@@ -1,6 +1,6 @@
 # Skills
 
-Ahmed Gharib's shared agent skills, installed globally into every repo the same way the mattpocock skills are. Each skill is written once here; a repo expresses its own differences through per-repo docs, never by forking the skill.
+Ahmed Gharib's shared agent skills. Each skill is written once here and reaches a repo as a derived copy; a repo expresses its own differences through per-repo docs, never by editing its copy.
 
 ## Language
 
@@ -35,6 +35,10 @@ _Avoid_: init, scaffold, bootstrap
 **Sibling skill**:
 A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which picks an issue in a cloud routine and runs Ship unattended. Only Ship claims an issue; a sibling never pre-claims.
 _Avoid_: wrapper, plugin, variant
+
+**Derived copy**:
+The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and never edited in place. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is never installed for the machine instead, because a personal skill silently shadows a repo's.
+_Avoid_: vendored fork, sync, symlink, snapshot
 
 **Claim**:
 The assignee on a tracker issue, set by Ship before any work. An assigned issue is in flight or awaiting merge and no run takes it; the same rule in every repo, not an axis.
