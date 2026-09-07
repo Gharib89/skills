@@ -53,7 +53,7 @@ The hard stop at the end of a Ship run where a human reads the summary and says 
 _Avoid_: approval, sign-off, review
 
 **Small lane**:
-The collapsed form of a Ship run for a change the whole team would call trivial; revocable mid-run. It drops planning breadth, never a check: the floor is the same in every repo and is worktree isolation, the full local gate, the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review never collapses, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
+The collapsed form of a Ship run for a change the whole team would call trivial; revocable mid-run. It drops planning breadth, never a check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the one regression test proving the change), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review never collapses, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
 _Avoid_: fast path, quick mode, hotfix
 
 **Reviewer**:
