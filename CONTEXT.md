@@ -33,8 +33,16 @@ A user-invoked skill that explores a repo and drafts its per-repo documents, con
 _Avoid_: init, scaffold, bootstrap
 
 **Sibling skill**:
-A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which picks an issue in a cloud routine and runs Ship unattended. Only Ship claims an issue; a sibling never pre-claims.
+A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which selects an issue in a cloud routine and runs Ship unattended. It adds only what Ship cannot know for itself — the cloud bootstrap, the PR cap and the selection — while Ship owns the claim, the branch, the isolation, the hand-back and the merge summary. Only Ship claims an issue; a sibling never pre-claims, and never writes to the tracker.
 _Avoid_: wrapper, plugin, variant
+
+**Fire**:
+One `cloud-ship` run: one selected issue driven to one merge-ready PR, ending at the merge gate with no human present. A fire either reaches merge-ready or hands the issue back; it never leaves it claimed and spinning. Distinct from an unattended run, which is the Ship run inside a fire.
+_Avoid_: run, invocation, job, tick, cycle
+
+**PR cap**:
+The count of open pull requests at which a fire stops before selecting anything, because the human merge-review queue is the bottleneck rather than the backlog. The rail is core in every repo; only the number is a profile fact.
+_Avoid_: throttle, rate limit, concurrency limit
 
 **Derived copy**:
 The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and never edited in place. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is never installed for the machine instead, because a personal skill silently shadows a repo's.
