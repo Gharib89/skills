@@ -55,3 +55,23 @@ _Avoid_: approval, sign-off, review
 **Small lane**:
 The collapsed form of a Ship run for a change the whole team would call trivial; keeps a fixed floor of checks and is revocable mid-run.
 _Avoid_: fast path, quick mode, hotfix
+
+**Reviewer**:
+One automated review bot the ship profile names for a repo, with its login, its trigger, and whether it is gating (a required check that can block the merge). A repo lists zero or more; no reviewer means the self-review plus green CI is the whole review gate.
+_Avoid_: review bot topology (the old three-shape framing), bot lane
+
+**Trigger**:
+How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push and its rounds are free, on-request delivers one review per explicit request and is capped. Convergence and mechanics follow the trigger, never the bot's brand.
+_Avoid_: mode, kind of bot
+
+**Converged**:
+The phase-7 exit where CI is green and every reviewer is settled per its trigger: auto-once threads all dispositioned; on-push quiet on the current head with every thread dispositioned and resolved; on-request latest round nothing actionable and every thread dispositioned. Silence on the current head is never quiet.
+_Avoid_: approved, clean, passed
+
+**Degraded exit**:
+A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. Never a hand-back on its own; the human reads it and decides.
+_Avoid_: failure, timeout, skipped review
+
+**Host**:
+The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). The ship profile names it; every generic mechanic has one implementation per host inside the skill, selected, never generated.
+_Avoid_: tracker (Boards is one part of a host), provider, platform
