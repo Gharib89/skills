@@ -17,11 +17,15 @@ One dimension along which repos legitimately differ in how they ship: worktree l
 _Avoid_: option, knob, setting
 
 **Local gate**:
-The repo-owned script that runs every check the repo's CI would run, locally, before a PR opens. The only Ship mechanic whose body is the repo itself.
+The repo-owned script that runs every check the repo's CI would run, locally, before a PR opens. The only Ship mechanic whose body is the repo itself; its verdict has one shape in every repo. Always includes the repo's secrets check, in every lane.
 _Avoid_: pre-push checks, lint step, test step
 
+**Verdict**:
+The local gate's one answer: pass, fail, or unavailable, built from a status per check. A check is deferred to CI when the gate knows CI proves it and unavailable when the gate could not ask its question; a deferred check proceeds and is named at the merge gate, an unavailable one stops an attended run and hands back an unattended one. Local green never means less than CI green.
+_Avoid_: result, report, gate output
+
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: preflight, manage-issue (take, release, hand back), isolate, CI wait, merge, reflect.
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: preflight, manage-issue (take, release, hand back), isolate, base-fresh, CI wait, merge, reflect.
 _Avoid_: helper, util
 
 **Setup skill**:
