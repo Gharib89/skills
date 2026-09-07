@@ -13,7 +13,7 @@ The per-repo document (`docs/agents/ship.md`) that carries every repo-specific f
 _Avoid_: ship config, ship settings, project instructions (that is CLAUDE.md)
 
 **Axis**:
-One dimension along which repos legitimately differ in how they ship: worktree layout, local gate, review-bot topology, verification kind, versioning, PR template, small-lane floor.
+One dimension along which repos legitimately differ in how they ship: worktree layout, local gate, reviewers, verification kind, versioning, PR template. The small-lane floor is not an axis: it is the same in every repo.
 _Avoid_: option, knob, setting
 
 **Local gate**:
@@ -53,7 +53,7 @@ The hard stop at the end of a Ship run where a human reads the summary and says 
 _Avoid_: approval, sign-off, review
 
 **Small lane**:
-The collapsed form of a Ship run for a change the whole team would call trivial; keeps a fixed floor of checks and is revocable mid-run.
+The collapsed form of a Ship run for a change the whole team would call trivial; revocable mid-run. It drops planning breadth, never a check: the floor is the same in every repo and is worktree isolation, the full local gate, the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review never collapses, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
 _Avoid_: fast path, quick mode, hotfix
 
 **Reviewer**:
