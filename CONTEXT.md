@@ -91,3 +91,7 @@ _Avoid_: pause, wait-state, hand-back (that releases the claim)
 **Host**:
 The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). The ship profile names it; every generic mechanic has one implementation per host inside the skill, selected, never generated.
 _Avoid_: tracker (Boards is one part of a host), provider, platform
+
+**Run file**:
+The one scratch file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The source of truth for where the run is and the map back after a mid-run context summary; the merge summary's timing is read off its stamps. The harness task tools, when a run finds them, are a mirror of it, never the record.
+_Avoid_: task list, scratch file, plan file, todo
