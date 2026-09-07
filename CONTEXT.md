@@ -95,3 +95,7 @@ _Avoid_: tracker (Boards is one part of a host), provider, platform
 **Run file**:
 The one scratch file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The source of truth for where the run is and the map back after a mid-run context summary; the merge summary's timing is read off its stamps. The harness task tools, when a run finds them, are a mirror of it, never the record.
 _Avoid_: task list, scratch file, plan file, todo
+
+**Adjacent find**:
+A problem outside the claimed issue that Ship meets while working it, whether the agent spotted it or a reviewer raised it. Filed for triage and left alone, unless it blocks the claimed issue, in which case it is fixed inline and logged as a deviation. Distinct from a deviation, which is the claimed issue's own work departing from its plan.
+_Avoid_: drive-by fix, scope creep, nit, out-of-scope finding
