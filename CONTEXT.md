@@ -72,6 +72,10 @@ _Avoid_: approved, clean, passed
 A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. Never a hand-back on its own; the human reads it and decides.
 _Avoid_: failure, timeout, skipped review
 
+**Carried file**:
+An untracked, gitignored file the ship profile names to be copied into the run's worktree when it is isolated, never copied back. A run that changes one stops.
+_Avoid_: env file (one kind of carried file), secrets, worktree setup
+
 **Host**:
 The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). The ship profile names it; every generic mechanic has one implementation per host inside the skill, selected, never generated.
 _Avoid_: tracker (Boards is one part of a host), provider, platform
