@@ -80,6 +80,14 @@ _Avoid_: failure, timeout, skipped review
 An untracked, gitignored file the ship profile names to be copied into the run's worktree when it is isolated, never copied back. A run that changes one stops.
 _Avoid_: env file (one kind of carried file), secrets, worktree setup
 
+**Verification**:
+One check the ship profile names that proves a change against the real thing the repo integrates with (a live org, a browser, a database in a container), scoped to what the change touched and run where the issue was reported. A repo lists zero or more; each names what it proves, when it applies, how to run it, what it needs, what Ship does without that, and which CI leg also proves it.
+_Avoid_: e2e, integration test, smoke test, live test (kinds of verification), phase-3 hook
+
+**Hand-off**:
+An attended stop where Ship prints the exact command and setup, waits for the human to run or confirm it, and resumes. The claim holds. In an unattended run a hand-off becomes a hand-back.
+_Avoid_: pause, wait-state, hand-back (that releases the claim)
+
 **Host**:
 The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). The ship profile names it; every generic mechanic has one implementation per host inside the skill, selected, never generated.
 _Avoid_: tracker (Boards is one part of a host), provider, platform
