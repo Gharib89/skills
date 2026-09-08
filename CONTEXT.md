@@ -29,7 +29,7 @@ A Ship script whose behavior is the same in every repo once the profile supplies
 _Avoid_: helper, util
 
 **Setup skill**:
-A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing. `setup-ship` drafts the ship profile.
+A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section, never a second setup skill.
 _Avoid_: init, scaffold, bootstrap
 
 **Sibling skill**:
