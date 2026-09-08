@@ -25,15 +25,15 @@ The local gate's one answer: pass, fail, or unavailable, built from a status per
 _Avoid_: result, report, gate output
 
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: preflight, manage-issue (take, release, hand back), isolate, base-fresh, CI wait, merge, reflect.
-_Avoid_: helper, util
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: preflight, read-issue, manage-issue (take, release, hand back), isolate, base-fresh, open-pr, reflect, poll-pr, request-review, comment-pr, update-pr-body, resolve-thread, CI wait, merge, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; the agent never drives a host's CLI directly, and a missing operation is a Ship defect, not a prose fallback. Their reads speak one vocabulary on every host.
+_Avoid_: helper, util, raw `gh` or `az` call
 
 **Setup skill**:
 A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section, never a second setup skill.
 _Avoid_: init, scaffold, bootstrap
 
 **Sibling skill**:
-A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which selects an issue in a cloud routine and runs Ship unattended. It adds only what Ship cannot know for itself — the cloud bootstrap, the PR cap and the selection — while Ship owns the claim, the branch, the isolation, the hand-back and the merge summary. Only Ship claims an issue; a sibling never pre-claims, and never writes to the tracker.
+A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which invokes Ship unattended from a cloud routine and relays its outcome. It adds nothing Ship could do for itself: the cloud bootstrap, the PR cap, the selection, the claim, the branch, the isolation, the hand-back and the merge summary are all Ship's. Only Ship claims an issue; a sibling never pre-claims, never writes to the tracker, and never calls a Ship script by path.
 _Avoid_: wrapper, plugin, variant
 
 **Fire**:
@@ -101,7 +101,7 @@ An attended stop where Ship prints the exact command and setup, waits for the hu
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
 
 **Host**:
-The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). The ship profile names it; every generic mechanic has one implementation per host inside the skill, selected, never generated.
+The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). Ship reads it off the repo's remote and the ship profile names it as a cross-check; every generic mechanic has one adapter per host inside the skill, selected, never generated. A host's own words (label or tag, assignee or Assigned To, review thread or thread) never reach Ship's prose: the mechanics translate them.
 _Avoid_: tracker (Boards is one part of a host), provider, platform
 
 **Run file**:
