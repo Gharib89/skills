@@ -8,7 +8,8 @@ description: >-
   issue through to a PR, or run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.0.0
+  version: 1.1.0
+  profile-schema: 1
 ---
 
 # ship
@@ -82,6 +83,25 @@ Two more repo docs feed a run and are read the same way: triage roles
 (`ready-for-agent`, `ready-for-human`, `needs-triage`) are canonical role names
 whose label strings come from `docs/agents/triage-labels.md`, and the tracker's
 mechanics come from `docs/agents/issue-tracker.md`.
+
+**Profile schema.** Directly under the `# Ship profile` title, before the first
+`##`, the profile carries `Schema: N`. This skill declares the schema it reads as
+`metadata.profile-schema` in the frontmatter above. The number is separate from
+`metadata.version`: it moves only when ship's expectations of the profile change
+(a heading or `Label:` line added, renamed or removed; a `Label:` vocabulary
+changed), always with a ship major bump, never for a behaviour change that
+leaves the profile alone. Preflight compares the two and refuses a mismatch in
+either direction, in both lanes, never claimed; the detail names both numbers
+and the fix:
+
+- `profile invalid: schema 1, ship expects 2; run /setup-skills` (profile older)
+- `profile invalid: schema 2, ship 1.1.0 reads 1; refresh ship` (ship older)
+- `profile invalid: no Schema line; run /setup-skills`
+
+A profile older than ship is refused even where ship could default the missing
+axis: a defaulted axis reads `None.`/`Default.` explicitly, never an omitted
+heading. The schema is not printed in the run header: a run that reaches the
+header has passed the check, so `ship <version>` implies it.
 
 Missing file: stop `profile missing`, naming `docs/agents/ship.md` and
 `/setup-skills`. Missing or misordered headings: stop `profile invalid`, naming

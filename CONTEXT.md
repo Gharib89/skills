@@ -12,6 +12,10 @@ _Avoid_: pipeline, deliver, autopilot
 The per-repo document (`docs/agents/ship.md`) that carries every repo-specific fact Ship needs, one section per axis. A repo without a profile cannot run Ship.
 _Avoid_: ship config, ship settings, project instructions (that is CLAUDE.md)
 
+**Profile schema**:
+The integer a ship profile declares and Ship declares it reads, moved only when Ship's expectations of the profile change; a mismatch in either direction refuses the run and `setup-skills` re-run migrates. Separate from Ship's version, which moves on any Ship change.
+_Avoid_: profile version, format version, compat level
+
 **Axis**:
 One dimension along which repos legitimately differ in how they ship: worktree layout, local gate, reviewers, verification kind, versioning, PR template. The small-lane floor is not an axis: it is the same in every repo.
 _Avoid_: option, knob, setting

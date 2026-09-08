@@ -85,7 +85,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every on-request reviewer has a `Cap:`; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order.
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every on-request reviewer has a `Cap:`; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 
@@ -96,7 +96,7 @@ Show the full draft of everything below, then let the user edit before writing. 
 
 `/ship` drives one issue to a merge-ready PR. This repo's ship profile: `docs/agents/ship.md`. Without that file ship refuses: run `/setup-skills`.
 
-Every skill under `.claude/skills/` is a derived copy, never edited in place; `skills-lock.json` records each one's source. `ship` and `cloud-ship` come from `Gharib89/skills`; the skills ship composes come from `mattpocock/skills` and `upstash/context7`. Refresh a skill by re-running its install line at project scope (never `-g`), e.g. `npx skills add Gharib89/skills --skill ship --skill cloud-ship --agent claude-code -y`.
+Every skill under `.claude/skills/` is a derived copy, never edited in place; `skills-lock.json` records each one's source. `ship` and `cloud-ship` come from `Gharib89/skills`; the skills ship composes come from `mattpocock/skills` and `upstash/context7`. Refresh a skill by re-running its install line at project scope (never `-g`). Ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`: `npx skills add Gharib89/skills --skill ship --skill cloud-ship --agent claude-code -y && .claude/skills/ship/scripts/preflight.sh <any open issue number>`.
 ```
 
 **Local gate.**
@@ -133,4 +133,4 @@ Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>
 
 ## Re-run
 
-Profile exists: run steps 1 to 3, then diff each section of the fresh exploration against the existing profile, propose only the updates, and ask whether anything else should change. Prose under the headings is the human's; update the `Label:` lines and leave the prose alone unless a fact it explains changed. End with step 6.
+Profile exists: run steps 1 to 3. Then compare the profile's `Schema:` line to ship's `metadata.profile-schema` in `.claude/skills/ship/SKILL.md`. Trailing: apply each `## Schema N` entry of [profile-schema.md](./profile-schema.md) between the two numbers in order, walking only the rows an entry adds or whose vocabulary it moves, leaving the prose under existing headings alone, and rewrite the `Schema:` line last. Ahead of ship: stop and print the refresh line; the profile is not what needs fixing. Then diff each section of the fresh exploration against the existing profile, propose only the updates, and ask whether anything else should change. Prose under the headings is the human's; update the `Label:` lines and leave the prose alone unless a fact it explains changed. End with step 6.
