@@ -75,11 +75,14 @@ git -C "$main" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1
 git -C "$main" fetch origin >/dev/null 2>&1
 holder=$(git -C "$main" worktree list --porcelain | awk -v b="refs/heads/$base" '$1=="worktree"{w=$2} $1=="branch" && $2==b {print w}' | head -1)
 if [ -n "$holder" ]; then
+  fflog=$(mktemp)
   for attempt in 1 2 3; do
-    git -C "$holder" pull --ff-only origin "$base" >/dev/null 2>&1 && base_updated=true && break
+    git -C "$holder" pull --ff-only origin "$base" >"$fflog" 2>&1 && base_updated=true && break
+    grep -q 'index.lock' "$fflog" || break   # only a lock is worth retrying
     sleep "$attempt"
   done
-  [ "$base_updated" = true ] || echo "local $base in $holder could not fast-forward (diverged, or a lock held); left untouched" >&2
+  [ "$base_updated" = true ] || { echo "local $base in $holder could not fast-forward; left untouched:" >&2; ship_tail40 "$fflog"; }
+  rm -f "$fflog"
 elif git -C "$main" show-ref --verify --quiet "refs/heads/$base"; then
   git -C "$main" fetch origin "$base:$base" >/dev/null 2>&1 && base_updated=true \
     || echo "local $base has diverged from origin/$base; left untouched" >&2
