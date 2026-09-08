@@ -3,8 +3,9 @@
 #
 # Push permission first: every read-only call succeeds for an account that
 # cannot push, so a wrong login stays invisible until the phase-9 merge answers
-# 404 with the whole run already spent. Then the profile (headings and the Host
-# cross-check), then every not-actionable reason, collected rather than
+# 404 with the whole run already spent. Then the profile (headings, the Schema
+# line against this ship's metadata.profile-schema, and the Host cross-check),
+# then every not-actionable reason, collected rather than
 # first-hit so the human reads one full stop report.
 #
 #   preflight <issue> [--unattended]
@@ -52,7 +53,8 @@ esac
 root=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
 reasons=()
 
-# Profile: presence, the fourteen headings in order, and the Host cross-check.
+# Profile: presence, the fourteen headings in order, the Schema line, and the
+# Host cross-check.
 profile="$root/docs/agents/ship.md"
 if [ ! -f "$profile" ]; then
   reasons+=("profile missing: $profile; run /setup-skills")
@@ -63,6 +65,19 @@ else
     detail=$(diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | grep -E '^[<>]' | sed 's/^< /missing or misplaced: /; s/^> /unexpected: /' | paste -sd';')
     reasons+=("profile invalid: headings; $detail")
   fi
+  skill="$SHIP_SCRIPTS/../SKILL.md"
+  reads=$(awk 'NR>1 && /^---$/{exit} /^  profile-schema:/{print $2; exit}' "$skill")
+  shipv=$(awk 'NR>1 && /^---$/{exit} /^  version:/{print $2; exit}' "$skill")
+  schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' "$profile")
+  case $schema in
+    '') reasons+=("profile invalid: no Schema line; run /setup-skills") ;;
+    "$reads") ;;
+    *) if [ "$schema" -lt "$reads" ] 2>/dev/null; then
+         reasons+=("profile invalid: schema $schema, ship expects $reads; run /setup-skills")
+       else
+         reasons+=("profile invalid: schema $schema, ship $shipv reads $reads; refresh ship")
+       fi ;;
+  esac
   declared=$(awk '/^## Host/{f=1;next} /^## /{f=0} f && /^Host:/{sub(/^Host: */,""); print; exit}' "$profile" | tr -d ' `')
   [ "$declared" = "$SHIP_HOST" ] || reasons+=("profile invalid: Host mismatch (profile says '${declared:-nothing}', remote is $SHIP_HOST)")
 fi
