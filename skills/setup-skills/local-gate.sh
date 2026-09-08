@@ -18,8 +18,8 @@ set -uo pipefail
 small="" base=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --small) small=${2:?--small needs a test node}; shift 2 ;;
-    --base)  base=${2:?--base needs a ref}; shift 2 ;;
+    --small) [ $# -ge 2 ] || { printf '{"error":"--small needs a test node"}\n'; exit 2; }; small=$2; shift 2 ;;
+    --base)  [ $# -ge 2 ] || { printf '{"error":"--base needs a ref"}\n'; exit 2; }; base=$2; shift 2 ;;
     *) printf '{"error":"unknown flag: %s"}\n' "$1"; exit 2 ;;
   esac
 done

@@ -12,9 +12,9 @@
 # resolved = status fixed|closed|wontFix|byDesign, CI = policy evaluations plus
 # PR statuses, blocked-by = Predecessor links, merge = pr update --status completed.
 #
-# UNVERIFIED against a live organization at the time of writing: the ADO test
-# project (map ticket "Create the Azure DevOps test project") did not exist yet.
-# Syntax-checked only; the onboarding run is its first real exercise.
+# Verified live on the onboarding run (map ticket "Onboard the Azure DevOps repo
+# and run ship attended"): every mechanic from preflight to merge and cleanup
+# completed one attended run against Azure Repos + Boards + Pipelines.
 
 ORG=(--org "$SHIP_ORG_URL")
 PRJ=("${ORG[@]}" --project "$SHIP_PROJECT")
@@ -62,12 +62,15 @@ _wi_norm() {
     is_pr: false,
     labels: ((.fields["System.Tags"] // "") | split(";") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != ""))),
     assignees: [.fields["System.AssignedTo"].uniqueName // empty],
-    created_at: .fields["System.CreatedDate"], url: ._links.html.href}'
+    created_at: .fields["System.CreatedDate"],
+    url: (._links.html.href // ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring)))}' \
+    --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT"
 }
 _wi_show() { azx boards work-item show "${ORG[@]}" --id "$1" --expand relations; }
 host_issue_get() { _wi_show "$1" | _wi_norm; }
 host_issue_comments() {
-  invoke GET wit comments 7.1-preview.4 --route-parameters project="$SHIP_PROJECT" workItemId="$1" \
+  # "7.1-preview" exactly: az parses the version as a float and chokes on "7.1-preview.4".
+  invoke GET wit comments 7.1-preview --route-parameters project="$SHIP_PROJECT" workItemId="$1" \
     | jq '[.comments[] | {author: .createdBy.uniqueName, body: .text, created_at: .createdDate}]'
 }
 # Predecessor links (System.LinkTypes.Dependency-Reverse) are the blockers; ADO
@@ -105,10 +108,20 @@ host_issue_add_label() {
   local t; t=$(_tags "$1") || return 1
   azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.Tags=${t:+$t; }$2" >/dev/null
 }
+# Removing the LAST tag needs a json-patch `remove`: the server ignores an empty
+# System.Tags value however it is sent (`--fields`, `add ""`, `replace ""`), and
+# `az devops invoke` cannot send application/json-patch+json, so this one call is
+# `az rest` on the Entra token (a PAT-only session fails it and reports false).
 host_issue_remove_label() {
   host_issue_has_label "$1" "$2" || return 0
   local t; t=$(host_issue_get "$1" | jq -r --arg l "$2" '[.labels[] | select(. != $l)] | join("; ")') || return 1
-  azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.Tags=$t" >/dev/null
+  if [ -n "$t" ]; then
+    azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.Tags=$t" >/dev/null
+  else
+    az rest --method patch --url "$SHIP_ORG_URL/_apis/wit/workitems/$1?api-version=7.1" \
+      --resource 499b84ac-1321-427f-aa17-267ca6975798 --headers "Content-Type=application/json-patch+json" \
+      --body '[{"op":"remove","path":"/fields/System.Tags"}]' -o none 2>/dev/null
+  fi
 }
 host_issue_comment() { azx boards work-item update "${ORG[@]}" --id "$1" --discussion "$2" >/dev/null; }
 host_issue_close()   { azx boards work-item update "${ORG[@]}" --id "$1" --state "$ADO_CLOSED" >/dev/null; }
@@ -153,33 +166,43 @@ host_pr_checks() { # <pr> <head_sha>
       | select(.status != "notApplicable")
       | {name: (.configuration.settings.displayName // .configuration.type.displayName),
          status: (if .status == "approved" then "success" elif (.status | IN("queued","running")) then "pending" else "failure" end)}]') || return 1
+  # A status is re-posted per transition (queued → pending → final), so only the
+  # newest row per context counts; notApplicable means "no check here", not red.
   st=$(invoke GET git pullRequestStatuses 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" \
-      | jq '[.value[] | {name: ((.context.genre // "status") + "/" + .context.name),
-         status: (if .state == "succeeded" then "success" elif (.state | IN("pending","notSet")) then "pending" else "failure" end)}]') || st='[]'
+      | jq '[.value[] | {name: ((.context.genre // "status") + "/" + .context.name), created: .creationDate,
+         status: (if .state == "succeeded" then "success" elif .state == "notApplicable" then "skip"
+                  elif (.state == null) or (.state | IN("pending","notSet")) then "pending" else "failure" end)}]
+         | group_by(.name) | map(sort_by(.created) | last | del(.created)) | map(select(.status != "skip"))') || st='[]'
   jq -n --argjson a "$pol" --argjson b "$st" '$a + $b | group_by(.name) | map(last)'
 }
 _threads_raw() { invoke GET git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1"; }
+# {id, created} of the newest iteration: a push makes one, so "on the current
+# head" means iteration == this id, or (for a PR-level thread with no iteration
+# context, how a build-service reviewer posts) published after it was created.
 _latest_iteration() {
   invoke GET git pullRequestIterations 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" \
-    | jq '[.value[].id] | max // 0'
+    | jq '(.value | max_by(.id)) as $i | {id: ($i.id // 0), created: ($i.createdDate // "")}'
 }
+# A service identity (a build service) has an empty uniqueName; its displayName is the login then.
+_author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
 # Votes are the review rows; a reviewer that only opened threads on the latest
 # iteration counts as a substantive comment review on the head.
 host_pr_reviews() { # <pr> <head_sha>
   local votes it threads
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)
       | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true}]') || return 1
-  it=$(_latest_iteration "$1") || it=0
+  it=$(_latest_iteration "$1") || it='{"id":0,"created":""}'
   threads=$(_threads_raw "$1" | jq --argjson it "$it" '[.value[] | select(.isDeleted != true)
       | select(.comments[0].commentType != "system")
-      | select(.pullRequestThreadContext.iterationContext.secondComparingIteration == $it)
-      | {login: .comments[0].author.uniqueName, state: "comment", substantive: true}] | unique_by(.login)') || threads='[]'
+      | select((.pullRequestThreadContext.iterationContext.secondComparingIteration == $it.id)
+               or (.pullRequestThreadContext == null and .publishedDate >= $it.created))
+      | {login: '"$_author_login"', state: "comment", substantive: true}] | unique_by(.login)') || threads='[]'
   jq -n --argjson v "$votes" --argjson t "$threads" '{on_head: ($v + $t), total: ($v + $t | length)}'
 }
 host_pr_threads() {
   _threads_raw "$1" | jq '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
     | {id: (.id | tostring), resolved: (.status | IN("fixed","closed","wontFix","byDesign")),
-       author: .comments[0].author.uniqueName, path: .threadContext.filePath, body: .comments[0].content}]'
+       author: '"$_author_login"', path: .threadContext.filePath, body: .comments[0].content}]'
 }
 host_pr_reviewer_blocked() { echo null; }
 host_pr_request_review() { # <pr> <login>

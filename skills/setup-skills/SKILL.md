@@ -44,6 +44,8 @@ Then prove the host tooling with ship's own preflight, the one host check that e
 
 Exit 2 with a `host-unreachable` reason (CLI missing, extension missing, not signed in, no push permission) stops here with that reason: setup is the one moment a human is present to fix auth. Exit 1 with `profile missing` is the expected answer at this point; continue.
 
+Preflight cannot prove the git remote itself, so also run `git ls-remote --heads origin`. A failure here surfaces later only as `existing branch: remote unreadable`, and every push in a run would fail. On Azure DevOps with an Entra `az login` and no PAT, offer the repo-local credential helper from the tracker doc's Auth line, which mints the git password from the same token.
+
 ### 3. Explore
 
 Read the repo once, every section, before saying anything. The right-hand column says whether exploration settles the section or the walk (step 4) must.
@@ -94,7 +96,7 @@ Show the full draft of everything below, then let the user edit before writing. 
 
 `/ship` drives one issue to a merge-ready PR. This repo's ship profile: `docs/agents/ship.md`. Without that file ship refuses: run `/setup-skills`.
 
-`ship`, `cloud-ship` and the skills ship composes are derived copies under `.claude/skills/`, installed from `Gharib89/skills` and never edited in place. Refresh: `npx skills add Gharib89/skills --skill ship --skill cloud-ship --agent claude-code -y` (project scope, never `-g`).
+Every skill under `.claude/skills/` is a derived copy, never edited in place; `skills-lock.json` records each one's source. `ship` and `cloud-ship` come from `Gharib89/skills`; the skills ship composes come from `mattpocock/skills` and `upstash/context7`. Refresh a skill by re-running its install line at project scope (never `-g`), e.g. `npx skills add Gharib89/skills --skill ship --skill cloud-ship --agent claude-code -y`.
 ```
 
 **Local gate.**

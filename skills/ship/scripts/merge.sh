@@ -44,9 +44,11 @@ title=$(jq -r .title <<<"$prj"); branch=$(jq -r .head_ref <<<"$prj"); base=$(jq 
 if [ "$(jq -r .state <<<"$prj")" = merged ]; then merged=true
 else
   host_pr_merge "$pr" "$title (#$pr)" >/dev/null 2>&1 || echo "merge call failed; verifying state anyway" >&2
-  for _ in 1 2 3; do
+  # Azure DevOps completes asynchronously: `pr update --status completed` returns
+  # the still-active PR and the merge lands a few seconds later, so poll for it.
+  for _ in $(seq 1 10); do
     [ "$(host_pr_get "$pr" | jq -r .state)" = merged ] && merged=true && break
-    sleep 2
+    sleep 3
   done
 fi
 [ "$merged" = true ] || { echo "PR $pr did not reach merged; stopping before any cleanup" >&2; finish 1; }
