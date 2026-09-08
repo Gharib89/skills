@@ -22,12 +22,16 @@ row() { printf '| %s | %s | %s | %s | %s |\n' "$@" | tee -a "$LOG"; }
 hdr() { printf '\n### %s\n\n| call | verdict | http | detail | ms |\n|---|---|---|---|---|\n' "$1" | tee -a "$LOG"; }
 note() { printf '\n%s\n' "$*" | tee -a "$LOG"; }
 OUT=""
+# uutils coreutils (Ubuntu 26.04) ignores the width in %3N and returns nanoseconds,
+# which made every ms cell garbage in the 2026-09-08 control run. %s%N is 19 digits
+# on both GNU and uutils, so divide instead of trusting the width.
+ms() { local n; n=$(date +%s%N); echo $(( n / 1000000 )); }
 probe() {
   local name=$1; shift
   local err t0 t1 rc http detail verdict
-  t0=$(date +%s%3N)
+  t0=$(ms)
   OUT=$("$@" 2>/tmp/probe-err); rc=$?
-  t1=$(date +%s%3N)
+  t1=$(ms)
   err=$(head -c 400 /tmp/probe-err | tr '\n' ' ')
   http=$(grep -oE 'HTTP[ /][0-9.]* ?[0-9]{3}|error: [0-9]{3}' <<<"$err" | grep -oE '[0-9]{3}$' | head -1)
   if [ $rc -eq 0 ]; then verdict=allowed; detail="";
