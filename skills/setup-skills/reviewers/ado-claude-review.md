@@ -33,13 +33,16 @@ steps:
     Return ONLY findings that require a code change. Severity: critical = must fix before merge
     (correctness, security, data loss, a MUST rule in the standards); major = a standards rule;
     minor = style. file is repo-relative, line is the line in the new file.
+    Files under .claude/skills/ are derived copies installed verbatim by the skills CLI and recorded in
+    skills-lock.json: do not review their content line by line; report only a change to them with no
+    matching skills-lock.json update.
     If nothing is actionable, return {\"findings\": []}. No praise, no summaries."
     claude --bare -p "$PROMPT" \
       --output-format json \
       --json-schema "$SCHEMA" \
       --allowedTools "Read,Grep,Glob,Bash(git diff *),Bash(git log *)" \
       --permission-mode dontAsk \
-      --max-turns 30 \
+      --max-turns 60 \
       --max-budget-usd 5 \
       | jq '.structured_output' > "$(Build.ArtifactStagingDirectory)/findings.json"
     cat "$(Build.ArtifactStagingDirectory)/findings.json"
@@ -76,6 +79,8 @@ steps:
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)   # the YAML form of "allow scripts to access the OAuth token"
 ```
+
+Proven on the first onboarding run (ship-ado-lab): a 51-file skill-install PR exhausted a 30-turn cap before any verdict, so the build failed with `error_max_turns` and no threads, and the gating policy rejected the PR. Keep the derived copies in the diff (excluding them removes the only review gate on files that drive agent actions) and rely on the prompt line above plus the 60-turn cap. `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` works in place of `ANTHROPIC_API_KEY`.
 
 Known gap, to settle on the first real run: the threads API documents `pullRequestThreadContext.changeTrackingId` as required for line anchoring on PRs with iterations. If threads land at PR level instead of on the line, look the id up from the PR iterations API and add it to the body.
 
