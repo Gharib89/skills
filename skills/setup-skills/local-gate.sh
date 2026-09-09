@@ -23,6 +23,7 @@ while [ $# -gt 0 ]; do
     *) printf '{"error":"unknown flag: %s"}\n' "$1"; exit 2 ;;
   esac
 done
+[ "${BASH_VERSINFO[0]}" -ge 4 ] || { echo '{"error":"bash 4+ required (associative arrays); macOS: brew install bash"}'; exit 2; }
 command -v jq >/dev/null || { echo '{"error":"jq not installed"}'; exit 2; }
 cd "$(git rev-parse --show-toplevel 2>/dev/null)" || { echo '{"error":"not inside a git checkout"}'; exit 2; }
 if [ -z "$base" ]; then
@@ -50,10 +51,10 @@ else
   mark secrets unavailable
 fi
 
+run deps  __DEPS__                       # every lane: a fresh worktree has no dependencies yet
 if [ "$lane" = small ]; then
   run tests __RUNNER__ "$small"          # the one regression test proving the change
 else
-  run deps  __DEPS__                     # dependency install first: a lockfile break is a real failure
   run tests __RUNNER__
 fi
 # --- end gates -----------------------------------------------------------------
