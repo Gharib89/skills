@@ -43,6 +43,14 @@ host_tooling_reasons() {
   command -v az >/dev/null && ! az extension show --name azure-devops >/dev/null 2>&1 \
     && echo "azure-devops extension missing: az extension add --name azure-devops"
 }
+# Microsoft's documented Debian install plus the extension. Not yet measured
+# behind the cloud sandbox proxy (map ticket "Probe a cloud session against the
+# Azure DevOps repo"); on a developer machine the tooling reasons already name it.
+host_tooling_install() {
+  local sudo=""; [ "$(id -u)" -eq 0 ] || sudo="sudo -n"
+  command -v az >/dev/null || curl -sL https://aka.ms/InstallAzureCLIDeb | $sudo bash
+  az extension show --name azure-devops >/dev/null 2>&1 || az extension add --name azure-devops
+}
 # Entra login first; a PAT session has no `az account`, so fall back to the
 # connection data of the authenticated user.
 host_identity() {

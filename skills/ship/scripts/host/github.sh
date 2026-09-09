@@ -18,6 +18,13 @@ host_tooling_reasons() {
   command -v jq  >/dev/null || echo "jq not installed"
   command -v git >/dev/null || echo "git not installed"
 }
+# The Ubuntu archive is the one route the cloud sandbox proxy passes (the
+# release tarball host 404s through it); apt installs 2.45.0 in about 12 s.
+host_tooling_install() {
+  command -v gh >/dev/null && return 0
+  local sudo=""; [ "$(id -u)" -eq 0 ] || sudo="sudo -n"
+  $sudo apt-get install -y gh
+}
 host_identity() { api user --jq .login; }
 host_can_push() { api "$R" --jq '.permissions.push // false'; }
 

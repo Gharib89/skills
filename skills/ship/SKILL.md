@@ -8,7 +8,7 @@ description: >-
   issue through to a PR, or run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.1.0
+  version: 1.2.0
   profile-schema: 1
 ---
 
@@ -46,9 +46,11 @@ every PR records which ship produced it.
   fetch, no claim, no `Closes`, no reflect; everything else runs.
 - `--unattended`: the **unattended run**. No human is present: a blocked stop
   hands back instead of asking, the sandbox clone is the isolation, and the
-  merge gate posts the summary as a PR comment and returns. With no `<issue>`
-  it runs the whole unattended lane (bootstrap, PR cap, select) before the
-  pipeline: [reference/unattended.md](reference/unattended.md).
+  merge gate posts the summary as a PR comment and returns. It starts with
+  `tooling --install`, because the cloud sandbox image lacks the host's CLI.
+  With no `<issue>` it runs the whole unattended lane (tooling, bootstrap, PR
+  cap, select) before the pipeline:
+  [reference/unattended.md](reference/unattended.md).
 
 Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits.
@@ -144,7 +146,7 @@ on both hosts: checks `pending|success|failure`, mergeable
 | `ci-wait <pr>` | 8 |
 | `merge <pr> <issue> --worktree <path>` | 9, on approval |
 | `cleanup <issue>` | 9, after merge |
-| `list-prs --open` and `select` | unattended lane |
+| `tooling [--install]`, `list-prs --open` and `select` | unattended lane |
 
 Run mechanics **inline**: they project their own output, so a subagent there
 burns budget to relay what an exit code already says. Poll loops are bounded

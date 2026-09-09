@@ -129,7 +129,7 @@ Report its `reasons`. Only issue-level reasons may remain (`not triaged`, `alrea
 
 ### 7. Done
 
-Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>` can run, `cloud-ship` is installed and how a cloud routine fires it (`ship --unattended` with no issue selects its own). The routine itself is one operator's schedule and not written here. They can edit `docs/agents/ship.md` directly later.
+Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>` can run, and `cloud-ship` is installed: a cloud routine on this repo fires it with the one-line prompt `Run the cloud-ship skill.` (it selects its own issue; the prompt names no repo). The routine itself is one operator's schedule and not written here. They can edit `docs/agents/ship.md` directly later.
 
 ## Re-run
 

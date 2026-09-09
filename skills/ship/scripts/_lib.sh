@@ -13,6 +13,7 @@
 # mechanic reports as "unavailable").
 #
 #   host_tooling_reasons                 -> one missing-tool reason per line
+#   host_tooling_install                 -> install the host CLI where absent; non-zero = could not
 #   host_identity                        -> the login the claim is written as
 #   host_can_push                        -> true | false | unknown
 #   host_issue_get <n>                   -> {number,title,body,state,is_pr,labels[],assignees[],created_at,url}
