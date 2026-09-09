@@ -8,7 +8,7 @@ description: >-
   issue through to a PR, or run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.2.4
+  version: 1.2.5
   profile-schema: 1
 ---
 
@@ -298,7 +298,7 @@ comment supersedes the body (**spec precedence**, detailed in
 [reference/implement.md](reference/implement.md)). Too vague to plan: stop
 `ambiguous`, unclaimed. Otherwise **claim before any work**:
 `manage-issue <issue> take`, idempotent, which assigns you and posts the fixed
-comment `🤖 Claimed by a ship run — implementation in progress.` The claim
+comment `🤖 Claimed by a ship run: implementation in progress.` The claim
 holds until merge; every stop after this point follows the stop table.
 
 **2 · Implement.** Classify `docs` / `code` / `infra`; **announce the class,

@@ -23,7 +23,7 @@ Location: scripts/local-gate.sh
 Small node: the path of the changed script, e.g. `skills/ship/scripts/merge.sh`
 Tripwires: None.
 
-All three gates are repo-wide and take seconds, so the small lane records the node and narrows nothing. There is no CI, so no gate is ever `deferred-to-ci`: the gate is the whole automated check on a diff, alongside the reviewer.
+Every gate is repo-wide and takes seconds, so the small lane records the node and narrows nothing. There is no CI, so no gate is ever `deferred-to-ci`: the gate is the whole automated check on a diff, alongside the reviewer.
 
 `derived-copies` is the drift gate. It fails when `.claude/skills/<name>/` differs from `skills/<name>/` for `ship`, `cloud-ship` or `setup-skills`, which is what makes the refresh below non-optional rather than a habit.
 

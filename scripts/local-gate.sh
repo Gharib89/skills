@@ -13,8 +13,8 @@
 #   `secrets` is required in every lane. Base defaults to origin/HEAD.
 #
 # This repo has no CI, so no gate is ever `deferred-to-ci`: the gate is the
-# whole check. All three gates are repo-wide and take seconds, so `--small`
-# records the lane and narrows nothing.
+# whole automated check on a diff. Every gate is repo-wide and takes seconds,
+# so `--small` records the lane and narrows nothing.
 set -uo pipefail
 
 small="" base=""
@@ -70,10 +70,10 @@ derived_copies() {
 }
 run derived-copies derived_copies
 
-# The lint gate covers the source tree's scripts plus this gate itself. The
-# derived copies are covered by `derived-copies` proving them identical, and
-# `-P SCRIPTDIR` resolves the
-# `source "$(dirname ...)/_lib.sh"` idiom the mechanics use.
+# The lint gate covers the source tree's scripts plus this gate itself; the
+# derived copies are covered by `derived-copies` proving them identical.
+# `-P SCRIPTDIR` resolves the `source "$(dirname ...)/_lib.sh"` idiom the
+# mechanics use.
 lint() {
   local files
   mapfile -t files < <(git ls-files 'skills/*.sh' 'skills/**/*.sh' 'scripts/*.sh')
@@ -85,6 +85,20 @@ if command -v npx >/dev/null; then
 else
   mark shellcheck unavailable
 fi
+
+# house-style: the standards doc bans em dashes in files this repo authors.
+# A written standard nothing enforces drifts, so enforce it. `.claude/skills/`
+# is install output from other repos and is exempt.
+house_style() {
+  local hits em
+  em=$'\u2014'   # built from its codepoint, so this gate does not match itself
+  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' '.github/*' CONTEXT.md CLAUDE.md \
+    | xargs -0 grep -n "$em" 2>/dev/null) || return 0
+  echo "em dashes in repo-authored files (see docs/contributing/coding-standards.md):"
+  echo "$hits"
+  return 1
+}
+run house-style house_style
 
 # --- end gates -----------------------------------------------------------------
 

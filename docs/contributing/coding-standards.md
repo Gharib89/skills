@@ -9,6 +9,7 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 - `shellcheck -x -s bash -P SCRIPTDIR -S warning` over every tracked script under `skills/` and `scripts/`, per the `shellcheck` gate in `scripts/local-gate.sh`. Warnings fail; suppress one only with a `# shellcheck disable=<code>` carrying the reason on the same line.
 - `gitleaks detect` over the branch's commits, per the `secrets` gate in the same file.
 - `.claude/skills/<name>/` byte-identical to `skills/<name>/` for `ship`, `cloud-ship` and `setup-skills`, per the `derived-copies` gate.
+- No em dashes in any file this repo authors, per the `house-style` gate.
 
 ## Written standards
 
@@ -23,4 +24,5 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 - **Mechanics print JSON and nothing else on stdout.** Evidence goes to stderr, capped at the last 40 lines. Exit 0 success, 1 the operation failed, 2 tooling.
 - **No host CLI outside a named mechanic.** `gh` and `az` are called only from `skills/ship/scripts/host/<host>.sh`; a host operation no mechanic performs is a ship defect, not a prose fallback.
 - **Commit subjects** are conventional-commit prefixed and scoped to the skill: `fix(ship):`, `docs:`, `feat(setup-skills):`.
-- **No em dashes** in any file this repo authors, or in a commit message. `.claude/skills/` is install output from other people's repos and is exempt, along with every other rule here: it is never edited in place.
+- **`.claude/skills/` is exempt from every rule here.** It is install output from other people's repos and is never edited in place, so its prose and its em dashes are not this repo's to fix.
+- **Commit messages** carry no em dashes either. The `house-style` gate reads files, not messages, so this one is on the author.

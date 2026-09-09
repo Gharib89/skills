@@ -46,7 +46,7 @@
 SHIP_SCRIPTS=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly SHIP_SCRIPTS
 # shellcheck disable=SC2034  # read by the mechanics that source this library
-readonly SHIP_CLAIM_COMMENT='🤖 Claimed by a ship run — implementation in progress.'
+readonly SHIP_CLAIM_COMMENT='🤖 Claimed by a ship run: implementation in progress.'
 
 # ship_tooling <msg>: the exit-2 shape. Also used when the host adapter itself
 # cannot load, so a broken install still emits the contract, not "command not found".
