@@ -138,8 +138,11 @@ note "adapter rows below run against az: **$AZ_OK**"
 
 # ---- 2. Network: REST twins, independent of az -----------------------------
 hdr "Network: ADO REST over curl with the PAT (runs regardless of az)"
-probe "GET _apis/connectionData"  rest GET "$ORG_URL/_apis/connectionData?api-version=7.1"
+probe "GET _apis/connectionData"  rest GET "$ORG_URL/_apis/connectionData?api-version=7.1-preview"
 ME_REST=$(jq -r '.authenticatedUser.properties.Account."$value" // .authenticatedUser.uniqueName // empty' <<<"${OUT:-}" 2>/dev/null)
+# vssps, a different host than dev.azure.com: worth its own row, because a
+# proxy allowlist can pass one and not the other.
+probe "GET vssps profile/profiles/me" rest GET "https://vssps.dev.azure.com/${ORG_URL##*/}/_apis/profile/profiles/me?api-version=7.1-preview.3"
 probe "GET _apis/projects"        rest GET "$ORG_URL/_apis/projects?api-version=7.1"
 probe "GET git/repositories/{r}"  rest GET "$API/git/repositories/$REPO?api-version=7.1"
 WIQL="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.State] <> '$CLOSED' ORDER BY [System.CreatedDate] ASC"
@@ -153,12 +156,16 @@ ME=""
 if $AZ_OK; then
   hdr "host_identity"
   # Entra path first, as the adapter does; a PAT session has no `az account`.
-  probe "az account show --query user.name (expect fail on PAT)" az account show --query user.name -o tsv
-  probe "az devops invoke core connectionData (PAT fallback)" \
+  probe "az account show --query user.name (Entra path)" az account show --query user.name -o tsv
+  ME=$(head -1 <<<"${OUT:-}" | tr -d '"')
+  # The adapter's PAT fallback, exactly as ado.sh writes it. The control run on
+  # 2026-09-09 failed this at every api-version tried, so the row is expected to
+  # fail and the curl twin below is what a PAT-only session would need.
+  probe "az devops invoke core connectionData (adapter PAT fallback)" \
     azx devops invoke "${ORG[@]}" --http-method GET --area core --resource connectionData --api-version 7.1
-  ME=$(jq -r '.authenticatedUser.properties.Account."$value" // .authenticatedUser.uniqueName // empty' <<<"${OUT:-}" 2>/dev/null)
+  [ -n "$ME" ] || ME=$(jq -r '.authenticatedUser.properties.Account."$value" // .authenticatedUser.uniqueName // empty' <<<"${OUT:-}" 2>/dev/null)
   ME=${ME:-$ME_REST}
-  note "host_identity resolved to: \`${ME:-unresolved}\`"
+  note "host_identity resolved to: \`${ME:-unresolved}\` (curl connectionData twin resolved \`${ME_REST:-nothing}\`)"
 fi
 
 WI=""
@@ -199,14 +206,17 @@ fi
 hdr "Git over the proxy (dev.azure.com, PAT over HTTPS)"
 CLONE_URL="$ORG_URL/$PROJ_ENC/_git/$REPO"
 AUTH_HDR="AUTHORIZATION: Basic $(printf ':%s' "$PAT" | base64 -w0)"
-G=(git -c "http.extraheader=$AUTH_HDR" -c credential.helper= -c user.name=probe -c user.email=probe@example.invalid)
+# ship-ado-lab enforces a commit-author policy (VS403702 on the control run), so
+# the scratch commit is authored by the resolved identity, not a placeholder.
+AUTHOR=${ME:-${ME_REST:-probe@example.invalid}}
+G=(git -c "http.extraheader=$AUTH_HDR" -c credential.helper= -c user.name=probe -c "user.email=$AUTHOR")
 probe "git ls-remote (ADO)"  "${G[@]}" ls-remote --heads "$CLONE_URL" main
 mkdir -p "$WORK"
 probe "git clone (ADO)"      "${G[@]}" clone -q "$CLONE_URL" "$WORK/repo"
 BASE=probe/base-$TS; HEAD=probe/head-$TS; SHA=""
 if [ -d "$WORK/repo/.git" ]; then
   cd "$WORK/repo" || exit 1
-  G=(git -c "http.extraheader=$AUTH_HDR" -c credential.helper= -c user.name=probe -c user.email=probe@example.invalid)
+  G=(git -c "http.extraheader=$AUTH_HDR" -c credential.helper= -c user.name=probe -c "user.email=$AUTHOR")
   git branch -f "$BASE" HEAD >/dev/null 2>&1
   probe "git push base branch" "${G[@]}" push -q origin "$BASE"
   git checkout -q -b "$HEAD" >/dev/null 2>&1
@@ -269,21 +279,29 @@ fi
 # ---- teardown --------------------------------------------------------------
 hdr "Teardown: ref deletion both ways, scratch work item"
 if [ -n "$SHA" ]; then
-  probe "git push --delete head" "${G[@]}" push -q origin --delete "$HEAD"
-  # REST twin of the deletion, the call that the GitHub proxy refused with 403.
+  # Completing the PR with --delete-source-branch already removed the head ref,
+  # so deleting it here would record a false failure. Ref deletion is the point
+  # of this section (the GitHub proxy refused it 403 both ways), so push a third
+  # throwaway ref and delete that with git, and the base ref with REST.
+  DEL=probe/del-$TS
+  git branch -f "$DEL" HEAD >/dev/null 2>&1
+  if "${G[@]}" push -q origin "$DEL" 2>/dev/null; then
+    probe "git push --delete (git path)" "${G[@]}" push -q origin --delete "$DEL"
+  else row "git push --delete (git path)" skipped "" "could not push the throwaway ref" 0; fi
+  # REST twin of the deletion.
   OLD=$("${G[@]}" ls-remote --heads origin "$BASE" 2>/dev/null | awk '{print $1}')
   if [ -n "$OLD" ]; then
-    probe "POST git/refs (delete base, REST)" rest POST "$API/git/repositories/$REPO/refs?api-version=7.1" \
+    probe "POST git/refs (delete base, REST path)" rest POST "$API/git/repositories/$REPO/refs?api-version=7.1" \
       "$(jq -cn --arg n "refs/heads/$BASE" --arg o "$OLD" '[{name: $n, oldObjectId: $o, newObjectId: "0000000000000000000000000000000000000000"}]')"
-  else row "POST git/refs (delete base, REST)" skipped "" "base ref already gone" 0; fi
+  else row "POST git/refs (delete base, REST path)" skipped "" "base ref already gone" 0; fi
   LEFT=$("${G[@]}" ls-remote --heads origin 'probe/*' 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
 else LEFT="(clone failed)"; fi
 if [ -n "$WI" ]; then
   if $AZ_OK; then
     probe "az boards work-item update --state $CLOSED" azx boards work-item update "${ORG[@]}" --id "$WI" --state "$CLOSED"
-    probe "az boards work-item delete"                 azx boards work-item delete "${ORG[@]}" --id "$WI" --yes
+    probe "az boards work-item delete"                 azx boards work-item delete "${PRJ[@]}" --id "$WI" --yes
   else row "scratch work item cleanup" skipped "" "az unavailable" 0; fi
 fi
-note "scratch: work item ${WI:-none}, PR ${PR:-none}, branches $BASE $HEAD; still on remote: ${LEFT:-none}"
+note "scratch: work item ${WI:-none}, PR ${PR:-none}, branches $BASE $HEAD ${DEL:-}; still on remote: ${LEFT:-none}"
 cd / 2>/dev/null; rm -rf "$WORK"
 echo "results in $LOG"
