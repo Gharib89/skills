@@ -37,7 +37,7 @@ Push policy: Default.
 
 ### copilot
 
-Login: copilot-pull-request-reviewer[bot]
+Login: copilot-pull-request-reviewer[bot] posts the review; Copilot posts the inline comments
 Trigger: on-push
 Request: None.
 Cap: None.

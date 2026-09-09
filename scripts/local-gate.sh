@@ -57,6 +57,12 @@ derived_copies() {
   for s in ship cloud-ship setup-skills; do
     [ -d ".claude/skills/$s" ] || { echo "missing derived copy: .claude/skills/$s"; rc=1; continue; }
     diff -rq "skills/$s" ".claude/skills/$s" || rc=1
+    # diff -rq compares content only. A mechanic that loses its executable bit
+    # on one side passes that check and then fails at run time, so compare the
+    # set of executable files too.
+    diff <(cd "skills/$s" && find . -type f -perm -u+x | sort) \
+         <(cd ".claude/skills/$s" && find . -type f -perm -u+x | sort) \
+      || { echo "executable bits differ between skills/$s and .claude/skills/$s"; rc=1; }
   done
   jq -e '.skills | has("ship") and has("cloud-ship") and has("setup-skills")' skills-lock.json >/dev/null \
     || { echo "skills-lock.json does not record all three self-installed skills"; rc=1; }
@@ -64,8 +70,9 @@ derived_copies() {
 }
 run derived-copies derived_copies
 
-# shellcheck: the source tree's scripts plus this gate. The derived copies are
-# covered by `derived-copies` proving them identical. -P SCRIPTDIR resolves the
+# The lint gate covers the source tree's scripts plus this gate itself. The
+# derived copies are covered by `derived-copies` proving them identical, and
+# `-P SCRIPTDIR` resolves the
 # `source "$(dirname ...)/_lib.sh"` idiom the mechanics use.
 lint() {
   local files

@@ -23,4 +23,4 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 - **Mechanics print JSON and nothing else on stdout.** Evidence goes to stderr, capped at the last 40 lines. Exit 0 success, 1 the operation failed, 2 tooling.
 - **No host CLI outside a named mechanic.** `gh` and `az` are called only from `skills/ship/scripts/host/<host>.sh`; a host operation no mechanic performs is a ship defect, not a prose fallback.
 - **Commit subjects** are conventional-commit prefixed and scoped to the skill: `fix(ship):`, `docs:`, `feat(setup-skills):`.
-- **No em dashes** in any file, comment or commit message.
+- **No em dashes** in any file this repo authors, or in a commit message. `.claude/skills/` is install output from other people's repos and is exempt, along with every other rule here: it is never edited in place.
