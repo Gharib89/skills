@@ -8,7 +8,7 @@ description: >-
   issue through to a PR, or run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.2.5
+  version: 1.3.0
   profile-schema: 1
 ---
 
@@ -142,6 +142,7 @@ on both hosts: checks `pending|success|failure`, mergeable
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
 | `update-pr-body <pr> --section Review --body-file` | 7 |
+| `update-pr-title <pr> --title` | 6, 9 |
 | `resolve-thread <pr> <thread>` | 7 |
 | `ci-wait <pr>` | 8 |
 | `merge <pr> <issue> --worktree <path>` | 9, on approval |
@@ -375,7 +376,9 @@ deferred gate. `unavailable`: stop `local gate unavailable`; never open the PR.
 **6 · Open PR.** `open-pr <issue> --title --body-file`, **non-draft** (drafts
 may not trigger a reviewer). Title: a Conventional-Commit subject derived from
 the issue, honouring `Subject constraints:`; it becomes the squash subject that
-release tooling reads. Body: the repo's template per `## PR`, filled honestly
+release tooling reads; a title that later proves wrong is fixed with
+`update-pr-title <pr> --title`, at phase 6 or at the merge gate, never by hand.
+Body: the repo's template per `## PR`, filled honestly
 (never a raw body that bypasses it); with no template, a plain body. Every
 variant carries `Closes #<issue>` (the mechanic translates it for the host), a
 **Deviations from plan** section (the log verbatim, `None` only if the plan
