@@ -7,21 +7,27 @@
 # through triage instead of being refused forever. Worktree teardown is
 # `cleanup`, run after this.
 #
-#   merge <pr> <issue> [--worktree <path>]
+#   merge <pr> <issue|none> [--worktree <path>]
+#
+# `none` as the issue argument is the task-spec run: there is no issue to close
+# or release, so those steps are skipped and their fields are absent from the
+# JSON. The merge, the branch deletion and the base fast-forward run unchanged.
 #
 # stdout: {merged, issue_closed, remote_branch_deleted, base_updated,
 #          claim_released, ready_for_agent_removed}
+#         `merge none` omits issue_closed, claim_released and ready_for_agent_removed.
 # exit: 0 every step true · 1 a step is false (finish it by hand) · 2 usage or tooling
 set -uo pipefail
 # No `set -e`: the steps below use explicit `|| flag=false`, and
 # `git ls-remote --exit-code` returning non-zero is a SUCCESS signal.
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: merge <pr> <issue> [--worktree <path>]'
-pr=${1:?$usage}; issue=${2:?$usage}; shift 2
+usage='usage: merge <pr> <issue|none> [--worktree <path>]'
+[ $# -ge 2 ] || ship_tooling "$usage"
+pr=$1; issue=$2; shift 2
 wt=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --worktree) wt=${2:?}; shift 2 ;;
+    --worktree) [ $# -ge 2 ] || ship_tooling "$usage"; wt=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
@@ -29,10 +35,14 @@ ship_load_host
 main=$(cd "${wt:-.}" && ship_main_checkout) || ship_tooling "not inside a git checkout"
 
 merged=false; issue_closed=false; remote_deleted=false; base_updated=false; released=false; rfa_removed=false
+# A task-spec run has no issue: its steps are skipped, their flags stand true so
+# the exit test below reads only the steps that ran, and `finish` drops them.
+[ "$issue" != none ] || { issue_closed=true; released=true; rfa_removed=true; }
 finish() {
   jq -n --argjson m "$merged" --argjson i "$issue_closed" --argjson r "$remote_deleted" \
-    --argjson b "$base_updated" --argjson c "$released" --argjson l "$rfa_removed" \
-    '{merged: $m, issue_closed: $i, remote_branch_deleted: $r, base_updated: $b, claim_released: $c, ready_for_agent_removed: $l}'
+    --argjson b "$base_updated" --argjson c "$released" --argjson l "$rfa_removed" --arg n "$issue" \
+    '{merged: $m, issue_closed: $i, remote_branch_deleted: $r, base_updated: $b, claim_released: $c, ready_for_agent_removed: $l}
+     | if $n == "none" then del(.issue_closed, .claim_released, .ready_for_agent_removed) else . end'
   exit "$1"
 }
 
@@ -54,13 +64,15 @@ fi
 [ "$merged" = true ] || { echo "PR $pr did not reach merged; stopping before any cleanup" >&2; finish 1; }
 
 # 2. The linked issue: give the host's automation a beat, then close explicitly.
-for _ in 1 2 3; do
-  [ "$(host_issue_get "$issue" | jq -r .state)" = closed ] && issue_closed=true && break
-  sleep 2
-done
-if [ "$issue_closed" = false ]; then
-  host_issue_close "$issue" >/dev/null 2>&1
-  [ "$(host_issue_get "$issue" | jq -r .state)" = closed ] && issue_closed=true
+if [ "$issue" != none ]; then
+  for _ in 1 2 3; do
+    [ "$(host_issue_get "$issue" | jq -r .state)" = closed ] && issue_closed=true && break
+    sleep 2
+  done
+  if [ "$issue_closed" = false ]; then
+    host_issue_close "$issue" >/dev/null 2>&1
+    [ "$(host_issue_get "$issue" | jq -r .state)" = closed ] && issue_closed=true
+  fi
 fi
 
 # 3. Remote branch: delete, then prove. ls-remote --exit-code returns 2 only when
@@ -93,16 +105,18 @@ else
 fi
 
 # 5. Release the claim and strip ready-for-agent.
-me=$(host_identity) || me=""
-if [ -n "$me" ]; then
-  if host_issue_get "$issue" | jq -e --arg m "$me" '.assignees | index($m)' >/dev/null; then
-    host_issue_unassign "$issue" "$me" >/dev/null 2>&1
+if [ "$issue" != none ]; then
+  me=$(host_identity) || me=""
+  if [ -n "$me" ]; then
+    if host_issue_get "$issue" | jq -e --arg m "$me" '.assignees | index($m)' >/dev/null; then
+      host_issue_unassign "$issue" "$me" >/dev/null 2>&1
+    fi
+    host_issue_get "$issue" | jq -e --arg m "$me" '.assignees | index($m) | not' >/dev/null && released=true
   fi
-  host_issue_get "$issue" | jq -e --arg m "$me" '.assignees | index($m) | not' >/dev/null && released=true
+  rfa=$(ship_triage_label ready-for-agent)
+  host_issue_remove_label "$issue" "$rfa" >/dev/null 2>&1
+  host_issue_has_label "$issue" "$rfa" || rfa_removed=true
 fi
-rfa=$(ship_triage_label ready-for-agent)
-host_issue_remove_label "$issue" "$rfa" >/dev/null 2>&1
-host_issue_has_label "$issue" "$rfa" || rfa_removed=true
 
 [ "$issue_closed" = true ] && [ "$remote_deleted" = true ] && [ "$base_updated" = true ] \
   && [ "$released" = true ] && [ "$rfa_removed" = true ] && finish 0

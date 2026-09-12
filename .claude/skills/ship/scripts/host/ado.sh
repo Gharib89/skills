@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Azure DevOps adapter: the host_* interface from _lib.sh over the `az` CLI with
-# the azure-devops extension. `az repos` / `az boards` where a subcommand
-# exists; `az devops invoke` for what they lack (PR threads, iterations,
-# statuses); never `az rest` or curl. One credential covers the run: `az login`
+# the azure-devops extension, in preference order: `az repos` / `az boards`
+# where a subcommand exists; `az devops invoke` for what they lack (PR threads,
+# iterations, statuses); `az rest` only where neither reaches, which today is
+# `host_issue_remove_label` alone and is documented at that call; never curl.
+# One credential covers the run: `az login`
 # (Entra) or AZURE_DEVOPS_EXT_PAT. Sourced by _lib.sh's ship_load_host; needs
 # SHIP_ORG_URL, SHIP_PROJECT and SHIP_REPO set.
 #

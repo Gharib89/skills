@@ -18,12 +18,13 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue> --title "<subject>" --body-file <path>'
-n=${1:?$usage}; shift
+[ $# -ge 1 ] || ship_tooling "$usage"
+n=$1; shift
 title=""; file=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --title) title=${2:?}; shift 2 ;;
-    --body-file) file=${2:?}; shift 2 ;;
+    --title) [ $# -ge 2 ] || ship_tooling "$usage"; title=$2; shift 2 ;;
+    --body-file) [ $# -ge 2 ] || ship_tooling "$usage"; file=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done

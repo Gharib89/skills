@@ -3,13 +3,18 @@
 # branch (a squash-merged branch is not an ancestor of the default branch).
 # Carried files are never copied back.
 #
-#   cleanup <issue>
+#   cleanup <issue|none>
+#
+# `none` as the issue argument is the task-spec run: it is the literal worktree
+# and branch suffix the run used, and the teardown is unchanged.
 #
 # stdout: {worktree, branch, worktree_removed, branch_deleted}
 # exit: 0 clean · 1 a step failed (JSON says which) · 2 usage or tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-n=${1:?usage: cleanup <issue>}
+usage='usage: cleanup <issue|none>'
+[ $# -ge 1 ] || ship_tooling "$usage"
+n=$1
 [ $# -eq 1 ] || ship_tooling "unknown flag: $2"
 root=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
 container=$(ship_worktree_container)

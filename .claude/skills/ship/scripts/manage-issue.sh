@@ -16,8 +16,9 @@
 # exit: 0 done · 1 not done (JSON says which step) · 2 usage or tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-n=${1:?usage: manage-issue <issue> take|release|handback "<reason>"}
-op=${2:?usage: manage-issue <issue> take|release|handback "<reason>"}
+usage='usage: manage-issue <issue> take|release|handback "<reason>"'
+[ $# -ge 2 ] || ship_tooling "$usage"
+n=$1; op=$2
 reason=${3:-}
 case $op in
   take|release) [ $# -eq 2 ] || ship_tooling "$op takes no further argument" ;;

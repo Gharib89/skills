@@ -36,14 +36,16 @@
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-pr=${1:?usage: poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]}; shift
+usage='usage: poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]'
+[ $# -ge 1 ] || ship_tooling "$usage"
+pr=$1; shift
 timeout=480; interval=20; await=""; since=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --await-review) await=${2:?}; shift 2 ;;
-    --since) since=${2:?}; shift 2 ;;
-    --timeout) timeout=${2:?}; shift 2 ;;
-    --interval) interval=${2:?}; shift 2 ;;
+    --await-review) [ $# -ge 2 ] || ship_tooling "$usage"; await=$2; shift 2 ;;
+    --since) [ $# -ge 2 ] || ship_tooling "$usage"; since=$2; shift 2 ;;
+    --timeout) [ $# -ge 2 ] || ship_tooling "$usage"; timeout=$2; shift 2 ;;
+    --interval) [ $# -ge 2 ] || ship_tooling "$usage"; interval=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
