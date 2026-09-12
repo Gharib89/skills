@@ -10,7 +10,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: comment-pr <pr> --body-file <path>'
-[ $# -ge 1 ] || ship_tooling "$usage"
+[ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 [ "${1:-}" = --body-file ] && [ -f "${2:-}" ] && [ $# -eq 2 ] || ship_tooling "$usage"
 ship_load_host

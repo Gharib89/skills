@@ -34,11 +34,11 @@ usage='usage: file-issue --title "<title>" --body-file <path> --label <marker> [
 title=""; file=""; label=""; exclude="[]"
 while [ $# -gt 0 ]; do
   case $1 in
-    --title) [ $# -ge 2 ] || ship_tooling "$usage"; title=$2; shift 2 ;;
-    --body-file) [ $# -ge 2 ] || ship_tooling "$usage"; file=$2; shift 2 ;;
-    --label) [ $# -ge 2 ] || ship_tooling "$usage"; label=$2; shift 2 ;;
+    --title) [ -n "${2:-}" ] || ship_tooling "$usage"; title=$2; shift 2 ;;
+    --body-file) [ -n "${2:-}" ] || ship_tooling "$usage"; file=$2; shift 2 ;;
+    --label) [ -n "${2:-}" ] || ship_tooling "$usage"; label=$2; shift 2 ;;
     --distinct-from)
-      [ $# -ge 2 ] || ship_tooling "$usage"
+      [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
       exclude=$(jq -cn --arg n "$2" '$n | split(",") | map(tonumber)' 2>/dev/null) \
         || ship_tooling "--distinct-from takes issue numbers: $2"
       shift 2 ;;
