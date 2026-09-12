@@ -376,15 +376,14 @@ deferred gate. `unavailable`: stop `local gate unavailable`; never open the PR.
 **6 · Open PR.** `open-pr <issue> --title --body-file`, **non-draft** (drafts
 may not trigger a reviewer). Title: a Conventional-Commit subject derived from
 the issue, honouring `Subject constraints:`; it becomes the squash subject that
-release tooling reads; a title that later proves wrong is fixed with
-`update-pr-title <pr> --title`, at phase 6 or at the merge gate, never by hand.
-Body: the repo's template per `## PR`, filled honestly
-(never a raw body that bypasses it); with no template, a plain body. Every
-variant carries `Closes #<issue>` (the mechanic translates it for the host), a
-**Deviations from plan** section (the log verbatim, `None` only if the plan
-held), and a `## Review` section holding one placeholder line per reviewer,
-filled at phase-7 exit. Then `reflect <issue> <pr>` so a human reading the
-issue sees the PR.
+release tooling reads, and a title that later proves wrong is fixed with
+`update-pr-title <pr> --title`. Body: the repo's template per `## PR`, filled
+honestly (never a raw body that bypasses it); with no template, a plain body.
+Every variant carries `Closes #<issue>` (the mechanic translates it for the
+host), a **Deviations from plan** section (the log verbatim, `None` only if
+the plan held), and a `## Review` section holding one placeholder line per
+reviewer, filled at phase-7 exit. Then `reflect <issue> <pr>` so a human
+reading the issue sees the PR.
 
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence by its **trigger**, never by its brand: `auto-once` is

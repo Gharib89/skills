@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Set the PR title on the host, then read it back and report it. `merge` passes
-# the title verbatim as the squash subject, so a mistitled PR is retitled here,
-# never by hand.
+# Set the PR title on the host, then read it back and report it. The title is
+# the squash subject `merge` commits, so a mistitled PR is retitled here.
 #
 #   update-pr-title <pr> --title "<subject>"
 #
