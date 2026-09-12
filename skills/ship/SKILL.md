@@ -403,8 +403,9 @@ convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
 fixes its loop, its convergence test and its cap; the brand fixes nothing.
 Zero reviewers: skip the phase. Batch fixes into one push per round, then
 answer each thread with `reply-thread` (`fixed in <sha>`, or the decline and
-its reason), reading the round itself from `poll-pr`'s `reviews.on_head[].body`
-where its findings sit there rather than in threads; `resolve-thread` runs per
+its reason), reading the round itself from its row in `poll-pr`'s `reviews`
+(`on_head[]` under the head rule, `all[]` under the since rule) where its
+findings sit in the body rather than in threads; `resolve-thread` runs per
 thread once every thread carries a disposition. Exits: `converged`,
 `converged, override needed` (a gating reviewer's declined finding, cited with
 evidence), or `degraded: <reason>` from

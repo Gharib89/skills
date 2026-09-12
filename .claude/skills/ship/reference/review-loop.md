@@ -18,9 +18,12 @@ a fresh read of the committed tree, not a conversation.
   and `landed_by` naming the rule that admitted the round. `done: false` means
   the window closed first: re-run to extend, never a background monitor. The
   poll is the landing signal only; before triage, read the round's review body
-  (`reviews.on_head[].body`) and its threads from the same payload. A round
-  whose findings live in the body rather than in threads is invisible from the
-  thread list alone, and `infra-error` is a judgment about the body.
+  and its threads from the same payload. The body sits on the row the reviewer's
+  landing rule admitted: `reviews.on_head[].body` under the head rule,
+  `reviews.all[].body` under the since rule, where the round may sit on an older
+  head. A round whose findings live in the body rather than in threads is
+  invisible from the thread list alone, and `infra-error` is a judgment about
+  the body.
 - **The trigger picks the landing rule; the poll has to be told which.** Under
   the **head** rule (no `--since`) a round counts only on the current head:
   right for `on-push`, where every push earns a fresh review. Under the

@@ -274,15 +274,28 @@ host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/d
 # host_pr_resolve_thread's job. parentCommentId is the thread's root comment,
 # read back rather than assumed, because a reply parented to 0 opens a sibling
 # comment instead of threading under the finding.
+#
+# The POST goes direct rather than through `invoke`, whose azx retry would post
+# a second identical disposition when a slow success is read as a failure. Per
+# this adapter's rule, a failed create re-reads the thread for the comment that
+# success left, and only then posts again.
 host_pr_reply_thread() { # <pr> <thread-id> <body-file>
-  local f out root
-  root=$(_threads_raw "$1" | jq -r --arg t "$2" '.value[] | select((.id | tostring) == $t) | .comments[0].id') || return 1
+  local pr=$1 thread=$2 file=$3 f root
+  root=$(_threads_raw "$pr" | jq -r --arg t "$thread" '.value[] | select((.id | tostring) == $t) | .comments[0].id') || return 1
   [ -n "$root" ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
   f=$(mktemp); trap 'rm -f "$f"' RETURN
-  jq -n --rawfile b "$3" --argjson p "$root" '{parentCommentId: $p, content: $b, commentType: 1}' > "$f"
-  out=$(invoke POST git pullRequestThreadComments 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2" --in-file "$f")
-  local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
-  jq -n --arg u "$(_pr_url "$1")" --arg t "$2" '{replied: true, url: ($u + "?discussionId=" + $t)}'
+  jq -n --rawfile b "$file" --argjson p "$root" '{parentCommentId: $p, content: $b, commentType: 1}' > "$f"
+  _post_reply() {
+    az devops invoke "${ORG[@]}" --http-method POST --area git --resource pullRequestThreadComments \
+      --api-version 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" \
+      pullRequestId="$pr" threadId="$thread" --in-file "$f" -o json >/dev/null 2>&1
+  }
+  _reply_landed() {
+    _threads_raw "$pr" | jq -e --arg t "$thread" --rawfile b "$file" \
+      '[.value[] | select((.id | tostring) == $t) | .comments[] | select(.content == $b)] | length > 0' >/dev/null
+  }
+  _post_reply || { sleep 2; _reply_landed || _post_reply; } || return 1
+  jq -n --arg u "$(_pr_url "$pr")" --arg t "$thread" '{replied: true, url: ($u + "?discussionId=" + $t)}'
 }
 host_pr_resolve_thread() { # <pr> <thread-id>
   local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN; printf '{"status":"fixed"}' > "$f"
