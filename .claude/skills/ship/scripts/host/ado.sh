@@ -195,6 +195,9 @@ host_pr_checks() { # <pr> <head_sha>
   jq -n --argjson a "$pol" --argjson b "$st" '$a + $b | group_by(.name) | map(last)'
 }
 _threads_raw() { invoke GET git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1"; }
+# One thread, for the reply path: phase 7 replies per thread, so listing every
+# thread on the PR once per reply is a walk this endpoint does not need.
+_thread_raw() { invoke GET git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2"; }
 # {id, created} of the newest iteration: a push makes one, so "on the current
 # head" means iteration == this id, or (for a PR-level thread with no iteration
 # context, how a build-service reviewer posts) published after it was created.
@@ -282,7 +285,7 @@ host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/d
 host_pr_reply_thread() { # <pr> <thread-id> <body-file>
   local pr=$1 thread=$2 file=$3 f root me
   me=$(host_identity) || return 1
-  root=$(_threads_raw "$pr" | jq -r --arg t "$thread" '.value[] | select((.id | tostring) == $t) | .comments[0].id') || return 1
+  root=$(_thread_raw "$pr" "$thread" | jq -r '.comments[0].id') || return 1
   [ -n "$root" ] && [ "$root" != null ] \
     || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
   f=$(mktemp); trap 'rm -f "$f"' RETURN
@@ -290,7 +293,7 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
   _post_reply() {
     az devops invoke "${ORG[@]}" --http-method POST --area git --resource pullRequestThreadComments \
       --api-version 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" \
-      pullRequestId="$pr" threadId="$thread" --in-file "$f" -o json >/dev/null 2>&1
+      pullRequestId="$pr" threadId="$thread" --in-file "$f" -o json >/dev/null
   }
   # Exit 0 the reply is there, 1 the thread carries no such child, 2 the thread
   # could not be read. An unknown is not an absence, so only a successful read
@@ -299,10 +302,9 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
   # the root comment, and someone else's identical text would stand in for a
   # reply this run never posted.
   _reply_landed() {
-    local raw; raw=$(_threads_raw "$pr") || return 2
-    jq -e --arg t "$thread" --argjson p "$root" --arg me "$me" --rawfile b "$file" \
-      '[.value[] | select((.id | tostring) == $t) | .comments[]
-        | select(.parentCommentId == $p and .content == $b
+    local raw; raw=$(_thread_raw "$pr" "$thread") || return 2
+    jq -e --argjson p "$root" --arg me "$me" --rawfile b "$file" \
+      '[.comments[] | select(.parentCommentId == $p and .content == $b
                  and (if (.author.uniqueName // "") != "" then .author.uniqueName else .author.displayName end) == $me)]
        | length > 0' >/dev/null <<<"$raw"
   }

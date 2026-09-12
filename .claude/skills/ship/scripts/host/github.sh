@@ -254,6 +254,8 @@ host_pr_comment() { # <pr> <body-file>
 host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
 host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
 
+_thread_reply_target_query='query($id:ID!){ node(id:$id){
+  ... on PullRequestReviewThread { comments(first:1){ nodes{ databaseId } } } } }'
 # REST, per this adapter's rule: a reply is `POST .../comments/{id}/replies`
 # keyed by the thread's first comment, which the thread row carries as
 # `comment_id`, so nothing here needs a GraphQL mutation. The thread ids
@@ -261,15 +263,15 @@ host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/
 # to reply to and `poll-pr` already reports `threads: "unavailable"`.
 #
 # The caller passes the thread id, the one id both reply-thread and
-# resolve-thread take on either host, and this resolves the row's comment_id
-# for it. That costs one thread read per reply and buys a single id vocabulary
-# in the mechanics; handing the caller two ids to keep straight per host does
-# not.
+# resolve-thread take on either host, and this resolves that thread's
+# comment_id for it: one targeted node read, not a walk of every thread on the
+# PR, because phase 7 replies once per thread.
 #
 # Create-then-verify, like host_pr_comment: a slow success must not double-post.
 host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
   local pr=$1 file=$3 cid me out raw
-  cid=$(host_pr_threads "$pr" | jq -r --arg t "$2" '.[] | select(.id == $t) | .comment_id') \
+  cid=$(gql -f query="$_thread_reply_target_query" -F id="$2" \
+    --jq '.data.node.comments.nodes[0].databaseId') \
     || { printf '{"replied": false, "url": null, "detail": "unavailable"}\n'; return 1; }
   [ -n "$cid" ] && [ "$cid" != null ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
   me=$(host_identity) || return 1

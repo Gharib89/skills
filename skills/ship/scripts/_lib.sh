@@ -48,9 +48,9 @@
 #                                           which the --since rule then cannot admit.
 #   host_pr_threads <pr>                 -> [{id,resolved,author,path,body}]; non-zero exit = unavailable
 #                                           GitHub rows also carry comment_id, the thread's first
-#                                           review comment: its REST reply target, which
-#                                           host_pr_reply_thread resolves from the id it is given.
-#                                           On Azure DevOps the thread id is that target already.
+#                                           review comment: the REST reply target that host's
+#                                           reply is keyed to. On Azure DevOps the thread id is
+#                                           that target already.
 #   host_pr_reviewer_blocked <pr> <login>-> JSON string | null
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
 #                                           requested_at: ISO-8601 time of the request event,
