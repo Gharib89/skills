@@ -282,7 +282,8 @@ host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/d
 host_pr_reply_thread() { # <pr> <thread-id> <body-file>
   local pr=$1 thread=$2 file=$3 f root
   root=$(_threads_raw "$pr" | jq -r --arg t "$thread" '.value[] | select((.id | tostring) == $t) | .comments[0].id') || return 1
-  [ -n "$root" ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
+  [ -n "$root" ] && [ "$root" != null ] \
+    || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
   f=$(mktemp); trap 'rm -f "$f"' RETURN
   jq -n --rawfile b "$file" --argjson p "$root" '{parentCommentId: $p, content: $b, commentType: 1}' > "$f"
   _post_reply() {
@@ -290,11 +291,25 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
       --api-version 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" \
       pullRequestId="$pr" threadId="$thread" --in-file "$f" -o json >/dev/null 2>&1
   }
+  # Exit 0 the reply is there, 1 the thread carries no such child, 2 the thread
+  # could not be read. An unknown is not an absence, so only a successful read
+  # licenses a second POST. The match is keyed to parentCommentId, because a
+  # disposition quoting the finding verbatim would otherwise match the root
+  # comment and report a reply nobody posted.
   _reply_landed() {
-    _threads_raw "$pr" | jq -e --arg t "$thread" --rawfile b "$file" \
-      '[.value[] | select((.id | tostring) == $t) | .comments[] | select(.content == $b)] | length > 0' >/dev/null
+    local raw; raw=$(_threads_raw "$pr") || return 2
+    jq -e --arg t "$thread" --argjson p "$root" --rawfile b "$file" \
+      '[.value[] | select((.id | tostring) == $t) | .comments[]
+        | select(.parentCommentId == $p and .content == $b)] | length > 0' >/dev/null <<<"$raw"
   }
-  _post_reply || { sleep 2; _reply_landed || _post_reply; } || return 1
+  if ! _post_reply; then
+    sleep 2
+    _reply_landed
+    case $? in
+      1) _post_reply || return 1 ;;
+      2) return 1 ;;
+    esac
+  fi
   jq -n --arg u "$(_pr_url "$pr")" --arg t "$thread" '{replied: true, url: ($u + "?discussionId=" + $t)}'
 }
 host_pr_resolve_thread() { # <pr> <thread-id>

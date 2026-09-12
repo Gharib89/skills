@@ -268,7 +268,7 @@ host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/
 #
 # Create-then-verify, like host_pr_comment: a slow success must not double-post.
 host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
-  local pr=$1 file=$3 cid me out
+  local pr=$1 file=$3 cid me out raw
   cid=$(host_pr_threads "$pr" | jq -r --arg t "$2" '.[] | select(.id == $t) | .comment_id') \
     || { printf '{"replied": false, "url": null, "detail": "unavailable"}\n'; return 1; }
   [ -n "$cid" ] && [ "$cid" != null ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
@@ -277,9 +277,12 @@ host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
     | gh api -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}' 2>/dev/null; }
   if out=$(_reply); then printf '%s\n' "$out"; return 0; fi
   sleep 2
-  out=$(api "$R/pulls/$pr/comments?per_page=100" --paginate --jq '.[]' \
-    | jq -s --argjson c "$cid" --arg me "$me" --rawfile b "$file" \
-        '[.[] | select(.in_reply_to_id == $c and .user.login == $me and .body == $b)] | last | select(. != null) | {replied: true, url: .html_url}')
+  # A failed read is not an absent reply. Only a read that succeeds and shows
+  # none licenses a second POST; otherwise a lost response becomes a duplicate
+  # disposition in the thread.
+  raw=$(api "$R/pulls/$pr/comments?per_page=100" --paginate --jq '.[]') || return 1
+  out=$(jq -s --argjson c "$cid" --arg me "$me" --rawfile b "$file" \
+    '[.[] | select(.in_reply_to_id == $c and .user.login == $me and .body == $b)] | last | select(. != null) | {replied: true, url: .html_url}' <<<"$raw")
   if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
   _reply
 }
