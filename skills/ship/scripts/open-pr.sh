@@ -17,13 +17,14 @@
 # exit: 0 · 1 push or create failed · 2 usage or wrong branch
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: open-pr <issue> --title "<subject>" --body-file <path>'
-n=${1:?$usage}; shift
+usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path>'
+[ -n "${1:-}" ] || ship_tooling "$usage"
+n=$1; shift
 title=""; file=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --title) title=${2:?}; shift 2 ;;
-    --body-file) file=${2:?}; shift 2 ;;
+    --title) [ -n "${2:-}" ] || ship_tooling "$usage"; title=$2; shift 2 ;;
+    --body-file) [ -n "${2:-}" ] || ship_tooling "$usage"; file=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done

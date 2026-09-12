@@ -30,20 +30,22 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # missed one costs a second issue for a find already filed.
 STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that their them then there these they this those very were what when where which while will with would your'
 
+usage='usage: file-issue --title "<title>" --body-file <path> --label <marker> [--distinct-from <n>[,<n>]]'
 title=""; file=""; label=""; exclude="[]"
 while [ $# -gt 0 ]; do
   case $1 in
-    --title) title=${2:?}; shift 2 ;;
-    --body-file) file=${2:?}; shift 2 ;;
-    --label) label=${2:?}; shift 2 ;;
+    --title) [ -n "${2:-}" ] || ship_tooling "$usage"; title=$2; shift 2 ;;
+    --body-file) [ -n "${2:-}" ] || ship_tooling "$usage"; file=$2; shift 2 ;;
+    --label) [ -n "${2:-}" ] || ship_tooling "$usage"; label=$2; shift 2 ;;
     --distinct-from)
-      exclude=$(jq -cn --arg n "${2:?}" '$n | split(",") | map(tonumber)' 2>/dev/null) \
+      [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
+      exclude=$(jq -cn --arg n "$2" '$n | split(",") | map(tonumber)' 2>/dev/null) \
         || ship_tooling "--distinct-from takes issue numbers: $2"
       shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
-[ -n "$title" ] && [ -f "$file" ] || ship_tooling 'usage: file-issue --title "<title>" --body-file <path> --label <marker> [--distinct-from <n>[,<n>]]'
+[ -n "$title" ] && [ -f "$file" ] || ship_tooling "$usage"
 ship_load_host
 
 open=$(host_issues_open) || ship_fail "cannot list open issues"

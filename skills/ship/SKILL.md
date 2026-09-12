@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 2.0.0
+  version: 3.0.0
   profile-schema: 1
 ---
 
@@ -36,8 +36,10 @@ every PR records which ship produced it.
   flag: ask which issue.
 - Free text instead of a number: treat it as the task spec directly. No issue
   fetch, no claim, no `Closes`, no reflect; everything else runs. `none` is the
-  issue argument these four mechanics accept: `preflight none`,
-  `isolate none <type> <slug>`, `open-pr none ...`, `cleanup none`.
+  issue argument these five mechanics accept: `preflight none`,
+  `isolate none <type> <slug>`, `open-pr none ...`, `merge <pr> none` and
+  `cleanup none`. The three that cannot take it (`read-issue`, `manage-issue`,
+  `reflect`) have no meaning without an issue.
 - `--unattended`: the **unattended run**. No human is present: a blocked stop
   hands back instead of asking, the sandbox clone is the isolation, and the
   merge gate posts the summary as a PR comment and returns. It starts with
@@ -87,10 +89,12 @@ run will not touch is never checked.
 
 `scripts/` holds one executable per deterministic step. Each prints one JSON
 verdict on stdout, a failing step's last 40 log lines on stderr, and exits
-`0` ok, `1` the mechanic's own not-ok answer, `2` tooling. Exit 1 is an answer,
-not always a fault: `nothing-ready` from `select`, a not-actionable `preflight`
-and a `poll-pr` window that closed are all exit 1 and none is red. Read the
-JSON, then decide. When a phase names a mechanic, run it
+`0` ok, `1` the mechanic's own not-ok answer, `2` tooling. A malformed
+invocation is tooling, never exit 1: a missing or empty positional and a flag
+without its value both print `{"error": "<usage>"}` and exit 2, as an unknown
+flag does. Exit 1 is an answer, not always a fault: `nothing-ready` from
+`select`, a not-actionable `preflight` and a `poll-pr` window that closed are
+all exit 1 and none is red. Read the JSON, then decide. When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that
 step, including the host adapter it sources (`scripts/host/github.sh` or
 `scripts/host/ado.sh`, chosen from the `origin` remote).
@@ -107,14 +111,14 @@ be read.
 
 | Mechanic | Phase |
 |---|---|
-| `preflight <issue> [--unattended]` | 0 |
-| `isolate <issue> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
+| `preflight <issue \| none> [--unattended]` | 0 |
+| `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
 | `read-issue <issue>` | 1 |
 | `manage-issue <issue> take \| release \| handback "<reason>"` | 1; any stop after the claim; 9 |
 | `file-issue --title --body-file --label <marker> [--distinct-from <n>[,<n>]]` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
-| `open-pr <issue> --title --body-file` | 6 |
+| `open-pr <issue \| none> --title --body-file` | 6 |
 | `reflect <issue> <pr>` | 6 |
 | `update-pr-title <pr> --title` | 6, 9 |
 | `poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]` | 7, 8 |
@@ -123,8 +127,8 @@ be read.
 | `update-pr-body <pr> --section Review --body-file` | 7 |
 | `resolve-thread <pr> <thread>` | 7 |
 | `ci-wait <pr> [--timeout <s>] [--interval <s>]` | 8 |
-| `merge <pr> <issue> --worktree <path>` | 9, on approval |
-| `cleanup <issue>` | 9, after merge |
+| `merge <pr> <issue \| none> --worktree <path>` | 9, on approval |
+| `cleanup <issue \| none>` | 9, after merge |
 | `tooling [--install]`, `list-prs --open` and `select` | unattended lane |
 
 Run mechanics **inline**: they project their own output, so a subagent there
@@ -424,7 +428,7 @@ and review quota, so push when the tree changed.
 **9 · Merge gate.** **Hard stop.** Write the summary per
 [reference/merge-gate.md](reference/merge-gate.md), uncompressed. Attended:
 post it in the conversation and wait for an explicit "merge"; on approval run
-`merge <pr> <issue> --worktree <path>` then `cleanup <issue>`; any `false` in
-their JSON is finished by hand before reporting done. Unattended:
+`merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
+`false` in their JSON is finished by hand before reporting done. Unattended:
 `comment-pr <pr> --body-file` with the summary, and return. The claim holds in
 both lanes until the merge releases it.

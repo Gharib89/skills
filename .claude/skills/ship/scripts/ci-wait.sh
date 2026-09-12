@@ -12,12 +12,14 @@
 # exit: 0 green or no-checks · 1 conflict, a failed check, or the window closed · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-pr=${1:?usage: ci-wait <pr> [--timeout <s>] [--interval <s>]}; shift
+usage='usage: ci-wait <pr> [--timeout <s>] [--interval <s>]'
+[ -n "${1:-}" ] || ship_tooling "$usage"
+pr=$1; shift
 timeout=1800; interval=30; grace=120
 while [ $# -gt 0 ]; do
   case $1 in
-    --timeout) timeout=${2:?}; shift 2 ;;
-    --interval) interval=${2:?}; shift 2 ;;
+    --timeout) [ -n "${2:-}" ] || ship_tooling "$usage"; timeout=$2; shift 2 ;;
+    --interval) [ -n "${2:-}" ] || ship_tooling "$usage"; interval=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
