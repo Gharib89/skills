@@ -57,6 +57,11 @@ memory. `Issues filed` lists every issue the run filed, in every lane; an
 implausible count is the human's signal. The `Review` blocks say what the PR
 body's `## Review` section says, in more detail; the section links here.
 
+**A wrong title is fixed before the merge, not after.** The merge freezes the
+PR title as the squash subject, so a subject that no longer matches what the
+run built is corrected with `update-pr-title <pr> --title "<subject>"` before
+the summary is posted, never left for the human to retitle.
+
 ## Attended: post, then wait
 
 Post the summary in the conversation and **wait**. Merge only on an explicit

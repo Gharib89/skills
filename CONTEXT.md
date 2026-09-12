@@ -29,7 +29,7 @@ The local gate's one answer: pass, fail, or unavailable, built from a status per
 _Avoid_: result, report, gate output
 
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: tooling, preflight, read-issue, manage-issue (take, release, hand back), isolate, base-fresh, open-pr, reflect, poll-pr, request-review, comment-pr, update-pr-body, resolve-thread, CI wait, merge, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; the agent never drives a host's CLI directly, and a missing operation is a Ship defect, not a prose fallback. Their reads speak one vocabulary on every host.
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: tooling, preflight, read-issue, manage-issue (take, release, hand back), isolate, base-fresh, open-pr, reflect, poll-pr, request-review, comment-pr, update-pr-body, update-pr-title, resolve-thread, CI wait, merge, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; the agent never drives a host's CLI directly, and a missing operation is a Ship defect, not a prose fallback. Their reads speak one vocabulary on every host.
 _Avoid_: helper, util, raw `gh` or `az` call
 
 **Setup skill**:

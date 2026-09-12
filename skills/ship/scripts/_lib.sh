@@ -38,6 +38,7 @@
 #   host_pr_request_review <pr> <login>  -> {requested,readback[]}
 #   host_pr_comment <pr> <body-file>     -> {id,url}
 #   host_pr_set_body <pr> <body-file>
+#   host_pr_set_title <pr> <title>
 #   host_pr_resolve_thread <pr> <thread> -> {resolved}
 #   host_pr_merge <pr> <subject>         -> exit 0 once the host reports merged
 #   host_prs_open                        -> [{number,title,head_ref,author,url,created_at}]
