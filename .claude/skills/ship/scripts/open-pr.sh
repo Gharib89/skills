@@ -17,7 +17,7 @@
 # exit: 0 · 1 push or create failed · 2 usage or wrong branch
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: open-pr <issue> --title "<subject>" --body-file <path>'
+usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path>'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 n=$1; shift
 title=""; file=""

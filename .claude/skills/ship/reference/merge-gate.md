@@ -89,7 +89,10 @@ checkout that holds it (a plain pull from the feature worktree would pull the
 base *into* the feature branch; a diverged local base is reported, never
 discarded; a transient `index.lock` from a concurrent status is retried, never
 deleted), and **releases the claim and strips `ready-for-agent`**, so a
-reopened issue goes back through triage instead of being refused forever.
+reopened issue goes back through triage instead of being refused forever. The
+two issue steps are the issue-backed run's: `merge <pr> none` has no issue to
+close and no claim to release, so it skips both and its JSON carries neither
+`issue_closed` nor `claim_released` nor `ready_for_agent_removed`.
 Then `cleanup <issue|none>`: removes the worktree and force-deletes the local
 branch (a squash-merged branch is not an ancestor of the default branch).
 Carried files are never copied back. Any `false` in either JSON: finish that
