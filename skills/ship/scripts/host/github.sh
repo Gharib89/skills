@@ -267,6 +267,15 @@ host_prs_open() {
   api "$R/pulls?state=open&per_page=100" --paginate \
     --jq '.[] | {number, title, head_ref: .head.ref, author: .user.login, url: .html_url, created_at}' | jq -s .
 }
+# Every open issue, for file-issue's candidate check. No label filter: an
+# adjacent find may already sit under any label, or none. Paginated, because a
+# candidate the check cannot see is the bug it exists to stop, and a repo's
+# open issues are a bounded read.
+host_issues_open() {
+  api "$R/issues?state=open&sort=created&direction=desc&per_page=100" --paginate \
+    --jq '.[] | select(.pull_request == null) | {number, title, url: .html_url}' | jq -s .
+}
+
 # Oldest first, unassigned, issues only (the issues endpoint also lists PRs).
 host_issues_ready() { # <label>
   api "$R/issues?state=open&assignee=none&sort=created&direction=asc&per_page=100&labels=$(jq -rn --arg l "$1" '$l | @uri')" \

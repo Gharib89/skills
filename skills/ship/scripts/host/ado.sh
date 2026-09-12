@@ -18,6 +18,10 @@
 
 ORG=(--org "$SHIP_ORG_URL")
 PRJ=("${ORG[@]}" --project "$SHIP_PROJECT")
+# WIQL's @project macro resolves to nothing through `az boards query`, so every
+# clause using it matched zero rows and the caller read that as an empty
+# tracker. The project name goes in literally, single quotes doubled the way
+# the tag filter does.
 _pr_url() { printf '%s/%s/_git/%s/pullrequest/%s' "$SHIP_ORG_URL" "$(jq -rn --arg p "$SHIP_PROJECT" '$p | @uri')" "$SHIP_REPO" "$1"; }
 
 # Reads retry once after 2 s; az is slow, so creates re-read rather than retry blindly.
@@ -139,10 +143,14 @@ host_issue_create() { # <title> <body-file> <label>
   local out
   out=$(azx boards work-item create "${PRJ[@]}" --type "$ADO_WIT" --title "$1" --description "$(_html_pre "$2")" \
         ${3:+--fields "System.Tags=$3"}) \
-    || out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.Title] = '${1//\'/\'\'}' AND [System.CreatedBy] = @me ORDER BY [System.CreatedDate] DESC" \
+    || out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${SHIP_PROJECT//\'/\'\'}' AND [System.Title] = '${1//\'/\'\'}' AND [System.CreatedBy] = @me ORDER BY [System.CreatedDate] DESC" \
              | jq 'first | select(. != null)') || return 1
   [ -n "$out" ] || return 1
-  jq '{number: .id, url: ._links.html.href}' <<<"$out"
+  # Same fallback as _wi_norm: `work-item create` returns no _links, and the
+  # retry path selects only System.Id, so href is absent on both branches.
+  jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
+    '{number: .id,
+      url: (._links.html.href // ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring)))}' <<<"$out"
 }
 
 host_pr_create() { # <head> <base> <title> <body-file> <issue>
@@ -246,7 +254,7 @@ host_pr_request_review() { # <pr> <login>
 }
 # A closed thread: visible, and a comment-resolution policy never blocks on it.
 host_pr_comment() { # <pr> <body-file>
-  local f out; f=$(mktemp)
+  local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN
   jq -n --rawfile b "$2" '{comments: [{parentCommentId: 0, content: $b, commentType: 1}], status: "closed"}' > "$f"
   out=$(invoke POST git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" --in-file "$f")
   local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
@@ -255,7 +263,7 @@ host_pr_comment() { # <pr> <body-file>
 host_pr_set_body() { azx repos pr update "${ORG[@]}" --id "$1" --description "$(cat "$2")" >/dev/null; }
 host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/dev/null; }
 host_pr_resolve_thread() { # <pr> <thread-id>
-  local f out; f=$(mktemp); printf '{"status":"fixed"}' > "$f"
+  local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN; printf '{"status":"fixed"}' > "$f"
   out=$(invoke PATCH git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2" --in-file "$f")
   local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
   jq '{resolved: (.status | IN("fixed","closed","wontFix","byDesign"))}' <<<"$out"
@@ -270,7 +278,42 @@ host_prs_open() {
       '[.[] | {number: .pullRequestId, title, head_ref: (.sourceRefName | ltrimstr("refs/heads/")), author: .createdBy.uniqueName,
               url: ($base + "/" + $p + "/_git/" + $r + "/pullrequest/" + (.pullRequestId | tostring)), created_at: .creationDate}]'
 }
+# Every open work item, for file-issue's candidate check. No tag filter: an
+# adjacent find may already sit under any tag, or none. PRs are not work items
+# here, so nothing has to be excluded.
+#
+# Ask for all of them first, because a candidate the check cannot see is the
+# bug it exists to stop. WIQL has no TOP and a project query past 20000 rows
+# fails outright with VS402337, so a board that large gets the 180-day window
+# instead and says so on stderr: a narrowed pool the caller is told about, not
+# a silent one. A board that size is a whole ADO project, not a repo's tracker.
+_wi_open_wiql() { # <extra predicate>
+  printf "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = '%s' AND [System.State] <> '%s' AND [System.State] <> 'Removed'%s ORDER BY [System.CreatedDate] DESC" \
+    "${SHIP_PROJECT//\'/\'\'}" "$ADO_CLOSED" "$1"
+}
+host_issues_open() {
+  local out err rc=0
+  err=$(mktemp); trap 'rm -f "$err"' RETURN
+  out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql "")" 2>"$err") || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    # Only the row-limit answer earns the narrower pool. An auth or transient
+    # failure that narrowed instead would hide an existing candidate and file a
+    # second issue for a find already filed, which is the bug this check exists
+    # to stop.
+    if grep -q 'VS402337' "$err"; then
+      echo "ADO: the project's open work items exceed WIQL's 20000-row limit; narrowing the candidate pool to the last 180 days" >&2
+      out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql " AND [System.CreatedDate] > @today - 180")") || return 1
+    else
+      ship_tail40 "$err"; return 1
+    fi
+  fi
+  jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
+      '[.[] | {number: .id, title: .fields["System.Title"],
+               url: ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring))}]' <<<"${out:-[]}"
+}
+
 host_issues_ready() { # <label>
-  azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title], [System.CreatedDate] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.Tags] CONTAINS '${1//\'/\'\'}' AND [System.AssignedTo] = '' ORDER BY [System.CreatedDate] ASC" \
-    | jq '[.[] | {number: .id, title: .fields["System.Title"], created_at: .fields["System.CreatedDate"]}]'
+  local out
+  out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title], [System.CreatedDate] FROM WorkItems WHERE [System.TeamProject] = '${SHIP_PROJECT//\'/\'\'}' AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.Tags] CONTAINS '${1//\'/\'\'}' AND [System.AssignedTo] = '' ORDER BY [System.CreatedDate] ASC") || return 1
+  jq '[.[] | {number: .id, title: .fields["System.Title"], created_at: .fields["System.CreatedDate"]}]' <<<"${out:-[]}"
 }
