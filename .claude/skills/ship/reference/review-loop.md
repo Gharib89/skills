@@ -18,7 +18,10 @@ a fresh read of the committed tree, not a conversation.
   and `landed_by` naming the rule that admitted the round. `done: false` means
   the window closed first: re-run to extend, never a background monitor. The
   poll is the landing signal only; before triage, read the round's review body
-  and threads from the same payload.
+  (`reviews.on_head[].body`, truncated to 2000 characters) and its threads from
+  the same payload. A round whose findings live in the body rather than in
+  threads is invisible from the thread list alone, and `infra-error` is a
+  judgment about the body.
 - **The trigger picks the landing rule; the poll has to be told which.** Under
   the **head** rule (no `--since`) a round counts only on the current head:
   right for `on-push`, where every push earns a fresh review. Under the
@@ -47,12 +50,14 @@ a fresh read of the committed tree, not a conversation.
   and `file-issue`'s candidate check included. The thread then carries that
   disposition with the link. That is also the honest answer to a gating
   reviewer.
-- **Batch fixes into one push per round**, then reply to the round in one
-  `comment-pr` body-file, addressing every thread by quote or link
-  (`fixed in <sha>`, or the decline and its reason). There is no per-thread
-  reply mechanic; `resolve-thread` posts no body and runs per thread only once
-  every thread carries a disposition. Every push spends review quota and CI
-  minutes, and an on-push reviewer's round.
+- **Batch fixes into one push per round**, then answer every thread with
+  `reply-thread <pr> <thread> --body-file` (`fixed in <sha>`, or the decline
+  and its reason), one call per thread, using the thread id `poll-pr` returns.
+  The disposition belongs in the thread the reviewer opened, which is where the
+  reviewer's next pass and a human reading the round both look; a round-level
+  `comment-pr` is a log, never the disposition channel. `resolve-thread` posts
+  no body and runs per thread only once every thread carries its reply. Every
+  push spends review quota and CI minutes, and an on-push reviewer's round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
@@ -65,7 +70,7 @@ a fresh read of the committed tree, not a conversation.
 Fires once on PR creation; nothing to request and **never re-requested**. Wait
 for it to land under the **since** rule, with `open-pr`'s `created_at`. If a
 round arrives before you poll, that is the round. Triage it once, push the
-fixes, reply to the round. **Converged** when every thread is dispositioned.
+fixes, reply on every thread. **Converged** when every thread is dispositioned.
 A later push does not bring it back; a lint or flake fix after convergence
 needs nothing from it.
 
@@ -74,7 +79,7 @@ needs nothing from it.
 Re-reviews every push; rounds are free and uncapped. After each push, wait for
 a review **landed on the current head**, the **head** rule (no `--since`);
 silence on the head is never quiet.
-Triage, batch-fix, push, reply to the round. Once **every** thread carries a
+Triage, batch-fix, push, reply on every thread. Once **every** thread carries a
 disposition, and only then, use the reviewer's `Resolve:` mechanism
 (`resolve-thread`, or the comment the profile names) to resolve them.
 **Converged** when a review has landed on the current head with nothing
@@ -92,8 +97,8 @@ login you request and the login you read back can differ, and that an empty
 requested-reviewers list proves nothing). One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
 request against the corrected tree. Loop: request, poll under the **since**
-rule with `request-review`'s `requested_at`, triage, batch-fix, push, reply to
-the round, request again. **Converged** when the latest round has nothing
+rule with `request-review`'s `requested_at`, triage, batch-fix, push, reply on
+every thread, request again. **Converged** when the latest round has nothing
 actionable and every thread from all rounds is dispositioned.
 **Cap** is the profile's `Cap:`, required, no default: a round at the cap that
 is still substantive is a shape problem more rounds will not fix; exit
@@ -113,7 +118,7 @@ reads the reason and decides.
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. |
 | `infra-error` | a review whose body is only an error notice with zero comments, twice. Not feedback. |
 | `cap-hit` | on-request cap reached with the latest round still substantive. |
-| `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`). |
+| `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`, which is also what leaves `reply-thread` with no id to answer). |
 
 ## Gating reviewer with a declined finding
 

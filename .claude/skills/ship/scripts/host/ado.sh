@@ -217,12 +217,15 @@ _author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueN
 # two (publishedDate "...:28.343Z", creationDate "...:46.977591+00:00") and the
 # adapter owes its caller one vocabulary.
 _utc='(sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z"))'
+# `body` is the thread's own text: an Azure DevOps round has no review body of
+# its own, so the round a reviewer wrote is the comment it opened. A vote has
+# no text at all, hence "".
 _review_row='{login: '"$_author_login"', state: "comment", substantive: true,
-              submitted_at: (.publishedDate | '"$_utc"')}'
+              submitted_at: (.publishedDate | '"$_utc"'), body: (.comments[0].content // "")[0:2000]}'
 host_pr_reviews() { # <pr> <head_sha>
   local votes it raw rows
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)
-      | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null}]') || return 1
+      | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null, body: ""}]') || return 1
   it=$(_latest_iteration "$1") || it='{"id":0,"created":""}'
   raw=$(_threads_raw "$1") || raw='{"value":[]}'
   # `all` is not deduped by login: --since asks whether ANY round landed after a
@@ -264,6 +267,20 @@ host_pr_comment() { # <pr> <body-file>
 }
 host_pr_set_body() { azx repos pr update "${ORG[@]}" --id "$1" --description "$(cat "$2")" >/dev/null; }
 host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/dev/null; }
+# A child comment on the thread, status untouched: resolving stays
+# host_pr_resolve_thread's job. parentCommentId is the thread's root comment,
+# read back rather than assumed, because a reply parented to 0 opens a sibling
+# comment instead of threading under the finding.
+host_pr_reply_thread() { # <pr> <thread-id> <body-file>
+  local f out root
+  root=$(_threads_raw "$1" | jq -r --arg t "$2" '.value[] | select((.id | tostring) == $t) | .comments[0].id') || return 1
+  [ -n "$root" ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
+  f=$(mktemp); trap 'rm -f "$f"' RETURN
+  jq -n --rawfile b "$3" --argjson p "$root" '{parentCommentId: $p, content: $b, commentType: 1}' > "$f"
+  out=$(invoke POST git pullRequestThreadComments 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2" --in-file "$f")
+  local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
+  jq -n --arg u "$(_pr_url "$1")" --arg t "$2" '{replied: true, url: ($u + "?discussionId=" + $t)}'
+}
 host_pr_resolve_thread() { # <pr> <thread-id>
   local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN; printf '{"status":"fixed"}' > "$f"
   out=$(invoke PATCH git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2" --in-file "$f")
