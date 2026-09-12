@@ -52,9 +52,12 @@ a fresh read of the committed tree, not a conversation.
   and `file-issue`'s candidate check included. The thread then carries that
   disposition with the link. That is also the honest answer to a gating
   reviewer.
-- **Batch fixes into one push per round**, then answer every thread with
-  `reply-thread <pr> <thread> --body-file`, one call per thread with the id
-  `poll-pr` returns (`fixed in <sha>`, or the decline and its reason). The
+- **Batch fixes into one push per round**, then answer every thread that does
+  not yet carry your disposition with `reply-thread <pr> <thread> --body-file`,
+  one call per thread with the id `poll-pr` returns (`fixed in <sha>`, or the
+  decline and its reason). `poll-pr` returns the PR's whole thread set, not the
+  round's, so a thread you answered in an earlier round is already done: answer
+  it again and the reviewer reads a second disposition for one finding. The
   disposition belongs in the thread the reviewer opened, which is where the
   reviewer's next pass and a human reading the round both look; a round-level
   `comment-pr` is a log of the round, never the disposition channel.
