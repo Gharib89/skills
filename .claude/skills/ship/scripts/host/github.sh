@@ -100,9 +100,15 @@ host_issue_create() { # <title> <body-file> <label>
 # appended to the end of the body sits inside the last section and the next
 # rewrite of that section drops it. A body with no heading has no section to
 # fall inside, so it keeps the append.
+#
+# Fenced blocks are skipped, matching the model `ship_body_closes` uses: a
+# `## ` inside a fence is example text, and a closing line printed into a
+# fence renders as code, so the host registers no link and the keyword test
+# that gates a re-run reads false.
 _gh_add_closes() { # <body> <issue>
   awk -v n="$2" '
-    !placed && /^## / { print "Closes #" n; print ""; placed = 1 }
+    /^```/ { fenced = !fenced }
+    !placed && !fenced && /^## / { print "Closes #" n; print ""; placed = 1 }
     { print }
     END { if (!placed) printf "\nCloses #%s\n", n }' <<<"$1"
 }
