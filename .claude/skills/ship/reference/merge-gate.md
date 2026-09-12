@@ -54,15 +54,18 @@ Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 ```
 
-The `Local gate:` row is the gate's `gates` object verbatim, never retyped from
-memory. `Issues filed` lists every issue the run filed, in every lane; an
-implausible count is the human's signal. `Ship defects:` lists every Ship
-defect the run met (a host operation no mechanic performs, prose that promised
-what a mechanic does not do), each with the phase it was met in and written to
-the Run file at that moment the way a deviation is, so the row is a record, not
-a recollection. The run files it to no other repo; the human carries the row
-upstream. The `Review` blocks say what the PR body's `## Review` section says,
-in more detail; the section links here.
+Every row is grounded in a result from this run: `Local gate:` is the gate's
+`gates` object verbatim, `CI:` is `ci-wait`'s output, `Issues filed` is the set
+of `file-issue` return values from this run in every lane (not a recalled
+count; an implausible count is the human's signal), and `Verification` and test
+counts are read from the phase-3 and phase-2 results, not recalled. A value you
+cannot point to a tool result for is written as `unverified`, never guessed.
+`Ship defects:` lists every Ship defect the run met (a host operation no
+mechanic performs, prose that promised what a mechanic does not do), each with
+the phase it was met in and written to the Run file at that moment the way a
+deviation is, so the row is a record, not a recollection. The run files it to no
+other repo; the human carries the row upstream. The `Review` blocks say what the
+PR body's `## Review` section says, in more detail; the section links here.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the

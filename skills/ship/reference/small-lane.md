@@ -19,8 +19,9 @@ real thing needs to prove. On top of that:
 - **On-request reviewers get exactly one round**, whatever their `Cap:`.
   `auto-once` and `on-push` reviewers behave as in the full lane; ship does not
   control when they fire.
-- **Subagents: usually none of your own.** You can already point at the file,
-  the proving node's output is short, and `code-review` brings its own.
+- **Subagents:** you can already point at the file, the proving node's output
+  is short, and `code-review` brings its own (context-discipline's delegation
+  rule already covers the rest).
 
 ## The floor: never collapses
 

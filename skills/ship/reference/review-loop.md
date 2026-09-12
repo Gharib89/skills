@@ -4,9 +4,8 @@ The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
 it posts under, a `Trigger:`, `Gating:`, an optional `Instructions:` file, and
 per trigger: `Request:` and `Cap:` (on-request), `Resolve:` (on-push). The
 **trigger fixes the loop, convergence and cap**; the bot's brand fixes nothing.
-Zero reviewers: the phase-4 self-review plus green CI is the review gate; skip
-this phase. Phase-4 self-review plus green CI is the gate in every other case
-too; reviewer rounds are a second pair of eyes.
+Zero reviewers: skip this phase; the review gate is phase 4's self-review plus
+green CI (SKILL.md), and reviewer rounds never replace it.
 
 A reviewer re-reads the **whole PR** each round: treat every round's output as
 a fresh read of the committed tree, not a conversation.
@@ -46,9 +45,12 @@ a fresh read of the committed tree, not a conversation.
   file; cite it when declining). A valid finding outside the issue is an
   adjacent find: file it, and disposition the thread with the link. That is
   also the honest answer to a gating reviewer.
-- **Batch fixes into one push per round**, then reply on every thread
-  (`fixed in <sha>`, or the decline and its reason). Every push spends review
-  quota and CI minutes, and an on-push reviewer's round.
+- **Batch fixes into one push per round**, then reply to the round in one
+  `comment-pr` body-file, addressing every thread by quote or link
+  (`fixed in <sha>`, or the decline and its reason). There is no per-thread
+  reply mechanic; `resolve-thread` posts no body and runs per thread only once
+  every thread carries a disposition. Every push spends review quota and CI
+  minutes, and an on-push reviewer's round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
@@ -61,7 +63,7 @@ a fresh read of the committed tree, not a conversation.
 Fires once on PR creation; nothing to request and **never re-requested**. Wait
 for it to land under the **since** rule, with `open-pr`'s `created_at`. If a
 round arrives before you poll, that is the round. Triage it once, push the
-fixes, reply on each thread. **Converged** when every thread is dispositioned.
+fixes, reply to the round. **Converged** when every thread is dispositioned.
 A later push does not bring it back; a lint or flake fix after convergence
 needs nothing from it.
 
@@ -70,7 +72,7 @@ needs nothing from it.
 Re-reviews every push; rounds are free and uncapped. After each push, wait for
 a review **landed on the current head**, the **head** rule (no `--since`);
 silence on the head is never quiet.
-Triage, batch-fix, push, reply on each thread. Once **every** thread carries a
+Triage, batch-fix, push, reply to the round. Once **every** thread carries a
 disposition, and only then, use the reviewer's `Resolve:` mechanism
 (`resolve-thread`, or the comment the profile names) to resolve them.
 **Converged** when a review has landed on the current head with nothing
@@ -88,8 +90,8 @@ login you request and the login you read back can differ, and that an empty
 requested-reviewers list proves nothing). One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
 request against the corrected tree. Loop: request, poll under the **since**
-rule with `request-review`'s `requested_at`, triage, batch-fix, push, reply on
-each thread, request again. **Converged** when the latest round has nothing
+rule with `request-review`'s `requested_at`, triage, batch-fix, push, reply to
+the round, request again. **Converged** when the latest round has nothing
 actionable and every thread from all rounds is dispositioned.
 **Cap** is the profile's `Cap:`, required, no default: a round at the cap that
 is still substantive is a shape problem more rounds will not fix; exit

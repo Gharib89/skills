@@ -12,12 +12,13 @@ the flag.
    `origin/HEAD` in the current checkout, no worktree, no carried files. The
    sandbox clone is disposable and already isolated.
 2. **A blocked stop hands back.** Every stop in SKILL.md's table that reads
-   "attended: ask" becomes `manage-issue <issue> handback "<reason>"`: unassign,
-   drop `ready-for-agent`, add `ready-for-human`, comment the reason
-   (for a `hand-off`, the exact command the human would have run). The run
-   then returns with the reason. A fire either reaches merge-ready or hands the
-   issue back; it never leaves an issue claimed and spinning. Admission is
-   narrower too: `ready-for-human` stops `ready-for-human: attended only`.
+   "attended: ask" becomes a hand-back
+   (`manage-issue <issue> handback "<reason>"`); for a `hand-off`, the reason
+   carries the exact command the human would have run. The run then returns with
+   the reason. A fire either reaches merge-ready or hands the issue back; it
+   never leaves an issue claimed and spinning. Admission is narrower too:
+   `preflight <issue> --unattended` makes `ready-for-human` the stop
+   `ready-for-human: attended only`.
 3. **The merge gate posts and returns.** `comment-pr` with the uncompressed
    summary, then return with the PR link. No waiting, no polling, no merge. The
    claim holds; the open PR is what keeps later fires off the issue.
