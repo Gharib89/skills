@@ -267,7 +267,6 @@ host_prs_open() {
   api "$R/pulls?state=open&per_page=100" --paginate \
     --jq '.[] | {number, title, head_ref: .head.ref, author: .user.login, url: .html_url, created_at}' | jq -s .
 }
-# Oldest first, unassigned, issues only (the issues endpoint also lists PRs).
 # Every open issue, for file-issue's duplicate check. Unfiltered on purpose:
 # an adjacent find may already sit under any label, or none.
 host_issues_open() {
@@ -275,6 +274,7 @@ host_issues_open() {
     --jq '.[] | select(.pull_request == null) | {number, title, url: .html_url}' | jq -s .
 }
 
+# Oldest first, unassigned, issues only (the issues endpoint also lists PRs).
 host_issues_ready() { # <label>
   api "$R/issues?state=open&assignee=none&sort=created&direction=asc&per_page=100&labels=$(jq -rn --arg l "$1" '$l | @uri')" \
     --paginate --jq '.[] | select(.pull_request == null) | {number, title, created_at}' | jq -s .

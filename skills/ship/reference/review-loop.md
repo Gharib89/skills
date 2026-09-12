@@ -43,11 +43,10 @@ a fresh read of the committed tree, not a conversation.
   claim separately from the evidence it cites. Check the reviewer's
   `Instructions:` file when a finding contradicts it (a host may truncate that
   file; cite it when declining). A valid finding outside the issue is an
-  adjacent find, and phase 2's three dispositions decide it: a finding in a
-  file this PR already changes is fixed inline, anything else goes through
-  `file-issue` (whose duplicate check may answer with a candidate to link
-  instead). Either way the thread gets that disposition with the link. That is
-  also the honest answer to a gating reviewer.
+  adjacent find, and phase 2's three dispositions decide it, inline conditions
+  and `file-issue`'s duplicate check included. The thread then carries that
+  disposition with the link. That is also the honest answer to a gating
+  reviewer.
 - **Batch fixes into one push per round**, then reply to the round in one
   `comment-pr` body-file, addressing every thread by quote or link
   (`fixed in <sha>`, or the decline and its reason). There is no per-thread

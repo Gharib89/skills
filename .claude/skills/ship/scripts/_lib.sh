@@ -29,6 +29,7 @@
 #   host_issue_comment <n> <body>
 #   host_issue_close <n>
 #   host_issue_create <title> <body-file> <label> -> {number,url}
+#   host_issues_open                     -> [{number,title,url}] every open issue, never a PR
 #   host_pr_create <head> <base> <title> <body-file> <issue> -> {number,url,created_at}
 #   host_pr_get <pr>                     -> {number,url,title,body,head_sha,head_ref,base_ref,state,mergeable}
 #   host_pr_for_branch <branch>          -> {number,state} of the newest PR with that head, or null

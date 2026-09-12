@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.7.0
+  version: 2.0.0
   profile-schema: 1
 ---
 
@@ -315,14 +315,14 @@ three dispositions and no fourth. **Fix it inline** and log the deviation when
 any of three hold: an acceptance criterion names it, the fix lands in a file
 this PR already changes, or a reviewer of this PR would flag it. Otherwise
 **`file-issue` it** with the profile's triage marker and leave it; the mechanic
-answers `filed: false` with candidates when an open issue may already carry the
-find, and a candidate that is the same finding is linked in the deviations log
-rather than refiled, while one that is a different finding is refiled with
+answers `filed: false` with candidates when an open issue's title shares three
+or more tokens with yours. Read each candidate: the same finding is linked in
+the deviations log rather than refiled, a different one is refiled with
 `--distinct-from`. Or the find shows the issue is **mis-specified**, so stop
 `mis-specified`. The merge summary lists every issue filed and every candidate
-linked. If the core
-work balloons (the diff outgrows one PR, or the fix demands a redesign the
-issue never scoped), stop `needs-split` with a split proposal. Phase 2 is done
+linked. If the core work balloons (the diff outgrows one PR, or the fix
+demands a redesign the issue never scoped), stop `needs-split` with a split
+proposal. Phase 2 is done
 when the applicable tests are green (red first, per class), `Tripwires:` and
 `In-PR requirement:` have landed, the deviations log is current, and every
 adjacent find carries one of the three dispositions.

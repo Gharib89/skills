@@ -43,8 +43,7 @@ Review                                         (one block per reviewer)
 Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>
 Docs-sync:   <ran: files | skipped: reason>
 CI:          <leg> → <green | state> · ...     (from the profile's Legs:)
-Issues filed: <#n <title>, ... | none>  (and <linked #n <title>, ...> for a candidate
-              `file-issue` answered with instead of filing)
+Issues filed: <#n <title>, ... | none>  ·  linked: <#n <title>, ... | none>
 Ship defects: <none | one line per defect:>
   - <missing operation or wrong prose> (phase <n>)
 Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2 <m> · 3 <m> · 4 <m> · 5 <m> · 6 <m> · 7 <m> · 8 <m>
@@ -57,9 +56,10 @@ Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 
 Every row is grounded in a result from this run: `Local gate:` is the gate's
 `gates` object verbatim, `CI:` is `ci-wait`'s output, `Issues filed` is the set
-of `file-issue` return values from this run in every lane, the filed numbers
-and the candidates it answered with (not a recalled count; an implausible
-count is the human's signal), and `Verification` and test
+of `file-issue` return values from this run in every lane, the numbers it
+filed on one side and the candidates it answered with instead on the other
+(not a recalled count; an implausible count is the human's signal), and
+`Verification` and test
 counts are read from the phase-3 and phase-2 results, not recalled. A value you
 cannot point to a tool result for is written as `unverified`, never guessed.
 `Ship defects:` lists every Ship defect the run met (a host operation no

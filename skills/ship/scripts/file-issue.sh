@@ -13,6 +13,11 @@
 # adjacent find cannot file it twice. `--distinct-from` names the numbers the
 # caller has read and judged different, and files past them.
 #
+# The list is the host's own, and GitHub's serves a just-created issue a few
+# seconds late, so two calls seconds apart can both file. That is the caller's
+# to handle and cheap to: one run already knows what it just filed, and the
+# check is for the same find met by a later run, minutes or days on.
+#
 # stdout: {"filed": true, "number": <n>, "url": "<url>"}
 #         {"filed": false, "candidates": [{number, title, url}]}
 # exit: 0 filed, or a candidate found · 1 list or create failed · 2 usage
