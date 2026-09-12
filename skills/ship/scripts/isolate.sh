@@ -2,7 +2,10 @@
 # ship phase 0: a fresh branch off origin's default, in a sibling worktree
 # (attended) or in the current checkout (unattended, --in-place).
 #
-#   isolate <issue> <type> <slug> [--carry <file>...] [--in-place]
+#   isolate <issue|none> <type> <slug> [--carry <file>...] [--in-place]
+#
+# `none` as the issue argument is the task-spec run: it is the literal branch
+# and worktree suffix, and every check runs unchanged.
 #
 # Resolves the MAIN checkout through --git-common-dir, so a run started inside a
 # worktree never nests another. Fetches first: refusing to branch off a
@@ -15,8 +18,9 @@
 # exit: 0 created · 1 branch or worktree exists, or dirty tree for --in-place · 2 git or usage failure
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: isolate <issue> <type> <slug> [--carry <file>...] [--in-place]'
-n=${1:?$usage}; type=${2:?$usage}; slug=${3:?$usage}; shift 3
+usage='usage: isolate <issue|none> <type> <slug> [--carry <file>...] [--in-place]'
+[ $# -ge 3 ] || ship_tooling "$usage"
+n=$1; type=$2; slug=$3; shift 3
 carry=(); in_place=false
 while [ $# -gt 0 ]; do
   case $1 in

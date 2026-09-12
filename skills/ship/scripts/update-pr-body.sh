@@ -8,16 +8,18 @@
 # exit: 0 · 1 update failed · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-pr=${1:?usage: update-pr-body <pr> --section <name> --body-file <path>}; shift
+usage='usage: update-pr-body <pr> --section <name> --body-file <path>'
+[ $# -ge 1 ] || ship_tooling "$usage"
+pr=$1; shift
 section=""; file=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --section) section=${2:?}; shift 2 ;;
-    --body-file) file=${2:?}; shift 2 ;;
+    --section) [ $# -ge 2 ] || ship_tooling "$usage"; section=$2; shift 2 ;;
+    --body-file) [ $# -ge 2 ] || ship_tooling "$usage"; file=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
-[ -n "$section" ] && [ -f "$file" ] || ship_tooling "usage: update-pr-body <pr> --section <name> --body-file <path>"
+[ -n "$section" ] && [ -f "$file" ] || ship_tooling "$usage"
 ship_load_host
 
 body=$(host_pr_get "$pr" | jq -r .body) || ship_tooling "cannot read PR $pr"
