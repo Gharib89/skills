@@ -303,12 +303,13 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
     jq -e --arg t "$thread" --argjson p "$root" --arg me "$me" --rawfile b "$file" \
       '[.value[] | select((.id | tostring) == $t) | .comments[]
         | select(.parentCommentId == $p and .content == $b
-                 and ((.author.uniqueName // .author.displayName) == $me))] | length > 0' >/dev/null <<<"$raw"
+                 and (if (.author.uniqueName // "") != "" then .author.uniqueName else .author.displayName end) == $me)]
+       | length > 0' >/dev/null <<<"$raw"
   }
   if ! _post_reply; then
     sleep 2
-    _reply_landed
-    case $? in
+    _reply_landed; local landed=$?
+    case $landed in
       1) _post_reply || return 1 ;;
       2) return 1 ;;
     esac
