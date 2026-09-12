@@ -22,12 +22,12 @@ set -uo pipefail
 # `git ls-remote --exit-code` returning non-zero is a SUCCESS signal.
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: merge <pr> <issue|none> [--worktree <path>]'
-[ $# -ge 2 ] || ship_tooling "$usage"
+[ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 pr=$1; issue=$2; shift 2
 wt=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --worktree) [ $# -ge 2 ] || ship_tooling "$usage"; wt=$2; shift 2 ;;
+    --worktree) [ -n "${2:-}" ] || ship_tooling "$usage"; wt=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done

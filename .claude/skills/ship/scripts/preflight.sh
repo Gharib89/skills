@@ -27,7 +27,7 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
 usage='usage: preflight <issue|none> [--unattended]'
-[ $# -ge 1 ] || ship_tooling "$usage"
+[ -n "${1:-}" ] || ship_tooling "$usage"
 n=$1; shift
 unattended=false
 while [ $# -gt 0 ]; do

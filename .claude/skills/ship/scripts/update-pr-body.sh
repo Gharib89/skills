@@ -9,13 +9,13 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: update-pr-body <pr> --section <name> --body-file <path>'
-[ $# -ge 1 ] || ship_tooling "$usage"
+[ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 section=""; file=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --section) [ $# -ge 2 ] || ship_tooling "$usage"; section=$2; shift 2 ;;
-    --body-file) [ $# -ge 2 ] || ship_tooling "$usage"; file=$2; shift 2 ;;
+    --section) [ -n "${2:-}" ] || ship_tooling "$usage"; section=$2; shift 2 ;;
+    --body-file) [ -n "${2:-}" ] || ship_tooling "$usage"; file=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done

@@ -90,12 +90,11 @@ run will not touch is never checked.
 `scripts/` holds one executable per deterministic step. Each prints one JSON
 verdict on stdout, a failing step's last 40 log lines on stderr, and exits
 `0` ok, `1` the mechanic's own not-ok answer, `2` tooling. A malformed
-invocation is tooling, never exit 1: a missing positional and a flag without its
-value both print `{"error": "<usage>"}` and exit 2, as an unknown flag does.
-Exit 1 is an answer,
-not always a fault: `nothing-ready` from `select`, a not-actionable `preflight`
-and a `poll-pr` window that closed are all exit 1 and none is red. Read the
-JSON, then decide. When a phase names a mechanic, run it
+invocation is tooling, never exit 1: a missing or empty positional and a flag
+without its value both print `{"error": "<usage>"}` and exit 2, as an unknown
+flag does. Exit 1 is an answer, not always a fault: `nothing-ready` from
+`select`, a not-actionable `preflight` and a `poll-pr` window that closed are
+all exit 1 and none is red. Read the JSON, then decide. When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that
 step, including the host adapter it sources (`scripts/host/github.sh` or
 `scripts/host/ado.sh`, chosen from the `origin` remote).
