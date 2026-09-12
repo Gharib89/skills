@@ -184,7 +184,7 @@ _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
       pageInfo{hasNextPage endCursor}
       nodes{ id isResolved isOutdated path
         comments(first:1){ nodes{ databaseId author{login} body url } }
-        mine: comments(first:100){ nodes{ viewerDidAuthor } } } } } } }'
+        mine: comments(last:100){ nodes{ viewerDidAuthor } } } } } } }'
 # GraphQL only: REST has no thread-resolution state. A refused GraphQL path
 # (a proxy that pins it) fails this call; the mechanic reports "unavailable".
 host_pr_threads() {
