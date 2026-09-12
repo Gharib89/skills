@@ -138,11 +138,11 @@ on both hosts: checks `pending|success|failure`, mergeable
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr <issue> --title --body-file` | 6 |
 | `reflect <issue> <pr>` | 6 |
+| `update-pr-title <pr> --title` | 6, 9 |
 | `poll-pr <pr> [--await-review <login>] [--timeout <s>]` | 7, 8 |
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
 | `update-pr-body <pr> --section Review --body-file` | 7 |
-| `update-pr-title <pr> --title` | 6, 9 |
 | `resolve-thread <pr> <thread>` | 7 |
 | `ci-wait <pr>` | 8 |
 | `merge <pr> <issue> --worktree <path>` | 9, on approval |
