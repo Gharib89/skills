@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.6.0
+  version: 1.7.0
   profile-schema: 1
 ---
 
@@ -111,7 +111,7 @@ be read.
 | `isolate <issue> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
 | `read-issue <issue>` | 1 |
 | `manage-issue <issue> take \| release \| handback "<reason>"` | 1; any stop after the claim; 9 |
-| `file-issue --title --body-file --label <marker>` | 2, 4, 7 |
+| `file-issue --title --body-file --label <marker> [--distinct-from <n>[,<n>]]` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr <issue> --title --body-file` | 6 |
@@ -311,10 +311,16 @@ with no phase explaining why. Keep a **deviations log** from the first edit:
 whenever the territory forces a departure from the issue, brief or plan,
 resolve it by the conservative option, log what and why, keep going; the log
 lands verbatim in the PR body and the merge summary. An **adjacent find** has
-three dispositions and no fourth: it blocks the issue, so fix it inline and log
-the deviation; it does not block, so `file-issue` it with the profile's triage
-marker and leave it; or it shows the issue is mis-specified, so stop
-`mis-specified`. No cap: the merge summary lists every issue filed. If the core
+three dispositions and no fourth. **Fix it inline** and log the deviation when
+any of three hold: an acceptance criterion names it, the fix lands in a file
+this PR already changes, or a reviewer of this PR would flag it. Otherwise
+**`file-issue` it** with the profile's triage marker and leave it; the mechanic
+answers `filed: false` with candidates when an open issue may already carry the
+find, and a candidate that is the same finding is linked in the deviations log
+rather than refiled, while one that is a different finding is refiled with
+`--distinct-from`. Or the find shows the issue is **mis-specified**, so stop
+`mis-specified`. The merge summary lists every issue filed and every candidate
+linked. If the core
 work balloons (the diff outgrows one PR, or the fix demands a redesign the
 issue never scoped), stop `needs-split` with a split proposal. Phase 2 is done
 when the applicable tests are green (red first, per class), `Tripwires:` and

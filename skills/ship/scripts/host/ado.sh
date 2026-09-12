@@ -270,6 +270,16 @@ host_prs_open() {
       '[.[] | {number: .pullRequestId, title, head_ref: (.sourceRefName | ltrimstr("refs/heads/")), author: .createdBy.uniqueName,
               url: ($base + "/" + $p + "/_git/" + $r + "/pullrequest/" + (.pullRequestId | tostring)), created_at: .creationDate}]'
 }
+# Every open work item, for file-issue's duplicate check. Unfiltered on purpose:
+# an adjacent find may already sit under any tag, or none. PRs are not work
+# items on this host, so nothing has to be excluded.
+host_issues_open() {
+  azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' ORDER BY [System.CreatedDate] DESC" \
+    | jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
+        '[.[] | {number: .id, title: .fields["System.Title"],
+                 url: ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring))}]'
+}
+
 host_issues_ready() { # <label>
   azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title], [System.CreatedDate] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.Tags] CONTAINS '${1//\'/\'\'}' AND [System.AssignedTo] = '' ORDER BY [System.CreatedDate] ASC" \
     | jq '[.[] | {number: .id, title: .fields["System.Title"], created_at: .fields["System.CreatedDate"]}]'

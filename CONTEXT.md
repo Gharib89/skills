@@ -117,9 +117,9 @@ The one scratch file a Ship run keeps outside the repo, in the session's scratch
 _Avoid_: task list, scratch file, plan file, todo
 
 **Adjacent find**:
-A problem outside the claimed issue that Ship meets while working it, whether the agent spotted it or a reviewer raised it. Filed for triage and left alone, unless it blocks the claimed issue, in which case it is fixed inline and logged as a deviation. Distinct from a deviation, which is the claimed issue's own work departing from its plan.
+A problem outside the claimed issue that Ship meets while working it, whether the agent spotted it or a reviewer raised it. Filed for triage and left alone, unless an acceptance criterion names it, its fix lands in a file the PR already changes, or a reviewer of the PR would flag it, in which case it is fixed inline and logged as a deviation. Filing goes through `file-issue`, which answers with an existing open issue rather than creating a second one for the same find. Distinct from a deviation, which is the claimed issue's own work departing from its plan.
 _Avoid_: drive-by fix, scope creep, nit, out-of-scope finding
 
 **Ship defect**:
-A gap in Ship itself met during a run: a host operation no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human; never hand-rolled around in the run, and never filed to another repo.
+A gap in Ship itself met during a run: a host operation no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human; never hand-rolled around in the run, and never filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
 _Avoid_: tooling gap, missing helper, upstream bug

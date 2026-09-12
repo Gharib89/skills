@@ -100,6 +100,8 @@ Everything a consumer repo depends on, all of it under `skills/`:
 
 File as an issue labelled `needs-triage`.
 
+This repo is Ship's own source, so a run here is already upstream and a **Ship defect** met during the run is an adjacent find: it takes phase 2's dispositions, through `file-issue` and its duplicate check, and is still named on the merge summary's `Ship defects:` row. ADR 0001 stands, because the write still goes to the repo the run is in, which here is the repo the defect belongs to.
+
 ## Docs sync
 
 Targets: CONTEXT.md, docs/adr/, docs/agents/, skills/setup-skills/profile-schema.md, .out-of-scope/
