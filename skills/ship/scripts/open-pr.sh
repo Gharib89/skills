@@ -9,7 +9,11 @@
 # link when the body lacks one aimed at this issue. Re-running after a flake
 # returns the PR the first call created.
 #
-# stdout: {number, url, branch, base}
+# stdout: {number, url, created_at, branch, base}
+#
+# `created_at` is the PR's creation time: an `auto-once` reviewer fires on it,
+# so phase 7 passes it to `poll-pr --since` to count that one round wherever a
+# later push left it keyed.
 # exit: 0 · 1 push or create failed · 2 usage or wrong branch
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
