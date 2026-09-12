@@ -267,10 +267,12 @@ host_prs_open() {
   api "$R/pulls?state=open&per_page=100" --paginate \
     --jq '.[] | {number, title, head_ref: .head.ref, author: .user.login, url: .html_url, created_at}' | jq -s .
 }
-# Every open issue, for file-issue's duplicate check. Unfiltered on purpose:
-# an adjacent find may already sit under any label, or none.
+# The newest open issues, for file-issue's duplicate check. No label filter: an
+# adjacent find may already sit under any label, or none. One page, not
+# --paginate: the check wants what a recent run filed, and every page is an API
+# call a repo with a long backlog would pay on every file-issue.
 host_issues_open() {
-  api "$R/issues?state=open&sort=created&direction=desc&per_page=100" --paginate \
+  api "$R/issues?state=open&sort=created&direction=desc&per_page=100" \
     --jq '.[] | select(.pull_request == null) | {number, title, url: .html_url}' | jq -s .
 }
 

@@ -18,6 +18,10 @@
 
 ORG=(--org "$SHIP_ORG_URL")
 PRJ=("${ORG[@]}" --project "$SHIP_PROJECT")
+# WIQL's @project macro resolves to nothing through `az boards query`, so every
+# clause using it matched zero rows and the caller read that as an empty
+# tracker. The project name goes in literally, single quotes doubled the way
+# the tag filter does.
 _pr_url() { printf '%s/%s/_git/%s/pullrequest/%s' "$SHIP_ORG_URL" "$(jq -rn --arg p "$SHIP_PROJECT" '$p | @uri')" "$SHIP_REPO" "$1"; }
 
 # Reads retry once after 2 s; az is slow, so creates re-read rather than retry blindly.
@@ -139,10 +143,14 @@ host_issue_create() { # <title> <body-file> <label>
   local out
   out=$(azx boards work-item create "${PRJ[@]}" --type "$ADO_WIT" --title "$1" --description "$(_html_pre "$2")" \
         ${3:+--fields "System.Tags=$3"}) \
-    || out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.Title] = '${1//\'/\'\'}' AND [System.CreatedBy] = @me ORDER BY [System.CreatedDate] DESC" \
+    || out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${SHIP_PROJECT//\'/\'\'}' AND [System.Title] = '${1//\'/\'\'}' AND [System.CreatedBy] = @me ORDER BY [System.CreatedDate] DESC" \
              | jq 'first | select(. != null)') || return 1
   [ -n "$out" ] || return 1
-  jq '{number: .id, url: ._links.html.href}' <<<"$out"
+  # Same fallback as _wi_norm: `work-item create` returns no _links, and the
+  # retry path selects only System.Id, so href is absent on both branches.
+  jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
+    '{number: .id,
+      url: (._links.html.href // ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring)))}' <<<"$out"
 }
 
 host_pr_create() { # <head> <base> <title> <body-file> <issue>
@@ -270,17 +278,21 @@ host_prs_open() {
       '[.[] | {number: .pullRequestId, title, head_ref: (.sourceRefName | ltrimstr("refs/heads/")), author: .createdBy.uniqueName,
               url: ($base + "/" + $p + "/_git/" + $r + "/pullrequest/" + (.pullRequestId | tostring)), created_at: .creationDate}]'
 }
-# Every open work item, for file-issue's duplicate check. Unfiltered on purpose:
+# The recent open work items, for file-issue's duplicate check. No tag filter:
 # an adjacent find may already sit under any tag, or none. PRs are not work
-# items on this host, so nothing has to be excluded.
+# items here, so nothing has to be excluded. The 180-day window is not a
+# nicety: WIQL has no TOP, and an unwindowed project query fails outright with
+# VS402337 past 20000 rows, which a real board reaches.
 host_issues_open() {
-  azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' ORDER BY [System.CreatedDate] DESC" \
-    | jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
-        '[.[] | {number: .id, title: .fields["System.Title"],
-                 url: ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring))}]'
+  local out
+  out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = '${SHIP_PROJECT//\'/\'\'}' AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.CreatedDate] > @today - 180 ORDER BY [System.CreatedDate] DESC") || return 1
+  jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
+      '[.[] | {number: .id, title: .fields["System.Title"],
+               url: ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring))}]' <<<"${out:-[]}"
 }
 
 host_issues_ready() { # <label>
-  azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title], [System.CreatedDate] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.Tags] CONTAINS '${1//\'/\'\'}' AND [System.AssignedTo] = '' ORDER BY [System.CreatedDate] ASC" \
-    | jq '[.[] | {number: .id, title: .fields["System.Title"], created_at: .fields["System.CreatedDate"]}]'
+  local out
+  out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title], [System.CreatedDate] FROM WorkItems WHERE [System.TeamProject] = '${SHIP_PROJECT//\'/\'\'}' AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.Tags] CONTAINS '${1//\'/\'\'}' AND [System.AssignedTo] = '' ORDER BY [System.CreatedDate] ASC") || return 1
+  jq '[.[] | {number: .id, title: .fields["System.Title"], created_at: .fields["System.CreatedDate"]}]' <<<"${out:-[]}"
 }
