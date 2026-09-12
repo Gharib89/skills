@@ -29,7 +29,10 @@ a fresh read of the committed tree, not a conversation.
   request and the review leaves the round keyed to the older head, and the head
   rule then waits out the whole window for a review that will never come again.
   Pass `request-review`'s `requested_at` or `open-pr`'s `created_at` straight
-  through. `--since` without `--await-review` is a usage error.
+  through. `--since` without `--await-review` is a usage error. The since rule
+  needs a timed round, so a reviewer whose only signal is an Azure DevOps vote,
+  which the API never stamps, exits `degraded: silent` under it; its threads,
+  which carry anything actionable, are stamped and land normally.
 - **A round is a review with a body.** A reviewer's reply to one thread posts
   as a review row of its own (current head, empty body), so answering round N
   manufactures rows that look like round N+1 arriving. Only `substantive: true`

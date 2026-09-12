@@ -28,14 +28,21 @@
 #   host_issue_comment <n> <body>
 #   host_issue_close <n>
 #   host_issue_create <title> <body-file> <label> -> {number,url}
-#   host_pr_create <head> <base> <title> <body-file> <issue> -> {number,url}
+#   host_pr_create <head> <base> <title> <body-file> <issue> -> {number,url,created_at}
 #   host_pr_get <pr>                     -> {number,url,title,body,head_sha,head_ref,base_ref,state,mergeable}
 #   host_pr_for_branch <branch>          -> {number,state} of the newest PR with that head, or null
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
-#   host_pr_reviews <pr> <head_sha>      -> {on_head:[{login,state,substantive}],total}
+#   host_pr_reviews <pr> <head_sha>      -> {on_head:[REVIEW],all:[REVIEW],total}
+#                                           REVIEW = {login,state,substantive,submitted_at}
+#                                           all: every round across heads, for poll-pr --since.
+#                                           submitted_at: one UTC spelling, or null where the host
+#                                           records state rather than a timed event (an ADO vote),
+#                                           which the --since rule then cannot admit.
 #   host_pr_threads <pr>                 -> [{id,resolved,author,path,body}]; non-zero exit = unavailable
 #   host_pr_reviewer_blocked <pr> <login>-> JSON string | null
-#   host_pr_request_review <pr> <login>  -> {requested,readback[]}
+#   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
+#                                           requested_at: ISO-8601 time of the request event,
+#                                           or the wall clock where the host records none.
 #   host_pr_comment <pr> <body-file>     -> {id,url}
 #   host_pr_set_body <pr> <body-file>
 #   host_pr_set_title <pr> <title>

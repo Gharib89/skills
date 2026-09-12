@@ -22,7 +22,9 @@
 #     `created_at`. Matching by time rather than by requesting login is
 #     deliberate: the login a request is made under and the login the host
 #     records can differ. A row with a null submitted_at is host state rather
-#     than a timed event (an Azure DevOps vote) and counts under either rule.
+#     than a timed event (an Azure DevOps vote, which the API never stamps): it
+#     cannot answer a question about time, so it satisfies the head rule only.
+#     Counting it here would land round 2 instantly off round 1's stale vote.
 #
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
 # quota or queue notice), not missing. `threads` is "unavailable" when thread
@@ -62,15 +64,14 @@ while :; do
   pending=$(jq '[.[] | select(.status == "pending")] | length' <<<"$checks")
   landed=true; landed_by=null
   if [ -n "$await" ]; then
-    landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" '
+    # An adapter emits submitted_at in one UTC spelling; --since is a flag, so
+    # normalise it here to the same fixed width, where a string compare is a
+    # chronological one.
+    landed_by=$(jq -c --arg l "$(norm "$await")" \
+      --arg s "$(printf '%s' "$since" | sed 's/\.[0-9]*//; s/+00:00$/Z/')" '
       def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
-      # One UTC spelling before comparing: Azure DevOps returns both
-      # "...:28.343Z" and "...:46.977591+00:00", and the two sort against each
-      # other wrongly as raw strings. Normalised they are fixed-width, so a
-      # string compare is a chronological one.
-      def utc: sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z");
       if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
-      else (if (.all | mine | map(select(.submitted_at == null or (.submitted_at | utc) >= ($s | utc)))) != [] then "since" else null end)
+      else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
       end' <<<"$reviews")
     [ "$landed_by" != null ] || landed=false
   fi

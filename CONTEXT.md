@@ -84,6 +84,10 @@ _Avoid_: review bot topology (the old three-shape framing), bot lane
 How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push and its rounds are free, on-request delivers one review per explicit request and is capped. Convergence and mechanics follow the trigger, never the bot's brand.
 _Avoid_: mode, kind of bot
 
+**Landing rule**:
+Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The head rule, its default, takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule, `--since <iso>`, takes a review submitted at or after a time on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it. The reviewer's trigger picks the rule.
+_Avoid_: landing check, freshness rule
+
 **Converged**:
 The phase-7 exit where CI is green and every reviewer is settled per its trigger: auto-once threads all dispositioned; on-push quiet on the current head with every thread dispositioned and resolved; on-request latest round nothing actionable and every thread dispositioned. Silence on the current head is never quiet.
 _Avoid_: approved, clean, passed

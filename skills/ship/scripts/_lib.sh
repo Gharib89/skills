@@ -35,7 +35,9 @@
 #   host_pr_reviews <pr> <head_sha>      -> {on_head:[REVIEW],all:[REVIEW],total}
 #                                           REVIEW = {login,state,substantive,submitted_at}
 #                                           all: every round across heads, for poll-pr --since.
-#                                           submitted_at null = host state, not a timed event.
+#                                           submitted_at: one UTC spelling, or null where the host
+#                                           records state rather than a timed event (an ADO vote),
+#                                           which the --since rule then cannot admit.
 #   host_pr_threads <pr>                 -> [{id,resolved,author,path,body}]; non-zero exit = unavailable
 #   host_pr_reviewer_blocked <pr> <login>-> JSON string | null
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}

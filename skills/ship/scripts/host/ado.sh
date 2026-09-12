@@ -152,7 +152,8 @@ host_pr_create() { # <head> <base> <title> <body-file> <issue>
     || out=$(azx repos pr list "${PRJ[@]}" --repository "$SHIP_REPO" --source-branch "$1" --status active --top 1 | jq 'first | select(. != null)') \
     || return 1
   [ -n "$out" ] || return 1
-  jq --arg u "$(_pr_url "$(jq -r .pullRequestId <<<"$out")")" '{number: .pullRequestId, url: $u, created_at: .creationDate}' <<<"$out"
+  jq --arg u "$(_pr_url "$(jq -r .pullRequestId <<<"$out")")" \
+    '{number: .pullRequestId, url: $u, created_at: (.creationDate | '"$_utc"')}' <<<"$out"
 }
 _pr_norm() {
   jq --arg u "$1" '{number: .pullRequestId, url: $u, title, body: (.description // ""),
@@ -196,28 +197,34 @@ _author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueN
 # Votes are the review rows; a reviewer that only opened threads on the latest
 # iteration counts as a substantive comment review on the head. `on_head` is
 # what poll-pr's default head rule reads; `all` carries every round across
-# iterations, for its --since rule. A vote has no timestamp anywhere in the
-# API, so its submitted_at is null: a vote is the reviewer's current state
-# rather than a timed event, and poll-pr counts a null submitted_at under
-# either rule.
+# iterations, for its --since rule.
+#
+# A vote has no timestamp anywhere in the API, so its submitted_at is null: a
+# vote is the reviewer's current state, not a timed event, and it cannot answer
+# the question --since asks. It therefore appears in `all` but never satisfies
+# that rule, which is why a reviewer who only votes lands under the head rule
+# alone. `submitted_at` is emitted in one UTC spelling, because the API mixes
+# two (publishedDate "...:28.343Z", creationDate "...:46.977591+00:00") and the
+# adapter owes its caller one vocabulary.
+_utc='(sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z"))'
+_review_row='{login: '"$_author_login"', state: "comment", substantive: true,
+              submitted_at: (.publishedDate | '"$_utc"')}'
 host_pr_reviews() { # <pr> <head_sha>
-  local votes it raw threads all_threads
+  local votes it raw rows
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)
       | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null}]') || return 1
   it=$(_latest_iteration "$1") || it='{"id":0,"created":""}'
   raw=$(_threads_raw "$1") || raw='{"value":[]}'
-  threads=$(jq --argjson it "$it" '[.value[] | select(.isDeleted != true)
-      | select(.comments[0].commentType != "system")
-      | select((.pullRequestThreadContext.iterationContext.secondComparingIteration == $it.id)
-               or (.pullRequestThreadContext == null and .publishedDate >= $it.created))
-      | {login: '"$_author_login"', state: "comment", substantive: true, submitted_at: .publishedDate}] | unique_by(.login)' <<<"$raw") || threads='[]'
-  # Not deduped by login: --since asks whether ANY round landed after a time, so
-  # collapsing a reviewer's rounds could keep only the stale one.
-  all_threads=$(jq '[.value[] | select(.isDeleted != true)
-      | select(.comments[0].commentType != "system")
-      | {login: '"$_author_login"', state: "comment", substantive: true, submitted_at: .publishedDate}]' <<<"$raw") || all_threads='[]'
-  jq -n --argjson v "$votes" --argjson t "$threads" --argjson a "$all_threads" \
-    '{on_head: ($v + $t), all: ($v + $a), total: ($v + $t | length)}'
+  # `all` is not deduped by login: --since asks whether ANY round landed after a
+  # time, so collapsing a reviewer's rounds could keep only the stale one.
+  rows=$(jq --argjson it "$it" '[.value[] | select(.isDeleted != true)
+      | select(.comments[0].commentType != "system")]
+    | {on_head: [.[] | select((.pullRequestThreadContext.iterationContext.secondComparingIteration == $it.id)
+                              or (.pullRequestThreadContext == null and .publishedDate >= $it.created))
+                 | '"$_review_row"'] | unique_by(.login),
+       all: [.[] | '"$_review_row"']}' <<<"$raw") || rows='{"on_head":[],"all":[]}'
+  jq -n --argjson v "$votes" --argjson r "$rows" \
+    '{on_head: ($v + $r.on_head), all: ($v + $r.all), total: ($v + $r.on_head | length)}'
 }
 host_pr_threads() {
   _threads_raw "$1" | jq '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
@@ -226,7 +233,8 @@ host_pr_threads() {
 }
 host_pr_reviewer_blocked() { echo null; }
 # Azure DevOps records no time for a reviewer-add, so requested_at is the wall
-# clock, stamped before the call so a review that lands immediately still counts.
+# clock in the adapter's one UTC spelling, stamped before the call so a review
+# that lands immediately still counts.
 host_pr_request_review() { # <pr> <login>
   local ok=false rb now
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
