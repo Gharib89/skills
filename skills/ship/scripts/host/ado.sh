@@ -254,7 +254,7 @@ host_pr_request_review() { # <pr> <login>
 }
 # A closed thread: visible, and a comment-resolution policy never blocks on it.
 host_pr_comment() { # <pr> <body-file>
-  local f out; f=$(mktemp)
+  local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN
   jq -n --rawfile b "$2" '{comments: [{parentCommentId: 0, content: $b, commentType: 1}], status: "closed"}' > "$f"
   out=$(invoke POST git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" --in-file "$f")
   local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
@@ -263,7 +263,7 @@ host_pr_comment() { # <pr> <body-file>
 host_pr_set_body() { azx repos pr update "${ORG[@]}" --id "$1" --description "$(cat "$2")" >/dev/null; }
 host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/dev/null; }
 host_pr_resolve_thread() { # <pr> <thread-id>
-  local f out; f=$(mktemp); printf '{"status":"fixed"}' > "$f"
+  local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN; printf '{"status":"fixed"}' > "$f"
   out=$(invoke PATCH git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2" --in-file "$f")
   local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
   jq '{resolved: (.status | IN("fixed","closed","wontFix","byDesign"))}' <<<"$out"
@@ -293,7 +293,7 @@ _wi_open_wiql() { # <extra predicate>
 }
 host_issues_open() {
   local out err rc=0
-  err=$(mktemp)
+  err=$(mktemp); trap 'rm -f "$err"' RETURN
   out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql "")" 2>"$err") || rc=$?
   if [ "$rc" -ne 0 ]; then
     # Only the row-limit answer earns the narrower pool. An auth or transient
@@ -302,12 +302,11 @@ host_issues_open() {
     # to stop.
     if grep -q 'VS402337' "$err"; then
       echo "ADO: the project's open work items exceed WIQL's 20000-row limit; narrowing the candidate pool to the last 180 days" >&2
-      out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql " AND [System.CreatedDate] > @today - 180")") || { rm -f "$err"; return 1; }
+      out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql " AND [System.CreatedDate] > @today - 180")") || return 1
     else
-      ship_tail40 "$err"; rm -f "$err"; return 1
+      ship_tail40 "$err"; return 1
     fi
   fi
-  rm -f "$err"
   jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
       '[.[] | {number: .id, title: .fields["System.Title"],
                url: ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring))}]' <<<"${out:-[]}"

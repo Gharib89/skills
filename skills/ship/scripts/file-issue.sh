@@ -28,7 +28,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # length rule already drops. No repo-specific word belongs here: the mechanic
 # is generic, and an over-eager candidate costs one `--distinct-from` while a
 # missed one costs a second issue for a find already filed.
-STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that them then they this those very were what when will with would your'
+STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that their them then there these they this those very were what when where which while will with would your'
 
 title=""; file=""; label=""; exclude="[]"
 while [ $# -gt 0 ]; do
