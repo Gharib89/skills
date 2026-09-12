@@ -64,8 +64,13 @@ while :; do
   if [ -n "$await" ]; then
     landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" '
       def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
+      # One UTC spelling before comparing: Azure DevOps returns both
+      # "...:28.343Z" and "...:46.977591+00:00", and the two sort against each
+      # other wrongly as raw strings. Normalised they are fixed-width, so a
+      # string compare is a chronological one.
+      def utc: sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z");
       if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
-      else (if (.all | mine | map(select(.submitted_at == null or .submitted_at >= $s))) != [] then "since" else null end)
+      else (if (.all | mine | map(select(.submitted_at == null or (.submitted_at | utc) >= ($s | utc)))) != [] then "since" else null end)
       end' <<<"$reviews")
     [ "$landed_by" != null ] || landed=false
   fi
