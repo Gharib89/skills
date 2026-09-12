@@ -220,7 +220,8 @@ host_pr_reviews() { # <pr> <head_sha>
   rows=$(jq --argjson it "$it" '[.value[] | select(.isDeleted != true)
       | select(.comments[0].commentType != "system")]
     | {on_head: [.[] | select((.pullRequestThreadContext.iterationContext.secondComparingIteration == $it.id)
-                              or (.pullRequestThreadContext == null and .publishedDate >= $it.created))
+                              or (.pullRequestThreadContext == null
+                                  and (.publishedDate | '"$_utc"') >= ($it.created | '"$_utc"')))
                  | '"$_review_row"'] | unique_by(.login),
        all: [.[] | '"$_review_row"']}' <<<"$raw") || rows='{"on_head":[],"all":[]}'
   jq -n --argjson v "$votes" --argjson r "$rows" \

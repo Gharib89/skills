@@ -18,9 +18,17 @@ pr=${1:?usage: request-review <pr> <login>}; login=${2:?usage: request-review <p
 [ $# -eq 2 ] || ship_tooling "unknown flag: $3"
 ship_load_host
 out=$(host_pr_request_review "$pr" "$login") || ship_tooling "request call failed"
+first_at=$(jq -r '.requested_at // empty' <<<"$out")
 if [ "$(jq -r .requested <<<"$out")" != true ]; then
   sleep 5
   out=$(host_pr_request_review "$pr" "$login") || ship_tooling "request call failed"
+  # Keep the EARLIER stamp. The first POST may have landed with only its
+  # read-back delayed, in which case the retry sees its own event in `before`
+  # and falls back to a wall clock later than the request that actually
+  # queued. Reporting the later one would make --since wait out a round that
+  # arrived in between.
+  out=$(jq --arg f "$first_at" '.requested_at = (
+          [.requested_at, (if $f == "" then empty else $f end)] | min)' <<<"$out")
 fi
 jq --argjson pr "$pr" --arg l "$login" '{pr: $pr, login: $l} + .' <<<"$out"
 [ "$(jq -r .requested <<<"$out")" = true ]

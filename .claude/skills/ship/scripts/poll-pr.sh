@@ -48,6 +48,20 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -z "$since" ] || [ -n "$await" ] || ship_tooling "--since needs --await-review"
+# --since is compared as a string against submitted_at, which every adapter
+# emits as UTC "YYYY-MM-DDTHH:MM:SSZ". Accept only what normalises to that, so
+# an offset this cannot convert (+05:00) is refused outright rather than
+# silently sorting wrong. Every mechanic that reports a timestamp
+# (request-review's requested_at, open-pr's created_at) already emits it.
+if [ -n "$since" ]; then
+  case $since in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z) ;;
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9].*Z|\
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]*+00:00)
+      since=$(printf '%s' "$since" | sed 's/\.[0-9]*//; s/+00:00$/Z/') ;;
+    *) ship_tooling "--since must be UTC ISO-8601 (YYYY-MM-DDTHH:MM:SSZ), got: $since" ;;
+  esac
+fi
 ship_load_host
 
 norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/\[bot\]$//'; }
@@ -64,11 +78,9 @@ while :; do
   pending=$(jq '[.[] | select(.status == "pending")] | length' <<<"$checks")
   landed=true; landed_by=null
   if [ -n "$await" ]; then
-    # An adapter emits submitted_at in one UTC spelling; --since is a flag, so
-    # normalise it here to the same fixed width, where a string compare is a
+    # Both sides are now fixed-width UTC, where a string compare is a
     # chronological one.
-    landed_by=$(jq -c --arg l "$(norm "$await")" \
-      --arg s "$(printf '%s' "$since" | sed 's/\.[0-9]*//; s/+00:00$/Z/')" '
+    landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" '
       def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
       if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
       else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)

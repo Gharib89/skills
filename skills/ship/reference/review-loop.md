@@ -106,7 +106,7 @@ reads the reason and decides.
 |---|---|
 | `never-queued` | on-request: no request event on the host's record after one retry. Do not spend a second poll window on it. |
 | `blocked` | queued, then a quota or rate-limit comment from the reviewer (`reviewer_blocked` non-null), and the poll window closed. Non-null with `done: false` means waiting, not missing. |
-| `silent` | queued, no review on the current head within the bounded wait. |
+| `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. |
 | `infra-error` | a review whose body is only an error notice with zero comments, twice. Not feedback. |
 | `cap-hit` | on-request cap reached with the latest round still substantive. |
 | `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`). |
