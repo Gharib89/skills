@@ -280,7 +280,8 @@ host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/d
 # this adapter's rule, a failed create re-reads the thread for the comment that
 # success left, and only then posts again.
 host_pr_reply_thread() { # <pr> <thread-id> <body-file>
-  local pr=$1 thread=$2 file=$3 f root
+  local pr=$1 thread=$2 file=$3 f root me
+  me=$(host_identity) || return 1
   root=$(_threads_raw "$pr" | jq -r --arg t "$thread" '.value[] | select((.id | tostring) == $t) | .comments[0].id') || return 1
   [ -n "$root" ] && [ "$root" != null ] \
     || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
@@ -293,14 +294,16 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
   }
   # Exit 0 the reply is there, 1 the thread carries no such child, 2 the thread
   # could not be read. An unknown is not an absence, so only a successful read
-  # licenses a second POST. The match is keyed to parentCommentId, because a
-  # disposition quoting the finding verbatim would otherwise match the root
-  # comment and report a reply nobody posted.
+  # licenses a second POST. The match is keyed to parentCommentId and to this
+  # identity: a disposition quoting the finding verbatim would otherwise match
+  # the root comment, and someone else's identical text would stand in for a
+  # reply this run never posted.
   _reply_landed() {
     local raw; raw=$(_threads_raw "$pr") || return 2
-    jq -e --arg t "$thread" --argjson p "$root" --rawfile b "$file" \
+    jq -e --arg t "$thread" --argjson p "$root" --arg me "$me" --rawfile b "$file" \
       '[.value[] | select((.id | tostring) == $t) | .comments[]
-        | select(.parentCommentId == $p and .content == $b)] | length > 0' >/dev/null <<<"$raw"
+        | select(.parentCommentId == $p and .content == $b
+                 and ((.author.uniqueName // .author.displayName) == $me))] | length > 0' >/dev/null <<<"$raw"
   }
   if ! _post_reply; then
     sleep 2
