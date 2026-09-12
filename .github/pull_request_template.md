@@ -1,8 +1,8 @@
+Closes #
+
 ## Summary
 
 <!-- What changed and why. The reader has the diff for the how. -->
-
-Closes #
 
 ## Deviations from plan
 

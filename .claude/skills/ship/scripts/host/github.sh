@@ -95,13 +95,34 @@ host_issue_create() { # <title> <body-file> <label>
   _issue_create
 }
 
+# Put `Closes #<issue>` above the first `## ` heading, where no section rewrite
+# reaches it: `update-pr-body` replaces a section wholesale, so a closing line
+# appended to the end of the body sits inside the last section and the next
+# rewrite of that section drops it. A body with no heading has no section to
+# fall inside, so it keeps the append.
+#
+# Fenced blocks are skipped, matching the model `ship_body_closes` uses: a
+# `## ` inside a fence is example text, and a closing line printed into a
+# fence renders as code, so the host registers no link and the keyword test
+# that gates a re-run reads false. A fence carries up to three leading spaces
+# (CommonMark), written out rather than as an interval so every awk reads it.
+# The heading match stays anchored at column 0 on purpose: it has to agree
+# with `update-pr-body`, whose `^## ` is what decides a section boundary.
+_gh_add_closes() { # <body> <issue>
+  awk -v n="$2" '
+    /^ ? ? ?```/ { fenced = !fenced }
+    !placed && !fenced && /^## / { print "Closes #" n; print ""; placed = 1 }
+    { print }
+    END { if (!placed) printf "\nCloses #%s\n", n }' <<<"$1"
+}
+
 host_pr_create() { # <head> <base> <title> <body-file> <issue>
   local head=$1 base=$2 title=$3 file=$4 issue=$5 body out
   body=$(cat "$file")
-  # The mechanic translates the closing link for the host: append the keyword
-  # when the body does not already carry one aimed at this issue.
+  # The mechanic translates the closing link for the host: add the keyword when
+  # the body does not already carry one aimed at this issue.
   if [ -n "$issue" ] && ! ship_body_closes "$body" "$issue"; then
-    body=$(printf '%s\n\nCloses #%s\n' "$body" "$issue")
+    body=$(_gh_add_closes "$body" "$issue")
   fi
   _pr_create() {
     jq -n --arg h "$head" --arg b "$base" --arg t "$title" --arg body "$body" \

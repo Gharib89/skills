@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.5.1
+  version: 1.6.0
   profile-schema: 1
 ---
 
@@ -379,9 +379,11 @@ the issue, honouring `Subject constraints:`; it becomes the squash subject that
 release tooling reads, and a title that later proves wrong is fixed with
 `update-pr-title <pr> --title`. Body: the repo's template per `## PR`, filled
 honestly (never a raw body that bypasses it); with no template, a plain body.
-Every variant carries `Closes #<issue>` (the mechanic translates it for the
-host), a **Deviations from plan** section (the log verbatim, `None` only if
-the plan held), and a `## Review` section holding one placeholder line per
+Every variant carries `Closes #<issue>` on its own line **above the first
+`## ` heading** (the mechanic translates it for the host, and puts it there
+itself when the body arrives without one), where no section rewrite reaches
+it; a **Deviations from plan** section (the log verbatim, `None` only if the
+plan held); and a `## Review` section holding one placeholder line per
 reviewer, filled at phase-7 exit. Then `reflect <issue> <pr>` so a human
 reading the issue sees the PR.
 
