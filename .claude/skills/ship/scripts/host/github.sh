@@ -221,6 +221,7 @@ host_pr_comment() { # <pr> <body-file>
   _pr_comment
 }
 host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
+host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
 
 host_pr_resolve_thread() { # <pr> <thread-node-id>
   gql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }' \
