@@ -56,13 +56,12 @@ a fresh read of the committed tree, not a conversation.
   not yet carry your disposition with `reply-thread <pr> <thread> --body-file`,
   one call per thread with the id `poll-pr` returns (`fixed in <sha>`, or the
   decline and its reason). `poll-pr` returns the PR's whole thread set, not the
-  round's, so a thread you answered in an earlier round is already done: answer
-  it again and the reviewer reads a second disposition for one finding. The
-  disposition belongs in the thread the reviewer opened, which is where the
-  reviewer's next pass and a human reading the round both look; a round-level
-  `comment-pr` is a log of the round, never the disposition channel.
-  `resolve-thread` posts no body and runs per thread only once every thread
-  carries its reply. Every push spends review quota and CI minutes, and an
+  round's, so skip every thread already carrying your disposition from an
+  earlier round: one finding, one disposition. The disposition belongs in the
+  thread the reviewer opened, which is where the reviewer's next pass and a
+  human reading the round both look; a round-level `comment-pr` is a log of the
+  round, never the disposition channel. `resolve-thread` posts no body and runs
+  per thread only once every thread carries its reply. Every push spends review quota and CI minutes, and an
   on-push reviewer's round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
