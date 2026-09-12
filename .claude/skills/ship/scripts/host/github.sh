@@ -106,11 +106,11 @@ host_pr_create() { # <head> <base> <title> <body-file> <issue>
   _pr_create() {
     jq -n --arg h "$head" --arg b "$base" --arg t "$title" --arg body "$body" \
       '{head: $h, base: $b, title: $t, body: $body, draft: false}' \
-      | gh api -X POST "$R/pulls" --input - --jq '{number, url: .html_url}' 2>/dev/null
+      | gh api -X POST "$R/pulls" --input - --jq '{number, url: .html_url, created_at}' 2>/dev/null
   }
   if out=$(_pr_create); then printf '%s\n' "$out"; return 0; fi
   sleep 2
-  out=$(api "$R/pulls?state=open&head=$SHIP_OWNER:$head" --jq 'first | select(. != null) | {number, url: .html_url}')
+  out=$(api "$R/pulls?state=open&head=$SHIP_OWNER:$head" --jq 'first | select(. != null) | {number, url: .html_url, created_at}')
   if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
   _pr_create
 }
@@ -142,15 +142,17 @@ host_pr_checks() { # <pr> <head_sha>
     '$a + $b | group_by(.name) | map(max_by(.at) | {name, status})'
 }
 
-# Reviews keyed to the current head: a review on an older commit does not count.
-# `substantive` is the landing signal: a reviewer's reply to one thread posts as
-# a review row of its own (current head, empty body), so only a body is a round.
+# `on_head` is keyed to the current head (a review on an older commit does not
+# count), which poll-pr's default head rule reads; `all` carries every round
+# across heads, for its --since rule. `substantive` is the landing signal: a
+# reviewer's reply to one thread posts as a review row of its own (current
+# head, empty body), so only a body is a round.
 host_pr_reviews() { # <pr> <head_sha>
-  api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" '{
-    on_head: [.[] | select(.commit_id == $sha) | {login: .user.login,
+  api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" '
+    def row: {login: .user.login,
       state: (if .state == "APPROVED" then "approved" elif .state == "CHANGES_REQUESTED" then "changes" else "comment" end),
-      substantive: ((.body // "") != ""), submitted_at}],
-    total: length}'
+      substantive: ((.body // "") != ""), submitted_at};
+    {on_head: [.[] | select(.commit_id == $sha) | row], all: [.[] | row], total: length}'
 }
 
 _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
@@ -190,23 +192,29 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # copilot-pull-request-reviewer[bot] and recorded on the timeline as `Copilot`),
 # and an empty requested_reviewers list proves nothing once the bot has posted.
 host_pr_request_review() { # <pr> <login>
-  local pr=$1 login=$2 ok=false before after readback
+  local pr=$1 login=$2 ok=false before after readback now
   _requested_events() {
     api "$R/issues/$pr/timeline" --paginate \
-      --jq '.[] | select(.event == "review_requested") | .requested_reviewer.login // empty' | jq -R . | jq -s .
+      --jq '.[] | select(.event == "review_requested") | select(.requested_reviewer.login) | {login: .requested_reviewer.login, created_at}' \
+      | jq -s .
   }
   before=$(_requested_events) || before='[]'
+  # Stamped before the POST, so a review submitted the instant the request lands
+  # is still at-or-after the fallback requested_at.
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   api -X POST "$R/pulls/$pr/requested_reviewers" -f "reviewers[]=$login" >/dev/null && ok=true
   sleep 2
   after=$(_requested_events) || after='[]'
-  readback=$( { api "$R/pulls/$pr" --jq '.requested_reviewers[].login'; jq -r '.[]' <<<"$after"; } | jq -R . | jq -s 'unique')
+  readback=$( { api "$R/pulls/$pr" --jq '.requested_reviewers[].login'; jq -r '.[].login' <<<"$after"; } | jq -R . | jq -s 'unique')
   # Read back by delta: the request landed iff the timeline gained a
   # review_requested event during this call. Comparing logins does not work for
   # an app reviewer, which is requested under one login and recorded under another.
-  jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson rb "$readback" --arg l "$login" \
+  # The timeline is chronological, so that new event is the last one.
+  jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson rb "$readback" --arg l "$login" --arg now "$now" \
     '{requested: ($ok and (($a | length) > ($b | length)
                           or ([$rb[] | ascii_downcase | sub("\\[bot\\]$"; "")] | index($l | ascii_downcase | sub("\\[bot\\]$"; "")) != null))),
-      readback: $rb}'
+      readback: $rb,
+      requested_at: (if ($a | length) > ($b | length) then ($a[-1].created_at // $now) else $now end)}'
 }
 
 host_pr_comment() { # <pr> <body-file>
@@ -221,7 +229,6 @@ host_pr_comment() { # <pr> <body-file>
   _pr_comment
 }
 host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
-host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
 
 host_pr_resolve_thread() { # <pr> <thread-node-id>
   gql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }' \

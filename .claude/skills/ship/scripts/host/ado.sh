@@ -152,7 +152,7 @@ host_pr_create() { # <head> <base> <title> <body-file> <issue>
     || out=$(azx repos pr list "${PRJ[@]}" --repository "$SHIP_REPO" --source-branch "$1" --status active --top 1 | jq 'first | select(. != null)') \
     || return 1
   [ -n "$out" ] || return 1
-  jq --arg u "$(_pr_url "$(jq -r .pullRequestId <<<"$out")")" '{number: .pullRequestId, url: $u}' <<<"$out"
+  jq --arg u "$(_pr_url "$(jq -r .pullRequestId <<<"$out")")" '{number: .pullRequestId, url: $u, created_at: .creationDate}' <<<"$out"
 }
 _pr_norm() {
   jq --arg u "$1" '{number: .pullRequestId, url: $u, title, body: (.description // ""),
@@ -194,18 +194,30 @@ _latest_iteration() {
 # A service identity (a build service) has an empty uniqueName; its displayName is the login then.
 _author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
 # Votes are the review rows; a reviewer that only opened threads on the latest
-# iteration counts as a substantive comment review on the head.
+# iteration counts as a substantive comment review on the head. `on_head` is
+# what poll-pr's default head rule reads; `all` carries every round across
+# iterations, for its --since rule. A vote has no timestamp anywhere in the
+# API, so its submitted_at is null: a vote is the reviewer's current state
+# rather than a timed event, and poll-pr counts a null submitted_at under
+# either rule.
 host_pr_reviews() { # <pr> <head_sha>
-  local votes it threads
+  local votes it raw threads all_threads
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)
-      | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true}]') || return 1
+      | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null}]') || return 1
   it=$(_latest_iteration "$1") || it='{"id":0,"created":""}'
-  threads=$(_threads_raw "$1" | jq --argjson it "$it" '[.value[] | select(.isDeleted != true)
+  raw=$(_threads_raw "$1") || raw='{"value":[]}'
+  threads=$(jq --argjson it "$it" '[.value[] | select(.isDeleted != true)
       | select(.comments[0].commentType != "system")
       | select((.pullRequestThreadContext.iterationContext.secondComparingIteration == $it.id)
                or (.pullRequestThreadContext == null and .publishedDate >= $it.created))
-      | {login: '"$_author_login"', state: "comment", substantive: true}] | unique_by(.login)') || threads='[]'
-  jq -n --argjson v "$votes" --argjson t "$threads" '{on_head: ($v + $t), total: ($v + $t | length)}'
+      | {login: '"$_author_login"', state: "comment", substantive: true, submitted_at: .publishedDate}] | unique_by(.login)' <<<"$raw") || threads='[]'
+  # Not deduped by login: --since asks whether ANY round landed after a time, so
+  # collapsing a reviewer's rounds could keep only the stale one.
+  all_threads=$(jq '[.value[] | select(.isDeleted != true)
+      | select(.comments[0].commentType != "system")
+      | {login: '"$_author_login"', state: "comment", substantive: true, submitted_at: .publishedDate}]' <<<"$raw") || all_threads='[]'
+  jq -n --argjson v "$votes" --argjson t "$threads" --argjson a "$all_threads" \
+    '{on_head: ($v + $t), all: ($v + $a), total: ($v + $t | length)}'
 }
 host_pr_threads() {
   _threads_raw "$1" | jq '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
@@ -213,12 +225,15 @@ host_pr_threads() {
        author: '"$_author_login"', path: .threadContext.filePath, body: .comments[0].content}]'
 }
 host_pr_reviewer_blocked() { echo null; }
+# Azure DevOps records no time for a reviewer-add, so requested_at is the wall
+# clock, stamped before the call so a review that lands immediately still counts.
 host_pr_request_review() { # <pr> <login>
-  local ok=false rb
+  local ok=false rb now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   azx repos pr reviewer add "${ORG[@]}" --id "$1" --reviewers "$2" >/dev/null && ok=true
   rb=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | .uniqueName, .displayName]') || rb='[]'
-  jq -n --argjson ok "$ok" --argjson rb "$rb" --arg l "$2" \
-    '{requested: ($ok and ([$rb[] | ascii_downcase] | index($l | ascii_downcase) != null)), readback: $rb}'
+  jq -n --argjson ok "$ok" --argjson rb "$rb" --arg l "$2" --arg now "$now" \
+    '{requested: ($ok and ([$rb[] | ascii_downcase] | index($l | ascii_downcase) != null)), readback: $rb, requested_at: $now}'
 }
 # A closed thread: visible, and a comment-resolution policy never blocks on it.
 host_pr_comment() { # <pr> <body-file>
@@ -229,7 +244,6 @@ host_pr_comment() { # <pr> <body-file>
   jq --arg u "$(_pr_url "$1")" '{id: .id, url: ($u + "?discussionId=" + (.id | tostring))}' <<<"$out"
 }
 host_pr_set_body() { azx repos pr update "${ORG[@]}" --id "$1" --description "$(cat "$2")" >/dev/null; }
-host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/dev/null; }
 host_pr_resolve_thread() { # <pr> <thread-id>
   local f out; f=$(mktemp); printf '{"status":"fixed"}' > "$f"
   out=$(invoke PATCH git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2" --in-file "$f")

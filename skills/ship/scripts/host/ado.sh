@@ -194,12 +194,12 @@ _latest_iteration() {
 # A service identity (a build service) has an empty uniqueName; its displayName is the login then.
 _author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
 # Votes are the review rows; a reviewer that only opened threads on the latest
-# iteration counts as a substantive comment review on the head.
-# `all` carries every round across iterations, for poll-pr's --since rule;
-# `on_head` and `total` are what the default head rule reads. A vote has no
-# timestamp anywhere in the API, so its submitted_at is null: a vote is the
-# reviewer's current state rather than a timed event, and poll-pr counts a null
-# submitted_at under either rule, which is how `on_head` already treats it.
+# iteration counts as a substantive comment review on the head. `on_head` is
+# what poll-pr's default head rule reads; `all` carries every round across
+# iterations, for its --since rule. A vote has no timestamp anywhere in the
+# API, so its submitted_at is null: a vote is the reviewer's current state
+# rather than a timed event, and poll-pr counts a null submitted_at under
+# either rule.
 host_pr_reviews() { # <pr> <head_sha>
   local votes it raw threads all_threads
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)

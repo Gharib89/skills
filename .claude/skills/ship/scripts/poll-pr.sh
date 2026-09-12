@@ -17,12 +17,12 @@
 #   since (--since, on-request and auto-once): the review was submitted at or
 #     after <iso>, on ANY head. Such a reviewer delivers one round per request
 #     and never re-posts, so a push between the request and the review leaves
-#     the round keyed to the older head; the head rule would wait forever.
-#     Pass `request-review`'s `requested_at` (on-request) or the PR's creation
-#     time (auto-once). Matching by time, not by request login, is deliberate:
-#     the login a request is made under and the login the host records can
-#     differ. A row with a null submitted_at is host state rather than a timed
-#     event (an Azure DevOps vote) and counts under either rule.
+#     the round keyed to the older head, where the head rule would wait out the
+#     whole window. Pass `request-review`'s `requested_at` or `open-pr`'s
+#     `created_at`. Matching by time rather than by requesting login is
+#     deliberate: the login a request is made under and the login the host
+#     records can differ. A row with a null submitted_at is host state rather
+#     than a timed event (an Azure DevOps vote) and counts under either rule.
 #
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
 # quota or queue notice), not missing. `threads` is "unavailable" when thread

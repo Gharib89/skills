@@ -142,11 +142,11 @@ host_pr_checks() { # <pr> <head_sha>
     '$a + $b | group_by(.name) | map(max_by(.at) | {name, status})'
 }
 
-# Reviews keyed to the current head: a review on an older commit does not count.
-# `substantive` is the landing signal: a reviewer's reply to one thread posts as
-# a review row of its own (current head, empty body), so only a body is a round.
-# `all` carries every round across heads, for poll-pr's --since rule; `on_head`
-# and `total` are what the default head rule reads.
+# `on_head` is keyed to the current head (a review on an older commit does not
+# count), which poll-pr's default head rule reads; `all` carries every round
+# across heads, for its --since rule. `substantive` is the landing signal: a
+# reviewer's reply to one thread posts as a review row of its own (current
+# head, empty body), so only a body is a round.
 host_pr_reviews() { # <pr> <head_sha>
   api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" '
     def row: {login: .user.login,

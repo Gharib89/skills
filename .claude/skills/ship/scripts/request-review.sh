@@ -5,7 +5,12 @@
 #
 #   request-review <pr> <login>
 #
-# stdout: {pr, login, requested, readback[]}
+# `requested_at` is the ISO-8601 time of the review_requested event the
+# read-back found, or the wall clock where the host records no event time.
+# Phase 7 passes it to `poll-pr --since` so the round counts on whatever head
+# it lands on.
+#
+# stdout: {pr, login, requested, readback[], requested_at}
 # exit: 0 requested and read back · 1 not read back (never-queued after one retry) · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
