@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.0.0
+  version: 3.1.0
   profile-schema: 1
 ---
 
@@ -124,6 +124,7 @@ be read.
 | `poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]` | 7, 8 |
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
+| `reply-thread <pr> <thread> --body-file` | 7 |
 | `update-pr-body <pr> --section Review --body-file` | 7 |
 | `resolve-thread <pr> <thread>` | 7 |
 | `ci-wait <pr> [--timeout <s>] [--interval <s>]` | 8 |
@@ -400,12 +401,13 @@ reading the issue sees the PR.
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
 fixes its loop, its convergence test and its cap; the brand fixes nothing.
-Zero reviewers: skip the phase. Batch fixes into one push per round, then reply
-to the round in one `comment-pr` body-file, addressing every thread by quote or
-link (`fixed in <sha>`, or the decline and its reason); there is no per-thread
-reply mechanic, and `resolve-thread` still runs per thread once every thread
-carries a disposition. Exits: `converged`, `converged, override needed` (a gating
-reviewer's declined finding, cited with evidence), or `degraded: <reason>` from
+Zero reviewers: skip the phase. Batch fixes into one push per round, then
+answer each thread with `reply-thread` (`fixed in <sha>`, or the decline and
+its reason), reading the round itself from `poll-pr`'s `reviews.on_head[].body`
+where its findings sit there rather than in threads; `resolve-thread` runs per
+thread once every thread carries a disposition. Exits: `converged`,
+`converged, override needed` (a gating reviewer's declined finding, cited with
+evidence), or `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |
 unreachable`. Degraded proceeds to the merge gate on green CI and never hands
 back on its own. At exit, `update-pr-body <pr> --section Review` with one status

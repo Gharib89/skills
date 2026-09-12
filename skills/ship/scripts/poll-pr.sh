@@ -26,6 +26,11 @@
 #     cannot answer a question about time, so it satisfies the head rule only.
 #     Counting it here would land round 2 instantly off round 1's stale vote.
 #
+# Each review row carries the round's own `body`, truncated to 2000 characters:
+# phase 7 triages from it, and a round whose findings are in the body rather
+# than in threads is invisible without it. `threads[]` rows carry the thread's
+# first comment, which is what `reply-thread` answers.
+#
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
 # quota or queue notice), not missing. `threads` is "unavailable" when thread
 # state could not be read (GraphQL refused): that reviewer's exit is degraded
