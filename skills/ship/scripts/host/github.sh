@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # GitHub adapter: the host_* interface from _lib.sh over REST via `gh api`.
 # REST throughout, one retry after 2 s: gh's GraphQL paths (gh pr view --json,
-# gh pr checks --watch) flake 401 mid-session. GraphQL is used only for the two
-# things REST lacks, review-thread resolution state and resolveReviewThread,
-# behind the same retry. Sourced by _lib.sh's ship_load_host; needs SHIP_OWNER
+# gh pr checks --watch) flake 401 mid-session. GraphQL is used only for the
+# three things REST lacks, review-thread resolution state, resolveReviewThread,
+# and a thread id's reply target (REST offers no route from a thread to its
+# first comment), behind the same retry. Sourced by _lib.sh's ship_load_host; needs SHIP_OWNER
 # and SHIP_REPO set.
 
 R="repos/$SHIP_OWNER/$SHIP_REPO"
