@@ -14,8 +14,8 @@
 # caller has read and judged different, and files past them.
 #
 # The list is the host's own, and GitHub's serves a just-created issue a few
-# seconds late, so two calls seconds apart can both file. That is the caller's
-# to handle and cheap to: one run already knows what it just filed, and the
+# seconds late, so two calls seconds apart can both file. The caller handles
+# that one itself, and cheaply: a run already knows what it just filed. The
 # check is for the same find met by a later run, minutes or days on.
 #
 # stdout: {"filed": true, "number": <n>, "url": "<url>"}

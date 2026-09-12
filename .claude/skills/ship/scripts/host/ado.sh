@@ -278,14 +278,25 @@ host_prs_open() {
       '[.[] | {number: .pullRequestId, title, head_ref: (.sourceRefName | ltrimstr("refs/heads/")), author: .createdBy.uniqueName,
               url: ($base + "/" + $p + "/_git/" + $r + "/pullrequest/" + (.pullRequestId | tostring)), created_at: .creationDate}]'
 }
-# The recent open work items, for file-issue's duplicate check. No tag filter:
-# an adjacent find may already sit under any tag, or none. PRs are not work
-# items here, so nothing has to be excluded. The 180-day window is not a
-# nicety: WIQL has no TOP, and an unwindowed project query fails outright with
-# VS402337 past 20000 rows, which a real board reaches.
+# Every open work item, for file-issue's duplicate check. No tag filter: an
+# adjacent find may already sit under any tag, or none. PRs are not work items
+# here, so nothing has to be excluded.
+#
+# Ask for all of them first, because a duplicate the check cannot see is the
+# bug it exists to stop. WIQL has no TOP and a project query past 20000 rows
+# fails outright with VS402337, so a board that large gets the 180-day window
+# instead and says so on stderr: a narrowed pool the caller is told about, not
+# a silent one. A board that size is a whole ADO project, not a repo's tracker.
+_wi_open_wiql() { # <extra predicate>
+  printf "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = '%s' AND [System.State] <> '%s' AND [System.State] <> 'Removed'%s ORDER BY [System.CreatedDate] DESC" \
+    "${SHIP_PROJECT//\'/\'\'}" "$ADO_CLOSED" "$1"
+}
 host_issues_open() {
   local out
-  out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = '${SHIP_PROJECT//\'/\'\'}' AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.CreatedDate] > @today - 180 ORDER BY [System.CreatedDate] DESC") || return 1
+  if ! out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql "")" 2>/dev/null); then
+    echo "ADO: the project's open work items exceed WIQL's 20000-row limit; narrowing the duplicate check to the last 180 days" >&2
+    out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql " AND [System.CreatedDate] > @today - 180")") || return 1
+  fi
   jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
       '[.[] | {number: .id, title: .fields["System.Title"],
                url: ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring))}]' <<<"${out:-[]}"

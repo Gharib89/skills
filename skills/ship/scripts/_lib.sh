@@ -29,9 +29,9 @@
 #   host_issue_comment <n> <body>
 #   host_issue_close <n>
 #   host_issue_create <title> <body-file> <label> -> {number,url}
-#   host_issues_open                     -> [{number,title,url}] recent open issues, newest
-#                                           first, never a PR. Bounded: a duplicate check wants
-#                                           what a recent run filed, and a real tracker is large.
+#   host_issues_open                     -> [{number,title,url}] every open issue, newest first,
+#                                           never a PR. Narrows only where the host refuses the
+#                                           whole set, and says so on stderr when it does.
 #   host_pr_create <head> <base> <title> <body-file> <issue> -> {number,url,created_at}
 #   host_pr_get <pr>                     -> {number,url,title,body,head_sha,head_ref,base_ref,state,mergeable}
 #   host_pr_for_branch <branch>          -> {number,state} of the newest PR with that head, or null
