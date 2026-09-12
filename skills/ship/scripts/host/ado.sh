@@ -310,8 +310,9 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
     sleep 2
     _reply_landed; local landed=$?
     case $landed in
-      1) _post_reply || return 1 ;;
-      2) return 1 ;;
+      0) ;;                            # the reply is there: the lost response was a success
+      1) _post_reply || return 1 ;;    # a read that found none: post again
+      *) return 1 ;;                   # 2, or a jq error: unknown, so never claim a reply
     esac
   fi
   jq -n --arg u "$(_pr_url "$pr")" --arg t "$thread" '{replied: true, url: ($u + "?discussionId=" + $t)}'
