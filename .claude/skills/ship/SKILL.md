@@ -122,8 +122,8 @@ step, including the host adapter it sources (`scripts/host/github.sh` or
 
 **You never run `gh` or `az` yourself in a ship run.** Every host interaction
 goes through a named mechanic, and a missing operation is a **Ship defect**:
-never a reason to hand-roll the call, and never filed to another repo. It goes
-on the merge summary's `Ship defects:` row, and the human carries it upstream.
+report it on the merge summary's `Ship defects:` row for the human to carry
+upstream, never hand-roll the call, and never file it to another repo.
 Reads come back in one vocabulary on both hosts: checks
 `pending|success|failure`, mergeable `clean|conflict|unknown`, review
 `approved|changes|comment`, threads `resolved|open|unavailable`.
