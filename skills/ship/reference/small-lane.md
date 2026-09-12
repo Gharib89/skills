@@ -32,7 +32,7 @@ real thing needs to prove. On top of that:
    against the issue; a reviewer reviews standards and has never read the
    issue. It also carries the two rejection rails. Its cost scales with the
    diff, so on a small diff it is cheap.
-4. Non-draft PR with `Closes #<issue>`
+4. Non-draft PR with `Closes #<issue>` above the first `## ` heading
 5. CI green plus every reviewer per its trigger
 6. The merge gate
 
