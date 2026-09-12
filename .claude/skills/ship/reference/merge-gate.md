@@ -44,6 +44,8 @@ Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci |
 Docs-sync:   <ran: files | skipped: reason>
 CI:          <leg> → <green | state> · ...     (from the profile's Legs:)
 Issues filed: <#n <title>, ... | none>
+Ship defects: <none | one line per defect:>
+  - <missing operation or wrong prose> (phase <n>)
 Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2 <m> · 3 <m> · 4 <m> · 5 <m> · 6 <m> · 7 <m> · 8 <m>
              (from the Run file's stamps: start→PR is phase 0's open to phase 6's
              close, PR→gate is phase 6's close to phase 8's close; a re-opened
@@ -54,8 +56,13 @@ Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 
 The `Local gate:` row is the gate's `gates` object verbatim, never retyped from
 memory. `Issues filed` lists every issue the run filed, in every lane; an
-implausible count is the human's signal. The `Review` blocks say what the PR
-body's `## Review` section says, in more detail; the section links here.
+implausible count is the human's signal. `Ship defects:` lists every Ship
+defect the run met (a host operation no mechanic performs, prose that promised
+what a mechanic does not do), each with the phase it was met in and written to
+the Run file at that moment the way a deviation is, so the row is a record, not
+a recollection. The run files it to no other repo; the human carries the row
+upstream. The `Review` blocks say what the PR body's `## Review` section says,
+in more detail; the section links here.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the

@@ -8,7 +8,7 @@ description: >-
   issue through to a PR, or run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.3.0
+  version: 1.3.1
   profile-schema: 1
 ---
 
@@ -121,11 +121,12 @@ step, including the host adapter it sources (`scripts/host/github.sh` or
 `scripts/host/ado.sh`, chosen from the `origin` remote).
 
 **You never run `gh` or `az` yourself in a ship run.** Every host interaction
-goes through a named mechanic, and a missing operation is a ship defect to
-report, never a reason to hand-roll the call. Reads come back in one vocabulary
-on both hosts: checks `pending|success|failure`, mergeable
-`clean|conflict|unknown`, review `approved|changes|comment`, threads
-`resolved|open|unavailable`.
+goes through a named mechanic, and a missing operation is a **Ship defect**:
+report it on the merge summary's `Ship defects:` row for the human to carry
+upstream, never hand-roll the call, and never file it to another repo.
+Reads come back in one vocabulary on both hosts: checks
+`pending|success|failure`, mergeable `clean|conflict|unknown`, review
+`approved|changes|comment`, threads `resolved|open|unavailable`.
 
 | Mechanic | Phase |
 |---|---|
