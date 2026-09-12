@@ -195,6 +195,9 @@ host_pr_checks() { # <pr> <head_sha>
   jq -n --argjson a "$pol" --argjson b "$st" '$a + $b | group_by(.name) | map(last)'
 }
 _threads_raw() { invoke GET git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1"; }
+# One thread, for the reply path: phase 7 replies per thread, so listing every
+# thread on the PR once per reply is a walk this endpoint does not need.
+_thread_raw() { invoke GET git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2"; }
 # {id, created} of the newest iteration: a push makes one, so "on the current
 # head" means iteration == this id, or (for a PR-level thread with no iteration
 # context, how a build-service reviewer posts) published after it was created.
@@ -203,7 +206,8 @@ _latest_iteration() {
     | jq '(.value | max_by(.id)) as $i | {id: ($i.id // 0), created: ($i.createdDate // "")}'
 }
 # A service identity (a build service) has an empty uniqueName; its displayName is the login then.
-_author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
+_comment_login='(.author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
+_author_login='(.comments[0] | '"$_comment_login"')'
 # Votes are the review rows; a reviewer that only opened threads on the latest
 # iteration counts as a substantive comment review on the head. `on_head` is
 # what poll-pr's default head rule reads; `all` carries every round across
@@ -217,12 +221,18 @@ _author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueN
 # two (publishedDate "...:28.343Z", creationDate "...:46.977591+00:00") and the
 # adapter owes its caller one vocabulary.
 _utc='(sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z"))'
+# A clipped round must not read as a whole one, so the cap leaves a marker.
+_clip='(if length > 2000 then .[0:2000] + "\n...[truncated]" else . end)'
+# `body` is the thread's own text: an Azure DevOps round has no review body of
+# its own, so the round a reviewer wrote is the comment it opened. A vote has
+# no text at all, hence "".
 _review_row='{login: '"$_author_login"', state: "comment", substantive: true,
-              submitted_at: (.publishedDate | '"$_utc"')}'
+              submitted_at: (.publishedDate | '"$_utc"'),
+              body: ((.comments[0].content // "") | '"$_clip"')}'
 host_pr_reviews() { # <pr> <head_sha>
   local votes it raw rows
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)
-      | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null}]') || return 1
+      | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null, body: ""}]') || return 1
   it=$(_latest_iteration "$1") || it='{"id":0,"created":""}'
   raw=$(_threads_raw "$1") || raw='{"value":[]}'
   # `all` is not deduped by login: --since asks whether ANY round landed after a
@@ -238,8 +248,11 @@ host_pr_reviews() { # <pr> <head_sha>
     '{on_head: ($v + $r.on_head), all: ($v + $r.all), total: ($v + $r.on_head | length)}'
 }
 host_pr_threads() {
-  _threads_raw "$1" | jq '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
+  local me
+  me=$(host_identity) || return 1
+  _threads_raw "$1" | jq --arg me "$me" '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
     | {id: (.id | tostring), resolved: (.status | IN("fixed","closed","wontFix","byDesign")),
+       replied: ([.comments[] | select('"$_comment_login"' == $me)] | length > 0),
        author: '"$_author_login"', path: .threadContext.filePath, body: .comments[0].content}]'
 }
 host_pr_reviewer_blocked() { echo null; }
@@ -264,6 +277,52 @@ host_pr_comment() { # <pr> <body-file>
 }
 host_pr_set_body() { azx repos pr update "${ORG[@]}" --id "$1" --description "$(cat "$2")" >/dev/null; }
 host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/dev/null; }
+# A child comment on the thread, status untouched: resolving stays
+# host_pr_resolve_thread's job. parentCommentId is the thread's root comment,
+# read back rather than assumed, because a reply parented to 0 opens a sibling
+# comment instead of threading under the finding.
+#
+# The POST goes direct rather than through `invoke`, whose azx retry would post
+# a second identical disposition when a slow success is read as a failure. Per
+# this adapter's rule, a failed create re-reads the thread for the comment that
+# success left, and only then posts again.
+host_pr_reply_thread() { # <pr> <thread-id> <body-file>
+  local pr=$1 thread=$2 file=$3 f root me
+  me=$(host_identity) || return 1
+  root=$(_thread_raw "$pr" "$thread" | jq -r '.comments[0].id') || return 1
+  [ -n "$root" ] && [ "$root" != null ] \
+    || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
+  f=$(mktemp); trap 'rm -f "$f"' RETURN
+  jq -n --rawfile b "$file" --argjson p "$root" '{parentCommentId: $p, content: $b, commentType: 1}' > "$f"
+  _post_reply() {
+    az devops invoke "${ORG[@]}" --http-method POST --area git --resource pullRequestThreadComments \
+      --api-version 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" \
+      pullRequestId="$pr" threadId="$thread" --in-file "$f" -o json >/dev/null
+  }
+  # Exit 0 the reply is there, 1 the thread carries no such child, 2 the thread
+  # could not be read. An unknown is not an absence, so only a successful read
+  # licenses a second POST. The match is keyed to parentCommentId and to this
+  # identity: a disposition quoting the finding verbatim would otherwise match
+  # the root comment, and someone else's identical text would stand in for a
+  # reply this run never posted.
+  _reply_landed() {
+    local raw; raw=$(_thread_raw "$pr" "$thread") || return 2
+    jq -e --argjson p "$root" --arg me "$me" --rawfile b "$file" \
+      '[.comments[] | select(.parentCommentId == $p and .content == $b
+                 and (if (.author.uniqueName // "") != "" then .author.uniqueName else .author.displayName end) == $me)]
+       | length > 0' >/dev/null <<<"$raw"
+  }
+  if ! _post_reply; then
+    sleep 2
+    _reply_landed; local landed=$?
+    case $landed in
+      0) ;;                            # the reply is there: the lost response was a success
+      1) _post_reply || return 1 ;;    # a read that found none: post again
+      *) return 1 ;;                   # 2, or a jq error: unknown, so never claim a reply
+    esac
+  fi
+  jq -n --arg u "$(_pr_url "$pr")" --arg t "$thread" '{replied: true, url: ($u + "?discussionId=" + $t)}'
+}
 host_pr_resolve_thread() { # <pr> <thread-id>
   local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN; printf '{"status":"fixed"}' > "$f"
   out=$(invoke PATCH git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" threadId="$2" --in-file "$f")

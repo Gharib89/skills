@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # GitHub adapter: the host_* interface from _lib.sh over REST via `gh api`.
 # REST throughout, one retry after 2 s: gh's GraphQL paths (gh pr view --json,
-# gh pr checks --watch) flake 401 mid-session. GraphQL is used only for the two
-# things REST lacks, review-thread resolution state and resolveReviewThread,
-# behind the same retry. Sourced by _lib.sh's ship_load_host; needs SHIP_OWNER
+# gh pr checks --watch) flake 401 mid-session. GraphQL is used only for the
+# three things REST lacks, review-thread resolution state, resolveReviewThread,
+# and a thread id's reply target (REST offers no route from a thread to its
+# first comment), behind the same retry. Sourced by _lib.sh's ship_load_host; needs SHIP_OWNER
 # and SHIP_REPO set.
 
 R="repos/$SHIP_OWNER/$SHIP_REPO"
@@ -170,9 +171,10 @@ host_pr_checks() { # <pr> <head_sha>
 # head, empty body), so only a body is a round.
 host_pr_reviews() { # <pr> <head_sha>
   api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" '
+    def clip: if length > 2000 then .[0:2000] + "\n...[truncated]" else . end;
     def row: {login: .user.login,
       state: (if .state == "APPROVED" then "approved" elif .state == "CHANGES_REQUESTED" then "changes" else "comment" end),
-      substantive: ((.body // "") != ""), submitted_at};
+      substantive: ((.body // "") != ""), submitted_at, body: ((.body // "") | clip)};
     {on_head: [.[] | select(.commit_id == $sha) | row], all: [.[] | row], total: length}'
 }
 
@@ -181,7 +183,8 @@ _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
     reviewThreads(first:100, after:$after){
       pageInfo{hasNextPage endCursor}
       nodes{ id isResolved isOutdated path
-        comments(first:1){ nodes{ author{login} body url } } } } } } }'
+        comments(first:1){ nodes{ databaseId author{login} body url } }
+        mine: comments(last:100){ nodes{ viewerDidAuthor } } } } } } }'
 # GraphQL only: REST has no thread-resolution state. A refused GraphQL path
 # (a proxy that pins it) fails this call; the mechanic reports "unavailable".
 host_pr_threads() {
@@ -191,7 +194,9 @@ host_pr_threads() {
     page=$(gql -f query="$_threads_query" -F o="$SHIP_OWNER" -F r="$SHIP_REPO" -F n="$1" \
       $([ "$after" != null ] && printf -- '-F after=%s' "$after") \
       --jq '.data.repository.pullRequest.reviewThreads') || return 1
-    out=$(jq --argjson p "$page" '. + [$p.nodes[] | {id, resolved: .isResolved, outdated: .isOutdated, path,
+    out=$(jq --argjson p "$page" '. + [$p.nodes[] | {id, comment_id: .comments.nodes[0].databaseId,
+      resolved: .isResolved, outdated: .isOutdated, path,
+      replied: ([.mine.nodes[] | select(.viewerDidAuthor)] | length > 0),
       author: .comments.nodes[0].author.login, body: .comments.nodes[0].body, url: .comments.nodes[0].url}]' <<<"$out")
     [ "$(jq -r .pageInfo.hasNextPage <<<"$page")" = true ] || break
     after=$(jq -r .pageInfo.endCursor <<<"$page")
@@ -251,6 +256,41 @@ host_pr_comment() { # <pr> <body-file>
 }
 host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
 host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
+
+_thread_reply_target_query='query($id:ID!){ node(id:$id){
+  ... on PullRequestReviewThread { comments(first:1){ nodes{ databaseId } } } } }'
+# REST, per this adapter's rule: a reply is `POST .../comments/{id}/replies`
+# keyed by the thread's first comment, which the thread row carries as
+# `comment_id`, so nothing here needs a GraphQL mutation. The thread ids
+# themselves come from GraphQL, so where the proxy blocks it there are no ids
+# to reply to and `poll-pr` already reports `threads: "unavailable"`.
+#
+# The caller passes the thread id, the one id both reply-thread and
+# resolve-thread take on either host, and this resolves that thread's
+# comment_id for it: one targeted node read, not a walk of every thread on the
+# PR, because phase 7 replies once per thread.
+#
+# Create-then-verify, like host_pr_comment: a slow success must not double-post.
+host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
+  local pr=$1 file=$3 cid me out raw
+  cid=$(gql -f query="$_thread_reply_target_query" -F id="$2" \
+    --jq '.data.node.comments.nodes[0].databaseId') \
+    || { printf '{"replied": false, "url": null, "detail": "unavailable"}\n'; return 1; }
+  [ -n "$cid" ] && [ "$cid" != null ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
+  me=$(host_identity) || return 1
+  _reply() { jq -n --rawfile b "$file" '{body: $b}' \
+    | gh api -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}' 2>/dev/null; }
+  if out=$(_reply); then printf '%s\n' "$out"; return 0; fi
+  sleep 2
+  # A failed read is not an absent reply. Only a read that succeeds and shows
+  # none licenses a second POST; otherwise a lost response becomes a duplicate
+  # disposition in the thread.
+  raw=$(api "$R/pulls/$pr/comments?per_page=100" --paginate --jq '.[]') || return 1
+  out=$(jq -s --argjson c "$cid" --arg me "$me" --rawfile b "$file" \
+    '[.[] | select(.in_reply_to_id == $c and .user.login == $me and .body == $b)] | last | select(. != null) | {replied: true, url: .html_url}' <<<"$raw")
+  if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
+  _reply
+}
 
 host_pr_resolve_thread() { # <pr> <thread-node-id>
   gql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ isResolved } } }' \
