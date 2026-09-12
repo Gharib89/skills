@@ -80,7 +80,7 @@ Subject constraints: <reserved prefixes or formats for the squash subject, or No
 
 Template: <path; honour it, never pass a raw body> | None.
 
-<!-- `Closes #<issue>`, `## Deviations from plan` and `## Review` are core in every repo. -->
+<!-- `Closes #<issue>`, `## Deviations from plan` and `## Review` are core in every repo. The closing reference sits above the first `## ` heading, not inside a section: ship rewrites sections wholesale. -->
 
 ## Public surface
 

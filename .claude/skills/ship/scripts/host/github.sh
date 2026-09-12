@@ -95,13 +95,25 @@ host_issue_create() { # <title> <body-file> <label>
   _issue_create
 }
 
+# Put `Closes #<issue>` above the first `## ` heading. `update-pr-body` replaces
+# a section wholesale, so a closing line appended to the end of the body sits
+# inside the last section and the next rewrite of that section drops it; above
+# the sections, no section rewrite can reach it. A body with no heading at all
+# has no section to fall inside, so it keeps the append.
+_gh_add_closes() { # <body> <issue>
+  awk -v n="$2" '
+    !placed && /^## / { print "Closes #" n; print ""; placed = 1 }
+    { print }
+    END { if (!placed) printf "\nCloses #%s\n", n }' <<<"$1"
+}
+
 host_pr_create() { # <head> <base> <title> <body-file> <issue>
   local head=$1 base=$2 title=$3 file=$4 issue=$5 body out
   body=$(cat "$file")
-  # The mechanic translates the closing link for the host: append the keyword
-  # when the body does not already carry one aimed at this issue.
+  # The mechanic translates the closing link for the host: add the keyword when
+  # the body does not already carry one aimed at this issue.
   if [ -n "$issue" ] && ! ship_body_closes "$body" "$issue"; then
-    body=$(printf '%s\n\nCloses #%s\n' "$body" "$issue")
+    body=$(_gh_add_closes "$body" "$issue")
   fi
   _pr_create() {
     jq -n --arg h "$head" --arg b "$base" --arg t "$title" --arg body "$body" \
