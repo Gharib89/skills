@@ -206,7 +206,8 @@ _latest_iteration() {
     | jq '(.value | max_by(.id)) as $i | {id: ($i.id // 0), created: ($i.createdDate // "")}'
 }
 # A service identity (a build service) has an empty uniqueName; its displayName is the login then.
-_author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
+_comment_login='(.author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
+_author_login='(.comments[0] | '"$_comment_login"')'
 # Votes are the review rows; a reviewer that only opened threads on the latest
 # iteration counts as a substantive comment review on the head. `on_head` is
 # what poll-pr's default head rule reads; `all` carries every round across
@@ -247,8 +248,11 @@ host_pr_reviews() { # <pr> <head_sha>
     '{on_head: ($v + $r.on_head), all: ($v + $r.all), total: ($v + $r.on_head | length)}'
 }
 host_pr_threads() {
-  _threads_raw "$1" | jq '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
+  local me
+  me=$(host_identity) || return 1
+  _threads_raw "$1" | jq --arg me "$me" '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
     | {id: (.id | tostring), resolved: (.status | IN("fixed","closed","wontFix","byDesign")),
+       replied: ([.comments[] | select('"$_comment_login"' == $me)] | length > 0),
        author: '"$_author_login"', path: .threadContext.filePath, body: .comments[0].content}]'
 }
 host_pr_reviewer_blocked() { echo null; }

@@ -46,7 +46,10 @@
 #                                           submitted_at: one UTC spelling, or null where the host
 #                                           records state rather than a timed event (an ADO vote),
 #                                           which the --since rule then cannot admit.
-#   host_pr_threads <pr>                 -> [{id,resolved,author,path,body}]; non-zero exit = unavailable
+#   host_pr_threads <pr>                 -> [{id,resolved,replied,author,path,body}]; non-zero exit =
+#                                           unavailable. replied: this identity has a comment in the
+#                                           thread, which is how phase 7 skips a thread it already
+#                                           dispositioned in an earlier round.
 #                                           GitHub rows also carry comment_id, the thread's first
 #                                           review comment: the REST reply target that host's
 #                                           reply is keyed to. On Azure DevOps the thread id is

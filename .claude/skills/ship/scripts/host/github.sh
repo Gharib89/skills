@@ -183,7 +183,8 @@ _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
     reviewThreads(first:100, after:$after){
       pageInfo{hasNextPage endCursor}
       nodes{ id isResolved isOutdated path
-        comments(first:1){ nodes{ databaseId author{login} body url } } } } } } }'
+        comments(first:1){ nodes{ databaseId author{login} body url } }
+        mine: comments(first:100){ nodes{ viewerDidAuthor } } } } } } }'
 # GraphQL only: REST has no thread-resolution state. A refused GraphQL path
 # (a proxy that pins it) fails this call; the mechanic reports "unavailable".
 host_pr_threads() {
@@ -195,6 +196,7 @@ host_pr_threads() {
       --jq '.data.repository.pullRequest.reviewThreads') || return 1
     out=$(jq --argjson p "$page" '. + [$p.nodes[] | {id, comment_id: .comments.nodes[0].databaseId,
       resolved: .isResolved, outdated: .isOutdated, path,
+      replied: ([.mine.nodes[] | select(.viewerDidAuthor)] | length > 0),
       author: .comments.nodes[0].author.login, body: .comments.nodes[0].body, url: .comments.nodes[0].url}]' <<<"$out")
     [ "$(jq -r .pageInfo.hasNextPage <<<"$page")" = true ] || break
     after=$(jq -r .pageInfo.endCursor <<<"$page")

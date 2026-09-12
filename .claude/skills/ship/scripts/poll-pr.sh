@@ -29,7 +29,8 @@
 # Each review row carries the round's own `body`, clipped past 2000 characters
 # and marked "...[truncated]" there: phase 7 triages from it, and a round whose
 # findings are in the body rather than in threads is invisible without it.
-# `threads[]` rows carry the thread's first comment, which `reply-thread` answers.
+# `threads[]` rows carry the thread's first comment, which `reply-thread` answers,
+# and `replied`, true once this identity has answered in that thread.
 #
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
 # quota or queue notice), not missing. `threads` is "unavailable" when thread
