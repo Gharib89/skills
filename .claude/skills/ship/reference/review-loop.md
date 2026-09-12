@@ -44,7 +44,7 @@ a fresh read of the committed tree, not a conversation.
   `Instructions:` file when a finding contradicts it (a host may truncate that
   file; cite it when declining). A valid finding outside the issue is an
   adjacent find, and phase 2's three dispositions decide it, inline conditions
-  and `file-issue`'s duplicate check included. The thread then carries that
+  and `file-issue`'s candidate check included. The thread then carries that
   disposition with the link. That is also the honest answer to a gating
   reviewer.
 - **Batch fixes into one push per round**, then reply to the round in one

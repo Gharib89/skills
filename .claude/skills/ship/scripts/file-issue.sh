@@ -5,7 +5,7 @@
 #   file-issue --title "<title>" --body-file <path> --label <triage marker>
 #              [--distinct-from <n>[,<n>]]
 #
-# Duplicate check. Before creating, the mechanic lists the host's open issues
+# Candidate check. Before creating, the mechanic lists the host's open issues
 # and compares titles: lowercased, punctuation as a separator, tokens under
 # four characters and generic English stopwords dropped. An open issue sharing
 # three or more tokens with the new title is a candidate, and with any
@@ -27,7 +27,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # Generic English function words of four or more characters; shorter ones the
 # length rule already drops. No repo-specific word belongs here: the mechanic
 # is generic, and an over-eager candidate costs one `--distinct-from` while a
-# missed one costs a duplicate issue.
+# missed one costs a second issue for a find already filed.
 STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that them then they this those very were what when will with would your'
 
 title=""; file=""; label=""; exclude="[]"

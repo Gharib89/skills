@@ -278,11 +278,11 @@ host_prs_open() {
       '[.[] | {number: .pullRequestId, title, head_ref: (.sourceRefName | ltrimstr("refs/heads/")), author: .createdBy.uniqueName,
               url: ($base + "/" + $p + "/_git/" + $r + "/pullrequest/" + (.pullRequestId | tostring)), created_at: .creationDate}]'
 }
-# Every open work item, for file-issue's duplicate check. No tag filter: an
+# Every open work item, for file-issue's candidate check. No tag filter: an
 # adjacent find may already sit under any tag, or none. PRs are not work items
 # here, so nothing has to be excluded.
 #
-# Ask for all of them first, because a duplicate the check cannot see is the
+# Ask for all of them first, because a candidate the check cannot see is the
 # bug it exists to stop. WIQL has no TOP and a project query past 20000 rows
 # fails outright with VS402337, so a board that large gets the 180-day window
 # instead and says so on stderr: a narrowed pool the caller is told about, not
@@ -292,11 +292,22 @@ _wi_open_wiql() { # <extra predicate>
     "${SHIP_PROJECT//\'/\'\'}" "$ADO_CLOSED" "$1"
 }
 host_issues_open() {
-  local out
-  if ! out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql "")" 2>/dev/null); then
-    echo "ADO: the project's open work items exceed WIQL's 20000-row limit; narrowing the duplicate check to the last 180 days" >&2
-    out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql " AND [System.CreatedDate] > @today - 180")") || return 1
+  local out err rc=0
+  err=$(mktemp)
+  out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql "")" 2>"$err") || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    # Only the row-limit answer earns the narrower pool. An auth or transient
+    # failure that narrowed instead would hide an existing candidate and file a
+    # second issue for a find already filed, which is the bug this check exists
+    # to stop.
+    if grep -q 'VS402337' "$err"; then
+      echo "ADO: the project's open work items exceed WIQL's 20000-row limit; narrowing the candidate pool to the last 180 days" >&2
+      out=$(azx boards query "${PRJ[@]}" --wiql "$(_wi_open_wiql " AND [System.CreatedDate] > @today - 180")") || { rm -f "$err"; return 1; }
+    else
+      ship_tail40 "$err"; rm -f "$err"; return 1
+    fi
   fi
+  rm -f "$err"
   jq --arg org "$SHIP_ORG_URL" --arg project "$SHIP_PROJECT" \
       '[.[] | {number: .id, title: .fields["System.Title"],
                url: ($org + "/" + ($project | @uri) + "/_workitems/edit/" + (.id | tostring))}]' <<<"${out:-[]}"
