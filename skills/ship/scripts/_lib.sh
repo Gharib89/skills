@@ -38,16 +38,19 @@
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
 #   host_pr_reviews <pr> <head_sha>      -> {on_head:[REVIEW],all:[REVIEW],total}
 #                                           REVIEW = {login,state,substantive,submitted_at,body}
-#                                           body: the round's text, truncated to 2000 chars,
-#                                           "" where the host records a state rather than a
-#                                           written round. Phase 7 triages from it.
+#                                           body: the round's text. Phase 7 triages from it.
+#                                           Past 2000 chars it is clipped and marked
+#                                           "...[truncated]"; "" where the host records a state
+#                                           rather than a written round.
 #                                           all: every round across heads, for poll-pr --since.
 #                                           submitted_at: one UTC spelling, or null where the host
 #                                           records state rather than a timed event (an ADO vote),
 #                                           which the --since rule then cannot admit.
 #   host_pr_threads <pr>                 -> [{id,resolved,author,path,body}]; non-zero exit = unavailable
-#                                           GitHub rows also carry comment_id, the thread's
-#                                           first review comment, which is its reply target.
+#                                           GitHub rows also carry comment_id, the thread's first
+#                                           review comment: its REST reply target, which
+#                                           host_pr_reply_thread resolves from the id it is given.
+#                                           On Azure DevOps the thread id is that target already.
 #   host_pr_reviewer_blocked <pr> <login>-> JSON string | null
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
 #                                           requested_at: ISO-8601 time of the request event,

@@ -170,9 +170,10 @@ host_pr_checks() { # <pr> <head_sha>
 # head, empty body), so only a body is a round.
 host_pr_reviews() { # <pr> <head_sha>
   api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" '
+    def clip: if length > 2000 then .[0:2000] + "\n...[truncated]" else . end;
     def row: {login: .user.login,
       state: (if .state == "APPROVED" then "approved" elif .state == "CHANGES_REQUESTED" then "changes" else "comment" end),
-      substantive: ((.body // "") != ""), submitted_at, body: ((.body // "")[0:2000])};
+      substantive: ((.body // "") != ""), submitted_at, body: ((.body // "") | clip)};
     {on_head: [.[] | select(.commit_id == $sha) | row], all: [.[] | row], total: length}'
 }
 
@@ -258,6 +259,12 @@ host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/
 # `comment_id`, so nothing here needs a GraphQL mutation. The thread ids
 # themselves come from GraphQL, so where the proxy blocks it there are no ids
 # to reply to and `poll-pr` already reports `threads: "unavailable"`.
+#
+# The caller passes the thread id, the one id both reply-thread and
+# resolve-thread take on either host, and this resolves the row's comment_id
+# for it. That costs one thread read per reply and buys a single id vocabulary
+# in the mechanics; handing the caller two ids to keep straight per host does
+# not.
 #
 # Create-then-verify, like host_pr_comment: a slow success must not double-post.
 host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>

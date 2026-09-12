@@ -217,11 +217,14 @@ _author_login='(.comments[0].author | if (.uniqueName // "") != "" then .uniqueN
 # two (publishedDate "...:28.343Z", creationDate "...:46.977591+00:00") and the
 # adapter owes its caller one vocabulary.
 _utc='(sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z"))'
+# A clipped round must not read as a whole one, so the cap leaves a marker.
+_clip='(if length > 2000 then .[0:2000] + "\n...[truncated]" else . end)'
 # `body` is the thread's own text: an Azure DevOps round has no review body of
 # its own, so the round a reviewer wrote is the comment it opened. A vote has
 # no text at all, hence "".
 _review_row='{login: '"$_author_login"', state: "comment", substantive: true,
-              submitted_at: (.publishedDate | '"$_utc"'), body: (.comments[0].content // "")[0:2000]}'
+              submitted_at: (.publishedDate | '"$_utc"'),
+              body: ((.comments[0].content // "") | '"$_clip"')}'
 host_pr_reviews() { # <pr> <head_sha>
   local votes it raw rows
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)
