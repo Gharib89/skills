@@ -129,7 +129,8 @@ Brand-level detail lives in the host adapters; these show the mapping only.
   profile. Two identities behind one reviewer: the request names one login,
   the review posts under another, and the check run a third; the mechanics
   match each surface to its own name. Copilot enabled as an automatic review
-  by a repository ruleset is `auto-once` instead.
+  by a repository ruleset is `on-push` or `auto-once` instead, according to the
+  `copilot_code_review` rule's `review_on_push`.
 - **CodeRabbit as `on-push`**: reviews every push; `Resolve:` is its resolve
   comment, posted once after every thread carries a reply.
 - **Claude Code on GitHub Actions as `on-push`**: reviews every push through a
