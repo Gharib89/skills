@@ -9,8 +9,9 @@
 # host/ado.sh, chosen from the origin remote, never from a flag. An adapter
 # defines every function below; reads come back in one vocabulary on both hosts:
 # checks pending|success|failure, mergeable clean|conflict|unknown, review
-# approved|changes|comment, threads resolved|open (or the call fails, which the
-# mechanic reports as "unavailable").
+# approved|changes|comment, and threads as `resolved: true|false` per thread, or
+# the whole `threads` field as the string "unavailable" when the state could not
+# be read.
 #
 #   host_tooling_reasons                 -> one missing-tool reason per line
 #   host_tooling_install                 -> install the host CLI where absent; non-zero = could not

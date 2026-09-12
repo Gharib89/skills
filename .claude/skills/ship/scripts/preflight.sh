@@ -8,7 +8,11 @@
 # then every not-actionable reason, collected rather than
 # first-hit so the human reads one full stop report.
 #
-#   preflight <issue> [--unattended]
+#   preflight <issue|none> [--unattended]
+#
+# `none` as the issue argument is the task-spec run: there is no issue to read,
+# so the issue block is skipped and `none` is the literal branch and worktree
+# suffix. Every other check runs unchanged.
 #
 # stdout: {host, repo, identity, profile, ok, reasons[], mentions[], pruned[]}
 #   reasons use the stop names verbatim, detail after a colon:
@@ -22,7 +26,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-n=${1:?usage: preflight <issue> [--unattended]}; shift
+n=${1:?usage: preflight <issue|none> [--unattended]}; shift
 unattended=false
 while [ $# -gt 0 ]; do
   case $1 in
@@ -104,9 +108,10 @@ if [ -d "$container" ]; then
   git -C "$root" worktree prune >/dev/null 2>&1
 fi
 
-# The issue itself.
+# The issue itself, unless this is a task-spec run.
 mentions='[]'
-if ! issue=$(host_issue_get "$n"); then
+if [ "$n" = none ]; then :
+elif ! issue=$(host_issue_get "$n"); then
   reasons+=("issue #$n not found or unreadable")
 else
   [ "$(jq -r .state <<<"$issue")" = open ] || reasons+=("closed")

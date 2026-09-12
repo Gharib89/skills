@@ -2,13 +2,11 @@
 name: ship
 description: >-
   Drive one tracker issue to a merge-ready PR in a single run, stopping only at
-  the human merge gate. Reads every repo fact from the ship profile at
-  docs/agents/ship.md. Composes the `tdd`, `code-review`, `writing-for-agents`
-  and `find-docs` skills. Use when the user wants to ship an issue, take an
-  issue through to a PR, or run the unattended lane.
+  the human merge gate. Use when the user wants to ship an issue, or to run the
+  unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.4.0
+  version: 1.5.0
   profile-schema: 1
 ---
 
@@ -21,16 +19,10 @@ integrates with, self-reviewed, reviewed by every reviewer the repo names, and
 CI-green, with every decision summarized for a ten-second approve.
 
 This skill is **generic**. It knows how to ship; it knows nothing about the
-repo. Every repo fact comes from the **ship profile**, `docs/agents/ship.md`
-(vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md)
-of the source repo). The copy under `.claude/skills/ship` is a **derived copy**:
+repo. Every repo fact comes from the **ship profile**, `docs/agents/ship.md`.
+The copy under `.claude/skills/ship` is a **derived copy**:
 never edit it in place; the repo's `### Ship` block in CLAUDE.md carries the
 refresh command.
-
-**Self-contained.** This skill behaves identically whether or not a personal
-`~/.claude/CLAUDE.md`, `~/.claude/rules/` or personal skills exist. Its inputs
-are the repo's CLAUDE.md, the profile, the docs the profile names, and the
-issue. Nothing a run needs arrives from the personal layer.
 
 **Version.** Print `ship <version>` (the `metadata.version` above) in the run
 header, the first line of the first reply, and again in the merge summary, so
@@ -43,7 +35,9 @@ every PR records which ship produced it.
 - `<issue>`: the issue number (work item id on Azure DevOps). Omitted with no
   flag: ask which issue.
 - Free text instead of a number: treat it as the task spec directly. No issue
-  fetch, no claim, no `Closes`, no reflect; everything else runs.
+  fetch, no claim, no `Closes`, no reflect; everything else runs. `none` is the
+  issue argument these four mechanics accept: `preflight none`,
+  `isolate none <type> <slug>`, `open-pr none ...`, `cleanup none`.
 - `--unattended`: the **unattended run**. No human is present: a blocked stop
   hands back instead of asking, the sandbox clone is the isolation, and the
   merge gate posts the summary as a PR comment and returns. It starts with
@@ -64,23 +58,6 @@ one always present; a defaulted axis reads `None.` or `Default.`. Facts sit on
 You read the profile and pass its facts to the mechanics as arguments; no script
 parses markdown.
 
-| Heading | Feeds |
-|---|---|
-| `## Host` | preflight cross-check against the `origin` remote |
-| `## Worktree` (`Carry:`, `Bootstrap:`) | phase 0 isolate and post-merge cleanup |
-| `## Local gate` (`Location:`, `Small node:`, `Tripwires:`) | phase 5; phase 2 tripwires |
-| `## CI` (`Legs:`, `No-checks legal:`, `Push policy:`) | phase 8; the legs a verification may defer to |
-| `## Reviewers` (zero or more, each with `Trigger:`) | phase 7 |
-| `## Coding standards` | the `code-review` skill's Standards axis in phase 4 and every reviewer decline |
-| `## Verification` (zero or more, seven fixed lines each) | phase 3 |
-| `## Versioning and changelog` (`In-PR requirement:`, `Subject constraints:`) | phase 2 and the PR title |
-| `## PR` | phase 6 |
-| `## Public surface` | lane key 1 |
-| `## Triage` | the marker `file-issue` applies to an adjacent find |
-| `## Docs sync` (`Targets:`, `Agent-facing:`) | phase 4 |
-| `## Current docs` (`Sources:`, `Pinned:`) | every API claim in phases 2, 4 and 7 |
-| `## Cloud lane` (`PR cap:`, `Bootstrap:`) | the unattended lane only |
-
 Two more repo docs feed a run and are read the same way: triage roles
 (`ready-for-agent`, `ready-for-human`, `needs-triage`) are canonical role names
 whose label strings come from `docs/agents/triage-labels.md`, and the tracker's
@@ -94,16 +71,11 @@ mechanics come from `docs/agents/issue-tracker.md`.
 changed), always with a ship major bump, never for a behaviour change that
 leaves the profile alone. Preflight compares the two and refuses a mismatch in
 either direction, in both lanes, never claimed; the detail names both numbers
-and the fix:
-
-- `profile invalid: schema 1, ship expects 2; run /setup-skills` (profile older)
-- `profile invalid: schema 2, ship 1.1.0 reads 1; refresh ship` (ship older)
-- `profile invalid: no Schema line; run /setup-skills`
+and the fix.
 
 A profile older than ship is refused even where ship could default the missing
 axis: a defaulted axis reads `None.`/`Default.` explicitly, never an omitted
-heading. The schema is not printed in the run header: a run that reaches the
-header has passed the check, so `ship <version>` implies it.
+heading.
 
 Missing file: stop `profile missing`, naming `docs/agents/ship.md` and
 `/setup-skills`. Missing or misordered headings: stop `profile invalid`, naming
@@ -115,7 +87,10 @@ run will not touch is never checked.
 
 `scripts/` holds one executable per deterministic step. Each prints one JSON
 verdict on stdout, a failing step's last 40 log lines on stderr, and exits
-`0` ok, `1` real failure, `2` tooling. When a phase names a mechanic, run it
+`0` ok, `1` the mechanic's own not-ok answer, `2` tooling. Exit 1 is an answer,
+not always a fault: `nothing-ready` from `select`, a not-actionable `preflight`
+and a `poll-pr` window that closed are all exit 1 and none is red. Read the
+JSON, then decide. When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that
 step, including the host adapter it sources (`scripts/host/github.sh` or
 `scripts/host/ado.sh`, chosen from the `origin` remote).
@@ -126,11 +101,13 @@ report it on the merge summary's `Ship defects:` row for the human to carry
 upstream, never hand-roll the call, and never file it to another repo.
 Reads come back in one vocabulary on both hosts: checks
 `pending|success|failure`, mergeable `clean|conflict|unknown`, review
-`approved|changes|comment`, threads `resolved|open|unavailable`.
+`approved|changes|comment`, and threads as `resolved: true|false` per thread, or
+the whole `threads` field as the string `"unavailable"` when the state could not
+be read.
 
 | Mechanic | Phase |
 |---|---|
-| `preflight <issue>` | 0 |
+| `preflight <issue> [--unattended]` | 0 |
 | `isolate <issue> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
 | `read-issue <issue>` | 1 |
 | `manage-issue <issue> take \| release \| handback "<reason>"` | 1; any stop after the claim; 9 |
@@ -140,12 +117,12 @@ Reads come back in one vocabulary on both hosts: checks
 | `open-pr <issue> --title --body-file` | 6 |
 | `reflect <issue> <pr>` | 6 |
 | `update-pr-title <pr> --title` | 6, 9 |
-| `poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>]` | 7, 8 |
+| `poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]` | 7, 8 |
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
 | `update-pr-body <pr> --section Review --body-file` | 7 |
 | `resolve-thread <pr> <thread>` | 7 |
-| `ci-wait <pr>` | 8 |
+| `ci-wait <pr> [--timeout <s>] [--interval <s>]` | 8 |
 | `merge <pr> <issue> --worktree <path>` | 9, on approval |
 | `cleanup <issue>` | 9, after merge |
 | `tooling [--install]`, `list-prs --open` and `select` | unattended lane |
@@ -153,16 +130,20 @@ Reads come back in one vocabulary on both hosts: checks
 Run mechanics **inline**: they project their own output, so a subagent there
 burns budget to relay what an exit code already says. Poll loops are bounded
 and foreground; reaching the bound is never permission to proceed. Re-run to
-extend.
+extend, or pass a wider `--timeout` up front when the profile's `Legs:` names a
+leg you know is slower than the bound.
 
 ## The autonomy contract
 
 One guaranteed stop, the **merge gate**: merging is effectively irreversible,
 so a human says merge. Ship never merges on its own and never uses an
-auto-merge flag. Two conditional pauses in an attended run: the **ambiguity
-rail** (phase 1, the issue is too vague to plan) and a **hand-off** (phase 3, a
+auto-merge flag. Two conditional pauses in an attended run: the `ambiguous`
+stop (phase 1, the issue is too vague to plan) and a **hand-off** (phase 3, a
 verification's prerequisite is missing and its disposition says so). Everything
-else, triaging your own findings, fixing, re-running, is autonomous.
+else, triaging your own findings, fixing, re-running, is autonomous. Before
+ending a turn, check your last paragraph: if it states a plan, a next step or an
+intention ("I'll re-run the poll") rather than having done it, do it now with a
+tool call instead of stopping.
 
 **Never proceed on red.** Any failure before the merge gate gets a bounded
 self-fix-and-retry, about two attempts. Still red, or the failure says the
@@ -183,12 +164,20 @@ sibling maps it, a human reads it.
 | Local gate verdict `unavailable` | `local gate unavailable: <gates>` | attended: ask; unattended: hand back |
 | Carried file changed | `carried file modified: <file>` | attended: ask; unattended: hand back |
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
+| Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | never claimed |
+| Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | never claimed |
+| No issue passes selection | `nothing-ready` | never claimed |
+| The host's blocker query exists and failed | `blockers-unavailable` | never claimed |
 | Merge gate reached | none: the run's success | holds until merge |
 
 Hand-back is `manage-issue <issue> handback "<reason>"`: unassign, drop
 `ready-for-agent`, add `ready-for-human`, comment the reason. In an attended run
 you stop and ask; only if the human says stop do you hand back. Never hand back
-to the agent queue: that loops forever.
+to the agent queue: that loops forever. A hand-back that prints
+`claim: released` and still exits 1 did release the claim; read `handed_back`
+and report which label is missing rather than a clean stop. One that prints
+`{"error": ...}` instead failed before the unassign landed: the claim is still
+held and the stop is unresolved.
 
 ## Consult current docs
 
@@ -211,14 +200,12 @@ every subagent with a model explicitly, never default-inherit.
 | Phase-2 **judgment** (classification, plan, design, the implementation brief); triage of every finding; the `writing-for-agents` pass; the `code-review` skill's **Standards** axis | opus |
 
 When you invoke `code-review`, tier its two axes yourself. Fall back to the
-nearest available tier rather than running everything on one model. Subagents
-are a lever, never a dependency: with no subagent tools in the session, run
-everything inline and the run is still complete.
+nearest available tier rather than running everything on one model.
 
 ## Working standards
 
-These bind every edit a run makes, in every repo, with or without a personal
-CLAUDE.md:
+These bind every edit a run makes, in every repo, regardless of a personal
+`~/.claude/CLAUDE.md`, `~/.claude/rules/` or personal skills:
 
 - **Simplest shape that solves the problem.** No speculative features,
   configurability or abstraction for single-use code. If the diff could be a
@@ -232,8 +219,9 @@ CLAUDE.md:
 - **Comments record the why.** Document public APIs and non-obvious
   constraints, invariants and workarounds. Skip narrative comments on
   internals.
-- **Concise PR and summary, always the why.** State what changed and why; the
-  reader has the diff for the how.
+- **Concise PR body, always the why.** State what changed and why; the reader
+  has the diff for the how. The merge summary is exempt: write it uncompressed
+  per [reference/merge-gate.md](reference/merge-gate.md).
 
 ## The lanes
 
@@ -269,12 +257,17 @@ claim) through the Skill tool when their moment comes; never hand-roll their
 logic. Any skill you compose that has an unattended mode is told the run is
 unattended explicitly; it has no other way to know.
 
-**0 · Isolate.** Run `preflight <issue>`. It proves tooling, identity and
-**push permission first** (every read-only call succeeds for an account that
-cannot push, so a wrong account stays invisible until the merge answers 404),
-cross-checks `## Host` against the remote, loads and validates the profile
-headings, prunes worktrees whose PR is merged or closed, and collects every
-not-actionable reason. Admission: `ready-for-agent` always; `ready-for-human` in an
+**0 · Isolate.** Run `preflight <issue>`, adding `--unattended` in an unattended
+run, which is what turns a `ready-for-human` issue into the
+`ready-for-human: attended only` stop; a bare call admits it. It proves tooling
+and identity, and **push permission first where the host can answer it** (every
+read-only call succeeds for an account that cannot push, so a wrong account
+stays invisible until the merge answers 404). Azure DevOps has no cheap push
+probe: preflight returns `unknown`, warns on stderr and continues, so read the
+warning before trusting `ok: true` and name the unproven check in the merge
+summary. It cross-checks `## Host` against the remote, loads and validates the
+profile headings, prunes worktrees whose PR is merged or closed, and collects
+every not-actionable reason. Admission: `ready-for-agent` always; `ready-for-human` in an
 attended run only; anything else is `not triaged`.
 An assignee, including your own identity, is `already claimed`; stale-claim
 recovery is a human unassigning by hand. `existing PR` means a live PR whose
@@ -287,7 +280,10 @@ fetches, branches from `origin/HEAD`, creates the sibling worktree
 `<parent>/<repo>.worktrees/<slug>-<issue>`, copies the carried files in one
 way, and prints the path. Unattended: `isolate ... --in-place`, because the
 sandbox clone is the isolation; same fetch and branch, no worktree, no carry.
-Never `EnterWorktree`. Branch `<type>/<slug>-<issue>`, `<type>` matching the
+Work from the printed worktree path; every edit uses an absolute path under it.
+Never `EnterWorktree` or a bare `git worktree add`: only `isolate` lands the
+worktree at the path and branch preflight checks, with the `Carry:` files copied
+in. Branch `<type>/<slug>-<issue>`, `<type>` matching the
 issue (`feat`, `fix`, `docs`, ...); the `-<issue>` suffix is what preflight
 greps. Every edit, commit and the PR happen from this branch. **Commit as you
 go**: the PR needs real commits. The branch type is a label; the squash
@@ -320,7 +316,10 @@ the deviation; it does not block, so `file-issue` it with the profile's triage
 marker and leave it; or it shows the issue is mis-specified, so stop
 `mis-specified`. No cap: the merge summary lists every issue filed. If the core
 work balloons (the diff outgrows one PR, or the fix demands a redesign the
-issue never scoped), stop `needs-split` with a split proposal.
+issue never scoped), stop `needs-split` with a split proposal. Phase 2 is done
+when the applicable tests are green (red first, per class), `Tripwires:` and
+`In-PR requirement:` have landed, the deviations log is current, and every
+adjacent find carries one of the three dispositions.
 
 **3 · Verify.** For each applicable verification, run its `Run:` line scoped
 to what you touched, on the environment the issue was reported against; green
@@ -387,20 +386,21 @@ reviewer, filled at phase-7 exit. Then `reflect <issue> <pr>` so a human
 reading the issue sees the PR.
 
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
-convergence by its **trigger**, never by its brand: `auto-once` is
-dispositioned once and never re-requested; `on-push` re-reviews every push,
-rounds are free, and it converges when a review has landed on the current head
-with nothing actionable and every thread is dispositioned and resolved;
-`on-request` gets one round per `request-review`, up to `Cap:`, and converges
-when the latest round has nothing actionable and every thread is dispositioned.
-Zero reviewers: skip the phase. Batch fixes into one push per round; reply on
-every thread. Exits: `converged`, `converged, override needed` (a gating
+convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
+fixes its loop, its convergence test and its cap; the brand fixes nothing.
+Zero reviewers: skip the phase. Batch fixes into one push per round, then reply
+to the round in one `comment-pr` body-file, addressing every thread by quote or
+link (`fixed in <sha>`, or the decline and its reason); there is no per-thread
+reply mechanic, and `resolve-thread` still runs per thread once every thread
+carries a disposition. Exits: `converged`, `converged, override needed` (a gating
 reviewer's declined finding, cited with evidence), or `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |
 unreachable`. Degraded proceeds to the merge gate on green CI and never hands
 back on its own. At exit, `update-pr-body <pr> --section Review` with one status
-line per reviewer. Mechanics, convergence per trigger, degraded detection and
-the worked examples: [reference/review-loop.md](reference/review-loop.md).
+line per reviewer. Read
+[reference/review-loop.md](reference/review-loop.md) for convergence per
+trigger, the substantive-round test, `Instructions:` handling and degraded
+detection.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers
 it, reading the profile's `Legs:`. `conflict`: a conflicted PR has no merge
@@ -420,18 +420,3 @@ post it in the conversation and wait for an explicit "merge"; on approval run
 their JSON is finished by hand before reporting done. Unattended:
 `comment-pr <pr> --body-file` with the summary, and return. The claim holds in
 both lanes until the merge releases it.
-
-## Reference files
-
-- `reference/context-discipline.md`: the delegation rule; the Run file, its ten
-  items and clock stamps.
-- `reference/small-lane.md`: what collapses, the floor, revocation.
-- `reference/implement.md`: phases 1 to 3 in detail: spec precedence, classes,
-  the TDD override, external-claim probes, the judgment/execution split,
-  verification dispositions.
-- `reference/review-loop.md`: phase 7 per trigger, convergence, degraded
-  exits, worked examples.
-- `reference/merge-gate.md`: the summary template, approval mechanics, the
-  unattended posting.
-- `reference/unattended.md`: `--unattended` end to end, and the lane with no
-  issue argument.

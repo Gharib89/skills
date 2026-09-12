@@ -23,8 +23,6 @@ Every lever below is subject to it, in rough order of impact:
   returns a small JSON; there is no bare host CLI call to over-fetch with.
 - **Investigate inside the worktree from the start**, so you never read a file
   in the main checkout and re-read it in the worktree to edit it.
-- **Trust Edit/Write.** The tool errors if the match failed and the harness
-  tracks file state; a re-Read to confirm is pure cost.
 - **Targeted test nodes during the loop; the full suite only at the local
   gate.** Re-running the whole suite every cycle is slow noise.
 - **Delegate noisy verification runs.** A phase-3 verification that dumps
@@ -43,10 +41,15 @@ temp directory when none is named. Never inside the repo. It holds the
 ten-item checklist below and, as they form, the design and plan. It is the
 **source of truth** for where the run is: it survives a mid-run summary and
 depends on no tool the harness might withhold. Without it a summarized run
-cannot tell which phase it was in, and skips or repeats one.
+cannot tell which phase it was in, and skips or repeats one. The window is
+managed, not scarce: the harness compacts long runs and the Run file carries
+state across that boundary, so never stop, narrow a phase or suggest a new
+session over context; keep working.
 
 The harness task tools are an **optional mirror**, decided per run, never per
-repo: one `ToolSearch` probe (`select:TaskCreate,TaskUpdate,TaskList`). Tools
+repo: one `ToolSearch` probe with `select:TaskCreate,TaskUpdate,TaskList`, then
+one keyword probe (e.g. `task list todo`) if the select returns nothing, since
+exact names differ across harness builds and some builds expose none. Tools
 present: mirror each flip. Nothing returned: an answer, not a fault; proceed on
 the file alone.
 
@@ -59,8 +62,9 @@ end of the line, after the `in_progress` suffix, one range per parentheses:
 - [x] 2 · Implement: ... (08:31→09:40) (10:20→10:33)     # re-opened by a red gate
 ```
 
-A phase that re-opens appends a second range. A range whose close reads
-earlier than its open crossed midnight UTC and is 24 h longer than it looks.
+A phase that re-opens appends a second range. A close stamped earlier than its
+open crossed midnight UTC; append `+1d` to it (`(23:58→00:12+1d)`) so the range
+still reads left to right and the `Timing:` row needs no special case.
 The merge summary's `Timing:` line is read off these stamps, and they are the
 only way to see which phase a slow run spent its hours in.
 
