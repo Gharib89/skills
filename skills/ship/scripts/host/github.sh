@@ -104,10 +104,13 @@ host_issue_create() { # <title> <body-file> <label>
 # Fenced blocks are skipped, matching the model `ship_body_closes` uses: a
 # `## ` inside a fence is example text, and a closing line printed into a
 # fence renders as code, so the host registers no link and the keyword test
-# that gates a re-run reads false.
+# that gates a re-run reads false. A fence carries up to three leading spaces
+# (CommonMark), written out rather than as an interval so every awk reads it.
+# The heading match stays anchored at column 0 on purpose: it has to agree
+# with `update-pr-body`, whose `^## ` is what decides a section boundary.
 _gh_add_closes() { # <body> <issue>
   awk -v n="$2" '
-    /^```/ { fenced = !fenced }
+    /^ ? ? ?```/ { fenced = !fenced }
     !placed && !fenced && /^## / { print "Closes #" n; print ""; placed = 1 }
     { print }
     END { if (!placed) printf "\nCloses #%s\n", n }' <<<"$1"
