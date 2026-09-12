@@ -14,12 +14,25 @@ a fresh read of the committed tree, not a conversation.
 ## Shared mechanics
 
 - **Poll with `poll-pr <pr> --await-review <login>`**, inline, bounded,
-  foreground. It returns one JSON: head sha, mergeable, checks, reviews keyed
-  to the **current head** (a review on an older commit does not count) with
-  `substantive`, threads with resolved state, and `reviewer_blocked`.
-  `done: false` means the window closed first: re-run to extend, never a
-  background monitor. The poll is the landing signal only; before triage, read
-  the round's review body and threads from the same payload.
+  foreground. It returns one JSON: head sha, mergeable, checks, the reviewer's
+  rounds with `substantive`, threads with resolved state, `reviewer_blocked`,
+  and `landed_by` naming the rule that admitted the round. `done: false` means
+  the window closed first: re-run to extend, never a background monitor. The
+  poll is the landing signal only; before triage, read the round's review body
+  and threads from the same payload.
+- **The trigger picks the landing rule; the poll has to be told which.** Under
+  the **head** rule (no `--since`) a round counts only on the current head:
+  right for `on-push`, where every push earns a fresh review. Under the
+  **since** rule (`--since <iso>`) a round counts wherever it sits, if it was
+  submitted at or after that time: right for `on-request` and `auto-once`,
+  which deliver one round per request and never re-post, so a push between the
+  request and the review leaves the round keyed to the older head, and the head
+  rule then waits out the whole window for a review that will never come again.
+  Pass `request-review`'s `requested_at` or `open-pr`'s `created_at` straight
+  through. `--since` without `--await-review` is a usage error. The since rule
+  needs a timed round, so a reviewer whose only signal is an Azure DevOps vote,
+  which the API never stamps, exits `degraded: silent` under it; its threads,
+  which carry anything actionable, are stamped and land normally.
 - **A round is a review with a body.** A reviewer's reply to one thread posts
   as a review row of its own (current head, empty body), so answering round N
   manufactures rows that look like round N+1 arriving. Only `substantive: true`
@@ -46,15 +59,17 @@ a fresh read of the committed tree, not a conversation.
 ### `auto-once`
 
 Fires once on PR creation; nothing to request and **never re-requested**. Wait
-for it to land with `poll-pr --await-review <login>`; if a round arrives before
-you poll, that is the round. Triage it once, push the fixes, reply on each
-thread. **Converged** when every thread is dispositioned. A later push does not
-bring it back; a lint or flake fix after convergence needs nothing from it.
+for it to land under the **since** rule, with `open-pr`'s `created_at`. If a
+round arrives before you poll, that is the round. Triage it once, push the
+fixes, reply on each thread. **Converged** when every thread is dispositioned.
+A later push does not bring it back; a lint or flake fix after convergence
+needs nothing from it.
 
 ### `on-push`
 
 Re-reviews every push; rounds are free and uncapped. After each push, wait for
-a review **landed on the current head**; silence on the head is never quiet.
+a review **landed on the current head**, the **head** rule (no `--since`);
+silence on the head is never quiet.
 Triage, batch-fix, push, reply on each thread. Once **every** thread carries a
 disposition, and only then, use the reviewer's `Resolve:` mechanism
 (`resolve-thread`, or the comment the profile names) to resolve them.
@@ -72,9 +87,10 @@ and **reads it back** from the host's own record (the mechanic knows that the
 login you request and the login you read back can differ, and that an empty
 requested-reviewers list proves nothing). One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
-request against the corrected tree. Loop: request, poll, triage, batch-fix,
-push, reply on each thread, request again. **Converged** when the latest round
-has nothing actionable and every thread from all rounds is dispositioned.
+request against the corrected tree. Loop: request, poll under the **since**
+rule with `request-review`'s `requested_at`, triage, batch-fix, push, reply on
+each thread, request again. **Converged** when the latest round has nothing
+actionable and every thread from all rounds is dispositioned.
 **Cap** is the profile's `Cap:`, required, no default: a round at the cap that
 is still substantive is a shape problem more rounds will not fix; exit
 `degraded: cap-hit` and leave the call to the human. Small lane: exactly one
@@ -90,7 +106,7 @@ reads the reason and decides.
 |---|---|
 | `never-queued` | on-request: no request event on the host's record after one retry. Do not spend a second poll window on it. |
 | `blocked` | queued, then a quota or rate-limit comment from the reviewer (`reviewer_blocked` non-null), and the poll window closed. Non-null with `done: false` means waiting, not missing. |
-| `silent` | queued, no review on the current head within the bounded wait. |
+| `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. |
 | `infra-error` | a review whose body is only an error notice with zero comments, twice. Not feedback. |
 | `cap-hit` | on-request cap reached with the latest round still substantive. |
 | `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`). |

@@ -2,33 +2,66 @@
 # ship phases 7 and 8: one bounded, foreground poll of a PR's head, checks,
 # reviews and threads, then ONE JSON summary.
 #
-#   poll-pr <pr> [--await-review <login>] [--timeout <s>] [--interval <s>]
+#   poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]
 #
 # done when the PR is in conflict (merge-ref checks never start, so waiting is
 # pointless), or every check on the head has completed and, with --await-review,
-# a SUBSTANTIVE review by that login has landed on the current head. A review on
-# an older commit does not count. `substantive` is the landing signal: a
-# reviewer's reply to one thread posts as a review row of its own (current head,
-# empty body), so only a body is a round. `reviewer_blocked` non-null with
-# done=false means the round is WAITING (a quota or queue notice), not missing.
-# `threads` is "unavailable" when thread state could not be read (GraphQL
-# refused): that reviewer's exit is degraded unreachable, the run proceeds.
+# a SUBSTANTIVE review by that login has landed. `substantive` is the landing
+# signal: a reviewer's reply to one thread posts as a review row of its own
+# (current head, empty body), so only a body is a round.
 #
-# stdout: {head_sha, mergeable, checks[], reviews: {on_head[], total}, threads,
-#          reviewer_blocked, done, waited_s}
+# Two landing rules, chosen by the reviewer's profile `Trigger:`; `landed_by`
+# names the one that matched.
+#   head (default, on-push): the review sits on the current head. Every push
+#     earns a new review, so a review on an older commit does not count.
+#   since (--since, on-request and auto-once): the review was submitted at or
+#     after <iso>, on ANY head. Such a reviewer delivers one round per request
+#     and never re-posts, so a push between the request and the review leaves
+#     the round keyed to the older head, where the head rule would wait out the
+#     whole window. Pass `request-review`'s `requested_at` or `open-pr`'s
+#     `created_at`. Matching by time rather than by requesting login is
+#     deliberate: the login a request is made under and the login the host
+#     records can differ. A row with a null submitted_at is host state rather
+#     than a timed event (an Azure DevOps vote, which the API never stamps): it
+#     cannot answer a question about time, so it satisfies the head rule only.
+#     Counting it here would land round 2 instantly off round 1's stale vote.
+#
+# `reviewer_blocked` non-null with done=false means the round is WAITING (a
+# quota or queue notice), not missing. `threads` is "unavailable" when thread
+# state could not be read (GraphQL refused): that reviewer's exit is degraded
+# unreachable, the run proceeds.
+#
+# stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
+#          threads, reviewer_blocked, landed_by, done, waited_s}
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-pr=${1:?usage: poll-pr <pr> [--await-review <login>] [--timeout <s>] [--interval <s>]}; shift
-timeout=480; interval=20; await=""
+pr=${1:?usage: poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]}; shift
+timeout=480; interval=20; await=""; since=""
 while [ $# -gt 0 ]; do
   case $1 in
     --await-review) await=${2:?}; shift 2 ;;
+    --since) since=${2:?}; shift 2 ;;
     --timeout) timeout=${2:?}; shift 2 ;;
     --interval) interval=${2:?}; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
+[ -z "$since" ] || [ -n "$await" ] || ship_tooling "--since needs --await-review"
+# --since is compared as a string against submitted_at, which every adapter
+# emits as UTC "YYYY-MM-DDTHH:MM:SSZ". Accept only what normalises to that, so
+# an offset this cannot convert (+05:00) is refused outright rather than
+# silently sorting wrong. Every mechanic that reports a timestamp
+# (request-review's requested_at, open-pr's created_at) already emits it.
+if [ -n "$since" ]; then
+  case $since in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z) ;;
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9].*Z|\
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]*+00:00)
+      since=$(printf '%s' "$since" | sed 's/\.[0-9]*//; s/+00:00$/Z/') ;;
+    *) ship_tooling "--since must be UTC ISO-8601 (YYYY-MM-DDTHH:MM:SSZ), got: $since" ;;
+  esac
+fi
 ship_load_host
 
 norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/\[bot\]$//'; }
@@ -43,10 +76,16 @@ while :; do
   [ -z "$await" ] || blocked=$(host_pr_reviewer_blocked "$pr" "$await") || blocked=null
 
   pending=$(jq '[.[] | select(.status == "pending")] | length' <<<"$checks")
-  landed=true
+  landed=true; landed_by=null
   if [ -n "$await" ]; then
-    landed=$(jq --arg l "$(norm "$await")" \
-      '[.on_head[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))] | length > 0' <<<"$reviews")
+    # Both sides are now fixed-width UTC, where a string compare is a
+    # chronological one.
+    landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" '
+      def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
+      if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
+      else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
+      end' <<<"$reviews")
+    [ "$landed_by" != null ] || landed=false
   fi
   done=false
   if [ "$mergeable" = conflict ]; then done=true
@@ -55,8 +94,9 @@ while :; do
   waited=$((SECONDS - start))
   if $done || [ "$waited" -ge "$timeout" ]; then
     jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
-      --argjson t "$threads" --argjson b "$blocked" --argjson d "$done" --argjson w "$waited" \
-      '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer_blocked: $b, done: $d, waited_s: $w}'
+      --argjson t "$threads" --argjson b "$blocked" --argjson lb "$landed_by" --argjson d "$done" --argjson w "$waited" \
+      '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer_blocked: $b,
+        landed_by: $lb, done: $d, waited_s: $w}'
     $done
     exit
   fi

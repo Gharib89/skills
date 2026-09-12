@@ -8,7 +8,7 @@ description: >-
   issue through to a PR, or run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 1.3.1
+  version: 1.4.0
   profile-schema: 1
 ---
 
@@ -140,7 +140,7 @@ Reads come back in one vocabulary on both hosts: checks
 | `open-pr <issue> --title --body-file` | 6 |
 | `reflect <issue> <pr>` | 6 |
 | `update-pr-title <pr> --title` | 6, 9 |
-| `poll-pr <pr> [--await-review <login>] [--timeout <s>]` | 7, 8 |
+| `poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>]` | 7, 8 |
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
 | `update-pr-body <pr> --section Review --body-file` | 7 |
