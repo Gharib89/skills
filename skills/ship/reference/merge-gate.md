@@ -80,8 +80,8 @@ Post the summary in the conversation and **wait**. Merge only on an explicit
 "merge". Never an auto-merge flag: it can merge the instant CI is green,
 before a reviewer lands.
 
-**On approval**, from the worktree, `merge <pr> <issue> --worktree <path>`. It
-squash-merges with the PR title as the squash subject, re-verifies the PR is
+**On approval**, from the worktree, `merge <pr> <issue|none> --worktree <path>`.
+It squash-merges with the PR title as the squash subject, re-verifies the PR is
 merged before reporting (never assume the command took), confirms the issue
 closed and closes it explicitly if the link did not fire, deletes the remote
 branch and proves the deletion, fast-forwards the local base branch from the
@@ -90,7 +90,7 @@ base *into* the feature branch; a diverged local base is reported, never
 discarded; a transient `index.lock` from a concurrent status is retried, never
 deleted), and **releases the claim and strips `ready-for-agent`**, so a
 reopened issue goes back through triage instead of being refused forever.
-Then `cleanup <issue>`: removes the worktree and force-deletes the local
+Then `cleanup <issue|none>`: removes the worktree and force-deletes the local
 branch (a squash-merged branch is not an ancestor of the default branch).
 Carried files are never copied back. Any `false` in either JSON: finish that
 step by hand before reporting done.

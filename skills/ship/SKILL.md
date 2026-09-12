@@ -111,14 +111,14 @@ be read.
 
 | Mechanic | Phase |
 |---|---|
-| `preflight <issue> [--unattended]` | 0 |
-| `isolate <issue> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
+| `preflight <issue \| none> [--unattended]` | 0 |
+| `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
 | `read-issue <issue>` | 1 |
 | `manage-issue <issue> take \| release \| handback "<reason>"` | 1; any stop after the claim; 9 |
 | `file-issue --title --body-file --label <marker> [--distinct-from <n>[,<n>]]` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
-| `open-pr <issue> --title --body-file` | 6 |
+| `open-pr <issue \| none> --title --body-file` | 6 |
 | `reflect <issue> <pr>` | 6 |
 | `update-pr-title <pr> --title` | 6, 9 |
 | `poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]` | 7, 8 |
@@ -128,7 +128,7 @@ be read.
 | `resolve-thread <pr> <thread>` | 7 |
 | `ci-wait <pr> [--timeout <s>] [--interval <s>]` | 8 |
 | `merge <pr> <issue \| none> --worktree <path>` | 9, on approval |
-| `cleanup <issue>` | 9, after merge |
+| `cleanup <issue \| none>` | 9, after merge |
 | `tooling [--install]`, `list-prs --open` and `select` | unattended lane |
 
 Run mechanics **inline**: they project their own output, so a subagent there
@@ -428,7 +428,7 @@ and review quota, so push when the tree changed.
 **9 · Merge gate.** **Hard stop.** Write the summary per
 [reference/merge-gate.md](reference/merge-gate.md), uncompressed. Attended:
 post it in the conversation and wait for an explicit "merge"; on approval run
-`merge <pr> <issue> --worktree <path>` then `cleanup <issue>`; any `false` in
-their JSON is finished by hand before reporting done. Unattended:
+`merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
+`false` in their JSON is finished by hand before reporting done. Unattended:
 `comment-pr <pr> --body-file` with the summary, and return. The claim holds in
 both lanes until the merge releases it.
