@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.3.2
+  version: 3.4.0
   profile-schema: 1
 ---
 
@@ -121,6 +121,7 @@ be read.
 | `open-pr <issue \| none> --title --body-file` | 6 |
 | `reflect <issue> <pr>` | 6 |
 | `update-pr-title <pr> --title` | 6, 9 |
+| `read-pr <pr>` | 6 and 7, reading a PR back after a title or body write |
 | `poll-pr <pr> [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]` | 7, 8 |
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
@@ -420,7 +421,8 @@ evidence), or `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |
 unreachable`. Degraded proceeds to the merge gate on green CI and never hands
 back on its own. At exit, `update-pr-body <pr> --section Review` with one status
-line per reviewer. Read
+line per reviewer, then `read-pr <pr>` to read the body back: a rewrite that
+swallowed the attribution footer shows up here, while the PR is still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per
 trigger, the substantive-round test, `Instructions:` handling and degraded
 detection.

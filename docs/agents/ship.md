@@ -61,7 +61,7 @@ docs/contributing/coding-standards.md
 
 Proves: a changed generic mechanic or the GitHub adapter performs its host call against a real issue, PR, thread or merge.
 Applies when: the change touches `skills/ship/scripts/`, on any path the GitHub adapter reaches.
-Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write read the body back and confirm the footer is still there.
+Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write, `read-pr` reads the body back and confirms the footer is still there.
 Needs: `gh` signed in with push permission on `Gharib89/skills`.
 Without it: hand-off
 Also proven by CI: None.
