@@ -68,4 +68,75 @@ EOF
 )
 check "skips a heading inside a fenced block" "$expected" "$(_gh_add_closes "$body" 76)"
 
+# A tilde fence hides a heading the same way.
+body=$(cat <<'EOF'
+Intro
+
+~~~md
+## Not a heading
+~~~
+
+## Real heading
+
+text
+EOF
+)
+expected=$(cat <<'EOF'
+Intro
+
+~~~md
+## Not a heading
+~~~
+
+Closes #76
+
+## Real heading
+
+text
+EOF
+)
+check "skips a heading inside a tilde fence" "$expected" "$(_gh_add_closes "$body" 76)"
+
+# A four-backtick fence holding a triple-backtick line: the inner run is not a
+# close, so the heading between them is still example text.
+body=$(cat <<'EOF'
+Intro
+
+````md
+```
+## Not a heading
+```
+````
+
+## Real heading
+
+text
+EOF
+)
+expected=$(cat <<'EOF'
+Intro
+
+````md
+```
+## Not a heading
+```
+````
+
+Closes #76
+
+## Real heading
+
+text
+EOF
+)
+check "skips a heading inside a four-backtick fence holding a triple-backtick line" \
+  "$expected" "$(_gh_add_closes "$body" 76)"
+
+# A host serves a body back with CRLF line endings, so a closing fence carries a
+# trailing CR. Reading that CR as an info string would leave the fence open and
+# swallow the real heading below it, appending the closing line at the end.
+body=$(printf 'Intro\r\n\r\n```md\r\n## Not a heading\r\n```\r\n\r\n## Real heading\r\n\r\ntext\r\n')
+expected=$(printf 'Intro\r\n\r\n```md\r\n## Not a heading\r\n```\r\n\r\nCloses #76\n\n## Real heading\r\n\r\ntext\r')
+check "closes a fence whose line ends in CRLF" "$expected" "$(_gh_add_closes "$body" 76)"
+
 finish

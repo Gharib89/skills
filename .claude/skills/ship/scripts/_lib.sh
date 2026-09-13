@@ -186,14 +186,63 @@ ship_triage_label() {
   printf '%s' "${label:-$role}"
 }
 
+# The one fence rule every transformation here reads: ship_body_replace_section
+# below, ship_body_closes under it, and _gh_add_closes in the GitHub adapter. A `## ` heading inside a fence
+# is example text, so the two have to agree on where a fence starts and ends, or
+# one rewrites the example and leaves the real section alone.
+#
+# CommonMark, as far as these two need it: an opening fence is three or more
+# backticks or tildes under up to three leading spaces, and only a bare run of
+# the same character at least as long closes it. The character rules a tilde
+# fence in; the length keeps a ``` line inside a ```` fence from closing it and
+# inverting the state for the rest of the body; the bareness keeps a ```js line
+# inside a ``` fence from doing the same, since a closing fence carries no info
+# string. A backtick opener carrying another backtick after its run is not a
+# fence at all but paragraph text, which is the one asymmetry with tildes.
+# Indented (four space) code blocks are not a fence form here.
+#
+# `ship_fence(line)` returns the in-fence state after the line: a fence line
+# reads as fenced when it opens one and unfenced when it closes one. Prepend it
+# to an awk program and call it once per line, before any heading test. It
+# holds its state for the length of the input in the globals `_fenced`,
+# `_fence_char` and `_fence_len`, so a host program leaves those three names to
+# it.
+readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
+    s = line; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
+    if (c != "`" && c != "~") return _fenced
+    n = 0; while (substr(s, n + 1, 1) == c) n++
+    if (n < 3) return _fenced
+    if (!_fenced) {
+      if (c == "`" && index(substr(s, n + 1), "`")) return _fenced
+      _fenced = 1; _fence_char = c; _fence_len = n
+    }
+    else if (c == _fence_char && n >= _fence_len && substr(s, n + 1) ~ /^[ \t\r]*$/) _fenced = 0
+    return _fenced
+  }
+'
+
 # Closing-keyword test, the same on both hosts: does <body> claim to close
 # <issue>? Fenced blocks and inline code come out first (a PR quoting
 # "Closes #n" while discussing another PR mentions the issue, it does not claim
 # it). The "(#n, and #m)" run lets a multi-issue "Closes #75, #81" count for #81.
+#
+# The fenced blocks come out by SHIP_AWK_FENCE, so this agrees with the two
+# heading transformations on what a fence is: a tilde-fenced example carrying
+# "Closes #n" reads as a mention here too, and host_pr_create, which asks this
+# before it places a closing line, does not skip a body that never claimed one.
+#
+# Code spans come out after, and stay in jq, because a span opens mid-line where
+# a line-oriented pass cannot see it. One rule for every run length: a span
+# closes on a backtick run as long as the one that opened it, which the
+# backreference says directly, and a multi-line ```md span is that rule at
+# length three rather than a fence form of its own.
 ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
-  jq -e -n --arg body "$1" --arg n "$2" '
+  local unfenced
+  unfenced=$(awk "$SHIP_AWK_FENCE"'
+    { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1")
+  jq -e -n --arg body "$unfenced" --arg n "$2" '
     $body
-    | gsub("(?s)```.*?```"; "") | gsub("`[^`]*`"; "")
+    | gsub("(?s)(`+).*?\\1"; "")
     | test("\\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))"
            + "\\s+(#[0-9]+[\\s,]+(and[\\s,]+)?)*#" + $n + "\\b"; "i")' >/dev/null
 }
@@ -203,17 +252,13 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # `Closes` line above the first heading. Prints the new body; exit 0 replaced,
 # 1 created, the way ship_body_closes answers with its exit code.
 #
-# The heading match is anchored at column 0 and skips fenced blocks, the same
-# rule _gh_add_closes reads: the two have to agree on what a section boundary
-# is, or a `## Review` written as an example inside a fence is replaced while
-# the real section below it survives. The fence carries up to three leading
-# spaces (CommonMark), written out rather than as an interval so every awk
-# reads it. Backtick fences only, which is the rule _gh_add_closes has always
-# read; tilde fences are issue #102.
+# The heading match is anchored at column 0 and skips fenced blocks by
+# SHIP_AWK_FENCE, the rule _gh_add_closes reads too, so the two agree on what a
+# section boundary is.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
-  awk -v sec="$2" -v file="$3" '
+  awk -v sec="$2" -v file="$3" "$SHIP_AWK_FENCE"'
     function dump() { while ((getline line < file) > 0) print line; close(file) }
-    /^ ? ? ?```/ { fenced = !fenced }
+    { fenced = ship_fence($0) }
     !fenced && $0 ~ "^## " sec "[ \t]*$" {
       print; print ""; dump(); print ""; skip=1; placed=1; next }
     skip && !fenced && /^## / { skip=0 }

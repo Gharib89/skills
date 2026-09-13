@@ -176,6 +176,140 @@ EOF
 check "skips a section heading inside a fenced block" \
   "$expected" "$(ship_body_replace_section "$body" Review "$content")"
 
+# A tilde fence is a fence too (CommonMark), so the example inside it is not a
+# boundary either. Recognising backticks only put the real section below it out
+# of reach.
+body=$(cat <<'EOF'
+## Summary
+
+An example of what ship writes:
+
+~~~md
+## Review
+
+copilot: converged
+~~~
+
+## Review
+
+placeholder
+EOF
+)
+expected=$(cat <<'EOF'
+## Summary
+
+An example of what ship writes:
+
+~~~md
+## Review
+
+copilot: converged
+~~~
+
+## Review
+
+line one
+line two
+EOF
+)
+check "skips a section heading inside a tilde fence" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
+# A fence longer than three characters legally contains a shorter run of the
+# same character. Closing on that inner run inverted the state for the rest of
+# the body, so the example was replaced and the real section survived.
+body=$(cat <<'EOF'
+## Summary
+
+````md
+```
+## Review
+```
+````
+
+## Review
+
+placeholder
+EOF
+)
+expected=$(cat <<'EOF'
+## Summary
+
+````md
+```
+## Review
+```
+````
+
+## Review
+
+line one
+line two
+EOF
+)
+check "skips a heading inside a four-backtick fence holding a triple-backtick line" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
+# A closing fence carries no info string, so a ```js line inside a ``` fence is
+# content, not the close. Closing on it would leave the heading below exposed.
+body=$(cat <<'EOF'
+## Summary
+
+```
+an example
+```js
+## Review
+```
+
+## Review
+
+placeholder
+EOF
+)
+expected=$(cat <<'EOF'
+## Summary
+
+```
+an example
+```js
+## Review
+```
+
+## Review
+
+line one
+line two
+EOF
+)
+check "does not close a fence on a run carrying an info string" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
+# A backtick opener may carry no backtick in its info string (CommonMark 4.5),
+# so the line is paragraph text and the heading below it is a real boundary.
+body=$(cat <<'EOF'
+## Summary
+
+```js`example
+
+## Review
+
+placeholder
+EOF
+)
+expected=$(cat <<'EOF'
+## Summary
+
+```js`example
+
+## Review
+
+line one
+line two
+EOF
+)
+check "does not open a fence on a backtick opener carrying a backtick" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
 # The only occurrence is fenced, so there is no section to replace.
 body=$(printf '## Summary\n\n```md\n## Review\n```\n')
 expected=$(printf '## Summary\n\n```md\n## Review\n```\n\n## Review\n\nline one\nline two')
