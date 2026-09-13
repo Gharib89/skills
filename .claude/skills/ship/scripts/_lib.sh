@@ -204,22 +204,26 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # one rewrites the example and leaves the real section alone.
 #
 # CommonMark, as far as these two need it: an opening fence is three or more
-# backticks or tildes under up to three leading spaces, and only a run of the
-# same character at least as long closes it. The character rules a tilde fence
-# in; the length keeps a ``` line inside a ```` fence from closing it and
-# inverting the state for the rest of the body. Indented (four space) code
-# blocks are not a fence form here.
+# backticks or tildes under up to three leading spaces, and only a bare run of
+# the same character at least as long closes it. The character rules a tilde
+# fence in; the length keeps a ``` line inside a ```` fence from closing it and
+# inverting the state for the rest of the body; the bareness keeps a ```js line
+# inside a ``` fence from doing the same, since a closing fence carries no info
+# string. Indented (four space) code blocks are not a fence form here.
 #
 # `ship_fence(line)` returns the in-fence state after the line: a fence line
 # reads as fenced when it opens one and unfenced when it closes one. Prepend it
-# to an awk program and call it once per line, before any heading test.
+# to an awk program and call it once per line, before any heading test. It
+# holds its state for the length of the input in the globals `_fenced`,
+# `_fence_char` and `_fence_len`, so a host program leaves those three names to
+# it.
 readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
     s = line; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
     if (c != "`" && c != "~") return _fenced
     n = 0; while (substr(s, n + 1, 1) == c) n++
     if (n < 3) return _fenced
     if (!_fenced) { _fenced = 1; _fence_char = c; _fence_len = n }
-    else if (c == _fence_char && n >= _fence_len) _fenced = 0
+    else if (c == _fence_char && n >= _fence_len && substr(s, n + 1) ~ /^[ \t]*$/) _fenced = 0
     return _fenced
   }
 '

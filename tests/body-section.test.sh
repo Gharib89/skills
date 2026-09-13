@@ -250,6 +250,40 @@ EOF
 check "skips a heading inside a four-backtick fence holding a triple-backtick line" \
   "$expected" "$(ship_body_replace_section "$body" Review "$content")"
 
+# A closing fence carries no info string, so a ```js line inside a ``` fence is
+# content, not the close. Closing on it would leave the heading below exposed.
+body=$(cat <<'EOF'
+## Summary
+
+```
+an example
+```js
+## Review
+```
+
+## Review
+
+placeholder
+EOF
+)
+expected=$(cat <<'EOF'
+## Summary
+
+```
+an example
+```js
+## Review
+```
+
+## Review
+
+line one
+line two
+EOF
+)
+check "does not close a fence on a run carrying an info string" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
 # The only occurrence is fenced, so there is no section to replace.
 body=$(printf '## Summary\n\n```md\n## Review\n```\n')
 expected=$(printf '## Summary\n\n```md\n## Review\n```\n\n## Review\n\nline one\nline two')

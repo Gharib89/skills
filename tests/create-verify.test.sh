@@ -21,7 +21,7 @@ _post() { mark; echo '{"number":1}'; }
 _find() { echo '{"number":9}'; }
 reset
 check    "prints the row a successful post returned" '{"number":1}' "$(_gh_create_verify _post _find)"
-check_rc "posts exactly once when the post succeeds" 1 "$(count)"
+check    "posts exactly once when the post succeeds" 1 "$(count)"
 
 # A slow success: the post reports failure but the row is there, so the row is
 # returned and the create is not attempted again.
@@ -31,7 +31,7 @@ reset
 out=$(_gh_create_verify _post _find); rc=$?
 check    "returns the row a slow success left"              '{"number":2}' "$out"
 check_rc "reports success for a row found by the re-read"   0 "$rc"
-check_rc "does not post again when the re-read finds a row" 1 "$(count)"
+check    "does not post again when the re-read finds a row" 1 "$(count)"
 
 # A genuine failure: the re-read succeeds and shows no row, so the create is
 # attempted once more.
@@ -41,7 +41,7 @@ reset
 out=$(_gh_create_verify _post _find); rc=$?
 check    "retries the post when the re-read finds nothing" '{"number":3}' "$out"
 check_rc "reports success for the retried post"            0 "$rc"
-check_rc "posts exactly twice for a genuine failure"       2 "$(count)"
+check    "posts exactly twice for a genuine failure"       2 "$(count)"
 
 # A failed re-read is not an absent row: it answers unknown, so the caller gets
 # the failure rather than a second POST that would double-post a slow success.
@@ -51,6 +51,6 @@ reset
 out=$(_gh_create_verify _post _find); rc=$?
 check    "prints nothing when the re-read fails"      "" "$out"
 check_rc "reports failure when the re-read fails"     1 "$rc"
-check_rc "does not post again when the re-read fails" 1 "$(count)"
+check    "does not post again when the re-read fails" 1 "$(count)"
 
 finish
