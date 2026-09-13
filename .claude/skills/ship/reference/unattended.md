@@ -40,7 +40,9 @@ costs nothing here: the lane returns at the merge gate and `merge` plus
 `cleanup` run attended from a human's machine.
 
 Unchanged: `defer-to-ci` is the only verification disposition that proceeds
-(`hand-off` and `blocked` hand back); a degraded reviewer exit still proceeds
+(`hand-off` and `blocked` hand back), and an `unexercised` result proceeds on
+its own, with no disposition behind it and nothing to hand back for; a degraded
+reviewer exit still proceeds
 to the merge gate on green CI and never hands back on its own; the local gate's
 `unavailable` hands back with `local gate unavailable: <gates>` and never opens
 the PR. Compose skills with an explicit unattended signal (`code-review`, `tdd`

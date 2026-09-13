@@ -349,9 +349,9 @@ unavailable | unexercised`. Prerequisite (`Needs:`) missing: follow
 (attended) or hands back (unattended); `defer-to-ci` continues only because
 `Also proven by CI:` names the leg you will watch in phase 8, and is the only
 unattended-safe disposition; `blocked` stops `blocked-verification`.
-`unexercised` is the one result no `Without it:` covers: phase 5 admits it and
-the merge summary names the subject that did not exist, for the human to
-weigh. Noisy runs go to a cheap-tier subagent returning the result plus
+`unexercised` is the one result no `Without it:` covers: phase 5 admits it, an
+unattended run proceeds on it, and the merge summary names the subject that did
+not exist, for the human to weigh. Noisy runs go to a cheap-tier subagent returning the result plus
 failing lines. `docs` class and the small lane skip this phase. Detail in
 [reference/implement.md](reference/implement.md).
 
