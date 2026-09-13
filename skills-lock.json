@@ -21,12 +21,18 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "554d86ec35a18ad7e8d3c3420502db8f6911e60791de94eff9f4f6cbdd9425da"
+      "computedHash": "5b04e28a91bcfab598f5c813eeeda280405c5547b9d6f277e32aeb8849bc1a05"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "c7f3c36e6cc82cfe858ecb2e0ac22037ee9b8b5924cfc32e5848320bbbb757bf"
+      "computedHash": "bac72205533bc6830d77a0cf6536f4bc745db54ee06d13c4a75bb1462cb8450b"
+    },
+    "show-me": {
+      "source": "humanlayer/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/show-me/skills/show-me/SKILL.md",
+      "computedHash": "de32a72f802801f08a84641b467f2c6306d35a58ce5e59ea607ac3a993a18c91"
     },
     "tdd": {
       "source": "mattpocock/skills",

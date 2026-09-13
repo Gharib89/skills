@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 1.2.1
+  version: 1.3.0
 ---
 
 # Setup skills
@@ -19,11 +19,12 @@ Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md
 Check all three before exploring. On any failure print the exact command, then "then rerun `/setup-skills`", and stop.
 
 1. **Parent docs.** `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and `docs/agents/domain.md` exist. Else: `/setup-matt-pocock-skills`. One exception: when the host (step 2) is Azure DevOps and `issue-tracker.md` is missing or is the parent's freeform "Other" page, offer to write the vendored [issue-tracker-ado.md](./issue-tracker-ado.md) in its place (confirm first), then continue. The parent ships GitHub, GitLab and local templates only.
-2. **Composed skills as derived copies.** `.claude/skills/` holds `code-review`, `tdd`, `writing-for-agents`, `triage` and `find-docs`, each recorded in the repo's `skills-lock.json` (the skills CLI writes it at install). A copy present but absent from the lock is hand-maintained: report it as "will be replaced by the derived copy", confirm, then refresh it with the same line. A global copy under `~/.claude/skills` never counts: a personal skill silently shadows a repo's, so ship's composed skills must live in the repo. Else print:
+2. **Composed skills as derived copies.** `.claude/skills/` holds `code-review`, `tdd`, `writing-for-agents`, `triage`, `find-docs` and `show-me`, each recorded in the repo's `skills-lock.json` (the skills CLI writes it at install). A copy present but absent from the lock is hand-maintained: report it as "will be replaced by the derived copy", confirm, then refresh it with the same line. A global copy under `~/.claude/skills` never counts: a personal skill silently shadows a repo's, so ship's composed skills must live in the repo. Else print:
 
    ```sh
    npx skills add mattpocock/skills --skill code-review --skill tdd --skill writing-for-agents --skill triage --agent claude-code -y
    npx skills add upstash/context7 --skill find-docs --agent claude-code -y
+   npx skills add humanlayer/skills --skill show-me --agent claude-code -y
    ```
 
 3. **`ship`, `cloud-ship` and `setup-skills`.** `.claude/skills/ship`, `.claude/skills/cloud-ship` and `.claude/skills/setup-skills` exist and are in the lock. A `ship` folder with no `metadata.version` in its frontmatter is a hand-maintained copy from before the generic skill: report "will be replaced by the derived copy", confirm, refresh. `setup-skills` gets step 1.2's treatment; the copy running this check is not evidence, so read `skills-lock.json`. It belongs in the repo because the `### Ship` block below and ship's three profile stops both end "run `/setup-skills`", which a repo that never installed it cannot follow. Else print:
@@ -98,7 +99,7 @@ Show the full draft of everything below, then let the user edit before writing. 
 
 `/ship` drives one issue to a merge-ready PR. This repo's ship profile: `docs/agents/ship.md`. Without that file ship refuses: run `/setup-skills`.
 
-Every skill under `.claude/skills/` is a derived copy, never edited in place; `skills-lock.json` records each one's source. `ship`, `cloud-ship` and `setup-skills` come from `Gharib89/skills`; the skills ship composes come from `mattpocock/skills` and `upstash/context7`. Refresh a skill by re-running its install line at project scope (never `-g`). Ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`: `npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --agent claude-code -y && .claude/skills/ship/scripts/preflight.sh <any open issue number>`.
+Every skill under `.claude/skills/` is a derived copy, never edited in place; `skills-lock.json` records each one's source. `ship`, `cloud-ship` and `setup-skills` come from `Gharib89/skills`; the skills ship composes come from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`. Refresh a skill by re-running its install line at project scope (never `-g`). Ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`: `npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --agent claude-code -y && .claude/skills/ship/scripts/preflight.sh <any open issue number>`.
 ```
 
 **Local gate.**
