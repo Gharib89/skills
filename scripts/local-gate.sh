@@ -76,7 +76,7 @@ run derived-copies derived_copies
 # mechanics use.
 lint() {
   local files
-  mapfile -t files < <(git ls-files 'skills/*.sh' 'skills/**/*.sh' 'scripts/*.sh')
+  mapfile -t files < <(git ls-files 'skills/*.sh' 'skills/**/*.sh' 'scripts/*.sh' 'tests/*.sh')
   [ ${#files[@]} -gt 0 ] || { echo "no shell scripts tracked"; return 1; }
   npx -y shellcheck -x -s bash -P SCRIPTDIR -S warning "${files[@]}"
 }
@@ -92,13 +92,17 @@ fi
 house_style() {
   local hits em
   em=$'\u2014'   # built from its codepoint, so this gate does not match itself
-  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' '.github/*' CONTEXT.md CLAUDE.md \
+  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' CONTEXT.md CLAUDE.md \
     | xargs -0 grep -n "$em" 2>/dev/null) || return 0
   echo "em dashes in repo-authored files (see docs/contributing/coding-standards.md):"
   echo "$hits"
   return 1
 }
 run house-style house_style
+
+# tests: the pure transformations the mechanics were refactored around, run
+# with no host call. A regression is caught here rather than by a reviewer.
+run tests tests/run.sh
 
 # --- end gates -----------------------------------------------------------------
 
