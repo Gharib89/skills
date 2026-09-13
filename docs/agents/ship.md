@@ -61,7 +61,7 @@ docs/contributing/coding-standards.md
 
 Proves: a changed generic mechanic or the GitHub adapter performs its host call against a real issue, PR, thread or merge.
 Applies when: the change touches `skills/ship/scripts/`, on any path the GitHub adapter reaches.
-Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used.
+Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after.
 Needs: `gh` signed in with push permission on `Gharib89/skills`.
 Without it: hand-off
 Also proven by CI: None.
