@@ -9,8 +9,8 @@
 
 R="repos/$SHIP_OWNER/$SHIP_REPO"
 
-# Reads retry once on any failure. Creates (comment, PR, issue) re-read before
-# retrying so a slow success is never double-posted; see the create functions.
+# Reads retry once on any failure. Creates go through `_gh_create_verify`,
+# which re-reads before retrying so a slow success is never double-posted.
 api() { gh api "$@" 2>/dev/null || { sleep 2; gh api "$@"; }; }
 gql() { gh api graphql "$@" 2>/dev/null || { sleep 2; gh api graphql "$@"; }; }
 
@@ -78,22 +78,37 @@ host_issue_remove_label() {
 host_issue_comment()  { jq -n --arg b "$2" '{body: $b}' | api -X POST "$R/issues/$1/comments" --input - >/dev/null; }
 host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_reason=completed >/dev/null; }
 
-# Create-then-verify: on a failed create, look for the row a slow success left
-# before retrying, so a flake never double-posts.
+# Create-then-verify, the shape every create in this adapter has: attempt the
+# POST once, and on failure look for the row a slow success would have left
+# before posting again, so a flake never double-posts. <post> performs the one
+# POST and prints the row; <find> prints that row, or nothing when there is
+# none. A <find> that fails is not an absent row: it answers unknown, so the
+# caller gets the failure rather than a second POST.
+#
+# A <post> calls `gh api` directly, not `api`: `api` retries on its own, and a
+# create is retried only after the re-read.
+_gh_create_verify() { # <post-fn> <find-fn>
+  local out
+  if out=$("$1"); then printf '%s\n' "$out"; return 0; fi
+  sleep 2
+  out=$("$2") || return 1
+  if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
+  "$1"
+}
+
 host_issue_create() { # <title> <body-file> <label>
-  local title=$1 file=$2 label=$3 me out
+  local title=$1 file=$2 label=$3 me
   me=$(host_identity) || return 1
-  _issue_create() {
+  _issue_post() {
     jq -n --arg t "$title" --rawfile b "$file" --arg l "$label" \
       '{title: $t, body: $b, labels: (if $l == "" then [] else [$l] end)}' \
       | gh api -X POST "$R/issues" --input - --jq '{number, url: .html_url}' 2>/dev/null
   }
-  if out=$(_issue_create); then printf '%s\n' "$out"; return 0; fi
-  sleep 2
-  out=$(api "$R/issues?state=open&creator=$me&sort=created&direction=desc&per_page=20" --jq '.[]' \
-    | jq -s --arg t "$title" '[.[] | select(.pull_request == null and .title == $t)] | first | select(. != null) | {number, url: .html_url}')
-  if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
-  _issue_create
+  _issue_find() {
+    api "$R/issues?state=open&creator=$me&sort=created&direction=desc&per_page=20" --jq '.[]' \
+      | jq -s --arg t "$title" '[.[] | select(.pull_request == null and .title == $t)] | first | select(. != null) | {number, url: .html_url}'
+  }
+  _gh_create_verify _issue_post _issue_find
 }
 
 # Put `Closes #<issue>` above the first `## ` heading, where no section rewrite
@@ -102,39 +117,37 @@ host_issue_create() { # <title> <body-file> <label>
 # rewrite of that section drops it. A body with no heading has no section to
 # fall inside, so it keeps the append.
 #
-# Fenced blocks are skipped, matching the model `ship_body_closes` uses: a
-# `## ` inside a fence is example text, and a closing line printed into a
-# fence renders as code, so the host registers no link and the keyword test
-# that gates a re-run reads false. A fence carries up to three leading spaces
-# (CommonMark), written out rather than as an interval so every awk reads it.
+# Fenced blocks are skipped by `SHIP_AWK_FENCE`, matching the model
+# `ship_body_closes` uses: a `## ` inside a fence is example text, and a closing
+# line printed into a fence renders as code, so the host registers no link and
+# the keyword test that gates a re-run reads false.
 # The heading match stays anchored at column 0 on purpose: it has to agree
 # with `update-pr-body`, whose `^## ` is what decides a section boundary.
 _gh_add_closes() { # <body> <issue>
-  awk -v n="$2" '
-    /^ ? ? ?```/ { fenced = !fenced }
+  awk -v n="$2" "$SHIP_AWK_FENCE"'
+    { fenced = ship_fence($0) }
     !placed && !fenced && /^## / { print "Closes #" n; print ""; placed = 1 }
     { print }
     END { if (!placed) printf "\nCloses #%s\n", n }' <<<"$1"
 }
 
 host_pr_create() { # <head> <base> <title> <body-file> <issue>
-  local head=$1 base=$2 title=$3 file=$4 issue=$5 body out
+  local head=$1 base=$2 title=$3 file=$4 issue=$5 body
   body=$(cat "$file")
   # The mechanic translates the closing link for the host: add the keyword when
   # the body does not already carry one aimed at this issue.
   if [ -n "$issue" ] && ! ship_body_closes "$body" "$issue"; then
     body=$(_gh_add_closes "$body" "$issue")
   fi
-  _pr_create() {
+  _pr_post() {
     jq -n --arg h "$head" --arg b "$base" --arg t "$title" --arg body "$body" \
       '{head: $h, base: $b, title: $t, body: $body, draft: false}' \
       | gh api -X POST "$R/pulls" --input - --jq '{number, url: .html_url, created_at}' 2>/dev/null
   }
-  if out=$(_pr_create); then printf '%s\n' "$out"; return 0; fi
-  sleep 2
-  out=$(api "$R/pulls?state=open&head=$SHIP_OWNER:$head" --jq 'first | select(. != null) | {number, url: .html_url, created_at}')
-  if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
-  _pr_create
+  _pr_find() {
+    api "$R/pulls?state=open&head=$SHIP_OWNER:$head" --jq 'first | select(. != null) | {number, url: .html_url, created_at}'
+  }
+  _gh_create_verify _pr_post _pr_find
 }
 
 host_pr_get() {
@@ -243,15 +256,14 @@ host_pr_request_review() { # <pr> <login>
 }
 
 host_pr_comment() { # <pr> <body-file>
-  local pr=$1 file=$2 me out
+  local pr=$1 file=$2 me
   me=$(host_identity) || return 1
-  _pr_comment() { jq -n --rawfile b "$file" '{body: $b}' | gh api -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url}' 2>/dev/null; }
-  if out=$(_pr_comment); then printf '%s\n' "$out"; return 0; fi
-  sleep 2
-  out=$(api "$R/issues/$pr/comments?per_page=100" --paginate --jq '.[]' \
-    | jq -s --arg me "$me" --rawfile b "$file" '[.[] | select(.user.login == $me and .body == $b)] | last | select(. != null) | {id, url: .html_url}')
-  if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
-  _pr_comment
+  _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | gh api -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url}' 2>/dev/null; }
+  _comment_find() {
+    api "$R/issues/$pr/comments?per_page=100" --paginate --jq '.[]' \
+      | jq -s --arg me "$me" --rawfile b "$file" '[.[] | select(.user.login == $me and .body == $b)] | last | select(. != null) | {id, url: .html_url}'
+  }
+  _gh_create_verify _comment_post _comment_find
 }
 host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
 host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
@@ -269,26 +281,25 @@ _thread_reply_target_query='query($id:ID!){ node(id:$id){
 # comment_id for it: one targeted node read, not a walk of every thread on the
 # PR, because phase 7 replies once per thread.
 #
-# Create-then-verify, like host_pr_comment: a slow success must not double-post.
+# Create-then-verify like every other create here, with a find that returns
+# non-zero when the comment read fails, so a lost response never becomes a
+# duplicate disposition in the thread.
 host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
-  local pr=$1 file=$3 cid me out raw
+  local pr=$1 file=$3 cid me
   cid=$(gql -f query="$_thread_reply_target_query" -F id="$2" \
     --jq '.data.node.comments.nodes[0].databaseId') \
     || { printf '{"replied": false, "url": null, "detail": "unavailable"}\n'; return 1; }
   [ -n "$cid" ] && [ "$cid" != null ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
   me=$(host_identity) || return 1
-  _reply() { jq -n --rawfile b "$file" '{body: $b}' \
+  _reply_post() { jq -n --rawfile b "$file" '{body: $b}' \
     | gh api -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}' 2>/dev/null; }
-  if out=$(_reply); then printf '%s\n' "$out"; return 0; fi
-  sleep 2
-  # A failed read is not an absent reply. Only a read that succeeds and shows
-  # none licenses a second POST; otherwise a lost response becomes a duplicate
-  # disposition in the thread.
-  raw=$(api "$R/pulls/$pr/comments?per_page=100" --paginate --jq '.[]') || return 1
-  out=$(jq -s --argjson c "$cid" --arg me "$me" --rawfile b "$file" \
-    '[.[] | select(.in_reply_to_id == $c and .user.login == $me and .body == $b)] | last | select(. != null) | {replied: true, url: .html_url}' <<<"$raw")
-  if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
-  _reply
+  _reply_find() {
+    local raw
+    raw=$(api "$R/pulls/$pr/comments?per_page=100" --paginate --jq '.[]') || return 1
+    jq -s --argjson c "$cid" --arg me "$me" --rawfile b "$file" \
+      '[.[] | select(.in_reply_to_id == $c and .user.login == $me and .body == $b)] | last | select(. != null) | {replied: true, url: .html_url}' <<<"$raw"
+  }
+  _gh_create_verify _reply_post _reply_find
 }
 
 host_pr_resolve_thread() { # <pr> <thread-node-id>

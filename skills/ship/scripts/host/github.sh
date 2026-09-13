@@ -81,12 +81,12 @@ host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_rea
 # Create-then-verify, the shape every create in this adapter has: attempt the
 # POST once, and on failure look for the row a slow success would have left
 # before posting again, so a flake never double-posts. <post> performs the one
-# POST and prints the row; <find> prints the row a slow success left, or nothing
-# when there is none. A <find> that fails is not an absent row: it answers
-# unknown, and the caller gets the failure rather than a second POST.
+# POST and prints the row; <find> prints that row, or nothing when there is
+# none. A <find> that fails is not an absent row: it answers unknown, so the
+# caller gets the failure rather than a second POST.
 #
-# `gh api` directly in a <post>, not `api`: `api` retries on its own, and the
-# whole point here is that a create is retried only after the re-read.
+# A <post> calls `gh api` directly, not `api`: `api` retries on its own, and a
+# create is retried only after the re-read.
 _gh_create_verify() { # <post-fn> <find-fn>
   local out
   if out=$("$1"); then printf '%s\n' "$out"; return 0; fi
@@ -117,11 +117,10 @@ host_issue_create() { # <title> <body-file> <label>
 # rewrite of that section drops it. A body with no heading has no section to
 # fall inside, so it keeps the append.
 #
-# Fenced blocks are skipped, matching the model `ship_body_closes` uses: a
-# `## ` inside a fence is example text, and a closing line printed into a
-# fence renders as code, so the host registers no link and the keyword test
-# that gates a re-run reads false. The fence rule is `SHIP_AWK_FENCE`, the one
-# `ship_body_replace_section` reads, because the two have to agree.
+# Fenced blocks are skipped by `SHIP_AWK_FENCE`, matching the model
+# `ship_body_closes` uses: a `## ` inside a fence is example text, and a closing
+# line printed into a fence renders as code, so the host registers no link and
+# the keyword test that gates a re-run reads false.
 # The heading match stays anchored at column 0 on purpose: it has to agree
 # with `update-pr-body`, whose `^## ` is what decides a section boundary.
 _gh_add_closes() { # <body> <issue>
@@ -282,9 +281,9 @@ _thread_reply_target_query='query($id:ID!){ node(id:$id){
 # comment_id for it: one targeted node read, not a walk of every thread on the
 # PR, because phase 7 replies once per thread.
 #
-# Create-then-verify, like every other create here: a slow success must not
-# double-post. The find reads the PR's comments and returns non-zero when that
-# read fails, so a lost response never becomes a duplicate disposition.
+# Create-then-verify like every other create here, with a find that returns
+# non-zero when the comment read fails, so a lost response never becomes a
+# duplicate disposition in the thread.
 host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
   local pr=$1 file=$3 cid me
   cid=$(gql -f query="$_thread_reply_target_query" -F id="$2" \
