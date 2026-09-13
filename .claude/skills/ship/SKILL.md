@@ -408,9 +408,9 @@ it; a **Deviations from plan** section (the log verbatim, `None` only if the
 plan held); a `## Verification` section holding one line per applicable
 verification, read from the phase-3 results in the merge summary's
 `Verification` row format, or `None applicable: <reason>` where none applied
-(`class docs` and `small lane` skip the phase; a full-lane change that no
-`Applies when:` matches is the third reason, a profile with zero verifications
-included); and a `## Review` section holding
+(`class docs` and `small lane` skip the phase; a full-lane change where no
+`Applies when:` line matches is the third reason, and a profile listing zero
+verifications is that case); and a `## Review` section holding
 one placeholder line per reviewer, filled at phase-7 exit. Where the
 environment provides an attribution footer for pull request descriptions, the
 body **ends** with it,

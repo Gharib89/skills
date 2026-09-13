@@ -62,9 +62,9 @@ filed on one side and the candidates it answered with instead on the other
 `Verification` and test
 counts are read from the phase-3 and phase-2 results, not recalled. The empty
 case writes the reason phase 6 wrote into the PR body's `## Verification`
-section: `class docs` and `small lane` skip the phase; a full-lane change that
-no `Applies when:` matches is the third reason, a profile with zero
-verifications included. On an `unexercised` row, `<what ran>` names the
+section: `class docs` and `small lane` skip the phase; a full-lane change where
+no `Applies when:` line matches is the third reason, and a profile listing
+zero verifications is that case. On an `unexercised` row, `<what ran>` names the
 **subject that did not exist** rather than a command; the row is a record for
 the human to weigh, never a degraded exit, a hand-back or a `Ship defects:`
 row. A value you cannot point to a tool result for is written as `unverified`,
