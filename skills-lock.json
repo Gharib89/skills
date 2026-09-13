@@ -26,7 +26,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "d04deebddc970bf7a498239ecc9b60a810d23a71e346e7eef04a6eac26eab071"
+      "computedHash": "cd009bb3e90c3af5fb99fbc90263c20505e3c7674220235ef9251ee6baf7d4ac"
     },
     "tdd": {
       "source": "mattpocock/skills",

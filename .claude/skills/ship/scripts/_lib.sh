@@ -209,7 +209,7 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
   awk -v sec="$2" -v file="$3" '
     function dump() { while ((getline line < file) > 0) print line; close(file) }
     /^ ? ? ?```/ { fenced = !fenced }
-    !placed && !fenced && $0 ~ "^## " sec "[ \t]*$" {
+    !fenced && $0 ~ "^## " sec "[ \t]*$" {
       print; print ""; dump(); print ""; skip=1; placed=1; next }
     skip && !fenced && /^## / { skip=0 }
     !skip { print }

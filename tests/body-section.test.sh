@@ -155,4 +155,12 @@ actual=$(ship_body_replace_section "$body" Review "$content"); rc=$?
 check    "appends when the only occurrence is fenced" "$expected" "$actual"
 check_rc "reports created for a fenced-only occurrence" 1 "$rc"
 
+# A malformed body carrying the section twice has both replaced. `placed` only
+# answers created-or-replaced; it never stops the second match.
+body=$(printf '## Review\n\nfirst\n\n## Notes\n\nkeep\n\n## Review\n\nsecond\n')
+expected=$(printf '## Review\n\nline one\nline two\n\n## Notes\n\nkeep\n\n## Review\n\nline one\nline two')
+actual=$(ship_body_replace_section "$body" Review "$content"); rc=$?
+check    "replaces every occurrence of the section" "$expected" "$actual"
+check_rc "reports replaced for a body carrying it twice" 0 "$rc"
+
 finish
