@@ -102,8 +102,21 @@ at classification; here you run the applicable ones.
     disposition.
   - `blocked`: cannot be verified anywhere without the prerequisite. Stop
     `blocked-verification`.
-- **Result words** are the local gate's: `pass | fail | deferred-to-ci |
-  unavailable`. Phase 5 admits `pass` and `deferred-to-ci` only. Never proceed
-  on an unrun verification; the merge gate is for reading a summary, not
-  finishing phase 3.
+- **Result words** are the local gate's plus `unexercised`:
+  `pass | fail | deferred-to-ci | unavailable | unexercised`. The fifth is
+  phase 3's alone, because a gate check never lacks a subject. Phase 5 admits
+  `pass`, `deferred-to-ci` and `unexercised` only. Never proceed on an unrun
+  verification; the merge gate is for reading a summary, not finishing
+  phase 3.
+- **`unexercised`** is the verification whose `Needs:` were satisfied and whose
+  every applicable path lacked a **subject** to drive, where the subject is one
+  another actor creates (a reviewer's thread on this run's PR) and never one
+  ship could have created itself. It is not a degraded exit, not a hand-back
+  and not a Ship defect: the human weighs it at the merge gate, and an
+  unattended run proceeds on it, because there is nothing to hand back for.
+  Three cases it is never the word for: a **prerequisite** that failed its
+  detection, which `Without it:` still owns; a path the run **skipped**, which
+  is an unrun verification; and a verification where **at least one applicable
+  path ran**, which is unchanged, the paths that ran giving the result and
+  `<what ran>` naming the unexercised one.
 - `docs` class and the small lane skip this phase entirely.
