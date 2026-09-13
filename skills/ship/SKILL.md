@@ -262,8 +262,9 @@ Phase 0 starts once the Run file exists.
 **Compose, don't reinline.** Load `tdd` (phase 2), `writing-for-agents`
 (phase 4, agent-facing docs), `code-review` (phase 4), `show-me` (phase 6, the
 Summary's Shape) and `find-docs` (any API claim) through the Skill tool when
-their moment comes; never hand-roll their logic. Any skill you compose that has an unattended mode is told the run is
-unattended explicitly; it has no other way to know. The frontmatter's
+their moment comes; never hand-roll their logic. Any skill you compose that
+has an unattended mode is told the run is unattended explicitly; it has no
+other way to know. The frontmatter's
 `composes` line is this same list with each skill's source repo, and is what
 phase 0 checks: a skill added here is added there too, or the run still fails
 at the phase that loads it.
@@ -417,16 +418,16 @@ phase 2's design; a redraw is not a deviation. It is the first thing under
 tree, control flow, pseudocode or component tree. Text forms only, never
 mermaid and never HTML: Azure DevOps renders neither, and the `diff` fence is
 the one form that shows the before and the after in a single view. One shape,
-about fifteen lines or fewer; a change that needs two is a PR spanning two
+about 15 lines or fewer; a change that needs two is a PR spanning two
 concerns. Every node is a real symbol, each tree's root node carries its file
-path, and no line carries a line number, which the first review-round push
-rots and nothing rewrites the Summary to fix. A change that moves no logic and
-no layout (a rename, a constant, a config value, docs alone) opens with the
-visible line `Shape: none, mechanical (<kind>).` instead, so the self-review
-and the reviewer can dispute the call; silent absence is never the answer. The
-small lane takes no exemption: a one-line behaviour fix is where four lines of
-control-flow diff pay for themselves. `show-me` supplies the form; these
-constraints are ship's, and its menu of other uses is not.
+path, and no line carries a line number: the first review-round push rots them
+and nothing rewrites the Summary. A change that moves no logic and no layout
+(a rename, a constant, a config value, docs alone) opens with the visible line
+`Shape: none, mechanical (<kind>).` instead, so the self-review and the
+reviewer can dispute the call. The small lane takes no exemption: a one-line
+behaviour fix is where four lines of control-flow diff pay for themselves.
+`show-me` supplies the form; these constraints are ship's, and its menu of
+other uses is not.
 
 Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
 
