@@ -24,12 +24,6 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-# Generic English function words of four or more characters; shorter ones the
-# length rule already drops. No repo-specific word belongs here: the mechanic
-# is generic, and an over-eager candidate costs one `--distinct-from` while a
-# missed one costs a second issue for a find already filed.
-STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that their them then there these they this those very were what when where which while will with would your'
-
 usage='usage: file-issue --title "<title>" --body-file <path> --label <marker> [--distinct-from <n>[,<n>]]'
 title=""; file=""; label=""; exclude="[]"
 while [ $# -gt 0 ]; do
@@ -49,14 +43,7 @@ done
 ship_load_host
 
 open=$(host_issues_open) || ship_fail "cannot list open issues"
-candidates=$(jq -c --arg t "$title" --argjson x "$exclude" --arg s "$STOPWORDS" '
-  def tokens: ascii_downcase | [splits("[^a-z0-9]+")]
-    | map(select(length >= 4)) | unique | . - ($s | split(" "));
-  ($t | tokens) as $new
-  | [ .[]
-      | select(([.number] - $x) != [])
-      | select((($new - ($new - (.title | tokens))) | length) >= 3)
-      | {number, title, url} ]' <<<"$open") || ship_fail "candidate check failed"
+candidates=$(ship_title_candidates "$title" "$open" "$exclude") || ship_fail "candidate check failed"
 if [ "$candidates" != "[]" ]; then
   jq -n --argjson c "$candidates" '{filed: false, candidates: $c}'
   exit 0

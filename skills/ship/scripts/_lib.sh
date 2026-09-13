@@ -192,3 +192,48 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
     | test("\\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))"
            + "\\s+(#[0-9]+[\\s,]+(and[\\s,]+)?)*#" + $n + "\\b"; "i")' >/dev/null
 }
+
+# Replace one `## <section>` of <body> with <body-file>'s content, appending the
+# section when the body has none. Every other line is untouched, including a
+# `Closes` line above the first heading. Prints the new body; exit 0 replaced,
+# 1 created, the way ship_body_closes answers with its exit code.
+#
+# The heading match is anchored at column 0 and skips fenced blocks, the same
+# rule _gh_add_closes reads: the two have to agree on what a section boundary
+# is, or a `## Review` written as an example inside a fence is replaced while
+# the real section below it survives. The fence carries up to three leading
+# spaces (CommonMark), written out rather than as an interval so every awk
+# reads it. Backtick fences only, which is the rule _gh_add_closes has always
+# read; tilde fences are issue #102.
+ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
+  awk -v sec="$2" -v file="$3" '
+    function dump() { while ((getline line < file) > 0) print line; close(file) }
+    /^ ? ? ?```/ { fenced = !fenced }
+    !fenced && $0 ~ "^## " sec "[ \t]*$" {
+      print; print ""; dump(); print ""; skip=1; placed=1; next }
+    skip && !fenced && /^## / { skip=0 }
+    !skip { print }
+    END { if (!placed) { printf "\n## %s\n\n", sec; dump(); exit 1 } }' <<<"$1"
+}
+
+# Generic English function words of four or more characters; shorter ones the
+# length rule already drops. No repo-specific word belongs here: the candidate
+# check is generic, and an over-eager candidate costs one `--distinct-from`
+# while a missed one costs a second issue for a find already filed.
+readonly SHIP_TITLE_STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that their them then there these they this those very were what when where which while will with would your'
+
+# Titles that look like <title> among <open-issues>, for file-issue's candidate
+# check. Compares lowercased tokens with punctuation as a separator, dropping
+# tokens under four characters and the stopwords above; three or more shared
+# tokens is a candidate. <exclude> is the JSON array of numbers the caller has
+# read and judged different. Prints the candidates as compact JSON.
+ship_title_candidates() { # ship_title_candidates <title> <open-issues-json> <exclude-json>
+  jq -c --arg t "$1" --argjson x "$3" --arg s "$SHIP_TITLE_STOPWORDS" '
+    def tokens: ascii_downcase | [splits("[^a-z0-9]+")]
+      | map(select(length >= 4)) | unique | . - ($s | split(" "));
+    ($t | tokens) as $new
+    | [ .[]
+        | select(([.number] - $x) != [])
+        | select((($new - ($new - (.title | tokens))) | length) >= 3)
+        | {number, title, url} ]' <<<"$2"
+}
