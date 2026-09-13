@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Setup skills
@@ -62,7 +62,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 | Coding standards | a path CLAUDE.md names, `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `docs/contributing/*` | yes, or stub |
 | Verification | not discoverable; seed from test markers (`e2e`, `integration`), Docker use, browser-test scripts | walked |
 | Versioning and changelog | semantic-release config, changesets, `version-gate` or bump scripts, `CHANGELOG.md`; `In-PR requirement:` | walked |
-| PR | `.github/pull_request_template.md` or `.azuredevops/pull_request_template.md`: presence and headings | yes |
+| PR | `.github/pull_request_template.md` or `.azuredevops/pull_request_template.md`: presence, headings, and where any closing reference sits relative to the first `## ` heading | yes |
 | Public surface | `Default.` proposed | walked |
 | Triage | the `needs-triage` row's right-hand column in `triage-labels.md`, never invented | yes |
 | Docs sync | `README.md`, `docs/`, `CONTEXT.md`, skills the repo ships; `Agent-facing:` `docs/agents/`, `.claude/skills/` | yes, confirm |
@@ -109,7 +109,10 @@ Every skill under `.claude/skills/` is a derived copy, never edited in place; `s
 
 Either way, **run it once** (`--small` with the example node) and check the verdict shape: a JSON object with `verdict`, `base`, `lane`, `gates.secrets`.
 
-**PR template.** None: create it from [pull_request_template.md](./pull_request_template.md) at `.github/pull_request_template.md` (GitHub) or `.azuredevops/pull_request_template.md` (ADO). Exists: propose adding the `## Review` section only.
+**PR template.** None: create it from [pull_request_template.md](./pull_request_template.md) at `.github/pull_request_template.md` (GitHub) or `.azuredevops/pull_request_template.md` (ADO). Exists: propose these two edits and nothing else.
+
+- The `## Review` section, when the template lacks it.
+- A **closing-reference move**, when a line matching `Closes`, `Fixes` or `Resolves` followed by an issue reference (case-insensitive) sits below the first `## ` heading: propose moving that line, unchanged, above the first heading. Ship's `update-pr-body` replaces a section wholesale, so a closing reference inside one is dropped by the next rewrite of that section, and nothing else migrates a template written before the reference moved out of `## Summary`. No proposal when the reference already sits above the first heading, or when the template carries none.
 
 **Coding standards.** None found: write `docs/contributing/coding-standards.md` from [coding-standards.md](./coding-standards.md), recording only what exists and is enforced today (config-enforced tools, links to CLAUDE.md sections carrying inline standards). Never move CLAUDE.md prose into it.
 
@@ -135,4 +138,4 @@ Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>
 
 ## Re-run
 
-Profile exists: run steps 1 to 3. Then compare the profile's `Schema:` line to ship's `metadata.profile-schema` in `.claude/skills/ship/SKILL.md`. Trailing: apply each `## Schema N` entry of [profile-schema.md](./profile-schema.md) between the two numbers in order, walking only the rows an entry adds or whose vocabulary it moves, leaving the prose under existing headings alone, and rewrite the `Schema:` line last. Ahead of ship: stop and print the refresh line; the profile is not what needs fixing. Then diff each section of the fresh exploration against the existing profile, propose only the updates, and ask whether anything else should change. Prose under the headings is the human's; update the `Label:` lines and leave the prose alone unless a fact it explains changed. End with step 6.
+Profile exists: run steps 1 to 3. Then compare the profile's `Schema:` line to ship's `metadata.profile-schema` in `.claude/skills/ship/SKILL.md`. Trailing: apply each `## Schema N` entry of [profile-schema.md](./profile-schema.md) between the two numbers in order, walking only the rows an entry adds or whose vocabulary it moves, leaving the prose under existing headings alone, and rewrite the `Schema:` line last. Ahead of ship: stop and print the refresh line; the profile is not what needs fixing. Then diff each section of the fresh exploration against the existing profile, propose only the updates, and ask whether anything else should change. Prose under the headings is the human's; update the `Label:` lines and leave the prose alone unless a fact it explains changed. Then re-check the PR template for step 5's closing-reference move, the one step-5 write a re-run revisits: a template installed before ship moved the reference out of `## Summary` is reachable no other way. End with step 6.
