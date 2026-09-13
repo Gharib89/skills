@@ -61,7 +61,7 @@ docs/contributing/coding-standards.md
 
 Proves: a changed generic mechanic or the GitHub adapter performs its host call against a real issue, PR, thread or merge.
 Applies when: the change touches `skills/ship/scripts/`, on any path the GitHub adapter reaches.
-Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write, `read-pr` reads the body back and confirms the footer is still there. The thread-reply path is driven against a thread the reviewer opened on that same PR; the reviewer opens it and ship does not, so a PR carrying none at convergence leaves that path unexercised. Unexercised is not a failed verification: say so in the `<what ran>` note on the merge summary's `Verification` row and let the human weigh it.
+Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write, `read-pr` reads the body back and confirms the footer is still there. The thread-reply path is driven against a thread the reviewer opened on that same PR; the reviewer opens it and ship does not, so a PR carrying none at convergence leaves that path unexercised. The verification then takes the result of the paths that did run, and its `<what ran>` note on the merge summary's `Verification` row names the unexercised one for the human to weigh.
 Needs: `gh` signed in with push permission on `Gharib89/skills`.
 Without it: hand-off
 Also proven by CI: None.
@@ -71,7 +71,7 @@ Claims to probe: the REST response shapes and api-versions the adapter reads, an
 
 Proves: a changed Azure DevOps adapter performs its host call against a real work item, PR, thread or completion.
 Applies when: the change touches `skills/ship/scripts/host/ado.sh`.
-Run: drive the changed mechanic by hand against the `ship-ado-lab` repo in the `AI_And_Data_Practice` project. A scratch round opened there is dispositioned with `resolve-thread` and left in place: the lab PR is a shared fixture whose resolved rounds accumulate, and no mechanic removes them. A later verification reads only its own round: `poll-pr <pr> --await-review <login> --since <iso>` lands a review submitted at or after that time, and `poll-pr <pr> --full <id>` returns that row's body whole, the id read from `all[]`.
+Run: drive the changed mechanic by hand against the `ship-ado-lab` repo in the `AI_And_Data_Practice` project. A scratch round opened there is dispositioned with `resolve-thread` and left in place: the lab PR is a shared fixture whose resolved rounds accumulate, and no mechanic removes them. A later verification picks its own round out of `all[]` by `submitted_at`, then reads it whole: `poll-pr <pr> --await-review <login> --since <iso>` reports a round at or after that time as `landed_by: since`, and `poll-pr <pr> --full <id>` lifts the round clip on that row alone.
 Needs: `az login` with Entra (the PAT path has known gaps, issue #29) plus the `azure-devops` extension.
 Without it: blocked
 Also proven by CI: None.
