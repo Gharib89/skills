@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 1.3.0
+  version: 1.4.0
 ---
 
 # Setup skills
@@ -110,8 +110,9 @@ Every skill under `.claude/skills/` is a derived copy, never edited in place; `s
 
 Either way, **run it once** (`--small` with the example node) and check the verdict shape: a JSON object with `verdict`, `base`, `lane`, `gates.secrets`.
 
-**PR template.** None: create it from [pull_request_template.md](./pull_request_template.md) at `.github/pull_request_template.md` (GitHub) or `.azuredevops/pull_request_template.md` (ADO). Exists: propose these two edits and nothing else.
+**PR template.** None: create it from [pull_request_template.md](./pull_request_template.md) at `.github/pull_request_template.md` (GitHub) or `.azuredevops/pull_request_template.md` (ADO). Exists: propose these three edits and nothing else.
 
+- The `## Verification` section, when the template lacks it, placed before `## Review` so the body's order matches the order Ship writes them: the verification results at PR open, the reviewer statuses at phase-7 exit.
 - The `## Review` section, when the template lacks it.
 - A **closing-reference move**, when a closing reference sits below the first `## ` heading: propose moving that line, unchanged, above the first heading. A closing reference is any inflection of `close`, `fix` or `resolve` followed by `#`, case-insensitive, with or without an issue number: `ship_body_closes` needs the number to read a filled-in body as a claim, and a template carries the bare `Closes #` placeholder a run fills in. A section rewrite drops whichever one sits inside a section, and nothing else migrates a template written before the reference moved out of `## Summary`.
 
