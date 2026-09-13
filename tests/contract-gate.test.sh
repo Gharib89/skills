@@ -74,6 +74,12 @@ d=$(copy_skills bash4-mapfile)
 printf '\nmapfile -t lines < /dev/null\n' >> "$d/$mechanics"
 check_rc "a mapfile under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
 
+# A command name ends at any character a name cannot carry, not at whitespace
+# alone: `mapfile<f` and `mapfile;` are the same builtin.
+d=$(copy_skills bash4-redirect)
+printf '\nmapfile</dev/null\n' >> "$d/$mechanics"
+check_rc "a mapfile delimited by a redirect fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
 d=$(copy_skills bash4-readarray)
 printf '\nreadarray -t lines < /dev/null\n' >> "$d/$mechanics"
 check_rc "a readarray under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
@@ -111,6 +117,17 @@ check_rc "a construct named in a comment does not fail the check" 0 "$(rc_of ski
 
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.
-check_rc "an unreadable skills tree is tooling, not a pass" 2 "$(rc_of skills/ship/scripts "$fixture/absent")"
+# Two ways it can be unreadable, and the second is the one the grep status owns.
+check_rc "an absent skills tree is tooling, not a pass" 2 "$(rc_of skills/ship/scripts "$fixture/absent")"
+
+# Root reads through a 000 directory, so there the search would succeed and the
+# case would assert the wrong thing.
+if [ "$(id -u)" -ne 0 ]; then
+  d=$(copy_skills grep-failure)
+  chmod 000 "$d/ship"
+  rc=$(rc_of skills/ship/scripts "$d")
+  chmod 755 "$d/ship"
+  check_rc "a search the tree refuses is tooling, not a pass" 2 "$rc"
+fi
 
 finish

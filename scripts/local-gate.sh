@@ -103,7 +103,8 @@ run house-style house_style
 # contract: the mechanics' malformed-invocation contract, and the Bash 3.2 target
 # over the whole skills tree. Every mechanic answers a malformed invocation with
 # one JSON error object and exit 2, and nothing a consumer installs uses a Bash 4
-# builtin; nothing else in the tree holds a new mechanic to either. Reaches no
+# builtin outside the setup-skills local-gate template, which carries its own
+# version guard; nothing else in the tree holds a new mechanic to either. Reaches no
 # host: each guard fires before the adapter loads.
 run contract scripts/contract-check.sh skills/ship/scripts skills
 
