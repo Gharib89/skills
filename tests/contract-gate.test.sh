@@ -115,6 +115,16 @@ d=$(copy_skills bash4-comment)
 printf '\n# a read loop, not mapfile: the mechanics target Bash 3.2\n' >> "$d/$mechanics"
 check_rc "a construct named in a comment does not fail the check" 0 "$(rc_of skills/ship/scripts "$d")"
 
+# Both exclusions read a field, not the whole line. A violation whose own content
+# carries the shape of the other exclusion is still a violation.
+d=$(copy_skills bash4-shadowed-comment)
+printf '\ndeclare -A seen # path:12: # a note\n' >> "$d/$mechanics"
+check_rc "a violation carrying :N: # in its content still fails" 1 "$(rc_of skills/ship/scripts "$d")"
+
+d=$(copy_skills bash4-shadowed-template)
+printf '\nmapfile -t x < "%s/setup-skills/local-gate.sh:"\n' "$d" >> "$d/$mechanics"
+check_rc "a violation naming the exempt template still fails" 1 "$(rc_of skills/ship/scripts "$d")"
+
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.
 # Two ways it can be unreadable, and the second is the one the grep status owns.
