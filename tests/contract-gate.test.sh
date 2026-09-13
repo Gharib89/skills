@@ -21,6 +21,12 @@ d=$(copy expansion)
 printf '\nx=${2:?needs a thing}\n' >> "$d/read-issue.sh"
 check_rc "a \${N:?} expansion fails the check" 1 "$(rc_of "$d")"
 
+# `${N?msg}` fails the same way as `${N:?msg}`: exit 1, bash's diagnostic on
+# stderr, no JSON. The ban covers both forms.
+d=$(copy expansion-no-colon)
+printf '\nx=${2?needs a thing}\n' >> "$d/read-issue.sh"
+check_rc "a \${N?} expansion fails the check" 1 "$(rc_of "$d")"
+
 # The expansion is banned under the whole directory, host adapters included.
 d=$(copy expansion-host)
 printf '\nx=${1:?needs a thing}\n' >> "$d/host/github.sh"

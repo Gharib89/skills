@@ -8,8 +8,10 @@
 #   scripts/contract-check.sh [<scripts-dir>]
 #
 # Reaches no host: every mechanic's usage guard fires before it loads the host
-# adapter, so a no-argument invocation makes no network call. A mechanic whose
-# guard fires later breaks that, and is itself a contract failure.
+# adapter, so a no-argument invocation makes no network call. Keep a new
+# mechanic's guard there. Check 2 cannot police that placement: a late guard
+# still exits 2 with an error object, because `ship_load_host` reports its own
+# failure in exactly that shape.
 #
 # stdout: one line per violation, with the offending mechanic named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
@@ -20,10 +22,13 @@ command -v jq >/dev/null || { echo "jq not installed" >&2; exit 2; }
 
 rc=0
 
-# 1. No positional-parameter expansion anywhere under the mechanics, adapters
-# included: `${2:?msg}` exits 1 with bash's diagnostic on stderr and no JSON.
-if hits=$(grep -rn '\${[0-9]\{1,\}:?' "$dir"); then
-  echo "\${N:?} expansion under $dir; a malformed invocation prints JSON and exits 2:"
+# 1. No positional-parameter error expansion anywhere under the mechanics,
+# adapters included: `${2:?msg}` and `${2?msg}` both exit 1 with bash's
+# diagnostic on stderr and no JSON.
+hits=$(grep -rn '\${[0-9]\{1,\}:\{0,1\}?' "$dir"); st=$?
+[ "$st" -le 1 ] || { printf 'cannot search %s\n' "$dir" >&2; exit 2; }
+if [ "$st" -eq 0 ]; then
+  echo "positional error expansion under $dir; a malformed invocation prints JSON and exits 2:"
   echo "$hits"
   rc=1
 fi
