@@ -89,7 +89,7 @@ git -C "$main" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1
 git -C "$main" fetch origin >/dev/null 2>&1
 holder=$(git -C "$main" worktree list --porcelain | awk -v b="refs/heads/$base" '$1=="worktree"{w=$2} $1=="branch" && $2==b {print w}' | head -1)
 if [ -n "$holder" ]; then
-  fflog=$(mktemp)
+  fflog=$(mktemp); trap 'rm -f "$fflog"' EXIT
   for attempt in 1 2 3; do
     git -C "$holder" pull --ff-only origin "$base" >"$fflog" 2>&1 && base_updated=true && break
     grep -q 'index.lock' "$fflog" || break   # only a lock is worth retrying

@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.1.1
+  version: 3.1.2
   profile-schema: 1
 ---
 

@@ -26,7 +26,7 @@ ship_load_host
 installed=false
 missing=$(host_tooling_reasons)
 if [ -n "$missing" ] && [ "$install" = true ]; then
-  log=$(mktemp)
+  log=$(mktemp); trap 'rm -f "$log"' EXIT
   if host_tooling_install >"$log" 2>&1; then installed=true; else ship_tail40 "$log"; fi
   rm -f "$log"
   missing=$(host_tooling_reasons)
