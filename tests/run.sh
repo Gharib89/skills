@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Run every tests/*.test.sh from the repo root. Each test file is a standalone
-# bash script that sources the function under test and asserts on strings; no
-# test drives a host call.
+# Run every tests/*.test.sh from the repo root. A test file is a standalone bash
+# script: it sources the function under test and asserts on strings, reaching no
+# host. The local gate's `tests` gate is this script.
 #
 #   tests/run.sh
 #

@@ -25,7 +25,7 @@ Tripwires: None.
 
 Every gate is repo-wide and takes seconds, so the small lane records the node and narrows nothing. There is no CI, so no gate is ever `deferred-to-ci`: the gate is the whole automated check on a diff, alongside the reviewer.
 
-`tests` runs `tests/run.sh`, every `tests/*.test.sh` under it. They cover the pure transformations the mechanics were refactored around (`ship_body_replace_section`, `ship_title_candidates`, `_gh_add_closes`), sourcing the function and asserting on strings; no test drives a host call, so the `host_*` functions stay the `github-mechanics` verification's job. A behavioural claim about one of those transformations belongs here rather than in a scratchpad probe that dies with the run.
+`tests` runs `tests/run.sh`, and it runs every `tests/*.test.sh`. Their subject is the pure transformations the mechanics are built around (`ship_body_replace_section`, `ship_title_candidates`, `_gh_add_closes`): a test sources its function and asserts on strings. A behavioural claim about one of them earns a case here, where it survives the run that made it, instead of a scratchpad probe that does not. The `host_*` functions stay the `github-mechanics` verification's job: a test that reaches a host is that verification, not this gate.
 
 `derived-copies` is the drift gate. It fails when `.claude/skills/<name>/` differs from `skills/<name>/` for `ship`, `cloud-ship` or `setup-skills`, which is what makes the refresh below non-optional rather than a habit.
 
