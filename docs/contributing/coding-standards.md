@@ -11,7 +11,7 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 - `.claude/skills/<name>/` byte-identical to `skills/<name>/` for `ship`, `cloud-ship` and `setup-skills`, per the `derived-copies` gate.
 - No em dashes in any file this repo authors, per the `house-style` gate.
 - The mechanics' malformed-invocation contract, per the `contract` gate: no `${N:?}` or `${N?}` expansion under `skills/ship/scripts/`, and every mechanic that requires an argument, invoked with none, prints exactly one JSON object with an `error` key and exits 2. The gate reaches no host because every usage guard fires before its mechanic loads the adapter; keep a new mechanic's guard there, since the gate checks the error's shape and cannot tell which guard produced it.
-- `tests/run.sh` green, per the `tests` gate. It runs every `tests/*.test.sh`: the pure transformations the mechanics are built around, sourced and asserted on as strings; the gate scripts, run against a fixture and asserted on their exit code; and the mechanics' usage guards, invoked malformed so the guard answers before the adapter loads. None of them reaches a host. A behavioural claim about either earns a case there.
+- `tests/run.sh` green, per the `tests` gate. It runs every `tests/*.test.sh`: the pure transformations the mechanics are built around, sourced and asserted on as strings; the gate scripts, run against a fixture and asserted on their exit code; and the mechanics' usage guards, invoked malformed so the guard answers before the adapter loads. None of them reaches a host. A behavioural claim about any of them earns a case there.
 
 ## Written standards
 
