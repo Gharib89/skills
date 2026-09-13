@@ -77,7 +77,7 @@ hits=$(printf '%s' "$raw" | awk -F: -v tmpl="$skills/setup-skills/local-gate.sh"
   { content = $0; sub(/^[^:]*:[0-9]+:/, "", content); if (content ~ /^[ \t]*#/) next; print }
 ')
 if [ -n "$hits" ]; then
-  echo "Bash 4+ construct under $skills; everything a consumer installs targets Bash 3.2, where the missing builtin is a skipped line and a silent pass:"
+  echo "Bash 4+ construct under $skills; everything a consumer installs targets Bash 3.2, which answers a mapfile with \"command not found\" and carries on, a declare -A with an invalid option, and a case modifier with a bad substitution:"
   echo "$hits"
   rc=1
 fi

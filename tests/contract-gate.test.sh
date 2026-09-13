@@ -88,10 +88,17 @@ d=$(copy_skills bash4-assoc)
 printf '\ndeclare -A seen\n' >> "$d/$mechanics"
 check_rc "a declare -A under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
 
-# `-A` need not be the first option group: `declare -r -A` is the same array.
-d=$(copy_skills bash4-assoc-separated)
-printf '\ndeclare -r -A seen\n' >> "$d/$mechanics"
-check_rc "a declare -r -A under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+# `-A` need not stand alone or come first: every spelling is the same array.
+for form in '-r -A' '-A -r' '-Ar'; do
+  d=$(copy_skills "bash4-assoc-$(printf '%s' "$form" | tr -d ' -')")
+  printf '\ndeclare %s seen\n' "$form" >> "$d/$mechanics"
+  check_rc "a declare $form under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+done
+
+# The lowercase options are Bash 3.2's own and must not be flagged.
+d=$(copy_skills bash3-indexed-array)
+printf '\ndeclare -ar plain\n' >> "$d/$mechanics"
+check_rc "a declare -ar does not fail the check" 0 "$(rc_of skills/ship/scripts "$d")"
 
 d=$(copy_skills bash4-lowercase)
 printf '\nx=${reason,,}\n' >> "$d/$mechanics"
