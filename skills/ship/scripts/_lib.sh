@@ -243,13 +243,9 @@ ship_title_candidates() { # ship_title_candidates <title> <open-issues-json> <ex
         | {number, title, url} ]' <<<"$2"
 }
 
-# The review-body clip, shared so both adapters clip in one vocabulary: a jq
-# `clip($id)` filter over a body string, run with `--argjson full <ids>`. Past
-# 2000 characters the body is cut and marked, so a clipped round never reads as
-# a whole one; a poll that dumped every round in full would flood the window.
-# `poll-pr --full <id>` lifts the cap for the rows it names and nothing else,
-# because a round whose findings sit past the cap (a reviewer that opens with a
-# long preamble) is otherwise unreadable, and phase 7 must disposition it.
+# The review-body clip both adapters run, so they clip in one vocabulary: a jq
+# `clip($id)` filter over a body string, invoked with `--argjson full <ids>`.
+# The cut leaves a marker, so a clipped round never reads as a whole one.
 # `$id | tostring` so a row the host gives no id (an Azure DevOps vote) compares
 # without erroring; such a row carries no body to unclip.
 # shellcheck disable=SC2034  # read by the host adapters that source this library

@@ -30,10 +30,8 @@
 # Each review row carries the round's own `body` and the `id` the host knows it
 # by, clipped past 2000 characters and marked "...[truncated]" there: phase 7
 # triages from the body, and a round whose findings are in it rather than in
-# threads is invisible without it. `--full` names the ids to return whole, so a
-# reviewer that opens with a long preamble does not push its findings past the
-# cap unreadably; every other row stays clipped, because the cap is what keeps a
-# poll from flooding the window. An id matching no row changes nothing.
+# threads is invisible without it. `--full` names the ids to return whole; every
+# other row stays clipped, and an id matching no row changes nothing.
 # `threads[]` rows carry the thread's first comment, which `reply-thread` answers,
 # and `replied`, true once this identity has answered in that thread.
 #
@@ -59,7 +57,8 @@ while [ $# -gt 0 ]; do
     # thread, and the adapters compare `.id | tostring` against this list.
     --full)
       [ -n "${2:-}" ] || ship_tooling "$usage"
-      full=$(jq -cn --arg n "$2" '$n | split(",") | map(select(. != ""))') || ship_tooling "$usage"
+      full=$(jq -cn --arg n "$2" '$n | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != ""))') \
+        || ship_tooling "$usage"
       shift 2 ;;
     --timeout) [ -n "${2:-}" ] || ship_tooling "$usage"; timeout=$2; shift 2 ;;
     --interval) [ -n "${2:-}" ] || ship_tooling "$usage"; interval=$2; shift 2 ;;

@@ -411,11 +411,9 @@ Zero reviewers: skip the phase. Batch fixes into one push per round, then
 answer each thread with `reply-thread` (`fixed in <sha>`, or the decline and
 its reason), reading the round itself from its row in `poll-pr`'s `reviews`
 (`on_head[]` under the head rule, `all[]` under the since rule) where its
-findings sit in the body rather than in threads. A body that ends
-`...[truncated]` is a round you have not read: re-poll with
-`--full <id>`, naming that row's `id`, before dispositioning its findings. The
-clip stays the default, because a poll that returned every round whole would
-flood the window. `resolve-thread` runs per
+findings sit in the body rather than in threads. A body ending
+`...[truncated]` is a round you have not read: re-poll with `--full <id>` for
+that row before dispositioning it. `resolve-thread` runs per
 thread once every thread carries a disposition. Exits: `converged`,
 `converged, override needed` (a gating reviewer's declined finding, cited with
 evidence), or `degraded: <reason>` from

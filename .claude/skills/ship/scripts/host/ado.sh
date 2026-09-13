@@ -226,7 +226,7 @@ _utc='(sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z"))'
 # no text at all, hence "".
 # `id` is the thread's own id, which is also what `poll-pr --full` names to
 # read this round whole; a vote has no thread, hence null there.
-_review_row='(. as $r | {id: .id, login: '"$_author_login"', state: "comment", substantive: true,
+_review_row='(. as $r | {id: (.id | tostring), login: '"$_author_login"', state: "comment", substantive: true,
               submitted_at: (.publishedDate | '"$_utc"'),
               body: ((.comments[0].content // "") | clip($r.id))})'
 host_pr_reviews() { # <pr> <head_sha> [<full-ids-json>]
