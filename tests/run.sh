@@ -13,7 +13,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 
 shopt -s nullglob
 files=(tests/*.test.sh)
-[ ${#files[@]} -gt 0 ] || { echo "no test files under tests/" >&2; exit 2; }
+[ "${#files[@]}" -gt 0 ] || { echo "no test files under tests/" >&2; exit 2; }
 
 pass=0 fail=0
 for t in "${files[@]}"; do
