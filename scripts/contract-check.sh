@@ -5,7 +5,7 @@
 # with the pre-#62 `${N:?}` idiom reintroduces exit 1 with a bare shell
 # diagnostic and no JSON. The `contract` gate in scripts/local-gate.sh is this.
 #
-#   scripts/contract-check.sh [<scripts-dir>]
+#   scripts/contract-check.sh [<scripts-dir> [<skills-dir>]]
 #
 # Reaches no host: every mechanic's usage guard fires before it loads the host
 # adapter, so a no-argument invocation makes no network call. Keep a new
@@ -13,11 +13,17 @@
 # still exits 2 with an error object, because `ship_load_host` reports its own
 # failure in exactly that shape.
 #
+# Check 3 is a second traversal, over the whole skills tree rather than the
+# mechanics alone: every file a consumer repo installs runs in that machine's
+# shell, not only the ones under skills/ship/scripts.
+#
 # stdout: one line per violation, with the offending mechanic named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
 dir=${1:-skills/ship/scripts}
+skills=${2:-skills}
 [ -d "$dir" ] || { printf 'not a directory: %s\n' "$dir" >&2; exit 2; }
+[ -d "$skills" ] || { printf 'not a directory: %s\n' "$skills" >&2; exit 2; }
 command -v jq >/dev/null || { echo "jq not installed" >&2; exit 2; }
 
 rc=0
@@ -50,5 +56,23 @@ for path in "$dir"/*.sh; do
   printf '%s' "$out" | jq -se 'length == 1 and (.[0] | type == "object" and has("error"))' >/dev/null 2>&1 \
     || { printf '%s: bare invocation did not print exactly one JSON object with an error key\n' "$m"; rc=1; }
 done
+
+# 3. No Bash 4+ construct under the skills tree. A derived copy runs in whatever
+# shell a consumer machine provides, macOS's system Bash 3.2 included, and the
+# mechanics carry no `set -e`: there a missing builtin prints "command not
+# found", execution continues, and the mechanic answers on state it never
+# collected. Shell files only, because the prose under skills/ names these
+# constructs deliberately; comment lines for the same reason. The setup-skills
+# local gate is excluded: it is a template written into a consumer repo as that
+# repo's own repo-local gate, behind its own Bash 4 version guard.
+bash4='(^|[^[:alnum:]_])(mapfile|readarray)([[:space:]]|$)|(declare|local|typeset)[[:space:]]+-[A-Za-z]*A|\$\{[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?(,|\^)'
+hits=$(grep -rnE --include='*.sh' "$bash4" "$skills" \
+  | grep -vE ':[0-9]+:[[:space:]]*#' \
+  | grep -vF "$skills/setup-skills/local-gate.sh:")
+if [ -n "$hits" ]; then
+  echo "Bash 4+ construct under $skills; everything a consumer installs targets Bash 3.2, where the missing builtin is a skipped line and a silent pass:"
+  echo "$hits"
+  rc=1
+fi
 
 exit $rc
