@@ -414,7 +414,8 @@ Ship never names the footer's lines; it only says where it sits.
 
 **The Summary opens with a Shape.** Draw it from the diff here, not from
 phase 2's design; a redraw is not a deviation. It is the first thing under
-`## Summary`, above the prose, and it is a `diff` fence over a call tree, file
+`## Summary`, above the prose, and where no template gives that heading the
+plain body opens with it instead. It is a `diff` fence over a call tree, file
 tree, control flow, pseudocode or component tree. Text forms only, never
 mermaid and never HTML: Azure DevOps renders neither, and the `diff` fence is
 the one form that shows the before and the after in a single view. One shape,
