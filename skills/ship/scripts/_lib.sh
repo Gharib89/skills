@@ -218,7 +218,6 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
 # length rule already drops. No repo-specific word belongs here: the matcher is
 # generic, and an over-eager candidate costs one `--distinct-from` while a
 # missed one costs a second issue for a find already filed.
-# shellcheck disable=SC2034  # read by ship_title_candidates
 readonly SHIP_TITLE_STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that their them then there these they this those very were what when where which while will with would your'
 
 # Titles that look like <title> among <open-issues>, for file-issue's candidate
