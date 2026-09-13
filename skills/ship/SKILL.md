@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.4.1
+  version: 3.5.0
   profile-schema: 1
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs
 ---
@@ -264,9 +264,9 @@ Phase 0 starts once the Run file exists.
 claim) through the Skill tool when their moment comes; never hand-roll their
 logic. Any skill you compose that has an unattended mode is told the run is
 unattended explicitly; it has no other way to know. The frontmatter's
-`composes` line names the same skills with the repo each installs from, and is
-the list phase 0 checks: a skill added here is added there too, or the run
-still fails at the phase that loads it.
+`composes` line is this same list with each skill's source repo, and is what
+phase 0 checks: a skill added here is added there too, or the run still fails
+at the phase that loads it.
 
 **0 · Isolate.** Run `preflight <issue>`, adding `--unattended` in an unattended
 run, which is what turns a `ready-for-human` issue into the
@@ -278,10 +278,9 @@ probe: preflight returns `unknown`, warns on stderr and continues, so read the
 warning before trusting `ok: true` and name the unproven check in the merge
 summary. It cross-checks `## Host` against the remote, loads and validates the
 profile headings, confirms every skill on ship's `composes` line is installed
-under this checkout's `.claude/skills/` (absent: `skill missing`, one reason
-per skill, carrying the `npx skills add ...` line that installs it), prunes
-worktrees whose PR is merged or closed, and collects every not-actionable
-reason. Admission: `ready-for-agent` always; `ready-for-human` in an
+under this checkout's `.claude/skills/`, one `skill missing` reason per absent
+skill, prunes worktrees whose PR is merged or closed, and collects every
+not-actionable reason. Admission: `ready-for-agent` always; `ready-for-human` in an
 attended run only; anything else is `not triaged`.
 An assignee, including your own identity, is `already claimed`; stale-claim
 recovery is a human unassigning by hand. `existing PR` means a live PR whose

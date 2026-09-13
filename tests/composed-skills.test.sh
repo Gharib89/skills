@@ -40,4 +40,24 @@ skill missing: find-docs; run npx skills add upstash/context7 --skill find-docs 
 
 check "an empty composes line checks nothing" '' "$(ship_missing_skill_reasons "$root" '')"
 
+# ship_frontmatter reads the line preflight passes in. A body line that looks
+# like the key is past the closing `---` and must not be read as one.
+fm=$(mktemp) || exit 2
+trap 'rm -rf "$root"; rm -f "$fm"' EXIT
+cat > "$fm" <<'MD'
+---
+name: ship
+metadata:
+  version: 3.5.0
+  composes: mattpocock/skills:tdd upstash/context7:find-docs
+---
+
+  composes: not-this-one
+MD
+
+check "a single-token value"          '3.5.0' "$(ship_frontmatter "$fm" version)"
+check "a space-separated value whole" 'mattpocock/skills:tdd upstash/context7:find-docs' \
+  "$(ship_frontmatter "$fm" composes)"
+check "a key the frontmatter lacks"   ''      "$(ship_frontmatter "$fm" profile-schema)"
+
 finish

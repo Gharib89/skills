@@ -66,6 +66,7 @@ reasons=()
 # repo's first profile lands on a branch before it ever reaches main.
 here=$(git rev-parse --show-toplevel)
 profile="$here/docs/agents/ship.md"
+ship_skill="$SHIP_SCRIPTS/../SKILL.md"
 if [ ! -f "$profile" ]; then
   reasons+=("profile missing: $profile; run /setup-skills")
 else
@@ -75,9 +76,8 @@ else
     detail=$(diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | grep -E '^[<>]' | sed 's/^< /missing or misplaced: /; s/^> /unexpected: /' | paste -sd';')
     reasons+=("profile invalid: headings; $detail")
   fi
-  skill="$SHIP_SCRIPTS/../SKILL.md"
-  reads=$(awk 'NR>1 && /^---$/{exit} /^  profile-schema:/{print $2; exit}' "$skill")
-  shipv=$(awk 'NR>1 && /^---$/{exit} /^  version:/{print $2; exit}' "$skill")
+  reads=$(ship_frontmatter "$ship_skill" profile-schema)
+  shipv=$(ship_frontmatter "$ship_skill" version)
   schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' "$profile")
   case $schema in
     '') reasons+=("profile invalid: no Schema line; run /setup-skills") ;;
@@ -95,10 +95,8 @@ fi
 # The skills ship loads through the Skill tool, from ship's own frontmatter:
 # nothing else proves they are installed, so without this a run claims the
 # issue and only discovers the absence at the phase that needs the skill.
-composes=$(awk 'NR>1 && /^---$/{exit} /^  composes:/{sub(/^  composes: */,""); print; exit}' "$SHIP_SCRIPTS/../SKILL.md")
-while IFS= read -r reason; do
-  [ -n "$reason" ] && reasons+=("$reason")
-done < <(ship_missing_skill_reasons "$here" "$composes")
+mapfile -t -O "${#reasons[@]}" reasons \
+  < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
 # Prune sibling worktrees whose PR is merged or closed. Never touches one whose
 # PR is open or unknown.

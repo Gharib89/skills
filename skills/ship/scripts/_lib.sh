@@ -186,6 +186,13 @@ ship_triage_label() {
   printf '%s' "${label:-$role}"
 }
 
+# ship_frontmatter <file> <key>: one `  <key>: <value>` line from a skill's
+# YAML frontmatter, value only. Stops at the closing `---`, so a body line that
+# looks like the key is never read as it.
+ship_frontmatter() {
+  awk -v k="  $2:" 'NR>1 && /^---$/{exit} index($0, k) == 1 {sub(/^[^:]*: */, ""); print; exit}' "$1"
+}
+
 # ship_missing_skill_reasons <root> <composes>: the skills ship loads through
 # the Skill tool, checked against a checkout before the claim. <composes> is
 # ship's `metadata.composes` line: space-separated `<source-repo>:<skill>`

@@ -36,6 +36,10 @@ _Avoid_: helper, util, raw `gh` or `az` call
 A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section, never a second setup skill.
 _Avoid_: init, scaffold, bootstrap
 
+**Composed skill**:
+A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
+_Avoid_: dependency, sub-skill, helper skill
+
 **Sibling skill**:
 A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which invokes Ship unattended from a cloud routine and relays its outcome. It adds nothing Ship could do for itself: the cloud bootstrap, the PR cap, the selection, the claim, the branch, the isolation, the hand-back and the merge summary are all Ship's. Only Ship claims an issue; a sibling never pre-claims, never writes to the tracker, and never calls a Ship script by path.
 _Avoid_: wrapper, plugin, variant

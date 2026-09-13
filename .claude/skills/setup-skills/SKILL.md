@@ -130,7 +130,7 @@ Write every confirmed file. Then run ship's preflight against the new profile:
 .claude/skills/ship/scripts/preflight.sh <any open issue number>
 ```
 
-Report its `reasons`. Only issue-level reasons may remain (`not triaged`, `already claimed`, `existing PR`, and the like); any `profile missing`, `profile invalid` or `skill missing` reason is yours to fix before finishing. A `skill missing` reason carries the install line: step 1 left a skill ship composes uninstalled, so run it.
+Report its `reasons`. Only issue-level reasons may remain (`not triaged`, `already claimed`, `existing PR`, and the like); any `profile missing`, `profile invalid` or `skill missing` reason is yours to fix before finishing. A `skill missing` reason names a composed skill step 1 left uninstalled and carries the line that installs it: run that line.
 
 ### 7. Done
 
