@@ -27,6 +27,8 @@ Every gate is repo-wide and takes seconds, so the small lane records the node an
 
 `tests` runs `tests/run.sh`, and it runs every `tests/*.test.sh`. Their subject is the pure transformations the mechanics are built around (`ship_body_replace_section`, `ship_title_candidates`, `_gh_add_closes`): a test sources its function and asserts on strings. A behavioural claim about one of them earns a case here, where it survives the run that made it, instead of a scratchpad probe that does not. The `host_*` functions stay the `github-mechanics` verification's job: a test that reaches a host is that verification, not this gate.
 
+`contract` holds a new mechanic to the malformed-invocation contract the `## Public surface` names: no `${N:?}` expansion under the mechanics, and a bare invocation of one that requires an argument answering with a single JSON error object and exit 2. It reaches no host, so it costs nothing and runs in every lane.
+
 `derived-copies` is the drift gate. It fails when `.claude/skills/<name>/` differs from `skills/<name>/` for `ship`, `cloud-ship` or `setup-skills`, which is what makes the refresh below non-optional rather than a habit.
 
 ## CI

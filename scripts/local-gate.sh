@@ -100,6 +100,12 @@ house_style() {
 }
 run house-style house_style
 
+# contract: the mechanics' malformed-invocation contract. Every mechanic answers
+# a malformed invocation with one JSON error object and exit 2; nothing else in
+# the tree holds a new mechanic to it. Reaches no host: each guard fires before
+# the adapter loads.
+run contract scripts/contract-check.sh skills/ship/scripts
+
 # tests: the pure transformations the mechanics were refactored around, run
 # with no host call. A regression is caught here rather than by a reviewer.
 run tests tests/run.sh

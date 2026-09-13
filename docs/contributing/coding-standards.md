@@ -10,6 +10,7 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 - `gitleaks detect` over the branch's commits, per the `secrets` gate in the same file.
 - `.claude/skills/<name>/` byte-identical to `skills/<name>/` for `ship`, `cloud-ship` and `setup-skills`, per the `derived-copies` gate.
 - No em dashes in any file this repo authors, per the `house-style` gate.
+- The mechanics' malformed-invocation contract, per the `contract` gate: no `${N:?}` expansion under `skills/ship/scripts/`, and every mechanic that requires an argument, invoked with none, prints exactly one JSON object with an `error` key and exits 2. The check reaches no host, because every usage guard fires before the adapter loads; a mechanic whose guard fires later breaks that and fails the gate.
 - `tests/run.sh` green, per the `tests` gate. It runs every `tests/*.test.sh`: the pure transformations the mechanics are built around, sourced and asserted on as strings, reaching no host. A behavioural claim about one of them earns a case there.
 
 ## Written standards
@@ -26,4 +27,5 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 - **No host CLI outside a named mechanic.** `gh` and `az` are called only from `skills/ship/scripts/host/<host>.sh`; a host operation no mechanic performs is a ship defect, not a prose fallback.
 - **Commit subjects** are conventional-commit prefixed and scoped to the skill: `fix(ship):`, `docs:`, `feat(setup-skills):`.
 - **`.claude/skills/` is exempt from every rule here.** It is install output from other people's repos and is never edited in place, so its prose and its em dashes are not this repo's to fix.
+- **Every `mktemp` is paired with a trap.** `trap 'rm -f "$f"' EXIT` at script top level, `trap 'rm -f "$f"' RETURN` for a file created inside a function. An interrupted run between the `mktemp` and the `rm -f` otherwise leaves the file in the system temp directory.
 - **Commit messages** carry no em dashes either. The `house-style` gate reads files, not messages, so this one is on the author.
