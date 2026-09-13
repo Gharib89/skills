@@ -169,12 +169,11 @@ host_pr_checks() { # <pr> <head_sha>
 # across heads, for its --since rule. `substantive` is the landing signal: a
 # reviewer's reply to one thread posts as a review row of its own (current
 # head, empty body), so only a body is a round.
-host_pr_reviews() { # <pr> <head_sha>
-  api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" '
-    def clip: if length > 2000 then .[0:2000] + "\n...[truncated]" else . end;
-    def row: {login: .user.login,
+host_pr_reviews() { # <pr> <head_sha> [<full-ids-json>]
+  api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" --argjson full "${3:-[]}" "$SHIP_REVIEW_CLIP"'
+    def row: . as $r | {id: (.id | tostring), login: .user.login,
       state: (if .state == "APPROVED" then "approved" elif .state == "CHANGES_REQUESTED" then "changes" else "comment" end),
-      substantive: ((.body // "") != ""), submitted_at, body: ((.body // "") | clip)};
+      substantive: ((.body // "") != ""), submitted_at, body: ((.body // "") | clip($r.id))};
     {on_head: [.[] | select(.commit_id == $sha) | row], all: [.[] | row], total: length}'
 }
 

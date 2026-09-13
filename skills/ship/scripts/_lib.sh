@@ -36,12 +36,17 @@
 #   host_pr_get <pr>                     -> {number,url,title,body,head_sha,head_ref,base_ref,state,mergeable}
 #   host_pr_for_branch <branch>          -> {number,state} of the newest PR with that head, or null
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
-#   host_pr_reviews <pr> <head_sha>      -> {on_head:[REVIEW],all:[REVIEW],total}
-#                                           REVIEW = {login,state,substantive,submitted_at,body}
+#   host_pr_reviews <pr> <head_sha> [<full-ids-json>]
+#                                        -> {on_head:[REVIEW],all:[REVIEW],total}
+#                                           REVIEW = {id,login,state,substantive,submitted_at,body}
+#                                           id: what the host knows the round by (a GitHub review,
+#                                           an Azure DevOps thread), null where it records a state
+#                                           rather than a round. poll-pr --full names ids from here.
 #                                           body: the round's text. Phase 7 triages from it.
 #                                           Past 2000 chars it is clipped and marked
-#                                           "...[truncated]"; "" where the host records a state
-#                                           rather than a written round.
+#                                           "...[truncated]", unless <full-ids-json> names its id;
+#                                           "" where the host records a state rather than a
+#                                           written round.
 #                                           all: every round across heads, for poll-pr --since.
 #                                           submitted_at: one UTC spelling, or null where the host
 #                                           records state rather than a timed event (an ADO vote),
@@ -237,3 +242,24 @@ ship_title_candidates() { # ship_title_candidates <title> <open-issues-json> <ex
         | select((($new - ($new - (.title | tokens))) | length) >= 3)
         | {number, title, url} ]' <<<"$2"
 }
+
+# ship_id_list <comma-list>: the ids `poll-pr --full` takes, trimmed, blanks
+# dropped, as a JSON array. Prints nothing and answers non-zero when the list
+# holds no id or one that reads as an option, so `--full --timeout` is the
+# caller's usage error rather than a poll that quietly matches no row.
+ship_id_list() {
+  jq -cne --arg n "$1" '
+    ($n | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != ""))) as $ids
+    | if ($ids | length) == 0 or any($ids[]; startswith("-")) then empty else $ids end'
+}
+
+# The review-body clip both adapters run, so they clip in one vocabulary: a jq
+# `clip($id)` filter over a body string, invoked with `--argjson full <ids>`.
+# The cut leaves a marker, so a clipped round never reads as a whole one.
+# `$id | tostring` so a row the host gives no id (an Azure DevOps vote) compares
+# without erroring; such a row carries no body to unclip.
+# shellcheck disable=SC2034  # read by the host adapters that source this library
+readonly SHIP_REVIEW_CLIP='def clip($id):
+  if ($full | index($id | tostring)) then .
+  elif length > 2000 then .[0:2000] + "\n...[truncated]"
+  else . end;'

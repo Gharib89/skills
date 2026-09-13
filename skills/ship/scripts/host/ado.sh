@@ -221,23 +221,23 @@ _author_login='(.comments[0] | '"$_comment_login"')'
 # two (publishedDate "...:28.343Z", creationDate "...:46.977591+00:00") and the
 # adapter owes its caller one vocabulary.
 _utc='(sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z"))'
-# A clipped round must not read as a whole one, so the cap leaves a marker.
-_clip='(if length > 2000 then .[0:2000] + "\n...[truncated]" else . end)'
 # `body` is the thread's own text: an Azure DevOps round has no review body of
 # its own, so the round a reviewer wrote is the comment it opened. A vote has
 # no text at all, hence "".
-_review_row='{login: '"$_author_login"', state: "comment", substantive: true,
+# `id` is the thread's own id, which is also what `poll-pr --full` names to
+# read this round whole; a vote has no thread, hence null there.
+_review_row='(. as $r | {id: (.id | tostring), login: '"$_author_login"', state: "comment", substantive: true,
               submitted_at: (.publishedDate | '"$_utc"'),
-              body: ((.comments[0].content // "") | '"$_clip"')}'
-host_pr_reviews() { # <pr> <head_sha>
+              body: ((.comments[0].content // "") | clip($r.id))})'
+host_pr_reviews() { # <pr> <head_sha> [<full-ids-json>]
   local votes it raw rows
   votes=$(azx repos pr reviewer list "${ORG[@]}" --id "$1" | jq '[.[] | select(.vote != 0)
-      | {login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null, body: ""}]') || return 1
+      | {id: null, login: .uniqueName, state: (if .vote > 0 then "approved" else "changes" end), substantive: true, submitted_at: null, body: ""}]') || return 1
   it=$(_latest_iteration "$1") || it='{"id":0,"created":""}'
   raw=$(_threads_raw "$1") || raw='{"value":[]}'
   # `all` is not deduped by login: --since asks whether ANY round landed after a
   # time, so collapsing a reviewer's rounds could keep only the stale one.
-  rows=$(jq --argjson it "$it" '[.value[] | select(.isDeleted != true)
+  rows=$(jq --argjson it "$it" --argjson full "${3:-[]}" "$SHIP_REVIEW_CLIP"'[.value[] | select(.isDeleted != true)
       | select(.comments[0].commentType != "system")]
     | {on_head: [.[] | select((.pullRequestThreadContext.iterationContext.secondComparingIteration == $it.id)
                               or (.pullRequestThreadContext == null

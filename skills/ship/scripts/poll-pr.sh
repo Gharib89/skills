@@ -2,7 +2,8 @@
 # ship phases 7 and 8: one bounded, foreground poll of a PR's head, checks,
 # reviews and threads, then ONE JSON summary.
 #
-#   poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]
+#   poll-pr <pr> [--await-review <login>] [--since <iso>] [--full <id>[,<id>]]
+#           [--timeout <s>] [--interval <s>]
 #
 # done when the PR is in conflict (merge-ref checks never start, so waiting is
 # pointless), or every check on the head has completed and, with --await-review,
@@ -26,9 +27,11 @@
 #     cannot answer a question about time, so it satisfies the head rule only.
 #     Counting it here would land round 2 instantly off round 1's stale vote.
 #
-# Each review row carries the round's own `body`, clipped past 2000 characters
-# and marked "...[truncated]" there: phase 7 triages from it, and a round whose
-# findings are in the body rather than in threads is invisible without it.
+# Each review row carries the round's own `body` and the `id` the host knows it
+# by, clipped past 2000 characters and marked "...[truncated]" there: phase 7
+# triages from the body, and a round whose findings are in it rather than in
+# threads is invisible without it. `--full` names the ids to return whole; every
+# other row stays clipped, and an id matching no row changes nothing.
 # `threads[]` rows carry the thread's first comment, which `reply-thread` answers,
 # and `replied`, true once this identity has answered in that thread.
 #
@@ -42,14 +45,20 @@
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: poll-pr <pr> [--await-review <login>] [--since <iso>] [--timeout <s>] [--interval <s>]'
+usage='usage: poll-pr <pr> [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
-timeout=480; interval=20; await=""; since=""
+timeout=480; interval=20; await=""; since=""; full='[]'
 while [ $# -gt 0 ]; do
   case $1 in
     --await-review) [ -n "${2:-}" ] || ship_tooling "$usage"; await=$2; shift 2 ;;
     --since) [ -n "${2:-}" ] || ship_tooling "$usage"; since=$2; shift 2 ;;
+    # Ids stay strings: GitHub numbers a review and Azure DevOps numbers a
+    # thread, and the adapters compare `.id | tostring` against this list.
+    --full)
+      [ -n "${2:-}" ] || ship_tooling "$usage"
+      full=$(ship_id_list "$2") || ship_tooling "$usage"
+      shift 2 ;;
     --timeout) [ -n "${2:-}" ] || ship_tooling "$usage"; timeout=$2; shift 2 ;;
     --interval) [ -n "${2:-}" ] || ship_tooling "$usage"; interval=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
@@ -78,7 +87,7 @@ while :; do
   prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
   sha=$(jq -r .head_sha <<<"$prj"); mergeable=$(jq -r .mergeable <<<"$prj")
   checks=$(host_pr_checks "$pr" "$sha") || ship_tooling "cannot read checks"
-  reviews=$(host_pr_reviews "$pr" "$sha") || ship_tooling "cannot read reviews"
+  reviews=$(host_pr_reviews "$pr" "$sha" "$full") || ship_tooling "cannot read reviews"
   threads=$(host_pr_threads "$pr") || threads='"unavailable"'
   blocked=null
   [ -z "$await" ] || blocked=$(host_pr_reviewer_blocked "$pr" "$await") || blocked=null
