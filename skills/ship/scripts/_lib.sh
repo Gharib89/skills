@@ -203,7 +203,8 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # is, or a `## Review` written as an example inside a fence is replaced while
 # the real section below it survives. The fence carries up to three leading
 # spaces (CommonMark), written out rather than as an interval so every awk
-# reads it.
+# reads it. Backtick fences only, which is the rule _gh_add_closes has always
+# read; tilde fences are issue #102.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
   awk -v sec="$2" -v file="$3" '
     function dump() { while ((getline line < file) > 0) print line; close(file) }
@@ -216,9 +217,9 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
 }
 
 # Generic English function words of four or more characters; shorter ones the
-# length rule already drops. No repo-specific word belongs here: the matcher is
-# generic, and an over-eager candidate costs one `--distinct-from` while a
-# missed one costs a second issue for a find already filed.
+# length rule already drops. No repo-specific word belongs here: the candidate
+# check is generic, and an over-eager candidate costs one `--distinct-from`
+# while a missed one costs a second issue for a find already filed.
 readonly SHIP_TITLE_STOPWORDS='about also been both does each else from have here into just like made make more most much must only over same some such than that their them then there these they this those very were what when where which while will with would your'
 
 # Titles that look like <title> among <open-issues>, for file-issue's candidate
