@@ -11,7 +11,25 @@ R="repos/$SHIP_OWNER/$SHIP_REPO"
 
 # Reads retry once on any failure. Creates go through `_gh_create_verify`,
 # which re-reads before retrying so a slow success is never double-posted.
-api() { gh api "$@" 2>/dev/null || { sleep 2; gh api "$@"; }; }
+# A retry has to be the request it retries. `gh api "$@"` carries the argument
+# list but not stdin, so a `--input -` payload the failed attempt already drained
+# reaches the retry empty and GitHub rejects it as "Body should be a JSON
+# object" (#108); buffering it once is what keeps the two byte-identical.
+api() {
+  local a prev="" buf=""
+  local -a args=()
+  for a in "$@"; do
+    # `gh` spells a stdin payload either `--input -` or `--input=-`.
+    if { [ "$prev" = --input ] && [ "$a" = - ]; } || [ "$a" = --input=- ]; then
+      buf=$(mktemp) || return 2
+      trap 'rm -f "$buf"' RETURN
+      cat > "$buf"
+      case $a in --input=-) a=--input=$buf ;; *) a=$buf ;; esac
+    fi
+    args+=("$a"); prev=$a
+  done
+  gh api "${args[@]}" 2>/dev/null || { sleep 2; gh api "${args[@]}"; }
+}
 gql() { gh api graphql "$@" 2>/dev/null || { sleep 2; gh api graphql "$@"; }; }
 
 host_tooling_reasons() {
