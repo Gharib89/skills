@@ -21,12 +21,12 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "1c7e7f4a7ddfe73e7f60aa3add1b33e136b0bc6d15497f3a119de193b9090a8a"
+      "computedHash": "554d86ec35a18ad7e8d3c3420502db8f6911e60791de94eff9f4f6cbdd9425da"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "521a90596e24761d5cef3d4c8e13135e803114ce67c375727a49c939a6853d49"
+      "computedHash": "c7f3c36e6cc82cfe858ecb2e0ac22037ee9b8b5924cfc32e5848320bbbb757bf"
     },
     "tdd": {
       "source": "mattpocock/skills",

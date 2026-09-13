@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 1.2.0
+  version: 1.2.1
 ---
 
 # Setup skills
@@ -130,7 +130,7 @@ Write every confirmed file. Then run ship's preflight against the new profile:
 .claude/skills/ship/scripts/preflight.sh <any open issue number>
 ```
 
-Report its `reasons`. Only issue-level reasons may remain (`not triaged`, `already claimed`, `existing PR`, and the like); any `profile missing` or `profile invalid` reason is yours to fix before finishing.
+Report its `reasons`. Only issue-level reasons may remain (`not triaged`, `already claimed`, `existing PR`, and the like); any `profile missing`, `profile invalid` or `skill missing` reason is yours to fix before finishing. A `skill missing` reason names a composed skill step 1 left uninstalled and carries the line that installs it: run that line.
 
 ### 7. Done
 

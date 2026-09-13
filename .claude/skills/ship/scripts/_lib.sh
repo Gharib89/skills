@@ -186,6 +186,36 @@ ship_triage_label() {
   printf '%s' "${label:-$role}"
 }
 
+# ship_frontmatter <file> <key>: one `  <key>: <value>` line from a skill's
+# YAML frontmatter, value only. Stops at the closing `---`, so a body line that
+# looks like the key is never read as it.
+ship_frontmatter() {
+  awk -v k="  $2:" 'NR>1 && /^---$/{exit} index($0, k) == 1 {sub(/^[^:]*: */, ""); print; exit}' "$1"
+}
+
+# ship_missing_skill_reasons <root> <composes>: the skills ship loads through
+# the Skill tool, checked against a checkout before the claim. <composes> is
+# ship's `metadata.composes` line: space-separated `<source-repo>:<skill>`
+# entries, the single place the list lives. Prints one reason per skill whose
+# `<root>/.claude/skills/<skill>/SKILL.md` is absent, carrying the line that
+# installs it; prints nothing when every one is there.
+#
+# Only the consumer repo's own `.claude/skills` counts: a global copy under
+# ~/.claude/skills is never a derived copy of this repo's, per setup-skills.
+ship_missing_skill_reasons() {
+  local root=$1 entry source skill
+  local -a entries
+  # read -ra, not an unquoted expansion: the split on spaces is intentional and
+  # explicit, and a glob character in an entry never reaches the filesystem.
+  read -ra entries <<<"$2"
+  for entry in ${entries[@]+"${entries[@]}"}; do
+    source=${entry%%:*}; skill=${entry##*:}
+    [ -f "$root/.claude/skills/$skill/SKILL.md" ] && continue
+    printf 'skill missing: %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
+      "$skill" "$source" "$skill"
+  done
+}
+
 # The one fence rule every transformation here reads: ship_body_replace_section
 # below, ship_body_closes under it, and _gh_add_closes in the GitHub adapter. A `## ` heading inside a fence
 # is example text, so the two have to agree on where a fence starts and ends, or

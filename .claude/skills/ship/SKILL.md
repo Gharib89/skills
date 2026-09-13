@@ -6,8 +6,9 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.4.0
+  version: 3.5.0
   profile-schema: 1
+  composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs
 ---
 
 # ship
@@ -162,6 +163,7 @@ sibling maps it, a human reads it.
 | Stop | Reason | Claim |
 |---|---|---|
 | Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | never claimed |
+| A skill ship composes is not installed | `skill missing: <skill>; run <install line>` | never claimed |
 | Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | never claimed |
 | Issue too vague to plan | `ambiguous` | never claimed |
 | Change outgrows one PR, or needs a redesign the issue never scoped | `needs-split` | attended: ask; unattended: hand back |
@@ -261,7 +263,10 @@ Phase 0 starts once the Run file exists.
 (phase 4, agent-facing docs), `code-review` (phase 4) and `find-docs` (any API
 claim) through the Skill tool when their moment comes; never hand-roll their
 logic. Any skill you compose that has an unattended mode is told the run is
-unattended explicitly; it has no other way to know.
+unattended explicitly; it has no other way to know. The frontmatter's
+`composes` line is this same list with each skill's source repo, and is what
+phase 0 checks: a skill added here is added there too, or the run still fails
+at the phase that loads it.
 
 **0 · Isolate.** Run `preflight <issue>`, adding `--unattended` in an unattended
 run, which is what turns a `ready-for-human` issue into the
@@ -272,8 +277,10 @@ stays invisible until the merge answers 404). Azure DevOps has no cheap push
 probe: preflight returns `unknown`, warns on stderr and continues, so read the
 warning before trusting `ok: true` and name the unproven check in the merge
 summary. It cross-checks `## Host` against the remote, loads and validates the
-profile headings, prunes worktrees whose PR is merged or closed, and collects
-every not-actionable reason. Admission: `ready-for-agent` always; `ready-for-human` in an
+profile headings, confirms every skill on ship's `composes` line is installed
+under this checkout's `.claude/skills/`, one `skill missing` reason per absent
+skill, prunes worktrees whose PR is merged or closed, and collects every
+not-actionable reason. Admission: `ready-for-agent` always; `ready-for-human` in an
 attended run only; anything else is `not triaged`.
 An assignee, including your own identity, is `already claimed`; stale-claim
 recovery is a human unassigning by hand. `existing PR` means a live PR whose

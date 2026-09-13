@@ -18,7 +18,8 @@
 #   reasons use the stop names verbatim, detail after a colon:
 #   closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
-#   attended only · profile missing · profile invalid: <detail>
+#   attended only · profile missing · profile invalid: <detail> · skill missing:
+#   <detail>
 #   mentions[] lists live PRs that name the issue without closing it: context
 #   for phase 1, never a stop. pruned[] lists worktrees removed because their
 #   PR is merged or closed.
@@ -63,7 +64,9 @@ reasons=()
 # Host cross-check. Read from the checkout preflight runs in, not the main one:
 # a run inside a worktree is governed by the profile on its own branch, and a
 # repo's first profile lands on a branch before it ever reaches main.
-profile="$(git rev-parse --show-toplevel)/docs/agents/ship.md"
+here=$(git rev-parse --show-toplevel)
+profile="$here/docs/agents/ship.md"
+ship_skill="$SHIP_SCRIPTS/../SKILL.md"
 if [ ! -f "$profile" ]; then
   reasons+=("profile missing: $profile; run /setup-skills")
 else
@@ -73,9 +76,8 @@ else
     detail=$(diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | grep -E '^[<>]' | sed 's/^< /missing or misplaced: /; s/^> /unexpected: /' | paste -sd';')
     reasons+=("profile invalid: headings; $detail")
   fi
-  skill="$SHIP_SCRIPTS/../SKILL.md"
-  reads=$(awk 'NR>1 && /^---$/{exit} /^  profile-schema:/{print $2; exit}' "$skill")
-  shipv=$(awk 'NR>1 && /^---$/{exit} /^  version:/{print $2; exit}' "$skill")
+  reads=$(ship_frontmatter "$ship_skill" profile-schema)
+  shipv=$(ship_frontmatter "$ship_skill" version)
   schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' "$profile")
   case $schema in
     '') reasons+=("profile invalid: no Schema line; run /setup-skills") ;;
@@ -89,6 +91,16 @@ else
   declared=$(awk '/^## Host/{f=1;next} /^## /{f=0} f && /^Host:/{sub(/^Host: */,""); print; exit}' "$profile" | tr -d ' `')
   [ "$declared" = "$SHIP_HOST" ] || reasons+=("profile invalid: Host mismatch (profile says '${declared:-nothing}', remote is $SHIP_HOST)")
 fi
+
+# The skills ship loads through the Skill tool, from ship's own frontmatter:
+# nothing else proves they are installed, so without this a run claims the
+# issue and only discovers the absence at the phase that needs the skill.
+# A read loop, not mapfile: the mechanics run wherever a consumer repo does,
+# including macOS's Bash 3.2, where mapfile is not a builtin and, with no
+# `set -e`, preflight would collect nothing and claim the issue anyway.
+while IFS= read -r reason; do
+  reasons+=("$reason")
+done < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
 # Prune sibling worktrees whose PR is merged or closed. Never touches one whose
 # PR is open or unknown.
