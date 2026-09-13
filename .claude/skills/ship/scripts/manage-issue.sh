@@ -15,7 +15,7 @@
 #
 # close is the only verb that is not about the claim: it closes any open issue,
 # claimed or not, which is how a verification disposes of the scratch issue it
-# created. `cleanup` still owns closing the issue a merge resolved.
+# created. `merge` still owns closing the issue a merge resolved.
 #
 # stdout: {issue, identity, claim: taken|held|released, handed_back?, labels?}
 #         {issue, identity, closed: true, already} for close
@@ -35,7 +35,8 @@ ship_load_host
 
 me=$(host_identity) || ship_tooling "cannot read the signed-in identity"
 issue=$(host_issue_get "$n") || ship_tooling "cannot read issue #$n"
-# Both read the issue variable the verbs re-read after a write, never a copy.
+# Functions, not values: a verb that re-reads $issue after a write sees the
+# new state through them.
 assigned() { jq -e --arg m "$me" '.assignees | index($m)' <<<"$issue" >/dev/null; }
 state()    { jq -r .state <<<"$issue"; }
 

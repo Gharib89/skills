@@ -397,11 +397,12 @@ it; a **Deviations from plan** section (the log verbatim, `None` only if the
 plan held); and a `## Review` section holding one placeholder line per
 reviewer, filled at phase-7 exit. Where the environment provides an
 attribution footer for pull request descriptions, the body **ends** with it,
-under a trailing `## ` heading of its own (`## Attribution`): a footer left
-loose after the last section is inside that section, and the phase-7
-`update-pr-body --section Review` write replaces everything from the heading to
-the next one. Ship never names the footer's lines; it only says where it sits.
-Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
+under a `## ` heading of its own that ship adds, no template carrying one
+(`## Attribution`), placed after every section a later phase rewrites: a rewrite replaces everything from its own heading to
+the next one, so a footer left loose at the end of the last section is inside
+that section and the phase-7 `update-pr-body --section Review` write drops it.
+Ship never names the footer's lines; it only says where it sits. Then
+`reflect <issue> <pr>` so a human reading the issue sees the PR.
 
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)

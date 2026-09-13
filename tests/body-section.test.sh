@@ -99,6 +99,34 @@ EOF
 check "replaces a section that runs to the end of the body" \
   "$expected" "$(ship_body_replace_section "$body" Review "$content")"
 
+# Phase 6 places the attribution footer under a heading of its own, after every
+# section a later phase rewrites. The rewrite stops at that heading, so the
+# footer survives; loose at the end of the last section (the case above) it is
+# inside the section and goes with it, which is what dropped it on PR #97.
+body=$(cat <<'EOF'
+## Review
+
+placeholder
+
+## Attribution
+
+a footer line
+EOF
+)
+expected=$(cat <<'EOF'
+## Review
+
+line one
+line two
+
+## Attribution
+
+a footer line
+EOF
+)
+check "keeps a footer under a heading placed after the section" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
 # A body that is nothing but the section still keeps its heading.
 body=$(printf '## Review\n\nplaceholder\n')
 check "replaces a section that is the whole body" \

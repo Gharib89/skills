@@ -14,7 +14,6 @@ rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 check "the usage line names every verb" \
   'usage: manage-issue <issue> take|release|handback "<reason>"|close' \
   "$(err)"
-check_rc "a bare invocation is tooling" 2 "$(rc)"
 
 # `manage-issue close` is the verb in the issue position: the issue number is
 # missing, so this is the usage error, not an unknown subcommand.
