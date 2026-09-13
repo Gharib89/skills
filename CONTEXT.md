@@ -109,7 +109,7 @@ An untracked, gitignored file the ship profile names to be copied into the run's
 _Avoid_: env file (one kind of carried file), secrets, worktree setup
 
 **Verification**:
-One check the ship profile names that proves a change against the real thing the repo integrates with (a live org, a browser, a database in a container), scoped to what the change touched and run where the issue was reported. A repo lists zero or more; each names what it proves, when it applies, how to run it, what it needs, what Ship does without that, and which CI leg also proves it. A run's result for one is `pass`, `fail`, `deferred-to-ci`, `unavailable`, or `unexercised`: prerequisites held, but every applicable path lacked a subject to drive, and the subject is one another actor creates.
+One check the ship profile names that proves a change against the real thing the repo integrates with (a live org, a browser, a database in a container), scoped to what the change touched and run where the issue was reported. A repo lists zero or more; each names what it proves, when it applies, how to run it, what it needs, what Ship does without that, and which CI leg also proves it. A run's result for one is `pass`, `fail`, `deferred-to-ci`, `unavailable`, or `unexercised`, the last meaning its prerequisites held but every applicable path lacked a subject to drive, the subject being one another actor creates.
 _Avoid_: e2e, integration test, smoke test, live test (kinds of verification), phase-3 hook
 
 **Hand-off**:
