@@ -70,11 +70,11 @@ mechanic performs, prose that promised what a mechanic does not do), each with
 the phase it was met in and written to the Run file at that moment the way a
 deviation is, so the row is a record, not a recollection. The run files it to no
 other repo; the human carries the row upstream. The `Review` blocks say what the
-PR body's `## Review` section says, in more detail; the section links here. The
-`Verification` block and the PR body's `## Verification` section are read from
-the same phase-3 results in the same row format, so they agree by construction;
-this block is where the human reads them at the gate, the section is where they
-outlive the run.
+PR body's `## Review` section says, in more detail; the section links here. Each
+row of this `Verification` block and its line in the PR body's
+`## Verification` section are read from the same phase-3 result in the same
+format, so the two agree by construction; this block is where the human reads
+them at the gate, the section is where they outlive the run.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the
