@@ -88,6 +88,11 @@ d=$(copy_skills bash4-assoc)
 printf '\ndeclare -A seen\n' >> "$d/$mechanics"
 check_rc "a declare -A under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
 
+# `-A` need not be the first option group: `declare -r -A` is the same array.
+d=$(copy_skills bash4-assoc-separated)
+printf '\ndeclare -r -A seen\n' >> "$d/$mechanics"
+check_rc "a declare -r -A under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
 d=$(copy_skills bash4-lowercase)
 printf '\nx=${reason,,}\n' >> "$d/$mechanics"
 check_rc "a \${var,,} under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"

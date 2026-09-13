@@ -66,7 +66,7 @@ done
 # author rewords, never a silent pass. The setup-skills local gate is excluded:
 # it is a template written into a consumer repo as that repo's own repo-local
 # gate, behind its own Bash 4 version guard.
-bash4='(^|[^[:alnum:]_])(mapfile|readarray)([^[:alnum:]_]|$)|(declare|local|typeset)[[:space:]]+-[A-Za-z]*A|\$\{([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[@*])(\[[^]]*\])?(,|\^)'
+bash4='(^|[^[:alnum:]_])(mapfile|readarray)([^[:alnum:]_]|$)|(declare|local|typeset)([[:space:]]+-[A-Za-z]+)*[[:space:]]+-[A-Za-z]*A|\$\{([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[@*])(\[[^]]*\])?(,|\^)'
 raw=$(grep -rnE --include='*.sh' "$bash4" "$skills"); st=$?
 [ "$st" -le 1 ] || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
 # Both exclusions read the `path:line:content` fields rather than the whole
