@@ -10,7 +10,7 @@ Closes #
 
 ## Verification
 
-<!-- One line per applicable verification the ship profile names, in the merge summary's row format: `- <name>: <phase-3 result word>   <what ran>`; ship fills these from the phase-3 results. `None applicable: <reason>` when phase 3 did not run. -->
+<!-- One line per applicable verification the ship profile names, in the merge summary's row format: `- <name>: <phase-3 result>   <what ran>`; ship fills these from the phase-3 results. `None applicable: <reason>` when none was. -->
 
 ## Review
 
