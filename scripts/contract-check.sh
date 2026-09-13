@@ -13,9 +13,8 @@
 # still exits 2 with an error object, because `ship_load_host` reports its own
 # failure in exactly that shape.
 #
-# Check 3 is a second traversal, over the whole skills tree rather than the
-# mechanics alone: every file a consumer repo installs runs in that machine's
-# shell, not only the ones under skills/ship/scripts.
+# Check 3 traverses the whole skills tree rather than the mechanics alone, so it
+# takes its own directory argument.
 #
 # stdout: one line per violation, with the offending mechanic named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
@@ -59,14 +58,18 @@ done
 
 # 3. No Bash 4+ construct under the skills tree. A derived copy runs in whatever
 # shell a consumer machine provides, macOS's system Bash 3.2 included, and the
-# mechanics carry no `set -e`: there a missing builtin prints "command not
-# found", execution continues, and the mechanic answers on state it never
-# collected. Shell files only, because the prose under skills/ names these
-# constructs deliberately; comment lines for the same reason. The setup-skills
-# local gate is excluded: it is a template written into a consumer repo as that
-# repo's own repo-local gate, behind its own Bash 4 version guard.
-bash4='(^|[^[:alnum:]_])(mapfile|readarray)([[:space:]]|$)|(declare|local|typeset)[[:space:]]+-[A-Za-z]*A|\$\{[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?(,|\^)'
-hits=$(grep -rnE --include='*.sh' "$bash4" "$skills" \
+# mechanics carry no `set -e`: a mapfile there prints "command not found" and
+# execution continues, so the mechanic answers on state it never collected.
+# Shell files only, because the prose under skills/ names these constructs
+# deliberately. A line whose first non-blank character is `#` is prose too; a
+# mention anywhere else on a line is flagged, which is a loud false positive the
+# author rewords, never a silent pass. The setup-skills local gate is excluded:
+# it is a template written into a consumer repo as that repo's own repo-local
+# gate, behind its own Bash 4 version guard.
+bash4='(^|[^[:alnum:]_])(mapfile|readarray)([[:space:]]|$)|(declare|local|typeset)[[:space:]]+-[A-Za-z]*A|\$\{([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[@*])(\[[^]]*\])?(,|\^)'
+raw=$(grep -rnE --include='*.sh' "$bash4" "$skills"); st=$?
+[ "$st" -le 1 ] || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
+hits=$(printf '%s' "$raw" \
   | grep -vE ':[0-9]+:[[:space:]]*#' \
   | grep -vF "$skills/setup-skills/local-gate.sh:")
 if [ -n "$hits" ]; then

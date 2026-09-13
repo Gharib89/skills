@@ -86,6 +86,12 @@ d=$(copy_skills bash4-lowercase)
 printf '\nx=${reason,,}\n' >> "$d/$mechanics"
 check_rc "a \${var,,} under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
 
+# A positional or `$@` takes the same case modifier, and the pattern covers it:
+# `${1,,}` is as absent from Bash 3.2 as `${reason,,}` is.
+d=$(copy_skills bash4-positional)
+printf '\nx=${1,,}\n' >> "$d/$mechanics"
+check_rc "a \${1,,} under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
 d=$(copy_skills bash4-uppercase)
 printf '\nx=${reason^^}\n' >> "$d/$mechanics"
 check_rc "a \${var^^} under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
@@ -102,5 +108,9 @@ check_rc "the setup-skills local-gate template is exempt" 0 "$(rc_of skills/ship
 d=$(copy_skills bash4-comment)
 printf '\n# a read loop, not mapfile: the mechanics target Bash 3.2\n' >> "$d/$mechanics"
 check_rc "a construct named in a comment does not fail the check" 0 "$(rc_of skills/ship/scripts "$d")"
+
+# A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
+# skills tree reported as clean is the silent pass the rule exists to prevent.
+check_rc "an unreadable skills tree is tooling, not a pass" 2 "$(rc_of skills/ship/scripts "$fixture/absent")"
 
 finish
