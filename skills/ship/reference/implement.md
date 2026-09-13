@@ -111,10 +111,10 @@ at classification; here you run the applicable ones.
 - **`unexercised`** is the verification whose `Needs:` were satisfied and whose
   every applicable path lacked a **subject** to drive, where the subject is one
   another actor creates (a reviewer's thread on this run's PR) and never one
-  ship could have created itself. It is not a degraded exit, not a hand-back
-  and not a Ship defect: the human weighs it at the merge gate, and an
-  unattended run proceeds on it, because there is nothing to hand back for.
-  Three cases it is never the word for: a **prerequisite** that failed its
+  ship could have created itself. The human weighs it at the merge gate, where
+  [merge-gate.md](merge-gate.md) says how the row reads, and an unattended run
+  proceeds on it, because there is nothing to hand back for. Three cases it is
+  never the word for: a **prerequisite** that failed its
   detection, which `Without it:` still owns; a path the run **skipped**, which
   is an unrun verification; and a verification where **at least one applicable
   path ran**, which is unchanged, the paths that ran giving the result and

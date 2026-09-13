@@ -349,13 +349,10 @@ unavailable | unexercised`. Prerequisite (`Needs:`) missing: follow
 (attended) or hands back (unattended); `defer-to-ci` continues only because
 `Also proven by CI:` names the leg you will watch in phase 8, and is the only
 unattended-safe disposition; `blocked` stops `blocked-verification`.
-`unexercised` is the separate case where the prerequisites held and no
-applicable path had a **subject** to drive, the subject being one another
-actor creates and never one ship could have created itself: phase 5 admits it
-and the merge summary names the subject that did not exist, for the human to
+`unexercised` is the one result no `Without it:` covers: phase 5 admits it and
+the merge summary names the subject that did not exist, for the human to
 weigh. Noisy runs go to a cheap-tier subagent returning the result plus
-failing lines. `docs` class and
-the small lane skip this phase. Detail in
+failing lines. `docs` class and the small lane skip this phase. Detail in
 [reference/implement.md](reference/implement.md).
 
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
@@ -382,8 +379,7 @@ second pair of eyes on top, never a substitute.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`; otherwise you
-skipped one, go back.
-Run `base-fresh` first: it proves the branch has seen every commit on its base,
+skipped one, go back. Run `base-fresh` first: it proves the branch has seen every commit on its base,
 the one thing CI cannot (CI tests the merge ref, so a branch that predates a
 merge still goes green while every "does this exist?" answer you took from the
 worktree was pre-merge). Behind: rebase, re-run, then continue. Confirm every
