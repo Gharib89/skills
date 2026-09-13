@@ -25,7 +25,7 @@ Tripwires: None.
 
 Every gate is repo-wide and takes seconds, so the small lane records the node and narrows nothing. There is no CI, so no gate is ever `deferred-to-ci`: the gate is the whole automated check on a diff, alongside the reviewer.
 
-`tests` runs `tests/run.sh`, and it runs every `tests/*.test.sh`. Their subject is the pure transformations the mechanics are built around (`ship_body_replace_section`, `ship_title_candidates`, `_gh_add_closes`): a test sources its function and asserts on strings. A gate script is the other subject: `contract-gate` runs `scripts/contract-check.sh` against a copy of the mechanics and asserts on its exit code, reaching no host either. A behavioural claim about one of them earns a case here, where it survives the run that made it, instead of a scratchpad probe that does not. The `host_*` functions stay the `github-mechanics` verification's job: a test that reaches a host is that verification, not this gate.
+`tests` runs `tests/run.sh`, and it runs every `tests/*.test.sh`. Their subject is the pure transformations the mechanics are built around (`ship_body_replace_section`, `ship_title_candidates`, `_gh_add_closes`): a test sources its function and asserts on strings. A gate script is the second subject: `contract-gate` runs `scripts/contract-check.sh` against a copy of the mechanics and asserts on its exit code, reaching no host either. A mechanic's usage guard is the third: `manage-issue-usage` invokes the mechanic malformed, which the guard answers before `ship_load_host`, so no host is reached there either. A behavioural claim about one of them earns a case here, where it survives the run that made it, instead of a scratchpad probe that does not. The `host_*` functions stay the `github-mechanics` verification's job: a test that reaches a host is that verification, not this gate.
 
 `contract` holds a new mechanic to the malformed-invocation contract `## Public surface` names: no `${N:?}` or `${N?}` expansion under the mechanics, and a bare invocation of one that requires an argument answering with a single JSON error object and exit 2. It reaches no host, because every usage guard fires before its mechanic loads the adapter.
 
@@ -61,7 +61,7 @@ docs/contributing/coding-standards.md
 
 Proves: a changed generic mechanic or the GitHub adapter performs its host call against a real issue, PR, thread or merge.
 Applies when: the change touches `skills/ship/scripts/`, on any path the GitHub adapter reaches.
-Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used.
+Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write read the body back and confirm the footer is still there.
 Needs: `gh` signed in with push permission on `Gharib89/skills`.
 Without it: hand-off
 Also proven by CI: None.

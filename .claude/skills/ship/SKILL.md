@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.1.2
+  version: 3.2.0
   profile-schema: 1
 ---
 
@@ -114,7 +114,7 @@ be read.
 | `preflight <issue \| none> [--unattended]` | 0 |
 | `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
 | `read-issue <issue>` | 1 |
-| `manage-issue <issue> take \| release \| handback "<reason>"` | 1; any stop after the claim; 9 |
+| `manage-issue <issue> take \| release \| handback "<reason>" \| close` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue --title --body-file --label <marker> [--distinct-from <n>[,<n>]]` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
@@ -395,8 +395,14 @@ Every variant carries `Closes #<issue>` on its own line **above the first
 itself when the body arrives without one), where no section rewrite reaches
 it; a **Deviations from plan** section (the log verbatim, `None` only if the
 plan held); and a `## Review` section holding one placeholder line per
-reviewer, filled at phase-7 exit. Then `reflect <issue> <pr>` so a human
-reading the issue sees the PR.
+reviewer, filled at phase-7 exit. Where the environment provides an
+attribution footer for pull request descriptions, the body **ends** with it,
+under a `## ` heading of its own that ship adds, no template carrying one
+(`## Attribution`), placed after every section a later phase rewrites: a rewrite replaces everything from its own heading to
+the next one, so a footer left loose at the end of the last section is inside
+that section and the phase-7 `update-pr-body --section Review` write drops it.
+Ship never names the footer's lines; it only says where it sits. Then
+`reflect <issue> <pr>` so a human reading the issue sees the PR.
 
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
