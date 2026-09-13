@@ -18,7 +18,8 @@
 #   reasons use the stop names verbatim, detail after a colon:
 #   closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
-#   attended only · profile missing · profile invalid: <detail>
+#   attended only · profile missing · profile invalid: <detail> · skill missing:
+#   <detail>
 #   mentions[] lists live PRs that name the issue without closing it: context
 #   for phase 1, never a stop. pruned[] lists worktrees removed because their
 #   PR is merged or closed.
@@ -63,7 +64,8 @@ reasons=()
 # Host cross-check. Read from the checkout preflight runs in, not the main one:
 # a run inside a worktree is governed by the profile on its own branch, and a
 # repo's first profile lands on a branch before it ever reaches main.
-profile="$(git rev-parse --show-toplevel)/docs/agents/ship.md"
+here=$(git rev-parse --show-toplevel)
+profile="$here/docs/agents/ship.md"
 if [ ! -f "$profile" ]; then
   reasons+=("profile missing: $profile; run /setup-skills")
 else
@@ -89,6 +91,14 @@ else
   declared=$(awk '/^## Host/{f=1;next} /^## /{f=0} f && /^Host:/{sub(/^Host: */,""); print; exit}' "$profile" | tr -d ' `')
   [ "$declared" = "$SHIP_HOST" ] || reasons+=("profile invalid: Host mismatch (profile says '${declared:-nothing}', remote is $SHIP_HOST)")
 fi
+
+# The skills ship loads through the Skill tool, from ship's own frontmatter:
+# nothing else proves they are installed, so without this a run claims the
+# issue and only discovers the absence at the phase that needs the skill.
+composes=$(awk 'NR>1 && /^---$/{exit} /^  composes:/{sub(/^  composes: */,""); print; exit}' "$SHIP_SCRIPTS/../SKILL.md")
+while IFS= read -r reason; do
+  [ -n "$reason" ] && reasons+=("$reason")
+done < <(ship_missing_skill_reasons "$here" "$composes")
 
 # Prune sibling worktrees whose PR is merged or closed. Never touches one whose
 # PR is open or unknown.
