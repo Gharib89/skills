@@ -83,7 +83,9 @@ host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_rea
 # before posting again, so a flake never double-posts. <post> performs the one
 # POST and prints the row; <find> prints that row, or nothing when there is
 # none. A <find> that fails is not an absent row: it answers unknown, so the
-# caller gets the failure rather than a second POST.
+# caller gets the failure rather than a second POST. A <find> that ends in a
+# pipe answers that way only under the `pipefail` every mechanic sets, which is
+# where a failed `api` upstream of a `jq` becomes the pipeline's exit status.
 #
 # A <post> calls `gh api` directly, not `api`: `api` retries on its own, and a
 # create is retried only after the re-read.
