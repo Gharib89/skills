@@ -284,6 +284,32 @@ EOF
 check "does not close a fence on a run carrying an info string" \
   "$expected" "$(ship_body_replace_section "$body" Review "$content")"
 
+# A backtick opener may carry no backtick in its info string (CommonMark 4.5),
+# so the line is paragraph text and the heading below it is a real boundary.
+body=$(cat <<'EOF'
+## Summary
+
+```js`example
+
+## Review
+
+placeholder
+EOF
+)
+expected=$(cat <<'EOF'
+## Summary
+
+```js`example
+
+## Review
+
+line one
+line two
+EOF
+)
+check "does not open a fence on a backtick opener carrying a backtick" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
 # The only occurrence is fenced, so there is no section to replace.
 body=$(printf '## Summary\n\n```md\n## Review\n```\n')
 expected=$(printf '## Summary\n\n```md\n## Review\n```\n\n## Review\n\nline one\nline two')

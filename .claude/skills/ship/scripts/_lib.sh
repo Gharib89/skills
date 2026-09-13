@@ -197,7 +197,9 @@ ship_triage_label() {
 # fence in; the length keeps a ``` line inside a ```` fence from closing it and
 # inverting the state for the rest of the body; the bareness keeps a ```js line
 # inside a ``` fence from doing the same, since a closing fence carries no info
-# string. Indented (four space) code blocks are not a fence form here.
+# string. A backtick opener carrying another backtick after its run is not a
+# fence at all but paragraph text, which is the one asymmetry with tildes.
+# Indented (four space) code blocks are not a fence form here.
 #
 # `ship_fence(line)` returns the in-fence state after the line: a fence line
 # reads as fenced when it opens one and unfenced when it closes one. Prepend it
@@ -210,7 +212,10 @@ readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
     if (c != "`" && c != "~") return _fenced
     n = 0; while (substr(s, n + 1, 1) == c) n++
     if (n < 3) return _fenced
-    if (!_fenced) { _fenced = 1; _fence_char = c; _fence_len = n }
+    if (!_fenced) {
+      if (c == "`" && index(substr(s, n + 1), "`")) return _fenced
+      _fenced = 1; _fence_char = c; _fence_len = n
+    }
     else if (c == _fence_char && n >= _fence_len && substr(s, n + 1) ~ /^[ \t\r]*$/) _fenced = 0
     return _fenced
   }
