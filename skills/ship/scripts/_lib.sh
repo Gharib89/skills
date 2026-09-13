@@ -198,6 +198,33 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
            + "\\s+(#[0-9]+[\\s,]+(and[\\s,]+)?)*#" + $n + "\\b"; "i")' >/dev/null
 }
 
+# The one fence rule both heading transformations read: ship_body_replace_section
+# here and _gh_add_closes in the GitHub adapter. A `## ` heading inside a fence
+# is example text, so both have to agree on where a fence starts and ends or one
+# rewrites the example while the real section survives.
+#
+# CommonMark, as far as these two need it: an opening fence is three or more
+# backticks or tildes under up to three leading spaces, and only a run of the
+# same character at least as long closes it. Tracking the character rules a
+# tilde fence in; tracking the length keeps a ``` line inside a ```` fence from
+# closing it and inverting the state for the rest of the body. Indented (four
+# space) code blocks are not a fence form here: issue #104 leaves them out.
+#
+# `ship_fence(line)` returns the in-fence state after the line, so the fence
+# line itself reads as fenced when it opens one and unfenced when it closes one,
+# matching the toggle this replaced. Prepend it to an awk program and call it
+# once per line before any heading test.
+readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
+    s = line; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
+    if (c != "`" && c != "~") return _fenced
+    n = 0; while (substr(s, n + 1, 1) == c) n++
+    if (n < 3) return _fenced
+    if (!_fenced) { _fenced = 1; _fence_char = c; _fence_len = n }
+    else if (c == _fence_char && n >= _fence_len) _fenced = 0
+    return _fenced
+  }
+'
+
 # Replace one `## <section>` of <body> with <body-file>'s content, appending the
 # section when the body has none. Every other line is untouched, including a
 # `Closes` line above the first heading. Prints the new body; exit 0 replaced,
@@ -206,14 +233,12 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # The heading match is anchored at column 0 and skips fenced blocks, the same
 # rule _gh_add_closes reads: the two have to agree on what a section boundary
 # is, or a `## Review` written as an example inside a fence is replaced while
-# the real section below it survives. The fence carries up to three leading
-# spaces (CommonMark), written out rather than as an interval so every awk
-# reads it. Backtick fences only, which is the rule _gh_add_closes has always
-# read; tilde fences are issue #102.
+# the real section below it survives. Both read that rule from
+# SHIP_AWK_FENCE, so there is one definition of what a fence is.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
-  awk -v sec="$2" -v file="$3" '
+  awk -v sec="$2" -v file="$3" "$SHIP_AWK_FENCE"'
     function dump() { while ((getline line < file) > 0) print line; close(file) }
-    /^ ? ? ?```/ { fenced = !fenced }
+    { fenced = ship_fence($0) }
     !fenced && $0 ~ "^## " sec "[ \t]*$" {
       print; print ""; dump(); print ""; skip=1; placed=1; next }
     skip && !fenced && /^## / { skip=0 }
