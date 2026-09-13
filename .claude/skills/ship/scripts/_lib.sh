@@ -186,20 +186,8 @@ ship_triage_label() {
   printf '%s' "${label:-$role}"
 }
 
-# Closing-keyword test, the same on both hosts: does <body> claim to close
-# <issue>? Fenced blocks and inline code come out first (a PR quoting
-# "Closes #n" while discussing another PR mentions the issue, it does not claim
-# it). The "(#n, and #m)" run lets a multi-issue "Closes #75, #81" count for #81.
-ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
-  jq -e -n --arg body "$1" --arg n "$2" '
-    $body
-    | gsub("(?s)```.*?```"; "") | gsub("`[^`]*`"; "")
-    | test("\\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))"
-           + "\\s+(#[0-9]+[\\s,]+(and[\\s,]+)?)*#" + $n + "\\b"; "i")' >/dev/null
-}
-
-# The one fence rule both heading transformations read: ship_body_replace_section
-# below and _gh_add_closes in the GitHub adapter. A `## ` heading inside a fence
+# The one fence rule every transformation here reads: ship_body_replace_section
+# below, ship_body_closes under it, and _gh_add_closes in the GitHub adapter. A `## ` heading inside a fence
 # is example text, so the two have to agree on where a fence starts and ends, or
 # one rewrites the example and leaves the real section alone.
 #
@@ -223,10 +211,31 @@ readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
     n = 0; while (substr(s, n + 1, 1) == c) n++
     if (n < 3) return _fenced
     if (!_fenced) { _fenced = 1; _fence_char = c; _fence_len = n }
-    else if (c == _fence_char && n >= _fence_len && substr(s, n + 1) ~ /^[ \t]*$/) _fenced = 0
+    else if (c == _fence_char && n >= _fence_len && substr(s, n + 1) ~ /^[ \t\r]*$/) _fenced = 0
     return _fenced
   }
 '
+
+# Closing-keyword test, the same on both hosts: does <body> claim to close
+# <issue>? Fenced blocks and inline code come out first (a PR quoting
+# "Closes #n" while discussing another PR mentions the issue, it does not claim
+# it). The "(#n, and #m)" run lets a multi-issue "Closes #75, #81" count for #81.
+#
+# The fenced blocks come out by SHIP_AWK_FENCE, so this agrees with the two
+# heading transformations on what a fence is: a tilde-fenced example carrying
+# "Closes #n" reads as a mention here too, and host_pr_create, which asks this
+# before it places a closing line, does not skip a body that never claimed one.
+# The inline-span strip stays in jq, which is where a span within a line lives.
+ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
+  local unfenced
+  unfenced=$(awk "$SHIP_AWK_FENCE"'
+    { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1")
+  jq -e -n --arg body "$unfenced" --arg n "$2" '
+    $body
+    | gsub("`[^`]*`"; "")
+    | test("\\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))"
+           + "\\s+(#[0-9]+[\\s,]+(and[\\s,]+)?)*#" + $n + "\\b"; "i")' >/dev/null
+}
 
 # Replace one `## <section>` of <body> with <body-file>'s content, appending the
 # section when the body has none. Every other line is untouched, including a
