@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# The PR in one normalized payload, the read-back for a title or body write.
+#
+#   read-pr <pr>
+#
+# stdout: {number, url, title, body, head_sha, head_ref, base_ref, state,
+#          mergeable}
+#   The adapter's PR object unchanged: the same fields on both hosts. Comments,
+#   review threads and checks are poll-pr's, not this mechanic's.
+# exit: 0 · 2 the PR could not be read
+set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+usage='usage: read-pr <pr>'
+[ -n "${1:-}" ] || ship_tooling "$usage"
+pr=$1
+[ $# -eq 1 ] || ship_tooling "unknown flag: $2"
+ship_load_host
+
+pull=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
+printf '%s\n' "$pull"

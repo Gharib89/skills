@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.3.2
+  version: 3.4.0
   profile-schema: 1
 ---
 
@@ -121,6 +121,7 @@ be read.
 | `open-pr <issue \| none> --title --body-file` | 6 |
 | `reflect <issue> <pr>` | 6 |
 | `update-pr-title <pr> --title` | 6, 9 |
+| `read-pr <pr>` | 6, 7, to read a PR back after a title or body write |
 | `poll-pr <pr> [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]` | 7, 8 |
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
