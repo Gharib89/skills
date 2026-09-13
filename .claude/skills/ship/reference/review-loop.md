@@ -24,6 +24,12 @@ a fresh read of the committed tree, not a conversation.
   head. A round whose findings live in the body rather than in threads is
   invisible from the thread list alone, and `infra-error` is a judgment about
   the body.
+- **A body ending `...[truncated]` has not been read.** Rounds are clipped past
+  2000 characters so a poll cannot flood the window, and a reviewer that opens
+  with a preamble (an overview, a per-file table) pushes its findings past that
+  cap. Re-run the poll with `--full <id>`, the `id` of the row you are
+  triaging, and that row alone comes back whole; every other row stays clipped.
+  Dispositioning a truncated round means converging on findings you never saw.
 - **The trigger picks the landing rule; the poll has to be told which.** Under
   the **head** rule (no `--since`) a round counts only on the current head:
   right for `on-push`, where every push earns a fresh review. Under the
