@@ -40,6 +40,12 @@ skill missing: find-docs; run npx skills add upstash/context7 --skill find-docs 
 
 check "an empty composes line checks nothing" '' "$(ship_missing_skill_reasons "$root" '')"
 
+# The split is on spaces only: an entry is never expanded against the working
+# directory, whatever it happens to contain.
+check "a glob character stays literal" \
+  'skill missing: *; run npx skills add o/r --skill * --agent claude-code -y' \
+  "$(cd / && ship_missing_skill_reasons "$root" 'o/r:*')"
+
 # ship_frontmatter reads the line preflight passes in. A body line that looks
 # like the key is past the closing `---` and must not be read as one.
 fm=$(mktemp) || exit 2

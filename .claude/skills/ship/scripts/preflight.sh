@@ -95,8 +95,12 @@ fi
 # The skills ship loads through the Skill tool, from ship's own frontmatter:
 # nothing else proves they are installed, so without this a run claims the
 # issue and only discovers the absence at the phase that needs the skill.
-mapfile -t -O "${#reasons[@]}" reasons \
-  < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
+# A read loop, not mapfile: the mechanics run wherever a consumer repo does,
+# including macOS's Bash 3.2, where mapfile is not a builtin and, with no
+# `set -e`, preflight would collect nothing and claim the issue anyway.
+while IFS= read -r reason; do
+  reasons+=("$reason")
+done < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
 # Prune sibling worktrees whose PR is merged or closed. Never touches one whose
 # PR is open or unknown.

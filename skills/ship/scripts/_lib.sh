@@ -204,7 +204,11 @@ ship_frontmatter() {
 # ~/.claude/skills is never a derived copy of this repo's, per setup-skills.
 ship_missing_skill_reasons() {
   local root=$1 entry source skill
-  for entry in $2; do
+  local -a entries
+  # read -ra, not an unquoted expansion: the split on spaces is intentional and
+  # explicit, and a glob character in an entry never reaches the filesystem.
+  read -ra entries <<<"$2"
+  for entry in ${entries[@]+"${entries[@]}"}; do
     source=${entry%%:*}; skill=${entry##*:}
     [ -f "$root/.claude/skills/$skill/SKILL.md" ] && continue
     printf 'skill missing: %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
