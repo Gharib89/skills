@@ -57,8 +57,7 @@ while [ $# -gt 0 ]; do
     # thread, and the adapters compare `.id | tostring` against this list.
     --full)
       [ -n "${2:-}" ] || ship_tooling "$usage"
-      full=$(jq -cn --arg n "$2" '$n | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != ""))') \
-        || ship_tooling "$usage"
+      full=$(ship_id_list "$2") || ship_tooling "$usage"
       shift 2 ;;
     --timeout) [ -n "${2:-}" ] || ship_tooling "$usage"; timeout=$2; shift 2 ;;
     --interval) [ -n "${2:-}" ] || ship_tooling "$usage"; interval=$2; shift 2 ;;

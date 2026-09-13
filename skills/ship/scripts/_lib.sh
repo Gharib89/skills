@@ -243,6 +243,16 @@ ship_title_candidates() { # ship_title_candidates <title> <open-issues-json> <ex
         | {number, title, url} ]' <<<"$2"
 }
 
+# ship_id_list <comma-list>: the ids `poll-pr --full` takes, trimmed, blanks
+# dropped, as a JSON array. Prints nothing and answers non-zero when the list
+# holds no id or one that reads as an option, so `--full --timeout` is the
+# caller's usage error rather than a poll that quietly matches no row.
+ship_id_list() {
+  jq -cne --arg n "$1" '
+    ($n | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != ""))) as $ids
+    | if ($ids | length) == 0 or any($ids[]; startswith("-")) then empty else $ids end'
+}
+
 # The review-body clip both adapters run, so they clip in one vocabulary: a jq
 # `clip($id)` filter over a body string, invoked with `--argjson full <ids>`.
 # The cut leaves a marker, so a clipped round never reads as a whole one.

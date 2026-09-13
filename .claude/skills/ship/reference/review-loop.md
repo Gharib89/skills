@@ -28,7 +28,7 @@ a fresh read of the committed tree, not a conversation.
   2000 characters so one poll cannot flood the window, and a reviewer that opens
   with a preamble (an overview, a per-file table) pushes its findings past that
   cap. Re-run the poll with `--full <id>` for that row and it alone comes back
-  whole. Dispositioning a truncated round is converging on findings you never
+  whole. Dispositioning a clipped round is converging on findings you never
   saw.
 - **The trigger picks the landing rule; the poll has to be told which.** Under
   the **head** rule (no `--since`) a round counts only on the current head:

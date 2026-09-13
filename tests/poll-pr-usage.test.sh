@@ -17,6 +17,10 @@ check "the usage line offers --full" "$usage" "$(err)"
 check "--full with no value is the usage error" "$usage" "$(err 1 --full)"
 check_rc "--full with no value is tooling" 2 "$(rc 1 --full)"
 
+# Without this guard --full would read --timeout as its id and start a poll.
+check "--full given a flag as its value is the usage error" "$usage" "$(err 1 --full --timeout)"
+check_rc "--full given a flag as its value is tooling" 2 "$(rc 1 --full --timeout)"
+
 check "an unknown flag is still named" 'unknown flag: --whole' "$(err 1 --whole 7)"
 
 finish
