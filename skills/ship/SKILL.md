@@ -421,7 +421,8 @@ evidence), or `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |
 unreachable`. Degraded proceeds to the merge gate on green CI and never hands
 back on its own. At exit, `update-pr-body <pr> --section Review` with one status
-line per reviewer. Read
+line per reviewer, then `read-pr <pr>` to read the body back: a rewrite that
+swallowed the attribution footer shows up here, while the PR is still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per
 trigger, the substantive-round test, `Instructions:` handling and degraded
 detection.
