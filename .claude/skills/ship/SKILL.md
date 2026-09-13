@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.7.0
+  version: 3.8.0
   profile-schema: 1
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -405,8 +405,12 @@ Every variant carries `Closes #<issue>` on its own line **above the first
 `## ` heading** (the mechanic translates it for the host, and puts it there
 itself when the body arrives without one), where no section rewrite reaches
 it; a **Deviations from plan** section (the log verbatim, `None` only if the
-plan held); and a `## Review` section holding one placeholder line per
-reviewer, filled at phase-7 exit. Where the environment provides an
+plan held); a `## Verification` section holding one line per applicable
+verification, read from the phase-3 results in the merge summary's row format
+(`- <name>: <result>   <what ran>`), or `None applicable: <class docs | small
+lane>` where phase 3 was skipped; and a `## Review` section holding one
+placeholder line per reviewer, filled at phase-7 exit. Where the environment
+provides an
 attribution footer for pull request descriptions, the body **ends** with it,
 under a `## ` heading of its own that ship adds, no template carrying one
 (`## Attribution`), placed after every section a later phase rewrites: a rewrite replaces everything from its own heading to
