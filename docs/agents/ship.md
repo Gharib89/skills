@@ -71,7 +71,7 @@ Claims to probe: the REST response shapes and api-versions the adapter reads, an
 
 Proves: a changed Azure DevOps adapter performs its host call against a real work item, PR, thread or completion.
 Applies when: the change touches `skills/ship/scripts/host/ado.sh`.
-Run: drive the changed mechanic by hand against the `ship-ado-lab` repo in the `AI_And_Data_Practice` project. A scratch round opened there is dispositioned with `resolve-thread` and left in place: the lab PR is a shared fixture whose resolved rounds accumulate, and no mechanic removes them. Scope a later verification's read to its own round with `poll-pr --since <iso>` or `--full <id>`.
+Run: drive the changed mechanic by hand against the `ship-ado-lab` repo in the `AI_And_Data_Practice` project. A scratch round opened there is dispositioned with `resolve-thread` and left in place: the lab PR is a shared fixture whose resolved rounds accumulate, and no mechanic removes them. A later verification reads only its own round: `poll-pr <pr> --await-review <login> --since <iso>` lands a review submitted at or after that time, and `poll-pr <pr> --full <id>` returns that row's body whole, the id read from `all[]`.
 Needs: `az login` with Entra (the PAT path has known gaps, issue #29) plus the `azure-devops` extension.
 Without it: blocked
 Also proven by CI: None.
