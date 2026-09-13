@@ -11,8 +11,13 @@ fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 
 # <case-dir>: a fresh copy of the mechanics, for one mutation.
 copy() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills/ship/scripts "$d"; printf '%s' "$d"; }
-rc_of() { bash scripts/contract-check.sh "$1" >/dev/null 2>&1; printf '%s' "$?"; }
+# <case-dir>: a fresh copy of the whole skills tree, for one Bash 4+ mutation.
+copy_skills() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills "$d"; printf '%s' "$d"; }
+rc_of() { bash scripts/contract-check.sh "$1" "${2:-skills}" >/dev/null 2>&1; printf '%s' "$?"; }
 
+# The real skills tree is the second argument here, so this case holds check 3
+# as well: the tree that ships carries no Bash 4+ construct outside the
+# setup-skills template.
 check_rc "the current tree holds the contract" 0 "$(rc_of "$(copy clean)")"
 
 # A mechanic written with the pre-#62 idiom: bash's own diagnostic on stderr and
@@ -57,5 +62,94 @@ printf '{"fresh":true}\n'
 exit 0
 EOF
 check_rc "a mechanic that takes no positional is exempt from check 2" 0 "$(rc_of "$d")"
+
+# Check 3: the Bash 3.2 target. A file under skills/ runs in whatever shell a
+# consumer machine provides, macOS's system Bash included, and the mechanics
+# carry no `set -e`, so a Bash 4 builtin there is a skipped line and a silent
+# pass rather than a stop. One case per named construct, because each is its own
+# branch of the pattern.
+mechanics=ship/scripts/read-issue.sh
+
+d=$(copy_skills bash4-mapfile)
+printf '\nmapfile -t lines < /dev/null\n' >> "$d/$mechanics"
+check_rc "a mapfile under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
+# A command name ends at any character a name cannot carry, not at whitespace
+# alone: `mapfile<f` and `mapfile;` are the same builtin.
+d=$(copy_skills bash4-redirect)
+printf '\nmapfile</dev/null\n' >> "$d/$mechanics"
+check_rc "a mapfile delimited by a redirect fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
+d=$(copy_skills bash4-readarray)
+printf '\nreadarray -t lines < /dev/null\n' >> "$d/$mechanics"
+check_rc "a readarray under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
+d=$(copy_skills bash4-assoc)
+printf '\ndeclare -A seen\n' >> "$d/$mechanics"
+check_rc "a declare -A under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
+# `-A` need not stand alone or come first: every spelling is the same array.
+for form in '-r -A' '-A -r' '-Ar'; do
+  d=$(copy_skills "bash4-assoc-$(printf '%s' "$form" | tr -d ' -')")
+  printf '\ndeclare %s seen\n' "$form" >> "$d/$mechanics"
+  check_rc "a declare $form under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+done
+
+# The lowercase options are Bash 3.2's own and must not be flagged.
+d=$(copy_skills bash3-indexed-array)
+printf '\ndeclare -ar plain\n' >> "$d/$mechanics"
+check_rc "a declare -ar does not fail the check" 0 "$(rc_of skills/ship/scripts "$d")"
+
+d=$(copy_skills bash4-lowercase)
+printf '\nx=${reason,,}\n' >> "$d/$mechanics"
+check_rc "a \${var,,} under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
+# A positional or `$@` takes the same case modifier, and the pattern covers it:
+# `${1,,}` is as absent from Bash 3.2 as `${reason,,}` is.
+d=$(copy_skills bash4-positional)
+printf '\nx=${1,,}\n' >> "$d/$mechanics"
+check_rc "a \${1,,} under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
+d=$(copy_skills bash4-uppercase)
+printf '\nx=${reason^^}\n' >> "$d/$mechanics"
+check_rc "a \${var^^} under skills/ fails the check" 1 "$(rc_of skills/ship/scripts "$d")"
+
+# The setup-skills local gate is a template written into a consumer repo as that
+# repo's own repo-local gate, behind its own Bash 4 version guard. It is
+# repo-local for this rule, so the check never reads it.
+d=$(copy_skills bash4-template)
+printf '\nmapfile -t lines < /dev/null\n' >> "$d/setup-skills/local-gate.sh"
+check_rc "the setup-skills local-gate template is exempt" 0 "$(rc_of skills/ship/scripts "$d")"
+
+# A construct named in a comment is prose, not a call: preflight.sh explains in
+# one why it uses a read loop instead of mapfile, and that comment must survive.
+d=$(copy_skills bash4-comment)
+printf '\n# a read loop, not mapfile: the mechanics target Bash 3.2\n' >> "$d/$mechanics"
+check_rc "a construct named in a comment does not fail the check" 0 "$(rc_of skills/ship/scripts "$d")"
+
+# Both exclusions read a field, not the whole line. A violation whose own content
+# carries the shape of the other exclusion is still a violation.
+d=$(copy_skills bash4-shadowed-comment)
+printf '\ndeclare -A seen # path:12: # a note\n' >> "$d/$mechanics"
+check_rc "a violation carrying :N: # in its content still fails" 1 "$(rc_of skills/ship/scripts "$d")"
+
+d=$(copy_skills bash4-shadowed-template)
+printf '\nmapfile -t x < "%s/setup-skills/local-gate.sh:"\n' "$d" >> "$d/$mechanics"
+check_rc "a violation naming the exempt template still fails" 1 "$(rc_of skills/ship/scripts "$d")"
+
+# A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
+# skills tree reported as clean is the silent pass the rule exists to prevent.
+# Two ways it can be unreadable, and the second is the one the grep status owns.
+check_rc "an absent skills tree is tooling, not a pass" 2 "$(rc_of skills/ship/scripts "$fixture/absent")"
+
+# Root reads through a 000 directory, so there the search would succeed and the
+# case would assert the wrong thing.
+if [ "$(id -u)" -ne 0 ]; then
+  d=$(copy_skills grep-failure)
+  chmod 000 "$d/ship"
+  rc=$(rc_of skills/ship/scripts "$d")
+  chmod 755 "$d/ship"
+  check_rc "a search the tree refuses is tooling, not a pass" 2 "$rc"
+fi
 
 finish

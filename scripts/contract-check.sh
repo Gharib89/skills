@@ -5,7 +5,7 @@
 # with the pre-#62 `${N:?}` idiom reintroduces exit 1 with a bare shell
 # diagnostic and no JSON. The `contract` gate in scripts/local-gate.sh is this.
 #
-#   scripts/contract-check.sh [<scripts-dir>]
+#   scripts/contract-check.sh [<scripts-dir> [<skills-dir>]]
 #
 # Reaches no host: every mechanic's usage guard fires before it loads the host
 # adapter, so a no-argument invocation makes no network call. Keep a new
@@ -13,11 +13,16 @@
 # still exits 2 with an error object, because `ship_load_host` reports its own
 # failure in exactly that shape.
 #
+# Check 3 traverses the whole skills tree rather than the mechanics alone, so it
+# takes its own directory argument.
+#
 # stdout: one line per violation, with the offending mechanic named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
 dir=${1:-skills/ship/scripts}
+skills=${2:-skills}
 [ -d "$dir" ] || { printf 'not a directory: %s\n' "$dir" >&2; exit 2; }
+[ -d "$skills" ] || { printf 'not a directory: %s\n' "$skills" >&2; exit 2; }
 command -v jq >/dev/null || { echo "jq not installed" >&2; exit 2; }
 
 rc=0
@@ -50,5 +55,31 @@ for path in "$dir"/*.sh; do
   printf '%s' "$out" | jq -se 'length == 1 and (.[0] | type == "object" and has("error"))' >/dev/null 2>&1 \
     || { printf '%s: bare invocation did not print exactly one JSON object with an error key\n' "$m"; rc=1; }
 done
+
+# 3. No Bash 4+ construct under the skills tree. A derived copy runs in whatever
+# shell a consumer machine provides, macOS's system Bash 3.2 included, and the
+# mechanics carry no `set -e`: a mapfile there prints "command not found" and
+# execution continues, so the mechanic answers on state it never collected.
+# Shell files only, because the prose under skills/ names these constructs
+# deliberately. A line whose first non-blank character is `#` is prose too; a
+# mention anywhere else on a line is flagged, which is a loud false positive the
+# author rewords, never a silent pass. The setup-skills local gate is excluded:
+# it is a template written into a consumer repo as that repo's own repo-local
+# gate, behind its own Bash 4 version guard.
+bash4='(^|[^[:alnum:]_])(mapfile|readarray)([^[:alnum:]_]|$)|(declare|local|typeset)([[:space:]]+-[A-Za-z]+)*[[:space:]]+-[A-Za-z]*A|\$\{([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[@*])(\[[^]]*\])?(,|\^)'
+raw=$(grep -rnE --include='*.sh' "$bash4" "$skills"); st=$?
+[ "$st" -le 1 ] || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
+# Both exclusions read the `path:line:content` fields rather than the whole
+# line: a grep for either anywhere in it drops a real violation whose own
+# content happens to carry `:12: #` or the template's path.
+hits=$(printf '%s' "$raw" | awk -F: -v tmpl="$skills/setup-skills/local-gate.sh" '
+  $1 == tmpl { next }
+  { content = $0; sub(/^[^:]*:[0-9]+:/, "", content); if (content ~ /^[ \t]*#/) next; print }
+')
+if [ -n "$hits" ]; then
+  echo "Bash 4+ construct under $skills; everything a consumer installs targets Bash 3.2, which answers a mapfile with \"command not found\" and carries on, a declare -A with an invalid option, and a case modifier with a bad substitution:"
+  echo "$hits"
+  rc=1
+fi
 
 exit $rc
