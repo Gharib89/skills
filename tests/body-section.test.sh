@@ -105,4 +105,54 @@ check "replaces a section that is the whole body" \
   "$(printf '## Review\n\nline one\nline two')" \
   "$(ship_body_replace_section "$body" Review "$content")"
 
+# A `## <section>` written as an example inside a fence is not a boundary: the
+# real section below it is the one that gets replaced. The rule agrees with
+# _gh_add_closes, which skips fences when it places the closing line.
+body=$(cat <<'EOF'
+Closes #76
+
+## Summary
+
+An example of what ship writes:
+
+```md
+## Review
+
+copilot: converged
+```
+
+## Review
+
+placeholder
+EOF
+)
+expected=$(cat <<'EOF'
+Closes #76
+
+## Summary
+
+An example of what ship writes:
+
+```md
+## Review
+
+copilot: converged
+```
+
+## Review
+
+line one
+line two
+EOF
+)
+check "skips a section heading inside a fenced block" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
+# The only occurrence is fenced, so there is no section to replace.
+body=$(printf '## Summary\n\n```md\n## Review\n```\n')
+expected=$(printf '## Summary\n\n```md\n## Review\n```\n\n## Review\n\nline one\nline two')
+actual=$(ship_body_replace_section "$body" Review "$content"); rc=$?
+check    "appends when the only occurrence is fenced" "$expected" "$actual"
+check_rc "reports created for a fenced-only occurrence" 1 "$rc"
+
 finish

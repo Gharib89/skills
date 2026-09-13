@@ -196,22 +196,23 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # Replace one `## <section>` of <body> with <body-file>'s content, appending the
 # section when the body has none. Every other line is untouched, including a
 # `Closes` line above the first heading. Prints the new body; exit 0 replaced,
-# 1 created, the way ship_body_closes answers with its exit code. The `^## `
-# match is anchored at column 0 on purpose: it has to agree with
-# _gh_add_closes, whose heading match is what decides where the closing line
-# lands.
+# 1 created, the way ship_body_closes answers with its exit code.
+#
+# The heading match is anchored at column 0 and skips fenced blocks, the same
+# rule _gh_add_closes reads: the two have to agree on what a section boundary
+# is, or a `## Review` written as an example inside a fence is replaced while
+# the real section below it survives. The fence carries up to three leading
+# spaces (CommonMark), written out rather than as an interval so every awk
+# reads it.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
-  local body=$1 section=$2 file=$3
-  if grep -qE "^## ${section}[[:space:]]*$" <<<"$body"; then
-    awk -v sec="$section" -v file="$file" '
-      function dump() { while ((getline line < file) > 0) print line; close(file) }
-      $0 ~ "^## " sec "[ \t]*$" { print; print ""; dump(); print ""; skip=1; next }
-      skip && /^## / { skip=0 }
-      !skip { print }' <<<"$body"
-    return 0
-  fi
-  { printf '%s\n\n## %s\n\n' "$body" "$section"; cat "$file"; }
-  return 1
+  awk -v sec="$2" -v file="$3" '
+    function dump() { while ((getline line < file) > 0) print line; close(file) }
+    /^ ? ? ?```/ { fenced = !fenced }
+    !placed && !fenced && $0 ~ "^## " sec "[ \t]*$" {
+      print; print ""; dump(); print ""; skip=1; placed=1; next }
+    skip && !fenced && /^## / { skip=0 }
+    !skip { print }
+    END { if (!placed) { printf "\n## %s\n\n", sec; dump(); exit 1 } }' <<<"$1"
 }
 
 # Generic English function words of four or more characters; shorter ones the
