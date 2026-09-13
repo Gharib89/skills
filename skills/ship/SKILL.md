@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.6.0
+  version: 3.7.0
   profile-schema: 1
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -344,13 +344,15 @@ adjacent find carries one of the three dispositions.
 **3 · Verify.** For each applicable verification, run its `Run:` line scoped
 to what you touched, on the environment the issue was reported against; green
 elsewhere is not fixed. Result words: `pass | fail | deferred-to-ci |
-unavailable`. Prerequisite (`Needs:`) missing: follow `Without it:`.
-`hand-off` prints the exact command and setup and waits (attended) or hands
-back (unattended); `defer-to-ci` continues only because `Also proven by CI:`
-names the leg you will watch in phase 8, and is the only unattended-safe
-disposition; `blocked` stops `blocked-verification`. Noisy runs go to a
-cheap-tier subagent returning the result plus failing lines. `docs` class and
-the small lane skip this phase. Detail in
+unavailable | unexercised`. Prerequisite (`Needs:`) missing: follow
+`Without it:`. `hand-off` prints the exact command and setup and waits
+(attended) or hands back (unattended); `defer-to-ci` continues only because
+`Also proven by CI:` names the leg you will watch in phase 8, and is the only
+unattended-safe disposition; `blocked` stops `blocked-verification`.
+`unexercised` is the one result no `Without it:` covers: phase 5 admits it, an
+unattended run proceeds on it, and the merge summary names the subject that did
+not exist, for the human to weigh. Noisy runs go to a cheap-tier subagent returning the result plus
+failing lines. `docs` class and the small lane skip this phase. Detail in
 [reference/implement.md](reference/implement.md).
 
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
@@ -375,9 +377,9 @@ finding outside the issue is an adjacent find: phase 2's three dispositions.
 This self-review plus green CI is the review gate; reviewers in phase 7 are a
 second pair of eyes on top, never a substitute.
 
-**5 · Local gate.** *Precondition:* every applicable verification is `pass` or
-`deferred-to-ci`, or the class is `docs`; otherwise you skipped one, go back.
-Run `base-fresh` first: it proves the branch has seen every commit on its base,
+**5 · Local gate.** *Precondition:* every applicable verification is `pass`,
+`deferred-to-ci` or `unexercised`, or the class is `docs`; otherwise you
+skipped one, go back. Run `base-fresh` first: it proves the branch has seen every commit on its base,
 the one thing CI cannot (CI tests the merge ref, so a branch that predates a
 merge still goes green while every "does this exist?" answer you took from the
 worktree was pre-merge). Behind: rebase, re-run, then continue. Confirm every
