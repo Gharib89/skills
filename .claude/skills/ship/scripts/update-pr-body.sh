@@ -24,16 +24,10 @@ ship_load_host
 
 body=$(host_pr_get "$pr" | jq -r .body) || ship_tooling "cannot read PR $pr"
 new=$(mktemp); trap 'rm -f "$new"' EXIT
-if grep -qE "^## ${section}[[:space:]]*$" <<<"$body"; then
+if ship_body_replace_section "$body" "$section" "$file" > "$new"; then
   replaced=true; created=false
-  awk -v sec="$section" -v file="$file" '
-    function dump() { while ((getline line < file) > 0) print line; close(file) }
-    $0 ~ "^## " sec "[ \t]*$" { print; print ""; dump(); print ""; skip=1; next }
-    skip && /^## / { skip=0 }
-    !skip { print }' <<<"$body" > "$new"
 else
   replaced=false; created=true
-  { printf '%s\n\n## %s\n\n' "$body" "$section"; cat "$file"; } > "$new"
 fi
 host_pr_set_body "$pr" "$new" || ship_fail "PR body update failed"
 jq -n --argjson pr "$pr" --arg s "$section" --argjson r "$replaced" --argjson c "$created" \
