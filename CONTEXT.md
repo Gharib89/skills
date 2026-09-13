@@ -37,7 +37,7 @@ A user-invoked skill that explores a repo and drafts its per-repo documents, con
 _Avoid_: init, scaffold, bootstrap
 
 **Composed skill**:
-A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
+A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `show-me`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
 _Avoid_: dependency, sub-skill, helper skill
 
 **Sibling skill**:
@@ -123,6 +123,10 @@ _Avoid_: tracker (Boards is one part of a host), provider, platform
 **Run file**:
 The one scratch file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The source of truth for where the run is and the map back after a mid-run context summary; the merge summary's timing is read off its stamps. The harness task tools, when a run finds them, are a mirror of it, never the record.
 _Avoid_: task list, scratch file, plan file, todo
+
+**Shape**:
+The compressed code-form view of a change that opens a PR's Summary: a call tree, file tree, control flow, pseudocode or component tree, written as a `diff` fence so the before and the after sit in one view. One per PR, about 15 lines or fewer, every node a real symbol and every root node carrying its file path. A change that moves no logic and no layout says so in a `Shape: none, mechanical (<kind>).` line rather than omitting it silently.
+_Avoid_: diagram, visual, picture, mermaid, sketch
 
 **Adjacent find**:
 A problem outside the claimed issue that Ship meets while working it, whether the agent spotted it or a reviewer raised it. Filed for triage and left alone, unless an acceptance criterion names it, its fix lands in a file the PR already changes, or a reviewer of the PR would flag it, in which case it is fixed inline and logged as a deviation. Filing goes through `file-issue`, which answers with an existing open issue rather than creating a second one for the same find. Distinct from a deviation, which is the claimed issue's own work departing from its plan.

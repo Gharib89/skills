@@ -6,9 +6,9 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.5.0
+  version: 3.6.0
   profile-schema: 1
-  composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs
+  composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
 
 # ship
@@ -260,9 +260,9 @@ your **required first action, the Run file** holding the ten-item checklist.
 Phase 0 starts once the Run file exists.
 
 **Compose, don't reinline.** Load `tdd` (phase 2), `writing-for-agents`
-(phase 4, agent-facing docs), `code-review` (phase 4) and `find-docs` (any API
-claim) through the Skill tool when their moment comes; never hand-roll their
-logic. Any skill you compose that has an unattended mode is told the run is
+(phase 4, agent-facing docs), `code-review` (phase 4), `show-me` (phase 6, the
+Summary's Shape) and `find-docs` (any API claim) through the Skill tool when
+their moment comes; never hand-roll their logic. Any skill you compose that has an unattended mode is told the run is
 unattended explicitly; it has no other way to know. The frontmatter's
 `composes` line is this same list with each skill's source repo, and is what
 phase 0 checks: a skill added here is added there too, or the run still fails
@@ -409,8 +409,26 @@ under a `## ` heading of its own that ship adds, no template carrying one
 (`## Attribution`), placed after every section a later phase rewrites: a rewrite replaces everything from its own heading to
 the next one, so a footer left loose at the end of the last section is inside
 that section and the phase-7 `update-pr-body --section Review` write drops it.
-Ship never names the footer's lines; it only says where it sits. Then
-`reflect <issue> <pr>` so a human reading the issue sees the PR.
+Ship never names the footer's lines; it only says where it sits.
+
+**The Summary opens with a Shape.** Draw it from the diff here, not from
+phase 2's design; a redraw is not a deviation. It is the first thing under
+`## Summary`, above the prose, and it is a `diff` fence over a call tree, file
+tree, control flow, pseudocode or component tree. Text forms only, never
+mermaid and never HTML: Azure DevOps renders neither, and the `diff` fence is
+the one form that shows the before and the after in a single view. One shape,
+about fifteen lines or fewer; a change that needs two is a PR spanning two
+concerns. Every node is a real symbol, each tree's root node carries its file
+path, and no line carries a line number, which the first review-round push
+rots and nothing rewrites the Summary to fix. A change that moves no logic and
+no layout (a rename, a constant, a config value, docs alone) opens with the
+visible line `Shape: none, mechanical (<kind>).` instead, so the self-review
+and the reviewer can dispute the call; silent absence is never the answer. The
+small lane takes no exemption: a one-line behaviour fix is where four lines of
+control-flow diff pay for themselves. `show-me` supplies the form; these
+constraints are ship's, and its menu of other uses is not.
+
+Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
 
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)

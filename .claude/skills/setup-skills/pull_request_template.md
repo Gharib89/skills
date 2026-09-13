@@ -2,7 +2,7 @@ Closes #
 
 ## Summary
 
-<!-- What changed and why. The reader has the diff for the how. -->
+<!-- Open with the Shape: one `diff` fence over a call tree, file tree, control flow, pseudocode or component tree, about 15 lines or fewer. A change that moves no logic and no layout opens with `Shape: none, mechanical (<kind>).` instead. Then what changed and why; the reader has the diff for the how. -->
 
 ## Deviations from plan
 

@@ -15,3 +15,6 @@ The standards every change in this repo is reviewed against. The `code-review` s
 ## Conventions a reviewer should know
 
 <!-- Repo conventions no tool enforces: commit subject format, test naming, layering rules. `None recorded yet.` is a legal line. -->
+
+- **PR body: the Summary opens with a Shape.** A `diff` fence over a call tree, file tree, control flow, pseudocode or component tree, first thing under `## Summary`. Text forms only, never mermaid and never HTML. One shape, about 15 lines or fewer. Every node is a real symbol, each tree's root node carries its file path, and no line carries a line number. A change that moves no logic and no layout opens with `Shape: none, mechanical (<kind>).` instead; silent absence is a finding.
+
