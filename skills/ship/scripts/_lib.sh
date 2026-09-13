@@ -225,14 +225,19 @@ readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
 # heading transformations on what a fence is: a tilde-fenced example carrying
 # "Closes #n" reads as a mention here too, and host_pr_create, which asks this
 # before it places a closing line, does not skip a body that never claimed one.
-# The inline-span strip stays in jq, which is where a span within a line lives.
+#
+# Code spans come out after, and stay in jq, because a span opens mid-line where
+# a line-oriented pass cannot see it. One rule for every run length: a span
+# closes on a backtick run as long as the one that opened it, which the
+# backreference says directly, and a multi-line ```md span is that rule at
+# length three rather than a fence form of its own.
 ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
   local unfenced
   unfenced=$(awk "$SHIP_AWK_FENCE"'
     { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1")
   jq -e -n --arg body "$unfenced" --arg n "$2" '
     $body
-    | gsub("`[^`]*`"; "")
+    | gsub("(?s)(`+).*?\\1"; "")
     | test("\\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))"
            + "\\s+(#[0-9]+[\\s,]+(and[\\s,]+)?)*#" + $n + "\\b"; "i")' >/dev/null
 }
