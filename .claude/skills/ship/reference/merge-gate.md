@@ -72,9 +72,9 @@ deviation is, so the row is a record, not a recollection. The run files it to no
 other repo; the human carries the row upstream. The `Review` blocks say what the
 PR body's `## Review` section says, in more detail; the section links here. The
 `Verification` block and the PR body's `## Verification` section are read from
-the same phase-3 results in the same row format, so they agree by construction:
-the summary is where the human reads them, the section is where they survive the
-session.
+the same phase-3 results in the same row format, so they agree by construction;
+this block is where the human reads them at the gate, the section is where they
+outlive the run.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the
