@@ -80,7 +80,7 @@ Walk order and the recommendation to lead with:
 
 - **Local gate, small node**: the runner's own node syntax with one example from the repo's tests.
 - **CI, push policy**: `one push per review round` on metered minutes (private repos, ADO parallel jobs); `Default.` otherwise.
-- **Reviewers**: each detected reviewer with its inferred trigger; then "any reviewer not detected?", offering Claude Code as a reviewer (see step 5, scaffolding). For every on-request reviewer ask the cap; recommend 2.
+- **Reviewers**: each detected reviewer with its inferred trigger; then "any reviewer not detected?", offering Claude Code as a reviewer (see step 5, scaffolding). Ask every reviewer its cap: recommend 2 on-request, 3 on-push, `None.` for auto-once.
 - **Verification**: one block per seed, or `None.` when nothing in the repo talks to a real system.
 - **Versioning**: what exploration found, then `In-PR requirement:`, the one line that changes what ship does.
 - **Public surface**: `Default.` unless the repo publishes more than an API (gate rules, palettes, bundle inputs).
@@ -88,7 +88,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every on-request reviewer has a `Cap:`; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every reviewer has a `Cap:`, a number or `None.`, and an on-request reviewer's is a number; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 

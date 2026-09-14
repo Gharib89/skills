@@ -107,7 +107,7 @@ Known gap, to settle on the first real run: the threads API documents `pullReque
 Login: <Project> Build Service (<Org>)
 Trigger: on-push
 Request: None.
-Cap: None.
+Cap: 3
 Resolve: threads are set to `fixed` once a finding is dispositioned; the build re-runs on the next push
 Gating: yes
 Instructions: __STANDARDS__

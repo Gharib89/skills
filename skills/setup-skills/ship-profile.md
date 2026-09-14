@@ -44,7 +44,7 @@ Push policy: <e.g. one push per review round; minutes are metered, or Default.>
 Login: <the login(s) it reviews under>
 Trigger: <auto-once | on-push | on-request>
 Request: <on-request only: the mechanic that requests a round, else None.>
-Cap: <on-request only: max rounds, required, no default; else None.>
+Cap: <on-request: max rounds, required, no default; on-push: max rounds, or None. for an uncapped loop; auto-once: None.>
 Resolve: <on-push only: how a dispositioned thread is resolved, else None.>
 Gating: <yes | no>
 Instructions: <path of the file this reviewer reads, or None.>

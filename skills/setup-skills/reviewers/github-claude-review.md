@@ -70,7 +70,7 @@ jobs:
 Login: github-actions[bot]
 Trigger: on-push
 Request: None.
-Cap: None.
+Cap: 3
 Resolve: None.
 Gating: no
 Instructions: __STANDARDS__
