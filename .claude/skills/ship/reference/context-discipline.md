@@ -59,8 +59,8 @@ depends on no tool the harness might withhold. Without it a summarized run
 cannot tell which phase it was in, and skips or repeats one. The window is
 managed, not scarce: the harness compacts long runs and the Run file carries
 state across that boundary, so never stop, narrow a phase or suggest a new
-session over context; keep working. It is the run's only checklist: a second
-copy of it anywhere else is bookkeeping that buys nothing.
+session over context; keep working. It is the run's **record**; the harness
+task list is its **display**, kept in step by the mirror rule below.
 
 **Stamp every flip by reading the clock inside the edit command**, so the
 stamp is a measurement rather than a recollection:
@@ -101,6 +101,15 @@ range per parentheses:
 - [ ] 5 · Local gate: ... in_progress (10:12→)   # opened
 - [x] 5 · Local gate: ... (10:12→10:19)          # closed, suffix gone
 ```
+
+**Every stamp has a mirror.** When you write the Run file, create its ten
+items as harness tasks (`TaskCreate`, one per phase, the phase line as the
+subject). Each `phase_open` is followed by `TaskUpdate` to `in_progress` on
+the matching task, each `phase_close` by `completed`. The Run file is the
+record and carries the run across compaction; the task list is the display the
+human watches in the terminal, and it is the one view of progress they read
+during an attended run. A harness build without the task tools runs on the
+file alone.
 
 A phase that re-opens appends a second range,
 `(08:31→09:40) (10:20→10:33)`. A close stamped earlier than its open crossed
