@@ -103,11 +103,11 @@ fi
 # `file-issue` joins check 2's exclusions here because it takes no positional
 # either; it stays off that list because its own bare invocation *is*
 # malformed, so check 2 must keep testing it.
-no_positional="$takes_no_positional file-issue "
+has_no_positional="${takes_no_positional}file-issue "
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ "$m" = _lib ] && continue
-  case $no_positional in *" $m "*) continue ;; esac
+  case $has_no_positional in *" $m "*) continue ;; esac
   dashes=()
   for i in 1 2 3; do
     dashes+=(--x)
