@@ -63,15 +63,16 @@ stamp is a measurement rather than a recollection:
 
 ```sh
 RUN=<scratchpad>/ship-<issue>.md
-# open a phase
-sed -i "s|^- \[ \] 5 · .*|& in_progress ($(date -u +%H:%M)→)|" "$RUN"
+# open phase 5; the `[.]` also picks up the `[x]` of a phase being re-opened
+sed "s|^- \[.\] \(5 · .*\)|- [ ] \1 in_progress ($(date -u +%H:%M)→)|" "$RUN" > "$RUN.t" && mv "$RUN.t" "$RUN"
 # close it
-sed -i "s|^- \[ \] \(5 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|" "$RUN"
+sed "s|^- \[ \] \(5 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|" "$RUN" > "$RUN.t" && mv "$RUN.t" "$RUN"
 ```
 
 The double quotes are the whole trick: the shell expands `$(date -u +%H:%M)`
 as it runs the command, so the file can only ever hold a time this run passed
-through. Stamps go at the end of the line, after the `in_progress` suffix, one
+through. The redirect and `mv` stand in for `sed -i`, whose in-place flag takes
+an argument on the BSD sed a macOS machine runs. Stamps go at the end of the line, after the `in_progress` suffix, one
 range per parentheses:
 
 ```
