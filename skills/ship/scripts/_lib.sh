@@ -20,7 +20,12 @@
 #   host_issue_get <n>                   -> {number,title,body,state,is_pr,labels[],assignees[],created_at,url}
 #   host_issue_comments <n>              -> [{author,body,created_at}]
 #   host_issue_blockers_open <n>         -> [n, ...] open blockers; non-zero exit = query unavailable
-#   host_issue_linked_prs <n>            -> {closing:[{number,state}], mentions:[{number,state}]} (live PRs)
+#   host_issue_linked_prs <n>            -> {closing:[{number,state}],
+#                                           mentions:[{number,kind,state}]}
+#                                           closing: live PRs whose body closes <n>.
+#                                           mentions: everything else that names it,
+#                                           kind "pr" or "issue"; none where the host
+#                                           records no cross-reference of its own.
 #   host_issue_assign <n> <identity>
 #   host_issue_unassign <n> <identity>
 #   host_issue_has_label <n> <label>     -> exit 0 when present
@@ -338,3 +343,92 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
   if ($full | index($id | tostring)) then .
   elif length > 2000 then .[0:2000] + "\n...[truncated]"
   else . end;'
+
+# ship_fence_unclosed <text>: does the text end inside a fenced block? Prints
+# `line <n>: <run>` naming the opener that never closed, or nothing when the
+# fence state is balanced. `update-pr-body` asks before it rewrites a section:
+# an open fence inverts the in-fence state for the rest of the body, so every
+# `## ` heading after it reads as example text and the rewrite swallows the
+# sections between them (run #121 lost four that way).
+ship_fence_unclosed() {
+  awk "$SHIP_AWK_FENCE"'
+    { was = fenced; fenced = ship_fence($0)
+      if (!was && fenced) {
+        open_line = NR; open_run = $0
+        sub(/^ ? ? ?/, "", open_run); sub(/[^`~].*$/, "", open_run)
+      } }
+    END { if (fenced) printf "line %d: %s\n", open_line, open_run }' <<<"$1"
+}
+
+# ship_body_headings <body>: the body's `## ` section headings, heading text
+# only, one per line, in order. The same fence rule as every transformation
+# above, so a `## ` inside a fence is example text here too. `update-pr-body`
+# reports this after the write, where a swallowed section is visible in the JSON
+# rather than eight minutes later in a review.
+ship_body_headings() {
+  awk "$SHIP_AWK_FENCE"'
+    { fenced = ship_fence($0) }
+    !fenced && /^## / { sub(/^## /, ""); sub(/[ \t\r]+$/, ""); print }' <<<"$1"
+}
+
+# ship_stale_base_reason <base-fresh-json>: the refusal `merge` answers with when
+# the branch has not seen every commit on its base, or nothing when it has. The
+# base can move between phase 5's `base-fresh` and the human's "merge" (PR #131
+# merged 46 seconds after its base moved, landing a body that no longer matched
+# the template), so the merge asks the same question again and reads the answer
+# here.
+#
+# Anything that is not a `fresh: true` verdict refuses, an unparseable one
+# included: a check that could not ask its question must not answer "fresh".
+ship_stale_base_reason() {
+  jq -rn --arg v "$1" '
+    (try ($v | fromjson) catch null) as $j
+    | if ($j | type) != "object" then "stale-base: base freshness unreadable"
+      elif $j.fresh == true then empty
+      elif ($j.behind | type) == "number" then "stale-base: behind \($j.behind) on \($j.base)"
+      else "stale-base: base freshness unreadable" end'
+}
+
+# ship_brief <poll-json> <identity> <on_head|all> [<full-ids-json>]: the projection `poll-pr
+# --brief` prints, from the JSON the poll already built. One host fetch, two
+# output shapes; the full shape stays the default so nothing existing changes
+# meaning.
+#
+# <identity> is the login the run posts as: its own thread replies land as review
+# rows of their own, and a convergence test that counts them reads its own voice
+# as the reviewer's. An empty <identity> drops nothing: a host that could not
+# name the run must not cost it the rounds it came for. <on_head|all> is `all`
+# under the --since rule and `on_head` under the head rule, matching the list
+# that rule lands from.
+#
+# A round's body comes down to its lead line and its finding items, which is what
+# a triage acts on: the lead line carries the round's verdict and the items carry
+# what to fix. A round with no items is clipped instead, so it is short without
+# being empty. A row named by <full-ids-json> keeps its whole body: `--full` says
+# "this round, verbatim" and outranks the cut, the way it outranks the adapter's.
+#
+# A body the adapter already clipped ends in the truncation marker, and the cut
+# carries that marker through: a round nobody has read whole must not come back
+# looking complete, or the loop never re-polls it with --full.
+# Threads come down to the open ones, the only ones still owed a disposition,
+# and the string "unavailable" passes through as itself.
+ship_brief() {
+  jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" '
+    def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+    def mine: $me != "" and (((.login // "") | norm) == ($me | norm));
+    def finding_items:
+      (if endswith("\n...[truncated]") then "\n...[truncated]" else "" end) as $mark
+      | [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
+      | [$lines[] | select(test("^[ \t]*([-*+]|[0-9]+[.)])[ \t]"))] as $items
+      | if ($items | length) == 0 then (if length > 200 then .[0:200] + "\n...[truncated]" else . end)
+        elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
+        else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
+    {head_sha, mergeable, landed_by,
+     rounds: [.reviews[$key][] | select(mine | not) | . as $r
+              | {id, submitted_at, substantive,
+                 body: (if ($full | index($r.id | tostring)) then $r.body
+                        else ($r.body | finding_items) end)}],
+     threads: (if (.threads | type) == "array"
+               then [.threads[] | select(.resolved | not) | {id, resolved, replied}]
+               else .threads end)}' <<<"$1"
+}

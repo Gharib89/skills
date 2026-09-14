@@ -24,6 +24,13 @@ a fresh read of the committed tree, not a conversation.
   head. A round whose findings live in the body rather than in threads is
   invisible from the thread list alone, and `infra-error` is a judgment about
   the body.
+- **`--brief` projects that same poll** down to what this loop acts on: head,
+  mergeable, `landed_by`, one row per round (id, `submitted_at`, `substantive`,
+  and the body cut to its lead line and finding items) and one row per OPEN
+  thread. Rounds come from the list the landing rule admitted, and the run's own
+  replies drop out, so a round count is the reviewer's rounds and not ours. Take
+  the full shape when a round needs reading whole; `--full <id>` still answers
+  that on the row it names.
 - **A body ending `...[truncated]` has not been read.** Rounds are clipped past
   2000 characters so one poll cannot flood the window, and a reviewer that opens
   with a preamble (an overview, a per-file table) pushes its findings past that

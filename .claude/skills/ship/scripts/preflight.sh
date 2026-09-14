@@ -14,15 +14,19 @@
 # so the issue block is skipped and `none` is the literal branch and worktree
 # suffix. Every other check runs unchanged.
 #
-# stdout: {host, repo, identity, profile, ok, reasons[], mentions[], pruned[]}
+# stdout: {host, repo, identity, profile, ok, reasons[], mentions[], mentioned_by[],
+#          pruned[]}
 #   reasons use the stop names verbatim, detail after a colon:
 #   closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
 #   attended only · profile missing · profile invalid: <detail> · skill missing:
 #   <detail>
 #   mentions[] lists live PRs that name the issue without closing it: context
-#   for phase 1, never a stop. pruned[] lists worktrees removed because their
-#   PR is merged or closed.
+#   for phase 1, never a stop. mentioned_by[] is the same rows widened to
+#   {number, kind: issue|pr, state}, so a run learns whether a mention is an
+#   open issue or a merged PR without reaching for the host CLI; both lists
+#   carry live cross-references only, open issues and open or merged PRs. pruned[] lists worktrees removed because their PR is merged or
+#   closed.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -42,7 +46,8 @@ ship_load_host
 identity=null
 unreachable() { # <detail>
   jq -n --arg h "$SHIP_HOST" --arg r "$SHIP_REPO_SLUG" --argjson id "$identity" --arg d "$1" \
-    '{host: $h, repo: $r, identity: $id, ok: false, reasons: ["host-unreachable: " + $d], mentions: [], pruned: []}'
+    '{host: $h, repo: $r, identity: $id, ok: false, reasons: ["host-unreachable: " + $d],
+      mentions: [], mentioned_by: [], pruned: []}'
   exit 2
 }
 
@@ -123,7 +128,7 @@ if [ -d "$container" ]; then
 fi
 
 # The issue itself, unless this is a task-spec run.
-mentions='[]'
+mentions='[]'; mentioned_by='[]'
 if [ "$n" = none ]; then :
 elif ! issue=$(host_issue_get "$n"); then
   reasons+=("issue #$n not found or unreadable")
@@ -144,7 +149,8 @@ else
   if linked=$(host_issue_linked_prs "$n"); then
     closing=$(jq -r '[.closing[] | "#\(.number) (\(.state))"] | join(", ")' <<<"$linked")
     [ -z "$closing" ] || reasons+=("existing PR: $closing")
-    mentions=$(jq -c '[.mentions[].number]' <<<"$linked")
+    mentions=$(jq -c '[.mentions[] | select(.kind == "pr") | .number]' <<<"$linked")
+    mentioned_by=$(jq -c '.mentions' <<<"$linked")
   else
     reasons+=("existing PR: cross-references unreadable, cannot prove none")
   fi
@@ -160,7 +166,8 @@ done
 
 ok=true; [ "${#reasons[@]}" -eq 0 ] || ok=false
 printf '%s\n' "${reasons[@]+"${reasons[@]}"}" | jq -Rs --arg h "$SHIP_HOST" --arg r "$SHIP_REPO_SLUG" \
-  --argjson id "$identity" --arg p "$profile" --argjson ok "$ok" --argjson m "$mentions" --argjson pr "$pruned" \
+  --argjson id "$identity" --arg p "$profile" --argjson ok "$ok" --argjson m "$mentions" \
+  --argjson mb "$mentioned_by" --argjson pr "$pruned" \
   '{host: $h, repo: $r, identity: $id, profile: $p, ok: $ok,
-    reasons: (split("\n") | map(select(. != ""))), mentions: $m, pruned: $pr}'
+    reasons: (split("\n") | map(select(. != ""))), mentions: $m, mentioned_by: $mb, pruned: $pr}'
 $ok

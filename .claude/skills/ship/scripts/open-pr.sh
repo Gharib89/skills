@@ -13,6 +13,10 @@
 # fires: phase 7 passes it to `poll-pr --since` so that one round counts on
 # whatever head it lands on.
 #
+# stderr is empty on a green call: the push and the create both log to a file
+# shown only when they fail, so anything on stderr from this mechanic is a
+# failure.
+#
 # stdout: {number, url, created_at, branch, base}
 # exit: 0 · 1 push or create failed · 2 usage or wrong branch
 set -uo pipefail
@@ -43,5 +47,6 @@ log=$(mktemp); trap 'rm -f "$log"' EXIT
 git push -u origin "HEAD:refs/heads/$branch" >"$log" 2>&1 || { ship_tail40 "$log"; ship_fail "git push failed"; }
 
 issue_arg=$n; [ "$n" = none ] && issue_arg=""
-pr=$(host_pr_create "$branch" "$base" "$title" "$file" "$issue_arg") || ship_fail "PR create failed"
+pr=$(host_pr_create "$branch" "$base" "$title" "$file" "$issue_arg" 2>"$log") \
+  || { ship_tail40 "$log"; ship_fail "PR create failed"; }
 jq --arg b "$branch" --arg base "$base" '. + {branch: $b, base: $base}' <<<"$pr"

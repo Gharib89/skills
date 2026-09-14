@@ -2,8 +2,8 @@
 # ship phases 7 and 8: one bounded, foreground poll of a PR's head, checks,
 # reviews and threads, then ONE JSON summary.
 #
-#   poll-pr <pr> [--await-review <login>] [--since <iso>] [--full <id>[,<id>]]
-#           [--timeout <s>] [--interval <s>]
+#   poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>]
+#           [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]
 #
 # done when the PR is in conflict (merge-ref checks never start, so waiting is
 # pointless), or every check on the head has completed and, with --await-review,
@@ -40,17 +40,35 @@
 # state could not be read (GraphQL refused): that reviewer's exit is degraded
 # unreachable, the run proceeds.
 #
+# `--brief` projects that same JSON, from the same single fetch, down to what a
+# review loop acts on: head, mergeable, `landed_by`, one row per reviewer round
+# (id, submitted_at, substantive, and the body cut to its finding items) and one
+# row per OPEN thread (id, resolved, replied). `--full` still names the rows that
+# come back whole, so `--brief --full <id>` is the summary with that one round
+# verbatim. Rounds come from `all[]` under the
+# --since rule and `on_head[]` under the head rule, the list that rule lands
+# from, and the run's own rows drop out: a thread reply of ours posts as a review
+# row of its own, and a convergence test that counts it reads its own voice as
+# the reviewer's. That drop needs the host identity, so `--brief` asks for it up
+# front and exits 2 when the host cannot answer, rather than returning a list it
+# cannot promise is the reviewer's alone. The full shape stays the default.
+#
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
 #          threads, reviewer_blocked, landed_by, done, waited_s}
+#   --brief: {head_sha, mergeable, landed_by, rounds[], threads}
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: poll-pr <pr> [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]'
+usage='usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
-timeout=480; interval=20; await=""; since=""; full='[]'
+# A flag in the positional slot is a malformed invocation, not a PR id: without
+# this, `poll-pr --brief` reads "--brief" as the id and asks the host for it.
+case $pr in -*) ship_tooling "$usage" ;; esac
+timeout=480; interval=20; await=""; since=""; full='[]'; brief=false
 while [ $# -gt 0 ]; do
   case $1 in
+    --brief) brief=true; shift ;;
     --await-review) [ -n "${2:-}" ] || ship_tooling "$usage"; await=$2; shift 2 ;;
     --since) [ -n "${2:-}" ] || ship_tooling "$usage"; since=$2; shift 2 ;;
     # Ids stay strings: GitHub numbers a review and Azure DevOps numbers a
@@ -81,6 +99,14 @@ if [ -n "$since" ]; then
 fi
 ship_load_host
 
+# --brief promises the run's own rows are gone, and only the identity can tell
+# them apart. Asked before the loop, so an unauthenticated host answers now
+# rather than after the timeout; the full shape needs no identity and runs on.
+me=""
+if $brief; then
+  me=$(host_identity) || ship_tooling "cannot read the host identity; --brief cannot drop the run's own rows"
+fi
+
 norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/\[bot\]$//'; }
 start=$SECONDS
 while :; do
@@ -110,10 +136,16 @@ while :; do
   fi
   waited=$((SECONDS - start))
   if $done || [ "$waited" -ge "$timeout" ]; then
-    jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
+    out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
       --argjson t "$threads" --argjson b "$blocked" --argjson lb "$landed_by" --argjson d "$done" --argjson w "$waited" \
       '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer_blocked: $b,
-        landed_by: $lb, done: $d, waited_s: $w}'
+        landed_by: $lb, done: $d, waited_s: $w}')
+    if $brief; then
+      key=on_head; [ -z "$since" ] || key=all
+      ship_brief "$out" "$me" "$key" "$full"
+    else
+      printf '%s\n' "$out"
+    fi
     $done
     exit
   fi
