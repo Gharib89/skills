@@ -32,6 +32,19 @@ Every lever below is subject to it, in rough order of impact:
 - **One Run file** for the checklist and the design and plan. It survives a
   mid-run context summary; the same summary repeated across turns does not.
 
+## While a subagent is out, end the turn
+
+Dispatch a composed skill's subagents, then **end the turn**. The completion
+notification is what resumes the run, and it arrives on its own: every call
+spent asking whether the result is ready yet (a poll loop, a sleep, a status
+ping, an agent listing, a read of the output file) buys nothing the
+notification does not deliver.
+
+This is the one place where having nothing to do is the correct next action.
+The autonomy contract's "do it now with a tool call" clause is about a *plan*
+left unexecuted, never about a *wait*: a turn that ends with work dispatched
+has already acted.
+
 ## First action: the Run file
 
 **Before phase 0, before the worktree**, write the **Run file**:
@@ -44,29 +57,36 @@ depends on no tool the harness might withhold. Without it a summarized run
 cannot tell which phase it was in, and skips or repeats one. The window is
 managed, not scarce: the harness compacts long runs and the Run file carries
 state across that boundary, so never stop, narrow a phase or suggest a new
-session over context; keep working.
+session over context; keep working. It is the run's only checklist: a second
+copy of it anywhere else is bookkeeping that buys nothing.
 
-The harness task tools are an **optional mirror**, decided per run, never per
-repo: one `ToolSearch` probe with `select:TaskCreate,TaskUpdate,TaskList`, then
-one keyword probe (e.g. `task list todo`) if the select returns nothing, since
-exact names differ across harness builds and some builds expose none. Tools
-present: mirror each flip. Nothing returned: an answer, not a fault; proceed on
-the file alone.
+**Stamp every flip by reading the clock inside the edit command**, so the
+stamp is a measurement rather than a recollection:
 
-**Stamp every flip** from `date -u +%H:%M`, never an estimate. Stamps go at the
-end of the line, after the `in_progress` suffix, one range per parentheses:
-
-```
-- [ ] 5 · Local gate: ... in_progress (10:12→)          # opened
-- [x] 5 · Local gate: ... (10:12→10:19)                  # closed, suffix gone
-- [x] 2 · Implement: ... (08:31→09:40) (10:20→10:33)     # re-opened by a red gate
+```sh
+RUN=<scratchpad>/ship-<issue>.md
+# open a phase
+sed -i "s|^- \[ \] 5 · .*|& in_progress ($(date -u +%H:%M)→)|" "$RUN"
+# close it
+sed -i "s|^- \[ \] \(5 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|" "$RUN"
 ```
 
-A phase that re-opens appends a second range. A close stamped earlier than its
-open crossed midnight UTC; append `+1d` to it (`(23:58→00:12+1d)`) so the range
-still reads left to right and the `Timing:` row needs no special case.
-The merge summary's `Timing:` line is read off these stamps, and they are the
-only way to see which phase a slow run spent its hours in.
+The double quotes are the whole trick: the shell expands `$(date -u +%H:%M)`
+as it runs the command, so the file can only ever hold a time this run passed
+through. Stamps go at the end of the line, after the `in_progress` suffix, one
+range per parentheses:
+
+```
+- [ ] 5 · Local gate: ... in_progress (10:12→)   # opened
+- [x] 5 · Local gate: ... (10:12→10:19)          # closed, suffix gone
+```
+
+A phase that re-opens appends a second range,
+`(08:31→09:40) (10:20→10:33)`. A close stamped earlier than its open crossed
+midnight UTC; append `+1d` to it (`(23:58→00:12+1d)`) so the range still reads
+left to right and the `Timing:` row needs no special case. The merge summary's
+`Timing:` row is computed from these stamps, and they are the only way to see
+which phase a slow run spent its hours in.
 
 One item per phase, exactly one `in_progress`, each `completed` only when its
 verification passed. A **small-lane** run keeps all ten and marks each
