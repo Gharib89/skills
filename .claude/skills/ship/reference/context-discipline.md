@@ -46,9 +46,13 @@ where having nothing to do is the correct next action.
 ## First action: the Run file
 
 **Before phase 0, before the worktree**, write the **Run file**:
-`ship-<issue>.md` (`ship-<slug>.md` when the argument was a task spec) in the
-scratchpad directory the harness names in its environment block, or the OS
-temp directory when none is named. Never inside the repo. It holds the
+`ship-<issue>/run.md` (`ship-<slug>/run.md` when the argument was a task
+spec), in a directory of its own under the scratchpad directory the harness
+names in its environment block, or under the OS temp directory when none is
+named. Never inside the repo. A directory of its own because the scratchpad is
+also where a subagent puts its scratch, and one that reaches for the run's own
+name overwrites the record with no failure signal; every subagent you dispatch
+is given a path outside this directory to write in. It holds the
 ten-item checklist below and, as they form, the design and plan. It is the
 **source of truth** for where the run is: it survives a mid-run summary and
 depends on no tool the harness might withhold. Without it a summarized run
@@ -62,7 +66,7 @@ copy of it anywhere else is bookkeeping that buys nothing.
 stamp is a measurement rather than a recollection:
 
 ```sh
-RUN="<scratchpad>/ship-<issue>.md"
+RUN="<scratchpad>/ship-<issue>/run.md"
 stamp() {  # $1: a sed script; fails rather than recording a flip that did not happen
   sed "$1" "$RUN" > "$RUN.t" \
     && ! cmp -s "$RUN" "$RUN.t" \
