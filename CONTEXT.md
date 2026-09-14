@@ -88,6 +88,10 @@ _Avoid_: review bot topology (the old three-shape framing), bot lane
 How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request. Convergence and mechanics follow the trigger, never the bot's brand; the profile's `Cap:` bounds the rounds of any of them.
 _Avoid_: mode, kind of bot
 
+**Fallback reviewer**:
+A reviewer driven only when the reviewer it names exits degraded, for any degraded reason; never a second opinion on a converged primary. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary converges, the fallback still reports, as not invoked, so the human sees it exists.
+_Avoid_: backup bot, secondary reviewer, second opinion
+
 **Landing rule**:
 Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The head rule, its default, takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule, `--since <iso>`, takes a review submitted at or after a time on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it. The reviewer's trigger picks the rule.
 _Avoid_: landing check, freshness rule
