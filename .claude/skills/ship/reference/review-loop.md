@@ -1,9 +1,11 @@
 # Phase 7: driving every reviewer to convergence
 
 The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
-it posts under, a `Trigger:`, `Gating:`, a `Cap:`, an optional `Instructions:`
-file, and per trigger: `Request:` (on-request), `Resolve:` (on-push). The
-**trigger fixes the loop and convergence**; the bot's brand fixes nothing.
+it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an optional
+`Instructions:` file, and per trigger: `Request:` (on-request), `Resolve:`
+(on-push). The **trigger fixes the loop and convergence**; the bot's brand fixes
+nothing. Preflight has already parsed these blocks and refused the three
+malformed shapes, so what reaches this phase is a list you can drive.
 Zero reviewers: skip this phase; the review gate is phase 4's self-review plus
 green CI (SKILL.md), and reviewer rounds never replace it.
 
@@ -93,7 +95,9 @@ a fresh read of the committed tree, not a conversation.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
-  `converged, override needed`, or `degraded: <reason>`, plus the round count.
+  `converged, override needed`, `degraded: <reason>`, or, for a fallback whose
+  primary converged, `not invoked: <primary> converged`, plus the round count. A
+  fallback that ran adds why it was: `fallback for <primary>: degraded: <reason>`.
 - **The exit rewrites Deviations too, when the rounds grew the log.** A round
   can force the same departure from the issue, brief or plan that phase 2 logs,
   and an in-scope fix is no more a deviation here than anywhere else, so where
@@ -136,7 +140,14 @@ and comments, which stay readable.
 Nothing arrives until asked. `request-review <pr> <login>` issues the request
 and **reads it back** from the host's own record (the mechanic knows that the
 login you request and the login you read back can differ, and that an empty
-requested-reviewers list proves nothing). One request yields one round; the
+requested-reviewers list proves nothing). The profile's `Request:` picks the
+transport: a bare `request-review` for a reviewer the host can add to the PR,
+and `request-review <pr> <login> --comment <phrase>` where `Request:` reads
+`comment <phrase>`, for a reviewer that is a comment-triggered workflow. That
+second transport posts the phrase, reads the posted comment back, and reports
+the host's creation time for it; there is no requested-reviewers list to read,
+because the host has no reviewer to add. Either way the `requested_at` it hands
+back is what `--since` takes. One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
 request against the corrected tree. Loop: request, poll under the **since**
 rule with `request-review`'s `requested_at`, triage, batch-fix, push,
@@ -145,6 +156,33 @@ when the latest round has nothing actionable and every thread from all rounds is
 dispositioned.
 Small lane: exactly one round. A lint or flake fix after convergence earns no
 new request.
+
+## Fallbacks: the reviewer driven only when another one failed
+
+A reviewer whose `Fallback-for:` names another reviewer stands in for it
+([ADR 0002](../../../docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md)).
+It is always on-request, which preflight enforces: a reviewer that fires on
+every push cannot be withheld.
+
+**Drive every non-fallback reviewer to its exit first**, then the fallbacks,
+because a fallback's only input is how its primary exited.
+
+- The primary exited `degraded: <any reason>`: request the fallback **once**,
+  then drive it as an ordinary on-request reviewer under its own `Cap:`, by the
+  section above. Which degraded reason the primary hit changes nothing here; the
+  human wanted a review on the PR and the reason is a footnote. Its exit is an
+  ordinary one, `converged` or `degraded: <reason>` of its own.
+- The primary exited `converged` or `converged, override needed`: **do not
+  request it**. Its exit is `not invoked: <primary> converged`, which is not a
+  degraded reason and not a stop; it is reported so a reader sees the reviewer
+  exists rather than reading its absence as one nobody configured.
+- A fallback's own degraded exit triggers nothing further. Nothing is a fallback
+  for a fallback, and a chain is one deep.
+
+Both exits are reported in both places: the PR body's `## Review` line and the
+merge summary's block for that reviewer. Where the fallback ran, both name the
+primary's degraded reason, which is the only record of why a second reviewer was
+paid for.
 
 ## Degraded exits: fixed vocabulary, per reviewer
 

@@ -12,4 +12,12 @@ The first numbered schema. Profiles written before it carry no `Schema:` line.
 - Fourteen `##` headings, always present, in this order: Host, Worktree, Local gate, CI, Reviewers, Coding standards, Verification, Versioning and changelog, PR, Public surface, Triage, Docs sync, Current docs, Cloud lane.
 - The `Label:` lines under each heading as [ship-profile.md](./ship-profile.md) lists them at this schema.
 
+## Schema 2
+
+The fallback reviewer ([ADR 0002](../../docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md)). Only the reviewer block moves; the fourteen headings and every other `Label:` line are unchanged from Schema 1.
+
+- Each `### <reviewer>` block under `## Reviewers` gains a `Fallback-for:` line, between `Gating:` and `Instructions:`. It names the reviewer this one stands in for, or `None.` where it stands in for nobody, which is every reviewer a Schema 1 profile had. Migration writes `Fallback-for: None.` on every existing block.
+- `Request:` gains the value `comment <phrase>`, beside the existing mechanic name and `None.`: the transport that asks a comment-triggered reviewer for a round by posting `<phrase>` as a PR comment.
+- Three refusals ship now makes at preflight, so a migrated profile is checked rather than trusted: `Fallback-for:` on a reviewer whose `Trigger:` is not `on-request`, `Fallback-for:` naming a reviewer the profile does not list, and an on-request reviewer with no `Cap:`.
+
 Migration from an unnumbered profile: add the line. Nothing else moves.

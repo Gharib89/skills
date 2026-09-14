@@ -6,8 +6,8 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.10.3
-  profile-schema: 1
+  version: 4.0.0
+  profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
 
@@ -84,9 +84,12 @@ heading.
 
 Missing file: stop `profile missing`, naming `docs/agents/ship.md` and
 `/setup-skills`. Missing or misordered headings: stop `profile invalid`, naming
-them. A fact the current run needs that reads `None.` where it cannot be none
-(an on-request reviewer with no `Cap:`) is also `profile invalid`; a fact the
-run will not touch is never checked.
+them. A fact the current run needs that reads `None.` where it cannot be none is also
+`profile invalid`; a fact the run will not touch is never checked. The reviewer
+blocks are the exception, checked whatever the run touches, because preflight
+parses them: an on-request reviewer with no `Cap:`, a `Fallback-for:` on a
+reviewer that is not on-request, and a `Fallback-for:` naming a reviewer the
+profile does not list are all refused there, before the claim.
 
 **Re-validate an edited profile with `preflight none`.** A run that changes the
 profile, or refreshes the ship copy that reads it, proves the new pair with the
@@ -135,7 +138,7 @@ be read.
 | `update-pr-title <pr> --title` | 6, 9 |
 | `read-pr <pr>` | 6 and 7, reading a PR back after a title or body write |
 | `poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]` | 7, 8 |
-| `request-review <pr> <login>` | 7 |
+| `request-review <pr> <login> [--comment <phrase>]` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
 | `reply-thread <pr> <thread> --body-file` | 7 |
 | `update-pr-body <pr> --section Review --body-file` | 7 |
@@ -489,9 +492,15 @@ Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
 
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
-fixes its loop and its convergence test, and the profile's `Cap:` bounds its
-rounds; the brand fixes nothing.
-Zero reviewers: skip the phase. Batch fixes into one push per round, then
+fixes its loop and its convergence test, its `Request:` fixes how a round is
+asked for, and the profile's `Cap:` bounds its rounds; the brand fixes nothing.
+Zero reviewers: skip the phase. **Order: every reviewer whose `Fallback-for:`
+reads `None.` first, then the fallbacks**, because a fallback's whole input is
+how the reviewer it names exited. A fallback is requested once, for any degraded
+reason, and then driven as an ordinary on-request reviewer under its own `Cap:`;
+where its primary converged it is not requested at all and exits
+`not invoked: <primary> converged`; its own degraded exit triggers nothing
+further, so the chain is one deep. Batch fixes into one push per round, then
 answer each thread with `reply-thread` (`fixed in <sha>`, or the decline and
 its reason), reading the round itself from its row in `poll-pr`'s output, where
 its findings sit in the body rather than in threads: `rounds[]` under `--brief`,
@@ -501,9 +510,10 @@ since rule selecting the same rows either way. A body ending
 that row before dispositioning it. `resolve-thread` runs per
 thread once every thread carries a disposition. Exits: `converged`,
 `converged, override needed` (a gating reviewer's declined finding, cited with
-evidence), or `degraded: <reason>` from
+evidence), `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |
-unreachable`. Degraded proceeds to the merge gate on green CI and never hands
+unreachable`, or, for a fallback whose primary converged,
+`not invoked: <primary> converged`. Degraded proceeds to the merge gate on green CI and never hands
 back on its own. `--brief` is how a round is read: it projects the same poll down
 to the rounds and open threads, with the run's own replies dropped, so the loop
 reads the findings rather than the whole fetch. At exit,

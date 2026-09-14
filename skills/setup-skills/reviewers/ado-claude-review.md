@@ -110,5 +110,6 @@ Request: None.
 Cap: 3
 Resolve: threads are set to `fixed` once a finding is dispositioned; the build re-runs on the next push
 Gating: yes
+Fallback-for: None.
 Instructions: __STANDARDS__
 ```

@@ -5,7 +5,7 @@
 #
 #   comment-pr <pr> --body-file <path>
 #
-# stdout: {id, url}
+# stdout: {id, url, created_at}  (created_at null where the host records none)
 # exit: 0 · 1 post failed · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }

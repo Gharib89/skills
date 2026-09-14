@@ -68,7 +68,15 @@
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
 #                                           requested_at: ISO-8601 time of the request event,
 #                                           or the wall clock where the host records none.
-#   host_pr_comment <pr> <body-file>     -> {id,url}
+#   host_pr_comment <pr> <body-file>     -> {id,url,created_at}
+#                                           created_at: the host's own creation time for the
+#                                           comment, one UTC spelling, or null where the host
+#                                           records none, the same way submitted_at is null
+#                                           where the host records state rather than a timed
+#                                           event. `request-review`'s comment transport
+#                                           reports it as `requested_at` and answers the null
+#                                           with a wall clock read before the post, so --since
+#                                           always has a bound to compare against.
 #   host_pr_set_body <pr> <body-file>
 #   host_pr_set_title <pr> <title>
 #   host_pr_reply_thread <pr> <thread> <body-file> -> {replied,url}
@@ -414,6 +422,97 @@ ship_body_headings() {
   awk "$SHIP_AWK_FENCE"'
     { fenced = ship_fence($0) }
     !fenced && /^## / { sub(/^## /, ""); sub(/[ \t\r]+$/, ""); print }' <<<"$1"
+}
+
+# ship_reviewers <profile-body>: the `## Reviewers` section as one JSON row per
+# reviewer, in profile order, each
+# {name, login, trigger, request, cap, resolve, gating, fallback_for, instructions}.
+# `None.` reads as null, `Cap:` as a number, `Gating:` as a boolean. A `Cap:` that
+# is neither a number nor `None.` comes back as the raw string, so
+# `ship_reviewer_reasons` can refuse it rather than read a typo as "uncapped".
+#
+# The row is the whole block, not just the fields preflight checks: a parser that
+# dropped the rest would force whoever needs `Login:` or `Request:` to parse the
+# block a second time, which is the drift this function exists to prevent.
+#
+# Only the nine field names are read, and only anchored at the start of a line
+# inside a `### ` block: the prose paragraph under a block explains the reviewer
+# and quotes its own field names ("what makes the trigger `on-push`"), which a
+# looser match would read as fields. First occurrence wins within a block for the
+# same reason, so prose below the fields cannot overwrite them; the counter keys
+# that, not the name, or a repeated `### <name>` would suppress its own fields and
+# come back as a row of nulls that no refusal can see. Tabs are the record
+# delimiter into jq, so a value carrying one is flattened rather than truncated at
+# it. Fenced blocks come out by SHIP_AWK_FENCE, so a `### ` inside a template
+# example is not a reviewer, the way it is not a heading to `ship_body_headings`.
+ship_reviewers() {
+  awk "$SHIP_AWK_FENCE"'
+    { fenced = ship_fence($0) }
+    fenced { next }
+    /^## / { s = $0; sub(/[ \t\r]+$/, "", s); sec = (s == "## Reviewers"); name = ""; next }
+    !sec { next }
+    /^### / {
+      name = $0; sub(/^### /, "", name); gsub(/\t/, " ", name); sub(/[ \t\r]+$/, "", name)
+      blk++; print "n\t" name; next
+    }
+    !blk { next }
+    /^(Login|Trigger|Request|Cap|Resolve|Gating|Fallback-for|Instructions): / {
+      k = substr($0, 1, index($0, ":") - 1)
+      if (seen[blk "\034" k]++) next
+      v = substr($0, index($0, ":") + 2)
+      gsub(/\t/, " ", v); sub(/[ \t\r]+$/, "", v)
+      print "f\t" k "\t" v
+    }' <<<"$1" | jq -Rs '
+    def norm($k; $v):
+      if $v == "None." or $v == "" then null
+      elif $k == "cap" then ($v | tonumber? // $v)
+      elif $k == "gating" then $v == "yes"
+      else $v end;
+    reduce (splits("\n") | select(. != "") | split("\t")) as $p ([];
+      if $p[0] == "n"
+      then . + [{name: $p[1], login: null, trigger: null, request: null, cap: null,
+                 resolve: null, gating: false, fallback_for: null, instructions: null}]
+      else (($p[1] | ascii_downcase | sub("-"; "_")) as $k
+            | .[length - 1] += {($k): (if $k == "gating" then $p[2] == "yes"
+                                       else norm($k; $p[2]) end)})
+      end)'
+}
+
+# ship_reviewer_reasons <rows-json>: one `profile invalid: <detail>` line per
+# reviewer-block fault, or nothing when the blocks hold. Preflight's only reviewer
+# check, so the faults are refused in both lanes and before the claim, rather than
+# at the phase that would have driven the reviewer.
+#
+# A fallback that is not on-request cannot be withheld (ADR 0002), one naming a
+# reviewer nobody listed can never fire, an on-request reviewer with no cap has no
+# bound on its loop, and a `Cap:` that is not a number is a typo that would read as
+# an uncapped one.
+#
+# Anything that is not an array refuses, exactly as `ship_stale_base_reason`
+# refuses an unreadable verdict: a parse that died must not come back as "the
+# blocks hold", or preflight claims the issue on the strength of a check that
+# never ran.
+ship_reviewer_reasons() {
+  jq -rn --arg r "$1" '
+    (try ($r | fromjson) catch null) as $rows
+    | if ($rows | type) != "array"
+      then "profile invalid: the ## Reviewers blocks could not be parsed"
+      else ([$rows[].name]) as $names
+        | $rows[]
+        | . as $x
+        | (if $x.fallback_for != null and $x.trigger != "on-request"
+           then "profile invalid: \($x.name) is Fallback-for: \($x.fallback_for) but its Trigger is \($x.trigger), not on-request"
+           else empty end),
+          (if $x.fallback_for != null and ($names | index($x.fallback_for)) == null
+           then "profile invalid: \($x.name) is Fallback-for: \($x.fallback_for), which ## Reviewers does not list"
+           else empty end),
+          (if ($x.cap | type) == "string"
+           then "profile invalid: \($x.name) has Cap: \($x.cap), which is neither a number nor None."
+           else empty end),
+          (if $x.trigger == "on-request" and $x.cap == null
+           then "profile invalid: \($x.name) is on-request with no Cap:"
+           else empty end)
+      end'
 }
 
 # ship_stale_base_reason <base-fresh-json>: the refusal `merge` answers with when
