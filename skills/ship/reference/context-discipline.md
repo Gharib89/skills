@@ -40,10 +40,8 @@ spent asking whether the result is ready yet (a poll loop, a sleep, a status
 ping, an agent listing, a read of the output file) buys nothing the
 notification does not deliver.
 
-This is the one place where having nothing to do is the correct next action.
-The autonomy contract's "do it now with a tool call" clause is about a *plan*
-left unexecuted, never about a *wait*: a turn that ends with work dispatched
-has already acted.
+A turn that ends with work dispatched has already acted: this is the one place
+where having nothing to do is the correct next action.
 
 ## First action: the Run file
 
