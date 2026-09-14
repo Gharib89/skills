@@ -14,6 +14,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: reply-thread <pr> <thread-id> --body-file <path>'
 [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 pr=$1 thread=$2; shift 2
+case $pr in -*) ship_tooling "$usage" ;; esac
+case $thread in -*) ship_tooling "$usage" ;; esac
 [ "${1:-}" = --body-file ] && [ -f "${2:-}" ] && [ -r "${2:-}" ] && [ $# -eq 2 ] || ship_tooling "$usage"
 ship_load_host
 # A failed call still says why: the adapter prints its own {replied:false, detail}

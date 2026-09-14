@@ -63,6 +63,30 @@ exit 0
 EOF
 check_rc "a mechanic that takes no positional is exempt from check 2" 0 "$(rc_of "$d")"
 
+# Check 4: a flag typed where the id belongs. A stub rather than the real
+# mechanic with its guard removed, because an unguarded mechanic reaches the
+# host and no test here does.
+d=$(copy dash-as-id)
+cat > "$d/read-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+usage='usage: read-issue <issue>'
+[ -n "${1:-}" ] || { printf '{"error":"%s"}\n' "$usage"; exit 2; }
+printf '{"number":"%s"}\n' "$1"
+EOF
+check_rc "a mechanic that reads a leading-dash value as its id fails the check" 1 "$(rc_of "$d")"
+
+# Why check 4 invokes three arities: a mechanic with more than one positional
+# answers a single `--x` on its missing-second-positional guard, which is the
+# usage line for the wrong reason, and passes.
+d=$(copy dash-as-id-third)
+cat > "$d/read-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+usage='usage: read-issue <issue>'
+[ -n "${1:-}" ] && [ -n "${2:-}" ] && [ -n "${3:-}" ] || { printf '{"error":"%s"}\n' "$usage"; exit 2; }
+printf '{"number":"%s"}\n' "$1"
+EOF
+check_rc "a three-positional mechanic is caught only by the third dash" 1 "$(rc_of "$d")"
+
 # Check 3: the Bash 3.2 target. A file under skills/ runs in whatever shell a
 # consumer machine provides, macOS's system Bash included, and the mechanics
 # carry no `set -e`, so a Bash 4 builtin there is a skipped line and a silent

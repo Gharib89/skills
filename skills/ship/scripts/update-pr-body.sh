@@ -17,6 +17,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: update-pr-body <pr> --section <name> --body-file <path>'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
+case $pr in -*) ship_tooling "$usage" ;; esac
 section=""; file=""
 while [ $# -gt 0 ]; do
   case $1 in

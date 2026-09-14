@@ -18,6 +18,11 @@ check_rc "a bare invocation is tooling" 2 "$(rc)"
 check "an empty PR argument is the usage error" "$usage" "$(err '')"
 check_rc "an empty PR argument is tooling" 2 "$(rc '')"
 
+# Without this guard `read-pr --body` reads "--body" as the PR number and asks
+# the host for it.
+check "a flag in the PR slot is the usage error" "$usage" "$(err --body)"
+check_rc "a flag in the PR slot is tooling" 2 "$(rc --body)"
+
 # read-pr takes no flags, so anything after the PR number is unknown.
 check "a second positional is named" 'unknown flag: --body' "$(err 1 --body)"
 check_rc "a second positional is tooling" 2 "$(rc 1 --body)"

@@ -30,6 +30,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: merge <pr> <issue|none> [--worktree <path>]'
 [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 pr=$1; issue=$2; shift 2
+case $pr in -*) ship_tooling "$usage" ;; esac
+case $issue in -*) ship_tooling "$usage" ;; esac
 wt=""
 while [ $# -gt 0 ]; do
   case $1 in

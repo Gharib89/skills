@@ -16,6 +16,10 @@
 # Check 3 traverses the whole skills tree rather than the mechanics alone, so it
 # takes its own directory argument.
 #
+# Check 4 is the one check that invokes a mechanic with arguments. An unguarded
+# mechanic makes it reach the host once: that failure is the finding, and the
+# ids it sends cannot exist.
+#
 # stdout: one line per violation, with the offending mechanic named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
@@ -81,5 +85,41 @@ if [ -n "$hits" ]; then
   echo "$hits"
   rc=1
 fi
+
+# 4. Every mechanic that takes a positional id refuses a leading-dash value in
+# it, with its own usage line, before it loads the host adapter. Without the
+# guard a flag typed where the id belongs is read as the id: `update-pr-body
+# --section Review --body-file b.md` asks the host for PR `--section`, and
+# `cleanup --x` answered `branch_deleted: true` for a null branch.
+#
+# Three arities, because no single one catches every mechanic: one `--x` alone
+# is answered by a two-positional mechanic's missing-second-positional guard,
+# which passes for the wrong reason, and a third dash is what makes a one-
+# positional mechanic's flag loop answer `unknown flag` instead of its usage
+# line. The assertion is the usage line itself: every mechanic's usage string
+# opens with its own name, which is what lets one check cover all of them
+# without knowing any mechanic's arity.
+#
+# `file-issue` joins check 2's exclusions here because it takes no positional
+# either; it stays off that list because its own bare invocation *is*
+# malformed, so check 2 must keep testing it.
+no_positional="$takes_no_positional file-issue "
+for path in "$dir"/*.sh; do
+  m=$(basename "$path" .sh)
+  [ "$m" = _lib ] && continue
+  case $no_positional in *" $m "*) continue ;; esac
+  dashes=()
+  for i in 1 2 3; do
+    dashes+=(--x)
+    out=$(bash "$path" "${dashes[@]}" 2>/dev/null); st=$?
+    if [ "$st" -ne 2 ]; then
+      printf '%s: %s leading-dash positional(s) exited %s, expected 2\n' "$m" "$i" "$st"
+      rc=1
+      continue
+    fi
+    printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | startswith("usage: " + $m)))' >/dev/null 2>&1 \
+      || { printf '%s: %s leading-dash positional(s) did not answer with its own usage line\n' "$m" "$i"; rc=1; }
+  done
+done
 
 exit $rc

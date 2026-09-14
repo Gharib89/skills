@@ -15,6 +15,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: ci-wait <pr> [--timeout <s>] [--interval <s>]'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
+case $pr in -*) ship_tooling "$usage" ;; esac
 timeout=1800; interval=30; grace=120
 while [ $# -gt 0 ]; do
   case $1 in

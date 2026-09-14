@@ -15,6 +15,11 @@ rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 check "a bare invocation prints the usage line" "$usage" "$(err)"
 check "an unknown flag is named" 'unknown flag: --body' "$(err 7 --body x)"
 
+# The PR number forgotten in front of the flags: without the guard "--section"
+# is the PR number and the host is asked for it.
+check "a flag in the PR slot is the usage error" "$usage" "$(err --section Review --body-file /dev/null)"
+check_rc "a flag in the PR slot is tooling" 2 "$(rc --section Review --body-file /dev/null)"
+
 open_fence=$(mktemp); trap 'rm -f "$open_fence"' EXIT
 printf '## Summary\n\n```diff\n- before\n+ after\n' > "$open_fence"
 
