@@ -8,7 +8,10 @@ never a check. The floor is the same in every repo.
 
 Keys 1 and 2 already make phase-3 verification and the phase-4 docs-sync gate
 no-ops by construction: nothing on the public surface changed, nothing the
-real thing needs to prove. On top of that:
+real thing needs to prove. The `writing-for-agents` pass is not inside that
+gate and does not collapse with it: its trigger is any diff touching a target
+on the profile's `Agent-facing:` line, so a small-lane diff of agent-facing
+prose takes the pass whether docs-sync fired or not. On top of that:
 
 - **Local gate (phase 5) is `--small <node>`**: the repo's security check (the
   `secrets` gate, whatever scanner the gate body wires) plus the one regression

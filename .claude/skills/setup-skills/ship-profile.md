@@ -22,7 +22,7 @@ Bootstrap: <command run once after isolate in every lane, or None.>
 ## Local gate
 
 Location: <scripts/local-gate.sh>
-Small node: <the syntax of one test node for --small, with an example>
+Small node: <the syntax of one test node for --small, with an example; then the docs-class value, the path of the changed document, with an example>
 Tripwires: <anything that must run before the gate, e.g. a bundle rebuild, or None.>
 
 <!-- Output contract, flags and statuses are core. -->

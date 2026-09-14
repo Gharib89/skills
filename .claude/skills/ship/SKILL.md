@@ -25,9 +25,11 @@ The copy under `.claude/skills/ship` is a **derived copy**:
 never edit it in place; the repo's `### Ship` block in CLAUDE.md carries the
 refresh command.
 
-**Version.** Print `ship <version>` (the `metadata.version` above) in the run
-header, the first line of the first reply, and again in the merge summary, so
-every PR records which ship produced it.
+**Version.** Print `ship <version>` in the run header, the first line of the
+first reply, and again in the merge summary, so every PR records which ship
+produced it. The harness strips this file's frontmatter on load, so the version
+is not in your context: read it once, at the start of the run, with
+`sed -n 's/^  version: //p' <base directory>/SKILL.md`.
 
 ## Argument and flags
 
@@ -86,6 +88,14 @@ them. A fact the current run needs that reads `None.` where it cannot be none
 (an on-request reviewer with no `Cap:`) is also `profile invalid`; a fact the
 run will not touch is never checked.
 
+**Re-validate an edited profile with `preflight none`.** A run that changes the
+profile, or refreshes the ship copy that reads it, proves the new pair with the
+issueless call, whose verdict is about the profile and the host alone. Do not
+re-run `preflight <issue>` for this: after the claim it always answers
+`already claimed` plus `worktree exists` and exits 1, so the profile never
+appears in `reasons` whether it is valid or not, and reading it green out of
+that is elimination, not an answer.
+
 ## Generic mechanics: the only way to touch the host
 
 `scripts/` holds one executable per deterministic step. Each prints one JSON
@@ -114,7 +124,7 @@ be read.
 |---|---|
 | `preflight <issue \| none> [--unattended]` | 0 |
 | `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
-| `read-issue <issue>` | 1 |
+| `read-issue <issue>` | 0 |
 | `manage-issue <issue> take \| release \| handback "<reason>" \| close` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue --title --body-file --label <marker> [--distinct-from <n>[,<n>]]` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
@@ -244,7 +254,8 @@ with anyone. When unsure, it is not small.
    `## Public surface`; `Default.` means the exported or published API, CLI
    flags and exit codes, config schema, file formats and documented behavior.
 2. **Provable without the real thing.** A unit or regression test fully proves
-   it; no verification in the profile's `## Verification` applies.
+   it, or the class is `docs` and there is no behavior to test; either way no
+   verification in the profile's `## Verification` applies.
 3. **Single-concern.** No new dependency, none of the profile's `Tripwires:`
    fired, no new logic branch beyond the fix itself.
 
@@ -293,7 +304,11 @@ merely mention it come back as `mentions[]`, context for phase 1, never a stop,
 alongside a `mentioned_by[]` row per live cross-reference, open issues and
 open or merged PRs both, naming its `kind` and `state`.
 
-Then isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
+Then `read-issue <issue>`, because the branch `<type>` and `<slug>` are derived
+from the issue: the read comes before the isolate, not after it, and phase 1
+reasons about the result this call already returned.
+
+Now isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
 `Carry:` files. It resolves the main checkout through `--git-common-dir`,
 fetches, branches from `origin/HEAD`, creates the sibling worktree
 `<parent>/<repo>.worktrees/<slug>-<issue>`, copies the carried files in one
@@ -309,8 +324,9 @@ go**: the PR needs real commits. The branch type is a label; the squash
 subject, not the branch, is what release tooling reads. A `Bootstrap:` under
 `## Worktree` runs once here, after isolate.
 
-**1 · Understand.** `read-issue <issue>`: title, body, labels, assignee, state,
-comments, open blockers. Derive what success looks like. A later authoritative
+**1 · Understand.** Work from phase 0's `read-issue` result: title, body,
+labels, assignee, state, comments, open blockers. Derive what success looks
+like. A later authoritative
 comment supersedes the body (**spec precedence**, detailed in
 [reference/implement.md](reference/implement.md)). Too vague to plan: stop
 `ambiguous`, unclaimed. Otherwise **claim before any work**:
@@ -363,16 +379,24 @@ failing lines. `docs` class and the small lane skip this phase. Detail in
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
 edits as part of the diff. **Docs-sync fires only when the public surface or
 observable behavior changed**: bring the profile's `Targets:` in line, folding
-the edits into this change. Targets on the `Agent-facing:` line go through the
-`writing-for-agents` skill at the judgment tier; human prose takes the
-mechanical pass. Skip the step for internal refactors, a bugfix restoring
-documented behavior, test-only or tooling changes, and comments; when you skip,
-say so in one line at the merge gate.
+the edits into this change. Skip the step for internal refactors, a bugfix
+restoring documented behavior, test-only or tooling changes, and comments; when
+you skip, say so in one line at the merge gate.
+
+**The `writing-for-agents` pass has a trigger of its own**, and skipping
+docs-sync never skips it: it fires whenever the diff touches a target on the
+profile's `Agent-facing:` line, at the judgment tier, over every agent-facing
+file in the diff. A change that edits agent-facing prose and nothing else syncs
+no docs and is still exactly the prose the skill governs. Human prose in the
+diff takes the mechanical pass.
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
-`## Coding standards` path, its Spec axis reading the issue. **Auto-triage**
-every finding: harden rather than rip out capability, verify nits against the
+`## Coding standards` path, its Spec axis reading the issue. **Triage waits for
+both axes.** Read each axis's report before dispositioning anything; an axis
+whose report never arrives is `red-after-retry: <axis>` after the bounded retry,
+never a disposition written from memory of what it would have said.
+**Auto-triage** every finding: harden rather than rip out capability, verify nits against the
 pinned versions, reject known non-issues; fix the valid ones; record a one-line
 disposition per finding. Two rails on rejecting: a claim about **what exists
 in the repo** is checked against `origin/HEAD`, never the worktree, which may
@@ -388,8 +412,11 @@ This self-review plus green CI is the review gate; reviewers in phase 7 are a
 second pair of eyes on top, never a substitute.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
-`deferred-to-ci` or `unexercised`, or the class is `docs`; otherwise you
-skipped one, go back. Run `base-fresh` first: it proves the branch has seen every commit on its base,
+`deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every
+phase-4 finding carries a disposition; otherwise you skipped one, go back.
+Running the gate while `code-review` is still out is not parallelism: a finding
+fixed afterwards pays for a second gate run and a second pass of whatever the
+profile's `Tripwires:` names. Run `base-fresh` first: it proves the branch has seen every commit on its base,
 the one thing CI cannot (CI tests the merge ref, so a branch that predates a
 merge still goes green while every "does this exist?" answer you took from the
 worktree was pre-merge). Behind: rebase, re-run, then continue. Confirm every
@@ -422,13 +449,25 @@ verification, read from the phase-3 results in the merge summary's
 `Applies when:` line matches is the third reason, and a profile listing zero
 verifications is that case); and a `## Review` section holding
 one placeholder line per reviewer, filled at phase-7 exit. Where the
-environment provides an attribution footer for pull request descriptions, the
-body **ends** with it,
-under a `## ` heading of its own that ship adds, no template carrying one
-(`## Attribution`), placed after every section a later phase rewrites: a rewrite replaces everything from its own heading to
-the next one, so a footer left loose at the end of the last section is inside
-that section and the phase-7 `update-pr-body --section Review` write drops it.
-Ship never names the footer's lines; it only says where it sits.
+environment provides an attribution footer for pull request descriptions, it is
+part of **the body file this call is handed**, never a later write: the body
+**ends** with it, under a `## ` heading of its own that ship adds, no template
+carrying one (`## Attribution`), placed after every section a later phase
+rewrites. So no PR exists footerless for a moment, and no second call has to
+create the section. The placement is what keeps it: a rewrite replaces
+everything from its own heading to the next one, so a footer left loose at the
+end of the last section is inside that section and the phase-7
+`update-pr-body --section Review` write drops it. Ship never names the footer's
+lines; it only says where it sits.
+
+**Every body write after open ends with `read-pr <pr>`**, whose `sections` list
+is checked against the headings the body is supposed to carry; a section the
+rewrite swallowed is missing from it, and this is the only place a swallowed
+`## Attribution` shows while the PR is still open. Reading the list is also how
+the fence trap stays harmless: a Shape fence over a markdown change carries its
+own `## ` lines, which the section slice reads as example text rather than as
+headings, so the reported list is the answer and the fence's contents never
+enter it.
 
 **The Summary opens with a Shape.** Draw it from the diff here, not from
 phase 2's design; a redraw is not a deviation. It is the first thing under
@@ -494,7 +533,10 @@ and review quota, so push when the tree changed.
 
 **9 · Merge gate.** **Hard stop.** Write the summary per
 [reference/merge-gate.md](reference/merge-gate.md), uncompressed. Attended:
-post it in the conversation and wait for an explicit "merge"; on approval run
+post it in the conversation and wait for an explicit "merge". The word is
+exact: a typo, a synonym, or approval of something else in the summary is asked
+back, never read as merge, because this is the one irreversible step and a
+misread spends the whole review. On approval run
 `merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
 `false` in their JSON is finished by hand before reporting done. `merge` proves
 the branch fresh against its base first and refuses `stale-base` when the base
