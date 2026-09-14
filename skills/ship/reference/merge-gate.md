@@ -29,7 +29,7 @@ Deviations from plan
 
 Verification                                   (one row per applicable entry)
   - <name>: <pass | fail | deferred-to-ci: <CI leg> | unavailable | unexercised>   <what ran>
-  (or: none applicable: <class docs | small lane>)
+  (or: none applicable: <reason>)
 
 Self-review (code-review skill, the review gate)
   - <finding> → <fixed | rejected: reason>
@@ -60,11 +60,15 @@ of `file-issue` return values from this run in every lane, the numbers it
 filed on one side and the candidates it answered with instead on the other
 (not a recalled count; an implausible count is the human's signal), and
 `Verification` and test
-counts are read from the phase-3 and phase-2 results, not recalled. On an
-`unexercised` row, `<what ran>` names the **subject that did not exist** rather
-than a command; the row is a record for the human to weigh, never a degraded
-exit, a hand-back or a `Ship defects:` row. A value you cannot point to a tool
-result for is written as `unverified`, never guessed.
+counts are read from the phase-3 and phase-2 results, not recalled. The empty
+case writes the reason phase 6 wrote into the PR body's `## Verification`
+section: `class docs` and `small lane` skip the phase; a full-lane change where
+no `Applies when:` line matches is the third reason, and a profile listing
+zero verifications is that case. On an `unexercised` row, `<what ran>` names the
+**subject that did not exist** rather than a command; the row is a record for
+the human to weigh, never a degraded exit, a hand-back or a `Ship defects:`
+row. A value you cannot point to a tool result for is written as `unverified`,
+never guessed.
 `Ship defects:` lists every Ship defect the run met (a host operation no
 mechanic performs, prose that promised what a mechanic does not do), each with
 the phase it was met in and written to the Run file at that moment the way a
