@@ -121,7 +121,7 @@ The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Az
 _Avoid_: tracker (Boards is one part of a host), provider, platform
 
 **Run file**:
-The one scratch file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The run's only checklist, the source of truth for where it is and the map back after a mid-run context summary; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps.
+The one file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The run's only checklist, the source of truth for where it is and the map back after a mid-run context summary; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps.
 _Avoid_: task list, scratch file, plan file, todo
 
 **Shape**:
