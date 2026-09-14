@@ -452,7 +452,8 @@ Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
 
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
-fixes its loop, its convergence test and its cap; the brand fixes nothing.
+fixes its loop and its convergence test, and the profile's `Cap:` bounds its
+rounds; the brand fixes nothing.
 Zero reviewers: skip the phase. Batch fixes into one push per round, then
 answer each thread with `reply-thread` (`fixed in <sha>`, or the decline and
 its reason), reading the round itself from its row in `poll-pr`'s output, where
