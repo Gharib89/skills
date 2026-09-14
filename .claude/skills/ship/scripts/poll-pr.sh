@@ -43,7 +43,9 @@
 # `--brief` projects that same JSON, from the same single fetch, down to what a
 # review loop acts on: head, mergeable, `landed_by`, one row per reviewer round
 # (id, submitted_at, substantive, and the body cut to its finding items) and one
-# row per OPEN thread (id, resolved, replied). Rounds come from `all[]` under the
+# row per OPEN thread (id, resolved, replied). `--full` still names the rows that
+# come back whole, so `--brief --full <id>` is the summary with that one round
+# verbatim. Rounds come from `all[]` under the
 # --since rule and `on_head[]` under the head rule, the list that rule lands
 # from, and the run's own rows drop out: a thread reply of ours posts as a review
 # row of its own, and a convergence test that counts it reads its own voice as
@@ -131,7 +133,7 @@ while :; do
     if $brief; then
       me=$(host_identity) || me=""
       key=on_head; [ -z "$since" ] || key=all
-      ship_brief "$out" "$me" "$key"
+      ship_brief "$out" "$me" "$key" "$full"
     else
       printf '%s\n' "$out"
     fi

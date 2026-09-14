@@ -389,7 +389,7 @@ ship_stale_base_reason() {
       else "stale-base: base freshness unreadable" end'
 }
 
-# ship_brief <poll-json> <identity> <on_head|all>: the projection `poll-pr
+# ship_brief <poll-json> <identity> <on_head|all> [<full-ids-json>]: the projection `poll-pr
 # --brief` prints, from the JSON the poll already built. One host fetch, two
 # output shapes; the full shape stays the default so nothing existing changes
 # meaning.
@@ -404,22 +404,30 @@ ship_stale_base_reason() {
 # A round's body comes down to its lead line and its finding items, which is what
 # a triage acts on: the lead line carries the round's verdict and the items carry
 # what to fix. A round with no items is clipped instead, so it is short without
-# being empty.
+# being empty. A row named by <full-ids-json> keeps its whole body: `--full` says
+# "this round, verbatim" and outranks the cut, the way it outranks the adapter's.
+#
+# A body the adapter already clipped ends in the truncation marker, and the cut
+# carries that marker through: a round nobody has read whole must not come back
+# looking complete, or the loop never re-polls it with --full.
 # Threads come down to the open ones, the only ones still owed a disposition,
 # and the string "unavailable" passes through as itself.
 ship_brief() {
-  jq -c --arg me "$2" --arg key "$3" '
+  jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" '
     def norm: ascii_downcase | sub("\\[bot\\]$"; "");
     def mine: $me != "" and (((.login // "") | norm) == ($me | norm));
     def finding_items:
-      [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
+      (if endswith("\n...[truncated]") then "\n...[truncated]" else "" end) as $mark
+      | [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
       | [$lines[] | select(test("^ *([-*+]|[0-9]+[.)]) "))] as $items
       | if ($items | length) == 0 then (if length > 200 then .[0:200] + "\n...[truncated]" else . end)
-        elif $lines[0] == $items[0] then ($items | join("\n"))
-        else ([$lines[0]] + $items | join("\n")) end;
+        elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
+        else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
     {head_sha, mergeable, landed_by,
-     rounds: [.reviews[$key][] | select(mine | not)
-              | {id, submitted_at, substantive, body: (.body | finding_items)}],
+     rounds: [.reviews[$key][] | select(mine | not) | . as $r
+              | {id, submitted_at, substantive,
+                 body: (if ($full | index($r.id | tostring)) then $r.body
+                        else ($r.body | finding_items) end)}],
      threads: (if (.threads | type) == "array"
                then [.threads[] | select(.resolved | not) | {id, resolved, replied}]
                else .threads end)}' <<<"$1"

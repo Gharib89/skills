@@ -57,6 +57,22 @@ check "the since rule projects all[]" \
 check "another identity drops no row" 2 \
   "$(ship_brief "$poll" someone-else on_head | jq '.rounds | length')"
 
+# `--full` outranks the cut: the row it names comes back verbatim, the way it
+# outranks the adapter's clip, and every other row stays cut.
+check "--full keeps the named round whole" \
+  "$(jq -rn --argjson r "$round" '$r.body')" \
+  "$(ship_brief "$poll" Gharib89 on_head '["11"]' | jq -r '.rounds[0].body')"
+
+# A body the adapter already clipped must not come back looking complete, or the
+# loop never learns to re-poll it with --full.
+clipped_source=$(jq -cn --argjson r "$round" '
+  {head_sha: "abc1234", mergeable: "clean", landed_by: null,
+   reviews: {on_head: [$r + {body: ($r.body + "\n...[truncated]")}], all: [], total: 1},
+   threads: []}')
+check "a clipped body keeps its truncation marker through the cut" \
+  "$(printf '%s\n...[truncated]' "$findings")" \
+  "$(ship_brief "$clipped_source" Gharib89 on_head | jq -r '.rounds[0].body')"
+
 # Both sides of the comparison lose the `[bot]` suffix: a run authenticated as a
 # bot carries it on its own identity, and comparing it against a stripped login
 # would leave its own rows in the reviewer's list.
