@@ -58,19 +58,24 @@ jobs:
                changed lines against (a) the brief and the standards it names and
                (b) the linked issue.
 
-            Report the round as ONE formal pull request review, submitted in a single
-            call, with every inline finding attached to it:
+            Report the round as ONE formal pull request review, submitted in a
+            single call, with every inline finding attached to it. Build it as one
+            command beginning with `gh api`, the JSON arriving by heredoc:
 
                 gh api --method POST \
                   repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}/reviews \
-                  --input -
-
-            reading this JSON on stdin:
-
+                  --input - <<'JSON'
                 {"event": "COMMENT",
                  "body": "<the round's text, or exactly `no findings`>",
                  "comments": [{"path": "<file>", "line": <line in the new file>,
                                "side": "RIGHT", "body": "<one finding>"}]}
+                JSON
+
+            No other shape of that call works. `--allowedTools` below grants
+            `Bash(gh api:*)`, which matches a command that starts with `gh api`
+            and nothing else. Piping from `echo` makes `echo` the command, the
+            call is refused, and a refused call is a round that never reaches
+            the PR.
 
             One entry in `comments` per finding tied to a line, each naming the rule
             or issue requirement broken and the concrete fix. A finding you cannot
