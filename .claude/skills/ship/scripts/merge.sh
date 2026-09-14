@@ -64,7 +64,9 @@ else
   # to the merge gate; unattended, hand back. A PR that is already merged never
   # reaches it: its branch is behind a base its own squash advanced, and the
   # run still owes the cleanup steps below.
-  stale=$(ship_stale_base_reason "$(cd "${wt:-.}" && "$SHIP_SCRIPTS/base-fresh.sh" 2>/dev/null)")
+  fresh=$(cd "${wt:-.}" && "$SHIP_SCRIPTS/base-fresh.sh" 2>/dev/null); rc=$?
+  [ "$rc" -lt 2 ] || ship_tooling "cannot read base freshness: base-fresh exited $rc"
+  stale=$(ship_stale_base_reason "$fresh")
   [ -z "$stale" ] || ship_fail "$stale"
   host_pr_merge "$pr" "$title (#$pr)" >/dev/null 2>&1 || echo "merge call failed; verifying state anyway" >&2
   # Azure DevOps completes asynchronously: `pr update --status completed` returns

@@ -15,9 +15,10 @@ check "a fresh verdict admits the merge" "" "$(ship_stale_base_reason "$fresh")"
 check "a behind verdict refuses with the count and the base" \
   "stale-base: behind 3 on origin/main" "$(ship_stale_base_reason "$behind")"
 
-# base-fresh exits 2 with an error object when it cannot resolve the base. A
-# check that could not ask its question must not answer "fresh", so the refusal
-# stands and the human rebases or fixes the remote.
+# `merge` turns base-fresh's own exit 2 into tooling before this function sees
+# the output. These two cases are what is left: an exit 0 or 1 whose payload
+# still cannot be read. A check that could not ask its question must not answer
+# "fresh", so the refusal stands.
 check "an error verdict refuses rather than admits" \
   "stale-base: base freshness unreadable" \
   "$(ship_stale_base_reason '{"error":"cannot resolve origin/HEAD"}')"

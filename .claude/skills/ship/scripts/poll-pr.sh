@@ -49,7 +49,9 @@
 # --since rule and `on_head[]` under the head rule, the list that rule lands
 # from, and the run's own rows drop out: a thread reply of ours posts as a review
 # row of its own, and a convergence test that counts it reads its own voice as
-# the reviewer's. The full shape stays the default.
+# the reviewer's. That drop needs the host identity, so `--brief` asks for it up
+# front and exits 2 when the host cannot answer, rather than returning a list it
+# cannot promise is the reviewer's alone. The full shape stays the default.
 #
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
 #          threads, reviewer_blocked, landed_by, done, waited_s}
@@ -97,6 +99,14 @@ if [ -n "$since" ]; then
 fi
 ship_load_host
 
+# --brief promises the run's own rows are gone, and only the identity can tell
+# them apart. Asked before the loop, so an unauthenticated host answers now
+# rather than after the timeout; the full shape needs no identity and runs on.
+me=""
+if $brief; then
+  me=$(host_identity) || ship_tooling "cannot read the host identity; --brief cannot drop the run's own rows"
+fi
+
 norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/\[bot\]$//'; }
 start=$SECONDS
 while :; do
@@ -131,7 +141,6 @@ while :; do
       '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer_blocked: $b,
         landed_by: $lb, done: $d, waited_s: $w}')
     if $brief; then
-      me=$(host_identity) || me=""
       key=on_head; [ -z "$since" ] || key=all
       ship_brief "$out" "$me" "$key" "$full"
     else

@@ -26,7 +26,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$section" ] && [ -f "$file" ] || ship_tooling "$usage"
-unclosed=$(ship_fence_unclosed "$(cat "$file")")
+content=$(cat "$file") || ship_tooling "cannot read $file"
+unclosed=$(ship_fence_unclosed "$content")
 [ -z "$unclosed" ] || ship_tooling "body file ends inside an unclosed fence ($unclosed)"
 ship_load_host
 

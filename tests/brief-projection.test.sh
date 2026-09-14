@@ -79,8 +79,9 @@ check "a clipped body keeps its truncation marker through the cut" \
 check "a bot identity still matches its own row" 1 \
   "$(ship_brief "$poll" 'Gharib89[bot]' on_head | jq '.rounds | length')"
 
-# An identity the host could not name drops nothing: losing the rounds the poll
-# came for is a worse answer than showing one row of our own.
+# `poll-pr --brief` refuses an unreadable identity as tooling before it polls,
+# so this is the function's floor rather than a shape a run sees: given no
+# identity it drops nothing, never every row.
 check "an unreadable identity drops no row" 2 \
   "$(ship_brief "$poll" "" on_head | jq '.rounds | length')"
 
