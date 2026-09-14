@@ -70,10 +70,13 @@
 #                                           or the wall clock where the host records none.
 #   host_pr_comment <pr> <body-file>     -> {id,url,created_at}
 #                                           created_at: the host's own creation time for the
-#                                           comment, one UTC spelling. `request-review`'s
-#                                           comment transport reports it as `requested_at`,
-#                                           which --since then compares against review times
-#                                           from the same clock.
+#                                           comment, one UTC spelling, or null where the host
+#                                           records none, the same way submitted_at is null
+#                                           where the host records state rather than a timed
+#                                           event. `request-review`'s comment transport
+#                                           reports it as `requested_at` and answers the null
+#                                           with a wall clock read before the post, so --since
+#                                           always has a bound to compare against.
 #   host_pr_set_body <pr> <body-file>
 #   host_pr_set_title <pr> <title>
 #   host_pr_reply_thread <pr> <thread> <body-file> -> {replied,url}
