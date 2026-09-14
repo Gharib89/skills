@@ -10,7 +10,7 @@ What both shapes do the same way, because ship reads a round off the host and ne
 - **One formal pull request review per round**, submitted in a single call, with every inline finding attached to it, and a body of exactly `no findings` when the PR is clean. A reviewer that stays silent on a clean PR cannot be told apart from one that failed, and the run waits out its whole poll window either way.
 - **`--model claude-opus-5`.** A review is judgment work: a cheaper tier reads the diff and misses the standards violation in it.
 - **`claude_code_oauth_token`** from the `CLAUDE_CODE_OAUTH_TOKEN` secret, minted by `claude setup-token`, so the review is billed to a Claude subscription rather than to API credit.
-- **`actions/checkout` before the action.** The action does not clone the repo, and step 1 of the prompt reads the brief off the filesystem with the Read tool. Without it the reviewer reviews with no brief and no standards, and says nothing about why.
+- **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the prompt is never reached: no review, no findings, and nothing on the PR to say why. Observed on run 34847733490 of this repo. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
 
 Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
 
@@ -49,9 +49,11 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      # A `pull_request` checkout is the PR's merge ref, so the brief read here
-      # is the PR's own version of it: a PR that edits the brief is reviewed
-      # against what it changed the brief to.
+      # Not optional: the action runs `git diff ... HEAD` in the workspace
+      # before the prompt runs, and fails the whole job with "Not a git
+      # repository" when there is nothing checked out. A `pull_request`
+      # checkout is the PR's merge ref, so the instructions file read here is
+      # the PR's own version of it.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
@@ -169,10 +171,13 @@ jobs:
       contains(github.event.comment.body, '__PHRASE__')
     runs-on: ubuntu-latest
     steps:
-      # An issue_comment checkout is the default branch, never the PR head, and
-      # that is the right brief to review against: the canonical one, not the
-      # version the PR under review proposes. The diff comes from `gh pr diff`,
-      # so the PR head is never needed on disk.
+      # Not optional: the action runs `git diff ... HEAD` in the workspace
+      # before the prompt runs, and fails the whole job with "Not a git
+      # repository" when there is nothing checked out. An issue_comment
+      # checkout is the default branch, never the PR head, and that is the
+      # right instructions file to review against: the canonical one, not the
+      # version the PR under review proposes. The reviewed diff comes from
+      # `gh pr diff`, so the PR head is never needed on disk.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
