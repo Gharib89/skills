@@ -14,13 +14,14 @@
 # and verifies, and the verified comment is the read-back.
 #
 # `requested_at` is the ISO-8601 time of the review_requested event the
-# read-back found, or the wall clock where the host records no event time, or,
-# under the comment transport, the host's own creation time for that comment.
-# Phase 7 passes it to `poll-pr --since` so the round counts on whatever head it
-# lands on. The host's clock and not this machine's, because a local clock
-# running ahead would put `since` in the future and strand the round it asked for.
+# read-back found, or, under the comment transport, the host's own creation time
+# for that comment. Phase 7 passes it to `poll-pr --since` so the round counts on
+# whatever head it lands on. The host's clock wherever the host keeps one, because
+# a local clock running ahead would put `since` in the future and strand the round
+# it asked for; a host that records no time for the comment falls back to a wall
+# clock read before the post, which is never later than the comment it stands for.
 #
-# stdout: {pr, login, requested, readback[], requested_at, transport}
+# stdout: {pr, login, requested, readback[], requested_at}
 # exit: 0 requested and read back · 1 not read back (never-queued after one retry) · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -44,10 +45,12 @@ if [ -n "$phrase" ]; then
   f=$(mktemp) || ship_tooling "cannot write the request comment"
   trap 'rm -f "$f"' EXIT
   printf '%s\n' "$phrase" > "$f"
-  c=$(host_pr_comment "$pr" "$f") || ship_tooling "comment transport: the request comment did not post"
-  jq --argjson pr "$pr" --arg l "$login" \
+  # Read before the post, so the fallback can only be earlier than the comment.
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  c=$(host_pr_comment "$pr" "$f") || ship_fail "comment transport: the request comment did not post"
+  jq --argjson pr "$pr" --arg l "$login" --arg now "$now" \
     '{pr: $pr, login: $l, requested: true, readback: [.url],
-      requested_at: .created_at, transport: "comment"}' <<<"$c"
+      requested_at: (.created_at // $now)}' <<<"$c"
   exit 0
 fi
 
@@ -64,5 +67,5 @@ if [ "$(jq -r .requested <<<"$out")" != true ]; then
   out=$(jq --arg f "$first_at" '.requested_at = (
           [.requested_at, (if $f == "" then empty else $f end)] | min)' <<<"$out")
 fi
-jq --argjson pr "$pr" --arg l "$login" '{pr: $pr, login: $l} + . + {transport: "reviewer"}' <<<"$out"
+jq --argjson pr "$pr" --arg l "$login" '{pr: $pr, login: $l} + .' <<<"$out"
 [ "$(jq -r .requested <<<"$out")" = true ]

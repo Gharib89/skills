@@ -155,4 +155,38 @@ check "refuses an on-request reviewer with no Cap:" \
 check "an on-push reviewer with no Cap: is allowed" \
   '' "$(reasons "$(sed 's|^Cap: 3$|Cap: None.|' <<<"$profile")")"
 
+check "refuses a Cap: that is not a number" \
+  'profile invalid: copilot has Cap: three, which is neither a number nor None.' \
+  "$(reasons "$(sed 's|^Cap: 3$|Cap: three|' <<<"$profile")")"
+
+# ---- adversarial: the ways a parser answers wrong rather than failing --------
+
+check "a parse that produced nothing refuses, rather than reading as no faults" \
+  'profile invalid: the ## Reviewers blocks could not be parsed' \
+  "$(ship_reviewer_reasons '')"
+
+check "so does output that is not an array" \
+  'profile invalid: the ## Reviewers blocks could not be parsed' \
+  "$(ship_reviewer_reasons '{"name": "copilot"}')"
+
+tabbed=$(printf '## Reviewers\n\n### copilot\n\nLogin: a\tb\nTrigger: on-push\nCap: None.\nGating: no\n\n## Coding standards\n')
+check "a tab inside a value is flattened, not truncated at" \
+  'a b' "$(ship_reviewers "$tabbed" | jq -r '.[0].login')"
+
+dup=$(sed 's|^### claude$|### copilot|' <<<"$profile")
+check "a repeated ### name keeps its own fields instead of a row of nulls" \
+  'on-push on-request' "$(ship_reviewers "$dup" | jq -r '[.[].trigger] | join(" ")')"
+
+tilde=$(printf '## Reviewers\n\n### copilot\n\nLogin: bot\nTrigger: on-push\nCap: None.\nGating: no\n\n~~~\n### not-a-reviewer\n\nLogin: nope\n~~~\n\n## Coding standards\n')
+check "a ### heading inside a tilde fence is not a reviewer" \
+  'copilot' "$(ship_reviewers "$tilde" | jq -r '[.[].name] | join(" ")')"
+
+bare=$(printf '## Reviewers\n\n### claude\n\nLogin: bot\nTrigger: on-request\nCap:\nGating: no\n\n## Coding standards\n')
+check "a Cap: with no value reads as absent, and on-request still refuses" \
+  'profile invalid: claude is on-request with no Cap:' \
+  "$(ship_reviewer_reasons "$(ship_reviewers "$bare")")"
+
+check "Gating: is a boolean whatever it reads, never null" \
+  'false' "$(ship_reviewers "$(sed 's|^Gating: no$|Gating: None.|' <<<"$profile")" | jq -r '.[0].gating')"
+
 finish

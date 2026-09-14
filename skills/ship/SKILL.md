@@ -510,9 +510,10 @@ since rule selecting the same rows either way. A body ending
 that row before dispositioning it. `resolve-thread` runs per
 thread once every thread carries a disposition. Exits: `converged`,
 `converged, override needed` (a gating reviewer's declined finding, cited with
-evidence), or `degraded: <reason>` from
+evidence), `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |
-unreachable`. Degraded proceeds to the merge gate on green CI and never hands
+unreachable`, or, for a fallback whose primary converged,
+`not invoked: <primary> converged`. Degraded proceeds to the merge gate on green CI and never hands
 back on its own. `--brief` is how a round is read: it projects the same poll down
 to the rounds and open threads, with the run's own replies dropped, so the loop
 reads the findings rather than the whole fetch. At exit,
