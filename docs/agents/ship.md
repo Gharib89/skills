@@ -81,7 +81,7 @@ Claims to probe: the api-version each call pins, and the work-item type and clos
 
 Tooling: manual
 Reads: `metadata.version` in each skill's `SKILL.md`; `metadata.profile-schema` in `skills/ship/SKILL.md`
-In-PR requirement: a change to a skill bumps that skill's `metadata.version` in the same PR; a change to what `ship` expects of a profile also bumps `metadata.profile-schema` and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
+In-PR requirement: a change to a skill bumps that skill's `metadata.version` in the same PR, graded patch, minor or major by the public-surface rule in [coding-standards.md](../contributing/coding-standards.md); a change to what `ship` expects of a profile also bumps `metadata.profile-schema` and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
 Subject constraints: conventional-commit prefix scoped to the skill, e.g. `fix(ship):`
 
 ## PR
