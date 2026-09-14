@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 2.0.0
+  version: 3.0.0
 ---
 
 # Setup skills
@@ -59,7 +59,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 | Worktree | `Carry:` from `git status --ignored --short`, kept to small dotfiles (`.env*`, `*.local`); `Bootstrap:` `None.` unless a setup script exists that the local gate cannot own | yes, confirm the list |
 | Local gate | `scripts/local-gate.sh`, else `.claude/skills/ship/scripts/local-gate.sh`, else `scripts/ship/local-gate.sh`; the lockfile fixes the runner (`package-lock.json` npm, `pnpm-lock.yaml` pnpm, `uv.lock` `uv run pytest`, `pyproject.toml` alone `pytest`); `Small node:` syntax follows the runner, and a docs-class line giving the path of the changed document | location yes; node syntax walked |
 | CI | `Legs:` every job of every workflow with a `pull_request` trigger (`.github/workflows/*.yml`; on ADO the pipelines named by build-validation policies); other workflows named in prose as non-PR; `No-checks legal: yes` iff any PR workflow carries a `paths:` filter; `Push policy:` | legs yes; push policy walked |
-| Reviewers | `.coderabbit.yaml` (on-push); `.github/copilot-instructions.md` plus a Copilot automatic-review ruleset, listed by `gh api repos/{owner}/{repo}/rulesets` then read per id from `.../rulesets/{id}`, since the list omits `rules`; its `copilot_code_review` rule's `review_on_push` fixes the trigger (`true` on-push, `false` or absent auto-once); `review_requested` events on the last ten merged PRs (on-request); `claude-code-action` in a workflow or a Claude review pipeline (on-push). Propose each with the trigger the evidence implies, always confirmed; `Resolve:` walked only where the proposed trigger is on-push (`resolve-thread` for Copilot on GitHub), else `None.`; `Cap:` always asked, never defaulted | walked |
+| Reviewers | `.coderabbit.yaml` (on-push); `.github/copilot-instructions.md` plus a Copilot automatic-review ruleset, listed by `gh api repos/{owner}/{repo}/rulesets` then read per id from `.../rulesets/{id}`, since the list omits `rules`; its `copilot_code_review` rule's `review_on_push` fixes the trigger (`true` on-push, `false` or absent auto-once); `review_requested` events on the last ten merged PRs (on-request); `claude-code-action` in a workflow, where the trigger the workflow declares is the trigger the profile takes: a `pull_request` trigger is on-push, an `issue_comment` trigger is on-request and the phrase its `if:` matches is the `Request: comment <phrase>` value; a Claude review pipeline on Azure DevOps is on-push. Propose each with the trigger the evidence implies, always confirmed; `Resolve:` walked only where the proposed trigger is on-push (`resolve-thread` for any GitHub reviewer whose findings arrive as inline review comments), else `None.`; `Cap:` always asked, never defaulted | walked |
 | Coding standards | a path CLAUDE.md names, `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `docs/contributing/*` | yes, or stub |
 | Verification | not discoverable; seed from test markers (`e2e`, `integration`), Docker use, browser-test scripts | walked |
 | Versioning and changelog | semantic-release config, changesets, `version-gate` or bump scripts, `CHANGELOG.md`; `In-PR requirement:` | walked |
@@ -80,7 +80,7 @@ Walk order and the recommendation to lead with:
 
 - **Local gate, small node**: the runner's own node syntax with one example from the repo's tests, and the docs-class value, the path of the changed document, with one example.
 - **CI, push policy**: `one push per review round` on metered minutes (private repos, ADO parallel jobs); `Default.` otherwise.
-- **Reviewers**: each detected reviewer with its inferred trigger; then "any reviewer not detected?", offering Claude Code as a reviewer (see step 5, scaffolding). Ask every reviewer its cap: recommend 2 on-request, 3 on-push, `None.` for auto-once.
+- **Reviewers**: each detected reviewer with its inferred trigger; then "any reviewer not detected?". Then **one question for Claude Code**, asked only where exploration found no Claude workflow already, and led by the shape the draft implies: with another reviewer in the draft, the on-request fallback shape, naming that reviewer as the primary it stands in for; with the draft naming none, the on-push shape, because a fallback for nobody reviews nothing. That one answer picks the shape step 5 scaffolds; there is no second question. Ask every reviewer its cap: recommend 2 on-request, 3 on-push, `None.` for auto-once.
 - **Verification**: one block per seed, or `None.` when nothing in the repo talks to a real system.
 - **Versioning**: what exploration found, then `In-PR requirement:`, the one line that changes what ship does.
 - **Public surface**: `Default.` unless the repo publishes more than an API (gate rules, palettes, bundle inputs).
@@ -88,7 +88,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every reviewer has a `Cap:`, a number or `None.`, and an on-request reviewer's cap is a number; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every reviewer has a `Cap:`, a number or `None.`, and an on-request reviewer's cap is a number; a `Fallback-for:` that names a reviewer sits only on a reviewer whose `Trigger:` is `on-request`, and names one of the draft's own `### <name>` blocks. The last three of those are the reviewer shapes ship refuses at preflight, checked here because this is the one moment a human is present to fix them. Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 
@@ -120,7 +120,7 @@ Either way, **run it once** (`--small` with the example node) and check the verd
 
 **Triage labels on the host** (GitHub only). Any of the five labels from `triage-labels.md` missing on the repo: create them, because ship's hand-back exits 1 without `ready-for-human`.
 
-**Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md) or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md). Point the reviewer's instructions at the coding-standards path, never at a copy of it. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
+**Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the scaffold's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, never a copy of either. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
 
 **Superseded ship scripts** (migrating repos): list what step 3 recorded, propose deletion, delete on confirm. Never touch `local-gate.sh`, `live-e2e`, `copilot-pr-review-loop`, or `cloud-ship-bootstrap.sh` (that one is now `## Cloud lane`'s `Bootstrap:`).
 

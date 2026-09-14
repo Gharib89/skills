@@ -19,12 +19,25 @@ jobs:
   review:
     # An issue_comment fires on issues too, so the PR test comes first. A run
     # that starts and finds nothing to review still costs minutes and still
-    # shows up in the Actions tab as a review that happened.
+    # shows up in the Actions tab as a review that happened. Deliberately no
+    # commenter test: the unattended lane posts the mention under its own
+    # identity, and a reviewer that silently declines to fire is the failure
+    # ADR 0002 exists to prevent.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '@claude')
     runs-on: ubuntu-latest
     steps:
+      # Not optional: the action runs `git diff ... HEAD` in the workspace
+      # before the prompt runs, and fails the whole job with "Not a git
+      # repository" when there is nothing checked out (run 34847733490, the
+      # round PR #168 requested). An issue_comment checkout is the default
+      # branch, never the PR head, and that is the brief to review against:
+      # the canonical one, not the version the PR under review proposes.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -45,24 +58,30 @@ jobs:
                changed lines against (a) the brief and the standards it names and
                (b) the linked issue.
 
-            Report the round as ONE formal pull request review, submitted in a single
-            call, with every inline finding attached to it:
+            Report the round as ONE formal pull request review, submitted in a
+            single call, with every inline finding attached to it. Build it as one
+            command beginning with `gh api`, the JSON arriving by heredoc:
 
                 gh api --method POST \
                   repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}/reviews \
-                  --input -
-
-            reading this JSON on stdin:
-
+                  --input - <<'JSON'
                 {"event": "COMMENT",
                  "body": "<the round's text, or exactly `no findings`>",
                  "comments": [{"path": "<file>", "line": <line in the new file>,
                                "side": "RIGHT", "body": "<one finding>"}]}
+                JSON
+
+            No other shape of that call works. `--allowedTools` below grants
+            `Bash(gh api:*)`, which matches a command that starts with `gh api`
+            and nothing else. Piping from `echo` makes `echo` the command, the
+            call is refused, and a refused call is a round that never reaches
+            the PR.
 
             One entry in `comments` per finding tied to a line, each naming the rule
-            or issue requirement broken and the concrete fix. A line you cannot anchor
-            in the diff goes in `body` instead; an unanchorable line makes the whole
-            call fail, and a failed call is a round the run never sees.
+            or issue requirement broken and the concrete fix. A finding you cannot
+            anchor to a line in the diff goes in `body`, never in `comments`:
+            GitHub rejects the entire call when one `comments` entry names a line
+            outside the diff, and a rejected call is a round the run never sees.
 
             Submit exactly one review, even when you found nothing: a fallback
             reviewer that stays silent on a clean PR cannot be told apart from one
