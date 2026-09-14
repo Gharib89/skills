@@ -109,8 +109,8 @@ subject). A flip that landed is followed by the matching `TaskUpdate`:
 phase marked `skipped`. A `stamp` that failed leaves the task where it was.
 The Run file is the record and carries the run across compaction; the task
 list is the display the human watches in the terminal, the one view of
-progress they read during an attended run. A harness that refuses
-`TaskCreate` has answered: run on the file alone.
+progress they read during an attended run. A harness that refuses either
+task tool has answered: run on the file alone.
 
 A phase that re-opens appends a second range,
 `(08:31→09:40) (10:20→10:33)`. A close stamped earlier than its open crossed
