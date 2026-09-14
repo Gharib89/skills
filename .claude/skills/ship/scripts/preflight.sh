@@ -22,10 +22,10 @@
 #   attended only · profile missing · profile invalid: <detail> · skill missing:
 #   <detail>
 #   mentions[] lists live PRs that name the issue without closing it: context
-#   for phase 1, never a stop. mentioned_by[] widens that to every
-#   cross-reference, as {number, kind: issue|pr, state} rows, so a run learns
-#   whether a mention is an open issue or a merged PR without reaching for the
-#   host CLI. pruned[] lists worktrees removed because their PR is merged or
+#   for phase 1, never a stop. mentioned_by[] is the same rows widened to
+#   {number, kind: issue|pr, state}, so a run learns whether a mention is an
+#   open issue or a merged PR without reaching for the host CLI; both lists
+#   carry live cross-references only, open issues and open or merged PRs. pruned[] lists worktrees removed because their PR is merged or
 #   closed.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable
 set -uo pipefail

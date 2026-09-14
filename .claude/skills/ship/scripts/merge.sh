@@ -40,12 +40,6 @@ done
 ship_load_host
 main=$(cd "${wt:-.}" && ship_main_checkout) || ship_tooling "not inside a git checkout"
 
-# The freshness check, in the checkout that holds the run's branch, before
-# anything is squashed: attended, rebase, re-run the local gate and come back to
-# the merge gate; unattended, hand back.
-stale=$(ship_stale_base_reason "$(cd "${wt:-.}" && "$SHIP_SCRIPTS/base-fresh.sh" 2>/dev/null)")
-[ -z "$stale" ] || ship_fail "$stale"
-
 merged=false; issue_closed=false; remote_deleted=false; base_updated=false; released=false; rfa_removed=false
 # A task-spec run has no issue: its steps are skipped, their flags stand true so
 # the exit test below reads only the steps that ran, and `finish` drops them.
@@ -65,6 +59,13 @@ title=$(jq -r .title <<<"$prj"); branch=$(jq -r .head_ref <<<"$prj"); base=$(jq 
 # 1. Merge, then verify: never assume the call took.
 if [ "$(jq -r .state <<<"$prj")" = merged ]; then merged=true
 else
+  # The freshness check, in the checkout that holds the run's branch, before
+  # anything is squashed: attended, rebase, re-run the local gate and come back
+  # to the merge gate; unattended, hand back. A PR that is already merged never
+  # reaches it: its branch is behind a base its own squash advanced, and the
+  # run still owes the cleanup steps below.
+  stale=$(ship_stale_base_reason "$(cd "${wt:-.}" && "$SHIP_SCRIPTS/base-fresh.sh" 2>/dev/null)")
+  [ -z "$stale" ] || ship_fail "$stale"
   host_pr_merge "$pr" "$title (#$pr)" >/dev/null 2>&1 || echo "merge call failed; verifying state anyway" >&2
   # Azure DevOps completes asynchronously: `pr update --status completed` returns
   # the still-active PR and the merge lands a few seconds later, so poll for it.

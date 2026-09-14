@@ -419,7 +419,7 @@ ship_brief() {
     def finding_items:
       (if endswith("\n...[truncated]") then "\n...[truncated]" else "" end) as $mark
       | [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
-      | [$lines[] | select(test("^ *([-*+]|[0-9]+[.)]) "))] as $items
+      | [$lines[] | select(test("^[ \t]*([-*+]|[0-9]+[.)])[ \t]"))] as $items
       | if ($items | length) == 0 then (if length > 200 then .[0:200] + "\n...[truncated]" else . end)
         elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;

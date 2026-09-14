@@ -94,6 +94,18 @@ check "a round with no items is clipped, not emptied" \
   "$(printf '%s\n...[truncated]' "$(rep 200 p)")" \
   "$(ship_brief "$clipped" Gharib89 on_head | jq -r '.rounds[0].body')"
 
+# CommonMark lets a bullet carry any whitespace between the marker and the text,
+# and a reviewer that aligns its items behind `1.` writes two spaces. A matcher
+# that demanded exactly one space read such a round as item-less and cut it to
+# its first 200 characters, dropping the findings the poll came for.
+wide=$(printf 'Approval recommended\n\n-  a wide bullet\n1.\ta tab bullet\n%s' "$(rep 240 p)")
+spaced=$(jq -cn --argjson r "$round" --arg b "$wide" '
+  {head_sha: "abc1234", mergeable: "clean", landed_by: null,
+   reviews: {on_head: [$r + {body: $b}], all: [], total: 1}, threads: []}')
+check "a bullet with wide whitespace after its marker is a finding item" \
+  "$(printf 'Approval recommended\n-  a wide bullet\n1.\ta tab bullet')" \
+  "$(ship_brief "$spaced" Gharib89 on_head | jq -r '.rounds[0].body')"
+
 # `threads` is the string "unavailable" when the host refused the state; the
 # projection reports that rather than an empty list, which would read as "no
 # threads left to answer".

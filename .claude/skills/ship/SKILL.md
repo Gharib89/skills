@@ -288,8 +288,8 @@ An assignee, including your own identity, is `already claimed`; stale-claim
 recovery is a human unassigning by hand. `existing PR` means a live PR whose
 body **closes** this issue or whose head branch ends in `-<issue>`; PRs that
 merely mention it come back as `mentions[]`, context for phase 1, never a stop,
-alongside a `mentioned_by[]` row per cross-reference, PRs and issues both,
-naming its `kind` and `state`.
+alongside a `mentioned_by[]` row per live cross-reference, open issues and
+open or merged PRs both, naming its `kind` and `state`.
 
 Then isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
 `Carry:` files. It resolves the main checkout through `--git-common-dir`,
@@ -448,9 +448,10 @@ convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
 fixes its loop, its convergence test and its cap; the brand fixes nothing.
 Zero reviewers: skip the phase. Batch fixes into one push per round, then
 answer each thread with `reply-thread` (`fixed in <sha>`, or the decline and
-its reason), reading the round itself from its row in `poll-pr`'s `reviews`
-(`on_head[]` under the head rule, `all[]` under the since rule) where its
-findings sit in the body rather than in threads. A body ending
+its reason), reading the round itself from its row in `poll-pr`'s output, where
+its findings sit in the body rather than in threads: `rounds[]` under `--brief`,
+`reviews.on_head[]` or `reviews.all[]` in the full shape, the head rule and the
+since rule selecting the same rows either way. A body ending
 `...[truncated]` is a round you have not read: re-poll with `--full <id>` for
 that row before dispositioning it. `resolve-thread` runs per
 thread once every thread carries a disposition. Exits: `converged`,
