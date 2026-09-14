@@ -21,11 +21,12 @@
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
 #   attended only · profile missing · profile invalid: <detail> · skill missing:
 #   <detail>
-#   mentions[] lists the numbers that name the issue without closing it: context
-#   for phase 1, never a stop. mentioned_by[] is the same set as
-#   {number, kind: issue|pr, state} rows, so a run learns whether a mention is an
-#   open issue or a merged PR without reaching for the host CLI. pruned[] lists
-#   worktrees removed because their PR is merged or closed.
+#   mentions[] lists live PRs that name the issue without closing it: context
+#   for phase 1, never a stop. mentioned_by[] widens that to every
+#   cross-reference, as {number, kind: issue|pr, state} rows, so a run learns
+#   whether a mention is an open issue or a merged PR without reaching for the
+#   host CLI. pruned[] lists worktrees removed because their PR is merged or
+#   closed.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -148,7 +149,7 @@ else
   if linked=$(host_issue_linked_prs "$n"); then
     closing=$(jq -r '[.closing[] | "#\(.number) (\(.state))"] | join(", ")' <<<"$linked")
     [ -z "$closing" ] || reasons+=("existing PR: $closing")
-    mentions=$(jq -c '[.mentions[].number]' <<<"$linked")
+    mentions=$(jq -c '[.mentions[] | select(.kind == "pr") | .number]' <<<"$linked")
     mentioned_by=$(jq -c '.mentions' <<<"$linked")
   else
     reasons+=("existing PR: cross-references unreadable, cannot prove none")

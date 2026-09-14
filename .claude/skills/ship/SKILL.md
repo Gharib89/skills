@@ -286,10 +286,10 @@ not-actionable reason. Admission: `ready-for-agent` always; `ready-for-human` in
 attended run only; anything else is `not triaged`.
 An assignee, including your own identity, is `already claimed`; stale-claim
 recovery is a human unassigning by hand. `existing PR` means a live PR whose
-body **closes** this issue or whose head branch ends in `-<issue>`; whatever
-merely mentions it comes back as `mentions[]` numbers with a `mentioned_by[]`
-row per mention naming its `kind` (`issue` or `pr`) and `state`, context for
-phase 1, never a stop.
+body **closes** this issue or whose head branch ends in `-<issue>`; PRs that
+merely mention it come back as `mentions[]`, context for phase 1, never a stop,
+alongside a `mentioned_by[]` row per cross-reference, PRs and issues both,
+naming its `kind` and `state`.
 
 Then isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
 `Carry:` files. It resolves the main checkout through `--git-common-dir`,

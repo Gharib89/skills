@@ -57,6 +57,11 @@ check "the since rule projects all[]" \
 check "another identity drops no row" 2 \
   "$(ship_brief "$poll" someone-else on_head | jq '.rounds | length')"
 
+# An identity the host could not name drops nothing: losing the rounds the poll
+# came for is a worse answer than showing one row of our own.
+check "an unreadable identity drops no row" 2 \
+  "$(ship_brief "$poll" "" on_head | jq '.rounds | length')"
+
 # A round with no finding items still has to be readable, so it is clipped the
 # way the adapters clip a long body.
 prose=$(rep 240 p)

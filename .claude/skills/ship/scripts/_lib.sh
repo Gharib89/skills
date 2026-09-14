@@ -396,21 +396,26 @@ ship_stale_base_reason() {
 #
 # <identity> is the login the run posts as: its own thread replies land as review
 # rows of their own, and a convergence test that counts them reads its own voice
-# as the reviewer's. <rounds-key> is `all` under the --since rule and `on_head`
-# under the head rule, matching the list that rule lands from.
+# as the reviewer's. An empty <identity> drops nothing: a host that could not
+# name the run must not cost it the rounds it came for. <on_head|all> is `all`
+# under the --since rule and `on_head` under the head rule, matching the list
+# that rule lands from.
 #
-# A round's body comes down to its finding items, the lines a triage acts on; a
-# round carrying none is clipped instead, so it is short without being empty.
+# A round's body comes down to its lead line and its finding items, which is what
+# a triage acts on: the lead line carries the round's verdict and the items carry
+# what to fix. A round with no items is clipped instead, so it is short without
+# being empty.
 # Threads come down to the open ones, the only ones still owed a disposition,
 # and the string "unavailable" passes through as itself.
 ship_brief() {
   jq -c --arg me "$2" --arg key "$3" '
-    def mine: ((.login // "") | ascii_downcase | sub("\\[bot\\]$"; "")) == ($me | ascii_downcase);
-    def items: split("\n") | map(select(test("^ *([-*+]|[0-9]+[.)]) ")));
-    def finding_items: items as $i
-      | if ($i | length) > 0 then ($i | join("\n"))
-        elif length > 200 then .[0:200] + "\n...[truncated]"
-        else . end;
+    def mine: $me != "" and (((.login // "") | ascii_downcase | sub("\\[bot\\]$"; "")) == ($me | ascii_downcase));
+    def finding_items:
+      [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
+      | [$lines[] | select(test("^ *([-*+]|[0-9]+[.)]) "))] as $items
+      | if ($items | length) == 0 then (if length > 200 then .[0:200] + "\n...[truncated]" else . end)
+        elif $lines[0] == $items[0] then ($items | join("\n"))
+        else ([$lines[0]] + $items | join("\n")) end;
     {head_sha, mergeable, landed_by,
      rounds: [.reviews[$key][] | select(mine | not)
               | {id, submitted_at, substantive, body: (.body | finding_items)}],
