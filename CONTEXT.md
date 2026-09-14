@@ -81,7 +81,7 @@ The collapsed form of a Ship run for a change the whole team would call trivial;
 _Avoid_: fast path, quick mode, hotfix
 
 **Reviewer**:
-One automated review bot the ship profile names for a repo, with its login, its trigger, and whether it is gating (a required check that can block the merge). A repo lists zero or more; no reviewer means the self-review plus green CI is the whole review gate.
+One automated review bot the ship profile names for a repo, with its login, its trigger, whether it is gating (a required check that can block the merge), and the reviewer it is a fallback for. A repo lists zero or more; no reviewer means the self-review plus green CI is the whole review gate. Preflight parses the blocks and refuses three shapes before the claim: a fallback that is not on-request, one naming a reviewer nobody listed, and an on-request reviewer with no cap.
 _Avoid_: review bot topology (the old three-shape framing), bot lane
 
 **Trigger**:
@@ -91,6 +91,10 @@ _Avoid_: mode, kind of bot
 **Fallback reviewer**:
 A reviewer driven only when the reviewer it names exits degraded, for any degraded reason; never a second opinion on a converged primary. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary converges, the fallback still reports, as not invoked, so the human sees it exists.
 _Avoid_: backup bot, secondary reviewer, second opinion
+
+**Request transport**:
+How an on-request reviewer is asked for a round, named by its `Request:` line and never by its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host and the time it reports is what the since rule takes, so it is the host's clock and never this machine's.
+_Avoid_: request method, trigger phrase (that is the workflow's own setting)
 
 **Landing rule**:
 Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The head rule, its default, takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule, `--since <iso>`, takes a review submitted at or after a time on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it. The reviewer's trigger picks the rule. Neither rule takes a row that is not substantive: an empty body (a reviewer's reply to one thread) or a body that is only a quota or rate-limit notice, which refuses the round rather than delivering it.
@@ -107,6 +111,10 @@ _Avoid_: approved, clean, passed
 **Degraded exit**:
 A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. Never a hand-back on its own; the human reads it and decides.
 _Avoid_: failure, timeout, skipped review
+
+**Not invoked**:
+The phase-7 exit belonging to a fallback reviewer whose primary converged: it was never requested, so it has no rounds and no findings. Neither converged nor degraded, and never a stop. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
+_Avoid_: skipped, not needed, n/a
 
 **Carried file**:
 An untracked, gitignored file the ship profile names to be copied into the run's worktree when it is isolated, never copied back. A run that changes one stops.
