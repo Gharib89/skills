@@ -152,13 +152,11 @@ jobs:
   review:
     # An issue_comment fires on issues too, so the PR test comes first. A run
     # that starts and finds nothing to review still costs minutes and still
-    # shows up in the Actions tab as a review that happened. The association
-    # test is what keeps a drive-by commenter on a public repo from spending
-    # the token; drop it only on a repo where every commenter can already push.
+    # shows up in the Actions tab as a review that happened. No commenter test
+    # here on purpose; checklist item 6 is where that decision belongs.
     if: >-
       github.event.issue.pull_request != null &&
-      contains(github.event.comment.body, '__PHRASE__') &&
-      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      contains(github.event.comment.body, '__PHRASE__')
     runs-on: ubuntu-latest
     steps:
       # An issue_comment checkout is the default branch, never the PR head, and
@@ -226,6 +224,13 @@ jobs:
 3. **Merge the workflow to the default branch before expecting a round.** GitHub dispatches an `issue_comment` workflow from the default branch only, so this file reviews nothing while it is still on a branch: the PR that adds it cannot be reviewed by it, and the first round is on the next PR.
 4. Nothing to configure as a check or a policy. The job lands no check run on the PR head, so `## CI` names no leg for it and `No-checks legal:` is unaffected.
 5. Post `__PHRASE__` on an open PR by hand once, after the merge, and confirm one formal review comes back. That proves the secret, the permissions and the trigger phrase in one go, and it is the only proof before a degraded primary needs this reviewer for real.
+6. Decide who may spend the token. The `if:` above fires for any commenter, including a drive-by on a public repo. To narrow it, add
+
+   ```yaml
+         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+   ```
+
+   as a third `&&` clause. Weigh it: whatever identity a ship run uses to request a round must fall inside the list, and an unattended run whose identity does not gets no review and no error, which is the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
 
 ### Profile block this produces
 
