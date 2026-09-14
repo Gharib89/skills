@@ -8,8 +8,10 @@
 # done when the PR is in conflict (merge-ref checks never start, so waiting is
 # pointless), or every check on the head has completed and, with --await-review,
 # a SUBSTANTIVE review by that login has landed. `substantive` is the landing
-# signal: a reviewer's reply to one thread posts as a review row of its own
-# (current head, empty body), so only a body is a round.
+# signal, and two kinds of row fail it: a reviewer's reply to one thread posts
+# as a review row of its own (current head, empty body), and a quota or
+# rate-limit notice posts as a review with a body that is only the notice. Both
+# are rows, neither is a round.
 #
 # Two landing rules, chosen by the reviewer's profile `Trigger:`; `landed_by`
 # names the one that matched.
@@ -36,7 +38,9 @@
 # and `replied`, true once this identity has answered in that thread.
 #
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
-# quota or queue notice), not missing. `threads` is "unavailable" when thread
+# quota or queue notice), not missing. It is read from the awaited login's
+# review bodies as well as its PR comments: Copilot states a quota limit as a
+# review, other reviewers as a comment. `threads` is "unavailable" when thread
 # state could not be read (GraphQL refused): that reviewer's exit is degraded
 # unreachable, the run proceeds.
 #
@@ -123,11 +127,7 @@ while :; do
   if [ -n "$await" ]; then
     # Both sides are now fixed-width UTC, where a string compare is a
     # chronological one.
-    landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" '
-      def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
-      if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
-      else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
-      end' <<<"$reviews")
+    landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" "$SHIP_LANDED_BY" <<<"$reviews")
     [ "$landed_by" != null ] || landed=false
   fi
   done=false
