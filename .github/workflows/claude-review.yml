@@ -71,9 +71,10 @@ jobs:
                                "side": "RIGHT", "body": "<one finding>"}]}
 
             One entry in `comments` per finding tied to a line, each naming the rule
-            or issue requirement broken and the concrete fix. A line you cannot anchor
-            in the diff goes in `body` instead; an unanchorable line makes the whole
-            call fail, and a failed call is a round the run never sees.
+            or issue requirement broken and the concrete fix. A finding you cannot
+            anchor to a line in the diff goes in `body`, never in `comments`:
+            GitHub rejects the entire call when one `comments` entry names a line
+            outside the diff, and a rejected call is a round the run never sees.
 
             Submit exactly one review, even when you found nothing: a fallback
             reviewer that stays silent on a clean PR cannot be told apart from one

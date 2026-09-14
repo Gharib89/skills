@@ -2,8 +2,8 @@
 
 Scaffold for a repo whose ship profile names Claude Code as a reviewer. It comes in two shapes, and a repo takes exactly one:
 
-- **Shape A, on-push.** The repo has no other reviewer. Claude reviews every push to an open PR, so it is the whole second pair of eyes, and its job lands a check run on the PR head.
-- **Shape B, on-request fallback.** The repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out. A PR comment is the trigger, so nothing fires while the primary is healthy. See [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) for why a fallback is on-request and never on-push.
+- **The on-push shape.** The repo has no other reviewer. Claude reviews every push to an open PR, so it is the whole second pair of eyes, and its job lands a check run on the PR head.
+- **The on-request fallback shape.** The repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out. A PR comment is the trigger, so nothing fires while the primary is healthy. See [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) for why a fallback is on-request and never on-push.
 
 What both shapes do the same way, because ship reads a round off the host and never off the workflow's logs:
 
@@ -12,11 +12,18 @@ What both shapes do the same way, because ship reads a round off the host and ne
 - **`claude_code_oauth_token`** from the `CLAUDE_CODE_OAUTH_TOKEN` secret, minted by `claude setup-token`, so the review is billed to a Claude subscription rather than to API credit.
 - **`actions/checkout` before the action.** The action does not clone the repo, and step 1 of the prompt reads the brief off the filesystem with the Read tool. Without it the reviewer reviews with no brief and no standards, and says nothing about why.
 
-Replace `__INSTRUCTIONS__`, named after the `Label:` line that fills it, with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete the sentence that sends the reviewer on from the brief to the standards.
+Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
 
-The two YAML blocks below are each complete, and deliberately so: a consumer copies one of them whole, and a shared block plus a list of substitutions is where a workflow that fails on indentation comes from.
+The two YAML blocks below are each complete on purpose: a consumer copies one of them whole, and a shared block plus a list of substitutions is where a workflow that fails on indentation comes from.
 
-## Shape A: on-push
+Two human steps belong to both shapes, so each checklist below carries only what is its own:
+
+1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
+2. Settings > Actions > General > Workflow permissions: the job-level `permissions:` block grants what the job needs; where the org restricts job-level permissions, an org admin must allow `pull-requests: write` for this repo.
+
+## The on-push shape
+
+A `pull_request` event from a fork never sees the secret, so a fork PR draws no round. Leave those unreviewed; nothing in the profile changes.
 
 ### `.github/workflows/claude-review.yml`
 
@@ -85,9 +92,10 @@ jobs:
 
             One entry in `comments` per finding tied to a line, each naming the
             rule or issue requirement broken and the concrete fix. A finding you
-            cannot anchor in the diff goes in `body` instead; an unanchorable line
-            makes the whole call fail, and a failed call is a round the run never
-            sees.
+            cannot anchor to a line in the diff goes in `body`, never in
+            `comments`: GitHub rejects the entire call when one `comments` entry
+            names a line outside the diff, and a rejected call is a round the run
+            never sees.
 
             Submit exactly one review, even when you found nothing: a reviewer
             that stays silent on a clean PR cannot be told apart from one that
@@ -102,12 +110,11 @@ jobs:
 
 ### Human checklist
 
-1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
-2. Settings > Actions > General > Workflow permissions: the job-level `permissions:` block grants what the job needs; where the org restricts job-level permissions, an org admin must allow `pull-requests: write` for this repo.
-3. Merge the workflow to the default branch. A `pull_request` event runs the workflow from the PR's own merge ref, so the PR that adds this file is reviewed by it, unlike shape B.
-4. Add the job to `## CI`'s `Legs:` in `docs/agents/ship.md`. It is a check run on the PR head, and a reviewer that is also a leg is waited for twice, once per phase.
-5. Fork PRs never see the secret; leave them unreviewed.
-6. For `Gating: yes`: Settings > Branches (or Rules) > require the `review` check to pass before merging.
+Both shared steps above, then:
+
+1. Merge the workflow to the default branch. A `pull_request` event runs the workflow from the PR's own merge ref, so the PR that adds this file is reviewed by it, unlike the fallback shape.
+2. Add the job to `## CI`'s `Legs:` in `docs/agents/ship.md`. It lands a check run on the PR head, and `Legs:` is where a run reads what that check proves.
+3. For `Gating: yes`: Settings > Branches (or Rules) > require the `review` check to pass before merging.
 
 ### Profile block this produces
 
@@ -116,16 +123,16 @@ jobs:
 Login: github-actions[bot]
 Trigger: on-push
 Request: None.
-Cap: 3
+Cap: <step 4's answer; recommend 3>
 Resolve: resolve-thread
 Gating: no
 Fallback-for: None.
 Instructions: __INSTRUCTIONS__
 ```
 
-## Shape B: on-request fallback
+## The on-request fallback shape
 
-Replace `__PHRASE__` with the phrase that triggers a round, `@claude` unless something else in the repo already answers to it, and `__PRIMARY__` with the `### <name>` of the reviewer this one stands in for, exactly as the profile spells it. The two must agree with the profile: ship posts `__PHRASE__` as a PR comment and nothing else starts a round, and it requests this reviewer only when `__PRIMARY__` exits degraded.
+Replace `__PHRASE__` with the phrase that triggers a round, `@claude` unless something else in the repo already answers to it, and `__PRIMARY__` with the `### <name>` of the reviewer this one stands in for, exactly as the profile spells it. The two must agree with the profile: ship posts `__PHRASE__` as a PR comment and nothing else starts a round, and it requests this reviewer only when `__PRIMARY__` exits degraded. The `if:` tests for the phrase anywhere in a comment body, so any comment that merely mentions it, a quote of an earlier request included, spends a round: pick a phrase nobody types in passing.
 
 ### `.github/workflows/claude-review.yml`
 
@@ -152,8 +159,11 @@ jobs:
   review:
     # An issue_comment fires on issues too, so the PR test comes first. A run
     # that starts and finds nothing to review still costs minutes and still
-    # shows up in the Actions tab as a review that happened. No commenter test
-    # here on purpose; checklist item 6 is where that decision belongs.
+    # shows up in the Actions tab as a review that happened. No commenter test:
+    # the identity a run requests a round under has to pass whatever this `if:`
+    # says, and a reviewer that silently declines to fire is the failure a
+    # fallback exists to prevent. The checklist's "Decide who may spend the
+    # token" step is where that is narrowed on purpose.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '__PHRASE__')
@@ -202,9 +212,10 @@ jobs:
 
             One entry in `comments` per finding tied to a line, each naming the
             rule or issue requirement broken and the concrete fix. A finding you
-            cannot anchor in the diff goes in `body` instead; an unanchorable line
-            makes the whole call fail, and a failed call is a round the run never
-            sees.
+            cannot anchor to a line in the diff goes in `body`, never in
+            `comments`: GitHub rejects the entire call when one `comments` entry
+            names a line outside the diff, and a rejected call is a round the run
+            never sees.
 
             Submit exactly one review, even when you found nothing: a fallback
             reviewer that stays silent on a clean PR cannot be told apart from one
@@ -219,18 +230,21 @@ jobs:
 
 ### Human checklist
 
-1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
-2. Settings > Actions > General > Workflow permissions: as shape A, an org that restricts job-level permissions needs an admin to allow `pull-requests: write`.
-3. **Merge the workflow to the default branch before expecting a round.** GitHub dispatches an `issue_comment` workflow from the default branch only, so this file reviews nothing while it is still on a branch: the PR that adds it cannot be reviewed by it, and the first round is on the next PR.
-4. Nothing to configure as a check or a policy. The job lands no check run on the PR head, so `## CI` names no leg for it and `No-checks legal:` is unaffected.
-5. Post `__PHRASE__` on an open PR by hand once, after the merge, and confirm one formal review comes back. That proves the secret, the permissions and the trigger phrase in one go, and it is the only proof before a degraded primary needs this reviewer for real.
-6. Decide who may spend the token. The `if:` above fires for any commenter, including a drive-by on a public repo. To narrow it, add
+Both shared steps above, then:
+
+1. **Merge the workflow to the default branch before expecting a round.** GitHub dispatches an `issue_comment` workflow from the default branch only, so this file reviews nothing while it is still on a branch: the PR that adds it cannot be reviewed by it, and the first round is on the next PR.
+2. Nothing to configure as a check or a policy. The job lands no check run on the PR head, so `## CI` names no leg for it and `No-checks legal:` is unaffected.
+3. Post `__PHRASE__` on an open PR by hand once, after the merge, and confirm one formal review comes back. That proves the secret, the permissions and the trigger phrase in one go, and it is the only proof before a degraded primary needs this reviewer for real.
+4. Decide who may spend the token. The `if:` above fires for any commenter, a drive-by on a public repo included. To narrow it, replace the whole `if:` with this one:
 
    ```yaml
-         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+    if: >-
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '__PHRASE__') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
    ```
 
-   as a third `&&` clause. Weigh it: whatever identity a ship run uses to request a round must fall inside the list, and an unattended run whose identity does not gets no review and no error, which is the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
+   Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review and no error, the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
 
 ### Profile block this produces
 
@@ -239,11 +253,11 @@ jobs:
 Login: github-actions[bot]
 Trigger: on-request
 Request: comment __PHRASE__
-Cap: 2
+Cap: <step 4's answer; recommend 2>
 Resolve: None.
 Gating: no
 Fallback-for: __PRIMARY__
 Instructions: __INSTRUCTIONS__
 ```
 
-`Login:` is `github-actions[bot]` in both shapes because a workflow reviews under the Actions identity, not under a bot account of its own. `Resolve:` is `None.` here and `resolve-thread` in shape A: the label is an on-push field, and an on-request round is answered on the review rather than resolved thread by thread.
+`Login:` is `github-actions[bot]` in both shapes because a workflow reviews under the Actions identity, not under a bot account of its own. `Resolve:` is `None.` here and `resolve-thread` in the on-push shape: the label is an on-push field, and an on-request round is answered on the review rather than resolved thread by thread.

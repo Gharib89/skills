@@ -1,6 +1,6 @@
 # Claude Code as reviewer on Azure Pipelines
 
-Scaffold for an Azure DevOps repo whose ship profile names Claude Code as a reviewer. A build validation policy runs the pipeline on every PR update (Azure Repos Git has no YAML `pr:` trigger; the policy is the trigger), Claude emits findings as JSON, the pipeline posts each as a PR thread and fails the build on a `critical` finding. Maps to the profile as `Trigger: on-push`, `Gating: yes` when the policy is required: a declined critical is `converged, override needed`. Threads are Azure DevOps PR threads with `fixed | closed` status. Replace `__STANDARDS__` with the profile's `## Coding standards` path.
+Scaffold for an Azure DevOps repo whose ship profile names Claude Code as a reviewer. A build validation policy runs the pipeline on every PR update (Azure Repos Git has no YAML `pr:` trigger; the policy is the trigger), Claude emits findings as JSON, the pipeline posts each as a PR thread and fails the build on a `critical` finding. Maps to the profile as `Trigger: on-push`, `Gating: yes` when the policy is required: a declined critical is `converged, override needed`. Threads are Azure DevOps PR threads with `fixed | closed` status. Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer, which is the repo's reviewer brief where it has one and the `## Coding standards` path where it has none. The reviewer reads that file, never a copy of it.
 
 ## `azure-pipelines-claude-review.yml`
 
@@ -12,7 +12,7 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  STANDARDS_PATH: __STANDARDS__
+  INSTRUCTIONS_PATH: __INSTRUCTIONS__
 
 steps:
 - checkout: self
@@ -26,8 +26,8 @@ steps:
     SCHEMA='{"type":"object","properties":{"findings":{"type":"array","items":{"type":"object","properties":{"severity":{"type":"string","enum":["critical","major","minor"]},"file":{"type":"string"},"line":{"type":"integer"},"message":{"type":"string"}},"required":["severity","file","message"]}}},"required":["findings"]}'
     PROMPT="You are reviewing Azure Repos pull request $(System.PullRequest.PullRequestId).
     HEAD is the PR merge commit; HEAD^1 is the target branch.
-    1. Read the coding standards at $STANDARDS_PATH.
-    2. Run 'git diff HEAD^1 HEAD' and review only the changed lines against the standards.
+    1. Read your review instructions at $INSTRUCTIONS_PATH, and the coding standards file they name where they name one.
+    2. Run 'git diff HEAD^1 HEAD' and review only the changed lines against those instructions and the standards they name.
     3. Run 'git log --format=%B HEAD^2 -n 20' and, if a work item is referenced (#1234 or AB#1234),
        treat its intent as the spec for this change.
     Return ONLY findings that require a code change. Severity: critical = must fix before merge
@@ -111,5 +111,5 @@ Cap: 3
 Resolve: threads are set to `fixed` once a finding is dispositioned; the build re-runs on the next push
 Gating: yes
 Fallback-for: None.
-Instructions: __STANDARDS__
+Instructions: __INSTRUCTIONS__
 ```

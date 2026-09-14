@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 2.1.0
+  version: 3.0.0
 ---
 
 # Setup skills
@@ -88,7 +88,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every reviewer has a `Cap:`, a number or `None.`, and an on-request reviewer's cap is a number; a `Fallback-for:` that names a reviewer sits only on a reviewer whose `Trigger:` is `on-request`, and names one of the draft's own `### <name>` blocks. Those three are the reviewer shapes ship refuses at preflight, checked here because this is the one moment a human is present to fix them. Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every reviewer has a `Cap:`, a number or `None.`, and an on-request reviewer's cap is a number; a `Fallback-for:` that names a reviewer sits only on a reviewer whose `Trigger:` is `on-request`, and names one of the draft's own `### <name>` blocks. The last three of those are the reviewer shapes ship refuses at preflight, checked here because this is the one moment a human is present to fix them. Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 
@@ -120,7 +120,7 @@ Either way, **run it once** (`--small` with the example node) and check the verd
 
 **Triage labels on the host** (GitHub only). Any of the five labels from `triage-labels.md` missing on the repo: create them, because ship's hand-back exits 1 without `ready-for-human`.
 
-**Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the reviewer's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, never a copy of either. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
+**Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the scaffold's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, never a copy of either. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
 
 **Superseded ship scripts** (migrating repos): list what step 3 recorded, propose deletion, delete on confirm. Never touch `local-gate.sh`, `live-e2e`, `copilot-pr-review-loop`, or `cloud-ship-bootstrap.sh` (that one is now `## Cloud lane`'s `Bootstrap:`).
 
