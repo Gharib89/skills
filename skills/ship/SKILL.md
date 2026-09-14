@@ -458,14 +458,13 @@ end of the last section is inside that section and the phase-7
 lines; it only says where it sits.
 
 **Every write to an open PR ends with `read-pr <pr>`**, the title writes
-included. After a body write its `sections` list is checked against the
-headings the body is supposed to carry; a section the rewrite swallowed is
-missing from it, and that is the only place a swallowed
-`## Attribution` shows while the PR is still open. Reading the list is also what
-disarms the fence trap: a Shape fence over a markdown change carries `## ` lines
-of its own, which the section slice takes as example text rather than as
-headings, so the reported list is the answer and the fence's contents never
-enter it.
+included. After a body write, check the `## ` headings of the body it returns
+against the ones the body is supposed to carry: a section the rewrite swallowed
+is missing from them, and that is the only place a swallowed `## Attribution`
+shows while the PR is still open. `update-pr-body` answers with a `sections`
+list, which is that same check one write earlier. Read the headings the way the
+slice does, fence-aware: the fence trap is a Shape fence over a markdown change
+carrying `## ` lines of its own, which are example text and not sections.
 
 **The Summary opens with a Shape.** Draw it from the diff here, not from
 phase 2's design; a redraw is not a deviation. It is the first thing under
