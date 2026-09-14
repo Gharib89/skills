@@ -32,41 +32,82 @@ Every lever below is subject to it, in rough order of impact:
 - **One Run file** for the checklist and the design and plan. It survives a
   mid-run context summary; the same summary repeated across turns does not.
 
+## While a subagent is out, end the turn
+
+Dispatch a composed skill's subagents, then **end the turn**. The completion
+notification is what resumes the run, and it arrives on its own: every call
+spent asking whether the result is ready yet (a poll loop, a sleep, a status
+ping, an agent listing, a read of the output file) buys nothing the
+notification does not deliver.
+
+A turn that ends with work dispatched has already acted: this is the one place
+where having nothing to do is the correct next action.
+
 ## First action: the Run file
 
 **Before phase 0, before the worktree**, write the **Run file**:
-`ship-<issue>.md` (`ship-<slug>.md` when the argument was a task spec) in the
-scratchpad directory the harness names in its environment block, or the OS
-temp directory when none is named. Never inside the repo. It holds the
+`ship-<issue>/run.md` (`ship-<slug>/run.md` when the argument was a task
+spec), in a directory of its own under the scratchpad directory the harness
+names in its environment block, or under the OS temp directory when none is
+named. Never inside the repo. A directory of its own because the scratchpad is
+also where a subagent puts its scratch, and one that reaches for the run's own
+name overwrites the record with no failure signal; every subagent you dispatch
+is given a path outside this directory to write in. It holds the
 ten-item checklist below and, as they form, the design and plan. It is the
 **source of truth** for where the run is: it survives a mid-run summary and
 depends on no tool the harness might withhold. Without it a summarized run
 cannot tell which phase it was in, and skips or repeats one. The window is
 managed, not scarce: the harness compacts long runs and the Run file carries
 state across that boundary, so never stop, narrow a phase or suggest a new
-session over context; keep working.
+session over context; keep working. It is the run's only checklist: a second
+copy of it anywhere else is bookkeeping that buys nothing.
 
-The harness task tools are an **optional mirror**, decided per run, never per
-repo: one `ToolSearch` probe with `select:TaskCreate,TaskUpdate,TaskList`, then
-one keyword probe (e.g. `task list todo`) if the select returns nothing, since
-exact names differ across harness builds and some builds expose none. Tools
-present: mirror each flip. Nothing returned: an answer, not a fault; proceed on
-the file alone.
+**Stamp every flip by reading the clock inside the edit command**, so the
+stamp is a measurement rather than a recollection:
 
-**Stamp every flip** from `date -u +%H:%M`, never an estimate. Stamps go at the
-end of the line, after the `in_progress` suffix, one range per parentheses:
+```sh
+RUN="<scratchpad>/ship-<issue>/run.md"
+stamp() {  # $1: a sed script; fails rather than recording a flip that did not happen
+  sed "$1" "$RUN" > "$RUN.t" \
+    && ! cmp -s "$RUN" "$RUN.t" \
+    && [ "$(grep '^- \[.\] ' "$RUN.t" | grep -o 'in_progress (..:..→)' | wc -l)" -le 1 ] \
+    && mv "$RUN.t" "$RUN" \
+    || { rm -f "$RUN.t"; echo "stamp: no line matched, or a second phase would be open" >&2; return 1; }
+}
+# the wildcard in \[.\] also matches the x of a phase being re-opened
+phase_open()  { stamp "s|^- \[.\] \($1 · .*\)|- [ ] \1 in_progress ($(date -u +%H:%M)→)|"; }
+phase_close() { stamp "s|^- \[ \] \($1 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|"; }
+
+phase_open 5      # ... run the local gate ...
+phase_close 5
+```
+
+The double quotes are the whole trick: the shell expands `$(date -u +%H:%M)`
+each time `phase_open` or `phase_close` runs, so the time comes from the clock
+and a call site has no place to put one of its own. The rest of `stamp` guards
+the three ways a flip goes missing in silence: `cmp` fails the call when the
+script matched no line, rather than writing an unchanged file back; the
+open-marker count, over the `in_progress (HH:MM→)` shape on checklist lines
+alone so neither the plan's prose nor a profile-supplied phase label feeds it,
+holds the file to the one-open-phase invariant below, so
+re-running an open, or opening a second phase while one is open, fails instead
+of appending a suffix nothing will close; and the redirect with `mv` stands in
+for `sed -i`, whose in-place flag takes an argument on the BSD sed a macOS
+machine runs. A `stamp` that fails is a phase line that is not where you think
+it is: read the file before flipping again. Stamps go at the end of the line, after the `in_progress` suffix, one
+range per parentheses:
 
 ```
-- [ ] 5 · Local gate: ... in_progress (10:12→)          # opened
-- [x] 5 · Local gate: ... (10:12→10:19)                  # closed, suffix gone
-- [x] 2 · Implement: ... (08:31→09:40) (10:20→10:33)     # re-opened by a red gate
+- [ ] 5 · Local gate: ... in_progress (10:12→)   # opened
+- [x] 5 · Local gate: ... (10:12→10:19)          # closed, suffix gone
 ```
 
-A phase that re-opens appends a second range. A close stamped earlier than its
-open crossed midnight UTC; append `+1d` to it (`(23:58→00:12+1d)`) so the range
-still reads left to right and the `Timing:` row needs no special case.
-The merge summary's `Timing:` line is read off these stamps, and they are the
-only way to see which phase a slow run spent its hours in.
+A phase that re-opens appends a second range,
+`(08:31→09:40) (10:20→10:33)`. A close stamped earlier than its open crossed
+midnight UTC; append `+1d` to it (`(23:58→00:12+1d)`) so the range still reads
+left to right and the `Timing:` row needs no special case. The merge summary's
+`Timing:` row is computed from these stamps, and they are the only way to see
+which phase a slow run spent its hours in.
 
 One item per phase, exactly one `in_progress`, each `completed` only when its
 verification passed. A **small-lane** run keeps all ten and marks each

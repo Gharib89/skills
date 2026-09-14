@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.9.0
+  version: 3.9.1
   profile-schema: 1
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -150,7 +150,9 @@ verification's prerequisite is missing and its disposition says so). Everything
 else, triaging your own findings, fixing, re-running, is autonomous. Before
 ending a turn, check your last paragraph: if it states a plan, a next step or an
 intention ("I'll re-run the poll") rather than having done it, do it now with a
-tool call instead of stopping.
+tool call instead of stopping. That clause is about a plan, never about a wait:
+while a composed skill's subagents are out, ending the turn *is* the action, per
+[reference/context-discipline.md](reference/context-discipline.md).
 
 **Never proceed on red.** Any failure before the merge gate gets a bounded
 self-fix-and-retry, about two attempts. Still red, or the failure says the
