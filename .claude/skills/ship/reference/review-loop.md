@@ -73,13 +73,23 @@ a fresh read of the committed tree, not a conversation.
   finding, one disposition. The disposition belongs in the thread the reviewer
   opened, which is where the reviewer's next pass and a human reading the round
   both look; a round-level `comment-pr` is a log of the round, never the
-  disposition channel. `resolve-thread` posts no body and runs per thread only
+  disposition channel. **A fix to a rule is propagated to every copy of that
+  rule inside the same batch**: grep the phrase before you push, because the
+  reviewer re-reads the whole PR and every copy the fix missed is another round
+  spent on a finding you already agreed with. `resolve-thread` posts no body and runs per thread only
   once every thread carries its reply. Every push spends review quota and CI
   minutes, and an on-push reviewer's round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
   `converged, override needed`, or `degraded: <reason>`, plus the round count.
+- **The exit rewrites Deviations too, when the rounds grew the log.** A round's
+  fixes and declines are deviations like any other, so where the log changed
+  since phase 6, write it back with
+  `update-pr-body <pr> --section "Deviations from plan"` before the `Review`
+  write, which stays last so `read-pr` reads both back at once. Skip it and the
+  PR body ships the phase-6 log while the merge summary carries the current
+  one, and the human reads the two against each other.
 
 ## By trigger
 
