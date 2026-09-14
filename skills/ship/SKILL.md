@@ -381,9 +381,9 @@ reviewer citing the wrong commit for a real primitive is still right. A valid
 finding outside the issue is an adjacent find: phase 2's three dispositions.
 Then read the diff yourself against the four depth checks in the
 coding-standards file the Standards axis reads, by their leading words: a
-vocabulary the change extends, a rule-shaped prose change, new pattern-matching
-code, and a fix landed after review. Those are the findings reviewer rounds
-otherwise spend the run's wall time on.
+vocabulary the change extends, a rule-shaped prose change, new
+pattern-matching code, a fix landed after review. Reviewer rounds find these
+otherwise, serially, at the cost of most of a run's wall time.
 This self-review plus green CI is the review gate; reviewers in phase 7 are a
 second pair of eyes on top, never a substitute.
 
@@ -471,9 +471,8 @@ to the rounds and open threads, with the run's own replies dropped, so the loop
 reads the findings rather than the whole fetch. At exit,
 `update-pr-body <pr> --section "Deviations from plan"` where the rounds grew
 the log, then `update-pr-body <pr> --section Review` with one status line per
-reviewer, whose
-verdict's `sections` lists the headings the body carries after the write: a
-section the rewrite swallowed is missing from it. Then `read-pr <pr>` to read the
+reviewer, whose verdict's `sections` lists the headings the body carries after
+the write: a section the rewrite swallowed is missing from it. Then `read-pr <pr>` to read the
 body back: a rewrite that swallowed the attribution footer shows up here, while
 the PR is still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per

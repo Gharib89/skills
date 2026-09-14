@@ -76,9 +76,9 @@ a fresh read of the committed tree, not a conversation.
   disposition channel. **A fix to a rule is propagated to every copy of that
   rule inside the same batch**: grep the phrase before you push, because the
   reviewer re-reads the whole PR and every copy the fix missed is another round
-  spent on a finding you already agreed with. `resolve-thread` posts no body and runs per thread only
-  once every thread carries its reply. Every push spends review quota and CI
-  minutes, and an on-push reviewer's round.
+  spent on a finding you already agreed with. `resolve-thread` posts no body
+  and runs per thread only once every thread carries its reply. Every push
+  spends review quota and CI minutes, and an on-push reviewer's round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
