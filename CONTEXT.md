@@ -37,7 +37,7 @@ A user-invoked skill that explores a repo and drafts its per-repo documents, con
 _Avoid_: init, scaffold, bootstrap
 
 **Composed skill**:
-A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `show-me`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
+A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `show-me`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. The inverse of a sibling skill: Ship composes these, a sibling composes Ship. Adding one is a breaking change for installed consumers, because a consumer that refreshes Ship alone has its next run refused until it installs the new skill.
 _Avoid_: dependency, sub-skill, helper skill
 
 **Sibling skill**:
