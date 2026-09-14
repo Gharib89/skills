@@ -19,11 +19,11 @@ The two YAML blocks below are each complete on purpose: a consumer copies one of
 Two human steps belong to both shapes, so each checklist below carries only what is its own:
 
 1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
-2. Settings > Actions > General > Workflow permissions: the workflow-level `permissions:` block above grants what the job needs; where the org caps what a workflow may grant, an org admin must allow `pull-requests: write` for this repo.
+2. Settings > Actions > General > Workflow permissions: the workflow-level `permissions:` block in the shape you copied grants what the job needs; where the org caps what a workflow may grant, an org admin must allow `pull-requests: write` for this repo.
 
 ## The on-push shape
 
-A `pull_request` event from a fork never sees the secret, so a fork PR draws no round. Leave those unreviewed; nothing in the profile changes.
+A `pull_request` event from a fork never sees the secret, so the job below skips fork PRs by comparing the head repo to this one. Without that guard the job still starts, the empty token fails the action, and the PR head carries a red `review` check: with step 2 below naming the job on `Legs:` and step 3 making it required, a fork PR can no longer be merged. Skipping is what keeps a fork PR merely unreviewed, and `## Reviewers` unchanged.
 
 ### `.github/workflows/claude-review.yml`
 
@@ -47,6 +47,10 @@ permissions:
 
 jobs:
   review:
+    # A fork PR cannot see the secret, and an empty token fails the action
+    # rather than skipping it, which lands a red check run on the head. Skip
+    # the fork instead: unreviewed is the intended outcome, red is not.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       # Not optional: the action runs `git diff ... HEAD` in the workspace
@@ -125,7 +129,7 @@ Both shared steps above, then:
 Login: github-actions[bot]
 Trigger: on-push
 Request: None.
-Cap: <step 4's answer; recommend 3>
+Cap: <the cap the walk settled; recommend 3>
 Resolve: resolve-thread
 Gating: no
 Fallback-for: None.
@@ -258,7 +262,7 @@ Both shared steps above, then:
 Login: github-actions[bot]
 Trigger: on-request
 Request: comment __PHRASE__
-Cap: <step 4's answer; recommend 2>
+Cap: <the cap the walk settled; recommend 2>
 Resolve: None.
 Gating: no
 Fallback-for: __PRIMARY__
