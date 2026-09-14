@@ -155,7 +155,7 @@ reads the reason and decides.
 | Reason | Detection |
 |---|---|
 | `never-queued` | on-request: no request event on the host's record after one retry. Do not spend a second poll window on it. |
-| `blocked` | queued, then a quota or rate-limit comment from the reviewer (`reviewer_blocked` non-null), and the poll window closed. Non-null with `done: false` means waiting, not missing. |
+| `blocked` | queued, then a quota or rate-limit notice from the reviewer, on either surface it states one on, a review body or a PR comment (`reviewer_blocked` non-null), and the poll window closed. A round that is only such a notice is not `substantive`, so `landed_by` stays null and the poll waits it out rather than reporting it as the round. Non-null with `done: false` means waiting, not missing. |
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. |
 | `infra-error` | a review whose body is only an error notice with zero comments, twice. Not feedback. |
 | `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. |

@@ -205,15 +205,22 @@ host_pr_checks() { # <pr> <head_sha>
 
 # `on_head` is keyed to the current head (a review on an older commit does not
 # count), which poll-pr's default head rule reads; `all` carries every round
-# across heads, for its --since rule. `substantive` is the landing signal: a
-# reviewer's reply to one thread posts as a review row of its own (current
-# head, empty body), so only a body is a round.
-host_pr_reviews() { # <pr> <head_sha> [<full-ids-json>]
-  api "$R/pulls/$1/reviews" --paginate --jq '.[]' | jq -s --arg sha "$2" --argjson full "${3:-[]}" "$SHIP_REVIEW_CLIP"'
+# across heads, for its --since rule. `substantive` is the landing signal, and
+# two kinds of row fail it: a reviewer's reply to one thread, which posts as a
+# review row of its own (current head, empty body), and a quota or rate-limit
+# notice, which posts as a review with a non-empty body (PR #154, three rounds)
+# and is a refusal to review rather than a round. Counting either lands round 2
+# off round 1. Both stay in the two lists with their bodies, so the run can see
+# what it is waiting on.
+_gh_reviews_projection="$SHIP_REVIEW_CLIP$SHIP_BLOCKED_NOTICE"'
     def row: . as $r | {id: (.id | tostring), login: .user.login,
       state: (if .state == "APPROVED" then "approved" elif .state == "CHANGES_REQUESTED" then "changes" else "comment" end),
-      substantive: ((.body // "") != ""), submitted_at, body: ((.body // "") | clip($r.id))};
+      substantive: ((.body // "") != "" and ((.body // "") | is_notice | not)),
+      submitted_at, body: ((.body // "") | clip($r.id))};
     {on_head: [.[] | select(.commit_id == $sha) | row], all: [.[] | row], total: length}'
+host_pr_reviews() { # <pr> <head_sha> [<full-ids-json>]
+  api "$R/pulls/$1/reviews" --paginate --jq '.[]' \
+    | jq -s --arg sha "$2" --argjson full "${3:-[]}" "$_gh_reviews_projection"
 }
 
 _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
@@ -242,13 +249,19 @@ host_pr_threads() {
   printf '%s\n' "$out"
 }
 
-# The awaited login's own account of a round it has not delivered, stated in a
-# PR comment rather than a review: the one place a quota or queue notice shows up.
+# The awaited login's own account of a round it has not delivered: a quota or
+# rate-limit notice, which Copilot states as a REVIEW of its own (PR #154, three
+# rounds) and other reviewers state as a PR comment. Both surfaces are read, so
+# `reviewer_blocked` answers the question whichever way the notice arrived.
+# Selection over the merged rows, sorted by time so `last` is the most recent
+# notice whichever surface it came from; the return shape is the notice line or
+# null, unchanged.
+_gh_blocked_select="$SHIP_BLOCKED_NOTICE"'
+  [sort_by(.at)[] | select(.login == $l) | (.body // "") | notice_lines] | last // null'
 host_pr_reviewer_blocked() { # <pr> <login>
-  api "$R/issues/$1/comments" --paginate --jq '.[]' | jq -s --arg l "$2" '
-    [.[] | select(.user.login == $l) | .body | split("\n")[]
-     | select(test("rate limit|quota|Next included review|queue"; "i"))
-     | sub("^>\\s*"; "") | gsub("\\*"; "")] | last // null'
+  { api "$R/issues/$1/comments" --paginate --jq '.[] | {login: .user.login, body, at: .created_at}'
+    api "$R/pulls/$1/reviews"   --paginate --jq '.[] | {login: .user.login, body, at: .submitted_at}'
+  } | jq -s --arg l "$2" "$_gh_blocked_select"
 }
 
 # Request, then read the request back off the host's own record: the login you

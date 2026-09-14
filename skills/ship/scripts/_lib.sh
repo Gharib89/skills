@@ -344,6 +344,33 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
   elif length > 2000 then .[0:2000] + "\n...[truncated]"
   else . end;'
 
+# The vocabulary a reviewer states a blocked round in, shared by the two places
+# that read it: the blocked lookup, which returns the notice line, and the
+# reviews projection, which refuses to call such a body a round. Both match on
+# the vocabulary, never on one reviewer's current sentence.
+#   notice_lines: the matching lines of a body, de-quoted and unbolded.
+#   is_notice:    the body is ONLY a notice, so every non-blank line matches. A
+#                 real round that merely mentions a quota is still a round.
+# shellcheck disable=SC2034  # read by the host adapters that source this library
+readonly SHIP_BLOCKED_NOTICE='def notice_re: "rate limit|quota|Next included review|queue";
+def notice_lines:
+  split("\n")[] | select(test(notice_re; "i")) | sub("^>\\s*"; "") | gsub("\\*"; "");
+def is_notice:
+  [splits("\n") | select(test("\\S"))] as $lines
+  | ($lines | length) > 0 and all($lines[]; test(notice_re; "i"));'
+
+# poll-pr's two landing rules over a `host_pr_reviews` projection, invoked with
+# `--arg l <normalised login>` and `--arg s <since|"">`. `$l` arrives already
+# lowercased and stripped of a `[bot]` suffix, the row side normalised here to
+# match. Only a SUBSTANTIVE row lands, which is what keeps a quota notice from
+# answering for a round that never arrived (#155).
+# shellcheck disable=SC2034  # read by poll-pr
+readonly SHIP_LANDED_BY='
+  def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
+  if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
+  else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
+  end'
+
 # ship_fence_unclosed <text>: does the text end inside a fenced block? Prints
 # `line <n>: <run>` naming the opener that never closed, or nothing when the
 # fence state is balanced. `update-pr-body` asks before it rewrites a section:
