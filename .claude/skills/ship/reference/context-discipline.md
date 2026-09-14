@@ -104,12 +104,13 @@ range per parentheses:
 
 **Every stamp has a mirror.** When you write the Run file, create its ten
 items as harness tasks (`TaskCreate`, one per phase, the phase line as the
-subject). Each `phase_open` is followed by `TaskUpdate` to `in_progress` on
-the matching task, each `phase_close` by `completed`. The Run file is the
-record and carries the run across compaction; the task list is the display the
-human watches in the terminal, and it is the one view of progress they read
-during an attended run. A harness build without the task tools runs on the
-file alone.
+subject). A flip that landed is followed by the matching `TaskUpdate`:
+`in_progress` after `phase_open`, `completed` after `phase_close` and after a
+phase marked `skipped`. A `stamp` that failed leaves the task where it was.
+The Run file is the record and carries the run across compaction; the task
+list is the display the human watches in the terminal, the one view of
+progress they read during an attended run. A harness that refuses
+`TaskCreate` has answered: run on the file alone.
 
 A phase that re-opens appends a second range,
 `(08:31→09:40) (10:20→10:33)`. A close stamped earlier than its open crossed
