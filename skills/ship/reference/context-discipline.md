@@ -63,30 +63,33 @@ stamp is a measurement rather than a recollection:
 
 ```sh
 RUN="<scratchpad>/ship-<issue>.md"
-stamp() {  # $1: a sed script that must change the phase line
+stamp() {  # $1: a sed script; fails rather than recording a flip that did not happen
   sed "$1" "$RUN" > "$RUN.t" \
     && ! cmp -s "$RUN" "$RUN.t" \
-    && [ "$(grep -o in_progress "$RUN.t" | wc -l)" -le 1 ] \
+    && [ "$(grep '^- \[.\] ' "$RUN.t" | grep -o in_progress | wc -l)" -le 1 ] \
     && mv "$RUN.t" "$RUN" \
     || { rm -f "$RUN.t"; echo "stamp: no line matched, or a second phase would be open" >&2; return 1; }
 }
-# open phase 5; the wildcard in \[.\] also matches the x of a phase being re-opened
-stamp "s|^- \[.\] \(5 · .*\)|- [ ] \1 in_progress ($(date -u +%H:%M)→)|"
-# close it
-stamp "s|^- \[ \] \(5 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|"
+# the wildcard in \[.\] also matches the x of a phase being re-opened
+phase_open()  { stamp "s|^- \[.\] \($1 · .*\)|- [ ] \1 in_progress ($(date -u +%H:%M)→)|"; }
+phase_close() { stamp "s|^- \[ \] \($1 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|"; }
+
+phase_open 5      # ... run the local gate ...
+phase_close 5
 ```
 
 The double quotes are the whole trick: the shell expands `$(date -u +%H:%M)`
-as it runs the command, so the file can only ever hold a time this run passed
-through. The rest of `stamp` guards the three ways a flip goes missing in
-silence: `cmp` fails the call when the script matched no line, rather than
-writing an unchanged file back; the `in_progress` count holds the file to the
-one-open-phase invariant below, so re-running an open, or opening a second
-phase while one is open, fails instead of appending a suffix nothing will
-close; and the redirect with `mv` stands in for `sed -i`, whose in-place flag
-takes an argument on the BSD sed a macOS machine runs. A `stamp` that fails is
-a phase line that is not where you think it is: read the file before flipping
-again. Stamps go at the end of the line, after the `in_progress` suffix, one
+each time `phase_open` or `phase_close` runs, so the time comes from the clock
+and a call site has no place to put one of its own. The rest of `stamp` guards
+the three ways a flip goes missing in silence: `cmp` fails the call when the
+script matched no line, rather than writing an unchanged file back; the
+`in_progress` count, over checklist lines alone so the plan's own prose does
+not feed it, holds the file to the one-open-phase invariant below, so
+re-running an open, or opening a second phase while one is open, fails instead
+of appending a suffix nothing will close; and the redirect with `mv` stands in
+for `sed -i`, whose in-place flag takes an argument on the BSD sed a macOS
+machine runs. A `stamp` that fails is a phase line that is not where you think
+it is: read the file before flipping again. Stamps go at the end of the line, after the `in_progress` suffix, one
 range per parentheses:
 
 ```
