@@ -66,7 +66,7 @@ RUN="<scratchpad>/ship-<issue>.md"
 stamp() {  # $1: a sed script; fails rather than recording a flip that did not happen
   sed "$1" "$RUN" > "$RUN.t" \
     && ! cmp -s "$RUN" "$RUN.t" \
-    && [ "$(grep '^- \[.\] ' "$RUN.t" | grep -o in_progress | wc -l)" -le 1 ] \
+    && [ "$(grep '^- \[.\] ' "$RUN.t" | grep -o 'in_progress (..:..→)' | wc -l)" -le 1 ] \
     && mv "$RUN.t" "$RUN" \
     || { rm -f "$RUN.t"; echo "stamp: no line matched, or a second phase would be open" >&2; return 1; }
 }
@@ -83,8 +83,9 @@ each time `phase_open` or `phase_close` runs, so the time comes from the clock
 and a call site has no place to put one of its own. The rest of `stamp` guards
 the three ways a flip goes missing in silence: `cmp` fails the call when the
 script matched no line, rather than writing an unchanged file back; the
-`in_progress` count, over checklist lines alone so the plan's own prose does
-not feed it, holds the file to the one-open-phase invariant below, so
+open-marker count, over the `in_progress (HH:MM→)` shape on checklist lines
+alone so neither the plan's prose nor a profile-supplied phase label feeds it,
+holds the file to the one-open-phase invariant below, so
 re-running an open, or opening a second phase while one is open, fails instead
 of appending a suffix nothing will close; and the redirect with `mv` stands in
 for `sed -i`, whose in-place flag takes an argument on the BSD sed a macOS
