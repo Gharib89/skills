@@ -39,10 +39,10 @@ Check all three before exploring. On any failure print the exact command, then "
 
 From `git remote get-url origin`: `github.com` is `github`; `dev.azure.com` or `visualstudio.com` is `ado`; anything else stops as out of scope. Cross-check against `docs/agents/issue-tracker.md`'s title line; a mismatch stops and names both.
 
-Then prove the host tooling with ship's own preflight, the one host check that exists:
+Then prove the host tooling with ship's own preflight, the one host check that exists. Call it issueless, so the verdict is about the host and the profile alone:
 
 ```sh
-.claude/skills/ship/scripts/preflight.sh <any open issue number>
+.claude/skills/ship/scripts/preflight.sh none
 ```
 
 Exit 2 with a `host-unreachable` reason (CLI missing, extension missing, not signed in, no push permission) stops here with that reason: setup is the one moment a human is present to fix auth. Exit 1 with `profile missing` is the expected answer at this point; continue.
@@ -57,7 +57,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 |---|---|---|
 | Host | step 2 | yes |
 | Worktree | `Carry:` from `git status --ignored --short`, kept to small dotfiles (`.env*`, `*.local`); `Bootstrap:` `None.` unless a setup script exists that the local gate cannot own | yes, confirm the list |
-| Local gate | `scripts/local-gate.sh`, else `.claude/skills/ship/scripts/local-gate.sh`, else `scripts/ship/local-gate.sh`; the lockfile fixes the runner (`package-lock.json` npm, `pnpm-lock.yaml` pnpm, `uv.lock` `uv run pytest`, `pyproject.toml` alone `pytest`); `Small node:` syntax follows the runner, plus the docs-class value, the path of the changed document | location yes; node syntax walked |
+| Local gate | `scripts/local-gate.sh`, else `.claude/skills/ship/scripts/local-gate.sh`, else `scripts/ship/local-gate.sh`; the lockfile fixes the runner (`package-lock.json` npm, `pnpm-lock.yaml` pnpm, `uv.lock` `uv run pytest`, `pyproject.toml` alone `pytest`); `Small node:` syntax follows the runner, and a docs-class line giving the path of the changed document | location yes; node syntax walked |
 | CI | `Legs:` every job of every workflow with a `pull_request` trigger (`.github/workflows/*.yml`; on ADO the pipelines named by build-validation policies); other workflows named in prose as non-PR; `No-checks legal: yes` iff any PR workflow carries a `paths:` filter; `Push policy:` | legs yes; push policy walked |
 | Reviewers | `.coderabbit.yaml` (on-push); `.github/copilot-instructions.md` plus a Copilot automatic-review ruleset, listed by `gh api repos/{owner}/{repo}/rulesets` then read per id from `.../rulesets/{id}`, since the list omits `rules`; its `copilot_code_review` rule's `review_on_push` fixes the trigger (`true` on-push, `false` or absent auto-once); `review_requested` events on the last ten merged PRs (on-request); `claude-code-action` in a workflow or a Claude review pipeline (on-push). Propose each with the trigger the evidence implies, always confirmed; `Resolve:` walked only where the proposed trigger is on-push (`resolve-thread` for Copilot on GitHub), else `None.`; `Cap:` always asked, never defaulted | walked |
 | Coding standards | a path CLAUDE.md names, `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `docs/contributing/*` | yes, or stub |
@@ -78,7 +78,7 @@ Present the whole exploration once: what each section will read, one line each. 
 
 Walk order and the recommendation to lead with:
 
-- **Local gate, small node**: the runner's own node syntax with one example from the repo's tests.
+- **Local gate, small node**: the runner's own node syntax with one example from the repo's tests, and the docs-class value, the path of the changed document, with one example.
 - **CI, push policy**: `one push per review round` on metered minutes (private repos, ADO parallel jobs); `Default.` otherwise.
 - **Reviewers**: each detected reviewer with its inferred trigger; then "any reviewer not detected?", offering Claude Code as a reviewer (see step 5, scaffolding). Ask every reviewer its cap: recommend 2 on-request, 3 on-push, `None.` for auto-once.
 - **Verification**: one block per seed, or `None.` when nothing in the repo talks to a real system.
@@ -129,10 +129,10 @@ Either way, **run it once** (`--small` with the example node) and check the verd
 Write every confirmed file. Then run ship's preflight against the new profile:
 
 ```sh
-.claude/skills/ship/scripts/preflight.sh <any open issue number>
+.claude/skills/ship/scripts/preflight.sh none
 ```
 
-Report its `reasons`. Only issue-level reasons may remain (`not triaged`, `already claimed`, `existing PR`, and the like); any `profile missing`, `profile invalid` or `skill missing` reason is yours to fix before finishing. A `skill missing` reason names a composed skill step 1 left uninstalled and carries the line that installs it: run that line.
+Report its `reasons`. The issueless call raises none of its own, so the list should be empty; any `profile missing`, `profile invalid` or `skill missing` reason is yours to fix before finishing. A `skill missing` reason names a composed skill step 1 left uninstalled and carries the line that installs it: run that line.
 
 ### 7. Done
 

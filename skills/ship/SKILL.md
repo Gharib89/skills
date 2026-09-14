@@ -123,8 +123,8 @@ be read.
 | Mechanic | Phase |
 |---|---|
 | `preflight <issue \| none> [--unattended]` | 0 |
-| `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
 | `read-issue <issue>` | 0 |
+| `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
 | `manage-issue <issue> take \| release \| handback "<reason>" \| close` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue --title --body-file --label <marker> [--distinct-from <n>[,<n>]]` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
@@ -304,9 +304,8 @@ merely mention it come back as `mentions[]`, context for phase 1, never a stop,
 alongside a `mentioned_by[]` row per live cross-reference, open issues and
 open or merged PRs both, naming its `kind` and `state`.
 
-Then `read-issue <issue>`, because the branch `<type>` and `<slug>` are derived
-from the issue: the read comes before the isolate, not after it, and phase 1
-reasons about the result this call already returned.
+Then `read-issue <issue>`: the branch `<type>` and `<slug>` are derived from the
+issue.
 
 Now isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
 `Carry:` files. It resolves the main checkout through `--git-common-dir`,
@@ -326,9 +325,9 @@ subject, not the branch, is what release tooling reads. A `Bootstrap:` under
 
 **1 · Understand.** Work from phase 0's `read-issue` result: title, body,
 labels, assignee, state, comments, open blockers. Derive what success looks
-like. A later authoritative
-comment supersedes the body (**spec precedence**, detailed in
-[reference/implement.md](reference/implement.md)). Too vague to plan: stop
+like. A later authoritative comment supersedes the body (**spec precedence**,
+detailed in [reference/implement.md](reference/implement.md)). Too vague to
+plan: stop
 `ambiguous`, unclaimed. Otherwise **claim before any work**:
 `manage-issue <issue> take`, idempotent, which assigns you and posts the fixed
 comment `🤖 Claimed by a ship run: implementation in progress.` The claim
@@ -386,20 +385,18 @@ you skip, say so in one line at the merge gate.
 **The `writing-for-agents` pass has a trigger of its own**, and skipping
 docs-sync never skips it: it fires whenever the diff touches a target on the
 profile's `Agent-facing:` line, at the judgment tier, over every agent-facing
-file in the diff. A change that edits agent-facing prose and nothing else syncs
-no docs and is still exactly the prose the skill governs. Human prose in the
-diff takes the mechanical pass.
+file in the diff. Human prose in the diff takes the mechanical pass.
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue. **Triage waits for
-both axes.** Read each axis's report before dispositioning anything; an axis
-whose report never arrives is `red-after-retry: <axis>` after the bounded retry,
-never a disposition written from memory of what it would have said.
-**Auto-triage** every finding: harden rather than rip out capability, verify nits against the
-pinned versions, reject known non-issues; fix the valid ones; record a one-line
-disposition per finding. Two rails on rejecting: a claim about **what exists
-in the repo** is checked against `origin/HEAD`, never the worktree, which may
+both axes.** An axis whose report never arrives is `red-after-retry: <axis>`
+after the bounded retry, never a disposition written from memory of what it
+would have said. **Auto-triage** every finding: harden rather than rip out
+capability, verify nits against the pinned versions, reject known non-issues;
+fix the valid ones; record a one-line disposition per finding. Two rails on
+rejecting: a claim about **what exists in the repo** is checked against
+`origin/HEAD`, never the worktree, which may
 predate a merge; and a finding's **evidence and its claim are separate**, so a
 reviewer citing the wrong commit for a real primitive is still right. A valid
 finding outside the issue is an adjacent find: phase 2's three dispositions.
@@ -453,8 +450,8 @@ environment provides an attribution footer for pull request descriptions, it is
 part of **the body file this call is handed**, never a later write: the body
 **ends** with it, under a `## ` heading of its own that ship adds, no template
 carrying one (`## Attribution`), placed after every section a later phase
-rewrites. So no PR exists footerless for a moment, and no second call has to
-create the section. The placement is what keeps it: a rewrite replaces
+rewrites. The footer is therefore in the body from open, and no second call
+creates the section. The placement is what keeps it there: a rewrite replaces
 everything from its own heading to the next one, so a footer left loose at the
 end of the last section is inside that section and the phase-7
 `update-pr-body --section Review` write drops it. Ship never names the footer's
@@ -462,10 +459,10 @@ lines; it only says where it sits.
 
 **Every body write after open ends with `read-pr <pr>`**, whose `sections` list
 is checked against the headings the body is supposed to carry; a section the
-rewrite swallowed is missing from it, and this is the only place a swallowed
-`## Attribution` shows while the PR is still open. Reading the list is also how
-the fence trap stays harmless: a Shape fence over a markdown change carries its
-own `## ` lines, which the section slice reads as example text rather than as
+rewrite swallowed is missing from it, and that is the only place a swallowed
+`## Attribution` shows while the PR is still open. Reading the list is also what
+disarms the fence trap: a Shape fence over a markdown change carries `## ` lines
+of its own, which the section slice takes as example text rather than as
 headings, so the reported list is the answer and the fence's contents never
 enter it.
 
@@ -512,10 +509,8 @@ reads the findings rather than the whole fetch. At exit,
 `update-pr-body <pr> --section "Deviations from plan" --body-file <path>` where
 the rounds grew the log, then
 `update-pr-body <pr> --section Review --body-file <path>` with one status line
-per reviewer, whose verdict's `sections` lists the headings the body carries
-after the write: a section the rewrite swallowed is missing from it. Then
-`read-pr <pr>` to read the body back: a rewrite that swallowed the attribution
-footer shows up here, while the PR is still open. Read
+per reviewer. Then read the body back per the rule at phase 6, while the PR is
+still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per
 trigger, the substantive-round test, `Instructions:` handling and degraded
 detection.
@@ -533,10 +528,8 @@ and review quota, so push when the tree changed.
 
 **9 · Merge gate.** **Hard stop.** Write the summary per
 [reference/merge-gate.md](reference/merge-gate.md), uncompressed. Attended:
-post it in the conversation and wait for an explicit "merge". The word is
-exact: a typo, a synonym, or approval of something else in the summary is asked
-back, never read as merge, because this is the one irreversible step and a
-misread spends the whole review. On approval run
+post it in the conversation and wait for an explicit "merge": the word is
+exact, and a near miss is asked back rather than read as merge. On approval run
 `merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
 `false` in their JSON is finished by hand before reporting done. `merge` proves
 the branch fresh against its base first and refuses `stale-base` when the base

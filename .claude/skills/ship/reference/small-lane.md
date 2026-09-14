@@ -15,10 +15,11 @@ prose takes the pass whether docs-sync fired or not. On top of that:
 
 - **Local gate (phase 5) is `--small <node>`**: the repo's security check (the
   `secrets` gate, whatever scanner the gate body wires) plus the one regression
-  test proving the behavior change red to green, with the node written in the
-  profile's `Small node:` syntax. `base-fresh` still runs first. Lean on CI for
-  the rest of the suite, lint and types: a red CI on a small change is a cheap
-  round-trip.
+  test proving the behavior change red to green, or, for a `docs`-class change
+  that has no such test, the changed document itself. Either way the node is
+  written in the profile's `Small node:` syntax. `base-fresh` still runs first.
+  Lean on CI for the rest of the suite, lint and types: a red CI on a small
+  change is a cheap round-trip.
 - **On-request reviewers get exactly one round**, whatever their `Cap:`.
   `auto-once` and `on-push` reviewers behave as in the full lane; ship does not
   control when they fire.
@@ -30,7 +31,7 @@ prose takes the pass whether docs-sync fired or not. On top of that:
 
 1. Isolation (phase 0)
 2. `base-fresh` and the local gate `--small <node>`: security check plus the
-   one regression test
+   one regression test, or the changed document where the class is `docs`
 3. The **self-review, unmodified**. It is the only check that reads the diff
    against the issue; a reviewer reviews standards and has never read the
    issue. It also carries the two rejection rails. Its cost scales with the

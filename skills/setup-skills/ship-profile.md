@@ -22,7 +22,7 @@ Bootstrap: <command run once after isolate in every lane, or None.>
 ## Local gate
 
 Location: <scripts/local-gate.sh>
-Small node: <the syntax of one test node for --small, with an example; then the docs-class value, the path of the changed document, with an example>
+Small node: <the syntax of one test node for --small, with an example; then a docs-class line giving the path of the changed document, with an example>
 Tripwires: <anything that must run before the gate, e.g. a bundle rebuild, or None.>
 
 <!-- Output contract, flags and statuses are core. -->
@@ -95,7 +95,7 @@ File as an issue labelled `<the needs-triage label from docs/agents/triage-label
 ## Docs sync
 
 Targets: <artifacts coupled to a change: README.md, docs/, CONTEXT.md, a shipped skill, examples/>
-Agent-facing: <which of those go through writing-for-agents: docs/agents/, .claude/skills/>
+Agent-facing: <every path here whose reader is an agent, whether or not it is also a docs-sync target: docs/agents/, .claude/skills/>
 
 ## Current docs
 
