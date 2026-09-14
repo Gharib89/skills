@@ -63,7 +63,7 @@ stamp is a measurement rather than a recollection:
 
 ```sh
 RUN=<scratchpad>/ship-<issue>.md
-# open phase 5; the `[.]` also picks up the `[x]` of a phase being re-opened
+# open phase 5; the wildcard in \[.\] also matches the x of a phase being re-opened
 sed "s|^- \[.\] \(5 · .*\)|- [ ] \1 in_progress ($(date -u +%H:%M)→)|" "$RUN" > "$RUN.t" && mv "$RUN.t" "$RUN"
 # close it
 sed "s|^- \[ \] \(5 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|" "$RUN" > "$RUN.t" && mv "$RUN.t" "$RUN"
