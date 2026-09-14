@@ -1,6 +1,6 @@
 # Ship profile
 
-Schema: 1
+Schema: 2
 
 Every repo-specific fact `/ship` needs, one section per axis. Fourteen `##` headings, always present and in this order; a defaulted axis reads `None.` or `Default.`, never an omitted heading. Facts sit on `Label:` lines; the prose under a heading explains and never carries a fact. The `Schema:` line above is the profile schema `ship` checks at preflight; only a `setup-skills` re-run moves it. Vocabulary: the `ship` skill's source repo, `Gharib89/skills`, `CONTEXT.md`.
 

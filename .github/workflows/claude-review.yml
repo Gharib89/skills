@@ -19,12 +19,22 @@ jobs:
   review:
     # An issue_comment fires on issues too, so the PR test comes first. A run
     # that starts and finds nothing to review still costs minutes and still
-    # shows up in the Actions tab as a review that happened.
+    # shows up in the Actions tab as a review that happened. The association
+    # test is what keeps a drive-by commenter from spending the token.
     if: >-
       github.event.issue.pull_request != null &&
-      contains(github.event.comment.body, '@claude')
+      contains(github.event.comment.body, '@claude') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     steps:
+      # The action does not clone the repo, and step 1 of the prompt reads the
+      # brief off the filesystem. An issue_comment checkout is the default
+      # branch, never the PR head, and that is the brief to review against: the
+      # canonical one, not the version the PR under review proposes.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

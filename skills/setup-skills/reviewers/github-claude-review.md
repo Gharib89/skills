@@ -1,69 +1,115 @@
 # Claude Code as reviewer on GitHub Actions
 
-Scaffold for a repo whose ship profile names Claude Code as a reviewer. Reviews every push, so it maps to the profile as `Trigger: on-push`, `Resolve: None.` (no thread-resolution mechanism; convergence rests on dispositioned threads and a quiet head), `Gating: no` unless the human makes the check required. Replace `__STANDARDS__` with the profile's `## Coding standards` path; the reviewer reads that file, never a copy.
+Scaffold for a repo whose ship profile names Claude Code as a reviewer. It comes in two shapes, and a repo takes exactly one:
 
-## `.github/workflows/claude-review.yml`
+- **Shape A, on-push.** The repo has no other reviewer. Claude reviews every push to an open PR, so it is the whole second pair of eyes, and its job lands a check run on the PR head.
+- **Shape B, on-request fallback.** The repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out. A PR comment is the trigger, so nothing fires while the primary is healthy. See [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) for why a fallback is on-request and never on-push.
+
+What both shapes do the same way, because ship reads a round off the host and never off the workflow's logs:
+
+- **One formal pull request review per round**, submitted in a single call, with every inline finding attached to it, and a body of exactly `no findings` when the PR is clean. A reviewer that stays silent on a clean PR cannot be told apart from one that failed, and the run waits out its whole poll window either way.
+- **`--model claude-opus-5`.** A review is judgment work: a cheaper tier reads the diff and misses the standards violation in it.
+- **`claude_code_oauth_token`** from the `CLAUDE_CODE_OAUTH_TOKEN` secret, minted by `claude setup-token`, so the review is billed to a Claude subscription rather than to API credit.
+- **`actions/checkout` before the action.** The action does not clone the repo, and step 1 of the prompt reads the brief off the filesystem with the Read tool. Without it the reviewer reviews with no brief and no standards, and says nothing about why.
+
+Replace `__BRIEF__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__BRIEF__` is the standards path itself, delete the sentence that sends the reviewer on from the brief to the standards.
+
+The two YAML blocks below are each complete, and deliberately so: a consumer copies one of them whole, and a shared block plus a list of substitutions is where a workflow that fails on indentation comes from.
+
+## Shape A: on-push
+
+### `.github/workflows/claude-review.yml`
 
 ```yaml
 name: Claude PR Review
 
+# On-push: every push to an open PR draws a fresh round, which is what
+# `Trigger: on-push` in the profile means, and convergence needs this reviewer
+# quiet on the current head. The job lands a check run on the PR head, so it is
+# a CI leg as well as a reviewer: name it on `## CI`'s `Legs:` line, or
+# `ci-wait` will not wait for it.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
+
 jobs:
   review:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: read
-      id-token: write
     steps:
-      - uses: actions/checkout@v7
+      # A `pull_request` checkout is the PR's merge ref, so the brief read here
+      # is the PR's own version of it: a PR that edits the brief is reviewed
+      # against what it changed the brief to.
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            You are reviewing this pull request. The PR branch is checked out in the
-            working directory.
+            You are reviewing this pull request. The PR branch is checked out in
+            the working directory.
 
-            1. Read the coding standards at `__STANDARDS__` with the Read tool.
+            1. Read `__BRIEF__` with the Read tool. It is your brief: it names the
+               coding standards to review against and the things that are not
+               findings in this repo. Read the standards file it points at as well.
             2. Run `gh pr view ${{ github.event.pull_request.number }} --json title,body`
-               and find the linked issue (Closes/Fixes/Resolves #N). If one exists, run
-               `gh issue view N` and treat it as the spec for this change.
-            3. Run `gh pr diff ${{ github.event.pull_request.number }}` and review only
-               the changed lines against (a) the standards file and (b) the linked issue.
+               and find the linked issue (Closes/Fixes/Resolves #N). If one exists,
+               run `gh issue view N` and treat it as the spec for this change.
+            3. Run `gh pr diff ${{ github.event.pull_request.number }}` and review
+               only the changed lines against (a) the brief and the standards it
+               names and (b) the linked issue.
 
-            Report findings ONLY as GitHub comments:
-            - Use `mcp__github_inline_comment__create_inline_comment` (with `confirmed: true`)
-              for anything tied to a specific line. One comment per finding. State the
-              rule or issue requirement violated and the concrete fix.
-            - Use `gh pr comment` only for a finding that cannot be attached to a line
-              (for example, the change does not implement what the issue asks).
+            Report the round as ONE formal pull request review, submitted in a
+            single call, with every inline finding attached to it:
 
-            If there is nothing actionable, post nothing at all. No "LGTM", summaries,
-            praise, or restatements of the diff. Comments are the only output.
+                gh api --method POST \
+                  repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews \
+                  --input -
+
+            reading this JSON on stdin:
+
+                {"event": "COMMENT",
+                 "body": "<the round's text, or exactly `no findings`>",
+                 "comments": [{"path": "<file>", "line": <line in the new file>,
+                               "side": "RIGHT", "body": "<one finding>"}]}
+
+            One entry in `comments` per finding tied to a line, each naming the
+            rule or issue requirement broken and the concrete fix. A finding you
+            cannot anchor in the diff goes in `body` instead; an unanchorable line
+            makes the whole call fail, and a failed call is a round the run never
+            sees.
+
+            Submit exactly one review, even when you found nothing: a reviewer
+            that stays silent on a clean PR cannot be told apart from one that
+            failed, and the run waits out its whole poll window either way. With
+            nothing actionable, send `body` of exactly `no findings` and an empty
+            `comments` list. No LGTM, no praise, no summary of the diff.
           claude_args: |
-            --allowedTools "Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*)"
+            --model claude-opus-5
             --max-turns 30
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*)"
 ```
 
-## Human checklist
+### Human checklist
 
-1. Settings > Secrets and variables > Actions > New repository secret: `ANTHROPIC_API_KEY`, value from the Claude Console.
-2. Settings > Actions > General > Workflow permissions: the job-level `permissions:` block grants what it needs; if the org restricts job-level permissions, an org admin must allow `pull-requests: write` for this repo.
-3. Merge the workflow to the default branch; the first review runs on the next PR.
-4. Fork PRs never see the secret; leave them unreviewed.
-5. For `Gating: yes`: Settings > Branches (or Rules) > require the `review` check to pass before merging.
+1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
+2. Settings > Actions > General > Workflow permissions: the job-level `permissions:` block grants what the job needs; where the org restricts job-level permissions, an org admin must allow `pull-requests: write` for this repo.
+3. Merge the workflow to the default branch. A `pull_request` event runs the workflow from the PR's own merge ref, so the PR that adds this file is reviewed by it, unlike shape B.
+4. Add the job to `## CI`'s `Legs:` in `docs/agents/ship.md`. It is a check run on the PR head, and a reviewer that is also a leg is waited for twice, once per phase.
+5. Fork PRs never see the secret; leave them unreviewed.
+6. For `Gating: yes`: Settings > Branches (or Rules) > require the `review` check to pass before merging.
 
-## Profile block this produces
+### Profile block this produces
 
 ```markdown
 ### Claude Code
@@ -71,8 +117,128 @@ Login: github-actions[bot]
 Trigger: on-push
 Request: None.
 Cap: 3
-Resolve: None.
+Resolve: resolve-thread
 Gating: no
 Fallback-for: None.
-Instructions: __STANDARDS__
+Instructions: __BRIEF__
 ```
+
+## Shape B: on-request fallback
+
+Replace `__PHRASE__` with the phrase that triggers a round, `@claude` unless something else in the repo already answers to it, and `__PRIMARY__` with the `### <name>` of the reviewer this one stands in for, exactly as the profile spells it. The two must agree with the profile: ship posts `__PHRASE__` as a PR comment and nothing else starts a round, and it requests this reviewer only when `__PRIMARY__` exits degraded.
+
+### `.github/workflows/claude-review.yml`
+
+```yaml
+name: Claude PR Review
+
+# On-request: one round per request, and the request is a PR comment carrying
+# `__PHRASE__`, which is what `Request: comment __PHRASE__` in the profile asks
+# for. There is deliberately no `pull_request` trigger: it would fire on every
+# push, and a reviewer that cannot be withheld cannot be a fallback. It also
+# keeps this workflow off the PR head, so it lands no check run and is not a
+# CI leg.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
+
+jobs:
+  review:
+    # An issue_comment fires on issues too, so the PR test comes first. A run
+    # that starts and finds nothing to review still costs minutes and still
+    # shows up in the Actions tab as a review that happened. The association
+    # test is what keeps a drive-by commenter on a public repo from spending
+    # the token; drop it only on a repo where every commenter can already push.
+    if: >-
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '__PHRASE__') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      # An issue_comment checkout is the default branch, never the PR head, and
+      # that is the right brief to review against: the canonical one, not the
+      # version the PR under review proposes. The diff comes from `gh pr diff`,
+      # so the PR head is never needed on disk.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.issue.number }}
+
+            You are reviewing this pull request.
+
+            1. Read `__BRIEF__` with the Read tool. It is your brief: it names the
+               coding standards to review against and the things that are not
+               findings in this repo. Read the standards file it points at as well.
+            2. Run `gh pr view ${{ github.event.issue.number }} --json title,body`
+               and find the linked issue (Closes/Fixes/Resolves #N). If one exists,
+               run `gh issue view N` and treat it as the spec for this change.
+            3. Run `gh pr diff ${{ github.event.issue.number }}` and review only
+               the changed lines against (a) the brief and the standards it names
+               and (b) the linked issue.
+
+            Report the round as ONE formal pull request review, submitted in a
+            single call, with every inline finding attached to it:
+
+                gh api --method POST \
+                  repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}/reviews \
+                  --input -
+
+            reading this JSON on stdin:
+
+                {"event": "COMMENT",
+                 "body": "<the round's text, or exactly `no findings`>",
+                 "comments": [{"path": "<file>", "line": <line in the new file>,
+                               "side": "RIGHT", "body": "<one finding>"}]}
+
+            One entry in `comments` per finding tied to a line, each naming the
+            rule or issue requirement broken and the concrete fix. A finding you
+            cannot anchor in the diff goes in `body` instead; an unanchorable line
+            makes the whole call fail, and a failed call is a round the run never
+            sees.
+
+            Submit exactly one review, even when you found nothing: a fallback
+            reviewer that stays silent on a clean PR cannot be told apart from one
+            that failed, and the run waits out its whole poll window either way.
+            With nothing actionable, send `body` of exactly `no findings` and an
+            empty `comments` list. No LGTM, no praise, no summary of the diff.
+          claude_args: |
+            --model claude-opus-5
+            --max-turns 30
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*)"
+```
+
+### Human checklist
+
+1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
+2. Settings > Actions > General > Workflow permissions: as shape A, an org that restricts job-level permissions needs an admin to allow `pull-requests: write`.
+3. **Merge the workflow to the default branch before expecting a round.** GitHub dispatches an `issue_comment` workflow from the default branch only, so this file reviews nothing while it is still on a branch: the PR that adds it cannot be reviewed by it, and the first round is on the next PR.
+4. Nothing to configure as a check or a policy. The job lands no check run on the PR head, so `## CI` names no leg for it and `No-checks legal:` is unaffected.
+5. Post `__PHRASE__` on an open PR by hand once, after the merge, and confirm one formal review comes back. That proves the secret, the permissions and the trigger phrase in one go, and it is the only proof before a degraded primary needs this reviewer for real.
+
+### Profile block this produces
+
+```markdown
+### Claude Code
+Login: github-actions[bot]
+Trigger: on-request
+Request: comment __PHRASE__
+Cap: 2
+Resolve: None.
+Gating: no
+Fallback-for: __PRIMARY__
+Instructions: __BRIEF__
+```
+
+`Login:` is `github-actions[bot]` in both shapes because a workflow reviews under the Actions identity, not under a bot account of its own. `Resolve:` is `None.` here and `resolve-thread` in shape A: the label is an on-push field, and an on-request round is answered on the review rather than resolved thread by thread.
