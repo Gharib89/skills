@@ -472,9 +472,9 @@ reads the findings rather than the whole fetch. At exit,
 `update-pr-body <pr> --section "Deviations from plan"` where the rounds grew
 the log, then `update-pr-body <pr> --section Review` with one status line per
 reviewer, whose verdict's `sections` lists the headings the body carries after
-the write: a section the rewrite swallowed is missing from it. Then `read-pr <pr>` to read the
-body back: a rewrite that swallowed the attribution footer shows up here, while
-the PR is still open. Read
+the write: a section the rewrite swallowed is missing from it. Then
+`read-pr <pr>` to read the body back: a rewrite that swallowed the attribution
+footer shows up here, while the PR is still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per
 trigger, the substantive-round test, `Instructions:` handling and degraded
 detection.
