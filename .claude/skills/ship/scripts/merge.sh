@@ -13,10 +13,16 @@
 # or release, so those steps are skipped and their fields are absent from the
 # JSON. The merge, the branch deletion and the base fast-forward run unchanged.
 #
+# Before any of that, the branch is proven fresh against its base: the base can
+# move between phase 5's `base-fresh` and the human's "merge", and the squash
+# would land a branch that never saw it. Refused as exit 1 `stale-base`.
+#
 # stdout: {merged, issue_closed, remote_branch_deleted, base_updated,
 #          claim_released, ready_for_agent_removed}
 #         `merge none` omits issue_closed, claim_released and ready_for_agent_removed.
-# exit: 0 every step true · 1 a step is false (finish it by hand) · 2 usage or tooling
+# exit: 0 every step true · 1 a step is false (finish it by hand), or the base
+#       moved (`{"error": "stale-base: behind <n> on <base>"}`, nothing merged)
+#       · 2 usage or tooling
 set -uo pipefail
 # No `set -e`: the steps below use explicit `|| flag=false`, and
 # `git ls-remote --exit-code` returning non-zero is a SUCCESS signal.
@@ -33,6 +39,12 @@ while [ $# -gt 0 ]; do
 done
 ship_load_host
 main=$(cd "${wt:-.}" && ship_main_checkout) || ship_tooling "not inside a git checkout"
+
+# The freshness check, in the checkout that holds the run's branch, before
+# anything is squashed: attended, rebase, re-run the local gate and come back to
+# the merge gate; unattended, hand back.
+stale=$(ship_stale_base_reason "$(cd "${wt:-.}" && "$SHIP_SCRIPTS/base-fresh.sh" 2>/dev/null)")
+[ -z "$stale" ] || ship_fail "$stale"
 
 merged=false; issue_closed=false; remote_deleted=false; base_updated=false; released=false; rfa_removed=false
 # A task-spec run has no issue: its steps are skipped, their flags stand true so

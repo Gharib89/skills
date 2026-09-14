@@ -20,7 +20,12 @@
 #   host_issue_get <n>                   -> {number,title,body,state,is_pr,labels[],assignees[],created_at,url}
 #   host_issue_comments <n>              -> [{author,body,created_at}]
 #   host_issue_blockers_open <n>         -> [n, ...] open blockers; non-zero exit = query unavailable
-#   host_issue_linked_prs <n>            -> {closing:[{number,state}], mentions:[{number,state}]} (live PRs)
+#   host_issue_linked_prs <n>            -> {closing:[{number,state}],
+#                                           mentions:[{number,kind,state}]}
+#                                           closing: live PRs whose body closes <n>.
+#                                           mentions: everything else that names it,
+#                                           kind "pr" or "issue"; none where the host
+#                                           records no cross-reference of its own.
 #   host_issue_assign <n> <identity>
 #   host_issue_unassign <n> <identity>
 #   host_issue_has_label <n> <label>     -> exit 0 when present
@@ -338,3 +343,78 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
   if ($full | index($id | tostring)) then .
   elif length > 2000 then .[0:2000] + "\n...[truncated]"
   else . end;'
+
+# ship_fence_unclosed <text>: does the text end inside a fenced block? Prints
+# `line <n>: <run>` naming the opener that never closed, or nothing when the
+# fence state is balanced. `update-pr-body` asks before it rewrites a section:
+# an open fence inverts the in-fence state for the rest of the body, so every
+# `## ` heading after it reads as example text and the rewrite swallows the
+# sections between them (run #121 lost four that way).
+ship_fence_unclosed() {
+  awk "$SHIP_AWK_FENCE"'
+    { was = fenced; fenced = ship_fence($0)
+      if (!was && fenced) {
+        open_line = NR; open_run = $0
+        sub(/^ ? ? ?/, "", open_run); sub(/[^`~].*$/, "", open_run)
+      } }
+    END { if (fenced) printf "line %d: %s\n", open_line, open_run }' <<<"$1"
+}
+
+# ship_body_headings <body>: the body's `## ` section headings, heading text
+# only, one per line, in order. The same fence rule as every transformation
+# above, so a `## ` inside a fence is example text here too. `update-pr-body`
+# reports this after the write, where a swallowed section is visible in the JSON
+# rather than eight minutes later in a review.
+ship_body_headings() {
+  awk "$SHIP_AWK_FENCE"'
+    { fenced = ship_fence($0) }
+    !fenced && /^## / { sub(/^## /, ""); sub(/[ \t\r]+$/, ""); print }' <<<"$1"
+}
+
+# ship_stale_base_reason <base-fresh-json>: the refusal `merge` answers with when
+# the branch has not seen every commit on its base, or nothing when it has. The
+# base can move between phase 5's `base-fresh` and the human's "merge" (PR #131
+# merged 46 seconds after its base moved, landing a body that no longer matched
+# the template), so the merge asks the same question again and reads the answer
+# here.
+#
+# Anything that is not a `fresh: true` verdict refuses, an unparseable one
+# included: a check that could not ask its question must not answer "fresh".
+ship_stale_base_reason() {
+  jq -rn --arg v "$1" '
+    (try ($v | fromjson) catch null) as $j
+    | if ($j | type) != "object" then "stale-base: base freshness unreadable"
+      elif $j.fresh == true then empty
+      elif ($j.behind | type) == "number" then "stale-base: behind \($j.behind) on \($j.base)"
+      else "stale-base: base freshness unreadable" end'
+}
+
+# ship_brief <poll-json> <identity> <on_head|all>: the projection `poll-pr
+# --brief` prints, from the JSON the poll already built. One host fetch, two
+# output shapes; the full shape stays the default so nothing existing changes
+# meaning.
+#
+# <identity> is the login the run posts as: its own thread replies land as review
+# rows of their own, and a convergence test that counts them reads its own voice
+# as the reviewer's. <rounds-key> is `all` under the --since rule and `on_head`
+# under the head rule, matching the list that rule lands from.
+#
+# A round's body comes down to its finding items, the lines a triage acts on; a
+# round carrying none is clipped instead, so it is short without being empty.
+# Threads come down to the open ones, the only ones still owed a disposition,
+# and the string "unavailable" passes through as itself.
+ship_brief() {
+  jq -c --arg me "$2" --arg key "$3" '
+    def mine: ((.login // "") | ascii_downcase | sub("\\[bot\\]$"; "")) == ($me | ascii_downcase);
+    def items: split("\n") | map(select(test("^ *([-*+]|[0-9]+[.)]) ")));
+    def finding_items: items as $i
+      | if ($i | length) > 0 then ($i | join("\n"))
+        elif length > 200 then .[0:200] + "\n...[truncated]"
+        else . end;
+    {head_sha, mergeable, landed_by,
+     rounds: [.reviews[$key][] | select(mine | not)
+              | {id, submitted_at, substantive, body: (.body | finding_items)}],
+     threads: (if (.threads | type) == "array"
+               then [.threads[] | select(.resolved | not) | {id, resolved, replied}]
+               else .threads end)}' <<<"$1"
+}

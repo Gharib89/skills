@@ -67,17 +67,23 @@ host_issue_linked_prs() {
   local n=$1 raw
   raw=$(api "$R/issues/$n/timeline" --paginate --jq '
       .[] | select(.event == "cross-referenced") | .source.issue
-      | select(.pull_request != null)
-      | select(.state == "open" or .pull_request.merged_at != null)
-      | {number, state: (if .pull_request.merged_at != null then "merged" else "open" end), body: (.body // "")}' \
+      | select(if .pull_request != null then (.state == "open" or .pull_request.merged_at != null)
+               else .state == "open" end)
+      | {number,
+         kind: (if .pull_request != null then "pr" else "issue" end),
+         state: (if .pull_request != null and .pull_request.merged_at != null then "merged" else .state end),
+         body: (.body // "")}' \
     | jq -s 'unique_by(.number)') || return 1
   local out='{"closing":[],"mentions":[]}' row
   while IFS= read -r row; do
     [ -z "$row" ] && continue
-    if ship_body_closes "$(jq -r .body <<<"$row")" "$n"; then
+    # Only a PR can close an issue: an issue whose body says "closes #n" is a
+    # mention, and reading it as a closing link would stop every run on this
+    # issue with `existing PR`.
+    if [ "$(jq -r .kind <<<"$row")" = pr ] && ship_body_closes "$(jq -r .body <<<"$row")" "$n"; then
       out=$(jq --argjson r "$row" '.closing += [$r | {number, state}]' <<<"$out")
     else
-      out=$(jq --argjson r "$row" '.mentions += [$r | {number, state}]' <<<"$out")
+      out=$(jq --argjson r "$row" '.mentions += [$r | {number, kind, state}]' <<<"$out")
     fi
   done < <(jq -c '.[]' <<<"$raw")
   printf '%s\n' "$out"

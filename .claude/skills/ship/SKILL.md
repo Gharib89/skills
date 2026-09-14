@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.8.1
+  version: 3.9.0
   profile-schema: 1
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -123,7 +123,7 @@ be read.
 | `reflect <issue> <pr>` | 6 |
 | `update-pr-title <pr> --title` | 6, 9 |
 | `read-pr <pr>` | 6 and 7, reading a PR back after a title or body write |
-| `poll-pr <pr> [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]` | 7, 8 |
+| `poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]` | 7, 8 |
 | `request-review <pr> <login>` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
 | `reply-thread <pr> <thread> --body-file` | 7 |
@@ -172,6 +172,7 @@ sibling maps it, a human reads it.
 | Local gate verdict `unavailable` | `local gate unavailable: <gates>` | attended: ask; unattended: hand back |
 | Carried file changed | `carried file modified: <file>` | attended: ask; unattended: hand back |
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
+| The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you rebase; unattended: hand back |
 | Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | never claimed |
 | Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | never claimed |
 | No issue passes selection | `nothing-ready` | never claimed |
@@ -285,8 +286,10 @@ not-actionable reason. Admission: `ready-for-agent` always; `ready-for-human` in
 attended run only; anything else is `not triaged`.
 An assignee, including your own identity, is `already claimed`; stale-claim
 recovery is a human unassigning by hand. `existing PR` means a live PR whose
-body **closes** this issue or whose head branch ends in `-<issue>`; PRs that
-merely mention it come back as `mentions[]`, context for phase 1, never a stop.
+body **closes** this issue or whose head branch ends in `-<issue>`; whatever
+merely mentions it comes back as `mentions[]` numbers with a `mentioned_by[]`
+row per mention naming its `kind` (`issue` or `pr`) and `state`, context for
+phase 1, never a stop.
 
 Then isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
 `Carry:` files. It resolves the main checkout through `--git-common-dir`,
@@ -455,9 +458,14 @@ thread once every thread carries a disposition. Exits: `converged`,
 evidence), or `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |
 unreachable`. Degraded proceeds to the merge gate on green CI and never hands
-back on its own. At exit, `update-pr-body <pr> --section Review` with one status
-line per reviewer, then `read-pr <pr>` to read the body back: a rewrite that
-swallowed the attribution footer shows up here, while the PR is still open. Read
+back on its own. `--brief` is how a round is read: it projects the same poll down
+to the rounds and open threads, with the run's own replies dropped, so the loop
+reads the findings rather than the whole fetch. At exit,
+`update-pr-body <pr> --section Review` with one status line per reviewer, whose
+verdict's `sections` lists the headings the body carries after the write: a
+section the rewrite swallowed is missing from it. Then `read-pr <pr>` to read the
+body back: a rewrite that swallowed the attribution footer shows up here, while
+the PR is still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per
 trigger, the substantive-round test, `Instructions:` handling and degraded
 detection.
@@ -477,6 +485,8 @@ and review quota, so push when the tree changed.
 [reference/merge-gate.md](reference/merge-gate.md), uncompressed. Attended:
 post it in the conversation and wait for an explicit "merge"; on approval run
 `merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
-`false` in their JSON is finished by hand before reporting done. Unattended:
+`false` in their JSON is finished by hand before reporting done. `merge` proves
+the branch fresh against its base first and refuses `stale-base` when the base
+moved since phase 5: rebase, re-run the local gate, and come back to this gate. Unattended:
 `comment-pr <pr> --body-file` with the summary, and return. The claim holds in
 both lanes until the merge releases it.
