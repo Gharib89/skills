@@ -20,7 +20,7 @@ Every skill under `.claude/skills/` is a derived copy, never edited in place; `s
 
 ```sh
 npx skills add . --skill ship --skill cloud-ship --skill setup-skills --agent claude-code -y \
-  && .claude/skills/ship/scripts/preflight.sh <any open issue number>
+  && .claude/skills/ship/scripts/preflight.sh none
 ```
 
 **A change to `skills/<name>/` is not finished until the refresh line has run and both trees are in the same commit.** `.claude/skills/` is what actually executes, so an unrefreshed change means the run is exercising the previous version. Run the refresh at the end of the implementation phase, before the self-review: the run's remaining phases then invoke the new mechanics, while changed `SKILL.md` prose is proven by the next run, because the skill was loaded into context at run start. The `derived-copies` gate in `scripts/local-gate.sh` fails when the two trees differ.

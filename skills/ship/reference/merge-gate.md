@@ -91,8 +91,10 @@ the summary is posted, never left for the human to retitle.
 ## Attended: post, then wait
 
 Post the summary in the conversation and **wait**. Merge only on an explicit
-"merge". Never an auto-merge flag: it can merge the instant CI is green,
-before a reviewer lands.
+"merge", and the word is exact: a typo, a synonym, or approval of some other
+part of the summary is asked back rather than read as the word, because merging
+is the step no later phase undoes. Never an auto-merge flag either: it can merge
+the instant CI is green, before a reviewer lands.
 
 **On approval**, from the worktree, `merge <pr> <issue|none> --worktree <path>`.
 It first proves the branch has seen every commit on its base and refuses

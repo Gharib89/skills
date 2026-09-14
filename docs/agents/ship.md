@@ -20,7 +20,7 @@ Nothing here is gitignored and nothing needs installing: the mechanics are bash,
 ## Local gate
 
 Location: scripts/local-gate.sh
-Small node: the path of the changed script, e.g. `skills/ship/scripts/merge.sh`
+Small node: the path of the changed script, e.g. `skills/ship/scripts/merge.sh`; for a `docs`-class change, the path of the changed document, e.g. `skills/ship/SKILL.md`
 Tripwires: None.
 
 Every gate is repo-wide and takes seconds, so the small lane records the node and narrows nothing. There is no CI, so no gate is ever `deferred-to-ci`: the gate is the whole automated check on a diff, alongside the reviewer.

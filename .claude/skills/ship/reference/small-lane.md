@@ -8,14 +8,18 @@ never a check. The floor is the same in every repo.
 
 Keys 1 and 2 already make phase-3 verification and the phase-4 docs-sync gate
 no-ops by construction: nothing on the public surface changed, nothing the
-real thing needs to prove. On top of that:
+real thing needs to prove. The `writing-for-agents` pass is not inside that
+gate and does not collapse with it: its trigger is any diff touching a target
+on the profile's `Agent-facing:` line, so a small-lane diff of agent-facing
+prose takes the pass whether docs-sync fired or not. On top of that:
 
 - **Local gate (phase 5) is `--small <node>`**: the repo's security check (the
   `secrets` gate, whatever scanner the gate body wires) plus the one regression
-  test proving the behavior change red to green, with the node written in the
-  profile's `Small node:` syntax. `base-fresh` still runs first. Lean on CI for
-  the rest of the suite, lint and types: a red CI on a small change is a cheap
-  round-trip.
+  test proving the behavior change red to green, or, for a `docs`-class change
+  that has no such test, the changed document itself. Either way the node is
+  written in the profile's `Small node:` syntax. `base-fresh` still runs first.
+  Lean on CI for the rest of the suite, lint and types: a red CI on a small
+  change is a cheap round-trip.
 - **On-request reviewers get exactly one round**, whatever their `Cap:`.
   `auto-once` and `on-push` reviewers behave as in the full lane; ship does not
   control when they fire.
@@ -27,7 +31,7 @@ real thing needs to prove. On top of that:
 
 1. Isolation (phase 0)
 2. `base-fresh` and the local gate `--small <node>`: security check plus the
-   one regression test
+   one regression test, or the changed document where the class is `docs`
 3. The **self-review, unmodified**. It is the only check that reads the diff
    against the issue; a reviewer reviews standards and has never read the
    issue. It also carries the two rejection rails. Its cost scales with the

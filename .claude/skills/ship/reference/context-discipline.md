@@ -126,8 +126,8 @@ decision, not a gap. The wording of items 2, 3, 7 and 8 comes from the profile
 (`Tripwires:`, the applicable verifications, the reviewer list, the CI legs);
 write it in when you create the file. Create exactly these ten:
 
-- [ ] 0 · Isolate: preflight, worktree (or in place) on a fresh branch off the default
-- [ ] 1 · Understand: read the issue, derive success, claim, apply spec precedence
+- [ ] 0 · Isolate: preflight, read the issue, worktree (or in place) on a fresh branch off the default
+- [ ] 1 · Understand: derive success, claim, apply spec precedence
 - [ ] 2 · Implement: classify (docs/code/infra), lane keys, TDD per class, tripwires <from the profile>
 - [ ] 3 · Verify: <applicable verifications from the profile> scoped to what changed
 - [ ] 4 · Docs-sync + self-review: sync docs first, then `code-review` on the diff, auto-triage

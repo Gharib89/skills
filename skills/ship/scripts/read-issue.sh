@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ship phase 1: the issue in one normalized payload.
+# ship phase 0: the issue in one normalized payload.
 #
 #   read-issue <issue>
 #
