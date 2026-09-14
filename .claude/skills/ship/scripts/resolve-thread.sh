@@ -10,6 +10,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: resolve-thread <pr> <thread-id>'
 [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 pr=$1; thread=$2
+case $pr in -*) ship_tooling "$usage" ;; esac
+case $thread in -*) ship_tooling "$usage" ;; esac
 [ $# -eq 2 ] || ship_tooling "unknown flag: $3"
 ship_load_host
 out=$(host_pr_resolve_thread "$pr" "$thread") || ship_fail "resolve call failed"

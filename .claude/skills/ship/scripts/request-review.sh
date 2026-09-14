@@ -17,6 +17,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: request-review <pr> <login>'
 [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 pr=$1; login=$2
+case $pr in -*) ship_tooling "$usage" ;; esac
+case $login in -*) ship_tooling "$usage" ;; esac
 [ $# -eq 2 ] || ship_tooling "unknown flag: $3"
 ship_load_host
 out=$(host_pr_request_review "$pr" "$login") || ship_tooling "request call failed"

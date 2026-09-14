@@ -14,6 +14,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: read-pr <pr>'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1
+case $pr in -*) ship_tooling "$usage" ;; esac
 [ $# -eq 1 ] || ship_tooling "unknown flag: $2"
 ship_load_host
 

@@ -12,6 +12,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: comment-pr <pr> --body-file <path>'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
+case $pr in -*) ship_tooling "$usage" ;; esac
 [ "${1:-}" = --body-file ] && [ -f "${2:-}" ] && [ $# -eq 2 ] || ship_tooling "$usage"
 ship_load_host
 host_pr_comment "$pr" "$2" || ship_fail "comment failed"

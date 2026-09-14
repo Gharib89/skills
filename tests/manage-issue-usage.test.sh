@@ -31,4 +31,15 @@ check "an unknown verb is still named" \
   'unknown subcommand: abandon' \
   "$(err 1 abandon)"
 
+# A flag where an id belongs, in either slot. Without the guards the first
+# reaches the host as issue "--json", and the second as verb "--json".
+check "a flag in the issue slot is the usage error" \
+  'usage: manage-issue <issue> take|release|handback "<reason>"|close' \
+  "$(err --json take)"
+check_rc "a flag in the issue slot is tooling" 2 "$(rc --json take)"
+
+check "a flag in the verb slot is the usage error" \
+  'usage: manage-issue <issue> take|release|handback "<reason>"|close' \
+  "$(err 1 --json)"
+
 finish

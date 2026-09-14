@@ -25,6 +25,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: manage-issue <issue> take|release|handback "<reason>"|close'
 [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 n=$1; op=$2
+case $n in -*) ship_tooling "$usage" ;; esac
+case $op in -*) ship_tooling "$usage" ;; esac
+# $3 is handback's reason, free text rather than an id: it takes no such guard.
 reason=${3:-}
 case $op in
   take|release|close) [ $# -eq 2 ] || ship_tooling "$op takes no further argument" ;;
