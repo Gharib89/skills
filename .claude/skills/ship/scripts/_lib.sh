@@ -344,6 +344,51 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
   elif length > 2000 then .[0:2000] + "\n...[truncated]"
   else . end;'
 
+# The vocabulary a reviewer refuses a round in, shared by the two readers: the
+# blocked lookup, which returns the notice line, and the reviews projection,
+# which refuses to call such a body a round.
+#
+# The refusal VERB carries the match, not the bare noun. A round that merely
+# mentions a quota or a rate limit ("back off rather than burn the API quota")
+# is a finding, and a draft of this that matched the noun alone dropped such a
+# round as a notice, which costs the run its whole poll window.
+#   notice_body:  the body on one line, HTML comments and quote or bold marks
+#                 gone, so a wrapped notice and one carrying a generated footer
+#                 classify the same as the one-line form. PR #154's notice
+#                 arrived all three ways.
+#   notice_lines: the matching lines of a body, de-quoted and unbolded: what the
+#                 blocked lookup reports, so the summary quotes the reviewer.
+#   is_notice:    the body is ONLY a refusal, every sentence of it one. Known
+#                 limit: a one-sentence round whose whole content is a refusal
+#                 phrase reads as a notice. The run then waits the window out
+#                 and reports the reviewer blocked, with the body still in
+#                 `rounds[]` to read, rather than losing it.
+# shellcheck disable=SC2034  # read by the host adapters that source this library
+readonly SHIP_BLOCKED_NOTICE='def notice_re:
+  "(unable|not able|cannot|could not|failed)( to)? [a-z ]{0,24}review"
+  + "|(reached|exceeded|hit|out of|ran out of) [a-z ]{0,24}(quota|rate limit)"
+  + "|next included review";
+def notice_body:
+  gsub("<!--[\\s\\S]*?-->"; "") | gsub("[*>]"; "") | gsub("\\s+"; " ")
+  | sub("^ +"; "") | sub(" +$"; "");
+def notice_lines:
+  splits("\n") | select(test(notice_re; "i")) | sub("^>\\s*"; "") | gsub("\\*"; "");
+def is_notice:
+  [notice_body | splits("(?<=[.!?]) +") | select(test("\\S"))] as $sentences
+  | ($sentences | length) > 0 and all($sentences[]; test(notice_re; "i"));'
+
+# poll-pr's two landing rules over a `host_pr_reviews` projection, invoked with
+# `--arg l <normalised login>` and `--arg s <since|"">`. `$l` arrives already
+# lowercased and stripped of a `[bot]` suffix, the row side normalised here to
+# match. Only a SUBSTANTIVE row lands, which is what keeps a quota notice from
+# answering for a round that never arrived (#155).
+# shellcheck disable=SC2034  # read by poll-pr
+readonly SHIP_LANDED_BY='
+  def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
+  if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
+  else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
+  end'
+
 # ship_fence_unclosed <text>: does the text end inside a fenced block? Prints
 # `line <n>: <run>` naming the opener that never closed, or nothing when the
 # fence state is balanced. `update-pr-body` asks before it rewrites a section:

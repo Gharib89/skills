@@ -93,7 +93,7 @@ A reviewer driven only when the reviewer it names exits degraded, for any degrad
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Landing rule**:
-Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The head rule, its default, takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule, `--since <iso>`, takes a review submitted at or after a time on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it. The reviewer's trigger picks the rule.
+Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The head rule, its default, takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule, `--since <iso>`, takes a review submitted at or after a time on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it. The reviewer's trigger picks the rule. Neither rule takes a row that is not substantive: an empty body (a reviewer's reply to one thread) or a body that is only a quota or rate-limit notice, which refuses the round rather than delivering it.
 _Avoid_: landing check, freshness rule
 
 **Round clip**:
