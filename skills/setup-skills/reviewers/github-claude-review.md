@@ -12,7 +12,7 @@ What both shapes do the same way, because ship reads a round off the host and ne
 - **`claude_code_oauth_token`** from the `CLAUDE_CODE_OAUTH_TOKEN` secret, minted by `claude setup-token`, so the review is billed to a Claude subscription rather than to API credit.
 - **`actions/checkout` before the action.** The action does not clone the repo, and step 1 of the prompt reads the brief off the filesystem with the Read tool. Without it the reviewer reviews with no brief and no standards, and says nothing about why.
 
-Replace `__BRIEF__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__BRIEF__` is the standards path itself, delete the sentence that sends the reviewer on from the brief to the standards.
+Replace `__INSTRUCTIONS__`, named after the `Label:` line that fills it, with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete the sentence that sends the reviewer on from the brief to the standards.
 
 The two YAML blocks below are each complete, and deliberately so: a consumer copies one of them whole, and a shared block plus a list of substitutions is where a workflow that fails on indentation comes from.
 
@@ -59,7 +59,7 @@ jobs:
             You are reviewing this pull request. The PR branch is checked out in
             the working directory.
 
-            1. Read `__BRIEF__` with the Read tool. It is your brief: it names the
+            1. Read `__INSTRUCTIONS__` with the Read tool. It is your brief: it names the
                coding standards to review against and the things that are not
                findings in this repo. Read the standards file it points at as well.
             2. Run `gh pr view ${{ github.event.pull_request.number }} --json title,body`
@@ -120,7 +120,7 @@ Cap: 3
 Resolve: resolve-thread
 Gating: no
 Fallback-for: None.
-Instructions: __BRIEF__
+Instructions: __INSTRUCTIONS__
 ```
 
 ## Shape B: on-request fallback
@@ -176,7 +176,7 @@ jobs:
 
             You are reviewing this pull request.
 
-            1. Read `__BRIEF__` with the Read tool. It is your brief: it names the
+            1. Read `__INSTRUCTIONS__` with the Read tool. It is your brief: it names the
                coding standards to review against and the things that are not
                findings in this repo. Read the standards file it points at as well.
             2. Run `gh pr view ${{ github.event.issue.number }} --json title,body`
@@ -243,7 +243,7 @@ Cap: 2
 Resolve: None.
 Gating: no
 Fallback-for: __PRIMARY__
-Instructions: __BRIEF__
+Instructions: __INSTRUCTIONS__
 ```
 
 `Login:` is `github-actions[bot]` in both shapes because a workflow reviews under the Actions identity, not under a bot account of its own. `Resolve:` is `None.` here and `resolve-thread` in shape A: the label is an on-push field, and an on-request round is answered on the review rather than resolved thread by thread.
