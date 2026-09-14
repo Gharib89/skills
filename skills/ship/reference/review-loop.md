@@ -85,9 +85,10 @@ a fresh read of the committed tree, not a conversation.
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
   `converged, override needed`, or `degraded: <reason>`, plus the round count.
-- **The exit rewrites Deviations too, when the rounds grew the log.** A round's
-  fixes and declines are deviations like any other, so where the log changed
-  since phase 6, write it back with
+- **The exit rewrites Deviations too, when the rounds grew the log.** A round
+  can force the same departure from the issue, brief or plan that phase 2 logs,
+  and an in-scope fix is no more a deviation here than anywhere else, so where
+  the log changed since phase 6, write it back with
   `update-pr-body <pr> --section "Deviations from plan" --body-file <path>`
   before the `Review` write, which stays last so `read-pr` reads both back at
   once. Skip it and the PR body ships the phase-6 log while the merge summary
