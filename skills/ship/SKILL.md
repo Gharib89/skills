@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 3.9.1
+  version: 3.9.2
   profile-schema: 1
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -379,6 +379,11 @@ in the repo** is checked against `origin/HEAD`, never the worktree, which may
 predate a merge; and a finding's **evidence and its claim are separate**, so a
 reviewer citing the wrong commit for a real primitive is still right. A valid
 finding outside the issue is an adjacent find: phase 2's three dispositions.
+Then read the diff yourself against the four depth checks in the
+coding-standards file the Standards axis reads, by their leading words: a
+vocabulary the change extends, a rule-shaped prose change, new
+pattern-matching code, a fix landed after review. Reviewer rounds find these
+otherwise, serially, at the cost of most of a run's wall time.
 This self-review plus green CI is the review gate; reviewers in phase 7 are a
 second pair of eyes on top, never a substitute.
 
@@ -464,11 +469,13 @@ unreachable`. Degraded proceeds to the merge gate on green CI and never hands
 back on its own. `--brief` is how a round is read: it projects the same poll down
 to the rounds and open threads, with the run's own replies dropped, so the loop
 reads the findings rather than the whole fetch. At exit,
-`update-pr-body <pr> --section Review` with one status line per reviewer, whose
-verdict's `sections` lists the headings the body carries after the write: a
-section the rewrite swallowed is missing from it. Then `read-pr <pr>` to read the
-body back: a rewrite that swallowed the attribution footer shows up here, while
-the PR is still open. Read
+`update-pr-body <pr> --section "Deviations from plan" --body-file <path>` where
+the rounds grew the log, then
+`update-pr-body <pr> --section Review --body-file <path>` with one status line
+per reviewer, whose verdict's `sections` lists the headings the body carries
+after the write: a section the rewrite swallowed is missing from it. Then
+`read-pr <pr>` to read the body back: a rewrite that swallowed the attribution
+footer shows up here, while the PR is still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per
 trigger, the substantive-round test, `Instructions:` handling and degraded
 detection.
