@@ -457,9 +457,10 @@ end of the last section is inside that section and the phase-7
 `update-pr-body --section Review` write drops it. Ship never names the footer's
 lines; it only says where it sits.
 
-**Every body write after open ends with `read-pr <pr>`**, whose `sections` list
-is checked against the headings the body is supposed to carry; a section the
-rewrite swallowed is missing from it, and that is the only place a swallowed
+**Every write to an open PR ends with `read-pr <pr>`**, the title writes
+included. After a body write its `sections` list is checked against the
+headings the body is supposed to carry; a section the rewrite swallowed is
+missing from it, and that is the only place a swallowed
 `## Attribution` shows while the PR is still open. Reading the list is also what
 disarms the fence trap: a Shape fence over a markdown change carries `## ` lines
 of its own, which the section slice takes as example text rather than as
