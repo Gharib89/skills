@@ -298,10 +298,10 @@ host_pr_request_review() { # <pr> <login>
 host_pr_comment() { # <pr> <body-file>
   local pr=$1 file=$2 me
   me=$(host_identity) || return 1
-  _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | gh api -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url}' 2>/dev/null; }
+  _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | gh api -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url, created_at}' 2>/dev/null; }
   _comment_find() {
     api "$R/issues/$pr/comments?per_page=100" --paginate --jq '.[]' \
-      | jq -s --arg me "$me" --rawfile b "$file" '[.[] | select(.user.login == $me and .body == $b)] | last | select(. != null) | {id, url: .html_url}'
+      | jq -s --arg me "$me" --rawfile b "$file" '[.[] | select(.user.login == $me and .body == $b)] | last | select(. != null) | {id, url: .html_url, created_at}'
   }
   _gh_create_verify _comment_post _comment_find
 }

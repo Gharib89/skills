@@ -36,9 +36,10 @@ Self-review (code-review skill, the review gate)
   ...
 
 Review                                         (one block per reviewer)
-  <name> (<trigger>, <n> rounds): <converged | converged, override needed | degraded: <reason>>
+  <name> (<trigger>, <n> rounds): <converged | converged, override needed | degraded: <reason> | not invoked: <primary> converged>
     - <finding> → <fixed in <sha> | declined: reason | filed: #<n>>
     ...                                        (or: clean, no findings)
+    (a fallback that ran opens with: fallback for <primary>: degraded: <reason>)
 
 Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>
 Docs-sync:   <ran: files | skipped: reason>

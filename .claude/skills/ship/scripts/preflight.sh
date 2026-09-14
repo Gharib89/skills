@@ -96,6 +96,15 @@ else
   esac
   declared=$(awk '/^## Host/{f=1;next} /^## /{f=0} f && /^Host:/{sub(/^Host: */,""); print; exit}' "$profile" | tr -d ' `')
   [ "$declared" = "$SHIP_HOST" ] || reasons+=("profile invalid: Host mismatch (profile says '${declared:-nothing}', remote is $SHIP_HOST)")
+
+  # The reviewer blocks, through the one parser. Refused here rather than at
+  # phase 7 because a run that reaches phase 7 has already spent itself, and
+  # because a fallback naming nobody would simply never fire: the loop would
+  # read as healthy while no second reviewer ever ran. A read loop, not
+  # mapfile, for the Bash 3.2 reason the composed-skills loop below gives.
+  while IFS= read -r reason; do
+    [ -z "$reason" ] || reasons+=("$reason")
+  done < <(ship_reviewer_reasons "$(ship_reviewers "$(cat "$profile")")")
 fi
 
 # The skills ship loads through the Skill tool, from ship's own frontmatter:
