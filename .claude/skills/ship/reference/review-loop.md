@@ -1,9 +1,9 @@
 # Phase 7: driving every reviewer to convergence
 
 The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
-it posts under, a `Trigger:`, `Gating:`, an optional `Instructions:` file, and
-per trigger: `Request:` and `Cap:` (on-request), `Resolve:` (on-push). The
-**trigger fixes the loop, convergence and cap**; the bot's brand fixes nothing.
+it posts under, a `Trigger:`, `Gating:`, a `Cap:`, an optional `Instructions:`
+file, and per trigger: `Request:` (on-request), `Resolve:` (on-push). The
+**trigger fixes the loop and convergence**; the bot's brand fixes nothing.
 Zero reviewers: skip this phase; the review gate is phase 4's self-review plus
 green CI (SKILL.md), and reviewer rounds never replace it.
 
@@ -81,6 +81,15 @@ a fresh read of the committed tree, not a conversation.
   posts no body and runs per thread only once every thread carries its reply.
   Every push spends review quota and CI minutes, and an on-push reviewer's
   round.
+- **Cap** is the profile's `Cap:`, the bound on one reviewer's rounds: a number,
+  or `None.` for an uncapped loop. On-request it is required with no default,
+  where a round costs a request; on-push it is a number or `None.`, where a
+  round costs a push, a wait on the new head, and a triage and a reply per
+  thread; `auto-once` delivers one round and reads `None.`. A round at the cap
+  that is still substantive is a shape problem more rounds will not fix:
+  disposition it in full (push its batch, reply to every thread, resolve where
+  the trigger resolves), then exit `degraded: cap-hit` without waiting for
+  another round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
@@ -108,9 +117,9 @@ needs nothing from it.
 
 ### `on-push`
 
-Re-reviews every push; rounds are free and uncapped. After each push, wait for
-a review **landed on the current head**, the **head** rule (no `--since`);
-silence on the head is never quiet.
+Re-reviews every push, and the profile's `Cap:` bounds the rounds. After each
+push, wait for a review **landed on the current head**, the **head** rule (no
+`--since`); silence on the head is never quiet.
 Triage, batch-fix, push, `reply-thread` on every `replied: false` thread. Once
 **every** thread carries a disposition, and only then, use the reviewer's
 `Resolve:` mechanism (`resolve-thread`, or the comment the profile names) to
@@ -134,10 +143,8 @@ rule with `request-review`'s `requested_at`, triage, batch-fix, push,
 `reply-thread` on every `replied: false` thread, request again. **Converged**
 when the latest round has nothing actionable and every thread from all rounds is
 dispositioned.
-**Cap** is the profile's `Cap:`, required, no default: a round at the cap that
-is still substantive is a shape problem more rounds will not fix; exit
-`degraded: cap-hit` and leave the call to the human. Small lane: exactly one
-round. A lint or flake fix after convergence earns no new request.
+Small lane: exactly one round. A lint or flake fix after convergence earns no
+new request.
 
 ## Degraded exits: fixed vocabulary, per reviewer
 
@@ -151,7 +158,7 @@ reads the reason and decides.
 | `blocked` | queued, then a quota or rate-limit comment from the reviewer (`reviewer_blocked` non-null), and the poll window closed. Non-null with `done: false` means waiting, not missing. |
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. |
 | `infra-error` | a review whose body is only an error notice with zero comments, twice. Not feedback. |
-| `cap-hit` | on-request cap reached with the latest round still substantive. |
+| `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. |
 | `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`, which is also what leaves `reply-thread` with no id to answer). |
 
 ## Gating reviewer with a declined finding

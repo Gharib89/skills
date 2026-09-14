@@ -44,12 +44,12 @@ Push policy: Default.
 Login: copilot-pull-request-reviewer[bot] posts the review; Copilot posts the inline comments
 Trigger: on-push
 Request: None.
-Cap: None.
+Cap: 3
 Resolve: resolve-thread
 Gating: no
 Instructions: .github/copilot-instructions.md
 
-Enabled by the repository ruleset **Copilot code review** on the default branch, with `review_on_push: true`. That setting, not the brand, is what makes the trigger `on-push`: every push to an open PR draws a fresh round, so rounds are free and convergence needs the bot quiet on the current head with every thread dispositioned and resolved. Flipping `review_on_push` to `false` in the ruleset makes it `auto-once`, and this block must move with it.
+Enabled by the repository ruleset **Copilot code review** on the default branch, with `review_on_push: true`. That setting, not the brand, is what makes the trigger `on-push`: every push to an open PR draws a fresh round, and convergence needs the bot quiet on the current head with every thread dispositioned and resolved. `Cap: 3` bounds that loop: runs #137 and #138 spent five and seven rounds, the late ones restating findings already dispositioned. Flipping `review_on_push` to `false` in the ruleset makes it `auto-once`, and this block must move with it.
 
 ## Coding standards
 
