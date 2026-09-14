@@ -34,7 +34,7 @@ jobs:
       # round PR #168 requested). An issue_comment checkout is the default
       # branch, never the PR head, and that is the brief to review against:
       # the canonical one, not the version the PR under review proposes.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 

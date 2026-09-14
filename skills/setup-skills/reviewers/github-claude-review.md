@@ -19,7 +19,7 @@ The two YAML blocks below are each complete on purpose: a consumer copies one of
 Two human steps belong to both shapes, so each checklist below carries only what is its own:
 
 1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
-2. Settings > Actions > General > Workflow permissions: the job-level `permissions:` block grants what the job needs; where the org restricts job-level permissions, an org admin must allow `pull-requests: write` for this repo.
+2. Settings > Actions > General > Workflow permissions: the workflow-level `permissions:` block above grants what the job needs; where the org caps what a workflow may grant, an org admin must allow `pull-requests: write` for this repo.
 
 ## The on-push shape
 
@@ -54,7 +54,7 @@ jobs:
       # repository" when there is nothing checked out. A `pull_request`
       # checkout is the PR's merge ref, so the instructions file read here is
       # the PR's own version of it.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -178,7 +178,7 @@ jobs:
       # right instructions file to review against: the canonical one, not the
       # version the PR under review proposes. The reviewed diff comes from
       # `gh pr diff`, so the PR head is never needed on disk.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -243,10 +243,10 @@ Both shared steps above, then:
 4. Decide who may spend the token. The `if:` above fires for any commenter, a drive-by on a public repo included. To narrow it, replace the whole `if:` with this one:
 
    ```yaml
-    if: >-
-      github.event.issue.pull_request != null &&
-      contains(github.event.comment.body, '__PHRASE__') &&
-      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+       if: >-
+         github.event.issue.pull_request != null &&
+         contains(github.event.comment.body, '__PHRASE__') &&
+         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
    ```
 
    Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review and no error, the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
