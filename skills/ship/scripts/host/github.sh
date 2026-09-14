@@ -208,8 +208,8 @@ host_pr_checks() { # <pr> <head_sha>
 # across heads, for its --since rule. `substantive` is the landing signal, and
 # two kinds of row fail it: a reviewer's reply to one thread, which posts as a
 # review row of its own (current head, empty body), and a quota or rate-limit
-# notice, which posts as a review with a non-empty body (PR #154, three rounds)
-# and is a refusal to review rather than a round. Counting either lands round 2
+# notice, which posts as a review with a non-empty body (PR #154, three times)
+# and refuses the round rather than delivering it. Counting either lands round 2
 # off round 1. Both stay in the two lists with their bodies, so the run can see
 # what it is waiting on.
 _gh_reviews_projection="$SHIP_REVIEW_CLIP$SHIP_BLOCKED_NOTICE"'
@@ -249,15 +249,16 @@ host_pr_threads() {
   printf '%s\n' "$out"
 }
 
-# The awaited login's own account of a round it has not delivered: a quota or
-# rate-limit notice, which Copilot states as a REVIEW of its own (PR #154, three
-# rounds) and other reviewers state as a PR comment. Both surfaces are read, so
-# `reviewer_blocked` answers the question whichever way the notice arrived.
-# Selection over the merged rows, sorted by time so `last` is the most recent
-# notice whichever surface it came from; the return shape is the notice line or
-# null, unchanged.
+# The awaited login's own account of a round it has not delivered. A reviewer
+# states it either as a review of its own or as a PR comment (Copilot did the
+# former on PR #154, three times), so both surfaces merge into one time-sorted
+# list and the latest notice wins whichever way it arrived.
+# The login is compared the way `SHIP_LANDED_BY` compares it, so a `Login:` typed
+# in another case cannot land rounds here and report blocked nowhere.
 _gh_blocked_select="$SHIP_BLOCKED_NOTICE"'
-  [sort_by(.at)[] | select(.login == $l) | (.body // "") | notice_lines] | last // null'
+  def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+  [sort_by(.at)[] | select((.login | norm) == ($l | norm)) | (.body // "") | notice_lines]
+  | last // null'
 host_pr_reviewer_blocked() { # <pr> <login>
   { api "$R/issues/$1/comments" --paginate --jq '.[] | {login: .user.login, body, at: .created_at}'
     api "$R/pulls/$1/reviews"   --paginate --jq '.[] | {login: .user.login, body, at: .submitted_at}'

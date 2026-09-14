@@ -344,20 +344,38 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
   elif length > 2000 then .[0:2000] + "\n...[truncated]"
   else . end;'
 
-# The vocabulary a reviewer states a blocked round in, shared by the two places
-# that read it: the blocked lookup, which returns the notice line, and the
-# reviews projection, which refuses to call such a body a round. Both match on
-# the vocabulary, never on one reviewer's current sentence.
-#   notice_lines: the matching lines of a body, de-quoted and unbolded.
-#   is_notice:    the body is ONLY a notice, so every non-blank line matches. A
-#                 real round that merely mentions a quota is still a round.
+# The vocabulary a reviewer refuses a round in, shared by the two readers: the
+# blocked lookup, which returns the notice line, and the reviews projection,
+# which refuses to call such a body a round.
+#
+# The refusal VERB carries the match, not the bare noun. A round that merely
+# mentions a quota or a rate limit ("back off rather than burn the API quota")
+# is a finding, and a draft of this that matched the noun alone dropped such a
+# round as a notice, which costs the run its whole poll window.
+#   notice_body:  the body on one line, HTML comments and quote or bold marks
+#                 gone, so a wrapped notice and one carrying a generated footer
+#                 classify the same as the one-line form. PR #154's notice
+#                 arrived all three ways.
+#   notice_lines: the matching lines of a body, de-quoted and unbolded: what the
+#                 blocked lookup reports, so the summary quotes the reviewer.
+#   is_notice:    the body is ONLY a refusal, every sentence of it one. Known
+#                 limit: a one-sentence round whose whole content is a refusal
+#                 phrase reads as a notice. The run then waits the window out
+#                 and reports the reviewer blocked, with the body still in
+#                 `rounds[]` to read, rather than losing it.
 # shellcheck disable=SC2034  # read by the host adapters that source this library
-readonly SHIP_BLOCKED_NOTICE='def notice_re: "rate limit|quota|Next included review|queue";
+readonly SHIP_BLOCKED_NOTICE='def notice_re:
+  "(unable|not able|cannot|could not|failed)( to)? [a-z ]{0,24}review"
+  + "|(reached|exceeded|hit|out of|ran out of) [a-z ]{0,24}(quota|rate limit)"
+  + "|next included review";
+def notice_body:
+  gsub("<!--[\\s\\S]*?-->"; "") | gsub("[*>]"; "") | gsub("\\s+"; " ")
+  | sub("^ +"; "") | sub(" +$"; "");
 def notice_lines:
-  split("\n")[] | select(test(notice_re; "i")) | sub("^>\\s*"; "") | gsub("\\*"; "");
+  splits("\n") | select(test(notice_re; "i")) | sub("^>\\s*"; "") | gsub("\\*"; "");
 def is_notice:
-  [splits("\n") | select(test("\\S"))] as $lines
-  | ($lines | length) > 0 and all($lines[]; test(notice_re; "i"));'
+  [notice_body | splits("(?<=[.!?]) +") | select(test("\\S"))] as $sentences
+  | ($sentences | length) > 0 and all($sentences[]; test(notice_re; "i"));'
 
 # poll-pr's two landing rules over a `host_pr_reviews` projection, invoked with
 # `--arg l <normalised login>` and `--arg s <since|"">`. `$l` arrives already

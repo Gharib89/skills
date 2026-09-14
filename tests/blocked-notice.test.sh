@@ -12,8 +12,9 @@ SHIP_OWNER=o SHIP_REPO=r
 source skills/ship/scripts/host/github.sh
 
 notice='Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.'
+bot='copilot-pull-request-reviewer[bot]'
 
-# select <login> <rows-json>: the adapter's call, in isolation.
+# select_blocked <login> <rows-json>: the adapter's call, in isolation.
 select_blocked() { jq -r --arg l "$1" "$_gh_blocked_select" <<<"$2"; }
 
 row() { # <login> <at> <body>
@@ -21,13 +22,11 @@ row() { # <login> <at> <body>
 }
 rows() { jq -s . <<<"$*"; }
 
-bot='copilot-pull-request-reviewer[bot]'
-
-check "a notice in a review body, with no comment carrying one" \
+check "a notice in a review body is found with no comment carrying one" \
   "$notice" \
   "$(select_blocked "$bot" "$(rows "$(row "$bot" 2026-09-14T09:00:00Z "$notice")")")"
 
-check "no row carries the vocabulary" \
+check "a body carrying no refusal is not a notice" \
   null \
   "$(select_blocked "$bot" "$(rows "$(row "$bot" 2026-09-14T09:00:00Z 'Reviewed 3 files and found no issues.')")")"
 
@@ -35,17 +34,23 @@ check "another login's notice is not this reviewer's" \
   null \
   "$(select_blocked "$bot" "$(rows "$(row someone-else 2026-09-14T09:00:00Z "$notice")")")"
 
+# The rounds land under a normalised login, so the blocked lookup normalises too:
+# a `Login:` typed in another case must not land rounds and report blocked nowhere.
+check "the login is matched case-insensitively, bot suffix aside" \
+  "$notice" \
+  "$(select_blocked 'Copilot-Pull-Request-Reviewer' "$(rows "$(row "$bot" 2026-09-14T09:00:00Z "$notice")")")"
+
 check "the most recent notice wins across the two surfaces" \
-  'later quota notice' \
+  'Copilot has exceeded its review quota.' \
   "$(select_blocked "$bot" "$(rows \
-      "$(row "$bot" 2026-09-14T09:00:00Z 'earlier rate limit notice')" \
-      "$(row "$bot" 2026-09-14T10:00:00Z 'later quota notice')")")"
+      "$(row "$bot" 2026-09-14T09:00:00Z 'Copilot was unable to review this pull request.')" \
+      "$(row "$bot" 2026-09-14T10:00:00Z 'Copilot has exceeded its review quota.')")")"
 
 check "rows out of chronological order still answer with the latest" \
-  'later quota notice' \
+  'Copilot has exceeded its review quota.' \
   "$(select_blocked "$bot" "$(rows \
-      "$(row "$bot" 2026-09-14T10:00:00Z 'later quota notice')" \
-      "$(row "$bot" 2026-09-14T09:00:00Z 'earlier rate limit notice')")")"
+      "$(row "$bot" 2026-09-14T10:00:00Z 'Copilot has exceeded its review quota.')" \
+      "$(row "$bot" 2026-09-14T09:00:00Z 'Copilot was unable to review this pull request.')")")"
 
 check "a quoted, bolded notice line is returned bare" \
   'Next included review is in 3 days' \
