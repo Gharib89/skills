@@ -57,6 +57,12 @@ check "the since rule projects all[]" \
 check "another identity drops no row" 2 \
   "$(ship_brief "$poll" someone-else on_head | jq '.rounds | length')"
 
+# Both sides of the comparison lose the `[bot]` suffix: a run authenticated as a
+# bot carries it on its own identity, and comparing it against a stripped login
+# would leave its own rows in the reviewer's list.
+check "a bot identity still matches its own row" 1 \
+  "$(ship_brief "$poll" 'Gharib89[bot]' on_head | jq '.rounds | length')"
+
 # An identity the host could not name drops nothing: losing the rounds the poll
 # came for is a worse answer than showing one row of our own.
 check "an unreadable identity drops no row" 2 \

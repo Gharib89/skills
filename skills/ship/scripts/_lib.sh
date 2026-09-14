@@ -409,7 +409,8 @@ ship_stale_base_reason() {
 # and the string "unavailable" passes through as itself.
 ship_brief() {
   jq -c --arg me "$2" --arg key "$3" '
-    def mine: $me != "" and (((.login // "") | ascii_downcase | sub("\\[bot\\]$"; "")) == ($me | ascii_downcase));
+    def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+    def mine: $me != "" and (((.login // "") | norm) == ($me | norm));
     def finding_items:
       [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
       | [$lines[] | select(test("^ *([-*+]|[0-9]+[.)]) "))] as $items
