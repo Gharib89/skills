@@ -12,7 +12,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: write
+  issues: read
   id-token: write
 
 jobs:
@@ -107,6 +107,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
         run: |
+          set -uo pipefail
           reason=unknown
           if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
             reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
@@ -115,4 +116,4 @@ jobs:
           [ -n "$reason" ] || reason=unknown
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
-            -f body="The Claude review round failed before posting a review: \`$reason\`. Nothing was submitted. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -f body="The Claude review round did not finish: \`$reason\`. Check the run before treating a missing review as a reviewer that never fired. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

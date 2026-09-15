@@ -13,7 +13,7 @@ What both shapes do the same way, because ship reads a round off the host and ne
 - **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the prompt is never reached: no review, no findings, and nothing on the PR to say why. Observed on run 34847733490 of this repo. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
 - **`--max-turns 60`, not 30.** A round reads a brief, a spec, a whole diff and then builds one POST, and 30 turns does not cover a mid-size PR: run 34949995325 of this repo exhausted a 30-turn cap reviewing 15 changed files, logged `num_turns: 31` with `error_max_turns`, posted nothing, and cost $2.17. [`ado-claude-review.md`](ado-claude-review.md) hit the same wall on a 51-file PR and moved to 60 first; this is the GitHub side catching up on the cap.
 - **An allowlist that covers every step of the prompt.** A tool the round needs and cannot call is a denied call, a spent turn and no explanation: run 34949995325 was denied 4 times, and the run log reports only `permission_denials_count`, never which commands, so the list is derived from what the prompt asks for and not from a log. `Read`, `Grep` and `Glob` serve step 1's brief and standards; `Bash(gh pr view:*)` and `Bash(gh issue view:*)` step 2's spec; `Bash(gh pr diff:*)` step 3's diff; `Bash(gh api:*)` the POST; and `Bash(head:*)`, `Bash(tail:*)` and `Bash(wc:*)` because a pipe is refused unless **both** of its commands are granted, so `gh pr diff | head` on a large diff needs `head` named too. Deliberately no `git` entry, though [`ado-claude-review.md`](ado-claude-review.md) grants two: that prompt reaches for `git diff` because Azure DevOps has no `gh`, while both shapes here check out at `fetch-depth: 1` and read the diff through `gh pr diff`, so `git log` would have no history to read and neither prompt asks for either. Nothing here writes and nothing reaches the network beyond `gh`. Narrow it and the round spends its turns on denied calls and posts nothing.
-- **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` and cannot tell it from a reviewer that never fired, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. The `if: failure()` step below leaves the run URL and the failure subtype on the PR instead. It is the only reason the job needs `issues: write` rather than `issues: read`: a comment on a pull request goes to `/issues/{n}/comments`, which the `issues` scope governs, not the `pull-requests` one that admits the review POST.
+- **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` and cannot tell it from a reviewer that never fired, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. The `if: failure()` step below leaves the run URL and the failure subtype on the PR instead. It needs no permission the job did not already have: a comment on a pull request is posted to `/issues/{n}/comments`, and the `pull-requests: write` that admits the review POST admits that endpoint too on a pull request, with no `issues` scope at all (probed on a runner, [run on #174](https://github.com/Gharib89/skills/pull/174)). Keep `issues: read`: this job hands PR-controlled text to a model holding `Bash(gh api:*)`, so a scope it does not need is a scope an injected prompt would get.
 
 Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
 
@@ -22,7 +22,7 @@ The two YAML blocks below are each complete on purpose: a consumer copies one of
 Two human steps belong to both shapes, so each checklist below carries only what is its own:
 
 1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
-2. Settings > Actions > General > Workflow permissions: the workflow-level `permissions:` block in the shape you copied grants what the job needs, `pull-requests: write` for the review POST and `issues: write` for the failure comment; where the org caps what a workflow may grant, an org admin must allow both for this repo.
+2. Settings > Actions > General > Workflow permissions: the workflow-level `permissions:` block in the shape you copied grants what the job needs, and `pull-requests: write` covers both the review POST and the failure comment. Where the org caps what a workflow may grant, an org admin must allow that one for this repo.
 
 ## The on-push shape
 
@@ -45,7 +45,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: write
+  issues: read
   id-token: write
 
 jobs:
@@ -133,6 +133,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
         run: |
+          set -uo pipefail
           reason=unknown
           if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
             reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
@@ -141,7 +142,7 @@ jobs:
           [ -n "$reason" ] || reason=unknown
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
-            -f body="The Claude review round failed before posting a review: \`$reason\`. Nothing was submitted. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -f body="The Claude review round did not finish: \`$reason\`. Check the run before treating a missing review as a reviewer that never fired. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 ```
 
 ### Human checklist
@@ -189,7 +190,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: write
+  issues: read
   id-token: write
 
 jobs:
@@ -284,6 +285,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
         run: |
+          set -uo pipefail
           reason=unknown
           if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
             reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
@@ -292,7 +294,7 @@ jobs:
           [ -n "$reason" ] || reason=unknown
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
-            -f body="The Claude review round failed before posting a review: \`$reason\`. Nothing was submitted. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -f body="The Claude review round did not finish: \`$reason\`. Check the run before treating a missing review as a reviewer that never fired. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 ```
 
 ### Human checklist
