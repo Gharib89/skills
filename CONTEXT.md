@@ -137,7 +137,7 @@ The one file a Ship run keeps outside the repo, in the session's scratchpad, hol
 _Avoid_: task list, scratch file, plan file, todo
 
 **Scratch directory**:
-The directory a Ship run names in every subagent prompt as the one place that subagent writes: `<scratchpad>/scratch/<role>/`, `<role>` being that subagent's job in the run. A sibling of the Run file's directory rather than a child, so a path a subagent invents below the one it was given still lands clear of the run's record. Passed at every dispatch the way the model tier is.
+The directory a Ship run names in every subagent prompt as the one place that subagent writes scratch of its own: `<scratchpad>/scratch/<role>/`, `<role>` being that subagent's job in the run. Edits to the repo are separate, and go under the worktree prefix. A sibling of the Run file's directory rather than a child, so a path a subagent invents below the one it was given still lands clear of the run's record. Passed at every dispatch the way the model tier is.
 _Avoid_: scratch file (that names the Run file, and is avoided there too), temp directory, workspace
 
 **Shape**:
