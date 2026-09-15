@@ -305,6 +305,10 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # still matches `## Review` and the heading this appends is the one the next
 # write will match.
 #
+# The name reaches awk through the environment rather than `-v`, which decodes
+# backslash escapes in its value: a `--section 'Review\name'` arrived as two
+# lines, so the real section was left alone and a mangled heading appended.
+#
 # The body file carries the section's CONTENT. A file that opens with the
 # section's own heading, and the blank line under it, has both dropped rather
 # than printed under the heading this writes: two `## <section>` lines make a
@@ -325,7 +329,7 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # write can repair. The boundary match reads the body the host returns and is the
 # pre-existing rule `_gh_add_closes` agrees with.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
-  awk -v sec="$2" -v file="$3" "$SHIP_AWK_FENCE"'
+  SHIP_SECTION="$2" awk -v file="$3" "$SHIP_AWK_FENCE"'
     function trimmed(line, cr) {
       if (cr) sub(/[ \t\r]*$/, "", line); else sub(/[ \t]*$/, "", line)
       return line
@@ -341,7 +345,7 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
       }
       for (i = start; i <= n; i++) print buf[i]
     }
-    BEGIN { hd = trimmed("## " sec, 1) }
+    BEGIN { hd = trimmed("## " ENVIRON["SHIP_SECTION"], 1) }
     { fenced = ship_fence($0) }
     !fenced && trimmed($0, 0) == hd {
       if (skip) next

@@ -424,4 +424,11 @@ appended=$(ship_body_replace_section "$(printf '## Summary\n\nkeep\n')" 'Review 
 check "appending under such a name writes a heading the next write matches" \
   "$appended" "$(ship_body_replace_section "$appended" 'Review ' "$content")"
 
+# The name reaches awk through the environment, not `-v`, which decodes
+# backslash escapes in its value: this name arrived as two lines, so the real
+# section survived and a mangled heading was appended next to it.
+check "a backslash in the section name is compared undecoded" \
+  "$(printf '## Review\\name\n\nline one\nline two')" \
+  "$(ship_body_replace_section "$(printf '## Review\\name\n\nplaceholder\n')" 'Review\name' "$content")"
+
 finish
