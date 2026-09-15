@@ -32,6 +32,19 @@ Every lever below is subject to it, in rough order of impact:
 - **One Run file** for the checklist and the design and plan. It survives a
   mid-run context summary; the same summary repeated across turns does not.
 
+**Every subagent prompt names the scratch directory the subagent writes in.** A
+subagent handed nowhere to write reaches for the scratchpad its own environment
+block names, which is the Run file's parent: that is how the #138 run lost its
+checklist, to a `code-review` axis testing a shell command against "a throwaway
+file". So every prompt you write carries one line naming
+`<scratchpad>/scratch/<role>/` as the only place that subagent writes, `<role>`
+being its job in the run (`map`, `execute`, `verify`, `standards`, `spec`), and
+saying that nothing under the Run file's own directory is written. That path is
+a **sibling** of the Run file's directory and never a child, so a subagent that
+invents a path below the one it was given still cannot land inside the record.
+Pass it the way you pass the model tier: written into the prompt, every
+dispatch, never left to be inferred.
+
 ## While a subagent is out, end the turn
 
 Dispatch a composed skill's subagents, then **end the turn**. The completion
@@ -52,7 +65,7 @@ names in its environment block, or under the OS temp directory when none is
 named. Never inside the repo. A directory of its own because the scratchpad is
 also where a subagent puts its scratch, and one that reaches for the run's own
 name overwrites the record with no failure signal; every subagent you dispatch
-is given a path outside this directory to write in. It holds the
+is given the scratch directory named above instead. It holds the
 ten-item checklist below and, as they form, the design and plan. It is the
 **source of truth** for where the run is: it survives a mid-run summary and
 depends on no tool the harness might withhold. Without it a summarized run
