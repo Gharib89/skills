@@ -94,7 +94,8 @@ a fresh read of the committed tree, not a conversation.
   another round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
-  (`update-pr-body` at phase-7 exit): `converged`,
+  (`update-pr-body` at phase-7 exit, whose body file carries the section's
+  content and not its `## Review` heading): `converged`,
   `converged, override needed`, `degraded: <reason>`, or, for a fallback whose
   primary converged, `not invoked: <primary> converged`, plus the round count. A
   fallback that ran adds why it was: `fallback for <primary>: degraded: <reason>`.
