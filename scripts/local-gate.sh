@@ -70,24 +70,23 @@ derived_copies() {
   return $rc
 }
 
-# The profile schema number lives in three files and the bump rule in
-# skills/setup-skills/profile-schema.md moves all three together. Same shape of
-# drift as the derived copies, one level up: PR #165 moved ship to 2 and left
-# the template at 1, so every profile a setup-skills run drafted in between was
-# refused by the next ship run with `profile invalid: schema 1, ship expects 2`,
-# with this gate green throughout.
+# The profile schema number lives in three files, and the bump rule in
+# skills/setup-skills/profile-schema.md moves all three together. Why that rule
+# needs a gate is in docs/agents/ship.md, under `## Local gate`. Each read stops
+# at the first body heading, so an example line further down the same file
+# cannot feed a second value into the comparison.
 profile_schema() {
-  local tmpl ship doc
-  tmpl=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' skills/setup-skills/ship-profile.md)
-  ship=$(sed -n 's/^  profile-schema: //p' skills/ship/SKILL.md)
-  doc=missing
-  grep -qx "## Schema $ship" skills/setup-skills/profile-schema.md && doc=present
-  [ "$tmpl" = "$ship" ] && [ "$doc" = present ] && return 0
-  echo "profile schema drift: ship-profile.md declares Schema ${tmpl:-none}," \
-       "ship reads profile-schema ${ship:-none}," \
-       "profile-schema.md entry '## Schema ${ship:-none}' $doc"
+  local tmpl_schema ship_schema doc_entry=missing
+  tmpl_schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' skills/setup-skills/ship-profile.md)
+  ship_schema=$(awk '/^# /{exit} /^  profile-schema: /{print $2; exit}' skills/ship/SKILL.md)
+  grep -qx "## Schema $ship_schema" skills/setup-skills/profile-schema.md && doc_entry=present
+  [ "$tmpl_schema" = "$ship_schema" ] && [ "$doc_entry" = present ] && return 0
+  echo "profile schema drift: ship-profile.md declares Schema ${tmpl_schema:-none}," \
+       "ship reads profile-schema ${ship_schema:-none}," \
+       "profile-schema.md entry '## Schema ${ship_schema:-none}' $doc_entry"
   return 1
 }
+
 run derived-copies derived_copies
 
 # The lint gate covers the source tree's scripts plus this gate itself; the
