@@ -311,14 +311,21 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # `## <section>` after a DIFFERENT heading has closed that state is a section of
 # its own and is replaced, so a malformed body with the section twice over still
 # gets both.
+#
+# The strip tolerates a trailing CR where the boundary match below does not, and
+# the two are anchored differently on purpose: they read different inputs. A CRLF
+# heading left in the file becomes a second `## <section>` in the body that the
+# boundary match never matches and rule 3 then treats as the section's end, which
+# is a body no later write can repair. The boundary match reads the body the host
+# returns and is the pre-existing rule `_gh_add_closes` agrees with.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
   awk -v sec="$2" -v file="$3" "$SHIP_AWK_FENCE"'
-    function dump(   n, i, line, start) {
+    function dump(   n, i, line, start, buf) {
       n = 0
       while ((getline line < file) > 0) { n++; buf[n] = line }
       close(file)
       start = 1
-      if (n >= 1 && buf[1] ~ "^## " sec "[ \t]*$") {
+      if (n >= 1 && buf[1] ~ "^## " sec "[ \t\r]*$") {
         start = 2
         if (n >= 2 && buf[2] ~ /^[ \t\r]*$/) start = 3
       }

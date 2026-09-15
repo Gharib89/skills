@@ -94,8 +94,7 @@ a fresh read of the committed tree, not a conversation.
   another round.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
-  (`update-pr-body` at phase-7 exit, whose body file carries the section's
-  content and not its `## Review` heading): `converged`,
+  (`update-pr-body` at phase-7 exit): `converged`,
   `converged, override needed`, `degraded: <reason>`, or, for a fallback whose
   primary converged, `not invoked: <primary> converged`, plus the round count. A
   fallback that ran adds why it was: `fallback for <primary>: degraded: <reason>`.
@@ -107,6 +106,12 @@ a fresh read of the committed tree, not a conversation.
   before the `Review` write, which stays last so `read-pr` reads both back at
   once. Skip it and the PR body ships the phase-6 log while the merge summary
   carries the current one, and the human reads the two against each other.
+
+**Every `update-pr-body --section <name> --body-file <path>` above takes the
+section's CONTENT**, `Review` and `Deviations from plan` alike: the mechanic
+writes the `## <name>` line itself, and a file that carries it too is a body
+with the heading twice, which the write collapses but which no other mechanic
+repairs.
 
 ## By trigger
 

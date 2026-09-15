@@ -5,7 +5,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source skills/ship/scripts/_lib.sh
 
-content=$(mktemp)
+content=$(mktemp); heading=$(mktemp); other=$(mktemp); crlf=$(mktemp)
+trap 'rm -f "$content" "$heading" "$other" "$crlf"' EXIT
 printf 'line one\nline two\n' > "$content"
 
 # The section sits between two others: it is replaced wholesale and every other
@@ -329,7 +330,6 @@ check_rc "reports replaced for a body carrying it twice" 0 "$rc"
 # heading anyway yields one heading, not two: the duplicate is what no mechanic
 # could then repair, because every `## <sec>` line matches and a later clean
 # write placed the content under both.
-heading=$(mktemp); trap 'rm -f "$content" "$heading" "$other"' EXIT
 printf '## Review\n\nline one\nline two\n' > "$heading"
 body=$(printf '## Review\n\nplaceholder\n\n## Attribution\n\na footer line\n')
 expected=$(printf '## Review\n\nline one\nline two\n\n## Attribution\n\na footer line')
@@ -339,7 +339,6 @@ check_rc "reports replaced for a file carrying the heading" 0 "$rc"
 
 # Any other leading line is content, `## Other` included: only the section's own
 # heading is the mechanic's to write.
-other=$(mktemp)
 printf '## Other\n\nline one\n' > "$other"
 body=$(printf '## Review\n\nplaceholder\n')
 check "keeps a leading heading that is not the section" \
@@ -387,5 +386,14 @@ check_rc "reports replaced for a body carrying the duplicate"     0 "$rc"
 # Writing the same file twice gives the same body: the repair is not a one-shot.
 check "is idempotent over the repaired body" \
   "$expected" "$(ship_body_replace_section "$expected" Review "$content")"
+
+# A CRLF body file: the strip is anchored to tolerate the trailing CR. Left in,
+# the heading would reach the body as a `## Review\r` line that the boundary
+# match never matches and rule 3 reads as the section's end, which is the body
+# no later write repairs.
+printf '## Review\r\n\r\nline one\r\n' > "$crlf"
+check "strips a repeated heading a CRLF body file carries" \
+  "$(printf '## Review\n\nline one\r')" \
+  "$(ship_body_replace_section "$(printf '## Review\n\nplaceholder\n')" Review "$crlf")"
 
 finish
