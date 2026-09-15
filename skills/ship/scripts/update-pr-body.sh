@@ -4,6 +4,13 @@
 #
 #   update-pr-body <pr> --section <name> --body-file <path>
 #
+# The body file carries the section's CONTENT: this writes the `## <name>` line
+# itself. A file that opens with that heading anyway has it dropped rather than
+# doubled, and a body already carrying the pair of headings that mistake left,
+# one repeating the other inside the same section, is collapsed to one heading by
+# an ordinary write. A `## <name>` that follows a DIFFERENT heading is a section
+# of its own, not a duplicate, and is replaced like any other.
+#
 # A body file whose fence state ends open is refused before any host read: an
 # open fence inverts the in-fence state for the rest of the body, so the rewrite
 # reads every later `## ` as example text and swallows the sections between them.

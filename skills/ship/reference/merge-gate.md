@@ -98,8 +98,12 @@ is the step no later phase undoes. Never an auto-merge flag either: it can merge
 the instant CI is green, before a reviewer lands.
 
 **On approval**, from the worktree, `merge <pr> <issue|none> --worktree <path>`.
-It first proves the branch has seen every commit on its base and refuses
-`stale-base: behind <n> on <base>` if not, merging nothing: the base can move
+It reads the PR first and refuses `pr-closed: <state>` for one that is neither
+open nor already merged, merging nothing: the host's merge endpoint accepts a
+closed PR, and a run that comes back to a stale PR number would otherwise land
+a branch somebody deliberately closed. Then it proves the branch has seen every
+commit on its base and refuses
+`stale-base: behind <n> on <base>` if not, merging nothing too: the base can move
 between phase 5's `base-fresh` and the human's word, which leaves the summary
 they approved written against a different tree than the one that would land.
 Rebase, re-run the local gate, and come back to this gate. Then it squash-merges with the PR title as the squash subject, re-verifies the PR is

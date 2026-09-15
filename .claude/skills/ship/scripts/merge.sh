@@ -13,15 +13,20 @@
 # or release, so those steps are skipped and their fields are absent from the
 # JSON. The merge, the branch deletion and the base fast-forward run unchanged.
 #
-# Before any of that, the branch is proven fresh against its base: the base can
-# move between phase 5's `base-fresh` and the human's "merge", and the squash
-# would land a branch that never saw it. Refused as exit 1 `stale-base`.
+# Before any of that, two refusals. A PR that is neither open nor already merged
+# is not the PR the human said "merge" about: exit 1 `pr-closed: <state>`, with
+# nothing merged, no issue closed and no branch deleted. Then the branch is
+# proven fresh against its base: the base can move between phase 5's
+# `base-fresh` and the human's "merge", and the squash would land a branch that
+# never saw it. Refused as exit 1 `stale-base`.
 #
 # stdout: {merged, issue_closed, remote_branch_deleted, base_updated,
 #          claim_released, ready_for_agent_removed}
 #         `merge none` omits issue_closed, claim_released and ready_for_agent_removed.
-# exit: 0 every step true · 1 a step is false (finish it by hand), or the base
-#       moved (`{"error": "stale-base: behind <n> on <base>"}`, nothing merged)
+# exit: 0 every step true · 1 a step is false (finish it by hand), the PR is
+#       neither open nor already merged (`{"error": "pr-closed: <state>"}`), or
+#       the base moved
+#       (`{"error": "stale-base: behind <n> on <base>"}`); neither merges anything
 #       · 2 usage or tooling
 set -uo pipefail
 # No `set -e`: the steps below use explicit `|| flag=false`, and
@@ -55,11 +60,18 @@ finish() {
 }
 
 prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
+state=$(jq -r '.state // ""' <<<"$prj")
+# Before anything else the PR itself is read: a human said "merge" about a PR,
+# and one that is closed is not the PR they said it about. Ahead of the
+# freshness check because a closed PR's branch has nothing to be fresh against,
+# and a stale-base refusal there would name the wrong reason.
+closed=$(ship_pr_state_reason "$state")
+[ -z "$closed" ] || ship_fail "$closed"
 title=$(jq -r .title <<<"$prj"); branch=$(jq -r .head_ref <<<"$prj"); base=$(jq -r .base_ref <<<"$prj")
 [ "$branch" != "$base" ] || ship_tooling "PR head is the base branch; refusing"
 
 # 1. Merge, then verify: never assume the call took.
-if [ "$(jq -r .state <<<"$prj")" = merged ]; then merged=true
+if [ "$state" = merged ]; then merged=true
 else
   # The freshness check, in the checkout that holds the run's branch, before
   # anything is squashed: attended, rebase, re-run the local gate and come back

@@ -5,7 +5,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source skills/ship/scripts/_lib.sh
 
-content=$(mktemp); trap 'rm -f "$content"' EXIT
+content=$(mktemp); heading=$(mktemp); other=$(mktemp); crlf=$(mktemp)
+trap 'rm -f "$content" "$heading" "$other" "$crlf"' EXIT
 printf 'line one\nline two\n' > "$content"
 
 # The section sits between two others: it is replaced wholesale and every other
@@ -324,5 +325,110 @@ expected=$(printf '## Review\n\nline one\nline two\n\n## Notes\n\nkeep\n\n## Rev
 actual=$(ship_body_replace_section "$body" Review "$content"); rc=$?
 check    "replaces every occurrence of the section" "$expected" "$actual"
 check_rc "reports replaced for a body carrying it twice" 0 "$rc"
+
+# Phase 7 hands the mechanic the section's CONTENT. A file that repeats the
+# heading anyway yields one heading, not two: the duplicate is what no mechanic
+# could then repair, because every `## <sec>` line matches and a later clean
+# write placed the content under both.
+printf '## Review\n\nline one\nline two\n' > "$heading"
+body=$(printf '## Review\n\nplaceholder\n\n## Attribution\n\na footer line\n')
+expected=$(printf '## Review\n\nline one\nline two\n\n## Attribution\n\na footer line')
+actual=$(ship_body_replace_section "$body" Review "$heading"); rc=$?
+check    "strips a leading heading the body file repeats" "$expected" "$actual"
+check_rc "reports replaced for a file carrying the heading" 0 "$rc"
+
+# Any other leading line is content, `## Other` included: only the section's own
+# heading is the mechanic's to write.
+printf '## Other\n\nline one\n' > "$other"
+body=$(printf '## Review\n\nplaceholder\n')
+check "keeps a leading heading that is not the section" \
+  "$(printf '## Review\n\n## Other\n\nline one')" \
+  "$(ship_body_replace_section "$body" Review "$other")"
+
+# A body already carrying the duplicate is repaired by one ordinary write: the
+# repeat sits inside the section just placed, so it is swallowed rather than
+# given a second copy of the content. Every other section survives.
+body=$(cat <<'BODY'
+## Summary
+
+keep
+
+## Review
+
+## Review
+
+placeholder
+
+## Attribution
+
+a footer line
+BODY
+)
+expected=$(cat <<'BODY'
+## Summary
+
+keep
+
+## Review
+
+line one
+line two
+
+## Attribution
+
+a footer line
+BODY
+)
+actual=$(ship_body_replace_section "$body" Review "$content"); rc=$?
+check    "collapses a duplicate heading the body already carries" "$expected" "$actual"
+check_rc "reports replaced for a body carrying the duplicate"     0 "$rc"
+
+# Writing the same file twice gives the same body: the repair is not a one-shot.
+check "is idempotent over the repaired body" \
+  "$expected" "$(ship_body_replace_section "$expected" Review "$content")"
+
+# A CRLF body file: the strip is anchored to tolerate the trailing CR. Left in,
+# the heading would reach the body as a `## Review\r` line that the boundary
+# match never matches and rule 3 reads as the section's end, which is the body
+# no later write repairs.
+printf '## Review\r\n\r\nline one\r\n' > "$crlf"
+check "strips a repeated heading a CRLF body file carries" \
+  "$(printf '## Review\n\nline one\r')" \
+  "$(ship_body_replace_section "$(printf '## Review\n\nplaceholder\n')" Review "$crlf")"
+
+# The section name is compared literally, never built into an ERE: `--section`
+# takes any name, and a `.` in one would otherwise match a heading nobody asked
+# for. `## ReviewX` is not the section `Review.`, so there is nothing to replace
+# and the real section is appended.
+body=$(printf '## ReviewX\n\nkeep\n')
+expected=$(printf '## ReviewX\n\nkeep\n\n## Review.\n\nline one\nline two')
+actual=$(ship_body_replace_section "$body" 'Review.' "$content"); rc=$?
+check    "a metacharacter in the section name matches no other heading" "$expected" "$actual"
+check_rc "reports created, having matched nothing"                      1 "$rc"
+
+# The same name against its own heading still replaces, so the literal compare
+# did not simply stop matching.
+check "a metacharacter section name still matches its own heading" \
+  "$(printf '## Review.\n\nline one\nline two')" \
+  "$(ship_body_replace_section "$(printf '## Review.\n\nplaceholder\n')" 'Review.' "$content")"
+
+# Trailing blanks come off both sides of that comparison, the section name
+# included: `--section 'Review '` still matches `## Review`, and the heading the
+# append writes is the trimmed one, so the next write replaces rather than
+# appending a third.
+check "a section name carrying trailing blanks still matches its heading" \
+  "$(printf '## Review\n\nline one\nline two')" \
+  "$(ship_body_replace_section "$(printf '## Review\n\nplaceholder\n')" 'Review ' "$content")"
+
+appended=$(ship_body_replace_section "$(printf '## Summary\n\nkeep\n')" 'Review ' "$content")
+check "appending under such a name writes a heading the next write matches" \
+  "$appended" "$(ship_body_replace_section "$appended" 'Review ' "$content")"
+
+# The name reaches awk through the environment, not `-v`, which decodes
+# backslash escapes in its value: this name arrived as two lines, so the real
+# section survived and a mangled heading was appended next to it.
+check "a backslash in the section name is compared undecoded" \
+  "$(printf '## Review\\name\n\nline one\nline two')" \
+  "$(ship_body_replace_section "$(printf '## Review\\name\n\nplaceholder\n')" 'Review\name' "$content")"
 
 finish

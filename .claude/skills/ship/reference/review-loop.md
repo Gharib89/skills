@@ -107,6 +107,12 @@ a fresh read of the committed tree, not a conversation.
   once. Skip it and the PR body ships the phase-6 log while the merge summary
   carries the current one, and the human reads the two against each other.
 
+**Every `update-pr-body --section <name> --body-file <path>` above takes the
+section's CONTENT**, `Review` and `Deviations from plan` alike: the mechanic
+writes the `## <name>` line itself, and a file that carries it too leaves the
+heading twice over inside one section, which the write collapses and which no
+other mechanic repairs.
+
 ## By trigger
 
 ### `auto-once`
