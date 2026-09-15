@@ -116,4 +116,4 @@ jobs:
           [ -n "$reason" ] || reason=unknown
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
-            -f body="The Claude review round did not finish: \`$reason\`. Check the run before treating a missing review as a reviewer that never fired. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            -f body="The Claude review job failed: \`$reason\`. Check the PR for a review from this round before reading the reviewer as silent. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
