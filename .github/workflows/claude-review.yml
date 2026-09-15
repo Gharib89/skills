@@ -111,7 +111,8 @@ jobs:
             reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
                              | .subtype // ""' "$EXECUTION_FILE" 2>/dev/null || echo "")"
           fi
-          [ -n "$reason" ] || reason=unknown
+          reason=$(printf '%s\n' "$reason" | head -n 1)
+          case $reason in ''|success) reason=unknown ;; esac
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
             -f body="The Claude review job failed: \`$reason\`. Check the PR for a review from this round before reading the reviewer as silent. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
