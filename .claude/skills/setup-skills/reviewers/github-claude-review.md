@@ -11,6 +11,9 @@ What both shapes do the same way, because ship reads a round off the host and ne
 - **`--model claude-opus-5`.** A review is judgment work: a cheaper tier reads the diff and misses the standards violation in it.
 - **`claude_code_oauth_token`** from the `CLAUDE_CODE_OAUTH_TOKEN` secret, minted by `claude setup-token`, so the review is billed to a Claude subscription rather than to API credit.
 - **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the prompt is never reached: no review, no findings, and nothing on the PR to say why. Observed on run 34847733490 of this repo. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
+- **`--max-turns 60`, not 30.** A round reads a brief, a spec, a whole diff and then builds one POST, and 30 turns does not cover a mid-size PR: run 34949995325 of this repo spent 31 turns on 15 changed files, died `error_max_turns` and posted nothing, at $2.17. [`ado-claude-review.md`](ado-claude-review.md) recorded the same exhaustion on a 51-file PR and moved to 60 first; this is the number catching up, so the two hosts no longer disagree.
+- **An allowlist that covers every step of the prompt.** A tool the round needs and cannot call is a denied call, a spent turn and no explanation: run 34949995325 was denied 4 times, and the run log reports only `permission_denials_count`, never which commands, so the list is derived from what the prompt asks for and not from a log. `Read`, `Grep` and `Glob` serve step 1's brief and standards; `Bash(gh pr view:*)` and `Bash(gh issue view:*)` step 2's spec; `Bash(gh pr diff:*)` step 3's diff; `Bash(gh api:*)` the POST; `Bash(git diff:*)` and `Bash(git log:*)` the history a finding sometimes turns on; `Bash(head:*)`, `Bash(tail:*)` and `Bash(wc:*)` because a pipe is refused unless **both** of its commands are granted, so `gh pr diff | head` needs `head` named too. Nothing here writes and nothing reaches the network beyond `gh`. Narrow it and the round fails the same silent way.
+- **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` and cannot tell it from a reviewer that never fired, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. The `if: failure()` step below leaves the run URL and the failure subtype on the PR instead. It is the only reason the job needs `issues: write` rather than `issues: read`: a comment on a pull request goes to `/issues/{n}/comments`, which the `issues` scope governs, not the `pull-requests` one that admits the review POST.
 
 Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
 
@@ -19,7 +22,7 @@ The two YAML blocks below are each complete on purpose: a consumer copies one of
 Two human steps belong to both shapes, so each checklist below carries only what is its own:
 
 1. Settings > Secrets and variables > Actions > New repository secret: `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` on your own machine. The token expires: a reviewer that stops arriving with no change to the workflow is an expired token, re-minted the same way.
-2. Settings > Actions > General > Workflow permissions: the workflow-level `permissions:` block in the shape you copied grants what the job needs; where the org caps what a workflow may grant, an org admin must allow `pull-requests: write` for this repo.
+2. Settings > Actions > General > Workflow permissions: the workflow-level `permissions:` block in the shape you copied grants what the job needs, `pull-requests: write` for the review POST and `issues: write` for the failure comment; where the org caps what a workflow may grant, an org admin must allow both for this repo.
 
 ## The on-push shape
 
@@ -42,7 +45,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: read
+  issues: write
   id-token: write
 
 jobs:
@@ -62,7 +65,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@v1
+      - id: review
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -113,10 +117,32 @@ jobs:
             failed, and the run waits out its whole poll window either way. With
             nothing actionable, send `body` of exactly `no findings` and an empty
             `comments` list. No LGTM, no praise, no summary of the diff.
+
+            Read the diff once, with the one `gh pr diff` call above, and review
+            from what it returned. Walking the changed files one at a time spends
+            the turn budget on navigation and the round dies before it posts.
           claude_args: |
             --model claude-opus-5
-            --max-turns 30
-            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*)"
+            --max-turns 60
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(git diff:*),Bash(git log:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
+
+      # A failed round otherwise leaves nothing on the PR: no review, no comment,
+      # and a ship run reads that as `degraded: silent`, indistinguishable from a
+      # reviewer that never fired. Costs one comment per failed round; drop it and
+      # the silent failure comes back.
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+        run: |
+          reason=unknown
+          if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
+            reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
+                             | .subtype // "unknown"' "$EXECUTION_FILE" 2>/dev/null || echo unknown)"
+          fi
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            -f body="The Claude review round failed before posting a review: \`$reason\`. Nothing was submitted. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 ```
 
 ### Human checklist
@@ -126,6 +152,7 @@ Both shared steps above, then:
 1. Merge the workflow to the default branch. A `pull_request` event runs the workflow from the PR's own merge ref, so the PR that adds this file is reviewed by it, unlike the fallback shape.
 2. Add the job to `## CI`'s `Legs:` in `docs/agents/ship.md`. It lands a check run on the PR head, and `Legs:` is where a run reads what that check proves.
 3. For `Gating: yes`: Settings > Branches (or Rules) > require the `review` check to pass before merging.
+4. Leave the `if: failure()` step in place, or accept the consequence. It costs one PR comment per failed round and nothing on a round that succeeds. Without it a failed job is invisible from the PR: no review, no comment, and a ship run reads `degraded: silent` whether the reviewer died or never fired.
 
 ### Profile block this produces
 
@@ -163,7 +190,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: read
+  issues: write
   id-token: write
 
 jobs:
@@ -191,7 +218,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@v1
+      - id: review
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -241,10 +269,32 @@ jobs:
             that failed, and the run waits out its whole poll window either way.
             With nothing actionable, send `body` of exactly `no findings` and an
             empty `comments` list. No LGTM, no praise, no summary of the diff.
+
+            Read the diff once, with the one `gh pr diff` call above, and review
+            from what it returned. Walking the changed files one at a time spends
+            the turn budget on navigation and the round dies before it posts.
           claude_args: |
             --model claude-opus-5
-            --max-turns 30
-            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*)"
+            --max-turns 60
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(git diff:*),Bash(git log:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
+
+      # A failed round otherwise leaves nothing on the PR: no review, no comment,
+      # and a ship run reads that as `degraded: silent`, indistinguishable from a
+      # reviewer that never fired. Costs one comment per failed round; drop it and
+      # the silent failure comes back.
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+        run: |
+          reason=unknown
+          if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
+            reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
+                             | .subtype // "unknown"' "$EXECUTION_FILE" 2>/dev/null || echo unknown)"
+          fi
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body="The Claude review round failed before posting a review: \`$reason\`. Nothing was submitted. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 ```
 
 ### Human checklist
@@ -264,6 +314,7 @@ Both shared steps above, then:
    ```
 
    Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review and no error, the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
+5. Leave the `if: failure()` step in place, or accept the consequence. It costs one PR comment per failed round and nothing on a round that succeeds. Without it a failed job is invisible from the PR, and a fallback whose whole job is to cover a degraded primary is the last reviewer that should fail quietly.
 
 ### Profile block this produces
 

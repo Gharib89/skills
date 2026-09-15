@@ -12,7 +12,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: read
+  issues: write
   id-token: write
 
 jobs:
@@ -38,7 +38,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@v1
+      - id: review
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -88,7 +89,29 @@ jobs:
             that failed, and the run waits out its whole poll window either way. With
             nothing actionable, send `body` of exactly `no findings` and an empty
             `comments` list. No LGTM, no praise, no summary of the diff.
+
+            Read the diff once, with the one `gh pr diff` call above, and review
+            from what it returned. Walking the changed files one at a time spends
+            the turn budget on navigation and the round dies before it posts.
           claude_args: |
             --model claude-opus-5
-            --max-turns 30
-            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*)"
+            --max-turns 60
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(git diff:*),Bash(git log:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
+
+      # A failed round otherwise leaves nothing on the PR: no review, no comment,
+      # and a ship run reads that as `degraded: silent`, indistinguishable from a
+      # reviewer that never fired. Costs one comment per failed round; drop it and
+      # the silent failure comes back.
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+        run: |
+          reason=unknown
+          if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
+            reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
+                             | .subtype // "unknown"' "$EXECUTION_FILE" 2>/dev/null || echo unknown)"
+          fi
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body="The Claude review round failed before posting a review: \`$reason\`. Nothing was submitted. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
