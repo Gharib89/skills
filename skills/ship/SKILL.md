@@ -217,10 +217,10 @@ installed version lacks is a regression.
 ## Model tiers
 
 Use the cheapest model that fits; reserve the strong tier for judgment. Tag
-every subagent with a model explicitly, never default-inherit, and name its
-scratch directory per the scratch rule in
-[reference/context-discipline.md](reference/context-discipline.md); a subagent
-inherits neither.
+every subagent with a model explicitly and with the scratch directory the
+scratch rule in
+[reference/context-discipline.md](reference/context-discipline.md) names;
+neither is inherited.
 
 | Work | Model |
 |---|---|

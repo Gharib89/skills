@@ -32,18 +32,16 @@ Every lever below is subject to it, in rough order of impact:
 - **One Run file** for the checklist and the design and plan. It survives a
   mid-run context summary; the same summary repeated across turns does not.
 
-**Every subagent prompt names the scratch directory the subagent writes in.** A
+**Every subagent prompt names the scratch directory that subagent writes in.** A
 subagent handed nowhere to write reaches for the scratchpad its own environment
 block names, which is the Run file's parent: that is how the #138 run lost its
 checklist, to a `code-review` axis testing a shell command against "a throwaway
-file". So every prompt you write carries one line naming
-`<scratchpad>/scratch/<role>/` as the only place that subagent writes, `<role>`
-being its job in the run (`map`, `execute`, `verify`, `standards`, `spec`), and
-saying that nothing under the Run file's own directory is written. That path is
-a **sibling** of the Run file's directory and never a child, so a subagent that
-invents a path below the one it was given still cannot land inside the record.
-Pass it the way you pass the model tier: written into the prompt, every
-dispatch, never left to be inferred.
+file". So every prompt carries one line naming `<scratchpad>/scratch/<role>/` as
+the one place that subagent writes, `<role>` being its job in the run (`map`,
+`execute`, `verify`, `standards`, `spec`). It is a **sibling** of the Run file's
+directory rather than a child, so a path a subagent invents below the one it was
+given still lands clear of the record. Pass it the way you pass the model tier:
+written into the prompt, every dispatch, never inferred.
 
 ## While a subagent is out, end the turn
 
