@@ -66,8 +66,27 @@ derived_copies() {
   done
   jq -e '.skills | has("ship") and has("cloud-ship") and has("setup-skills")' skills-lock.json >/dev/null \
     || { echo "skills-lock.json does not record all three self-installed skills"; rc=1; }
+  profile_schema || rc=1
   return $rc
 }
+
+# The profile schema number lives in three files, and the bump rule in
+# skills/setup-skills/profile-schema.md moves all three together. Why that rule
+# needs a gate is in docs/agents/ship.md, under `## Local gate`. Each read stops
+# at the first body heading, so an example line further down the same file
+# cannot feed a second value into the comparison.
+profile_schema() {
+  local tmpl_schema ship_schema doc_entry=missing
+  tmpl_schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' skills/setup-skills/ship-profile.md)
+  ship_schema=$(awk '/^# /{exit} /^  profile-schema: /{print $2; exit}' skills/ship/SKILL.md)
+  grep -qxF "## Schema $ship_schema" skills/setup-skills/profile-schema.md && doc_entry=present
+  [ "$tmpl_schema" = "$ship_schema" ] && [ "$doc_entry" = present ] && return 0
+  echo "profile schema drift: ship-profile.md declares Schema ${tmpl_schema:-none}," \
+       "ship reads profile-schema ${ship_schema:-none}," \
+       "profile-schema.md entry '## Schema ${ship_schema:-none}' $doc_entry"
+  return 1
+}
+
 run derived-copies derived_copies
 
 # The lint gate covers the source tree's scripts plus this gate itself; the
