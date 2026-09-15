@@ -16,7 +16,8 @@ Every lever below is subject to it, in rough order of impact:
 
 - **Delegate reading, not just review.** Send the investigation to a cheap-tier
   subagent ("map how X, Y, Z connect; return signatures, call sites and data
-  shapes") and read only the exact lines you will edit. A file body you only
+  shapes"), with the `map` scratch directory below, and read only the exact
+  lines you will edit. A file body you only
   need to *understand* never enters main context; only the hunk you *change*
   does.
 - **Mechanics already project.** Every host read comes through a mechanic that
@@ -26,9 +27,10 @@ Every lever below is subject to it, in rough order of impact:
 - **Targeted test nodes during the loop; the full suite only at the local
   gate.** Re-running the whole suite every cycle is slow noise.
 - **Delegate noisy verification runs.** A phase-3 verification that dumps
-  volumes goes to a cheap-tier subagent returning `pass | fail` plus the
-  failing lines. The local gate, `base-fresh`, `poll-pr` and `ci-wait` project
-  their own output: run them inline.
+  volumes goes to a cheap-tier subagent, with the `verify` scratch directory
+  below, returning `pass | fail` plus the failing lines. The local gate,
+  `base-fresh`, `poll-pr` and `ci-wait` project their own output: run them
+  inline.
 - **One Run file** for the checklist and the design and plan. It survives a
   mid-run context summary; the same summary repeated across turns does not.
 

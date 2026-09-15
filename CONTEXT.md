@@ -136,6 +136,10 @@ _Avoid_: tracker (Boards is one part of a host), provider, platform
 The one file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The run's record, and the harness task list is its display: the source of truth for where the run is and the map back after a mid-run context summary, mirrored into the task list on every flip; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps.
 _Avoid_: task list, scratch file, plan file, todo
 
+**Scratch directory**:
+The directory a Ship run names in every subagent prompt as the one place that subagent writes: `<scratchpad>/scratch/<role>/`, `<role>` being that subagent's job in the run. A sibling of the Run file's directory rather than a child, so a path a subagent invents below the one it was given still lands clear of the run's record. Passed at every dispatch the way the model tier is.
+_Avoid_: scratch file (that names the Run file, and is avoided there too), temp directory, workspace
+
 **Shape**:
 The compressed code-form view of a change that opens a PR's Summary: a call tree, file tree, control flow, pseudocode or component tree, written as a `diff` fence so the before and the after sit in one view. One per PR, about 15 lines or fewer, every node a real symbol and every root node carrying its file path. A change that moves no logic and no layout says so in a `Shape: none, mechanical (<kind>).` line rather than omitting it silently.
 _Avoid_: diagram, visual, picture, mermaid, sketch

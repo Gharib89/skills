@@ -218,9 +218,8 @@ installed version lacks is a regression.
 
 Use the cheapest model that fits; reserve the strong tier for judgment. Tag
 every subagent with a model explicitly and with the scratch directory the
-scratch rule in
-[reference/context-discipline.md](reference/context-discipline.md) names;
-neither is inherited.
+scratch rule in [reference/context-discipline.md](reference/context-discipline.md)
+names; neither is inherited.
 
 | Work | Model |
 |---|---|
@@ -380,7 +379,8 @@ unattended-safe disposition; `blocked` stops `blocked-verification`.
 `unexercised` is the one result no `Without it:` covers: phase 5 admits it, an
 unattended run proceeds on it, and the merge summary names the subject that did
 not exist, for the human to weigh. Noisy runs go to a cheap-tier subagent, given
-its scratch directory, returning the result plus failing lines. `docs` class and the small lane skip this phase. Detail in
+the `verify` scratch directory, returning the result plus failing lines. `docs`
+class and the small lane skip this phase. Detail in
 [reference/implement.md](reference/implement.md).
 
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
@@ -398,7 +398,7 @@ file in the diff. Human prose in the diff takes the mechanical pass.
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
-carrying its own scratch directory. **Triage waits for
+carrying its own scratch directory (`standards`, `spec`). **Triage waits for
 both axes.** An axis whose report never arrives is `red-after-retry: <axis>`
 after the bounded retry, never a disposition written from memory of what it
 would have said. **Auto-triage** every finding: harden rather than rip out
