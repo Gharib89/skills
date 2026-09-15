@@ -38,7 +38,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@v1
+      - id: review
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -54,9 +55,11 @@ jobs:
             2. Run `gh pr view ${{ github.event.issue.number }} --json title,body` and
                find the linked issue (Closes/Fixes/Resolves #N). If one exists, run
                `gh issue view N` and treat it as the spec for this change.
-            3. Run `gh pr diff ${{ github.event.issue.number }}` and review only the
-               changed lines against (a) the brief and the standards it names and
-               (b) the linked issue.
+            3. Run `gh pr diff ${{ github.event.issue.number }}` once and review
+               only the changed lines it returned, against (a) the brief and the
+               standards it names and (b) the linked issue. Walking the changed
+               files one at a time instead spends the turn budget on navigation
+               and the round dies before it posts.
 
             Report the round as ONE formal pull request review, submitted in a
             single call, with every inline finding attached to it. Build it as one
@@ -90,5 +93,26 @@ jobs:
             `comments` list. No LGTM, no praise, no summary of the diff.
           claude_args: |
             --model claude-opus-5
-            --max-turns 30
-            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*)"
+            --max-turns 60
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
+
+      # A failed round otherwise leaves nothing on the PR: no review, no comment,
+      # and a ship run reads that as `degraded: silent`, indistinguishable from a
+      # reviewer that never fired. Costs one comment per failed round; drop it and
+      # the silent failure comes back.
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+        run: |
+          set -uo pipefail
+          reason=unknown
+          if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
+            reason="$(jq -rs 'flatten | map(select(.type == "result")) | last
+                              | .subtype // ""' "$EXECUTION_FILE" 2>/dev/null || echo "")"
+          fi
+          reason=$(printf '%s\n' "$reason" | head -n 1)
+          case $reason in ''|success) reason=unknown ;; esac
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            -f body="The Claude review job failed: \`$reason\`. Check the PR for a review from this round before reading the reviewer as silent. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

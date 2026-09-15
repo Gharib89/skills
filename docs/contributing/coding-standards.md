@@ -30,7 +30,7 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 
 - **The source is `skills/`, never `.claude/skills/`.** The derived copies are install output. A change lands in `skills/<name>/` and reaches `.claude/skills/` only through `npx skills add . --skill <name> --agent claude-code -y`.
 - **Mechanics print JSON and nothing else on stdout.** Evidence goes to stderr, capped at the last 40 lines. Exit 0 success, 1 the operation failed, 2 tooling.
-- **No host CLI outside a named mechanic.** `gh` and `az` are called only from `skills/ship/scripts/host/<host>.sh`; a host operation no mechanic performs is a ship defect, not a prose fallback.
+- **No host CLI outside a named mechanic.** `gh` and `az` are called only from `skills/ship/scripts/host/<host>.sh`; a host operation no mechanic performs is a ship defect, not a prose fallback. One documented exception: a CI template under `skills/setup-skills/reviewers/`, and this repo's own copy of one under `.github/workflows/`, calls `gh` directly. It runs on a runner in a consumer repo that has no mechanics checked out, so there is nothing to route through.
 - **Commit subjects** are conventional-commit prefixed and scoped to the skill: `fix(ship):`, `docs:`, `feat(setup-skills):`.
 - **`.claude/skills/` is exempt from every rule here.** It is install output from other people's repos and is never edited in place, so its prose and its em dashes are not this repo's to fix.
 - **Every `mktemp` is paired with a trap.** `trap 'rm -f "$f"' EXIT` at script top level, `trap 'rm -f "$f"' RETURN` for a file created inside a function. An interrupted run between the `mktemp` and the `rm -f` otherwise leaves the file in the system temp directory.
