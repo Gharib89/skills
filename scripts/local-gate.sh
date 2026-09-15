@@ -66,7 +66,27 @@ derived_copies() {
   done
   jq -e '.skills | has("ship") and has("cloud-ship") and has("setup-skills")' skills-lock.json >/dev/null \
     || { echo "skills-lock.json does not record all three self-installed skills"; rc=1; }
+  profile_schema || rc=1
   return $rc
+}
+
+# The profile schema number lives in three files and the bump rule in
+# skills/setup-skills/profile-schema.md moves all three together. Same shape of
+# drift as the derived copies, one level up: PR #165 moved ship to 2 and left
+# the template at 1, so every profile a setup-skills run drafted in between was
+# refused by the next ship run with `profile invalid: schema 1, ship expects 2`,
+# with this gate green throughout.
+profile_schema() {
+  local tmpl ship doc
+  tmpl=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' skills/setup-skills/ship-profile.md)
+  ship=$(sed -n 's/^  profile-schema: //p' skills/ship/SKILL.md)
+  doc=missing
+  grep -qx "## Schema $ship" skills/setup-skills/profile-schema.md && doc=present
+  [ "$tmpl" = "$ship" ] && [ "$doc" = present ] && return 0
+  echo "profile schema drift: ship-profile.md declares Schema ${tmpl:-none}," \
+       "ship reads profile-schema ${ship:-none}," \
+       "profile-schema.md entry '## Schema ${ship:-none}' $doc"
+  return 1
 }
 run derived-copies derived_copies
 

@@ -42,6 +42,7 @@ steps:
       --json-schema "$SCHEMA" \
       --allowedTools "Read,Grep,Glob,Bash(git diff *),Bash(git log *)" \
       --permission-mode dontAsk \
+      --model claude-opus-5 \
       --max-turns 60 \
       --max-budget-usd 5 \
       | jq '.structured_output' > "$(Build.ArtifactStagingDirectory)/findings.json"
@@ -80,7 +81,7 @@ steps:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)   # the YAML form of "allow scripts to access the OAuth token"
 ```
 
-Proven on the first onboarding run (ship-ado-lab): a 51-file skill-install PR exhausted a 30-turn cap before any verdict, so the build failed with `error_max_turns` and no threads, and the gating policy rejected the PR. Keep the derived copies in the diff (excluding them removes the only review gate on files that drive agent actions) and rely on the prompt line above plus the 60-turn cap. `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` works in place of `ANTHROPIC_API_KEY`.
+Proven on the first onboarding run (ship-ado-lab): a 51-file skill-install PR exhausted a 30-turn cap before any verdict, so the build failed with `error_max_turns` and no threads, and the gating policy rejected the PR. Keep the derived copies in the diff (excluding them removes the only review gate on files that drive agent actions) and rely on the prompt line above plus the 60-turn cap. `--model claude-opus-5` pins the tier for the same reason the GitHub scaffold pins it: a review is judgment work, and a cheaper tier reads the diff and misses the standards violation in it. The `--max-budget-usd 5` beside it was measured before that pin and has not been re-measured against Opus, so a round that stops on budget rather than on a verdict is the number to revisit first. `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` works in place of `ANTHROPIC_API_KEY`.
 
 Known gap, to settle on the first real run: the threads API documents `pullRequestThreadContext.changeTrackingId` as required for line anchoring on PRs with iterations. If threads land at PR level instead of on the line, look the id up from the PR iterations API and add it to the body.
 
