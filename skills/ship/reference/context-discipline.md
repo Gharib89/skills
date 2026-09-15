@@ -16,7 +16,8 @@ Every lever below is subject to it, in rough order of impact:
 
 - **Delegate reading, not just review.** Send the investigation to a cheap-tier
   subagent ("map how X, Y, Z connect; return signatures, call sites and data
-  shapes") and read only the exact lines you will edit. A file body you only
+  shapes"), with the `map` scratch directory below, and read only the exact
+  lines you will edit. A file body you only
   need to *understand* never enters main context; only the hunk you *change*
   does.
 - **Mechanics already project.** Every host read comes through a mechanic that
@@ -26,11 +27,24 @@ Every lever below is subject to it, in rough order of impact:
 - **Targeted test nodes during the loop; the full suite only at the local
   gate.** Re-running the whole suite every cycle is slow noise.
 - **Delegate noisy verification runs.** A phase-3 verification that dumps
-  volumes goes to a cheap-tier subagent returning `pass | fail` plus the
-  failing lines. The local gate, `base-fresh`, `poll-pr` and `ci-wait` project
-  their own output: run them inline.
+  volumes goes to a cheap-tier subagent, with the `verify` scratch directory
+  below, returning `pass | fail` plus the failing lines. The local gate,
+  `base-fresh`, `poll-pr` and `ci-wait` project their own output: run them
+  inline.
 - **One Run file** for the checklist and the design and plan. It survives a
   mid-run context summary; the same summary repeated across turns does not.
+
+**Every subagent prompt names the scratch directory that subagent writes in.** A
+subagent handed nowhere to write reaches for the scratchpad its own environment
+block names, which is the Run file's parent: that is how the #138 run lost its
+checklist, to a `code-review` axis testing a shell command against "a throwaway
+file". So every prompt carries one line naming `<scratchpad>/scratch/<role>/` as
+the one place that subagent writes scratch of its own, `<role>` being its job in
+the run (`map`, `execute`, `verify`, `standards`, `spec`). Edits to the repo are
+separate, and go under the worktree prefix. It is a **sibling** of the Run file's
+directory rather than a child, so a path a subagent invents below the one it was
+given still lands clear of the record. Pass it the way you pass the model tier:
+written into the prompt, every dispatch, never inferred.
 
 ## While a subagent is out, end the turn
 
@@ -52,7 +66,7 @@ names in its environment block, or under the OS temp directory when none is
 named. Never inside the repo. A directory of its own because the scratchpad is
 also where a subagent puts its scratch, and one that reaches for the run's own
 name overwrites the record with no failure signal; every subagent you dispatch
-is given a path outside this directory to write in. It holds the
+is given the scratch directory named above instead. It holds the
 ten-item checklist below and, as they form, the design and plan. It is the
 **source of truth** for where the run is: it survives a mid-run summary and
 depends on no tool the harness might withhold. Without it a summarized run
