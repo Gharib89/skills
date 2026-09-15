@@ -79,7 +79,7 @@ profile_schema() {
   local tmpl_schema ship_schema doc_entry=missing
   tmpl_schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' skills/setup-skills/ship-profile.md)
   ship_schema=$(awk '/^# /{exit} /^  profile-schema: /{print $2; exit}' skills/ship/SKILL.md)
-  grep -qx "## Schema $ship_schema" skills/setup-skills/profile-schema.md && doc_entry=present
+  grep -qxF "## Schema $ship_schema" skills/setup-skills/profile-schema.md && doc_entry=present
   [ "$tmpl_schema" = "$ship_schema" ] && [ "$doc_entry" = present ] && return 0
   echo "profile schema drift: ship-profile.md declares Schema ${tmpl_schema:-none}," \
        "ship reads profile-schema ${ship_schema:-none}," \
