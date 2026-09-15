@@ -67,7 +67,7 @@ Gating: no
 Fallback-for: copilot
 Instructions: .github/copilot-instructions.md
 
-Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits degraded, for any degraded reason; on a run where Copilot converges it reports `not invoked: copilot converged` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --since` lands, so `Resolve: None.`: it opens no threads of its own to resolve, and a finding it leaves is answered on the review, not on a thread. `Login:` is `github-actions[bot]` because a workflow reviews under the Actions identity, not under a bot account of its own.
+Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits degraded, for any degraded reason; on a run where Copilot converges it reports `not invoked: copilot converged` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --since` lands, so `Resolve: None.`: it opens no threads of its own to resolve, and a finding it leaves is answered on the review, not on a thread. `Login:` is `github-actions[bot]` because a workflow reviews under the Actions identity, not under a bot account of its own. A round that dies before posting leaves a plain PR comment naming the run and the failure subtype, which `poll-pr` does not read as a round: the exit is still `degraded: silent`, but the reason is on the PR rather than only in the Actions log.
 
 ## Coding standards
 
