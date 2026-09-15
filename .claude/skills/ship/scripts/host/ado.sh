@@ -273,7 +273,11 @@ host_pr_comment() { # <pr> <body-file>
   jq -n --rawfile b "$2" '{comments: [{parentCommentId: 0, content: $b, commentType: 1}], status: "closed"}' > "$f"
   out=$(invoke POST git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" --in-file "$f")
   local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
-  jq --arg u "$(_pr_url "$1")" '{id: .id, url: ($u + "?discussionId=" + (.id | tostring))}' <<<"$out"
+  # The comment's time comes off the POST response, so the window `poll-pr
+  # --since` opens is bounded by the host's clock: a local clock running ahead
+  # would strand the round. The thread's own publishedDate is the fallback.
+  jq --arg u "$(_pr_url "$1")" '{id: .id, url: ($u + "?discussionId=" + (.id | tostring)),
+      created_at: ((.comments[0].publishedDate // .publishedDate) | if . then '"$_utc"' else null end)}' <<<"$out"
 }
 host_pr_set_body() { azx repos pr update "${ORG[@]}" --id "$1" --description "$(cat "$2")" >/dev/null; }
 host_pr_set_title() { azx repos pr update "${ORG[@]}" --id "$1" --title "$2" >/dev/null; }
