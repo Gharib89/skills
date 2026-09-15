@@ -108,8 +108,8 @@ jobs:
           set -uo pipefail
           reason=unknown
           if [ -n "$EXECUTION_FILE" ] && [ -f "$EXECUTION_FILE" ]; then
-            reason="$(jq -r 'if type == "array" then (map(select(.type == "result")) | last) else . end
-                             | .subtype // ""' "$EXECUTION_FILE" 2>/dev/null || echo "")"
+            reason="$(jq -rs 'flatten | map(select(.type == "result")) | last
+                              | .subtype // ""' "$EXECUTION_FILE" 2>/dev/null || echo "")"
           fi
           reason=$(printf '%s\n' "$reason" | head -n 1)
           case $reason in ''|success) reason=unknown ;; esac
