@@ -396,4 +396,20 @@ check "strips a repeated heading a CRLF body file carries" \
   "$(printf '## Review\n\nline one\r')" \
   "$(ship_body_replace_section "$(printf '## Review\n\nplaceholder\n')" Review "$crlf")"
 
+# The section name is compared literally, never built into an ERE: `--section`
+# takes any name, and a `.` in one would otherwise match a heading nobody asked
+# for. `## ReviewX` is not the section `Review.`, so there is nothing to replace
+# and the real section is appended.
+body=$(printf '## ReviewX\n\nkeep\n')
+expected=$(printf '## ReviewX\n\nkeep\n\n## Review.\n\nline one\nline two')
+actual=$(ship_body_replace_section "$body" 'Review.' "$content"); rc=$?
+check    "a metacharacter in the section name matches no other heading" "$expected" "$actual"
+check_rc "reports created, having matched nothing"                      1 "$rc"
+
+# The same name against its own heading still replaces, so the literal compare
+# did not simply stop matching.
+check "a metacharacter section name still matches its own heading" \
+  "$(printf '## Review.\n\nline one\nline two')" \
+  "$(ship_body_replace_section "$(printf '## Review.\n\nplaceholder\n')" 'Review.' "$content")"
+
 finish
