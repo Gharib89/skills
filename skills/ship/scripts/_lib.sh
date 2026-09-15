@@ -298,11 +298,35 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # The heading match is anchored at column 0 and skips fenced blocks by
 # SHIP_AWK_FENCE, the rule _gh_add_closes reads too, so the two agree on what a
 # section boundary is.
+#
+# The body file carries the section's CONTENT. A file that opens with the
+# section's own heading, and the blank line under it, has both dropped rather
+# than printed under the heading this writes: two `## <section>` lines is a body
+# no mechanic can repair afterwards, because every one of them matches here and
+# a later clean write puts the content under each. Any other opening line is
+# content, `## <other>` included.
+#
+# A repeat met while the section just placed is still open is swallowed for the
+# same reason, which is what repairs a body already carrying the duplicate. A
+# `## <section>` after a DIFFERENT heading has closed that state is a section of
+# its own and is replaced, so a malformed body with the section twice over still
+# gets both.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
   awk -v sec="$2" -v file="$3" "$SHIP_AWK_FENCE"'
-    function dump() { while ((getline line < file) > 0) print line; close(file) }
+    function dump(   n, i, line, start) {
+      n = 0
+      while ((getline line < file) > 0) { n++; buf[n] = line }
+      close(file)
+      start = 1
+      if (n >= 1 && buf[1] ~ "^## " sec "[ \t]*$") {
+        start = 2
+        if (n >= 2 && buf[2] ~ /^[ \t\r]*$/) start = 3
+      }
+      for (i = start; i <= n; i++) print buf[i]
+    }
     { fenced = ship_fence($0) }
     !fenced && $0 ~ "^## " sec "[ \t]*$" {
+      if (skip) next
       print; print ""; dump(); print ""; skip=1; placed=1; next }
     skip && !fenced && /^## / { skip=0 }
     !skip { print }
@@ -531,6 +555,25 @@ ship_stale_base_reason() {
       elif $j.fresh == true then empty
       elif ($j.behind | type) == "number" then "stale-base: behind \($j.behind) on \($j.base)"
       else "stale-base: base freshness unreadable" end'
+}
+
+# ship_pr_state_reason <state>: the refusal `merge` answers with when the PR is
+# not one a human can still say "merge" about, or nothing when it is. Both
+# adapters normalise to `open`, `merged` or `closed` (Azure DevOps maps
+# `abandoned` to `closed`), and GitHub's merge endpoint accepts a closed PR, so
+# without this a PR somebody deliberately closed is squashed onto the base by a
+# mechanic whose whole contract is that a human said "merge" about THIS PR.
+#
+# `merged` admits because `merge` skips the merge call for it and still owes the
+# steps after it. Anything else refuses, an unreadable state included: a check
+# that could not ask its question must not answer "open", the rule
+# ship_stale_base_reason follows.
+ship_pr_state_reason() { # ship_pr_state_reason <state>
+  case $1 in
+    open|merged) ;;
+    '') printf 'pr-closed: state unreadable\n' ;;
+    *)  printf 'pr-closed: %s\n' "$1" ;;
+  esac
 }
 
 # ship_brief <poll-json> <identity> <on_head|all> [<full-ids-json>]: the projection `poll-pr

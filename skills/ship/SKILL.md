@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 4.0.0
+  version: 4.1.0
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -189,6 +189,7 @@ sibling maps it, a human reads it.
 | Carried file changed | `carried file modified: <file>` | attended: ask; unattended: hand back |
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
 | The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you rebase; unattended: hand back |
+| The PR is closed at the merge gate | `pr-closed: <state>` | attended: ask; unattended: hand back |
 | Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | never claimed |
 | Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | never claimed |
 | No issue passes selection | `nothing-ready` | never claimed |
@@ -520,8 +521,9 @@ reads the findings rather than the whole fetch. At exit,
 `update-pr-body <pr> --section "Deviations from plan" --body-file <path>` where
 the rounds grew the log, then
 `update-pr-body <pr> --section Review --body-file <path>` with one status line
-per reviewer. Then read the body back per the rule at phase 6, while the PR is
-still open. Read
+per reviewer. **Each body file carries the section's content and not its
+heading**: the mechanic writes the `## ` line itself. Then read the body back
+per the rule at phase 6, while the PR is still open. Read
 [reference/review-loop.md](reference/review-loop.md) for convergence per
 trigger, the substantive-round test, `Instructions:` handling and degraded
 detection.
@@ -542,8 +544,11 @@ and review quota, so push when the tree changed.
 post it in the conversation and wait for an explicit "merge": the word is
 exact, and a near miss is asked back rather than read as merge. On approval run
 `merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
-`false` in their JSON is finished by hand before reporting done. `merge` proves
-the branch fresh against its base first and refuses `stale-base` when the base
+`false` in their JSON is finished by hand before reporting done. `merge` reads
+the PR first and refuses `pr-closed: <state>` for one that is neither open nor
+already merged, merging nothing: a human says "merge" about a PR, and a closed
+one is not it. Then it proves
+the branch fresh against its base and refuses `stale-base` when the base
 moved since phase 5: rebase, re-run the local gate, and come back to this gate. Unattended:
 `comment-pr <pr> --body-file` with the summary, and return. The claim holds in
 both lanes until the merge releases it.
