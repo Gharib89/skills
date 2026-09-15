@@ -412,4 +412,16 @@ check "a metacharacter section name still matches its own heading" \
   "$(printf '## Review.\n\nline one\nline two')" \
   "$(ship_body_replace_section "$(printf '## Review.\n\nplaceholder\n')" 'Review.' "$content")"
 
+# Trailing blanks come off both sides of that comparison, the section name
+# included: `--section 'Review '` still matches `## Review`, and the heading the
+# append writes is the trimmed one, so the next write replaces rather than
+# appending a third.
+check "a section name carrying trailing blanks still matches its heading" \
+  "$(printf '## Review\n\nline one\nline two')" \
+  "$(ship_body_replace_section "$(printf '## Review\n\nplaceholder\n')" 'Review ' "$content")"
+
+appended=$(ship_body_replace_section "$(printf '## Summary\n\nkeep\n')" 'Review ' "$content")
+check "appending under such a name writes a heading the next write matches" \
+  "$appended" "$(ship_body_replace_section "$appended" 'Review ' "$content")"
+
 finish

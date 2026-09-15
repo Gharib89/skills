@@ -300,7 +300,10 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # section boundary is. It compares the line to `## <section>` LITERALLY rather
 # than building an ERE around the name: `--section` takes any name, and a `.` or
 # a `+` in one would otherwise match a heading nobody asked for, silently
-# rewriting the wrong section of a PR body.
+# rewriting the wrong section of a PR body. Both sides of that comparison have
+# their trailing blanks trimmed, the name included, so a `--section 'Review '`
+# still matches `## Review` and the heading this appends is the one the next
+# write will match.
 #
 # The body file carries the section's CONTENT. A file that opens with the
 # section's own heading, and the blank line under it, has both dropped rather
@@ -338,14 +341,14 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
       }
       for (i = start; i <= n; i++) print buf[i]
     }
-    BEGIN { hd = "## " sec }
+    BEGIN { hd = trimmed("## " sec, 1) }
     { fenced = ship_fence($0) }
     !fenced && trimmed($0, 0) == hd {
       if (skip) next
       print; print ""; dump(); print ""; skip=1; placed=1; next }
     skip && !fenced && /^## / { skip=0 }
     !skip { print }
-    END { if (!placed) { printf "\n## %s\n\n", sec; dump(); exit 1 } }' <<<"$1"
+    END { if (!placed) { printf "\n%s\n\n", hd; dump(); exit 1 } }' <<<"$1"
 }
 
 # Generic English function words of four or more characters; shorter ones the

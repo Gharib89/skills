@@ -109,9 +109,9 @@ a fresh read of the committed tree, not a conversation.
 
 **Every `update-pr-body --section <name> --body-file <path>` above takes the
 section's CONTENT**, `Review` and `Deviations from plan` alike: the mechanic
-writes the `## <name>` line itself, and a file that carries it too is a body
-with the heading twice, which the write collapses but which no other mechanic
-repairs.
+writes the `## <name>` line itself, and a file that carries it too leaves the
+heading twice over inside one section, which the write collapses and which no
+other mechanic repairs.
 
 ## By trigger
 
