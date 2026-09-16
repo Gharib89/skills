@@ -102,9 +102,30 @@ else
   # because a fallback naming nobody would simply never fire: the loop would
   # read as healthy while no second reviewer ever ran. A read loop, not
   # mapfile, for the Bash 3.2 reason the composed-skills loop below gives.
+  rows=$(ship_reviewers "$(cat "$profile")")
   while IFS= read -r reason; do
     [ -z "$reason" ] || reasons+=("$reason")
-  done < <(ship_reviewer_reasons "$(ship_reviewers "$(cat "$profile")")")
+  done < <(ship_reviewer_reasons "$rows")
+
+  # The one reviewer fact the host can settle. Every other check above reads the
+  # block against itself; this one reads it against the setting that actually
+  # drives the loop, because a `Trigger:` the ruleset disagrees with is what let
+  # #182 spend nine rounds against `Cap: 3`.
+  #
+  # Scoped to the Copilot login, because `copilot_code_review` governs that
+  # reviewer alone. An unreadable answer warns and continues: preflight refuses a
+  # profile that is wrong, never one it could not check.
+  copilot_trigger=$(jq -r '.[] | select((.login // "") | ascii_downcase
+                                        == "copilot-pull-request-reviewer[bot]")
+                           | .trigger // "" ' <<<"$rows" | head -1)
+  if [ -n "$copilot_trigger" ]; then
+    if rop=$(host_copilot_review_on_push); then
+      reason=$(ship_copilot_trigger_reason copilot "$copilot_trigger" "$rop")
+      [ -z "$reason" ] || reasons+=("$reason")
+    else
+      echo "warning: could not read the copilot_code_review ruleset; Trigger: $copilot_trigger is unchecked" >&2
+    fi
+  fi
 fi
 
 # The skills ship loads through the Skill tool, from ship's own frontmatter:

@@ -44,7 +44,7 @@ The one workflow, `.github/workflows/claude-review.yml`, is triggered by an issu
 ### copilot
 
 Login: copilot-pull-request-reviewer[bot]
-Trigger: on-push
+Trigger: on-request
 Request: None.
 Cap: 3
 Resolve: resolve-thread
@@ -52,9 +52,11 @@ Gating: no
 Fallback-for: None.
 Instructions: .github/copilot-instructions.md
 
-The review itself lands under `copilot-pull-request-reviewer[bot]`, which is the login `poll-pr --await-review` takes; the inline comments arrive under Copilot's own name, so a thread's author and the round's author differ here.
+The review itself lands under `copilot-pull-request-reviewer[bot]`, which is the login `poll-pr --await-review` takes; the inline comments arrive under Copilot's own name, so a thread's author and the round's author differ here. `Request: None.` because the host adds this login to the PR's reviewer list, so a bare `request-review` is the transport and no comment phrase is needed.
 
-Enabled by the repository ruleset **Copilot code review** on the default branch, with `review_on_push: true`. That setting, not the brand, is what makes the trigger `on-push`: every push to an open PR draws a fresh round, and convergence needs the bot quiet on the current head with every thread dispositioned and resolved. `Cap: 3` bounds that loop: runs #137 and #138 spent five and seven rounds, the late ones restating findings already dispositioned. Flipping `review_on_push` to `false` in the ruleset makes it `auto-once`, and this block must move with it.
+Enabled by the repository ruleset **Copilot code review** on the default branch, with `review_on_push: false`. That setting, not the brand, is what fixes the trigger. `false` still opens one round when the PR does and never again on a push, which is the free first round the `on-request` loop reads under the since rule before it spends a request; every round after it is a request ship issues, so `Cap: 3` is the number of rounds this reviewer actually gets. Flipping `review_on_push` back to `true` makes it `on-push`, and this block must move with it: preflight reads the ruleset and refuses the pair when they disagree.
+
+`on-push` was the shape until #184, and the cap was advisory under it. A ruleset that re-reviews every push keeps posting whatever `Cap:` says, so the number bounded only how long ship waited: runs #137, #138 and #182 drew five, seven and nine rounds against a cap of three. #182 is the reason the shape changed rather than the number: its rounds 4 through 9 carried eleven of its fifteen fixes, so the cap was cutting off a reviewer that still had real findings, and a bound that cannot be enforced is worse than a slower loop that can.
 
 ### claude
 

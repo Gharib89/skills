@@ -674,6 +674,34 @@ ship_reviewer_reasons() {
       end'
 }
 
+# ship_copilot_trigger_reason <name> <trigger> <review_on_push>: the one
+# `profile invalid:` line for a Copilot block whose `Trigger:` contradicts the
+# repository ruleset that actually drives it, or nothing.
+#
+# The ruleset, not the block, decides whether a push draws a round, so a profile
+# the two disagree about is one that lies about its own loop: #182 spent nine
+# rounds against `Cap: 3` because the block said on-push and nothing checked it
+# against the setting that made it so.
+#
+# `review_on_push` is the host's answer, passed in rather than read here, so the
+# contradiction is a pure decision the tests drive with no host. An empty third
+# argument is the check that could not run (no admin rights, a fork, an adapter
+# with no equivalent) and yields no reason: a check that could not run is not a
+# verdict, and preflight warns on stderr instead of refusing.
+#
+# `true` admits on-push alone. `false` admits both triggers that take their
+# rounds without a push, because the ruleset still opens one when the PR does:
+# auto-once stops there, on-request asks for the rest.
+ship_copilot_trigger_reason() { # <name> <trigger> <review_on_push>
+  local name=$1 trigger=$2 rop=$3
+  [ -n "$trigger" ] && [ -n "$rop" ] || return 0
+  case $rop:$trigger in
+    true:on-push|false:on-request|false:auto-once) ;;
+    *) printf 'profile invalid: %s is Trigger: %s, but the copilot_code_review ruleset has review_on_push: %s\n' \
+         "$name" "$trigger" "$rop" ;;
+  esac
+}
+
 # ship_stale_base_reason <base-fresh-json>: the refusal `merge` answers with when
 # the branch has not seen every commit on its base, or nothing when it has. The
 # base can move between phase 5's `base-fresh` and the human's "merge" (PR #131

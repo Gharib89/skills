@@ -189,4 +189,40 @@ check "a Cap: with no value reads as absent, and on-request still refuses" \
 check "Gating: is a boolean whatever it reads, never null" \
   'false' "$(ship_reviewers "$(sed 's|^Gating: no$|Gating: None.|' <<<"$profile")" | jq -r '.[0].gating')"
 
+# --- ship_copilot_trigger_reason: the profile's Copilot block against the host --
+#
+# The ruleset is what actually decides whether Copilot re-reviews a push, so a
+# `Trigger:` that contradicts it is a profile that lies about its own loop. The
+# function is pure: preflight reads `review_on_push` off the host and passes it
+# in, so the contradiction is decided here and tested with no host.
+
+check "on-push agrees with review_on_push: true" \
+  '' "$(ship_copilot_trigger_reason copilot on-push true)"
+
+check "on-push contradicts review_on_push: false" \
+  'profile invalid: copilot is Trigger: on-push, but the copilot_code_review ruleset has review_on_push: false' \
+  "$(ship_copilot_trigger_reason copilot on-push false)"
+
+check "on-request agrees with review_on_push: false" \
+  '' "$(ship_copilot_trigger_reason copilot on-request false)"
+
+check "auto-once agrees with review_on_push: false" \
+  '' "$(ship_copilot_trigger_reason copilot auto-once false)"
+
+check "on-request contradicts review_on_push: true" \
+  'profile invalid: copilot is Trigger: on-request, but the copilot_code_review ruleset has review_on_push: true' \
+  "$(ship_copilot_trigger_reason copilot on-request true)"
+
+check "auto-once contradicts review_on_push: true" \
+  'profile invalid: copilot is Trigger: auto-once, but the copilot_code_review ruleset has review_on_push: true' \
+  "$(ship_copilot_trigger_reason copilot auto-once true)"
+
+# A check that could not run is not a verdict: preflight warns and continues, so
+# the function must stay silent rather than invent an agreement or a fault.
+check "an unreadable ruleset yields no reason" \
+  '' "$(ship_copilot_trigger_reason copilot on-push '')"
+
+check "a reviewer with no Trigger: at all yields no reason, the null Trigger being its own fault elsewhere" \
+  '' "$(ship_copilot_trigger_reason copilot '' true)"
+
 finish
