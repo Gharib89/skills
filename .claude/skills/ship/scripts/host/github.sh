@@ -26,18 +26,24 @@ R="repos/$SHIP_OWNER/$SHIP_REPO"
 # pages concatenate exactly as they do without `-i`. That is the whole defence
 # against a body line shaped like a status line: one that does not follow a
 # blank line is body, and every caller here reads `--jq` output, one JSON value
-# per line, where a blank line does not arise.
+# per line, where a blank line does not arise. The status and the body come off
+# the one program below, read twice, so a line is body for both or header for
+# both: a second rule of its own would be the place the two could disagree.
+_GH_AWK_SPLIT='
+  BEGIN { start = 1 }
+  start && /^HTTP\/[0-9.]+ [0-9][0-9][0-9]/ {
+    hdr = 1; start = 0; held = ""; status = substr($2, 1, 3); next }
+  hdr && /^[ \t\r]*$/ { hdr = 0; next }
+  hdr { next }
+  /^[ \t\r]*$/ { held = held "\n"; start = 1; next }
+  { if (want == "body") { if (held != "") { printf "%s", held; held = "" } print }
+    start = 0 }
+  END { if (want == "status") print status }'
 _gh() {
   local raw rc
   raw=$(gh api -i "$@" 2>/dev/null); rc=$?
-  SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | sed -n 's|^HTTP/[0-9.]* \([0-9][0-9][0-9]\).*|\1|p' | tail -1)
-  [ -n "$raw" ] && printf '%s\n' "$raw" | awk '
-    BEGIN { start = 1 }
-    start && /^HTTP\/[0-9.]+ [0-9][0-9][0-9]/ { hdr = 1; start = 0; held = ""; next }
-    hdr && /^[ \t\r]*$/ { hdr = 0; next }
-    hdr { next }
-    /^[ \t\r]*$/ { held = held "\n"; start = 1; next }
-    { if (held != "") { printf "%s", held; held = "" } print; start = 0 }'
+  SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | awk -v want=status "$_GH_AWK_SPLIT")
+  [ -n "$raw" ] && printf '%s\n' "$raw" | awk -v want=body "$_GH_AWK_SPLIT"
   return $rc
 }
 
@@ -63,11 +69,15 @@ _gh_write() { ( api "$@" >/dev/null || { _gh_status; exit 1; } ); }
 # and not the payload, and it can outlast a single sleep by minutes (PR #170),
 # so it gets a growing backoff, bounded at five attempts and about 30 seconds so
 # a genuinely broken call still fails fast. Every other failure, the one 401
-# flake this wrapper was written for included, keeps its single retry. The wider
-# retry adds no double-post risk because every caller of this is idempotent: a
-# create goes direct through create-then-verify and never through here.
+# flake this wrapper was written for included, keeps its single retry.
+#
+# So does a POST, whatever its status. A 5xx can be a response lost on the way
+# back from a write that landed, and the wider backoff would then repeat the
+# write; the creates that must not double go through create-then-verify instead,
+# and the POSTs left here (a comment, an assignee, a label, a review request)
+# keep exactly the one retry they had before #173 rather than gaining four.
 api() {
-  local a prev="" buf="" attempt=0 wait
+  local a prev="" buf="" attempt=0 wait post=no
   local -a args=() backoff=(2 4 8 16)
   for a in "$@"; do
     # `gh` spells a stdin payload either `--input -` or `--input=-`.
@@ -79,12 +89,13 @@ api() {
     fi
     args+=("$a"); prev=$a
   done
+  case " $* " in *" -X POST "*) post=yes ;; esac
   while :; do
     _gh "${args[@]}" && return 0
     attempt=$((attempt + 1))
-    case ${SHIP_HTTP_STATUS:-} in
-      5??|429) [ "$attempt" -le "${#backoff[@]}" ] || return 1; wait=${backoff[$((attempt - 1))]} ;;
-      *)       [ "$attempt" -le 1 ] || return 1; wait=2 ;;
+    case ${post:-no}${SHIP_HTTP_STATUS:-} in
+      no5??|no429) [ "$attempt" -le "${#backoff[@]}" ] || return 1; wait=${backoff[$((attempt - 1))]} ;;
+      *)           [ "$attempt" -le 1 ] || return 1; wait=2 ;;
     esac
     sleep "$wait"
   done

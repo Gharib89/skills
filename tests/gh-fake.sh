@@ -17,7 +17,8 @@
 # it exits (which is what empties the pipe for a retry, the #108 bug), and `-i`
 # adds the CRLF header block the status is read from. `GH_BODY` is the response
 # body, so a case can hand back the shape `--paginate` produces: a second header
-# block after a blank line.
+# block after a blank line. With `-i` it comes back on a failing status too,
+# because `-i` prints the whole response and an error carries one.
 gh_fake_install() { # <dir>
   export GH_LOG=$1/calls
   cat > "$1/gh" <<'FAKE'
@@ -47,7 +48,11 @@ if [ -n "$include" ]; then
   printf 'Content-Type: application/json\r\n'
   printf '\r\n'
 fi
-[ "$status" -ge 400 ] && { echo "gh: unexpected end of JSON input" >&2; exit 1; }
+if [ "$status" -ge 400 ]; then
+  [ -n "$include" ] && [ -n "${GH_BODY:-}" ] && printf '%s\n' "$GH_BODY"
+  echo "gh: unexpected end of JSON input" >&2
+  exit 1
+fi
 printf '%s\n' "${GH_BODY:-ok}"
 exit 0
 FAKE

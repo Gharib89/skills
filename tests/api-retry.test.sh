@@ -80,6 +80,23 @@ api user >/dev/null; rc=$?
 check_rc "the 401 flake still clears on its retry"     0 "$rc"
 check    "retries a 401 once"                          2 "$(gh_attempts)"
 
+# A POST can be a write that landed with its response lost on the way back, so
+# it keeps the one retry it had before the backoff arrived, whatever the status.
+gh_reset; export GH_STATUS_SEQ="500"
+api -X POST "$R/issues/1/comments" >/dev/null; rc=$?
+check_rc "a POST against a 500 burst fails"            1 "$rc"
+check    "does not back off a POST"                    2 "$(gh_attempts)"
+
+# The status is read by the same rule that strips the headers, so an error body
+# ending in a status-shaped line cannot pass itself off as the real status and
+# turn one retry into five.
+gh_reset; export GH_STATUS_SEQ="404"
+export GH_BODY=$'{"message":"Not Found"}\nHTTP/1.1 500 Internal Server Error'
+api user >/dev/null; rc=$?
+check_rc "a 404 carrying a status-shaped body fails"   1 "$rc"
+check    "reads the status off the headers, not the body" 2 "$(gh_attempts)"
+unset GH_BODY
+
 # `--paginate` answers with one header block per page, the second introduced by
 # a blank line. The pages have to concatenate exactly as they do without `-i`,
 # so that separator goes out with the block and nothing else moves.
