@@ -58,16 +58,16 @@ Enabled by the repository ruleset **Copilot code review** on the default branch,
 
 ### claude
 
-Login: github-actions[bot]
+Login: claude[bot]
 Trigger: on-request
 Request: comment @claude
 Cap: 2
-Resolve: None.
+Resolve: resolve-thread
 Gating: no
 Fallback-for: copilot
 Instructions: .github/copilot-instructions.md
 
-Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits degraded, for any degraded reason; on a run where Copilot converges it reports `not invoked: copilot converged` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --since` lands, so `Resolve: None.`: it opens no threads of its own to resolve, and a finding it leaves is answered on the review, not on a thread. `Login:` is `github-actions[bot]` because a workflow reviews under the Actions identity, not under a bot account of its own. The exit is still `degraded: silent` when a round dies before posting, because `poll-pr` does not read a plain comment as a round, but where the job fails the workflow now leaves one naming the run and the failure subtype, so the reason is on the PR and not only in the Actions log. A cancelled job runs no step and still leaves nothing.
+Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits degraded, for any degraded reason; on a run where Copilot converges it reports `not invoked: copilot converged` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --since` lands, and the action attaches the per-file ones as inline threads on that review, so `Resolve: resolve-thread` the way Copilot's rounds resolve. A finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. `Login:` is `claude[bot]`: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App the workflow's `claude_code_oauth_token` authenticates, not under the Actions identity. PR #182 read `github-actions[bot]` here and waited out a round that had already landed. Only the `if: failure()` comment below the action runs on `github.token`, and that comment is not a round, so the login the loop awaits is the app's. The exit is still `degraded: silent` when a round dies before posting, because `poll-pr` does not read a plain comment as a round, but where the job fails the workflow now leaves one naming the run and the failure subtype, so the reason is on the PR and not only in the Actions log. A cancelled job runs no step and still leaves nothing.
 
 ## Coding standards
 
@@ -79,7 +79,7 @@ docs/contributing/coding-standards.md
 
 Proves: a changed generic mechanic or the GitHub adapter performs its host call against a real issue, PR, thread or merge.
 Applies when: the change touches `skills/ship/scripts/`, on any path the GitHub adapter reaches.
-Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write, `read-pr` reads the body back and confirms the footer is still there. The thread-reply path is driven against a thread the reviewer opened on that same PR; the reviewer opens it and ship does not, so a PR carrying none at convergence leaves that path unexercised. The verification then takes the result of the paths that did run, and its `<what ran>` note on the merge summary's `Verification` row names the unexercised one for the human to weigh. Where the thread-reply path is the **only** path the change touches, a threadless PR leaves no path to take a result from, and the verification's result is `unexercised`.
+Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write, `read-pr` reads the body back and confirms the footer is still there. Where the change reaches the body's preamble, the same PR is the subject of an `update-pr-body <pr> --preamble` write, read back the same way, confirming the closing reference survived it. The thread-reply path is driven against a thread the reviewer opened on that same PR; the reviewer opens it and ship does not, so a PR carrying none at convergence leaves that path unexercised. The verification then takes the result of the paths that did run, and its `<what ran>` note on the merge summary's `Verification` row names the unexercised one for the human to weigh. Where the thread-reply path is the **only** path the change touches, a threadless PR leaves no path to take a result from, and the verification's result is `unexercised`.
 Needs: `gh` signed in with push permission on `Gharib89/skills`.
 Without it: hand-off
 Also proven by CI: None.

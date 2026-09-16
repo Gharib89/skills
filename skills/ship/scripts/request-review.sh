@@ -47,7 +47,7 @@ if [ -n "$phrase" ]; then
   printf '%s\n' "$phrase" > "$f"
   # Read before the post, so the fallback can only be earlier than the comment.
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  c=$(host_pr_comment "$pr" "$f") || ship_fail "comment transport: the request comment did not post"
+  c=$(host_pr_comment "$pr" "$f") || ship_fail_host "comment transport: the request comment did not post" "$c"
   jq --argjson pr "$pr" --arg l "$login" --arg now "$now" \
     '{pr: $pr, login: $l, requested: true, readback: [.url],
       requested_at: (.created_at // $now)}' <<<"$c"

@@ -1,23 +1,118 @@
 #!/usr/bin/env bash
 # GitHub adapter: the host_* interface from _lib.sh over REST via `gh api`.
-# REST throughout, one retry after 2 s: gh's GraphQL paths (gh pr view --json,
-# gh pr checks --watch) flake 401 mid-session. GraphQL is used only for the
-# three things REST lacks, review-thread resolution state, resolveReviewThread,
-# and a thread id's reply target (REST offers no route from a thread to its
-# first comment), behind the same retry. Sourced by _lib.sh's ship_load_host; needs SHIP_OWNER
-# and SHIP_REPO set.
+# REST throughout, retried by the policy on `api` below: gh's GraphQL paths
+# (gh pr view --json, gh pr checks --watch) flake 401 mid-session. GraphQL is
+# used only for the three things REST lacks, review-thread resolution state,
+# resolveReviewThread, and a thread id's reply target (REST offers no route from
+# a thread to its first comment), and those keep the flat one retry after 2 s
+# that every REST call had before #173. Sourced by _lib.sh's ship_load_host;
+# needs SHIP_OWNER and SHIP_REPO set.
 
 R="repos/$SHIP_OWNER/$SHIP_REPO"
 
-# Reads retry once on any failure. Creates go through `_gh_create_verify`,
-# which re-reads before retrying so a slow success is never double-posted.
+# `gh api -i`, with the response status kept and the header block taken back
+# out. gh loses the status whenever the error body is empty: a 500 carrying
+# Content-Length: 0 surfaces as "unexpected end of JSON input" on stderr, which
+# reads like a malformed request rather than a host that is down (#173), so the
+# status comes from the response headers `-i` prints instead. Leaves
+# SHIP_HTTP_STATUS at the last status line of the response, empty where the call
+# never got an HTTP answer at all.
+#
+# The whole response is buffered to split it, which is also what `--paginate`
+# means here: gh prints one header block per page, separated from the page
+# before it by a blank line, and the status is the last page's.
+#
+# A header block starts at the top of the response or on that separator, never
+# mid-page, and the separator goes out with the block it introduces, so the
+# pages concatenate exactly as they do without `-i`. That is the whole defence
+# against a body line shaped like a status line: one that does not follow a
+# blank line is body, and every caller here reads `--jq` output, one JSON value
+# per line, where a blank line does not arise. The status and the body come off
+# the one program below, read twice, so a line is body for both or header for
+# both: a second rule of its own would be the place the two could disagree.
+_GH_AWK_SPLIT='
+  BEGIN { start = 1 }
+  start && /^HTTP\/[0-9.]+ [0-9][0-9][0-9]/ {
+    hdr = 1; start = 0; held = ""; status = substr($2, 1, 3); next }
+  hdr && /^[ \t\r]*$/ { hdr = 0; next }
+  hdr { next }
+  /^[ \t\r]*$/ { held = held "\n"; start = 1; next }
+  { if (want == "body") { if (held != "") { printf "%s", held; held = "" } print }
+    start = 0 }
+  END { if (want == "status") print status }'
+#
+# gh's own message is the other half of the answer: the status says the host
+# refused it, the message says why ("Validation Failed: body is too long"), and
+# `open-pr` captures this stderr and prints it with `ship_tail40`. So each
+# attempt's stderr is held rather than dropped, and a failure sends it on. A
+# retried outage sends one message per attempt, which is the outage being
+# visible rather than noise.
+#
+# The temp file takes an explicit `rm` where the standard asks for a RETURN
+# trap, because a RETURN trap set in a callee REPLACES the caller's: arming one
+# here would disarm the `rm -f "$buf"` that `api` uses to clean up a buffered
+# payload. This function has one exit path, so the explicit removal covers it.
+_gh() {
+  local raw rc err
+  # Cleared before anything can fail, so a call that gives up here reports no
+  # status rather than the one the call before it left standing. `api` clears it
+  # too, on the way in; this one covers `_gh_create`, which reaches `_gh`
+  # without passing through `api`.
+  SHIP_HTTP_STATUS=
+  err=$(mktemp) || return 2
+  raw=$(gh api -i "$@" 2>"$err"); rc=$?
+  SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | awk -v want=status "$_GH_AWK_SPLIT")
+  # The body goes out only on a success. A failed call's body is an error
+  # document nothing here reads, and `_gh_create` prints its own JSON after
+  # this returns, so emitting both would hand the caller two JSON values where
+  # `ship_fail_host` expects one.
+  if [ "$rc" -eq 0 ]; then
+    [ -n "$raw" ] && printf '%s\n' "$raw" | awk -v want=body "$_GH_AWK_SPLIT"
+  else
+    ship_tail40 "$err"
+  fi
+  rm -f "$err"
+  return $rc
+}
+
+# A failed host call answers with its status, so `ship_fail_host` can tell "the
+# host refused this" from "the host is down". `_gh` leaves the status in a
+# variable, and a pipeline element and a `$( )` are both subshells where one
+# dies unread, so both helpers below print it instead. The `( )` is what makes
+# the `exit` end this call rather than the mechanic that made it.
+_gh_status() { jq -n --argjson s "${SHIP_HTTP_STATUS:-null}" '{status: $s}'; }
+# A create: one attempt, because creates go through `_gh_create_verify`.
+_gh_create() { ( _gh "$@" || { _gh_status; exit 1; } ); }
+# A write through the retrying wrapper: nothing on success, the status on failure.
+_gh_write() { ( api "$@" >/dev/null || { _gh_status; exit 1; } ); }
+
+# Reads retry on failure. Creates go through `_gh_create_verify`, which re-reads
+# before retrying so a slow success is never double-posted.
 # A retry has to be the request it retries. `gh api "$@"` carries the argument
 # list but not stdin, so a `--input -` payload the failed attempt already drained
 # reaches the retry empty and GitHub rejects it as "Body should be a JSON
 # object" (#108); buffering it once is what keeps the two byte-identical.
+#
+# The retry POLICY reads the status `_gh` recovered. A 5xx or a 429 is the host
+# and not the payload, and it can outlast a single sleep by minutes (PR #170),
+# so it gets a growing backoff, bounded at five attempts and about 30 seconds so
+# a genuinely broken call still fails fast. Every other failure, the one 401
+# flake this wrapper was written for included, keeps its single retry.
+#
+# So does a call whose method cannot be repeated, whatever its status. A 5xx can
+# be a response lost on the way back from a write that landed, and the wider
+# backoff would then repeat the write. GET, PATCH and DELETE are safe to send
+# again; POST doubles what it creates, and the one PUT here is the squash merge,
+# which must not be attempted five times over 30 s. Those keep exactly the one
+# retry they had before #173 rather than gaining four. The method is read from
+# `-X`, `-X<M>`, `--method` and `--method=<M>` alike, so a future call site
+# cannot spell its way past the classification.
 api() {
-  local a prev="" buf=""
-  local -a args=()
+  local a prev="" buf="" attempt=0 wait method=GET again
+  local -a args=() backoff=(2 4 8 16)
+  # A call that returns before `_gh` runs would otherwise leave the previous
+  # call's status standing, and `_gh_write` would report it as this one's.
+  SHIP_HTTP_STATUS=
   for a in "$@"; do
     # `gh` spells a stdin payload either `--input -` or `--input=-`.
     if { [ "$prev" = --input ] && [ "$a" = - ]; } || [ "$a" = --input=- ]; then
@@ -26,9 +121,23 @@ api() {
       cat > "$buf"
       case $a in --input=-) a=--input=$buf ;; *) a=$buf ;; esac
     fi
+    case $a in
+      -X?*)        method=${a#-X} ;;
+      --method=?*) method=${a#--method=} ;;
+      *) case $prev in -X|--method) method=$a ;; esac ;;
+    esac
     args+=("$a"); prev=$a
   done
-  gh api "${args[@]}" 2>/dev/null || { sleep 2; gh api "${args[@]}"; }
+  case $method in GET|PATCH|DELETE) again=yes ;; *) again=no ;; esac
+  while :; do
+    _gh "${args[@]}" && return 0
+    attempt=$((attempt + 1))
+    case $again${SHIP_HTTP_STATUS:-} in
+      yes5??|yes429) [ "$attempt" -le "${#backoff[@]}" ] || return 1; wait=${backoff[$((attempt - 1))]} ;;
+      *)             [ "$attempt" -le 1 ] || return 1; wait=2 ;;
+    esac
+    sleep "$wait"
+  done
 }
 gql() { gh api graphql "$@" 2>/dev/null || { sleep 2; gh api graphql "$@"; }; }
 
@@ -44,7 +153,11 @@ host_tooling_install() {
   local sudo=""; [ "$(id -u)" -eq 0 ] || sudo="sudo -n"
   $sudo apt-get install -y gh
 }
-host_identity() { api user --jq .login; }
+# Prints the status on failure, the way `_gh_write` does and for the same
+# reason: the read runs in a command substitution at every call site, so a
+# status left in a variable dies with the subshell, and the two writes that open
+# with this read would answer a 5xx burst with a null status.
+host_identity() { ( api user --jq .login || { _gh_status; exit 1; } ); }
 host_can_push() { api "$R" --jq '.permissions.push // false'; }
 
 _norm_issue='{number, title, body: (.body // ""),
@@ -111,13 +224,19 @@ host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_rea
 # pipe answers that way only under the `pipefail` every mechanic sets, which is
 # where a failed `api` upstream of a `jq` becomes the pipeline's exit status.
 #
-# A <post> calls `gh api` directly, not `api`: `api` retries on its own, and a
+# A <post> goes through `_gh_create`, not `api`: `api` retries on its own, and a
 # create is retried only after the re-read.
+#
+# Whichever way this fails, what it prints last is the failed POST's status, so
+# the mechanic's verdict names the status of the WRITE. Where the re-read failed
+# too, that is the first POST's, held from before the read: the read's own
+# status says nothing about whether the create landed.
 _gh_create_verify() { # <post-fn> <find-fn>
-  local out
+  local out posted
   if out=$("$1"); then printf '%s\n' "$out"; return 0; fi
+  posted=$out
   sleep 2
-  out=$("$2") || return 1
+  out=$("$2") || { [ -n "$posted" ] && printf '%s\n' "$posted"; return 1; }
   if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
   "$1"
 }
@@ -128,7 +247,7 @@ host_issue_create() { # <title> <body-file> <label>
   _issue_post() {
     jq -n --arg t "$title" --rawfile b "$file" --arg l "$label" \
       '{title: $t, body: $b, labels: (if $l == "" then [] else [$l] end)}' \
-      | gh api -X POST "$R/issues" --input - --jq '{number, url: .html_url}' 2>/dev/null
+      | _gh_create -X POST "$R/issues" --input - --jq '{number, url: .html_url}'
   }
   _issue_find() {
     api "$R/issues?state=open&creator=$me&sort=created&direction=desc&per_page=20" --jq '.[]' \
@@ -168,7 +287,7 @@ host_pr_create() { # <head> <base> <title> <body-file> <issue>
   _pr_post() {
     jq -n --arg h "$head" --arg b "$base" --arg t "$title" --arg body "$body" \
       '{head: $h, base: $b, title: $t, body: $body, draft: false}' \
-      | gh api -X POST "$R/pulls" --input - --jq '{number, url: .html_url, created_at}' 2>/dev/null
+      | _gh_create -X POST "$R/pulls" --input - --jq '{number, url: .html_url, created_at}'
   }
   _pr_find() {
     api "$R/pulls?state=open&head=$SHIP_OWNER:$head" --jq 'first | select(. != null) | {number, url: .html_url, created_at}'
@@ -297,16 +416,18 @@ host_pr_request_review() { # <pr> <login>
 
 host_pr_comment() { # <pr> <body-file>
   local pr=$1 file=$2 me
-  me=$(host_identity) || return 1
-  _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | gh api -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url, created_at}' 2>/dev/null; }
+  me=$(host_identity) || { [ -n "$me" ] && printf '%s\n' "$me"; return 1; }
+  _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | _gh_create -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url, created_at}'; }
   _comment_find() {
     api "$R/issues/$pr/comments?per_page=100" --paginate --jq '.[]' \
       | jq -s --arg me "$me" --rawfile b "$file" '[.[] | select(.user.login == $me and .body == $b)] | last | select(. != null) | {id, url: .html_url, created_at}'
   }
   _gh_create_verify _comment_post _comment_find
 }
-host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
-host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | api -X PATCH "$R/pulls/$1" --input - >/dev/null; }
+# Nothing on success, {"status": <n|null>} on failure: the caller's `ship_fail_host`
+# turns that into the verdict.
+host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | _gh_write -X PATCH "$R/pulls/$1" --input -; }
+host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | _gh_write -X PATCH "$R/pulls/$1" --input -; }
 
 _thread_reply_target_query='query($id:ID!){ node(id:$id){
   ... on PullRequestReviewThread { comments(first:1){ nodes{ databaseId } } } } }'
@@ -330,9 +451,9 @@ host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
     --jq '.data.node.comments.nodes[0].databaseId') \
     || { printf '{"replied": false, "url": null, "detail": "unavailable"}\n'; return 1; }
   [ -n "$cid" ] && [ "$cid" != null ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
-  me=$(host_identity) || return 1
+  me=$(host_identity) || { [ -n "$me" ] && printf '%s\n' "$me"; return 1; }
   _reply_post() { jq -n --rawfile b "$file" '{body: $b}' \
-    | gh api -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}' 2>/dev/null; }
+    | _gh_create -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}'; }
   _reply_find() {
     local raw
     raw=$(api "$R/pulls/$pr/comments?per_page=100" --paginate --jq '.[]') || return 1

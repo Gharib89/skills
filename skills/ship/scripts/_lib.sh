@@ -96,6 +96,22 @@ readonly SHIP_CLAIM_COMMENT='🤖 Claimed by a ship run: implementation in progr
 ship_tooling() { jq -n --arg e "$1" '{error: $e}'; exit 2; }
 ship_fail()    { jq -n --arg e "$1" '{error: $e}'; exit 1; }
 
+# ship_fail_host <msg> <adapter-answer>: the exit-1 shape for a host write that
+# failed, carrying the HTTP status of the last attempt. Without it a host that
+# is briefly down and a payload the host refuses produce the identical verdict,
+# and the run has no way to tell them apart: PR #170 spent four minutes
+# bisecting a valid body against a burst of 500s. <adapter-answer> is whatever
+# the adapter printed on its failure path; an adapter that reports no status,
+# as `az` does, leaves it empty and the status is null. A guessed status is
+# worse than none, so anything that is not a number reads as null.
+ship_fail_host() { # ship_fail_host <msg> <adapter-answer>
+  local s
+  s=$(jq -r 'if (.status | type) == "number" then .status else "null" end' <<<"${2:-}" 2>/dev/null) || s=null
+  [ -n "$s" ] || s=null
+  jq -n --arg e "$1" --argjson s "$s" '{error: $e, status: $s}'
+  exit 1
+}
+
 # ship_tail40 <file>: a failing step's evidence, never the whole log.
 ship_tail40() { tail -n 40 "$1" >&2; }
 
@@ -264,10 +280,26 @@ readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
   }
 '
 
+# The closing-keyword vocabulary, read by both closing tests below so a keyword
+# one recognizes is a keyword the other does. It ends on the `#` of the issue
+# number: `ship_body_closes` anchors the one number it was asked about to it,
+# `ship_body_closing_line` takes any number, since it asks whether a line closes
+# anything at all. The "(#n, and #m)" run lets a multi-issue "Closes #75, #81"
+# count for #81.
+readonly SHIP_CLOSES_RE='\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))\s+(#[0-9]+[\s,]+(and[\s,]+)?)*#'
+
+# ship_unfenced <text>: <text> with every fenced block taken out, opener and
+# closer included, by SHIP_AWK_FENCE. What is left is the text a closing test
+# reads: a "Closes #n" inside a fence is example text, not a claim.
+ship_unfenced() { # ship_unfenced <text>
+  awk "$SHIP_AWK_FENCE"'
+    { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1"
+}
+
 # Closing-keyword test, the same on both hosts: does <body> claim to close
 # <issue>? Fenced blocks and inline code come out first (a PR quoting
 # "Closes #n" while discussing another PR mentions the issue, it does not claim
-# it). The "(#n, and #m)" run lets a multi-issue "Closes #75, #81" count for #81.
+# it).
 #
 # The fenced blocks come out by SHIP_AWK_FENCE, so this agrees with the two
 # heading transformations on what a fence is: a tilde-fenced example carrying
@@ -281,13 +313,36 @@ readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
 # length three rather than a fence form of its own.
 ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
   local unfenced
-  unfenced=$(awk "$SHIP_AWK_FENCE"'
-    { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1")
-  jq -e -n --arg body "$unfenced" --arg n "$2" '
+  unfenced=$(ship_unfenced "$1")
+  jq -e -n --arg body "$unfenced" --arg n "$2" --arg re "$SHIP_CLOSES_RE" '
     $body
     | gsub("(?s)(`+).*?\\1"; "")
-    | test("\\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))"
-           + "\\s+(#[0-9]+[\\s,]+(and[\\s,]+)?)*#" + $n + "\\b"; "i")' >/dev/null
+    | test($re + $n + "\\b"; "i")' >/dev/null
+}
+
+# ship_body_closing_line <text>: the first line of <text> that claims to close
+# an issue, any issue, or nothing where no line does. The same vocabulary and
+# the same fence and code-span rules as ship_body_closes, answering with the
+# line itself: `ship_body_replace_preamble` carries the line over rather than
+# rebuilding it, so it needs the line and not a yes or no.
+#
+# The spans come out of the whole text at once, exactly as ship_body_closes
+# takes them out, so a multi-line span is inert for both. Each span leaves its
+# own newlines behind, which keeps the stripped text line for line with the
+# original: the test reads the stripped line and the answer is the original one,
+# backticks and all. Stripping per line instead would read a line inside a
+# multi-line span as a claim, and carrying that line over lifts a quoted
+# `Closes #n` out of its span and makes it a real one.
+ship_body_closing_line() { # ship_body_closing_line <text>
+  local unfenced
+  unfenced=$(ship_unfenced "$1")
+  jq -rn --arg body "$unfenced" --arg re "$SHIP_CLOSES_RE" '
+    ($body | split("\n")) as $lines
+    | ($body | gsub("(?s)(?<b>`+)(?<c>.*?)\\1"; (.c | gsub("[^\n]"; "")))
+       | split("\n")) as $bare
+    | first(range($lines | length)
+            | select($bare[.] | test($re + "[0-9]+\\b"; "i")))
+    | $lines[.] // empty'
 }
 
 # Replace one `## <section>` of <body> with <body-file>'s content, appending the
@@ -353,6 +408,64 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
     skip && !fenced && /^## / { skip=0 }
     !skip { print }
     END { if (!placed) { printf "\n%s\n\n", hd; dump(); exit 1 } }' <<<"$1"
+}
+
+# Replace the PREAMBLE of <body>, everything above its first `## ` heading, with
+# <body-file>'s content, and print the new body. A body with no heading is all
+# preamble. The preamble is where this repo's standard puts the Shape fence and
+# where `open-pr` puts the closing line. Nothing under scripts/ could rewrite
+# that half before #173, so an accepted body-shape finding in phase 7 was
+# reported and left standing; this is what makes it a fix like any other.
+#
+# The boundary is the same column-0 `^## ` outside a fence that
+# ship_body_replace_section and _gh_add_closes read, so the two halves of a body
+# meet exactly and neither can reach into the other.
+#
+# Unlike a section, a preamble is never absent: a body that opens on its first
+# heading has an empty one, and the content is placed above that heading. So
+# there is no created case and no exit-1 answer.
+#
+# A closing line the OLD preamble carried and the new content does not is
+# carried over, last, where `open-pr` puts it. `open-pr` places it above the
+# first heading precisely so no section rewrite reaches it; this rewrite does
+# reach it, and a rewrite that says nothing about closing should not drop the
+# link the PR was opened with.
+#
+# Content that carries a closing line of its own is left exactly as written,
+# whichever issues that line names. The test is per line, not per issue number:
+# the line is the caller saying what this PR closes, and merging the old line's
+# references into it would put back an issue they had just taken out, which the
+# caller cannot see in the file they wrote.
+#
+# The content reaches awk through the environment rather than a file, because
+# the carried line is appended to it first, and rather than `-v`, which decodes
+# backslash escapes in its value the way it did to a `--section` name.
+ship_body_replace_preamble() { # ship_body_replace_preamble <body> <body-file>
+  local content carried pre
+  content=$(cat "$2")
+  pre=$(awk "$SHIP_AWK_FENCE"'
+    { fenced = ship_fence($0) }
+    !fenced && /^## / { exit }
+    { print }' <<<"$1")
+  carried=$(ship_body_closing_line "$pre")
+  if [ -n "$carried" ] && [ -z "$(ship_body_closing_line "$content")" ]; then
+    if [ -n "$content" ]; then content=$(printf '%s\n\n%s' "$content" "$carried")
+    else content=$carried
+    fi
+  fi
+  SHIP_PREAMBLE="$content" awk "$SHIP_AWK_FENCE"'
+    function dump(   n, i, a) {
+      n = split(ENVIRON["SHIP_PREAMBLE"], a, "\n")
+      # Trailing blanks come off, so the one blank line under the preamble is
+      # placed here however the content file ended.
+      while (n > 0 && a[n] ~ /^[ \t\r]*$/) n--
+      for (i = 1; i <= n; i++) print a[i]
+      return n
+    }
+    { fenced = ship_fence($0) }
+    !placed && !fenced && /^## / { if (dump() > 0) print ""; placed = 1 }
+    placed { print }
+    END { if (!placed) dump() }' <<<"$1"
 }
 
 # Generic English function words of four or more characters; shorter ones the

@@ -29,7 +29,7 @@ The local gate's one answer: pass, fail, or unavailable, built from a status per
 _Avoid_: result, report, gate output
 
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-pr, reply-thread, update-pr-body, update-pr-title, resolve-thread, CI wait, merge, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; the agent never drives a host's CLI directly, and a missing operation is a Ship defect, not a prose fallback. Their reads speak one vocabulary on every host.
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-pr, reply-thread, update-pr-body, update-pr-title, resolve-thread, CI wait, merge, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; the agent never drives a host's CLI directly, and a missing operation is a Ship defect, not a prose fallback. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down.
 _Avoid_: helper, util, raw `gh` or `az` call
 
 **Setup skill**:
@@ -143,6 +143,10 @@ _Avoid_: scratch file (that names the Run file, and is avoided there too), temp 
 **Shape**:
 The compressed code-form view of a change that opens a PR's Summary: a call tree, file tree, control flow, pseudocode or component tree, written as a `diff` fence so the before and the after sit in one view. One per PR, about 15 lines or fewer, every node a real symbol and every root node carrying its file path. A change that moves no logic and no layout says so in a `Shape: none, mechanical (<kind>).` line rather than omitting it silently.
 _Avoid_: diagram, visual, picture, mermaid, sketch
+
+**Body preamble**:
+Everything in a PR body above its first `## ` heading: the closing reference, and the Shape where no template gives a `## Summary`. The half of a body no section rewrite reaches, and `update-pr-body --preamble` is what rewrites it, carrying over a closing line the new content lacks so a rewrite that says nothing about closing keeps the link to the issue; content carrying its own closing line is left as written, whichever issues it names.
+_Avoid_: header, intro, top of the body
 
 **Adjacent find**:
 A problem outside the claimed issue that Ship meets while working it, whether the agent spotted it or a reviewer raised it. Filed for triage and left alone, unless an acceptance criterion names it, its fix lands in a file the PR already changes, or a reviewer of the PR would flag it, in which case it is fixed inline and logged as a deviation. Filing goes through `file-issue`, which answers with an existing open issue rather than creating a second one for the same find. Distinct from a deviation, which is the claimed issue's own work departing from its plan.

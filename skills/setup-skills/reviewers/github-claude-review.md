@@ -159,7 +159,7 @@ Both shared steps above, then:
 
 ```markdown
 ### Claude Code
-Login: github-actions[bot]
+Login: claude[bot]
 Trigger: on-push
 Request: None.
 Cap: <the cap the walk settled; recommend 3>
@@ -322,14 +322,16 @@ Both shared steps above, then:
 
 ```markdown
 ### Claude Code
-Login: github-actions[bot]
+Login: claude[bot]
 Trigger: on-request
 Request: comment __PHRASE__
 Cap: <the cap the walk settled; recommend 2>
-Resolve: None.
+Resolve: resolve-thread
 Gating: no
 Fallback-for: __PRIMARY__
 Instructions: __INSTRUCTIONS__
 ```
 
-`Login:` is `github-actions[bot]` in both shapes because a workflow reviews under the Actions identity, not under a bot account of its own. `Resolve:` is `None.` here and `resolve-thread` in the on-push shape: the label is an on-push field, and an on-request round is answered on the review rather than resolved thread by thread.
+`Login:` is `claude[bot]` in both shapes: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App its `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` step runs on `github.token` and lands as `github-actions[bot]`, and that comment is not a round, so the login a run awaits is the app's. PR #182 in this repo read the Actions identity here and waited out a round that had already landed.
+
+`Resolve:` is `resolve-thread` in both shapes, because the action attaches its per-file findings as inline threads on the review whichever trigger drew it. A finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve.
