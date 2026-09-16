@@ -113,6 +113,14 @@ writes the `## <name>` line itself, and a file that carries it too leaves the
 heading twice over inside one section, which the write collapses and which no
 other mechanic repairs.
 
+**A finding about the body itself is a fix, not a report.** `--section <name>`
+reaches one section and `--preamble` reaches everything above the first heading,
+so a reviewer's accepted objection to the Shape, or to a body that opens on
+prose where the standard wants a Shape fence, is answered by a write like any
+other finding. The preamble file is the whole preamble, and a closing line the
+old one carried that the file lacks is carried over, so the rewrite never
+unlinks the PR from its issue.
+
 ## By trigger
 
 ### `auto-once`

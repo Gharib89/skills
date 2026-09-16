@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# update-pr-body's guards: the usage line, an unknown flag, and the body file
-# whose fence state ends open. Every case here is malformed, so the guard answers
-# before `ship_load_host` and nothing reaches a host.
+# update-pr-body's guards: the usage line, an unknown flag, the two body-address
+# flags, and the body file whose fence state ends open. Every case here is
+# malformed, so the guard answers before `ship_load_host` and nothing reaches a
+# host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 m=skills/ship/scripts/update-pr-body.sh
-usage='usage: update-pr-body <pr> --section <name> --body-file <path>'
+usage='usage: update-pr-body <pr> (--section <name> | --preamble) --body-file <path>'
 
 err() { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
@@ -20,6 +21,15 @@ check "an unknown flag is named" 'unknown flag: --body' "$(err 7 --body x)"
 check "a flag in the PR slot is the usage error" "$usage" "$(err --section Review --body-file /dev/null)"
 check_rc "a flag in the PR slot is tooling" 2 "$(rc --section Review --body-file /dev/null)"
 
+# The two ways to address the body are exclusive: a call carrying both asks for
+# two different rewrites of the same body, and a call carrying neither says
+# nothing about which part of it to replace.
+check "both address flags is the usage error" "$usage" \
+  "$(err 7 --section Review --preamble --body-file /dev/null)"
+check_rc "both address flags is tooling" 2 "$(rc 7 --section Review --preamble --body-file /dev/null)"
+check "neither address flag is the usage error" "$usage" "$(err 7 --body-file /dev/null)"
+check_rc "neither address flag is tooling" 2 "$(rc 7 --body-file /dev/null)"
+
 open_fence=$(mktemp); trap 'rm -f "$open_fence"' EXIT
 printf '## Summary\n\n```diff\n- before\n+ after\n' > "$open_fence"
 
@@ -31,5 +41,12 @@ check "a body file whose fence ends open is refused, naming the fence" \
   "$(err 7 --section Summary --body-file "$open_fence")"
 check_rc "an unclosed fence is tooling, not a failed update" \
   2 "$(rc 7 --section Summary --body-file "$open_fence")"
+
+# The preamble file takes the same rule: an open fence there inverts the state
+# for the whole body under it, which is the same swallowed sections.
+check "a preamble file whose fence ends open is refused too" \
+  'body file ends inside an unclosed fence (line 3: ```)' \
+  "$(err 7 --preamble --body-file "$open_fence")"
+check_rc "an unclosed preamble fence is tooling" 2 "$(rc 7 --preamble --body-file "$open_fence")"
 
 finish

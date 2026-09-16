@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 4.1.2
+  version: 4.2.0
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -141,7 +141,7 @@ be read.
 | `request-review <pr> <login> [--comment <phrase>]` | 7 |
 | `comment-pr <pr> --body-file` | 7, 9 |
 | `reply-thread <pr> <thread> --body-file` | 7 |
-| `update-pr-body <pr> --section Review --body-file` | 7 |
+| `update-pr-body <pr> (--section <name> \| --preamble) --body-file` | 7 |
 | `resolve-thread <pr> <thread>` | 7 |
 | `ci-wait <pr> [--timeout <s>] [--interval <s>]` | 8 |
 | `merge <pr> <issue \| none> --worktree <path>` | 9, on approval |
@@ -475,6 +475,13 @@ list, which is that same check one write earlier. Read the headings the way the
 slice does, fence-aware: the fence trap is a Shape fence over a markdown change
 carrying `## ` lines of its own, which are example text and not sections.
 
+**A body has two halves, and a mechanic reaches each.** `--section <name>`
+replaces one section; `--preamble` replaces everything above the first heading,
+which is where the closing line sits and, where no template gives a `## Summary`,
+where the Shape sits. So a finding about the body's own shape is a fix like any
+other, not something to report: the preamble write carries the old closing line
+over where the new content lacks one, so it never unlinks the PR from its issue.
+
 **The Summary opens with a Shape.** Draw it from the diff here, not from
 phase 2's design; a redraw is not a deviation. It is the first thing under
 `## Summary`, above the prose, and where no template gives that heading the
@@ -513,7 +520,9 @@ its findings sit in the body rather than in threads: `rounds[]` under `--brief`,
 since rule selecting the same rows either way. A body ending
 `...[truncated]` is a round you have not read: re-poll with `--full <id>` for
 that row before dispositioning it. `resolve-thread` runs per
-thread once every thread carries a disposition. Exits: `converged`,
+thread once every thread carries a disposition. A finding about the PR body
+itself is fixed here like any other, `--preamble` for the Shape and the lines
+above the first heading, `--section` for one section. Exits: `converged`,
 `converged, override needed` (a gating reviewer's declined finding, cited with
 evidence), `degraded: <reason>` from
 the fixed vocabulary `never-queued | blocked | silent | infra-error | cap-hit |

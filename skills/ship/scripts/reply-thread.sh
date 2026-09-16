@@ -6,7 +6,8 @@
 # One call per thread, matching resolve-thread: the thread a reviewer opened is
 # where the reviewer, and a human reading the round, look for the answer.
 #
-# stdout: {pr, thread, replied, url}
+# stdout: {pr, thread, replied, url}; a failure adds `status`, the host's
+#         status for the failed post, and `detail` where the adapter named one
 # exit: 0 replied · 1 not replied (a thread the host cannot reach, or thread
 #       state unavailable, which is the reviewer's degraded `unreachable`) · 2 usage
 set -uo pipefail
@@ -25,6 +26,6 @@ if out=$(host_pr_reply_thread "$pr" "$thread" "$2"); then
 else
   detail=$(jq -c . <<<"$out" 2>/dev/null) || detail=null
   jq -n --argjson pr "$pr" --arg t "$thread" --argjson d "${detail:-null}" \
-    '{pr: $pr, thread: $t, replied: false, url: null} + ($d // {})'
+    '{pr: $pr, thread: $t, replied: false, url: null, status: null} + ($d // {})'
   exit 1
 fi
