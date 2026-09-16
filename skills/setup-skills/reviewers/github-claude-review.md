@@ -8,11 +8,11 @@ Scaffold for a repo whose ship profile names Claude Code as a reviewer. It comes
 What both shapes do the same way, because ship reads a round off the host and never off the workflow's logs:
 
 - **One formal pull request review per round**, submitted in a single call, with every inline finding attached to it, and a body of exactly `no findings` when the PR is clean. A reviewer that stays silent on a clean PR cannot be told apart from one that failed, and the run waits out its whole poll window either way.
-- **`--model claude-opus-5`.** A review is judgment work: a cheaper tier reads the diff and misses the standards violation in it.
+- **`--model opus`.** A review is judgment work: a cheaper tier reads the diff and misses the standards violation in it. The alias tracks the tier's current model rather than pinning one release.
 - **`claude_code_oauth_token`** from the `CLAUDE_CODE_OAUTH_TOKEN` secret, minted by `claude setup-token`, so the review is billed to a Claude subscription rather than to API credit.
-- **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the prompt is never reached: no review, no findings, and nothing on the PR to say why. Observed on run 34847733490 of this repo. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
-- **`--max-turns 60`, not 30.** A round reads a brief, a spec, a whole diff and then builds one POST, and 30 turns does not cover a mid-size PR: run 34949995325 of this repo exhausted a 30-turn cap reviewing 15 changed files, logged `num_turns: 31` with `error_max_turns`, posted nothing, and cost $2.17. [`ado-claude-review.md`](ado-claude-review.md) hit the same wall on a 51-file PR and moved to 60 first; this is the GitHub side catching up on the cap.
-- **An allowlist that covers every step of the prompt.** A tool the round needs and cannot call is a denied call, a spent turn and no explanation: run 34949995325 was denied 4 times, and the run log reports only `permission_denials_count`, never which commands, so the list is derived from what the prompt's own steps ask for, plus the read-only verbs a round reaches for while sizing a large diff, and never from a log. `Read`, `Grep` and `Glob` serve step 1's brief and standards; `Bash(gh pr view:*)` and `Bash(gh issue view:*)` step 2's spec; `Bash(gh pr diff:*)` step 3's diff; `Bash(gh api:*)` the POST; and `Bash(head:*)`, `Bash(tail:*)` and `Bash(wc:*)` because a pipe is refused unless **both** of its commands are granted, so `gh pr diff | wc -l` needs `wc` named too. Those three size a diff and never stand in for it: step 3 says review what the one `gh pr diff` returned, and a `head` that truncates it leaves the tail unreviewed with nothing saying so. Deliberately no `git` entry, though [`ado-claude-review.md`](ado-claude-review.md) grants two: that prompt reaches for `git diff` because Azure DevOps has no `gh`, while both shapes here check out at `fetch-depth: 1` and read the diff through `gh pr diff`, so `git log` would have no history to read and neither prompt asks for either. Nothing here writes to the checkout, the one write it can make anywhere is the review POST the round exists for, and nothing reaches the network beyond `gh`. Narrow it and the round spends its turns on denied calls and posts nothing.
+- **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the prompt is never reached: no review, no findings, and nothing on the PR to say why. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
+- **`--max-turns 60`.** A round reads a brief, a spec, a whole diff and then builds one POST, and a 30-turn cap does not cover a mid-size PR: the round exhausts it, logs `error_max_turns`, posts nothing, and still bills the turns it spent.
+- **An allowlist that covers every step of the prompt.** A tool the round needs and cannot call is a denied call, a spent turn and no explanation, and the run log reports only `permission_denials_count`, never which commands, so the list is derived from what the prompt's own steps ask for, plus the read-only verbs a round reaches for while sizing a large diff, and never from a log. `Read`, `Grep` and `Glob` serve step 1's brief and standards; `Bash(gh pr view:*)` and `Bash(gh issue view:*)` step 2's spec; `Bash(gh pr diff:*)` step 3's diff; `Bash(gh api:*)` the POST; and `Bash(head:*)`, `Bash(tail:*)` and `Bash(wc:*)` because a pipe is refused unless **both** of its commands are granted, so `gh pr diff | wc -l` needs `wc` named too. Those three size a diff and never stand in for it: step 3 says review what the one `gh pr diff` returned, and a `head` that truncates it leaves the tail unreviewed with nothing saying so. Deliberately no `git` entry, though [`ado-claude-review.md`](ado-claude-review.md) grants two: that prompt reaches for `git diff` because Azure DevOps has no `gh`, while both shapes here check out at `fetch-depth: 1` and read the diff through `gh pr diff`, so `git log` would have no history to read and neither prompt asks for either. Nothing here writes to the checkout, the one write it can make anywhere is the review POST the round exists for, and nothing reaches the network beyond `gh`. Narrow it and the round spends its turns on denied calls and posts nothing.
 - **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` and cannot tell it from a reviewer that never fired, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. The `if: failure()` step below leaves the run URL and the failure subtype on the PR instead, and [`ado-claude-review.md`](ado-claude-review.md) carries the same step as a `condition: failed()` one posting a closed PR thread. It needs no permission the job did not already have: a comment on a pull request is posted to `/issues/{n}/comments`, and the `pull-requests: write` that admits the review POST admits that endpoint too on a pull request, with no `issues` scope at all (probed on a runner, [run on #174](https://github.com/Gharib89/skills/pull/174)). Keep `issues: read`: this job hands PR-controlled text to a model holding `Bash(gh api:*)`, so a scope it does not need is a scope an injected prompt would get.
 
 Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
@@ -118,9 +118,11 @@ jobs:
             that stays silent on a clean PR cannot be told apart from one that
             failed, and the run waits out its whole poll window either way. With
             nothing actionable, send `body` of exactly `no findings` and an empty
-            `comments` list. No LGTM, no praise, no summary of the diff.
+            `comments` list. Open `body` with the findings: the run reads its
+            first 2000 characters, and a summary of the diff or praise ahead of
+            them pushes them past that cut.
           claude_args: |
-            --model claude-opus-5
+            --model opus
             --max-turns 60
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
@@ -271,9 +273,11 @@ jobs:
             reviewer that stays silent on a clean PR cannot be told apart from one
             that failed, and the run waits out its whole poll window either way.
             With nothing actionable, send `body` of exactly `no findings` and an
-            empty `comments` list. No LGTM, no praise, no summary of the diff.
+            empty `comments` list. Open `body` with the findings: the run reads
+            its first 2000 characters, and a summary of the diff or praise ahead
+            of them pushes them past that cut.
           claude_args: |
-            --model claude-opus-5
+            --model opus
             --max-turns 60
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
@@ -332,6 +336,6 @@ Fallback-for: __PRIMARY__
 Instructions: __INSTRUCTIONS__
 ```
 
-`Login:` is `claude[bot]` in both shapes: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App its `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` step runs on `github.token` and lands as `github-actions[bot]`, and that comment is not a round, so the login a run awaits is the app's. PR #182 in this repo read the Actions identity here and waited out a round that had already landed.
+`Login:` is `claude[bot]` in both shapes: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App its `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` step runs on `github.token` and lands as `github-actions[bot]`, and that comment is not a round, so the login a run awaits is the app's.
 
 `Resolve:` is `resolve-thread` in both shapes, because the action attaches its per-file findings as inline threads on the review whichever trigger drew it. A finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve.

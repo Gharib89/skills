@@ -36,13 +36,13 @@ steps:
     Files under .claude/skills/ are derived copies installed verbatim by the skills CLI and recorded in
     skills-lock.json: do not review their content line by line; report only a change to them with no
     matching skills-lock.json update.
-    If nothing is actionable, return {\"findings\": []}. No praise, no summaries."
+    If nothing is actionable, return {\"findings\": []}."
     claude --bare -p "$PROMPT" \
       --output-format json \
       --json-schema "$SCHEMA" \
       --allowedTools "Read,Grep,Glob,Bash(git diff *),Bash(git log *)" \
       --permission-mode dontAsk \
-      --model claude-opus-5 \
+      --model opus \
       --max-turns 60 \
       --max-budget-usd 5 \
       | tee "$(Build.ArtifactStagingDirectory)/result.json" \
@@ -115,7 +115,7 @@ steps:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
-Proven on the first onboarding run (ship-ado-lab): a 51-file skill-install PR exhausted a 30-turn cap before any verdict, so the build failed with `error_max_turns` and no threads, and the gating policy rejected the PR. Keep the derived copies in the diff (excluding them removes the only review gate on files that drive agent actions) and rely on the prompt line above plus the 60-turn cap. `--model claude-opus-5` pins the tier, as [`github-claude-review.md`](github-claude-review.md) does: a review is judgment work, and a cheaper tier reads the diff and misses the standards violation in it. The `--max-budget-usd 5` beside it was measured before that pin and has not been re-measured against Opus, so a round that stops on budget rather than on a verdict is the number to revisit first. `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` works in place of `ANTHROPIC_API_KEY`.
+A skill-install PR runs to dozens of files once the derived copies are in it, and exhausts a 30-turn cap before any verdict: the build fails with `error_max_turns` and no threads, and a gating policy rejects the PR. Keep the derived copies in the diff (excluding them removes the only review gate on files that drive agent actions) and rely on the prompt line above plus the 60-turn cap. `--model opus` pins the tier, as [`github-claude-review.md`](github-claude-review.md) does: a review is judgment work, and a cheaper tier reads the diff and misses the standards violation in it; the alias tracks the tier's current model rather than one release. The `--max-budget-usd 5` beside it was measured before that pin and has not been re-measured against Opus, so a round that stops on budget rather than on a verdict is the number to revisit first. `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` works in place of `ANTHROPIC_API_KEY`.
 
 `Speak when the round failed` is what keeps a dead round distinguishable. Claude failing before a verdict posts no thread and fails the build, so a ship run polling the PR reads `degraded: silent` and cannot tell it from a reviewer that never fired, the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent; the first-run note above is that case. It costs one closed thread per failed round and nothing on a round that succeeds, the `critical` finding included: that one fails the build by design, and the `posted.ok` marker the posting step leaves behind its loop is what keeps the last step quiet. The marker and not the verdict, because Claude can return `success` and the posting loop still die on a 403 or a malformed findings file, and that round is as silent as one that never reviewed. Dropping the step restores the silent failure. It needs no permission the job did not already have: the same threads endpoint under the same `System.AccessToken` the post-findings step uses. The `tee` in the review step is what feeds it, keeping Claude's raw result on disk for the `subtype` while `jq` still reads the structured output off the same stream and `pipefail` still fails the step when Claude does. `succeeded()` on the post-findings step is what keeps the two from both firing: a bare `condition:` replaces the implicit `succeeded()` rather than adding to it, so without it a failed round runs the posting loop against a findings file that was never written. The review step keeps its bare condition: a failed install leaves no verdict either way, which is a round the last step is right to report.
 

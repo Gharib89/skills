@@ -36,11 +36,11 @@ Every lever below is subject to it, in rough order of impact:
 
 **Every subagent prompt names the scratch directory that subagent writes in.** A
 subagent handed nowhere to write reaches for the scratchpad its own environment
-block names, which is the Run file's parent: that is how the #138 run lost its
-checklist, to a `code-review` axis testing a shell command against "a throwaway
-file". So every prompt carries one line naming `<scratchpad>/scratch/<role>/` as
-the one place that subagent writes scratch of its own, `<role>` being its job in
-the run (`map`, `execute`, `verify`, `standards`, `spec`). Edits to the repo are
+block names, which is the Run file's parent, and a scratch file written there
+can overwrite the checklist with no failure signal. So every prompt carries one
+line naming `<scratchpad>/scratch/<role>/` as the one place that subagent writes
+scratch of its own, `<role>` being its job in the run (`map`, `execute`,
+`verify`, `standards`, `spec`). Edits to the repo are
 separate, and go under the worktree prefix. It is a **sibling** of the Run file's
 directory rather than a child, so a path a subagent invents below the one it was
 given still lands clear of the record. Pass it the way you pass the model tier:

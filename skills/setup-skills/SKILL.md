@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 3.5.0
+  version: 3.5.1
 ---
 
 # Setup skills
@@ -122,7 +122,7 @@ Either way, **run it once** (`--small` with the example node) and check the verd
 
 **Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the scaffold's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, never a copy of either. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
 
-**Superseded ship scripts** (migrating repos): list what step 3 recorded, propose deletion, delete on confirm. Never touch `local-gate.sh`, `live-e2e`, `copilot-pr-review-loop`, or `cloud-ship-bootstrap.sh` (that one is now `## Cloud lane`'s `Bootstrap:`).
+**Superseded ship scripts** (migrating repos): list what step 3 recorded, propose deletion, delete on confirm. Never touch `local-gate.sh`, `live-e2e`, `copilot-pr-review-loop`, or `cloud-ship-bootstrap.sh` (which is `## Cloud lane`'s `Bootstrap:`).
 
 ### 6. Write, then prove
 

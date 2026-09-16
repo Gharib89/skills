@@ -90,9 +90,11 @@ jobs:
             reviewer that stays silent on a clean PR cannot be told apart from one
             that failed, and the run waits out its whole poll window either way. With
             nothing actionable, send `body` of exactly `no findings` and an empty
-            `comments` list. No LGTM, no praise, no summary of the diff.
+            `comments` list. Open `body` with the findings: the run reads its
+            first 2000 characters, and a summary of the diff or praise ahead of
+            them pushes them past that cut.
           claude_args: |
-            --model claude-opus-5
+            --model opus
             --max-turns 60
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 

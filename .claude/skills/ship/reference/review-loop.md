@@ -175,9 +175,9 @@ request against the corrected tree.
 A **free round** is one the host delivers without a request: a Copilot ruleset
 with `review_on_push: false` still opens one when the PR does. Before the run's
 **first** request to any on-request reviewer, poll once for it, under the since
-rule with `open-pr`'s `created_at` and `--timeout 600`: PR #185's free round
-took just under seven minutes, so a bound of a minute or two reports `silent` on
-a review that is merely still coming. A round already there
+rule with `open-pr`'s `created_at` and `--timeout 600`: a free round can take
+several minutes to land, so a bound of a minute or two reports `silent` on a
+review that is merely still coming. A round already there
 **is** round 1 and counts against `Cap:`; nothing there and the loop proceeds to
 its first request as written. A reviewer that gets no free round pays that one
 poll, where skipping it spends a round of a small cap re-asking for a review
