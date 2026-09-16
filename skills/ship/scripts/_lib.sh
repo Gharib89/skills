@@ -17,6 +17,12 @@
 #   host_tooling_install                 -> install the host CLI where absent; non-zero = could not
 #   host_identity                        -> the login the claim is written as
 #   host_can_push                        -> true | false | unknown
+#   host_copilot_login                   -> the login `copilot_code_review` governs, or
+#                                           nothing on a host with no Copilot reviewer
+#   host_copilot_review_on_push          -> true | false, whether a push to an open PR
+#                                           draws a fresh Copilot round on the default
+#                                           branch; non-zero and silent where the host
+#                                           cannot answer, which preflight warns on
 #   host_issue_get <n>                   -> {number,title,body,state,is_pr,labels[],assignees[],created_at,url}
 #   host_issue_comments <n>              -> [{author,body,created_at}]
 #   host_issue_blockers_open <n>         -> [n, ...] open blockers; non-zero exit = query unavailable
@@ -672,6 +678,46 @@ ship_reviewer_reasons() {
            then "profile invalid: \($x.name) is on-request with no Cap:"
            else empty end)
       end'
+}
+
+# ship_copilot_trigger_reason <name> <trigger> <review_on_push>: the one
+# `profile invalid:` line for a Copilot block whose `Trigger:` contradicts the
+# repository ruleset that actually drives it, or nothing.
+#
+# The ruleset, not the block, decides whether a push draws a round, so a profile
+# the two disagree about is one that lies about its own loop: #182 spent nine
+# rounds against `Cap: 3` because the block said on-push and nothing checked it
+# against the setting that made it so.
+#
+# `review_on_push` is the host's answer, passed in rather than read here, so the
+# contradiction is a pure decision the tests drive with no host. An empty third
+# argument is the check that could not run (no admin rights, a fork, an adapter
+# with no equivalent) and yields no reason: a check that could not run is not a
+# verdict, and preflight warns on stderr instead of refusing.
+#
+# `true` admits on-push alone. `false` admits both triggers that take their
+# rounds without a push, because the ruleset still opens one when the PR does:
+# auto-once stops there, on-request asks for the rest.
+# ship_copilot_row <login> <rows-json>: the `<name>\t<trigger>` of the reviewer
+# block posting under <login>, or nothing where no block does. Tab-joined because
+# the refusal names the block and the check reads its trigger, and a lookup that
+# returned one without the other is how a refusal ends up naming the wrong
+# reviewer.
+ship_copilot_row() { # <login> <rows-json>
+  [ -n "$1" ] || return 0
+  jq -r --arg l "$1" \
+    '.[] | select((.login // "") | ascii_downcase == ($l | ascii_downcase))
+         | "\(.name)\t\(.trigger // "")"' <<<"$2" | head -1
+}
+
+ship_copilot_trigger_reason() { # <name> <trigger> <review_on_push>
+  local name=$1 trigger=$2 rop=$3
+  [ -n "$trigger" ] && [ -n "$rop" ] || return 0
+  case $rop:$trigger in
+    true:on-push|false:on-request|false:auto-once) ;;
+    *) printf 'profile invalid: %s is Trigger: %s, but the copilot_code_review ruleset has review_on_push: %s\n' \
+         "$name" "$trigger" "$rop" ;;
+  esac
 }
 
 # ship_stale_base_reason <base-fresh-json>: the refusal `merge` answers with when

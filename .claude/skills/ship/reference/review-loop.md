@@ -5,8 +5,10 @@ it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an optiona
 `Instructions:` file, and per trigger: `Request:` (on-request), `Resolve:`
 (on-push and on-request; auto-once converges on dispositioned threads and
 reads `None.`). The **trigger fixes the loop and convergence**; the bot's brand fixes
-nothing. Preflight has already parsed these blocks and refused the three
-malformed shapes, so what reaches this phase is a list you can drive.
+nothing. Preflight has already parsed these blocks and refused the four
+malformed shapes, and asked the host whether a Copilot reviewer's `Trigger:`
+matches the ruleset driving it, so what reaches this phase is a list you can
+drive.
 Zero reviewers: skip this phase; the review gate is phase 4's self-review plus
 green CI (SKILL.md), and reviewer rounds never replace it.
 
@@ -88,11 +90,17 @@ a fresh read of the committed tree, not a conversation.
   or `None.` for an uncapped loop. On-request it is required with no default,
   where a round costs a request; on-push it is a number or `None.`, where a
   round costs a push, a wait on the new head, and a triage and a reply per
-  thread; `auto-once` delivers one round and reads `None.`. A round at the cap
-  that is still substantive is a shape problem more rounds will not fix:
-  disposition it in full (push its batch, reply to every thread, resolve where
-  the trigger resolves), then exit `degraded: cap-hit` without waiting for
-  another round.
+  thread; `auto-once` delivers one round and reads `None.`. It is a **budget**
+  for the rounds ship drives, which is every round only where ship starts them:
+  a reviewer the host re-runs on its own keeps posting past the number, so under
+  on-push the budget ends ship's engagement while the reviewer carries on. Where
+  a repo needs the number to bind, pick a trigger ship starts. A round at the
+  cap that is still substantive means the budget ran out while the reviewer was
+  still finding things: disposition it in full (push its batch, reply to every
+  thread, resolve where the trigger resolves), exit `degraded: cap-hit` without
+  waiting for another round, and say in that reviewer's block whether that last
+  round was still landing real findings, which is what tells the human at the
+  merge gate whether the budget was the right one.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
@@ -130,7 +138,9 @@ needs nothing from it.
 
 ### `on-push`
 
-Re-reviews every push, and the profile's `Cap:` bounds the rounds. After each
+Re-reviews every push. This is the trigger the `Cap:` budget does not bind: the
+host starts the rounds, so the number ends ship's engagement and the reviewer
+keeps posting. After each
 push, wait for a review **landed on the current head**, the **head** rule (no
 `--since`); silence on the head is never quiet.
 Triage, batch-fix, push, `reply-thread` on every `replied: false` thread. Once
@@ -146,7 +156,9 @@ and comments, which stay readable.
 
 ### `on-request`
 
-Nothing arrives until asked. `request-review <pr> <login>` issues the request
+Nothing arrives until asked, with one exception the loop below opens on: a
+**free round** the host delivers unbidden when the PR is created.
+`request-review <pr> <login>` issues the request
 and **reads it back** from the host's own record (the mechanic knows that the
 login you request and the login you read back can differ, and that an empty
 requested-reviewers list proves nothing). The profile's `Request:` picks the
@@ -158,9 +170,27 @@ the host's creation time for it; there is no requested-reviewers list to read,
 because the host has no reviewer to add. Either way the `requested_at` it hands
 back is what `--since` takes. One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
-request against the corrected tree. Loop: request, poll under the **since**
-rule with `request-review`'s `requested_at`, triage, batch-fix, push,
-`reply-thread` on every `replied: false` thread, request again. A round that
+request against the corrected tree.
+
+A **free round** is one the host delivers without a request: a Copilot ruleset
+with `review_on_push: false` still opens one when the PR does. Before the run's
+**first** request to any on-request reviewer, poll once for it, under the since
+rule with `open-pr`'s `created_at` and `--timeout 600`: PR #185's free round
+took just under seven minutes, so a bound of a minute or two reports `silent` on
+a review that is merely still coming. A round already there
+**is** round 1 and counts against `Cap:`; nothing there and the loop proceeds to
+its first request as written. A reviewer that gets no free round pays that one
+poll, where skipping it spends a round of a small cap re-asking for a review
+that had already landed.
+
+Loop: **triage whatever round you are holding first**, then request the next
+one. A free round the poll above found is a round in hand, so it is triaged,
+batch-fixed, pushed, replied to on every `replied: false` thread and resolved
+before any request is issued; requesting on top of it spends round 2 on a tree
+the reviewer has not seen and burns the budget the free round just saved. With
+nothing in hand: request, poll under the **since** rule with `request-review`'s
+`requested_at`, triage, batch-fix, push, `reply-thread` on every
+`replied: false` thread, and round the loop. A round that
 opened threads takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.
@@ -181,7 +211,9 @@ because a fallback's only input is how its primary exited.
 
 - The primary exited `degraded: <any reason>`: request the fallback **once**,
   then drive it as an ordinary on-request reviewer under its own `Cap:`, by the
-  section above. Which degraded reason the primary hit changes nothing here; the
+  section above, the free-round poll included: that first request is the one it
+  runs ahead of, and a fallback reached through a comment transport reliably
+  finds nothing there, which is the one short poll the rule costs. Which degraded reason the primary hit changes nothing here; the
   human wanted a review on the PR and the reason is a footnote. Its exit is an
   ordinary one, `converged` or `degraded: <reason>` of its own.
 - The primary exited `converged` or `converged, override needed`: **do not
@@ -208,7 +240,7 @@ reads the reason and decides.
 | `blocked` | queued, then a quota or rate-limit notice from the reviewer, stated as a review body or a PR comment (`reviewer_blocked` non-null), and the poll window closed. A review row whose body is only such a notice is not `substantive`, so `landed_by` stays null and the poll waits it out rather than reporting the refusal as the round. Non-null with `done: false` means waiting, not missing. |
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. |
 | `infra-error` | a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |
-| `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. |
+| `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. The budget ran out; whether the reviewer had run out of findings is a separate question the block answers. |
 | `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`, which is also what leaves `reply-thread` with no id to answer). |
 
 ## Gating reviewer with a declined finding
@@ -226,9 +258,12 @@ Brand-level detail lives in the host adapters; these show the mapping only.
 - **GitHub Copilot as `on-request`**: request per round, cap from the
   profile. Two identities behind one reviewer: the request names one login,
   the review posts under another, and the check run a third; the mechanics
-  match each surface to its own name. Copilot enabled as an automatic review
-  by a repository ruleset is `on-push` or `auto-once` instead, according to the
-  `copilot_code_review` rule's `review_on_push`.
+  match each surface to its own name. The `copilot_code_review` rule's
+  `review_on_push` fixes the trigger: `true` is `on-push`, and `false` is
+  `auto-once` where the opening round is the only one wanted, or `on-request`
+  where that same free round becomes the loop's round 1 and the cap buys the
+  rest. Preflight reads the rule and refuses a `Trigger:` that disagrees with
+  it, so the profile cannot drift from the setting that drives it.
 - **CodeRabbit as `on-push`**: reviews every push; `Resolve:` is its resolve
   comment, posted once after every thread carries a reply.
 - **Claude Code on GitHub Actions as `on-push`**: reviews every push through a

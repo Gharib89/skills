@@ -189,4 +189,66 @@ check "a Cap: with no value reads as absent, and on-request still refuses" \
 check "Gating: is a boolean whatever it reads, never null" \
   'false' "$(ship_reviewers "$(sed 's|^Gating: no$|Gating: None.|' <<<"$profile")" | jq -r '.[0].gating')"
 
+# --- ship_copilot_trigger_reason: the profile's Copilot block against the host --
+#
+# The ruleset is what actually decides whether Copilot re-reviews a push, so a
+# `Trigger:` that contradicts it is a profile that lies about its own loop. The
+# function is pure: preflight reads `review_on_push` off the host and passes it
+# in, so the contradiction is decided here and tested with no host.
+
+check "on-push agrees with review_on_push: true" \
+  '' "$(ship_copilot_trigger_reason copilot on-push true)"
+
+check "on-push contradicts review_on_push: false" \
+  'profile invalid: copilot is Trigger: on-push, but the copilot_code_review ruleset has review_on_push: false' \
+  "$(ship_copilot_trigger_reason copilot on-push false)"
+
+check "on-request agrees with review_on_push: false" \
+  '' "$(ship_copilot_trigger_reason copilot on-request false)"
+
+check "auto-once agrees with review_on_push: false" \
+  '' "$(ship_copilot_trigger_reason copilot auto-once false)"
+
+check "on-request contradicts review_on_push: true" \
+  'profile invalid: copilot is Trigger: on-request, but the copilot_code_review ruleset has review_on_push: true' \
+  "$(ship_copilot_trigger_reason copilot on-request true)"
+
+check "auto-once contradicts review_on_push: true" \
+  'profile invalid: copilot is Trigger: auto-once, but the copilot_code_review ruleset has review_on_push: true' \
+  "$(ship_copilot_trigger_reason copilot auto-once true)"
+
+# A check that could not run is not a verdict: preflight warns and continues, so
+# the function must stay silent rather than invent an agreement or a fault.
+check "an unreadable ruleset yields no reason" \
+  '' "$(ship_copilot_trigger_reason copilot on-push '')"
+
+check "a reviewer with no Trigger: at all yields no reason, the null Trigger being its own fault elsewhere" \
+  '' "$(ship_copilot_trigger_reason copilot '' true)"
+
+# --- ship_copilot_row: which block the host check is about ---------------------
+#
+# The selection preflight makes before it asks the host anything. An empty
+# trigger out of here is what makes the check skip itself, so the three ways it
+# comes back empty are the three ways preflight declines to ask.
+
+rows=$(ship_reviewers "$profile")
+
+check "the block posting under the login is found, name and trigger together" \
+  $'copilot\ton-push' "$(ship_copilot_row 'copilot-pull-request-reviewer[bot]' "$rows")"
+
+check "the login match ignores case, the host spelling one way and the profile another" \
+  $'copilot\ton-push' "$(ship_copilot_row 'Copilot-Pull-Request-Reviewer[BOT]' "$rows")"
+
+check "a login no block posts under selects nothing, so nothing is asked of the host" \
+  '' "$(ship_copilot_row 'nobody[bot]' "$rows")"
+
+check "an adapter with no Copilot prints no login, and an empty login selects nothing" \
+  '' "$(ship_copilot_row '' "$rows")"
+
+# A block whose own Trigger: is missing is a fault `ship_reviewer_reasons` owns;
+# the host check declines it rather than refusing it twice under two messages.
+notrig=$(printf '## Reviewers\n\n### copilot\n\nLogin: copilot-pull-request-reviewer[bot]\nCap: 3\nGating: no\n\n## Coding standards\n')
+check "a block with no Trigger: comes back named but triggerless" \
+  $'copilot\t' "$(ship_copilot_row 'copilot-pull-request-reviewer[bot]' "$(ship_reviewers "$notrig")")"
+
 finish

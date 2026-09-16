@@ -160,6 +160,48 @@ host_tooling_install() {
 host_identity() { ( api user --jq .login || { _gh_status; exit 1; } ); }
 host_can_push() { api "$R" --jq '.permissions.push // false'; }
 
+# Prints `true` or `false`: whether a push to an open PR draws a fresh Copilot
+# round on the default branch. Non-zero, printing nothing, where the host cannot
+# answer, which is the ordinary result for a fork or an account without admin on
+# the repo; preflight warns and continues on that, because a check that could
+# not run is not a verdict.
+#
+# Two calls, and the second is the point: `rules/branches/<branch>` returns the
+# rules the host has already resolved for ONE branch, enforcement and branch
+# conditions applied. Listing rulesets instead and taking the first
+# `copilot_code_review` found reads a rule scoped to `release/*` as governing
+# the default branch, which is a refusal aimed at an honest profile.
+#
+# No `copilot_code_review` rule on that branch is `false`: nothing there draws a
+# round from a push, which is precisely what `false` asserts to
+# `ship_copilot_trigger_reason`.
+host_copilot_review_on_push() {
+  local branch review_on_push
+  branch=$(api "$R" --jq .default_branch) || return 1
+  [ -n "$branch" ] || return 1
+  # `@uri`, because a default branch may carry a slash (`release/main`) and an
+  # unencoded one silently addresses a different route, which comes back as a
+  # failed read and skips the check rather than failing it.
+  branch=$(jq -rn --arg b "$branch" '$b | @uri') || return 1
+  # `--paginate` because the list is paged, and a rule on page two read as
+  # absent would admit the contradiction this check exists to refuse.
+  review_on_push=$(api "$R/rules/branches/$branch" --paginate \
+    --jq '.[] | select(.type == "copilot_code_review") | .parameters.review_on_push') || return 1
+  # Two rulesets can both carry the rule for one branch, and a two-line value
+  # matches neither arm below, so it would read as "no rule here". First wins.
+  review_on_push=${review_on_push%%$'\n'*}
+  case $review_on_push in true|false) printf '%s\n' "$review_on_push"; return 0 ;; esac
+  # No copilot_code_review rule on this branch: nothing here draws a round from
+  # a push, which is what `false` asserts.
+  printf 'false\n'
+}
+
+# The login `copilot_code_review` governs. Here rather than in `preflight.sh`,
+# because a bot's brand is host detail and a generic mechanic matches on the
+# trigger, never the brand. An adapter with no Copilot prints nothing, which is
+# what makes the check skip rather than branch on the host name.
+host_copilot_login() { printf 'copilot-pull-request-reviewer[bot]\n'; }
+
 _norm_issue='{number, title, body: (.body // ""),
   state: (if .state == "open" then "open" else "closed" end),
   is_pr: (.pull_request != null),
