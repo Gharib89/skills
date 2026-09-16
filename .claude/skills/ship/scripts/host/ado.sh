@@ -382,3 +382,9 @@ host_issues_ready() { # <label>
   out=$(azx boards query "${PRJ[@]}" --wiql "SELECT [System.Id], [System.Title], [System.CreatedDate] FROM WorkItems WHERE [System.TeamProject] = '${SHIP_PROJECT//\'/\'\'}' AND [System.State] <> '$ADO_CLOSED' AND [System.State] <> 'Removed' AND [System.Tags] CONTAINS '${1//\'/\'\'}' AND [System.AssignedTo] = '' ORDER BY [System.CreatedDate] ASC") || return 1
   jq '[.[] | {number: .id, title: .fields["System.Title"], created_at: .fields["System.CreatedDate"]}]' <<<"${out:-[]}"
 }
+
+# Azure DevOps has no Copilot-review ruleset, so there is nothing to contradict
+# a profile with. Non-zero and silent is "not checked", the same answer the
+# GitHub adapter gives for a ruleset it cannot read, which is what lets preflight
+# hold one warn-and-continue path rather than branching on the host.
+host_copilot_review_on_push() { return 1; }

@@ -160,6 +160,31 @@ host_tooling_install() {
 host_identity() { ( api user --jq .login || { _gh_status; exit 1; } ); }
 host_can_push() { api "$R" --jq '.permissions.push // false'; }
 
+# Prints `true` or `false`: whether a push to an open PR draws a fresh Copilot
+# round, read from the repository ruleset that decides it. Non-zero, printing
+# nothing, when the rulesets cannot be read at all, which is the ordinary answer
+# for a fork or an account without admin on the repo; preflight warns and
+# continues on that, because a check that could not run is not a verdict.
+#
+# Two calls because the list omits `rules`, so each active ruleset is read back
+# by id. `enforcement` filters first: a disabled ruleset drives no review, and
+# reading its setting as live is how this check would refuse a profile that is
+# telling the truth.
+#
+# No `copilot_code_review` rule anywhere is `false`, the same answer
+# `setup-skills` maps an absent rule to: nothing here draws a round from a push,
+# which is precisely what `false` asserts to `ship_copilot_trigger_reason`.
+host_copilot_review_on_push() {
+  local ids id rop
+  ids=$(api "$R/rulesets" --jq '.[] | select(.enforcement == "active") | .id') || return 1
+  for id in $ids; do
+    rop=$(api "$R/rulesets/$id" \
+      --jq '.rules[]? | select(.type == "copilot_code_review") | .parameters.review_on_push') || return 1
+    case $rop in true|false) printf '%s\n' "$rop"; return 0 ;; esac
+  done
+  printf 'false\n'
+}
+
 _norm_issue='{number, title, body: (.body // ""),
   state: (if .state == "open" then "open" else "closed" end),
   is_pr: (.pull_request != null),

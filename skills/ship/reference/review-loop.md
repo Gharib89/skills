@@ -88,11 +88,19 @@ a fresh read of the committed tree, not a conversation.
   or `None.` for an uncapped loop. On-request it is required with no default,
   where a round costs a request; on-push it is a number or `None.`, where a
   round costs a push, a wait on the new head, and a triage and a reply per
-  thread; `auto-once` delivers one round and reads `None.`. A round at the cap
-  that is still substantive is a shape problem more rounds will not fix:
-  disposition it in full (push its batch, reply to every thread, resolve where
-  the trigger resolves), then exit `degraded: cap-hit` without waiting for
-  another round.
+  thread; `auto-once` delivers one round and reads `None.`. **It bounds the
+  rounds ship drives, never the rounds the host posts.** A reviewer the host
+  re-runs on its own keeps posting past the number, which then ends ship's
+  engagement rather than the reviewer's: run #182 drew nine rounds against a cap
+  of three, and rounds 4 to 9 carried eleven of its fifteen fixes. Where that
+  gap matters the fix is the trigger, not the number. A round at the cap that is
+  still substantive means the budget ran out with the reviewer still finding
+  things, which is not the same as the reviewer repeating itself: disposition it
+  in full (push its batch, reply to every thread, resolve where the trigger
+  resolves), then exit `degraded: cap-hit` without waiting for another round,
+  and say in that reviewer's block whether the last round was still landing real
+  findings. The exit is a budget the human weighs at the merge gate, never a
+  verdict on the reviewer.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
@@ -158,7 +166,17 @@ the host's creation time for it; there is no requested-reviewers list to read,
 because the host has no reviewer to add. Either way the `requested_at` it hands
 back is what `--since` takes. One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
-request against the corrected tree. Loop: request, poll under the **since**
+request against the corrected tree.
+
+**Poll before the first request.** Some on-request reviewers get their first
+round free: a Copilot ruleset with `review_on_push: false` still opens one when
+the PR does. So before issuing the run's **first** request to a reviewer, poll
+once under the since rule with `open-pr`'s `created_at` on a short timeout. A
+round already there **is** round 1 and counts against `Cap:`; nothing there and
+the loop proceeds to its first request as written. The rule holds for every
+on-request reviewer, not only the ones known to get a free round: one that gets
+none finds nothing and has paid a single short poll, where skipping the poll
+spends a round of a small cap re-asking for a review that had already landed. Loop: request, poll under the **since**
 rule with `request-review`'s `requested_at`, triage, batch-fix, push,
 `reply-thread` on every `replied: false` thread, request again. A round that
 opened threads takes the reviewer's `Resolve:` once every one of them carries a
@@ -208,7 +226,7 @@ reads the reason and decides.
 | `blocked` | queued, then a quota or rate-limit notice from the reviewer, stated as a review body or a PR comment (`reviewer_blocked` non-null), and the poll window closed. A review row whose body is only such a notice is not `substantive`, so `landed_by` stays null and the poll waits it out rather than reporting the refusal as the round. Non-null with `done: false` means waiting, not missing. |
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. |
 | `infra-error` | a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |
-| `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. |
+| `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. The budget ran out; whether the reviewer had run out of findings is a separate question the block answers. |
 | `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`, which is also what leaves `reply-thread` with no id to answer). |
 
 ## Gating reviewer with a declined finding
@@ -226,9 +244,12 @@ Brand-level detail lives in the host adapters; these show the mapping only.
 - **GitHub Copilot as `on-request`**: request per round, cap from the
   profile. Two identities behind one reviewer: the request names one login,
   the review posts under another, and the check run a third; the mechanics
-  match each surface to its own name. Copilot enabled as an automatic review
-  by a repository ruleset is `on-push` or `auto-once` instead, according to the
-  `copilot_code_review` rule's `review_on_push`.
+  match each surface to its own name. The `copilot_code_review` rule's
+  `review_on_push` fixes the trigger: `true` is `on-push`, and `false` is
+  `auto-once` where the opening round is the only one wanted, or `on-request`
+  where that same free round becomes the loop's round 1 and the cap buys the
+  rest. Preflight reads the rule and refuses a `Trigger:` that disagrees with
+  it, so the profile cannot drift from the setting that drives it.
 - **CodeRabbit as `on-push`**: reviews every push; `Resolve:` is its resolve
   comment, posted once after every thread carries a reply.
 - **Claude Code on GitHub Actions as `on-push`**: reviews every push through a

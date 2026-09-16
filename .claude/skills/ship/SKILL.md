@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 4.2.0
+  version: 4.3.0
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -417,11 +417,13 @@ rejecting: a claim about **what exists in the repo** is checked against
 predate a merge; and a finding's **evidence and its claim are separate**, so a
 reviewer citing the wrong commit for a real primitive is still right. A valid
 finding outside the issue is an adjacent find: phase 2's three dispositions.
-Then read the diff yourself against the four depth checks in the
+Then read the diff yourself against the depth checks in the
 coding-standards file the Standards axis reads, by their leading words: a
 vocabulary the change extends, a rule-shaped prose change, new
-pattern-matching code, a fix landed after review. Reviewer rounds find these
-otherwise, serially, at the cost of most of a run's wall time.
+pattern-matching code, a new test run with its fix reverted, a fix landed after
+review. Reviewer rounds find these otherwise, serially, at the cost of most of a
+run's wall time; the reverted-fix one they never find at all, a vacuous
+assertion reading from a diff exactly like a sound one.
 This self-review plus green CI is the review gate; reviewers in phase 7 are a
 second pair of eyes on top, never a substitute.
 
