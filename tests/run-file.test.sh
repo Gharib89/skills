@@ -207,24 +207,27 @@ check_rc "a state naming no phase of the ten is malformed" 2 \
 
 # Ten lines of regex read as correct and answer wrong on the input nobody wrote
 # a case for: every field here can carry the stamp's own shape.
-check "init refuses a profile tail that ends in a stamp shape" \
-  '--tripwires cannot end in a stamp shape (HH:MM→HH:MM): the Run file reads one as time' \
+shapes='--tripwires cannot carry the Run file'"'"'s own state shapes ((HH:MM→HH:MM), in_progress (HH:MM→), skipped (<reason>)): a phase line reads them as state'
+check "init refuses a profile tail carrying a range" "$shapes" \
   "$(err init 499 --scratchpad "$tmp" --tripwires 'held (09:00→17:00)')"
-check_rc "a tail that ends in a stamp shape is malformed" 2 \
+check_rc "a tail carrying a range is malformed" 2 \
   "$(rc init 498 --scratchpad "$tmp" --tripwires 'held (09:00→17:00)')"
+# A tail can imitate any shape the mechanic writes, not just the one at the end:
+# a range behind a `skipped (...)` the strip would expose, a half-open stamp
+# `open_phase` would read as an active phase, and the skip suffix `item` strips.
+check "init refuses a tail carrying a range behind a skipped suffix" "$shapes" \
+  "$(err init 497 --scratchpad "$tmp" --tripwires 'held (09:00→17:00) skipped (profile)')"
+check "init refuses a tail carrying the open marker" "$shapes" \
+  "$(err init 496 --scratchpad "$tmp" --tripwires 'x in_progress (09:00→)')"
+check "init refuses a tail carrying a skip suffix" "$shapes" \
+  "$(err init 495 --scratchpad "$tmp" --tripwires 'manual skipped (small lane)')"
 
-# A stamp shape the tail does not end on is wording: the scan anchors at the
-# end of the line, so only the end of a tail can be mistaken for time.
-a=$(out init 500 --scratchpad "$tmp" --legs 'nightly (09:00→17:00) only' | jq -r '.run_file')
+# A skip reason is free text the profile does not supply, so it can still carry
+# a range shape; it is wording, and the strip takes the whole reason with it.
+a=$(out init 500 --scratchpad "$tmp" | jq -r '.run_file')
 out skip 3 'blocked (10:00→10:30)' --file "$a" >/dev/null
 check "a range inside a skip reason is wording, not time" \
   unverified "$(out timing --file "$a" | jq -r '.phases["3"]')"
-check "a range inside a profile tail is wording, not time" \
-  unverified "$(out timing --file "$a" | jq -r '.phases["8"]')"
-out open 8 --file "$a" >/dev/null
-sed 's|^\(- \[ \] 8 · .*\) in_progress ([0-9][0-9]:[0-9][0-9]→)$|\1 (11:50→12:00)|; s|^- \[ \] 8|- [x] 8|' "$a" > "$a.x" && mv "$a.x" "$a"
-check "the stamp after a range-shaped tail is still read" \
-  10 "$(out timing --file "$a" | jq -r '.phases["8"]')"
 
 # The design and plan sit below the checklist in the same file, so a line of
 # the checklist's shape can appear there. One phase, one line: the first.
@@ -270,6 +273,14 @@ check "a --state naming the same phase twice is refused" \
   "$(err init 504 --scratchpad "$tmp" --state 0=done --state 0=open)"
 check_rc "a --state naming the same phase twice is malformed" 2 \
   "$(rc init 505 --scratchpad "$tmp" --state 0=done --state 0=open)"
+
+
+# One phase, one line, for the open-phase check too: a line of the checklist's
+# shape copied into the design and plan is not phase 7 going open.
+o=$(out init 506 --scratchpad "$tmp" | jq -r '.run_file')
+printf -- '- [ ] 7 · a line copied into the plan in_progress (10:00→)\n' >> "$o"
+check_rc "a copied open line below the checklist does not block an open" 0 \
+  "$(rc open 2 --file "$o")"
 
 
 finish

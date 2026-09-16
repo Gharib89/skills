@@ -58,17 +58,27 @@ item()       { printf '%s' "$1" | sed 's/^- \[.\] //; s/ in_progress ([0-9][0-9]
 # text and not time, exactly as `timing` reads it.
 ran()        { printf '%s\n' "$(item "$1")" | grep -q '([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]\(+1d\)\{0,1\})$'; }
 is_open()    { case $1 in *" in_progress ("??:??"→)") return 0 ;; esac; return 1; }
-# The mechanic owns the stamp region, so it owns what may sit beside it: a
-# profile tail that ends in a stamp shape would be read as time by `timing`
-# and by `ran`, and phase 2's tail sits at the end of its line. Refusing it
-# here is what makes the anchoring at the end of a line unambiguous.
+# The mechanic owns the state shapes, so it owns what may sit beside them: a
+# profile tail carrying one would be read as state by `timing`, by `ran` and by
+# `open_phase`, and phase 2's tail sits at the end of its line. Refusing it here
+# is the one place the boundary between wording and state can be made
+# unambiguous.
 reject_stamp_tail() { # reject_stamp_tail <flag> <value>
-  printf '%s\n' "$2" | grep -q '([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]\(+1d\)\{0,1\})$' \
-    && ship_tooling "$1 cannot end in a stamp shape (HH:MM→HH:MM): the Run file reads one as time"
+  printf '%s\n' "$2" \
+    | grep -Eq '\([0-9]{2}:[0-9]{2}→[0-9]{2}:[0-9]{2}(\+1d)?\)|in_progress \([0-9]{2}:[0-9]{2}→\)| skipped \(' \
+    && ship_tooling "$1 cannot carry the Run file's own state shapes ((HH:MM→HH:MM), in_progress (HH:MM→), skipped (<reason>)): a phase line reads them as state"
   return 0
 }
-open_phase() { grep "^- \[.\] [0-9][0-9]* · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$" "$file" \
-                 | sed 's/^- \[.\] \([0-9][0-9]*\) · .*/\1/' | head -1; }
+# One phase, one line here too: a line of the checklist's shape copied into the
+# design and plan would otherwise report a phase that is not open.
+open_phase() {
+  awk '/^- \[.\] [0-9][0-9]* · / {
+         p = substr($0, 7); sub(/ .*/, "", p)
+         if (p in seen) next
+         seen[p] = 1
+         if ($0 ~ / in_progress \([0-9][0-9]:[0-9][0-9]→\)$/) { print p; exit }
+       }' "$file"
+}
 
 # Every line the mechanic writes is rendered here, so the flips and `init`'s
 # rebuild cannot drift into two spellings of the same state.
