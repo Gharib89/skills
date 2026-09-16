@@ -57,7 +57,9 @@ item()       { printf '%s' "$1" | sed 's/^- \[.\] //; s/ in_progress ([0-9][0-9]
 # substring inside the item's own wording (a profile tail, a skip reason) is
 # text and not time, exactly as `timing` reads it.
 ran()        { printf '%s\n' "$(item "$1")" | grep -q '([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]\(+1d\)\{0,1\})$'; }
-is_open()    { case $1 in *" in_progress ("??:??"→)") return 0 ;; esac; return 1; }
+# The clock is numeric wherever the mechanic writes it, so it is numeric
+# wherever the mechanic reads it back: `??` would let prose cross the boundary.
+is_open()    { case $1 in *" in_progress ("[0-9][0-9]:[0-9][0-9]"→)") return 0 ;; esac; return 1; }
 # The mechanic owns the state shapes, so it owns what may sit beside them: a
 # profile tail carrying one would be read as state by `timing`, by `ran` and by
 # `open_phase`, and phase 2's tail sits at the end of its line. Refusing it here

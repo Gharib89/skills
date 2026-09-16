@@ -283,4 +283,12 @@ check_rc "a copied open line below the checklist does not block an open" 0 \
   "$(rc open 2 --file "$o")"
 
 
+# The clock is numeric: `in_progress (ab:cd→)` is prose, so `close` refuses it
+# rather than rewriting the line as a range.
+n=$(out init 507 --scratchpad "$tmp" | jq -r '.run_file')
+sed 's|^\(- \[ \] 2 · .*\)$|\1 in_progress (ab:cd→)|' "$n" > "$n.x" && mv "$n.x" "$n"
+check "a non-numeric clock is not an open phase" \
+  "phase 2 is not open" "$(err close 2 --file "$n")"
+
+
 finish
