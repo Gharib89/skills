@@ -25,6 +25,9 @@
 # A body file whose fence state ends open is refused before any host read: an
 # open fence inverts the in-fence state for the rest of the body, so the rewrite
 # reads every later `## ` as example text and swallows the sections between them.
+# A `--preamble` file carrying an unfenced `## ` heading is refused there too:
+# the preamble is by definition what sits above the first heading, so a heading
+# in it would open a section the write then puts the carried closing line inside.
 #
 # stdout: {pr, section, replaced, created, sections[]}
 #         {pr, section: null, preamble: true, replaced, created, sections[]}
@@ -40,9 +43,9 @@ case $pr in -*) ship_tooling "$usage" ;; esac
 section=""; preamble=false; file=""
 while [ $# -gt 0 ]; do
   case $1 in
-    --section) [ -n "${2:-}" ] || ship_tooling "$usage"; section=$2; shift 2 ;;
+    --section) case ${2:-} in ""|-*) ship_tooling "$usage" ;; esac; section=$2; shift 2 ;;
     --preamble) preamble=true; shift ;;
-    --body-file) [ -n "${2:-}" ] || ship_tooling "$usage"; file=$2; shift 2 ;;
+    --body-file) case ${2:-} in ""|-*) ship_tooling "$usage" ;; esac; file=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
@@ -55,6 +58,9 @@ fi
 content=$(cat "$file") || ship_tooling "cannot read $file"
 unclosed=$(ship_fence_unclosed "$content")
 [ -z "$unclosed" ] || ship_tooling "body file ends inside an unclosed fence ($unclosed)"
+if [ "$preamble" = true ] && [ -n "$(ship_body_headings "$content")" ]; then
+  ship_tooling "a preamble carries no \`## \` heading: the preamble ends at the first one"
+fi
 ship_load_host
 
 body=$(host_pr_get "$pr" | jq -r .body) || ship_tooling "cannot read PR $pr"

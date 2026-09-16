@@ -125,6 +125,20 @@ check "a closing keyword in a code span is not carried" \
   "$(printf 'a shape\n\n## Summary\n\ns')" \
   "$(ship_body_replace_preamble "$(printf 'the phrase `Closes #76` is quoted here\n\n## Summary\n\ns')" "$new")"
 
+# A span that opens on one line and closes on a later one is one span, so the
+# line inside it is quoted text: carrying it over would lift a quoted `Closes`
+# out of its span and make it a real one.
+printf 'a shape\n' > "$new"
+check "a closing keyword in a multi-line code span is not carried" \
+  "$(printf 'a shape\n\n## Summary\n\ns')" \
+  "$(ship_body_replace_preamble "$(printf 'the phrase `text\nCloses #76\n` is quoted\n\n## Summary\n\ns')" "$new")"
+
+# And the real line under such a span is still the one carried, rather than the
+# quoted line above it winning by being first.
+check "a real closing line under a multi-line span is the one carried" \
+  "$(printf 'a shape\n\nCloses #173\n\n## Summary\n\ns')" \
+  "$(ship_body_replace_preamble "$(printf '`text\nCloses #76\n`\nCloses #173\n\n## Summary\n\ns')" "$new")"
+
 # An empty preamble file with a closing line to carry leaves no leading blank.
 : > "$new"
 check "an empty new preamble is just the carried line" \

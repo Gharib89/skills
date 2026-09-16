@@ -43,7 +43,11 @@ _gh() {
   local raw rc
   raw=$(gh api -i "$@" 2>/dev/null); rc=$?
   SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | awk -v want=status "$_GH_AWK_SPLIT")
-  [ -n "$raw" ] && printf '%s\n' "$raw" | awk -v want=body "$_GH_AWK_SPLIT"
+  # The body goes out only on a success. A failed call's body is an error
+  # document nothing here reads, and `_gh_create` prints its own JSON after
+  # this returns, so emitting both would hand the caller two JSON values where
+  # `ship_fail_host` expects one.
+  [ "$rc" -eq 0 ] && [ -n "$raw" ] && printf '%s\n' "$raw" | awk -v want=body "$_GH_AWK_SPLIT"
   return $rc
 }
 

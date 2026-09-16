@@ -322,18 +322,27 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 
 # ship_body_closing_line <text>: the first line of <text> that claims to close
 # an issue, any issue, or nothing where no line does. The same vocabulary and
-# the same fence and code-span rules as ship_body_closes, one line at a time:
-# `ship_body_replace_preamble` carries the line itself over rather than
-# rebuilding it, so it needs the line and not a yes or no. The span strip is
-# per line here, where a span that opens on one line and closes on the next is
-# not one line's claim to close anything.
+# the same fence and code-span rules as ship_body_closes, answering with the
+# line itself: `ship_body_replace_preamble` carries the line over rather than
+# rebuilding it, so it needs the line and not a yes or no.
+#
+# The spans come out of the whole text at once, exactly as ship_body_closes
+# takes them out, so a multi-line span is inert for both. Each span leaves its
+# own newlines behind, which keeps the stripped text line for line with the
+# original: the test reads the stripped line and the answer is the original one,
+# backticks and all. Stripping per line instead would read a line inside a
+# multi-line span as a claim, and carrying that line over lifts a quoted
+# `Closes #n` out of its span and makes it a real one.
 ship_body_closing_line() { # ship_body_closing_line <text>
   local unfenced
   unfenced=$(ship_unfenced "$1")
   jq -rn --arg body "$unfenced" --arg re "$SHIP_CLOSES_RE" '
-    $body | split("\n")
-    | map(select(gsub("(`+).*?\\1"; "") | test($re + "[0-9]+\\b"; "i")))
-    | first // empty'
+    ($body | split("\n")) as $lines
+    | ($body | gsub("(?s)(?<b>`+)(?<c>.*?)\\1"; (.c | gsub("[^\n]"; "")))
+       | split("\n")) as $bare
+    | first(range($lines | length)
+            | select($bare[.] | test($re + "[0-9]+\\b"; "i")))
+    | $lines[.] // empty'
 }
 
 # Replace one `## <section>` of <body> with <body-file>'s content, appending the

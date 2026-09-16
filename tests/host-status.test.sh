@@ -61,6 +61,18 @@ out=$(host_pr_reply_thread 7 THREAD "$body" 2>/dev/null); rc=$?
 check_rc "a failed thread reply fails"                 1 "$rc"
 check    "a failed thread reply carries the status"    500 "$(status_of "$out")"
 
+# The failed call's own error body must not travel with the status. `-i` prints
+# the whole response, error document included, and `_gh_create` prints its JSON
+# after it, so a body let through hands the caller two JSON values where
+# ship_fail_host expects one.
+gh_reset; export GH_STATUS_SEQ="200 404"
+export GH_BODY='{"message":"Not Found"}'
+out=$(host_pr_comment 7 "$body" 2>/dev/null); rc=$?
+check_rc "a refused create fails"                      1 "$rc"
+check    "a refused create answers with the status alone" \
+  '{"status":404}' "$(jq -c . <<<"$out")"
+unset GH_BODY
+
 # ship_fail_host is what turns that into the mechanic's verdict. It is host
 # agnostic: an adapter that reports no status, as `az` does, yields null.
 verdict() { bash -c 'source skills/ship/scripts/_lib.sh; ship_fail_host "PR body update failed" "$1"' _ "$1"; }
