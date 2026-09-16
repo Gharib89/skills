@@ -85,6 +85,25 @@ gh_reset; export GH_STATUS_SEQ="200"
 err=$(host_pr_set_body 7 "$body" 2>&1 >/dev/null)
 check "a successful write says nothing on stderr"      "" "$err"
 
+# The two writes that open with an identity read answer a burst that takes that
+# read with the read's status, not with null: `_gh` sets the status inside the
+# command substitution the read runs in, so it has to be printed to get out.
+gh_reset; export GH_STATUS_SEQ="500"
+out=$(host_pr_comment 7 "$body" 2>/dev/null); rc=$?
+check_rc "a comment whose identity read fails, fails"  1 "$rc"
+check    "it carries the identity read's status"       500 "$(status_of "$out")"
+
+# A call that gives up before it reaches the host, which is what a failed mktemp
+# while buffering stdin does, must not report the status in scope from the call
+# before it. `api` clears it on the way in, inside the same subshell the write
+# prints from.
+SHIP_HTTP_STATUS=500
+mktemp() { return 1; }
+out=$(host_pr_set_body 7 "$body" 2>/dev/null); rc=$?
+unset -f mktemp; SHIP_HTTP_STATUS=
+check_rc "a write that cannot buffer its payload fails" 1 "$rc"
+check    "and reports no status rather than the last one" null "$(status_of "$out")"
+
 # ship_fail_host is what turns that into the mechanic's verdict. It is host
 # agnostic: an adapter that reports no status, as `az` does, yields null.
 verdict() { bash -c 'source skills/ship/scripts/_lib.sh; ship_fail_host "PR body update failed" "$1"' _ "$1"; }

@@ -3,7 +3,7 @@
 The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
 it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an optional
 `Instructions:` file, and per trigger: `Request:` (on-request), `Resolve:`
-(on-push). The **trigger fixes the loop and convergence**; the bot's brand fixes
+(any trigger whose reviewer opens threads). The **trigger fixes the loop and convergence**; the bot's brand fixes
 nothing. Preflight has already parsed these blocks and refused the three
 malformed shapes, so what reaches this phase is a list you can drive.
 Zero reviewers: skip this phase; the review gate is phase 4's self-review plus
@@ -159,9 +159,12 @@ back is what `--since` takes. One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
 request against the corrected tree. Loop: request, poll under the **since**
 rule with `request-review`'s `requested_at`, triage, batch-fix, push,
-`reply-thread` on every `replied: false` thread, request again. **Converged**
-when the latest round has nothing actionable and every thread from all rounds is
-dispositioned.
+`reply-thread` on every `replied: false` thread, request again. A round that
+opened threads takes the reviewer's `Resolve:` once every one of them carries a
+reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
+opens none and the findings are answered on the review with `comment-pr`.
+**Converged** when the latest round has nothing actionable and every thread from
+all rounds is dispositioned, and resolved where the reviewer resolves.
 Small lane: exactly one round. A lint or flake fix after convergence earns no
 new request.
 
@@ -228,8 +231,11 @@ Brand-level detail lives in the host adapters; these show the mapping only.
 - **CodeRabbit as `on-push`**: reviews every push; `Resolve:` is its resolve
   comment, posted once after every thread carries a reply.
 - **Claude Code on GitHub Actions as `on-push`**: reviews every push through a
-  workflow; no thread-resolution mechanism, so `Resolve:` reads `None.` and
-  convergence rests on dispositioned threads and a quiet head.
+  workflow, posting under `claude[bot]`, the app its OAuth token authenticates,
+  never the Actions identity the workflow otherwise runs as. It attaches its
+  per-file findings as inline threads on the review, so `Resolve:` is
+  `resolve-thread`; a finding that names no file stays on the review body and is
+  answered with `comment-pr`.
 - **Claude Code on Azure Pipelines as `on-push`, `Gating: yes`**: a build
   validation policy that fails the build on a critical finding; threads are
   Azure DevOps PR threads with `fixed | closed` status; a declined critical is

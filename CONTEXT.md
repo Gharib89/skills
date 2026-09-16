@@ -145,7 +145,7 @@ The compressed code-form view of a change that opens a PR's Summary: a call tree
 _Avoid_: diagram, visual, picture, mermaid, sketch
 
 **Body preamble**:
-Everything in a PR body above its first `## ` heading: the closing reference, and the Shape where no template gives a `## Summary`. The half of a body no section rewrite reaches, and `update-pr-body --preamble` is what rewrites it, carrying over a closing reference the new content lacks so the rewrite never unlinks the PR from its issue.
+Everything in a PR body above its first `## ` heading: the closing reference, and the Shape where no template gives a `## Summary`. The half of a body no section rewrite reaches, and `update-pr-body --preamble` is what rewrites it, carrying over a closing line the new content lacks so a rewrite that says nothing about closing keeps the link to the issue; content carrying its own closing line is left as written, whichever issues it names.
 _Avoid_: header, intro, top of the body
 
 **Adjacent find**:

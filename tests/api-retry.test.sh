@@ -26,7 +26,7 @@ payload='{"body":"a line\nand another"}'
 # #108: the first attempt drains the pipe, so a retry that re-runs the same
 # argument list sends nothing and GitHub answers "Body should be a JSON object".
 gh_reset; export GH_STATUS_SEQ="500 200"
-out=$(printf '%s' "$payload" | api -X PATCH "$R/pulls/1" --input -); rc=$?
+out=$(printf '%s' "$payload" | api -X PATCH "$R/pulls/1" --input - 2>/dev/null); rc=$?
 check_rc "reports success once the retry lands"        0 "$rc"
 check    "retries a failed stdin-fed call"             2 "$(gh_attempts)"
 check    "sends the payload on the first attempt"      "$payload" "$(gh_body_of 1)"
@@ -36,63 +36,84 @@ check    "strips the header block from the answer"     "ok" "$out"
 # A call with no stdin payload keeps its current behaviour: it is retried, and
 # nothing tries to read a pipe that was never there.
 gh_reset; export GH_STATUS_SEQ="500 200"
-api user --jq .login >/dev/null; rc=$?
+api user --jq .login >/dev/null 2>&1; rc=$?
 check_rc "reports success for a retried read"          0 "$rc"
 check    "retries a read"                              2 "$(gh_attempts)"
 
 # `gh` takes the flag glued to its value too, so the guard reads both spellings
 # and a `--input=-` call is buffered like any other.
 gh_reset; export GH_STATUS_SEQ="500 200"
-printf '%s' "$payload" | api -X PATCH "$R/pulls/1" --input=- >/dev/null; rc=$?
+printf '%s' "$payload" | api -X PATCH "$R/pulls/1" --input=- >/dev/null 2>&1; rc=$?
 check_rc "reports success for a glued-flag retry"      0 "$rc"
 check    "resends the payload of a glued-flag call"    "$payload" "$(gh_body_of 2)"
 
 # A first attempt that succeeds is the only attempt: the buffering must not
 # turn one request into two.
 gh_reset; export GH_STATUS_SEQ="200"
-printf '%s' "$payload" | api -X PATCH "$R/pulls/1" --input - >/dev/null; rc=$?
+printf '%s' "$payload" | api -X PATCH "$R/pulls/1" --input - >/dev/null 2>&1; rc=$?
 check_rc "reports success for a first-attempt success" 0 "$rc"
 check    "does not resend a request that succeeded"    1 "$(gh_attempts)"
 check    "sends the payload once"                      "$payload" "$(gh_body_of 1)"
 
 # 429 is the other status the host answers with when the payload is fine.
 gh_reset; export GH_STATUS_SEQ="429 200"
-api user >/dev/null; rc=$?
+api user >/dev/null 2>&1; rc=$?
 check_rc "a 429 that clears is a success"              0 "$rc"
 check    "retries a 429"                               2 "$(gh_attempts)"
 
 # PR #170: minutes of 500s. The backoff is bounded, so a host that stays down
 # still fails, after five attempts rather than after two.
 gh_reset; export GH_STATUS_SEQ="500"
-api user >/dev/null; rc=$?
+api user >/dev/null 2>&1; rc=$?
 check_rc "a 500 burst fails once the backoff is spent" 1 "$rc"
 check    "bounds the 5xx backoff at five attempts"     5 "$(gh_attempts)"
 
 # A 4xx is the payload, not the host: one more attempt for the 401 flake, and
 # no backoff beyond it.
 gh_reset; export GH_STATUS_SEQ="400"
-api user >/dev/null; rc=$?
+api user >/dev/null 2>&1; rc=$?
 check_rc "a 400 that repeats fails"                    1 "$rc"
 check    "does not back off a 400"                     2 "$(gh_attempts)"
 
 gh_reset; export GH_STATUS_SEQ="401 200"
-api user >/dev/null; rc=$?
+api user >/dev/null 2>&1; rc=$?
 check_rc "the 401 flake still clears on its retry"     0 "$rc"
 check    "retries a 401 once"                          2 "$(gh_attempts)"
 
-# A POST can be a write that landed with its response lost on the way back, so
-# it keeps the one retry it had before the backoff arrived, whatever the status.
+# A write whose method cannot be repeated keeps the one retry it had before the
+# backoff arrived, whatever the status: a 5xx can be the response lost on the
+# way back from a write that landed. The merge PUT is the one that matters most.
 gh_reset; export GH_STATUS_SEQ="500"
-api -X POST "$R/issues/1/comments" >/dev/null; rc=$?
+api -X POST "$R/issues/1/comments" >/dev/null 2>&1; rc=$?
 check_rc "a POST against a 500 burst fails"            1 "$rc"
 check    "does not back off a POST"                    2 "$(gh_attempts)"
+
+gh_reset; export GH_STATUS_SEQ="500"
+api -X PUT "$R/pulls/1/merge" -f merge_method=squash >/dev/null 2>&1
+check    "does not back off the merge PUT"             2 "$(gh_attempts)"
+
+# The classification reads the method, not one spelling of it.
+gh_reset; export GH_STATUS_SEQ="500"
+api -XPOST "$R/issues/1/comments" >/dev/null 2>&1
+check    "reads -X<method> written closed up"          2 "$(gh_attempts)"
+gh_reset; export GH_STATUS_SEQ="500"
+api --method POST "$R/issues/1/comments" >/dev/null 2>&1
+check    "reads --method <method>"                     2 "$(gh_attempts)"
+gh_reset; export GH_STATUS_SEQ="500"
+api --method=POST "$R/issues/1/comments" >/dev/null 2>&1
+check    "reads --method=<method>"                     2 "$(gh_attempts)"
+
+# A PATCH is the write this issue was opened for, and it is safe to send again.
+gh_reset; export GH_STATUS_SEQ="500"
+api -X PATCH "$R/pulls/1" >/dev/null 2>&1
+check    "backs off a PATCH"                           5 "$(gh_attempts)"
 
 # The status is read by the same rule that strips the headers, so an error body
 # ending in a status-shaped line cannot pass itself off as the real status and
 # turn one retry into five.
 gh_reset; export GH_STATUS_SEQ="404"
 export GH_BODY=$'{"message":"Not Found"}\nHTTP/1.1 500 Internal Server Error'
-api user >/dev/null; rc=$?
+api user >/dev/null 2>&1; rc=$?
 check_rc "a 404 carrying a status-shaped body fails"   1 "$rc"
 check    "reads the status off the headers, not the body" 2 "$(gh_attempts)"
 unset GH_BODY
@@ -122,7 +143,7 @@ unset GH_BODY
 # No HTTP answer at all (the tool missing, a refused connection): there is no
 # status to classify on, so it takes the single retry, not the backoff.
 gh_reset; export GH_STATUS_SEQ="none"
-api user >/dev/null; rc=$?
+api user >/dev/null 2>&1; rc=$?
 check_rc "a call with no HTTP answer fails"            1 "$rc"
 check    "does not back off without a status"          2 "$(gh_attempts)"
 

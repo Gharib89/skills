@@ -94,14 +94,20 @@ _gh_write() { ( api "$@" >/dev/null || { _gh_status; exit 1; } ); }
 # a genuinely broken call still fails fast. Every other failure, the one 401
 # flake this wrapper was written for included, keeps its single retry.
 #
-# So does a POST, whatever its status. A 5xx can be a response lost on the way
-# back from a write that landed, and the wider backoff would then repeat the
-# write; the creates that must not double go through create-then-verify instead,
-# and the POSTs left here (a comment, an assignee, a label, a review request)
-# keep exactly the one retry they had before #173 rather than gaining four.
+# So does a call whose method cannot be repeated, whatever its status. A 5xx can
+# be a response lost on the way back from a write that landed, and the wider
+# backoff would then repeat the write. GET, PATCH and DELETE are safe to send
+# again; POST doubles what it creates, and the one PUT here is the squash merge,
+# which must not be attempted five times over 30 s. Those keep exactly the one
+# retry they had before #173 rather than gaining four. The method is read from
+# `-X`, `-X<M>`, `--method` and `--method=<M>` alike, so a future call site
+# cannot spell its way past the classification.
 api() {
-  local a prev="" buf="" attempt=0 wait post=no
+  local a prev="" buf="" attempt=0 wait method=GET again
   local -a args=() backoff=(2 4 8 16)
+  # A call that returns before `_gh` runs would otherwise leave the previous
+  # call's status standing, and `_gh_write` would report it as this one's.
+  SHIP_HTTP_STATUS=
   for a in "$@"; do
     # `gh` spells a stdin payload either `--input -` or `--input=-`.
     if { [ "$prev" = --input ] && [ "$a" = - ]; } || [ "$a" = --input=- ]; then
@@ -110,15 +116,20 @@ api() {
       cat > "$buf"
       case $a in --input=-) a=--input=$buf ;; *) a=$buf ;; esac
     fi
+    case $a in
+      -X?*)        method=${a#-X} ;;
+      --method=?*) method=${a#--method=} ;;
+      *) case $prev in -X|--method) method=$a ;; esac ;;
+    esac
     args+=("$a"); prev=$a
   done
-  case " $* " in *" -X POST "*) post=yes ;; esac
+  case $method in GET|PATCH|DELETE) again=yes ;; *) again=no ;; esac
   while :; do
     _gh "${args[@]}" && return 0
     attempt=$((attempt + 1))
-    case ${post:-no}${SHIP_HTTP_STATUS:-} in
-      no5??|no429) [ "$attempt" -le "${#backoff[@]}" ] || return 1; wait=${backoff[$((attempt - 1))]} ;;
-      *)           [ "$attempt" -le 1 ] || return 1; wait=2 ;;
+    case $again${SHIP_HTTP_STATUS:-} in
+      yes5??|yes429) [ "$attempt" -le "${#backoff[@]}" ] || return 1; wait=${backoff[$((attempt - 1))]} ;;
+      *)             [ "$attempt" -le 1 ] || return 1; wait=2 ;;
     esac
     sleep "$wait"
   done
@@ -137,7 +148,11 @@ host_tooling_install() {
   local sudo=""; [ "$(id -u)" -eq 0 ] || sudo="sudo -n"
   $sudo apt-get install -y gh
 }
-host_identity() { api user --jq .login; }
+# Prints the status on failure, the way `_gh_write` does and for the same
+# reason: the read runs in a command substitution at every call site, so a
+# status left in a variable dies with the subshell, and the two writes that open
+# with this read would answer a 5xx burst with a null status.
+host_identity() { ( api user --jq .login || { _gh_status; exit 1; } ); }
 host_can_push() { api "$R" --jq '.permissions.push // false'; }
 
 _norm_issue='{number, title, body: (.body // ""),
@@ -396,7 +411,7 @@ host_pr_request_review() { # <pr> <login>
 
 host_pr_comment() { # <pr> <body-file>
   local pr=$1 file=$2 me
-  me=$(host_identity) || return 1
+  me=$(host_identity) || { [ -n "$me" ] && printf '%s\n' "$me"; return 1; }
   _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | _gh_create -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url, created_at}'; }
   _comment_find() {
     api "$R/issues/$pr/comments?per_page=100" --paginate --jq '.[]' \
@@ -431,7 +446,7 @@ host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
     --jq '.data.node.comments.nodes[0].databaseId') \
     || { printf '{"replied": false, "url": null, "detail": "unavailable"}\n'; return 1; }
   [ -n "$cid" ] && [ "$cid" != null ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
-  me=$(host_identity) || return 1
+  me=$(host_identity) || { [ -n "$me" ] && printf '%s\n' "$me"; return 1; }
   _reply_post() { jq -n --rawfile b "$file" '{body: $b}' \
     | _gh_create -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}'; }
   _reply_find() {

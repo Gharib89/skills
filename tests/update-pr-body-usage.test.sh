@@ -49,6 +49,14 @@ check "a preamble file carrying a heading is refused" \
   "$(err 7 --preamble --body-file "$heading")"
 check_rc "a heading in a preamble file is tooling" 2 "$(rc 7 --preamble --body-file "$heading")"
 
+# A heading with no text is the one most likely to be a typo, and it is also the
+# one whose heading TEXT is empty, so the refusal counts the headings rather
+# than reading them.
+printf 'a lede\n\n## \n' > "$heading"
+check "a preamble file carrying an empty heading is refused too" \
+  'a preamble carries no `## ` heading: the preamble ends at the first one' \
+  "$(err 7 --preamble --body-file "$heading")"
+
 printf '## Summary\n\n```diff\n- before\n+ after\n' > "$open_fence"
 
 # Run #121: two Summary rewrites on an unclosed Shape fence swallowed four
