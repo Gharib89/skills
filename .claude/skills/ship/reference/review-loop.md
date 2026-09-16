@@ -183,9 +183,14 @@ its first request as written. A reviewer that gets no free round pays that one
 poll, where skipping it spends a round of a small cap re-asking for a review
 that had already landed.
 
-Loop: request, poll under the **since** rule with `request-review`'s
+Loop: **triage whatever round you are holding first**, then request the next
+one. A free round the poll above found is a round in hand, so it is triaged,
+batch-fixed, pushed, replied to on every `replied: false` thread and resolved
+before any request is issued; requesting on top of it spends round 2 on a tree
+the reviewer has not seen and burns the budget the free round just saved. With
+nothing in hand: request, poll under the **since** rule with `request-review`'s
 `requested_at`, triage, batch-fix, push, `reply-thread` on every
-`replied: false` thread, request again. A round that
+`replied: false` thread, and round the loop. A round that
 opened threads takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.

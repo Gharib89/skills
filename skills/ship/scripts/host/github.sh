@@ -161,29 +161,30 @@ host_identity() { ( api user --jq .login || { _gh_status; exit 1; } ); }
 host_can_push() { api "$R" --jq '.permissions.push // false'; }
 
 # Prints `true` or `false`: whether a push to an open PR draws a fresh Copilot
-# round, read from the repository ruleset that decides it. Non-zero, printing
-# nothing, when the rulesets cannot be read at all, which is the ordinary answer
-# for a fork or an account without admin on the repo; preflight warns and
-# continues on that, because a check that could not run is not a verdict.
+# round on the default branch. Non-zero, printing nothing, where the host cannot
+# answer, which is the ordinary result for a fork or an account without admin on
+# the repo; preflight warns and continues on that, because a check that could
+# not run is not a verdict.
 #
-# Two calls because the list omits `rules`, so each active ruleset is read back
-# by id. `enforcement` filters first: a disabled ruleset drives no review, and
-# reading its setting as live is how this check would refuse a profile that is
-# telling the truth.
+# Two calls, and the second is the point: `rules/branches/<branch>` returns the
+# rules the host has already resolved for ONE branch, enforcement and branch
+# conditions applied. Listing rulesets instead and taking the first
+# `copilot_code_review` found reads a rule scoped to `release/*` as governing
+# the default branch, which is a refusal aimed at an honest profile.
 #
-# No `copilot_code_review` rule anywhere is `false`, the same answer
-# `setup-skills` maps an absent rule to: nothing here draws a round from a push,
-# which is precisely what `false` asserts to `ship_copilot_trigger_reason`.
+# No `copilot_code_review` rule on that branch is `false`: nothing there draws a
+# round from a push, which is precisely what `false` asserts to
+# `ship_copilot_trigger_reason`.
 host_copilot_review_on_push() {
   local branch review_on_push
-  # The rules that apply to ONE branch, not every ruleset in the repo. A ruleset
-  # scoped to `release/*` governs nothing a PR to the default branch draws, and
-  # reading it as live would refuse an honest profile; this endpoint resolves
-  # the branch conditions host-side, so the walk needs no pattern matching of
-  # its own. `--paginate` because the list is paged, and a rule on page two read
-  # as absent would admit the contradiction this check exists to refuse.
   branch=$(api "$R" --jq .default_branch) || return 1
   [ -n "$branch" ] || return 1
+  # `@uri`, because a default branch may carry a slash (`release/main`) and an
+  # unencoded one silently addresses a different route, which comes back as a
+  # failed read and skips the check rather than failing it.
+  branch=$(jq -rn --arg b "$branch" '$b | @uri') || return 1
+  # `--paginate` because the list is paged, and a rule on page two read as
+  # absent would admit the contradiction this check exists to refuse.
   review_on_push=$(api "$R/rules/branches/$branch" --paginate \
     --jq '.[] | select(.type == "copilot_code_review") | .parameters.review_on_push') || return 1
   # Two rulesets can both carry the rule for one branch, and a two-line value

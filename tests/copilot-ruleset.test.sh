@@ -66,4 +66,23 @@ out=$(host_copilot_review_on_push); rc=$?
 check_rc "an empty default branch is non-zero, not a read of /rules/branches/" 1 "$rc"
 check "an empty default branch prints nothing" '' "$out"
 
+# A default branch may carry a slash. Unencoded it addresses a different route,
+# which the host answers as a miss, so the check would skip itself on a repo it
+# could perfectly well have checked.
+# The path goes to a file, not a variable: the function reads `api` inside a
+# command substitution, and a variable set there dies with the subshell.
+pathlog=$(mktemp) || exit 2
+trap 'rm -f "$pathlog"' EXIT
+api() {
+  case $1 in
+    repos/*/*/rules/branches/*) printf '%s\n' "$1" > "$pathlog"; printf 'true\n' ;;
+    repos/*/*)                  printf 'release/main\n' ;;
+    *) return 1 ;;
+  esac
+}
+check "the answer still comes back for a branch carrying a slash" \
+  'true' "$(host_copilot_review_on_push)"
+check "the branch is percent-encoded into the one path segment it belongs in" \
+  'repos/owner/repo/rules/branches/release%2Fmain' "$(cat "$pathlog")"
+
 finish
