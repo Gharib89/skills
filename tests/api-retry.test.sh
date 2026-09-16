@@ -80,6 +80,28 @@ api user >/dev/null; rc=$?
 check_rc "the 401 flake still clears on its retry"     0 "$rc"
 check    "retries a 401 once"                          2 "$(gh_attempts)"
 
+# `--paginate` answers with one header block per page, the second introduced by
+# a blank line. The pages have to concatenate exactly as they do without `-i`,
+# so that separator goes out with the block and nothing else moves.
+gh_reset; export GH_STATUS_SEQ="200"
+export GH_BODY=$'{"a":1}\n\nHTTP/2.0 200 OK\nContent-Type: application/json\n\n{"b":2}'
+check "concatenates the pages of a paginated answer" \
+  "$(printf '{"a":1}\n{"b":2}')" "$(api 'repos/o/r/issues' --paginate --jq '.[]')"
+
+# A body line shaped like a status line, mid-page, is body: a header block only
+# ever starts the response or follows the blank line that ended the page before.
+gh_reset
+export GH_BODY=$'{"a":1}\nHTTP/1.1 200 OK\n{"b":2}'
+check "a status-shaped body line survives mid-page" \
+  "$(printf '{"a":1}\nHTTP/1.1 200 OK\n{"b":2}')" "$(api 'repos/o/r/issues' --jq '.[]')"
+
+# A blank line inside one page's body is the body's own, and stays.
+gh_reset
+export GH_BODY=$'{"a":1}\n\n{"b":2}'
+check "a blank line inside a page survives" \
+  "$(printf '{"a":1}\n\n{"b":2}')" "$(api 'repos/o/r/issues' --jq '.[]')"
+unset GH_BODY
+
 # No HTTP answer at all (the tool missing, a refused connection): there is no
 # status to classify on, so it takes the single retry, not the backoff.
 gh_reset; export GH_STATUS_SEQ="none"

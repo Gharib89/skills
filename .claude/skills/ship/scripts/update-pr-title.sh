@@ -5,7 +5,7 @@
 #   update-pr-title <pr> --title "<subject>"
 #
 # stdout: {pr, title, changed}
-# exit: 0 · 1 update failed · 2 usage
+# exit: 0 · 1 update failed, with the host's status where there was one · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: update-pr-title <pr> --title "<subject>"'
@@ -27,7 +27,7 @@ if [ "$before" = "$title" ]; then
   jq -n --argjson pr "$pr" --arg t "$title" '{pr: $pr, title: $t, changed: false}'
   exit 0
 fi
-host_pr_set_title "$pr" "$title" || ship_fail "PR title update failed"
+answer=$(host_pr_set_title "$pr" "$title") || ship_fail_host "PR title update failed" "$answer"
 # The write is proven by the read-back, never by the call's exit code.
 after=$(host_pr_get "$pr" | jq -r .title) || ship_tooling "cannot read PR $pr back"
 [ "$after" = "$title" ] || ship_fail "PR title read back as: $after"

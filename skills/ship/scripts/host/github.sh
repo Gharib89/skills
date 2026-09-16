@@ -18,18 +18,26 @@ R="repos/$SHIP_OWNER/$SHIP_REPO"
 # never got an HTTP answer at all.
 #
 # The whole response is buffered to split it, which is also what `--paginate`
-# means here: one header block per page, and the status is the last page's. A
-# body line can no more open with `HTTP/1.1 200 ` than a header block can be
-# JSON, so the two never trade places.
+# means here: gh prints one header block per page, separated from the page
+# before it by a blank line, and the status is the last page's.
+#
+# A header block starts at the top of the response or on that separator, never
+# mid-page, and the separator goes out with the block it introduces, so the
+# pages concatenate exactly as they do without `-i`. That is the whole defence
+# against a body line shaped like a status line: one that does not follow a
+# blank line is body, and every caller here reads `--jq` output, one JSON value
+# per line, where a blank line does not arise.
 _gh() {
   local raw rc
   raw=$(gh api -i "$@" 2>/dev/null); rc=$?
   SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | sed -n 's|^HTTP/[0-9.]* \([0-9][0-9][0-9]\).*|\1|p' | tail -1)
   [ -n "$raw" ] && printf '%s\n' "$raw" | awk '
-    /^HTTP\/[0-9.]+ [0-9][0-9][0-9]/ { hdr = 1; next }
+    BEGIN { start = 1 }
+    start && /^HTTP\/[0-9.]+ [0-9][0-9][0-9]/ { hdr = 1; start = 0; held = ""; next }
     hdr && /^[ \t\r]*$/ { hdr = 0; next }
     hdr { next }
-    { print }'
+    /^[ \t\r]*$/ { held = held "\n"; start = 1; next }
+    { if (held != "") { printf "%s", held; held = "" } print; start = 0 }'
   return $rc
 }
 

@@ -15,7 +15,9 @@
 # The fake models the three things the adapter depends on: `--input` resolves
 # from stdin or a file the way gh's does, a failing attempt drains stdin before
 # it exits (which is what empties the pipe for a retry, the #108 bug), and `-i`
-# adds the CRLF header block the status is read from.
+# adds the CRLF header block the status is read from. `GH_BODY` is the response
+# body, so a case can hand back the shape `--paginate` produces: a second header
+# block after a blank line.
 gh_fake_install() { # <dir>
   export GH_LOG=$1/calls
   cat > "$1/gh" <<'FAKE'
@@ -46,7 +48,7 @@ if [ -n "$include" ]; then
   printf '\r\n'
 fi
 [ "$status" -ge 400 ] && { echo "gh: unexpected end of JSON input" >&2; exit 1; }
-printf 'ok\n'
+printf '%s\n' "${GH_BODY:-ok}"
 exit 0
 FAKE
   chmod +x "$1/gh"

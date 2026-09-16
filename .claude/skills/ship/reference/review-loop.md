@@ -111,7 +111,9 @@ a fresh read of the committed tree, not a conversation.
 section's CONTENT**, `Review` and `Deviations from plan` alike: the mechanic
 writes the `## <name>` line itself, and a file that carries it too leaves the
 heading twice over inside one section, which the write collapses and which no
-other mechanic repairs.
+other mechanic repairs. `--preamble` takes the whole preamble the same way,
+which is how a reviewer's accepted objection to the Shape, or to a body that
+opens on prose where the standard wants a Shape fence, is answered by a write.
 
 ## By trigger
 
