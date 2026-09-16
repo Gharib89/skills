@@ -109,10 +109,11 @@ a positional belongs and a flag without its value all print
 `{"error": "<usage>"}` and exit 2, as an unknown flag does. Exit 1 is an
 answer, not always a fault: `nothing-ready` from `select`, a not-actionable
 `preflight` and a `poll-pr` window that closed are all exit 1 and none is red.
-A failed PR write carries the host's `status` beside its `error`: a 5xx or a 429
-outlasted the mechanic's own backoff, so retrying is the fix; any other status,
-and `null` where the call never got an HTTP answer, means the request itself is
-what to look at. Read the JSON, then decide. When a phase names a mechanic, run it
+A failed write to an open PR's body or title, a comment or a thread reply
+carries the host's `status` beside its `error`: a 5xx or a 429 outlasted the
+mechanic's own backoff, so retrying is the fix; any other status, and `null`
+where the call never got an HTTP answer, means the request itself is what to
+look at. The creates answer with the error alone. Read the JSON, then decide. When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that
 step, including the host adapter it sources (`scripts/host/github.sh` or
 `scripts/host/ado.sh`, chosen from the `origin` remote).

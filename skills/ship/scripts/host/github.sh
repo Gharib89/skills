@@ -40,15 +40,33 @@ _GH_AWK_SPLIT='
   { if (want == "body") { if (held != "") { printf "%s", held; held = "" } print }
     start = 0 }
   END { if (want == "status") print status }'
+#
+# gh's own message is the other half of the answer: the status says the host
+# refused it, the message says why ("Validation Failed: body is too long"), and
+# `open-pr` captures this stderr and prints it with `ship_tail40`. So each
+# attempt's stderr is held rather than dropped, and a failure sends it on. A
+# retried outage sends one message per attempt, which is the outage being
+# visible rather than noise.
+#
+# The temp file takes an explicit `rm` where the standard asks for a RETURN
+# trap, because a RETURN trap set in a callee REPLACES the caller's: arming one
+# here would disarm the `rm -f "$buf"` that `api` uses to clean up a buffered
+# payload. This function has one exit path, so the explicit removal covers it.
 _gh() {
-  local raw rc
-  raw=$(gh api -i "$@" 2>/dev/null); rc=$?
+  local raw rc err
+  err=$(mktemp) || return 2
+  raw=$(gh api -i "$@" 2>"$err"); rc=$?
   SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | awk -v want=status "$_GH_AWK_SPLIT")
   # The body goes out only on a success. A failed call's body is an error
   # document nothing here reads, and `_gh_create` prints its own JSON after
   # this returns, so emitting both would hand the caller two JSON values where
   # `ship_fail_host` expects one.
-  [ "$rc" -eq 0 ] && [ -n "$raw" ] && printf '%s\n' "$raw" | awk -v want=body "$_GH_AWK_SPLIT"
+  if [ "$rc" -eq 0 ]; then
+    [ -n "$raw" ] && printf '%s\n' "$raw" | awk -v want=body "$_GH_AWK_SPLIT"
+  else
+    ship_tail40 "$err"
+  fi
+  rm -f "$err"
   return $rc
 }
 

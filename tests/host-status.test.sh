@@ -73,6 +73,18 @@ check    "a refused create answers with the status alone" \
   '{"status":404}' "$(jq -c . <<<"$out")"
 unset GH_BODY
 
+# The status says the host refused it; gh's own message says why, and `open-pr`
+# captures this stderr and prints it with ship_tail40. Dropping it leaves that
+# log empty and the run with half an answer.
+gh_reset; export GH_STATUS_SEQ="422"
+err=$(host_pr_set_body 7 "$body" 2>&1 >/dev/null)
+check "a failed write leaves gh's message on stderr, one per attempt" \
+  "$(printf 'gh: unexpected end of JSON input\ngh: unexpected end of JSON input')" "$err"
+
+gh_reset; export GH_STATUS_SEQ="200"
+err=$(host_pr_set_body 7 "$body" 2>&1 >/dev/null)
+check "a successful write says nothing on stderr"      "" "$err"
+
 # ship_fail_host is what turns that into the mechanic's verdict. It is host
 # agnostic: an adapter that reports no status, as `az` does, yields null.
 verdict() { bash -c 'source skills/ship/scripts/_lib.sh; ship_fail_host "PR body update failed" "$1"' _ "$1"; }

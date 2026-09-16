@@ -428,8 +428,14 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
 # A closing line the OLD preamble carried and the new content does not is
 # carried over, last, where `open-pr` puts it. `open-pr` places it above the
 # first heading precisely so no section rewrite reaches it; this rewrite does
-# reach it, and a preamble write that silently unlinked the PR from its issue
-# would be a worse bug than the one this flag fixes.
+# reach it, and a rewrite that says nothing about closing should not drop the
+# link the PR was opened with.
+#
+# Content that carries a closing line of its own is left exactly as written,
+# whichever issues that line names. The test is per line, not per issue number:
+# the line is the caller saying what this PR closes, and merging the old line's
+# references into it would put back an issue they had just taken out, which the
+# caller cannot see in the file they wrote.
 #
 # The content reaches awk through the environment rather than a file, because
 # the carried line is appended to it first, and rather than `-v`, which decodes

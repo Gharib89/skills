@@ -58,7 +58,7 @@ Enabled by the repository ruleset **Copilot code review** on the default branch,
 
 ### claude
 
-Login: github-actions[bot]
+Login: claude[bot]
 Trigger: on-request
 Request: comment @claude
 Cap: 2
@@ -67,7 +67,7 @@ Gating: no
 Fallback-for: copilot
 Instructions: .github/copilot-instructions.md
 
-Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits degraded, for any degraded reason; on a run where Copilot converges it reports `not invoked: copilot converged` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --since` lands, so `Resolve: None.`: it opens no threads of its own to resolve, and a finding it leaves is answered on the review, not on a thread. `Login:` is `github-actions[bot]` because a workflow reviews under the Actions identity, not under a bot account of its own. The exit is still `degraded: silent` when a round dies before posting, because `poll-pr` does not read a plain comment as a round, but where the job fails the workflow now leaves one naming the run and the failure subtype, so the reason is on the PR and not only in the Actions log. A cancelled job runs no step and still leaves nothing.
+Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits degraded, for any degraded reason; on a run where Copilot converges it reports `not invoked: copilot converged` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --since` lands, so `Resolve: None.`: it opens no threads of its own to resolve, and a finding it leaves is answered on the review, not on a thread. `Login:` is `claude[bot]`: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App the workflow's `claude_code_oauth_token` authenticates, not under the Actions identity. PR #182 read `github-actions[bot]` here and waited out a round that had already landed. Only the `if: failure()` comment below the action runs on `github.token`, and that comment is not a round, so the login the loop awaits is the app's. The exit is still `degraded: silent` when a round dies before posting, because `poll-pr` does not read a plain comment as a round, but where the job fails the workflow now leaves one naming the run and the failure subtype, so the reason is on the PR and not only in the Actions log. A cancelled job runs no step and still leaves nothing.
 
 ## Coding standards
 
