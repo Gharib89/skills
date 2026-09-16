@@ -59,123 +59,32 @@ where having nothing to do is the correct next action.
 
 ## First action: the Run file
 
-**Before phase 0, before the worktree**, write the **Run file**:
-`ship-<issue>/run.md` (`ship-<slug>/run.md` when the argument was a task
-spec), in a directory of its own under the scratchpad directory the harness
-names in its environment block, or under the OS temp directory when none is
-named. Never inside the repo. A directory of its own because the scratchpad is
-also where a subagent puts its scratch, and one that reaches for the run's own
-name overwrites the record with no failure signal; every subagent you dispatch
-is given the scratch directory named above instead. It holds the
-ten-item checklist below and, as they form, the design and plan. It is the
-**source of truth** for where the run is: it survives a mid-run summary and
-depends on no tool the harness might withhold. Without it a summarized run
-cannot tell which phase it was in, and skips or repeats one. The window is
-managed, not scarce: the harness compacts long runs and the Run file carries
-state across that boundary, so never stop, narrow a phase or suggest a new
-session over context; keep working. It is the run's **record**; the harness
-task list is its **display**, kept in step by the mirror rule below.
+**Before phase 0, before the worktree**, run `run-file init <issue|slug>
+--scratchpad <dir>`, handing it the profile's `Tripwires:`, the applicable
+verifications, the reviewer list and the CI `Legs:` (`--tripwires`,
+`--verifications`, `--reviewers`, `--legs`): it writes the ten-item checklist to
+`<scratchpad>/ship-<issue>/run.md`, a directory of its own so a subagent that
+reaches for the run's own name cannot overwrite the record, and returns the
+items, one per harness task you then create. The file is the run's **record**,
+the source of truth for where the run is and the home of the design and plan as
+they form; it survives a mid-run context summary, so never stop, narrow a phase
+or suggest a new session over context. The harness task list is its **display**:
+flip a phase with `run-file open <n>`, `close <n>` or `skip <n> "<reason>"`
+against `--file <path>`, then set that phase's task to the `mirror` value the
+flip returned. The mechanic owns the stamp, the one-open-phase invariant and
+every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
+a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
+the record shows a decision and not a gap. A harness that refuses the task tools
+has answered: run on the file alone.
 
-**Stamp every flip by reading the clock inside the edit command**, so the
-stamp is a measurement rather than a recollection:
-
-```sh
-RUN="<scratchpad>/ship-<issue>/run.md"
-stamp() {  # $1: a sed script; fails rather than recording a flip that did not happen
-  sed "$1" "$RUN" > "$RUN.t" \
-    && ! cmp -s "$RUN" "$RUN.t" \
-    && [ "$(grep '^- \[.\] ' "$RUN.t" | grep -o 'in_progress (..:..→)' | wc -l)" -le 1 ] \
-    && mv "$RUN.t" "$RUN" \
-    || { rm -f "$RUN.t"; echo "stamp: no line matched, or a second phase would be open" >&2; return 1; }
-}
-# the wildcard in \[.\] also matches the x of a phase being re-opened
-phase_open()  { stamp "s|^- \[.\] \($1 · .*\)|- [ ] \1 in_progress ($(date -u +%H:%M)→)|"; }
-phase_close() { stamp "s|^- \[ \] \($1 · .*\) in_progress (\(..:..\)→)|- [x] \1 (\2→$(date -u +%H:%M))|"; }
-
-phase_open 5      # ... run the local gate ...
-phase_close 5
-```
-
-The double quotes are the whole trick: the shell expands `$(date -u +%H:%M)`
-each time `phase_open` or `phase_close` runs, so the time comes from the clock
-and a call site has no place to put one of its own. The rest of `stamp` guards
-the three ways a flip goes missing in silence: `cmp` fails the call when the
-script matched no line, rather than writing an unchanged file back; the
-open-marker count, over the `in_progress (HH:MM→)` shape on checklist lines
-alone so neither the plan's prose nor a profile-supplied phase label feeds it,
-holds the file to the one-open-phase invariant below, so
-re-running an open, or opening a second phase while one is open, fails instead
-of appending a suffix nothing will close; and the redirect with `mv` stands in
-for `sed -i`, whose in-place flag takes an argument on the BSD sed a macOS
-machine runs. A `stamp` that fails is a phase line that is not where you think
-it is: read the file before flipping again. Stamps go at the end of the line, after the `in_progress` suffix, one
-range per parentheses:
-
-```
-- [ ] 5 · Local gate: ... in_progress (10:12→)   # opened
-- [x] 5 · Local gate: ... (10:12→10:19)          # closed, suffix gone
-```
-
-**Every stamp has a mirror.** When you write the Run file, create its ten
-items as harness tasks (`TaskCreate`, one per phase, the phase line as the
-subject). A flip that landed is followed by the matching `TaskUpdate`:
-`in_progress` after `phase_open`, `completed` after `phase_close` and after a
-phase marked `skipped`. A `stamp` that failed leaves the task where it was.
-The Run file is the record and carries the run across compaction; the task
-list is the display the human watches in the terminal, the one view of
-progress they read during an attended run. A harness that refuses either
-task tool has answered: run on the file alone.
-
-A phase that re-opens appends a second range,
-`(08:31→09:40) (10:20→10:33)`. A close stamped earlier than its open crossed
-midnight UTC; append `+1d` to it (`(23:58→00:12+1d)`) so the range still reads
-left to right and the `Timing:` row needs no special case. The merge summary's
-`Timing:` row is computed from these stamps, and they are the only way to see
-which phase a slow run spent its hours in.
-
-**A failed `stamp` on a file you no longer recognize is a clobbered Run file.**
-Reading the file, as above, is how you find out: one that no longer holds the
-ten checklist items, or carries someone else's content in their place, was
-overwritten by a subagent that reached for the run's own path. Nothing checks
-for that before a flip, because `stamp` has already caught it (the script
-matched no line, the output is byte-identical, `cmp` fails the call), and a
-read before every flip would buy the same answer at the price of a read per
-flip. The recovery is what
-is left, and it happens in place:
-
-- **Rebuild the file** from what the run still holds: this transcript's stamps
-  and decisions, the design and plan, and the harness task list, which is the
-  file's mirror and says which phases opened and which closed.
-- **Invent no range.** A closed phase whose range you cannot recover is written
-  closed with no range. The phase that was running when the file went is
-  re-opened at the current clock, so the file still holds exactly one
-  `in_progress`. Both phases read `unverified` on the merge summary's `Timing:`
-  row under the rule in [merge-gate.md](merge-gate.md), the first for the range
-  it has not got and the second because the range it has starts at the rebuild.
-- **Log it in the deviations log**: what stood in the file's place (which
-  subagent's output, where that is identifiable), what was lost, what was
-  rebuilt, and which ranges are unverified. From there it reaches the PR body
-  and the merge summary.
-- **Re-check the mirror** against the rebuilt file, then flip again.
-
-Rebuild and record, in that order and every time: a Run file that can be
-rebuilt does not end a run, so a fresh blank checklist and a stop are both the
-wrong answer.
-
-One item per phase, exactly one `in_progress`, each `completed` only when its
-verification passed. A **small-lane** run keeps all ten and marks each
-collapsed phase `completed` with `skipped (small lane)`, so the record shows a
-decision, not a gap. The wording of items 2, 3, 7 and 8 comes from the profile
-(`Tripwires:`, the applicable verifications, the reviewer list, the CI legs);
-write it in when you create the file. Create exactly these ten:
-
-- [ ] 0 · Isolate: preflight, read the issue, worktree (or in place) on a fresh branch off the default
-- [ ] 1 · Understand: derive success, claim, apply spec precedence
-- [ ] 2 · Implement: classify (docs/code/infra), lane keys, TDD per class, tripwires <from the profile>
-- [ ] 3 · Verify: <applicable verifications from the profile> scoped to what changed
-- [ ] 4 · Docs-sync + self-review: sync docs first, then `code-review` on the diff, auto-triage
-- [ ] 5 · Local gate: base-fresh, then the repo's gate, all green
-- [ ] 6 · Open PR: non-draft, Conventional-Commit title, Closes, reflect on the issue
-- [ ] 7 · Reviewers: <each reviewer and its trigger from the profile> to convergence
-- [ ] 8 · CI: resolve any conflict, land <legs from the profile> green
-- [ ] 9 · Merge gate: hard stop for human approval (unattended: summary as PR comment, return)
+**A refusal naming a line you thought was there is a clobbered Run file**: a
+subagent wrote over the path, and the mechanic says so rather than flipping a
+line that is not present. Rebuild it in place with `run-file init ... --rebuild`
+and one `--state <n>=<spec>` per phase this transcript and the task list still
+account for: `done:<HH:MM→HH:MM>` where the range is recoverable, `done` where it
+is not, `skipped:<reason>`, and `open` for the phase that was running, which is
+re-opened at the current clock. Invent no range; a phase left without one reads
+`unverified` on the `Timing:` row, as does the phase re-opened at the rebuild.
+Then log it in the deviations log (what stood in the file's place, what was
+lost, which ranges are unverified) and re-check the mirror against the rebuilt
+file.
