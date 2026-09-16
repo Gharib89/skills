@@ -53,7 +53,9 @@ Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2
              per-phase field is its own range, and a re-opened phase sums its
              ranges. A per-phase field with no range, and an aggregate
              missing either of its two endpoints, read `unverified`, never a
-             number.)
+             number. A Run file rebuilt after a subagent overwrote it is one
+             cause of both: the ranges the rebuild could not recover are the
+             ranges it left out.)
 
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 ```

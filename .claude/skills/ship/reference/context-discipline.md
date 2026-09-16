@@ -133,6 +133,35 @@ left to right and the `Timing:` row needs no special case. The merge summary's
 `Timing:` row is computed from these stamps, and they are the only way to see
 which phase a slow run spent its hours in.
 
+**A failed `stamp` on a file you no longer recognize is a clobbered Run file.**
+Reading the file, as above, is how you find out: one that no longer holds the
+ten checklist items, or carries someone else's content in their place, was
+overwritten by a subagent that reached for the run's own path. Nothing checks
+for that before a flip, because `stamp` has already caught it (the script
+matched no line, the output is byte-identical, `cmp` fails the call), and a
+read before every flip would buy the same answer at the price of a read per
+flip. The recovery is what
+is left, and it happens in place:
+
+- **Rebuild the file** from what the run still holds: this transcript's stamps
+  and decisions, the design and plan, and the harness task list, which is the
+  file's mirror and says which phases opened and which closed.
+- **Invent no range.** A closed phase whose range you cannot recover is written
+  closed with no range, which is what makes its `Timing:` field read
+  `unverified` under the rule in [merge-gate.md](merge-gate.md). The phase that
+  was running when the file went is re-opened at the current clock, so the file
+  still holds exactly one `in_progress`; what it loses is that phase's earlier
+  time, which the log below carries as unverified.
+- **Log it in the deviations log**: what stood in the file's place (which
+  subagent's output, where that is identifiable), what was lost, what was
+  rebuilt, and which ranges are unverified. From there it reaches the PR body
+  and the merge summary.
+- **Re-check the mirror** against the rebuilt file, then flip again.
+
+Rebuild and record, in that order and every time: a Run file that can be
+rebuilt does not end a run, so a fresh blank checklist and a stop are both the
+wrong answer.
+
 One item per phase, exactly one `in_progress`, each `completed` only when its
 verification passed. A **small-lane** run keeps all ten and marks each
 collapsed phase `completed` with `skipped (small lane)`, so the record shows a
