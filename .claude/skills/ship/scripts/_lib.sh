@@ -413,9 +413,9 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
 # Replace the PREAMBLE of <body>, everything above its first `## ` heading, with
 # <body-file>'s content, and print the new body. A body with no heading is all
 # preamble. The preamble is where this repo's standard puts the Shape fence and
-# where `open-pr` puts the closing line, and until #173 nothing under scripts/
-# could rewrite it: an accepted body-shape finding in phase 7 could only be
-# reported.
+# where `open-pr` puts the closing line. Nothing under scripts/ could rewrite
+# that half before #173, so an accepted body-shape finding in phase 7 was
+# reported and left standing; this is what makes it a fix like any other.
 #
 # The boundary is the same column-0 `^## ` outside a fence that
 # ship_body_replace_section and _gh_add_closes read, so the two halves of a body
