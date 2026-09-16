@@ -54,7 +54,8 @@ is not in your context: read it once, at the start of the run, with
 Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits.
 
-Each of the mechanics named here answers `--help` with its own usage, and
+Every mechanic a run invokes, in this block and in the phases below, answers
+`--help` with its own usage;
 [reference/mechanics.md](reference/mechanics.md) is the contract all of them
 share.
 
@@ -287,9 +288,8 @@ other way to know. The frontmatter's
 phase 0 checks: a skill added here is added there too, or the run still fails
 at the phase that loads it.
 
-**0 · Isolate.** Every mechanic this phase and the nine after it run answers to
-[reference/mechanics.md](reference/mechanics.md). Run `preflight <issue>`, adding
-`--unattended` in an unattended run, which is what turns a `ready-for-human`
+**0 · Isolate.** Run `preflight <issue>`, adding `--unattended` in an unattended
+run, which is what turns a `ready-for-human`
 issue into the
 `ready-for-human: attended only` stop; a bare call admits it. It proves tooling
 and identity, and **push permission first where the host can answer it** (every
@@ -311,7 +311,8 @@ alongside a `mentioned_by[]` row per live cross-reference, open issues and
 open or merged PRs both, naming its `kind` and `state`.
 
 Then `read-issue <issue>`: the branch `<type>` and `<slug>` are derived from the
-issue.
+issue. Every mechanic this phase and the nine after it run answers to
+[reference/mechanics.md](reference/mechanics.md).
 
 Now isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
 `Carry:` files. It resolves the main checkout through `--git-common-dir`,
@@ -557,7 +558,7 @@ and review quota, so push when the tree changed.
 [reference/merge-gate.md](reference/merge-gate.md), uncompressed. Attended:
 post it in the conversation and wait for an explicit "merge": the word is
 exact, and a near miss is asked back rather than read as merge. On approval run
-`merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
+`merge <pr> <issue|none> [--worktree <path>]` then `cleanup <issue|none>`; any
 `false` in their JSON is finished by hand before reporting done. `merge` reads
 the PR first and refuses `pr-closed: <state>` for one that is neither open nor
 already merged, merging nothing: a human says "merge" about a PR, and a closed
