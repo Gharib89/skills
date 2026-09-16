@@ -203,4 +203,54 @@ check_rc "a state naming no phase of the ten is malformed" 2 \
   "$(rc init 403 --scratchpad "$tmp" --state 12=done)"
 
 
+# --- adversarial: a range shape that is text and not a stamp ---------------------
+
+# Ten lines of regex read as correct and answer wrong on the input nobody wrote
+# a case for: every field here can carry the stamp's own shape.
+a=$(out init 500 --scratchpad "$tmp" --legs 'nightly (09:00→17:00)' | jq -r '.run_file')
+out skip 3 'blocked (10:00→10:30)' --file "$a" >/dev/null
+check "a range inside a skip reason is wording, not time" \
+  unverified "$(out timing --file "$a" | jq -r '.phases["3"]')"
+check "a range inside a profile tail is wording, not time" \
+  unverified "$(out timing --file "$a" | jq -r '.phases["8"]')"
+out open 8 --file "$a" >/dev/null
+sed 's|^\(- \[ \] 8 · .*\) in_progress ([0-9][0-9]:[0-9][0-9]→)$|\1 (11:50→12:00)|; s|^- \[ \] 8|- [x] 8|' "$a" > "$a.x" && mv "$a.x" "$a"
+check "the stamp after a range-shaped tail is still read" \
+  10 "$(out timing --file "$a" | jq -r '.phases["8"]')"
+
+# The design and plan sit below the checklist in the same file, so a line of
+# the checklist's shape can appear there. One phase, one line: the first.
+b=$(out init 501 --scratchpad "$tmp" | jq -r '.run_file')
+out open 2 --file "$b" >/dev/null
+sed 's|^\(- \[ \] 2 · .*\) in_progress ([0-9][0-9]:[0-9][0-9]→)$|\1 (10:00→10:30)|; s|^- \[ \] 2|- [x] 2|' "$b" > "$b.x" && mv "$b.x" "$b"
+printf -- '- [x] 2 · note copied into the plan (00:00→00:01)\n' >> "$b"
+check "a line of the same shape below the checklist does not win" \
+  30 "$(out timing --file "$b" | jq -r '.phases["2"]')"
+
+# --- skip and open against a phase that already carries a state ----------------
+
+c=$(out init 502 --scratchpad "$tmp" | jq -r '.run_file')
+out open 5 --file "$c" >/dev/null; out close 5 --file "$c" >/dev/null
+check "skip on a phase that has run is refused" \
+  "phase 5 has already run; it cannot be skipped" "$(err skip 5 oops --file "$c")"
+check_rc "skip on a phase that has run exits 1" 1 "$(rc skip 5 oops --file "$c")"
+
+out skip 6 'small lane' --file "$c" >/dev/null
+check "skip on an already skipped phase is refused" \
+  "phase 6 is already skipped" "$(err skip 6 'small lane' --file "$c")"
+# The small lane revokes one way only, so a skipped phase can come back.
+out open 6 --file "$c" >/dev/null
+check "re-opening a skipped phase drops the skip" \
+  1 "$(line6=$(grep '^- \[.\] 6 · ' "$c"); printf '%s' "$line6" | grep -c 'Closes, reflect on the issue in_progress ([0-9][0-9]:[0-9][0-9]→)$')"
+
+# --- timing on the file the rebuild actually wrote -------------------------------
+
+check "an aggregate over a rebuilt file is unverified where a range was lost" \
+  unverified "$(out timing --file "$rb" | jq -r '.start_to_pr')"
+check "a range the rebuild recovered is still counted" \
+  10 "$(out timing --file "$rb" | jq -r '.phases["0"]')"
+check "the phase re-opened at the rebuild has no range yet" \
+  unverified "$(out timing --file "$rb" | jq -r '.phases["4"]')"
+
+
 finish

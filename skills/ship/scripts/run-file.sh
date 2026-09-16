@@ -5,11 +5,16 @@
 # and the merge summary's `Timing:` row is arithmetic rather than mental
 # subtraction.
 #
-#   run-file init <issue|slug> --scratchpad <dir> [--tripwires <t>]
-#                [--verifications <v>] [--reviewers <r>] [--legs <l>]
+#   run-file init <issue|slug> --scratchpad <dir> [--rebuild]
+#                [--state <n>=open|done|done:<HH:MM→HH:MM>|skipped:<reason>]...
+#                [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>]
 #   run-file open|close <n> --file <path>
 #   run-file skip <n> <reason> --file <path>
 #   run-file timing --file <path>
+#
+# `init` writes the ten items and returns them, one per harness task the run
+# then creates; `--rebuild` with `--state` is the recovery from a Run file a
+# subagent overwrote. A flip returns the `mirror` value for that phase's task.
 #
 # Reaches no host and no repo file: the scratchpad path is the only thing it
 # writes.
@@ -19,7 +24,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> --scratchpad <dir> [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> --file <path> | close <n> --file <path> | skip <n> <reason> --file <path> | timing --file <path>'
+usage='usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> --file <path> | close <n> --file <path> | skip <n> <reason> --file <path> | timing --file <path>'
 [ -n "${1:-}" ] || ship_tooling "$usage"
 verb=$1; shift
 case $verb in -*) ship_tooling "$usage" ;; esac
@@ -41,19 +46,35 @@ checklist() { # checklist <tripwires> <verifications> <reviewers> <legs>
 ITEMS
 }
 
-# One flip, one line. The line number is the address, so the replacement is
-# written whole rather than patched by a regex that could match twice.
-phase_line() { grep "^- \[.\] $1 · " "$file" | head -1; }
-open_phase()  { grep "^- \[.\] [0-9][0-9]* · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$" "$file" \
-                  | sed 's/^- \[.\] \([0-9][0-9]*\) · .*/\1/' | head -1; }
+# One phase, one line: the first line carrying that number, so a flip and
+# `timing` always mean the same line even where the design and plan below the
+# checklist carry a line of the same shape.
+phase_row()  { grep -n "^- \[.\] $1 · " "$file" | head -1; }
+# The item text: the line without its marker and without the suffixes a flip
+# owns. Ranges stay, because a re-open appends its own after them.
+item()       { printf '%s' "$1" | sed 's/^- \[.\] //; s/ in_progress ([0-9][0-9]:[0-9][0-9]→)$//; s/ skipped (.*)$//'; }
+# Has this phase run? The question is about the stamp region, so a range-shaped
+# substring inside the item's own wording (a profile tail, a skip reason) is
+# text and not time, exactly as `timing` reads it.
+ran()        { printf '%s\n' "$(item "$1")" | grep -q '([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]\(+1d\)\{0,1\})$'; }
+is_open()    { case $1 in *" in_progress ("??:??"→)") return 0 ;; esac; return 1; }
+open_phase() { grep "^- \[.\] [0-9][0-9]* · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$" "$file" \
+                 | sed 's/^- \[.\] \([0-9][0-9]*\) · .*/\1/' | head -1; }
+
+# Every line the mechanic writes is rendered here, so the flips and `init`'s
+# rebuild cannot drift into two spellings of the same state.
+render() { # render open|closed|done|skipped <item> [<stamp>]
+  case $1 in
+    open)    printf -- '- [ ] %s in_progress (%s→)' "$2" "$3" ;;
+    closed)  printf -- '- [x] %s (%s)' "$2" "$3" ;;
+    done)    printf -- '- [x] %s' "$2" ;;
+    skipped) printf -- '- [x] %s skipped (%s)' "$2" "$3" ;;
+  esac
+}
 write_line() { # write_line <lineno> <replacement>
   repl=$2 awk -v ln="$1" 'NR == ln { print ENVIRON["repl"]; next } { print }' "$file" > "$file.t" \
     && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
 }
-lineno()  { grep -n "^- \[.\] $1 · " "$file" | head -1 | cut -d: -f1; }
-# The item text: the line without its `- [ ] ` marker and without any stamp.
-item()    { printf '%s' "$1" | sed 's/^- \[.\] //; s/ in_progress ([0-9][0-9]:[0-9][0-9]→)$//'; }
-
 phase_arg() { # phase_arg <value>: the phase number, never a flag
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
   case ${1:-} in '' | *[!0-9]*) ship_tooling "$usage" ;; esac
@@ -69,6 +90,18 @@ parse_file() { # parse_file "$@": the --file flag every flip and timing takes
   [ -n "$file" ] || ship_tooling "$usage"
   [ -f "$file" ] || ship_fail "no Run file at $file"
 }
+# The row a flip acts on, or the refusal that it is not there.
+take_row() { # take_row <n>: sets line and lineno
+  row=$(phase_row "$1")
+  [ -n "$row" ] || ship_fail "no phase $1 line in $file"
+  lineno=${row%%:*}
+  line=${row#*:}
+}
+flip_json() { # flip_json <state> <line> <mirror> [<reason>]
+  jq -n --arg f "$file" --argjson n "$n" --arg s "$1" --arg l "$2" --arg m "$3" --arg r "${4:-}" \
+    '{run_file: $f, phase: $n, state: $s, line: $l, mirror: $m}
+     | if $r == "" then . else .reason = $r end'
+}
 
 case $verb in
 init)
@@ -79,23 +112,21 @@ init)
   rebuild=false states=""
   while [ $# -gt 0 ]; do
     case $1 in
-      --scratchpad)   [ $# -ge 2 ] || ship_tooling "--scratchpad needs a directory"; scratchpad=$2; shift 2 ;;
-      --tripwires)    [ $# -ge 2 ] || ship_tooling "--tripwires needs a value"; tripwires=$2; shift 2 ;;
+      --scratchpad)    [ $# -ge 2 ] || ship_tooling "--scratchpad needs a directory"; scratchpad=$2; shift 2 ;;
+      --tripwires)     [ $# -ge 2 ] || ship_tooling "--tripwires needs a value"; tripwires=$2; shift 2 ;;
       --verifications) [ $# -ge 2 ] || ship_tooling "--verifications needs a value"; verifications=$2; shift 2 ;;
-      --reviewers)    [ $# -ge 2 ] || ship_tooling "--reviewers needs a value"; reviewers=$2; shift 2 ;;
-      --legs)         [ $# -ge 2 ] || ship_tooling "--legs needs a value"; legs=$2; shift 2 ;;
-      --state)        [ $# -ge 2 ] || ship_tooling "--state needs <n>=<spec>"; states="$states$2
+      --reviewers)     [ $# -ge 2 ] || ship_tooling "--reviewers needs a value"; reviewers=$2; shift 2 ;;
+      --legs)          [ $# -ge 2 ] || ship_tooling "--legs needs a value"; legs=$2; shift 2 ;;
+      --state)         [ $# -ge 2 ] || ship_tooling "--state needs <n>=<spec>"; states="$states$2
 "; shift 2 ;;
-      --rebuild)      rebuild=true; shift ;;
+      --rebuild)       rebuild=true; shift ;;
       *) ship_tooling "unknown flag: $1" ;;
     esac
   done
   [ -n "$scratchpad" ] || ship_tooling "$usage"
-  dir="$scratchpad/ship-$id"
-  file="$dir/run.md"
-  # The rebuild path: a Run file a subagent overwrote is rebuilt in place, so
-  # the guard that keeps a resumed run from wiping its own record steps aside
-  # only when the caller says so.
+  file="$scratchpad/ship-$id/run.md"
+  # Every state is validated before anything is written, so a bad spec leaves
+  # no half-built file behind.
   state_usage='--state takes <0-9>=open|done|done:<HH:MM→HH:MM>|skipped:<reason>'
   open_states=0
   while IFS= read -r st; do
@@ -110,8 +141,11 @@ init)
 $states
 EOSTATES
   [ "$open_states" -le 1 ] || ship_fail "a Run file holds one open phase; $open_states were given"
+  # The rebuild path: a Run file a subagent overwrote is rebuilt in place, so
+  # the guard that keeps a resumed run from wiping its own record steps aside
+  # only when the caller says so.
   [ -e "$file" ] && [ "$rebuild" = false ] && ship_fail "Run file exists: $file (pass --rebuild to rebuild it in place)"
-  mkdir -p "$dir" || ship_tooling "cannot create $dir"
+  mkdir -p "$scratchpad/ship-$id" || ship_tooling "cannot create $scratchpad/ship-$id"
   items=$(checklist "$tripwires" "$verifications" "$reviewers" "$legs")
   { printf '# ship run · %s\n\n' "$id"
     printf '%s\n' "$items" | sed 's/^/- [ ] /'
@@ -119,16 +153,15 @@ EOSTATES
   } > "$file" || ship_tooling "cannot write $file"
   while IFS= read -r st; do
     [ -n "$st" ] || continue
-    n=${st%%=*}; spec=${st#*=}
-    line=$(phase_line "$n")
-    [ -n "$line" ] || ship_fail "no phase $n line in $file"
+    take_row "${st%%=*}"
+    spec=${st#*=}
     case $spec in
-      open)      new="- [ ] $(item "$line") in_progress ($(date -u +%H:%M)→)" ;;
-      done)      new="- [x] $(item "$line")" ;;
-      done:*)    new="- [x] $(item "$line") (${spec#done:})" ;;
-      skipped:*) new="- [x] $(item "$line") skipped (${spec#skipped:})" ;;
+      open)      new=$(render open "$(item "$line")" "$(date -u +%H:%M)") ;;
+      done)      new=$(render done "$(item "$line")") ;;
+      done:*)    new=$(render closed "$(item "$line")" "${spec#done:}") ;;
+      skipped:*) new=$(render skipped "$(item "$line")" "${spec#skipped:}") ;;
     esac
-    write_line "$(lineno "$n")" "$new"
+    write_line "$lineno" "$new"
   done <<EOAPPLY
 $states
 EOAPPLY
@@ -138,37 +171,30 @@ EOAPPLY
 open)
   phase_arg "${1:-}"; n=$1; shift
   parse_file "$@"
-  line=$(phase_line "$n")
-  [ -n "$line" ] || ship_fail "no phase $n line in $file"
+  take_row "$n"
   busy=$(open_phase)
   if [ -n "$busy" ]; then
     [ "$busy" = "$n" ] && ship_fail "phase $n is already open"
     ship_fail "phase $busy is open; close it before opening $n"
   fi
-  new="- [ ] $(item "$line") in_progress ($(date -u +%H:%M)→)"
-  write_line "$(lineno "$n")" "$new"
-  jq -n --arg f "$file" --argjson n "$n" --arg l "$new" \
-    '{run_file: $f, phase: $n, state: "open", line: $l, mirror: "in_progress"}'
+  new=$(render open "$(item "$line")" "$(date -u +%H:%M)")
+  write_line "$lineno" "$new"
+  flip_json open "$new" in_progress
   ;;
 close)
   phase_arg "${1:-}"; n=$1; shift
   parse_file "$@"
-  line=$(phase_line "$n")
-  [ -n "$line" ] || ship_fail "no phase $n line in $file"
-  case $line in
-    *" in_progress ("??:??"→)") : ;;
-    *) ship_fail "phase $n is not open" ;;
-  esac
+  take_row "$n"
+  is_open "$line" || ship_fail "phase $n is not open"
   start=${line##*in_progress (}
   start=${start%%→*}
   end=$(date -u +%H:%M)
   # A close stamped before its open crossed midnight UTC; the range still reads
   # left to right, and `timing` adds the day.
   [ "$end" \< "$start" ] && end="$end+1d"
-  new="- [x] $(item "$line") ($start→$end)"
-  write_line "$(lineno "$n")" "$new"
-  jq -n --arg f "$file" --argjson n "$n" --arg l "$new" \
-    '{run_file: $f, phase: $n, state: "closed", line: $l, mirror: "completed"}'
+  new=$(render closed "$(item "$line")" "$start→$end")
+  write_line "$lineno" "$new"
+  flip_json closed "$new" completed
   ;;
 skip)
   phase_arg "${1:-}"; n=$1; shift
@@ -176,15 +202,13 @@ skip)
   reason=$1; shift
   case $reason in -*) ship_tooling "$usage" ;; esac
   parse_file "$@"
-  line=$(phase_line "$n")
-  [ -n "$line" ] || ship_fail "no phase $n line in $file"
-  case $line in
-    *" in_progress ("??:??"→)") ship_fail "phase $n is open; close it before skipping it" ;;
-  esac
-  new="- [x] $(item "$line") skipped ($reason)"
-  write_line "$(lineno "$n")" "$new"
-  jq -n --arg f "$file" --argjson n "$n" --arg l "$new" --arg r "$reason" \
-    '{run_file: $f, phase: $n, state: "skipped", reason: $r, line: $l, mirror: "completed"}'
+  take_row "$n"
+  is_open "$line" && ship_fail "phase $n is open; close it before skipping it"
+  ran "$line" && ship_fail "phase $n has already run; it cannot be skipped"
+  case $line in *" skipped ("*) ship_fail "phase $n is already skipped" ;; esac
+  new=$(render skipped "$(item "$line")" "$reason")
+  write_line "$lineno" "$new"
+  flip_json skipped "$new" completed "$reason"
   ;;
 timing)
   parse_file "$@"
@@ -197,20 +221,28 @@ timing)
     function agg(a, b) { return (b < a) ? b + 1440 - a : b - a }
     /^- \[.\] [0-9][0-9]* · / {
       p = substr($0, 7); sub(/ .*/, "", p)
-      rest = $0; total = 0; found = 0
-      while (match(rest, /\([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9](\+1d)?\)/)) {
-        r = substr(rest, RSTART, RLENGTH)
-        rest = substr(rest, RSTART + RLENGTH)
+      if (p in seen) next          # one phase, one line: the first, as a flip reads it
+      seen[p] = 1
+      s = $0
+      sub(/ in_progress \([0-9][0-9]:[0-9][0-9]→\)$/, "", s)
+      sub(/ skipped \(.*\)$/, "", s)
+      total = 0; found = 0
+      # Only the trailing run of ranges is a stamp. A range-shaped substring
+      # inside the item text (a profile tail, a reason) is wording, not time,
+      # so the scan anchors at the end of the line and stops at the first
+      # thing that is not a range.
+      while (match(s, / \([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9](\+1d)?\)$/)) {
+        r = substr(s, RSTART, RLENGTH)
+        s = substr(s, 1, RSTART - 1)
         split(r, part, "→")
-        st = part[1]; sub(/^\(/, "", st)
+        st = part[1]; sub(/^ \(/, "", st)
         en = part[2]; day = (en ~ /\+1d/) ? 1440 : 0
         sub(/\+1d/, "", en); sub(/\)$/, "", en)
         total += mins(en) + day - mins(st)
-        if (!found) { first[p] = mins(st); found = 1 }
-        last[p] = mins(en) + day
+        if (!found) { last[p] = mins(en) + day; found = 1 }
+        first[p] = mins(st)        # the scan runs right to left, so this ends leftmost
       }
-      if (found) { phase[p] = total } else { phase[p] = "unverified" }
-      seen[p] = 1
+      phase[p] = found ? total : "unverified"
     }
     END {
       for (p in seen) printf "phase\t%s\t%s\n", p, phase[p]

@@ -65,13 +65,13 @@ verifications, the reviewer list and the CI `Legs:` (`--tripwires`,
 `--verifications`, `--reviewers`, `--legs`): it writes the ten-item checklist to
 `<scratchpad>/ship-<issue>/run.md`, a directory of its own so a subagent that
 reaches for the run's own name cannot overwrite the record, and returns the
-items, one per harness task you then create. The file is the run's **record**,
+items, one per harness task you then create (`TaskCreate`). The file is the run's **record**,
 the source of truth for where the run is and the home of the design and plan as
 they form; it survives a mid-run context summary, so never stop, narrow a phase
 or suggest a new session over context. The harness task list is its **display**:
 flip a phase with `run-file open <n>`, `close <n>` or `skip <n> "<reason>"`
 against `--file <path>`, then set that phase's task to the `mirror` value the
-flip returned. The mechanic owns the stamp, the one-open-phase invariant and
+flip returned (`TaskUpdate`). The mechanic owns the stamp, the one-open-phase invariant and
 every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
 a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
 the record shows a decision and not a gap. A harness that refuses the task tools
