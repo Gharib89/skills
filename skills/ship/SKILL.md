@@ -138,7 +138,8 @@ be read.
 
 | Mechanic | Phase |
 |---|---|
-| `run-file init <issue \| slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>]...`; `run-file open \| close \| skip <n> [<reason>] \| timing --file <path>` | the required first action, every phase flip, and the merge summary's `Timing:` row |
+| `run-file init <issue \| slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>]... [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>]` | the required first action |
+| `run-file open <n> --file <path>`, `run-file close <n> --file <path>`, `run-file skip <n> <reason> --file <path>`, `run-file timing --file <path>` | every phase flip, and the merge summary's `Timing:` row |
 | `preflight <issue \| none> [--unattended]` | 0 |
 | `read-issue <issue>` | 0 |
 | `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |

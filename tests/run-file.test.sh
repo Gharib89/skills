@@ -207,7 +207,15 @@ check_rc "a state naming no phase of the ten is malformed" 2 \
 
 # Ten lines of regex read as correct and answer wrong on the input nobody wrote
 # a case for: every field here can carry the stamp's own shape.
-a=$(out init 500 --scratchpad "$tmp" --legs 'nightly (09:00→17:00)' | jq -r '.run_file')
+check "init refuses a profile tail that ends in a stamp shape" \
+  '--tripwires cannot end in a stamp shape (HH:MM→HH:MM): the Run file reads one as time' \
+  "$(err init 499 --scratchpad "$tmp" --tripwires 'held (09:00→17:00)')"
+check_rc "a tail that ends in a stamp shape is malformed" 2 \
+  "$(rc init 498 --scratchpad "$tmp" --tripwires 'held (09:00→17:00)')"
+
+# A stamp shape the tail does not end on is wording: the scan anchors at the
+# end of the line, so only the end of a tail can be mistaken for time.
+a=$(out init 500 --scratchpad "$tmp" --legs 'nightly (09:00→17:00) only' | jq -r '.run_file')
 out skip 3 'blocked (10:00→10:30)' --file "$a" >/dev/null
 check "a range inside a skip reason is wording, not time" \
   unverified "$(out timing --file "$a" | jq -r '.phases["3"]')"
@@ -251,6 +259,17 @@ check "a range the rebuild recovered is still counted" \
   10 "$(out timing --file "$rb" | jq -r '.phases["0"]')"
 check "the phase re-opened at the rebuild has no range yet" \
   unverified "$(out timing --file "$rb" | jq -r '.phases["4"]')"
+
+
+check "skip on a phase rebuilt as done, which carries no range, is refused" \
+  "phase 2 has already run; it cannot be skipped" \
+  "$(rb2=$(out init 503 --scratchpad "$tmp" --state 2=done | jq -r '.run_file'); err skip 2 oops --file "$rb2")"
+
+check "a --state naming the same phase twice is refused" \
+  '--state names phase 0 twice' \
+  "$(err init 504 --scratchpad "$tmp" --state 0=done --state 0=open)"
+check_rc "a --state naming the same phase twice is malformed" 2 \
+  "$(rc init 505 --scratchpad "$tmp" --state 0=done --state 0=open)"
 
 
 finish

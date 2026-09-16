@@ -58,6 +58,15 @@ item()       { printf '%s' "$1" | sed 's/^- \[.\] //; s/ in_progress ([0-9][0-9]
 # text and not time, exactly as `timing` reads it.
 ran()        { printf '%s\n' "$(item "$1")" | grep -q '([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]\(+1d\)\{0,1\})$'; }
 is_open()    { case $1 in *" in_progress ("??:??"→)") return 0 ;; esac; return 1; }
+# The mechanic owns the stamp region, so it owns what may sit beside it: a
+# profile tail that ends in a stamp shape would be read as time by `timing`
+# and by `ran`, and phase 2's tail sits at the end of its line. Refusing it
+# here is what makes the anchoring at the end of a line unambiguous.
+reject_stamp_tail() { # reject_stamp_tail <flag> <value>
+  printf '%s\n' "$2" | grep -q '([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]\(+1d\)\{0,1\})$' \
+    && ship_tooling "$1 cannot end in a stamp shape (HH:MM→HH:MM): the Run file reads one as time"
+  return 0
+}
 open_phase() { grep "^- \[.\] [0-9][0-9]* · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$" "$file" \
                  | sed 's/^- \[.\] \([0-9][0-9]*\) · .*/\1/' | head -1; }
 
@@ -124,13 +133,21 @@ init)
     esac
   done
   [ -n "$scratchpad" ] || ship_tooling "$usage"
+  reject_stamp_tail --tripwires "$tripwires"
+  reject_stamp_tail --verifications "$verifications"
+  reject_stamp_tail --reviewers "$reviewers"
+  reject_stamp_tail --legs "$legs"
   file="$scratchpad/ship-$id/run.md"
   # Every state is validated before anything is written, so a bad spec leaves
   # no half-built file behind.
   state_usage='--state takes <0-9>=open|done|done:<HH:MM→HH:MM>|skipped:<reason>'
-  open_states=0
+  open_states=0 stated=""
   while IFS= read -r st; do
     [ -n "$st" ] || continue
+    # One state per phase: two for the same one would apply in order and leave
+    # a rebuild contradicting its own recovered state.
+    case " $stated " in *" ${st%%=*} "*) ship_tooling "--state names phase ${st%%=*} twice" ;; esac
+    stated="$stated${st%%=*} "
     case $st in
       [0-9]=open) open_states=$((open_states + 1)) ;;
       [0-9]=done | [0-9]=skipped:?*) : ;;
@@ -204,8 +221,11 @@ skip)
   parse_file "$@"
   take_row "$n"
   is_open "$line" && ship_fail "phase $n is open; close it before skipping it"
-  ran "$line" && ship_fail "phase $n has already run; it cannot be skipped"
   case $line in *" skipped ("*) ship_fail "phase $n is already skipped" ;; esac
+  # The marker is the mechanic's own record that the phase is done, so it
+  # answers before the stamps do: a phase rebuilt as `done` carries no range.
+  case $line in "- [x] "*) ship_fail "phase $n has already run; it cannot be skipped" ;; esac
+  ran "$line" && ship_fail "phase $n has already run; it cannot be skipped"
   new=$(render skipped "$(item "$line")" "$reason")
   write_line "$lineno" "$new"
   flip_json skipped "$new" completed "$reason"
