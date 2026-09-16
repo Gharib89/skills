@@ -4,7 +4,7 @@
 # line of the profile template, `metadata.profile-schema` in ship's SKILL.md,
 # and the `## Schema <n>` entry in the schema doc. Why that rule needs a gate is
 # in docs/agents/ship.md, under `## Local gate`. The `derived-copies` gate in
-# scripts/local-gate.sh is this.
+# scripts/local-gate.sh runs this, as one of its checks.
 #
 #   scripts/profile-schema-check.sh [<root>]
 #

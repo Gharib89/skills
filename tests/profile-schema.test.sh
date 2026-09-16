@@ -22,13 +22,17 @@ doc_file() { printf '# Profile schema\n\n'; printf '%s\n\n' "$@"; }
 tree() {
   local d="$fixture/$1"; rm -rf "$d"
   mkdir -p "$d/skills/setup-skills" "$d/skills/ship" || return 1
-  printf '%s' "$2" > "$d/skills/setup-skills/ship-profile.md"
-  printf '%s' "$3" > "$d/skills/ship/SKILL.md"
-  printf '%s' "$4" > "$d/skills/setup-skills/profile-schema.md"
+  printf '%s\n' "$2" > "$d/skills/setup-skills/ship-profile.md"
+  printf '%s\n' "$3" > "$d/skills/ship/SKILL.md"
+  printf '%s\n' "$4" > "$d/skills/setup-skills/profile-schema.md"
   printf '%s' "$d"
 }
 rc_of()  { bash scripts/profile-schema-check.sh "$1" >/dev/null 2>&1; printf '%s' "$?"; }
 out_of() { bash scripts/profile-schema-check.sh "$1" 2>/dev/null; }
+
+# The real tree, so a format change in the three files it reads fails a case
+# here rather than leaving every synthetic fixture green.
+check_rc "the current tree agrees" 0 "$(rc_of .)"
 
 check_rc "all three agree" 0 \
   "$(rc_of "$(tree agree "$(tmpl_file 2)" "$(ship_file 2)" "$(doc_file '## Schema 1' '## Schema 2')")")"
@@ -49,6 +53,14 @@ check_rc "ship's number with no doc entry is drift" 1 \
 check_rc "a second profile-schema line in the body is ignored" 0 \
   "$(rc_of "$(tree body-line "$(tmpl_file 2)" \
     "$(ship_file 2)$(printf 'more prose\n  profile-schema: 9\n')" \
+    "$(doc_file '## Schema 1' '## Schema 2')")")"
+
+# The frontmatter value is what stops that read, so drop it: with no key above
+# the first heading the body line is the only candidate, and the value is none.
+# Without this case the one above passes whatever the heading anchor does.
+check_rc "a body line is not read when the frontmatter has none" 1 \
+  "$(rc_of "$(tree body-only "$(tmpl_file 2)" \
+    "$(printf -- '---\nname: ship\n---\n\n# ship\n\n  profile-schema: 2\n')" \
     "$(doc_file '## Schema 1' '## Schema 2')")")"
 
 # A schema value carrying a regex metacharacter: the doc lookup is exact and
