@@ -85,7 +85,7 @@ One automated review bot the ship profile names for a repo, with its login, its 
 _Avoid_: review bot topology (the old three-shape framing), bot lane
 
 **Trigger**:
-How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request. Convergence and mechanics follow the trigger, never the bot's brand. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
+How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request, and where the host still posts an opening round on its own, the loop polls for that free round and takes it as round 1 rather than spending a request on it. Convergence and mechanics follow the trigger, never the bot's brand. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
 _Avoid_: mode, kind of bot
 
 **Fallback reviewer**:
