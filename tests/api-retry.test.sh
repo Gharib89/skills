@@ -14,9 +14,13 @@ SHIP_OWNER=owner SHIP_REPO=repo
 source skills/ship/scripts/_lib.sh
 source skills/ship/scripts/host/github.sh
 
-# The wrapper waits between attempts. The wait lengths are not under test, the
-# attempt count is, so a no-op shadows every sleep.
-sleep() { :; }
+# The wrapper waits between attempts. A no-op shadows the wait so the file runs
+# in no time, and records what it was asked for, because the growing backoff is
+# part of the contract: a regression to a flat 2 s would keep every attempt
+# count in this file and still lose the ~30 s window a 5xx outage needs.
+_waits=""
+sleep() { _waits="$_waits $1"; }
+waits() { printf '%s' "${_waits# }"; _waits=""; }
 
 bin=$(mktemp -d); trap 'rm -rf "$bin"' EXIT
 gh_fake_install "$bin"
@@ -63,17 +67,19 @@ check    "retries a 429"                               2 "$(gh_attempts)"
 
 # PR #170: minutes of 500s. The backoff is bounded, so a host that stays down
 # still fails, after five attempts rather than after two.
-gh_reset; export GH_STATUS_SEQ="500"
+gh_reset; _waits=""; export GH_STATUS_SEQ="500"
 api user >/dev/null 2>&1; rc=$?
 check_rc "a 500 burst fails once the backoff is spent" 1 "$rc"
 check    "bounds the 5xx backoff at five attempts"     5 "$(gh_attempts)"
+check    "and waits 2, 4, 8, 16 between them"          "2 4 8 16" "$(waits)"
 
 # A 4xx is the payload, not the host: one more attempt for the 401 flake, and
 # no backoff beyond it.
-gh_reset; export GH_STATUS_SEQ="400"
+gh_reset; _waits=""; export GH_STATUS_SEQ="400"
 api user >/dev/null 2>&1; rc=$?
 check_rc "a 400 that repeats fails"                    1 "$rc"
 check    "does not back off a 400"                     2 "$(gh_attempts)"
+check    "and waits 2 before its one retry"            "2" "$(waits)"
 
 gh_reset; export GH_STATUS_SEQ="401 200"
 api user >/dev/null 2>&1; rc=$?
