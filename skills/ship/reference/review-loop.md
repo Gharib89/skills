@@ -5,8 +5,10 @@ it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an optiona
 `Instructions:` file, and per trigger: `Request:` (on-request), `Resolve:`
 (on-push and on-request; auto-once converges on dispositioned threads and
 reads `None.`). The **trigger fixes the loop and convergence**; the bot's brand fixes
-nothing. Preflight has already parsed these blocks and refused the three
-malformed shapes, so what reaches this phase is a list you can drive.
+nothing. Preflight has already parsed these blocks and refused the four
+malformed shapes, and asked the host whether a Copilot reviewer's `Trigger:`
+matches the ruleset driving it, so what reaches this phase is a list you can
+drive.
 Zero reviewers: skip this phase; the review gate is phase 4's self-review plus
 green CI (SKILL.md), and reviewer rounds never replace it.
 
@@ -136,7 +138,9 @@ needs nothing from it.
 
 ### `on-push`
 
-Re-reviews every push, and the profile's `Cap:` bounds the rounds. After each
+Re-reviews every push. This is the trigger the `Cap:` budget does not bind: the
+host starts the rounds, so the number ends ship's engagement and the reviewer
+keeps posting. After each
 push, wait for a review **landed on the current head**, the **head** rule (no
 `--since`); silence on the head is never quiet.
 Triage, batch-fix, push, `reply-thread` on every `replied: false` thread. Once
@@ -152,7 +156,9 @@ and comments, which stay readable.
 
 ### `on-request`
 
-Nothing arrives until asked. `request-review <pr> <login>` issues the request
+Nothing arrives until asked, with one exception the loop below opens on: a
+**free round** the host delivers unbidden when the PR is created.
+`request-review <pr> <login>` issues the request
 and **reads it back** from the host's own record (the mechanic knows that the
 login you request and the login you read back can differ, and that an empty
 requested-reviewers list proves nothing). The profile's `Request:` picks the
@@ -169,7 +175,9 @@ request against the corrected tree.
 A **free round** is one the host delivers without a request: a Copilot ruleset
 with `review_on_push: false` still opens one when the PR does. Before the run's
 **first** request to any on-request reviewer, poll once for it, under the since
-rule with `open-pr`'s `created_at` and `--timeout 120`. A round already there
+rule with `open-pr`'s `created_at` and `--timeout 600`: PR #185's free round
+took just under seven minutes, so a bound of a minute or two reports `silent` on
+a review that is merely still coming. A round already there
 **is** round 1 and counts against `Cap:`; nothing there and the loop proceeds to
 its first request as written. A reviewer that gets no free round pays that one
 poll, where skipping it spends a round of a small cap re-asking for a review

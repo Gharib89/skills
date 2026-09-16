@@ -225,4 +225,30 @@ check "an unreadable ruleset yields no reason" \
 check "a reviewer with no Trigger: at all yields no reason, the null Trigger being its own fault elsewhere" \
   '' "$(ship_copilot_trigger_reason copilot '' true)"
 
+# --- ship_copilot_row: which block the host check is about ---------------------
+#
+# The selection preflight makes before it asks the host anything. An empty
+# trigger out of here is what makes the check skip itself, so the three ways it
+# comes back empty are the three ways preflight declines to ask.
+
+rows=$(ship_reviewers "$profile")
+
+check "the block posting under the login is found, name and trigger together" \
+  $'copilot\ton-push' "$(ship_copilot_row 'copilot-pull-request-reviewer[bot]' "$rows")"
+
+check "the login match ignores case, the host spelling one way and the profile another" \
+  $'copilot\ton-push' "$(ship_copilot_row 'Copilot-Pull-Request-Reviewer[BOT]' "$rows")"
+
+check "a login no block posts under selects nothing, so nothing is asked of the host" \
+  '' "$(ship_copilot_row 'nobody[bot]' "$rows")"
+
+check "an adapter with no Copilot prints no login, and an empty login selects nothing" \
+  '' "$(ship_copilot_row '' "$rows")"
+
+# A block whose own Trigger: is missing is a fault `ship_reviewer_reasons` owns;
+# the host check declines it rather than refusing it twice under two messages.
+notrig=$(printf '## Reviewers\n\n### copilot\n\nLogin: copilot-pull-request-reviewer[bot]\nCap: 3\nGating: no\n\n## Coding standards\n')
+check "a block with no Trigger: comes back named but triggerless" \
+  $'copilot\t' "$(ship_copilot_row 'copilot-pull-request-reviewer[bot]' "$(ship_reviewers "$notrig")")"
+
 finish

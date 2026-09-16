@@ -518,7 +518,8 @@ Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
 **7 · Reviewers.** For each reviewer under `## Reviewers`, drive it to
 convergence. Each reviewer's `Trigger:` (`auto-once`, `on-push`, `on-request`)
 fixes its loop and its convergence test, its `Request:` fixes how a round is
-asked for, and the profile's `Cap:` bounds its rounds; the brand fixes nothing.
+asked for, and the profile's `Cap:` budgets the rounds **ship drives**, which is
+every round only under a trigger ship starts; the brand fixes nothing.
 Zero reviewers: skip the phase. **Order: every reviewer whose `Fallback-for:`
 reads `None.` first, then the fallbacks**, because a fallback's whole input is
 how the reviewer it names exited. A fallback is requested once, for any degraded
