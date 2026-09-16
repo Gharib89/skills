@@ -63,12 +63,12 @@ open_phase() { grep "^- \[.\] [0-9][0-9]* · .* in_progress ([0-9][0-9]:[0-9][0-
 
 # Every line the mechanic writes is rendered here, so the flips and `init`'s
 # rebuild cannot drift into two spellings of the same state.
-render() { # render open|closed|done|skipped <item> [<stamp>]
+render() { # render open|closed|rangeless|skipped <item> [<stamp>]
   case $1 in
-    open)    printf -- '- [ ] %s in_progress (%s→)' "$2" "$3" ;;
-    closed)  printf -- '- [x] %s (%s)' "$2" "$3" ;;
-    done)    printf -- '- [x] %s' "$2" ;;
-    skipped) printf -- '- [x] %s skipped (%s)' "$2" "$3" ;;
+    open)      printf -- '- [ ] %s in_progress (%s→)' "$2" "$3" ;;
+    closed)    printf -- '- [x] %s (%s)' "$2" "$3" ;;
+    rangeless) printf -- '- [x] %s' "$2" ;;
+    skipped)   printf -- '- [x] %s skipped (%s)' "$2" "$3" ;;
   esac
 }
 write_line() { # write_line <lineno> <replacement>
@@ -157,7 +157,7 @@ EOSTATES
     spec=${st#*=}
     case $spec in
       open)      new=$(render open "$(item "$line")" "$(date -u +%H:%M)") ;;
-      done)      new=$(render done "$(item "$line")") ;;
+      done)      new=$(render rangeless "$(item "$line")") ;;
       done:*)    new=$(render closed "$(item "$line")" "${spec#done:}") ;;
       skipped:*) new=$(render skipped "$(item "$line")" "${spec#skipped:}") ;;
     esac
