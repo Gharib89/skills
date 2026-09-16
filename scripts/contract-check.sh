@@ -129,8 +129,10 @@ done
 # and nothing on stderr. No mechanic is exempt, the four that take no positional
 # included: a run reads a mechanic's flags by running it, and one that has none
 # still answers with its name. Like check 2 this cannot police where the guard
-# sits; the empty-stderr assertion is the part that catches a --help answered
-# after the adapter loaded, because that is where a host's own complaint lands.
+# sits, and no assertion here can: the adapter load makes no host call, so a late
+# guard answers this check correctly on a machine that can load one. The reason
+# the guard belongs before `ship_load_host` is the machine that cannot: there a
+# late guard answers --help with a tooling error instead of the usage line.
 err=$(mktemp) || { echo "cannot create a temp file" >&2; exit 2; }
 trap 'rm -f "$err"' EXIT
 for path in "$dir"/*.sh; do

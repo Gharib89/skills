@@ -2,16 +2,13 @@
 # Shared helpers for ship's generic mechanics. Sourced, never executed.
 # Serves ship's own scripts only: a repo's local gate never sources this.
 #
-# Every mechanic prints one JSON object on stdout (built with jq -n), a failing
-# step's last 40 log lines on stderr, and exits 0 ok / 1 real failure / 2 tooling.
+# What a mechanic answers, exit codes, --help, the vocabulary a read comes back
+# in and all, is ../reference/mechanics.md. It is the one copy: a second one
+# here would be the copy that goes stale.
 #
 # Host adapter interface. Each mechanic sources exactly one of host/github.sh or
 # host/ado.sh, chosen from the origin remote, never from a flag. An adapter
-# defines every function below; reads come back in one vocabulary on both hosts:
-# checks pending|success|failure, mergeable clean|conflict|unknown, review
-# approved|changes|comment, and threads as `resolved: true|false` per thread, or
-# the whole `threads` field as the string "unavailable" when the state could not
-# be read.
+# defines every function below, in that read vocabulary.
 #
 #   host_tooling_reasons                 -> one missing-tool reason per line
 #   host_tooling_install                 -> install the host CLI where absent; non-zero = could not
@@ -122,9 +119,10 @@ ship_fail_host() { # ship_fail_host <msg> <adapter-answer>
 # flags are rather than reading them out of SKILL.md, so the answer is the same
 # usage string the mechanic's guards print, on stdout, exit 0, nothing on
 # stderr. Called on the line after the usage assignment, before every other
-# guard and before ship_load_host: --help is not a malformed invocation and
-# reaches no host. Only the first argument is read, because --help behind real
-# arguments is a call the caller meant to make.
+# guard and before ship_load_host: a guard placed after it answers --help with a
+# tooling error wherever the adapter cannot load, which is exactly where someone
+# is asking what the flags are. Only the first argument is read, because --help
+# behind real arguments is a call the caller meant to make.
 ship_help() { # ship_help <usage> "$@"
   local usage=$1; shift
   [ "${1:-}" = --help ] || return 0
