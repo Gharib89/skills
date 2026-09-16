@@ -19,14 +19,19 @@ root=${1:-.}
 tmpl=$root/skills/setup-skills/ship-profile.md
 ship=$root/skills/ship/SKILL.md
 doc=$root/skills/setup-skills/profile-schema.md
-for f in "$tmpl" "$ship" "$doc"; do
-  [ -f "$f" ] || { printf 'not a file: %s\n' "$f" >&2; exit 2; }
-done
 
-tmpl_schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' "$tmpl")
-ship_schema=$(awk '/^# /{exit} /^  profile-schema: /{print $2; exit}' "$ship")
+# A file this cannot read is tooling, not drift: awk and grep report that in
+# their exit status, and an ignored status turns it into a value of `none` and
+# a drift message about a file nobody read. grep alone answers 1 for no match,
+# which is an answer, and 2 or more for a failure.
+tmpl_schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' "$tmpl") \
+  || { printf 'cannot read %s\n' "$tmpl" >&2; exit 2; }
+ship_schema=$(awk '/^# /{exit} /^  profile-schema: /{print $2; exit}' "$ship") \
+  || { printf 'cannot read %s\n' "$ship" >&2; exit 2; }
+grep -qxF "## Schema $ship_schema" "$doc"; st=$?
+[ "$st" -le 1 ] || { printf 'cannot search %s\n' "$doc" >&2; exit 2; }
 doc_entry=missing
-grep -qxF "## Schema $ship_schema" "$doc" && doc_entry=present
+[ "$st" -eq 0 ] && doc_entry=present
 [ "$tmpl_schema" = "$ship_schema" ] && [ "$doc_entry" = present ] && exit 0
 echo "profile schema drift: ship-profile.md declares Schema ${tmpl_schema:-none}," \
      "ship reads profile-schema ${ship_schema:-none}," \

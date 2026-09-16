@@ -85,4 +85,13 @@ missing=$(tree missing "$(tmpl_file 2)" "$(ship_file 2)" "$(doc_file '## Schema 
 rm -f "$missing/skills/ship/SKILL.md"
 check_rc "a missing file under the root is tooling" 2 "$(rc_of "$missing")"
 
+# The same path for a file that is there and cannot be read: the selector's own
+# exit status is the only report of it, and an ignored one reads as a value of
+# `none`, which is drift. A directory at the path rather than a chmod, so the
+# case fails for the same reason whatever uid runs it.
+unreadable=$(tree unreadable "$(tmpl_file 2)" "$(ship_file 2)" "$(doc_file '## Schema 2')")
+rm -f "$unreadable/skills/setup-skills/profile-schema.md"
+mkdir -p "$unreadable/skills/setup-skills/profile-schema.md"
+check_rc "a file that cannot be read is tooling" 2 "$(rc_of "$unreadable")"
+
 finish
