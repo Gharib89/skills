@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 4.3.0
+  version: 5.0.0
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -87,9 +87,13 @@ Missing file: stop `profile missing`, naming `docs/agents/ship.md` and
 them. A fact the current run needs that reads `None.` where it cannot be none is also
 `profile invalid`; a fact the run will not touch is never checked. The reviewer
 blocks are the exception, checked whatever the run touches, because preflight
-parses them: an on-request reviewer with no `Cap:`, a `Fallback-for:` on a
-reviewer that is not on-request, and a `Fallback-for:` naming a reviewer the
-profile does not list are all refused there, before the claim.
+parses them: an on-request reviewer with no `Cap:`, a `Cap:` that is neither a
+number nor `None.`, a `Fallback-for:` on a reviewer that is not on-request, and
+a `Fallback-for:` naming a reviewer the profile does not list are all refused
+there, before the claim. So is the one reviewer fact the host settles rather
+than the block: a Copilot reviewer whose `Trigger:` disagrees with the
+`copilot_code_review` ruleset that drives it. A ruleset preflight cannot read
+warns on stderr and admits the run.
 
 **Re-validate an edited profile with `preflight none`.** A run that changes the
 profile, or refreshes the ship copy that reads it, proves the new pair with the
@@ -422,8 +426,7 @@ coding-standards file the Standards axis reads, by their leading words: a
 vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, a fix landed after
 review. Reviewer rounds find these otherwise, serially, at the cost of most of a
-run's wall time; the reverted-fix one they never find at all, a vacuous
-assertion reading from a diff exactly like a sound one.
+run's wall time, and the reverted-fix one they never find at all.
 This self-review plus green CI is the review gate; reviewers in phase 7 are a
 second pair of eyes on top, never a substitute.
 

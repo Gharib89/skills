@@ -88,19 +88,17 @@ a fresh read of the committed tree, not a conversation.
   or `None.` for an uncapped loop. On-request it is required with no default,
   where a round costs a request; on-push it is a number or `None.`, where a
   round costs a push, a wait on the new head, and a triage and a reply per
-  thread; `auto-once` delivers one round and reads `None.`. **It bounds the
-  rounds ship drives, never the rounds the host posts.** A reviewer the host
-  re-runs on its own keeps posting past the number, which then ends ship's
-  engagement rather than the reviewer's: run #182 drew nine rounds against a cap
-  of three, and rounds 4 to 9 carried eleven of its fifteen fixes. Where that
-  gap matters the fix is the trigger, not the number. A round at the cap that is
-  still substantive means the budget ran out with the reviewer still finding
-  things, which is not the same as the reviewer repeating itself: disposition it
-  in full (push its batch, reply to every thread, resolve where the trigger
-  resolves), then exit `degraded: cap-hit` without waiting for another round,
-  and say in that reviewer's block whether the last round was still landing real
-  findings. The exit is a budget the human weighs at the merge gate, never a
-  verdict on the reviewer.
+  thread; `auto-once` delivers one round and reads `None.`. It is a **budget**
+  for the rounds ship drives, which is every round only where ship starts them:
+  a reviewer the host re-runs on its own keeps posting past the number, so under
+  on-push the budget ends ship's engagement while the reviewer carries on. Where
+  a repo needs the number to bind, pick a trigger ship starts. A round at the
+  cap that is still substantive means the budget ran out while the reviewer was
+  still finding things: disposition it in full (push its batch, reply to every
+  thread, resolve where the trigger resolves), exit `degraded: cap-hit` without
+  waiting for another round, and say in that reviewer's block whether that last
+  round was still landing real findings, which is what tells the human at the
+  merge gate whether the budget was the right one.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the
   merge summary and its own line in the PR body's `## Review` section
   (`update-pr-body` at phase-7 exit): `converged`,
@@ -168,17 +166,18 @@ back is what `--since` takes. One request yields one round; the
 reviewer does not re-review on push, so each round after the first is a new
 request against the corrected tree.
 
-**Poll before the first request.** Some on-request reviewers get their first
-round free: a Copilot ruleset with `review_on_push: false` still opens one when
-the PR does. So before issuing the run's **first** request to a reviewer, poll
-once under the since rule with `open-pr`'s `created_at` on a short timeout. A
-round already there **is** round 1 and counts against `Cap:`; nothing there and
-the loop proceeds to its first request as written. The rule holds for every
-on-request reviewer, not only the ones known to get a free round: one that gets
-none finds nothing and has paid a single short poll, where skipping the poll
-spends a round of a small cap re-asking for a review that had already landed. Loop: request, poll under the **since**
-rule with `request-review`'s `requested_at`, triage, batch-fix, push,
-`reply-thread` on every `replied: false` thread, request again. A round that
+A **free round** is one the host delivers without a request: a Copilot ruleset
+with `review_on_push: false` still opens one when the PR does. Before the run's
+**first** request to any on-request reviewer, poll once for it, under the since
+rule with `open-pr`'s `created_at` and `--timeout 120`. A round already there
+**is** round 1 and counts against `Cap:`; nothing there and the loop proceeds to
+its first request as written. A reviewer that gets no free round pays that one
+poll, where skipping it spends a round of a small cap re-asking for a review
+that had already landed.
+
+Loop: request, poll under the **since** rule with `request-review`'s
+`requested_at`, triage, batch-fix, push, `reply-thread` on every
+`replied: false` thread, request again. A round that
 opened threads takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.
@@ -199,7 +198,9 @@ because a fallback's only input is how its primary exited.
 
 - The primary exited `degraded: <any reason>`: request the fallback **once**,
   then drive it as an ordinary on-request reviewer under its own `Cap:`, by the
-  section above. Which degraded reason the primary hit changes nothing here; the
+  section above, the free-round poll included: that first request is the one it
+  runs ahead of, and a fallback reached through a comment transport reliably
+  finds nothing there, which is the one short poll the rule costs. Which degraded reason the primary hit changes nothing here; the
   human wanted a review on the PR and the reason is a footnote. Its exit is an
   ordinary one, `converged` or `degraded: <reason>` of its own.
 - The primary exited `converged` or `converged, override needed`: **do not

@@ -175,15 +175,25 @@ host_can_push() { api "$R" --jq '.permissions.push // false'; }
 # `setup-skills` maps an absent rule to: nothing here draws a round from a push,
 # which is precisely what `false` asserts to `ship_copilot_trigger_reason`.
 host_copilot_review_on_push() {
-  local ids id rop
+  local ids id review_on_push
   ids=$(api "$R/rulesets" --jq '.[] | select(.enforcement == "active") | .id') || return 1
   for id in $ids; do
-    rop=$(api "$R/rulesets/$id" \
+    review_on_push=$(api "$R/rulesets/$id" \
       --jq '.rules[]? | select(.type == "copilot_code_review") | .parameters.review_on_push') || return 1
-    case $rop in true|false) printf '%s\n' "$rop"; return 0 ;; esac
+    # One ruleset carrying the rule twice answers on two lines, and a two-line
+    # value matches neither arm below and would read as "no rule here". First
+    # line wins instead, the way the first ruleset carrying it does.
+    review_on_push=${review_on_push%%$'\n'*}
+    case $review_on_push in true|false) printf '%s\n' "$review_on_push"; return 0 ;; esac
   done
   printf 'false\n'
 }
+
+# The login `copilot_code_review` governs. Here rather than in `preflight.sh`,
+# because a bot's brand is host detail and a generic mechanic matches on the
+# trigger, never the brand. An adapter with no Copilot prints nothing, which is
+# what makes the check skip rather than branch on the host name.
+host_copilot_login() { printf 'copilot-pull-request-reviewer[bot]\n'; }
 
 _norm_issue='{number, title, body: (.body // ""),
   state: (if .state == "open" then "open" else "closed" end),

@@ -115,15 +115,23 @@ else
   # Scoped to the Copilot login, because `copilot_code_review` governs that
   # reviewer alone. An unreadable answer warns and continues: preflight refuses a
   # profile that is wrong, never one it could not check.
-  copilot_trigger=$(jq -r '.[] | select((.login // "") | ascii_downcase
-                                        == "copilot-pull-request-reviewer[bot]")
-                           | .trigger // "" ' <<<"$rows" | head -1)
-  if [ -n "$copilot_trigger" ]; then
-    if rop=$(host_copilot_review_on_push); then
-      reason=$(ship_copilot_trigger_reason copilot "$copilot_trigger" "$rop")
+  copilot_login=$(host_copilot_login)
+  if [ -n "$copilot_login" ]; then
+    # Tab-joined, because the reason names the block and the check reads its
+    # trigger, and a row losing one of the two is how a refusal ends up naming
+    # the wrong reviewer.
+    copilot_row=$(jq -r --arg l "$copilot_login" \
+      '.[] | select((.login // "") | ascii_downcase == ($l | ascii_downcase))
+           | "\(.name)\t\(.trigger // "")"' <<<"$rows" | head -1)
+    copilot_name=${copilot_row%%	*}
+    copilot_trigger=${copilot_row#*	}
+  fi
+  if [ -n "${copilot_trigger:-}" ]; then
+    if review_on_push=$(host_copilot_review_on_push); then
+      reason=$(ship_copilot_trigger_reason "$copilot_name" "$copilot_trigger" "$review_on_push")
       [ -z "$reason" ] || reasons+=("$reason")
     else
-      echo "warning: could not read the copilot_code_review ruleset; Trigger: $copilot_trigger is unchecked" >&2
+      echo "warning: could not read the copilot_code_review ruleset; $copilot_name Trigger: $copilot_trigger is unchecked" >&2
     fi
   fi
 fi

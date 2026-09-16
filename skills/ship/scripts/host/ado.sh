@@ -388,3 +388,6 @@ host_issues_ready() { # <label>
 # GitHub adapter gives for a ruleset it cannot read, which is what lets preflight
 # hold one warn-and-continue path rather than branching on the host.
 host_copilot_review_on_push() { return 1; }
+
+# No Copilot reviewer on this host, so no login to match and nothing to check.
+host_copilot_login() { :; }
