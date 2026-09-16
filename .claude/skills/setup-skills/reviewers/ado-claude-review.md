@@ -73,6 +73,7 @@ steps:
         -H "Content-Type: application/json" \
         -d "$body" > /dev/null
     done
+    touch "$(Build.ArtifactStagingDirectory)/posted.ok"   # every finding is on the PR; only the gate below can fail now
     crit=$(jq '[.findings[] | select(.severity=="critical")] | length' "$F")
     echo "critical findings: $crit"
     [ "$crit" -eq 0 ] || exit 1
@@ -88,14 +89,16 @@ steps:
 # posts nothing, which is the silence it exists to break.
 - bash: |
     set -uo pipefail
+    # A `critical` finding fails the step above by design, so failed() is true on
+    # a round that already posted everything it found. The marker is what tells
+    # that apart from a round that died: the verdict cannot, because Claude can
+    # succeed and the posting loop still fail after it.
+    [ -f "$(Build.ArtifactStagingDirectory)/posted.ok" ] && exit 0
     R="$(Build.ArtifactStagingDirectory)/result.json"
     reason=""
     [ -f "$R" ] && reason=$(jq -r '.subtype // ""' "$R" 2>/dev/null || echo "")
     reason=$(printf '%s\n' "$reason" | head -n 1)
-    # A `critical` finding fails the step above by design, so failed() is true on
-    # a round that worked. A verdict in the result file is how the two are told
-    # apart: the review ran, and there is nothing to speak about.
-    case $reason in success) exit 0 ;; '') reason=unknown ;; esac
+    case $reason in ''|success) reason=unknown ;; esac
     BUILD="$(System.CollectionUri)$(System.TeamProjectId)/_build/results?buildId=$(Build.BuildId)"
     URL="$(System.CollectionUri)$(System.TeamProjectId)/_apis/git/repositories/$(Build.Repository.ID)/pullRequests/$(System.PullRequest.PullRequestId)/threads?api-version=7.1"
     body=$(jq -n --arg r "$reason" --arg u "$BUILD" '
@@ -114,7 +117,7 @@ steps:
 
 Proven on the first onboarding run (ship-ado-lab): a 51-file skill-install PR exhausted a 30-turn cap before any verdict, so the build failed with `error_max_turns` and no threads, and the gating policy rejected the PR. Keep the derived copies in the diff (excluding them removes the only review gate on files that drive agent actions) and rely on the prompt line above plus the 60-turn cap. `--model claude-opus-5` pins the tier, as [`github-claude-review.md`](github-claude-review.md) does: a review is judgment work, and a cheaper tier reads the diff and misses the standards violation in it. The `--max-budget-usd 5` beside it was measured before that pin and has not been re-measured against Opus, so a round that stops on budget rather than on a verdict is the number to revisit first. `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` works in place of `ANTHROPIC_API_KEY`.
 
-`Speak when the round failed` is what keeps a dead round distinguishable. Claude failing before a verdict posts no thread and fails the build, so a ship run polling the PR reads `degraded: silent` and cannot tell it from a reviewer that never fired, the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent; the first-run note above is that case. It costs one closed thread per failed round and nothing on a round that succeeds, the `critical` finding included: that one fails the build by design, and the step reads the verdict off the result file and stays quiet. Dropping the step restores the silent failure. It needs no permission the job did not already have: the same threads endpoint under the same `System.AccessToken` the post-findings step uses. The `tee` in the review step is what feeds it, keeping Claude's raw result on disk for the `subtype` while `jq` still reads the structured output off the same stream and `pipefail` still fails the step when Claude does. `succeeded()` on the post-findings step is what keeps the two from both firing: a bare `condition:` replaces the implicit `succeeded()` rather than adding to it, so without it a failed round runs the posting loop against a findings file that was never written. The review step keeps its bare condition: a failed install leaves no verdict either way, which is a round the last step is right to report.
+`Speak when the round failed` is what keeps a dead round distinguishable. Claude failing before a verdict posts no thread and fails the build, so a ship run polling the PR reads `degraded: silent` and cannot tell it from a reviewer that never fired, the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent; the first-run note above is that case. It costs one closed thread per failed round and nothing on a round that succeeds, the `critical` finding included: that one fails the build by design, and the `posted.ok` marker the posting step leaves behind its loop is what keeps the last step quiet. The marker and not the verdict, because Claude can return `success` and the posting loop still die on a 403 or a malformed findings file, and that round is as silent as one that never reviewed. Dropping the step restores the silent failure. It needs no permission the job did not already have: the same threads endpoint under the same `System.AccessToken` the post-findings step uses. The `tee` in the review step is what feeds it, keeping Claude's raw result on disk for the `subtype` while `jq` still reads the structured output off the same stream and `pipefail` still fails the step when Claude does. `succeeded()` on the post-findings step is what keeps the two from both firing: a bare `condition:` replaces the implicit `succeeded()` rather than adding to it, so without it a failed round runs the posting loop against a findings file that was never written. The review step keeps its bare condition: a failed install leaves no verdict either way, which is a round the last step is right to report.
 
 Known gaps, to settle on the first real run. The failure-speaking step is unverified: no run in the source repo can execute an Azure Pipelines step, so its condition, its `subtype` read and its thread POST are proven only by the first failed round on a real pipeline. The other gap is older: the threads API documents `pullRequestThreadContext.changeTrackingId` as required for line anchoring on PRs with iterations. If threads land at PR level instead of on the line, look the id up from the PR iterations API and add it to the body.
 
