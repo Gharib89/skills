@@ -150,6 +150,13 @@ for path in "$dir"/*.sh; do
     "usage: $m"|"usage: $m "*) ;;
     *) printf '%s: --help did not print its own usage line on stdout\n' "$m"; rc=1; continue ;;
   esac
+  # The usage line and nothing else: a case pattern matches across newlines, so
+  # the prefix above accepts whatever a mechanic prints under it.
+  if [ "$(printf '%s\n' "$out" | wc -l)" -ne 1 ]; then
+    printf '%s: --help printed more than its usage line on stdout\n' "$m"
+    rc=1
+    continue
+  fi
   [ -s "$err" ] && { printf '%s: --help wrote to stderr\n' "$m"; rc=1; }
 done
 
