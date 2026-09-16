@@ -49,7 +49,12 @@ help_case update-pr-title 'usage: update-pr-title <pr> --title "<subject>"'
 
 # A mechanic added without a case above would leave the contract untested for
 # the one mechanic nobody thought about.
-present=$(ls "$dir"/*.sh | sed 's|.*/||; s|\.sh$||' | grep -v '^_lib$' | sort)
-check "every mechanic has a case" "$present" "$(printf '%s' "$covered" | sort)"
+present=""
+for path in "$dir"/*.sh; do
+  m=${path##*/}; m=${m%.sh}
+  [ "$m" = _lib ] || present="$present$m
+"
+done
+check "every mechanic has a case" "$(printf '%s' "$present" | sort)" "$(printf '%s' "$covered" | sort)"
 
 finish

@@ -120,7 +120,7 @@ for path in "$dir"/*.sh; do
       rc=1
       continue
     fi
-    printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | startswith("usage: " + $m)))' >/dev/null 2>&1 \
+    printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | test("^usage: " + $m + "( |$)")))' >/dev/null 2>&1 \
       || { printf '%s: %s leading-dash positional(s) did not answer with its own usage line\n' "$m" "$i"; rc=1; }
   done
 done
@@ -144,8 +144,10 @@ for path in "$dir"/*.sh; do
     rc=1
     continue
   fi
+  # The name ends at the string or at a space: a bare prefix match takes
+  # `usage: read-issue-other` for read-issue's own line.
   case $out in
-    "usage: $m"*) ;;
+    "usage: $m"|"usage: $m "*) ;;
     *) printf '%s: --help did not print its own usage line on stdout\n' "$m"; rc=1; continue ;;
   esac
   [ -s "$err" ] && { printf '%s: --help wrote to stderr\n' "$m"; rc=1; }

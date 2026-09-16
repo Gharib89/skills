@@ -121,6 +121,13 @@ check "a --help answer that writes to stderr is named" \
   'read-issue: --help wrote to stderr' "$(out_of "$d")"
 check_rc "a --help answer that writes to stderr fails the check" 1 "$(rc_of "$d")"
 
+# The mechanic's name has to end where its own usage line ends it. A prefix
+# match alone takes another mechanic's line as this one's.
+d=$(help_stub help-name-prefix '[ "${1:-}" = --help ] && { echo "usage: read-issue-other <issue>"; exit 0; }')
+check "a --help answer naming a longer mechanic is named" \
+  'read-issue: --help did not print its own usage line on stdout' "$(out_of "$d")"
+check_rc "a --help answer naming a longer mechanic fails the check" 1 "$(rc_of "$d")"
+
 # Check 3: the Bash 3.2 target. A file under skills/ runs in whatever shell a
 # consumer machine provides, macOS's system Bash included, and the mechanics
 # carry no `set -e`, so a Bash 4 builtin there is a skipped line and a silent
