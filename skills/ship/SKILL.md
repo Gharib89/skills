@@ -109,7 +109,9 @@ a positional belongs and a flag without its value all print
 `{"error": "<usage>"}` and exit 2, as an unknown flag does. Exit 1 is an
 answer, not always a fault: `nothing-ready` from `select`, a not-actionable
 `preflight` and a `poll-pr` window that closed are all exit 1 and none is red.
-Read the JSON, then decide. When a phase names a mechanic, run it
+A failed PR write carries the host's `status` beside its `error`: a 5xx or a 429
+outlasted the mechanic's own backoff, so retrying is the fix; any other status is
+the payload, so the body is. Read the JSON, then decide. When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that
 step, including the host adapter it sources (`scripts/host/github.sh` or
 `scripts/host/ado.sh`, chosen from the `origin` remote).
@@ -478,7 +480,8 @@ carrying `## ` lines of its own, which are example text and not sections.
 **A body has two halves and a mechanic reaches each.** `--section <name>`
 replaces one section; `--preamble` replaces everything above the first heading,
 where the closing line sits and, where no template gives `## Summary`, where the
-Shape sits. A preamble write carries the old closing line over when the new
+Shape sits. A body with no heading at all is preamble entire, so a `--preamble`
+write replaces the whole of it. A preamble write carries the old closing line over when the new
 content lacks one, so the link to the issue survives the rewrite.
 
 **The Summary opens with a Shape.** Draw it from the diff here, not from

@@ -119,6 +119,12 @@ check "a fenced closing keyword is not carried" \
   "$(printf 'a shape\n\n## Summary\n\ns')" \
   "$(ship_body_replace_preamble "$(printf '```\nCloses #76\n```\n\n## Summary\n\ns')" "$new")"
 
+# A closing keyword inside a code span is a mention too, the way ship_body_closes
+# reads one: the span comes out before the line is tested.
+check "a closing keyword in a code span is not carried" \
+  "$(printf 'a shape\n\n## Summary\n\ns')" \
+  "$(ship_body_replace_preamble "$(printf 'the phrase `Closes #76` is quoted here\n\n## Summary\n\ns')" "$new")"
+
 # An empty preamble file with a closing line to carry leaves no leading blank.
 : > "$new"
 check "an empty new preamble is just the carried line" \

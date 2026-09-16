@@ -288,6 +288,14 @@ readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
 # count for #81.
 readonly SHIP_CLOSES_RE='\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))\s+(#[0-9]+[\s,]+(and[\s,]+)?)*#'
 
+# ship_unfenced <text>: <text> with every fenced block taken out, opener and
+# closer included, by SHIP_AWK_FENCE. What is left is the text a closing test
+# reads: a "Closes #n" inside a fence is example text, not a claim.
+ship_unfenced() { # ship_unfenced <text>
+  awk "$SHIP_AWK_FENCE"'
+    { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1"
+}
+
 # Closing-keyword test, the same on both hosts: does <body> claim to close
 # <issue>? Fenced blocks and inline code come out first (a PR quoting
 # "Closes #n" while discussing another PR mentions the issue, it does not claim
@@ -305,8 +313,7 @@ readonly SHIP_CLOSES_RE='\b(clos(e[sd]?|ing)|fix(e[sd]|ing)?|resolv(e[sd]?|ing))
 # length three rather than a fence form of its own.
 ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
   local unfenced
-  unfenced=$(awk "$SHIP_AWK_FENCE"'
-    { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1")
+  unfenced=$(ship_unfenced "$1")
   jq -e -n --arg body "$unfenced" --arg n "$2" --arg re "$SHIP_CLOSES_RE" '
     $body
     | gsub("(?s)(`+).*?\\1"; "")
@@ -322,8 +329,7 @@ ship_body_closes() { # ship_body_closes <body> <issue> -> exit 0 when it does
 # not one line's claim to close anything.
 ship_body_closing_line() { # ship_body_closing_line <text>
   local unfenced
-  unfenced=$(awk "$SHIP_AWK_FENCE"'
-    { was = fenced; fenced = ship_fence($0); if (!was && !fenced) print }' <<<"$1")
+  unfenced=$(ship_unfenced "$1")
   jq -rn --arg body "$unfenced" --arg re "$SHIP_CLOSES_RE" '
     $body | split("\n")
     | map(select(gsub("(`+).*?\\1"; "") | test($re + "[0-9]+\\b"; "i")))
@@ -421,7 +427,7 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
 # backslash escapes in its value the way it did to a `--section` name.
 ship_body_replace_preamble() { # ship_body_replace_preamble <body> <body-file>
   local content carried pre
-  content=$(cat "$2") || return 2
+  content=$(cat "$2")
   pre=$(awk "$SHIP_AWK_FENCE"'
     { fenced = ship_fence($0) }
     !fenced && /^## / { exit }

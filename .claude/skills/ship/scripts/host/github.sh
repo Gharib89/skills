@@ -47,8 +47,8 @@ _gh() {
 # dies unread, so both helpers below print it instead. The `( )` is what makes
 # the `exit` end this call rather than the mechanic that made it.
 _gh_status() { jq -n --argjson s "${SHIP_HTTP_STATUS:-null}" '{status: $s}'; }
-# A create: no retry, because creates go through `_gh_create_verify`.
-_gh_post()  { ( _gh "$@" || { _gh_status; exit 1; } ); }
+# A create: one attempt, because creates go through `_gh_create_verify`.
+_gh_create() { ( _gh "$@" || { _gh_status; exit 1; } ); }
 # A write through the retrying wrapper: nothing on success, the status on failure.
 _gh_write() { ( api "$@" >/dev/null || { _gh_status; exit 1; } ); }
 
@@ -170,7 +170,7 @@ host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_rea
 # pipe answers that way only under the `pipefail` every mechanic sets, which is
 # where a failed `api` upstream of a `jq` becomes the pipeline's exit status.
 #
-# A <post> goes through `_gh_post`, not `api`: `api` retries on its own, and a
+# A <post> goes through `_gh_create`, not `api`: `api` retries on its own, and a
 # create is retried only after the re-read.
 #
 # Whichever way this fails, what it prints last is the failed POST's status, so
@@ -193,7 +193,7 @@ host_issue_create() { # <title> <body-file> <label>
   _issue_post() {
     jq -n --arg t "$title" --rawfile b "$file" --arg l "$label" \
       '{title: $t, body: $b, labels: (if $l == "" then [] else [$l] end)}' \
-      | _gh_post -X POST "$R/issues" --input - --jq '{number, url: .html_url}'
+      | _gh_create -X POST "$R/issues" --input - --jq '{number, url: .html_url}'
   }
   _issue_find() {
     api "$R/issues?state=open&creator=$me&sort=created&direction=desc&per_page=20" --jq '.[]' \
@@ -233,7 +233,7 @@ host_pr_create() { # <head> <base> <title> <body-file> <issue>
   _pr_post() {
     jq -n --arg h "$head" --arg b "$base" --arg t "$title" --arg body "$body" \
       '{head: $h, base: $b, title: $t, body: $body, draft: false}' \
-      | _gh_post -X POST "$R/pulls" --input - --jq '{number, url: .html_url, created_at}'
+      | _gh_create -X POST "$R/pulls" --input - --jq '{number, url: .html_url, created_at}'
   }
   _pr_find() {
     api "$R/pulls?state=open&head=$SHIP_OWNER:$head" --jq 'first | select(. != null) | {number, url: .html_url, created_at}'
@@ -363,7 +363,7 @@ host_pr_request_review() { # <pr> <login>
 host_pr_comment() { # <pr> <body-file>
   local pr=$1 file=$2 me
   me=$(host_identity) || return 1
-  _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | _gh_post -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url, created_at}'; }
+  _comment_post() { jq -n --rawfile b "$file" '{body: $b}' | _gh_create -X POST "$R/issues/$pr/comments" --input - --jq '{id, url: .html_url, created_at}'; }
   _comment_find() {
     api "$R/issues/$pr/comments?per_page=100" --paginate --jq '.[]' \
       | jq -s --arg me "$me" --rawfile b "$file" '[.[] | select(.user.login == $me and .body == $b)] | last | select(. != null) | {id, url: .html_url, created_at}'
@@ -399,7 +399,7 @@ host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
   [ -n "$cid" ] && [ "$cid" != null ] || { printf '{"replied": false, "url": null, "detail": "no such thread"}\n'; return 1; }
   me=$(host_identity) || return 1
   _reply_post() { jq -n --rawfile b "$file" '{body: $b}' \
-    | _gh_post -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}'; }
+    | _gh_create -X POST "$R/pulls/$pr/comments/$cid/replies" --input - --jq '{replied: true, url: .html_url}'; }
   _reply_find() {
     local raw
     raw=$(api "$R/pulls/$pr/comments?per_page=100" --paginate --jq '.[]') || return 1
