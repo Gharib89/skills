@@ -33,6 +33,7 @@ set -uo pipefail
 # `git ls-remote --exit-code` returning non-zero is a SUCCESS signal.
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: merge <pr> <issue|none> [--worktree <path>]'
+ship_help "$usage" "$@"
 [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 pr=$1; issue=$2; shift 2
 case $pr in -*) ship_tooling "$usage" ;; esac

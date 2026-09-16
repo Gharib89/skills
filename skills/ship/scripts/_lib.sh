@@ -118,6 +118,20 @@ ship_fail_host() { # ship_fail_host <msg> <adapter-answer>
   exit 1
 }
 
+# ship_help <usage> "$@": the --help contract. A run asks the script what its
+# flags are rather than reading them out of SKILL.md, so the answer is the same
+# usage string the mechanic's guards print, on stdout, exit 0, nothing on
+# stderr. Called on the line after the usage assignment, before every other
+# guard and before ship_load_host: --help is not a malformed invocation and
+# reaches no host. Only the first argument is read, because --help behind real
+# arguments is a call the caller meant to make.
+ship_help() { # ship_help <usage> "$@"
+  local usage=$1; shift
+  [ "${1:-}" = --help ] || return 0
+  printf '%s\n' "$usage"
+  exit 0
+}
+
 # ship_tail40 <file>: a failing step's evidence, never the whole log.
 ship_tail40() { tail -n 40 "$1" >&2; }
 

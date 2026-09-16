@@ -14,6 +14,8 @@ copy() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills/ship/scripts "$d"; pri
 # <case-dir>: a fresh copy of the whole skills tree, for one Bash 4+ mutation.
 copy_skills() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills "$d"; printf '%s' "$d"; }
 rc_of() { bash scripts/contract-check.sh "$1" "${2:-skills}" >/dev/null 2>&1; printf '%s' "$?"; }
+# The checker's own stdout, for the cases that assert which violation it named.
+out_of() { bash scripts/contract-check.sh "$1" "${2:-skills}" 2>/dev/null; }
 
 # The real skills tree is the second argument here, so this case holds check 3
 # as well: the tree that ships carries no Bash 4+ construct outside the
@@ -56,8 +58,11 @@ check_rc "exit 2 without a JSON error object fails the check" 1 "$(rc_of "$d")"
 # The four mechanics that legitimately take no argument are not held to check 2:
 # a bare invocation of one is a real run, not a malformed invocation.
 d=$(copy excluded)
+# The stub answers --help because check 5 exempts nobody: without that branch
+# the fixture would fail on check 5 and the case would assert the wrong thing.
 cat > "$d/base-fresh.sh" <<'EOF'
 #!/usr/bin/env bash
+[ "${1:-}" = --help ] && { echo "usage: base-fresh"; exit 0; }
 printf '{"fresh":true}\n'
 exit 0
 EOF
@@ -86,6 +91,35 @@ usage='usage: read-issue <issue>'
 printf '{"number":"%s"}\n' "$1"
 EOF
 check_rc "a three-positional mechanic is caught only by the third dash" 1 "$(rc_of "$d")"
+
+# Check 5: the --help contract. Each stub answers checks 2 and 4 the way a real
+# mechanic does, so the one violation in the fixture is the one under test and
+# the checker's whole stdout is the line it names.
+help_stub() { # <case-dir> <help-branch>
+  local d; d=$(copy "$1")
+  { printf '#!/usr/bin/env bash\n'
+    printf "usage='usage: read-issue <issue>'\n"
+    [ -n "$2" ] && printf '%s\n' "$2"
+    printf 'case ${1:-} in ""|-*) printf %s "$usage"; exit 2 ;; esac\n' "'{\"error\":\"%s\"}\\n'"
+    printf 'printf %s "$1"\n' "'{\"number\":\"%s\"}\\n'"
+  } > "$d/read-issue.sh"
+  printf '%s' "$d"
+}
+
+d=$(help_stub help-unanswered '')
+check "a mechanic that does not answer --help is named" \
+  'read-issue: --help exited 2, expected 0' "$(out_of "$d")"
+check_rc "a mechanic that does not answer --help fails the check" 1 "$(rc_of "$d")"
+
+d=$(help_stub help-wrong-line '[ "${1:-}" = --help ] && { echo "see the docs"; exit 0; }')
+check "a --help answer that is not the usage line is named" \
+  'read-issue: --help did not print its own usage line on stdout' "$(out_of "$d")"
+check_rc "a --help answer that is not the usage line fails the check" 1 "$(rc_of "$d")"
+
+d=$(help_stub help-noisy '[ "${1:-}" = --help ] && { echo "$usage"; echo noise >&2; exit 0; }')
+check "a --help answer that writes to stderr is named" \
+  'read-issue: --help wrote to stderr' "$(out_of "$d")"
+check_rc "a --help answer that writes to stderr fails the check" 1 "$(rc_of "$d")"
 
 # Check 3: the Bash 3.2 target. A file under skills/ runs in whatever shell a
 # consumer machine provides, macOS's system Bash included, and the mechanics

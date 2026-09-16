@@ -20,6 +20,9 @@
 # mechanic makes it reach the host once: that failure is the finding, and the
 # ids it sends cannot exist.
 #
+# Check 5 is the --help contract: a run asks a mechanic what its flags are by
+# running it, so the answer has to be the usage line, on stdout, exit 0.
+#
 # stdout: one line per violation, with the offending mechanic named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
@@ -120,6 +123,30 @@ for path in "$dir"/*.sh; do
     printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | startswith("usage: " + $m)))' >/dev/null 2>&1 \
       || { printf '%s: %s leading-dash positional(s) did not answer with its own usage line\n' "$m" "$i"; rc=1; }
   done
+done
+
+# 5. Every mechanic answers `--help` with its own usage line on stdout, exit 0
+# and nothing on stderr. No mechanic is exempt, the four that take no positional
+# included: a run reads a mechanic's flags by running it, and one that has none
+# still answers with its name. Like check 2 this cannot police where the guard
+# sits; the empty-stderr assertion is the part that catches a --help answered
+# after the adapter loaded, because that is where a host's own complaint lands.
+err=$(mktemp) || { echo "cannot create a temp file" >&2; exit 2; }
+trap 'rm -f "$err"' EXIT
+for path in "$dir"/*.sh; do
+  m=$(basename "$path" .sh)
+  [ "$m" = _lib ] && continue
+  out=$(bash "$path" --help 2>"$err"); st=$?
+  if [ "$st" -ne 0 ]; then
+    printf '%s: --help exited %s, expected 0\n' "$m" "$st"
+    rc=1
+    continue
+  fi
+  case $out in
+    "usage: $m"*) ;;
+    *) printf '%s: --help did not print its own usage line on stdout\n' "$m"; rc=1; continue ;;
+  esac
+  [ -s "$err" ] && { printf '%s: --help wrote to stderr\n' "$m"; rc=1; }
 done
 
 exit $rc

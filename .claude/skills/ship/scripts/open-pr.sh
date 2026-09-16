@@ -22,6 +22,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path>'
+ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 n=$1; shift
 case $n in -*) ship_tooling "$usage" ;; esac
