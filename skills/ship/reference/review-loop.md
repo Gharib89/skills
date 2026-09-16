@@ -3,7 +3,8 @@
 The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
 it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an optional
 `Instructions:` file, and per trigger: `Request:` (on-request), `Resolve:`
-(any trigger whose reviewer opens threads). The **trigger fixes the loop and convergence**; the bot's brand fixes
+(on-push and on-request; auto-once converges on dispositioned threads and
+reads `None.`). The **trigger fixes the loop and convergence**; the bot's brand fixes
 nothing. Preflight has already parsed these blocks and refused the three
 malformed shapes, so what reaches this phase is a list you can drive.
 Zero reviewers: skip this phase; the review gate is phase 4's self-review plus

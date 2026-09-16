@@ -111,10 +111,11 @@ answer, not always a fault: `nothing-ready` from `select`, a not-actionable
 `preflight` and a `poll-pr` window that closed are all exit 1 and none is red.
 A failed write to an open PR's body or title, a comment or a thread reply
 carries the host's `status` beside its `error`: a 5xx or a 429 outlasted the
-mechanic's own backoff, so retrying is the fix; any other status, and `null`
-where the call never got an HTTP answer, means the request itself is what to
-look at. `open-pr` and `file-issue` answer with the error alone, and their
-stderr carries the host's own message. Read the JSON, then decide.
+mechanic's own backoff, so retrying is the fix; any other number is the request
+itself, so read the body you sent. `null` is neither: the call never got an HTTP
+answer at all, so the host or the tooling between you and it is what to look at.
+`open-pr` and `file-issue` answer with the error alone, and their stderr carries
+the host's own message. Read the JSON, then decide.
 
 When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that

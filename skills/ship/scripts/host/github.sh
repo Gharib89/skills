@@ -54,6 +54,11 @@ _GH_AWK_SPLIT='
 # payload. This function has one exit path, so the explicit removal covers it.
 _gh() {
   local raw rc err
+  # Cleared before anything can fail, so a call that gives up here reports no
+  # status rather than the one the call before it left standing. `api` clears it
+  # too, on the way in; this one covers `_gh_create`, which reaches `_gh`
+  # without passing through `api`.
+  SHIP_HTTP_STATUS=
   err=$(mktemp) || return 2
   raw=$(gh api -i "$@" 2>"$err"); rc=$?
   SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | awk -v want=status "$_GH_AWK_SPLIT")

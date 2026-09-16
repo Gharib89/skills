@@ -64,7 +64,7 @@ unclosed=$(ship_fence_unclosed "$content")
 # `## ` has none, so a non-empty test passes on the one heading most likely to
 # be a typo.
 if [ "$preamble" = true ] && [ "$(ship_body_headings "$content" | wc -l)" -gt 0 ]; then
-  ship_tooling "a preamble carries no \`## \` heading: the preamble ends at the first one"
+  ship_tooling "preamble body file carries a \`## \` heading: the preamble ends at the first one"
 fi
 ship_load_host
 

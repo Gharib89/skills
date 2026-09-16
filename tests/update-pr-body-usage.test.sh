@@ -45,7 +45,7 @@ printf 'a lede\n\n## Summary\n' > "$heading"
 # The preamble is what sits above the first heading, so a heading in the file
 # opens a section, and the carried closing line then lands inside it.
 check "a preamble file carrying a heading is refused" \
-  'a preamble carries no `## ` heading: the preamble ends at the first one' \
+  'preamble body file carries a `## ` heading: the preamble ends at the first one' \
   "$(err 7 --preamble --body-file "$heading")"
 check_rc "a heading in a preamble file is tooling" 2 "$(rc 7 --preamble --body-file "$heading")"
 
@@ -54,7 +54,7 @@ check_rc "a heading in a preamble file is tooling" 2 "$(rc 7 --preamble --body-f
 # than reading them.
 printf 'a lede\n\n## \n' > "$heading"
 check "a preamble file carrying an empty heading is refused too" \
-  'a preamble carries no `## ` heading: the preamble ends at the first one' \
+  'preamble body file carries a `## ` heading: the preamble ends at the first one' \
   "$(err 7 --preamble --body-file "$heading")"
 
 printf '## Summary\n\n```diff\n- before\n+ after\n' > "$open_fence"
