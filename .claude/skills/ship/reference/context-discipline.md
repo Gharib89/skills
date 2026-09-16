@@ -147,11 +147,11 @@ is left, and it happens in place:
   and decisions, the design and plan, and the harness task list, which is the
   file's mirror and says which phases opened and which closed.
 - **Invent no range.** A closed phase whose range you cannot recover is written
-  closed with no range, which is what makes its `Timing:` field read
-  `unverified` under the rule in [merge-gate.md](merge-gate.md). The phase that
-  was running when the file went is re-opened at the current clock, so the file
-  still holds exactly one `in_progress`; what it loses is that phase's earlier
-  time, which the log below carries as unverified.
+  closed with no range. The phase that was running when the file went is
+  re-opened at the current clock, so the file still holds exactly one
+  `in_progress`. Both phases read `unverified` on the merge summary's `Timing:`
+  row under the rule in [merge-gate.md](merge-gate.md), the first for the range
+  it has not got and the second because the range it has starts at the rebuild.
 - **Log it in the deviations log**: what stood in the file's place (which
   subagent's output, where that is identifiable), what was lost, what was
   rebuilt, and which ranges are unverified. From there it reaches the PR body

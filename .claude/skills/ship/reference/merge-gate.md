@@ -55,7 +55,9 @@ Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2
              missing either of its two endpoints, read `unverified`, never a
              number. A Run file rebuilt after a subagent overwrote it is one
              cause of both: the ranges the rebuild could not recover are the
-             ranges it left out.)
+             ranges it left out, and the phase it re-opened at the rebuild
+             reads `unverified` whatever range that phase now carries, since
+             the clock on it started at the rebuild and not at the phase.)
 
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 ```
