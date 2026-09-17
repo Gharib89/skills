@@ -43,7 +43,7 @@ lines() { awk 'END{print NR}' "$1"; }
 # other line, a fence delimiter among them, ending it, so a bullet in the prose
 # below is prose. An entry names a heading when its bracketed link text, or its
 # whole text where the `](` is not there to make it a link, equals the heading;
-# both sides are trimmed, so trailing whitespace and a CRLF line ending, neither
+# both sides are trimmed at both ends, so padding and a CRLF line ending, neither
 # of them visible in the file a reader compares the list against, are neither.
 #
 #   contents_check <file> <display-name> <line-count>
@@ -68,7 +68,7 @@ contents_check() {
       }
       if (fenced) next
       if ($0 ~ /^## /) {
-        h = substr($0, 4); sub(/[ \t\r]+$/, "", h)
+        h = substr($0, 4); sub(/^[ \t]+/, "", h); sub(/[ \t\r]+$/, "", h)
         if (h == "Contents") { if (NR <= 15) anchored = 1; listing = 1; next }
         listing = 0; heads[h] = 1; horder[++nh] = h
         next
@@ -78,7 +78,10 @@ contents_check() {
         if ($0 !~ /^[ \t]*([-*+]|[0-9]+\.)[ \t]+/) { listing = 0; next }
         e = $0
         sub(/^[ \t]*([-*+]|[0-9]+\.)[ \t]+/, "", e); sub(/[ \t\r]+$/, "", e)
-        if (match(e, /^\[[^]]*\]\(/)) e = substr(e, RSTART + 1, RLENGTH - 3)
+        if (match(e, /^\[[^]]*\]\(/)) {
+          e = substr(e, RSTART + 1, RLENGTH - 3)
+          sub(/^[ \t]+/, "", e); sub(/[ \t]+$/, "", e)
+        }
         ents[e] = 1; eorder[++ne] = e
       }
     }
