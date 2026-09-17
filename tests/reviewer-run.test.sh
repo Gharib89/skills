@@ -35,7 +35,13 @@ pick() {
   done
 }
 # `runs.fail` present: the host refuses the run read, the way an outage does.
-[ "${1:-}" = run ] && { [ -f "$FAKE/runs.fail" ] && exit 1; pick runs; exit 0; }
+# `runs.failonce`: it refuses the first call and answers the next, the way a
+# flake does.
+if [ "${1:-}" = run ]; then
+  [ -f "$FAKE/runs.fail" ] && exit 1
+  [ -f "$FAKE/runs.failonce" ] && { rm -f "$FAKE/runs.failonce"; exit 1; }
+  pick runs; exit 0
+fi
 path=$2; [ "$2" = -i ] && { path=$3; printf 'HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n'; }
 case $path in
   graphql) printf '{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}\n'; exit 0 ;;
@@ -214,6 +220,16 @@ check_rc "a refused run read closes the window at --timeout" 1 "$rc"
 check "a refused run read is unavailable, not a missing run" '"unavailable"' \
   "$(jq -c '.reviewer_run' <<<"$out")"
 check "and it buys no extra poll" 1 "$(calls reviews)"
+
+# A read that flaked once is not an outage: the adapter's retry is what keeps a
+# bad second from reporting a working reviewer unreachable.
+reset
+: > "$FAKE/runs.failonce"
+run_row completed success > "$FAKE/runs.1.json"
+printf ''                 > "$FAKE/reviews.1.json"
+out=$(poll --await-run claude-review.yml)
+check "a run read that flakes once still answers" 'completed success' \
+  "$(jq -r '[.reviewer_run.status, .reviewer_run.conclusion] | join(" ")' <<<"$out")"
 
 # An answer the filter cannot walk is the same nothing as a refused read: the
 # mechanic still prints one JSON object, which is what the caller parses.

@@ -42,9 +42,9 @@
 # Such a run is attached to the default branch's SHA, so `checks` cannot see it,
 # and the one signal left was the absence of a review. With the flag the window
 # is the RUN's lifetime and `--timeout` only its floor: a run that has not
-# finished keeps the poll going, and the 1800 s ceiling is the bound on what the
-# run may add, so a `--timeout` past it is the caller's own window, which the run
-# then extends by nothing. A run that concluded successfully buys one more
+# finished keeps the poll going, and the ceiling the usage line states is the
+# bound on what the run may add, so a `--timeout` past it is the caller's own
+# window, which the run then extends by nothing. A run that concluded successfully buys one more
 # interval for the row to appear; one that concluded any other way closes the
 # window there and then, whatever `--timeout` had left, carrying its URL, which
 # the review loop reads as `infra-error` rather than `silent`, or, where the

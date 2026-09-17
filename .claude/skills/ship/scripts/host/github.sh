@@ -452,14 +452,21 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # size: a truncated read drops the run the poll is waiting on and reads as a
 # reviewer that never queued. Its stderr is tailed the way `_gh` tails its own,
 # because a CLI diagnostic is unbounded and the caller prints one JSON object.
+_gh_run_list() { # <workflow-file> <since-iso>
+  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 200 \
+    --json status,conclusion,createdAt,url,displayTitle \
+    --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})'
+}
 host_workflow_runs() { # <workflow-file> <since-iso>
   local err rc
   err=$(mktemp) || return 2
   trap 'rm -f "$err"' RETURN
-  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 200 \
-    --json status,conclusion,createdAt,url,displayTitle \
-    --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})' 2>"$err"
-  rc=$?
+  _gh_run_list "$1" "$2" 2>"$err"; rc=$?
+  # The flat one retry `gql` keeps rather than `api`'s backoff: a read that
+  # answers non-zero reports the reviewer unreachable, and this CLI family is the
+  # one the header names as flaking 401 mid-session, so a bad second would
+  # otherwise be read as evidence about a reviewer that is working.
+  if [ "$rc" -ne 0 ]; then sleep 2; : > "$err"; _gh_run_list "$1" "$2" 2>"$err"; rc=$?; fi
   [ "$rc" -eq 0 ] || ship_tail40 "$err"
   return $rc
 }
