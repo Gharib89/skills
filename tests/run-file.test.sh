@@ -313,5 +313,25 @@ check "the same reason is refused through --state" 2 \
 check "a phase the refused skip touched is untouched" \
   1 "$(grep -c '^- \[ \] 3 · [^(]*$' "$w")"
 
+# A phase is one line, so a reason that spans two would split its line and leave
+# the item's own text loose in the file.
+nl=$(printf 'small lane\nheld (10:00→10:30)')
+held=$(cat "$w")
+check "a reason carrying a newline is refused" \
+  "a phase is one line: that reason carries a newline; reword it" \
+  "$(err skip 3 "$nl" --file "$w")"
+check_rc "a multi-line reason is malformed" 2 "$(rc skip 3 "$nl" --file "$w")"
+check "the refused reason left the Run file untouched" "$held" "$(cat "$w")"
+
+# init decides every state before it writes, so a rebuild refused on its reason
+# leaves the record it was asked to recover exactly as it was.
+v=$(out init 510 --scratchpad "$tmp" | jq -r '.run_file')
+out open 4 --file "$v" >/dev/null
+was=$(cat "$v")
+check_rc "a rebuild whose reason ends in a state shape is malformed" 2 \
+  "$(rc init 510 --scratchpad "$tmp" --rebuild --state '3=skipped:x) in_progress (10:00→')"
+check "the refused rebuild leaves the Run file it was asked to recover" \
+  "$was" "$(cat "$v")"
+
 
 finish

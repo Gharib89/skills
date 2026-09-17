@@ -75,7 +75,9 @@ they form; it survives a mid-run context summary, so never stop, narrow a phase
 or suggest a new session over context. The harness task list is its **display**:
 flip a phase with `run-file open <n>`, `close <n>` or `skip <n> "<reason>"`
 against `--file <path>`, then set that phase's task to the `mirror` value the
-flip returned (`TaskUpdate`). The mechanic owns the stamp, the one-open-phase invariant and
+flip returned (`TaskUpdate`); close a phase only once its verification passed,
+which is judgement the mechanic cannot hold: it stamps whatever close it is
+given. It owns the stamp, the one-open-phase invariant and
 every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
 a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
 the record shows a decision and not a gap. A harness that refuses the task tools

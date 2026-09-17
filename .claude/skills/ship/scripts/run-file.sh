@@ -67,6 +67,8 @@ is_open()    { case $1 in *" in_progress ("[0-9][0-9]:[0-9][0-9]"→)") return 0
 # The rendered line is what the file holds, so the rendered line is what is
 # checked.
 reject_written_state() { # reject_written_state <rendered line>
+  [ "${1%%$'\n'*}" = "$1" ] \
+    || ship_tooling "a phase is one line: that reason carries a newline; reword it"
   printf '%s\n' "$1" \
     | grep -Eq '\([0-9]{2}:[0-9]{2}→([0-9]{2}:[0-9]{2}(\+1d)?)?\)$' \
     && ship_tooling "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it"
@@ -169,7 +171,11 @@ init)
     stated="$stated${st%%=*} "
     case $st in
       [0-9]=open) open_states=$((open_states + 1)) ;;
-      [0-9]=done | [0-9]=skipped:?*) : ;;
+      [0-9]=done) : ;;
+      # The reason is free text, and it is decided here with every other state:
+      # under `--rebuild` the write is what the caller is recovering from, so a
+      # refusal after it would destroy the record this call exists to restore.
+      [0-9]=skipped:?*) sp=${st#*=}; reject_written_state "$(render skipped x "${sp#skipped:}")" ;;
       [0-9]=done:[0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9] | [0-9]=done:[0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]+1d) : ;;
       *) ship_tooling "$state_usage" ;;
     esac
@@ -195,7 +201,7 @@ EOSTATES
       open)      new=$(render open "$(item "$line")" "$(date -u +%H:%M)") ;;
       done)      new=$(render rangeless "$(item "$line")") ;;
       done:*)    new=$(render closed "$(item "$line")" "${spec#done:}") ;;
-      skipped:*) new=$(render skipped "$(item "$line")" "${spec#skipped:}"); reject_written_state "$new" ;;
+      skipped:*) new=$(render skipped "$(item "$line")" "${spec#skipped:}") ;;
     esac
     write_line "$lineno" "$new"
   done <<EOAPPLY
