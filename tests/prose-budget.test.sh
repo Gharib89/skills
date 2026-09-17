@@ -131,6 +131,29 @@ d=$(tree heading-fenced)
 { printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n\n```\n## Not a heading\n```\n\n~~~\n## Nor this\n~~~\n'; body 86; } > "$d/skills/ship/reference/r.md"
 check_rc "a heading inside a fence needs no entry" 0 "$(rc_of "$d")"
 
+# A fence opener is a non-list line like any other, so it ends the list: a bullet
+# under a fenced example further down the section is prose, not a late entry.
+d=$(tree list-then-fence)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n```\nx\n```\n\n- a lever\n\n## A\n'; body 89; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a bullet after a fence in the section is not an entry" 0 "$(rc_of "$d")"
+
+# CRLF: the marker is read the way the headings and the entries are, trimmed, so
+# a file written on Windows is judged on its list rather than on its line endings.
+d=$(tree crlf)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n'; body 94; } | sed 's/$/\r/' \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a CRLF file is judged on its list" 0 "$(rc_of "$d")"
+
+# An entry is a link only where the link syntax is there. `- [A] note` is whole
+# text, so it names no heading and says so, rather than passing as `A`.
+d=$(tree entry-not-a-link)
+{ printf '# R\n\n## Contents\n\n- [A] note\n\n## A\n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "a bracketed non-link entry is compared whole" 1 "$(rc_of "$d")"
+check "the message quotes the whole entry" \
+  'skills/ship/reference/r.md: `## A` has no entry under `## Contents`
+skills/ship/reference/r.md: `## Contents` entry `[A] note` names no heading' "$(out_of "$d")"
+
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \

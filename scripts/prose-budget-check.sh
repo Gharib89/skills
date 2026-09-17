@@ -40,10 +40,11 @@ lines() { awk 'END{print NR}' "$1"; }
 # reader to a heading that is not there, which is worse than no map, so every
 # `## ` heading has an entry and every entry names a heading. The list is the run
 # of list items directly under the heading, blank lines included and the first
-# other line ending it, so a bullet in the prose below is prose. An entry names
-# a heading when its bracketed link text, or its whole text where it is not a
-# link, equals the heading; both sides are trimmed, because trailing whitespace
-# on a heading is invisible in the file a reader compares the list against.
+# other line, a fence delimiter among them, ending it, so a bullet in the prose
+# below is prose. An entry names a heading when its bracketed link text, or its
+# whole text where the `](` is not there to make it a link, equals the heading;
+# both sides are trimmed, so trailing whitespace and a CRLF line ending, neither
+# of them visible in the file a reader compares the list against, are neither.
 #
 #   contents_check <file> <display-name> <line-count>
 #
@@ -61,14 +62,15 @@ contents_check() {
             }
           }
           else if (c == fchar && n >= flen && substr(s, n + 1) ~ /^[ \t\r]*$/) fenced = 0
+          listing = 0
           next
         }
       }
       if (fenced) next
-      if ($0 == "## Contents") { if (NR <= 15) anchored = 1; listing = 1; next }
       if ($0 ~ /^## /) {
-        listing = 0; h = substr($0, 4); sub(/[ \t\r]+$/, "", h)
-        heads[h] = 1; horder[++nh] = h
+        h = substr($0, 4); sub(/[ \t\r]+$/, "", h)
+        if (h == "Contents") { if (NR <= 15) anchored = 1; listing = 1; next }
+        listing = 0; heads[h] = 1; horder[++nh] = h
         next
       }
       if (listing) {
@@ -76,7 +78,7 @@ contents_check() {
         if ($0 !~ /^[ \t]*([-*+]|[0-9]+\.)[ \t]+/) { listing = 0; next }
         e = $0
         sub(/^[ \t]*([-*+]|[0-9]+\.)[ \t]+/, "", e); sub(/[ \t\r]+$/, "", e)
-        if (match(e, /^\[[^]]*\]/)) e = substr(e, RSTART + 1, RLENGTH - 2)
+        if (match(e, /^\[[^]]*\]\(/)) e = substr(e, RSTART + 1, RLENGTH - 3)
         ents[e] = 1; eorder[++ne] = e
       }
     }
