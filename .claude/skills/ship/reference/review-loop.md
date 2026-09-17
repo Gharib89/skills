@@ -72,8 +72,10 @@ a fresh read of the committed tree, not a conversation.
   from one that will never come. Poll with `--await-run <workflow-file>`, the
   file that reviewer's block names in prose, alongside `--await-review` and
   `--since`. `--timeout` is then the floor of the window rather than its end: a
-  queued or running run keeps the poll going, to the ceiling `poll-pr --help`
-  states, and a concluded one buys one more interval for the row to appear. The
+  run that has not finished keeps the poll going, to the ceiling `poll-pr
+  --help` states, and one that concluded successfully buys one more interval for
+  the row to appear. A run that concluded any other way closes the window there,
+  with its URL. The
   run comes back on `reviewer_run`, in the full shape and in `--brief` alike,
   and it is what separates three of the degraded reasons below from each other.
   Where it reads `"unavailable"` the host refused the read itself, so it is
@@ -264,7 +266,7 @@ The human reads the reason and decides.
 
 | Reason | Detection |
 |---|---|
-| `never-queued` | on-request: no request event on the host's record after one retry. Under a comment transport, `reviewer_run.status: "none"` after that retry: the request landed and the host started no run for it. Do not spend a second poll window on it. |
+| `never-queued` | on-request: no request event on the host's record after one retry. Under a comment transport there is no second request to make, because the one post is verified as it is made and a second would draw a second round: `reviewer_run.status: "none"` is the answer on the first poll, the request landed and the host started no run for it. Do not spend a second poll window on it. |
 | `blocked` | queued, then a quota or rate-limit notice from the reviewer, stated as a review body or a PR comment (`reviewer_blocked` non-null), and the poll window closed. A review row whose body is only such a notice is not `substantive`, so `landed_by` stays null and the poll waits it out rather than reporting the refusal as the round. Non-null with `done: false` means waiting, not missing. |
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. Under a comment transport it takes the run read as well: `reviewer_run` concluded and no round followed it. A run that has not finished is not silence, and the poll holds the window open on it to its ceiling. |
 | `infra-error` | `reviewer_run.conclusion` is a failure: the run died before it could post, and its `url` is where the human reads why. A run still unfinished in the returned `reviewer_run` says the same thing: it outlived the poll's ceiling, delivered nothing in half an hour, and its `url` is where that is read. Also a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |

@@ -42,16 +42,17 @@
 # Such a run is attached to the default branch's SHA, so `checks` cannot see it,
 # and the one signal left was the absence of a review. With the flag the window
 # is the RUN's lifetime and `--timeout` only its floor: a run that has not
-# finished keeps the poll going, to a hard ceiling of 1800 s on the whole wait;
-# a run that concluded successfully buys one more interval for the row to
-# appear; a failed one closes the window carrying its URL, which is
-# `infra-error` rather than `silent`. A run still live when the ceiling closes
+# finished keeps the poll going, and the 1800 s ceiling is the bound on what the
+# run may add, so a `--timeout` past it is the caller's own window, which the run
+# then extends by nothing. A run that concluded successfully buys one more
+# interval for the row to appear; one that concluded any other way closes the
+# window there and then, whatever `--timeout` had left, carrying its URL, which
+# is `infra-error` rather than `silent`. A run still live when the ceiling closes
 # is reported as it stands, status and URL, and reads as `infra-error` too: a
-# run that outlived the ceiling delivered nothing either. The ceiling bounds
-# what the RUN buys: a `--timeout` past it is the caller's own window, which the
-# run then extends by nothing. The run is reported on `reviewer_run`: null where
-# the flag was not given, `{status, conclusion, url}` otherwise, with status
-# `none` and the other two null where no run was created at all, and the string
+# run that outlived the ceiling delivered nothing either. The run is reported on
+# `reviewer_run`: null where the flag was not given, `{status, conclusion, url}`
+# otherwise, with status `none` and the other two null where no run was created
+# at all, and the string
 # "unavailable" where the host could not answer the read, the way `threads`
 # reports one it could not read. An unavailable read leaves the window at the
 # constant and that reviewer's exit is `unreachable`, never `silent`, because a
@@ -177,24 +178,30 @@ while :; do
   elif [ "$pending" -eq 0 ] && [ "$landed" = true ]; then done=true
   fi
   waited=$((SECONDS - start))
+  run_status=$(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run")
+  # A run that ended any way but successfully ends the window with it, wherever
+  # `--timeout` stands: no round is coming out of it, and the minutes left on the
+  # clock would be spent waiting for one.
+  dead_run=false
+  if [ "$landed" = false ] && [ "$run_status" = completed ] \
+     && [ "$(jq -r '.conclusion // ""' <<<"$reviewer_run")" != success ]; then dead_run=true; fi
   # The run outranks the constant: a round still being written is not a silent
   # reviewer, and the ceiling is what keeps that from being unbounded.
-  if ! $done && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
-    case $(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run") in
+  if ! $done && ! $dead_run && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
+    case $run_status in
       # No run to wait on: no flag, a read the host refused, or no run created.
       ''|none) ;;
-      # A concluded run buys one more interval for the row to appear, and one
+      # Only a successful run reaches here, a failed one having closed the
+      # window above. It buys one more interval for the row to appear, and one
       # only: waiting on a run that is over is waiting on nothing.
       completed)
-        if [ "$(jq -r '.conclusion // ""' <<<"$reviewer_run")" = success ] && [ "$after_run" -lt 1 ]; then
-          after_run=1; sleep "$interval"; continue
-        fi ;;
+        if [ "$after_run" -lt 1 ]; then after_run=1; sleep "$interval"; continue; fi ;;
       # Every other status is a run that has not finished, the host's approval
       # states included, and a round can still come out of it.
       *) sleep "$interval"; continue ;;
     esac
   fi
-  if $done || [ "$waited" -ge "$timeout" ]; then
+  if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
     out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
       --argjson t "$threads" --argjson b "$blocked" --argjson rr "$reviewer_run" \
       --argjson lb "$landed_by" --argjson d "$done" --argjson w "$waited" \

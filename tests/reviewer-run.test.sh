@@ -105,16 +105,20 @@ check "and the run is on the record" 'false completed success' \
   "$(jq -r '[(.done|tostring), .reviewer_run.status, .reviewer_run.conclusion] | join(" ")' <<<"$out")"
 
 # A failed run is the reviewer's infrastructure, not its silence: the URL is
-# what sends the human to the failure.
+# what sends the human to the failure. The window it closes is the whole window,
+# so this case is driven with minutes still on `--timeout`: a poll that spends
+# them is waiting for a round that cannot come.
 reset
 run_row completed failure > "$FAKE/runs.1.json"
 printf ''                 > "$FAKE/reviews.1.json"
-out=$(poll --await-run claude-review.yml); rc=$?
+out=$(poll --await-run claude-review.yml --timeout 600 --interval 30); rc=$?
 check_rc "a failed run closes the window" 1 "$rc"
 check "the failure comes back with the run URL" \
   'completed failure https://example.invalid/runs/9' \
   "$(jq -r '[.reviewer_run.status, .reviewer_run.conclusion, .reviewer_run.url] | join(" ")' <<<"$out")"
 check "a failed run buys no extra poll" 1 "$(calls reviews)"
+check "and none of the window is spent on it" true \
+  "$(jq -r '.waited_s < 30' <<<"$out")"
 
 # No run at all: the status the review loop reads as never-queued.
 reset

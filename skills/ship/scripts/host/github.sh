@@ -455,12 +455,12 @@ host_pr_reviewer_blocked() { # <pr> <login>
 host_workflow_runs() { # <workflow-file> <since-iso>
   local err rc
   err=$(mktemp) || return 2
+  trap 'rm -f "$err"' RETURN
   gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 200 \
     --json status,conclusion,createdAt,url,displayTitle \
     --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})' 2>"$err"
   rc=$?
   [ "$rc" -eq 0 ] || ship_tail40 "$err"
-  rm -f "$err"
   return $rc
 }
 

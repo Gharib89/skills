@@ -73,7 +73,9 @@
 #   host_workflow_runs <file> <since-iso>-> [{status,conclusion,created_at,url,title}] the runs
 #                                           of that workflow file, for the event a comment
 #                                           transport starts, created at or
-#                                           after <since>. status queued|in_progress|completed,
+#                                           after <since>. status is the host's own vocabulary,
+#                                           of which `completed` is the one word ship tests for:
+#                                           every other status is a run still able to deliver,
 #                                           conclusion the host's own word or null while it runs,
 #                                           title the issue or PR the triggering event sits on,
 #                                           which is what narrows the runs to one PR. Non-zero and
