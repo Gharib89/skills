@@ -53,10 +53,6 @@ phase_row()  { grep -n "^- \[.\] $1 · " "$file" | head -1; }
 # The item text: the line without its marker and without the suffixes a flip
 # owns. Ranges stay, because a re-open appends its own after them.
 item()       { printf '%s' "$1" | sed 's/^- \[.\] //; s/ in_progress ([0-9][0-9]:[0-9][0-9]→)$//; s/ skipped (.*)$//'; }
-# Has this phase run? The question is about the stamp region, so a range-shaped
-# substring inside the item's own wording (a profile tail, a skip reason) is
-# text and not time, exactly as `timing` reads it.
-ran()        { printf '%s\n' "$(item "$1")" | grep -q '([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]\(+1d\)\{0,1\})$'; }
 # The clock is numeric wherever the mechanic writes it, so it is numeric
 # wherever the mechanic reads it back: `??` would let prose cross the boundary.
 is_open()    { case $1 in *" in_progress ("[0-9][0-9]:[0-9][0-9]"→)") return 0 ;; esac; return 1; }
@@ -65,6 +61,17 @@ is_open()    { case $1 in *" in_progress ("[0-9][0-9]:[0-9][0-9]"→)") return 0
 # `open_phase`, and phase 2's tail sits at the end of its line. Refusing it here
 # is the one place the boundary between wording and state can be made
 # unambiguous.
+# A reason is free text the profile does not supply, and `render` wraps it: a
+# reason that closes the wrapper early leaves the line ending in a state shape
+# the mechanic reads back, which is enough to report a skipped phase as open.
+# The rendered line is what the file holds, so the rendered line is what is
+# checked.
+reject_written_state() { # reject_written_state <rendered line>
+  printf '%s\n' "$1" \
+    | grep -Eq '\([0-9]{2}:[0-9]{2}→([0-9]{2}:[0-9]{2}(\+1d)?)?\)$' \
+    && ship_tooling "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it"
+  return 0
+}
 reject_stamp_tail() { # reject_stamp_tail <flag> <value>
   printf '%s\n' "$2" \
     | grep -Eq '\([0-9]{2}:[0-9]{2}→[0-9]{2}:[0-9]{2}(\+1d)?\)|in_progress \([0-9]{2}:[0-9]{2}→\)| skipped \(' \
@@ -188,7 +195,7 @@ EOSTATES
       open)      new=$(render open "$(item "$line")" "$(date -u +%H:%M)") ;;
       done)      new=$(render rangeless "$(item "$line")") ;;
       done:*)    new=$(render closed "$(item "$line")" "${spec#done:}") ;;
-      skipped:*) new=$(render skipped "$(item "$line")" "${spec#skipped:}") ;;
+      skipped:*) new=$(render skipped "$(item "$line")" "${spec#skipped:}"); reject_written_state "$new" ;;
     esac
     write_line "$lineno" "$new"
   done <<EOAPPLY
@@ -237,8 +244,8 @@ skip)
   # The marker is the mechanic's own record that the phase is done, so it
   # answers before the stamps do: a phase rebuilt as `done` carries no range.
   case $line in "- [x] "*) ship_fail "phase $n has already run; it cannot be skipped" ;; esac
-  ran "$line" && ship_fail "phase $n has already run; it cannot be skipped"
   new=$(render skipped "$(item "$line")" "$reason")
+  reject_written_state "$new"
   write_line "$lineno" "$new"
   flip_json skipped "$new" completed "$reason"
   ;;

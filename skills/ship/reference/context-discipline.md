@@ -60,12 +60,16 @@ where having nothing to do is the correct next action.
 ## First action: the Run file
 
 **Before phase 0, before the worktree**, run `run-file init <issue|slug>
---scratchpad <dir>`, handing it the profile's `Tripwires:`, the applicable
-verifications, the reviewer list and the CI `Legs:` (`--tripwires`,
-`--verifications`, `--reviewers`, `--legs`): it writes the ten-item checklist to
+--scratchpad <dir>`, where `<dir>` is the scratchpad directory the harness names
+in its environment block, the OS temp directory where it names none, and never a
+path inside the repo, which would dirty the tree the local gate reads. Hand it
+the profile's `Tripwires:`, the applicable verifications, the reviewer list and
+the CI `Legs:` (`--tripwires`, `--verifications`, `--reviewers`, `--legs`): it
+writes the ten-item checklist to
 `<scratchpad>/ship-<issue>/run.md`, a directory of its own so a subagent that
 reaches for the run's own name cannot overwrite the record, and returns the
-items, one per harness task you then create (`TaskCreate`). The file is the run's **record**,
+items, one per harness task you then create (`TaskCreate`). The file is the
+run's **record**,
 the source of truth for where the run is and the home of the design and plan as
 they form; it survives a mid-run context summary, so never stop, narrow a phase
 or suggest a new session over context. The harness task list is its **display**:

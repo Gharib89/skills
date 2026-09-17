@@ -101,11 +101,20 @@ check "closing again leaves two ranges" \
   1 "$(line 2 | grep -c '^- \[x\] .*([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9]) ([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9])$')"
 
 # A phase opened at 23:58 and closed after midnight: the close is stamped +1d
-# rather than reading as a range that runs backwards.
+# rather than reading as a range that runs backwards. The clock the mechanic
+# reads is stubbed on PATH, so the case proves the same thing at every hour of
+# the day rather than only while the real clock sits before the open stamp.
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/date" <<'STUB'
+#!/usr/bin/env bash
+[ "$1 $2" = "-u +%H:%M" ] && { echo 00:02; exit 0; }
+exec /usr/bin/env -i PATH=/usr/bin:/bin date "$@"
+STUB
+chmod +x "$tmp/bin/date"
 sed 's|^- \[.\] 1 · \(.*\)|- [ ] 1 · \1 in_progress (23:58→)|' "$g" > "$tmp/midnight.md"
-out close 1 --file "$tmp/midnight.md" >/dev/null
+( PATH="$tmp/bin:$PATH"; out close 1 --file "$tmp/midnight.md" >/dev/null )
 check "a close earlier than its open is stamped +1d" \
-  1 "$(grep -c '^- \[x\] 1 · .*(23:58→[0-9][0-9]:[0-9][0-9]+1d)$' "$tmp/midnight.md")"
+  1 "$(grep -c '^- \[x\] 1 · .*(23:58→00:02+1d)$' "$tmp/midnight.md")"
 
 # --- skip ----------------------------------------------------------------------
 
@@ -289,6 +298,20 @@ n=$(out init 507 --scratchpad "$tmp" | jq -r '.run_file')
 sed 's|^\(- \[ \] 2 · .*\)$|\1 in_progress (ab:cd→)|' "$n" > "$n.x" && mv "$n.x" "$n"
 check "a non-numeric clock is not an open phase" \
   "phase 2 is not open" "$(err close 2 --file "$n")"
+
+
+# A reason is free text, and `render` wraps it: one that closes the wrapper
+# early would leave the line ending in a state shape, which `open_phase` reads
+# as an active phase and `close` rewrites.
+w=$(out init 508 --scratchpad "$tmp" | jq -r '.run_file')
+check "a reason that closes the wrapper and ends in a state shape is refused" \
+  "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it" \
+  "$(err skip 3 'x) in_progress (10:00→' --file "$w")"
+check_rc "such a reason is malformed" 2 "$(rc skip 3 'x) in_progress (10:00→' --file "$w")"
+check "the same reason is refused through --state" 2 \
+  "$(rc init 509 --scratchpad "$tmp" --state '3=skipped:x) in_progress (10:00→')"
+check "a phase the refused skip touched is untouched" \
+  1 "$(grep -c '^- \[ \] 3 · [^(]*$' "$w")"
 
 
 finish
