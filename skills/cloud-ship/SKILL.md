@@ -38,10 +38,10 @@ the repo's `### Ship` block in CLAUDE.md carries.
 
 Git, the tracker, the mechanics and the merge gate are ship's on both sides of
 the invocation, so a behaviour defined here would be a second definition of one
-ship already owns: hand the sandbox clone over untouched for `isolate
---in-place` to branch, let ship run every mechanic itself, and end the fire
-where ship returns, relaying what it said, because a human merges from the PR
-and the open PR and the claim keep the next fire off that issue. The tracker is
+ship already owns: hand the sandbox clone over untouched for
+`isolate --in-place` to branch, let ship run every mechanic itself, and end the
+fire where ship returns, relaying what it said, because a human merges from the
+PR and the open PR and the claim keep the next fire off that issue. The tracker is
 the guardrail: leave every claim, label, comment and hand-back to ship, which
 holds them from selection onwards, and before selection there is no issue to
 write to.

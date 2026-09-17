@@ -245,8 +245,9 @@ evidence), `degraded: <reason>` from the fixed vocabulary
 `never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
 a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
 proceeds to the merge gate on green CI and is reported there rather than handed
-back. At exit, `update-pr-body <pr> --section "Deviations from plan"
---body-file <path>` where the rounds grew the log, then
+back. At exit,
+`update-pr-body <pr> --section "Deviations from plan" --body-file <path>`
+where the rounds grew the log, then
 `update-pr-body <pr> --section Review --body-file <path>` with one status line
 per reviewer, then the phase-6 read-back while the PR is still open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
