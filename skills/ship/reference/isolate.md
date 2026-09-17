@@ -99,8 +99,8 @@ neither a number nor `None.`, a `Fallback-for:` on a reviewer that is not
 on-request, and a `Fallback-for:` naming a reviewer the profile does not list are
 all refused there, before the claim. So is the one reviewer fact the host settles
 rather than the block: a Copilot reviewer whose `Trigger:` disagrees with the
-`copilot_code_review` ruleset that drives it. A ruleset preflight cannot read
-warns on stderr and admits the run.
+`copilot_code_review` ruleset that drives it. Where preflight cannot read that
+ruleset, it warns on stderr and admits the run.
 
 ## Re-validate an edited profile with `preflight none`
 

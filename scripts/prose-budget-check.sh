@@ -23,8 +23,12 @@ lines() { awk 'END{print NR}' "$1"; }
 
 # One awk rather than `head | grep`, because this script runs under pipefail: a
 # SIGPIPE on the head of that pipeline would read as a file without the heading.
-# Both `exit`s run END, so the status comes from `f` either way.
-has_contents() { awk 'NR>15{exit} $0=="## Contents"{f=1; exit} END{exit !f}' "$1"; }
+# It tracks fenced state, so a `## Contents` line inside a fenced example is
+# example text and not the heading. Both `exit`s run END, so the status comes
+# from `f` either way.
+has_contents() {
+  awk 'NR>15{exit} /^```/{fence=!fence; next} !fence && $0=="## Contents"{f=1; exit} END{exit !f}' "$1"
+}
 
 rc=0
 for f in "$root"/skills/*/SKILL.md; do

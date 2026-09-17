@@ -71,7 +71,8 @@ decisions. **First**, read
 delegation rule, the levers that keep a long run from bloating the window, and
 your **required first action, the Run file** holding the ten-item checklist.
 Phase 0 starts once the Run file exists, and each phase below flips it with
-`run-file open`, `close` or `skip` on the bound its `Done when:` names.
+`run-file open`, `close` or `skip`: a phase closes once the bound in its
+`Done when:` sentence is met, and not before.
 
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps; [reference/mechanics.md](reference/mechanics.md) maps mechanic

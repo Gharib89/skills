@@ -59,6 +59,12 @@ d=$(tree contents-not-heading)
 { printf -- '- see ## Contents below\n### Contents\n'; body 99; } > "$d/skills/ship/reference/r.md"
 check_rc "a mention of ## Contents is not the heading" 1 "$(rc_of "$d")"
 
+# The fence trap: a fenced example carrying a `## Contents` line is example
+# text, so a file whose only one sits inside a fence still has no heading.
+d=$(tree contents-fenced)
+{ printf -- '# R\n\n```markdown\n## Contents\n```\n'; body 96; } > "$d/skills/ship/reference/r.md"
+check_rc "## Contents inside a fence is not the heading" 1 "$(rc_of "$d")"
+
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \
