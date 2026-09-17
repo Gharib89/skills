@@ -197,7 +197,9 @@ request against the corrected tree.
 A **free round** is one the host delivers without a request: a Copilot ruleset
 with `review_on_push: false` still opens one when the PR does. Before the run's
 **first** request to any on-request reviewer, poll once for it, under the since
-rule with `open-pr`'s `created_at` and `--timeout 600`: a free round can take
+rule with `open-pr`'s `created_at`, `--timeout 600`, and, where its `Request:`
+reads `comment <phrase>`, `--await-run <workflow-file>`, because a free round
+reaches a comment transport through a run like any other: a free round can take
 several minutes to land, so a bound of a minute or two reports `silent` on a
 review that is merely still coming. A round already there
 **is** round 1 and counts against `Cap:`; nothing there and the loop proceeds to
@@ -264,8 +266,8 @@ The human reads the reason and decides.
 |---|---|
 | `never-queued` | on-request: no request event on the host's record after one retry. Under a comment transport, `reviewer_run.status: "none"` after that retry: the request landed and the host started no run for it. Do not spend a second poll window on it. |
 | `blocked` | queued, then a quota or rate-limit notice from the reviewer, stated as a review body or a PR comment (`reviewer_blocked` non-null), and the poll window closed. A review row whose body is only such a notice is not `substantive`, so `landed_by` stays null and the poll waits it out rather than reporting the refusal as the round. Non-null with `done: false` means waiting, not missing. |
-| `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. Under a comment transport it takes the run read as well: `reviewer_run` concluded and no round followed it. A run still queued or running is not silence, and the poll holds the window open on it. |
-| `infra-error` | `reviewer_run.conclusion` is a failure: the run died before it could post, and its `url` is where the human reads why. Also a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |
+| `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. Under a comment transport it takes the run read as well: `reviewer_run` concluded and no round followed it. A run that has not finished is not silence, and the poll holds the window open on it to its ceiling. |
+| `infra-error` | `reviewer_run.conclusion` is a failure: the run died before it could post, and its `url` is where the human reads why. A run still unfinished in the returned `reviewer_run` says the same thing: it outlived the poll's ceiling, delivered nothing in half an hour, and its `url` is where that is read. Also a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |
 | `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. The budget ran out; whether the reviewer had run out of findings is a separate question the block answers. |
 | `unreachable` | no host path to the reviewer from this environment, thread state could not be read (`threads: unavailable`, which is also what leaves `reply-thread` with no id to answer), or, under a comment transport, `reviewer_run: "unavailable"`: the host refused the run read, so nothing here is evidence about the reviewer. |
 

@@ -446,11 +446,22 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # and no more, and a title rewritten between the request and the poll matches
 # nothing, which reads as a reviewer that never queued.
 # `gh run list` rather than `api`: it builds the `--created` search itself, and
-# a read that returns nothing is an answer here rather than a failure.
+# a read that returns nothing is an answer here rather than a failure. `--limit`
+# truncates a set `--created` has already bounded to the poll's own window, so
+# it is set far above the runs one such window can hold rather than at the page
+# size: a truncated read drops the run the poll is waiting on and reads as a
+# reviewer that never queued. Its stderr is tailed the way `_gh` tails its own,
+# because a CLI diagnostic is unbounded and the caller prints one JSON object.
 host_workflow_runs() { # <workflow-file> <since-iso>
-  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 50 \
+  local err rc
+  err=$(mktemp) || return 2
+  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 200 \
     --json status,conclusion,createdAt,url,displayTitle \
-    --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})'
+    --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})' 2>"$err"
+  rc=$?
+  [ "$rc" -eq 0 ] || ship_tail40 "$err"
+  rm -f "$err"
+  return $rc
 }
 
 # Request, then read the request back off the host's own record: the login you

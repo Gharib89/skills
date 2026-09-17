@@ -164,6 +164,41 @@ check_rc "a live run outranks a newer concluded one and holds the window" 0 "$rc
 check "and it is the run reported" 'in_progress https://example.invalid/runs/9' \
   "$(jq -r '[.reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
 
+# The host also reports runs it has not started yet (`requested`, `waiting`,
+# `pending`, the approval states): every status but `completed` is a run that can
+# still deliver, so it holds the window and outranks a concluded one the way
+# `queued` does. Here the round lands two polls out, which a concluded run's one
+# extra interval does not reach.
+reset
+jq -cn --arg t "$title" '[{status: "waiting", conclusion: null,
+     created_at: "2026-09-17T11:59:00Z", url: "https://example.invalid/runs/9", title: $t},
+    {status: "completed", conclusion: "success",
+     created_at: "2026-09-17T11:59:30Z", url: "https://example.invalid/runs/10", title: $t}]' \
+  > "$FAKE/runs.1.json"
+printf ''              > "$FAKE/reviews.1.json"
+printf ''              > "$FAKE/reviews.2.json"
+printf '%s\n' "$round" > "$FAKE/reviews.3.json"
+out=$(poll --await-run claude-review.yml); rc=$?
+check_rc "an unfinished run in any status holds the window" 0 "$rc"
+check "and it outranks a newer concluded run" 'true since waiting' \
+  "$(jq -r '[(.done|tostring), .landed_by, .reviewer_run.status] | join(" ")' <<<"$out")"
+
+# The ceiling is what keeps a run that never finishes from holding the window
+# forever: past it the poll returns with the run as it stands, which the review
+# loop reads as infra-error. Driven against a copy of the mechanic whose ceiling
+# is seconds rather than half an hour; everything else is the real mechanic.
+reset
+cp -R skills/ship/scripts "$work/scripts"
+sed -i.bak 's/^ceiling=1800$/ceiling=2/' "$work/scripts/poll-pr.sh"
+run_row in_progress '' > "$FAKE/runs.1.json"
+printf ''              > "$FAKE/reviews.1.json"
+out=$( cd "$repo" && bash "$work/scripts/poll-pr.sh" 7 --await-review 'claude[bot]' \
+  --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 --await-run claude-review.yml ); rc=$?
+check_rc "a run still going at the ceiling closes the window" 1 "$rc"
+check "and it comes back as it stands, with its URL" \
+  'false in_progress https://example.invalid/runs/9' \
+  "$(jq -r '[(.done|tostring), .reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
+
 # A read the host refused says nothing about the reviewer, and must not read as
 # a run that was never created: the window falls back to the constant and the
 # loop reports the host, not silence.

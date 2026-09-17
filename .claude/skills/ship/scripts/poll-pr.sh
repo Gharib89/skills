@@ -41,14 +41,17 @@
 # reviewer's round comes from before the window may report that reviewer silent.
 # Such a run is attached to the default branch's SHA, so `checks` cannot see it,
 # and the one signal left was the absence of a review. With the flag the window
-# is the RUN's lifetime and `--timeout` only its floor: a queued or running run
-# keeps the poll going, to a hard ceiling of 1800 s on the whole wait; a run that
-# concluded successfully buys one more interval for the row to appear; a failed
-# one closes the window carrying its URL, which is `infra-error` rather than
-# `silent`. The ceiling bounds what the RUN buys: a `--timeout` past it is the
-# caller's own window, which the run then extends by nothing. The run is
-# reported on `reviewer_run`: null where the flag was not given,
-# `{"status":"none"}` where no run was created at all, and the string
+# is the RUN's lifetime and `--timeout` only its floor: a run that has not
+# finished keeps the poll going, to a hard ceiling of 1800 s on the whole wait;
+# a run that concluded successfully buys one more interval for the row to
+# appear; a failed one closes the window carrying its URL, which is
+# `infra-error` rather than `silent`. A run still live when the ceiling closes
+# is reported as it stands, status and URL, and reads as `infra-error` too: a
+# run that outlived the ceiling delivered nothing either. The ceiling bounds
+# what the RUN buys: a `--timeout` past it is the caller's own window, which the
+# run then extends by nothing. The run is reported on `reviewer_run`: null where
+# the flag was not given, `{status, conclusion, url}` otherwise, with status
+# `none` and the other two null where no run was created at all, and the string
 # "unavailable" where the host could not answer the read, the way `threads`
 # reports one it could not read. An unavailable read leaves the window at the
 # constant and that reviewer's exit is `unreachable`, never `silent`, because a
@@ -178,13 +181,17 @@ while :; do
   # reviewer, and the ceiling is what keeps that from being unbounded.
   if ! $done && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
     case $(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run") in
-      queued|in_progress) sleep "$interval"; continue ;;
+      # No run to wait on: no flag, a read the host refused, or no run created.
+      ''|none) ;;
       # A concluded run buys one more interval for the row to appear, and one
       # only: waiting on a run that is over is waiting on nothing.
       completed)
         if [ "$(jq -r '.conclusion // ""' <<<"$reviewer_run")" = success ] && [ "$after_run" -lt 1 ]; then
           after_run=1; sleep "$interval"; continue
         fi ;;
+      # Every other status is a run that has not finished, the host's approval
+      # states included, and a round can still come out of it.
+      *) sleep "$interval"; continue ;;
     esac
   fi
   if $done || [ "$waited" -ge "$timeout" ]; then

@@ -596,13 +596,15 @@ readonly SHIP_LANDED_BY='
 # still able to deliver the round, and a concluded run that arrived after it
 # would otherwise close the window on a round still being written. Then the
 # newest run that did something, because a `skipped` run is the workflow's own
-# `if` refusing a comment that was not the request. The title is the only link
-# the host offers, so a PR renamed mid-poll matches nothing: the adapter's own
-# comment carries what that costs. `none` is the read finding
+# `if` refusing a comment that was not the request. Live is every status but
+# `completed`, so the approval states a host also reports (`requested`,
+# `waiting`, `pending`) hold the window the way `queued` does. The title is the
+# only link the host offers, so a PR renamed mid-poll matches nothing: the
+# adapter's own comment carries what that costs. `none` is the read finding
 # no run at all, which the review loop reads as never-queued.
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_REVIEWER_RUN='
-  def live: .status == "queued" or .status == "in_progress";
+  def live: .status != "completed";
   ([.[] | select(.title == $t)] | sort_by(.created_at)) as $rows
   | (([$rows[] | select(live)] | last)
      // ([$rows[] | select(.conclusion != "skipped")] | last)
