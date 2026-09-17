@@ -16,7 +16,7 @@ the flag.
    (`manage-issue <issue> handback "<reason>"`); for a `hand-off`, the reason
    carries the exact command the human would have run. The run then returns with
    the reason. A fire either reaches merge-ready or hands the issue back; it
-   never leaves an issue claimed and spinning. Admission is narrower too:
+   leaves no issue claimed and spinning. Admission is narrower too:
    `preflight <issue> --unattended` makes `ready-for-human` the stop
    `ready-for-human: attended only`.
 3. **The merge gate posts and returns.** `comment-pr` with the uncompressed
@@ -26,11 +26,11 @@ the flag.
 Before any of it, **`tooling --install`**: the cloud sandbox image has `jq`,
 `curl` and `git` but not the host's CLI, and only the host adapter knows what
 that is and how it installs (GitHub: `apt-get install -y gh`, the one route
-the sandbox proxy passes). Core in every repo, never a profile `Bootstrap:`
-line. Still missing afterwards: stop `host-unreachable`, exactly as preflight
-would. Never run `gh auth status` to check the token: behind the sandbox proxy
-it reports the working token as invalid; preflight's `user` and repo reads are
-the proof.
+the sandbox proxy passes). Core in every repo, which is why it sits here rather
+than on a profile `Bootstrap:` line. Still missing afterwards: stop
+`host-unreachable`, exactly as preflight would. Read the token through
+preflight's `user` and repo reads, which are the proof; `gh auth status` reports
+the working token as invalid behind the sandbox proxy.
 
 Two sandbox facts the run meets and neither is a failure. Review-thread state
 is GraphQL, which the proxy blocks, so `poll-pr` reports `threads:
@@ -42,11 +42,11 @@ costs nothing here: the lane returns at the merge gate and `merge` plus
 Unchanged: `defer-to-ci` is the only verification disposition that proceeds
 (`hand-off` and `blocked` hand back), and an `unexercised` result proceeds on
 its own, with no disposition behind it and nothing to hand back for; a degraded
-reviewer exit still proceeds
-to the merge gate on green CI and never hands back on its own; the local gate's
-`unavailable` hands back with `local gate unavailable: <gates>` and never opens
-the PR. Compose skills with an explicit unattended signal (`code-review`, `tdd`
-and any reviewer helper); they cannot infer the absence of a human.
+reviewer exit still proceeds to the merge gate on green CI and is reported there
+rather than handed back; the local gate's `unavailable` hands back with `local
+gate unavailable: <gates>`, leaving the PR unopened. Compose skills with an
+explicit unattended signal (`code-review`, `tdd` and any reviewer helper); they
+cannot infer the absence of a human.
 
 ## The lane with no issue: `ship --unattended`
 
@@ -66,8 +66,8 @@ leave no trace on any issue.
    with no assignee and no open blocker, walking candidates ascending
    until one passes. No candidate: stop `nothing-ready`, the one clean no-op.
    The host's blocker query exists and failed: stop `blockers-unavailable`;
-   shipping a dependent issue out of order builds a PR on unmerged work, so
-   never guess order.
+   shipping a dependent issue out of order builds a PR on unmerged work, so the
+   stop stands until the query answers.
 4. **Run** phases 0 to 9 on the selected issue as `ship <issue> --unattended`.
 5. **Report**: the PR link and the merge summary's location, or the stop
    reason verbatim (ship's own reasons pass through unchanged, including
@@ -76,4 +76,4 @@ leave no trace on any issue.
 The repo is derived from the clone's `origin` remote; no repo name is passed
 anywhere. The `cloud-ship` sibling is this lane's only caller from a routine:
 it invokes the `ship` skill with `--unattended` through the Skill tool and
-relays step 5 verbatim, never calling a mechanic by path.
+relays step 5 verbatim, leaving every mechanic to ship.

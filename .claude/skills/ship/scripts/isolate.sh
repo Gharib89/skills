@@ -8,10 +8,11 @@
 # and worktree suffix, and every check runs unchanged.
 #
 # Resolves the MAIN checkout through --git-common-dir, so a run started inside a
-# worktree never nests another. Fetches first: refusing to branch off a
-# possibly-stale default. Branches from origin/HEAD, never a hardcoded name.
-# Refuses when the branch or the worktree already exists (preflight should have
-# stopped this run); never reuses, never deletes. Carried files are gitignored
+# worktree lands its worktree beside that checkout rather than inside itself.
+# Fetches first: refusing to branch off a possibly-stale default. Branches from
+# origin/HEAD, whatever that branch is called. Refuses when the branch or the
+# worktree already exists (preflight should have stopped this run), leaving both
+# as it found them. Carried files are gitignored
 # files copied IN one way; nothing is ever copied back.
 #
 # stdout: {worktree, branch, base, in_place, carried[], missing[]}

@@ -1,8 +1,8 @@
 # The small lane: the reduced spine
 
 A change that passes all three lane keys (SKILL.md, *The lanes*) skips the
-ceremony that cannot matter and keeps every check. It drops planning breadth,
-never a check. The floor is the same in every repo.
+ceremony that cannot matter and keeps every check. What it drops is planning
+breadth alone. The floor is the same in every repo.
 
 ## What collapses
 
@@ -27,15 +27,15 @@ prose takes the pass whether docs-sync fired or not. On top of that:
   is short, and `code-review` brings its own (context-discipline's delegation
   rule already covers the rest).
 
-## The floor: never collapses
+## The floor: stands in every lane
 
 1. Isolation (phase 0)
-2. `base-fresh` and the local gate `--small <node>`: security check plus the
-   one regression test, or the changed document where the class is `docs`
+2. `base-fresh` and the local gate `--small <node>`: security check plus the one
+   regression test, or the changed document where the class is `docs`
 3. The **self-review, unmodified**. It is the only check that reads the diff
-   against the issue; a reviewer reviews standards and has never read the
-   issue. It also carries the two rejection rails. Its cost scales with the
-   diff, so on a small diff it is cheap.
+   against the issue; a reviewer reviews standards against the diff, with the
+   issue out of view. It also carries the two rejection rails. Its cost scales
+   with the diff, so on a small diff it is cheap.
 4. Non-draft PR with `Closes #<issue>` above the first `## ` heading
 5. CI green plus every reviewer per its trigger
 6. The merge gate
@@ -50,5 +50,5 @@ remaining phases: CI red on behavior, a reviewer flags a real bug, the
 self-review flags a real bug, the local gate's floor check hits, or the change
 turns out to touch the public surface. Downgrade means: run the skipped
 verifications and docs-sync, add the missing test or docs, run the full local
-gate, and apply full-lane review terms. Never upgrade back. Downgrading once is
-cheap; shipping a non-small change as small is the failure.
+gate, and apply full-lane review terms. The run stays full lane from there on.
+Downgrading once is cheap; shipping a non-small change as small is the failure.

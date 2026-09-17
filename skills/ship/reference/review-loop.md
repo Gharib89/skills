@@ -10,16 +10,15 @@
 - [Worked examples](#worked-examples)
 
 The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
-it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an optional
-`Instructions:` file, and per trigger: `Request:` (on-request), `Resolve:`
-(on-push and on-request; auto-once converges on dispositioned threads and
-reads `None.`). The **trigger fixes the loop and convergence**; the bot's brand fixes
-nothing. Preflight has already parsed these blocks and refused the four
-malformed shapes, and asked the host whether a Copilot reviewer's `Trigger:`
-matches the ruleset driving it, so what reaches this phase is a list you can
-drive.
-Zero reviewers: skip this phase; the review gate is phase 4's self-review plus
-green CI (SKILL.md), and reviewer rounds never replace it.
+it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an
+optional `Instructions:` file, and per trigger: `Request:` (on-request),
+`Resolve:` (on-push and on-request; auto-once converges on dispositioned threads
+and reads `None.`). The **trigger fixes the loop and convergence**; the bot's
+brand fixes nothing. Preflight has already parsed these blocks and refused the
+four malformed shapes, and asked the host whether a Copilot reviewer's
+`Trigger:` matches the ruleset driving it, so what reaches this phase is a list
+you can drive. Zero reviewers: skip this phase; the review gate is phase 4's
+self-review plus green CI (SKILL.md), which reviewer rounds sit on top of.
 
 A reviewer re-reads the **whole PR** each round: treat every round's output as
 a fresh read of the committed tree, not a conversation.
@@ -30,7 +29,7 @@ a fresh read of the committed tree, not a conversation.
   foreground. It returns one JSON: head sha, mergeable, checks, the reviewer's
   rounds with `substantive`, threads with resolved state, `reviewer_blocked`,
   and `landed_by` naming the rule that admitted the round. `done: false` means
-  the window closed first: re-run to extend, never a background monitor. The
+  the window closed first: re-run to extend it, in the foreground again. The
   poll is the landing signal only; before triage, read the round's review body
   and its threads from the same payload. The body sits on the row the reviewer's
   landing rule admitted: `reviews.on_head[].body` under the head rule,
@@ -43,30 +42,30 @@ a fresh read of the committed tree, not a conversation.
   `substantive`, and the body cut to its lead line and finding items) and one
   row per OPEN thread. Rounds come from the list the landing rule admitted, and
   the run's own replies drop out, so a round count is the reviewer's rounds and
-  not ours. Take
-  the full shape when a round needs reading whole; `--full <id>` still answers
-  that on the row it names.
+  not ours. Take the full shape when a round needs reading whole; `--full <id>`
+  still answers that on the row it names.
 - **A body ending `...[truncated]` has not been read.** Rounds are clipped past
   2000 characters so one poll cannot flood the window, and a reviewer that opens
   with a preamble (an overview, a per-file table) pushes its findings past that
   cap. Re-run the poll with `--full <id>` for that row and it alone comes back
-  whole. Dispositioning a clipped round is converging on findings you never
-  saw.
+  whole, and that read comes before the triage: dispositioning a clipped round
+  is converging on the findings you happened to see.
 - **The trigger picks the landing rule; the poll has to be told which.** Under
   the **head** rule (no `--since`) a round counts only on the current head:
   right for `on-push`, where every push earns a fresh review. Under the
   **since** rule (`--since <iso>`) a round counts wherever it sits, if it was
-  submitted at or after that time: right for `on-request` and `auto-once`,
-  which deliver one round per request and never re-post, so a push between the
-  request and the review leaves the round keyed to the older head, and the head
-  rule then waits out the whole window for a review that will never come again.
-  Pass `request-review`'s `requested_at` or `open-pr`'s `created_at` straight
-  through. `--since` without `--await-review` is a usage error. The since rule
-  needs a timed round, so a reviewer whose only signal is an Azure DevOps vote,
-  which the API never stamps, exits `degraded: silent` under it; its threads,
-  which carry anything actionable, are stamped and land normally.
-- **A round is a review with a body.** A reviewer's reply to one thread posts
-  as a review row of its own (current head, empty body), so answering round N
+  submitted at or after that time: right for `on-request` and `auto-once`, which
+  deliver one round per request and post it once, so a push between the request
+  and the review leaves the round keyed to the older head, and the head rule
+  then waits out the whole window for a review that has already landed
+  elsewhere. Pass `request-review`'s `requested_at` or `open-pr`'s `created_at`
+  straight through. `--since` without `--await-review` is a usage error. The
+  since rule needs a timed round, so a reviewer whose only signal is an Azure
+  DevOps vote, which the API leaves unstamped, exits `degraded: silent` under
+  it; its threads, which carry anything actionable, are stamped and land
+  normally.
+- **A round is a review with a body.** A reviewer's reply to one thread posts as
+  a review row of its own (current head, empty body), so answering round N
   manufactures rows that look like round N+1 arriving. Only `substantive: true`
   counts; hold any hand check to that bar.
 - **Triage, don't apply**, at the judgment tier, with phase 4's definition:
@@ -83,12 +82,12 @@ a fresh read of the committed tree, not a conversation.
 - **Batch fixes into one push per round**, then answer every `replied: false`
   thread with `reply-thread <pr> <thread> --body-file`, one call per thread with
   the id `poll-pr` returns (`fixed in <sha>`, or the decline and its reason).
-  `poll-pr` returns the PR's whole thread set, not the round's, and `replied`
-  is true once this identity has answered in the thread: skip those, one
-  finding, one disposition. The disposition belongs in the thread the reviewer
-  opened, which is where the reviewer's next pass and a human reading the round
-  both look; a round-level `comment-pr` is a log of the round, never the
-  disposition channel. **A fix to a rule is propagated to every copy of that
+  `poll-pr` returns the PR's whole thread set, not the round's, and `replied` is
+  true once this identity has answered in the thread: skip those, one finding,
+  one disposition. The disposition belongs in the thread the reviewer opened,
+  which is where the reviewer's next pass and a human reading the round both
+  look; a round-level `comment-pr` logs the round, and the disposition itself
+  stays in the thread. **A fix to a rule is propagated to every copy of that
   rule inside the same batch**: grep the phrase before you push, and read each
   fix's hunk back out of the file while you are there, because the reviewer
   re-reads the whole PR and a copy the fix missed, or a fix applied by half, is
@@ -111,20 +110,20 @@ a fresh read of the committed tree, not a conversation.
   waiting for another round, and say in that reviewer's block whether that last
   round was still landing real findings, which is what tells the human at the
   merge gate whether the budget was the right one.
-- **Per-reviewer accountability.** Each reviewer gets its own block in the
-  merge summary and its own line in the PR body's `## Review` section
-  (`update-pr-body` at phase-7 exit): `converged`,
-  `converged, override needed`, `degraded: <reason>`, or, for a fallback whose
-  primary converged, `not invoked: <primary> converged`, plus the round count. A
-  fallback that ran adds why it was: `fallback for <primary>: degraded: <reason>`.
+- **Per-reviewer accountability.** Each reviewer gets its own block in the merge
+  summary and its own line in the PR body's `## Review` section
+  (`update-pr-body` at phase-7 exit): `converged`, `converged, override needed`,
+  `degraded: <reason>`, or, for a fallback whose primary converged, `not
+  invoked: <primary> converged`, plus the round count. A fallback that ran adds
+  why it was: `fallback for <primary>: degraded: <reason>`.
 - **The exit rewrites Deviations too, when the rounds grew the log.** A round
   can force the same departure from the issue, brief or plan that phase 2 logs,
   and an in-scope fix is no more a deviation here than anywhere else, so where
-  the log changed since phase 6, write it back with
-  `update-pr-body <pr> --section "Deviations from plan" --body-file <path>`
-  before the `Review` write, which stays last so `read-pr` reads both back at
-  once. Skip it and the PR body ships the phase-6 log while the merge summary
-  carries the current one, and the human reads the two against each other.
+  the log changed since phase 6, write it back with `update-pr-body <pr>
+  --section "Deviations from plan" --body-file <path>` before the `Review`
+  write, which stays last so `read-pr` reads both back at once. Skip it and the
+  PR body ships the phase-6 log while the merge summary carries the current one,
+  and the human reads the two against each other.
 
 **Every `update-pr-body --section <name> --body-file <path>` above takes the
 section's CONTENT**, `Review` and `Deviations from plan` alike: the mechanic
@@ -138,31 +137,29 @@ opens on prose where the standard wants a Shape fence, is answered by a write.
 
 ### `auto-once`
 
-Fires once on PR creation; nothing to request and **never re-requested**. Wait
-for it to land under the **since** rule, with `open-pr`'s `created_at`. If a
-round arrives before you poll, that is the round. Triage it once, push the
-fixes, `reply-thread` on every `replied: false` thread. **Converged** when every
-thread is dispositioned.
-A later push does not bring it back; a lint or flake fix after convergence
-needs nothing from it.
+Fires once on PR creation; nothing to request, and the one round it fires is
+**all there is**. Wait for it to land under the **since** rule, with `open-pr`'s
+`created_at`. If a round arrives before you poll, that is the round. Triage it
+once, push the fixes, `reply-thread` on every `replied: false` thread.
+**Converged** when every thread is dispositioned. A later push does not bring it
+back; a lint or flake fix after convergence needs nothing from it.
 
 ### `on-push`
 
 Re-reviews every push. This is the trigger the `Cap:` budget does not bind: the
 host starts the rounds, so the number ends ship's engagement and the reviewer
-keeps posting. After each
-push, wait for a review **landed on the current head**, the **head** rule (no
-`--since`); silence on the head is never quiet.
-Triage, batch-fix, push, `reply-thread` on every `replied: false` thread. Once
-**every** thread carries a disposition, and only then, use the reviewer's
-`Resolve:` mechanism (`resolve-thread`, or the comment the profile names) to
-resolve them.
-**Converged** when a review has landed on the current head with nothing
-actionable and every thread is dispositioned and resolved. A fix pushed after
-convergence gets re-read on its own: wait for quiet on the new head again.
-When `poll-pr` reports `threads: unavailable`, this reviewer's exit is
-`degraded: unreachable` and the run proceeds; the other triggers read reviews
-and comments, which stay readable.
+keeps posting. After each push, wait for a review **landed on the current
+head**, the **head** rule (no `--since`); a round on the head with nothing
+actionable in it is the quiet this waits for, and no round on the head at all
+keeps the poll running. Triage, batch-fix, push, `reply-thread` on every
+`replied: false` thread. Once **every** thread carries a disposition, and only
+then, use the reviewer's `Resolve:` mechanism (`resolve-thread`, or the comment
+the profile names) to resolve them. **Converged** when a review has landed on
+the current head with nothing actionable and every thread is dispositioned and
+resolved. A fix pushed after convergence gets re-read on its own: wait for quiet
+on the new head again. When `poll-pr` reports `threads: unavailable`, this
+reviewer's exit is `degraded: unreachable` and the run proceeds; the other
+triggers read reviews and comments, which stay readable.
 
 ### `on-request`
 
@@ -211,10 +208,11 @@ new request.
 
 ## Fallbacks: the reviewer driven only when another one failed
 
-A reviewer whose `Fallback-for:` names another reviewer stands in for it
-([ADR 0002](../../../docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md)).
-It is always on-request, which preflight enforces: a reviewer that fires on
-every push cannot be withheld.
+A reviewer whose `Fallback-for:` names another reviewer stands in for it, and
+only on the runs where that primary exits degraded: a fallback is on-request and
+conditional, so ship requests and drives it only once the primary is degraded.
+Preflight enforces the trigger, because a reviewer that fires on every push
+cannot be withheld.
 
 **Drive every non-fallback reviewer to its exit first**, then the fallbacks,
 because a fallback's only input is how its primary exited.
@@ -241,8 +239,8 @@ paid for.
 ## Degraded exits: fixed vocabulary, per reviewer
 
 Degraded means the reviewer did not finish its job; it proceeds to the merge
-gate on green CI and never hands back on its own, in either lane. The human
-reads the reason and decides.
+gate on green CI and is reported there rather than handed back, in either lane.
+The human reads the reason and decides.
 
 | Reason | Detection |
 |---|---|
@@ -278,7 +276,7 @@ Brand-level detail lives in the host adapters; these show the mapping only.
   comment, posted once after every thread carries a reply.
 - **Claude Code on GitHub Actions as `on-push`**: reviews every push through a
   workflow, posting under `claude[bot]`, the app its OAuth token authenticates,
-  never the Actions identity the workflow otherwise runs as. It attaches its
+  rather than the Actions identity the workflow otherwise runs as. It attaches its
   per-file findings as inline threads on the review, so `Resolve:` is
   `resolve-thread`; a finding that names no file stays on the review body and is
   answered with `comment-pr`.

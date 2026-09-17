@@ -106,7 +106,7 @@ write_line() { # write_line <lineno> <replacement>
   repl=$2 awk -v ln="$1" 'NR == ln { print ENVIRON["repl"]; next } { print }' "$file" > "$file.t" \
     && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
 }
-phase_arg() { # phase_arg <value>: the phase number, never a flag
+phase_arg() { # phase_arg <value>: the phase number; a flag here is a usage error
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
   case ${1:-} in '' | *[!0-9]*) ship_tooling "$usage" ;; esac
 }

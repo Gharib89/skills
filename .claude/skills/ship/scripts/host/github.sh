@@ -16,14 +16,14 @@ R="repos/$SHIP_OWNER/$SHIP_REPO"
 # reads like a malformed request rather than a host that is down (#173), so the
 # status comes from the response headers `-i` prints instead. Leaves
 # SHIP_HTTP_STATUS at the last status line of the response, empty where the call
-# never got an HTTP answer at all.
+# got no HTTP answer at all.
 #
 # The whole response is buffered to split it, which is also what `--paginate`
 # means here: gh prints one header block per page, separated from the page
 # before it by a blank line, and the status is the last page's.
 #
-# A header block starts at the top of the response or on that separator, never
-# mid-page, and the separator goes out with the block it introduces, so the
+# A header block starts at the top of the response or on that separator, and the
+# separator goes out with the block it introduces, so the
 # pages concatenate exactly as they do without `-i`. That is the whole defence
 # against a body line shaped like a status line: one that does not follow a
 # blank line is body, and every caller here reads `--jq` output, one JSON value
@@ -87,7 +87,7 @@ _gh_create() { ( _gh "$@" || { _gh_status; exit 1; } ); }
 _gh_write() { ( api "$@" >/dev/null || { _gh_status; exit 1; } ); }
 
 # Reads retry on failure. Creates go through `_gh_create_verify`, which re-reads
-# before retrying so a slow success is never double-posted.
+# before retrying so a slow success is left alone.
 # A retry has to be the request it retries. `gh api "$@"` carries the argument
 # list but not stdin, so a `--input -` payload the failed attempt already drained
 # reaches the retry empty and GitHub rejects it as "Body should be a JSON
@@ -198,8 +198,8 @@ host_copilot_review_on_push() {
 
 # The login `copilot_code_review` governs. Here rather than in `preflight.sh`,
 # because a bot's brand is host detail and a generic mechanic matches on the
-# trigger, never the brand. An adapter with no Copilot prints nothing, which is
-# what makes the check skip rather than branch on the host name.
+# trigger rather than the brand. An adapter with no Copilot prints nothing,
+# which is what makes the check skip rather than branch on the host name.
 host_copilot_login() { printf 'copilot-pull-request-reviewer[bot]\n'; }
 
 _norm_issue='{number, title, body: (.body // ""),
@@ -212,7 +212,7 @@ host_issue_get()      { api "$R/issues/$1" --jq "$_norm_issue"; }
 host_issue_comments() {
   api "$R/issues/$1/comments" --paginate --jq '.[] | {author: .user.login, body, created_at}' | jq -s .
 }
-# GitHub has native issue dependencies, so a failed query is "unavailable", never vacuous.
+# GitHub has native issue dependencies, so a failed query is "unavailable" rather than empty.
 host_issue_blockers_open() {
   api "$R/issues/$1/dependencies/blocked_by" --paginate --jq '.[] | select(.state == "open") | .number' | jq -s .
 }
@@ -248,8 +248,8 @@ host_issue_unassign() { api -X DELETE "$R/issues/$1/assignees" -f "assignees[]=$
 host_issue_has_label(){ api "$R/issues/$1/labels" --jq '.[].name' | grep -qxF -- "$2"; }
 host_issue_add_label(){ api -X POST "$R/issues/$1/labels" -f "labels[]=$2" >/dev/null; }
 # Check first: a DELETE 404s the same way whether the label was already gone or
-# the call itself failed, and a reported removal that never happened is exactly
-# the residue this exists to stop.
+# the call itself failed, and a removal reported on a label still there is
+# exactly the residue this exists to stop.
 host_issue_remove_label() {
   host_issue_has_label "$1" "$2" || return 0
   api -X DELETE "$R/issues/$1/labels/$(jq -rn --arg l "$2" '$l | @uri')" >/dev/null
@@ -259,12 +259,13 @@ host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_rea
 
 # Create-then-verify, the shape every create in this adapter has: attempt the
 # POST once, and on failure look for the row a slow success would have left
-# before posting again, so a flake never double-posts. <post> performs the one
-# POST and prints the row; <find> prints that row, or nothing when there is
-# none. A <find> that fails is not an absent row: it answers unknown, so the
-# caller gets the failure rather than a second POST. A <find> that ends in a
-# pipe answers that way only under the `pipefail` every mechanic sets, which is
-# where a failed `api` upstream of a `jq` becomes the pipeline's exit status.
+# before posting again, so a flake costs a read rather than a second row. <post>
+# performs the one POST and prints the row; <find> prints that row, or nothing
+# when there is none. A <find> that fails is not an absent row: it answers
+# unknown, so the caller gets the failure rather than a second POST. A <find>
+# that ends in a pipe answers that way only under the `pipefail` every mechanic
+# sets, which is where a failed `api` upstream of a `jq` becomes the pipeline's
+# exit status.
 #
 # A <post> goes through `_gh_create`, not `api`: `api` retries on its own, and a
 # create is retried only after the re-read.
@@ -485,8 +486,8 @@ _thread_reply_target_query='query($id:ID!){ node(id:$id){
 # PR, because phase 7 replies once per thread.
 #
 # Create-then-verify like every other create here, with a find that returns
-# non-zero when the comment read fails, so a lost response never becomes a
-# duplicate disposition in the thread.
+# non-zero when the comment read fails, so a read that failed is reported rather
+# than turned into a duplicate disposition in the thread.
 host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
   local pr=$1 file=$3 cid me
   cid=$(gql -f query="$_thread_reply_target_query" -F id="$2" \
@@ -511,7 +512,7 @@ host_pr_resolve_thread() { # <pr> <thread-node-id>
 }
 
 # Squash with the PR title as the subject; release tooling reads it. Verified by
-# the caller re-reading host_pr_get, never assumed from this call's exit code.
+# the caller re-reading host_pr_get rather than by this call's exit code.
 host_pr_merge() { # <pr> <subject>
   api -X PUT "$R/pulls/$1/merge" -f merge_method=squash -f commit_title="$2" >/dev/null
 }

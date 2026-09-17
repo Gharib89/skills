@@ -3,7 +3,8 @@
 # runs it first: the cloud sandbox image ships without `gh` (measured in
 # "Probe the cloud sandbox proxy with ship's GitHub REST calls"), and only the
 # host adapter knows what its tool is and how to install it, so this is core,
-# never a profile Bootstrap: line every repo repeats.
+# which is why it lives here rather than on a profile Bootstrap: line every repo
+# repeats.
 #
 #   tooling [--install]
 #

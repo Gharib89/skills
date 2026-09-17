@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # After the merge: remove the issue's worktree and force-delete its local
 # branch (a squash-merged branch is not an ancestor of the default branch).
-# Carried files are never copied back.
+# Carried files stay in the worktree this removes.
 #
 #   cleanup <issue|none>
 #

@@ -5,7 +5,8 @@
 #
 #   request-review <pr> <login> [--comment <phrase>]
 #
-# Two transports, chosen by the profile's `Request:` line, never by the brand.
+# Two transports, chosen by the profile's `Request:` line, with the brand left
+# out of it.
 # Default, `Request: None.`: the host's own request-a-reviewer call. With
 # `--comment <phrase>`, from `Request: comment <phrase>`: the phrase is posted as
 # a PR comment, which is how a reviewer that is a comment-triggered workflow is
@@ -19,7 +20,7 @@
 # whatever head it lands on. The host's clock wherever the host keeps one, because
 # a local clock running ahead would put `since` in the future and strand the round
 # it asked for; a host that records no time for the comment falls back to a wall
-# clock read before the post, which is never later than the comment it stands for.
+# clock read before the post, which is at or before the comment it stands for.
 #
 # stdout: {pr, login, requested, readback[], requested_at}
 # exit: 0 requested and read back · 1 not read back (never-queued after one retry) · 2 usage

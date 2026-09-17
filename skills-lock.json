@@ -4,7 +4,7 @@
     "cloud-ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "b0c3aff9c1a72282d314109f0431c0bfc9ecc4e6abae133a51d7950b7d467604"
+      "computedHash": "96d38371572f9fc497c34a0b7ab417debebbd03ce8f7e1f4bde3bfb83c3437a6"
     },
     "code-review": {
       "source": "mattpocock/skills",
@@ -21,12 +21,12 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "9d0d87cf42f11113b3424ed142e43351040ab7e7592cacdedf57b9f7ac6de41b"
+      "computedHash": "f0b9bd050225139febbc5149c3ac66c7d9b7653c305a23670aeff7d0de5e0fc0"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "a3a1e6f44a3c5c4e8ed1612d1fa88610fb6d2f31c92af296ecaec8f48c713faf"
+      "computedHash": "c6ee6e41beb4035901f3c31a8a251b554d84f92fe0f8847042606e561d913240"
     },
     "show-me": {
       "source": "humanlayer/skills",

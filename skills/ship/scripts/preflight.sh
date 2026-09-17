@@ -8,6 +8,15 @@
 # then every not-actionable reason, collected rather than
 # first-hit so the human reads one full stop report.
 #
+# Once the run holds the claim and the worktree, `preflight <issue>` collects
+# `already claimed` plus `worktree exists` and exits 1. The profile is checked
+# on every call, so an invalid one lands its own reason and a valid one lands
+# nothing: a green profile is read out of that `ok: false` by elimination,
+# exactly those two reasons and nothing beside them. A run that edits the
+# profile mid-run re-validates it with `preflight none`, which has no issue to
+# collect a claim, PR or branch reason from, so what is left in `reasons` is the
+# profile's and the host's.
+#
 #   preflight <issue|none> [--unattended]
 #
 # `none` as the issue argument is the task-spec run: there is no issue to read,
@@ -22,7 +31,7 @@
 #   attended only · profile missing · profile invalid: <detail> · skill missing:
 #   <detail>
 #   mentions[] lists live PRs that name the issue without closing it: context
-#   for phase 1, never a stop. mentioned_by[] is the same rows widened to
+#   for phase 1, and no kind of stop. mentioned_by[] is the same rows widened to
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an
 #   open issue or a merged PR without reaching for the host CLI; both lists
 #   carry live cross-references only, open issues and open or merged PRs. pruned[] lists worktrees removed because their PR is merged or
@@ -100,7 +109,7 @@ else
 
   # The reviewer blocks, through the one parser. Refused here rather than at
   # phase 7 because a run that reaches phase 7 has already spent itself, and
-  # because a fallback naming nobody would simply never fire: the loop would
+  # because a fallback naming nobody would sit there unfired: the loop would
   # read as healthy while no second reviewer ever ran. A read loop, not
   # mapfile, for the Bash 3.2 reason the composed-skills loop below gives.
   rows=$(ship_reviewers "$(cat "$profile")")
@@ -115,7 +124,7 @@ else
   #
   # Scoped to the Copilot login, because `copilot_code_review` governs that
   # reviewer alone. An unreadable answer warns and continues: preflight refuses a
-  # profile that is wrong, never one it could not check.
+  # profile that is wrong, and admits one it could not check.
   copilot_row=$(ship_copilot_row "$(host_copilot_login)" "$rows")
   copilot_name=${copilot_row%%	*}
   copilot_trigger=${copilot_row#*	}
@@ -139,7 +148,7 @@ while IFS= read -r reason; do
   reasons+=("$reason")
 done < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
-# Prune sibling worktrees whose PR is merged or closed. Never touches one whose
+# Prune sibling worktrees whose PR is merged or closed, leaving alone any whose
 # PR is open or unknown.
 pruned='[]'
 container=$(ship_worktree_container)
