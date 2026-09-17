@@ -44,7 +44,10 @@ lines() { awk 'END{print NR}' "$1"; }
 # below is prose. An item is one at the same up-to-three-space indent the fence
 # grammar allows: four spaces open an indented code block, so an example list in
 # the section is not the map, and a deeper item is a sub-list, which is neither an
-# entry nor the end of the list. An entry names a heading when its bracketed link text, or its
+# entry nor the end of the list. An entry that wraps onto indented continuation
+# lines is one entry, joined with a space, because it is one entry to the reader
+# comparing the list against the file; the label is taken from the last `](` on
+# it, so a close bracket inside the label does not end it early. An entry names a heading when its bracketed link text, or its
 # whole text where the `](` is not there to make it a link, equals the heading;
 # both sides are trimmed at both ends, so padding and a CRLF line ending, neither
 # of them visible in the file a reader compares the list against, are neither.
@@ -56,6 +59,19 @@ lines() { awk 'END{print NR}' "$1"; }
 # stdout: one line per violation · exit: 0 clean · 1 a `## Contents` violation
 contents_check() {
   awk -v name="$2" -v count="$3" '
+    function record(   t, p, q) {
+      if (pending == "") return
+      t = pending; sub(/[ \t\r]+$/, "", t)
+      if (substr(t, 1, 1) == "[") {
+        p = 0
+        while ((q = index(substr(t, p + 1), "](")) > 0) p += q
+        if (p > 1) {
+          t = substr(t, 2, p - 2); sub(/^[ \t]+/, "", t); sub(/[ \t]+$/, "", t)
+        }
+      }
+      ents[t] = 1; eorder[++ne] = t
+      pending = ""
+    }
     {
       s = $0; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
       if (c == "`" || c == "~") {
@@ -67,34 +83,36 @@ contents_check() {
             }
           }
           else if (c == fchar && n >= flen && substr(s, n + 1) ~ /^[ \t\r]*$/) fenced = 0
-          listing = 0
+          record(); listing = 0
           next
         }
       }
       if (fenced) next
       if (s ~ /^## /) {
+        record()
         h = substr(s, 4); sub(/^[ \t]+/, "", h); sub(/[ \t\r]+$/, "", h)
         if (h == "Contents") { if (NR <= 15) anchored = 1; listing = 1; next }
         listing = 0; heads[h] = 1; horder[++nh] = h
         next
       }
       if (listing) {
-        if ($0 ~ /^[ \t\r]*$/) next
+        if ($0 ~ /^[ \t\r]*$/) { record(); next }
         if (s ~ /^([-*+]|[0-9]+\.)[ \t]+/) {
-          e = s
-          sub(/^([-*+]|[0-9]+\.)[ \t]+/, "", e); sub(/[ \t\r]+$/, "", e)
-          if (match(e, /^\[[^]]*\]\(/)) {
-            e = substr(e, RSTART + 1, RLENGTH - 3)
-            sub(/^[ \t]+/, "", e); sub(/[ \t]+$/, "", e)
-          }
-          ents[e] = 1; eorder[++ne] = e
+          record()
+          pending = s; sub(/^([-*+]|[0-9]+\.)[ \t]+/, "", pending)
           next
         }
-        if ($0 ~ /^[ \t]+([-*+]|[0-9]+\.)[ \t]+/) next
-        listing = 0
+        if ($0 ~ /^[ \t]+([-*+]|[0-9]+\.)[ \t]+/) { record(); next }
+        if (pending != "" && $0 ~ /^[ \t]+[^ \t]/) {
+          cont = $0; sub(/^[ \t]+/, "", cont); sub(/[ \t\r]+$/, "", cont)
+          pending = pending " " cont
+          next
+        }
+        record(); listing = 0
       }
     }
     END{
+      record()
       if (!anchored) {
         printf "%s: %s lines and no `## Contents` heading in its first 15 lines\n", name, count
         exit 1

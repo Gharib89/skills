@@ -2,9 +2,10 @@
 # scripts/prose-budget-check.sh: the line budget on ship's prose. Each case
 # builds a tree at the real relative paths under a fresh root, so a fixture
 # differs from a tree inside the budget only in the overrun under test. The
-# subject is the pair of thresholds and the `## Contents` selector: both
-# boundaries, the first-15-lines anchor, the heading anchor, the empty glob and
-# the path where the tooling itself fails.
+# subject is the pair of thresholds, the `## Contents` selector and the list
+# under it: both boundaries, the first-15-lines anchor, the heading anchor, the
+# entry grammar in both directions, the empty glob and the path where the tooling
+# itself fails.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -187,6 +188,20 @@ d=$(tree heading-indented-unlisted)
 check_rc "an indented heading still needs an entry" 1 "$(rc_of "$d")"
 check "the message names the indented heading" \
   'skills/ship/reference/r.md: `## Sneaky` has no entry under `## Contents`' "$(out_of "$d")"
+
+# An entry that wraps is one entry: the continuation joins it, so it compares as
+# the text a reader sees, and the entries below the wrap are still entries.
+d=$(tree entry-wrapped)
+{ printf '# R\n\n## Contents\n\n- [A long one that\n  wraps](#a-long-one-that-wraps)\n- [B](#b)\n\n## A long one that wraps\n\n## B\n'; body 92; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a wrapped entry is one entry" 0 "$(rc_of "$d")"
+
+# The delimiter inside the field: a label carrying a close bracket is still a
+# link, so the label is taken from the last `](` rather than the first `]`.
+d=$(tree label-bracket)
+{ printf '# R\n\n## Contents\n\n- [A [x] B](#a-x-b)\n\n## A [x] B\n'; body 94; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a bracket inside the label does not break the link" 0 "$(rc_of "$d")"
 
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
