@@ -13,6 +13,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: ci-wait <pr> [--timeout <s>] [--interval <s>]'
+ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 case $pr in -*) ship_tooling "$usage" ;; esac

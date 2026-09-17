@@ -13,6 +13,8 @@
 #   not answer "fresh". Offline is fine (the last-known ref still compares).
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+usage='usage: base-fresh'
+ship_help "$usage" "$@"
 [ $# -eq 0 ] || ship_tooling "base-fresh takes no arguments"
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || ship_tooling "not inside a git checkout"
 

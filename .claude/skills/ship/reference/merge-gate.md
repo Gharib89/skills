@@ -94,7 +94,7 @@ part of the summary is asked back rather than read as the word, because merging
 is the step no later phase undoes. Never an auto-merge flag either: it can merge
 the instant CI is green, before a reviewer lands.
 
-**On approval**, from the worktree, `merge <pr> <issue|none> --worktree <path>`.
+**On approval**, from the worktree, `merge <pr> <issue|none> [--worktree <path>]`.
 It reads the PR first and refuses `pr-closed: <state>` for one that is neither
 open nor already merged, merging nothing: the host's merge endpoint accepts a
 closed PR, and a run that comes back to a stale PR number would otherwise land

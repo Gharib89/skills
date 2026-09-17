@@ -25,6 +25,7 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
 usage='usage: file-issue --title "<title>" --body-file <path> --label <marker> [--distinct-from <n>[,<n>]]'
+ship_help "$usage" "$@"
 title=""; file=""; label=""; exclude="[]"
 while [ $# -gt 0 ]; do
   case $1 in

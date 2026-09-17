@@ -16,9 +16,14 @@
 # Check 3 traverses the whole skills tree rather than the mechanics alone, so it
 # takes its own directory argument.
 #
-# Check 4 is the one check that invokes a mechanic with arguments. An unguarded
-# mechanic makes it reach the host once: that failure is the finding, and the
-# ids it sends cannot exist.
+# Checks 4 and 5 invoke a mechanic with arguments. An unguarded mechanic makes
+# check 4 reach the host once: that failure is the finding, and the ids it sends
+# cannot exist. Check 5 has the wider reach of the two, because check 4 skips the
+# mechanics that take no positional and check 5 exempts nobody; a mechanic whose
+# `ship_help` landed after `ship_load_host` is what makes it load an adapter.
+#
+# Check 5 is the --help contract: a run asks a mechanic what its flags are by
+# running it, so the answer has to be the usage line, on stdout, exit 0.
 #
 # stdout: one line per violation, with the offending mechanic named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
@@ -117,9 +122,71 @@ for path in "$dir"/*.sh; do
       rc=1
       continue
     fi
-    printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | startswith("usage: " + $m)))' >/dev/null 2>&1 \
+    printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | test("^usage: " + $m + "( |$)") and (contains("\n") | not)))' >/dev/null 2>&1 \
       || { printf '%s: %s leading-dash positional(s) did not answer with its own usage line\n' "$m" "$i"; rc=1; }
   done
+done
+
+# 5. Every mechanic answers `--help` with its own usage line on stdout, exit 0
+# and nothing on stderr. No mechanic is exempt, the four that take no positional
+# included: a run reads a mechanic's flags by running it, and one that has none
+# still answers with its name.
+#
+# Run from a directory with no resolvable origin, which is what makes this check
+# police the guard's PLACEMENT where check 2 cannot. A guard after
+# `ship_load_host` answers correctly wherever an adapter loads, and the load
+# makes no host call, so a check run from the repo cannot see the difference.
+# From here it can: a late guard answers `--help` with the adapter's tooling
+# error, which is the answer someone asking what the flags are would get on a
+# machine that has no origin remote.
+err=$(mktemp) || { echo "cannot create a temp file" >&2; exit 2; }
+nogit=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
+trap 'rm -f "$err"; rm -rf "$nogit"' EXIT
+for path in "$dir"/*.sh; do
+  m=$(basename "$path" .sh)
+  [ "$m" = _lib ] && continue
+  apath=$(cd "$(dirname "$path")" && pwd)/$(basename "$path")
+  out=$(cd "$nogit" && bash "$apath" --help 2>"$err"); st=$?
+  # stderr is read before the shape checks below return: a mechanic can answer
+  # with the wrong line AND talk on stderr, and one report per run per fault is
+  # what keeps a fix loop from paying for a second run to see the second fault.
+  [ -s "$err" ] && { printf '%s: --help wrote to stderr\n' "$m"; rc=1; }
+  if [ "$st" -ne 0 ]; then
+    printf '%s: --help exited %s, expected 0\n' "$m" "$st"
+    rc=1
+    continue
+  fi
+  # The name ends at the string or at a space: a bare prefix match takes
+  # `usage: read-issue-other` for read-issue's own line.
+  case $out in
+    "usage: $m"|"usage: $m "*) ;;
+    *) printf '%s: --help did not print its own usage line on stdout\n' "$m"; rc=1; continue ;;
+  esac
+  # The usage line and nothing else: a case pattern matches across newlines, so
+  # the prefix above accepts whatever a mechanic prints under it.
+  if [ "$(printf '%s\n' "$out" | wc -l)" -ne 1 ]; then
+    printf '%s: --help printed more than its usage line on stdout\n' "$m"
+    rc=1
+    continue
+  fi
+  # The same line the guards print. Check 4 reads the error path and this one
+  # reads the --help path; nothing compares them, so a mechanic can answer
+  # --help with a usage line its guards have since outgrown. With the flags out
+  # of SKILL.md's table, that answer is the only place a run reads them.
+  # `base-fresh` and `select` are the only two with nothing to compare against:
+  # their guards answer a bad call `<name> takes no arguments`, not a usage
+  # line. Every other mechanic has one, reached by a different call: bare for
+  # the two whose bare invocation is itself malformed, one `--x` for `tooling`,
+  # whose bare call is a real run, and check 4's three for everything that
+  # takes a positional.
+  if [ "$m" != base-fresh ] && [ "$m" != select ]; then
+    case $m in
+      file-issue|list-prs) want=$(bash "$path" 2>/dev/null | jq -r '.error // ""') ;;
+      tooling)             want=$(bash "$path" --x 2>/dev/null | jq -r '.error // ""') ;;
+      *)                   want=$(bash "$path" --x --x --x 2>/dev/null | jq -r '.error // ""') ;;
+    esac
+    [ "$out" = "$want" ] || { printf '%s: --help and the usage guard print different lines\n' "$m"; rc=1; }
+  fi
 done
 
 exit $rc

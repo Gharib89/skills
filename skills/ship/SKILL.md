@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 5.1.0
+  version: 5.2.0
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -53,6 +53,11 @@ is not in your context: read it once, at the start of the run, with
 
 Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits.
+
+Every mechanic a run invokes, in this block and in the phases below, answers
+`--help` with its own usage (the repo's local gate is not one of them);
+[reference/mechanics.md](reference/mechanics.md) is the contract all of them
+share.
 
 ## The ship profile
 
@@ -105,21 +110,15 @@ that is elimination, not an answer.
 
 ## Generic mechanics: the only way to touch the host
 
-`scripts/` holds one executable per deterministic step. Each prints one JSON
-verdict on stdout, a failing step's last 40 log lines on stderr, and exits
-`0` ok, `1` the mechanic's own not-ok answer, `2` tooling. A malformed
-invocation is tooling, never exit 1: a missing or empty positional, a flag where
-a positional belongs and a flag without its value all print
-`{"error": "<usage>"}` and exit 2, as an unknown flag does. Exit 1 is an
-answer, not always a fault: `nothing-ready` from `select`, a not-actionable
-`preflight` and a `poll-pr` window that closed are all exit 1 and none is red.
-A failed write to an open PR's body or title, a comment or a thread reply
-carries the host's `status` beside its `error`: a 5xx or a 429 outlasted the
-mechanic's own backoff, so retrying is the fix; any other number is the request
-itself, so read the body you sent. `null` is neither: the call never got an HTTP
-answer at all, so the host or the tooling between you and it is what to look at.
-`open-pr` and `file-issue` answer with the error alone, and their stderr carries
-the host's own message. Read the JSON, then decide.
+`scripts/` holds one executable per deterministic step. What every mechanic
+answers, whichever phase runs it, is
+[reference/mechanics.md](reference/mechanics.md): the exit codes, what a failed
+write's `status` says, the vocabulary a read comes back in, the inline-run rule,
+and `--help`, which is where a mechanic's flags come from. The table below maps
+mechanic to phase and carries no flags, because a table goes stale against the
+script and `--help` does not. Its one row that is not a mechanic, the repo's own
+local gate, keeps its flags: they come from the local-gate contract, and that
+script answers no `--help`.
 
 When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that
@@ -130,43 +129,32 @@ step, including the host adapter it sources (`scripts/host/github.sh` or
 goes through a named mechanic, and a missing operation is a **Ship defect**:
 report it on the merge summary's `Ship defects:` row for the human to carry
 upstream, never hand-roll the call, and never file it to another repo.
-Reads come back in one vocabulary on both hosts: checks
-`pending|success|failure`, mergeable `clean|conflict|unknown`, review
-`approved|changes|comment`, and threads as `resolved: true|false` per thread, or
-the whole `threads` field as the string `"unavailable"` when the state could not
-be read.
 
 | Mechanic | Phase |
 |---|---|
-| `run-file init <issue \| slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>]... [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>]` | the required first action |
-| `run-file open <n> --file <path>`, `run-file close <n> --file <path>`, `run-file skip <n> <reason> --file <path>`, `run-file timing --file <path>` | every phase flip, and the merge summary's `Timing:` row |
-| `preflight <issue \| none> [--unattended]` | 0 |
-| `read-issue <issue>` | 0 |
-| `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
-| `manage-issue <issue> take \| release \| handback "<reason>" \| close` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
-| `file-issue --title --body-file --label <marker> [--distinct-from <n>[,<n>]]` | 2, 4, 7 |
+| `run-file init` | the required first action |
+| `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
+| `preflight` | 0 |
+| `read-issue` | 0 |
+| `isolate` | 0 |
+| `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
+| `file-issue` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
-| `open-pr <issue \| none> --title --body-file` | 6 |
-| `reflect <issue> <pr>` | 6 |
-| `update-pr-title <pr> --title` | 6, 9 |
-| `read-pr <pr>` | 6 and 7, reading a PR back after a title or body write |
-| `poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]` | 7, 8 |
-| `request-review <pr> <login> [--comment <phrase>]` | 7 |
-| `comment-pr <pr> --body-file` | 7, 9 |
-| `reply-thread <pr> <thread> --body-file` | 7 |
-| `update-pr-body <pr> (--section <name> \| --preamble) --body-file` | 7 |
-| `resolve-thread <pr> <thread>` | 7 |
-| `ci-wait <pr> [--timeout <s>] [--interval <s>]` | 8 |
-| `merge <pr> <issue \| none> --worktree <path>` | 9, on approval |
-| `cleanup <issue \| none>` | 9, after merge |
-| `tooling [--install]`, `list-prs --open` and `select` | unattended lane |
-
-Run mechanics **inline**: they project their own output, so a subagent there
-burns budget to relay what an exit code already says. Poll loops are bounded
-and foreground; reaching the bound is never permission to proceed. Re-run to
-extend, or pass a wider `--timeout` up front when the profile's `Legs:` names a
-leg you know is slower than the bound.
+| `open-pr` | 6 |
+| `reflect` | 6 |
+| `update-pr-title` | 6, 9 |
+| `read-pr` | 6 and 7, reading a PR back after a title or body write |
+| `poll-pr` | 7, 8 |
+| `request-review` | 7 |
+| `comment-pr` | 7, 9 |
+| `reply-thread` | 7 |
+| `update-pr-body` | 7 |
+| `resolve-thread` | 7 |
+| `ci-wait` | 8 |
+| `merge` | 9, on approval |
+| `cleanup` | 9, after merge |
+| `tooling`, `list-prs` and `select` | unattended lane |
 
 ## The autonomy contract
 
@@ -326,7 +314,8 @@ alongside a `mentioned_by[]` row per live cross-reference, open issues and
 open or merged PRs both, naming its `kind` and `state`.
 
 Then `read-issue <issue>`: the branch `<type>` and `<slug>` are derived from the
-issue.
+issue. Every mechanic this phase and the nine after it run answers to
+[reference/mechanics.md](reference/mechanics.md).
 
 Now isolate. Attended: `isolate <issue> <type> <slug>` with the profile's
 `Carry:` files. It resolves the main checkout through `--git-common-dir`,
@@ -572,7 +561,7 @@ and review quota, so push when the tree changed.
 [reference/merge-gate.md](reference/merge-gate.md), uncompressed. Attended:
 post it in the conversation and wait for an explicit "merge": the word is
 exact, and a near miss is asked back rather than read as merge. On approval run
-`merge <pr> <issue|none> --worktree <path>` then `cleanup <issue|none>`; any
+`merge <pr> <issue|none> [--worktree <path>]` then `cleanup <issue|none>`; any
 `false` in their JSON is finished by hand before reporting done. `merge` reads
 the PR first and refuses `pr-closed: <state>` for one that is neither open nor
 already merged, merging nothing: a human says "merge" about a PR, and a closed

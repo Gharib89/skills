@@ -14,6 +14,13 @@ copy() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills/ship/scripts "$d"; pri
 # <case-dir>: a fresh copy of the whole skills tree, for one Bash 4+ mutation.
 copy_skills() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills "$d"; printf '%s' "$d"; }
 rc_of() { bash scripts/contract-check.sh "$1" "${2:-skills}" >/dev/null 2>&1; printf '%s' "$?"; }
+# The checker's own stdout, for the cases that assert which violation it named.
+out_of() { bash scripts/contract-check.sh "$1" "${2:-skills}" 2>/dev/null; }
+# 0 when the checker named exactly this line, for a fixture that trips more than
+# one check and whose whole stdout is therefore not one assertion's business.
+# No pipe: `grep -q` closes one early, and `pipefail` then reports the checker's
+# SIGPIPE instead of the match.
+named() { local out; out=$(bash scripts/contract-check.sh "$1" "${2:-skills}" 2>/dev/null); case $out in *"$3"*) printf 0 ;; *) printf 1 ;; esac; }
 
 # The real skills tree is the second argument here, so this case holds check 3
 # as well: the tree that ships carries no Bash 4+ construct outside the
@@ -56,8 +63,11 @@ check_rc "exit 2 without a JSON error object fails the check" 1 "$(rc_of "$d")"
 # The four mechanics that legitimately take no argument are not held to check 2:
 # a bare invocation of one is a real run, not a malformed invocation.
 d=$(copy excluded)
+# The stub answers --help because check 5 exempts nobody: without that branch
+# the fixture would fail on check 5 and the case would assert the wrong thing.
 cat > "$d/base-fresh.sh" <<'EOF'
 #!/usr/bin/env bash
+[ "${1:-}" = --help ] && { echo "usage: base-fresh"; exit 0; }
 printf '{"fresh":true}\n'
 exit 0
 EOF
@@ -86,6 +96,108 @@ usage='usage: read-issue <issue>'
 printf '{"number":"%s"}\n' "$1"
 EOF
 check_rc "a three-positional mechanic is caught only by the third dash" 1 "$(rc_of "$d")"
+
+# Check 5: the --help contract. Each stub answers checks 2 and 4 the way a real
+# mechanic does, so the one violation in the fixture is the one under test and
+# the checker's whole stdout is the line it names.
+help_stub() { # <case-dir> <help-branch>
+  local d; d=$(copy "$1")
+  { printf '#!/usr/bin/env bash\n'
+    printf "usage='usage: read-issue <issue>'\n"
+    [ -n "$2" ] && printf '%s\n' "$2"
+    printf 'case ${1:-} in ""|-*) printf %s "$usage"; exit 2 ;; esac\n' "'{\"error\":\"%s\"}\\n'"
+    printf 'printf %s "$1"\n' "'{\"number\":\"%s\"}\\n'"
+  } > "$d/read-issue.sh"
+  printf '%s' "$d"
+}
+
+d=$(help_stub help-unanswered '')
+check "a mechanic that does not answer --help is named" \
+  'read-issue: --help exited 2, expected 0' "$(out_of "$d")"
+check_rc "a mechanic that does not answer --help fails the check" 1 "$(rc_of "$d")"
+
+d=$(help_stub help-wrong-line '[ "${1:-}" = --help ] && { echo "see the docs"; exit 0; }')
+check "a --help answer that is not the usage line is named" \
+  'read-issue: --help did not print its own usage line on stdout' "$(out_of "$d")"
+check_rc "a --help answer that is not the usage line fails the check" 1 "$(rc_of "$d")"
+
+d=$(help_stub help-noisy '[ "${1:-}" = --help ] && { echo "$usage"; echo noise >&2; exit 0; }')
+check "a --help answer that writes to stderr is named" \
+  'read-issue: --help wrote to stderr' "$(out_of "$d")"
+check_rc "a --help answer that writes to stderr fails the check" 1 "$(rc_of "$d")"
+
+# The mechanic's name has to end where its own usage line ends it. A prefix
+# match alone takes another mechanic's line as this one's.
+d=$(help_stub help-name-prefix '[ "${1:-}" = --help ] && { echo "usage: read-issue-other <issue>"; exit 0; }')
+check "a --help answer naming a longer mechanic is named" \
+  'read-issue: --help did not print its own usage line on stdout' "$(out_of "$d")"
+check_rc "a --help answer naming a longer mechanic fails the check" 1 "$(rc_of "$d")"
+
+# The usage line and nothing under it. A case pattern matches across newlines,
+# so the prefix arm above passes a mechanic that prints its usage and then talks.
+d=$(help_stub help-extra-output '[ "${1:-}" = --help ] && { echo "usage: read-issue <issue>"; echo "and some more"; exit 0; }')
+check "a --help answer with a second line is named" \
+  'read-issue: --help printed more than its usage line on stdout' "$(out_of "$d")"
+check_rc "a --help answer with a second line fails the check" 1 "$(rc_of "$d")"
+
+# A guard placed after `ship_load_host` answers --help correctly wherever an
+# adapter loads, which is why check 5 runs from a directory with no origin
+# remote. This stub answers checks 2 and 4 from the repo, and only check 5,
+# from there, sees the adapter error where the usage line belongs.
+d=$(copy help-late-guard)
+cat > "$d/read-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+usage='usage: read-issue <issue>'
+ship_load_host
+ship_help "$usage" "$@"
+case ${1:-} in ""|-*) ship_tooling "$usage" ;; esac
+printf '{"number":"%s"}\n' "$1"
+EOF
+check "a guard after the adapter load is named" \
+  'read-issue: --help exited 2, expected 0' "$(out_of "$d")"
+check_rc "a guard after the adapter load fails the check" 1 "$(rc_of "$d")"
+
+# The --help answer and the guards' answer are two paths, and check 4 reads only
+# the second. A mechanic that grows a flag and updates one of them leaves the
+# other as the run's stale source.
+d=$(help_stub help-drift '[ "${1:-}" = --help ] && { echo "usage: read-issue"; exit 0; }')
+check "a --help answer that disagrees with the guard is named" \
+  'read-issue: --help and the usage guard print different lines' "$(out_of "$d")"
+check_rc "a --help answer that disagrees with the guard fails the check" 1 "$(rc_of "$d")"
+
+# The drift comparison reaches the mechanics that take no positional too: only
+# `base-fresh` and `select` answer a bad call with no usage line at all. The
+# call that reaches the guard differs per mechanic, and `file-issue`, which
+# carries the longest usage string in the tree, answers the bare call, not
+# check 4's three dashes.
+d=$(copy help-drift-no-positional)
+cat > "$d/file-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+usage='usage: file-issue --title <title> --body-file <path> --label <marker>'
+[ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
+printf '{"error":"%s [--distinct-from <n>[,<n>]]"}\n' "$usage"
+exit 2
+EOF
+check "a no-positional mechanic whose --help drifts from its guard is named" \
+  'file-issue: --help and the usage guard print different lines' "$(out_of "$d")"
+check_rc "a no-positional mechanic whose --help drifts fails the check" 1 "$(rc_of "$d")"
+
+# Check 4 takes the usage line and nothing under it, the way check 5 does: the
+# regex anchors the start alone. This stub trips check 5's comparison too, so the
+# assertion names check 4's own line rather than the whole stdout.
+d=$(copy dash-usage-extra)
+cat > "$d/read-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+usage='usage: read-issue <issue>'
+[ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
+case ${1:-} in ""|-*) printf '{"error":"%s\\nand more"}\n' "$usage"; exit 2 ;; esac
+printf '{"number":"%s"}\n' "$1"
+EOF
+check_rc "a usage error with a second line is named by check 4" 0 \
+  "$(named "$d" skills 'read-issue: 1 leading-dash positional(s) did not answer with its own usage line')"
+check_rc "a usage error with a second line fails the check" 1 "$(rc_of "$d")"
 
 # Check 3: the Bash 3.2 target. A file under skills/ runs in whatever shell a
 # consumer machine provides, macOS's system Bash included, and the mechanics

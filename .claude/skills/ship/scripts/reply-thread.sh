@@ -13,6 +13,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: reply-thread <pr> <thread-id> --body-file <path>'
+ship_help "$usage" "$@"
 [ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
 pr=$1 thread=$2; shift 2
 case $pr in -*) ship_tooling "$usage" ;; esac

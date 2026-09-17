@@ -14,11 +14,14 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
+usage='usage: tooling [--install]'
+ship_help "$usage" "$@"
+
 install=false
 while [ $# -gt 0 ]; do
   case $1 in
     --install) install=true; shift ;;
-    *) ship_tooling "usage: tooling [--install]" ;;
+    *) ship_tooling "$usage" ;;
   esac
 done
 
