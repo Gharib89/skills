@@ -79,7 +79,7 @@ Subject constraints: <reserved prefixes or formats for the squash subject, or No
 
 ## PR
 
-Template: <path; fill it through its own headings> | None.
+Template: <path; fill it through its own headings rather than a raw body that bypasses it> | None.
 
 <!-- `Closes #<issue>`, `## Deviations from plan`, `## Verification` and `## Review` are core in every repo. The closing reference sits above the first `## ` heading, where a section rewrite cannot reach it. -->
 
