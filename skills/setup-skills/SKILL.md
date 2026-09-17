@@ -81,7 +81,7 @@ Detect per kind, propose each with the trigger the evidence implies, and confirm
 - **A reviewer with request history.** `review_requested` events on the last ten merged PRs: `on-request`.
 - **Claude Code.** `claude-code-action` in a workflow, where the trigger the workflow declares is the trigger the profile takes: a `pull_request` trigger is on-push, an `issue_comment` trigger is on-request and the phrase its `if:` matches is the `Request: comment <phrase>` value. A Claude review pipeline on Azure DevOps is on-push.
 
-Then, for each reviewer the draft names: `Resolve:` is walked where the proposed trigger is on-push or on-request and the reviewer's findings arrive as inline review comments (`resolve-thread` for any GitHub reviewer; `claude-code-action` opens threads on both hosts), and reads `None.` otherwise, which is what auto-once always takes because its loop converges on dispositioned threads without resolving them. `Cap:` is asked of every reviewer, always.
+Then, for each reviewer the draft names: `Resolve:` is walked where the proposed trigger is on-push or on-request and the reviewer's findings arrive as inline review comments, and it is the mechanism that reviewer actually offers, `resolve-thread` for Copilot and for `claude-code-action` on either host (GitHub review threads, Azure DevOps PR threads), the reviewer's own resolve comment where it posts one, as CodeRabbit does. It reads `None.` otherwise, which is what auto-once always takes because its loop converges on dispositioned threads without resolving them. `Cap:` is asked of every reviewer, always.
 
 ### 4. Present, then walk
 

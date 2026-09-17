@@ -83,7 +83,7 @@ Directly under the `# Ship profile` title, before the first
 (a heading or `Label:` line added, renamed or removed; a `Label:` vocabulary
 changed), always with a ship major bump, and stays put for a behaviour change
 that leaves the profile alone. Preflight compares the two and refuses a mismatch
-in either direction, in both lanes, unclaimed; the detail names both numbers
+in either direction, in both lanes, before any claim; the detail names both numbers
 and the fix. A profile older than ship is refused even where ship could default
 the missing axis: a defaulted axis reads `None.`/`Default.` explicitly, on a
 heading that is present like every other.

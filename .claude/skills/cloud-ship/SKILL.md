@@ -2,7 +2,7 @@
 name: cloud-ship
 description: >-
   Run one fire of a scheduled cloud routine: invoke `ship` unattended and relay
-  its outcome. Use only from a cloud routine's prompt; a human shipping an issue
+  its outcome. Composes `ship`. Use only from a cloud routine's prompt; a human
   runs `/ship`.
 metadata:
   version: 1.0.1

@@ -110,7 +110,7 @@ labels, assignee, state, comments, open blockers. Derive what success looks
 like and write it into the Run file, as criteria a later phase can check. A
 later authoritative comment supersedes the body (**spec precedence**, detailed
 in [reference/implement.md](reference/implement.md)). Too vague to plan: stop
-`ambiguous`, unclaimed. Otherwise **claim before any work**:
+`ambiguous`, with no claim taken. Otherwise **claim before any work**:
 `manage-issue <issue> take`, idempotent, which assigns you and posts the fixed
 comment `🤖 Claimed by a ship run: implementation in progress.` The claim holds
 until merge; every stop after this point follows the stop table.
@@ -304,10 +304,10 @@ hold around that:
 
 | Stop | Reason | Claim |
 |---|---|---|
-| Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | unclaimed |
-| A skill ship composes is not installed | `skill missing: <skill>; run <install line>` | unclaimed |
-| Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | unclaimed |
-| Issue too vague to plan | `ambiguous` | unclaimed |
+| Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | no claim |
+| A skill ship composes is not installed | `skill missing: <skill>; run <install line>` | no claim |
+| Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | no claim |
+| Issue too vague to plan | `ambiguous` | no claim |
 | Change outgrows one PR, or needs a redesign the issue did not scope | `needs-split` | attended: ask; unattended: hand back |
 | A find shows the issue is mis-specified | `mis-specified` | attended: ask; unattended: hand back |
 | Verification prerequisite missing | `hand-off` (attended waits, claim holds) / `blocked-verification` | attended: hold; unattended: hand back |
@@ -316,10 +316,10 @@ hold around that:
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
 | The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you rebase; unattended: hand back |
 | The PR is closed at the merge gate | `pr-closed: <state>` | attended: ask; unattended: hand back |
-| Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | unclaimed |
-| Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | unclaimed |
-| No issue passes selection | `nothing-ready` | unclaimed |
-| The host's blocker query exists and failed | `blockers-unavailable` | unclaimed |
+| Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | no claim |
+| Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | no claim |
+| No issue passes selection | `nothing-ready` | no claim |
+| The host's blocker query exists and failed | `blockers-unavailable` | no claim |
 | Merge gate reached | none: the run's success | holds until merge |
 
 Hand-back is `manage-issue <issue> handback "<reason>"`: unassign, drop
