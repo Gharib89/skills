@@ -141,7 +141,7 @@ done
 # machine that has no origin remote.
 err=$(mktemp) || { echo "cannot create a temp file" >&2; exit 2; }
 nogit=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
-trap 'rm -f "$err"; rmdir "$nogit" 2>/dev/null' EXIT
+trap 'rm -f "$err"; rm -rf "$nogit"' EXIT
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ "$m" = _lib ] && continue
@@ -172,16 +172,21 @@ for path in "$dir"/*.sh; do
   # The same line the guards print. Check 4 reads the error path and this one
   # reads the --help path; nothing compares them, so a mechanic can answer
   # --help with a usage line its guards have since outgrown. With the flags out
-  # of SKILL.md's table, that answer is the only place a run reads them. The
-  # mechanics with no positional are excluded for check 4's reason: they have no
-  # malformed-invocation usage line to compare against.
-  case $has_no_positional in
-    *" $m "*) ;;
-    *)
-      want=$(bash "$path" --x --x --x 2>/dev/null | jq -r '.error // ""')
-      [ "$out" = "$want" ] || { printf '%s: --help and the usage guard print different lines\n' "$m"; rc=1; }
-      ;;
-  esac
+  # of SKILL.md's table, that answer is the only place a run reads them.
+  # `base-fresh` and `select` are the only two with nothing to compare against:
+  # their guards answer a bad call `<name> takes no arguments`, not a usage
+  # line. Every other mechanic has one, reached by a different call: bare for
+  # the two whose bare invocation is itself malformed, one `--x` for `tooling`,
+  # whose bare call is a real run, and check 4's three for everything that
+  # takes a positional.
+  if [ "$m" != base-fresh ] && [ "$m" != select ]; then
+    case $m in
+      file-issue|list-prs) want=$(bash "$path" 2>/dev/null | jq -r '.error // ""') ;;
+      tooling)             want=$(bash "$path" --x 2>/dev/null | jq -r '.error // ""') ;;
+      *)                   want=$(bash "$path" --x --x --x 2>/dev/null | jq -r '.error // ""') ;;
+    esac
+    [ "$out" = "$want" ] || { printf '%s: --help and the usage guard print different lines\n' "$m"; rc=1; }
+  fi
 done
 
 exit $rc

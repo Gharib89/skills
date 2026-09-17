@@ -167,6 +167,23 @@ check "a --help answer that disagrees with the guard is named" \
   'read-issue: --help and the usage guard print different lines' "$(out_of "$d")"
 check_rc "a --help answer that disagrees with the guard fails the check" 1 "$(rc_of "$d")"
 
+# The drift comparison reaches the mechanics that take no positional too: only
+# `base-fresh` and `select` answer a bad call with no usage line at all. The
+# call that reaches the guard differs per mechanic, and `file-issue`, which
+# carries the longest usage string in the tree, answers the bare call, not
+# check 4's three dashes.
+d=$(copy help-drift-no-positional)
+cat > "$d/file-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+usage='usage: file-issue --title <title> --body-file <path> --label <marker>'
+[ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
+printf '{"error":"%s [--distinct-from <n>[,<n>]]"}\n' "$usage"
+exit 2
+EOF
+check "a no-positional mechanic whose --help drifts from its guard is named" \
+  'file-issue: --help and the usage guard print different lines' "$(out_of "$d")"
+check_rc "a no-positional mechanic whose --help drifts fails the check" 1 "$(rc_of "$d")"
+
 # Check 4 takes the usage line and nothing under it, the way check 5 does: the
 # regex anchors the start alone. This stub trips check 5's comparison too, so the
 # assertion names check 4's own line rather than the whole stdout.
@@ -175,7 +192,7 @@ cat > "$d/read-issue.sh" <<'EOF'
 #!/usr/bin/env bash
 usage='usage: read-issue <issue>'
 [ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
-case ${1:-} in ""|-*) printf '{"error":"%s\nand more"}\n' "$usage"; exit 2 ;; esac
+case ${1:-} in ""|-*) printf '{"error":"%s\\nand more"}\n' "$usage"; exit 2 ;; esac
 printf '{"number":"%s"}\n' "$1"
 EOF
 check_rc "a usage error with a second line is named by check 4" 0 \
