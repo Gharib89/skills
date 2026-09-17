@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Local gate: every check this repo's CI runs, run locally before a PR opens.
-# Written by setup-skills; owned by the repo. Ship reads its verdict alone.
+# Written by setup-skills; owned by the repo, which is who edits it from here.
 #
 #   scripts/local-gate.sh [--small <node>] [--base <ref>]
 #
