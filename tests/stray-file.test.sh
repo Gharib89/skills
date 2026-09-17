@@ -41,6 +41,12 @@ check_rc "a stray top-level directory fails" 1 "$(rc_of "$d")"
 check "the message names the path, not the directory" \
   "src/main.sh: tracked outside the repo's top-level allowlist" "$(out_of "$d")"
 
+# A tab in a tracked name: `git ls-files` C-quotes it unless the index is read
+# NUL-delimited, and a quoted path has no top-level entry this can match, so an
+# owned file would read as stray under a name the message misprints.
+d=$(repo odd-name "docs/$(printf 'a\tb')")
+check_rc "a tab in a tracked name is read whole" 0 "$(rc_of "$d")"
+
 # Untracked is not tracked: scratch a run leaves in the tree is not a finding,
 # which is what keeps this gate from firing on a worktree mid-run.
 d=$(repo untracked skills/ship/SKILL.md); : > "$d/null.x"

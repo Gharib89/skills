@@ -27,10 +27,16 @@ files=" CLAUDE.md CONTEXT.md skills-lock.json "
 toplevel=$(git -C "$root" rev-parse --show-toplevel) || exit 2
 [ "$toplevel" = "$(cd "$root" && pwd -P)" ] \
   || { printf 'not the top of a checkout: %s\n' "$root" >&2; exit 2; }
-tracked=$(git -C "$root" ls-files) || exit 2
+# NUL-delimited, because `git ls-files` C-quotes a name carrying a tab or a
+# newline, and a quoted path has no top-level entry to match: an owned file would
+# read as stray, under a name the message misprints. A command substitution drops
+# NULs, so the list goes through a file.
+list=$(mktemp) || exit 2
+trap 'rm -f "$list"' EXIT
+git -C "$root" ls-files -z > "$list" || exit 2
 
 rc=0
-while IFS= read -r p; do
+while IFS= read -r -d '' p; do
   [ -n "$p" ] || continue
   top=${p%%/*}
   if [ "$top" = "$p" ]; then
@@ -40,5 +46,5 @@ while IFS= read -r p; do
   fi
   printf "%s: tracked outside the repo's top-level allowlist\n" "$p"
   rc=1
-done <<< "$tracked"
+done < "$list"
 exit $rc

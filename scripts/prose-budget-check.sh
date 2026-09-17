@@ -41,7 +41,10 @@ lines() { awk 'END{print NR}' "$1"; }
 # `## ` heading has an entry and every entry names a heading. The list is the run
 # of list items directly under the heading, blank lines included and the first
 # other line, a fence delimiter among them, ending it, so a bullet in the prose
-# below is prose. An entry names a heading when its bracketed link text, or its
+# below is prose. An item is one at the same up-to-three-space indent the fence
+# grammar allows: four spaces open an indented code block, so an example list in
+# the section is not the map, and a deeper item is a sub-list, which is neither an
+# entry nor the end of the list. An entry names a heading when its bracketed link text, or its
 # whole text where the `](` is not there to make it a link, equals the heading;
 # both sides are trimmed at both ends, so padding and a CRLF line ending, neither
 # of them visible in the file a reader compares the list against, are neither.
@@ -75,14 +78,18 @@ contents_check() {
       }
       if (listing) {
         if ($0 ~ /^[ \t\r]*$/) next
-        if ($0 !~ /^[ \t]*([-*+]|[0-9]+\.)[ \t]+/) { listing = 0; next }
-        e = $0
-        sub(/^[ \t]*([-*+]|[0-9]+\.)[ \t]+/, "", e); sub(/[ \t\r]+$/, "", e)
-        if (match(e, /^\[[^]]*\]\(/)) {
-          e = substr(e, RSTART + 1, RLENGTH - 3)
-          sub(/^[ \t]+/, "", e); sub(/[ \t]+$/, "", e)
+        if (s ~ /^([-*+]|[0-9]+\.)[ \t]+/) {
+          e = s
+          sub(/^([-*+]|[0-9]+\.)[ \t]+/, "", e); sub(/[ \t\r]+$/, "", e)
+          if (match(e, /^\[[^]]*\]\(/)) {
+            e = substr(e, RSTART + 1, RLENGTH - 3)
+            sub(/^[ \t]+/, "", e); sub(/[ \t]+$/, "", e)
+          }
+          ents[e] = 1; eorder[++ne] = e
+          next
         }
-        ents[e] = 1; eorder[++ne] = e
+        if ($0 ~ /^[ \t]+([-*+]|[0-9]+\.)[ \t]+/) next
+        listing = 0
       }
     }
     END{

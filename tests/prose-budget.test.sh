@@ -159,6 +159,20 @@ check "the message quotes the whole entry" \
   'skills/ship/reference/r.md: `## A` has no entry under `## Contents`
 skills/ship/reference/r.md: `## Contents` entry `[A] note` names no heading' "$(out_of "$d")"
 
+# Four spaces make an indented code block, not a list item, so an example list
+# inside the section cannot stand in for the map. A deeper item under a real
+# entry is not the map either, and it does not end it: the entries after it are
+# still entries.
+d=$(tree indented-example)
+{ printf '# R\n\n## Contents\n\n    - [A](#a)\n    - [B](#b)\n\n## A\n\n## B\n'; body 91; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "an indented code block is not the list" 1 "$(rc_of "$d")"
+
+d=$(tree nested-entry)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n    - [A1](#a1)\n- [B](#b)\n\n## A\n\n## B\n'; body 90; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a deeper item neither counts nor ends the list" 0 "$(rc_of "$d")"
+
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \
