@@ -5,7 +5,7 @@
 #   poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>]
 #           [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]
 #
-# done when the PR is in conflict (merge-ref checks never start, so waiting is
+# done when the PR is in conflict (merge-ref checks stay unstarted, so waiting is
 # pointless), or every check on the head has completed and, with --await-review,
 # a SUBSTANTIVE review by that login has landed. `substantive` is the landing
 # signal, set by the host adapter's reviews projection: an empty row and a
@@ -17,14 +17,15 @@
 #     earns a new review, so a review on an older commit does not count.
 #   since (--since, on-request and auto-once): the review was submitted at or
 #     after <iso>, on ANY head. Such a reviewer delivers one round per request
-#     and never re-posts, so a push between the request and the review leaves
+#     and posts it once, so a push between the request and the review leaves
 #     the round keyed to the older head, where the head rule would wait out the
 #     whole window. Pass `request-review`'s `requested_at` or `open-pr`'s
 #     `created_at`. Matching by time rather than by requesting login is
 #     deliberate: the login a request is made under and the login the host
 #     records can differ. A row with a null submitted_at is host state rather
-#     than a timed event (an Azure DevOps vote, which the API never stamps): it
-#     cannot answer a question about time, so it satisfies the head rule only.
+#     than a timed event (an Azure DevOps vote, which the API leaves
+#     unstamped): it cannot answer a question about time, so it satisfies the
+#     head rule only.
 #     Counting it here would land round 2 instantly off round 1's stale vote.
 #
 # Each review row carries the round's own `body` and the `id` the host knows it

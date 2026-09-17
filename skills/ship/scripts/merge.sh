@@ -17,8 +17,8 @@
 # is not the PR the human said "merge" about: exit 1 `pr-closed: <state>`, with
 # nothing merged, no issue closed and no branch deleted. Then the branch is
 # proven fresh against its base: the base can move between phase 5's
-# `base-fresh` and the human's "merge", and the squash would land a branch that
-# never saw it. Refused as exit 1 `stale-base`.
+# `base-fresh` and the human's "merge", and the squash would land a branch blind
+# to those commits. Refused as exit 1 `stale-base`.
 #
 # stdout: {merged, issue_closed, remote_branch_deleted, base_updated,
 #          claim_released, ready_for_agent_removed}
@@ -71,13 +71,13 @@ closed=$(ship_pr_state_reason "$state")
 title=$(jq -r .title <<<"$prj"); branch=$(jq -r .head_ref <<<"$prj"); base=$(jq -r .base_ref <<<"$prj")
 [ "$branch" != "$base" ] || ship_tooling "PR head is the base branch; refusing"
 
-# 1. Merge, then verify: never assume the call took.
+# 1. Merge, then verify: the read-back is what says the call took.
 if [ "$state" = merged ]; then merged=true
 else
   # The freshness check, in the checkout that holds the run's branch, before
   # anything is squashed: attended, rebase, re-run the local gate and come back
-  # to the merge gate; unattended, hand back. A PR that is already merged never
-  # reaches it: its branch is behind a base its own squash advanced, and the
+  # to the merge gate; unattended, hand back. A PR that is already merged stops
+  # short of it: its branch is behind a base its own squash advanced, and the
   # run still owes the cleanup steps below.
   fresh=$(cd "${wt:-.}" && "$SHIP_SCRIPTS/base-fresh.sh" 2>/dev/null); rc=$?
   [ "$rc" -lt 2 ] || ship_tooling "cannot read base freshness: base-fresh exited $rc"
@@ -113,9 +113,9 @@ git -C "$main" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1
 
 # 4. Fast-forward the local base from the checkout that holds it. A plain pull
 # from the feature worktree would pull the base INTO the feature branch. A
-# transient index.lock from a concurrent `git status` is retried, never deleted
-# (only safe with no git process running, which this script cannot prove). A
-# diverged local base is reported, never discarded.
+# transient index.lock from a concurrent `git status` is retried and left in
+# place (deleting one is only safe with no git process running, which this script
+# cannot prove). A diverged local base is reported and kept.
 git -C "$main" fetch origin >/dev/null 2>&1
 holder=$(git -C "$main" worktree list --porcelain | awk -v b="refs/heads/$base" '$1=="worktree"{w=$2} $1=="branch" && $2==b {print w}' | head -1)
 if [ -n "$holder" ]; then

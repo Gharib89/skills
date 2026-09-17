@@ -15,7 +15,7 @@ conclusion you need: a multi-file map, a verification run, CI logs. When you
 can already point at the target (one or two known files, a single test node,
 one mechanic's projected JSON) work inline; a subagent there costs more than it
 saves. A small-lane run typically spawns none of its own; a large or unfamiliar
-change may spawn several. The rule is a lever, never a dependency: a session
+change may spawn several. The rule is a lever rather than a dependency: a session
 with no subagent tools runs everything inline and is still a complete run.
 Every lever below is subject to it, in rough order of impact:
 
@@ -23,12 +23,12 @@ Every lever below is subject to it, in rough order of impact:
   subagent ("map how X, Y, Z connect; return signatures, call sites and data
   shapes"), with the `map` scratch directory below, and read only the exact
   lines you will edit. A file body you only
-  need to *understand* never enters main context; only the hunk you *change*
-  does.
+  need to *understand* stays out of main context; only the hunk you *change*
+  enters it.
 - **Mechanics already project.** Every host read comes through a mechanic that
   returns a small JSON; there is no bare host CLI call to over-fetch with.
-- **Investigate inside the worktree from the start**, so you never read a file
-  in the main checkout and re-read it in the worktree to edit it.
+- **Investigate inside the worktree from the start**, so every file you read is
+  the copy you will edit, rather than a main-checkout copy read twice.
 - **Targeted test nodes during the loop; the full suite only at the local
   gate.** Re-running the whole suite every cycle is slow noise.
 - **Delegate noisy verification runs.** A phase-3 verification that dumps
@@ -49,7 +49,7 @@ scratch of its own, `<role>` being its job in the run (`map`, `execute`,
 separate, and go under the worktree prefix. It is a **sibling** of the Run file's
 directory rather than a child, so a path a subagent invents below the one it was
 given still lands clear of the record. Pass it the way you pass the model tier:
-written into the prompt, every dispatch, never inferred.
+written into the prompt, every dispatch.
 
 ## While a subagent is out, end the turn
 
@@ -66,27 +66,26 @@ where having nothing to do is the correct next action.
 
 **Before phase 0, before the worktree**, run `run-file init <issue|slug>
 --scratchpad <dir>`, where `<dir>` is the scratchpad directory the harness names
-in its environment block, the OS temp directory where it names none, and never a
-path inside the repo, which would dirty the tree the local gate reads. Hand it
-the profile's `Tripwires:`, the applicable verifications, the reviewer list and
-the CI `Legs:` (`--tripwires`, `--verifications`, `--reviewers`, `--legs`): it
-writes the ten-item checklist to
+in its environment block, the OS temp directory where it names none, and a path
+outside the repo either way, since one inside it would dirty the tree the local
+gate reads. Hand it the profile's `Tripwires:`, the applicable verifications,
+the reviewer list and the CI `Legs:` (`--tripwires`, `--verifications`,
+`--reviewers`, `--legs`): it writes the ten-item checklist to
 `<scratchpad>/ship-<issue>/run.md`, a directory of its own so a subagent that
 reaches for the run's own name cannot overwrite the record, and returns the
 items, one per harness task you then create (`TaskCreate`). The file is the
-run's **record**,
-the source of truth for where the run is and the home of the design and plan as
-they form; it survives a mid-run context summary, so never stop, narrow a phase
-or suggest a new session over context. The harness task list is its **display**:
-flip a phase with `run-file open <n>`, `close <n>` or `skip <n> "<reason>"`
-against `--file <path>`, then set that phase's task to the `mirror` value the
-flip returned (`TaskUpdate`); close a phase only once its verification passed,
-which is judgement the mechanic cannot hold: it stamps whatever close it is
-given. It owns the stamp, the one-open-phase invariant and
-every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
-a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
-the record shows a decision and not a gap. A harness that refuses the task tools
-has answered: run on the file alone.
+run's **record**, the source of truth for where the run is and the home of the
+design and plan as they form; it survives a mid-run context summary, so work
+straight through one, every phase at full width, in the same session. The
+harness task list is its **display**: flip a phase with `run-file open <n>`,
+`close <n>` or `skip <n> "<reason>"` against `--file <path>`, then set that
+phase's task to the `mirror` value the flip returned (`TaskUpdate`); close a
+phase only once its verification passed, which is judgement the mechanic cannot
+hold: it stamps whatever close it is given. It owns the stamp, the
+one-open-phase invariant and every refusal, and `run-file timing` computes the
+merge summary's `Timing:` row; a **small-lane** run keeps all ten items and
+`skip`s each collapsed phase, so the record shows a decision and not a gap. A
+harness that refuses the task tools has answered: run on the file alone.
 
 **A refusal naming a line you thought was there is a clobbered Run file**: a
 subagent wrote over the path, and the mechanic says so rather than flipping a

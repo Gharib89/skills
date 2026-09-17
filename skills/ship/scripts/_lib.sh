@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Shared helpers for ship's generic mechanics. Sourced, never executed.
-# Serves ship's own scripts only: a repo's local gate never sources this.
+# Shared helpers for ship's generic mechanics. Sourced by them, and by them
+# alone: a repo's local gate stands on its own.
 #
 # What a mechanic answers, exit codes, --help, the vocabulary a read comes back
 # in and all, is ../reference/mechanics.md. It is the one copy: a second one
 # here would be the copy that goes stale.
 #
 # Host adapter interface. Each mechanic sources exactly one of host/github.sh or
-# host/ado.sh, chosen from the origin remote, never from a flag. An adapter
+# host/ado.sh, chosen from the origin remote rather than from a flag. An adapter
 # defines every function below, in that read vocabulary.
 #
 #   host_tooling_reasons                 -> one missing-tool reason per line
@@ -38,7 +38,7 @@
 #   host_issue_close <n>
 #   host_issue_create <title> <body-file> <label> -> {number,url}
 #   host_issues_open                     -> [{number,title,url}] every open issue, newest first,
-#                                           never a PR. Narrows only where the host refuses the
+#                                           issues alone. Narrows only where the host refuses the
 #                                           whole set, and says so on stderr when it does.
 #   host_pr_create <head> <base> <title> <body-file> <issue> -> {number,url,created_at}
 #   host_pr_get <pr>                     -> {number,url,title,body,head_sha,head_ref,base_ref,state,mergeable}
@@ -130,7 +130,7 @@ ship_help() { # ship_help <usage> "$@"
   exit 0
 }
 
-# ship_tail40 <file>: a failing step's evidence, never the whole log.
+# ship_tail40 <file>: a failing step's evidence, the last 40 lines of the log.
 ship_tail40() { tail -n 40 "$1" >&2; }
 
 # Branch convention: <type>/<slug>-<issue>. The "-<issue>" suffix is what
@@ -139,7 +139,8 @@ ship_branch()           { printf '%s/%s-%s' "$1" "$2" "$3"; }
 ship_branch_suffix_re() { printf -- '-%s$' "$1"; }
 
 # The main checkout, even when run from inside a worktree: --git-common-dir
-# points at the primary .git, so a run started in a worktree never nests another.
+# points at the primary .git, so a run started in a worktree lands the new one
+# beside it.
 ship_main_checkout() {
   local common
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
@@ -152,8 +153,8 @@ ship_worktree_container() {
   printf '%s/%s.worktrees' "$(dirname "$root")" "$(basename "$root")"
 }
 
-# The base ref, resolved from origin/HEAD, never a hardcoded branch (ADO
-# defaults vary). Refreshes the symbolic ref when the clone never recorded it.
+# The base ref, resolved from origin/HEAD rather than a hardcoded branch (ADO
+# defaults vary). Refreshes the symbolic ref where the clone lacks one.
 ship_base_ref() {
   local ref
   ref=$(git symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null) \
@@ -235,7 +236,7 @@ ship_triage_label() {
 
 # ship_frontmatter <file> <key>: one `  <key>: <value>` line from a skill's
 # YAML frontmatter, value only. Stops at the closing `---`, so a body line that
-# looks like the key is never read as it.
+# looks like the key is body text.
 ship_frontmatter() {
   awk -v k="  $2:" 'NR>1 && /^---$/{exit} index($0, k) == 1 {sub(/^[^:]*: */, ""); print; exit}' "$1"
 }
@@ -248,12 +249,13 @@ ship_frontmatter() {
 # installs it; prints nothing when every one is there.
 #
 # Only the consumer repo's own `.claude/skills` counts: a global copy under
-# ~/.claude/skills is never a derived copy of this repo's, per setup-skills.
+# ~/.claude/skills is a personal skill rather than this repo's derived copy, per
+# setup-skills.
 ship_missing_skill_reasons() {
   local root=$1 entry source skill
   local -a entries
   # read -ra, not an unquoted expansion: the split on spaces is intentional and
-  # explicit, and a glob character in an entry never reaches the filesystem.
+  # explicit, and a glob character in an entry stays a literal character.
   read -ra entries <<<"$2"
   for entry in ${entries[@]+"${entries[@]}"}; do
     source=${entry%%:*}; skill=${entry##*:}
@@ -322,7 +324,8 @@ ship_unfenced() { # ship_unfenced <text>
 # The fenced blocks come out by SHIP_AWK_FENCE, so this agrees with the two
 # heading transformations on what a fence is: a tilde-fenced example carrying
 # "Closes #n" reads as a mention here too, and host_pr_create, which asks this
-# before it places a closing line, does not skip a body that never claimed one.
+# before it places a closing line, still places one on a body that only mentions
+# the issue.
 #
 # Code spans come out after, and stay in jq, because a span opens mid-line where
 # a line-oriented pass cannot see it. One rule for every run length: a span
@@ -397,8 +400,8 @@ ship_body_closing_line() { # ship_body_closing_line <text>
 #
 # The strip trims a trailing CR before that comparison where the boundary match
 # does not, on purpose: they read different inputs. A CRLF heading left in the
-# file becomes a second `## <section>` in the body that the boundary match never
-# matches and rule 3 then treats as the section's end, which is a body no later
+# file becomes a second `## <section>` in the body that the boundary match misses
+# and rule 3 then treats as the section's end, which is a body no later
 # write can repair. The boundary match reads the body the host returns and is the
 # pre-existing rule `_gh_add_closes` agrees with.
 ship_body_replace_section() { # ship_body_replace_section <body> <section> <body-file>
@@ -439,7 +442,7 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
 # ship_body_replace_section and _gh_add_closes read, so the two halves of a body
 # meet exactly and neither can reach into the other.
 #
-# Unlike a section, a preamble is never absent: a body that opens on its first
+# Unlike a section, a preamble is always present: a body that opens on its first
 # heading has an empty one, and the content is placed above that heading. So
 # there is no created case and no exit-1 answer.
 #
@@ -520,7 +523,7 @@ ship_id_list() {
 
 # The review-body clip both adapters run, so they clip in one vocabulary: a jq
 # `clip($id)` filter over a body string, invoked with `--argjson full <ids>`.
-# The cut leaves a marker, so a clipped round never reads as a whole one.
+# The cut leaves a marker, so a clipped round reads as clipped.
 # `$id | tostring` so a row the host gives no id (an Azure DevOps vote) compares
 # without erroring; such a row carries no body to unclip.
 # shellcheck disable=SC2034  # read by the host adapters that source this library
@@ -566,7 +569,7 @@ def is_notice:
 # `--arg l <normalised login>` and `--arg s <since|"">`. `$l` arrives already
 # lowercased and stripped of a `[bot]` suffix, the row side normalised here to
 # match. Only a SUBSTANTIVE row lands, which is what keeps a quota notice from
-# answering for a round that never arrived (#155).
+# answering for a round that has yet to arrive (#155).
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_LANDED_BY='
   def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
@@ -575,7 +578,7 @@ readonly SHIP_LANDED_BY='
   end'
 
 # ship_fence_unclosed <text>: does the text end inside a fenced block? Prints
-# `line <n>: <run>` naming the opener that never closed, or nothing when the
+# `line <n>: <run>` naming the opener still open, or nothing when the
 # fence state is balanced. `update-pr-body` asks before it rewrites a section:
 # an open fence inverts the in-fence state for the rest of the body, so every
 # `## ` heading after it reads as example text and the rewrite swallows the
@@ -660,15 +663,16 @@ ship_reviewers() {
 # check, so the faults are refused in both lanes and before the claim, rather than
 # at the phase that would have driven the reviewer.
 #
-# A fallback that is not on-request cannot be withheld (ADR 0002), one naming a
-# reviewer nobody listed can never fire, an on-request reviewer with no cap has no
-# bound on its loop, and a `Cap:` that is not a number is a typo that would read as
-# an uncapped one.
+# A fallback that is not on-request cannot be withheld, and withholding it until
+# its primary degrades is the whole point of a fallback; one naming a reviewer
+# nobody listed has no primary to stand in for, an on-request reviewer with no
+# cap has no bound on its loop, and a `Cap:` that is not a number is a typo that
+# would read as an uncapped one.
 #
 # Anything that is not an array refuses, exactly as `ship_stale_base_reason`
 # refuses an unreadable verdict: a parse that died must not come back as "the
 # blocks hold", or preflight claims the issue on the strength of a check that
-# never ran.
+# was skipped.
 ship_reviewer_reasons() {
   jq -rn --arg r "$1" '
     (try ($r | fromjson) catch null) as $rows
@@ -789,7 +793,7 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 #
 # A body the adapter already clipped ends in the truncation marker, and the cut
 # carries that marker through: a round nobody has read whole must not come back
-# looking complete, or the loop never re-polls it with --full.
+# looking complete, or the loop stops before re-polling it with --full.
 # Threads come down to the open ones, the only ones still owed a disposition,
 # and the string "unavailable" passes through as itself.
 ship_brief() {

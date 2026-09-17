@@ -17,12 +17,18 @@
 # DIFFERENT heading is a section of its own, not a duplicate, and is replaced
 # like any other.
 #
-# `--preamble`: the body file is the whole preamble. A preamble is never absent,
-# only empty, so it is always replaced and never created. A closing line the old
-# preamble carried and the file does not is carried over, where `open-pr` puts
-# it, so a rewrite that says nothing about closing keeps the link to the issue.
+# `--preamble`: the body file is the whole preamble. A preamble is always there,
+# empty at the emptiest, so it is always replaced and the create path is unused.
+# A closing line the old preamble carried and the file does not is carried over,
+# where `open-pr` puts it, so a rewrite that says nothing about closing keeps the link to the issue.
 # A file carrying its own closing line states what the PR closes and is left
 # alone, whichever issues it names.
+#
+# A section write replaces everything from its own `## ` heading to the next one,
+# which is what fixes where the attribution footer `open-pr` places has to sit:
+# under a `## Attribution` heading of its own, after every section a later phase
+# rewrites. A footer left loose at the end of the last section sits inside that
+# section, and the phase-7 `--section Review` write takes it with the section.
 #
 # A body file whose fence state ends open is refused before any host read: an
 # open fence inverts the in-fence state for the rest of the body, so the rewrite

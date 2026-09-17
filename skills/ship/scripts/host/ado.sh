@@ -3,7 +3,8 @@
 # the azure-devops extension, in preference order: `az repos` / `az boards`
 # where a subcommand exists; `az devops invoke` for what they lack (PR threads,
 # iterations, statuses); `az rest` only where neither reaches, which today is
-# `host_issue_remove_label` alone and is documented at that call; never curl.
+# `host_issue_remove_label` alone and is documented at that call. No curl: the
+# CLI holds the credential.
 # One credential covers the run: `az login`
 # (Entra) or AZURE_DEVOPS_EXT_PAT. Sourced by _lib.sh's ship_load_host; needs
 # SHIP_ORG_URL, SHIP_PROJECT and SHIP_REPO set.
@@ -88,7 +89,7 @@ host_issue_comments() {
     | jq '[.comments[] | {author: .createdBy.uniqueName, body: .text, created_at: .createdDate}]'
 }
 # Predecessor links (System.LinkTypes.Dependency-Reverse) are the blockers; ADO
-# has the concept, so a failed read is "unavailable", never vacuous.
+# has the concept, so a failed read is "unavailable" rather than empty.
 host_issue_blockers_open() {
   local ids out='[]' id
   ids=$(_wi_show "$1" | jq -r '[.relations[]? | select(.rel == "System.LinkTypes.Dependency-Reverse") | .url | split("/") | last] | .[]') || return 1
@@ -215,8 +216,8 @@ _author_login='(.comments[0] | '"$_comment_login"')'
 #
 # A vote has no timestamp anywhere in the API, so its submitted_at is null: a
 # vote is the reviewer's current state, not a timed event, and it cannot answer
-# the question --since asks. It therefore appears in `all` but never satisfies
-# that rule, which is why a reviewer who only votes lands under the head rule
+# the question --since asks. It therefore appears in `all` and stays out of that
+# rule's answer, which is why a reviewer who only votes lands under the head rule
 # alone. `submitted_at` is emitted in one UTC spelling, because the API mixes
 # two (publishedDate "...:28.343Z", creationDate "...:46.977591+00:00") and the
 # adapter owes its caller one vocabulary.
@@ -267,7 +268,7 @@ host_pr_request_review() { # <pr> <login>
   jq -n --argjson ok "$ok" --argjson rb "$rb" --arg l "$2" --arg now "$now" \
     '{requested: ($ok and ([$rb[] | ascii_downcase] | index($l | ascii_downcase) != null)), readback: $rb, requested_at: $now}'
 }
-# A closed thread: visible, and a comment-resolution policy never blocks on it.
+# A closed thread: visible, and a comment-resolution policy reads it as settled.
 host_pr_comment() { # <pr> <body-file>
   local f out; f=$(mktemp); trap 'rm -f "$f"' RETURN
   jq -n --rawfile b "$2" '{comments: [{parentCommentId: 0, content: $b, commentType: 1}], status: "closed"}' > "$f"
@@ -308,7 +309,7 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
   # licenses a second POST. The match is keyed to parentCommentId and to this
   # identity: a disposition quoting the finding verbatim would otherwise match
   # the root comment, and someone else's identical text would stand in for a
-  # reply this run never posted.
+  # reply this run left unposted.
   _reply_landed() {
     local raw; raw=$(_thread_raw "$pr" "$thread") || return 2
     jq -e --argjson p "$root" --arg me "$me" --rawfile b "$file" \
@@ -322,7 +323,7 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
     case $landed in
       0) ;;                            # the reply is there: the lost response was a success
       1) _post_reply || return 1 ;;    # a read that found none: post again
-      *) return 1 ;;                   # 2, or a jq error: unknown, so never claim a reply
+      *) return 1 ;;                   # 2, or a jq error: unknown, so report no reply
     esac
   fi
   jq -n --arg u "$(_pr_url "$pr")" --arg t "$thread" '{replied: true, url: ($u + "?discussionId=" + $t)}'

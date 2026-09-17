@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 5.2.1
+  version: 5.2.2
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -20,8 +20,8 @@ integrates with, self-reviewed, reviewed by every reviewer the repo names,
 CI-green, and summarized for a ten-second approve. This skill is **generic**: it
 knows how to ship and nothing about the repo, and every repo fact comes from the
 **ship profile**, `docs/agents/ship.md`. The copy under `.claude/skills/ship` is
-a **derived copy**, never edited in place; the repo's `### Ship` block in
-CLAUDE.md carries the refresh command.
+a **derived copy**, changed upstream in `skills/ship/` and refreshed through the
+command the repo's `### Ship` block in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
 version once, at the start of the run, with
@@ -58,9 +58,10 @@ and asks, and the claim holds while it waits.
 
 Load `tdd` (phase 2), `writing-for-agents` (phase 4, agent-facing docs),
 `code-review` (phase 4), `show-me` (phase 6, the Summary's Shape) and
-`find-docs` (any API claim) through the Skill tool when their moment comes;
-never hand-roll their logic, and tell any composed skill with an unattended mode
-that the run is unattended, explicitly, because it has no other way to know. The
+`find-docs` (any API claim) through the Skill tool when their moment comes,
+taking each one's logic from the skill itself, and tell any composed skill with
+an unattended mode that the run is unattended, explicitly, because it has no
+other way to know. The
 frontmatter's `composes` line is this same list with each skill's source repo,
 and is what phase 0 checks: a skill added here is added there too, or the run
 still fails at the phase that loads it.
@@ -79,10 +80,10 @@ Phase 0 starts once the Run file exists, and each phase below flips it with
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps; [reference/mechanics.md](reference/mechanics.md) maps mechanic
 to phase and carries the contract they share, `--help` included, which is where
-a mechanic's flags come from. **You never run `gh` or `az` yourself**: a host
-operation no mechanic performs is a **Ship defect**, reported on the merge
-summary's `Ship defects:` row for the human to carry upstream, never hand-rolled
-and never filed to another repo.
+a mechanic's flags come from. **Every host call you make goes through a
+mechanic**: a host operation no mechanic performs is a **Ship defect**, which
+goes on the merge summary's `Ship defects:` row for the human to carry upstream,
+rather than into a hand-rolled call or an issue filed to another repo.
 
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
 preflight proves, what it refuses, the profile it loads and its schema check,
@@ -132,7 +133,7 @@ one of implement.md's three dispositions and no fourth: **fix it inline** and
 log the deviation, **`file-issue` it** and leave it, or stop
 **`mis-specified`** where the find shows the issue itself is wrong. If the core
 work balloons (the diff outgrows one PR, or the fix demands a redesign the
-issue never scoped), stop `needs-split` with a split proposal.
+issue did not scope), stop `needs-split` with a split proposal.
 **Done when:** the applicable tests are green (red first, per class),
 `Tripwires:` and `In-PR requirement:` have landed, the Run file's deviations
 log carries every departure so far, and every adjacent find carries one of the
@@ -156,21 +157,21 @@ observable behavior changed**: bring the profile's `Targets:` in line, folding
 the edits into this change. Skip it for internal refactors, a bugfix restoring
 documented behavior, test-only or tooling changes, and comments, and say so in
 one line at the merge gate. **The `writing-for-agents` pass has a trigger of its
-own**, and skipping docs-sync never skips it: it fires whenever the diff touches
-a target on the profile's `Agent-facing:` line, at the judgment tier, over every
-agent-facing file in the diff. Human prose takes the mechanical pass.
+own**, and it still fires where docs-sync is skipped: it fires whenever the diff
+touches a target on the profile's `Agent-facing:` line, at the judgment tier,
+over every agent-facing file in the diff. Human prose takes the mechanical pass.
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
 carrying its own scratch directory (`standards`, `spec`). **Triage waits for
-both axes.** An axis whose report never arrives is `red-after-retry: <axis>`
-after the bounded retry, never a disposition written from memory of what it
-would have said. **Auto-triage** every finding: harden rather than rip out
+both axes.** An axis whose report fails to arrive is `red-after-retry: <axis>`
+after the bounded retry, a stop in place of a disposition written from memory of
+what it would have said. **Auto-triage** every finding: harden rather than rip out
 capability, verify nits against the pinned versions, reject known non-issues,
 fix the valid ones, and record a one-line disposition per finding. Two rails on
 rejecting: a claim about **what exists in the repo** is checked against
-`origin/HEAD`, never the worktree, which may predate a merge; and a finding's
+`origin/HEAD` rather than the worktree, which may predate a merge; and a finding's
 **evidence and its claim are separate**, so a reviewer citing the wrong commit
 for a real primitive is still right. A valid finding outside the issue is an
 adjacent find: phase 2's three dispositions. Then read the diff yourself against
@@ -178,9 +179,9 @@ the depth checks in the coding-standards file the Standards axis reads, by their
 leading words: a vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, a fix landed after
 review. Reviewer rounds find these otherwise, serially, at the cost of most of a
-run's wall time, and the reverted-fix one never. This self-review plus green CI
-is the review gate; phase 7's reviewers are a second pair of eyes on top, never
-a substitute.
+run's wall time, and the reverted-fix one escapes them entirely. This
+self-review plus green CI is the review gate; phase 7's reviewers add a second
+pair of eyes on top of it.
 **Done when:** both `code-review` axes have reported, the `writing-for-agents`
 pass has reported where the diff touches `Agent-facing:`, every finding
 carries a one-line disposition, and docs-sync either landed its edits or is
@@ -205,7 +206,8 @@ install and every check CI runs; its verdict is one JSON object: `verdict`
 `pass|fail|deferred-to-ci|unavailable`, `gates.secrets` present in every lane.
 Unparseable output or a missing `secrets` key reads as `unavailable`. `fail`:
 fix loop. Any `deferred-to-ci`: proceed, and the merge summary names each
-deferred gate. `unavailable`: stop `local gate unavailable`; never open the PR.
+deferred gate. `unavailable`: stop `local gate unavailable`, leaving phase 6 to
+a run whose gate answers.
 **Done when:** `base-fresh` reports the branch not behind its base and the
 gate's JSON reads `verdict: pass` with `gates.secrets` present.
 
@@ -216,7 +218,8 @@ reviewer). Title: a Conventional-Commit subject derived from the issue,
 honouring `Subject constraints:`; it becomes the squash subject that release
 tooling reads, and a title that later proves wrong is fixed with
 `update-pr-title <pr> --title`. Body: the repo's template per `## PR`, filled
-honestly (never a raw body that bypasses it); with no template, a plain body.
+honestly, through its own headings rather than a raw body that bypasses it;
+with no template, a plain body.
 **Every title or body write to an open PR ends with `read-pr <pr>`**, whose
 `## ` headings are checked against the ones the body is supposed to carry.
 Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
@@ -240,7 +243,8 @@ any other, through the writes pr-body.md names. Exits: `converged`,
 evidence), `degraded: <reason>` from the fixed vocabulary
 `never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
 a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
-proceeds to the merge gate on green CI and never hands back on its own. At exit,
+proceeds to the merge gate on green CI and is reported there rather than handed
+back. At exit,
 `update-pr-body <pr> --section "Deviations from plan" --body-file <path>` where
 the rounds grew the log, then
 `update-pr-body <pr> --section Review --body-file <path>` with one status line
@@ -280,18 +284,19 @@ link.
 ## The stops
 
 One guaranteed stop, the **merge gate**: merging is effectively irreversible, so
-a human says merge, and ship never merges on its own or uses an auto-merge flag.
-Two conditional pauses in an attended run: the `ambiguous` stop (phase 1) and a
-**hand-off** (phase 3). Everything else, triaging your own findings, fixing,
-re-running, is autonomous. Three guardrails hold around that:
+a human says merge and ship merges on that word alone: ship never merges on its
+own or uses an auto-merge flag. Two conditional pauses in an attended run: the
+`ambiguous` stop (phase 1) and a **hand-off** (phase 3). Everything else,
+triaging your own findings, fixing, re-running, is autonomous. Three guardrails
+hold around that:
 
-- **Never proceed on red.** Any failure before the merge gate gets a bounded
+- **Red stops the run.** Any failure before the merge gate gets a bounded
   self-fix-and-retry, about two attempts. Still red, or the failure says the
   approach is wrong: **stop and report** with the concrete evidence and, if
   cheap, a verified-working alternative, so the report is a fast yes.
-- **Never end a turn on an intention.** If your last paragraph states a plan or
+- **End every turn on an action.** If your last paragraph states a plan or
   a next step ("I'll re-run the poll") rather than having done it, do it now
-  with a tool call instead of stopping. That is about a plan, never a wait:
+  with a tool call instead of stopping. That is about a plan rather than a wait:
   while a composed skill's subagents are out, ending the turn *is* the action
   ([reference/context-discipline.md](reference/context-discipline.md)).
 - **Every stop has a name**, reported verbatim, with the claim action below. A
@@ -299,11 +304,11 @@ re-running, is autonomous. Three guardrails hold around that:
 
 | Stop | Reason | Claim |
 |---|---|---|
-| Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | never claimed |
-| A skill ship composes is not installed | `skill missing: <skill>; run <install line>` | never claimed |
-| Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | never claimed |
-| Issue too vague to plan | `ambiguous` | never claimed |
-| Change outgrows one PR, or needs a redesign the issue never scoped | `needs-split` | attended: ask; unattended: hand back |
+| Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | unclaimed |
+| A skill ship composes is not installed | `skill missing: <skill>; run <install line>` | unclaimed |
+| Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | unclaimed |
+| Issue too vague to plan | `ambiguous` | unclaimed |
+| Change outgrows one PR, or needs a redesign the issue did not scope | `needs-split` | attended: ask; unattended: hand back |
 | A find shows the issue is mis-specified | `mis-specified` | attended: ask; unattended: hand back |
 | Verification prerequisite missing | `hand-off` (attended waits, claim holds) / `blocked-verification` | attended: hold; unattended: hand back |
 | Local gate verdict `unavailable` | `local gate unavailable: <gates>` | attended: ask; unattended: hand back |
@@ -311,26 +316,26 @@ re-running, is autonomous. Three guardrails hold around that:
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
 | The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you rebase; unattended: hand back |
 | The PR is closed at the merge gate | `pr-closed: <state>` | attended: ask; unattended: hand back |
-| Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | never claimed |
-| Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | never claimed |
-| No issue passes selection | `nothing-ready` | never claimed |
-| The host's blocker query exists and failed | `blockers-unavailable` | never claimed |
+| Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | unclaimed |
+| Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | unclaimed |
+| No issue passes selection | `nothing-ready` | unclaimed |
+| The host's blocker query exists and failed | `blockers-unavailable` | unclaimed |
 | Merge gate reached | none: the run's success | holds until merge |
 
 Hand-back is `manage-issue <issue> handback "<reason>"`: unassign, drop
 `ready-for-agent`, add `ready-for-human`, comment the reason. In an attended run
-you stop and ask; only if the human says stop do you hand back. Never hand back
-to the agent queue: that loops forever. A hand-back that prints
-`claim: released` and still exits 1 did release the claim; read `handed_back`
-and report which label is missing rather than a clean stop. One that prints
-`{"error": ...}` instead failed before the unassign landed: the claim is still
-held and the stop is unresolved.
+you stop and ask; only if the human says stop do you hand back, to the human
+queue: never hand back to the agent queue, which loops forever. A hand-back that
+prints `claim: released` and still exits 1 did release the claim; read
+`handed_back` and report which label is missing rather than a clean stop. One
+that prints `{"error": ...}` instead failed before the unassign landed: the
+claim is still held and the stop is unresolved.
 
 ## The lanes
 
 Every run is **full lane** until the change proves it **small**: all three keys
-hold, asserted by you at phase 2 and announced with the class, never confirmed
-with anyone. When unsure, it is not small.
+hold, asserted by you at phase 2 and announced with the class, a call you make
+alone. When unsure, it is not small.
 
 1. **No public-surface change.** The public surface is the profile's
    `## Public surface`; `Default.` means the exported or published API, CLI
@@ -386,7 +391,7 @@ These bind every edit a run makes, in every repo, regardless of a personal
 
 While implementing (phase 2) or triaging findings (phases 4 and 7), verify API
 claims against **current** docs through the `find-docs` skill and the extra
-`Sources:` the profile names, never memory. For every library on the profile's
+`Sources:` the profile names. For every library on the profile's
 `Pinned:` line, read the installed version from the repo's manifest and confirm
 the claim against that version before acting on it; a remembered API the
 installed version lacks is a regression.

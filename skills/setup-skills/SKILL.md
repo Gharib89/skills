@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 3.5.1
+  version: 3.5.2
 ---
 
 # Setup skills
@@ -59,7 +59,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 | Worktree | `Carry:` from `git status --ignored --short`, kept to small dotfiles (`.env*`, `*.local`); `Bootstrap:` `None.` unless a setup script exists that the local gate cannot own | yes, confirm the list |
 | Local gate | `scripts/local-gate.sh`, else `.claude/skills/ship/scripts/local-gate.sh`, else `scripts/ship/local-gate.sh`; the lockfile fixes the runner (`package-lock.json` npm, `pnpm-lock.yaml` pnpm, `uv.lock` `uv run pytest`, `pyproject.toml` alone `pytest`); `Small node:` syntax follows the runner, and a docs-class line giving the path of the changed document | location yes; node syntax walked |
 | CI | `Legs:` every job of every workflow with a `pull_request` trigger (`.github/workflows/*.yml`; on ADO the pipelines named by build-validation policies); other workflows named in prose as non-PR; `No-checks legal: yes` iff any PR workflow carries a `paths:` filter; `Push policy:` | legs yes; push policy walked |
-| Reviewers | `.coderabbit.yaml` (on-push); `.github/copilot-instructions.md` plus a Copilot automatic-review ruleset, read from `gh api repos/{owner}/{repo}/rules/branches/{default_branch}` with the branch percent-encoded into that one segment, since a default branch may carry a slash and an unencoded one addresses a different route, which returns the rules the host has already resolved for that branch rather than every ruleset in the repo, so a rule scoped to another branch is not mistaken for the one that drives PRs here (this is the endpoint ship's own preflight reads, and proposing from the repo-wide ruleset list instead is how setup writes a profile ship then refuses); its `copilot_code_review` rule's `review_on_push` fixes the trigger (`true` on-push; `false` or absent is auto-once where the PR's opening round is the only one wanted, or on-request where that same free round becomes the loop's round 1 and the cap buys the rest, which is the shape to propose wherever the repo wants a bound it controls); ship's preflight reads the rule and refuses a `Trigger:` that disagrees with it, so a value confirmed against the evidence here is the one that runs; `review_requested` events on the last ten merged PRs (on-request); `claude-code-action` in a workflow, where the trigger the workflow declares is the trigger the profile takes: a `pull_request` trigger is on-push, an `issue_comment` trigger is on-request and the phrase its `if:` matches is the `Request: comment <phrase>` value; a Claude review pipeline on Azure DevOps is on-push. Propose each with the trigger the evidence implies, always confirmed; `Resolve:` walked where the proposed trigger is on-push or on-request and the reviewer's findings arrive as inline review comments (`resolve-thread` for any GitHub reviewer; `claude-code-action` opens threads on both), else `None.`, which auto-once always takes because its loop converges on dispositioned threads without resolving them; `Cap:` always asked, never defaulted | walked |
+| Reviewers | one list per reviewer kind, [### Reviewers](#reviewers) below | walked |
 | Coding standards | a path CLAUDE.md names, `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `docs/contributing/*` | yes, or stub |
 | Verification | not discoverable; seed from test markers (`e2e`, `integration`), Docker use, browser-test scripts | walked |
 | Versioning and changelog | semantic-release config, changesets, `version-gate` or bump scripts, `CHANGELOG.md`; `In-PR requirement:` | walked |
@@ -71,6 +71,17 @@ Read the repo once, every section, before saying anything. The right-hand column
 | Cloud lane | `PR cap: 3`; `Bootstrap:` the path of `scripts/cloud-ship-bootstrap.sh` when it exists, else `None.` | yes |
 
 Also record, for step 5: the per-repo ship scripts the generic mechanics supersede (`claim`, `isolate`, `preflight`, `poll-pr`, `ci-wait`, `merge-and-verify`, `merge`, `reflect`, `release`, `_lib` under `.claude/skills/ship/scripts/` or `scripts/ship/`), and whether the triage labels exist on the host (`gh label list`; on ADO tags exist once used, so nothing to check).
+
+### Reviewers
+
+Detect per kind, propose each with the trigger the evidence implies, and confirm every one:
+
+- **CodeRabbit.** `.coderabbit.yaml` in the repo: `Trigger: on-push`.
+- **Copilot.** `.github/copilot-instructions.md`, plus the `copilot_code_review` rule read from `gh api repos/{owner}/{repo}/rules/branches/{default_branch}` with the branch percent-encoded into that one segment, since a default branch may carry a slash and an unencoded one addresses a different route. That endpoint returns the rules the host has already resolved for that branch, so a rule scoped to another branch stays out of the answer, and it is the endpoint ship's own preflight reads: propose from the repo-wide ruleset list instead and setup writes a profile ship then refuses. The rule's `review_on_push` fixes the trigger: `true` is on-push; `false` or absent is auto-once where the PR's opening round is the only one wanted, or on-request where that same free round becomes the loop's round 1 and the cap buys the rest, which is the shape to propose wherever the repo wants a bound it controls. Preflight reads the rule and refuses a `Trigger:` that disagrees with it, so a value confirmed against the evidence here is the one that runs.
+- **A reviewer with request history.** `review_requested` events on the last ten merged PRs: `on-request`.
+- **Claude Code.** `claude-code-action` in a workflow, where the trigger the workflow declares is the trigger the profile takes: a `pull_request` trigger is on-push, an `issue_comment` trigger is on-request and the phrase its `if:` matches is the `Request: comment <phrase>` value. A Claude review pipeline on Azure DevOps is on-push.
+
+Then, for each reviewer the draft names: `Resolve:` is walked where the proposed trigger is on-push or on-request and the reviewer's findings arrive as inline review comments (`resolve-thread` for any GitHub reviewer; `claude-code-action` opens threads on both hosts), and reads `None.` otherwise, which is what auto-once always takes because its loop converges on dispositioned threads without resolving them. `Cap:` is asked of every reviewer, always.
 
 ### 4. Present, then walk
 
@@ -88,7 +99,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, where a human can fix it: every reviewer has a `Cap:`, a number or `None.`, and an on-request reviewer's cap is a number; a `Fallback-for:` that names a reviewer sits only on a reviewer whose `Trigger:` is `on-request`, and names one of the draft's own `### <name>` blocks. The last three of those are the reviewer shapes ship refuses at preflight, checked here because this is the one moment a human is present to fix them. Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it: check the draft for the four reviewer shapes ship's preflight refuses, an on-request reviewer with no `Cap:`, a `Cap:` that is neither a number nor `None.`, a `Fallback-for:` on a reviewer whose `Trigger:` is not `on-request`, and a `Fallback-for:` naming a reviewer the draft does not list. Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 

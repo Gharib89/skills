@@ -13,8 +13,8 @@ would want to check.
 **Write it uncompressed.** A session-wide output style or personal brevity rule
 does **not** apply to this summary. It is the evidence a human approves an
 irreversible squash-merge on, and in the unattended lane it is the only record
-of the run. Never paste organization identifiers, credentials or live-system
-names into it; the repo may be public.
+of the run. Keep organization identifiers, credentials and live-system names out
+of it; the repo may be public.
 
 ## The summary
 
@@ -55,74 +55,69 @@ Ship defects: <none | one line per defect:>
   - <missing operation or wrong prose> (phase <n>)
 Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2 <m> · 3 <m> · 4 <m> · 5 <m> · 6 <m> · 7 <m> · 8 <m>
              (from `run-file timing`: its `row` is this line verbatim, and a
-             field the mechanic could not compute reads `unverified`, never a
-             number.)
+             field the mechanic could not compute reads `unverified` in place
+             of a number.)
 
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 ```
 
 Every row is grounded in a result from this run: `Local gate:` is the gate's
 `gates` object verbatim, `CI:` is `ci-wait`'s output, `Issues filed` is the set
-of `file-issue` return values from this run in every lane, the numbers it
-filed on one side and the candidates it answered with instead on the other
-(not a recalled count; an implausible count is the human's signal), and
-`Verification` and test
-counts are read from the phase-3 and phase-2 results, not recalled. The empty
-case writes the same reason phase 6 wrote into the PR body's `## Verification`
-section, one of the three [pr-body.md](pr-body.md) names. On an `unexercised` row, `<what ran>` names the
-**subject that did not exist** rather than a command; the row is a record for
-the human to weigh, never a degraded exit, a hand-back or a `Ship defects:`
-row. A value you cannot point to a tool result for is written as `unverified`,
-never guessed.
+of `file-issue` return values from this run in every lane, the numbers it filed
+on one side and the candidates it answered with instead on the other (not a
+recalled count; an implausible count is the human's signal), and `Verification`
+and test counts are read from the phase-3 and phase-2 results, not recalled. The
+empty case writes the same reason phase 6 wrote into the PR body's `##
+Verification` section, one of the three [pr-body.md](pr-body.md) names. On an
+`unexercised` row, `<what ran>` names the **subject that did not exist** rather
+than a command; the row is a record for the human to weigh, and it stays a
+record: a degraded exit, a hand-back and a `Ship defects:` row are all something
+else. A value you cannot point to a tool result for is written as `unverified`.
 `Ship defects:` lists every Ship defect the run met (a host operation no
 mechanic performs, prose that promised what a mechanic does not do), each with
 the phase it was met in and written to the Run file at that moment the way a
 deviation is, so the row is a record, not a recollection. The run files it to no
 other repo; the human carries the row upstream. The `Review` blocks say what the
 PR body's `## Review` section says, in more detail; the section links here. Each
-row of this `Verification` block and its line in the PR body's
-`## Verification` section are read from the same phase-3 result in the same
-format, so the two agree by construction; this block is where the human reads
-them at the gate, the section is where they outlive the run.
+row of this `Verification` block and its line in the PR body's `## Verification`
+section are read from the same phase-3 result in the same format, so the two
+agree by construction; this block is where the human reads them at the gate, the
+section is where they outlive the run.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the
 run built is corrected with `update-pr-title <pr> --title "<subject>"` before
-the summary is posted, never left for the human to retitle.
+the summary is posted, so the human reads the title that will land.
 
 ## Attended: post, then wait
 
 Post the summary in the conversation and **wait**. Merge only on an explicit
 "merge", and the word is exact: a typo, a synonym, or approval of some other
 part of the summary is asked back rather than read as the word, because merging
-is the step no later phase undoes. Never an auto-merge flag either: it can merge
-the instant CI is green, before a reviewer lands.
+is the step no later phase undoes. The word is the whole trigger, so never an
+auto-merge flag either: it can merge the instant CI is green, before a reviewer
+lands.
 
-**On approval**, from the worktree, `merge <pr> <issue|none> [--worktree <path>]`.
-It reads the PR first and refuses `pr-closed: <state>` for one that is neither
-open nor already merged, merging nothing: the host's merge endpoint accepts a
-closed PR, and a run that comes back to a stale PR number would otherwise land
-a branch somebody deliberately closed. Then it proves the branch has seen every
-commit on its base and refuses
-`stale-base: behind <n> on <base>` if not, merging nothing too: the base can move
-between phase 5's `base-fresh` and the human's word, which leaves the summary
-they approved written against a different tree than the one that would land.
-Rebase, re-run the local gate, and come back to this gate. Then it squash-merges with the PR title as the squash subject, re-verifies the PR is
-merged before reporting (never assume the command took), confirms the issue
-closed and closes it explicitly if the link did not fire, deletes the remote
-branch and proves the deletion, fast-forwards the local base branch from the
-checkout that holds it (a plain pull from the feature worktree would pull the
-base *into* the feature branch; a diverged local base is reported, never
-discarded; a transient `index.lock` from a concurrent status is retried, never
-deleted), and **releases the claim and strips `ready-for-agent`**, so a
-reopened issue goes back through triage instead of being refused forever. The
-two issue steps are the issue-backed run's: `merge <pr> none` has no issue to
-close and no claim to release, so it skips both and its JSON carries neither
-`issue_closed` nor `claim_released` nor `ready_for_agent_removed`.
-Then `cleanup <issue|none>`: removes the worktree and force-deletes the local
-branch (a squash-merged branch is not an ancestor of the default branch).
-Carried files are never copied back. Any `false` in either JSON: finish that
-step by hand before reporting done.
+**On approval**, from the worktree, `merge <pr> <issue|none> [--worktree
+<path>]`. It reads the PR first and refuses `pr-closed: <state>` for one that is
+neither open nor already merged, merging nothing. Then it proves the branch has
+seen every commit on its base and refuses `stale-base: behind <n> on <base>` if
+not, merging nothing either; rebase, re-run the local gate, and come back to
+this gate. [merge](../scripts/merge.sh) carries what each refusal is protecting
+against. Then it squash-merges with the PR title as the squash subject, re-reads
+the PR to confirm the merge took, confirms the issue closed and closes it
+explicitly if the link did not fire, deletes the remote branch and proves the
+deletion, fast-forwards the local base branch from the checkout that holds it
+(reporting a diverged local base and leaving it alone, retrying a transient
+`index.lock` from a concurrent status), and **releases the claim and strips
+`ready-for-agent`**, so a reopened issue goes back through triage instead of
+being refused forever. The two issue steps are the issue-backed run's: `merge
+<pr> none` has no issue to close and no claim to release, so it skips both and
+its JSON carries neither `issue_closed` nor `claim_released` nor
+`ready_for_agent_removed`. Then `cleanup <issue|none>`: removes the worktree and
+force-deletes the local branch (a squash-merged branch is not an ancestor of the
+default branch). Carried files stay in the worktree it removes. Any `false` in
+either JSON: finish that step by hand before reporting done.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this

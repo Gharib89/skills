@@ -40,7 +40,7 @@ stop), and anything else is `not triaged`.
 An assignee, including your own identity, is `already claimed`; stale-claim
 recovery is a human unassigning by hand. `existing PR` means a live PR whose
 body **closes** this issue or whose head branch ends in `-<issue>`. PRs that
-merely mention it come back as `mentions[]`, context for phase 1 and never a
+merely mention it come back as `mentions[]`, context for phase 1 and no kind of
 stop, alongside a `mentioned_by[]` row per live cross-reference, open issues and
 open or merged PRs both, naming its `kind` and `state`.
 
@@ -53,12 +53,13 @@ worktree `<parent>/<repo>.worktrees/<slug>-<issue>`, copies the profile's
 `isolate ... --in-place` does the same fetch and branch in the sandbox clone,
 which is already isolation: no worktree, no carry.
 
-Never `EnterWorktree` or a bare `git worktree add`: only `isolate` lands the
-worktree at the path and branch preflight checks, with the `Carry:` files copied
-in. Work from the printed path, every edit under it absolute, because an
-absolute main-checkout path silently edits the wrong tree. The `-<issue>` suffix
-on the branch is what preflight greps, and the branch type is a label: the
-squash subject, not the branch, is what release tooling reads.
+Isolation is `isolate`'s call alone, rather than `EnterWorktree` or a bare `git
+worktree add`: it is what lands the worktree at the path and branch preflight
+checks, with the `Carry:` files copied in. Work from the printed path, every
+edit under it absolute, because an absolute main-checkout path silently edits
+the wrong tree. The `-<issue>` suffix on the branch is what preflight greps, and
+the branch type is a label: the squash subject, not the branch, is what release
+tooling reads.
 
 ## The ship profile
 
@@ -66,7 +67,7 @@ squash subject, not the branch, is what release tooling reads.
 Load `docs/agents/ship.md` **once, whole, at preflight**, the way a session
 loads `docs/agents/issue-tracker.md`. It has fourteen fixed `##` headings, every
 one always present; a defaulted axis reads `None.` or `Default.`. Facts sit on
-`Label:` lines; the prose under a heading explains, and never carries a fact.
+`Label:` lines, and the prose under a heading explains them.
 You read the profile and pass its facts to the mechanics as arguments; no script
 parses markdown. Two more repo docs feed a run and are read the same way: triage
 roles (`ready-for-agent`, `ready-for-human`, `needs-triage`) are canonical role
@@ -80,19 +81,19 @@ Directly under the `# Ship profile` title, before the first
 `metadata.profile-schema` in the frontmatter above. The number is separate from
 `metadata.version`: it moves only when ship's expectations of the profile change
 (a heading or `Label:` line added, renamed or removed; a `Label:` vocabulary
-changed), always with a ship major bump, never for a behaviour change that
-leaves the profile alone. Preflight compares the two and refuses a mismatch in
-either direction, in both lanes, never claimed; the detail names both numbers
+changed), always with a ship major bump, and stays put for a behaviour change
+that leaves the profile alone. Preflight compares the two and refuses a mismatch
+in either direction, in both lanes, unclaimed; the detail names both numbers
 and the fix. A profile older than ship is refused even where ship could default
-the missing axis: a defaulted axis reads `None.`/`Default.` explicitly, never an
-omitted heading.
+the missing axis: a defaulted axis reads `None.`/`Default.` explicitly, on a
+heading that is present like every other.
 
 ## What preflight refuses
 
 Missing file: stop `profile missing`, naming `docs/agents/ship.md` and
 `/setup-skills`. Missing or misordered headings: stop `profile invalid`, naming
 them. A fact the current run needs that reads `None.` where it cannot be none is
-also `profile invalid`; a fact the run will not touch is never checked. The
+also `profile invalid`; a fact the run will not touch goes unchecked. The
 reviewer blocks are the exception, checked whatever the run touches, because
 preflight parses them: an on-request reviewer with no `Cap:`, a `Cap:` that is
 neither a number nor `None.`, a `Fallback-for:` on a reviewer that is not
@@ -106,8 +107,6 @@ ruleset, it warns on stderr and admits the run.
 
 A run that changes the
 profile, or refreshes the ship copy that reads it, proves the new pair with the
-issueless call, whose verdict is about the profile and the host alone. Do not
-re-run `preflight <issue>` for this: after the claim it always answers
-`already claimed` plus `worktree exists` and exits 1, so the profile never
-appears in `reasons` whether it is valid or not, and reading it green out of
-that is elimination, not an answer.
+issueless call, whose verdict is about the profile and the host alone. Use that
+call rather than a second `preflight <issue>`, for the reason
+[preflight](../scripts/preflight.sh) carries at the top of its own file.

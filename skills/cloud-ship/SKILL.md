@@ -1,12 +1,11 @@
 ---
 name: cloud-ship
 description: >-
-  Run one fire of the scheduled cloud routine: invoke the `ship` skill
-  unattended so it selects the oldest ready issue, drives it to a merge-ready
-  PR and stops at the merge gate, then relay the outcome. Composes `ship`. Use
-  only from a cloud routine's prompt; a human shipping an issue runs `/ship`.
+  Run one fire of a scheduled cloud routine: invoke `ship` unattended and relay
+  its outcome. Use only from a cloud routine's prompt; a human shipping an issue
+  runs `/ship`.
 metadata:
-  version: 1.0.0
+  version: 1.0.1
 ---
 
 # cloud-ship
@@ -17,8 +16,8 @@ sandbox tooling, the profile's cloud bootstrap, the PR cap, the selection, the
 claim, the branch, the isolation, the hand-back and the merge summary. This
 skill adds the invocation and the relay, nothing else. The copy under
 `.claude/skills/cloud-ship` is a **derived copy**, the same bytes in every repo,
-never edited in place; the repo's `### Ship` block in CLAUDE.md carries the
-refresh command.
+changed upstream in `skills/cloud-ship/` and refreshed through the command the
+repo's `### Ship` block in CLAUDE.md carries.
 
 ## The fire
 
@@ -35,19 +34,14 @@ refresh command.
    `nothing-ready` is the one clean no-op; every other stop is a fire worth
    reading in the routine log.
 
-## What this skill never does
+## The one invariant
 
-- **Never writes to the tracker.** No claim, no label, no comment, no
-  hand-back: after selection every tracker write is ship's, and before it there
-  is no issue to write to.
-- **Never touches git before ship does.** No `git switch`, no branch: ship's
-  `isolate --in-place` branches the sandbox clone itself.
-- **Never calls a ship script by path.** `select`, `list-prs`, `preflight` and
-  the rest are ship's mechanics, run by ship.
-- **Never overrides the merge gate.** Ship already knows it is unattended and
-  returns there; a second definition of the gate here would drift from ship's.
-- **Never merges, waits or polls after ship returns.** A human merges from the
-  PR; the open PR and the claim keep later fires off the issue.
+Everything after the invocation is ship's: git, the tracker, the mechanics, the
+merge gate and every wait after it. This skill contributes the two steps above
+and nothing else, so a behaviour defined here would be a second definition of
+one ship already owns. The tracker is where that bites hardest: leave every
+claim, label, comment and hand-back to ship, which holds them from selection
+onwards, and before selection there is no issue to write to anyway.
 
 ## The routine prompt
 

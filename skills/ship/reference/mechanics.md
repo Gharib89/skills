@@ -66,19 +66,20 @@ against the script, and `--help` cannot. Only the first argument is read, so
 
 Each prints one JSON verdict on stdout, a failing step's last 40 log lines on
 stderr, and exits `0` ok, `1` the mechanic's own not-ok answer, `2` tooling. A
-malformed invocation is tooling, never exit 1: a missing or empty positional, a
-flag where a positional belongs and a flag without its value all print
-`{"error": "<usage>"}` and exit 2, as an unknown flag does. A leading `--help`
-is the one exception, answered above before any of these guards runs. Exit 1 is an answer,
-not always a fault: `nothing-ready` from `select`, a not-actionable `preflight`
-and a `poll-pr` window that closed are all exit 1 and none is red.
+malformed invocation is tooling, exit 2 rather than 1: a missing or empty
+positional, a flag where a positional belongs and a flag without its value all
+print `{"error": "<usage>"}` and exit 2, as an unknown flag does. A leading
+`--help` is the one exception, answered above before any of these guards runs.
+Exit 1 is an answer, not always a fault: `nothing-ready` from `select`, a
+not-actionable `preflight` and a `poll-pr` window that closed are all exit 1 and
+none is red.
 
 ## What a failed write says
 
 A failed write to an open PR's body or title, a comment or a thread reply
 carries the host's `status` beside its `error`: a 5xx or a 429 outlasted the
 mechanic's own backoff, so retrying is the fix; any other number is the request
-itself, so read the body you sent. `null` is neither: the call never got an HTTP
+itself, so read the body you sent. `null` is neither: the call got no HTTP
 answer at all, so the host or the tooling between you and it is what to look at.
 `open-pr` and `file-issue` answer with the error alone, and their stderr carries
 the host's own message. Read the JSON, then decide.
@@ -95,6 +96,6 @@ be read.
 
 Run mechanics **inline**: they project their own output, so a subagent there
 burns budget to relay what an exit code already says. Poll loops are bounded
-and foreground; reaching the bound is never permission to proceed. Re-run to
+and foreground; reaching the bound leaves the question open. Re-run to
 extend, or pass a wider `--timeout` up front when the profile's `Legs:` names a
 leg you know is slower than the bound.

@@ -14,8 +14,9 @@ transcript. Phase 6 opens it; phase 7 rewrites two of its sections at exit
 
 ## What the body carries
 
-The repo's template per the profile's `## PR`, filled honestly, never a raw body
-that bypasses it; with no template, a plain body. Every variant carries:
+The repo's template per the profile's `## PR`, filled honestly through its own
+headings rather than a raw body that bypasses it; with no template, a plain
+body. Every variant carries:
 
 - **`Closes #<issue>` on its own line above the first `## ` heading.** The
   mechanic translates it for the host, and puts it there itself when the body
@@ -33,14 +34,12 @@ that bypasses it; with no template, a plain body. Every variant carries:
 - **A `## Review` section**, one placeholder line per reviewer at open, filled
   at phase-7 exit with that reviewer's exit word.
 - **The attribution footer**, where the environment provides one for pull
-  request descriptions. It is part of **the body file `open-pr` is handed**,
-  never a later write: the body **ends** with it, under a `## ` heading of its
-  own that ship adds because no template carries one (`## Attribution`), placed
-  after every section a later phase rewrites. The placement is the whole rule: a
-  rewrite replaces everything from its own heading to the next one, so a footer
-  left loose at the end of the last section sits inside that section and the
-  phase-7 `update-pr-body --section Review` write drops it. Ship never names the
-  footer's lines; it only says where it sits.
+  request descriptions. It belongs to **the body file `open-pr` is handed**, and
+  the body **ends** with it, under a `## ` heading of its own that ship adds
+  where no template carries one (`## Attribution`), placed after every section a
+  later phase rewrites. That placement is the whole rule, and
+  [update-pr-body](../scripts/update-pr-body.sh) carries why it is the one that
+  survives. The footer's lines are the environment's; ship says where they sit.
 
 ## The Summary opens with a Shape
 
@@ -49,7 +48,7 @@ deviation. It is the first thing under `## Summary`, above the prose, and where
 no template gives that heading the plain body opens with it instead.
 
 It is a `diff` fence over a call tree, file tree, control flow, pseudocode or
-component tree. Text forms only, never mermaid and never HTML: Azure DevOps
+component tree. Text forms only, which rules out mermaid and HTML: Azure DevOps
 renders neither, and the `diff` fence is the one form that shows the before and
 the after in a single view. One shape, about 15 lines or fewer; a change that
 needs two is a PR spanning two concerns. Every node is a real symbol, each
