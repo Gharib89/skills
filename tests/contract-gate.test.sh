@@ -16,6 +16,11 @@ copy_skills() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills "$d"; printf '%
 rc_of() { bash scripts/contract-check.sh "$1" "${2:-skills}" >/dev/null 2>&1; printf '%s' "$?"; }
 # The checker's own stdout, for the cases that assert which violation it named.
 out_of() { bash scripts/contract-check.sh "$1" "${2:-skills}" 2>/dev/null; }
+# 0 when the checker named exactly this line, for a fixture that trips more than
+# one check and whose whole stdout is therefore not one assertion's business.
+# No pipe: `grep -q` closes one early, and `pipefail` then reports the checker's
+# SIGPIPE instead of the match.
+named() { local out; out=$(bash scripts/contract-check.sh "$1" "${2:-skills}" 2>/dev/null); case $out in *"$3"*) printf 0 ;; *) printf 1 ;; esac; }
 
 # The real skills tree is the second argument here, so this case holds check 3
 # as well: the tree that ships carries no Bash 4+ construct outside the
@@ -134,6 +139,48 @@ d=$(help_stub help-extra-output '[ "${1:-}" = --help ] && { echo "usage: read-is
 check "a --help answer with a second line is named" \
   'read-issue: --help printed more than its usage line on stdout' "$(out_of "$d")"
 check_rc "a --help answer with a second line fails the check" 1 "$(rc_of "$d")"
+
+# A guard placed after `ship_load_host` answers --help correctly wherever an
+# adapter loads, which is why check 5 runs from a directory with no origin
+# remote. This stub answers checks 2 and 4 from the repo, and only check 5,
+# from there, sees the adapter error where the usage line belongs.
+d=$(copy help-late-guard)
+cat > "$d/read-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+usage='usage: read-issue <issue>'
+ship_load_host
+ship_help "$usage" "$@"
+case ${1:-} in ""|-*) ship_tooling "$usage" ;; esac
+printf '{"number":"%s"}\n' "$1"
+EOF
+check "a guard after the adapter load is named" \
+  'read-issue: --help exited 2, expected 0' "$(out_of "$d")"
+check_rc "a guard after the adapter load fails the check" 1 "$(rc_of "$d")"
+
+# The --help answer and the guards' answer are two paths, and check 4 reads only
+# the second. A mechanic that grows a flag and updates one of them leaves the
+# other as the run's stale source.
+d=$(help_stub help-drift '[ "${1:-}" = --help ] && { echo "usage: read-issue"; exit 0; }')
+check "a --help answer that disagrees with the guard is named" \
+  'read-issue: --help and the usage guard print different lines' "$(out_of "$d")"
+check_rc "a --help answer that disagrees with the guard fails the check" 1 "$(rc_of "$d")"
+
+# Check 4 takes the usage line and nothing under it, the way check 5 does: the
+# regex anchors the start alone. This stub trips check 5's comparison too, so the
+# assertion names check 4's own line rather than the whole stdout.
+d=$(copy dash-usage-extra)
+cat > "$d/read-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+usage='usage: read-issue <issue>'
+[ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
+case ${1:-} in ""|-*) printf '{"error":"%s\nand more"}\n' "$usage"; exit 2 ;; esac
+printf '{"number":"%s"}\n' "$1"
+EOF
+check_rc "a usage error with a second line is named by check 4" 0 \
+  "$(named "$d" skills 'read-issue: 1 leading-dash positional(s) did not answer with its own usage line')"
+check_rc "a usage error with a second line fails the check" 1 "$(rc_of "$d")"
 
 # Check 3: the Bash 3.2 target. A file under skills/ runs in whatever shell a
 # consumer machine provides, macOS's system Bash included, and the mechanics

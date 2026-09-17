@@ -120,7 +120,7 @@ for path in "$dir"/*.sh; do
       rc=1
       continue
     fi
-    printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | test("^usage: " + $m + "( |$)")))' >/dev/null 2>&1 \
+    printf '%s' "$out" | jq -se --arg m "$m" 'length == 1 and (.[0] | type == "object" and ((.error // "") | test("^usage: " + $m + "( |$)") and (contains("\n") | not)))' >/dev/null 2>&1 \
       || { printf '%s: %s leading-dash positional(s) did not answer with its own usage line\n' "$m" "$i"; rc=1; }
   done
 done
@@ -128,17 +128,27 @@ done
 # 5. Every mechanic answers `--help` with its own usage line on stdout, exit 0
 # and nothing on stderr. No mechanic is exempt, the four that take no positional
 # included: a run reads a mechanic's flags by running it, and one that has none
-# still answers with its name. Like check 2 this cannot police where the guard
-# sits, and no assertion here can: the adapter load makes no host call, so a late
-# guard answers this check correctly on a machine that can load one. The reason
-# the guard belongs before `ship_load_host` is the machine that cannot: there a
-# late guard answers --help with a tooling error instead of the usage line.
+# still answers with its name.
+#
+# Run from a directory with no resolvable origin, which is what makes this check
+# police the guard's PLACEMENT where check 2 cannot. A guard after
+# `ship_load_host` answers correctly wherever an adapter loads, and the load
+# makes no host call, so a check run from the repo cannot see the difference.
+# From here it can: a late guard answers `--help` with the adapter's tooling
+# error, which is the answer someone asking what the flags are would get on a
+# machine that has no origin remote.
 err=$(mktemp) || { echo "cannot create a temp file" >&2; exit 2; }
-trap 'rm -f "$err"' EXIT
+nogit=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
+trap 'rm -f "$err"; rmdir "$nogit" 2>/dev/null' EXIT
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ "$m" = _lib ] && continue
-  out=$(bash "$path" --help 2>"$err"); st=$?
+  apath=$(cd "$(dirname "$path")" && pwd)/$(basename "$path")
+  out=$(cd "$nogit" && bash "$apath" --help 2>"$err"); st=$?
+  # stderr is read before the shape checks below return: a mechanic can answer
+  # with the wrong line AND talk on stderr, and one report per run per fault is
+  # what keeps a fix loop from paying for a second run to see the second fault.
+  [ -s "$err" ] && { printf '%s: --help wrote to stderr\n' "$m"; rc=1; }
   if [ "$st" -ne 0 ]; then
     printf '%s: --help exited %s, expected 0\n' "$m" "$st"
     rc=1
@@ -157,7 +167,19 @@ for path in "$dir"/*.sh; do
     rc=1
     continue
   fi
-  [ -s "$err" ] && { printf '%s: --help wrote to stderr\n' "$m"; rc=1; }
+  # The same line the guards print. Check 4 reads the error path and this one
+  # reads the --help path; nothing compares them, so a mechanic can answer
+  # --help with a usage line its guards have since outgrown. With the flags out
+  # of SKILL.md's table, that answer is the only place a run reads them. The
+  # mechanics with no positional are excluded for check 4's reason: they have no
+  # malformed-invocation usage line to compare against.
+  case $has_no_positional in
+    *" $m "*) ;;
+    *)
+      want=$(bash "$path" --x --x --x 2>/dev/null | jq -r '.error // ""')
+      [ "$out" = "$want" ] || { printf '%s: --help and the usage guard print different lines\n' "$m"; rc=1; }
+      ;;
+  esac
 done
 
 exit $rc

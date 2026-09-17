@@ -55,7 +55,7 @@ Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits.
 
 Every mechanic a run invokes, in this block and in the phases below, answers
-`--help` with its own usage;
+`--help` with its own usage (the repo's local gate is not one of them);
 [reference/mechanics.md](reference/mechanics.md) is the contract all of them
 share.
 
@@ -116,7 +116,9 @@ answers, whichever phase runs it, is
 write's `status` says, the vocabulary a read comes back in, the inline-run rule,
 and `--help`, which is where a mechanic's flags come from. The table below maps
 mechanic to phase and carries no flags, because a table goes stale against the
-script and `--help` does not.
+script and `--help` does not. Its one row that is not a mechanic, the repo's own
+local gate, keeps its flags: they come from the local-gate contract, and that
+script answers no `--help`.
 
 When a phase names a mechanic, run it
 instead of re-deriving what it wraps; it is the single source of truth for that
@@ -136,7 +138,7 @@ upstream, never hand-roll the call, and never file it to another repo.
 | `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue` | 2, 4, 7 |
 | `base-fresh` | 5, and after every conflict resolution |
-| `<Location:>` from the profile | 5 (the repo's own local gate) |
+| `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr` | 6 |
 | `reflect` | 6 |
 | `update-pr-title` | 6, 9 |

@@ -3,9 +3,11 @@
 # nothing on stderr, so a run looks a mechanic's flags up by asking the script.
 # The usage strings are written out here rather than read from the scripts: a
 # case that lifted the string from the file it checks would pass whatever the
-# file said. `tests/run.sh`'s host stub covers the other half of the contract,
-# that the answer comes before the adapter loads: a `--help` that reached a host
-# logs the call and fails this file whatever the cases said.
+# file said. The other half of the contract, that the answer comes before the
+# adapter loads, is not testable from here: loading an adapter makes no host
+# call, so `tests/run.sh`'s host stub stays empty either way.
+# `scripts/contract-check.sh`'s check 5 proves that half, by running each
+# mechanic from a directory where no origin remote resolves.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
