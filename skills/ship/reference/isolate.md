@@ -97,6 +97,7 @@ reviewer blocks are the exception, checked whatever the run touches, because
 preflight parses them: an on-request reviewer with no `Cap:`, a `Cap:` that is
 neither a number nor `None.`, a `Fallback-for:` on a reviewer that is not
 on-request, a `Fallback-for:` naming a reviewer the profile does not list, a
+`Request: comment` with no phrase for the transport to post, a
 `Request: comment <phrase>` with no `Workflow:` naming the file its round comes
 from, a `Workflow:` on a block whose `Request:` is not a comment transport, and a
 `Workflow:` naming a file the checkout does not carry are all refused there,

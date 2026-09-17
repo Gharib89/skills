@@ -15,7 +15,7 @@ optional `Instructions:` file, and per trigger: `Request:` and the `Workflow:`
 qualifying it (on-request), `Resolve:` (on-push and on-request; auto-once
 converges on dispositioned threads and reads `None.`). The **trigger fixes the
 loop and convergence**; the bot's brand fixes nothing. Preflight has already
-parsed these blocks and refused the seven malformed shapes, and asked the host
+parsed these blocks and refused the eight malformed shapes, and asked the host
 whether a Copilot reviewer's
 `Trigger:` matches the ruleset driving it, so what reaches this phase is a list
 you can drive. Zero reviewers: skip this phase; the review gate is phase 4's

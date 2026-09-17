@@ -216,14 +216,18 @@ check "refuses an absolute Workflow:, whatever it names" \
   'profile invalid: claude has Workflow: /etc/hostname, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: /etc/hostname|' <<<"$profile")")"
 
-# The template reads `comment <phrase>`, so the phrase left off is the likely
-# typo, and it is the one an anchor on the trailing space would read as no
-# comment transport at all: the block would then owe no `Workflow:` and phase 7
-# would poll on the constant, which is the silence this field exists to remove.
+# `request-review --comment` takes no empty phrase, so a block whose Request: is
+# the bare word cannot be asked for a round at all. It is refused on its own,
+# whether or not a Workflow: sits beside it: read as a transport owing one, the
+# block that carries one would pass.
 bare_comment=$(sed 's|^Request: comment @claude$|Request: comment|;/^Workflow: .github\/workflows\/claude-review.yml$/d' <<<"$profile")
-check "reads a Request: comment with the phrase left off as a comment transport" \
-  'profile invalid: claude has Request: comment with no Workflow: naming the workflow file its round comes from' \
+check "refuses a Request: comment with the phrase left off" \
+  'profile invalid: claude has Request: comment with no phrase for the transport to post' \
   "$(reasons "$bare_comment")"
+
+check "refuses it just the same where a Workflow: sits beside it" \
+  'profile invalid: claude has Request: comment with no phrase for the transport to post' \
+  "$(reasons "$(sed 's|^Request: comment @claude$|Request: comment|' <<<"$profile")")"
 
 check "a Request: whose value merely starts with the letters of comment is not one" \
   '' \

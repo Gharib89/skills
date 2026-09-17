@@ -720,13 +720,13 @@ ship_reviewers() {
 # often than it is left out. The stat is keyed by path rather than by reviewer
 # name, because two blocks sharing a name would otherwise answer for each other.
 #
-# `test("^comment( |$)")` and not `startswith("comment ")`: the template reads
-# `comment <phrase>`, so `Request: comment` with the phrase left off is the
-# likely typo, and anchoring on the trailing space alone would read it as no
-# comment transport at all and demand no `Workflow:` for it. The separator is
-# a space or the end of the value and nothing else, because the other thing a
-# `Request:` holds is a mechanic name: `comment-pr` is one, and `^comment\\b`
-# would read it as a transport.
+# `Request: comment` with the phrase left off is refused on its own, before the
+# pair is read: `request-review --comment` takes no empty phrase, so that block
+# cannot be asked for a round at all, and reading it as a transport owing a
+# `Workflow:` would let one carrying a `Workflow:` through. With the bare value
+# refused above it, the transport is a plain `startswith("comment ")`, which is
+# also what keeps a mechanic name out of it: `comment-pr` is a mechanic, and a
+# word boundary in place of the space would read it as a transport.
 #
 # Anything that is not an array refuses, exactly as `ship_stale_base_reason`
 # refuses an unreadable verdict: a parse that died must not come back as "the
@@ -767,7 +767,9 @@ ship_reviewer_reasons() {
           (if $x.trigger == "on-request" and $x.cap == null
            then "profile invalid: \($x.name) is on-request with no Cap:"
            else empty end),
-          (if (($x.request // "") | test("^comment( |$)"))
+          (if $x.request == "comment"
+           then "profile invalid: \($x.name) has Request: comment with no phrase for the transport to post"
+           elif (($x.request // "") | startswith("comment "))
            then (if $x.workflow == null
                  then "profile invalid: \($x.name) has Request: \($x.request) with no Workflow: naming the workflow file its round comes from"
                  elif ($absent | index($x.workflow)) != null
