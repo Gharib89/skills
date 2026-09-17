@@ -25,11 +25,12 @@ R="repos/$SHIP_OWNER/$SHIP_REPO"
 # A header block starts at the top of the response or on that separator, and at
 # those two places alone; the separator goes out with the block it introduces,
 # so the pages concatenate exactly as they do without `-i`. That is the whole
-# defence against a body line shaped like a status line: one that does not follow a
-# blank line is body, and every caller here reads `--jq` output, one JSON value
-# per line, where a blank line does not arise. The status and the body come off
-# the one program below, read twice, so a line is body for both or header for
-# both: a second rule of its own would be the place the two could disagree.
+# defence against a body line shaped like a status line: one that does not
+# follow a blank line is body, and every caller here reads `--jq` output, one
+# JSON value per line, where a blank line does not arise. The status and the
+# body come off the one program below, read twice, so a line is body for both
+# or header for both: a second rule of its own would be the place the two could
+# disagree.
 _GH_AWK_SPLIT='
   BEGIN { start = 1 }
   start && /^HTTP\/[0-9.]+ [0-9][0-9][0-9]/ {

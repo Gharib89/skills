@@ -93,7 +93,7 @@ A reviewer driven only when the reviewer it names exits degraded, for any degrad
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Request transport**:
-How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host and the time it reports is what the since rule takes, so the since rule takes its timestamp from that read-back, on the host's clock.
+How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host, and the since rule takes its timestamp from that read-back, so the clock is the host's.
 _Avoid_: request method, trigger phrase (that is the workflow's own setting)
 
 **Landing rule**:
@@ -109,7 +109,7 @@ The phase-7 exit where CI is green and every reviewer is settled per its trigger
 _Avoid_: approved, clean, passed
 
 **Degraded exit**:
-A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. On its own it carries the run to the merge gate, where the human reads it and decides.
+A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. It is the human's call at the merge gate rather than a hand-back.
 _Avoid_: failure, timeout, skipped review
 
 **Not invoked**:

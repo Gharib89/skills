@@ -32,8 +32,9 @@ jobs:
       # before the prompt runs, and fails the whole job with "Not a git
       # repository" when there is nothing checked out (run 34847733490, the
       # round PR #168 requested). An issue_comment checkout is the default
-      # branch, never the PR head, and that is the brief to review against:
-      # the canonical one, not the version the PR under review proposes.
+      # branch rather than the PR head, and that is the brief to review
+      # against: the canonical one, not the version the PR under review
+      # proposes.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -77,14 +78,14 @@ jobs:
             No other shape of that call works. `--allowedTools` below grants
             `Bash(gh api:*)`, which matches a command that starts with `gh api`
             and nothing else. Piping from `echo` makes `echo` the command, the
-            call is refused, and a refused call is a round that never reaches
+            call is refused, and a refused call is a round that stops before
             the PR.
 
             One entry in `comments` per finding tied to a line, each naming the rule
             or issue requirement broken and the concrete fix. A finding you cannot
-            anchor to a line in the diff goes in `body`, never in `comments`:
+            anchor to a line in the diff goes in `body` rather than `comments`:
             GitHub rejects the entire call when one `comments` entry names a line
-            outside the diff, and a rejected call is a round the run never sees.
+            outside the diff, and a rejected call is a round the run cannot see.
 
             Submit exactly one review, even when you found nothing: a fallback
             reviewer that stays silent on a clean PR cannot be told apart from one
@@ -100,8 +101,8 @@ jobs:
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment,
       # and a ship run reads that as `degraded: silent`, indistinguishable from a
-      # reviewer that never fired. Costs one comment per failed round; drop it and
-      # the silent failure comes back.
+      # reviewer that did not fire. Costs one comment per failed round; drop it
+      # and the silent failure comes back.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}

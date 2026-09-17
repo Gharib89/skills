@@ -125,12 +125,12 @@ deletion, fast-forwards the local base branch from the checkout that holds it
 the claim and strips `ready-for-agent`**, so a reopened issue goes back through
 triage instead of being refused forever. The two issue steps are the
 issue-backed run's: `merge <pr> none` has no issue to close and no claim to
-release, so it skips both and its JSON carries neither `issue_closed` nor
-`claim_released` nor
-`ready_for_agent_removed`. Then `cleanup <issue|none>`: removes the worktree and
-force-deletes the local branch (a squash-merged branch is not an ancestor of the
-default branch). Carried files stay in the worktree it removes. Any `false` in
-either JSON: finish that step by hand before reporting done.
+release, so it skips both and its JSON carries none of `issue_closed`,
+`claim_released` and `ready_for_agent_removed`. Then `cleanup <issue|none>`:
+removes the worktree and force-deletes the local branch (a squash-merged branch
+is not an ancestor of the default branch). Carried files stay in the worktree it
+removes. Any `false` in either JSON: finish that step by hand before reporting
+done.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this
