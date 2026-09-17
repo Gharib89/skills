@@ -36,9 +36,11 @@ repo's `### Ship` block in CLAUDE.md carries.
 
 ## The one invariant
 
-Git, the tracker, the mechanics, the merge gate and every wait after it are
-ship's, on both sides of the invocation: hand the sandbox clone over untouched,
-for `isolate --in-place` to branch, and let ship run every mechanic itself. This
+Git, the tracker, the mechanics and the merge gate are ship's, on both sides of
+the invocation: hand the sandbox clone over untouched, for `isolate --in-place`
+to branch, and let ship run every mechanic itself. The fire ends where ship
+returns: relay what it said and stop there, because a human merges from the PR,
+and the open PR and the claim keep the next fire off that issue. This
 skill contributes the two steps above and nothing else, so a behaviour defined
 here would be a second definition of one ship already owns. The tracker is where
 that bites hardest: leave every claim, label, comment and hand-back to ship,

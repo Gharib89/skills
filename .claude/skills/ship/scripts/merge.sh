@@ -20,7 +20,8 @@
 # would otherwise land a branch somebody deliberately closed. Then the branch is
 # proven fresh against its base: the base can move between phase 5's
 # `base-fresh` and the human's "merge", and the squash would land a branch blind
-# to those commits. Refused as exit 1 `stale-base`.
+# to those commits, which leaves the summary they approved written against a
+# different tree than the one that would land. Refused as exit 1 `stale-base`.
 #
 # stdout: {merged, issue_closed, remote_branch_deleted, base_updated,
 #          claim_released, ready_for_agent_removed}

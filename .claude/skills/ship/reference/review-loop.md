@@ -210,10 +210,9 @@ new request.
 
 A reviewer whose `Fallback-for:` names another reviewer stands in for it, and
 only on the runs where that primary exits degraded: a fallback is on-request and
-conditional, so ship requests and drives it only once the primary is degraded. A
-host that opens a free round on a fallback of its own accord is read like any
-other round, and costs nothing. Preflight enforces the trigger, because a
-reviewer that fires on every push cannot be withheld.
+conditional, so ship requests and drives it only once the primary is degraded.
+Preflight enforces the trigger, because a reviewer that fires on every push
+cannot be withheld.
 
 **Drive every non-fallback reviewer to its exit first**, then the fallbacks,
 because a fallback's only input is how its primary exited.
