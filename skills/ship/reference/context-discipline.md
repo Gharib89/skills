@@ -92,9 +92,11 @@ has answered: run on the file alone.
 dispositioned.** Both `code-review` axis reports and the `writing-for-agents`
 pass's report reach the run in context alone, where a compaction takes them
 while the Run file survives, so **the run** writes each verbatim to
-`<scratchpad>/scratch/<role>/report.md` under the role that produced it, itself
+`<scratchpad>/scratch/<role>/<role>-report.md` under the role that produced it,
+itself
 where the subagent's own write did not land, and the Run file's `## Design and
-plan` section names the paths. Disposition from the file, re-read it there after
+plan` section names the paths, the role in each filename so a row of the merge
+summary names its report and not a third `report.md`. Disposition from the file, re-read it there after
 a compaction, and quote the merge summary's `Self-review` rows from it rather
 than from the transcript.
 

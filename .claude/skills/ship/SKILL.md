@@ -183,10 +183,10 @@ review. Reviewer rounds find these otherwise, serially, at the cost of most of a
 run's wall time, and the reverted-fix one escapes them entirely. This
 self-review plus green CI is the review gate; phase 7's reviewers add a second
 pair of eyes on top of it.
-**Done when:** every phase-4 Report file
-[context-discipline.md](reference/context-discipline.md) names is on disk, every
-finding carries a one-line disposition, and docs-sync either landed its edits or
-is skipped in one line for the merge gate.
+**Done when:** both `code-review` axes and, where it fired, the
+`writing-for-agents` pass have a Report file on disk with its path in the Run
+file, every finding carries a one-line disposition, and docs-sync either landed
+its edits or is skipped in one line for the merge gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
