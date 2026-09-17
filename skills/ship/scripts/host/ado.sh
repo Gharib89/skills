@@ -386,6 +386,12 @@ host_issues_ready() { # <label>
   jq '[.[] | {number: .id, title: .fields["System.Title"], created_at: .fields["System.CreatedDate"]}]' <<<"${out:-[]}"
 }
 
+# Azure DevOps runs its pipelines against the PR itself, so there is no
+# comment-started run sitting off the PR head to settle. Non-zero and silent is
+# "this host has no such read", the answer every read the host lacks gives, and
+# `poll-pr` then holds its window to the constant.
+host_workflow_runs() { return 1; }
+
 # Azure DevOps has no Copilot-review ruleset, so there is nothing to contradict
 # a profile with. Non-zero and silent is "not checked", the same answer the
 # GitHub adapter gives for a ruleset it cannot read, which is what lets preflight

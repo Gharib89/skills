@@ -70,6 +70,15 @@
 #                                           reply is keyed to. On Azure DevOps the thread id is
 #                                           that target already.
 #   host_pr_reviewer_blocked <pr> <login>-> JSON string | null
+#   host_workflow_runs <file> <event> <since-iso>
+#                                        -> [{status,conclusion,created_at,url,title}] the runs
+#                                           of that workflow file for that event, created at or
+#                                           after <since>. status queued|in_progress|completed,
+#                                           conclusion the host's own word or null while it runs,
+#                                           title the issue or PR the triggering event sits on,
+#                                           which is what narrows the runs to one PR. Non-zero and
+#                                           silent where the host has no such read, which poll-pr
+#                                           reads as "hold the window to the constant".
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
 #                                           requested_at: ISO-8601 time of the request event,
 #                                           or the wall clock where the host records none.
@@ -579,6 +588,25 @@ readonly SHIP_LANDED_BY='
   else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
   end'
 
+# poll-pr's pick of THE run a comment-transport reviewer's round is waiting on,
+# over a `host_workflow_runs` projection, invoked with `--arg t <the PR's title>`.
+# The workflow fires on every comment in the repo, so the rows are narrowed to
+# the PR being polled first. Among what is left a LIVE run wins: it is the one
+# still able to deliver the round, and a concluded run that arrived after it
+# would otherwise close the window on a round still being written. Then the
+# newest run that did something, because a `skipped` run is the workflow's own
+# `if` refusing a comment that was not the request. `none` is the read finding
+# no run at all, which the review loop reads as never-queued.
+# shellcheck disable=SC2034  # read by poll-pr
+readonly SHIP_REVIEWER_RUN='
+  def live: .status == "queued" or .status == "in_progress";
+  ([.[] | select(.title == $t)] | sort_by(.created_at)) as $rows
+  | (([$rows[] | select(live)] | last)
+     // ([$rows[] | select(.conclusion != "skipped")] | last)
+     // ($rows | last)
+     // {status: "none", conclusion: null, url: null})
+  | {status, conclusion, url}'
+
 # ship_fence_unclosed <text>: does the text end inside a fenced block? Prints
 # `line <n>: <run>` naming the opener still open, or nothing when the
 # fence state is balanced. `update-pr-body` asks before it rewrites a section:
@@ -797,7 +825,9 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # carries that marker through: a round nobody has read whole must not come back
 # looking complete, or the loop stops before re-polling it with --full.
 # Threads come down to the open ones, the only ones still owed a disposition,
-# and the string "unavailable" passes through as itself.
+# and the string "unavailable" passes through as itself. `reviewer_run` passes
+# through whole: it is three fields, and a loop reading rounds from the brief is
+# the loop that has to tell a silent reviewer from one whose run is still going.
 ship_brief() {
   jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" '
     def norm: ascii_downcase | sub("\\[bot\\]$"; "");
@@ -809,7 +839,7 @@ ship_brief() {
       | if ($items | length) == 0 then (if length > 200 then .[0:200] + "\n...[truncated]" else . end)
         elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
-    {head_sha, mergeable, landed_by,
+    {head_sha, mergeable, landed_by, reviewer_run,
      rounds: [.reviews[$key][] | select(mine | not) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index($r.id | tostring)) then $r.body

@@ -427,6 +427,24 @@ host_pr_reviewer_blocked() { # <pr> <login>
   } | jq -s --arg l "$2" "$_gh_blocked_select"
 }
 
+# The runs of one workflow file, for one event, created at or after <since>.
+# A reviewer reached through a comment transport runs as a workflow, and an
+# `issue_comment` run is attached to the DEFAULT BRANCH's SHA rather than to the
+# PR head: `host_pr_checks` reads the head and cannot see it, which is why a
+# window that closed before the round landed looked like a reviewer that never
+# queued (#203). `gh run list` is the one read that sees it.
+#
+# `title` is the run's display title, which is the title of the issue or PR the
+# triggering comment sits on. The workflow fires on every comment in the repo,
+# so that is what narrows the runs to the PR being polled.
+# `gh run list` rather than `api`: it builds the `--created` search itself, and
+# a read that returns nothing is an answer here rather than a failure.
+host_workflow_runs() { # <workflow-file> <event> <since-iso>
+  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event "$2" --created ">=$3" --limit 50 \
+    --json status,conclusion,createdAt,url,displayTitle \
+    --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})'
+}
+
 # Request, then read the request back off the host's own record: the login you
 # request and the login you read back can differ (Copilot is requested as
 # copilot-pull-request-reviewer[bot] and recorded on the timeline as `Copilot`),

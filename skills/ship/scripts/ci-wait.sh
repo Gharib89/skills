@@ -12,12 +12,17 @@
 # exit: 0 green or no-checks · 1 conflict, a failed check, or the window closed · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: ci-wait <pr> [--timeout <s>] [--interval <s>]'
+# The no-checks grace: how long the host is given to register a check before an
+# empty list is believed. A --timeout under it can only report `timeout` where
+# this mechanic answers `no-checks` a minute later, so it is refused rather than
+# honoured, and the usage line carries the number the refusal names.
+grace=120
+usage="usage: ci-wait <pr> [--timeout <s>, at least the ${grace}s no-checks grace] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 case $pr in -*) ship_tooling "$usage" ;; esac
-timeout=1800; interval=30; grace=120
+timeout=1800; interval=30
 while [ $# -gt 0 ]; do
   case $1 in
     --timeout) [ -n "${2:-}" ] || ship_tooling "$usage"; timeout=$2; shift 2 ;;
@@ -25,6 +30,9 @@ while [ $# -gt 0 ]; do
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
+case $timeout in ''|*[!0-9]*) ship_tooling "$usage" ;; esac
+[ "$timeout" -ge "$grace" ] || ship_tooling \
+  "--timeout below the ${grace}s no-checks grace: a shorter window reports timeout where this mechanic answers no-checks"
 ship_load_host
 
 emit() { # <status> <sha> <checks-json> <waited>
