@@ -29,7 +29,9 @@ lines() { awk 'END{print NR}' "$1"; }
 # tracks fences, in the grammar `SHIP_AWK_FENCE` in skills/ship/scripts/_lib.sh
 # states in full: three or more backticks or tildes under up to three spaces
 # open a fence, and only a bare run of the same character at least as long
-# closes it. This is a second copy of that grammar because a local gate never
+# closes it, with one asymmetry: a backtick run carrying another backtick after
+# it is an info string CommonMark disallows, so the line is paragraph text and
+# opens nothing. This is a second copy of that grammar because a local gate never
 # sources `_lib.sh`, which serves ship's mechanics alone; the tilde, long-run
 # and indented cases in tests/prose-budget.test.sh are what hold the copy to it.
 has_contents() {

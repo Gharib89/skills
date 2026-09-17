@@ -86,6 +86,13 @@ d=$(tree contents-after-fence)
 { printf -- '# R\n\n~~~\nx\n~~~\n\n## Contents\n'; body 95; } > "$d/skills/ship/reference/r.md"
 check_rc "a heading after a closed tilde fence is the heading" 0 "$(rc_of "$d")"
 
+# The one asymmetry in the grammar: a backtick run carrying another backtick
+# after it is an info string CommonMark disallows, so the line opens no fence
+# and the heading under it is a heading. A scan that opens one here loses it.
+d=$(tree contents-backtick-info)
+{ printf -- '# R\n\n```foo`bar\n\n## Contents\n'; body 96; } > "$d/skills/ship/reference/r.md"
+check_rc "a backtick info string opens no fence" 0 "$(rc_of "$d")"
+
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \

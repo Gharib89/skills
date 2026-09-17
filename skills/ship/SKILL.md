@@ -134,8 +134,9 @@ log the deviation, **`file-issue` it** and leave it, or stop
 work balloons (the diff outgrows one PR, or the fix demands a redesign the
 issue never scoped), stop `needs-split` with a split proposal.
 **Done when:** the applicable tests are green (red first, per class),
-`Tripwires:` and `In-PR requirement:` have landed, the deviations log is
-current, and every adjacent find carries one of the three dispositions.
+`Tripwires:` and `In-PR requirement:` have landed, the Run file's deviations
+log carries every departure so far, and every adjacent find carries one of the
+three dispositions.
 
 **3 · Verify.** [reference/implement.md](reference/implement.md) carries the
 result words, the `Without it:` dispositions and what `unexercised` is. For each
