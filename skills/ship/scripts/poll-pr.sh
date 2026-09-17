@@ -47,7 +47,8 @@
 # then extends by nothing. A run that concluded successfully buys one more
 # interval for the row to appear; one that concluded any other way closes the
 # window there and then, whatever `--timeout` had left, carrying its URL, which
-# is `infra-error` rather than `silent`. A run still live when the ceiling closes
+# the review loop reads as `infra-error` rather than `silent`, or, where the
+# conclusion is `skipped`, as the workflow declining the comment. A run still live when the ceiling closes
 # is reported as it stands, status and URL, and reads as `infra-error` too: a
 # run that outlived the ceiling delivered nothing either. The run is reported on
 # `reviewer_run`: null where the flag was not given, `{status, conclusion, url}`
@@ -155,11 +156,14 @@ while :; do
   [ -z "$await" ] || blocked=$(host_pr_reviewer_blocked "$pr" "$await") || blocked=null
   # A read the host refused, an outage included, is "unavailable" rather than a
   # missing run: both leave the window at the constant, and only one of them is
-  # evidence about the reviewer.
+  # evidence about the reviewer. A read that answered with something the filter
+  # cannot walk is the same kind of nothing, and saying so keeps the emit below
+  # holding one JSON object rather than a `--argjson` that will not parse.
   reviewer_run=null
   if [ -n "$await_run" ]; then
     if runs=$(host_workflow_runs "$await_run" "$since"); then
-      reviewer_run=$(jq -c --arg t "$(jq -r .title <<<"$prj")" "$SHIP_REVIEWER_RUN" <<<"$runs")
+      reviewer_run=$(jq -c --arg t "$(jq -r .title <<<"$prj")" "$SHIP_REVIEWER_RUN" <<<"$runs") \
+        || reviewer_run='"unavailable"'
     else
       reviewer_run='"unavailable"'
     fi

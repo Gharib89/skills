@@ -215,6 +215,16 @@ check "a refused run read is unavailable, not a missing run" '"unavailable"' \
   "$(jq -c '.reviewer_run' <<<"$out")"
 check "and it buys no extra poll" 1 "$(calls reviews)"
 
+# An answer the filter cannot walk is the same nothing as a refused read: the
+# mechanic still prints one JSON object, which is what the caller parses.
+reset
+printf '"not a list of runs"\n' > "$FAKE/runs.1.json"
+printf ''                        > "$FAKE/reviews.1.json"
+out=$(poll --await-run claude-review.yml 2>/dev/null); rc=$?
+check_rc "an unreadable run payload closes the window" 1 "$rc"
+check "and reads as unavailable, on one JSON object" '"unavailable"' \
+  "$(jq -c '.reviewer_run' <<<"$out")"
+
 # --await-run has no meaning without the reviewer it belongs to, or without the
 # instant the request happened.
 err() { ( cd "$repo" && bash "$mech" "$@" 2>/dev/null | jq -r '.error' ); }
