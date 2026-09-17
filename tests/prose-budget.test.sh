@@ -2,9 +2,10 @@
 # scripts/prose-budget-check.sh: the line budget on ship's prose. Each case
 # builds a tree at the real relative paths under a fresh root, so a fixture
 # differs from a tree inside the budget only in the overrun under test. The
-# subject is the pair of thresholds and the `## Contents` selector: both
-# boundaries, the first-15-lines anchor, the heading anchor, the empty glob and
-# the path where the tooling itself fails.
+# subject is the pair of thresholds, the `## Contents` selector and the list
+# under it: both boundaries, the first-15-lines anchor, the heading anchor, the
+# entry grammar in both directions, the empty glob and the path where the tooling
+# itself fails.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -92,6 +93,115 @@ check_rc "a heading after a closed tilde fence is the heading" 0 "$(rc_of "$d")"
 d=$(tree contents-backtick-info)
 { printf -- '# R\n\n```foo`bar\n\n## Contents\n'; body 96; } > "$d/skills/ship/reference/r.md"
 check_rc "a backtick info string opens no fence" 0 "$(rc_of "$d")"
+
+# The list under `## Contents` is a map, and a map that does not match the file
+# sends a reader to a heading that is not there. Both directions fail: a heading
+# nobody listed, and an entry naming a heading that was renamed away.
+d=$(tree heading-unlisted)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n\n## B\n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "a heading with no entry fails" 1 "$(rc_of "$d")"
+check "the message names the heading" \
+  'skills/ship/reference/r.md: `## B` has no entry under `## Contents`' "$(out_of "$d")"
+
+d=$(tree entry-stale)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n- [C](#c)\n\n## A\n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "an entry naming no heading fails" 1 "$(rc_of "$d")"
+check "the message names the entry" \
+  'skills/ship/reference/r.md: `## Contents` entry `C` names no heading' "$(out_of "$d")"
+
+d=$(tree contents-listed)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n- [B](#b)\n\nProse.\n\n## A\n\n## B\n'; body 92; } > "$d/skills/ship/reference/r.md"
+check_rc "a list that matches the headings passes" 0 "$(rc_of "$d")"
+
+# The list is the run of items directly under the heading. A bullet in the prose
+# below it is prose, so a file can keep a bullet list of its levers without a
+# heading for each.
+d=$(tree prose-bullets)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\nProse.\n\n- a lever\n- another\n\n## A\n'; body 91; } > "$d/skills/ship/reference/r.md"
+check_rc "bullets below the list are not entries" 0 "$(rc_of "$d")"
+
+# Whitespace around a heading or a link label is invisible in the rendered file,
+# so a list that matches what a reader sees matches here too: both sides are
+# trimmed, at both ends.
+d=$(tree heading-trailing-space)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A \n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "a trailing space on a heading is not a mismatch" 0 "$(rc_of "$d")"
+
+d=$(tree padded)
+{ printf '# R\n\n## Contents\n\n- [ A ](#a)\n\n##   A\n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "padding inside the heading and the link label is not a mismatch" 0 "$(rc_of "$d")"
+
+# The fence trap again, on both sides: a `## ` inside a fence is an example, so
+# it needs no entry, and an entry for it would name no heading.
+d=$(tree heading-fenced)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n\n```\n## Not a heading\n```\n\n~~~\n## Nor this\n~~~\n'; body 86; } > "$d/skills/ship/reference/r.md"
+check_rc "a heading inside a fence needs no entry" 0 "$(rc_of "$d")"
+
+# A fence opener is a non-list line like any other, so it ends the list: a bullet
+# under a fenced example further down the section is prose, not a late entry.
+d=$(tree list-then-fence)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n```\nx\n```\n\n- a lever\n\n## A\n'; body 89; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a bullet after a fence in the section is not an entry" 0 "$(rc_of "$d")"
+
+# CRLF: the marker is read the way the headings and the entries are, trimmed, so
+# a file written on Windows is judged on its list rather than on its line endings.
+d=$(tree crlf)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n'; body 94; } | sed 's/$/\r/' \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a CRLF file is judged on its list" 0 "$(rc_of "$d")"
+
+# An entry is a link only where the link syntax is there. `- [A] note` is whole
+# text, so it names no heading and says so, rather than passing as `A`.
+d=$(tree entry-not-a-link)
+{ printf '# R\n\n## Contents\n\n- [A] note\n\n## A\n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "a bracketed non-link entry is compared whole" 1 "$(rc_of "$d")"
+check "the message quotes the whole entry" \
+  'skills/ship/reference/r.md: `## A` has no entry under `## Contents`
+skills/ship/reference/r.md: `## Contents` entry `[A] note` names no heading' "$(out_of "$d")"
+
+# Four spaces make an indented code block, not a list item, so an example list
+# inside the section cannot stand in for the map. A deeper item under a real
+# entry is not the map either, and it does not end it: the entries after it are
+# still entries.
+d=$(tree indented-example)
+{ printf '# R\n\n## Contents\n\n    - [A](#a)\n    - [B](#b)\n\n## A\n\n## B\n'; body 91; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "an indented code block is not the list" 1 "$(rc_of "$d")"
+
+d=$(tree nested-entry)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n    - [A1](#a1)\n- [B](#b)\n\n## A\n\n## B\n'; body 90; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a deeper item neither counts nor ends the list" 0 "$(rc_of "$d")"
+
+# A heading under one to three spaces is an ATX heading, the same indent the
+# fence grammar honours, so it is read as one on both sides: it can be listed,
+# and it has to be.
+d=$(tree heading-indented)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n- [Intro](#intro)\n\n  ## Intro\n\n## A\n'; body 95; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "an indented heading can be listed" 0 "$(rc_of "$d")"
+
+d=$(tree heading-indented-unlisted)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n\n  ## Sneaky\n'; body 95; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "an indented heading still needs an entry" 1 "$(rc_of "$d")"
+check "the message names the indented heading" \
+  'skills/ship/reference/r.md: `## Sneaky` has no entry under `## Contents`' "$(out_of "$d")"
+
+# An entry that wraps is one entry: the continuation joins it, so it compares as
+# the text a reader sees, and the entries below the wrap are still entries.
+d=$(tree entry-wrapped)
+{ printf '# R\n\n## Contents\n\n- [A long one that\n  wraps](#a-long-one-that-wraps)\n- [B](#b)\n\n## A long one that wraps\n\n## B\n'; body 92; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a wrapped entry is one entry" 0 "$(rc_of "$d")"
+
+# The delimiter inside the field: a label carrying a close bracket is still a
+# link, so the label is taken from the last `](` rather than the first `]`.
+d=$(tree label-bracket)
+{ printf '# R\n\n## Contents\n\n- [A [x] B](#a-x-b)\n\n## A [x] B\n'; body 94; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "a bracket inside the label does not break the link" 0 "$(rc_of "$d")"
 
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"

@@ -106,8 +106,14 @@ run house-style house_style
 # prose-budget: ship's own documents, whose shape decides what a run reads
 # before it acts. `skills/*/SKILL.md` at most 400 lines, and every
 # `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
-# inside its first 15 lines; scripts/prose-budget-check.sh is the whole rule.
+# inside its first 15 lines whose list matches the file's `## ` headings;
+# scripts/prose-budget-check.sh is the whole rule.
 run prose-budget scripts/prose-budget-check.sh
+
+# stray-files: a tracked path outside the top-level entries this repo owns, which
+# is what a `git add -A` sweeps in and what a diff-shaped review misses.
+# scripts/stray-file-check.sh carries the allowlist.
+run stray-files scripts/stray-file-check.sh
 
 # contract: the mechanics' malformed-invocation contract, their --help contract,
 # and the Bash 3.2 target over the whole skills tree. Every mechanic answers a
