@@ -6,12 +6,21 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source skills/ship/scripts/_lib.sh
 
+# `ship_reviewer_reasons` stats the file a `Workflow:` line names, so the cases
+# need a checkout root to stat against. A fixture tree, not this repo: a case
+# that passed because the real `.github/workflows/` happened to carry the name
+# would stop proving the check the day that file is renamed.
+root=$(mktemp -d)
+trap 'rm -rf "$root"' EXIT
+mkdir -p "$root/.github/workflows"
+: >"$root/.github/workflows/claude-review.yml"
+
 # A two-reviewer profile in the shape `docs/agents/ship.md` carries: field lines
 # first, then the prose paragraph that explains the block.
 profile=$(cat <<'EOF'
 # Ship profile
 
-Schema: 2
+Schema: 3
 
 ## Host
 
@@ -24,6 +33,7 @@ Host: github
 Login: copilot-pull-request-reviewer[bot]
 Trigger: on-push
 Request: None.
+Workflow: None.
 Cap: 3
 Resolve: resolve-thread
 Gating: no
@@ -37,6 +47,7 @@ Enabled by a ruleset. Trigger: this sentence is prose, not a field.
 Login: github-actions[bot]
 Trigger: on-request
 Request: comment @claude
+Workflow: .github/workflows/claude-review.yml
 Cap: 2
 Resolve: None.
 Gating: no
@@ -87,6 +98,17 @@ check "reads Resolve: and Instructions:" \
   'resolve-thread .github/copilot-instructions.md' \
   "$(jq -r '[.[0].resolve, .[0].instructions] | join(" ")' <<<"$rows")"
 
+check "reads Workflow: as the file the reviewer's round comes from" \
+  '.github/workflows/claude-review.yml' \
+  "$(jq -r '.[1].workflow' <<<"$rows")"
+
+check "turns Workflow: None. into null, like every other field" \
+  'null' "$(jq -r '.[0].workflow | tostring' <<<"$rows")"
+
+nowf=$(printf '## Reviewers\n\n### copilot\n\nLogin: bot\nTrigger: on-push\nCap: None.\nGating: no\n\n## Coding standards\n')
+check "a block with no Workflow: line reads as null, not absent from the row" \
+  'null' "$(ship_reviewers "$nowf" | jq -r '.[0].workflow | tostring')"
+
 # Adversarial: a field name inside the explaining prose is not a field, and a
 # `### ` heading in a later section is not a reviewer.
 check "ignores a field name inside the block's prose" \
@@ -131,9 +153,9 @@ EOF
 check "a ### heading inside a fence is not a reviewer" \
   'copilot' "$(ship_reviewers "$fenced" | jq -r '[.[].name] | join(" ")')"
 
-# ---- the three refusals preflight makes -------------------------------------
+# ---- the refusals preflight makes -------------------------------------
 
-reasons() { ship_reviewer_reasons "$(ship_reviewers "$1")"; }
+reasons() { ship_reviewer_reasons "$(ship_reviewers "$1")" "$root"; }
 
 check "a valid pair yields no reason" '' "$(reasons "$profile")"
 
@@ -159,15 +181,37 @@ check "refuses a Cap: that is not a number" \
   'profile invalid: copilot has Cap: three, which is neither a number nor None.' \
   "$(reasons "$(sed 's|^Cap: 3$|Cap: three|' <<<"$profile")")"
 
+# The `Workflow:`/`Request:` pair. A comment transport's round comes from a
+# workflow run, so a block that asks for one and names no file leaves the run
+# polling on a constant; a file named on a block no comment drives is a value
+# nothing reads. The third is the one stat: a path that names no file is the
+# same silence as no path at all, and it is spelt wrong far more often.
+
+check "refuses a comment transport whose Workflow: is None." \
+  'profile invalid: claude has Request: comment @claude with no Workflow: naming the workflow file its round comes from' \
+  "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: None.|' <<<"$profile")")"
+
+check "refuses a comment transport with no Workflow: line at all" \
+  'profile invalid: claude has Request: comment @claude with no Workflow: naming the workflow file its round comes from' \
+  "$(reasons "$(sed '/^Workflow: .github\/workflows\/claude-review.yml$/d' <<<"$profile")")"
+
+check "refuses a Workflow: on a block whose Request: is not a comment transport" \
+  'profile invalid: copilot has Workflow: .github/workflows/claude-review.yml but its Request: is None., not comment <phrase>' \
+  "$(reasons "$(sed '0,/^Workflow: None.$/s||Workflow: .github/workflows/claude-review.yml|' <<<"$profile")")"
+
+check "refuses a Workflow: naming a file the checkout does not carry" \
+  'profile invalid: claude has Workflow: .github/workflows/gone.yml, which is not in the checkout' \
+  "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: .github/workflows/gone.yml|' <<<"$profile")")"
+
 # ---- adversarial: the ways a parser answers wrong rather than failing --------
 
 check "a parse that produced nothing refuses, rather than reading as no faults" \
   'profile invalid: the ## Reviewers blocks could not be parsed' \
-  "$(ship_reviewer_reasons '')"
+  "$(ship_reviewer_reasons '' "$root")"
 
 check "so does output that is not an array" \
   'profile invalid: the ## Reviewers blocks could not be parsed' \
-  "$(ship_reviewer_reasons '{"name": "copilot"}')"
+  "$(ship_reviewer_reasons '{"name": "copilot"}' "$root")"
 
 tabbed=$(printf '## Reviewers\n\n### copilot\n\nLogin: a\tb\nTrigger: on-push\nCap: None.\nGating: no\n\n## Coding standards\n')
 check "a tab inside a value is flattened, not truncated at" \
@@ -184,7 +228,7 @@ check "a ### heading inside a tilde fence is not a reviewer" \
 bare=$(printf '## Reviewers\n\n### claude\n\nLogin: bot\nTrigger: on-request\nCap:\nGating: no\n\n## Coding standards\n')
 check "a Cap: with no value reads as absent, and on-request still refuses" \
   'profile invalid: claude is on-request with no Cap:' \
-  "$(ship_reviewer_reasons "$(ship_reviewers "$bare")")"
+  "$(ship_reviewer_reasons "$(ship_reviewers "$bare")" "$root")"
 
 check "Gating: is a boolean whatever it reads, never null" \
   'false' "$(ship_reviewers "$(sed 's|^Gating: no$|Gating: None.|' <<<"$profile")" | jq -r '.[0].gating')"

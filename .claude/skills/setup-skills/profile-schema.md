@@ -21,3 +21,12 @@ The fallback reviewer: a reviewer that stands in for another one is on-request a
 - Three refusals Schema 2 added at preflight, so a migrated profile is checked rather than trusted (ship has grown others since; `CONTEXT.md` carries the current set): `Fallback-for:` on a reviewer whose `Trigger:` is not `on-request`, `Fallback-for:` naming a reviewer the profile does not list, and an on-request reviewer with no `Cap:`.
 
 Migration from an unnumbered profile: add the line. Nothing else moves.
+
+## Schema 3
+
+The workflow file a comment-transport reviewer's round comes from, on the block instead of in the prose under it. Only the reviewer block moves; the fourteen headings and every other `Label:` line are unchanged from Schema 2.
+
+- Each `### <reviewer>` block under `## Reviewers` gains a `Workflow:` line, directly after `Request:`, the field it qualifies. It names the path of the workflow file that reviewer's round comes from, as the host's run listing takes it (e.g. `.github/workflows/claude-review.yml`), where `Request:` reads `comment <phrase>`, and `None.` on every other block. A run passes the value to `poll-pr --await-run`, which is what separates a round still being written from one that will not come; before this schema the run read that path out of the prose paragraph under the block, where nothing checked it.
+- Three refusals Schema 3 added at preflight, so a migrated profile is checked rather than trusted (ship has grown others since; `CONTEXT.md` carries the current set): `Request: comment <phrase>` with no `Workflow:` line or `Workflow: None.`, a `Workflow:` naming a file on a block whose `Request:` is not `comment <phrase>`, and a `Workflow:` naming a file the checkout does not carry.
+
+Migration from Schema 2: **a block whose `Request:` is `comment <phrase>` cannot receive `Workflow: None.`**, or the migrated profile is refused by the first preflight that reads it. Lift the path from that block's prose paragraph where exactly one file path is named there; where the prose names none, or several, stop and ask the human which file it is. Every other block gets `Workflow: None.`

@@ -144,6 +144,7 @@ Known gaps, to settle on the first real run. The failure-speaking step is unveri
 Login: <Project> Build Service (<Org>)
 Trigger: on-push
 Request: None.
+Workflow: None.
 Cap: 3
 Resolve: threads are set to `fixed` once a finding is dispositioned; the build re-runs on the next push
 Gating: yes
