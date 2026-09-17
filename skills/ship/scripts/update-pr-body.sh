@@ -20,7 +20,8 @@
 # `--preamble`: the body file is the whole preamble. A preamble is always there,
 # empty at the emptiest, so it is always replaced and the create path is unused.
 # A closing line the old preamble carried and the file does not is carried over,
-# where `open-pr` puts it, so a rewrite that says nothing about closing keeps the link to the issue.
+# where `open-pr` puts it, so a rewrite that says nothing about closing keeps
+# the link to the issue.
 # A file carrying its own closing line states what the PR closes and is left
 # alone, whichever issues it names.
 #

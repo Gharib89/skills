@@ -69,7 +69,7 @@ a fresh read of the committed tree, not a conversation.
   that comment starts, and such a run is attached to the default branch's SHA:
   it lands no check on the PR head, so the run itself is the evidence that the
   reviewer is working, and reading it is what tells a round still being written
-  from one that will never come. Poll with `--await-run <workflow-file>`, the
+  from one that will not come. Poll with `--await-run <workflow-file>`, the
   file that reviewer's block names in prose, alongside `--await-review` and
   `--since`. `--timeout` is then the floor of the window rather than its end: a
   run that has not finished keeps the poll going, to the ceiling `poll-pr

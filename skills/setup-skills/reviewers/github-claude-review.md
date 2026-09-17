@@ -3,19 +3,19 @@
 Scaffold for a repo whose ship profile names Claude Code as a reviewer. It comes in two shapes, and a repo takes exactly one:
 
 - **The on-push shape.** The repo has no other reviewer. Claude reviews every push to an open PR, so it is the whole second pair of eyes, and its job lands a check run on the PR head.
-- **The on-request fallback shape.** The repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out. A PR comment is the trigger, so nothing fires while the primary is healthy. See [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) for why a fallback is on-request and never on-push.
+- **The on-request fallback shape.** The repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out. A PR comment is the trigger, so nothing fires while the primary is healthy. See [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) for why a fallback is on-request rather than on-push.
 
-What both shapes do the same way, because ship reads a round off the host and never off the workflow's logs:
+What both shapes do the same way, because ship reads a round off the host alone:
 
 - **One formal pull request review per round**, submitted in a single call, with every inline finding attached to it, and a body of exactly `no findings` when the PR is clean. A reviewer that stays silent on a clean PR cannot be told apart from one that failed, and the run waits out its whole poll window either way.
 - **`--model opus`.** A review is judgment work: a cheaper tier reads the diff and misses the standards violation in it. The alias tracks the tier's current model rather than pinning one release.
 - **`claude_code_oauth_token`** from the `CLAUDE_CODE_OAUTH_TOKEN` secret, minted by `claude setup-token`, so the review is billed to a Claude subscription rather than to API credit.
-- **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the prompt is never reached: no review, no findings, and nothing on the PR to say why. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
+- **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the job dies before the prompt runs: no review, no findings, and nothing on the PR to say why. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
 - **`--max-turns 60`.** A round reads a brief, a spec, a whole diff and then builds one POST, and a 30-turn cap does not cover a mid-size PR: the round exhausts it, logs `error_max_turns`, posts nothing, and still bills the turns it spent.
-- **An allowlist that covers every step of the prompt.** A tool the round needs and cannot call is a denied call, a spent turn and no explanation, and the run log reports only `permission_denials_count`, never which commands, so the list is derived from what the prompt's own steps ask for, plus the read-only verbs a round reaches for while sizing a large diff, and never from a log. `Read`, `Grep` and `Glob` serve step 1's brief and standards; `Bash(gh pr view:*)` and `Bash(gh issue view:*)` step 2's spec; `Bash(gh pr diff:*)` step 3's diff; `Bash(gh api:*)` the POST; and `Bash(head:*)`, `Bash(tail:*)` and `Bash(wc:*)` because a pipe is refused unless **both** of its commands are granted, so `gh pr diff | wc -l` needs `wc` named too. Those three size a diff and never stand in for it: step 3 says review what the one `gh pr diff` returned, and a `head` that truncates it leaves the tail unreviewed with nothing saying so. Deliberately no `git` entry, though [`ado-claude-review.md`](ado-claude-review.md) grants two: that prompt reaches for `git diff` because Azure DevOps has no `gh`, while both shapes here check out at `fetch-depth: 1` and read the diff through `gh pr diff`, so `git log` would have no history to read and neither prompt asks for either. Nothing here writes to the checkout, the one write it can make anywhere is the review POST the round exists for, and nothing reaches the network beyond `gh`. Narrow it and the round spends its turns on denied calls and posts nothing.
-- **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` under the on-push shape and cannot tell it from a reviewer that never fired, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. Under the on-request shape the run read settles it, `poll-pr --await-run` reading the failed run as `infra-error` with its URL, and the `if: failure()` step below leaves that URL and the failure subtype on the PR for both shapes. [`ado-claude-review.md`](ado-claude-review.md) carries the same step as a `condition: failed()` one posting a closed PR thread. It needs no permission the job did not already have: a comment on a pull request is posted to `/issues/{n}/comments`, and the `pull-requests: write` that admits the review POST admits that endpoint too on a pull request, with no `issues` scope at all (probed on a runner, [run on #174](https://github.com/Gharib89/skills/pull/174)). Keep `issues: read`: this job hands PR-controlled text to a model holding `Bash(gh api:*)`, so a scope it does not need is a scope an injected prompt would get.
+- **An allowlist that covers every step of the prompt.** A tool the round needs and cannot call is a denied call, a spent turn and no explanation, and the run log reports `permission_denials_count` alone and names no command, so the list is derived from what the prompt's own steps ask for, plus the read-only verbs a round reaches for while sizing a large diff, rather than from a log. `Read`, `Grep` and `Glob` serve step 1's brief and standards; `Bash(gh pr view:*)` and `Bash(gh issue view:*)` step 2's spec; `Bash(gh pr diff:*)` step 3's diff; `Bash(gh api:*)` the POST; and `Bash(head:*)`, `Bash(tail:*)` and `Bash(wc:*)` because a pipe is refused unless **both** of its commands are granted, so `gh pr diff | wc -l` needs `wc` named too. Those three size a diff and leave the reviewing to step 3: step 3 says review what the one `gh pr diff` returned, and a `head` that truncates it leaves the tail unreviewed with nothing saying so. Deliberately no `git` entry, though [`ado-claude-review.md`](ado-claude-review.md) grants two: that prompt reaches for `git diff` because Azure DevOps has no `gh`, while both shapes here check out at `fetch-depth: 1` and read the diff through `gh pr diff`, so `git log` would have no history to read and neither prompt asks for either. Nothing here writes to the checkout, the one write it can make anywhere is the review POST the round exists for, and nothing reaches the network beyond `gh`. Narrow it and the round spends its turns on denied calls and posts nothing.
+- **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` under the on-push shape and cannot tell it from a reviewer that did not fire, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. Under the on-request shape the run read settles it, `poll-pr --await-run` reading the failed run as `infra-error` with its URL, and the `if: failure()` step below leaves that URL and the failure subtype on the PR for both shapes. [`ado-claude-review.md`](ado-claude-review.md) carries the same step as a `condition: failed()` one posting a closed PR thread. It needs no permission the job did not already have: a comment on a pull request is posted to `/issues/{n}/comments`, and the `pull-requests: write` that admits the review POST admits that endpoint too on a pull request, with no `issues` scope at all (probed on a runner, [run on #174](https://github.com/Gharib89/skills/pull/174)). `issues: read` is there for step 2's `gh issue view`, and it stays at `read`: this job hands PR-controlled text to a model holding `Bash(gh api:*)`, so a scope beyond what the prompt's own steps ask for is a scope an injected prompt would get, and the failure comment above asks for none.
 
-Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file, never a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
+Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file itself, rather than a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
 
 The two YAML blocks below are each complete on purpose: a consumer copies one of them whole, and a shared block plus a list of substitutions is where a workflow that fails on indentation comes from.
 
@@ -26,7 +26,7 @@ Two human steps belong to both shapes, so each checklist below carries only what
 
 ## The on-push shape
 
-A `pull_request` event from a fork never sees the secret, so the job below skips fork PRs by comparing the head repo to this one. Without that guard the job still starts, the empty token fails the action, and the PR head carries a red `review` check: with step 2 below naming the job on `Legs:` and step 3 making it required, a fork PR can no longer be merged. Skipping is what keeps a fork PR merely unreviewed, and `## Reviewers` unchanged.
+A `pull_request` event from a fork sees no secret, so the job below skips fork PRs by comparing the head repo to this one. Without that guard the job still starts, the empty token fails the action, and the PR head carries a red `review` check: with step 2 below naming the job on `Legs:` and step 3 making it required, a fork PR can no longer be merged. Skipping is what keeps a fork PR merely unreviewed, and `## Reviewers` unchanged.
 
 ### `.github/workflows/claude-review.yml`
 
@@ -104,15 +104,15 @@ jobs:
             No other shape of that call works. `--allowedTools` below grants
             `Bash(gh api:*)`, which matches a command that starts with
             `gh api` and nothing else. Piping from `echo` makes `echo` the
-            command, the call is refused, and a refused call is a round that
-            never reaches the PR.
+            command, the call is refused, and a refused call is a round
+            that stops before the PR.
 
             One entry in `comments` per finding tied to a line, each naming the
             rule or issue requirement broken and the concrete fix. A finding you
-            cannot anchor to a line in the diff goes in `body`, never in
+            cannot anchor to a line in the diff goes in `body` rather than
             `comments`: GitHub rejects the entire call when one `comments` entry
-            names a line outside the diff, and a rejected call is a round the run
-            never sees.
+            names a line outside the diff, and a rejected call is a round the
+            run cannot see.
 
             Submit exactly one review, even when you found nothing: a reviewer
             that stays silent on a clean PR cannot be told apart from one that
@@ -128,7 +128,7 @@ jobs:
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment,
       # and a ship run reads that as `degraded: silent`, indistinguishable from a
-      # reviewer that never fired. Costs one comment per failed round; drop it and
+      # reviewer that did not fire. Costs one comment per failed round; drop it and
       # the silent failure comes back.
       - if: failure()
         env:
@@ -213,10 +213,10 @@ jobs:
       # Not optional: the action runs `git diff ... HEAD` in the workspace
       # before the prompt runs, and fails the whole job with "Not a git
       # repository" when there is nothing checked out. An issue_comment
-      # checkout is the default branch, never the PR head, and that is the
-      # right instructions file to review against: the canonical one, not the
-      # version the PR under review proposes. The reviewed diff comes from
-      # `gh pr diff`, so the PR head is never needed on disk.
+      # checkout is the default branch rather than the PR head, and that is
+      # the right instructions file to review against: the canonical one, not
+      # the version the PR under review proposes. The reviewed diff comes from
+      # `gh pr diff`, so the PR head can stay off disk.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -259,15 +259,15 @@ jobs:
             No other shape of that call works. `--allowedTools` below grants
             `Bash(gh api:*)`, which matches a command that starts with
             `gh api` and nothing else. Piping from `echo` makes `echo` the
-            command, the call is refused, and a refused call is a round that
-            never reaches the PR.
+            command, the call is refused, and a refused call is a round
+            that stops before the PR.
 
             One entry in `comments` per finding tied to a line, each naming the
             rule or issue requirement broken and the concrete fix. A finding you
-            cannot anchor to a line in the diff goes in `body`, never in
+            cannot anchor to a line in the diff goes in `body` rather than
             `comments`: GitHub rejects the entire call when one `comments` entry
-            names a line outside the diff, and a rejected call is a round the run
-            never sees.
+            names a line outside the diff, and a rejected call is a round the
+            run cannot see.
 
             Submit exactly one review, even when you found nothing: a fallback
             reviewer that stays silent on a clean PR cannot be told apart from one
@@ -283,7 +283,7 @@ jobs:
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment,
       # and a ship run with no run read reads that as `degraded: silent`,
-      # indistinguishable from a reviewer that never fired. Costs one comment per
+      # indistinguishable from a reviewer that did not fire. Costs one comment per
       # failed round; drop it and the silent failure comes back wherever the run
       # read is unavailable.
       - if: failure()
@@ -337,7 +337,7 @@ Fallback-for: __PRIMARY__
 Instructions: __INSTRUCTIONS__
 ```
 
-**Name the workflow file in the prose under this block.** A round reaches this reviewer through a comment, so its run is what tells a round still being written from one that will never come, and ship passes that file to `poll-pr --await-run`. The file this shape writes is `.github/workflows/claude-review.yml`; a block whose prose names none leaves the run polling on the constant, which is the silence this shape exists to remove, and it fails quietly.
+**Name the workflow file in the prose under this block.** A round reaches this reviewer through a comment, so its run is what tells a round still being written from one that will not come, and ship passes that file to `poll-pr --await-run`. The file this shape writes is `.github/workflows/claude-review.yml`; a block whose prose names none leaves the run polling on the constant, which is the silence this shape exists to remove, and it fails quietly.
 
 `Login:` is `claude[bot]` in both shapes: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App its `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` step runs on `github.token` and lands as `github-actions[bot]`, and that comment is not a round, so the login a run awaits is the app's.
 

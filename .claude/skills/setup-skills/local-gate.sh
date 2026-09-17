@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Local gate: every check this repo's CI runs, run locally before a PR opens.
-# Written by setup-skills; owned by the repo. Ship never edits it.
+# Written by setup-skills; owned by the repo, which is who edits it from here.
 #
 #   scripts/local-gate.sh [--small <node>] [--base <ref>]
 #
 # Contract (ship's local-gate contract, the same in every repo):
 #   stdout: one JSON object, {"verdict","base","lane","gates":{<name>:<status>}}
-#   stderr: a failing gate's last 40 log lines, never the full log
+#   stderr: a failing gate's last 40 log lines
 #   exit:   0 every gate passed · 1 a gate failed · 2 tooling
 #   gate status: pass | fail | deferred-to-ci | unavailable
 #     deferred-to-ci: planned, CI proves this gate (Docker absent, other-OS leg)

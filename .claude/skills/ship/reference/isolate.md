@@ -63,7 +63,6 @@ tooling reads.
 
 ## The ship profile
 
-
 Load `docs/agents/ship.md` **once, whole, at preflight**, the way a session
 loads `docs/agents/issue-tracker.md`. It has fourteen fixed `##` headings, every
 one always present; a defaulted axis reads `None.` or `Default.`. Facts sit on

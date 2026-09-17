@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 6.0.1
+  version: 6.0.2
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -20,8 +20,8 @@ integrates with, self-reviewed, reviewed by every reviewer the repo names,
 CI-green, and summarized for a ten-second approve. This skill is **generic**: it
 knows how to ship and nothing about the repo, and every repo fact comes from the
 **ship profile**, `docs/agents/ship.md`. The copy under `.claude/skills/ship` is
-a **derived copy**, changed upstream in `skills/ship/` and refreshed through the
-command the repo's `### Ship` block in CLAUDE.md carries.
+a **derived copy**, changed in its source repo `Gharib89/skills` and refreshed
+through the command the repo's `### Ship` block in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
 version once, at the start of the run, with
@@ -246,8 +246,8 @@ evidence), `degraded: <reason>` from the fixed vocabulary
 a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
 proceeds to the merge gate on green CI and is reported there rather than handed
 back. At exit,
-`update-pr-body <pr> --section "Deviations from plan" --body-file <path>` where
-the rounds grew the log, then
+`update-pr-body <pr> --section "Deviations from plan" --body-file <path>`
+where the rounds grew the log, then
 `update-pr-body <pr> --section Review --body-file <path>` with one status line
 per reviewer, then the phase-6 read-back while the PR is still open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`

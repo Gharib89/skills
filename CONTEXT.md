@@ -1,6 +1,6 @@
 # Skills
 
-Ahmed Gharib's shared agent skills. Each skill is written once here and reaches a repo as a derived copy; a repo expresses its own differences through per-repo docs, never by editing its copy.
+Ahmed Gharib's shared agent skills. Each skill is written once here and reaches a repo as a derived copy; a repo expresses its own differences through per-repo docs, leaving its copy as installed.
 
 ## Language
 
@@ -25,15 +25,15 @@ The repo-owned script that runs every check the repo's CI would run, locally, be
 _Avoid_: pre-push checks, lint step, test step
 
 **Verdict**:
-The local gate's one answer: pass, fail, or unavailable, built from a status per check. A check is deferred to CI when the gate knows CI proves it and unavailable when the gate could not ask its question; a deferred check proceeds and is named at the merge gate, an unavailable one stops an attended run and hands back an unattended one. Local green never means less than CI green.
+The local gate's one answer: pass, fail, or unavailable, built from a status per check. A check is deferred to CI when the gate knows CI proves it and unavailable when the gate could not ask its question; a deferred check proceeds and is named at the merge gate, an unavailable one stops an attended run and hands back an unattended one. Local green means at least as much as CI green.
 _Avoid_: result, report, gate output
 
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-pr, reply-thread, update-pr-body, update-pr-title, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; the agent never drives a host's CLI directly, and a missing operation is a Ship defect, not a prose fallback. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-pr, reply-thread, update-pr-body, update-pr-title, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; a run reaches a host's CLI only from inside a mechanic, and a missing operation is a Ship defect, not a prose fallback. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
 _Avoid_: helper, util, raw `gh` or `az` call
 
 **Setup skill**:
-A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section, never a second setup skill.
+A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section of that same skill.
 _Avoid_: init, scaffold, bootstrap
 
 **Composed skill**:
@@ -41,11 +41,11 @@ A skill Ship loads through the Skill tool at the phase that needs it rather than
 _Avoid_: dependency, sub-skill, helper skill
 
 **Sibling skill**:
-A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which invokes Ship unattended from a cloud routine and relays its outcome. It adds nothing Ship could do for itself: the cloud bootstrap, the PR cap, the selection, the claim, the branch, the isolation, the hand-back and the merge summary are all Ship's. Only Ship claims an issue; a sibling never pre-claims, never writes to the tracker, and never calls a Ship script by path.
+A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which invokes Ship unattended from a cloud routine and relays its outcome. It adds nothing Ship could do for itself: the cloud bootstrap, the PR cap, the selection, the claim, the branch, the isolation, the hand-back and the merge summary are all Ship's. Only Ship claims an issue: a sibling leaves the claim and every tracker write to Ship, and reaches it through the Skill tool rather than by a script path.
 _Avoid_: wrapper, plugin, variant
 
 **Fire**:
-One `cloud-ship` run: one selected issue driven to one merge-ready PR, ending at the merge gate with no human present. A fire either reaches merge-ready or hands the issue back; it never leaves it claimed and spinning. Distinct from an unattended run, which is the Ship run inside a fire.
+One `cloud-ship` run: one selected issue driven to one merge-ready PR, ending at the merge gate with no human present. A fire ends at one of two resting states, merge-ready or handed back, so the issue always ends up somewhere a human can act on. Distinct from an unattended run, which is the Ship run inside a fire.
 _Avoid_: run, invocation, job, tick, cycle
 
 **PR cap**:
@@ -53,7 +53,7 @@ The count of open pull requests at which a fire stops before selecting anything,
 _Avoid_: throttle, rate limit, concurrency limit
 
 **Derived copy**:
-The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and never edited in place. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is never installed for the machine instead, because a personal skill silently shadows a repo's.
+The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and left as installed, every change going to the source. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is installed at repo scope, because a personal skill silently shadows a repo's.
 _Avoid_: vendored fork, sync, symlink, snapshot
 
 **Claim**:
@@ -61,7 +61,7 @@ The assignee on a tracker issue, set by Ship before any work. An assigned issue 
 _Avoid_: lock, agent-working, in-progress label
 
 **Hand-back**:
-Releasing the claim after a blocked stop and marking the issue for a human, never returning it to the agent queue.
+Releasing the claim after a blocked stop and marking the issue for a human: to the human queue, never the agent queue, which loops forever.
 _Avoid_: requeue, unclaim, release (release alone is the claim coming off; hand-back adds the human marker)
 
 **Attended run**:
@@ -73,11 +73,11 @@ A Ship run a cloud routine invoked through `cloud-ship`. Admits `ready-for-agent
 _Avoid_: cloud run, headless, autopilot
 
 **Merge gate**:
-The hard stop at the end of a Ship run where a human reads the summary and says merge or not. Ship never merges on its own.
+The hard stop at the end of a Ship run where a human reads the summary and says merge or not. Ship merges on that word alone, and never on its own.
 _Avoid_: approval, sign-off, review
 
 **Small lane**:
-The collapsed form of a Ship run for a change the whole team would call trivial; revocable mid-run. It drops planning breadth, never a check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the one regression test proving the change), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review never collapses, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
+The collapsed form of a Ship run for a change the whole team would call trivial; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the one regression test proving the change), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
 _Avoid_: fast path, quick mode, hotfix
 
 **Reviewer**:
@@ -85,15 +85,15 @@ One automated review bot the ship profile names for a repo, with its login, its 
 _Avoid_: review bot topology (the old three-shape framing), bot lane
 
 **Trigger**:
-How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request, and where the host still posts an opening round on its own, the loop polls for that free round and takes it as round 1 rather than spending a request on it. Convergence and mechanics follow the trigger, never the bot's brand. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
+How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request, and where the host still posts an opening round on its own, the loop polls for that free round and takes it as round 1 rather than spending a request on it. Convergence and mechanics follow the trigger alone; the bot's brand decides nothing. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
 _Avoid_: mode, kind of bot
 
 **Fallback reviewer**:
-A reviewer driven only when the reviewer it names exits degraded, for any degraded reason; never a second opinion on a converged primary. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary converges, the fallback still reports, as not invoked, so the human sees it exists.
+A reviewer driven only when the reviewer it names exits degraded, for any degraded reason; a converged primary leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary converges, the fallback still reports, as not invoked, so the human sees it exists.
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Request transport**:
-How an on-request reviewer is asked for a round, named by its `Request:` line and never by its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host and the time it reports is what the since rule takes, so it is the host's clock and never this machine's.
+How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host, and the since rule takes its timestamp from that read-back, so the clock is the host's.
 _Avoid_: request method, trigger phrase (that is the workflow's own setting)
 
 **Landing rule**:
@@ -105,19 +105,19 @@ The 2000-character cap `poll-pr` puts on every review body, marked `...[truncate
 _Avoid_: truncation, body limit
 
 **Converged**:
-The phase-7 exit where CI is green and every reviewer is settled per its trigger: auto-once threads all dispositioned; on-push quiet on the current head with every thread dispositioned and resolved; on-request latest round nothing actionable and every thread dispositioned. Silence on the current head is never quiet.
+The phase-7 exit where CI is green and every reviewer is settled per its trigger: auto-once threads all dispositioned; on-push quiet on the current head with every thread dispositioned and resolved; on-request latest round nothing actionable and every thread dispositioned. A round lands on the current head for it to be quiet; silence keeps the poll running.
 _Avoid_: approved, clean, passed
 
 **Degraded exit**:
-A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. Never a hand-back on its own; the human reads it and decides.
+A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. It is the human's call at the merge gate rather than a hand-back.
 _Avoid_: failure, timeout, skipped review
 
 **Not invoked**:
-The phase-7 exit belonging to a fallback reviewer whose primary converged: it was never requested, so it has no rounds and no findings. Neither converged nor degraded, and never a stop. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
+The phase-7 exit belonging to a fallback reviewer whose primary converged: it went unrequested, so it has no rounds and no findings. Neither converged nor degraded, and the run carries on past it. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
 _Avoid_: skipped, not needed, n/a
 
 **Carried file**:
-An untracked, gitignored file the ship profile names to be copied into the run's worktree when it is isolated, never copied back. A run that changes one stops.
+An untracked, gitignored file the ship profile names to be copied into the run's worktree when it is isolated, and left there. A run that changes one stops.
 _Avoid_: env file (one kind of carried file), secrets, worktree setup
 
 **Verification**:
@@ -129,7 +129,7 @@ An attended stop where Ship prints the exact command and setup, waits for the hu
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
 
 **Host**:
-The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). Ship reads it off the repo's remote and the ship profile names it as a cross-check; every generic mechanic has one adapter per host inside the skill, selected, never generated. A host's own words (label or tag, assignee or Assigned To, review thread or thread) never reach Ship's prose: the mechanics translate them.
+The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). Ship reads it off the repo's remote and the ship profile names it as a cross-check; every generic mechanic has one adapter per host inside the skill, selected from the ones it carries. A host's own words (label or tag, assignee or Assigned To, review thread or thread) stop at the mechanics, which translate them into Ship's own vocabulary.
 _Avoid_: tracker (Boards is one part of a host), provider, platform
 
 **Run file**:
@@ -161,5 +161,5 @@ An open issue whose title shares three or more tokens with an adjacent find the 
 _Avoid_: duplicate, match, near-miss, collision
 
 **Ship defect**:
-A gap in Ship itself met during a run: a host operation no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human; never hand-rolled around in the run, and never filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
+A gap in Ship itself met during a run: a host operation no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human, rather than into a hand-rolled call or an issue filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
 _Avoid_: tooling gap, missing helper, upstream bug
