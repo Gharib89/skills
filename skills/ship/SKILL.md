@@ -123,15 +123,12 @@ rebuild or a version bump CI enforces lands in this change, or phase 8 goes red
 with no phase explaining why. Keep a **deviations log** from the first edit:
 whenever the territory forces a departure from the issue, brief or plan,
 resolve it by the conservative option, log what and why, keep going; the log
-lands verbatim in the PR body and the merge summary. An **adjacent find** has
-three dispositions and no fourth: **fix it inline** and log the deviation where
-an acceptance criterion names it, the fix lands in a file this PR already
-changes, or a reviewer of this PR would flag it; otherwise **`file-issue` it**
-with the profile's triage marker and leave it; or the find shows the issue is
-**mis-specified**, so stop there. The merge summary lists every issue filed and
-every candidate linked. If the core work balloons (the diff outgrows one PR, or
-the fix demands a redesign the issue never scoped), stop `needs-split` with a
-split proposal.
+lands verbatim in the PR body and the merge summary. An **adjacent find** takes
+one of implement.md's three dispositions and no fourth: **fix it inline** and
+log the deviation, **`file-issue` it** and leave it, or stop
+**`mis-specified`** where the find shows the issue itself is wrong. If the core
+work balloons (the diff outgrows one PR, or the fix demands a redesign the
+issue never scoped), stop `needs-split` with a split proposal.
 **Done when:** the applicable tests are green (red first, per class),
 `Tripwires:` and `In-PR requirement:` have landed, the deviations log is
 current, and every adjacent find carries one of the three dispositions.

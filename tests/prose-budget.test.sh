@@ -74,4 +74,12 @@ check_rc "a skill with no reference directory passes" 0 "$(rc_of "$d")"
 # tree whose files no glob matched.
 check_rc "a root that does not exist is tooling" 2 "$(rc_of "$fixture/absent")"
 
+# The other tooling path: a file the glob matched and awk could not read. Root
+# reads it anyway, so the case only runs where the mode bits bind.
+if [ "$(id -u)" != 0 ]; then
+  d=$(tree unreadable); chmod 000 "$d/skills/ship/SKILL.md"
+  check_rc "a file that cannot be read is tooling" 2 "$(rc_of "$d")"
+  chmod 644 "$d/skills/ship/SKILL.md"
+fi
+
 finish

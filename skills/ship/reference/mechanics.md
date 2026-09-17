@@ -22,11 +22,6 @@ is the single source of truth for that step, including the host adapter it
 sources (`scripts/host/github.sh` or `scripts/host/ado.sh`, chosen from the
 `origin` remote).
 
-**You never run `gh` or `az` yourself in a ship run.** Every host interaction
-goes through a named mechanic, and a missing operation is a **Ship defect**:
-report it on the merge summary's `Ship defects:` row for the human to carry
-upstream, never hand-roll the call, and never file it to another repo.
-
 The table below maps mechanic to phase and carries no flags, because a table
 goes stale against the script and `--help` does not. Its one row that is not a
 mechanic, the repo's own local gate, keeps its flags: they come from the

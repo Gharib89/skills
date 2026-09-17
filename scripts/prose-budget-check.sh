@@ -21,6 +21,11 @@ shopt -s nullglob
 # that into a count of nothing and a budget answer about a file nobody read.
 lines() { awk 'END{print NR}' "$1"; }
 
+# One awk rather than `head | grep`, because this script runs under pipefail: a
+# SIGPIPE on the head of that pipeline would read as a file without the heading.
+# Both `exit`s run END, so the status comes from `f` either way.
+has_contents() { awk 'NR>15{exit} $0=="## Contents"{f=1; exit} END{exit !f}' "$1"; }
+
 rc=0
 for f in "$root"/skills/*/SKILL.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
@@ -30,7 +35,7 @@ done
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
   [ "$n" -gt 100 ] || continue
-  head -n 15 "$f" | grep -qxF '## Contents' && continue
+  has_contents "$f" && continue
   printf '%s: %s lines and no `## Contents` heading in its first 15 lines\n' \
     "${f#"$root"/}" "$n"
   rc=1

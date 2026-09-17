@@ -41,8 +41,9 @@ a fresh read of the committed tree, not a conversation.
 - **`--brief` projects that same poll** down to what this loop acts on: head,
   mergeable, `landed_by`, one `rounds[]` row per round (id, `submitted_at`,
   `substantive`, and the body cut to its lead line and finding items) and one
-  row per OPEN thread. Rounds come from the list the landing rule admitted, and the run's own
-  replies drop out, so a round count is the reviewer's rounds and not ours. Take
+  row per OPEN thread. Rounds come from the list the landing rule admitted, and
+  the run's own replies drop out, so a round count is the reviewer's rounds and
+  not ours. Take
   the full shape when a round needs reading whole; `--full <id>` still answers
   that on the row it names.
 - **A body ending `...[truncated]` has not been read.** Rounds are clipped past
