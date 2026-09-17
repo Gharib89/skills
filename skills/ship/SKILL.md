@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 6.0.0
+  version: 6.0.1
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -164,7 +164,8 @@ over every agent-facing file in the diff. Human prose takes the mechanical pass.
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
-carrying its own scratch directory (`standards`, `spec`). **Triage waits for
+carrying its own scratch directory (`standards`, `spec`; the pass above takes
+`writing`). **Triage waits for
 both axes.** An axis whose report fails to arrive is `red-after-retry: <axis>`
 after the bounded retry, a stop in place of a disposition written from memory of
 what it would have said. **Auto-triage** every finding: harden rather than rip out
@@ -182,10 +183,11 @@ review. Reviewer rounds find these otherwise, serially, at the cost of most of a
 run's wall time, and the reverted-fix one escapes them entirely. This
 self-review plus green CI is the review gate; phase 7's reviewers add a second
 pair of eyes on top of it.
-**Done when:** both `code-review` axes have reported, the `writing-for-agents`
-pass has reported where the diff touches `Agent-facing:`, every finding
-carries a one-line disposition, and docs-sync either landed its edits or is
-skipped in one line for the merge gate.
+**Done when:** both `code-review` axes and, where the diff touches
+`Agent-facing:`, the `writing-for-agents` pass have written their reports to the
+files context-discipline.md names, every finding carries a one-line disposition,
+and docs-sync either landed its edits or is skipped in one line for the merge
+gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4

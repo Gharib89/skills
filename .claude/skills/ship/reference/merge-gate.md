@@ -38,6 +38,7 @@ Verification                                   (one row per applicable entry)
   (or: none applicable: <reason>)
 
 Self-review (code-review skill, the review gate)
+  - <axis>: <n> findings  ·  report: <path>     (one row per axis, from its file)
   - <finding> → <fixed | rejected: reason>
   ...
 
@@ -83,6 +84,16 @@ row of this `Verification` block and its line in the PR body's `## Verification`
 section are read from the same phase-3 result in the same format, so the two
 agree by construction; this block is where the human reads them at the gate, the
 section is where they outlive the run.
+
+The `Self-review` block is read from the phase-4 report files
+[context-discipline.md](context-discipline.md) has the run write, one row per
+axis naming the file its findings came from; a file that is not on disk at the
+gate leaves its row `unverified`, and mining the transcript for what the report
+said is not a substitute for it. **Every count anywhere in this summary or in
+the PR body is a measurement rather than a recollection**: write the number with
+the command that produced it beside it, run on the PR head, and count a word
+with `grep -ow` so a longer word carrying it as a substring does not inflate the
+total.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the

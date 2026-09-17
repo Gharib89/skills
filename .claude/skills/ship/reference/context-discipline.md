@@ -45,7 +45,7 @@ block names, which is the Run file's parent, and a scratch file written there
 can overwrite the checklist with no failure signal. So every prompt carries one
 line naming `<scratchpad>/scratch/<role>/` as the one place that subagent writes
 scratch of its own, `<role>` being its job in the run (`map`, `execute`,
-`verify`, `standards`, `spec`). Edits to the repo are
+`verify`, `standards`, `spec`, `writing`). Edits to the repo are
 separate, and go under the worktree prefix. It is a **sibling** of the Run file's
 directory rather than a child, so a path a subagent invents below the one it was
 given still lands clear of the record. Pass it the way you pass the model tier:
@@ -87,6 +87,16 @@ every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
 a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
 the record shows a decision and not a gap. A harness that refuses the task tools
 has answered: run on the file alone.
+
+**A report that arrives as a hand-back is written to a file before it is read as
+evidence.** Each phase-4 axis report, and any reviewer round that reaches the
+run as a hand-back rather than through `poll-pr`, goes verbatim to
+`<scratchpad>/scratch/<role>/report.md` before one of its findings is
+dispositioned, and the Run file names the path, because the hand-back lives in
+context alone and a compaction takes it while the Run file survives.
+Disposition from the file and re-read it there after a compaction: the merge
+summary's rows are quoted from these files, and a row whose file is not on disk
+at the gate reads `unverified` rather than being rebuilt from the transcript.
 
 **A refusal naming a line you thought was there is a clobbered Run file**: a
 subagent wrote over the path, and the mechanic says so rather than flipping a
