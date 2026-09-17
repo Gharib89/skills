@@ -291,8 +291,7 @@ phase 0 checks: a skill added here is added there too, or the run still fails
 at the phase that loads it.
 
 **0 · Isolate.** Run `preflight <issue>`, adding `--unattended` in an unattended
-run, which is what turns a `ready-for-human`
-issue into the
+run, which is what turns a `ready-for-human` issue into the
 `ready-for-human: attended only` stop; a bare call admits it. It proves tooling
 and identity, and **push permission first where the host can answer it** (every
 read-only call succeeds for an account that cannot push, so a wrong account

@@ -16,9 +16,11 @@
 # Check 3 traverses the whole skills tree rather than the mechanics alone, so it
 # takes its own directory argument.
 #
-# Check 4 is the one check that invokes a mechanic with arguments. An unguarded
-# mechanic makes it reach the host once: that failure is the finding, and the
-# ids it sends cannot exist.
+# Checks 4 and 5 invoke a mechanic with arguments. An unguarded mechanic makes
+# check 4 reach the host once: that failure is the finding, and the ids it sends
+# cannot exist. Check 5 has the wider reach of the two, because check 4 skips the
+# mechanics that take no positional and check 5 exempts nobody; a mechanic whose
+# `ship_help` landed after `ship_load_host` is what makes it load an adapter.
 #
 # Check 5 is the --help contract: a run asks a mechanic what its flags are by
 # running it, so the answer has to be the usage line, on stdout, exit 0.
