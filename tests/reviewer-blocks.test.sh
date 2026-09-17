@@ -203,6 +203,19 @@ check "refuses a Workflow: naming a file the checkout does not carry" \
   'profile invalid: claude has Workflow: .github/workflows/gone.yml, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: .github/workflows/gone.yml|' <<<"$profile")")"
 
+# A path the stat resolves outside the checkout is not in it. `$root/..` is the
+# system temp directory, which always carries something, so a traversal that
+# stats true is the case a plain `-f` passes.
+: >"$root/../reviewer-blocks-outside.yml"
+check "refuses a Workflow: that climbs out of the checkout with .." \
+  'profile invalid: claude has Workflow: ../reviewer-blocks-outside.yml, which is not in the checkout' \
+  "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: ../reviewer-blocks-outside.yml|' <<<"$profile")")"
+rm -f "$root/../reviewer-blocks-outside.yml"
+
+check "refuses an absolute Workflow:, whatever it names" \
+  'profile invalid: claude has Workflow: /etc/hostname, which is not in the checkout' \
+  "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: /etc/hostname|' <<<"$profile")")"
+
 # The template reads `comment <phrase>`, so the phrase left off is the likely
 # typo, and it is the one an anchor on the trailing space would read as no
 # comment transport at all: the block would then owe no `Workflow:` and phase 7

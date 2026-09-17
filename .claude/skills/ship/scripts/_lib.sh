@@ -732,10 +732,16 @@ ship_reviewers() {
 ship_reviewer_reasons() {
   # The stat runs out here and its verdict goes into jq as a list of names, so
   # every reason is worded in one place and comes out in profile order.
-  local absent wf
+  local absent wf inside
   absent='[]'
   while IFS= read -r wf; do
-    [ -f "$2/$wf" ] || absent=$(jq -c --arg w "$wf" '. + [$w]' <<<"$absent")
+    inside=yes
+    # A leading `/` or a `..` component stats true outside the checkout, and the
+    # host's run listing takes neither, so such a path is as absent as a name
+    # nothing carries rather than a second refusal of its own.
+    case /$wf/ in //*|*/../*) inside=no ;; esac
+    [ "$inside" = yes ] && [ -f "$2/$wf" ] ||
+      absent=$(jq -c --arg w "$wf" '. + [$w]' <<<"$absent")
   done < <(jq -r 'if type == "array"
                   then .[].workflow | select(. != null)
                   else empty end' <<<"$1" 2>/dev/null)
