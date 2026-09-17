@@ -203,7 +203,10 @@ rule with `open-pr`'s `created_at`, `--timeout 600`, and, where its `Request:`
 reads `comment <phrase>`, `--await-run <workflow-file>`, because a free round
 reaches a comment transport through a run like any other: a free round can take
 several minutes to land, so a bound of a minute or two reports `silent` on a
-review that is merely still coming. A round already there
+review that is merely still coming. The run read is what shortens that poll
+where it applies: `reviewer_run.status: "none"` on the first pass means the host
+started nothing, and nothing is what a reviewer with no request outstanding will
+deliver, so a minute is the whole bound there. A round already there
 **is** round 1 and counts against `Cap:`; nothing there and the loop proceeds to
 its first request as written. A reviewer that gets no free round pays that one
 poll, where skipping it spends a round of a small cap re-asking for a review
