@@ -229,6 +229,13 @@ check "a Request: whose value merely starts with the letters of comment is not o
   '' \
   "$(reasons "$(sed 's|^Request: comment @claude$|Request: commentary-bot|;s|^Workflow: .github/workflows/claude-review.yml$|Workflow: None.|' <<<"$profile")")"
 
+# The other thing a `Request:` holds is a mechanic name, and one of them starts
+# with the word: a separator that admitted `comment-pr` would read the host's
+# own request transport as the comment one.
+check "the mechanic comment-pr is a mechanic name, not a comment transport" \
+  '' \
+  "$(reasons "$(sed 's|^Request: comment @claude$|Request: comment-pr|;s|^Workflow: .github/workflows/claude-review.yml$|Workflow: None.|' <<<"$profile")")"
+
 # Keyed by path, not by name: two blocks under one name would otherwise answer
 # for each other's file.
 twin=$(sed 's|^### claude$|### copilot|;s|^Workflow: None.$|Workflow: .github/workflows/claude-review.yml|;s|^Request: None.$|Request: comment @copilot|' <<<"$profile")

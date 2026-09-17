@@ -720,10 +720,13 @@ ship_reviewers() {
 # often than it is left out. The stat is keyed by path rather than by reviewer
 # name, because two blocks sharing a name would otherwise answer for each other.
 #
-# `test("^comment\\b")` and not `startswith("comment ")`: the template reads
+# `test("^comment( |$)")` and not `startswith("comment ")`: the template reads
 # `comment <phrase>`, so `Request: comment` with the phrase left off is the
-# likely typo, and anchoring on the trailing space would read it as no comment
-# transport at all and demand no `Workflow:` for it.
+# likely typo, and anchoring on the trailing space alone would read it as no
+# comment transport at all and demand no `Workflow:` for it. The separator is
+# a space or the end of the value and nothing else, because the other thing a
+# `Request:` holds is a mechanic name: `comment-pr` is one, and `^comment\\b`
+# would read it as a transport.
 #
 # Anything that is not an array refuses, exactly as `ship_stale_base_reason`
 # refuses an unreadable verdict: a parse that died must not come back as "the
@@ -739,7 +742,7 @@ ship_reviewer_reasons() {
     # A leading `/` or a `..` component stats true outside the checkout, and the
     # host's run listing takes neither, so such a path is as absent as a name
     # nothing carries rather than a second refusal of its own.
-    case /$wf/ in //*|*/../*) inside=no ;; esac
+    case "/$wf/" in //*|*/../*) inside=no ;; esac
     [ "$inside" = yes ] && [ -f "$2/$wf" ] ||
       absent=$(jq -c --arg w "$wf" '. + [$w]' <<<"$absent")
   done < <(jq -r 'if type == "array"
@@ -764,7 +767,7 @@ ship_reviewer_reasons() {
           (if $x.trigger == "on-request" and $x.cap == null
            then "profile invalid: \($x.name) is on-request with no Cap:"
            else empty end),
-          (if (($x.request // "") | test("^comment\\b"))
+          (if (($x.request // "") | test("^comment( |$)"))
            then (if $x.workflow == null
                  then "profile invalid: \($x.name) has Request: \($x.request) with no Workflow: naming the workflow file its round comes from"
                  elif ($absent | index($x.workflow)) != null

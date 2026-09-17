@@ -99,7 +99,17 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it: every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of every reviewer shape ship's preflight refuses, which the Reviewer entry in the source repo's `CONTEXT.md` lists. Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the seven reviewer shapes ship's preflight refuses:
+
+- an on-request reviewer with no `Cap:`
+- a `Cap:` that is neither a number nor `None.`
+- a `Fallback-for:` on a reviewer whose `Trigger:` is not `on-request`
+- a `Fallback-for:` naming a reviewer the draft does not list
+- a `Request: comment <phrase>` with no `Workflow:` naming the file its round comes from
+- a `Workflow:` on a block whose `Request:` is not a comment transport
+- a `Workflow:` naming a file the checkout does not carry, a path climbing out of it with `..` included
+
+Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 
