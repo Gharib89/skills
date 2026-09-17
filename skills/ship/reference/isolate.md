@@ -106,7 +106,6 @@ ruleset, it warns on stderr and admits the run.
 ## Re-validate an edited profile with `preflight none`
 
 A run that changes the profile, or refreshes the ship copy that reads it, proves
-the new pair with the issueless call, which has no issue to collect a claim, PR
-or branch reason from, so what is left in `reasons` is the profile's and the
-host's. Use that call rather than a second `preflight <issue>`, for the reason
-[preflight](../scripts/preflight.sh) carries at the top of its own file.
+the new pair with the issueless call. Use that call rather than a second
+`preflight <issue>`, for the reason [preflight](../scripts/preflight.sh) carries
+at the top of its own file.

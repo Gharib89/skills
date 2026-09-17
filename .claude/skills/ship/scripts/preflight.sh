@@ -10,12 +10,12 @@
 #
 # Once the run holds the claim and the worktree, `preflight <issue>` collects
 # `already claimed` plus `worktree exists` and exits 1. The profile is checked
-# on every call, so an invalid one still lands its own reason; a valid one lands
-# nothing, and `ok: false` out of those two reasons reads the same whether the
-# profile passed or went unasked. A run that edits the profile mid-run
-# re-validates it with `preflight none`, which has no issue to collect a claim,
-# PR or branch reason from, so what is left in `reasons` is the profile's and
-# the host's.
+# on every call, so an invalid one lands its own reason and a valid one lands
+# nothing: a green profile is read out of that `ok: false` by elimination,
+# exactly those two reasons and nothing beside them. A run that edits the
+# profile mid-run re-validates it with `preflight none`, which has no issue to
+# collect a claim, PR or branch reason from, so what is left in `reasons` is the
+# profile's and the host's.
 #
 #   preflight <issue|none> [--unattended]
 #

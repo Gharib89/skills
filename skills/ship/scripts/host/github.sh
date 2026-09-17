@@ -486,8 +486,8 @@ _thread_reply_target_query='query($id:ID!){ node(id:$id){
 # PR, because phase 7 replies once per thread.
 #
 # Create-then-verify like every other create here, with a find that returns
-# non-zero when the comment read fails, so a lost response is retried rather than
-# turned into a duplicate disposition in the thread.
+# non-zero when the comment read fails, so a read that failed is reported rather
+# than turned into a duplicate disposition in the thread.
 host_pr_reply_thread() { # <pr> <thread-node-id> <body-file>
   local pr=$1 file=$3 cid me
   cid=$(gql -f query="$_thread_reply_target_query" -F id="$2" \
