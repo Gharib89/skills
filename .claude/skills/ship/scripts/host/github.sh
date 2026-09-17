@@ -22,9 +22,9 @@ R="repos/$SHIP_OWNER/$SHIP_REPO"
 # means here: gh prints one header block per page, separated from the page
 # before it by a blank line, and the status is the last page's.
 #
-# A header block starts at the top of the response or on that separator, and the
-# separator goes out with the block it introduces, so the
-# pages concatenate exactly as they do without `-i`. That is the whole defence
+# A header block starts at the top of the response or on that separator, and at
+# those two places alone; the separator goes out with the block it introduces,
+# so the pages concatenate exactly as they do without `-i`. That is the whole defence
 # against a body line shaped like a status line: one that does not follow a
 # blank line is body, and every caller here reads `--jq` output, one JSON value
 # per line, where a blank line does not arise. The status and the body come off
@@ -431,8 +431,8 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # A reviewer reached through a comment transport runs as a workflow, and an
 # `issue_comment` run is attached to the DEFAULT BRANCH's SHA rather than to the
 # PR head: `host_pr_checks` reads the head and cannot see it, which is why a
-# window that closed before the round landed looked like a reviewer that never
-# queued (#203). `gh run list` is the one read that sees it.
+# window that closed before the round landed looked like `never-queued` (#203).
+# `gh run list` is the one read that sees it.
 #
 # `issue_comment` is this host's word for the event a comment transport starts,
 # and it is named here rather than passed in: the caller is a generic mechanic,
@@ -444,13 +444,13 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # and it is the only link the host offers between a run and its PR. Two open PRs
 # sharing a title therefore match each other's runs, which costs the poll time
 # and no more, and a title rewritten between the request and the poll matches
-# nothing, which reads as a reviewer that never queued.
+# nothing, which reads as `never-queued`.
 # `gh run list` rather than `api`: it builds the `--created` search itself, and
 # a read that returns nothing is an answer here rather than a failure. `--limit`
 # truncates a set `--created` has already bounded to the poll's own window, so
 # it is set far above the runs one such window can hold rather than at the page
-# size: a truncated read drops the run the poll is waiting on and reads as a
-# reviewer that never queued. Its stderr is tailed the way `_gh` tails its own,
+# size: a truncated read drops the run the poll is waiting on and reads as
+# `never-queued`. Its stderr is tailed the way `_gh` tails its own,
 # because a CLI diagnostic is unbounded and the caller prints one JSON object.
 _gh_run_list() { # <workflow-file> <since-iso>
   gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 200 \

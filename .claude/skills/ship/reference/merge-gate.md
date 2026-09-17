@@ -121,8 +121,8 @@ the PR to confirm the merge took, confirms the issue closed and closes it
 explicitly if the link did not fire, deletes the remote branch and proves the
 deletion, fast-forwards the local base branch from the checkout that holds it
 (reporting a diverged local base and leaving it alone, retrying a transient
-`index.lock` from a concurrent status and leaving the lock for whoever holds it), and **releases the claim and strips
-`ready-for-agent`**, so a reopened issue goes back through triage instead of
+`index.lock` from a concurrent status and leaving the lock for whoever holds
+it), and **releases the claim and strips `ready-for-agent`**, so a reopened issue goes back through triage instead of
 being refused forever. The two issue steps are the issue-backed run's: `merge
 <pr> none` has no issue to close and no claim to release, so it skips both and
 its JSON carries neither `issue_closed` nor `claim_released` nor

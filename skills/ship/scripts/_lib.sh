@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Shared helpers for ship's generic mechanics. Sourced by them, and by them
-# alone: it is a library rather than a mechanic, answering no command line of
-# its own, and a repo's local gate stands on its own. `contract-check.sh` skips
-# it by name for that reason.
+# alone: the file is read into a mechanic's shell and run in no other way, being
+# a library rather than a mechanic, answering no command line of its own, and a
+# repo's local gate stands on its own. `contract-check.sh` skips it by name for
+# that reason.
 #
 # What a mechanic answers, exit codes, --help, the vocabulary a read comes back
 # in and all, is ../reference/mechanics.md. It is the one copy: a second one

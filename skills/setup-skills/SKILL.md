@@ -3,12 +3,12 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 3.5.2
+  version: 3.5.3
 ---
 
 # Setup skills
 
-Draft the per-repo documents the `ship` skill reads, confirming with the human before every write. Same shape as `setup-matt-pocock-skills`: explore once, present, walk what exploration could not settle, confirm the full draft, write, prove. This skill does only what that parent leaves undone and ship needs; it never re-asks anything the parent settled (tracker, triage vocabulary, domain-doc layout).
+Draft the per-repo documents the `ship` skill reads, confirming with the human before every write. Same shape as `setup-matt-pocock-skills`: explore once, present, walk what exploration could not settle, confirm the full draft, write, prove. This skill does only what that parent leaves undone and ship needs; it leaves everything the parent settled (tracker, triage vocabulary, domain-doc layout) unasked.
 
 Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (ship profile, axis, local gate, verdict, reviewer, trigger, derived copy). Every document you write here is read by an agent: apply `writing-for-agents` to its prose.
 
@@ -19,7 +19,7 @@ Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md
 Check all three before exploring. On any failure print the exact command, then "then rerun `/setup-skills`", and stop.
 
 1. **Parent docs.** `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and `docs/agents/domain.md` exist. Else: `/setup-matt-pocock-skills`. One exception: when the host (step 2) is Azure DevOps and `issue-tracker.md` is missing or is the parent's freeform "Other" page, offer to write the vendored [issue-tracker-ado.md](./issue-tracker-ado.md) in its place (confirm first), then continue. The parent ships GitHub, GitLab and local templates only.
-2. **Composed skills as derived copies.** `.claude/skills/` holds `code-review`, `tdd`, `writing-for-agents`, `triage`, `find-docs` and `show-me`, each recorded in the repo's `skills-lock.json` (the skills CLI writes it at install). A copy present but absent from the lock is hand-maintained: report it as "will be replaced by the derived copy", confirm, then refresh it with the same line. A global copy under `~/.claude/skills` never counts: a personal skill silently shadows a repo's, so ship's composed skills must live in the repo. Else print:
+2. **Composed skills as derived copies.** `.claude/skills/` holds `code-review`, `tdd`, `writing-for-agents`, `triage`, `find-docs` and `show-me`, each recorded in the repo's `skills-lock.json` (the skills CLI writes it at install). A copy present but absent from the lock is hand-maintained: report it as "will be replaced by the derived copy", confirm, then refresh it with the same line. A global copy under `~/.claude/skills` leaves this check unmet: a personal skill silently shadows a repo's, so ship's composed skills must live in the repo. Else print:
 
    ```sh
    npx skills add mattpocock/skills --skill code-review --skill tdd --skill writing-for-agents --skill triage --agent claude-code -y
@@ -27,13 +27,13 @@ Check all three before exploring. On any failure print the exact command, then "
    npx skills add humanlayer/skills --skill show-me --agent claude-code -y
    ```
 
-3. **`ship`, `cloud-ship` and `setup-skills`.** `.claude/skills/ship`, `.claude/skills/cloud-ship` and `.claude/skills/setup-skills` exist and are in the lock. A `ship` folder with no `metadata.version` in its frontmatter is a hand-maintained copy from before the generic skill: report "will be replaced by the derived copy", confirm, refresh. `setup-skills` gets step 1.2's treatment; the copy running this check is not evidence, so read `skills-lock.json`. It belongs in the repo because the `### Ship` block below and ship's three profile stops both end "run `/setup-skills`", which a repo that never installed it cannot follow. Else print:
+3. **`ship`, `cloud-ship` and `setup-skills`.** `.claude/skills/ship`, `.claude/skills/cloud-ship` and `.claude/skills/setup-skills` exist and are in the lock. A `ship` folder with no `metadata.version` in its frontmatter is a hand-maintained copy from before the generic skill: report "will be replaced by the derived copy", confirm, refresh. `setup-skills` gets step 1.2's treatment; the copy running this check is not evidence, so read `skills-lock.json`. It belongs in the repo because the `### Ship` block below and ship's three profile stops both end "run `/setup-skills`", which only a repo carrying it can follow. Else print:
 
    ```sh
    npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --agent claude-code -y
    ```
 
-   Project scope always, never `-g`. The agent id is `claude-code`; the CLI rejects `'Claude Code'`.
+   Project scope always, which is the install line without `-g`. The agent id is `claude-code`; the CLI rejects `'Claude Code'`.
 
 ### 2. Host
 
@@ -65,7 +65,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 | Versioning and changelog | semantic-release config, changesets, `version-gate` or bump scripts, `CHANGELOG.md`; `In-PR requirement:` | walked |
 | PR | `.github/pull_request_template.md` or `.azuredevops/pull_request_template.md`: presence, headings, and where any closing reference sits relative to the first `## ` heading | yes |
 | Public surface | `Default.` proposed | walked |
-| Triage | the `needs-triage` row's right-hand column in `triage-labels.md`, never invented | yes |
+| Triage | copied from the `needs-triage` row's right-hand column in `triage-labels.md` | yes |
 | Docs sync | `README.md`, `docs/`, `CONTEXT.md`, skills the repo ships; `Agent-facing:` `docs/agents/`, `.claude/skills/` | yes, confirm |
 | Current docs | context7 always; Microsoft Learn when a Microsoft stack shows (D365, Azure, Power BI, .NET); `Pinned:` | walked |
 | Cloud lane | `PR cap: 3`; `Bootstrap:` the path of `scripts/cloud-ship-bootstrap.sh` when it exists, else `None.` | yes |
@@ -85,7 +85,7 @@ Then, for each reviewer the draft names: `Resolve:` is walked where the proposed
 
 ### 4. Present, then walk
 
-Present the whole exploration once: what each section will read, one line each. Then walk **only the walked rows**, one section, one answer, each led by the recommended answer so the user can accept in a word. A one-line explainer only where the choice genuinely branches. Sections exploration settled are shown, never asked.
+Present the whole exploration once: what each section will read, one line each. Then walk **only the walked rows**, one section, one answer, each led by the recommended answer so the user can accept in a word. A one-line explainer only where the choice genuinely branches. Sections exploration settled are shown for confirmation alone.
 
 Walk order and the recommendation to lead with:
 
@@ -103,14 +103,14 @@ Show the full draft of everything below, then let the user edit before writing. 
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 
-**The `### Ship` sub-block**, inside the existing `## Agent skills` block of whichever of `CLAUDE.md` / `AGENTS.md` the parent chose (the file that has the block). Updated in place when present, never duplicated:
+**The `### Ship` sub-block**, inside the existing `## Agent skills` block of whichever of `CLAUDE.md` / `AGENTS.md` the parent chose (the file that has the block). Updated in place when present, so the file carries one:
 
 ```markdown
 ### Ship
 
 `/ship` drives one issue to a merge-ready PR. This repo's ship profile: `docs/agents/ship.md`. Without that file ship refuses: run `/setup-skills`.
 
-Every skill under `.claude/skills/` is a derived copy, never edited in place; `skills-lock.json` records each one's source. `ship`, `cloud-ship` and `setup-skills` come from `Gharib89/skills`; the skills ship composes come from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`. Refresh a skill by re-running its install line at project scope (never `-g`). Ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`: `npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --agent claude-code -y && .claude/skills/ship/scripts/preflight.sh none`.
+Every skill under `.claude/skills/` is a derived copy, changed at its source and refreshed here; `skills-lock.json` records each one's source. `ship`, `cloud-ship` and `setup-skills` come from `Gharib89/skills`; the skills ship composes come from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`. Refresh a skill by re-running its install line at project scope, without `-g`. Ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`: `npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --agent claude-code -y && .claude/skills/ship/scripts/preflight.sh none`.
 ```
 
 **Local gate.**
@@ -131,7 +131,7 @@ Either way, **run it once** (`--small` with the example node) and check the verd
 
 **Triage labels on the host** (GitHub only). Any of the five labels from `triage-labels.md` missing on the repo: create them, because ship's hand-back exits 1 without `ready-for-human`.
 
-**Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the scaffold's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, never a copy of either. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
+**Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the scaffold's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, pointing at that file rather than a copy of it. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
 
 **Superseded ship scripts** (migrating repos): list what step 3 recorded, propose deletion, delete on confirm. Never touch `local-gate.sh`, `live-e2e`, `copilot-pr-review-loop`, or `cloud-ship-bootstrap.sh` (which is `## Cloud lane`'s `Bootstrap:`).
 

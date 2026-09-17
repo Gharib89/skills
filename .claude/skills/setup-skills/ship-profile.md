@@ -2,7 +2,7 @@
 
 Schema: 2
 
-Every repo-specific fact `/ship` needs, one section per axis. Fourteen `##` headings, always present and in this order; a defaulted axis reads `None.` or `Default.`, never an omitted heading. Facts sit on `Label:` lines; the prose under a heading explains and never carries a fact. The `Schema:` line above is the profile schema `ship` checks at preflight; only a `setup-skills` re-run moves it. Vocabulary: the `ship` skill's source repo, `Gharib89/skills`, `CONTEXT.md`.
+Every repo-specific fact `/ship` needs, one section per axis. Fourteen `##` headings, always present and in this order; a defaulted axis reads `None.` or `Default.` under its own heading. Facts sit on `Label:` lines and nowhere else, and the prose under a heading explains them. The `Schema:` line above is the profile schema `ship` checks at preflight; only a `setup-skills` re-run moves it. Vocabulary: the `ship` skill's source repo, `Gharib89/skills`, `CONTEXT.md`.
 
 <!-- setup-skills: fill every `Label:` line, replace each <...>, delete these comments. -->
 
@@ -37,7 +37,7 @@ Push policy: <e.g. one push per review round; minutes are metered, or Default.>
 
 ## Reviewers
 
-<!-- Zero or more `### <name>` blocks, or the single line `None.` Trigger fixes mechanics and convergence; brand never does. -->
+<!-- Zero or more `### <name>` blocks, or the single line `None.` Trigger fixes mechanics and convergence; brand decides nothing. -->
 
 ### <reviewer name>
 
@@ -79,7 +79,7 @@ Subject constraints: <reserved prefixes or formats for the squash subject, or No
 
 ## PR
 
-Template: <path; honour it, never pass a raw body> | None.
+Template: <path; fill it through its own headings> | None.
 
 <!-- `Closes #<issue>`, `## Deviations from plan`, `## Verification` and `## Review` are core in every repo. The closing reference sits above the first `## ` heading, where a section rewrite cannot reach it. -->
 
@@ -108,4 +108,4 @@ Pinned: <libraries whose installed version matters, or None.>
 PR cap: <number, default 3, or none>
 Bootstrap: <path of a sandbox-only setup script, or None.>
 
-<!-- The cloud bootstrap repairs the sandbox image; it never runs on a developer machine. -->
+<!-- The cloud bootstrap repairs the sandbox image; it runs in the cloud lane alone. -->

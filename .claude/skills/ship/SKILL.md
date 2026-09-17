@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 6.0.1
+  version: 6.0.2
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -20,8 +20,8 @@ integrates with, self-reviewed, reviewed by every reviewer the repo names,
 CI-green, and summarized for a ten-second approve. This skill is **generic**: it
 knows how to ship and nothing about the repo, and every repo fact comes from the
 **ship profile**, `docs/agents/ship.md`. The copy under `.claude/skills/ship` is
-a **derived copy**, changed upstream in `skills/ship/` and refreshed through the
-command the repo's `### Ship` block in CLAUDE.md carries.
+a **derived copy**, changed in this skill's own source repo and refreshed
+through the command the repo's `### Ship` block in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
 version once, at the start of the run, with

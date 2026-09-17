@@ -38,7 +38,7 @@ Every gate is repo-wide and takes seconds, so the small lane records the node an
 ## CI
 
 Legs: None.
-No-checks legal: yes, the one workflow is comment-triggered and never runs on a PR head
+No-checks legal: yes, the one workflow is comment-triggered and runs from the default branch alone
 Push policy: Default.
 
 The one workflow, `.github/workflows/claude-review.yml`, is triggered by an issue comment carrying `@claude` and has no `pull_request` trigger, so it lands no check run on a PR head and is not a leg. It is the `claude` reviewer below, not CI.
@@ -58,7 +58,7 @@ Instructions: .github/copilot-instructions.md
 
 The review itself lands under `copilot-pull-request-reviewer[bot]`, which is the login `poll-pr --await-review` takes; the inline comments arrive under Copilot's own name, so a thread's author and the round's author differ here. `Request: None.` because the host adds this login to the PR's reviewer list, so a bare `request-review` is the transport and no comment phrase is needed.
 
-Enabled by the repository ruleset **Copilot code review** on the default branch, with `review_on_push: false`. That setting, not the brand, is what fixes the trigger. `false` still opens one round when the PR does and never again on a push, which is the free first round the `on-request` loop reads under the since rule before it spends a request; every round after it is a request ship issues, so `Cap: 3` is the number of rounds this reviewer actually gets. Flipping `review_on_push` back to `true` makes it `on-push`, and this block must move with it: preflight reads the ruleset and refuses the pair when they disagree.
+Enabled by the repository ruleset **Copilot code review** on the default branch, with `review_on_push: false`. That setting, not the brand, is what fixes the trigger. `false` still opens one round when the PR does, and that one only: a push opens none, which is the free first round the `on-request` loop reads under the since rule before it spends a request; every round after it is a request ship issues, so `Cap: 3` is the number of rounds this reviewer actually gets. Flipping `review_on_push` back to `true` makes it `on-push`, and this block must move with it: preflight reads the ruleset and refuses the pair when they disagree.
 
 Under `on-push` the cap is advisory: a ruleset that re-reviews every push keeps posting whatever `Cap:` says, so the number bounds only how long ship waits, and a bound that cannot be enforced is worse than a slower loop that can.
 

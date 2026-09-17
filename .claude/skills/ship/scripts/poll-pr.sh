@@ -56,8 +56,8 @@
 # at all, and the string
 # "unavailable" where the host could not answer the read, the way `threads`
 # reports one it could not read. An unavailable read leaves the window at the
-# constant and that reviewer's exit is `unreachable`, never `silent`, because a
-# read that did not happen is not evidence about the reviewer. It needs
+# constant and that reviewer's exit is `unreachable` rather than `silent`,
+# because a read that did not happen is no evidence about the reviewer. It needs
 # `--await-review` (whose reviewer it belongs to) and `--since` (the request the
 # run should follow). Which event starts such a run is the
 # host's word and the adapter's business: this mechanic names the workflow file
