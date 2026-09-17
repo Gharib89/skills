@@ -40,11 +40,14 @@ lines() { awk 'END{print NR}' "$1"; }
 # reader to a heading that is not there, which is worse than no map, so every
 # `## ` heading has an entry and every entry names a heading. The list is the run
 # of list items directly under the heading, blank lines included and the first
-# other line ending it, so a bullet in the prose below is prose.
+# other line ending it, so a bullet in the prose below is prose. An entry names
+# a heading when its bracketed link text, or its whole text where it is not a
+# link, equals the heading; both sides are trimmed, because trailing whitespace
+# on a heading is invisible in the file a reader compares the list against.
 #
 #   contents_check <file> <display-name> <line-count>
 #
-# stdout: one line per violation · exit: 0 clean · 1 over budget
+# stdout: one line per violation · exit: 0 clean · 1 a `## Contents` violation
 contents_check() {
   awk -v name="$2" -v count="$3" '
     {
@@ -64,7 +67,7 @@ contents_check() {
       if (fenced) next
       if ($0 == "## Contents") { if (NR <= 15) anchored = 1; listing = 1; next }
       if ($0 ~ /^## /) {
-        listing = 0; h = substr($0, 4)
+        listing = 0; h = substr($0, 4); sub(/[ \t\r]+$/, "", h)
         heads[h] = 1; horder[++nh] = h
         next
       }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# scripts/stray-file-check.sh: the tracked paths this repo owns. Each case
-# builds a checkout under a fresh root and tracks paths in it, because the
+# scripts/stray-file-check.sh: the tracked paths this repo owns. Most cases
+# build a checkout under a fresh root and track paths in it, because the
 # subject is the index rather than the working tree: a stray nobody committed is
 # not one. The fixtures track files without committing, which `git ls-files`
 # reads and which needs no identity configured.
@@ -46,8 +46,15 @@ check "the message names the path, not the directory" \
 d=$(repo untracked skills/ship/SKILL.md); : > "$d/null.x"
 check_rc "an untracked stray passes" 0 "$(rc_of "$d")"
 
-# The tooling paths: a root outside any checkout, and a root that is not there.
+# The tooling paths: a root outside any checkout, a root that is not there, and a
+# root inside a checkout that is not its top. `git ls-files` answers that last
+# one with paths relative to the subdirectory, which reads as every tracked file
+# being stray, so the check refuses it rather than answering about a tree it was
+# not given.
 check_rc "a root that is not a checkout is tooling" 2 "$(rc_of "$fixture")"
 check_rc "a root that does not exist is tooling" 2 "$(rc_of "$fixture/absent")"
+
+d=$(repo subdir skills/ship/SKILL.md docs/agents/ship.md)
+check_rc "a subdirectory of a checkout is tooling" 2 "$(rc_of "$d/docs")"
 
 finish

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# A tracked path outside the trees this repo owns. PR #197 committed `null.x` at
-# the root through a `git add -A` and it survived two review rounds, because
-# nothing looked for one; a stray file is invisible in a diff nobody scrolls to
-# the end of. The allowlist, whole: the top-level directories `.claude/`,
+# A tracked path outside the top-level entries this repo owns. PR #197 committed
+# `null.x` at the root through a `git add -A` and it survived two review rounds,
+# because nothing looked for one; a stray file is invisible in a diff nobody
+# scrolls to the end of. The allowlist, whole: the top-level directories `.claude/`,
 # `.github/`, `.out-of-scope/`, `docs/`, `scripts/`, `skills/` and `tests/`, and
-# the root files `CLAUDE.md`, `CONTEXT.md` and `skills-lock.json`. A new
-# top-level entry is a decision rather than a side effect, so it is added here in
-# the same commit that tracks it. The `stray-files` gate in
-# scripts/local-gate.sh runs this, in every lane.
+# the root files `CLAUDE.md`, `CONTEXT.md` and `skills-lock.json`, which is
+# `dirs` and `files` below. A new top-level entry is a decision rather than a
+# side effect, so it is added there in the same commit that tracks it. The
+# `stray-files` gate in scripts/local-gate.sh runs this, in every lane.
 #
 #   scripts/stray-file-check.sh [<root>]
 #
@@ -22,6 +22,11 @@ files=" CLAUDE.md CONTEXT.md skills-lock.json "
 
 # The index, not the working tree: scratch a run leaves behind is not a stray,
 # and a `git ls-files` outside a checkout is tooling rather than a clean answer.
+# So is one inside a checkout below its top, where `ls-files` answers with paths
+# relative to that subdirectory and every one of them reads as stray.
+toplevel=$(git -C "$root" rev-parse --show-toplevel) || exit 2
+[ "$toplevel" = "$(cd "$root" && pwd -P)" ] \
+  || { printf 'not the top of a checkout: %s\n' "$root" >&2; exit 2; }
 tracked=$(git -C "$root" ls-files) || exit 2
 
 rc=0

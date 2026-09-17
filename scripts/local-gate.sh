@@ -110,8 +110,8 @@ run house-style house_style
 # scripts/prose-budget-check.sh is the whole rule.
 run prose-budget scripts/prose-budget-check.sh
 
-# stray-files: a tracked path outside the trees this repo owns, which is what a
-# `git add -A` sweeps in and what no other gate reads.
+# stray-files: a tracked path outside the top-level entries this repo owns, which
+# is what a `git add -A` sweeps in and what a diff-shaped review misses.
 # scripts/stray-file-check.sh carries the allowlist.
 run stray-files scripts/stray-file-check.sh
 

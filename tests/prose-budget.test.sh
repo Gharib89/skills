@@ -113,11 +113,17 @@ d=$(tree contents-listed)
 check_rc "a list that matches the headings passes" 0 "$(rc_of "$d")"
 
 # The list is the run of items directly under the heading. A bullet in the prose
-# below it is prose, so a file whose levers are a bullet list is not a file whose
-# every lever needs a heading.
+# below it is prose, so a file can keep a bullet list of its levers without a
+# heading for each.
 d=$(tree prose-bullets)
 { printf '# R\n\n## Contents\n\n- [A](#a)\n\nProse.\n\n- a lever\n- another\n\n## A\n'; body 91; } > "$d/skills/ship/reference/r.md"
 check_rc "bullets below the list are not entries" 0 "$(rc_of "$d")"
+
+# Trailing whitespace on a heading is invisible in the rendered file, so a list
+# that matches what a reader sees matches here too: both sides are trimmed.
+d=$(tree heading-trailing-space)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A \n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "a trailing space on a heading is not a mismatch" 0 "$(rc_of "$d")"
 
 # The fence trap again, on both sides: a `## ` inside a fence is an example, so
 # it needs no entry, and an entry for it would name no heading.
