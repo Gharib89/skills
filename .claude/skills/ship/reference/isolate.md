@@ -99,8 +99,8 @@ neither a number nor `None.`, a `Fallback-for:` on a reviewer that is not
 on-request, a `Fallback-for:` naming a reviewer the profile does not list, a
 `Request: comment` with no phrase for the transport to post, a
 `Request: comment <phrase>` with no `Workflow:` naming the file its round comes
-from, a `Workflow:` on a block whose `Request:` is not a comment transport, and a
-`Workflow:` naming a file the checkout does not carry are all refused there,
+from, a `Workflow:` on a block whose `Request:` is not a comment transport, and
+a `Workflow:` naming a file the checkout does not carry are all refused there,
 before the claim. So is the one reviewer fact the host settles
 rather than the block: a Copilot reviewer whose `Trigger:` disagrees with the
 `copilot_code_review` ruleset that drives it. Where preflight cannot read that
