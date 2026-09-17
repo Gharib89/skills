@@ -3,11 +3,13 @@
 # the azure-devops extension, in preference order: `az repos` / `az boards`
 # where a subcommand exists; `az devops invoke` for what they lack (PR threads,
 # iterations, statuses); `az rest` only where neither reaches, which today is
-# `host_issue_remove_label` alone and is documented at that call. No curl: the
-# CLI holds the credential.
-# One credential covers the run: `az login`
-# (Entra) or AZURE_DEVOPS_EXT_PAT. Sourced by _lib.sh's ship_load_host; needs
-# SHIP_ORG_URL, SHIP_PROJECT and SHIP_REPO set.
+# `host_issue_remove_label` alone and is documented at that call. Every host API
+# call goes through the CLI, which holds the credential, so none of them is a
+# curl; the only curl in this file is the installer download in
+# `host_tooling_install`, which is what puts the CLI on the machine. One
+# credential covers the run: `az login` (Entra) or AZURE_DEVOPS_EXT_PAT. Sourced
+# by _lib.sh's ship_load_host; needs SHIP_ORG_URL, SHIP_PROJECT and SHIP_REPO
+# set.
 #
 # Contract mapping (Host interface decision): label = tag, claim = Assigned To,
 # issue comment = discussion entry, "Closes #n" = --work-items link plus
