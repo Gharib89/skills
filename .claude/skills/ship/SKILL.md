@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 6.0.0
+  version: 6.0.1
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -158,8 +158,9 @@ the edits into this change. Skip it for internal refactors, a bugfix restoring
 documented behavior, test-only or tooling changes, and comments, and say so in
 one line at the merge gate. **The `writing-for-agents` pass has a trigger of its
 own**, and it still fires where docs-sync is skipped: it fires whenever the diff
-touches a target on the profile's `Agent-facing:` line, at the judgment tier,
-over every agent-facing file in the diff. Human prose takes the mechanical pass.
+touches a target on the profile's `Agent-facing:` line, at the judgment tier, in
+the `writing` scratch directory, over every agent-facing file in the diff. Human
+prose takes the mechanical pass.
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
@@ -182,10 +183,10 @@ review. Reviewer rounds find these otherwise, serially, at the cost of most of a
 run's wall time, and the reverted-fix one escapes them entirely. This
 self-review plus green CI is the review gate; phase 7's reviewers add a second
 pair of eyes on top of it.
-**Done when:** both `code-review` axes have reported, the `writing-for-agents`
-pass has reported where the diff touches `Agent-facing:`, every finding
-carries a one-line disposition, and docs-sync either landed its edits or is
-skipped in one line for the merge gate.
+**Done when:** both `code-review` axes and, where it fired, the
+`writing-for-agents` pass have a Report file on disk with its path in the Run
+file, every finding carries a one-line disposition, and docs-sync either landed
+its edits or is skipped in one line for the merge gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
