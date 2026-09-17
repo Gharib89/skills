@@ -65,6 +65,27 @@ d=$(tree contents-fenced)
 { printf -- '# R\n\n```markdown\n## Contents\n```\n'; body 96; } > "$d/skills/ship/reference/r.md"
 check_rc "## Contents inside a fence is not the heading" 1 "$(rc_of "$d")"
 
+# The three fence forms beyond a bare ```: a tilde fence, a fence opened under
+# up to three spaces, and a longer run. Each hides its `## Contents` the same
+# way, so a scan that only toggles on a column-0 ``` passes all three wrongly.
+d=$(tree contents-fenced-tilde)
+{ printf -- '# R\n\n~~~markdown\n## Contents\n~~~\n'; body 96; } > "$d/skills/ship/reference/r.md"
+check_rc "## Contents inside a tilde fence is not the heading" 1 "$(rc_of "$d")"
+
+d=$(tree contents-fenced-indented)
+{ printf -- '# R\n\n   ```\n## Contents\n   ```\n'; body 96; } > "$d/skills/ship/reference/r.md"
+check_rc "## Contents inside an indented fence is not the heading" 1 "$(rc_of "$d")"
+
+d=$(tree contents-fenced-long)
+{ printf -- '# R\n\n````\n```\n## Contents\n````\n'; body 95; } > "$d/skills/ship/reference/r.md"
+check_rc "a shorter run does not close a longer fence" 1 "$(rc_of "$d")"
+
+# The other side of the grammar: a fence has to close, so a heading after the
+# closing line is a heading. A scan that never leaves the fenced state loses it.
+d=$(tree contents-after-fence)
+{ printf -- '# R\n\n~~~\nx\n~~~\n\n## Contents\n'; body 95; } > "$d/skills/ship/reference/r.md"
+check_rc "a heading after a closed tilde fence is the heading" 0 "$(rc_of "$d")"
+
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \

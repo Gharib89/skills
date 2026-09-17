@@ -35,12 +35,14 @@ in the merge summary, so every PR records which ship produced it.
 
 - `<issue>`: the issue number (work item id on Azure DevOps). Omitted with no
   flag: ask which issue.
-- Free text instead of a number: treat it as the task spec directly. No issue
-  fetch, no claim, no `Closes`, no reflect; everything else runs. `none` is the
-  issue argument these five mechanics accept: `preflight none`,
-  `isolate none <type> <slug>`, `open-pr none ...`, `merge <pr> none` and
-  `cleanup none`; the three that cannot (`read-issue`, `manage-issue`,
-  `reflect`) have no meaning without an issue.
+- Free text instead of a number: treat it as the task spec directly. No
+  issue fetch, no claim, no `Closes`, no reflect; everything else runs. The
+  `Done when:` bounds below read without the two clauses that branch cannot
+  reach: phase 1's `claim: taken` and phase 6's `reflect`. `none` is the
+  issue argument these five mechanics accept: `preflight none`, `isolate
+  none <type> <slug>`, `open-pr none ...`, `merge <pr> none` and `cleanup
+  none`; the three that cannot (`read-issue`, `manage-issue`, `reflect`)
+  have no meaning without an issue.
 - `--unattended`: the **unattended run**, detailed in
   [reference/unattended.md](reference/unattended.md). No human is present: a
   blocked stop hands back instead of asking, the sandbox clone is the isolation,

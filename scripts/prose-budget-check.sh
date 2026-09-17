@@ -23,11 +23,36 @@ lines() { awk 'END{print NR}' "$1"; }
 
 # One awk rather than `head | grep`, because this script runs under pipefail: a
 # SIGPIPE on the head of that pipeline would read as a file without the heading.
-# It tracks fenced state, so a `## Contents` line inside a fenced example is
-# example text and not the heading. Both `exit`s run END, so the status comes
-# from `f` either way.
+# Both `exit`s run END, so the status comes from `f` either way.
+#
+# A `## Contents` line inside a fenced example is example text, so the scan
+# tracks fences, in the grammar `SHIP_AWK_FENCE` in skills/ship/scripts/_lib.sh
+# states in full: three or more backticks or tildes under up to three spaces
+# open a fence, and only a bare run of the same character at least as long
+# closes it. This is a second copy of that grammar because a local gate never
+# sources `_lib.sh`, which serves ship's mechanics alone; the tilde, long-run
+# and indented cases in tests/prose-budget.test.sh are what hold the copy to it.
 has_contents() {
-  awk 'NR>15{exit} /^```/{fence=!fence; next} !fence && $0=="## Contents"{f=1; exit} END{exit !f}' "$1"
+  awk '
+    NR>15{exit}
+    {
+      s = $0; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
+      if (c == "`" || c == "~") {
+        n = 0; while (substr(s, n + 1, 1) == c) n++
+        if (n >= 3) {
+          if (!fenced) {
+            if (!(c == "`" && index(substr(s, n + 1), "`"))) {
+              fenced = 1; fchar = c; flen = n
+            }
+          }
+          else if (c == fchar && n >= flen && substr(s, n + 1) ~ /^[ \t\r]*$/) fenced = 0
+          next
+        }
+      }
+    }
+    !fenced && $0 == "## Contents"{f = 1; exit}
+    END{exit !f}
+  ' "$1"
 }
 
 rc=0
