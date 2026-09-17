@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 5.0.2
+  version: 5.1.0
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -138,6 +138,8 @@ be read.
 
 | Mechanic | Phase |
 |---|---|
+| `run-file init <issue \| slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>]... [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>]` | the required first action |
+| `run-file open <n> --file <path>`, `run-file close <n> --file <path>`, `run-file skip <n> <reason> --file <path>`, `run-file timing --file <path>` | every phase flip, and the merge summary's `Timing:` row |
 | `preflight <issue \| none> [--unattended]` | 0 |
 | `read-issue <issue>` | 0 |
 | `isolate <issue \| none> <type> <slug> [--carry <file>...] [--in-place]` | 0 |
