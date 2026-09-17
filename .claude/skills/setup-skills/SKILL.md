@@ -8,7 +8,7 @@ metadata:
 
 # Setup skills
 
-Draft the per-repo documents the `ship` skill reads, confirming with the human before every write. Same shape as `setup-matt-pocock-skills`: explore once, present, walk what exploration could not settle, confirm the full draft, write, prove. This skill does only what that parent leaves undone and ship needs; it leaves everything the parent settled (tracker, triage vocabulary, domain-doc layout) unasked.
+Draft the per-repo documents the `ship` skill reads, confirming with the human before every write. Same shape as `setup-matt-pocock-skills`: explore once, present, walk what exploration could not settle, confirm the full draft, write, prove. This skill does only what that parent leaves undone and ship needs; everything the parent settled (tracker, triage vocabulary, domain-doc layout) stays settled here.
 
 Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (ship profile, axis, local gate, verdict, reviewer, trigger, derived copy). Every document you write here is read by an agent: apply `writing-for-agents` to its prose.
 
@@ -85,7 +85,7 @@ Then, for each reviewer the draft names: `Resolve:` is walked where the proposed
 
 ### 4. Present, then walk
 
-Present the whole exploration once: what each section will read, one line each. Then walk **only the walked rows**, one section, one answer, each led by the recommended answer so the user can accept in a word. A one-line explainer only where the choice genuinely branches. Sections exploration settled are shown for confirmation alone.
+Present the whole exploration once: what each section will read, one line each. Then walk **only the walked rows**, one section, one answer, each led by the recommended answer so the user can accept in a word. A one-line explainer only where the choice genuinely branches. Sections exploration settled are shown in the draft; the walk skips them.
 
 Walk order and the recommendation to lead with:
 
@@ -103,7 +103,7 @@ Show the full draft of everything below, then let the user edit before writing. 
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 
-**The `### Ship` sub-block**, inside the existing `## Agent skills` block of whichever of `CLAUDE.md` / `AGENTS.md` the parent chose (the file that has the block). Updated in place when present, so the file carries one:
+**The `### Ship` sub-block**, inside the existing `## Agent skills` block of whichever of `CLAUDE.md` / `AGENTS.md` the parent chose (the file that has the block). Updated in place when present, so the file ends with exactly one:
 
 ```markdown
 ### Ship
@@ -127,13 +127,13 @@ Either way, **run it once** (`--small` with the example node) and check the verd
 - The `## Review` section, when the template lacks it.
 - A **closing-reference move**, when a closing reference sits below the first `## ` heading: propose moving that line, unchanged, above the first heading. A closing reference is any inflection of `close`, `fix` or `resolve` followed by `#`, case-insensitive, with or without an issue number: `ship_body_closes` needs the number to read a filled-in body as a claim, and a template carries the bare `Closes #` placeholder a run fills in. A section rewrite drops whichever one sits inside a section, and nothing else migrates a template written before the reference moved out of `## Summary`.
 
-**Coding standards.** None found: write `docs/contributing/coding-standards.md` from [coding-standards.md](./coding-standards.md), recording only what exists and is enforced today (config-enforced tools, links to CLAUDE.md sections carrying inline standards). Never move CLAUDE.md prose into it.
+**Coding standards.** None found: write `docs/contributing/coding-standards.md` from [coding-standards.md](./coding-standards.md), recording only what exists and is enforced today (config-enforced tools, links to CLAUDE.md sections carrying inline standards). Link to CLAUDE.md prose rather than moving it in.
 
 **Triage labels on the host** (GitHub only). Any of the five labels from `triage-labels.md` missing on the repo: create them, because ship's hand-back exits 1 without `ready-for-human`.
 
 **Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the scaffold's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, pointing at that file rather than a copy of it. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
 
-**Superseded ship scripts** (migrating repos): list what step 3 recorded, propose deletion, delete on confirm. Never touch `local-gate.sh`, `live-e2e`, `copilot-pr-review-loop`, or `cloud-ship-bootstrap.sh` (which is `## Cloud lane`'s `Bootstrap:`).
+**Superseded ship scripts** (migrating repos): list what step 3 recorded, propose deletion, delete on confirm. Leave `local-gate.sh`, `live-e2e`, `copilot-pr-review-loop` and `cloud-ship-bootstrap.sh` (which is `## Cloud lane`'s `Bootstrap:`) in place.
 
 ### 6. Write, then prove
 

@@ -38,7 +38,7 @@ Every gate is repo-wide and takes seconds, so the small lane records the node an
 ## CI
 
 Legs: None.
-No-checks legal: yes, the one workflow is comment-triggered and runs from the default branch alone
+No-checks legal: yes, the one workflow is comment-triggered and lands no check run on a PR head
 Push policy: Default.
 
 The one workflow, `.github/workflows/claude-review.yml`, is triggered by an issue comment carrying `@claude` and has no `pull_request` trigger, so it lands no check run on a PR head and is not a leg. It is the `claude` reviewer below, not CI.

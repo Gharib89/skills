@@ -29,7 +29,7 @@ The local gate's one answer: pass, fail, or unavailable, built from a status per
 _Avoid_: result, report, gate output
 
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-pr, reply-thread, update-pr-body, update-pr-title, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them, which is the run's whole reach into a host's CLI, and a missing operation is a Ship defect, not a prose fallback. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-pr, reply-thread, update-pr-body, update-pr-title, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; a run reaches a host's CLI only from inside a mechanic, and a missing operation is a Ship defect, not a prose fallback. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
 _Avoid_: helper, util, raw `gh` or `az` call
 
 **Setup skill**:
@@ -93,7 +93,7 @@ A reviewer driven only when the reviewer it names exits degraded, for any degrad
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Request transport**:
-How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host and the time it reports is what the since rule takes, so the since rule runs on the host's clock.
+How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host and the time it reports is what the since rule takes, so the since rule takes its timestamp from that read-back, on the host's clock.
 _Avoid_: request method, trigger phrase (that is the workflow's own setting)
 
 **Landing rule**:
@@ -105,7 +105,7 @@ The 2000-character cap `poll-pr` puts on every review body, marked `...[truncate
 _Avoid_: truncation, body limit
 
 **Converged**:
-The phase-7 exit where CI is green and every reviewer is settled per its trigger: auto-once threads all dispositioned; on-push quiet on the current head with every thread dispositioned and resolved; on-request latest round nothing actionable and every thread dispositioned. Silence on the current head is settled against the reviewer's own record before it counts as quiet.
+The phase-7 exit where CI is green and every reviewer is settled per its trigger: auto-once threads all dispositioned; on-push quiet on the current head with every thread dispositioned and resolved; on-request latest round nothing actionable and every thread dispositioned. A round lands on the current head for it to be quiet; silence keeps the poll running.
 _Avoid_: approved, clean, passed
 
 **Degraded exit**:
@@ -117,7 +117,7 @@ The phase-7 exit belonging to a fallback reviewer whose primary converged: it we
 _Avoid_: skipped, not needed, n/a
 
 **Carried file**:
-An untracked, gitignored file the ship profile names to be copied into the run's worktree when it is isolated, one way. A run that changes one stops.
+An untracked, gitignored file the ship profile names to be copied into the run's worktree when it is isolated, and left there. A run that changes one stops.
 _Avoid_: env file (one kind of carried file), secrets, worktree setup
 
 **Verification**:
