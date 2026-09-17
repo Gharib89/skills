@@ -107,6 +107,14 @@ if [ "$(id -u)" != 0 ]; then
   d=$(tree unreadable); chmod 000 "$d/skills/ship/SKILL.md"
   check_rc "a file that cannot be read is tooling" 2 "$(rc_of "$d")"
   chmod 644 "$d/skills/ship/SKILL.md"
+
+  # The same on the reference side, where the answer would otherwise be a
+  # missing-Contents violation: the line count is taken first, so a file awk
+  # cannot open stops the run at 2 before the heading scan ever reads it.
+  d=$(tree unreadable-reference)
+  body 101 > "$d/skills/ship/reference/r.md"; chmod 000 "$d/skills/ship/reference/r.md"
+  check_rc "a reference file that cannot be read is tooling" 2 "$(rc_of "$d")"
+  chmod 644 "$d/skills/ship/reference/r.md"
 fi
 
 finish

@@ -99,9 +99,10 @@ input and from which the branch `<type>` and `<slug>` are derived. Then
 ...). Every edit, commit and the PR happen from that branch, from the path
 `isolate` printed, and you **commit as you go**, because the PR needs real
 commits. A `Bootstrap:` under `## Worktree` runs once here, after isolate.
-**Done when:** `preflight` answered `ok: true` with an empty `reasons`, and
+**Done when:** `preflight` answered `ok: true` with an empty `reasons`,
 `isolate` printed a worktree path (or `in_place: true`) on branch
-`<type>/<slug>-<issue>`.
+`<type>/<slug>-<issue>`, and a `Bootstrap:` under `## Worktree`, where the
+profile carries one, ran green.
 
 **1 · Understand.** Work from phase 0's `read-issue` result: title, body,
 labels, assignee, state, comments, open blockers. Derive what success looks
@@ -179,9 +180,10 @@ review. Reviewer rounds find these otherwise, serially, at the cost of most of a
 run's wall time, and the reverted-fix one never. This self-review plus green CI
 is the review gate; phase 7's reviewers are a second pair of eyes on top, never
 a substitute.
-**Done when:** both `code-review` axes have reported and every finding carries a
-one-line disposition, and docs-sync either landed its edits or is skipped in one
-line for the merge gate.
+**Done when:** both `code-review` axes have reported, the `writing-for-agents`
+pass has reported where the diff touches `Agent-facing:`, every finding
+carries a one-line disposition, and docs-sync either landed its edits or is
+skipped in one line for the merge gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every
@@ -243,8 +245,10 @@ the rounds grew the log, then
 `update-pr-body <pr> --section Review --body-file <path>` with one status line
 per reviewer, then the phase-6 read-back while the PR is still open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
-returns carries a reply, and `read-pr` shows a `## Review` section with one line
-per reviewer.
+returned carries a reply (none to carry one, where it answered `threads:
+unavailable`), and `read-pr` shows a `## Review` section with one line per
+reviewer and, where the rounds grew the log, a `## Deviations from plan`
+section carrying what they added.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. `conflict`: a conflicted PR has no merge ref, so
