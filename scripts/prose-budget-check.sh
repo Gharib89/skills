@@ -5,12 +5,12 @@
 # the top rather than at the point a reader gives up. The thresholds and the
 # paths, whole: `skills/*/SKILL.md` at most 400 lines, and every
 # `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
-# inside its first 15 lines. The `prose-budget` gate in scripts/local-gate.sh
-# runs this, in every lane.
+# inside its first 15 lines whose list matches the file's `## ` headings. The
+# `prose-budget` gate in scripts/local-gate.sh runs this, in every lane.
 #
 #   scripts/prose-budget-check.sh [<root>]
 #
-# stdout: one line per file over budget, nothing when every file is inside it
+# stdout: one line per violation, nothing when every file is inside the budget
 # exit: 0 inside the budget · 1 over it · 2 tooling
 set -uo pipefail
 root=${1:-.}
@@ -21,9 +21,10 @@ shopt -s nullglob
 # that into a count of nothing and a budget answer about a file nobody read.
 lines() { awk 'END{print NR}' "$1"; }
 
-# One awk rather than `head | grep`, because this script runs under pipefail: a
-# SIGPIPE on the head of that pipeline would read as a file without the heading.
-# Both `exit`s run END, so the status comes from `f` either way.
+# One awk over the whole file rather than `head | grep`, because this script runs
+# under pipefail: a SIGPIPE on the head of that pipeline would read as a file
+# without the heading. It answers both halves of the budget's `## Contents` rule,
+# so the fence grammar below is stated once.
 #
 # A `## Contents` line inside a fenced example is example text, so the scan
 # tracks fences, in the grammar `SHIP_AWK_FENCE` in skills/ship/scripts/_lib.sh
@@ -34,9 +35,18 @@ lines() { awk 'END{print NR}' "$1"; }
 # opens nothing. This is a second copy of that grammar because a local gate never
 # sources `_lib.sh`, which serves ship's mechanics alone; the tilde, long-run
 # and indented cases in tests/prose-budget.test.sh are what hold the copy to it.
-has_contents() {
-  awk '
-    NR>15{exit}
+#
+# The second half is the list itself: a map that does not match the file sends a
+# reader to a heading that is not there, which is worse than no map, so every
+# `## ` heading has an entry and every entry names a heading. The list is the run
+# of list items directly under the heading, blank lines included and the first
+# other line ending it, so a bullet in the prose below is prose.
+#
+#   contents_check <file> <display-name> <line-count>
+#
+# stdout: one line per violation · exit: 0 clean · 1 over budget
+contents_check() {
+  awk -v name="$2" -v count="$3" '
     {
       s = $0; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
       if (c == "`" || c == "~") {
@@ -51,9 +61,37 @@ has_contents() {
           next
         }
       }
+      if (fenced) next
+      if ($0 == "## Contents") { if (NR <= 15) anchored = 1; listing = 1; next }
+      if ($0 ~ /^## /) {
+        listing = 0; h = substr($0, 4)
+        heads[h] = 1; horder[++nh] = h
+        next
+      }
+      if (listing) {
+        if ($0 ~ /^[ \t\r]*$/) next
+        if ($0 !~ /^[ \t]*([-*+]|[0-9]+\.)[ \t]+/) { listing = 0; next }
+        e = $0
+        sub(/^[ \t]*([-*+]|[0-9]+\.)[ \t]+/, "", e); sub(/[ \t\r]+$/, "", e)
+        if (match(e, /^\[[^]]*\]/)) e = substr(e, RSTART + 1, RLENGTH - 2)
+        ents[e] = 1; eorder[++ne] = e
+      }
     }
-    !fenced && $0 == "## Contents"{f = 1; exit}
-    END{exit !f}
+    END{
+      if (!anchored) {
+        printf "%s: %s lines and no `## Contents` heading in its first 15 lines\n", name, count
+        exit 1
+      }
+      for (i = 1; i <= nh; i++)
+        if (!(horder[i] in ents)) {
+          printf "%s: `## %s` has no entry under `## Contents`\n", name, horder[i]; bad = 1
+        }
+      for (i = 1; i <= ne; i++)
+        if (!(eorder[i] in heads)) {
+          printf "%s: `## Contents` entry `%s` names no heading\n", name, eorder[i]; bad = 1
+        }
+      exit bad
+    }
   ' "$1"
 }
 
@@ -66,9 +104,6 @@ done
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
   [ "$n" -gt 100 ] || continue
-  has_contents "$f" && continue
-  printf '%s: %s lines and no `## Contents` heading in its first 15 lines\n' \
-    "${f#"$root"/}" "$n"
-  rc=1
+  contents_check "$f" "${f#"$root"/}" "$n" || rc=1
 done
 exit $rc

@@ -93,6 +93,38 @@ d=$(tree contents-backtick-info)
 { printf -- '# R\n\n```foo`bar\n\n## Contents\n'; body 96; } > "$d/skills/ship/reference/r.md"
 check_rc "a backtick info string opens no fence" 0 "$(rc_of "$d")"
 
+# The list under `## Contents` is a map, and a map that does not match the file
+# sends a reader to a heading that is not there. Both directions fail: a heading
+# nobody listed, and an entry naming a heading that was renamed away.
+d=$(tree heading-unlisted)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n\n## B\n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "a heading with no entry fails" 1 "$(rc_of "$d")"
+check "the message names the heading" \
+  'skills/ship/reference/r.md: `## B` has no entry under `## Contents`' "$(out_of "$d")"
+
+d=$(tree entry-stale)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n- [C](#c)\n\n## A\n'; body 94; } > "$d/skills/ship/reference/r.md"
+check_rc "an entry naming no heading fails" 1 "$(rc_of "$d")"
+check "the message names the entry" \
+  'skills/ship/reference/r.md: `## Contents` entry `C` names no heading' "$(out_of "$d")"
+
+d=$(tree contents-listed)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n- [B](#b)\n\nProse.\n\n## A\n\n## B\n'; body 92; } > "$d/skills/ship/reference/r.md"
+check_rc "a list that matches the headings passes" 0 "$(rc_of "$d")"
+
+# The list is the run of items directly under the heading. A bullet in the prose
+# below it is prose, so a file whose levers are a bullet list is not a file whose
+# every lever needs a heading.
+d=$(tree prose-bullets)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\nProse.\n\n- a lever\n- another\n\n## A\n'; body 91; } > "$d/skills/ship/reference/r.md"
+check_rc "bullets below the list are not entries" 0 "$(rc_of "$d")"
+
+# The fence trap again, on both sides: a `## ` inside a fence is an example, so
+# it needs no entry, and an entry for it would name no heading.
+d=$(tree heading-fenced)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n\n```\n## Not a heading\n```\n\n~~~\n## Nor this\n~~~\n'; body 86; } > "$d/skills/ship/reference/r.md"
+check_rc "a heading inside a fence needs no entry" 0 "$(rc_of "$d")"
+
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \
