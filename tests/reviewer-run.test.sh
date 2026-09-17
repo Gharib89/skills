@@ -34,7 +34,8 @@ pick() {
     n=$((n - 1))
   done
 }
-[ "${1:-}" = run ] && { pick runs; exit 0; }
+# `runs.fail` present: the host refuses the run read, the way an outage does.
+[ "${1:-}" = run ] && { [ -f "$FAKE/runs.fail" ] && exit 1; pick runs; exit 0; }
 path=$2; [ "$2" = -i ] && { path=$3; printf 'HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n'; }
 case $path in
   graphql) printf '{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}\n'; exit 0 ;;
@@ -62,7 +63,7 @@ run_row() { # <status> <conclusion> [<title>]
        created_at: "2026-09-17T11:59:00Z", url: "https://example.invalid/runs/9", title: $t}]'
 }
 
-reset() { rm -f "$FAKE"/*.n "$FAKE"/runs.*.json "$FAKE"/reviews.*.json; }
+reset() { rm -f "$FAKE"/*.n "$FAKE"/runs.*.json "$FAKE"/reviews.*.json "$FAKE/runs.fail"; }
 poll() { ( cd "$repo" && bash "$mech" 7 --await-review 'claude[bot]' --since 2026-09-17T11:58:00Z \
   --timeout 0 --interval 1 "$@" ); }
 calls() { cat "$FAKE/$1.n" 2>/dev/null || echo 0; }
@@ -162,6 +163,18 @@ out=$(poll --await-run claude-review.yml); rc=$?
 check_rc "a live run outranks a newer concluded one and holds the window" 0 "$rc"
 check "and it is the run reported" 'in_progress https://example.invalid/runs/9' \
   "$(jq -r '[.reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
+
+# A read the host refused says nothing about the reviewer, and must not read as
+# a run that was never created: the window falls back to the constant and the
+# loop reports the host, not silence.
+reset
+: > "$FAKE/runs.fail"
+printf '' > "$FAKE/reviews.1.json"
+out=$(poll --await-run claude-review.yml); rc=$?
+check_rc "a refused run read closes the window at --timeout" 1 "$rc"
+check "a refused run read is unavailable, not a missing run" '"unavailable"' \
+  "$(jq -c '.reviewer_run' <<<"$out")"
+check "and it buys no extra poll" 1 "$(calls reviews)"
 
 # --await-run has no meaning without the reviewer it belongs to, or without the
 # instant the request happened.

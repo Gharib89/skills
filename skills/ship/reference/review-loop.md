@@ -76,6 +76,9 @@ a fresh read of the committed tree, not a conversation.
   states, and a concluded one buys one more interval for the row to appear. The
   run comes back on `reviewer_run`, in the full shape and in `--brief` alike,
   and it is what separates three of the degraded reasons below from each other.
+  Where it reads `"unavailable"` the host refused the read itself, so it is
+  evidence about the host rather than about the reviewer: that exit is
+  `unreachable`.
 - **A round is a review with a body.** A reviewer's reply to one thread posts as
   a review row of its own (current head, empty body), so answering round N
   manufactures rows that look like round N+1 arriving. Only `substantive: true`
@@ -264,7 +267,7 @@ The human reads the reason and decides.
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. Under a comment transport it takes the run read as well: `reviewer_run` concluded and no round followed it. A run still queued or running is not silence, and the poll holds the window open on it. |
 | `infra-error` | `reviewer_run.conclusion` is a failure: the run died before it could post, and its `url` is where the human reads why. Also a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |
 | `cap-hit` | `Cap:` reached with the latest round still substantive, that round dispositioned. The budget ran out; whether the reviewer had run out of findings is a separate question the block answers. |
-| `unreachable` | no host path to the reviewer from this environment, or thread state could not be read (`threads: unavailable`, which is also what leaves `reply-thread` with no id to answer). |
+| `unreachable` | no host path to the reviewer from this environment, thread state could not be read (`threads: unavailable`, which is also what leaves `reply-thread` with no id to answer), or, under a comment transport, `reviewer_run: "unavailable"`: the host refused the run read, so nothing here is evidence about the reviewer. |
 
 ## Gating reviewer with a declined finding
 

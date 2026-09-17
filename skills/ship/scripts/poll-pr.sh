@@ -3,7 +3,8 @@
 # reviews and threads, then ONE JSON summary.
 #
 #   poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>]
-#           [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]
+#           [--await-run <workflow-file>] [--full <id>[,<id>]]
+#           [--timeout <s>] [--interval <s>]
 #
 # done when the PR is in conflict (merge-ref checks stay unstarted, so waiting is
 # pointless), or every check on the head has completed and, with --await-review,
@@ -41,13 +42,19 @@
 # Such a run is attached to the default branch's SHA, so `checks` cannot see it,
 # and the one signal left was the absence of a review. With the flag the window
 # is the RUN's lifetime and `--timeout` only its floor: a queued or running run
-# keeps the poll going, to a hard ceiling of 1800 s; a run that concluded
-# successfully buys one more interval for the row to appear; a failed one closes
-# the window carrying its URL, which is `infra-error` rather than `silent`. The
-# run is reported on `reviewer_run`, null where the flag was not given or the
-# host has no such read, and `{"status":"none"}` where no run was created at
-# all. It needs `--await-review` (whose reviewer it belongs to) and `--since`
-# (the request the run should follow). Which event starts such a run is the
+# keeps the poll going, to a hard ceiling of 1800 s on the whole wait; a run that
+# concluded successfully buys one more interval for the row to appear; a failed
+# one closes the window carrying its URL, which is `infra-error` rather than
+# `silent`. The ceiling bounds what the RUN buys: a `--timeout` past it is the
+# caller's own window, which the run then extends by nothing. The run is
+# reported on `reviewer_run`: null where the flag was not given,
+# `{"status":"none"}` where no run was created at all, and the string
+# "unavailable" where the host could not answer the read, the way `threads`
+# reports one it could not read. An unavailable read leaves the window at the
+# constant and that reviewer's exit is `unreachable`, never `silent`, because a
+# read that did not happen is not evidence about the reviewer. It needs
+# `--await-review` (whose reviewer it belongs to) and `--since` (the request the
+# run should follow). Which event starts such a run is the
 # host's word and the adapter's business: this mechanic names the workflow file
 # and the instant, and nothing else.
 #
@@ -80,7 +87,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, waited out to its conclusion within ${ceiling}s] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, whose run holds the window open past --timeout, to ${ceiling}s] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
@@ -142,11 +149,16 @@ while :; do
   threads=$(host_pr_threads "$pr") || threads='"unavailable"'
   blocked=null
   [ -z "$await" ] || blocked=$(host_pr_reviewer_blocked "$pr" "$await") || blocked=null
-  # A host with no such read leaves this null, and the window stays the constant.
+  # A read the host refused, an outage included, is "unavailable" rather than a
+  # missing run: both leave the window at the constant, and only one of them is
+  # evidence about the reviewer.
   reviewer_run=null
   if [ -n "$await_run" ]; then
-    runs=$(host_workflow_runs "$await_run" "$since") \
-      && reviewer_run=$(jq -c --arg t "$(jq -r .title <<<"$prj")" "$SHIP_REVIEWER_RUN" <<<"$runs")
+    if runs=$(host_workflow_runs "$await_run" "$since"); then
+      reviewer_run=$(jq -c --arg t "$(jq -r .title <<<"$prj")" "$SHIP_REVIEWER_RUN" <<<"$runs")
+    else
+      reviewer_run='"unavailable"'
+    fi
   fi
 
   pending=$(jq '[.[] | select(.status == "pending")] | length' <<<"$checks")
@@ -165,7 +177,7 @@ while :; do
   # The run outranks the constant: a round still being written is not a silent
   # reviewer, and the ceiling is what keeps that from being unbounded.
   if ! $done && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
-    case $(jq -r '.status // ""' <<<"$reviewer_run") in
+    case $(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run") in
       queued|in_progress) sleep "$interval"; continue ;;
       # A concluded run buys one more interval for the row to appear, and one
       # only: waiting on a run that is over is waiting on nothing.

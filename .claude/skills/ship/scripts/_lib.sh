@@ -77,8 +77,9 @@
 #                                           conclusion the host's own word or null while it runs,
 #                                           title the issue or PR the triggering event sits on,
 #                                           which is what narrows the runs to one PR. Non-zero and
-#                                           silent where the host has no such read, which poll-pr
-#                                           reads as "hold the window to the constant".
+#                                           silent where the host has no such read or could not
+#                                           answer it, which poll-pr reports as "unavailable" and
+#                                           holds the window to the constant on.
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
 #                                           requested_at: ISO-8601 time of the request event,
 #                                           or the wall clock where the host records none.
@@ -828,8 +829,9 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # looking complete, or the loop stops before re-polling it with --full.
 # Threads come down to the open ones, the only ones still owed a disposition,
 # and the string "unavailable" passes through as itself. `reviewer_run` passes
-# through whole: it is three fields, and a loop reading rounds from the brief is
-# the loop that has to tell a silent reviewer from one whose run is still going.
+# through whole, the string "unavailable" included: it is three fields, and a
+# loop reading rounds from the brief is the loop that has to tell a silent
+# reviewer from one whose run is still going.
 ship_brief() {
   jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" '
     def norm: ascii_downcase | sub("\\[bot\\]$"; "");
