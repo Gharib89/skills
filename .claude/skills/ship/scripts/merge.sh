@@ -15,7 +15,9 @@
 #
 # Before any of that, two refusals. A PR that is neither open nor already merged
 # is not the PR the human said "merge" about: exit 1 `pr-closed: <state>`, with
-# nothing merged, no issue closed and no branch deleted. Then the branch is
+# nothing merged, no issue closed and no branch deleted. The host's merge
+# endpoint accepts a closed PR, so a run that comes back to a stale PR number
+# would otherwise land a branch somebody deliberately closed. Then the branch is
 # proven fresh against its base: the base can move between phase 5's
 # `base-fresh` and the human's "merge", and the squash would land a branch blind
 # to those commits. Refused as exit 1 `stale-base`.

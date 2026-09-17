@@ -33,9 +33,9 @@ prose takes the pass whether docs-sync fired or not. On top of that:
 2. `base-fresh` and the local gate `--small <node>`: security check plus the one
    regression test, or the changed document where the class is `docs`
 3. The **self-review, unmodified**. It is the only check that reads the diff
-   against the issue; a reviewer reviews standards and reads the diff alone. It
-   also carries the two rejection rails. Its cost scales with the diff, so on a
-   small diff it is cheap.
+   against the issue; a reviewer reviews standards against the diff, with the
+   issue out of view. It also carries the two rejection rails. Its cost scales
+   with the diff, so on a small diff it is cheap.
 4. Non-draft PR with `Closes #<issue>` above the first `## ` heading
 5. CI green plus every reviewer per its trigger
 6. The merge gate

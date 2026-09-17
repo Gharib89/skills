@@ -188,10 +188,10 @@ carries a one-line disposition, and docs-sync either landed its edits or is
 skipped in one line for the merge gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
-`deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every
-phase-4 finding carries a disposition; otherwise you skipped one, go back.
-Running the gate while `code-review` is still out is not parallelism: a finding
-fixed afterwards pays for a second gate run and a second pass of whatever the
+`deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
+finding carries a disposition; otherwise you skipped one, go back. Running the
+gate while `code-review` is still out is not parallelism: a finding fixed
+afterwards pays for a second gate run and a second pass of whatever the
 profile's `Tripwires:` names. Run `base-fresh` first: it proves the branch has
 seen every commit on its base, the one thing CI cannot, because CI tests the
 merge ref, so a branch that predates a merge still goes green while every "does
@@ -206,10 +206,10 @@ install and every check CI runs; its verdict is one JSON object: `verdict`
 `pass|fail|deferred-to-ci|unavailable`, `gates.secrets` present in every lane.
 Unparseable output or a missing `secrets` key reads as `unavailable`. `fail`:
 fix loop. Any `deferred-to-ci`: proceed, and the merge summary names each
-deferred gate. `unavailable`: stop `local gate unavailable`, leaving phase 6 to
-a run whose gate answers.
-**Done when:** `base-fresh` reports the branch not behind its base and the
-gate's JSON reads `verdict: pass` with `gates.secrets` present.
+deferred gate. `unavailable`: stop `local gate unavailable` with the PR
+unopened, leaving phase 6 to a run whose gate answers. **Done when:**
+`base-fresh` reports the branch not behind its base and the gate's JSON reads
+`verdict: pass` with `gates.secrets` present.
 
 **6 · Open PR.** [reference/pr-body.md](reference/pr-body.md) carries what the
 body holds, the Shape, the two halves a write reaches and the read-back.
@@ -290,13 +290,13 @@ own or uses an auto-merge flag. Two conditional pauses in an attended run: the
 triaging your own findings, fixing, re-running, is autonomous. Three guardrails
 hold around that:
 
-- **Red stops the run.** Any failure before the merge gate gets a bounded
+- **Red is fixed or reported.** Any failure before the merge gate gets a bounded
   self-fix-and-retry, about two attempts. Still red, or the failure says the
   approach is wrong: **stop and report** with the concrete evidence and, if
   cheap, a verified-working alternative, so the report is a fast yes.
-- **End every turn on an action.** If your last paragraph states a plan or
-  a next step ("I'll re-run the poll") rather than having done it, do it now
-  with a tool call instead of stopping. That is about a plan rather than a wait:
+- **End every turn on an action.** If your last paragraph states a plan or a
+  next step ("I'll re-run the poll") rather than having done it, do it now with
+  a tool call instead of stopping. That is about a plan rather than a wait:
   while a composed skill's subagents are out, ending the turn *is* the action
   ([reference/context-discipline.md](reference/context-discipline.md)).
 - **Every stop has a name**, reported verbatim, with the claim action below. A

@@ -86,15 +86,15 @@ a fresh read of the committed tree, not a conversation.
   true once this identity has answered in the thread: skip those, one finding,
   one disposition. The disposition belongs in the thread the reviewer opened,
   which is where the reviewer's next pass and a human reading the round both
-  look; a round-level `comment-pr` logs the round and leaves the disposition
-  where the reviewer will read it. **A fix to a rule is propagated to every copy
-  of that rule inside the same batch**: grep the phrase before you push, and
-  read each fix's hunk back out of the file while you are there, because the
-  reviewer re-reads the whole PR and a copy the fix missed, or a fix applied by
-  half, is another round spent on a finding you already agreed with.
-  `resolve-thread` posts no body and runs per thread only once every thread
-  carries its reply. Every push spends review quota and CI minutes, and an
-  on-push reviewer's round.
+  look; a round-level `comment-pr` logs the round, and the disposition itself
+  stays in the thread. **A fix to a rule is propagated to every copy of that
+  rule inside the same batch**: grep the phrase before you push, and read each
+  fix's hunk back out of the file while you are there, because the reviewer
+  re-reads the whole PR and a copy the fix missed, or a fix applied by half, is
+  another round spent on a finding you already agreed with. `resolve-thread`
+  posts no body and runs per thread only once every thread carries its reply.
+  Every push spends review quota and CI minutes, and an on-push reviewer's
+  round.
 - **Cap** is the profile's `Cap:`, the bound on one reviewer's rounds: a number,
   or `None.` for an uncapped loop. On-request it is required with no default,
   where a round costs a request; on-push it is a number or `None.`, where a
@@ -137,31 +137,29 @@ opens on prose where the standard wants a Shape fence, is answered by a write.
 
 ### `auto-once`
 
-Fires once on PR creation; nothing to request and **one round in total**. Wait
-for it to land under the **since** rule, with `open-pr`'s `created_at`. If a
-round arrives before you poll, that is the round. Triage it once, push the
-fixes, `reply-thread` on every `replied: false` thread. **Converged** when every
-thread is dispositioned.
-A later push does not bring it back; a lint or flake fix after convergence
-needs nothing from it.
+Fires once on PR creation; nothing to request, and the one round it fires is
+**all there is**. Wait for it to land under the **since** rule, with `open-pr`'s
+`created_at`. If a round arrives before you poll, that is the round. Triage it
+once, push the fixes, `reply-thread` on every `replied: false` thread.
+**Converged** when every thread is dispositioned. A later push does not bring it
+back; a lint or flake fix after convergence needs nothing from it.
 
 ### `on-push`
 
 Re-reviews every push. This is the trigger the `Cap:` budget does not bind: the
 host starts the rounds, so the number ends ship's engagement and the reviewer
-keeps posting. After each
-push, wait for a review **landed on the current head**, the **head** rule (no
-`--since`); quiet means a round on the head with nothing actionable in it.
-Triage, batch-fix, push, `reply-thread` on every `replied: false` thread. Once
-**every** thread carries a disposition, and only then, use the reviewer's
-`Resolve:` mechanism (`resolve-thread`, or the comment the profile names) to
-resolve them.
-**Converged** when a review has landed on the current head with nothing
-actionable and every thread is dispositioned and resolved. A fix pushed after
-convergence gets re-read on its own: wait for quiet on the new head again.
-When `poll-pr` reports `threads: unavailable`, this reviewer's exit is
-`degraded: unreachable` and the run proceeds; the other triggers read reviews
-and comments, which stay readable.
+keeps posting. After each push, wait for a review **landed on the current
+head**, the **head** rule (no `--since`); a round on the head with nothing
+actionable in it is the quiet this waits for, and no round on the head at all
+keeps the poll running. Triage, batch-fix, push, `reply-thread` on every
+`replied: false` thread. Once **every** thread carries a disposition, and only
+then, use the reviewer's `Resolve:` mechanism (`resolve-thread`, or the comment
+the profile names) to resolve them. **Converged** when a review has landed on
+the current head with nothing actionable and every thread is dispositioned and
+resolved. A fix pushed after convergence gets re-read on its own: wait for quiet
+on the new head again. When `poll-pr` reports `threads: unavailable`, this
+reviewer's exit is `degraded: unreachable` and the run proceeds; the other
+triggers read reviews and comments, which stay readable.
 
 ### `on-request`
 

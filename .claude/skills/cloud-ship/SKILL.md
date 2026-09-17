@@ -36,12 +36,14 @@ repo's `### Ship` block in CLAUDE.md carries.
 
 ## The one invariant
 
-Everything after the invocation is ship's: git, the tracker, the mechanics, the
-merge gate and every wait after it. This skill contributes the two steps above
-and nothing else, so a behaviour defined here would be a second definition of
-one ship already owns. The tracker is where that bites hardest: leave every
-claim, label, comment and hand-back to ship, which holds them from selection
-onwards, and before selection there is no issue to write to anyway.
+Git, the tracker, the mechanics, the merge gate and every wait after it are
+ship's, on both sides of the invocation: hand the sandbox clone over untouched,
+for `isolate --in-place` to branch, and let ship run every mechanic itself. This
+skill contributes the two steps above and nothing else, so a behaviour defined
+here would be a second definition of one ship already owns. The tracker is where
+that bites hardest: leave every claim, label, comment and hand-back to ship,
+which holds them from selection onwards, and before selection there is no issue
+to write to anyway.
 
 ## The routine prompt
 

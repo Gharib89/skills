@@ -67,7 +67,7 @@ tooling reads.
 Load `docs/agents/ship.md` **once, whole, at preflight**, the way a session
 loads `docs/agents/issue-tracker.md`. It has fourteen fixed `##` headings, every
 one always present; a defaulted axis reads `None.` or `Default.`. Facts sit on
-`Label:` lines, and the prose under a heading explains them.
+`Label:` lines and nowhere else, and the prose under a heading explains them.
 You read the profile and pass its facts to the mechanics as arguments; no script
 parses markdown. Two more repo docs feed a run and are read the same way: triage
 roles (`ready-for-agent`, `ready-for-human`, `needs-triage`) are canonical role

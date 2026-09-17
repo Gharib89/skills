@@ -29,7 +29,7 @@ if [ "$before" = "$title" ]; then
   exit 0
 fi
 answer=$(host_pr_set_title "$pr" "$title") || ship_fail_host "PR title update failed" "$answer"
-# The write is proven by the read-back, which is what the exit code below reads.
+# The write is proven by the read-back rather than by the host call's exit code.
 after=$(host_pr_get "$pr" | jq -r .title) || ship_tooling "cannot read PR $pr back"
 [ "$after" = "$title" ] || ship_fail "PR title read back as: $after"
 jq -n --argjson pr "$pr" --arg t "$title" '{pr: $pr, title: $t, changed: true}'

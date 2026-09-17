@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Post a PR comment (the merge summary in the unattended lane, a round log).
 # On Azure DevOps this is a thread with status closed, so a comment-resolution
-# policy leaves completion open.
+# policy reads it as settled.
 #
 #   comment-pr <pr> --body-file <path>
 #

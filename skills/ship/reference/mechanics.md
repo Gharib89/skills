@@ -95,7 +95,7 @@ be read.
 ## Run them inline
 
 Run mechanics **inline**: they project their own output, so a subagent there
-burns budget to relay what an exit code already says. Poll loops are bounded
-and foreground; reaching the bound leaves the question open. Re-run to
-extend, or pass a wider `--timeout` up front when the profile's `Legs:` names a
-leg you know is slower than the bound.
+burns budget to relay what an exit code already says. Poll loops are bounded and
+foreground; reaching the bound leaves the question open, so re-run rather than
+proceed: re-run to extend it, or pass a wider `--timeout` up front when the
+profile's `Legs:` names a leg you know is slower than the bound.
