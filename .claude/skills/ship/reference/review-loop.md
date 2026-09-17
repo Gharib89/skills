@@ -48,8 +48,8 @@ a fresh read of the committed tree, not a conversation.
   2000 characters so one poll cannot flood the window, and a reviewer that opens
   with a preamble (an overview, a per-file table) pushes its findings past that
   cap. Re-run the poll with `--full <id>` for that row and it alone comes back
-  whole. Dispositioning a clipped round is converging on the findings you
-  happened to see.
+  whole, and that read comes before the triage: dispositioning a clipped round
+  is converging on the findings you happened to see.
 - **The trigger picks the landing rule; the poll has to be told which.** Under
   the **head** rule (no `--since`) a round counts only on the current head:
   right for `on-push`, where every push earns a fresh review. Under the
@@ -210,8 +210,10 @@ new request.
 
 A reviewer whose `Fallback-for:` names another reviewer stands in for it, and
 only on the runs where that primary exits degraded: a fallback is on-request and
-conditional, so nothing fires while the primary is healthy. Preflight enforces
-the trigger, because a reviewer that fires on every push cannot be withheld.
+conditional, so ship requests and drives it only once the primary is degraded. A
+host that opens a free round on a fallback of its own accord is read like any
+other round, and costs nothing. Preflight enforces the trigger, because a
+reviewer that fires on every push cannot be withheld.
 
 **Drive every non-fallback reviewer to its exit first**, then the fallbacks,
 because a fallback's only input is how its primary exited.

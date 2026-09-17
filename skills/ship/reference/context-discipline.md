@@ -76,16 +76,17 @@ reaches for the run's own name cannot overwrite the record, and returns the
 items, one per harness task you then create (`TaskCreate`). The file is the
 run's **record**, the source of truth for where the run is and the home of the
 design and plan as they form; it survives a mid-run context summary, so work
-straight through one, every phase at full width, in the same session. The
-harness task list is its **display**: flip a phase with `run-file open <n>`,
-`close <n>` or `skip <n> "<reason>"` against `--file <path>`, then set that
-phase's task to the `mirror` value the flip returned (`TaskUpdate`); close a
-phase only once its verification passed, which is judgement the mechanic cannot
-hold: it stamps whatever close it is given. It owns the stamp, the
-one-open-phase invariant and every refusal, and `run-file timing` computes the
-merge summary's `Timing:` row; a **small-lane** run keeps all ten items and
-`skip`s each collapsed phase, so the record shows a decision and not a gap. A
-harness that refuses the task tools has answered: run on the file alone.
+straight through one in the same session, each phase at the width its lane gives
+it rather than the width the remaining context suggests. The harness task list
+is its **display**: flip a phase with `run-file open <n>`, `close <n>` or `skip
+<n> "<reason>"` against `--file <path>`, then set that phase's task to the
+`mirror` value the flip returned (`TaskUpdate`); close a phase only once its
+verification passed, which is judgement the mechanic cannot hold: it stamps
+whatever close it is given. It owns the stamp, the one-open-phase invariant and
+every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
+a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
+the record shows a decision and not a gap. A harness that refuses the task tools
+has answered: run on the file alone.
 
 **A refusal naming a line you thought was there is a clobbered Run file**: a
 subagent wrote over the path, and the mechanic says so rather than flipping a

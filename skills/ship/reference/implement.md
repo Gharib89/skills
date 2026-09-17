@@ -132,9 +132,9 @@ at classification; here you run the applicable ones.
 - **Result words** are the local gate's plus `unexercised`: `pass | fail |
   deferred-to-ci | unavailable | unexercised`. The fifth is phase 3's alone,
   because a gate check always has a subject. Phase 5 admits `pass`,
-  `deferred-to-ci` and `unexercised` only, so a verification that reached no
-  result at all is driven to one of those three words here; the merge gate is
-  for reading a summary, not finishing phase 3.
+  `deferred-to-ci` and `unexercised` only, so a verification still without a
+  result is finished here, by running it or by taking its `Without it:` line;
+  the merge gate is for reading a summary, not finishing phase 3.
 - **`unexercised`** is the verification whose `Needs:` were satisfied and whose
   every applicable path lacked a **subject** to drive, where the subject is one
   another actor creates (a reviewer's thread on this run's PR), as opposed to
