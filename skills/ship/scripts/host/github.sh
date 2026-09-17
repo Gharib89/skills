@@ -427,6 +427,50 @@ host_pr_reviewer_blocked() { # <pr> <login>
   } | jq -s --arg l "$2" "$_gh_blocked_select"
 }
 
+# The runs of one workflow file, created at or after <since>.
+# A reviewer reached through a comment transport runs as a workflow, and an
+# `issue_comment` run is attached to the DEFAULT BRANCH's SHA rather than to the
+# PR head: `host_pr_checks` reads the head and cannot see it, which is why a
+# window that closed before the round landed looked like a reviewer that never
+# queued (#203). `gh run list` is the one read that sees it.
+#
+# `issue_comment` is this host's word for the event a comment transport starts,
+# and it is named here rather than passed in: the caller is a generic mechanic,
+# and a host's own words stop at the adapter.
+#
+# `title` is the run's display title, which on this host is the title of the
+# issue or PR the triggering comment sits on. The workflow fires on every
+# comment in the repo, so that is what narrows the runs to the PR being polled,
+# and it is the only link the host offers between a run and its PR. Two open PRs
+# sharing a title therefore match each other's runs, which costs the poll time
+# and no more, and a title rewritten between the request and the poll matches
+# nothing, which reads as a reviewer that never queued.
+# `gh run list` rather than `api`: it builds the `--created` search itself, and
+# a read that returns nothing is an answer here rather than a failure. `--limit`
+# truncates a set `--created` has already bounded to the poll's own window, so
+# it is set far above the runs one such window can hold rather than at the page
+# size: a truncated read drops the run the poll is waiting on and reads as a
+# reviewer that never queued. Its stderr is tailed the way `_gh` tails its own,
+# because a CLI diagnostic is unbounded and the caller prints one JSON object.
+_gh_run_list() { # <workflow-file> <since-iso>
+  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 200 \
+    --json status,conclusion,createdAt,url,displayTitle \
+    --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})'
+}
+host_workflow_runs() { # <workflow-file> <since-iso>
+  local err rc
+  err=$(mktemp) || return 2
+  trap 'rm -f "$err"' RETURN
+  _gh_run_list "$1" "$2" 2>"$err"; rc=$?
+  # The flat one retry `gql` keeps rather than `api`'s backoff: a read that
+  # answers non-zero reports the reviewer unreachable, and this CLI family is the
+  # one the header names as flaking 401 mid-session, so a bad second would
+  # otherwise be read as evidence about a reviewer that is working.
+  if [ "$rc" -ne 0 ]; then sleep 2; : > "$err"; _gh_run_list "$1" "$2" 2>"$err"; rc=$?; fi
+  [ "$rc" -eq 0 ] || ship_tail40 "$err"
+  return $rc
+}
+
 # Request, then read the request back off the host's own record: the login you
 # request and the login you read back can differ (Copilot is requested as
 # copilot-pull-request-reviewer[bot] and recorded on the timeline as `Copilot`),

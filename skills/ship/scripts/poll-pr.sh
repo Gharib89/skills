@@ -3,7 +3,8 @@
 # reviews and threads, then ONE JSON summary.
 #
 #   poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>]
-#           [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]
+#           [--await-run <workflow-file>] [--full <id>[,<id>]]
+#           [--timeout <s>] [--interval <s>]
 #
 # done when the PR is in conflict (merge-ref checks stay unstarted, so waiting is
 # pointless), or every check on the head has completed and, with --await-review,
@@ -36,6 +37,32 @@
 # `threads[]` rows carry the thread's first comment, which `reply-thread` answers,
 # and `replied`, true once this identity has answered in that thread.
 #
+# `--await-run <workflow-file>` settles the workflow run a comment-transport
+# reviewer's round comes from before the window may report that reviewer silent.
+# Such a run is attached to the default branch's SHA, so `checks` cannot see it,
+# and the one signal left was the absence of a review. With the flag the window
+# is the RUN's lifetime and `--timeout` only its floor: a run that has not
+# finished keeps the poll going, and the ceiling the usage line states is the
+# bound on what the run may add, so a `--timeout` past it is the caller's own
+# window, which the run then extends by nothing. A run that concluded successfully buys one more
+# interval for the row to appear; one that concluded any other way closes the
+# window there and then, whatever `--timeout` had left, carrying its URL, which
+# the review loop reads as `infra-error` rather than `silent`, or, where the
+# conclusion is `skipped`, as the workflow declining the comment. A run still live when the ceiling closes
+# is reported as it stands, status and URL, and reads as `infra-error` too: a
+# run that outlived the ceiling delivered nothing either. The run is reported on
+# `reviewer_run`: null where the flag was not given, `{status, conclusion, url}`
+# otherwise, with status `none` and the other two null where no run was created
+# at all, and the string
+# "unavailable" where the host could not answer the read, the way `threads`
+# reports one it could not read. An unavailable read leaves the window at the
+# constant and that reviewer's exit is `unreachable`, never `silent`, because a
+# read that did not happen is not evidence about the reviewer. It needs
+# `--await-review` (whose reviewer it belongs to) and `--since` (the request the
+# run should follow). Which event starts such a run is the
+# host's word and the adapter's business: this mechanic names the workflow file
+# and the instant, and nothing else.
+#
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
 # quota or rate-limit notice), not missing. It is read from the awaited login's
 # review bodies as well as its PR comments: a reviewer states a notice on either
@@ -57,24 +84,28 @@
 # cannot promise is the reviewer's alone. The full shape stays the default.
 #
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
-#          threads, reviewer_blocked, landed_by, done, waited_s}
-#   --brief: {head_sha, mergeable, landed_by, rounds[], threads}
+#          threads, reviewer_blocked, reviewer_run, landed_by, done, waited_s}
+#   --brief: {head_sha, mergeable, landed_by, reviewer_run, rounds[], threads}
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]'
+# The hard bound on waiting a run out, written once: the usage line is where a
+# run reads it.
+ceiling=1800
+usage="usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, whose run holds the window open past --timeout, to ${ceiling}s] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 # A flag in the positional slot is a malformed invocation, not a PR id: without
 # this, `poll-pr --brief` reads "--brief" as the id and asks the host for it.
 case $pr in -*) ship_tooling "$usage" ;; esac
-timeout=480; interval=20; await=""; since=""; full='[]'; brief=false
+timeout=480; interval=20; await=""; since=""; await_run=""; full='[]'; brief=false; after_run=0
 while [ $# -gt 0 ]; do
   case $1 in
     --brief) brief=true; shift ;;
     --await-review) [ -n "${2:-}" ] || ship_tooling "$usage"; await=$2; shift 2 ;;
     --since) [ -n "${2:-}" ] || ship_tooling "$usage"; since=$2; shift 2 ;;
+    --await-run) [ -n "${2:-}" ] || ship_tooling "$usage"; await_run=$2; shift 2 ;;
     # Ids stay strings: GitHub numbers a review and Azure DevOps numbers a
     # thread, and the adapters compare `.id | tostring` against this list.
     --full)
@@ -87,6 +118,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -z "$since" ] || [ -n "$await" ] || ship_tooling "--since needs --await-review"
+[ -z "$await_run" ] || { [ -n "$await" ] && [ -n "$since" ]; } \
+  || ship_tooling "--await-run needs --await-review and --since"
 # --since is compared as a string against submitted_at, which every adapter
 # emits as UTC "YYYY-MM-DDTHH:MM:SSZ". Accept only what normalises to that, so
 # an offset this cannot convert (+05:00) is refused outright rather than
@@ -121,6 +154,20 @@ while :; do
   threads=$(host_pr_threads "$pr") || threads='"unavailable"'
   blocked=null
   [ -z "$await" ] || blocked=$(host_pr_reviewer_blocked "$pr" "$await") || blocked=null
+  # A read the host refused, an outage included, is "unavailable" rather than a
+  # missing run: both leave the window at the constant, and only one of them is
+  # evidence about the reviewer. A read that answered with something the filter
+  # cannot walk is the same kind of nothing, and saying so keeps the emit below
+  # holding one JSON object rather than a `--argjson` that will not parse.
+  reviewer_run=null
+  if [ -n "$await_run" ]; then
+    if runs=$(host_workflow_runs "$await_run" "$since"); then
+      reviewer_run=$(jq -c --arg t "$(jq -r .title <<<"$prj")" "$SHIP_REVIEWER_RUN" <<<"$runs") \
+        || reviewer_run='"unavailable"'
+    else
+      reviewer_run='"unavailable"'
+    fi
+  fi
 
   pending=$(jq '[.[] | select(.status == "pending")] | length' <<<"$checks")
   landed=true; landed_by=null
@@ -135,11 +182,35 @@ while :; do
   elif [ "$pending" -eq 0 ] && [ "$landed" = true ]; then done=true
   fi
   waited=$((SECONDS - start))
-  if $done || [ "$waited" -ge "$timeout" ]; then
+  run_status=$(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run")
+  # A run that ended any way but successfully ends the window with it, wherever
+  # `--timeout` stands: no round is coming out of it, and the minutes left on the
+  # clock would be spent waiting for one.
+  dead_run=false
+  if [ "$landed" = false ] && [ "$run_status" = completed ] \
+     && [ "$(jq -r '.conclusion // ""' <<<"$reviewer_run")" != success ]; then dead_run=true; fi
+  # The run outranks the constant: a round still being written is not a silent
+  # reviewer, and the ceiling is what keeps that from being unbounded.
+  if ! $done && ! $dead_run && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
+    case $run_status in
+      # No run to wait on: no flag, a read the host refused, or no run created.
+      ''|none) ;;
+      # Only a successful run reaches here, a failed one having closed the
+      # window above. It buys one more interval for the row to appear, and one
+      # only: waiting on a run that is over is waiting on nothing.
+      completed)
+        if [ "$after_run" -lt 1 ]; then after_run=1; sleep "$interval"; continue; fi ;;
+      # Every other status is a run that has not finished, the host's approval
+      # states included, and a round can still come out of it.
+      *) sleep "$interval"; continue ;;
+    esac
+  fi
+  if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
     out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
-      --argjson t "$threads" --argjson b "$blocked" --argjson lb "$landed_by" --argjson d "$done" --argjson w "$waited" \
+      --argjson t "$threads" --argjson b "$blocked" --argjson rr "$reviewer_run" \
+      --argjson lb "$landed_by" --argjson d "$done" --argjson w "$waited" \
       '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer_blocked: $b,
-        landed_by: $lb, done: $d, waited_s: $w}')
+        reviewer_run: $rr, landed_by: $lb, done: $d, waited_s: $w}')
     if $brief; then
       key=on_head; [ -z "$since" ] || key=all
       ship_brief "$out" "$me" "$key" "$full"
