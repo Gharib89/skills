@@ -203,6 +203,25 @@ check "refuses a Workflow: naming a file the checkout does not carry" \
   'profile invalid: claude has Workflow: .github/workflows/gone.yml, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: .github/workflows/gone.yml|' <<<"$profile")")"
 
+# The template reads `comment <phrase>`, so the phrase left off is the likely
+# typo, and it is the one an anchor on the trailing space would read as no
+# comment transport at all: the block would then owe no `Workflow:` and phase 7
+# would poll on the constant, which is the silence this field exists to remove.
+bare_comment=$(sed 's|^Request: comment @claude$|Request: comment|;/^Workflow: .github\/workflows\/claude-review.yml$/d' <<<"$profile")
+check "reads a Request: comment with the phrase left off as a comment transport" \
+  'profile invalid: claude has Request: comment with no Workflow: naming the workflow file its round comes from' \
+  "$(reasons "$bare_comment")"
+
+check "a Request: whose value merely starts with the letters of comment is not one" \
+  '' \
+  "$(reasons "$(sed 's|^Request: comment @claude$|Request: commentary-bot|;s|^Workflow: .github/workflows/claude-review.yml$|Workflow: None.|' <<<"$profile")")"
+
+# Keyed by path, not by name: two blocks under one name would otherwise answer
+# for each other's file.
+twin=$(sed 's|^### claude$|### copilot|;s|^Workflow: None.$|Workflow: .github/workflows/claude-review.yml|;s|^Request: None.$|Request: comment @copilot|' <<<"$profile")
+check "two blocks sharing a name are stated against their own files" \
+  '' "$(reasons "$twin")"
+
 # ---- adversarial: the ways a parser answers wrong rather than failing --------
 
 check "a parse that produced nothing refuses, rather than reading as no faults" \

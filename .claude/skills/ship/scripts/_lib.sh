@@ -717,7 +717,13 @@ ship_reviewers() {
 # The third is the one filesystem stat here, taken against `<checkout-root>`
 # rather than a root read inside, so the cases drive it over a fixture tree: a
 # path naming no file buys the same silence as no path, and is mistyped far more
-# often than it is left out.
+# often than it is left out. The stat is keyed by path rather than by reviewer
+# name, because two blocks sharing a name would otherwise answer for each other.
+#
+# `test("^comment\\b")` and not `startswith("comment ")`: the template reads
+# `comment <phrase>`, so `Request: comment` with the phrase left off is the
+# likely typo, and anchoring on the trailing space would read it as no comment
+# transport at all and demand no `Workflow:` for it.
 #
 # Anything that is not an array refuses, exactly as `ship_stale_base_reason`
 # refuses an unreadable verdict: a parse that died must not come back as "the
@@ -726,12 +732,12 @@ ship_reviewers() {
 ship_reviewer_reasons() {
   # The stat runs out here and its verdict goes into jq as a list of names, so
   # every reason is worded in one place and comes out in profile order.
-  local absent name wf
+  local absent wf
   absent='[]'
-  while IFS=$'\t' read -r name wf; do
-    [ -f "$2/$wf" ] || absent=$(jq -c --arg n "$name" '. + [$n]' <<<"$absent")
+  while IFS= read -r wf; do
+    [ -f "$2/$wf" ] || absent=$(jq -c --arg w "$wf" '. + [$w]' <<<"$absent")
   done < <(jq -r 'if type == "array"
-                  then .[] | select(.workflow != null) | "\(.name)\t\(.workflow)"
+                  then .[].workflow | select(. != null)
                   else empty end' <<<"$1" 2>/dev/null)
   jq -rn --arg r "$1" --argjson absent "$absent" '
     (try ($r | fromjson) catch null) as $rows
@@ -752,10 +758,10 @@ ship_reviewer_reasons() {
           (if $x.trigger == "on-request" and $x.cap == null
            then "profile invalid: \($x.name) is on-request with no Cap:"
            else empty end),
-          (if (($x.request // "") | startswith("comment "))
+          (if (($x.request // "") | test("^comment\\b"))
            then (if $x.workflow == null
                  then "profile invalid: \($x.name) has Request: \($x.request) with no Workflow: naming the workflow file its round comes from"
-                 elif ($absent | index($x.name)) != null
+                 elif ($absent | index($x.workflow)) != null
                  then "profile invalid: \($x.name) has Workflow: \($x.workflow), which is not in the checkout"
                  else empty end)
            elif $x.workflow != null

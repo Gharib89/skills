@@ -339,7 +339,7 @@ Fallback-for: __PRIMARY__
 Instructions: __INSTRUCTIONS__
 ```
 
-`Workflow:` is the file this shape writes, and it is what makes the shape work: a round reaches this reviewer through a comment, so its run is what tells a round still being written from one that will not come, and ship passes that line's value to `poll-pr --await-run`. Rename the file and this line moves with it. Preflight refuses the pair when they disagree, so a `comment` request with no `Workflow:`, and a `Workflow:` naming a file the checkout does not carry, are both stopped before the claim rather than left polling on the constant.
+`Workflow:` is the file this shape writes. A round reaches this reviewer through a comment, so its run is what tells a round still being written from one that will not come, and ship passes that line's value to `poll-pr --await-run`. Rename the file and this line moves with it. Preflight refuses three shapes before the claim, rather than leaving the run polling on the constant: this block with no `Workflow:`, a `Workflow:` on a block whose `Request:` is not a comment transport (the on-push shape above, which reads `None.`), and a `Workflow:` naming a file the checkout does not carry.
 
 `Login:` is `claude[bot]` in both shapes: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App its `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` step runs on `github.token` and lands as `github-actions[bot]`, and that comment is not a round, so the login a run awaits is the app's.
 
