@@ -173,6 +173,21 @@ d=$(tree nested-entry)
   > "$d/skills/ship/reference/r.md"
 check_rc "a deeper item neither counts nor ends the list" 0 "$(rc_of "$d")"
 
+# A heading under one to three spaces is an ATX heading, the same indent the
+# fence grammar honours, so it is read as one on both sides: it can be listed,
+# and it has to be.
+d=$(tree heading-indented)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n- [Intro](#intro)\n\n  ## Intro\n\n## A\n'; body 95; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "an indented heading can be listed" 0 "$(rc_of "$d")"
+
+d=$(tree heading-indented-unlisted)
+{ printf '# R\n\n## Contents\n\n- [A](#a)\n\n## A\n\n  ## Sneaky\n'; body 95; } \
+  > "$d/skills/ship/reference/r.md"
+check_rc "an indented heading still needs an entry" 1 "$(rc_of "$d")"
+check "the message names the indented heading" \
+  'skills/ship/reference/r.md: `## Sneaky` has no entry under `## Contents`' "$(out_of "$d")"
+
 # Both budgets in one tree: the run reports every overrun, never the first.
 d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \

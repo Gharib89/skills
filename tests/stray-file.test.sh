@@ -16,7 +16,10 @@ repo() {
   rm -rf "$d"; mkdir -p "$d" || return 1
   git -C "$d" init -q || return 1
   for p in "$@"; do mkdir -p "$d/$(dirname "$p")" && : > "$d/$p" || return 1; done
-  git -C "$d" add -A || return 1
+  # -f as well as -A: `git add` obeys the user's `core.excludesFile`, so a
+  # global ignore carrying a scratch pattern would leave a fixture's own stray
+  # untracked and fail the case below on correct code, on that machine alone.
+  git -C "$d" add -Af || return 1
   printf '%s' "$d"
 }
 rc_of()  { bash scripts/stray-file-check.sh "$1" >/dev/null 2>&1; printf '%s' "$?"; }

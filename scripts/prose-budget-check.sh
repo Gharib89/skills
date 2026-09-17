@@ -48,6 +48,8 @@ lines() { awk 'END{print NR}' "$1"; }
 # whole text where the `](` is not there to make it a link, equals the heading;
 # both sides are trimmed at both ends, so padding and a CRLF line ending, neither
 # of them visible in the file a reader compares the list against, are neither.
+# Headings, entries and fences alike are read off the de-indented copy `s`, so
+# the up-to-three-space indent CommonMark allows is one rule here too.
 #
 #   contents_check <file> <display-name> <line-count>
 #
@@ -70,8 +72,8 @@ contents_check() {
         }
       }
       if (fenced) next
-      if ($0 ~ /^## /) {
-        h = substr($0, 4); sub(/^[ \t]+/, "", h); sub(/[ \t\r]+$/, "", h)
+      if (s ~ /^## /) {
+        h = substr(s, 4); sub(/^[ \t]+/, "", h); sub(/[ \t\r]+$/, "", h)
         if (h == "Contents") { if (NR <= 15) anchored = 1; listing = 1; next }
         listing = 0; heads[h] = 1; horder[++nh] = h
         next
@@ -119,6 +121,13 @@ done
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
   [ "$n" -gt 100 ] || continue
-  contents_check "$f" "${f#"$root"/}" "$n" || rc=1
+  contents_check "$f" "${f#"$root"/}" "$n"; crc=$?
+  # A status the helper does not document is awk failing, which the header
+  # promises as 2, the way the `lines` read above answers an unreadable file.
+  case $crc in
+    0) ;;
+    1) rc=1 ;;
+    *) printf 'cannot read %s\n' "$f" >&2; exit 2 ;;
+  esac
 done
 exit $rc
