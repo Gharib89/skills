@@ -16,8 +16,8 @@ sandbox tooling, the profile's cloud bootstrap, the PR cap, the selection, the
 claim, the branch, the isolation, the hand-back and the merge summary. This
 skill adds the invocation and the relay, nothing else. The copy under
 `.claude/skills/cloud-ship` is a **derived copy**, the same bytes in every repo,
-changed in this skill's own source repo and refreshed through the command the
-repo's `### Ship` block in CLAUDE.md carries.
+changed in its source repo `Gharib89/skills` and refreshed through the command
+the repo's `### Ship` block in CLAUDE.md carries.
 
 ## The fire
 

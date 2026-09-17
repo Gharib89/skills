@@ -20,7 +20,7 @@ integrates with, self-reviewed, reviewed by every reviewer the repo names,
 CI-green, and summarized for a ten-second approve. This skill is **generic**: it
 knows how to ship and nothing about the repo, and every repo fact comes from the
 **ship profile**, `docs/agents/ship.md`. The copy under `.claude/skills/ship` is
-a **derived copy**, changed in this skill's own source repo and refreshed
+a **derived copy**, changed in its source repo `Gharib89/skills` and refreshed
 through the command the repo's `### Ship` block in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
@@ -245,9 +245,8 @@ evidence), `degraded: <reason>` from the fixed vocabulary
 `never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
 a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
 proceeds to the merge gate on green CI and is reported there rather than handed
-back. At exit,
-`update-pr-body <pr> --section "Deviations from plan" --body-file <path>` where
-the rounds grew the log, then
+back. At exit, `update-pr-body <pr> --section "Deviations from plan"
+--body-file <path>` where the rounds grew the log, then
 `update-pr-body <pr> --section Review --body-file <path>` with one status line
 per reviewer, then the phase-6 read-back while the PR is still open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
