@@ -103,6 +103,12 @@ house_style() {
 }
 run house-style house_style
 
+# prose-budget: ship's own documents, whose shape decides what a run reads
+# before it acts. `skills/*/SKILL.md` at most 400 lines, and every
+# `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
+# inside its first 15 lines; scripts/prose-budget-check.sh is the whole rule.
+run prose-budget scripts/prose-budget-check.sh
+
 # contract: the mechanics' malformed-invocation contract, their --help contract,
 # and the Bash 3.2 target over the whole skills tree. Every mechanic answers a
 # malformed invocation with one JSON error object and exit 2 and `--help` with its

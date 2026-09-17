@@ -1,5 +1,14 @@
 # Phases 1 to 3: understand, classify, implement, verify (detail)
 
+## Contents
+
+- [Phase 2: classify, then implement test-first](#phase-2-classify-then-implement-test-first)
+- [Phase 2: delegate execution, keep judgment](#phase-2-delegate-execution-keep-judgment)
+- [Phase 2: adjacent finds](#phase-2-adjacent-finds)
+- [Verify the spec's external-system claims before building on them](#verify-the-specs-external-system-claims-before-building-on-them)
+- [Phase 1 detail: spec precedence](#phase-1-detail-spec-precedence)
+- [Phase 3 detail: verify where it failed](#phase-3-detail-verify-where-it-failed)
+
 Phase 2 leads, because classification drives everything downstream; the
 phase-1 and phase-3 deep-dives follow.
 
@@ -57,6 +66,23 @@ in its prompt:
   `git -C <main-checkout> status` must be clean.
 - It runs only the **targeted test nodes**; the phase-5 gate stays with the
   orchestrator.
+
+## Phase 2: adjacent finds
+
+A find outside the issue takes one of three dispositions and no fourth, and
+phases 4 and 7 send their own out-of-scope findings back here.
+
+- **Fix it inline** and log the deviation, where an acceptance criterion names
+  it, the fix lands in a file this PR already changes, or a reviewer of this PR
+  would flag it.
+- **`file-issue` it** with the profile's triage marker and leave it. The
+  mechanic answers `filed: false` with candidates when an open issue's title
+  shares three or more tokens with yours, and each candidate is **read**: the
+  same finding is linked in the deviations log rather than refiled, a different
+  one is refiled with `--distinct-from`.
+- **Stop `mis-specified`**, where the find shows the issue itself is wrong.
+
+The merge summary lists every issue filed and every candidate linked.
 
 ## Verify the spec's external-system claims before building on them
 

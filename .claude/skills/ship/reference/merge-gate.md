@@ -1,6 +1,12 @@
 # Phase 9: the merge gate
 
-The one guaranteed human stop (the autonomy contract in SKILL.md). Your job is
+## Contents
+
+- [The summary](#the-summary)
+- [Attended: post, then wait](#attended-post-then-wait)
+- [Unattended: post to the PR, then return](#unattended-post-to-the-pr-then-return)
+
+The one guaranteed human stop (`## The stops` in SKILL.md). Your job is
 to make the call a ten-second yes or no by laying out everything the human
 would want to check.
 
