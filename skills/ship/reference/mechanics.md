@@ -1,10 +1,57 @@
 # The mechanics: what all of them have in common
 
+## Contents
+
+- [Which mechanic each phase runs](#which-mechanic-each-phase-runs)
+- [Ask the script what its flags are](#ask-the-script-what-its-flags-are)
+- [The exit codes](#the-exit-codes)
+- [What a failed write says](#what-a-failed-write-says)
+- [The vocabulary a read comes back in](#the-vocabulary-a-read-comes-back-in)
+- [Run them inline](#run-them-inline)
+
 `scripts/` holds one executable per deterministic step, and a mechanic is the
 only way a ship run touches the host, though not every one does: `run-file`
-writes the run's own record and nothing else. `SKILL.md` says which mechanic each phase
-runs and what it decides there; this file says how every one of them answers,
-so the rule is read once rather than re-derived per call.
+writes the run's own record and nothing else. `SKILL.md` says what each phase
+decides; this file says which mechanic the phase runs there and how every one of
+them answers, so both are read once rather than re-derived per call.
+
+## Which mechanic each phase runs
+
+When a phase names a mechanic, run it instead of re-deriving what it wraps: it
+is the single source of truth for that step, including the host adapter it
+sources (`scripts/host/github.sh` or `scripts/host/ado.sh`, chosen from the
+`origin` remote).
+
+The table below maps mechanic to phase and carries no flags, because a table
+goes stale against the script and `--help` does not. Its one row that is not a
+mechanic, the repo's own local gate, keeps its flags: they come from the
+local-gate contract, and that script answers no `--help`.
+
+| Mechanic | Phase |
+|---|---|
+| `run-file init` | the required first action |
+| `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
+| `preflight` | 0 |
+| `read-issue` | 0 |
+| `isolate` | 0 |
+| `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
+| `file-issue` | 2, 4, 7 |
+| `base-fresh` | 5, and after every conflict resolution |
+| `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
+| `open-pr` | 6 |
+| `reflect` | 6 |
+| `update-pr-title` | 6, 9 |
+| `read-pr` | 6 and 7, reading a PR back after a title or body write |
+| `poll-pr` | 7, 8 |
+| `request-review` | 7 |
+| `comment-pr` | 7, 9 |
+| `reply-thread` | 7 |
+| `update-pr-body` | 7 |
+| `resolve-thread` | 7 |
+| `ci-wait` | 8 |
+| `merge` | 9, on approval |
+| `cleanup` | 9, after merge |
+| `tooling`, `list-prs` and `select` | unattended lane |
 
 ## Ask the script what its flags are
 

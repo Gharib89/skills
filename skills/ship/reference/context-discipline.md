@@ -1,5 +1,10 @@
 # Context discipline: a ship run is long; protect the main thread
 
+## Contents
+
+- [While a subagent is out, end the turn](#while-a-subagent-is-out-end-the-turn)
+- [First action: the Run file](#first-action-the-run-file)
+
 A full ship touches many files across many turns. What bloats the window is raw
 tool output landing in the main thread, not the work itself, so spend tokens on
 decisions, not dumps.

@@ -1,5 +1,14 @@
 # Phase 7: driving every reviewer to convergence
 
+## Contents
+
+- [Shared mechanics](#shared-mechanics)
+- [By trigger](#by-trigger)
+- [Fallbacks: the reviewer driven only when another one failed](#fallbacks-the-reviewer-driven-only-when-another-one-failed)
+- [Degraded exits: fixed vocabulary, per reviewer](#degraded-exits-fixed-vocabulary-per-reviewer)
+- [Gating reviewer with a declined finding](#gating-reviewer-with-a-declined-finding)
+- [Worked examples](#worked-examples)
+
 The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
 it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an optional
 `Instructions:` file, and per trigger: `Request:` (on-request), `Resolve:`
@@ -30,10 +39,11 @@ a fresh read of the committed tree, not a conversation.
   invisible from the thread list alone, and `infra-error` is a judgment about
   the body.
 - **`--brief` projects that same poll** down to what this loop acts on: head,
-  mergeable, `landed_by`, one row per round (id, `submitted_at`, `substantive`,
-  and the body cut to its lead line and finding items) and one row per OPEN
-  thread. Rounds come from the list the landing rule admitted, and the run's own
-  replies drop out, so a round count is the reviewer's rounds and not ours. Take
+  mergeable, `landed_by`, one `rounds[]` row per round (id, `submitted_at`,
+  `substantive`, and the body cut to its lead line and finding items) and one
+  row per OPEN thread. Rounds come from the list the landing rule admitted, and
+  the run's own replies drop out, so a round count is the reviewer's rounds and
+  not ours. Take
   the full shape when a round needs reading whole; `--full <id>` still answers
   that on the row it names.
 - **A body ending `...[truncated]` has not been read.** Rounds are clipped past
