@@ -10,10 +10,16 @@ source skills/ship/scripts/_lib.sh
 # need a checkout root to stat against. A fixture tree, not this repo: a case
 # that passed because the real `.github/workflows/` happened to carry the name
 # would stop proving the check the day that file is renamed.
-root=$(mktemp -d)
-trap 'rm -rf "$root"' EXIT
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+root=$tmp/checkout
 mkdir -p "$root/.github/workflows"
 : >"$root/.github/workflows/claude-review.yml"
+# The traversal case needs a file that really exists above the root. It sits
+# inside the trapped tree, one level up from the checkout, so the one `rm -rf`
+# covers it: a fixed name in the system temp directory would outlive an
+# interrupted run and collide between two concurrent suites.
+: >"$tmp/reviewer-blocks-outside.yml"
 
 # A two-reviewer profile in the shape `docs/agents/ship.md` carries: field lines
 # first, then the prose paragraph that explains the block.
@@ -203,14 +209,11 @@ check "refuses a Workflow: naming a file the checkout does not carry" \
   'profile invalid: claude has Workflow: .github/workflows/gone.yml, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: .github/workflows/gone.yml|' <<<"$profile")")"
 
-# A path the stat resolves outside the checkout is not in it. `$root/..` is the
-# system temp directory, which always carries something, so a traversal that
-# stats true is the case a plain `-f` passes.
-: >"$root/../reviewer-blocks-outside.yml"
+# A path the stat resolves outside the checkout is not in it, and the fixture
+# above it really exists, so this is the case a plain `-f` passes.
 check "refuses a Workflow: that climbs out of the checkout with .." \
   'profile invalid: claude has Workflow: ../reviewer-blocks-outside.yml, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: ../reviewer-blocks-outside.yml|' <<<"$profile")")"
-rm -f "$root/../reviewer-blocks-outside.yml"
 
 check "refuses an absolute Workflow:, whatever it names" \
   'profile invalid: claude has Workflow: /etc/hostname, which is not in the checkout' \
