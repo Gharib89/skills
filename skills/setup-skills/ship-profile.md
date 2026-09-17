@@ -44,7 +44,7 @@ Push policy: <e.g. one push per review round; minutes are metered, or Default.>
 Login: <the login(s) it reviews under>
 Trigger: <auto-once | on-push | on-request>
 Request: <on-request only: the mechanic that requests a round, or `comment <phrase>` for a reviewer a PR comment triggers, else None.>
-Workflow: <`comment <phrase>` only: the path of the workflow file that comment starts, whose run is the round's window, else None.>
+Workflow: <`comment <phrase>` only: the repo-relative path, from the checkout root, of the workflow file that comment starts, whose run is the round's window, else None.>
 Cap: <on-request: max rounds, required, no default; on-push: max rounds, or None. for an uncapped loop; auto-once: None.>
 Resolve: <on-push and on-request: how a dispositioned thread is resolved, else None.>
 Gating: <yes | no>
