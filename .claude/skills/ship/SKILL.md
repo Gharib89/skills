@@ -118,19 +118,20 @@ split. Classify `docs` / `code` / `infra`; **announce the class, the skip path
 it implies, and whether the three lane keys hold**; announce the applicable
 verifications from `## Verification` (their `Applies when:` lines are prose you
 judge here) or the skip. Then implement test-first per class. The profile's
-`Tripwires:` and `In-PR requirement:` apply whatever the class: a bundle rebuild
-or a version bump CI enforces lands in this change, or phase 8 goes red with no
-phase explaining why. Keep a **deviations log** from the first edit: whenever
-the territory forces a departure from the issue, brief or plan, resolve it by
-the conservative option, log what and why, keep going; the log lands verbatim in
-the PR body and the merge summary. An **adjacent find** has three dispositions and no fourth, per
-[reference/implement.md](reference/implement.md): **fix it inline** and log the
-deviation where an acceptance criterion names it, the fix lands in a file this
-PR already changes, or a reviewer of this PR would flag it; otherwise
-**`file-issue` it** with the profile's triage marker and leave it; or the find
-shows the issue is **mis-specified**, so stop there. The merge summary lists
-every issue filed and every candidate linked. If the core work balloons (the diff outgrows one PR, or the fix demands
-a redesign the issue never scoped), stop `needs-split` with a split proposal.
+`Tripwires:` and `In-PR requirement:` apply whatever the class: a bundle
+rebuild or a version bump CI enforces lands in this change, or phase 8 goes red
+with no phase explaining why. Keep a **deviations log** from the first edit:
+whenever the territory forces a departure from the issue, brief or plan,
+resolve it by the conservative option, log what and why, keep going; the log
+lands verbatim in the PR body and the merge summary. An **adjacent find** has
+three dispositions and no fourth: **fix it inline** and log the deviation where
+an acceptance criterion names it, the fix lands in a file this PR already
+changes, or a reviewer of this PR would flag it; otherwise **`file-issue` it**
+with the profile's triage marker and leave it; or the find shows the issue is
+**mis-specified**, so stop there. The merge summary lists every issue filed and
+every candidate linked. If the core work balloons (the diff outgrows one PR, or
+the fix demands a redesign the issue never scoped), stop `needs-split` with a
+split proposal.
 **Done when:** the applicable tests are green (red first, per class),
 `Tripwires:` and `In-PR requirement:` have landed, the deviations log is
 current, and every adjacent find carries one of the three dispositions.
@@ -183,25 +184,25 @@ one-line disposition, and docs-sync either landed its edits or is skipped in one
 line for the merge gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
-`deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
-finding carries a disposition; otherwise you skipped one, go back. Running the
-gate while `code-review` is still out is not parallelism: a finding fixed
-afterwards pays for a second gate run and a second pass of whatever the
+`deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every
+phase-4 finding carries a disposition; otherwise you skipped one, go back.
+Running the gate while `code-review` is still out is not parallelism: a finding
+fixed afterwards pays for a second gate run and a second pass of whatever the
 profile's `Tripwires:` names. Run `base-fresh` first: it proves the branch has
 seen every commit on its base, the one thing CI cannot, because CI tests the
 merge ref, so a branch that predates a merge still goes green while every "does
 this exist?" answer you took from the worktree was pre-merge. Behind: rebase,
-re-run, then continue. Confirm every `Carry:` file still matches the main checkout's
-copy; a difference is `carried file modified`, because ship has no business
-editing untracked secrets. Then run the gate at the profile's `Location:` from
-the worktree, inline. Small lane: `--small <node>` with the node written in the
-profile's `Small node:` syntax. The gate owns dependency install and every check
-CI runs; its verdict is one JSON object: `verdict` `pass|fail|unavailable`,
-per-gate statuses `pass|fail|deferred-to-ci|unavailable`, `gates.secrets`
-present in every lane. Unparseable output or a missing `secrets` key reads as
-`unavailable`. `fail`: fix loop. Any `deferred-to-ci`: proceed, and the merge
-summary names each deferred gate. `unavailable`: stop `local gate unavailable`;
-never open the PR.
+re-run, then continue. Confirm every `Carry:` file still matches the main
+checkout's copy; a difference is `carried file modified`, because ship has no
+business editing untracked secrets. Then run the gate at the profile's
+`Location:` from the worktree, inline. Small lane: `--small <node>` with the
+node written in the profile's `Small node:` syntax. The gate owns dependency
+install and every check CI runs; its verdict is one JSON object: `verdict`
+`pass|fail|unavailable`, per-gate statuses
+`pass|fail|deferred-to-ci|unavailable`, `gates.secrets` present in every lane.
+Unparseable output or a missing `secrets` key reads as `unavailable`. `fail`:
+fix loop. Any `deferred-to-ci`: proceed, and the merge summary names each
+deferred gate. `unavailable`: stop `local gate unavailable`; never open the PR.
 **Done when:** `base-fresh` reports the branch not behind its base and the
 gate's JSON reads `verdict: pass` with `gates.secrets` present.
 
@@ -258,9 +259,9 @@ review quota, so push when the tree changed.
 **Done when:** `ci-wait` reports every leg on `Legs:` green, or `no-checks`
 where `No-checks legal:` admits it, with `mergeable` not `conflict`.
 
-**9 · Merge gate.** **Hard stop.** [reference/merge-gate.md](reference/merge-gate.md)
-carries the summary's shape, what `merge` does and the two refusals it answers
-with (`pr-closed`, `stale-base`). Write the summary per that file,
+**9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
+the summary's shape, what `merge` does and the two refusals it answers with
+(`pr-closed`, `stale-base`). **Hard stop.** Write the summary per that file,
 uncompressed. Attended: post it in the conversation and wait for an explicit
 "merge": the word is exact, and a near miss is asked back rather than read as
 merge. On approval run `merge <pr> <issue|none> [--worktree <path>]` then
