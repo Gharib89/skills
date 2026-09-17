@@ -88,15 +88,15 @@ a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
 the record shows a decision and not a gap. A harness that refuses the task tools
 has answered: run on the file alone.
 
-**A report that arrives as a hand-back is written to a file before it is read as
-evidence.** Each phase-4 axis report, and any reviewer round that reaches the
-run as a hand-back rather than through `poll-pr`, goes verbatim to
-`<scratchpad>/scratch/<role>/report.md` before one of its findings is
-dispositioned, and the Run file names the path, because the hand-back lives in
-context alone and a compaction takes it while the Run file survives.
-Disposition from the file and re-read it there after a compaction: the merge
-summary's rows are quoted from these files, and a row whose file is not on disk
-at the gate reads `unverified` rather than being rebuilt from the transcript.
+**A phase-4 report is written to a Report file before one of its findings is
+dispositioned.** Both `code-review` axis reports and the `writing-for-agents`
+pass's report reach the run in context alone, where a compaction takes them
+while the Run file survives, so **the run** writes each verbatim to
+`<scratchpad>/scratch/<role>/report.md` under the role that produced it, itself
+where the subagent's own write did not land, and the Run file's `## Design and
+plan` section names the paths. Disposition from the file, re-read it there after
+a compaction, and quote the merge summary's `Self-review` rows from it rather
+than from the transcript.
 
 **A refusal naming a line you thought was there is a clobbered Run file**: a
 subagent wrote over the path, and the mechanic says so rather than flipping a

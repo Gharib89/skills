@@ -33,6 +33,9 @@ body. Every variant carries:
   the same result into the summary, so the two agree by construction.
 - **A `## Review` section**, one placeholder line per reviewer at open, filled
   at phase-7 exit with that reviewer's exit word.
+- **A count with the command that produced it**, wherever the body states one,
+  run on the PR head; [merge-gate.md](merge-gate.md) carries the rule the
+  summary and this body share.
 - **The attribution footer**, where the environment provides one for pull
   request descriptions. It belongs to **the body file `open-pr` is handed**, and
   the body **ends** with it, under a `## ` heading of its own that ship adds

@@ -158,14 +158,14 @@ the edits into this change. Skip it for internal refactors, a bugfix restoring
 documented behavior, test-only or tooling changes, and comments, and say so in
 one line at the merge gate. **The `writing-for-agents` pass has a trigger of its
 own**, and it still fires where docs-sync is skipped: it fires whenever the diff
-touches a target on the profile's `Agent-facing:` line, at the judgment tier,
-over every agent-facing file in the diff. Human prose takes the mechanical pass.
+touches a target on the profile's `Agent-facing:` line, at the judgment tier, in
+the `writing` scratch directory, over every agent-facing file in the diff. Human
+prose takes the mechanical pass.
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
-carrying its own scratch directory (`standards`, `spec`; the pass above takes
-`writing`). **Triage waits for
+carrying its own scratch directory (`standards`, `spec`). **Triage waits for
 both axes.** An axis whose report fails to arrive is `red-after-retry: <axis>`
 after the bounded retry, a stop in place of a disposition written from memory of
 what it would have said. **Auto-triage** every finding: harden rather than rip out
@@ -183,11 +183,10 @@ review. Reviewer rounds find these otherwise, serially, at the cost of most of a
 run's wall time, and the reverted-fix one escapes them entirely. This
 self-review plus green CI is the review gate; phase 7's reviewers add a second
 pair of eyes on top of it.
-**Done when:** both `code-review` axes and, where the diff touches
-`Agent-facing:`, the `writing-for-agents` pass have written their reports to the
-files context-discipline.md names, every finding carries a one-line disposition,
-and docs-sync either landed its edits or is skipped in one line for the merge
-gate.
+**Done when:** every phase-4 Report file
+[context-discipline.md](reference/context-discipline.md) names is on disk, every
+finding carries a one-line disposition, and docs-sync either landed its edits or
+is skipped in one line for the merge gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
