@@ -47,7 +47,9 @@
 # run is reported on `reviewer_run`, null where the flag was not given or the
 # host has no such read, and `{"status":"none"}` where no run was created at
 # all. It needs `--await-review` (whose reviewer it belongs to) and `--since`
-# (the request the run should follow).
+# (the request the run should follow). Which event starts such a run is the
+# host's word and the adapter's business: this mechanic names the workflow file
+# and the instant, and nothing else.
 #
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
 # quota or rate-limit notice), not missing. It is read from the awaited login's
@@ -75,18 +77,17 @@
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, waited out to its conclusion within 1800s] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]'
+# The hard bound on waiting a run out, written once: the usage line is where a
+# run reads it.
+ceiling=1800
+usage="usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, waited out to its conclusion within ${ceiling}s] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 # A flag in the positional slot is a malformed invocation, not a PR id: without
 # this, `poll-pr --brief` reads "--brief" as the id and asks the host for it.
 case $pr in -*) ship_tooling "$usage" ;; esac
-timeout=480; interval=20; await=""; since=""; await_run=""; full='[]'; brief=false
-# The hard bound on waiting a run out, and the event a comment transport starts.
-# One host has this read today and spells the event `issue_comment`; an adapter
-# whose host spells it otherwise maps it.
-ceiling=1800; run_event=issue_comment; after_run=0
+timeout=480; interval=20; await=""; since=""; await_run=""; full='[]'; brief=false; after_run=0
 while [ $# -gt 0 ]; do
   case $1 in
     --brief) brief=true; shift ;;
@@ -144,7 +145,7 @@ while :; do
   # A host with no such read leaves this null, and the window stays the constant.
   reviewer_run=null
   if [ -n "$await_run" ]; then
-    runs=$(host_workflow_runs "$await_run" "$run_event" "$since") \
+    runs=$(host_workflow_runs "$await_run" "$since") \
       && reviewer_run=$(jq -c --arg t "$(jq -r .title <<<"$prj")" "$SHIP_REVIEWER_RUN" <<<"$runs")
   fi
 

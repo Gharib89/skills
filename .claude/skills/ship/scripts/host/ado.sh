@@ -390,7 +390,7 @@ host_issues_ready() { # <label>
 # comment-started run sitting off the PR head to settle. Non-zero and silent is
 # "this host has no such read", the answer every read the host lacks gives, and
 # `poll-pr` then holds its window to the constant.
-host_workflow_runs() { return 1; }
+host_workflow_runs() { return 1; } # <workflow-file> <since-iso>
 
 # Azure DevOps has no Copilot-review ruleset, so there is nothing to contradict
 # a profile with. Non-zero and silent is "not checked", the same answer the

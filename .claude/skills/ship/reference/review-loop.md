@@ -64,18 +64,18 @@ a fresh read of the committed tree, not a conversation.
   DevOps vote, which the API leaves unstamped, exits `degraded: silent` under
   it; its threads, which carry anything actionable, are stamped and land
   normally.
-- **A comment-transport reviewer's window is its workflow run, not a constant.**
-  Where the profile's `Request:` reads `comment <phrase>`, the round comes from a
-  workflow that comment starts, and such a run is attached to the default
-  branch's SHA: it lands no check on the PR head, so an empty `checks` list says
-  nothing about it and the absence of a review is not evidence the reviewer
-  never queued. Poll it with `--await-run <workflow-file>`, the workflow the
-  reviewer's block names, alongside `--await-review` and `--since`. `--timeout`
-  is then the floor of the window rather than its end: a queued or running run
-  keeps the poll going, to the ceiling `poll-pr --help` states, and a concluded
-  one buys one more interval for the row to appear. The run comes back on
-  `reviewer_run`, in the full shape and in `--brief` alike, and it is what
-  separates three of the degraded reasons below from each other.
+- **A comment-transport reviewer's window is its workflow run.** Where the
+  profile's `Request:` reads `comment <phrase>`, the round comes from a workflow
+  that comment starts, and such a run is attached to the default branch's SHA:
+  it lands no check on the PR head, so the run itself is the evidence that the
+  reviewer is working, and reading it is what tells a round still being written
+  from one that will never come. Poll with `--await-run <workflow-file>`, the
+  file that reviewer's block names in prose, alongside `--await-review` and
+  `--since`. `--timeout` is then the floor of the window rather than its end: a
+  queued or running run keeps the poll going, to the ceiling `poll-pr --help`
+  states, and a concluded one buys one more interval for the row to appear. The
+  run comes back on `reviewer_run`, in the full shape and in `--brief` alike,
+  and it is what separates three of the degraded reasons below from each other.
 - **A round is a review with a body.** A reviewer's reply to one thread posts as
   a review row of its own (current head, empty body), so answering round N
   manufactures rows that look like round N+1 arriving. Only `substantive: true`
@@ -208,8 +208,9 @@ batch-fixed, pushed, replied to on every `replied: false` thread and resolved
 before any request is issued; requesting on top of it spends round 2 on a tree
 the reviewer has not seen and burns the budget the free round just saved. With
 nothing in hand: request, poll under the **since** rule with `request-review`'s
-`requested_at`, triage, batch-fix, push, `reply-thread` on every
-`replied: false` thread, and round the loop. A round that
+`requested_at`, carrying `--await-run <workflow-file>` where this reviewer's
+`Request:` reads `comment <phrase>`, triage, batch-fix, push, `reply-thread` on
+every `replied: false` thread, and round the loop. A round that
 opened threads takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.
@@ -233,7 +234,9 @@ because a fallback's only input is how its primary exited.
   then drive it as an ordinary on-request reviewer under its own `Cap:`, by the
   section above, the free-round poll included: that first request is the one it
   runs ahead of, and a fallback reached through a comment transport reliably
-  finds nothing there, which is the one short poll the rule costs. Which degraded reason the primary hit changes nothing here; the
+  finds nothing there, which is the one short poll the rule costs. That
+  transport is also what puts `--await-run` on every poll of it, the free-round
+  one included. Which degraded reason the primary hit changes nothing here; the
   human wanted a review on the PR and the reason is a footnote. Its exit is an
   ordinary one, `converged` or `degraded: <reason>` of its own.
 - The primary exited `converged` or `converged, override needed`: **do not

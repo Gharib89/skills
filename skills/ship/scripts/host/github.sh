@@ -427,20 +427,28 @@ host_pr_reviewer_blocked() { # <pr> <login>
   } | jq -s --arg l "$2" "$_gh_blocked_select"
 }
 
-# The runs of one workflow file, for one event, created at or after <since>.
+# The runs of one workflow file, created at or after <since>.
 # A reviewer reached through a comment transport runs as a workflow, and an
 # `issue_comment` run is attached to the DEFAULT BRANCH's SHA rather than to the
 # PR head: `host_pr_checks` reads the head and cannot see it, which is why a
 # window that closed before the round landed looked like a reviewer that never
 # queued (#203). `gh run list` is the one read that sees it.
 #
-# `title` is the run's display title, which is the title of the issue or PR the
-# triggering comment sits on. The workflow fires on every comment in the repo,
-# so that is what narrows the runs to the PR being polled.
+# `issue_comment` is this host's word for the event a comment transport starts,
+# and it is named here rather than passed in: the caller is a generic mechanic,
+# and a host's own words stop at the adapter.
+#
+# `title` is the run's display title, which on this host is the title of the
+# issue or PR the triggering comment sits on. The workflow fires on every
+# comment in the repo, so that is what narrows the runs to the PR being polled,
+# and it is the only link the host offers between a run and its PR. Two open PRs
+# sharing a title therefore match each other's runs, which costs the poll time
+# and no more, and a title rewritten between the request and the poll matches
+# nothing, which reads as a reviewer that never queued.
 # `gh run list` rather than `api`: it builds the `--created` search itself, and
 # a read that returns nothing is an answer here rather than a failure.
-host_workflow_runs() { # <workflow-file> <event> <since-iso>
-  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event "$2" --created ">=$3" --limit 50 \
+host_workflow_runs() { # <workflow-file> <since-iso>
+  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 50 \
     --json status,conclusion,createdAt,url,displayTitle \
     --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})'
 }

@@ -133,6 +133,36 @@ check "a run for another PR is not this PR's round" 'none' \
   "$(jq -r '.reviewer_run.status' <<<"$out")"
 check "and it holds the window open for nothing" 1 "$(calls reviews)"
 
+# The workflow's own `if` answers a comment that was not the request with a
+# skipped run, and that run says nothing about the round: the run that did
+# something is the one the poll reports, however new the skipped one is.
+reset
+jq -cn --arg t "$title" '[{status: "completed", conclusion: "success",
+     created_at: "2026-09-17T11:59:00Z", url: "https://example.invalid/runs/9", title: $t},
+    {status: "completed", conclusion: "skipped",
+     created_at: "2026-09-17T11:59:30Z", url: "https://example.invalid/runs/10", title: $t}]' \
+  > "$FAKE/runs.1.json"
+printf '' > "$FAKE/reviews.1.json"
+out=$(poll --await-run claude-review.yml)
+check "a skipped run does not answer for the one that ran" \
+  'success https://example.invalid/runs/9' \
+  "$(jq -r '[.reviewer_run.conclusion, .reviewer_run.url] | join(" ")' <<<"$out")"
+
+# A run that is still going outranks one that concluded after it started: the
+# round can only come from the live one.
+reset
+jq -cn --arg t "$title" '[{status: "in_progress", conclusion: null,
+     created_at: "2026-09-17T11:59:00Z", url: "https://example.invalid/runs/9", title: $t},
+    {status: "completed", conclusion: "success",
+     created_at: "2026-09-17T11:59:30Z", url: "https://example.invalid/runs/10", title: $t}]' \
+  > "$FAKE/runs.1.json"
+printf ''               > "$FAKE/reviews.1.json"
+printf '%s\n' "$round" > "$FAKE/reviews.2.json"
+out=$(poll --await-run claude-review.yml); rc=$?
+check_rc "a live run outranks a newer concluded one and holds the window" 0 "$rc"
+check "and it is the run reported" 'in_progress https://example.invalid/runs/9' \
+  "$(jq -r '[.reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
+
 # --await-run has no meaning without the reviewer it belongs to, or without the
 # instant the request happened.
 err() { ( cd "$repo" && bash "$mech" "$@" 2>/dev/null | jq -r '.error' ); }
@@ -147,7 +177,7 @@ check "--await-run without --since is a usage error" '--await-run needs --await-
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
   source skills/ship/scripts/_lib.sh
   source skills/ship/scripts/host/ado.sh
-  out=$(host_workflow_runs review.yml issue_comment 2026-09-17T11:58:00Z 2>&1); rc=$?
+  out=$(host_workflow_runs review.yml 2026-09-17T11:58:00Z 2>&1); rc=$?
   check_rc "the ADO adapter answers the new read non-zero" 1 "$rc"
   check "the ADO adapter says nothing" "" "$out"
   finish

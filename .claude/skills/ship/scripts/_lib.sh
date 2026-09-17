@@ -70,9 +70,9 @@
 #                                           reply is keyed to. On Azure DevOps the thread id is
 #                                           that target already.
 #   host_pr_reviewer_blocked <pr> <login>-> JSON string | null
-#   host_workflow_runs <file> <event> <since-iso>
-#                                        -> [{status,conclusion,created_at,url,title}] the runs
-#                                           of that workflow file for that event, created at or
+#   host_workflow_runs <file> <since-iso>-> [{status,conclusion,created_at,url,title}] the runs
+#                                           of that workflow file, for the event a comment
+#                                           transport starts, created at or
 #                                           after <since>. status queued|in_progress|completed,
 #                                           conclusion the host's own word or null while it runs,
 #                                           title the issue or PR the triggering event sits on,
@@ -595,7 +595,9 @@ readonly SHIP_LANDED_BY='
 # still able to deliver the round, and a concluded run that arrived after it
 # would otherwise close the window on a round still being written. Then the
 # newest run that did something, because a `skipped` run is the workflow's own
-# `if` refusing a comment that was not the request. `none` is the read finding
+# `if` refusing a comment that was not the request. The title is the only link
+# the host offers, so a PR renamed mid-poll matches nothing: the adapter's own
+# comment carries what that costs. `none` is the read finding
 # no run at all, which the review loop reads as never-queued.
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_REVIEWER_RUN='
