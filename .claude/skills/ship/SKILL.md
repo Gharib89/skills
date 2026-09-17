@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 5.1.0
+  version: 5.2.0
   profile-schema: 2
   composes: mattpocock/skills:tdd mattpocock/skills:writing-for-agents mattpocock/skills:code-review upstash/context7:find-docs humanlayer/skills:show-me
 ---
@@ -132,6 +132,8 @@ upstream, never hand-roll the call, and never file it to another repo.
 
 | Mechanic | Phase |
 |---|---|
+| `run-file init` | the required first action |
+| `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
 | `preflight` | 0 |
 | `read-issue` | 0 |
 | `isolate` | 0 |

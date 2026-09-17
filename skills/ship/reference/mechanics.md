@@ -1,7 +1,8 @@
 # The mechanics: what all of them have in common
 
 `scripts/` holds one executable per deterministic step, and a mechanic is the
-only way a ship run touches the host. `SKILL.md` says which mechanic each phase
+only way a ship run touches the host, though not every one does: `run-file`
+writes the run's own record and nothing else. `SKILL.md` says which mechanic each phase
 runs and what it decides there; this file says how every one of them answers,
 so the rule is read once rather than re-derived per call.
 
