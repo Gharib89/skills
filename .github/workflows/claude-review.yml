@@ -34,7 +34,8 @@ jobs:
       # round PR #168 requested). An issue_comment checkout is the default
       # branch rather than the PR head, and that is the brief to review
       # against: the canonical one, not the version the PR under review
-      # proposes.
+      # proposes. The reviewed diff comes from `gh pr diff`, so the PR head can
+      # stay off disk.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -100,9 +101,10 @@ jobs:
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment,
-      # and a ship run reads that as `degraded: silent`, indistinguishable from a
-      # reviewer that did not fire. Costs one comment per failed round; drop it
-      # and the silent failure comes back.
+      # and a ship run with no run read reads that as `degraded: silent`,
+      # indistinguishable from a reviewer that did not fire. Costs one comment per
+      # failed round; drop it and the silent failure comes back wherever the run
+      # read is unavailable.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
