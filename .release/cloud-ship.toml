@@ -13,8 +13,11 @@ tag_format = "cloud-ship-v{version}"
 version_variables = ["skills/cloud-ship/SKILL.md:version"]
 commit_message = "chore(release): cloud-ship v{version}"
 # Run after the version is written and before the commit, so the derived copy and
-# the lock move with the bump and `derived-copies` stays green on main.
+# the lock move with the bump and `derived-copies` stays green on main. `set -e`
+# because the last line's status is the command's: without it a failed refresh is
+# hidden by the `git add` after it, and the release commits a stale derived copy.
 build_command = """
+set -e
 npx -y skills@latest add . --skill cloud-ship --agent claude-code -y
 git add .claude/skills skills-lock.json
 """

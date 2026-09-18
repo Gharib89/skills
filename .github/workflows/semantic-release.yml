@@ -33,30 +33,31 @@ concurrency:
 
 jobs:
   release:
-    # Only the subjects the configurations generate, rather than every
-    # `chore(release):` commit: a PR legitimately titled `chore(release): ...`
-    # passes `bump-guard` and must still release. A new skill is added here as
-    # well as to SKILLS below.
+    # A release commit is the bot's own, with one of the subjects the
+    # configurations generate. Both halves are needed: `bump-guard` admits a PR
+    # titled `chore(release): ship v7.1`, and such a PR must still release. A new
+    # skill is added here as well as to SKILLS below.
     if: >-
-      ${{ !(startsWith(github.event.head_commit.message, 'chore(release): ship v')
+      ${{ !(github.event.head_commit.author.name == 'github-actions[bot]'
+      && (startsWith(github.event.head_commit.message, 'chore(release): ship v')
       || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
-      || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v')) }}
+      || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v'))) }}
     runs-on: ubuntu-latest
     env:
       # The skills this repo releases, named once for both loops below.
       SKILLS: ship cloud-ship setup-skills
     steps:
-      # The whole history: each skill's version comes from the commits since that
-      # skill's own last tag, and a shallow clone carries neither.
+      # The branch tip, not the commit that triggered this run: the run pushes, and
+      # a run pinned to its triggering SHA pushes a commit whose parent is no
+      # longer main's tip once a second merge has landed, which the remote rejects
+      # as non-fast-forward. Releasing from the tip costs nothing, because each
+      # version comes from the commits since that skill's own last tag either way.
+      # The whole history, because a shallow clone carries neither the tags nor
+      # those commits.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
-
-      # Checking out the branch name can land a tip newer than the commit that
-      # triggered this run; the release must describe that commit.
-      - name: Force the branch to the commit that triggered this run
-        run: git reset --hard ${{ github.sha }}
 
       # Without the tag its own `tag_format` names, python-semantic-release ignores
       # the version in `SKILL.md` and forces 1.0.0, which would regress `ship` from
