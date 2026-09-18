@@ -39,8 +39,8 @@ jobs:
     # well as to SKILLS below.
     if: >-
       ${{ !(startsWith(github.event.head_commit.message, 'chore(release): ship v')
-        || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
-        || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v')) }}
+      || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
+      || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v')) }}
     runs-on: ubuntu-latest
     env:
       # The skills this repo releases, named once for both loops below.
