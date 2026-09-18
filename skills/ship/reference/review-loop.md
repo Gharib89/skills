@@ -152,10 +152,13 @@ a fresh read of the committed tree, not a conversation.
   --section "Special things to note" --body-file <path>`; where a round filed
   or linked an issue, or met a Ship defect, write `update-pr-body <pr>
   --section "Needs attention" --body-file <path>`. A `--section` write
-  replaces the **whole** section, so each `--body-file` is the section rebuilt
-  entire: the phase-6 warnings, migrations and constraints carried over as
-  written, and the refolded deviations beside them. Rebuilding it from the
-  deviations alone silently drops the rest. Both go before the `Review`
+  replaces the **whole** section, so each `--body-file` is that section rebuilt
+  entire from its own inputs, never from what changed alone: `Special things to
+  note` is the phase-6 warnings, migrations and constraints carried over as
+  written plus the refolded deviations, and `Needs attention` is every issue
+  already listed there plus what this round filed, linked or met. Rebuilding
+  either from the new entries alone silently drops its prior ones. Both go
+  before the `Review`
   write, which stays last so `read-pr` reads all of them back at once. Skip
   them and the PR body ships the phase-6 text while the merge summary carries
   the current one, and the human reads the two against each other.

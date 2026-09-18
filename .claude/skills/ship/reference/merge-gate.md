@@ -107,10 +107,16 @@ takes the `unverified` rule above rather than the transcript.
 measurement.** Write the number with the command that produced it beside it,
 run on the PR head, and count a word with `grep -ow` so a longer word carrying
 it as a substring does not inflate the total. A **tally of the run's own work**
-is the exception, and the only one: rounds, findings raised, accepted, declined
-and filed are read from the Run file, which recorded each as it happened, and
-no command reproduces them. The PR body's fixed `## Review` line is entirely
-such a tally, which is why it carries no commands.
+is the exception, and the only one: no command reproduces a round count or a
+finding outcome, so each is **written to the Run file at the moment it
+happens**, the way a deviation and a Ship defect already are. That is one rule
+over three records: a `file-issue` result, filed number or linked candidate,
+goes down when the call answers; a Ship defect when it is met; and a reviewer's
+round, with one line per finding and its disposition, when that round is
+dispositioned in phase 7. Each is then read back from the file rather than
+recalled, which is what makes them survive a compaction. The PR body's fixed
+`## Review` line is entirely such a tally, which is why it carries no
+commands.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the

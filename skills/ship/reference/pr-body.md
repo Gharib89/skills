@@ -53,9 +53,11 @@ reads without the section. Every variant carries:
 - **A `## Review` section**, one placeholder line per reviewer at open, filled
   at phase-7 exit with that reviewer's line in the fixed shape
   [review-loop.md](review-loop.md) carries.
-- **A count with the command that produced it**, wherever the body states one,
-  run on the PR head; [merge-gate.md](merge-gate.md) carries the rule the
-  summary and this body share.
+- **A count with the command that produced it**, wherever the body **measures
+  the tree**, run on the PR head. A tally of the run's own work is the
+  exception, which is what the `## Review` line is made of;
+  [merge-gate.md](merge-gate.md) carries the rule and its exception, and the
+  Run-file record the tallies come from.
 - **The attribution footer**, where the environment provides one for pull
   request descriptions. It belongs to **the body file `open-pr` is handed**, and
   the body **ends** with it, under a `## ` heading of its own that ship adds
@@ -115,10 +117,11 @@ there are neither.
 
 Nothing else belongs here. An adjacent find is filed or fixed inline by phase
 2's dispositions, so an unfiled observation parked in this section is a find
-that skipped its disposition. Phase 6 writes the section from the Run file's own
-record of what the run filed, linked and met, which is not the deviations log;
-the phase-7 exit rewrites it where a round added to either, the same pattern
-`## Special things to note` follows.
+that skipped its disposition. Phase 6 writes the section from the run's record
+of what it filed, linked and met, which is the Run file and not the deviations
+log, under the recording rule [merge-gate.md](merge-gate.md) carries; the
+phase-7 exit rewrites it where a round added to any of the three, the same
+pattern `## Special things to note` follows.
 
 ## Two halves, and a mechanic reaches each
 
