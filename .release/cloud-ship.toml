@@ -1,0 +1,47 @@
+# Release configuration for the `cloud-ship` skill, read by
+# `.github/workflows/semantic-release.yml`. One per skill, because each carries
+# its own version, tag line and changelog. Every decision here, the grade per
+# type, the build command, the squash-parsing setting, is recorded once in
+# [ADR 0003](../docs/adr/0003-version-and-changelog-cut-on-merge.md); this file
+# carries the per-skill facts and no second copy of the reasoning.
+#
+# Paths are relative to the repo root, where the workflow runs PSR from.
+
+[semantic_release]
+commit_parser = "conventional-monorepo"
+tag_format = "cloud-ship-v{version}"
+version_variables = ["skills/cloud-ship/SKILL.md:version"]
+commit_message = "chore(release): cloud-ship v{version}"
+# Run after the version is written and before the commit, so the derived copy and
+# the lock move with the bump and `derived-copies` stays green on main. `set -e`
+# because the last line's status is the command's: without it a failed refresh is
+# hidden by the `git add` after it, and the release commits a stale derived copy.
+# The CLI is pinned rather than `@latest`: this command's output is committed and
+# tagged by a job holding `contents: write`, so the version that writes it is a
+# deliberate bump and not whatever npm resolves that morning.
+build_command = """
+set -e
+npx -y skills@1.7.0 add . --skill cloud-ship --agent claude-code -y
+git add .claude/skills skills-lock.json
+"""
+allow_zero_version = false
+
+[semantic_release.branches.main]
+match = "(main|master)"
+
+[semantic_release.commit_parser_options]
+path_filters = ["skills/cloud-ship"]
+# `allowed_tags` is what the parser's type regex is built from; `patch_tags` only
+# maps an already-parsed type to a level, so a type missing here parses as nothing
+# and skips the release silently. It is the same set as `types` in
+# `scripts/check-bump-label.sh`, so the guard and the release run admit one list.
+allowed_tags = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test"]
+patch_tags = ["build", "chore", "ci", "docs", "fix", "perf", "refactor", "revert", "style", "test"]
+minor_tags = ["feat"]
+parse_squash_commits = false
+
+[semantic_release.changelog]
+mode = "update"
+
+[semantic_release.changelog.default_templates]
+changelog_file = "skills/cloud-ship/CHANGELOG.md"

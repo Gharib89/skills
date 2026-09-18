@@ -163,3 +163,7 @@ _Avoid_: duplicate, match, near-miss, collision
 **Ship defect**:
 A gap in Ship itself met during a run: a host operation no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human, rather than into a hand-rolled call or an issue filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
 _Avoid_: tooling gap, missing helper, upstream bug
+
+**Release run**:
+The push-to-main workflow that owns every skill's `metadata.version`: it writes the number and cuts that skill's `CHANGELOG.md`, one run per skill, from the Conventional-Commit type of the squash subject. The `version-lines` gate refuses a PR that writes the line instead. `semantic-release` is the tool that runs it, and the value the ship profile's `Tooling:` line takes.
+_Avoid_: release job, auto-bump, version bump PR

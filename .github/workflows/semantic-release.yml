@@ -1,0 +1,102 @@
+name: semantic-release
+
+# One release run per skill on every push to main. python-semantic-release reads
+# the Conventional-Commit type of the squash subject, which is the PR title the
+# `bump-guard` workflow validated and `merge.sh` passes as `commit_title`, then
+# writes that skill's `metadata.version`, cuts its `CHANGELOG.md`, refreshes its
+# derived copy under `.claude/skills/`, commits and tags. A PR no longer touches
+# the version line, so two PRs on one skill merge in either order.
+# See docs/adr/0003-version-and-changelog-cut-on-merge.md.
+#
+# The CLI rather than python-semantic-release's own action: that action runs in a
+# `python:slim` container carrying no node, and every configuration's build
+# command runs this repo's `npx skills add` refresh line so `.claude/skills/`
+# follows the bump and the `derived-copies` gate stays green on main.
+#
+# The default GITHUB_TOKEN rather than a PAT: a push made with it starts no
+# workflow run, which is what keeps the release commit from re-triggering this.
+# The job's `if` is the second guard, for a release commit pushed by hand.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+# One release at a time, queued rather than cancelled: two merges landing close
+# together each cut their own tag, and cancelling the first would drop one.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # A release commit is the bot's own, with one of the subjects the
+    # configurations generate. Both halves are needed: `bump-guard` admits a PR
+    # titled `chore(release): ship v7.1`, and such a PR must still release. A new
+    # skill is added here as well as to SKILLS below.
+    if: >-
+      ${{ !(github.event.head_commit.author.name == 'github-actions[bot]'
+      && (startsWith(github.event.head_commit.message, 'chore(release): ship v')
+      || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
+      || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v'))) }}
+    runs-on: ubuntu-latest
+    env:
+      # The skills this repo releases, named once for both loops below.
+      SKILLS: ship cloud-ship setup-skills
+    steps:
+      # The branch tip, not the commit that triggered this run: the run pushes, and
+      # a run pinned to its triggering SHA pushes a commit whose parent is no
+      # longer main's tip once a second merge has landed, which the remote rejects
+      # as non-fast-forward. Releasing from the tip costs nothing, because each
+      # version comes from the commits since that skill's own last tag either way.
+      # The whole history, because a shallow clone carries neither the tags nor
+      # those commits.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      # Without the tag its own `tag_format` names, python-semantic-release ignores
+      # the version in `SKILL.md` and forces 1.0.0, which would regress `ship` from
+      # 7.x on the first run; the baseline tags are pushed once, before this
+      # workflow first fires. The tag has to be the exact reachable version, not
+      # any `$s-v*`: a tag off this history, or ahead of `SKILL.md`, computes the
+      # next version from the wrong baseline just as silently. Every later run
+      # satisfies this for free, because the release commit writes the version and
+      # its tag together, so a failure here is real drift.
+      - name: Refuse to release without a reachable baseline tag
+        run: |
+          for s in $SKILLS; do
+            v=$(sed -n 's/^  version: //p' "skills/$s/SKILL.md")
+            [ -n "$v" ] || { echo "no metadata.version in skills/$s/SKILL.md"; exit 1; }
+            git merge-base --is-ancestor "$s-v$v" HEAD 2>/dev/null \
+              || { echo "skills/$s/SKILL.md is at $v with no $s-v$v tag reachable from HEAD: tag this history at that version before merging"; exit 1; }
+          done
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install python-semantic-release
+        run: pip install python-semantic-release==10.6.2
+
+      - name: Configure the committer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # Sequential, because each release pushes. A skill untouched by the commits
+      # since its own tag reports that and cuts nothing, so a push touching one
+      # skill cuts one tag and a push touching none cuts none.
+      - name: Release each skill
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for s in $SKILLS; do
+            echo "::group::$s"
+            semantic-release -c ".release/$s.toml" version --no-vcs-release
+            echo "::endgroup::"
+          done

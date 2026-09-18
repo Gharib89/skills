@@ -23,11 +23,13 @@ Location: scripts/local-gate.sh
 Small node: the path of the changed script, e.g. `skills/ship/scripts/merge.sh`; for a `docs`-class change, the path of the changed document, e.g. `skills/ship/SKILL.md`
 Tripwires: None.
 
-Every gate is repo-wide and takes seconds, so the small lane records the node and narrows nothing. No workflow here runs on a PR head, so no gate is ever `deferred-to-ci`: the gate is the whole automated check on a diff, alongside the reviewers.
+Every gate is repo-wide and takes seconds, so the small lane records the node and narrows nothing. The one workflow on a PR head, `bump-guard`, reads the PR title rather than the diff, so no gate is ever `deferred-to-ci`: this script is the whole automated check on a diff, alongside that leg and the reviewers.
 
 `tests` runs `tests/run.sh`, and it runs every `tests/*.test.sh`. Their subject is the pure transformations the mechanics are built around (`ship_body_replace_section`, `ship_body_closes`, `ship_title_candidates`, `_gh_add_closes`): a test sources its function and asserts on strings. A gate script is the second subject: `contract-gate` runs `scripts/contract-check.sh` against a copy of the mechanics and asserts on its exit code, reaching no host either. A mechanic's usage guard is the third: `manage-issue-usage` invokes the mechanic malformed, which the guard answers before `ship_load_host`, so no host is reached there either. A helper whose subject is an order of calls rather than a string is the fourth: `create-verify` drives `_gh_create_verify` with stub post and find functions, so the create-then-verify sequence is asserted without a host. A function whose subject is the request it sends is the fifth: `api-retry` puts a fake `gh` on PATH that drains stdin before it fails, so the REST wrapper's retry is held to resending the bytes the first attempt sent, with the fake in place of a host. A mechanic driven end to end is the sixth: `run-file` writes and flips its own file, so `run-file` invokes the mechanic against a scratch directory under the OS temp dir and asserts on the lines it wrote, reaching no host and no repo file. A behavioural claim about one of them earns a case here, where it survives the run that made it, instead of a scratchpad probe that does not. The `host_*` functions stay the `github-mechanics` verification's job: a test that reaches a host is that verification, not this gate.
 
 `prose-budget` holds the shape of ship's own documents, the one gate here whose subject is prose rather than a script: `skills/*/SKILL.md` at most 400 lines, and every `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading inside its first 15 lines whose list matches the file's `## ` headings, each heading listed and each entry naming a heading that exists. A run reads `SKILL.md` whole at load and re-reads it after a compaction, so a file that outgrows the budget spends that read on reference material and reaches phase 0 late; the `## Contents` list is what makes a long reference file answerable without reading it through, and a list that drifted from the file sends that reader to a heading that is not there, which is worse than no list. `scripts/prose-budget-check.sh` is the whole rule, a script rather than a function in the gate so `tests/prose-budget.test.sh` can drive it against fixture trees, the way `derived-copies` calls `scripts/profile-schema-check.sh`. A `## ` inside a fence is an example: it needs no entry, and no entry may name it.
+
+`version-lines` refuses a diff that changes a `metadata.version` line under `skills/`, which `## Versioning and changelog` below hands to the release run on main. `scripts/version-line-check.sh` is the whole rule: it compares the merge base with the working tree, so an uncommitted bump is caught alongside a committed one, and it needs a *removed* version line, because a new skill arrives carrying its first and a file can gain a metadata block it did not have. `metadata.profile-schema` is exempt.
 
 `stray-files` refuses a tracked path outside the top-level entries this repo owns, the allowlist being `dirs` and `files` in `scripts/stray-file-check.sh`, stated once more in that file's header. It reads the index rather than the working tree, so scratch a run leaves behind is not a finding and a file a `git add -A` swept in is.
 
@@ -37,11 +39,13 @@ Every gate is repo-wide and takes seconds, so the small lane records the node an
 
 ## CI
 
-Legs: None.
-No-checks legal: yes, the one workflow is comment-triggered and lands no check run on a PR head
+Legs: bump-guard: the PR title is a Conventional Commit of a type the release run reads, and a title implying a major bump carries the `major` label
+No-checks legal: no, `bump-guard` is not path-filtered and reports on every PR
 Push policy: Default.
 
-The one workflow, `.github/workflows/claude-review.yml`, is triggered by an issue comment carrying `@claude` and has no `pull_request` trigger, so it lands no check run on a PR head and is not a leg. It is the `claude` reviewer below, not CI.
+`bump-guard` is the one leg. It runs on `pull_request` opened, edited, synchronize, labeled and unlabeled, is not path-filtered, and reports on every PR, so a run always has a check to await. Its subject is the PR title, because the release run on main grades the bump from the squash subject: a red leg here is a title to fix with `update-pr-title`. It reads the branch's commit messages too, because a `BREAKING CHANGE:` footer in one of them reaches the release run through the squash body, and it reads the description for the same footer, so neither text grades a major bump the guard has not seen. The one red run cannot clear is the `major` label, which only the maintainer applies: a run whose change grades major keeps the `!` in the title, leaves the leg red, and asks for the label at the merge gate rather than dropping the `!`, which would under-grade the release.
+
+Two workflows are not legs. `.github/workflows/claude-review.yml` is triggered by an issue comment carrying `@claude` and has no `pull_request` trigger, so it lands no check run on a PR head: it is the `claude` reviewer below. `.github/workflows/semantic-release.yml` runs on push to main, after the merge, so no PR ever sees it.
 
 ## Reviewers
 
@@ -105,10 +109,14 @@ Claims to probe: the api-version each call pins, and the work-item type and clos
 
 ## Versioning and changelog
 
-Tooling: manual
-Reads: `metadata.version` in each skill's `SKILL.md`; `metadata.profile-schema` in `skills/ship/SKILL.md`
-In-PR requirement: a change to a skill bumps that skill's `metadata.version` in the same PR, graded patch, minor or major by the public-surface rule in [coding-standards.md](../contributing/coding-standards.md); a change to what `ship` expects of a profile also bumps `metadata.profile-schema` and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
-Subject constraints: conventional-commit prefix scoped to the skill, e.g. `fix(ship):`
+Tooling: semantic-release
+Reads: the squash subject's Conventional-Commit type, one configuration per skill under `.release/`; it writes `metadata.version` in that skill's `SKILL.md` and its section of `skills/<name>/CHANGELOG.md`
+In-PR requirement: the PR title is a Conventional Commit, of a type the release run reads, whose type is the public-surface grade from [coding-standards.md](../contributing/coding-standards.md), because the squash subject is what the release run reads; a change to what `ship` expects of a profile still bumps `metadata.profile-schema` by hand and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
+Subject constraints: conventional-commit prefix, scoped to the skill where the change is a skill's, e.g. `fix(ship):`, and to the area otherwise, e.g. `feat(ci):`. The scope is for a human reading the log: `path_filters` in `.release/*.toml` route a commit to a skill by the paths it touched, and `bump-guard` accepts a scopeless subject, so it is the type that decides the bump and the type is graded first
+
+**The release run owns `metadata.version`.** `.github/workflows/semantic-release.yml` writes it on every push to main, once per skill, from the commits that touched that skill's `skills/<name>/`: every conventional type is at least a patch, `feat` is minor, and a `!` or a `BREAKING CHANGE:` footer is major. The `version-lines` gate above refuses a diff that moves the line, so the habit from the old rule is caught before the PR opens rather than by a reviewer. `metadata.profile-schema` is the exception and stays a hand edit, because the `## Schema N` entry it carries is written by the change that needs it.
+
+The title is therefore load-bearing twice: the `bump-guard` leg holds it to a Conventional Commit of a type the release run reads and gates the major grade behind the maintainer's `major` label, and `merge.sh` passes it as the squash `commit_title` so the subject the leg validated is the subject the release run reads. A human merging through the host's own UI instead must land the PR title as that subject.
 
 ## PR
 

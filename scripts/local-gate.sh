@@ -12,9 +12,10 @@
 #   verdict: pass | fail | unavailable; fail wins over unavailable
 #   `secrets` is required in every lane. Base defaults to origin/HEAD.
 #
-# This repo has no CI, so no gate is ever `deferred-to-ci`: the gate is the
-# whole automated check on a diff. Every gate is repo-wide and takes seconds,
-# so `--small` records the lane and narrows nothing.
+# The repo's one CI leg, `bump-guard`, reads the PR title rather than the diff,
+# so no gate here is ever `deferred-to-ci`: this script is the whole automated
+# check on a diff. Every gate is repo-wide and takes seconds, so `--small`
+# records the lane and narrows nothing.
 set -uo pipefail
 
 small="" base=""
@@ -73,6 +74,12 @@ derived_copies() {
 
 run derived-copies derived_copies
 
+# version-lines: `metadata.version` is the release run's to write, from the squash
+# subject's Conventional-Commit type, so a PR that moves one either loses to that
+# run or collides with another PR on the same line. `metadata.profile-schema`
+# stays a hand edit and is exempt. scripts/version-line-check.sh is the whole rule.
+run version-lines scripts/version-line-check.sh "$base"
+
 # The lint gate covers the source tree's scripts plus this gate itself; the
 # derived copies are covered by `derived-copies` proving them identical.
 # `-P SCRIPTDIR` resolves the `source "$(dirname ...)/_lib.sh"` idiom the
@@ -95,7 +102,7 @@ fi
 house_style() {
   local hits em
   em=$'\u2014'   # built from its codepoint, so this gate does not match itself
-  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' CONTEXT.md CLAUDE.md \
+  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' '.release/*' CONTEXT.md CLAUDE.md \
     | xargs -0 grep -n "$em" 2>/dev/null) || return 0
   echo "em dashes in repo-authored files (see docs/contributing/coding-standards.md):"
   echo "$hits"

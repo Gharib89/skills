@@ -1,0 +1,44 @@
+name: bump-guard
+
+# The major digit is the maintainer's. The release run on main reads the squash
+# subject, which is the PR title, to pick the bump: `feat:` minor, `!` or a
+# `BREAKING CHANGE:` footer major, every other type patch. This refuses a PR whose
+# title implies a major bump without the maintainer-applied `major` label, so a
+# major bump is never an agent's decision alone; `feat:` and the patch types flow
+# without a label. `scripts/check-bump-label.sh` is the whole rule, which is what
+# lets `tests/bump-label.test.sh` drive it.
+#
+# Not path-filtered, so it reports on every PR and is the profile's one CI leg.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  bump-guard:
+    runs-on: ubuntu-latest
+    steps:
+      # The whole history, because the guard reads the branch's commit messages:
+      # this repository squashes with `COMMIT_MESSAGES`, so that text, and not the
+      # description, is the body the release run grades.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate the PR title against the bump labels
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          PR_COMMITS=$(git log --format=%B "origin/$BASE_REF..HEAD")
+          export PR_COMMITS
+          scripts/check-bump-label.sh
