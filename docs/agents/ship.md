@@ -39,7 +39,7 @@ Every gate is repo-wide and takes seconds, so the small lane records the node an
 
 ## CI
 
-Legs: bump-guard: the PR title is a Conventional Commit, and a title implying a major bump carries the `major` label
+Legs: bump-guard: the PR title is a Conventional Commit of a type the release run reads, and a title implying a major bump carries the `major` label
 No-checks legal: no, `bump-guard` is not path-filtered and reports on every PR
 Push policy: Default.
 
@@ -111,12 +111,12 @@ Claims to probe: the api-version each call pins, and the work-item type and clos
 
 Tooling: semantic-release
 Reads: the squash subject's Conventional-Commit type, one configuration per skill under `.release/`; it writes `metadata.version` in that skill's `SKILL.md` and its section of `skills/<name>/CHANGELOG.md`
-In-PR requirement: the PR title is a Conventional Commit whose type is the public-surface grade from [coding-standards.md](../contributing/coding-standards.md), because the squash subject is what the release run reads; a change to what `ship` expects of a profile still bumps `metadata.profile-schema` by hand and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
+In-PR requirement: the PR title is a Conventional Commit, of a type the release run reads, whose type is the public-surface grade from [coding-standards.md](../contributing/coding-standards.md), because the squash subject is what the release run reads; a change to what `ship` expects of a profile still bumps `metadata.profile-schema` by hand and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
 Subject constraints: conventional-commit prefix scoped to the skill, e.g. `fix(ship):`
 
 **The release run owns `metadata.version`.** `.github/workflows/semantic-release.yml` writes it on every push to main, once per skill, from the commits that touched that skill's `skills/<name>/`: every conventional type is at least a patch, `feat` is minor, and a `!` or a `BREAKING CHANGE:` footer is major. The `version-lines` gate above refuses a diff that moves the line, so the habit from the old rule is caught before the PR opens rather than by a reviewer. `metadata.profile-schema` is the exception and stays a hand edit, because the `## Schema N` entry it carries is written by the change that needs it.
 
-The title is therefore load-bearing twice: the `bump-guard` leg holds it to a valid Conventional Commit and gates the major grade behind the maintainer's `major` label, and `merge.sh` passes it as the squash `commit_title` so the subject the leg validated is the subject the release run reads. A human merging through the host's own UI instead must land the PR title as that subject.
+The title is therefore load-bearing twice: the `bump-guard` leg holds it to a Conventional Commit of a type the release run reads and gates the major grade behind the maintainer's `major` label, and `merge.sh` passes it as the squash `commit_title` so the subject the leg validated is the subject the release run reads. A human merging through the host's own UI instead must land the PR title as that subject.
 
 ## PR
 
