@@ -103,10 +103,14 @@ report naming the file its findings came from: both `code-review` axes, and the
 `writing-for-agents` pass where it fired. A row whose file is no longer on disk
 takes the `unverified` rule above rather than the transcript.
 
-**Every count in this summary and in the PR body is a measurement.** Write the
-number with the command that produced it beside it, run on the PR head, and
-count a word with `grep -ow` so a longer word carrying it as a substring does
-not inflate the total.
+**Every count in this summary and in the PR body that measures the tree is a
+measurement.** Write the number with the command that produced it beside it,
+run on the PR head, and count a word with `grep -ow` so a longer word carrying
+it as a substring does not inflate the total. A **tally of the run's own work**
+is the exception, and the only one: rounds, findings raised, accepted, declined
+and filed are read from the Run file, which recorded each as it happened, and
+no command reproduces them. The PR body's fixed `## Review` line is entirely
+such a tally, which is why it carries no commands.
 
 **A wrong title is fixed before the merge, not after.** The merge freezes the
 PR title as the squash subject, so a subject that no longer matches what the

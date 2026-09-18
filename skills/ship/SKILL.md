@@ -128,7 +128,7 @@ rebuild or a version bump CI enforces lands in this change, or phase 8 goes red
 with no phase explaining why. Keep a **deviations log** from the first edit:
 whenever the territory forces a departure from the issue, brief or plan,
 resolve it by the conservative option, log what and why, keep going; the log
-lands verbatim in the merge summary, and folded to what a reviewer would act on
+lands verbatim in the merge summary, and is folded to what a reviewer would act on
 in the PR body's `## Special things to note`. An **adjacent find** takes
 one of implement.md's three dispositions and no fourth: **fix it inline** and
 log the deviation, **`file-issue` it** and leave it, or stop
@@ -221,7 +221,8 @@ honouring `Subject constraints:`; it becomes the squash subject that release
 tooling reads, and a title that later proves wrong is fixed with
 `update-pr-title <pr> --title`. Body: the repo's template per `## PR`, filled
 honestly, through its own headings rather than a raw body that bypasses it;
-with no template, a plain body.
+with no template, the run writes the same seven headings into the body itself,
+because `open-pr` synthesizes none of them.
 **Every title or body write to an open PR ends with `read-pr <pr>`**, whose
 `## ` headings are checked against the ones the body is supposed to carry.
 Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
@@ -246,16 +247,16 @@ evidence), `degraded: <reason>` from the fixed vocabulary
 `never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
 a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
 proceeds to the merge gate on green CI and is reported there rather than handed
-back. At exit, `update-pr-body <pr> --section "Special things to note"` where
-the rounds grew the deviations log and `--section "Needs attention"` where a
-round filed or linked an issue or met a defect, then `--section Review` with one line per
-reviewer in the fixed shape review-loop.md carries, each taking its own
-`--body-file <path>`; then the phase-6 read-back while the PR is still open.
+back. At exit, one `update-pr-body <pr> --section <name> --body-file <path>`
+call per section, in this order: `"Special things to note"` where the rounds
+grew the deviations log, `"Needs attention"` where a round filed or linked an
+issue or met a defect, and `Review` last, one line per reviewer in the fixed
+shape review-loop.md carries. Then the phase-6 read-back while the PR is open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned carries a reply (none to carry one, where it answered `threads:
 unavailable`), and `read-pr` shows a `## Review` section with one line per
-reviewer and, where the rounds grew either, the `## Special things to note` and
-`## Needs attention` sections carrying what they added.
+reviewer and, where a round grew either section, `## Special things to note`
+and `## Needs attention` carrying what it added.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. `conflict`: a conflicted PR has no merge ref, so
