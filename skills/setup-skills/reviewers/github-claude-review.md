@@ -283,12 +283,12 @@ jobs:
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment.
-      # Ship's grading does not rest on this step: this shape's profile block
-      # carries `Workflow:`, and `poll-pr --await-run` reads the failed run itself
-      # as `infra-error`. The step is what puts the run URL and the failure
-      # subtype on the PR, so the human reading the PR or the merge summary finds
-      # the reason without opening the Actions log. Costs one comment per failed
-      # round.
+      # Ship grades it from the run read either way: the profile block driving
+      # this workflow carries `Workflow:`, so `poll-pr --await-run` reads the
+      # failed run itself as `infra-error`. The step is what puts the run URL and
+      # the failure subtype on the PR, where the human reading the PR finds why
+      # the round died without opening the Actions log. Costs one comment per
+      # failed round.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -324,7 +324,7 @@ Both shared steps above, then:
    ```
 
    Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review and no error, the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
-5. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so what dropping the step costs is the reason on the PR: a human reading it, or the merge summary, opens the Actions log to learn why the round died. A fallback exists to cover a degraded primary, so it is the last reviewer whose failures should need that dig.
+5. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so dropping the step costs the reason on the PR: the human then opens the Actions log to learn why the round died. A fallback exists to cover a degraded primary, so it is the last reviewer whose failures should send you there.
 
 ### Profile block this produces
 

@@ -101,12 +101,12 @@ jobs:
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment.
-      # Ship's grading does not rest on this step: this shape's profile block
-      # carries `Workflow:`, and `poll-pr --await-run` reads the failed run itself
-      # as `infra-error`. The step is what puts the run URL and the failure
-      # subtype on the PR, so the human reading the PR or the merge summary finds
-      # the reason without opening the Actions log. Costs one comment per failed
-      # round.
+      # Ship grades it from the run read either way: the profile block driving
+      # this workflow carries `Workflow:`, so `poll-pr --await-run` reads the
+      # failed run itself as `infra-error`. The step is what puts the run URL and
+      # the failure subtype on the PR, where the human reading the PR finds why
+      # the round died without opening the Actions log. Costs one comment per
+      # failed round.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
