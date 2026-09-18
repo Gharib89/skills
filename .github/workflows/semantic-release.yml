@@ -35,6 +35,9 @@ jobs:
   release:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
+    env:
+      # The skills this repo releases, named once for both loops below.
+      SKILLS: ship cloud-ship setup-skills
     steps:
       # The whole history: each skill's version comes from the commits since that
       # skill's own last tag, and a shallow clone carries neither.
@@ -54,7 +57,7 @@ jobs:
       # this workflow first fires; refuse to release rather than cut that version.
       - name: Refuse to release without the baseline tags
         run: |
-          for s in ship cloud-ship setup-skills; do
+          for s in $SKILLS; do
             git tag -l "$s-v*" | grep -q . \
               || { echo "no $s-v* tag: push one at the version in skills/$s/SKILL.md before merging"; exit 1; }
           done
@@ -71,20 +74,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # One step per skill, sequential because each pushes. A step whose skill was
-      # untouched by the commits since its tag reports that and cuts nothing, so a
-      # push touching one skill cuts one tag and a push touching none cuts none.
-      - name: Release ship
+      # Sequential, because each release pushes. A skill untouched by the commits
+      # since its own tag reports that and cuts nothing, so a push touching one
+      # skill cuts one tag and a push touching none cuts none.
+      - name: Release each skill
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release -c .release/ship.toml version --no-vcs-release
-
-      - name: Release cloud-ship
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release -c .release/cloud-ship.toml version --no-vcs-release
-
-      - name: Release setup-skills
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release -c .release/setup-skills.toml version --no-vcs-release
+        run: |
+          for s in $SKILLS; do
+            echo "::group::$s"
+            semantic-release -c ".release/$s.toml" version --no-vcs-release
+            echo "::endgroup::"
+          done

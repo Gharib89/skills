@@ -12,9 +12,10 @@
 #   verdict: pass | fail | unavailable; fail wins over unavailable
 #   `secrets` is required in every lane. Base defaults to origin/HEAD.
 #
-# This repo has no CI, so no gate is ever `deferred-to-ci`: the gate is the
-# whole automated check on a diff. Every gate is repo-wide and takes seconds,
-# so `--small` records the lane and narrows nothing.
+# The repo's one CI leg, `bump-guard`, reads the PR title rather than the diff,
+# so no gate here is ever `deferred-to-ci`: this script is the whole automated
+# check on a diff. Every gate is repo-wide and takes seconds, so `--small`
+# records the lane and narrows nothing.
 set -uo pipefail
 
 small="" base=""

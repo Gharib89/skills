@@ -80,7 +80,7 @@ Directly under the `# Ship profile` title, before the first
 `metadata.profile-schema` in the frontmatter above. The number is separate from
 `metadata.version`: it moves only when ship's expectations of the profile change
 (a heading or `Label:` line added, renamed or removed; a `Label:` vocabulary
-changed), always with a ship major bump, and stays put for a behaviour change
+changed), always graded a ship major, and stays put for a behaviour change
 that leaves the profile alone. Preflight compares the two and refuses a mismatch
 in either direction, in both lanes, before any claim; the detail names both numbers
 and the fix. A profile older than ship is refused even where ship could default

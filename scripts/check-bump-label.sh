@@ -27,11 +27,18 @@ labels=${PR_LABELS:-}
 title=${title#"${title%%[![:space:]]*}"}
 title=${title%"${title##*[![:space:]]}"}
 
+# The types the release run recognises, which is `patch_tags` plus `feat` in
+# every `.release/*.toml`. Any other lowercase word parses as a Conventional
+# Commit and then releases nothing, because python-semantic-release grades an
+# unknown type at its default bump level of none: a typo like `fx(ship):` would
+# skip that skill's release silently, so it is refused here instead.
+types='build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test'
+
 # type, optional (scope), optional !, ": ", description. The `!` sits after the
 # closing paren, so a `!` inside the scope is part of the scope and not the
 # breaking marker.
-if [[ ! $title =~ ^([a-z]+)(\([^\)]+\))?(!)?:[[:space:]]+[^[:space:]] ]]; then
-  printf "bump-guard: title '%s' is not a valid Conventional Commit. PR titles must be Conventional Commits (e.g. 'fix: ...', 'feat: ...') because the squash subject drives the release version bump.\n" "$title"
+if [[ ! $title =~ ^($types)(\([^\)]+\))?(!)?:[[:space:]]+[^[:space:]] ]]; then
+  printf "bump-guard: title '%s' is not a Conventional Commit of a type the release run reads (%s). PR titles must be, e.g. 'fix: ...' or 'feat(ship): ...', because the squash subject drives the release version bump.\n" "$title" "$types"
   exit 1
 fi
 bang=${BASH_REMATCH[3]}

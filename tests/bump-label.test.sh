@@ -23,6 +23,13 @@ check_rc "a feat title passes"  0 "$(rc_of 'feat(ship): add a flag' '' '')"
 check_rc "a docs title passes"  0 "$(rc_of 'docs: reword the profile' '' '')"
 check_rc "a scopeless title passes" 0 "$(rc_of 'chore: bump the pin' '' '')"
 
+# Every type the `.release/*.toml` configurations read, so the guard and the
+# release run admit the same set: a type one takes and the other drops is a
+# release skipped or a PR refused for no reason.
+for t in build chore ci docs feat fix perf refactor revert style test; do
+  check_rc "the type $t passes" 0 "$(rc_of "$t(ship): a change" '' '')"
+done
+
 # --- the major grade ---------------------------------------------------------
 
 check_rc "a bang title without the label fails" \
@@ -55,6 +62,11 @@ check_rc "a label that merely contains it is not the label" \
 # --- what is not a Conventional Commit ---------------------------------------
 
 check_rc "a title with no type fails"        1 "$(rc_of 'update the profile' '' '')"
+# A type the release run does not read grades nothing, so the release is skipped
+# silently rather than mis-graded. A typo is the common way in.
+check_rc "a type the release run does not read fails" 1 "$(rc_of 'wip(ship): a flag' '' '')"
+check_rc "a typo of a real type fails"       1 "$(rc_of 'fx(ship): the loop' '' '')"
+check_rc "a type that merely starts with one fails" 1 "$(rc_of 'features: a flag' '' '')"
 check_rc "a title with no description fails" 1 "$(rc_of 'fix(ship):' '' '')"
 check_rc "a title with an uppercase type fails" 1 "$(rc_of 'Fix: the loop' '' '')"
 check_rc "an empty title fails"              1 "$(rc_of '' '' '')"
@@ -83,8 +95,8 @@ check "the passing message names the grade" \
 check "the refusal names the label to add" \
   "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the body), which bumps the major version. A major bump must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer)." \
   "$(out_of 'feat!: x' '' '')"
-check "the invalid-title refusal names the title" \
-  "bump-guard: title 'update the profile' is not a valid Conventional Commit. PR titles must be Conventional Commits (e.g. 'fix: ...', 'feat: ...') because the squash subject drives the release version bump." \
+check "the invalid-title refusal names the title and the types" \
+  "bump-guard: title 'update the profile' is not a Conventional Commit of a type the release run reads (build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test). PR titles must be, e.g. 'fix: ...' or 'feat(ship): ...', because the squash subject drives the release version bump." \
   "$(out_of 'update the profile' '' '')"
 
 finish

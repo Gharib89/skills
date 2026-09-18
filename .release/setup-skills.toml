@@ -1,50 +1,32 @@
-# Release configuration for the `setup-skills` skill. One per skill, because each carries
-# its own `metadata.version`, its own tag line and its own changelog, and a
-# consumer refreshing one skill reads only that skill's numbers.
+# Release configuration for the `setup-skills` skill, read by
+# `.github/workflows/semantic-release.yml`. One per skill, because each carries
+# its own version, tag line and changelog. Every decision here, the grade per
+# type, the build command, the squash-parsing setting, is recorded once in
+# [ADR 0003](../docs/adr/0003-version-and-changelog-cut-on-merge.md); this file
+# carries the per-skill facts and no second copy of the reasoning.
 #
-# Read by `.github/workflows/semantic-release.yml`, which runs
-# `python-semantic-release` once per configuration on every push to main. The
-# grade comes from the squash subject, which is the PR title the `bump-guard`
-# workflow validated and `merge.sh` passes as `commit_title`.
-#
-# Paths are relative to the repo root, which is where the workflow runs PSR from:
-# the monorepo parser resolves `path_filters` against the working directory.
+# Paths are relative to the repo root, where the workflow runs PSR from.
 
 [semantic_release]
 commit_parser = "conventional-monorepo"
 tag_format = "setup-skills-v{version}"
 version_variables = ["skills/setup-skills/SKILL.md:version"]
 commit_message = "chore(release): setup-skills v{version}"
-# The release commit must carry the derived copy too, or the `derived-copies`
-# gate goes red on main. PSR runs this after writing the version and before
-# committing, and stages whatever it is given.
+# Run after the version is written and before the commit, so the derived copy and
+# the lock move with the bump and `derived-copies` stays green on main.
 build_command = """
 npx -y skills@latest add . --skill setup-skills --agent claude-code -y
 git add .claude/skills skills-lock.json
 """
-# The tag and the changelog are the release; nothing here builds an artifact.
 allow_zero_version = false
 
 [semantic_release.branches.main]
 match = "(main|master)"
 
 [semantic_release.commit_parser_options]
-# Only commits touching this skill's source count. The derived copy under
-# `.claude/skills/` is install output and is deliberately not a filter: a commit
-# that changed nothing but the copy has already been released.
 path_filters = ["skills/setup-skills"]
-# Every conventional type is at least a patch, because a derived copy changes
-# whatever the type says and a consumer compares the number before refreshing.
-# `feat` stays minor and a breaking change stays major, which the `bump-guard`
-# workflow holds to the maintainer's `major` label.
-patch_tags = ["build", "chore", "ci", "docs", "fix", "perf", "refactor", "style", "test"]
+patch_tags = ["build", "chore", "ci", "docs", "fix", "perf", "refactor", "revert", "style", "test"]
 minor_tags = ["feat"]
-# Squash parsing off, which is the default: the grade is the subject's type alone.
-# With it on, a PR body quoting a conventional-commit example reads as a second
-# commit and over-grades the release, and this repo's bodies quote them: a
-# `docs(ship):` PR whose Summary listed `- feat(ship): add a flag` cut a minor in
-# a local run. A body's `BREAKING CHANGE:` footer is read either way, which is
-# the one thing squash parsing was wanted for.
 parse_squash_commits = false
 
 [semantic_release.changelog]

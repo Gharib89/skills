@@ -165,5 +165,5 @@ A gap in Ship itself met during a run: a host operation no generic mechanic perf
 _Avoid_: tooling gap, missing helper, upstream bug
 
 **Release run**:
-The push-to-main workflow that writes one skill's `metadata.version` and cuts its `CHANGELOG.md`, one run per skill, from the Conventional-Commit type of the squash subject. A PR never writes the version line; the `version-lines` gate refuses one that tries.
-_Avoid_: release job, semantic release, auto-bump
+The push-to-main workflow that owns every skill's `metadata.version`: it writes the number and cuts that skill's `CHANGELOG.md`, one run per skill, from the Conventional-Commit type of the squash subject. The `version-lines` gate refuses a PR that writes the line instead. `semantic-release` is the tool that runs it, and the value the ship profile's `Tooling:` line takes.
+_Avoid_: release job, auto-bump, version bump PR

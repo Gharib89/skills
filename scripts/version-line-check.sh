@@ -27,9 +27,9 @@ git -C "$root" rev-parse --show-toplevel >/dev/null 2>&1 \
 mb=$(git -C "$root" merge-base "$base" HEAD 2>/dev/null) \
   || { printf 'cannot resolve a merge base with %s\n' "$base" >&2; exit 2; }
 
-# A version line: the key at the start of the line. The documented `sed -n 's/^
-# version: //p'` idiom in ship's own SKILL.md carries the key mid-sentence, which
-# the anchor is what excludes.
+# A version line: the key at the start of the line. The anchor is what excludes
+# the documented `sed -n 's/^  version: //p'` idiom in ship's own SKILL.md, which
+# carries the key mid-sentence.
 line_re='^[+-][[:space:]]*version:'
 
 # NUL-delimited through a file, because a command substitution drops NULs and a
