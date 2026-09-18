@@ -35,29 +35,35 @@ rc_of()  { bash scripts/version-line-check.sh base-commit "$1" >/dev/null 2>&1; 
 out_of() { bash scripts/version-line-check.sh base-commit "$1" 2>/dev/null; }
 
 # The real tree, so a bump committed on this branch fails a case here rather than
-# leaving every synthetic fixture green.
-check_rc "this branch moves no version line" 0 \
-  "$(bash scripts/version-line-check.sh "$(git merge-base origin/HEAD HEAD)" . >/dev/null 2>&1; printf '%s' "$?")"
+# leaving every synthetic fixture green. `origin/HEAD` is not set by every clone,
+# `actions/checkout` included, so resolve it the way `scripts/local-gate.sh` does
+# and skip the case rather than report a missing ref as a version line.
+if git symbolic-ref -q refs/remotes/origin/HEAD >/dev/null; then
+  check_rc "this branch moves no version line" 0 \
+    "$(bash scripts/version-line-check.sh "$(git merge-base origin/HEAD HEAD)" . >/dev/null 2>&1; printf '%s' "$?")"
+else
+  echo "skip version-line: this branch moves no version line (origin/HEAD unset; run git remote set-head origin -a)"
+fi
 
 # --- what the release run owns ----------------------------------------------
 
-d=$(base_repo bumped); sed -i 's/version: 7.0.0/version: 7.0.1/' "$d/skills/ship/SKILL.md"
+d=$(base_repo bumped); sed -i.bak 's/version: 7.0.0/version: 7.0.1/' "$d/skills/ship/SKILL.md"
 check_rc "a bumped version line fails" 1 "$(rc_of "$d")"
 check "the message names the file and the line" \
   "skills/ship/SKILL.md: changes a metadata.version line, which the release run owns
     -  version: 7.0.0
     +  version: 7.0.1" "$(out_of "$d")"
 
-d=$(base_repo bumped-committed); sed -i 's/version: 7.0.0/version: 8.0.0/' "$d/skills/ship/SKILL.md"
+d=$(base_repo bumped-committed); sed -i.bak 's/version: 7.0.0/version: 8.0.0/' "$d/skills/ship/SKILL.md"
 git_ "$d" add -Af && git_ "$d" commit -qm 'feat(ship)!: x'
 check_rc "a bump already committed fails too" 1 "$(rc_of "$d")"
 
-d=$(base_repo bumped-second); sed -i 's/version: 1.0.2/version: 1.1.0/' "$d/skills/cloud-ship/SKILL.md"
+d=$(base_repo bumped-second); sed -i.bak 's/version: 1.0.2/version: 1.1.0/' "$d/skills/cloud-ship/SKILL.md"
 check_rc "a bump in any skill fails" 1 "$(rc_of "$d")"
 
 # --- what stays a hand edit --------------------------------------------------
 
-d=$(base_repo schema); sed -i 's/profile-schema: 3/profile-schema: 4/' "$d/skills/ship/SKILL.md"
+d=$(base_repo schema); sed -i.bak 's/profile-schema: 3/profile-schema: 4/' "$d/skills/ship/SKILL.md"
 check_rc "a profile-schema bump passes" 0 "$(rc_of "$d")"
 
 d=$(base_repo prose); printf 'A new paragraph.\n' >> "$d/skills/ship/SKILL.md"
@@ -91,12 +97,12 @@ check_rc "a deleted skill passes" 0 "$(rc_of "$d")"
 # The documented `sed -n 's/^  version: //p'` idiom is a version line to a grep
 # that reads the key and not the value, and rewording the sentence removes it.
 d=$(base_repo idiom)
-sed -i "s|^Read the version with|Read ship's version with|" "$d/skills/ship/SKILL.md"
+sed -i.bak "s|^Read the version with|Read ship's version with|" "$d/skills/ship/SKILL.md"
 check_rc "the sed idiom reworded is not a version line" 0 "$(rc_of "$d")"
 
 # A version line outside a skill is not this rule's: the release run owns the
 # three under skills/ and nothing else.
-d=$(base_repo elsewhere); sed -i 's/version: 9.9.9/version: 9.9.10/' "$d/docs/note.md"
+d=$(base_repo elsewhere); sed -i.bak 's/version: 9.9.9/version: 9.9.10/' "$d/docs/note.md"
 check_rc "a version line outside skills/ passes" 0 "$(rc_of "$d")"
 
 # --- tooling -----------------------------------------------------------------

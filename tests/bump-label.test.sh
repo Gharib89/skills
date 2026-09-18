@@ -32,6 +32,17 @@ for t in build chore ci docs feat fix perf refactor revert style test; do
   check_rc "the type $t passes" 0 "$(rc_of "$t(ship): a change" '' '')"
 done
 
+# And the same set on the other side, read out of the configurations rather than
+# repeated here: `allowed_tags` is what the parser's type regex is built from, so
+# a type this guard admits and that list omits parses as nothing and skips the
+# release silently, which is the failure the guard exists to refuse.
+guard_types=$(sed -n "s/^types='\(.*\)'$/\1/p" scripts/check-bump-label.sh | tr '|' '\n' | sort | tr '\n' ' ')
+for c in .release/*.toml; do
+  cfg_types=$(sed -n 's/^allowed_tags = \[\(.*\)\]$/\1/p' "$c" \
+    | tr -d '" ' | tr ',' '\n' | sort | tr '\n' ' ')
+  check "$c admits the types the guard does" "$guard_types" "$cfg_types"
+done
+
 # --- the major grade ---------------------------------------------------------
 
 check_rc "a bang title without the label fails" \

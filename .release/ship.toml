@@ -31,6 +31,11 @@ match = "(main|master)"
 
 [semantic_release.commit_parser_options]
 path_filters = ["skills/ship"]
+# `allowed_tags` is what the parser's type regex is built from; `patch_tags` only
+# maps an already-parsed type to a level, so a type missing here parses as nothing
+# and skips the release silently. It is the same set as `types` in
+# `scripts/check-bump-label.sh`, so the guard and the release run admit one list.
+allowed_tags = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test"]
 patch_tags = ["build", "chore", "ci", "docs", "fix", "perf", "refactor", "revert", "style", "test"]
 minor_tags = ["feat"]
 parse_squash_commits = false
