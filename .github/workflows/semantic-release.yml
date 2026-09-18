@@ -33,7 +33,14 @@ concurrency:
 
 jobs:
   release:
-    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    # Only the subjects the configurations generate, rather than every
+    # `chore(release):` commit: a PR legitimately titled `chore(release): ...`
+    # passes `bump-guard` and must still release. A new skill is added here as
+    # well as to SKILLS below.
+    if: >-
+      ${{ !(startsWith(github.event.head_commit.message, 'chore(release): ship v')
+        || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
+        || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v')) }}
     runs-on: ubuntu-latest
     env:
       # The skills this repo releases, named once for both loops below.
@@ -51,15 +58,21 @@ jobs:
       - name: Force the branch to the commit that triggered this run
         run: git reset --hard ${{ github.sha }}
 
-      # A skill with no tag matching its `tag_format` makes python-semantic-release
-      # ignore the version in `SKILL.md` and force 1.0.0, which would regress
-      # `ship` from 7.x on the first run. The baseline tags are pushed once, before
-      # this workflow first fires; refuse to release rather than cut that version.
-      - name: Refuse to release without the baseline tags
+      # Without the tag its own `tag_format` names, python-semantic-release ignores
+      # the version in `SKILL.md` and forces 1.0.0, which would regress `ship` from
+      # 7.x on the first run; the baseline tags are pushed once, before this
+      # workflow first fires. The tag has to be the exact reachable version, not
+      # any `$s-v*`: a tag off this history, or ahead of `SKILL.md`, computes the
+      # next version from the wrong baseline just as silently. Every later run
+      # satisfies this for free, because the release commit writes the version and
+      # its tag together, so a failure here is real drift.
+      - name: Refuse to release without a reachable baseline tag
         run: |
           for s in $SKILLS; do
-            git tag -l "$s-v*" | grep -q . \
-              || { echo "no $s-v* tag: push one at the version in skills/$s/SKILL.md before merging"; exit 1; }
+            v=$(sed -n 's/^  version: //p' "skills/$s/SKILL.md")
+            [ -n "$v" ] || { echo "no metadata.version in skills/$s/SKILL.md"; exit 1; }
+            git merge-base --is-ancestor "$s-v$v" HEAD 2>/dev/null \
+              || { echo "skills/$s/SKILL.md is at $v with no $s-v$v tag reachable from HEAD: tag this history at that version before merging"; exit 1; }
           done
 
       - uses: actions/setup-python@v5

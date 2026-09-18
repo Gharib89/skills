@@ -26,10 +26,10 @@ Two guards sit around the grade. `bump-guard` refuses a PR title that is not a C
     && git tag setup-skills-v4.0.1 origin/main && git push origin --tags
   ```
 
-  Without a tag matching its `tag_format`, python-semantic-release ignores the number in `SKILL.md` and forces `1.0.0`, which would regress `ship` from 7.x; the workflow's first step refuses to release rather than cut that version, so a forgotten tag costs a red run and not a wrong release.
+  Without a tag matching its `tag_format`, python-semantic-release ignores the number in `SKILL.md` and forces `1.0.0`, which would regress `ship` from 7.x, so the workflow refuses to release rather than cut that version and a forgotten tag costs a red run. It demands the exact `<skill>-v<the version in SKILL.md>` tag, reachable from the commit being released, because a tag off another history or ahead of `SKILL.md` computes the next version from the wrong baseline just as silently. Every later run satisfies that for free, the release commit writing the version and its tag together, so a failure after the first is real drift.
 - `metadata.profile-schema` stays a hand edit. The `## Schema N` entry it carries is written by the change that needs it, and no subject can derive that entry.
 - Each skill's changelog lives at `skills/<name>/CHANGELOG.md`, inside the skill directory rather than at the repo root, because the derived copy mirrors the whole directory: the changelog reaches a consumer with the skill it describes, so the version a consumer reads and the entries explaining it arrive together. `prose-budget` reads only `SKILL.md` and `reference/*.md`, and `stray-files` already admits everything under `skills/`, so neither gate needed changing.
 - The release commit runs the repo's refresh line as its build command, so `.claude/skills/` and `skills-lock.json` move with the bump and `derived-copies` stays green on main.
-- The release run pushes with the default `GITHUB_TOKEN`, whose pushes start no workflow run, so it cannot recurse; the job's `if` on a `chore(release):` head commit is the second guard. Main's ruleset must admit that push.
+- The release run pushes with the default `GITHUB_TOKEN`, whose pushes start no workflow run, so it cannot recurse; the job's `if` is the second guard, and it matches only the `chore(release): <skill> v<version>` subjects the configurations generate, so a PR legitimately titled `chore(release): ...` still releases. Main's ruleset must admit that push.
 
 Decided in Gharib89/skills#222.
