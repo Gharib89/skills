@@ -145,11 +145,11 @@ The verbatim copy of a phase-4 report a Ship run writes into the producing role'
 _Avoid_: axis output, review log, findings dump
 
 **Shape**:
-The compressed code-form view of a change that opens a PR's Summary: a call tree, file tree, control flow, pseudocode or component tree, written as a `diff` fence so the before and the after sit in one view. One per PR, about 15 lines or fewer, every node a real symbol and every root node carrying its file path. A change that moves no logic and no layout says so in a `Shape: none, mechanical (<kind>).` line rather than omitting it silently.
+The compressed code-form view of a change, sitting under a PR body's `## Change outline`: a call tree, control flow, pseudocode or component tree, written as a `diff` fence so the before and the after sit in one view. **One behavioural fence per PR**, about 15 lines or fewer, every node a real symbol and every root node carrying its file path; a carrier file tree may follow it, and only where the same edit lands in more than two files. The `Shape: none, mechanical (<kind>).` line replaces the fence only where the reviewer's question is "did the text change correctly", never where it is "what does X now do", and omitting both silently is a finding.
 _Avoid_: diagram, visual, picture, mermaid, sketch
 
 **Body preamble**:
-Everything in a PR body above its first `## ` heading: the closing reference, and the Shape where no template gives a `## Summary`. The half of a body no section rewrite reaches, and `update-pr-body --preamble` is what rewrites it, carrying over a closing line the new content lacks so a rewrite that says nothing about closing keeps the link to the issue; content carrying its own closing line is left as written, whichever issues it names.
+Everything in a PR body above its first `## ` heading, which is the closing reference and nothing else. The half of a body no section rewrite reaches, and `update-pr-body --preamble` is what rewrites it, carrying over a closing line the new content lacks so a rewrite that says nothing about closing keeps the link to the issue; content carrying its own closing line is left as written, whichever issues it names.
 _Avoid_: header, intro, top of the body
 
 **Adjacent find**:
