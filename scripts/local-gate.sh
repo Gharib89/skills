@@ -73,6 +73,12 @@ derived_copies() {
 
 run derived-copies derived_copies
 
+# version-lines: `metadata.version` is the release run's to write, from the squash
+# subject's Conventional-Commit type, so a PR that moves one either loses to that
+# run or collides with another PR on the same line. `metadata.profile-schema`
+# stays a hand edit and is exempt. scripts/version-line-check.sh is the whole rule.
+run version-lines scripts/version-line-check.sh "$base"
+
 # The lint gate covers the source tree's scripts plus this gate itself; the
 # derived copies are covered by `derived-copies` proving them identical.
 # `-P SCRIPTDIR` resolves the `source "$(dirname ...)/_lib.sh"` idiom the

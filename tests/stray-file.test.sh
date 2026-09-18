@@ -31,7 +31,7 @@ check_rc "the current tree tracks nothing stray" 0 "$(rc_of .)"
 
 d=$(repo owned skills/ship/SKILL.md .claude/skills/ship/SKILL.md docs/agents/ship.md \
   scripts/local-gate.sh tests/run.sh .github/workflows/claude-review.yml \
-  .out-of-scope/note.md CLAUDE.md CONTEXT.md skills-lock.json)
+  .out-of-scope/note.md .release/ship.toml CLAUDE.md CONTEXT.md skills-lock.json)
 check_rc "a checkout of owned paths passes" 0 "$(rc_of "$d")"
 
 d=$(repo stray-root skills/ship/SKILL.md null.x)
