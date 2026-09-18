@@ -1,0 +1,79 @@
+name: semantic-release
+
+# One release run per skill on every push to main. python-semantic-release reads
+# the Conventional-Commit type of the squash subject, which is the PR title the
+# `bump-guard` workflow validated and `merge.sh` passes as `commit_title`, then
+# writes that skill's `metadata.version`, cuts its `CHANGELOG.md`, refreshes its
+# derived copy under `.claude/skills/`, commits and tags. A PR no longer touches
+# the version line, so two PRs on one skill merge in either order.
+# See docs/adr/0003-version-and-changelog-cut-on-merge.md.
+#
+# The CLI rather than python-semantic-release's own action: that action runs in a
+# `python:slim` container carrying no node, and every configuration's build
+# command runs this repo's `npx skills add` refresh line so `.claude/skills/`
+# follows the bump and the `derived-copies` gate stays green on main.
+#
+# The default GITHUB_TOKEN rather than a PAT: a push made with it starts no
+# workflow run, which is what keeps the release commit from re-triggering this.
+# The job's `if` is the second guard, for a release commit pushed by hand.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+# One release at a time, queued rather than cancelled: two merges landing close
+# together each cut their own tag, and cancelling the first would drop one.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    runs-on: ubuntu-latest
+    steps:
+      # The whole history: each skill's version comes from the commits since that
+      # skill's own last tag, and a shallow clone carries neither.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      # Checking out the branch name can land a tip newer than the commit that
+      # triggered this run; the release must describe that commit.
+      - name: Force the branch to the commit that triggered this run
+        run: git reset --hard ${{ github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install python-semantic-release
+        run: pip install python-semantic-release==10.6.2
+
+      - name: Configure the committer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # One step per skill, sequential because each pushes. A step whose skill was
+      # untouched by the commits since its tag reports that and cuts nothing, so a
+      # push touching one skill cuts one tag and a push touching none cuts none.
+      - name: Release ship
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: semantic-release -c .release/ship.toml version --no-vcs-release
+
+      - name: Release cloud-ship
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: semantic-release -c .release/cloud-ship.toml version --no-vcs-release
+
+      - name: Release setup-skills
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: semantic-release -c .release/setup-skills.toml version --no-vcs-release

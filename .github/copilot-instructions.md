@@ -1,6 +1,6 @@
 # Copilot instructions
 
-This repo is the source of a set of shared agent skills written in bash and Markdown. There is no application code and no CI; the checks are `scripts/local-gate.sh` and your review.
+This repo is the source of a set of shared agent skills written in bash and Markdown. There is no application code; the checks are `scripts/local-gate.sh`, the `bump-guard` workflow over the PR title, and your review.
 
 Review against [docs/contributing/coding-standards.md](../docs/contributing/coding-standards.md). Read it: the rules below are only the ones a reviewer most often gets wrong here.
 
@@ -12,7 +12,7 @@ Review against [docs/contributing/coding-standards.md](../docs/contributing/codi
 
 ## What is worth flagging
 
-- A change to `skills/<name>/` with no matching change under `.claude/skills/<name>/`, or no `metadata.version` bump in that skill's `SKILL.md`.
+- A change to `skills/<name>/` with no matching change under `.claude/skills/<name>/`, or a PR title whose Conventional-Commit type under-grades the public-surface change. The title is the grade: the release run on main writes `metadata.version` from the squash subject, so a bump in the diff is a finding the other way and `scripts/version-line-check.sh` already refuses it.
 - A change to what `ship` expects of a ship profile with no `metadata.profile-schema` bump and no new `## Schema N` entry in `skills/setup-skills/profile-schema.md`.
 - `gh` or `az` called from anywhere but `skills/ship/scripts/host/github.sh` or `skills/ship/scripts/host/ado.sh`.
 - Unquoted expansions, missing `set -uo pipefail`, and `mktemp` without a `trap` that removes it.
