@@ -19,12 +19,14 @@ idiom="Read the version with \`sed -n 's/^  version: //p' SKILL.md\` at load."
 # it rather than to itself.
 base_repo() {
   local d="$fixture/$1"
-  rm -rf "$d"; mkdir -p "$d/skills/ship" "$d/skills/cloud-ship" "$d/docs" || return 1
+  rm -rf "$d"; mkdir -p "$d/skills/ship" "$d/skills/cloud-ship" "$d/skills/setup-skills" "$d/docs" || return 1
   git_ "$d" init -q || return 1
   printf -- '---\nname: ship\nmetadata:\n  version: 7.0.0\n  profile-schema: 3\n---\n\n# ship\n\n%s\n' \
     "$idiom" > "$d/skills/ship/SKILL.md"
   printf -- '---\nname: cloud-ship\nmetadata:\n  version: 1.0.2\n---\n\n# cloud-ship\n' \
     > "$d/skills/cloud-ship/SKILL.md"
+  printf -- '---\nname: setup-skills\n---\n\n# setup-skills\n' \
+    > "$d/skills/setup-skills/SKILL.md"
   printf -- 'A doc that happens to carry one.\n  version: 9.9.9\n' > "$d/docs/note.md"
   git_ "$d" add -Af && git_ "$d" commit -qm base && git_ "$d" tag base-commit || return 1
   printf '%s' "$d"
@@ -76,8 +78,8 @@ check_rc "a new skill's first version line passes" 0 "$(rc_of "$d")"
 # `--diff-filter` cannot see this: the file is modified, and only the absence of a
 # removed version line says the number was not moved.
 d=$(base_repo gains-a-block)
-printf -- '---\nname: cloud-ship\nmetadata:\n  version: 1.0.2\n  profile-schema: 3\n---\n\n# cloud-ship\n' \
-  > "$d/skills/cloud-ship/SKILL.md"
+printf -- '---\nname: setup-skills\nmetadata:\n  version: 4.0.1\n---\n\n# setup-skills\n' \
+  > "$d/skills/setup-skills/SKILL.md"
 check_rc "a version line the file did not have passes" 0 "$(rc_of "$d")"
 
 # A skill removed takes its version line with it, and that is not a bump either.

@@ -16,9 +16,12 @@ commit_message = "chore(release): setup-skills v{version}"
 # the lock move with the bump and `derived-copies` stays green on main. `set -e`
 # because the last line's status is the command's: without it a failed refresh is
 # hidden by the `git add` after it, and the release commits a stale derived copy.
+# The CLI is pinned rather than `@latest`: this command's output is committed and
+# tagged by a job holding `contents: write`, so the version that writes it is a
+# deliberate bump and not whatever npm resolves that morning.
 build_command = """
 set -e
-npx -y skills@latest add . --skill setup-skills --agent claude-code -y
+npx -y skills@1.7.0 add . --skill setup-skills --agent claude-code -y
 git add .claude/skills skills-lock.json
 """
 allow_zero_version = false
