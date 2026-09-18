@@ -130,26 +130,40 @@ a fresh read of the committed tree, not a conversation.
   merge gate whether the budget was the right one.
 - **Per-reviewer accountability.** Each reviewer gets its own block in the merge
   summary and its own line in the PR body's `## Review` section
-  (`update-pr-body` at phase-7 exit): `converged`, `converged, override needed`,
-  `degraded: <reason>`, or, for a fallback whose primary converged, `not
-  invoked: <primary> converged`, plus the round count. A fallback that ran adds
-  why it was: `fallback for <primary>: degraded: <reason>`.
-- **The exit rewrites Deviations too, when the rounds grew the log.** A round
-  can force the same departure from the issue, brief or plan that phase 2 logs,
-  and an in-scope fix is no more a deviation here than anywhere else, so where
-  the log changed since phase 6, write it back with `update-pr-body <pr>
-  --section "Deviations from plan" --body-file <path>` before the `Review`
-  write, which stays last so `read-pr` reads both back at once. Skip it and the
-  PR body ships the phase-6 log while the merge summary carries the current one,
-  and the human reads the two against each other.
+  (`update-pr-body` at phase-7 exit), in one fixed shape:
+
+  ```
+  - <reviewer>: <exit word>, <n> rounds, <raised> findings: <accepted> accepted, <declined> declined, <filed> filed
+  - <fallback>: not invoked, <primary> converged
+  ```
+
+  The exit word is `converged`, `converged, override needed`, `degraded:
+  <reason>`, or, for a fallback whose primary converged, `not invoked:
+  <primary> converged`, which takes the second form and states no counts,
+  having none. A trailing clause is added only where the reader must know
+  something the counts do not say (a cap that ran out mid-findings, the
+  primary's degraded reason on a fallback that ran). The per-finding outcomes
+  are the merge summary's block, which this line points at rather than repeats.
+- **The exit rewrites the two sections the rounds grew.** A round can force the
+  same departure from the issue, brief or plan that phase 2 logs, and it can
+  file an issue; an in-scope fix is no more a deviation here than anywhere
+  else. So where the deviations log changed since phase 6, refold it by
+  [pr-body.md](pr-body.md)'s rule and write it back with `update-pr-body <pr>
+  --section "Special things to note" --body-file <path>`; where a round filed
+  or linked an issue, or met a Ship defect, write `update-pr-body <pr>
+  --section "Needs attention" --body-file <path>`. Both go before the `Review`
+  write, which stays last so `read-pr` reads all of them back at once. Skip
+  them and the PR body ships the phase-6 text while the merge summary carries
+  the current one, and the human reads the two against each other.
 
 **Every `update-pr-body --section <name> --body-file <path>` above takes the
-section's CONTENT**, `Review` and `Deviations from plan` alike: the mechanic
-writes the `## <name>` line itself, and a file that carries it too leaves the
-heading twice over inside one section, which the write collapses and which no
-other mechanic repairs. `--preamble` takes the whole preamble the same way,
-which is how a reviewer's accepted objection to the Shape, or to a body that
-opens on prose where the standard wants a Shape fence, is answered by a write.
+section's CONTENT**, `Review`, `Special things to note` and `Needs attention`
+alike: the mechanic writes the `## <name>` line itself, and a file that carries
+it too leaves the heading twice over inside one section, which the write
+collapses and which no other mechanic repairs. `--preamble` takes the whole preamble the same way,
+which is how a reviewer's accepted objection to a body's closing line is
+answered by a write; an objection to the Change outline is a `--section
+"Change outline"` write, that fence sitting in a section of its own.
 
 ## By trigger
 
