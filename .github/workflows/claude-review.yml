@@ -21,8 +21,9 @@ jobs:
     # that starts and finds nothing to review still costs minutes and still
     # shows up in the Actions tab as a review that happened. Deliberately no
     # commenter test: the unattended lane posts the mention under its own
-    # identity, and a reviewer that silently declines to fire is the failure
-    # ADR 0002 exists to prevent.
+    # identity, and an `if:` that declines it costs the round. Ship grades that
+    # `never-queued`, so the loss is named rather than silent; naming it is not
+    # reviewing the PR, which is what ADR 0002 keeps this reviewer for.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '@claude')

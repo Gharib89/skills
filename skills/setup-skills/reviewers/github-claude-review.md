@@ -203,9 +203,12 @@ jobs:
     # that starts and finds nothing to review still costs minutes and still
     # shows up in the Actions tab as a review that happened. No commenter test:
     # the identity a run requests a round under has to pass whatever this `if:`
-    # says, and a reviewer that silently declines to fire is the failure a
-    # fallback exists to prevent. The checklist's "Decide who may spend the
-    # token" step is where that is narrowed on purpose.
+    # says, and an `if:` that declines it costs the round. Ship grades that
+    # `never-queued`, whether the host records no run or one concluded
+    # `skipped`, so the loss is named rather than silent; naming it is not
+    # reviewing the PR, which is what a fallback is for. The checklist's
+    # "Decide who may spend the token" step is where that is narrowed on
+    # purpose.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '__PHRASE__')
@@ -323,7 +326,7 @@ Both shared steps above, then:
          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
    ```
 
-   Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review and no error, the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
+   Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review. Ship grades that `never-queued` rather than reading the reviewer as silent, so the loss is named; naming it is not reviewing the PR, which on a quota month is what this reviewer was there for. A private repo where every commenter can already push needs no clause.
 5. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so dropping the step costs the reason on the PR: the human then opens the Actions log to learn why the round died. A fallback exists to cover a degraded primary, so it is the last reviewer whose failures should send you there.
 
 ### Profile block this produces
