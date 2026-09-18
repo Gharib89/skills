@@ -448,8 +448,8 @@ ship_body_replace_section() { # ship_body_replace_section <body> <section> <body
 
 # Replace the PREAMBLE of <body>, everything above its first `## ` heading, with
 # <body-file>'s content, and print the new body. A body with no heading is all
-# preamble. The preamble is where this repo's standard puts the Shape fence and
-# where `open-pr` puts the closing line. Nothing under scripts/ could rewrite
+# preamble. The preamble is where `open-pr` puts the closing line, and under
+# this repo's standard it holds nothing else. Nothing under scripts/ could rewrite
 # that half before #173, so an accepted body-shape finding in phase 7 was
 # reported and left standing; this is what makes it a fix like any other.
 #

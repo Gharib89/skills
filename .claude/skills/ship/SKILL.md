@@ -57,7 +57,7 @@ and asks, and the claim holds while it waits.
 ## Compose, don't reinline
 
 Load `tdd` (phase 2), `writing-for-agents` (phase 4, agent-facing docs),
-`code-review` (phase 4), `show-me` (phase 6, the Summary's Shape) and
+`code-review` (phase 4), `show-me` (phase 6, the Change outline) and
 `find-docs` (any API claim) through the Skill tool when their moment comes,
 taking each one's logic from the skill itself, and tell any composed skill with
 an unattended mode that the run is unattended, explicitly, because it has no
@@ -213,7 +213,7 @@ unopened, leaving phase 6 to a run whose gate answers. **Done when:**
 `verdict: pass` with `gates.secrets` present.
 
 **6 · Open PR.** [reference/pr-body.md](reference/pr-body.md) carries what the
-body holds, the Shape, the two halves a write reaches and the read-back.
+body holds, the Change outline, the two halves a write reaches and the read-back.
 `open-pr <issue> --title --body-file`, **non-draft** (drafts may not trigger a
 reviewer). Title: a Conventional-Commit subject derived from the issue,
 honouring `Subject constraints:`; it becomes the squash subject that release
@@ -245,16 +245,16 @@ evidence), `degraded: <reason>` from the fixed vocabulary
 `never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
 a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
 proceeds to the merge gate on green CI and is reported there rather than handed
-back. At exit,
-`update-pr-body <pr> --section "Deviations from plan" --body-file <path>`
-where the rounds grew the log, then
-`update-pr-body <pr> --section Review --body-file <path>` with one status line
-per reviewer, then the phase-6 read-back while the PR is still open.
+back. At exit, `update-pr-body <pr> --section "Special things to note"` where
+the rounds grew the deviations log and `--section "Needs attention"` where a
+round filed or linked an issue, then `--section Review` with one line per
+reviewer in the fixed shape review-loop.md carries, each taking its own
+`--body-file <path>`; then the phase-6 read-back while the PR is still open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned carries a reply (none to carry one, where it answered `threads:
 unavailable`), and `read-pr` shows a `## Review` section with one line per
-reviewer and, where the rounds grew the log, a `## Deviations from plan`
-section carrying what they added.
+reviewer and, where the rounds grew either, the `## Special things to note` and
+`## Needs attention` sections carrying what they added.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. `conflict`: a conflicted PR has no merge ref, so
