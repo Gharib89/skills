@@ -1,6 +1,6 @@
 # Ship profile
 
-Schema: 2
+Schema: 3
 
 Every repo-specific fact `/ship` needs, one section per axis. Fourteen `##` headings, always present and in this order; a defaulted axis reads `None.` or `Default.` under its own heading. Facts sit on `Label:` lines and nowhere else, and the prose under a heading explains them. The `Schema:` line above is the profile schema `ship` checks at preflight; only a `setup-skills` re-run moves it. Vocabulary: the `ship` skill's source repo, `Gharib89/skills`, `CONTEXT.md`.
 
@@ -44,6 +44,7 @@ Push policy: <e.g. one push per review round; minutes are metered, or Default.>
 Login: <the login(s) it reviews under>
 Trigger: <auto-once | on-push | on-request>
 Request: <on-request only: the mechanic that requests a round, or `comment <phrase>` for a reviewer a PR comment triggers, else None.>
+Workflow: <`comment <phrase>` only: the repo-relative path, from the checkout root, of the workflow file that comment starts, whose run is the round's window, else None.>
 Cap: <on-request: max rounds, required, no default; on-push: max rounds, or None. for an uncapped loop; auto-once: None.>
 Resolve: <on-push and on-request: how a dispositioned thread is resolved, else None.>
 Gating: <yes | no>

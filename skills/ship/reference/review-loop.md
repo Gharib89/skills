@@ -9,16 +9,17 @@
 - [Gating reviewer with a declined finding](#gating-reviewer-with-a-declined-finding)
 - [Worked examples](#worked-examples)
 
-The profile's `## Reviewers` lists zero or more reviewers. Each has the login(s)
-it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`, an
-optional `Instructions:` file, and per trigger: `Request:` (on-request),
-`Resolve:` (on-push and on-request; auto-once converges on dispositioned threads
-and reads `None.`). The **trigger fixes the loop and convergence**; the bot's
-brand fixes nothing. Preflight has already parsed these blocks and refused the
-four malformed shapes, and asked the host whether a Copilot reviewer's
-`Trigger:` matches the ruleset driving it, so what reaches this phase is a list
-you can drive. Zero reviewers: skip this phase; the review gate is phase 4's
-self-review plus green CI (SKILL.md), which reviewer rounds sit on top of.
+The profile's `## Reviewers` lists zero or more reviewers. Each has the
+login(s) it posts under, a `Trigger:`, `Gating:`, a `Cap:`, a `Fallback-for:`,
+an optional `Instructions:` file, and per trigger: `Request:` and the
+`Workflow:` qualifying it (on-request), `Resolve:` (on-push and on-request;
+auto-once converges on dispositioned threads and reads `None.`). The **trigger
+fixes the loop and convergence**; the bot's brand fixes nothing. Preflight has
+already parsed these blocks and refused the eight malformed shapes, and asked
+the host whether a Copilot reviewer's `Trigger:` matches the ruleset driving
+it, so what reaches this phase is a list you can drive. Zero reviewers: skip
+this phase; the review gate is phase 4's self-review plus green CI (SKILL.md),
+which reviewer rounds sit on top of.
 
 A reviewer re-reads the **whole PR** each round: treat every round's output as
 a fresh read of the committed tree, not a conversation.
@@ -69,13 +70,13 @@ a fresh read of the committed tree, not a conversation.
   that comment starts, and such a run is attached to the default branch's SHA:
   it lands no check on the PR head, so the run itself is the evidence that the
   reviewer is working, and reading it is what tells a round still being written
-  from one that will not come. Poll with `--await-run <workflow-file>`, the
-  file that reviewer's block names in prose, alongside `--await-review` and
-  `--since`. `--timeout` is then the floor of the window rather than its end: a
-  run that has not finished keeps the poll going, to the ceiling `poll-pr
-  --help` states, and one that concluded successfully buys one more interval for
-  the row to appear. A run that concluded any other way closes the window there,
-  with its URL. The
+  from one that will not come. Poll with `--await-run <workflow-file>`, the file
+  that reviewer's block names on its `Workflow:` line, alongside
+  `--await-review` and `--since`. `--timeout` is then the floor of the window
+  rather than its end: a run that has not finished keeps the poll going, to the
+  ceiling `poll-pr --help` states, and one that concluded successfully buys one
+  more interval for the row to appear. A run that concluded any other way closes
+  the window there, with its URL. The
   run comes back on `reviewer_run`, in the full shape and in `--brief` alike,
   and it is what separates three of the degraded reasons below from each other.
   Where it reads `"unavailable"` the host refused the read itself, so it is
@@ -197,20 +198,21 @@ reviewer does not re-review on push, so each round after the first is a new
 request against the corrected tree.
 
 A **free round** is one the host delivers without a request: a Copilot ruleset
-with `review_on_push: false` still opens one when the PR does. Before the run's
-**first** request to any on-request reviewer, poll once for it, under the since
-rule with `open-pr`'s `created_at`. The bound is the transport's: `--timeout 600`
-where the host's own reviewer list is the transport, because a free round can
-take several minutes to land and a bound of a minute or two reports `silent` on a
-review that is merely still coming; `--timeout 60` and `--await-run
-<workflow-file>` where its `Request:` reads `comment <phrase>`, because a free
-round reaches that reviewer through a run like any other and the host starts no
-run for a reviewer with no request outstanding, so `reviewer_run.status: "none"`
-on the first pass is the whole answer and the minutes after it buy nothing. A round already there
-**is** round 1 and counts against `Cap:`; nothing there and the loop proceeds to
-its first request as written. A reviewer that gets no free round pays that one
-poll, where skipping it spends a round of a small cap re-asking for a review
-that had already landed.
+with `review_on_push: false` still opens one when the PR does. Before the
+run's **first** request to any on-request reviewer, poll once for it, under
+the since rule with `open-pr`'s `created_at`. The bound is the transport's:
+`--timeout 600` where the host's own reviewer list is the transport, because a
+free round can take several minutes to land and a bound of a minute or two
+reports `silent` on a review that is merely still coming; `--timeout 60` and
+`--await-run <workflow-file>` where its `Request:` reads `comment <phrase>`,
+because a free round reaches that reviewer through a run like any other and
+the host starts no run for a reviewer with no request outstanding, so
+`reviewer_run.status: "none"` on the first pass is the whole answer and the
+minutes after it buy nothing. A round already there **is** round 1 and counts
+against `Cap:`; nothing there and the loop proceeds to its first request as
+written. A reviewer that gets no free round pays that one poll, where skipping
+it spends a round of a small cap re-asking for a review that had already
+landed.
 
 Loop: **triage whatever round you are holding first**, then request the next
 one. A free round the poll above found is a round in hand, so it is triaged,
@@ -220,8 +222,8 @@ the reviewer has not seen and burns the budget the free round just saved. With
 nothing in hand: request, poll under the **since** rule with `request-review`'s
 `requested_at`, carrying `--await-run <workflow-file>` where this reviewer's
 `Request:` reads `comment <phrase>`, triage, batch-fix, push, `reply-thread` on
-every `replied: false` thread, and round the loop. A round that
-opened threads takes the reviewer's `Resolve:` once every one of them carries a
+every `replied: false` thread, and round the loop. A round that opened threads
+takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.
 **Converged** when the latest round has nothing actionable and every thread from

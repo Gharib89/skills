@@ -115,7 +115,7 @@ else
   rows=$(ship_reviewers "$(cat "$profile")")
   while IFS= read -r reason; do
     [ -z "$reason" ] || reasons+=("$reason")
-  done < <(ship_reviewer_reasons "$rows")
+  done < <(ship_reviewer_reasons "$rows" "$here")
 
   # The one reviewer fact the host can settle. Every other check above reads the
   # block against itself; this one reads it against the setting that actually

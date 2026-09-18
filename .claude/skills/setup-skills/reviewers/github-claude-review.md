@@ -164,6 +164,7 @@ Both shared steps above, then:
 Login: claude[bot]
 Trigger: on-push
 Request: None.
+Workflow: None.
 Cap: <the cap the walk settled; recommend 3>
 Resolve: resolve-thread
 Gating: no
@@ -330,6 +331,7 @@ Both shared steps above, then:
 Login: claude[bot]
 Trigger: on-request
 Request: comment __PHRASE__
+Workflow: .github/workflows/claude-review.yml
 Cap: <the cap the walk settled; recommend 2>
 Resolve: resolve-thread
 Gating: no
@@ -337,7 +339,7 @@ Fallback-for: __PRIMARY__
 Instructions: __INSTRUCTIONS__
 ```
 
-**Name the workflow file in the prose under this block.** A round reaches this reviewer through a comment, so its run is what tells a round still being written from one that will not come, and ship passes that file to `poll-pr --await-run`. The file this shape writes is `.github/workflows/claude-review.yml`; a block whose prose names none leaves the run polling on the constant, which is the silence this shape exists to remove, and it fails quietly.
+`Workflow:` is the file this shape writes. A round reaches this reviewer through a comment, so its run is what tells a round still being written from one that will not come, and ship passes that line's value to `poll-pr --await-run`. Rename the file and this line moves with it. Preflight refuses four shapes before the claim, rather than leaving the run polling on the constant: `Request: comment` with `__PHRASE__` left unsubstituted or substituted blank, so the transport has no phrase to post; this block with no `Workflow:`; a `Workflow:` on a block whose `Request:` is not a comment transport (the on-push shape above, which reads `None.`); and a `Workflow:` naming a file the checkout does not carry.
 
 `Login:` is `claude[bot]` in both shapes: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App its `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` step runs on `github.token` and lands as `github-actions[bot]`, and that comment is not a round, so the login a run awaits is the app's.
 

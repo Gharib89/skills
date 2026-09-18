@@ -1,6 +1,6 @@
 # Ship profile
 
-Schema: 2
+Schema: 3
 
 Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [CONTEXT.md](../../CONTEXT.md).
 
@@ -50,6 +50,7 @@ The one workflow, `.github/workflows/claude-review.yml`, is triggered by an issu
 Login: copilot-pull-request-reviewer[bot]
 Trigger: on-request
 Request: None.
+Workflow: None.
 Cap: 3
 Resolve: resolve-thread
 Gating: no
@@ -67,6 +68,7 @@ Under `on-push` the cap is advisory: a ruleset that re-reviews every push keeps 
 Login: claude[bot]
 Trigger: on-request
 Request: comment @claude
+Workflow: .github/workflows/claude-review.yml
 Cap: 2
 Resolve: resolve-thread
 Gating: no

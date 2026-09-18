@@ -644,7 +644,8 @@ ship_body_headings() {
 
 # ship_reviewers <profile-body>: the `## Reviewers` section as one JSON row per
 # reviewer, in profile order, each
-# {name, login, trigger, request, cap, resolve, gating, fallback_for, instructions}.
+# {name, login, trigger, request, workflow, cap, resolve, gating, fallback_for,
+# instructions}.
 # `None.` reads as null, `Cap:` as a number, `Gating:` as a boolean. A `Cap:` that
 # is neither a number nor `None.` comes back as the raw string, so
 # `ship_reviewer_reasons` can refuse it rather than read a typo as "uncapped".
@@ -674,7 +675,7 @@ ship_reviewers() {
       blk++; print "n\t" name; next
     }
     !blk { next }
-    /^(Login|Trigger|Request|Cap|Resolve|Gating|Fallback-for|Instructions): / {
+    /^(Login|Trigger|Request|Workflow|Cap|Resolve|Gating|Fallback-for|Instructions): / {
       k = substr($0, 1, index($0, ":") - 1)
       if (seen[blk "\034" k]++) next
       v = substr($0, index($0, ":") + 2)
@@ -688,18 +689,19 @@ ship_reviewers() {
       else $v end;
     reduce (splits("\n") | select(. != "") | split("\t")) as $p ([];
       if $p[0] == "n"
-      then . + [{name: $p[1], login: null, trigger: null, request: null, cap: null,
-                 resolve: null, gating: false, fallback_for: null, instructions: null}]
+      then . + [{name: $p[1], login: null, trigger: null, request: null,
+                 workflow: null, cap: null, resolve: null, gating: false,
+                 fallback_for: null, instructions: null}]
       else (($p[1] | ascii_downcase | sub("-"; "_")) as $k
             | .[length - 1] += {($k): (if $k == "gating" then $p[2] == "yes"
                                        else norm($k; $p[2]) end)})
       end)'
 }
 
-# ship_reviewer_reasons <rows-json>: one `profile invalid: <detail>` line per
-# reviewer-block fault, or nothing when the blocks hold. Preflight's only reviewer
-# check, so the faults are refused in both lanes and before the claim, rather than
-# at the phase that would have driven the reviewer.
+# ship_reviewer_reasons <rows-json> <checkout-root>: one `profile invalid:
+# <detail>` line per reviewer-block fault, or nothing when the blocks hold.
+# Preflight's only reviewer check, so the faults are refused in both lanes and
+# before the claim, rather than at the phase that would have driven the reviewer.
 #
 # A fallback that is not on-request cannot be withheld, and withholding it until
 # its primary degrades is the whole point of a fallback; one naming a reviewer
@@ -707,12 +709,46 @@ ship_reviewers() {
 # cap has no bound on its loop, and a `Cap:` that is not a number is a typo that
 # would read as an uncapped one.
 #
+# `Workflow:` and `Request:` are refused as a pair, in both directions. A comment
+# transport's round comes from the run that comment starts, and that run is the
+# only signal separating a round still being written from one that will not come,
+# so a block asking for one and naming no file leaves phase 7 polling on a
+# constant; a file named on a block no comment drives is a value nothing reads.
+# The third is the one filesystem stat here, taken against `<checkout-root>`
+# rather than a root read inside, so the cases drive it over a fixture tree: a
+# path naming no file buys the same silence as no path, and is mistyped far more
+# often than it is left out. The stat is keyed by path rather than by reviewer
+# name, because two blocks sharing a name would otherwise answer for each other.
+#
+# `Request: comment` with the phrase left off is refused on its own, before the
+# pair is read: `request-review --comment` takes no empty phrase, so that block
+# cannot be asked for a round at all, and reading it as a transport owing a
+# `Workflow:` would let one carrying a `Workflow:` through. With the bare value
+# refused above it, the transport is a plain `startswith("comment ")`, which is
+# also what keeps a mechanic name out of it: `comment-pr` is a mechanic, and a
+# word boundary in place of the space would read it as a transport.
+#
 # Anything that is not an array refuses, exactly as `ship_stale_base_reason`
 # refuses an unreadable verdict: a parse that died must not come back as "the
 # blocks hold", or preflight claims the issue on the strength of a check that
 # was skipped.
 ship_reviewer_reasons() {
-  jq -rn --arg r "$1" '
+  # The stat runs out here and its verdict goes into jq as a list of names, so
+  # every reason is worded in one place and comes out in profile order.
+  local absent wf inside
+  absent='[]'
+  while IFS= read -r wf; do
+    inside=yes
+    # A leading `/` or a `..` component stats true outside the checkout, and the
+    # host's run listing takes neither, so such a path is as absent as a name
+    # nothing carries rather than a second refusal of its own.
+    case "/$wf/" in //*|*/../*) inside=no ;; esac
+    [ "$inside" = yes ] && [ -f "$2/$wf" ] ||
+      absent=$(jq -c --arg w "$wf" '. + [$w]' <<<"$absent")
+  done < <(jq -r 'if type == "array"
+                  then .[].workflow | select(. != null)
+                  else empty end' <<<"$1" 2>/dev/null)
+  jq -rn --arg r "$1" --argjson absent "$absent" '
     (try ($r | fromjson) catch null) as $rows
     | if ($rows | type) != "array"
       then "profile invalid: the ## Reviewers blocks could not be parsed"
@@ -730,6 +766,17 @@ ship_reviewer_reasons() {
            else empty end),
           (if $x.trigger == "on-request" and $x.cap == null
            then "profile invalid: \($x.name) is on-request with no Cap:"
+           else empty end),
+          (if $x.request == "comment"
+           then "profile invalid: \($x.name) has Request: comment with no phrase for the transport to post"
+           elif (($x.request // "") | startswith("comment "))
+           then (if $x.workflow == null
+                 then "profile invalid: \($x.name) has Request: \($x.request) with no Workflow: naming the workflow file its round comes from"
+                 elif ($absent | index($x.workflow)) != null
+                 then "profile invalid: \($x.name) has Workflow: \($x.workflow), which is not in the checkout"
+                 else empty end)
+           elif $x.workflow != null
+           then "profile invalid: \($x.name) has Workflow: \($x.workflow) but its Request: is \($x.request // "None."), not comment <phrase>"
            else empty end)
       end'
 }
