@@ -102,7 +102,7 @@ fi
 house_style() {
   local hits em
   em=$'\u2014'   # built from its codepoint, so this gate does not match itself
-  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' CONTEXT.md CLAUDE.md \
+  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' '.release/*' CONTEXT.md CLAUDE.md \
     | xargs -0 grep -n "$em" 2>/dev/null) || return 0
   echo "em dashes in repo-authored files (see docs/contributing/coding-standards.md):"
   echo "$hits"

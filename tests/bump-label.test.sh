@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # scripts/check-bump-label.sh: the bump grade a PR title implies, and the label a
-# major one needs. The seam is the script's CLI: PR_TITLE, PR_BODY and PR_LABELS
-# in, an exit code and one message out, which is what the bump-guard workflow runs.
+# major one needs. The seam is the script's CLI: PR_TITLE, PR_BODY, PR_COMMITS and
+# PR_LABELS in, an exit code and one message out, which is what the bump-guard
+# workflow runs.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-# <title> <body> <labels>: the script's exit code.
+# <title> <body> <labels> [<commit messages>]: the script's exit code.
 rc_of() {
-  PR_TITLE=$1 PR_BODY=$2 PR_LABELS=$3 bash scripts/check-bump-label.sh >/dev/null 2>&1
+  PR_TITLE=$1 PR_BODY=$2 PR_LABELS=$3 PR_COMMITS=${4:-} \
+    bash scripts/check-bump-label.sh >/dev/null 2>&1
   printf '%s' "$?"
 }
 # <title> <body> <labels>: the script's message.
@@ -46,6 +48,20 @@ check_rc "the hyphen spelling of the footer fails too" \
   1 "$(rc_of 'fix(ship): drop a stop reason' 'BREAKING-CHANGE: gone.' '')"
 check_rc "a footer with the label passes" \
   0 "$(rc_of 'fix(ship): drop a stop reason' 'BREAKING CHANGE: gone.' 'major')"
+
+# This repository squashes with `COMMIT_MESSAGES`, so a footer in a branch commit
+# is the one the release run grades and the description is the one that does not
+# travel. Both are read, so neither reaches the release run unseen.
+check_rc "a footer in a commit message without the label fails" \
+  1 "$(rc_of 'fix(ship): drop a stop reason' '' '' 'fix(ship): drop a stop reason
+
+BREAKING CHANGE: the stop reason is gone.')"
+check_rc "a footer in a commit message with the label passes" \
+  0 "$(rc_of 'fix(ship): drop a stop reason' '' 'major' 'BREAKING CHANGE: gone.')"
+check_rc "commit messages with no footer pass" \
+  0 "$(rc_of 'fix(ship): drop a stop reason' '' '' 'fix(ship): drop a stop reason
+
+Refs #1.')"
 
 # --- the label list ----------------------------------------------------------
 
@@ -93,7 +109,7 @@ check "the passing message names the grade" \
   "bump-guard: no major bump implied, no bump label required." \
   "$(out_of 'fix: x' '' '')"
 check "the refusal names the label to add" \
-  "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the body), which bumps the major version. A major bump must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer)." \
+  "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the description or in a commit message), which bumps the major version. A major bump must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer)." \
   "$(out_of 'feat!: x' '' '')"
 check "the invalid-title refusal names the title and the types" \
   "bump-guard: title 'update the profile' is not a Conventional Commit of a type the release run reads (build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test). PR titles must be, e.g. 'fix: ...' or 'feat(ship): ...', because the squash subject drives the release version bump." \

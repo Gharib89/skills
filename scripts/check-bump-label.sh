@@ -10,7 +10,7 @@
 # Commit fails outright, because the release run would otherwise have to guess.
 # See docs/adr/0003-version-and-changelog-cut-on-merge.md.
 #
-#   PR_TITLE=... PR_BODY=... PR_LABELS=... scripts/check-bump-label.sh
+#   PR_TITLE=... PR_BODY=... PR_COMMITS=... PR_LABELS=... scripts/check-bump-label.sh
 #
 # stdout: one line saying which grade was read and what it needs
 # exit: 0 the PR may merge · 1 it may not
@@ -21,6 +21,7 @@ set -uo pipefail
 
 title=${PR_TITLE:-}
 body=${PR_BODY:-}
+commits=${PR_COMMITS:-}
 labels=${PR_LABELS:-}
 
 # The host pads a title it round-trips through a form, and the author did not.
@@ -43,10 +44,17 @@ if [[ ! $title =~ ^($types)(\([^\)]+\))?(!)?:[[:space:]]+[^[:space:]] ]]; then
 fi
 bang=${BASH_REMATCH[3]}
 
+# The squash body, whichever text the host composes it from: `COMMIT_MESSAGES`
+# concatenates the branch's commit messages and `PR_BODY` takes the description,
+# and the setting is the repository's, not this workflow's. Both are read, so the
+# guard has seen whatever python-semantic-release will read; the cost of reading
+# the one that does not travel is a label demanded for a bump that then does not
+# happen, which is the safe direction for a digit that is the maintainer's.
+#
 # Line-anchored, both spellings, because the release run treats either as major.
 # A mention of the words mid-sentence is prose.
 footer=no
-printf '%s\n' "$body" | grep -Eq '^BREAKING[ -]CHANGE:' && footer=yes
+printf '%s\n%s\n' "$body" "$commits" | grep -Eq '^BREAKING[ -]CHANGE:' && footer=yes
 
 if [ -z "$bang" ] && [ "$footer" = no ]; then
   echo "bump-guard: no major bump implied, no bump label required."
@@ -61,5 +69,5 @@ if printf '%s\n' "$have" | grep -qx 'major'; then
   exit 0
 fi
 
-printf "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the body), which bumps the major version. A major bump must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer).\n"
+printf "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the description or in a commit message), which bumps the major version. A major bump must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer).\n"
 exit 1

@@ -25,13 +25,20 @@ jobs:
   bump-guard:
     runs-on: ubuntu-latest
     steps:
+      # The whole history, because the guard reads the branch's commit messages:
+      # this repository squashes with `COMMIT_MESSAGES`, so that text, and not the
+      # description, is the body the release run grades.
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Validate the PR title against the bump labels
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: scripts/check-bump-label.sh
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          PR_COMMITS=$(git log --format=%B "origin/$BASE_REF..HEAD")
+          export PR_COMMITS
+          scripts/check-bump-label.sh
