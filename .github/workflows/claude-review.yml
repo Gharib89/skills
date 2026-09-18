@@ -21,8 +21,9 @@ jobs:
     # that starts and finds nothing to review still costs minutes and still
     # shows up in the Actions tab as a review that happened. Deliberately no
     # commenter test: the unattended lane posts the mention under its own
-    # identity, and a reviewer that silently declines to fire is the failure
-    # ADR 0002 exists to prevent.
+    # identity, and an `if:` that declines it costs the round. Ship grades that
+    # `never-queued`, so the loss is named rather than silent; naming it is not
+    # reviewing the PR, which is what ADR 0002 keeps this reviewer for.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '@claude')
@@ -34,8 +35,8 @@ jobs:
       # round PR #168 requested). An issue_comment checkout is the default
       # branch rather than the PR head, and that is the brief to review
       # against: the canonical one, not the version the PR under review
-      # proposes. The reviewed diff comes from `gh pr diff`, so the PR head can
-      # stay off disk.
+      # proposes. The PR head is not checked out; the reviewed diff comes from
+      # `gh pr diff`.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -100,11 +101,13 @@ jobs:
             --max-turns 60
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
-      # A failed round otherwise leaves nothing on the PR: no review, no comment,
-      # and a ship run with no run read reads that as `degraded: silent`,
-      # indistinguishable from a reviewer that did not fire. Costs one comment per
-      # failed round; drop it and the silent failure comes back wherever the run
-      # read is unavailable.
+      # A failed round otherwise leaves nothing on the PR: no review, no comment.
+      # Ship grades it from the run read either way: the profile block driving
+      # this workflow carries `Workflow:`, so `poll-pr --await-run` reads the
+      # failed run itself as `infra-error`. The step is what puts the run URL on
+      # the PR, with the failure subtype beside it where the action left one and
+      # `unknown` where it did not, so the human reading the PR has the reason or
+      # the link that carries it. Costs one comment per failed round.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}

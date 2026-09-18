@@ -13,7 +13,7 @@ What both shapes do the same way, because ship reads a round off the host alone:
 - **`actions/checkout` before the action.** The action does not clone the repo, and it runs `git diff --name-only -z --relative --ignore-submodules HEAD --` in the workspace of its own accord, before the prompt runs. With no checkout that fails the job outright, `Action failed with error: ... warning: Not a git repository.`, and the job dies before the prompt runs: no review, no findings, and nothing on the PR to say why. Step 1 of the prompt needs it a second time, to read the instructions file off the filesystem.
 - **`--max-turns 60`.** A round reads a brief, a spec, a whole diff and then builds one POST, and a 30-turn cap does not cover a mid-size PR: the round exhausts it, logs `error_max_turns`, posts nothing, and still bills the turns it spent.
 - **An allowlist that covers every step of the prompt.** A tool the round needs and cannot call is a denied call, a spent turn and no explanation, and the run log reports `permission_denials_count` alone and names no command, so the list is derived from what the prompt's own steps ask for, plus the read-only verbs a round reaches for while sizing a large diff, rather than from a log. `Read`, `Grep` and `Glob` serve step 1's brief and standards; `Bash(gh pr view:*)` and `Bash(gh issue view:*)` step 2's spec; `Bash(gh pr diff:*)` step 3's diff; `Bash(gh api:*)` the POST; and `Bash(head:*)`, `Bash(tail:*)` and `Bash(wc:*)` because a pipe is refused unless **both** of its commands are granted, so `gh pr diff | wc -l` needs `wc` named too. Those three size a diff and leave the reviewing to step 3: step 3 says review what the one `gh pr diff` returned, and a `head` that truncates it leaves the tail unreviewed with nothing saying so. Deliberately no `git` entry, though [`ado-claude-review.md`](ado-claude-review.md) grants two: that prompt reaches for `git diff` because Azure DevOps has no `gh`, while both shapes here check out at `fetch-depth: 1` and read the diff through `gh pr diff`, so `git log` would have no history to read and neither prompt asks for either. Nothing here writes to the checkout, the one write it can make anywhere is the review POST the round exists for, and nothing reaches the network beyond `gh`. Narrow it and the round spends its turns on denied calls and posts nothing.
-- **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` under the on-push shape and cannot tell it from a reviewer that did not fire, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. Under the on-request shape the run read settles it, `poll-pr --await-run` reading the failed run as `infra-error` with its URL, and the `if: failure()` step below leaves that URL and the failure subtype on the PR for both shapes. [`ado-claude-review.md`](ado-claude-review.md) carries the same step as a `condition: failed()` one posting a closed PR thread. It needs no permission the job did not already have: a comment on a pull request is posted to `/issues/{n}/comments`, and the `pull-requests: write` that admits the review POST admits that endpoint too on a pull request, with no `issues` scope at all (probed on a runner, [run on #174](https://github.com/Gharib89/skills/pull/174)). `issues: read` is there for step 2's `gh issue view`, and it stays at `read`: this job hands PR-controlled text to a model holding `Bash(gh api:*)`, so a scope beyond what the prompt's own steps ask for is a scope an injected prompt would get, and the failure comment above asks for none.
+- **A step that speaks when the job fails.** The action failing posts no review and no comment, so a ship run polling the PR reads `degraded: silent` under the on-push shape and cannot tell it from a reviewer that did not fire, which is the indistinguishability [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) exists to prevent. Under the on-request shape the run read settles it, `poll-pr --await-run` reading the failed run as `infra-error` with its URL, and the `if: failure()` step below leaves that URL on the PR for both shapes, with the failure subtype where the action left one and `unknown` where it did not. [`ado-claude-review.md`](ado-claude-review.md) carries the same step as a `condition: failed()` one posting a closed PR thread. It needs no permission the job did not already have: a comment on a pull request is posted to `/issues/{n}/comments`, and the `pull-requests: write` that admits the review POST admits that endpoint too on a pull request, with no `issues` scope at all (probed on a runner, [run on #174](https://github.com/Gharib89/skills/pull/174)). `issues: read` is there for step 2's `gh issue view`, and it stays at `read`: this job hands PR-controlled text to a model holding `Bash(gh api:*)`, so a scope beyond what the prompt's own steps ask for is a scope an injected prompt would get, and the failure comment above asks for none.
 
 Replace `__INSTRUCTIONS__` with the profile's `Instructions:` path for this reviewer: the repo's reviewer brief where it has one (a repo with Copilot keeps it at `.github/copilot-instructions.md`), else the `## Coding standards` path. The reviewer reads that file itself, rather than a copy of it. Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt.
 
@@ -203,9 +203,12 @@ jobs:
     # that starts and finds nothing to review still costs minutes and still
     # shows up in the Actions tab as a review that happened. No commenter test:
     # the identity a run requests a round under has to pass whatever this `if:`
-    # says, and a reviewer that silently declines to fire is the failure a
-    # fallback exists to prevent. The checklist's "Decide who may spend the
-    # token" step is where that is narrowed on purpose.
+    # says, and an `if:` that declines it costs the round. Ship grades that
+    # `never-queued`, whether the host records no run or one concluded
+    # `skipped`, so the loss is named rather than silent; naming it is not
+    # reviewing the PR, which is what a fallback is for. The checklist's
+    # "Decide who may spend the token" step is where that is narrowed on
+    # purpose.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '__PHRASE__')
@@ -216,8 +219,8 @@ jobs:
       # repository" when there is nothing checked out. An issue_comment
       # checkout is the default branch rather than the PR head, and that is
       # the right instructions file to review against: the canonical one, not
-      # the version the PR under review proposes. The reviewed diff comes from
-      # `gh pr diff`, so the PR head can stay off disk.
+      # the version the PR under review proposes. The PR head is not checked
+      # out; the reviewed diff comes from `gh pr diff`.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -282,11 +285,13 @@ jobs:
             --max-turns 60
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
-      # A failed round otherwise leaves nothing on the PR: no review, no comment,
-      # and a ship run with no run read reads that as `degraded: silent`,
-      # indistinguishable from a reviewer that did not fire. Costs one comment per
-      # failed round; drop it and the silent failure comes back wherever the run
-      # read is unavailable.
+      # A failed round otherwise leaves nothing on the PR: no review, no comment.
+      # Ship grades it from the run read either way: the profile block driving
+      # this workflow carries `Workflow:`, so `poll-pr --await-run` reads the
+      # failed run itself as `infra-error`. The step is what puts the run URL on
+      # the PR, with the failure subtype beside it where the action left one and
+      # `unknown` where it did not, so the human reading the PR has the reason or
+      # the link that carries it. Costs one comment per failed round.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -321,8 +326,8 @@ Both shared steps above, then:
          contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
    ```
 
-   Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review and no error, the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
-5. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. A fallback exists to cover a degraded primary, so it is the last reviewer that should fail quietly: drop the step here and a quota month gives you two silent reviewers instead of one.
+   Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review. Ship grades that `never-queued` rather than reading the reviewer as silent, so the loss is named; naming it is not reviewing the PR, which on a quota month is what this reviewer was there for. A private repo where every commenter can already push needs no clause.
+5. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so dropping the step costs the link on the PR: the human then goes to the Actions tab to find the run themselves. A fallback exists to cover a degraded primary, so it is the last reviewer whose failures should send you there.
 
 ### Profile block this produces
 
