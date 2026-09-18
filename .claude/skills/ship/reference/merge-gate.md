@@ -80,9 +80,9 @@ the phase it was met in and written to the Run file at that moment the way a
 deviation is, so the row is a record, not a recollection. The run files it to no
 other repo; the human carries the row upstream.
 
-**This summary is the record; the PR body is the short form of it.** Three of
-its rows have a counterpart section in the body ([pr-body.md](pr-body.md)), and
-each pair is written from one result so the two cannot disagree:
+**This summary is the record; the PR body is the short form of it.** Four of
+its blocks have a counterpart section in the body ([pr-body.md](pr-body.md)),
+and each pair is written from one result so the two cannot disagree:
 
 - `Deviations from plan` is the phase-2 log **verbatim**; the body's `## Special
   things to note` carries only the subset that changes how the reviewer reads
@@ -92,11 +92,10 @@ each pair is written from one result so the two cannot disagree:
 - Each `Review` block is one reviewer's per-finding outcomes; the body's `##
   Review` line for that reviewer is the fixed counts line
   [review-loop.md](review-loop.md) fixes, and it points here for the detail.
-
-Each row of the `Verification` block and its line in the PR body's `##
-Verification` section are read from the same phase-3 result in the same format;
-this block is where the human reads them at the gate, the section is where they
-outlive the run.
+- Each row of the `Verification` block and its line in the body's `##
+  Verification` section are the same phase-3 result in the same format. This
+  block is where the human reads them at the gate; the section is where they
+  outlive the run.
 
 The `Self-review` block is read from the phase-4 Report files
 [context-discipline.md](context-discipline.md) has the run write, one row per

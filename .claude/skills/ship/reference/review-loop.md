@@ -134,7 +134,7 @@ a fresh read of the committed tree, not a conversation.
 
   ```
   - <reviewer>: <exit word>, <n> rounds, <raised> findings: <accepted> accepted, <declined> declined, <filed> filed
-  - <fallback>: not invoked, <primary> converged
+  - <fallback>: not invoked: <primary> converged
   ```
 
   The exit word is `converged`, `converged, override needed`, `degraded:

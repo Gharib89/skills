@@ -247,7 +247,7 @@ a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
 proceeds to the merge gate on green CI and is reported there rather than handed
 back. At exit, `update-pr-body <pr> --section "Special things to note"` where
 the rounds grew the deviations log and `--section "Needs attention"` where a
-round filed or linked an issue, then `--section Review` with one line per
+round filed or linked an issue or met a defect, then `--section Review` with one line per
 reviewer in the fixed shape review-loop.md carries, each taking its own
 `--body-file <path>`; then the phase-6 read-back while the PR is still open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`

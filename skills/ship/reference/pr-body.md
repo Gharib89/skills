@@ -18,10 +18,9 @@ Ship defects. Nothing the body leaves out is lost, so the body may leave it out.
 Phase 6 opens it; phase 7 rewrites three of its sections at exit
 ([review-loop.md](review-loop.md)); phase 9 reads it at the gate.
 
-The three top headings, and the discipline of a one-sentence why over a short
-notes list over a structural outline, are taken from the `visual-pr` skill's PR
-template (humanlayer/skills). Its template text is the source; its workflow is
-not, and ship does not compose it.
+The three top headings are taken from the `visual-pr` skill's PR template
+(humanlayer/skills): its template text is the source, its workflow is not, and
+ship does not compose it.
 
 ## What the body carries
 
@@ -37,7 +36,8 @@ body. Every variant carries:
   becomes possible now.
 - **A `## Change outline` section**: the behavioural fence below.
 - **A `## Special things to note` section**: the reviewer's warnings and the
-  folded deviations below, `None.` when there are neither.
+  folded deviations below, `None.` when there are neither. Phase 7 rewrites it
+  where a round grew the log.
 - **A `## Needs attention` section**: every issue the run filed or linked and
   every Ship defect it met, `None.` when there are neither. Phase 7 rewrites it
   where a round filed one.
@@ -72,22 +72,25 @@ tree, showing what the change **does**. Text forms only, which rules out mermaid
 and HTML: Azure DevOps renders neither, and the `diff` fence is the one form
 that shows the before and the after in a single view. **One behavioural fence
 per PR**, about 15 lines or fewer; a change that needs two is a PR spanning two
-concerns. A **carrier file tree** may follow it, and only when the same edit
-lands in more than two files, where naming them one by one in prose costs more
-than the tree. Every node is a real symbol, each tree's root node carries its
-file path, and no line carries a line number: the first review-round push rots
-them and nothing rewrites the outline.
+concerns. A **carrier file tree** may follow it in a second fence, and only when
+the same edit lands in more than two files, where naming them one by one in
+prose costs more than the tree; that second fence is not behavioural, so the
+count and the line budget above are the behavioural one's alone. Every node is a
+real symbol, each tree's root node carries its file path, and no line carries a
+line number: the first review-round push rots them and nothing rewrites the
+outline.
 
-The visible line `Shape: none, mechanical (<kind>).` replaces the fence, so the
-self-review and the reviewer can dispute the call. **The hatch is narrow**: it
-is allowed only where the reviewer's question about the change is "did the text
-change correctly", and never where it is "what does X now do". A comment reword
-that changes which degraded reason a reader expects has a control-flow shape
-even though the diff is comments, and PR #221 is the evidence: it took the hatch
-and left the reviewer without the one view that answered the question it had.
-The small lane takes no exemption either: a one-line behaviour fix is where four
-lines of control-flow diff pay for themselves. `show-me` supplies the form;
-these constraints are ship's, and its menu of other uses is not.
+**The hatch is narrow.** The visible line `Shape: none, mechanical (<kind>).`
+replaces the fence only where the reviewer's question about the change is "did
+the text change correctly", and never where it is "what does X now do"; it is
+visible rather than a silent omission so the self-review and the reviewer can
+dispute the call. A comment reword that changes which degraded reason a reader
+expects has a control-flow shape even though the diff is comments, and PR #221
+is the evidence: it took the hatch and left the reviewer without the one view
+that answered the question it had. The small lane takes no exemption either: a
+one-line behaviour fix is where four lines of control-flow diff pay for
+themselves. `show-me` supplies the form; these constraints are ship's, and its
+menu of other uses is not.
 
 ## Special things to note: the folded deviations
 
@@ -110,9 +113,10 @@ there are neither.
 
 Nothing else belongs here. An adjacent find is filed or fixed inline by phase
 2's dispositions, so an unfiled observation parked in this section is a find
-that skipped its disposition. Phase 6 writes the section from the phase-2 log,
-and the phase-7 exit rewrites it where a review round filed one, the same
-pattern `## Special things to note` follows.
+that skipped its disposition. Phase 6 writes the section from the Run file's own
+record of what the run filed, linked and met, which is not the deviations log;
+the phase-7 exit rewrites it where a round added to either, the same pattern
+`## Special things to note` follows.
 
 ## Two halves, and a mechanic reaches each
 

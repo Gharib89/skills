@@ -17,5 +17,6 @@ Review against [docs/contributing/coding-standards.md](../docs/contributing/codi
 - `gh` or `az` called from anywhere but `skills/ship/scripts/host/github.sh` or `skills/ship/scripts/host/ado.sh`.
 - Unquoted expansions, missing `set -uo pipefail`, and `mktemp` without a `trap` that removes it.
 - Terms that contradict the glossary in [CONTEXT.md](../CONTEXT.md), including the synonyms each entry says to avoid.
-- A PR whose `## Change outline`, or whose plain body where no template gives that heading, carries neither a Shape (a `diff` fence over a call tree, control flow, pseudocode or component tree) nor a `Shape: none, mechanical (<kind>).` line, and a `Shape: none` line on a change whose reviewer has to ask what something now does.
+- A PR whose `## Change outline` carries neither a Shape (a `diff` fence over a call tree, control flow, pseudocode or component tree) nor a `Shape: none, mechanical (<kind>).` line.
+- A `Shape: none, mechanical (<kind>).` line on a change whose reviewer has to ask what something now does, rather than only whether the text changed correctly. The diff being comments or prose does not settle it.
 - Em dashes, anywhere.

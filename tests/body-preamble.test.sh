@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ship_body_replace_preamble: the transformation behind `update-pr-body
 # --preamble`. The preamble is everything above the first unfenced `## `
-# heading, which is where this repo's standard puts the Shape fence and where
-# `open-pr` puts the closing line; before #173 nothing under scripts/ could
+# heading, which under this repo's standard holds the closing line `open-pr`
+# puts there and nothing else; before #173 nothing under scripts/ could
 # rewrite it, so an accepted body-shape finding could only be reported.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
