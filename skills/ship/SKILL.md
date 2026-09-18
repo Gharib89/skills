@@ -128,7 +128,8 @@ rebuild or a version bump CI enforces lands in this change, or phase 8 goes red
 with no phase explaining why. Keep a **deviations log** from the first edit:
 whenever the territory forces a departure from the issue, brief or plan,
 resolve it by the conservative option, log what and why, keep going; the log
-lands verbatim in the PR body and the merge summary. An **adjacent find** takes
+lands verbatim in the merge summary, and folded to what a reviewer would act on
+in the PR body's `## Special things to note`. An **adjacent find** takes
 one of implement.md's three dispositions and no fourth: **fix it inline** and
 log the deviation, **`file-issue` it** and leave it, or stop
 **`mis-specified`** where the find shows the issue itself is wrong. If the core

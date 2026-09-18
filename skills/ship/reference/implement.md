@@ -57,7 +57,7 @@ phase-4 Standards review on the full diff is the safety net either way.
 Hand the subagent: the worktree path, its `execute` scratch directory, the
 plan, the test command, and the repo conventions the edit needs. Require back:
 a diff summary, the test files and cases added or updated, and a **structured
-deviations list**; it lands verbatim in the PR body, and a subagent that
+deviations list**; it lands verbatim in the merge summary, and a subagent that
 fixes-and-forgets loses it. Two hard rules
 in its prompt:
 

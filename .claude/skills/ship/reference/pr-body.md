@@ -25,8 +25,10 @@ ship does not compose it.
 ## What the body carries
 
 The repo's template per the profile's `## PR`, filled honestly through its own
-headings rather than a raw body that bypasses it; with no template, a plain
-body. Every variant carries:
+headings rather than a raw body that bypasses it. **With no template, the run
+writes the same seven headings itself**: `open-pr` synthesizes none of them, so
+a plain body that skips one is a body phase 7 cannot write into and a reviewer
+reads without the section. Every variant carries:
 
 - **`Closes #<issue>` on its own line above the first `## ` heading.** The
   mechanic translates it for the host, and puts it there itself when the body
@@ -40,7 +42,7 @@ body. Every variant carries:
   where a round grew the log.
 - **A `## Needs attention` section**: every issue the run filed or linked and
   every Ship defect it met, `None.` when there are neither. Phase 7 rewrites it
-  where a round filed one.
+  where a round added to any of the three.
 - **A `## Verification` section**: one line per applicable verification, read
   from the phase-3 results in the merge summary's `Verification` row format, or
   `None applicable: <reason>` where none applied. There are three such reasons
