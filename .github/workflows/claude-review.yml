@@ -104,10 +104,10 @@ jobs:
       # A failed round otherwise leaves nothing on the PR: no review, no comment.
       # Ship grades it from the run read either way: the profile block driving
       # this workflow carries `Workflow:`, so `poll-pr --await-run` reads the
-      # failed run itself as `infra-error`. The step is what puts the run URL and
-      # the failure subtype on the PR, where the human reading the PR finds why
-      # the round died without opening the Actions log. Costs one comment per
-      # failed round.
+      # failed run itself as `infra-error`. The step is what puts the run URL on
+      # the PR, with the failure subtype beside it where the action left one and
+      # `unknown` where it did not, so the human reading the PR has the reason or
+      # the link that carries it. Costs one comment per failed round.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
