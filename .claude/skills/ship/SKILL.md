@@ -255,8 +255,8 @@ shape review-loop.md carries. Then the phase-6 read-back while the PR is open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned carries a reply (none to carry one, where it answered `threads:
 unavailable`), and `read-pr` shows a `## Review` section with one line per
-reviewer and, where a round grew either section, `## Special things to note`
-and `## Needs attention` carrying what it added.
+reviewer, plus `## Special things to note` and `## Needs attention`, each
+required only where a round grew that section's own record.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. `conflict`: a conflicted PR has no merge ref, so

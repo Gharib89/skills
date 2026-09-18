@@ -144,6 +144,11 @@ a fresh read of the committed tree, not a conversation.
   something the counts do not say (a cap that ran out mid-findings, the
   primary's degraded reason on a fallback that ran). The per-finding outcomes
   are the merge summary's block, which this line points at rather than repeats.
+  **Write the round to the Run file as you disposition it**, one line per
+  finding with its disposition, the way phase 2 writes a deviation: no command
+  reproduces a round count or a finding outcome, so the file is the only thing
+  a compaction leaves standing between here and the counts line at exit.
+  [merge-gate.md](merge-gate.md) reads it back and does not write it.
 - **The exit rewrites the two sections the rounds grew.** A round can force the
   same departure from the issue, brief or plan that phase 2 logs, and it can
   file an issue; an in-scope fix is no more a deviation here than anywhere
@@ -152,23 +157,25 @@ a fresh read of the committed tree, not a conversation.
   --section "Special things to note" --body-file <path>`; where a round filed
   or linked an issue, or met a Ship defect, write `update-pr-body <pr>
   --section "Needs attention" --body-file <path>`. A `--section` write
-  replaces the **whole** section, so each `--body-file` is that section rebuilt
-  entire from its own inputs, never from what changed alone: `Special things to
-  note` is the phase-6 warnings, migrations and constraints carried over as
-  written plus the refolded deviations, and `Needs attention` is every issue
-  already listed there plus what this round filed, linked or met. Rebuilding
-  either from the new entries alone silently drops its prior ones. Both go
-  before the `Review`
-  write, which stays last so `read-pr` reads all of them back at once. Skip
-  them and the PR body ships the phase-6 text while the merge summary carries
-  the current one, and the human reads the two against each other.
+  replaces the **whole** section, so each `--body-file` is that section
+  rebuilt entire, from the Run file and never from the body the write is
+  about to replace: reading the body back inherits whatever an earlier write
+  got wrong and loses the per-entry detail the file holds. `Special things to
+  note` is rebuilt from the phase-6 warnings, migrations and constraints plus
+  the whole deviations log refolded; `Needs attention` from every issue the
+  run has filed or linked and every Ship defect it has met, this round's
+  included. Both go before the `Review` write, which stays last so `read-pr`
+  reads all of them back at once. Skip them and the PR body ships the phase-6
+  text while the merge summary carries the current one, and the human reads
+  the two against each other.
 
 **Every `update-pr-body --section <name> --body-file <path>` above takes the
 section's CONTENT**, `Review`, `Special things to note` and `Needs attention`
 alike: the mechanic writes the `## <name>` line itself, and a file that carries
 it too leaves the heading twice over inside one section, which the write
-collapses and which no other mechanic repairs. `--preamble` takes the whole preamble the same way,
-which is how a reviewer's accepted objection to a body's closing line is
+collapses and which no other mechanic repairs. `--preamble` takes the whole
+preamble the same way, which is how a reviewer's accepted objection to a
+body's closing line is
 answered by a write; an objection to the Change outline is a `--section
 "Change outline"` write, that fence sitting in a section of its own.
 

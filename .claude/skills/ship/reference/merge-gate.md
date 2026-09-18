@@ -80,8 +80,8 @@ the phase it was met in and written to the Run file at that moment the way a
 deviation is, so the row is a record, not a recollection. The run files it to no
 other repo; the human carries the row upstream.
 
-**This summary is the record; the PR body is the short form of it.** Four of
-its blocks have a counterpart section in the body ([pr-body.md](pr-body.md)),
+**This summary is the record; the PR body is the short form of it.** Four
+sections of the body have a counterpart block here ([pr-body.md](pr-body.md)),
 and each pair is written from one result so the two cannot disagree:
 
 - `Deviations from plan` is the phase-2 log **verbatim**; the body's `## Special
@@ -110,11 +110,13 @@ it as a substring does not inflate the total. A **tally of the run's own work**
 is the exception, and the only one: no command reproduces a round count or a
 finding outcome, so each is **written to the Run file at the moment it
 happens**, the way a deviation and a Ship defect already are. That is one rule
-over three records: a `file-issue` result, filed number or linked candidate,
-goes down when the call answers; a Ship defect when it is met; and a reviewer's
-round, with one line per finding and its disposition, when that round is
-dispositioned in phase 7. Each is then read back from the file rather than
-recalled, which is what makes them survive a compaction. The PR body's fixed
+over three records, each written by the phase that produces it: a `file-issue`
+result, filed number or linked candidate, when the call answers; a Ship defect
+when it is met; and a reviewer's round, with one line per finding and its
+disposition, when that round is dispositioned, which
+[review-loop.md](review-loop.md) carries at the bullet that does it. This
+paragraph is the **read-back** rule: each is read from the file here rather
+than recalled, which is what makes them survive a compaction. The PR body's fixed
 `## Review` line is entirely such a tally, which is why it carries no
 commands.
 
