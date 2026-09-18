@@ -216,8 +216,8 @@ jobs:
       # repository" when there is nothing checked out. An issue_comment
       # checkout is the default branch rather than the PR head, and that is
       # the right instructions file to review against: the canonical one, not
-      # the version the PR under review proposes. The reviewed diff comes from
-      # `gh pr diff`, so the PR head can stay off disk.
+      # the version the PR under review proposes. The PR head is not checked
+      # out; the reviewed diff comes from `gh pr diff`.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -282,11 +282,13 @@ jobs:
             --max-turns 60
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
 
-      # A failed round otherwise leaves nothing on the PR: no review, no comment,
-      # and a ship run with no run read reads that as `degraded: silent`,
-      # indistinguishable from a reviewer that did not fire. Costs one comment per
-      # failed round; drop it and the silent failure comes back wherever the run
-      # read is unavailable.
+      # A failed round otherwise leaves nothing on the PR: no review, no comment.
+      # Ship's grading does not rest on this step: this shape's profile block
+      # carries `Workflow:`, and `poll-pr --await-run` reads the failed run itself
+      # as `infra-error`. The step is what puts the run URL and the failure
+      # subtype on the PR, so the human reading the PR or the merge summary finds
+      # the reason without opening the Actions log. Costs one comment per failed
+      # round.
       - if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -322,7 +324,7 @@ Both shared steps above, then:
    ```
 
    Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review and no error, the silent failure a fallback exists to prevent. A private repo where every commenter can already push needs no clause.
-5. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. A fallback exists to cover a degraded primary, so it is the last reviewer that should fail quietly: drop the step here and a quota month gives you two silent reviewers instead of one.
+5. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so what dropping the step costs is the reason on the PR: a human reading it, or the merge summary, opens the Actions log to learn why the round died. A fallback exists to cover a degraded primary, so it is the last reviewer whose failures should need that dig.
 
 ### Profile block this produces
 
