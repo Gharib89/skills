@@ -48,6 +48,17 @@ jobs:
       - name: Force the branch to the commit that triggered this run
         run: git reset --hard ${{ github.sha }}
 
+      # A skill with no tag matching its `tag_format` makes python-semantic-release
+      # ignore the version in `SKILL.md` and force 1.0.0, which would regress
+      # `ship` from 7.x on the first run. The baseline tags are pushed once, before
+      # this workflow first fires; refuse to release rather than cut that version.
+      - name: Refuse to release without the baseline tags
+        run: |
+          for s in ship cloud-ship setup-skills; do
+            git tag -l "$s-v*" | grep -q . \
+              || { echo "no $s-v* tag: push one at the version in skills/$s/SKILL.md before merging"; exit 1; }
+          done
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"

@@ -15,6 +15,7 @@ Two guards sit around the grade. `bump-guard` refuses a PR title that is not a v
 - `metadata.profile-schema` stays a hand edit. The `## Schema N` entry it carries is written by the change that needs it, and no subject can derive that entry.
 - Each skill's changelog lives at `skills/<name>/CHANGELOG.md`, inside the skill directory rather than at the repo root, because the derived copy mirrors the whole directory: the changelog reaches a consumer with the skill it describes, so the version a consumer reads and the entries explaining it arrive together. `prose-budget` reads only `SKILL.md` and `reference/*.md`, and `stray-files` already admits everything under `skills/`, so neither gate needed changing.
 - The release commit runs the repo's refresh line as its build command, so `.claude/skills/` and `skills-lock.json` move with the bump and `derived-copies` stays green on main.
+- Each skill needs a baseline tag at the version it already carries, pushed once before the workflow first fires. Without a tag matching its `tag_format`, python-semantic-release ignores the number in `SKILL.md` and forces `1.0.0`, which would regress `ship` from 7.x; the workflow refuses to release rather than cut that version.
 - The release run pushes with the default `GITHUB_TOKEN`, whose pushes start no workflow run, so it cannot recurse; the job's `if` on a `chore(release):` head commit is the second guard. Main's ruleset must admit that push.
 
 ## Considered options
