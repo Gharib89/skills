@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # scripts/contract-check.sh: the mechanics' malformed-invocation contract.
-# Each case runs the checker once against its own fixture and asserts on the
-# exit code and the stdout that one run left behind: the verdict and the
-# violation it named are two readings of the same run, and taking them from two
-# runs doubled the slowest test in the gate.
+# The first case runs the checker against the real `skills/ship/scripts`, and
+# every case under it runs it once against a fixture of its own, asserting on
+# the exit code and the stdout that one run left behind: the verdict and the
+# violation it names are two readings of the same run.
 #
 # A fixture carries `_lib.sh`, the real host adapters and only the mechanics the
 # case's own mutation is read through, rather than a copy of all of them. Checks
-# 2, 4 and 5 spawn every mechanic in the directory six times, which is nearly
-# all of what a full-tree run costs, and on a fixture it is spent re-asserting
-# what the `clean` case below asserts once against the real tree. The exclusion
-# lists and the guards a fixture does share are the real ones, copied in.
+# 2, 4 and 5 spawn each mechanic in the directory up to six times, which is
+# nearly all of what a full-tree run costs, and on a fixture it is spent
+# re-asserting what the first case asserts once against the real tree. The
+# guards a fixture does share are the real ones, copied in. Together the two
+# take this file from 64 s to 2.5 s.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -23,9 +24,11 @@ fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 copy_mechanics() {
   local d="$fixture/$1" m; shift
   rm -rf "$d"; mkdir -p "$d"
-  cp skills/ship/scripts/_lib.sh "$d/"
-  cp -r skills/ship/scripts/host "$d/"
-  for m; do cp "skills/ship/scripts/$m.sh" "$d/"; done
+  cp skills/ship/scripts/_lib.sh "$d/" || exit 2
+  cp -r skills/ship/scripts/host "$d/" || exit 2
+  # A mechanic renamed out from under this file would otherwise leave the case
+  # appending its mutation to a file holding nothing else, still green.
+  for m; do cp "skills/ship/scripts/$m.sh" "$d/" || exit 2; done
   printf '%s' "$d"
 }
 # <case-dir>: a fresh copy of the whole skills tree, for one Bash 4+ mutation.
@@ -35,7 +38,7 @@ copy_skills() { local d="$fixture/$1"; rm -rf "$d"; cp -r skills "$d"; printf '%
 # which is what every assertion below reads.
 run() { out=$(bash scripts/contract-check.sh "$1" "${2:-skills}" 2>/dev/null); rc=$?; }
 
-# 0 when the last run named exactly this line, for a fixture that trips more
+# 0 when the last run's stdout contains this line, for a fixture that trips more
 # than one check and whose whole stdout is therefore not one assertion's
 # business.
 named() { case $out in *"$1"*) printf 0 ;; *) printf 1 ;; esac; }
@@ -238,8 +241,7 @@ check_rc "a usage error with a second line fails the check" 1 "$rc"
 # consumer machine provides, macOS's system Bash included, and the mechanics
 # carry no `set -e`, so a Bash 4 builtin there is a skipped line and a silent
 # pass rather than a stop. One case per named construct, because each is its own
-# branch of the pattern. The mechanics directory is `inert`: check 3 is the only
-# check a mutation here reaches, and the real one costs a full pass of the rest.
+# branch of the pattern. The mechanics directory is `inert`.
 mechanics=ship/scripts/read-issue.sh
 
 d=$(copy_skills bash4-mapfile)
