@@ -2,8 +2,8 @@
 # ship phases 7 and 8: one bounded, foreground poll of a PR's head, checks,
 # reviews and threads, then ONE JSON summary.
 #
-#   poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>]
-#           [--await-run <workflow-file>] [--full <id>[,<id>]]
+#   poll-pr <pr> [--brief [--full <id>[,<id>]]] [--await-review <login>]
+#           [--since <iso>] [--await-run <workflow-file>]
 #           [--timeout <s>] [--interval <s>]
 #
 # done when the PR is in conflict (merge-ref checks stay unstarted, so waiting is
@@ -32,8 +32,8 @@
 # Each review row carries the round's own `body` and the `id` the host knows it
 # by, clipped past 2000 characters and marked "...[truncated]" there: phase 7
 # triages from the body, and a round whose findings are in it rather than in
-# threads is invisible without it. `--full` names the ids to return whole; every
-# other row stays clipped, and an id matching no row changes nothing.
+# threads is invisible without it. `--brief --full` names the ids to return whole;
+# every other row stays clipped, and an id matching no row changes nothing.
 # `threads[]` rows carry the thread's first comment, which `reply-thread` answers,
 # and `replied`, true once this identity has answered in that thread.
 #
@@ -73,9 +73,9 @@
 # `--brief` projects that same JSON, from the same single fetch, down to what a
 # review loop acts on: head, mergeable, `landed_by`, one row per reviewer round
 # (id, submitted_at, substantive, and the body cut to its finding items) and one
-# row per OPEN thread (id, resolved, replied). `--full` still names the rows that
-# come back whole, so `--brief --full <id>` is the summary with that one round
-# verbatim. Rounds come from `all[]` under the
+# row per OPEN thread (id, path, lead, resolved, replied). `--full` names the
+# rows that come back whole, so `--brief --full <id>` is the summary with that
+# one round verbatim. Rounds come from `all[]` under the
 # --since rule and `on_head[]` under the head rule, the list that rule lands
 # from, and the run's own rows drop out: a thread reply of ours posts as a review
 # row of its own, and a convergence test that counts it reads its own voice as
@@ -92,7 +92,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--brief] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, whose run holds the window open past --timeout, to ${ceiling}s] [--full <id>[,<id>]] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--brief [--full <id>[,<id>]]] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, whose run holds the window open past --timeout, to ${ceiling}s] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
@@ -117,6 +117,11 @@ while [ $# -gt 0 ]; do
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
+# `--full` is a --brief modifier and nothing else. It lifted the adapter's clip
+# in the full shape too, but that shape keeps its rounds under `reviews` and has
+# no `rounds[]` to read the lifted body off: /ship 205 asked three times and got
+# null each time, with no error to say the pair was wrong (#218).
+[ "$full" = '[]' ] || $brief || ship_tooling "--full needs --brief"
 [ -z "$since" ] || [ -n "$await" ] || ship_tooling "--since needs --await-review"
 [ -z "$await_run" ] || { [ -n "$await" ] && [ -n "$since" ]; } \
   || ship_tooling "--await-run needs --await-review and --since"

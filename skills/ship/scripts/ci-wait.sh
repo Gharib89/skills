@@ -15,9 +15,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The no-checks grace: how long the host is given to register a check before an
 # empty list is believed. A --timeout under it can only report `timeout` where
 # this mechanic answers `no-checks` a minute later, so it is refused rather than
-# honoured, and the usage line carries the number the refusal names.
+# honoured, and the usage line carries the number the refusal names. The profile
+# can drop it to zero, below; the constant is what stands where it does not.
 grace=120
-usage="usage: ci-wait <pr> [--timeout <s>, at least the ${grace}s no-checks grace] [--interval <s>]"
+usage="usage: ci-wait <pr> [--timeout <s>, at least the no-checks grace (${grace}s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
@@ -31,6 +32,13 @@ while [ $# -gt 0 ]; do
   esac
 done
 case $timeout in ''|*[!0-9]*) ship_tooling "$usage" ;; esac
+# A repo whose profile declares no legs and legal no-checks has already said an
+# empty list is its answer, so there is nothing for the grace to wait out and no
+# floor left to hold: the window the floor protects is the grace itself. No
+# checkout, or no profile in it, leaves the constant standing.
+profile=$(ship_profile_path)
+if [ -n "$profile" ] && [ -f "$profile" ] \
+   && ship_no_checks_expected "$(cat "$profile")"; then grace=0; fi
 [ "$timeout" -ge "$grace" ] || ship_tooling \
   "--timeout below the ${grace}s no-checks grace: a shorter window reports timeout where this mechanic answers no-checks"
 ship_load_host
@@ -52,7 +60,9 @@ while :; do
   checks=$(host_pr_checks "$pr" "$sha") || ship_tooling "cannot read checks"
   n=$(jq length <<<"$checks"); pending=$(jq '[.[] | select(.status == "pending")] | length' <<<"$checks")
   # A path-filtered repo can legitimately report no checks for a docs-only PR;
-  # give the host a grace window to register them before believing that.
+  # give the host a grace window to register them before believing that. A
+  # profile that expects none set the grace to zero above, and the first empty
+  # poll is the answer.
   if [ "$n" -eq 0 ] && [ "$waited" -ge "$grace" ]; then emit no-checks "$sha" "$checks" "$waited"; exit 0; fi
   if [ "$n" -gt 0 ] && [ "$pending" -eq 0 ]; then
     if jq -e 'any(.[]; .status == "failure")' <<<"$checks" >/dev/null; then

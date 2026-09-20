@@ -41,16 +41,21 @@ a fresh read of the committed tree, not a conversation.
 - **`--brief` projects that same poll** down to what this loop acts on: head,
   mergeable, `landed_by`, one `rounds[]` row per round (id, `submitted_at`,
   `substantive`, and the body cut to its lead line and finding items) and one
-  row per OPEN thread. Rounds come from the list the landing rule admitted, and
-  the run's own replies drop out, so a round count is the reviewer's rounds and
-  not ours. Take the full shape when a round needs reading whole; `--full <id>`
-  still answers that on the row it names.
+  row per OPEN thread (id, `path`, `lead`, `resolved`, `replied`). Rounds come
+  from the list the landing rule admitted, and the run's own replies drop out,
+  so a round count is the reviewer's rounds and not ours. A thread row carries
+  the file its finding sits on and the line that states it, so one thread is
+  dispositioned off the brief without a second poll, unless that `lead` comes
+  back marked `...[truncated]`: `--full` names rounds alone, and the comment is
+  read whole from the full shape's `threads[]`.
 - **A body ending `...[truncated]` has not been read.** Rounds are clipped past
   2000 characters so one poll cannot flood the window, and a reviewer that opens
   with a preamble (an overview, a per-file table) pushes its findings past that
-  cap. Re-run the poll with `--full <id>` for that row and it alone comes back
-  whole, and that read comes before the triage: dispositioning a clipped round
-  is converging on the findings you happened to see.
+  cap. Re-run the poll with `--brief --full <id>` for that row and it alone
+  comes back whole, and that read comes before the triage: dispositioning a
+  clipped round is converging on the findings you happened to see. `--full` is
+  the brief's own flag and is refused without it: the full shape keeps its rounds
+  under `reviews` and has no `rounds[]` for a run to read the lifted body off.
 - **The trigger picks the landing rule; the poll has to be told which.** Under
   the **head** rule (no `--since`) a round counts only on the current head:
   right for `on-push`, where every push earns a fresh review. Under the

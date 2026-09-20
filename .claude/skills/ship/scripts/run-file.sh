@@ -8,9 +8,20 @@
 #   run-file init <issue|slug> --scratchpad <dir> [--rebuild]
 #                [--state <n>=open|done|done:<HH:MM→HH:MM>|skipped:<reason>]...
 #                [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>]
-#   run-file open|close <n> --file <path>
-#   run-file skip <n> <reason> --file <path>
-#   run-file timing --file <path>
+#   run-file open|close <n> <where>
+#   run-file skip <n> <reason> <where>
+#   run-file timing <where>
+#
+# where <where> is `--file <path>`, or `--issue <n|slug> [--scratchpad <dir>]`
+# for the layout `init` wrote, `<scratchpad>/ship-<issue>/run.md`. A left-out
+# `--scratchpad` is `$TMPDIR` or `/tmp`, which is where a run whose harness named
+# no scratchpad put the record; a run whose harness named one passes it, the same
+# directory it passed `init`. `init` owns
+# that layout, so it is the mechanic that resolves it: a run whose context was
+# compacted still has the issue it was invoked on and the scratchpad its
+# environment block names, and called `close` without a path twice for want of
+# the rest (#218). An explicit `--file` wins, and neither given is the usage
+# error it always was.
 #
 # `init` writes the ten items and returns them, one per harness task the run
 # then creates; `--rebuild` with `--state` is the recovery from a Run file a
@@ -24,7 +35,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> --file <path> | close <n> --file <path> | skip <n> <reason> --file <path> | timing --file <path>'
+usage='usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> | close <n> | skip <n> <reason> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default $TMPDIR or /tmp] resolving <scratchpad>/ship-<issue>/run.md'
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 verb=$1; shift
@@ -110,15 +121,20 @@ phase_arg() { # phase_arg <value>: the phase number; a flag here is a usage erro
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
   case ${1:-} in '' | *[!0-9]*) ship_tooling "$usage" ;; esac
 }
-parse_file() { # parse_file "$@": the --file flag every flip and timing takes
-  file=""
+parse_file() { # parse_file "$@": where every flip and timing reads the record
+  file="" issue="" scratchpad=${TMPDIR:-/tmp}
   while [ $# -gt 0 ]; do
     case $1 in
-      --file) [ $# -ge 2 ] || ship_tooling "--file needs a path"; file=$2; shift 2 ;;
+      --file)       [ $# -ge 2 ] || ship_tooling "--file needs a path"; file=$2; shift 2 ;;
+      --issue)      [ $# -ge 2 ] || ship_tooling "--issue needs an issue or slug"; issue=$2; shift 2 ;;
+      --scratchpad) [ $# -ge 2 ] || ship_tooling "--scratchpad needs a directory"; scratchpad=$2; shift 2 ;;
       *) ship_tooling "unknown flag: $1" ;;
     esac
   done
-  [ -n "$file" ] || ship_tooling "$usage"
+  [ -n "$file" ] || [ -n "$issue" ] || ship_tooling "$usage"
+  [ -n "$file" ] || file="${scratchpad%/}/ship-$issue/run.md"
+  # The resolved path, not the flags it came from: a run that brought the wrong
+  # scratchpad reads which record the mechanic went looking for.
   [ -f "$file" ] || ship_fail "no Run file at $file"
 }
 # The row a flip acts on, or the refusal that it is not there.
