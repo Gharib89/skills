@@ -238,11 +238,10 @@ ship_load_host() {
 }
 
 # Triage roles are canonical names; the label strings a repo actually uses live
-# in the role table docs/agents/triage-labels.md opens with, which the setup
-# skill writes. The read stops at the first `## ` heading, where that skill
-# puts `## Dimension labels`: a dimension row is keyed by label name rather
-# than by a role, so one spelled like a role is not one, and the bound says so.
-# Falls back to the canonical name when the file or row is missing.
+# in the role table docs/agents/triage-labels.md opens with. The read stops at
+# the first `## ` heading, where `setup-skills` puts `## Dimension labels`: a
+# dimension row is keyed by label name, so one spelled like a role never
+# resolves as one. Falls back to the canonical name when file or row is missing.
 ship_triage_label() {
   local role=$1 root file label
   root=$(ship_main_checkout) || { printf '%s' "$role"; return; }

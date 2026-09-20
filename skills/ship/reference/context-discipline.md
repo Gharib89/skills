@@ -86,9 +86,9 @@ whatever close it is given. It owns the stamp, the one-open-phase invariant and
 every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
 a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
 the record shows a decision and not a gap. A later phase can widen the diff
-under a skip reason, so a second `skip <n> "<reason>"` re-stamps that reason in
-place: a reason the run knows to be wrong is corrected there, and `init
---rebuild` below stays reserved for a clobbered file. A harness that refuses
+past the reason a phase was skipped under: re-run `skip <n> "<reason>"` with the
+corrected wording and it replaces the old reason in place, leaving `init
+--rebuild` below to a clobbered file. A harness that refuses
 the task tools has answered: run on the file alone.
 
 **A phase-4 report is written to a Report file before one of its findings is

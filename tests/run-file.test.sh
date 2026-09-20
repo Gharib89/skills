@@ -256,9 +256,9 @@ check "skip on a phase that has run is refused" \
 check_rc "skip on a phase that has run exits 1" 1 "$(rc skip 5 oops --file "$c")"
 
 out skip 6 'small lane' --file "$c" >/dev/null
-# A later phase can widen the diff under a skip reason, so a second skip
-# re-stamps that reason in place rather than refusing it: correcting a reason
-# the run knows to be wrong is this call, not `init --rebuild`.
+# A second skip replaces the reason and leaves the phase skipped, so the cases
+# below pin the new reason, the first skip's JSON shape and the refusals a
+# re-stamp does not relax.
 check "a re-stamp answers with the first skip's shape and the new reason" \
   'skipped completed phase 4 reached a new directory' \
   "$(out skip 6 'phase 4 reached a new directory' --file "$c" \
