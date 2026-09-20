@@ -247,10 +247,15 @@ skip)
   parse_file "$@"
   take_row "$n"
   is_open "$line" && ship_fail "phase $n is open; close it before skipping it"
-  case $line in *" skipped ("*) ship_fail "phase $n is already skipped" ;; esac
   # The marker is the mechanic's own record that the phase is done, so it
   # answers before the stamps do: a phase rebuilt as `done` carries no range.
-  case $line in "- [x] "*) ship_fail "phase $n has already run; it cannot be skipped" ;; esac
+  # An already-skipped phase is the exception it must be read before: a later
+  # phase can widen the diff under a skip reason, so a second skip re-stamps
+  # that reason in place rather than sending the correction to `init --rebuild`.
+  case $line in
+    *" skipped ("*) ;;
+    "- [x] "*) ship_fail "phase $n has already run; it cannot be skipped" ;;
+  esac
   new=$(render skipped "$(item "$line")" "$reason")
   reject_written_state "$new"
   write_line "$lineno" "$new"
