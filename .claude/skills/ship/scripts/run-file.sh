@@ -125,9 +125,9 @@ parse_file() { # parse_file "$@": where every flip and timing reads the record
   file="" issue="" scratchpad=${TMPDIR:-/tmp}
   while [ $# -gt 0 ]; do
     case $1 in
-      --file)       [ $# -ge 2 ] || ship_tooling "--file needs a path"; file=$2; shift 2 ;;
-      --issue)      [ $# -ge 2 ] || ship_tooling "--issue needs an issue or slug"; issue=$2; shift 2 ;;
-      --scratchpad) [ $# -ge 2 ] || ship_tooling "--scratchpad needs a directory"; scratchpad=$2; shift 2 ;;
+      --file)       [ -n "${2:-}" ] || ship_tooling "--file needs a path"; file=$2; shift 2 ;;
+      --issue)      [ -n "${2:-}" ] || ship_tooling "--issue needs an issue or slug"; issue=$2; shift 2 ;;
+      --scratchpad) [ -n "${2:-}" ] || ship_tooling "--scratchpad needs a directory"; scratchpad=$2; shift 2 ;;
       *) ship_tooling "unknown flag: $1" ;;
     esac
   done

@@ -373,6 +373,12 @@ j=$(out init 219 --scratchpad "$tmp" | jq -r '.run_file')
 check "--file wins over --issue" \
   "$j" "$(out open 4 --file "$j" --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
 
+# An empty value is malformed, not absent: `--file ""` from an unset variable
+# used to fall through to --issue and flip a record the caller never named.
+check "an empty --file is refused, not resolved by --issue" \
+  '--file needs a path' "$(err open 4 --file '' --issue 219 --scratchpad "$tmp")"
+check_rc "an empty --file is malformed" 2 "$(rc open 4 --file '' --issue 219 --scratchpad "$tmp")"
+
 # Neither is the usage error it always was: the flip has no record to act on.
 check "neither --file nor --issue is the usage line" "$usage" "$(err close 4)"
 check_rc "neither --file nor --issue is malformed" 2 "$(rc close 4)"

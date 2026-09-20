@@ -2,7 +2,7 @@
 # ship phases 7 and 8: one bounded, foreground poll of a PR's head, checks,
 # reviews and threads, then ONE JSON summary.
 #
-#   poll-pr <pr> [--brief [--full <id>[,<id>]]] [--await-review <login>]
+#   poll-pr <pr> [--brief, or --brief --full <id>[,<id>]] [--await-review <login>]
 #           [--since <iso>] [--await-run <workflow-file>]
 #           [--timeout <s>] [--interval <s>]
 #
@@ -92,7 +92,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--brief [--full <id>[,<id>]]] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, whose run holds the window open past --timeout, to ${ceiling}s] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--await-review <login>] [--since <iso>] [--await-run <workflow-file>, whose run holds the window open past --timeout, to ${ceiling}s] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
@@ -121,7 +121,7 @@ done
 # in the full shape too, but that shape keeps its rounds under `reviews` and has
 # no `rounds[]` to read the lifted body off: /ship 205 asked three times and got
 # null each time, with no error to say the pair was wrong (#218).
-[ "$full" = '[]' ] || $brief || ship_tooling "--full needs --brief"
+[ "$full" = '[]' ] || $brief || ship_tooling "--full needs --brief; $usage"
 [ -z "$since" ] || [ -n "$await" ] || ship_tooling "--since needs --await-review"
 [ -z "$await_run" ] || { [ -n "$await" ] && [ -n "$since" ]; } \
   || ship_tooling "--await-run needs --await-review and --since"

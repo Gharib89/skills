@@ -3,7 +3,8 @@
 # checks sit pending forever), then a bounded foreground wait until every check
 # on the head has completed.
 #
-#   ci-wait <pr> [--timeout <s>, at least the 120s no-checks grace] [--interval <s>]
+#   ci-wait <pr> [--timeout <s>, at least the no-checks grace the profile
+#           leaves standing] [--interval <s>]
 #
 # stdout: {status: green | no-checks | conflict | checks-failed | timeout,
 #          head_sha, checks: [{name, status}], failing: [names], waited_s}
