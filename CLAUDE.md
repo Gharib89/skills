@@ -6,7 +6,7 @@ Issues are tracked as GitHub Issues via the `gh` CLI. See `docs/agents/issue-tra
 
 ### Triage labels
 
-Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`, plus one Kind, one Size and one Priority dimension label per issue. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 

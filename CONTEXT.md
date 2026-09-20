@@ -37,8 +37,8 @@ A user-invoked skill that explores a repo and drafts its per-repo documents, con
 _Avoid_: init, scaffold, bootstrap
 
 **Dimension label**:
-One of the three orthogonal axes a repo's tracker carries beside the five triage roles: kind, size and priority, at most one label per axis on an issue, stamped at triage time. `setup-skills` owns the vocabulary, creating the labels on the host and writing the `## Dimension labels` section into the repo's `docs/agents/triage-labels.md`, which is the mapping the `triage` skill reads. Implementation order is derived from priority, size and blocking edges and is never one of them: a rank label rots the moment a higher issue ships.
-_Avoid_: tag, rank label, severity, t-shirt size, triage label (that is the role)
+A label on one of the three dimensions a repo's tracker carries beside the five triage roles: kind, size and priority, at most one label per dimension on an issue, stamped at triage time. `setup-skills` seeds the vocabulary, creating the labels on the host and writing the `## Dimension labels` section into a `docs/agents/triage-labels.md` that has none; the repo owns the section from then on. Implementation order is derived from priority, size and blocking edges and is never one of them: a rank label rots the moment a higher issue ships.
+_Avoid_: tag, rank label, severity, t-shirt size, axis (that is a ship profile section)
 
 **Composed skill**:
 A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `show-me`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. Adding one is therefore a breaking change for installed consumers. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.

@@ -10,7 +10,7 @@ metadata:
 
 Draft the per-repo documents the `ship` skill reads, confirming with the human before every write. Same shape as `setup-matt-pocock-skills`: explore once, present, walk what exploration could not settle, confirm the full draft, write, prove. This skill does only what that parent leaves undone and ship needs: it takes the parent's answers on tracker, triage vocabulary and domain-doc layout as given, and asks only about what the parent left open.
 
-Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (ship profile, axis, local gate, verdict, reviewer, trigger, derived copy). Every document you write here is read by an agent: apply `writing-for-agents` to its prose.
+Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (ship profile, axis, local gate, verdict, reviewer, trigger, derived copy, dimension label). Every document you write here is read by an agent: apply `writing-for-agents` to its prose.
 
 ## Process
 
@@ -70,7 +70,11 @@ Read the repo once, every section, before saying anything. The right-hand column
 | Current docs | context7 always; Microsoft Learn when a Microsoft stack shows (D365, Azure, Power BI, .NET); `Pinned:` | walked |
 | Cloud lane | `PR cap: 3`; `Bootstrap:` the path of `scripts/cloud-ship-bootstrap.sh` when it exists, else `None.` | yes |
 
-Also record, for step 5: the per-repo ship scripts the generic mechanics supersede (`claim`, `isolate`, `preflight`, `poll-pr`, `ci-wait`, `merge-and-verify`, `merge`, `reflect`, `release`, `_lib` under `.claude/skills/ship/scripts/` or `scripts/ship/`); which of `triage-labels.md`'s five role labels and [dimension-labels.md](./dimension-labels.md)'s fourteen dimension labels the host already carries, read from `gh label list` and matched **case-insensitively**, because GitHub label names are, so a variant in another casing is recorded as a rename and not as a gap (on ADO tags exist once used, so nothing to check); and whether `docs/agents/triage-labels.md` already carries a `## Dimension labels` heading.
+Also record, for step 5, three things:
+
+- The per-repo ship scripts the generic mechanics supersede: `claim`, `isolate`, `preflight`, `poll-pr`, `ci-wait`, `merge-and-verify`, `merge`, `reflect`, `release`, `_lib` under `.claude/skills/ship/scripts/` or `scripts/ship/`.
+- Which of `triage-labels.md`'s five role labels and [dimension-labels.md](./dimension-labels.md)'s fourteen dimension labels the host already carries, from `gh label list`, matched **case-insensitively**, because GitHub label names are: a label in another casing is recorded as a rename and not as a gap. On ADO a tag exists once it is used, so there is nothing to read.
+- Whether `docs/agents/triage-labels.md` already carries a `## Dimension labels` heading.
 
 ### Reviewers
 
@@ -140,9 +144,9 @@ Either way, **run it once** (`--small` with the example node) and check the verd
 
 **Coding standards.** None found: write `docs/contributing/coding-standards.md` from [coding-standards.md](./coding-standards.md), recording only what exists and is enforced today (config-enforced tools, links to CLAUDE.md sections carrying inline standards). Link to CLAUDE.md prose rather than moving it in.
 
-**Triage labels on the host** (GitHub only). Any of the five role labels from `triage-labels.md` missing on the repo: create them, because ship's hand-back exits 1 without `ready-for-human`. Then the fourteen dimension labels of [dimension-labels.md](./dimension-labels.md), each created with that file's own colour and description: only the ones step 3 recorded as missing, so a repo already carrying the set sees no label call. A label step 3 recorded in another casing is **renamed** to the template's casing rather than created a second time, which the host refuses anyway. On Azure DevOps a tag exists once it is used, so nothing is created there and only the section below is written.
+**Triage labels on the host** (GitHub only). Any of the five role labels from `triage-labels.md` missing on the repo: create them, because ship's hand-back exits 1 without `ready-for-human`. Then the fourteen dimension labels of [dimension-labels.md](./dimension-labels.md), each created with that file's own color and description: only the ones step 3 recorded as missing, so a repo already carrying the set sees no label call. A label step 3 recorded in another casing is **renamed** to the template's casing rather than created a second time, which the host refuses anyway. On Azure DevOps a tag exists once it is used, so nothing is created there and only the section below is written.
 
-**The `## Dimension labels` section** of `docs/agents/triage-labels.md`, from the same [dimension-labels.md](./dimension-labels.md), placed after the five-role table with the template comment removed. A file that already carries the heading is left alone. That file is the label mapping the vendored `triage` skill reads, so the section is how triage learns the two extra axes: it stamps at most one label per axis at triage time, alongside the role label, and implementation order stays derived from priority, size and blocking edges rather than being a label of its own.
+**The `## Dimension labels` section** of `docs/agents/triage-labels.md`, from the same [dimension-labels.md](./dimension-labels.md), placed after the five-role table with the template comment removed. A file that already carries the heading is left alone: the section is the repo's once it is written. `triage-labels.md` is the label mapping a repo hands the vendored `triage` skill, through the `### Triage labels` block of its CLAUDE.md, so this write is how triage learns the three dimensions; its own prose carries the one-per-dimension and derived-order rules, and this step adds nothing to them.
 
 **Reviewer scaffolding**, for each reviewer the user named that is not installed: write the files the host needs and hand the human an inline checklist of the steps only they can do (secrets, app installs, branch policies). Claude Code as reviewer: [reviewers/github-claude-review.md](./reviewers/github-claude-review.md), in the shape step 4's one question settled, or [reviewers/ado-claude-review.md](./reviewers/ado-claude-review.md) on Azure DevOps. Point the scaffold's `__INSTRUCTIONS__` at the profile's `Instructions:` path, which is the repo's reviewer brief where it has one and the coding-standards path where it has none, pointing at that file rather than a copy of it. Other bots (CodeRabbit, Copilot) are configured in their own UIs; the checklist names the setting.
 
