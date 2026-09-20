@@ -1,20 +1,6 @@
-# Triage Labels
-
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker, and carries the dimension labels that sit beside them.
-
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
-| `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
-
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
-
-Edit the right-hand column to match whatever vocabulary you actually use.
-
 ## Dimension labels
+
+<!-- setup-skills: written verbatim at the end of docs/agents/triage-labels.md, below the role table and the prose lines that explain it, this comment removed. Create each label on the host with the Color and Description columns below. `bug`, `enhancement` and `documentation` are GitHub's own defaults, color and description included, so a fresh repo already carries those three and only `refactor` and `chore` are created. The size greys run light to dark and the priority colors run red through amber to green, so each dimension reads as a ramp in the tracker's label column rather than as unrelated colors. -->
 
 Three dimensions beside the five triage roles. Triage stamps **at most one label per dimension**, at triage time, alongside the role label, so a maintainer glancing at the tracker reads off what kind of change an issue is, how big it is and how urgent it is without opening it.
 

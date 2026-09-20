@@ -36,6 +36,10 @@ _Avoid_: helper, util, raw `gh` or `az` call
 A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section of that same skill.
 _Avoid_: init, scaffold, bootstrap
 
+**Dimension label**:
+A label on one of the three dimensions a repo's tracker carries beside the five triage roles: kind, size and priority, at most one label per dimension on an issue, stamped at triage time. `setup-skills` seeds the vocabulary, creating the labels on the host and writing the `## Dimension labels` section into a `docs/agents/triage-labels.md` that has none; the repo owns the section from then on. Implementation order is derived from priority, size and blocking edges and is never one of them: a rank label rots the moment a higher issue ships.
+_Avoid_: tag, rank label, severity, t-shirt size
+
 **Composed skill**:
 A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `show-me`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. Adding one is therefore a breaking change for installed consumers. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
 _Avoid_: dependency, sub-skill, helper skill
