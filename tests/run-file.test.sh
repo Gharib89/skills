@@ -256,8 +256,22 @@ check "skip on a phase that has run is refused" \
 check_rc "skip on a phase that has run exits 1" 1 "$(rc skip 5 oops --file "$c")"
 
 out skip 6 'small lane' --file "$c" >/dev/null
-check "skip on an already skipped phase is refused" \
-  "phase 6 is already skipped" "$(err skip 6 'small lane' --file "$c")"
+# A second skip replaces the reason and leaves the phase skipped, so the cases
+# below pin the new reason, the first skip's JSON shape and the refusals a
+# re-stamp does not relax.
+check "a re-stamp answers with the first skip's shape and the new reason" \
+  'skipped completed phase 4 reached a new directory' \
+  "$(out skip 6 'phase 4 reached a new directory' --file "$c" \
+       | jq -r '[.state, .mirror, .reason] | join(" ")')"
+check_rc "a re-stamp exits 0" 0 "$(rc skip 6 'phase 4 reached a new directory' --file "$c")"
+check "the re-stamped line carries the new reason alone" \
+  '- [x] 6 · Open PR: non-draft, Conventional-Commit title, Closes, reflect on the issue skipped (phase 4 reached a new directory)' \
+  "$(grep '^- \[.\] 6 · ' "$c")"
+check "a re-stamp whose reason closes the wrapper into a state shape is refused" \
+  "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it" \
+  "$(err skip 6 'x) in_progress (10:00→' --file "$c")"
+check "timing reads the re-stamped phase as it reads any skipped phase" \
+  unverified "$(out timing --file "$c" | jq -r '.phases["6"]')"
 # The small lane revokes one way only, so a skipped phase can come back.
 out open 6 --file "$c" >/dev/null
 check "re-opening a skipped phase drops the skip" \

@@ -85,8 +85,11 @@ verification passed, which is judgement the mechanic cannot hold: it stamps
 whatever close it is given. It owns the stamp, the one-open-phase invariant and
 every refusal, and `run-file timing` computes the merge summary's `Timing:` row;
 a **small-lane** run keeps all ten items and `skip`s each collapsed phase, so
-the record shows a decision and not a gap. A harness that refuses the task tools
-has answered: run on the file alone.
+the record shows a decision and not a gap. A later phase can widen the diff
+past the reason a phase was skipped under: re-run `skip <n> "<reason>"` with the
+corrected wording and it replaces the old reason in place, leaving `init
+--rebuild` below to a clobbered file. A harness that refuses
+the task tools has answered: run on the file alone.
 
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned.** Both `code-review` axis reports and the `writing-for-agents`
