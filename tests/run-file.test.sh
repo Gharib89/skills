@@ -10,6 +10,8 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
+usage='usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> | close <n> | skip <n> <reason> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default $TMPDIR or /tmp] resolving <scratchpad>/ship-<issue>/run.md'
+
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()   { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
@@ -346,6 +348,51 @@ check_rc "a rebuild whose reason ends in a state shape is malformed" 2 \
   "$(rc init 510 --scratchpad "$tmp" --rebuild --state '3=skipped:x) in_progress (10:00→')"
 check "the refused rebuild leaves the Run file it was asked to recover" \
   "$was" "$(cat "$v")"
+
+# --- naming the record by its issue ---------------------------------------------
+
+# A run that lost the path to its own record after a context compaction called
+# `close` without `--file` twice (/ship 205). The layout is the mechanic's, so
+# the mechanic resolves it: the run brings the scratchpad its environment block
+# names and the issue it was invoked on, and the usage line carries the rest.
+i=$(out init 218 --scratchpad "$tmp" | jq -r '.run_file')
+
+check "--issue resolves the record under the scratchpad" \
+  "$i" "$(out open 4 --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
+check "the line it flipped is the one --file flips" \
+  1 "$(grep -c '^- \[ \] 4 · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$i")"
+check_rc "close by --issue exits ok" 0 "$(rc close 4 --issue 218 --scratchpad "$tmp")"
+check "skip by --issue carries the reason" \
+  'small lane' "$(out skip 3 'small lane' --issue 218 --scratchpad "$tmp" | jq -r '.reason')"
+check "timing by --issue reads the same file" \
+  "$i" "$(out timing --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
+
+# An explicit path outranks the pair that would resolve one: a run that knows
+# where its record is never has the mechanic guess.
+j=$(out init 219 --scratchpad "$tmp" | jq -r '.run_file')
+check "--file wins over --issue" \
+  "$j" "$(out open 4 --file "$j" --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
+
+# An empty value is malformed, not absent: `--file ""` from an unset variable
+# used to fall through to --issue and flip a record the caller never named.
+check "an empty --file is refused, not resolved by --issue" \
+  '--file needs a path' "$(err open 4 --file '' --issue 219 --scratchpad "$tmp")"
+check_rc "an empty --file is malformed" 2 "$(rc open 4 --file '' --issue 219 --scratchpad "$tmp")"
+
+# Neither is the usage error it always was: the flip has no record to act on.
+check "neither --file nor --issue is the usage line" "$usage" "$(err close 4)"
+check_rc "neither --file nor --issue is malformed" 2 "$(rc close 4)"
+
+# The refusal names the path it resolved, so a run that brought the wrong
+# scratchpad reads which one it asked for rather than that something was missing.
+check "an --issue with no record names the path it resolved" \
+  "no Run file at $tmp/ship-nothing-here/run.md" \
+  "$(err close 4 --issue nothing-here --scratchpad "$tmp")"
+
+# With no --scratchpad the OS temp dir stands, which is where a run whose
+# harness named none put the record in the first place.
+tmpdir_case=$(TMPDIR=$tmp out timing --issue 218 | jq -r '.run_file')
+check "--scratchpad defaults to the OS temp dir" "$i" "$tmpdir_case"
 
 
 finish

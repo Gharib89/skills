@@ -79,7 +79,9 @@ design and plan as they form; it survives a mid-run context summary, so work
 straight through one in the same session, each phase at the width its lane gives
 it rather than the width the remaining context suggests. The harness task list
 is its **display**: flip a phase with `run-file open <n>`, `close <n>` or `skip
-<n> "<reason>"` against `--file <path>`, then set that phase's task to the
+<n> "<reason>"` against `--file <path>`, or against `--issue <issue>
+--scratchpad <dir>`, which resolves the same path from the two facts a compacted
+context still holds; then set that phase's task to the
 `mirror` value the flip returned (`TaskUpdate`); close a phase only once its
 verification passed, which is judgement the mechanic cannot hold: it stamps
 whatever close it is given. It owns the stamp, the one-open-phase invariant and

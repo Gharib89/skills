@@ -644,6 +644,41 @@ ship_body_headings() {
     !fenced && /^## / { sub(/^## /, ""); sub(/[ \t\r]+$/, ""); print }' <<<"$1"
 }
 
+# ship_profile_path: the ship profile in the checkout the caller runs in, rather
+# than the main one: a run inside a worktree is governed by the profile on its
+# own branch, and a repo's first profile lands on a branch before it ever
+# reaches main. Fails outside a checkout. Whether the file is there is the
+# caller's own question, because the two that ask it answer differently: for
+# preflight an absent profile is a stop, and for `ci-wait` it is the default
+# grace standing.
+ship_profile_path() {
+  local here
+  here=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+  printf '%s/docs/agents/ship.md' "$here"
+}
+
+# ship_no_checks_expected <profile-body>: true when the profile's `## CI` block
+# says both that no leg runs on a PR (`Legs: None.`) and that an empty check list
+# is legal (`No-checks legal: yes`). That pair answers, up front, the question
+# `ci-wait`'s no-checks grace exists to ask, so a run in such a repo waits
+# nothing instead of two minutes for a check the profile says never comes
+# (#218). Either fact alone keeps the grace: a repo with no legs that still
+# calls an empty list illegal is waiting for a leg nobody named, and a repo with
+# a leg has a check coming whatever the second line says.
+#
+# Read inside `## CI` and nowhere else, the way every profile fact is read from
+# its own section: `Legs:` is that section's word, and a line of the same shape
+# under another heading is prose. Both values are matched as the profile spells
+# them, lower case: one function reading its own section two ways is the drift
+# a second spelling starts.
+ship_no_checks_expected() { # <profile-body>
+  local ci
+  ci=$(awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$1")
+  grep -Eq '^Legs:[[:space:]]*None\.[[:space:]]*$' <<<"$ci" || return 1
+  grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)' <<<"$ci" || return 1
+  return 0
+}
+
 # ship_reviewers <profile-body>: the `## Reviewers` section as one JSON row per
 # reviewer, in profile order, each
 # {name, login, trigger, request, workflow, cap, resolve, gating, fallback_for,
@@ -882,7 +917,10 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # carries that marker through: a round nobody has read whole must not come back
 # looking complete, or the loop stops before re-polling it with --full.
 # Threads come down to the open ones, the only ones still owed a disposition,
-# and the string "unavailable" passes through as itself. `reviewer_run` passes
+# each carrying the `path` its finding sits on and the `lead` line that states
+# it, cut at the same width: a run answers one thread off the brief, and a row
+# holding an id alone sent it back for the full shape to read what the finding
+# was. The string "unavailable" passes through as itself. `reviewer_run` passes
 # through whole, the string "unavailable" included: it is three fields, and a
 # loop reading rounds from the brief is the loop that has to tell a silent
 # reviewer from one whose run is still going.
@@ -890,19 +928,22 @@ ship_brief() {
   jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" '
     def norm: ascii_downcase | sub("\\[bot\\]$"; "");
     def mine: $me != "" and (((.login // "") | norm) == ($me | norm));
+    def clip: if length > 200 then .[0:200] + "\n...[truncated]" else . end;
     def finding_items:
       (if endswith("\n...[truncated]") then "\n...[truncated]" else "" end) as $mark
       | [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
       | [$lines[] | select(test("^[ \t]*([-*+]|[0-9]+[.)])[ \t]"))] as $items
-      | if ($items | length) == 0 then (if length > 200 then .[0:200] + "\n...[truncated]" else . end)
+      | if ($items | length) == 0 then clip
         elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
+    def lead: [splits("\n") | select(test("^[ \t]*$") | not)] | (.[0] // "") | clip;
     {head_sha, mergeable, landed_by, reviewer_run,
      rounds: [.reviews[$key][] | select(mine | not) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index($r.id | tostring)) then $r.body
                         else ($r.body | finding_items) end)}],
      threads: (if (.threads | type) == "array"
-               then [.threads[] | select(.resolved | not) | {id, resolved, replied}]
+               then [.threads[] | select(.resolved | not)
+                     | {id, path, lead: ((.body // "") | lead), resolved, replied}]
                else .threads end)}' <<<"$1"
 }

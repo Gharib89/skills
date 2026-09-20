@@ -30,7 +30,7 @@ Tripwires: <anything that must run before the gate, e.g. a bundle rebuild, or No
 ## CI
 
 Legs: <one `name: what it proves` per line; these names are what `## Verification` may defer to>
-No-checks legal: <yes | no, with the reason: path-filtered workflows may legitimately report no checks>
+No-checks legal: <yes | no, with the reason: a path-filtered workflow may legitimately report no checks, and a repo with no PR workflow reports none ever; `yes` with `Legs: None.` is what drops `ci-wait`'s no-checks grace to zero>
 Push policy: <e.g. one push per review round; minutes are metered, or Default.>
 
 <!-- Only workflows with a pull_request trigger are legs. Name other workflows in prose here as non-PR. -->

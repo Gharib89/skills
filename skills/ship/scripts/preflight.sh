@@ -77,11 +77,10 @@ root=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
 reasons=()
 
 # Profile: presence, the fourteen headings in order, the Schema line, and the
-# Host cross-check. Read from the checkout preflight runs in, not the main one:
-# a run inside a worktree is governed by the profile on its own branch, and a
-# repo's first profile lands on a branch before it ever reaches main.
+# Host cross-check. `ship_profile_path` carries which checkout it is read from,
+# and why.
 here=$(git rev-parse --show-toplevel)
-profile="$here/docs/agents/ship.md"
+profile=$(ship_profile_path)
 ship_skill="$SHIP_SCRIPTS/../SKILL.md"
 if [ ! -f "$profile" ]; then
   reasons+=("profile missing: $profile; run /setup-skills")

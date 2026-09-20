@@ -105,7 +105,7 @@ Which reviews `poll-pr` accepts as the round it is waiting for, reported as `lan
 _Avoid_: landing check, freshness rule
 
 **Round clip**:
-The 2000-character cap `poll-pr` puts on every review body, marked `...[truncated]` where it bites, so one poll cannot flood the run's window. `--full <id>` lifts it for the rows it names and nothing else. A reviewer that opens with a preamble pushes its findings past the cap, and a round that comes back clipped is one phase 7 has not read.
+The 2000-character cap `poll-pr` puts on every review body, marked `...[truncated]` where it bites, so one poll cannot flood the run's window. `--brief --full <id>` lifts it for the rows it names and nothing else, and `--full` without `--brief` is refused. It covers review bodies alone: a `--brief` thread row's `lead` carries the same marker at 200 characters, which no flag lifts, and the full shape's `threads[]` is where that comment is read whole. A reviewer that opens with a preamble pushes its findings past the cap, and a round that comes back clipped is one phase 7 has not read.
 _Avoid_: truncation, body limit
 
 **Converged**:

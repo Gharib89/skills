@@ -43,7 +43,8 @@ check "the head rule projects on_head without the run's own row" \
   "$(jq -cn --arg f "$findings" '{head_sha: "abc1234", mergeable: "clean", landed_by: "head",
       reviewer_run: {status: "completed", conclusion: "success", url: "https://example.invalid/runs/9"},
       rounds: [{id: 11, submitted_at: "2026-09-14T03:00:00Z", substantive: true, body: $f}],
-      threads: [{id: "t1", resolved: false, replied: false}]}')" \
+      threads: [{id: "t1", path: "skills/ship/scripts/merge.sh", lead: "nit: name the base",
+                 resolved: false, replied: false}]}')" \
   "$(ship_brief "$poll" Gharib89 on_head)"
 
 # The since rule reads every head, so the round that landed before the last push
@@ -53,7 +54,8 @@ check "the since rule projects all[]" \
       reviewer_run: {status: "completed", conclusion: "success", url: "https://example.invalid/runs/9"},
       rounds: [{id: 9, submitted_at: "2026-09-14T02:00:00Z", substantive: true, body: "- first round finding"},
                {id: 11, submitted_at: "2026-09-14T03:00:00Z", substantive: true, body: $f}],
-      threads: [{id: "t1", resolved: false, replied: false}]}')" \
+      threads: [{id: "t1", path: "skills/ship/scripts/merge.sh", lead: "nit: name the base",
+                 resolved: false, replied: false}]}')" \
   "$(ship_brief "$poll" Gharib89 all)"
 
 # An identity that matches no row drops nothing: the exclusion is the run's own
@@ -110,6 +112,50 @@ spaced=$(jq -cn --argjson r "$round" --arg b "$wide" '
 check "a bullet with wide whitespace after its marker is a finding item" \
   "$(printf 'Approval recommended\n-  a wide bullet\n1.\ta tab bullet')" \
   "$(ship_brief "$spaced" Gharib89 on_head | jq -r '.rounds[0].body')"
+
+# A thread row is what a run dispositions: `path` says which file the finding is
+# on and `lead` says what it is, so one Copilot thread can be answered off the
+# brief instead of a second poll for the full shape. The lead is the first line
+# with text in it: a thread body that opens on a blank line or a fenced
+# suggestion below carries its verdict on that line and nothing else.
+leads=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t3", resolved: false, replied: false, author: "Copilot",
+             path: "skills/ship/scripts/ci-wait.sh",
+             body: "\n\nthe grace is read twice\n\n```suggestion\ngrace=0\n```"},
+            {id: "t4", resolved: false, replied: false, author: "Copilot",
+             path: null, body: "a round finding naming no file"}]}')
+
+check "a multi-line thread body comes down to its first line with text" \
+  'the grace is read twice' \
+  "$(ship_brief "$leads" Gharib89 on_head | jq -r '.threads[0].lead')"
+
+# A thread the host attached to no file (a review-body finding) keeps the null
+# rather than an empty string: the two read differently to a run choosing
+# between `reply-thread` and `comment-pr`.
+check "a thread on no file carries a null path" \
+  null "$(ship_brief "$leads" Gharib89 on_head | jq -c '.threads[1].path')"
+
+# The lead is cut at the width the rounds' finding items use, and carries the
+# same marker, so a thread whose first line is an essay does not cost the brief
+# its brevity.
+long=$(jq -cn --arg b "$(rep 240 t)" '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t5", resolved: false, replied: false, author: "Copilot",
+             path: "skills/ship/scripts/poll-pr.sh", body: $b}]}')
+check "a long lead is cut at the finding-items width and says so" \
+  "$(printf '%s\n...[truncated]' "$(rep 200 t)")" \
+  "$(ship_brief "$long" Gharib89 on_head | jq -r '.threads[0].lead')"
+
+# A thread with nothing in its body still produces a row: the id is what
+# `resolve-thread` takes, and a row dropped for an empty lead is a disposition
+# the run never makes.
+empty=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t6", resolved: false, replied: false, author: "Copilot", path: "x.sh", body: ""}]}')
+check "an empty thread body leaves an empty lead, not a missing row" \
+  '{"id":"t6","path":"x.sh","lead":"","resolved":false,"replied":false}' \
+  "$(ship_brief "$empty" Gharib89 on_head | jq -c '.threads[0]')"
 
 # `threads` is the string "unavailable" when the host refused the state; the
 # projection reports that rather than an empty list, which would read as "no
