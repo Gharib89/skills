@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.1.0 (2026-09-21)
+
+### Features
+
+- **ship**: The PR body states the door and the blast radius
+  ([#237](https://github.com/Gharib89/skills/pull/237),
+  [`5f6a870`](https://github.com/Gharib89/skills/commit/5f6a87093c08e94667b719c5a628d9375cdbeed4))
+
+
 ## v8.0.0 (2026-09-21)
 
 ### Bug Fixes
