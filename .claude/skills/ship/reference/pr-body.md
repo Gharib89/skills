@@ -100,8 +100,9 @@ menu of other uses is not.
 ## Special things to note: the folded deviations
 
 What the reviewer must know before reading the diff: warnings, migrations,
-compatibility constraints, deliberate omissions. At most five bullets, one
-sentence each; a sixth means the body is becoming the record again.
+compatibility constraints, deliberate omissions. At most five bullets below
+the Door line, one sentence each; a sixth means the body is becoming the record
+again.
 
 **The first bullet is always the Door line**, in this shape:
 
