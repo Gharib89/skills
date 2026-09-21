@@ -5,7 +5,7 @@ description: >-
   its outcome. Composes `ship`. Use only from a cloud routine's prompt; a human
   runs `/ship`.
 metadata:
-  version: 1.0.2
+  version: 1.1.0
 ---
 
 # cloud-ship
