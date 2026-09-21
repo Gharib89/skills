@@ -37,9 +37,10 @@ reads without the section. Every variant carries:
 - **A `## Why the change` section**: exactly one sentence, the problem and what
   becomes possible now.
 - **A `## Change outline` section**: the behavioural fence below.
-- **A `## Special things to note` section**: the reviewer's warnings and the
-  folded deviations below, `None.` when there are neither. Phase 7 rewrites it
-  where a round grew the log.
+- **A `## Special things to note` section**: the Door line first, then the
+  reviewer's warnings and the folded deviations below. The Door line is always
+  there, so this section is never `None.`. Phase 7 rewrites it where a round
+  grew the log.
 - **A `## Needs attention` section**: every issue the run filed or linked and
   every Ship defect it met, `None.` when there are neither. Phase 7 rewrites it
   where a round added to any of the three.
@@ -101,6 +102,20 @@ menu of other uses is not.
 What the reviewer must know before reading the diff: warnings, migrations,
 compatibility constraints, deliberate omissions. At most five bullets, one
 sentence each; a sixth means the body is becoming the record again.
+
+**The first bullet is always the Door line**, in this shape:
+
+```text
+- Door: <one-way|two-way>. Blast radius: <one clause>.
+```
+
+One-way is a merge nobody can walk back: a released breaking change consumers
+have already adopted, a data migration, a deleted artifact. Two-way is a
+revert. The blast radius names who else feels it rather than grading it. The
+line sits **outside the five-bullet ceiling**, because a reviewer deciding
+whether to approve reads it before the warnings, and a change carrying five
+warnings is exactly the one that needs it. It is the bullet the section always
+carries, which is why the section has no `None.` form.
 
 The phase-2 deviations log stays **verbatim in the merge summary**. What reaches
 this section is the subset that would change how the reviewer reads the diff,
