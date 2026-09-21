@@ -28,6 +28,17 @@ jobs:
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '@claude')
     runs-on: ubuntu-latest
+    # Claude Code resolves no account identity from a setup token, so every
+    # metric this runner exports reaches cc-otel with a NULL user_email and
+    # lands there as unattributed telemetry (58 such sessions in the 21 days to
+    # 2026-09-21). The CLI takes env-supplied OTel resource attributes whole
+    # while it has no identity of its own, and strips every user.* and
+    # identity.* key once it has one, so this attributes the runs and cannot
+    # override a real seat's email. It has to sit at job level: the action
+    # forwards OTEL_RESOURCE_ATTRIBUTES explicitly to the CLI subprocess, and
+    # its own step env: block shadows anything set further out.
+    env:
+      OTEL_RESOURCE_ATTRIBUTES: user.email=ahmed.gharib@itworx.com
     steps:
       # Not optional: the action runs `git diff ... HEAD` in the workspace
       # before the prompt runs, and fails the whole job with "Not a git
