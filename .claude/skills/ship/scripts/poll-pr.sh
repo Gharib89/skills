@@ -63,10 +63,15 @@
 # host's word and the adapter's business: this mechanic names the workflow file
 # and the instant, and nothing else.
 #
-# `reviewer_blocked` non-null with done=false means the round is WAITING (a
-# quota or rate-limit notice), not missing. It is read from the awaited login's
-# review bodies as well as its PR comments: a reviewer states a notice on either
-# surface, and both are read. `threads` is "unavailable" when thread
+# `reviewer_blocked` is the awaited login's latest quota or rate-limit notice,
+# read from its review bodies as well as its PR comments: a reviewer states a
+# notice on either surface, and both are read. `refused_by` names the landing
+# rule that admitted a notice posted as a REVIEW (on the head, or at or after
+# `--since`) while no round landed: that notice answers the request, no round
+# follows it, and the window closes on it at once with done=false, which the
+# review loop reads as `degraded: blocked` and requests nothing more. A notice
+# the rule does not admit, an older request's or one posted only as a comment,
+# leaves the window to run as before. `threads` is "unavailable" when thread
 # state could not be read (GraphQL refused): that reviewer's exit is degraded
 # unreachable, the run proceeds.
 #
@@ -84,8 +89,9 @@
 # cannot promise is the reviewer's alone. The full shape stays the default.
 #
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
-#          threads, reviewer_blocked, reviewer_run, landed_by, done, waited_s}
-#   --brief: {head_sha, mergeable, landed_by, reviewer_run, rounds[], threads}
+#          threads, reviewer_blocked, reviewer_run, landed_by, refused_by, done, waited_s}
+#   --brief: {head_sha, mergeable, landed_by, refused_by, reviewer_blocked, reviewer_run,
+#             rounds[], threads}
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -175,12 +181,17 @@ while :; do
   fi
 
   pending=$(jq '[.[] | select(.status == "pending")] | length' <<<"$checks")
-  landed=true; landed_by=null
+  landed=true; landed_by=null; refused_by=null
   if [ -n "$await" ]; then
     # Both sides are now fixed-width UTC, where a string compare is a
     # chronological one.
     landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" "$SHIP_LANDED_BY" <<<"$reviews")
     [ "$landed_by" != null ] || landed=false
+    # A refusal the landing rule admits is the answer to that request: no round
+    # follows it, so the window closes on it rather than on the clock.
+    if [ "$landed" = false ]; then
+      refused_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" "$SHIP_REFUSED_BY" <<<"$reviews")
+    fi
   fi
   done=false
   if [ "$mergeable" = conflict ]; then done=true
@@ -194,6 +205,8 @@ while :; do
   dead_run=false
   if [ "$landed" = false ] && [ "$run_status" = completed ] \
      && [ "$(jq -r '.conclusion // ""' <<<"$reviewer_run")" != success ]; then dead_run=true; fi
+  # A refused round ends the window the same way, and for the same reason.
+  [ "$refused_by" = null ] || dead_run=true
   # The run outranks the constant: a round still being written is not a silent
   # reviewer, and the ceiling is what keeps that from being unbounded.
   if ! $done && ! $dead_run && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
@@ -213,9 +226,9 @@ while :; do
   if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
     out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
       --argjson t "$threads" --argjson b "$blocked" --argjson rr "$reviewer_run" \
-      --argjson lb "$landed_by" --argjson d "$done" --argjson w "$waited" \
+      --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson d "$done" --argjson w "$waited" \
       '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer_blocked: $b,
-        reviewer_run: $rr, landed_by: $lb, done: $d, waited_s: $w}')
+        reviewer_run: $rr, landed_by: $lb, refused_by: $rf, done: $d, waited_s: $w}')
     if $brief; then
       key=on_head; [ -z "$since" ] || key=all
       ship_brief "$out" "$me" "$key" "$full"
