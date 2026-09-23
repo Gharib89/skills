@@ -73,7 +73,7 @@ contents_check() {
       pending = ""
     }
     {
-      s = $0; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
+      s = $0; if (match(s, /^ +/)) s = substr(s, (RLENGTH < 3 ? RLENGTH : 3) + 1); c = substr(s, 1, 1)
       if (c == "`" || c == "~") {
         n = 0; while (substr(s, n + 1, 1) == c) n++
         if (n >= 3) {

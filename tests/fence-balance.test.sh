@@ -20,6 +20,16 @@ check "an open backtick fence names its line and run" \
 check "an open tilde fence names its line and run" \
   "line 1: ~~~" "$(ship_fence_unclosed "$(printf '~~~\nshape\n')")"
 
+# CommonMark lets a fence sit up to three spaces in; four open an indented code
+# block, which is not a fence form here. mawk, the default awk on Debian and
+# Ubuntu, read the old `^ ? ? ?` de-indent as one optional space, so a
+# two-space fence went unseen there.
+check "a fence indented three spaces is a fence" \
+  "line 1: \`\`\`" "$(ship_fence_unclosed "$(printf '   ```\ncode\n')")"
+
+check "a fence indented four spaces is not" \
+  "" "$(ship_fence_unclosed "$(printf '    ```\ncode\n')")"
+
 # The fence rule closes on a run at least as long as the opener, so a four-tick
 # line ends a three-tick block; the reverse leaves it open.
 check "a longer run closes a shorter fence" \

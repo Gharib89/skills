@@ -302,7 +302,9 @@ ship_missing_skill_reasons() {
 # inside a ``` fence from doing the same, since a closing fence carries no info
 # string. A backtick opener carrying another backtick after its run is not a
 # fence at all but paragraph text, which is the one asymmetry with tildes.
-# Indented (four space) code blocks are not a fence form here.
+# Indented (four space) code blocks are not a fence form here. The de-indent
+# is a `match` rather than `sub(/^ ? ? ?/, ...)`, which mawk, the default awk on
+# Debian and Ubuntu, reads as one optional space.
 #
 # `ship_fence(line)` returns the in-fence state after the line: a fence line
 # reads as fenced when it opens one and unfenced when it closes one. Prepend it
@@ -311,7 +313,7 @@ ship_missing_skill_reasons() {
 # `_fence_char` and `_fence_len`, so a host program leaves those three names to
 # it.
 readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
-    s = line; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
+    s = line; if (match(s, /^ +/)) s = substr(s, (RLENGTH < 3 ? RLENGTH : 3) + 1); c = substr(s, 1, 1)
     if (c != "`" && c != "~") return _fenced
     n = 0; while (substr(s, n + 1, 1) == c) n++
     if (n < 3) return _fenced
@@ -652,7 +654,7 @@ ship_fence_unclosed() {
     { was = fenced; fenced = ship_fence($0)
       if (!was && fenced) {
         open_line = NR; open_run = $0
-        sub(/^ ? ? ?/, "", open_run); sub(/[^`~].*$/, "", open_run)
+        if (match(open_run, /^ +/)) open_run = substr(open_run, (RLENGTH < 3 ? RLENGTH : 3) + 1); sub(/[^`~].*$/, "", open_run)
       } }
     END { if (fenced) printf "line %d: %s\n", open_line, open_run }' <<<"$1"
 }
