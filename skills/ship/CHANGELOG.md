@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.2.0 (2026-09-23)
+
+### Features
+
+- **ship**: Comment-issue posts a comment on an existing issue on both hosts
+  ([#243](https://github.com/Gharib89/skills/pull/243),
+  [`e0d439f`](https://github.com/Gharib89/skills/commit/e0d439f3e73b38b5e27e6210ded4762174faac4f))
+
+
 ## v8.1.1 (2026-09-23)
 
 ### Bug Fixes
