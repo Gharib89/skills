@@ -94,9 +94,9 @@ expects has a control-flow shape even though the diff is comments, and taking
 the hatch there leaves the reviewer without the one view that answers its
 question. The small lane takes no exemption either: a
 one-line behaviour fix is where four lines of control-flow diff pay for
-themselves. `show-me` supplies the form, read from its derived
-`.claude/skills/show-me/SKILL.md` rather than invoked, because upstream disables
-model invocation; these constraints are ship's, and its menu of other uses is
+themselves. `show-me` supplies the form: read it from
+`.claude/skills/show-me/SKILL.md` (SKILL.md's "Compose, don't reinline" says
+why). These constraints are ship's, and `show-me`'s menu of other uses is
 not.
 
 ## Special things to note: the folded deviations

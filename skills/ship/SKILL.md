@@ -60,12 +60,12 @@ Load `tdd` (phase 2), `writing-for-agents` (phase 4, agent-facing docs),
 `code-review` (phase 4) and `find-docs` (any API claim) through the Skill tool
 when their moment comes, taking each one's logic from the skill itself, and tell
 any composed skill with an unattended mode that the run is unattended,
-explicitly, because it has no other way to know. `show-me` (phase 6, the Change
-outline) is **read, not invoked**: upstream sets `disable-model-invocation`,
+explicitly, because it has no other way to know. **Read** `show-me` (phase 6,
+the Change outline) instead: its upstream sets `disable-model-invocation`,
 which bars the Skill tool and not a read, so take the outline's form from
-`.claude/skills/show-me/SKILL.md`. The frontmatter's `composes` line is this same list with each skill's source repo,
-and is what phase 0 checks: a skill added here is added there too, or the run
-still fails at the phase that loads it.
+`.claude/skills/show-me/SKILL.md`. The frontmatter's `composes` line names all
+five with each one's source repo, and is what phase 0 checks: a skill added here
+is added there too, or the run still fails at the phase that uses it.
 
 ## The pipeline
 
