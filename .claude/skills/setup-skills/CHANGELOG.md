@@ -7,6 +7,14 @@ released version. See
 
 <!-- version list -->
 
+## v5.1.1 (2026-09-23)
+
+### Bug Fixes
+
+- **ship**: Drop dated prompt patterns found by a prompt audit
+  ([`c4e475e`](https://github.com/Gharib89/skills/commit/c4e475e2d89af2ad7b81d594990ad695460c3522))
+
+
 ## v5.1.0 (2026-09-21)
 
 ### Features
