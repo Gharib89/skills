@@ -60,4 +60,15 @@ check_rc "a post with no HTTP answer exits 1" 1 "$rc"
 check "a post with no HTTP answer carries a null status" \
   'false null' "$(jq -r '"\(.posted) \(.status)"' <<<"$out")"
 
+# The adapter's failure {status} is comment-issue's to read. The other callers of
+# host_issue_comment print a verdict of their own, so a failed comment must still
+# leave them exactly one JSON value on stdout. One body answers every read here:
+# the PR read takes its url, the comment read finds no matching line, and the
+# identity read takes it whole; the POST is the refusal.
+gh_reset; export GH_STATUS_SEQ="200 200 200 422" GH_BODY='{"url":"u","body":"b"}'
+out=$(cd "$tmp/repo" && bash "${m%/*}/reflect.sh" 7 8 2>/dev/null)
+check "reflect prints one JSON value when its comment fails" \
+  1 "$(jq -s length <<<"$out")"
+unset GH_BODY
+
 finish
