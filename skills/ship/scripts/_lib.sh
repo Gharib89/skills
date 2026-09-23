@@ -765,7 +765,7 @@ ship_reviewers() {
 # name, because two blocks sharing a name would otherwise answer for each other.
 #
 # `Request: comment` with the phrase left off is refused on its own, before the
-# pair is read: `request-review --comment` takes no empty phrase, so that block
+# pair is read: the comment transport has no phrase to post, so that block
 # cannot be asked for a round at all, and reading it as a transport owing a
 # `Workflow:` would let one carrying a `Workflow:` through. With the bare value
 # refused above it, the transport is a plain `startswith("comment ")`, which is
