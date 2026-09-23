@@ -23,7 +23,7 @@ reset
 out=$(run); rc=$?
 check_rc "a list that lands exits 0" 0 "$rc"
 check "the count matches the list the host answered" '1' "$(jq -r .count <<<"$out")"
-check "the call the mechanic hands the host takes no args" 'host_prs_open ' \
+check "the call the mechanic hands the host takes no args" 'host_prs_open' \
   "$(cat "$SHIP_FAKE/calls")"
 
 reset

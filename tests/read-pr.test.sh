@@ -23,7 +23,7 @@ reset
 out=$(run 7); rc=$?
 check_rc "a read that lands exits 0" 0 "$rc"
 check "the PR object comes back unchanged" 'fix: a fake PR' "$(jq -r .title <<<"$out")"
-check "the call the mechanic hands the host" 'host_pr_get 7' "$(cat "$SHIP_FAKE/calls")"
+check "the call the mechanic hands the host" $'host_pr_get\t7' "$(cat "$SHIP_FAKE/calls")"
 
 reset
 : > "$SHIP_FAKE/host_pr_get.1.fail"

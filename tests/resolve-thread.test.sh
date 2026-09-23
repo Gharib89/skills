@@ -25,7 +25,7 @@ out=$(run); rc=$?
 check_rc "a resolved thread exits 0" 0 "$rc"
 check "the pr and thread are stamped onto the answer" '7 t1 true' \
   "$(jq -r '[.pr, .thread, .resolved] | @tsv' <<<"$out" | tr '\t' ' ')"
-check "the call the mechanic hands the host" 'host_pr_resolve_thread 7 t1' \
+check "the call the mechanic hands the host" $'host_pr_resolve_thread\t7\tt1' \
   "$(cat "$SHIP_FAKE/calls")"
 
 # A call the host refuses outright uses ship_fail, which carries no status: the

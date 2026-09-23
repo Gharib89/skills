@@ -25,6 +25,10 @@
 # Check 5 is the --help contract: a run asks a mechanic what its flags are by
 # running it, so the answer has to be the usage line, on stdout, exit 0.
 #
+# Check 6 reads the skills tree too, every file in it: SHIP_HOST_ADAPTER has
+# one reader, `ship_load_host` in `_lib.sh`, and a mention anywhere else is a
+# second.
+#
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail

@@ -7,6 +7,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+T=$'\t'  # the calls log separates arguments with a tab
 
 mech=$PWD/skills/ship/scripts/comment-pr.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
@@ -27,7 +28,7 @@ out=$(run 7 --body-file "$body"); rc=$?
 check_rc "a post that lands exits 0" 0 "$rc"
 check "a post that lands answers the fake's comment" \
   'https://example.invalid/pull/7#issuecomment-1' "$(jq -r .url <<<"$out")"
-check "the call the mechanic hands the host" "host_pr_comment 7 $body" \
+check "the call the mechanic hands the host" "host_pr_comment${T}7${T}$body" \
   "$(cat "$SHIP_FAKE/calls")"
 
 reset

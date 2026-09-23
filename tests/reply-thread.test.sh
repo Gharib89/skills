@@ -8,6 +8,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+T=$'\t'  # the calls log separates arguments with a tab
 
 mech=$PWD/skills/ship/scripts/reply-thread.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
@@ -28,7 +29,7 @@ out=$(run); rc=$?
 check_rc "a reply that lands exits 0" 0 "$rc"
 check "the pr and thread are stamped onto the answer" '7 t1 true' \
   "$(jq -r '[.pr, .thread, .replied] | @tsv' <<<"$out" | tr '\t' ' ')"
-check "the call the mechanic hands the host" "host_pr_reply_thread 7 t1 $body" \
+check "the call the mechanic hands the host" "host_pr_reply_thread${T}7${T}t1${T}$body" \
   "$(cat "$SHIP_FAKE/calls")"
 
 reset

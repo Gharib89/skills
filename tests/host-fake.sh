@@ -23,16 +23,19 @@
 # so <fn>.1.fail alone fails every call and <fn>.1.fail with <fn>.2.json is one
 # failure then an answer.
 #
-# Every call appends `<fn> <raw args>` as one line to $SHIP_FAKE/calls, a
-# newline inside an argument (a comment body) written as `\n`.
+# Every call appends one line to $SHIP_FAKE/calls: `<fn>`, then each raw
+# argument after a tab, so an argument's own spaces (a PR title) stay inside
+# it, and a newline inside one (a comment body) written as `\n`.
 # Counters live in files, not variables, because a mechanic calls most reads in
 # a command substitution, whose subshell would lose an increment.
 _host_fake_defaults=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/host-fake/defaults
 
 _host_fake() { # <fn> <args...>
-  local fn=$1 n i args; shift
-  args=$*
-  printf '%s %s\n' "$fn" "${args//$'\n'/\\n}" >> "$SHIP_FAKE/calls"
+  local fn=$1 n i a; shift
+  { printf '%s' "$fn"
+    for a; do printf '\t%s' "${a//$'\n'/\\n}"; done
+    printf '\n'
+  } >> "$SHIP_FAKE/calls"
   n=$(( $(cat "$SHIP_FAKE/$fn.n" 2>/dev/null || echo 0) + 1 ))
   printf '%s' "$n" > "$SHIP_FAKE/$fn.n"
   i=$n
