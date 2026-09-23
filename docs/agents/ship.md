@@ -146,7 +146,7 @@ This repo is Ship's own source, so a run here is already upstream and a **Ship d
 Targets: CONTEXT.md, docs/adr/, docs/agents/, skills/setup-skills/profile-schema.md, .out-of-scope/
 Agent-facing: all of them, plus skills/ and .claude/skills/
 
-A diff touching none of these paths, such as a `.github/` workflow edit, takes no `writing-for-agents` pass.
+A diff touching nothing on the `Agent-facing:` line, such as a `.github/` workflow edit, takes no `writing-for-agents` pass.
 
 ## Current docs
 
