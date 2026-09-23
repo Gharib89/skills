@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # request-review --reviewer <name> driven end to end over the Host fake (#235):
 # the block's `Request:` picks the transport, so the call the host is handed is
-# the subject. A throwaway checkout whose origin names GitHub carries a copy of
-# this repo's own profile, whose `claude` is a comment transport and whose
-# `copilot` is the host's request call.
+# the subject. A throwaway checkout whose origin names GitHub carries a fixture
+# profile in the shape this repo's own carries: `claude` a comment transport and
+# `copilot` the host's request call.
 #
 # The comment transport posts a temp file it deletes on exit, so this test's
 # adapter is the fake with its `host_pr_comment` keeping a copy of that file:
@@ -20,7 +20,31 @@ export SHIP_FAKE=$work/fake
 mkdir -p "$repo/docs/agents" "$SHIP_FAKE"
 git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
-cp docs/agents/ship.md "$repo/docs/agents/ship.md"
+cat > "$repo/docs/agents/ship.md" <<'EOF'
+## Reviewers
+
+### copilot
+
+Login: copilot-pull-request-reviewer[bot]
+Trigger: on-request
+Request: None.
+Workflow: None.
+Cap: 3
+Gating: no
+Fallback-for: None.
+
+### claude
+
+Login: claude[bot]
+Trigger: on-request
+Request: comment @claude
+Workflow: .github/workflows/claude-review.yml
+Cap: 2
+Gating: no
+Fallback-for: copilot
+
+## Coding standards
+EOF
 cat > "$work/adapter.sh" <<ADAPTER
 source "$PWD/tests/host-fake.sh" || return 1
 host_pr_comment() { cp "\$2" "\$SHIP_FAKE/posted"; _host_fake host_pr_comment "\$@"; }

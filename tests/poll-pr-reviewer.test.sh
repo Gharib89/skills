@@ -4,9 +4,11 @@
 # that block rather than passed flag by flag (#235).
 #
 # Driven end to end over the Host fake inside a throwaway checkout whose origin
-# names GitHub, carrying a copy of this repo's own profile plus one on-push block
-# the real profile lacks, so the derivation is read off the blocks a real run
-# reads. The refusals are asserted to reach no host: no call is recorded.
+# names GitHub, carrying a fixture profile: the two blocks in the shape this
+# repo's own profile carries them, plus an on-push block. A fixture rather than
+# a copy, so a profile edit (a third reviewer, the documented ruleset flip that
+# moves copilot to on-push) leaves these cases alone. The refusals are asserted
+# to reach no host: no call is recorded.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -18,9 +20,41 @@ export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 mkdir -p "$repo/docs/agents" "$SHIP_FAKE"
 git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
-awk '/^## Coding standards/ {
-       print "### pusher\n\nLogin: pusher[bot]\nTrigger: on-push\nRequest: None.\nWorkflow: None.\nCap: None.\nGating: no\nFallback-for: None.\n"
-     } { print }' docs/agents/ship.md > "$repo/docs/agents/ship.md"
+cat > "$repo/docs/agents/ship.md" <<'EOF'
+## Reviewers
+
+### copilot
+
+Login: copilot-pull-request-reviewer[bot]
+Trigger: on-request
+Request: None.
+Workflow: None.
+Cap: 3
+Gating: no
+Fallback-for: None.
+
+### claude
+
+Login: claude[bot]
+Trigger: on-request
+Request: comment @claude
+Workflow: .github/workflows/claude-review.yml
+Cap: 2
+Gating: no
+Fallback-for: copilot
+
+### pusher
+
+Login: pusher[bot]
+Trigger: on-push
+Request: None.
+Workflow: None.
+Cap: None.
+Gating: no
+Fallback-for: None.
+
+## Coding standards
+EOF
 
 since=2026-09-17T11:58:00Z
 round() { # <login>

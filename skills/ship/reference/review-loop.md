@@ -28,22 +28,21 @@ a fresh read of the committed tree, not a conversation.
 
 - **Poll with `poll-pr <pr> --reviewer <name>`**, `<name>` being the
   reviewer's `### <name>` heading ([mechanics.md](mechanics.md)), inline,
-  bounded, foreground. It returns one JSON: head sha, mergeable, checks, the reviewer's
-  rounds with `substantive`, threads with resolved state, `reviewer_blocked`,
-  `landed_by` naming the rule that admitted the round, and `refused_by` naming
-  the rule that admitted a refusal in its place. `done: false` means the window
-  closed first: re-run to extend it, in the foreground again, **unless
-  `refused_by` is non-null**. That is the reviewer's quota or rate-limit notice
-  answering this request, the window closed on it at once, and re-polling or
-  re-requesting waits on a round that is not coming: the reviewer exits
-  `degraded: blocked` there and then. The
-  poll is the landing signal only; before triage, read the round's review body
-  and its threads from the same payload. The body sits on the row the reviewer's
-  landing rule admitted: `reviews.on_head[].body` under the head rule,
-  `reviews.all[].body` under the since rule, where the round may sit on an older
-  head. A round whose findings live in the body rather than in threads is
-  invisible from the thread list alone, and `infra-error` is a judgment about
-  the body.
+  bounded, foreground. It returns one JSON: head sha, mergeable, checks, the
+  reviewer's rounds with `substantive`, threads with resolved state,
+  `reviewer_blocked`, `landed_by` naming the rule that admitted the round, and
+  `refused_by` naming the rule that admitted a refusal in its place. `done:
+  false` means the window closed first: re-run to extend it, in the foreground
+  again, **unless `refused_by` is non-null**. That is the reviewer's quota or
+  rate-limit notice answering this request, the window closed on it at once,
+  and re-polling or re-requesting waits on a round that is not coming: the
+  reviewer exits `degraded: blocked` there and then. The poll is the landing
+  signal only; before triage, read the round's review body and its threads
+  from the same payload. The body sits on the row the reviewer's landing rule
+  admitted: `reviews.on_head[].body` under the head rule, `reviews.all[].body`
+  under the since rule, where the round may sit on an older head. A round
+  whose findings live in the body rather than in threads is invisible from the
+  thread list alone, and `infra-error` is a judgment about the body.
 - **`--brief` projects that same poll** down to what this loop acts on: head,
   mergeable, `landed_by`, `refused_by`, `reviewer_blocked`, one `rounds[]` row per round (id, `submitted_at`,
   `substantive`, and the body cut to its lead line and finding items) and one
@@ -223,32 +222,32 @@ triggers read reviews and comments, which stay readable.
 
 Nothing arrives until asked, with one exception the loop below opens on: a
 **free round** the host delivers unbidden when the PR is created.
-`request-review <pr> --reviewer <name>` issues the request
-and **reads it back** from the host's own record (the mechanic knows that the
-login you request and the login you read back can differ, and that an empty
+`request-review <pr> --reviewer <name>` issues the request and **reads it
+back** from the host's own record (the mechanic knows that the login you
+request and the login you read back can differ, and that an empty
 requested-reviewers list proves nothing). The block's `Request:` picks the
-transport: the host's own request call for
-a reviewer the host can add to the PR, and a PR comment carrying the phrase
-where `Request:` reads `comment <phrase>`, for a reviewer that is a
-comment-triggered workflow. That second transport posts the phrase, reads the posted comment back, and reports
-the host's creation time for it; there is no requested-reviewers list to read,
-because the host has no reviewer to add. Either way the `requested_at` it hands
-back is what `--since` takes. One request yields one round; the
-reviewer does not re-review on push, so each round after the first is a new
-request against the corrected tree.
+transport: the host's own request call for a reviewer the host can add to the
+PR, and a PR comment carrying the phrase where `Request:` reads `comment
+<phrase>`, for a reviewer that is a comment-triggered workflow. That second
+transport posts the phrase, reads the posted comment back, and reports the
+host's creation time for it; there is no requested-reviewers list to read,
+because the host has no reviewer to add. Either way the `requested_at` it
+hands back is what `--since` takes. One request yields one round; the reviewer
+does not re-review on push, so each round after the first is a new request
+against the corrected tree.
 
 A **free round** is one the host delivers without a request: a Copilot ruleset
 with `review_on_push: false` still opens one when the PR does. Before the
 run's **first** request to any on-request reviewer, poll once for it, under
 the since rule with `open-pr`'s `created_at`, with no `--timeout`: the
-reviewer's default is sized for its transport. A round already there **is** round 1 and counts
-against `Cap:`; nothing there and the loop proceeds to its first request as
-written. A **refusal** there (`refused_by` non-null: Copilot posts its quota
-notice as the opening review) ends this reviewer before any request: its exit
-is `degraded: blocked`, and no request is issued, because the quota the free
-round was refused on is the one every request draws from. A reviewer that gets no free round pays that one poll, where skipping
-it spends a round of a small cap re-asking for a review that had already
-landed.
+reviewer's default is sized for its transport. A round already there **is**
+round 1 and counts against `Cap:`; nothing there and the loop proceeds to its
+first request as written. A **refusal** there (`refused_by` non-null: Copilot
+posts its quota notice as the opening review) ends this reviewer before any
+request: its exit is `degraded: blocked`, and no request is issued, because
+the quota the free round was refused on is the one every request draws from. A
+reviewer that gets no free round pays that one poll, where skipping it spends
+a round of a small cap re-asking for a review that had already landed.
 
 Loop: **triage whatever round you are holding first**, then request the next
 one. A free round the poll above found is a round in hand, so it is triaged,
@@ -280,14 +279,15 @@ cannot be withheld.
 because a fallback's only input is how its primary exited.
 
 - The primary exited `degraded: <any reason>`: request the fallback **once**,
-  then drive it as an ordinary on-request reviewer under its own `Cap:`, by the
-  section above, the free-round poll included: that first request is the one it
-  runs ahead of, and a fallback reached through a comment transport reliably
-  finds nothing there, which is the one short poll the rule costs. That
-  transport is also what makes every poll of it await its workflow run, the
-  free-round one included. Which degraded reason the primary hit changes nothing here; the
-  human wanted a review on the PR and the reason is a footnote. Its exit is an
-  ordinary one, `converged` or `degraded: <reason>` of its own.
+  then drive it as an ordinary on-request reviewer under its own `Cap:`, by
+  the section above, the free-round poll included: that first request is the
+  one it runs ahead of, and a fallback reached through a comment transport
+  reliably finds nothing there, which is the one short poll the rule costs.
+  That transport is also what makes every poll of it await its workflow run,
+  the free-round one included. Which degraded reason the primary hit changes
+  nothing here; the human wanted a review on the PR and the reason is a
+  footnote. Its exit is an ordinary one, `converged` or `degraded: <reason>`
+  of its own.
 - The primary exited `converged` or `converged, override needed`: **do not
   request it**. Its exit is `not invoked: <primary> converged`, which is not a
   degraded reason and not a stop; it is reported so a reader sees the reviewer

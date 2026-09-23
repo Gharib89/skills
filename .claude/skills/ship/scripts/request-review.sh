@@ -7,12 +7,13 @@
 #
 # `<name>` is the `### <name>` block under the profile's `## Reviewers`, read
 # before any host is reached. The block's `Login:` is the login requested, and
-# its `Request:` line picks one of two transports, with the brand left out of it.
-# `Request: None.`: the host's own request-a-reviewer call.
-# `Request: comment <phrase>`: the phrase is posted as a PR comment, which is how
-# a reviewer that is a comment-triggered workflow is asked for a round. The host has no reviewer to add for that one, so there is
-# nothing to read back off a requested-reviewers list; `host_pr_comment` posts
-# and verifies, and the verified comment is the read-back.
+# its `Request:` line picks one of two transports, with the brand left out of
+# it. `Request: None.`: the host's own request-a-reviewer call. `Request:
+# comment <phrase>`: the phrase is posted as a PR comment, which is how a
+# reviewer that is a comment-triggered workflow is asked for a round. The host
+# has no reviewer to add for that one, so there is nothing to read back off a
+# requested-reviewers list; `host_pr_comment` posts and verifies, and the
+# verified comment is the read-back.
 #
 # `requested_at` is the ISO-8601 time of the review_requested event the
 # read-back found, or, under the comment transport, the host's own creation time
