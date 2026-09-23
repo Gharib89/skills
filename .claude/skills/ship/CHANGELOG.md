@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.3.1 (2026-09-23)
+
+### Bug Fixes
+
+- **ship**: A reviewer's quota refusal closes the poll and ends its loop at degraded: blocked
+  ([#251](https://github.com/Gharib89/skills/pull/251),
+  [`62c29e9`](https://github.com/Gharib89/skills/commit/62c29e90d098ac0e82716d53f0f45ed073db88df))
+
+
 ## v8.3.0 (2026-09-23)
 
 ### Features
