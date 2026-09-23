@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v5.2.0 (2026-09-23)
+
+### Features
+
+- **ship**: Poll-pr and request-review take the Reviewer by name
+  ([#248](https://github.com/Gharib89/skills/pull/248),
+  [`ef35ae6`](https://github.com/Gharib89/skills/commit/ef35ae6b5805d05becf0aebc3abbe4857abbcbba))
+
+
 ## v5.1.2 (2026-09-23)
 
 ### Documentation
