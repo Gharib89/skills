@@ -65,9 +65,8 @@
 # constant and that reviewer's exit is `unreachable` rather than `silent`,
 # because a read that did not happen is no evidence about the reviewer. The run
 # read is keyed by `--since`, the request the run should follow. Which event
-# starts such a run is the
-# host's word and the adapter's business: this mechanic names the workflow file
-# and the instant, and nothing else.
+# starts such a run is the host's word and the adapter's business: this
+# mechanic names the workflow file and the instant, and nothing else.
 #
 # `reviewer_blocked` non-null with done=false means the round is WAITING (a
 # quota or rate-limit notice), not missing. It is read from the awaited login's

@@ -219,7 +219,7 @@ check "refuses an absolute Workflow:, whatever it names" \
   'profile invalid: claude has Workflow: /etc/hostname, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: /etc/hostname|' <<<"$profile")")"
 
-# `request-review --comment` takes no empty phrase, so a block whose Request: is
+# The comment transport has no phrase to post, so a block whose Request: is
 # the bare word cannot be asked for a round at all. It is refused on its own,
 # whether or not a Workflow: sits beside it: read as a transport owing one, the
 # block that carries one would pass.
@@ -395,6 +395,14 @@ check "the host's request call answers no phrase, no workflow and the long bound
 check "the name and the login come back with the derivation" \
   'copilot copilot-pull-request-reviewer[bot]' \
   "$(one "$onreq" "$since" '[.name, .login] | join(" ")')"
+
+# A run read is keyed by the --since instant, which a head-rule poll has none
+# of: an on-push block on a comment transport awaits no run, where an empty
+# instant would reach the host as a refused `--created >=` and read unreachable.
+pushcomment=$(printf '## Reviewers\n\n### bot\n\nLogin: bot[bot]\nTrigger: on-push\nRequest: comment @bot\nWorkflow: review.yml\nCap: None.\nGating: no\n\n## Coding standards\n')
+check "a head-rule reviewer on a comment transport awaits no run, keeping its phrase" \
+  'head null comment @bot null' \
+  "$(one "$pushcomment" '' '[.rule, (.await_run|tostring), .transport, .phrase, (.refusal|tostring)] | join(" ")')"
 
 # Per refusal: the landing rule and the caller's --since must agree.
 check "--since with an on-push reviewer is refused" \

@@ -858,15 +858,21 @@ ship_reviewer_by_name() {
 # whose every push earns a round on the new head, and `since` for every other
 # trigger, which posts one round per request on whatever head it lands on.
 # `transport` is `comment` where `Request:` reads `comment <phrase>`, with
-# `phrase` its text and `await_run` the block's `Workflow:`, the run that
-# separates a round still being written from one that will not come; `host`
-# otherwise, the host's own request-a-reviewer call, with both null. `timeout`
+# `phrase` its text and, under the since rule, `await_run` the block's
+# `Workflow:`, the run that separates a round still being written from one that
+# will not come; the run read is keyed by the --since instant, which a head-rule
+# poll has none of. `host` otherwise, the host's own request-a-reviewer call,
+# with both null. `timeout`
 # is the poll's default bound, by transport: 600 where the host's call is the
 # transport, since its round can take several minutes to land and a bound of a
 # minute or two reports `silent` on a review still coming, and 60 where a
 # comment is, since the run read then holds the window open for as long as a
 # round is being written, and a free round that starts no run is answered by
-# `reviewer_run.status: "none"` on the first pass.
+# `reviewer_run.status: "none"` on the first pass. After a request the 60 is
+# the bound on the run's creation, not on the round: the host creates the
+# `issue_comment` run within seconds of the comment, and from then on the run,
+# not the constant, holds the window. A backed-up queue that outlasts it reads
+# `never-queued`; a caller expecting one passes `--timeout`.
 #
 # `refusal` is null, or the line `poll-pr` exits 2 on, where the caller's
 # <since> disagrees with the rule: a --since for an on-push reviewer, or none for
@@ -877,7 +883,7 @@ ship_reviewer_derive() {
     ((.request // "") | startswith("comment ")) as $c
     | (if .trigger == "on-push" then "head" else "since" end) as $rule
     | {name, login, rule: $rule,
-       await_run: (if $c then .workflow else null end),
+       await_run: (if $c and $rule == "since" then .workflow else null end),
        transport: (if $c then "comment" else "host" end),
        phrase: (if $c then (.request | ltrimstr("comment ")) else null end),
        timeout: (if $c then 60 else 600 end),
