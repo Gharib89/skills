@@ -290,18 +290,13 @@ One guaranteed stop, the **merge gate**: merging is effectively irreversible, so
 a human says merge and ship merges on that word alone: ship never merges on its
 own or uses an auto-merge flag. Two conditional pauses in an attended run: the
 `ambiguous` stop (phase 1) and a **hand-off** (phase 3). Everything else,
-triaging your own findings, fixing, re-running, is autonomous. Three guardrails
+triaging your own findings, fixing, re-running, is autonomous. Two guardrails
 hold around that:
 
 - **Red is fixed or reported.** Any failure before the merge gate gets a bounded
   self-fix-and-retry, about two attempts. Still red, or the failure says the
   approach is wrong: **stop and report** with the concrete evidence and, if
   cheap, a verified-working alternative, so the report is a fast yes.
-- **End every turn on an action.** If your last paragraph states a plan or a
-  next step ("I'll re-run the poll") rather than having done it, do it now with
-  a tool call instead of stopping. That is about a plan rather than a wait:
-  while a composed skill's subagents are out, ending the turn *is* the action
-  ([reference/context-discipline.md](reference/context-discipline.md)).
 - **Every stop has a name**, reported verbatim, with the claim action below. A
   sibling maps the name, a human reads it.
 

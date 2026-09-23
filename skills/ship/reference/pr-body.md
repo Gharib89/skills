@@ -90,9 +90,9 @@ replaces the fence only where the reviewer's question about the change is "did
 the text change correctly", and never where it is "what does X now do"; it is
 visible rather than a silent omission so the self-review and the reviewer can
 dispute the call. A comment reword that changes which degraded reason a reader
-expects has a control-flow shape even though the diff is comments, and PR #221
-is the evidence: it took the hatch and left the reviewer without the one view
-that answered the question it had. The small lane takes no exemption either: a
+expects has a control-flow shape even though the diff is comments, and taking
+the hatch there leaves the reviewer without the one view that answers its
+question. The small lane takes no exemption either: a
 one-line behaviour fix is where four lines of control-flow diff pay for
 themselves. `show-me` supplies the form; these constraints are ship's, and its
 menu of other uses is not.
