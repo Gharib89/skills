@@ -40,4 +40,14 @@ check_rc "a refused reply exits 1" 1 "$rc"
 check "and reads replied:false, carrying the host's status" '7 t1 false 502' \
   "$(jq -r '[.pr, .thread, .replied, .status] | @tsv' <<<"$out" | tr '\t' ' ')"
 
+# An adapter that fails with a body of its own: the mechanic keeps its detail,
+# which is how "unavailable" reaches the run rather than a bare exit 1.
+reset
+: > "$SHIP_FAKE/host_pr_reply_thread.1.fail"
+printf '{"replied":false,"detail":"thread state unavailable"}\n' > "$SHIP_FAKE/host_pr_reply_thread.1.json"
+out=$(run); rc=$?
+check_rc "a reply refused with a body exits 1" 1 "$rc"
+check "and carries the adapter's detail" 'false thread state unavailable' \
+  "$(jq -r '[.replied, .detail] | @tsv' <<<"$out" | tr '\t' ' ')"
+
 finish

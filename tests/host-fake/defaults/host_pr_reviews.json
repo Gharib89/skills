@@ -1,5 +1,23 @@
 {
-  "on_head": [],
-  "all": [],
-  "total": 0
+  "on_head": [
+    {
+      "id": "1",
+      "login": "reviewer",
+      "state": "comment",
+      "substantive": true,
+      "submitted_at": "2026-01-01T00:00:00Z",
+      "body": "a finding"
+    }
+  ],
+  "all": [
+    {
+      "id": "1",
+      "login": "reviewer",
+      "state": "comment",
+      "substantive": true,
+      "submitted_at": "2026-01-01T00:00:00Z",
+      "body": "a finding"
+    }
+  ],
+  "total": 1
 }

@@ -13,9 +13,11 @@ lib=skills/ship/scripts/_lib.sh
 defaults=tests/host-fake/defaults
 
 # <adapter>: the host_* functions it defines, one per line, sorted. The
-# adapters read these at source time.
+# adapters read these at source time, and the fake wants SHIP_FAKE to name a
+# directory; nothing is called, so nothing is written there.
 fns() {
-  ( export SHIP_OWNER=o SHIP_REPO=r SHIP_REPO_SLUG=o/r SHIP_ORG=o SHIP_PROJECT=p SHIP_ORG_URL=https://dev.azure.com/o
+  ( export SHIP_OWNER=o SHIP_REPO=r SHIP_REPO_SLUG=o/r SHIP_ORG=o SHIP_PROJECT=p SHIP_ORG_URL=https://dev.azure.com/o \
+      SHIP_FAKE=${TMPDIR:-/tmp}
     # shellcheck source=/dev/null
     source "$lib" && source "$1" && declare -F | awk '$3 ~ /^host_/ {print $3}' | sort )
 }
@@ -78,6 +80,12 @@ while read -r fn keys; do
   check "$fn's default carries the documented key set" "$keys" \
     "$(jq -r 'if type == "array" then .[0] else . end | keys_unsorted | sort | join(",")' "$f")"
 done <<<"$contract"
+
+# REVIEW is the one named row shape, documented on a line of its own under
+# host_pr_reviews, so the default's rows are held to it separately.
+check "host_pr_reviews' default rows carry the documented REVIEW keys" \
+  "$(sed -n 's/.*REVIEW = {\([^}]*\)}.*/\1/p' "$lib" | tr , '\n' | sort | paste -sd, -)" \
+  "$(jq -r '[.on_head[0], .all[0]] | map(keys_unsorted | sort | join(",")) | unique | join(" ")' "$defaults/host_pr_reviews.json")"
 
 # A default for a function the contract gives no object answer is a shape
 # nobody documented.

@@ -17,9 +17,11 @@
 # tests/host-fake/defaults/<fn>.json, the canonical answer per documented shape
 # that tests/host-contract.test.sh holds to the `_lib.sh` contract comment; with
 # neither it prints nothing and returns 0, which is a write that succeeded.
-# A <fn>.<n>.fail marker makes that call print nothing and return 1, and a
-# <fn>.<n>.status beside it, read only there, is printed as {"status": <n>},
-# the failure answer `ship_fail_host` reads. A marker is an entry of the sequence like a fixture,
+# A <fn>.<n>.fail marker makes that call return 1, printing the <fn>.<n>.json
+# beside it where there is one (an adapter that fails with a body, such as
+# reply's {replied:false, detail}), else {"status": <n>} from a
+# <fn>.<n>.status beside it (the failure answer `ship_fail_host` reads), else
+# nothing. A marker is an entry of the sequence like a fixture,
 # so <fn>.1.fail alone fails every call and <fn>.1.fail with <fn>.2.json is one
 # failure then an answer.
 #
@@ -28,6 +30,10 @@
 # it, and a newline inside one (a comment body) written as `\n`.
 # Counters live in files, not variables, because a mechanic calls most reads in
 # a command substitution, whose subshell would lose an increment.
+# Sourced by a mechanic running `set -u`, where an unset SHIP_FAKE would fail
+# inside a command substitution and read as a host that answered nothing: a
+# failed source here is `ship_load_host`'s tooling error instead.
+[ -d "${SHIP_FAKE:-}" ] || { echo "host-fake: SHIP_FAKE must name a directory" >&2; return 1; }
 _host_fake_defaults=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/host-fake/defaults
 
 _host_fake() { # <fn> <args...>
@@ -41,7 +47,9 @@ _host_fake() { # <fn> <args...>
   i=$n
   while [ "$i" -gt 0 ]; do
     if [ -f "$SHIP_FAKE/$fn.$i.fail" ]; then
-      [ -f "$SHIP_FAKE/$fn.$i.status" ] && printf '{"status":%s}\n' "$(cat "$SHIP_FAKE/$fn.$i.status")"
+      if [ -f "$SHIP_FAKE/$fn.$i.json" ]; then cat "$SHIP_FAKE/$fn.$i.json"
+      elif [ -f "$SHIP_FAKE/$fn.$i.status" ]; then printf '{"status":%s}\n' "$(cat "$SHIP_FAKE/$fn.$i.status")"
+      fi
       return 1
     fi
     [ -f "$SHIP_FAKE/$fn.$i.json" ] && { cat "$SHIP_FAKE/$fn.$i.json"; return 0; }
