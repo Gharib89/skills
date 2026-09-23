@@ -160,8 +160,10 @@ documented behavior, test-only or tooling changes, and comments, and say so in
 one line at the merge gate. **The `writing-for-agents` pass has a trigger of its
 own**, and it still fires where docs-sync is skipped: it fires whenever the diff
 touches a target on the profile's `Agent-facing:` line, at the judgment tier, in
-the `writing` scratch directory, over every agent-facing file in the diff. Human
-prose takes the mechanical pass.
+the `writing` scratch directory, over every agent-facing file in the diff.
+Human prose takes the mechanical pass. Each phase-4 dispatch, this pass and both
+`code-review` axes below, names its subagent's Report file, per
+[reference/context-discipline.md](reference/context-discipline.md).
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
