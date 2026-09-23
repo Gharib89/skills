@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v5.1.2 (2026-09-23)
+
+### Documentation
+
+- **ship**: Agent-facing is the one rule, subagents write their own Report files, derived-copy
+  pointer rule ([#245](https://github.com/Gharib89/skills/pull/245),
+  [`c3b3e89`](https://github.com/Gharib89/skills/commit/c3b3e8907859cc343442f05aad3dc4783f61b722))
+
+
 ## v5.1.1 (2026-09-23)
 
 ### Bug Fixes
