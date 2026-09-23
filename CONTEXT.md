@@ -41,7 +41,7 @@ A label on one of the three dimensions a repo's tracker carries beside the five 
 _Avoid_: tag, rank label, severity, t-shirt size
 
 **Composed skill**:
-A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `show-me`, `find-docs`. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. Adding one is therefore a breaking change for installed consumers. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
+A skill Ship loads through the Skill tool at the phase that needs it rather than reimplementing: `tdd`, `writing-for-agents`, `code-review`, `find-docs`, and `show-me`, the one Ship reads as a file instead, because its upstream sets `disable-model-invocation`, which bars the Skill tool and not a read. Ship's `metadata.composes` line names each with the repo it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`. Adding one is therefore a breaking change for installed consumers. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
 _Avoid_: dependency, sub-skill, helper skill
 
 **Sibling skill**:
