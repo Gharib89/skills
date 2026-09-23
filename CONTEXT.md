@@ -145,7 +145,7 @@ The directory a Ship run names in every subagent prompt as the one place that su
 _Avoid_: scratch file (that names the Run file, and is avoided there too), temp directory, workspace
 
 **Report file**:
-The file a phase-4 subagent writes its report to, at the path its dispatch names in the producing role's Scratch directory, `<scratchpad>/scratch/<role>/<role>-report.md`, handing back only the path and a short summary: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. The run writes it itself only where no file exists there at hand-back. A report held in context alone is taken by a compaction, so the file is what a disposition and the merge summary's `Self-review` rows are read from; a row whose file is no longer on disk reads `unverified`.
+The file a phase-4 subagent writes its report to, at the path its dispatch names in the producing role's Scratch directory, `<scratchpad>/scratch/<role>/<role>-report.md`, handing back only the path and a summary of at most five lines: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. No file there at hand-back is a report that failed to arrive. A report held in context alone is taken by a compaction, so the file is what a disposition and the merge summary's `Self-review` rows are read from; a row whose file is no longer on disk reads `unverified`.
 _Avoid_: axis output, review log, findings dump
 
 **Shape**:

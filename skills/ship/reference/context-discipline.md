@@ -100,12 +100,13 @@ takes them while the Run file survives. So each dispatch names the subagent's
 Report file, `<scratchpad>/scratch/<role>/<role>-report.md` under the role that
 produces it, asks the subagent to write its report there, and takes back only
 the path and a summary of at most five lines: a report handed back whole and
-re-typed to disk spends its length twice. **The run** writes the file itself
-only where no file exists at the named path when the subagent hands back, and
-the Run file's `## Design and plan` section names the paths, the role in each filename so a row of the merge
-summary names its report and not a third `report.md`. Disposition from the file, re-read it there after
-a compaction, and quote the merge summary's `Self-review` rows from it rather
-than from the transcript.
+re-typed to disk spends its length twice. No file at the named path when the
+subagent hands back is a report that failed to arrive: the bounded retry, then
+`red-after-retry`, since the run holds five lines and not the report. The Run
+file's `## Design and plan` section names the paths, the role in each filename
+so a row of the merge summary names its report and not a third `report.md`.
+Disposition from the file, re-read it there after a compaction, and quote the
+merge summary's `Self-review` rows from it rather than from the transcript.
 
 **A refusal naming a line you thought was there is a clobbered Run file**: a
 subagent wrote over the path, and the mechanic says so rather than flipping a
