@@ -6,7 +6,7 @@ This repo ships bash and Markdown. Every file in it is read by an agent, so pros
 
 ## Enforced by tooling
 
-- `shellcheck -x -s bash -P SCRIPTDIR -S warning` over every tracked script under `skills/`, `scripts/` and `tests/`, per the `shellcheck` gate in `scripts/local-gate.sh`. Warnings fail; suppress one only with a `# shellcheck disable=<code>` carrying the reason on the same line, and only where the warning actually fires.
+- `shellcheck -x -s bash -P SCRIPTDIR -S warning` over every tracked script under `skills/`, `scripts/` and `tests/`, per the `shellcheck` gate in `scripts/local-gate.sh`, whose rule is `scripts/shellcheck-check.sh`. Warnings fail; suppress one only with a `# shellcheck disable=<code>` carrying the reason on the same line, and only where the warning actually fires.
 - `gitleaks detect` over the branch's commits, per the `secrets` gate in the same file.
 - `.claude/skills/<name>/` byte-identical to `skills/<name>/` for `ship`, `cloud-ship` and `setup-skills`, per the `derived-copies` gate.
 - No em dashes in any file this repo authors, per the `house-style` gate.
