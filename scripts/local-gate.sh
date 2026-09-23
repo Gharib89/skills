@@ -40,6 +40,14 @@ declare -A gates
 log=$(mktemp); trap 'rm -f "$log"' EXIT
 run()  { local name=$1; shift; if "$@" >"$log" 2>&1; then gates[$name]=pass; else gates[$name]=fail; tail -n 40 "$log" >&2; fi; }
 mark() { gates[$1]=$2; }
+# run_or_unavailable: as run, but the check's exit 2, a tool it could not obtain,
+# grades `unavailable` rather than `fail`.
+run_or_unavailable() {
+  local name=$1 rc; shift
+  "$@" >"$log" 2>&1; rc=$?
+  case $rc in 0) gates[$name]=pass; return ;; 2) gates[$name]=unavailable ;; *) gates[$name]=fail ;; esac
+  tail -n 40 "$log" >&2
+}
 
 # --- gates ---------------------------------------------------------------------
 
@@ -84,12 +92,7 @@ run version-lines scripts/version-line-check.sh "$base"
 # through a system `shellcheck` when one is on PATH and `npx` otherwise.
 # A missing shellcheck is `unavailable`, not a lint finding;
 # scripts/shellcheck-check.sh is the whole rule, and exits 2 for that case.
-scripts/shellcheck-check.sh >"$log" 2>&1
-case $? in
-  0) mark shellcheck pass ;;
-  2) mark shellcheck unavailable; tail -n 40 "$log" >&2 ;;
-  *) mark shellcheck fail; tail -n 40 "$log" >&2 ;;
-esac
+run_or_unavailable shellcheck scripts/shellcheck-check.sh
 
 # house-style: the standards doc bans em dashes in files this repo authors.
 # A written standard nothing enforces drifts, so enforce it, under any locale;

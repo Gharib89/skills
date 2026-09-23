@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
-# The ship profile's `## Cloud lane` `Bootstrap:`: repairs the cloud sandbox
-# image before an unattended fire can claim an issue, so scripts/local-gate.sh
-# reaches a full verdict there with no manual steps (issue #249). The image has
-# neither tool: `shellcheck`'s npx download is refused by the sandbox proxy, and
-# without `gitleaks` the required `secrets` gate is `unavailable`. apt is the
-# route the proxy passes. Runs in the cloud lane alone, never on a human's
-# machine, so it installs without asking.
+# The ship profile's `## Cloud lane` `Bootstrap:` (why: that section of
+# docs/agents/ship.md, issue #249). Installs whichever of `shellcheck` and
+# `gitleaks` is missing through apt, the route the sandbox proxy passes, so
+# scripts/local-gate.sh reaches a full verdict. Only the cloud lane runs it,
+# so it installs without asking; with both on PATH it does nothing.
 #
 #   scripts/cloud-ship-bootstrap.sh
 #

@@ -5,10 +5,10 @@
 # mechanics use. The `shellcheck` gate in scripts/local-gate.sh runs this, in
 # every lane.
 #
-# A system `shellcheck` on PATH is used as is. Otherwise `npx -y shellcheck`
-# fetches one, and a fetch that fails before any linting runs, as the cloud
-# sandbox's proxy refuses it (issue #249), is exit 2 so the gate reads
-# `unavailable` rather than grading a missing tool as a lint finding.
+# Uses a system `shellcheck` on PATH, else fetches one with `npx -y shellcheck`.
+# When neither yields a shellcheck (for example, the cloud sandbox's proxy
+# refuses the fetch, issue #249), exit 2: the gate reads that as `unavailable`,
+# a missing tool, and keeps exit 1 for lint findings.
 #
 #   scripts/shellcheck-check.sh
 #
@@ -16,7 +16,11 @@
 # exit: 0 clean · 1 a finding · 2 no shellcheck could be obtained
 set -uo pipefail
 
-mapfile -t files < <(git ls-files 'skills/*.sh' 'skills/**/*.sh' 'scripts/*.sh' 'tests/*.sh')
+# A read loop rather than `mapfile`, so a Bash 3.2 run lists the scripts too
+# instead of reading as a lint failure over an empty list.
+files=()
+while IFS= read -r f; do files+=("$f"); done \
+  < <(git ls-files 'skills/*.sh' 'skills/**/*.sh' 'scripts/*.sh' 'tests/*.sh')
 [ ${#files[@]} -gt 0 ] || { echo "no shell scripts tracked"; exit 1; }
 
 if command -v shellcheck >/dev/null; then

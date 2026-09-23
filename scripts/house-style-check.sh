@@ -3,20 +3,25 @@
 # repo authors. `.claude/skills/` is install output from other repos and is
 # exempt. The `house-style` gate in scripts/local-gate.sh runs this, in every lane.
 #
-# The dash is built from its UTF-8 bytes rather than a `$'\u'` escape, whose expansion
-# depends on the locale: with LANG and LC_ALL empty, as in the cloud sandbox, it
-# stays escape text, and grep then matched this check's own source (issue #249).
-# Bytes match bytes under any locale.
+# Build the dash from its UTF-8 bytes. A `$'\u2014'` escape expands by locale:
+# with LANG and LC_ALL empty (the cloud sandbox) it stays literal escape text and
+# matches this script's own source (issue #249). Bytes match under any locale.
 #
 #   scripts/house-style-check.sh
 #
 # stdout: the offending lines, nothing when clean
-# exit: 0 clean · 1 an em dash
+# exit: 0 clean · 1 an em dash · 2 tooling
 set -uo pipefail
 
 em=$(printf '\342\200\224')
-hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' '.release/*' CONTEXT.md CLAUDE.md \
-  | xargs -0 grep -n "$em" 2>/dev/null) || exit 0
+# `git grep` over the tracked files: 1 is a clean tree, and anything past 1,
+# such as a run outside a checkout, is tooling rather than a clean answer.
+hits=$(git grep -n -F -e "$em" -- 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' '.release/*' CONTEXT.md CLAUDE.md)
+case $? in
+  0) ;;
+  1) exit 0 ;;
+  *) exit 2 ;;
+esac
 echo "em dashes in repo-authored files (see docs/contributing/coding-standards.md):"
 echo "$hits"
 exit 1

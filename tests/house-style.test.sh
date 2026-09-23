@@ -38,4 +38,9 @@ for loc in "" C.UTF-8; do
     "skills/x/SKILL.md:1:one $(printf '\342\200\224') two" "$(out_of "$loc" "$d" | tail -n 1)"
 done
 
+# Tooling: outside a checkout there is no listing, which is not a clean tree.
+mkdir -p "$fixture/no-checkout"
+(cd "$fixture/no-checkout" && GIT_CEILING_DIRECTORIES=$fixture bash "$check_script" >/dev/null 2>&1)
+check_rc "a run outside a checkout is tooling" 2 "$?"
+
 finish
