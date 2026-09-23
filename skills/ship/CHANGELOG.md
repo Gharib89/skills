@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.4.2 (2026-09-23)
+
+### Bug Fixes
+
+- **ship**: Read the composed show-me rather than invoking it
+  ([#253](https://github.com/Gharib89/skills/pull/253),
+  [`9f4c5ae`](https://github.com/Gharib89/skills/commit/9f4c5aef7db80237d8bc6706f08641a4454b68ed))
+
+
 ## v8.4.1 (2026-09-23)
 
 ### Bug Fixes
