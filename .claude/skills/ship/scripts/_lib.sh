@@ -1014,10 +1014,9 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # as the reviewer's. An empty <identity> drops nothing: a host that could not
 # name the run must not cost it the rounds it came for. The awaited reviewer's
 # login, `.reviewer.login`, narrows the rounds to its rows: under `--reviewer
-# claude` a Copilot quota notice is not a round of claude's (#255). <on_head|all>
-# is `all`
-# under the --since rule and `on_head` under the head rule, matching the list
-# that rule lands from.
+# claude` a Copilot quota notice is not a round of claude's (#255).
+# <on_head|all> is `all` under the --since rule and `on_head` under the head
+# rule, matching the list that rule lands from.
 #
 # A round's body comes down to its lead line and its finding items, which is what
 # a triage acts on: the lead line carries the round's verdict and the items carry
