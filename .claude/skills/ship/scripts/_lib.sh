@@ -309,9 +309,18 @@ ship_missing_skill_reasons() {
 # to an awk program and call it once per line, before any heading test. It
 # holds its state for the length of the input in the globals `_fenced`,
 # `_fence_char` and `_fence_len`, so a host program leaves those three names to
-# it.
-readonly SHIP_AWK_FENCE='function ship_fence(line,   s, c, n) {
-    s = line; sub(/^ ? ? ?/, "", s); c = substr(s, 1, 1)
+# it, and reads no `RSTART` or `RLENGTH` of its own across a call, which
+# `ship_deindent`'s `match` overwrites.
+#
+# `ship_deindent(s)` strips up to three leading spaces. It is a `match` because
+# mawk, the default awk on Debian and Ubuntu, reads `sub(/^ ? ? ?/, ...)` as one
+# optional space.
+readonly SHIP_AWK_FENCE='function ship_deindent(s) {
+    if (match(s, /^ +/)) s = substr(s, (RLENGTH < 3 ? RLENGTH : 3) + 1)
+    return s
+  }
+  function ship_fence(line,   s, c, n) {
+    s = ship_deindent(line); c = substr(s, 1, 1)
     if (c != "`" && c != "~") return _fenced
     n = 0; while (substr(s, n + 1, 1) == c) n++
     if (n < 3) return _fenced
@@ -652,7 +661,7 @@ ship_fence_unclosed() {
     { was = fenced; fenced = ship_fence($0)
       if (!was && fenced) {
         open_line = NR; open_run = $0
-        sub(/^ ? ? ?/, "", open_run); sub(/[^`~].*$/, "", open_run)
+        open_run = ship_deindent(open_run); sub(/[^`~].*$/, "", open_run)
       } }
     END { if (fenced) printf "line %d: %s\n", open_line, open_run }' <<<"$1"
 }
