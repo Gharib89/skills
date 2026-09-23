@@ -17,6 +17,38 @@ export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 mkdir -p "$repo" "$SHIP_FAKE"
 git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
+# The blocks `--reviewer` reads: copilot on-request, the same login on-push for
+# the head rule, and a second login that has posted nothing.
+mkdir -p "$repo/docs/agents"
+cat > "$repo/docs/agents/ship.md" <<'EOF'
+## Reviewers
+
+### copilot
+
+Login: copilot-pull-request-reviewer[bot]
+Trigger: on-request
+Request: None.
+Cap: 3
+Gating: no
+
+### copilot-push
+
+Login: copilot-pull-request-reviewer[bot]
+Trigger: on-push
+Request: None.
+Cap: None.
+Gating: no
+
+### other
+
+Login: claude[bot]
+Trigger: on-request
+Request: None.
+Cap: 2
+Gating: no
+
+## Coding standards
+EOF
 
 login='copilot-pull-request-reviewer[bot]'
 notice_text='Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.'
@@ -40,7 +72,7 @@ reviews() { # <on_head-json> <all-json>
   jq -cn --argjson h "$1" --argjson a "$2" '{on_head: $h, all: $a, total: ($a | length)}' \
     > "$SHIP_FAKE/host_pr_reviews.1.json"
 }
-poll() { ( cd "$repo" && bash "$mech" 7 --await-review "$login" "$@" ); }
+poll() { ( cd "$repo" && bash "$mech" 7 --reviewer copilot "$@" ); }
 calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 
 # The free-round poll #250 made: the notice landed after the PR opened, and the
@@ -74,14 +106,14 @@ check "and nothing reads as refused" 'since null' \
 # The head rule: a notice on the current head refuses that push's round.
 reset
 reviews "[$notice]" "[$notice]"
-out=$(poll --timeout 600 --interval 30); rc=$?
+out=$( ( cd "$repo" && bash "$mech" 7 --reviewer copilot-push --timeout 600 --interval 30 ) ); rc=$?
 check_rc "a notice on the head closes the window" 1 "$rc"
 check "under the head rule" head "$(jq -r '.refused_by' <<<"$out")"
 
 # Another login's notice is not this reviewer's refusal.
 reset
 reviews "[$notice]" "[$notice]"
-out=$( ( cd "$repo" && bash "$mech" 7 --await-review 'claude[bot]' --since 2026-09-23T14:22:34Z \
+out=$( ( cd "$repo" && bash "$mech" 7 --reviewer other --since 2026-09-23T14:22:34Z \
   --timeout 0 --interval 1 ) )
 check "another reviewer's notice refuses nothing" null "$(jq -r '.refused_by' <<<"$out")"
 

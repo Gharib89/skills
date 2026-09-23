@@ -63,6 +63,12 @@ why `SKILL.md`'s table carries phases and not flags: a table can go stale
 against the script, and `--help` cannot. Only the first argument is read, so
 `poll-pr.sh 42 --help` is a poll of PR 42 and not a help call.
 
+A mechanic acting for one reviewer, `poll-pr` and `request-review`, takes it as
+`--reviewer <name>`, the `### <name>` heading under the profile's
+`## Reviewers`, and reads the rest off that block: the login, the landing rule,
+the transport, the workflow run to await and the poll's default bound. The run
+passes the block's name, the one the merge summary uses.
+
 ## The exit codes
 
 Each prints one JSON verdict on stdout, a failing step's last 40 log lines on

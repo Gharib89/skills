@@ -219,7 +219,7 @@ check "refuses an absolute Workflow:, whatever it names" \
   'profile invalid: claude has Workflow: /etc/hostname, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: /etc/hostname|' <<<"$profile")")"
 
-# `request-review --comment` takes no empty phrase, so a block whose Request: is
+# The comment transport has no phrase to post, so a block whose Request: is
 # the bare word cannot be asked for a round at all. It is refused on its own,
 # whether or not a Workflow: sits beside it: read as a transport owing one, the
 # block that carries one would pass.
@@ -340,5 +340,81 @@ check "an adapter with no Copilot prints no login, and an empty login selects no
 notrig=$(printf '## Reviewers\n\n### copilot\n\nLogin: copilot-pull-request-reviewer[bot]\nCap: 3\nGating: no\n\n## Coding standards\n')
 check "a block with no Trigger: comes back named but triggerless" \
   $'copilot\t' "$(ship_copilot_row 'copilot-pull-request-reviewer[bot]' "$(ship_reviewers "$notrig")")"
+
+# --- ship_reviewer_row and ship_reviewer_derive: the Reviewer by name ---------
+#
+# What `poll-pr --reviewer` and `request-review --reviewer` derive from a block
+# instead of being told. The fixture's copilot is on-push and its claude a
+# comment transport; an on-request block on the host's own request call and an
+# auto-once block cover the other shapes.
+
+rows=$(ship_reviewers "$profile")
+
+check "a name a block carries selects that block's row" \
+  'github-actions[bot]' "$(ship_reviewer_row "$rows" claude | jq -r .login)"
+out=$(ship_reviewer_row "$rows" Claude); rc=$?
+check_rc "the name is the ### heading, matched exactly" 1 "$rc"
+out=$(ship_reviewer_row "$rows" nobody); rc=$?
+check_rc "a name no block carries is refused" 1 "$rc"
+check "and the refusal lists the names the profile carries" \
+  'no ## Reviewers block is named nobody; the profile names: copilot, claude' "$out"
+out=$(ship_reviewer_row '[]' nobody); rc=$?
+check_rc "an empty ## Reviewers refuses every name" 1 "$rc"
+check "and says it names none" \
+  'no ## Reviewers block is named nobody; the profile names: none' "$out"
+out=$(ship_reviewer_row 'not json' nobody); rc=$?
+check_rc "rows that are not JSON refuse every name" 1 "$rc"
+check "and say so rather than refusing with an empty message" \
+  'the ## Reviewers blocks could not be parsed' "$out"
+
+derive() { # <name> <since> <jq-projection>
+  ship_reviewer_derive "$(ship_reviewer_row "$rows" "$1")" "$2" | jq -r "$3"
+}
+one() { # <profile-body> <since> <jq-projection>: derive the body's only block
+  ship_reviewer_derive "$(ship_reviewers "$1" | jq -c '.[0]')" "$2" | jq -r "$3"
+}
+since=2026-09-17T11:58:00Z
+onreq=$(printf '## Reviewers\n\n### copilot\n\nLogin: copilot-pull-request-reviewer[bot]\nTrigger: on-request\nRequest: None.\nWorkflow: None.\nCap: 3\nGating: no\n\n## Coding standards\n')
+autoonce=$(printf '## Reviewers\n\n### bot\n\nLogin: auto[bot]\nTrigger: auto-once\nRequest: None.\nCap: None.\nGating: no\n\n## Coding standards\n')
+
+# Per trigger: on-push lands under the head rule, every other trigger under since.
+check "an on-push reviewer lands under the head rule" \
+  'head null' "$(derive copilot '' '[.rule, (.refusal|tostring)] | join(" ")')"
+check "and keeps the 480 s bound the on-push loop has always had, no request having been made" \
+  480 "$(derive copilot '' '.timeout')"
+check "an on-request reviewer lands under the since rule" \
+  'since null' "$(one "$onreq" "$since" '[.rule, (.refusal|tostring)] | join(" ")')"
+check "an auto-once reviewer lands under the since rule" \
+  'since null' "$(one "$autoonce" "$since" '[.rule, (.refusal|tostring)] | join(" ")')"
+
+# Per transport: the host's own request call, or a comment carrying a phrase.
+check "a comment transport answers its phrase, its workflow and the short bound" \
+  'comment @claude .github/workflows/claude-review.yml 60' \
+  "$(derive claude "$since" '[.transport, .phrase, .await_run, .timeout] | map(tostring) | join(" ")')"
+check "the host's request call answers no phrase, no workflow and the long bound" \
+  'host null null 600' \
+  "$(one "$onreq" "$since" '[.transport, .phrase, .await_run, .timeout] | map(tostring) | join(" ")')"
+check "the name and the login come back with the derivation" \
+  'copilot copilot-pull-request-reviewer[bot]' \
+  "$(one "$onreq" "$since" '[.name, .login] | join(" ")')"
+
+# A run read is keyed by the --since instant, which a head-rule poll has none
+# of: an on-push block on a comment transport awaits no run, where an empty
+# instant would reach the host as a refused `--created >=` and read unreachable.
+pushcomment=$(printf '## Reviewers\n\n### bot\n\nLogin: bot[bot]\nTrigger: on-push\nRequest: comment @bot\nWorkflow: review.yml\nCap: None.\nGating: no\n\n## Coding standards\n')
+check "a head-rule reviewer on a comment transport awaits no run, keeping its phrase" \
+  'head null comment @bot null' \
+  "$(one "$pushcomment" '' '[.rule, (.await_run|tostring), .transport, .phrase, (.refusal|tostring)] | join(" ")')"
+
+# Per refusal: the landing rule and the caller's --since must agree.
+check "--since with an on-push reviewer is refused" \
+  'copilot is on-push, whose rounds land on the head: --since does not apply' \
+  "$(derive copilot "$since" '.refusal')"
+check "no --since with an on-request reviewer is refused" \
+  'claude is on-request, whose rounds land by time: --since <iso> is required' \
+  "$(derive claude '' '.refusal')"
+check "no --since with an auto-once reviewer is refused" \
+  'bot is auto-once, whose rounds land by time: --since <iso> is required' \
+  "$(one "$autoonce" '' '.refusal')"
 
 finish

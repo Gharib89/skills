@@ -114,7 +114,7 @@ jobs:
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment.
       # Ship grades it from the run read either way: the profile block driving
-      # this workflow carries `Workflow:`, so `poll-pr --await-run` reads the
+      # this workflow carries `Workflow:`, so `poll-pr --reviewer` reads the
       # failed run itself as `infra-error`. The step is what puts the run URL on
       # the PR, with the failure subtype beside it where the action left one and
       # `unknown` where it did not, so the human reading the PR has the reason or

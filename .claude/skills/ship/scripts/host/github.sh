@@ -470,16 +470,19 @@ _gh_run_list() { # <workflow-file> <since-iso>
     --json status,conclusion,createdAt,url,displayTitle \
     --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})'
 }
+# GitHub knows a workflow by its file name, and answers the repo-relative path
+# the profile's `Workflow:` carries with a 404; every workflow sits flat in
+# `.github/workflows/`, so the name alone is unambiguous.
 host_workflow_runs() { # <workflow-file> <since-iso>
-  local err rc
+  local err rc wf=${1##*/}
   err=$(mktemp) || return 2
   trap 'rm -f "$err"' RETURN
-  _gh_run_list "$1" "$2" 2>"$err"; rc=$?
+  _gh_run_list "$wf" "$2" 2>"$err"; rc=$?
   # The flat one retry `gql` keeps rather than `api`'s backoff: a read that
   # answers non-zero reports the reviewer unreachable, and this CLI family is the
   # one the header names as flaking 401 mid-session, so a bad second would
   # otherwise be read as evidence about a reviewer that is working.
-  if [ "$rc" -ne 0 ]; then sleep 2; : > "$err"; _gh_run_list "$1" "$2" 2>"$err"; rc=$?; fi
+  if [ "$rc" -ne 0 ]; then sleep 2; : > "$err"; _gh_run_list "$wf" "$2" 2>"$err"; rc=$?; fi
   [ "$rc" -eq 0 ] || ship_tail40 "$err"
   return $rc
 }

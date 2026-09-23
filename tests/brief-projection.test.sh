@@ -27,6 +27,8 @@ poll=$(jq -cn --argjson r "$round" --argjson m "$mine" --argjson o "$older" '
               path: "skills/ship/scripts/merge.sh", body: "nit: name the base"},
              {id: "t2", resolved: true, replied: true, author: "Copilot",
               path: "skills/ship/scripts/poll-pr.sh", body: "done"}],
+   reviewer: {name: "copilot", login: "copilot-pull-request-reviewer[bot]", rule: "head",
+              await_run: null, timeout: 600},
    reviewer_blocked: null, reviewer_run: {status: "completed", conclusion: "success",
                                           url: "https://example.invalid/runs/9"},
    landed_by: "head", done: true, waited_s: 20}')
@@ -40,7 +42,10 @@ findings='Reviewed 4 files and found 2 comments.
 # The head rule: the rounds are the ones on the current head, the run's own reply
 # row drops out, and the round body comes down to its finding items.
 check "the head rule projects on_head without the run's own row" \
-  "$(jq -cn --arg f "$findings" '{head_sha: "abc1234", mergeable: "clean", landed_by: "head", refused_by: null, reviewer_blocked: null,
+  "$(jq -cn --arg f "$findings" '{head_sha: "abc1234", mergeable: "clean",
+      reviewer: {name: "copilot", login: "copilot-pull-request-reviewer[bot]", rule: "head",
+                 await_run: null, timeout: 600},
+      landed_by: "head", refused_by: null, reviewer_blocked: null,
       reviewer_run: {status: "completed", conclusion: "success", url: "https://example.invalid/runs/9"},
       rounds: [{id: 11, submitted_at: "2026-09-14T03:00:00Z", substantive: true, body: $f}],
       threads: [{id: "t1", path: "skills/ship/scripts/merge.sh", lead: "nit: name the base",
@@ -50,7 +55,10 @@ check "the head rule projects on_head without the run's own row" \
 # The since rule reads every head, so the round that landed before the last push
 # is in the list too.
 check "the since rule projects all[]" \
-  "$(jq -cn --arg f "$findings" '{head_sha: "abc1234", mergeable: "clean", landed_by: "head", refused_by: null, reviewer_blocked: null,
+  "$(jq -cn --arg f "$findings" '{head_sha: "abc1234", mergeable: "clean",
+      reviewer: {name: "copilot", login: "copilot-pull-request-reviewer[bot]", rule: "head",
+                 await_run: null, timeout: 600},
+      landed_by: "head", refused_by: null, reviewer_blocked: null,
       reviewer_run: {status: "completed", conclusion: "success", url: "https://example.invalid/runs/9"},
       rounds: [{id: 9, submitted_at: "2026-09-14T02:00:00Z", substantive: true, body: "- first round finding"},
                {id: 11, submitted_at: "2026-09-14T03:00:00Z", substantive: true, body: $f}],

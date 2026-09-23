@@ -101,7 +101,7 @@ How an on-request reviewer is asked for a round, named by its `Request:` line al
 _Avoid_: request method, trigger phrase (that is the workflow's own setting)
 
 **Landing rule**:
-Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The head rule, its default, takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule, `--since <iso>`, takes a review submitted at or after a time on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it. The reviewer's trigger picks the rule. Neither rule takes a row that is not substantive: an empty body (a reviewer's reply to one thread) or a body that is only a quota or rate-limit notice, which refuses the round rather than delivering it.
+Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The reviewer's `Trigger:` picks the rule, which `poll-pr --reviewer` derives from its block. The head rule takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule takes a review submitted at or after the `--since <iso>` instant on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it; that instant is the one value the poll cannot derive. Neither rule takes a row that is not substantive: an empty body (a reviewer's reply to one thread) or a body that is only a quota or rate-limit notice, which refuses the round rather than delivering it.
 _Avoid_: landing check, freshness rule
 
 **Round clip**:
