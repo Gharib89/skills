@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# poll-pr --await-run: the window a comment-transport reviewer's workflow run
-# opens. A run of that workflow is attached to the default branch's SHA, so the
+# poll-pr --reviewer on a comment transport: the window that reviewer's
+# workflow run opens. A run of that workflow is attached to the default branch's SHA, so the
 # PR head's checks cannot see it, and a window that closed before the round
 # landed was indistinguishable from a reviewer that never queued (#203).
 #
@@ -18,6 +18,32 @@ export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 mkdir -p "$repo" "$SHIP_FAKE"
 git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
+# The profile `--reviewer` reads: `claude` a comment transport, whose run the
+# poll awaits, and `plain` the same login on the host's request call, which
+# awaits none.
+mkdir -p "$repo/docs/agents"
+cat > "$repo/docs/agents/ship.md" <<'EOF'
+## Reviewers
+
+### claude
+
+Login: claude[bot]
+Trigger: on-request
+Request: comment @claude
+Workflow: claude-review.yml
+Cap: 2
+Gating: no
+
+### plain
+
+Login: claude[bot]
+Trigger: on-request
+Request: None.
+Cap: 2
+Gating: no
+
+## Coding standards
+EOF
 
 title='fix(ship): the PR under review'
 round='{"id":"1","login":"claude[bot]","state":"comment","substantive":true,
@@ -37,8 +63,12 @@ reset() {
     > "$SHIP_FAKE/host_pr_get.1.json"
   echo null > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"
 }
-poll() { ( cd "$repo" && bash "$mech" 7 --await-review 'claude[bot]' --since 2026-09-17T11:58:00Z \
-  --timeout 0 --interval 1 "$@" ); }
+poll() { # [<reviewer>] [<flag>...]: claude unless the first argument names another
+  local r=claude
+  case ${1:-} in ''|-*) ;; *) r=$1; shift ;; esac
+  ( cd "$repo" && bash "$mech" 7 --reviewer "$r" --since 2026-09-17T11:58:00Z \
+    --timeout 0 --interval 1 "$@" )
+}
 calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 
 # A run still going at the window's end is the case the bug was: the round was
@@ -49,20 +79,21 @@ run_row in_progress ''      > "$SHIP_FAKE/host_workflow_runs.1.json"
 run_row completed success   > "$SHIP_FAKE/host_workflow_runs.2.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll --await-run claude-review.yml); rc=$?
+out=$(poll); rc=$?
 check_rc "an in_progress run keeps the poll going until the round lands" 0 "$rc"
 check "the round that landed past the window is the round" \
   'true since completed' \
   "$(jq -r '[(.done|tostring), .landed_by, .reviewer_run.status] | join(" ")' <<<"$out")"
 
-# The same fixtures without the flag: the window closes on the second the
-# timeout names, which is the behaviour this flag exists to fix.
+# The same fixtures on the host's request call, which awaits no run: the window
+# closes on the second the timeout names, which is the behaviour the run read
+# exists to fix.
 reset
 run_row in_progress ''      > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll); rc=$?
-check_rc "without --await-run the window still closes at --timeout" 1 "$rc"
+out=$(poll plain); rc=$?
+check_rc "without a run to await the window still closes at --timeout" 1 "$rc"
 check "and the run is not read at all" 'false null' \
   "$(jq -r '[(.done|tostring), (.reviewer_run|tostring)] | join(" ")' <<<"$out")"
 
@@ -71,7 +102,7 @@ check "and the run is not read at all" 'false null' \
 reset
 run_row completed success > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll --await-run claude-review.yml); rc=$?
+out=$(poll); rc=$?
 check_rc "a concluded run with no row yet closes the window after one more poll" 1 "$rc"
 check "the extra poll is one" 2 "$(calls pr_reviews)"
 check "and the run is on the record" 'false completed success' \
@@ -84,7 +115,7 @@ check "and the run is on the record" 'false completed success' \
 reset
 run_row completed failure > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll --await-run claude-review.yml --timeout 600 --interval 30); rc=$?
+out=$(poll --timeout 600 --interval 30); rc=$?
 check_rc "a failed run closes the window" 1 "$rc"
 check "the failure comes back with the run URL" \
   'completed failure https://example.invalid/runs/9' \
@@ -97,7 +128,7 @@ check "and none of the window is spent on it" true \
 reset
 printf '[]\n'             > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll --await-run claude-review.yml)
+out=$(poll)
 check "no run since the request reports the none status" 'none null' \
   "$(jq -r '[.reviewer_run.status, (.reviewer_run.conclusion|tostring)] | join(" ")' <<<"$out")"
 
@@ -106,7 +137,7 @@ check "no run since the request reports the none status" 'none null' \
 reset
 run_row in_progress '' 'another PR entirely' > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll --await-run claude-review.yml)
+out=$(poll)
 check "a run for another PR is not this PR's round" 'none' \
   "$(jq -r '.reviewer_run.status' <<<"$out")"
 check "and it holds the window open for nothing" 1 "$(calls pr_reviews)"
@@ -121,7 +152,7 @@ jq -cn --arg t "$title" '[{status: "completed", conclusion: "success",
      created_at: "2026-09-17T11:59:30Z", url: "https://example.invalid/runs/10", title: $t}]' \
   > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll --await-run claude-review.yml)
+out=$(poll)
 check "a skipped run does not answer for the one that ran" \
   'success https://example.invalid/runs/9' \
   "$(jq -r '[.reviewer_run.conclusion, .reviewer_run.url] | join(" ")' <<<"$out")"
@@ -136,7 +167,7 @@ jq -cn --arg t "$title" '[{status: "in_progress", conclusion: null,
   > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll --await-run claude-review.yml); rc=$?
+out=$(poll); rc=$?
 check_rc "a live run outranks a newer concluded one and holds the window" 0 "$rc"
 check "and it is the run reported" 'in_progress https://example.invalid/runs/9' \
   "$(jq -r '[.reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
@@ -155,7 +186,7 @@ jq -cn --arg t "$title" '[{status: "waiting", conclusion: null,
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.2.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.3.json"
-out=$(poll --await-run claude-review.yml); rc=$?
+out=$(poll); rc=$?
 check_rc "an unfinished run in any status holds the window" 0 "$rc"
 check "and it outranks a newer concluded run" 'true since waiting' \
   "$(jq -r '[(.done|tostring), .landed_by, .reviewer_run.status] | join(" ")' <<<"$out")"
@@ -169,8 +200,8 @@ cp -R skills/ship/scripts "$work/scripts"
 sed -i.bak 's/^ceiling=1800$/ceiling=2/' "$work/scripts/poll-pr.sh"
 run_row in_progress '' > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$( cd "$repo" && bash "$work/scripts/poll-pr.sh" 7 --await-review 'claude[bot]' \
-  --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 --await-run claude-review.yml ); rc=$?
+out=$( cd "$repo" && bash "$work/scripts/poll-pr.sh" 7 --reviewer claude \
+  --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 ); rc=$?
 check_rc "a run still going at the ceiling closes the window" 1 "$rc"
 check "and it comes back as it stands, with its URL" \
   'false in_progress https://example.invalid/runs/9' \
@@ -182,7 +213,7 @@ check "and it comes back as it stands, with its URL" \
 reset
 : > "$SHIP_FAKE/host_workflow_runs.1.fail"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll --await-run claude-review.yml); rc=$?
+out=$(poll); rc=$?
 check_rc "a refused run read closes the window at --timeout" 1 "$rc"
 check "a refused run read is unavailable, not a missing run" '"unavailable"' \
   "$(jq -c '.reviewer_run' <<<"$out")"
@@ -193,18 +224,10 @@ check "and it buys no extra poll" 1 "$(calls pr_reviews)"
 reset
 printf '"not a list of runs"\n' > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll --await-run claude-review.yml 2>/dev/null); rc=$?
+out=$(poll 2>/dev/null); rc=$?
 check_rc "an unreadable run payload closes the window" 1 "$rc"
 check "and reads as unavailable, on one JSON object" '"unavailable"' \
   "$(jq -c '.reviewer_run' <<<"$out")"
-
-# --await-run has no meaning without the reviewer it belongs to, or without the
-# instant the request happened.
-err() { ( cd "$repo" && bash "$mech" "$@" 2>/dev/null | jq -r '.error' ); }
-check "--await-run alone is a usage error" '--await-run needs --await-review and --since' \
-  "$(err 7 --await-run claude-review.yml)"
-check "--await-run without --since is a usage error" '--await-run needs --await-review and --since' \
-  "$(err 7 --await-review 'claude[bot]' --await-run claude-review.yml)"
 
 # The Azure DevOps adapter has no such read, and answers the way it answers
 # every read the host lacks: non-zero, silent.

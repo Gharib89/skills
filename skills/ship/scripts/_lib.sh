@@ -825,6 +825,56 @@ ship_reviewer_reasons() {
       end'
 }
 
+# ship_reviewer_row <rows-json> <name>: the `ship_reviewers` row whose `### `
+# heading is <name>, matched exactly, the key `Fallback-for:` and the merge
+# summary already use. A name no block carries prints the refusal, listing the
+# names the profile does carry, and returns 1: `poll-pr` and `request-review`
+# exit 2 on it, because a mistyped name is a malformed invocation.
+ship_reviewer_row() {
+  jq -ce --arg n "$2" 'first(.[] | select(.name == $n))' <<<"$1" 2>/dev/null && return 0
+  jq -rn --argjson r "$1" --arg n "$2" \
+    '"no ## Reviewers block is named \($n); the profile names: \(
+       if ($r | length) == 0 then "none" else [$r[].name] | join(", ") end)"'
+  return 1
+}
+
+# ship_reviewer_derive <row-json> <since>: what a round of that reviewer is
+# polled and requested with, derived from its block rather than handed to the
+# mechanic flag by flag, as {name, login, rule, await_run, transport, phrase,
+# timeout, refusal}.
+#
+# `rule` is the landing rule `poll-pr` applies: `head` for an on-push reviewer,
+# whose every push earns a round on the new head, and `since` for every other
+# trigger, which posts one round per request on whatever head it lands on.
+# `transport` is `comment` where `Request:` reads `comment <phrase>`, with
+# `phrase` its text and `await_run` the block's `Workflow:`, the run that
+# separates a round still being written from one that will not come; `host`
+# otherwise, the host's own request-a-reviewer call, with both null. `timeout`
+# is the poll's default bound, by transport: 600 where the host's call is the
+# transport, since its round can take several minutes to land, and 60 where a
+# comment is, since the run read then holds the window open for as long as a
+# round is being written.
+#
+# `refusal` is null, or the line `poll-pr` exits 2 on, where the caller's
+# <since> disagrees with the rule: a --since for an on-push reviewer, or none for
+# a since-rule one. It is reported rather than exited on because `request-review`
+# takes no --since and reads the transport alone.
+ship_reviewer_derive() {
+  jq -c --arg s "$2" '
+    ((.request // "") | startswith("comment ")) as $c
+    | (if .trigger == "on-push" then "head" else "since" end) as $rule
+    | {name, login, rule: $rule,
+       await_run: (if $c then .workflow else null end),
+       transport: (if $c then "comment" else "host" end),
+       phrase: (if $c then (.request | ltrimstr("comment ")) else null end),
+       timeout: (if $c then 60 else 600 end),
+       refusal: (if $rule == "head" and $s != ""
+                 then "\(.name) is on-push, whose rounds land on the head: --since does not apply"
+                 elif $rule == "since" and $s == ""
+                 then "\(.name) is \(.trigger), whose rounds land by time: --since <iso> is required"
+                 else null end)}' <<<"$1"
+}
+
 # ship_copilot_trigger_reason <name> <trigger> <review_on_push>: the one
 # `profile invalid:` line for a Copilot block whose `Trigger:` contradicts the
 # repository ruleset that actually drives it, or nothing.
@@ -944,7 +994,7 @@ ship_brief() {
         elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
     def lead: [splits("\n") | select(test("^[ \t]*$") | not)] | (.[0] // "") | clip;
-    {head_sha, mergeable, landed_by, reviewer_run,
+    {head_sha, mergeable, reviewer, landed_by, reviewer_run,
      rounds: [.reviews[$key][] | select(mine | not) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index($r.id | tostring)) then $r.body
