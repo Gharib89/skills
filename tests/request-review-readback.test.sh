@@ -2,8 +2,9 @@
 # request-review over the real GitHub adapter: a request that landed reads back
 # as one. `host_pr_request_review` takes it as landed when the timeline gained a
 # `review_requested` event during the call, or when the reviewer is on the
-# readback under its login less a `[bot]` suffix or under its recorded alias.
-# The readback alone must suffice, because the timeline can lag the adapter's
+# pending list under its login less a `[bot]` suffix or under its recorded
+# alias; the timeline's own logins, which keep every earlier request, do not count.
+# The pending list alone must suffice, because the timeline can lag the adapter's
 # wait; Copilot, requested as copilot-pull-request-reviewer[bot] and recorded
 # as `Copilot`, is the alias case (#239).
 #
@@ -50,12 +51,13 @@ export PATH=$bin:$PATH
 
 reset() { # <readback-logins, one per line> [<timeline read n> <event lines>]...
   rm -f "$FAKE"/*
+  : > "$FAKE/calls"
   printf '%s' "$1" > "$FAKE/readback"; shift
   : > "$FAKE/timeline.1"
   while [ $# -gt 1 ]; do printf '%s' "$2" > "$FAKE/timeline.$1"; shift 2; done
 }
 req()   { ( cd "$repo" && bash "$mech" 7 "$1" 2>/dev/null ); }
-posts() { grep -c -- '-X POST' "$FAKE/calls" 2>/dev/null || echo 0; }
+posts() { grep -c -- '-X POST' "$FAKE/calls"; }
 
 # The field case: the POST succeeds, the timeline has not surfaced the event,
 # and the readback names the reviewer under the name GitHub records it as.
@@ -81,6 +83,15 @@ reset '' 2 '{"login":"Copilot","created_at":"2026-09-21T15:00:00Z"}'
 out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
 check_rc "a timeline delta alone is a landed request" 0 "$rc"
 check    "and stamps requested_at from the event" 2026-09-21T15:00:00Z "$(jq -r .requested_at <<<"$out")"
+
+# A reviewer requested before on this PR: its event is in the timeline before
+# and after the call, the POST queues nothing, and nothing is pending. The
+# earlier request must not read this one back.
+prior='{"login":"Copilot","created_at":"2026-09-21T14:00:00Z"}'
+reset '' 1 "$prior"
+out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
+check_rc "an earlier request on the timeline does not read back a new one" 1 "$rc"
+check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
 
 # Neither signal: never-queued, after the one retry.
 reset ''
