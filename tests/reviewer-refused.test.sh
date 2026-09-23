@@ -64,9 +64,14 @@ reset() {
   jq -cn '{number: 7, url: "https://example.invalid/7", title: "t", body: "",
     head_sha: "deadbee", head_ref: "fix/x-7", base_ref: "main", state: "open", mergeable: "clean"}' \
     > "$SHIP_FAKE/host_pr_get.1.json"
-  jq -cn --arg n "$notice_text" '$n' > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"
+  blocked_at 2026-09-23T14:23:19Z
   printf '[]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
   printf 'me\n' > "$SHIP_FAKE/host_identity.1.json"
+}
+# The adapter's blocked lookup: the latest notice line and when it was posted.
+blocked_at() { # <at>
+  jq -cn --arg n "$notice_text" --arg at "$1" '{line: $n, at: $at}' \
+    > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"
 }
 reviews() { # <on_head-json> <all-json>
   jq -cn --argjson h "$1" --argjson a "$2" '{on_head: $h, all: $a, total: ($a | length)}' \
@@ -110,9 +115,11 @@ out=$( ( cd "$repo" && bash "$mech" 7 --reviewer copilot-push --timeout 600 --in
 check_rc "a notice on the head closes the window" 1 "$rc"
 check "under the head rule" head "$(jq -r '.refused_by' <<<"$out")"
 
-# Another login's notice is not this reviewer's refusal.
+# Another login's notice is not this reviewer's refusal. The adapter's blocked
+# lookup filters by login, so for claude[bot] it answers null.
 reset
 reviews "[$notice]" "[$notice]"
+echo null > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"
 out=$( ( cd "$repo" && bash "$mech" 7 --reviewer other --since 2026-09-23T14:22:34Z \
   --timeout 0 --interval 1 ) )
 check "another reviewer's notice refuses nothing" null "$(jq -r '.refused_by' <<<"$out")"
@@ -123,5 +130,33 @@ reviews "[$notice]" "[$notice]"
 out=$(poll --brief --since 2026-09-23T14:22:34Z --timeout 600 --interval 30)
 check "--brief carries the refusal and the notice" "since $notice_text" \
   "$(jq -r '[.refused_by, .reviewer_blocked] | join(" ")' <<<"$out")"
+
+# A reviewer that posts its notice as a PR comment leaves no review row: the
+# blocked lookup's own timestamp is what the since rule reads (#256).
+reset
+reviews '[]' '[]'
+blocked_at 2026-09-23T14:30:00Z
+out=$(poll --since 2026-09-23T14:22:34Z --timeout 600 --interval 30); rc=$?
+check_rc "a comment-only notice after --since closes the window" 1 "$rc"
+check "under the since rule, with done false" 'since false' \
+  "$(jq -r '[.refused_by, (.done|tostring)] | join(" ")' <<<"$out")"
+check "and the notice line is quoted" "$notice_text" "$(jq -r .reviewer_blocked <<<"$out")"
+check "and none of the window is spent" true "$(jq -r '.waited_s < 30' <<<"$out")"
+out=$(poll --brief --since 2026-09-23T14:22:34Z --timeout 600 --interval 30)
+check "--brief quotes the comment notice's line" "since $notice_text" \
+  "$(jq -r '[.refused_by, .reviewer_blocked] | join(" ")' <<<"$out")"
+
+reset
+reviews '[]' '[]'
+blocked_at 2026-09-23T14:20:00Z
+out=$(poll --since 2026-09-23T14:22:34Z --timeout 0 --interval 1)
+check "a comment notice before --since refuses nothing" null "$(jq -r '.refused_by' <<<"$out")"
+
+# A comment is tied to no commit, so the head rule leaves it to review rows.
+reset
+reviews '[]' '[]'
+blocked_at 2026-09-23T14:30:00Z
+out=$( ( cd "$repo" && bash "$mech" 7 --reviewer copilot-push --timeout 0 --interval 1 ) )
+check "under the head rule a comment-only notice refuses nothing" null "$(jq -r '.refused_by' <<<"$out")"
 
 finish

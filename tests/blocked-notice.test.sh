@@ -15,7 +15,9 @@ notice='Copilot was unable to review this pull request because the user who requ
 bot='copilot-pull-request-reviewer[bot]'
 
 # select_blocked <login> <rows-json>: the adapter's call, in isolation.
-select_blocked() { jq -r --arg l "$1" "$_gh_blocked_select" <<<"$2"; }
+select_blocked() { jq -c --arg l "$1" "$_gh_blocked_select" <<<"$2" | jq -r '.line'; }
+# select_blocked_at <login> <rows-json>: when the notice it answers with was posted.
+select_blocked_at() { jq -c --arg l "$1" "$_gh_blocked_select" <<<"$2" | jq -r '.at'; }
 
 row() { # <login> <at> <body>
   jq -n --arg l "$1" --arg at "$2" --arg b "$3" '{login: $l, at: $at, body: $b}'
@@ -43,6 +45,14 @@ check "the login is matched case-insensitively, bot suffix aside" \
 check "the most recent notice wins across the two surfaces" \
   'Copilot has exceeded its review quota.' \
   "$(select_blocked "$bot" "$(rows \
+      "$(row "$bot" 2026-09-14T09:00:00Z 'Copilot was unable to review this pull request.')" \
+      "$(row "$bot" 2026-09-14T10:00:00Z 'Copilot has exceeded its review quota.')")")"
+
+# poll-pr reads the since rule off this timestamp for a notice posted as a
+# comment, which leaves no review row to read it from (#256).
+check "the latest notice answers with the time it was posted" \
+  2026-09-14T10:00:00Z \
+  "$(select_blocked_at "$bot" "$(rows \
       "$(row "$bot" 2026-09-14T09:00:00Z 'Copilot was unable to review this pull request.')" \
       "$(row "$bot" 2026-09-14T10:00:00Z 'Copilot has exceeded its review quota.')")")"
 

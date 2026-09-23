@@ -71,12 +71,12 @@
 # `reviewer_blocked` is the awaited login's latest quota or rate-limit notice,
 # read from its review bodies as well as its PR comments: a reviewer states a
 # notice on either surface, and both are read. `refused_by` names the landing
-# rule that admitted a notice posted as a REVIEW (on the head, or at or after
-# `--since`) while no round landed: that notice answers the request, no round
-# follows it, and the window closes on it at once with done=false, which the
-# review loop reads as `degraded: blocked` and requests nothing more. A notice
-# the rule does not admit, an older request's or one posted only as a comment,
-# leaves the window to run as before. `threads` is "unavailable" when thread
+# rule that admitted a notice while no round landed: a review on the head, or a
+# review or PR comment at or after `--since`. That notice answers the request, no
+# round follows it, and the window closes on it at once with done=false, which
+# the review loop reads as `degraded: blocked` and requests nothing more. A
+# notice the rule does not admit, an older request's or a comment under the head
+# rule, leaves the window to run as before. `threads` is "unavailable" when thread
 # state could not be read (GraphQL refused): that reviewer's exit is degraded
 # unreachable, the run proceeds.
 #
@@ -87,7 +87,7 @@
 # rows that come back whole, so `--brief --full <id>` is the summary with that
 # one round verbatim. Rounds come from `all[]` under the
 # --since rule and `on_head[]` under the head rule, the list that rule lands
-# from, and the run's own rows drop out: a thread reply of ours posts as a review
+# from, under `--reviewer` only that reviewer's rows, and the run's own rows drop out: a thread reply of ours posts as a review
 # row of its own, and a convergence test that counts it reads its own voice as
 # the reviewer's. That drop needs the host identity, so `--brief` asks for it up
 # front and exits 2 when the host cannot answer, rather than returning a list it
@@ -208,6 +208,13 @@ while :; do
     # follows it, so the window closes on it rather than on the clock.
     if [ "$landed" = false ]; then
       refused_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" "$SHIP_REFUSED_BY" <<<"$reviews")
+      # A notice posted as a PR comment has no review row, so the blocked
+      # lookup's `at` is what the since rule reads; the head rule has no commit
+      # to tie a comment to and leaves it to review rows (#256).
+      if [ "$refused_by" = null ] && [ -n "$since" ]; then
+        refused_by=$(jq -c --arg s "$since" \
+          'if (.at // "") >= $s and (.at // "") != "" then "since" else null end' <<<"$blocked")
+      fi
     fi
   fi
   done=false
@@ -244,7 +251,7 @@ while :; do
     out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
       --argjson t "$threads" --argjson rv "$reviewer" --argjson b "$blocked" --argjson rr "$reviewer_run" \
       --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson d "$done" --argjson w "$waited" \
-      '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer: $rv, reviewer_blocked: $b,
+      '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer: $rv, reviewer_blocked: ($b.line? // null),
         reviewer_run: $rr, landed_by: $lb, refused_by: $rf, done: $d, waited_s: $w}')
     if $brief; then
       key=on_head; [ -z "$since" ] || key=all

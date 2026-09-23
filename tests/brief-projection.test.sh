@@ -68,8 +68,11 @@ check "the since rule projects all[]" \
 
 # An identity that matches no row drops nothing: the exclusion is the run's own
 # login, never a guess at which rows look like replies.
+# The same poll with no reviewer awaited, so the identity is the only filter left
+# and these cases read it alone.
+unawaited=$(jq -c '.reviewer = null' <<<"$poll")
 check "another identity drops no row" 2 \
-  "$(ship_brief "$poll" someone-else on_head | jq '.rounds | length')"
+  "$(ship_brief "$unawaited" someone-else on_head | jq '.rounds | length')"
 
 # `--full` outranks the cut: the row it names comes back verbatim, the way it
 # outranks the adapter's clip, and every other row stays cut.
@@ -97,7 +100,20 @@ check "a bot identity still matches its own row" 1 \
 # so this is the function's floor rather than a shape a run sees: given no
 # identity it drops nothing, never every row.
 check "an unreadable identity drops no row" 2 \
-  "$(ship_brief "$poll" "" on_head | jq '.rounds | length')"
+  "$(ship_brief "$unawaited" "" on_head | jq '.rounds | length')"
+
+# Under --reviewer the rounds are that reviewer's alone: on #255 a poll awaiting
+# claude listed Copilot's quota notice as a round of claude's.
+quota='{"id":20,"login":"copilot-pull-request-reviewer[bot]","state":"comment","substantive":false,
+        "submitted_at":"2026-09-14T04:00:00Z","body":"Copilot was unable to review this pull request."}'
+claude_round='{"id":21,"login":"claude[bot]","state":"comment","substantive":true,
+               "submitted_at":"2026-09-14T04:10:00Z","body":"- a claude finding"}'
+fallback=$(jq -cn --argjson q "$quota" --argjson c "$claude_round" --argjson m "$mine" '
+  {head_sha: "abc1234", mergeable: "clean", landed_by: "since",
+   reviews: {on_head: [$q, $c, $m], all: [$q, $c, $m], total: 3}, threads: [],
+   reviewer: {name: "claude", login: "Claude[bot]", rule: "since", await_run: null, timeout: 480}}')
+check "under --reviewer rounds[] holds only that reviewer's rows" '[21]' \
+  "$(ship_brief "$fallback" Gharib89 all | jq -c '[.rounds[].id]')"
 
 # A round with no finding items still has to be readable, so it is clipped the
 # way the adapters clip a long body.
