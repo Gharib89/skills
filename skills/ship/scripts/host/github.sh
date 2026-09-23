@@ -202,6 +202,10 @@ host_copilot_review_on_push() {
 # trigger rather than the brand. An adapter with no Copilot prints nothing,
 # which is what makes the check skip rather than branch on the host name.
 host_copilot_login() { printf 'copilot-pull-request-reviewer[bot]\n'; }
+# The name GitHub records that login under, on `requested_reviewers` and the
+# timeline alike. A different name, not the login less its `[bot]` suffix, so
+# `host_pr_request_review` matches it by alias rather than by suffix (#239).
+_gh_copilot_recorded=Copilot
 
 _norm_issue='{number, title, body: (.body // ""),
   state: (if .state == "open" then "open" else "closed" end),
@@ -492,7 +496,8 @@ host_workflow_runs() { # <workflow-file> <since-iso>
 # copilot-pull-request-reviewer[bot] and recorded on the timeline as `Copilot`),
 # and an empty requested_reviewers list proves nothing once the bot has posted.
 host_pr_request_review() { # <pr> <login>
-  local pr=$1 login=$2 ok=false before after readback now
+  local pr=$1 login=$2 ok=false before after readback now alias=
+  [ "$login" = "$(host_copilot_login)" ] && alias=$_gh_copilot_recorded
   _requested_events() {
     api "$R/issues/$pr/timeline" --paginate \
       --jq '.[] | select(.event == "review_requested") | select(.requested_reviewer.login) | {login: .requested_reviewer.login, created_at}' \
@@ -506,13 +511,17 @@ host_pr_request_review() { # <pr> <login>
   sleep 2
   after=$(_requested_events) || after='[]'
   readback=$( { api "$R/pulls/$pr" --jq '.requested_reviewers[].login'; jq -r '.[].login' <<<"$after"; } | jq -R . | jq -s 'unique')
-  # Read back by delta: the request landed iff the timeline gained a
-  # review_requested event during this call. Comparing logins does not work for
-  # an app reviewer, which is requested under one login and recorded under another.
-  # The timeline is chronological, so that new event is the last one.
-  jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson rb "$readback" --arg l "$login" --arg now "$now" \
-    '{requested: ($ok and (($a | length) > ($b | length)
-                          or ([$rb[] | ascii_downcase | sub("\\[bot\\]$"; "")] | index($l | ascii_downcase | sub("\\[bot\\]$"; "")) != null))),
+  # The request landed if the timeline gained a review_requested event during
+  # this call, or if the reviewer is on the readback under any name it is
+  # recorded as: its login less a `[bot]` suffix (github-actions[bot] reads back
+  # as github-actions), or its alias (Copilot). The timeline can lag the wait
+  # above, so the readback alone must be enough, or a landed request reads as
+  # never-queued. The timeline is chronological, so a new event is the last one.
+  jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson rb "$readback" --arg l "$login" --arg alias "$alias" --arg now "$now" \
+    'def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+     [$l, $alias | select(. != "") | norm] as $names
+     | {requested: ($ok and (($a | length) > ($b | length)
+                          or any($rb[] | norm; . as $r | $names | index($r) != null))),
       readback: $rb,
       requested_at: (if ($a | length) > ($b | length) then ($a[-1].created_at // $now) else $now end)}'
 }
