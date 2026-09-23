@@ -493,7 +493,8 @@ host_workflow_runs() { # <workflow-file> <since-iso>
 
 # Request, then read the request back off the host's own record: the login you
 # request and the login you read back can differ (Copilot is requested as
-# copilot-pull-request-reviewer[bot] and recorded as `Copilot`, the `_gh_copilot_recorded` alias above),
+# copilot-pull-request-reviewer[bot] and recorded as `Copilot`, the
+# `_gh_copilot_recorded` alias above),
 # and an empty requested_reviewers list proves nothing once the bot has posted.
 host_pr_request_review() { # <pr> <login>
   local pr=$1 login=$2 ok=false before after pending readback now alias=
@@ -520,8 +521,11 @@ host_pr_request_review() { # <pr> <login>
   # enough, or a landed request reads as never-queued. The match reads the
   # pending list and not the timeline's logins, which keep every earlier
   # request on the PR: matched against those, a second request that queued
-  # nothing would read as landed. The timeline is chronological, so a new event
-  # is the last one.
+  # nothing would read as landed. The pending list drops a reviewer once it
+  # submits, so a reviewer still on it has a round queued and unposted, which
+  # lands after this call's `requested_at` and is what the caller waits for:
+  # already pending counts as landed. The timeline is chronological, so a new
+  # event is the last one.
   jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson p "$pending" --argjson rb "$readback" --arg l "$login" --arg alias "$alias" --arg now "$now" \
     'def norm: ascii_downcase | sub("\\[bot\\]$"; "");
      [$l, $alias | select(. != "") | norm] as $names

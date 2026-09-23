@@ -310,9 +310,11 @@ ship_missing_skill_reasons() {
 # holds its state for the length of the input in the globals `_fenced`,
 # `_fence_char` and `_fence_len`, so a host program leaves those three names to
 # it, and reads no `RSTART` or `RLENGTH` of its own across a call, which
-# `ship_deindent`'s `match` overwrites. `ship_deindent(s)` strips up to three leading spaces; it is a `match`
-# because mawk, the default awk on Debian and Ubuntu, reads `sub(/^ ? ? ?/, ...)`
-# as one optional space.
+# `ship_deindent`'s `match` overwrites.
+#
+# `ship_deindent(s)` strips up to three leading spaces. It is a `match` because
+# mawk, the default awk on Debian and Ubuntu, reads `sub(/^ ? ? ?/, ...)` as one
+# optional space.
 readonly SHIP_AWK_FENCE='function ship_deindent(s) {
     if (match(s, /^ +/)) s = substr(s, (RLENGTH < 3 ? RLENGTH : 3) + 1)
     return s

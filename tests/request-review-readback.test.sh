@@ -93,6 +93,14 @@ out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
 check_rc "an earlier request on the timeline does not read back a new one" 1 "$rc"
 check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
 
+# A reviewer still pending from an earlier request: GitHub no-ops the POST and
+# writes no event, but the round it owes is queued and unposted, so it lands
+# after this call and the request reads as landed.
+reset 'Copilot' 1 "$prior"
+out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
+check_rc "a reviewer already pending reads back as requested" 0 "$rc"
+check    "on the one POST" 1 "$(posts)"
+
 # Neither signal: never-queued, after the one retry.
 reset ''
 out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
