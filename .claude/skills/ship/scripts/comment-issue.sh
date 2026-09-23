@@ -17,7 +17,10 @@ n=$1; shift
 case $n in ""|*[!0-9]*) ship_tooling "$usage" ;; esac
 [ "${1:-}" = --body-file ] && [ -f "${2:-}" ] && [ $# -eq 2 ] || ship_tooling "$usage"
 ship_load_host
-if ! answer=$(host_issue_comment "$n" "$(cat "$2")"); then
+# host_issue_comment takes the body as a string, and `$( )` strips trailing
+# newlines, so a sentinel carries them through and the post is the file's bytes.
+body=$(cat "$2"; printf x); body=${body%x}
+if ! answer=$(host_issue_comment "$n" "$body"); then
   # ship_fail_host exits, so it runs in the subshell and its verdict is extended.
   verdict=$(ship_fail_host "comment on issue #$n failed" "$answer")
   jq --argjson n "$n" '{issue: $n, posted: false} + .' <<<"$verdict"

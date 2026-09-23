@@ -257,14 +257,15 @@ host_issue_remove_label() {
 }
 # A create, so it is create-then-verify: a 5xx may have landed the comment, and a
 # blind retry would post it twice. An issue comment is the same REST route as a
-# PR comment, so it is host_pr_comment over a body file. {id,url,created_at} on
-# success, {"status": <n|null>} on failure, which `comment-issue` reads.
+# PR comment, so it is host_pr_comment over a body file. Nothing on success, as
+# on Azure DevOps; {"status": <n|null>} on failure, which `comment-issue` reads.
 host_issue_comment() {
-  local f rc
-  f=$(mktemp) || return 1
+  local f out rc
+  f=$(mktemp) || return 2
+  trap 'rm -f "$f"' RETURN
   printf '%s' "$2" > "$f"
-  host_pr_comment "$1" "$f"; rc=$?
-  rm -f "$f"
+  out=$(host_pr_comment "$1" "$f"); rc=$?
+  [ "$rc" -eq 0 ] || printf '%s\n' "$out"
   return $rc
 }
 host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_reason=completed >/dev/null; }

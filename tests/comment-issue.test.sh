@@ -14,11 +14,15 @@ tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 mkdir "$tmp/bin" "$tmp/repo"
 gh_fake_install "$tmp/bin"
+# The adapter's backoff sleeps for real, and the mechanic runs as a subprocess a
+# shell function cannot reach, so the no-op goes on PATH beside the fake.
+printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/sleep" && chmod +x "$tmp/bin/sleep"
 git -C "$tmp/repo" init -q && git -C "$tmp/repo" remote add origin https://github.com/owner/repo.git
-printf 'a later finding\n' > "$tmp/body"
+# A trailing blank line, so a post that drops the file's trailing newlines fails.
+printf 'a later finding\n\n' > "$tmp/body"
 
 run() { (cd "$tmp/repo" && bash "$m" "$@" 2>/dev/null); }
-posts() { grep -cF '"body": "a later finding"' "$GH_LOG"; }
+posts() { grep -cF '"body": "a later finding\n\n"' "$GH_LOG"; }
 
 out=$(run); rc=$?
 check_rc "a bare call is tooling" 2 "$rc"
@@ -31,7 +35,7 @@ gh_reset; export GH_STATUS_SEQ="201"
 out=$(run 7 --body-file "$tmp/body"); rc=$?
 check_rc "a post that lands exits 0" 0 "$rc"
 check "a post that lands answers posted" '{"issue":7,"posted":true}' "$(jq -c . <<<"$out")"
-check "a post that lands is posted once, carrying the file's body" \
+check "a post that lands is posted once, carrying the file's bytes" \
   1 "$(posts)"
 
 gh_reset; export GH_STATUS_SEQ="422"
@@ -42,8 +46,7 @@ check "a refused post answers not posted, with the host's status" \
 
 # A 5xx may have landed the comment anyway, so the POST is not retried blind: a
 # create re-reads the comments first, and here the re-read fails too, which
-# answers unknown rather than posting a second time. The attempts are the
-# identity read, the POST and the re-read.
+# answers unknown rather than posting a second time.
 gh_reset; export GH_STATUS_SEQ="200 500 500"
 out=$(run 7 --body-file "$tmp/body"); rc=$?
 check_rc "a post the host answered 5xx exits 1" 1 "$rc"
