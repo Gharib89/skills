@@ -255,8 +255,18 @@ host_issue_remove_label() {
   host_issue_has_label "$1" "$2" || return 0
   api -X DELETE "$R/issues/$1/labels/$(jq -rn --arg l "$2" '$l | @uri')" >/dev/null
 }
-# Nothing on success, {"status": <n|null>} on failure, which `comment-issue` reads.
-host_issue_comment()  { jq -n --arg b "$2" '{body: $b}' | _gh_write -X POST "$R/issues/$1/comments" --input -; }
+# A create, so it is create-then-verify: a 5xx may have landed the comment, and a
+# blind retry would post it twice. An issue comment is the same REST route as a
+# PR comment, so it is host_pr_comment over a body file. {id,url,created_at} on
+# success, {"status": <n|null>} on failure, which `comment-issue` reads.
+host_issue_comment() {
+  local f rc
+  f=$(mktemp) || return 1
+  printf '%s' "$2" > "$f"
+  host_pr_comment "$1" "$f"; rc=$?
+  rm -f "$f"
+  return $rc
+}
 host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_reason=completed >/dev/null; }
 
 # Create-then-verify, the shape every create in this adapter has: attempt the

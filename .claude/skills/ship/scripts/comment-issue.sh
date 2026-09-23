@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Post a comment on an existing issue (an adjacent find's later evidence, where
-# the issue is what a triager reads). On Azure DevOps this is a discussion entry
-# on the work item.
+# Post a comment on an existing issue, so evidence a run finds for an issue
+# already filed lands where a triager reads it rather than in the PR body. On
+# Azure DevOps this is a discussion entry on the work item.
 #
 #   comment-issue <issue> --body-file <path>
 #
@@ -14,7 +14,7 @@ usage='usage: comment-issue <issue> --body-file <path>'
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 n=$1; shift
-case $n in -*) ship_tooling "$usage" ;; esac
+case $n in ""|*[!0-9]*) ship_tooling "$usage" ;; esac
 [ "${1:-}" = --body-file ] && [ -f "${2:-}" ] && [ $# -eq 2 ] || ship_tooling "$usage"
 ship_load_host
 if ! answer=$(host_issue_comment "$n" "$(cat "$2")"); then
