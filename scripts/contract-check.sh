@@ -25,7 +25,7 @@
 # Check 5 is the --help contract: a run asks a mechanic what its flags are by
 # running it, so the answer has to be the usage line, on stdout, exit 0.
 #
-# stdout: one line per violation, with the offending mechanic named
+# stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
 dir=${1:-skills/ship/scripts}
@@ -188,5 +188,19 @@ for path in "$dir"/*.sh; do
     [ "$out" = "$want" ] || { printf '%s: --help and the usage guard print different lines\n' "$m"; rc=1; }
   fi
 done
+
+# 6. SHIP_HOST_ADAPTER is read by `ship_load_host` and nowhere else under the
+# skills tree. It swaps the host adapter for whatever file it names, which is
+# the test suite's Host fake and nothing a consumer should ever reach, so a
+# second reader is a mechanic that can be pointed off its host. Every file,
+# prose included: a doc teaching the variable is how a second reader starts.
+raw=$(grep -rn 'SHIP_HOST_ADAPTER' "$skills"); st=$?
+[ "$st" -le 1 ] || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
+hits=$(printf '%s' "$raw" | awk -F: -v lib="$skills/ship/scripts/_lib.sh" '$1 != lib')
+if [ -n "$hits" ]; then
+  echo "SHIP_HOST_ADAPTER outside $skills/ship/scripts/_lib.sh; it is test-only, read by ship_load_host alone:"
+  echo "$hits"
+  rc=1
+fi
 
 exit $rc

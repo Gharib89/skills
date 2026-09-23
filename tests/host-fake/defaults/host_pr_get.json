@@ -1,0 +1,11 @@
+{
+  "number": 7,
+  "url": "https://example.invalid/pull/7",
+  "title": "fix: a fake PR",
+  "body": "",
+  "head_sha": "deadbee",
+  "head_ref": "fix/fake-1",
+  "base_ref": "main",
+  "state": "open",
+  "mergeable": "clean"
+}

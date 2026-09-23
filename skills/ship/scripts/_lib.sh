@@ -13,6 +13,12 @@
 # host/ado.sh, chosen from the origin remote rather than from a flag. An adapter
 # defines every function below, in that read vocabulary.
 #
+# SHIP_HOST_ADAPTER is test-only: set, it names the file ship_load_host sources
+# in place of host/$SHIP_HOST.sh, after host detection has still run. The repo's
+# test suite points it at its fixture-driven Host fake so a mechanic runs as a
+# script without a host. Nothing under skills/ outside this file may read it,
+# which the contract gate enforces.
+#
 #   host_tooling_reasons                 -> one missing-tool reason per line
 #   host_tooling_install                 -> install the host CLI where absent; non-zero = could not
 #   host_identity                        -> the login the claim is written as
@@ -234,7 +240,8 @@ ship_detect_host() {
 ship_load_host() {
   ship_detect_host || ship_tooling "cannot derive the host from the origin remote"
   # shellcheck source=/dev/null
-  source "$SHIP_SCRIPTS/host/$SHIP_HOST.sh" || ship_tooling "cannot load host adapter $SHIP_HOST"
+  source "${SHIP_HOST_ADAPTER:-$SHIP_SCRIPTS/host/$SHIP_HOST.sh}" \
+    || ship_tooling "cannot load host adapter ${SHIP_HOST_ADAPTER:-$SHIP_HOST}"
 }
 
 # Triage roles are canonical names; the label strings a repo actually uses live
