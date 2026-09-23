@@ -4,7 +4,8 @@
 # request the first attempt sent, the stdin payload included (#108), and its
 # retry POLICY reads the HTTP status, so a 5xx or 429 burst gets the bounded
 # backoff a host outage needs while every other failure keeps the single retry
-# the 401 flake it was written for needs (#173).
+# the 401 flake it was written for needs (#173). `host_workflow_runs`, which
+# is not built on it, is held to its own flat single retry at the end.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -152,5 +153,16 @@ gh_reset; export GH_STATUS_SEQ="none"
 api user >/dev/null 2>&1; rc=$?
 check_rc "a call with no HTTP answer fails"            1 "$rc"
 check    "does not back off without a status"          2 "$(gh_attempts)"
+
+
+# host_workflow_runs is not built on api(): `gh run list` keeps the flat one
+# retry, because a read that answers non-zero reports a working reviewer
+# unreachable, and this CLI family is the one that flakes a bad second.
+gh_reset; export GH_STATUS_SEQ="none 200" GH_BODY='[]' SHIP_REPO_SLUG=owner/repo
+out=$(host_workflow_runs claude-review.yml 2026-09-17T11:58:00Z 2>/dev/null); rc=$?
+check_rc "a run read that flakes once still answers" 0 "$rc"
+check    "with the answer the second attempt got"    '[]' "$out"
+check    "after one retry"                           2 "$(gh_attempts)"
+unset GH_BODY
 
 finish
