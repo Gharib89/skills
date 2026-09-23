@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.4.3 (2026-09-23)
+
+### Bug Fixes
+
+- **ship**: Admit a PR-comment quota notice under poll-pr's since rule
+  ([#258](https://github.com/Gharib89/skills/pull/258),
+  [`5e9bbbc`](https://github.com/Gharib89/skills/commit/5e9bbbc4d2417b72c1f3821cf00306a3487c1c52))
+
+
 ## v8.4.2 (2026-09-23)
 
 ### Bug Fixes
