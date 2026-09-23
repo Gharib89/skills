@@ -168,8 +168,8 @@ unset GH_BODY
 # by its file name alone: `--workflow .github/workflows/claude-review.yml` is a
 # 404, which poll-pr reads as `reviewer_run: "unavailable"` (probed on
 # Gharib89/skills during #235). The read hands gh the file name.
-args=$( gh() { printf '%s\n' "$@" | grep -A1 -x -- --workflow | tail -1; }
+wf_arg=$( gh() { printf '%s\n' "$@" | grep -A1 -x -- --workflow | tail -1; }
         host_workflow_runs .github/workflows/claude-review.yml 2026-09-17T11:58:00Z )
-check    "the run read names the workflow by its file name" 'claude-review.yml' "$args"
+check    "the run read names the workflow by its file name" 'claude-review.yml' "$wf_arg"
 
 finish
