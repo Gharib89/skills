@@ -21,9 +21,18 @@ mech=$PWD/skills/ship/scripts/request-review.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo bin=$work/bin
 export FAKE=$work/fake
-mkdir -p "$repo" "$bin" "$FAKE"
+mkdir -p "$repo/docs/agents" "$bin" "$FAKE"
 git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
+# The mechanic takes a reviewer by its `### <name>` block, so the fixture
+# profile names one per login a case requests, all on the host's request call.
+block() { printf '### %s\n\nLogin: %s\nTrigger: on-request\nRequest: None.\nWorkflow: None.\nCap: 3\nGating: no\nFallback-for: None.\n\n' "$1" "$2"; }
+{ printf '## Reviewers\n\n'
+  block copilot 'copilot-pull-request-reviewer[bot]'
+  block actions 'github-actions[bot]'
+  block other 'someone-else[bot]'
+  printf '## Coding standards\n'
+} > "$repo/docs/agents/ship.md"
 
 cat > "$bin/gh" <<'GH'
 #!/usr/bin/env bash
@@ -56,31 +65,31 @@ reset() { # <readback-logins, one per line> [<timeline read n> <event lines>]...
   : > "$FAKE/timeline.1"
   while [ $# -gt 1 ]; do printf '%s' "$2" > "$FAKE/timeline.$1"; shift 2; done
 }
-req()   { ( cd "$repo" && bash "$mech" 7 "$1" 2>/dev/null ); }
+req()   { ( cd "$repo" && bash "$mech" 7 --reviewer "$1" 2>/dev/null ); }
 posts() { grep -c -- '-X POST' "$FAKE/calls"; }
 
 # The field case: the POST succeeds, the timeline has not surfaced the event,
 # and the readback names the reviewer under the name GitHub records it as.
 reset 'Copilot'
-out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
+out=$(req copilot); rc=$?
 check_rc "a Copilot request read back as Copilot is requested" 0 "$rc"
 check    "and reports requested: true" true "$(jq -r .requested <<<"$out")"
 check    "and spends one POST, no retry" 1 "$(posts)"
 
 # The alias belongs to Copilot's login: another reviewer is not read back by it.
 reset 'Copilot'
-out=$(req 'someone-else[bot]'); rc=$?
+out=$(req other); rc=$?
 check_rc "Copilot on the readback does not read back another reviewer" 1 "$rc"
 
 # The same-name app reviewer the `[bot]` bridge was written for still matches.
 reset 'github-actions'
-out=$(req 'github-actions[bot]'); rc=$?
+out=$(req actions); rc=$?
 check_rc "github-actions[bot] read back as github-actions is requested" 0 "$rc"
 check    "and reports requested: true" true "$(jq -r .requested <<<"$out")"
 
 # A timeline that gained the event is the other signal, and its time is the stamp.
 reset '' 2 '{"login":"Copilot","created_at":"2026-09-21T15:00:00Z"}'
-out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
+out=$(req copilot); rc=$?
 check_rc "a timeline delta alone is a landed request" 0 "$rc"
 check    "and stamps requested_at from the event" 2026-09-21T15:00:00Z "$(jq -r .requested_at <<<"$out")"
 
@@ -89,7 +98,7 @@ check    "and stamps requested_at from the event" 2026-09-21T15:00:00Z "$(jq -r 
 # earlier request must not read this one back.
 prior='{"login":"Copilot","created_at":"2026-09-21T14:00:00Z"}'
 reset '' 1 "$prior"
-out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
+out=$(req copilot); rc=$?
 check_rc "an earlier request on the timeline does not read back a new one" 1 "$rc"
 check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
 
@@ -97,13 +106,13 @@ check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
 # writes no event, but the round it owes is queued and unposted, so it lands
 # after this call and the request reads as landed.
 reset 'Copilot' 1 "$prior"
-out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
+out=$(req copilot); rc=$?
 check_rc "a reviewer already pending reads back as requested" 0 "$rc"
 check    "on the one POST" 1 "$(posts)"
 
 # Neither signal: never-queued, after the one retry.
 reset ''
-out=$(req 'copilot-pull-request-reviewer[bot]'); rc=$?
+out=$(req copilot); rc=$?
 check_rc "a request with no delta and no readback is not requested" 1 "$rc"
 check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
 check    "after exactly one retry POST" 2 "$(posts)"
