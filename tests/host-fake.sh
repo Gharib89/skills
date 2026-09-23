@@ -11,25 +11,28 @@
 #   ( cd "$repo" && bash skills/ship/scripts/read-pr.sh 7 )
 #   cat "$SHIP_FAKE/calls"
 #
-# The n-th call of a function answers from $SHIP_FAKE/<fn>.<n>.json, and a
-# sequence that runs out repeats its last entry. With no fixture it answers from
+# The n-th call of a function answers from $SHIP_FAKE/<fn>.<n>.json, or from
+# the nearest lower-numbered entry where <n> has none, so a sequence that runs
+# out repeats its last entry. With no entry at or below <n> it answers from
 # tests/host-fake/defaults/<fn>.json, the canonical answer per documented shape
 # that tests/host-contract.test.sh holds to the `_lib.sh` contract comment; with
 # neither it prints nothing and returns 0, which is a write that succeeded.
 # A <fn>.<n>.fail marker makes that call print nothing and return 1, and a
-# <fn>.<n>.status beside it is printed as {"status": <n>}, the failure answer
-# `ship_fail_host` reads. A marker is an entry of the sequence like a fixture,
+# <fn>.<n>.status beside it, read only there, is printed as {"status": <n>},
+# the failure answer `ship_fail_host` reads. A marker is an entry of the sequence like a fixture,
 # so <fn>.1.fail alone fails every call and <fn>.1.fail with <fn>.2.json is one
 # failure then an answer.
 #
-# Every call appends `<fn> <raw args>` as one line to $SHIP_FAKE/calls.
+# Every call appends `<fn> <raw args>` as one line to $SHIP_FAKE/calls, a
+# newline inside an argument (a comment body) written as `\n`.
 # Counters live in files, not variables, because a mechanic calls most reads in
 # a command substitution, whose subshell would lose an increment.
 _host_fake_defaults=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/host-fake/defaults
 
 _host_fake() { # <fn> <args...>
-  local fn=$1 n i; shift
-  printf '%s %s\n' "$fn" "$*" >> "$SHIP_FAKE/calls"
+  local fn=$1 n i args; shift
+  args=$*
+  printf '%s %s\n' "$fn" "${args//$'\n'/\\n}" >> "$SHIP_FAKE/calls"
   n=$(( $(cat "$SHIP_FAKE/$fn.n" 2>/dev/null || echo 0) + 1 ))
   printf '%s' "$n" > "$SHIP_FAKE/$fn.n"
   i=$n

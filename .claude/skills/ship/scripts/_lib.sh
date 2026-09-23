@@ -14,10 +14,10 @@
 # defines every function below, in that read vocabulary.
 #
 # SHIP_HOST_ADAPTER is test-only: set, it names the file ship_load_host sources
-# in place of host/$SHIP_HOST.sh, after host detection has still run. The repo's
-# test suite points it at its fixture-driven Host fake so a mechanic runs as a
-# script without a host. Nothing under skills/ outside this file may read it,
-# which the contract gate enforces.
+# in place of host/$SHIP_HOST.sh; ship_detect_host still runs first. Ship's
+# source repo points it at tests/host-fake.sh, a fixture-driven adapter, so a
+# mechanic runs as a script without a host. Nothing under skills/ outside this
+# file may read it, which that repo's contract gate enforces.
 #
 #   host_tooling_reasons                 -> one missing-tool reason per line
 #   host_tooling_install                 -> install the host CLI where absent; non-zero = could not

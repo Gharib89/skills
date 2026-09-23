@@ -12,9 +12,11 @@ source tests/lib.sh
 lib=skills/ship/scripts/_lib.sh
 defaults=tests/host-fake/defaults
 
-# <adapter>: the host_* functions it defines, one per line, sorted.
+# <adapter>: the host_* functions it defines, one per line, sorted. The
+# adapters read these at source time.
 fns() {
-  ( SHIP_OWNER=o SHIP_REPO=r SHIP_REPO_SLUG=o/r SHIP_ORG=o SHIP_PROJECT=p SHIP_ORG_URL=https://dev.azure.com/o
+  ( export SHIP_OWNER=o SHIP_REPO=r SHIP_REPO_SLUG=o/r SHIP_ORG=o SHIP_PROJECT=p SHIP_ORG_URL=https://dev.azure.com/o
+    # shellcheck source=/dev/null
     source "$lib" && source "$1" && declare -F | awk '$3 ~ /^host_/ {print $3}' | sort )
 }
 gh_fns=$(fns skills/ship/scripts/host/github.sh)
@@ -64,6 +66,11 @@ shapes() {
 }
 contract=$(shapes)
 check "the contract comment documents object answers at all" true "$([ -n "$contract" ] && echo true)"
+# The parser reads an entry only at the comment's own indent, so an entry that
+# drifted from it would drop out of $contract with nothing to say so: every
+# adapter function has to be an entry the parser can see.
+check "every adapter function is a contract entry at the parsed indent" "$gh_fns" \
+  "$(sed '/^[^#]/q' "$lib" | awk '/^#   host_/ {print $2}' | sort)"
 
 while read -r fn keys; do
   f=$defaults/$fn.json

@@ -154,7 +154,6 @@ api user >/dev/null 2>&1; rc=$?
 check_rc "a call with no HTTP answer fails"            1 "$rc"
 check    "does not back off without a status"          2 "$(gh_attempts)"
 
-
 # host_workflow_runs is not built on api(): `gh run list` keeps the flat one
 # retry, because a read that answers non-zero reports a working reviewer
 # unreachable, and this CLI family is the one that flakes a bad second.

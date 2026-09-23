@@ -198,7 +198,7 @@ raw=$(grep -rn 'SHIP_HOST_ADAPTER' "$skills"); st=$?
 [ "$st" -le 1 ] || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
 hits=$(printf '%s' "$raw" | awk -F: -v lib="$skills/ship/scripts/_lib.sh" '$1 != lib')
 if [ -n "$hits" ]; then
-  echo "SHIP_HOST_ADAPTER outside $skills/ship/scripts/_lib.sh; it is test-only, read by ship_load_host alone:"
+  echo "SHIP_HOST_ADAPTER outside $skills/ship/scripts/_lib.sh; it is test-only, and _lib.sh is its one reader:"
   echo "$hits"
   rc=1
 fi

@@ -137,7 +137,7 @@ The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Az
 _Avoid_: tracker (Boards is one part of a host), provider, platform
 
 **Host fake**:
-The third adapter at the Host seam, beside the GitHub and Azure DevOps ones: `tests/host-fake.sh`, defining the same `host_*` functions and answering each call from a fixture, so a generic mechanic is tested as a script with no host behind it. Selected only by `SHIP_HOST_ADAPTER`, which `ship_load_host` reads and nothing else under `skills/` may; it lives under `tests/` and is never part of a derived copy. Its default answers carry exactly the key sets the `_lib.sh` host contract documents, which a test holds them to.
+A third host adapter, beside the GitHub and Azure DevOps ones: `tests/host-fake.sh`, defining the same `host_*` functions and answering each call from a fixture, so a generic mechanic is tested as a script with no host behind it. Selected only by `SHIP_HOST_ADAPTER`, which `ship_load_host` reads and nothing else under `skills/` may; it lives under `tests/` and is never part of a derived copy. Its default answers carry exactly the key sets the `_lib.sh` host contract documents, which `tests/host-contract.test.sh` holds them to.
 _Avoid_: mock, stub host, `host-stub` (the stub `gh` and `az` that fail any test reaching a real host)
 
 **Run file**:
