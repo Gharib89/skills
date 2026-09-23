@@ -141,11 +141,11 @@ The one file a Ship run keeps outside the repo, in the session's scratchpad, hol
 _Avoid_: task list, scratch file, plan file, todo
 
 **Scratch directory**:
-The directory a Ship run names in every subagent prompt as the one place that subagent writes scratch of its own: `<scratchpad>/scratch/<role>/`, `<role>` being that subagent's job in the run, and where the run writes that subagent's Report file. Edits to the repo are separate, and go under the worktree prefix. A sibling of the Run file's directory rather than a child, so a path a subagent invents below the one it was given still lands clear of the run's record. Passed at every dispatch the way the model tier is.
+The directory a Ship run names in every subagent prompt as the one place that subagent writes scratch of its own: `<scratchpad>/scratch/<role>/`, `<role>` being that subagent's job in the run, and where that subagent writes its Report file. Edits to the repo are separate, and go under the worktree prefix. A sibling of the Run file's directory rather than a child, so a path a subagent invents below the one it was given still lands clear of the run's record. Passed at every dispatch the way the model tier is.
 _Avoid_: scratch file (that names the Run file, and is avoided there too), temp directory, workspace
 
 **Report file**:
-The verbatim copy of a phase-4 report a Ship run writes into the producing role's Scratch directory, `<scratchpad>/scratch/<role>/<role>-report.md`, before dispositioning one of its findings: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. The report reaches the run in context alone, where a compaction takes it, so the file is what a disposition and the merge summary's `Self-review` rows are read from; a row whose file is no longer on disk reads `unverified`.
+The file a phase-4 subagent writes its report to, at the path its dispatch names in the producing role's Scratch directory, `<scratchpad>/scratch/<role>/<role>-report.md`, handing back only the path and a short summary: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. The run writes it itself only where no file exists there at hand-back. A report held in context alone is taken by a compaction, so the file is what a disposition and the merge summary's `Self-review` rows are read from; a row whose file is no longer on disk reads `unverified`.
 _Avoid_: axis output, review log, findings dump
 
 **Shape**:
