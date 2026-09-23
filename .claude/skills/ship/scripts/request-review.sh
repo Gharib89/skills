@@ -6,10 +6,8 @@
 #   request-review <pr> --reviewer <name>
 #
 # `<name>` is the `### <name>` block under the profile's `## Reviewers`, read
-# through `ship_profile_path` before any host is reached; a name no block
-# carries is exit 2, listing the names the profile carries. The block's `Login:`
-# is the login requested, and `ship_reviewer_derive` reads its `Request:` line
-# for one of two transports, with the brand left out of it.
+# before any host is reached. The block's `Login:` is the login requested, and
+# its `Request:` line picks one of two transports, with the brand left out of it.
 # `Request: None.`: the host's own request-a-reviewer call.
 # `Request: comment <phrase>`: the phrase is posted as a PR comment, which is how
 # a reviewer that is a comment-triggered workflow is asked for a round. The host has no reviewer to add for that one, so there is
@@ -41,8 +39,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$name" ] || ship_tooling "$usage"
-profile=$(ship_profile_path) && [ -f "$profile" ] || ship_tooling "no ship profile at ${profile:-docs/agents/ship.md}; --reviewer reads it"
-row=$(ship_reviewer_row "$(ship_reviewers "$(cat "$profile")")" "$name") || ship_tooling "$row"
+row=$(ship_reviewer_by_name "$name") || ship_tooling "$row"
 # No --since here: the refusal the derivation carries is poll-pr's, and this
 # mechanic reads the login and the transport alone.
 d=$(ship_reviewer_derive "$row" "")

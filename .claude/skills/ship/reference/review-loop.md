@@ -27,9 +27,8 @@ a fresh read of the committed tree, not a conversation.
 ## Shared mechanics
 
 - **Poll with `poll-pr <pr> --reviewer <name>`**, `<name>` being the
-  reviewer's `### <name>` heading, inline, bounded, foreground. The mechanic
-  reads that block and derives what to await from it, reporting the derivation
-  on `reviewer`. It returns one JSON: head sha, mergeable, checks, the reviewer's
+  reviewer's `### <name>` heading ([mechanics.md](mechanics.md)), inline,
+  bounded, foreground. It returns one JSON: head sha, mergeable, checks, the reviewer's
   rounds with `substantive`, threads with resolved state, `reviewer_blocked`,
   and `landed_by` naming the rule that admitted the round. `done: false` means
   the window closed first: re-run to extend it, in the foreground again. The
@@ -68,8 +67,7 @@ a fresh read of the committed tree, not a conversation.
   then waits out the whole window for a review that has already landed
   elsewhere. The instant is the one thing the poll cannot derive: pass
   `request-review`'s `requested_at` or `open-pr`'s `created_at` as `--since`
-  for every reviewer but an on-push one, which takes none. The mismatch either
-  way is a usage error, as is `--since` without `--reviewer`. The
+  for every reviewer but an on-push one, which takes none. The
   since rule needs a timed round, so a reviewer whose only signal is an Azure
   DevOps vote, which the API leaves unstamped, exits `degraded: silent` under
   it; its threads, which carry anything actionable, are stamped and land
@@ -80,8 +78,8 @@ a fresh read of the committed tree, not a conversation.
   it lands no check on the PR head, so the run itself is the evidence that the
   reviewer is working, and reading it is what tells a round still being written
   from one that will not come. The poll awaits the run of the file that
-  reviewer's block names on its `Workflow:` line, keyed by `--since`, with
-  nothing passed for it. `--timeout` is then the floor of the window
+  reviewer's block names on its `Workflow:` line, keyed by `--since`, derived
+  from `--reviewer`. `--timeout` is then the floor of the window
   rather than its end: a run that has not finished keeps the poll going, to the
   ceiling `poll-pr --help` states, and one that concluded successfully buys one
   more interval for the row to appear. A run that concluded any other way closes
@@ -224,7 +222,7 @@ Nothing arrives until asked, with one exception the loop below opens on: a
 and **reads it back** from the host's own record (the mechanic knows that the
 login you request and the login you read back can differ, and that an empty
 requested-reviewers list proves nothing). The block's `Request:` picks the
-transport, which the mechanic reads for itself: the host's own request call for
+transport: the host's own request call for
 a reviewer the host can add to the PR, and a PR comment carrying the phrase
 where `Request:` reads `comment <phrase>`, for a reviewer that is a
 comment-triggered workflow. That second transport posts the phrase, reads the posted comment back, and reports
@@ -237,15 +235,8 @@ request against the corrected tree.
 A **free round** is one the host delivers without a request: a Copilot ruleset
 with `review_on_push: false` still opens one when the PR does. Before the
 run's **first** request to any on-request reviewer, poll once for it, under
-the since rule with `open-pr`'s `created_at`. The bound is the transport's,
-and the poll's default for that reviewer: long where the host's own reviewer
-list is the transport, because a free round can take several minutes to land
-and a bound of a minute or two reports `silent` on a review that is merely
-still coming; short where its `Request:` reads `comment <phrase>`, because a
-free round reaches that reviewer through a run like any other and the host
-starts no run for a reviewer with no request outstanding, so
-`reviewer_run.status: "none"` on the first pass is the whole answer and the
-minutes after it buy nothing. A round already there **is** round 1 and counts
+the since rule with `open-pr`'s `created_at`, with no `--timeout`: the
+reviewer's default is sized for its transport. A round already there **is** round 1 and counts
 against `Cap:`; nothing there and the loop proceeds to its first request as
 written. A reviewer that gets no free round pays that one poll, where skipping
 it spends a round of a small cap re-asking for a review that had already

@@ -834,8 +834,19 @@ ship_reviewer_row() {
   jq -ce --arg n "$2" 'first(.[] | select(.name == $n))' <<<"$1" 2>/dev/null && return 0
   jq -rn --argjson r "$1" --arg n "$2" \
     '"no ## Reviewers block is named \($n); the profile names: \(
-       if ($r | length) == 0 then "none" else [$r[].name] | join(", ") end)"'
+       if ($r | length) == 0 then "none" else [$r[].name] | join(", ") end)"' 2>/dev/null \
+    || printf 'the ## Reviewers blocks could not be parsed\n'
   return 1
+}
+
+# ship_reviewer_by_name <name>: `ship_reviewer_row` over the profile in the
+# caller's checkout, the one lookup `poll-pr` and `request-review` share. Prints
+# the row, or the refusal and returns 1, a missing profile included.
+ship_reviewer_by_name() {
+  local profile
+  profile=$(ship_profile_path) && [ -f "$profile" ] \
+    || { printf 'no ship profile at %s; --reviewer reads it\n' "${profile:-docs/agents/ship.md}"; return 1; }
+  ship_reviewer_row "$(ship_reviewers "$(cat "$profile")")" "$1"
 }
 
 # ship_reviewer_derive <row-json> <since>: what a round of that reviewer is
@@ -851,9 +862,11 @@ ship_reviewer_row() {
 # separates a round still being written from one that will not come; `host`
 # otherwise, the host's own request-a-reviewer call, with both null. `timeout`
 # is the poll's default bound, by transport: 600 where the host's call is the
-# transport, since its round can take several minutes to land, and 60 where a
+# transport, since its round can take several minutes to land and a bound of a
+# minute or two reports `silent` on a review still coming, and 60 where a
 # comment is, since the run read then holds the window open for as long as a
-# round is being written.
+# round is being written, and a free round that starts no run is answered by
+# `reviewer_run.status: "none"` on the first pass.
 #
 # `refusal` is null, or the line `poll-pr` exits 2 on, where the caller's
 # <since> disagrees with the rule: a --since for an on-push reviewer, or none for

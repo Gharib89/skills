@@ -66,10 +66,8 @@ against the script, and `--help` cannot. Only the first argument is read, so
 A mechanic acting for one reviewer, `poll-pr` and `request-review`, takes it as
 `--reviewer <name>`, the `### <name>` heading under the profile's
 `## Reviewers`, and reads the rest off that block: the login, the landing rule,
-the transport, the workflow run to await and the poll's default bound. A name
-no block carries is exit 2, naming the blocks the profile does carry, so the
-run passes the name the merge summary uses and never a field it copied out of
-the block.
+the transport, the workflow run to await and the poll's default bound. The run
+passes the block's name, the one the merge summary uses.
 
 ## The exit codes
 

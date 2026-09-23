@@ -362,6 +362,10 @@ out=$(ship_reviewer_row '[]' nobody); rc=$?
 check_rc "an empty ## Reviewers refuses every name" 1 "$rc"
 check "and says it names none" \
   'no ## Reviewers block is named nobody; the profile names: none' "$out"
+out=$(ship_reviewer_row 'not json' nobody); rc=$?
+check_rc "rows that are not JSON refuse every name" 1 "$rc"
+check "and say so rather than refusing with an empty message" \
+  'the ## Reviewers blocks could not be parsed' "$out"
 
 derive() { # <name> <since> <jq-projection>
   ship_reviewer_derive "$(ship_reviewer_row "$rows" "$1")" "$2" | jq -r "$3"

@@ -6,14 +6,10 @@
 #           [--timeout <s>] [--interval <s>]
 #
 # `--reviewer <name>` names the `### <name>` block under the profile's
-# `## Reviewers`, read through `ship_profile_path` before any host is reached,
-# and `ship_reviewer_derive` answers the rest: the login to await, the landing
-# rule, the workflow run to await under a comment transport, and the default
-# `--timeout` (600 where the host's request call is the transport, 60 where a
-# comment is; a `--timeout` given wins). A name no block carries is exit 2,
-# listing the names the profile carries; so is a `--since` for an on-push
-# reviewer, and a since-rule reviewer given none. The derivation comes back on
-# `reviewer`: {name, login, rule, await_run, timeout}, null without the flag.
+# `## Reviewers`, read before any host is reached; `ship_reviewer_derive` answers
+# the login, the landing rule, the run to await and the default `--timeout`, which
+# a `--timeout` given overrides. The derivation comes back on `reviewer`: {name,
+# login, rule, await_run, timeout}, null without the flag.
 #
 # done when the PR is in conflict (merge-ref checks stay unstarted, so waiting is
 # pointless), or every check on the head has completed and, with --reviewer, a
@@ -150,8 +146,7 @@ fi
 # mistyped name or a --since the landing rule refuses costs no host call.
 reviewer=null; await=""; await_run=""
 if [ -n "$name" ]; then
-  profile=$(ship_profile_path) && [ -f "$profile" ] || ship_tooling "no ship profile at ${profile:-docs/agents/ship.md}; --reviewer reads it"
-  row=$(ship_reviewer_row "$(ship_reviewers "$(cat "$profile")")" "$name") || ship_tooling "$row"
+  row=$(ship_reviewer_by_name "$name") || ship_tooling "$row"
   d=$(ship_reviewer_derive "$row" "$since")
   refusal=$(jq -r '.refusal // empty' <<<"$d")
   [ -z "$refusal" ] || ship_tooling "$refusal"
