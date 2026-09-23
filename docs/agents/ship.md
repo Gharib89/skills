@@ -146,7 +146,7 @@ This repo is Ship's own source, so a run here is already upstream and a **Ship d
 Targets: CONTEXT.md, docs/adr/, docs/agents/, skills/setup-skills/profile-schema.md, .out-of-scope/
 Agent-facing: all of them, plus skills/ and .claude/skills/
 
-Every file this repo ships is read by an agent, so `writing-for-agents` applies to the whole diff, not to a subset of it.
+The `Agent-facing:` line is the whole trigger for the `writing-for-agents` pass: a diff touching none of its paths, a `.github/` workflow edit for one, takes no pass.
 
 ## Current docs
 

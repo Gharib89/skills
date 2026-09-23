@@ -159,15 +159,16 @@ the edits into this change. Skip it for internal refactors, a bugfix restoring
 documented behavior, test-only or tooling changes, and comments, and say so in
 one line at the merge gate. **The `writing-for-agents` pass has a trigger of its
 own**, and it still fires where docs-sync is skipped: it fires whenever the diff
-touches a target on the profile's `Agent-facing:` line, at the judgment tier, in
-the `writing` scratch directory, over every agent-facing file in the diff. Human
-prose takes the mechanical pass.
+touches a target on the profile's `Agent-facing:` line, at the judgment tier,
+over every agent-facing file in the diff, its Report file in the `writing`
+scratch directory. Human prose takes the mechanical pass.
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
-carrying its own scratch directory (`standards`, `spec`). **Triage waits for
-both axes.** An axis whose report fails to arrive is `red-after-retry: <axis>`
+carrying its own scratch directory (`standards`, `spec`). Every phase-4 subagent
+writes its own Report file there and hands back the path and a summary of at
+most five lines, per context-discipline.md. **Triage waits for both axes.** An axis whose report fails to arrive is `red-after-retry: <axis>`
 after the bounded retry, a stop in place of a disposition written from memory of
 what it would have said. **Auto-triage** every finding: harden rather than rip out
 capability, verify nits against the pinned versions, reject known non-issues,
