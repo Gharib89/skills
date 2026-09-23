@@ -601,6 +601,23 @@ readonly SHIP_LANDED_BY='
   else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
   end'
 
+# poll-pr's refusal test, over the same projection and the same two arguments:
+# the rule that admitted a NOTICE row by that login, a row with a body that is
+# not substantive, which is the one kind `is_notice` leaves. A quota notice
+# answers the request it follows, and no round is coming after it: Copilot's
+# quota is the requesting user's and monthly, so waiting the window out, or
+# asking again, buys nothing (#248, #250: every poll spent its whole window on
+# a refusal already posted). Read only when no round landed, so a round that
+# follows a notice still lands. A notice posted as a PR comment rather than as a
+# review carries no rule here and is left to `reviewer_blocked`.
+# shellcheck disable=SC2034  # read by poll-pr
+readonly SHIP_REFUSED_BY='
+  def refusals: [.[] | select((.substantive | not) and (.body // "") != ""
+                              and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
+  if $s == "" then (if (.on_head | refusals) != [] then "head" else null end)
+  else (if (.all | refusals | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
+  end'
+
 # poll-pr's pick of THE run a comment-transport reviewer's round is waiting on,
 # over a `host_workflow_runs` projection, invoked with `--arg t <the PR's title>`.
 # The workflow fires on every comment in the repo, so the rows are narrowed to
@@ -1013,7 +1030,7 @@ ship_brief() {
         elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
     def lead: [splits("\n") | select(test("^[ \t]*$") | not)] | (.[0] // "") | clip;
-    {head_sha, mergeable, reviewer, landed_by, reviewer_run,
+    {head_sha, mergeable, reviewer, landed_by, refused_by, reviewer_blocked, reviewer_run,
      rounds: [.reviews[$key][] | select(mine | not) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index($r.id | tostring)) then $r.body
