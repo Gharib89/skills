@@ -324,6 +324,19 @@ printf '\nmapfile -t x < "%s/setup-skills/local-gate.sh:"\n' "$d" >> "$d/$mechan
 run "$inert" "$d"
 check_rc "a violation naming the exempt template still fails" 1 "$rc"
 
+# SHIP_HOST_ADAPTER swaps the host adapter for the test suite's Host fake, so
+# `ship_load_host` in `_lib.sh` is its one reader. The untouched copy carries
+# that reader and passes; a mechanic that reads it fails, named.
+d=$(copy_skills host-adapter-lib)
+run "$inert" "$d"
+check_rc "the one reader in _lib.sh passes" 0 "$rc"
+
+d=$(copy_skills host-adapter-mechanic)
+printf '\nadapter=${SHIP_HOST_ADAPTER:-}\n' >> "$d/ship/scripts/read-issue.sh"
+run "$inert" "$d"
+check_rc "a mechanic reading SHIP_HOST_ADAPTER fails" 1 "$rc"
+check "and the violation names the mechanic" 0 "$(named "$d/ship/scripts/read-issue.sh:")"
+
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.
 # Two ways it can be unreadable, and the second is the one the grep status owns.

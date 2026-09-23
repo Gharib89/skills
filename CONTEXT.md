@@ -136,6 +136,10 @@ _Avoid_: pause, wait-state, hand-back (that releases the claim)
 The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). Ship reads it off the repo's remote and the ship profile names it as a cross-check; every generic mechanic has one adapter per host inside the skill, selected from the ones it carries. A host's own words (label or tag, assignee or Assigned To, review thread or thread) stop at the mechanics, which translate them into Ship's own vocabulary.
 _Avoid_: tracker (Boards is one part of a host), provider, platform
 
+**Host fake**:
+A third host adapter, beside the GitHub and Azure DevOps ones: `tests/host-fake.sh`, defining the same `host_*` functions and answering each call from a fixture, so a generic mechanic is tested as a script with no host behind it. Selected only by `SHIP_HOST_ADAPTER`, which `ship_load_host` reads and nothing else under `skills/` may; it lives under `tests/` and is never part of a derived copy. Its default answers carry exactly the key sets the `_lib.sh` host contract documents, which `tests/host-contract.test.sh` holds them to.
+_Avoid_: mock, stub host, `host-stub` (the stub `gh` and `az` that fail any test reaching a real host)
+
 **Run file**:
 The one file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The run's record, and the harness task list is its display: the source of truth for where the run is and the map back after a mid-run context summary, mirrored into the task list on every flip; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps.
 _Avoid_: task list, scratch file, plan file, todo

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "T1",
+    "resolved": false,
+    "replied": false,
+    "author": "reviewer",
+    "path": "README.md",
+    "body": "a finding"
+  }
+]
