@@ -2,7 +2,9 @@
 # The host seam's contract, held on both sides of the Host fake: the three
 # adapters define one function set, and each default under tests/host-fake/
 # defaults/ carries exactly the key set the `_lib.sh` contract comment documents
-# for that function. A function added to one real adapter and not the other, or
+# for that function, even where the contract also admits `null` (as
+# `host_pr_reviewer_blocked`'s does): the default exercises the object shape, and
+# a test wanting the null answer writes that fixture itself. A function added to one real adapter and not the other, or
 # a default drifting from the comment, is a mechanic test passing against a host
 # that does not exist.
 set -uo pipefail
