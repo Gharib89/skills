@@ -80,35 +80,21 @@ run derived-copies derived_copies
 # stays a hand edit and is exempt. scripts/version-line-check.sh is the whole rule.
 run version-lines scripts/version-line-check.sh "$base"
 
-# The lint gate covers the source tree's scripts plus this gate itself; the
-# derived copies are covered by `derived-copies` proving them identical.
-# `-P SCRIPTDIR` resolves the `source "$(dirname ...)/_lib.sh"` idiom the
-# mechanics use.
-lint() {
-  local files
-  mapfile -t files < <(git ls-files 'skills/*.sh' 'skills/**/*.sh' 'scripts/*.sh' 'tests/*.sh')
-  [ ${#files[@]} -gt 0 ] || { echo "no shell scripts tracked"; return 1; }
-  npx -y shellcheck -x -s bash -P SCRIPTDIR -S warning "${files[@]}"
-}
-if command -v npx >/dev/null; then
-  run shellcheck lint
-else
-  mark shellcheck unavailable
-fi
+# The `shellcheck` gate: the source tree's scripts plus this gate itself,
+# through a system `shellcheck` when one is on PATH and `npx` otherwise.
+# A missing shellcheck is `unavailable`, not a lint finding;
+# scripts/shellcheck-check.sh is the whole rule, and exits 2 for that case.
+scripts/shellcheck-check.sh >"$log" 2>&1
+case $? in
+  0) mark shellcheck pass ;;
+  2) mark shellcheck unavailable; tail -n 40 "$log" >&2 ;;
+  *) mark shellcheck fail; tail -n 40 "$log" >&2 ;;
+esac
 
 # house-style: the standards doc bans em dashes in files this repo authors.
-# A written standard nothing enforces drifts, so enforce it. `.claude/skills/`
-# is install output from other repos and is exempt.
-house_style() {
-  local hits em
-  em=$'\u2014'   # built from its codepoint, so this gate does not match itself
-  hits=$(git ls-files -z 'skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' '.release/*' CONTEXT.md CLAUDE.md \
-    | xargs -0 grep -n "$em" 2>/dev/null) || return 0
-  echo "em dashes in repo-authored files (see docs/contributing/coding-standards.md):"
-  echo "$hits"
-  return 1
-}
-run house-style house_style
+# A written standard nothing enforces drifts, so enforce it, under any locale;
+# scripts/house-style-check.sh is the whole rule.
+run house-style scripts/house-style-check.sh
 
 # prose-budget: ship's own documents, whose shape decides what a run reads
 # before it acts. `skills/*/SKILL.md` at most 400 lines, and every

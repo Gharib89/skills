@@ -15,7 +15,7 @@ Host: github
 Carry: None.
 Bootstrap: None.
 
-Nothing here is gitignored and nothing needs installing: the mechanics are bash, and the gate's only download is `npx -y shellcheck`, cached per machine.
+Nothing here is gitignored and nothing needs installing: the mechanics are bash, and the gate's only download is `npx -y shellcheck`, cached per machine, made only where no system `shellcheck` is on PATH.
 
 ## Local gate
 
@@ -158,4 +158,6 @@ The skills CLI (`npx skills@latest`) is unpinned and its behaviour is load-beari
 ## Cloud lane
 
 PR cap: 3
-Bootstrap: None.
+Bootstrap: scripts/cloud-ship-bootstrap.sh
+
+The sandbox image has no `shellcheck` and no `gitleaks`, and its proxy refuses the binary download `npx -y shellcheck` makes, so without this every fire's local gate reads `shellcheck: unavailable` and `secrets: unavailable` and stops `local gate unavailable`. The script installs both through apt and is a no-op where both are already on PATH.
