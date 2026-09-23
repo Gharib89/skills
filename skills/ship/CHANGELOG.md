@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.3.0 (2026-09-23)
+
+### Features
+
+- **ship**: A Host fake at the host seam, and the pass-through mechanics get behavioural tests
+  ([#246](https://github.com/Gharib89/skills/pull/246),
+  [`89cba9d`](https://github.com/Gharib89/skills/commit/89cba9dbcd97e064d16297927bc7fecfec09a676))
+
+
 ## v8.2.1 (2026-09-23)
 
 ### Documentation
