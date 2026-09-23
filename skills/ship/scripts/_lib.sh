@@ -76,7 +76,7 @@
 #                                           review comment: the REST reply target that host's
 #                                           reply is keyed to. On Azure DevOps the thread id is
 #                                           that target already.
-#   host_pr_reviewer_blocked <pr> <login>-> {line, at} | null: the awaited login's latest
+#   host_pr_reviewer_blocked <pr> <login>-> {line, at} | null: that login's latest
 #                                           quota or rate-limit notice line, from its review
 #                                           bodies or its PR comments, and the UTC time the row
 #                                           carrying it was posted.
@@ -621,8 +621,8 @@ readonly SHIP_LANDED_BY='
 # asking again, buys nothing (#248, #250: every poll spent its whole window on
 # a refusal already posted). Read only when no round landed, so a round that
 # follows a notice still lands. A notice posted as a PR comment rather than as a
-# review leaves no row here: poll-pr admits it from the blocked lookup's `at`,
-# under the since rule only, since a comment is tied to no commit (#256).
+# review leaves no row here: poll-pr admits it from `host_pr_reviewer_blocked`'s
+# `at`, under the since rule only (#256).
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_REFUSED_BY='
   def refusals: [.[] | select((.substantive | not) and (.body // "") != ""
@@ -1012,10 +1012,10 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # <identity> is the login the run posts as: its own thread replies land as review
 # rows of their own, and a convergence test that counts them reads its own voice
 # as the reviewer's. An empty <identity> drops nothing: a host that could not
-# name the run must not cost it the rounds it came for. Where the poll awaited a
-# reviewer, `.reviewer.login` narrows the rounds to that login's rows: under
-# `--reviewer claude` a Copilot quota notice is not a round of claude's (#255).
-# <on_head|all> is `all`
+# name the run must not cost it the rounds it came for. The awaited reviewer's
+# login, `.reviewer.login`, narrows the rounds to its rows: under `--reviewer
+# claude` a Copilot quota notice is not a round of claude's (#255). <on_head|all>
+# is `all`
 # under the --since rule and `on_head` under the head rule, matching the list
 # that rule lands from.
 #
@@ -1039,8 +1039,9 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 ship_brief() {
   jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" '
     def norm: ascii_downcase | sub("\\[bot\\]$"; "");
-    def mine: $me != "" and (((.login // "") | norm) == ($me | norm));
-    def awaited($l): $l == "" or (((.login // "") | norm) == ($l | norm));
+    def by($l): ((.login // "") | norm) == ($l | norm);
+    def mine: $me != "" and by($me);
+    def awaited($l): $l == "" or by($l);
     def clip: if length > 200 then .[0:200] + "\n...[truncated]" else . end;
     def finding_items:
       (if endswith("\n...[truncated]") then "\n...[truncated]" else "" end) as $mark

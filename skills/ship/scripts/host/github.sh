@@ -434,8 +434,8 @@ host_pr_threads() {
 # list and the latest notice wins whichever way it arrived.
 # The login is compared the way `SHIP_LANDED_BY` compares it, so a `Login:` typed
 # in another case cannot land rounds here and report blocked nowhere.
-# The notice carries the time its row was posted: a comment leaves no review row
-# for poll-pr's since rule to read, so this is where that rule reads it (#256).
+# The notice carries the time its row was posted, which is what poll-pr's since
+# rule reads for a comment (#256).
 _gh_blocked_select="$SHIP_BLOCKED_NOTICE"'
   def norm: ascii_downcase | sub("\\[bot\\]$"; "");
   [sort_by(.at)[] | select((.login | norm) == ($l | norm)) | .at as $at

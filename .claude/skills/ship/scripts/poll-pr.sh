@@ -87,7 +87,8 @@
 # rows that come back whole, so `--brief --full <id>` is the summary with that
 # one round verbatim. Rounds come from `all[]` under the
 # --since rule and `on_head[]` under the head rule, the list that rule lands
-# from, under `--reviewer` only that reviewer's rows, and the run's own rows drop out: a thread reply of ours posts as a review
+# from. Under `--reviewer` only the awaited reviewer's rows are kept, and the
+# run's own rows drop out: a thread reply of ours posts as a review
 # row of its own, and a convergence test that counts it reads its own voice as
 # the reviewer's. That drop needs the host identity, so `--brief` asks for it up
 # front and exits 2 when the host cannot answer, rather than returning a list it
@@ -208,12 +209,11 @@ while :; do
     # follows it, so the window closes on it rather than on the clock.
     if [ "$landed" = false ]; then
       refused_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" "$SHIP_REFUSED_BY" <<<"$reviews")
-      # A notice posted as a PR comment has no review row, so the blocked
-      # lookup's `at` is what the since rule reads; the head rule has no commit
-      # to tie a comment to and leaves it to review rows (#256).
+      # A comment notice has no review row: `host_pr_reviewer_blocked`'s `at`
+      # is what the since rule reads, and only that rule (#256).
       if [ "$refused_by" = null ] && [ -n "$since" ]; then
         refused_by=$(jq -c --arg s "$since" \
-          'if (.at // "") >= $s and (.at // "") != "" then "since" else null end' <<<"$blocked")
+          '(.at? // "") as $at | if $at != "" and $at >= $s then "since" else null end' <<<"$blocked")
       fi
     fi
   fi

@@ -64,7 +64,9 @@ reset() {
   jq -cn '{number: 7, url: "https://example.invalid/7", title: "t", body: "",
     head_sha: "deadbee", head_ref: "fix/x-7", base_ref: "main", state: "open", mergeable: "clean"}' \
     > "$SHIP_FAKE/host_pr_get.1.json"
-  blocked_at 2026-09-23T14:23:19Z
+  # Earlier than every --since below, so the review-row cases are decided by
+  # the review rows alone; the comment cases at the end set their own time.
+  blocked_at 2026-09-23T14:00:00Z
   printf '[]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
   printf 'me\n' > "$SHIP_FAKE/host_identity.1.json"
 }
