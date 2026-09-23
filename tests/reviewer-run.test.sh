@@ -30,7 +30,7 @@ cat > "$repo/docs/agents/ship.md" <<'EOF'
 Login: claude[bot]
 Trigger: on-request
 Request: comment @claude
-Workflow: claude-review.yml
+Workflow: .github/workflows/claude-review.yml
 Cap: 2
 Gating: no
 

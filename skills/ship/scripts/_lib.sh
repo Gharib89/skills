@@ -880,9 +880,12 @@ ship_reviewer_by_name() {
 # will not come; the run read is keyed by the --since instant, which a head-rule
 # poll has none of. `host` otherwise, the host's own request-a-reviewer call,
 # with both null. `timeout`
-# is the poll's default bound, by transport: 600 where the host's call is the
-# transport, since its round can take several minutes to land and a bound of a
-# minute or two reports `silent` on a review still coming, and 60 where a
+# is the poll's default bound. Under the head rule it is 480, the bound the
+# on-push loop has always polled a push's round on: nothing is requested, so no
+# transport sizes it. Under the since rule it is by transport: 600 where the
+# host's call is the transport, since its round can take several minutes to
+# land and a bound of a minute or two reports `silent` on a review still
+# coming, and 60 where a
 # comment is, since the run read then holds the window open for as long as a
 # round is being written, and a free round that starts no run is answered by
 # `reviewer_run.status: "none"` on the first pass. After a request the 60 is
@@ -903,7 +906,7 @@ ship_reviewer_derive() {
        await_run: (if $c and $rule == "since" then .workflow else null end),
        transport: (if $c then "comment" else "host" end),
        phrase: (if $c then (.request | ltrimstr("comment ")) else null end),
-       timeout: (if $c then 60 else 600 end),
+       timeout: (if $rule == "head" then 480 elif $c then 60 else 600 end),
        refusal: (if $rule == "head" and $s != ""
                  then "\(.name) is on-push, whose rounds land on the head: --since does not apply"
                  elif $rule == "since" and $s == ""

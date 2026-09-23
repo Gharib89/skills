@@ -380,6 +380,8 @@ autoonce=$(printf '## Reviewers\n\n### bot\n\nLogin: auto[bot]\nTrigger: auto-on
 # Per trigger: on-push lands under the head rule, every other trigger under since.
 check "an on-push reviewer lands under the head rule" \
   'head null' "$(derive copilot '' '[.rule, (.refusal|tostring)] | join(" ")')"
+check "and keeps the 480 s bound the on-push loop has always had, no request having been made" \
+  480 "$(derive copilot '' '.timeout')"
 check "an on-request reviewer lands under the since rule" \
   'since null' "$(one "$onreq" "$since" '[.rule, (.refusal|tostring)] | join(" ")')"
 check "an auto-once reviewer lands under the since rule" \

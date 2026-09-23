@@ -67,8 +67,8 @@ jq -cn --argjson r "$(round 'pusher[bot]')" '{on_head: [$r], all: [$r], total: 1
   > "$SHIP_FAKE/host_pr_reviews.1.json"
 out=$(poll --reviewer pusher); rc=$?
 check_rc "an on-push reviewer polls without --since" 0 "$rc"
-check "and lands under the head rule" 'head head' \
-  "$(jq -r '[.reviewer.rule, .landed_by] | join(" ")' <<<"$out")"
+check "and lands under the head rule, on the 480 s bound" 'head head 480' \
+  "$(jq -r '[.reviewer.rule, .landed_by, .reviewer.timeout] | join(" ")' <<<"$out")"
 
 # Refusals: each is exit 2 and each is answered before the host is loaded.
 refuse() { # <case> <expected-error> <flags...>
