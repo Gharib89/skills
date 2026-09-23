@@ -29,6 +29,7 @@ help_case() { # <mechanic> <usage>
 help_case base-fresh     'usage: base-fresh'
 help_case ci-wait        'usage: ci-wait <pr> [--timeout <s>, at least the no-checks grace (120s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]'
 help_case cleanup        'usage: cleanup <issue|none>'
+help_case comment-issue  'usage: comment-issue <issue> --body-file <path>'
 help_case comment-pr     'usage: comment-pr <pr> --body-file <path>'
 help_case file-issue     'usage: file-issue --title "<title>" --body-file <path> --label <marker> [--distinct-from <n>[,<n>]]'
 help_case isolate        'usage: isolate <issue|none> <type> <slug> [--carry <file>...] [--in-place]'

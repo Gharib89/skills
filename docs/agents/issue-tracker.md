@@ -13,7 +13,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
-An acceptance criterion asks for a comment on the issue rather than an edit to its body: no generic mechanic performs an edit, so a run cannot meet one.
+An acceptance criterion asks for a comment on the issue rather than an edit to its body: no generic mechanic performs an edit, so a run cannot meet one, and `comment-issue` posts the comment.
 
 ## Pull requests as a triage surface
 

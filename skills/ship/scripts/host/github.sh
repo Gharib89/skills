@@ -255,7 +255,8 @@ host_issue_remove_label() {
   host_issue_has_label "$1" "$2" || return 0
   api -X DELETE "$R/issues/$1/labels/$(jq -rn --arg l "$2" '$l | @uri')" >/dev/null
 }
-host_issue_comment()  { jq -n --arg b "$2" '{body: $b}' | api -X POST "$R/issues/$1/comments" --input - >/dev/null; }
+# Nothing on success, {"status": <n|null>} on failure, which `comment-issue` reads.
+host_issue_comment()  { jq -n --arg b "$2" '{body: $b}' | _gh_write -X POST "$R/issues/$1/comments" --input -; }
 host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_reason=completed >/dev/null; }
 
 # Create-then-verify, the shape every create in this adapter has: attempt the
