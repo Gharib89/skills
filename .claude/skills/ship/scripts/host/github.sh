@@ -493,7 +493,7 @@ host_workflow_runs() { # <workflow-file> <since-iso>
 
 # Request, then read the request back off the host's own record: the login you
 # request and the login you read back can differ (Copilot is requested as
-# copilot-pull-request-reviewer[bot] and recorded on the timeline as `Copilot`),
+# copilot-pull-request-reviewer[bot] and recorded as `_gh_copilot_recorded`),
 # and an empty requested_reviewers list proves nothing once the bot has posted.
 host_pr_request_review() { # <pr> <login>
   local pr=$1 login=$2 ok=false before after readback now alias=

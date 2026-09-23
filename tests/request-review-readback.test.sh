@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# request-review over the real GitHub adapter: whether a request that landed
-# reads back as one. `host_pr_request_review` takes the request as landed when
-# the timeline gained a `review_requested` event during the call, or when the
-# reviewer is on the readback. Copilot is requested as
-# copilot-pull-request-reviewer[bot] and recorded as `Copilot`, so a readback
-# that matched on a `[bot]`-stripped login alone could never find it, and a
-# timeline slower than the adapter's wait graded a working reviewer
-# never-queued, after a second POST (#239).
+# request-review over the real GitHub adapter: a request that landed reads back
+# as one. `host_pr_request_review` takes it as landed when the timeline gained a
+# `review_requested` event during the call, or when the reviewer is on the
+# readback under its login less a `[bot]` suffix or under its recorded alias.
+# The readback alone must suffice, because the timeline can lag the adapter's
+# wait; Copilot, requested as copilot-pull-request-reviewer[bot] and recorded
+# as `Copilot`, is the alias case (#239).
 #
 # Driven end to end in a throwaway checkout whose origin names GitHub, with a
 # fake `gh` in front of PATH answering per call: the timeline from a fixture per

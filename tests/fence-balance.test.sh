@@ -20,10 +20,8 @@ check "an open backtick fence names its line and run" \
 check "an open tilde fence names its line and run" \
   "line 1: ~~~" "$(ship_fence_unclosed "$(printf '~~~\nshape\n')")"
 
-# CommonMark lets a fence sit up to three spaces in; four open an indented code
-# block, which is not a fence form here. mawk, the default awk on Debian and
-# Ubuntu, read the old `^ ? ? ?` de-indent as one optional space, so a
-# two-space fence went unseen there.
+# A fence sits up to three spaces in; four open an indented code block, which
+# is not a fence form here. `ship_deindent` says why the de-indent is a `match`.
 check "a fence indented three spaces is a fence" \
   "line 1: \`\`\`" "$(ship_fence_unclosed "$(printf '   ```\ncode\n')")"
 
