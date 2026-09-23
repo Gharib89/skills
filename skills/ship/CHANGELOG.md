@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.4.1 (2026-09-23)
+
+### Bug Fixes
+
+- **ship**: Read a Copilot review request back under the name GitHub records it as
+  ([#250](https://github.com/Gharib89/skills/pull/250),
+  [`35ec22b`](https://github.com/Gharib89/skills/commit/35ec22bd4063ba056c987e84139a86de295f5e32))
+
+
 ## v8.4.0 (2026-09-23)
 
 ### Features
