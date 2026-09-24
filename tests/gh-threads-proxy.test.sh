@@ -108,7 +108,7 @@ source skills/ship/scripts/host/github.sh
 sleep() { :; }
 
 reset() { # [refused | <gql-seq words>]
-  rm -rf "$FAKE/calls" "$FAKE/gql-refused" "$FAKE/gql-seq" "$FAKE/gql.n" "$FAKE/ccr-fail" "$TMPDIR"/*
+  rm -rf "$FAKE/calls" "$FAKE/gql-refused" "$FAKE/gql-seq" "$FAKE/gql.n" "$FAKE/ccr-fail" "${TMPDIR:?}"/*
   : > "$FAKE/calls"
   case ${1:-} in
     '') ;;
