@@ -56,8 +56,11 @@ out=$(host_pr_comment 7 "$body" 2>/dev/null); rc=$?
 check_rc "a failed comment fails"                      1 "$rc"
 check    "a failed comment carries the write's status" 500 "$(status_of "$out")"
 
-gh_reset; export GH_STATUS_SEQ="200 200 500"
-out=$(host_pr_reply_thread 7 THREAD "$body" 2>/dev/null); rc=$?
+# The comment read and the identity read both answer GH_BODY, so a body of `5`
+# is the list holding thread 5 and the login alike, and the post is the third call.
+gh_reset; export GH_STATUS_SEQ="200 200 500" GH_BODY=5
+out=$(host_pr_reply_thread 7 5 "$body" 2>/dev/null); rc=$?
+unset GH_BODY
 check_rc "a failed thread reply fails"                 1 "$rc"
 check    "a failed thread reply carries the status"    500 "$(status_of "$out")"
 

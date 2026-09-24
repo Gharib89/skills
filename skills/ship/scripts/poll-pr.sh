@@ -77,8 +77,9 @@
 # the review loop reads as `degraded: blocked` and requests nothing more. A
 # notice the rule does not admit, an older request's or a comment under the head
 # rule, leaves the window to run as before. `threads` is "unavailable" when thread
-# state could not be read (GraphQL refused): that reviewer's exit is degraded
-# unreachable, the run proceeds.
+# state could not be read (on GitHub, GraphQL and the REST routes a refusing
+# proxy names both failed): that reviewer's exit is degraded unreachable, the
+# run proceeds.
 #
 # `--brief` projects that same JSON, from the same single fetch, down to what a
 # review loop acts on: head, mergeable, `landed_by`, one row per reviewer round

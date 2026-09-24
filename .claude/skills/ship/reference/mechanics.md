@@ -98,7 +98,10 @@ Reads come back in one vocabulary on both hosts: checks
 `pending|success|failure`, mergeable `clean|conflict|unknown`, review
 `approved|changes|comment`, and threads as `resolved: true|false` per thread, or
 the whole `threads` field as the string `"unavailable"` when the state could not
-be read.
+be read. A thread's `id` is what `reply-thread` and `resolve-thread` take: on
+GitHub the thread's root review comment id, on either of the adapter's paths
+(GraphQL, or the REST routes it takes where a proxy refuses GraphQL); an id no
+thread carries answers `no such thread`.
 
 ## Run them inline
 
