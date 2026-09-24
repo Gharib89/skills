@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.5.1 (2026-09-24)
+
+### Bug Fixes
+
+- **ship**: Poll-pr grades review rows above the Host seam
+  ([#273](https://github.com/Gharib89/skills/pull/273),
+  [`7d6791f`](https://github.com/Gharib89/skills/commit/7d6791f0c22823e8074ba6270f8451b561d134c8))
+
+
 ## v8.5.0 (2026-09-24)
 
 ### Features
