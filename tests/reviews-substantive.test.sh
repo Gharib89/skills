@@ -71,8 +71,8 @@ check "a bodiless comment row is not substantive" false "$(grade '')"
 check "a bodiless approved row is substantive" true "$(grade '' approved)"
 check "a bodiless changes row is substantive" true "$(grade '' changes)"
 
-check "a clipped long body is substantive" true \
-  "$(grade "$(printf 'x%.0s' $(seq 1 2000))
+long=$(printf '%2000s' '' | tr ' ' x)
+check "a clipped long body is substantive" true "$(grade "$long
 ...[truncated]")"
 
 # Too narrow reproduces #155: the same notice, three shapes it has arrived in.
