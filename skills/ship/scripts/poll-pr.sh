@@ -14,10 +14,8 @@
 # done when the PR is in conflict (merge-ref checks stay unstarted, so waiting is
 # pointless), or every check on the head has completed and, with --reviewer, a
 # SUBSTANTIVE review by that reviewer's login has landed. `substantive` is the landing
-# signal, and Ship grades it here, above the host, overwriting any grade an
-# adapter sends (`SHIP_SUBSTANTIVE`): a notice-only row and a bodiless comment
-# row are rows, not rounds, while a bodiless approved or changes row is the
-# reviewer's verdict and counts.
+# signal: Ship's grade of each row, applied here above the host
+# (`SHIP_SUBSTANTIVE` in _lib.sh defines it).
 #
 # Two landing rules, derived from the reviewer's profile `Trigger:`; `landed_by`
 # names the one that matched.
@@ -183,8 +181,8 @@ while :; do
   sha=$(jq -r .head_sha <<<"$prj"); mergeable=$(jq -r .mergeable <<<"$prj")
   checks=$(host_pr_checks "$pr" "$sha") || ship_tooling "cannot read checks"
   reviews=$(host_pr_reviews "$pr" "$sha" "$full") || ship_tooling "cannot read reviews"
-  # Graded here and nowhere else, before the landing rule, the refusal rule or
-  # the brief reads a row, so a row grades the same on every host.
+  # Ship's grade (`SHIP_SUBSTANTIVE`), before the landing rule, the refusal
+  # rule or the brief reads a row.
   reviews=$(jq -c "$SHIP_SUBSTANTIVE" <<<"$reviews") || ship_tooling "cannot grade reviews"
   threads=$(host_pr_threads "$pr") || threads='"unavailable"'
   blocked=null

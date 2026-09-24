@@ -50,6 +50,7 @@ reset() { # <row>: the one review row the host answers with, on the head and in 
 }
 poll() { ( cd "$repo" && bash "$mech" 7 --interval 1 --timeout 0 "$@" ); }
 graded() { jq -r '[.reviews.on_head[0].substantive, .reviews.all[0].substantive] | map(tostring) | unique | join(" ")'; }
+rules() { jq -r '[.landed_by, .refused_by] | map(tostring) | join(" ")'; }
 
 # The Azure DevOps vote row: state alone, no id, no time, no body.
 vote='{"id": null, "login": "voter@example.com", "state": "approved", "substantive": true, "submitted_at": null, "body": ""}'
@@ -59,7 +60,7 @@ check_rc "an Azure DevOps vote lands under the head rule" 0 "$rc"
 check "as head" head "$(jq -r .landed_by <<<"$out")"
 out=$(poll --reviewer voter-request --since "$since")
 check "and not under the since rule, which cannot time it" 'null null' \
-  "$(jq -r '[.landed_by, .refused_by] | map(tostring) | join(" ")' <<<"$out")"
+  "$(rules <<<"$out")"
 
 # The Azure DevOps notice-only thread: the adapter still calls it substantive.
 thread=$(jq -cn --arg b "$notice_text" \
@@ -68,7 +69,7 @@ reset "$thread"
 out=$(poll --reviewer voter-request --since "$since"); rc=$?
 check_rc "an Azure DevOps notice thread lands nothing" 1 "$rc"
 check "it refuses the round instead" 'null since' \
-  "$(jq -r '[.landed_by, .refused_by] | map(tostring) | join(" ")' <<<"$out")"
+  "$(rules <<<"$out")"
 check "because poll-pr's grade overwrote the adapter's" false "$(graded <<<"$out")"
 out=$(poll --reviewer voter)
 check "and under the head rule too" head "$(jq -r .refused_by <<<"$out")"
@@ -87,11 +88,10 @@ reset "$reply"
 out=$(poll --reviewer voter-request --since "$since"); rc=$?
 check_rc "a bodiless comment row lands nothing" 1 "$rc"
 check "and refuses nothing" 'null null' \
-  "$(jq -r '[.landed_by, .refused_by] | map(tostring) | join(" ")' <<<"$out")"
+  "$(rules <<<"$out")"
 check "graded not substantive" false "$(graded <<<"$out")"
 
 # --brief reads the same graded rows.
-printf 'me\n' > "$SHIP_FAKE/host_identity.1.json"
 reset "$approval"; printf 'me\n' > "$SHIP_FAKE/host_identity.1.json"
 check "--brief carries poll-pr's grade" true \
   "$(poll --reviewer voter-request --since "$since" --brief | jq -r '.rounds[0].substantive')"

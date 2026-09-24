@@ -56,8 +56,9 @@
 #   host_pr_reviews <pr> <head_sha> [<full-ids-json>]
 #                                        -> {on_head:[REVIEW],all:[REVIEW],total}
 #                                           REVIEW = {id,login,state,submitted_at,body}
-#                                           state: approved, changes or comment. No
-#                                           grade: poll-pr grades each row itself.
+#                                           state: approved, changes or comment.
+#                                           Adapters send no `substantive`; poll-pr
+#                                           adds it (`SHIP_SUBSTANTIVE`).
 #                                           id: what the host knows the round by (a GitHub review,
 #                                           an Azure DevOps thread), null where it records a state
 #                                           rather than a round. poll-pr --full names ids from here.
@@ -574,7 +575,7 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
   else . end;'
 
 # The vocabulary a reviewer refuses a round in, shared by the two readers: the
-# blocked lookup, which returns the notice line, and the reviews projection,
+# blocked lookup, which returns the notice line, and `SHIP_SUBSTANTIVE` below,
 # which refuses to call such a body a round.
 #
 # The refusal VERB carries the match, not the bare noun. A round that merely
@@ -592,7 +593,6 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
 #                 phrase reads as a notice. The run then waits the window out
 #                 and reports the reviewer blocked, with the body still in
 #                 `rounds[]` to read, rather than losing it.
-# shellcheck disable=SC2034  # read by the host adapters that source this library
 readonly SHIP_BLOCKED_NOTICE='def notice_re:
   "(unable|not able|cannot|could not|failed)( to)? [a-z ]{0,24}review"
   + "|(reached|exceeded|hit|out of|ran out of) [a-z ]{0,24}(quota|rate limit)"

@@ -424,8 +424,8 @@ host_pr_checks() { # <pr> <head_sha>
 # count), which poll-pr's default head rule reads; `all` carries every round
 # across heads, for its --since rule. Every review stays in the two lists with
 # its body, a reviewer's reply to one thread and a quota notice included, so the
-# run can see what it is waiting on; which of them is a round is poll-pr's grade,
-# not this projection's.
+# run can see what it is waiting on; which of them is a round is
+# `SHIP_SUBSTANTIVE`'s grade, applied in poll-pr.
 _gh_reviews_projection="$SHIP_REVIEW_CLIP"'
     def row: . as $r | {id: (.id | tostring), login: .user.login,
       state: (if .state == "APPROVED" then "approved" elif .state == "CHANGES_REQUESTED" then "changes" else "comment" end),
