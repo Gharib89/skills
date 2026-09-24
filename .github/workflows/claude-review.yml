@@ -66,22 +66,22 @@ jobs:
                brief: it names the coding standards to review against and the things
                that are not findings in this repo. Read the standards file it points
                at as well.
-            2. Run `gh pr view ${{ github.event.issue.number }} --json title,body` and
+            2. Run `gh pr view ${{ github.event.issue.number }} --json title,body,headRefOid` and
                find the linked issue (Closes/Fixes/Resolves #N). If one exists, run
                `gh issue view N` and treat it as the spec for this change.
             3. Run `gh pr diff ${{ github.event.issue.number }}` once and review
                only the changed lines it returned, against (a) the brief and the
                standards it names and (b) the linked issue. Walking the changed
                files one at a time instead spends the turn budget on navigation
-               and the round dies before it posts. A large diff comes back as the
-               path of the file it was saved to: page through that file with the
-               Read tool's offset and limit, or search it with `grep`, and review
-               all of it. To see a changed file beyond its hunks, read the PR's
-               copy with
-               `gh api 'repos/${{ github.repository }}/contents/<path>?ref=<head sha>' -H 'Accept: application/vnd.github.raw+json'`,
-               the head sha from `gh pr view ${{ github.event.issue.number }} --json headRefOid`:
-               the checkout is the default branch, so a Read there is its copy,
-               not the PR's.
+               and the round dies before it posts. A large diff comes back as a
+               preview and the path of the file it was saved to: page through
+               that file with the Read tool's offset and limit, or search it with
+               `grep`, and review every `diff --git` section in it. When a hunk's
+               context is too thin to settle a finding, read that file's copy at
+               the PR head with
+               `gh api 'repos/${{ github.repository }}/contents/<path>?ref=<headRefOid>' -H 'Accept: application/vnd.github.raw+json'`,
+               `<headRefOid>` being the one step 2 returned: the checkout is the
+               default branch, so a Read there is its copy, not the PR's.
 
             Report the round as ONE formal pull request review, submitted in a
             single call, with every inline finding attached to it. Build it as
