@@ -17,7 +17,7 @@ git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
 export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 
-printf '#!/usr/bin/env bash\necho bootstrap >> "$SHIP_FAKE/calls"\n' > "$repo/scripts/boot.sh"
+printf '#!/usr/bin/env bash\necho bootstrap >> "$SHIP_FAKE/calls"\necho installed\n' > "$repo/scripts/boot.sh"
 printf '#!/usr/bin/env bash\necho bootstrap >> "$SHIP_FAKE/calls"\necho apt refused; exit 3\n' > "$repo/scripts/boot-fail.sh"
 chmod +x "$repo/scripts/boot.sh" "$repo/scripts/boot-fail.sh"
 
@@ -66,6 +66,12 @@ check_rc "host tooling that stays missing is the not-ok answer" 1 "$rc"
 check "which names the tooling step and never reaches the bootstrap" 'tooling ["tooling:failed"]' \
   "$(jq -r '"\(.failed) \([.steps[] | "\(.step):\(.status)"] | tojson)"' <<<"$out")"
 check "and the missing tool is named" '["gh not installed"]' "$(jq -c .missing <<<"$out")"
+
+reset
+profile '`scripts/boot.sh`  '
+out=$(CLAUDE_CODE_REMOTE=true bash -c 'cd "$1/scripts" && bash "$2"' _ "$repo" "$mech"); rc=$?
+check_rc "from a subdirectory, a backticked Bootstrap: runs from the checkout root" 0 "$rc"
+check "with both steps ran" '["tooling:ran","bootstrap:ran"]' "$(steps "$out")"
 
 reset
 profile None.

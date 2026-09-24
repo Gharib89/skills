@@ -29,8 +29,8 @@ local-gate contract, and that script answers no `--help`.
 
 | Mechanic | Phase |
 |---|---|
-| `run-file init` | the required first action |
-| `prepare`, which runs `tooling` | every run, before phase 0 |
+| `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run, before `run-file init` |
+| `run-file init` | the required first action after `prepare` |
 | `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
 | `preflight` | 0 |
 | `read-issue` | 0 |

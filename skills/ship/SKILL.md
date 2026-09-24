@@ -50,12 +50,12 @@ in the merge summary, so every PR records which ship produced it.
   `<issue>` it first runs the unattended lane: prepare, PR cap, select.
 
 Without `--unattended` the run is **attended**: any needed human action stops
-and asks, and the claim holds while it waits. **The sandbox decides preparation;
-the lane decides admission.** Every run opens with `prepare` (`--unattended` in
-that lane): in a **cloud sandbox** (`CLAUDE_CODE_REMOTE=true`) it runs `tooling
---install`, then the profile's `## Cloud lane` `Bootstrap:`, before any claim;
-elsewhere an attended run's is a no-op. A `failed` step stops the run, `tooling`
-as `host-unreachable` and `bootstrap` as `bootstrap-failed`, with its tail.
+and asks, and the claim holds while it waits. **Preparation**, in every lane,
+before `run-file init`: `prepare` (`--unattended` in that lane). In a **cloud
+sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that flag, it runs `tooling
+--install` then the profile's `## Cloud lane` `Bootstrap:`; elsewhere it is a
+no-op. A `failed` step stops the run, no claim, with its tail: `tooling` as
+`host-unreachable`, `bootstrap` as `bootstrap-failed`.
 
 ## Compose, don't reinline
 
@@ -287,7 +287,7 @@ merge. On approval run `merge <pr> <issue|none> [--worktree <path>]` then
 reporting done. Unattended: `comment-pr <pr> --body-file` with the summary, and
 return. The claim holds in both lanes until the merge releases it.
 **Done when:** attended, `merge` and `cleanup` answered with no `false` in their
-JSON; unattended, `comment-pr` posted the summary, the run returning the PR link.
+JSON; unattended, `comment-pr` posted the summary and the run returned the PR link.
 
 ## The stops
 

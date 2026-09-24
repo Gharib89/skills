@@ -4,9 +4,9 @@
 # in that order. The sandbox decides preparation and the lane decides admission,
 # so this runs in every run inside a cloud sandbox, attended or unattended; the
 # sandbox marks itself with CLAUDE_CODE_REMOTE=true. `--unattended` runs it off
-# the sandbox too, because the unattended lane always has and a human running
-# `ship --unattended` locally reproduces a fire exactly. Outside both it is a
-# no-op, so an attended run on a workstation is unchanged.
+# the sandbox too, so a local `ship --unattended` reproduces a fire. Outside
+# both it is a no-op, so an attended run on a workstation is unchanged. The
+# bootstrap runs from the checkout root whatever directory the run is in.
 #
 #   prepare [--unattended]
 #
@@ -57,7 +57,7 @@ step tooling ran
 
 bootstrap=""
 root=$(git rev-parse --show-toplevel 2>/dev/null) && profile=$(ship_profile_path) && [ -f "$profile" ] \
-  && bootstrap=$(awk '/^## /{f = ($0 ~ /^## Cloud lane[ \t\r]*$/)} f && /^Bootstrap:/{sub(/^Bootstrap:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit}' "$profile")
+  && bootstrap=$(awk '/^## /{f = ($0 ~ /^## Cloud lane[ \t\r]*$/)} f && /^Bootstrap:/{sub(/^Bootstrap:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); gsub(/`/, ""); print; exit}' "$profile")
 case $bootstrap in
   ""|None.) step bootstrap skipped; emit ;;
 esac

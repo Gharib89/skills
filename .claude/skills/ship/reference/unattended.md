@@ -30,9 +30,8 @@ image has `jq`, `curl` and `git` but not the host's CLI, and only the host
 adapter knows what that is and how it installs (GitHub: `apt-get install -y
 gh`, the one route the sandbox proxy passes). Core in every repo, which is why
 it sits in a mechanic rather than on a profile `Bootstrap:` line. Its second is
-the profile's `## Cloud lane` `Bootstrap:`. Preparation is the sandbox's, not
-the lane's: an attended run inside a cloud sandbox runs the same `prepare` and
-asks where this lane returns. Read the token through preflight's `user` and
+the profile's `## Cloud lane` `Bootstrap:`. An attended run inside a cloud
+sandbox runs the same `prepare`; a failed step stops it the same way. Read the token through preflight's `user` and
 repo reads, which are the proof; `gh auth status` reports the working token as
 invalid behind the sandbox proxy.
 
@@ -59,16 +58,15 @@ cannot infer the absence of a human.
 ## The lane with no issue: `ship --unattended`
 
 With no `<issue>`, ship runs the whole unattended lane before phase 0. It
-writes nothing to the tracker until the claim in phase 1; the four stops below
+writes nothing to the tracker until the claim in phase 1; the stops below
 leave no trace on any issue.
 
-0. **Tooling.** `prepare --unattended`, whose first step is `tooling
-   --install`; `failed: "tooling"`: stop `host-unreachable`.
-1. **Bootstrap.** Its second step, the profile's `## Cloud lane` `Bootstrap:`
-   where it names one, before anything can be claimed; `failed: "bootstrap"`:
-   stop `bootstrap-failed`. This is sandbox-image repair for the repo's own
-   stack, distinct from `## Worktree`'s `Bootstrap:`, which runs in every lane
-   after isolate.
+0. **Prepare.** `prepare --unattended`, one call running both steps before
+   anything can be claimed; `failed: "tooling"`: stop `host-unreachable`.
+1. **Bootstrap.** Already run as `prepare`'s second step, not run again;
+   `failed: "bootstrap"`: stop `bootstrap-failed`. It is sandbox-image repair
+   for the repo's own stack, distinct from `## Worktree`'s `Bootstrap:`, which
+   runs in every lane after isolate.
 2. **PR cap.** `list-prs --open`; at or above the profile's `PR cap:` (default
    3, `none` disables), stop `pr-queue-full`. One operator's merge-review queue
    is the bottleneck, not the backlog.
@@ -78,7 +76,8 @@ leave no trace on any issue.
    The host's blocker query exists and failed: stop `blockers-unavailable`;
    shipping a dependent issue out of order builds a PR on unmerged work, so the
    stop stands until the query answers.
-4. **Run** phases 0 to 9 on the selected issue as `ship <issue> --unattended`.
+4. **Run** phases 0 to 9 on the selected issue as `ship <issue> --unattended`;
+   preparation is done, so skip `prepare`.
 5. **Report**: the PR link and the merge summary's location, or the stop
    reason verbatim (ship's own reasons pass through unchanged, including
    `host-unreachable` from preflight).
