@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.6.0 (2026-09-24)
+
+### Features
+
+- **ship**: The free-round poll closes on never_queued when the host queued no round
+  ([#285](https://github.com/Gharib89/skills/pull/285),
+  [`e0f8813`](https://github.com/Gharib89/skills/commit/e0f8813e4882d18ccc13826b4067423d8463a1bc))
+
+
 ## v8.5.3 (2026-09-24)
 
 ### Refactoring
