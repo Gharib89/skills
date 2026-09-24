@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.4.4 (2026-09-24)
+
+### Bug Fixes
+
+- **ship**: Read, reply to and resolve review threads in the cloud sandbox through the proxy's REST
+  routes ([#261](https://github.com/Gharib89/skills/pull/261),
+  [`7aaf64f`](https://github.com/Gharib89/skills/commit/7aaf64f2711fa8299a699f2eaff57cc7e6a67be2))
+
+
 ## v8.4.3 (2026-09-23)
 
 ### Bug Fixes
