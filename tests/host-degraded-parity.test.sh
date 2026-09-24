@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Parity cases for the degraded answers the host contract in `_lib.sh`
 # documents: an answer an adapter gives where its host cannot say more, which
-# on Azure DevOps is the everyday answer. No mechanic branches on the detected
-# host, so each case feeds that answer as a fixture over the Host fake
-# (tests/host-fake.sh) inside a throwaway checkout whose origin names GitHub,
-# and holds the mechanic that acts on it to its documented behaviour.
+# on Azure DevOps is the everyday answer. The rows are the ones #267 holds to a
+# parity case, each a degraded answer a mechanic acts on. No mechanic branches
+# on the detected host, so each case feeds that answer as a fixture over the
+# Host fake (tests/host-fake.sh) inside a throwaway checkout whose origin names
+# GitHub, and holds the mechanic that acts on it to its documented behaviour.
 #
 #   host_can_push unknown            preflight warns on stderr and continues
 #   host_pr_reviewer_blocked null    poll-pr --reviewer refuses nothing
@@ -17,6 +18,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+T=$'\t'  # the calls log separates arguments with a tab
 
 scripts=$PWD/skills/ship/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
@@ -29,9 +31,10 @@ git -C "$repo" remote add origin https://github.com/owner/repo.git
 reset() { rm -f "$SHIP_FAKE"/*; }
 mech() { local m=$1; shift; ( cd "$repo" && bash "$scripts/$m.sh" "$@" ); }
 
-# host_can_push. The checkout carries no profile, so a preflight that went on
-# past the push check stops at the next one, `profile missing`, with exit 1: the
-# reason is the proof it continued, where `false` ends the run at exit 2.
+# host_can_push. These two run before the profile below is written: with none,
+# a preflight that went on past the push check stops at the next one, `profile
+# missing`, with exit 1. The reason is the proof it continued, where `false`
+# ends the run at exit 2.
 reset
 printf 'me\n'      > "$SHIP_FAKE/host_identity.1.json"
 printf 'unknown\n' > "$SHIP_FAKE/host_can_push.1.json"
@@ -75,9 +78,15 @@ printf '{"number":7,"body":"","head_sha":"deadbee","state":"open","mergeable":"c
 printf '[]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
 printf '{"on_head":[],"all":[],"total":0}\n' > "$SHIP_FAKE/host_pr_reviews.1.json"
 echo null > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"
-out=$(mech poll-pr 7 --reviewer copilot --since 2026-09-23T14:22:34Z --timeout 0 --interval 1)
+out=$(mech poll-pr 7 --reviewer copilot --since 2026-09-23T14:22:34Z --timeout 0 --interval 1); rc=$?
+check "the blocked lookup is asked for the reviewer's login" \
+  "host_pr_reviewer_blocked${T}7${T}copilot-pull-request-reviewer[bot]" \
+  "$(grep '^host_pr_reviewer_blocked' "$SHIP_FAKE/calls" | sort -u)"
 check "a null blocked lookup refuses nothing" 'null null' \
   "$(jq -r '[.refused_by, .reviewer_blocked] | map(tostring) | join(" ")' <<<"$out")"
+check_rc "and the window closes at --timeout" 1 "$rc"
+check "with nothing landed" 'null false' \
+  "$(jq -r '[.landed_by, .done] | map(tostring) | join(" ")' <<<"$out")"
 rm -rf "$repo/docs"
 
 # host_pr_set_body and host_pr_set_title. `az` reports no HTTP status, so a
