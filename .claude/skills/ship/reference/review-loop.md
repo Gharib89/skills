@@ -33,17 +33,15 @@ a fresh read of the committed tree, not a conversation.
   threads with resolved state, `reviewer_blocked`, `landed_by` naming the rule
   that admitted the round, and
   `refused_by` naming the rule that admitted a refusal in its place, and
-  `never_queued` true where the host has no round queued for the reviewer since
-  `--since`. `done: false` means the window closed first: re-run to extend it,
+  `never_queued`, under `--free-round` alone, true where the host has no round
+  queued for the reviewer since `--since`. `done: false` means the window closed first: re-run to extend it,
   in the foreground again, **unless `refused_by` is non-null or `never_queued`
   is true**. A non-null `refused_by` is the reviewer's quota or
   rate-limit notice answering this request, the window closed on it at once,
   and re-polling or re-requesting waits on a round that is not coming: the
   reviewer exits `degraded: blocked` there and then. A true `never_queued`
-  closed the window on the host's own record of requests: on the free-round
-  poll the loop proceeds to its first request, and after a request, where the
-  host has lost the request it read back, the reviewer exits `degraded:
-  never-queued`. The poll is the landing
+  closed the free-round poll on the host's own record of requests, and the
+  loop proceeds to its first request. The poll is the landing
   signal only; before triage, read the round's review body and its threads
   from the same payload. The body sits on the row the reviewer's landing rule
   admitted: `reviews.on_head[].body` under the head rule, `reviews.all[].body`
@@ -249,8 +247,9 @@ against the corrected tree.
 A **free round** is one the host delivers without a request: a Copilot ruleset
 with `review_on_push: false` still opens one when the PR does. Before the
 run's **first** request to any on-request reviewer, poll once for it, under
-the since rule with `open-pr`'s `created_at`, with no `--timeout`: the
-reviewer's default is sized for its transport. A round already there **is**
+the since rule with `open-pr`'s `created_at` and `--free-round`, with no
+`--timeout`: the reviewer's default is sized for its transport. No poll after
+a request passes `--free-round`. A round already there **is**
 round 1 and counts against `Cap:`; nothing there and the loop proceeds to its
 first request as written, and so does a poll that closed on `never_queued`,
 which ends the window once the settle `poll-pr --help` states has passed with
@@ -271,8 +270,7 @@ nothing in hand: request, poll under the **since** rule with `request-review`'s
 `requested_at`, triage, batch-fix, push, `reply-thread` on
 every `replied: false` thread, and round the loop. A poll that comes back with
 `refused_by` non-null ends the loop at `degraded: blocked`: no re-poll, no
-further request, whatever `Cap:` has left; one with `never_queued` true ends it
-at `degraded: never-queued` the same way. A round that opened threads
+further request, whatever `Cap:` has left. A round that opened threads
 takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.
