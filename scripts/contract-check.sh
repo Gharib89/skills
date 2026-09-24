@@ -52,9 +52,9 @@ if [ "$st" -eq 0 ]; then
 fi
 
 # 2. Every mechanic that requires an argument, invoked with none, prints exactly
-# one JSON object carrying an `error` key and exits 2. The four listed here take
+# one JSON object carrying an `error` key and exits 2. The five listed here take
 # no positional, so a bare invocation of one is a real run, not a malformed one.
-takes_no_positional=" base-fresh select tooling list-prs "
+takes_no_positional=" base-fresh select tooling list-prs prepare "
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ "$m" = _lib ] && continue

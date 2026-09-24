@@ -2,8 +2,9 @@
 # The ship profile's `## Cloud lane` `Bootstrap:` (why: that section of
 # docs/agents/ship.md, issue #249). Installs whichever of `shellcheck` and
 # `gitleaks` is missing through apt, the route the sandbox proxy passes, so
-# scripts/local-gate.sh reaches a full verdict. Only the cloud lane runs it,
-# so it installs without asking; with both on PATH it does nothing.
+# scripts/local-gate.sh reaches a full verdict. Only ship's `prepare` runs it,
+# in a cloud sandbox or the unattended lane, so it installs without asking;
+# with both on PATH it does nothing.
 #
 #   scripts/cloud-ship-bootstrap.sh
 #
