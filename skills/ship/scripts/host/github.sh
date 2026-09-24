@@ -153,8 +153,9 @@ api() {
 # directory named for this user and this process's pid ($$ is the parent's in
 # every subshell); `mkdir` creates it without following a link planted at that
 # path, and only a real directory this user owns counts as the marker, since the
-# name is predictable and a shared /tmp lets another user plant one. It is made only where the proxy refused, which is a disposable sandbox,
-# so it is left there rather than cleaned up by a trap that would replace the
+# name is predictable and a shared /tmp lets another user plant one. It is
+# made only where the proxy refused, which is a disposable sandbox, so it is
+# left there rather than cleaned up by a trap that would replace the
 # mechanic's own.
 # Switching on the host's answer rather than on the environment keeps the
 # sandbox out of the adapter's logic, and a run outside it never meets the
@@ -449,8 +450,9 @@ _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
 # A thread's id, on both paths, is its root review comment's REST id as a
 # string: the id the reply route posts to and the `ccr` routes key on; REST
 # routes take it, where they cannot take GraphQL's node id. On this path a
-# thread whose root was deleted takes its next comment's id. The GraphQL rows also carry `node`, the thread's
-# node id, which resolveReviewThread needs and host_pr_threads drops.
+# thread whose root was deleted takes its next comment's id. The GraphQL rows
+# also carry `node`, the thread's node id, which resolveReviewThread needs and
+# host_pr_threads drops.
 # Returns 3 where GraphQL was refused (see `gql`), 1 on any other failure.
 _gh_threads_gql() { # <pr>
   local after=null page out='[]' rc
@@ -655,9 +657,9 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
 
 # The thread id is a root comment id, so the GraphQL path finds the thread
 # carrying it to get the node id resolveReviewThread takes: a walk of the PR's
-# threads, one GraphQL page per hundred threads. Where GraphQL was refused, the proxy's own
-# route takes the comment id directly, is idempotent, and answers 404 for an id
-# no thread on the PR contains. Either way an unknown id prints
+# threads, one GraphQL page per hundred threads. Where GraphQL was refused, the
+# proxy's own route takes the comment id directly, is idempotent, and answers
+# 404 for an id no thread on the PR contains. Either way an unknown id prints
 # {resolved: false, detail: "no such thread"} and returns 1.
 host_pr_resolve_thread() { # <pr> <thread-id>
   local rows node rc nosuch='{"resolved": false, "detail": "no such thread"}'
