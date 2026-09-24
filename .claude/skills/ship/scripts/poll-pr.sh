@@ -87,7 +87,10 @@
 # the since rule with the host's own request transport, once `settle` seconds
 # have passed since `--since`, since the host records a request a few seconds
 # after the event behind it, and only until the host first answers true, after
-# which `never_queued` stays false for the rest of the window. It is null under
+# which `never_queued` stays false for the rest of the window. A false is
+# believed only on the second pass that reads it, the first being re-run at once,
+# so a round that landed between a pass's reviews read and its queued read is
+# landed rather than never queued. It is null under
 # the head rule, under a comment transport (which records no request event, its
 # workflow run being its signal), before the settle, and where the host could
 # not answer; null leaves the window to run as before. The clock is read with
@@ -196,7 +199,7 @@ if $brief; then
 fi
 
 norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/\[bot\]$//'; }
-never_queued=null
+never_queued=null; unqueued=false; recheck=false
 start=$SECONDS
 while :; do
   prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
@@ -251,9 +254,13 @@ while :; do
           '$n - ($s | fromdateiso8601) >= $w' >/dev/null; then
     case $(host_pr_review_queued "$pr" "$await" "$since") in
       true) never_queued=false ;;
-      false) never_queued=true ;;
+      # A round submitted after this pass read the reviews has already left the
+      # pending list, so the first false buys one more pass, at once, whose
+      # reviews read lands that round; only a second false is believed.
+      false) if $unqueued; then never_queued=true; else unqueued=true; recheck=true; fi ;;
     esac
   fi
+  if $recheck; then recheck=false; continue; fi
   done=false
   if [ "$mergeable" = conflict ]; then done=true
   elif [ "$pending" -eq 0 ] && [ "$landed" = true ]; then done=true

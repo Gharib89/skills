@@ -93,7 +93,7 @@ check "with never_queued set and done false" 'true false' \
   "$(jq -r '[(.never_queued|tostring), (.done|tostring)] | join(" ")' <<<"$out")"
 check "and none of the window is spent" true "$(jq -r '.waited_s < 5' <<<"$out")"
 check "the read names the reviewer's login and the --since" \
-  "host_pr_review_queued	7	$login	$old" "$(grep '^host_pr_review_queued' "$SHIP_FAKE/calls")"
+  "host_pr_review_queued	7	$login	$old" "$(grep '^host_pr_review_queued' "$SHIP_FAKE/calls" | sort -u)"
 check "and the refusal path stays out of it" null "$(jq -r .refused_by <<<"$out")"
 
 # --brief is what the loop reads, so the signal travels in it.
@@ -142,6 +142,19 @@ check "and never_queued stays null" null "$(jq -r .never_queued <<<"$out")"
 reset; queued false
 out=$(poll --reviewer pusher --timeout 0 --interval 1)
 check "under the head rule the read is never made" 0 "$(calls pr_review_queued)"
+
+# A round submitted between the pass's reviews read and its queued read has
+# already dropped off the pending list, so a false is re-checked against a fresh
+# reviews read before it closes anything, and the round lands.
+reset; queued false
+jq -cn --arg l "$login" --arg at "$posted" \
+  '{id: "3", login: $l, state: "comment", submitted_at: $at, body: "- a finding"} as $r
+   | {on_head: [$r], all: [$r], total: 1}' > "$SHIP_FAKE/host_pr_reviews.2.json"
+out=$(poll --reviewer copilot --since "$old" --timeout 10 --interval 1); rc=$?
+check_rc "a round landing behind the first false is done" 0 "$rc"
+check "as landed, not never_queued" 'since null' \
+  "$(jq -r '[.landed_by, (.never_queued|tostring)] | join(" ")' <<<"$out")"
+check "on the pass straight after, with no interval slept" true "$(jq -r '.waited_s < 1' <<<"$out")"
 
 # A landed round needs no answer about the queue.
 reset; queued false
