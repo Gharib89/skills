@@ -22,7 +22,11 @@
 #   host_tooling_reasons                 -> one missing-tool reason per line
 #   host_tooling_install                 -> install the host CLI where absent; non-zero = could not
 #   host_identity                        -> the login the claim is written as
-#   host_can_push                        -> true | false | unknown
+#                                           (on failure, a {status} where the adapter reports one;
+#                                           `az` reports none, so on Azure DevOps the caller reads
+#                                           `status: null`)
+#   host_can_push                        -> true | false | unknown: unknown on Azure DevOps,
+#                                           which has no cheap push probe
 #   host_copilot_login                   -> the login `copilot_code_review` governs, or
 #                                           nothing on a host with no Copilot reviewer
 #   host_copilot_review_on_push          -> true | false, whether a push to an open PR
@@ -36,14 +40,17 @@
 #                                           mentions:[{number,kind,state}]}
 #                                           closing: live PRs whose body closes <n>.
 #                                           mentions: everything else that names it,
-#                                           kind "pr" or "issue"; none where the host
-#                                           records no cross-reference of its own.
+#                                           kind "pr" or "issue"; [] on Azure DevOps,
+#                                           which records work-item links rather than
+#                                           mentions.
 #   host_issue_assign <n> <identity>
 #   host_issue_unassign <n> <identity>
 #   host_issue_has_label <n> <label>     -> exit 0 when present
 #   host_issue_add_label <n> <label>
 #   host_issue_remove_label <n> <label>  (no-op success when absent)
-#   host_issue_comment <n> <body>        (on failure, a {status} where the adapter reports one)
+#   host_issue_comment <n> <body>        (on failure, a {status} where the adapter reports one;
+#                                           `az` reports none, so on Azure DevOps the caller reads
+#                                           `status: null`)
 #   host_issue_close <n>
 #   host_issue_create <title> <body-file> <label> -> {number,url}
 #   host_issues_open                     -> [{number,title,url}] every open issue, newest first,
@@ -53,6 +60,7 @@
 #   host_pr_get <pr>                     -> {number,url,title,body,head_sha,head_ref,base_ref,state,mergeable}
 #   host_pr_for_branch <branch>          -> {number,state} of the newest PR with that head, or null
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
+#                                           status: pending | success | failure.
 #   host_pr_reviews <pr> <head_sha> [<full-ids-json>]
 #                                        -> {on_head:[REVIEW],all:[REVIEW],total}
 #                                           REVIEW = {id,login,state,submitted_at,body}
@@ -60,30 +68,37 @@
 #                                           Adapters send no `substantive`; poll-pr
 #                                           adds it (`SHIP_SUBSTANTIVE`).
 #                                           id: what the host knows the round by (a GitHub review,
-#                                           an Azure DevOps thread), null where it records a state
-#                                           rather than a round. poll-pr --full names ids from here.
+#                                           an Azure DevOps thread), null for an Azure DevOps vote,
+#                                           which records a state rather than a round. poll-pr --full
+#                                           names ids from here.
 #                                           body: the round's text. Phase 7 triages from it.
 #                                           Past 2000 chars it is clipped and marked
 #                                           "...[truncated]", unless <full-ids-json> names its id;
-#                                           "" where the host records a state rather than a
-#                                           written round.
+#                                           "" for an Azure DevOps vote, which records a state
+#                                           rather than a written round.
 #                                           all: every round across heads, for poll-pr --since.
-#                                           submitted_at: one UTC spelling, or null where the host
-#                                           records state rather than a timed event (an ADO vote),
-#                                           which the --since rule then cannot admit.
+#                                           submitted_at: one UTC spelling, null for an Azure DevOps
+#                                           vote, which records a state rather than a timed event,
+#                                           and which the --since rule then cannot admit.
 #   host_pr_threads <pr>                 -> [{id,resolved,replied,author,path,body}]; non-zero exit =
 #                                           unavailable. replied: this identity has a comment in the
 #                                           thread, which is how phase 7 skips a thread it already
 #                                           dispositioned in an earlier round.
-#                                           GitHub rows also carry comment_id, the thread's first
+#                                           GitHub rows also carry comment_id, outdated and url,
+#                                           which no mechanic reads. comment_id is the thread's first
 #                                           review comment: the REST reply target that host's
 #                                           reply is keyed to, and the thread id is that same
-#                                           comment id, as a string. On Azure DevOps the thread id is
-#                                           that target already.
+#                                           comment id, as a string. outdated: the thread sits on a
+#                                           superseded diff. url: that first comment's page. Azure
+#                                           DevOps rows carry none of the three: the thread id is
+#                                           that reply target already.
 #   host_pr_reviewer_blocked <pr> <login>-> {line, at} | null: that login's latest
 #                                           quota or rate-limit notice line, from its review
 #                                           bodies or its PR comments, and the UTC time the row
-#                                           carrying it was posted.
+#                                           carrying it was posted. null on Azure DevOps, where
+#                                           every comment is a thread that host_pr_reviews already
+#                                           carries, so a notice there is graded and refused
+#                                           through the reviews path.
 #   host_workflow_runs <file> <since-iso>-> [{status,conclusion,created_at,url,title}] the runs
 #                                           of that workflow file, for the event a comment
 #                                           transport starts, created at or
@@ -93,13 +108,21 @@
 #                                           conclusion the host's own word or null while it runs,
 #                                           title the issue or PR the triggering event sits on,
 #                                           which is what narrows the runs to one PR. Non-zero and
-#                                           silent where the host has no such read or could not
-#                                           answer it, which poll-pr reports as "unavailable" and
-#                                           holds the window to the constant on.
+#                                           silent on Azure DevOps, which has no such read, and
+#                                           non-zero wherever the host could not answer it, both of
+#                                           which poll-pr reports as "unavailable" and holds the
+#                                           window to the constant on.
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
-#                                           requested_at: ISO-8601 time of the request event,
-#                                           or the wall clock where the host records none.
+#                                           readback: the host's own names for the PR's reviewers,
+#                                           logins on GitHub, uniqueName and displayName on Azure
+#                                           DevOps; request-review passes it through and no mechanic
+#                                           reads it.
+#                                           requested_at: ISO-8601 time of the request event, or,
+#                                           where the host records none (always, on Azure DevOps),
+#                                           the wall clock, stamped before the call.
 #   host_pr_comment <pr> <body-file>     -> {id,url,created_at}
+#                                           id: the comment's id on GitHub, the thread's id on
+#                                           Azure DevOps, where a PR comment is a thread of its own.
 #                                           created_at: the host's own creation time for the
 #                                           comment, one UTC spelling, or null where the host
 #                                           records none, the same way submitted_at is null
@@ -108,8 +131,12 @@
 #                                           reports it as `requested_at` and answers the null
 #                                           with a wall clock read before the post, so --since
 #                                           always has a bound to compare against.
-#   host_pr_set_body <pr> <body-file>
-#   host_pr_set_title <pr> <title>
+#   host_pr_set_body <pr> <body-file>    (on failure, a {status} where the adapter reports one;
+#                                           `az` reports none, so on Azure DevOps the caller reads
+#                                           `status: null`)
+#   host_pr_set_title <pr> <title>       (on failure, a {status} where the adapter reports one;
+#                                           `az` reports none, so on Azure DevOps the caller reads
+#                                           `status: null`)
 #   host_pr_reply_thread <pr> <thread> <body-file> -> {replied,url}
 #                                           A reply inside the thread, leaving its status alone.
 #   host_pr_resolve_thread <pr> <thread> -> {resolved}
