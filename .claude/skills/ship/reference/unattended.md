@@ -32,12 +32,16 @@ than on a profile `Bootstrap:` line. Still missing afterwards: stop
 preflight's `user` and repo reads, which are the proof; `gh auth status` reports
 the working token as invalid behind the sandbox proxy.
 
-Two sandbox facts the run meets and neither is a failure. Review-thread state
-is GraphQL, which the proxy blocks, so `poll-pr` reports `threads:
-"unavailable"` and a reviewer that opened threads exits `degraded: unreachable`
-and proceeds to the merge gate. Remote ref deletion is blocked both ways, which
-costs nothing here: the lane returns at the merge gate and `merge` plus
-`cleanup` run attended from a human's machine.
+Two sandbox facts the run meets and neither is a failure. The proxy refuses
+GitHub GraphQL, where review-thread state lives, and names REST routes in its
+place; the GitHub adapter switches to those on that refusal, so `poll-pr`,
+`reply-thread` and `resolve-thread` work on threads as they do outside the
+sandbox (a bot's thread `author` keeps its `[bot]` suffix there) and a reviewer
+exits by its normal rules. `threads: "unavailable"`, and with it `degraded:
+unreachable`, now means the thread read failed on both paths. Remote
+ref deletion is blocked both ways, which costs nothing here: the lane returns
+at the merge gate and `merge` plus `cleanup` run attended from a human's
+machine.
 
 Unchanged: `defer-to-ci` is the only verification disposition that proceeds
 (`hand-off` and `blocked` hand back), and an `unexercised` result proceeds on

@@ -74,7 +74,8 @@
 #                                           dispositioned in an earlier round.
 #                                           GitHub rows also carry comment_id, the thread's first
 #                                           review comment: the REST reply target that host's
-#                                           reply is keyed to. On Azure DevOps the thread id is
+#                                           reply is keyed to, and the thread id is that same
+#                                           comment id, as a string. On Azure DevOps the thread id is
 #                                           that target already.
 #   host_pr_reviewer_blocked <pr> <login>-> {line, at} | null: that login's latest
 #                                           quota or rate-limit notice line, from its review
@@ -109,6 +110,8 @@
 #   host_pr_reply_thread <pr> <thread> <body-file> -> {replied,url}
 #                                           A reply inside the thread, leaving its status alone.
 #   host_pr_resolve_thread <pr> <thread> -> {resolved}
+#                                           A failure may print {resolved,detail}, resolved false,
+#                                           which resolve-thread reports as its error ("no such thread").
 #   host_pr_merge <pr> <subject>         -> exit 0 once the host reports merged
 #   host_prs_open                        -> [{number,title,head_ref,author,url,created_at}]
 #   host_issues_ready <label>            -> [{number,title,created_at}] oldest first, unassigned, not PRs
