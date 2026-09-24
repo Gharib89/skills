@@ -23,14 +23,18 @@ the flag.
    summary, then return with the PR link. No waiting, no polling, no merge. The
    claim holds; the open PR is what keeps later fires off the issue.
 
-Before any of it, **`tooling --install`**: the cloud sandbox image has `jq`,
-`curl` and `git` but not the host's CLI, and only the host adapter knows what
-that is and how it installs (GitHub: `apt-get install -y gh`, the one route
-the sandbox proxy passes). Core in every repo, which is why it sits here rather
-than on a profile `Bootstrap:` line. Still missing afterwards: stop
-`host-unreachable`, exactly as preflight would. Read the token through
-preflight's `user` and repo reads, which are the proof; `gh auth status` reports
-the working token as invalid behind the sandbox proxy.
+Before any of it, **`prepare --unattended`**, which in this lane runs whether
+or not the run is in a cloud sandbox, so a local `ship --unattended` still
+reproduces a fire. Its first step is `tooling --install`: the cloud sandbox
+image has `jq`, `curl` and `git` but not the host's CLI, and only the host
+adapter knows what that is and how it installs (GitHub: `apt-get install -y
+gh`, the one route the sandbox proxy passes). Core in every repo, which is why
+it sits in a mechanic rather than on a profile `Bootstrap:` line. Its second is
+the profile's `## Cloud lane` `Bootstrap:`. Preparation is the sandbox's, not
+the lane's: an attended run inside a cloud sandbox runs the same `prepare` and
+asks where this lane returns. Read the token through preflight's `user` and
+repo reads, which are the proof; `gh auth status` reports the working token as
+invalid behind the sandbox proxy.
 
 Two sandbox facts the run meets and neither is a failure. The proxy refuses
 GitHub GraphQL, where review-thread state lives, and names REST routes in its
@@ -58,11 +62,13 @@ With no `<issue>`, ship runs the whole unattended lane before phase 0. It
 writes nothing to the tracker until the claim in phase 1; the four stops below
 leave no trace on any issue.
 
-0. **Tooling.** `tooling --install`; still missing: stop `host-unreachable`.
-1. **Bootstrap.** If the profile's `## Cloud lane` names a `Bootstrap:`, run it
-   before anything can be claimed. Non-zero exit: stop `bootstrap-failed`.
-   This is sandbox-image repair for the repo's own stack, distinct from
-   `## Worktree`'s `Bootstrap:`, which runs in every lane after isolate.
+0. **Tooling.** `prepare --unattended`, whose first step is `tooling
+   --install`; `failed: "tooling"`: stop `host-unreachable`.
+1. **Bootstrap.** Its second step, the profile's `## Cloud lane` `Bootstrap:`
+   where it names one, before anything can be claimed; `failed: "bootstrap"`:
+   stop `bootstrap-failed`. This is sandbox-image repair for the repo's own
+   stack, distinct from `## Worktree`'s `Bootstrap:`, which runs in every lane
+   after isolate.
 2. **PR cap.** `list-prs --open`; at or above the profile's `PR cap:` (default
    3, `none` disables), stop `pr-queue-full`. One operator's merge-review queue
    is the bottleneck, not the backlog.

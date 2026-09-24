@@ -30,6 +30,7 @@ local-gate contract, and that script answers no `--help`.
 | Mechanic | Phase |
 |---|---|
 | `run-file init` | the required first action |
+| `prepare`, which runs `tooling` | every run, before phase 0 |
 | `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
 | `preflight` | 0 |
 | `read-issue` | 0 |
@@ -52,7 +53,7 @@ local-gate contract, and that script answers no `--help`.
 | `ci-wait` | 8 |
 | `merge` | 9, on approval |
 | `cleanup` | 9, after merge |
-| `tooling`, `list-prs` and `select` | unattended lane |
+| `list-prs` and `select` | unattended lane |
 
 ## Ask the script what its flags are
 

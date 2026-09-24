@@ -109,4 +109,4 @@ Pinned: <libraries whose installed version matters, or None.>
 PR cap: <number, default 3, or none>
 Bootstrap: <path of a sandbox-only setup script, or None.>
 
-<!-- The cloud bootstrap repairs the sandbox image; it runs in the cloud lane alone. -->
+<!-- The cloud bootstrap repairs the sandbox image; it runs at the start of every run in a cloud sandbox, attended or unattended. PR cap: is read by the unattended lane alone. -->

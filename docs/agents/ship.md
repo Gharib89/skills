@@ -160,4 +160,6 @@ The skills CLI (`npx skills@latest`) is unpinned and its behaviour is load-beari
 PR cap: 3
 Bootstrap: scripts/cloud-ship-bootstrap.sh
 
-The sandbox image lacks `shellcheck` and `gitleaks`, and its proxy refuses the `npx -y shellcheck` download. Without this bootstrap every cloud fire stops `local gate unavailable: secrets shellcheck`. The script apt-installs whichever of the two is missing, so it is safe to rerun.
+`Bootstrap:` runs in any cloud sandbox, attended or unattended: `prepare` runs it after `tooling --install` at the start of every run there, so an attended `/ship` from a cloud session gets the same tools a fire does. `PR cap:` is the fire's alone, read only by the unattended lane before it selects.
+
+The sandbox image lacks `shellcheck` and `gitleaks`, and its proxy refuses the `npx -y shellcheck` download. Without this bootstrap every cloud run stops `local gate unavailable: secrets shellcheck`. The script apt-installs whichever of the two is missing, so it is safe to rerun.
