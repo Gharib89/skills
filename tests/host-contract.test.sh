@@ -5,9 +5,10 @@
 # for that function, even where the contract also admits `null` (as
 # `host_pr_reviewer_blocked`'s does): the default exercises the object shape, and
 # a test wanting the null answer writes that fixture itself. A default's `status`
-# is held to the vocabulary its entry lists, where the entry lists one. A function added to one real adapter and not the other, or
-# a default drifting from the comment, is a mechanic test passing against a host
-# that does not exist.
+# is held to the vocabulary its entry lists, where the entry lists one. A
+# function added to one real adapter and not the other, or a default drifting
+# from the comment, is a mechanic test passing against a host that does not
+# exist.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -90,23 +91,26 @@ check "host_pr_reviews' default rows carry the documented REVIEW keys" \
   "$(sed -n 's/.*REVIEW = {\([^}]*\)}.*/\1/p' "$lib" | tr , '\n' | sort | paste -sd, -)" \
   "$(jq -r '[.on_head[0], .all[0]] | map(keys_unsorted | sort | join(",")) | unique | join(" ")' "$defaults/host_pr_reviews.json")"
 
-# `<fn> <word|word|...>` for every entry whose continuation lines carry a
-# `status: a | b | c.` vocabulary, so a default's status is a word a real adapter
-# emits: a fake-driven test passing on any other word passes on a check state
-# `ci-wait` and `poll-pr` never see.
+# `<fn> <vocabulary line>` for every entry whose continuation lines open with
+# `status:`, the form an entry spells a closed vocabulary in, so each default's
+# status is held to the words a real adapter emits: a fake-driven test passing
+# on any other word passes on a state no mechanic ever sees. A line in that form
+# that does not parse fails rather than dropping its entry from the check.
 vocab=$(sed '/^[^#]/q' "$lib" | awk '
   /^#   host_/ { fn = $2; next }
-  fn != "" && /^#[ \t]+status: [a-z_]+( \| [a-z_]+)+\.?$/ {
-    s = $0; sub(/^#[ \t]+status: /, "", s); sub(/\.$/, "", s); gsub(/ /, "", s)
-    print fn, s
-  }')
+  fn != "" && /^#[ \t]+status: / { s = $0; sub(/^#[ \t]+status: /, "", s); print fn, s }')
 check "the contract comment documents host_pr_checks' status vocabulary" true \
   "$(awk '$1 == "host_pr_checks" {print "true"}' <<<"$vocab")"
-while read -r fn words; do
+while read -r fn line; do
+  [ -n "$fn" ] || continue
+  if ! grep -Eq '^[a-z_-]+( \| [a-z_-]+)*\.?$' <<<"$line"; then
+    check "$fn's status vocabulary reads as \`word | word.\`" "a vocabulary" "$line"; continue
+  fi
+  words=$(sed 's/\.$//; s/ //g' <<<"$line")
   check "$fn's default statuses are words its contract entry lists" "" \
     "$(jq -r --arg w "$words" '($w | split("|")) as $v
       | (if type == "array" then .[] else . end) | .status | select(IN($v[]) | not)' \
-      "$defaults/$fn.json")"
+      "$defaults/$fn.json" 2>&1 || echo "unreadable: $defaults/$fn.json")"
 done <<<"$vocab"
 
 # A default for a function the contract gives no object answer is a shape
