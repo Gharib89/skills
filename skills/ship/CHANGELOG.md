@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.5.2 (2026-09-24)
+
+### Documentation
+
+- **ship**: The host contract names every per-host answer
+  ([#274](https://github.com/Gharib89/skills/pull/274),
+  [`d3247a2`](https://github.com/Gharib89/skills/commit/d3247a298ce489d0ce81ecdd551ed9dfee3d5cd1))
+
+
 ## v8.5.1 (2026-09-24)
 
 ### Bug Fixes
