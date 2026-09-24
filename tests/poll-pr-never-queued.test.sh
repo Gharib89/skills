@@ -150,11 +150,12 @@ reset; queued false
 jq -cn --arg l "$login" --arg at "$posted" \
   '{id: "3", login: $l, state: "comment", submitted_at: $at, body: "- a finding"} as $r
    | {on_head: [$r], all: [$r], total: 1}' > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll --reviewer copilot --since "$old" --timeout 10 --interval 1); rc=$?
+out=$(poll --reviewer copilot --since "$old" --timeout 60 --interval 30); rc=$?
 check_rc "a round landing behind the first false is done" 0 "$rc"
 check "as landed, not never_queued" 'since null' \
   "$(jq -r '[.landed_by, (.never_queued|tostring)] | join(" ")' <<<"$out")"
-check "on the pass straight after, with no interval slept" true "$(jq -r '.waited_s < 1' <<<"$out")"
+# A re-check that fell through to the sleep would read about 30 here.
+check "on the pass straight after, with no interval slept" true "$(jq -r '.waited_s < 5' <<<"$out")"
 
 # A landed round needs no answer about the queue.
 reset; queued false
