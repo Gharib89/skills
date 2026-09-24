@@ -65,6 +65,16 @@ answer() { # <status> <raw-json>
   jq -rc "$jqx" <<<"$2"; exit 0
 }
 if [ "$2" = graphql ] || [ "$1" = graphql ]; then
+  # gql-seq: one word per GraphQL call, the last repeating: `flake` is a 401,
+  # `refuse` the proxy's 403, anything else an answer.
+  if [ -f "$FAKE/gql-seq" ]; then
+    n=$(( $(cat "$FAKE/gql.n" 2>/dev/null || echo 0) + 1 )); printf '%s' "$n" > "$FAKE/gql.n"
+    i=0; for w in $(cat "$FAKE/gql-seq"); do i=$((i + 1)); word=$w; [ "$i" -ge "$n" ] && break; done
+    case $word in
+      flake) echo 'gh: Bad credentials (HTTP 401)' >&2; exit 1 ;;
+      refuse) : > "$FAKE/gql-refused" ;;
+    esac
+  fi
   if [ -f "$FAKE/gql-refused" ]; then
     cat "$FAKE/refusal.json"
     printf 'gh: %s (HTTP 403)\n' "$(jq -r .message "$FAKE/refusal.json")" >&2
@@ -77,10 +87,13 @@ if [ "$2" = graphql ] || [ "$1" = graphql ]; then
 fi
 case $method:$path in
   GET:user) answer 200 '{"login":"me"}' ;;
-  GET:*/pulls/7/ccr/review_threads) answer 200 "$(cat "$FAKE/ccr.json")" ;;
+  GET:*/pulls/7/ccr/review_threads)
+    [ -f "$FAKE/ccr-fail" ] && answer 500 '{"message":"Server Error"}'
+    answer 200 "$(cat "$FAKE/ccr.json")" ;;
   GET:*/pulls/7/comments*) answer 200 "$(cat "$FAKE/comments.json")" ;;
   POST:*/pulls/7/comments/*/replies) answer 201 '{"id":103,"html_url":"u103"}' ;;
   POST:*/pulls/7/ccr/comments/101/resolve|POST:*/pulls/7/ccr/comments/201/resolve) answer 200 '{}' ;;
+  POST:*/pulls/7/ccr/comments/301/resolve) answer 500 '{"message":"Server Error"}' ;;
   POST:*/pulls/7/ccr/comments/*/resolve) answer 404 '{"message":"No review thread on this pull request contains that comment ID"}' ;;
 esac
 echo "fake gh: unexpected call: $*" >&2; exit 1
@@ -94,12 +107,17 @@ source skills/ship/scripts/_lib.sh
 source skills/ship/scripts/host/github.sh
 sleep() { :; }
 
-reset() { # [refused]
-  rm -f "$FAKE/calls" "$FAKE/gql-refused" "$TMPDIR"/*
+reset() { # [refused | <gql-seq words>]
+  rm -rf "$FAKE/calls" "$FAKE/gql-refused" "$FAKE/gql-seq" "$FAKE/gql.n" "$FAKE/ccr-fail" "$TMPDIR"/*
   : > "$FAKE/calls"
-  [ "${1:-}" = refused ] && : > "$FAKE/gql-refused"
+  case ${1:-} in
+    '') ;;
+    refused) : > "$FAKE/gql-refused" ;;
+    *) printf '%s' "$1" > "$FAKE/gql-seq" ;;
+  esac
   return 0
 }
+markers() { find "$TMPDIR" -mindepth 1 -maxdepth 1 -name 'ship-gh-graphql-refused.*' | wc -l | tr -d ' '; }
 calls_matching() { grep -c -- "$1" "$FAKE/calls"; }
 body=$work/body.md; printf 'fixed in abc\n' > "$body"
 
@@ -129,8 +147,9 @@ check "and answers no such thread" 'false no such thread' "$(jq -r '[.resolved, 
 
 # GraphQL refused by the proxy: the ccr and REST routes answer, same rows.
 reset refused
-out=$(host_pr_threads 7); rc=$?
+out=$(host_pr_threads 7 2>"$work/err"); rc=$?
 check_rc "threads read through the ccr route" 0 "$rc"
+check "the switch is said once on stderr" 1 "$(grep -c 'REST routes' "$work/err")"
 check "the ccr rows match the GraphQL rows" "$rows" "$(norm <<<"$out")"
 check "the ccr row takes its author from the root comment" 'claude[bot]' "$(jq -r '.[0].author' <<<"$out")"
 out=$(host_pr_threads 7)
@@ -145,6 +164,30 @@ check "the reply answers replied" 'true u103' "$(jq -r '[.replied, .url] | @tsv'
 out=$(host_pr_resolve_thread 7 999 2>/dev/null); rc=$?
 check_rc "an unknown id through the ccr route does not resolve" 1 "$rc"
 check "the ccr 404 answers no such thread" 'false no such thread' "$(jq -r '[.resolved, .detail] | @tsv' <<<"$out" | tr '\t' ' ')"
+
+# A GraphQL failure that is not the proxy's refusal keeps today's one retry,
+# writes no marker and reads as unavailable; the refusal arriving on the retry
+# still switches paths.
+reset flake
+out=$(host_pr_threads 7 2>/dev/null); rc=$?
+check_rc "a flaking GraphQL read fails" 1 "$rc"
+check "it is retried once" 2 "$(calls_matching graphql)"
+check "and remembers nothing" 0 "$(markers)"
+check "and makes no ccr call" 0 "$(calls_matching ccr)"
+reset "flake refuse"
+out=$(host_pr_threads 7 2>/dev/null); rc=$?
+check_rc "a refusal on the retry still takes the ccr route" 0 "$rc"
+check "with the same rows" "$rows" "$(norm <<<"$out")"
+check "and is remembered" 1 "$(markers)"
+
+# Both paths failing is what `threads: "unavailable"` now means.
+reset refused; : > "$FAKE/ccr-fail"
+out=$(host_pr_threads 7 2>/dev/null); rc=$?
+check_rc "a failed ccr read after the refusal fails the read" 1 "$rc"
+reset refused
+out=$(host_pr_resolve_thread 7 301 2>/dev/null); rc=$?
+check_rc "a ccr resolve the host fails does not resolve" 1 "$rc"
+check "and names no thread missing" '' "$(jq -r '.detail? // empty' <<<"$out" 2>/dev/null)"
 
 # An id that is no root comment, the old GraphQL node id included, is no thread.
 reset

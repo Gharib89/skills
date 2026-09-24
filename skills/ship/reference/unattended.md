@@ -35,9 +35,10 @@ the working token as invalid behind the sandbox proxy.
 Two sandbox facts the run meets and neither is a failure. The proxy refuses
 GitHub GraphQL, where review-thread state lives, and names REST routes in its
 place; the GitHub adapter switches to those on that refusal, so `poll-pr`,
-`reply-thread` and `resolve-thread` work on threads exactly as in a local run
-and a reviewer exits by its normal rules. `threads: "unavailable"`, and with it
-`degraded: unreachable`, is left for a read that failed on both paths. Remote
+`reply-thread` and `resolve-thread` work on threads as they do outside the
+sandbox (a bot's thread `author` keeps its `[bot]` suffix there) and a reviewer
+exits by its normal rules. `threads: "unavailable"`, and with it `degraded:
+unreachable`, now means the thread read failed on both paths. Remote
 ref deletion is blocked both ways, which costs nothing here: the lane returns
 at the merge gate and `merge` plus `cleanup` run attended from a human's
 machine.

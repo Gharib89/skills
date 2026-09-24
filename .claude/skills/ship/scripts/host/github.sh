@@ -141,30 +141,40 @@ api() {
     sleep "$wait"
   done
 }
-# GraphQL, and the one refusal it is told apart from a flake by. The Claude
-# cloud sandbox's session proxy answers every GraphQL call with a 403 whose
-# message names the REST routes it serves in its place, review threads among
-# them (`GET .../pulls/{n}/ccr/review_threads`); gh prints that message on
-# stderr. That answer returns 3, which the thread functions below read as "take
-# the REST path", and it is remembered for the rest of the process, so a
-# polling mechanic pays for one refused call rather than one per poll. The
-# callers run in command substitutions, whose subshells lose a variable, so the
-# memory is a marker file named for this process's pid ($$ is the parent's in
-# every subshell). It is written only where the proxy refused, which is a
-# disposable sandbox, so it is left there rather than cleaned up by a trap that
-# would replace the mechanic's own.
+# GraphQL, telling one refusal apart from a flake. The Claude cloud sandbox's
+# session proxy answers every GraphQL call with a 403 whose message names the
+# REST routes it serves in its place, review threads among them
+# (`GET .../pulls/{n}/ccr/review_threads`); gh prints that message on stderr. On
+# that answer, from either attempt, `gql` returns 3, which the thread functions
+# below read as "take the REST path", and says so once on stderr. The refusal is
+# remembered for the rest of the process, so a polling mechanic pays for one
+# refused call rather than one per poll. The callers run in command
+# substitutions, whose subshells lose a variable, so the memory is a marker
+# directory named for this user and this process's pid ($$ is the parent's in
+# every subshell); `mkdir` creates it without following a link planted at that
+# path. It is made only where the proxy refused, which is a disposable sandbox,
+# so it is left there rather than cleaned up by a trap that would replace the
+# mechanic's own.
 # Switching on the host's answer rather than on the environment keeps the
-# sandbox's name out of the adapter, and a local run never meets the refusal,
-# so it never makes a `ccr` call.
-_gh_gql_marker() { printf '%s/ship-gh-graphql-refused.%s' "${TMPDIR:-/tmp}" "$$"; }
+# sandbox out of the adapter's logic, and a run outside it never meets the
+# refusal, so it never makes a `ccr` call.
+_gh_gql_marker() { printf '%s/ship-gh-graphql-refused.%s.%s' "${TMPDIR:-/tmp}" "${UID:-0}" "$$"; }
 gql() {
-  local err rc
-  [ -e "$(_gh_gql_marker)" ] && return 3
-  # stderr into $err, stdout on to the caller, through fd 3.
-  { err=$(gh api graphql "$@" 2>&1 1>&3 3>&-); rc=$?; } 3>&1
-  [ "$rc" -eq 0 ] && return 0
-  case $err in *ccr/review_threads*) : > "$(_gh_gql_marker)"; return 3 ;; esac
-  sleep 2; gh api graphql "$@"
+  local err rc attempt
+  [ -d "$(_gh_gql_marker)" ] && return 3
+  for attempt in 1 2; do
+    # stderr into $err, stdout on to the caller, through fd 3.
+    { err=$(gh api graphql "$@" 2>&1 1>&3 3>&-); rc=$?; } 3>&1
+    [ "$rc" -eq 0 ] && return 0
+    case $err in *ccr/review_threads*)
+      mkdir "$(_gh_gql_marker)" 2>/dev/null
+      echo "GraphQL refused by the session proxy; review threads go through its REST routes" >&2
+      return 3 ;;
+    esac
+    [ "$attempt" -eq 1 ] && sleep 2
+  done
+  printf '%s\n' "$err" | tail -n 40 >&2
+  return "$rc"
 }
 
 host_tooling_reasons() {
@@ -435,9 +445,9 @@ _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
         comments(first:1){ nodes{ databaseId author{login} body url } }
         mine: comments(last:100){ nodes{ viewerDidAuthor } } } } } } }'
 # A thread's id, on both paths, is its root review comment's REST id as a
-# string: the id the reply route posts to and the `ccr` routes key on, which
-# REST can name where GraphQL's node id cannot. A thread whose root was deleted
-# takes its next comment's id. The GraphQL rows also carry `node`, the thread's
+# string: the id the reply route posts to and the `ccr` routes key on; REST
+# routes take it, where they cannot take GraphQL's node id. On this path a
+# thread whose root was deleted takes its next comment's id. The GraphQL rows also carry `node`, the thread's
 # node id, which resolveReviewThread needs and host_pr_threads drops.
 # Returns 3 where GraphQL was refused (see `gql`), 1 on any other failure.
 _gh_threads_gql() { # <pr>
@@ -459,7 +469,7 @@ _gh_threads_gql() { # <pr>
   done
   printf '%s\n' "$out"
 }
-# The REST path, for a GraphQL the proxy refused: the proxy's thread list
+# The REST path, taken when the proxy refuses GraphQL: the proxy's thread list
 # carries each thread's state, path and `comment_ids` but no body or author, so
 # the PR's review comments, joined on id, supply the rest. `author` is the REST
 # login, which keeps a bot's `[bot]` suffix where GraphQL drops it.
@@ -611,12 +621,14 @@ host_pr_comment() { # <pr> <body-file>
 host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | _gh_write -X PATCH "$R/pulls/$1" --input -; }
 host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | _gh_write -X PATCH "$R/pulls/$1" --input -; }
 
-# REST only, on both paths: a reply is `POST .../comments/{id}/replies` keyed
-# by the thread's root comment, and that id is the thread id itself, so no
-# GraphQL read stands between the caller and the post. The id is checked
-# against the PR's review comments first, so an id no comment carries (a
-# GraphQL node id from an older ship included) answers `no such thread` rather
-# than a failed post.
+# REST whichever path the threads came from: a reply is
+# `POST .../comments/{id}/replies` keyed by the thread's root comment, and that
+# id is the thread id itself, so no GraphQL read stands between the caller and
+# the post. The id is checked against the PR's review comments first, so an id
+# no comment carries (a GraphQL node id from an older ship included) answers
+# `no such thread` rather than a failed post. A reply's own id passes that
+# check and the host answers the post, with its status: the check names unknown
+# ids, it does not rank them.
 #
 # Create-then-verify like every other create here, with a find that returns
 # non-zero when the comment read fails, so a read that failed is reported rather
@@ -641,7 +653,7 @@ host_pr_reply_thread() { # <pr> <thread-id> <body-file>
 
 # The thread id is a root comment id, so the GraphQL path finds the thread
 # carrying it to get the node id resolveReviewThread takes: a walk of the PR's
-# threads, one page per hundred. Where GraphQL was refused, the proxy's own
+# threads, one GraphQL page per hundred threads. Where GraphQL was refused, the proxy's own
 # route takes the comment id directly, is idempotent, and answers 404 for an id
 # no thread on the PR contains. Either way an unknown id prints
 # {resolved: false, detail: "no such thread"} and returns 1.
