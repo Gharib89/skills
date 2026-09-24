@@ -50,12 +50,12 @@ in the merge summary, so every PR records which ship produced it.
   `<issue>` it first runs the unattended lane: prepare, PR cap, select.
 
 Without `--unattended` the run is **attended**: any needed human action stops
-and asks, and the claim holds while it waits. **Preparation**, in every lane,
-before `run-file init`: `prepare` (`--unattended` in that lane). In a **cloud
-sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that flag, it runs `tooling
---install` then the profile's `## Cloud lane` `Bootstrap:`; elsewhere it is a
-no-op. A `failed` step stops the run, no claim, with its tail: `tooling` as
-`host-unreachable`, `bootstrap` as `bootstrap-failed`.
+and asks, and the claim holds while it waits. **Preparation**, before `run-file
+init` in every run but the no-issue lane's inner one: `prepare` (`--unattended`
+in that lane). In a **cloud sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that
+flag, it runs `tooling --install` then the profile's `## Cloud lane`
+`Bootstrap:`, elsewhere a no-op. A `failed` step stops the run, no claim, with
+its tail: `tooling` as `host-unreachable`, `bootstrap` as `bootstrap-failed`.
 
 ## Compose, don't reinline
 

@@ -29,7 +29,7 @@ local-gate contract, and that script answers no `--help`.
 
 | Mechanic | Phase |
 |---|---|
-| `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run, before `run-file init` |
+| `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run but the no-issue lane's inner one, before `run-file init` |
 | `run-file init` | the required first action after `prepare` |
 | `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
 | `preflight` | 0 |
