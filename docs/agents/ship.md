@@ -73,7 +73,7 @@ Login: claude[bot]
 Trigger: on-request
 Request: comment @claude
 Workflow: .github/workflows/claude-review.yml
-Cap: 2
+Cap: 3
 Resolve: resolve-thread
 Gating: no
 Fallback-for: copilot
