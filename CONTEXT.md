@@ -105,8 +105,12 @@ How an on-request reviewer is asked for a round, named by its `Request:` line al
 _Avoid_: request method, trigger phrase (that is the workflow's own setting)
 
 **Landing rule**:
-Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The reviewer's `Trigger:` picks the rule, which `poll-pr --reviewer` derives from its block. The head rule takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule takes a review submitted at or after the `--since <iso>` instant on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it; that instant is the one value the poll cannot derive. Neither rule takes a row that is not substantive: an empty body (a reviewer's reply to one thread) or a body that is only a quota or rate-limit notice, which refuses the round rather than delivering it.
+Which reviews `poll-pr` accepts as the round it is waiting for, reported as `landed_by`. The reviewer's `Trigger:` picks the rule, which `poll-pr --reviewer` derives from its block. The head rule takes only a review on the current head, because an on-push reviewer earns a fresh one per push. The since rule takes a review submitted at or after the `--since <iso>` instant on any head, because an on-request or auto-once reviewer posts one round per request and a later push would otherwise strand it; that instant is the one value the poll cannot derive. Neither rule takes a row that is not substantive: a bodiless comment (a reviewer's reply to one thread) or a body that is only a quota or rate-limit notice, which refuses the round rather than delivering it.
 _Avoid_: landing check, freshness rule
+
+**Substantive**:
+A review row that counts as a round: one with text that is not wholly a quota or rate-limit notice, or a bodiless verdict (approved or changes). Ship grades it above the host, never in an adapter.
+_Avoid_: real review, meaningful round
 
 **Round clip**:
 The 2000-character cap `poll-pr` puts on every review body, marked `...[truncated]` where it bites, so one poll cannot flood the run's window. `--brief --full <id>` lifts it for the rows it names and nothing else, and `--full` without `--brief` is refused. It covers review bodies alone: a `--brief` thread row's `lead` carries the same marker at 200 characters, which no flag lifts, and the full shape's `threads[]` is where that comment is read whole. A reviewer that opens with a preamble pushes its findings past the cap, and a round that comes back clipped is one phase 7 has not read.
