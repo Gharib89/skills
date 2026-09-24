@@ -40,8 +40,10 @@ a fresh read of the committed tree, not a conversation.
   rate-limit notice answering this request, the window closed on it at once,
   and re-polling or re-requesting waits on a round that is not coming: the
   reviewer exits `degraded: blocked` there and then. A true `never_queued`
-  closed the window on the host's own record of requests, and what follows it
-  is the free-round rule below. The poll is the landing
+  closed the window on the host's own record of requests: on the free-round
+  poll the loop proceeds to its first request, and after a request, where the
+  host has lost the request it read back, the reviewer exits `degraded:
+  never-queued`. The poll is the landing
   signal only; before triage, read the round's review body and its threads
   from the same payload. The body sits on the row the reviewer's landing rule
   admitted: `reviews.on_head[].body` under the head rule, `reviews.all[].body`
@@ -250,13 +252,10 @@ run's **first** request to any on-request reviewer, poll once for it, under
 the since rule with `open-pr`'s `created_at`, with no `--timeout`: the
 reviewer's default is sized for its transport. A round already there **is**
 round 1 and counts against `Cap:`; nothing there and the loop proceeds to its
-first request as written, and so does a poll that closed on `never_queued`:
-under the host's own request call it asks the host, once 30 s have passed since
-`created_at`, whether the reviewer has a request on record or pending, and ends
-the window on a no rather than waiting it out. A quota-out Copilot is that case
-today: the host queues it nothing, posts no notice, and shows the quota only as
-a PR-page banner no API exposes, so the first request then exits
-`never-queued`. A **refusal** there (`refused_by` non-null: Copilot
+first request as written, and so does a poll that closed on `never_queued`,
+which ends the window once the settle `poll-pr --help` states has passed with
+no request for the reviewer on the host's record. A quota-out Copilot lands
+here; its first request then exits `never-queued`. A **refusal** there (`refused_by` non-null: Copilot
 posts its quota notice as the opening review) ends this reviewer before any
 request: its exit is `degraded: blocked`, and no request is issued, because
 the quota the free round was refused on is the one every request draws from. A
@@ -272,7 +271,8 @@ nothing in hand: request, poll under the **since** rule with `request-review`'s
 `requested_at`, triage, batch-fix, push, `reply-thread` on
 every `replied: false` thread, and round the loop. A poll that comes back with
 `refused_by` non-null ends the loop at `degraded: blocked`: no re-poll, no
-further request, whatever `Cap:` has left. A round that opened threads
+further request, whatever `Cap:` has left; one with `never_queued` true ends it
+at `degraded: never-queued` the same way. A round that opened threads
 takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.
@@ -322,7 +322,7 @@ The human reads the reason and decides.
 
 | Reason | Detection |
 |---|---|
-| `never-queued` | on-request: no request event on the host's record after one retry. A quota-out Copilot reads here rather than as `blocked`: the host queues it nothing and shows the quota only as a PR-page banner, so there is no notice for `refused_by` to admit, and the free-round poll before it has already closed on `never_queued` rather than on its window. Under a comment transport there is no second request to make, because the one post is verified as it is made and a second would draw a second round: `reviewer_run.status: "none"` is the answer on the first poll, the request landed and the host started no run for it. A run whose conclusion is `skipped` says the same thing from the other side: the workflow's own `if` declined the comment, so nothing ran for the request. Do not spend a second poll window on it. |
+| `never-queued` | on-request: no request event on the host's record after one retry. A quota-out Copilot reads here rather than as `blocked`: the host queues it nothing and shows the quota only as a PR-page banner, so there is no notice for `refused_by` to admit. Under a comment transport there is no second request to make, because the one post is verified as it is made and a second would draw a second round: `reviewer_run.status: "none"` is the answer on the first poll, the request landed and the host started no run for it. A run whose conclusion is `skipped` says the same thing from the other side: the workflow's own `if` declined the comment, so nothing ran for the request. Do not spend a second poll window on it. |
 | `blocked` | a quota or rate-limit notice from the reviewer answering the request. The landing rule admits it as `refused_by` while `landed_by` stays null, because a notice-only row is not `substantive`: under the since rule a review or a PR comment at or after `--since`, under the head rule only a review on the head, since a comment is tied to no commit; a comment-only notice there shows as `reviewer_blocked` alone, and the window runs out before the exit is taken. Admitted, the poll closes the window on it at once, and the reviewer exits here without another poll or request: the refusal is the answer, and the quota does not come back inside a run. Either way the fallback, where one is configured, is what runs next. |
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. Under a comment transport it takes the run read as well: `reviewer_run` concluded `success` and no round followed it. A run that has not finished is not silence, and the poll holds the window open on it to its ceiling. |
 | `infra-error` | `reviewer_run.status` is `completed` with any conclusion but `success` or `skipped`, `cancelled` and `timed_out` among them: the run ended before it could post, and its `url` is where the human reads why. A run still unfinished in the returned `reviewer_run` says the same thing: it outlived the ceiling `poll-pr --help` states without delivering, and its `url` is where that is read. Also a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |

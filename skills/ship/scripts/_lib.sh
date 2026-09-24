@@ -127,10 +127,10 @@
 #                                           where the host records none (always, on Azure DevOps),
 #                                           the wall clock, stamped before the call.
 #   host_pr_review_queued <pr> <login> <since-iso>
-#                                        -> true | false: whether <login> has a round queued at or
-#                                           after <since>, a request event on the host's record
-#                                           then or a pending request on the PR now, under any
-#                                           name the host records it as. Non-zero and silent where
+#                                        -> true | false: true where the host records a request
+#                                           event for <login> at or after <since>, or lists it as
+#                                           a pending reviewer on the PR now, under any name the
+#                                           host records it as. Non-zero and silent where
 #                                           the host keeps no such record (always, on Azure DevOps,
 #                                           whose reviewer list carries no request time), which
 #                                           poll-pr reads as unknown and leaves the window to run.

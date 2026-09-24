@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# `_gh_queued_select`: the GitHub adapter's answer to whether a login has a
+# `host_pr_review_queued`: the GitHub adapter's answer to whether a login has a
 # round queued since an instant, over the PR's review_requested events and the
-# logins pending on it now, which is what `host_pr_review_queued` returns. A pure
-# jq transformation; no call in this file reaches a host. The shapes are #266's
-# onward: a quota-out Copilot left no event and no pending entry (#284).
+# logins pending on it now. `_gh_queued_select`, the selection, is driven as a
+# pure jq transformation; the function itself runs with the adapter's `api`
+# redefined to answer fixtures, so the Copilot alias it passes and the reads it
+# fails on are held too. No call in this file reaches a host. The shapes are
+# those observed since #266: a quota-out Copilot left no event and no pending
+# entry (#284).
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -41,5 +44,29 @@ check "a login is matched less its [bot] suffix, with no alias" true \
   "$(queued 'github-actions[bot]' '' "[$(ev github-actions 2026-09-24T17:52:00Z)]" '[]')"
 
 check "and in any case" true "$(queued "$bot" Copilot '[]' '["copilot"]')"
+
+# The function over a stubbed `api`: each read answers what its own `--jq`
+# would have printed, the timeline one event per line.
+TIMELINE='' PENDING='[]' FAIL=''
+api() {
+  case $1 in
+    */timeline) [ "$FAIL" != timeline ] || return 1; printf '%s' "$TIMELINE" ;;
+    */pulls/7)  [ "$FAIL" != pulls ] || return 1; printf '%s\n' "$PENDING" ;;
+    *) echo "unexpected api call: $*" >&2; return 1 ;;
+  esac
+}
+TIMELINE=$(ev Copilot 2026-09-24T17:51:14Z)
+check "the function passes Copilot's alias to the selection" true \
+  "$(host_pr_review_queued 7 "$bot" "$since")"
+check "and none to another login" false "$(host_pr_review_queued 7 'claude[bot]' "$since")"
+TIMELINE='' PENDING='["Copilot"]'
+check "a pending entry reaches the selection" true "$(host_pr_review_queued 7 "$bot" "$since")"
+TIMELINE='' PENDING='[]'
+check "nothing on either read is false" false "$(host_pr_review_queued 7 "$bot" "$since")"
+for FAIL in timeline pulls; do
+  out=$(host_pr_review_queued 7 "$bot" "$since"); rc=$?
+  check "a failed $FAIL read is non-zero" 1 "$rc"
+  check "and answers nothing" '' "$out"
+done
 
 finish

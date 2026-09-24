@@ -57,9 +57,18 @@ Fallback-for: None.
 EOF
 
 login='copilot-pull-request-reviewer[bot]'
-# A PR opened two minutes ago is past the settle; one opened now is not.
-old=$(jq -rn 'now - 120 | todate')
-new=$(jq -rn 'now | todate')
+# The clock poll-pr reads the settle against, held by a `date` stub: a PR opened
+# two minutes before it is past the settle, one opened at it is not.
+clock=1790000000
+mkdir -p "$work/bin"
+cat > "$work/bin/date" <<STUB
+#!/usr/bin/env bash
+[ "\$1 \$2" = "-u +%s" ] && { echo $clock; exit 0; }
+exec /usr/bin/env -i PATH=/usr/bin:/bin date "\$@"
+STUB
+chmod +x "$work/bin/date"
+at() { jq -rn --argjson t "$1" '$t | todate'; }
+old=$(at $((clock - 120))) new=$(at "$clock") posted=$(at $((clock - 60)))
 
 reset() {
   rm -f "$SHIP_FAKE"/*
@@ -72,7 +81,7 @@ reset() {
   echo null > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"
 }
 queued() { printf '%s\n' "$1" > "$SHIP_FAKE/host_pr_review_queued.1.json"; }
-poll() { ( cd "$repo" && bash "$mech" 7 "$@" ); }
+poll() { ( cd "$repo" && PATH="$work/bin:$PATH" bash "$mech" 7 "$@" ); }
 calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 
 # The free-round poll #273 made: nothing queued, and the window closes on the
@@ -104,7 +113,7 @@ check "the queued read is made once" 1 "$(calls pr_review_queued)"
 # A queued round refused with a quota notice is still `degraded: blocked`.
 reset; queued true
 notice='Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.'
-jq -cn --arg b "$notice" --arg l "$login" --arg at "$(jq -rn 'now - 60 | todate')" \
+jq -cn --arg b "$notice" --arg l "$login" --arg at "$posted" \
   '{id: "1", login: $l, state: "comment", submitted_at: $at, body: $b} as $r
    | {on_head: [$r], all: [$r], total: 1}' > "$SHIP_FAKE/host_pr_reviews.1.json"
 out=$(poll --reviewer copilot --since "$old" --interval 30); rc=$?
@@ -136,7 +145,7 @@ check "under the head rule the read is never made" 0 "$(calls pr_review_queued)"
 
 # A landed round needs no answer about the queue.
 reset; queued false
-jq -cn --arg l "$login" --arg at "$(jq -rn 'now - 60 | todate')" \
+jq -cn --arg l "$login" --arg at "$posted" \
   '{id: "2", login: $l, state: "comment", submitted_at: $at, body: "- a finding"} as $r
    | {on_head: [$r], all: [$r], total: 1}' > "$SHIP_FAKE/host_pr_reviews.1.json"
 out=$(poll --reviewer copilot --since "$old" --interval 30); rc=$?

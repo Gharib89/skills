@@ -86,11 +86,12 @@
 # showing the quota only as a banner no API reads (#284). It is read only under
 # the since rule with the host's own request transport, once `settle` seconds
 # have passed since `--since`, since the host records a request a few seconds
-# after the event behind it, and only until the host answers queued: false then,
-# for the rest of the window. A comment transport records no request event, its
-# workflow run being its signal, so it is null there, as under the head rule,
-# before the settle, and where the host could not answer, each of which leaves
-# the window to run as before. `threads` is "unavailable" when thread
+# after the event behind it, and only until the host first answers true, after
+# which `never_queued` stays false for the rest of the window. It is null under
+# the head rule, under a comment transport (which records no request event, its
+# workflow run being its signal), before the settle, and where the host could
+# not answer; null leaves the window to run as before. The clock is read with
+# `date`, so a test holds it with a stub. `threads` is "unavailable" when thread
 # state could not be read (on GitHub, GraphQL and the REST routes a refusing
 # proxy names both failed): that reviewer's exit is degraded unreachable, the
 # run proceeds.
@@ -124,7 +125,7 @@ ceiling=1800
 # before its absence is read as never queued: the ruleset's event landed within
 # 4 s of the PR's creation in every case measured on #284.
 settle=30
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s, and whose round the host has not queued ${settle}s after --since, under the host transport, closes it as never_queued] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s, and whose round the host has not queued ${settle}s after --since, under the host transport, closes the window as never_queued] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
@@ -246,7 +247,8 @@ while :; do
   # nothing refused, and no earlier pass has heard the host answer queued.
   if [ -n "$since" ] && [ "$transport" = host ] && [ "$landed" = false ] && [ "$refused_by" = null ] \
      && [ "$never_queued" != false ] \
-     && jq -en --arg s "$since" --argjson w "$settle" 'now - ($s | fromdateiso8601) >= $w' >/dev/null; then
+     && jq -en --arg s "$since" --argjson n "$(date -u +%s)" --argjson w "$settle" \
+          '$n - ($s | fromdateiso8601) >= $w' >/dev/null; then
     case $(host_pr_review_queued "$pr" "$await" "$since") in
       true) never_queued=false ;;
       false) never_queued=true ;;
