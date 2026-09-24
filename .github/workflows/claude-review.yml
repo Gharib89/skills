@@ -73,7 +73,15 @@ jobs:
                only the changed lines it returned, against (a) the brief and the
                standards it names and (b) the linked issue. Walking the changed
                files one at a time instead spends the turn budget on navigation
-               and the round dies before it posts.
+               and the round dies before it posts. A large diff comes back as the
+               path of the file it was saved to: page through that file with the
+               Read tool's offset and limit, or search it with `grep`, and review
+               all of it. To see a changed file beyond its hunks, read the PR's
+               copy with
+               `gh api 'repos/${{ github.repository }}/contents/<path>?ref=<head sha>' -H 'Accept: application/vnd.github.raw+json'`,
+               the head sha from `gh pr view ${{ github.event.issue.number }} --json headRefOid`:
+               the checkout is the default branch, so a Read there is its copy,
+               not the PR's.
 
             Report the round as ONE formal pull request review, submitted in a
             single call, with every inline finding attached to it. Build it as
@@ -128,7 +136,7 @@ jobs:
           claude_args: |
             --model opus
             --max-turns 60
-            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*),Bash(grep:*)"
 
       # The action logs `permission_denials_count` and hides which calls were
       # refused, so a round that spent turns on denied calls looks clean. This
