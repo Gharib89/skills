@@ -55,7 +55,10 @@
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
 #   host_pr_reviews <pr> <head_sha> [<full-ids-json>]
 #                                        -> {on_head:[REVIEW],all:[REVIEW],total}
-#                                           REVIEW = {id,login,state,substantive,submitted_at,body}
+#                                           REVIEW = {id,login,state,submitted_at,body}
+#                                           state: approved, changes or comment.
+#                                           Adapters send no `substantive`; poll-pr
+#                                           adds it (`SHIP_SUBSTANTIVE`).
 #                                           id: what the host knows the round by (a GitHub review,
 #                                           an Azure DevOps thread), null where it records a state
 #                                           rather than a round. poll-pr --full names ids from here.
@@ -572,7 +575,7 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
   else . end;'
 
 # The vocabulary a reviewer refuses a round in, shared by the two readers: the
-# blocked lookup, which returns the notice line, and the reviews projection,
+# blocked lookup, which returns the notice line, and `SHIP_SUBSTANTIVE` below,
 # which refuses to call such a body a round.
 #
 # The refusal VERB carries the match, not the bare noun. A round that merely
@@ -590,7 +593,6 @@ readonly SHIP_REVIEW_CLIP='def clip($id):
 #                 phrase reads as a notice. The run then waits the window out
 #                 and reports the reviewer blocked, with the body still in
 #                 `rounds[]` to read, rather than losing it.
-# shellcheck disable=SC2034  # read by the host adapters that source this library
 readonly SHIP_BLOCKED_NOTICE='def notice_re:
   "(unable|not able|cannot|could not|failed)( to)? [a-z ]{0,24}review"
   + "|(reached|exceeded|hit|out of|ran out of) [a-z ]{0,24}(quota|rate limit)"
@@ -604,11 +606,28 @@ def is_notice:
   [notice_body | splits("(?<=[.!?]) +") | select(test("\\S"))] as $sentences
   | ($sentences | length) > 0 and all($sentences[]; test(notice_re; "i"));'
 
+# Ship's grade of a review row, applied by poll-pr alone, once, to the
+# `host_pr_reviews` answer before any rule below reads it: every row in
+# `on_head` and `all` gets `substantive`, overwriting whatever an adapter sent,
+# so a notice refuses the round on every host alike (#268). A row with a body is
+# a round unless the body is only a refusal notice. A bodiless row is a round
+# only when it is a verdict, `approved` or `changes`: a GitHub approval with no
+# text, an Azure DevOps vote. A bodiless comment is a reviewer's reply to one
+# thread, which posts as a review row of its own, and counting it lands round 2
+# off round 1.
+# shellcheck disable=SC2034  # read by poll-pr
+readonly SHIP_SUBSTANTIVE="$SHIP_BLOCKED_NOTICE"'
+  def substantive:
+    if (.body // "") != "" then (.body | is_notice | not)
+    else (.state | IN("approved", "changes")) end;
+  .on_head |= map(.substantive = substantive) | .all |= map(.substantive = substantive)'
+
 # poll-pr's two landing rules over a `host_pr_reviews` projection, invoked with
 # `--arg l <normalised login>` and `--arg s <since|"">`. `$l` arrives already
 # lowercased and stripped of a `[bot]` suffix, the row side normalised here to
-# match. Only a SUBSTANTIVE row lands, which is what keeps a quota notice from
-# answering for a round that has yet to arrive (#155).
+# match. Only a SUBSTANTIVE row lands, as `SHIP_SUBSTANTIVE` graded it, which is
+# what keeps a quota notice from answering for a round that has yet to arrive
+# (#155).
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_LANDED_BY='
   def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];

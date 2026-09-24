@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# `_gh_reviews_projection` and `SHIP_LANDED_BY`: the chain that decides whether
-# a round landed. A review whose body is only a quota notice refuses the round
-# rather than delivering it, so it is `substantive: false` and neither landing
-# rule can land off it (issue #155). Pure jq over review objects; no call in
-# this file reaches a host.
+# `SHIP_SUBSTANTIVE` and `SHIP_LANDED_BY`: the chain that decides whether a
+# round landed. Ship grades every review row itself, above the host seam, so a
+# quota notice refuses the round on every host alike (#155, #268): a row with a
+# body is a round unless the body is only a refusal notice, and a row with no
+# body is a round only when it is a verdict, `approved` or `changes`. Pure jq
+# over review rows; no call in this file reaches a host.
 #
 # The cases below hold `is_notice` at both edges, because a match that is too
 # wide drops a real round (the run then waits out its whole poll window) and one
@@ -19,24 +20,39 @@ source skills/ship/scripts/host/github.sh
 notice='Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.'
 bot='copilot-pull-request-reviewer[bot]'
 
-# review <id> <sha> <at> <body>: one raw GitHub review object.
+# review <id> <sha> <at> <body> [<state>]: one raw GitHub review object.
 review() {
-  jq -n --arg id "$1" --arg sha "$2" --arg at "$3" --arg b "$4" --arg l "$bot" \
-    '{id: ($id | tonumber), user: {login: $l}, state: "COMMENTED",
+  jq -n --arg id "$1" --arg sha "$2" --arg at "$3" --arg b "$4" --arg st "${5:-COMMENTED}" --arg l "$bot" \
+    '{id: ($id | tonumber), user: {login: $l}, state: $st,
       body: $b, submitted_at: $at, commit_id: $sha}'
 }
-# project <head-sha> <review>...: the adapter's call, in isolation.
-project() { local sha=$1; shift; jq -s --arg sha "$sha" --argjson full '[]' "$_gh_reviews_projection" <<<"$*"; }
+# project <head-sha> <review>...: the adapter's call, then Ship's grading,
+# the order poll-pr applies them in.
+project() {
+  local sha=$1; shift
+  jq -s --arg sha "$sha" --argjson full '[]' "$_gh_reviews_projection" <<<"$*" | jq "$SHIP_SUBSTANTIVE"
+}
 # landed <normalised-login> <since> <projection>: poll-pr's landing rules.
 landed() { jq -r --arg l "$1" --arg s "$2" "$SHIP_LANDED_BY" <<<"$3"; }
-# substantive <body>: the flag the projection puts on a row carrying that body.
-substantive() { jq -r '.on_head[0].substantive' <<<"$(project h "$(review 1 h 2026-09-14T09:00:00Z "$1")")"; }
+# grade <body> [<state>]: the rule's answer for one row, a host-neutral one
+# carrying a `substantive` the rule must overwrite rather than read.
+grade() {
+  jq -cn --arg b "$1" --arg st "${2:-comment}" \
+    '{id: "1", login: "r", state: $st, substantive: "stale", submitted_at: null, body: $b} as $r
+     | {on_head: [$r], all: [$r], total: 1}' \
+    | jq -r "$SHIP_SUBSTANTIVE"' | [.on_head[0].substantive, .all[0].substantive] | map(tostring) | unique | join(" ")'
+}
 
 head=abc123
 notice_round=$(project $head "$(review 1 $head 2026-09-14T09:00:00Z "$notice")")
 real_round=$(project $head "$(review 2 $head 2026-09-14T09:00:00Z 'Reviewed 3 files. One finding in poll-pr.sh.')")
 
-check "a notice row is not substantive" false "$(substantive "$notice")"
+check "the GitHub adapter no longer grades its rows" false \
+  "$(jq -s --arg sha $head --argjson full '[]' "$_gh_reviews_projection" \
+       <<<"$(review 1 $head 2026-09-14T09:00:00Z "$notice")" \
+     | jq '[.on_head[], .all[]] | any(has("substantive"))')"
+
+check "a notice-only body is not substantive" false "$(grade "$notice")"
 
 check "a notice row still carries its body, so the run can see why it waited" \
   "$notice" "$(jq -r '.on_head[0].body' <<<"$notice_round")"
@@ -44,39 +60,53 @@ check "a notice row still carries its body, so the run can see why it waited" \
 check "a notice row still appears in on_head[] and all[]" \
   "1 1" "$(jq -r '[(.on_head | length), (.all | length)] | join(" ")' <<<"$notice_round")"
 
-check "a real round is unchanged" true "$(jq -r '.on_head[0].substantive' <<<"$real_round")"
+check "a real round is substantive" true "$(jq -r '.on_head[0].substantive' <<<"$real_round")"
 
-check "an empty body is still not a round" false "$(substantive '')"
+# A reviewer's reply to one thread posts as a bodiless comment row of its own:
+# counting it lands round 2 off round 1.
+check "a bodiless comment row is not substantive" false "$(grade '')"
+
+# A bodiless verdict is the reviewer's whole answer: a GitHub approval with no
+# text, or an Azure DevOps vote, which the host records as state alone.
+check "a bodiless approved row is substantive" true "$(grade '' approved)"
+check "a bodiless changes row is substantive" true "$(grade '' changes)"
+
+long=$(printf '%2000s' '' | tr ' ' x)
+check "a clipped long body is substantive" true "$(grade "$long
+...[truncated]")"
 
 # Too narrow reproduces #155: the same notice, three shapes it has arrived in.
 check "a notice wrapped across lines is still a notice" false \
-  "$(substantive 'Copilot was unable to review this pull request
+  "$(grade 'Copilot was unable to review this pull request
 because the user has reached their quota limit.')"
 
 check "a notice with a generated footer is still a notice" false \
-  "$(substantive "$notice
+  "$(grade "$notice
 <!-- generated by the reviewer -->")"
 
 check "a notice quoted and bolded is still a notice" false \
-  "$(substantive '> **Copilot was unable to review this pull request.**')"
+  "$(grade '> **Copilot was unable to review this pull request.**')"
 
 check "a notice with its next-review sentence is still a notice" false \
-  "$(substantive "$notice Next included review is in 3 days.")"
+  "$(grade "$notice Next included review is in 3 days.")"
+
+# A notice is a notice whatever verdict the host filed it under.
+check "a notice under an approved state is still a notice" false "$(grade "$notice" approved)"
 
 # Too wide drops a real round: the vocabulary must match the refusal, not the
 # bare noun, or a finding that names a quota costs the run its poll window.
 check "a one-line finding that names a quota is a round" true \
-  "$(substantive 'The retry should back off rather than burn the API quota.')"
+  "$(grade 'The retry should back off rather than burn the API quota.')"
 
 check "a one-line finding that names a rate limit is a round" true \
-  "$(substantive 'Consider backing off when the API returns a rate limit.')"
+  "$(grade 'Consider backing off when the API returns a rate limit.')"
 
-check "a multi-line round that mentions a quota is a round" true \
-  "$(substantive 'Reviewed 3 files.
+check "a body that mentions a quota among real findings is substantive" true \
+  "$(grade 'Reviewed 3 files.
 The retry should back off rather than burn the API quota.')"
 
 check "a structured round is a round" true \
-  "$(substantive '### Changes recommended
+  "$(grade '### Changes recommended
 
 Unresolved moderate findings affect docs. One finding in poll-pr.sh.')"
 
@@ -96,5 +126,9 @@ check "a real round on the same head lands past a notice row" \
   head "$(landed copilot-pull-request-reviewer '' \
     "$(project $head "$(review 1 $head 2026-09-14T09:00:00Z "$notice")" \
                       "$(review 2 $head 2026-09-14T09:30:00Z 'Reviewed 3 files. One finding.')")")"
+
+check "a GitHub bodiless approval lands" \
+  since "$(landed copilot-pull-request-reviewer 2026-09-14T08:00:00Z \
+    "$(project $head "$(review 3 $head 2026-09-14T09:00:00Z '' APPROVED)")")"
 
 finish

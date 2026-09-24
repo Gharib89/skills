@@ -422,17 +422,13 @@ host_pr_checks() { # <pr> <head_sha>
 
 # `on_head` is keyed to the current head (a review on an older commit does not
 # count), which poll-pr's default head rule reads; `all` carries every round
-# across heads, for its --since rule. `substantive` is the landing signal, and
-# two kinds of row fail it: a reviewer's reply to one thread, which posts as a
-# review row of its own (current head, empty body), and a quota or rate-limit
-# notice, which posts as a review with a non-empty body (PR #154, three times)
-# and refuses the round rather than delivering it. Counting either lands round 2
-# off round 1. Both stay in the two lists with their bodies, so the run can see
-# what it is waiting on.
-_gh_reviews_projection="$SHIP_REVIEW_CLIP$SHIP_BLOCKED_NOTICE"'
+# across heads, for its --since rule. Every review stays in the two lists with
+# its body, a reviewer's reply to one thread and a quota notice included, so the
+# run can see what it is waiting on; which of them is a round is
+# `SHIP_SUBSTANTIVE`'s grade, applied in poll-pr.
+_gh_reviews_projection="$SHIP_REVIEW_CLIP"'
     def row: . as $r | {id: (.id | tostring), login: .user.login,
       state: (if .state == "APPROVED" then "approved" elif .state == "CHANGES_REQUESTED" then "changes" else "comment" end),
-      substantive: ((.body // "") != "" and ((.body // "") | is_notice | not)),
       submitted_at, body: ((.body // "") | clip($r.id))};
     {on_head: [.[] | select(.commit_id == $sha) | row], all: [.[] | row], total: length}'
 host_pr_reviews() { # <pr> <head_sha> [<full-ids-json>]

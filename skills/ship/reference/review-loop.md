@@ -29,8 +29,9 @@ a fresh read of the committed tree, not a conversation.
 - **Poll with `poll-pr <pr> --reviewer <name>`**, `<name>` being the
   reviewer's `### <name>` heading ([mechanics.md](mechanics.md)), inline,
   bounded, foreground. It returns one JSON: head sha, mergeable, checks, the
-  reviewer's rounds with `substantive`, threads with resolved state,
-  `reviewer_blocked`, `landed_by` naming the rule that admitted the round, and
+  reviewer's rounds, each graded `substantive` by Ship rather than the host,
+  threads with resolved state, `reviewer_blocked`, `landed_by` naming the rule
+  that admitted the round, and
   `refused_by` naming the rule that admitted a refusal in its place. `done:
   false` means the window closed first: re-run to extend it, in the foreground
   again, **unless `refused_by` is non-null**. That is the reviewer's quota or
@@ -94,10 +95,12 @@ a fresh read of the committed tree, not a conversation.
   Where it reads `"unavailable"` the host refused the read itself, so it is
   evidence about the host rather than about the reviewer: that exit is
   `unreachable`.
-- **A round is a review with a body.** A reviewer's reply to one thread posts as
-  a review row of its own (current head, empty body), so answering round N
-  manufactures rows that look like round N+1 arriving. Only `substantive: true`
-  counts; hold any hand check to that bar.
+- **A round is a review with a body, or a bodiless verdict.** A reviewer's
+  reply to one thread posts as a review row of its own (current head, a
+  bodiless `comment`), so answering round N manufactures rows that look like
+  round N+1 arriving. Only `substantive: true` counts: a body that is not
+  wholly a quota or rate-limit notice, or a bodiless `approved` or `changes`
+  verdict. Hold any hand check to that bar.
 - **Triage, don't apply**, at the judgment tier, with phase 4's definition:
   harden rather than rip out capability, verify nits against the pinned
   versions, reject known non-issues with a one-line reason. The two rejection
