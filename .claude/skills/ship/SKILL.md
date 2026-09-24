@@ -46,13 +46,16 @@ in the merge summary, so every PR records which ship produced it.
 - `--unattended`: the **unattended run**, detailed in
   [reference/unattended.md](reference/unattended.md). No human is present: a
   blocked stop hands back instead of asking, the sandbox clone is the isolation,
-  and the merge gate posts the summary as a PR comment and returns. It starts
-  with `tooling --install`, because the cloud sandbox image lacks the host's
-  CLI. With no `<issue>` it runs the whole unattended lane (tooling, bootstrap,
-  PR cap, select) before the pipeline.
+  and the merge gate posts the summary as a PR comment and returns. With no
+  `<issue>` it first runs the unattended lane: prepare, PR cap, select.
 
 Without `--unattended` the run is **attended**: any needed human action stops
-and asks, and the claim holds while it waits.
+and asks, and the claim holds while it waits. **Preparation**, before `run-file
+init` in every run but the no-issue lane's inner one: `prepare` (`--unattended`
+in that lane). In a **cloud sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that
+flag, it runs `tooling --install` then the profile's `## Cloud lane`
+`Bootstrap:`, elsewhere a no-op. A `failed` step stops the run, no claim, with
+its tail: `tooling` as `host-unreachable`, `bootstrap` as `bootstrap-failed`.
 
 ## Compose, don't reinline
 
@@ -284,8 +287,7 @@ merge. On approval run `merge <pr> <issue|none> [--worktree <path>]` then
 reporting done. Unattended: `comment-pr <pr> --body-file` with the summary, and
 return. The claim holds in both lanes until the merge releases it.
 **Done when:** attended, `merge` and `cleanup` answered with no `false` in their
-JSON; unattended, `comment-pr` posted the summary and the run returned the PR
-link.
+JSON; unattended, `comment-pr` posted the summary and the run returned the PR link.
 
 ## The stops
 
@@ -317,7 +319,7 @@ hold around that:
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
 | The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you rebase; unattended: hand back |
 | The PR is closed at the merge gate | `pr-closed: <state>` | attended: ask; unattended: hand back |
-| Cloud-lane `Bootstrap:` failed | `bootstrap-failed` | no claim |
+| `prepare` failed its Cloud lane `Bootstrap:` | `bootstrap-failed` | no claim |
 | Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | no claim |
 | No issue passes selection | `nothing-ready` | no claim |
 | The host's blocker query exists and failed | `blockers-unavailable` | no claim |
