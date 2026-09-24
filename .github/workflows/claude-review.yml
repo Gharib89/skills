@@ -76,23 +76,38 @@ jobs:
                and the round dies before it posts.
 
             Report the round as ONE formal pull request review, submitted in a
-            single call, with every inline finding attached to it. Build it as one
-            command beginning with `gh api`, the JSON arriving by heredoc:
+            single call, with every inline finding attached to it. Build it as
+            one `gh api` command whose every field is a typed `-F` flag:
 
                 gh api --method POST \
                   repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}/reviews \
-                  --input - <<'JSON'
-                {"event": "COMMENT",
-                 "body": "<the round's text, or exactly `no findings`>",
-                 "comments": [{"path": "<file>", "line": <line in the new file>,
-                               "side": "RIGHT", "body": "<one finding>"}]}
-                JSON
+                  -F event=COMMENT \
+                  -F 'body=<text of the round, or exactly no findings>' \
+                  -F 'comments[][path]=<file>' \
+                  -F 'comments[][line]=<line in the new file>' \
+                  -F 'comments[][side]=RIGHT' \
+                  -F 'comments[][body]=<one finding>'
 
-            No other shape of that call works. `--allowedTools` below grants
-            `Bash(gh api:*)`, which matches a command that starts with `gh api`
-            and nothing else. Piping from `echo` makes `echo` the command, the
-            call is refused, and a refused call is a round that stops before
-            the PR.
+            Repeat the four `comments[][...]` flags, in that order, once per
+            finding; each new `path` starts the next comment. Single-quote every
+            value (an apostrophe inside one is written '\'' ). Four traps:
+
+            - Use `-F` for every field, never `-f`: gh sends every `-f` field
+              ahead of every `-F` one, so mixing them detaches a `line` from its
+              comment.
+            - A value starting with `@` is read as a file path. Never start one
+              with `@`.
+            - `{owner}`, `{repo}` and `{branch}` in a value are filled in from the
+              checkout. Name a placeholder in words rather than quoting it.
+            - A value of exactly `true`, `false`, `null` or an integer becomes
+              that JSON type, which is what makes `line` an integer.
+
+            Do not send the review as JSON on stdin: Claude Code's Bash check
+            refuses a heredoc of JSON before `--allowedTools` is read.
+            `--allowedTools` below grants `Bash(gh api:*)`, which matches a
+            command that starts with `gh api` and nothing else, so piping from
+            `echo` makes `echo` the command and is refused too. A refused call
+            is a round that stops before the PR.
 
             One entry in `comments` per finding tied to a line, each naming the rule
             or issue requirement broken and the concrete fix. A finding you cannot
@@ -103,14 +118,36 @@ jobs:
             Submit exactly one review, even when you found nothing: a fallback
             reviewer that stays silent on a clean PR cannot be told apart from one
             that failed, and the run waits out its whole poll window either way. With
-            nothing actionable, send `body` of exactly `no findings` and an empty
-            `comments` list. Open `body` with the findings: the run reads its
+            nothing actionable, send `body` of exactly `no findings` and no
+            `comments` flags. Open `body` with the findings: the run reads its
             first 2000 characters, and a summary of the diff or praise ahead of
             them pushes them past that cut.
           claude_args: |
             --model opus
             --max-turns 60
             --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(head:*),Bash(tail:*),Bash(wc:*)"
+
+      # The action logs `permission_denials_count` and hides which calls were
+      # refused, so a round that spent turns on denied calls looks clean. This
+      # names each one in the run log, which REST can read, and warns once with
+      # the count. The input is model-written and can quote PR text: the
+      # `denied: ` prefix keeps a line from starting a `::` command, and every
+      # `#` is written as its JSON escape because the runner also honours a
+      # `##[` command anywhere in a line.
+      - if: always() && steps.review.outputs.execution_file != ''
+        env:
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+        run: |
+          set -uo pipefail
+          [ -f "$EXECUTION_FILE" ] || exit 0
+          denials="$(jq -rs 'flatten | map(select(.type == "result")) | last
+                             | .permission_denials // [] | .[]
+                             | "\(.tool_name) \(.tool_input | tojson | .[0:300])"
+                             | gsub("#"; "\\u0023")' "$EXECUTION_FILE" 2>/dev/null || true)"
+          [ -n "$denials" ] || exit 0
+          n=$(printf '%s\n' "$denials" | wc -l)
+          printf '%s\n' "$denials" | sed 's/^/denied: /'
+          echo "::warning title=claude-review::$n tool call(s) denied; this step's log names each on a denied: line"
 
       # A failed round otherwise leaves nothing on the PR: no review, no comment.
       # Ship grades it from the run read either way: the profile block driving
