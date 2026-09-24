@@ -152,7 +152,8 @@ api() {
 # substitutions, whose subshells lose a variable, so the memory is a marker
 # directory named for this user and this process's pid ($$ is the parent's in
 # every subshell); `mkdir` creates it without following a link planted at that
-# path. It is made only where the proxy refused, which is a disposable sandbox,
+# path, and only a real directory this user owns counts as the marker, since the
+# name is predictable and a shared /tmp lets another user plant one. It is made only where the proxy refused, which is a disposable sandbox,
 # so it is left there rather than cleaned up by a trap that would replace the
 # mechanic's own.
 # Switching on the host's answer rather than on the environment keeps the
@@ -160,14 +161,15 @@ api() {
 # refusal, so it never makes a `ccr` call.
 _gh_gql_marker() { printf '%s/ship-gh-graphql-refused.%s.%s' "${TMPDIR:-/tmp}" "${UID:-0}" "$$"; }
 gql() {
-  local err rc attempt
-  [ -d "$(_gh_gql_marker)" ] && return 3
+  local err rc attempt m
+  m=$(_gh_gql_marker)
+  [ -d "$m" ] && [ ! -L "$m" ] && [ -O "$m" ] && return 3
   for attempt in 1 2; do
     # stderr into $err, stdout on to the caller, through fd 3.
     { err=$(gh api graphql "$@" 2>&1 1>&3 3>&-); rc=$?; } 3>&1
     [ "$rc" -eq 0 ] && return 0
     case $err in *ccr/review_threads*)
-      mkdir "$(_gh_gql_marker)" 2>/dev/null
+      mkdir "$m" 2>/dev/null
       echo "GraphQL refused by the session proxy; review threads go through its REST routes" >&2
       return 3 ;;
     esac

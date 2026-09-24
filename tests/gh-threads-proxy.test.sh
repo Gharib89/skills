@@ -180,6 +180,17 @@ check_rc "a refusal on the retry still takes the ccr route" 0 "$rc"
 check "with the same rows" "$rows" "$(norm <<<"$out")"
 check "and is remembered" 1 "$(markers)"
 
+# A link planted at the marker's predictable path is not the marker: the run
+# still asks GraphQL, which answers, and makes no ccr call.
+reset
+mkdir "$work/elsewhere"
+ln -s "$work/elsewhere" "$TMPDIR/ship-gh-graphql-refused.${UID:-0}.$$"
+out=$(host_pr_threads 7); rc=$?
+check_rc "a planted link leaves GraphQL in charge" 0 "$rc"
+check "and it is asked" 1 "$(calls_matching graphql)"
+check "and no ccr call is made" 0 "$(calls_matching ccr)"
+rm -f "$TMPDIR/ship-gh-graphql-refused.${UID:-0}.$$"
+
 # Both paths failing is what `threads: "unavailable"` now means.
 reset refused; : > "$FAKE/ccr-fail"
 out=$(host_pr_threads 7 2>/dev/null); rc=$?
