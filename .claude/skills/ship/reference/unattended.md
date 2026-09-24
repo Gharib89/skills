@@ -31,9 +31,10 @@ adapter knows what that is and how it installs (GitHub: `apt-get install -y
 gh`, the one route the sandbox proxy passes). Core in every repo, which is why
 it sits in a mechanic rather than on a profile `Bootstrap:` line. Its second is
 the profile's `## Cloud lane` `Bootstrap:`. An attended run inside a cloud
-sandbox runs the same `prepare`; a failed step stops it the same way. Read the token through preflight's `user` and
-repo reads, which are the proof; `gh auth status` reports the working token as
-invalid behind the sandbox proxy.
+sandbox runs the same `prepare`; a failed step stops it under the same stop
+word and asks, with the failing step's tail. Read the token through
+preflight's `user` and repo reads, which are the proof; `gh auth status`
+reports the working token as invalid behind the sandbox proxy.
 
 Two sandbox facts the run meets and neither is a failure. The proxy refuses
 GitHub GraphQL, where review-thread state lives, and names REST routes in its

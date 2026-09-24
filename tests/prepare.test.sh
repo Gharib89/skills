@@ -18,7 +18,7 @@ git -C "$repo" remote add origin https://github.com/owner/repo.git
 export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 
 printf '#!/usr/bin/env bash\necho bootstrap >> "$SHIP_FAKE/calls"\necho installed\n' > "$repo/scripts/boot.sh"
-printf '#!/usr/bin/env bash\necho bootstrap >> "$SHIP_FAKE/calls"\necho apt refused; exit 3\n' > "$repo/scripts/boot-fail.sh"
+printf '#!/usr/bin/env bash\necho bootstrap-fail >> "$SHIP_FAKE/calls"\necho apt refused; exit 3\n' > "$repo/scripts/boot-fail.sh"
 chmod +x "$repo/scripts/boot.sh" "$repo/scripts/boot-fail.sh"
 
 profile() { # <bootstrap value>
