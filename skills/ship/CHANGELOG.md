@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.5.0 (2026-09-24)
+
+### Features
+
+- **ship**: An attended run in a cloud sandbox prepares it as an unattended run does
+  ([#263](https://github.com/Gharib89/skills/pull/263),
+  [`2101eae`](https://github.com/Gharib89/skills/commit/2101eae4be28ca49caa65dc32e47dcc817a734c4))
+
+
 ## v8.4.4 (2026-09-24)
 
 ### Bug Fixes
