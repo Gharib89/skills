@@ -30,7 +30,8 @@ a fresh read of the committed tree, not a conversation.
   reviewer's `### <name>` heading ([mechanics.md](mechanics.md)), inline,
   bounded, foreground. It returns one JSON: head sha, mergeable, checks, the
   reviewer's rounds, each graded `substantive` by Ship rather than the host,
-  threads with resolved state, `reviewer_blocked`, `landed_by` naming the rule that admitted the round, and
+  threads with resolved state, `reviewer_blocked`, `landed_by` naming the rule
+  that admitted the round, and
   `refused_by` naming the rule that admitted a refusal in its place. `done:
   false` means the window closed first: re-run to extend it, in the foreground
   again, **unless `refused_by` is non-null**. That is the reviewer's quota or
