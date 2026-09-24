@@ -212,9 +212,10 @@ _latest_iteration() {
 _comment_login='(.author | if (.uniqueName // "") != "" then .uniqueName else .displayName end)'
 _author_login='(.comments[0] | '"$_comment_login"')'
 # Votes are the review rows; a reviewer that only opened threads on the latest
-# iteration counts as a comment review on the head, graded by poll-pr. `on_head` is
-# what poll-pr's default head rule reads; `all` carries every round across
-# iterations, for its --since rule.
+# iteration counts as a comment review on the head. `on_head` is what poll-pr's
+# default head rule reads; `all` carries every round across iterations, for its
+# --since rule. Which rows are rounds is `SHIP_SUBSTANTIVE`'s grade, applied in
+# poll-pr.
 #
 # A vote has no timestamp anywhere in the API, so its submitted_at is null: a
 # vote is the reviewer's current state, not a timed event, and it cannot answer
