@@ -562,6 +562,36 @@ host_workflow_runs() { # <workflow-file> <since-iso>
   return $rc
 }
 
+# The PR's review_requested events, oldest first, as {login, created_at}.
+_gh_requested_events() { # <pr>
+  api "$R/issues/$1/timeline" --paginate \
+    --jq '.[] | select(.event == "review_requested") | select(.requested_reviewer.login) | {login: .requested_reviewer.login, created_at}' \
+    | jq -s .
+}
+
+# Whether a round is queued for the login since <since>: over $e, the PR's
+# review_requested events, and $p, the logins pending on it now. A reviewer is
+# matched under any name it is recorded as, the way `host_pr_request_review`
+# matches it: the login less a `[bot]` suffix, or its alias ($alias, Copilot).
+# An event before <since> answered an earlier request and counts for nothing.
+# The pending list counts whatever its age, since a reviewer drops off it once
+# it submits: one still on it has a round queued and unposted.
+_gh_queued_select='def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+  [$l, $alias | select(. != "") | norm] as $names
+  | any(($e[] | select(.created_at >= $s) | .login), $p[] | norm; . as $r | $names | index($r) != null)'
+
+# A quota-out Copilot leaves no trace but a PR-page banner no API exposes: from
+# #266 on, its ruleset queued no request event for it and posted no notice, so
+# the host's own record of requests is the only thing that tells a free round
+# still coming from one that never will (#284).
+host_pr_review_queued() { # <pr> <login> <since-iso>
+  local e p alias=
+  [ "$2" = "$(host_copilot_login)" ] && alias=$_gh_copilot_recorded
+  e=$(_gh_requested_events "$1") || return 1
+  p=$(api "$R/pulls/$1" --jq '[.requested_reviewers[].login]') || return 1
+  jq -n --argjson e "$e" --argjson p "$p" --arg l "$2" --arg alias "$alias" --arg s "$3" "$_gh_queued_select"
+}
+
 # Request, then read the request back off the host's own record: the login you
 # request and the login you read back can differ (Copilot is requested as
 # copilot-pull-request-reviewer[bot] and recorded as `Copilot`, the
@@ -570,18 +600,13 @@ host_workflow_runs() { # <workflow-file> <since-iso>
 host_pr_request_review() { # <pr> <login>
   local pr=$1 login=$2 ok=false before after pending readback now alias=
   [ "$login" = "$(host_copilot_login)" ] && alias=$_gh_copilot_recorded
-  _requested_events() {
-    api "$R/issues/$pr/timeline" --paginate \
-      --jq '.[] | select(.event == "review_requested") | select(.requested_reviewer.login) | {login: .requested_reviewer.login, created_at}' \
-      | jq -s .
-  }
-  before=$(_requested_events) || before='[]'
+  before=$(_gh_requested_events "$pr") || before='[]'
   # Stamped before the POST, so a review submitted the instant the request lands
   # is still at-or-after the fallback requested_at.
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   api -X POST "$R/pulls/$pr/requested_reviewers" -f "reviewers[]=$login" >/dev/null && ok=true
   sleep 2
-  after=$(_requested_events) || after='[]'
+  after=$(_gh_requested_events "$pr") || after='[]'
   pending=$(api "$R/pulls/$pr" --jq '.requested_reviewers[].login' | jq -R . | jq -s .)
   readback=$( { jq -r '.[]' <<<"$pending"; jq -r '.[].login' <<<"$after"; } | jq -R . | jq -s 'unique')
   # The request landed if the timeline gained a review_requested event during

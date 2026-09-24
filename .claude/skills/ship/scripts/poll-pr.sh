@@ -76,7 +76,21 @@
 # round follows it, and the window closes on it at once with done=false, which
 # the review loop reads as `degraded: blocked` and requests nothing more. A
 # notice the rule does not admit, an older request's or a comment under the head
-# rule, leaves the window to run as before. `threads` is "unavailable" when thread
+# rule, leaves the window to run as before.
+#
+# `never_queued` is true where the host has no round queued for the awaited
+# login since `--since`: no request event on its record at or after that instant
+# and no pending request on the PR (`host_pr_review_queued`). The window closes
+# on it at once with done=false, the way it does on a refusal: nothing is coming
+# to wait for. A quota-out Copilot is this case, the host queuing it nothing and
+# showing the quota only as a banner no API reads (#284). It is read only under
+# the since rule with the host's own request transport, once `settle` seconds
+# have passed since `--since`, since the host records a request a few seconds
+# after the event behind it, and only until the host answers queued: false then,
+# for the rest of the window. A comment transport records no request event, its
+# workflow run being its signal, so it is null there, as under the head rule,
+# before the settle, and where the host could not answer, each of which leaves
+# the window to run as before. `threads` is "unavailable" when thread
 # state could not be read (on GitHub, GraphQL and the REST routes a refusing
 # proxy names both failed): that reviewer's exit is degraded unreachable, the
 # run proceeds.
@@ -96,16 +110,21 @@
 # cannot promise is the reviewer's alone. The full shape stays the default.
 #
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
-#          threads, reviewer, reviewer_blocked, reviewer_run, landed_by, refused_by, done, waited_s}
-#   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, reviewer_blocked, reviewer_run,
-#             rounds[], threads}
+#          threads, reviewer, reviewer_blocked, reviewer_run, landed_by, refused_by, never_queued,
+#          done, waited_s}
+#   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, never_queued, reviewer_blocked,
+#             reviewer_run, rounds[], threads}
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
+# How long after --since the host has to record the request behind a round
+# before its absence is read as never queued: the ruleset's event landed within
+# 4 s of the PR's creation in every case measured on #284.
+settle=30
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s, and whose round the host has not queued ${settle}s after --since, under the host transport, closes it as never_queued] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
@@ -151,7 +170,7 @@ if [ -n "$since" ]; then
 fi
 # The reviewer is derived from the profile before any host is reached, so a
 # mistyped name or a --since the landing rule refuses costs no host call.
-reviewer=null; await=""; await_run=""
+reviewer=null; await=""; await_run=""; transport=""
 if [ -n "$name" ]; then
   row=$(ship_reviewer_by_name "$name") || ship_tooling "$row"
   d=$(ship_reviewer_derive "$row" "$since")
@@ -160,6 +179,7 @@ if [ -n "$name" ]; then
   await=$(jq -r '.login // empty' <<<"$d")
   [ -n "$await" ] || ship_tooling "$name has no Login: to await"
   await_run=$(jq -r '.await_run // empty' <<<"$d")
+  transport=$(jq -r '.transport' <<<"$d")
   [ -n "$timeout" ] || timeout=$(jq -r .timeout <<<"$d")
   reviewer=$(jq -c --arg t "$timeout" '{name, login, rule, await_run, timeout: ($t | tonumber? // $t)}' <<<"$d")
 fi
@@ -175,6 +195,7 @@ if $brief; then
 fi
 
 norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/\[bot\]$//'; }
+never_queued=null
 start=$SECONDS
 while :; do
   prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
@@ -221,6 +242,16 @@ while :; do
       fi
     fi
   fi
+  # Asked only while the answer could still close the window: nothing landed,
+  # nothing refused, and no earlier pass has heard the host answer queued.
+  if [ -n "$since" ] && [ "$transport" = host ] && [ "$landed" = false ] && [ "$refused_by" = null ] \
+     && [ "$never_queued" != false ] \
+     && jq -en --arg s "$since" --argjson w "$settle" 'now - ($s | fromdateiso8601) >= $w' >/dev/null; then
+    case $(host_pr_review_queued "$pr" "$await" "$since") in
+      true) never_queued=false ;;
+      false) never_queued=true ;;
+    esac
+  fi
   done=false
   if [ "$mergeable" = conflict ]; then done=true
   elif [ "$pending" -eq 0 ] && [ "$landed" = true ]; then done=true
@@ -235,6 +266,8 @@ while :; do
      && [ "$(jq -r '.conclusion // ""' <<<"$reviewer_run")" != success ]; then dead_run=true; fi
   # A refused round ends the window the same way, and for the same reason.
   [ "$refused_by" = null ] || dead_run=true
+  # So does a round the host never queued: no request, so no round to wait for.
+  [ "$never_queued" != true ] || dead_run=true
   # The run outranks the constant: a round still being written is not a silent
   # reviewer, and the ceiling is what keeps that from being unbounded.
   if ! $done && ! $dead_run && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
@@ -254,9 +287,9 @@ while :; do
   if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
     out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
       --argjson t "$threads" --argjson rv "$reviewer" --argjson b "$blocked" --argjson rr "$reviewer_run" \
-      --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson d "$done" --argjson w "$waited" \
+      --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson nq "$never_queued" --argjson d "$done" --argjson w "$waited" \
       '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer: $rv, reviewer_blocked: ($b.line? // null),
-        reviewer_run: $rr, landed_by: $lb, refused_by: $rf, done: $d, waited_s: $w}')
+        reviewer_run: $rr, landed_by: $lb, refused_by: $rf, never_queued: $nq, done: $d, waited_s: $w}')
     if $brief; then
       key=on_head; [ -z "$since" ] || key=all
       ship_brief "$out" "$me" "$key" "$full"

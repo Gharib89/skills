@@ -68,8 +68,8 @@ for _fn in host_tooling_reasons host_tooling_install host_identity host_can_push
   host_issue_remove_label host_issue_comment host_issue_close host_issue_create \
   host_issues_open host_issues_ready \
   host_pr_create host_pr_get host_pr_for_branch host_pr_checks host_pr_reviews \
-  host_pr_threads host_pr_reviewer_blocked host_workflow_runs host_pr_request_review \
-  host_pr_comment host_pr_set_body host_pr_set_title host_pr_reply_thread \
+  host_pr_threads host_pr_reviewer_blocked host_workflow_runs host_pr_review_queued \
+  host_pr_request_review host_pr_comment host_pr_set_body host_pr_set_title host_pr_reply_thread \
   host_pr_resolve_thread host_pr_merge host_prs_open; do
   eval "$_fn() { _host_fake $_fn \"\$@\"; }"
 done

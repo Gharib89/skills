@@ -126,6 +126,14 @@
 #                                           requested_at: ISO-8601 time of the request event, or,
 #                                           where the host records none (always, on Azure DevOps),
 #                                           the wall clock, stamped before the call.
+#   host_pr_review_queued <pr> <login> <since-iso>
+#                                        -> true | false: whether <login> has a round queued at or
+#                                           after <since>, a request event on the host's record
+#                                           then or a pending request on the PR now, under any
+#                                           name the host records it as. Non-zero and silent where
+#                                           the host keeps no such record (always, on Azure DevOps,
+#                                           whose reviewer list carries no request time), which
+#                                           poll-pr reads as unknown and leaves the window to run.
 #   host_pr_comment <pr> <body-file>     -> {id,url,created_at}
 #                                           (fails with {status})
 #                                           id: the comment's id on GitHub, the thread's id on
@@ -1103,7 +1111,7 @@ ship_brief() {
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
     def lead: [splits("\n") | select(test("^[ \t]*$") | not)] | (.[0] // "") | clip;
     (.reviewer.login // "") as $await
-    | {head_sha, mergeable, reviewer, landed_by, refused_by, reviewer_blocked, reviewer_run,
+    | {head_sha, mergeable, reviewer, landed_by, refused_by, never_queued, reviewer_blocked, reviewer_run,
      rounds: [.reviews[$key][] | select((mine | not) and awaited($await)) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index($r.id | tostring)) then $r.body
