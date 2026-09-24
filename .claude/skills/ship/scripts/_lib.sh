@@ -26,8 +26,8 @@
 #   host_tooling_install                 -> install the host CLI where absent; non-zero = could not
 #   host_identity                        -> the login the claim is written as
 #                                           (fails with {status}, which reaches a verdict only through
-#                                           the writes that open with this read, host_pr_comment on
-#                                           GitHub and host_pr_reply_thread on both hosts)
+#                                           the GitHub writes that open with this read,
+#                                           host_pr_comment and host_pr_reply_thread)
 #   host_can_push                        -> true | false on GitHub; always unknown on Azure
 #                                           DevOps, which has no cheap push probe
 #   host_copilot_login                   -> the login `copilot_code_review` governs, or
@@ -70,8 +70,8 @@
 #                                        -> {on_head:[REVIEW],all:[REVIEW],total}
 #                                           REVIEW = {id,login,state,submitted_at,body}
 #                                           state: approved, changes or comment.
-#                                           vote: an Azure DevOps reviewer vote, a state rather
-#                                           than a written, timed round; its row carries id null,
+#                                           An Azure DevOps reviewer vote is a state rather than a
+#                                           written, timed round, so a vote's row carries id null,
 #                                           body "" and submitted_at null.
 #                                           Adapters send no `substantive`; poll-pr
 #                                           adds it (`SHIP_SUBSTANTIVE`).
