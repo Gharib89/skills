@@ -562,32 +562,60 @@ host_workflow_runs() { # <workflow-file> <since-iso>
   return $rc
 }
 
+# The PR's review_requested events, oldest first, as {login, created_at}.
+_gh_requested_events() { # <pr>
+  api "$R/issues/$1/timeline" --paginate \
+    --jq '.[] | select(.event == "review_requested") | select(.requested_reviewer.login) | {login: .requested_reviewer.login, created_at}' \
+    | jq -s .
+}
+
+# The alias GitHub records <login> under, or nothing where it has none.
+_gh_alias() { [ "$1" = "$(host_copilot_login)" ] && printf '%s' "$_gh_copilot_recorded"; return 0; }
+# `recorded`: whether the name in hand is one GitHub records the reviewer under,
+# given $l, its login, and $alias from `_gh_alias`: the login less a `[bot]`
+# suffix (github-actions[bot] reads back as github-actions), or the alias
+# (Copilot), in any case.
+_gh_recorded_def='def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+  def recorded: norm as $r | [$l, $alias | select(. != "") | norm] | index($r) != null;'
+
+# Whether a round is queued for the login since <since>: over $e, the PR's
+# review_requested events, and $p, the logins pending on it now. An event before
+# <since> answered an earlier request and counts for nothing. The pending list
+# counts whatever its age, since a reviewer drops off it once it submits: one
+# still on it has a round queued and unposted.
+_gh_queued_select="$_gh_recorded_def"'
+  any(($e[] | select(.created_at >= $s) | .login), $p[]; recorded)'
+
+# A quota-out Copilot leaves no trace but a PR-page banner no API exposes: in
+# every run observed since #266, its ruleset queued no request event for it and
+# posted no notice, so the host's own record of requests is the only thing that
+# tells a free round still coming from one that never will (#284).
+host_pr_review_queued() { # <pr> <login> <since-iso>
+  local e p
+  e=$(_gh_requested_events "$1") || return 1
+  p=$(api "$R/pulls/$1" --jq '[.requested_reviewers[].login]') || return 1
+  jq -n --argjson e "$e" --argjson p "$p" --arg l "$2" --arg alias "$(_gh_alias "$2")" --arg s "$3" "$_gh_queued_select"
+}
+
 # Request, then read the request back off the host's own record: the login you
 # request and the login you read back can differ (Copilot is requested as
 # copilot-pull-request-reviewer[bot] and recorded as `Copilot`, the
 # `_gh_copilot_recorded` alias above),
 # and an empty requested_reviewers list proves nothing once the bot has posted.
 host_pr_request_review() { # <pr> <login>
-  local pr=$1 login=$2 ok=false before after pending readback now alias=
-  [ "$login" = "$(host_copilot_login)" ] && alias=$_gh_copilot_recorded
-  _requested_events() {
-    api "$R/issues/$pr/timeline" --paginate \
-      --jq '.[] | select(.event == "review_requested") | select(.requested_reviewer.login) | {login: .requested_reviewer.login, created_at}' \
-      | jq -s .
-  }
-  before=$(_requested_events) || before='[]'
+  local pr=$1 login=$2 ok=false before after pending readback now
+  before=$(_gh_requested_events "$pr") || before='[]'
   # Stamped before the POST, so a review submitted the instant the request lands
   # is still at-or-after the fallback requested_at.
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   api -X POST "$R/pulls/$pr/requested_reviewers" -f "reviewers[]=$login" >/dev/null && ok=true
   sleep 2
-  after=$(_requested_events) || after='[]'
+  after=$(_gh_requested_events "$pr") || after='[]'
   pending=$(api "$R/pulls/$pr" --jq '.requested_reviewers[].login' | jq -R . | jq -s .)
   readback=$( { jq -r '.[]' <<<"$pending"; jq -r '.[].login' <<<"$after"; } | jq -R . | jq -s 'unique')
   # The request landed if the timeline gained a review_requested event during
   # this call, or if the reviewer is pending on `requested_reviewers` now under
-  # any name it is recorded as: its login less a `[bot]` suffix
-  # (github-actions[bot] reads back as github-actions), or its alias (Copilot).
+  # any name it is recorded as (`recorded`).
   # The timeline can lag the wait above, so the pending list alone must be
   # enough, or a landed request reads as never-queued. The match reads the
   # pending list and not the timeline's logins, which keep every earlier
@@ -597,11 +625,9 @@ host_pr_request_review() { # <pr> <login>
   # lands after this call's `requested_at` and is what the caller waits for:
   # already pending counts as landed. The timeline is chronological, so a new
   # event is the last one.
-  jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson p "$pending" --argjson rb "$readback" --arg l "$login" --arg alias "$alias" --arg now "$now" \
-    'def norm: ascii_downcase | sub("\\[bot\\]$"; "");
-     [$l, $alias | select(. != "") | norm] as $names
-     | {requested: ($ok and (($a | length) > ($b | length)
-                          or any($p[] | norm; . as $r | $names | index($r) != null))),
+  jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson p "$pending" --argjson rb "$readback" --arg l "$login" --arg alias "$(_gh_alias "$login")" --arg now "$now" \
+    "$_gh_recorded_def"'
+     {requested: ($ok and (($a | length) > ($b | length) or any($p[]; recorded))),
       readback: $rb,
       requested_at: (if ($a | length) > ($b | length) then ($a[-1].created_at // $now) else $now end)}'
 }
