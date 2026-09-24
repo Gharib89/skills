@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] && cd \"$CLAUDE_PROJECT_DIR\" && { scripts/cloud-ship-bootstrap.sh; .claude/skills/ship/scripts/tooling.sh --install; } >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

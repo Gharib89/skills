@@ -76,6 +76,10 @@ _Avoid_: local run, interactive mode
 A Ship run a cloud routine invoked through `cloud-ship`. Admits `ready-for-agent` issues only; a blocked stop hands back.
 _Avoid_: cloud run, headless, autopilot
 
+**Cloud sandbox**:
+The container any cloud session runs in, attended or unattended, reaching hosts only through the session proxy. Its image, network policy and refusals (GitHub GraphQL among them) are facts Ship adapts to, not settings a repo owns. The lane decides which issues a run admits; the sandbox decides what the run must prepare before it can work.
+_Avoid_: cloud env, default env, container
+
 **Merge gate**:
 The hard stop at the end of a Ship run where a human reads the summary and says merge or not. Ship merges on that word alone, and never on its own.
 _Avoid_: approval, sign-off, review
