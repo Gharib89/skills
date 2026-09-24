@@ -81,7 +81,7 @@ jobs:
 
                 gh api --method POST \
                   repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}/reviews \
-                  -F event=COMMENT \
+                  -F 'event=COMMENT' \
                   -F 'body=<text of the round, or exactly no findings>' \
                   -F 'comments[][path]=<file>' \
                   -F 'comments[][line]=<line in the new file>' \
@@ -90,24 +90,27 @@ jobs:
 
             Repeat the four `comments[][...]` flags, in that order, once per
             finding; each new `path` starts the next comment. Single-quote every
-            value (an apostrophe inside one is written '\'' ). Four traps:
+            value, writing an apostrophe inside one as '\''. Four traps:
 
             - Use `-F` for every field, never `-f`: gh sends every `-f` field
               ahead of every `-F` one, so mixing them detaches a `line` from its
               comment.
-            - A value starting with `@` is read as a file path. Never start one
-              with `@`.
-            - `{owner}`, `{repo}` and `{branch}` in a value are filled in from the
-              checkout. Name a placeholder in words rather than quoting it.
-            - A value of exactly `true`, `false`, `null` or an integer becomes
-              that JSON type, which is what makes `line` an integer.
+            - A value starting with `@` is read as a file path, so open each
+              value with a word: `the @types/node bump ...`, not
+              `@types/node bump ...`.
+            - gh fills in `{owner}`, `{repo}` and `{branch}` anywhere in a value,
+              so a finding quoting code that contains one writes it without the
+              braces (`repos/OWNER/REPO/pulls`).
+            - A value of exactly `true`, `false`, `null` or an integer is sent as
+              that JSON type: that is what makes `line` an integer, and a `body`
+              that is only a number or one of those words needs a word added.
 
-            Do not send the review as JSON on stdin: Claude Code's Bash check
-            refuses a heredoc of JSON before `--allowedTools` is read.
-            `--allowedTools` below grants `Bash(gh api:*)`, which matches a
-            command that starts with `gh api` and nothing else, so piping from
-            `echo` makes `echo` the command and is refused too. A refused call
-            is a round that stops before the PR.
+            The `-F` flags are the whole call: one command that starts with
+            `gh api` and reads nothing from stdin. That is the shape both gates
+            admit: Claude Code's Bash check refuses a heredoc of JSON before
+            `--allowedTools` is read, and `Bash(gh api:*)` below matches only a
+            command that starts with `gh api`, so piping from `echo` is refused
+            too. A refused call is a round that stops before the PR.
 
             One entry in `comments` per finding tied to a line, each naming the rule
             or issue requirement broken and the concrete fix. A finding you cannot
@@ -134,16 +137,20 @@ jobs:
       # `denied: ` prefix keeps a line from starting a `::` command, and every
       # `#` is written as its JSON escape because the runner also honours a
       # `##[` command anywhere in a line.
-      - if: always() && steps.review.outputs.execution_file != ''
+      - name: Name the denied tool calls
+        if: always() && steps.review.outputs.execution_file != ''
         env:
           EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
         run: |
           set -uo pipefail
           [ -f "$EXECUTION_FILE" ] || exit 0
-          denials="$(jq -rs 'flatten | map(select(.type == "result")) | last
-                             | .permission_denials // [] | .[]
-                             | "\(.tool_name) \(.tool_input | tojson | .[0:300])"
-                             | gsub("#"; "\\u0023")' "$EXECUTION_FILE" 2>/dev/null || true)"
+          if ! denials="$(jq -rs 'flatten | map(select(.type == "result")) | last
+                                 | .permission_denials // [] | .[]
+                                 | "\(.tool_name) \(.tool_input | tojson | .[0:300])"
+                                 | gsub("#"; "\\u0023")' "$EXECUTION_FILE")"; then
+            echo "::warning title=claude-review::the denied tool calls could not be read from the execution file"
+            exit 0
+          fi
           [ -n "$denials" ] || exit 0
           n=$(printf '%s\n' "$denials" | wc -l)
           printf '%s\n' "$denials" | sed 's/^/denied: /'
