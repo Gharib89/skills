@@ -24,6 +24,9 @@ scripts=$PWD/skills/ship/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo
 export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
+# preflight's existing-branch check runs `git ls-remote origin`; refusing every
+# transport but file keeps it off the network and off git's credential helper.
+export GIT_ALLOW_PROTOCOL=file
 mkdir -p "$repo" "$SHIP_FAKE"
 git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
