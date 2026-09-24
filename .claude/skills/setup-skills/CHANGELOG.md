@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v5.5.0 (2026-09-24)
+
+### Features
+
+- **setup-skills**: The Claude reviewer reads a saved diff and the PR head's copy of a changed file
+  ([#287](https://github.com/Gharib89/skills/pull/287),
+  [`c169357`](https://github.com/Gharib89/skills/commit/c169357164d5a1febd10afaeb830cb4dfc6f9ef6))
+
+
 ## v5.4.0 (2026-09-24)
 
 ### Features
