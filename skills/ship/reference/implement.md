@@ -16,7 +16,7 @@ to the local gate"), so a wrong label is a visible decision now, not a silently
 skipped verification later.
 
 - **`docs`**: markdown, comments, manifest text with no logic. **Skip TDD**;
-  do not manufacture a contrived test.
+  do not manufacture a contrived test. Commit `docs:`.
 - **`code`**: a feature or bugfix in behavior. Invoke the `tdd` skill
   **autonomously**: red, green, refactor **without pausing for plan approval**
   (you are intentionally overriding tdd's checkpoint; the merge gate is the
