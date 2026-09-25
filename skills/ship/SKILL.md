@@ -159,12 +159,13 @@ result plus failing lines. `docs` class and the small lane skip this phase.
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
 edits as part of the diff. **Docs-sync fires only when the public surface or
 observable behavior changed**: bring the profile's `Targets:` in line, folding
-the edits into this change. Skip it for internal refactors, a bugfix restoring
-documented behavior, test-only or tooling changes, and comments, and say so in
-one line at the merge gate. **The `writing-for-agents` pass has a trigger of its
-own**, and it still fires where docs-sync is skipped: it fires whenever the diff
-touches a target on the profile's `Agent-facing:` line, at the judgment tier, in
-the `writing` scratch directory, over every agent-facing file in the diff.
+the edits into this change, a tracker item's as a section drafted for phase 9.
+Skip it for internal refactors, a bugfix restoring documented behavior,
+test-only or tooling changes, and comments, and say so in one line at the merge
+gate. **The `writing-for-agents` pass has a trigger of its own**, and it still
+fires where docs-sync is skipped: whenever the diff touches a target on the
+profile's `Agent-facing:` line, at the judgment tier, in the `writing` scratch
+directory, over every agent-facing file in the diff.
 Human prose takes the mechanical pass. Each phase-4 dispatch, this pass and both
 `code-review` axes below, names its subagent's Report file, per
 [reference/context-discipline.md](reference/context-discipline.md).
@@ -278,16 +279,15 @@ review quota, so push when the tree changed.
 where `No-checks legal:` admits it, with `mergeable` not `conflict`.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
-the summary's shape, what `merge` does and the two refusals it answers with
-(`pr-closed`, `stale-base`). **Hard stop.** Write the summary per that file,
-uncompressed. Attended: post it in the conversation and wait for an explicit
-"merge": the word is exact, and a near miss is asked back rather than read as
-merge. On approval run `merge <pr> <issue|none> [--worktree <path>]` then
-`cleanup <issue|none>`; any `false` in their JSON is finished by hand before
-reporting done. Unattended: `comment-pr <pr> --body-file` with the summary, and
-return. The claim holds in both lanes until the merge releases it.
-**Done when:** attended, `merge` and `cleanup` answered with no `false` in their
-JSON; unattended, `comment-pr` posted the summary and the run returned the PR link.
+the summary's shape, what `merge` does, its two refusals and the drafted tracker
+sections. **Hard stop.** Write the summary per that file, uncompressed.
+Attended: post it in the conversation and wait for an explicit "merge": the word
+is exact, and a near miss is asked back. On approval run
+`merge <pr> <issue|none> [--worktree <path>]`, `update-issue-body` once per
+drafted section, then `cleanup <issue|none>`; any `false` or error is finished
+by hand. Unattended: `comment-pr <pr> --body-file` with the summary, and return.
+**Done when:** attended, each of those answered with no `false` and no error;
+unattended, `comment-pr` posted the summary and the run returned the PR link.
 
 ## The stops
 
