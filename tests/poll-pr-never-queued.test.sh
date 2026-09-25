@@ -123,8 +123,11 @@ check "a queued round is not degraded" null "$(jq -r .degraded <<<"$out")"
 reset
 out=$(poll --review-on-push false --reviewer copilot --since "$old"); rc=$?
 check_rc "--review-on-push without --free-round is a usage error" 2 "$rc"
+check "naming the flag it needs" true \
+  "$(jq -r '.error | startswith("--review-on-push needs --free-round")' <<<"$out")"
 out=$(poll --free-round --review-on-push maybe --reviewer copilot --since "$old"); rc=$?
 check_rc "--review-on-push takes true or false" 2 "$rc"
+check "answered with the usage line" true "$(jq -r '.error | startswith("usage: poll-pr")' <<<"$out")"
 check "reaching no host" false "$([ -s "$SHIP_FAKE/calls" ] && echo true || echo false)"
 
 # A queued round with nothing posted yet keeps today's window, and the read is

@@ -90,8 +90,10 @@ and why the worktree is made the way it is. Run `preflight <issue>`, adding
 issue and the flag turns it into a stop. Read its `reasons`: empty with
 `ok: true` is the admission, every entry is a row of the stop table below, and a
 push-permission `unknown` is a warning on stderr that you carry to the merge
-summary rather than a stop. Then `read-issue <issue>`, whose result is phase 1's
-input and from which the branch `<type>` and `<slug>` are derived. Then
+summary rather than a stop; record in the Run file each `reviewers[]` row
+reading `review_on_push: false`, which phase 7 passes on. Then `read-issue
+<issue>`, whose result is phase 1's input and from which the branch `<type>`
+and `<slug>` are derived. Then
 `isolate <issue> <type> <slug>` with the profile's `Carry:` files, or
 `isolate ... --in-place` unattended, which leaves branch
 `<type>/<slug>-<issue>`, `<type>` matching the issue (`feat`, `fix`, `docs`,
@@ -120,19 +122,19 @@ classes, the TDD override, external-claim probes and the judgment/execution
 split. Classify `docs` / `code` / `infra`; **announce the class, the skip path
 it implies, and whether the three lane keys hold**; announce the applicable
 verifications from `## Verification` (their `Applies when:` lines are prose you
-judge here) or the skip. Then implement test-first per class, `Tripwires:` and
-`In-PR requirement:` included whatever the class. Keep a **deviations log**
-from the first edit: whenever the territory forces a departure from the issue,
-brief or plan, resolve it by the conservative option, log what and why, keep
-going; the log lands verbatim in the merge summary, and is folded to what a
-reviewer would act on in the PR body's `## Special things to note`. An
+judge here) or the skip. Then implement test-first per class; `Tripwires:` and
+`In-PR requirement:` land in this change whatever the class. Keep a
+**deviations log** from the first edit: whenever the territory forces a departure
+from the issue, brief or plan, resolve it by the conservative option, log what and
+why, keep going; the log lands verbatim in the merge summary, and is folded to
+what a reviewer would act on in the PR body's `## Special things to note`. An
 **adjacent find** takes one of implement.md's three dispositions and no fourth.
 If the core work balloons (the diff outgrows one PR, or the fix demands a
 redesign the issue did not scope), stop `needs-split` with a split proposal.
 **Done when:** the applicable tests are green (red first, per class),
-`Tripwires:` and `In-PR requirement:` have landed, the Run file's deviations
-log carries every departure so far, and every adjacent find carries one of the
-three dispositions.
+`Tripwires:` and `In-PR requirement:` have landed, a small-lane diff is counted
+under the cap, the Run file's deviations log carries every departure so far,
+and every adjacent find carries one of the three dispositions.
 
 **3 · Verify.** [reference/verify.md](reference/verify.md) carries the
 result words, the `Without it:` dispositions and what `unexercised` is. For each
@@ -156,9 +158,9 @@ gate. **The `writing-for-agents` pass has a trigger of its own**, and it still
 fires where docs-sync is skipped: whenever the diff touches a target on the
 profile's `Agent-facing:` line, at the judgment tier, in the `writing` scratch
 directory, over every agent-facing file in the diff.
-Human prose takes the mechanical pass. With docs-sync's edits landed, dispatch
-this pass and both `code-review` axes below in the same turn and end it, each
-naming its Report file per
+Human prose takes the mechanical pass. With docs-sync's edits landed, load
+`code-review`, then dispatch this pass and its two axes in one turn and end it,
+each naming its Report file per
 [reference/context-discipline.md](reference/context-discipline.md). Small lane:
 dispatch the axes, then run this pass inline, writing its Report file before any
 disposition.
@@ -167,8 +169,8 @@ disposition.
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
 carrying its own scratch directory (`standards`, `spec`). **Triage waits for
-every Report file.** An axis whose report fails to arrive is `red-after-retry: <axis>`
-after the bounded retry, a stop in place of a disposition written from memory of
+every Report file.** An axis whose report fails to arrive is
+`red-after-retry: <axis>` after the bounded retry, a stop in place of a disposition written from memory of
 what it would have said. **Auto-triage** every finding: harden rather than rip out
 capability, verify nits against the pinned versions, reject known non-issues,
 fix the valid ones, and record a one-line disposition per finding. Two rails on
@@ -201,8 +203,8 @@ this exist?" answer you took from the worktree was pre-merge. Behind: rebase,
 re-run, then continue. Confirm every `Carry:` file still matches the main
 checkout's copy; a difference is `carried file modified`, because ship has no
 business editing untracked secrets. Then run the gate at the profile's
-`Location:` from the worktree, inline. Small lane: `--small <node>` with the
-node written in the profile's `Small node:` syntax. The gate owns dependency
+`Location:` from the worktree, inline. Small lane: `--small <node>` for one
+proving node, the full gate for more (small-lane.md). The gate owns dependency
 install and every check CI runs; its verdict is one JSON object: `verdict`
 `pass|fail|unavailable`, per-gate statuses
 `pass|fail|deferred-to-ci|unavailable`, `gates.secrets` present in every lane.
@@ -241,8 +243,8 @@ reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks.** Batch
 fixes into one push per round, read each round from `poll-pr` (`--brief` is how
 a round is read), then answer each thread with `reply-thread` (`fixed in <sha>`,
 or the decline and its reason), and the reviewer's `Resolve:` per thread once
-every thread carries a disposition. A finding about the PR body itself is a fix like
-any other, through the writes pr-body.md names. Exits: `converged`,
+every thread carries a disposition. A finding about the PR body itself is a fix
+like any other, through the writes pr-body.md names. Exits: `converged`,
 `converged, override needed` (a gating reviewer's declined finding, cited with
 evidence), `degraded: <reason>` from the fixed vocabulary
 `never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
@@ -255,8 +257,8 @@ issue or met a defect, and `Review` last, one line per reviewer in the fixed
 shape review-loop.md carries. Then the phase-6 read-back while the PR is open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned carries a reply and, where `Resolve:` is not `None.`, is resolved (none
-to carry one, where it answered `threads: unavailable`), and `read-pr` shows a `## Review` section with one line per
-reviewer, plus `## Special things to note` and `## Needs attention`, each
+to carry one, where it answered `threads: unavailable`), and `read-pr` shows a
+`## Review` section with one line per reviewer, plus `## Special things to note` and `## Needs attention`, each
 required only where a round grew that section's own record.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
@@ -343,12 +345,11 @@ alone. When unsure, it is not small.
 2. **Provable without the real thing.** A unit or regression test fully proves
    it, or the class is `docs` and there is no behavior to test; either way no
    verification in the profile's `## Verification` applies.
-3. **Inside the cap.** No new dependency, none of the profile's `Tripwires:`
+3. **Contained.** No new dependency, none of the profile's `Tripwires:`
    fired, and the diff inside the size cap small-lane.md counts.
 
 Behavior change is allowed: a bugfix is one. Small means narrow, locally
-provable, invisible to the public surface and inside the size cap, counted on
-the diff and never estimated. Small: read
+provable, invisible to the public surface and inside the size cap. Small: read
 [reference/small-lane.md](reference/small-lane.md) before continuing. Its floor
 is the same in every repo, and the lane revokes one way only.
 

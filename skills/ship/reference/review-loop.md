@@ -51,7 +51,7 @@ a fresh read of the committed tree, not a conversation.
   whose findings live in the body rather than in threads is invisible from the
   thread list alone, and `infra-error` is a judgment about the body.
 - **`--brief` projects that same poll** down to what this loop acts on: head,
-  mergeable, `landed_by`, `refused_by`, `never_queued`, `reviewer_blocked`, one `rounds[]` row per round (id, `submitted_at`,
+  mergeable, `landed_by`, `refused_by`, `never_queued`, `degraded`, `reviewer_blocked`, one `rounds[]` row per round (id, `submitted_at`,
   `substantive`, and the body cut to its lead line and finding items) and one
   row per OPEN thread (id, `path`, `lead`, `resolved`, `replied`). Rounds come
   from the list the landing rule admitted and hold only the awaited reviewer's
@@ -262,8 +262,8 @@ run's **first** request to an on-request reviewer whose `Request:` is the
 host's call, poll once for it, under the since rule with `open-pr`'s
 `created_at` and `--free-round`, with no `--timeout`: the reviewer's default is
 sized for its transport. Add `--review-on-push false` where preflight's
-`reviewers[]` row for that reviewer read `false`; the Run file keeps it from
-phase 0. A block whose `Request:` is `comment <phrase>` skips this poll and
+`reviewers[]` row for that reviewer read `false`, which the Run file recorded
+at phase 0. A block whose `Request:` is `comment <phrase>` skips this poll and
 requests directly: a comment-triggered workflow opens no round unbidden. No
 poll after a request passes `--free-round`. A round already there **is** round
 1 and counts against `Cap:`; nothing there and the loop proceeds to its first

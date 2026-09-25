@@ -137,7 +137,6 @@ else
       reason=$(ship_copilot_trigger_reason "$copilot_name" "$copilot_trigger" "$review_on_push")
       [ -z "$reason" ] || reasons+=("$reason")
     else
-      review_on_push=""
       echo "warning: could not read the copilot_code_review ruleset; $copilot_name Trigger: $copilot_trigger is unchecked" >&2
     fi
   fi
