@@ -95,7 +95,8 @@ run version-lines scripts/version-line-check.sh "$base"
 run_or_unavailable shellcheck scripts/shellcheck-check.sh
 
 # house-style: the standards doc bans em dashes in files this repo authors.
-# A written standard nothing enforces drifts, so enforce it, under any locale;
+# A written standard nothing enforces drifts, so enforce it, under any locale,
+# along with the trailing-whitespace and final-newline rules beside it;
 # scripts/house-style-check.sh is the whole rule.
 run house-style scripts/house-style-check.sh
 
