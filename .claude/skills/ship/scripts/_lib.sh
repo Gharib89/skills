@@ -1127,7 +1127,7 @@ ship_brief() {
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
     def lead: [splits("\n") | select(test("^[ \t]*$") | not)] | (.[0] // "") | clip;
     (.reviewer.login // "") as $await
-    | {head_sha, mergeable, reviewer, landed_by, refused_by, never_queued, reviewer_blocked, reviewer_run,
+    | {head_sha, mergeable, reviewer, landed_by, refused_by, never_queued, degraded, reviewer_blocked, reviewer_run,
      rounds: [.reviews[$key][] | select((mine | not) and awaited($await)) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index($r.id | tostring)) then $r.body

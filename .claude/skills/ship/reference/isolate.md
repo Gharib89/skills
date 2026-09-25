@@ -65,10 +65,11 @@ tooling reads.
 
 Load `docs/agents/ship.md` **once, whole, at preflight**, the way a session
 loads `docs/agents/issue-tracker.md`. It has fourteen fixed `##` headings, every
-one always present; a defaulted axis reads `None.` or `Default.`. Facts sit on
-`Label:` lines and nowhere else, and the prose under a heading explains them.
-You read the profile and pass its facts to the mechanics as arguments; no script
-parses markdown. Two more repo docs feed a run and are read the same way: triage
+one always present; a defaulted axis reads `None.` or `Default.`. Most facts sit
+on `Label:` lines; Coding standards, Public surface and Triage carry theirs as
+the section body, and the prose under a heading explains them. Preflight,
+prepare and the reviewer mechanics read their own lines; everything else you
+pass as arguments. Two more repo docs feed a run and are read the same way: triage
 roles (`ready-for-agent`, `ready-for-human`, `needs-triage`) are canonical role
 names whose label strings come from `docs/agents/triage-labels.md`, and the
 tracker's mechanics come from `docs/agents/issue-tracker.md`.
@@ -77,7 +78,7 @@ tracker's mechanics come from `docs/agents/issue-tracker.md`.
 
 Directly under the `# Ship profile` title, before the first
 `##`, the profile carries `Schema: N`. This skill declares the schema it reads as
-`metadata.profile-schema` in the frontmatter above. The number is separate from
+`metadata.profile-schema` in SKILL.md's frontmatter. The number is separate from
 `metadata.version`: it moves only when ship's expectations of the profile change
 (a heading or `Label:` line added, renamed or removed; a `Label:` vocabulary
 changed), always graded a ship major, and stays put for a behaviour change

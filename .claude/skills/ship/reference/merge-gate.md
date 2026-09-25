@@ -155,7 +155,8 @@ returned. Re-read the issue first: a section that no longer matches its base is
 redrafted, posted, and written on the human's explicit "yes". `created: true`
 for a section the draft meant to replace means the name missed, and exit 1 (an
 Azure DevOps description ship did not write, a refused write) means nothing was
-written: finish either by hand.
+written: re-run `update-issue-body` with the heading corrected, and a write it
+still refuses is a Ship defect for the summary.
 
 The unattended lane runs no merge, so ship writes no section: under each draft
 the summary gives the command a human runs after merging, from a file they save
@@ -192,8 +193,10 @@ release, so it skips both and its JSON carries none of `issue_closed`,
 section, per the section above. Then `cleanup <issue|none>`:
 removes the worktree and force-deletes the local branch (a squash-merged branch
 is not an ancestor of the default branch). Carried files stay in the worktree it
-removes. Any `false` in `merge`'s or `cleanup`'s JSON, or a nonzero exit from
-any of the three: finish that step by hand before reporting done.
+removes. Any `false` in `merge`'s or `cleanup`'s JSON, or a nonzero exit: re-run
+the mechanic that owns the step before reporting done, and a step no mechanic
+re-does is a Ship defect for the summary. Done is `merge`, every
+`update-issue-body` (none where the run drafted none) and `cleanup` exited 0.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this
