@@ -93,6 +93,7 @@ check "the refusal names the rule that admitted it" 'since false' \
 check "and the notice is quoted" "$notice_text" "$(jq -r .reviewer_blocked <<<"$out")"
 check "the refusal costs one read" 1 "$(calls pr_reviews)"
 check "and none of the window" true "$(jq -r '.waited_s < 30' <<<"$out")"
+check "and the reviewer is not reviewed: blocked" blocked "$(jq -r .not_reviewed <<<"$out")"
 
 # A notice older than the request answered an earlier one: this request can
 # still be served, so the window runs as it always did.
@@ -109,6 +110,7 @@ out=$(poll --since 2026-09-23T14:22:34Z --timeout 0 --interval 1); rc=$?
 check_rc "a round after a notice lands" 0 "$rc"
 check "and nothing reads as refused" 'since null' \
   "$(jq -r '[.landed_by, (.refused_by|tostring)] | join(" ")' <<<"$out")"
+check "and the reviewer reviewed" null "$(jq -r .not_reviewed <<<"$out")"
 
 # The head rule: a notice on the current head refuses that push's round.
 reset
@@ -116,6 +118,7 @@ reviews "[$notice]" "[$notice]"
 out=$( ( cd "$repo" && bash "$mech" 7 --reviewer copilot-push --timeout 600 --interval 30 ) ); rc=$?
 check_rc "a notice on the head closes the window" 1 "$rc"
 check "under the head rule" head "$(jq -r '.refused_by' <<<"$out")"
+check "is blocked under the head rule too" blocked "$(jq -r .not_reviewed <<<"$out")"
 
 # Another login's notice is not this reviewer's refusal. The adapter's blocked
 # lookup filters by login, so for claude[bot] it answers null.
@@ -132,6 +135,7 @@ reviews "[$notice]" "[$notice]"
 out=$(poll --brief --since 2026-09-23T14:22:34Z --timeout 600 --interval 30)
 check "--brief carries the refusal and the notice" "since $notice_text" \
   "$(jq -r '[.refused_by, .reviewer_blocked] | join(" ")' <<<"$out")"
+check "--brief carries the reason" blocked "$(jq -r .not_reviewed <<<"$out")"
 
 # A reviewer that posts its notice as a PR comment leaves no review row: the
 # blocked lookup's own timestamp is what the since rule reads (#256).
@@ -143,6 +147,7 @@ check_rc "a comment-only notice after --since closes the window" 1 "$rc"
 check "under the since rule, with done false" 'since false' \
   "$(jq -r '[.refused_by, (.done|tostring)] | join(" ")' <<<"$out")"
 check "and the notice line is quoted" "$notice_text" "$(jq -r .reviewer_blocked <<<"$out")"
+check "a comment-only notice is blocked" blocked "$(jq -r .not_reviewed <<<"$out")"
 check "and none of the window is spent" true "$(jq -r '.waited_s < 30' <<<"$out")"
 out=$(poll --brief --since 2026-09-23T14:22:34Z --timeout 600 --interval 30)
 check "--brief quotes the comment notice's line" "since $notice_text" \
