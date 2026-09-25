@@ -141,10 +141,12 @@ parse_file() { # parse_file "$@": where every flip and timing reads the record
   # scratchpad reads which record the mechanic went looking for.
   [ -f "$file" ] || ship_fail "no Run file at $file"
 }
-# The row a flip acts on, or the refusal that it is not there.
+# The row a flip acts on, or the refusal that it is not there. A missing line is
+# the one symptom of a Run file a subagent wrote over, so the refusal carries the
+# recovery rather than leaving it to prose a compacted run may no longer hold.
 take_row() { # take_row <n>: sets line and lineno
   row=$(phase_row "$1")
-  [ -n "$row" ] || ship_fail "no phase $1 line in $file"
+  [ -n "$row" ] || ship_fail "no phase $1 line in $file: a subagent overwrote the Run file; rebuild it with \`run-file init <issue> --rebuild\`, one --state per phase the transcript accounts for and no invented range, then log what was lost in the deviations log"
   lineno=${row%%:*}
   line=${row#*:}
 }

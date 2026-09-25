@@ -130,7 +130,7 @@ run version-lines scripts/version-line-check.sh "$base"
 run house-style scripts/house-style-check.sh
 
 # prose-budget: ship's own documents, whose shape decides what a run reads
-# before it acts. `skills/*/SKILL.md` at most 400 lines, and every
+# before it acts. `skills/*/SKILL.md` at most 350 lines, and every
 # `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
 # inside its first 15 lines whose list matches the file's `## ` headings;
 # scripts/prose-budget-check.sh is the whole rule.
