@@ -306,11 +306,13 @@ while :; do
   if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
     # Read here rather than per pass, so a poll that waited out the run reads
     # its count once, and only the run it reports.
-    # An answer that is not a count is no count, like a read that failed.
     if [ "$run_status" = completed ]; then
       denied=null
       if denials=$(host_run_denials "$(jq -r .url <<<"$reviewer_run")"); then
-        denied=$(jq -c '(.denied | numbers) // null' <<<"$denials" 2>/dev/null) || denied=null
+        # An answer that is not one object carrying a count is no count, like a
+        # read that failed, and keeps the `--argjson` below to one value.
+        denied=$(jq -cs 'if length == 1 then (.[0].denied? | numbers) // null else null end' \
+          <<<"$denials" 2>/dev/null) || denied=null
         [ -n "$denied" ] || denied=null
       fi
       reviewer_run=$(jq -c --argjson d "$denied" '.denied = $d' <<<"$reviewer_run")

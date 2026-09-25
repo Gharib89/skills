@@ -123,14 +123,15 @@
 #                                           Azure DevOps, which has no such read. poll-pr reports
 #                                           either as "unavailable" and holds the window to the
 #                                           constant on.
-#   host_run_denials <run-url>           -> {denied} the tool calls the round in that
-#                                           completed run was refused: the leading number of
-#                                           its job's `claude-review` warning annotation, 0
-#                                           where the job raised none. Non-zero where the host
-#                                           could not answer or the warning leads with no
-#                                           number; always non-zero and silent on Azure DevOps,
-#                                           which awaits no run. poll-pr reports either as a
-#                                           `denied` of null and leaves the run read standing.
+#   host_run_denials <run-url>           -> {denied} the count of tool calls the round in
+#                                           that completed run was refused: the leading
+#                                           numbers of its jobs' `claude-review` warning
+#                                           annotations, summed, 0 where none was raised.
+#                                           Non-zero where the host could not answer or a
+#                                           warning leads with no number; always non-zero and
+#                                           silent on Azure DevOps, which awaits no run.
+#                                           poll-pr reports a failure as a `denied` of null
+#                                           and leaves the run read standing.
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
 #                                           readback: the host's own names for the PR's reviewers:
 #                                           logins on GitHub, each reviewer's uniqueName and

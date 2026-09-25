@@ -568,7 +568,9 @@ host_workflow_runs() { # <workflow-file> <since-iso>
 # The scaffolded Claude reviewer job raises one warning annotation titled
 # `claude-review` when its round had refused tool calls, `N tool call(s)
 # denied; ...`, and none when it had none (#283). A job is its own check run on
-# this host, so the run's jobs are read first, then each job's annotations. Only
+# this host, so the run's jobs are read first, then each job's annotations, and
+# every such warning is summed, so a workflow of several jobs is not
+# undercounted. Only
 # the leading number is read, so the wording around it may change; a warning
 # that leads with none is a count this read cannot give, and fails rather than
 # answering 0.

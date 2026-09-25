@@ -264,6 +264,18 @@ check "a failed count read leaves the run read standing, denied null" \
   '{"status":"completed","conclusion":"success","url":"https://example.invalid/runs/9","denied":null}' \
   "$(jq -c '.reviewer_run' <<<"$out")"
 
+# An answer that is not one count is no count either.
+for answer in '{"denied":"2"}' '{"denied":1}
+{"denied":2}' 'not json'; do
+  reset
+  run_row completed success > "$SHIP_FAKE/host_workflow_runs.1.json"
+  printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
+  printf '%s\n' "$answer" > "$SHIP_FAKE/host_run_denials.1.json"
+  out=$(poll)
+  check "an answer that is not one count leaves denied null: ${answer//$'\n'/ }" \
+    'completed null' "$(jq -r '[.reviewer_run.status, (.reviewer_run.denied|tostring)] | join(" ")' <<<"$out")"
+done
+
 # A run still going has no count yet, and neither has a run that was never
 # created: neither is asked for one.
 reset
