@@ -49,6 +49,7 @@ help_case resolve-thread 'usage: resolve-thread <pr> <thread-id>'
 help_case run-file      'usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> | close <n> | skip <n> <reason> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default $TMPDIR or /tmp] resolving <scratchpad>/ship-<issue>/run.md'
 help_case select         'usage: select'
 help_case tooling        'usage: tooling [--install]'
+help_case update-issue-body 'usage: update-issue-body <issue> --section <name> --body-file <path>'
 help_case update-pr-body 'usage: update-pr-body <pr> (--section <name> | --preamble) --body-file <path>'
 help_case update-pr-title 'usage: update-pr-title <pr> --title "<subject>"'
 

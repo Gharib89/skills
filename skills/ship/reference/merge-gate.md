@@ -3,6 +3,7 @@
 ## Contents
 
 - [The summary](#the-summary)
+- [A tracker issue on Targets:](#a-tracker-issue-on-targets)
 - [Attended: post, then wait](#attended-post-then-wait)
 - [Unattended: post to the PR, then return](#unattended-post-to-the-pr-then-return)
 
@@ -50,6 +51,10 @@ Review                                         (one block per reviewer)
 
 Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>
 Docs-sync:   <ran: files | skipped: reason>
+Tracker:     <none | one block per drafted section:>
+  #<n> `## <section>`:
+  <the drafted section, verbatim>
+  (unattended: the command a human runs after merging, per the tracker section)
 CI:          <leg> → <green | state> · ...     (from the profile's Legs:)
 Issues filed: <#n <title>, ... | none>  ·  linked: <#n <title>, ... | none>
 Ship defects: <none | one line per defect:>
@@ -125,6 +130,36 @@ PR title as the squash subject, so a subject that no longer matches what the
 run built is corrected with `update-pr-title <pr> --title "<subject>"` before
 the summary is posted, so the human reads the title that will land.
 
+## A tracker issue on Targets:
+
+A `Targets:` entry naming an issue by number (`#<n>`, such as `map issue #1`) is
+met in phase 4 by a **drafted section**, not a file edit: the new content of
+each `## ` section the change affects, one draft per section, written to
+`<scratchpad>/ship-<issue>/tracker-<n>-<k>.md` beside the Run file (`<n>` the
+tracker issue, `<k>` the draft's ordinal) and named with its heading in the Run
+file's `## Design and plan`. Beside each draft, save the section as `read-issue`
+returned it, as `tracker-<n>-<k>.base.md`. On Azure DevOps that body is the
+description's HTML: for the `<pre>` block ship writes, the markdown is the text
+inside it, entities decoded. The summary's `Tracker:` block shows each draft
+verbatim, so the human approves the text with the merge. The unit is the whole
+section, because `update-issue-body` replaces nothing smaller.
+
+A drafted section is written after the merge and never before, so no issue
+records code that has not landed: once `merge` answers `merged: true`, and
+before `cleanup`, run `update-issue-body <n> --section "<section>" --body-file
+<draft>` per draft, `<section>` taken verbatim from the heading `read-issue`
+returned. Re-read the issue first: a section that no longer matches its base is
+redrafted, posted, and written on the human's explicit "yes". `created: true`
+for a section the draft meant to replace means the name missed, and exit 1 (an
+Azure DevOps description ship did not write, a refused write) means nothing was
+written: finish either by hand.
+
+The unattended lane runs no merge, so ship writes no section: under each draft
+the summary gives the command a human runs after merging, from a file they save
+the draft to, `.claude/skills/ship/scripts/update-issue-body.sh <n> --section
+"<section>" --body-file <file>`, once they have checked the section has not
+changed since the draft.
+
 ## Attended: post, then wait
 
 Post the summary in the conversation and **wait**. Merge only on an explicit
@@ -150,11 +185,12 @@ the claim and strips `ready-for-agent`**, so a reopened issue goes back through
 triage instead of being refused forever. The two issue steps are the
 issue-backed run's: `merge <pr> none` has no issue to close and no claim to
 release, so it skips both and its JSON carries none of `issue_closed`,
-`claim_released` and `ready_for_agent_removed`. Then `cleanup <issue|none>`:
+`claim_released` and `ready_for_agent_removed`. Then each drafted tracker
+section, per the section above. Then `cleanup <issue|none>`:
 removes the worktree and force-deletes the local branch (a squash-merged branch
 is not an ancestor of the default branch). Carried files stay in the worktree it
-removes. Any `false` in either JSON: finish that step by hand before reporting
-done.
+removes. Any `false` in `merge`'s or `cleanup`'s JSON, or a nonzero exit from
+any of the three: finish that step by hand before reporting done.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this
@@ -166,4 +202,6 @@ gate. Do not re-open the whole pipeline.
 link. Do not wait, poll, or merge; the claim stays on the issue, which carries
 the open PR, so later fires skip it until a human merges. The line
 "Ready to merge. Reply ..." becomes "Ready to merge: a human merges from the
-PR." Detail in [unattended.md](unattended.md).
+PR." A drafted tracker section is not written: the summary carries the command
+for it ([A tracker issue on Targets:](#a-tracker-issue-on-targets)). Detail in
+[unattended.md](unattended.md).

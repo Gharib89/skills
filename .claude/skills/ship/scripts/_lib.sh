@@ -57,6 +57,12 @@
 #   host_issue_comment <n> <body>        (fails with {status})
 #   host_issue_close <n>
 #   host_issue_create <title> <body-file> <label> -> {number,url}
+#   host_issue_body <n>                  -> {body} the body as markdown. On Azure DevOps, a
+#                                           description that is the one `<pre>` block
+#                                           host_issue_create writes, unwrapped; any other
+#                                           shape fails with {reason}.
+#   host_issue_set_body <n> <body-file>  (fails with {status}); on Azure DevOps, written as
+#                                           that one `<pre>` block.
 #   host_issues_open                     -> [{number,title,url}] every open issue, newest first,
 #                                           issues alone. Narrows only on Azure DevOps, where WIQL
 #                                           refuses a set past 20000 rows, and says so on stderr
