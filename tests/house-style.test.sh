@@ -66,10 +66,13 @@ git -C "$d" add skills
 check_rc "a symlink to a file with a trailing blank and no final newline passes" 0 "$(rc_of C.UTF-8 "$d")"
 
 # git grep names an unreadable file on stderr and exits 0: that is not clean.
-d=$(checkout unreadable)
-chmod 000 "$d/skills/x/SKILL.md"
-check_rc "an unreadable tracked file is tooling" 2 "$(rc_of C.UTF-8 "$d")"
-chmod 644 "$d/skills/x/SKILL.md"
+# Root reads it anyway, so the case only runs where the mode bits bind.
+if [ "$(id -u)" != 0 ]; then
+  d=$(checkout unreadable)
+  chmod 000 "$d/skills/x/SKILL.md"
+  check_rc "an unreadable tracked file is tooling" 2 "$(rc_of C.UTF-8 "$d")"
+  chmod 644 "$d/skills/x/SKILL.md"
+fi
 
 # Tooling: outside a checkout there is no listing, which is not a clean tree.
 mkdir -p "$fixture/no-checkout"
