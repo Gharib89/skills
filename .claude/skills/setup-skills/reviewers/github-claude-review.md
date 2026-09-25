@@ -2,7 +2,7 @@
 
 Scaffold for a repo whose ship profile names Claude Code as a reviewer. It comes in two shapes, on-push and on-request, and a repo takes exactly one; the on-request shape stands alone or as another reviewer's fallback:
 
-- **The on-push shape.** The repo has no other reviewer. Claude reviews every push to an open PR, so it is the whole second pair of eyes, and its job lands a check run on the PR head.
+- **The on-push shape.** Claude is the only reviewer and reviews every push to an open PR, so it is the whole second pair of eyes, and its job lands a check run on the PR head.
 - **The on-request shape.** A PR comment is the trigger, so nothing fires until a round is asked for. Standalone (`Fallback-for: None.`), it is the repo's reviewer and ship asks for each round, so the cap binds and a small-lane run spends one round. As a fallback, the repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out, so nothing fires while the primary is healthy. See [ADR 0002](https://github.com/Gharib89/skills/blob/main/docs/adr/0002-fallback-reviewer-is-on-request-and-conditional.md) for why a fallback is on-request rather than on-push.
 
 What both shapes do the same way, because ship reads a round off the host alone:

@@ -153,10 +153,10 @@ before `cleanup`, run `update-issue-body <n> --section "<section>" --body-file
 <draft>` per draft, `<section>` taken verbatim from the heading `read-issue`
 returned. Re-read the issue first: a section that no longer matches its base is
 redrafted, posted, and written on the human's explicit "yes". `created: true`
-for a section the draft meant to replace means the name missed, and exit 1 (an
-Azure DevOps description ship did not write, a refused write) means nothing was
-written: re-run `update-issue-body` with the heading corrected, and a write it
-still refuses is a Ship defect for the summary.
+for a section the draft meant to replace means the name missed: re-run with the
+heading `read-issue` returned, and name the stray section as a Ship defect. Exit
+1 (an Azure DevOps description ship did not write, a refused write) means
+nothing was written: a Ship defect for the summary, with the draft attached.
 
 The unattended lane runs no merge, so ship writes no section: under each draft
 the summary gives the command a human runs after merging, from a file they save

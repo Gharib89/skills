@@ -14,9 +14,10 @@ a Tripwire's rebuilt bundle). Agent-facing prose counts. The run never edits a
 CHANGELOG (ADR 0003), so no rule covers one.
 
 **Measured, never estimated.** Phase 2 announces the lane as a prediction from
-the plan. The count is taken at phase 2's `Done when:`, before phase 3 is
-skipped, and again before every later push. Over the cap revokes to the full
-lane, below. The cap applies in attended and unattended runs alike.
+the plan. The count is taken at phase 2's `Done when:`, with every edit
+committed, before phase 3 is skipped, and again before every later push. Over
+the cap revokes to the full lane, below. The cap applies in attended and
+unattended runs alike.
 
 ## What collapses
 
@@ -42,9 +43,9 @@ and does not collapse with docs-sync. On top of that:
 ## The floor: stands in every lane
 
 1. Isolation (phase 0)
-2. `base-fresh` and the local gate: `--small <node>` with the security check
-   plus the test proving the change, or the full gate where more than one test
-   proves it, or the changed document where the class is `docs`
+2. `base-fresh` and the local gate: `--small <node>` (the security check plus
+   the test proving the change, or the changed document where the class is
+   `docs`), or the full gate where more than one test proves it
 3. The **self-review, unmodified**. It is the only check that reads the diff
    against the issue; a reviewer reviews standards against the diff, with the
    issue out of view. It also carries the two rejection rails. It costs two
