@@ -311,6 +311,9 @@ host_issue_comment() {
   return $rc
 }
 host_issue_close()    { api -X PATCH "$R/issues/$1" -f state=closed -f state_reason=completed >/dev/null; }
+host_issue_body()     { api "$R/issues/$1" --jq '{body: (.body // "")}'; }
+# Nothing on success, {"status": <n|null>} on failure, as host_pr_set_body.
+host_issue_set_body() { jq -n --rawfile b "$2" '{body: $b}' | _gh_write -X PATCH "$R/issues/$1" --input -; }
 
 # Create-then-verify, the shape every create in this adapter has: attempt the
 # POST once, and on failure look for the row a slow success would have left

@@ -66,6 +66,7 @@ for _fn in host_tooling_reasons host_tooling_install host_identity host_can_push
   host_issue_get host_issue_comments host_issue_blockers_open host_issue_linked_prs \
   host_issue_assign host_issue_unassign host_issue_has_label host_issue_add_label \
   host_issue_remove_label host_issue_comment host_issue_close host_issue_create \
+  host_issue_body host_issue_set_body \
   host_issues_open host_issues_ready \
   host_pr_create host_pr_get host_pr_for_branch host_pr_checks host_pr_reviews \
   host_pr_threads host_pr_reviewer_blocked host_workflow_runs host_pr_review_queued \
