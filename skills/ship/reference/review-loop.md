@@ -29,9 +29,10 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
   host's own request call, or a PR comment of the phrase for a comment-triggered
   workflow), and the mechanic reads the request back off the host. A request
   that does not read back exits 1: the reviewer is `not reviewed: never-queued`,
-  with no poll. A round the host opened unbidden when the PR was created (a
-  Copilot ruleset with `review_on_push: false`) is still pending then, and a
-  pending reviewer reads back as requested, so it lands as round 1.
+  with no poll. Under the host's own request call, poll round 1 `--since`
+  `open-pr`'s `created_at` instead: a round the host opened unbidden with the
+  PR (a Copilot ruleset with `review_on_push: false`) is then round 1 whether
+  it landed before the request or after.
 - **`auto-once`**: nothing to request; poll once with `--since` `open-pr`'s
   `created_at`. That one round is all there is.
 - **`on-push`**: every push earns a round; poll with no `--since`, which is the
@@ -39,29 +40,31 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
 
 Per round: start it, `poll-pr <pr> --reviewer <name> [--since <iso>] --brief`
 inline, triage what landed, push the fixes once, reply. The next round starts
-only while the latest one had something actionable and `Cap:` has rounds left.
+only while the latest round's fixes changed the tree and `Cap:` has rounds left.
 The poll takes its bound from the block (`poll-pr --help`), and a window that
 closed is the answer rather than a reason to re-poll, except after a `conflict`,
 which says nothing about the reviewer: resolve it (phase 8) and poll again.
 
 **`Cap:`** is the budget on rounds ship starts: a number, or `None.` for an
-uncapped loop, and `auto-once` delivers one round whatever it reads. Under
+uncapped loop, and `auto-once` delivers one round whatever `Cap:` reads. Under
 `on-push` the host starts the rounds, so the number ends ship's engagement while
 the reviewer may carry on. A round at the cap is dispositioned in full and ends
 the loop; say in the reviewer's block whether it was still landing real
 findings, which tells the human whether the budget was the right one.
 
-Small lane: at most one requested round. A lint or flake fix after the loop
-ends earns no new request; an on-push reviewer re-reads it on its own, so wait
-for its round on the new head.
+Small lane: at most one requested round. In either lane a lint or flake fix
+after the loop ends earns no new request; an on-push reviewer re-reads it on
+its own, so wait for that round and disposition it, which opens no further one.
 
 ## Reading a round
 
 `poll-pr` returns one JSON: head, mergeable, checks, the reviewer's rounds, each
 graded `substantive` by Ship, threads with resolved state, `landed_by` naming
 the rule that admitted a round, `refused_by` a quota or rate-limit notice
-admitted in its place, `reviewer_run` for a comment transport, and
-`not_reviewed`, the cause the poll observed where no round was admitted.
+admitted in its place, `reviewer_run` for a comment transport,
+`reviewer_blocked` a quota notice the rule did not admit (cite it in a trailing
+clause, never as the reason), and `not_reviewed`, the cause the poll observed
+where no round was admitted.
 
 - **`--brief` is how a round is read**: one `rounds[]` row per round (id,
   `submitted_at`, `substantive`, the body cut to its lead line and finding
@@ -101,8 +104,8 @@ admitted in its place, `reviewer_run` for a comment transport, and
   `poll-pr` returns the PR's whole thread set, so skip the `replied: true` ones.
   Once every thread carries a reply, run the block's `Resolve:` per thread;
   `Resolve: None.` means the findings are answered on the review with
-  `comment-pr`. A finding about the PR body is fixed through the writes
-  [pr-body.md](pr-body.md) names.
+  `comment-pr`, which also answers a body finding with no thread. A finding
+  about the PR body is fixed through the writes [pr-body.md](pr-body.md) names.
 - **Write each round to the Run file as you disposition it**, one line per
   finding with its disposition, and one per round whose `reviewer_run.denied`
   is numeric, with the run URL. No command reproduces these after a compaction,
@@ -114,10 +117,12 @@ Each reviewer exits with one of:
 
 - `reviewed`: at least one round landed and was dispositioned. A later round
   that did not land is a trailing clause, not a different exit.
-- `not reviewed: <reason>`: no round landed. The reason is `not_reviewed` off
-  the last poll, or `never-queued` off `request-review`'s exit 1, and never
-  one you infer: a human saying a reviewer "can't review" is a claim to check
-  against the poll. The header of `scripts/poll-pr.sh` lists what each cause means.
+- `not reviewed: <reason>`: no round landed, or one did and its threads could
+  not be read (`unreachable`): triage that one off its body and answer it with
+  `comment-pr`. The reason is `not_reviewed` off the last poll, or
+  `never-queued` off `request-review`'s exit 1, and never one you infer: a human
+  saying a reviewer "can't review" is a claim to check against the poll. The
+  header of `scripts/poll-pr.sh` lists what each cause means.
 - `not invoked: <primary> reviewed`: a fallback whose primary reviewed.
 
 `not reviewed` proceeds to the merge gate on green CI, in either lane, and is
@@ -159,8 +164,9 @@ because a fallback's only input is how its primary exited.
 
 - Primary `not reviewed: <any reason>`: drive the fallback as an ordinary
   on-request reviewer under its own `Cap:`. Its exit is its own, `reviewed` or
-  `not reviewed: <reason>`, and both its lines name the primary's reason, the
-  only record of why a second reviewer was paid for.
+  `not reviewed: <reason>`, and its `## Review` line and merge-summary block
+  both name the primary's reason, the only record of why a second reviewer
+  was paid for.
 - Primary `reviewed`: do not request it. It exits `not invoked: <primary>
   reviewed`, reported so a reader sees the reviewer exists.
 - Nothing is a fallback for a fallback: a chain is one deep.

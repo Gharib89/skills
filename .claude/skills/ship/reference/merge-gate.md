@@ -61,6 +61,7 @@ CI:          <leg> → <green | state> · ...     (from the profile's Legs:)
 Issues filed: <#n <title>, ... | none>  ·  linked: <#n <title>, ... | none>
 Ship defects: <none | one line per defect:>
   - <missing write, missing gating read, or wrong prose> (phase <n>)
+Direct reads: <none | <call> · <why>, ...>     (from the Run file's ## Direct reads)
 Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2 <m> · 3 <m> · 4 <m> · 5 <m> · 6 <m> · 7 <m> · 8 <m>
              (from `run-file timing`: its `row` is this line verbatim, and a
              field the mechanic could not compute reads `unverified` in place
@@ -83,11 +84,11 @@ record: a `not reviewed` exit, a hand-back and a `Ship defects:` row are all som
 else. A value you cannot point to a tool result for is written as `unverified`.
 `Ship defects:` lists every Ship defect the run met (a host write or a gating
 read no mechanic performs, prose that promised what a mechanic does not do),
-and not an informational read made directly, which the Run file's `## Direct
-reads` lists instead; each with
-the phase it was met in and written to the Run file at that moment the way a
-deviation is, so the row is a record, not a recollection. The run files it to no
-other repo; the human carries the row upstream.
+and not an informational read made directly, which `Direct reads:` lists
+instead, so a read that recurs across runs is seen by the human who promotes
+it; each defect with the phase it was met in and written to the Run file at
+that moment the way a deviation is, so the row is a record, not a recollection.
+The run files it to no other repo; the human carries the row upstream.
 
 **This summary is the record; the PR body is the short form of it.** Four
 sections of the body have a counterpart block here ([pr-body.md](pr-body.md)),

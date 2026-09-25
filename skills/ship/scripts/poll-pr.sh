@@ -83,14 +83,15 @@
 #
 # `not_reviewed` is the cause this poll observed for the awaited reviewer
 # delivering no round, which the review loop reports as `not reviewed: <cause>`
-# rather than naming one of its own. Null without --reviewer, where a round
-# landed, and where a conflict closed the window, which says nothing about the
-# reviewer. Otherwise, first match wins:
+# rather than naming one of its own. Null without --reviewer and where a
+# conflict closed the window, which says nothing about the reviewer. Otherwise,
+# first match wins:
 #   unreachable   `threads` is "unavailable" (on GitHub, GraphQL and the REST
 #                 routes a refusing proxy names both failed), a landed round's
-#                 included, since its threads can be neither read nor answered;
-#                 or, with no round landed, `reviewer_run` is "unavailable": a
-#                 read that did not happen is no evidence about the reviewer
+#                 included, since its threads can be neither read nor answered
+#   (null)        a round landed
+#   unreachable   `reviewer_run` is "unavailable": a read that did not happen is
+#                 no evidence about the reviewer
 #   blocked       `refused_by` is non-null
 #   never-queued  the awaited run's status is `none`, or its conclusion
 #                 `skipped`: the request landed and nothing ran for it
@@ -107,8 +108,8 @@
 # --since rule and `on_head[]` under the head rule, the list that rule lands
 # from. Under `--reviewer` only the awaited reviewer's rows are kept, and the
 # run's own rows drop out: a thread reply of ours posts as a review
-# row of its own, and a convergence test that counts it reads its own voice as
-# the reviewer's. That drop needs the host identity, so `--brief` asks for it up
+# row of its own, and a round count that counts it reads its own voice as the
+# reviewer's. That drop needs the host identity, so `--brief` asks for it up
 # front and exits 2 when the host cannot answer, rather than returning a list it
 # cannot promise is the reviewer's alone. The full shape stays the default.
 #
@@ -117,7 +118,8 @@
 #          done, waited_s}
 #   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked,
 #             reviewer_run, rounds[], threads}
-# exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
+# exit: 0 done · 1 window closed first (done=false; `not_reviewed` names why, and
+#       the review loop takes it as the answer) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 # The hard bound on waiting a run out, written once: the usage line is where a

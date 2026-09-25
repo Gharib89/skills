@@ -82,8 +82,8 @@ reviews() { # <on_head-json> <all-json>
 poll() { ( cd "$repo" && bash "$mech" 7 --reviewer copilot "$@" ); }
 calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 
-# The free-round poll #250 made: the notice landed after the PR opened, and the
-# minutes left on --timeout were spent waiting on nothing.
+# The poll #250 made: the notice landed after the PR opened, and the minutes
+# left on --timeout were spent waiting on nothing.
 reset
 reviews "[$notice]" "[$notice]"
 out=$(poll --since 2026-09-23T14:22:34Z --timeout 600 --interval 30); rc=$?

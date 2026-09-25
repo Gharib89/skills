@@ -3,9 +3,9 @@
 # requests a fallback exactly when its primary exits `not reviewed`, and a
 # primary's exit is `not reviewed: <cause>` where no round of it landed, the
 # cause being poll-pr's `not_reviewed` or request-review's exit 1
-# (never-queued). That branch is prose; this file holds the two mechanics to
-# the signals it reads, end to end, and holds the fallback's request to the
-# transport its own block names.
+# (never-queued). That branch is prose; `loop` below transcribes it over the
+# real mechanics, so each case holds the signals it reads end to end and the
+# fallback's request to the transport its own block names.
 #
 # Driven inside a throwaway checkout whose origin names GitHub, with
 # SHIP_HOST_ADAPTER on tests/host-fake.sh: no case reaches a host.
@@ -75,23 +75,32 @@ primary_exit() {
   if [ "$(jq -r .not_reviewed <<<"$out")" = null ]; then echo reviewed
   else echo "not reviewed: $(jq -r .not_reviewed <<<"$out")"; fi
 }
+# review-loop.md's Fallbacks: request the fallback on a `not reviewed` primary,
+# report it `not invoked` on a reviewed one. Prints both exits, one per line.
+loop() {
+  local p; p=$(primary_exit); echo "$p"
+  case $p in
+    "not reviewed"*) run request-review --reviewer claude > "$work/fallback" && echo requested ;;
+    *) echo "not invoked: copilot reviewed" ;;
+  esac
+}
 
 # A primary that answers nothing inside its bound: not reviewed, and the
 # fallback is requested through its own transport, a PR comment of its phrase.
 reset
-check "a silent primary is not reviewed" "not reviewed: silent" "$(primary_exit)"
-out=$(run request-review --reviewer claude); rc=$?
-check_rc "the fallback's request is made" 0 "$rc"
+check "a silent primary is not reviewed, and the fallback requested" \
+  "$(printf 'not reviewed: silent\nrequested')" "$(loop)"
 check "as a comment of its phrase" 1 "$(calls pr_comment)"
 check "the fallback is on its own block's login" 'claude claude[bot]' \
-  "$(jq -r '[.name, .login] | join(" ")' <<<"$out")"
+  "$(jq -r '[.name, .login] | join(" ")' "$work/fallback")"
 
 # A quota-out Copilot: the request never reads back, request-review exits 1,
 # and the fallback is due without a poll of the primary.
 reset
 jq -cn --arg a "$at" '{requested: false, readback: [], requested_at: $a}' \
   > "$SHIP_FAKE/host_pr_request_review.1.json"
-check "a request never read back is never-queued" "not reviewed: never-queued" "$(primary_exit)"
+check "a request never read back is never-queued, and the fallback requested" \
+  "$(printf 'not reviewed: never-queued\nrequested')" "$(loop)"
 check "and no poll of the primary was spent" 0 "$(calls pr_reviews)"
 
 # A primary that reviews: reviewed, and nothing requests the fallback, which
@@ -99,7 +108,8 @@ check "and no poll of the primary was spent" 0 "$(calls pr_reviews)"
 reset
 jq -cn --argjson r "$(row 'copilot-pull-request-reviewer[bot]' 2)" '{on_head: [$r], all: [$r], total: 1}' \
   > "$SHIP_FAKE/host_pr_reviews.1.json"
-check "a primary whose round landed is reviewed" reviewed "$(primary_exit)"
+check "a primary whose round landed is reviewed, the fallback not invoked" \
+  "$(printf 'reviewed\nnot invoked: copilot reviewed')" "$(loop)"
 check "and no fallback request was posted" 0 "$(calls pr_comment)"
 
 finish

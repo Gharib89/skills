@@ -33,7 +33,7 @@ A Ship script whose behavior is the same in every repo once the profile supplies
 _Avoid_: helper, util, raw `gh` or `az` call (for a write)
 
 **Gating read**:
-A host read a phase's `Done when:` or a stop row depends on, such as preflight's admission, poll-pr's round, ci-wait's legs or base-fresh's answer. It stays a generic mechanic, so the same host state always gives the same verdict.
+A host read a phase's `Done when:` or a stop row depends on, such as preflight's admission, poll-pr's round, CI wait's legs or base-fresh's answer. It stays a generic mechanic, so the same host state always gives the same verdict.
 _Avoid_: check, probe
 
 **Informational read**:
@@ -101,7 +101,7 @@ One automated review bot the ship profile names for a repo, with its login, its 
 _Avoid_: review bot topology (the old three-shape framing), bot lane
 
 **Trigger**:
-How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request, and where the host still posts an opening round on its own, that round is still pending when the first request reads back and lands as round 1. The loop and mechanics follow the trigger alone; the bot's brand decides nothing. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
+How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request, and where the host still posts an opening round on its own, round 1 is polled from PR creation so that round is round 1 whether it lands before the first request or after. The loop and mechanics follow the trigger alone; the bot's brand decides nothing. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
 _Avoid_: mode, kind of bot
 
 **Fallback reviewer**:
@@ -129,7 +129,7 @@ A reviewer's phase-7 exit where at least one of its rounds landed and every find
 _Avoid_: converged, approved, clean, passed
 
 **Not reviewed**:
-A reviewer's phase-7 exit where no round of it landed, named by the cause a mechanic observed: poll-pr's `not_reviewed` (unreachable, blocked, never-queued, infra-error, silent) or request-review's exit 1 (never-queued). It still proceeds to the merge gate on green CI, the human's call there rather than a hand-back.
+A reviewer's phase-7 exit where no round of it landed, or one did and its threads could not be read (unreachable), named by the cause a mechanic observed: poll-pr's `not_reviewed` (unreachable, blocked, never-queued, infra-error, silent) or request-review's exit 1 (never-queued). It still proceeds to the merge gate on green CI, the human's call there rather than a hand-back.
 _Avoid_: degraded, failure, timeout, skipped review
 
 **Not invoked**:
@@ -185,7 +185,7 @@ An open issue whose title shares three or more tokens with an adjacent find the 
 _Avoid_: duplicate, match, near-miss, collision
 
 **Ship defect**:
-A gap in Ship itself met during a run: a host operation no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human, rather than into a hand-rolled call or an issue filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
+A gap in Ship itself met during a run: a host write or gating read no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human, rather than into a hand-rolled call or an issue filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
 _Avoid_: tooling gap, missing helper, upstream bug
 
 **Release run**:

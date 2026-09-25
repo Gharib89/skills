@@ -1078,8 +1078,8 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # meaning.
 #
 # <identity> is the login the run posts as: its own thread replies land as review
-# rows of their own, and a convergence test that counts them reads its own voice
-# as the reviewer's. An empty <identity> drops nothing: a host that could not
+# rows of their own, and a round count that counts them reads its own voice as
+# the reviewer's. An empty <identity> drops nothing: a host that could not
 # name the run must not cost it the rounds it came for. The awaited reviewer's
 # login, `.reviewer.login`, narrows the rounds to its rows: under `--reviewer
 # claude` a Copilot quota notice is not a round of claude's (#255).

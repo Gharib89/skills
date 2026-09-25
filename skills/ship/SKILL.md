@@ -265,7 +265,7 @@ checks sit pending forever; fetch, rebase onto the base, resolve, re-run
 `Also proven by CI:` line is that verification failing: back to phase 2. Red
 after the reviewers exited: fix, push, proceed on green; a lint or flake fix
 earns no new on-request round, and an on-push reviewer re-reads it on its own,
-so wait for its quiet again. Honour `Push policy:`; a push spends CI minutes and
+so wait for its round on the new head and disposition it. Honour `Push policy:`; a push spends CI minutes and
 review quota, so push when the tree changed.
 **Done when:** `ci-wait` reports every leg on `Legs:` green, or `no-checks`
 where `No-checks legal:` admits it, with `mergeable` not `conflict`.

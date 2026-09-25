@@ -120,6 +120,28 @@ jq -cn '[{status: "completed", conclusion: "skipped", created_at: "2026-09-25T10
 out=$(poll --reviewer claude --since "$since" --timeout 0 --interval 1)
 check "a skipped run alone is never-queued" never-queued "$(jq -r .not_reviewed <<<"$out")"
 
+# Where two causes hold at once, the first in the header's order wins.
+notice() { jq -cn '{line: "quota reached", at: "2026-09-25T10:01:00Z"}' > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"; }
+reset; notice
+: > "$SHIP_FAKE/host_pr_threads.1.fail"
+out=$(poll --reviewer copilot --since "$since" --timeout 0 --interval 1)
+check "unreadable threads beat a refusal" unreachable "$(jq -r .not_reviewed <<<"$out")"
+reset; pr_state conflict
+: > "$SHIP_FAKE/host_pr_threads.1.fail"
+out=$(poll --reviewer copilot --since "$since" --timeout 60 --interval 30)
+check "a conflict beats unreadable threads" null "$(jq -r .not_reviewed <<<"$out")"
+reset; notice
+jq -cn '[{status: "completed", conclusion: "failure", created_at: "2026-09-25T10:00:30Z",
+          url: "https://example.invalid/runs/10", title: "t"}]' > "$SHIP_FAKE/host_workflow_runs.1.json"
+out=$(poll --reviewer claude --since "$since" --timeout 0 --interval 1)
+check "a refusal beats a failed run" blocked "$(jq -r .not_reviewed <<<"$out")"
+reset
+r=$(jq -cn '{id: "3", login: "claude[bot]", state: "comment", submitted_at: "2026-09-25T10:05:00Z", body: "- a finding"}')
+jq -cn --argjson r "$r" '{on_head: [$r], all: [$r], total: 1}' > "$SHIP_FAKE/host_pr_reviews.1.json"
+: > "$SHIP_FAKE/host_workflow_runs.1.fail"
+out=$(poll --reviewer claude --since "$since" --timeout 0 --interval 1)
+check "a landed round beats an unreadable run" null "$(jq -r .not_reviewed <<<"$out")"
+
 # With no reviewer awaited there is no one to be reviewed.
 reset
 out=$(poll --timeout 0 --interval 1)
