@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.8.0 (2026-09-25)
+
+### Features
+
+- **ship**: The Review line reports a Claude round's denied-call count
+  ([#294](https://github.com/Gharib89/skills/pull/294),
+  [`e5246b9`](https://github.com/Gharib89/skills/commit/e5246b91245f2f10f8ac5d42d7abe381bab2a2cd))
+
+
 ## v8.7.0 (2026-09-25)
 
 ### Features
