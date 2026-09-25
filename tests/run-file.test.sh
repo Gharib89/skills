@@ -43,6 +43,18 @@ check "the fixed wording, with the profile tails substituted" \
 - [ ] 9 · Merge gate: hard stop for human approval (unattended: summary as PR comment, return)' \
   "$(grep '^- \[ \] ' "$f")"
 
+# The informational reads a run made with no mechanic behind them, one line
+# each, so the ones that recur across runs can be promoted to a mechanic.
+check "init gives direct reads a section of their own, after the deviations log" \
+  '## Deviations log
+
+(none yet)
+
+## Direct reads
+
+(none yet)' \
+  "$(sed -n '/^## Deviations log$/,$p' "$f")"
+
 check "init returns the ten items for the mirror" \
   10 "$(out init 193 --scratchpad "$tmp" | jq '.items | length')"
 

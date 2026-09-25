@@ -26,6 +26,10 @@
 # `init` writes the ten items and returns them, one per harness task the run
 # then creates; `--rebuild` with `--state` is the recovery from a Run file a
 # subagent overwrote. A flip returns the `mirror` value for that phase's task.
+# Below the checklist it writes three sections the run fills by hand: `Design
+# and plan`, `Deviations log`, and `Direct reads`, one line per informational
+# read the run made straight through the host's REST form, no mechanic covering
+# it, so one that recurs across runs is visible as a mechanic to promote.
 #
 # Reaches no host and no repo file: the scratchpad path is the only thing it
 # writes.
@@ -209,6 +213,7 @@ EOSTATES
   { printf '# ship run · %s\n\n' "$id"
     printf '%s\n' "$items" | sed 's/^/- [ ] /'
     printf '\n## Design and plan\n\n(pending)\n\n## Deviations log\n\n(none yet)\n'
+    printf '\n## Direct reads\n\n(none yet)\n'
   } > "$file" || ship_tooling "cannot write $file"
   while IFS= read -r st; do
     [ -n "$st" ] || continue
