@@ -2,8 +2,8 @@
 # The shellcheck lint over the source tree's scripts plus the gate itself; the
 # derived copies are covered by `derived-copies` proving them identical.
 # `-P SCRIPTDIR` resolves the `source "$(dirname ...)/_lib.sh"` idiom the
-# mechanics use. The `shellcheck` gate in scripts/local-gate.sh runs this, in
-# every lane.
+# mechanics use. The `shellcheck` gate in scripts/local-gate.sh runs this in the
+# full lane, and under `--small` only when the diff touches a `*.sh`.
 #
 # Uses a system `shellcheck` on PATH, else fetches one with `npx -y shellcheck`.
 # When neither yields a shellcheck (for example, the cloud sandbox's proxy

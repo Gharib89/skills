@@ -14,8 +14,10 @@
 #
 # The repo's one CI leg, `bump-guard`, reads the PR title rather than the diff,
 # so no gate here is ever `deferred-to-ci`: this script is the whole automated
-# check on a diff. Every gate is repo-wide and takes seconds, so `--small`
-# records the lane and narrows nothing.
+# check on a diff: CI runs no tests. So `--small` narrows one gate alone, leaving
+# `shellcheck` out of `gates` when the diff since the base touches no `*.sh`;
+# every other gate runs repo-wide in both lanes. `tests` and `shellcheck`, most
+# of the wall time, run in the background while the rest run in turn.
 set -uo pipefail
 
 small="" base=""
@@ -36,20 +38,49 @@ if [ -z "$base" ]; then
 fi
 lane=full; [ -z "$small" ] || lane=small
 
-declare -A gates
-log=$(mktemp); trap 'rm -f "$log"' EXIT
-run()  { local name=$1; shift; if "$@" >"$log" 2>&1; then gates[$name]=pass; else gates[$name]=fail; tail -n 40 "$log" >&2; fi; }
-mark() { gates[$1]=$2; }
-# run_or_unavailable: as run, but the check's exit 2, a tool it could not obtain,
-# grades `unavailable` rather than `fail`.
-run_or_unavailable() {
-  local name=$1 rc; shift
-  "$@" >"$log" 2>&1; rc=$?
-  case $rc in 0) gates[$name]=pass; return ;; 2) gates[$name]=unavailable ;; *) gates[$name]=fail ;; esac
-  tail -n 40 "$log" >&2
+declare -A gates pids
+# The trap stops each background gate's whole process group first, so an
+# interrupted gate orphans neither the gate nor the test file or npx it runs.
+logs=$(mktemp -d)
+stop() { local p; for p in ${pids[@]+"${pids[@]}"}; do kill -- "-$p" 2>/dev/null; done; rm -rf "$logs"; }
+trap stop EXIT
+# grade <name> <rc> [unavailable]: the gate's status from its exit code, and on
+# anything but a pass its own log's tail on stderr. With `unavailable`, exit 2,
+# a tool the check could not obtain, grades `unavailable` rather than `fail`.
+grade() {
+  case $2 in
+    0) gates[$1]=pass; return ;;
+    2) if [ -n "${3:-}" ]; then gates[$1]=unavailable; else gates[$1]=fail; fi ;;
+    *) gates[$1]=fail ;;
+  esac
+  tail -n 40 "$logs/$1" >&2
+}
+run()   { local name=$1; shift; "$@" >"$logs/$name" 2>&1; grade "$name" $?; }
+mark()  { gates[$1]=$2; }
+# start: as run, in the background; its pid waits in pids[<name>] to be graded.
+# `set -m` puts the job in a process group of its own, which the trap kills;
+# without job control bash would have given it /dev/null as stdin, so it is
+# given that explicitly.
+start() {
+  local name=$1; shift
+  set -m; "$@" </dev/null >"$logs/$name" 2>&1 & pids[$name]=$!; set +m
 }
 
 # --- gates ---------------------------------------------------------------------
+
+# tests: the pure transformations the mechanics were refactored around, run
+# with no host call. A regression is caught here rather than by a reviewer.
+start tests tests/run.sh
+
+# The `shellcheck` gate: the source tree's scripts plus this gate itself,
+# through a system `shellcheck` when one is on PATH and `npx` otherwise.
+# A missing shellcheck is `unavailable`, not a lint finding;
+# scripts/shellcheck-check.sh is the whole rule, and exits 2 for that case.
+# `git diff --quiet` rather than a grep over names: git C-quotes a non-ASCII
+# path, and a diff git cannot compute exits 128, which runs the gate.
+if [ "$lane" = full ] || ! git diff --quiet "$base...HEAD" -- '*.sh'; then
+  start shellcheck scripts/shellcheck-check.sh
+fi
 
 # secrets: required in every lane.
 if command -v gitleaks >/dev/null; then
@@ -88,12 +119,6 @@ run derived-copies derived_copies
 # stays a hand edit and is exempt. scripts/version-line-check.sh is the whole rule.
 run version-lines scripts/version-line-check.sh "$base"
 
-# The `shellcheck` gate: the source tree's scripts plus this gate itself,
-# through a system `shellcheck` when one is on PATH and `npx` otherwise.
-# A missing shellcheck is `unavailable`, not a lint finding;
-# scripts/shellcheck-check.sh is the whole rule, and exits 2 for that case.
-run_or_unavailable shellcheck scripts/shellcheck-check.sh
-
 # house-style: the standards doc bans em dashes in files this repo authors.
 # A written standard nothing enforces drifts, so enforce it, under any locale,
 # along with the trailing-whitespace and final-newline rules beside it;
@@ -121,9 +146,11 @@ run stray-files scripts/stray-file-check.sh
 # host: each guard fires before the adapter loads.
 run contract scripts/contract-check.sh skills/ship/scripts skills
 
-# tests: the pure transformations the mechanics were refactored around, run
-# with no host call. A regression is caught here rather than by a reviewer.
-run tests tests/run.sh
+# The background gates, graded once the rest have run; shellcheck's exit 2 is
+# `unavailable`, per its comment above. Each leaves pids once reaped, so the
+# trap signals no group whose number the kernel may since have handed out.
+wait "${pids[tests]}"; grade tests $?; unset 'pids[tests]'
+[ -z "${pids[shellcheck]:-}" ] || { wait "${pids[shellcheck]}"; grade shellcheck $? unavailable; unset 'pids[shellcheck]'; }
 
 # --- end gates -----------------------------------------------------------------
 
