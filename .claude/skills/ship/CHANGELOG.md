@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.7.0 (2026-09-25)
+
+### Features
+
+- **ship**: Update-issue-body lands a tracker-issue docs-sync target after the merge
+  ([#292](https://github.com/Gharib89/skills/pull/292),
+  [`bd47489`](https://github.com/Gharib89/skills/commit/bd47489c43b1d696750b3efdab14efa9d6f9450f))
+
+
 ## v8.6.1 (2026-09-25)
 
 ### Bug Fixes
