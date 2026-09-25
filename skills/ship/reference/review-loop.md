@@ -29,10 +29,10 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
   host's own request call, or a PR comment of the phrase for a comment-triggered
   workflow), and the mechanic reads the request back off the host. A request
   that does not read back exits 1: the reviewer is `not reviewed: never-queued`,
-  with no poll. Under the host's own request call, poll round 1 `--since`
-  `open-pr`'s `created_at` instead: a round the host opened unbidden with the
-  PR (a Copilot ruleset with `review_on_push: false`) is then round 1 whether
-  it landed before the request or after.
+  with no poll. Under the host's own request call, round 1 polls `--since`
+  `open-pr`'s `created_at`, first at `--timeout 0`: a round the host opened
+  unbidden with the PR (a Copilot ruleset, `review_on_push: false`) that has
+  landed is round 1, and the request is sent only where none has.
 - **`auto-once`**: nothing to request; poll once with `--since` `open-pr`'s
   `created_at`. That one round is all there is.
 - **`on-push`**: every push earns a round; poll with no `--since`, which is the
