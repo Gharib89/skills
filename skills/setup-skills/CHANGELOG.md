@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v5.9.0 (2026-09-25)
+
+### Features
+
+- **setup-skills**: Fail the gate on an unresolvable base, and gate the Claude reviewer on the PR
+  author ([#305](https://github.com/Gharib89/skills/pull/305),
+  [`093a7a6`](https://github.com/Gharib89/skills/commit/093a7a6afc53aca7b63bc7fdffa4f18d5083770d))
+
+
 ## v5.8.0 (2026-09-25)
 
 ### Features
