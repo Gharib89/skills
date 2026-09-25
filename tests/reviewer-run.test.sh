@@ -158,7 +158,13 @@ check "a skipped run does not answer for the one that ran" \
   "$(jq -r '[.reviewer_run.conclusion, .reviewer_run.url] | join(" ")' <<<"$out")"
 
 # A run that is still going outranks one that concluded after it started: the
-# round can only come from the live one.
+# round can only come from the live one. A landed round's live run holds the
+# window to the ceiling (#295), so these two cases run a copy of the mechanic
+# whose ceiling is seconds.
+cp -R skills/ship/scripts "$work/ceil5"
+sed -i.bak 's/^ceiling=1800$/ceiling=5/' "$work/ceil5/poll-pr.sh"
+poll5() { ( cd "$repo" && bash "$work/ceil5/poll-pr.sh" 7 --reviewer claude \
+  --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 ); }
 reset
 jq -cn --arg t "$title" '[{status: "in_progress", conclusion: null,
      created_at: "2026-09-17T11:59:00Z", url: "https://example.invalid/runs/9", title: $t},
@@ -167,7 +173,7 @@ jq -cn --arg t "$title" '[{status: "in_progress", conclusion: null,
   > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll); rc=$?
+out=$(poll5); rc=$?
 check_rc "a live run outranks a newer concluded one and holds the window" 0 "$rc"
 check "and it is the run reported" 'in_progress https://example.invalid/runs/9' \
   "$(jq -r '[.reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
@@ -186,7 +192,7 @@ jq -cn --arg t "$title" '[{status: "waiting", conclusion: null,
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.2.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.3.json"
-out=$(poll); rc=$?
+out=$(poll5); rc=$?
 check_rc "an unfinished run in any status holds the window" 0 "$rc"
 check "and it outranks a newer concluded run" 'true since waiting' \
   "$(jq -r '[(.done|tostring), .landed_by, .reviewer_run.status] | join(" ")' <<<"$out")"
@@ -276,14 +282,30 @@ for answer in '{"denied":"2"}' '{"denied":1}
     'completed null' "$(jq -r '[.reviewer_run.status, (.reviewer_run.denied|tostring)] | join(" ")' <<<"$out")"
 done
 
-# A run still going has no count yet, and neither has a run that was never
-# created: neither is asked for one.
+# The job posts its review before its denial step raises the count, so a round
+# usually lands while its run is still going (#295). The window stays open past
+# the landed round until the run completes, and the count is read then.
+reset
+run_row in_progress ''    > "$SHIP_FAKE/host_workflow_runs.1.json"
+run_row completed success > "$SHIP_FAKE/host_workflow_runs.2.json"
+printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
+printf '{"denied":1}\n' > "$SHIP_FAKE/host_run_denials.1.json"
+out=$(poll); rc=$?
+check_rc "a round that lands before its run completes still lands" 0 "$rc"
+check "the window waits for the run, then reads its count" 'true completed 1' \
+  "$(jq -r '[(.done|tostring), .reviewer_run.status, (.reviewer_run.denied|tostring)] | join(" ")' <<<"$out")"
+check "one more pass, for the run to complete" 2 "$(calls workflow_runs)"
+
+# A run still going at the ceiling has no count yet, and neither has a run that
+# was never created: neither is asked for one. The landed round stands.
 reset
 run_row in_progress '' > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
-out=$(poll)
-check "an in-progress run's count is null" 'in_progress null' \
-  "$(jq -r '[.reviewer_run.status, (.reviewer_run.denied|tostring)] | join(" ")' <<<"$out")"
+out=$( cd "$repo" && bash "$work/scripts/poll-pr.sh" 7 --reviewer claude \
+  --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 ); rc=$?
+check_rc "a landed round whose run outlives the ceiling is still done" 0 "$rc"
+check "an in-progress run's count is null" 'true in_progress null' \
+  "$(jq -r '[(.done|tostring), .reviewer_run.status, (.reviewer_run.denied|tostring)] | join(" ")' <<<"$out")"
 check "and no count is read for it" 0 "$(calls run_denials)"
 reset
 printf '[]\n' > "$SHIP_FAKE/host_workflow_runs.1.json"

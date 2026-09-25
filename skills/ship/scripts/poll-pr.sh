@@ -68,10 +68,12 @@
 # starts such a run is the host's word and the adapter's business: this
 # mechanic names the workflow file and the instant, and nothing else. `denied`
 # is the count of tool calls the round in a `completed` run was refused, read
-# once as the poll returns, for that run alone; it is null while the run is
-# live, where none was created, and where the host could not read the count,
-# which leaves the rest of the run read as it was. It never changes the window
-# or the verdict: the review loop carries it onto the Review line.
+# once as the poll returns, for that run alone; it is null for a run still live
+# at the ceiling, where none was created, and where the host could not read the
+# count, which leaves the rest of the run read as it was. The job posts its
+# review before it raises the count, so a landed round whose run is still going
+# holds the window until the run completes, to the ceiling (#295). The count
+# never changes the verdict: the review loop carries it onto the Review line.
 #
 # `reviewer_blocked` is the awaited login's latest quota or rate-limit notice,
 # read from its review bodies as well as its PR comments: a reviewer states a
@@ -302,6 +304,12 @@ while :; do
       # states included, and a round can still come out of it.
       *) sleep "$interval"; continue ;;
     esac
+  fi
+  # A landed round's run is still going: the job posts its review before its
+  # denial step raises the count, so the window stays open until the run ends,
+  # to the ceiling, and the count below is read from a completed run (#295).
+  if $done && [ "$landed" = true ] && [ "$mergeable" != conflict ] && [ "$waited" -lt "$ceiling" ]; then
+    case $run_status in ''|none|completed) ;; *) sleep "$interval"; continue ;; esac
   fi
   if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
     # Read here rather than per pass, so a poll that waited out the run reads
