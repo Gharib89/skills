@@ -70,9 +70,9 @@ case $op in
     already=true
     if assigned; then
       already=false
-      host_issue_unassign "$n" "$me" || ship_fail "unassign call failed"
+      host_issue_unassign "$n" "$me" || ship_fail "unassign call failed: the claim is still held"
       issue=$(host_issue_get "$n") || ship_fail "cannot re-read issue #$n after unassigning"
-      ! assigned || ship_fail "unassign did not land"
+      ! assigned || ship_fail "unassign did not land: the claim is still held"
     fi
     if [ "$op" = release ]; then
       jq -n --argjson n "$n" --arg m "$me" --argjson a "$already" '{issue: $n, identity: $m, claim: "released", already: $a}'; exit 0
@@ -87,5 +87,6 @@ case $op in
       --argjson rm "$removed" --argjson ad "$added" --argjson c "$commented" --arg rfa "$rfa" --arg rfh "$rfh" \
       '{issue: $n, identity: $m, claim: "released", already: $a, handed_back: $h,
         labels: {removed: (if $rm then $rfa else null end), added: (if $ad then $rfh else null end)}, commented: $c}'
+    $handed || echo "the claim is released but the hand-back is incomplete: report the label left null under labels, not a clean stop" >&2
     $handed ;;
 esac

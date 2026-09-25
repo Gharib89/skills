@@ -100,7 +100,8 @@ check "close on an already closed phase is refused" \
 
 grep -v '^- \[.\] 8 · ' "$g" > "$tmp/gapped.md"
 check "a flip whose line is absent names the line" \
-  "no phase 8 line in $tmp/gapped.md" "$(err open 8 --file "$tmp/gapped.md")"
+  "no phase 8 line in $tmp/gapped.md: a subagent overwrote the Run file; rebuild it with \`run-file init <issue> --rebuild\`, one --state per phase the transcript accounts for and no invented range, then log what was lost in the deviations log" \
+  "$(err open 8 --file "$tmp/gapped.md")"
 check_rc "a flip whose line is absent exits 1" 1 "$(rc open 8 --file "$tmp/gapped.md")"
 
 check_rc "a flip on a file that is not there exits 1" 1 "$(rc open 8 --file "$tmp/nope.md")"
