@@ -89,7 +89,7 @@ outline.
 replaces the fence only where the reviewer's question about the change is "did
 the text change correctly", and never where it is "what does X now do"; it is
 visible rather than a silent omission so the self-review and the reviewer can
-dispute the call. A comment reword that changes which degraded reason a reader
+dispute the call. A comment reword that changes which `not reviewed` reason a reader
 expects has a control-flow shape even though the diff is comments, and taking
 the hatch there leaves the reviewer without the one view that answers its
 question. The small lane takes no exemption either: a

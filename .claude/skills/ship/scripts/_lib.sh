@@ -141,14 +141,6 @@
 #                                           requested_at: ISO-8601 time of the request event, or,
 #                                           where the host records none (always, on Azure DevOps),
 #                                           the wall clock, stamped before the call.
-#   host_pr_review_queued <pr> <login> <since-iso>
-#                                        -> true | false: true where the host records a request
-#                                           event for <login> at or after <since>, or lists it as
-#                                           a pending reviewer on the PR now, under any name the
-#                                           host records it as. Non-zero and silent where
-#                                           the host keeps no such record (always, on Azure DevOps,
-#                                           whose reviewer list carries no request time), which
-#                                           poll-pr reads as unknown and leaves the window to run.
 #   host_pr_comment <pr> <body-file>     -> {id,url,created_at}
 #                                           (fails with {status})
 #                                           id: the comment's id on GitHub, the thread's id on
@@ -718,7 +710,7 @@ readonly SHIP_REFUSED_BY='
 # `waiting`, `pending`) hold the window the way `queued` does. The title is the
 # only link the host offers, so a PR renamed mid-poll matches nothing: the
 # adapter's own comment carries what that costs. `none` is the read finding
-# no run at all, which the review loop reads as never-queued. `denied` is null
+# no run at all, which poll-pr reports as never-queued. `denied` is null
 # here: poll-pr fills it from `host_run_denials` once, for a completed pick.
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_REVIEWER_RUN='
@@ -981,7 +973,7 @@ ship_reviewer_by_name() {
 # host creates the
 # `issue_comment` run within seconds of the comment, and from then on the run,
 # not the constant, holds the window. A backed-up queue that outlasts it reads
-# `never-queued`; a caller expecting one passes `--timeout`.
+# as no run, `never-queued`; a caller expecting one passes `--timeout`.
 #
 # `refusal` is null, or the line `poll-pr` exits 2 on, where the caller's
 # <since> disagrees with the rule: a --since for an on-push reviewer, or none for
@@ -1127,7 +1119,7 @@ ship_brief() {
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
     def lead: [splits("\n") | select(test("^[ \t]*$") | not)] | (.[0] // "") | clip;
     (.reviewer.login // "") as $await
-    | {head_sha, mergeable, reviewer, landed_by, refused_by, never_queued, degraded, reviewer_blocked, reviewer_run,
+    | {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked, reviewer_run,
      rounds: [.reviews[$key][] | select((mine | not) and awaited($await)) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index($r.id | tostring)) then $r.body

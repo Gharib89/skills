@@ -41,8 +41,8 @@ GitHub GraphQL, where review-thread state lives, and names REST routes in its
 place; the GitHub adapter switches to those on that refusal, so `poll-pr`,
 `reply-thread` and `resolve-thread` work on threads as they do outside the
 sandbox (a bot's thread `author` keeps its `[bot]` suffix there) and a reviewer
-exits by its normal rules. `threads: "unavailable"`, and with it `degraded:
-unreachable`, now means the thread read failed on both paths. Remote
+exits by its normal rules. `threads: "unavailable"`, and with it `not
+reviewed: unreachable`, now means the thread read failed on both paths. Remote
 ref deletion is blocked both ways, which costs nothing here: the lane returns
 at the merge gate, and `merge`, `cleanup` and the `update-issue-body` command
 the summary carries for each tracker draft
@@ -51,8 +51,8 @@ machine.
 
 Unchanged: `defer-to-ci` is the only verification disposition that proceeds
 (`hand-off` and `blocked` hand back), and an `unexercised` result proceeds on
-its own, with no disposition behind it and nothing to hand back for; a degraded
-reviewer exit still proceeds to the merge gate on green CI and is reported there
+its own, with no disposition behind it and nothing to hand back for; a `not
+reviewed` reviewer exit still proceeds to the merge gate on green CI and is reported there
 rather than handed back; the local gate's `unavailable` hands back with `local
 gate unavailable: <gates>`, leaving the PR unopened. Compose skills with an
 explicit unattended signal (`code-review`, `tdd` and any reviewer helper); they

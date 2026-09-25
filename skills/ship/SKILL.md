@@ -78,10 +78,15 @@ Phase 0 starts once the Run file exists, and each phase below flips it with
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps; [reference/mechanics.md](reference/mechanics.md) maps mechanic
 to phase and carries the contract they share, `--help` included, which is where
-a mechanic's flags come from. **Every host call you make goes through a
-mechanic**: a host operation no mechanic performs is a **Ship defect**, which
-goes on the merge summary's `Ship defects:` row for the human to carry upstream,
-rather than into a hand-rolled call or an issue filed to another repo.
+a mechanic's flags come from. **Every host write, and every gating read (one a
+phase's `Done when:` or a stop row depends on), goes through a mechanic**: one
+no mechanic performs is a **Ship defect**, which goes on the merge summary's
+`Ship defects:` row for the human to carry upstream, rather than into a
+hand-rolled call or an issue filed to another repo. An **informational read**
+no mechanic covers may be made directly, through the host's REST form so it
+works in the cloud sandbox, and is listed in the Run file's `## Direct reads`;
+verification scaffolding (a scratch issue, a scratch review thread) is outside
+the rule.
 
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
 preflight proves, what it refuses, the profile it loads and its schema check,
@@ -90,8 +95,7 @@ and why the worktree is made the way it is. Run `preflight <issue>`, adding
 issue and the flag turns it into a stop. Read its `reasons`: empty with
 `ok: true` is the admission, every entry is a row of the stop table below, and a
 push-permission `unknown` is a warning on stderr that you carry to the merge
-summary rather than a stop; record in the Run file each `reviewers[]` row
-reading `review_on_push: false`, which phase 7 passes on. Then `read-issue
+summary rather than a stop. Then `read-issue
 <issue>`, whose result is phase 1's input and from which the branch `<type>`
 and `<slug>` are derived. Then
 `isolate <issue> <type> <slug>` with the profile's `Carry:` files, or
@@ -233,28 +237,20 @@ Then `reflect <issue> <pr>` so a human reading the issue sees the PR.
 the ones the body owes, and `reflect` has posted the link on the issue.
 
 **7 · Reviewers.** [reference/review-loop.md](reference/review-loop.md) carries
-convergence per trigger, the cap as a budget, fallback order, clipped rounds,
-`--brief`, `Instructions:` handling and degraded detection. For each reviewer
-under `## Reviewers`, drive it to convergence: its `Trigger:` (`auto-once`,
-`on-push`, `on-request`) fixes its loop and its convergence test, its `Request:`
-fixes how a round is asked for, and the profile's `Cap:` budgets the rounds ship
-drives; the brand fixes nothing. Zero reviewers: skip the phase. **Order: every
-reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks.** Batch
-fixes into one push per round, read each round from `poll-pr` (`--brief` is how
-a round is read), then answer each thread with `reply-thread` (`fixed in <sha>`,
-or the decline and its reason), and the reviewer's `Resolve:` per thread once
-every thread carries a disposition. A finding about the PR body itself is a fix
-like any other, through the writes pr-body.md names. Exits: `converged`,
-`converged, override needed` (a gating reviewer's declined finding, cited with
-evidence), `degraded: <reason>` from the fixed vocabulary
-`never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
-a fallback whose primary converged, `not invoked: <primary> converged`. Degraded
-proceeds to the merge gate on green CI and is reported there rather than handed
-back. At exit, one `update-pr-body <pr> --section <name> --body-file <path>`
-call per section, in this order: `"Special things to note"` where the rounds
-grew the deviations log, `"Needs attention"` where a round filed or linked an
-issue or met a defect, and `Review` last, one line per reviewer in the fixed
-shape review-loop.md carries. Then the phase-6 read-back while the PR is open.
+the round per trigger, the cap as a budget, reading a round, the exit lines and
+fallbacks. Phase 7 is best-effort, a second pair of eyes on the review gate: for
+each reviewer under `## Reviewers`, per round, start it by its `Trigger:` and
+`Request:` (`request-review` for `on-request`), wait out one `poll-pr --brief`
+window, triage whatever landed, push the fixes once, answer each thread with
+`reply-thread`, then the block's `Resolve:`; `Cap:` bounds the rounds. **Order:
+every reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks.**
+Exits: `reviewed`, `not reviewed: <reason>` (the cause `poll-pr` reports as
+`not_reviewed`, or `never-queued` where `request-review` exits 1), or, for a
+fallback whose primary reviewed, `not invoked: <primary> reviewed`. `not
+reviewed` proceeds to the merge gate on green CI, reported there rather than
+handed back. At exit, `update-pr-body --section` writes `"Special things to
+note"` and `"Needs attention"` where the rounds grew them, then `Review` last,
+then the phase-6 read-back.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned carries a reply and, where `Resolve:` is not `None.`, is resolved (none
 to carry one, where it answered `threads: unavailable`), and `read-pr` shows a
@@ -267,7 +263,7 @@ checks sit pending forever; fetch, rebase onto the base, resolve, re-run
 `base-fresh` and the local gate, push. `no-checks` is fine only where
 `No-checks legal:` says so. A red leg named on a verification's
 `Also proven by CI:` line is that verification failing: back to phase 2. Red
-after reviewers converged: fix, push, proceed on green; a lint or flake fix
+after the reviewers exited: fix, push, proceed on green; a lint or flake fix
 earns no new on-request round, and an on-push reviewer re-reads it on its own,
 so wait for its quiet again. Honour `Push policy:`; a push spends CI minutes and
 review quota, so push when the tree changed.

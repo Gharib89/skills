@@ -1,7 +1,7 @@
 name: Claude PR Review
 
 # The `claude` reviewer in docs/agents/ship.md: Copilot's fallback, driven only
-# when Copilot exits degraded. An issue-comment trigger and nothing else, which
+# when Copilot exits not reviewed. An issue-comment trigger and nothing else, which
 # is what `Request: comment @claude` in the profile asks for. There is
 # deliberately no `pull_request` trigger: a check run on the PR head would make
 # this a CI leg, and `## CI` says this repo has none.

@@ -34,8 +34,7 @@ and does not collapse with docs-sync. On top of that:
   gate. Lean on CI for the rest of the suite, lint and types: a red CI on a
   small change is a cheap round-trip.
 - **At most one *requested* round per on-request reviewer**, fallback included,
-  whatever its `Cap:`; a free round with nothing actionable ends that reviewer's
-  loop `converged` with no request. `auto-once` and `on-push` reviewers behave
+  whatever its `Cap:`. `auto-once` and `on-push` reviewers behave
   as in the full lane; ship does not control when they fire.
 - **Subagents:** only `code-review`'s axes; map, execute, verify and the
   `writing-for-agents` pass run inline.

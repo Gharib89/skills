@@ -2,6 +2,7 @@
 
 ## Contents
 
+- [Which calls need a mechanic](#which-calls-need-a-mechanic)
 - [Which mechanic each phase runs](#which-mechanic-each-phase-runs)
 - [Ask the script what its flags are](#ask-the-script-what-its-flags-are)
 - [The exit codes](#the-exit-codes)
@@ -9,11 +10,24 @@
 - [The vocabulary a read comes back in](#the-vocabulary-a-read-comes-back-in)
 - [Run them inline](#run-them-inline)
 
-`scripts/` holds one executable per deterministic step, and a mechanic is the
-only way a ship run touches the host, though not every one does: `run-file`
-writes the run's own record and nothing else. `SKILL.md` says what each phase
+`scripts/` holds one executable per deterministic step, and not every one
+touches the host: `run-file` writes the run's own record and nothing else. `SKILL.md` says what each phase
 decides; this file says which mechanic the phase runs there and how every one of
 them answers, so both are read once rather than re-derived per call.
+
+## Which calls need a mechanic
+
+Every host **write**, and every **gating read** (one a phase's `Done when:` or a
+stop row depends on: `preflight`, `poll-pr`, `ci-wait`, `base-fresh` and the
+like), goes through a mechanic, so create-then-verify, the host status on a
+failed write and the same verdict from the same host state all hold. One no
+mechanic performs is a Ship defect. An **informational read**, one no phase or
+stop branches on, may be made directly where no mechanic covers it: through the
+host's REST form (`gh api`, `az rest`), which the cloud sandbox admits where it
+refuses GitHub GraphQL, with one line in the Run file's `## Direct reads`
+naming the call and why. A read made directly in two runs is a candidate
+mechanic. Verification scaffolding, a scratch issue or scratch review thread a
+`Run:` line sets up by hand, sits outside the rule.
 
 ## Which mechanic each phase runs
 

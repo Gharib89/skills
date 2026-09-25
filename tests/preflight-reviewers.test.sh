@@ -2,10 +2,8 @@
 # preflight's reviewers[]: one {name, review_on_push} row per reviewer block,
 # `review_on_push` being the copilot_code_review ruleset's answer for the block
 # posting under the Copilot login and null for every other block, or where the
-# host could not answer. The review loop reads it at phase 7: a free-round poll
-# closing on `never_queued: true` is `degraded: never-queued` with no request
-# only where this row read `false`, because only then did the host promise the
-# free round it did not queue.
+# host could not answer: the ruleset read the Trigger check rests on, reported
+# for the human.
 #
 # Driven over the Host fake inside a throwaway GitHub-origin checkout; the
 # profile carries the Reviewers section alone, so preflight's other reasons are

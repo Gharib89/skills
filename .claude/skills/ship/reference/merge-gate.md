@@ -44,11 +44,12 @@ Self-review (code-review skill, the review gate)
   ...
 
 Review                                         (one block per reviewer)
-  <name> (<trigger>, <n> rounds): <converged | converged, override needed | degraded: <reason> | not invoked: <primary> converged>[, <N> denied calls (run <url>[, run <url>…])]
+  <name> (<trigger>, <n> rounds): <reviewed | not reviewed: <reason> | not invoked: <primary> reviewed>[, <N> denied calls (run <url>[, run <url>…])]
     (the denied-calls clause as review-loop.md's Review line carries it, only where N > 0)
     - <finding> → <fixed in <sha> | declined: reason | filed: #<n>>
     ...                                        (or: clean, no findings)
-    (a fallback that ran opens with: fallback for <primary>: degraded: <reason>)
+    (a fallback that ran opens with: fallback for <primary>: not reviewed: <reason>)
+    (a Gating: yes reviewer's declined finding: override needed: <finding>, <evidence>)
 
 Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>
 Docs-sync:   <ran: files | skipped: reason>
@@ -59,7 +60,7 @@ Tracker:     <none | one block per drafted section:>
 CI:          <leg> → <green | state> · ...     (from the profile's Legs:)
 Issues filed: <#n <title>, ... | none>  ·  linked: <#n <title>, ... | none>
 Ship defects: <none | one line per defect:>
-  - <missing operation or wrong prose> (phase <n>)
+  - <missing write, missing gating read, or wrong prose> (phase <n>)
 Timing:      start→PR <m>m · PR→gate <m>m · per phase: 0 <m> · 1 <m> · 2 <m> · 3 <m> · 4 <m> · 5 <m> · 6 <m> · 7 <m> · 8 <m>
              (from `run-file timing`: its `row` is this line verbatim, and a
              field the mechanic could not compute reads `unverified` in place
@@ -78,10 +79,12 @@ empty case writes the same reason phase 6 wrote into the PR body's `##
 Verification` section, one of the three [pr-body.md](pr-body.md) names. On an
 `unexercised` row, `<what ran>` names the **subject that did not exist** rather
 than a command; the row is a record for the human to weigh, and it stays a
-record: a degraded exit, a hand-back and a `Ship defects:` row are all something
+record: a `not reviewed` exit, a hand-back and a `Ship defects:` row are all something
 else. A value you cannot point to a tool result for is written as `unverified`.
-`Ship defects:` lists every Ship defect the run met (a host operation no
-mechanic performs, prose that promised what a mechanic does not do), each with
+`Ship defects:` lists every Ship defect the run met (a host write or a gating
+read no mechanic performs, prose that promised what a mechanic does not do),
+and not an informational read made directly, which the Run file's `## Direct
+reads` lists instead; each with
 the phase it was met in and written to the Run file at that moment the way a
 deviation is, so the row is a record, not a recollection. The run files it to no
 other repo; the human carries the row upstream.

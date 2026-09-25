@@ -26,6 +26,10 @@
 # `init` writes the ten items and returns them, one per harness task the run
 # then creates; `--rebuild` with `--state` is the recovery from a Run file a
 # subagent overwrote. A flip returns the `mirror` value for that phase's task.
+# Below the checklist it writes three sections the run fills by hand: `Design
+# and plan`, `Deviations log`, and `Direct reads`, one line per informational
+# read the run made straight through the host's REST form, no mechanic covering
+# it, so one that recurs across runs is visible as a mechanic to promote.
 #
 # Reaches no host and no repo file: the scratchpad path is the only thing it
 # writes.
@@ -52,7 +56,7 @@ checklist() { # checklist <tripwires> <verifications> <reviewers> <legs>
 4 · Docs-sync + self-review: sync docs first, then \`code-review\` on the diff, auto-triage
 5 · Local gate: base-fresh, then the repo's gate, all green
 6 · Open PR: non-draft, Conventional-Commit title, Closes, reflect on the issue
-7 · Reviewers: $3 to convergence
+7 · Reviewers: $3, one bounded pass each
 8 · CI: resolve any conflict, land $4 green
 9 · Merge gate: hard stop for human approval (unattended: summary as PR comment, return)
 ITEMS
@@ -209,6 +213,7 @@ EOSTATES
   { printf '# ship run · %s\n\n' "$id"
     printf '%s\n' "$items" | sed 's/^/- [ ] /'
     printf '\n## Design and plan\n\n(pending)\n\n## Deviations log\n\n(none yet)\n'
+    printf '\n## Direct reads\n\n(none yet)\n'
   } > "$file" || ship_tooling "cannot write $file"
   while IFS= read -r st; do
     [ -n "$st" ] || continue
