@@ -123,6 +123,15 @@
 #                                           Azure DevOps, which has no such read. poll-pr reports
 #                                           either as "unavailable" and holds the window to the
 #                                           constant on.
+#   host_run_denials <run-url>           -> {denied} the count of tool calls the round in
+#                                           that completed run was refused: the leading
+#                                           numbers of its jobs' `claude-review` warning
+#                                           annotations, summed, 0 where none was raised.
+#                                           Non-zero where the host could not answer or a
+#                                           warning leads with no number; always non-zero and
+#                                           silent on Azure DevOps, which awaits no run.
+#                                           poll-pr reports a failure as a `denied` of null
+#                                           and leaves the run read standing.
 #   host_pr_request_review <pr> <login>  -> {requested,readback[],requested_at}
 #                                           readback: the host's own names for the PR's reviewers:
 #                                           logins on GitHub, each reviewer's uniqueName and
@@ -709,7 +718,8 @@ readonly SHIP_REFUSED_BY='
 # `waiting`, `pending`) hold the window the way `queued` does. The title is the
 # only link the host offers, so a PR renamed mid-poll matches nothing: the
 # adapter's own comment carries what that costs. `none` is the read finding
-# no run at all, which the review loop reads as never-queued.
+# no run at all, which the review loop reads as never-queued. `denied` is null
+# here: poll-pr fills it from `host_run_denials` once, for a completed pick.
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_REVIEWER_RUN='
   def live: .status != "completed";
@@ -718,7 +728,7 @@ readonly SHIP_REVIEWER_RUN='
      // ([$rows[] | select(.conclusion != "skipped")] | last)
      // ($rows | last)
      // {status: "none", conclusion: null, url: null})
-  | {status, conclusion, url}'
+  | {status, conclusion, url, denied: null}'
 
 # ship_fence_unclosed <text>: does the text end inside a fenced block? Prints
 # `line <n>: <run>` naming the opener still open, or nothing when the
@@ -1098,7 +1108,7 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # it, cut at the same width: a run answers one thread off the brief, and a row
 # holding an id alone sent it back for the full shape to read what the finding
 # was. The string "unavailable" passes through as itself. `reviewer_run` passes
-# through whole, the string "unavailable" included: it is three fields, and a
+# through whole, the string "unavailable" included: it is four fields, and a
 # loop reading rounds from the brief is the loop that has to tell a silent
 # reviewer from one whose run is still going.
 ship_brief() {

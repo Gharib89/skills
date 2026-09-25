@@ -409,6 +409,8 @@ host_issues_ready() { # <label>
 # "this host has no such read", the answer every read the host lacks gives, and
 # `poll-pr` then holds its window to the constant.
 host_workflow_runs() { return 1; } # <workflow-file> <since-iso>
+# With no awaited run there is no run whose denied calls to count.
+host_run_denials() { return 1; } # <run-url>
 
 # A reviewer on an Azure DevOps PR carries a vote and no time it was asked, so
 # there is no record to say a round was queued since an instant. Non-zero and

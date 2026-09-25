@@ -565,6 +565,29 @@ host_workflow_runs() { # <workflow-file> <since-iso>
   return $rc
 }
 
+# The scaffolded Claude reviewer job raises one warning annotation titled
+# `claude-review` when its round had refused tool calls, `N tool call(s)
+# denied; ...`, and none when it had none (#283). A job is its own check run on
+# this host, so the run's jobs are read first, then each job's annotations, and
+# every such warning is summed, so a workflow of several jobs is not
+# undercounted. Only
+# the leading number is read, so the wording around it may change; a warning
+# that leads with none is a count this read cannot give, and fails rather than
+# answering 0.
+host_run_denials() { # <run-url>
+  local id=${1##*/runs/} jobs j a ann=""
+  id=${id%%[/?#]*}
+  case $id in ''|*[!0-9]*) return 1 ;; esac
+  jobs=$(api "$R/actions/runs/$id/jobs" --paginate --jq '.jobs[].id') || return 1
+  for j in $jobs; do
+    a=$(api "$R/check-runs/$j/annotations" --paginate --jq '.[]') || return 1
+    ann+="$a"$'\n'
+  done
+  jq -sc '[.[] | select(.annotation_level == "warning" and .title == "claude-review") | .message]
+    | if all(test("^\\s*[0-9]")) then {denied: (map(capture("^\\s*(?<n>[0-9]+)").n | tonumber) | add // 0)}
+      else error("a claude-review warning leads with no count") end' <<<"$ann"
+}
+
 # The PR's review_requested events, oldest first, as {login, created_at}.
 _gh_requested_events() { # <pr>
   api "$R/issues/$1/timeline" --paginate \
