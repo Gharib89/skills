@@ -20,4 +20,4 @@ Copilot's review quota is per month and a repo whose only reviewer is Copilot sp
 
 ## Amended by #307
 
-The primary's `degraded` exit is now `not reviewed: <reason>`, and a primary whose cap ran out is `reviewed`, since its rounds landed: it no longer requests the fallback. The decision stands for every primary that delivered no round.
+The primary's `degraded` exit is now `not reviewed: <reason>`, and a primary whose cap ran out is `reviewed`, since its rounds landed: it no longer requests the fallback. The decision stands for every primary that exits `not reviewed`: one that delivered no round, or whose landed round's threads could not be read (`unreachable`).
