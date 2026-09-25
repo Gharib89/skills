@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v9.0.1 (2026-09-25)
+
+### Refactoring
+
+- **ship**: A prose deletion pass and the deletes-at-least-as-much rule
+  ([#311](https://github.com/Gharib89/skills/pull/311),
+  [`1794420`](https://github.com/Gharib89/skills/commit/1794420591f3d8cc41efd36d891771f5c51f7a65))
+
+
 ## v9.0.0 (2026-09-25)
 
 ### Features
