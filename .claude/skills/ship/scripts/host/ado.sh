@@ -148,10 +148,12 @@ _html_pre() { jq -Rs '"<pre>" + (. | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gs
 # between the tags, since _html_pre escapes every one. The lab's sanitizer hands
 # a `_html_pre` write back with `"` as &quot; and U+00A0 as &nbsp; too (probed
 # on #289), so those decode as well, and &amp; last, so each decodes once. Any
-# other shape is HTML ship did not write, which nothing here edits.
+# other shape is HTML ship did not write, which nothing here edits. The anchors
+# are \A and \z because Oniguruma's `$` also matches before a final newline,
+# which let `<pre>x</pre>\n` through to a slice that then cut the wrong bytes.
 host_issue_body() {
   local out
-  out=$(host_issue_get "$1" | jq '.body | if . == "" or test("^<pre>[^<]*</pre>$")
+  out=$(host_issue_get "$1" | jq '.body | if . == "" or test("\\A<pre>[^<]*</pre>\\z")
     then {body: (.[5:-6] | gsub("&lt;"; "<") | gsub("&gt;"; ">") | gsub("&quot;"; "\"")
                          | gsub("&nbsp;"; "\u00a0") | gsub("&amp;"; "&"))}
     else {reason: "the description is not the one <pre> block ship writes, and no HTML is edited"} end') || return 1

@@ -159,7 +159,7 @@ result plus failing lines. `docs` class and the small lane skip this phase.
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
 edits as part of the diff. **Docs-sync fires only when the public surface or
 observable behavior changed**: bring the profile's `Targets:` in line, folding
-the edits into this change, a tracker item's as a section drafted for phase 9.
+the edits into this change, a tracker issue's as a [drafted section](reference/merge-gate.md#a-tracker-issue-on-targets).
 Skip it for internal refactors, a bugfix restoring documented behavior,
 test-only or tooling changes, and comments, and say so in one line at the merge
 gate. **The `writing-for-agents` pass has a trigger of its own**, and it still
@@ -194,7 +194,7 @@ pair of eyes on top of it.
 **Done when:** both `code-review` axes and, where it fired, the
 `writing-for-agents` pass have a Report file on disk with its path in the Run
 file, every finding carries a one-line disposition, and docs-sync either landed
-its edits or is skipped in one line for the merge gate.
+its edits (a tracker issue's as a draft on disk) or is skipped in one line for the merge gate.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
@@ -279,14 +279,14 @@ review quota, so push when the tree changed.
 where `No-checks legal:` admits it, with `mergeable` not `conflict`.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
-the summary's shape, what `merge` does, its two refusals and the drafted tracker
-sections. **Hard stop.** Write the summary per that file, uncompressed.
-Attended: post it in the conversation and wait for an explicit "merge": the word
-is exact, and a near miss is asked back. On approval run
-`merge <pr> <issue|none> [--worktree <path>]`, `update-issue-body` once per
-drafted section, then `cleanup <issue|none>`; any `false` or error is finished
-by hand. Unattended: `comment-pr <pr> --body-file` with the summary, and return.
-**Done when:** attended, each of those answered with no `false` and no error;
+the summary's shape, what `merge` does, its two refusals and the tracker drafts.
+**Hard stop.** Write the summary per that file, uncompressed. Attended: post it
+in the conversation and wait for an explicit "merge": the word is exact, and a
+near miss is asked back. On approval run `merge <pr> <issue|none> [--worktree
+<path>]`, `update-issue-body` per draft, then `cleanup <issue|none>`; a nonzero
+exit, or a `false` in `merge`'s or `cleanup`'s JSON, is finished by hand.
+Unattended: `comment-pr <pr> --body-file` with the summary, and return.
+**Done when:** attended, all three exited 0 with no `false` from `merge` or `cleanup`;
 unattended, `comment-pr` posted the summary and the run returned the PR link.
 
 ## The stops

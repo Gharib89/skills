@@ -47,4 +47,9 @@ check "with a reason saying so" true "$(jq -r '.reason | test("pre")' <<<"$out")
 desc '<pre>a</pre><p>b</p>'
 check_rc "a <pre> block with HTML beside it is refused too" 1 "$(host_issue_body 7 >/dev/null; echo $?)"
 
+# Oniguruma's `$` matches before a final newline too: anchored with it, this
+# passed the test and the fixed slice cut `x</pre>` to `x<`.
+desc $'<pre>x</pre>\n'
+check_rc "a <pre> block followed by a newline is refused, not mis-sliced" 1 "$(host_issue_body 7 >/dev/null; echo $?)"
+
 finish

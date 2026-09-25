@@ -13,7 +13,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
-An acceptance criterion asks for a comment on the issue, which `comment-issue` posts, rather than an edit to its body. The one body edit a run makes is `update-issue-body`: one `## ` section, written after the merge, for a tracker item on the ship profile's docs-sync `Targets:` line.
+An acceptance criterion asks for a comment on the issue, which `comment-issue` posts, rather than an edit to its body: the one body edit a run makes, `update-issue-body` on a tracker issue named on the ship profile's docs-sync `Targets:` line, waits for the merge, after every criterion is checked.
 
 ## Pull requests as a triage surface
 

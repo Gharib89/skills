@@ -49,7 +49,7 @@ local-gate contract, and that script answers no `--help`.
 | `comment-pr` | 7, 9 |
 | `reply-thread` | 7 |
 | `update-pr-body` | 7 |
-| `update-issue-body` | 9, after `merge`, once per drafted tracker section |
+| `update-issue-body` | 9, after `merge` answers `merged: true`, once per tracker draft |
 | `resolve-thread` | 7 |
 | `ci-wait` | 8 |
 | `merge` | 9, on approval |

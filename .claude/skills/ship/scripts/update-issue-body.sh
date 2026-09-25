@@ -21,7 +21,8 @@
 #
 # stdout: {issue, section, replaced, created, sections[]}
 #   sections[]: the `## ` headings of the body AFTER the write.
-# exit: 0 · 1 update failed or the body is not one ship edits, with the host's status where there was one · 2 usage
+# exit: 0 · 1 update failed or the body is not one ship edits, with the host's status where there was one
+#       · 2 usage, or the issue could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: update-issue-body <issue> --section <name> --body-file <path>'
