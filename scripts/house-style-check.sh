@@ -13,6 +13,7 @@
 #   scripts/house-style-check.sh
 #
 # stdout: the offending lines, and each file missing its final newline; nothing when clean
+# stderr: on tooling, git's reason, at most 40 lines
 # exit: 0 clean · 1 a finding · 2 tooling
 set -uo pipefail
 
@@ -25,6 +26,8 @@ trap 'rm -f "$err"' EXIT
 # stderr and still exits 0 or 1, so anything on stderr is tooling. Every rule
 # reads the same files, so the first rule's check covers the listing below.
 repo_grep() { git grep "$@" -- "${paths[@]}" 2>"$err"; }
+# Exit 2 with git's own reason on stderr, capped at 40 lines.
+tooling() { tail -n 40 "$err" >&2; exit 2; }
 
 # <heading> <git grep pattern args...>: prints the heading and the hits when any.
 # 1 is a clean tree, and anything past 1, such as a run outside a checkout, is
@@ -33,11 +36,11 @@ grep_rule() {
   local heading=$1 hits rc
   shift
   hits=$(repo_grep -n "$@"); rc=$?
-  [ -s "$err" ] && exit 2
+  [ -s "$err" ] && tooling
   case $rc in
     0) ;;
     1) return 0 ;;
-    *) exit 2 ;;
+    *) tooling ;;
   esac
   echo "$heading"
   echo "$hits"

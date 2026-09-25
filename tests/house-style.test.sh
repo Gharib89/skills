@@ -78,5 +78,7 @@ fi
 mkdir -p "$fixture/no-checkout"
 (cd "$fixture/no-checkout" && GIT_CEILING_DIRECTORIES=$fixture bash "$check_script" >/dev/null 2>&1)
 check_rc "a run outside a checkout is tooling" 2 "$?"
+stderr=$(cd "$fixture/no-checkout" && GIT_CEILING_DIRECTORIES=$fixture bash "$check_script" 2>&1 >/dev/null)
+check "tooling carries git's reason on stderr" "fatal: not a git repository" "${stderr%% (*}"
 
 finish
