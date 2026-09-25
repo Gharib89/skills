@@ -24,9 +24,9 @@ jobs:
     # identity, and an `if:` that declines it costs the round. Ship grades that
     # `never-queued`, so the loss is named rather than silent; naming it is not
     # reviewing the PR, which is what ADR 0002 keeps this reviewer for. The PR
-    # author is tested instead: the agent runs on the Claude app's installation
-    # token, which `permissions:` does not narrow, so a fork PR's text must not
-    # reach it.
+    # author is tested instead: the round runs on the Claude app's installation
+    # token, which `permissions:` does not narrow, so an outsider's PR text must
+    # not reach it.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '@claude') &&

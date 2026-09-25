@@ -7,7 +7,8 @@
 # The stubs prove concurrency by rendezvous: under `AWAIT`, each of the two
 # waits up to 5 s for the other to start and fails if it never does, which is
 # what a gate running them one after another produces.
-# Both this gate and the setup-skills template refuse a base that is not a commit.
+# The base cases sit apart from that: both this gate and the setup-skills
+# template refuse a base that is not a commit, before any gate runs.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
