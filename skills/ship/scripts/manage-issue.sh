@@ -37,8 +37,10 @@ case $op in
 esac
 ship_load_host
 
-me=$(host_identity) || ship_tooling "cannot read the signed-in identity"
-issue=$(host_issue_get "$n") || ship_tooling "cannot read issue #$n"
+# Both reads precede every verb's first write, so a failure here leaves the claim
+# exactly as it was, and the error says so.
+me=$(host_identity) || ship_tooling "cannot read the signed-in identity: nothing was written, so the claim is as it was"
+issue=$(host_issue_get "$n") || ship_tooling "cannot read issue #$n: nothing was written, so the claim is as it was"
 # Functions, not values: a verb that re-reads $issue after a write sees the
 # new state through them.
 assigned() { jq -e --arg m "$me" '.assignees | index($m)' <<<"$issue" >/dev/null; }

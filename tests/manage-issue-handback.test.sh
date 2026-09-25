@@ -65,4 +65,20 @@ check_rc "an unassign that did not land exits 1" 1 "$rc"
 check "an unassign that did not land says the claim is still held" \
   'unassign did not land: the claim is still held' "$(jq -r .error <<<"$out")"
 
+# The reads before any write fail as tooling, and nothing was written, so the
+# claim is as the run left it: the answer says so rather than leaving it to prose.
+reset
+: > "$SHIP_FAKE/host_identity.1.fail"
+out=$(run 7 handback "a reason"); rc=$?
+check_rc "an identity read that failed is tooling" 2 "$rc"
+check "an identity read that failed says the claim is unchanged" \
+  'cannot read the signed-in identity: nothing was written, so the claim is as it was' "$(jq -r .error <<<"$out")"
+
+reset
+: > "$SHIP_FAKE/host_issue_get.1.fail"
+out=$(run 7 handback "a reason"); rc=$?
+check_rc "an issue read that failed is tooling" 2 "$rc"
+check "an issue read that failed says the claim is unchanged" \
+  'cannot read issue #7: nothing was written, so the claim is as it was' "$(jq -r .error <<<"$out")"
+
 finish

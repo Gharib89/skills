@@ -209,8 +209,8 @@ proceeds to the merge gate on green CI and is reported there. At exit,
 `update-pr-body --section` writes the sections the rounds grew, `Review` last,
 then the phase-6 read-back.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
-returned is replied to and resolved per `Resolve:`, and `read-pr` shows a `##
-Review` line per reviewer.
+returned is replied to and resolved per `Resolve:`, every section the rounds
+grew is rewritten, and `read-pr` shows a `## Review` line per reviewer.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. On `conflict`, its stderr carries the recovery.
@@ -219,8 +219,8 @@ verification's `Also proven by CI:` line is that verification failing: back to
 phase 2. Red after the reviewers exited: fix, push, proceed on green. Honour
 `Push policy:`: a push spends CI minutes and review quota, so push when the tree
 changed.
-**Done when:** `ci-wait` answered `green`, or `no-checks` where `No-checks
-legal:` admits it.
+**Done when:** `ci-wait` answered `green` with every leg on `Legs:` among its
+`checks`, or `no-checks` where `No-checks legal:` admits it.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
 the summary's shape, what `merge` does, its two refusals and the tracker drafts.
