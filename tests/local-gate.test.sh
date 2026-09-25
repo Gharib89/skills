@@ -7,6 +7,8 @@
 # The stubs prove concurrency by rendezvous: under `AWAIT`, each of the two
 # waits up to 5 s for the other to start and fails if it never does, which is
 # what a gate running them one after another produces.
+# The base cases sit apart from that: both this gate and the setup-skills
+# template refuse a base that is not a commit, before any gate runs.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -113,8 +115,29 @@ d=$(repo small-quoted "skills/caf$(printf '\303\251').sh")
 gate "$d" --small docs/note.md
 check "--small, a C-quoted *.sh in the diff: shellcheck runs" "pass" "$(jq -r '.gates.shellcheck' <<<"$out")"
 
+# A base that names no commit is tooling, before any gate runs: gitleaks given a
+# range it cannot resolve scans nothing and still exits 0, so `secrets` would pass.
+gate "$d" --base no-such-ref
+check_rc "a base that is not a commit: exit 2" 2 "$rc"
+check "a base that is not a commit: the error names it, and no gate ran" "true true" \
+  "$(jq -r '.error | contains("no-such-ref")' <<<"$out") $([ -z "$(ls "$d/marks")" ] && echo true || echo false)"
+
 # A diff git cannot compute fails closed: shellcheck runs rather than being skipped.
-gate "$d" --small docs/note.md --base no-such-ref
+# The base resolves but shares no history with HEAD, so `base...HEAD` has no merge base.
+git_ "$d" tag unrelated "$(git_ "$d" commit-tree -m unrelated "$(git_ "$d" mktree </dev/null)")"
+gate "$d" --small docs/note.md --base unrelated
 check "--small, a base git cannot diff: shellcheck runs" "true" "$(jq -r '.gates | has("shellcheck")' <<<"$out")"
+
+# The setup-skills template holds the same line: its placeholders stubbed, a
+# base that is not a commit stops it as tooling and a real one still passes.
+d=$fixture/template; mkdir -p "$d"
+sed 's/__DEPS__/true/; s/__RUNNER__/true/' skills/setup-skills/local-gate.sh > "$d/local-gate.sh"
+git_ "$d" init -q && git_ "$d" add -A && git_ "$d" commit -qm base && git_ "$d" tag base
+out=$(cd "$d" && bash local-gate.sh --base no-such-ref 2>/dev/null); rc=$?
+check_rc "template, a base that is not a commit: exit 2" 2 "$rc"
+check "template, a base that is not a commit: the error names it" "true" "$(jq -r '.error | contains("no-such-ref")' <<<"$out")"
+out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
+check_rc "template, a real base: exit 0" 0 "$rc"
+check "template, a real base: secrets passes" "pass" "$(jq -r '.gates.secrets' <<<"$out")"
 
 finish
