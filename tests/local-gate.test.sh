@@ -21,11 +21,13 @@ export PATH="$fixture/bin:$PATH"
 
 # <path> <name> <peer> <rc-var>: a check that logs its name, marks that it
 # started, under AWAIT waits for <peer> to start, and exits with $<rc-var>.
+# Under HANG it records its pid and becomes a long sleep, for the interrupt case.
 stub() {
   cat > "$1" <<EOF
 #!/usr/bin/env bash
 echo "$2 log line"
 : > "\$MARKS/$2"
+[ -z "\${HANG:-}" ] || { echo \$\$ > "\$MARKS/$2.pid"; exec sleep 30; }
 if [ -n "\${AWAIT:-}" ]; then
   for _ in \$(seq 50); do [ -e "\$MARKS/$3" ] && break; sleep 0.1; done
   [ -e "\$MARKS/$3" ] || { echo "$2 ran without $3"; exit 1; }
@@ -90,6 +92,20 @@ check "--small, no *.sh in the diff: shellcheck never ran" "absent" "$([ -e "$d/
 d=$(repo small-sh skills/ship/scripts/x.sh)
 gate "$d" --small skills/ship/scripts/x.sh
 check "--small, a *.sh in the diff: shellcheck runs" "pass" "$(jq -r '.gates.shellcheck' <<<"$out")"
+
+# An interrupted gate stops its background gates rather than orphaning them.
+rm -rf "$d/marks"; mkdir "$d/marks"
+(cd "$d" && HANG=1 MARKS="$d/marks" exec bash scripts/local-gate.sh --base base >/dev/null 2>&1) &
+gpid=$!
+for _ in $(seq 50); do [ -s "$d/marks/tests.pid" ] && [ -s "$d/marks/shellcheck.pid" ] && break; sleep 0.1; done
+kill -TERM "$gpid"; wait "$gpid" 2>/dev/null
+left=""
+for g in tests shellcheck; do
+  p=$(cat "$d/marks/$g.pid" 2>/dev/null) || { left+=" $g(never started)"; continue; }
+  for _ in $(seq 20); do kill -0 "$p" 2>/dev/null || break; sleep 0.1; done
+  if kill -0 "$p" 2>/dev/null; then left+=" $g"; kill "$p"; fi
+done
+check "a killed gate leaves no background gate running" "" "$left"
 
 # git C-quotes a path carrying a non-ASCII byte, so a name-matching skip misses it.
 d=$(repo small-quoted "skills/caf$(printf '\303\251').sh")

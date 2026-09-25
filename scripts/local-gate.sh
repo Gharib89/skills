@@ -39,7 +39,9 @@ fi
 lane=full; [ -z "$small" ] || lane=small
 
 declare -A gates pids
-logs=$(mktemp -d); trap 'rm -rf "$logs"' EXIT
+# The trap stops the background gates first: bash without job control starts
+# them with SIGINT ignored, so an interrupted gate would otherwise orphan them.
+logs=$(mktemp -d); trap 'kill $(jobs -p) 2>/dev/null; rm -rf "$logs"' EXIT
 # grade <name> <rc> [unavailable]: the gate's status from its exit code, and on
 # anything but a pass its own log's tail on stderr. With `unavailable`, exit 2,
 # a tool the check could not obtain, grades `unavailable` rather than `fail`.
