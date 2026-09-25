@@ -79,9 +79,9 @@ ANN=$(warn "tool calls denied")
 check "a claude-review warning with no leading number fails the read" true "$(fails "$url" && echo true)"
 
 ANN=$(warn "1 tool call(s) denied")
-FAIL=jobs
+FAIL='jobs'
 check "a failed jobs read fails the count" true "$(fails "$url" && echo true)"
-FAIL=annotations
+FAIL='annotations'
 check "a failed annotations read fails the count" true "$(fails "$url" && echo true)"
 FAIL=''
 
