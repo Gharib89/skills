@@ -30,7 +30,7 @@ _Avoid_: result, report, gate output
 
 **Generic mechanic**:
 A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, prepare, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-issue, comment-pr, reply-thread, update-pr-body, update-pr-title, update-issue-body, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host write and every gating read in a Ship run goes through one of them, and a missing one is a Ship defect, not a prose fallback; an informational read no mechanic covers is the one host call a run may make directly. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) or to an issue (a comment, its body) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
-_Avoid_: helper, util, raw `gh` or `az` call (for a write)
+_Avoid_: helper, util, raw `gh` or `az` call (for a write or a gating read)
 
 **Gating read**:
 A host read a phase's `Done when:` or a stop row depends on, such as preflight's admission, poll-pr's round, CI wait's legs or base-fresh's answer. It stays a generic mechanic, so the same host state always gives the same verdict.

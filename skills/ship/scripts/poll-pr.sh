@@ -118,8 +118,9 @@
 #          done, waited_s}
 #   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked,
 #             reviewer_run, rounds[], threads}
-# exit: 0 done · 1 window closed first (done=false; `not_reviewed` names why, and
-#       the review loop takes it as the answer) · 2 tooling
+# exit: 0 done · 1 window closed first (done=false; `not_reviewed` names why no
+#       round landed, and null beside a landed round means only checks were still
+#       pending; the review loop takes either as the answer) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 # The hard bound on waiting a run out, written once: the usage line is where a
