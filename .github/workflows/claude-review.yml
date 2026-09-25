@@ -23,10 +23,14 @@ jobs:
     # commenter test: the unattended lane posts the mention under its own
     # identity, and an `if:` that declines it costs the round. Ship grades that
     # `never-queued`, so the loss is named rather than silent; naming it is not
-    # reviewing the PR, which is what ADR 0002 keeps this reviewer for.
+    # reviewing the PR, which is what ADR 0002 keeps this reviewer for. The PR
+    # author is tested instead: the agent runs on the Claude app's installation
+    # token, which `permissions:` does not narrow, so a fork PR's text must not
+    # reach it.
     if: >-
       github.event.issue.pull_request != null &&
-      contains(github.event.comment.body, '@claude')
+      contains(github.event.comment.body, '@claude') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     # Claude Code resolves no account identity from a setup token, so every
     # metric this runner exports reaches cc-otel with a NULL user_email and
