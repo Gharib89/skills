@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v8.6.1 (2026-09-25)
+
+### Bug Fixes
+
+- **ship**: Trim the trailing space in host/ado.sh, and gate trailing whitespace
+  ([#290](https://github.com/Gharib89/skills/pull/290),
+  [`ea07543`](https://github.com/Gharib89/skills/commit/ea075437bb9e8941500c3d1eb59a838f8a9b27ee))
+
+
 ## v8.6.0 (2026-09-24)
 
 ### Features
