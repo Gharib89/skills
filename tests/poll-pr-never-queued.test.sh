@@ -102,6 +102,34 @@ reset; queued false
 out=$(poll --free-round --reviewer copilot --since "$old" --timeout 10 --interval 1 --brief)
 check "--brief carries never_queued" true "$(jq -r .never_queued <<<"$out")"
 
+# `--review-on-push false` is preflight's read that the ruleset promised this
+# free round: a round it promised and never queued is the quota, so the poll
+# names the exit, `degraded: never-queued`, and the loop requests nothing. With
+# no flag, or `true`, never_queued is reported alone and the loop requests.
+reset; queued false
+out=$(poll --free-round --review-on-push false --reviewer copilot --since "$old" --timeout 10 --interval 1 --brief)
+check "a promised round never queued is degraded never-queued" 'never-queued true' \
+  "$(jq -r '[.degraded, (.never_queued|tostring)] | join(" ")' <<<"$out")"
+reset; queued false
+out=$(poll --free-round --reviewer copilot --since "$old" --timeout 10 --interval 1)
+check "without the ruleset's read it is not degraded" 'null true' \
+  "$(jq -r '[(.degraded|tostring), (.never_queued|tostring)] | join(" ")' <<<"$out")"
+reset; queued false
+out=$(poll --free-round --review-on-push true --reviewer copilot --since "$old" --timeout 10 --interval 1)
+check "nor where the ruleset reviews on push" null "$(jq -r .degraded <<<"$out")"
+reset; queued true
+out=$(poll --free-round --review-on-push false --reviewer copilot --since "$old" --timeout 0 --interval 1)
+check "a queued round is not degraded" null "$(jq -r .degraded <<<"$out")"
+reset
+out=$(poll --review-on-push false --reviewer copilot --since "$old"); rc=$?
+check_rc "--review-on-push without --free-round is a usage error" 2 "$rc"
+check "naming the flag it needs" true \
+  "$(jq -r '.error | startswith("--review-on-push needs --free-round")' <<<"$out")"
+out=$(poll --free-round --review-on-push maybe --reviewer copilot --since "$old"); rc=$?
+check_rc "--review-on-push takes true or false" 2 "$rc"
+check "answered with the usage line" true "$(jq -r '.error | startswith("usage: poll-pr")' <<<"$out")"
+check "reaching no host" false "$([ -s "$SHIP_FAKE/calls" ] && echo true || echo false)"
+
 # A queued round with nothing posted yet keeps today's window, and the read is
 # not repeated once the host has answered queued.
 reset; queued true

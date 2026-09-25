@@ -2,7 +2,7 @@
 # ship phases 7 and 8: one bounded, foreground poll of a PR's head, checks,
 # reviews and threads, then ONE JSON summary.
 #
-#   poll-pr <pr> [--reviewer <name> [--since <iso> [--free-round]]] [--brief, or --brief --full <id>[,<id>]]
+#   poll-pr <pr> [--reviewer <name> [--since <iso> [--free-round [--review-on-push <true|false>]]]] [--brief, or --brief --full <id>[,<id>]]
 #           [--timeout <s>] [--interval <s>]
 #
 # `--reviewer <name>` names the `### <name>` block under the profile's
@@ -103,7 +103,11 @@
 # landed rather than never queued. It is null under
 # the head rule, under a comment transport (which records no request event, its
 # workflow run being its signal), without `--free-round`, before the settle, and
-# where the host could not answer; null leaves the window to run as before. The clock is read with
+# where the host could not answer; null leaves the window to run as before.
+# `degraded` is "never-queued" where a true `never_queued` meets
+# `--review-on-push false`, preflight's read that the ruleset promised this free
+# round: that is the reviewer's exit, with no request sent. It is null in every
+# other case, and the loop then proceeds to its first request. The clock is read with
 # `date`, so a test holds it with a stub. `threads` is "unavailable" when thread
 # state could not be read (on GitHub, GraphQL and the REST routes a refusing
 # proxy names both failed): that reviewer's exit is degraded unreachable, the
@@ -124,9 +128,9 @@
 # cannot promise is the reviewer's alone. The full shape stays the default.
 #
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
-#          threads, reviewer, reviewer_blocked, reviewer_run, landed_by, refused_by, never_queued,
+#          threads, reviewer, reviewer_blocked, reviewer_run, landed_by, refused_by, never_queued, degraded,
 #          done, waited_s}
-#   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, never_queued, reviewer_blocked,
+#   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, never_queued, degraded, reviewer_blocked,
 #             reviewer_run, rounds[], threads}
 # exit: 0 done · 1 window closed first (done=false; re-run to extend) · 2 tooling
 set -uo pipefail
@@ -138,18 +142,19 @@ ceiling=1800
 # before its absence is read as never queued: the ruleset's event landed within
 # 4 s of the PR's creation in every case measured on #284.
 settle=30
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso> [--free-round]], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s, and whose round, under --free-round and the host transport, the host has not queued ${settle}s after --since closes the window as never_queued] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso> [--free-round [--review-on-push <true|false>]]], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s, and whose round, under --free-round and the host transport, the host has not queued ${settle}s after --since closes the window as never_queued, and as degraded never-queued where --review-on-push false says the ruleset promised that round] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 # A flag in the positional slot is a malformed invocation, not a PR id: without
 # this, `poll-pr --brief` reads "--brief" as the id and asks the host for it.
 case $pr in -*) ship_tooling "$usage" ;; esac
-timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; free_round=false; after_run=0
+timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; free_round=false; review_on_push=""; after_run=0
 while [ $# -gt 0 ]; do
   case $1 in
     --brief) brief=true; shift ;;
     --free-round) free_round=true; shift ;;
+    --review-on-push) case ${2:-} in true|false) ;; *) ship_tooling "$usage" ;; esac; review_on_push=$2; shift 2 ;;
     --reviewer) case ${2:-} in ''|-*) ship_tooling "$usage" ;; esac; name=$2; shift 2 ;;
     --since) [ -n "${2:-}" ] || ship_tooling "$usage"; since=$2; shift 2 ;;
     # Ids stay strings: GitHub numbers a review and Azure DevOps numbers a
@@ -170,6 +175,7 @@ done
 [ "$full" = '[]' ] || $brief || ship_tooling "--full needs --brief; $usage"
 [ -z "$since" ] || [ -n "$name" ] || ship_tooling "--since needs --reviewer"
 ! $free_round || [ -n "$since" ] || ship_tooling "--free-round needs --since; $usage"
+[ -z "$review_on_push" ] || $free_round || ship_tooling "--review-on-push needs --free-round; $usage"
 # --since is compared as a string against submitted_at, which every adapter
 # emits as UTC "YYYY-MM-DDTHH:MM:SSZ". Accept only what normalises to that, so
 # an offset this cannot convert (+05:00) is refused outright rather than
@@ -330,6 +336,12 @@ while :; do
       --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson nq "$never_queued" --argjson d "$done" --argjson w "$waited" \
       '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer: $rv, reviewer_blocked: ($b.line? // null),
         reviewer_run: $rr, landed_by: $lb, refused_by: $rf, never_queued: $nq, done: $d, waited_s: $w}')
+    # A free round the ruleset promised (`review_on_push: false`, preflight's
+    # read) and the host never queued is the quota: the exit is named here, so
+    # the loop spends no request drawing on it.
+    degraded=null
+    [ "$never_queued" = true ] && [ "$review_on_push" = false ] && degraded='"never-queued"'
+    out=$(jq -c --argjson g "$degraded" '.degraded = $g' <<<"$out")
     if $brief; then
       key=on_head; [ -z "$since" ] || key=all
       ship_brief "$out" "$me" "$key" "$full"

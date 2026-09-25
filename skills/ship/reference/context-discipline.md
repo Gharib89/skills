@@ -102,7 +102,9 @@ produces it, asks the subagent to write its report there, and takes back only
 the path and a summary of at most five lines: a report handed back whole and
 re-typed to disk spends its length twice. No file at the named path when the
 subagent hands back is a report that failed to arrive: the bounded retry, then
-`red-after-retry`, since the run holds five lines and not the report. The Run
+`red-after-retry`, since the run holds five lines and not the report. An inline
+pass (the small lane's `writing-for-agents` pass) has no hand-back: it writes
+the same file itself before any of its findings is dispositioned. The Run
 file's `## Design and plan` section names the paths, the role in each filename
 so a row of the merge summary names its report and not a third `report.md`.
 Disposition from the file, re-read it there after a compaction, and quote the

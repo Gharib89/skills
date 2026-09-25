@@ -34,14 +34,16 @@ a fresh read of the committed tree, not a conversation.
   that admitted the round, and
   `refused_by` naming the rule that admitted a refusal in its place, and
   `never_queued`, under `--free-round` alone, true where the host has no round
-  queued for the reviewer since `--since`. `done: false` means the window closed first: re-run to extend it,
+  queued for the reviewer since `--since`, with `degraded` naming the exit
+  where `--review-on-push false` says that round was promised. `done: false` means the window closed first: re-run to extend it,
   in the foreground again, **unless `refused_by` is non-null or `never_queued`
   is true**. A non-null `refused_by` is the reviewer's quota or
   rate-limit notice answering this request, the window closed on it at once,
   and re-polling or re-requesting waits on a round that is not coming: the
   reviewer exits `degraded: blocked` there and then. A true `never_queued`
   closed the free-round poll on the host's own record of requests, and the
-  loop proceeds to its first request. The poll is the landing
+  loop proceeds to its first request, unless `degraded` is non-null, which is
+  the reviewer's exit with no request. The poll is the landing
   signal only; before triage, read the round's review body and its threads
   from the same payload. The body sits on the row the reviewer's landing rule
   admitted: `reviews.on_head[].body` under the head rule, `reviews.all[].body`
@@ -49,7 +51,7 @@ a fresh read of the committed tree, not a conversation.
   whose findings live in the body rather than in threads is invisible from the
   thread list alone, and `infra-error` is a judgment about the body.
 - **`--brief` projects that same poll** down to what this loop acts on: head,
-  mergeable, `landed_by`, `refused_by`, `never_queued`, `reviewer_blocked`, one `rounds[]` row per round (id, `submitted_at`,
+  mergeable, `landed_by`, `refused_by`, `never_queued`, `degraded`, `reviewer_blocked`, one `rounds[]` row per round (id, `submitted_at`,
   `substantive`, and the body cut to its lead line and finding items) and one
   row per OPEN thread (id, `path`, `lead`, `resolved`, `replied`). Rounds come
   from the list the landing rule admitted and hold only the awaited reviewer's
@@ -256,17 +258,24 @@ against the corrected tree.
 
 A **free round** is one the host delivers without a request: a Copilot ruleset
 with `review_on_push: false` still opens one when the PR does. Before the
-run's **first** request to any on-request reviewer, poll once for it, under
-the since rule with `open-pr`'s `created_at` and `--free-round`, with no
-`--timeout`: the reviewer's default is sized for its transport. No poll after
-a request passes `--free-round`. A round already there **is**
-round 1 and counts against `Cap:`; nothing there and the loop proceeds to its
-first request as written, and so does a poll that closed on `never_queued`,
-which ends the window once the settle `poll-pr --help` states has passed with
-no request for the reviewer on the host's record. A quota-out Copilot lands
-here; its first request then exits `never-queued`. A **refusal** there (`refused_by` non-null: Copilot
-posts its quota notice as the opening review) ends this reviewer before any
-request: its exit is `degraded: blocked`, and no request is issued, because
+run's **first** request to an on-request reviewer whose `Request:` is the
+host's call, poll once for it, under the since rule with `open-pr`'s
+`created_at` and `--free-round`, with no `--timeout`: the reviewer's default is
+sized for its transport. Add `--review-on-push false` where preflight's
+`reviewers[]` row for that reviewer read `false`, which the Run file recorded
+at phase 0. A block whose `Request:` is `comment <phrase>` skips this poll and
+requests directly: a comment-triggered workflow opens no round unbidden. No
+poll after a request passes `--free-round`. A round already there **is** round
+1 and counts against `Cap:`; nothing there and the loop proceeds to its first
+request as written. A poll that closed on `never_queued` ends the window once
+the settle `poll-pr --help` states has passed with no request for the reviewer
+on the host's record. Where it also answers `degraded: "never-queued"`, the
+ruleset promised the round the host never queued, which is a quota-out Copilot:
+that is the reviewer's exit, `degraded: never-queued`, with no request sent.
+Where `degraded` is null, without preflight's `false`, the loop proceeds to its
+first request, which exits `never-queued` if the quota is out. A **refusal**
+there (`refused_by` non-null: Copilot posts its quota notice as the opening
+review) ends this reviewer before any request: its exit is `degraded: blocked`, and no request is issued, because
 the quota the free round was refused on is the one every request draws from. A
 reviewer that gets no free round pays that one poll, where skipping it spends
 a round of a small cap re-asking for a review that had already landed.
@@ -278,16 +287,19 @@ before any request is issued; requesting on top of it spends round 2 on a tree
 the reviewer has not seen and burns the budget the free round just saved. With
 nothing in hand: request, poll under the **since** rule with `request-review`'s
 `requested_at`, triage, batch-fix, push, `reply-thread` on
-every `replied: false` thread, and round the loop. A poll that comes back with
-`refused_by` non-null ends the loop at `degraded: blocked`: no re-poll, no
+every `replied: false` thread, and round the loop. Run no `update-pr-title`
+between a comment-transport request and its poll: the run read matches the
+PR's title, so a rewritten one matches nothing and reads as `never-queued`. A
+poll that comes back with `refused_by` non-null ends the loop at `degraded: blocked`: no re-poll, no
 further request, whatever `Cap:` has left. A round that opened threads
 takes the reviewer's `Resolve:` once every one of them carries a
 reply, exactly as an on-push round does; `Resolve: None.` means the reviewer
 opens none and the findings are answered on the review with `comment-pr`.
 **Converged** when the latest round has nothing actionable and every thread from
 all rounds is dispositioned, and resolved where the reviewer resolves.
-Small lane: exactly one round. A lint or flake fix after convergence earns no
-new request.
+Small lane: at most one *requested* round, a free round with nothing
+actionable ending the loop `converged` with no request. A lint or flake fix
+after convergence earns no new request.
 
 ## Fallbacks: the reviewer driven only when another one failed
 
@@ -302,11 +314,9 @@ because a fallback's only input is how its primary exited.
 
 - The primary exited `degraded: <any reason>`: request the fallback **once**,
   then drive it as an ordinary on-request reviewer under its own `Cap:`, by
-  the section above, the free-round poll included: that first request is the
-  one it runs ahead of, and a fallback reached through a comment transport
-  reliably finds nothing there, which is the one short poll the rule costs.
-  That transport is also what makes every poll of it await its workflow run,
-  the free-round one included. Which degraded reason the primary hit changes
+  the section above: a fallback reached through a comment transport skips the
+  free-round poll and requests directly, and that transport is what makes every
+  poll of it await its workflow run. Which degraded reason the primary hit changes
   nothing here; the human wanted a review on the PR and the reason is a
   footnote. Its exit is an ordinary one, `converged` or `degraded: <reason>`
   of its own.
@@ -330,7 +340,7 @@ The human reads the reason and decides.
 
 | Reason | Detection |
 |---|---|
-| `never-queued` | on-request: no request event on the host's record after one retry. A quota-out Copilot reads here rather than as `blocked`: the host queues it nothing and shows the quota only as a PR-page banner, so there is no notice for `refused_by` to admit. Under a comment transport there is no second request to make, because the one post is verified as it is made and a second would draw a second round: `reviewer_run.status: "none"` is the answer on the first poll, the request landed and the host started no run for it. A run whose conclusion is `skipped` says the same thing from the other side: the workflow's own `if` declined the comment, so nothing ran for the request. Do not spend a second poll window on it. |
+| `never-queued` | on-request, two detections. The free-round poll answers `degraded: "never-queued"`: preflight read `review_on_push: false`, so the ruleset promised a round the host never queued, and no request is sent. Otherwise, no request event on the host's record after one retry. A quota-out Copilot reads here rather than as `blocked`: the host queues it nothing and shows the quota only as a PR-page banner, so there is no notice for `refused_by` to admit. Under a comment transport there is no second request to make, because the one post is verified as it is made and a second would draw a second round: `reviewer_run.status: "none"` is the answer on the first poll, the request landed and the host started no run for it. A run whose conclusion is `skipped` says the same thing from the other side: the workflow's own `if` declined the comment, so nothing ran for the request. Do not spend a second poll window on it. |
 | `blocked` | a quota or rate-limit notice from the reviewer answering the request. The landing rule admits it as `refused_by` while `landed_by` stays null, because a notice-only row is not `substantive`: under the since rule a review or a PR comment at or after `--since`, under the head rule only a review on the head, since a comment is tied to no commit; a comment-only notice there shows as `reviewer_blocked` alone, and the window runs out before the exit is taken. Admitted, the poll closes the window on it at once, and the reviewer exits here without another poll or request: the refusal is the answer, and the quota does not come back inside a run. Either way the fallback, where one is configured, is what runs next. |
 | `silent` | queued, no round admitted by the reviewer's landing rule within the bounded wait: under the head rule none on the current head, under the since rule none submitted after the timestamp on any head. Under a comment transport it takes the run read as well: `reviewer_run` concluded `success` and no round followed it. A run that has not finished is not silence, and the poll holds the window open on it to its ceiling. |
 | `infra-error` | `reviewer_run.status` is `completed` with any conclusion but `success` or `skipped`, `cancelled` and `timed_out` among them: the run ended before it could post, and its `url` is where the human reads why. A run still unfinished in the returned `reviewer_run` says the same thing: it outlived the ceiling `poll-pr --help` states without delivering, and its `url` is where that is read. Also a review whose body is only an error notice with zero comments, twice, and the notice is not a quota or rate-limit one: that is `blocked`, which `reviewer_blocked` names for you. Not feedback. |

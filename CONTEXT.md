@@ -85,7 +85,7 @@ The hard stop at the end of a Ship run where a human reads the summary and says 
 _Avoid_: approval, sign-off, review
 
 **Small lane**:
-The collapsed form of a Ship run for a change the whole team would call trivial; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the one regression test proving the change), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
+The collapsed form of a Ship run for a change that is narrow, locally provable, invisible to the public surface and inside the size cap, which is counted on the diff, never estimated; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the test proving the change, or the full gate where more than one test proves it), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
 _Avoid_: fast path, quick mode, hotfix
 
 **Reviewer**:
@@ -157,7 +157,7 @@ The directory a Ship run names in every subagent prompt as the one place that su
 _Avoid_: scratch file (that names the Run file, and is avoided there too), temp directory, workspace
 
 **Report file**:
-The file a phase-4 subagent writes its report to, at the path its dispatch names in the producing role's Scratch directory, `<scratchpad>/scratch/<role>/<role>-report.md`, handing back only the path and a summary of at most five lines: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. No file there at hand-back is a report that failed to arrive. A report held in context alone is taken by a compaction, so the file is what a disposition and the merge summary's `Self-review` rows are read from; a row whose file is no longer on disk reads `unverified`.
+The file a phase-4 pass writes its report to (a subagent's, where one was dispatched), at the path named in the producing role's Scratch directory, `<scratchpad>/scratch/<role>/<role>-report.md`, a subagent handing back only the path and a summary of at most five lines: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. No file there at hand-back is a report that failed to arrive. A report held in context alone is taken by a compaction, so the file is what a disposition and the merge summary's `Self-review` rows are read from; a row whose file is no longer on disk reads `unverified`.
 _Avoid_: axis output, review log, findings dump
 
 **Shape**:

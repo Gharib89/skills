@@ -35,14 +35,9 @@ in the merge summary, so every PR records which ship produced it.
 
 - `<issue>`: the issue number (work item id on Azure DevOps). Omitted with no
   flag: ask which issue.
-- Free text instead of a number: treat it as the task spec directly. No
-  issue fetch, no claim, no `Closes`, no reflect; everything else runs. The
-  `Done when:` bounds below read without the two clauses that branch cannot
-  reach: phase 1's `claim: taken` and phase 6's `reflect`. `none` is the
-  issue argument these five mechanics accept: `preflight none`, `isolate
-  none <type> <slug>`, `open-pr none ...`, `merge <pr> none` and `cleanup
-  none`; the three that cannot (`read-issue`, `manage-issue`, `reflect`)
-  have no meaning without an issue.
+- Free text instead of a number: the task spec itself. No issue fetch, claim,
+  `Closes` or reflect, nor the `Done when:` clauses naming them; `none` is the
+  issue argument to `preflight`, `isolate`, `open-pr`, `merge` and `cleanup`.
 - `--unattended`: the **unattended run**, detailed in
   [reference/unattended.md](reference/unattended.md). No human is present: a
   blocked stop hands back instead of asking, the sandbox clone is the isolation,
@@ -64,11 +59,10 @@ Load `tdd` (phase 2), `writing-for-agents` (phase 4, agent-facing docs),
 when their moment comes, taking each one's logic from the skill itself, and tell
 any composed skill with an unattended mode that the run is unattended,
 explicitly, because it has no other way to know. **Read** `show-me` (phase 6,
-the Change outline) instead: its upstream sets `disable-model-invocation`,
-which bars the Skill tool and not a read, so take the outline's form from
-`.claude/skills/show-me/SKILL.md`. The frontmatter's `composes` line names all
-five with each one's source repo, and is what phase 0 checks: a skill added here
-is added there too, or the run still fails at the phase that uses it.
+the Change outline) instead; [pr-body.md](reference/pr-body.md) says why. The
+frontmatter's `composes` line names all five with each one's source repo, and is
+what phase 0 checks: a skill added here is added there too, or the run still
+fails at the phase that uses it.
 
 ## The pipeline
 
@@ -96,8 +90,10 @@ and why the worktree is made the way it is. Run `preflight <issue>`, adding
 issue and the flag turns it into a stop. Read its `reasons`: empty with
 `ok: true` is the admission, every entry is a row of the stop table below, and a
 push-permission `unknown` is a warning on stderr that you carry to the merge
-summary rather than a stop. Then `read-issue <issue>`, whose result is phase 1's
-input and from which the branch `<type>` and `<slug>` are derived. Then
+summary rather than a stop; record in the Run file each `reviewers[]` row
+reading `review_on_push: false`, which phase 7 passes on. Then `read-issue
+<issue>`, whose result is phase 1's input and from which the branch `<type>`
+and `<slug>` are derived. Then
 `isolate <issue> <type> <slug>` with the profile's `Carry:` files, or
 `isolate ... --in-place` unattended, which leaves branch
 `<type>/<slug>-<issue>`, `<type>` matching the issue (`feat`, `fix`, `docs`,
@@ -126,25 +122,21 @@ classes, the TDD override, external-claim probes and the judgment/execution
 split. Classify `docs` / `code` / `infra`; **announce the class, the skip path
 it implies, and whether the three lane keys hold**; announce the applicable
 verifications from `## Verification` (their `Applies when:` lines are prose you
-judge here) or the skip. Then implement test-first per class. The profile's
-`Tripwires:` and `In-PR requirement:` apply whatever the class: a bundle
-rebuild or a version bump CI enforces lands in this change, or phase 8 goes red
-with no phase explaining why. Keep a **deviations log** from the first edit:
-whenever the territory forces a departure from the issue, brief or plan,
-resolve it by the conservative option, log what and why, keep going; the log
-lands verbatim in the merge summary, and is folded to what a reviewer would act on
-in the PR body's `## Special things to note`. An **adjacent find** takes
-one of implement.md's three dispositions and no fourth: **fix it inline** and
-log the deviation, **`file-issue` it** and leave it, or stop
-**`mis-specified`** where the find shows the issue itself is wrong. If the core
-work balloons (the diff outgrows one PR, or the fix demands a redesign the
-issue did not scope), stop `needs-split` with a split proposal.
+judge here) or the skip. Then implement test-first per class; `Tripwires:` and
+`In-PR requirement:` land in this change whatever the class. Keep a
+**deviations log** from the first edit: whenever the territory forces a departure
+from the issue, brief or plan, resolve it by the conservative option, log what and
+why, keep going; the log lands verbatim in the merge summary, and is folded to
+what a reviewer would act on in the PR body's `## Special things to note`. An
+**adjacent find** takes one of implement.md's three dispositions and no fourth.
+If the core work balloons (the diff outgrows one PR, or the fix demands a
+redesign the issue did not scope), stop `needs-split` with a split proposal.
 **Done when:** the applicable tests are green (red first, per class),
-`Tripwires:` and `In-PR requirement:` have landed, the Run file's deviations
-log carries every departure so far, and every adjacent find carries one of the
-three dispositions.
+`Tripwires:` and `In-PR requirement:` have landed, a small-lane diff is counted
+under the cap, the Run file's deviations log carries every departure so far,
+and every adjacent find carries one of the three dispositions.
 
-**3 · Verify.** [reference/implement.md](reference/implement.md) carries the
+**3 · Verify.** [reference/verify.md](reference/verify.md) carries the
 result words, the `Without it:` dispositions and what `unexercised` is. For each
 applicable verification, run its `Run:` line **scoped to what you touched**, on
 the environment the issue was reported against; green elsewhere is not fixed.
@@ -166,16 +158,19 @@ gate. **The `writing-for-agents` pass has a trigger of its own**, and it still
 fires where docs-sync is skipped: whenever the diff touches a target on the
 profile's `Agent-facing:` line, at the judgment tier, in the `writing` scratch
 directory, over every agent-facing file in the diff.
-Human prose takes the mechanical pass. Each phase-4 dispatch, this pass and both
-`code-review` axes below, names its subagent's Report file, per
-[reference/context-discipline.md](reference/context-discipline.md).
+Human prose takes the mechanical pass. With docs-sync's edits landed, load
+`code-review`, then dispatch this pass and its two axes in one turn and end it,
+each naming its Report file per
+[reference/context-discipline.md](reference/context-discipline.md). Small lane:
+dispatch the axes, then run this pass inline, writing its Report file before any
+disposition.
 
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
 carrying its own scratch directory (`standards`, `spec`). **Triage waits for
-both axes.** An axis whose report fails to arrive is `red-after-retry: <axis>`
-after the bounded retry, a stop in place of a disposition written from memory of
+every Report file.** An axis whose report fails to arrive is
+`red-after-retry: <axis>` after the bounded retry, a stop in place of a disposition written from memory of
 what it would have said. **Auto-triage** every finding: harden rather than rip out
 capability, verify nits against the pinned versions, reject known non-issues,
 fix the valid ones, and record a one-line disposition per finding. Two rails on
@@ -183,7 +178,7 @@ rejecting: a claim about **what exists in the repo** is checked against
 `origin/HEAD` rather than the worktree, which may predate a merge; and a finding's
 **evidence and its claim are separate**, so a reviewer citing the wrong commit
 for a real primitive is still right. A valid finding outside the issue is an
-adjacent find: phase 2's three dispositions. Then read the diff yourself against
+adjacent find. Then read the diff yourself against
 the depth checks in the coding-standards file the Standards axis reads, by their
 leading words: a vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, a fix landed after
@@ -208,8 +203,8 @@ this exist?" answer you took from the worktree was pre-merge. Behind: rebase,
 re-run, then continue. Confirm every `Carry:` file still matches the main
 checkout's copy; a difference is `carried file modified`, because ship has no
 business editing untracked secrets. Then run the gate at the profile's
-`Location:` from the worktree, inline. Small lane: `--small <node>` with the
-node written in the profile's `Small node:` syntax. The gate owns dependency
+`Location:` from the worktree, inline. Small lane: `--small <node>` for one
+proving node, the full gate for more (small-lane.md). The gate owns dependency
 install and every check CI runs; its verdict is one JSON object: `verdict`
 `pass|fail|unavailable`, per-gate statuses
 `pass|fail|deferred-to-ci|unavailable`, `gates.secrets` present in every lane.
@@ -217,7 +212,8 @@ Unparseable output or a missing `secrets` key reads as `unavailable`. `fail`:
 fix loop. Any `deferred-to-ci`: proceed, and the merge summary names each
 deferred gate. `unavailable`: stop `local gate unavailable` with the PR
 unopened, leaving phase 6 to a run whose gate answers. **Done when:**
-`base-fresh` reports the branch not behind its base and the gate's JSON reads
+`base-fresh` reports the branch not behind its base, every `Carry:` file matches
+the main checkout's copy (vacuous at `Carry: None.`), and the gate's JSON reads
 `verdict: pass` with `gates.secrets` present.
 
 **6 · Open PR.** [reference/pr-body.md](reference/pr-body.md) carries what the
@@ -246,9 +242,9 @@ drives; the brand fixes nothing. Zero reviewers: skip the phase. **Order: every
 reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks.** Batch
 fixes into one push per round, read each round from `poll-pr` (`--brief` is how
 a round is read), then answer each thread with `reply-thread` (`fixed in <sha>`,
-or the decline and its reason), and `resolve-thread` per thread once every
-thread carries a disposition. A finding about the PR body itself is a fix like
-any other, through the writes pr-body.md names. Exits: `converged`,
+or the decline and its reason), and the reviewer's `Resolve:` per thread once
+every thread carries a disposition. A finding about the PR body itself is a fix
+like any other, through the writes pr-body.md names. Exits: `converged`,
 `converged, override needed` (a gating reviewer's declined finding, cited with
 evidence), `degraded: <reason>` from the fixed vocabulary
 `never-queued | blocked | silent | infra-error | cap-hit | unreachable`, or, for
@@ -260,9 +256,9 @@ grew the deviations log, `"Needs attention"` where a round filed or linked an
 issue or met a defect, and `Review` last, one line per reviewer in the fixed
 shape review-loop.md carries. Then the phase-6 read-back while the PR is open.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
-returned carries a reply (none to carry one, where it answered `threads:
-unavailable`), and `read-pr` shows a `## Review` section with one line per
-reviewer, plus `## Special things to note` and `## Needs attention`, each
+returned carries a reply and, where `Resolve:` is not `None.`, is resolved (none
+to carry one, where it answered `threads: unavailable`), and `read-pr` shows a
+`## Review` section with one line per reviewer, plus `## Special things to note` and `## Needs attention`, each
 required only where a round grew that section's own record.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
@@ -284,9 +280,11 @@ the summary's shape, what `merge` does, its two refusals and the tracker drafts.
 in the conversation and wait for an explicit "merge": the word is exact, and a
 near miss is asked back. On approval run `merge <pr> <issue|none> [--worktree
 <path>]`, `update-issue-body` per draft, then `cleanup <issue|none>`; a nonzero
-exit, or a `false` in `merge`'s or `cleanup`'s JSON, is finished by hand.
+exit, or a `false` in `merge`'s or `cleanup`'s JSON, re-runs the mechanic that
+owns the step, and a step no mechanic re-does is a Ship defect for the summary.
 Unattended: `comment-pr <pr> --body-file` with the summary, and return.
-**Done when:** attended, all three exited 0 with no `false` from `merge` or `cleanup`;
+**Done when:** attended, `merge`, every `update-issue-body` (none where the run
+drafted none) and `cleanup` exited 0, with no `false` from `merge` or `cleanup`;
 unattended, `comment-pr` posted the summary and the run returned the PR link.
 
 ## The stops
@@ -298,10 +296,11 @@ own or uses an auto-merge flag. Two conditional pauses in an attended run: the
 triaging your own findings, fixing, re-running, is autonomous. Two guardrails
 hold around that:
 
-- **Red is fixed or reported.** Any failure before the merge gate gets a bounded
-  self-fix-and-retry, about two attempts. Still red, or the failure says the
-  approach is wrong: **stop and report** with the concrete evidence and, if
-  cheap, a verified-working alternative, so the report is a fast yes.
+- **Red is fixed or reported.** Any failure before the merge gate gets at most
+  two fix-and-retry attempts; still red after the second is `red-after-retry:
+  <what>`, and a failure saying the approach is wrong stops sooner. Either way
+  **stop and report** with the concrete evidence and, if cheap, a
+  verified-working alternative, so the report is a fast yes.
 - **Every stop has a name**, reported verbatim, with the claim action below. A
   sibling maps the name, a human reads it.
 
@@ -346,11 +345,11 @@ alone. When unsure, it is not small.
 2. **Provable without the real thing.** A unit or regression test fully proves
    it, or the class is `docs` and there is no behavior to test; either way no
    verification in the profile's `## Verification` applies.
-3. **Single-concern.** No new dependency, none of the profile's `Tripwires:`
-   fired, no new logic branch beyond the fix itself.
+3. **Contained.** No new dependency, none of the profile's `Tripwires:`
+   fired, and the diff inside the size cap small-lane.md counts.
 
 Behavior change is allowed: a bugfix is one. Small means narrow, locally
-provable and invisible to the public surface. Small: read
+provable, invisible to the public surface and inside the size cap. Small: read
 [reference/small-lane.md](reference/small-lane.md) before continuing. Its floor
 is the same in every repo, and the lane revokes one way only.
 

@@ -1,4 +1,4 @@
-# Phases 1 to 3: understand, classify, implement, verify (detail)
+# Phases 1 and 2: understand, classify, implement (detail)
 
 ## Contents
 
@@ -7,10 +7,6 @@
 - [Phase 2: adjacent finds](#phase-2-adjacent-finds)
 - [Verify the spec's external-system claims before building on them](#verify-the-specs-external-system-claims-before-building-on-them)
 - [Phase 1 detail: spec precedence](#phase-1-detail-spec-precedence)
-- [Phase 3 detail: verify where it failed](#phase-3-detail-verify-where-it-failed)
-
-Phase 2 leads, because classification drives everything downstream; the
-phase-1 and phase-3 deep-dives follow.
 
 ## Phase 2: classify, then implement test-first
 
@@ -49,7 +45,8 @@ keys, spec interpretation, external-claim probes, design choices, the brief)
 stays in the main thread on the judgment tier. **Execution** (writing the
 failing test, making it green, refactoring, from a plan the main thread set) is
 mechanical-tier work: delegate it to ONE subagent when the plan is settled and
-the change is bounded. Keep it inline when the issue is exploratory, the spec
+the edit spans files you have not opened; where you can point at the files,
+execute inline. Keep it inline when the issue is exploratory, the spec
 is still settling, or the change touches schema or architecture; a
 plan-implement feedback loop across a subagent boundary loses too much. The
 phase-4 Standards review on the full diff is the safety net either way.
@@ -105,46 +102,3 @@ latest authoritative spec wins and the body's original acceptance criteria no
 longer bind. Note it in the deviations log so the merge summary carries it, and
 expect a reviewer reading the stale body to flag "missing" requirements; reject
 those in phases 4 and 7 with the comment as evidence.
-
-## Phase 3 detail: verify where it failed
-
-Each entry under `## Verification` has seven lines. You judged `Applies when:`
-at classification; here you run the applicable ones.
-
-- **Run** its `Run:` line scoped to what you touched, the phase-2 regression
-  test in that run and the rest of the suite left to the local gate. Pass is
-  generic: green for the touched scope on the named environment. There is no
-  per-verification pass rule.
-- **Where.** On the environment the issue was reported against. A different
-  environment may auto-heal the bug, so green is not fixed unless it is green
-  where it failed. Where this machine cannot prove the claim (an OS the issue
-  names, a matrix leg), `Also proven by CI:` names the leg that does; write the
-  test so that leg proves it and watch it in phase 8.
-- **Prerequisite missing** (`Needs:` fails its detection): the disposition is
-  the entry's `Without it:` line, one of:
-  - `hand-off`: attended, print the exact command and setup, wait for the human
-    to run or confirm it, resume; the claim holds. Unattended: hand back with
-    the same command in the reason.
-  - `defer-to-ci`: continue; legal only because `Also proven by CI:` names a
-    leg, which the merge summary then names. The only unattended-safe
-    disposition.
-  - `blocked`: cannot be verified anywhere without the prerequisite. Stop
-    `blocked-verification`.
-- **Result words** are the local gate's plus `unexercised`: `pass | fail |
-  deferred-to-ci | unavailable | unexercised`. The fifth is phase 3's alone,
-  because a gate check always has a subject. Phase 5 admits `pass`,
-  `deferred-to-ci` and `unexercised` only, so a verification still without a
-  result is finished here, by running it or by taking its `Without it:` line;
-  the merge gate is for reading a summary, not finishing phase 3.
-- **`unexercised`** is the verification whose `Needs:` were satisfied and whose
-  every applicable path lacked a **subject** to drive, where the subject is one
-  another actor creates (a reviewer's thread on this run's PR), as opposed to
-  one ship could have created itself. The human weighs it at the merge gate,
-  where [merge-gate.md](merge-gate.md) says how the row reads, and an unattended
-  run proceeds on it, because there is nothing to hand back for. Three cases it
-  is the wrong word for: a **prerequisite** that failed its detection, which
-  `Without it:` still owns; a path the run **skipped**, which is an unrun
-  verification; and a verification where **at least one applicable path ran**,
-  which is unchanged, the paths that ran giving the result and `<what ran>`
-  naming the unexercised one.
-- `docs` class and the small lane skip this phase entirely.
