@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# scripts/house-style-check.sh: the em-dash ban. The subject is the verdict's
+# scripts/house-style-check.sh: the em-dash ban and the whitespace rules. The
+# em-dash cases' subject is the verdict's
 # independence from the locale: the cloud sandbox runs with LANG and LC_ALL
 # empty, where a `$'\u'` escape stays escape text and the check matched
 # its own source (issue #249). Each case runs under both an empty locale and
@@ -37,6 +38,26 @@ for loc in "" C.UTF-8; do
   check "the finding names the file under the $label locale" \
     "skills/x/SKILL.md:1:one $(printf '\342\200\224') two" "$(out_of "$loc" "$d" | tail -n 1)"
 done
+
+# Trailing whitespace: a derived repo's stock `trailing-whitespace` hook fails on
+# a copied script that carries one (issue #288). No locale enters this rule.
+d=$(checkout trailing-space)
+printf 'text \n' > "$d/skills/x/SKILL.md"; git -C "$d" add -A
+check_rc "a trailing space fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the finding names the line" "skills/x/SKILL.md:1:text " "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout trailing-tab)
+printf 'text\t\n' > "$d/skills/x/SKILL.md"; git -C "$d" add -A
+check_rc "a trailing tab fails" 1 "$(rc_of C.UTF-8 "$d")"
+
+d=$(checkout no-final-newline)
+printf 'text' > "$d/skills/x/SKILL.md"; git -C "$d" add -A
+check_rc "a file without a final newline fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the finding names the file" "skills/x/SKILL.md" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout empty-file)
+: > "$d/skills/x/empty.md"; git -C "$d" add -A
+check_rc "an empty file passes" 0 "$(rc_of C.UTF-8 "$d")"
 
 # Tooling: outside a checkout there is no listing, which is not a clean tree.
 mkdir -p "$fixture/no-checkout"

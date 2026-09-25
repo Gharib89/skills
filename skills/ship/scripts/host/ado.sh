@@ -66,7 +66,7 @@ host_identity() {
   local id
   id=$(az account show --query user.name -o tsv 2>/dev/null) && [ -n "$id" ] && { printf '%s' "$id"; return 0; }
   invoke GET core connectionData 7.1 --query 'authenticatedUser.properties.Account.$value' -o tsv 2>/dev/null \
-    | tr -d '"' | grep . 
+    | tr -d '"' | grep .
 }
 # No cheap, reliable push probe exists on ADO without a security-namespace
 # walk; preflight reports unknown and the merge tells.
