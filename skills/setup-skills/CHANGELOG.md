@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v5.8.0 (2026-09-25)
+
+### Features
+
+- **ship**: A measured 200-line small lane, reviewer probes from preflight, parallel phase 4
+  ([#300](https://github.com/Gharib89/skills/pull/300),
+  [`38daa3f`](https://github.com/Gharib89/skills/commit/38daa3f04531f861e93e67362f4d26564f23b0f2))
+
+
 ## v5.7.0 (2026-09-25)
 
 ### Features
