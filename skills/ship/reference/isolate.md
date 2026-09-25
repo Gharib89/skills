@@ -1,8 +1,7 @@
 # Phase 0: preflight, the profile it loads, and isolation
 
-`SKILL.md` names the calls and the branch they leave behind; this file says
-what each one proves, what it refuses and why the worktree is made the way it
-is.
+`SKILL.md` names the calls; this file says what each one proves, what it
+refuses and why the worktree is made the way it is.
 
 ## What preflight proves
 
@@ -29,9 +28,10 @@ cross-references as `mentioned_by[]` rows: context for phase 1, no kind of stop.
 
 ## The worktree
 
-Attended, `isolate <issue> <type> <slug>` fetches, branches from `origin/HEAD`,
-creates the sibling worktree `<parent>/<repo>.worktrees/<slug>-<issue>`, copies
-the profile's `Carry:` files in one way, and prints the path. Unattended,
+Attended, `isolate <issue> <type> <slug>` fetches, branches
+`<type>/<slug>-<issue>` from `origin/HEAD`, creates the sibling worktree
+`<parent>/<repo>.worktrees/<slug>-<issue>`, copies the profile's `Carry:` files
+in one way, and prints the path. Unattended,
 `isolate ... --in-place` does the same fetch and branch in the sandbox clone,
 which is already isolation: no worktree, no carry.
 

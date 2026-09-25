@@ -2,7 +2,8 @@
 # manage-issue's release and handback driven end to end over the Host fake
 # (tests/host-fake.sh). The subject is what a failed step tells the run: a
 # hand-back whose label edit missed has still released the claim, and an
-# unassign that missed has not, so each answer carries which one it is.
+# unassign that missed or went unconfirmed may not have, so each answer
+# carries which one it is.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -40,15 +41,22 @@ check_rc "a hand-back whose label add missed exits 1" 1 "$rc"
 check "a hand-back whose label add missed has released the claim" \
   'released false' "$(jq -r '"\(.claim) \(.handed_back)"' <<<"$out")"
 check "a hand-back whose label add missed says what to report" \
-  'the claim is released but the hand-back is incomplete: report the label left null under labels, not a clean stop' \
+  'the claim is released but the hand-back is incomplete: report the labels left null under labels, not a clean stop' \
   "$(cat "$work/err")"
 
 reset
 : > "$SHIP_FAKE/host_issue_unassign.1.fail"
 out=$(run 7 handback "a reason"); rc=$?
 check_rc "an unassign that failed exits 1" 1 "$rc"
-check "an unassign that failed says the claim is still held" \
-  'unassign call failed: the claim is still held' "$(jq -r .error <<<"$out")"
+check "an unassign that failed says the claim may still be held" \
+  'unassign call failed: the claim may still be held; re-read the issue before reporting it' "$(jq -r .error <<<"$out")"
+
+reset
+: > "$SHIP_FAKE/host_issue_get.2.fail"
+out=$(run 7 handback "a reason"); rc=$?
+check_rc "a re-read that failed after the unassign exits 1" 1 "$rc"
+check "a re-read that failed after the unassign says the release is unconfirmed" \
+  'cannot re-read issue #7 after unassigning: the release is unconfirmed; re-read the issue before reporting it' "$(jq -r .error <<<"$out")"
 
 reset
 printf '{"number":7,"state":"open","assignees":["me"],"labels":[]}\n' > "$SHIP_FAKE/host_issue_get.2.json"

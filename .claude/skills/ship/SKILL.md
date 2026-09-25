@@ -273,10 +273,10 @@ hold around that:
 | Merge gate reached | none: the run's success | holds until merge |
 
 Hand-back is `manage-issue <issue> handback "<reason>"`: unassign, drop
-`ready-for-agent`, add `ready-for-human`, comment the reason; a hand-back that
-does not complete says on its own output what the claim is left as. In an
-attended run you stop and ask, and hand back only if the human says stop, to the
-human queue: never to the agent queue, which loops forever.
+`ready-for-agent`, add `ready-for-human`, comment the reason; one that exits 1
+says on its own output what the claim is left as. In an attended run you stop
+and ask, and hand back only if the human says stop, to the human queue: never to
+the agent queue, which loops forever.
 
 ## The lanes
 
