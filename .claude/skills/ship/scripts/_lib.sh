@@ -976,9 +976,9 @@ ship_reviewer_by_name() {
 # land and a bound of a minute or two reports `silent` on a review still
 # coming, and 60 where a
 # comment is, since the run read then holds the window open for as long as a
-# round is being written, and a free round that starts no run is answered by
-# `reviewer_run.status: "none"` on the first pass. After a request the 60 is
-# the bound on the run's creation, not on the round: the host creates the
+# round is being written. A comment transport is only ever polled after its
+# request, so the 60 is the bound on the run's creation, not on the round: the
+# host creates the
 # `issue_comment` run within seconds of the comment, and from then on the run,
 # not the constant, holds the window. A backed-up queue that outlasts it reads
 # `never-queued`; a caller expecting one passes `--timeout`.
