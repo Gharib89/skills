@@ -103,7 +103,11 @@
 # landed rather than never queued. It is null under
 # the head rule, under a comment transport (which records no request event, its
 # workflow run being its signal), without `--free-round`, before the settle, and
-# where the host could not answer; null leaves the window to run as before. The clock is read with
+# where the host could not answer; null leaves the window to run as before.
+# `degraded` is "never-queued" where a true `never_queued` meets
+# `--review-on-push false`, preflight's read that the ruleset promised this free
+# round: that is the reviewer's exit, with no request sent. It is null in every
+# other case, and the loop then proceeds to its first request. The clock is read with
 # `date`, so a test holds it with a stub. `threads` is "unavailable" when thread
 # state could not be read (on GitHub, GraphQL and the REST routes a refusing
 # proxy names both failed): that reviewer's exit is degraded unreachable, the
