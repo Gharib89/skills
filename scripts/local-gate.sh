@@ -42,7 +42,7 @@ declare -A gates pids
 # The trap stops each background gate's whole process group first, so an
 # interrupted gate orphans neither the gate nor the test file or npx it runs.
 logs=$(mktemp -d)
-stop() { local p; for p in "${pids[@]}"; do kill -- "-$p" 2>/dev/null; done; rm -rf "$logs"; }
+stop() { local p; for p in ${pids[@]+"${pids[@]}"}; do kill -- "-$p" 2>/dev/null; done; rm -rf "$logs"; }
 trap stop EXIT
 # grade <name> <rc> [unavailable]: the gate's status from its exit code, and on
 # anything but a pass its own log's tail on stderr. With `unavailable`, exit 2,
@@ -147,9 +147,10 @@ run stray-files scripts/stray-file-check.sh
 run contract scripts/contract-check.sh skills/ship/scripts skills
 
 # The background gates, graded once the rest have run; shellcheck's exit 2 is
-# `unavailable`, per its comment above.
-wait "${pids[tests]}"; grade tests $?
-[ -z "${pids[shellcheck]:-}" ] || { wait "${pids[shellcheck]}"; grade shellcheck $? unavailable; }
+# `unavailable`, per its comment above. Each leaves pids once reaped, so the
+# trap signals no group whose number the kernel may since have handed out.
+wait "${pids[tests]}"; grade tests $?; unset 'pids[tests]'
+[ -z "${pids[shellcheck]:-}" ] || { wait "${pids[shellcheck]}"; grade shellcheck $? unavailable; unset 'pids[shellcheck]'; }
 
 # --- end gates -----------------------------------------------------------------
 
