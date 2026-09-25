@@ -66,7 +66,9 @@ start tests tests/run.sh
 # through a system `shellcheck` when one is on PATH and `npx` otherwise.
 # A missing shellcheck is `unavailable`, not a lint finding;
 # scripts/shellcheck-check.sh is the whole rule, and exits 2 for that case.
-if [ "$lane" = full ] || git diff --name-only "$base...HEAD" | grep -q '\.sh$'; then
+# `git diff --quiet` rather than a grep over names: git C-quotes a non-ASCII
+# path, and a diff git cannot compute exits 128, which runs the gate.
+if [ "$lane" = full ] || ! git diff --quiet "$base...HEAD" -- '*.sh'; then
   start shellcheck scripts/shellcheck-check.sh
 fi
 
@@ -134,6 +136,8 @@ run stray-files scripts/stray-file-check.sh
 # host: each guard fires before the adapter loads.
 run contract scripts/contract-check.sh skills/ship/scripts skills
 
+# The background gates, graded once the rest have run; shellcheck's exit 2 is
+# `unavailable`, per its comment above.
 wait "${pids[tests]}"; grade tests $?
 [ -z "${pids[shellcheck]:-}" ] || { wait "${pids[shellcheck]}"; grade shellcheck $? unavailable; }
 

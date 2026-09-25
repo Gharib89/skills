@@ -91,4 +91,13 @@ d=$(repo small-sh skills/ship/scripts/x.sh)
 gate "$d" --small skills/ship/scripts/x.sh
 check "--small, a *.sh in the diff: shellcheck runs" "pass" "$(jq -r '.gates.shellcheck' <<<"$out")"
 
+# git C-quotes a path carrying a non-ASCII byte, so a name-matching skip misses it.
+d=$(repo small-quoted "skills/caf$(printf '\303\251').sh")
+gate "$d" --small docs/note.md
+check "--small, a C-quoted *.sh in the diff: shellcheck runs" "pass" "$(jq -r '.gates.shellcheck' <<<"$out")"
+
+# A diff git cannot compute fails closed: shellcheck runs rather than being skipped.
+gate "$d" --small docs/note.md --base no-such-ref
+check "--small, a base git cannot diff: shellcheck runs" "true" "$(jq -r '.gates | has("shellcheck")' <<<"$out")"
+
 finish
