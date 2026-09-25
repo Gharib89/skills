@@ -39,9 +39,11 @@ fi
 lane=full; [ -z "$small" ] || lane=small
 
 declare -A gates pids
-# The trap stops the background gates first: bash without job control starts
-# them with SIGINT ignored, so an interrupted gate would otherwise orphan them.
-logs=$(mktemp -d); trap 'kill $(jobs -p) 2>/dev/null; rm -rf "$logs"' EXIT
+# The trap stops each background gate's whole process group first, so an
+# interrupted gate orphans neither the gate nor the test file or npx it runs.
+logs=$(mktemp -d)
+stop() { local p; for p in "${pids[@]}"; do kill -- "-$p" 2>/dev/null; done; rm -rf "$logs"; }
+trap stop EXIT
 # grade <name> <rc> [unavailable]: the gate's status from its exit code, and on
 # anything but a pass its own log's tail on stderr. With `unavailable`, exit 2,
 # a tool the check could not obtain, grades `unavailable` rather than `fail`.
@@ -56,7 +58,13 @@ grade() {
 run()   { local name=$1; shift; "$@" >"$logs/$name" 2>&1; grade "$name" $?; }
 mark()  { gates[$1]=$2; }
 # start: as run, in the background; its pid waits in pids[<name>] to be graded.
-start() { local name=$1; shift; "$@" >"$logs/$name" 2>&1 & pids[$name]=$!; }
+# `set -m` puts the job in a process group of its own, which the trap kills;
+# without job control bash would have given it /dev/null as stdin, so it is
+# given that explicitly.
+start() {
+  local name=$1; shift
+  set -m; "$@" </dev/null >"$logs/$name" 2>&1 & pids[$name]=$!; set +m
+}
 
 # --- gates ---------------------------------------------------------------------
 

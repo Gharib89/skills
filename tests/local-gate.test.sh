@@ -21,13 +21,14 @@ export PATH="$fixture/bin:$PATH"
 
 # <path> <name> <peer> <rc-var>: a check that logs its name, marks that it
 # started, under AWAIT waits for <peer> to start, and exits with $<rc-var>.
-# Under HANG it records its pid and becomes a long sleep, for the interrupt case.
+# Under HANG it forks a long sleep and waits on it, recording both pids, so the
+# interrupt case sees a grandchild of the gate the way a real test file is one.
 stub() {
   cat > "$1" <<EOF
 #!/usr/bin/env bash
 echo "$2 log line"
 : > "\$MARKS/$2"
-[ -z "\${HANG:-}" ] || { echo \$\$ > "\$MARKS/$2.pid"; exec sleep 30; }
+[ -z "\${HANG:-}" ] || { sleep 30 & echo \$! > "\$MARKS/$2.child.pid"; echo \$\$ > "\$MARKS/$2.pid"; wait; }
 if [ -n "\${AWAIT:-}" ]; then
   for _ in \$(seq 50); do [ -e "\$MARKS/$3" ] && break; sleep 0.1; done
   [ -e "\$MARKS/$3" ] || { echo "$2 ran without $3"; exit 1; }
@@ -100,12 +101,12 @@ gpid=$!
 for _ in $(seq 50); do [ -s "$d/marks/tests.pid" ] && [ -s "$d/marks/shellcheck.pid" ] && break; sleep 0.1; done
 kill -TERM "$gpid"; wait "$gpid" 2>/dev/null
 left=""
-for g in tests shellcheck; do
+for g in tests tests.child shellcheck shellcheck.child; do
   p=$(cat "$d/marks/$g.pid" 2>/dev/null) || { left+=" $g(never started)"; continue; }
   for _ in $(seq 20); do kill -0 "$p" 2>/dev/null || break; sleep 0.1; done
   if kill -0 "$p" 2>/dev/null; then left+=" $g"; kill "$p"; fi
 done
-check "a killed gate leaves no background gate running" "" "$left"
+check "a killed gate leaves no background gate or its child running" "" "$left"
 
 # git C-quotes a path carrying a non-ASCII byte, so a name-matching skip misses it.
 d=$(repo small-quoted "skills/caf$(printf '\303\251').sh")
