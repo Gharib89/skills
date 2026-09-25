@@ -113,13 +113,15 @@ takes the `unverified` rule above rather than the transcript.
 measurement.** Write the number with the command that produced it beside it,
 run on the PR head, and count a word with `grep -ow` so a longer word carrying
 it as a substring does not inflate the total. A **tally of the run's own work**
-is the exception, and the only one: no command reproduces a round count or a
-finding outcome, so each is **written to the Run file at the moment it
-happens**, the way a deviation and a Ship defect already are. That is one rule
-over three records, each written by the phase that produces it: a `file-issue`
-result, filed number or linked candidate, when the call answers; a Ship defect
-when it is met; and a reviewer's round, with one line per finding and its
-disposition, when that round is dispositioned, which
+is the exception, and the only one: no command reproduces a round count, a
+finding outcome or a past round's run URL, so each is **written to the Run file
+at the moment it happens**, the way a deviation and a Ship defect already are.
+That is one rule over three records, each written by the phase that produces
+it: a `file-issue` result, filed number or linked candidate, when the call
+answers; a Ship defect when it is met; and a reviewer's round, with one line
+per finding and its disposition, and one carrying its numeric
+`reviewer_run.denied` and run URL where `poll-pr` returned one, when that round
+is dispositioned, which
 [review-loop.md](review-loop.md) carries at the bullet that does it. This
 paragraph is the **read-back** rule: each is read from the file here rather
 than recalled, which is what makes them survive a compaction. The PR body's fixed
