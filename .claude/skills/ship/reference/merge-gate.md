@@ -44,7 +44,8 @@ Self-review (code-review skill, the review gate)
   ...
 
 Review                                         (one block per reviewer)
-  <name> (<trigger>, <n> rounds): <converged | converged, override needed | degraded: <reason> | not invoked: <primary> converged>
+  <name> (<trigger>, <n> rounds): <converged | converged, override needed | degraded: <reason> | not invoked: <primary> converged>[, <N> denied calls (run <url>, ...)]
+    (the denied-calls clause as review-loop.md's Review line carries it, only where N > 0)
     - <finding> → <fixed in <sha> | declined: reason | filed: #<n>>
     ...                                        (or: clean, no findings)
     (a fallback that ran opens with: fallback for <primary>: degraded: <reason>)

@@ -229,6 +229,58 @@ check_rc "an unreadable run payload closes the window" 1 "$rc"
 check "and reads as unavailable, on one JSON object" '"unavailable"' \
   "$(jq -c '.reviewer_run' <<<"$out")"
 
+# A completed run carries the count of tool calls its round was refused, read
+# once, for the run already picked, however many passes the poll took: the
+# run that concluded here buys one extra pass before the round lands.
+reset
+run_row completed success > "$SHIP_FAKE/host_workflow_runs.1.json"
+printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
+printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.2.json"
+printf '{"denied":2}\n' > "$SHIP_FAKE/host_run_denials.1.json"
+out=$(poll); rc=$?
+check_rc "a completed run's round lands" 0 "$rc"
+check "the completed run carries its denied count" 2 "$(jq -r '.reviewer_run.denied' <<<"$out")"
+check "the count is read once, for the picked run's URL" \
+  "host_run_denials	https://example.invalid/runs/9" \
+  "$(grep '^host_run_denials' "$SHIP_FAKE/calls")"
+
+# The same run under --brief: `reviewer_run` passes through whole, the count in it.
+reset
+run_row completed success > "$SHIP_FAKE/host_workflow_runs.1.json"
+printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
+printf '{"denied":2}\n' > "$SHIP_FAKE/host_run_denials.1.json"
+printf 'Gharib89\n' > "$SHIP_FAKE/host_identity.1.json"
+out=$(poll --brief)
+check "--brief carries the denied count" 2 "$(jq -r '.reviewer_run.denied' <<<"$out")"
+
+# A count the host could not read is no count, and says nothing about the run:
+# the run read stands as it was given.
+reset
+run_row completed success > "$SHIP_FAKE/host_workflow_runs.1.json"
+printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
+: > "$SHIP_FAKE/host_run_denials.1.fail"
+out=$(poll)
+check "a failed count read leaves the run read standing, denied null" \
+  '{"status":"completed","conclusion":"success","url":"https://example.invalid/runs/9","denied":null}' \
+  "$(jq -c '.reviewer_run' <<<"$out")"
+
+# A run still going has no count yet, and neither has a run that was never
+# created: neither is asked for one.
+reset
+run_row in_progress '' > "$SHIP_FAKE/host_workflow_runs.1.json"
+printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
+out=$(poll)
+check "an in-progress run's count is null" 'in_progress null' \
+  "$(jq -r '[.reviewer_run.status, (.reviewer_run.denied|tostring)] | join(" ")' <<<"$out")"
+check "and no count is read for it" 0 "$(calls run_denials)"
+reset
+printf '[]\n' > "$SHIP_FAKE/host_workflow_runs.1.json"
+printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
+out=$(poll)
+check "a none status's count is null" 'none null' \
+  "$(jq -r '[.reviewer_run.status, (.reviewer_run.denied|tostring)] | join(" ")' <<<"$out")"
+check "and no count is read for it" 0 "$(calls run_denials)"
+
 # The Azure DevOps adapter has no such read, and answers the way it answers
 # every read the host lacks: non-zero, silent.
 (
@@ -238,6 +290,9 @@ check "and reads as unavailable, on one JSON object" '"unavailable"' \
   out=$(host_workflow_runs review.yml 2026-09-17T11:58:00Z 2>&1); rc=$?
   check_rc "the ADO adapter answers the new read non-zero" 1 "$rc"
   check "the ADO adapter says nothing" "" "$out"
+  out=$(host_run_denials https://dev.azure.com/org/proj/_build/results?buildId=1 2>&1); rc=$?
+  check_rc "the ADO adapter answers the count read non-zero" 1 "$rc"
+  check "the ADO adapter says nothing of a count" "" "$out"
   finish
 ) || _failed=1
 

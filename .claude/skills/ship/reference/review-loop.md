@@ -161,10 +161,18 @@ a fresh read of the committed tree, not a conversation.
   <primary> converged`, which takes the second form and states no counts,
   having none. A trailing clause is added only where the reader must know
   something the counts do not say (a cap that ran out mid-findings, the
-  primary's degraded reason on a fallback that ran). The per-finding outcomes
+  primary's degraded reason on a fallback that ran, the tool calls its rounds
+  were refused). The last one reads `<N> denied calls (run <url>[, run
+  <url>…])`: N is the sum of `reviewer_run.denied` over that reviewer's rounds,
+  followed by the run URL of each round whose count was non-zero, as in
+  `- claude: converged, 3 rounds, 4 findings: 3 accepted, 1 declined, 0 filed,
+  3 denied calls (run <url>, run <url>)`. A total of 0, or no numeric count at
+  all (a `null` from a live run, a failed read, or a host with no run to read),
+  adds nothing, and a count never changes the exit word. The per-finding outcomes
   are the merge summary's block, which this line points at rather than repeats.
   **Write the round to the Run file as you disposition it**, one line per
-  finding with its disposition, the way phase 2 writes a deviation: no command
+  finding with its disposition and, where `poll-pr` returned one, the round's
+  `reviewer_run.denied` and URL, the way phase 2 writes a deviation: no command
   reproduces a round count or a finding outcome, so the file is the only thing
   a compaction leaves standing between here and the counts line at exit.
   [merge-gate.md](merge-gate.md) reads it back and does not write it.

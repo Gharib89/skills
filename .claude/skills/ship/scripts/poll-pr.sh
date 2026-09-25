@@ -57,8 +57,8 @@
 # conclusion is `skipped`, as the workflow declining the comment. A run still live when the ceiling closes
 # is reported as it stands, status and URL, and reads as `infra-error` too: a
 # run that outlived the ceiling delivered nothing either. The run is reported on
-# `reviewer_run`: null where no run is awaited, `{status, conclusion, url}`
-# otherwise, with status `none` and the other two null where no run was created
+# `reviewer_run`: null where no run is awaited, `{status, conclusion, url, denied}`
+# otherwise, with status `none` and the other three null where no run was created
 # at all, and the string
 # "unavailable" where the host could not answer the read, the way `threads`
 # reports one it could not read. An unavailable read leaves the window at the
@@ -66,7 +66,12 @@
 # because a read that did not happen is no evidence about the reviewer. The run
 # read is keyed by `--since`, the request the run should follow. Which event
 # starts such a run is the host's word and the adapter's business: this
-# mechanic names the workflow file and the instant, and nothing else.
+# mechanic names the workflow file and the instant, and nothing else. `denied`
+# is the count of tool calls the round in a `completed` run was refused, read
+# once as the poll returns, for that run alone; it is null while the run is
+# live, where none was created, and where the host could not read the count,
+# which leaves the rest of the run read as it was. It never changes the window
+# or the verdict: the review loop carries it onto the Review line.
 #
 # `reviewer_blocked` is the awaited login's latest quota or rate-limit notice,
 # read from its review bodies as well as its PR comments: a reviewer states a
@@ -299,6 +304,17 @@ while :; do
     esac
   fi
   if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
+    # Read here rather than per pass, so a poll that waited out the run reads
+    # its count once, and only the run it reports.
+    # An answer that is not a count is no count, like a read that failed.
+    if [ "$run_status" = completed ]; then
+      denied=null
+      if denials=$(host_run_denials "$(jq -r .url <<<"$reviewer_run")"); then
+        denied=$(jq -c '(.denied | numbers) // null' <<<"$denials" 2>/dev/null) || denied=null
+        [ -n "$denied" ] || denied=null
+      fi
+      reviewer_run=$(jq -c --argjson d "$denied" '.denied = $d' <<<"$reviewer_run")
+    fi
     out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
       --argjson t "$threads" --argjson rv "$reviewer" --argjson b "$blocked" --argjson rr "$reviewer_run" \
       --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson nq "$never_queued" --argjson d "$done" --argjson w "$waited" \
