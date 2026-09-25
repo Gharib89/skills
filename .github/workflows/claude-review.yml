@@ -83,6 +83,14 @@ jobs:
                `<headRefOid>` being the one step 2 returned: the checkout is the
                default branch, so a Read there is its copy, not the PR's.
 
+            Make every Bash call one command, with no `;`, `&&` or `>` redirect:
+            such a call is refused even when each command in it is allowed.
+            Read a file with the Read tool rather than `cat`, and a file at the
+            PR head through the `gh api .../contents?ref=` call above rather
+            than `git`, which this round is not granted. Search a saved diff
+            with `grep` and page it with the Read tool; `sed` and `awk` are
+            refused.
+
             Report the round as ONE formal pull request review, submitted in a
             single call, with every inline finding attached to it. Build it as
             one `gh api` command whose every field is a typed `-F` flag:
