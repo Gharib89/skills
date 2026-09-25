@@ -3,10 +3,12 @@
 # at load, so a file that outgrows its budget buries the pipeline behind its own
 # reference material, and a reference file long enough to scroll needs a map at
 # the top rather than at the point a reader gives up. The thresholds and the
-# paths, whole: `skills/*/SKILL.md` at most 400 lines, and every
+# paths, whole: `skills/*/SKILL.md` at most 350 lines, and every
 # `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
 # inside its first 15 lines whose list matches the file's `## ` headings. The
 # `prose-budget` gate in scripts/local-gate.sh runs this, in every lane.
+# 350 is ship's SKILL.md after the #308 deletion pass, rounded up to the next 25:
+# a ratchet, so prose that regrows fails here instead of accumulating again.
 #
 #   scripts/prose-budget-check.sh [<root>]
 #
@@ -133,8 +135,8 @@ contents_check() {
 rc=0
 for f in "$root"/skills/*/SKILL.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
-  [ "$n" -le 400 ] \
-    || { printf '%s: %s lines, over the 400-line budget\n' "${f#"$root"/}" "$n"; rc=1; }
+  [ "$n" -le 350 ] \
+    || { printf '%s: %s lines, over the 350-line budget\n' "${f#"$root"/}" "$n"; rc=1; }
 done
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }

@@ -29,13 +29,13 @@ out_of() { bash scripts/prose-budget-check.sh "$1" 2>/dev/null; }
 # than leaving every synthetic fixture green.
 check_rc "the current tree is inside the budget" 0 "$(rc_of .)"
 
-d=$(tree at-400); body 400 > "$d/skills/ship/SKILL.md"
-check_rc "a 400-line SKILL.md passes" 0 "$(rc_of "$d")"
+d=$(tree at-350); body 350 > "$d/skills/ship/SKILL.md"
+check_rc "a 350-line SKILL.md passes" 0 "$(rc_of "$d")"
 
-d=$(tree over-400); body 401 > "$d/skills/ship/SKILL.md"
-check_rc "a 401-line SKILL.md fails" 1 "$(rc_of "$d")"
+d=$(tree over-350); body 351 > "$d/skills/ship/SKILL.md"
+check_rc "a 351-line SKILL.md fails" 1 "$(rc_of "$d")"
 check "the overrun message names the file and the count" \
-  "skills/ship/SKILL.md: 401 lines, over the 400-line budget" "$(out_of "$d")"
+  "skills/ship/SKILL.md: 351 lines, over the 350-line budget" "$(out_of "$d")"
 
 d=$(tree at-100); body 100 > "$d/skills/ship/reference/r.md"
 check_rc "a 100-line reference with no ## Contents passes" 0 "$(rc_of "$d")"
@@ -204,9 +204,9 @@ d=$(tree label-bracket)
 check_rc "a bracket inside the label does not break the link" 0 "$(rc_of "$d")"
 
 # Both budgets in one tree: the run reports every overrun, never the first.
-d=$(tree both); body 401 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
+d=$(tree both); body 351 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \
-  "skills/ship/SKILL.md: 401 lines, over the 400-line budget
+  "skills/ship/SKILL.md: 351 lines, over the 350-line budget
 skills/ship/reference/r.md: 101 lines and no \`## Contents\` heading in its first 15 lines" \
   "$(out_of "$d")"
 

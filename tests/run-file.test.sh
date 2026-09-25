@@ -99,8 +99,13 @@ check "close on an already closed phase is refused" \
   "phase 2 is not open" "$(err close 2 --file "$g")"
 
 grep -v '^- \[.\] 8 · ' "$g" > "$tmp/gapped.md"
-check "a flip whose line is absent names the line" \
-  "no phase 8 line in $tmp/gapped.md" "$(err open 8 --file "$tmp/gapped.md")"
+check "a flip whose line is absent names the line and the rebuild" \
+  "no phase 8 line in $tmp/gapped.md: a subagent overwrote the Run file; rebuild it with \`run-file init <issue> --scratchpad <dir> --rebuild\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log" \
+  "$(err open 8 --file "$tmp/gapped.md")"
+# A phase outside the ten is a mistyped number, not a damaged file: advice to
+# rebuild would wipe an intact record.
+check "a flip naming no phase of the ten is refused without the rebuild" \
+  "no phase 12 line in $g" "$(err open 12 --file "$g")"
 check_rc "a flip whose line is absent exits 1" 1 "$(rc open 8 --file "$tmp/gapped.md")"
 
 check_rc "a flip on a file that is not there exits 1" 1 "$(rc open 8 --file "$tmp/nope.md")"
