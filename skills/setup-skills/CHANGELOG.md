@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v5.7.0 (2026-09-25)
+
+### Features
+
+- **setup-skills**: The Claude reviewer prompt names the Bash shapes its allowlist refuses
+  ([#296](https://github.com/Gharib89/skills/pull/296),
+  [`527ee4c`](https://github.com/Gharib89/skills/commit/527ee4c962de749abdcf89a3b9b53fb3ec0f08ba))
+
+
 ## v5.6.0 (2026-09-25)
 
 ### Features
