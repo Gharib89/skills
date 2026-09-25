@@ -44,7 +44,9 @@ sandbox (a bot's thread `author` keeps its `[bot]` suffix there) and a reviewer
 exits by its normal rules. `threads: "unavailable"`, and with it `degraded:
 unreachable`, now means the thread read failed on both paths. Remote
 ref deletion is blocked both ways, which costs nothing here: the lane returns
-at the merge gate and `merge` plus `cleanup` run attended from a human's
+at the merge gate, and `merge`, `cleanup` and the `update-issue-body` command
+the summary carries for each tracker draft
+([merge-gate.md](merge-gate.md#a-tracker-issue-on-targets)) run from a human's
 machine.
 
 Unchanged: `defer-to-ci` is the only verification disposition that proceeds
