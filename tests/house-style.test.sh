@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # scripts/house-style-check.sh: the em-dash ban and the whitespace rules. The
-# em-dash cases' subject is the verdict's
-# independence from the locale: the cloud sandbox runs with LANG and LC_ALL
-# empty, where a `$'\u'` escape stays escape text and the check matched
-# its own source (issue #249). Each case runs under both an empty locale and
-# C.UTF-8, against a throwaway checkout that carries a copy of the check itself.
+# em-dash cases' subject is the verdict's independence from the locale: the
+# cloud sandbox runs with LANG and LC_ALL empty, where a `$'\u'` escape stays
+# escape text and the check matched its own source (issue #249). Each runs under
+# both an empty locale and C.UTF-8, against a throwaway checkout that carries a
+# copy of the check itself.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -55,9 +55,21 @@ printf 'text' > "$d/skills/x/SKILL.md"; git -C "$d" add -A
 check_rc "a file without a final newline fails" 1 "$(rc_of C.UTF-8 "$d")"
 check "the finding names the file" "skills/x/SKILL.md" "$(out_of C.UTF-8 "$d" | tail -n 1)"
 
-d=$(checkout empty-file)
-: > "$d/skills/x/empty.md"; git -C "$d" add -A
-check_rc "an empty file passes" 0 "$(rc_of C.UTF-8 "$d")"
+# The stock hooks skip binaries and symlinks, so neither rule reads them.
+d=$(checkout binary)
+printf '\000\001 ' > "$d/skills/x/icon.bin"; git -C "$d" add -A
+check_rc "a binary with a trailing blank and no final newline passes" 0 "$(rc_of C.UTF-8 "$d")"
+
+d=$(checkout symlink)
+printf 'text ' > "$d/outside.txt"; ln -s ../../outside.txt "$d/skills/x/link.md"
+git -C "$d" add skills
+check_rc "a symlink to a file with a trailing blank and no final newline passes" 0 "$(rc_of C.UTF-8 "$d")"
+
+# git grep names an unreadable file on stderr and exits 0: that is not clean.
+d=$(checkout unreadable)
+chmod 000 "$d/skills/x/SKILL.md"
+check_rc "an unreadable tracked file is tooling" 2 "$(rc_of C.UTF-8 "$d")"
+chmod 644 "$d/skills/x/SKILL.md"
 
 # Tooling: outside a checkout there is no listing, which is not a clean tree.
 mkdir -p "$fixture/no-checkout"
