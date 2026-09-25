@@ -98,6 +98,16 @@ jobs:
                the checkout is the merge ref, whose lines can differ from the
                diff's.
 
+            Make every Bash call one command, with no `;`, `&&` or `>` redirect:
+            a redirect is refused even between allowed commands, and a chain
+            holding one refused command loses the whole call. Run `gh pr diff`
+            bare, since Claude Code saves a large diff for you, and work that
+            file as step 3 says, with `grep` and the Read tool rather than
+            `sed`, `awk` or `cat`; `awk` is refused. Take a file at the PR head
+            from the `gh api .../contents?ref=` call above rather than `git`:
+            the checkout is not the PR head, and a `git clone` or `git fetch`
+            to reach it is refused.
+
             Report the round as ONE formal pull request review, submitted in a
             single call, with every inline finding attached to it. Build it as
             one `gh api` command whose every field is a typed `-F` flag:
@@ -309,6 +319,16 @@ jobs:
                `gh api 'repos/${{ github.repository }}/contents/<path>?ref=<headRefOid>' -H 'Accept: application/vnd.github.raw+json'`,
                `<headRefOid>` being the one step 2 returned: the checkout is the
                default branch, so a Read there is its copy, not the PR's.
+
+            Make every Bash call one command, with no `;`, `&&` or `>` redirect:
+            a redirect is refused even between allowed commands, and a chain
+            holding one refused command loses the whole call. Run `gh pr diff`
+            bare, since Claude Code saves a large diff for you, and work that
+            file as step 3 says, with `grep` and the Read tool rather than
+            `sed`, `awk` or `cat`; `awk` is refused. Take a file at the PR head
+            from the `gh api .../contents?ref=` call above rather than `git`:
+            the checkout is not the PR head, and a `git clone` or `git fetch`
+            to reach it is refused.
 
             Report the round as ONE formal pull request review, submitted in a
             single call, with every inline finding attached to it. Build it as
