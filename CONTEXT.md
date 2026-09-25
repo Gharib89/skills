@@ -29,8 +29,16 @@ The local gate's one answer: pass, fail, or unavailable, built from a status per
 _Avoid_: result, report, gate output
 
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, prepare, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-issue, comment-pr, reply-thread, update-pr-body, update-pr-title, update-issue-body, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host interaction in a Ship run goes through one of them; a run reaches a host's CLI only from inside a mechanic, and a missing operation is a Ship defect, not a prose fallback. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) or to an issue (a comment, its body) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
-_Avoid_: helper, util, raw `gh` or `az` call
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, prepare, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-issue, comment-pr, reply-thread, update-pr-body, update-pr-title, update-issue-body, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host write and every gating read in a Ship run goes through one of them, and a missing one is a Ship defect, not a prose fallback; an informational read no mechanic covers is the one host call a run may make directly. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) or to an issue (a comment, its body) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
+_Avoid_: helper, util, raw `gh` or `az` call (for a write or a gating read)
+
+**Gating read**:
+A host read a phase's `Done when:` or a stop row depends on, such as preflight's admission, poll-pr's round, CI wait's legs or base-fresh's answer. It stays a generic mechanic, so the same host state always gives the same verdict.
+_Avoid_: check, probe
+
+**Informational read**:
+A host read no phase or stop branches on, made for context alone. Where no mechanic covers it, a run may make it directly through the host's REST form, which the cloud sandbox admits, and lists it in the Run file's `## Direct reads`; one made directly in two runs is a candidate mechanic. Verification scaffolding (a scratch issue or scratch review thread set up by hand) is neither kind of read and sits outside the rule.
+_Avoid_: side read, ad-hoc call
 
 **Setup skill**:
 A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section of that same skill.
@@ -93,11 +101,11 @@ One automated review bot the ship profile names for a repo, with its login, its 
 _Avoid_: review bot topology (the old three-shape framing), bot lane
 
 **Trigger**:
-How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request, and where the host still posts an opening round on its own, the loop polls for that free round and takes it as round 1 rather than spending a request on it. Convergence and mechanics follow the trigger alone; the bot's brand decides nothing. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
+How a reviewer's rounds start: auto-once fires on PR creation and is dispositioned once, on-push re-reviews every push, on-request delivers one review per explicit request, and where the host still posts an opening round on its own, round 1 is polled from PR creation, so that round is round 1, and one already landed takes no request. The loop and mechanics follow the trigger alone; the bot's brand decides nothing. The profile's `Cap:` is a budget for the rounds **ship drives**, which is every round only where ship starts them: a reviewer the host re-runs on its own keeps posting past the number.
 _Avoid_: mode, kind of bot
 
 **Fallback reviewer**:
-A reviewer driven only when the reviewer it names exits degraded, for any degraded reason; a converged primary leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary converges, the fallback still reports, as not invoked, so the human sees it exists.
+A reviewer driven only when the reviewer it names exits not reviewed, for any reason; a primary that reviewed leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary reviewed, the fallback still reports, as not invoked, so the human sees it exists.
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Request transport**:
@@ -116,16 +124,16 @@ _Avoid_: real review, meaningful round
 The 2000-character cap `poll-pr` puts on every review body, marked `...[truncated]` where it bites, so one poll cannot flood the run's window. `--brief --full <id>` lifts it for the rows it names and nothing else, and `--full` without `--brief` is refused. It covers review bodies alone: a `--brief` thread row's `lead` carries the same marker at 200 characters, which no flag lifts, and the full shape's `threads[]` is where that comment is read whole. A reviewer that opens with a preamble pushes its findings past the cap, and a round that comes back clipped is one phase 7 has not read.
 _Avoid_: truncation, body limit
 
-**Converged**:
-The phase-7 exit where CI is green and every reviewer is settled per its trigger: auto-once threads all dispositioned; on-push quiet on the current head with every thread dispositioned and resolved; on-request latest round nothing actionable and every thread dispositioned. A round lands on the current head for it to be quiet; silence keeps the poll running.
-_Avoid_: approved, clean, passed
+**Reviewed**:
+A reviewer's phase-7 exit where at least one of its rounds landed and every finding in it carries a disposition, whether or not a later round landed. A gating reviewer's declined finding is still reviewed, cited at the merge gate as the override the human decides on.
+_Avoid_: converged, approved, clean, passed
 
-**Degraded exit**:
-A phase-7 exit that is not converged but still proceeds to the merge gate on green CI, named by one reason per reviewer: never-queued, blocked, silent, infra-error, cap-hit, unreachable. It is the human's call at the merge gate rather than a hand-back.
-_Avoid_: failure, timeout, skipped review
+**Not reviewed**:
+A reviewer's phase-7 exit where no round of it landed, or one did and its threads could not be read (unreachable), named by the cause a mechanic observed: poll-pr's `not_reviewed` (unreachable, blocked, never-queued, infra-error, silent) or request-review's exit 1 (never-queued). It still proceeds to the merge gate on green CI, the human's call there rather than a hand-back.
+_Avoid_: degraded, failure, timeout, skipped review
 
 **Not invoked**:
-The phase-7 exit belonging to a fallback reviewer whose primary converged: it went unrequested, so it has no rounds and no findings. Neither converged nor degraded, and the run carries on past it. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
+The phase-7 exit belonging to a fallback reviewer whose primary reviewed: it went unrequested, so it has no rounds and no findings. Neither reviewed nor not reviewed, and the run carries on past it. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
 _Avoid_: skipped, not needed, n/a
 
 **Carried file**:
@@ -177,7 +185,7 @@ An open issue whose title shares three or more tokens with an adjacent find the 
 _Avoid_: duplicate, match, near-miss, collision
 
 **Ship defect**:
-A gap in Ship itself met during a run: a host operation no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human, rather than into a hand-rolled call or an issue filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
+A gap in Ship itself met during a run: a host write or gating read no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary and carried upstream by the human, rather than into a hand-rolled call or an issue filed to another repo. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
 _Avoid_: tooling gap, missing helper, upstream bug
 
 **Release run**:

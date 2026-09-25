@@ -38,7 +38,8 @@
 #   closed. reviewers[] is one {name, review_on_push} row per reviewer block:
 #   the copilot_code_review ruleset's true or false for the block posting under
 #   the Copilot login, null for every other block and where the host could not
-#   answer. Phase 7 passes a false to `poll-pr --free-round --review-on-push`.
+#   answer. It is the ruleset read the Trigger check rests on, reported for
+#   the human; the review loop does not branch on it.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }

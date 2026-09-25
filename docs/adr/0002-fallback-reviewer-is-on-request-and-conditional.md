@@ -17,3 +17,7 @@ Copilot's review quota is per month and a repo whose only reviewer is Copilot sp
 - The fallback needs a new line on its reviewer block, which by the profile-schema bump rule is Schema 2 and a Ship major bump; installed consumers migrate through `setup-skills`.
 - A comment-triggered workflow is the request transport, so `request-review` grows a second transport chosen by the profile and the round's `requested_at` is the comment's creation time.
 - A fallback that stays silent on a clean PR is indistinguishable from one that failed, so the Claude reviewer submits one formal review per round, even when it has no findings.
+
+## Amended by #307
+
+The primary's `degraded` exit is now `not reviewed: <reason>`, and a primary whose cap ran out is `reviewed`, since its rounds landed: it no longer requests the fallback. The decision stands for every primary that exits `not reviewed`: one that delivered no round, or whose landed round's threads could not be read (`unreachable`).

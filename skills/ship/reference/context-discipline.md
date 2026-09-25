@@ -25,8 +25,9 @@ Every lever below is subject to it, in rough order of impact:
   lines you will edit. A file body you only
   need to *understand* stays out of main context; only the hunk you *change*
   enters it.
-- **Mechanics already project.** Every host read comes through a mechanic that
-  returns a small JSON; there is no bare host CLI call to over-fetch with.
+- **Mechanics already project.** Every gating read comes through a mechanic
+  that returns a small JSON; a direct informational read asks its REST route
+  for the fields it needs, no more.
 - **Investigate inside the worktree from the start**, so every file you read is
   the copy you will edit, rather than a main-checkout copy read twice.
 - **Targeted test nodes during the loop; the full suite only at the local

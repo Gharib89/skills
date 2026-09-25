@@ -38,10 +38,22 @@ check "the fixed wording, with the profile tails substituted" \
 - [ ] 4 · Docs-sync + self-review: sync docs first, then `code-review` on the diff, auto-triage
 - [ ] 5 · Local gate: base-fresh, then the repo'"'"'s gate, all green
 - [ ] 6 · Open PR: non-draft, Conventional-Commit title, Closes, reflect on the issue
-- [ ] 7 · Reviewers: copilot (on-request), claude (on-request) to convergence
+- [ ] 7 · Reviewers: copilot (on-request), claude (on-request), one bounded pass each
 - [ ] 8 · CI: resolve any conflict, land None green
 - [ ] 9 · Merge gate: hard stop for human approval (unattended: summary as PR comment, return)' \
   "$(grep '^- \[ \] ' "$f")"
+
+# The informational reads a run made with no mechanic behind them, one line
+# each, so the ones that recur across runs can be promoted to a mechanic.
+check "init gives direct reads a section of their own, after the deviations log" \
+  '## Deviations log
+
+(none yet)
+
+## Direct reads
+
+(none yet)' \
+  "$(sed -n '/^## Deviations log$/,$p' "$f")"
 
 check "init returns the ten items for the mirror" \
   10 "$(out init 193 --scratchpad "$tmp" | jq '.items | length')"

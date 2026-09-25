@@ -84,6 +84,7 @@ check_rc "an in_progress run keeps the poll going until the round lands" 0 "$rc"
 check "the round that landed past the window is the round" \
   'true since completed' \
   "$(jq -r '[(.done|tostring), .landed_by, .reviewer_run.status] | join(" ")' <<<"$out")"
+check "and the reviewer reviewed" null "$(jq -r .not_reviewed <<<"$out")"
 
 # The same fixtures on the host's request call, which awaits no run: the window
 # closes on the second the timeout names, which is the behaviour the run read
@@ -96,6 +97,7 @@ out=$(poll plain); rc=$?
 check_rc "without a run to await the window still closes at --timeout" 1 "$rc"
 check "and the run is not read at all" 'false null' \
   "$(jq -r '[(.done|tostring), (.reviewer_run|tostring)] | join(" ")' <<<"$out")"
+check "and a window closed with no round is silent" silent "$(jq -r .not_reviewed <<<"$out")"
 
 # A concluded run buys one more interval for the review row to appear, and one
 # only: waiting longer on a run that is over is waiting on nothing.
@@ -107,6 +109,7 @@ check_rc "a concluded run with no row yet closes the window after one more poll"
 check "the extra poll is one" 2 "$(calls pr_reviews)"
 check "and the run is on the record" 'false completed success' \
   "$(jq -r '[(.done|tostring), .reviewer_run.status, .reviewer_run.conclusion] | join(" ")' <<<"$out")"
+check "a successful run with no round after it is silent" silent "$(jq -r .not_reviewed <<<"$out")"
 
 # A failed run is the reviewer's infrastructure, not its silence: the URL is
 # what sends the human to the failure. The window it closes is the whole window,
@@ -123,14 +126,16 @@ check "the failure comes back with the run URL" \
 check "a failed run buys no extra poll" 1 "$(calls pr_reviews)"
 check "and none of the window is spent on it" true \
   "$(jq -r '.waited_s < 30' <<<"$out")"
+check "a failed run is infra-error" infra-error "$(jq -r .not_reviewed <<<"$out")"
 
-# No run at all: the status the review loop reads as never-queued.
+# No run at all: the request landed and the host started nothing for it.
 reset
 printf '[]\n'             > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 out=$(poll)
 check "no run since the request reports the none status" 'none null' \
   "$(jq -r '[.reviewer_run.status, (.reviewer_run.conclusion|tostring)] | join(" ")' <<<"$out")"
+check "and the reviewer is never-queued" never-queued "$(jq -r .not_reviewed <<<"$out")"
 
 # The workflow fires on every comment in the repo, so a run belonging to another
 # PR is not this reviewer's round and must not hold the window open.
@@ -198,8 +203,7 @@ check "and it outranks a newer concluded run" 'true since waiting' \
   "$(jq -r '[(.done|tostring), .landed_by, .reviewer_run.status] | join(" ")' <<<"$out")"
 
 # The ceiling is what keeps a run that never finishes from holding the window
-# forever: past it the poll returns with the run as it stands, which the review
-# loop reads as infra-error. Driven against a copy of the mechanic whose ceiling
+# forever: past it the poll returns with the run as it stands, as infra-error. Driven against a copy of the mechanic whose ceiling
 # is seconds rather than half an hour; everything else is the real mechanic.
 reset
 cp -R skills/ship/scripts "$work/scripts"
@@ -212,6 +216,7 @@ check_rc "a run still going at the ceiling closes the window" 1 "$rc"
 check "and it comes back as it stands, with its URL" \
   'false in_progress https://example.invalid/runs/9' \
   "$(jq -r '[(.done|tostring), .reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
+check "a run that outlived the ceiling is infra-error" infra-error "$(jq -r .not_reviewed <<<"$out")"
 
 # A read the host refused says nothing about the reviewer, and must not read as
 # a run that was never created: the window falls back to the constant and the
@@ -223,6 +228,7 @@ out=$(poll); rc=$?
 check_rc "a refused run read closes the window at --timeout" 1 "$rc"
 check "a refused run read is unavailable, not a missing run" '"unavailable"' \
   "$(jq -c '.reviewer_run' <<<"$out")"
+check "and the reviewer is unreachable, not silent" unreachable "$(jq -r .not_reviewed <<<"$out")"
 check "and it buys no extra poll" 1 "$(calls pr_reviews)"
 
 # An answer the filter cannot walk is the same nothing as a refused read: the

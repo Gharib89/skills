@@ -27,8 +27,10 @@ the repo's `### Ship` block in CLAUDE.md carries.
    `## Cloud lane` bootstrap, the PR cap, selection, then phases 0 to 9 on the
    selected issue, posting the merge summary as a PR comment and returning.
 2. **Relay.** Report ship's step-5 result verbatim, prefixed with
-   `cloud-ship <version>` (the `metadata.version` above): the PR link and where
-   the merge summary is, or the stop reason as ship named it
+   `cloud-ship <version>` (the `metadata.version` above): the PR link, where
+   the merge summary is, and each reviewer's exit off its `Review` block
+   (`reviewed`, `not reviewed: <reason>` or `not invoked: <primary>
+   reviewed`), or the stop reason as ship named it
    (`bootstrap-failed`, `pr-queue-full`, `nothing-ready`,
    `blockers-unavailable`, `host-unreachable`, or any stop from ship's table).
    `nothing-ready` is the one clean no-op; every other stop is a fire worth
