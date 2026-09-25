@@ -60,9 +60,7 @@ local-gate contract, and that script answers no `--help`.
 
 For a mechanic's flags, run `<base directory>/scripts/<mechanic>.sh --help`.
 Every mechanic answers it with its usage line on stdout, exit 0 and nothing on
-stderr, before it loads a host adapter and without reaching the host, which is
-why `SKILL.md`'s table carries phases and not flags: a table can go stale
-against the script, and `--help` cannot. Only the first argument is read, so
+stderr, before it loads a host adapter and without reaching the host. Only the first argument is read, so
 `poll-pr.sh 42 --help` is a poll of PR 42 and not a help call.
 
 A mechanic acting for one reviewer, `poll-pr` and `request-review`, takes it as
