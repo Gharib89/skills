@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 7.0.0
+  version: 7.1.0
   composes: mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:triage
 ---
 

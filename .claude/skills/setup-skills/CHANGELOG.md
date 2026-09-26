@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v7.1.0 (2026-09-26)
+
+### Features
+
+- **update-skills**: Refresh skills at pinned refs, report upstream drift, summarise in one PR
+  ([#318](https://github.com/Gharib89/skills/pull/318),
+  [`232fae5`](https://github.com/Gharib89/skills/commit/232fae52afd8369053e6555cc5ce543d5dad83aa))
+
+
 ## v7.0.0 (2026-09-26)
 
 ### Features
