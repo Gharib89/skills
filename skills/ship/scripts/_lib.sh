@@ -357,15 +357,25 @@ ship_frontmatter() {
 # sha, one per skill whose `<root>/.claude/skills/<skill>/SKILL.md` is absent,
 # and one per present skill `<root>/skills-lock.json` records at another `ref`
 # or none, each of the last two carrying the pinned line that installs it;
-# prints nothing when every one is well pinned, there and at its pin. A lock
-# that is absent or unreadable records no ref, so every copy reads as off its pin.
+# prints nothing when every one is well pinned, there and at its pin. An absent
+# lock records no ref, so every copy reads as off its pin; a lock that is not one
+# JSON object prints one `skills lock unreadable` reason and nothing else.
 #
 # Only the consumer repo's own `.claude/skills` counts: a global copy under
 # ~/.claude/skills is a personal skill rather than this repo's derived copy, per
 # setup-skills.
 ship_missing_skill_reasons() {
-  local root=$1 entry source skill ref pin='^[^/#:]+/[^/#:]+#[0-9a-f]{40}$'
+  local root=$1 entry source skill ref lock='{}' pin='^[^/#:]+/[^/#:]+#[0-9a-f]{40}$'
   local -a entries
+  # Every install line below rewrites the lock, and the CLI reads one it cannot
+  # parse as empty, erasing every other entry: such a lock gets no install line.
+  if [ -e "$root/skills-lock.json" ]; then
+    lock=$(jq -cs 'if length == 1 and (.[0] | type) == "object" then .[0] else error end' \
+      "$root/skills-lock.json" 2>/dev/null) || {
+      echo 'skills lock unreadable: skills-lock.json; repair it, then re-run preflight'
+      return 0
+    }
+  fi
   # read -ra, not an unquoted expansion: the split on spaces is intentional and
   # explicit, and a glob character in an entry stays a literal character.
   read -ra entries <<<"$2"
@@ -380,7 +390,7 @@ ship_missing_skill_reasons() {
         "$skill" "$source" "$skill"
       continue
     fi
-    ref=$(jq -r --arg k "$skill" '.skills[$k].ref // "none"' "$root/skills-lock.json" 2>/dev/null) || ref=none
+    ref=$(jq -r --arg k "$skill" '(.skills[$k]?.ref? | select(type == "string" and . != "")) // "none"' <<<"$lock")
     [ "$ref" = "${source#*#}" ] && continue
     printf 'skill off pin: %s at %s, pinned %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
       "$skill" "$ref" "${source#*#}" "$source" "$skill"

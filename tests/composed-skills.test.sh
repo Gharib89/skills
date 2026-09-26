@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ship_missing_skill_reasons: the skills ship composes, checked against a
-# checkout's .claude/skills/. A pure filesystem read over a fixture tree; no
-# call in this file reaches a host.
+# checkout's .claude/skills/ and the refs its skills-lock.json records. A pure
+# filesystem read over a fixture tree; no call in this file reaches a host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -38,6 +38,19 @@ lock tdd "" find-docs "$B"
 check "a copy the lock records with no ref is off its pin" \
   "skill off pin: tdd at none, pinned $A; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y" \
   "$(reasons)"
+lock tdd "" find-docs "$B"; jq '.skills.tdd.ref = ""' "$root/skills-lock.json" > "$root/l" && mv "$root/l" "$root/skills-lock.json"
+check "an empty ref reads as none" \
+  "skill off pin: tdd at none, pinned $A; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y" \
+  "$(reasons)"
+
+# The CLI reads a lock it cannot parse as empty and rewrites it holding only the
+# new entry, so an install line printed here would erase every other entry.
+for bad in '{"skills":' '{"skills":{}} {"skills":{}}' '[]'; do
+  printf '%s' "$bad" > "$root/skills-lock.json"
+  check "a lock that is not one JSON object is refused, with no install line: $bad" \
+    "skills lock unreadable: skills-lock.json; repair it, then re-run preflight" \
+    "$(reasons)"
+done
 rm -f "$root/skills-lock.json"
 check "with no lock every present copy is off its pin" \
   "skill off pin: tdd at none, pinned $A; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y
