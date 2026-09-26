@@ -171,6 +171,21 @@ check "a long lead is cut at the finding-items width and says so" \
   "$(printf '%s\n...[truncated]' "$(rep 200 t)")" \
   "$(ship_brief "$long" Gharib89 on_head | jq -r '.threads[0].lead')"
 
+# `--full` outranks the thread cut too: a clipped lead is one the loop re-polls
+# with `--full <id>`, and a re-poll handing back the same cut sends the run to a
+# read no mechanic performs (#327). The named row's lead is its whole body, every
+# line of it, and the unnamed rows keep the cut.
+whole="$(rep 240 w)"$'\n\n'"the second paragraph"
+named=$(jq -cn --arg b "$whole" --arg t "$(rep 240 t)" '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t7", resolved: false, replied: false, author: "claude", path: "x.sh", body: $b},
+            {id: "t5", resolved: false, replied: false, author: "Copilot", path: "y.sh", body: $t}]}')
+check "--full keeps the named thread's body whole" \
+  "$whole" "$(ship_brief "$named" Gharib89 on_head '["t7"]' | jq -r '.threads[0].lead')"
+check "--full leaves an unnamed thread cut" \
+  "$(printf '%s\n...[truncated]' "$(rep 200 t)")" \
+  "$(ship_brief "$named" Gharib89 on_head '["t7"]' | jq -r '.threads[1].lead')"
+
 # A thread with nothing in its body still produces a row: the id is what
 # `resolve-thread` takes, and a row dropped for an empty lead is a disposition
 # the run never makes.

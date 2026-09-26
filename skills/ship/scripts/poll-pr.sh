@@ -104,7 +104,7 @@
 # (id, submitted_at, substantive, and the body cut to its finding items) and one
 # row per OPEN thread (id, path, lead, resolved, replied). `--full` names the
 # rows that come back whole, so `--brief --full <id>` is the summary with that
-# one round verbatim. Rounds come from `all[]` under the
+# one round verbatim, or that one thread's whole body as its `lead`. Rounds come from `all[]` under the
 # --since rule and `on_head[]` under the head rule, the list that rule lands
 # from. Under `--reviewer` only the awaited reviewer's rows are kept, and the
 # run's own rows drop out: a thread reply of ours posts as a review
@@ -126,7 +126,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
