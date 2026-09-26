@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v11.1.3 (2026-09-26)
+
+### Bug Fixes
+
+- **ship**: Merge the base in once the branch is pushed, not rebase
+  ([#332](https://github.com/Gharib89/skills/pull/332),
+  [`5a3ecc4`](https://github.com/Gharib89/skills/commit/5a3ecc44be5d8a65fb71a753ab2616e33a450c62))
+
+
 ## v11.1.2 (2026-09-26)
 
 ### Bug Fixes
