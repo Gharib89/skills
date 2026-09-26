@@ -1,4 +1,11 @@
 {
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": ["Bash(echo harness-probe-allow:*)"],
+    "deny": ["Bash(echo harness-probe-deny:*)"]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -6,6 +13,34 @@
           {
             "type": "command",
             "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] && cd \"$CLAUDE_PROJECT_DIR\" && { scripts/cloud-ship-bootstrap.sh; .claude/skills/ship/scripts/tooling.sh --install; } >/dev/null 2>&1; exit 0"
+          },
+          {
+            "type": "command",
+            "timeout": 300,
+            "command": "mkdir -p /tmp/harness-probe && echo \"$(date -u +%FT%TZ) remote=$CLAUDE_CODE_REMOTE cwd=$(pwd) user=$(id -un)\" >> /tmp/harness-probe/sessionstart.log; [ \"$CLAUDE_CODE_REMOTE\" = true ] && npm install -g pyright >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "mkdir -p /tmp/harness-probe && echo \"$(date -u +%FT%TZ) $(jq -r .tool_input.file_path)\" >> /tmp/harness-probe/posttooluse.log"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "mkdir -p /tmp/harness-probe && date -u +%FT%TZ >> /tmp/harness-probe/stop.log"
           }
         ]
       }

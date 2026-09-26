@@ -1,0 +1,5 @@
+{
+  "name": "probe-pyright",
+  "version": "1.0.0+probe",
+  "description": "Probe only (#342): vendored pyright LSP plugin, loaded as probe-pyright@skills-dir"
+}
