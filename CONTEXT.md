@@ -41,8 +41,12 @@ A host read no phase or stop branches on, made for context alone. Where no mecha
 _Avoid_: side read, ad-hoc call
 
 **Setup skill**:
-A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. One per skill repo: `setup-skills` drafts the ship profile today and each later per-repo document as one more section of that same skill.
+A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. Two in the source repo, each a different concern: `setup-skills` drafts what Ship reads, and each later Ship document joins it as one more section; the harness setup skill drafts the agent harness and needs no Ship.
 _Avoid_: init, scaffold, bootstrap
+
+**Agent harness**:
+The repo-owned setup that lets any Claude Code session, cloud or local, prove its own work fast: one verification entry point, pre-commit hooks, linters and formatters, the Claude Code hooks that run them, working language servers, installed dependencies, and the cloud environment setup that makes all of it available in the cloud sandbox. Configured for the cloud first; a repo is local-only when the project needs it, and says why. The harness setup skill audits an existing harness and fills its gaps, keeping the repo's own choices; the local gate runs the harness's verification rather than duplicating it.
+_Avoid_: agent config, dev environment, tooling setup
 
 **Dimension label**:
 A label on one of the three dimensions a repo's tracker carries beside the five triage roles: kind, size and priority, at most one label per dimension on an issue, stamped at triage time. `setup-skills` seeds the vocabulary, creating the labels on the host and writing the `## Dimension labels` section into a `docs/agents/triage-labels.md` that has none; the repo owns the section from then on. Implementation order is derived from priority, size and blocking edges and is never one of them: a rank label rots the moment a higher issue ships.
