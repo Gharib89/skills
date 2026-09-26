@@ -6,7 +6,7 @@ description: >-
   unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 9.0.1
+  version: 10.0.0
   profile-schema: 3
   composes: mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:tdd mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:code-review upstash/context7#e275a848a420e0d11c2822f61201ee005bfd1133:find-docs humanlayer/skills#6ab9013a10c28f5046f7f999549cd5328a0b30d7:show-me
 ---
