@@ -45,7 +45,7 @@ for f in "$root"/skills/*/SKILL.md; do
     got=$(jq -r --arg k "$skill" '.skills[$k] // {} | "\(.source // "none")#\(.ref // "none")"' "$lock") \
       || { printf 'cannot parse %s\n' "$lock" >&2; exit 2; }
     [ "$kind" = printed ] && [ "${got##*#}" = none ] && continue
-    [ "$got" = "$source#$sha" ] && continue
+    [ "$got" = "$source#$sha" ] && [ "$sha" != none ] && continue
     echo "pin drift: $skill is pinned at $source#$sha in $rel, the lock installed $got"
     rc=1
   done < <(pins "$f")

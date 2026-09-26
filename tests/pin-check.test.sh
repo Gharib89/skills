@@ -82,6 +82,14 @@ check "an unpinned composes entry is drift, named by its skill" \
   "pin drift: tdd is pinned at o/r#none in skills/ship/SKILL.md, the lock installed o/r#$A" \
   "$(out_of "$d")"
 
+# A composes entry is a pin by definition: one with no sha is drift even where
+# the lock is unpinned too, since the two agreeing on "none" pins nothing.
+d=$(tree nopin-nolock "$(skill_file "o/r:tdd u/c#$B:find-docs")" "$setup" \
+  "$(lock_file tdd o/r "" find-docs u/c "$B" triage o/r "$A")")
+check "an unpinned composes entry is drift against an unpinned lock" \
+  "pin drift: tdd is pinned at o/r#none in skills/ship/SKILL.md, the lock installed o/r#none" \
+  "$(out_of "$d")"
+
 # A printed line that lost its sha installs upstream HEAD for a skill the lock
 # pins; one for a skill the lock pins nowhere (ship itself) is not a pin.
 body=$(printf '%s\n\n```sh\nnpx skills add o/r --skill tdd --agent claude-code -y\n```\n' "$setup")
