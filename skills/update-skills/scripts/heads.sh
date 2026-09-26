@@ -38,9 +38,10 @@ token=${GH_TOKEN:-${GITHUB_TOKEN:-}}
 
 api=https://api.github.com
 # get <path>: one GET, the body in $body, curl's own error on stderr as
-# evidence; on failure $err names the request and get returns 1.
+# evidence; on failure $err names the request and get returns 1. Bounded in
+# time, so an upstream that accepts and never answers fails here too.
 get() {
-  body=$(curl -fsSL -H 'Accept: application/vnd.github+json' ${token:+-H "Authorization: Bearer $token"} "$api/$1") \
+  body=$(curl -fsSL --connect-timeout 10 --max-time 30 -H 'Accept: application/vnd.github+json' ${token:+-H "Authorization: Bearer $token"} "$api/$1") \
     || { err="cannot read $api/$1"; return 1; }
 }
 

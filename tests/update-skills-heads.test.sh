@@ -31,6 +31,7 @@ cat > "$tmp/bin/curl" <<'EOF'
 #!/usr/bin/env bash
 for url; do :; done
 printf '%s\n' "$url" >> "$FAKE_CURL_LOG"
+printf '%s\n' "$*" >> "$FAKE_CURL_LOG.args"
 f=$FAKE_CURL_FIX/$(printf '%s' "${url#https://api.github.com/}" | tr '/' '_')
 [ -f "$f" ] || exit 22
 cat "$f"
@@ -83,6 +84,8 @@ https://api.github.com/repos/p/q/compare/$A...$H
 https://api.github.com/repos/w/w/commits/HEAD
 https://api.github.com/repos/w/w/compare/$A...$H
 https://api.github.com/repos/z/z/commits/HEAD" "$(sort -u "$tmp/log")"
+check "every request is time-bounded, so a stalled upstream fails into an unreachable row rather than hanging" \
+  0 "$(grep -vc -- '--connect-timeout 10 --max-time 30' "$tmp/log.args")"
 check "each upstream's HEAD is asked for once" 1 "$(grep -c 'repos/o/r/commits/HEAD' "$tmp/log")"
 
 echo '[' > "$repo/skills-lock.json"
