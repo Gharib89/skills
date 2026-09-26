@@ -59,7 +59,7 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "b900b3cb72d43e14f56422ac3f98ee2810a8cd229d597625327046134a06dc4e"
+      "computedHash": "25d8f6033e5e837a1ccc763d2723b36f1c4dad8d38b12a0334c052ce8d5cff0a"
     },
     "ship": {
       "source": ".",
