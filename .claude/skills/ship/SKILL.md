@@ -160,9 +160,8 @@ claim are separate**, so a reviewer citing the wrong commit for a real primitive
 is still right. A valid finding outside the issue is an adjacent find. Then read
 the diff yourself against the depth checks in the coding-standards file the
 Standards axis reads, by their leading words: a vocabulary the change extends, a
-rule-shaped prose change, a prose change to ship's SKILL.md or a reference
-file, new pattern-matching code, a new test run with its fix reverted, a fix
-landed after review. Reviewer rounds find these otherwise, serially, at the cost
+rule-shaped prose change, new pattern-matching code, a new test run with its fix
+reverted, a fix landed after review, and any the repo adds beside them. Reviewer rounds find these otherwise, serially, at the cost
 of most of a run's wall time, and the reverted-fix one escapes them entirely.
 This self-review plus green CI is the review gate.
 **Done when:** every report that fired has its Report file on disk and its path
