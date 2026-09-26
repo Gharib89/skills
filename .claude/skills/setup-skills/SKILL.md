@@ -28,11 +28,13 @@ Check all three before exploring. On any failure print the exact command, then "
    npx skills add humanlayer/skills#6ab9013a10c28f5046f7f999549cd5328a0b30d7 --skill show-me --agent claude-code -y
    ```
 
-3. **`ship`, `cloud-ship`, `setup-skills` and `update-skills`.** `.claude/skills/ship`, `.claude/skills/cloud-ship`, `.claude/skills/setup-skills` and `.claude/skills/update-skills` exist and are in the lock. A `ship` folder with no `metadata.version` in its frontmatter is a hand-maintained copy from before the generic skill: report "will be replaced by the derived copy", confirm, refresh. `setup-skills` gets step 1.2's treatment; the copy running this check is not evidence, so read `skills-lock.json`. It belongs in the repo because the `### Ship` block below and ship's three profile stops both end "run `/setup-skills`", which only a repo carrying it can follow. Else print:
+3. **`ship`, `cloud-ship` and `setup-skills`.** `.claude/skills/ship`, `.claude/skills/cloud-ship` and `.claude/skills/setup-skills` exist and are in the lock. A `ship` folder with no `metadata.version` in its frontmatter is a hand-maintained copy from before the generic skill: report "will be replaced by the derived copy", confirm, refresh. `setup-skills` gets step 1.2's treatment; the copy running this check is not evidence, so read `skills-lock.json`. It belongs in the repo because the `### Ship` block below and ship's three profile stops both end "run `/setup-skills`", which only a repo carrying it can follow. Else print:
 
    ```sh
    npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --agent claude-code -y
    ```
+
+   `update-skills` is no precondition: nothing refuses without it. When it is absent from the lock, report that, print the same line, which installs it, and go on.
 
    Project scope always, which is the install line without `-g`. The agent id is `claude-code`; the CLI rejects `'Claude Code'`.
 
