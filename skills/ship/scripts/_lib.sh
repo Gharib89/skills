@@ -290,12 +290,36 @@ ship_detect_host() {
   export SHIP_HOST SHIP_OWNER SHIP_REPO SHIP_REPO_SLUG SHIP_ORG SHIP_PROJECT SHIP_ORG_URL
 }
 
-# ship_load_host: detect and source the adapter, or exit 2 with the contract.
+# ship_load_host [<owner>/<repo>]: detect and source the adapter, or exit 2 with
+# the contract. With a repo, the host is GitHub at that repo whatever the origin
+# names: the source repo, which a consumer on any host files a Ship defect to
+# (ADR 0004).
 ship_load_host() {
-  ship_detect_host || ship_tooling "cannot derive the host from the origin remote"
+  if [ -n "${1:-}" ]; then
+    SHIP_HOST=github SHIP_OWNER=${1%%/*} SHIP_REPO=${1#*/} SHIP_REPO_SLUG=$1
+    export SHIP_HOST SHIP_OWNER SHIP_REPO SHIP_REPO_SLUG
+  else
+    ship_detect_host || ship_tooling "cannot derive the host from the origin remote"
+  fi
   # shellcheck source=/dev/null
   source "${SHIP_HOST_ADAPTER:-$SHIP_SCRIPTS/host/$SHIP_HOST.sh}" \
     || ship_tooling "cannot load host adapter ${SHIP_HOST_ADAPTER:-$SHIP_HOST}"
+}
+
+# ship_repo_arg <value>: whether a --repo value is `<owner>/<repo>`.
+ship_repo_arg() { [[ ${1:-} =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; }
+
+# ship_reach_repo <repo> <mechanic-path> <args...>: under --repo, prove the
+# named repo's host answers before any read or write, and where it does not,
+# exit 1 with the invocation that performs the write, shell-quoted, for the
+# human to run where it does. An Azure DevOps run carries no GitHub
+# credentials, and a write it cannot make is still the human's to make.
+ship_reach_repo() {
+  local repo=$1; shift
+  host_identity >/dev/null 2>&1 && return 0
+  jq -n --arg e "$repo is unreachable from here" --arg c "$(printf '%q ' "$@")" \
+    '{error: $e, command: ($c | rtrimstr(" "))}'
+  exit 1
 }
 
 # Triage roles are canonical names; the label strings a repo actually uses live
