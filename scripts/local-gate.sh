@@ -112,6 +112,8 @@ derived_copies() {
     || { echo "skills-lock.json does not record all three self-installed skills"; rc=1; }
   # The profile schema number across its three files: scripts/profile-schema-check.sh.
   scripts/profile-schema-check.sh || rc=1
+  # Every pinned ref a skill states against the lock's: scripts/pin-check.sh.
+  scripts/pin-check.sh || rc=1
   return $rc
 }
 

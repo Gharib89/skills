@@ -11,7 +11,9 @@ root=$(mktemp -d) || exit 2
 trap 'rm -rf "$root"' EXIT
 install() { mkdir -p "$root/.claude/skills/$1" && touch "$root/.claude/skills/$1/SKILL.md"; }
 
-composes='mattpocock/skills:tdd upstash/context7:find-docs'
+# Pinned refs: a composed skill installs at the commit the source repo tested.
+A=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; B=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+composes="mattpocock/skills#$A:tdd upstash/context7#$B:find-docs"
 reasons() { ship_missing_skill_reasons "$root" "$composes"; }
 
 install tdd; install find-docs
@@ -19,23 +21,23 @@ check "every composed skill present" '' "$(reasons)"
 
 rm -rf "$root/.claude/skills/tdd"
 check "one absent skill names its install line" \
-  'skill missing: tdd; run npx skills add mattpocock/skills --skill tdd --agent claude-code -y' \
+  "skill missing: tdd; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y" \
   "$(reasons)"
 
 # One report, not one stop per skill: preflight collects these alongside its
 # other reasons, so a human fixes every missing skill in one pass.
 rm -rf "$root/.claude/skills/find-docs"
 check "two absent skills give two reasons, in frontmatter order" \
-  'skill missing: tdd; run npx skills add mattpocock/skills --skill tdd --agent claude-code -y
-skill missing: find-docs; run npx skills add upstash/context7 --skill find-docs --agent claude-code -y' \
+  "skill missing: tdd; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y
+skill missing: find-docs; run npx skills add upstash/context7#$B --skill find-docs --agent claude-code -y" \
   "$(reasons)"
 
 # A directory without SKILL.md is not an installed skill: `skills add` writes
 # the file, so its absence is a half-installed copy the Skill tool cannot load.
 mkdir -p "$root/.claude/skills/tdd"
 check "a skill directory without SKILL.md is absent" \
-  'skill missing: tdd; run npx skills add mattpocock/skills --skill tdd --agent claude-code -y
-skill missing: find-docs; run npx skills add upstash/context7 --skill find-docs --agent claude-code -y' \
+  "skill missing: tdd; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y
+skill missing: find-docs; run npx skills add upstash/context7#$B --skill find-docs --agent claude-code -y" \
   "$(reasons)"
 
 check "an empty composes line checks nothing" '' "$(ship_missing_skill_reasons "$root" '')"
@@ -43,8 +45,19 @@ check "an empty composes line checks nothing" '' "$(ship_missing_skill_reasons "
 # The split is on spaces only: an entry is never expanded against the working
 # directory, whatever it happens to contain.
 check "a glob character stays literal" \
-  'skill missing: *; run npx skills add o/r --skill * --agent claude-code -y' \
-  "$(cd / && ship_missing_skill_reasons "$root" 'o/r:*')"
+  "skill missing: *; run npx skills add o/r#$A --skill * --agent claude-code -y" \
+  "$(cd / && ship_missing_skill_reasons "$root" "o/r#$A:*")"
+
+# A pin that is not a 40-hex sha installs whatever the upstream holds today, so
+# it is refused whether or not the skill is present: the installed copy proves
+# nothing about which commit it came from.
+install tdd; install find-docs
+for bad in "mattpocock/skills:tdd" "mattpocock/skills#main:tdd" "mattpocock/skills#${A:0:7}:tdd" \
+           "mattpocock/skills#${A}0:tdd" "mattpocock/skills#$(printf 'A%.0s' {1..40}):tdd" "skills#$A:tdd"; do
+  check "a malformed pin is refused: $bad" \
+    "composes pin invalid: $bad; want <owner>/<repo>#<40-hex sha>:<skill>" \
+    "$(ship_missing_skill_reasons "$root" "$bad upstash/context7#$B:find-docs")"
+done
 
 # ship_frontmatter reads the line preflight passes in. A body line that looks
 # like the key is past the closing `---` and must not be read as one.

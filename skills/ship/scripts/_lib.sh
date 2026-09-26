@@ -321,22 +321,28 @@ ship_frontmatter() {
 
 # ship_missing_skill_reasons <root> <composes>: the skills ship loads through
 # the Skill tool, checked against a checkout before the claim. <composes> is
-# ship's `metadata.composes` line: space-separated `<source-repo>:<skill>`
-# entries, the single place the list lives. Prints one reason per skill whose
-# `<root>/.claude/skills/<skill>/SKILL.md` is absent, carrying the line that
-# installs it; prints nothing when every one is there.
+# ship's `metadata.composes` line: space-separated `<source-repo>#<sha>:<skill>`
+# entries, the single place the list lives, each pinned at the upstream commit
+# the source repo tested. Prints one reason per entry whose pin is not a 40-hex
+# sha, and one per skill whose `<root>/.claude/skills/<skill>/SKILL.md` is
+# absent, carrying the pinned line that installs it; prints nothing when every
+# one is well pinned and there.
 #
 # Only the consumer repo's own `.claude/skills` counts: a global copy under
 # ~/.claude/skills is a personal skill rather than this repo's derived copy, per
 # setup-skills.
 ship_missing_skill_reasons() {
-  local root=$1 entry source skill
+  local root=$1 entry source skill pin='^[^/#:]+/[^/#:]+#[0-9a-f]{40}$'
   local -a entries
   # read -ra, not an unquoted expansion: the split on spaces is intentional and
   # explicit, and a glob character in an entry stays a literal character.
   read -ra entries <<<"$2"
   for entry in ${entries[@]+"${entries[@]}"}; do
     source=${entry%%:*}; skill=${entry##*:}
+    if ! [[ $source =~ $pin ]]; then
+      printf 'composes pin invalid: %s; want <owner>/<repo>#<40-hex sha>:<skill>\n' "$entry"
+      continue
+    fi
     [ -f "$root/.claude/skills/$skill/SKILL.md" ] && continue
     printf 'skill missing: %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
       "$skill" "$source" "$skill"
