@@ -7,6 +7,18 @@ released version. See
 
 <!-- version list -->
 
+## v11.0.0 (2026-09-26)
+
+### Bug Fixes
+
+- **ship**: Move show-me to ca7c808 ([#319](https://github.com/Gharib89/skills/pull/319),
+  [`33061b2`](https://github.com/Gharib89/skills/commit/33061b21f99791ae686b005f3055995d174f2537))
+
+### Breaking Changes
+
+- **ship**: Preflight refuses a consumer whose show-me is still at 6ab9013; refresh it at ca7c808.
+
+
 ## v10.0.0 (2026-09-26)
 
 ### Features
