@@ -98,7 +98,7 @@ fi
 # A change to a skill that was not followed by the refresh line fails here.
 derived_copies() {
   local s rc=0
-  for s in ship cloud-ship setup-skills; do
+  for s in ship cloud-ship setup-skills update-skills; do
     [ -d ".claude/skills/$s" ] || { echo "missing derived copy: .claude/skills/$s"; rc=1; continue; }
     diff -rq "skills/$s" ".claude/skills/$s" || rc=1
     # diff -rq compares content only. A mechanic that loses its executable bit
@@ -108,8 +108,8 @@ derived_copies() {
          <(cd ".claude/skills/$s" && find . -type f -perm -u+x | sort) \
       || { echo "executable bits differ between skills/$s and .claude/skills/$s"; rc=1; }
   done
-  jq -e '.skills | has("ship") and has("cloud-ship") and has("setup-skills")' skills-lock.json >/dev/null \
-    || { echo "skills-lock.json does not record all three self-installed skills"; rc=1; }
+  jq -e '.skills | has("ship") and has("cloud-ship") and has("setup-skills") and has("update-skills")' skills-lock.json >/dev/null \
+    || { echo "skills-lock.json does not record all four self-installed skills"; rc=1; }
   # The profile schema number across its three files: scripts/profile-schema-check.sh.
   scripts/profile-schema-check.sh || rc=1
   # Every pinned ref a skill states against the lock's: scripts/pin-check.sh.
@@ -149,8 +149,16 @@ run stray-files scripts/stray-file-check.sh
 # usage line and exit 0, and nothing a consumer installs uses a Bash 4
 # builtin outside the setup-skills local-gate template, which carries its own
 # version guard; nothing else in the tree holds a new mechanic to either. Reaches no
-# host: each guard fires before the adapter loads.
-run contract scripts/contract-check.sh skills/ship/scripts skills
+# host: each guard fires before the adapter loads. update-skills' mechanics are
+# held to the same contract, from their own directory.
+contract() {
+  local rc=0
+  # The second tree is a part of the first, passed so a violation prints once.
+  scripts/contract-check.sh skills/ship/scripts skills || rc=1
+  scripts/contract-check.sh skills/update-skills/scripts skills/update-skills || rc=1
+  return $rc
+}
+run contract contract
 
 # The background gates, graded once the rest have run; shellcheck's exit 2 is
 # `unavailable`, per its comment above. Each leaves pids once reaped, so the

@@ -41,11 +41,12 @@ jobs:
       ${{ !(github.event.head_commit.author.name == 'github-actions[bot]'
       && (startsWith(github.event.head_commit.message, 'chore(release): ship v')
       || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
-      || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v'))) }}
+      || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v')
+      || startsWith(github.event.head_commit.message, 'chore(release): update-skills v'))) }}
     runs-on: ubuntu-latest
     env:
       # The skills this repo releases, named once for both loops below.
-      SKILLS: ship cloud-ship setup-skills
+      SKILLS: ship cloud-ship setup-skills update-skills
     steps:
       # The branch tip, not the commit that triggered this run: the run pushes, and
       # a run pinned to its triggering SHA pushes a commit whose parent is no
@@ -66,12 +67,19 @@ jobs:
       # any `$s-v*`: a tag off this history, or ahead of `SKILL.md`, computes the
       # next version from the wrong baseline just as silently. Every later run
       # satisfies this for free, because the release commit writes the version and
-      # its tag together, so a failure here is real drift.
-      - name: Refuse to release without a reachable baseline tag
+      # its tag together, so a failure here is real drift. A skill with no tag of
+      # its own at all is one this push added, arriving carrying its first
+      # version: HEAD is its baseline, tagged and pushed here, and it releases from
+      # the next push that touches it.
+      - name: Tag a new skill's baseline, refuse a missing one
         run: |
           for s in $SKILLS; do
             v=$(sed -n 's/^  version: //p' "skills/$s/SKILL.md")
             [ -n "$v" ] || { echo "no metadata.version in skills/$s/SKILL.md"; exit 1; }
+            if [ -z "$(git tag -l "$s-v*")" ]; then
+              git tag "$s-v$v" && git push origin "refs/tags/$s-v$v" || exit 1
+              continue
+            fi
             git merge-base --is-ancestor "$s-v$v" HEAD 2>/dev/null \
               || { echo "skills/$s/SKILL.md is at $v with no $s-v$v tag reachable from HEAD: tag this history at that version before merging"; exit 1; }
           done
