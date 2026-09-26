@@ -4,6 +4,7 @@
 
 # A lock entry the source repo installs: from `.` in the source repo itself,
 # from Gharib89/skills anywhere else.
+# shellcheck disable=SC2034  # read by plan and heads
 us_source_repo='def source_repo: .source | ascii_downcase | . == "." or . == "gharib89/skills";'
 
 # us_composed <checkout>: every entry of the checkout's Ship and setup-skills

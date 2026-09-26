@@ -102,7 +102,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "bafe129693c96a2cb7fd3f37159a982e23513576d774f68ee106fd9c5e259a57"
+      "computedHash": "e4d057a5ff97df702e4226d68643270698dc4d39e3abb61d153a6402f26fcbd4"
     },
     "wayfinder": {
       "source": "mattpocock/skills",
