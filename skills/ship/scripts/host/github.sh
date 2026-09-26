@@ -406,7 +406,8 @@ host_pr_get() {
 
 host_pr_for_branch() { # <branch>
   api "$R/pulls?state=all&head=$SHIP_OWNER:$1&sort=created&direction=desc&per_page=1" \
-    --jq 'first | if . == null then null else {number, state: (if .merged_at != null then "merged" elif .state == "open" then "open" else "closed" end)} end'
+    --jq 'first | if . == null then null else {number, state: (if .merged_at != null then "merged" elif .state == "open" then "open" else "closed" end),
+      head_sha: .head.sha} end'
 }
 
 # Check runs plus classic commit statuses, one row per name, latest wins.
