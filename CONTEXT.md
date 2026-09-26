@@ -48,6 +48,14 @@ _Avoid_: init, scaffold, bootstrap
 The repo-owned setup that lets any Claude Code session, cloud or local, prove its own work fast: one verification entry point, pre-commit hooks, linters and formatters, the Claude Code hooks that run them, working language servers, installed dependencies, and the cloud environment setup that makes all of it available in the cloud sandbox. Configured for the cloud first; a repo is local-only when the project needs it, and says why. The harness setup skill audits an existing harness and fills its gaps, keeping the repo's own choices; the local gate runs the harness's verification rather than duplicating it.
 _Avoid_: agent config, dev environment, tooling setup
 
+**Trust tier**:
+One of the three ordered sources the harness setup skill installs from: Anthropic-authored plugins and docs; the tool's own vendor (which admits a partner entry in the official marketplace only when the partner makes the tool it wraps); the skill sources the target repo already pins. Being listed in a marketplace is not a tier. Anything outside the tiers is reported as found, not trusted, and never installed.
+_Avoid_: allowlist entry, verified source, trusted marketplace
+
+**Install check**:
+What the harness setup skill runs before adding any third-party unit to a repo: read every file of the unit's glue (the config and scripts that make Claude Code run it), pin the unit and everything it launches, show what it runs and reaches and whether it reaches the cloud, then take one confirmation or refuse. A refused unit is named with its reason and never written; the human can still install it by hand. Deps restored from the repo's own lockfile and hook scripts the skill writes itself are not units.
+_Avoid_: security review, vetting, audit (the audit is the whole skill's pass over a repo)
+
 **Dimension label**:
 A label on one of the three dimensions a repo's tracker carries beside the five triage roles: kind, size and priority, at most one label per dimension on an issue, stamped at triage time. `setup-skills` seeds the vocabulary, creating the labels on the host and writing the `## Dimension labels` section into a `docs/agents/triage-labels.md` that has none; the repo owns the section from then on. Implementation order is derived from priority, size and blocking edges and is never one of them: a rank label rots the moment a higher issue ships.
 _Avoid_: tag, rank label, severity, t-shirt size
