@@ -20,7 +20,7 @@ Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md
 Check all three before exploring. On any failure print the exact command, then "then rerun `/setup-skills`", and stop.
 
 1. **Parent docs.** `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and `docs/agents/domain.md` exist. Else: `/setup-matt-pocock-skills`. One exception: when the host (step 2) is Azure DevOps and `issue-tracker.md` is missing or is the parent's freeform "Other" page, offer to write the vendored [issue-tracker-ado.md](./issue-tracker-ado.md) in its place (confirm first), then continue. The parent ships GitHub, GitLab and local templates only.
-2. **Composed skills as derived copies.** `.claude/skills/` holds `code-review`, `tdd`, `writing-for-agents`, `triage`, `find-docs` and `show-me`, each recorded in the repo's `skills-lock.json` (the skills CLI writes it at install) with the `ref` its line below pins, the upstream commit the source repo tested. A copy the lock records at another `ref`, or none, is stale: print its line. A copy present but absent from the lock is hand-maintained: report it as "will be replaced by the derived copy", confirm, then refresh it with the same line. A global copy under `~/.claude/skills` leaves this check unmet: a personal skill silently shadows a repo's, so ship's composed skills must live in the repo. Else print:
+2. **Composed skills as derived copies.** `.claude/skills/` holds `code-review`, `tdd`, `writing-for-agents`, `triage`, `find-docs` and `show-me`, each recorded in the repo's `skills-lock.json` (the skills CLI writes it at install) with the `ref` its line below pins, the upstream commit the source repo tested. A copy the lock records at another `ref`, or none, is off its pin: print its line. A copy present but absent from the lock is hand-maintained: report it as "will be replaced by the derived copy", confirm, then refresh it with the same line. A global copy under `~/.claude/skills` leaves this check unmet: a personal skill silently shadows a repo's, so ship's composed skills must live in the repo. Else print:
 
    ```sh
    npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill code-review --skill tdd --skill writing-for-agents --skill triage --agent claude-code -y
@@ -162,7 +162,7 @@ Write every confirmed file. Then run ship's preflight against the new profile:
 .claude/skills/ship/scripts/preflight.sh none
 ```
 
-Report its `reasons`. The issueless call raises none of its own, so the list should be empty; any `profile missing`, `profile invalid`, `skill missing` or `composes pin invalid` reason is yours to fix before finishing, the last by re-running the refresh line, since it means the installed `ship` copy is malformed. A `skill missing` reason names a composed skill step 1 left uninstalled and carries the line that installs it: run that line.
+Report its `reasons`. The issueless call raises none of its own, so the list should be empty; any `profile missing`, `profile invalid`, `skill missing`, `skill off pin` or `composes pin invalid` reason is yours to fix before finishing, the last by re-running the refresh line, since it means the installed `ship` copy is malformed. A `skill missing` or `skill off pin` reason names a composed skill step 1 left uninstalled or off its pin and carries the line that installs it: run that line.
 
 ### 7. Done
 

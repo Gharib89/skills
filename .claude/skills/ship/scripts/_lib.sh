@@ -354,15 +354,17 @@ ship_frontmatter() {
 # ship's `metadata.composes` line: space-separated `<source-repo>#<sha>:<skill>`
 # entries, the single place the list lives, each pinned at the upstream commit
 # the source repo tested. Prints one reason per entry whose pin is not a 40-hex
-# sha, and one per skill whose `<root>/.claude/skills/<skill>/SKILL.md` is
-# absent, carrying the pinned line that installs it; prints nothing when every
-# one is well pinned and there.
+# sha, one per skill whose `<root>/.claude/skills/<skill>/SKILL.md` is absent,
+# and one per present skill `<root>/skills-lock.json` records at another `ref`
+# or none, each of the last two carrying the pinned line that installs it;
+# prints nothing when every one is well pinned, there and at its pin. A lock
+# that is absent or unreadable records no ref, so every copy reads as off its pin.
 #
 # Only the consumer repo's own `.claude/skills` counts: a global copy under
 # ~/.claude/skills is a personal skill rather than this repo's derived copy, per
 # setup-skills.
 ship_missing_skill_reasons() {
-  local root=$1 entry source skill pin='^[^/#:]+/[^/#:]+#[0-9a-f]{40}$'
+  local root=$1 entry source skill ref pin='^[^/#:]+/[^/#:]+#[0-9a-f]{40}$'
   local -a entries
   # read -ra, not an unquoted expansion: the split on spaces is intentional and
   # explicit, and a glob character in an entry stays a literal character.
@@ -373,9 +375,15 @@ ship_missing_skill_reasons() {
       printf 'composes pin invalid: %s; want <owner>/<repo>#<40-hex sha>:<skill>\n' "$entry"
       continue
     fi
-    [ -f "$root/.claude/skills/$skill/SKILL.md" ] && continue
-    printf 'skill missing: %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
-      "$skill" "$source" "$skill"
+    if ! [ -f "$root/.claude/skills/$skill/SKILL.md" ]; then
+      printf 'skill missing: %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
+        "$skill" "$source" "$skill"
+      continue
+    fi
+    ref=$(jq -r --arg k "$skill" '.skills[$k].ref // "none"' "$root/skills-lock.json" 2>/dev/null) || ref=none
+    [ "$ref" = "${source#*#}" ] && continue
+    printf 'skill off pin: %s at %s, pinned %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
+      "$skill" "$ref" "${source#*#}" "$source" "$skill"
   done
 }
 

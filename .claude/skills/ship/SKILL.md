@@ -258,7 +258,7 @@ hold around that:
 | Stop | Reason | Claim |
 |---|---|---|
 | Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | no claim |
-| A skill ship composes is not installed, or its pin is malformed | `skill missing: <skill>; run <install line>`, `composes pin invalid: <entry>; want <form>` | no claim |
+| A skill ship composes is not installed at its pin, or its pin is malformed | `skill missing: <skill>; run <install line>`, `skill off pin: <skill> at <ref>, pinned <sha>; run <install line>`, `composes pin invalid: <entry>; want <form>` | no claim |
 | Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | no claim |
 | Issue too vague to plan | `ambiguous` | no claim |
 | Change outgrows one PR, or needs a redesign the issue did not scope | `needs-split` | attended: ask; unattended: hand back |

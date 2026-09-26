@@ -29,7 +29,7 @@
 #   closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
 #   attended only · profile missing · profile invalid: <detail> · skill missing:
-#   <detail> · composes pin invalid: <detail>
+#   <detail> · skill off pin: <detail> · composes pin invalid: <detail>
 #   mentions[] lists live PRs that name the issue without closing it: context
 #   for phase 1, and no kind of stop. mentioned_by[] is the same rows widened to
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an

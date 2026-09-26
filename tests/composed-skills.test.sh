@@ -10,14 +10,40 @@ source skills/ship/scripts/_lib.sh
 root=$(mktemp -d) || exit 2
 trap 'rm -rf "$root"' EXIT
 install() { mkdir -p "$root/.claude/skills/$1" && touch "$root/.claude/skills/$1/SKILL.md"; }
+# <skill> <ref|"">...: the consumer's skills-lock.json, each skill at that ref.
+lock() {
+  local out='{}'
+  while [ $# -gt 0 ]; do
+    out=$(jq --arg k "$1" --arg r "$2" '.[$k] = ({source: "o/r"} + (if $r == "" then {} else {ref: $r} end))' <<<"$out")
+    shift 2
+  done
+  jq '{version: 1, skills: .}' <<<"$out" > "$root/skills-lock.json"
+}
 
 # Pinned refs: a composed skill installs at the commit the source repo tested.
 A=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; B=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 composes="mattpocock/skills#$A:tdd upstash/context7#$B:find-docs"
 reasons() { ship_missing_skill_reasons "$root" "$composes"; }
 
-install tdd; install find-docs
-check "every composed skill present" '' "$(reasons)"
+install tdd; install find-docs; lock tdd "$A" find-docs "$B"
+check "every composed skill present at its pin" '' "$(reasons)"
+
+# The lock's ref is what the copy was installed at: a copy from another commit,
+# or from upstream HEAD (no ref), is not the one the source repo tested.
+lock tdd "$B" find-docs "$B"
+check "a copy the lock records at another ref is off its pin" \
+  "skill off pin: tdd at $B, pinned $A; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y" \
+  "$(reasons)"
+lock tdd "" find-docs "$B"
+check "a copy the lock records with no ref is off its pin" \
+  "skill off pin: tdd at none, pinned $A; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y" \
+  "$(reasons)"
+rm -f "$root/skills-lock.json"
+check "with no lock every present copy is off its pin" \
+  "skill off pin: tdd at none, pinned $A; run npx skills add mattpocock/skills#$A --skill tdd --agent claude-code -y
+skill off pin: find-docs at none, pinned $B; run npx skills add upstash/context7#$B --skill find-docs --agent claude-code -y" \
+  "$(reasons)"
+lock tdd "$A" find-docs "$B"
 
 rm -rf "$root/.claude/skills/tdd"
 check "one absent skill names its install line" \
