@@ -77,7 +77,7 @@ while IFS= read -r s; do
   retired=$(jq -Rn --arg s "$s" --arg o "$was" --arg n "$new" --argjson r "$retired" '
     def v: if test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?$") then split("-")[0] | split(".") | map(tonumber)
       else error("not a version: \(.)") end;
-    $r + [inputs | select(test("^\\|") and (test("^\\| *(Version *\\||-)") | not)) | split("|")[1:4] | map(gsub("^ +| +$"; ""))
+    $r + [inputs | select(test("^\\|") and (test("^\\| *Version *\\||^\\|[ :|-]+$") | not)) | split("|")[1:4] | map(gsub("^ +| +$"; ""))
       | select((.[0] | v) > ($o | v) and (.[0] | v) <= ($n | v))
       | {skill: $s, version: .[0], term: .[1], replacement: (if (.[2] // "" | test("^(none\\.?)?$"; "i")) then null else .[2] end)}]' "$f") \
     || ship_fail "cannot read retired terms: $f"

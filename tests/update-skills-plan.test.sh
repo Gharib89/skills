@@ -137,9 +137,9 @@ check "a lock recording ship from . is source mode" source "$(bash "$plan" "$rep
 
 # A prerelease version compares by its release part, in the skill's version
 # and in a row's, and a row with no replacement cell, or a lowercase none, has
-# no replacement.
+# no replacement. An aligned separator row is no row.
 skill "$repo" setup-skills 2.1.0-rc.1 "o/r#$A:triage"
-printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 2.0.5 | short-row |' '| 2.0.6 | lower | none |' '| 2.0.7-rc.1 | pre | x |' \
+printf '%s\n' '| Version | Term | Replacement |' '| :--- |:---:| ---: |' '| 2.0.5 | short-row |' '| 2.0.6 | lower | none |' '| 2.0.7-rc.1 | pre | x |' \
   > "$repo/.claude/skills/setup-skills/retired-terms.md"
 out=$(bash "$plan" "$repo" "$tmp/heads.json"); rc=$?
 check_rc "a prerelease version still plans" 0 "$rc"
