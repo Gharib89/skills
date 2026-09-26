@@ -132,6 +132,22 @@ check "--old reads the old tree at that ref" \
 jq '.skills.ship.source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a lock recording ship from . is source mode" source "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r .mode)"
 
+# A prerelease new version compares by its release part, and a row with no
+# replacement cell, or a lowercase none, has no replacement.
+skill "$repo" setup-skills 2.1.0-rc.1 "o/r#$A:triage"
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 2.0.5 | short-row |' '| 2.0.6 | lower | none |' \
+  > "$repo/.claude/skills/setup-skills/retired-terms.md"
+out=$(bash "$plan" "$repo" "$tmp/heads.json"); rc=$?
+check_rc "a prerelease version still plans" 0 "$rc"
+check "a missing or lowercase none replacement is null" \
+  '[{"skill":"setup-skills","version":"2.0.5","term":"short-row","replacement":null},{"skill":"setup-skills","version":"2.0.6","term":"lower","replacement":null}]' \
+  "$(jq -c .retired <<<"$out")"
+skill "$repo" setup-skills not-a-version "o/r#$A:triage"
+out=$(bash "$plan" "$repo" "$tmp/heads.json" 2>/dev/null); rc=$?
+check_rc "a version the retired range cannot compare exits 1" 1 "$rc"
+check "a version the retired range cannot compare names the file" \
+  "cannot read retired terms: $repo/.claude/skills/setup-skills/retired-terms.md" "$(jq -r .error <<<"$out")"
+
 out=$(bash "$plan" "$repo" "$tmp/nope.json" 2>/dev/null); rc=$?
 check_rc "an unreadable heads file exits 1" 1 "$rc"
 check "an unreadable heads file names it" "cannot read heads: $tmp/nope.json" "$(jq -r .error <<<"$out")"

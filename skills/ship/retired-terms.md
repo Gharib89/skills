@@ -8,5 +8,6 @@ in the same diff. A cell holds no `|`.
 
 | Version | Term | Replacement |
 |---|---|---|
+| 9.0.0 | converged | reviewed |
 | 9.0.0 | degraded | not reviewed |
 | 9.0.0 | cap-hit | None. |

@@ -34,8 +34,8 @@
 #   sections: the setup-skills sections whose template file or directory
 #     differs between the old and new copies; SKILL.md is not a template.
 #   retired: every row of a source-repo skill's retired-terms.md, in the new
-#     copy, whose version is above old_version and at or below new_version; a
-#     replacement of `None.` is null. A skill the old tree lacked has none: the
+#     copy, whose version is above old_version and at or below new_version,
+#     compared by release part; a replacement of `None.`, or none, is null. A skill the old tree lacked has none: the
 #     repo never used its words.
 #   mode: `source` where the lock installs ship from `.`, the source repo itself.
 # exit: 0 · 1 an unreadable lock, heads file or old ref · 2 usage
@@ -74,10 +74,11 @@ while IFS= read -r s; do
   f=$root/$skills/$s/retired-terms.md
   [ -n "$was" ] && [ -n "$new" ] && [ -f "$f" ] || continue
   retired=$(jq -Rn --arg s "$s" --arg o "$was" --arg n "$new" --argjson r "$retired" '
-    def v: split(".") | map(tonumber);
+    def v: split("-")[0] | split(".") | map(tonumber);
     $r + [inputs | select(test("^\\| *[0-9]+\\.[0-9]+\\.[0-9]+ *\\|")) | split("|")[1:4] | map(gsub("^ +| +$"; ""))
       | select((.[0] | v) > ($o | v) and (.[0] | v) <= ($n | v))
-      | {skill: $s, version: .[0], term: .[1], replacement: (if .[2] == "None." then null else .[2] end)}]' "$f")
+      | {skill: $s, version: .[0], term: .[1], replacement: (if (.[2] // "" | test("^(none\\.?)?$"; "i")) then null else .[2] end)}]' "$f") \
+    || ship_fail "cannot read retired terms: $f"
 done < <(jq -r "$us_source_repo"'.skills | to_entries | sort_by(.key)[] | select(.value | source_repo) | .key' <<<"$lock")
 
 # A template's content as `<blob sha> <path>` lines, old tree and working tree,
