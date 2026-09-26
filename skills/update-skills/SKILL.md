@@ -191,5 +191,9 @@ drift issue this PR closes; steps 5, 6 and 8 run unchanged. Per row:
 Then the refresh line, and `scripts/local-gate.sh`, whose `derived-copies` gate
 holds every pin to the lock. In step 8 the PR body opens with `Closes #<n>`,
 the drift issue step 7 filed or found, and the title is scoped to the composing
-skill, e.g. `fix(ship): move show-me to <short sha>`, so the release run
-records the move in that skill's CHANGELOG.
+skill, so the release run records the move in that skill's CHANGELOG. A pin
+moved on ship's `composes` line is a breaking change to ship, since preflight
+refuses every consumer still at the old ref (`skill off pin`): the title takes
+`!`, e.g. `fix(ship)!: move show-me to <short sha>`, and the maintainer applies
+the `major` label. A pin moved on setup-skills' line alone refuses nothing and
+takes no `!`.
