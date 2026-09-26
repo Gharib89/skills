@@ -7,6 +7,14 @@ released version. See
 
 <!-- version list -->
 
+## v8.1.1 (2026-09-26)
+
+### Bug Fixes
+
+- **skills**: Prompt-audit cleanup of ship and setup-skills prose
+  ([`9b84fb6`](https://github.com/Gharib89/skills/commit/9b84fb6742875c2fd9dda08f0010b31f200bb5ab))
+
+
 ## v8.1.0 (2026-09-26)
 
 ### Features
