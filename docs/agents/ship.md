@@ -133,6 +133,7 @@ Everything a consumer repo depends on, all of it under `skills/`:
 - the ship profile's fourteen headings, their `Label:` lines, and the schema number
 - the `### Ship` CLAUDE.md block `setup-skills` writes
 - the `setup-skills` templates, which land verbatim in consumer repos
+- each skill's `retired-terms.md` table (version, term, replacement or `None.`), which `update-skills`' plan reads
 - `ship`'s `metadata.composes` line: the set of skills a consumer must have installed, each at its pinned ref, for a run to pass preflight
 
 ## Triage

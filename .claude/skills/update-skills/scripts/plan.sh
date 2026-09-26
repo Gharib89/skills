@@ -16,7 +16,8 @@
 #          "composed": [{skill, source, pin, old_ref, install}],
 #          "drift": [{skill, pin, head}],
 #          "others": [{skill, source, old_ref, head, install}],
-#          "sections": [{section, template}]}
+#          "sections": [{section, template}],
+#          "retired": [{skill, version, term, replacement}]}
 #   source_skills: lock entries installed from the source repo; changelog is
 #     the path of the skill's CHANGELOG.md; a null old_version is a skill the
 #     old tree lacked.
@@ -25,13 +26,20 @@
 #   old_ref, in composed and others: the old tree's lock ref, null for a copy
 #     installed unpinned or absent. Read from <old> rather than the working
 #     tree, which the installs rewrite, so a re-run mid-refresh plans the same.
+#   install, in composed and others: redirects stdin from /dev/null, so an
+#     install run inside a shell read loop cannot swallow the loop's input.
 #   drift: a composed skill whose upstream head is not its pin.
 #   others: every other repo-scoped lock entry whose head differs from its old_ref,
 #     installed at the head so the next run has a ref to compare.
 #   sections: the setup-skills sections whose template file or directory
 #     differs between the old and new copies; SKILL.md is not a template.
+#   retired: every row of a source-repo skill's retired-terms.md, in the new
+#     copy, whose version is above old_version and at or below new_version,
+#     compared by release part; a replacement of `None.`, or none, is null. A
+#     skill the old tree lacked has none: the repo never used its words. A row
+#     whose version cell is no version fails the plan rather than vanish.
 #   mode: `source` where the lock installs ship from `.`, the source repo itself.
-# exit: 0 · 1 an unreadable lock, heads file or old ref · 2 usage
+# exit: 0 · 1 an unreadable lock, heads file, old ref or retired-terms row · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../../ship/scripts/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || ship_tooling "cannot source update-skills' _lib.sh"
@@ -57,13 +65,22 @@ oldlock=$(git -C "$root" show "$old:skills-lock.json" 2>/dev/null | jq -ce 'sele
 
 skills=.claude/skills
 
-versions='[]'
+versions='[]' retired='[]'
 while IFS= read -r s; do
   [ -n "$s" ] || continue
   new=$(ship_frontmatter "$root/$skills/$s/SKILL.md" version 2>/dev/null)
   was=$(git -C "$root" show "$old:$skills/$s/SKILL.md" 2>/dev/null | ship_frontmatter /dev/stdin version)
   versions=$(jq -c --arg s "$s" --arg o "$was" --arg n "$new" --arg c "$skills/$s/CHANGELOG.md" \
     '. + [{skill: $s, old_version: (if $o == "" then null else $o end), new_version: (if $n == "" then null else $n end), changelog: $c}]' <<<"$versions")
+  f=$root/$skills/$s/retired-terms.md
+  [ -n "$was" ] && [ -n "$new" ] && [ -f "$f" ] || continue
+  retired=$(jq -Rn --arg s "$s" --arg o "$was" --arg n "$new" --argjson r "$retired" '
+    def v: if test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?$") then split("-")[0] | split(".") | map(tonumber)
+      else error("not a version: \(.)") end;
+    $r + [inputs | select(test("^\\|") and (test("^\\| *Version *\\||^\\|[ :|-]+$") | not)) | split("|")[1:4] | map(gsub("^ +| +$"; ""))
+      | select((.[0] | v) > ($o | v) and (.[0] | v) <= ($n | v))
+      | {skill: $s, version: .[0], term: .[1], replacement: (if (.[2] // "" | test("^(none\\.?)?$"; "i")) then null else .[2] end)}]' "$f") \
+    || ship_fail "cannot read retired terms: $f"
 done < <(jq -r "$us_source_repo"'.skills | to_entries | sort_by(.key)[] | select(.value | source_repo) | .key' <<<"$lock")
 
 # A template's content as `<blob sha> <path>` lines, old tree and working tree,
@@ -83,8 +100,8 @@ for pair in pull_request_template.md:pr-template reviewers:reviewer-scaffolding 
 done
 
 jq -n --arg old "$old" --argjson composed "$(us_composed "$root")" --argjson lock "$lock" --argjson oldlock "$oldlock" \
-  --argjson heads "$heads" --argjson versions "$versions" --argjson sections "$sections" "$us_source_repo"'
-  def install($src; $ref; $s): "npx skills add \($src)#\($ref) --skill \($s) --agent claude-code -y";
+  --argjson heads "$heads" --argjson versions "$versions" --argjson sections "$sections" --argjson retired "$retired" "$us_source_repo"'
+  def install($src; $ref; $s): "npx skills add \($src)#\($ref) --skill \($s) --agent claude-code -y </dev/null";
   ($composed | map(.skill)) as $names
   | {mode: (if $lock.skills.ship.source? == "." then "source" else "consumer" end),
      old: $old,
@@ -98,4 +115,5 @@ jq -n --arg old "$old" --argjson composed "$(us_composed "$root")" --argjson loc
        | select($heads[.key] != null and $heads[.key] != $was)
        | {skill: .key, source: .value.source, old_ref: $was, head: $heads[.key],
           install: install(.value.source; $heads[.key]; .key)}],
-     sections: $sections}'
+     sections: $sections,
+     retired: $retired}'

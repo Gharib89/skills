@@ -88,6 +88,10 @@ _Avoid_: outdated skill, stale dependency
 Re-installing a consumer repo's derived copies, and its composed skills at their pinned refs, then running Ship's preflight so a profile the new Ship no longer reads is reported at once. The repo owner's act, which `update-skills` performs.
 _Avoid_: sync, upgrade, update (the CLI's `update` ignores pinned refs)
 
+**Retired term**:
+A word a source-repo skill stops using, declared in that skill's `retired-terms.md` with the version that retired it and the word that replaces it, so a refresh that crosses that version can find the word in the consumer repo's own documents and replace it there.
+_Avoid_: deprecated term, old vocabulary, stale wording
+
 **Claim**:
 The assignee on a tracker issue, set by Ship before any work. An assigned issue is in flight or awaiting merge and no run takes it; the same rule in every repo, not an axis.
 _Avoid_: lock, agent-working, in-progress label
