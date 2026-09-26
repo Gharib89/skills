@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v11.1.2 (2026-09-26)
+
+### Bug Fixes
+
+- **ship**: A multi-line thread lead ends in the truncation marker
+  ([#330](https://github.com/Gharib89/skills/pull/330),
+  [`90f2ad5`](https://github.com/Gharib89/skills/commit/90f2ad593da4bc8126e405e34b4941ea03719402))
+
+
 ## v11.1.1 (2026-09-26)
 
 ### Bug Fixes
