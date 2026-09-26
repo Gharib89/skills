@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v11.1.1 (2026-09-26)
+
+### Bug Fixes
+
+- **ship**: Poll-pr --brief --full lifts a clipped thread lead
+  ([#329](https://github.com/Gharib89/skills/pull/329),
+  [`5e05ffc`](https://github.com/Gharib89/skills/commit/5e05ffcb565b863cffd97629147acbd85aedcd04))
+
+
 ## v11.1.0 (2026-09-26)
 
 ### Features
