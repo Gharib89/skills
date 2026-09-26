@@ -132,21 +132,27 @@ check "--old reads the old tree at that ref" \
 jq '.skills.ship.source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a lock recording ship from . is source mode" source "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r .mode)"
 
-# A prerelease new version compares by its release part, and a row with no
-# replacement cell, or a lowercase none, has no replacement.
+# A prerelease version compares by its release part, in the skill's version
+# and in a row's, and a row with no replacement cell, or a lowercase none, has
+# no replacement.
 skill "$repo" setup-skills 2.1.0-rc.1 "o/r#$A:triage"
-printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 2.0.5 | short-row |' '| 2.0.6 | lower | none |' \
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 2.0.5 | short-row |' '| 2.0.6 | lower | none |' '| 2.0.7-rc.1 | pre | x |' \
   > "$repo/.claude/skills/setup-skills/retired-terms.md"
 out=$(bash "$plan" "$repo" "$tmp/heads.json"); rc=$?
 check_rc "a prerelease version still plans" 0 "$rc"
 check "a missing or lowercase none replacement is null" \
-  '[{"skill":"setup-skills","version":"2.0.5","term":"short-row","replacement":null},{"skill":"setup-skills","version":"2.0.6","term":"lower","replacement":null}]' \
+  '[{"skill":"setup-skills","version":"2.0.5","term":"short-row","replacement":null},{"skill":"setup-skills","version":"2.0.6","term":"lower","replacement":null},{"skill":"setup-skills","version":"2.0.7-rc.1","term":"pre","replacement":"x"}]' \
   "$(jq -c .retired <<<"$out")"
 skill "$repo" setup-skills not-a-version "o/r#$A:triage"
 out=$(bash "$plan" "$repo" "$tmp/heads.json" 2>/dev/null); rc=$?
 check_rc "a version the retired range cannot compare exits 1" 1 "$rc"
 check "a version the retired range cannot compare names the file" \
   "cannot read retired terms: $repo/.claude/skills/setup-skills/retired-terms.md" "$(jq -r .error <<<"$out")"
+# A row whose version cell is no version fails the plan rather than vanish.
+skill "$repo" setup-skills 2.1.0 "o/r#$A:triage"
+echo '| 2.0 | typo | x |' >> "$repo/.claude/skills/setup-skills/retired-terms.md"
+out=$(bash "$plan" "$repo" "$tmp/heads.json" 2>/dev/null); rc=$?
+check_rc "a malformed version cell exits 1" 1 "$rc"
 
 out=$(bash "$plan" "$repo" "$tmp/nope.json" 2>/dev/null); rc=$?
 check_rc "an unreadable heads file exits 1" 1 "$rc"

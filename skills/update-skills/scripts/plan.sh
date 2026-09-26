@@ -35,10 +35,11 @@
 #     differs between the old and new copies; SKILL.md is not a template.
 #   retired: every row of a source-repo skill's retired-terms.md, in the new
 #     copy, whose version is above old_version and at or below new_version,
-#     compared by release part; a replacement of `None.`, or none, is null. A skill the old tree lacked has none: the
-#     repo never used its words.
+#     compared by release part; a replacement of `None.`, or none, is null. A
+#     skill the old tree lacked has none: the repo never used its words. A row
+#     whose version cell is no version fails the plan rather than vanish.
 #   mode: `source` where the lock installs ship from `.`, the source repo itself.
-# exit: 0 · 1 an unreadable lock, heads file or old ref · 2 usage
+# exit: 0 · 1 an unreadable lock, heads file, old ref or retired-terms row · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../../ship/scripts/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || ship_tooling "cannot source update-skills' _lib.sh"
@@ -74,8 +75,9 @@ while IFS= read -r s; do
   f=$root/$skills/$s/retired-terms.md
   [ -n "$was" ] && [ -n "$new" ] && [ -f "$f" ] || continue
   retired=$(jq -Rn --arg s "$s" --arg o "$was" --arg n "$new" --argjson r "$retired" '
-    def v: split("-")[0] | split(".") | map(tonumber);
-    $r + [inputs | select(test("^\\| *[0-9]+\\.[0-9]+\\.[0-9]+ *\\|")) | split("|")[1:4] | map(gsub("^ +| +$"; ""))
+    def v: if test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?$") then split("-")[0] | split(".") | map(tonumber)
+      else error("not a version: \(.)") end;
+    $r + [inputs | select(test("^\\|") and (test("^\\| *(Version *\\||-)") | not)) | split("|")[1:4] | map(gsub("^ +| +$"; ""))
       | select((.[0] | v) > ($o | v) and (.[0] | v) <= ($n | v))
       | {skill: $s, version: .[0], term: .[1], replacement: (if (.[2] // "" | test("^(none\\.?)?$"; "i")) then null else .[2] end)}]' "$f") \
     || ship_fail "cannot read retired terms: $f"
