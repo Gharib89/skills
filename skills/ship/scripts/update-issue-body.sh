@@ -7,9 +7,8 @@
 #   update-issue-body <issue> [--repo <owner>/<repo>] --section <name> --body-file <path>
 #
 # --repo edits that GitHub repo's issue instead of the origin's, the source
-# repo's (ADR 0004). Its host is probed first, and where it does not answer the
-# mechanic exits 1 with the command to run by hand, as `command`, in place of
-# the write.
+# repo's (ADR 0004). Its host is probed first, and every exit 1 under it, the
+# probe's or a refused write's, carries the command to run by hand as `command`.
 #
 # Section-only by design: no whole-body mode and no preamble, so two runs
 # editing different sections of one issue cannot clobber each other. Phase 9
@@ -26,7 +25,7 @@
 #
 # stdout: {issue, section, replaced, created, sections[]}
 #   sections[]: the `## ` headings of the body AFTER the write.
-#   {"error": "<repo> is unreachable from here", "command": "<invocation>"} under --repo
+#   {"error": "...", "command": "<invocation>"} on any exit 1 under --repo
 # exit: 0 · 1 update failed or the body is not one ship edits, with the host's status where there was one,
 #         or --repo unreachable
 #       · 2 usage, or the issue could not be read

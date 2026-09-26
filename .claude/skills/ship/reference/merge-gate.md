@@ -175,7 +175,7 @@ context to a public repo. On "file defects", or a word naming one draft, run
 needs-triage` per Ship defect draft and put its answer on the row: the number filed, the
 candidates it answered with instead, each read the way phase 2 reads one, or,
 on exit 1 with a `command`, that command verbatim for the human to run where
-GitHub answers. Before or after the merge, either order holds.
+the write succeeds. Before or after the merge, either order holds.
 
 ## Unattended: post to the PR, then return
 

@@ -7,8 +7,8 @@
 #
 # --repo files at that GitHub repo instead of the origin's: a Ship defect, at
 # the source repo, on the human's word (ADR 0004). Its host is probed first,
-# and where it does not answer the mechanic exits 1 with the command to run by
-# hand, as `command`, in place of filing.
+# and every exit 1 under it, the probe's or a refused write's, carries the
+# command to run by hand as `command`.
 #
 # Candidate check. Before creating, the mechanic lists the host's open issues
 # and compares titles: lowercased, punctuation as a separator, tokens under
@@ -25,7 +25,7 @@
 #
 # stdout: {"filed": true, "number": <n>, "url": "<url>"}
 #         {"filed": false, "candidates": [{number, title, url}]}
-#         {"error": "<repo> is unreachable from here", "command": "<invocation>"}
+#         {"error": "...", "command": "<invocation>"} on any exit 1 under --repo
 # exit: 0 filed, or a candidate found · 1 list or create failed, or --repo unreachable · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }

@@ -109,4 +109,14 @@ check "with the command to run by hand" \
   "$mech 7 --repo Gharib89/skills --section Decisions --body-file $file" "$(jq -r .command <<<"$out")"
 check "and no read or write" "host_identity" "$(cat "$SHIP_FAKE/calls")"
 
+reset
+jq -n '{body: "## Decisions\n\nold\n"}' > "$SHIP_FAKE/host_issue_body.1.json"
+: > "$SHIP_FAKE/host_issue_set_body.1.fail"
+printf '403' > "$SHIP_FAKE/host_issue_set_body.1.status"
+out=$(run 7 --repo Gharib89/skills --section Decisions --body-file "$file"); rc=$?
+check_rc "a --repo write the host refuses exits 1" 1 "$rc"
+check "with its status and the command to run by hand" \
+  "403|$mech 7 --repo Gharib89/skills --section Decisions --body-file $file" \
+  "$(jq -r '"\(.status)|\(.command)"' <<<"$out")"
+
 finish

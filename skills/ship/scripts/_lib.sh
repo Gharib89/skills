@@ -172,7 +172,8 @@ readonly SHIP_CLAIM_COMMENT='🤖 Claimed by a ship run: implementation in progr
 # ship_tooling <msg>: the exit-2 shape. Also used when the host adapter itself
 # cannot load, so a broken install still emits the contract, not "command not found".
 ship_tooling() { jq -n --arg e "$1" '{error: $e}'; exit 2; }
-ship_fail()    { jq -n --arg e "$1" '{error: $e}'; exit 1; }
+# SHIP_BY_HAND, set by ship_reach_repo, rides every exit-1 answer as `command`.
+ship_fail()    { jq -n --arg e "$1" --arg c "${SHIP_BY_HAND:-}" '{error: $e} + if $c == "" then {} else {command: $c} end'; exit 1; }
 
 # ship_fail_host <msg> <adapter-answer>: the exit-1 shape for a host write that
 # failed, carrying the HTTP status of the last attempt. Without it a host that
@@ -186,7 +187,8 @@ ship_fail_host() { # ship_fail_host <msg> <adapter-answer>
   local s
   s=$(jq -r 'if (.status | type) == "number" then .status else "null" end' <<<"${2:-}" 2>/dev/null) || s=null
   [ -n "$s" ] || s=null
-  jq -n --arg e "$1" --argjson s "$s" '{error: $e, status: $s}'
+  jq -n --arg e "$1" --argjson s "$s" --arg c "${SHIP_BY_HAND:-}" \
+    '{error: $e, status: $s} + if $c == "" then {} else {command: $c} end'
   exit 1
 }
 
@@ -315,16 +317,15 @@ ship_repo_arg() {
 }
 
 # ship_reach_repo <repo> <mechanic-path> <args...>: under --repo, prove the
-# named repo's host answers before any read or write, and where it does not,
-# exit 1 with the invocation that performs the write, shell-quoted, for the
-# human to run where it does. An Azure DevOps run carries no GitHub
-# credentials, and a write it cannot make is still the human's to make.
+# named repo's host answers before any read or write, and make every exit 1
+# after it carry the invocation that performs the write, shell-quoted, as
+# `command`, for the human to run where it succeeds. An Azure DevOps run carries
+# no GitHub credentials, and a token that authenticates can still be refused the
+# write; either way the write is still the human's to make.
 ship_reach_repo() {
   local repo=$1; shift
-  host_identity >/dev/null 2>&1 && return 0
-  jq -n --arg e "$repo is unreachable from here" --arg c "$(printf '%q ' "$@")" \
-    '{error: $e, command: ($c | rtrimstr(" "))}'
-  exit 1
+  SHIP_BY_HAND=$(printf '%q ' "$@"); SHIP_BY_HAND=${SHIP_BY_HAND% }
+  host_identity >/dev/null 2>&1 || ship_fail "$repo is unreachable from here"
 }
 
 # Triage roles are canonical names; the label strings a repo actually uses live

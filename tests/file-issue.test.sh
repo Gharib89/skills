@@ -55,6 +55,17 @@ check "with the command to run by hand, quoted as a shell reads it" \
   "$(jq -r .command <<<"$out")"
 check "and nothing listed or filed" 'host_identity' "$(cut -f1 "$SHIP_FAKE/calls")"
 
+# A token that authenticates may still be refused the write (one scoped to the
+# consumer's own org): the refusal carries the same command.
+reset
+printf '[]\n' > "$SHIP_FAKE/host_issues_open.1.json"
+: > "$SHIP_FAKE/host_issue_create.1.fail"
+out=$(run --repo Gharib89/skills --title "poll-pr misses a round" --body-file "$file" --label needs-triage); rc=$?
+check_rc "a --repo create the host refuses exits 1" 1 "$rc"
+check "with the error and the command to run by hand" \
+  "issue create failed|$mech --repo Gharib89/skills --title poll-pr\\ misses\\ a\\ round --body-file $file --label needs-triage" \
+  "$(jq -r '"\(.error)|\(.command)"' <<<"$out")"
+
 # Without --repo the run's own origin is the host, and no reachability probe
 # stands in front of the list: an unreachable host there is the run's own stop.
 git -C "$repo" remote set-url origin https://github.com/owner/repo.git
@@ -64,5 +75,10 @@ out=$(run --title "poll-pr misses a round" --body-file "$file" --label needs-tri
 check_rc "an origin file exits 0" 0 "$rc"
 check "at the origin's repo" 'github owner/repo' "$(cat "$SHIP_FAKE/loaded")"
 check "with no reachability probe" 'host_issues_open host_issue_create' "$(cut -f1 "$SHIP_FAKE/calls" | paste -sd' ')"
+
+reset
+: > "$SHIP_FAKE/host_issue_create.1.fail"
+check "a refused create without --repo carries no command" 'null' \
+  "$(run --title "poll-pr misses a round" --body-file "$file" --label needs-triage | jq -r .command)"
 
 finish
