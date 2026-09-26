@@ -25,7 +25,7 @@ Check all three before exploring. On any failure print the exact command, then "
    ```sh
    npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill code-review --skill tdd --skill writing-for-agents --skill triage --agent claude-code -y
    npx skills add upstash/context7#e275a848a420e0d11c2822f61201ee005bfd1133 --skill find-docs --agent claude-code -y
-   npx skills add humanlayer/skills#6ab9013a10c28f5046f7f999549cd5328a0b30d7 --skill show-me --agent claude-code -y
+   npx skills add humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c --skill show-me --agent claude-code -y
    ```
 
 3. **`ship`, `cloud-ship` and `setup-skills`.** `.claude/skills/ship`, `.claude/skills/cloud-ship` and `.claude/skills/setup-skills` exist and are in the lock. A `ship` folder with no `metadata.version` in its frontmatter is a hand-maintained copy from before the generic skill: report "will be replaced by the derived copy", confirm, refresh. `setup-skills` gets step 1.2's treatment; the copy running this check is not evidence, so read `skills-lock.json`. It belongs in the repo because the `### Ship` block below and ship's three profile stops both end "run `/setup-skills`", which only a repo carrying it can follow. Else print:
