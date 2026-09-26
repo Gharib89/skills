@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v1.2.0 (2026-09-26)
+
+### Features
+
+- **setup-skills**: Ship block as a setup section, whole-file section re-run
+  ([#326](https://github.com/Gharib89/skills/pull/326),
+  [`874cca1`](https://github.com/Gharib89/skills/commit/874cca19fbe56ffc99be0d6cac1a31c09aa244ac))
+
+
 ## v1.1.0 (2026-09-26)
 
 ### Features
