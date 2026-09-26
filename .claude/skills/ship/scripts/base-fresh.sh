@@ -34,10 +34,10 @@ if ! $fresh; then
   # Rebase only a branch known not to be on origin, read off the remote-tracking
   # ref the fetch above refreshed rather than ls-remote, so the answer holds
   # offline. A detached HEAD takes the merge advice, which is never wrong.
-  advice="it is on origin, so merge $base in rather than rebase, and re-run:"
-  branch=$(git symbolic-ref -q --short HEAD) \
-    && ! git rev-parse --verify -q "refs/remotes/origin/$branch" >/dev/null \
-    && advice="rebase onto it and re-run:"
+  advice="merge $base in, which keeps the next push a plain one, and re-run:"
+  if branch=$(git symbolic-ref -q --short HEAD) && ! git rev-parse --verify -q "refs/remotes/origin/$branch" >/dev/null; then
+    advice="rebase onto it and re-run:"
+  fi
   { echo "branch has not seen these commits on $base; $advice"; git log --oneline "HEAD..$base"; } >&2
 fi
 jq -n --argjson f "$fresh" --arg b "$base" --argjson behind "$behind" --argjson ahead "$ahead" --argjson fe "$fetched" \
