@@ -37,8 +37,9 @@
 # Each review row carries the round's own `body` and the `id` the host knows it
 # by, clipped past 2000 characters and marked "...[truncated]" there: phase 7
 # triages from the body, and a round whose findings are in it rather than in
-# threads is invisible without it. `--brief --full` names the ids to return whole;
-# every other row stays clipped, and an id matching no row changes nothing.
+# threads is invisible without it. `--brief --full` names the round or thread
+# ids to return whole; every other row stays clipped, and an id matching no row
+# changes nothing.
 # `threads[]` rows carry the thread's first comment, which `reply-thread` answers,
 # and `replied`, true once this identity has answered in that thread.
 #
@@ -104,14 +105,15 @@
 # (id, submitted_at, substantive, and the body cut to its finding items) and one
 # row per OPEN thread (id, path, lead, resolved, replied). `--full` names the
 # rows that come back whole, so `--brief --full <id>` is the summary with that
-# one round verbatim, or that one thread's whole body as its `lead`. Rounds come from `all[]` under the
-# --since rule and `on_head[]` under the head rule, the list that rule lands
-# from. Under `--reviewer` only the awaited reviewer's rows are kept, and the
-# run's own rows drop out: a thread reply of ours posts as a review
-# row of its own, and a round count that counts it reads its own voice as the
-# reviewer's. That drop needs the host identity, so `--brief` asks for it up
-# front and exits 2 when the host cannot answer, rather than returning a list it
-# cannot promise is the reviewer's alone. The full shape stays the default.
+# one round verbatim, or that one thread's first comment whole as its `lead`.
+# Rounds come from `all[]` under the --since rule and `on_head[]` under the head
+# rule, the list that rule lands from. Under `--reviewer` only the awaited
+# reviewer's rows are kept, and the run's own rows drop out: a thread reply of
+# ours posts as a review row of its own, and a round count that counts it reads
+# its own voice as the reviewer's. That drop needs the host identity, so
+# `--brief` asks for it up front and exits 2 when the host cannot answer, rather
+# than returning a list it cannot promise is the reviewer's alone. The full
+# shape stays the default.
 #
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
 #          threads, reviewer, reviewer_blocked, reviewer_run, landed_by, refused_by, not_reviewed,

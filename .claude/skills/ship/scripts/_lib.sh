@@ -95,6 +95,8 @@
 #                                           unavailable. replied: this identity has a comment in the
 #                                           thread, which is how phase 7 skips a thread it already
 #                                           dispositioned in an earlier round.
+#                                           id: poll-pr --full names ids from here too, to read
+#                                           that thread's first comment whole under --brief.
 #                                           GitHub rows also carry comment_id, outdated and url,
 #                                           which no mechanic reads. comment_id is the thread's first
 #                                           review comment, the REST target GitHub's reply is keyed
@@ -1153,9 +1155,9 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # each carrying the `path` its finding sits on and the `lead` line that states
 # it, cut at the same width: a run answers one thread off the brief, and a row
 # holding an id alone sent it back for the full shape to read what the finding
-# was. A thread named by <full-ids-json> carries its whole body as `lead`, so a
-# clipped lead is lifted by the re-poll that lifts a clipped round (#327). The
-# string "unavailable" passes through as itself. `reviewer_run` passes
+# was. A thread named by <full-ids-json> carries its whole first comment as
+# `lead`, so a clipped lead is lifted by the re-poll that lifts a clipped round
+# (#327). The string "unavailable" passes through as itself. `reviewer_run` passes
 # through whole, the string "unavailable" included: it is four fields, and a
 # loop reading rounds from the brief is the loop that has to tell a silent
 # reviewer from one whose run is still going.
