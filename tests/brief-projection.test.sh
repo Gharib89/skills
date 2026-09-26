@@ -140,8 +140,10 @@ check "a bullet with wide whitespace after its marker is a finding item" \
 # A thread row is what a run dispositions: `path` says which file the finding is
 # on and `lead` says what it is, so one Copilot thread can be answered off the
 # brief instead of a second poll for the full shape. The lead is the first line
-# with text in it: a thread body that opens on a blank line or a fenced
-# suggestion below carries its verdict on that line and nothing else.
+# with text in it, and a body with text past that line ends in the truncation
+# marker: a finding in a later paragraph, or the fenced suggestion below a
+# Copilot verdict, is text nobody has read, and an unmarked lead reads as the
+# whole comment, so the loop never re-polls it with `--full` (#328).
 leads=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
   reviews: {on_head: [], all: [], total: 0},
   threads: [{id: "t3", resolved: false, replied: false, author: "Copilot",
@@ -150,8 +152,8 @@ leads=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
             {id: "t4", resolved: false, replied: false, author: "Copilot",
              path: null, body: "a round finding naming no file"}]}')
 
-check "a multi-line thread body comes down to its first line with text" \
-  'the grace is read twice' \
+check "a multi-line thread body comes down to its first line with text, marked" \
+  "$(printf 'the grace is read twice\n...[truncated]')" \
   "$(ship_brief "$leads" Gharib89 on_head | jq -r '.threads[0].lead')"
 
 # A thread the host attached to no file (a review-body finding) keeps the null
@@ -170,6 +172,29 @@ long=$(jq -cn --arg b "$(rep 240 t)" '{head_sha: "abc1234", mergeable: "clean", 
 check "a long lead is cut at the finding-items width and says so" \
   "$(printf '%s\n...[truncated]' "$(rep 200 t)")" \
   "$(ship_brief "$long" Gharib89 on_head | jq -r '.threads[0].lead')"
+
+# Blank lines are not text: a single line padded with them was read whole and
+# takes no marker, a browser-typed `\r` blank line included. A long first line
+# that also drops later lines was cut twice and says so once, the way a clipped
+# round's finding items carry a single marker.
+padded=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t8", resolved: false, replied: false, author: "Copilot", path: "x.sh",
+             body: "\n\n  one line, whole  \n\n"}]}')
+check "a single line padded with blank lines is not marked" \
+  '  one line, whole  ' "$(ship_brief "$padded" Gharib89 on_head | jq -r '.threads[0].lead')"
+crlf=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t10", resolved: false, replied: false, author: "claude", path: "x.sh",
+             body: "typed in the browser\r\n\r\n"}]}')
+check "a CRLF blank line is not text" \
+  "$(printf 'typed in the browser\r')" "$(ship_brief "$crlf" Gharib89 on_head | jq -r '.threads[0].lead')"
+both=$(jq -cn --arg b "$(rep 240 t)"$'\n\n'"a later paragraph" '{head_sha: "abc1234", mergeable: "clean",
+  landed_by: null, reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t9", resolved: false, replied: false, author: "Copilot", path: "x.sh", body: $b}]}')
+check "a long multi-line lead carries one marker" \
+  "$(printf '%s\n...[truncated]' "$(rep 200 t)")" \
+  "$(ship_brief "$both" Gharib89 on_head | jq -r '.threads[0].lead')"
 
 # `--full` outranks the thread cut too: a clipped lead is one the loop re-polls
 # with `--full <id>`, and a re-poll handing back the same cut sends the run to a
