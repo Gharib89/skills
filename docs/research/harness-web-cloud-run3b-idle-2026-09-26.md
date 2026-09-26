@@ -28,3 +28,16 @@ Turn ended 21:42:58; the next message (about 6 minutes later) found a restarted 
 preserved disk: `/tmp`, the checkout and a local commit survived. The setup script did not
 re-run; the SessionStart hook did, 8 s after boot. The session reports `git remote -v` is
 empty in its checkout, which is why its results push never reached GitHub.
+
+## Run 2b, read from its session page
+
+"setup.log has one run line. It was written at 21:46:12, 8 seconds after this container
+booted at 21:46:04. [...] The SessionStart hook ran 2 seconds after setup, at 21:46:14."
+
+## Run 3b's push, read from its session page
+
+    (a) * main / 07042cd chore: seed lab / /home/user/repo   (git remote -v: empty)
+    (b) ADO_PAT set, length 84
+    (d) exit=0 ... To https://dev.azure.com/AhmedGharib/_git/AhmedGharib
+        * [new branch] HEAD -> probe/bundle-push-1790459207
+    (e) 07042cd... refs/heads/probe/bundle-push-1790459207   (branch deleted afterwards)
