@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by 0004
 ---
 
 # Ship writes only to the repo it runs in
