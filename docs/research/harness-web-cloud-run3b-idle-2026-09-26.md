@@ -1,16 +1,19 @@
-# Cloud probe: setup cache and idle restart (2026-09-26)
+# Cloud probe: bundle setup run and idle restart (2026-09-26)
 
 Both in `Default` (env_01JP2VM3dbgtAjtNh8um94pq), relayed by the user.
 
-## Run 2b, a second new session (session_01R4ZyNDLGa8cbbc9zq9ji41)
+## Run 3b, a bundle session (session_01EiP3hH6AXSsidJDd7XfCaV)
+
+Output of the idle-check command, which the user sent to this session:
 
     ae7a55da-992e-42be-96c4-6e0292079fbe          (boot_id)
     2026-09-26 21:46:48                           (up since)
     run 2026-09-26T21:46:55Z pwd=/home/user/repo user=root home=/root
 
-A new session about 7 minutes after run 1b's setup (21:40:00) got a fresh VM and ran the
-setup script again: the log holds only its own line. No reuse of run 1b's setup snapshot
-was observed at that interval.
+A `CCR_FORCE_BUNDLE=1` session also runs the environment setup script, as root, with cwd at
+its checkout (`/home/user/repo`), on a fresh VM. It did not reuse run 1b's setup snapshot,
+but a bundle session has a different repository, so this does not settle cache reuse for a
+second session on the same GitHub repo (run 2b, session_01R4ZyNDLGa8cbbc9zq9ji41).
 
 ## Run 1b resumed after idle (session_01GpdNgpC5jwhAdG24yWtqrk)
 
