@@ -78,7 +78,10 @@ host's `status` beside its `error`: a 5xx or 429 outlasted the mechanic's own
 backoff, so retrying is the fix; any other number is the request itself, so read
 the body you sent; `null` is no HTTP answer at all, so look at the host or the
 tooling in between. `open-pr` and `file-issue` answer with the error alone, and
-their stderr carries the host's message.
+their stderr carries the host's message. Under `--repo`, `file-issue` and
+`update-issue-body` answer a host that does not answer with exit 1 and a
+`command` beside the `error`: the shell-quoted invocation for the human to run
+where it does.
 
 ## The vocabulary a read comes back in
 
