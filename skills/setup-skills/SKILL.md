@@ -121,15 +121,7 @@ Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` a
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 
-**The `### Ship` sub-block**, inside the existing `## Agent skills` block of whichever of `CLAUDE.md` / `AGENTS.md` the parent chose (the file that has the block). Updated in place when present, so the file ends with exactly one:
-
-```markdown
-### Ship
-
-`/ship` drives one issue to a merge-ready PR. This repo's ship profile: `docs/agents/ship.md`. Without that file ship refuses: run `/setup-skills`.
-
-Every skill under `.claude/skills/` is a derived copy, changed at its source and refreshed here; `skills-lock.json` records each one's source. `ship`, `cloud-ship`, `setup-skills` and `update-skills` come from `Gharib89/skills`; the skills ship and setup-skills compose come from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`, each at the pin of the skill that composes it. `/update-skills` refreshes them all in one PR. By hand, refresh a skill by re-running its install line at project scope, without `-g`. Ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`: `npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --agent claude-code -y && .claude/skills/ship/scripts/preflight.sh none`.
-```
+**The `### Ship` sub-block**, from [ship-block.md](./ship-block.md) with its template comment removed, inside the existing `## Agent skills` block of whichever of `CLAUDE.md` / `AGENTS.md` the parent chose (the file that has the block). Updated in place when present, so the file ends with exactly one.
 
 **Local gate.**
 
@@ -173,3 +165,5 @@ Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>
 ## Re-run
 
 Profile exists: run steps 1 to 3. Then compare the profile's `Schema:` line to ship's `metadata.profile-schema` in `.claude/skills/ship/SKILL.md`. Trailing: apply each `## Schema N` entry of [profile-schema.md](./profile-schema.md) between the two numbers in order, walking only the rows an entry adds or whose vocabulary it moves, leaving the prose under existing headings alone, and rewrite the `Schema:` line last. Ahead of ship: stop and print the refresh line; the profile is not what needs fixing. Then diff each section of the fresh exploration against the existing profile, propose only the updates, and ask whether anything else should change. Prose under the headings is the human's; update the `Label:` lines and leave the prose alone unless a fact it explains changed. Then propose step 5's closing-reference move against the existing PR template, and step 5's two dimension-label writes, the labels step 3 recorded as missing or miscased and the `## Dimension labels` section where `triage-labels.md` has none, each confirmed like every other write: a re-run reaches all three no other way. End with step 6.
+
+**A setup section re-run**, when a refresh asks for step 5's item for a section whose template moved: compare the repo's whole current file against the whole current template, not only the template's change since the version the repo last installed. A repo that missed one paragraph releases ago misses it still after a delta-only re-run. Propose each part of the template the file lacks, and keep the repo's deliberate departures: its own wording, framing (a `### Ship` block worded around the repo's own derived copies, say) and any checks it added. Write on confirm, like every other write. A section the refresh did not name is not audited.
