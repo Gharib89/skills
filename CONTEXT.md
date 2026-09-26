@@ -69,7 +69,7 @@ The copy of a shared skill committed under a repo's `.claude/skills/`, installed
 _Avoid_: vendored fork, sync, symlink, snapshot
 
 **Source repo**:
-This repo, `Gharib89/skills`: where Ship, `cloud-ship` and `setup-skills` are written, and where the versions of their composed skills are tested. Every derived copy of those three is installed from it.
+This repo, `Gharib89/skills`: where Ship, `cloud-ship`, `setup-skills` and `update-skills` are written, and where the versions of their composed skills are tested. Every derived copy of those four is installed from it.
 _Avoid_: upstream (that is a composed skill's own repo), skills repo, origin
 
 **Consumer repo**:

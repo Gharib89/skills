@@ -59,7 +59,7 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "25d8f6033e5e837a1ccc763d2723b36f1c4dad8d38b12a0334c052ce8d5cff0a"
+      "computedHash": "775e90146890d351688ca6a22ca408cc41454e94ceafa1e5799beef6ac905308"
     },
     "ship": {
       "source": ".",
@@ -98,6 +98,11 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/triage/SKILL.md",
       "computedHash": "b954d74c219c805bf353d6642251a713c9b2e9cfdb11babfe588bcfe7dfd16d5"
+    },
+    "update-skills": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "1ebe31b4242e7e7f883505e9904f3581d18373eab6116116cc123185978bb1cb"
     },
     "wayfinder": {
       "source": "mattpocock/skills",
