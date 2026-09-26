@@ -47,7 +47,7 @@ repo() {
   mkdir -p "$d/scripts" "$d/tests" || return 1
   for s in ship cloud-ship setup-skills; do mkdir -p "$d/skills/$s" "$d/.claude/skills/$s"; done
   cp scripts/local-gate.sh "$d/scripts/" || return 1
-  for f in version-line house-style prose-budget stray-file contract profile-schema; do
+  for f in version-line house-style prose-budget stray-file contract profile-schema pin; do
     printf '#!/usr/bin/env bash\nexit 0\n' > "$d/scripts/$f-check.sh"; chmod +x "$d/scripts/$f-check.sh"
   done
   stub "$d/tests/run.sh" tests shellcheck TESTS_RC

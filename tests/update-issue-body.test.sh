@@ -10,7 +10,7 @@ source tests/lib.sh
 T=$'\t'  # the calls log separates arguments with a tab
 
 mech=$PWD/skills/ship/scripts/update-issue-body.sh
-usage='usage: update-issue-body <issue> --section <name> --body-file <path>'
+usage='usage: update-issue-body <issue> [--repo <owner>/<repo>] --section <name> --body-file <path>'
 
 err() { bash "$mech" "$@" 2>/dev/null | jq -r '.error'; }
 rc()  { bash "$mech" "$@" >/dev/null 2>&1; echo $?; }
@@ -88,5 +88,35 @@ jq -n '{body: "## Decisions\n\nold\n"}' > "$SHIP_FAKE/host_issue_body.1.json"
 out=$(run 7 --section Decisions --body-file "$file"); rc=$?
 check_rc "a silent write failure exits 1" 1 "$rc"
 check "with status null" '{"error":"issue body update failed","status":null}' "$(jq -c . <<<"$out")"
+
+# --repo: the source repo's issue, reached from a consumer whose origin is
+# another host entirely (ADR 0004).
+check "a --repo that is not owner/repo is the usage error" "$usage" \
+  "$(err 7 --repo nope --section X --body-file "$file")"
+git -C "$repo" remote set-url origin https://dev.azure.com/org/proj/_git/repo
+reset
+jq -n '{body: "## Decisions\n\nold\n"}' > "$SHIP_FAKE/host_issue_body.1.json"
+out=$(run 7 --repo Gharib89/skills --section Decisions --body-file "$file"); rc=$?
+check_rc "a --repo write exits 0" 0 "$rc"
+check "on GitHub, at the named repo" 'github Gharib89/skills' "$(cat "$SHIP_FAKE/loaded")"
+check "after proving the host answers" "host_identity" "$(head -1 "$SHIP_FAKE/calls")"
+
+reset
+: > "$SHIP_FAKE/host_identity.1.fail"
+out=$(run 7 --repo Gharib89/skills --section Decisions --body-file "$file"); rc=$?
+check_rc "an unreachable --repo host exits 1" 1 "$rc"
+check "with the command to run by hand" \
+  "$mech 7 --repo Gharib89/skills --section Decisions --body-file $file" "$(jq -r .command <<<"$out")"
+check "and no read or write" "host_identity" "$(cat "$SHIP_FAKE/calls")"
+
+reset
+jq -n '{body: "## Decisions\n\nold\n"}' > "$SHIP_FAKE/host_issue_body.1.json"
+: > "$SHIP_FAKE/host_issue_set_body.1.fail"
+printf '403' > "$SHIP_FAKE/host_issue_set_body.1.status"
+out=$(run 7 --repo Gharib89/skills --section Decisions --body-file "$file"); rc=$?
+check_rc "a --repo write the host refuses exits 1" 1 "$rc"
+check "with its status and the command to run by hand" \
+  "403|$mech 7 --repo Gharib89/skills --section Decisions --body-file $file" \
+  "$(jq -r '"\(.status)|\(.command)"' <<<"$out")"
 
 finish

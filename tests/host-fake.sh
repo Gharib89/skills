@@ -35,6 +35,9 @@
 # failed source here is `ship_load_host`'s tooling error instead.
 [ -d "${SHIP_FAKE:-}" ] || { echo "host-fake: SHIP_FAKE must name a directory" >&2; return 1; }
 _host_fake_defaults=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/host-fake/defaults
+# The host and repo `ship_load_host` resolved, so a test can assert which repo a
+# mechanic's calls would have reached.
+printf '%s %s\n' "${SHIP_HOST:-}" "${SHIP_REPO_SLUG:-}" > "$SHIP_FAKE/loaded"
 
 _host_fake() { # <fn> <args...>
   local fn=$1 n i a; shift
