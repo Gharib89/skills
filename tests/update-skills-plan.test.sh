@@ -122,6 +122,9 @@ skill "$repo" update-skills 1.0.0
 jq '.skills["update-skills"] = {source: "Gharib89/skills"}' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a source-repo skill the old tree lacks has a null old version" \
   'null 1.0.0' "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r '.source_skills[] | select(.skill == "update-skills") | "\(.old_version) \(.new_version)"')"
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 1.0.0 | fresh | x |' > "$repo/.claude/skills/update-skills/retired-terms.md"
+check "a source-repo skill the old tree lacks plans no retired rows" \
+  '[]' "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -c '[.retired[] | select(.skill == "update-skills")]')"
 
 # --old names the tree before the refresh when it is not HEAD.
 git -C "$repo" add -A && git -C "$repo" commit -qm refreshed
