@@ -93,7 +93,8 @@ new_blobs() {
 }
 sections='[]'
 for pair in pull_request_template.md:pr-template reviewers:reviewer-scaffolding local-gate.sh:local-gate \
-  coding-standards.md:coding-standards dimension-labels.md:dimension-labels issue-tracker-ado.md:ado-tracker-doc; do
+  coding-standards.md:coding-standards dimension-labels.md:dimension-labels issue-tracker-ado.md:ado-tracker-doc \
+  ship-block.md:ship-block; do
   t=${pair%%:*} p=$skills/setup-skills/${pair%%:*}
   [ "$(old_blobs "$p")" = "$(new_blobs "$p")" ] && continue
   sections=$(jq -c --arg s "${pair#*:}" --arg t "$t" '. + [{section: $s, template: $t}]' <<<"$sections")

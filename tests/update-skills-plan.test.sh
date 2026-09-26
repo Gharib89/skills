@@ -45,7 +45,7 @@ mkdir -p "$repo" && git -C "$repo" init -q && git -C "$repo" config user.email t
 skill "$repo" ship 1.0.0 "o/r#$A:tdd o/r#$A:code-review"
 skill "$repo" setup-skills 2.0.0 "o/r#$A:triage"
 mkdir -p "$repo/.claude/skills/setup-skills/reviewers"
-for f in pull_request_template.md local-gate.sh coding-standards.md dimension-labels.md issue-tracker-ado.md reviewers/github-claude-review.md; do
+for f in pull_request_template.md local-gate.sh coding-standards.md dimension-labels.md issue-tracker-ado.md ship-block.md reviewers/github-claude-review.md; do
   echo "old $f" > "$repo/.claude/skills/setup-skills/$f"
 done
 lock "$repo" '{"ship": {"source": "Gharib89/skills"}, "setup-skills": {"source": "gharib89/skills"},
@@ -111,6 +111,14 @@ echo new > "$repo/.claude/skills/setup-skills/reviewers/extra.md"
 check "a file added under reviewers/ names reviewer scaffolding" \
   '["pr-template","reviewer-scaffolding"]' "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -c '[.sections[].section]')"
 rm "$repo/.claude/skills/setup-skills/reviewers/extra.md"
+
+# The Ship block's template is a section of its own, unlike the SKILL.md it
+# moved out of.
+echo new > "$repo/.claude/skills/setup-skills/ship-block.md"
+check "a changed Ship block template names the ship-block section" \
+  '[{"section":"pr-template","template":"pull_request_template.md"},{"section":"ship-block","template":"ship-block.md"}]' \
+  "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -c .sections)"
+git -C "$repo" checkout -q -- .claude/skills/setup-skills/ship-block.md
 
 # With the templates reverted, setup-skills' SKILL.md is the one change left.
 git -C "$repo" checkout -q -- .claude/skills/setup-skills/pull_request_template.md

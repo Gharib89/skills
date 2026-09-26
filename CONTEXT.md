@@ -88,6 +88,10 @@ _Avoid_: outdated skill, stale dependency
 Re-installing a consumer repo's derived copies, and its composed skills at their pinned refs, then running Ship's preflight so a profile the new Ship no longer reads is reported at once. The repo owner's act, which `update-skills` performs.
 _Avoid_: sync, upgrade, update (the CLI's `update` ignores pinned refs)
 
+**Setup section**:
+One unit of what `setup-skills` writes into a consumer repo, fed by one template file or directory of it: the PR template, the reviewer scaffolding, the local gate, the CLAUDE.md Ship block and the like. A refresh re-runs a section when its template moved, and a re-run holds the repo's whole file to the whole template, keeping the repo's own choices, rather than applying only the template's change.
+_Avoid_: template, step, item
+
 **Retired term**:
 A word a source-repo skill stops using, declared in that skill's `retired-terms.md` with the version that retired it and the word that replaces it, so a refresh that crosses that version can find the word in the consumer repo's own documents and replace it there.
 _Avoid_: deprecated term, old vocabulary, stale wording
