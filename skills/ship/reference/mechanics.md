@@ -37,7 +37,7 @@ local-gate contract.
 | `read-issue` | 0 |
 | `isolate` | 0 |
 | `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
-| `file-issue` | 2, 4, 7 |
+| `file-issue` | 2, 4, 7; 9 with `--repo`, per Ship defect draft, on the human's word |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr` | 6 |

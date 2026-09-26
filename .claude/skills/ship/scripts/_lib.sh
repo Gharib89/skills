@@ -290,12 +290,36 @@ ship_detect_host() {
   export SHIP_HOST SHIP_OWNER SHIP_REPO SHIP_REPO_SLUG SHIP_ORG SHIP_PROJECT SHIP_ORG_URL
 }
 
-# ship_load_host: detect and source the adapter, or exit 2 with the contract.
+# ship_load_host [<owner>/<repo>]: detect and source the adapter, or exit 2 with
+# the contract. With a repo, the host is GitHub at that repo whatever the origin
+# names: the source repo, which a consumer on any host files a Ship defect to
+# (ADR 0004).
 ship_load_host() {
-  ship_detect_host || ship_tooling "cannot derive the host from the origin remote"
+  if [ -n "${1:-}" ]; then
+    SHIP_HOST=github SHIP_OWNER=${1%%/*} SHIP_REPO=${1#*/} SHIP_REPO_SLUG=$1
+    export SHIP_HOST SHIP_OWNER SHIP_REPO SHIP_REPO_SLUG
+  else
+    ship_detect_host || ship_tooling "cannot derive the host from the origin remote"
+  fi
   # shellcheck source=/dev/null
   source "${SHIP_HOST_ADAPTER:-$SHIP_SCRIPTS/host/$SHIP_HOST.sh}" \
     || ship_tooling "cannot load host adapter ${SHIP_HOST_ADAPTER:-$SHIP_HOST}"
+}
+
+# ship_repo_arg <value>: whether a --repo value is `<owner>/<repo>`.
+ship_repo_arg() { [[ ${1:-} =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; }
+
+# ship_reach_repo <repo> <mechanic-path> <args...>: under --repo, prove the
+# named repo's host answers before any read or write, and where it does not,
+# exit 1 with the invocation that performs the write, shell-quoted, for the
+# human to run where it does. An Azure DevOps run carries no GitHub
+# credentials, and a write it cannot make is still the human's to make.
+ship_reach_repo() {
+  local repo=$1; shift
+  host_identity >/dev/null 2>&1 && return 0
+  jq -n --arg e "$repo is unreachable from here" --arg c "$(printf '%q ' "$@")" \
+    '{error: $e, command: ($c | rtrimstr(" "))}'
+  exit 1
 }
 
 # Triage roles are canonical names; the label strings a repo actually uses live
@@ -321,22 +345,28 @@ ship_frontmatter() {
 
 # ship_missing_skill_reasons <root> <composes>: the skills ship loads through
 # the Skill tool, checked against a checkout before the claim. <composes> is
-# ship's `metadata.composes` line: space-separated `<source-repo>:<skill>`
-# entries, the single place the list lives. Prints one reason per skill whose
-# `<root>/.claude/skills/<skill>/SKILL.md` is absent, carrying the line that
-# installs it; prints nothing when every one is there.
+# ship's `metadata.composes` line: space-separated `<source-repo>#<sha>:<skill>`
+# entries, the single place the list lives, each pinned at the upstream commit
+# the source repo tested. Prints one reason per entry whose pin is not a 40-hex
+# sha, and one per skill whose `<root>/.claude/skills/<skill>/SKILL.md` is
+# absent, carrying the pinned line that installs it; prints nothing when every
+# one is well pinned and there.
 #
 # Only the consumer repo's own `.claude/skills` counts: a global copy under
 # ~/.claude/skills is a personal skill rather than this repo's derived copy, per
 # setup-skills.
 ship_missing_skill_reasons() {
-  local root=$1 entry source skill
+  local root=$1 entry source skill pin='^[^/#:]+/[^/#:]+#[0-9a-f]{40}$'
   local -a entries
   # read -ra, not an unquoted expansion: the split on spaces is intentional and
   # explicit, and a glob character in an entry stays a literal character.
   read -ra entries <<<"$2"
   for entry in ${entries[@]+"${entries[@]}"}; do
     source=${entry%%:*}; skill=${entry##*:}
+    if ! [[ $source =~ $pin ]]; then
+      printf 'composes pin invalid: %s; want <owner>/<repo>#<40-hex sha>:<skill>\n' "$entry"
+      continue
+    fi
     [ -f "$root/.claude/skills/$skill/SKILL.md" ] && continue
     printf 'skill missing: %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
       "$skill" "$source" "$skill"

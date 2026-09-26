@@ -60,8 +60,9 @@ when their moment comes, taking each one's logic from the skill itself, and tell
 any composed skill with an unattended mode that the run is unattended,
 explicitly, because it has no other way to know. **Read** `show-me` (phase 6,
 the Change outline) instead; [pr-body.md](reference/pr-body.md) says why. The
-frontmatter's `composes` line names all five with each one's source repo, and is
-what phase 0 checks: a skill added here is added there too.
+frontmatter's `composes` line names all five, each pinned at the upstream commit
+ship was tested against (`<owner>/<repo>#<sha>:<skill>`), and is what phase 0
+checks: a skill added here is added there too.
 
 ## The pipeline
 
@@ -76,8 +77,8 @@ once its `Done when:` holds, not before.
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every host write, and every gating read, goes through a
 mechanic**: one no mechanic performs is a **Ship defect** for the merge
-summary's `Ship defects:` row, not a hand-rolled call or an issue filed to
-another repo. [reference/mechanics.md](reference/mechanics.md) carries the rule
+summary's `Ship defects:` row, never a hand-rolled call, its drafted issue
+reaching the source repo on the human's word alone. [reference/mechanics.md](reference/mechanics.md) carries the rule
 in full, the informational reads it admits, the mechanic each phase runs and the
 contract they share, `--help` included.
 
@@ -227,7 +228,8 @@ the summary's shape, what `merge` does, its two refusals and the tracker drafts.
 **Hard stop.** Write the summary per that file, uncompressed. Attended: post it
 in the conversation and wait for an explicit "merge": the word is exact, and a
 near miss is asked back. On approval run `merge <pr> <issue|none> [--worktree
-<path>]`, `update-issue-body` per draft, then `cleanup <issue|none>`; a nonzero
+<path>]`, `update-issue-body` per draft, then `cleanup <issue|none>`, and a Ship
+defect's draft is filed only on a word of its own; a nonzero
 exit, or a `false` in `merge`'s or `cleanup`'s JSON, re-runs the mechanic that
 owns the step, and a step no mechanic re-does is a Ship defect for the summary.
 Unattended: `comment-pr <pr> --body-file` with the summary, and return.
@@ -255,7 +257,7 @@ hold around that:
 | Stop | Reason | Claim |
 |---|---|---|
 | Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | no claim |
-| A skill ship composes is not installed | `skill missing: <skill>; run <install line>` | no claim |
+| A skill ship composes is not installed, or its pin is malformed | `skill missing: <skill>; run <install line>`, `composes pin invalid: <entry>` | no claim |
 | Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | no claim |
 | Issue too vague to plan | `ambiguous` | no claim |
 | Change outgrows one PR, or needs a redesign the issue did not scope | `needs-split` | attended: ask; unattended: hand back |
