@@ -1155,8 +1155,9 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # each carrying the `path` its finding sits on and the `lead` line that states
 # it, cut at the same width: a run answers one thread off the brief, and a row
 # holding an id alone sent it back for the full shape to read what the finding
-# was. A lead that drops a later line with text carries the marker too, once, so
-# a finding below a short first line is not read as the whole comment (#328).
+# was. A lead that drops a later line with text carries the marker too (one
+# marker, even where the width cut also bit), so a finding below a short first
+# line is not read as the whole comment (#328). A CRLF blank line is blank.
 # A thread named by <full-ids-json> carries its whole first comment as
 # `lead`, so a clipped lead is lifted by the re-poll that lifts a clipped round
 # (#327). The string "unavailable" passes through as itself. `reviewer_run` passes
@@ -1177,10 +1178,10 @@ ship_brief() {
       | if ($items | length) == 0 then clip
         elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
         else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
-    def lead: [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
-      | ($lines[0] // "") as $first
-      | if ($lines | length) > 1 and ($first | length) <= 200
-        then $first + "\n...[truncated]" else ($first | clip) end;
+    def lead: [splits("\n") | select(test("^[ \t\r]*$") | not)] as $lines
+      | ($lines[0] // "") as $first | ($first | clip) as $cut
+      | if ($lines | length) > 1 and $cut == $first
+        then $first + "\n...[truncated]" else $cut end;
     (.reviewer.login // "") as $await
     | {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked, reviewer_run,
      rounds: [.reviews[$key][] | select((mine | not) and awaited($await)) | . as $r

@@ -174,14 +174,21 @@ check "a long lead is cut at the finding-items width and says so" \
   "$(ship_brief "$long" Gharib89 on_head | jq -r '.threads[0].lead')"
 
 # Blank lines are not text: a single line padded with them was read whole and
-# takes no marker. A long first line that also drops later lines was cut twice,
-# and says so once, so the review loop's rule matches one trailing marker.
+# takes no marker, a browser-typed `\r` blank line included. A long first line
+# that also drops later lines was cut twice and says so once, the way a clipped
+# round's finding items carry a single marker.
 padded=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
   reviews: {on_head: [], all: [], total: 0},
   threads: [{id: "t8", resolved: false, replied: false, author: "Copilot", path: "x.sh",
              body: "\n\n  one line, whole  \n\n"}]}')
 check "a single line padded with blank lines is not marked" \
   '  one line, whole  ' "$(ship_brief "$padded" Gharib89 on_head | jq -r '.threads[0].lead')"
+crlf=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [], all: [], total: 0},
+  threads: [{id: "t10", resolved: false, replied: false, author: "claude", path: "x.sh",
+             body: "typed in the browser\r\n\r\n"}]}')
+check "a CRLF blank line is not text" \
+  "$(printf 'typed in the browser\r')" "$(ship_brief "$crlf" Gharib89 on_head | jq -r '.threads[0].lead')"
 both=$(jq -cn --arg b "$(rep 240 t)"$'\n\n'"a later paragraph" '{head_sha: "abc1234", mergeable: "clean",
   landed_by: null, reviews: {on_head: [], all: [], total: 0},
   threads: [{id: "t9", resolved: false, replied: false, author: "Copilot", path: "x.sh", body: $b}]}')

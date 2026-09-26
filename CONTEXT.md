@@ -149,7 +149,7 @@ A review row that counts as a round: one with text that is not wholly a quota or
 _Avoid_: real review, meaningful round
 
 **Round clip**:
-The 2000-character cap `poll-pr` puts on every review body, marked `...[truncated]` where it bites, so one poll cannot flood the run's window. `--brief --full <id>` lifts it for the rows it names and nothing else, and `--full` without `--brief` is refused. It covers review bodies alone. A `--brief` thread row's `lead` is its first line with text, cut at 200 characters, and carries the same marker where either cut bites: past 200 characters, or where a later line with text was dropped. Naming the thread in `--brief --full <id>` returns its first comment whole as `lead`. A reviewer that opens with a preamble pushes its findings past the cap, and a round that comes back clipped is one phase 7 has not read.
+The 2000-character cap `poll-pr` puts on every review body, marked `...[truncated]` where it bites, so one poll cannot flood the run's window. `--brief --full <id>` lifts it for the rows it names and nothing else, and `--full` without `--brief` is refused. It covers review bodies alone. A `--brief` thread row's `lead` is its first line with text, cut at 200 characters, and carries the same marker where either cut bites: past 200 characters, or where a later line with text was dropped. Naming the thread in `--brief --full <id>` returns its first comment whole as `lead`. A reviewer that opens with a preamble pushes its findings past the cap, and a round or lead that comes back clipped is one phase 7 has not read.
 _Avoid_: truncation, body limit
 
 **Reviewed**:
