@@ -35,9 +35,10 @@
 #   for phase 1, and no kind of stop. mentioned_by[] is the same rows widened to
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an
 #   open issue or a merged PR without reaching for the host CLI; both lists
-#   carry live cross-references only, open issues and open or merged PRs. pruned[] lists sibling worktrees removed because their HEAD is
-#   exactly the head of the merged or closed PR their branch names; a worktree
-#   at any other commit is live work and kept. reviewers[] is one {name, review_on_push} row per reviewer block:
+#   carry live cross-references only, open issues and open or merged PRs.
+#   pruned[] lists sibling worktrees removed because their HEAD is exactly the
+#   head of the merged or closed PR their branch names; a worktree at any other
+#   commit is kept. reviewers[] is one {name, review_on_push} row per reviewer block:
 #   the copilot_code_review ruleset's true or false for the block posting under
 #   the Copilot login, null for every other block and where the host could not
 #   answer. It is the ruleset read the Trigger check rests on, reported for
@@ -157,10 +158,8 @@ while IFS= read -r reason; do
   reasons+=("$reason")
 done < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
-# Prune a sibling worktree only when its HEAD is exactly the head of the merged
-# or closed PR its branch names: a branch name alone is reused, so a fresh
-# worktree an old PR's name matches, or one that gained commits after its PR
-# closed, is live work and stays. An open or unknown PR leaves it alone too.
+# Prune rule in the header. The sha, not the branch name, decides: names get
+# reused, so a name match alone would delete a fresh worktree's unfinished work.
 pruned='[]'
 container=$(ship_worktree_container)
 if [ -d "$container" ]; then
@@ -170,7 +169,7 @@ if [ -d "$container" ]; then
     br=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null) || continue
     head=$(git -C "$wt" rev-parse HEAD 2>/dev/null) || continue
     pr=$(host_pr_for_branch "$br") || continue
-    case $(jq -r --arg h "$head" 'if .head_sha == $h then .state else "live" end' <<<"$pr") in
+    case $(jq -r --arg h "$head" 'if .head_sha == $h then .state else "keep" end' <<<"$pr") in
       merged|closed)
         git -C "$root" worktree remove --force "$wt" >/dev/null 2>&1 \
           && git -C "$root" branch -D "$br" >/dev/null 2>&1

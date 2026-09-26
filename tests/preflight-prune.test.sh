@@ -5,8 +5,10 @@
 # PR closed, keeps its work.
 #
 # Driven over the Host fake inside a throwaway GitHub-origin checkout whose
-# sibling container holds one worktree per case; there is no profile, so
-# preflight's other reasons are present and beside the point.
+# sibling container holds one worktree per case. The fake answers the same PR
+# for every branch, so each case removes its worktree before the next adds one.
+# There is no profile, so preflight's other reasons are present and beside the
+# point.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -42,8 +44,8 @@ branch() { g branch --list --format='%(refname:short)' "fix/$1"; }
 wt=$(worktree fresh)
 pr closed 0123456789abcdef0123456789abcdef01234567
 check "a worktree off another PR's head is not pruned" '[]' "$(preflight | jq -c .pruned)"
-check "and survives" true "$([ -d "$wt" ] && echo true)"
-g worktree remove --force "$wt"; g branch -D -q fix/fresh
+check "and survives" true "$([ -d "$wt" ] && echo true || echo false)"
+g worktree remove --force "$wt" 2>/dev/null; g branch -D -q fix/fresh 2>/dev/null
 
 # The merged PR's own leftover: HEAD is its head, so the worktree and its local
 # branch go, and pruned[] names it.

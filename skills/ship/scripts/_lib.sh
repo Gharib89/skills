@@ -69,7 +69,7 @@
 #                                           when it does.
 #   host_pr_create <head> <base> <title> <body-file> <issue> -> {number,url,created_at}
 #   host_pr_get <pr>                     -> {number,url,title,body,head_sha,head_ref,base_ref,state,mergeable}
-#   host_pr_for_branch <branch>          -> {number,state,head_sha} of the newest PR with that head, or null
+#   host_pr_for_branch <branch>          -> {number,state,head_sha} of the newest PR whose head branch is <branch>, or null
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
 #                                           status: pending | success | failure.
 #   host_pr_reviews <pr> <head_sha> [<full-ids-json>]
