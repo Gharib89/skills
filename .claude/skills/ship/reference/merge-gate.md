@@ -155,12 +155,12 @@ before a reviewer lands.
 **On approval**, from the worktree, `merge <pr> <issue|none> [--worktree
 <path>]`. Its header carries what it does and what each refusal protects
 against: `pr-closed: <state>` and `stale-base: behind <n> on <base>` merge
-nothing (for the second, rebase, re-run the local gate and come back to this
-gate); otherwise it squash-merges with the PR title as the subject, closes the
-issue, deletes the remote branch, fast-forwards the local base, and releases the
-claim and strips `ready-for-agent`, so a reopened issue goes back through
-triage. Then each drafted tracker section, then `cleanup <issue|none>`, which
-removes the worktree and force-deletes the local branch.
+nothing (for the second, merge the base in, re-run the local gate and come back
+to this gate); otherwise it squash-merges with the PR title as the subject,
+closes the issue, deletes the remote branch, fast-forwards the local base, and
+releases the claim and strips `ready-for-agent`, so a reopened issue goes back
+through triage. Then each drafted tracker section, then `cleanup <issue|none>`,
+which removes the worktree and force-deletes the local branch.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this

@@ -175,11 +175,11 @@ finding carries a disposition; otherwise go back. A gate run while `code-review`
 is still out is paid twice when a finding lands. Run `base-fresh` first: CI
 tests the merge ref, so a branch that predates a merge still goes green while
 every "does this exist?" answer taken from the worktree was pre-merge; behind:
-rebase, re-run, continue. Confirm every `Carry:` file still matches the main
-checkout's copy; a difference is `carried file modified`, because ship has no
-business editing untracked secrets. Then run the gate at the profile's
-`Location:` from the worktree, inline (small lane: small-lane.md). Its verdict is
-one JSON object: `verdict` `pass|fail|unavailable`, per-gate statuses
+follow its advice, re-run, continue. Confirm every `Carry:` file still matches
+the main checkout's copy; a difference is `carried file modified`, because ship
+has no business editing untracked secrets. Then run the gate at the profile's
+`Location:` from the worktree, inline (small lane: small-lane.md). Its verdict
+is one JSON object: `verdict` `pass|fail|unavailable`, per-gate statuses
 `pass|fail|deferred-to-ci|unavailable`, and `gates.secrets` in every lane;
 unparseable output or a missing `secrets` key reads as `unavailable`. `fail`:
 fix loop. `deferred-to-ci`: proceed, the merge summary naming each deferred
@@ -267,7 +267,7 @@ hold around that:
 | Local gate verdict `unavailable` | `local gate unavailable: <gates>` | attended: ask; unattended: hand back |
 | Carried file changed | `carried file modified: <file>` | attended: ask; unattended: hand back |
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
-| The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you rebase; unattended: hand back |
+| The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you merge the base in; unattended: hand back |
 | The PR is closed at the merge gate | `pr-closed: <state>` | attended: ask; unattended: hand back |
 | `prepare` failed its Cloud lane `Bootstrap:` | `bootstrap-failed` | no claim |
 | Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | no claim |
