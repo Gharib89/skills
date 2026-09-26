@@ -180,10 +180,9 @@ drift issue this PR closes; steps 5, 6 and 8 run unchanged. Per row:
 2. Re-add the skill at the head, its install line with `#<head>` in place of
    the pin, and move the pin on the `composes` line that names it
    (`skills/ship/SKILL.md` or `skills/setup-skills/SKILL.md`, the composing
-   skill), plus the sha on
-   every printed install line in setup-skills' step 1.2 that installs it. A
-   printed line installing several skills at one sha is split when their pins
-   part.
+   skill), plus the sha on every printed install line in setup-skills' step
+   1.2 that installs it. A printed line installing several skills at one sha is
+   split when their pins part.
 3. Judge the upstream diff against what the composing skill's prose relies
    on where it composes the skill. Where it breaks a reliance, rework that
    prose through `/writing-for-agents` in this same change: no skill ships
