@@ -7,7 +7,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 m=skills/ship/scripts/poll-pr.sh
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to 1800s] [--brief, or --brief --full <id>[,<id>] to read those rounds whole] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to 1800s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--timeout <s>] [--interval <s>]"
 
 err() { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
