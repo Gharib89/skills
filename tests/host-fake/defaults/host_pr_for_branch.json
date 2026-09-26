@@ -1,4 +1,5 @@
 {
   "number": 7,
-  "state": "open"
+  "state": "open",
+  "head_sha": "deadbee"
 }
