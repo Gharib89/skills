@@ -66,7 +66,7 @@ Direct reads: <none | <call> · <why>, ...>     (from the Run file's ## Direct r
 Timing:      <`run-file timing`'s `row`, verbatim>
 
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
-(with a draft: Reply "file defects" to file the drafts at Gharib89/skills.)
+(with a Ship defect draft: Reply "file defects" to file the drafts at Gharib89/skills.)
 ```
 
 **Every row is grounded in a result from this run**: `Local gate:` is the
@@ -132,12 +132,12 @@ section, because `update-issue-body` replaces nothing smaller.
 A drafted section is written after the merge and never before, so no issue
 records code that has not landed: once `merge` answers `merged: true`, and
 before `cleanup`, run `update-issue-body <n> --section "<section>" --body-file
-<draft>` per draft, `<section>` verbatim from the heading `read-issue` returned.
+<draft>` per tracker draft, `<section>` verbatim from the heading `read-issue` returned.
 Re-read the issue first: a section that no longer matches its base is
 redrafted, posted, and written on the human's explicit "yes". `created: true`
 for a section the draft meant to replace means the name missed: re-run with the
 returned heading, and name the stray section as a Ship defect. Exit 1 means
-nothing was written: a Ship defect for the summary, with the draft attached.
+nothing was written: a Ship defect for the summary, with the tracker draft attached.
 
 The unattended lane runs no merge, so under each draft the summary gives the
 command a human runs after merging, from a file they save the draft to,
@@ -168,11 +168,11 @@ gate. Do not re-open the whole pipeline.
 
 ## Filing a Ship defect
 
-A draft reaches the source repo on the human's word alone ([ADR 0004](https://github.com/Gharib89/skills/blob/main/docs/adr/0004-cross-repo-writes-reach-the-source-repo-on-the-humans-word.md)),
+A Ship defect draft reaches the source repo on the human's word alone ([ADR 0004](https://github.com/Gharib89/skills/blob/main/docs/adr/0004-cross-repo-writes-reach-the-source-repo-on-the-humans-word.md)),
 and "merge" is not that word: it approves the PR, not publishing the run's
 context to a public repo. On "file defects", or a word naming one draft, run
 `file-issue --repo Gharib89/skills --title "<title>" --body-file <draft> --label
-needs-triage` per draft and put its answer on the row: the number filed, the
+needs-triage` per Ship defect draft and put its answer on the row: the number filed, the
 candidates it answered with instead, each read the way phase 2 reads one, or,
 on exit 1 with a `command`, that command verbatim for the human to run where
 GitHub answers. Before or after the merge, either order holds.
@@ -183,6 +183,8 @@ GitHub answers. Before or after the merge, either order holds.
 link. Do not wait, poll, or merge; the claim stays on the issue, which carries
 the open PR, so later fires skip it until a human merges. The last line becomes
 "Ready to merge: a human merges from the PR." A Ship defect's draft is never
-filed from here: the comment carries each draft verbatim under its `file-issue
---repo` command, for the human to run. Detail in
+filed from here, and the comment drops the "file defects" line: it carries each
+draft verbatim under the command a human runs from a file they save it to,
+`.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
+"<title>" --body-file <file> --label needs-triage`. Detail in
 [unattended.md](unattended.md).

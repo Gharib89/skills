@@ -23,6 +23,15 @@ reset() { rm -f "$SHIP_FAKE"/*; }
 
 check "a --repo that is not owner/repo is the usage error" "$usage" \
   "$(run --repo nope --title t --body-file "$file" --label needs-triage | jq -r .error)"
+# The slug lands in a REST path, so a traversal or a flag-shaped owner is the
+# usage error rather than a request to another endpoint.
+for bad in ../x x/.. x/. -a/b a/b/c; do
+  check "--repo $bad is the usage error" "$usage" \
+    "$(run --repo "$bad" --title t --body-file "$file" --label needs-triage | jq -r .error)"
+done
+check "a repo name may start with a dot" 'github o/.github' \
+  "$(rm -f "$SHIP_FAKE"/*; printf '[]\n' > "$SHIP_FAKE/host_issues_open.1.json"
+     run --repo o/.github --title t --body-file "$file" --label needs-triage >/dev/null; cat "$SHIP_FAKE/loaded")"
 check "a bare --repo is the usage error" "$usage" \
   "$(run --title t --body-file "$file" --label needs-triage --repo | jq -r .error)"
 

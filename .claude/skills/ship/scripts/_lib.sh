@@ -306,8 +306,13 @@ ship_load_host() {
     || ship_tooling "cannot load host adapter ${SHIP_HOST_ADAPTER:-$SHIP_HOST}"
 }
 
-# ship_repo_arg <value>: whether a --repo value is `<owner>/<repo>`.
-ship_repo_arg() { [[ ${1:-} =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; }
+# ship_repo_arg <value>: whether a --repo value is `<owner>/<repo>`. The slug
+# lands in a REST path, so an owner is GitHub's alphanumerics and inner hyphens,
+# and a repo name that is all dots is a traversal, not a name.
+ship_repo_arg() {
+  [[ ${1:-} =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$ ]] || return 1
+  case ${1#*/} in .|..) return 1 ;; esac
+}
 
 # ship_reach_repo <repo> <mechanic-path> <args...>: under --repo, prove the
 # named repo's host answers before any read or write, and where it does not,

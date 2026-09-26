@@ -75,6 +75,21 @@ check "a printed install line is checked per --skill, unpinned lines skipped" \
 pin drift: triage is pinned at o/r#$B in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
   "$(out_of "$d")"
 
+# An unpinned composes entry is drift, named by its skill: preflight refuses the
+# form, and this check must not read the source as the skill.
+d=$(tree nopin "$(skill_file "o/r:tdd u/c#$B:find-docs")" "$setup" "$lock")
+check "an unpinned composes entry is drift, named by its skill" \
+  "pin drift: tdd is pinned at o/r#none in skills/ship/SKILL.md, the lock installed o/r#$A" \
+  "$(out_of "$d")"
+
+# A printed line that lost its sha installs upstream HEAD for a skill the lock
+# pins; one for a skill the lock pins nowhere (ship itself) is not a pin.
+body=$(printf '%s\n\n```sh\nnpx skills add o/r --skill tdd --agent claude-code -y\n```\n' "$setup")
+d=$(tree dropped "$ship" "$body" "$lock")
+check "a printed line that dropped the sha of a pinned skill is drift" \
+  "pin drift: tdd is pinned at o/r#none in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
+  "$(out_of "$d")"
+
 # A body line shaped like the frontmatter key is prose, not a pin.
 body=$(printf '%s\n\n  composes: o/r#%s:tdd\n' "$setup" "$B")
 check_rc "a composes line below the frontmatter is not read" 0 \

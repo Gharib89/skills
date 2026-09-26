@@ -139,7 +139,7 @@ Everything a consumer repo depends on, all of it under `skills/`:
 
 File as an issue labelled `needs-triage`.
 
-This repo is Ship's own source, so a run here is already upstream and a **Ship defect** met during the run is an adjacent find: it takes phase 2's dispositions, through `file-issue` and its candidate check, and is still named on the merge summary's `Ship defects:` row. It takes no source-repo draft under ADR 0004, because the repo the run is in is the source repo.
+This repo is Ship's own source, so a run here is already in the source repo and a **Ship defect** met during the run is an adjacent find: it takes phase 2's dispositions, through `file-issue` and its candidate check, and is still named on the merge summary's `Ship defects:` row. It takes no source-repo draft under ADR 0004, because the repo the run is in is the source repo.
 
 ## Docs sync
 
