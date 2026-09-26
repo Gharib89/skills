@@ -55,7 +55,7 @@ while :; do
   waited=$((SECONDS - start))
   if [ "$(jq -r .mergeable <<<"$prj")" = conflict ]; then
     emit conflict "$sha" '[]' "$waited"
-    echo "PR $pr conflicts with its base: fetch, rebase, resolve, re-run base-fresh and the local gate, push." >&2
+    echo "PR $pr conflicts with its base: fetch, merge the base in, resolve, re-run base-fresh and the local gate, push." >&2
     exit 1
   fi
   checks=$(host_pr_checks "$pr" "$sha") || ship_tooling "cannot read checks"
