@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v11.0.1 (2026-09-26)
+
+### Bug Fixes
+
+- **ship**: Preflight prunes only a PR's own leftover worktree
+  ([#324](https://github.com/Gharib89/skills/pull/324),
+  [`6a6ba9b`](https://github.com/Gharib89/skills/commit/6a6ba9b545fb52e7e4b628a246fe6dd995f5d237))
+
+
 ## v11.0.0 (2026-09-26)
 
 ### Bug Fixes
