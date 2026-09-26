@@ -63,7 +63,8 @@ from the main checkout, and stop.
 ### 4. Composed skills at their pins
 
 Run every `composed[].install` line, then `$S/preflight.sh none` and keep its
-`reasons`. A consumer repo never installs a drift row's `head`: that version is
+`reasons`; a `worktree exists` reason naming this run's own worktree is
+expected. A consumer repo never installs a drift row's `head`: that version is
 one nobody tested Ship against, and the row reaches the source repo in step 7
 instead.
 
@@ -78,10 +79,12 @@ are never in the lock and never touched.
 
 ### 6. setup-skills sections
 
-Invoke `/setup-skills` through the Skill tool when step 4's `reasons` carry
-`profile missing` or `profile invalid`, or `sections` is non-empty, and name
-what to redo: its Re-run path for a profile refusal, and for each section only
-the step-5 item its template feeds:
+`/setup-skills` re-runs when step 4's `reasons` carry `profile missing` or
+`profile invalid`, or `sections` is non-empty. Ask the owner to run it from a
+new session opened at the worktree, and wait: it takes no model invocation, and
+this session's copy predates the refresh. Tell them what to redo: its Re-run
+path for a profile refusal, and for each section only the step-5 item its
+template feeds:
 
 | `section` | setup-skills item |
 |---|---|
@@ -100,10 +103,10 @@ against the one now.
 ### 7. Report upstream drift (consumer repo)
 
 `drift` non-empty, and `mode` is `consumer`: the source repo keeps one open
-issue for it. Write a body file holding one line saying which repo last reported
-it, then a `## Drift` section whose table is `| Skill | Pinned | Upstream head |`,
-one row per `drift` entry; that body holds skill names and refs only, never
-this repo's context. Then:
+issue for it. Write a body file holding a `## Drift` section and nothing else,
+its table `| Skill | Pinned | Upstream head |` with one row per `drift` entry.
+The source repo is public, so the body carries skill names and refs only: not
+this repo's name, nor anything else about it (ADR 0004). Then:
 
 ```sh
 $S/file-issue.sh --repo Gharib89/skills --title "Upstream drift: composed skills" --body-file <body> --label needs-triage
