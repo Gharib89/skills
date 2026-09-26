@@ -41,8 +41,10 @@ fix() { printf '%s' "$2" > "$tmp/fix/$(printf '%s' "$1" | tr '/' '_')"; }
 
 repo=$tmp/repo
 mkdir -p "$repo/.claude/skills/ship" "$repo/.claude/skills/setup-skills"
+# setup-skills composes code-review a second time, at a pin the first entry
+# overrides, and grilling unpinned, which is no pin at all.
 printf -- '---\nname: ship\nmetadata:\n  composes: o/r#%s:tdd o/r#%s:code-review o/r#%s:find-docs\n---\n' "$A" "$A" "$H" > "$repo/.claude/skills/ship/SKILL.md"
-printf -- '---\nname: setup-skills\n---\n' > "$repo/.claude/skills/setup-skills/SKILL.md"
+printf -- '---\nname: setup-skills\nmetadata:\n  composes: o/r#%s:code-review o/r:grilling\n---\n' "$X" > "$repo/.claude/skills/setup-skills/SKILL.md"
 jq -n --arg a "$A" '{version: 1, skills: {
   ship: {source: "gharib89/skills", sourceType: "github", skillPath: "skills/ship/SKILL.md"},
   tdd: {source: "o/r", ref: $a, sourceType: "github", skillPath: "skills/engineering/tdd/SKILL.md"},
@@ -50,25 +52,42 @@ jq -n --arg a "$A" '{version: 1, skills: {
   "find-docs": {source: "o/r", ref: $a, sourceType: "github", skillPath: "skills/find-docs/SKILL.md"},
   grilling: {source: "o/r", ref: $a, sourceType: "github", skillPath: "skills/grilling/SKILL.md"},
   research: {source: "o/r", sourceType: "github", skillPath: "skills/research/SKILL.md"},
+  solo: {source: "p/q", ref: $a, sourceType: "github", skillPath: "SKILL.md"},
+  wide: {source: "w/w", ref: $a, sourceType: "github", skillPath: "skills/wide/SKILL.md"},
+  far: {source: "z/z", sourceType: "github", skillPath: "skills/far/SKILL.md"},
   mine: {source: "./local", sourceType: "local"}}}' > "$repo/skills-lock.json"
 
 fix "repos/o/r/commits/HEAD" '{"sha": "'$H'"}'
 # Between A and HEAD, tdd's folder changed, and a folder whose name only starts
 # with code-review's did; code-review's own and grilling's did not.
 fix "repos/o/r/compare/$A...$H" '{"files": [{"filename": "skills/engineering/tdd/SKILL.md"}, {"filename": "skills/engineering/code-review-extra/SKILL.md"}]}'
+# A skill at the repo root owns the whole repo, so any changed file moves it.
+fix "repos/p/q/commits/HEAD" '{"sha": "'$H'"}'
+fix "repos/p/q/compare/$A...$H" '{"files": [{"filename": "README.md"}]}'
+# A compare lists 300 files at most, so a full list cannot show a folder
+# unchanged. z/z answers nothing.
+fix "repos/w/w/commits/HEAD" '{"sha": "'$H'"}'
+fix "repos/w/w/compare/$A...$H" "$(jq -cn '{files: [range(300) | {filename: "other/\(.)"}]}')"
 
-out=$(bash "$heads" "$repo"); rc=$?
-check_rc "heads exits 0" 0 "$rc"
+out=$(bash "$heads" "$repo" 2>"$tmp/err"); rc=$?
+check_rc "heads exits 0 with one upstream unreachable" 0 "$rc"
 check "a skill whose folder changed since its base is at HEAD; one unchanged stays at its base; one with no base is at HEAD" \
-  '{"code-review":"'$A'","find-docs":"'$H'","grilling":"'$A'","research":"'$H'","tdd":"'$H'"}' "$(jq -cS . <<<"$out")"
-check "the composes pin, not the lock's ref, is a composed skill's base; a source-repo or local entry is never asked for" \
+  '{"code-review":"'$A'","find-docs":"'$H'","grilling":"'$A'","research":"'$H'","solo":"'$H'","tdd":"'$H'","wide":"'$H'"}' "$(jq -cS .heads <<<"$out")"
+check "an unreachable upstream is a row naming its skill and the request, not a head" \
+  '[{"skill":"far","error":"cannot read https://api.github.com/repos/z/z/commits/HEAD"}]' "$(jq -c .unreachable <<<"$out")"
+check "the first composes pin, not a later one or the lock's ref, is a composed skill's base; a source-repo or local entry is never asked for" \
   "https://api.github.com/repos/o/r/commits/HEAD
-https://api.github.com/repos/o/r/compare/$A...$H" "$(sort -u "$tmp/log")"
+https://api.github.com/repos/o/r/compare/$A...$H
+https://api.github.com/repos/p/q/commits/HEAD
+https://api.github.com/repos/p/q/compare/$A...$H
+https://api.github.com/repos/w/w/commits/HEAD
+https://api.github.com/repos/w/w/compare/$A...$H
+https://api.github.com/repos/z/z/commits/HEAD" "$(sort -u "$tmp/log")"
+check "each upstream's HEAD is asked for once" 1 "$(grep -c 'repos/o/r/commits/HEAD' "$tmp/log")"
 
-# A request that fails is an unreachable upstream, not a head.
-rm "$tmp/fix/repos_o_r_commits_HEAD"
+echo '[' > "$repo/skills-lock.json"
 out=$(bash "$heads" "$repo" 2>/dev/null); rc=$?
-check_rc "an unreachable upstream exits 1" 1 "$rc"
-check "an unreachable upstream names the request" "cannot read https://api.github.com/repos/o/r/commits/HEAD" "$(jq -r .error <<<"$out")"
+check_rc "an unreadable lock exits 1" 1 "$rc"
+check "an unreadable lock names it" "cannot read lock: $repo/skills-lock.json" "$(jq -r .error <<<"$out")"
 
 finish

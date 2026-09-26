@@ -71,7 +71,7 @@ jobs:
       # its own at all is one this push added, arriving carrying its first
       # version: HEAD is its baseline, tagged and pushed here, and it releases from
       # the next push that touches it.
-      - name: Refuse to release without a reachable baseline tag
+      - name: Tag a new skill's baseline, refuse a missing one
         run: |
           for s in $SKILLS; do
             v=$(sed -n 's/^  version: //p' "skills/$s/SKILL.md")

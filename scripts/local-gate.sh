@@ -153,8 +153,9 @@ run stray-files scripts/stray-file-check.sh
 # held to the same contract, from their own directory.
 contract() {
   local rc=0
+  # The second tree is a part of the first, passed so a violation prints once.
   scripts/contract-check.sh skills/ship/scripts skills || rc=1
-  scripts/contract-check.sh skills/update-skills/scripts skills || rc=1
+  scripts/contract-check.sh skills/update-skills/scripts skills/update-skills || rc=1
   return $rc
 }
 run contract contract

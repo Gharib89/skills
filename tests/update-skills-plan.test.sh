@@ -54,14 +54,18 @@ lock "$repo" '{"ship": {"source": "Gharib89/skills"}, "setup-skills": {"source":
 git -C "$repo" add -A && git -C "$repo" commit -qm old
 
 # The refresh: ship moves to 1.1.0 and its pins to B; setup-skills' own SKILL.md
-# changes, and so does exactly one template file.
+# changes, and so does exactly one template file. setup-skills now also names
+# tdd, at a pin ship's first entry overrides, and grilling unpinned, which is
+# no composes entry. The installs have begun, so the working-tree lock already
+# records tdd at B and grilling at D: the old refs come from the old tree.
 skill "$repo" ship 1.1.0 "o/r#$B:tdd o/r#$B:code-review"
-skill "$repo" setup-skills 2.0.1 "o/r#$A:triage"
+skill "$repo" setup-skills 2.0.1 "o/r#$A:triage o/r#$C:tdd o/r:grilling"
 echo "new" > "$repo/.claude/skills/setup-skills/pull_request_template.md"
+jq --arg b "$B" --arg d "$D" '.skills.tdd.ref = $b | .skills.grilling.ref = $d' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 
 # Upstream: tdd's folder has moved past B, code-review's has not; triage has no
 # head reported; grilling has an update and research does not.
-echo '{"tdd": "'$C'", "code-review": "'$B'", "grilling": "'$D'", "research": "'$A'"}' > "$tmp/heads.json"
+echo '{"heads": {"tdd": "'$C'", "code-review": "'$B'", "grilling": "'$D'", "research": "'$A'"}, "unreachable": []}' > "$tmp/heads.json"
 out=$(bash "$plan" "$repo" "$tmp/heads.json"); rc=$?
 check_rc "a plan exits 0" 0 "$rc"
 check "a consumer checkout is consumer mode" consumer "$(jq -r .mode <<<"$out")"
@@ -70,14 +74,14 @@ check "each source-repo skill carries its old and new version and its changelog"
   '[{"skill":"setup-skills","old_version":"2.0.0","new_version":"2.0.1","changelog":".claude/skills/setup-skills/CHANGELOG.md"},{"skill":"ship","old_version":"1.0.0","new_version":"1.1.0","changelog":".claude/skills/ship/CHANGELOG.md"}]' \
   "$(jq -c .source_skills <<<"$out")"
 
-check "every composed skill refreshes at the refreshed composes line's pin, from the old lock's ref" \
+check "every composed skill refreshes at its first composes pin, from the old tree's lock ref; an unpinned entry is none" \
   '[{"skill":"code-review","source":"o/r","pin":"'$B'","old_ref":null,"install":"npx skills add o/r#'$B' --skill code-review --agent claude-code -y"},{"skill":"tdd","source":"o/r","pin":"'$B'","old_ref":"'$A'","install":"npx skills add o/r#'$B' --skill tdd --agent claude-code -y"},{"skill":"triage","source":"o/r","pin":"'$A'","old_ref":"'$A'","install":"npx skills add o/r#'$A' --skill triage --agent claude-code -y"}]' \
   "$(jq -c .composed <<<"$out")"
 
 check "a composed skill whose upstream head is past its pin is a drift row; one at its pin, or with no head, is not" \
   '[{"skill":"tdd","pin":"'$B'","head":"'$C'"}]' "$(jq -c .drift <<<"$out")"
 
-check "an other skill whose head differs from its ref is offered at the head; one at its head is not" \
+check "an other skill whose head differs from its old ref is offered at the head; one at its head is not" \
   '[{"skill":"grilling","source":"o/r","old_ref":"'$A'","head":"'$D'","install":"npx skills add o/r#'$D' --skill grilling --agent claude-code -y"}]' \
   "$(jq -c .others <<<"$out")"
 
