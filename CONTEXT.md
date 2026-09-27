@@ -76,6 +76,10 @@ _Avoid_: package (overloaded), module, subproject
 Tracked files that tools act on without a package manager, such as shell scripts, Dockerfiles, workflow YAML and Markdown. They take the edit and commit rungs only, never turn.
 _Avoid_: pseudo-stack, file type
 
+**Catalog**:
+The harness setup skill's closed, shipped list of stacks and file kinds, one entry each, carrying the signals that detect it and the known tools per role (a default and its alternatives, each with its publisher and trust tier). It changes only through a change to the skill, never at run time: a stack with no entry is reported, and every tool drawn from an entry still passes the install check.
+_Avoid_: registry, tool list, knowledge base
+
 **Local-only**:
 A verdict that a repo, or one rung of its harness, runs in a local session and not in the cloud sandbox, always recorded with its reason. A repo is local-only when evidence in it shows the project needs something the cloud sandbox cannot give (a non-Linux-x86_64 build, a private network, interactive or SSO auth, more than the VM holds, hardware or licensed tools, org IP allowlisting or Zero Data Retention, secrets that cannot be plain environment variables), or when the operator chooses it. A rung is local-only when the cloud cannot run it (language servers, repo-enabled plugins) or cannot yet reach it (a host the network policy blocks); a local-only rung leaves the repo cloud-first. Hosting on Azure DevOps is not a reason: its cloud route is a human-started bundle session.
 _Avoid_: offline, local mode, no-cloud
