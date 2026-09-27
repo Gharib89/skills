@@ -80,6 +80,10 @@ _Avoid_: pseudo-stack, file type
 The harness setup skill's closed, shipped list of stacks and file kinds, one entry each, carrying the signals that detect it and the known tools per role (a default and its alternatives, each with its publisher and trust tier). It changes only through a change to the skill, never at run time: a stack with no entry is reported, and every tool drawn from an entry still passes the install check.
 _Avoid_: registry, tool list, knowledge base
 
+**Entry trial**:
+One catalog entry's tools installed by the routes the entry names and run on a small clean tree, which must pass, and a planted-bad tree, which must fail, in a cloud session: the proof that the entry's claims about installing and running still hold.
+_Avoid_: smoke test, catalog check (the check entry point is the repo's), probe (a probe measures an unknown)
+
 **Surface**:
 What a repo lets someone drive from outside its test suite: a web UI, an API, a CLI or a library's public API. A repo has zero or more, worked out afresh on every run from evidence the repo already carries and never recorded in the harness profile.
 _Avoid_: repo kind (kind is already a file kind and a dimension label), app type, project type
@@ -255,6 +259,10 @@ _Avoid_: tracker (Boards is one part of a host), provider, platform
 **Host fake**:
 A third host adapter, beside the GitHub and Azure DevOps ones: `tests/host-fake.sh`, defining the same `host_*` functions and answering each call from a fixture, so a generic mechanic is tested as a script with no host behind it. Selected only by `SHIP_HOST_ADAPTER`, which `ship_load_host` reads and nothing else under `skills/` may; it lives under `tests/` and is never part of a derived copy. Its default answers carry exactly the key sets the `_lib.sh` host contract documents, which `tests/host-contract.test.sh` holds them to.
 _Avoid_: mock, stub host, `host-stub` (the stub `gh` and `az` that fail any test reaching a real host)
+
+**Fixture repo**:
+A git repo a pre-merge live run drives a skill in, to prove one path through it on real state: synthetic (a standing repo reset by branching off a seed tag) or real (reverted afterwards).
+_Avoid_: fixture (the host fake's canned answers), test repo, lab
 
 **Run file**:
 The one file a Ship run keeps outside the repo, in the session's scratchpad, holding the ten-phase checklist with a clock stamp on every flip and the run's design and plan. The run's record, and the harness task list is its display: the source of truth for where the run is and the map back after a mid-run context summary, mirrored into the task list on every flip; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps.
