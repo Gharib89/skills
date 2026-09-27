@@ -84,6 +84,10 @@ _Avoid_: registry, tool list, knowledge base
 A verdict that a repo, or one rung of its harness, runs in a local session and not in the cloud sandbox, always recorded with its reason. A repo is local-only when evidence in it shows the project needs something the cloud sandbox cannot give (a non-Linux-x86_64 build, a private network, interactive or SSO auth, more than the VM holds, hardware or licensed tools, org IP allowlisting or Zero Data Retention, secrets that cannot be plain environment variables), or when the operator chooses it. A rung is local-only when the cloud cannot run it (language servers, repo-enabled plugins) or cannot yet reach it (a host the network policy blocks); a local-only rung leaves the repo cloud-first. Hosting on Azure DevOps is not a reason: its cloud route is a human-started bundle session.
 _Avoid_: offline, local mode, no-cloud
 
+**Bundle session**:
+A cloud session a human starts from a local clone, which uploads that clone instead of cloning from GitHub: the only cloud route for a repo hosted elsewhere, such as Azure DevOps. It sees the local HEAD, pushed or not, plus edits to tracked files, but never untracked files, so anything it must run is committed first. No routine can start one.
+_Avoid_: bundle upload, local cloud session
+
 **Cloud setup**:
 The harness's step that makes the whole harness available in a cloud session: run at the start of every cloud session, safe to rerun, knowing nothing of Ship. It installs every runtime, dependency and tool the check entry point runs. A failed cloud setup never stops the session, so whatever must not proceed on a broken sandbox runs it again and stops on its failure.
 _Avoid_: setup script (the cloud environment's own slot, which the harness does not use), cloud bootstrap, provisioning
