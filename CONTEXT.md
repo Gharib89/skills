@@ -45,8 +45,12 @@ A user-invoked skill that explores a repo and drafts its per-repo documents, con
 _Avoid_: init, scaffold, bootstrap
 
 **Agent harness**:
-The repo-owned setup that lets any Claude Code session, cloud or local, prove its own work fast: one verification entry point, pre-commit hooks, linters and formatters, the Claude Code hooks that run them, working language servers, installed dependencies, and the cloud environment setup that makes all of it available in the cloud sandbox. Configured for the cloud first; a repo is local-only when the project needs it, and says why. The harness setup skill audits an existing harness and fills its gaps, keeping the repo's own choices; the local gate runs the harness's verification rather than duplicating it.
+The repo-owned setup that lets any Claude Code session, cloud or local, prove its own work fast: one verification entry point, pre-commit hooks, linters and formatters, the Claude Code hooks that run them, working language servers, installed dependencies, and the cloud environment setup that makes all of it available in the cloud sandbox. Configured for the cloud first; a repo is local-only only when the project needs it or the operator chooses it, and says why. The harness setup skill audits an existing harness and fills its gaps, keeping the repo's own choices; the local gate runs the harness's verification rather than duplicating it.
 _Avoid_: agent config, dev environment, tooling setup
+
+**Local-only**:
+A verdict that a repo, or one rung of its harness, runs in a local session and not in the cloud sandbox, always recorded with its reason. A repo is local-only when evidence in it shows the project needs something the cloud sandbox cannot give (a non-Linux-x86_64 build, a private network, interactive or SSO auth, more than the VM holds, hardware or licensed tools, org IP allowlisting or Zero Data Retention, secrets that cannot be plain environment variables), or when the operator chooses it. A rung is local-only when the cloud cannot run it (language servers, repo-enabled plugins) or cannot yet reach it (a host the network policy blocks); a local-only rung leaves the repo cloud-first. Hosting on Azure DevOps is not a reason: its cloud route is a human-started bundle session.
+_Avoid_: offline, local mode, no-cloud
 
 **Trust tier**:
 One of the three ordered sources the harness setup skill installs from: Anthropic-authored plugins and docs; the tool's own vendor (which admits a partner entry in the official marketplace only when the partner makes the tool it wraps); the skill sources the target repo already pins. Being listed in a marketplace is not a tier. Anything outside the tiers is reported as found, not trusted, and never installed.
