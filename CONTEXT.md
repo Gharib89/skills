@@ -45,8 +45,16 @@ A user-invoked skill that explores a repo and drafts its per-repo documents, con
 _Avoid_: init, scaffold, bootstrap
 
 **Agent harness**:
-The repo-owned setup that lets any Claude Code session, cloud or local, prove its own work fast: one verification entry point, pre-commit hooks, linters and formatters, the Claude Code hooks that run them, working language servers, installed dependencies, and the cloud environment setup that makes all of it available in the cloud sandbox. Configured for the cloud first; a repo is local-only only when the project needs it or the operator chooses it, and says why. The harness setup skill audits an existing harness and fills its gaps, keeping the repo's own choices; the local gate runs the harness's verification rather than duplicating it.
+The repo-owned setup that lets any Claude Code session, cloud or local, prove its own work fast: one check entry point, pre-commit hooks, linters and formatters, the Claude Code hooks that run them, working language servers, installed dependencies, and the cloud environment setup that makes all of it available in the cloud sandbox. Configured for the cloud first; a repo is local-only only when the project needs it or the operator chooses it, and says why. The harness setup skill audits an existing harness and fills its gaps, keeping the repo's own choices; the local gate runs the check entry point rather than duplicating it.
 _Avoid_: agent config, dev environment, tooling setup
+
+**Check entry point**:
+The one repo-owned command every rung but the commit rung calls, taking the rung and a file set and answering a verdict per check. It knows nothing of Ship; the local gate calls its full rung and adds only what is Ship's own.
+_Avoid_: verification entry point (Verification is Ship's real-system check), verify script, test command
+
+**Rung**:
+One layer of the harness's check ladder, fastest first: edit (the edited file), turn (the uncommitted change set, at turn end), commit (staged files, owned by the repo's pre-commit runner) and full. A slower check never runs at a faster rung, and a rung over its budget warns the human rather than passing or blocking.
+_Avoid_: layer, stage, level
 
 **Local-only**:
 A verdict that a repo, or one rung of its harness, runs in a local session and not in the cloud sandbox, always recorded with its reason. A repo is local-only when evidence in it shows the project needs something the cloud sandbox cannot give (a non-Linux-x86_64 build, a private network, interactive or SSO auth, more than the VM holds, hardware or licensed tools, org IP allowlisting or Zero Data Retention, secrets that cannot be plain environment variables), or when the operator chooses it. A rung is local-only when the cloud cannot run it (language servers, repo-enabled plugins) or cannot yet reach it (a host the network policy blocks); a local-only rung leaves the repo cloud-first. Hosting on Azure DevOps is not a reason: its cloud route is a human-started bundle session.
