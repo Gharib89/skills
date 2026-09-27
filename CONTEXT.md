@@ -64,6 +64,18 @@ _Avoid_: layer, stage, level
 The seconds one rung, or the cloud setup, may take on a warm run. The harness setup skill ships a default per rung; a repo overrides one only with a reason the human gives, recorded in its harness profile, and the skill never raises one silently. A rung measured over its budget is narrowed, demoted to the next rung, or overridden before its hook is written.
 _Avoid_: timeout (the hook's backstop, derived from the budget), limit, SLA
 
+**Stack**:
+One language and its package manager, rooted at a directory whose manifest owns a lockfile or which a workspace config names: the unit that installs once and runs one set of tool versions. A polyglot repo or a monorepo holds several; a language the harness setup skill has no entry for is reported, never guessed.
+_Avoid_: language, project, ecosystem
+
+**Member**:
+One workspace package inside a stack: the unit typecheck and affected tests run on, carrying its own tools or inheriting the stack root's. A stack with no workspace is its own single member.
+_Avoid_: package (overloaded), module, subproject
+
+**File kind**:
+Tracked files that tools act on without a package manager, such as shell scripts, Dockerfiles, workflow YAML and Markdown. They take the edit and commit rungs only, never turn.
+_Avoid_: pseudo-stack, file type
+
 **Local-only**:
 A verdict that a repo, or one rung of its harness, runs in a local session and not in the cloud sandbox, always recorded with its reason. A repo is local-only when evidence in it shows the project needs something the cloud sandbox cannot give (a non-Linux-x86_64 build, a private network, interactive or SSO auth, more than the VM holds, hardware or licensed tools, org IP allowlisting or Zero Data Retention, secrets that cannot be plain environment variables), or when the operator chooses it. A rung is local-only when the cloud cannot run it (language servers, repo-enabled plugins) or cannot yet reach it (a host the network policy blocks); a local-only rung leaves the repo cloud-first. Hosting on Azure DevOps is not a reason: its cloud route is a human-started bundle session.
 _Avoid_: offline, local mode, no-cloud
