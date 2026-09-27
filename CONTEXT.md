@@ -80,6 +80,14 @@ _Avoid_: pseudo-stack, file type
 The harness setup skill's closed, shipped list of stacks and file kinds, one entry each, carrying the signals that detect it and the known tools per role (a default and its alternatives, each with its publisher and trust tier). It changes only through a change to the skill, never at run time: a stack with no entry is reported, and every tool drawn from an entry still passes the install check.
 _Avoid_: registry, tool list, knowledge base
 
+**Surface**:
+What a repo lets someone drive from outside its test suite: a web UI, an API, a CLI or a library's public API. A repo has zero or more, worked out afresh on every run from evidence the repo already carries and never recorded in the harness profile.
+_Avoid_: repo kind (kind is already a file kind and a dimension label), app type, project type
+
+**Behaviour tool**:
+A trusted-tier tool that drives one surface beyond the test suite, such as a browser driver or a public-API checker. It runs on the full rung or on demand, never at a faster rung.
+_Avoid_: verification tool (Verification is Ship's real-system check), e2e tool, smoke test
+
 **Local-only**:
 A verdict that a repo, or one rung of its harness, runs in a local session and not in the cloud sandbox, always recorded with its reason. A repo is local-only when evidence in it shows the project needs something the cloud sandbox cannot give (a non-Linux-x86_64 build, a private network, interactive or SSO auth, more than the VM holds, hardware or licensed tools, org IP allowlisting or Zero Data Retention, secrets that cannot be plain environment variables), or when the operator chooses it. A rung is local-only when the cloud cannot run it (language servers, repo-enabled plugins) or cannot yet reach it (a host the network policy blocks); a local-only rung leaves the repo cloud-first. Hosting on Azure DevOps is not a reason: its cloud route is a human-started bundle session.
 _Avoid_: offline, local mode, no-cloud
