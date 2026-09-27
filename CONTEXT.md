@@ -56,6 +56,10 @@ _Avoid_: verification entry point (Verification is Ship's real-system check), ve
 One layer of the harness's check ladder, fastest first: edit (the edited file), turn (the uncommitted change set, at turn end), commit (staged files, owned by the repo's pre-commit runner) and full. A slower check never runs at a faster rung, and a rung over its budget warns the human rather than passing or blocking.
 _Avoid_: layer, stage, level
 
+**Budget**:
+The seconds one rung, or the cloud setup, may take on a warm run. The harness setup skill ships a default per rung; a repo overrides one only with a reason the human gives, recorded in its harness profile, and the skill never raises one silently. A rung measured over its budget is narrowed, demoted to the next rung, or overridden before its hook is written.
+_Avoid_: timeout (the hook's backstop, derived from the budget), limit, SLA
+
 **Local-only**:
 A verdict that a repo, or one rung of its harness, runs in a local session and not in the cloud sandbox, always recorded with its reason. A repo is local-only when evidence in it shows the project needs something the cloud sandbox cannot give (a non-Linux-x86_64 build, a private network, interactive or SSO auth, more than the VM holds, hardware or licensed tools, org IP allowlisting or Zero Data Retention, secrets that cannot be plain environment variables), or when the operator chooses it. A rung is local-only when the cloud cannot run it (language servers, repo-enabled plugins) or cannot yet reach it (a host the network policy blocks); a local-only rung leaves the repo cloud-first. Hosting on Azure DevOps is not a reason: its cloud route is a human-started bundle session.
 _Avoid_: offline, local mode, no-cloud
