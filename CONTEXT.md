@@ -100,6 +100,10 @@ _Avoid_: allowlist entry, verified source, trusted marketplace
 What the harness setup skill runs before adding any third-party unit to a repo: read every file of the unit's glue (the config and scripts that make Claude Code run it), pin the unit and everything it launches, show what it runs and reaches and whether it reaches the cloud, then take one confirmation or refuse. A refused unit is named with its reason and never written; the human can still install it by hand. Deps restored from the repo's own lockfile and hook scripts the skill writes itself are not units.
 _Avoid_: security review, vetting, audit (the audit is the whole skill's pass over a repo)
 
+**Gap**:
+One place where a repo's harness differs from what a fresh run of the harness setup skill would write or prove: a missing or incomplete piece, a broken contract, a pin that is broken or behind, a budget or proof no longer met, a stack or tool the harness does not yet cover. A re-run reports every gap; one the human declines with a reason becomes a standing choice and is not proposed again. The repo's own additions to a file the skill writes are departures it keeps, not gaps.
+_Avoid_: drift (Upstream drift is a composed skill's), finding (a reviewer's), issue
+
 **Dimension label**:
 A label on one of the three dimensions a repo's tracker carries beside the five triage roles: kind, size and priority, at most one label per dimension on an issue, stamped at triage time. `setup-skills` seeds the vocabulary, creating the labels on the host and writing the `## Dimension labels` section into a `docs/agents/triage-labels.md` that has none; the repo owns the section from then on. Implementation order is derived from priority, size and blocking edges and is never one of them: a rank label rots the moment a higher issue ships.
 _Avoid_: tag, rank label, severity, t-shirt size
