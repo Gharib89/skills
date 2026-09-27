@@ -12,8 +12,12 @@ _Avoid_: pipeline, deliver, autopilot
 The per-repo document (`docs/agents/ship.md`) that carries every repo-specific fact Ship needs, one section per axis. A repo without a profile cannot run Ship.
 _Avoid_: ship config, ship settings, project instructions (that is CLAUDE.md)
 
+**Harness profile**:
+The per-repo document (`docs/agents/harness.md`) that the harness setup skill writes and re-reads. It carries only what the repo cannot say for itself: the contracts other readers parse (the check entry point's path, the Claude Code floor), the human's choices with their reasons (a budget override, a local-only verdict), and proof state. Anything already recorded in the repo's own files stays out of it.
+_Avoid_: harness config, harness.md (the path, not the concept)
+
 **Profile schema**:
-The integer a ship profile declares and Ship declares it reads, moved only when Ship's expectations of the profile change; a mismatch in either direction refuses the run and `setup-skills` re-run migrates. Separate from Ship's version, which moves on any Ship change.
+The integer a per-repo profile declares and its reader declares it reads: Ship for the ship profile, the harness setup skill for the harness profile. It moves only when the reader's expectations of the profile change; a mismatch either way refuses the run (Ship) or stops the re-run, and the profile's setup skill migrates a trailing one. Separate from the reader's version, which moves on any change.
 _Avoid_: profile version, format version, compat level
 
 **Axis**:
