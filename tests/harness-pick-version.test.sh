@@ -136,6 +136,10 @@ pick dockerhub hadolint/hadolint
 check "dockerhub: version tags only, across pages, past a tag with no push time" v2.15.1 "$out"
 pick maven https://repo.eclipse.org/content/repositories/jdtls-releases org.eclipse.jdt.ls:org.eclipse.jdt.ls.product
 check "maven: a named repository is read in place of Central, timestamped versions by version order" 1.60.0.20260626225408 "$out"
+pick maven https://repo.eclipse.org/content/repositories/jdtls-releases/ org.eclipse.jdt.ls:org.eclipse.jdt.ls.product
+check "maven: a named repository's trailing slash is dropped" 1.60.0.20260626225408 "$out"
+pick npm prettier extra
+check_rc "a third argument on any registry but maven is a usage error" 2 "$rc"
 pick maven org.example:flat
 check "maven: metadata on one line still lists every version" 2.1 "$out"
 pick crates half-gone

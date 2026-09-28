@@ -8,12 +8,13 @@
 #   pick-version.sh <npm|pypi|go|crates|nuget|maven|dockerhub> <name>
 #   pick-version.sh maven <repository> <group>:<artifact>
 #
-# <name> is the package name; for go the package path `go install` takes, its module
-# found by asking the proxy for each prefix in turn; for maven `<group>:<artifact>` on
-# Maven Central, or on the Maven repository whose base URL comes before it; for dockerhub the image repository. A yanked crate and an unlisted
-# NuGet release are passed over as a yanked PyPI release is. For maven the publish
-# time is the release pom's Last-Modified; for dockerhub it is the tag's last push,
-# so a re-pushed tag counts from its re-push.
+# <name> is the package name; for go the package path `go install` takes, its
+# module found by asking the proxy for each prefix in turn; for maven
+# `<group>:<artifact>` on Maven Central, or on the Maven repository whose base
+# URL comes before it; for dockerhub the image repository. A yanked crate and
+# an unlisted NuGet release are passed over as a yanked PyPI release is. For
+# maven the publish time is the release pom's Last-Modified; for dockerhub it is
+# the tag's last push, so a re-pushed tag counts from its re-push.
 #
 # stdout: the version
 # exit: 0 picked · 1 no release qualifies · 2 usage, registry unreachable, or name unknown
@@ -21,7 +22,8 @@ set -uo pipefail
 usage="usage: pick-version.sh <npm|pypi|go|crates|nuget|maven|dockerhub> <name> | maven <repository> <group>:<artifact>"
 case ${1:-} in
   -h | --help) echo "$usage"; exit 0 ;;
-  npm | pypi | go | crates | nuget | maven | dockerhub) [ -n "${2:-}" ] || { echo "$usage" >&2; exit 2; } ;;
+  maven) [ -n "${2:-}" ] && [ $# -le 3 ] || { echo "$usage" >&2; exit 2; } ;;
+  npm | pypi | go | crates | nuget | dockerhub) [ -n "${2:-}" ] && [ $# = 2 ] || { echo "$usage" >&2; exit 2; } ;;
   *) echo "$usage" >&2; exit 2 ;;
 esac
 registry=$1 name=$2 repo=https://repo1.maven.org/maven2

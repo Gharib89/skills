@@ -27,7 +27,7 @@ Anything else is "found, not trusted, not installed". No trust by stars, downloa
 ## Reading a unit
 
 - **Glue**, whatever makes Claude Code or git run the unit, is read in full and shown: a hook repo's `.pre-commit-hooks.yaml`, a plugin's directory with its `marketplace.json` entry, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `bin/`, skill files.
-- **A packaged tool** from tier 1 or 2 is not source-read: trust rests on tier, exact pin and published provenance (checksum, GitHub attestation, npm or PyPI provenance, a Maven Central `.sha256` or `.asc`, an image digest), checked where it exists, `none published` where it does not.
+- **A packaged tool** from tier 1 or 2 is not source-read: trust rests on tier, exact pin and published provenance (checksum, GitHub attestation, npm or PyPI provenance, a Maven repository's `.sha256` or `.asc`, or its `.sha1` where it publishes only sha1 and md5, an image digest), checked where it exists, `none published` where it does not.
 
 ## Pins
 
@@ -42,9 +42,11 @@ Each pin lives in its tool's own place; the skill adds no lock file of its own.
 | Container image | `<repository>:<tag>@<digest>`, the tag by version choice and the digest the one `docker image inspect --format '{{index .RepoDigests 0}}'` reports after the pull |
 | MCP server | exact version in `.mcp.json` args, never `@latest` |
 | Skill | `skills-lock.json` `ref` (SHA) plus `computedHash` |
-| Vendored plugin config | the repo's own commit; its README carries `Vendored from <repo>@<full sha>` and its `plugin.json` version `<entry version>+<full sha>` ([language-servers.md](language-servers.md)); a language server whose `Pin:` registry is not its stack's own carries its exact version in the vendored launch command, and a launcher that downloads the build (jdtls) the build's sha256 beside it, computed from the pinned download when the version is picked and checked by the launcher before it runs the build |
+| Vendored plugin config | the repo's own commit; its README carries `Vendored from <repo>@<full sha>` and its `plugin.json` version `<entry version>+<full sha>` ([language-servers.md](language-servers.md)); a language server that is not a dev dependency of its stack carries its exact version in the vendored launch command, and a language server whose launcher downloads the build (jdtls) the build's sha256 beside it, the download digest below |
 
-**Version choice:** the newest non-prerelease whose registry publish time is at least 7 days old, installed as that exact version on every route; the package manager resolves peer caps. Run `scripts/pick-version.sh <npm|pypi|go|crates|nuget|maven|dockerhub> <name>` from this skill's directory, a `Pin:` naming a Maven repository passing it before the name (`maven <repository> <group>:<artifact>`); it prints the version, exits 1 when none qualifies (a refusal), and exits 2 when the registry did not answer or does not know the name. Run it once more (a Maven Central 429 burst can outlast the script's six tries); a second 2 stops that row, reported with the script's stderr, not refused. apt is exempt.
+**Version choice:** the newest non-prerelease whose registry publish time is at least 7 days old, installed as that exact version on every route; the package manager resolves peer caps. Run `scripts/pick-version.sh` from this skill's directory with the `Pin:` line's words after `package` (`<npm|pypi|go|crates|nuget|maven|dockerhub> <name>`, or `maven <repository> <group>:<artifact>`); it prints the version, exits 1 when none qualifies (a refusal), and exits 2 when the registry did not answer or does not know the name. Run it once more (a Maven Central 429 burst can outlast the script's six tries); a second 2 stops that row, reported with the script's stderr, not refused. apt is exempt.
+
+**Download digest:** where a `Run:` carries `{sha256}`, download the picked version's file at the URL its entry's `Constraints:` spells, in Explore beside the version pick, check it against the repository's published `.sha1` (a mismatch is refused), and take its sha256 (`sha256sum`, or `shasum -a 256`). The row's Pin shows the version and that sha256, and a re-pin computes it again. The launcher checks the build against it, not against the sha1.
 
 ## Run-time fetches
 

@@ -142,9 +142,9 @@ Run: `${CLAUDE_PLUGIN_ROOT}/jdtls-launch.sh {version} {sha256}`
 Hook: None.
 Pin: package maven https://repo.eclipse.org/content/repositories/jdtls-releases org.eclipse.jdt.ls:org.eclipse.jdt.ls.product
 Route: None.
-Constraints: needs a JDK 21 and python3 on `PATH`. The launch is [templates/jdtls-launch.sh](../templates/jdtls-launch.sh), copied into the plugin beside `.lsp.json`, in place of the upstream's bare `jdtls` from `PATH`: its first launch of a version downloads `<repository>/org/eclipse/jdt/ls/org.eclipse.jdt.ls.product/<version>/org.eclipse.jdt.ls.product-<version>.tar.gz` into `~/.cache/harness-jdtls/<version>` and runs it only when its sha256 is `{sha256}`, which the install check computes from that tarball when it pins the version, because the repository publishes sha1 and md5 alone. Maven Central carries no jdtls. The upstream's `startupTimeout` stays.
+Constraints: needs a JDK 21 and python3 on `PATH`, and `curl` for a version's first launch. The launch is [templates/jdtls-launch.sh](../templates/jdtls-launch.sh), copied into the plugin beside `.lsp.json`, in place of the upstream's bare `jdtls` from `PATH`: its first launch of a version downloads `<repository>/org/eclipse/jdt/ls/org.eclipse.jdt.ls.product/<version>/org.eclipse.jdt.ls.product-<version>.tar.gz` into `${XDG_CACHE_HOME:-~/.cache}/harness-jdtls/<version>` and runs it only when its sha256 is `{sha256}`, the install check's download digest, because the repository publishes sha1 and md5 alone. Maven Central carries no jdtls.
 Local-only: cloud sessions start no plugin language server.
-Traps: the first launch of a version downloads about 50 MB before jdtls starts, inside that startup timeout.
+Traps: the first launch of a version downloads about 50 MB before jdtls starts, inside the upstream's 120 s `startupTimeout`, which the vendored `.lsp.json` keeps; later launches start from the cache.
 
 ### kotlin-lsp
 Publisher: JetBrains
