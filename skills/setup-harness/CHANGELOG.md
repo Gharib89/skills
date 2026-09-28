@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.1 (2026-09-28)
+
+### Bug Fixes
+
+- **setup-harness**: Pass ShellCheck at default severity in the check.sh template
+  ([#385](https://github.com/Gharib89/skills/pull/385),
+  [`014f6d4`](https://github.com/Gharib89/skills/commit/014f6d454605c7045e32e5535a9afff295dcdea4))
+
+
 ## v0.6.0 (2026-09-28)
 
 ### Features
