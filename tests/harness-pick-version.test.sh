@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# skills/setup-harness/scripts/pick-version.sh: the catalog's version rule, the
-# newest non-prerelease published at least 7 days ago. The subject is the
-# version it prints per registry. A fake `curl` in front of PATH answers each
-# registry URL with a fixture whose publish times are relative to now, so the
-# 7-day line sits between two releases.
+# skills/setup-harness/scripts/pick-version.sh: the install check's version
+# choice, the newest non-prerelease published at least 7 days ago. The subject
+# is the version it prints per registry. A fake `curl` in front of PATH answers
+# each registry URL with a fixture whose publish times are relative to now, so
+# the 7-day line sits between two releases.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

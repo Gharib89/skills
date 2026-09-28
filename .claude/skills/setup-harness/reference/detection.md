@@ -13,8 +13,6 @@
 - Its **members** are its workspace packages; a stack with no workspace is its own single member. Typecheck and affected tests run per member.
 - A **file kind** (shell and the like) is detected by extension or shebang and takes the edit and commit rungs only, never `turn`.
 
-Detection knows only the signals catalog entries carry, so read every `catalog/*.md`'s `## Signals` block, and nothing else of an entry, before scanning. A detected entry's whole file is read when the run needs its tools.
-
 ## The scan
 
 Tracked files only, from the repo root:
@@ -42,8 +40,6 @@ For each member, with inheritance from its root (root dev dependencies, a root `
 - **An invocation**: a tool run only in CI or a script counts as used but `unpinned`, the gap being its pin.
 
 Also record per stack the runtime version source, the first of its entry's `Runtime version:` files present, and for the repo its own check target: a `package.json` script `check`, a `check:` target in `Makefile`, a `check` recipe in `justfile`.
-
-Two tools in one role (Prettier and Biome, ESLint and oxlint): the one the runner config or CI calls is active and the other "present, not wired"; ask only when both or neither are called. Never wire both: two formatters on the edit rung fight.
 
 ## What detection reports
 

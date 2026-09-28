@@ -11,9 +11,9 @@ metadata:
 
 Give every Claude Code session in this repo a fast, measured way to check its own work: `scripts/check.sh` answers "is this change good" at three rungs, Claude Code hooks run the fast rungs on every edit and every stop, and the pre-commit runner holds the commit. Same shape as `setup-skills`: explore, present, confirm, write, prove. Nothing is written before the human confirms it as a diff, and nothing third-party is installed before it passes the install check.
 
-Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (agent harness, check entry point, rung, budget, stack, member, file kind, catalog, trust tier, install check, harness profile). "Verification" is Ship's word for a real-system check; never use it for anything here.
+Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (agent harness, check entry point, rung, budget, stack, member, file kind, catalog, trust tier, install check, harness profile). "Verification" is Ship's word for a real-system check; here the words are check and prove.
 
-This version sets up the local ladder: the profile's `## Cloud` is written `Verdict: cloud-first`, `Setup: None.`, `Proof: unproven`, and no language server is wired. Say so in the report.
+This version sets up the local ladder only: `## Cloud` keeps the template's values and no language server is wired.
 
 **Paths are contracts.** `scripts/check.sh`, `.claude/hooks/check-hook.sh` and `docs/agents/harness.md` are read by hooks and by a re-run, and `setup-skills` is to read the profile ([#367](https://github.com/Gharib89/skills/issues/367)); write them at exactly those paths. Configuration is committed at project scope (`.claude/settings.json`, `.claude/hooks/`, the runner config); anything machine-specific goes to `.claude/settings.local.json`, and the report names it as such.
 
@@ -34,7 +34,7 @@ On any failure print the exact command, then "then rerun `/setup-harness`", and 
 
 Read `docs/agents/harness.md` if it exists; a repo without one is a first run.
 
-- `Schema:` equal to this skill's `metadata.harness-schema`: read its choices (`## Budgets` overrides, `Local-only:` and `Declined:` lines) and honour them without re-asking.
+- `Schema:` equal to this skill's `metadata.harness-schema`: read its choices (`## Budgets` overrides, `Local-only:` and `Declined:` lines) and honour them without re-asking; a removed `Declined:` line re-opens its proposal.
 - `Schema:` behind: the migration is the first, undroppable row of the confirm step, applied entry by entry from [harness-schema.md](harness-schema.md), `Schema:` rewritten last.
 - `Schema:` ahead: stop. That repo was set up by a newer setup-harness; print `npx skills add Gharib89/skills --skill setup-harness --agent claude-code -y` and "then rerun `/setup-harness`".
 
@@ -45,7 +45,7 @@ Read-only. Collect, then present everything at once in step 4.
 1. **Stacks, members and file kinds** per [reference/detection.md](reference/detection.md): read every `catalog/*.md` `## Signals` block first, then scan tracked files only. Read [catalog/README.md](catalog/README.md) once, then each detected entry's file.
 2. **Tools per member and role** from the evidence, applying the catalog's yielding rules: the repo's tools are kept and only their gaps filled; a default fills only a role with no evidence.
 3. **The pre-commit runner** git invokes, per [reference/runner.md](reference/runner.md), and any config that is present but not wired.
-4. **Existing harness pieces**: `scripts/check.sh`, `.claude/hooks/`, the `hooks` in `.claude/settings.json` and `.claude/settings.local.json`, and a `### Harness` block in `CLAUDE.md`. An existing `check.sh` or hook is the repo's own: keep what it runs and propose only what it lacks.
+4. **Existing harness pieces**: `scripts/check.sh`, `.claude/hooks/`, the `hooks` in `.claude/settings.json` and `.claude/settings.local.json`, and a `### Harness` block in `CLAUDE.md`. An existing harness file is the repo's own evidence: compare it with its current template by what it says, keep what it adds and propose only what it lacks.
 5. **The install-check rows**: every package, hook repo or binary the plan adds or re-pins, per [reference/install-check.md](reference/install-check.md), with its version picked by this skill's `scripts/pick-version.sh` and its tier, publisher, provenance and glue read now.
 
 ### 4. Present
@@ -67,7 +67,7 @@ One approval covers the batch: the human answers the questions and may drop rows
 In this order, each step's failure stopping the run with its output:
 
 1. **Installs**: each approved unit at its exact pin, then the repo's own deps from its lockfile (`uv sync --frozen`, `pnpm install --frozen-lockfile`).
-2. **The runner**: its config additions, its install command when git does not yet invoke it (`prek install`), then `prek run --all-files` (or the runner's equivalent). A failure here is the repo's code on a tool new to it: report the findings and ask whether to fix them in this run, leave them for the human, or drop the tool; leave and drop `git restore` the files its fixes rewrote. Never weaken the tool's config to pass.
+2. **The runner**: its config additions, its install command when git does not yet invoke it (`prek install`), then `prek run --all-files` (or the runner's equivalent). A failure here is the repo's code on a tool new to it: report the findings and ask whether to fix them in this run, leave them for the human, or drop the tool; on leave or drop, `git restore` the files its fixes rewrote. Never weaken the tool's config to pass.
 3. **`scripts/check.sh`** from [templates/check.sh](templates/check.sh), configuration block filled per [reference/check-ladder.md](reference/check-ladder.md).
 4. **Time the rungs** before any hook exists, per check-ladder.md's timing section: each twice, cold reported, warm judged against its budget. A warm `edit` or `turn` over budget gets the narrow / demote / override offer now, and its hook waits until one is applied.
 5. **`.claude/hooks/check-hook.sh`** from [templates/check-hook.sh](templates/check-hook.sh) and the hook entries from [templates/settings-hooks.json](templates/settings-hooks.json), merged beside the repo's own, each `timeout` derived from its budget.
@@ -76,9 +76,7 @@ In this order, each step's failure stopping the run with its output:
 
 ### 7. Prove
 
-1. **Report step 6's timings**; re-time only a rung a narrow, demote or override changed. An override is written `override <N>s: <reason>` in `## Budgets`, and the hook `timeout`s and wrapper deadlines are re-derived from it.
-2. **The contract**: `scripts/check.sh full` prints one JSON line and exits 0, or its failures are reported as the repo's code, each `<rung>: fail (<check>)`.
-3. **The profile** passes `harness-profile-check.sh`.
+`scripts/check.sh full` prints one JSON line and exits 0, or its failures are reported as the repo's code, each `<rung>: fail (<check>)`.
 
 ### 8. Report
 
@@ -88,7 +86,3 @@ In this order, each step's failure stopping the run with its output:
 4. **Not acted on**: unclaimed extensions and stacks, unwired tools, Found-not-installed units, anything "present, not wired".
 5. **Standing choices**: every `Declined:` and override, and `cloud: unproven`: this version sets up the local ladder only.
 6. **Next**: commit the harness files; hooks in `.claude/settings.json` load in new sessions, so start one (or review them in `/hooks`) before relying on them; then `/setup-skills` if the repo uses Ship.
-
-## Re-run
-
-A re-run is the same process. Existing harness files are the repo's own evidence: compare each written file against its current template by what it says, propose what the repo's copy lacks and keep its additions. A standing `Declined:` choice is listed, never re-asked; removing the line re-opens it.

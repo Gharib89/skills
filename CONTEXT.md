@@ -17,7 +17,7 @@ The per-repo document (`docs/agents/harness.md`) that the harness setup skill wr
 _Avoid_: harness config, harness.md (the path, not the concept)
 
 **Profile schema**:
-The integer a per-repo profile declares and its reader declares it reads: Ship for the ship profile, the harness setup skill for the harness profile. It moves only when the reader's expectations of the profile change; a mismatch either way refuses the run (Ship) or stops the re-run, and the profile's setup skill migrates a trailing one. Separate from the reader's version, which moves on any change.
+The integer a per-repo profile declares and its reader declares it reads: Ship for the ship profile, the harness setup skill for the harness profile. It moves only when the reader's expectations of the profile change; Ship refuses a run on a mismatch either way; the profile's setup skill migrates a trailing profile on its re-run and stops on one ahead. Separate from the reader's version, which moves on any change.
 _Avoid_: profile version, format version, compat level
 
 **Axis**:

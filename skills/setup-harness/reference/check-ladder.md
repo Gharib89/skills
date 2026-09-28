@@ -35,19 +35,13 @@ A changed file matching some row's globs under no row's prefix reports `new-root
 
 ## Writing the hooks
 
-Copy [templates/check-hook.sh](../templates/check-hook.sh) to `.claude/hooks/check-hook.sh`, executable, and fill its configuration block: `CHECK` is the profile's `Location:`; `EDIT_BUDGET` and `TURN_BUDGET` are the deadlines in seconds from the profile's `## Budgets` (`default` is 5 and 60, `override <N>s: ...` is N). Then merge [templates/settings-hooks.json](../templates/settings-hooks.json) into `.claude/settings.json`, each `timeout` set to the deadline plus max(10 s, deadline / 4): 15 and 75 at the defaults. Every entry carries a `timeout`: a hook that times out passes silently, and the default is 600 s.
+Copy [templates/check-hook.sh](../templates/check-hook.sh) to `.claude/hooks/check-hook.sh`, executable, and fill its configuration block: `CHECK` stays `scripts/check.sh`; `EDIT_BUDGET` and `TURN_BUDGET` are the edit and turn budgets in seconds as timing left them (`default` is 5 and 60, `override <N>s: ...` is N). Then merge [templates/settings-hooks.json](../templates/settings-hooks.json) into `.claude/settings.json`, each `timeout` set to the deadline plus max(10 s, deadline / 4): 15 and 75 at the defaults. Every entry carries a `timeout`: a hook that times out passes silently, and the default is 600 s.
 
 Merge beside what the repo has: keep every existing hook entry, add these two, and never duplicate one already present. Hooks live in `.claude/hooks/`, never in a plugin: a cloud session does not install repo-enabled plugins.
 
-What the wrapper does, so the report can say it:
-
-- `edit` reads `tool_input.file_path` from the hook's stdin and runs `check.sh edit <file>` under the edit deadline.
-- `turn` fingerprints the working tree with a throwaway index (`git write-tree`, milliseconds, the real index untouched) and skips the check when the tree matches the last one checked, stored under `.git/`. A tree unchanged since a failing check lets the stop through and tells the human, continuation (`stop_hook_active`) or not, so Claude never loops on a failure it has not touched.
-- `check.sh` exit 1 becomes hook exit 2 with the failure output on stderr, capped under Claude Code's 10k-character limit, which is the one failure Claude reads. Exit 2 (a tool missing) and exit 3 (over budget) become a `systemMessage` to the human and never block.
-
 ## Budgets
 
-The defaults are the table's. The profile overrides one rung only with the human's reason, `override <N>s: <reason>`; the skill never raises a budget on its own, and a budget measured per repo is not a thing it offers. The edit budget covers one invocation: sync `PostToolUse` hooks run one after another, so a batch of N edits costs N times the edit time.
+The defaults are the table's; a budget moves only by the human's `override <N>s: <reason>` in the profile. The edit budget covers one invocation: sync `PostToolUse` hooks run one after another, so a batch of N edits costs N times the edit time.
 
 ## Timing the rungs
 
@@ -59,4 +53,4 @@ Time with the wrapper's own clock, whole seconds (`start=$(date +%s)`; Bash 3.2 
 
 A rung that fails while timing is the repo's code, not the harness: report `<rung>: fail (<check>)` with its time "not judged".
 
-A warm time over budget gets three offers, in order, each with a recommendation: **narrow** the check to the file set where its tool allows; **demote** it to the next rung (a slow linter to `turn`, a slow typecheck to `full`); **override** the budget with the human's reason. No hook is written for a rung over its budget until one of the three is applied, and the rung is timed again after. Commit and `full` are measured only: over budget is reported `over`, with no offer.
+A warm time over budget gets three offers, in order, each with a recommendation: **narrow** the check to the file set where its tool allows; **demote** it to the next rung (a slow linter to `turn`, a slow typecheck to `full`); **override** the budget with the human's reason. An applied offer re-times the rung. Commit and `full` are measured only: over budget is reported `over`, with no offer.

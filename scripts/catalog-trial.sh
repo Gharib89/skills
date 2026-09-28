@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# The entry trial for setup-harness's catalog: proves an entry's install and
-# run lines against real tools. Per `###` tool: pick the version by the
-# catalog's version rule (packages only), install by `Route:`, run `Run:` on a
+# The entry trial for setup-harness's catalog: proves an entry's install and run
+# lines against real tools. Per `###` tool: pick the version by the install
+# check's version choice (packages only), install by `Route:`, run `Run:` on a
 # copy of tests/fixtures/catalog/<entry>/clean/, which must pass without
 # changing a seed file, then lay bad/<tool>/ over that copy and run it on the
-# planted files, which must fail or change one. A tool marked `Unavailable:`
-# is reported and not tried.
+# planted files, which must fail or change one. A tool marked `Unavailable:` is
+# reported and not tried. <tool> is the `###` heading, lower-cased, with each
+# run of other characters turned into `-`.
 #
 #   scripts/catalog-trial.sh <entry>|all
 #

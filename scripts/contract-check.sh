@@ -216,9 +216,9 @@ fi
 # `###` tool block carrying every required label. Detection reads only the
 # Signals blocks and a run reads the rest by label, so an entry missing one is
 # a stack the skill silently half-knows. A `Route:` carries its `Blocked:`
-# clause, so a run can tell "nothing is blocked" from "nobody looked". A file kind takes no turn rung (it has
-# no project to typecheck or test), and browser and public-API tools run on
-# `full` only. Only a skills tree carrying setup-harness has a catalog.
+# clause, so a run can tell "nothing is blocked" from "nobody looked". A file
+# kind takes no turn rung (it has no project to typecheck or test), and browser
+# and public-API tools run on `full` only.
 harness=$skills/setup-harness
 if [ -d "$harness/catalog" ]; then
   for entry in "$harness"/catalog/*.md; do

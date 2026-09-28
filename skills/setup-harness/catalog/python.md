@@ -112,5 +112,5 @@ Run: `pytest --testmon`
 Hook: local
 Pin: package pypi pytest-testmon
 Route: `uv tool install pytest --with pytest-testmon=={version}`; Blocked: None.
-Constraints: needs `coverage<8` and a first full run to build `.testmondata` before it can select. A plugin with no executable of its own, so the route installs it into a pytest tool environment, whose pytest takes the newest release testmon admits: `uv tool install` refuses a package with no executables as the one named.
+Constraints: needs `coverage<8` and a first full run to build `.testmondata` before it can select. The route installs it into a pytest tool environment because `uv tool install` refuses a package with no executable of its own; that pytest is the newest release testmon admits.
 Traps: crashes with `KeyError: 'lf'` under `-p no:cacheprovider`.

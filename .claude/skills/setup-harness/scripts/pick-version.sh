@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The catalog's version rule: the newest non-prerelease whose registry publish
+# The install check's version choice: the newest non-prerelease whose registry publish
 # time is at least 7 days old, so a just-published compromised release never
 # lands. Newest by version order, not publish order. A yanked PyPI release is
 # passed over. apt is exempt (its versions are the distribution's) and takes

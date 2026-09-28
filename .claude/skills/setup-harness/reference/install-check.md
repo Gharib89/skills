@@ -61,8 +61,6 @@ One table, a row per unit, then each unit's glue in full:
 - **Cloud**: `yes`, or `local-only: <why>`.
 - **Provenance**: `checked`, `none published` or `failed`.
 
-One approval for the batch; the human drops rows by number. A dropped row with a reason writes `Declined: <unit>: <reason>` in the same batch; one dropped without a reason is proposed again next run.
-
 ## Refusing
 
 Refused units are listed under **Found, not installed**, each with its reason, never dropped silently. A unit is refused when it:
