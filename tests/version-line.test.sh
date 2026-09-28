@@ -61,6 +61,23 @@ check_rc "a bump already committed fails too" 1 "$(rc_of "$d")"
 d=$(base_repo bumped-second); sed -i.bak 's/version: 1.0.2/version: 1.1.0/' "$d/skills/cloud-ship/SKILL.md"
 check_rc "a bump in any skill fails" 1 "$(rc_of "$d")"
 
+# --- the renumber to 0.x (#369) ---------------------------------------------
+
+# Every skill moves M.m.p to 0.M.p once, before its public release; the release
+# run then owns the 0.x line like any other.
+d=$(base_repo renumber)
+sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
+sed -i.bak 's/version: 1.0.2/version: 0.1.2/' "$d/skills/cloud-ship/SKILL.md"
+check_rc "the renumber M.m.p to 0.M.p passes" 0 "$(rc_of "$d")"
+
+d=$(base_repo renumber-other); sed -i.bak 's/version: 7.0.0/version: 0.1.0/' "$d/skills/ship/SKILL.md"
+check_rc "a move to 0.x that is not the renumber fails" 1 "$(rc_of "$d")"
+
+d=$(base_repo zero-bump); sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
+git_ "$d" add -Af && git_ "$d" commit -qm renumber && git_ "$d" tag -f base-commit >/dev/null
+sed -i.bak 's/version: 0.7.0/version: 0.7.1/' "$d/skills/ship/SKILL.md"
+check_rc "a bump inside 0.x still fails" 1 "$(rc_of "$d")"
+
 # --- what stays a hand edit --------------------------------------------------
 
 d=$(base_repo schema); sed -i.bak 's/profile-schema: 3/profile-schema: 4/' "$d/skills/ship/SKILL.md"

@@ -143,6 +143,15 @@ check "--old reads the old tree at that ref" \
 jq '.skills.ship.source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a lock recording ship from . is source mode" source "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r .mode)"
 
+# The renumber to 0.x (#369) moves a version down: the plan still runs, and the
+# empty range (1.1.0, 0.1.1] plans no retired row.
+skill "$repo" ship 0.1.1 "o/r#$B:tdd o/r#$B:code-review"
+out=$(bash "$plan" "$repo" "$tmp/heads.json"); rc=$?
+check_rc "a version moved down still plans" 0 "$rc"
+check "a version moved down carries both versions and plans no retired row" \
+  '1.1.0 0.1.1 0' "$(jq -r '[(.source_skills[] | select(.skill == "ship") | .old_version, .new_version), ([.retired[] | select(.skill == "ship")] | length)] | join(" ")' <<<"$out")"
+skill "$repo" ship 1.1.0 "o/r#$B:tdd o/r#$B:code-review"
+
 # A prerelease version compares by its release part, in the skill's version
 # and in a row's, and a row with no replacement cell, or a lowercase none, has
 # no replacement. An aligned separator row is no row.

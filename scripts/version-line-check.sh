@@ -45,6 +45,12 @@ while IFS= read -r -d '' f; do
   # A `+` alone is a line arriving with a new frontmatter block; a `-` is the one
   # that was already there and moved.
   printf '%s\n' "$hits" | grep -q '^-' || continue
+  # The one move a PR makes: the renumber to 0.x before a skill's public release
+  # (#369), M.m.p to exactly 0.M.p. Its old major is never 0, so it admits no
+  # bump inside 0.x.
+  old=$(printf '%s\n' "$hits" | sed -n 's/^-[[:space:]]*version:[[:space:]]*//p')
+  new=$(printf '%s\n' "$hits" | sed -n 's/^+[[:space:]]*version:[[:space:]]*//p')
+  case $old in 0.*) ;; *.*.*) [ "$new" = "0.${old%%.*}.${old##*.}" ] && continue ;; esac
   printf '%s: changes a metadata.version line, which the release run owns\n' "$f"
   printf '%s\n' "$hits" | sed 's/^/    /'
   rc=1

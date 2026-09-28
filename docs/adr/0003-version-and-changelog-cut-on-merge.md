@@ -4,6 +4,8 @@ status: accepted
 
 # The release run on main cuts the version bump and the changelog
 
+Amended by [0005](0005-skills-stay-0x-until-public-release.md): every skill is 0.x until its public release, so a breaking change bumps the minor and no tag carries the numbers below.
+
 Every change to a skill had to bump that skill's `metadata.version` in the same PR. The number is one line in one file, so any two PRs touching the same skill collided on it, and a run that merged its base in had to re-grade its own bump against the new number. The retro tickets #218, #219 and #220 were chained for that reason alone. The grade already sat in the PR title, which `ship` writes as a Conventional Commit and `merge.sh` passes as the squash `commit_title`.
 
 So the release moves to main. `.github/workflows/semantic-release.yml` runs python-semantic-release once per skill on every push to main, reading the Conventional-Commit type of the squash subject: every type is at least a patch, because a derived copy changes whatever the type says and a consumer compares the number before refreshing; `feat` is minor; a `!` or a `BREAKING CHANGE:` footer is major. A PR leaves the version line alone, which the `version-lines` gate holds it to, so nothing serialises on it.

@@ -62,9 +62,8 @@ jobs:
           ref: ${{ github.ref_name }}
 
       # Without the tag its own `tag_format` names, python-semantic-release ignores
-      # the version in `SKILL.md` and forces 1.0.0, which would regress `ship` from
-      # 7.x on the first run; the baseline tags are pushed once, before this
-      # workflow first fires. The tag has to be the exact reachable version, not
+      # the version in `SKILL.md` and computes the next one from no baseline at
+      # all. The tag has to be the exact reachable version, not
       # any `$s-v*`: a tag off this history, or ahead of `SKILL.md`, computes the
       # next version from the wrong baseline just as silently. Every later run
       # satisfies this for free, because the release commit writes the version and
