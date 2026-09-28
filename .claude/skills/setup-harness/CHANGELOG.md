@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.3.0 (2026-09-28)
+
+### Features
+
+- **setup-harness**: Vendored language servers and the LSP proof
+  ([#374](https://github.com/Gharib89/skills/pull/374),
+  [`3b6d33f`](https://github.com/Gharib89/skills/commit/3b6d33fab6e0b24918e570c52d78fca2368c3327))
+
+
 ## v0.2.0 (2026-09-28)
 
 ### Features

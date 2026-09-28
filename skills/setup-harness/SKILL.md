@@ -3,7 +3,7 @@ name: setup-harness
 description: "Set up this repo's agent harness for Claude Code: one check entry point (scripts/check.sh), a pre-commit runner, the linters, formatters, typecheckers and tests it runs, hooks that run them after every edit and at every turn end, vendored language servers proven by a real LSP hover, and a cloud setup that installs them in every Claude Code on the web session, proven in a real one; each third-party tool pinned and passed through an install check. Independent of Ship; run it before /setup-skills. Re-run after adding a stack or tool."
 disable-model-invocation: true
 metadata:
-  version: 0.2.0
+  version: 0.3.0
   harness-schema: 1
 ---
 
