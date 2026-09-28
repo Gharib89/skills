@@ -31,6 +31,7 @@ tool() { # <name> <run> [<route>]
   printf '## format\n'
   tool fmt 'fmt {files}'
   printf '### gone\nPublisher: p\nTier: 2: https://example.com\nEvidence: e\nRung: edit\nRun: `gone {files}`\nHook: local\nPin: apt gone\nRoute: `false`; Blocked: None.\nConstraints: None.\nUnavailable: no route\nTraps: None.\n'
+  printf '### far\nPublisher: p\nTier: 2: https://example.com\nEvidence: e\nRung: edit\nRun: `false {files}`\nHook: local\nPin: apt far\nRoute: `false`; Blocked: None.\nConstraints: None.\nLocal-only: no cloud session runs it\nTraps: None.\n'
 } > "$root/skills/setup-harness/catalog/toy.md"
 
 seed=$root/tests/fixtures/catalog/toy
@@ -45,9 +46,10 @@ out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh toy 2>/
 check "each tool gets one verdict line" "toy lint: pass
 toy lax-lint: fail (passed on bad/lax-lint)
 toy fmt: pass
-toy gone: unavailable (no route)" "$out"
+toy gone: unavailable (no route)
+toy far: local-only (no cloud session runs it)" "$out"
 check_rc "a tool that misses its planted failure fails the trial" 1 "$rc"
-check "every tried tool was installed by its Route, the unavailable one not" "installed lint
+check "every tried tool was installed by its Route, the unavailable and local-only ones not" "installed lint
 installed Lax Lint
 installed fmt" "$(cat "$fixture/installs")"
 check "the seed tree itself is left untouched" fine "$(cat "$seed/clean/src/a.toy")"

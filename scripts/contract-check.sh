@@ -217,8 +217,10 @@ fi
 # Signals blocks and a run reads the rest by label, so an entry missing one is
 # a stack the skill silently half-knows. A `Route:` carries its `Blocked:`
 # clause, so a run can tell "nothing is blocked" from "nobody looked". A file
-# kind takes no turn rung (it has no project to typecheck or test), and browser
-# and public-API tools run on `full` only.
+# kind takes no turn rung (it has no project to typecheck or test), browser
+# and public-API tools run on `full` only, and a language server sits on no
+# rung and is `Local-only:`, because it answers Claude's `LSP` calls rather
+# than a check and no cloud session starts one.
 harness=$skills/setup-harness
 if [ -d "$harness/catalog" ]; then
   for entry in "$harness"/catalog/*.md; do
@@ -228,6 +230,7 @@ if [ -d "$harness/catalog" ]; then
     function close_tool(  i) {
       if (tool == "") return
       for (i = 1; i <= nt; i++) if (!(tl[i] in got)) bad("### " tool ": missing " tl[i] ":")
+      if (role == "language server" && !("Local-only" in got)) bad("### " tool ": a language server is Local-only:")
       tool = ""; delete got
     }
     function close_signals(  i, n, want) {
@@ -251,14 +254,15 @@ if [ -d "$harness/catalog" ]; then
       next
     }
     /^### / { close_tool(); tool = substr($0, 5); next }
-    /^[A-Z][A-Za-z ]*: / || /^[A-Z][A-Za-z ]*:$/ {
+    /^[A-Z][A-Za-z -]*: / || /^[A-Z][A-Za-z -]*:$/ {
       label = substr($0, 1, index($0, ":") - 1); v = substr($0, length(label) + 3)
       if (signals) { sig[label] = 1; if (label == "Kind") kind = v; next }
       if (tool == "") next
       got[label] = 1
       if (label == "Route" && v != "None." && v !~ /^`[^`]+`; Blocked: /) bad("### " tool ": Route: want `<install>`; Blocked: <routes> | None., or None.")
       if (label != "Rung") next
-      if (v != "edit" && v != "turn" && v != "full") bad("### " tool ": Rung: want edit, turn or full, got " v)
+      if (role == "language server") { if (v != "None.") bad("### " tool ": a language server takes Rung: None.") }
+      else if (v != "edit" && v != "turn" && v != "full") bad("### " tool ": Rung: want edit, turn or full, got " v)
       else if (kind == "file kind" && v == "turn") bad("### " tool ": a file kind takes no turn rung")
       else if ((role == "browser" || role == "public API") && v != "full") bad("### " tool ": " role " is full only")
     }

@@ -414,6 +414,26 @@ sed -i.bak 's/^Rung: edit/Rung: commit/' "$d/setup-harness/catalog/sh.md"
 run "$inert" "$d"
 check "a rung outside edit, turn and full is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ### shellcheck: Rung: want edit, turn or full, got commit")"
 
+d=$(harness_tree catalog-lsp)
+{ printf '## language server\n'; tool_block pyright None.; printf 'Local-only: cloud sessions start no plugin language server\n'; } >> "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check_rc "a local-only language server with no rung passes" 0 "$rc"
+
+d=$(harness_tree catalog-lsp-rung)
+{ printf '## language server\n'; tool_block pyright edit; printf 'Local-only: x\n'; } >> "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a language server on a rung is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### pyright: a language server takes Rung: None.")"
+
+d=$(harness_tree catalog-lsp-local)
+{ printf '## language server\n'; tool_block pyright None.; } >> "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a language server without Local-only: is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### pyright: a language server is Local-only:")"
+
+d=$(harness_tree catalog-rung-none)
+sed -i.bak 's/^Rung: edit/Rung: None./' "$d/setup-harness/catalog/sh.md"
+run "$inert" "$d"
+check "Rung: None. off a language server is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ### shellcheck: Rung: want edit, turn or full, got None.")"
+
 # 8. The two profile lines setup-skills parses are frozen in the template.
 d=$(harness_tree frozen-location)
 sed -i.bak 's/^Location:/Path:/' "$d/setup-harness/templates/harness-profile.md"
