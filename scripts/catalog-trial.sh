@@ -13,9 +13,10 @@
 # files carrying those extensions instead. {version} is the picked version,
 # {member} is `.` and {package} is `seed`, the package name every stack
 # seed carries. The clean copy is a git repo whose one commit is tagged
-# v0.1.0, the baseline a public-API tool diffs against (griffe). `Run:` runs with the
-# tree's node_modules/.bin ahead of PATH, as a stack's exec command would, so
-# a Route: installing into the tree (`npm install --no-save`) is the copy tried.
+# v0.1.0, the baseline a public-API tool diffs against (griffe). `Run:` runs
+# with the tree's node_modules/.bin ahead of PATH, as a stack's exec command
+# would, so a Route: installing into the tree (`npm install --no-save`) is the
+# copy tried.
 #
 #   scripts/catalog-trial.sh <entry>|all
 #
