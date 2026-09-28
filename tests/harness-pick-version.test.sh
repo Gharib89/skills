@@ -50,6 +50,11 @@ case \$url in
   https://repo1.maven.org/maven2/org/example/young/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.0</version></versions></versioning></metadata>' ;;
   https://repo1.maven.org/maven2/org/example/young/1.0/young-1.0.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
   https://repo1.maven.org/maven2/org/example/nopom/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.0</version></versions></versioning></metadata>' ;;
+  'https://crates.io/api/v1/crates/garbled/versions?per_page=100') printf '{"errors":[]}' ;;
+  https://api.nuget.org/v3/registration5-gz-semver2/garbled/index.json) printf '<html>busy</html>' ;;
+  https://api.nuget.org/v3/registration5-gz-semver2/badpage/index.json) printf '{"items":[{"@id":"https://api.nuget.org/v3/registration5-gz-semver2/badpage/p1.json"}]}' ;;
+  https://api.nuget.org/v3/registration5-gz-semver2/badpage/p1.json) printf '{}' ;;
+  'https://hub.docker.com/v2/repositories/x/garbled/tags?page_size=100') printf '{"message":"busy"}' ;;
   *) exit 22 ;;
 esac
 FAKE
@@ -133,6 +138,14 @@ pick maven org.example:nopom
 check_rc "maven: a pom that cannot be read is tooling" 2 "$rc"
 pick maven org.example:young
 check_rc "maven: every release under a week old is no pick, not tooling" 1 "$rc"
+pick crates garbled
+check_rc "crates: a page that does not parse is tooling, not a refusal" 2 "$rc"
+pick nuget garbled
+check_rc "nuget: an index that does not parse is tooling, not a refusal" 2 "$rc"
+pick nuget badpage
+check_rc "nuget: a linked page that does not parse is tooling, not a refusal" 2 "$rc"
+pick dockerhub x/garbled
+check_rc "dockerhub: a page that does not parse is tooling, not a refusal" 2 "$rc"
 pick gems rails
 check_rc "an unknown registry is a usage error" 2 "$rc"
 

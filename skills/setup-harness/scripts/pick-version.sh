@@ -101,8 +101,8 @@ for v, files in json.load(sys.stdin)["releases"].items():
 import json, sys
 for v in json.load(sys.stdin)["versions"]:
     if not v["yanked"]:
-        print(v["num"], v["created_at"])'
-      next=$(printf '%s' "$json" | python3 -c 'import json, sys; print(json.load(sys.stdin)["meta"]["next_page"] or "")')
+        print(v["num"], v["created_at"])' || exit 2
+      next=$(printf '%s' "$json" | python3 -c 'import json, sys; print(json.load(sys.stdin)["meta"]["next_page"] or "")') || exit 2
       url=${next:+https://crates.io/api/v1/crates/$name/versions$next}
     done) || exit 2
     printf '%s\n' "$lines" | choose ;;
@@ -124,11 +124,11 @@ for item in json.load(sys.stdin)["items"]:
 import json, sys
 for p in json.load(sys.stdin)["items"]:
     if "items" not in p:
-        print(p["@id"])')
-    lines=$(printf '%s' "$index" | releases
+        print(p["@id"])') || exit 2
+    lines=$(printf '%s' "$index" | releases || exit 2
       for page in $pages; do
         json=$(fetch "$page") || exit 2
-        printf '%s' "$json" | releases
+        printf '%s' "$json" | releases || exit 2
       done) || exit 2
     printf '%s\n' "$lines" | choose ;;
   maven)
@@ -155,8 +155,8 @@ print("\n".join(sorted(vs, key=lambda v: tuple(int(p) for p in v.split(".")), re
 import json, sys
 for t in json.load(sys.stdin)["results"]:
     if t["tag_last_pushed"]:
-        print(t["name"], t["tag_last_pushed"])'
-      url=$(printf '%s' "$json" | python3 -c 'import json, sys; print(json.load(sys.stdin)["next"] or "")')
+        print(t["name"], t["tag_last_pushed"])' || exit 2
+      url=$(printf '%s' "$json" | python3 -c 'import json, sys; print(json.load(sys.stdin)["next"] or "")') || exit 2
     done) || exit 2
     printf '%s\n' "$lines" | choose ;;
 esac
