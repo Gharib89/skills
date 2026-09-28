@@ -8,6 +8,7 @@ Workspace: pnpm-workspace.yaml, package.json `workspaces`
 Extensions: .ts .tsx .js .jsx .mjs .cjs .mts .cts
 Shebangs: node
 Runtime version: .nvmrc, .node-version, package.json `engines`, .tool-versions, mise.toml
+Library: a `package.json` with a `name` and no `"private": true`
 
 ## lint
 
@@ -165,3 +166,43 @@ Route: None.
 Constraints: vendored from the Anthropic `typescript-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md), pinned once at the stack root beside the repo's own `typescript`, whose tsserver it drives. When the lockfile resolves that `typescript` to 7 or later, the tool is `Unavailable: typescript-lsp needs TS ≤ 6`; a stack with no `typescript` makes it `Unavailable: typescript-lsp needs the stack's typescript`, since the server refuses to initialize without one (measured, 6.0.0). Either way nothing of it is written.
 Local-only: cloud sessions start no plugin language server.
 Traps: None.
+
+## browser
+
+### Playwright Test
+Publisher: Microsoft
+Tier: 2: https://github.com/microsoft/playwright
+Evidence: `playwright.config.*`, `@playwright/test` dev dependency
+Rung: full
+Run: `playwright test`
+Hook: local
+Pin: package npm @playwright/test
+Route: `npm install --no-save @playwright/test@{version} && npx --no-install playwright install --with-deps chromium`; Blocked: `cdn.playwright.dev` for the browser download, on the Default network
+Constraints: the repo's own suite only, wired where it is evidence and never a default; its browsers come from the cloud setup's browser step ([reference/surfaces.md](../reference/surfaces.md) `## Web UI`), and `PLAYWRIGHT_BROWSERS_PATH` is never overridden. A repo's copy comes from its frozen install, so `Route:` is the entry trial's alone and never a cloud setup step.
+Traps: `--only-changed` selects by the import graph and the vendor calls it a heuristic, so it is never offered. A `webServer` in the config builds and starts the app, so the row's time is mostly the build's. A `webServer.command` run through `pnpm exec` starts in a new session (pnpm 11.27.1), so Playwright's teardown kill misses the server and the row hangs after its tests pass; where `webServer.command` starts with `pnpm exec`, the report asks the human, as a numbered question, to call `./node_modules/.bin/<bin>` instead, and the skill never edits the config itself; a no drops the `e2e-<member>` row, recorded `Declined: e2e-<member>: webServer.command runs through pnpm exec: <reason>`.
+
+## public API
+
+### publint
+Publisher: bluwy
+Tier: 2: https://github.com/publint/publint
+Evidence: `publint` dev dependency
+Rung: full
+Run: `publint`
+Hook: local
+Pin: package npm publint
+Route: `npm install -g publint@{version}`; Blocked: None.
+Constraints: runs `npm pack` itself and checks the tarball's `main`, `exports` and `files` against the files it holds; offline.
+Traps: a `"private": true` package is still checked.
+
+### attw
+Publisher: andrewbranch
+Tier: 2: https://github.com/arethetypeswrong/arethetypeswrong.github.io
+Evidence: `@arethetypeswrong/cli` dev dependency
+Rung: full
+Run: `attw --pack .`
+Hook: local
+Pin: package npm @arethetypeswrong/cli
+Route: `npm install -g @arethetypeswrong/cli@{version}`; Blocked: None.
+Constraints: checks how each module resolution mode resolves the packed tarball's types; offline.
+Traps: a package with no types passes, since there is nothing to resolve. A package whose `exports` has no `require` or `default` condition leading to a CommonJS file is ESM-only, and fails `CJSResolvesToESM` under the default profile: its row passes `--profile esm-only`.

@@ -42,8 +42,11 @@ FULL_RUN=''
 TURN_ROWS=''
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS=''
+# FULL_ROWS names the cloud cannot run (the profile's Local-only: parts),
+# space-separated: `skipped` unrun when CLAUDE_CODE_REMOTE=true.
+LOCAL_ONLY=''
 # <<< setup-harness configuration
-: "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}"
+: "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}" "${LOCAL_ONLY=}"
 
 rung=${1:-}
 case $rung in
@@ -236,6 +239,9 @@ EOF
   while IFS= read -r row; do
     [ -n "$row" ] || continue
     name=${row%%|*}
+    if [ "${CLAUDE_CODE_REMOTE:-}" = true ]; then
+      case " $LOCAL_ONLY " in *" $name "*) record "$name" skipped; continue ;; esac
+    fi
     check "$name" . "${row#*|}"
   done <<EOF
 $FULL_ROWS

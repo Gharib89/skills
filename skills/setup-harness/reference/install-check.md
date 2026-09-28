@@ -58,7 +58,7 @@ One table, a row per unit, then each unit's glue in full:
 |---|---|---|---|---|---|---|---|
 
 - **Tier**: the number and the reason (`2: ruff is Astral's; PyPI publisher astral-sh`).
-- **Runs**: each command and its trigger: install, on edit, on `Stop`, on commit, session start.
+- **Runs**: each command and its trigger: install, on edit, on `Stop`, on commit, on `full`, session start.
 - **Reaches**: the hosts at install and at run time, and any file written outside the repo (`~/.cache/prek`, `~/.local/bin`).
 - **Cloud**: `yes`, or `local-only: <why>`.
 - **Provenance**: `checked`, `none published` or `failed`.

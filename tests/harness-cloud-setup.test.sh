@@ -119,6 +119,69 @@ check "after an idle restart kills dockerd it starts again, the image kept" "har
 dockerd" "$out
 $(cat "$log")"
 
+# The browser rows reference/cloud.md gives a web UI member, one per route, as
+# written there. The member's own Playwright names its revision directories;
+# the stub installs a revision by writing each directory's marker, the vendor
+# route through Playwright's installer, the mcr route by copying the image's.
+pw=$fixture/pw-browsers
+cat > "$bin/pnpm" <<'STUB'
+#!/bin/sh
+case "$*" in
+  "exec playwright --version") echo "Version 1.2.3" ;;
+  "exec playwright install --dry-run chromium")
+    [ -e "$PW.dry-empty" ] && exit 0
+    for d in chromium-7 ffmpeg-1 chromium_headless_shell-7 ffmpeg-1; do echo "browser: x"; echo "  Install location:    $PW/$d"; done ;;
+  "exec playwright install --with-deps chromium")
+    echo vendor >> "$LOG"; for d in chromium-7 ffmpeg-1 chromium_headless_shell-7; do mkdir -p "$PW/$d"; : > "$PW/$d/INSTALLATION_COMPLETE"; done ;;
+  *) exit 64 ;;
+esac
+STUB
+cat > "$bin/docker" <<'STUB'
+#!/bin/sh
+case "$1" in
+  create) echo "create $2" >> "$LOG"; echo cid ;;
+  cp) [ -e "$PW.cp-fail" ] && exit 1; d=${2#cid:/ms-playwright/}; mkdir -p "$3$d"; : > "$3$d/INSTALLATION_COMPLETE" ;;
+  rm) echo "rm $2" >> "$LOG" ;;
+  *) exit 64 ;;
+esac
+STUB
+chmod +x "$bin/pnpm" "$bin/docker"
+browser_rows=$(sed -n 's/^   - `\(browsers-<member>|.*\)`$/\1/p' skills/setup-harness/reference/cloud.md | sed 's/<member>/web/g; s/<exec>/pnpm exec/g')
+check "cloud.md gives a browser row per route" 2 "$(printf '%s\n' "$browser_rows" | grep -c .)"
+browser_run() { # <route>: the row whose command takes that route
+  local row; row=$(printf '%s\n' "$browser_rows" | grep -e "$1")
+  s=$(hook_script "browser-$1" "STEPS='$row'"); mkdir -p "${s%/.claude/hooks/cloud-setup.sh}/web"
+  : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" PW=$pw CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
+}
+rm -rf "$pw"; mkdir -p "$pw"
+browser_run 'docker create'
+check "the mcr row copies the member's revision out of its version's image" "harness cloud setup: ok
+create mcr.microsoft.com/playwright:v1.2.3-noble
+rm cid" "$out
+$(cat "$log")"
+check "into the directories Playwright names" "chromium-7 chromium_headless_shell-7 ffmpeg-1" "$(ls "$pw" | tr '\n' ' ' | sed 's/ $//')"
+browser_run 'docker create'
+check "and a second run, the revision complete, is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
+rm -rf "$pw"; mkdir -p "$pw/chromium-7"
+browser_run 'with-deps'
+check "the vendor row installs through Playwright's installer" "harness cloud setup: ok
+vendor" "$out
+$(cat "$log")"
+browser_run 'with-deps'
+check "and a second run is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
+: > "$pw.dry-empty"
+browser_run 'with-deps'
+check "a Playwright naming no directory runs the row, then fails its done test" "harness cloud setup: FAILED browsers-web
+vendor" "$out
+$(cat "$log")"
+rm -f "$pw.dry-empty"; rm -rf "$pw"; mkdir -p "$pw"; : > "$pw.cp-fail"
+browser_run 'docker create'
+check "a failed copy fails the setup and removes its container" "harness cloud setup: FAILED browsers-web
+create mcr.microsoft.com/playwright:v1.2.3-noble
+rm cid" "$out
+$(cat "$log")"
+rm -f "$pw.cp-fail"
+
 # The SessionStart entry setup-harness merges into .claude/settings.json: its
 # command, run as a hook runs it, exits 0 outside a cloud session, because a
 # non-zero SessionStart exit is shown to a local session as a hook error.

@@ -8,6 +8,7 @@ Workspace: settings.gradle `include`, settings.gradle.kts `include`, pom.xml `<m
 Extensions: .java .kt .kts
 Shebangs: None.
 Runtime version: .java-version, .sdkmanrc, .tool-versions, mise.toml, the build's toolchain block
+Library: the `maven-publish` plugin in a Gradle build, or `<distributionManagement>` in a `pom.xml`
 
 ## lint
 

@@ -8,6 +8,7 @@ Workspace: go.work
 Extensions: .go
 Shebangs: None.
 Runtime version: go.mod `toolchain`, go.mod `go`, .go-version, .tool-versions, mise.toml
+Library: a `go.mod` whose module holds a package other than `main` outside `internal/`
 
 ## lint
 

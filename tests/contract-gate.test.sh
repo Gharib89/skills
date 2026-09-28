@@ -348,7 +348,7 @@ harness_tree() { # <case-dir>: prints its path
   rm -rf "$d"; mkdir -p "$d/setup-harness/catalog" "$d/setup-harness/templates"
   cp skills/setup-harness/templates/harness-profile.md "$d/setup-harness/templates/"
   printf '# Catalog\n\n## Signals\n\nNot an entry.\n' > "$d/setup-harness/catalog/README.md"
-  { printf '# Py\n\n## Signals\nKind: stack\nManifest: pyproject.toml\nLockfile: uv.lock\nWorkspace: None.\nExtensions: .py\nShebangs: python\nRuntime version: .python-version\n\n## lint\n'
+  { printf '# Py\n\n## Signals\nKind: stack\nManifest: pyproject.toml\nLockfile: uv.lock\nWorkspace: None.\nExtensions: .py\nShebangs: python\nRuntime version: .python-version\nLibrary: `[build-system]` and `[project]` in pyproject.toml\n\n## lint\n'
     tool_block ruff edit
     printf '## typecheck\n'; tool_block mypy turn
   } > "$d/setup-harness/catalog/py.md"
@@ -372,6 +372,16 @@ d=$(harness_tree catalog-signals)
 sed -i.bak '/^Lockfile:/d' "$d/setup-harness/catalog/py.md"
 run "$inert" "$d"
 check "a stack entry missing a Signals label is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ## Signals: missing Lockfile:")"
+
+d=$(harness_tree catalog-library)
+sed -i.bak '/^Library:/d' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a stack entry missing its Library: signal is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ## Signals: missing Library:")"
+
+d=$(harness_tree catalog-kind-library)
+sed -i.bak 's/^Paths: None.$/Paths: None.\nLibrary: None./' "$d/setup-harness/catalog/sh.md"
+run "$inert" "$d"
+check "a file-kind entry carrying a stack's Library: is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ## Signals: Library: is a stack's")"
 
 d=$(harness_tree catalog-names)
 sed -i.bak '/^Names:/d' "$d/setup-harness/catalog/sh.md"

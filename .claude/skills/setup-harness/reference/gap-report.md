@@ -25,18 +25,23 @@ Each gap kind takes exactly one disposition:
 | The profile's `Schema:` trails the skill's `metadata.harness-schema` | Write: the migration, row 1, undroppable |
 | A piece the skill writes is missing: `scripts/check.sh`, `.claude/hooks/check-hook.sh`, a hook entry, the cloud setup or its `SessionStart` entry (cloud-first only), a vendored language server, the `CLAUDE.md` block | Write |
 | A file the skill wrote lacks what its current template says | Write |
-| A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack) | Write: the removal |
+| A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack, a browser step or `FULL_ROWS` row for a surface no longer detected, the `tags` step once no griffe row is left, the `dockerd` row once no `mcr` browser step or container tool needs it, a `LOCAL_ONLY` name whose row is gone) | Write: the removal |
 | A hook `timeout` off deadline plus max(10 s, deadline / 4) | Write |
 | A new root whose stack has a catalog entry | Write: its `TURN_ROWS` row and runner additions |
-| A now-available role: a role with no tool that its catalog entry now fills, or a `Constraints:` `Unavailable:` that no longer holds | Write |
+| New web UI evidence ([surfaces.md](surfaces.md)) | Write: its browser step, cloud-first, and its suite's `FULL_ROWS` row where surfaces.md `## Web UI` gives one |
+| New library evidence ([surfaces.md](surfaces.md)) | Write: each `public API` default surfaces.md `## Library` proposes, its `FULL_ROWS` row, droppable; cloud-first, its `LOCAL_ONLY` name and `Local-only:` line where the catalog carries one, and the cloud setup's `tags` step with a griffe row |
+| `Allowlist:` gained or lost `cdn.playwright.dev` | Write: each web UI member's browser step on the route it now takes, on `vendor` also where an MCR no left it unwritten, removing that member's `LOCAL_ONLY` name and `Local-only:` line; on `mcr` only after the MCR tag check ([surfaces.md](surfaces.md) `## Web UI`), a missing tag becoming its question; the `dockerd` row added for `mcr`, or removed for `vendor` where no container tool needs it |
+| A now-available role: a role with no tool that its catalog entry now fills (a `public API` default whose baseline now exists included), or a `Constraints:` `Unavailable:` that no longer holds | Write |
 | `check.sh` breaks its contract, and no Write above explains it | Offer: rewrite onto the current template, keeping every check the old file ran |
 | A warm `edit` or `turn` time over budget | Offer: narrow, demote or override ([check-ladder.md](check-ladder.md) `## Timing the rungs`) |
 | A new candidate ([detection.md](detection.md)) | Offer |
 | `cloud: unproven`, or `unproven (changed since <sha>)`, on a cloud-first repo | Offer: the proof ([cloud.md](cloud.md) `## The proof`) |
 | A broken pin | Offer: re-pin or remove |
-| Evidence gone from an evidence-backed `Local-only:` line | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
+| Evidence gone from a `Local-only:` line that is not `operator's choice` | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
+| A surface and no `.claude/skills/run-*/`, not `Declined: run recipe` | Offer: type `/run-skill-generator` ([surfaces.md](surfaces.md) `## The run recipe`) |
 | A third-party unit a Write above adds or re-pins (the Write keeps its own row), and a pin that is behind | Install-check row |
-| Unclaimed extensions and stacks, unwired tools, Found-not-installed units | Report only |
+| A catalog `Traps:` question whose condition holds (js-ts Playwright Test's `webServer.command` starting with `pnpm exec`), not `Declined:` | Offer |
+| Unclaimed extensions and stacks, unwired tools, Found-not-installed units, `public API` defaults with no baseline | Report only |
 | Standing choices | Report only |
 
 Not gaps: a line the repo added to a file the skill wrote (kept); a red or unavailable check during timing (`not judged: fail (<check>)`, `not judged: unavailable (<check>)`); a skill pin in `skills-lock.json` (tier 3, never proposed: that bump is `update-skills`'); a profile `Schema:` ahead of the skill, which stops the run at step 2.
@@ -59,7 +64,7 @@ Every pin the harness carries is read: runner config `rev`s, the dev dependency 
 
 A missing piece is proposed every run until step 5 records it `Declined:`; removing that line re-opens it.
 
-**Standing choices** are listed and never re-asked: every `Declined:`, every `Local-only:` whose reason is `operator's choice`, budget overrides, the `Verdict:` and `Allowlist:`. A `Local-only:` line whose reason names a file, target or host is re-checked against the repo; when that evidence is gone it is the Offer above, and "keep" rewrites its reason to `operator's choice: <why>`.
+**Standing choices** are listed and never re-asked: every `Declined:`, every `Local-only:` whose reason is `operator's choice`, budget overrides, the `Verdict:` and `Allowlist:`. A `Local-only:` line whose reason is not `operator's choice` is re-checked against its evidence: a file, target or host in the repo, the MCR tag check for the member's current locked Playwright version, or the catalog `Local-only:` line with no `Cloud setup:` override; when that evidence is gone it is the Offer above, whose "set it up" also removes its name from `LOCAL_ONLY`, and "keep" rewrites its reason to `operator's choice: <why>`.
 
 ## Timing on a re-run
 
@@ -71,7 +76,7 @@ After the writes, in place of step 6's first timing, every rung the batch touche
 
 Step 4's message on a re-run, in this order:
 
-1. **Header**: skill version, `Schema: N` (and "migrates to M" when it trails), the Claude Code floor against the installed version, the step-1 warnings.
+1. **Header**: skill version, `Schema: N` (and "migrates to M" when it trails), the Claude Code floor against the installed version, the step-1 warnings, the surfaces with their evidence paths.
 2. **Offers**, numbered, each with its recommendation.
 3. **Proposed writes**: one table, `| # | Gap | Path | Now | Proposed |`, with the install-check columns filled on unit rows and each unit's glue in full after it; the migration is row 1, marked undroppable.
 4. **Budgets**: rung, cold, warm, budget, verdict.
