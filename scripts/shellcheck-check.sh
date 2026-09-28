@@ -5,6 +5,12 @@
 # mechanics use. The `shellcheck` gate in scripts/local-gate.sh runs this in the
 # full lane, and under `--small` only when the diff touches a `*.sh`.
 #
+# The landed scripts, the ones setup-harness and setup-skills write into a
+# consumer, get a second, plain `shellcheck` pass at its default severity,
+# `style`: a consumer wiring the Shell catalog entry runs exactly that over
+# them, so a finding below `warning`, which the first pass admits, fails there
+# (issue #371).
+#
 # Uses a system `shellcheck` on PATH, else fetches one with `npx -y shellcheck`.
 # When neither yields a shellcheck (for example, the cloud sandbox's proxy
 # refuses the fetch, issue #249), exit 2: the gate reads that as `unavailable`,
@@ -22,6 +28,9 @@ files=()
 while IFS= read -r f; do files+=("$f"); done \
   < <(git ls-files 'skills/*.sh' 'skills/**/*.sh' 'scripts/*.sh' 'tests/*.sh')
 [ ${#files[@]} -gt 0 ] || { echo "no shell scripts tracked"; exit 1; }
+landed=()
+while IFS= read -r f; do landed+=("$f"); done \
+  < <(git ls-files 'skills/setup-harness/templates/*.sh' 'skills/setup-skills/*.sh')
 
 if command -v shellcheck >/dev/null; then
   sc=(shellcheck)
@@ -32,3 +41,6 @@ else
   exit 2
 fi
 "${sc[@]}" -x -s bash -P SCRIPTDIR -S warning "${files[@]}" || exit 1
+if [ ${#landed[@]} -gt 0 ]; then
+  "${sc[@]}" "${landed[@]}" || exit 1
+fi

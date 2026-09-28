@@ -104,7 +104,7 @@ check() {
       rc=$?
     fi
     tries=$((tries - 1))
-    [ "$rc" -ne 0 ] && [ "$rc" -ne 127 ] && [ "$tries" -gt 0 ] || break
+    { [ "$rc" -ne 0 ] && [ "$rc" -ne 127 ] && [ "$tries" -gt 0 ]; } || break
   done
   if [ -n "$expired" ]; then record "$name" over-budget; return; fi
   case $rc in
@@ -249,7 +249,14 @@ EOF
   [ -n "$names" ] || record full skipped
 }
 
-"rung_$rung" "$@"
+# A direct dispatch, not a call through a name built from $rung: ShellCheck
+# reads a function called only indirectly as never invoked (SC2317, SC2329),
+# and a repo that lints this file at ShellCheck's default severity fails on it.
+case $rung in
+  edit) rung_edit "$@" ;;
+  turn) rung_turn "$@" ;;
+  full) rung_full "$@" ;;
+esac
 
 # One JSON line. A real failure outranks every other outcome, so it still
 # reaches the caller when the deadline also hit; a passed deadline is exit 3
