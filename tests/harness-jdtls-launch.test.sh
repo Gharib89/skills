@@ -23,6 +23,7 @@ for a; do url=\$a; done
 echo "\$url" >> "$fixture/calls"
 case \$url in https://repo.eclipse.org/content/repositories/jdtls-releases/org/eclipse/jdt/ls/org.eclipse.jdt.ls.product/9.9.9/*) exit 22 ;; esac
 case \$url in https://repo.eclipse.org/content/repositories/jdtls-releases/org/eclipse/jdt/ls/org.eclipse.jdt.ls.product/*/org.eclipse.jdt.ls.product-*.tar.gz) ;; *) exit 22 ;; esac
+[ -z "\${RIVAL:-}" ] || { mkdir -p "$fixture/cache/harness-jdtls/2.0.0/bin"; printf '#!/bin/sh\necho "rival \$*"\n' > "$fixture/cache/harness-jdtls/2.0.0/bin/jdtls"; chmod +x "$fixture/cache/harness-jdtls/2.0.0/bin/jdtls"; }
 cat "$fixture/build.tar.gz"
 FAKE
 chmod +x "$fixture/bin/curl"
@@ -55,5 +56,10 @@ check "a build that does not unpack leaves no cache" "$v" "$(ls "$fixture/cache/
 
 launch
 check_rc "a launch with no pin is a usage error" 2 "$rc"
+
+# A rival first launch of 2.0.0 lands its build while this one downloads.
+tar czf "$fixture/build.tar.gz" -C "$fixture/build" bin
+check "a build a rival launch cached first is the one run" "rival -data ws" "$(PATH="$fixture/bin:$PATH" XDG_CACHE_HOME="$fixture/cache" RIVAL=1 bash "$script" 2.0.0 "$sha" -data ws 2>/dev/null)"
+check "a rival's cached build gets no second copy inside it" "bin" "$(ls "$fixture/cache/harness-jdtls/2.0.0")"
 
 finish

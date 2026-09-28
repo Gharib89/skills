@@ -25,7 +25,10 @@ if [ ! -x "$cache/bin/jdtls" ]; then
   curl -fsSL "$url" > "$tmp/build.tar.gz" || exit 2
   got=$( (sha256sum 2>/dev/null || shasum -a 256) < "$tmp/build.tar.gz" | cut -d' ' -f1)
   [ "$got" = "$sha256" ] || { echo "jdtls-launch: $url has sha256 $got, pinned $sha256" >&2; exit 1; }
-  mkdir "$tmp/build" && tar xzf "$tmp/build.tar.gz" -C "$tmp/build" && mv "$tmp/build" "$cache" || exit 2
+  mkdir "$tmp/build" && tar xzf "$tmp/build.tar.gz" -C "$tmp/build" || exit 2
+  # A rival first launch may have cached the version meanwhile, and mv onto an
+  # existing directory nests inside it; the rival's copy is kept.
+  [ -x "$cache/bin/jdtls" ] || mv "$tmp/build" "$cache" || exit 2
   rm -rf "$tmp" # exec below skips the EXIT trap
 fi
 exec "$cache/bin/jdtls" "$@"
