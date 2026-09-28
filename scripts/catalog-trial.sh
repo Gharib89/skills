@@ -13,7 +13,9 @@
 # files carrying those extensions instead. {version} is the picked version,
 # {member} is `.` and {package} is `seed`, the package name every stack
 # seed carries. The clean copy is a git repo whose one commit is tagged
-# v0.1.0, the baseline a public-API tool diffs against (griffe).
+# v0.1.0, the baseline a public-API tool diffs against (griffe). `Run:` runs with the
+# tree's node_modules/.bin ahead of PATH, as a stack's exec command would, so
+# a Route: installing into the tree (`npm install --no-save`) is the copy tried.
 #
 #   scripts/catalog-trial.sh <entry>|all
 #
@@ -102,13 +104,13 @@ trial() {
   run=${run//\{member\}/.}
   run=${run//\{package\}/seed}
   run=${run//\{version\}/$version}
-  if ! (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 || [ "$(snapshot "$work" "$seeds/$entry/clean")" != "$before" ]; then
+  if ! (cd "$work" && PATH=$work/node_modules/.bin:$PATH bash -c "${run//\{files\}/$files}") >&2 || [ "$(snapshot "$work" "$seeds/$entry/clean")" != "$before" ]; then
     echo "$entry $s: fail (failed on clean)"; rm -rf "$work"; return 1
   fi
   cp -R "$seeds/$entry/bad/$s/." "$work/"
   files=$(files_in "$seeds/$entry/bad/$s" "$e" "$n" "$p")
   before=$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")
-  if (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 && [ "$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")" = "$before" ]; then
+  if (cd "$work" && PATH=$work/node_modules/.bin:$PATH bash -c "${run//\{files\}/$files}") >&2 && [ "$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")" = "$before" ]; then
     echo "$entry $s: fail (passed on bad/$s)"; rm -rf "$work"; return 1
   fi
   echo "$entry $s: pass"

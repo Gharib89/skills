@@ -107,6 +107,20 @@ printf '#!/bin/sh\nexit 2\n' > "$root/skills/setup-harness/scripts/pick-version.
 out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh kind 2>/dev/null)
 check "an unreachable registry is named, not a missing version" "kind versioned: fail (npm did not answer for versioned)" "$(printf '%s\n' "$out" | grep versioned)"
 
+# A Route: that installs into the tree (`npm install --no-save`) is run from its
+# node_modules/.bin ahead of PATH, as a stack's exec command would, so a same-named
+# global on PATH (the cloud image's own `playwright`) is never the one tried.
+printf '#!/bin/sh\nexit 0\n' > "$root/bin/shadow"; chmod +x "$root/bin/shadow"
+{ printf '# Local\n\n## Signals\nKind: file kind\nNames: None.\nExtensions: .toy\nShebangs: None.\n\n## lint\n'
+  tool shadow 'shadow {files}' 'mkdir -p node_modules/.bin && cp '"$root"'/bin/lint node_modules/.bin/shadow'
+} > "$root/skills/setup-harness/catalog/local.md"
+seed=$root/tests/fixtures/catalog/local
+mkdir -p "$seed/clean" "$seed/bad/shadow"
+echo fine > "$seed/clean/a.toy"
+echo BAD > "$seed/bad/shadow/b.toy"
+out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh local 2>/dev/null)
+check "a Route: installed into the tree wins over a same-named command on PATH" "local shadow: pass" "$out"
+
 out=$(cd "$root" && bash scripts/catalog-trial.sh nope 2>/dev/null); rc=$?
 check_rc "an entry that does not exist is a usage error" 2 "$rc"
 
