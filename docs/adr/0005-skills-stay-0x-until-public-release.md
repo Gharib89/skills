@@ -18,6 +18,6 @@ Measured against 10.6.2, the workflow's pin, in a throwaway repo:
 ## Consequences
 
 - The `version-lines` gate admits the renumber alone: one version line out and one in, `M.m.p` with `M` at least 1 to exactly `0.M.p`, in the diff that flips that skill's `allow_zero_version` to true. The flip happens once, so no later diff qualifies, a move from 1.x back to 0.x included.
-- `ship`'s retired terms moved with the numbers (9.0.0 to 0.9.0), and `update-skills`' plan reads an installed `M.m.p` as `0.M.p` when the new version is 0.x, because it applies a row whose version lies in `(installed, new]`. Consumers sat at ship 1.1.0, 1.2.3, 5.2.1, 8.0.0 and 11.x at #369: one at 5.2.1 reads `(0.5.1, 0.11.4]` and still plans 0.9.0's rows, where the raw range would be empty.
+- `ship`'s retired terms moved with the numbers (9.0.0 to 0.9.0), and `update-skills`' plan reads an installed `M.m.p` above the new version as `0.M.p`, the one move down a refresh makes, because it applies a row whose version lies in `(installed, new]`. Consumers sat at ship 1.1.0, 1.2.3, 5.2.1, 8.0.0 and 11.x at #369: one at 5.2.1 reads `(0.5.1, 0.11.4]` and still plans 0.9.0's rows, where the raw range would be empty.
 - While a skill is 0.x its number no longer separates additive from breaking: a minor can be either, so a consumer crossing one reads that release's changelog entry.
 - `bump-guard` still holds a `!` title to the maintainer's `major` label, though in 0.x it grades a minor: a breaking change stays the maintainer's decision, whatever digit it moves.

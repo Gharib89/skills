@@ -3,11 +3,12 @@
 # bump unless the maintainer has applied the `major` label.
 #
 # The release run reads the squash subject, which is the PR title, to pick the
-# bump: `feat:` minor, `!` or a `BREAKING CHANGE:` footer major, every other type
-# patch. A major bump must be a maintainer's decision and never an agent's, so
-# only that grade is label-gated; `feat:` flows without a label so an agent's
-# feature PR is not stalled on a human. A title that is not a valid Conventional
-# Commit fails outright, because the release run would otherwise have to guess.
+# bump: `feat:` minor, `!` or a `BREAKING CHANGE:` footer major (a minor while the
+# skill is 0.x, ADR 0005), every other type patch. A major bump must be a
+# maintainer's decision and never an agent's, so only that grade is label-gated;
+# `feat:` flows without a label so an agent's feature PR is not stalled on a
+# human. A title that is not a valid Conventional Commit fails outright, because
+# the release run would otherwise have to guess.
 # See docs/adr/0003-version-and-changelog-cut-on-merge.md.
 #
 #   PR_TITLE=... PR_BODY=... PR_COMMITS=... PR_LABELS=... scripts/check-bump-label.sh
@@ -69,5 +70,5 @@ if printf '%s\n' "$have" | grep -qx 'major'; then
   exit 0
 fi
 
-printf "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the description or in a commit message), which bumps the major version. A major bump must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer).\n"
+printf "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the description or in a commit message), which grades major, a minor while the skill is 0.x. A breaking change must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer).\n"
 exit 1

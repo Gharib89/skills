@@ -160,6 +160,14 @@ check "a plan across the renumber reads the installed M.m.p as 0.M.p" \
   '["crossed","at-new"]' "$(jq -c '[.retired[].term]' <<<"$out")"
 check "a plan across the renumber still reports the installed version as it was" \
   '5.2.1' "$(jq -r '.source_skills[0].old_version' <<<"$out")"
+# A consumer that skips the whole 0.x line, 8.0.0 straight to a public 1.0.0,
+# still crosses the renumber: the version went down, which only it does.
+git -C "$r2" checkout -q -- . && skill "$r2" ship 8.0.0 && git -C "$r2" commit -qam eight
+skill "$r2" ship 1.0.0
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 0.8.0 | at-old | x |' '| 0.9.0 | crossed | x |' '| 1.0.0 | at-new | x |' \
+  > "$r2/.claude/skills/ship/retired-terms.md"
+check "a plan from a pre-renumber version to a 1.x one reads the installed M.m.p as 0.M.p" \
+  '["crossed","at-new"]' "$(bash "$plan" "$r2" "$tmp/heads0.json" | jq -c '[.retired[].term]')"
 
 # A prerelease version compares by its release part, in the skill's version
 # and in a row's, and a row with no replacement cell, or a lowercase none, has

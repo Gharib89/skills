@@ -35,8 +35,8 @@
 #     differs between the old and new copies; SKILL.md is not a template.
 #   retired: every row of a source-repo skill's retired-terms.md, in the new
 #     copy, whose version is above old_version and at or below new_version,
-#     compared by release part, an old M.m.p read as 0.M.p when the new
-#     version is 0.x (the #369 renumber); a replacement of `None.`, or none, is null. A
+#     compared by release part, an old M.m.p above the new version read
+#     as 0.M.p (the #369 renumber); a replacement of `None.`, or none, is null. A
 #     skill the old tree lacked has none: the repo never used its words. A row
 #     whose version cell is no version fails the plan rather than vanish.
 #   mode: `source` where the lock installs ship from `.`, the source repo itself.
@@ -78,8 +78,9 @@ while IFS= read -r s; do
   retired=$(jq -Rn --arg s "$s" --arg o "$was" --arg n "$new" --argjson r "$retired" '
     def v: if test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?$") then split("-")[0] | split(".") | map(tonumber)
       else error("not a version: \(.)") end;
-    # Across the renumber to 0.x (ADR 0005) an installed M.m.p reads as 0.M.p.
-    ($n | v) as $nv | ($o | v | if .[0] > 0 and $nv[0] == 0 then [0, .[0], .[2]] else . end) as $ov |
+    # An installed version above the new one crossed the renumber to 0.x (ADR
+    # 0005), the one move down a refresh makes: it reads as 0.M.p.
+    ($n | v) as $nv | ($o | v | if .[0] > 0 and . > $nv then [0, .[0], .[2]] else . end) as $ov |
     $r + [inputs | select(test("^\\|") and (test("^\\| *Version *\\||^\\|[ :|-]+$") | not)) | split("|")[1:4] | map(gsub("^ +| +$"; ""))
       | select((.[0] | v) > $ov and (.[0] | v) <= $nv)
       | {skill: $s, version: .[0], term: .[1], replacement: (if (.[2] // "" | test("^(none\\.?)?$"; "i")) then null else .[2] end)}]' "$f") \
