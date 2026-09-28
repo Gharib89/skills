@@ -62,6 +62,11 @@
       "skillPath": "skills/in-progress/retro/SKILL.md",
       "computedHash": "b8d55851a2909e26c2dbb2e8563719c87b3b700559f604e4df344f8c27e21047"
     },
+    "setup-harness": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "5f48ebdf7b10b36330b3fb8d1faf45a92257d7da02926184bc5ac7ffb679185b"
+    },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",

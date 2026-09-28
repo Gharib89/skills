@@ -337,6 +337,90 @@ run "$inert" "$d"
 check_rc "a mechanic reading SHIP_HOST_ADAPTER fails" 1 "$rc"
 check "and the violation names the mechanic" 0 "$(named "$d/ship/scripts/read-issue.sh:")"
 
+# 7. Every setup-harness catalog entry carries its fixed headings and labels.
+# A tree of its own, one valid stack entry and one valid file-kind entry beside
+# the real profile template, so each case breaks one rule in one file.
+tool_block() { # <tool> <rung>
+  printf '### %s\nPublisher: p\nTier: 2: https://example.com\nEvidence: e\nRung: %s\nRun: `t {files}`\nHook: local\nPin: apt t\nRoute: `apt-get install t`; Blocked: None.\nConstraints: None.\nTraps: None.\n\n' "$1" "$2"
+}
+harness_tree() { # <case-dir>: prints its path
+  local d="$fixture/$1"
+  rm -rf "$d"; mkdir -p "$d/setup-harness/catalog" "$d/setup-harness/templates"
+  cp skills/setup-harness/templates/harness-profile.md "$d/setup-harness/templates/"
+  printf '# Catalog\n\n## Signals\n\nNot an entry.\n' > "$d/setup-harness/catalog/README.md"
+  { printf '# Py\n\n## Signals\nKind: stack\nManifest: pyproject.toml\nLockfile: uv.lock\nWorkspace: None.\nExtensions: .py\nShebangs: python\nRuntime version: .python-version\n\n## lint\n'
+    tool_block ruff edit
+    printf '## typecheck\n'; tool_block mypy turn
+  } > "$d/setup-harness/catalog/py.md"
+  { printf '# Shell\n\n## Signals\nKind: file kind\nExtensions: .sh\nShebangs: sh\n\n## lint\n'
+    tool_block shellcheck edit
+  } > "$d/setup-harness/catalog/sh.md"
+  printf '%s' "$d"
+}
+
+d=$(harness_tree catalog-valid)
+run "$inert" "$d"
+check_rc "a valid catalog and profile template pass" 0 "$rc"
+
+d=$(harness_tree catalog-label)
+sed -i.bak '/^Pin:/d' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check_rc "a tool missing a required label fails" 1 "$rc"
+check "and the violation names the entry, tool and label" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### ruff: missing Pin:")"
+
+d=$(harness_tree catalog-signals)
+sed -i.bak '/^Lockfile:/d' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a stack entry missing a Signals label is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ## Signals: missing Lockfile:")"
+
+d=$(harness_tree catalog-first)
+sed -i.bak 's/^## Signals/## Sig/' "$d/setup-harness/catalog/sh.md"
+run "$inert" "$d"
+check "an entry not opening with ## Signals is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: first ## heading is not ## Signals")"
+
+d=$(harness_tree catalog-turn)
+{ printf '## format\n'; tool_block shfmt turn; } >> "$d/setup-harness/catalog/sh.md"
+run "$inert" "$d"
+check_rc "a file-kind entry with a turn rung fails" 1 "$rc"
+check "and names the tool" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ### shfmt: a file kind takes no turn rung")"
+
+d=$(harness_tree catalog-blocked)
+sed -i.bak 's/; Blocked: None\.$//' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a Route line without its Blocked: clause is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### ruff: Route: want \`<install>\`; Blocked: <routes> | None., or None.")"
+
+d=$(harness_tree catalog-role)
+{ printf '## typecheck\n'; tool_block shx edit; } >> "$d/setup-harness/catalog/sh.md"
+run "$inert" "$d"
+check "a file-kind entry with a role beyond lint and format is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ## typecheck: a file kind carries lint and format only")"
+
+d=$(harness_tree catalog-unknown-role)
+{ printf '## linting\n'; tool_block x edit; } >> "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a role outside the vocabulary is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ## linting: not a role")"
+
+d=$(harness_tree catalog-full-only)
+{ printf '## browser\n'; tool_block playwright turn; } >> "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a browser tool off the full rung is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### playwright: browser is full only")"
+
+d=$(harness_tree catalog-rung)
+sed -i.bak 's/^Rung: edit/Rung: commit/' "$d/setup-harness/catalog/sh.md"
+run "$inert" "$d"
+check "a rung outside edit, turn and full is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ### shellcheck: Rung: want edit, turn or full, got commit")"
+
+# 8. The two profile lines setup-skills parses are frozen in the template.
+d=$(harness_tree frozen-location)
+sed -i.bak 's/^Location:/Path:/' "$d/setup-harness/templates/harness-profile.md"
+run "$inert" "$d"
+check_rc "a profile template without Location: fails" 1 "$rc"
+check "and names the frozen line" 0 "$(named "harness profile template: ## Check entry point has no Location: line")"
+
+d=$(harness_tree frozen-setup)
+sed -i.bak 's/^## Cloud$/## Remote/' "$d/setup-harness/templates/harness-profile.md"
+run "$inert" "$d"
+check "a renamed ## Cloud loses its Setup: line, named" 0 "$(named "harness profile template: ## Cloud has no Setup: line")"
+
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.
 # Two ways it can be unreadable, and the second is the one the grep status owns.

@@ -42,11 +42,12 @@ jobs:
       && (startsWith(github.event.head_commit.message, 'chore(release): ship v')
       || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
       || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v')
-      || startsWith(github.event.head_commit.message, 'chore(release): update-skills v'))) }}
+      || startsWith(github.event.head_commit.message, 'chore(release): update-skills v')
+      || startsWith(github.event.head_commit.message, 'chore(release): setup-harness v'))) }}
     runs-on: ubuntu-latest
     env:
       # The skills this repo releases, named once for both loops below.
-      SKILLS: ship cloud-ship setup-skills update-skills
+      SKILLS: ship cloud-ship setup-skills update-skills setup-harness
     steps:
       # The branch tip, not the commit that triggered this run: the run pushes, and
       # a run pinned to its triggering SHA pushes a commit whose parent is no

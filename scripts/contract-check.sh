@@ -29,6 +29,10 @@
 # one reader, `ship_load_host` in `_lib.sh`, and a mention anywhere else is a
 # second.
 #
+# Checks 7 and 8 read setup-harness, when the skills tree carries it: its
+# catalog entries' format and the two profile-template lines setup-skills is
+# to parse (#367).
+#
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
@@ -205,6 +209,78 @@ if [ -n "$hits" ]; then
   echo "SHIP_HOST_ADAPTER outside $skills/ship/scripts/_lib.sh; it is test-only, and _lib.sh is its one reader:"
   echo "$hits"
   rc=1
+fi
+
+# 7. Every setup-harness catalog entry keeps the entry format its README fixes:
+# `## Signals` first, its labels per kind, roles from the fixed set, and every
+# `###` tool block carrying every required label. Detection reads only the
+# Signals blocks and a run reads the rest by label, so an entry missing one is
+# a stack the skill silently half-knows. A `Route:` carries its `Blocked:`
+# clause, so a run can tell "nothing is blocked" from "nobody looked". A file
+# kind takes no turn rung (it has no project to typecheck or test), and browser
+# and public-API tools run on `full` only.
+harness=$skills/setup-harness
+if [ -d "$harness/catalog" ]; then
+  for entry in "$harness"/catalog/*.md; do
+    [ "${entry##*/}" = README.md ] && continue
+    awk -v f="$entry" '
+    function bad(m) { print "catalog " f ": " m; rc = 1 }
+    function close_tool(  i) {
+      if (tool == "") return
+      for (i = 1; i <= nt; i++) if (!(tl[i] in got)) bad("### " tool ": missing " tl[i] ":")
+      tool = ""; delete got
+    }
+    function close_signals(  i, n, want) {
+      if (!signals) return
+      want = kind == "file kind" ? "Kind|Extensions|Shebangs" : "Kind|Manifest|Lockfile|Workspace|Extensions|Shebangs|Runtime version"
+      n = split(want, w, "|")
+      for (i = 1; i <= n; i++) if (!(w[i] in sig)) bad("## Signals: missing " w[i] ":")
+      if (kind != "stack" && kind != "file kind") bad("## Signals: Kind: want stack or file kind, got " kind)
+      signals = 0
+    }
+    BEGIN {
+      nt = split("Publisher|Tier|Evidence|Rung|Run|Hook|Pin|Route|Constraints|Traps", tl, "|")
+      roles = "|lint|format|typecheck|test runner|affected tests|language server|browser|public API|"
+    }
+    /^## / {
+      close_tool(); close_signals()
+      role = substr($0, 4)
+      if (!headings++) { if (role == "Signals") signals = 1; else bad("first ## heading is not ## Signals"); next }
+      if (index(roles, "|" role "|") == 0) bad("## " role ": not a role")
+      else if (kind == "file kind" && role != "lint" && role != "format") bad("## " role ": a file kind carries lint and format only")
+      next
+    }
+    /^### / { close_tool(); tool = substr($0, 5); next }
+    /^[A-Z][A-Za-z ]*: / || /^[A-Z][A-Za-z ]*:$/ {
+      label = substr($0, 1, index($0, ":") - 1); v = substr($0, length(label) + 3)
+      if (signals) { sig[label] = 1; if (label == "Kind") kind = v; next }
+      if (tool == "") next
+      got[label] = 1
+      if (label == "Route" && v != "None." && v !~ /^`[^`]+`; Blocked: /) bad("### " tool ": Route: want `<install>`; Blocked: <routes> | None., or None.")
+      if (label != "Rung") next
+      if (v != "edit" && v != "turn" && v != "full") bad("### " tool ": Rung: want edit, turn or full, got " v)
+      else if (kind == "file kind" && v == "turn") bad("### " tool ": a file kind takes no turn rung")
+      else if ((role == "browser" || role == "public API") && v != "full") bad("### " tool ": " role " is full only")
+    }
+    END { close_tool(); close_signals(); if (!headings) bad("first ## heading is not ## Signals"); exit rc }
+    ' "$entry" || rc=1
+  done
+fi
+
+# 8. setup-skills is to read two lines of a harness profile with no schema
+# check (#367 adds that reader), `Location:` under `## Check entry point` and
+# `Setup:` under `## Cloud`, so they are frozen across every harness schema:
+# renaming either is a major of both skills in one PR. The profile template is
+# where a rename would start.
+if [ -d "$harness" ]; then
+  tmpl=$harness/templates/harness-profile.md
+  for pair in "Check entry point:Location" "Cloud:Setup"; do
+    awk -v h="## ${pair%%:*}" -v l="${pair#*:}: " '
+      /^## / { in_h = ($0 == h); next }
+      in_h && index($0, l) == 1 { found = 1 }
+      END { exit !found }' "$tmpl" 2>/dev/null \
+      || { printf 'harness profile template: ## %s has no %s: line\n' "${pair%%:*}" "${pair#*:}"; rc=1; }
+  done
 fi
 
 exit $rc
