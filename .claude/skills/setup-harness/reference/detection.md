@@ -11,7 +11,7 @@
 
 - A **stack** is one language plus package manager at a root whose manifest owns a lockfile, or that a workspace config names (pnpm, npm or yarn workspaces, a uv workspace). One stack per root. Install and tool versions are once per root.
 - Its **members** are its workspace packages; a stack with no workspace is its own single member. Typecheck and affected tests run per member.
-- A **file kind** (shell and the like) is detected by extension, shebang, file name (`Names:`, a tracked basename at any depth, such as `azure-pipelines.yml`) or path (`Paths:`, a glob on the root-relative path, such as `.github/workflows/*.yml`) and takes the edit and commit rungs only, never `turn`.
+- A **file kind** (shell and the like) is detected by extension, shebang, file name (`Names:`, a tracked basename at any depth, such as `azure-pipelines.yml`) or path (`Paths:`, a glob on the repo-relative path, such as `.github/workflows/*.yml`) and takes the edit and commit rungs only, never `turn`.
 
 ## The scan
 
@@ -23,7 +23,7 @@ git submodule status                           # reported, never scanned
 git ls-files -- . ':!:.claude/skills/' | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\)$/\1/p' | sort | uniq -c | sort -rn   # extension counts, dotfiles skipped
 ```
 
-- A **root** is a directory holding a stack's `Manifest:` with one of its `Lockfile:` names beside it, or a member a root's `Workspace:` config names.
+- A **root** is a directory holding a stack's `Manifest:` with one of its `Lockfile:` names beside it, or a member a root's `Workspace:` config names. A `Manifest:` or `Workspace:` name with `*` (`*.csproj`, `*.sln`) is a glob on the basename.
 - A lockless manifest no workspace names is a **candidate**: ask the human to mark it a root or ignored. Ignored lands as `Declined: <path> as a root: <reason>` in the profile, so a re-run does not ask again.
 - A root with no lockfile the human marked a root is reported `unlocked` and installed from its manifest as it stands. Never generate a lockfile: that changes the repo's dependency resolution.
 - **Installed skills** under `.claude/skills/` are derived copies pinned by `skills-lock.json`: not scanned, and excluded from the runner config (`exclude: ^\.claude/skills/`), because a fix-mode tool rewriting one breaks its `computedHash`. A `harness-<upstream>/` directory there is a vendored plugin instead: excluded the same way, and read as a language server's evidence per [language-servers.md](language-servers.md).
@@ -48,7 +48,7 @@ Shown on the present step and consumed while writing; nothing of it enters the p
 
 1. Roots: path, stack, lockfile or `unlocked`, members, runtime version source.
 2. Per member and role: the tool, `default` or its evidence path, and `unpinned` or `unwired: <tool> (<evidence path>)` where either applies.
-3. File kinds: extension or name, file count, tools, and each `Unavailable:` tool with its reason.
+3. File kinds: extension, name or path, file count, tools, and each `Unavailable:` tool with its reason.
 4. Candidates, each with its question.
 5. Submodules: `submodule <path>, not scanned`.
 6. Unclaimed extensions and stacks.

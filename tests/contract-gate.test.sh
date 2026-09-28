@@ -383,6 +383,16 @@ sed -i.bak '/^Paths:/d' "$d/setup-harness/catalog/sh.md"
 run "$inert" "$d"
 check "a file-kind entry missing its Paths: label is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ## Signals: missing Paths:")"
 
+d=$(harness_tree catalog-stack-paths)
+sed -i.bak 's/^Workspace: None.$/Workspace: None.\nPaths: None./' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a stack entry carrying a file kind's Paths: is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ## Signals: Paths: is a file kind's")"
+
+d=$(harness_tree catalog-files)
+sed -i.bak 's/^Rung: turn$/Rung: turn\nFiles: .py .pyi/' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a Files: extension outside the entry's Extensions: is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### mypy: Files: .pyi is not in Extensions:")"
+
 d=$(harness_tree catalog-first)
 sed -i.bak 's/^## Signals/## Sig/' "$d/setup-harness/catalog/sh.md"
 run "$inert" "$d"

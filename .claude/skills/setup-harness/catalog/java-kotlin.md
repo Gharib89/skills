@@ -3,7 +3,7 @@
 ## Signals
 Kind: stack
 Manifest: build.gradle, build.gradle.kts, pom.xml
-Lockfile: gradle.lockfile
+Lockfile: gradle.lockfile (Gradle, opt-in; Maven has none, so a pom.xml root is a candidate)
 Workspace: settings.gradle `include`, settings.gradle.kts `include`, pom.xml `<modules>`
 Extensions: .java .kt .kts
 Shebangs: None.
@@ -12,7 +12,7 @@ Runtime version: .java-version, .sdkmanrc, .tool-versions, mise.toml, the build'
 ## lint
 
 ### ktlint
-Publisher: ktlint
+Publisher: pinterest
 Tier: 2: https://github.com/pinterest/ktlint
 Evidence: `.editorconfig` `ktlint_*` keys, `ktlint` in the build or CI
 Rung: edit
@@ -27,20 +27,20 @@ Traps: 2.0 moves to the `io.github.ktlint` group; the pin stays on `com.pinteres
 ## format
 
 ### google-java-format
-Publisher: Google
+Publisher: google
 Tier: 2: https://github.com/google/google-java-format
-Evidence: `google-java-format` in the build (Spotless `googleJavaFormat()`) or CI
+Evidence: `google-java-format` in CI or a make or just target
 Rung: edit
 Files: .java
 Run: `google-java-format --replace {files}`
 Hook: local
 Pin: package maven com.google.googlejavaformat:google-java-format
 Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSLo "$HOME/.local/lib/google-java-format-{version}.jar" https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/{version}/google-java-format-{version}-all-deps.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/google-java-format-{version}.jar" > "$HOME/.local/bin/google-java-format" && chmod +x "$HOME/.local/bin/google-java-format"`; Blocked: release binaries
-Constraints: Java files only, beside ktlint's Kotlin, so both defaults are wired, each hook scoped by `types`. Needs JDK 21 or later. The route puts the jar behind a launcher, as ktlint's does.
-Traps: a repo formatting through Spotless keeps Spotless, wired through its own `spotlessApply` task; its `ratchetFrom 'origin/main'` fails on a shallow clone until `git fetch origin main`.
+Constraints: Needs JDK 21 or later. The route puts the jar behind a launcher, as ktlint's does.
+Traps: Spotless (`googleJavaFormat()` or `ktlint()` in the build) is a tool this entry does not list, so it is kept and wired through its own `spotlessApply` task, never beside this jar; its `ratchetFrom 'origin/main'` fails on a shallow clone until `git fetch origin main`.
 
 ### ktlint format
-Publisher: ktlint
+Publisher: pinterest
 Tier: 2: https://github.com/pinterest/ktlint
 Evidence: `ktlint` evidence, as above
 Rung: edit
@@ -49,7 +49,7 @@ Run: `ktlint --format {files}`
 Hook: local
 Pin: package maven com.pinterest.ktlint:ktlint-cli
 Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSLo "$HOME/.local/lib/ktlint-{version}.jar" https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/{version}/ktlint-cli-{version}-all.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/ktlint-{version}.jar" > "$HOME/.local/bin/ktlint" && chmod +x "$HOME/.local/bin/ktlint"`; Blocked: release binaries
-Constraints: Kotlin files only, beside google-java-format's Java; one ktlint pin serves both roles.
+Constraints: one ktlint pin serves both roles.
 Traps: None.
 
 ## typecheck
@@ -63,8 +63,8 @@ Run: `gradle classes`
 Hook: local
 Pin: None.
 Route: None.
-Constraints: the image's preinstalled `gradle`, never `./gradlew`: every `services.gradle.org` distribution the wrapper downloads redirects to a GitHub release asset, which the cloud refuses. Plugins and dependencies come from the Gradle plugin portal and Maven Central, which pass. A project is the smallest unit it takes.
-Traps: the preinstalled Gradle's version is the image's, not the wrapper's `distributionUrl`, so a build needing a newer Gradle fails; noble's apt `gradle` is 4.4.1 and no fix. The first run starts a daemon and pays every compile (13.6 s cold, 0.9 s warm on a toy, measured).
+Constraints: the image's preinstalled `gradle`, never `./gradlew`: every `services.gradle.org` distribution the wrapper downloads redirects to a GitHub release asset, which the cloud sandbox refuses. Plugins and dependencies come from the Gradle plugin portal and Maven Central, which pass. A project is the smallest unit it takes. With no `gradle` on `PATH` the tool is `Unavailable: gradle classes needs a gradle on PATH`.
+Traps: the preinstalled Gradle's version is the image's, not the wrapper's `distributionUrl`, so a build needing a newer Gradle fails; installing noble's apt `gradle` (4.4.1) does not fix it; report the rung under Not acted on with the wrapper's version. The image's is 8.14.3. The first run starts a daemon and pays every compile (13.6 s cold, 0.9 s warm on a toy, measured).
 
 ### maven compile
 Publisher: Apache Maven
@@ -75,7 +75,7 @@ Run: `mvn -q compile`
 Hook: local
 Pin: None.
 Route: None.
-Constraints: the image's preinstalled `mvn`; a repo's `./mvnw` also works, its distribution coming from Maven Central.
+Constraints: a repo's `./mvnw` where it has one (its distribution comes from Maven Central, which passes), else the image's preinstalled `mvn`. In a multi-module build a module built alone cannot resolve sibling modules missing from `~/.m2`, so the row runs from the stack root as `mvn -q -pl {member} -am compile`.
 Traps: None.
 
 ## test runner
@@ -101,7 +101,7 @@ Run: `mvn -q test`
 Hook: local
 Pin: None.
 Route: None.
-Constraints: the preinstalled `mvn`.
+Constraints: `./mvnw` or `mvn`, as for `maven compile`; in a multi-module build, `mvn -q -pl {member} -am test` from the stack root.
 Traps: None.
 
 ## affected tests
@@ -127,7 +127,7 @@ Run: `mvn -q -pl {member} -amd test`
 Hook: local
 Pin: None.
 Route: None.
-Constraints: Maven skips no up-to-date tests and `-Dtest=` filters by name only, so the row runs the member's module and every module depending on it (`-amd`, its reverse dependents). A reactor started inside the module cannot see its dependents, so this command runs from the stack root, `{member}` the module's path relative to it (`-f <root>/pom.xml` from the member's directory).
+Constraints: Maven skips no up-to-date tests and `-Dtest=` filters by name only, so the row runs the member's module and every module depending on it (`-amd`, its reverse dependents). A reactor started inside the module cannot see its dependents, so the row runs from the stack root (`cd <root> && mvn -q -pl {member} -amd test`), `{member}` the module's path relative to it.
 Traps: None.
 
 ## language server

@@ -20,8 +20,8 @@ Run: `golangci-lint run --fix`
 Hook: https://github.com/golangci/golangci-lint
 Pin: package go github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 Route: `GOBIN="$HOME/.local/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{version}`; Blocked: `install.sh`, release binaries
-Constraints: takes packages, not files: its hook is `pass_filenames: false`, as the vendor's own is. Needs a Go toolchain.
-Traps: the vendor's install docs say `go install` "isn't guaranteed to work"; it is the only route the cloud passes, and it builds cleanly. The `unused` linter misreports when the vendor hook's `--new-from-rev` narrows the run to modified files.
+Constraints: takes packages, not files: the hook is the vendor's `golangci-lint-full` id (`pass_filenames: false`, entry `golangci-lint run --fix`), never its `golangci-lint` id. It lints the file's whole module, so a large module can outrun the 5 s edit budget; its per-package cache makes a warm run pay only for changed packages. Needs a Go toolchain.
+Traps: the vendor's install docs say `go install` "isn't guaranteed to work"; it is the only route the cloud sandbox passes, and it builds cleanly. The `golangci-lint` hook id's `--new-from-rev HEAD` narrows the run to modified files, where the `unused` linter misreports.
 
 ## format
 
@@ -82,7 +82,7 @@ Traps: the cache lives in `GOCACHE`, which survives an idle resume; a cold first
 ## language server
 
 ### gopls
-Publisher: Go team
+Publisher: golang
 Tier: 2: https://go.dev/gopls/
 Evidence: `.claude/skills/harness-gopls-lsp/`, `gopls-lsp@claude-plugins-official` in `.claude/settings.json` `enabledPlugins`
 Rung: None.

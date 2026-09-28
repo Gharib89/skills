@@ -30,14 +30,19 @@ case \$url in
   https://proxy.golang.org/mvdan.cc/sh/v3/@v/v3.9.0.info) printf '{"Version":"v3.9.0","Time":"$d30"}' ;;
   'https://crates.io/api/v1/crates/cargo-nextest/versions?per_page=100') cat "$fixture/r/crates1" ;;
   'https://crates.io/api/v1/crates/cargo-nextest/versions?per_page=100&seek=X') cat "$fixture/r/crates2" ;;
-  https://api.nuget.org/v3/registration5-semver1/csharp-ls/index.json) cat "$fixture/r/nuget" ;;
-  https://api.nuget.org/v3/registration5-semver1/csharp-ls/page2.json) cat "$fixture/r/nuget2" ;;
+  https://api.nuget.org/v3/registration5-gz-semver2/csharp-ls/index.json) cat "$fixture/r/nuget" ;;
+  https://api.nuget.org/v3/registration5-gz-semver2/csharp-ls/page2.json) cat "$fixture/r/nuget2" ;;
   https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/maven-metadata.xml) cat "$fixture/r/maven" ;;
   https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/1.12/google-java-format-1.12.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
   https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/1.10/google-java-format-1.10.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h10\r\n\r\n' ;;
   https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/1.9/google-java-format-1.9.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h30\r\n\r\n' ;;
   'https://hub.docker.com/v2/repositories/hadolint/hadolint/tags?page_size=100') cat "$fixture/r/hub1" ;;
   'https://hub.docker.com/v2/repositories/hadolint/hadolint/tags?page=2&page_size=100') cat "$fixture/r/hub2" ;;
+  'https://crates.io/api/v1/crates/half-gone/versions?per_page=100') cat "$fixture/r/crates-half" ;;
+  https://repo1.maven.org/maven2/org/example/flat/maven-metadata.xml) printf '<metadata><versioning><versions><version>2.0</version><version>2.1</version><version>2.2</version></versions></versioning></metadata>' ;;
+  https://repo1.maven.org/maven2/org/example/flat/2.2/flat-2.2.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
+  https://repo1.maven.org/maven2/org/example/flat/2.1/flat-2.1.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h10\r\n\r\n' ;;
+  https://repo1.maven.org/maven2/org/example/nopom/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.0</version></versions></versioning></metadata>' ;;
   *) exit 22 ;;
 esac
 FAKE
@@ -64,7 +69,7 @@ JSON
 # NuGet inlines some registration pages and links others by @id; an unlisted
 # release (0.28.0) is NuGet's yank.
 cat > "$fixture/r/nuget" <<JSON
-{"items":[{"items":[{"catalogEntry":{"version":"0.26.0","published":"$d30","listed":true}}]},{"@id":"https://api.nuget.org/v3/registration5-semver1/csharp-ls/page2.json"}]}
+{"items":[{"items":[{"catalogEntry":{"version":"0.26.0","published":"$d30","listed":true}}]},{"@id":"https://api.nuget.org/v3/registration5-gz-semver2/csharp-ls/page2.json"}]}
 JSON
 cat > "$fixture/r/nuget2" <<JSON
 {"items":[{"catalogEntry":{"version":"0.27.0","published":"$d10","listed":true}},{"catalogEntry":{"version":"0.28.0","published":"$d10","listed":false}},{"catalogEntry":{"version":"0.29.0-beta.1","published":"$d10","listed":true}},{"catalogEntry":{"version":"0.30.0","published":"$d3","listed":true}}]}
@@ -79,9 +84,14 @@ cat > "$fixture/r/maven" <<XML
       <version>1.12</version>
 </versions></versioning></metadata>
 XML
-# Docker Hub pages by `next`; latest and a -debian variant are not versions.
+# A crate whose second page fails: the registry did not answer in full.
+cat > "$fixture/r/crates-half" <<JSON
+{"versions":[{"num":"1.0.0","created_at":"$d30","yanked":false}],"meta":{"next_page":"?per_page=100&seek=GONE"}}
+JSON
+# Docker Hub pages by `next`; latest and a -debian variant are not versions,
+# and a tag never pushed has no push time.
 cat > "$fixture/r/hub1" <<JSON
-{"next":"https://hub.docker.com/v2/repositories/hadolint/hadolint/tags?page=2&page_size=100","results":[{"name":"latest","tag_last_pushed":"$d3"},{"name":"v2.16.0","tag_last_pushed":"$d3"},{"name":"v2.15.1-debian","tag_last_pushed":"$d10"}]}
+{"next":"https://hub.docker.com/v2/repositories/hadolint/hadolint/tags?page=2&page_size=100","results":[{"name":"latest","tag_last_pushed":"$d3"},{"name":"v2.17.0","tag_last_pushed":null},{"name":"v2.16.0","tag_last_pushed":"$d3"},{"name":"v2.15.1-debian","tag_last_pushed":"$d10"}]}
 JSON
 cat > "$fixture/r/hub2" <<JSON
 {"next":null,"results":[{"name":"v2.15.1","tag_last_pushed":"$d10"},{"name":"v2.14.0","tag_last_pushed":"$d30"}]}
@@ -104,7 +114,14 @@ check "nuget: unlisted releases are passed over, linked pages are read" 0.27.0 "
 pick maven com.google.googlejavaformat:google-java-format
 check "maven: each version dated by its pom's Last-Modified, by version order" 1.10 "$out"
 pick dockerhub hadolint/hadolint
-check "dockerhub: version tags only, across pages" v2.15.1 "$out"
+check "dockerhub: version tags only, across pages, past a tag with no push time" v2.15.1 "$out"
+pick maven org.example:flat
+check "maven: metadata on one line still lists every version" 2.1 "$out"
+pick crates half-gone
+check_rc "crates: a page that fails is tooling, not a pick" 2 "$rc"
+check "crates: a page that fails prints no version" "" "$out"
+pick maven org.example:nopom
+check_rc "maven: a pom that cannot be read is tooling" 2 "$rc"
 pick gems rails
 check_rc "an unknown registry is a usage error" 2 "$rc"
 

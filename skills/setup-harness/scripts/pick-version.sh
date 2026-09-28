@@ -7,11 +7,12 @@
 #
 #   pick-version.sh <npm|pypi|go|crates|nuget|maven|dockerhub> <name>
 #
-# <name> is the package name; for go the package path `go install` takes, its
-# module found by asking the proxy for each prefix in turn; for maven
-# `<group>:<artifact>` on Maven Central; for dockerhub the image repository.
-# A yanked crate and an unlisted NuGet release are passed over as a yanked
-# PyPI release is.
+# <name> is the package name; for go the package path `go install` takes, its module
+# found by asking the proxy for each prefix in turn; for maven `<group>:<artifact>` on
+# Maven Central; for dockerhub the image repository. A yanked crate and an unlisted
+# NuGet release are passed over as a yanked PyPI release is. For maven the publish
+# time is the release pom's Last-Modified; for dockerhub it is the tag's last push,
+# so a re-pushed tag counts from its re-push.
 #
 # stdout: the version
 # exit: 0 picked · 1 no release qualifies · 2 usage or registry unreachable
@@ -23,8 +24,10 @@ case ${1:-} in
   *) echo "$usage" >&2; exit 2 ;;
 esac
 registry=$1 name=$2
-# crates.io refuses a request without a User-Agent naming its sender.
-fetch() { curl -fsSL --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$1"; }
+# crates.io refuses a request without a User-Agent naming its sender. Maven
+# Central answers a cloud session's shared egress 429 at times (measured), which
+# `--retry` waits out, honouring Retry-After.
+fetch() { curl -fsSL --compressed --retry 3 --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$1"; }
 
 # stdin: one `<version> <iso time>` line per release; prints the pick.
 choose() {
@@ -77,7 +80,8 @@ for v, files in json.load(sys.stdin)["releases"].items():
     done | choose ;;
   crates)
     url="https://crates.io/api/v1/crates/$name/versions?per_page=100"
-    while [ -n "$url" ]; do
+    # Collected before choosing, so a page that fails exits 2 with no pick.
+    lines=$(while [ -n "$url" ]; do
       json=$(fetch "$url") || exit 2
       printf '%s' "$json" | python3 -c '
 import json, sys
@@ -86,7 +90,8 @@ for v in json.load(sys.stdin)["versions"]:
         print(v["num"], v["created_at"])'
       next=$(printf '%s' "$json" | python3 -c 'import json, sys; print(json.load(sys.stdin)["meta"]["next_page"] or "")')
       url=${next:+https://crates.io/api/v1/crates/$name/versions$next}
-    done | choose ;;
+    done) || exit 2
+    printf '%s\n' "$lines" | choose ;;
   nuget)
     # The index inlines small registration pages and links the rest by @id; a
     # linked page's own items are the releases.
@@ -99,41 +104,45 @@ for item in json.load(sys.stdin)["items"]:
         if e.get("listed", True):
             print(e["version"], e["published"])'
     }
-    index=$(fetch "https://api.nuget.org/v3/registration5-semver1/$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')/index.json") || exit 2
+    # The gz-semver2 hive is the only one listing SemVer 2.0 releases.
+    index=$(fetch "https://api.nuget.org/v3/registration5-gz-semver2/$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')/index.json") || exit 2
     pages=$(printf '%s' "$index" | python3 -c '
 import json, sys
 for p in json.load(sys.stdin)["items"]:
     if "items" not in p:
         print(p["@id"])')
-    { printf '%s' "$index" | releases
+    lines=$(printf '%s' "$index" | releases
       for page in $pages; do
         json=$(fetch "$page") || exit 2
         printf '%s' "$json" | releases
-      done
-    } | choose ;;
+      done) || exit 2
+    printf '%s\n' "$lines" | choose ;;
   maven)
     base="https://repo1.maven.org/maven2/$(printf '%s' "${name%%:*}" | tr . /)/${name#*:}"
     xml=$(fetch "$base/maven-metadata.xml") || exit 2
     # Central dates a release only by its files' Last-Modified, one request per
     # version, so walk newest first and stop at the first old enough.
-    printf '%s' "$xml" | sed -n 's|.*<version>\(.*\)</version>.*|\1|p' | python3 -c '
+    lines=$(printf '%s' "$xml" | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | python3 -c '
 import re, sys
 vs = [v.strip() for v in sys.stdin if re.fullmatch(r"\d+(\.\d+)*", v.strip())]
 print("\n".join(sorted(vs, key=lambda v: tuple(int(p) for p in v.split(".")), reverse=True)))' |
       while IFS= read -r v; do
-        mod=$(curl -fsSI --max-time 30 "$base/$v/${name#*:}-$v.pom" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: *//p') || exit 2
+        mod=$(curl -fsSI --retry 3 --max-time 30 "$base/$v/${name#*:}-$v.pom" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: *//p') || exit 2
         line=$(python3 -c 'import email.utils, sys; print(sys.argv[1], email.utils.parsedate_to_datetime(sys.argv[2]).isoformat())' "$v" "$mod") || exit 2
         printf '%s\n' "$line"
         printf '%s\n' "$line" | choose >/dev/null && break
-      done | choose ;;
+      done) || exit 2
+    printf '%s\n' "$lines" | choose ;;
   dockerhub)
     url="https://hub.docker.com/v2/repositories/$name/tags?page_size=100"
-    while [ -n "$url" ]; do
+    lines=$(while [ -n "$url" ]; do
       json=$(fetch "$url") || exit 2
       printf '%s' "$json" | python3 -c '
 import json, sys
 for t in json.load(sys.stdin)["results"]:
-    print(t["name"], t["tag_last_pushed"])'
+    if t["tag_last_pushed"]:
+        print(t["name"], t["tag_last_pushed"])'
       url=$(printf '%s' "$json" | python3 -c 'import json, sys; print(json.load(sys.stdin)["next"] or "")')
-    done | choose ;;
+    done) || exit 2
+    printf '%s\n' "$lines" | choose ;;
 esac

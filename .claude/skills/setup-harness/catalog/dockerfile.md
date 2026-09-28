@@ -19,7 +19,7 @@ Hook: local
 Pin: package dockerhub hadolint/hadolint
 Route: `docker pull hadolint/hadolint:{version}`; Blocked: `ghcr.io/hadolint/hadolint` (its blobs redirect to `pkg-containers.githubusercontent.com`), release binaries, Hackage (needs GHC 9.10, noble has 9.4.7)
 Constraints: runs in the vendor's Docker Hub image, the only vendor route with no GitHub release asset, so it needs a running dockerd: the cloud setup starts it and prefetches the image ([reference/cloud.md](../reference/cloud.md)). The hook is `language: docker_image` with `entry: hadolint/hadolint:<tag>@<digest> hadolint`, which the runner mounts the repo into, the Run line being that hook spelled out. It links ShellCheck as a library, so `RUN` lines are linted with no `shellcheck` binary.
-Traps: the vendor's own `hadolint-docker` hook pulls from ghcr.io, which the cloud refuses; do not wire it. The PyPI `hadolint-py` and `hadolint-bin` wheels are third-party. Docker Hub's anonymous pull limit on the cloud's shared egress is unmeasured.
+Traps: the vendor's own `hadolint-docker` hook pulls from ghcr.io, which the cloud sandbox refuses; the `docker_image` hook above replaces it. The PyPI `hadolint-py` and `hadolint-bin` wheels are third-party. Docker Hub rate-limits anonymous pulls from the cloud sandbox's shared egress: the entry trial's pull got `429 Too Many Requests` once (2026-09-28), so a failed pull is retried by the next session's setup, whose done test finds no image.
 
 ### docker build --check
 Publisher: Docker

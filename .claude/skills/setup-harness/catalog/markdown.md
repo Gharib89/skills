@@ -19,7 +19,7 @@ Hook: local
 Pin: package npm markdownlint-cli2
 Route: `npm install -g markdownlint-cli2@{version}`; Blocked: None.
 Constraints: needs Node 22 or later (the image's default). Beside Prettier, the run writes `.markdownlint.jsonc` at the repo root extending `markdownlint/style/prettier`, which turns off the rules Prettier's output breaks; a repo's own markdownlint config gains that `extends` instead.
-Traps: without that pairing the two fight over line length, list indent and emphasis style, and MD013 alone fires on every line over 80 columns (62 findings on this repo's `CONTEXT.md`). `markdownlint-cli2 .` lints the whole tree, so the hook passes files. It reads `.markdownlint-cli2.*` before `.markdownlint.*` and drops markdownlint-cli's `.markdownlintrc` and `.markdownlintignore`.
+Traps: without that pairing the two fight over line length, list indent and emphasis style, and MD013 alone fires on every line over 80 columns (62 findings on this repo's `CONTEXT.md`). It reads `.markdownlint-cli2.*` before `.markdownlint.*` and ignores markdownlint-cli's `.markdownlintrc` and `.markdownlintignore`, so a repo on markdownlint-cli is a tool this entry does not list and keeps it.
 
 ## format
 
@@ -33,4 +33,4 @@ Hook: local
 Pin: package npm prettier
 Route: `npm install -g prettier@{version}`; Blocked: None.
 Constraints: None.
-Traps: `prettier/pre-commit` and `pre-commit/mirrors-prettier` are both archived; do not wire either.
+Traps: `prettier/pre-commit` and `pre-commit/mirrors-prettier` are both archived, so Prettier runs as the `local` hook above.

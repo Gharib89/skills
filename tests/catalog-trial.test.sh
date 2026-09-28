@@ -77,11 +77,12 @@ chmod +x "$root/bin/arg"
   tool packaged 'arg {package} {files}'
 } > "$root/skills/setup-harness/catalog/kind.md"
 seed=$root/tests/fixtures/catalog/kind
-mkdir -p "$seed/clean/ci" "$seed/clean/deep" "$seed/bad/named/deep" "$seed/bad/narrow" "$seed/bad/versioned/ci" "$seed/bad/packaged"
+mkdir -p "$seed/clean/ci/sub" "$seed/clean/deep" "$seed/bad/named/deep" "$seed/bad/narrow" "$seed/bad/versioned/ci" "$seed/bad/packaged"
 echo fine > "$seed/clean/deep/Kindfile"
 echo fine > "$seed/clean/ci/a.yml"
 echo fine > "$seed/clean/a.toy"
 echo BAD > "$seed/clean/other.yml"
+echo BAD > "$seed/clean/ci/sub/nested.yml"  # a Paths: `*` stays within one directory
 echo BAD > "$seed/clean/b.alt"
 echo BAD > "$seed/bad/named/deep/Kindfile"
 echo BAD > "$seed/bad/narrow/c.toy"
@@ -96,7 +97,7 @@ kind versioned: fail (failed on clean)
 kind packaged: fail (failed on clean)" "$out"
 rm "$seed/clean/b.alt"
 out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh kind 2>/dev/null); rc=$?
-check "a file outside Names:, Paths: and Extensions: is never passed" "kind named: pass
+check "a file outside Names:, Paths: and Extensions: is never passed, nor one a directory below a Paths: glob" "kind named: pass
 kind narrow: pass
 kind versioned: pass
 kind packaged: pass" "$out"

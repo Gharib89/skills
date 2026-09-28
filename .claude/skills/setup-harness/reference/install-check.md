@@ -22,12 +22,12 @@ Third-party units only: packages, binaries, pre-commit hook repos, plugins, skil
 2. **The tool's own vendor.** A partner's marketplace entry is admitted only when the partner makes the tool it wraps.
 3. **Skill sources pinned in the target repo's own `skills-lock.json`.** A repo with none has no tier 3.
 
-Anything else is "found, not trusted, not installed". No trust by stars, downloads or recency. A packaged tool's tier is its publisher's, or that of the tier-1 glue that names it; an exact pin is still required. The catalog's `Publisher:` line is the identity the resolved package must carry: check it against the registry (npm `maintainers` and `repository`, PyPI `project_urls` and the uploader's repository, the Go module path), and refuse a mismatch.
+Anything else is "found, not trusted, not installed". No trust by stars, downloads or recency. A packaged tool's tier is its publisher's, or that of the tier-1 glue that names it; an exact pin is still required. The catalog's `Publisher:` line is the identity the resolved package must carry: check it against the registry (npm `maintainers` and `repository`, PyPI `project_urls` and the uploader's repository, the Go module path, crates.io `owners` and `repository`, NuGet `owners` and `projectUrl`, the Maven `groupId`, the Docker Hub namespace), and refuse a mismatch.
 
 ## Reading a unit
 
 - **Glue**, whatever makes Claude Code or git run the unit, is read in full and shown: a hook repo's `.pre-commit-hooks.yaml`, a plugin's directory with its `marketplace.json` entry, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `bin/`, skill files.
-- **A packaged tool** from tier 1 or 2 is not source-read: trust rests on tier, exact pin and published provenance (checksum, GitHub attestation, npm or PyPI provenance), checked where it exists, `none published` where it does not.
+- **A packaged tool** from tier 1 or 2 is not source-read: trust rests on tier, exact pin and published provenance (checksum, GitHub attestation, npm or PyPI provenance, a Maven Central `.sha256` or `.asc`, an image digest), checked where it exists, `none published` where it does not.
 
 ## Pins
 
@@ -39,6 +39,7 @@ Each pin lives in its tool's own place; the skill adds no lock file of its own.
 | Pre-commit hook repo | `rev` frozen to a full SHA, reachable from the upstream tag it names (`prek autoupdate --freeze`, then confirm the SHA is on that tag) |
 | apt package | name only, distro-pinned; the installed version is recorded in the report |
 | Direct download | exact-version URL plus a sha256 check |
+| Container image | `<repository>:<tag>@<digest>`, the tag by version choice and the digest the one `docker image inspect --format '{{index .RepoDigests 0}}'` reports after the pull |
 | MCP server | exact version in `.mcp.json` args, never `@latest` |
 | Skill | `skills-lock.json` `ref` (SHA) plus `computedHash` |
 | Vendored plugin config | the repo's own commit; its README carries `Vendored from <repo>@<full sha>` and its `plugin.json` version `<entry version>+<full sha>` ([language-servers.md](language-servers.md)); a language server whose `Pin:` registry is not its stack's own carries its exact version in the vendored launch command |

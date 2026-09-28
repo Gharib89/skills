@@ -7,11 +7,12 @@
 # planted files, which must fail or change one. A tool marked `Unavailable:` or
 # `Local-only:` is reported and not tried, the trial running in a cloud
 # session. <tool> is the `###` heading, lower-cased, with each run of other
-# characters turned into `-`. {files} is every seed file the entry claims, by
-# `Extensions:`, `Names:` (a basename at any depth) or `Paths:` (a glob on the
-# seed-relative path), or by the tool's own `Files:` extensions where it has
-# them; {version} is the picked version and {package} is `seed`, the package
-# name every stack seed carries.
+# characters turned into `-`. {files} is every seed file the entry claims,
+# by `Extensions:`, `Names:` (a basename at any depth) or `Paths:` (a glob
+# on the seed-relative path); a tool with its own `Files:` gets only the
+# files carrying those extensions instead. {version} is the picked version,
+# {member} is `.` and {package} is `seed`, the package name every stack
+# seed carries.
 #
 #   scripts/catalog-trial.sh <entry>|all
 #
@@ -58,17 +59,24 @@ files_in() {
     f=${f#./}
     for p in $2; do case $f in *"$p") q="$q $(printf '%q' "$f")"; continue 2 ;; esac; done
     for p in $3; do case ${f##*/} in "$p") q="$q $(printf '%q' "$f")"; continue 2 ;; esac; done
-    for p in $4; do case $f in $p) q="$q $(printf '%q' "$f")"; continue 2 ;; esac; done
+    # A Paths: `*` stays within one directory: the path and glob have as many `/`.
+    # shellcheck disable=SC2254 # a Paths: entry is a glob, matched as one
+    for p in $4; do case $f in $p) [ "${f//[!\/]/}" = "${p//[!\/]/}" ] && { q="$q $(printf '%q' "$f")"; continue 2; } ;; esac; done
   done <<EOF
 $(cd "$1" && find . -type f ! -path './node_modules/*' ! -path './.venv/*' | sort)
 EOF
   printf '%s' "${q# }"
 }
 
+# <entry> <label>: the entry's signal line, empty for `None.`.
+signal() { sed -n "s/^$2: //p" "$catalog/$1.md" | head -n 1 | sed 's/^None\.$//'; }
+
 # <entry> <tool> <pin> <route> <run> <skip> <only>: a non-empty <skip> is the
 # verdict of a tool that is not tried; a non-empty <only> is its Files:.
 trial() {
-  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 skip=$6 only=$7 s version='' before files claim
+  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 skip=$6 only=$7 s version='' before files
+  local e=$exts n=$names p=$paths
+  [ -n "$only" ] && e=$only n='' p=''
   s=$(slug "$tool")
   if [ -n "$skip" ]; then echo "$entry $s: $skip"; return 0; fi
   case $pin in
@@ -82,8 +90,7 @@ trial() {
   cp -R "$seeds/$entry/clean/." "$work/"
   (cd "$work" && bash -c "${route//\{version\}/$version}") >&2 \
     || { echo "$entry $s: fail (install)"; rm -rf "$work"; return 1; }
-  claim() { if [ -n "$only" ]; then files_in "$1" "$only" '' ''; else files_in "$1" "$exts" "$names" "$paths"; fi; }
-  files=$(claim "$work")
+  files=$(files_in "$work" "$e" "$n" "$p")
   before=$(snapshot "$work" "$seeds/$entry/clean")
   run=${run//\{member\}/.}
   run=${run//\{package\}/seed}
@@ -92,7 +99,7 @@ trial() {
     echo "$entry $s: fail (failed on clean)"; rm -rf "$work"; return 1
   fi
   cp -R "$seeds/$entry/bad/$s/." "$work/"
-  files=$(claim "$seeds/$entry/bad/$s")
+  files=$(files_in "$seeds/$entry/bad/$s" "$e" "$n" "$p")
   before=$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")
   if (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 && [ "$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")" = "$before" ]; then
     echo "$entry $s: fail (passed on bad/$s)"; rm -rf "$work"; return 1
@@ -112,8 +119,7 @@ trap 'rm -rf "$work"' EXIT
 
 rc=0
 for entry in $entries; do
-  signal() { sed -n "s/^$1: //p" "$catalog/$entry.md" | head -n 1 | sed 's/^None\.$//'; }
-  exts=$(signal Extensions) names=$(signal Names) paths=$(signal Paths)
+  exts=$(signal "$entry" Extensions) names=$(signal "$entry" Names) paths=$(signal "$entry" Paths)
   tool='' pin='' route='' run='' skip='' only=''
   while IFS= read -r line; do
     case $line in
