@@ -39,7 +39,7 @@ Each gap kind takes exactly one disposition:
 | Unclaimed extensions and stacks, unwired tools, Found-not-installed units | Report only |
 | Standing choices | Report only |
 
-Not gaps: a line the repo added to a file the skill wrote (kept); a red check during timing (`<rung>: fail (<check>)`); a skill pin in `skills-lock.json` (tier 3, never proposed: that bump is `update-skills`'); a profile `Schema:` ahead of the skill, which stops the run at step 2.
+Not gaps: a line the repo added to a file the skill wrote (kept); a red or unavailable check during timing (`not judged: fail (<check>)`, `not judged: unavailable (<check>)`); a skill pin in `skills-lock.json` (tier 3, never proposed: that bump is `update-skills`'); a profile `Schema:` ahead of the skill, which stops the run at step 2.
 
 ## Files the skill wrote
 
