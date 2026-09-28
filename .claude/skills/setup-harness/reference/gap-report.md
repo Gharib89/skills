@@ -38,7 +38,7 @@ Each gap kind takes exactly one disposition:
 | A broken pin | Offer: re-pin or remove |
 | Evidence gone from an evidence-backed `Local-only:` line | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
 | A surface and no `.claude/skills/run-*/`, not `Declined: run recipe` | Offer: type `/run-skill-generator` ([surfaces.md](surfaces.md) `## The run recipe`) |
-| A third-party unit a Write above adds or re-pins (the Write keeps its own row), new library evidence's `public API` tools, and a pin that is behind | Install-check row |
+| A third-party unit a Write above adds or re-pins (the Write keeps its own row), new library evidence's `public API` tools that install a unit, and a pin that is behind | Install-check row |
 | Unclaimed extensions and stacks, unwired tools, Found-not-installed units | Report only |
 | Standing choices | Report only |
 

@@ -129,6 +129,7 @@ cat > "$bin/pnpm" <<'STUB'
 case "$*" in
   "exec playwright --version") echo "Version 1.2.3" ;;
   "exec playwright install --dry-run chromium")
+    [ -e "$PW.dry-empty" ] && exit 0
     for d in chromium-7 ffmpeg-1 chromium_headless_shell-7 ffmpeg-1; do echo "browser: x"; echo "  Install location:    $PW/$d"; done ;;
   "exec playwright install --with-deps chromium")
     echo vendor >> "$LOG"; for d in chromium-7 ffmpeg-1 chromium_headless_shell-7; do mkdir -p "$PW/$d"; : > "$PW/$d/INSTALLATION_COMPLETE"; done ;;
@@ -139,7 +140,7 @@ cat > "$bin/docker" <<'STUB'
 #!/bin/sh
 case "$1" in
   create) echo "create $2" >> "$LOG"; echo cid ;;
-  cp) d=${2#cid:/ms-playwright/}; mkdir -p "$3$d"; : > "$3$d/INSTALLATION_COMPLETE" ;;
+  cp) [ -e "$PW.cp-fail" ] && exit 1; d=${2#cid:/ms-playwright/}; mkdir -p "$3$d"; : > "$3$d/INSTALLATION_COMPLETE" ;;
   rm) echo "rm $2" >> "$LOG" ;;
   *) exit 64 ;;
 esac
@@ -168,6 +169,16 @@ vendor" "$out
 $(cat "$log")"
 browser_run 'with-deps'
 check "and a second run is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
+: > "$pw.dry-empty"
+browser_run 'with-deps'
+check "a Playwright naming no directory runs the row, then fails its done test" "harness cloud setup: FAILED browsers-web
+vendor" "$out
+$(cat "$log")"
+rm -f "$pw.dry-empty"; rm -rf "$pw"; mkdir -p "$pw"; : > "$pw.cp-fail"
+browser_run 'docker create'
+check "a failed copy fails the setup and removes its container" "create mcr.microsoft.com/playwright:v1.2.3-noble
+rm cid" "$(cat "$log")"
+rm -f "$pw.cp-fail"
 
 # The SessionStart entry setup-harness merges into .claude/settings.json: its
 # command, run as a hook runs it, exits 0 outside a cloud session, because a

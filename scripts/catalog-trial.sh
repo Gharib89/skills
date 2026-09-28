@@ -64,7 +64,7 @@ files_in() {
     # shellcheck disable=SC2254 # a Paths: entry is a glob, matched as one
     for p in $4; do case $f in $p) [ "${f//[!\/]/}" = "${p//[!\/]/}" ] && { q="$q $(printf '%q' "$f")"; continue 2; } ;; esac; done
   done <<EOF
-$(cd "$1" && find . -type f ! -path './node_modules/*' ! -path './.venv/*' | sort)
+$(cd "$1" && find . -type f ! -path './.git/*' ! -path './node_modules/*' ! -path './.venv/*' | sort)
 EOF
   printf '%s' "${q# }"
 }
@@ -93,7 +93,7 @@ trial() {
   [ -d "$seeds/$entry/bad/$s" ] || { echo "$entry $s: fail (no bad/$s)"; return 1; }
   work=$(mktemp -d) || exit 2
   cp -R "$seeds/$entry/clean/." "$work/"
-  (cd "$work" && git init -q && git add -A && git -c user.name=trial -c user.email=trial@example.invalid commit -qm seed && git tag v0.1.0) >&2 \
+  (cd "$work" && g="git -c core.hooksPath=/dev/null -c commit.gpgSign=false -c tag.gpgSign=false -c user.name=trial -c user.email=trial@example.invalid" && $g init -q && $g add -A && $g commit -qm seed && $g tag v0.1.0) >&2 \
     || { echo "$entry $s: fail (git baseline)"; rm -rf "$work"; return 1; }
   (cd "$work" && bash -c "${route//\{version\}/$version}") >&2 \
     || { echo "$entry $s: fail (install)"; rm -rf "$work"; return 1; }

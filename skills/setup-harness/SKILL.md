@@ -11,7 +11,7 @@ metadata:
 
 Give every Claude Code session in this repo a fast, measured way to check its own work: `scripts/check.sh` answers "is this change good" at three rungs, Claude Code hooks run the fast rungs on every edit and every stop, and the pre-commit runner holds the commit. Same shape as `setup-skills`: explore, present, confirm, write, prove. Nothing is written before the human confirms it as a diff, and nothing third-party is installed before it passes the install check.
 
-Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (agent harness, check entry point, rung, budget, stack, member, file kind, catalog, trust tier, install check, harness profile, cloud setup, local-only, bundle session). "Verification" is Ship's word for a real-system check; here the words are check and prove.
+Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (agent harness, check entry point, rung, budget, stack, member, file kind, catalog, trust tier, install check, harness profile, cloud setup, local-only, bundle session, surface, behaviour tool). "Verification" is Ship's word for a real-system check; here the words are check and prove.
 
 **Paths are contracts.** `scripts/check.sh`, `.claude/hooks/check-hook.sh`, `.claude/hooks/cloud-setup.sh` and `docs/agents/harness.md` are read by hooks and by a re-run, and `setup-skills` is to read the profile ([#367](https://github.com/Gharib89/skills/issues/367)); write them at exactly those paths. Configuration is committed at project scope (`.claude/settings.json`, `.claude/hooks/`, the runner config); anything machine-specific goes to `.claude/settings.local.json`, and the report names it as such.
 
