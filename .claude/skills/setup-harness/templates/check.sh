@@ -249,6 +249,9 @@ EOF
   [ -n "$names" ] || record full skipped
 }
 
+# A direct dispatch, not a call through a name built from $rung: ShellCheck
+# reads a function called only indirectly as never invoked (SC2317, SC2329),
+# and a repo that lints this file at ShellCheck's default severity fails on it.
 case $rung in
   edit) rung_edit "$@" ;;
   turn) rung_turn "$@" ;;

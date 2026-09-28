@@ -5,10 +5,11 @@
 # mechanics use. The `shellcheck` gate in scripts/local-gate.sh runs this in the
 # full lane, and under `--small` only when the diff touches a `*.sh`.
 #
-# The scripts setup-harness and setup-skills land in a consumer get a second
-# pass at shellcheck's default severity: a consumer that wires the Shell
-# catalog entry runs a plain `shellcheck {files}` over them, and an info-level
-# finding `-S warning` passes fails there (issue #371).
+# The landed scripts, the ones setup-harness and setup-skills write into a
+# consumer, get a second, plain `shellcheck` pass at its default severity,
+# `style`: a consumer wiring the Shell catalog entry runs exactly that over
+# them, so a finding below `warning`, which the first pass admits, fails there
+# (issue #371).
 #
 # Uses a system `shellcheck` on PATH, else fetches one with `npx -y shellcheck`.
 # When neither yields a shellcheck (for example, the cloud sandbox's proxy
