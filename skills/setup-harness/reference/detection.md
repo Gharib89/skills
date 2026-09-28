@@ -11,7 +11,7 @@
 
 - A **stack** is one language plus package manager at a root whose manifest owns a lockfile, or that a workspace config names (pnpm, npm or yarn workspaces, a uv workspace). One stack per root. Install and tool versions are once per root.
 - Its **members** are its workspace packages; a stack with no workspace is its own single member. Typecheck and affected tests run per member.
-- A **file kind** (shell and the like) is detected by extension, shebang or file name (`Names:`, a tracked basename at any depth, such as `azure-pipelines.yml`) and takes the edit and commit rungs only, never `turn`.
+- A **file kind** (shell and the like) is detected by extension, shebang, file name (`Names:`, a tracked basename at any depth, such as `azure-pipelines.yml`) or path (`Paths:`, a glob on the root-relative path, such as `.github/workflows/*.yml`) and takes the edit and commit rungs only, never `turn`.
 
 ## The scan
 
@@ -28,7 +28,7 @@ git ls-files -- . ':!:.claude/skills/' | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\
 - A root with no lockfile the human marked a root is reported `unlocked` and installed from its manifest as it stands. Never generate a lockfile: that changes the repo's dependency resolution.
 - **Installed skills** under `.claude/skills/` are derived copies pinned by `skills-lock.json`: not scanned, and excluded from the runner config (`exclude: ^\.claude/skills/`), because a fix-mode tool rewriting one breaks its `computedHash`. A `harness-<upstream>/` directory there is a vendored plugin instead: excluded the same way, and read as a language server's evidence per [language-servers.md](language-servers.md).
 - A shebang is read from the first line of an extensionless tracked file with the executable bit (`git ls-files -s` mode `100755`).
-- A file a `Names:` line claims is that file kind's alone, whatever its extension.
+- A file a `Names:` or `Paths:` line claims is that file kind's alone, whatever its extension.
 - Every tracked extension no stack or file kind claims is `unclaimed: *.<ext> (<N> files)`, with no guessed tools. It adds nothing to `edit` or `turn`; `check.sh full` still calls the repo's own check target.
 - A stack with no catalog entry is `unclaimed` the same way, with a pointer to file an issue on [Gharib89/skills](https://github.com/Gharib89/skills/issues) asking for its entry.
 

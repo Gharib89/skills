@@ -22,6 +22,7 @@ The profile grammar: fixed headings, facts on `Label:` lines, `None.` where a la
 ## Signals
 Kind: stack | file kind
 Names: <file basenames> | None.        (file kind only)
+Paths: <root-relative globs> | None.   (file kind only)
 Manifest: <file names>                 (stack only)
 Lockfile: <file names>                 (stack only)
 Workspace: <where a workspace is named> (stack only)
@@ -35,6 +36,7 @@ Publisher: <registry identity the install check matches>
 Tier: <n>: <source URL>
 Evidence: <config files, [tool.x] tables, dependency names>
 Rung: edit | turn | full | None.     (None.: language server only)
+Files: <.ext ...>                      (only when the tool takes a subset of Extensions:)
 Run: `<command>`
 Hook: local | <vendor hook repo URL> | None.
 Pin: <pin kind> <registry> <name>
@@ -50,9 +52,10 @@ Roles, as `##` headings, from this set only: `lint`, `format`, `typecheck`, `tes
 ## Label vocabulary
 
 - **Rung.** `edit` takes one file and must fit the 5 s edit budget: formatters and most linters, run through the pre-commit runner, fix mode on. `turn` is project-scoped: typecheckers and tests, run by `check.sh` per member. `full` runs only on `check.sh full`. `None.` is a language server's, and only a language server's.
-- **Run.** One command, in backticks. `{files}` stands for the file list and `{member}` for the member's directory; a `turn` command runs in the member's directory. A `lint` or `format` command is the runner hook's `entry`, in fix mode where the tool has one. A command names the tool's own binary; where the tool is a dev dependency, the written hook entry or turn row prefixes the stack's exec command (`uv run`, `pnpm exec`, `npx --no-install`). A language server's command is the one its vendored `.lsp.json` launches, `{version}` standing for the pin where the command carries it and `{root}` for the stack root.
+- **Run.** One command, in backticks. `{files}` stands for the file list, `{member}` for the member's directory and `{package}` for the member's package name where a selector takes names; a `turn` command runs in the member's directory. `{version}` stands for the pin where the command carries it: a container image's tag, a language server's launch. A `lint` or `format` command is the runner hook's `entry`, in fix mode where the tool has one. A command names the tool's own binary; where the tool is a dev dependency, the written hook entry or turn row prefixes the stack's exec command (`uv run`, `pnpm exec`, `npx --no-install`). A language server's command is the one its vendored `.lsp.json` launches, `{root}` standing for the stack root.
 - **Hook.** `local` or the vendor hook repo (`None.` for a language server); [reference/runner.md](../reference/runner.md) `## Writing hooks` says which a run writes.
-- **Pin.** The kind names the install check's pin table: `package <npm|pypi|go|crates|nuget> <name>`, `apt <name>`, `hook-repo <url>`, `download <url>`.
+- **Files.** A tool taking only some of the entry's extensions names them (ktlint's `.kt .kts` beside google-java-format's `.java`); its hook is scoped to them by `types`. Tools in one role with disjoint `Files:` are each a default for their own files, as is a tool whose `Constraints:` name it a second default (zizmor beside actionlint).
+- **Pin.** The kind names the install check's pin table: `package <npm|pypi|go|crates|nuget|maven|dockerhub> <name>` (maven `<group>:<artifact>` on Maven Central, dockerhub the image repository), `apt <name>`, `hook-repo <url>`, `download <url>`.
 - **Route.** The install that passes in a cloud sandbox, in backticks, with `{version}` for the version the run picks; `Blocked:` names the routes a cloud sandbox refuses, so a run never proposes them. Route serves the cloud sandbox and the entry trials; a local install follows the install check's pin table.
 
 Each stack's commands, by its lockfile:
@@ -84,7 +87,7 @@ Entries carry no versions: the run picks each by install-check.md's version choi
 
 ## Affected tests
 
-The member is the selection unit. A runner that selects natively gets the member's test command. Vitest `related` and Jest `--findRelatedTests` are used whenever that runner is present. pytest-testmon is offered as a gap proposal through the install check, and may be declined. A runner with name filters only (bats, node:test), or a declined selector, runs the affected members' whole suites. No file-name heuristics.
+The member is the selection unit. A runner that selects natively (the Go test cache, Gradle's up-to-date checks) gets the member's test command. Vitest `related` and Jest `--findRelatedTests` are used whenever that runner is present. pytest-testmon and nextest `rdeps()` are offered as gap proposals through the install check, and may be declined. A runner with name filters only (bats, node:test, Maven, .NET), or a declined selector, runs the affected members' whole suites, plus their reverse dependents where the build names them (Maven's `-amd`, .NET project references). No file-name heuristics.
 
 ## Entry trials
 

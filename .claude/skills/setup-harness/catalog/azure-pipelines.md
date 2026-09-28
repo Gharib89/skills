@@ -3,6 +3,7 @@
 ## Signals
 Kind: file kind
 Names: azure-pipelines.yml azure-pipelines.yaml
+Paths: None.
 Extensions: None.
 Shebangs: None.
 

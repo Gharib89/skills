@@ -43,7 +43,7 @@ Each pin lives in its tool's own place; the skill adds no lock file of its own.
 | Skill | `skills-lock.json` `ref` (SHA) plus `computedHash` |
 | Vendored plugin config | the repo's own commit; its README carries `Vendored from <repo>@<full sha>` and its `plugin.json` version `<entry version>+<full sha>` ([language-servers.md](language-servers.md)); a language server whose `Pin:` registry is not its stack's own carries its exact version in the vendored launch command |
 
-**Version choice:** the newest non-prerelease whose registry publish time is at least 7 days old, installed as that exact version on every route; the package manager resolves peer caps. Run `scripts/pick-version.sh <npm|pypi|go> <name>` from this skill's directory; it prints the version or exits 1 when none qualifies. apt is exempt.
+**Version choice:** the newest non-prerelease whose registry publish time is at least 7 days old, installed as that exact version on every route; the package manager resolves peer caps. Run `scripts/pick-version.sh <npm|pypi|go|crates|nuget|maven|dockerhub> <name>` from this skill's directory; it prints the version or exits 1 when none qualifies. apt is exempt.
 
 ## Run-time fetches
 

@@ -1,0 +1,8 @@
+name: bad
+on: push
+permissions: {}
+jobs:
+  check:
+    runs-on: ubuntu-latst
+    steps:
+      - run: echo ok
