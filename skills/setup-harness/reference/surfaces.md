@@ -19,7 +19,7 @@ Tracked files only, per member, as detection scans them:
 | web UI | in a js-ts member: a `playwright.config.*`, or `playwright` or `@playwright/test` among its declared dependencies |
 | library | the member's own manifest matches its catalog entry's `Library:` signal |
 | API | a server framework among the declared dependencies (FastAPI, Flask, Django, Express, Fastify, Spring Boot, a `Microsoft.NET.Sdk.Web` project), or a tracked OpenAPI or GraphQL schema |
-| CLI | an npm `bin`, a pyproject `[project.scripts]`, a setuptools `console_scripts` entry point (`setup.py` `entry_points={"console_scripts": ...}`, `setup.cfg` `[options.entry_points]`), a Cargo bin target (`src/main.rs`, `[[bin]]`), a Go `package main` |
+| CLI | an npm `bin`, a pyproject `[project.scripts]`, a setuptools `console_scripts` entry point (`setup.py` `entry_points={"console_scripts": ...}`, a `console_scripts =` key under `setup.cfg` `[options.entry_points]`), a Cargo bin target (`src/main.rs`, `[[bin]]`), a Go `package main` |
 
 The header of step 4 (Present), and of the gap report, lists each surface with its member and evidence paths (`web UI: web/ (web/playwright.config.ts)`), or `surfaces: none`.
 

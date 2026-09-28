@@ -41,7 +41,7 @@ Each gap kind takes exactly one disposition:
 | A surface and no `.claude/skills/run-*/`, not `Declined: run recipe` | Offer: type `/run-skill-generator` ([surfaces.md](surfaces.md) `## The run recipe`) |
 | A third-party unit a Write above adds or re-pins (the Write keeps its own row), and a pin that is behind | Install-check row |
 | A catalog `Traps:` question whose condition holds (js-ts Playwright Test's `webServer.command` starting with `pnpm exec`), not `Declined:` | Offer |
-| Unclaimed extensions and stacks, unwired tools, Found-not-installed units, `public API` defaults with no baseline | Report only |
+| Unclaimed extensions and stacks, unwired tools, Found-not-installed units, `public API` defaults with no baseline, roots a language server does not serve | Report only |
 | Standing choices | Report only |
 
 Not gaps: a line the repo added to a file the skill wrote (kept); a red or unavailable check during timing (`not judged: fail (<check>)`, `not judged: unavailable (<check>)`); a skill pin in `skills-lock.json` (tier 3, never proposed: that bump is `update-skills`'); a profile `Schema:` ahead of the skill, which stops the run at step 2.
