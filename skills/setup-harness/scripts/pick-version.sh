@@ -32,14 +32,15 @@ registry=$1 name=$2
 fetch() {
   local i body err
   err=$(mktemp) || return 1
+  trap 'rm -f "$err"' RETURN
   for i in 1 2 3 4 5 6; do
     if body=$(curl -fsSL --compressed --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$@" 2>"$err"); then
-      rm -f "$err"; printf '%s' "$body"; return 0
+      printf '%s' "$body"; return 0
     fi
     grep -q 'error: 429$' "$err" || break
     [ "$i" = 6 ] || sleep 5
   done
-  cat "$err" >&2; rm -f "$err"; return 1
+  cat "$err" >&2; return 1
 }
 
 # stdin: one `<version> <iso time>` line per release; prints the pick.
@@ -143,7 +144,7 @@ print("\n".join(sorted(vs, key=lambda v: tuple(int(p) for p in v.split(".")), re
         mod=$(fetch -I "$base/$v/${name#*:}-$v.pom" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: *//p') || exit 2
         line=$(python3 -c 'import email.utils, sys; print(sys.argv[1], email.utils.parsedate_to_datetime(sys.argv[2]).isoformat())' "$v" "$mod") || exit 2
         printf '%s\n' "$line"
-        printf '%s\n' "$line" | choose >/dev/null && break
+        if printf '%s\n' "$line" | choose >/dev/null; then break; fi
       done) || exit 2
     printf '%s\n' "$lines" | choose ;;
   dockerhub)

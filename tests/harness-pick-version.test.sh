@@ -47,6 +47,8 @@ case \$url in
   https://repo1.maven.org/maven2/org/example/flat/maven-metadata.xml) printf '<metadata><versioning><versions><version>2.0</version><version>2.1</version><version>2.2</version></versions></versioning></metadata>' ;;
   https://repo1.maven.org/maven2/org/example/flat/2.2/flat-2.2.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
   https://repo1.maven.org/maven2/org/example/flat/2.1/flat-2.1.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h10\r\n\r\n' ;;
+  https://repo1.maven.org/maven2/org/example/young/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.0</version></versions></versioning></metadata>' ;;
+  https://repo1.maven.org/maven2/org/example/young/1.0/young-1.0.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
   https://repo1.maven.org/maven2/org/example/nopom/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.0</version></versions></versioning></metadata>' ;;
   *) exit 22 ;;
 esac
@@ -129,6 +131,8 @@ check_rc "crates: a page that fails is tooling, not a pick" 2 "$rc"
 check "crates: a page that fails prints no version" "" "$out"
 pick maven org.example:nopom
 check_rc "maven: a pom that cannot be read is tooling" 2 "$rc"
+pick maven org.example:young
+check_rc "maven: every release under a week old is no pick, not tooling" 1 "$rc"
 pick gems rails
 check_rc "an unknown registry is a usage error" 2 "$rc"
 
