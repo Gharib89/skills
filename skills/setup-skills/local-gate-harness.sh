@@ -7,7 +7,8 @@
 #
 # Contract (ship's local-gate contract, the same in every repo):
 #   stdout: one JSON object, {"verdict","base","lane","gates":{<name>:<status>}}
-#   stderr: a failing gate's last 40 log lines, and check.sh's own stderr's last 40
+#   stderr: a failing gate's last 40 log lines, and the last 40 lines of
+#           check.sh's own stderr unless check.sh answered a clean pass
 #   exit:   0 every gate passed · 1 a gate failed · 2 tooling
 #   gate status: pass | fail | deferred-to-ci | unavailable
 #   verdict: pass | fail | unavailable; fail wins over unavailable
