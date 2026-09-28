@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.1 (2026-09-28)
+
+### Bug Fixes
+
+- **skills**: Keep every skill self-contained, and gate it
+  ([#380](https://github.com/Gharib89/skills/pull/380),
+  [`76934a4`](https://github.com/Gharib89/skills/commit/76934a4d031a8f63229b3c79ea93df4d762b016e))
+
+
 ## v0.5.0 (2026-09-28)
 
 ### Features
