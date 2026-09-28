@@ -9,7 +9,7 @@
 - [Timing on a re-run](#timing-on-a-re-run)
 - [The report](#the-report)
 
-A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. There is no audit-only mode: the report always ends in the confirm step, or in `harness: no gaps`.
+A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. Every re-run ends in the confirm step, or in `harness: no gaps`.
 
 ## Dispositions
 
@@ -30,12 +30,12 @@ Each gap kind takes exactly one disposition:
 | A new root whose stack has a catalog entry | Write: its `TURN_ROWS` row and runner additions |
 | A now-available role: a role with no tool that its catalog entry now fills, or a `Constraints:` `Unavailable:` that no longer holds | Write |
 | `check.sh` breaks its contract, and no Write above explains it | Offer: rewrite onto the current template, keeping every check the old file ran |
-| A warm time over budget | Offer: narrow, demote or override ([check-ladder.md](check-ladder.md) `## Timing the rungs`) |
+| A warm `edit` or `turn` time over budget | Offer: narrow, demote or override ([check-ladder.md](check-ladder.md) `## Timing the rungs`) |
 | A new candidate ([detection.md](detection.md)) | Offer |
 | `cloud: unproven`, or `unproven (changed since <sha>)`, on a cloud-first repo | Offer: the proof ([cloud.md](cloud.md) `## The proof`) |
 | A broken pin | Offer: re-pin or remove |
 | Evidence gone from an evidence-backed `Local-only:` line | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
-| A write that adds or re-pins a third-party unit, a pin that is behind and new library evidence included | Install-check row |
+| A third-party unit a Write above adds or re-pins (the Write keeps its own row), and a pin that is behind | Install-check row |
 | Unclaimed extensions and stacks, unwired tools, Found-not-installed units | Report only |
 | Standing choices | Report only |
 
@@ -45,7 +45,7 @@ Not gaps: a line the repo added to a file the skill wrote (kept); a red check du
 
 `scripts/check.sh`, `.claude/hooks/check-hook.sh`, `.claude/hooks/cloud-setup.sh`, the hook entries in `.claude/settings.json`, a vendored plugin and the `CLAUDE.md` block are each compared whole with the current template **by what they say**: there is no version stamp and no old template to diff against. What the template says outside a configuration block and the copy lacks is a Write that restores it in place; the configuration block is compared with the block Explore would fill now. A line the repo added is kept, in the Write's proposed text too. A line the repo reworded to the same effect is no gap.
 
-`scripts/check.sh` is also run against its contract, the cold timing run of every rung going through this skill's `scripts/check-contract.sh scripts/check.sh <rung> [<file>...]`: it prints the entry point's own JSON line when the contract holds, and one line per violation (exit 1) when it does not. A violation that a Write from the comparison explains (the JSON `printf` deleted) is that Write. Any other (a repo-added check echoing to stdout, an exit code off its verdict) is the Offer: the current template with a configuration block that runs every check the old file ran, the repo's own additions moved into `TURN_ROWS` or `FULL_ROWS`. Either way the rung's time is "not judged" until the rewrite lands.
+`scripts/check.sh` is also run against its contract, the cold timing run of `edit`, `turn` and `full` going through this skill's `scripts/check-contract.sh scripts/check.sh <rung> [<file>...]` (commit is the runner's own hook, with no `check.sh` subcommand): it prints the entry point's own JSON line when the contract holds, one line per violation (exit 1) when it does not, and exits 2 when the entry point answered no line with exit 2, which is the repo's tooling failing, not the contract. A violation that a Write from the comparison explains (the JSON `printf` deleted) is that Write. Any other (a repo-added check echoing to stdout, an exit code off its verdict) is the Offer: the current template with a configuration block that runs every check the old file ran, the repo's own additions moved into `TURN_ROWS` or `FULL_ROWS`. Either way the rung's budget verdict is `not judged: contract` until the rewrite lands.
 
 ## Pins
 
@@ -57,15 +57,15 @@ Every pin the harness carries is read: runner config `rev`s, the dev dependency 
 
 ## Deleted pieces and standing choices
 
-A missing piece is proposed again every run, until the human drops its row with a reason: that writes `Declined: <piece>: <reason>` in the same batch, and the line stops the proposal. A row dropped without a reason returns next run; removing a `Declined:` line re-opens it.
+A missing piece is proposed again every run, until the human drops its row with a reason and step 5 records it `Declined:`; that line stops the proposal, and removing it re-opens it.
 
 **Standing choices** are listed and never re-asked: every `Declined:`, every `Local-only:` whose reason is `operator's choice`, budget overrides, the `Verdict:` and `Allowlist:`. A `Local-only:` line whose reason names a file, target or host is re-checked against the repo; when that evidence is gone it is the Offer above, and "keep" rewrites its reason to `operator's choice: <why>`.
 
 ## Timing on a re-run
 
-Every rung is timed as [check-ladder.md](check-ladder.md) `## Timing the rungs` says, the cold run through `check-contract.sh`. A rung that fails is the repo's code: `<rung>: fail (<check>)` with its time "not judged", and no gap or offer follows from it.
+Every rung is timed in Explore, before the report, as [check-ladder.md](check-ladder.md) `## Timing the rungs` says, the cold run of `edit`, `turn` and `full` through `check-contract.sh`. Timing is read-only: fix mode on a clean file writes nothing. A rung that fails is the repo's code: `<rung>: fail (<check>)` with its time "not judged", and no gap or offer follows from it.
 
-After the writes, every rung the batch touched is timed again: a `check.sh` configuration change re-times the rungs whose rows changed, `check-hook.sh` or a hook entry the rung it runs, a runner config change `edit`, commit and `full`. A write to a file the proof covers turns a standing `Proof: <sha>` into `cloud: unproven (changed since <sha>)`, and the proof is offered again.
+After the writes, in place of step 6's first timing, every rung the batch touched is timed again: a `check.sh` configuration change re-times the rungs whose rows changed, `check-hook.sh` or a hook entry the rung it runs, a runner config change `edit`, commit and `full`. A write to a file the proof covers turns a standing `Proof: <sha>` into `cloud: unproven (changed since <sha>)`, and the proof is offered again.
 
 ## The report
 
@@ -78,4 +78,4 @@ Step 4's message on a re-run, in this order:
 5. **Not acted on.**
 6. **Standing choices**, with the cloud state.
 
-With no gaps: `harness: no gaps`, then the budgets table and the standing choices. Nothing is written and there is no confirm step.
+With no gaps: `harness: no gaps`, then the budgets table and the standing choices. Nothing is written, and the run ends after this message.

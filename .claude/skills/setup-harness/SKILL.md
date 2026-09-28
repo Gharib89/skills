@@ -32,7 +32,7 @@ On any failure print the exact command, then "then rerun `/setup-harness`", and 
 
 Read `docs/agents/harness.md` if it exists; a repo without one is a first run, and a repo with one is a **re-run**, whose report is the gap report of [reference/gap-report.md](reference/gap-report.md): read it now.
 
-- `Schema:` equal to this skill's `metadata.harness-schema`: read its choices (`## Budgets` overrides, the `## Cloud` verdict and `Allowlist:`, `Local-only:` and `Declined:` lines) and honour them without re-asking; a removed `Declined:` line re-opens its proposal. A `Proof: <sha>` stands or is stale per [reference/cloud.md](reference/cloud.md) `## Recording the proof`.
+- `Schema:` equal to this skill's `metadata.harness-schema`: read its choices (`## Budgets` overrides, the `## Cloud` verdict and `Allowlist:`, `Local-only:` and `Declined:` lines) and honour them without re-asking; a removed `Declined:` line re-opens its proposal, and a `Local-only:` line whose evidence is gone is offered again (gap-report.md `## Deleted pieces and standing choices`). A `Proof: <sha>` stands or is stale per [reference/cloud.md](reference/cloud.md) `## Recording the proof`.
 - `Schema:` behind: the migration is the first, undroppable row of the confirm step, applied entry by entry from [harness-schema.md](harness-schema.md), `Schema:` rewritten last.
 - `Schema:` ahead: stop. That repo was set up by a newer setup-harness; print `npx skills add Gharib89/skills --skill setup-harness --agent claude-code -y` and "then rerun `/setup-harness`".
 
@@ -45,7 +45,8 @@ Read-only. Collect, then present everything at once in step 4.
 3. **The pre-commit runner** git invokes, per [reference/runner.md](reference/runner.md), and any config that is present but not wired.
 4. **Existing harness pieces**: `scripts/check.sh`, `.claude/hooks/`, the `hooks` in `.claude/settings.json` and `.claude/settings.local.json`, and a `### Harness` block in `CLAUDE.md`. An existing harness file is the repo's own evidence: compare it with its current template by what it says, keep what it adds and propose only what it lacks ([reference/gap-report.md](reference/gap-report.md) `## Files the skill wrote`).
 5. **The install-check rows**: every package, hook repo, binary or vendored plugin the plan adds or re-pins, per [reference/install-check.md](reference/install-check.md), with its version picked by this skill's `scripts/pick-version.sh` and its tier, publisher, provenance and glue read now; a language server's per [reference/language-servers.md](reference/language-servers.md) `## Vendoring` step 1, at the SHA it records. On a re-run, also every pin the harness already carries, per gap-report.md `## Pins`.
-6. **The cloud** per [reference/cloud.md](reference/cloud.md): the verdict's evidence, need by need; an existing cloud `SessionStart` script; the cloud setup's steps, each rung's cloud label, and the static host check over those steps. `origin` on `dev.azure.com` or `visualstudio.com` makes the proof's route Azure DevOps and changes nothing else.
+6. **On a re-run, time the rungs** now, per gap-report.md `## Timing on a re-run`, so the report carries the budgets and any over-budget Offer.
+7. **The cloud** per [reference/cloud.md](reference/cloud.md): the verdict's evidence, need by need; an existing cloud `SessionStart` script; the cloud setup's steps, each rung's cloud label, and the static host check over those steps. `origin` on `dev.azure.com` or `visualstudio.com` makes the proof's route Azure DevOps and changes nothing else.
 
 ### 4. Present
 
@@ -59,7 +60,7 @@ On a re-run, the gap report in the layout gap-report.md `## The report` gives, e
 
 ### 5. Confirm
 
-One approval covers the batch: the human answers the questions and may drop rows or writes by number. A dropped row with a reason is recorded `Declined: <what>: <reason>` in the profile in the same batch; one dropped without a reason is proposed again next run. An ignored candidate is recorded the same way. Re-present only what an answer changed. On a re-run, steps 6 to 8 act on the approved rows alone, and step 6's timing follows gap-report.md `## Timing on a re-run`.
+One approval covers the batch: the human answers the questions and may drop rows or writes by number. A dropped row with a reason is recorded `Declined: <what>: <reason>` in the profile in the same batch; one dropped without a reason is proposed again next run. An ignored candidate is recorded the same way. Re-present only what an answer changed. On a re-run the questions are the gap report's Offers, steps 6 to 8 act on the approved rows alone, and step 6's timing is the re-timing of gap-report.md `## Timing on a re-run`.
 
 ### 6. Write
 

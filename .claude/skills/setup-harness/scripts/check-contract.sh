@@ -12,7 +12,9 @@
 # stdout: the entry point's own line when the contract holds, else one line
 #         per violation
 # stderr: the entry point's, passed through
-# exit: 0 holds · 1 a violation · 2 usage or the entry point cannot run
+# exit: 0 holds · 1 a violation · 2 usage, no python3, the entry point cannot
+#       run, or it answered no line with exit 2 (its own tooling failing,
+#       which the contract admits)
 set -uo pipefail
 usage="usage: check-contract.sh <entry point> <rung> [<file>...]"
 case ${1:-} in
@@ -21,10 +23,12 @@ case ${1:-} in
 esac
 [ -n "${2:-}" ] || { echo "$usage" >&2; exit 2; }
 [ -x "$1" ] || { echo "cannot run $1" >&2; exit 2; }
+command -v python3 >/dev/null || { echo "check-contract.sh: needs python3" >&2; exit 2; }
 out=$(mktemp) || exit 2
 trap 'rm -f "$out"' EXIT
 "$@" > "$out"
 code=$?
+[ "$code" = 2 ] && [ ! -s "$out" ] && exit 2
 
 python3 - "$2" "$code" "$out" <<'EOF'
 import json, sys
@@ -33,24 +37,25 @@ statuses = ["pass", "fail", "unavailable", "skipped", "over-budget"]
 want = " | ".join(statuses)
 exits = {"pass": 0, "skipped": 0, "fail": 1, "unavailable": 2, "over-budget": 3}
 bad = []
-lines = open(path).read().splitlines()
+with open(path, encoding="utf-8", errors="replace") as f:
+    lines = f.read().splitlines()
 if len(lines) != 1:
     print(f"stdout: want one JSON line, got {len(lines)} lines")
     sys.exit(1)
 try:
-    d = json.loads(lines[0])
-    assert isinstance(d, dict)
+    answer = json.loads(lines[0])
+    assert isinstance(answer, dict)
 except (ValueError, AssertionError):
     print(f"stdout: not a JSON object: {lines[0]}")
     sys.exit(1)
-if d.get("rung") != rung:
-    bad.append(f"rung: want {rung}, got {d.get('rung')}")
-verdict = d.get("verdict")
+if answer.get("rung") != rung:
+    bad.append(f"rung: want {rung}, got {answer.get('rung', 'nothing')}")
+verdict = answer.get("verdict", "nothing")
 if verdict not in statuses:
     bad.append(f"verdict: want {want}, got {verdict}")
 elif exits[verdict] != code:
     bad.append(f"exit: verdict {verdict} wants {exits[verdict]}, got {code}")
-checks = d.get("checks")
+checks = answer.get("checks")
 if not isinstance(checks, dict):
     bad.append("checks: want an object of <name>: <status>")
 else:
