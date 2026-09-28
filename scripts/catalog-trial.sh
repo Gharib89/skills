@@ -82,8 +82,12 @@ trial() {
   case $pin in
     package\ *)
       set -- $pin
-      version=$("$root/skills/setup-harness/scripts/pick-version.sh" "$2" "$3") \
-        || { echo "$entry $s: fail (no version of $3 on $2)"; return 1; } ;;
+      version=$("$root/skills/setup-harness/scripts/pick-version.sh" "$2" "$3")
+      case $? in
+        0) ;;
+        2) echo "$entry $s: fail ($2 did not answer for $3)"; return 1 ;;
+        *) echo "$entry $s: fail (no version of $3 on $2)"; return 1 ;;
+      esac ;;
   esac
   [ -d "$seeds/$entry/bad/$s" ] || { echo "$entry $s: fail (no bad/$s)"; return 1; }
   work=$(mktemp -d) || exit 2

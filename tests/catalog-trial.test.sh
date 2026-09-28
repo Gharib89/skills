@@ -102,6 +102,11 @@ kind narrow: pass
 kind versioned: pass
 kind packaged: pass" "$out"
 
+# A registry that does not answer is named as such, not as a missing version.
+printf '#!/bin/sh\nexit 2\n' > "$root/skills/setup-harness/scripts/pick-version.sh"
+out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh kind 2>/dev/null)
+check "an unreachable registry is named, not a missing version" "kind versioned: fail (npm did not answer for versioned)" "$(printf '%s\n' "$out" | grep versioned)"
+
 out=$(cd "$root" && bash scripts/catalog-trial.sh nope 2>/dev/null); rc=$?
 check_rc "an entry that does not exist is a usage error" 2 "$rc"
 

@@ -20,9 +20,9 @@ Files: .kt .kts
 Run: `ktlint {files}`
 Hook: local
 Pin: package maven com.pinterest.ktlint:ktlint-cli
-Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSLo "$HOME/.local/lib/ktlint-{version}.jar" https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/{version}/ktlint-cli-{version}-all.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/ktlint-{version}.jar" > "$HOME/.local/bin/ktlint" && chmod +x "$HOME/.local/bin/ktlint"`; Blocked: release binaries
+Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSL --retry 6 --retry-delay 5 -o "$HOME/.local/lib/ktlint-{version}.jar" https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/{version}/ktlint-cli-{version}-all.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/ktlint-{version}.jar" > "$HOME/.local/bin/ktlint" && chmod +x "$HOME/.local/bin/ktlint"`; Blocked: release binaries
 Constraints: Kotlin files only; Java has no vendor linter, so a Java-only member takes no lint default. Needs a JVM, which the image carries (OpenJDK 21). The route puts the Maven Central jar behind a `ktlint` launcher in `~/.local/bin`, so the hook entry names the tool's own binary.
-Traps: 2.0 moves to the `io.github.ktlint` group; the pin stays on `com.pinterest.ktlint` through 1.x.
+Traps: 2.0 moves to the `io.github.ktlint` group; the pin stays on `com.pinterest.ktlint` through 1.x. Maven Central's Cloudflare front answers about one cloud-sandbox request in four 429, in bursts (measured), so the route's `curl` retries on a 5 s delay; Maven and Gradle back off on their own.
 
 ## format
 
@@ -35,7 +35,7 @@ Files: .java
 Run: `google-java-format --replace {files}`
 Hook: local
 Pin: package maven com.google.googlejavaformat:google-java-format
-Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSLo "$HOME/.local/lib/google-java-format-{version}.jar" https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/{version}/google-java-format-{version}-all-deps.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/google-java-format-{version}.jar" > "$HOME/.local/bin/google-java-format" && chmod +x "$HOME/.local/bin/google-java-format"`; Blocked: release binaries
+Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSL --retry 6 --retry-delay 5 -o "$HOME/.local/lib/google-java-format-{version}.jar" https://repo1.maven.org/maven2/com/google/googlejavaformat/google-java-format/{version}/google-java-format-{version}-all-deps.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/google-java-format-{version}.jar" > "$HOME/.local/bin/google-java-format" && chmod +x "$HOME/.local/bin/google-java-format"`; Blocked: release binaries
 Constraints: Needs JDK 21 or later. The route puts the jar behind a launcher, as ktlint's does.
 Traps: Spotless (`googleJavaFormat()` or `ktlint()` in the build) is a tool this entry does not list, so it is kept and wired through its own `spotlessApply` task, never beside this jar; its `ratchetFrom 'origin/main'` fails on a shallow clone until `git fetch origin main`.
 
@@ -48,7 +48,7 @@ Files: .kt .kts
 Run: `ktlint --format {files}`
 Hook: local
 Pin: package maven com.pinterest.ktlint:ktlint-cli
-Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSLo "$HOME/.local/lib/ktlint-{version}.jar" https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/{version}/ktlint-cli-{version}-all.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/ktlint-{version}.jar" > "$HOME/.local/bin/ktlint" && chmod +x "$HOME/.local/bin/ktlint"`; Blocked: release binaries
+Route: `mkdir -p "$HOME/.local/lib" "$HOME/.local/bin" && curl -fsSL --retry 6 --retry-delay 5 -o "$HOME/.local/lib/ktlint-{version}.jar" https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/{version}/ktlint-cli-{version}-all.jar && printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$HOME/.local/lib/ktlint-{version}.jar" > "$HOME/.local/bin/ktlint" && chmod +x "$HOME/.local/bin/ktlint"`; Blocked: release binaries
 Constraints: one ktlint pin serves both roles.
 Traps: None.
 

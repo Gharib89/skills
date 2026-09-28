@@ -25,9 +25,9 @@ case ${1:-} in
 esac
 registry=$1 name=$2
 # crates.io refuses a request without a User-Agent naming its sender. Maven
-# Central answers a cloud session's shared egress 429 at times (measured), which
-# `--retry` waits out, honouring Retry-After.
-fetch() { curl -fsSL --compressed --retry 3 --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$1"; }
+# Central's Cloudflare front answers about one request in four from a cloud
+# session 429, in bursts (measured), so a retry waits 5 s rather than curl's 1 s.
+fetch() { curl -fsSL --compressed --retry 6 --retry-delay 5 --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$1"; }
 
 # stdin: one `<version> <iso time>` line per release; prints the pick.
 choose() {
@@ -127,7 +127,7 @@ import re, sys
 vs = [v.strip() for v in sys.stdin if re.fullmatch(r"\d+(\.\d+)*", v.strip())]
 print("\n".join(sorted(vs, key=lambda v: tuple(int(p) for p in v.split(".")), reverse=True)))' |
       while IFS= read -r v; do
-        mod=$(curl -fsSI --retry 3 --max-time 30 "$base/$v/${name#*:}-$v.pom" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: *//p') || exit 2
+        mod=$(curl -fsSI --retry 6 --retry-delay 5 --max-time 30 "$base/$v/${name#*:}-$v.pom" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: *//p') || exit 2
         line=$(python3 -c 'import email.utils, sys; print(sys.argv[1], email.utils.parsedate_to_datetime(sys.argv[2]).isoformat())' "$v" "$mod") || exit 2
         printf '%s\n' "$line"
         printf '%s\n' "$line" | choose >/dev/null && break
