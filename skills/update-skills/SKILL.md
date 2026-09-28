@@ -205,8 +205,9 @@ Between the last content section and `## Attribution`, one collapsed block per
 `<details><summary><skill> <old_version> → <new_version></summary>`: the
 sections of the file at its `changelog` path above `old_version` up to
 `new_version`, verbatim, breaking changes first. A null `old_version` is a skill
-new to this repo: its version alone. An `old_version` above `new_version` crosses
-the renumber to 0.x: the sections above `old_version` under the old numbers, then
+new to this repo: its version alone. A refresh whose new `changelog` carries the
+**The renumber to 0.x.** note, where the old copy's lacked it, crosses that
+renumber: the sections above `old_version` under the old numbers, then
 the renumbered ones up to `new_version`. One more block holds each composed and
 other skill that moved, with the upstream commit subjects that touched its
 folder between the two refs; a null `old_ref` has no subjects.
