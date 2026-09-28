@@ -9,11 +9,11 @@ metadata:
 
 # Setup harness
 
-Give every Claude Code session in this repo a fast, measured way to check its own work: `scripts/check.sh` answers "is this change good" at three rungs, Claude Code hooks run the fast rungs on every edit and every stop, and the pre-commit runner holds the commit. Same shape as `setup-skills`: explore, present, confirm, write, prove. Nothing is written before the human confirms it as a diff, and nothing third-party is installed before it passes the install check.
+Give every Claude Code session in this repo a fast, measured way to check its own work: `scripts/check.sh` answers "is this change good" at three rungs, Claude Code hooks run the fast rungs on every edit and every stop, and the pre-commit runner holds the commit. The run is explore, present, confirm, write, prove. Nothing is written before the human confirms it as a diff, and nothing third-party is installed before it passes the install check.
 
-Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (agent harness, check entry point, rung, budget, stack, member, file kind, catalog, trust tier, install check, harness profile, cloud setup, local-only, bundle session). "Verification" is Ship's word for a real-system check; here the words are check and prove.
+The words here are check and prove; "verification" is Ship's word for a real-system check.
 
-**Paths are contracts.** `scripts/check.sh`, `.claude/hooks/check-hook.sh`, `.claude/hooks/cloud-setup.sh` and `docs/agents/harness.md` are read by hooks and by a re-run, and `setup-skills` is to read the profile ([#367](https://github.com/Gharib89/skills/issues/367)); write them at exactly those paths. Configuration is committed at project scope (`.claude/settings.json`, `.claude/hooks/`, the runner config); anything machine-specific goes to `.claude/settings.local.json`, and the report names it as such.
+**Paths are contracts.** `scripts/check.sh`, `.claude/hooks/check-hook.sh`, `.claude/hooks/cloud-setup.sh` and `docs/agents/harness.md` are read by hooks and by a re-run, and `setup-skills` is to read the profile; write them at exactly those paths. Configuration is committed at project scope (`.claude/settings.json`, `.claude/hooks/`, the runner config); anything machine-specific goes to `.claude/settings.local.json`, and the report names it as such.
 
 ## Process
 
@@ -23,7 +23,7 @@ On any failure print the exact command, then "then rerun `/setup-harness`", and 
 
 1. **A git repo with tracked files**, on GitHub or Azure DevOps (`git remote get-url origin`). `curl` and `python3` on `PATH`: this skill's `scripts/pick-version.sh` needs both.
 2. **A clean working tree** (`git status --porcelain` empty; else `git stash -u`), so the run's changes are the whole diff and a fix-mode tool rewrites nothing the human has not committed.
-3. **Claude Code floor.** Skip this item entirely when `CLAUDE_CODE_REMOTE=true`. Read `claude --version`. Below **2.1.277** (the profile's `Floor:`), write nothing under `.claude/` in this run, print the upgrade command for the install method (`claude update`; Homebrew `brew upgrade claude-code`; npm `npm install -g @anthropic-ai/claude-code@latest`), and stop. The floor is the last release fixing a prompt-cache or context bug that hooks would trigger.
+3. **Claude Code floor.** Skip this item entirely when `CLAUDE_CODE_REMOTE=true`. Read `claude --version`. Below the `Floor:` of [templates/harness-profile.md](templates/harness-profile.md), write nothing under `.claude/` in this run, print the upgrade command for the install method (`claude update`; Homebrew `brew upgrade claude-code`; npm `npm install -g @anthropic-ai/claude-code@latest`), and stop. The floor is the last release fixing a prompt-cache or context bug that hooks would trigger.
 4. **Warn, do not stop**, in the report's header:
    - `claude doctor </dev/null` reports `Auto-updates:` other than `enabled`: name the switch doctor names (`DISABLE_AUTOUPDATER`, `DISABLE_UPDATES`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`) and the install method's own update command, since Homebrew, WinGet and apt installs do not self-update.
    - The installed version trails its channel's latest: `npm view @anthropic-ai/claude-code dist-tags --json` (`latest` and `stable`); name the channel, both versions and the update command.
@@ -60,7 +60,7 @@ On a re-run, the gap report in the layout gap-report.md `## The report` gives, e
 
 ### 5. Confirm
 
-One approval covers the batch: the human answers the questions and may drop rows or writes by number. A dropped row with a reason is recorded `Declined: <what>: <reason>` in the profile in the same batch; one dropped without a reason is proposed again next run. An answer that keeps a unit off the version the install check picks is recorded the same way, `Declined: <unit> <picked version>: <reason>`. An ignored candidate is recorded the same way. Re-present only what an answer changed. On a re-run the questions are the gap report's Offers, steps 6 to 8 act on the approved rows and the profile lines the answers record, and step 6's timing is the re-timing of gap-report.md `## Timing on a re-run`.
+One approval covers the batch: the human answers the questions and may drop rows or writes by number. A row dropped with a reason, an ignored candidate, and an answer keeping a unit off the version the install check picks are each recorded in the profile in the same batch, as `Declined: <what>: <reason>` (`Declined: <unit> <picked version>: <reason>` for the last); a row dropped without a reason is proposed again next run. Re-present only what an answer changed. On a re-run the questions are the gap report's Offers, steps 6 to 8 act on the approved rows and the profile lines the answers record, and step 6's timing is the re-timing of gap-report.md `## Timing on a re-run`.
 
 ### 6. Write
 

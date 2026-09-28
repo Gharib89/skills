@@ -143,6 +143,11 @@ run prose-budget scripts/prose-budget-check.sh
 # scripts/stray-file-check.sh carries the allowlist.
 run stray-files scripts/stray-file-check.sh
 
+# self-contained: a skill's prose pointing at material that does not install
+# with it, which `derived-copies`, comparing bytes, cannot see.
+# scripts/self-contained-check.sh is the whole rule.
+run self-contained scripts/self-contained-check.sh
+
 # contract: the mechanics' malformed-invocation contract, their --help contract,
 # and the Bash 3.2 target over the whole skills tree. Every mechanic answers a
 # malformed invocation with one JSON error object and exit 2 and `--help` with its

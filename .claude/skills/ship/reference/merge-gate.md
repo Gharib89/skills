@@ -168,7 +168,7 @@ gate. Do not re-open the whole pipeline.
 
 ## Filing a Ship defect
 
-A Ship defect draft reaches the source repo on the human's word alone ([ADR 0004](https://github.com/Gharib89/skills/blob/main/docs/adr/0004-cross-repo-writes-reach-the-source-repo-on-the-humans-word.md)),
+A Ship defect draft reaches the source repo on the human's word alone,
 and "merge" is not that word: it approves the PR, not publishing the run's
 context to a public repo. On "file defects", or a word naming one draft, run
 `file-issue --repo Gharib89/skills --title "<title>" --body-file <draft> --label
