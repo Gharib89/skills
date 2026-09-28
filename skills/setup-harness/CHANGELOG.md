@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.0 (2026-09-28)
+
+### Features
+
+- **setup-harness**: Surfaces and behaviour tools
+  ([#382](https://github.com/Gharib89/skills/pull/382),
+  [`0a17675`](https://github.com/Gharib89/skills/commit/0a17675dc772413920fc3c10e1a2ce72d650b39d))
+
+
 ## v0.5.1 (2026-09-28)
 
 ### Bug Fixes
