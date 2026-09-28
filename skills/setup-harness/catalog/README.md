@@ -38,6 +38,7 @@ Evidence: <config files, [tool.x] tables, dependency names>
 Rung: edit | turn | full | None.     (None.: language server only)
 Files: <.ext ...>                      (only when the tool takes a subset of Extensions:)
 Run: `<command>`
+Settings: `<JSON object>`             (language server only, when it applies)
 Hook: local | <vendor hook repo URL> | None.
 Pin: <pin kind> <registry> <name>
 Route: `<install command>`; Blocked: <routes that 403> | None.
@@ -53,6 +54,7 @@ Roles, as `##` headings, from this set only: `lint`, `format`, `typecheck`, `tes
 
 - **Rung.** `edit` takes one file and must fit the 5 s edit budget: formatters and most linters, run through the pre-commit runner, fix mode on. `turn` is project-scoped: typecheckers and tests, run by `check.sh` per member. `full` runs only on `check.sh full`. `None.` is a language server's, and only a language server's.
 - **Run.** One command, in backticks. `{files}` stands for the file list, `{member}` for the member's directory and `{package}` for the member's package name where a selector takes names; a `turn` command runs in the member's directory, unless its `Constraints:` name the stack root (Maven's `-amd`). `{version}` stands for the pin where the command carries it: a container image's tag, a language server's launch. A `lint` or `format` command is the runner hook's `entry`, in fix mode where the tool has one. A tool run in a container image is a `language: docker_image` hook instead, its `Run:` that hook spelled out (hadolint). `Run: None.` is for an `Unavailable:` tool only. A command names the tool's own binary; where the tool is a dev dependency, the written hook entry or turn row prefixes the stack's exec command (`uv run`, `pnpm exec`, `npx --no-install`). A language server's command is the one its vendored `.lsp.json` launches, `{root}` standing for the stack root.
+- **Settings.** A language server's `settings` object, in backticks, which the vendored `.lsp.json` carries as its `settings` key and Claude Code hands the server when it asks for its configuration. `{root}` is as in `Run:`, its `{root}/` dropped at the repo root. Claude Code expands no `${...}` there, so a path in it is relative to the project directory.
 - **Hook.** `local` or the vendor hook repo (`None.` for a language server); [reference/runner.md](../reference/runner.md) `## Writing hooks` says which a run writes.
 - **Files.** A tool taking only some of the entry's extensions names them (ktlint's `.kt .kts` beside google-java-format's `.java`); its hook is scoped to them by `types`.
 - **Paths.** A file kind claimed by path scopes each of its hooks with `files:`, a regex of its `Paths:` globs (`^\.github/workflows/[^/]+\.ya?ml$`), never by `types`, which would hand every YAML file to a workflow linter. A glob's `*` stays within one directory.

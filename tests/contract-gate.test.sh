@@ -474,6 +474,16 @@ d=$(harness_tree catalog-lsp-reason)
 run "$inert" "$d"
 check "a Local-only: with no reason is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### pyright: Local-only: wants its reason")"
 
+d=$(harness_tree catalog-settings)
+{ printf '## language server\n'; tool_block pyright None. None.; printf 'Local-only: x\nSettings: `{}`\n'; } >> "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check_rc "a language server with Settings: passes" 0 "$rc"
+
+d=$(harness_tree catalog-settings-off)
+sed -i.bak 's/^Rung: edit$/Rung: edit\nSettings: `{}`/' "$d/setup-harness/catalog/sh.md"
+run "$inert" "$d"
+check "Settings: off a language server is named" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ### shellcheck: Settings: is for a language server only")"
+
 # 8. The two profile lines setup-skills parses are frozen in the template.
 d=$(harness_tree frozen-location)
 sed -i.bak 's/^Location:/Path:/' "$d/setup-harness/templates/harness-profile.md"
