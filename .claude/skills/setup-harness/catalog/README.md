@@ -21,10 +21,11 @@ The profile grammar: fixed headings, facts on `Label:` lines, `None.` where a la
 
 ## Signals
 Kind: stack | file kind
+Names: <file basenames> | None.     (file kind only)
 Manifest: <file names>                 (stack only)
 Lockfile: <file names>                 (stack only)
 Workspace: <where a workspace is named> (stack only)
-Extensions: <.ext ...>
+Extensions: <.ext ...> | None.
 Shebangs: <interpreters> | None.
 Runtime version: <files, in precedence order> (stack only)
 
