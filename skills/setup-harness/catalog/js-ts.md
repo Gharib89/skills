@@ -8,6 +8,7 @@ Workspace: pnpm-workspace.yaml, package.json `workspaces`
 Extensions: .ts .tsx .js .jsx .mjs .cjs .mts .cts
 Shebangs: node
 Runtime version: .nvmrc, .node-version, package.json `engines`, .tool-versions, mise.toml
+Library: a `package.json` with a `name` and no `"private": true`
 
 ## lint
 

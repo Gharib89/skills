@@ -29,6 +29,7 @@ Workspace: <where a workspace is named> (stack only)
 Extensions: <.ext ...> | None.
 Shebangs: <interpreters> | None.
 Runtime version: <files, in precedence order> (stack only)
+Library: <what makes a root publishable> (stack only)
 
 ## <role>
 ### <tool>        (default first, then known alternatives)

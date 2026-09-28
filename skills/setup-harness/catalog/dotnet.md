@@ -8,6 +8,7 @@ Workspace: `*.sln`, `*.slnx`
 Extensions: .cs
 Shebangs: None.
 Runtime version: global.json, .tool-versions, mise.toml
+Library: a `*.csproj` setting `<IsPackable>true</IsPackable>` or a `<PackageId>`
 
 ## format
 

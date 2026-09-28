@@ -8,6 +8,7 @@ Workspace: Cargo.toml `[workspace]`
 Extensions: .rs
 Shebangs: None.
 Runtime version: rust-toolchain.toml, rust-toolchain, Cargo.toml `rust-version`, .tool-versions, mise.toml
+Library: a lib target (`src/lib.rs` or `[lib]`) in a `Cargo.toml` without `publish = false`
 
 ## format
 

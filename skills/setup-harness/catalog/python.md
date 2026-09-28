@@ -8,6 +8,7 @@ Workspace: `[tool.uv.workspace]`
 Extensions: .py .pyi
 Shebangs: python python3
 Runtime version: .python-version, pyproject `requires-python`, .tool-versions, mise.toml
+Library: a `pyproject.toml` with both `[build-system]` and `[project]`
 
 ## lint
 

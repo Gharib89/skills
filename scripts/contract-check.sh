@@ -218,7 +218,7 @@ fi
 # a stack the skill silently half-knows. A `Route:` carries its `Blocked:`
 # clause, so a run can tell "nothing is blocked" from "nobody looked". A file
 # kind takes no turn rung (it has no project to typecheck or test), and only a
-# file kind is claimed by Names: or Paths:. A tool's Files: is a subset of the
+# file kind is claimed by Names: or Paths:, only a stack publishes (Library:). A tool's Files: is a subset of the
 # entry's Extensions:, since it narrows the files the entry claims. Browser
 # and public-API tools run on `full` only, and a language server sits on no
 # rung, takes no hook and is `Local-only:` with its reason, because it answers
@@ -237,11 +237,12 @@ if [ -d "$harness/catalog" ]; then
     }
     function close_signals(  i, n, want) {
       if (!signals) return
-      want = kind == "file kind" ? "Kind|Names|Paths|Extensions|Shebangs" : "Kind|Manifest|Lockfile|Workspace|Extensions|Shebangs|Runtime version"
+      want = kind == "file kind" ? "Kind|Names|Paths|Extensions|Shebangs" : "Kind|Manifest|Lockfile|Workspace|Extensions|Shebangs|Runtime version|Library"
       n = split(want, w, "|")
       for (i = 1; i <= n; i++) if (!(w[i] in sig)) bad("## Signals: missing " w[i] ":")
       if (kind != "stack" && kind != "file kind") bad("## Signals: Kind: want stack or file kind, got " kind)
       if (kind == "stack") { if ("Names" in sig) bad("## Signals: Names: is a file kind\047s"); if ("Paths" in sig) bad("## Signals: Paths: is a file kind\047s") }
+      if (kind == "file kind" && ("Library" in sig)) bad("## Signals: Library: is a stack\047s")
       signals = 0
     }
     BEGIN {
