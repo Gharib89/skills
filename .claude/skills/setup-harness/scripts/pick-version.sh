@@ -24,10 +24,23 @@ case ${1:-} in
   *) echo "$usage" >&2; exit 2 ;;
 esac
 registry=$1 name=$2
-# crates.io refuses a request without a User-Agent naming its sender. Maven
-# Central's Cloudflare front answers about one request in four from a cloud
-# session 429, in bursts (measured), so a retry waits 5 s rather than curl's 1 s.
-fetch() { curl -fsSL --compressed --retry 6 --retry-delay 5 --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$1"; }
+# [curl args] <url>: the body. crates.io refuses a request without a User-Agent
+# naming its sender. Maven Central's Cloudflare front answers a cloud session's
+# requests 429 now and then, and curl's own --retry kept getting 429 on every
+# attempt where a fresh curl got 200 (measured), so a 429 is retried here, each
+# attempt a new curl; any other failure returns at once.
+fetch() {
+  local i body err
+  err=$(mktemp) || return 1
+  for i in 1 2 3 4 5 6; do
+    if body=$(curl -fsSL --compressed --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$@" 2>"$err"); then
+      rm -f "$err"; printf '%s' "$body"; return 0
+    fi
+    grep -q 'error: 429$' "$err" || break
+    [ "$i" = 6 ] || sleep 5
+  done
+  cat "$err" >&2; rm -f "$err"; return 1
+}
 
 # stdin: one `<version> <iso time>` line per release; prints the pick.
 choose() {
@@ -127,7 +140,7 @@ import re, sys
 vs = [v.strip() for v in sys.stdin if re.fullmatch(r"\d+(\.\d+)*", v.strip())]
 print("\n".join(sorted(vs, key=lambda v: tuple(int(p) for p in v.split(".")), reverse=True)))' |
       while IFS= read -r v; do
-        mod=$(curl -fsSI --retry 6 --retry-delay 5 --max-time 30 "$base/$v/${name#*:}-$v.pom" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: *//p') || exit 2
+        mod=$(fetch -I "$base/$v/${name#*:}-$v.pom" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: *//p') || exit 2
         line=$(python3 -c 'import email.utils, sys; print(sys.argv[1], email.utils.parsedate_to_datetime(sys.argv[2]).isoformat())' "$v" "$mod") || exit 2
         printf '%s\n' "$line"
         printf '%s\n' "$line" | choose >/dev/null && break

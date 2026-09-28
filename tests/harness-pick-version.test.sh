@@ -22,6 +22,11 @@ cat > "$fixture/bin/curl" <<FAKE
 for a; do url=\$a; done
 case \$url in
   https://registry.npmjs.org/prettier) cat "$fixture/r/npm" ;;
+  https://registry.npmjs.org/flaky)
+    # Answers 429 twice, as Maven Central's front does in bursts, then serves.
+    n=\$(cat "$fixture/flaky" 2>/dev/null || echo 0); echo \$((n + 1)) > "$fixture/flaky"
+    [ "\$n" -ge 2 ] || { echo 'curl: (22) The requested URL returned error: 429' >&2; exit 22; }
+    cat "$fixture/r/npm" ;;
   https://pypi.org/pypi/ruff/json) cat "$fixture/r/pypi" ;;
   https://proxy.golang.org/mvdan.cc/sh/v3/@v/list) printf 'v3.8.0\nv3.9.0\nv3.10.0\nv3.11.0-rc1\nv3.11.0\n' ;;
   https://proxy.golang.org/mvdan.cc/sh/v3/@v/v3.8.0.info) printf '{"Version":"v3.8.0"}' ;;
@@ -105,6 +110,8 @@ pick pypi ruff
 check "pypi: yanked releases and prereleases are passed over" 0.7.0 "$out"
 pick go mvdan.cc/sh/v3/cmd/shfmt
 check "go: the module's newest old-enough version, read through the proxy, past one with no publish time" v3.10.0 "$out"
+pick npm flaky
+check "a 429 is retried by a fresh request until the registry serves" 3.10.0 "$out"
 pick npm left-pad
 check_rc "a registry that cannot answer is tooling" 2 "$rc"
 pick crates cargo-nextest
