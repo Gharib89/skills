@@ -10,11 +10,10 @@ One file per stack or file kind. The catalog is closed at run time: an entry cha
 - [Version rule](#version-rule)
 - [Yielding to the repo](#yielding-to-the-repo)
 - [Affected tests](#affected-tests)
-- [Entry trials](#entry-trials)
 
 ## Entry format
 
-The profile grammar: fixed headings, facts on `Label:` lines, `None.` where a label has nothing to say. `scripts/contract-check.sh` in the source repo fails an entry that breaks it.
+The profile grammar: fixed headings, facts on `Label:` lines, `None.` where a label has nothing to say.
 
 ```
 # <Stack or file kind>
@@ -97,7 +96,3 @@ Entries carry no versions: the run picks each by install-check.md's version choi
 ## Affected tests
 
 The member is the selection unit. A runner that selects natively (the Go test cache, Gradle's up-to-date checks) gets the member's test command. Vitest `related` and Jest `--findRelatedTests` are used whenever that runner is present. pytest-testmon and nextest `rdeps()` are offered as gap proposals through the install check, and may be declined. A runner with name filters only (bats, node:test, Maven, .NET), or a declined selector, runs the affected members' whole suites, plus their reverse dependents where the build names them (Maven's `-amd`, .NET project references). No file-name heuristics.
-
-## Entry trials
-
-Every entry is proven by `scripts/catalog-trial.sh` in the source repo before it merges and on any later PR touching it; its header gives the seed layout.

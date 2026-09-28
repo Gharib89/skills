@@ -65,17 +65,17 @@
     "setup-harness": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "838dd7f7b71993a6e675295e17acbe62df347280a6b8f735ca9615acfe90c3d1"
+      "computedHash": "b229c796de462e566e55d2d196544d43d47aabfdb75fb25e134d97ccaee23f9c"
     },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "3afd796d2ab057b9805c46b08ec8c988c637aa1b6b7bafc69dce3c1bc7175621"
+      "computedHash": "8a0c0f7fc6e32a08c9739c96756df86e24c1d2369d6b152ca238d998aabcef93"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "d33963d21cea8792ad2d36f746aec567c61292d90cc6d50d6b32097f76d8b160"
+      "computedHash": "2bf095d0cc098ac2849c62b660fda818bddba96ee5a74fccf3c3f8779bc2d4bb"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -115,7 +115,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "3069c8499d50b91aed41f1d45758521c1af20be49a92c71431a93513520e4458"
+      "computedHash": "793c693af5a730be950b40157b9701bcf7537b093031199fb0a8182d9f78fb68"
     },
     "wayfinder": {
       "source": "mattpocock/skills",

@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 0.8.1
+  version: 0.8.2
   composes: mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:triage
 ---
 
@@ -11,7 +11,7 @@ metadata:
 
 Draft the per-repo documents the `ship` skill reads, confirming with the human before every write. Same shape as `setup-matt-pocock-skills`: explore once, present, walk what exploration could not settle, confirm the full draft, write, prove. This skill does only what that parent leaves undone and ship needs: it takes the parent's answers on tracker, triage vocabulary and domain-doc layout as given, and asks only about what the parent left open.
 
-Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (ship profile, axis, local gate, verdict, reviewer, trigger, derived copy, dimension label). Every document you write here is read by an agent: apply `writing-for-agents` to its prose.
+Every document you write here is read by an agent: apply `writing-for-agents` to its prose.
 
 ## Process
 

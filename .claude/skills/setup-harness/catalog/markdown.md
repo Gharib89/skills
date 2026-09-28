@@ -19,7 +19,7 @@ Hook: local
 Pin: package npm markdownlint-cli2
 Route: `npm install -g markdownlint-cli2@{version}`; Blocked: None.
 Constraints: needs Node 22 or later (the image's default). Beside Prettier, the run writes `.markdownlint.jsonc` at the repo root extending `markdownlint/style/prettier`, which turns off the rules Prettier's output breaks; a repo's own markdownlint config gains that `extends` instead.
-Traps: without that pairing the two fight over line length, list indent and emphasis style, and MD013 alone fires on every line over 80 columns (62 findings on this repo's `CONTEXT.md`). It reads `.markdownlint-cli2.*` before `.markdownlint.*` and ignores markdownlint-cli's `.markdownlintrc` and `.markdownlintignore`, so a repo on markdownlint-cli is a tool this entry does not list and keeps it.
+Traps: without that pairing the two fight over line length, list indent and emphasis style, and MD013 alone fires on every line over 80 columns (62 findings on one 300-line glossary). It reads `.markdownlint-cli2.*` before `.markdownlint.*` and ignores markdownlint-cli's `.markdownlintrc` and `.markdownlintignore`, so a repo on markdownlint-cli is a tool this entry does not list and keeps it.
 
 ## format
 
