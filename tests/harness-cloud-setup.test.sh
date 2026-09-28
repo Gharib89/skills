@@ -81,6 +81,44 @@ b
 
 root" "$(cat "$log")"
 
+# The dockerd and image rows reference/cloud.md gives a container tool, as
+# written there. dockerd is a daemon: the row detaches it with every fd off
+# the hook's pipes, else the hook waits on it until its timeout. The stub
+# daemon stays up, so a row that held stdout would stall this run 20 s.
+bin=$fixture/bin; mkdir -p "$bin"
+printf '#!/bin/sh\n: > "$LOG.up"; echo dockerd >> "$LOG"; exec sleep 20\n' > "$bin/dockerd"
+cat > "$bin/docker" <<'STUB'
+#!/bin/sh
+case "$1 $2" in
+  "info "*) test -e "$LOG.up" ;;
+  "image inspect") test -e "$LOG.img" ;;
+  "pull "*) : > "$LOG.img"; echo "pull $2" >> "$LOG" ;;
+  *) exit 64 ;;
+esac
+STUB
+chmod +x "$bin/dockerd" "$bin/docker"
+rows=$(sed -n 's/^   - `\([a-z-]*|docker .*\)`$/\1/p' skills/setup-harness/reference/cloud.md | sed 's/<tag>/v9.9.9/g')
+check "cloud.md gives the two rows" 2 "$(printf '%s\n' "$rows" | grep -c .)"
+s=$(hook_script docker "STEPS='$rows'")
+# stdout and stderr both reach a pipe, as a hook's do: a writer left holding
+# either keeps the pipeline open.
+docker_run() { : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" TMPDIR=$fixture CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>&1 | grep '^harness cloud setup'); }
+rm -f "$log.up" "$log.img"
+start=$(date +%s)
+docker_run
+check "the first run starts dockerd and pulls the image" "harness cloud setup: ok
+dockerd
+pull hadolint/hadolint:v9.9.9" "$out
+$(cat "$log")"
+check "without waiting on the daemon" yes "$([ $(( $(date +%s) - start )) -lt 10 ] && echo yes || echo no)"
+docker_run
+check "the second run is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
+rm -f "$log.up"
+docker_run
+check "after an idle restart kills dockerd it starts again, the image kept" "harness cloud setup: ok
+dockerd" "$out
+$(cat "$log")"
+
 # The SessionStart entry setup-harness merges into .claude/settings.json: its
 # command, run as a hook runs it, exits 0 outside a cloud session, because a
 # non-zero SessionStart exit is shown to a local session as a hook error.
