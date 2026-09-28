@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.4.0 (2026-09-28)
+
+### Features
+
+- **setup-harness**: The re-run gap report and the check.sh contract check
+  ([#375](https://github.com/Gharib89/skills/pull/375),
+  [`4e0de2e`](https://github.com/Gharib89/skills/commit/4e0de2ec72f7f72bafb4230f35a5e564c4db320d))
+
+
 ## v0.3.0 (2026-09-28)
 
 ### Features
