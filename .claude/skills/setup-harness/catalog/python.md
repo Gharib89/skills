@@ -128,4 +128,4 @@ Pin: package npm pyright
 Route: None.
 Constraints: vendored from the Anthropic `pyright-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md); needs Node on PATH. The Python registries carry no trusted pyright, so the exact version rides in the vendored launch command instead of a dev dependency.
 Local-only: cloud sessions start no plugin language server.
-Traps: None.
+Traps: the first launch of a version fetches pyright into the npx cache, which the first `LSP` call waits out (10 s cold, 3 s warm, measured).
