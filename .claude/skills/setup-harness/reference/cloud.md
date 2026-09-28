@@ -59,7 +59,7 @@ Otherwise copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.clau
 
 `STEPS`, one `<name>|<done test>|<command>` row each, in this order:
 
-1. A runtime or tool the image lacks, by the catalog tool's `Route:`, done test `command -v <tool>` (`shellcheck|command -v shellcheck|sudo apt-get install -y shellcheck`).
+1. A runtime or tool the image lacks, by the catalog tool's `Route:`, done test `command -v <tool>`. An apt route gains `-o DPkg::Lock::Timeout=120`, because the image's own dpkg still holds the lock when the hook starts and apt otherwise fails at once (`shellcheck|command -v shellcheck|sudo apt-get -o DPkg::Lock::Timeout=120 install -y shellcheck`).
 2. prek where it is not a dev dependency, by the command [runner.md](runner.md) installed it with.
 3. Each root's frozen install, no done test (`deps-api||cd api && uv sync --frozen`).
 4. The runner's git shim and hook environments, no done test (`prek||uv run --frozen prek install --prepare-hooks`), so the commit rung works and its first run downloads nothing.
