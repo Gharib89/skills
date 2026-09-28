@@ -60,7 +60,7 @@ On a re-run, the gap report in the layout gap-report.md `## The report` gives, e
 
 ### 5. Confirm
 
-One approval covers the batch: the human answers the questions and may drop rows or writes by number. A dropped row with a reason is recorded `Declined: <what>: <reason>` in the profile in the same batch; one dropped without a reason is proposed again next run. An answer that keeps a unit off the version the install check picks is recorded the same way, `Declined: <unit> <picked version>: <reason>`. An ignored candidate is recorded the same way. Re-present only what an answer changed. On a re-run the questions are the gap report's Offers, steps 6 to 8 act on the approved rows alone, and step 6's timing is the re-timing of gap-report.md `## Timing on a re-run`.
+One approval covers the batch: the human answers the questions and may drop rows or writes by number. A dropped row with a reason is recorded `Declined: <what>: <reason>` in the profile in the same batch; one dropped without a reason is proposed again next run. An answer that keeps a unit off the version the install check picks is recorded the same way, `Declined: <unit> <picked version>: <reason>`. An ignored candidate is recorded the same way. Re-present only what an answer changed. On a re-run the questions are the gap report's Offers, steps 6 to 8 act on the approved rows and the profile lines the answers record, and step 6's timing is the re-timing of gap-report.md `## Timing on a re-run`.
 
 ### 6. Write
 
@@ -87,7 +87,7 @@ In this order, each step's failure stopping the run with its output:
 1. The header from step 4.
 2. What was written, one line per file, `.claude/settings.local.json` entries named machine-specific.
 3. **Language servers**: one line per wired language from the proof, each `local-only`.
-4. **Budgets**: one row per rung, cold, warm, budget, verdict (`within`, `over: narrowed`, `over: demoted to <rung>`, `over: override <N>s`, `not judged: fail (<check>)`). Then the **cloud** table: per rung its cloud label and cloud times, and the cloud setup's local double run.
+4. **Budgets**: one row per rung, cold, warm, budget, verdict (`within`, `over: narrowed`, `over: demoted to <rung>`, `over: override <N>s`, `not judged: fail (<check>)`, `not judged: unavailable (<check>)`, `not judged: contract`). Then the **cloud** table: per rung its cloud label and cloud times, and the cloud setup's local double run.
 5. **Not acted on**: unclaimed extensions and stacks, unwired tools, Found-not-installed units, anything "present, not wired".
 6. **Standing choices**: every `Declined:`, `Local-only:` and override, `Allowlist:`, and the cloud state: `Proof: <sha>`, `cloud: unproven` with what is missing, or `cloud: n/a (local-only: <reason>)`.
 7. **Next**: commit the harness files if the proof did not; hooks in `.claude/settings.json` load in new sessions, so start one (or review them in `/hooks`) before relying on them; then `/setup-skills` if the repo uses Ship.

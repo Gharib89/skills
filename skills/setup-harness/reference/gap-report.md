@@ -9,7 +9,7 @@
 - [Timing on a re-run](#timing-on-a-re-run)
 - [The report](#the-report)
 
-A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. Every re-run ends in the confirm step, or in `harness: no gaps`.
+A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. Every re-run ends in the confirm step, or in `harness: no gaps`. `## Files the skill wrote` and `## Pins` also apply on a first run, their Offers asked as step 4 questions.
 
 ## Dispositions
 
@@ -57,15 +57,15 @@ Every pin the harness carries is read: runner config `rev`s, the dev dependency 
 
 ## Deleted pieces and standing choices
 
-A missing piece is proposed again every run, until the human drops its row with a reason and step 5 records it `Declined:`; that line stops the proposal, and removing it re-opens it.
+A missing piece is proposed every run until step 5 records it `Declined:`; removing that line re-opens it.
 
 **Standing choices** are listed and never re-asked: every `Declined:`, every `Local-only:` whose reason is `operator's choice`, budget overrides, the `Verdict:` and `Allowlist:`. A `Local-only:` line whose reason names a file, target or host is re-checked against the repo; when that evidence is gone it is the Offer above, and "keep" rewrites its reason to `operator's choice: <why>`.
 
 ## Timing on a re-run
 
-Every rung is timed in Explore, before the report, as [check-ladder.md](check-ladder.md) `## Timing the rungs` says, the cold run of `edit`, `turn` and `full` through `check-contract.sh`. Timing is read-only: fix mode on a clean file writes nothing. A rung that fails is the repo's code: `<rung>: fail (<check>)` with its time "not judged", and no gap or offer follows from it.
+Every rung is timed in Explore, before the report, as [check-ladder.md](check-ladder.md) `## Timing the rungs` says, the cold run of `edit`, `turn` and `full` through `check-contract.sh`. Timing is read-only: fix mode on a clean file writes nothing. A rung that fails is the repo's code, its verdict `not judged: fail (<check>)`, and one that answers `unavailable` is `not judged: unavailable (<check>)`; no gap or offer follows from either.
 
-After the writes, in place of step 6's first timing, every rung the batch touched is timed again: a `check.sh` configuration change re-times the rungs whose rows changed, `check-hook.sh` or a hook entry the rung it runs, a runner config change `edit`, commit and `full`. A write to a file the proof covers turns a standing `Proof: <sha>` into `cloud: unproven (changed since <sha>)`, and the proof is offered again.
+After the writes, in place of step 6's first timing, every rung the batch touched is timed again: a `check.sh` configuration change re-times the rungs whose rows changed, `check-hook.sh` or a hook entry the rung it runs, a runner config change `edit`, commit and `full`. A proposed write to a path the proof covers ([cloud.md](cloud.md) `## Recording the proof`) makes a standing `Proof: <sha>` stale, so the report carries the proof Offer beside that row; approved, the proof runs after the writes.
 
 ## The report
 
