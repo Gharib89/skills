@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# skills/setup-harness/templates/cloud-setup.sh: the cloud setup's contract. The
+# subject is what a cloud session and Ship's cloud bootstrap read: nothing run
+# and exit 0 outside a cloud session, one status line on stdout inside one,
+# exit non-zero on failure, and a second run that re-runs no satisfied step.
+# Each case writes the template into a throwaway git repo with its own
+# configuration block, the way setup-harness writes it; the steps log to a file.
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
+source tests/lib.sh
+
+fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
+template=$PWD/skills/setup-harness/templates/cloud-setup.sh
+log=$fixture/log
+
+# <name> <config>: a git repo whose .claude/hooks/cloud-setup.sh is the template
+# with its configuration block replaced by <config>; prints the script's path.
+repo() {
+  local r=$fixture/$1
+  mkdir -p "$r/.claude/hooks"
+  git -C "$r" init -q
+  awk -v cfg="$2" '
+    /^# >>> setup-harness/ { print; print cfg; skip = 1; next }
+    /^# <<< setup-harness/ { skip = 0 }
+    !skip' "$template" > "$r/.claude/hooks/cloud-setup.sh"
+  chmod +x "$r/.claude/hooks/cloud-setup.sh"
+  printf '%s' "$r/.claude/hooks/cloud-setup.sh"
+}
+# <remote> <script>: runs it from outside the repo, stdout only; sets rc.
+run() { : > "$log"; out=$(cd "$fixture" && CLAUDE_CODE_REMOTE=$1 LOG=$log "$2" 2>/dev/null); rc=$?; }
+
+# The tool step installs a marker the done test looks for, so a second run finds
+# it satisfied; the deps step has no done test and runs every time.
+s=$(repo ok "STEPS='tool|test -e \"\$LOG.tool\"|echo tool >> \"\$LOG\"; : > \"\$LOG.tool\"
+deps||echo deps >> \"\$LOG\"'")
+
+run false "$s"
+check_rc "outside a cloud session it exits 0" 0 "$rc"
+check "and runs no step or prints anything" "" "$out$(cat "$log")"
+run '' "$s"
+check "an unset CLAUDE_CODE_REMOTE is not a cloud session" "" "$out$(cat "$log")"
+
+rm -f "$log.tool"
+run true "$s"
+check_rc "in a cloud session every step passing exits 0" 0 "$rc"
+check "and prints the ok line alone" "harness cloud setup: ok" "$out"
+check "each step ran once, in order" "tool
+deps" "$(cat "$log")"
+run true "$s"
+check "a second run skips a step whose done test passes" "deps" "$(cat "$log")"
+check "and still prints ok" "harness cloud setup: ok" "$out"
+
+s=$(repo fail "STEPS='first||echo first >> \"\$LOG\"
+broken||echo half >> \"\$LOG\"; exit 3
+never||echo never >> \"\$LOG\"'")
+run true "$s"
+check_rc "a failing step exits non-zero" 1 "$rc"
+check "and names the step on the status line" "harness cloud setup: FAILED broken" "$out"
+check "and stops there" "first
+half" "$(cat "$log")"
+
+s=$(repo inert "STEPS='tool|test -e \"\$LOG.none\"|echo tool >> \"\$LOG\"'")
+run true "$s"
+check_rc "a step whose done test still fails after it ran is a failure" 1 "$rc"
+check "named on the status line" "harness cloud setup: FAILED tool" "$out"
+
+out=$(cd "$fixture" && CLAUDE_CODE_REMOTE=true LOG=$log "$(repo noise "STEPS='chatty||echo installing; echo warn >&2'")" 2>/dev/null)
+check "a step's own output stays off stdout" "harness cloud setup: ok" "$out"
+
+# The SessionStart entry setup-harness merges into .claude/settings.json: its
+# command, run as a hook runs it, exits 0 outside a cloud session, because a
+# non-zero SessionStart exit is shown to a local session as a hook error.
+entry=skills/setup-harness/templates/settings-cloud.json
+hook=$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$entry")
+s=$(repo hook "STEPS=''"); r=${s%/.claude/hooks/cloud-setup.sh}
+out=$(cd "$r" && CLAUDE_PROJECT_DIR=$r CLAUDE_CODE_REMOTE='' LOG=$log bash -c "$hook" 2>&1); rc=$?
+check_rc "the SessionStart command exits 0 outside a cloud session" 0 "$rc"
+check "and prints nothing" "" "$out"
+out=$(cd "$r" && CLAUDE_PROJECT_DIR=$r CLAUDE_CODE_REMOTE=true LOG=$log bash -c "$hook" 2>/dev/null)
+check "in a cloud session it runs the cloud setup" "harness cloud setup: ok" "$out"
+check "synchronous, with an explicit timeout" "null 375" "$(jq -r '.hooks.SessionStart[0].hooks[0] | "\(.async) \(.timeout)"' "$entry")"
+
+finish
