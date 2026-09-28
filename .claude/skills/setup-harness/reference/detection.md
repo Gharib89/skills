@@ -26,7 +26,7 @@ git ls-files -- . ':!:.claude/skills/' | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\
 - A **root** is a directory holding a stack's `Manifest:` with one of its `Lockfile:` names beside it, or a member a root's `Workspace:` config names.
 - A lockless manifest no workspace names is a **candidate**: ask the human to mark it a root or ignored. Ignored lands as `Declined: <path> as a root: <reason>` in the profile, so a re-run does not ask again.
 - A root with no lockfile the human marked a root is reported `unlocked` and installed from its manifest as it stands. Never generate a lockfile: that changes the repo's dependency resolution.
-- **Installed skills** under `.claude/skills/` are vendored copies pinned by `skills-lock.json`: not scanned, and excluded from the runner config (`exclude: ^\.claude/skills/`), because a fix-mode tool rewriting one breaks its `computedHash`.
+- **Installed skills** under `.claude/skills/` are derived copies pinned by `skills-lock.json`: not scanned, and excluded from the runner config (`exclude: ^\.claude/skills/`), because a fix-mode tool rewriting one breaks its `computedHash`. A `harness-<upstream>/` directory there is a vendored plugin instead: excluded the same way, and read as a language server's evidence per [language-servers.md](language-servers.md).
 - A shebang is read from the first line of an extensionless tracked file with the executable bit (`git ls-files -s` mode `100755`).
 - A file a `Names:` line claims is that file kind's alone, whatever its extension.
 - Every tracked extension no stack or file kind claims is `unclaimed: *.<ext> (<N> files)`, with no guessed tools. It adds nothing to `edit` or `turn`; `check.sh full` still calls the repo's own check target.

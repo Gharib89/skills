@@ -219,8 +219,8 @@ fi
 # clause, so a run can tell "nothing is blocked" from "nobody looked". A file
 # kind takes no turn rung (it has no project to typecheck or test), browser
 # and public-API tools run on `full` only, and a language server sits on no
-# rung and is `Local-only:`, because it answers Claude's `LSP` calls rather
-# than a check and no cloud session starts one.
+# rung, takes no hook and is `Local-only:` with its reason, because it answers
+# Claude's `LSP` calls rather than a check and no cloud session starts one.
 harness=$skills/setup-harness
 if [ -d "$harness/catalog" ]; then
   for entry in "$harness"/catalog/*.md; do
@@ -260,6 +260,9 @@ if [ -d "$harness/catalog" ]; then
       if (tool == "") next
       got[label] = 1
       if (label == "Route" && v != "None." && v !~ /^`[^`]+`; Blocked: /) bad("### " tool ": Route: want `<install>`; Blocked: <routes> | None., or None.")
+      if (label == "Hook" && role == "language server" && v != "None.") bad("### " tool ": a language server takes Hook: None.")
+      if (label == "Hook" && role != "language server" && v == "None.") bad("### " tool ": Hook: None. is for a language server only")
+      if (label == "Local-only" && v == "") bad("### " tool ": Local-only: wants its reason")
       if (label != "Rung") next
       if (role == "language server") { if (v != "None.") bad("### " tool ": a language server takes Rung: None.") }
       else if (v != "edit" && v != "turn" && v != "full") bad("### " tool ": Rung: want edit, turn or full, got " v)

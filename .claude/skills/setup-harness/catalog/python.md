@@ -126,6 +126,6 @@ Run: `npx --yes --package=pyright@{version} pyright-langserver --stdio`
 Hook: None.
 Pin: package npm pyright
 Route: None.
-Constraints: vendored from the Anthropic `pyright-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md); needs Node on PATH. The Python registries carry no trusted pyright, so the exact version rides in the vendored launch command instead of a dev dependency.
+Constraints: vendored from the Anthropic `pyright-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md); needs Node, and with no `npx` on `PATH` the tool is `Unavailable: pyright needs Node`. The Python registries carry no trusted pyright, so the exact version rides in the vendored launch command instead of a dev dependency.
 Local-only: cloud sessions start no plugin language server.
 Traps: the first launch of a version fetches pyright into the npx cache, which the first `LSP` call waits out (10 s cold, 3 s warm, measured).
