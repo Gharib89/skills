@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.0 (2026-09-28)
+
+### Features
+
+- **setup-skills**: Local gate and cloud bootstrap over the harness
+  ([#384](https://github.com/Gharib89/skills/pull/384),
+  [`a0a8f9a`](https://github.com/Gharib89/skills/commit/a0a8f9ae146bfec29e0f84faa3f72f76fb84c303))
+
+
 ## v0.8.2 (2026-09-28)
 
 ### Bug Fixes
