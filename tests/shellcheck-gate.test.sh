@@ -63,8 +63,30 @@ printf '#!%s\necho "npx $*" >> "%s/calls"\ncase " $* " in *" --version "*) exit 
   "$bash_bin" "$b" > "$b/npx"; chmod +x "$b/npx"
 check_rc "a finding through npx fails" 1 "$(rc_of "$b")"
 
+# A checkout carrying the scripts setup-harness and setup-skills land in a
+# consumer: they get a second pass at the consumer's default severity, the
+# Shell catalog entry's plain `shellcheck {files}` (issue #371).
+landed="$fixture/landed"
+mkdir -p "$landed/scripts" "$landed/skills/setup-harness/templates" "$landed/skills/setup-skills"
+printf '#!/usr/bin/env bash\necho ok\n' > "$landed/scripts/a.sh"
+printf '#!/usr/bin/env bash\necho ok\n' > "$landed/skills/setup-harness/templates/t.sh"
+printf '#!/usr/bin/env bash\necho ok\n' > "$landed/skills/setup-skills/s.sh"
+git -C "$landed" init -q && git -C "$landed" add -A
+rc_in() { (cd "$2" && PATH=$1 "$bash_bin" "$check_script" >/dev/null 2>&1); printf '%s' "$?"; }
+
+b=$(bindir landed-clean); fake "$b" shellcheck 0
+check_rc "a clean run over landed templates passes" 0 "$(rc_in "$b" "$landed")"
+check "the landed templates get a second pass at default severity" \
+  "shellcheck -x -s bash -P SCRIPTDIR -S warning scripts/a.sh skills/setup-harness/templates/t.sh skills/setup-skills/s.sh
+shellcheck skills/setup-harness/templates/t.sh skills/setup-skills/s.sh" "$(cat "$b/calls")"
+
 # Where this machine has a real shellcheck, hold a real warning to `fail` too.
 if real=$(command -v shellcheck); then
+  # An info-level finding (SC2086) passes `-S warning` and fails a consumer.
+  printf '#!/usr/bin/env bash\necho $1\n' > "$landed/skills/setup-harness/templates/t.sh"
+  b=$(bindir landed-real); ln -s "$real" "$b/shellcheck"
+  check_rc "an info-level finding in a landed template fails" 1 "$(rc_in "$b" "$landed")"
+
   b=$(bindir real); ln -s "$real" "$b/shellcheck"
   printf '#!/usr/bin/env bash\ncd /nowhere\n' > "$repo/scripts/b.sh"; git -C "$repo" add -A
   check_rc "a real shellcheck warning (SC2164) fails" 1 "$(rc_of "$b")"
