@@ -20,7 +20,8 @@ for a; do url=\$a; done
 case \$url in
   https://registry.npmjs.org/prettier) cat "$fixture/r/npm" ;;
   https://pypi.org/pypi/ruff/json) cat "$fixture/r/pypi" ;;
-  https://proxy.golang.org/mvdan.cc/sh/v3/@v/list) printf 'v3.9.0\nv3.10.0\nv3.11.0-rc1\nv3.11.0\n' ;;
+  https://proxy.golang.org/mvdan.cc/sh/v3/@v/list) printf 'v3.8.0\nv3.9.0\nv3.10.0\nv3.11.0-rc1\nv3.11.0\n' ;;
+  https://proxy.golang.org/mvdan.cc/sh/v3/@v/v3.8.0.info) printf '{"Version":"v3.8.0"}' ;;
   https://proxy.golang.org/mvdan.cc/sh/v3/@v/v3.11.0.info) printf '{"Version":"v3.11.0","Time":"$d3"}' ;;
   https://proxy.golang.org/mvdan.cc/sh/v3/@v/v3.10.0.info) printf '{"Version":"v3.10.0","Time":"$d10"}' ;;
   https://proxy.golang.org/mvdan.cc/sh/v3/@v/v3.9.0.info) printf '{"Version":"v3.9.0","Time":"$d30"}' ;;
@@ -46,7 +47,7 @@ check "npm: the newest release at least 7 days old, by version order" 3.10.0 "$o
 pick pypi ruff
 check "pypi: yanked releases and prereleases are passed over" 0.7.0 "$out"
 pick go mvdan.cc/sh/v3/cmd/shfmt
-check "go: the module's newest old-enough version, read through the proxy" v3.10.0 "$out"
+check "go: the module's newest old-enough version, read through the proxy, past one with no publish time" v3.10.0 "$out"
 pick npm left-pad
 check_rc "a registry that cannot answer is tooling" 2 "$rc"
 pick crates ripgrep

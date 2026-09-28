@@ -16,6 +16,7 @@
 # stdout: one `<entry> <tool>: pass | fail (<why>) | unavailable (<why>)` line per tool
 # exit: 0 every tried tool passed · 1 a tool failed · 2 usage
 set -uo pipefail
+shopt -u patsub_replacement 2>/dev/null || :
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd) || exit 2
 catalog=$root/skills/setup-harness/catalog
 seeds=$root/tests/fixtures/catalog
@@ -49,7 +50,7 @@ EOF
 
 # <entry> <tool> <pin> <route> <run> <unavailable>
 trial() {
-  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 unavail=$6 s work version='' before files
+  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 unavail=$6 s version='' before files
   s=$(slug "$tool")
   if [ -n "$unavail" ]; then echo "$entry $s: unavailable ($unavail)"; return 0; fi
   case $pin in
@@ -78,6 +79,10 @@ trial() {
   echo "$entry $s: pass"
   rm -rf "$work"
 }
+
+# The trial tree in use, removed on any exit.
+work=''
+trap 'rm -rf "$work"' EXIT
 
 rc=0
 for entry in $entries; do

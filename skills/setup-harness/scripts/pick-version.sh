@@ -8,7 +8,9 @@
 #   pick-version.sh <npm|pypi|go> <name>
 #
 # <name> is the package name, or for go the package path `go install` takes;
-# its module is found by asking the proxy for each prefix in turn.
+# its module is found by asking the proxy for each prefix in turn. crates and
+# nuget, which the catalog's pin vocabulary names, arrive with their stacks'
+# entries.
 #
 # stdout: the version
 # exit: 0 picked · 1 no release qualifies · 2 usage or registry unreachable
@@ -29,7 +31,10 @@ import datetime, re, sys
 cut = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)
 best = None
 for line in sys.stdin:
-    v, t = line.split()
+    parts = line.split()
+    if len(parts) != 2:
+        continue  # a release the registry gives no publish time
+    v, t = parts
     if not re.fullmatch(r"v?\d+(\.\d+)*", v):
         continue  # a prerelease or a local version
     if datetime.datetime.fromisoformat(t.replace("Z", "+00:00")) > cut:

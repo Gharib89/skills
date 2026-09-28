@@ -33,6 +33,8 @@ esac
 input=$(cat)
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$root" || exit 0
+tmp='' errf=''
+trap 'rm -f "$tmp" "$errf"' EXIT
 
 say() { # <message>: a systemMessage for the human; never blocks
   local m=${1//\\/\\\\}
@@ -50,12 +52,12 @@ if [ "$rung" = edit ]; then
   set -- "$file"
 else
   # A throwaway index seeded from the real one, so the fingerprint costs
-  # milliseconds and the real index is never touched.
+  # milliseconds and the real index is never touched. `git add` still writes
+  # each changed file's blob to the object store, where gc reclaims it.
   state=$(git rev-parse --git-path setup-harness-turn)
   tmp=$(mktemp) || exit 0
   cp "$(git rev-parse --git-path index)" "$tmp" 2>/dev/null || rm -f "$tmp"
   fp=$(GIT_INDEX_FILE=$tmp git add -A 2>/dev/null && GIT_INDEX_FILE=$tmp git write-tree 2>/dev/null)
-  rm -f "$tmp"
   last=$(cat "$state" 2>/dev/null)
   # Unchanged since the last check, continuation or not: re-running would
   # only repeat its answer, and blocking again would loop Claude on a failure
@@ -70,15 +72,18 @@ fi
 errf=$(mktemp) || exit 0
 out=$(CHECK_DEADLINE=$(( $(date +%s) + budget )) "./$CHECK" "$rung" "$@" 2>"$errf")
 code=$?
+# Only a pass or a failure is the tree's answer: an over-budget or unavailable
+# rung may answer differently on the same tree, so it is checked again.
 if [ "$rung" = turn ] && [ -n "$fp" ]; then
-  case $code in 0) v=pass ;; 1) v=failing ;; 3) v='over budget' ;; *) v=unavailable ;; esac
-  printf '%s %s\n' "$fp" "$v" > "$state"
+  case $code in
+    0) printf '%s pass\n' "$fp" > "$state" ;;
+    1) printf '%s failing\n' "$fp" > "$state" ;;
+  esac
 fi
 case $code in
-  0) rm -f "$errf"; exit 0 ;;
-  1) head -c 9000 "$errf" >&2; rm -f "$errf"; exit 2 ;;
+  0) exit 0 ;;
+  1) head -c 9000 "$errf" >&2; exit 2 ;;
   3) say "harness: $rung rung over its $budget s budget: $(named over-budget "$out")" ;;
-  *) say "harness: $rung rung unavailable: $(named unavailable "$out")" ;;
+  *) n=$(named unavailable "$out"); say "harness: $rung rung unavailable: ${n:-check.sh exited $code}" ;;
 esac
-rm -f "$errf"
 exit 0

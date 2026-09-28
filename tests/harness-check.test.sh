@@ -98,6 +98,7 @@ check "a changed file runs its own member's typecheck and tests only" \
 check "a member without an affected-tests command runs its suite" "typecheck-api
 tests-api" "$(cat "$ARGS_LOG")"
 
+touch "$r/web/src/a.ts" "$r/web/src/b.ts"
 : > "$ARGS_LOG"
 run "$r" turn web/src/a.ts web/src/b.ts
 check "affected tests get the changed files, relative to the member" "typecheck-web
@@ -155,5 +156,46 @@ r=$(repo both "FULL_RUN='bad'
 FULL_ROWS='slow|slow'")
 out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 1 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
 check_rc "a failure outranks an over-budget check" 1 "$rc"
+
+# Twenty runs at once, each killed at its deadline: every one is over-budget,
+# never a fail, however the watchdog's own exit races the check's.
+r=$(repo race "FULL_RUN='slow'")
+d=$(( $(date +%s) + 1 ))
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+  (cd "$r" && CHECK_DEADLINE=$d PATH="$bin:$PATH" bash scripts/check.sh full > "$fixture/race.$i" 2>&1) &
+done
+wait
+check "a check killed at the deadline is over-budget in every run" 0 \
+  "$(cat "$fixture"/race.* | grep -vc '"verdict":"over-budget"' | tr -d ' ')"
+
+r=$(repo quiet "FULL_RUN='ok'")
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 30 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>"$fixture/err"); rc=$?
+check "a passing run under a deadline writes nothing to stderr" '' "$(cat "$fixture/err")"
+
+stub e124 'exit 124'
+r=$(repo own124 "FULL_RUN='e124'")
+run "$r" full
+check "a command's own exit 124 is a fail, not over-budget" \
+  '{"rung":"full","verdict":"fail","checks":{"runner":"fail"}}' "$out"
+
+# The default file set holds names the porcelain format quotes or that carry
+# a shell metacharacter, and drops a deleted file.
+r=$(repo names "TURN_ROWS='web/|web|*.ts|||args related {files}'")
+mkdir -p "$r/web/src"; echo x > "$r/web/src/gone.ts"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+rm "$r/web/src/gone.ts"; echo y > "$r/web/src/sp ace.ts"; echo z > "$r/web/src/a&b.ts"
+: > "$ARGS_LOG"
+run "$r" turn
+check "quoted, metacharacter and deleted names reach affected tests as they are" \
+  "related src/a&b.ts src/sp ace.ts" "$(cat "$ARGS_LOG")"
+
+r=$(repo deleted "TURN_ROWS='web/|web|*.ts|args typecheck|args suite|args related {files}'")
+mkdir -p "$r/web"; echo x > "$r/web/gone.ts"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+rm "$r/web/gone.ts"
+: > "$ARGS_LOG"
+run "$r" turn
+check "a deleted file alone still checks its member, whole suite" "typecheck
+suite" "$(cat "$ARGS_LOG")"
 
 finish

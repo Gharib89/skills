@@ -215,7 +215,8 @@ fi
 # `## Signals` first, its labels per kind, roles from the fixed set, and every
 # `###` tool block carrying every required label. Detection reads only the
 # Signals blocks and a run reads the rest by label, so an entry missing one is
-# a stack the skill silently half-knows. A file kind takes no turn rung (it has
+# a stack the skill silently half-knows. A `Route:` carries its `Blocked:`
+# clause, so a run can tell "nothing is blocked" from "nobody looked". A file kind takes no turn rung (it has
 # no project to typecheck or test), and browser and public-API tools run on
 # `full` only. Only a skills tree carrying setup-harness has a catalog.
 harness=$skills/setup-harness
@@ -255,6 +256,7 @@ if [ -d "$harness/catalog" ]; then
       if (signals) { sig[label] = 1; if (label == "Kind") kind = v; next }
       if (tool == "") next
       got[label] = 1
+      if (label == "Route" && v != "None." && v !~ /^`[^`]+`; Blocked: /) bad("### " tool ": Route: want `<install>`; Blocked: <routes> | None., or None.")
       if (label != "Rung") next
       if (v != "edit" && v != "turn" && v != "full") bad("### " tool ": Rung: want edit, turn or full, got " v)
       else if (kind == "file kind" && v == "turn") bad("### " tool ": a file kind takes no turn rung")

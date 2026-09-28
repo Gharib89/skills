@@ -384,6 +384,11 @@ run "$inert" "$d"
 check_rc "a file-kind entry with a turn rung fails" 1 "$rc"
 check "and names the tool" 0 "$(named "catalog $d/setup-harness/catalog/sh.md: ### shfmt: a file kind takes no turn rung")"
 
+d=$(harness_tree catalog-blocked)
+sed -i.bak 's/; Blocked: None\.$//' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a Route line without its Blocked: clause is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### ruff: Route: want \`<install>\`; Blocked: <routes> | None., or None.")"
+
 d=$(harness_tree catalog-role)
 { printf '## typecheck\n'; tool_block shx edit; } >> "$d/setup-harness/catalog/sh.md"
 run "$inert" "$d"

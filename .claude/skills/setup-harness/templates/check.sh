@@ -21,6 +21,9 @@ set -uo pipefail
 # File lists and globs here are data, so no pathname expansion; the commands
 # the configuration names get it back in their own subshell.
 set -f
+# Bash 5.2 expands `&` in a ${x//pat/rep} replacement; a file name is not a
+# pattern reference.
+shopt -u patsub_replacement 2>/dev/null || :
 
 # >>> setup-harness configuration
 # Files the edit rung covers, as shell globs on the file name; any other file
@@ -51,6 +54,9 @@ cd "$root" || exit 2
 nl='
 '
 deadline=${CHECK_DEADLINE:-}
+# One log for every check in turn; <log>.x is the watchdog's expiry mark.
+log=$(mktemp) || exit 2
+trap 'rm -f "$log" "$log.x"' EXIT
 names='' statuses='' expired=''
 record() { names="$names$1$nl" statuses="$statuses$2$nl"; }
 
@@ -60,21 +66,26 @@ record() { names="$names$1$nl" statuses="$statuses$2$nl"; }
 # the deadline a check is skipped unrun; one still running at it is killed,
 # with its whole process group, and is over-budget.
 check() {
-  local name=$1 dir=$2 cmd=$3 tries=${4:-1} log rc pid dog now
+  local name=$1 dir=$2 cmd=$3 tries=${4:-1} rc pid dog now
   if [ -n "$expired" ]; then record "$name" skipped; return; fi
-  log=$(mktemp) || exit 2
   while :; do
     if [ -n "$deadline" ]; then
       now=$(date +%s)
-      if [ "$now" -ge "$deadline" ]; then expired=1; rc=124; break; fi
+      if [ "$now" -ge "$deadline" ]; then expired=1; break; fi
+      rm -f "$log.x"
       set -m
       (cd "$dir" && set +f && eval "$cmd") > "$log" 2>&1 &
       pid=$!
-      (sleep $((deadline - now)); kill -TERM -- "-$pid" 2>/dev/null) > /dev/null 2>&1 &
+      # The mark goes down before the kill, so the verdict never rests on
+      # which of the two processes exits first.
+      (sleep $((deadline - now)); : > "$log.x"; kill -TERM -- "-$pid" 2>/dev/null) > /dev/null 2>&1 &
       dog=$!
       set +m
-      wait "$pid"; rc=$?
-      if kill -0 "$dog" 2>/dev/null; then kill -TERM -- "-$dog" 2>/dev/null; else expired=1; rc=124; break; fi
+      # Bash 3.2 reports each killed job on stderr; the redirects keep that
+      # out of the failure tail.
+      wait "$pid" 2>/dev/null; rc=$?
+      kill -TERM -- "-$dog" 2>/dev/null; wait "$dog" 2>/dev/null
+      if [ -e "$log.x" ]; then expired=1; break; fi
     else
       (cd "$dir" && set +f && eval "$cmd") > "$log" 2>&1
       rc=$?
@@ -82,13 +93,12 @@ check() {
     tries=$((tries - 1))
     [ "$rc" -ne 0 ] && [ "$rc" -ne 127 ] && [ "$tries" -gt 0 ] || break
   done
+  if [ -n "$expired" ]; then record "$name" over-budget; return; fi
   case $rc in
     0) record "$name" pass ;;
-    124) record "$name" over-budget ;;
     127) record "$name" unavailable; { printf -- '--- %s: unavailable ---\n' "$name"; tail -n 40 "$log"; } >&2 ;;
     *) record "$name" fail; { printf -- '--- %s ---\n' "$name"; tail -n 40 "$log"; } >&2 ;;
   esac
-  rm -f "$log"
 }
 
 # The files, shell-quoted and space-joined, for a {files} placeholder.
@@ -157,13 +167,17 @@ EOF
 }
 
 rung_turn() {
-  local f o rows='' pairs='' row files pair tab='	' new=''
+  local f o rows='' pairs='' row files pair tab='	' new='' rec changed=''
   if [ "$#" -eq 0 ]; then
-    # Every uncommitted change, untracked files included; a rename line
-    # carries its new path last.
+    # Every uncommitted change, untracked files included. NUL-separated, so
+    # no path comes back quoted; a rename's second record is its old path.
+    while IFS= read -r -d '' rec; do
+      case $rec in R* | C*) IFS= read -r -d '' _ ;; esac
+      changed="$changed${rec#???}$nl"
+    done < <(git status --porcelain -z --untracked-files=all)
     local IFS=$nl
-    # shellcheck disable=SC2046 # one path per line
-    set -- $(git status --porcelain --untracked-files=all | sed 's/^...//; s/.* -> //')
+    # shellcheck disable=SC2086 # the list splits on newlines only
+    set -- $changed
     unset IFS
   fi
   for f; do
@@ -172,8 +186,10 @@ rung_turn() {
     case $o in
       '') ;;
       new-root) new="$new ${f%/*}" ;;
+      # A deleted file still selects its member, whose typecheck may now
+      # break, but is no argument to affected tests.
       *) case $nl$rows in *"$nl$o$nl"*) ;; *) rows="$rows$o$nl" ;; esac
-         pairs="$pairs$o$tab$f$nl" ;;
+         [ -e "$f" ] && pairs="$pairs$o$tab$f$nl" ;;
     esac
   done
   if [ -n "$new" ]; then

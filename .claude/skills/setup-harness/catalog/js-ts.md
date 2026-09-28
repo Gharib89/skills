@@ -19,7 +19,7 @@ Rung: edit
 Run: `eslint --fix {files}`
 Hook: https://github.com/eslint/eslint
 Pin: package npm eslint
-Route: `npm install -g eslint@{version}`
+Route: `npm install -g eslint@{version}`; Blocked: None.
 Constraints: ESLint 9 and later lint nothing without a flat config; a default writes `eslint.config.mjs` extending `@eslint/js` and, for TypeScript, `typescript-eslint`, both exact dev dependencies through the install check.
 Traps: the vendor hook runs in an isolated env; flat-config plugins must be listed under `additional_dependencies` or they are not resolvable.
 
@@ -31,7 +31,7 @@ Rung: edit
 Run: `biome lint --write {files}`
 Hook: https://github.com/biomejs/pre-commit
 Pin: package npm @biomejs/biome
-Route: `npm install -g @biomejs/biome@{version}`
+Route: `npm install -g @biomejs/biome@{version}`; Blocked: None.
 Constraints: None.
 Traps: None.
 
@@ -43,7 +43,7 @@ Rung: edit
 Run: `oxlint --fix --deny-warnings {files}`
 Hook: https://github.com/oxc-project/mirrors-oxlint
 Pin: package npm oxlint
-Route: `npm install -g oxlint@{version}`
+Route: `npm install -g oxlint@{version}`; Blocked: None.
 Constraints: None.
 Traps: every finding is a warning by default and exits 0; `--deny-warnings` is required for it to gate anything.
 
@@ -57,7 +57,7 @@ Rung: edit
 Run: `prettier --write {files}`
 Hook: local
 Pin: package npm prettier
-Route: `npm install -g prettier@{version}`
+Route: `npm install -g prettier@{version}`; Blocked: None.
 Constraints: None.
 Traps: `prettier/pre-commit` and `pre-commit/mirrors-prettier` are both archived; do not wire either.
 
@@ -69,7 +69,7 @@ Rung: edit
 Run: `biome format --write {files}`
 Hook: https://github.com/biomejs/pre-commit
 Pin: package npm @biomejs/biome
-Route: `npm install -g @biomejs/biome@{version}`
+Route: `npm install -g @biomejs/biome@{version}`; Blocked: None.
 Constraints: None.
 Traps: None.
 
@@ -83,7 +83,7 @@ Rung: turn
 Run: `tsc --noEmit`
 Hook: local
 Pin: package npm typescript
-Route: `npm install -g typescript@{version}`
+Route: `npm install -g typescript@{version}`; Blocked: None.
 Constraints: typescript-eslint requires `typescript >=4.8.4 <6.1.0`.
 Traps: `tsc --noEmit <file>` fails with `TS5112` once a tsconfig is present; run project-scoped only, with no file arguments.
 
@@ -97,7 +97,7 @@ Rung: turn
 Run: `vitest run`
 Hook: local
 Pin: package npm vitest
-Route: `npm install -g vitest@{version}`
+Route: `npm install -g vitest@{version}`; Blocked: None.
 Constraints: None.
 Traps: None.
 
@@ -109,7 +109,7 @@ Rung: turn
 Run: `jest`
 Hook: local
 Pin: package npm jest
-Route: `npm install -g jest@{version}`
+Route: `npm install -g jest@{version}`; Blocked: None.
 Constraints: None.
 Traps: `--watchman` defaults true; pass `--no-watchman` where the binary is absent.
 
@@ -135,7 +135,7 @@ Rung: turn
 Run: `vitest related --run {files}`
 Hook: local
 Pin: package npm vitest
-Route: `npm install -g vitest@{version}`
+Route: `npm install -g vitest@{version}`; Blocked: None.
 Constraints: follows static imports only; a dynamic `import()` is not tracked.
 Traps: None.
 
@@ -147,6 +147,6 @@ Rung: turn
 Run: `jest --findRelatedTests {files}`
 Hook: local
 Pin: package npm jest
-Route: `npm install -g jest@{version}`
+Route: `npm install -g jest@{version}`; Blocked: None.
 Constraints: None.
 Traps: None.

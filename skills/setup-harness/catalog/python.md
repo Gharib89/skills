@@ -45,7 +45,7 @@ Rung: edit
 Run: `black {files}`
 Hook: https://github.com/psf/black-pre-commit-mirror
 Pin: package pypi black
-Route: `uv tool install black=={version}`
+Route: `uv tool install black=={version}`; Blocked: None.
 Constraints: None.
 Traps: None.
 
@@ -59,7 +59,7 @@ Rung: turn
 Run: `mypy .`
 Hook: local
 Pin: package pypi mypy
-Route: `uv tool install mypy=={version}`
+Route: `uv tool install mypy=={version}`; Blocked: None.
 Constraints: None.
 Traps: the only pre-commit hook, `pre-commit/mirrors-mypy`, is a third-party mirror that runs in an isolated venv without project dependencies; this entry pins and runs mypy itself instead.
 
@@ -83,7 +83,7 @@ Rung: turn
 Run: `ty check .`
 Hook: https://github.com/astral-sh/ty-pre-commit
 Pin: package pypi ty
-Route: `uv tool install ty=={version}`
+Route: `uv tool install ty=={version}`; Blocked: None.
 Constraints: beta (0.0.x, classifier "4 - Beta").
 Traps: the vendor hook may create or update `uv.lock`; pass `--isolated` to avoid that.
 
@@ -97,7 +97,7 @@ Rung: turn
 Run: `pytest`
 Hook: local
 Pin: package pypi pytest
-Route: `uv tool install pytest=={version}`
+Route: `uv tool install pytest=={version}`; Blocked: None.
 Constraints: None.
 Traps: None.
 
@@ -111,6 +111,6 @@ Rung: turn
 Run: `pytest --testmon`
 Hook: local
 Pin: package pypi pytest-testmon
-Route: `uv tool install pytest-testmon=={version}`
+Route: `uv tool install pytest-testmon=={version}`; Blocked: None.
 Constraints: needs `coverage<8` and a first full run to build `.testmondata` before it can select.
 Traps: crashes with `KeyError: 'lf'` under `-p no:cacheprovider`.

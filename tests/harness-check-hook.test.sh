@@ -92,6 +92,15 @@ STUB_RC=0 hook turn "$cont_in"
 check "a continuation after a change re-checks" 3 "$(calls)"
 check_rc "a fixed continuation lets the stop through" 0 "$rc"
 
+echo 'x = 3' > "$r/new.py"
+STUB_RC=2 STUB_OUT='{"rung":"turn","verdict":"unavailable","checks":{"typecheck:api":"unavailable"}}' hook turn "$stop_in"
+STUB_RC=0 hook turn "$stop_in"
+check "an unavailable turn is re-checked on an unchanged tree, a tool may since be installed" 5 "$(calls)"
+
+STUB_RC=2 STUB_OUT='' hook edit "$edit_in"
+check "a tooling failure with no JSON line still says what happened" \
+  '{"systemMessage":"harness: edit rung unavailable: check.sh exited 2"}' "$out"
+
 check "the real index is untouched by the fingerprint" "?? new.py
 ?? scripts/" "$(git -C "$r" status --porcelain)"
 
