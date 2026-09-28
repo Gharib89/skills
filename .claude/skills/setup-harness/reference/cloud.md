@@ -59,15 +59,15 @@ Otherwise copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.clau
 
 `STEPS`, one `<name>|<done test>|<command>` row each, in this order:
 
-1. A runtime or tool the image lacks, by the catalog tool's `Route:` (a `docker pull` route is step 3's, run after dockerd starts), done test `command -v <tool>`, or `<tool> --version` where a launcher answers before the tool exists (rustup's `rustfmt` and `cargo-clippy` proxies) or the image ships its own unpinned copy (`prettier --version | grep -qx <v>`); a runtime the image already ships at a version the repo accepts needs no step. An apt route gains `-o DPkg::Lock::Timeout=120`, because the image's own dpkg still holds the lock when the hook starts and apt otherwise fails at once (`shellcheck|command -v shellcheck|sudo apt-get -o DPkg::Lock::Timeout=120 install -y shellcheck`).
+1. A runtime or tool the image lacks, by the catalog tool's `Route:` (a `docker pull` route is step 5's, run after dockerd starts), done test `command -v <tool>`, or `<tool> --version` where a launcher answers before the tool exists (rustup's `rustfmt` and `cargo-clippy` proxies) or the image ships its own unpinned copy (`prettier --version | grep -qx <v>`); a runtime the image already ships at a version the repo accepts needs no step. An apt route gains `-o DPkg::Lock::Timeout=120`, because the image's own dpkg still holds the lock when the hook starts and apt otherwise fails at once (`shellcheck|command -v shellcheck|sudo apt-get -o DPkg::Lock::Timeout=120 install -y shellcheck`).
 2. prek where it is not a dev dependency, by the command [runner.md](runner.md) installed it with.
-3. Where a wired tool needs dockerd (a tool run in a container, such as the Dockerfile entry's hadolint, or `docker build --check`): start dockerd, then pull each container image a wired tool runs, `<tag>` its picked version. The sandbox image ships dockerd without starting it, and an idle restart kills the daemon while the disk keeps the pulled images, so each row's done test lets a second run skip it:
+3. Each root's frozen install, no done test (`deps-api||cd api && uv sync --frozen`).
+4. The runner's git shim and hook environments, no done test (`prek||uv run --frozen prek install --prepare-hooks`), so the commit rung works and its first run downloads nothing.
+5. Where a wired tool needs dockerd (a tool run in a container, such as the Dockerfile entry's hadolint, or `docker build --check`): last, because the setup stops at its first failed row and a Docker Hub 429 fails the pull: start dockerd, then pull each container image a wired tool runs, `<tag>` its picked version and `<digest>` the hook's pinned digest. The sandbox image ships dockerd without starting it, and an idle restart kills the daemon while the disk keeps the pulled images, so each row's done test lets a second run skip it:
    - `dockerd|docker info|setsid -f dockerd >"${TMPDIR:-/tmp}/dockerd.log" 2>&1 </dev/null; for i in $(seq 60); do docker info >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1`
-   - `hadolint-image|docker image inspect hadolint/hadolint:<tag>|docker pull hadolint/hadolint:<tag>`
+   - `hadolint-image|docker image inspect hadolint/hadolint@<digest>|docker pull hadolint/hadolint:<tag>@<digest>`
 
    `setsid -f` and the redirects detach the daemon: one holding the hook's stdout or stderr makes Claude Code wait on the hook until its timeout.
-4. Each root's frozen install, no done test (`deps-api||cd api && uv sync --frozen`).
-5. The runner's git shim and hook environments, no done test (`prek||uv run --frozen prek install --prepare-hooks`), so the commit rung works and its first run downloads nothing.
 
 A step needing a blocked host is labelled, not written, per the static host check.
 

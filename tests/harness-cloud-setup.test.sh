@@ -97,7 +97,7 @@ case "$1 $2" in
 esac
 STUB
 chmod +x "$bin/dockerd" "$bin/docker"
-rows=$(sed -n 's/^   - `\([a-z-]*|docker .*\)`$/\1/p' skills/setup-harness/reference/cloud.md | sed 's/<tag>/v9.9.9/g')
+rows=$(sed -n 's/^   - `\([a-z-]*|docker .*\)`$/\1/p' skills/setup-harness/reference/cloud.md | sed 's/<tag>/v9.9.9/g; s/<digest>/sha256:abc/g')
 check "cloud.md gives the two rows" 2 "$(printf '%s\n' "$rows" | grep -c .)"
 s=$(hook_script docker "STEPS='$rows'")
 # stdout and stderr both reach a pipe, as a hook's do: a writer left holding
@@ -108,7 +108,7 @@ start=$(date +%s)
 docker_run
 check "the first run starts dockerd and pulls the image" "harness cloud setup: ok
 dockerd
-pull hadolint/hadolint:v9.9.9" "$out
+pull hadolint/hadolint:v9.9.9@sha256:abc" "$out
 $(cat "$log")"
 check "without waiting on the daemon" yes "$([ $(( $(date +%s) - start )) -lt 10 ] && echo yes || echo no)"
 docker_run

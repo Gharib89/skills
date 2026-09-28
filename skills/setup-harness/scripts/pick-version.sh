@@ -15,7 +15,7 @@
 # so a re-pushed tag counts from its re-push.
 #
 # stdout: the version
-# exit: 0 picked · 1 no release qualifies · 2 usage or registry unreachable
+# exit: 0 picked · 1 no release qualifies · 2 usage, registry unreachable, or name unknown
 set -uo pipefail
 usage="usage: pick-version.sh <npm|pypi|go|crates|nuget|maven|dockerhub> <name>"
 case ${1:-} in

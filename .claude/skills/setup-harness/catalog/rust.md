@@ -86,7 +86,7 @@ Run: `cargo nextest run --workspace -E 'rdeps({package})'`
 Hook: local
 Pin: package crates cargo-nextest
 Route: `cargo install --locked cargo-nextest@{version}`; Blocked: `get.nexte.st` (redirects to release binaries)
-Constraints: `{package}` is the member's `[package] name`; the filterset selects that crate and every crate depending on it, from the dependency graph. Run inside a member, cargo builds only that crate (measured), so the row runs from the stack root. Cargo has no changed-files mode, so this is a gap proposal per the catalog README's `## Affected tests`.
+Constraints: `{package}` is the member's `[package] name`; the filterset selects that crate and every crate depending on it, from the dependency graph. Run inside a member without `--workspace`, cargo builds only that crate (measured), so `Run:` carries `--workspace`, which selects from the whole workspace from any member directory. Cargo has no changed-files mode, so this is a gap proposal per the catalog README's `## Affected tests`.
 Traps: the same 219 s build as `cargo-nextest`, and no doctests.
 
 ## language server
