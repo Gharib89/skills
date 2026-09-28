@@ -87,7 +87,7 @@ In this order, each step's failure stopping the run with its output:
 1. The header from step 4.
 2. What was written, one line per file, `.claude/settings.local.json` entries named machine-specific.
 3. **Language servers**: one line per wired language from the proof, each `local-only`.
-4. **Budgets**: one row per rung, cold, warm, budget, verdict (`within`, `over: narrowed`, `over: demoted to <rung>`, `over: override <N>s`, `not judged: fail (<check>)`, `not judged: unavailable (<check>)`, `not judged: contract`). Then the **cloud** table: per rung its cloud label and cloud times, and the cloud setup's local double run.
+4. **Budgets**: one row per rung, cold, warm, budget, verdict (`within`, `over: narrowed`, `over: demoted to <rung>`, `over: override <N>s`, `not judged: fail (<check>)`, `not judged: unavailable (<check>)`, `not judged: contract` on a re-run). Then the **cloud** table: per rung its cloud label and cloud times, and the cloud setup's local double run.
 5. **Not acted on**: unclaimed extensions and stacks, unwired tools, Found-not-installed units, anything "present, not wired".
 6. **Standing choices**: every `Declined:`, `Local-only:` and override, `Allowlist:`, and the cloud state: `Proof: <sha>`, `cloud: unproven` with what is missing, or `cloud: n/a (local-only: <reason>)`.
 7. **Next**: commit the harness files if the proof did not; hooks in `.claude/settings.json` load in new sessions, so start one (or review them in `/hooks`) before relying on them; then `/setup-skills` if the repo uses Ship.
