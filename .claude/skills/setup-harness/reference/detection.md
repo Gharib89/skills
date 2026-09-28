@@ -34,7 +34,7 @@ git ls-files -- . ':!:.claude/skills/' | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\
 
 ## Evidence per member
 
-For each member, with inheritance from its root (root dev dependencies, a root `tsconfig.base.json`), per role (lint, format, typecheck, test runner), each tool with the path that proves it:
+For each member, with inheritance from its root (root dev dependencies, a root `tsconfig.base.json`), per role (every role its catalog entry carries), each tool with the path that proves it:
 
 - **A config file or table**: `ruff.toml`, `[tool.ruff]` in `pyproject.toml`, `biome.json`, `eslint.config.*`, `.prettierrc*`, `tsconfig.json`, `vitest.config.*`, `[tool.pytest.ini_options]`.
 - **A declared dependency**: `devDependencies`, `[dependency-groups]`, `[tool.uv] dev-dependencies`.

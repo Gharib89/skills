@@ -142,5 +142,5 @@ Run: `griffe check {package} -s src`
 Hook: local
 Pin: package pypi griffe
 Route: `uv tool install griffe=={version}`; Blocked: None.
-Constraints: compares the working tree's public API with the latest git tag's, so it needs a release tag in the history; `-s` names the directory holding the import package: `Run:` gives a src layout's `src`, and a flat layout writes `-s .` and `{package}` is the import name.
-Traps: with no tag in the history it exits 1 with a traceback rather than a finding; a clone that fetched no tags needs `git fetch --tags` first.
+Constraints: compares the working tree's public API with the latest git tag's, so it needs a release tag in the history; `{package}` is the import package's name in either layout, not the distribution name, and `-s` the directory holding it: `Run:` gives a src layout's `src`, and a flat layout writes `-s .`.
+Traps: with no tag in the history it exits 1 with a traceback rather than a finding; a clone that fetched no tags, as a cloud session's does, needs the cloud setup's `tags` row ([reference/cloud.md](../reference/cloud.md) step 3).

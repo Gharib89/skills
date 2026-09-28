@@ -75,6 +75,9 @@ EOF
 # <entry> <label>: the entry's signal line, empty for `None.`.
 signal() { sed -n "s/^$2: //p" "$catalog/$1.md" | head -n 1 | sed 's/^None\.$//'; }
 
+# git for the clean copy's baseline, deaf to the host's hooks, signing and identity.
+g() { git -c core.hooksPath=/dev/null -c commit.gpgSign=false -c tag.gpgSign=false -c user.name=trial -c user.email=trial@example.invalid "$@"; }
+
 # <entry> <tool> <pin> <route> <run> <skip> <only>: a non-empty <skip> is the
 # verdict of a tool that is not tried; a non-empty <only> is its Files:.
 trial() {
@@ -96,7 +99,7 @@ trial() {
   [ -d "$seeds/$entry/bad/$s" ] || { echo "$entry $s: fail (no bad/$s)"; return 1; }
   work=$(mktemp -d) || exit 2
   cp -R "$seeds/$entry/clean/." "$work/"
-  (cd "$work" && g="git -c core.hooksPath=/dev/null -c commit.gpgSign=false -c tag.gpgSign=false -c user.name=trial -c user.email=trial@example.invalid" && $g init -q && $g add -A && $g commit -qm seed && $g tag v0.1.0) >&2 \
+  (cd "$work" && g init -q && g add -A && g commit -qm seed && g tag v0.1.0) >&2 \
     || { echo "$entry $s: fail (git baseline)"; rm -rf "$work"; return 1; }
   (cd "$work" && bash -c "${route//\{version\}/$version}") >&2 \
     || { echo "$entry $s: fail (install)"; rm -rf "$work"; return 1; }

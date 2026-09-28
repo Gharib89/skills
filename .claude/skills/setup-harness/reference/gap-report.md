@@ -28,8 +28,9 @@ Each gap kind takes exactly one disposition:
 | A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack, a browser step or `FULL_ROWS` row for a surface no longer detected) | Write: the removal |
 | A hook `timeout` off deadline plus max(10 s, deadline / 4) | Write |
 | A new root whose stack has a catalog entry | Write: its `TURN_ROWS` row and runner additions |
-| New web UI evidence ([surfaces.md](surfaces.md)) | Write: its suite's `FULL_ROWS` row and, cloud-first, its browser step |
-| `Allowlist:` gained or lost `cdn.playwright.dev` | Write: each browser step switched to the route it now takes |
+| New web UI evidence ([surfaces.md](surfaces.md)) | Write: its browser step, cloud-first, and its suite's `FULL_ROWS` row where surfaces.md `## Web UI` gives one |
+| New library evidence ([surfaces.md](surfaces.md)) | Write: each `public API` tool's `FULL_ROWS` row, droppable |
+| `Allowlist:` gained or lost `cdn.playwright.dev` | Write: each browser step switched to the route it now takes, with the `dockerd` row added for `mcr`, or removed for `vendor` where no container tool needs it |
 | A now-available role: a role with no tool that its catalog entry now fills, or a `Constraints:` `Unavailable:` that no longer holds | Write |
 | `check.sh` breaks its contract, and no Write above explains it | Offer: rewrite onto the current template, keeping every check the old file ran |
 | A warm `edit` or `turn` time over budget | Offer: narrow, demote or override ([check-ladder.md](check-ladder.md) `## Timing the rungs`) |
@@ -38,7 +39,7 @@ Each gap kind takes exactly one disposition:
 | A broken pin | Offer: re-pin or remove |
 | Evidence gone from an evidence-backed `Local-only:` line | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
 | A surface and no `.claude/skills/run-*/`, not `Declined: run recipe` | Offer: type `/run-skill-generator` ([surfaces.md](surfaces.md) `## The run recipe`) |
-| A third-party unit a Write above adds or re-pins (the Write keeps its own row), new library evidence's `public API` tools that install a unit, and a pin that is behind | Install-check row |
+| A third-party unit a Write above adds or re-pins (the Write keeps its own row), and a pin that is behind | Install-check row |
 | Unclaimed extensions and stacks, unwired tools, Found-not-installed units | Report only |
 | Standing choices | Report only |
 

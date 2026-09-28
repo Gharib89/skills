@@ -142,6 +142,17 @@ tests-api
 typecheck-web
 tests-web" "$(cat "$ARGS_LOG")"
 
+r=$(repo local-only "FULL_ROWS='semver-core|bad
+after|ok'
+LOCAL_ONLY='semver-core'")
+out=$(cd "$r" && CLAUDE_CODE_REMOTE=true PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+check "a cloud session skips a LOCAL_ONLY row unrun" \
+  '{"rung":"full","verdict":"pass","checks":{"semver-core":"skipped","after":"pass"}}' "$out"
+check_rc "and full still passes there" 0 "$rc"
+run "$r" full
+check "outside the cloud a LOCAL_ONLY row runs" \
+  '{"rung":"full","verdict":"fail","checks":{"semver-core":"fail","after":"pass"}}' "$out"
+
 r=$(repo deadline "FULL_RUN='slow'
 FULL_ROWS='after|ok'")
 start=$(date +%s)
