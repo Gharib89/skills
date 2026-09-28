@@ -1,0 +1,36 @@
+# Harness profile
+
+Schema: 1
+
+Written by `/setup-harness`, which is its only reader besides `setup-skills`. Facts sit on `Label:` lines; prose under a heading is yours and nothing parses it. A budget override reads `override <N>s: <reason>`.
+
+## Claude Code
+
+Floor: 2.1.277
+
+## Check entry point
+
+Location: scripts/check.sh
+
+## Budgets
+
+Edit: default
+Turn: default
+Commit: default
+Full: default
+Cloud setup: default
+
+## Cloud
+
+Verdict: cloud-first
+Setup: None.
+Allowlist: None.
+Proof: unproven
+
+## Local-only
+
+Local-only: None.
+
+## Declined
+
+Declined: None.
