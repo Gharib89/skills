@@ -116,6 +116,6 @@ Run: `cargo semver-checks check-release`
 Hook: local
 Pin: package crates cargo-semver-checks
 Route: `cargo install --locked cargo-semver-checks@{version}`; Blocked: `cargo binstall` (GitHub release assets)
-Constraints: the baseline is the crate's newest crates.io release; an unpublished crate takes `--baseline-rev <ref>`. It reads rustdoc JSON, whose format each release supports only for the then-current stable and beta, so its pin moves with `rust-toolchain.toml`.
+Constraints: the baseline is the crate's newest crates.io release, so it is proposed only where one exists ([reference/surfaces.md](../reference/surfaces.md) `## Library`); `--baseline-rev <ref>` is kept where the repo's own CI or a script passes it. It reads rustdoc JSON, whose format each release supports only for the then-current stable and beta, so its pin moves with `rust-toolchain.toml`.
 Local-only: cloud install 351 s exceeds the 300 s cloud setup budget
 Traps: None.
