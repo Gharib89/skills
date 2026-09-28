@@ -7,9 +7,9 @@
 # comparing bytes, could not see it. The coding standards' self-contained bullet
 # is the rule; this is the part of it a grep can hold: any source-repo URL but
 # the repo root and its issue tracker (destinations), in any case, since GitHub
-# resolves owner and repo case-insensitively; and outside a code span, where
-# either is an example, `PR #N` or `issue #N` and a relative link leaving the
-# skill. `CHANGELOG.md` carries provenance and is exempt. The `self-contained`
+# resolves owner and repo case-insensitively; and outside a code span or a
+# fenced block, where either is an example, `PR #N` or `issue #N` in any case
+# and a relative link leaving the skill. `CHANGELOG.md` carries provenance and is exempt. The `self-contained`
 # gate in scripts/local-gate.sh runs this.
 #
 #   scripts/self-contained-check.sh [<root>]
@@ -26,6 +26,7 @@ toplevel=$(git -C "$root" rev-parse --show-toplevel) || exit 2
 url='(github\.com|raw\.githubusercontent\.com)/gharib89/skills(/[^[:space:])>`"]*)?'
 destination='^github\.com/gharib89/skills(/|/issues/?|/issues/new[^/]*)?$'
 number='(^|[^[:alnum:]])(PR|issue) #[0-9]+'
+fence='^[[:space:]]*(```|~~~)'
 
 # normalize <path>: `a/b/../c` -> `a/c`, `./` dropped; a `..` above the root is
 # kept, so the prefix test below fails on it. Split by `read`, not an unquoted
@@ -50,14 +51,16 @@ while IFS= read -r f; do
   case $f in */CHANGELOG.md) continue ;; esac
   skill=${f#skills/}; skill=skills/${skill%%/*}
   dir=${f%/*}
-  n=0
+  n=0 fenced=0
   while IFS= read -r line || [ -n "$line" ]; do
     n=$((n + 1))
     if printf '%s\n' "$line" | grep -oiE "$url" | grep -qviE "$destination"; then
       printf '%s:%s: links source-repo material by URL\n' "$f" "$n"; rc=1
     fi
+    if [[ $line =~ $fence ]]; then fenced=$((1 - fenced)); continue; fi
+    [ "$fenced" -eq 0 ] || continue
     prose=$(printf '%s\n' "$line" | sed 's/`[^`]*`//g')
-    if printf '%s\n' "$prose" | grep -qE "$number"; then
+    if printf '%s\n' "$prose" | grep -qiE "$number"; then
       printf '%s:%s: cites an issue or PR number\n' "$f" "$n"; rc=1
     fi
     while IFS= read -r target; do

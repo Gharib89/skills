@@ -55,6 +55,19 @@ check_rc "a bare PR number fails" 1 "$(rc_of "$d")"
 check "the message names the reason" \
   "skills/a/SKILL.md:1: cites an issue or PR number" "$(out_of "$d")"
 
+d=$(repo cased-number skills/a/SKILL.md 'Issue #12 settled it, as did pr #13.')
+check_rc "a capitalised issue number fails" 1 "$(rc_of "$d")"
+
+# A fenced block is an example, as a code span is: its numbers and links are
+# the sample's, and the fence's close hands the lines after it back to prose.
+d=$(repo fenced skills/a/SKILL.md "$(printf '%s\n' '```markdown' '- PR #12 [glossary](../../CONTEXT.md)' '```')")
+check_rc "a number and a link inside a fence pass" 0 "$(rc_of "$d")"
+
+d=$(repo after-fence skills/a/SKILL.md "$(printf '%s\n' '~~~' 'PR #12' '~~~' 'See PR #13.')")
+check_rc "a number after a closed fence fails" 1 "$(rc_of "$d")"
+check "the finding names the line after the fence" \
+  "skills/a/SKILL.md:4: cites an issue or PR number" "$(out_of "$d")"
+
 # A consumer's own tracker syntax, quoted as an example, is not a citation.
 d=$(repo number-example skills/a/reference/merge-gate.md 'An entry naming an issue by number (`#<n>`, such as `map issue #1`) is kept.')
 check_rc "a number inside a code span passes" 0 "$(rc_of "$d")"
