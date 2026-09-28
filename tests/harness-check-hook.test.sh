@@ -4,7 +4,8 @@
 # exit code (2 blocks with stderr, the only failure Claude sees), a
 # `systemMessage` on stdout for the human, and whether `check.sh` ran at all.
 # `check.sh` is a stub in a throwaway git repo, answering the exit code and
-# JSON line each case sets, and logging its arguments and CHECK_DEADLINE.
+# JSON line each case sets, and logging its arguments and CHECK_DEADLINE. The
+# hook reads the clock through a `date` stub fixed at epoch 1000000000.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -23,11 +24,12 @@ exit "${STUB_RC:-0}"
 STUB
 chmod +x "$r/scripts/check.sh"
 export STUB_LOG=$fixture/log
+mkdir -p "$fixture/bin"; printf '#!/bin/sh\necho 1000000000\n' > "$fixture/bin/date"; chmod +x "$fixture/bin/date"
 
 # <rung> <stdin>: run the hook in the repo; leaves stdout in `out`, stderr in
 # `err` and the exit code in `rc`.
 hook() {
-  out=$(cd "$r" && printf '%s' "$2" | bash "$hook" "$1" 2>"$fixture/err"); rc=$?
+  out=$(cd "$r" && printf '%s' "$2" | PATH="$fixture/bin:$PATH" bash "$hook" "$1" 2>"$fixture/err"); rc=$?
   err=$(cat "$fixture/err")
 }
 calls() { wc -l < "$STUB_LOG" | tr -d ' '; }
@@ -35,14 +37,12 @@ calls() { wc -l < "$STUB_LOG" | tr -d ' '; }
 edit_in='{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"'$r'/src/a b.py","old_string":"x"}}'
 
 : > "$STUB_LOG"
-now=$(date +%s)
 STUB_RC=0 hook edit "$edit_in"
 check_rc "a passing edit rung exits 0" 0 "$rc"
 check "a passing edit rung says nothing" "" "$out"
 logged=$(cat "$STUB_LOG")
 check "the edited file reaches check.sh edit" "edit $r/src/a b.py" "${logged% deadline=*}"
-d=${logged##*deadline=}
-check "the edit deadline is the 5 s budget from now" yes "$([ "$d" -ge $((now + 5)) ] && [ "$d" -le $((now + 6)) ] && echo yes)"
+check "the edit deadline is the 5 s budget from now" 1000000005 "${logged##*deadline=}"
 
 big=$(head -c 30000 /dev/zero | tr '\0' 'e')
 STUB_RC=1 STUB_ERR="lint: a.py:1: E501
@@ -68,12 +68,10 @@ check "a deadline passed before any check started names what never ran" \
 stop_in='{"hook_event_name":"Stop","stop_hook_active":false}'
 cont_in='{"hook_event_name":"Stop","stop_hook_active": true}'
 : > "$STUB_LOG"
-now=$(date +%s)
 STUB_RC=0 hook turn "$stop_in"
 check_rc "a passing turn rung lets the stop through" 0 "$rc"
 check "the turn rung runs check.sh turn once" 1 "$(calls)"
-d=$(sed -n 's/.*deadline=//p' "$STUB_LOG")
-check "the turn deadline is the 60 s budget from now" yes "$([ "$d" -ge $((now + 60)) ] && [ "$d" -le $((now + 61)) ] && echo yes)"
+check "the turn deadline is the 60 s budget from now" 1000000060 "$(sed -n 's/.*deadline=//p' "$STUB_LOG")"
 
 STUB_RC=0 hook turn "$stop_in"
 check "a turn with no working-tree change skips the check" 1 "$(calls)"

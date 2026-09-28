@@ -15,7 +15,7 @@ Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md
 
 This version sets up the local ladder: the profile's `## Cloud` is written `Verdict: cloud-first`, `Setup: None.`, `Proof: unproven`, and no language server is wired. Say so in the report.
 
-**Paths are contracts.** `scripts/check.sh`, `.claude/hooks/check-hook.sh` and `docs/agents/harness.md` are read by hooks, by `setup-skills` and by a re-run; write them at exactly those paths. Configuration is committed at project scope (`.claude/settings.json`, `.claude/hooks/`, the runner config); anything machine-specific goes to `.claude/settings.local.json`, and the report names it as such.
+**Paths are contracts.** `scripts/check.sh`, `.claude/hooks/check-hook.sh` and `docs/agents/harness.md` are read by hooks and by a re-run, and `setup-skills` is to read the profile ([#367](https://github.com/Gharib89/skills/issues/367)); write them at exactly those paths. Configuration is committed at project scope (`.claude/settings.json`, `.claude/hooks/`, the runner config); anything machine-specific goes to `.claude/settings.local.json`, and the report names it as such.
 
 ## Process
 

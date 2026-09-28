@@ -2,7 +2,7 @@
 
 Schema: 1
 
-Written by `/setup-harness`, which is its only reader besides `setup-skills`. Facts sit on `Label:` lines; prose under a heading is yours and nothing parses it. A budget override reads `override <N>s: <reason>`.
+Written by `/setup-harness`, which reads it back on a re-run. Facts sit on `Label:` lines; prose under a heading is yours and nothing parses it. A budget override reads `override <N>s: <reason>`.
 
 ## Claude Code
 

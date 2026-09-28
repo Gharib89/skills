@@ -4,7 +4,7 @@ One `## Schema N` entry per number, oldest first, each listing the structural ch
 
 Bump rule: a setup-harness PR that changes what the profile must contain (a heading or `Label:` line added, renamed or removed; a `Label:` vocabulary changed) adds an entry here, moves `metadata.harness-schema` in `SKILL.md`, the `Schema:` line in [templates/harness-profile.md](templates/harness-profile.md) and the check in [scripts/harness-profile-check.sh](scripts/harness-profile-check.sh), and is graded a setup-harness major.
 
-Two lines are frozen across every schema, because `setup-skills` reads them with no schema check: `Location:` under `## Check entry point` and `Setup:` under `## Cloud`. Renaming either is a major of both skills in one PR; `scripts/contract-check.sh` fails when the template stops carrying them.
+Two lines are frozen across every schema, because `setup-skills` is to read them with no schema check ([#367](https://github.com/Gharib89/skills/issues/367) adds that reader): `Location:` under `## Check entry point` and `Setup:` under `## Cloud`. Renaming either is a major of both skills in one PR; `scripts/contract-check.sh` fails when the template stops carrying them.
 
 ## Schema 1
 
