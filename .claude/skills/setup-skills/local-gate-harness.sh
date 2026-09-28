@@ -41,7 +41,7 @@ git rev-parse --verify -q "$base^{commit}" >/dev/null \
 lane=full; [ -z "$small" ] || lane=small
 
 gates='{}' checks='{}'
-log=$(mktemp); trap 'rm -f "$log"' EXIT
+log=$(mktemp) err=$(mktemp); trap 'rm -f "$log" "$err"' EXIT
 put()  { gates=$(jq -c --arg k "$1" --arg v "$2" '. + {($k): $v}' <<<"$gates"); }
 run()  { local name=$1; shift; if "$@" >"$log" 2>&1; then put "$name" pass; else put "$name" fail; tail -n 40 "$log" >&2; fi; }
 mark() { put "$1" "$2"; }   # mark <name> deferred-to-ci|unavailable
@@ -61,23 +61,29 @@ if [ "$lane" = small ]; then
 else
   # No CHECK_DEADLINE: `full` is measured only, and a deadline would have
   # check.sh skip whatever it had not reached.
-  (unset CHECK_DEADLINE; exec __CHECK__ full) >"$log" 2>"$log.err"; rc=$?
-  # 0 and 1 carry the JSON line; 2 (unavailable or tooling), 3 (over budget)
-  # and any line outside the contract leave nothing to map one to one.
-  if [ "$rc" -le 1 ] && c=$(jq -ce '.checks | objects | map_values(if . == "skipped" then "pass" else . end)' "$log" 2>/dev/null); then
-    checks=$c
+  (unset CHECK_DEADLINE; exec __CHECK__ full) >"$log" 2>"$err"; rc=$?
+  # 0 and 1 carry the one JSON line; 2 (unavailable or tooling), 3 (over
+  # budget) and any stdout outside the contract leave nothing to map one to
+  # one. A status outside the gate vocabulary reads as unavailable.
+  if [ "$rc" -le 1 ] && parsed=$(jq -sce 'select(length == 1) | .[0].checks | objects
+      | map_values(if . == "skipped" then "pass" elif . == "pass" or . == "fail" or . == "unavailable" then . else "unavailable" end)' \
+      "$log" 2>/dev/null); then
+    checks=$parsed
+    [ "$rc" -eq 0 ] || cat "$err" >&2     # check.sh already keeps each failing check to its last 40 lines
   else
     mark check unavailable
+    cat "$err" >&2
   fi
-  [ "$rc" -eq 0 ] || cat "$log.err" >&2
-  rm -f "$log.err"
 fi
 
 # The repo's Ship-only gates go here: checks relative to "$base", and
 # `mark <CI leg> deferred-to-ci` for what only CI can prove.
 # --- end gates -----------------------------------------------------------------
 
-gates=$(jq -c --argjson c "$checks" '$c + .' <<<"$gates")
+# A name both report keeps the worse status, so neither side can mask a failure.
+gates=$(jq -c --argjson c "$checks" '
+  def rank: {"pass": 0, "deferred-to-ci": 1, "unavailable": 2, "fail": 3}[.];
+  reduce ($c | to_entries[]) as $e (.; .[$e.key] = ([.[$e.key] // "pass", $e.value] | max_by(rank)))' <<<"$gates")
 verdict=$(jq -r 'if any(.[]; . == "fail") then "fail" elif any(.[]; . == "unavailable") then "unavailable" else "pass" end' <<<"$gates")
 case $verdict in pass) rc=0 ;; fail) rc=1 ;; *) rc=2 ;; esac
 jq -cn --arg v "$verdict" --arg b "$base" --arg l "$lane" --argjson g "$gates" \

@@ -18,9 +18,10 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # >>> setup-skills configuration
-# SCANNER: the command the local gate's `secrets` gate runs. SCANNER_INSTALL:
-# how to install it when missing, `apt_install <package>` or a registry's own
-# install (`pipx install detect-secrets`).
+# SCANNER: the executable name of the scanner the local gate's `secrets` gate
+# runs (`gitleaks`), looked up with `command -v`. SCANNER_INSTALL: how to
+# install it when missing, `apt_install <package>` or a registry's own install
+# (`pipx install detect-secrets`).
 SCANNER=__SCANNER__
 SCANNER_INSTALL='__SCANNER_INSTALL__'
 # <<< setup-skills configuration
@@ -34,7 +35,8 @@ apt_install() {
 
 # The harness cloud setup, at the harness profile's `Setup:` path, read here
 # rather than copied so a re-run of setup-harness that moves it moves this too.
-setup=$(awk '/^## / { c = ($0 == "## Cloud"); next } c && sub(/^Setup: /, "") { print; exit }' docs/agents/harness.md)
+setup=$(awk '{ sub(/\r$/, "") } /^## / { c = ($0 == "## Cloud"); next } c && sub(/^Setup: /, "") { print; exit }' docs/agents/harness.md)
+[ -n "$setup" ] || { echo "cloud-ship-bootstrap: no Setup: line under ## Cloud in docs/agents/harness.md" >&2; exit 1; }
 [ "$setup" = None. ] || bash "$setup"
 
 command -v "$SCANNER" >/dev/null || { eval "$SCANNER_INSTALL"; command -v "$SCANNER" >/dev/null; }

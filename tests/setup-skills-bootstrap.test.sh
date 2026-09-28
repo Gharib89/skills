@@ -63,6 +63,17 @@ boot SETUP_RC=1
 check_rc "a failing cloud setup fails the bootstrap" 1 "$rc"
 check "a failing cloud setup stops before the scanner" "setup" "$calls"
 
+printf '# Harness profile\n\n## Cloud\r\n\r\nSetup: scripts/cloud-setup.sh\r\n' > "$d/docs/agents/harness.md"
+boot
+check "a CRLF profile still finds the cloud setup" "setup" "${calls%%$'\n'*}"
+rm -f "$bin/fakescan"
+
+printf '# Harness profile\n\n## Cloud\n\nVerdict: cloud-first\n' > "$d/docs/agents/harness.md"
+: > "$fixture/calls"
+err=$(cd "$d" && env PATH="$bin:$PATH" CALLS="$fixture/calls" CLAUDE_CODE_REMOTE=true "$bash_bin" scripts/cloud-ship-bootstrap.sh 2>&1 >/dev/null); rc=$?
+check_rc "no Setup: line under ## Cloud fails the bootstrap" 1 "$rc"
+check "no Setup: line: the error names the line and the file" "cloud-ship-bootstrap: no Setup: line under ## Cloud in docs/agents/harness.md" "$err"
+
 profile None.
 boot APT_INERT=1
 check "Setup: None. skips the cloud setup" "apt-get install -y fakescan

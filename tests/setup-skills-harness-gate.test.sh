@@ -23,14 +23,16 @@ printf '%s' "$STUB_OUT"
 exit "$STUB_RC"
 STUB
 printf '#!/usr/bin/env bash\necho "node $*" >> "$CALLS"\n' > "$d/scripts/node.sh"
-chmod +x "$d/scripts/check.sh" "$d/scripts/node.sh"
+# gitleaks: a pass, so `secrets` does not depend on the machine running the test.
+mkdir -p "$fixture/bin"; printf '#!/bin/sh\nexit 0\n' > "$fixture/bin/gitleaks"
+chmod +x "$d/scripts/check.sh" "$d/scripts/node.sh" "$fixture/bin/gitleaks"
 git -C "$d" init -q && git -C "$d" add -A \
   && git -C "$d" -c user.email=t@t -c user.name=t commit -qm base && git -C "$d" tag base
 
 # gate <stdout> <rc> <stderr> [flags...]: run the gate; sets out, rc, err, calls.
 gate() {
   : > "$fixture/calls"
-  out=$(cd "$d" && CALLS="$fixture/calls" STUB_OUT=$1 STUB_RC=$2 STUB_ERR=$3 CHECK_DEADLINE=99 \
+  out=$(cd "$d" && PATH="$fixture/bin:$PATH" CALLS="$fixture/calls" STUB_OUT=$1 STUB_RC=$2 STUB_ERR=$3 CHECK_DEADLINE=99 \
     bash scripts/local-gate.sh --base base "${@:4}" 2>"$fixture/err"); rc=$?
   err=$(cat "$fixture/err"); calls=$(cat "$fixture/calls")
 }
@@ -56,6 +58,20 @@ for c in "2|tooling: uv missing|exit 2" "3|over budget|exit 3" "0|not json|a lin
   check "$name: one check gate, unavailable" '{"check":"unavailable","deps":"pass"}' "$(gates)"
 done
 check "exit 3: check.sh's stderr is forwarded" "over budget" "$(gate '' 3 'over budget'; printf '%s' "$err")"
+check "exit 0, a line outside the contract: check.sh's stderr is forwarded" "noise" "$(gate 'not json' 0 'noise'; printf '%s' "$err")"
+
+gate '{"checks":{"lint":"pass"}}
+{"checks":{"lint":"pass"}}' 0 ''
+check_rc "two JSON lines: exit 2" 2 "$rc"
+check "two JSON lines: still one verdict object, check unavailable" '{"check":"unavailable","deps":"pass"}' "$(gates)"
+
+gate '{"rung":"full","verdict":"fail","checks":{"secrets":"fail","deps":"fail"}}' 1 ''
+check_rc "a check named like a Ship gate: its failure is not masked" 1 "$rc"
+check "a check named like a Ship gate: the worse of the two stands" '{"deps":"fail","secrets":"fail"}' \
+  "$(jq -cS '.gates' <<<"$out")"
+
+gate '{"rung":"full","verdict":"pass","checks":{"lint":"over-budget"}}' 0 ''
+check "a status outside the contract reads as unavailable" '{"deps":"pass","lint":"unavailable"}' "$(gates)"
 
 gate '' 0 '' --small tests/test_one.py
 check "--small: the node runs directly and check.sh does not" "node tests/test_one.py" "$calls"
