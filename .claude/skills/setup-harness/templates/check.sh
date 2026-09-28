@@ -81,7 +81,9 @@ check() {
       started=1
       rm -f "$log.x"
       set -m
-      (cd "$dir" && set +f && eval "$cmd") > "$log" 2>&1 &
+      # No stdin: a command reading it would drain the row list the caller
+      # loops over, dropping every check after it.
+      (cd "$dir" && set +f && eval "$cmd") < /dev/null > "$log" 2>&1 &
       pid=$!
       # The mark goes down before the kill, so the verdict never rests on
       # which of the two processes exits first.
@@ -94,7 +96,7 @@ check() {
       kill -TERM -- "-$dog" 2>/dev/null; wait "$dog" 2>/dev/null
       if [ -e "$log.x" ]; then expired=1; break; fi
     else
-      (cd "$dir" && set +f && eval "$cmd") > "$log" 2>&1
+      (cd "$dir" && set +f && eval "$cmd") < /dev/null > "$log" 2>&1
       rc=$?
     fi
     tries=$((tries - 1))

@@ -179,6 +179,19 @@ r=$(repo quiet "FULL_RUN='ok'")
 out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 30 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>"$fixture/err"); rc=$?
 check "a passing run under a deadline writes nothing to stderr" '' "$(cat "$fixture/err")"
 
+# A check that reads stdin gets none, so it cannot drain the row list the rung
+# loops over and silently drop the members after it.
+stub drain 'cat > /dev/null'
+r=$(repo stdin "TURN_ROWS='api/|api|*.py|drain||
+web/|web|*.ts|ok||'")
+mkdir -p "$r/api" "$r/web"
+run "$r" full
+check "a check reading stdin leaves every later member checked" \
+  '{"rung":"full","verdict":"pass","checks":{"typecheck:api":"pass","typecheck:web":"pass"}}' "$out"
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 30 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null)
+check "and the same under a deadline" \
+  '{"rung":"full","verdict":"pass","checks":{"typecheck:api":"pass","typecheck:web":"pass"}}' "$out"
+
 stub e124 'exit 124'
 r=$(repo own124 "FULL_RUN='e124'")
 run "$r" full
