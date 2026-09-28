@@ -8,6 +8,7 @@ Workspace: Cargo.toml `[workspace]`
 Extensions: .rs
 Shebangs: None.
 Runtime version: rust-toolchain.toml, rust-toolchain, Cargo.toml `rust-version`, .tool-versions, mise.toml
+Library: a lib target (`src/lib.rs` or `[lib]`) in a `Cargo.toml` without `publish = false`
 
 ## format
 
@@ -103,3 +104,18 @@ Route: None.
 Constraints: vendored from the Anthropic `rust-analyzer-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md). The binary is the toolchain's `rust-analyzer` component, pinned with the channel in `rust-toolchain.toml` `components`, and rustup is its launcher: with no `rustup` on `PATH` the tool is `Unavailable: rust-analyzer needs rustup`.
 Local-only: cloud sessions start no plugin language server.
 Traps: rustup's `rust-analyzer` proxy exists before the component does, so probe with `rust-analyzer --version`, not `command -v`; a failing probe is filled by adding `rust-analyzer` to `rust-toolchain.toml` `components`.
+
+## public API
+
+### cargo-semver-checks
+Publisher: obi1kenobi
+Tier: 2: https://github.com/obi1kenobi/cargo-semver-checks
+Evidence: `cargo-semver-checks` or `cargo semver-checks` in CI or a script
+Rung: full
+Run: `cargo semver-checks check-release`
+Hook: local
+Pin: package crates cargo-semver-checks
+Route: `cargo install --locked cargo-semver-checks@{version}`; Blocked: `cargo binstall` (GitHub release assets)
+Constraints: the baseline is the crate's newest crates.io release; an unpublished crate takes `--baseline-rev <ref>`. It reads rustdoc JSON, whose format each release supports only for the then-current stable and beta, so its pin moves with `rust-toolchain.toml`.
+Local-only: cloud install 351 s exceeds the 300 s cloud setup budget
+Traps: None.

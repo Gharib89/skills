@@ -3,5 +3,5 @@
   "version": "0.1.0",
   "private": true,
   "main": "src/mathjs.js",
-  "types": "src/mathjs.d.ts"
+  "types": "src/missing.d.ts"
 }

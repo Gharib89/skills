@@ -12,7 +12,8 @@
 # on the seed-relative path); a tool with its own `Files:` gets only the
 # files carrying those extensions instead. {version} is the picked version,
 # {member} is `.` and {package} is `seed`, the package name every stack
-# seed carries.
+# seed carries. The clean copy is a git repo whose one commit is tagged
+# v0.1.0, the baseline a public-API tool diffs against (griffe).
 #
 #   scripts/catalog-trial.sh <entry>|all
 #
@@ -92,6 +93,8 @@ trial() {
   [ -d "$seeds/$entry/bad/$s" ] || { echo "$entry $s: fail (no bad/$s)"; return 1; }
   work=$(mktemp -d) || exit 2
   cp -R "$seeds/$entry/clean/." "$work/"
+  (cd "$work" && git init -q && git add -A && git -c user.name=trial -c user.email=trial@example.invalid commit -qm seed && git tag v0.1.0) >&2 \
+    || { echo "$entry $s: fail (git baseline)"; rm -rf "$work"; return 1; }
   (cd "$work" && bash -c "${route//\{version\}/$version}") >&2 \
     || { echo "$entry $s: fail (install)"; rm -rf "$work"; return 1; }
   files=$(files_in "$work" "$e" "$n" "$p")

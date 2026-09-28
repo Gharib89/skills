@@ -25,9 +25,11 @@ Each gap kind takes exactly one disposition:
 | The profile's `Schema:` trails the skill's `metadata.harness-schema` | Write: the migration, row 1, undroppable |
 | A piece the skill writes is missing: `scripts/check.sh`, `.claude/hooks/check-hook.sh`, a hook entry, the cloud setup or its `SessionStart` entry (cloud-first only), a vendored language server, the `CLAUDE.md` block | Write |
 | A file the skill wrote lacks what its current template says | Write |
-| A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack) | Write: the removal |
+| A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack, a browser step or `FULL_ROWS` row for a surface no longer detected) | Write: the removal |
 | A hook `timeout` off deadline plus max(10 s, deadline / 4) | Write |
 | A new root whose stack has a catalog entry | Write: its `TURN_ROWS` row and runner additions |
+| New web UI evidence ([surfaces.md](surfaces.md)) | Write: its suite's `FULL_ROWS` row and, cloud-first, its browser step |
+| `Allowlist:` gained or lost `cdn.playwright.dev` | Write: each browser step switched to the route it now takes |
 | A now-available role: a role with no tool that its catalog entry now fills, or a `Constraints:` `Unavailable:` that no longer holds | Write |
 | `check.sh` breaks its contract, and no Write above explains it | Offer: rewrite onto the current template, keeping every check the old file ran |
 | A warm `edit` or `turn` time over budget | Offer: narrow, demote or override ([check-ladder.md](check-ladder.md) `## Timing the rungs`) |
@@ -35,7 +37,8 @@ Each gap kind takes exactly one disposition:
 | `cloud: unproven`, or `unproven (changed since <sha>)`, on a cloud-first repo | Offer: the proof ([cloud.md](cloud.md) `## The proof`) |
 | A broken pin | Offer: re-pin or remove |
 | Evidence gone from an evidence-backed `Local-only:` line | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
-| A third-party unit a Write above adds or re-pins (the Write keeps its own row), and a pin that is behind | Install-check row |
+| A surface and no `.claude/skills/run-*/`, not `Declined: run recipe` | Offer: type `/run-skill-generator` ([surfaces.md](surfaces.md) `## The run recipe`) |
+| A third-party unit a Write above adds or re-pins (the Write keeps its own row), new library evidence's `public API` tools, and a pin that is behind | Install-check row |
 | Unclaimed extensions and stacks, unwired tools, Found-not-installed units | Report only |
 | Standing choices | Report only |
 
@@ -71,7 +74,7 @@ After the writes, in place of step 6's first timing, every rung the batch touche
 
 Step 4's message on a re-run, in this order:
 
-1. **Header**: skill version, `Schema: N` (and "migrates to M" when it trails), the Claude Code floor against the installed version, the step-1 warnings.
+1. **Header**: skill version, `Schema: N` (and "migrates to M" when it trails), the Claude Code floor against the installed version, the step-1 warnings, the surfaces with their evidence paths.
 2. **Offers**, numbered, each with its recommendation.
 3. **Proposed writes**: one table, `| # | Gap | Path | Now | Proposed |`, with the install-check columns filled on unit rows and each unit's glue in full after it; the migration is row 1, marked undroppable.
 4. **Budgets**: rung, cold, warm, budget, verdict.

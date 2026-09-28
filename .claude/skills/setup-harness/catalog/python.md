@@ -8,6 +8,7 @@ Workspace: `[tool.uv.workspace]`
 Extensions: .py .pyi
 Shebangs: python python3
 Runtime version: .python-version, pyproject `requires-python`, .tool-versions, mise.toml
+Library: a `pyproject.toml` with both `[build-system]` and `[project]`
 
 ## lint
 
@@ -129,3 +130,17 @@ Route: None.
 Constraints: vendored from the Anthropic `pyright-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md); needs Node, and with no `npx` on `PATH` the tool is `Unavailable: pyright needs Node`. The Python registries carry no trusted pyright, so the exact version rides in the vendored launch command instead of a dev dependency.
 Local-only: cloud sessions start no plugin language server.
 Traps: the first launch of a version fetches pyright into the npx cache, which the first `LSP` call waits out (10 s cold, 3 s warm, measured).
+
+## public API
+
+### griffe
+Publisher: mkdocstrings
+Tier: 2: https://github.com/mkdocstrings/griffe
+Evidence: `griffe` dev dependency
+Rung: full
+Run: `griffe check {package} -s src`
+Hook: local
+Pin: package pypi griffe
+Route: `uv tool install griffe=={version}`; Blocked: None.
+Constraints: compares the working tree's public API with the latest git tag's, so it needs a release tag in the history; `-s` names the directory holding the import package (`src` in a src layout, `.` otherwise) and `{package}` is the import name.
+Traps: with no tag in the history it exits 1 with a traceback rather than a finding; a clone that fetched no tags needs `git fetch --tags` first.

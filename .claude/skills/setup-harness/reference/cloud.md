@@ -45,7 +45,7 @@ Measured in a cloud session on the Default (Trusted) network, Claude Code 2.1.28
 
 | Passes | Blocked (403 or CONNECT refused) |
 |---|---|
-| `archive.ubuntu.com` (apt), `registry.npmjs.org`, `pypi.org`, `files.pythonhosted.org`, `proxy.golang.org`, `sum.golang.org`, `static.crates.io`, `static.rust-lang.org`, RubyGems, Maven Central, the Gradle plugin portal, `api.nuget.org`, `repo.packagist.org`, `raw.githubusercontent.com`, `registry-1.docker.io`, `dev.azure.com`, `packages.microsoft.com`, a `git clone` of a public repo over `github.com` | `objects.githubusercontent.com` and `release-assets.githubusercontent.com` (another project's GitHub release assets), `codeload.github.com` (tarballs), `deb.nodesource.com`, `cli.github.com` (apt), `apt.llvm.org`, `cdn.playwright.dev`, `playwright.download.prss.microsoft.com`, `playwright.azureedge.net`, `storage.googleapis.com` |
+| `archive.ubuntu.com` (apt), `registry.npmjs.org`, `pypi.org`, `files.pythonhosted.org`, `proxy.golang.org`, `sum.golang.org`, `static.crates.io`, `static.rust-lang.org`, RubyGems, Maven Central, the Gradle plugin portal, `api.nuget.org`, `repo.packagist.org`, `raw.githubusercontent.com`, `registry-1.docker.io`, `mcr.microsoft.com` and its `*.data.mcr.microsoft.com` blobs, `dev.azure.com`, `packages.microsoft.com`, a `git clone` of a public repo over `github.com` | `objects.githubusercontent.com` and `release-assets.githubusercontent.com` (another project's GitHub release assets), `codeload.github.com` (tarballs), `deb.nodesource.com`, `cli.github.com` (apt), `apt.llvm.org`, `cdn.playwright.dev`, `playwright.download.prss.microsoft.com`, `playwright.azureedge.net`, `storage.googleapis.com` |
 
 Node 20, 21 and 22 ship on the image under `/opt` (22 on `PATH`), as do `uv`, `pnpm`, Go 1.24, Rust (rustup, cargo), OpenJDK 21, Gradle 8.14, Maven 3.9 and Docker (Buildx 0.31), so a runtime is a step only where the repo's runtime version file asks for one the image lacks, and never through NodeSource.
 
@@ -68,6 +68,11 @@ Otherwise copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.clau
    - `hadolint-image|docker image inspect hadolint/hadolint@<digest>|docker pull hadolint/hadolint:<tag>@<digest>`
 
    `setsid -f` and the redirects detach the daemon: one holding the hook's stdout or stderr makes Claude Code wait on the hook until its timeout.
+6. For each web UI member ([surfaces.md](surfaces.md) `## Web UI`): last, after that member's frozen install and, on the `mcr` route, after the `dockerd` row, which the setup carries for it even where no container tool needs one. `<member>` is the member's directory and `<exec>` its stack's exec command (`pnpm exec`). The done test reads the revision directories from the member's own Playwright (`install --dry-run` lists them offline, under the image's `PLAYWRIGHT_BROWSERS_PATH`) and passes when each holds Playwright's `INSTALLATION_COMPLETE` marker, so a second run, or a repo on the image's own Playwright version, does nothing. One row, by route:
+   - `browsers-<member>|cd <member> && n=0 && for p in $(<exec> playwright install --dry-run chromium); do case $p in /*) if [ ! -e "$p/INSTALLATION_COMPLETE" ]; then exit 1; fi; n=1 ;; esac; done; [ $n = 1 ]|cd <member> && <exec> playwright install --with-deps chromium`
+   - `browsers-<member>|cd <member> && n=0 && for p in $(<exec> playwright install --dry-run chromium); do case $p in /*) if [ ! -e "$p/INSTALLATION_COMPLETE" ]; then exit 1; fi; n=1 ;; esac; done; [ $n = 1 ]|cd <member> && v=$(<exec> playwright --version) && c=$(docker create mcr.microsoft.com/playwright:v${v##* }-noble) && for p in $(<exec> playwright install --dry-run chromium); do case $p in /*) docker cp "$c:/ms-playwright/${p##*/}" "${p%/*}/" || exit 1 ;; esac; done && docker rm "$c"`
+
+   The first is the `vendor` route, for an `Allowlist:` naming `cdn.playwright.dev`; the second is `mcr`, which copies only the revision directories the member's Playwright names out of the image tagged with its version.
 
 A step needing a blocked host is labelled, not written, per the static host check.
 

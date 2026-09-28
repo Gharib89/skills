@@ -80,3 +80,17 @@ Route: None.
 Constraints: vendored from the Anthropic `csharp-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md), pinned as a local tool at the stack root (`dotnet new tool-manifest`, then `dotnet tool install csharp-ls --version <v>`), which `dotnet tool restore` installs. Needs the .NET 10 SDK (0.28.0 targets `net10.0`; the plugin README's ".NET SDK 6.0 or later" is stale); with no `dotnet` on `PATH` the tool is `Unavailable: csharp-ls needs the .NET 10 SDK`.
 Local-only: cloud sessions start no plugin language server.
 Traps: Microsoft's own `roslyn-language-server` ships on NuGet as a prerelease only and no Anthropic plugin runs it.
+
+## public API
+
+### package validation
+Publisher: Microsoft
+Tier: 2: https://learn.microsoft.com/en-us/dotnet/fundamentals/apicompat/package-validation/overview
+Evidence: `<EnablePackageValidation>` in a `*.csproj` or `Directory.Build.props`
+Rung: full
+Run: `dotnet pack -p:EnablePackageValidation=true`
+Hook: local
+Pin: apt dotnet-sdk-10.0
+Route: `sudo apt-get update && sudo apt-get install -y dotnet-sdk-10.0`; Blocked: `dotnet-install.sh` (redirects to `builds.dotnet.microsoft.com`)
+Constraints: part of the SDK, so no unit is added: it checks that the package's target frameworks agree with one another, and against a released version only where the project sets `PackageValidationBaselineVersion`, whose package is restored from NuGet.
+Traps: None.

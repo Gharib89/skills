@@ -29,7 +29,7 @@ Copy [templates/check.sh](../templates/check.sh) to `scripts/check.sh`, executab
 - `EDIT_RUN`: the runner on a file list, `prek run --files {files}` (or `pre-commit run --files {files}`, `lefthook run pre-commit --file {files}`). `check.sh` runs it twice when the first run fails: the first run's fixes fail it, and only what the fixes leave fails the second.
 - `FULL_RUN`: the runner on every file, `prek run --all-files`.
 - `TURN_ROWS`: one row per member, `<path prefix>|<member>|<globs>|<typecheck>|<tests>|<affected tests>`. The prefix ends in `/` (`api/`, `packages/web/`), or is empty for a member at the repo root. Globs are the stack's extensions plus its manifest names, so a manifest change re-checks the member. Commands run in the member's directory, prefixed with the stack's exec command (`uv run --frozen mypy .`, `pnpm exec tsc --noEmit`). `<affected tests>` takes `{files}` relative to the member (`pnpm exec vitest related --run {files}`); leave it empty to run `<tests>`, the member's whole suite. An empty typecheck or tests field is no check.
-- `FULL_ROWS`: extra checks on `full` only, `<name>|<command>` from the root: the repo's own check target (`check-target|make check`).
+- `FULL_ROWS`: extra checks on `full` only, `<name>|<command>` from the root: the repo's own check target (`check-target|make check`), and each surface's behaviour tools per [surfaces.md](surfaces.md) (`e2e-web|cd web && pnpm exec playwright test`).
 
 A changed file matching some row's globs under no row's prefix reports `new-root: unavailable` with "re-run setup-harness": a stack root appeared that this file has no row for. A repo's existing check target is kept and called from `FULL_ROWS`, never replaced.
 
