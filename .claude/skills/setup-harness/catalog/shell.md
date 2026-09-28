@@ -17,7 +17,7 @@ Hook: local
 Pin: apt shellcheck
 Route: `sudo apt-get install -y shellcheck`; Blocked: release binaries
 Constraints: None.
-Traps: the vendor hook, `koalaman/shellcheck-precommit`, is `language: docker_image`; this entry runs `local` instead since the cloud sandbox has no guaranteed Docker daemon. Results depend on cwd and `-P`/`source-path`.
+Traps: the vendor hook, `koalaman/shellcheck-precommit`, is `language: docker_image`; this entry runs `local` instead since the cloud sandbox has no guaranteed Docker daemon. Results depend on cwd and `-P`/`source-path`. A release binary in `~/.local/bin` shadows apt's copy on `PATH`: report it, never replace it.
 
 ## format
 
@@ -30,5 +30,5 @@ Run: `shfmt -w {files}`
 Hook: local
 Pin: package go mvdan.cc/sh/v3/cmd/shfmt
 Route: `go install mvdan.cc/sh/v3/cmd/shfmt@{version}`; Blocked: None.
-Constraints: None.
+Constraints: needs a Go toolchain; with none, shfmt is proposed with that reason so the human can decline it.
 Traps: reads `.editorconfig`; apt's `shfmt` lags several releases behind, so a repo pinning a specific shfmt style should carry it in `.editorconfig`.

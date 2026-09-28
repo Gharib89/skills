@@ -21,7 +21,7 @@ Hook: https://github.com/astral-sh/ruff-pre-commit
 Pin: package pypi ruff
 Route: `uv tool install ruff=={version}`; Blocked: Astral's curl installer, release binaries
 Constraints: None.
-Traps: an explicit file path bypasses `[tool.ruff] exclude` unless `--force-exclude` is passed.
+Traps: an explicit file path bypasses `[tool.ruff] exclude` unless `--force-exclude` is passed. ruff reads a `pyproject.toml` only when it has a `[tool.ruff]` table; a member below the root without one is linted from the root and its first-party imports are sorted as third-party, so the run adds an empty table there.
 
 ## format
 

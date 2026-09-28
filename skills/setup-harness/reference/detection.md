@@ -22,12 +22,13 @@ Tracked files only, from the repo root:
 ```sh
 git ls-files                                   # the whole tree detection reads
 git submodule status                           # reported, never scanned
-git ls-files | sed -n 's/.*\.\([^./]*\)$/\1/p' | sort | uniq -c | sort -rn   # extension counts
+git ls-files | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\)$/\1/p' | sort | uniq -c | sort -rn   # extension counts, dotfiles skipped
 ```
 
 - A **root** is a directory holding a stack's `Manifest:` with one of its `Lockfile:` names beside it, or a member a root's `Workspace:` config names.
 - A lockless manifest no workspace names is a **candidate**: ask the human to mark it a root or ignored. Ignored lands as `Declined: <path> as a root: <reason>` in the profile, so a re-run does not ask again.
 - A root with no lockfile the human marked a root is reported `unlocked` and installed from its manifest as it stands. Never generate a lockfile: that changes the repo's dependency resolution.
+- **Installed skills** under `.claude/skills/` are vendored copies pinned by `skills-lock.json`: not scanned, and excluded from the runner config (`exclude: ^\.claude/skills/`), because a fix-mode tool rewriting one breaks its `computedHash`.
 - A shebang is read from the first line of an extensionless tracked file with the executable bit (`git ls-files -s` mode `100755`).
 - Every tracked extension no stack or file kind claims is `unclaimed: *.<ext> (<N> files)`, with no guessed tools. It adds nothing to `edit` or `turn`; `check.sh full` still calls the repo's own check target.
 - A stack with no catalog entry is `unclaimed` the same way, with a pointer to file an issue on [Gharib89/skills](https://github.com/Gharib89/skills/issues) asking for its entry.

@@ -20,7 +20,7 @@ Run: `eslint --fix {files}`
 Hook: https://github.com/eslint/eslint
 Pin: package npm eslint
 Route: `npm install -g eslint@{version}`
-Constraints: None.
+Constraints: ESLint 9 and later lint nothing without a flat config; a default writes `eslint.config.mjs` extending `@eslint/js` and, for TypeScript, `typescript-eslint`, both exact dev dependencies through the install check.
 Traps: the vendor hook runs in an isolated env; flat-config plugins must be listed under `additional_dependencies` or they are not resolvable.
 
 ### Biome
