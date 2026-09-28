@@ -4,7 +4,7 @@ status: accepted
 
 # The release run on main cuts the version bump and the changelog
 
-Amended by [0005](0005-skills-stay-0x-until-public-release.md): every skill is 0.x until its public release, so a breaking change bumps the minor and no tag carries the numbers below.
+Amended by [0005](0005-skills-stay-0x-until-public-release.md): while a skill is 0.x a breaking change bumps the minor, a skill with no tag bumps from `0.0.0` rather than forcing `1.0.0`, and every tag and version number below predates the #369 renumber.
 
 Every change to a skill had to bump that skill's `metadata.version` in the same PR. The number is one line in one file, so any two PRs touching the same skill collided on it, and a run that merged its base in had to re-grade its own bump against the new number. The retro tickets #218, #219 and #220 were chained for that reason alone. The grade already sat in the PR title, which `ship` writes as a Conventional Commit and `merge.sh` passes as the squash `commit_title`.
 

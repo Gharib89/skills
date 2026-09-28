@@ -5,8 +5,9 @@
 # to the release run or collides with another PR on the same line. The habit from
 # the old rule is what this catches, before the PR opens rather than in review.
 # `metadata.profile-schema` is exempt: it stays a hand edit, because the
-# `## Schema N` entry it carries is written by the change that needs it.
-# See docs/adr/0003-version-and-changelog-cut-on-merge.md.
+# `## Schema N` entry it carries is written by the change that needs it. So is
+# the one-time renumber to 0.x, `renumbered` below.
+# See docs/adr/0003-version-and-changelog-cut-on-merge.md and 0005.
 #
 #   scripts/version-line-check.sh <base-ref> [<root>]
 #
@@ -38,6 +39,20 @@ list=$(mktemp) || exit 2
 trap 'rm -f "$list"' EXIT
 git -C "$root" diff -z --name-only --diff-filter=d "$mb" -- 'skills/*/SKILL.md' > "$list" || exit 2
 
+# The renumber to 0.x (ADR 0005): one version line out and one in, M.m.p with
+# M at least 1 to exactly 0.M.p, in the diff that flips the skill's
+# `allow_zero_version` to true. The flip happens once per skill, so no later
+# diff qualifies, a move back out of 1.x included.
+renumbered() {
+  local s=${1#skills/}; s=${s%%/*}
+  local old new
+  old=$(printf '%s\n' "$2" | sed -n 's/^-[[:space:]]*version:[[:space:]]*//p')
+  new=$(printf '%s\n' "$2" | sed -n 's/^+[[:space:]]*version:[[:space:]]*//p')
+  [[ $old =~ ^[1-9][0-9]*\.[0-9]+\.[0-9]+$ && $new == "0.${old%%.*}.${old##*.}" ]] || return 1
+  git -C "$root" diff -U0 "$mb" -- ".release/$s.toml" \
+    | grep -qx '+allow_zero_version = true'
+}
+
 rc=0
 while IFS= read -r -d '' f; do
   [ -n "$f" ] || continue
@@ -45,12 +60,7 @@ while IFS= read -r -d '' f; do
   # A `+` alone is a line arriving with a new frontmatter block; a `-` is the one
   # that was already there and moved.
   printf '%s\n' "$hits" | grep -q '^-' || continue
-  # The one move a PR makes: the renumber to 0.x before a skill's public release
-  # (#369), M.m.p to exactly 0.M.p. Its old major is never 0, so it admits no
-  # bump inside 0.x.
-  old=$(printf '%s\n' "$hits" | sed -n 's/^-[[:space:]]*version:[[:space:]]*//p')
-  new=$(printf '%s\n' "$hits" | sed -n 's/^+[[:space:]]*version:[[:space:]]*//p')
-  case $old in 0.*) ;; *.*.*) [ "$new" = "0.${old%%.*}.${old##*.}" ] && continue ;; esac
+  renumbered "$f" "$hits" && continue
   printf '%s: changes a metadata.version line, which the release run owns\n' "$f"
   printf '%s\n' "$hits" | sed 's/^/    /'
   rc=1

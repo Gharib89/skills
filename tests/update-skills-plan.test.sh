@@ -143,14 +143,23 @@ check "--old reads the old tree at that ref" \
 jq '.skills.ship.source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a lock recording ship from . is source mode" source "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r .mode)"
 
-# The renumber to 0.x (#369) moves a version down: the plan still runs, and the
-# empty range (1.1.0, 0.1.1] plans no retired row.
-skill "$repo" ship 0.1.1 "o/r#$B:tdd o/r#$B:code-review"
-out=$(bash "$plan" "$repo" "$tmp/heads.json"); rc=$?
-check_rc "a version moved down still plans" 0 "$rc"
-check "a version moved down carries both versions and plans no retired row" \
-  '1.1.0 0.1.1 0' "$(jq -r '[(.source_skills[] | select(.skill == "ship") | .old_version, .new_version), ([.retired[] | select(.skill == "ship")] | length)] | join(" ")' <<<"$out")"
-skill "$repo" ship 1.1.0 "o/r#$B:tdd o/r#$B:code-review"
+# The renumber to 0.x (#369) moves every version down, M.m.p to 0.M.p, so an
+# installed pre-renumber version is read as its 0.x counterpart: 5.2.1 as 0.5.1,
+# whose range to 0.11.4 still holds the 0.9.0 rows.
+r2=$tmp/renumbered
+mkdir -p "$r2" && git -C "$r2" init -q && git -C "$r2" config user.email t@t && git -C "$r2" config user.name t
+skill "$r2" ship 5.2.1; lock "$r2" '{"ship": {"source": "Gharib89/skills"}}'
+git -C "$r2" add -A && git -C "$r2" commit -qm old
+skill "$r2" ship 0.11.4
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 0.5.1 | at-old | x |' '| 0.9.0 | crossed | x |' '| 0.11.4 | at-new | x |' '| 0.12.0 | above | x |' \
+  > "$r2/.claude/skills/ship/retired-terms.md"
+echo '{"heads": {}, "unreachable": []}' > "$tmp/heads0.json"
+out=$(bash "$plan" "$r2" "$tmp/heads0.json"); rc=$?
+check_rc "a plan across the renumber exits 0" 0 "$rc"
+check "a plan across the renumber reads the installed M.m.p as 0.M.p" \
+  '["crossed","at-new"]' "$(jq -c '[.retired[].term]' <<<"$out")"
+check "a plan across the renumber still reports the installed version as it was" \
+  '5.2.1' "$(jq -r '.source_skills[0].old_version' <<<"$out")"
 
 # A prerelease version compares by its release part, in the skill's version
 # and in a row's, and a row with no replacement cell, or a lowercase none, has
