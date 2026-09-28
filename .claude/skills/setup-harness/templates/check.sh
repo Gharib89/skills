@@ -66,12 +66,19 @@ record() { names="$names$1$nl" statuses="$statuses$2$nl"; }
 # the deadline a check is skipped unrun; one still running at it is killed,
 # with its whole process group, and is over-budget.
 check() {
-  local name=$1 dir=$2 cmd=$3 tries=${4:-1} rc pid dog now
+  local name=$1 dir=$2 cmd=$3 tries=${4:-1} rc pid dog now started=''
   if [ -n "$expired" ]; then record "$name" skipped; return; fi
   while :; do
     if [ -n "$deadline" ]; then
       now=$(date +%s)
-      if [ "$now" -ge "$deadline" ]; then expired=1; break; fi
+      # A check the deadline passed before it started is skipped, not blamed;
+      # one whose retry it cut off ran, and is over-budget.
+      if [ "$now" -ge "$deadline" ]; then
+        expired=1
+        [ -n "$started" ] && break
+        record "$name" skipped; return
+      fi
+      started=1
       rm -f "$log.x"
       set -m
       (cd "$dir" && set +f && eval "$cmd") > "$log" 2>&1 &
@@ -236,7 +243,8 @@ EOF
 "rung_$rung" "$@"
 
 # One JSON line. A real failure outranks every other outcome, so it still
-# reaches the caller when the deadline also hit.
+# reaches the caller when the deadline also hit; a passed deadline is exit 3
+# even when no check was running at it.
 json='' seen='' i=0
 while IFS= read -r n; do
   [ -n "$n" ] || continue
@@ -249,10 +257,14 @@ $names
 EOF
 case $seen in
   *fail*) verdict=fail code=1 ;;
-  *over-budget*) verdict=over-budget code=3 ;;
-  *unavailable*) verdict=unavailable code=2 ;;
-  *pass*) verdict=pass code=0 ;;
-  *) verdict=skipped code=0 ;;
+  *) if [ -n "$expired" ]; then verdict=over-budget code=3
+     else
+       case $seen in
+         *unavailable*) verdict=unavailable code=2 ;;
+         *pass*) verdict=pass code=0 ;;
+         *) verdict=skipped code=0 ;;
+       esac
+     fi ;;
 esac
 printf '{"rung":"%s","verdict":"%s","checks":{%s}}\n' "$rung" "$verdict" "${json#,}"
 exit $code

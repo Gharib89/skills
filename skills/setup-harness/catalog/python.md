@@ -111,6 +111,6 @@ Rung: turn
 Run: `pytest --testmon`
 Hook: local
 Pin: package pypi pytest-testmon
-Route: `uv tool install pytest-testmon=={version}`; Blocked: None.
+Route: `uv tool install pytest --with pytest-testmon=={version}`; Blocked: None.
 Constraints: needs `coverage<8` and a first full run to build `.testmondata` before it can select.
 Traps: crashes with `KeyError: 'lf'` under `-p no:cacheprovider`.

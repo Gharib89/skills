@@ -154,8 +154,15 @@ check "the deadline stops the running check rather than waiting it out" yes "$([
 
 r=$(repo both "FULL_RUN='bad'
 FULL_ROWS='slow|slow'")
-out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 1 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 2 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
 check_rc "a failure outranks an over-budget check" 1 "$rc"
+
+r=$(repo late "FULL_RUN='ok'
+FULL_ROWS='after|ok'")
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) - 1 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+check "a check the deadline passed before it started is skipped, never blamed" \
+  '{"rung":"full","verdict":"over-budget","checks":{"runner":"skipped","after":"skipped"}}' "$out"
+check_rc "and the rung is still over budget" 3 "$rc"
 
 # Twenty runs at once, each killed at its deadline: every one is over-budget,
 # never a fail, however the watchdog's own exit races the check's.

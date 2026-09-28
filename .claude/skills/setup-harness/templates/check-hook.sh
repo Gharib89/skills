@@ -83,7 +83,9 @@ fi
 case $code in
   0) exit 0 ;;
   1) head -c 9000 "$errf" >&2; exit 2 ;;
-  3) say "harness: $rung rung over its $budget s budget: $(named over-budget "$out")" ;;
+  3) n=$(named over-budget "$out")
+     if [ -n "$n" ]; then say "harness: $rung rung over its $budget s budget: $n"
+     else say "harness: $rung rung over its $budget s budget before $(named skipped "$out") started"; fi ;;
   *) n=$(named unavailable "$out"); say "harness: $rung rung unavailable: ${n:-check.sh exited $code}" ;;
 esac
 exit 0

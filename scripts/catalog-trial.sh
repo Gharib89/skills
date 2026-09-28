@@ -32,8 +32,15 @@ esac
 # The first backticked command on a line.
 cmd() { printf '%s' "$1" | sed -n 's/^[^`]*`\([^`]*\)`.*/\1/p'; }
 slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9][^a-z0-9]*/-/g; s/^-//; s/-$//'; }
-# A tree's contents as one string, to tell whether a run changed a file.
-snapshot() { (cd "$1" && find . -type f ! -path './node_modules/*' ! -path './.venv/*' -exec cksum {} + | sort); }
+# <tree> <seed>...: the seed's own files as they stand in the tree. A
+# formatter's rewrite changes one; a tool's cache (.ruff_cache, __pycache__)
+# is none of them, so it is no change.
+snapshot() {
+  local w=$1 f s; shift
+  for s; do (cd "$s" && find . -type f); done | sort -u | while IFS= read -r f; do
+    (cd "$w" && cksum "$f" 2>/dev/null) || echo "gone $f"
+  done
+}
 # The files in a directory whose names carry one of the entry's extensions,
 # shell-quoted for {files}.
 files_in() {
@@ -65,20 +72,25 @@ trial() {
   (cd "$work" && bash -c "${route//\{version\}/$version}") >&2 \
     || { echo "$entry $s: fail (install)"; rm -rf "$work"; return 1; }
   files=$(files_in "$work")
-  before=$(snapshot "$work")
+  before=$(snapshot "$work" "$seeds/$entry/clean")
   run=${run//\{member\}/.}
-  if ! (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 || [ "$(snapshot "$work")" != "$before" ]; then
+  if ! (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 || [ "$(snapshot "$work" "$seeds/$entry/clean")" != "$before" ]; then
     echo "$entry $s: fail (failed on clean)"; rm -rf "$work"; return 1
   fi
   cp -R "$seeds/$entry/bad/$s/." "$work/"
   files=$(files_in "$seeds/$entry/bad/$s")
-  before=$(snapshot "$work")
-  if (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 && [ "$(snapshot "$work")" = "$before" ]; then
+  before=$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")
+  if (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 && [ "$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")" = "$before" ]; then
     echo "$entry $s: fail (passed on bad/$s)"; rm -rf "$work"; return 1
   fi
   echo "$entry $s: pass"
   rm -rf "$work"
 }
+
+# A bad seed can match its clean file's size and land in the same second, which
+# Python's bytecode check (mtime in seconds plus size) cannot tell apart, so a
+# cached .pyc would run the clean code on the bad run.
+export PYTHONDONTWRITEBYTECODE=1
 
 # The trial tree in use, removed on any exit.
 work=''

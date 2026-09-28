@@ -61,6 +61,10 @@ check_rc "an over-budget check never blocks" 0 "$rc"
 check "over budget names rung, check and time" \
   '{"systemMessage":"harness: edit rung over its 5 s budget: runner"}' "$out"
 
+STUB_RC=3 STUB_OUT='{"rung":"edit","verdict":"over-budget","checks":{"runner":"skipped"}}' hook edit "$edit_in"
+check "a deadline passed before any check started names what never ran" \
+  '{"systemMessage":"harness: edit rung over its 5 s budget before runner started"}' "$out"
+
 stop_in='{"hook_event_name":"Stop","stop_hook_active":false}'
 cont_in='{"hook_event_name":"Stop","stop_hook_active": true}'
 : > "$STUB_LOG"
