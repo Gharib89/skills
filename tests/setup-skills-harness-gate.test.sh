@@ -59,6 +59,10 @@ for c in "2|tooling: uv missing|exit 2" "3|over budget|exit 3" "0|not json|a lin
 done
 check "exit 3: check.sh's stderr is forwarded" "over budget" "$(gate '' 3 'over budget'; printf '%s' "$err")"
 check "exit 0, a line outside the contract: check.sh's stderr is forwarded" "noise" "$(gate 'not json' 0 'noise'; printf '%s' "$err")"
+long=$(seq 1 50)
+check "exit 2: check.sh's stderr is capped at its last 40 lines" "$(seq 11 50)" "$(gate '' 2 "$long"; printf '%s' "$err")"
+check "a failing check: check.sh's stderr is capped at its last 40 lines" "$(seq 11 50)" \
+  "$(gate '{"checks":{"tests":"fail"}}' 1 "$long"; printf '%s' "$err")"
 
 gate '{"checks":{"lint":"pass"}}
 {"checks":{"lint":"pass"}}' 0 ''

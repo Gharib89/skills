@@ -7,7 +7,7 @@
 #
 # Contract (ship's local-gate contract, the same in every repo):
 #   stdout: one JSON object, {"verdict","base","lane","gates":{<name>:<status>}}
-#   stderr: a failing gate's last 40 log lines, and check.sh's own stderr
+#   stderr: a failing gate's last 40 log lines, and check.sh's own stderr's last 40
 #   exit:   0 every gate passed · 1 a gate failed · 2 tooling
 #   gate status: pass | fail | deferred-to-ci | unavailable
 #   verdict: pass | fail | unavailable; fail wins over unavailable
@@ -69,10 +69,10 @@ else
       | map_values(if . == "skipped" then "pass" elif . == "pass" or . == "fail" or . == "unavailable" then . else "unavailable" end)' \
       "$log" 2>/dev/null); then
     checks=$parsed
-    [ "$rc" -eq 0 ] || cat "$err" >&2     # check.sh already keeps each failing check to its last 40 lines
+    [ "$rc" -eq 0 ] || tail -n 40 "$err" >&2
   else
     mark check unavailable
-    cat "$err" >&2
+    tail -n 40 "$err" >&2
   fi
 fi
 
