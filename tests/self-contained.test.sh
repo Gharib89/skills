@@ -39,6 +39,17 @@ check_rc "a PR link fails" 1 "$(rc_of "$d")"
 d=$(repo destination skills/a/reference/detection.md 'file an issue on [Gharib89/skills](https://github.com/Gharib89/skills/issues) asking for its entry.')
 check_rc "the issue tracker as a destination passes" 0 "$(rc_of "$d")"
 
+# Any source-repo path is material but the tracker itself, and GitHub resolves
+# the owner and repo case-insensitively.
+d=$(repo run-link skills/a/SKILL.md 'the [run](https://github.com/Gharib89/skills/actions/runs/1) proved it')
+check_rc "a URL to an Actions run fails" 1 "$(rc_of "$d")"
+
+d=$(repo cased skills/a/SKILL.md 'see https://github.com/gharib89/Skills/wiki/Home')
+check_rc "a differently cased URL fails" 1 "$(rc_of "$d")"
+
+d=$(repo new-issue skills/a/SKILL.md 'open [a new issue](https://github.com/Gharib89/skills/issues/new) or read https://github.com/Gharib89/skills.')
+check_rc "the new-issue form and the repo root pass" 0 "$(rc_of "$d")"
+
 d=$(repo pr-number skills/a/SKILL.md 'PR #212 is the case.')
 check_rc "a bare PR number fails" 1 "$(rc_of "$d")"
 check "the message names the reason" \
@@ -55,6 +66,16 @@ check "the message names the target" \
 
 d=$(repo sibling-link skills/a/SKILL.md 'See [ship](../ship/SKILL.md#process).')
 check_rc "a relative link into a sibling skill fails" 1 "$(rc_of "$d")"
+
+# A glob character in a target is a path segment, not a pattern against the
+# directory the check runs in: expanded, `*` there becomes that directory's
+# entries and the `..` count no longer reaches the right parent.
+d=$(repo glob-link skills/a/reference/f.md 'See [x](*/../../../b/SKILL.md).')
+check_rc "a glob character in a target is read literally" 1 "$(rc_of "$d")"
+
+# A link quoted in a code span is an example, as a number there is.
+d=$(repo link-example skills/a/SKILL.md 'A pointer such as `[x](../../CONTEXT.md)` dangles.')
+check_rc "a link inside a code span passes" 0 "$(rc_of "$d")"
 
 d=$(repo own-link skills/a/reference/cloud.md 'From [templates/x.sh](../templates/x.sh) and [the ladder](check-ladder.md#rungs).')
 check_rc "a relative link inside the skill passes" 0 "$(rc_of "$d")"
