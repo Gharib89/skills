@@ -11,8 +11,9 @@
 # stderr: each failing check's last 40 lines
 # exit:   0 pass · 1 fail · 2 unavailable or tooling · 3 over budget
 #
-# CHECK_DEADLINE=<epoch s> stops the run at that time: the running check is
-# over-budget, the rest skipped, exit 3. Without it, exit 3 never occurs.
+# CHECK_DEADLINE=<epoch s> stops the run at that time: the check running at
+# it is over-budget (none, when it fell between checks), the rest skipped,
+# exit 3. Without it, exit 3 never occurs.
 #
 # Bash 3.2 and no jq, because hooks run this on every edit on macOS too. Edit
 # the configuration block freely: a setup-harness re-run compares this file by
@@ -71,8 +72,8 @@ check() {
   while :; do
     if [ -n "$deadline" ]; then
       now=$(date +%s)
-      # A check the deadline passed before it started is skipped, not blamed;
-      # one whose retry it cut off ran, and is over-budget.
+      # A retry the deadline cut off follows a try that ran, so it is
+      # over-budget, not skipped.
       if [ "$now" -ge "$deadline" ]; then
         expired=1
         [ -n "$started" ] && break

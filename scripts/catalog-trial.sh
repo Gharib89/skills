@@ -3,7 +3,7 @@
 # run lines against real tools. Per `###` tool: pick the version by the
 # catalog's version rule (packages only), install by `Route:`, run `Run:` on a
 # copy of tests/fixtures/catalog/<entry>/clean/, which must pass without
-# changing a file, then lay bad/<tool>/ over that copy and run it on the
+# changing a seed file, then lay bad/<tool>/ over that copy and run it on the
 # planted files, which must fail or change one. A tool marked `Unavailable:`
 # is reported and not tried.
 #

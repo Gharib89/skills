@@ -13,7 +13,7 @@ The per-repo document (`docs/agents/ship.md`) that carries every repo-specific f
 _Avoid_: ship config, ship settings, project instructions (that is CLAUDE.md)
 
 **Harness profile**:
-The per-repo document (`docs/agents/harness.md`) that the harness setup skill writes and re-reads. It carries only what the repo cannot say for itself: the contracts other readers parse (the check entry point's path, the Claude Code floor), the human's choices with their reasons (a budget override, a local-only verdict), and proof state. Anything already recorded in the repo's own files stays out of it.
+The per-repo document (`docs/agents/harness.md`) that the harness setup skill writes and re-reads. It carries only what the repo cannot say for itself: the contracts other readers parse (the check entry point's path, the cloud setup's path), the human's choices with their reasons (a budget override, a local-only verdict), and proof state. Anything already recorded in the repo's own files stays out of it.
 _Avoid_: harness config, harness.md (the path, not the concept)
 
 **Profile schema**:

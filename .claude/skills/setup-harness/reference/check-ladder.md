@@ -19,7 +19,7 @@
 
 The linter set is defined once, in the runner config; `check.sh` calls a linter directly only when the runner cannot take a file list (lint-staged). Typecheck and tests live in `check.sh`. There is no `commit` subcommand: the commit rung is the runner's git hook.
 
-The contract every caller parses: stdout is one JSON line `{"rung","verdict","checks":{<name>:<status>}}`, status `pass | fail | unavailable | skipped | over-budget`; stderr carries each failing check's last 40 lines; exit 0 pass, 1 fail, 2 unavailable or tooling, 3 over budget. `CHECK_DEADLINE=<epoch s>` makes `check.sh` stop at that time, mark the running check `over-budget` and the rest `skipped`, and exit 3; without it exit 3 never occurs. A failure outranks an over-budget check, so a real failure still blocks.
+The contract every caller parses: stdout is one JSON line `{"rung","verdict","checks":{<name>:<status>}}`, status `pass | fail | unavailable | skipped | over-budget`; stderr carries each failing check's last 40 lines; exit 0 pass, 1 fail, 2 unavailable or tooling, 3 over budget. `CHECK_DEADLINE=<epoch s>` makes `check.sh` stop at that time, mark the check running at that time `over-budget` (none, when the deadline fell between checks) and the rest `skipped`, and exit 3; without it exit 3 never occurs. A failure outranks an over-budget check, so a real failure still blocks.
 
 ## Writing check.sh
 
