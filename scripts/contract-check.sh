@@ -232,7 +232,7 @@ if [ -d "$harness/catalog" ]; then
     }
     function close_signals(  i, n, want) {
       if (!signals) return
-      want = kind == "file kind" ? "Kind|Extensions|Shebangs" : "Kind|Manifest|Lockfile|Workspace|Extensions|Shebangs|Runtime version"
+      want = kind == "file kind" ? "Kind|Names|Extensions|Shebangs" : "Kind|Manifest|Lockfile|Workspace|Extensions|Shebangs|Runtime version"
       n = split(want, w, "|")
       for (i = 1; i <= n; i++) if (!(w[i] in sig)) bad("## Signals: missing " w[i] ":")
       if (kind != "stack" && kind != "file kind") bad("## Signals: Kind: want stack or file kind, got " kind)

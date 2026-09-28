@@ -11,7 +11,7 @@
 
 - A **stack** is one language plus package manager at a root whose manifest owns a lockfile, or that a workspace config names (pnpm, npm or yarn workspaces, a uv workspace). One stack per root. Install and tool versions are once per root.
 - Its **members** are its workspace packages; a stack with no workspace is its own single member. Typecheck and affected tests run per member.
-- A **file kind** (shell and the like) is detected by extension or shebang and takes the edit and commit rungs only, never `turn`.
+- A **file kind** (shell and the like) is detected by extension, shebang or file name (`Names:`, a tracked basename at any depth, such as `azure-pipelines.yml`) and takes the edit and commit rungs only, never `turn`.
 
 ## The scan
 
@@ -28,6 +28,7 @@ git ls-files -- . ':!:.claude/skills/' | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\
 - A root with no lockfile the human marked a root is reported `unlocked` and installed from its manifest as it stands. Never generate a lockfile: that changes the repo's dependency resolution.
 - **Installed skills** under `.claude/skills/` are vendored copies pinned by `skills-lock.json`: not scanned, and excluded from the runner config (`exclude: ^\.claude/skills/`), because a fix-mode tool rewriting one breaks its `computedHash`.
 - A shebang is read from the first line of an extensionless tracked file with the executable bit (`git ls-files -s` mode `100755`).
+- A file a `Names:` line claims is that file kind's alone, whatever its extension.
 - Every tracked extension no stack or file kind claims is `unclaimed: *.<ext> (<N> files)`, with no guessed tools. It adds nothing to `edit` or `turn`; `check.sh full` still calls the repo's own check target.
 - A stack with no catalog entry is `unclaimed` the same way, with a pointer to file an issue on [Gharib89/skills](https://github.com/Gharib89/skills/issues) asking for its entry.
 
@@ -47,7 +48,7 @@ Shown on the present step and consumed while writing; nothing of it enters the p
 
 1. Roots: path, stack, lockfile or `unlocked`, members, runtime version source.
 2. Per member and role: the tool, `default` or its evidence path, and `unpinned` or `unwired: <tool> (<evidence path>)` where either applies.
-3. File kinds: extension, file count, tools.
+3. File kinds: extension or name, file count, tools, and each `Unavailable:` tool with its reason.
 4. Candidates, each with its question.
 5. Submodules: `submodule <path>, not scanned`.
 6. Unclaimed extensions and stacks.

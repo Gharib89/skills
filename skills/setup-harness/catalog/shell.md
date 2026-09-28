@@ -2,6 +2,7 @@
 
 ## Signals
 Kind: file kind
+Names: None.
 Extensions: .sh .bash
 Shebangs: sh bash
 

@@ -25,7 +25,7 @@ tool() { # <name> <run> [<route>]
   printf '### %s\nPublisher: p\nTier: 2: https://example.com\nEvidence: e\nRung: edit\nRun: `%s`\nHook: local\nPin: apt %s\nRoute: `%s`; Blocked: None.\nConstraints: None.\nTraps: None.\n\n' \
     "$1" "$2" "$1" "${3:-echo installed $1 >> $fixture/installs}"
 }
-{ printf '# Toy\n\n## Signals\nKind: file kind\nExtensions: .toy\nShebangs: None.\n\n## lint\n'
+{ printf '# Toy\n\n## Signals\nKind: file kind\nNames: None.\nExtensions: .toy\nShebangs: None.\n\n## lint\n'
   tool lint 'lint {files}'
   tool 'Lax Lint' 'lax {files}'
   printf '## format\n'
