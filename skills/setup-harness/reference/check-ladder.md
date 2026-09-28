@@ -51,6 +51,6 @@ Time with the wrapper's own clock, whole seconds (`start=$(date +%s)`; Bash 3.2 
 - `turn` and commit: the files of the last commit that touched a member's source, `scripts/check.sh turn <files>` and the runner's hook on those files (`prek run --files <files>`).
 - `full`: one run of `scripts/check.sh full`.
 
-A rung that fails while timing is the repo's code, not the harness: report `<rung>: fail (<check>)` with its time "not judged".
+A rung that fails while timing is the repo's code, not the harness: its verdict is `not judged: fail (<check>)`, and one that answers `unavailable` is `not judged: unavailable (<check>)`.
 
 A warm time over budget gets three offers, in order, each with a recommendation: **narrow** the check to the file set where its tool allows; **demote** it to the next rung (a slow linter to `turn`, a slow typecheck to `full`); **override** the budget with the human's reason. An applied offer re-times the rung. Commit and `full` are measured only: over budget is reported `over`, with no offer.
