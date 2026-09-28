@@ -23,7 +23,7 @@ git submodule status                           # reported, never scanned
 git ls-files -- . ':!:.claude/skills/' | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\)$/\1/p' | sort | uniq -c | sort -rn   # extension counts, dotfiles skipped
 ```
 
-- A **root** is a directory holding a stack's `Manifest:` with one of its `Lockfile:` names beside it, or a member a root's `Workspace:` config names. A `Manifest:` or `Workspace:` name with `*` (`*.csproj`, `*.sln`) is a glob on the basename.
+- A **root** is a directory holding a stack's `Manifest:` with one of its `Lockfile:` names beside it, or a member a root's `Workspace:` config names. A directory holding a `Workspace:` file but no `Manifest:` (a `*.sln`, a `go.work`, a `settings.gradle` with no build file) is a root too, its members the ones that file names. A `Manifest:` or `Workspace:` name with `*` (`*.csproj`, `*.sln`) is a glob on the basename.
 - A lockless manifest no workspace names is a **candidate**: ask the human to mark it a root or ignored. Ignored lands as `Declined: <path> as a root: <reason>` in the profile, so a re-run does not ask again.
 - A root with no lockfile the human marked a root is reported `unlocked` and installed from its manifest as it stands. Never generate a lockfile: that changes the repo's dependency resolution.
 - **Installed skills** under `.claude/skills/` are derived copies pinned by `skills-lock.json`: not scanned, and excluded from the runner config (`exclude: ^\.claude/skills/`), because a fix-mode tool rewriting one breaks its `computedHash`. A `harness-<upstream>/` directory there is a vendored plugin instead: excluded the same way, and read as a language server's evidence per [language-servers.md](language-servers.md).

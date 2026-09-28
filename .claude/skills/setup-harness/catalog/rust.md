@@ -82,11 +82,11 @@ Publisher: nextest-rs
 Tier: 2: https://nexte.st/docs/filtersets/reference/
 Evidence: `cargo-nextest` evidence, as above
 Rung: turn
-Run: `cargo nextest run -E 'rdeps({package})'`
+Run: `cargo nextest run --workspace -E 'rdeps({package})'`
 Hook: local
 Pin: package crates cargo-nextest
 Route: `cargo install --locked cargo-nextest@{version}`; Blocked: `get.nexte.st` (redirects to release binaries)
-Constraints: `{package}` is the member's `[package] name`; the filterset selects that crate and every crate depending on it, from the dependency graph. Cargo has no changed-files mode, so this is a gap proposal per the catalog README's `## Affected tests`.
+Constraints: `{package}` is the member's `[package] name`; the filterset selects that crate and every crate depending on it, from the dependency graph. Run inside a member, cargo builds only that crate (measured), so the row runs from the stack root. Cargo has no changed-files mode, so this is a gap proposal per the catalog README's `## Affected tests`.
 Traps: the same 219 s build as `cargo-nextest`, and no doctests.
 
 ## language server
@@ -102,4 +102,4 @@ Pin: None.
 Route: None.
 Constraints: vendored from the Anthropic `rust-analyzer-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md). The binary is the toolchain's `rust-analyzer` component, pinned with the channel in `rust-toolchain.toml` `components`, and rustup is its launcher: with no `rustup` on `PATH` the tool is `Unavailable: rust-analyzer needs rustup`.
 Local-only: cloud sessions start no plugin language server.
-Traps: rustup's `rust-analyzer` proxy exists before the component does, so probe with `rust-analyzer --version`, not `command -v`.
+Traps: rustup's `rust-analyzer` proxy exists before the component does, so probe with `rust-analyzer --version`, not `command -v`; a failing probe is filled by adding `rust-analyzer` to `rust-toolchain.toml` `components`.

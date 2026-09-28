@@ -14,12 +14,12 @@ Publisher: rhysd
 Tier: 2: https://github.com/rhysd/actionlint
 Evidence: `.github/actionlint.yaml`, `.github/actionlint.yml`
 Rung: edit
-Run: `actionlint {files}`
+Run: `actionlint -pyflakes= {files}`
 Hook: local
 Pin: package go github.com/rhysd/actionlint/cmd/actionlint
 Route: `GOBIN="$HOME/.local/bin" go install github.com/rhysd/actionlint/cmd/actionlint@{version}`; Blocked: release binaries, `download-actionlint.bash`
 Constraints: needs Go 1.25 or later, else the module proxy fetches a toolchain (which the cloud sandbox passes). GitHub publishes no workflow linter CLI of its own.
-Traps: it runs `shellcheck` and `pyflakes` on `run:` scripts when either is on `PATH`, so results change with `PATH`: the hook passes `-pyflakes=` always, and `-shellcheck=` unless the Shell entry's ShellCheck is wired (apt pins it). Its runner labels are compiled in: a new GitHub label or a self-hosted one needs a newer actionlint or `self-hosted-runner.labels` in `.github/actionlint.yaml`.
+Traps: it runs `shellcheck` and `pyflakes` on `run:` scripts when either is on `PATH`, so results change with `PATH`: `Run:` turns pyflakes off, and the hook adds `-shellcheck=` unless the Shell entry's ShellCheck is wired (apt pins it). Its runner labels are compiled in: a new GitHub label or a self-hosted one needs a newer actionlint or `self-hosted-runner.labels` in `.github/actionlint.yaml`.
 
 ### zizmor
 Publisher: zizmorcore
