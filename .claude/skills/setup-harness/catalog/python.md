@@ -114,3 +114,18 @@ Pin: package pypi pytest-testmon
 Route: `uv tool install pytest --with pytest-testmon=={version}`; Blocked: None.
 Constraints: needs `coverage<8` and a first full run to build `.testmondata` before it can select. The route installs it into a pytest tool environment because `uv tool install` refuses a package with no executable of its own; that pytest is the newest release testmon admits.
 Traps: crashes with `KeyError: 'lf'` under `-p no:cacheprovider`.
+
+## language server
+
+### pyright
+Publisher: Microsoft
+Tier: 2: https://github.com/microsoft/pyright
+Evidence: `.claude/skills/harness-pyright-lsp/`, `pyright-lsp@claude-plugins-official` in `.claude/settings.json` `enabledPlugins`
+Rung: None.
+Run: `npx --yes --package=pyright@{version} pyright-langserver --stdio`
+Hook: None.
+Pin: package npm pyright
+Route: None.
+Constraints: vendored from the Anthropic `pyright-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md); needs Node on PATH. The Python registries carry no trusted pyright, so the exact version rides in the vendored launch command instead of a dev dependency.
+Local-only: cloud sessions start no plugin language server.
+Traps: None.

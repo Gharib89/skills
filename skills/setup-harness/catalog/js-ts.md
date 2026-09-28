@@ -150,3 +150,18 @@ Pin: package npm jest
 Route: `npm install -g jest@{version}`; Blocked: None.
 Constraints: None.
 Traps: None.
+
+## language server
+
+### typescript-language-server
+Publisher: typescript-language-server
+Tier: 1: https://github.com/anthropics/claude-plugins-official (the `typescript-lsp` entry names it)
+Evidence: `.claude/skills/harness-typescript-lsp/`, `typescript-lsp@claude-plugins-official` in `.claude/settings.json` `enabledPlugins`, `typescript-language-server` dev dependency
+Rung: None.
+Run: `${CLAUDE_PROJECT_DIR}/{member}/node_modules/.bin/typescript-language-server --stdio`
+Hook: None.
+Pin: package npm typescript-language-server
+Route: None.
+Constraints: vendored from the Anthropic `typescript-lsp` plugin per [reference/language-servers.md](../reference/language-servers.md), pinned once at the stack root beside the repo's own `typescript`, whose tsserver it drives. When that `typescript` resolves to 7 or later, the tool is `Unavailable: typescript-lsp needs TS ≤ 6` and nothing of it is written.
+Local-only: cloud sessions start no plugin language server.
+Traps: None.
