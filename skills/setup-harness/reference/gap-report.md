@@ -52,7 +52,7 @@ Not gaps: a line the repo added to a file the skill wrote (kept); a red check du
 Every pin the harness carries is read: runner config `rev`s, the dev dependency pins of catalog tools, versions in launch and install commands, vendored plugin SHAs, direct downloads.
 
 - **Broken**: the version is yanked or gone from its registry, its SHA is not reachable from the tag it names, its provenance or checksum fails, or its publisher no longer matches the catalog `Publisher:`. Offer: re-pin to the newest version passing the install check, or remove the tool when no version passes. Keeping it is not an option.
-- **Behind**: `scripts/pick-version.sh` (for a hook repo, the newest tag at least 7 days old) picks a newer version than the pin. Install-check row, droppable, showing old and new. Skipped for an ecosystem the repo's Renovate config (`renovate.json`, `.renovaterc*`, `.github/renovate.json*`) or `.github/dependabot.yml` already updates.
+- **Behind**: `scripts/pick-version.sh` (for a hook repo, the newest tag at least 7 days old) picks a newer version than the pin. Install-check row, droppable, showing old and new; a `Declined: <unit> <version>` line stops that version's row, and a newer version is proposed again. Skipped for an ecosystem the repo's Renovate config (`renovate.json`, `.renovaterc*`, `.github/renovate.json*`) or `.github/dependabot.yml` already updates.
 - **Tier 3**: skill pins are never proposed.
 
 ## Deleted pieces and standing choices
