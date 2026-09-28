@@ -179,7 +179,7 @@ Hook: local
 Pin: package npm @playwright/test
 Route: `npm install --no-save @playwright/test@{version} && npx --no-install playwright install --with-deps chromium`; Blocked: `cdn.playwright.dev` for the browser download, on the Default network
 Constraints: the repo's own suite only, wired where it is evidence and never a default; its browsers come from the cloud setup's browser step ([reference/surfaces.md](../reference/surfaces.md) `## Web UI`), and `PLAYWRIGHT_BROWSERS_PATH` is never overridden. A repo's copy comes from its frozen install, so `Route:` is the entry trial's alone and never a cloud setup step.
-Traps: `--only-changed` selects by the import graph and the vendor calls it a heuristic, so it is never offered. A `webServer` in the config builds and starts the app, so the row's time is mostly the build's.
+Traps: `--only-changed` selects by the import graph and the vendor calls it a heuristic, so it is never offered. A `webServer` in the config builds and starts the app, so the row's time is mostly the build's. A `webServer.command` run through `pnpm exec` starts in a new session (pnpm 11.27.1), so Playwright's teardown kill misses the server and the row hangs after its tests pass; the command calls `./node_modules/.bin/<bin>` instead, which the human is asked to change in the repo's config.
 
 ## public API
 
