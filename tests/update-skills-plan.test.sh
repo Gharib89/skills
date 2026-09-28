@@ -143,6 +143,36 @@ check "--old reads the old tree at that ref" \
 jq '.skills.ship.source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a lock recording ship from . is source mode" source "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r .mode)"
 
+# The renumber to 0.x (#369) moved every version down, M.m.p to 0.M.p, and left
+# a note in each renumbered CHANGELOG.md. A refresh whose new copy carries the
+# note and whose old copy does not crossed it, so the installed version reads as
+# 0.M.p: 5.2.1 as 0.5.1, whose range to 0.11.4 still holds the 0.9.0 rows.
+note='**The renumber to 0.x.** Every entry below predates it.'
+echo '{"heads": {}, "unreachable": []}' > "$tmp/heads0.json"
+# <case> <old> <new> <old note: yes|no> <row>...: ship moved from <old> to <new>,
+# the new CHANGELOG.md carrying the note; prints the plan's retired terms.
+crossing() {
+  local d=$tmp/$1 o=$2 n=$3 had=$4; shift 4
+  mkdir -p "$d" && git -C "$d" init -q && git -C "$d" config user.email t@t && git -C "$d" config user.name t
+  skill "$d" ship "$o"; lock "$d" '{"ship": {"source": "Gharib89/skills"}}'
+  if [ "$had" = yes ]; then printf '%s\n' "$note" > "$d/.claude/skills/ship/CHANGELOG.md"; fi
+  git -C "$d" add -A && git -C "$d" commit -qm old
+  skill "$d" ship "$n"; printf '%s\n' "$note" > "$d/.claude/skills/ship/CHANGELOG.md"
+  { echo '| Version | Term | Replacement |'; echo '|---|---|---|'
+    for r in "$@"; do echo "| $r | at-$r | x |"; done; } > "$d/.claude/skills/ship/retired-terms.md"
+  bash "$plan" "$d" "$tmp/heads0.json" | jq -c '[.retired[].term]'
+}
+check "a plan across the renumber reads the installed M.m.p as 0.M.p" \
+  '["at-0.9.0","at-0.11.4"]' "$(crossing c1 5.2.1 0.11.4 no 0.5.1 0.9.0 0.11.4 0.12.0)"
+check "a plan from a pre-renumber version straight to a 1.x one still crosses it" \
+  '["at-0.9.0","at-1.0.0"]' "$(crossing c2 8.0.0 1.0.0 no 0.8.0 0.9.0 1.0.0)"
+check "a pre-renumber 1.1.0 refreshing to a released 1.3.0 crosses it, though the number went up" \
+  '["at-0.9.0","at-1.0.0","at-1.3.0"]' "$(crossing c3 1.1.0 1.3.0 no 0.1.0 0.9.0 1.0.0 1.3.0)"
+check "a released 1.1.0 refreshing to 1.3.0 reads its range as it is" \
+  '["at-1.2.0","at-1.3.0"]' "$(crossing c4 1.1.0 1.3.0 yes 0.9.0 1.1.0 1.2.0 1.3.0)"
+check "a plan across the renumber still reports the installed version as it was" \
+  '5.2.1' "$(bash "$plan" "$tmp/c1" "$tmp/heads0.json" | jq -r '.source_skills[0].old_version')"
+
 # A prerelease version compares by its release part, in the skill's version
 # and in a row's, and a row with no replacement cell, or a lowercase none, has
 # no replacement. An aligned separator row is no row.

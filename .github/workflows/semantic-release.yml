@@ -62,16 +62,15 @@ jobs:
           ref: ${{ github.ref_name }}
 
       # Without the tag its own `tag_format` names, python-semantic-release ignores
-      # the version in `SKILL.md` and forces 1.0.0, which would regress `ship` from
-      # 7.x on the first run; the baseline tags are pushed once, before this
-      # workflow first fires. The tag has to be the exact reachable version, not
-      # any `$s-v*`: a tag off this history, or ahead of `SKILL.md`, computes the
-      # next version from the wrong baseline just as silently. Every later run
-      # satisfies this for free, because the release commit writes the version and
-      # its tag together, so a failure here is real drift. A skill with no tag of
-      # its own at all is one this push added, arriving carrying its first
-      # version: HEAD is its baseline, tagged and pushed here, and it releases from
-      # the next push that touches it.
+      # the version in `SKILL.md` and bumps from 0.0.0 over the whole history. The
+      # tag has to be the exact reachable version, not any `$s-v*`: a tag off this
+      # history, or ahead of `SKILL.md`, computes the next version from the wrong
+      # baseline just as silently. Every later run satisfies this for free, because
+      # the release commit writes the version and its tag together, so a failure
+      # here is real drift. A skill with no tag of its own at all is one this push
+      # added, or one whose old tags the 0.x renumber deleted (ADR 0005), carrying
+      # the version to start from: HEAD is its baseline, tagged and pushed here,
+      # and it releases from the next push that touches it.
       - name: Tag a new skill's baseline, refuse a missing one
         run: |
           for s in $SKILLS; do

@@ -7,6 +7,8 @@ released version. See
 
 <!-- version list -->
 
+**The renumber to 0.x.** Every entry below predates it and keeps the number it was released under. `ship` was never publicly released, so on 2026-09-28 its version moved from 11.1.4 to 0.11.4: the old major is now the minor. The release run writes new entries above this note, counting on from 0.11.4. See [ADR 0005](https://github.com/Gharib89/skills/blob/main/docs/adr/0005-skills-stay-0x-until-public-release.md).
+
 ## v11.1.4 (2026-09-26)
 
 ### Bug Fixes

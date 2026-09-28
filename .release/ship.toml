@@ -24,7 +24,8 @@ set -e
 npx -y skills@1.7.0 add . --skill ship --agent claude-code -y
 git add .claude/skills skills-lock.json
 """
-allow_zero_version = false
+allow_zero_version = true
+major_on_zero = false
 
 [semantic_release.branches.main]
 match = "(main|master)"

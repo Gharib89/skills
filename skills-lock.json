@@ -4,7 +4,7 @@
     "cloud-ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "8175fe1a2fa53ba6bf826336a33bfd1ceb1988af2d04a49e1d3a329454d33520"
+      "computedHash": "0232ac44431478351146f8a75b1a0180fca0bc48d41fac5afe07e7784c07fd4e"
     },
     "code-review": {
       "source": "mattpocock/skills",
@@ -65,17 +65,17 @@
     "setup-harness": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "5f48ebdf7b10b36330b3fb8d1faf45a92257d7da02926184bc5ac7ffb679185b"
+      "computedHash": "80153e8f329fc383a27c223dcf078de7075cd46581eaf5de17f17bf01d916351"
     },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "696c2e4fcf68ce13ae0f0175642dc5129b46bdf886ad522e91d00eecd878d525"
+      "computedHash": "3afd796d2ab057b9805c46b08ec8c988c637aa1b6b7bafc69dce3c1bc7175621"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "561af49051cd7975df8fac99a551f271549d0cbf2c224b85058bd5a5a18f64f4"
+      "computedHash": "d33963d21cea8792ad2d36f746aec567c61292d90cc6d50d6b32097f76d8b160"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -115,7 +115,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "110d4ae29daee41fb45840ec1025239d5ae46c13cf6f498d1f3ab3c676c502e4"
+      "computedHash": "3069c8499d50b91aed41f1d45758521c1af20be49a92c71431a93513520e4458"
     },
     "wayfinder": {
       "source": "mattpocock/skills",

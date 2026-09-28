@@ -28,6 +28,8 @@ base_repo() {
   printf -- '---\nname: setup-skills\n---\n\n# setup-skills\n' \
     > "$d/skills/setup-skills/SKILL.md"
   printf -- 'A doc that happens to carry one.\n  version: 9.9.9\n' > "$d/docs/note.md"
+  mkdir -p "$d/.release" && for s in ship cloud-ship; do
+    printf 'allow_zero_version = false\n' > "$d/.release/$s.toml"; done
   git_ "$d" add -Af && git_ "$d" commit -qm base && git_ "$d" tag base-commit || return 1
   printf '%s' "$d"
 }
@@ -60,6 +62,54 @@ check_rc "a bump already committed fails too" 1 "$(rc_of "$d")"
 
 d=$(base_repo bumped-second); sed -i.bak 's/version: 1.0.2/version: 1.1.0/' "$d/skills/cloud-ship/SKILL.md"
 check_rc "a bump in any skill fails" 1 "$(rc_of "$d")"
+
+# --- the renumber to 0.x (#369) ---------------------------------------------
+
+# Every skill moves M.m.p to 0.M.p once, before its public release, in the diff
+# that flips its `allow_zero_version`; the release run then owns the 0.x line.
+flip() { sed -i.bak 's/allow_zero_version = false/allow_zero_version = true/' "$1/.release/$2.toml"; }
+# <case> <old> <new>: ship moved from <old>, committed as the base, to <new>,
+# its toml flipped.
+moved() {
+  local d; d=$(base_repo "$1")
+  sed -i.bak "s/version: 7.0.0/version: $2/" "$d/skills/ship/SKILL.md"
+  git_ "$d" add -Af && git_ "$d" commit -qm base2 && git_ "$d" tag -f base-commit >/dev/null
+  sed -i.bak "s/version: $2/version: $3/" "$d/skills/ship/SKILL.md"; flip "$d" ship
+  printf '%s' "$d"
+}
+
+d=$(base_repo renumber)
+sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
+sed -i.bak 's/version: 1.0.2/version: 0.1.2/' "$d/skills/cloud-ship/SKILL.md"
+flip "$d" ship; flip "$d" cloud-ship
+check_rc "the renumber M.m.p to 0.M.p passes" 0 "$(rc_of "$d")"
+check_rc "a multi-digit major with a non-zero minor renumbers, 11.1.4 to 0.11.4" 0 "$(rc_of "$(moved multi 11.1.4 0.11.4)")"
+
+d=$(base_repo renumber-unflipped); sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
+check_rc "the renumber without its allow_zero_version flip fails" 1 "$(rc_of "$d")"
+
+d=$(base_repo renumber-other-flip); sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"; flip "$d" cloud-ship
+check_rc "another skill's flip does not admit this one's renumber" 1 "$(rc_of "$d")"
+
+d=$(base_repo renumber-other); sed -i.bak 's/version: 7.0.0/version: 0.1.0/' "$d/skills/ship/SKILL.md"; flip "$d" ship
+check_rc "a move to 0.x that is not the renumber fails" 1 "$(rc_of "$d")"
+
+check_rc "a prerelease old version is no renumber" 1 "$(rc_of "$(moved pre 7.0.0-rc.1 0.7.1)")"
+check_rc "a four-part old version is no renumber" 1 "$(rc_of "$(moved four 1.2.3.4 0.1.4)")"
+check_rc "a move out of 0.x back to 0.x is no renumber" 1 "$(rc_of "$(moved zero 0.7.0 0.0.0)")"
+
+# Two version lines in one file: each old line would renumber on its own, but
+# the pair is two moves, and the second must not ride on the first.
+d=$(base_repo two-lines)
+printf '  version: 8.0.0\n' >> "$d/skills/ship/SKILL.md"
+git_ "$d" add -Af && git_ "$d" commit -qm base2 && git_ "$d" tag -f base-commit >/dev/null
+sed -i.bak -e 's/version: 7.0.0/version: 0.7.0/' -e '/^  version: 8.0.0$/d' "$d/skills/ship/SKILL.md"; flip "$d" ship
+check_rc "a second removed version line is no renumber" 1 "$(rc_of "$d")"
+
+d=$(base_repo zero-bump); sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"; flip "$d" ship
+git_ "$d" add -Af && git_ "$d" commit -qm renumber && git_ "$d" tag -f base-commit >/dev/null
+sed -i.bak 's/version: 0.7.0/version: 0.7.1/' "$d/skills/ship/SKILL.md"
+check_rc "a bump inside 0.x still fails" 1 "$(rc_of "$d")"
 
 # --- what stays a hand edit --------------------------------------------------
 
