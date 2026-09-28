@@ -4,9 +4,10 @@
 # check's version choice (packages only), install by `Route:`, run `Run:` on a
 # copy of tests/fixtures/catalog/<entry>/clean/, which must pass without
 # changing a seed file, then lay bad/<tool>/ over that copy and run it on the
-# planted files, which must fail or change one. A tool marked `Unavailable:` is
-# reported and not tried. <tool> is the `###` heading, lower-cased, with each
-# run of other characters turned into `-`.
+# planted files, which must fail or change one. A tool marked `Unavailable:` or
+# `Local-only:` is reported and not tried, the trial running in a cloud
+# session. <tool> is the `###` heading, lower-cased, with each run of other
+# characters turned into `-`.
 #
 #   scripts/catalog-trial.sh <entry>|all
 #
@@ -14,7 +15,8 @@
 # session (`claude --cloud`), never on a dev machine or in the local gate; it
 # is required before an entry merges and on any later PR touching one.
 #
-# stdout: one `<entry> <tool>: pass | fail (<why>) | unavailable (<why>)` line per tool
+# stdout: one line per tool, `<entry> <tool>: pass | fail (<why>) |
+#   unavailable (<why>) | local-only (<why>)`
 # exit: 0 every tried tool passed · 1 a tool failed · 2 usage
 set -uo pipefail
 shopt -u patsub_replacement 2>/dev/null || :
@@ -56,11 +58,12 @@ EOF
   printf '%s' "${q# }"
 }
 
-# <entry> <tool> <pin> <route> <run> <unavailable>
+# <entry> <tool> <pin> <route> <run> <skip>: a non-empty <skip> is the verdict
+# of a tool that is not tried.
 trial() {
-  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 unavail=$6 s version='' before files
+  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 skip=$6 s version='' before files
   s=$(slug "$tool")
-  if [ -n "$unavail" ]; then echo "$entry $s: unavailable ($unavail)"; return 0; fi
+  if [ -n "$skip" ]; then echo "$entry $s: $skip"; return 0; fi
   case $pin in
     package\ *)
       set -- $pin
@@ -100,17 +103,18 @@ trap 'rm -rf "$work"' EXIT
 rc=0
 for entry in $entries; do
   exts=$(sed -n 's/^Extensions: //p' "$catalog/$entry.md" | head -n 1)
-  tool='' pin='' route='' run='' unavail=''
+  tool='' pin='' route='' run='' skip=''
   while IFS= read -r line; do
     case $line in
       '### '* | '## '* | __END__)
-        [ -n "$tool" ] && { trial "$entry" "$tool" "$pin" "$route" "$run" "$unavail" < /dev/null || rc=1; }
-        tool='' pin='' route='' run='' unavail=''
+        [ -n "$tool" ] && { trial "$entry" "$tool" "$pin" "$route" "$run" "$skip" < /dev/null || rc=1; }
+        tool='' pin='' route='' run='' skip=''
         case $line in '### '*) tool=${line#\#\#\# } ;; esac ;;
       'Pin: '*) pin=${line#Pin: } ;;
       'Route: '*) route=$(cmd "$line") ;;
       'Run: '*) run=$(cmd "$line") ;;
-      'Unavailable: '*) unavail=${line#Unavailable: } ;;
+      'Unavailable: '*) skip="unavailable (${line#Unavailable: })" ;;
+      'Local-only: '*) skip="local-only (${line#Local-only: })" ;;
     esac
   done <<EOF
 $(cat "$catalog/$entry.md")

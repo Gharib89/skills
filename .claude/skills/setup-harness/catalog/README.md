@@ -34,9 +34,9 @@ Runtime version: <files, in precedence order> (stack only)
 Publisher: <registry identity the install check matches>
 Tier: <n>: <source URL>
 Evidence: <config files, [tool.x] tables, dependency names>
-Rung: edit | turn | full
+Rung: edit | turn | full | None.     (None.: language server only)
 Run: `<command>`
-Hook: local | <vendor hook repo URL>
+Hook: local | <vendor hook repo URL> | None.
 Pin: <pin kind> <registry> <name>
 Route: `<install command>`; Blocked: <routes that 403> | None.
 Constraints: <needs / breaks with> | None.
@@ -45,13 +45,13 @@ Local-only: <reason>                   (only when it applies)
 Traps: <one line each> | None.
 ```
 
-Roles, as `##` headings, from this set only: `lint`, `format`, `typecheck`, `test runner`, `affected tests`, `language server`, `browser`, `public API`. A file-kind entry carries `lint` and `format` only and never `Rung: turn`: a file kind has no project to typecheck or test. `browser` and `public API` are `Rung: full` only.
+Roles, as `##` headings, from this set only: `lint`, `format`, `typecheck`, `test runner`, `affected tests`, `language server`, `browser`, `public API`. A file-kind entry carries `lint` and `format` only and never `Rung: turn`: a file kind has no project to typecheck or test. `browser` and `public API` are `Rung: full` only. A `language server` takes `Rung: None.`, `Hook: None.` and a `Local-only:` line: it answers Claude's `LSP` calls, not a check, and no cloud session starts it.
 
 ## Label vocabulary
 
-- **Rung.** `edit` takes one file and must fit the 5 s edit budget: formatters and most linters, run through the pre-commit runner, fix mode on. `turn` is project-scoped: typecheckers and tests, run by `check.sh` per member. `full` runs only on `check.sh full`.
-- **Run.** One command, in backticks. `{files}` stands for the file list and `{member}` for the member's directory; a `turn` command runs in the member's directory. A `lint` or `format` command is the runner hook's `entry`, in fix mode where the tool has one. A command names the tool's own binary; where the tool is a dev dependency, the written hook entry or turn row prefixes the stack's exec command (`uv run`, `pnpm exec`, `npx --no-install`).
-- **Hook.** `local` or the vendor hook repo; [reference/runner.md](../reference/runner.md) `## Writing hooks` says which a run writes.
+- **Rung.** `edit` takes one file and must fit the 5 s edit budget: formatters and most linters, run through the pre-commit runner, fix mode on. `turn` is project-scoped: typecheckers and tests, run by `check.sh` per member. `full` runs only on `check.sh full`. `None.` is a language server's, and only a language server's.
+- **Run.** One command, in backticks. `{files}` stands for the file list and `{member}` for the member's directory; a `turn` command runs in the member's directory. A `lint` or `format` command is the runner hook's `entry`, in fix mode where the tool has one. A command names the tool's own binary; where the tool is a dev dependency, the written hook entry or turn row prefixes the stack's exec command (`uv run`, `pnpm exec`, `npx --no-install`). A language server's command is the one its vendored `.lsp.json` launches, `{version}` standing for the pin where the command carries it and `{root}` for the stack root.
+- **Hook.** `local` or the vendor hook repo (`None.` for a language server); [reference/runner.md](../reference/runner.md) `## Writing hooks` says which a run writes.
 - **Pin.** The kind names the install check's pin table: `package <npm|pypi|go|crates|nuget> <name>`, `apt <name>`, `hook-repo <url>`, `download <url>`.
 - **Route.** The install that passes in a cloud sandbox, in backticks, with `{version}` for the version the run picks; `Blocked:` names the routes a cloud sandbox refuses, so a run never proposes them. Route serves the cloud sandbox and the entry trials; a local install follows the install check's pin table.
 
