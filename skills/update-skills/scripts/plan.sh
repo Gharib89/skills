@@ -36,7 +36,7 @@
 #   retired: every row of a source-repo skill's retired-terms.md, in the new
 #     copy, whose version is above old_version and at or below new_version,
 #     compared by release part, an old M.m.p above the new version read
-#     as 0.M.p (the #369 renumber); a replacement of `None.`, or none, is null. A
+#     as 0.M.p (the renumber to 0.x); a replacement of `None.`, or none, is null. A
 #     skill the old tree lacked has none: the repo never used its words. A row
 #     whose version cell is no version fails the plan rather than vanish.
 #   mode: `source` where the lock installs ship from `.`, the source repo itself.
