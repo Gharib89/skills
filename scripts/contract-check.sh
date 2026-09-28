@@ -30,8 +30,8 @@
 # second.
 #
 # Checks 7 and 8 read setup-harness, when the skills tree carries it: its
-# catalog entries' format and the two profile-template lines setup-skills is
-# to parse (#367).
+# catalog entries' format and the two profile-template lines setup-skills
+# parses.
 #
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
@@ -280,9 +280,10 @@ if [ -d "$harness/catalog" ]; then
   done
 fi
 
-# 8. setup-skills is to read two lines of a harness profile with no schema
-# check (#367 adds that reader), `Location:` under `## Check entry point` and
-# `Setup:` under `## Cloud`, so they are frozen across every harness schema:
+# 8. setup-skills reads two lines of a harness profile with no schema check,
+# in its harness detection and in its cloud bootstrap template, `Location:`
+# under `## Check entry point` and `Setup:` under `## Cloud`, so they are
+# frozen across every harness schema:
 # renaming either is a major of both skills in one PR. The profile template is
 # where a rename would start.
 if [ -d "$harness" ]; then

@@ -120,6 +120,15 @@ check "a changed Ship block template names the ship-block section" \
   "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -c .sections)"
 git -C "$repo" checkout -q -- .claude/skills/setup-skills/ship-block.md
 
+# The harness-backed templates: the thin gate feeds the same Local gate item as
+# the self-contained one, and the cloud bootstrap feeds an item of its own.
+echo new > "$repo/.claude/skills/setup-skills/local-gate-harness.sh"
+echo new > "$repo/.claude/skills/setup-skills/cloud-ship-bootstrap.sh"
+check "the harness gate names local-gate, the bootstrap names cloud-bootstrap" \
+  '[{"section":"pr-template","template":"pull_request_template.md"},{"section":"local-gate","template":"local-gate-harness.sh"},{"section":"cloud-bootstrap","template":"cloud-ship-bootstrap.sh"}]' \
+  "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -c .sections)"
+rm "$repo/.claude/skills/setup-skills/local-gate-harness.sh" "$repo/.claude/skills/setup-skills/cloud-ship-bootstrap.sh"
+
 # With the templates reverted, setup-skills' SKILL.md is the one change left.
 git -C "$repo" checkout -q -- .claude/skills/setup-skills/pull_request_template.md
 check "a changed setup-skills SKILL.md alone re-runs no section" \

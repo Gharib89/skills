@@ -104,6 +104,7 @@ section only the step-5 item its template feeds:
 | `dimension-labels` | **Triage labels on the host** and **The `## Dimension labels` section** |
 | `ado-tracker-doc` | step 1.1's Azure DevOps tracker doc |
 | `ship-block` | **The `### Ship` sub-block** |
+| `cloud-bootstrap` | **Cloud bootstrap** |
 
 A change to setup-skills' `SKILL.md` alone is not a section: its prose moving
 costs no interview. When the owner says it finished, run `$S/preflight.sh none`
