@@ -21,7 +21,7 @@ The profile grammar: fixed headings, facts on `Label:` lines, `None.` where a la
 
 ## Signals
 Kind: stack | file kind
-Names: <file basenames> | None.     (file kind only)
+Names: <file basenames> | None.        (file kind only)
 Manifest: <file names>                 (stack only)
 Lockfile: <file names>                 (stack only)
 Workspace: <where a workspace is named> (stack only)

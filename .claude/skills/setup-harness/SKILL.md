@@ -11,7 +11,7 @@ metadata:
 
 Give every Claude Code session in this repo a fast, measured way to check its own work: `scripts/check.sh` answers "is this change good" at three rungs, Claude Code hooks run the fast rungs on every edit and every stop, and the pre-commit runner holds the commit. Same shape as `setup-skills`: explore, present, confirm, write, prove. Nothing is written before the human confirms it as a diff, and nothing third-party is installed before it passes the install check.
 
-Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (agent harness, check entry point, rung, budget, stack, member, file kind, catalog, trust tier, install check, harness profile). "Verification" is Ship's word for a real-system check; here the words are check and prove.
+Vocabulary: [CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the source repo (agent harness, check entry point, rung, budget, stack, member, file kind, catalog, trust tier, install check, harness profile, cloud setup, local-only, bundle session). "Verification" is Ship's word for a real-system check; here the words are check and prove.
 
 This version wires no language server.
 
@@ -57,7 +57,7 @@ One message, in this order:
 2. **Detection** as detection.md's report lists it.
 3. **Questions**, numbered, each with a recommendation: every candidate (root or ignored), every role with two tools and no caller, a runner choice where more than one config has no shim, the cloud verdict with its evidence, and each blocked host a step needs (does the environment's Custom allowlist admit it?).
 4. **The install-check table**, glue in full after it, then **Found, not installed** with each refusal's reason.
-5. **The writes, as diffs**: runner config additions, the manifest line of each pinned dev dependency, config files a catalog `Constraints:` or `Traps:` line writes, the `scripts/check.sh` configuration block, `.claude/hooks/check-hook.sh`, the cloud setup's `STEPS` block, the `.claude/settings.json` hook entries, `docs/agents/harness.md` and the `CLAUDE.md` block.
+5. **The writes, as diffs**: runner config additions, the manifest line of each pinned dev dependency, config files a catalog `Constraints:` or `Traps:` line writes, the `scripts/check.sh` configuration block, `.claude/hooks/check-hook.sh`, the cloud setup's `STEPS` block (or the diff to the repo's own cloud script), the `.claude/settings.json` hook entries, `docs/agents/harness.md` and the `CLAUDE.md` block.
 
 ### 5. Confirm
 
@@ -73,13 +73,13 @@ In this order, each step's failure stopping the run with its output:
 4. **Time the rungs** before any hook exists, per check-ladder.md's timing section: each twice, cold reported, warm judged against its budget. A warm `edit` or `turn` over budget gets the narrow / demote / override offer now, and its hook waits until one is applied.
 5. **`.claude/hooks/check-hook.sh`** from [templates/check-hook.sh](templates/check-hook.sh) and the hook entries from [templates/settings-hooks.json](templates/settings-hooks.json), merged beside the repo's own, each `timeout` derived from its budget.
 6. **The cloud setup**, cloud-first only, per [reference/cloud.md](reference/cloud.md) `## Writing the cloud setup`: `.claude/hooks/cloud-setup.sh` from [templates/cloud-setup.sh](templates/cloud-setup.sh), or the repo's own cloud script extended in place, and the `SessionStart` entry from [templates/settings-cloud.json](templates/settings-cloud.json).
-7. **`docs/agents/harness.md`** from [templates/harness-profile.md](templates/harness-profile.md): `Floor:` and `Location:` as written, every budget `default` unless the human gave an override with a reason, `## Cloud` with the confirmed `Verdict:`, `Setup:` (the cloud setup's path, `None.` when local-only), the human's `Allowlist:` and `Proof: unproven`, `Local-only:` and `Declined:` lines from the confirm step. Then run `scripts/harness-profile-check.sh docs/agents/harness.md` from this skill's directory; a violation is fixed before continuing.
+7. **`docs/agents/harness.md`** from [templates/harness-profile.md](templates/harness-profile.md): `Floor:` and `Location:` as written, every budget `default` unless the human gave an override with a reason, `## Cloud` with the confirmed `Verdict:`, `Setup:` (the cloud setup's path, `None.` when local-only), the human's `Allowlist:`, and `Proof:` kept where step 2 found it standing, else `unproven`, `Local-only:` and `Declined:` lines from the confirm step. Then run `scripts/harness-profile-check.sh docs/agents/harness.md` from this skill's directory; a violation is fixed before continuing.
 8. **The `CLAUDE.md` block** from [templates/harness-block.md](templates/harness-block.md), replacing an existing `### Harness` block rather than adding a second.
 
 ### 7. Prove
 
 1. `scripts/check.sh full` prints one JSON line and exits 0, or its failures are reported as the repo's code, each `<rung>: fail (<check>)`.
-2. **The cloud proof**, cloud-first only, per [reference/cloud.md](reference/cloud.md) `## The proof`: the local double run, the static host check, then the commit, the printed `claude --cloud` command (on Azure DevOps the `git status` gate first, then `CCR_FORCE_BUNDLE=1`, nothing pushed), and the human's pasted answer, recorded as `Proof: <sha>` in a commit of the profile alone.
+2. **The cloud proof**, cloud-first only, per [reference/cloud.md](reference/cloud.md) `## The proof`: the local double run, the static host check, then the commit, on GitHub the push the human approves, the printed `claude --cloud` command (on Azure DevOps the `git status` gate over the whole tree first, then `CCR_FORCE_BUNDLE=1`, nothing pushed), and the human's pasted answer, recorded as `Proof: <sha>` in a commit of the profile alone.
 
 ### 8. Report
 

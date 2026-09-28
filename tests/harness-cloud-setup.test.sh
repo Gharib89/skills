@@ -15,7 +15,7 @@ log=$fixture/log
 
 # <name> <config>: a git repo whose .claude/hooks/cloud-setup.sh is the template
 # with its configuration block replaced by <config>; prints the script's path.
-repo() {
+hook_script() {
   local r=$fixture/$1
   mkdir -p "$r/.claude/hooks"
   git -C "$r" init -q
@@ -31,7 +31,7 @@ run() { : > "$log"; out=$(cd "$fixture" && CLAUDE_CODE_REMOTE=$1 LOG=$log "$2" 2
 
 # The tool step installs a marker the done test looks for, so a second run finds
 # it satisfied; the deps step has no done test and runs every time.
-s=$(repo ok "STEPS='tool|test -e \"\$LOG.tool\"|echo tool >> \"\$LOG\"; : > \"\$LOG.tool\"
+s=$(hook_script ok "STEPS='tool|test -e \"\$LOG.tool\"|echo tool >> \"\$LOG\"; : > \"\$LOG.tool\"
 deps||echo deps >> \"\$LOG\"'")
 
 run false "$s"
@@ -50,7 +50,7 @@ run true "$s"
 check "a second run skips a step whose done test passes" "deps" "$(cat "$log")"
 check "and still prints ok" "harness cloud setup: ok" "$out"
 
-s=$(repo fail "STEPS='first||echo first >> \"\$LOG\"
+s=$(hook_script fail "STEPS='first||echo first >> \"\$LOG\"
 broken||echo half >> \"\$LOG\"; exit 3
 never||echo never >> \"\$LOG\"'")
 run true "$s"
@@ -59,25 +59,42 @@ check "and names the step on the status line" "harness cloud setup: FAILED broke
 check "and stops there" "first
 half" "$(cat "$log")"
 
-s=$(repo inert "STEPS='tool|test -e \"\$LOG.none\"|echo tool >> \"\$LOG\"'")
+s=$(hook_script inert "STEPS='tool|test -e \"\$LOG.none\"|echo tool >> \"\$LOG\"'")
 run true "$s"
 check_rc "a step whose done test still fails after it ran is a failure" 1 "$rc"
 check "named on the status line" "harness cloud setup: FAILED tool" "$out"
 
-out=$(cd "$fixture" && CLAUDE_CODE_REMOTE=true LOG=$log "$(repo noise "STEPS='chatty||echo installing; echo warn >&2'")" 2>/dev/null)
+out=$(cd "$fixture" && CLAUDE_CODE_REMOTE=true LOG=$log "$(hook_script noise "STEPS='chatty||echo installing; echo warn >&2'")" 2>/dev/null)
 check "a step's own output stays off stdout" "harness cloud setup: ok" "$out"
+
+# A step reading stdin, as its command or its done test, would otherwise eat the
+# rows after it; a command may carry a pipe; steps run from the repo root.
+s=$(hook_script stdin "STEPS='cmd-reads||cat >/dev/null; echo cmd >> \"\$LOG\"
+test-reads|cat >/dev/null; test -e \"\$LOG.t\"|: > \"\$LOG.t\"; echo test >> \"\$LOG\"
+piped||echo a | tr a b >> \"\$LOG\"
+where||git rev-parse --show-prefix >> \"\$LOG\"; echo root >> \"\$LOG\"'")
+rm -f "$log.t"
+run true "$s"
+check "no step's stdin reaches the rows after it, a pipe stays in its command, steps run at the root" "cmd
+test
+b
+
+root" "$(cat "$log")"
 
 # The SessionStart entry setup-harness merges into .claude/settings.json: its
 # command, run as a hook runs it, exits 0 outside a cloud session, because a
 # non-zero SessionStart exit is shown to a local session as a hook error.
 entry=skills/setup-harness/templates/settings-cloud.json
 hook=$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$entry")
-s=$(repo hook "STEPS=''"); r=${s%/.claude/hooks/cloud-setup.sh}
+s=$(hook_script hook "STEPS=''"); r=${s%/.claude/hooks/cloud-setup.sh}
 out=$(cd "$r" && CLAUDE_PROJECT_DIR=$r CLAUDE_CODE_REMOTE='' LOG=$log bash -c "$hook" 2>&1); rc=$?
 check_rc "the SessionStart command exits 0 outside a cloud session" 0 "$rc"
 check "and prints nothing" "" "$out"
 out=$(cd "$r" && CLAUDE_PROJECT_DIR=$r CLAUDE_CODE_REMOTE=true LOG=$log bash -c "$hook" 2>/dev/null)
 check "in a cloud session it runs the cloud setup" "harness cloud setup: ok" "$out"
+chmod -x "$s"
+out=$(cd "$r" && CLAUDE_PROJECT_DIR=$r CLAUDE_CODE_REMOTE='' bash -c "$hook" 2>&1); rc=$?
+check_rc "outside a cloud session it never starts the script" 0 "$rc"
 check "synchronous, with an explicit timeout" "null 375" "$(jq -r '.hooks.SessionStart[0].hooks[0] | "\(.async) \(.timeout)"' "$entry")"
 
 finish

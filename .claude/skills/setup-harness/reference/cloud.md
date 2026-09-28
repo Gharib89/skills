@@ -41,7 +41,7 @@ Blocked hosts are re-derived every run by the static host check; only the human'
 
 ## The host list
 
-Measured in a cloud session on the Default (Trusted) network, Claude Code 2.1.283. A host missing from both columns is unmeasured: write the step, and the cloud run is what proves it.
+Measured in a cloud session on the Default (Trusted) network, Claude Code 2.1.283. A host missing from both columns is unmeasured: write the step, and the proof's cloud session is what proves it.
 
 | Passes | Blocked (403 or CONNECT refused) |
 |---|---|
@@ -49,17 +49,17 @@ Measured in a cloud session on the Default (Trusted) network, Claude Code 2.1.28
 
 Node 20, 21 and 22 ship on the image under `/opt` (22 on `PATH`), as do `uv`, `pnpm`, Go and Docker, so a runtime is a step only where the repo's runtime version file asks for one the image lacks, and never through NodeSource.
 
-**The static host check.** For every step the cloud setup runs, name the host its route reaches: apt is `archive.ubuntu.com`, `uv` and `pip` are PyPI, `npm`, `pnpm` and `npx` are `registry.npmjs.org`, `go install` is the Go proxy, a URL in the command is its own host. A step reaching a blocked host that is not on `Allowlist:` is not written: its rung is labelled `needs the Custom allowlist: <hosts>`, and the human is asked whether their environment admits those hosts. A yes adds them to `Allowlist:` and the step is written; the cloud run then checks the claim.
+**The static host check.** For every step the cloud setup runs, name the host its route reaches: apt is `archive.ubuntu.com`, `uv` and `pip` are PyPI, `npm`, `pnpm` and `npx` are `registry.npmjs.org`, `go install` is the Go proxy, a URL in the command is its own host. A step reaching a blocked host that is not on `Allowlist:` is not written: its rung is labelled `needs the Custom allowlist: <hosts>`, and the human is asked whether their environment admits those hosts. A yes adds them to `Allowlist:` and the step is written; the proof's cloud session then checks the claim.
 
 ## Writing the cloud setup
 
 An existing `SessionStart` entry that runs a script only when `CLAUDE_CODE_REMOTE=true` is the repo's cloud setup: extend that script in place with the missing steps, keep what it does, and record its path on `Setup:`. Never add a second one.
 
-Otherwise copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.claude/hooks/cloud-setup.sh`, executable, fill its `STEPS` block, and merge [templates/settings-cloud.json](../templates/settings-cloud.json) into `.claude/settings.json` beside the repo's own hooks, with `timeout` the `Cloud setup:` budget plus max(10 s, budget / 4): 375 at the default 300 s. The entry is synchronous (no `async`) so the tools exist before the first edit, and its guard exits 0 outside a cloud session, so a local session shows no hook error.
+Otherwise copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.claude/hooks/cloud-setup.sh`, executable, fill its `STEPS` block, and merge [templates/settings-cloud.json](../templates/settings-cloud.json) into `.claude/settings.json` beside the repo's own hooks, with `timeout` the `Cloud setup:` budget plus max(10 s, budget / 4): 375 at the default 300 s, the template's value, recomputed on an override. The entry is synchronous (no `async`) so the tools exist before the first edit, and its guard exits 0 outside a cloud session, so a local session shows no hook error.
 
 `STEPS`, one `<name>|<done test>|<command>` row each, in this order:
 
-1. A runtime or tool the image lacks, by the catalog tool's `Route:`, done test `command -v <tool>`. An apt route gains `-o DPkg::Lock::Timeout=120`, because the image's own dpkg still holds the lock when the hook starts and apt otherwise fails at once (`shellcheck|command -v shellcheck|sudo apt-get -o DPkg::Lock::Timeout=120 install -y shellcheck`).
+1. A runtime or tool the image lacks, by the catalog tool's `Route:`, done test `command -v <tool>`; a tool the image already ships needs no step. An apt route gains `-o DPkg::Lock::Timeout=120`, because the image's own dpkg still holds the lock when the hook starts and apt otherwise fails at once (`shellcheck|command -v shellcheck|sudo apt-get -o DPkg::Lock::Timeout=120 install -y shellcheck`).
 2. prek where it is not a dev dependency, by the command [runner.md](runner.md) installed it with.
 3. Each root's frozen install, no done test (`deps-api||cd api && uv sync --frozen`).
 4. The runner's git shim and hook environments, no done test (`prek||uv run --frozen prek install --prepare-hooks`), so the commit rung works and its first run downloads nothing.
@@ -73,8 +73,8 @@ Three parts, in order. The report says `cloud: unproven` until the third passes.
 1. **Locally, twice.** `CLAUDE_CODE_REMOTE=true .claude/hooks/cloud-setup.sh`, timed with the wrapper's clock: the first prints `harness cloud setup: ok` within the `Cloud setup:` budget (else the override offer), and the second is a fast no-op. Report both times.
 2. **Statically.** The static host check over the setup as written: no step reaches a blocked host that is not on `Allowlist:`.
 3. **In a real cloud session.** The session runs the harness at a commit, so every file this run wrote or changed is committed first, then:
-   - **GitHub** (the push route): push the branch (`git push -u origin HEAD`). The session starts on the current branch.
-   - **Azure DevOps** (`origin` on `dev.azure.com` or `visualstudio.com`): nothing is pushed. First the gate: `git status --porcelain` over every harness file this run wrote or changed must print nothing; else stop, name each file as `untracked: <path>` or `uncommitted: <path>`, and say why: a bundle session drops an untracked file silently and holds back an uncommitted `.claude/settings.json`, so the proof would test a harness that is not this one. Then the command is prefixed `CCR_FORCE_BUNDLE=1`, which uploads local `HEAD`, pushed or not.
+   - **GitHub** (the push route): name the branch and push it once the human says yes (`git push -u origin HEAD`). The session starts on the current branch.
+   - **Azure DevOps** (`origin` on `dev.azure.com` or `visualstudio.com`): nothing is pushed. First the gate: `git status --porcelain` must print nothing (the tree was clean when the run began, so every line is this run's, a fix-mode rewrite included); else stop, name each file as `untracked: <path>` or `uncommitted: <path>`, and say why: a bundle session drops an untracked file silently and holds back an uncommitted `.claude/settings.json`, so the proof would test a harness that is not this one. Then the command is prefixed `CCR_FORCE_BUNDLE=1`, which uploads local `HEAD`, pushed or not.
 
    Print the command and have the human run it from the repo, after `/remote-env` in Claude Code has picked this repo's cloud environment (without one, `--cloud` uses a fallback environment silently):
 
@@ -90,6 +90,6 @@ Three parts, in order. The report says `cloud: unproven` until the third passes.
 
 A passing answer writes `Proof: <sha>` into `docs/agents/harness.md` and commits that file alone (`git commit -m "chore(harness): cloud proof at <sha>" -- docs/agents/harness.md`), so the proven commit never carries its own proof. On Azure DevOps the sha may be unpushed.
 
-The report's **cloud table**: one row per rung, its cloud label, and its times, `full` from the cloud run (first run cold, second warm, judged against its budget) and the cloud setup from the local double run.
+The report's **cloud table**: one row per rung, its cloud label, and its times, `full` from the proof's cloud session (first run cold, second warm, judged against its budget) and the cloud setup from the local double run.
 
-A re-run reads the proof as standing while `git diff <sha> -- <Setup: path> .claude/settings.json scripts/check.sh` prints nothing; otherwise, or when the sha is not in the repo, it reports `cloud: unproven (changed since <sha>)` and offers the proof again.
+A re-run reads the proof as standing while `git diff <sha> -- <Setup: path> .claude/settings.json scripts/check.sh <each root's lockfile> <the runner config>` prints nothing; otherwise, or when the sha is not in the repo, it reports `cloud: unproven (changed since <sha>)` and offers the proof again.
