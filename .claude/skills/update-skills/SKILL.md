@@ -9,16 +9,16 @@ metadata:
 # update-skills
 
 Refresh a repo's skills as one PR the repo's own CI, reviewers and merge gate
-see, with a body that says what moved. Vocabulary:
-[CONTEXT.md](https://github.com/Gharib89/skills/blob/main/CONTEXT.md) of the
-source repo (source repo, consumer repo, derived copy, pinned ref, upstream
-drift, refresh).
+see, with a body that says what moved. The **source repo** is
+`Gharib89/skills`, where these skills are written; a **consumer repo** holds
+**derived copies** installed from it, the source repo included. A composed
+skill's **pinned ref** is the upstream commit the source repo tested, and
+**upstream drift** is that upstream moving past it.
 
 **Attended only.** It asks the repo owner which skills to take and re-runs
 `/setup-skills`, which interviews; no cloud routine runs it.
 
-**It calls Ship's generic mechanics by path** from the worktree
-([ADR 0004](https://github.com/Gharib89/skills/blob/main/docs/adr/0004-cross-repo-writes-reach-the-source-repo-on-the-humans-word.md)): `$S` below stands for
+**It calls Ship's generic mechanics by path** from the worktree: `$S` below stands for
 `.claude/skills/ship/scripts` and `$U` for `.claude/skills/update-skills/scripts`.
 After step 2 those are the scripts it just installed, so it never drives a Ship
 other than the one the PR ships. Each mechanic answers `--help` with its flags.
@@ -134,7 +134,7 @@ repo, run step 9 first, then this step, then step 8. Write a body file holding
 a `## Drift` section and nothing else, its table
 `| Skill | Pinned | Upstream head |` with one row per `drift` entry. The source
 repo is public, so the body carries skill names and refs only: not this repo's
-name, nor anything else about it ([ADR 0004](https://github.com/Gharib89/skills/blob/main/docs/adr/0004-cross-repo-writes-reach-the-source-repo-on-the-humans-word.md)). Then:
+name, nor anything else about it. Then:
 
 ```sh
 $S/file-issue.sh --repo Gharib89/skills --title "Upstream drift: composed skills" --body-file <body> --label needs-triage
