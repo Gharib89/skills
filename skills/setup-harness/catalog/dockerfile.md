@@ -31,7 +31,7 @@ Hook: local
 Pin: None.
 Route: None.
 Constraints: needs the image's dockerd running (the cloud setup's dockerd step) and Buildx 0.15 or later (the image has 0.31.1).
-Traps: it resolves every `FROM` image from its registry (1.7 s unpulled, 0.3 s warm), so a ghcr.io or private base fails as a pull does, and a `# syntax=` line pulls a frontend image too.
+Traps: it resolves every `FROM` image from its registry (1.7 s unpulled, 0.3 s warm), so a ghcr.io or private base fails as a pull does, and a `# syntax=` line pulls a frontend image too. A Docker Hub base shares hadolint's anonymous pull limit: the entry trial's check got `429 Too Many Requests` on `alpine` once (2026-09-28).
 
 ## format
 
