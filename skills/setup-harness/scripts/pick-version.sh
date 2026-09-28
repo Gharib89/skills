@@ -69,18 +69,20 @@ print(best[1])'
 case $registry in
   npm)
     json=$(fetch "https://registry.npmjs.org/$name") || exit 2
-    printf '%s' "$json" | python3 -c '
+    lines=$(printf '%s' "$json" | python3 -c '
 import json, sys
 for v, t in json.load(sys.stdin)["time"].items():
     if v not in ("created", "modified"):
-        print(v, t)' | choose ;;
+        print(v, t)') || exit 2
+    printf '%s\n' "$lines" | choose ;;
   pypi)
     json=$(fetch "https://pypi.org/pypi/$name/json") || exit 2
-    printf '%s' "$json" | python3 -c '
+    lines=$(printf '%s' "$json" | python3 -c '
 import json, sys
 for v, files in json.load(sys.stdin)["releases"].items():
     if files and not any(f.get("yanked") for f in files):
-        print(v, min(f["upload_time_iso_8601"] for f in files))' | choose ;;
+        print(v, min(f["upload_time_iso_8601"] for f in files))') || exit 2
+    printf '%s\n' "$lines" | choose ;;
   go)
     mod=$name list=''
     while :; do
