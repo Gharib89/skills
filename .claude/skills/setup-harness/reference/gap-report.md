@@ -9,7 +9,7 @@
 - [Timing on a re-run](#timing-on-a-re-run)
 - [The report](#the-report)
 
-A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. Every re-run ends in the confirm step, or in `harness: no gaps`. `## Files the skill wrote` and `## Pins` also apply on a first run, their Offers asked as step 4 questions.
+A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. Every re-run ends in the confirm step, or in `harness: no gaps`. On a first run, the comparison in `## Files the skill wrote` and all of `## Pins` apply too, their Offers asked as step 4 questions; the contract check is a re-run's.
 
 ## Dispositions
 
@@ -63,9 +63,9 @@ A missing piece is proposed every run until step 5 records it `Declined:`; remov
 
 ## Timing on a re-run
 
-Every rung is timed in Explore, before the report, as [check-ladder.md](check-ladder.md) `## Timing the rungs` says, the cold run of `edit`, `turn` and `full` through `check-contract.sh`. Timing is read-only: fix mode on a clean file writes nothing. A rung that fails is the repo's code, its verdict `not judged: fail (<check>)`, and one that answers `unavailable` is `not judged: unavailable (<check>)`; no gap or offer follows from either.
+Every rung is timed in Explore, before the report, as [check-ladder.md](check-ladder.md) `## Timing the rungs` says, the cold run of `edit`, `turn` and `full` through `check-contract.sh`. Timing leaves `git status --porcelain` empty: a file a fixer rewrote is `git restore`d and listed under Not acted on with the check that rewrote it. A rung that fails is the repo's code, its verdict `not judged: fail (<check>)`, and one that answers `unavailable` is `not judged: unavailable (<check>)`; no gap or offer follows from either.
 
-After the writes, in place of step 6's first timing, every rung the batch touched is timed again: a `check.sh` configuration change re-times the rungs whose rows changed, `check-hook.sh` or a hook entry the rung it runs, a runner config change `edit`, commit and `full`. A proposed write to a path the proof covers ([cloud.md](cloud.md) `## Recording the proof`) makes a standing `Proof: <sha>` stale, so the report carries the proof Offer beside that row; approved, the proof runs after the writes.
+After the writes, in place of step 6's first timing, every rung the batch touched is timed again: a `check.sh` configuration change re-times the rungs whose rows changed, `check-hook.sh` or a hook entry the rung it runs, a runner config change `edit`, commit and `full`, an installed or re-pinned unit the rungs that run it. A proposed write to a path the proof covers ([cloud.md](cloud.md) `## Recording the proof`) makes a standing `Proof: <sha>` stale: the Offers carry one proof Offer naming that row's number. Approved, the proof runs after the writes; declined, the profile keeps `Proof: <sha>` and the report says `cloud: unproven (changed since <sha>)`.
 
 ## The report
 
