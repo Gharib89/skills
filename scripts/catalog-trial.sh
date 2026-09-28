@@ -89,11 +89,12 @@ trial() {
   case $pin in
     package\ *)
       set -- $pin
-      version=$("$root/skills/setup-harness/scripts/pick-version.sh" "$2" "$3")
+      shift # past `package`: a maven pin may name its repository before the name
+      version=$("$root/skills/setup-harness/scripts/pick-version.sh" "$@")
       case $? in
         0) ;;
-        2) echo "$entry $s: fail ($2 did not answer for $3)"; return 1 ;;
-        *) echo "$entry $s: fail (no version of $3 on $2)"; return 1 ;;
+        2) echo "$entry $s: fail ($1 did not answer for ${pin##* })"; return 1 ;;
+        *) echo "$entry $s: fail (no version of ${pin##* } on $1)"; return 1 ;;
       esac ;;
   esac
   [ -d "$seeds/$entry/bad/$s" ] || { echo "$entry $s: fail (no bad/$s)"; return 1; }
