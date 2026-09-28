@@ -217,7 +217,9 @@ fi
 # Signals blocks and a run reads the rest by label, so an entry missing one is
 # a stack the skill silently half-knows. A `Route:` carries its `Blocked:`
 # clause, so a run can tell "nothing is blocked" from "nobody looked". A file
-# kind takes no turn rung (it has no project to typecheck or test), browser
+# kind takes no turn rung (it has no project to typecheck or test), and only a
+# file kind is claimed by Names: or Paths:. A tool's Files: is a subset of the
+# entry's Extensions:, since it narrows the files the entry claims. Browser
 # and public-API tools run on `full` only, and a language server sits on no
 # rung, takes no hook and is `Local-only:` with its reason, because it answers
 # Claude's `LSP` calls rather than a check and no cloud session starts one.
@@ -235,10 +237,11 @@ if [ -d "$harness/catalog" ]; then
     }
     function close_signals(  i, n, want) {
       if (!signals) return
-      want = kind == "file kind" ? "Kind|Names|Extensions|Shebangs" : "Kind|Manifest|Lockfile|Workspace|Extensions|Shebangs|Runtime version"
+      want = kind == "file kind" ? "Kind|Names|Paths|Extensions|Shebangs" : "Kind|Manifest|Lockfile|Workspace|Extensions|Shebangs|Runtime version"
       n = split(want, w, "|")
       for (i = 1; i <= n; i++) if (!(w[i] in sig)) bad("## Signals: missing " w[i] ":")
       if (kind != "stack" && kind != "file kind") bad("## Signals: Kind: want stack or file kind, got " kind)
+      if (kind == "stack") { if ("Names" in sig) bad("## Signals: Names: is a file kind\047s"); if ("Paths" in sig) bad("## Signals: Paths: is a file kind\047s") }
       signals = 0
     }
     BEGIN {
@@ -256,13 +259,14 @@ if [ -d "$harness/catalog" ]; then
     /^### / { close_tool(); tool = substr($0, 5); next }
     /^[A-Z][A-Za-z -]*: / || /^[A-Z][A-Za-z -]*:$/ {
       label = substr($0, 1, index($0, ":") - 1); v = substr($0, length(label) + 3)
-      if (signals) { sig[label] = 1; if (label == "Kind") kind = v; next }
+      if (signals) { sig[label] = 1; if (label == "Kind") kind = v; if (label == "Extensions") exts = " " v " "; next }
       if (tool == "") next
       got[label] = 1
       if (label == "Route" && v != "None." && v !~ /^`[^`]+`; Blocked: /) bad("### " tool ": Route: want `<install>`; Blocked: <routes> | None., or None.")
       if (label == "Hook" && role == "language server" && v != "None.") bad("### " tool ": a language server takes Hook: None.")
       if (label == "Hook" && role != "language server" && v == "None.") bad("### " tool ": Hook: None. is for a language server only")
       if (label == "Local-only" && v == "") bad("### " tool ": Local-only: wants its reason")
+      if (label == "Files") { n = split(v, fx, " "); for (i = 1; i <= n; i++) if (index(exts, " " fx[i] " ") == 0) bad("### " tool ": Files: " fx[i] " is not in Extensions:") }
       if (label != "Rung") next
       if (role == "language server") { if (v != "None.") bad("### " tool ": a language server takes Rung: None.") }
       else if (v != "edit" && v != "turn" && v != "full") bad("### " tool ": Rung: want edit, turn or full, got " v)

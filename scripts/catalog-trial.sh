@@ -7,7 +7,12 @@
 # planted files, which must fail or change one. A tool marked `Unavailable:` or
 # `Local-only:` is reported and not tried, the trial running in a cloud
 # session. <tool> is the `###` heading, lower-cased, with each run of other
-# characters turned into `-`.
+# characters turned into `-`. {files} is every seed file the entry claims,
+# by `Extensions:`, `Names:` (a basename at any depth) or `Paths:` (a glob
+# on the seed-relative path); a tool with its own `Files:` gets only the
+# files carrying those extensions instead. {version} is the picked version,
+# {member} is `.` and {package} is `seed`, the package name every stack
+# seed carries.
 #
 #   scripts/catalog-trial.sh <entry>|all
 #
@@ -44,45 +49,61 @@ snapshot() {
     (cd "$w" && cksum "$f" 2>/dev/null) || echo "gone $f"
   done
 }
-# The files in a directory whose names carry one of the entry's extensions,
-# shell-quoted for {files}.
+# <dir> <extensions> <names> <paths>: the files in a directory the entry
+# claims, shell-quoted for {files}. Always run in a command substitution, so
+# the `set -f` keeping a Paths: glob from matching the cwd stays in it.
 files_in() {
-  local f q=''
+  local f p q=''
+  set -f
   while IFS= read -r f; do
-    for e in $exts; do
-      case $f in *"$e") q="$q $(printf '%q' "${f#./}")"; break ;; esac
-    done
+    f=${f#./}
+    for p in $2; do case $f in *"$p") q="$q $(printf '%q' "$f")"; continue 2 ;; esac; done
+    for p in $3; do case ${f##*/} in "$p") q="$q $(printf '%q' "$f")"; continue 2 ;; esac; done
+    # A Paths: `*` stays within one directory: the path and glob have as many `/`.
+    # shellcheck disable=SC2254 # a Paths: entry is a glob, matched as one
+    for p in $4; do case $f in $p) [ "${f//[!\/]/}" = "${p//[!\/]/}" ] && { q="$q $(printf '%q' "$f")"; continue 2; } ;; esac; done
   done <<EOF
 $(cd "$1" && find . -type f ! -path './node_modules/*' ! -path './.venv/*' | sort)
 EOF
   printf '%s' "${q# }"
 }
 
-# <entry> <tool> <pin> <route> <run> <skip>: a non-empty <skip> is the verdict
-# of a tool that is not tried.
+# <entry> <label>: the entry's signal line, empty for `None.`.
+signal() { sed -n "s/^$2: //p" "$catalog/$1.md" | head -n 1 | sed 's/^None\.$//'; }
+
+# <entry> <tool> <pin> <route> <run> <skip> <only>: a non-empty <skip> is the
+# verdict of a tool that is not tried; a non-empty <only> is its Files:.
 trial() {
-  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 skip=$6 s version='' before files
+  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 skip=$6 only=$7 s version='' before files
+  local e=$exts n=$names p=$paths
+  [ -n "$only" ] && e=$only n='' p=''
   s=$(slug "$tool")
   if [ -n "$skip" ]; then echo "$entry $s: $skip"; return 0; fi
   case $pin in
     package\ *)
       set -- $pin
-      version=$("$root/skills/setup-harness/scripts/pick-version.sh" "$2" "$3") \
-        || { echo "$entry $s: fail (no version of $3 on $2)"; return 1; } ;;
+      version=$("$root/skills/setup-harness/scripts/pick-version.sh" "$2" "$3")
+      case $? in
+        0) ;;
+        2) echo "$entry $s: fail ($2 did not answer for $3)"; return 1 ;;
+        *) echo "$entry $s: fail (no version of $3 on $2)"; return 1 ;;
+      esac ;;
   esac
   [ -d "$seeds/$entry/bad/$s" ] || { echo "$entry $s: fail (no bad/$s)"; return 1; }
   work=$(mktemp -d) || exit 2
   cp -R "$seeds/$entry/clean/." "$work/"
   (cd "$work" && bash -c "${route//\{version\}/$version}") >&2 \
     || { echo "$entry $s: fail (install)"; rm -rf "$work"; return 1; }
-  files=$(files_in "$work")
+  files=$(files_in "$work" "$e" "$n" "$p")
   before=$(snapshot "$work" "$seeds/$entry/clean")
   run=${run//\{member\}/.}
+  run=${run//\{package\}/seed}
+  run=${run//\{version\}/$version}
   if ! (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 || [ "$(snapshot "$work" "$seeds/$entry/clean")" != "$before" ]; then
     echo "$entry $s: fail (failed on clean)"; rm -rf "$work"; return 1
   fi
   cp -R "$seeds/$entry/bad/$s/." "$work/"
-  files=$(files_in "$seeds/$entry/bad/$s")
+  files=$(files_in "$seeds/$entry/bad/$s" "$e" "$n" "$p")
   before=$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")
   if (cd "$work" && bash -c "${run//\{files\}/$files}") >&2 && [ "$(snapshot "$work" "$seeds/$entry/clean" "$seeds/$entry/bad/$s")" = "$before" ]; then
     echo "$entry $s: fail (passed on bad/$s)"; rm -rf "$work"; return 1
@@ -102,15 +123,16 @@ trap 'rm -rf "$work"' EXIT
 
 rc=0
 for entry in $entries; do
-  exts=$(sed -n 's/^Extensions: //p' "$catalog/$entry.md" | head -n 1)
-  tool='' pin='' route='' run='' skip=''
+  exts=$(signal "$entry" Extensions) names=$(signal "$entry" Names) paths=$(signal "$entry" Paths)
+  tool='' pin='' route='' run='' skip='' only=''
   while IFS= read -r line; do
     case $line in
       '### '* | '## '* | __END__)
-        [ -n "$tool" ] && { trial "$entry" "$tool" "$pin" "$route" "$run" "$skip" < /dev/null || rc=1; }
-        tool='' pin='' route='' run='' skip=''
+        [ -n "$tool" ] && { trial "$entry" "$tool" "$pin" "$route" "$run" "$skip" "$only" < /dev/null || rc=1; }
+        tool='' pin='' route='' run='' skip='' only=''
         case $line in '### '*) tool=${line#\#\#\# } ;; esac ;;
       'Pin: '*) pin=${line#Pin: } ;;
+      'Files: '*) only=${line#Files: } ;;
       'Route: '*) route=$(cmd "$line") ;;
       'Run: '*) run=$(cmd "$line") ;;
       'Unavailable: '*) skip="unavailable (${line#Unavailable: })" ;;

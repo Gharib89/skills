@@ -39,7 +39,7 @@ repos:
         types_or: [ts, tsx, javascript, jsx, json, markdown, yaml]
 ```
 
-The `entry` is the catalog tool's `Run:` without `{files}` (the runner appends the files), prefixed with the exec command. Route each hook by `types`, `types_or` or `files`, the way `check.sh edit` expects: it hands the runner any file and the runner picks the hooks. A member-only tool is scoped with `files: ^<prefix>` and its `entry` reaches the member's pinned binary from the repo root, where the runner passes root-relative paths: `uv run --frozen --project api ruff check --fix`, `web/node_modules/.bin/eslint --fix` (not `pnpm --dir web exec`, which changes directory under those paths).
+The `entry` is the catalog tool's `Run:` without `{files}` (the runner appends the files), prefixed with the exec command. Route each hook by `types`, `types_or` or `files`, the way `check.sh edit` expects: it hands the runner any file and the runner picks the hooks. A member-only tool is scoped with `files: ^<prefix>` and its `entry` reaches the member's pinned binary from the repo root, where the runner passes root-relative paths: `uv run --frozen --project api ruff check --fix`, `web/node_modules/.bin/eslint --fix` (not `pnpm --dir web exec`, which changes directory under those paths). A container tool (hadolint) is a `repo: local` hook with `language: docker_image` and `entry: <image>:<tag>@<digest> <binary>`, in place of `language: system`. A file kind claimed by `Paths:` routes by `files:`, never `types`.
 
 A remote hook repo is used only for a tool the repo does not pin (the catalog's `Hook:` names the vendor repo), `rev` frozen to a full SHA through the install check.
 

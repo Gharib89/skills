@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Seed/Seed.csproj" />
+  <Project Path="tests/Seed.Tests/Seed.Tests.csproj" />
+</Solution>

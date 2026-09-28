@@ -47,9 +47,9 @@ Measured in a cloud session on the Default (Trusted) network, Claude Code 2.1.28
 |---|---|
 | `archive.ubuntu.com` (apt), `registry.npmjs.org`, `pypi.org`, `files.pythonhosted.org`, `proxy.golang.org`, `sum.golang.org`, `static.crates.io`, `static.rust-lang.org`, RubyGems, Maven Central, the Gradle plugin portal, `api.nuget.org`, `repo.packagist.org`, `raw.githubusercontent.com`, `registry-1.docker.io`, `dev.azure.com`, `packages.microsoft.com`, a `git clone` of a public repo over `github.com` | `objects.githubusercontent.com` and `release-assets.githubusercontent.com` (another project's GitHub release assets), `codeload.github.com` (tarballs), `deb.nodesource.com`, `cli.github.com` (apt), `apt.llvm.org`, `cdn.playwright.dev`, `playwright.download.prss.microsoft.com`, `playwright.azureedge.net`, `storage.googleapis.com` |
 
-Node 20, 21 and 22 ship on the image under `/opt` (22 on `PATH`), as do `uv`, `pnpm`, Go and Docker, so a runtime is a step only where the repo's runtime version file asks for one the image lacks, and never through NodeSource.
+Node 20, 21 and 22 ship on the image under `/opt` (22 on `PATH`), as do `uv`, `pnpm`, Go 1.24, Rust (rustup, cargo), OpenJDK 21, Gradle 8.14, Maven 3.9 and Docker (Buildx 0.31), so a runtime is a step only where the repo's runtime version file asks for one the image lacks, and never through NodeSource.
 
-**The static host check.** For every step the cloud setup runs, name the host its route reaches: apt is `archive.ubuntu.com`, `uv` and `pip` are PyPI, `npm`, `pnpm` and `npx` are `registry.npmjs.org`, `go install` is the Go proxy, a URL in the command is its own host. A step reaching a blocked host that is not on `Allowlist:` is not written: its rung is labelled `needs the Custom allowlist: <hosts>`, and the human is asked whether their environment admits those hosts. A yes adds them to `Allowlist:` and the step is written; the proof's cloud session then checks the claim.
+**The static host check.** For every step the cloud setup runs, name the host its route reaches: apt is `archive.ubuntu.com`, `uv` and `pip` are PyPI, `npm`, `pnpm` and `npx` are `registry.npmjs.org`, `go install` is the Go proxy, `cargo install` is `index.crates.io` and `static.crates.io`, `rustup component add` is `static.rust-lang.org`, `docker pull` is `registry-1.docker.io`, `dotnet` restore is `api.nuget.org`, a URL in the command is its own host. A step reaching a blocked host that is not on `Allowlist:` is not written: its rung is labelled `needs the Custom allowlist: <hosts>`, and the human is asked whether their environment admits those hosts. A yes adds them to `Allowlist:` and the step is written; the proof's cloud session then checks the claim.
 
 ## Writing the cloud setup
 
@@ -59,10 +59,15 @@ Otherwise copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.clau
 
 `STEPS`, one `<name>|<done test>|<command>` row each, in this order:
 
-1. A runtime or tool the image lacks, by the catalog tool's `Route:`, done test `command -v <tool>`; a tool the image already ships needs no step. An apt route gains `-o DPkg::Lock::Timeout=120`, because the image's own dpkg still holds the lock when the hook starts and apt otherwise fails at once (`shellcheck|command -v shellcheck|sudo apt-get -o DPkg::Lock::Timeout=120 install -y shellcheck`).
+1. A runtime or tool the image lacks, by the catalog tool's `Route:` (a `docker pull` route is step 5's, run after dockerd starts), done test `command -v <tool>`, or `<tool> --version` where a launcher answers before the tool exists (rustup's `rustfmt` and `cargo-clippy` proxies) or the image ships its own unpinned copy (`prettier --version | grep -qx <v>`); a runtime the image already ships at a version the repo accepts needs no step. An apt route gains `-o DPkg::Lock::Timeout=120`, because the image's own dpkg still holds the lock when the hook starts and apt otherwise fails at once (`shellcheck|command -v shellcheck|sudo apt-get -o DPkg::Lock::Timeout=120 install -y shellcheck`).
 2. prek where it is not a dev dependency, by the command [runner.md](runner.md) installed it with.
 3. Each root's frozen install, no done test (`deps-api||cd api && uv sync --frozen`).
 4. The runner's git shim and hook environments, no done test (`prek||uv run --frozen prek install --prepare-hooks`), so the commit rung works and its first run downloads nothing.
+5. Where a wired tool needs dockerd (a tool run in a container, such as the Dockerfile entry's hadolint, or `docker build --check`): last, because the setup stops at its first failed row and a Docker Hub 429 fails the pull: start dockerd, then pull each container image a wired tool runs, `<tag>` its picked version and `<digest>` the hook's pinned digest. The sandbox image ships dockerd without starting it, and an idle restart kills the daemon while the disk keeps the pulled images, so each row's done test lets a second run skip it:
+   - `dockerd|docker info|setsid -f dockerd >"${TMPDIR:-/tmp}/dockerd.log" 2>&1 </dev/null; for i in $(seq 60); do docker info >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1`
+   - `hadolint-image|docker image inspect hadolint/hadolint@<digest>|docker pull hadolint/hadolint:<tag>@<digest>`
+
+   `setsid -f` and the redirects detach the daemon: one holding the hook's stdout or stderr makes Claude Code wait on the hook until its timeout.
 
 A step needing a blocked host is labelled, not written, per the static host check.
 

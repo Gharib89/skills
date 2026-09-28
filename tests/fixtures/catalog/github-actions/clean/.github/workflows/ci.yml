@@ -1,0 +1,8 @@
+name: ci
+on: push
+permissions: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
