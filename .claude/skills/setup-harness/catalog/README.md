@@ -53,7 +53,19 @@ Roles, as `##` headings, from this set only: `lint`, `format`, `typecheck`, `tes
 - **Run.** One command, in backticks. `{files}` stands for the file list and `{member}` for the member's directory; a `turn` command runs in the member's directory. A `lint` or `format` command is the runner hook's `entry`, in fix mode where the tool has one. A command names the tool's own binary; where the tool is a dev dependency, the written hook entry or turn row prefixes the stack's exec command (`uv run`, `pnpm exec`, `npx --no-install`).
 - **Hook.** `local` means a `repo: local` runner hook with `language: system`, calling the binary the repo pins, so the commit rung runs the same version as the edit and turn rungs. A vendor hook repo is used only for a tool the repo does not pin, `rev` frozen to a full SHA through the install check.
 - **Pin.** The kind names the install check's pin table: `package <npm|pypi|go|crates|nuget> <name>`, `apt <name>`, `hook-repo <url>`, `download <url>`. A package is an exact dev dependency in the repo's manifest and lockfile when the stack has one, else an exact version in the install command.
-- **Route.** The install that passes in a cloud sandbox, in backticks, with `{version}` for the version the run picks; `Blocked:` names the routes a cloud sandbox refuses, so a run never proposes them.
+- **Route.** The install that passes in a cloud sandbox, in backticks, with `{version}` for the version the run picks; `Blocked:` names the routes a cloud sandbox refuses, so a run never proposes them. Route serves the cloud sandbox and the entry trials; a local install follows the install check's pin table.
+
+Each stack's commands, by its lockfile:
+
+| Lockfile | Exec | Exact dev add | Frozen install |
+|---|---|---|---|
+| `uv.lock` | `uv run --frozen` | `uv add --dev <t>==<v>` | `uv sync --frozen` |
+| `poetry.lock` | `poetry run` | `poetry add --group dev <t>==<v>` | `poetry sync` |
+| `pdm.lock` | `pdm run` | `pdm add -dG dev <t>==<v>` | `pdm sync` |
+| `pnpm-lock.yaml` | `pnpm exec` | `pnpm add -D -E <t>@<v>` | `pnpm install --frozen-lockfile` |
+| `package-lock.json` | `npx --no-install` | `npm install -D -E <t>@<v>` | `npm ci` |
+| `yarn.lock` | `yarn run` | `yarn add -D -E <t>@<v>` | `yarn install --immutable` (Yarn 1: `--frozen-lockfile`) |
+| `bun.lock` | `bun run` | `bun add -d --exact <t>@<v>` | `bun install --frozen-lockfile` |
 
 ## Tier rule
 
@@ -67,7 +79,7 @@ Entries carry no versions. The run picks each one: the newest non-prerelease who
 
 - Evidence of a tool the entry lists (default or alternative) keeps that tool; only its gaps (wiring, pin, rung) are filled.
 - Evidence of a tool the entry does not list keeps it, wired only through the repo's own invocation (a `package.json` script, a make or just target), else reported `unwired: <tool> (<evidence path>)`.
-- A default applies only to a role with no evidence, written once at the stack root and inherited by every member without evidence of its own. A member's own evidence wins for that member.
+- A default applies only to a role with no evidence, written once at the stack root and inherited by every member without evidence of its own. A member's own evidence wins for that member. A `typecheck` or `test runner` default also needs its target (tsc a `tsconfig.json`, a test runner one test file); without it the field stays empty and the role is reported under Not acted on, since an empty suite exits nonzero and would start the turn rung red.
 - Two tools in one role: the one the runner config or CI calls is active, the other "present, not wired"; asked only when both or neither are called. Never both wired.
 
 ## Affected tests

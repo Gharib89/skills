@@ -27,7 +27,7 @@ Anything else is "found, not trusted, not installed". No trust by stars, downloa
 ## Reading a unit
 
 - **Glue**, whatever makes Claude Code or git run the unit, is read in full and shown: a hook repo's `.pre-commit-hooks.yaml`, a plugin's directory with its `marketplace.json` entry, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `bin/`, skill files.
-- **A packaged tool** from tier 1 or 2 is not source-read: trust rests on tier, exact pin and published provenance (checksum, GitHub attestation, npm or PyPI provenance), verified where it exists, `none published` where it does not.
+- **A packaged tool** from tier 1 or 2 is not source-read: trust rests on tier, exact pin and published provenance (checksum, GitHub attestation, npm or PyPI provenance), checked where it exists, `none published` where it does not.
 
 ## Pins
 
@@ -59,7 +59,7 @@ One table, a row per unit, then each unit's glue in full:
 - **Runs**: each command and its trigger: install, on edit, on `Stop`, on commit, session start.
 - **Reaches**: the hosts at install and at run time, and any file written outside the repo (`~/.cache/prek`, `~/.local/bin`).
 - **Cloud**: `yes`, or `local-only: <why>`.
-- **Provenance**: `verified`, `none published` or `failed`.
+- **Provenance**: `checked`, `none published` or `failed`.
 
 One approval for the batch; the human drops rows by number. A dropped row with a reason writes `Declined: <unit>: <reason>` in the same batch; one dropped without a reason is proposed again next run.
 

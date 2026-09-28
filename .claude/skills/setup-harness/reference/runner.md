@@ -45,6 +45,6 @@ A remote hook repo is used only for a tool the repo does not pin (the catalog's 
 
 ## A repo with a runner
 
-Keep it and extend it in its own format: `.pre-commit-config.yaml` for pre-commit or prek, `lefthook.yml` for lefthook, the lint-staged config for husky with lint-staged. Add only the missing checks; offer no migration, not even pre-commit to prek. Its `EDIT_RUN` in `check.sh` is its own file-list command (`pre-commit run --files {files}`, `lefthook run pre-commit --file {files}`). lint-staged takes no file list, so under it `check.sh edit` calls the linters directly and the runner config stays the commit rung.
+Keep it and extend it in its own format: `.pre-commit-config.yaml` for pre-commit or prek, `lefthook.yml` for lefthook, the lint-staged config for husky with lint-staged. Add only the missing checks; offer no migration, not even pre-commit to prek. Its `EDIT_RUN` in `check.sh` is its own file-list command (`pre-commit run --files {files}`, `lefthook run pre-commit --file {files}`). lint-staged takes no file list, so under it `check.sh edit` calls the linters directly and the runner config stays the commit rung: `EDIT_RUN` chains each linter's `Run:` with `&&`, keeping only tools that skip foreign files (`prettier --ignore-unknown`, `eslint --no-warn-ignored`); any other is a question.
 
 lefthook's `ai:` key is never written; this skill writes its own `.claude/hooks/`. A repo already using it keeps it, and an absolute binary path it wrote into a committed `.claude/settings.json` is reported with a proposed relative command.

@@ -20,9 +20,9 @@ Detection knows only the signals catalog entries carry, so read every `catalog/*
 Tracked files only, from the repo root:
 
 ```sh
-git ls-files                                   # the whole tree detection reads
+git ls-files -- . ':!:.claude/skills/'         # the whole tree detection reads
 git submodule status                           # reported, never scanned
-git ls-files | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\)$/\1/p' | sort | uniq -c | sort -rn   # extension counts, dotfiles skipped
+git ls-files -- . ':!:.claude/skills/' | sed -n 's|.*/||; /^\./d; s/.*\.\([^.]*\)$/\1/p' | sort | uniq -c | sort -rn   # extension counts, dotfiles skipped
 ```
 
 - A **root** is a directory holding a stack's `Manifest:` with one of its `Lockfile:` names beside it, or a member a root's `Workspace:` config names.
