@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.0 (2026-09-28)
+
+### Features
+
+- **setup-harness**: Catalog entries for Go, Rust, .NET, Java/Kotlin, Dockerfile, workflows and
+  Markdown ([#378](https://github.com/Gharib89/skills/pull/378),
+  [`ca2322d`](https://github.com/Gharib89/skills/commit/ca2322d56aaa0321a1dd88de65ba0a1545e89625))
+
+
 ## v0.4.0 (2026-09-28)
 
 ### Features
