@@ -176,8 +176,10 @@ vendor" "$out
 $(cat "$log")"
 rm -f "$pw.dry-empty"; rm -rf "$pw"; mkdir -p "$pw"; : > "$pw.cp-fail"
 browser_run 'docker create'
-check "a failed copy fails the setup and removes its container" "create mcr.microsoft.com/playwright:v1.2.3-noble
-rm cid" "$(cat "$log")"
+check "a failed copy fails the setup and removes its container" "harness cloud setup: FAILED browsers-web
+create mcr.microsoft.com/playwright:v1.2.3-noble
+rm cid" "$out
+$(cat "$log")"
 rm -f "$pw.cp-fail"
 
 # The SessionStart entry setup-harness merges into .claude/settings.json: its
