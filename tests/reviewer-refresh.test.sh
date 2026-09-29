@@ -21,16 +21,21 @@ para() { awk -v RS= -v lbl="**$2" 'index($0, lbl) == 1' "$1"; }
 # Prints "listed" when the re-run paragraph names the item in its write-only clause.
 write_only_lists() {
   para "$1" 'A setup section re-run' \
-    | grep -o 'writing only where none is found or installed ([^)]*)' \
+    | grep -o 'writing only where none is found[^(]*([^)]*)' \
     | grep -q 'Reviewer scaffolding' && echo listed
 }
 
 # Prints "compares" when the item's paragraph carries the compare for an installed
-# workflow: it names the section, says installed, and says it proposes.
+# workflow: it names the section and holds each rule the compare keeps, so a
+# sentence that mentions the words but drops a rule does not pass.
 item_compares() {
-  local p; p=$(para "$1" 'Reviewer scaffolding')
+  local p phrase; p=$(para "$1" 'Reviewer scaffolding')
   [ -n "$p" ] || return 0
-  grep -q '`reviewer-scaffolding`' <<<"$p" && grep -q 'installed' <<<"$p" && grep -q 'propose' <<<"$p" && echo compares
+  for phrase in '`reviewer-scaffolding`' 'installed Claude workflow' 'whole current scaffold' 'installed trigger' \
+    'never guessed' 'deliberate departures' 'persist-credentials: false' 'never downgrades'; do
+    grep -qF -- "$phrase" <<<"$p" || return 0
+  done
+  echo compares
 }
 
 fx=$(mktemp -d) || exit 2
@@ -42,9 +47,12 @@ cat > "$fx/old.md" <<'EOF'
 **A setup section re-run**, when a refresh names sections: or writing only where none is found or installed (**Coding standards**, **Reviewer scaffolding**, step 1.1's tracker doc). Write on confirm.
 EOF
 cat > "$fx/new.md" <<'EOF'
-**Reviewer scaffolding**, for each reviewer not installed: write the files. In a setup section re-run naming `reviewer-scaffolding`, an installed workflow is compared and each missing part proposed.
+**Reviewer scaffolding**, for each reviewer not installed: write the files. In a setup section re-run naming `reviewer-scaffolding`, an installed Claude workflow is compared against the whole current scaffold. The shape comes from the installed trigger; a value that cannot be read is never guessed. Keep the repo's deliberate departures. Propose a pin move only where a checkout lacks `persist-credentials: false`; a refresh never downgrades.
 
 **A setup section re-run**, when a refresh names sections: or writing only where none is found or installed (**Coding standards**, step 1.1's tracker doc). Write on confirm.
+EOF
+cat > "$fx/dropped-rule.md" <<'EOF'
+**Reviewer scaffolding**, for each reviewer not installed: write the files. In a setup section re-run naming `reviewer-scaffolding`, an installed Claude workflow is compared against the whole current scaffold. The shape comes from the installed trigger; a value that cannot be read is never guessed. Keep the repo's deliberate departures. Propose a pin move only where a checkout lacks `persist-credentials: false`.
 EOF
 cat > "$fx/stale-scaffold.md" <<'EOF'
 The cost is that a `/setup-skills` re-run writes this workflow only where none is installed: moving them is the consumer's own edit.
@@ -52,6 +60,7 @@ EOF
 
 check "the old paragraph lists Reviewer scaffolding as write-only" "listed" "$(write_only_lists "$fx/old.md")"
 check "the new paragraph does not" "" "$(write_only_lists "$fx/new.md")"
+check "an item that drops the never-downgrade rule does not compare" "" "$(item_compares "$fx/dropped-rule.md")"
 check "the old item has no compare" "" "$(item_compares "$fx/old.md")"
 check "the new item compares an installed workflow" "compares" "$(item_compares "$fx/new.md")"
 
