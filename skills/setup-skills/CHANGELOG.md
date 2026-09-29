@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.1 (2026-09-29)
+
+### Bug Fixes
+
+- **setup-skills**: Map check.sh's per-check statuses on exit 2 and 3
+  ([#410](https://github.com/Gharib89/skills/pull/410),
+  [`226127c`](https://github.com/Gharib89/skills/commit/226127cd6445116c57b4abe7a32c48f4642f2874))
+
+
 ## v0.10.0 (2026-09-29)
 
 ### Features
