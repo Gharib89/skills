@@ -85,6 +85,10 @@ run "$(variant excludedslash 's/^Excluded: None./Excluded: tests\/fixtures: cata
 check "an excluded prefix with no trailing slash is named" \
   "## Excluded: Excluded: want <path prefix>: <reason> or None., the prefix ending in /, got tests/fixtures: catalog-trial inputs" "$out"
 
+run "$(variant excludedempty 's/^Excluded: None./Excluded: \/: the whole repo/')"
+check "an excluded line with an empty prefix is named" \
+  "## Excluded: Excluded: want <path prefix>: <reason> or None., the prefix ending in /, got /: the whole repo" "$out"
+
 run "$(variant floor 's/^Floor: 2.1.277/Floor: latest/')"
 check "a floor that is not a version is named" "## Claude Code: Floor: want <major>.<minor>.<patch>, got latest" "$out"
 

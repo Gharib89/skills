@@ -55,7 +55,7 @@ h != "" {
     else if (h == "Budgets") oneof(l, v, v == "default" || v ~ /^override [0-9]+s: ./, "default or override <N>s: <reason>")
     else if (l == "Verdict") oneof(l, v, v == "cloud-first" || v ~ /^local-only: ./, "cloud-first or local-only: <reason>")
     else if (l == "Proof") oneof(l, v, v == "unproven" || (v ~ /^[0-9a-f]+$/ && length(v) >= 7 && length(v) <= 40), "<sha> or unproven")
-    else if (h == "Excluded") oneof(l, v, v == "None." || v ~ /^[^:]*\/: ./, ph[h] ": <reason> or None., the prefix ending in /")
+    else if (h == "Excluded") oneof(l, v, v == "None." || v ~ /^[^:]+\/: ./, ph[h] ": <reason> or None., the prefix ending in /")
     else if (h in ph) oneof(l, v, v == "None." || v ~ /^[^:]+: ./, ph[h] ": <reason> or None.")
     else if (v == "") bad("## " h ": " l ": empty")
   }
