@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # skills/setup-harness/scripts/harness-profile-check.sh: the harness profile's
-# Schema 2 grammar. The subject is the verdict a setup-harness run reads after
+# Schema 3 grammar. The subject is the verdict a setup-harness run reads after
 # writing a profile: exit 0 and silence for a valid one, exit 1 and one line
 # per violation otherwise. The template is the first valid profile; each case
 # after it breaks one rule in a copy.
@@ -22,27 +22,31 @@ check "a valid profile prints nothing" "" "$out"
 
 run "$(variant proven 's/^Proof: unproven/Proof: 93bfa43/; s/^Setup: None./Setup: .claude\/hooks\/cloud-setup.sh/; s/^Turn: default/Turn: override 120s: the integration suite needs a database/; s/^Local-only: None./Local-only: language server: operator'"'"'s choice: slow laptop\
 Local-only: browser: needs a GPU/; s/^Root: None./Root: api\/pom.xml: Maven has no lockfile\
-Root: worker\/go.mod: a library with no go.sum/; s/^Declined: None./Declined: pytest-testmon: we run the full suite/')"
+Root: worker\/go.mod: a library with no go.sum/; s/^Excluded: None./Excluded: tests\/fixtures\/: catalog-trial inputs, bad by design\
+Excluded: internal\/testdata\/: golden files/; s/^Declined: None./Declined: pytest-testmon: we run the full suite/')"
 check_rc "overrides, a proof, a setup path and repeated lines are valid" 0 "$rc"
 
 run "$(variant local 's/^Verdict: cloud-first/Verdict: local-only: operator'"'"'s choice: VPN-only database/')"
 check_rc "a local-only verdict with its reason is valid" 0 "$rc"
 
-run "$(variant noschema '/^Schema: 2/d')"
+run "$(variant noschema '/^Schema: 3/d')"
 check_rc "a profile with no Schema line fails" 1 "$rc"
 check "the missing Schema line is named" "missing Schema: line before the first ## heading" "$out"
 
-run "$(variant ahead 's/^Schema: 2/Schema: 3/')"
-check "a schema this checker does not read is named" "Schema: 3; this checker reads Schema 2" "$out"
+run "$(variant ahead 's/^Schema: 3/Schema: 4/')"
+check "a schema this checker does not read is named" "Schema: 4; this checker reads Schema 3" "$out"
 
-run "$(variant behind 's/^Schema: 2/Schema: 1/')"
-check "a Schema 1 profile is refused" "Schema: 1; this checker reads Schema 2" "$out"
+run "$(variant behind 's/^Schema: 3/Schema: 2/')"
+check "a Schema 2 profile is refused" "Schema: 2; this checker reads Schema 3" "$out"
 
 run "$(variant noheading '/^## Declined/,$d')"
-check "a missing heading is named" "headings out of order or missing: want Claude Code, Check entry point, Budgets, Cloud, Roots, Local-only, Declined" "$out"
+check "a missing heading is named" "headings out of order or missing: want Claude Code, Check entry point, Budgets, Cloud, Excluded, Roots, Local-only, Declined" "$out"
 
 run "$(variant noroots '/^## Roots/,/^Root:/d')"
-check "a missing ## Roots is named" "headings out of order or missing: want Claude Code, Check entry point, Budgets, Cloud, Roots, Local-only, Declined" "$out"
+check "a missing ## Roots is named" "headings out of order or missing: want Claude Code, Check entry point, Budgets, Cloud, Excluded, Roots, Local-only, Declined" "$out"
+
+run "$(variant noexcluded '/^## Excluded/,/^Excluded:/d')"
+check "a missing ## Excluded is named" "headings out of order or missing: want Claude Code, Check entry point, Budgets, Cloud, Excluded, Roots, Local-only, Declined" "$out"
 
 run "$(variant order 's/^## Budgets/## Tmp/; s/^## Check entry point/## Budgets/; s/^## Tmp/## Check entry point/')"
 check_rc "headings out of order fail" 1 "$rc"
@@ -72,6 +76,18 @@ check "a declined line with no reason is named" \
 run "$(variant rootreason 's/^Root: None./Root: api\/pom.xml/')"
 check "a root line with no reason is named" \
   "## Roots: Root: want <manifest>: <reason> or None., got api/pom.xml" "$out"
+
+run "$(variant excludedreason 's/^Excluded: None./Excluded: tests\/fixtures\//')"
+check "an excluded line with no reason is named" \
+  "## Excluded: Excluded: want <path prefix>: <reason> or None., the prefix ending in /, got tests/fixtures/" "$out"
+
+run "$(variant excludedslash 's/^Excluded: None./Excluded: tests\/fixtures: catalog-trial inputs/')"
+check "an excluded prefix with no trailing slash is named" \
+  "## Excluded: Excluded: want <path prefix>: <reason> or None., the prefix ending in /, got tests/fixtures: catalog-trial inputs" "$out"
+
+run "$(variant excludedempty 's/^Excluded: None./Excluded: \/: the whole repo/')"
+check "an excluded line with an empty prefix is named" \
+  "## Excluded: Excluded: want <path prefix>: <reason> or None., the prefix ending in /, got /: the whole repo" "$out"
 
 run "$(variant floor 's/^Floor: 2.1.277/Floor: latest/')"
 check "a floor that is not a version is named" "## Claude Code: Floor: want <major>.<minor>.<patch>, got latest" "$out"

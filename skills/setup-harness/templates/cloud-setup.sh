@@ -18,6 +18,7 @@
 set -uo pipefail
 [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 
+# shellcheck disable=SC2016 # each step's own bash -c expands STEPS below
 # >>> setup-harness configuration
 # One step per line, run in order from the repo root:
 #   <name>|<done test>|<command>
