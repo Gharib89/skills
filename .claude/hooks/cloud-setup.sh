@@ -31,7 +31,7 @@ actionlint|command -v actionlint|GOBIN="$HOME/.local/bin" go install github.com/
 zizmor|command -v zizmor|uv tool install zizmor==1.30.1
 prettier|[ "$(prettier --version 2>/dev/null)" = 3.9.8 ]|npm install -g prettier@3.9.8
 prek-tool|command -v prek|uv tool install prek==0.5.3
-prek||prek install --prepare-hooks'
+prek||prek install --prepare-hooks --allow-missing-config'
 # <<< setup-harness configuration
 : "${STEPS=}"
 

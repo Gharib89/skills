@@ -51,8 +51,11 @@ contract|scripts/contract-check.sh skills/ship/scripts skills && scripts/contrac
 # FULL_ROWS names the cloud cannot run (the profile's Local-only: parts),
 # space-separated: `skipped` unrun when CLAUDE_CODE_REMOTE=true.
 LOCAL_ONLY=''
+# The profile's Excluded: prefixes, one per line: the edit rung skips a file
+# under one, which belongs to no TURN_ROWS row and is no new root.
+EXCLUDED='tests/fixtures/'
 # <<< setup-harness configuration
-: "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}" "${LOCAL_ONLY=}"
+: "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}" "${LOCAL_ONLY=}" "${EXCLUDED=}"
 
 rung=${1:-}
 case $rung in
@@ -132,11 +135,23 @@ matches() { # <file> <globs>: 0 when one of the globs matches the file name
   return 1
 }
 
+# <file>: 0 when the file sits under an EXCLUDED prefix.
+excluded() {
+  local p
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    case $1 in "$p"*) return 0 ;; esac
+  done <<EOF
+$EXCLUDED
+EOF
+  return 1
+}
+
 rung_edit() {
   local f files=''
   for f; do
     case $f in "$root"/*) f=${f#"$root"/} ;; esac
-    [ -f "$f" ] && matches "$f" "$EDIT_GLOBS" && files="$files$f$nl"
+    [ -f "$f" ] && matches "$f" "$EDIT_GLOBS" && ! excluded "$f" && files="$files$f$nl"
   done
   if [ -z "$files" ] || [ -z "$EDIT_RUN" ]; then record runner skipped; return; fi
   local IFS=$nl
@@ -147,9 +162,11 @@ rung_edit() {
 }
 
 # <file>: the TURN_ROWS row owning the file, else nothing. Prints `new-root`
-# for a file some row's globs match under no row's prefix.
+# for a file some row's globs match under no row's prefix, and nothing for one
+# under an EXCLUDED prefix.
 owner() {
   local row prefix member globs best='' blen=-1 kind=''
+  excluded "$1" && return
   while IFS= read -r row; do
     [ -n "$row" ] || continue
     prefix=${row%%|*} member=${row#*|}; globs=${member#*|}; globs=${globs%%|*}
