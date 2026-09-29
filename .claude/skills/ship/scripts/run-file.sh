@@ -106,6 +106,17 @@ open_phase() {
          if ($0 ~ / in_progress \([0-9][0-9]:[0-9][0-9]→\)$/) { print p; exit }
        }' "$file"
 }
+# The first phase below <n> whose row is not `[x]`: closed, rebuilt `done` and
+# skipped all tick it, so every phase that ran or was skipped passes. One phase,
+# one line, as `open_phase` reads it.
+unflipped() { # unflipped <n>
+  awk -v n="$1" '/^- \[.\] [0-9][0-9]* · / {
+         p = substr($0, 7); sub(/ .*/, "", p)
+         if (p in seen) next
+         seen[p] = 1
+         if (p + 0 < n + 0 && $0 !~ /^- \[x\] /) { print p; exit }
+       }' "$file"
+}
 
 # Every line the mechanic writes is rendered here, so the flips and `init`'s
 # rebuild cannot drift into two spellings of the same state.
@@ -250,6 +261,12 @@ open)
     [ "$busy" = "$n" ] && ship_fail "phase $n is already open"
     ship_fail "phase $busy is open; close it before opening $n"
   fi
+  # A phase opened over one never flipped leaves that one unticked and
+  # `unverified` on the Timing row for a phase that may have run. The recovery
+  # is open-then-close, not `close` or `skip`: `close` needs it open, and `skip`
+  # would record a phase that ran as one that did not.
+  gap=$(unflipped "$n")
+  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped: if it ran, open and close it now and log its true window in the deviations log; if it did not, skip it with a reason; then open $n"
   new=$(render open "$(item "$line")" "$(date -u +%H:%M)")
   write_line "$lineno" "$new"
   flip_json open "$new" in_progress

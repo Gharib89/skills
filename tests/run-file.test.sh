@@ -16,6 +16,12 @@ out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()   { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 
+# `open` refuses a phase over an earlier one never flipped, so a fixture that
+# opens a later phase first marks the phases below it done.
+done_below2=(--state 0=done --state 1=done)
+done_below4=("${done_below2[@]}" --state 2=done --state 3=done)
+done_below5=("${done_below4[@]}" --state 4=done)
+
 # --- init ----------------------------------------------------------------------
 
 f=$(out init 192 --scratchpad "$tmp" \
@@ -66,7 +72,7 @@ check_rc "init refuses to overwrite an existing Run file" 1 "$(rc init 192 --scr
 
 # --- open and close ------------------------------------------------------------
 
-g=$(out init 200 --scratchpad "$tmp" | jq -r '.run_file')
+g=$(out init 200 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done --state 3=skipped:fixture --state 4=done | jq -r '.run_file')
 line() { grep "^- \[.\] $1 · " "$g"; }
 
 o=$(out open 5 --file "$g"); orc=$?
@@ -259,7 +265,7 @@ check "a range inside a skip reason is wording, not time" \
 
 # The design and plan sit below the checklist in the same file, so a line of
 # the checklist's shape can appear there. One phase, one line: the first.
-b=$(out init 501 --scratchpad "$tmp" | jq -r '.run_file')
+b=$(out init 501 --scratchpad "$tmp" "${done_below2[@]}" | jq -r '.run_file')
 out open 2 --file "$b" >/dev/null
 sed 's|^\(- \[ \] 2 · .*\) in_progress ([0-9][0-9]:[0-9][0-9]→)$|\1 (10:00→10:30)|; s|^- \[ \] 2|- [x] 2|' "$b" > "$b.x" && mv "$b.x" "$b"
 printf -- '- [x] 2 · note copied into the plan (00:00→00:01)\n' >> "$b"
@@ -268,7 +274,7 @@ check "a line of the same shape below the checklist does not win" \
 
 # --- skip and open against a phase that already carries a state ----------------
 
-c=$(out init 502 --scratchpad "$tmp" | jq -r '.run_file')
+c=$(out init 502 --scratchpad "$tmp" "${done_below5[@]}" | jq -r '.run_file')
 out open 5 --file "$c" >/dev/null; out close 5 --file "$c" >/dev/null
 check "skip on a phase that has run is refused" \
   "phase 5 has already run; it cannot be skipped" "$(err skip 5 oops --file "$c")"
@@ -319,7 +325,7 @@ check_rc "a --state naming the same phase twice is malformed" 2 \
 
 # One phase, one line, for the open-phase check too: a line of the checklist's
 # shape copied into the design and plan is not phase 7 going open.
-o=$(out init 506 --scratchpad "$tmp" | jq -r '.run_file')
+o=$(out init 506 --scratchpad "$tmp" "${done_below2[@]}" | jq -r '.run_file')
 printf -- '- [ ] 7 · a line copied into the plan in_progress (10:00→)\n' >> "$o"
 check_rc "a copied open line below the checklist does not block an open" 0 \
   "$(rc open 2 --file "$o")"
@@ -358,7 +364,7 @@ check "the refused reason left the Run file untouched" "$held" "$(cat "$w")"
 
 # init decides every state before it writes, so a rebuild refused on its reason
 # leaves the record it was asked to recover exactly as it was.
-v=$(out init 510 --scratchpad "$tmp" | jq -r '.run_file')
+v=$(out init 510 --scratchpad "$tmp" "${done_below4[@]}" | jq -r '.run_file')
 out open 4 --file "$v" >/dev/null
 was=$(cat "$v")
 check_rc "a rebuild whose reason ends in a state shape is malformed" 2 \
@@ -372,7 +378,7 @@ check "the refused rebuild leaves the Run file it was asked to recover" \
 # `close` without `--file` twice (/ship 205). The layout is the mechanic's, so
 # the mechanic resolves it: the run brings the scratchpad its environment block
 # names and the issue it was invoked on, and the usage line carries the rest.
-i=$(out init 218 --scratchpad "$tmp" | jq -r '.run_file')
+i=$(out init 218 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done --state 3=skipped:fixture | jq -r '.run_file')
 
 check "--issue resolves the record under the scratchpad" \
   "$i" "$(out open 4 --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
@@ -386,7 +392,7 @@ check "timing by --issue reads the same file" \
 
 # An explicit path outranks the pair that would resolve one: a run that knows
 # where its record is never has the mechanic guess.
-j=$(out init 219 --scratchpad "$tmp" | jq -r '.run_file')
+j=$(out init 219 --scratchpad "$tmp" "${done_below4[@]}" | jq -r '.run_file')
 check "--file wins over --issue" \
   "$j" "$(out open 4 --file "$j" --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
 
@@ -410,6 +416,48 @@ check "an --issue with no record names the path it resolved" \
 # harness named none put the record in the first place.
 tmpdir_case=$(TMPDIR=$tmp out timing --issue 218 | jq -r '.run_file')
 check "--scratchpad defaults to the OS temp dir" "$i" "$tmpdir_case"
+
+# --- phase order ---------------------------------------------------------------
+
+# A phase opened over an earlier one that was never flipped leaves that one
+# unticked and `unverified` for good (/ship 365), so `open` refuses it and names
+# the lowest such phase with the recovery that works for it.
+q=$(out init 600 --scratchpad "$tmp" | jq -r '.run_file')
+for p in 0 1 2 3; do out open "$p" --file "$q" >/dev/null; out close "$p" --file "$q" >/dev/null; done
+held=$(cat "$q")
+e=$(out open 5 --file "$q"); erc=$?
+check "open over an earlier phase never flipped names it and the recovery" \
+  'phase 4 is neither closed nor skipped: if it ran, open and close it now and log its true window in the deviations log; if it did not, skip it with a reason; then open 5' \
+  "$(printf '%s' "$e" | jq -r '.error')"
+check_rc "open over an earlier phase never flipped exits 1" 1 "$erc"
+check "the refused open left the Run file byte-identical" "$held" "$(cat "$q")"
+
+# Closed, skipped and rebuilt `done` all tick the row, so each admits the open.
+out open 4 --file "$q" >/dev/null; out close 4 --file "$q" >/dev/null
+check_rc "open over a closed phase exits ok" 0 "$(rc open 5 --file "$q")"
+out close 5 --file "$q" >/dev/null
+check_rc "open over a skipped phase exits ok" 0 \
+  "$(k=$(out init 601 --scratchpad "$tmp" "${done_below4[@]}" --state '4=skipped:small lane' | jq -r '.run_file'); rc open 5 --file "$k")"
+check_rc "open over a phase rebuilt as done exits ok" 0 \
+  "$(k=$(out init 602 --scratchpad "$tmp" "${done_below5[@]}" | jq -r '.run_file'); rc open 5 --file "$k")"
+
+# Going back is still allowed: every phase below a closed one is already ticked.
+check_rc "re-opening an earlier closed phase after later ones closed exits ok" 0 \
+  "$(rc open 2 --file "$q")"
+
+# A phase that is open is the refusal it always was, not the unflipped one.
+check "an earlier phase still open answers with the open-phase refusal" \
+  "phase 1 is open; close it before opening 5" \
+  "$(k=$(out init 603 --scratchpad "$tmp" --state 0=done --state 1=open | jq -r '.run_file'); err open 5 --file "$k")"
+
+# One phase, one line: a ticked copy below the checklist does not tick phase 4,
+# and an unticked copy does not untick phase 2.
+k=$(out init 604 --scratchpad "$tmp" "${done_below4[@]}" | jq -r '.run_file')
+printf -- '- [x] 4 · a line copied into the plan (10:00→10:30)\n' >> "$k"
+check_rc "a ticked copy below the checklist does not satisfy the check" 1 "$(rc open 5 --file "$k")"
+k=$(out init 605 --scratchpad "$tmp" "${done_below5[@]}" | jq -r '.run_file')
+printf -- '- [ ] 2 · a line copied into the plan\n' >> "$k"
+check_rc "an unticked copy below the checklist does not trip the check" 0 "$(rc open 5 --file "$k")"
 
 
 finish
