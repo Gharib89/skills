@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.0 (2026-09-29)
+
+### Features
+
+- **setup-harness**: Record a root the human marked in the harness profile (Schema 2)
+  ([#393](https://github.com/Gharib89/skills/pull/393),
+  [`094089d`](https://github.com/Gharib89/skills/commit/094089db2ba2d71e9fab489efcf8eefc719e53dd))
+
+
 ## v0.7.1 (2026-09-29)
 
 ### Bug Fixes

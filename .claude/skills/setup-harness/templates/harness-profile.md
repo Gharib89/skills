@@ -1,6 +1,6 @@
 # Harness profile
 
-Schema: 1
+Schema: 2
 
 Written by `/setup-harness`, which reads it back on a re-run. Facts sit on `Label:` lines; prose under a heading is yours and nothing parses it. A budget override reads `override <N>s: <reason>`.
 
@@ -26,6 +26,10 @@ Verdict: cloud-first
 Setup: None.
 Allowlist: None.
 Proof: unproven
+
+## Roots
+
+Root: None.
 
 ## Local-only
 
