@@ -526,9 +526,9 @@ run "$inert" "$d"
 check "a moved checker literal is named" 0 "$(named "scripts/harness-profile-check.sh schema=9,")"
 
 d=$(harness_tree schema-entry)
-sed -i.bak 's/^## Schema 2$/## Schema two/' "$d/setup-harness/harness-schema.md"
+sed -i.bak 's/^## Schema 3$/## Schema three/' "$d/setup-harness/harness-schema.md"
 run "$inert" "$d"
-check "a missing harness-schema.md entry is named" 0 "$(named "harness-schema.md entry '## Schema 2' missing")"
+check "a missing harness-schema.md entry is named" 0 "$(named "harness-schema.md entry '## Schema 3' missing")"
 
 d=$(harness_tree schema-missing)
 sed -i.bak '/^schema=/d' "$d/setup-harness/scripts/harness-profile-check.sh"
