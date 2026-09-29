@@ -4,7 +4,7 @@ description: "Set up this repo's agent harness for Claude Code: one check entry 
 disable-model-invocation: true
 metadata:
   version: 0.7.1
-  harness-schema: 1
+  harness-schema: 2
 ---
 
 # Setup harness
@@ -32,8 +32,8 @@ On any failure print the exact command, then "then rerun `/setup-harness`", and 
 
 Read `docs/agents/harness.md` if it exists; a repo without one is a first run, and a repo with one is a **re-run**, whose report is the gap report of [reference/gap-report.md](reference/gap-report.md): read it now.
 
-- `Schema:` equal to this skill's `metadata.harness-schema`: read its choices (`## Budgets` overrides, the `## Cloud` verdict and `Allowlist:`, `Local-only:` and `Declined:` lines) and honour them without re-asking; a removed `Declined:` line re-opens its proposal, and a `Local-only:` line whose evidence is gone is offered again (gap-report.md `## Deleted pieces and standing choices`). A `Proof: <sha>` stands or is stale per [reference/cloud.md](reference/cloud.md) `## Recording the proof`.
-- `Schema:` behind: the migration is the first, undroppable row of the confirm step, applied entry by entry from [harness-schema.md](harness-schema.md), `Schema:` rewritten last.
+- `Schema:` equal to this skill's `metadata.harness-schema`: read its choices (`## Budgets` overrides, the `## Cloud` verdict and `Allowlist:`, `Root:`, `Local-only:` and `Declined:` lines) and honour them without re-asking; a removed `Declined:` line re-opens its proposal, a removed `Root:` line its candidate's question, and a `Local-only:` line whose evidence is gone is offered again (gap-report.md `## Deleted pieces and standing choices`). A `Proof: <sha>` stands or is stale per [reference/cloud.md](reference/cloud.md) `## Recording the proof`.
+- `Schema:` behind: read and honour its choices as on an equal schema; the migration is the first, undroppable row of the confirm step, applied entry by entry from [harness-schema.md](harness-schema.md), `Schema:` rewritten last.
 - `Schema:` ahead: stop. That repo was set up by a newer setup-harness; print `npx skills add Gharib89/skills --skill setup-harness --agent claude-code -y` and "then rerun `/setup-harness`".
 
 ### 3. Explore
@@ -55,13 +55,13 @@ On a re-run, the gap report in the layout gap-report.md `## The report` gives, e
 
 1. **Header**: skill version, the profile's `Schema:` (and what it migrates to), the Claude Code floor against the installed version (or `skipped: cloud session`), the step-1 warnings, and the surfaces with their evidence paths.
 2. **Detection** as detection.md's report lists it.
-3. **Questions**, numbered, each with a recommendation: every candidate (root or ignored), every role with two tools and no caller, a runner choice where more than one config has no shim, the cloud verdict with its evidence, each blocked host a step needs (does the environment's Custom allowlist admit it?), the run recipe Offer where surfaces.md makes one, and each question a catalog `Traps:` line asks (js-ts Playwright Test's `webServer.command`).
+3. **Questions**, numbered, each with a recommendation: every new candidate ([reference/detection.md](reference/detection.md)), asking root or ignored and the human's reason, every role with two tools and no caller, a runner choice where more than one config has no shim, the cloud verdict with its evidence, each blocked host a step needs (does the environment's Custom allowlist admit it?), the run recipe Offer where surfaces.md makes one, and each question a catalog `Traps:` line asks (js-ts Playwright Test's `webServer.command`).
 4. **The install-check table**, glue in full after it, then **Found, not installed** with each refusal's reason.
 5. **The writes, as diffs**: runner config additions, the manifest line of each pinned dev dependency, each vendored language server plugin with its `enabledPlugins` line, config files a catalog `Constraints:` or `Traps:` line writes, the `scripts/check.sh` configuration block, `.claude/hooks/check-hook.sh`, the cloud setup's `STEPS` block (or the diff to the repo's own cloud script), the `.claude/settings.json` hook entries, `docs/agents/harness.md` and the `CLAUDE.md` block.
 
 ### 5. Confirm
 
-One approval covers the batch: the human answers the questions and may drop rows or writes by number. A row dropped with a reason, an ignored candidate, and an answer keeping a unit off the version the install check picks are each recorded in the profile in the same batch, as `Declined: <what>: <reason>` (`Declined: <unit> <picked version>: <reason>` for the last); a row dropped without a reason is proposed again next run. Re-present only what an answer changed. On a re-run the questions are the gap report's Offers, steps 6 to 8 act on the approved rows and the profile lines the answers record, and step 6's timing is the re-timing of gap-report.md `## Timing on a re-run`.
+One approval covers the batch: the human answers the questions and may drop rows or writes by number. A candidate's answer is recorded with the human's reason, a root as `Root: <manifest>: <reason>` and an ignore as `Declined: <manifest> as a root: <reason>`; an answer given without a reason is asked once more before the writes, and one still without a reason acts in this run but is not recorded, so its candidate is new next run. A row dropped with a reason and an answer keeping a unit off the version the install check picks are each recorded in the profile in the same batch, as `Declined: <what>: <reason>` (`Declined: <unit> <picked version>: <reason>` for the last); a row dropped without a reason is proposed again next run. Re-present only what an answer changed. On a re-run the questions are the gap report's Offers, steps 6 to 8 act on the approved rows and the profile lines the answers record, and step 6's timing is the re-timing of gap-report.md `## Timing on a re-run`.
 
 ### 6. Write
 
@@ -74,7 +74,7 @@ In this order, each step's failure stopping the run with its output:
 5. **Vendored language servers** per [reference/language-servers.md](reference/language-servers.md) `## Vendoring` steps 2 to 4, at the SHA Explore read.
 6. **`.claude/hooks/check-hook.sh`** from [templates/check-hook.sh](templates/check-hook.sh) and the hook entries from [templates/settings-hooks.json](templates/settings-hooks.json), merged beside the repo's own, each `timeout` derived from its budget.
 7. **The cloud setup**, cloud-first only, per [reference/cloud.md](reference/cloud.md) `## Writing the cloud setup`: `.claude/hooks/cloud-setup.sh` from [templates/cloud-setup.sh](templates/cloud-setup.sh), or the repo's own cloud script extended in place, and the `SessionStart` entry from [templates/settings-cloud.json](templates/settings-cloud.json).
-8. **`docs/agents/harness.md`** from [templates/harness-profile.md](templates/harness-profile.md): `Floor:` and `Location:` as written, every budget `default` unless the human gave an override with a reason, `## Cloud` with the confirmed `Verdict:`, `Setup:` (the cloud setup's path, `None.` when local-only), the human's `Allowlist:`, and `Proof:` kept where step 2 found it standing, else `unproven`, `Local-only:` lines (never a language server's), one for each partial need the cloud verdict found, each MCR no, and each catalog `Local-only:` line a wired `FULL_ROWS` tool carries on a cloud-first repo, so every `LOCAL_ONLY` name has the line whose `<part>` is that name; then the `Declined:` lines from the confirm step. Then run `scripts/harness-profile-check.sh docs/agents/harness.md` from this skill's directory; a violation is fixed before continuing.
+8. **`docs/agents/harness.md`** from [templates/harness-profile.md](templates/harness-profile.md): `Floor:` and `Location:` as written, every budget `default` unless the human gave an override with a reason, `## Cloud` with the confirmed `Verdict:`, `Setup:` (the cloud setup's path, `None.` when local-only), the human's `Allowlist:`, and `Proof:` kept where step 2 found it standing, else `unproven`, `Local-only:` lines (never a language server's), one for each partial need the cloud verdict found, each MCR no, and each catalog `Local-only:` line a wired `FULL_ROWS` tool carries on a cloud-first repo, so every `LOCAL_ONLY` name has the line whose `<part>` is that name; then the `Root:` and `Declined:` lines from the confirm step. Then run `scripts/harness-profile-check.sh docs/agents/harness.md` from this skill's directory; a violation is fixed before continuing.
 9. **The `CLAUDE.md` block** from [templates/harness-block.md](templates/harness-block.md), replacing an existing `### Harness` block rather than adding a second.
 
 ### 7. Prove
@@ -90,5 +90,5 @@ In this order, each step's failure stopping the run with its output:
 3. **Language servers**: one line per wired language from the proof, each `local-only`.
 4. **Budgets**: one row per rung, cold, warm, budget, verdict (`within`, `over: narrowed`, `over: demoted to <rung>`, `over: override <N>s`, `not judged: fail (<check>)`, `not judged: unavailable (<check>)`, `not judged: contract` on a re-run). Then the **cloud** table: per rung its cloud label and cloud times, and the cloud setup's local double run.
 5. **Not acted on**: unclaimed extensions and stacks, unwired tools, Found-not-installed units, `public API: no baseline (<member>)`, `<tool>: <root> not served`, anything "present, not wired".
-6. **Standing choices**: every `Declined:`, `Local-only:` and override, `Allowlist:`, and the cloud state: `Proof: <sha>`, `cloud: unproven` with what is missing, or `cloud: n/a (local-only: <reason>)`.
+6. **Standing choices**: every `Root:`, `Declined:`, `Local-only:` and override, `Allowlist:`, and the cloud state: `Proof: <sha>`, `cloud: unproven` with what is missing, or `cloud: n/a (local-only: <reason>)`.
 7. **Next**: commit the harness files if the proof did not; hooks in `.claude/settings.json` load in new sessions, so start one (or review them in `/hooks`) before relying on them; then `/setup-skills` if the repo uses Ship.
