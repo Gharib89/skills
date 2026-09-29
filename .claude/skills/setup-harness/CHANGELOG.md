@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.2 (2026-09-29)
+
+### Bug Fixes
+
+- **setup-harness**: A new CLAUDE.md opens with a heading, and Prove checks the run's own files
+  ([#396](https://github.com/Gharib89/skills/pull/396),
+  [`69d412d`](https://github.com/Gharib89/skills/commit/69d412d348249330df4259c9f9389ebabcbb18fb))
+
+
 ## v0.8.1 (2026-09-29)
 
 ### Bug Fixes
