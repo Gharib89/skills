@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.2 (2026-09-29)
+
+### Bug Fixes
+
+- **setup-skills**: Refresh an installed Claude reviewer workflow on a setup section re-run
+  ([#409](https://github.com/Gharib89/skills/pull/409),
+  [`8d3774f`](https://github.com/Gharib89/skills/commit/8d3774f5ff0a5eb7ed628b5f857f76a53effe6d4))
+
+
 ## v0.10.1 (2026-09-29)
 
 ### Bug Fixes
