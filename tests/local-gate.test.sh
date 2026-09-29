@@ -34,12 +34,13 @@ printf '%s' "$CHECK_OUT"
 exit "${CHECK_RC:-0}"
 # >>> setup-harness configuration
 FULL_RUN='prek run --all-files'
+LOCAL_ONLY="${STUB_LOCAL_ONLY-}"
 FULL_ROWS='tests|tests/run.sh
 derived-copies|scripts/derived-copies-check.sh
 contract|scripts/contract-check.sh a && scripts/contract-check.sh b'
 # <<< setup-harness configuration
 STUB
-  printf '#!/usr/bin/env bash\necho "run.sh${*:+ $*}" >> "$CALLS"\necho tests log line\nexit "${TESTS_RC:-0}"\n' > "$d/tests/run.sh"
+  printf '#!/usr/bin/env bash\necho "run.sh${*:+ $*}" >> "$CALLS"\ncat >/dev/null\necho tests log line\nexit "${TESTS_RC:-0}"\n' > "$d/tests/run.sh"
   printf '#!/usr/bin/env bash\necho "version-line-check.sh $*" >> "$CALLS"\necho version log line\nexit "${VERSION_RC:-0}"\n' > "$d/scripts/version-line-check.sh"
   printf '#!/usr/bin/env bash\necho "derived-copies-check.sh" >> "$CALLS"\necho derived log line\nexit "${DERIVED_RC:-0}"\n' > "$d/scripts/derived-copies-check.sh"
   printf '#!/usr/bin/env bash\necho "contract-check.sh $*" >> "$CALLS"\n' > "$d/scripts/contract-check.sh"
@@ -97,6 +98,23 @@ check "--small, a failing suite: its log tail reaches stderr" "tests log line" "
 
 DERIVED_RC=1 gate "$d" --small docs/note.md
 check "--small, derived copies that differ fail the verdict" "fail fail" "$(jq -r '"\(.verdict) \(.gates["derived-copies"])"' <<<"$out")"
+
+DERIVED_RC=127 gate "$d" --small docs/note.md
+check_rc "--small, a row whose tool is missing (127) is tooling" 2 "$rc"
+check "--small, a row whose tool is missing (127) grades unavailable" "unavailable" "$(jq -r '.gates["derived-copies"]' <<<"$out")"
+
+STUB_LOCAL_ONLY=contract CLAUDE_CODE_REMOTE=true gate "$d" --small docs/note.md
+check "--small, a LOCAL_ONLY row in a cloud session is skipped and read as pass" "pass 3" \
+  "$(jq -r '.gates.contract' <<<"$out") $(grep -c . <<<"$calls")"
+STUB_LOCAL_ONLY=contract gate "$d" --small docs/note.md
+check "--small, a LOCAL_ONLY row outside a cloud session still runs" "5" "$(grep -c . <<<"$calls")"
+
+d=$(repo no-rows docs/note.md)
+sed -i '/setup-harness configuration/d' "$d/scripts/check.sh"
+gate "$d" --small docs/note.md
+check_rc "--small, a check.sh with no configuration block is tooling" 2 "$rc"
+check "--small, a check.sh with no configuration block grades one check: unavailable" "unavailable" "$(jq -r '.gates.check' <<<"$out")"
+d=$fixture/full
 
 # A base that names no commit is tooling, before any gate runs: gitleaks given a
 # range it cannot resolve scans nothing and still exits 0, so `secrets` would pass.

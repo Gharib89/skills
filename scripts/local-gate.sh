@@ -63,10 +63,26 @@ fi
 if [ "$lane" = small ]; then
   # FULL_ROWS is read from check.sh's configuration block, so the two lanes
   # cannot drift; each row is `<name>|<command>`, the command may hold a `|`.
+  # Graded as check.sh grades a row: exit 127 is `unavailable`, a LOCAL_ONLY
+  # row is skipped (read as `pass`) in a cloud session, and a command gets no
+  # stdin, which would otherwise drain the rows still to come.
   eval "$(sed -n '/^# >>> setup-harness configuration/,/^# <<< setup-harness configuration/p' scripts/check.sh)"
+  if [ -z "${FULL_ROWS:-}" ]; then
+    mark check unavailable
+    echo "check.sh carries no FULL_ROWS block between its setup-harness configuration markers" >&2
+  fi
   while IFS='|' read -r name cmd; do
-    [ -z "$name" ] || run "$name" bash -c "$cmd"
-  done <<<"$FULL_ROWS"
+    [ -n "$name" ] || continue
+    if [ "${CLAUDE_CODE_REMOTE:-}" = true ]; then
+      case " ${LOCAL_ONLY:-} " in *" $name "*) put "$name" pass; continue ;; esac
+    fi
+    bash -c "$cmd" </dev/null >"$log" 2>&1; rc=$?
+    case $rc in
+      0) put "$name" pass ;;
+      127) put "$name" unavailable; tail -n 40 "$log" >&2 ;;
+      *) put "$name" fail; tail -n 40 "$log" >&2 ;;
+    esac
+  done <<<"${FULL_ROWS:-}"
 else
   # No CHECK_DEADLINE: `full` is measured only, and a deadline would have
   # check.sh skip whatever it had not reached.
