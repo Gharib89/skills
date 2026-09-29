@@ -213,7 +213,11 @@ returned is replied to and resolved per `Resolve:`, every section the rounds
 grew is rewritten, and `read-pr` shows a `## Review` line per reviewer.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
-reading the profile's `Legs:`. On `conflict`, its stderr carries the recovery.
+reading the profile's `Legs:`. `ci-wait` and `poll-pr` wait for the expected
+head, `--sha <sha>` else the worktree's `HEAD` when it is on the PR's branch, so
+a read straight after a push never grades the previous head. A `timeout` whose
+`head_sha` is not that head means the host never showed the push: confirm it
+landed, then re-run. On `conflict`, its stderr carries the recovery.
 `no-checks` is fine only where `No-checks legal:` says so. A red leg named on a
 verification's `Also proven by CI:` line is that verification failing: back to
 phase 2. Red after the reviewers exited: fix, push, proceed on green. Honour
