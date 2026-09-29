@@ -18,9 +18,9 @@ rc()   { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 
 # `open` refuses a phase over an earlier one never flipped, so a fixture that
 # opens a later phase first marks the phases below it done.
-done_below2=(--state 0=done --state 1=done)
-done_below4=("${done_below2[@]}" --state 2=done --state 3=done)
-done_below5=("${done_below4[@]}" --state 4=done)
+done_below2=(--state "0=done" --state "1=done")
+done_below4=("${done_below2[@]}" --state "2=done" --state "3=done")
+done_below5=("${done_below4[@]}" --state "4=done")
 
 # --- init ----------------------------------------------------------------------
 
