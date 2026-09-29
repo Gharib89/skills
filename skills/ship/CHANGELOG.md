@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.11.6 (2026-09-29)
+
+### Bug Fixes
+
+- **ship**: Run-file open refuses a phase over an earlier one never flipped
+  ([#392](https://github.com/Gharib89/skills/pull/392),
+  [`4d9c292`](https://github.com/Gharib89/skills/commit/4d9c292d22749b4e445cb23344e11b506d855bbe))
+
+
 ## v0.11.5 (2026-09-28)
 
 ### Bug Fixes
