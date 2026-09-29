@@ -427,7 +427,7 @@ for p in 0 1 2 3; do out open "$p" --file "$q" >/dev/null; out close "$p" --file
 held=$(cat "$q")
 e=$(out open 5 --file "$q"); erc=$?
 check "open over an earlier phase never flipped names it and the recovery" \
-  'phase 4 is neither closed nor skipped: if it ran, `run-file open 4` then `run-file close 4`, and log in the deviations log that this stamp is the recovery time, with when it really ran if the transcript holds it; if it did not, `run-file skip 4 <reason>`; then open 5' \
+  'phase 4 is neither closed nor skipped: if it ran, `run-file open 4` then `run-file close 4`, and log in the deviations log that phase 4'"'"'s stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds are not measured, with when it really ran if the transcript holds it; if it did not, `run-file skip 4 <reason>`; then open 5' \
   "$(printf '%s' "$e" | jq -r '.error')"
 check_rc "open over an earlier phase never flipped exits 1" 1 "$erc"
 check "the refused open left the Run file byte-identical" "$held" "$(cat "$q")"

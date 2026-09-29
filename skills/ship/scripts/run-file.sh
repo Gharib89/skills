@@ -262,11 +262,11 @@ open)
     ship_fail "phase $busy is open; close it before opening $n"
   fi
   # A phase opened over one never flipped leaves that one unticked and
-  # `unverified` on the Timing row for a phase that may have run. The recovery
-  # is open-then-close, not `close` or `skip`: `close` needs it open, and `skip`
-  # would record a phase that ran as one that did not.
+  # `unverified` on the Timing row for a phase that may have run. For a phase
+  # that ran, the recovery is open-then-close: `close` needs it open, and `skip`
+  # would record it as not run. A phase that did not run is skipped.
   gap=$(unflipped "$n")
-  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped: if it ran, \`run-file open $gap\` then \`run-file close $gap\`, and log in the deviations log that this stamp is the recovery time, with when it really ran if the transcript holds it; if it did not, \`run-file skip $gap <reason>\`; then open $n"
+  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped: if it ran, \`run-file open $gap\` then \`run-file close $gap\`, and log in the deviations log that phase $gap's stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds are not measured, with when it really ran if the transcript holds it; if it did not, \`run-file skip $gap <reason>\`; then open $n"
   new=$(render open "$(item "$line")" "$(date -u +%H:%M)")
   write_line "$lineno" "$new"
   flip_json open "$new" in_progress
