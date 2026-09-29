@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.0 (2026-09-29)
+
+### Features
+
+- **setup-skills**: Pin the claude reviewer template's actions and drop checkout credentials
+  ([#405](https://github.com/Gharib89/skills/pull/405),
+  [`9b40b12`](https://github.com/Gharib89/skills/commit/9b40b12537d8a02cbbd3df9cb213305ca145d0f5))
+
+
 ## v0.9.0 (2026-09-28)
 
 ### Features
