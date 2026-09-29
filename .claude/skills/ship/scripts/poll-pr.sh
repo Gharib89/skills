@@ -3,7 +3,12 @@
 # reviews and threads, then ONE JSON summary.
 #
 #   poll-pr <pr> [--reviewer <name> [--since <iso>]] [--brief, or --brief --full <id>[,<id>]]
-#           [--timeout <s>] [--interval <s>]
+#           [--sha <sha>] [--timeout <s>] [--interval <s>]
+#
+# The expected head is `--sha`, else the local HEAD of a checkout of the PR's head
+# branch: while the host shows another head the poll reads nothing on it, so a
+# round on the previous head never counts as one on this head, and a window that
+# closes first answers `done: false` carrying the host's head_sha.
 #
 # `--reviewer <name>` names the `### <name>` block under the profile's
 # `## Reviewers`, read before any host is reached; `ship_reviewer_derive` answers
@@ -128,14 +133,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--sha <sha>, default the local HEAD on the PR head branch] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
 # A flag in the positional slot is a malformed invocation, not a PR id: without
 # this, `poll-pr --brief` reads "--brief" as the id and asks the host for it.
 case $pr in -*) ship_tooling "$usage" ;; esac
-timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; after_run=0
+timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; after_run=0; want=""
 while [ $# -gt 0 ]; do
   case $1 in
     --brief) brief=true; shift ;;
@@ -149,6 +154,7 @@ while [ $# -gt 0 ]; do
       shift 2 ;;
     --timeout) [ -n "${2:-}" ] || ship_tooling "$usage"; timeout=$2; shift 2 ;;
     --interval) [ -n "${2:-}" ] || ship_tooling "$usage"; interval=$2; shift 2 ;;
+    --sha) case ${2:-} in ''|-*) ship_tooling "$usage" ;; esac; want=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
@@ -202,6 +208,11 @@ start=$SECONDS
 while :; do
   prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
   sha=$(jq -r .head_sha <<<"$prj"); mergeable=$(jq -r .mergeable <<<"$prj")
+  stale=false
+  if ship_head_stale "$prj" "$want"; then
+    [ $((SECONDS - start)) -ge "$timeout" ] || { sleep "$interval"; continue; }
+    stale=true
+  fi
   checks=$(host_pr_checks "$pr" "$sha") || ship_tooling "cannot read checks"
   reviews=$(host_pr_reviews "$pr" "$sha" "$full") || ship_tooling "cannot read reviews"
   # Ship's grade (`SHIP_SUBSTANTIVE`), before the landing rule, the refusal
@@ -248,6 +259,8 @@ while :; do
   if [ "$mergeable" = conflict ]; then done=true
   elif [ "$pending" -eq 0 ] && [ "$landed" = true ]; then done=true
   fi
+  # A window that closed on the previous head answered nothing on this one.
+  ! $stale || done=false
   waited=$((SECONDS - start))
   run_status=$(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run")
   # A run that ended any way but successfully ends the window with it, wherever

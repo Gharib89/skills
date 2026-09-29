@@ -27,7 +27,7 @@ help_case() { # <mechanic> <usage>
 }
 
 help_case base-fresh     'usage: base-fresh'
-help_case ci-wait        'usage: ci-wait <pr> [--timeout <s>, at least the no-checks grace (120s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]'
+help_case ci-wait        'usage: ci-wait <pr> [--sha <sha>, default the local HEAD on the PR head branch] [--timeout <s>, at least the no-checks grace (120s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]'
 help_case cleanup        'usage: cleanup <issue|none>'
 help_case comment-issue  'usage: comment-issue <issue> --body-file <path>'
 help_case comment-pr     'usage: comment-pr <pr> --body-file <path>'
@@ -37,7 +37,7 @@ help_case list-prs       'usage: list-prs --open'
 help_case manage-issue   'usage: manage-issue <issue> take|release|handback "<reason>"|close'
 help_case merge          'usage: merge <pr> <issue|none> [--worktree <path>]'
 help_case open-pr        'usage: open-pr <issue|none> --title "<subject>" --body-file <path>'
-help_case poll-pr        'usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to 1800s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--timeout <s>] [--interval <s>]'
+help_case poll-pr        'usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to 1800s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--sha <sha>, default the local HEAD on the PR head branch] [--timeout <s>] [--interval <s>]'
 help_case preflight      'usage: preflight <issue|none> [--unattended]'
 help_case prepare        'usage: prepare [--unattended]'
 help_case read-issue     'usage: read-issue <issue>'

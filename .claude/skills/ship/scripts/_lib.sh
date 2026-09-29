@@ -840,6 +840,21 @@ ship_no_checks_expected() { # <profile-body>
   return 0
 }
 
+# ship_head_stale <pr-json> [<sha>]: true while the host shows a PR head other
+# than the expected one, so `ci-wait` and `poll-pr` wait inside their window
+# rather than grade the previous head: straight after a push the host can still
+# show it (#394). The expected head is `<sha>`, a prefix match against the host's
+# full one, else the local HEAD when the caller's checkout is on the PR's head
+# branch. With neither there is no expected head, and nothing is stale.
+ship_head_stale() { # <pr-json> [<sha>]
+  local want=${2:-}
+  if [ -z "$want" ]; then
+    [ "$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" = "$(jq -r .head_ref <<<"$1")" ] || return 1
+    want=$(git rev-parse HEAD 2>/dev/null) || return 1
+  fi
+  case $(jq -r .head_sha <<<"$1") in "$want"*) return 1 ;; esac
+}
+
 # ship_reviewers <profile-body>: the `## Reviewers` section as one JSON row per
 # reviewer, in profile order, each
 # {name, login, trigger, request, workflow, cap, resolve, gating, fallback_for,
