@@ -23,10 +23,11 @@ Each gap kind takes exactly one disposition:
 | Gap | Disposition |
 |---|---|
 | The profile's `Schema:` trails the skill's `metadata.harness-schema` | Write: the migration, row 1, undroppable |
-| A piece the skill writes is missing: `scripts/check.sh`, `.claude/hooks/check-hook.sh`, a hook entry, the cloud setup or its `SessionStart` entry (cloud-first only), a vendored language server, the `CLAUDE.md` block | Write |
+| A piece the skill writes is missing: `scripts/check.sh`, `.claude/hooks/check-hook.sh`, a hook entry, the cloud setup or its `SessionStart` entry (cloud-first only; a Ship bootstrap entry whose last command is the cloud setup is that entry, [cloud.md](cloud.md) `## Writing the cloud setup`), a vendored language server, the `CLAUDE.md` block | Write |
 | A file the skill wrote lacks what its current template says | Write |
 | A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, for a root now `Declined:` as a root or for one under an `Excluded:` prefix, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack, a browser step or `FULL_ROWS` row for a surface no longer detected, the `tags` step once no griffe row is left, the `dockerd` row once no `mcr` browser step or container tool needs it, a `LOCAL_ONLY` name whose row is gone) | Write: the removal |
-| A `Root:` line whose manifest is no longer a candidate root ([detection.md](detection.md)): the manifest gone, a lockfile beside it, or a root's `Workspace:` config naming it | Write: the removal |
+| A `Root:` line whose manifest is no longer a candidate root ([detection.md](detection.md)): the manifest gone, a lockfile beside it, a root's `Workspace:` config naming it, or an `Excluded:` prefix holding it | Write: the removal |
+| An `Excluded:` line whose prefix holds no tracked file | Write: the removal, and its alternative in the runner config's `exclude:` |
 | A hook `timeout` off deadline plus max(10 s, deadline / 4) | Write |
 | prek's git shim, `$(git rev-parse --git-path hooks)/pre-commit`, lacking `--skip-on-missing-config`, the mark `prek install --allow-missing-config` writes ([runner.md](runner.md)) | Offer: reinstall it with that flag, a change to this machine that commits nothing |
 | A new root whose stack has a catalog entry | Write: its `TURN_ROWS` row and runner additions |

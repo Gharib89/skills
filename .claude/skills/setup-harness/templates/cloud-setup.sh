@@ -18,6 +18,7 @@
 set -uo pipefail
 [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 
+# shellcheck disable=SC2016 # each step's own bash -c expands STEPS below
 # >>> setup-harness configuration
 # One step per line, run in order from the repo root:
 #   <name>|<done test>|<command>
@@ -25,7 +26,6 @@ set -uo pipefail
 # test passes is skipped; one with no done test always runs, so its command
 # must itself be a fast no-op when there is nothing to do (`uv sync --frozen`).
 # After the command runs the done test must pass.
-# shellcheck disable=SC2016 # each step's own bash -c expands it
 STEPS=''
 # <<< setup-harness configuration
 : "${STEPS=}"

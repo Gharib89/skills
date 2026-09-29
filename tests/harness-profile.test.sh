@@ -79,7 +79,11 @@ check "a root line with no reason is named" \
 
 run "$(variant excludedreason 's/^Excluded: None./Excluded: tests\/fixtures\//')"
 check "an excluded line with no reason is named" \
-  "## Excluded: Excluded: want <path prefix>: <reason> or None., got tests/fixtures/" "$out"
+  "## Excluded: Excluded: want <path prefix>: <reason> or None., the prefix ending in /, got tests/fixtures/" "$out"
+
+run "$(variant excludedslash 's/^Excluded: None./Excluded: tests\/fixtures: catalog-trial inputs/')"
+check "an excluded prefix with no trailing slash is named" \
+  "## Excluded: Excluded: want <path prefix>: <reason> or None., the prefix ending in /, got tests/fixtures: catalog-trial inputs" "$out"
 
 run "$(variant floor 's/^Floor: 2.1.277/Floor: latest/')"
 check "a floor that is not a version is named" "## Claude Code: Floor: want <major>.<minor>.<patch>, got latest" "$out"
