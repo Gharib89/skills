@@ -217,6 +217,12 @@ polls 100000
 out=$(pollpr "$co" --reviewer rev --since 2026-09-29T02:20:00Z --timeout 2 --interval 1)
 check "a reviewer polled only on the old head is unreachable" unreachable "$(jq -r .not_reviewed <<<"$out")"
 
+# The since rule counts a round on any head, so one landed after --since keeps
+# its answer even when the window closes on the old head.
+polls 100000
+out=$(pollpr "$co" --reviewer rev --since 2026-09-29T02:10:00Z --timeout 2 --interval 1)
+check "a since-rule round on the old head still lands" "since null" "$(jq -r '"\(.landed_by) \(.not_reviewed)"' <<<"$out")"
+
 # Off the PR's branch there is no expected head: the first read is the answer,
 # as before.
 git -C "$co" checkout -q -b elsewhere

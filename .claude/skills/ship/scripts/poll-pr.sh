@@ -92,7 +92,8 @@
 # rather than naming one of its own. Null without --reviewer. Otherwise, first
 # match wins:
 #   unreachable   the window closed with the host still on another head than the
-#                 expected one, so the reviewer was never read on it
+#                 expected one and no round landed, so the reviewer was never
+#                 read on it; a round the since rule landed keeps its null
 #   (null)        a conflict closed the window, which says nothing about the
 #                 reviewer
 #   unreachable   `threads` is "unavailable" (on GitHub, GraphQL and the REST
@@ -320,7 +321,7 @@ while :; do
         reviewer_run: $rr, landed_by: $lb, refused_by: $rf, done: $d, waited_s: $w}
        | .not_reviewed = (
            if $aw == "" then null
-           elif $st then "unreachable"
+           elif $st and $lb == null then "unreachable"
            elif $m == "conflict" then null
            elif $t == "unavailable" then "unreachable"
            elif $lb != null then null
