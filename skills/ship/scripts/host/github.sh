@@ -416,7 +416,8 @@ host_pr_for_branch() { # <branch>
 # A `cancelled` check run whose workflow has a newer workflow run on this head was
 # superseded by its concurrency group, and its successor can have no check run
 # yet (#394): it reads `pending` until the successor's own row outranks it by id.
-# One cancelled with no newer workflow run, or no workflow behind it, is a failure.
+# A successor is a newer run still going, or one that wrote a row of this name.
+# One cancelled with no successor, or no workflow behind it, is a failure.
 host_pr_checks() { # <pr> <head_sha>
   local sha=$2 runs statuses wruns='[]'
   runs=$(api "$R/commits/$sha/check-runs" --paginate --jq '.check_runs[] | {id, name,
@@ -426,14 +427,15 @@ host_pr_checks() { # <pr> <head_sha>
                else "failure" end), at: (.completed_at // .started_at // "")}' | jq -s .) || return 1
   if jq -e 'any(.[]; .cancelled)' <<<"$runs" >/dev/null; then
     wruns=$(api "$R/actions/runs?head_sha=$sha&per_page=100" --paginate \
-      --jq '.workflow_runs[] | {id, workflow_id, suite: .check_suite_id}' | jq -s .) || return 1
+      --jq '.workflow_runs[] | {id, workflow_id, suite: .check_suite_id, done: (.status == "completed")}' | jq -s .) || return 1
   fi
   statuses=$(api "$R/commits/$sha/status" --jq '.statuses[] | {name: .context,
       status: (if .state == "success" then "success" elif .state == "pending" then "pending" else "failure" end),
       at: .updated_at}' | jq -s .) || return 1
   jq -n --argjson a "$runs" --argjson b "$statuses" --argjson wruns "$wruns" '
-    def superseded: .suite as $s | ($wruns | map(select(.suite == $s)) | first) as $w
-      | $w != null and any($wruns[]; .workflow_id == $w.workflow_id and .id > $w.id);
+    def superseded: . as $r | ($wruns | map(select(.suite == $r.suite)) | first) as $w
+      | $w != null and any($wruns[]; .workflow_id == $w.workflow_id and .id > $w.id
+          and ((.done | not) or (.suite as $s | any($a[]; .suite == $s and .name == $r.name))));
     ($a | map(if .cancelled and superseded then .status = "pending" else . end)
         | group_by(.name) | map(max_by(.id))) + $b
     | group_by(.name) | map(max_by(.at) | {name, status})'

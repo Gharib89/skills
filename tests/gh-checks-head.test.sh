@@ -119,6 +119,19 @@ actions_reads() { grep -c '/actions/runs' "$FAKE/calls" 2>/dev/null; }
   check "a lone cancelled run reads failure" \
     '[{"name":"bump-guard","status":"failure"}]' "$(checks)"
 
+  # A newer run that finished without a check run of this name is no successor:
+  # the #392 table's middle run, cancelled while queued, is one. Only a newer run
+  # still going, or one that wrote a row of this name, holds the row pending.
+  workflows '{"workflow_runs":[{"id":11,"workflow_id":7,"check_suite_id":502,"status":"completed"},
+    {"id":12,"workflow_id":7,"check_suite_id":503,"status":"completed"}]}'
+  check "a newer run that finished with no row of this name does not supersede" \
+    '[{"name":"bump-guard","status":"failure"}]' "$(checks)"
+  workflows '{"workflow_runs":[{"id":11,"workflow_id":7,"check_suite_id":502,"status":"completed"},
+    {"id":12,"workflow_id":7,"check_suite_id":503,"status":"completed"},
+    {"id":13,"workflow_id":7,"check_suite_id":504,"status":"queued"}]}'
+  check "a queued run behind a finished one still supersedes" \
+    '[{"name":"bump-guard","status":"pending"}]' "$(checks)"
+
   # A newer run of a different workflow supersedes nothing.
   workflows '{"workflow_runs":[{"id":11,"workflow_id":7,"check_suite_id":502},{"id":12,"workflow_id":8,"check_suite_id":503}]}'
   check "another workflow's newer run does not supersede" \
