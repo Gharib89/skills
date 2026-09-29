@@ -181,7 +181,7 @@ One unit of what `setup-skills` writes into a consumer repo, fed by one template
 _Avoid_: template, step, item
 
 **Retired term**:
-A word a source-repo skill stops using, declared in that skill's `retired-terms.md` with the version that retired it and the word that replaces it, so a refresh that crosses that version can find the word in the consumer repo's own documents and replace it there.
+A word a source-repo skill stops using, declared in that skill's `retired-terms.md` with the version that retired it and the word that replaces it, so a refresh that crosses that version can find the word in the consumer repo's own documents and replace it there, renaming a file whose name is the word.
 _Avoid_: deprecated term, old vocabulary, stale wording
 
 **Claim**:

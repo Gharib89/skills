@@ -114,7 +114,20 @@ exists` are the only reasons left. Note the profile schema move for step 8: the
 
 **Retired terms**, whether or not setup-skills re-ran. Each `retired` row is a
 word a source-repo skill stopped using inside the range this refresh crosses.
-In a consumer repo, find it in the repo's own files, never the derived copies:
+In a consumer repo, find it in the repo's own files, never the derived copies.
+A term that is a file name (a Term cell ending in an extension, such as
+`CONTEXT.md`) is renamed first: `git mv` every tracked file of that name to the
+row's `replacement` in the same directory. List them with:
+
+```sh
+git ls-files -- ':(glob)**/<term>' ':!.claude/skills/'
+```
+
+Three cases rename nothing, each listed for step 8's Needs attention: a file
+that is not the one the row means, such as a test fixture or a vendored
+document, as `<path>: not renamed, not the <term> the row means`; a file whose
+target already exists, as `<path>: not renamed, <replacement> exists`; and every
+file of a row whose replacement is null. Then sweep the references:
 
 ```sh
 git grep -n -w -F -e '<term>' -- . ':!.claude/skills/'
@@ -122,11 +135,13 @@ git grep -n -w -F -e '<term>' -- . ':!.claude/skills/'
 
 Replace each hit with the row's `replacement` where it reads correctly in that
 sentence. A record of the past, such as a changelog entry or an ADR, keeps the
-word and is no hit. List every other hit, and every hit of a row whose
-`replacement` is null, for step 8's Needs attention as `<path>:<line>: <term>`.
+word and is no hit. A hit that names a file this step left in place keeps the
+word too. List it, every other hit that was not replaced, and every hit of a
+row whose `replacement` is null, for step 8's Needs attention as
+`<path>:<line>: <term>`.
 In the source repo there is nothing to sweep: the PR that retired a word adds
-its row to that skill's `retired-terms.md` and replaces the word in this repo's
-own documents, in the same diff.
+its row to that skill's `retired-terms.md`, replaces the word in this repo's
+own documents and renames a file whose name is the word, in the same diff.
 
 ### 7. Report upstream drift
 
@@ -249,8 +264,10 @@ Then the refresh line, and `scripts/local-gate.sh`, whose `derived-copies` gate
 holds every pin to the lock. In step 8 the PR body opens with `Closes #<n>`,
 the drift issue step 7 filed or found, and the title is scoped to the composing
 skill, so the release run records the move in that skill's CHANGELOG. A pin
-moved on ship's `composes` line is a breaking change to ship, since preflight
-refuses every consumer still at the old ref (`skill off pin`): the title takes
-`!`, e.g. `fix(ship)!: move show-me to <short sha>`, and the maintainer applies
-the `major` label. A pin moved on setup-skills' line alone refuses nothing and
-takes no `!`.
+moved on ship's `composes` line breaks ship, since preflight refuses every
+consumer still at the old ref (`skill off pin`). While ship is 0.x that grades
+minor: the title is `feat(ship): move show-me to <short sha>`, with no `!`, no
+`BREAKING CHANGE:` footer in any commit, since `bump-guard` reads commits too,
+and no `major` label. State the break in plain words in the commit body and
+under `## Special things to note`. A pin moved on setup-skills' line alone
+refuses nothing and takes no `!` either.

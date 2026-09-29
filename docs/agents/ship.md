@@ -2,7 +2,7 @@
 
 Schema: 3
 
-Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [CONTEXT.md](../../CONTEXT.md).
+Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [GLOSSARY.md](../../GLOSSARY.md).
 
 This repo is both the **source** of the shared skills and a **consumer** of them: `skills/<name>/` is the source of truth and `.claude/skills/<name>/` is the derived copy that actually runs. A change to a skill is not shipped until both carry it.
 
@@ -45,7 +45,7 @@ Legs: bump-guard: the PR title is a Conventional Commit of a type the release ru
 No-checks legal: no, `bump-guard` is not path-filtered and reports on every PR
 Push policy: Default.
 
-`bump-guard` is the one leg. It runs on `pull_request` opened, edited, synchronize, labeled and unlabeled, is not path-filtered, and reports on every PR, so a run always has a check to await. Its subject is the PR title, because the release run on main grades the bump from the squash subject: a red leg here is a title to fix with `update-pr-title`. It reads the branch's commit messages too, because a `BREAKING CHANGE:` footer in one of them reaches the release run through the squash body, and it reads the description for the same footer, so neither text grades a major bump the guard has not seen. The one red run cannot clear is the `major` label, which only the maintainer applies: a run whose change grades major keeps the `!` in the title, leaves the leg red, and asks for the label at the merge gate rather than dropping the `!`, which would under-grade the release.
+`bump-guard` is the one leg. It runs on `pull_request` opened, edited, synchronize, labeled and unlabeled, is not path-filtered, and reports on every PR, so a run always has a check to await. Its subject is the PR title, because the release run on main grades the bump from the squash subject: a red leg here is a title to fix with `update-pr-title`. It reads the branch's commit messages too, because a `BREAKING CHANGE:` footer in one of them reaches the release run through the squash body, and it reads the description for the same footer, so neither text grades a major bump the guard has not seen. Every skill is 0.x until its public release ([ADR 0005](../adr/0005-skills-stay-0x-until-public-release.md)), so a breaking change is titled `feat(<skill>):`, which cuts the same minor a `!` would, and states its break in plain words in the commit body and under `## Special things to note`; the title, every commit and the description stay free of `!` and of the footer, and the leg stays green. The one red run cannot clear is the `major` label, which only the maintainer applies: on the PR that releases a skill at 1.0, and on every breaking change after, the title keeps its `!`, the leg stays red, and the run asks for the label at the merge gate.
 
 Two workflows are not legs. `.github/workflows/claude-review.yml` is triggered by an issue comment carrying `@claude` and has no `pull_request` trigger, so it lands no check run on a PR head: it is the `claude` reviewer below. `.github/workflows/semantic-release.yml` runs on push to main, after the merge, so no PR ever sees it.
 
@@ -146,7 +146,7 @@ This repo is Ship's own source, so a run here is already in the source repo and 
 
 ## Docs sync
 
-Targets: CONTEXT.md, docs/adr/, docs/agents/, skills/setup-skills/profile-schema.md, .out-of-scope/
+Targets: GLOSSARY.md, docs/adr/, docs/agents/, skills/setup-skills/profile-schema.md, .out-of-scope/
 Agent-facing: all of them, plus skills/, .claude/skills/ and docs/contributing/
 
 A diff touching nothing on the `Agent-facing:` line, such as a `.github/` workflow edit, takes no `writing-for-agents` pass.
