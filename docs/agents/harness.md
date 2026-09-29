@@ -25,7 +25,7 @@ Cloud setup: default
 Verdict: cloud-first
 Setup: .claude/hooks/cloud-setup.sh
 Allowlist: None.
-Proof: 3c08b916c88cee4c2759bda04b2eaeb6642579c1
+Proof: 2feca7bfc75121cd7266074b2a8fce112328e544
 
 ## Excluded
 
