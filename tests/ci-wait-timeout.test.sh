@@ -21,7 +21,7 @@ nogit=$work/nogit; mkdir -p "$nogit"
 err() { ( cd "$1" && shift && bash "$m" "$@" 2>/dev/null | jq -r '.error' ); }
 rc()  { ( cd "$1" && shift && bash "$m" "$@" >/dev/null 2>&1 ); echo $?; }
 
-usage='usage: ci-wait <pr> [--sha <sha>, default the local HEAD on the PR head branch] [--timeout <s>, at least the no-checks grace (120s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]'
+usage='usage: ci-wait <pr> [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is timeout] [--timeout <s>, at least the no-checks grace (120s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]'
 floor='--timeout below the 120s no-checks grace: a shorter window reports timeout where this mechanic answers no-checks'
 
 # --- where the grace comes from ------------------------------------------------

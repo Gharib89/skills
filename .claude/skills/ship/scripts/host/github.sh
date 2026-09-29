@@ -413,27 +413,27 @@ host_pr_for_branch() { # <branch>
 # Check runs plus classic commit statuses, one row per name, latest wins. Within
 # a name, the latest check run is the latest created, by id: a cancellation can
 # complete after its successor started, so a time rule prefers the cancelled row.
-# A `cancelled` run whose workflow has a newer run on this head was superseded by
-# its concurrency group, and its successor can have no check run yet (#394): it
-# reads `pending` until the successor's own row outranks it by id. One cancelled
-# with no newer run of its workflow, or no workflow behind it, is a failure.
+# A `cancelled` check run whose workflow has a newer workflow run on this head was
+# superseded by its concurrency group, and its successor can have no check run
+# yet (#394): it reads `pending` until the successor's own row outranks it by id.
+# One cancelled with no newer workflow run, or no workflow behind it, is a failure.
 host_pr_checks() { # <pr> <head_sha>
-  local sha=$2 runs statuses wf='[]'
+  local sha=$2 runs statuses wruns='[]'
   runs=$(api "$R/commits/$sha/check-runs" --paginate --jq '.check_runs[] | {id, name,
       suite: .check_suite.id, cancelled: (.conclusion == "cancelled"),
       status: (if .status != "completed" then "pending"
                elif (.conclusion | IN("success","neutral","skipped")) then "success"
                else "failure" end), at: (.completed_at // .started_at // "")}' | jq -s .) || return 1
   if jq -e 'any(.[]; .cancelled)' <<<"$runs" >/dev/null; then
-    wf=$(api "$R/actions/runs?head_sha=$sha&per_page=100" --paginate \
+    wruns=$(api "$R/actions/runs?head_sha=$sha&per_page=100" --paginate \
       --jq '.workflow_runs[] | {id, workflow_id, suite: .check_suite_id}' | jq -s .) || return 1
   fi
   statuses=$(api "$R/commits/$sha/status" --jq '.statuses[] | {name: .context,
       status: (if .state == "success" then "success" elif .state == "pending" then "pending" else "failure" end),
       at: .updated_at}' | jq -s .) || return 1
-  jq -n --argjson a "$runs" --argjson b "$statuses" --argjson wf "$wf" '
-    def superseded: .suite as $s | ($wf | map(select(.suite == $s)) | first) as $w
-      | $w != null and any($wf[]; .workflow_id == $w.workflow_id and .id > $w.id);
+  jq -n --argjson a "$runs" --argjson b "$statuses" --argjson wruns "$wruns" '
+    def superseded: .suite as $s | ($wruns | map(select(.suite == $s)) | first) as $w
+      | $w != null and any($wruns[]; .workflow_id == $w.workflow_id and .id > $w.id);
     ($a | map(if .cancelled and superseded then .status = "pending" else . end)
         | group_by(.name) | map(max_by(.id))) + $b
     | group_by(.name) | map(max_by(.at) | {name, status})'

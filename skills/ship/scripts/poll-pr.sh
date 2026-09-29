@@ -133,7 +133,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--sha <sha>, default the local HEAD on the PR head branch] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift

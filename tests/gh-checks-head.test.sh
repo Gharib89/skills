@@ -159,6 +159,25 @@ polls() { rm -f "$FAKE/pulls.n"; printf '%s' "$1" > "$FAKE/old-polls"; }
 ciwait() { ( cd "$1" && shift && bash "$root/skills/ship/scripts/ci-wait.sh" 1 "$@" 2>/dev/null ); }
 pollpr() { ( cd "$1" && shift && bash "$root/skills/ship/scripts/poll-pr.sh" 1 "$@" 2>/dev/null ); }
 
+# The no-checks grace counts from the expected head's arrival, which only a
+# nonzero grace shows: a checkout whose profile names a leg keeps the 120 s one.
+# The head arrives about 20 s in and no check ever registers, so a window of 120 s
+# closes inside the grace: `timeout` on the arrived head, where a grace counted
+# from the start answers `no-checks`. Real time, so it runs in the background on
+# its own fake state while the cases below run.
+late=$work/late; mkdir -p "$late/docs/agents"
+printf '# Ship profile\n\nSchema: 3\n\n## CI\n\nLegs: bump-guard: the title\nNo-checks legal: no\nPush policy: Default.\n' \
+  > "$late/docs/agents/ship.md"
+git -C "$late" init -q -b fix/fake-1
+git -C "$late" -c user.name=t -c user.email=t@t commit -q --allow-empty -m late
+git -C "$late" remote add origin https://github.com/owner/repo.git
+late_sha=$(git -C "$late" rev-parse HEAD)
+cp -r "$FAKE" "$work/fake-late"; rm -f "$work/fake-late/pulls.n"
+printf '%s' "$late_sha" > "$work/fake-late/new-sha"; printf '2' > "$work/fake-late/old-polls"
+printf '{"total_count":0,"check_runs":[]}' > "$work/fake-late/check-runs-$late_sha.json"
+( FAKE=$work/fake-late ciwait "$late" --timeout 120 --interval 10 > "$work/late.out" ) &
+late_pid=$!
+
 polls 2
 out=$(ciwait "$co" --timeout 30 --interval 0)
 check "ci-wait waits out the old head and answers green" green "$(jq -r .status <<<"$out")"
@@ -191,6 +210,11 @@ polls 2
 out=$(ciwait "$co" --sha "${new:0:12}" --timeout 30 --interval 0)
 check "--sha waits for the head it names" "green $new" "$(jq -r '"\(.status) \(.head_sha)"' <<<"$out")"
 
+# --sha is a literal prefix: a glob in it matches no head.
+polls 0
+out=$(ciwait "$co" --sha '*' --timeout 1 --interval 1)
+check "a glob in --sha is literal" "timeout $new" "$(jq -r '"\(.status) \(.head_sha)"' <<<"$out")"
+
 # A lone cancelled leg on the expected head is checks-failed at once.
 git -C "$co" checkout -q fix/fake-1
 run 2 bump-guard completed '"cancelled"' 2026-09-29T02:16:28Z '"2026-09-29T02:16:33Z"' 502 | runs_of
@@ -199,5 +223,9 @@ polls 0
 out=$(ciwait "$co" --interval 30)
 check "a lone cancelled leg is checks-failed" checks-failed "$(jq -r .status <<<"$out")"
 check "without waiting out the window" true "$(jq '.waited_s < 30' <<<"$out")"
+
+wait "$late_pid"
+check "a head arriving late gets the grace from its arrival" "timeout $late_sha" \
+  "$(jq -r '"\(.status) \(.head_sha)"' "$work/late.out")"
 
 finish

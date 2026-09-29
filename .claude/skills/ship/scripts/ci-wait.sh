@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# ship phase 8: conflict check first (a conflicted PR has no merge ref, so its
-# checks sit pending forever), then a bounded foreground wait until every check
-# on the head has completed.
+# ship phase 8: the expected head, then the conflict check (a conflicted PR has
+# no merge ref, so its checks sit pending forever), then a bounded foreground
+# wait until every check on the head has completed.
 #
 #   ci-wait <pr> [--sha <sha>] [--timeout <s>, at least the no-checks grace the
 #           profile leaves standing] [--interval <s>]
 #
 # The expected head is `--sha`, else the local HEAD of a checkout of the PR's head
-# branch: while the host shows another head the wait answers nothing about it,
+# branch: while the host shows another head the wait grades nothing,
 # and a window that closes first is `timeout` carrying the host's head_sha.
 #
 # stdout: {status: green | no-checks | conflict | checks-failed | timeout,
@@ -23,7 +23,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # honoured, and the usage line carries the number the refusal names. The profile
 # can drop it to zero, below; the constant is what stands where it does not.
 grace=120
-usage="usage: ci-wait <pr> [--sha <sha>, default the local HEAD on the PR head branch] [--timeout <s>, at least the no-checks grace (${grace}s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]"
+usage="usage: ci-wait <pr> [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is timeout] [--timeout <s>, at least the no-checks grace (${grace}s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]"
 ship_help "$usage" "$@"
 [ -n "${1:-}" ] || ship_tooling "$usage"
 pr=$1; shift
@@ -53,7 +53,7 @@ emit() { # <status> <sha> <checks-json> <waited>
   jq -n --arg s "$1" --arg sha "$2" --argjson c "$3" --argjson w "$4" \
     '{status: $s, head_sha: $sha, checks: $c, failing: [$c[] | select(.status == "failure") | .name], waited_s: $w}'
 }
-start=$SECONDS; seen=""
+start=$SECONDS; head_at=""
 while :; do
   prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
   sha=$(jq -r .head_sha <<<"$prj")
@@ -64,7 +64,7 @@ while :; do
   fi
   # The grace counts from the expected head's arrival, so a late push cannot
   # spend it on the previous head.
-  [ -n "$seen" ] || seen=$SECONDS
+  [ -n "$head_at" ] || head_at=$SECONDS
   if [ "$(jq -r .mergeable <<<"$prj")" = conflict ]; then
     emit conflict "$sha" '[]' "$waited"
     echo "PR $pr conflicts with its base: fetch, merge the base in, resolve, re-run base-fresh and the local gate, push." >&2
@@ -76,7 +76,7 @@ while :; do
   # give the host a grace window to register them before believing that. A
   # profile that expects none set the grace to zero above, and the first empty
   # poll is the answer.
-  if [ "$n" -eq 0 ] && [ $((SECONDS - seen)) -ge "$grace" ]; then emit no-checks "$sha" "$checks" "$waited"; exit 0; fi
+  if [ "$n" -eq 0 ] && [ $((SECONDS - head_at)) -ge "$grace" ]; then emit no-checks "$sha" "$checks" "$waited"; exit 0; fi
   if [ "$n" -gt 0 ] && [ "$pending" -eq 0 ]; then
     if jq -e 'any(.[]; .status == "failure")' <<<"$checks" >/dev/null; then
       emit checks-failed "$sha" "$checks" "$waited"; exit 1
