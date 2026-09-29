@@ -1,4 +1,4 @@
-<!-- setup-harness: written inside the `## Agent skills` block of CLAUDE.md (a new one at the end when there is none), this comment removed. -->
+<!-- setup-harness: written inside the `## Agent skills` block of CLAUDE.md (a new one at the end when there is none), this comment removed. With no CLAUDE.md, the file this creates opens with `# CLAUDE.md` above that block, so a markdown linter's first-line-heading rule passes; an existing CLAUDE.md keeps its own first line. -->
 
 ### Harness
 

@@ -68,6 +68,10 @@ _Avoid_: timeout (the hook's backstop, derived from the budget), limit, SLA
 One language and its package manager, rooted at a directory whose manifest owns a lockfile or which a workspace config names: the unit that installs once and runs one set of tool versions. A polyglot repo or a monorepo holds several; a language the harness setup skill has no entry for is reported, never guessed.
 _Avoid_: language, project, ecosystem
 
+**Candidate root**:
+A stack's manifest with no lockfile beside it that no root's workspace config names, which the harness setup skill asks the human to mark a root or ignored. The answer lands in the harness profile as a `Root: <manifest>` or a `Declined: <manifest> as a root` line, and a candidate root with neither is new, asked again on the next run.
+_Avoid_: candidate (that is `file-issue`'s open-issue match), lockless root
+
 **Member**:
 One workspace package inside a stack: the unit typecheck and affected tests run on, carrying its own tools or inheriting the stack root's. A stack with no workspace is its own single member.
 _Avoid_: package (overloaded), module, subproject

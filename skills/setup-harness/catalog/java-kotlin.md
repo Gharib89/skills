@@ -3,7 +3,7 @@
 ## Signals
 Kind: stack
 Manifest: build.gradle, build.gradle.kts, pom.xml
-Lockfile: gradle.lockfile (Gradle, opt-in; Maven has none, so a pom.xml root is a candidate)
+Lockfile: gradle.lockfile (Gradle, opt-in; Maven has none, so a pom.xml is a candidate root)
 Workspace: settings.gradle `include`, settings.gradle.kts `include`, pom.xml `<modules>`
 Extensions: .java .kt .kts
 Shebangs: None.
