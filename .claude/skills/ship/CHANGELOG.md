@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.0 (2026-09-29)
+
+### Features
+
+- **ship**: Move tdd and triage to d81f3a1 and retire CONTEXT.md for GLOSSARY.md
+  ([#411](https://github.com/Gharib89/skills/pull/411),
+  [`4ad593d`](https://github.com/Gharib89/skills/commit/4ad593dbc393d2e5d15046018cb9c8c98c9d2573))
+
+
 ## v0.12.0 (2026-09-29)
 
 ### Features
