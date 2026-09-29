@@ -7,7 +7,7 @@
 #   scripts/derived-copies-check.sh
 #
 # stdout: one line per difference
-# exit: 0 identical · 1 a difference
+# exit: 0 identical · 1 a difference · 2 tooling
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 

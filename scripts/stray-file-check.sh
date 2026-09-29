@@ -6,9 +6,9 @@
 # `.github/`, `.out-of-scope/`, `.release/`, `docs/`, `scripts/`, `skills/` and `tests/`, and
 # the root files `.pre-commit-config.yaml`, `CLAUDE.md`, `CONTEXT.md` and
 # `skills-lock.json`, which is `dirs` and `files` below. A new top-level entry
-# is a decision rather than a
-# side effect, so it is added there in the same commit that tracks it. The
-# `stray-files` gate in scripts/local-gate.sh runs this, in every lane.
+# is a decision rather than a side effect, so it is added there in the same
+# commit that tracks it. The `stray-files` gate in scripts/local-gate.sh runs
+# this, in every lane.
 #
 #   scripts/stray-file-check.sh [<root>]
 #
