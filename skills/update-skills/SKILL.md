@@ -123,10 +123,12 @@ row's `replacement` in the same directory. List them with:
 git ls-files -- ':(glob)**/<term>' ':!.claude/skills/'
 ```
 
-A rename whose target already exists is not performed: list it for step 8's
-Needs attention as `<path>: not renamed, <replacement> exists`, and replace
-none of that term's hits in the sweep: list them all, since a hit may name the
-file left in place. A null replacement renames nothing. Then sweep the
+A file that is not the one the row means, such as a test fixture or a
+vendored document, stays in place: list it for step 8's Needs attention as
+`<path>: not renamed, not the <term> the row means`. A rename whose target
+already exists is not performed either: list it as `<path>: not renamed,
+<replacement> exists`. In both cases replace none of that term's hits in the
+sweep: list them all, since a hit may name the file left in place. A null replacement renames nothing. Then sweep the
 references:
 
 ```sh
