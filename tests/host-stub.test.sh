@@ -40,8 +40,9 @@ fixture() { # <name> -> path of a fresh tree carrying the runner
 }
 # <tree> <name> <body>: a fixture test file that records the host log it was given.
 fx() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$SHIP_TEST_HOSTLOG" >> "$LOGPATHS"\n%s\n' "$3" > "$1/tests/$2.test.sh"; }
+# A `timeout` bounds each run, so a runner that spins reads as a red case, exit 124.
 run_in() { # <tree> <jobs>: stdout, then stderr, then the exit code, each on its own
-  SHIP_TEST_JOBS=$2 LOGPATHS="$1/logpaths" bash "$1/tests/run.sh" >"$1/stdout.$2" 2>"$1/stderr.$2"; echo $? >"$1/rc.$2"
+  SHIP_TEST_JOBS=$2 LOGPATHS="$1/logpaths" timeout 60 bash "$1/tests/run.sh" >"$1/stdout.$2" 2>"$1/stderr.$2"; echo $? >"$1/rc.$2"
 }
 
 t=$(fixture ordered)
@@ -89,6 +90,5 @@ t=$(fixture badjobs)
 fx "$t" 01-pass 'true'
 run_in "$t" 0
 check_rc "a worker count that is not a positive integer is refused" 2 "$(cat "$t/rc.0")"
-
 
 finish

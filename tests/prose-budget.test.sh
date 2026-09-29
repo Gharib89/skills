@@ -262,6 +262,12 @@ if [ "$(id -u)" != 0 ]; then
   body 101 > "$d/skills/ship/reference/r.md"; chmod 000 "$d/skills/ship/reference/r.md"
   check_rc "a reference file that cannot be read is tooling" 2 "$(rc_of "$d")"
   chmod 644 "$d/skills/ship/reference/r.md"
+
+  # The profile's byte budget reads the file with awk too, and an unreadable one
+  # must not read as a section of zero bytes.
+  d=$(tree unreadable-profile); gate_profile "$d" 100; chmod 000 "$d/docs/agents/ship.md"
+  check_rc "a profile that cannot be read is tooling" 2 "$(rc_of "$d")"
+  chmod 644 "$d/docs/agents/ship.md"
 fi
 
 finish

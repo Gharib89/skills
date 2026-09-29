@@ -109,7 +109,7 @@ check    "and reports no status rather than the last one" null "$(status_of "$ou
 
 # ship_fail_host is what turns that into the mechanic's verdict. It is host
 # agnostic: an adapter that reports no status, as `az` does, yields null.
-verdict() { bash -c 'source skills/ship/scripts/_lib.sh; ship_fail_host "PR body update failed" "$1"' _ "$1"; }
+verdict() { bash -c 'source skills/ship/scripts/_lib.sh; ship_fail_host "PR body update failed" "$1"' _ "$1" 2>/dev/null; }
 check "the verdict carries the error and the status" \
   '{"error":"PR body update failed","status":500}' "$(verdict '{"status":500}' | jq -c .)"
 check "a verdict with no adapter answer is null" \
@@ -117,5 +117,7 @@ check "a verdict with no adapter answer is null" \
 check "a verdict whose adapter answer is not JSON is null" \
   '{"error":"PR body update failed","status":null}' "$(verdict 'gh: something' | jq -c .)"
 check_rc "a failed write is exit 1" 1 "$(verdict '{"status":500}' >/dev/null; echo $?)"
+check "the error is also on stderr, where a jq over stdout cannot read it as null" \
+  "PR body update failed" "$(bash -c 'source skills/ship/scripts/_lib.sh; ship_fail_host "PR body update failed" "$1"' _ '{"status":500}' 2>&1 >/dev/null)"
 
 finish

@@ -33,8 +33,8 @@ in the merge summary, so every PR records which ship produced it.
 
 `$ARGUMENTS`:
 
-- `<issue>`: the issue number (work item id on Azure DevOps). Omitted with no
-  flag: ask which issue.
+- `<issue>`: the issue number (work item id on Azure DevOps); `prepare` alone
+  takes none. Omitted with no flag: ask which issue.
 - Free text instead of a number: the task spec itself. No issue fetch, claim,
   `Closes` or reflect, nor the `Done when:` clauses naming them; `none` is the
   issue argument to `preflight`, `isolate`, `open-pr`, `merge` and `cleanup`.
@@ -46,8 +46,8 @@ in the merge summary, so every PR records which ship produced it.
 
 Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits. **Preparation**, before `run-file
-init` in every run but the no-issue lane's inner one: `prepare` (no issue
-argument; `--unattended` in that lane). In a **cloud sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that
+init` in every run but the no-issue lane's inner one: `prepare` (`--unattended`
+in that lane). In a **cloud sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that
 flag, it runs `tooling --install` then the profile's `## Cloud lane`
 `Bootstrap:`, elsewhere a no-op. A `failed` step stops the run, no claim, with
 its tail: `tooling` as `host-unreachable`, `bootstrap` as `bootstrap-failed`.

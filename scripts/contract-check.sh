@@ -36,8 +36,8 @@
 # Check 10 reads two sentences of ship's prose that nothing else holds: phase
 # 4's instruction that an axis reads the Local gate's JSON rather than running
 # the suite, and context discipline's one-reference-file-per-call rule. Each is
-# matched as the whole sentence with its line wraps joined, so the same words
-# turned to the opposite meaning ("and also runs") do not pass.
+# matched as a substring of the file with its line wraps joined, so the same
+# words turned to the opposite meaning ("and also runs") do not pass.
 #
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
@@ -333,22 +333,21 @@ fi
 
 # 10. The two sentences above. A tree with no ship skill has nothing to hold.
 # Whitespace is squeezed first, because the prose is wrapped at 80 columns.
-flat() { tr '\n' ' ' < "$1" | tr -s ' '; }
+# require_sentence <file> <sentence> <violation>: the file must contain the
+# sentence, whitespace-flattened; a file that cannot be read is tooling.
+require_sentence() {
+  local flat
+  flat=$(tr '\n' ' ' < "$1" | tr -s ' ') || { printf 'cannot read %s\n' "$1" >&2; exit 2; }
+  case $flat in *"$2"*) ;; *) printf '%s: %s\n' "$1" "$3"; rc=1 ;; esac
+}
 if [ -f "$skills/ship/SKILL.md" ]; then
-  doc=$skills/ship/SKILL.md
-  phase4=$(flat "$doc") || { printf 'cannot read %s\n' "$doc" >&2; exit 2; }
-  case $phase4 in
-    *"the Local gate runs later in the run, so the axis reads the gate's JSON and never runs \`check.sh full\` or the suite itself"*) ;;
-    *) printf "%s: phase 4 must tell each axis the Local gate runs later, so it reads the gate's JSON and never runs check.sh full or the suite\n" "$doc"; rc=1 ;;
-  esac
+  require_sentence "$skills/ship/SKILL.md" \
+    "the Local gate runs later in the run, so the axis reads the gate's JSON and never runs \`check.sh full\` or the suite itself" \
+    "phase 4 must tell each axis the Local gate runs later, so it reads the gate's JSON and never runs check.sh full or the suite"
 fi
 if [ -f "$skills/ship/reference/context-discipline.md" ]; then
-  doc=$skills/ship/reference/context-discipline.md
-  discipline=$(flat "$doc") || { printf 'cannot read %s\n' "$doc" >&2; exit 2; }
-  case $discipline in
-    *"Read one reference file per call."*) ;;
-    *) printf '%s: must say to read one reference file per call\n' "$doc"; rc=1 ;;
-  esac
+  require_sentence "$skills/ship/reference/context-discipline.md" \
+    "Read one reference file per call." "must say to read one reference file per call"
 fi
 
 exit $rc

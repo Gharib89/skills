@@ -28,6 +28,8 @@ files=(tests/*.test.sh)
 [ "${#files[@]}" -gt 0 ] || { echo "no test files under tests/" >&2; exit 2; }
 
 source tests/host-stub.sh
+# `wait -n`, which the worker pool throttles on, arrived in Bash 4.3.
+[ "${BASH_VERSINFO[0]}${BASH_VERSINFO[1]}" -ge 43 ] || { echo "tests/run.sh needs Bash 4.3 or newer, got $BASH_VERSION" >&2; exit 2; }
 workers=${SHIP_TEST_JOBS:-$(nproc 2>/dev/null || echo 1)}
 [[ $workers =~ ^[1-9][0-9]*$ ]] || { echo "SHIP_TEST_JOBS must be a positive integer, got '$workers'" >&2; exit 2; }
 stub=$(mktemp -d) || exit 2

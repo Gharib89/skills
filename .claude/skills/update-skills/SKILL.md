@@ -62,7 +62,7 @@ $U/plan.sh . <scratch>/heads.json --old <old> > <scratch>/plan.json
 `unreachable` rows are skills whose upstream did not answer: no head, so never
 drift or an offered update. Carry them to step 8. `heads` retries a failed read,
 and exits 1 with the count on stderr when every upstream failed: nothing was
-read, so nothing is planned against. The plan's fields drive every
+read, so stop and tell the owner. The plan's fields drive every
 later step; the header comment in `plan.sh` defines each one.
 
 Nothing moved (every `source_skills` entry at its old version, every
@@ -164,7 +164,9 @@ $S/file-issue.sh --repo Gharib89/skills --title "Upstream drift: composed skills
 - `filed: true`: that is the drift issue.
 - `filed: false`: the candidate titled exactly
   `Upstream drift: composed skills` is the drift issue. Rewrite its table in
-  place, with a file holding the table alone:
+  place, with a file holding the table alone, then write `Moving the pins` the
+  same way from a file holding its one sentence (a section the issue lacks is
+  added):
 
   ```sh
   $S/update-issue-body.sh <n> --repo Gharib89/skills --section Drift --body-file <table>
@@ -286,11 +288,11 @@ Ship's: `isolate` is the worktree, the issue being shipped is the drift issue
 step 7 would file, and phase 6 opens the PR with `Closes #<issue>`.
 
 1. `<old>`: `git rev-parse HEAD` in the worktree, before the first edit.
-2. Step 2's source-repo refresh line, from this repo's CLAUDE.md.
+2. Step 2's source-repo refresh line, from the source repo's CLAUDE.md.
 3. Step 3: `$U/heads.sh .`, then `$U/plan.sh . <heads.json> --old <old>`. A
    `heads` exit 1 is retried once, then stops the run `red-after-retry: heads`.
-4. Step 9 per `drift` row, which moves the pins, then its refresh line and the
-   local gate.
+4. Step 9 per `drift` row, which moves the pins, then its refresh line. The
+   local gate is Ship's phase 5, and step 9's title rule is phase 6's title.
 
 Where a step would ask the owner, the run takes the conservative answer and
 writes it to the Run file's deviations log, which lands in the merge summary:
