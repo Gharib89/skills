@@ -133,14 +133,25 @@ check_rc "a failing test exits 1" 1 "$rc"
 
 # A fixture tree the profile excludes: its files belong to no row, even one
 # whose prefix covers them, and are no new root.
-r=$(repo excluded "TURN_ROWS='api/|api|*.py|ok|ok|'
-EXCLUDED='tests/fixtures/ testdata/'")
-run "$r" turn tests/fixtures/bad/app.py testdata/x.py
+r=$(repo excluded "EDIT_GLOBS='*.py'
+EDIT_RUN='lint {files}'
+TURN_ROWS='api/|api|*.py|ok|ok|'
+EXCLUDED='tests/fixtures/
+my data/'")
+run "$r" turn tests/fixtures/bad/app.py 'my data/x.py'
 check "a stack file under an EXCLUDED prefix is no new root" \
   '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
 run "$r" turn svc/new.py
 check "a stack file outside every EXCLUDED prefix is still a new root" \
   '{"rung":"turn","verdict":"unavailable","checks":{"new-root":"unavailable"}}' "$out"
+run "$r" turn my/x.py
+check "a prefix holding a space is one prefix, not two" \
+  '{"rung":"turn","verdict":"unavailable","checks":{"new-root":"unavailable"}}' "$out"
+mkdir -p "$r/tests/fixtures"
+echo 'BAD' > "$r/tests/fixtures/bad.py"
+run "$r" edit tests/fixtures/bad.py
+check "the edit rung skips a file under an EXCLUDED prefix, whatever the runner excludes" \
+  '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
 r=$(repo excluded-root "TURN_ROWS='|app|*.py||bad|'
 EXCLUDED='tests/fixtures/'")
 run "$r" turn tests/fixtures/app.py
