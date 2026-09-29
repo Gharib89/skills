@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.1 (2026-09-29)
+
+### Bug Fixes
+
+- **setup-harness**: Vendored pyright resolves a stack's .venv, testmon honours addopts selectors
+  ([#386](https://github.com/Gharib89/skills/pull/386),
+  [`7530d75`](https://github.com/Gharib89/skills/commit/7530d75dc0aa770cbf9116e2d5efb24525ef936f))
+
+
 ## v0.7.0 (2026-09-29)
 
 ### Features
