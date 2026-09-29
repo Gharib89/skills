@@ -114,9 +114,16 @@ exists` are the only reasons left. Note the profile schema move for step 8: the
 
 **Retired terms**, whether or not setup-skills re-ran. Each `retired` row is a
 word a source-repo skill stopped using inside the range this refresh crosses.
-In a consumer repo, find it in the repo's own files, never the derived copies:
+In a consumer repo, find it in the repo's own files, never the derived copies.
+A term that names a file, such as a glossary, is a file to rename first: list
+every tracked file of that name, at the root or in a context folder, and `git
+mv` each one to the row's `replacement` in the same directory, in this
+refresh. A rename whose target already exists is not performed: list it for
+step 8's Needs attention as `<path>: not renamed, <replacement> exists`. A null
+replacement renames nothing. Then sweep the references:
 
 ```sh
+git ls-files -- ':(glob)**/<term>' ':!.claude/skills/'
 git grep -n -w -F -e '<term>' -- . ':!.claude/skills/'
 ```
 
@@ -249,8 +256,10 @@ Then the refresh line, and `scripts/local-gate.sh`, whose `derived-copies` gate
 holds every pin to the lock. In step 8 the PR body opens with `Closes #<n>`,
 the drift issue step 7 filed or found, and the title is scoped to the composing
 skill, so the release run records the move in that skill's CHANGELOG. A pin
-moved on ship's `composes` line is a breaking change to ship, since preflight
-refuses every consumer still at the old ref (`skill off pin`): the title takes
-`!`, e.g. `fix(ship)!: move show-me to <short sha>`, and the maintainer applies
-the `major` label. A pin moved on setup-skills' line alone refuses nothing and
-takes no `!`.
+moved on ship's `composes` line breaks ship, since preflight refuses every
+consumer still at the old ref (`skill off pin`). While ship is 0.x that grades
+minor: the title is `feat(ship): move show-me to <short sha>`, with no `!`, no
+`BREAKING CHANGE:` footer in any commit, since `bump-guard` reads commits too,
+and no `major` label. State the break in plain words in the commit body and
+under `## Special things to note`. A pin moved on setup-skills' line alone
+refuses nothing.
