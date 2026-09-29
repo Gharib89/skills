@@ -4,7 +4,7 @@ description: "Configure this repo for the Gharib89/skills engineering skills: dr
 disable-model-invocation: true
 metadata:
   version: 0.10.2
-  composes: mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:triage
+  composes: mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60:triage
 ---
 
 # Setup skills
@@ -23,7 +23,8 @@ Check all three before exploring. On any failure print the exact command, then "
 2. **Composed skills as derived copies.** `.claude/skills/` holds `code-review`, `tdd`, `writing-for-agents`, `triage`, `find-docs` and `show-me`, each recorded in the repo's `skills-lock.json` (the skills CLI writes it at install) with the `ref` its line below pins, the upstream commit the source repo tested. A copy the lock records at another `ref`, or none, is off its pin: print its line. A copy present but absent from the lock is hand-maintained: report it as "will be replaced by the derived copy", confirm, then refresh it with the same line. A global copy under `~/.claude/skills` leaves this check unmet: a personal skill silently shadows a repo's, so ship's composed skills must live in the repo. Else print:
 
    ```sh
-   npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill code-review --skill tdd --skill writing-for-agents --skill triage --agent claude-code -y
+   npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill code-review --skill writing-for-agents --agent claude-code -y
+   npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skill tdd --skill triage --agent claude-code -y
    npx skills add upstash/context7#e275a848a420e0d11c2822f61201ee005bfd1133 --skill find-docs --agent claude-code -y
    npx skills add humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c --skill show-me --agent claude-code -y
    ```
