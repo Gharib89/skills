@@ -65,7 +65,7 @@
     "setup-harness": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "dd2b0bf4a92354a61bd0d581325caf6c9ecd198a630d670b6d06860e1de1ed01"
+      "computedHash": "9982fcb5a64809abca30115e5947f6b2f098df2d49612a4662ed0b58196dea9d"
     },
     "setup-skills": {
       "source": ".",

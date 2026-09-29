@@ -35,7 +35,7 @@ Each gap kind takes exactly one disposition:
 | A now-available role: a role with no tool that its catalog entry now fills (a `public API` default whose baseline now exists included), or a `Constraints:` `Unavailable:` that no longer holds | Write |
 | `check.sh` breaks its contract, and no Write above explains it | Offer: rewrite onto the current template, keeping every check the old file ran |
 | A warm `edit` or `turn` time over budget | Offer: narrow, demote or override ([check-ladder.md](check-ladder.md) `## Timing the rungs`) |
-| A new candidate ([detection.md](detection.md)): one with neither a `Root: <manifest>` nor a `Declined: <manifest> as a root` line | Offer |
+| A new candidate ([detection.md](detection.md)): one with neither a `Root: <manifest>` nor a `Declined: <manifest> as a root` line | Offer; the steps a previous run wrote for it are no removal Write, its answer keeping them for a root and removing them for an ignore |
 | `cloud: unproven`, or `unproven (changed since <sha>)`, on a cloud-first repo | Offer: the proof ([cloud.md](cloud.md) `## The proof`) |
 | A broken pin | Offer: re-pin or remove |
 | Evidence gone from a `Local-only:` line that is not `operator's choice` | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
