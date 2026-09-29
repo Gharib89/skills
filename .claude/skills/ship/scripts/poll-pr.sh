@@ -215,6 +215,8 @@ while :; do
   fi
   checks=$(host_pr_checks "$pr" "$sha") || ship_tooling "cannot read checks"
   reviews=$(host_pr_reviews "$pr" "$sha" "$full") || ship_tooling "cannot read reviews"
+  # The previous head's rounds are on no head the run is waiting for.
+  ! $stale || reviews=$(jq -c '.on_head = []' <<<"$reviews")
   # Ship's grade (`SHIP_SUBSTANTIVE`), before the landing rule, the refusal
   # rule or the brief reads a row.
   reviews=$(jq -c "$SHIP_SUBSTANTIVE" <<<"$reviews") || ship_tooling "cannot grade reviews"

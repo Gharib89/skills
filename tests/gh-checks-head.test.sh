@@ -174,6 +174,11 @@ out=$(ciwait "$co" --timeout 2 --interval 1)
 check "a head that never arrives is a timeout" timeout "$(jq -r .status <<<"$out")"
 check "carrying the host's head" "$old" "$(jq -r .head_sha <<<"$out")"
 
+polls 100000
+out=$(pollpr "$co" --timeout 2 --interval 1)
+check "poll-pr closing on the old head is not done" "false $old" "$(jq -r '"\(.done) \(.head_sha)"' <<<"$out")"
+check "and counts the old head's round as on no head" 0 "$(jq '.reviews.on_head | length' <<<"$out")"
+
 # Off the PR's branch there is no expected head: the first read is the answer,
 # as before.
 git -C "$co" checkout -q -b elsewhere
