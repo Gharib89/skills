@@ -115,15 +115,21 @@ exists` are the only reasons left. Note the profile schema move for step 8: the
 **Retired terms**, whether or not setup-skills re-ran. Each `retired` row is a
 word a source-repo skill stopped using inside the range this refresh crosses.
 In a consumer repo, find it in the repo's own files, never the derived copies.
-A term that names a file, such as a glossary, is a file to rename first: list
-every tracked file of that name, at the root or in a context folder, and `git
-mv` each one to the row's `replacement` in the same directory, in this
-refresh. A rename whose target already exists is not performed: list it for
-step 8's Needs attention as `<path>: not renamed, <replacement> exists`. A null
-replacement renames nothing. Then sweep the references:
+A term that is a file name (a Term cell ending in an extension, such as
+`CONTEXT.md`) is renamed first: `git mv` every tracked file of that name to the
+row's `replacement` in the same directory. List them with:
 
 ```sh
 git ls-files -- ':(glob)**/<term>' ':!.claude/skills/'
+```
+
+A rename whose target already exists is not performed: list it for step 8's
+Needs attention as `<path>: not renamed, <replacement> exists`, and replace
+none of that term's hits in the sweep: list them all, since a hit may name the
+file left in place. A null replacement renames nothing. Then sweep the
+references:
+
+```sh
 git grep -n -w -F -e '<term>' -- . ':!.claude/skills/'
 ```
 
@@ -262,4 +268,4 @@ minor: the title is `feat(ship): move show-me to <short sha>`, with no `!`, no
 `BREAKING CHANGE:` footer in any commit, since `bump-guard` reads commits too,
 and no `major` label. State the break in plain words in the commit body and
 under `## Special things to note`. A pin moved on setup-skills' line alone
-refuses nothing.
+refuses nothing and takes no `!` either.
