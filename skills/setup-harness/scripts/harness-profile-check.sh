@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The harness profile's grammar at Schema 1, checked: the `Schema:` line before
-# the first `##`, the six headings present and in order, and each heading's
+# The harness profile's grammar at Schema 2, checked: the `Schema:` line before
+# the first `##`, the seven headings present and in order, and each heading's
 # `Label:` lines present with a value in their vocabulary. Lines that are not a
 # known label under their heading are the human's prose and are not read.
 # setup-harness runs this on every profile it writes; harness-schema.md is the
@@ -17,16 +17,20 @@ case ${1:-} in
   '') echo "$usage" >&2; exit 2 ;;
 esac
 [ -r "$1" ] || { echo "cannot read $1" >&2; exit 2; }
+# The schema this checker reads; the local gate holds it equal to the skill's
+# metadata.harness-schema and the template's Schema: line.
+schema=2
 
-awk '
+awk -v want="$schema" '
 function bad(m) { print m; rc = 1 }
 function oneof(label, v, ok, want) { if (!ok) bad("## " h ": " label ": want " want ", got " v) }
 BEGIN {
-  order = "Claude Code|Check entry point|Budgets|Cloud|Local-only|Declined"
+  order = "Claude Code|Check entry point|Budgets|Cloud|Roots|Local-only|Declined"
   need["Claude Code"] = "Floor"
   need["Check entry point"] = "Location"
   need["Budgets"] = "Edit|Turn|Commit|Full|Cloud setup"
   need["Cloud"] = "Verdict|Setup|Allowlist|Proof"
+  need["Roots"] = "Root"
   need["Local-only"] = "Local-only"
   need["Declined"] = "Declined"
 }
@@ -36,7 +40,7 @@ BEGIN {
 }
 /^Schema:/ && h == "" {
   schema = $2
-  if (schema != "1") { bad("Schema: " schema "; this checker reads Schema 1") }
+  if (schema != want) { bad("Schema: " schema "; this checker reads Schema " want) }
   next
 }
 h != "" {
@@ -49,7 +53,7 @@ h != "" {
     else if (h == "Budgets") oneof(l, v, v == "default" || v ~ /^override [0-9]+s: ./, "default or override <N>s: <reason>")
     else if (l == "Verdict") oneof(l, v, v == "cloud-first" || v ~ /^local-only: ./, "cloud-first or local-only: <reason>")
     else if (l == "Proof") oneof(l, v, v == "unproven" || (v ~ /^[0-9a-f]+$/ && length(v) >= 7 && length(v) <= 40), "<sha> or unproven")
-    else if (h == "Local-only" || h == "Declined") oneof(l, v, v == "None." || v ~ /^[^:]+: ./, (h == "Declined" ? "<proposal>" : "<part>") ": <reason> or None.")
+    else if (h == "Roots" || h == "Local-only" || h == "Declined") oneof(l, v, v == "None." || v ~ /^[^:]+: ./, (h == "Roots" ? "<path>" : h == "Declined" ? "<proposal>" : "<part>") ": <reason> or None.")
     else if (v == "") bad("## " h ": " l ": empty")
   }
 }

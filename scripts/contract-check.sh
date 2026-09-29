@@ -29,9 +29,9 @@
 # one reader, `ship_load_host` in `_lib.sh`, and a mention anywhere else is a
 # second.
 #
-# Checks 7 and 8 read setup-harness, when the skills tree carries it: its
-# catalog entries' format and the two profile-template lines setup-skills
-# parses.
+# Checks 7 to 9 read setup-harness, when the skills tree carries it: its
+# catalog entries' format, the two profile-template lines setup-skills parses
+# and the harness schema number's three places.
 #
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
@@ -297,6 +297,22 @@ if [ -d "$harness" ]; then
       END { exit !found }' "$tmpl" 2>/dev/null \
       || { printf 'harness profile template: ## %s has no %s: line\n' "${pair%%:*}" "${pair#*:}"; rc=1; }
   done
+fi
+
+# 9. The harness schema number sits in three places, moved together by the
+# bump rule in harness-schema.md: the skill's metadata.harness-schema, the
+# template's Schema: line and the checker's schema= literal. One moved alone
+# ships a template its own checker refuses, or a re-run that migrates to the
+# wrong number.
+if [ -d "$harness" ]; then
+  meta=$(sed -n 's/^  harness-schema: //p' "$harness/SKILL.md" 2>/dev/null)
+  line=$(sed -n 's/^Schema: //p' "$harness/templates/harness-profile.md" 2>/dev/null)
+  lit=$(sed -n 's/^schema=//p' "$harness/scripts/harness-profile-check.sh" 2>/dev/null)
+  if [ -z "$meta" ] || [ "$meta" != "$line" ] || [ "$meta" != "$lit" ]; then
+    printf 'harness schema disagrees: SKILL.md metadata.harness-schema %s, templates/harness-profile.md Schema: %s, scripts/harness-profile-check.sh schema=%s\n' \
+      "${meta:-none}" "${line:-none}" "${lit:-none}"
+    rc=1
+  fi
 fi
 
 exit $rc
