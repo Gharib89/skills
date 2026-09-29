@@ -72,6 +72,10 @@ _Avoid_: language, project, ecosystem
 A stack's manifest with no lockfile beside it that no root's workspace config names, which the harness setup skill asks the human to mark a root or ignored. The answer lands in the harness profile as a `Root: <manifest>` or a `Declined: <manifest> as a root` line, and a candidate root with neither line is new, so each run asks it.
 _Avoid_: candidate (that is `file-issue`'s open-issue match), lockless root
 
+**Fixture tree**:
+A tracked `fixtures` or `testdata` directory, inputs a test reads that are often bad or byte-exact by design, which the harness setup skill asks the human to exclude or read. Excluded, it is recorded as an `Excluded: <path prefix>` line in the harness profile: detection reads nothing under it, and the pre-commit runner's exclude keeps every fix-mode tool off it. A fixture tree with neither that line nor a `Declined: <path prefix> as excluded` line is new, so each run asks it.
+_Avoid_: test data, ignored tree
+
 **Member**:
 One workspace package inside a stack: the unit typecheck and affected tests run on, carrying its own tools or inheriting the stack root's. A stack with no workspace is its own single member.
 _Avoid_: package (overloaded), module, subproject
