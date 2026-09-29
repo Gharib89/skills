@@ -513,7 +513,7 @@ d=$(harness_tree schema-metadata)
 sed -i.bak 's/^  harness-schema: .*/  harness-schema: 9/' "$d/setup-harness/SKILL.md"
 run "$inert" "$d"
 check_rc "a moved metadata.harness-schema fails" 1 "$rc"
-check "and names all four places" 0 "$(named "harness schema disagrees: SKILL.md metadata.harness-schema 9, templates/harness-profile.md Schema: 2, scripts/harness-profile-check.sh schema=2, harness-schema.md entry '## Schema 9' missing")"
+check "and names all four places" 0 "$(named "harness schema disagrees: SKILL.md metadata.harness-schema 9, templates/harness-profile.md Schema: 3, scripts/harness-profile-check.sh schema=3, harness-schema.md entry '## Schema 9' missing")"
 
 d=$(harness_tree schema-template)
 sed -i.bak 's/^Schema: .*/Schema: 9/' "$d/setup-harness/templates/harness-profile.md"

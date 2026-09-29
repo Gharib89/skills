@@ -45,4 +45,4 @@ Hook: local
 Pin: package npm prettier
 Route: `npm install -g prettier@{version}`; Blocked: None.
 Constraints: None.
-Traps: yamllint is not a default: its stock config fights workflow files (35 findings on one real workflow, mostly `line-length`, `truthy` on `on:` and `document-start`). The image ships an unpinned global `prettier`, so the cloud setup's done test matches the picked version rather than `command -v`.
+Traps: yamllint is not a default: its stock config fights workflow files (35 findings on one real workflow, mostly `line-length`, `truthy` on `on:` and `document-start`). The image ships an unpinned global `prettier`, so the cloud setup's done test matches the picked version rather than `command -v`: `[ "$(prettier --version 2>/dev/null)" = <v> ]`, with no `|`, which separates a cloud setup row's fields.

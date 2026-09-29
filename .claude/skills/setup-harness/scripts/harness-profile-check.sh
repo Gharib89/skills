@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The harness profile's grammar at Schema 2, checked: the `Schema:` line before
-# the first `##`, the seven headings present and in order, and each heading's
+# The harness profile's grammar at Schema 3, checked: the `Schema:` line before
+# the first `##`, the eight headings present and in order, and each heading's
 # `Label:` lines present with a value in their vocabulary. Lines that are not a
 # known label under their heading are the human's prose and are not read.
 # setup-harness runs this on every profile it writes; harness-schema.md is the
@@ -19,21 +19,22 @@ esac
 [ -r "$1" ] || { echo "cannot read $1" >&2; exit 2; }
 # The schema this checker reads, moved with the skill's metadata.harness-schema
 # by the bump rule in harness-schema.md.
-schema=2
+schema=3
 
 awk -v reads="$schema" '
 function bad(m) { print m; rc = 1 }
 function oneof(label, v, ok, want) { if (!ok) bad("## " h ": " label ": want " want ", got " v) }
 BEGIN {
-  order = "Claude Code|Check entry point|Budgets|Cloud|Roots|Local-only|Declined"
+  order = "Claude Code|Check entry point|Budgets|Cloud|Excluded|Roots|Local-only|Declined"
   need["Claude Code"] = "Floor"
   need["Check entry point"] = "Location"
   need["Budgets"] = "Edit|Turn|Commit|Full|Cloud setup"
   need["Cloud"] = "Verdict|Setup|Allowlist|Proof"
+  need["Excluded"] = "Excluded"
   need["Roots"] = "Root"
   need["Local-only"] = "Local-only"
   need["Declined"] = "Declined"
-  ph["Roots"] = "<manifest>"; ph["Local-only"] = "<part>"; ph["Declined"] = "<proposal>"
+  ph["Excluded"] = "<path prefix>"; ph["Roots"] = "<manifest>"; ph["Local-only"] = "<part>"; ph["Declined"] = "<proposal>"
 }
 /^## / {
   if (!schema) { bad("missing Schema: line before the first ## heading"); schema = "none" }

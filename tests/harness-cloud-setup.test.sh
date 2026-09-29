@@ -182,6 +182,31 @@ rm cid" "$out
 $(cat "$log")"
 rm -f "$pw.cp-fail"
 
+# The done test cloud.md gives a tool the image ships its own unpinned copy of,
+# as written there: the row splits on `|`, so that test carries none, and a
+# second run finds the picked version and skips the install.
+pv=$(sed -n 's/.*(`\(\[ [^`]*prettier --version[^`]*\)`.*/\1/p' skills/setup-harness/reference/cloud.md | sed 's/<v>/3.9.8/')
+check "cloud.md gives the version done test" 1 "$(printf '%s\n' "$pv" | grep -c .)"
+printf '#!/bin/sh\ncat "$LOG.pv"\n' > "$bin/prettier"; chmod +x "$bin/prettier"
+s=$(hook_script prettier "STEPS='prettier|$pv|echo 3.9.8 > \"\$LOG.pv\"; echo install >> \"\$LOG\"'")
+echo 3.0.0 > "$log.pv"
+: > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
+check "an image's own older copy is replaced by the picked version" "harness cloud setup: ok
+install" "$out
+$(cat "$log")"
+: > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
+check "and a second run, the picked version in place, is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
+
+# The template filled the way setup-harness fills it, STEPS carrying a `$` a
+# step's own bash -c expands, passes ShellCheck at its default severity, which
+# a consumer's Shell hook runs over .claude/hooks/.
+if real=$(command -v shellcheck); then
+  filled=$fixture/filled.sh
+  awk '/^STEPS=/ { print "STEPS='\''actionlint|command -v actionlint|GOBIN=\"$HOME/.local/bin\" go install x'\''"; next } 1' "$template" > "$filled"
+  "$real" "$filled" >/dev/null 2>&1; rc=$?
+  check_rc "the filled template passes ShellCheck at default severity" 0 "$rc"
+fi
+
 # The SessionStart entry setup-harness merges into .claude/settings.json: its
 # command, run as a hook runs it, exits 0 outside a cloud session, because a
 # non-zero SessionStart exit is shown to a local session as a hook error.

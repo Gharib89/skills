@@ -17,7 +17,7 @@ The active runner is the one git invokes: `git config core.hooksPath`, else the 
 
 Install prek, pinned per [install-check.md](install-check.md): an exact dev dependency when a root stack has a manifest (`uv add --dev prek==<v>` for Python, `pnpm add -D -E @j178/prek@<v>` for JS/TS), else `uv tool install prek==<v>`. The same command goes into the cloud setup later. prek's standalone installer is out: it downloads a GitHub release asset, which a cloud sandbox refuses.
 
-Write `.pre-commit-config.yaml` with pre-commit-compatible keys only, so pre-commit can still run it and the choice stays reversible; prek-only keys a repo already has are kept. Then `prek install` writes the git shim, and `prek run --all-files` proves the config before any hook is timed.
+Write `.pre-commit-config.yaml` with pre-commit-compatible keys only, so pre-commit can still run it and the choice stays reversible; prek-only keys a repo already has are kept. Then `prek install --allow-missing-config` writes the git shim, and `prek run --all-files` proves the config before any hook is timed. The shim lands in the common `hooks` directory every worktree of the repo shares, and without the flag it fails a commit in any checkout whose tree has no config yet: the default branch and every branch cut before the harness merges.
 
 ## Writing hooks
 
