@@ -31,8 +31,9 @@ Copy [templates/check.sh](../templates/check.sh) to `scripts/check.sh`, executab
 - `TURN_ROWS`: one row per member, `<path prefix>|<member>|<globs>|<typecheck>|<tests>|<affected tests>`. The prefix ends in `/` (`api/`, `packages/web/`), or is empty for a member at the repo root. Globs are the stack's extensions plus its manifest names, so a manifest change re-checks the member. Commands run in the member's directory, prefixed with the stack's exec command (`uv run --frozen mypy .`, `pnpm exec tsc --noEmit`). `<affected tests>` takes `{files}` relative to the member (`pnpm exec vitest related --run {files}`); leave it empty to run `<tests>`, the member's whole suite. An empty typecheck or tests field is no check.
 - `FULL_ROWS`: extra checks on `full` only, `<name>|<command>` from the root: the repo's own check target (`check-target|make check`), and each surface's behaviour tools per [surfaces.md](surfaces.md) (`e2e-web|cd web && pnpm exec playwright test`).
 - `LOCAL_ONLY`: the `FULL_ROWS` names the cloud cannot run, space-separated, each a profile `Local-only:` part: a cloud session records them `skipped` unrun, so the proof's `full` still exits 0.
+- `EXCLUDED`: the profile's `Excluded:` prefixes, space-separated (`'tests/fixtures/ internal/testdata/'`): a changed file under one belongs to no `TURN_ROWS` row, even one whose prefix covers it, and is no new root. A prefix answered read, or whose line is gone, leaves it.
 
-A changed file matching some row's globs under no row's prefix reports `new-root: unavailable` with "re-run setup-harness": a stack root appeared that this file has no row for. A repo's existing check target is kept and called from `FULL_ROWS`, never replaced.
+A changed file matching some row's globs under no row's prefix and no `EXCLUDED` prefix reports `new-root: unavailable` with "re-run setup-harness": a stack root appeared that this file has no row for. A repo's existing check target is kept and called from `FULL_ROWS`, never replaced.
 
 ## Writing the hooks
 

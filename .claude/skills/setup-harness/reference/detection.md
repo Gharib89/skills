@@ -11,7 +11,7 @@
 
 - A **stack** is one language plus package manager at a root whose manifest owns a lockfile, or that a workspace config names (pnpm, npm or yarn workspaces, a uv workspace). One stack per root. Install and tool versions are once per root.
 - Its **members** are its workspace packages; a stack with no workspace is its own single member. Typecheck and affected tests run per member.
-- Nothing under an `Excluded:` prefix is scanned, so it yields no root, candidate root, file kind or unclaimed extension, and the runner config's `exclude:` carries it ([runner.md](runner.md)), so no fix-mode tool rewrites it.
+- Nothing under an `Excluded:` prefix is scanned, so it yields no root, candidate root, file kind or unclaimed extension, the runner config's `exclude:` carries it ([runner.md](runner.md)), so no fix-mode tool rewrites it, and `check.sh`'s `EXCLUDED` carries it ([check-ladder.md](check-ladder.md)), so `turn` reports no new root for it.
 - A **file kind** (shell and the like) is detected by extension, shebang, file name (`Names:`, a tracked basename at any depth, such as `azure-pipelines.yml`) or path (`Paths:`, a glob on the repo-relative path, such as `.github/workflows/*.yml`) and takes the edit and commit rungs only, never `turn`.
 
 ## The scan

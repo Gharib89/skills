@@ -27,7 +27,7 @@ Each gap kind takes exactly one disposition:
 | A file the skill wrote lacks what its current template says | Write |
 | A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, for a root now `Declined:` as a root or for one under an `Excluded:` prefix, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack, a browser step or `FULL_ROWS` row for a surface no longer detected, the `tags` step once no griffe row is left, the `dockerd` row once no `mcr` browser step or container tool needs it, a `LOCAL_ONLY` name whose row is gone) | Write: the removal |
 | A `Root:` line whose manifest is no longer a candidate root ([detection.md](detection.md)): the manifest gone, a lockfile beside it, a root's `Workspace:` config naming it, or an `Excluded:` prefix holding it | Write: the removal |
-| An `Excluded:` line whose prefix holds no tracked file | Write: the removal, and its alternative in the runner config's `exclude:` |
+| An `Excluded:` line whose prefix holds no tracked file | Write: the removal, its alternative in the runner config's `exclude:` and its prefix in `check.sh`'s `EXCLUDED` |
 | A hook `timeout` off deadline plus max(10 s, deadline / 4) | Write |
 | prek's git shim, `$(git rev-parse --git-path hooks)/pre-commit`, lacking `--skip-on-missing-config`, the mark `prek install --allow-missing-config` writes ([runner.md](runner.md)) | Offer: reinstall it with that flag, a change to this machine that commits nothing |
 | A new root whose stack has a catalog entry | Write: its `TURN_ROWS` row and runner additions |
@@ -67,7 +67,7 @@ Every pin the harness carries is read: runner config `rev`s, the dev dependency 
 
 ## Deleted pieces and standing choices
 
-A missing piece is proposed every run until step 5 records it `Declined:`; removing that line re-opens it. A `Root:` line the human deletes re-opens its candidate root's question the same way.
+A missing piece is proposed every run until step 5 records it `Declined:`; removing that line re-opens it. A `Root:` line the human deletes re-opens its candidate root's question the same way, and an `Excluded:` line its fixture tree's question, the tree new again; its prefix stays in the runner config's `exclude:` and `check.sh`'s `EXCLUDED` only if the answer excludes it again.
 
 **Standing choices** are listed and never re-asked: every `Excluded:`, every `Root:`, every `Declined:`, every `Local-only:` whose reason is `operator's choice`, budget overrides, the `Verdict:` and `Allowlist:`. A `Local-only:` line whose reason is not `operator's choice` is re-checked against its evidence: a file, target or host in the repo, the MCR tag check for the member's current locked Playwright version, or the catalog `Local-only:` line with no `Cloud setup:` override; when that evidence is gone it is the Offer above, whose "set it up" also removes its name from `LOCAL_ONLY`, and "keep" rewrites its reason to `operator's choice: <why>`.
 

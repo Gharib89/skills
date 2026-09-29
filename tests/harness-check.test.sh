@@ -131,6 +131,22 @@ check "an empty prefix is the root member, and an empty typecheck is no check" \
   '{"rung":"turn","verdict":"fail","checks":{"tests:app":"fail"}}' "$out"
 check_rc "a failing test exits 1" 1 "$rc"
 
+# A fixture tree the profile excludes: its files belong to no row, even one
+# whose prefix covers them, and are no new root.
+r=$(repo excluded "TURN_ROWS='api/|api|*.py|ok|ok|'
+EXCLUDED='tests/fixtures/ testdata/'")
+run "$r" turn tests/fixtures/bad/app.py testdata/x.py
+check "a stack file under an EXCLUDED prefix is no new root" \
+  '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
+run "$r" turn svc/new.py
+check "a stack file outside every EXCLUDED prefix is still a new root" \
+  '{"rung":"turn","verdict":"unavailable","checks":{"new-root":"unavailable"}}' "$out"
+r=$(repo excluded-root "TURN_ROWS='|app|*.py||bad|'
+EXCLUDED='tests/fixtures/'")
+run "$r" turn tests/fixtures/app.py
+check "a file under an EXCLUDED prefix is not the root member's" \
+  '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
+
 r=$(repo full "FULL_RUN='ok'
 TURN_ROWS='$rows'
 FULL_ROWS='check-target|ok'")

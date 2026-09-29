@@ -45,8 +45,11 @@ FULL_ROWS=''
 # FULL_ROWS names the cloud cannot run (the profile's Local-only: parts),
 # space-separated: `skipped` unrun when CLAUDE_CODE_REMOTE=true.
 LOCAL_ONLY=''
+# The profile's Excluded: prefixes, space-separated: a changed file under one
+# belongs to no TURN_ROWS row and is no new root.
+EXCLUDED=''
 # <<< setup-harness configuration
-: "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}" "${LOCAL_ONLY=}"
+: "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}" "${LOCAL_ONLY=}" "${EXCLUDED=}"
 
 rung=${1:-}
 case $rung in
@@ -141,9 +144,11 @@ rung_edit() {
 }
 
 # <file>: the TURN_ROWS row owning the file, else nothing. Prints `new-root`
-# for a file some row's globs match under no row's prefix.
+# for a file some row's globs match under no row's prefix, and nothing for one
+# under an EXCLUDED prefix.
 owner() {
-  local row prefix member globs best='' blen=-1 kind=''
+  local row prefix member globs best='' blen=-1 kind='' p
+  for p in $EXCLUDED; do case $1 in "$p"*) return ;; esac; done
   while IFS= read -r row; do
     [ -n "$row" ] || continue
     prefix=${row%%|*} member=${row#*|}; globs=${member#*|}; globs=${globs%%|*}
