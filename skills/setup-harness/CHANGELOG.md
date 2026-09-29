@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.1 (2026-09-29)
+
+### Bug Fixes
+
+- **setup-harness**: Decide a vendored plugin pin's Behind by its vendored glue
+  ([#391](https://github.com/Gharib89/skills/pull/391),
+  [`d2acca4`](https://github.com/Gharib89/skills/commit/d2acca44c0340ebc71be6e1dac45b7cab27f260d))
+
+
 ## v0.8.0 (2026-09-29)
 
 ### Features
