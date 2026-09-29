@@ -103,8 +103,9 @@ check "after proving the host answers" "host_identity" "$(head -1 "$SHIP_FAKE/ca
 
 reset
 : > "$SHIP_FAKE/host_identity.1.fail"
-out=$(run 7 --repo Gharib89/skills --section Decisions --body-file "$file"); rc=$?
+out=$(run 7 --repo Gharib89/skills --section Decisions --body-file "$file" 2>"$work/err"); rc=$?
 check_rc "an unreachable --repo host exits 1" 1 "$rc"
+check "and says so on stderr too" "Gharib89/skills is unreachable from here" "$(cat "$work/err")"
 check "with the command to run by hand" \
   "$mech 7 --repo Gharib89/skills --section Decisions --body-file $file" "$(jq -r .command <<<"$out")"
 check "and no read or write" "host_identity" "$(cat "$SHIP_FAKE/calls")"

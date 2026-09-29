@@ -33,6 +33,12 @@
 # catalog entries' format, the two profile-template lines setup-skills parses
 # and the harness schema number's four places.
 #
+# Check 10 reads two sentences of ship's prose that nothing else holds: phase
+# 4's instruction that an axis reads the Local gate's JSON rather than running
+# the suite, and context discipline's one-reference-file-per-call rule. Each is
+# matched as the whole sentence with its line wraps joined, so the same words
+# turned to the opposite meaning ("and also runs") do not pass.
+#
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
@@ -323,6 +329,26 @@ if [ -d "$harness" ]; then
       "${meta:-none}" "${line:-none}" "${lit:-none}" "${meta:-none}" "$entry"
     rc=1
   fi
+fi
+
+# 10. The two sentences above. A tree with no ship skill has nothing to hold.
+# Whitespace is squeezed first, because the prose is wrapped at 80 columns.
+flat() { tr '\n' ' ' < "$1" | tr -s ' '; }
+if [ -f "$skills/ship/SKILL.md" ]; then
+  doc=$skills/ship/SKILL.md
+  phase4=$(flat "$doc") || { printf 'cannot read %s\n' "$doc" >&2; exit 2; }
+  case $phase4 in
+    *"the Local gate runs later in the run, so the axis reads the gate's JSON and never runs \`check.sh full\` or the suite itself"*) ;;
+    *) printf "%s: phase 4 must tell each axis the Local gate runs later, so it reads the gate's JSON and never runs check.sh full or the suite\n" "$doc"; rc=1 ;;
+  esac
+fi
+if [ -f "$skills/ship/reference/context-discipline.md" ]; then
+  doc=$skills/ship/reference/context-discipline.md
+  discipline=$(flat "$doc") || { printf 'cannot read %s\n' "$doc" >&2; exit 2; }
+  case $discipline in
+    *"Read one reference file per call."*) ;;
+    *) printf '%s: must say to read one reference file per call\n' "$doc"; rc=1 ;;
+  esac
 fi
 
 exit $rc

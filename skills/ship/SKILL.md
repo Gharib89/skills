@@ -46,8 +46,8 @@ in the merge summary, so every PR records which ship produced it.
 
 Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits. **Preparation**, before `run-file
-init` in every run but the no-issue lane's inner one: `prepare` (`--unattended`
-in that lane). In a **cloud sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that
+init` in every run but the no-issue lane's inner one: `prepare` (no issue
+argument; `--unattended` in that lane). In a **cloud sandbox** (`CLAUDE_CODE_REMOTE=true`), or with that
 flag, it runs `tooling --install` then the profile's `## Cloud lane`
 `Bootstrap:`, elsewhere a no-op. A `failed` step stops the run, no claim, with
 its tail: `tooling` as `host-unreachable`, `bootstrap` as `bootstrap-failed`.
@@ -148,9 +148,11 @@ dispatch the axes, then run this pass inline.
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
-carrying its own scratch directory (`standards`, `spec`). **Triage waits for
-every Report file**; one that fails to arrive after the bounded retry is
-`red-after-retry: <axis>`, never a disposition written from memory.
+carrying its own scratch directory (`standards`, `spec`) and saying the Local
+gate runs later in the run, so the axis reads the gate's JSON and never runs
+`check.sh full` or the suite itself. **Triage waits for every Report file**; one
+that fails to arrive after the bounded retry is `red-after-retry: <axis>`, never
+a disposition written from memory.
 **Auto-triage** every finding: harden rather than rip out capability, verify
 nits against the pinned versions, reject known non-issues, fix the valid ones,
 and record a one-line disposition per finding. Two rails on rejecting: a claim

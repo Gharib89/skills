@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # _gh_add_closes: the GitHub adapter's closing-line placement.
+# The function is sourced and asserted on as strings: no call here reaches a host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

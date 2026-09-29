@@ -37,6 +37,8 @@ f=$FAKE_CURL_FIX/$(printf '%s' "${url#https://api.github.com/}" | tr '/' '_')
 cat "$f"
 EOF
 chmod +x "$tmp/bin/curl"
+# A retry waits between attempts; the fake sleep keeps the test from doing so.
+printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/sleep"; chmod +x "$tmp/bin/sleep"
 export FAKE_CURL_LOG=$tmp/log FAKE_CURL_FIX=$tmp/fix PATH="$tmp/bin:$PATH"
 fix() { printf '%s' "$2" > "$tmp/fix/$(printf '%s' "$1" | tr '/' '_')"; }
 
@@ -87,6 +89,45 @@ https://api.github.com/repos/z/z/commits/HEAD" "$(sort -u "$tmp/log")"
 check "every request is time-bounded, so a stalled upstream fails into an unreachable row rather than hanging" \
   0 "$(grep -vc -- '--connect-timeout 10 --max-time 30' "$tmp/log.args")"
 check "each upstream's HEAD is asked for once" 1 "$(grep -c 'repos/o/r/commits/HEAD' "$tmp/log")"
+
+# A GET that fails is tried again: a flaky route must not empty `heads`. A curl
+# that fails the first attempts at each URL, then answers, gives the same result.
+real_curl=$tmp/bin/curl; mv "$real_curl" "$tmp/curl.real"
+cat > "$real_curl" <<'EOF'
+#!/usr/bin/env bash
+for url; do :; done
+n=$FAKE_CURL_LOG.tries.$(printf '%s' "$url" | tr '/:' '__')
+echo x >> "$n"
+[ "$(wc -l < "$n")" -gt "${FAKE_CURL_FLAKY:-0}" ] || exit 28
+exec "$(dirname "$0")/../curl.real" "$@"
+EOF
+chmod +x "$real_curl"
+rm -f "$tmp"/log*
+out=$(FAKE_CURL_FLAKY=1 bash "$heads" "$repo" 2>/dev/null); rc=$?
+check_rc "a first attempt that fails at every URL still exits 0" 0 "$rc"
+check "the retried reads give the same heads" \
+  '{"code-review":"'$A'","find-docs":"'$H'","grilling":"'$A'","research":"'$H'","solo":"'$H'","tdd":"'$H'","wide":"'$H'"}' "$(jq -cS .heads <<<"$out")"
+rm -f "$tmp"/log*
+FAKE_CURL_FLAKY=99 bash "$heads" "$repo" >/dev/null 2>&1
+check "a read that never answers is tried three times, not forever" \
+  3 "$(wc -l < "$tmp/log.tries.https___api.github.com_repos_z_z_commits_HEAD" | tr -d ' ')"
+
+# When no upstream answers there is nothing to plan against: the exit says so,
+# with the count, where a clean exit 0 over an empty `heads` would read as "no
+# drift".
+one=$tmp/one; mkdir -p "$one"
+jq -n --arg a "$A" '{version: 1, skills: {
+  tdd: {source: "o/r", ref: $a, sourceType: "github", skillPath: "skills/tdd/SKILL.md"},
+  far: {source: "z/z", sourceType: "github", skillPath: "skills/far/SKILL.md"}}}' > "$one/skills-lock.json"
+rm -f "$tmp"/log*
+out=$(FAKE_CURL_FLAKY=99 bash "$heads" "$one" 2>"$tmp/err"); rc=$?
+check_rc "every upstream read failing exits 1" 1 "$rc"
+check "the exit names the count on stderr" \
+  "every upstream read failed: 2 skills unreachable" "$(cat "$tmp/err")"
+check "stdout still carries the unreachable rows" 2 "$(jq '.unreachable | length' <<<"$out")"
+rm -f "$tmp"/log*
+out=$(FAKE_CURL_FLAKY=1 bash "$heads" "$one" 2>/dev/null); rc=$?
+check_rc "every read answering on its second attempt keeps exit 0" 0 "$rc"
 
 echo '[' > "$repo/skills-lock.json"
 out=$(bash "$heads" "$repo" 2>/dev/null); rc=$?

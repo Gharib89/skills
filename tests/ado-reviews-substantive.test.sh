@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # host_pr_reviews() on Azure DevOps sends no `substantive` (#270): poll-pr grades
 # every row itself (`SHIP_SUBSTANTIVE`, #268), and the host contract lists no such
-# field, so a key the adapter set would contradict it.
+# field, so a key the adapter set would contradict it. The adapter is sourced and
+# its transport functions, `invoke` and `azx`, are redefined as shell functions
+# answering fixtures, so the projection is the subject with no `az` behind it.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

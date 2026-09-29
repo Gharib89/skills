@@ -3,7 +3,9 @@
 # the comment it posted (#164). `request-review`'s comment transport reports that
 # value as `requested_at` and phase 7 hands it to `poll-pr --since`, so a wall
 # clock read on a machine whose clock drifts widens that window or strands the
-# round it asked for.
+# round it asked for. The adapter is sourced and its transport function, `invoke`,
+# is redefined as a shell function answering fixtures, so the projection is the
+# subject with no `az` behind it.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

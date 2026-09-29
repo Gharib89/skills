@@ -2,7 +2,8 @@
 # ship_triage_label: the role-to-label lookup, read from the role table the
 # label file opens with and no further. Every case sources the function and
 # runs it inside a fixture checkout under the OS temp dir, one of them carrying
-# this repo's own label file; none reaches a host.
+# this repo's own label file, because the function resolves that file through
+# the main checkout rather than the worktree a run works in; none reaches a host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

@@ -33,10 +33,11 @@ check "the call the mechanic hands the host" $'host_pr_resolve_thread\t7\tt1' \
 reset
 : > "$SHIP_FAKE/host_pr_resolve_thread.1.fail"
 printf '502' > "$SHIP_FAKE/host_pr_resolve_thread.1.status"
-out=$(run); rc=$?
+out=$(run 2>"$work/err"); rc=$?
 check_rc "a refused call exits 1" 1 "$rc"
 check "and names the failure, carrying no status" 'resolve call failed' \
   "$(jq -r .error <<<"$out")"
+check "and says it on stderr too" 'resolve call failed' "$(cat "$work/err")"
 check "the status the host offered is dropped" false "$(jq 'has("status")' <<<"$out")"
 
 reset
