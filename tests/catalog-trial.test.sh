@@ -107,6 +107,13 @@ printf '#!/bin/sh\nexit 2\n' > "$root/skills/setup-harness/scripts/pick-version.
 out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh kind 2>/dev/null)
 check "an unreachable registry is named, not a missing version" "kind versioned: fail (npm did not answer for versioned)" "$(printf '%s\n' "$out" | grep versioned)"
 
+# A maven pin naming its repository hands pick-version the repository and the
+# name both, and the failure names the package, not the repository.
+printf '#!/bin/sh\n[ $# = 3 ] || exit 1\nexit 2\n' > "$root/skills/setup-harness/scripts/pick-version.sh"
+tool repod 'arg {version} {files}' | sed 's|^Pin: apt repod$|Pin: package maven https://repo.example/releases org.example:repod|' >> "$root/skills/setup-harness/catalog/kind.md"
+out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh kind 2>/dev/null)
+check "a maven pin's repository reaches pick-version" "kind repod: fail (maven did not answer for org.example:repod)" "$(printf '%s\n' "$out" | grep repod)"
+
 # A Route: that installs into the tree (`npm install --no-save`) is run from its
 # node_modules/.bin ahead of PATH, as a stack's exec command would, so a same-named
 # global on PATH (the cloud image's own `playwright`) is never the one tried.

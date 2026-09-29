@@ -47,6 +47,9 @@ case \$url in
   https://repo1.maven.org/maven2/org/example/flat/maven-metadata.xml) printf '<metadata><versioning><versions><version>2.0</version><version>2.1</version><version>2.2</version></versions></versioning></metadata>' ;;
   https://repo1.maven.org/maven2/org/example/flat/2.2/flat-2.2.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
   https://repo1.maven.org/maven2/org/example/flat/2.1/flat-2.1.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h10\r\n\r\n' ;;
+  https://repo.eclipse.org/content/repositories/jdtls-releases/org/eclipse/jdt/ls/org.eclipse.jdt.ls.product/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.9.0.20250101000000</version><version>1.60.0.20260626225408</version><version>1.61.0.20260903134612</version></versions></versioning></metadata>' ;;
+  https://repo.eclipse.org/content/repositories/jdtls-releases/org/eclipse/jdt/ls/org.eclipse.jdt.ls.product/1.61.0.20260903134612/org.eclipse.jdt.ls.product-1.61.0.20260903134612.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
+  https://repo.eclipse.org/content/repositories/jdtls-releases/org/eclipse/jdt/ls/org.eclipse.jdt.ls.product/1.60.0.20260626225408/org.eclipse.jdt.ls.product-1.60.0.20260626225408.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h10\r\n\r\n' ;;
   https://repo1.maven.org/maven2/org/example/young/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.0</version></versions></versioning></metadata>' ;;
   https://repo1.maven.org/maven2/org/example/young/1.0/young-1.0.pom) printf 'HTTP/1.1 200 OK\r\nlast-modified: $h3\r\n\r\n' ;;
   https://repo1.maven.org/maven2/org/example/nopom/maven-metadata.xml) printf '<metadata><versioning><versions><version>1.0</version></versions></versioning></metadata>' ;;
@@ -131,6 +134,12 @@ pick maven com.google.googlejavaformat:google-java-format
 check "maven: each version dated by its pom's Last-Modified, by version order" 1.10 "$out"
 pick dockerhub hadolint/hadolint
 check "dockerhub: version tags only, across pages, past a tag with no push time" v2.15.1 "$out"
+pick maven https://repo.eclipse.org/content/repositories/jdtls-releases org.eclipse.jdt.ls:org.eclipse.jdt.ls.product
+check "maven: a named repository is read in place of Central, timestamped versions by version order" 1.60.0.20260626225408 "$out"
+pick maven https://repo.eclipse.org/content/repositories/jdtls-releases/ org.eclipse.jdt.ls:org.eclipse.jdt.ls.product
+check "maven: a named repository's trailing slash is dropped" 1.60.0.20260626225408 "$out"
+pick npm prettier extra
+check_rc "a third argument on any registry but maven is a usage error" 2 "$rc"
 pick maven org.example:flat
 check "maven: metadata on one line still lists every version" 2.1 "$out"
 pick crates half-gone
