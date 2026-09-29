@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.0 (2026-09-29)
+
+### Features
+
+- **setup-harness**: Exclude fixture trees and fix five more setup gaps
+  ([#402](https://github.com/Gharib89/skills/pull/402),
+  [`deabc91`](https://github.com/Gharib89/skills/commit/deabc9171865360d274c8e77016a86a131397625))
+
+
 ## v0.8.2 (2026-09-29)
 
 ### Bug Fixes
