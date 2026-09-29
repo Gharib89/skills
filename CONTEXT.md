@@ -69,7 +69,7 @@ One language and its package manager, rooted at a directory whose manifest owns 
 _Avoid_: language, project, ecosystem
 
 **Candidate root**:
-A stack's manifest with no lockfile beside it that no root's workspace config names, which the harness setup skill asks the human to mark a root or ignored. The answer lands in the harness profile as a `Root: <manifest>` or a `Declined: <manifest> as a root` line, and a candidate root with neither is new, asked again on the next run.
+A stack's manifest with no lockfile beside it that no root's workspace config names, which the harness setup skill asks the human to mark a root or ignored. The answer lands in the harness profile as a `Root: <manifest>` or a `Declined: <manifest> as a root` line, and a candidate root with neither line is new, so each run asks it.
 _Avoid_: candidate (that is `file-issue`'s open-issue match), lockless root
 
 **Member**:
