@@ -4,7 +4,7 @@
 # setup-harness wires zizmor whose `unpinned-uses` fails on a tag ref; every
 # `actions/checkout` step sets `persist-credentials: false`, because no template
 # step pushes; and this repo's own claude-review.yml, a copy of the template,
-# pins no ref the template does not. The two reads are functions so the fixture
+# pins no ref the template does not and sets the same key. The two reads are functions so the fixture
 # cases can break them. Reads files only; no call here reaches a host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -90,6 +90,7 @@ check "this repo's copy has uses: lines to judge" "yes" "$(uses "$own" | grep -q
 
 check "every uses: line in the template is a SHA pin with a version comment" "" "$(unpinned "$tpl")"
 check "every checkout in the template sets persist-credentials: false" "" "$(unpersisted "$tpl")"
+check "every checkout in this repo's claude-review.yml sets persist-credentials: false" "" "$(unpersisted "$own")"
 
 # Refs only the copy carries: a ref the template lacks is drift, while a template
 # ref the copy does not use (the copy installs one of the template's two shapes)
