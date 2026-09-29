@@ -51,6 +51,12 @@ cat > "$fx/new.md" <<'EOF'
 
 **A setup section re-run**, when a refresh names sections: or writing only where none is found or installed (**Coding standards**, step 1.1's tracker doc). Write on confirm.
 EOF
+cat > "$fx/both-groups.md" <<'EOF'
+**A setup section re-run**, when a refresh names sections: proposing the parts an installed Claude workflow lacks (**Reviewer scaffolding**), or writing only where none is found (**Coding standards**, **Reviewer scaffolding**, step 1.1's tracker doc). Write on confirm.
+EOF
+cat > "$fx/propose-only.md" <<'EOF'
+**A setup section re-run**, when a refresh names sections: proposing the parts an installed Claude workflow lacks (**Reviewer scaffolding**), or writing only where none is found (**Coding standards**, step 1.1's tracker doc). Write on confirm.
+EOF
 cat > "$fx/dropped-rule.md" <<'EOF'
 **Reviewer scaffolding**, for each reviewer not installed: write the files. In a setup section re-run naming `reviewer-scaffolding`, an installed Claude workflow is compared against the whole current scaffold. The shape comes from the installed trigger; a value that cannot be read is never guessed. Keep the repo's deliberate departures. Propose a pin move only where a checkout lacks `persist-credentials: false`.
 EOF
@@ -61,6 +67,8 @@ EOF
 check "the old paragraph lists Reviewer scaffolding as write-only" "listed" "$(write_only_lists "$fx/old.md")"
 check "the new paragraph does not" "" "$(write_only_lists "$fx/new.md")"
 check "an item that drops the never-downgrade rule does not compare" "" "$(item_compares "$fx/dropped-rule.md")"
+check "naming the item in the propose group only is not write-only" "" "$(write_only_lists "$fx/propose-only.md")"
+check "re-adding the item to the write-only group is caught beside the propose group" "listed" "$(write_only_lists "$fx/both-groups.md")"
 check "the old item has no compare" "" "$(item_compares "$fx/old.md")"
 check "the new item compares an installed workflow" "compares" "$(item_compares "$fx/new.md")"
 
