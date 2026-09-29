@@ -123,13 +123,11 @@ row's `replacement` in the same directory. List them with:
 git ls-files -- ':(glob)**/<term>' ':!.claude/skills/'
 ```
 
-A file that is not the one the row means, such as a test fixture or a
-vendored document, stays in place: list it for step 8's Needs attention as
-`<path>: not renamed, not the <term> the row means`. A rename whose target
-already exists is not performed either: list it as `<path>: not renamed,
-<replacement> exists`. In both cases replace none of that term's hits in the
-sweep: list them all, since a hit may name the file left in place. A null replacement renames nothing. Then sweep the
-references:
+Three cases rename nothing, each listed for step 8's Needs attention: a file
+that is not the one the row means, such as a test fixture or a vendored
+document, as `<path>: not renamed, not the <term> the row means`; a file whose
+target already exists, as `<path>: not renamed, <replacement> exists`; and every
+file of a row whose replacement is null. Then sweep the references:
 
 ```sh
 git grep -n -w -F -e '<term>' -- . ':!.claude/skills/'
@@ -137,11 +135,13 @@ git grep -n -w -F -e '<term>' -- . ':!.claude/skills/'
 
 Replace each hit with the row's `replacement` where it reads correctly in that
 sentence. A record of the past, such as a changelog entry or an ADR, keeps the
-word and is no hit. List every other hit, and every hit of a row whose
-`replacement` is null, for step 8's Needs attention as `<path>:<line>: <term>`.
+word and is no hit. A hit that names a file this step left in place keeps the
+word too. List it, every other hit that was not replaced, and every hit of a
+row whose `replacement` is null, for step 8's Needs attention as
+`<path>:<line>: <term>`.
 In the source repo there is nothing to sweep: the PR that retired a word adds
-its row to that skill's `retired-terms.md` and replaces the word in this repo's
-own documents, in the same diff.
+its row to that skill's `retired-terms.md`, replaces the word in this repo's
+own documents and renames a file whose name is the word, in the same diff.
 
 ### 7. Report upstream drift
 
