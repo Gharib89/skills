@@ -17,7 +17,7 @@
 # exit: 0 clean · 1 a finding · 2 tooling
 set -uo pipefail
 
-paths=('skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' '.release/*' CONTEXT.md CLAUDE.md)
+paths=('skills/*' 'docs/*' 'scripts/*' 'tests/*' '.github/*' '.release/*' GLOSSARY.md CLAUDE.md)
 found=0
 err=$(mktemp) || exit 2
 trap 'rm -f "$err"' EXIT

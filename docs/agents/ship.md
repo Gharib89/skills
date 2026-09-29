@@ -2,7 +2,7 @@
 
 Schema: 3
 
-Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [CONTEXT.md](../../CONTEXT.md).
+Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [GLOSSARY.md](../../GLOSSARY.md).
 
 This repo is both the **source** of the shared skills and a **consumer** of them: `skills/<name>/` is the source of truth and `.claude/skills/<name>/` is the derived copy that actually runs. A change to a skill is not shipped until both carry it.
 
@@ -146,7 +146,7 @@ This repo is Ship's own source, so a run here is already in the source repo and 
 
 ## Docs sync
 
-Targets: CONTEXT.md, docs/adr/, docs/agents/, skills/setup-skills/profile-schema.md, .out-of-scope/
+Targets: GLOSSARY.md, docs/adr/, docs/agents/, skills/setup-skills/profile-schema.md, .out-of-scope/
 Agent-facing: all of them, plus skills/, .claude/skills/ and docs/contributing/
 
 A diff touching nothing on the `Agent-facing:` line, such as a `.github/` workflow edit, takes no `writing-for-agents` pass.
