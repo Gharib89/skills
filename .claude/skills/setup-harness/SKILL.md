@@ -3,7 +3,7 @@ name: setup-harness
 description: "Set up this repo's agent harness for Claude Code: one check entry point (scripts/check.sh), a pre-commit runner, the linters, formatters, typecheckers and tests it runs, hooks that run them after every edit and at every turn end, vendored language servers proven by a real LSP hover, and a cloud setup that installs them in every Claude Code on the web session, proven in a real one; each third-party tool pinned and passed through an install check. Independent of Ship; run it before /setup-skills. Re-run any time for a gap report that proposes only what is missing, broken or behind, keeping the repo's own additions and standing choices."
 disable-model-invocation: true
 metadata:
-  version: 0.6.1
+  version: 0.7.0
   harness-schema: 1
 ---
 
@@ -67,7 +67,7 @@ One approval covers the batch: the human answers the questions and may drop rows
 
 In this order, each step's failure stopping the run with its output:
 
-1. **Installs**: each approved unit at its exact pin, then the repo's own deps from its lockfile (`uv sync --frozen`, `pnpm install --frozen-lockfile`).
+1. **Installs**: each approved unit at its exact pin (a language server whose pin rides in its launch installs nothing here, [reference/language-servers.md](reference/language-servers.md) `## Vendoring` step 4), then the repo's own deps from its lockfile (`uv sync --frozen`, `pnpm install --frozen-lockfile`).
 2. **The runner**: its config additions, its install command when git does not yet invoke it (`prek install`), then `prek run --all-files` (or the runner's equivalent). A failure here is the repo's code on a tool new to it: report the findings and ask whether to fix them in this run, leave them for the human, or drop the tool; on leave or drop, `git restore` the files its fixes rewrote. Never weaken the tool's config to pass.
 3. **`scripts/check.sh`** from [templates/check.sh](templates/check.sh), configuration block filled per [reference/check-ladder.md](reference/check-ladder.md).
 4. **Time the rungs** before any hook exists, per check-ladder.md's timing section: each twice, cold reported, warm judged against its budget. A warm `edit` or `turn` over budget gets the narrow / demote / override offer now, and its hook waits until one is applied.
