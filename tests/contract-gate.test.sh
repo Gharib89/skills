@@ -500,7 +500,6 @@ check "a renamed ## Cloud loses its Setup: line, named" 0 "$(named "harness prof
 
 # 9. The harness schema number agrees in its four places. Each case moves one
 # of them, because any one moving alone is the drift a Schema bump invites.
-agree="SKILL.md metadata.harness-schema 2, templates/harness-profile.md Schema: 2, scripts/harness-profile-check.sh schema=2, harness-schema.md entry '## Schema 2' present"
 d=$(harness_tree schema-agrees)
 run "$inert" "$d"
 check_rc "a harness tree whose four schema places agree passes" 0 "$rc"
