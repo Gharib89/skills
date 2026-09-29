@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.0 (2026-09-29)
+
+### Features
+
+- **ship**: Ci-wait and poll-pr grade the latest check run on the expected head
+  ([#397](https://github.com/Gharib89/skills/pull/397),
+  [`8f4c95d`](https://github.com/Gharib89/skills/commit/8f4c95d8f8188909172ae4774379b27317754329))
+
+
 ## v0.11.6 (2026-09-29)
 
 ### Bug Fixes
