@@ -177,8 +177,10 @@ check_rc "a --help answer with a second line fails the check" 1 "$rc"
 
 # A guard placed after `ship_load_host` answers --help correctly wherever an
 # adapter loads, which is why check 5 runs from a directory with no origin
-# remote. This stub answers checks 2 and 4 from the repo, and only check 5,
-# from there, sees the adapter error where the usage line belongs.
+# remote. This stub answers checks 2 and 4 from a checkout whose origin is on
+# GitHub, and only check 5, from there, sees the adapter error where the usage
+# line belongs. That checkout is a throwaway rather than this repo, whose clone
+# in a cloud session has no origin remote.
 d=$(copy_mechanics help-late-guard)
 cat > "$d/read-issue.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -190,7 +192,10 @@ ship_help "$usage" "$@"
 case ${1:-} in ""|-*) ship_tooling "$usage" ;; esac
 printf '{"number":"%s"}\n' "$1"
 EOF
-run "$d"
+origin=$fixture/github-origin
+git init -q "$origin" && git -C "$origin" remote add origin https://github.com/example/repo.git || exit 2
+root=$PWD
+out=$(cd "$origin" && bash "$root/scripts/contract-check.sh" "$d" "$root/skills" 2>/dev/null); rc=$?
 check "a guard after the adapter load is named" \
   'read-issue: --help exited 2, expected 0' "$out"
 check_rc "a guard after the adapter load fails the check" 1 "$rc"

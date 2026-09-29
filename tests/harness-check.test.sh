@@ -40,9 +40,11 @@ repo() {
 
 # <repo> <args...>: run check.sh there; leaves stdout in `out`, stderr in
 # `err` and the exit code in `rc`.
+# Every case but the cloud ones runs outside the cloud, so the variable a cloud
+# session sets is cleared rather than inherited.
 run() {
   local r=$1; shift
-  out=$(cd "$r" && PATH="$bin:$PATH" bash scripts/check.sh "$@" 2>"$fixture/err"); rc=$?
+  out=$(cd "$r" && CLAUDE_CODE_REMOTE='' PATH="$bin:$PATH" bash scripts/check.sh "$@" 2>"$fixture/err"); rc=$?
   err=$(cat "$fixture/err")
 }
 
