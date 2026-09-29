@@ -23,5 +23,5 @@ The first schema.
 
 A candidate the human marks a root is recorded, so a re-run reads it instead of asking again.
 
-- A seventh `##` heading, `## Roots`, between `## Cloud` and `## Local-only`: `Root: <path>: <reason>`, repeatable, or `Root: None.`, each a lockless manifest the human marked a root.
-- Migration: insert `## Roots` holding `Root: None.` before `## Local-only`. A Schema 1 profile never recorded its marked roots, so the first Schema 2 re-run asks each candidate once more, and its answers are the first `Root:` lines.
+- A seventh `##` heading, `## Roots`, between `## Cloud` and `## Local-only`: `Root: <manifest>: <reason>`, repeatable, or `Root: None.`, each `<manifest>` the repo-relative path of a lockless manifest the human marked a root.
+- Migration: insert `## Roots` before `## Local-only`, holding the migrating run's `Root:` lines, or `Root: None.` when it records none. A Schema 1 profile recorded ignored candidates as `Declined: <manifest> as a root` but never its marked roots, so the migrating run asks again each candidate with no such line, and those answers are the profile's first `Root:` lines.

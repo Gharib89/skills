@@ -71,7 +71,7 @@ check "a declined line with no reason is named" \
 
 run "$(variant rootreason 's/^Root: None./Root: api\/pom.xml/')"
 check "a root line with no reason is named" \
-  "## Roots: Root: want <path>: <reason> or None., got api/pom.xml" "$out"
+  "## Roots: Root: want <manifest>: <reason> or None., got api/pom.xml" "$out"
 
 run "$(variant floor 's/^Floor: 2.1.277/Floor: latest/')"
 check "a floor that is not a version is named" "## Claude Code: Floor: want <major>.<minor>.<patch>, got latest" "$out"

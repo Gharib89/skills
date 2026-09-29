@@ -31,7 +31,7 @@
 #
 # Checks 7 to 9 read setup-harness, when the skills tree carries it: its
 # catalog entries' format, the two profile-template lines setup-skills parses
-# and the harness schema number's three places.
+# and the harness schema number's four places.
 #
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
@@ -299,18 +299,28 @@ if [ -d "$harness" ]; then
   done
 fi
 
-# 9. The harness schema number sits in three places, moved together by the
+# 9. The harness schema number sits in four places, moved together by the
 # bump rule in harness-schema.md: the skill's metadata.harness-schema, the
-# template's Schema: line and the checker's schema= literal. One moved alone
-# ships a template its own checker refuses, or a re-run that migrates to the
-# wrong number.
+# template's Schema: line, the checker's schema= literal and the doc's own
+# `## Schema <n>` entry. One moved alone ships a template its own checker
+# refuses, or a re-run that migrates by an entry that is not there. Each read
+# takes the first match before any body heading, as profile-schema-check.sh
+# does, and a file it cannot read is tooling rather than drift.
 if [ -d "$harness" ]; then
-  meta=$(sed -n 's/^  harness-schema: //p' "$harness/SKILL.md" 2>/dev/null)
-  line=$(sed -n 's/^Schema: //p' "$harness/templates/harness-profile.md" 2>/dev/null)
-  lit=$(sed -n 's/^schema=//p' "$harness/scripts/harness-profile-check.sh" 2>/dev/null)
-  if [ -z "$meta" ] || [ "$meta" != "$line" ] || [ "$meta" != "$lit" ]; then
-    printf 'harness schema disagrees: SKILL.md metadata.harness-schema %s, templates/harness-profile.md Schema: %s, scripts/harness-profile-check.sh schema=%s\n' \
-      "${meta:-none}" "${line:-none}" "${lit:-none}"
+  doc=$harness/harness-schema.md
+  meta=$(awk '/^# /{exit} /^  harness-schema: /{print $2; exit}' "$harness/SKILL.md") \
+    || { printf 'cannot read %s\n' "$harness/SKILL.md" >&2; exit 2; }
+  line=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' "$harness/templates/harness-profile.md") \
+    || { printf 'cannot read %s\n' "$harness/templates/harness-profile.md" >&2; exit 2; }
+  lit=$(awk -F= '/^schema=/{print $2; exit}' "$harness/scripts/harness-profile-check.sh") \
+    || { printf 'cannot read %s\n' "$harness/scripts/harness-profile-check.sh" >&2; exit 2; }
+  grep -qxF "## Schema $meta" "$doc"; st=$?
+  [ "$st" -le 1 ] || { printf 'cannot search %s\n' "$doc" >&2; exit 2; }
+  entry=missing
+  [ "$st" -eq 0 ] && entry=present
+  if [ -z "$meta" ] || [ "$meta" != "$line" ] || [ "$meta" != "$lit" ] || [ "$entry" = missing ]; then
+    printf "harness schema disagrees: SKILL.md metadata.harness-schema %s, templates/harness-profile.md Schema: %s, scripts/harness-profile-check.sh schema=%s, harness-schema.md entry '## Schema %s' %s\n" \
+      "${meta:-none}" "${line:-none}" "${lit:-none}" "${meta:-none}" "$entry"
     rc=1
   fi
 fi

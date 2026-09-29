@@ -25,8 +25,8 @@ Each gap kind takes exactly one disposition:
 | The profile's `Schema:` trails the skill's `metadata.harness-schema` | Write: the migration, row 1, undroppable |
 | A piece the skill writes is missing: `scripts/check.sh`, `.claude/hooks/check-hook.sh`, a hook entry, the cloud setup or its `SessionStart` entry (cloud-first only), a vendored language server, the `CLAUDE.md` block | Write |
 | A file the skill wrote lacks what its current template says | Write |
-| A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack, a browser step or `FULL_ROWS` row for a surface no longer detected, the `tags` step once no griffe row is left, the `dockerd` row once no `mcr` browser step or container tool needs it, a `LOCAL_ONLY` name whose row is gone) | Write: the removal |
-| A `Root:` line whose manifest is gone, or whose root now has a lockfile | Write: the removal |
+| A step the skill wrote whose evidence is gone (a `TURN_ROWS` row for a removed member or for a candidate now `Declined:` as a root, a runner hook for a file kind no longer tracked, a cloud setup step for a removed stack, a browser step or `FULL_ROWS` row for a surface no longer detected, the `tags` step once no griffe row is left, the `dockerd` row once no `mcr` browser step or container tool needs it, a `LOCAL_ONLY` name whose row is gone) | Write: the removal |
+| A `Root:` line whose manifest is no longer a candidate ([detection.md](detection.md)): the manifest gone, a lockfile beside it, or a root's `Workspace:` config naming it | Write: the removal |
 | A hook `timeout` off deadline plus max(10 s, deadline / 4) | Write |
 | A new root whose stack has a catalog entry | Write: its `TURN_ROWS` row and runner additions |
 | New web UI evidence ([surfaces.md](surfaces.md)) | Write: its browser step, cloud-first, and its suite's `FULL_ROWS` row where surfaces.md `## Web UI` gives one |
@@ -35,7 +35,7 @@ Each gap kind takes exactly one disposition:
 | A now-available role: a role with no tool that its catalog entry now fills (a `public API` default whose baseline now exists included), or a `Constraints:` `Unavailable:` that no longer holds | Write |
 | `check.sh` breaks its contract, and no Write above explains it | Offer: rewrite onto the current template, keeping every check the old file ran |
 | A warm `edit` or `turn` time over budget | Offer: narrow, demote or override ([check-ladder.md](check-ladder.md) `## Timing the rungs`) |
-| A new candidate ([detection.md](detection.md)): one with neither a `Root:` nor a `Declined:` line | Offer |
+| A new candidate ([detection.md](detection.md)): one with neither a `Root: <manifest>` nor a `Declined: <manifest> as a root` line | Offer |
 | `cloud: unproven`, or `unproven (changed since <sha>)`, on a cloud-first repo | Offer: the proof ([cloud.md](cloud.md) `## The proof`) |
 | A broken pin | Offer: re-pin or remove |
 | Evidence gone from a `Local-only:` line that is not `operator's choice` | Offer: set it up for the cloud (recommended), or keep it as `operator's choice: <why>` |
@@ -63,7 +63,7 @@ Every pin the harness carries is read: runner config `rev`s, the dev dependency 
 
 ## Deleted pieces and standing choices
 
-A missing piece is proposed every run until step 5 records it `Declined:`; removing that line re-opens it. Removing a `Root:` line re-opens its candidate's question the same way.
+A missing piece is proposed every run until step 5 records it `Declined:`; removing that line re-opens it. A `Root:` line the human deletes re-opens its candidate's question the same way.
 
 **Standing choices** are listed and never re-asked: every `Root:`, every `Declined:`, every `Local-only:` whose reason is `operator's choice`, budget overrides, the `Verdict:` and `Allowlist:`. A `Local-only:` line whose reason is not `operator's choice` is re-checked against its evidence: a file, target or host in the repo, the MCR tag check for the member's current locked Playwright version, or the catalog `Local-only:` line with no `Cloud setup:` override; when that evidence is gone it is the Offer above, whose "set it up" also removes its name from `LOCAL_ONLY`, and "keep" rewrites its reason to `operator's choice: <why>`.
 

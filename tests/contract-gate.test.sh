@@ -347,7 +347,7 @@ harness_tree() { # <case-dir>: prints its path
   local d="$fixture/$1"
   rm -rf "$d"; mkdir -p "$d/setup-harness/catalog" "$d/setup-harness/templates" "$d/setup-harness/scripts"
   cp skills/setup-harness/templates/harness-profile.md "$d/setup-harness/templates/"
-  cp skills/setup-harness/SKILL.md "$d/setup-harness/"
+  cp skills/setup-harness/SKILL.md skills/setup-harness/harness-schema.md "$d/setup-harness/"
   cp skills/setup-harness/scripts/harness-profile-check.sh "$d/setup-harness/scripts/"
   printf '# Catalog\n\n## Signals\n\nNot an entry.\n' > "$d/setup-harness/catalog/README.md"
   { printf '# Py\n\n## Signals\nKind: stack\nManifest: pyproject.toml\nLockfile: uv.lock\nWorkspace: None.\nExtensions: .py\nShebangs: python\nRuntime version: .python-version\nLibrary: `[build-system]` and `[project]` in pyproject.toml\n\n## lint\n'
@@ -498,32 +498,63 @@ sed -i.bak 's/^## Cloud$/## Remote/' "$d/setup-harness/templates/harness-profile
 run "$inert" "$d"
 check "a renamed ## Cloud loses its Setup: line, named" 0 "$(named "harness profile template: ## Cloud has no Setup: line")"
 
-# 9. The harness schema number agrees in its three places. Each case moves one
+# 9. The harness schema number agrees in its four places. Each case moves one
 # of them, because any one moving alone is the drift a Schema bump invites.
+agree="SKILL.md metadata.harness-schema 2, templates/harness-profile.md Schema: 2, scripts/harness-profile-check.sh schema=2, harness-schema.md entry '## Schema 2' present"
 d=$(harness_tree schema-agrees)
 run "$inert" "$d"
-check_rc "a harness tree whose three schema numbers agree passes" 0 "$rc"
+check_rc "a harness tree whose four schema places agree passes" 0 "$rc"
 
 d=$(harness_tree schema-metadata)
 sed -i.bak 's/^  harness-schema: .*/  harness-schema: 9/' "$d/setup-harness/SKILL.md"
 run "$inert" "$d"
 check_rc "a moved metadata.harness-schema fails" 1 "$rc"
-check "and names all three numbers" 0 "$(named "harness schema disagrees: SKILL.md metadata.harness-schema 9, templates/harness-profile.md Schema: 2, scripts/harness-profile-check.sh schema=2")"
+check "and names all four places" 0 "$(named "harness schema disagrees: SKILL.md metadata.harness-schema 9, templates/harness-profile.md Schema: 2, scripts/harness-profile-check.sh schema=2, harness-schema.md entry '## Schema 9' missing")"
 
 d=$(harness_tree schema-template)
 sed -i.bak 's/^Schema: .*/Schema: 9/' "$d/setup-harness/templates/harness-profile.md"
 run "$inert" "$d"
-check "a moved template Schema: line is named" 0 "$(named "harness schema disagrees: SKILL.md metadata.harness-schema 2, templates/harness-profile.md Schema: 9, scripts/harness-profile-check.sh schema=2")"
+check "a moved template Schema: line is named" 0 "$(named "templates/harness-profile.md Schema: 9,")"
 
 d=$(harness_tree schema-checker)
 sed -i.bak 's/^schema=.*/schema=9/' "$d/setup-harness/scripts/harness-profile-check.sh"
 run "$inert" "$d"
-check "a moved checker literal is named" 0 "$(named "harness schema disagrees: SKILL.md metadata.harness-schema 2, templates/harness-profile.md Schema: 2, scripts/harness-profile-check.sh schema=9")"
+check "a moved checker literal is named" 0 "$(named "scripts/harness-profile-check.sh schema=9,")"
+
+d=$(harness_tree schema-entry)
+sed -i.bak 's/^## Schema 2$/## Schema two/' "$d/setup-harness/harness-schema.md"
+run "$inert" "$d"
+check "a missing harness-schema.md entry is named" 0 "$(named "harness-schema.md entry '## Schema 2' missing")"
 
 d=$(harness_tree schema-missing)
 sed -i.bak '/^schema=/d' "$d/setup-harness/scripts/harness-profile-check.sh"
 run "$inert" "$d"
-check "a checker with no literal is named as disagreeing" 0 "$(named "scripts/harness-profile-check.sh schema=none")"
+check "a checker with no literal is named as disagreeing" 0 "$(named "scripts/harness-profile-check.sh schema=none,")"
+
+# Only the first value counts: a later line that looks like one (an example in
+# the template's prose, a second assignment in the checker) is not a second value.
+d=$(harness_tree schema-second-template)
+printf '\nSchema: 9\n' >> "$d/setup-harness/templates/harness-profile.md"
+run "$inert" "$d"
+check_rc "a Schema: line below the first heading is not read" 0 "$rc"
+
+d=$(harness_tree schema-second-checker)
+printf '\nschema=9\n' >> "$d/setup-harness/scripts/harness-profile-check.sh"
+run "$inert" "$d"
+check_rc "a second schema= assignment is not read" 0 "$rc"
+
+d=$(harness_tree schema-second-skill)
+printf '\n  harness-schema: 9\n' >> "$d/setup-harness/SKILL.md"
+run "$inert" "$d"
+check_rc "a harness-schema: line below the frontmatter is not read" 0 "$rc"
+
+# A place the check cannot read is tooling, not a drift about a file nobody
+# read. A missing file is the case check 9 alone meets: an unreadable one trips
+# the tree-wide grep of checks 3 and 6 first.
+d=$(harness_tree schema-no-doc)
+rm "$d/setup-harness/harness-schema.md"
+run "$inert" "$d"
+check_rc "a missing harness-schema.md is tooling" 2 "$rc"
 
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.
