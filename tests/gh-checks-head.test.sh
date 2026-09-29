@@ -150,7 +150,7 @@ actions_reads() { grep -c '/actions/runs' "$FAKE/calls" 2>/dev/null; }
 # A GitHub-origin checkout on the PR's head branch, whose profile expects no
 # checks, so the no-checks grace is zero and a short --timeout is admitted.
 co=$work/co; mkdir -p "$co/docs/agents"
-printf '# Ship profile\n\nSchema: 3\n\n## CI\n\nLegs: None.\nNo-checks legal: yes, nothing here\nPush policy: Default.\n' \
+printf '# Ship profile\n\nSchema: 3\n\n## CI\n\nLegs: None.\nNo-checks legal: yes, nothing here\nPush policy: Default.\n\n## Reviewers\n\n### rev\n\nLogin: rev\nTrigger: on-request\nRequest: None.\nWorkflow: None.\nCap: 1\nResolve: None.\nGating: no\nFallback-for: None.\nInstructions: None.\n' \
   > "$co/docs/agents/ship.md"
 git -C "$co" init -q -b fix/fake-1
 git -C "$co" -c user.name=t -c user.email=t@t commit -q --allow-empty -m one
@@ -210,6 +210,12 @@ polls 100000
 out=$(pollpr "$co" --timeout 2 --interval 1)
 check "poll-pr closing on the old head is not done" "false $old" "$(jq -r '"\(.done) \(.head_sha)"' <<<"$out")"
 check "and counts the old head's round as on no head" 0 "$(jq '.reviews.on_head | length' <<<"$out")"
+
+# The reviewer was never read on the expected head, so its cause is no evidence
+# about it: unreachable, not silent.
+polls 100000
+out=$(pollpr "$co" --reviewer rev --since 2026-09-29T02:20:00Z --timeout 2 --interval 1)
+check "a reviewer polled only on the old head is unreachable" unreachable "$(jq -r .not_reviewed <<<"$out")"
 
 # Off the PR's branch there is no expected head: the first read is the answer,
 # as before.

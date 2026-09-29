@@ -89,9 +89,12 @@
 #
 # `not_reviewed` is the cause this poll observed for the awaited reviewer
 # delivering no round, which the review loop reports as `not reviewed: <cause>`
-# rather than naming one of its own. Null without --reviewer and where a
-# conflict closed the window, which says nothing about the reviewer. Otherwise,
-# first match wins:
+# rather than naming one of its own. Null without --reviewer. Otherwise, first
+# match wins:
+#   unreachable   the window closed with the host still on another head than the
+#                 expected one, so the reviewer was never read on it
+#   (null)        a conflict closed the window, which says nothing about the
+#                 reviewer
 #   unreachable   `threads` is "unavailable" (on GitHub, GraphQL and the REST
 #                 routes a refusing proxy names both failed), a landed round's
 #                 included, since its threads can be neither read nor answered
@@ -312,11 +315,13 @@ while :; do
     out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
       --argjson t "$threads" --argjson rv "$reviewer" --argjson b "$blocked" --argjson rr "$reviewer_run" \
       --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson d "$done" --argjson w "$waited" \
-      --arg aw "$await" \
+      --arg aw "$await" --argjson st "$stale" \
       '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer: $rv, reviewer_blocked: ($b.line? // null),
         reviewer_run: $rr, landed_by: $lb, refused_by: $rf, done: $d, waited_s: $w}
        | .not_reviewed = (
-           if $aw == "" or $m == "conflict" then null
+           if $aw == "" then null
+           elif $st then "unreachable"
+           elif $m == "conflict" then null
            elif $t == "unavailable" then "unreachable"
            elif $lb != null then null
            elif $rr == "unavailable" then "unreachable"

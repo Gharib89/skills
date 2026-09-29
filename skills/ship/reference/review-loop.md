@@ -74,6 +74,10 @@ observed where no round was admitted.
 - **A comment transport's window is its workflow run**, the one `Workflow:`
   names, held open while the run is going. Run no `update-pr-title` between that
   request and its poll: the run is matched by the PR's title.
+- **A poll waits for the expected head**, the worktree's `HEAD` on the PR's
+  branch or `--sha`. `not_reviewed: unreachable` with a `head_sha` that is not
+  that head means the host never showed the push: confirm it landed, then poll
+  again.
 
 ## Triage, fix, reply
 
