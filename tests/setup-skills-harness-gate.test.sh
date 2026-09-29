@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # skills/setup-skills/local-gate-harness.sh: the thin local gate setup-skills
 # writes over a harness. The subject is how it reads `check.sh full`: each check
-# becomes a gate of the same name, `skipped` as `pass`, and an answer outside the
-# contract (exit 2, exit 3, output that is not the JSON line) as one `check:
-# unavailable` gate with check.sh's stderr forwarded. check.sh is a stub that
-# prints what the case sets and logs how it was called.
+# becomes a gate of the same name, `skipped` as `pass`, on any exit 0 to 3, and
+# an answer outside the contract (output that is not the one JSON line, or an
+# exit above 3) as one `check: unavailable` gate with check.sh's stderr
+# forwarded. check.sh is a stub that prints what the case sets and logs how it
+# was called.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -49,11 +50,15 @@ check "a failing check: verdict fail, the check its own gate" 'fail {"deps":"pas
   "$(jq -r .verdict <<<"$out") $(gates)"
 check "a failing check: check.sh's stderr is forwarded" "tests: 1 failed" "$err"
 
-for c in "2|tooling: uv missing|exit 2" "3|over budget|exit 3" "0|not json|a line outside the contract"; do
-  IFS='|' read -r code msg name <<<"$c"
-  stdout='{"rung":"full","verdict":"unavailable","checks":{"lint":"unavailable"}}'
-  [ "$name" = "exit 2" ] || [ "$name" = "exit 3" ] || stdout=$msg
-  gate "$stdout" "$code" "$msg"
+for code in 2 3; do
+  gate '{"rung":"full","verdict":"unavailable","checks":{"lint":"pass","runner":"unavailable"}}' "$code" 'runner missing'
+  check_rc "exit $code: exit 2" 2 "$rc"
+  check "exit $code: each check is still its own gate" '{"deps":"pass","lint":"pass","runner":"unavailable"}' "$(gates)"
+  check "exit $code: check.sh's stderr is forwarded" "runner missing" "$err"
+done
+for c in "2||exit 2, no stdout" "3||exit 3, no stdout" "0|not json|a line outside the contract"; do
+  IFS='|' read -r code stdout name <<<"$c"
+  gate "$stdout" "$code" 'noise'
   check_rc "$name: exit 2" 2 "$rc"
   check "$name: one check gate, unavailable" '{"check":"unavailable","deps":"pass"}' "$(gates)"
 done
