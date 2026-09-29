@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.0 (2026-09-29)
+
+### Features
+
+- **setup-harness**: Pin jdtls from repo.eclipse.org behind a vendored launcher
+  ([#388](https://github.com/Gharib89/skills/pull/388),
+  [`9d2f028`](https://github.com/Gharib89/skills/commit/9d2f0286534ddce1837bc763631098091e9caf62))
+
+
 ## v0.6.1 (2026-09-28)
 
 ### Bug Fixes
