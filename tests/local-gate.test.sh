@@ -43,16 +43,14 @@ EOF
 # <case> <changed-file>: a checkout whose base commit carries the gate and its
 # stubs, with <changed-file> committed on top; prints its path.
 repo() {
-  local d="$fixture/$1" s f
+  local d="$fixture/$1" f
   mkdir -p "$d/scripts" "$d/tests" || return 1
-  for s in ship cloud-ship setup-skills update-skills setup-harness; do mkdir -p "$d/skills/$s" "$d/.claude/skills/$s"; done
   cp scripts/local-gate.sh "$d/scripts/" || return 1
-  for f in version-line house-style prose-budget stray-file self-contained contract profile-schema pin; do
+  for f in version-line house-style prose-budget stray-file self-contained contract derived-copies; do
     printf '#!/usr/bin/env bash\nexit 0\n' > "$d/scripts/$f-check.sh"; chmod +x "$d/scripts/$f-check.sh"
   done
   stub "$d/tests/run.sh" tests shellcheck TESTS_RC
   stub "$d/scripts/shellcheck-check.sh" shellcheck tests SHELLCHECK_RC
-  echo '{"skills":{"ship":{},"cloud-ship":{},"setup-skills":{},"update-skills":{},"setup-harness":{}}}' > "$d/skills-lock.json"
   git_ "$d" init -q && git_ "$d" add -A && git_ "$d" commit -qm base && git_ "$d" tag base || return 1
   mkdir -p "$d/$(dirname "$2")"; echo change > "$d/$2"
   git_ "$d" add -A && git_ "$d" commit -qm change || return 1

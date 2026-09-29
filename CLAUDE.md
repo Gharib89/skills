@@ -24,3 +24,7 @@ npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill up
 ```
 
 **A change to `skills/<name>/` is not finished until the refresh line has run and both trees are in the same commit.** `.claude/skills/` is what actually executes, so an unrefreshed change means the run is exercising the previous version. Run the refresh at the end of the implementation phase, before the self-review: the run's remaining phases then invoke the new mechanics, while changed `SKILL.md` prose is proven by the next run, because the skill was loaded into context at run start. The `derived-copies` gate in `scripts/local-gate.sh` fails when the two trees differ.
+
+### Harness
+
+`scripts/check.sh` is this repo's check entry point: `edit <file>...` lints and formats, `turn` typechecks and runs the affected tests of every uncommitted change, and `full` answers for the whole repo. It prints one JSON line and exits 0 pass, 1 fail, 2 unavailable, 3 over budget. Hooks in `.claude/settings.json` run `edit` after every Edit or Write and `turn` at every stop, and the pre-commit runner is the commit rung. Harness profile: `docs/agents/harness.md`. Re-run `/setup-harness` after adding a stack, a member or a tool.

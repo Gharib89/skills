@@ -56,10 +56,12 @@ jobs:
       # version comes from the commits since that skill's own last tag either way.
       # The whole history, because a shallow clone carries neither the tags nor
       # those commits.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
+          # The tag step and the release push through this checkout's token.
+          persist-credentials: true
 
       # Without the tag its own `tag_format` names, python-semantic-release ignores
       # the version in `SKILL.md` and bumps from 0.0.0 over the whole history. The
@@ -84,7 +86,7 @@ jobs:
               || { echo "skills/$s/SKILL.md is at $v with no $s-v$v tag reachable from HEAD: tag this history at that version before merging"; exit 1; }
           done
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
 
