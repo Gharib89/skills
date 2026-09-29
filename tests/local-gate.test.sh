@@ -79,6 +79,14 @@ check_rc "version-lines failing fails the verdict" 1 "$rc"
 check "version-lines failing is graded fail and its log reaches stderr" "fail version log line" \
   "$(jq -r '.gates["version-lines"]' <<<"$out") $err"
 
+CHECK_OUT='{"rung":"full","verdict":"unavailable","checks":{"tests":"pass","runner":"unavailable"}}' CHECK_RC=2 gate "$d"
+check_rc "check.sh answering unavailable (exit 2) is tooling" 2 "$rc"
+check "check.sh answering unavailable (exit 2) keeps each check under its own name" "unavailable pass" \
+  "$(jq -r '"\(.gates.runner) \(.gates.tests)"' <<<"$out")"
+
+CHECK_OUT='{"rung":"full","verdict":"over-budget","checks":{"tests":"pass","runner":"over-budget"}}' CHECK_RC=3 gate "$d"
+check "check.sh over budget (exit 3) folds over-budget into unavailable" "unavailable" "$(jq -r '.gates.runner' <<<"$out")"
+
 CHECK_OUT='not json' CHECK_RC=2 gate "$d"
 check_rc "check.sh outside its contract is tooling" 2 "$rc"
 check "check.sh outside its contract grades one check: unavailable" "unavailable" "$(jq -r '.gates.check' <<<"$out")"
@@ -111,8 +119,15 @@ check "--small, a LOCAL_ONLY row in a cloud session is skipped and read as pass"
 STUB_LOCAL_ONLY=contract gate "$d" --small docs/note.md
 check "--small, a LOCAL_ONLY row outside a cloud session still runs" "6" "$(grep -c . <<<"$calls")"
 
+# A row runs under pipefail, as check.sh runs it: a failing head of a pipe fails
+# the row, where a bare `bash -c` would read the last command's status alone.
+d=$(repo pipefail)
+sed -i.bak "s/^piped|.*/piped|false | cat'/" "$d/scripts/check.sh"
+gate "$d" --small docs/note.md
+check "--small, a row failing at the head of a pipe fails (pipefail)" "fail" "$(jq -r '.gates.piped' <<<"$out")"
+
 d=$(repo no-rows)
-sed -i '/setup-harness configuration/d' "$d/scripts/check.sh"
+sed -i.bak '/setup-harness configuration/d' "$d/scripts/check.sh"
 gate "$d" --small docs/note.md
 check_rc "--small, a check.sh with no configuration block is tooling" 2 "$rc"
 check "--small, a check.sh with no configuration block grades one check: unavailable" "unavailable" "$(jq -r '.gates.check' <<<"$out")"

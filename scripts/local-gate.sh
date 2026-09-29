@@ -63,9 +63,11 @@ fi
 if [ "$lane" = small ]; then
   # FULL_ROWS is read from check.sh's configuration block, so the two lanes
   # cannot drift; each row is `<name>|<command>`, the command may hold a `|`.
-  # Graded as check.sh grades a row: exit 127 is `unavailable`, a LOCAL_ONLY
-  # row is skipped (read as `pass`) in a cloud session, and a command gets no
-  # stdin, which would otherwise drain the rows still to come.
+  # The row data is check.sh's; the runner is not, and covers the parts of
+  # check.sh's own that a row's result rests on: exit 127 is `unavailable`, a
+  # LOCAL_ONLY row is skipped (read as `pass`) in a cloud session, a command
+  # gets no stdin, which would otherwise drain the rows still to come, and it
+  # runs under `-u` and `pipefail` as check.sh does. No deadline here.
   eval "$(sed -n '/^# >>> setup-harness configuration/,/^# <<< setup-harness configuration/p' scripts/check.sh)"
   if [ -z "${FULL_ROWS:-}" ]; then
     mark check unavailable
@@ -76,7 +78,7 @@ if [ "$lane" = small ]; then
     if [ "${CLAUDE_CODE_REMOTE:-}" = true ]; then
       case " ${LOCAL_ONLY:-} " in *" $name "*) put "$name" pass; continue ;; esac
     fi
-    bash -c "$cmd" </dev/null >"$log" 2>&1; rc=$?
+    bash -uo pipefail -c "$cmd" </dev/null >"$log" 2>&1; rc=$?
     case $rc in
       0) put "$name" pass ;;
       127) put "$name" unavailable; tail -n 40 "$log" >&2 ;;
@@ -87,10 +89,12 @@ else
   # No CHECK_DEADLINE: `full` is measured only, and a deadline would have
   # check.sh skip whatever it had not reached.
   (unset CHECK_DEADLINE; exec scripts/check.sh full) >"$log" 2>"$err"; rc=$?
-  # 0 and 1 carry the one JSON line; 2 (unavailable or tooling), 3 (over
-  # budget) and any stdout outside the contract leave nothing to map one to
-  # one. A status outside the gate vocabulary reads as unavailable.
-  if [ "$rc" -le 1 ] && parsed=$(jq -sce 'select(length == 1) | .[0].checks | objects
+  # 0 to 3 all carry the one JSON line (2 is a check unavailable, 3 over
+  # budget), so an unavailable tool still names its own check; a stdout outside
+  # the contract (the usage path, not a git repo) leaves nothing to map, which
+  # the jq guard catches. A status outside the gate vocabulary reads as
+  # unavailable.
+  if [ "$rc" -le 3 ] && parsed=$(jq -sce 'select(length == 1) | .[0].checks | objects
       | map_values(if . == "skipped" then "pass" elif . == "pass" or . == "fail" or . == "unavailable" then . else "unavailable" end)' \
       "$log" 2>/dev/null); then
     checks=$parsed
