@@ -16,9 +16,11 @@
 #
 # check.sh owns every check it runs, each one a gate of the same name here. This
 # file owns only what check.sh cannot know: `secrets` over base..HEAD and
-# `version-lines`, both relative to the base. No CI leg is only-CI, so no gate
-# is ever `deferred-to-ci`; this repo has no dependencies, so no `deps` gate.
-# `--small` skips check.sh and runs the test suite alone.
+# `version-lines`, both relative to the base. The one CI leg, `bump-guard`, reads
+# the PR title, so no gate is ever `deferred-to-ci`; this repo has no
+# dependencies, so no `deps` gate. `--small` runs check.sh's own `FULL_ROWS`
+# checks in place of `check.sh full`, which leaves out only its `runner`, the
+# linters, that the edit and commit hooks run on every change.
 # Bash 3.2 plus jq, so it runs on a stock macOS bash.
 set -uo pipefail
 
@@ -59,7 +61,12 @@ else
 fi
 
 if [ "$lane" = small ]; then
-  run tests tests/run.sh                 # the whole suite: it takes no node, and the small lane keeps it repo-wide
+  # FULL_ROWS is read from check.sh's configuration block, so the two lanes
+  # cannot drift; each row is `<name>|<command>`, the command may hold a `|`.
+  eval "$(sed -n '/^# >>> setup-harness configuration/,/^# <<< setup-harness configuration/p' scripts/check.sh)"
+  while IFS='|' read -r name cmd; do
+    [ -z "$name" ] || run "$name" bash -c "$cmd"
+  done <<<"$FULL_ROWS"
 else
   # No CHECK_DEADLINE: `full` is measured only, and a deadline would have
   # check.sh skip whatever it had not reached.

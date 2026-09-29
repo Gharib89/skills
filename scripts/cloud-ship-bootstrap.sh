@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The ship profile's `## Cloud lane` `Bootstrap:`, written by setup-skills where
 # the repo has a harness profile (docs/agents/harness.md); owned by the repo
-# from here. Ship's `prepare` runs it before a cloud run takes its claim, so the
-# local gate finds every tool it runs.
+# from here. Ship's `prepare` and the `SessionStart` hook run it, so the local
+# gate finds every tool it runs.
 #
 #   scripts/cloud-ship-bootstrap.sh
 #
