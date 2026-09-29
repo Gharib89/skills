@@ -37,7 +37,8 @@ FULL_RUN='prek run --all-files'
 LOCAL_ONLY="${STUB_LOCAL_ONLY-}"
 FULL_ROWS='tests|tests/run.sh
 derived-copies|scripts/derived-copies-check.sh
-contract|scripts/contract-check.sh a && scripts/contract-check.sh b'
+contract|scripts/contract-check.sh a && scripts/contract-check.sh b
+piped|echo "piped row" | cat >> "$CALLS"'
 # <<< setup-harness configuration
 STUB
   printf '#!/usr/bin/env bash\necho "run.sh${*:+ $*}" >> "$CALLS"\ncat >/dev/null\necho tests log line\nexit "${TESTS_RC:-0}"\n' > "$d/tests/run.sh"
@@ -84,12 +85,13 @@ check "check.sh outside its contract grades one check: unavailable" "unavailable
 
 CHECK_OUT=$ALL_GREEN gate "$d" --small docs/note.md
 check_rc "--small, all green: exit 0" 0 "$rc"
-check "--small runs check.sh's FULL_ROWS by name, never its runner" '{"lane":"small","gates":["contract","derived-copies","secrets","tests","version-lines"]}' \
+check "--small runs check.sh's FULL_ROWS by name, never its runner" '{"lane":"small","gates":["contract","derived-copies","piped","secrets","tests","version-lines"]}' \
   "$(jq -c '{lane, gates: (.gates | keys)}' <<<"$out")"
-check "--small: the calls are the rows in order, a row's && command in full, then version-lines" "run.sh
+check "--small: the calls are the rows in order, a row's && and | commands in full, then version-lines" "run.sh
 derived-copies-check.sh
 contract-check.sh a
 contract-check.sh b
+piped row
 version-line-check.sh base" "$calls"
 
 TESTS_RC=1 gate "$d" --small docs/note.md
@@ -104,12 +106,12 @@ check_rc "--small, a row whose tool is missing (127) is tooling" 2 "$rc"
 check "--small, a row whose tool is missing (127) grades unavailable" "unavailable" "$(jq -r '.gates["derived-copies"]' <<<"$out")"
 
 STUB_LOCAL_ONLY=contract CLAUDE_CODE_REMOTE=true gate "$d" --small docs/note.md
-check "--small, a LOCAL_ONLY row in a cloud session is skipped and read as pass" "pass 3" \
+check "--small, a LOCAL_ONLY row in a cloud session is skipped and read as pass" "pass 4" \
   "$(jq -r '.gates.contract' <<<"$out") $(grep -c . <<<"$calls")"
 STUB_LOCAL_ONLY=contract gate "$d" --small docs/note.md
-check "--small, a LOCAL_ONLY row outside a cloud session still runs" "5" "$(grep -c . <<<"$calls")"
+check "--small, a LOCAL_ONLY row outside a cloud session still runs" "6" "$(grep -c . <<<"$calls")"
 
-d=$(repo no-rows docs/note.md)
+d=$(repo no-rows)
 sed -i '/setup-harness configuration/d' "$d/scripts/check.sh"
 gate "$d" --small docs/note.md
 check_rc "--small, a check.sh with no configuration block is tooling" 2 "$rc"
