@@ -107,8 +107,8 @@ open_phase() {
        }' "$file"
 }
 # The first phase below <n> whose row is not `[x]`: closed, rebuilt `done` and
-# skipped all tick it, so every phase that ran or was skipped passes. One phase,
-# one line, as `open_phase` reads it.
+# skipped all tick it, so every phase that ran or was skipped passes. Only the
+# first row per phase counts, as in `open_phase`.
 unflipped() { # unflipped <n>
   awk -v n="$1" '/^- \[.\] [0-9][0-9]* · / {
          p = substr($0, 7); sub(/ .*/, "", p)
@@ -266,7 +266,7 @@ open)
   # is open-then-close, not `close` or `skip`: `close` needs it open, and `skip`
   # would record a phase that ran as one that did not.
   gap=$(unflipped "$n")
-  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped: if it ran, open and close it now and log its true window in the deviations log; if it did not, skip it with a reason; then open $n"
+  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped: if it ran, \`run-file open $gap\` then \`run-file close $gap\`, and log in the deviations log that this stamp is the recovery time, with when it really ran if the transcript holds it; if it did not, \`run-file skip $gap <reason>\`; then open $n"
   new=$(render open "$(item "$line")" "$(date -u +%H:%M)")
   write_line "$lineno" "$new"
   flip_json open "$new" in_progress
