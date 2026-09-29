@@ -266,7 +266,7 @@ open)
   # that ran, the recovery is open-then-close: `close` needs it open, and `skip`
   # would record it as not run. A phase that did not run is skipped.
   gap=$(unflipped "$n")
-  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped: if it ran, \`run-file open $gap\` then \`run-file close $gap\`, and log in the deviations log that phase $gap's stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds are not measured, with when it really ran if the transcript holds it; if it did not, \`run-file skip $gap <reason>\`; then open $n"
+  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped. If it ran: \`run-file open $gap\`, \`run-file close $gap\`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: \`run-file skip $gap <reason>\`. Then retry \`run-file open $n\`, which names the next such phase if any."
   new=$(render open "$(item "$line")" "$(date -u +%H:%M)")
   write_line "$lineno" "$new"
   flip_json open "$new" in_progress
