@@ -43,6 +43,12 @@ cd "$(dirname "$0")/.." || exit 2
 source extra.sh
 [ "$(extra)" = yes ]
 EOF
+cat > "$repo/tests/hostcall.test.sh" <<'EOF'
+cd "$(dirname "$0")/.." || exit 2
+gh api repos/x/y
+source lib.sh
+[ "$(answer)" = 2 ]
+EOF
 cat > "$repo/tests/unrelated.test.sh" <<'EOF'
 cd "$(dirname "$0")/.." || exit 2
 [ -f lib.sh ]
@@ -76,6 +82,14 @@ check "a red test says so" \
 check "a green test names the vacuous test" \
   "revert-red: tests/unrelated.test.sh stays green with lib.sh reverted, so it does not prove the fix." \
   "$(out_of tests/unrelated.test.sh lib.sh)"
+
+# Red for the stub's sake is not red for the fix's: a reverted tree that reaches a
+# host, as one that loses the Host fake would, is not a verdict.
+check_rc "a reverted tree that calls a host is tooling, not red" \
+  2 "$(rc_of tests/hostcall.test.sh lib.sh)"
+check "and the call is named on stderr" \
+  "    gh api repos/x/y" \
+  "$(cd "$repo" && bash "$script" tests/hostcall.test.sh lib.sh 2>&1 >/dev/null | grep '^    ')"
 
 # --- it leaves nothing behind ------------------------------------------------
 

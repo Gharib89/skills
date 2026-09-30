@@ -10,8 +10,8 @@ name: bump-guard
 #
 # The same job holds the PR body to the template: every `##` heading the template
 # has must be in the body, because ship would create the missing section at the
-# end, after `## Attribution`. It refuses the absence and leaves order to the
-# author. `scripts/check-pr-body.sh` is that rule,
+# end, after `## Attribution`. It refuses the absence up front and leaves order to
+# the author: nothing here holds the footer last. `scripts/check-pr-body.sh` is that rule,
 # driven by `tests/pr-body-headings.test.sh`, and it reads the body from the event
 # rather than through `gh`.
 #

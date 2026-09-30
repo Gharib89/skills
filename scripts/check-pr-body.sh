@@ -3,8 +3,9 @@
 #
 # A section ship writes into a body that lacks its heading is created at the end,
 # after `## Attribution`; a body written by hand without the template is how a
-# heading goes missing. This refuses the absence up front and leaves order to the
-# author. The template is the source of truth: a heading added to it is required
+# heading goes missing. This refuses the absence up front. Order is the author's:
+# nothing here holds `## Attribution` last, so a section appended after it once the
+# body is edited passes. The template is the source of truth: a heading added to it is required
 # of every body from then on.
 #
 #   scripts/check-pr-body.sh [<body-file>]      the body on stdin when no file is given

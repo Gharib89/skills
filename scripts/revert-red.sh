@@ -9,13 +9,20 @@
 # merge base with origin/HEAD, or deleted where the fix added it, and the test
 # runs there. It reads committed state, so commit the test and the fix first.
 #
+# The test runs behind the suite's host stubs (`tests/host-stub.sh`), as under
+# `tests/run.sh`: a revert can take out what swaps in the Host fake (`ship_load_host`),
+# and the reverted tree would then call the real host with the developer's own
+# credentials. A run that reaches a host is exit 2, since the red it shows is the
+# stub's 127.
+#
 #   scripts/revert-red.sh <test> <path>...
 #
 # <test> and each <path> are files relative to the repo root; a directory is refused.
 # stdout: one line saying whether the test went red
 # stderr: the test's last 40 lines when it went red, the evidence it failed
 # exit: 0 the test went red on the reverted tree · 1 it stayed green, so it does
-#       not prove the fix · 2 tooling or a bad call, which is not a verdict
+#       not prove the fix · 2 tooling, a bad call, or a reverted tree that reached
+#       a host, none of which is a verdict
 set -uo pipefail
 
 if [ "$#" -lt 2 ]; then
@@ -25,6 +32,7 @@ fi
 test_path=$1
 shift
 
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) || exit 2
 cd "$(git rev-parse --show-toplevel)" || exit 2
 root=$PWD
 base=$(git merge-base HEAD origin/HEAD 2>/dev/null) || {
@@ -54,6 +62,11 @@ wt=$tmp/tree
 log=$tmp/test.log
 trap 'git -C "$root" worktree remove --force "$wt" 2>/dev/null; rm -rf "$tmp"' EXIT
 git worktree add -q --detach "$wt" HEAD || exit 2
+# shellcheck source=../tests/host-stub.sh
+source "$here/../tests/host-stub.sh"
+mkdir "$tmp/stub" && ship_test_host_stub "$tmp/stub" || exit 2
+hostlog=$tmp/hostlog
+: > "$hostlog"
 
 for p in "$@"; do
   if git cat-file -e "$base:$p" 2>/dev/null; then
@@ -63,8 +76,12 @@ for p in "$@"; do
   fi
 done
 
-(cd "$wt" && bash "$test_path") >"$log" 2>&1
+(cd "$wt" && PATH="$tmp/stub:$PATH" SHIP_TEST_HOSTLOG="$hostlog" bash "$test_path") >"$log" 2>&1
 rc=$?
+if [ -s "$hostlog" ]; then
+  { echo "revert-red: $test_path reached a host with the fix reverted:"; sed 's/^/    /' "$hostlog"; } >&2
+  exit 2
+fi
 
 list=$(printf '%s, ' "$@")
 list=${list%, }
