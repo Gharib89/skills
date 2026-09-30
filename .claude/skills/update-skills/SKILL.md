@@ -102,12 +102,12 @@ invalid` takes its `## Re-run`, and `sections` its "A setup section re-run",
 redoing for each section only the item its template feeds; when both hold, the
 `## Re-run` first, then the sections. Its step 1 re-checks what steps 2 and 4
 installed and the parent docs this run never writes, so run it as a check: a
-failure skips the re-run, recorded as `setup-skills needed: <what it printed>`
-for step 8's Needs attention, and the step goes on to the retired terms. Its
-own preflight calls read this run's `existing branch` and `worktree exists` as
-the expected pair. Its proposals and interview questions go to the owner from
-this session, with AskUserQuestion, and writes land on confirm as setup-skills
-says.
+failure skips the re-run, recorded as `setup-skills needed: <section or profile
+reason>` per item it would have redone, with what step 1 printed beside it, and
+the step goes on to the retired terms. Its own preflight calls read this run's
+`existing branch` and `worktree exists` as the expected pair. Its proposals and
+interview questions go to the owner from this session, with AskUserQuestion,
+and writes land on confirm as setup-skills says.
 
 | `section` | setup-skills item |
 |---|---|
@@ -124,8 +124,9 @@ says.
 A change to setup-skills' `SKILL.md` alone is not a section: its prose moving
 costs no interview. When the re-run is done, run `$S/preflight.sh none` again:
 the step is done when this run's own `existing branch` and `worktree exists` are
-the only reasons left, unless the re-run was skipped. Note the profile schema move for step 8: the `Schema:`
-line of `docs/agents/ship.md` at `<old>` against the one now.
+the only reasons left, unless the re-run was skipped. Note the profile schema
+move for step 8: the `Schema:` line of `docs/agents/ship.md` at `<old>` against
+the one now.
 
 **Retired terms**, whether or not setup-skills re-ran. Each `retired` row is a
 word a source-repo skill stopped using inside the range this refresh crosses.
@@ -231,7 +232,8 @@ section carries the content below either way:
      are any.
 - `## Needs attention`: the drift issue's link or step 7's printed command,
   every retired-term hit step 6 listed, a local gate `verdict` other than
-  `pass`, and any to-do left to the owner, one line each; `None.` when empty.
+  `pass`, every `setup-skills needed` line step 6 recorded, and any to-do left
+  to the owner, one line each; `None.` when empty.
   The PR opens either way: the owner decides.
 - `## Verification`: the last preflight's `reasons` (step 6's, else step 4's),
   the expected pair named as expected, and the local gate `verdict`.
