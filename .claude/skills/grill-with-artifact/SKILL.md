@@ -75,11 +75,11 @@ the session.
    round number.
 6. Resolve the Submit thread that started this turn, if one did, so an open
    thread always means still working. Then print one status line,
-   `Round <n> posted: <k> questions.`, and end the turn. The questions live on
-   the page only, so the human answers one copy.
+   `Round <n> posted. Questions: <k>.`, and end the turn. The questions and
+   what settled them live on the page only, so the human reads one copy.
 
 **Done when:** `rounds/<n>` is written, the turn's Submit thread is resolved,
-and the status line is the turn's last output.
+and the status line is the turn's only text.
 
 ## 4 · Read a Submit
 
@@ -107,16 +107,17 @@ A `submitted` typed in the terminal rings the same bell.
 ## 5 · Close
 
 When the frontier is empty, post a closing round: `kind` `closing`, with
-`summary` holding every decision under a few headings. The page shows Confirm
-and Not yet, and no Reopen: a Not yet comment names what to reopen.
+`summary` holding every decision under a few headings, and its status line
+reads `Round <n> posted. Closing summary.` The page shows Confirm and Not yet,
+and no Reopen: a Not yet comment names what to reopen.
 
 - **Not yet**: grill its comment as a new frontier from step 3.
-- **Confirm**: resolve its thread, print exactly `Session confirmed: <k>
-  decisions, <m> docs written.`, and end the turn.
+- **Confirm**: resolve its thread, print exactly `Session confirmed.
+  Decisions: <k>. Docs written: <m>.`, and end the turn.
 
 Any outward-facing step (filing issues, writing a spec) waits for the Confirm
 and for the human to ask for it. A next command the Skill tool cannot run, such
 as `/to-spec`, is named for the human to type.
 
 **Done when:** the human pressed Confirm, its thread is resolved, and the
-confirmed line is the turn's last output.
+confirmed line is the turn's only text.
