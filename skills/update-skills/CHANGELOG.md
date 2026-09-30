@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.4.1 (2026-09-30)
+
+### Bug Fixes
+
+- **ship**: Nested adapter calls survive RETURN traps; encoded PR lookup; token off argv; installer
+  -f; capped base-fresh log ([#428](https://github.com/Gharib89/skills/pull/428),
+  [`7266a14`](https://github.com/Gharib89/skills/commit/7266a14449df72012123eb22b543ced26f596ff4))
+
+
 ## v0.4.0 (2026-09-30)
 
 ### Features
