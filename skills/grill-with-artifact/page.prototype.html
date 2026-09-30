@@ -243,8 +243,13 @@ kbd { font: 500 10px/1.5 var(--f-mono); border: 1px solid var(--line-strong); bo
 :root[data-theme="light"] .pal-gray { --page: #e6e8eb; --wall-a: #c9cdd3; --wall-b: #b8bdc5; --wall-c: #dadde2; --wall-base: #eceef1; --card: #ffffff8c; }
 
 /* variant 2: Black, with a faint sheen so the glass still reads */
-.pal-black { --page: #000000; --wall-a: #1f1f22; --wall-b: #151517; --wall-c: #232326; --wall-base: #000000; --card: #ffffff0d; --glass-edge: #ffffff21; --glass-hi: #ffffff2e; --glass-shadow: #000000cc; }
-:root[data-theme="light"] .pal-black { --page: #f2f2f4; --wall-a: #e6e6e9; --wall-b: #efeff1; --wall-c: #e2e2e6; --wall-base: #fafafa; --card: #ffffffa6; --glass-edge: #ffffffcc; --glass-hi: #ffffff; --glass-shadow: #0000001a; }
+.pal-black { --page: #000000; --wall-a: #1f1f22; --wall-b: #151517; --wall-c: #232326; --wall-base: #000000; --card: #ffffff0d; --glass-edge: #ffffff21; --glass-hi: #ffffff2e; --glass-shadow: #000000cc;
+  --park: #aeaeb2; --park-wash: #aeaeb21a; --park-line: #aeaeb259; --bar: #0a0a0bcc; }
+:root[data-theme="light"] .pal-black { --page: #f2f2f4; --wall-a: #e6e6e9; --wall-b: #efeff1; --wall-c: #e2e2e6; --wall-base: #fafafa; --card: #ffffffa6; --glass-edge: #ffffffcc; --glass-hi: #ffffff; --glass-shadow: #0000001a;
+  --park: #636366; --park-wash: #6363661a; --park-line: #63636659; --bar: #fafafacc; }
+/* Deferred is neutral gray here, and the bar blurs without boosting saturation, so content scrolling
+   under it never tints it. */
+.glass.pal-black .a-bar { -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px); }
 
 /* variant 3: apple.com. Solid tiles, big headlines, blur only on the sticky bar. */
 .pal-apple {
