@@ -1,0 +1,825 @@
+<title>Grill Page Directions</title>
+<!--
+  PROTOTYPE (#435), throwaway. Three layouts of the grill-with-artifact page, switchable with the
+  bar at the top (arrow keys, or #a / #b / #c in the link). All three share one skin taken from
+  aihero.dev's skill pages, dark by default; light applies only when data-theme="light" is set.
+  Sample data only. Nothing is saved or sent: Submit is stubbed, and the bar picks its outcome.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one skin, three layouts. A stacks rounds in a reading column; B steps through one
+   question at a time; C answers a round as ledger rows. Tokens follow aihero.dev, dark first. */
+:root {
+  --page: #080808; --bg: #0b0b0b; --card: #100f0e; --band: #0e0e0d;
+  --fg: #f4f3f1; --fg-body: #f4f3f1b8; --fg-muted: #f4f3f199; --fg-label: #f4f3f17a; --fg-faint: #f4f3f14d;
+  --line: #ffffff14; --line-strong: #ffffff1f; --input: #ffffff1f; --hover: #ffffff12;
+  --gold: #f5c451; --gold-hover: #ffd873; --gold-ink: #191510; --gold-text: #f5c451; --gold-edge: #f5c451;
+  --gold-wash: #f5c45112; --gold-panel: #1d1a11; --gold-line: #f5c45159;
+  --ok: #5ec386; --ok-wash: #5ec3861a; --ok-line: #5ec38666;
+  --park: #b995f6; --park-wash: #b995f61a; --park-line: #b995f666;
+  --warn: #e3ad4b; --danger: #ea6a64; --link: #f5c451;
+  --p-bg: #f4f3f1; --p-fg: #0b0b0b; --p-edge: #0b0b0b59; --p-shadow: #00000099;
+  --r: 9px;
+  --f-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --page: #f1f2f5; --bg: #fbfbfc; --card: #ffffff; --band: #f1f2f5;
+  --fg: #14161a; --fg-body: #14161acc; --fg-muted: #14161ab3; --fg-label: #14161a99; --fg-faint: #14161a59;
+  --line: #14161a1a; --line-strong: #14161a24; --input: #14161a24; --hover: #14161a0f;
+  --gold: #f5c451; --gold-hover: #eab534; --gold-ink: #191510; --gold-text: #8a6400; --gold-edge: #c99a1c;
+  --gold-wash: #f5c45126; --gold-panel: #fbf3dc; --gold-line: #c99a1c66;
+  --ok: #00884c; --ok-wash: #00884c14; --ok-line: #00884c55;
+  --park: #794db6; --park-wash: #794db614; --park-line: #794db655;
+  --warn: #ac7300; --danger: #c92f33; --link: #14161a;
+  --p-bg: #14161a; --p-fg: #fbfbfc; --p-edge: #fbfbfc59; --p-shadow: #14161a40;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--page); color: var(--fg); font: 16px/1.55 var(--f-sans); -webkit-font-smoothing: antialiased; }
+
+/* ---------- prototype chrome (not part of any direction) ---------- */
+.proto { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; display: flex; justify-content: center; padding: 8px 16px; pointer-events: none; }
+.proto-in { pointer-events: auto; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: center; background: var(--p-bg); color: var(--p-fg); border: 1px dashed var(--p-edge); border-radius: 12px; padding: 6px 10px; font: 500 12px/1.3 var(--f-mono); box-shadow: 0 6px 24px var(--p-shadow); max-width: 100%; }
+.proto button, .proto select { font: inherit; color: inherit; background: var(--p-bg); border: 1px solid var(--p-edge); border-radius: 6px; padding: 3px 7px; cursor: pointer; }
+.proto label { display: flex; gap: 6px; align-items: center; }
+.proto-tag { background: var(--gold); color: var(--gold-ink); border-radius: 4px; padding: 1px 6px; font-size: 10.5px; letter-spacing: .06em; }
+.proto-dir { min-width: 8.5em; text-align: center; }
+.proto-panel { pointer-events: auto; position: absolute; top: calc(100% - 2px); left: 50%; transform: translateX(-50%); width: min(680px, calc(100% - 32px)); max-height: 62vh; overflow: auto; background: var(--p-bg); color: var(--p-fg); border: 1px dashed var(--p-edge); border-radius: 12px; padding: 12px 14px; box-shadow: 0 6px 24px var(--p-shadow); }
+.proto-panel h4 { margin: 0 0 6px; font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; }
+.proto-panel pre { margin: 0 0 14px; font: 12px/1.5 var(--f-mono); white-space: pre-wrap; word-break: break-word; }
+body.frame #stage { max-width: 400px; margin-inline: auto; outline: 1px dashed var(--fg-faint); }
+
+/* ---------- shared skin ---------- */
+.dir { container-type: inline-size; min-height: 100vh; background: var(--bg); color: var(--fg); }
+.dir h1, .dir h2, .dir h3 { margin: 0; text-wrap: balance; font-weight: 700; }
+.dir h1 { font-size: 2.5rem; line-height: 1.06; letter-spacing: -.03em; }
+.dir h2 { font-size: 1.5rem; line-height: 1.15; letter-spacing: -.022em; }
+.dir h3 { font-size: 1.0625rem; line-height: 1.3; letter-spacing: -.01em; }
+.dir p { margin: 0; max-width: 68ch; }
+@container (max-width: 560px) { .dir h1 { font-size: 2rem; } .dir h2 { font-size: 1.3rem; } }
+.label { font: 500 11px/1.4 var(--f-mono); color: var(--fg-label); letter-spacing: .02em; }
+.mono { font-family: var(--f-mono); }
+.chip { font: 500 11px/1.4 var(--f-mono); border: 1px solid var(--line-strong); border-radius: 4px; padding: 1px 6px; color: var(--fg-muted); white-space: nowrap; }
+.dir code { font: 500 .86em var(--f-mono); background: var(--hover); border: 1px solid var(--line); border-radius: 4px; padding: .05em .35em; overflow-wrap: anywhere; }
+.dir a { color: var(--link); }
+.btn { font: 500 14px/1.2 var(--f-sans); color: var(--fg); background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn.gold { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); }
+.btn.gold:hover:not(:disabled) { background: var(--gold-hover); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.on { border-color: var(--park); color: var(--park); background: var(--park-wash); }
+.btn-sm { padding: 6px 11px; font-size: 13px; }
+.btn-lg { padding: 12px 20px; font-size: 15px; }
+.btn-link { font: 500 13px var(--f-sans); background: none; border: 0; padding: 0; color: var(--gold-text); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--gold-line); white-space: nowrap; }
+.btn-link:disabled { opacity: .4; cursor: not-allowed; }
+kbd { font: 500 10px/1.5 var(--f-mono); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--fg-muted); }
+.btn.gold kbd { color: inherit; border-color: currentColor; opacity: .6; }
+.tag, .qtag { font: 500 11px/1.5 var(--f-mono); border-radius: 4px; padding: 1px 6px; white-space: nowrap; color: var(--fg-muted); background: var(--hover); }
+.tag.ok { color: var(--ok); background: var(--ok-wash); }
+.tag.gold { color: var(--gold-text); background: var(--gold-wash); }
+.tag.park { color: var(--park); background: var(--park-wash); }
+.qtag[data-state="ready"] { color: var(--ok); background: var(--ok-wash); }
+.qtag[data-state="deferred"] { color: var(--park); background: var(--park-wash); }
+.qtag[data-state="incomplete"] { color: var(--warn); background: var(--hover); }
+.rec { font: 500 10.5px/1.5 var(--f-mono); color: var(--gold-text); text-transform: uppercase; letter-spacing: .06em; border: 1px solid var(--gold-line); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+.qid { font: 500 12px var(--f-mono); color: var(--fg-label); }
+.how { font: 500 11px var(--f-mono); color: var(--fg-label); white-space: nowrap; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--gold-edge); outline-offset: 2px; }
+.dir textarea, .dir input[type="text"] { width: 100%; font: 14px/1.5 var(--f-sans); color: var(--fg); background: var(--bg); border: 1px solid var(--input); border-radius: 7px; padding: 8px 10px; }
+.dir textarea { resize: vertical; min-height: 2.6em; }
+.dir textarea:focus, .dir input[type="text"]:focus { border-color: var(--gold-line); outline: none; box-shadow: 0 0 0 3px var(--gold-wash); }
+.dir textarea:disabled, .dir input:disabled { opacity: .6; }
+.carried { font-size: 14px; color: var(--fg-body); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.docs { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--band); }
+.docs ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; color: var(--fg-body); }
+.docs-none { font-size: 14px; color: var(--fg-muted); }
+
+/* submit status, shared markup */
+.st { flex-basis: 100%; font-size: 14px; color: var(--fg-body); display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--fg-faint); border-radius: 7px; background: var(--bg); }
+.st b { color: var(--fg); }
+.st-sending { display: flex; align-items: center; gap: 10px; }
+.st-ok { border-left-color: var(--ok); }
+.st-warn { border-left-color: var(--warn); }
+.st-bad { border-left-color: var(--danger); }
+.st pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 var(--f-mono); color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 10px; max-height: 12em; overflow: auto; }
+.st-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.spin { flex: none; width: 12px; height: 12px; border: 2px solid var(--line-strong); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+.cl-ctl { display: grid; gap: 10px; flex: 1 1 100%; }
+.cl-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.cl-note { display: grid; gap: 6px; }
+
+/* figures */
+.fig { margin: 0; display: grid; gap: 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); padding: 14px; min-width: 0; }
+.fig-scroll { overflow-x: auto; }
+.fig svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.fig figcaption { font-size: 14px; color: var(--fg-muted); max-width: 68ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; margin: 0; padding: 0; font: 500 11px var(--f-mono); color: var(--fg-muted); }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.dir svg [data-q] { cursor: pointer; }
+
+/* ===== FIGURE STYLE CONTRACT: the only classes Claude-drawn SVGs use; colours come from tokens ===== */
+.dir svg { color: var(--fg); }
+.dir svg text { font: 12px var(--f-sans); fill: currentColor; }
+.dir svg .lbl { font: 500 11px var(--f-mono); fill: var(--fg-label); letter-spacing: .04em; }
+.dir svg .n-settled rect { fill: var(--ok-wash); stroke: var(--ok); }
+.dir svg .n-open rect { fill: var(--gold-wash); stroke: var(--gold-edge); stroke-width: 1.5; }
+.dir svg .n-open text { font-weight: 500; }
+.dir svg .n-blocked rect { fill: var(--card); stroke: var(--fg-faint); stroke-dasharray: 4 3; }
+.dir svg .n-blocked text { fill: var(--fg-muted); }
+.dir svg .n-deferred rect { fill: var(--park-wash); stroke: var(--park); stroke-dasharray: 2 3; }
+.dir svg .edge { fill: none; stroke: var(--fg-faint); stroke-width: 1.2; }
+.dir svg .edge.hot { stroke: var(--gold-edge); stroke-width: 1.8; }
+.dir svg .box rect { fill: var(--card); stroke: var(--fg-faint); }
+.dir svg .box.hot rect { fill: var(--gold-wash); stroke: var(--gold-edge); stroke-width: 1.5; }
+
+/* ---------- A · Column ---------- */
+.a-wrap { max-width: 860px; margin: 0 auto; padding-inline: 24px; padding-block: 40px 32px; display: grid; gap: 36px; }
+.a-hdr { display: grid; gap: 12px; }
+.a-hdr .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.a-lede { font-size: 18.5px; line-height: 1.55; color: var(--fg-muted); max-width: 52ch; }
+.a-round { display: grid; gap: 16px; }
+.a-rhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.a-rhead .btn-link { margin-left: auto; }
+.a-settled { border: 1px solid var(--line); border-radius: var(--r); background: var(--card); }
+.a-settled summary { cursor: pointer; padding: 12px 16px; font-weight: 500; font-size: 15px; }
+.a-settled ol { margin: 0; padding: 4px 16px 14px; list-style: none; display: grid; gap: 10px; }
+.a-settled li { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) auto; gap: 10px; align-items: baseline; font-size: 15px; color: var(--fg-body); }
+.a-settled li b { color: var(--fg); font-weight: 600; }
+.a-settled li .how { margin-left: 6px; }
+.a-q { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.a-q[data-state="ready"] { border-color: var(--ok-line); }
+.a-q[data-state="deferred"] { border-color: var(--park-line); }
+.a-qhead { display: flex; gap: 10px; align-items: baseline; }
+.a-qhead h3 { flex: 1; min-width: 0; font-size: 1.25rem; letter-spacing: -.02em; }
+.a-opts { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+.a-opt { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 11px 14px; border: 1px solid var(--line-strong); border-radius: var(--r); cursor: pointer; }
+.a-opt:hover { background: var(--hover); }
+.a-opt:has(input:checked) { border-color: var(--gold-edge); background: var(--gold-wash); }
+.a-opt.a-defer:has(input:checked) { border-color: var(--park); background: var(--park-wash); }
+.a-opt input[type="radio"] { margin: 5px 0 0; accent-color: var(--gold); }
+.a-opt > span { display: grid; gap: 4px; min-width: 0; }
+.a-opt .t { font-weight: 500; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.a-opt .d { color: var(--fg-muted); font-size: 14px; }
+.a-why { background: var(--band); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 6px; font-size: 15px; color: var(--fg-body); }
+.a-why .label { color: var(--gold-text); }
+.a-foot { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.a-comment { flex: 1 1 16rem; display: grid; gap: 6px; }
+.a-summary { display: grid; gap: 8px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.a-summary h3:not(:first-child) { margin-top: 10px; }
+.a-summary p { color: var(--fg-body); }
+.a-bar { position: sticky; bottom: 0; z-index: 5; background: var(--card); border-top: 1px solid var(--line-strong); padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.a-bar-in { max-width: 812px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.a-count { font-variant-numeric: tabular-nums; color: var(--fg-muted); font-size: 14px; }
+.a-count b { color: var(--fg); }
+.a-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@container (max-width: 560px) {
+  .a-wrap { padding-inline: 16px; padding-block: 24px; gap: 28px; }
+  .a-lede { font-size: 17px; }
+  .a-q { padding: 16px; }
+  .a-settled li { grid-template-columns: 3.2rem minmax(0, 1fr); }
+  .a-settled li > :last-child { grid-column: 2; justify-self: start; }
+  .a-bar { padding-inline: 16px; }
+}
+
+/* ---------- B · Focus ---------- */
+.b-shell { max-width: 1040px; margin: 0 auto; padding-inline: 28px; padding-block: 28px 0; display: grid; gap: 24px; }
+.b-top { display: grid; gap: 10px; }
+.b-id { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.b-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; margin-top: 8px; }
+.b-tabs button { font: 500 14px var(--f-sans); color: var(--fg-muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; cursor: pointer; white-space: nowrap; }
+.b-tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--gold); }
+.b-strip { list-style: none; margin: 0; padding: 0 0 2px; display: flex; gap: 6px; overflow-x: auto; }
+.b-strip button { display: flex; align-items: center; gap: 8px; font: 500 13px var(--f-sans); color: var(--fg-muted); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 10px; cursor: pointer; white-space: nowrap; }
+.b-strip button.on { color: var(--fg); border-color: var(--fg-faint); background: var(--hover); }
+.b-dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--fg-faint); }
+[data-state="ready"] > .b-dot { background: var(--ok); border-color: var(--ok); }
+[data-state="deferred"] > .b-dot { background: var(--park); border-color: var(--park); }
+[data-state="incomplete"] > .b-dot { border-color: var(--warn); }
+.b-stage { min-height: 55vh; padding-bottom: 32px; }
+.b-q, .b-review, .b-sign { display: grid; gap: 20px; }
+.b-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.b-title { font-size: 2rem !important; line-height: 1.1 !important; letter-spacing: -.03em; max-width: 26ch; }
+.b-sub { color: var(--fg-muted); font-size: 17px; }
+.b-lean { display: flex; gap: 16px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 16px 18px; border: 1px solid var(--gold-line); background: var(--gold-panel); border-radius: 12px; }
+.b-lean > div { display: grid; gap: 4px; flex: 1 1 20rem; min-width: 0; }
+.b-lean .label { color: var(--gold-text); }
+.b-lean-pick { font-weight: 700; font-size: 1.125rem; letter-spacing: -.01em; }
+.b-lean-why { color: var(--fg-body); font-size: 15px; }
+.b-body { display: grid; gap: 16px; }
+.b-tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.b-tile { position: relative; text-align: left; display: grid; gap: 6px; align-content: start; font: inherit; color: var(--fg); background: var(--card); border: 1px solid var(--line-strong); border-radius: 12px; padding: 16px 16px 14px; cursor: pointer; min-height: 116px; }
+.b-tile:hover:not(:disabled) { background: var(--hover); }
+.b-tile:disabled { cursor: not-allowed; opacity: .6; }
+.b-tile[aria-checked="true"] { border-color: var(--gold-edge); background: var(--gold-wash); box-shadow: inset 0 0 0 1px var(--gold-edge); }
+.b-tile kbd { justify-self: start; }
+.b-tile-t { font-weight: 700; font-size: 1.0625rem; letter-spacing: -.01em; line-height: 1.25; padding-right: 7.5rem; }
+.b-tile-d { color: var(--fg-muted); font-size: 14px; line-height: 1.45; }
+.b-tile .rec { position: absolute; top: 14px; right: 14px; }
+.b-other { display: grid; gap: 6px; max-width: 40rem; }
+.b-extra { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.b-comment { flex: 1 1 18rem; display: grid; gap: 6px; }
+.b-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.b-dock { position: sticky; bottom: 0; z-index: 5; margin-inline: -28px; background: var(--card); border-top: 1px solid var(--line-strong); padding: 10px 28px calc(10px + env(safe-area-inset-bottom, 0px)); }
+.b-dock-in { display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; }
+.b-meter { display: flex; gap: 3px; flex: 1 1 120px; min-width: 80px; }
+.b-meter span { height: 6px; flex: 1; border-radius: 3px; background: var(--line-strong); }
+.b-meter span[data-state="ready"] { background: var(--ok); }
+.b-meter span[data-state="deferred"] { background: var(--park); }
+.b-meter span[data-state="incomplete"] { background: var(--warn); }
+.b-count { font-size: 13px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.b-count b { color: var(--fg); }
+.b-rev-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.b-rev-list li { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 14px 16px; border-top: 1px solid var(--line); }
+.b-rev-list li:first-child { border-top: 0; }
+.b-rev-q { font-weight: 500; }
+.b-rev-a { color: var(--fg-body); font-size: 15px; }
+.b-rev-c { color: var(--fg-muted); font-size: 14px; }
+.b-rev-list li[data-state="empty"] .b-rev-a, .b-rev-list li[data-state="incomplete"] .b-rev-a { color: var(--warn); }
+.b-send { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.b-panel, .b-record { display: grid; gap: 16px; padding-bottom: 32px; }
+.b-rr { border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.b-rr header { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.b-rr ul { list-style: none; margin: 0; padding: 0; }
+.b-rr li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: start; }
+.b-rr li > div { display: grid; gap: 2px; }
+.b-rr-t { font-weight: 500; }
+.b-rr-a { color: var(--fg-body); font-size: 15px; }
+.b-rr .docs { margin: 12px 16px 16px; }
+.b-sum { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.b-sum > div { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 16px; display: grid; gap: 6px; align-content: start; }
+.b-sum p { color: var(--fg-body); font-size: 15px; }
+@container (max-width: 560px) {
+  .b-shell { padding-inline: 16px; padding-block: 18px 0; gap: 18px; }
+  .b-strip-t, .b-nav .label { display: none; }
+  .b-title { font-size: 1.55rem !important; }
+  .b-dock { margin-inline: -16px; padding-inline: 16px; }
+  .b-rev-list li { grid-template-columns: 2.6rem minmax(0, 1fr); }
+  .b-rev-list li > .btn { grid-column: 2; justify-self: start; }
+  .b-tile-t { padding-right: 0; }
+  .b-tile .rec { position: static; justify-self: start; }
+}
+
+/* ---------- C · Ledger ---------- */
+.c-shell { max-width: 1200px; margin: 0 auto; padding-inline: 24px; padding-block: 24px 48px; display: grid; gap: 28px; }
+.c-head { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: end; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.c-head > div { display: grid; gap: 8px; min-width: 0; }
+.c-head h1 { font-size: 2rem; }
+.c-stats { display: flex; flex-wrap: wrap; margin: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); }
+.c-stats div { padding: 8px 14px; border-left: 1px solid var(--line); display: grid; gap: 2px; }
+.c-stats div:first-child { border-left: 0; }
+.c-stats dt { font: 500 10.5px var(--f-mono); color: var(--fg-label); text-transform: uppercase; letter-spacing: .06em; }
+.c-stats dd { margin: 0; font: 700 1.25rem/1.2 var(--f-sans); font-variant-numeric: tabular-nums; }
+.c-sec { display: grid; gap: 12px; }
+.c-sec-h { display: flex; align-items: baseline; gap: 12px; }
+.c-sec-h h2 { font-size: 1.125rem !important; }
+.c-round { border: 1px solid var(--line-strong); border-radius: 12px; background: var(--card); }
+.c-bar { position: sticky; top: var(--proto-h, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--card); border-bottom: 1px solid var(--line-strong); border-radius: 12px 12px 0 0; }
+.c-bar-l { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.c-bar-l h2 { font-size: 1.125rem !important; }
+.c-meter { font: 500 12px var(--f-mono); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.c-meter b { color: var(--fg); }
+.c-bar-r { display: flex; gap: 8px; flex-wrap: wrap; }
+.c-row { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) 9rem; gap: 14px; padding: 16px; border-top: 1px solid var(--line); }
+.c-rows > .c-row:first-child { border-top: 0; }
+.c-row[data-state="ready"] { box-shadow: inset 3px 0 0 var(--ok); }
+.c-row[data-state="deferred"] { box-shadow: inset 3px 0 0 var(--park); }
+.c-row[data-state="incomplete"] { box-shadow: inset 3px 0 0 var(--warn); }
+.c-ref { font: 500 13px var(--f-mono); color: var(--fg-label); padding-top: 3px; }
+.c-body { display: grid; gap: 10px; min-width: 0; }
+.c-title { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.c-seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; width: fit-content; max-width: 100%; }
+.c-seg button { font: 500 13px/1.35 var(--f-sans); color: var(--fg-body); background: var(--bg); border: 0; border-left: 1px solid var(--line-strong); padding: 7px 12px; cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline; text-align: left; }
+.c-seg button:first-child { border-left: 0; }
+.c-seg button:hover:not(:disabled) { background: var(--hover); }
+.c-seg button:disabled { cursor: not-allowed; }
+.c-seg button[aria-checked="true"] { background: var(--gold); color: var(--gold-ink); }
+.c-seg button.c-defer[aria-checked="true"] { background: var(--park); color: var(--bg); }
+.c-seg .mono { font-size: 11px; opacity: .7; }
+.star { color: var(--gold-text); }
+.c-seg [aria-checked="true"] .star { color: inherit; }
+.c-why { font-size: 14px; color: var(--fg-body); }
+.c-why .mono { color: var(--gold-text); font-size: 12px; margin-right: 4px; }
+.c-more { justify-self: start; font: 500 13px var(--f-sans); background: none; border: 0; padding: 0; color: var(--fg-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+.c-detail { display: grid; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--band); min-width: 0; }
+.c-opts { margin: 0; display: grid; gap: 8px; }
+.c-opts dt { font-weight: 500; font-size: 14px; }
+.c-opts dd { margin: 0; color: var(--fg-muted); font-size: 14px; }
+.c-comment { display: grid; gap: 6px; }
+.c-state { display: grid; gap: 8px; align-content: start; justify-items: start; }
+.c-table { border: 1px solid var(--line); border-radius: 12px; background: var(--card); overflow: hidden; }
+.c-tr { display: grid; grid-template-columns: 5rem minmax(0, 1fr) 10rem 7rem; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--fg-body); align-items: baseline; }
+.c-tr b { color: var(--fg); font-weight: 600; }
+.c-th { font: 500 10.5px var(--f-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--fg-label); border-top: 0; }
+.c-group { background: var(--band); grid-template-columns: 5rem minmax(0, 1fr); }
+.c-group > :first-child { font: 500 11px var(--f-mono); color: var(--fg-muted); letter-spacing: .06em; }
+.c-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.c-sum > div { padding: 16px; border-top: 1px solid var(--line); display: grid; gap: 6px; align-content: start; }
+.c-sum p { font-size: 15px; color: var(--fg-body); }
+.c-note { padding: 0 16px 16px; }
+@container (max-width: 640px) {
+  .c-shell { padding-inline: 16px; gap: 22px; }
+  .c-row { grid-template-columns: 2.4rem minmax(0, 1fr); }
+  .c-state { grid-column: 2; display: flex; gap: 12px; align-items: center; }
+  .c-seg { display: grid; width: 100%; }
+  .c-seg button { border-left: 0; border-top: 1px solid var(--line-strong); }
+  .c-seg button:first-child { border-top: 0; }
+  .c-tr { grid-template-columns: 4.2rem minmax(0, 1fr); }
+  .c-tr > :nth-child(3), .c-tr > :nth-child(4) { grid-column: 2; }
+  .c-th { display: none; }
+}
+</style>
+
+<div class="proto" id="proto">
+  <div class="proto-in">
+    <span class="proto-tag">PROTOTYPE</span>
+    <button id="p-prev" aria-label="Previous layout">&lsaquo;</button>
+    <span class="proto-dir" id="p-dir">A · Column</span>
+    <button id="p-next" aria-label="Next layout">&rsaquo;</button>
+    <label>Scene <select id="p-scene"><option value="round">Round 3 open</option><option value="closing">Closing</option></select></label>
+    <label>Submit gives <select id="p-outcome"><option value="sent">sent</option><option value="saved">saved, not woken</option><option value="neither">neither</option></select></label>
+    <label>Theme <select id="p-theme"><option value="dark">dark</option><option value="light">light</option></select></label>
+    <label>Width <select id="p-width"><option value="full">full</option><option value="phone">400px</option></select></label>
+    <button id="p-data" aria-expanded="false">Data</button>
+    <button id="p-reset">Reset</button>
+  </div>
+  <div class="proto-panel" id="p-panel" hidden></div>
+</div>
+<div id="stage"></div>
+
+<script>
+/* ---------------- sample data (the round-data shape, first cut) ---------------- */
+const TOPIC = 'Stale claims in ship';
+
+const TREE = `<svg viewBox="0 0 900 262" role="img" aria-label="Design tree for round 3: three settled answers and one deferred answer feed four open questions. Two decisions stay blocked, and both wait on Q1.">
+<text class="lbl" x="20" y="26">SETTLED · BUILT ON</text><text class="lbl" x="340" y="26">OPEN · ROUND 3</text><text class="lbl" x="680" y="26">BLOCKED</text>
+<path class="edge" d="M230 62 L340 62"/><path class="edge" d="M230 106 C285 106 285 62 340 62"/><path class="edge" d="M230 150 C285 150 285 112 340 112"/><path class="edge" d="M230 194 C285 194 285 162 340 162"/>
+<path class="edge hot" d="M570 62 C625 62 625 76 680 76"/><path class="edge hot" d="M570 62 C625 62 625 156 680 156"/><path class="edge" d="M570 112 C625 112 625 76 680 76"/><path class="edge" d="M570 162 C625 162 625 156 680 156"/>
+<g class="n-settled"><rect x="20" y="48" width="210" height="28" rx="5"/><text x="30" y="66">R1·Q1 · Assignee plus comment</text></g>
+<g class="n-settled"><rect x="20" y="92" width="210" height="28" rx="5"/><text x="30" y="110">R2·Q1 · Idle, not stuck</text></g>
+<g class="n-settled"><rect x="20" y="136" width="210" height="28" rx="5"/><text x="30" y="154">R2·Q2 · Comment, then take</text></g>
+<g class="n-deferred"><rect x="20" y="180" width="210" height="28" rx="5"/><text x="30" y="198">R2·Q3 · Retry budget</text></g>
+<text class="lbl" x="30" y="226">deferred in round 2</text>
+<g class="n-open" data-q="Q1"><rect x="340" y="46" width="230" height="32" rx="6"/><text x="352" y="66">Q1 · When a claim is stale</text></g>
+<g class="n-open" data-q="Q2"><rect x="340" y="96" width="230" height="32" rx="6"/><text x="352" y="116">Q2 · Who may break it</text></g>
+<g class="n-open" data-q="Q3"><rect x="340" y="146" width="230" height="32" rx="6"/><text x="352" y="166">Q3 · Retry budget</text></g>
+<g class="n-open" data-q="Q4"><rect x="340" y="196" width="230" height="32" rx="6"/><text x="352" y="216">Q4 · Where the comment goes</text></g>
+<text class="lbl" x="352" y="246">reopened from R1·Q2</text>
+<g class="n-blocked"><rect x="680" y="60" width="200" height="32" rx="6"/><text x="692" y="80">Stale-claim notice text</text></g>
+<text class="lbl" x="692" y="110">waits on Q1, Q2</text>
+<g class="n-blocked"><rect x="680" y="140" width="200" height="32" rx="6"/><text x="692" y="160">Hand-back message</text></g>
+<text class="lbl" x="692" y="190">waits on Q1, Q3</text>
+</svg>`;
+const TREE_CAPTION = 'Q1 has the most riding on it: both blocked decisions wait on it. Q3 is the question you deferred in round 2, and Q4 is the answer you reopened from round 1.';
+
+const FIG_Q1 = `<svg viewBox="0 0 720 178" role="img" aria-label="Two timelines. With a fixed two-hour clock, a live run whose CI queue took 2 hours 10 minutes loses its claim. With two CI rounds and no push, only an idle run loses it.">
+<text class="lbl" x="20" y="22">a · FIXED 2 HOURS</text>
+<g class="box"><rect x="20" y="34" width="150" height="32" rx="5"/><text x="32" y="54">Claim taken</text></g>
+<path class="edge" d="M170 50 L200 50"/>
+<g class="box"><rect x="200" y="34" width="150" height="32" rx="5"/><text x="212" y="54">CI queue: 2h 10m</text></g>
+<path class="edge" d="M350 50 L380 50"/>
+<g class="box"><rect x="380" y="34" width="150" height="32" rx="5"/><text x="392" y="54">Claim broken mid-run</text></g>
+<text class="lbl" x="548" y="54">live run loses it</text>
+<text class="lbl" x="20" y="106">b · TWO CI ROUNDS, NO PUSH</text>
+<g class="box"><rect x="20" y="118" width="150" height="32" rx="5"/><text x="32" y="138">Claim taken</text></g>
+<path class="edge" d="M170 134 L200 134"/>
+<g class="box"><rect x="200" y="118" width="150" height="32" rx="5"/><text x="212" y="138">Two red rounds</text></g>
+<path class="edge hot" d="M350 134 L380 134"/>
+<g class="box hot"><rect x="380" y="118" width="150" height="32" rx="5"/><text x="392" y="138">Stale: may be broken</text></g>
+<text class="lbl" x="548" y="138">only idle runs lose it</text>
+</svg>`;
+
+const PAST = [
+  { round: 1, settled: [
+      { id: 'R1·Q1', title: 'Claim marker', answer: 'The issue\'s assignee plus a `claim:` comment that names the run.', how: 'rec' },
+      { id: 'R1·Q2', title: 'Where the claim comment goes', answer: 'On the issue.', how: 'rec', reopened: 'Q4', replacedBy: 'R3·Q4' },
+      { id: 'R1·Q3', title: 'What the comment names', answer: 'The run\'s session URL and the time it started.', how: 'other' },
+      { id: 'R1·Q4', title: 'Held claims', answer: '`select` skips any issue whose claim is held.', how: 'rec' } ],
+    docsWritten: [ { file: 'GLOSSARY.md', summary: 'New term **Claim**: the marker that says one run owns an issue.' } ] },
+  { round: 2, settled: [
+      { id: 'R2·Q1', title: 'What stale means', answer: 'No activity from the claiming run, judged by pushes and CI, not by progress.', how: 'rec' },
+      { id: 'R2·Q2', title: 'How a claim is broken', answer: 'The breaking run comments first, then takes the assignee.', how: 'yours' },
+      { id: 'R2·Q3', title: 'Retry budget', answer: 'Deferred.', how: 'defer', carried: 'Q3', replacedBy: 'R3·Q3' } ],
+    docsWritten: [ { file: 'docs/adr/0007-a-stale-claim-is-broken-by-comment.md', summary: 'Drafted: comment first, then take, and why a silent take was rejected.' } ] },
+];
+
+const ROUND = { round: 3, kind: 'questions', treeSvg: TREE, treeCaption: TREE_CAPTION, questions: [
+  { id: 'Q1', short: 'Stale when', title: 'When does a claim count as stale?', recommended: 'b',
+    options: [
+      { id: 'a', title: 'After 2 hours with no push', detail: 'A fixed clock, the same in every repo.' },
+      { id: 'b', title: 'After two CI rounds with no new commit', detail: 'Tracks the run\'s own pace, so slow CI gets a longer lease.' },
+      { id: 'c', title: 'Never on its own', detail: 'Only the human releases a claim, by removing the assignee.' } ],
+    why: 'A fixed clock breaks live runs on slow CI, as the figure shows. Two rounds leave room for one flaky retry before another run may take over.',
+    figureSvg: FIG_Q1, figureCaption: 'Row a breaks a live run whose CI queue ran long. Row b waits for two red rounds with no new commit, so only an idle run loses its claim.' },
+  { id: 'Q2', short: 'Who breaks it', title: 'Who may break a stale claim?', recommended: 'a',
+    options: [
+      { id: 'a', title: 'Any ship run', detail: 'Attended or unattended, whichever selects the issue next.' },
+      { id: 'b', title: 'Only an attended run', detail: 'A human is watching when work changes hands.' },
+      { id: 'c', title: 'Only the human', detail: 'By a `claim:release` label. Runs never break claims.' } ],
+    why: 'Unattended runs are where claims go stale. If only attended runs may break them, a stale issue stays parked until someone is at the keyboard.' },
+  { id: 'Q3', short: 'Retry budget', title: 'How many times may a broken claim be retried?', recommended: 'a',
+    carriedFrom: { round: 2, id: 'R2·Q3', reason: 'deferred' },
+    options: [
+      { id: 'a', title: 'Once, then hand back', detail: 'One fresh run tries. If it goes stale too, the issue goes back to `needs-triage`.' },
+      { id: 'b', title: 'Up to three times', detail: 'Each stale run hands to the next, three in a row at most.' },
+      { id: 'c', title: 'Never: hand back at once', detail: 'A broken claim means a human looks first.' } ],
+    why: 'A second stale run on the same issue usually means the issue is the problem, not the run. One retry still catches a crashed sandbox without looping.' },
+  { id: 'Q4', short: 'Comment place', title: 'Where does the claim comment go?', recommended: 'a',
+    carriedFrom: { round: 1, id: 'R1·Q2', reason: 'reopened', earlier: 'On the issue.' },
+    options: [
+      { id: 'a', title: 'On the issue', detail: 'One place for the claim, before and after a PR exists.' },
+      { id: 'b', title: 'On the PR once one exists', detail: 'Reviewers see who holds it; the issue comment is edited to point there.' },
+      { id: 'c', title: 'On both', detail: 'Two comments to keep in step.' } ],
+    why: 'The claim exists before any PR does, and `select` reads issues, not PRs. Moving it later adds a second place to look.' },
+] };
+const QS = Object.fromEntries(ROUND.questions.map(q => [q.id, q]));
+
+const R3_SETTLED = { round: 3, settled: [
+    { id: 'R3·Q1', title: 'When a claim is stale', answer: 'After two CI rounds with no new commit.', how: 'rec' },
+    { id: 'R3·Q2', title: 'Who may break it', answer: 'Any ship run.', how: 'rec' },
+    { id: 'R3·Q3', title: 'Retry budget', answer: 'Once, then hand back.', how: 'rec' },
+    { id: 'R3·Q4', title: 'Where the claim comment goes', answer: 'On the issue, kept after reopening.', how: 'yours' } ],
+  docsWritten: [
+    { file: 'GLOSSARY.md', summary: 'New term **Stale claim**.' },
+    { file: 'docs/adr/0007-a-stale-claim-is-broken-by-comment.md', summary: 'Updated with the two-round threshold and the one-retry budget.' } ] };
+
+const CLOSING = { round: 4, kind: 'closing', summary: [
+    { heading: 'What a claim is', text: 'An issue\'s assignee plus a `claim:` comment on the issue, naming the run\'s session URL and start time. `select` skips a held claim.' },
+    { heading: 'When it goes stale', text: 'After two CI rounds with no new commit from the claiming run. A slow CI queue alone never makes a claim stale.' },
+    { heading: 'Breaking and retrying', text: 'Any ship run may break a stale claim: it comments first, then takes the assignee. One retry is allowed; a second stale run hands the issue back.' } ] };
+
+const HOW = { rec: 'recommendation', yours: 'your pick', other: 'your own answer', defer: 'deferred' };
+const DIRS = [ { k: 'a', name: 'Column', view: () => viewA() }, { k: 'b', name: 'Focus', view: () => viewB() }, { k: 'c', name: 'Ledger', view: () => viewC() } ];
+
+/* ---------------- state (in memory only) ---------------- */
+let S = { dir: 'a', scene: 'round', outcome: 'sent' };
+function reset() {
+  S = { dir: S.dir, scene: S.scene, outcome: S.outcome, submit: 'idle', submittedAt: null,
+    answers: Object.fromEntries(ROUND.questions.map(q => [q.id, { choice: null, other: '', comment: '' }])),
+    reopen: [], step: 0, tab: 'round', open: { Q1: true }, closing: { choice: null, comment: '' } };
+}
+reset();
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const md = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+const $ = s => document.querySelector(s);
+const ans = id => S.answers[id];
+const locked = () => S.submit === 'sending' || S.submit === 'sent';
+const dis = () => locked() ? 'disabled' : '';
+const optTitle = (q, id) => q.options.find(o => o.id === id)?.title;
+function qstate(q) {
+  const a = ans(q.id);
+  if (!a.choice) return 'empty';
+  if (a.choice === 'defer') return 'deferred';
+  if (a.choice === 'other' && !a.other.trim()) return 'incomplete';
+  return 'ready';
+}
+const QTAG = { empty: 'Open', incomplete: 'Other needs text', ready: 'Ready', deferred: 'Deferred' };
+const readyN = () => ROUND.questions.filter(q => ['ready', 'deferred'].includes(qstate(q))).length;
+const allDone = () => readyN() === ROUND.questions.length;
+function answerLabel(q) {
+  const a = ans(q.id);
+  if (!a.choice) return 'Not answered yet';
+  if (a.choice === 'defer') return 'Deferred to round 4';
+  if (a.choice === 'other') return 'Other: ' + (a.other.trim() || '(no text yet)');
+  return a.choice + '. ' + optTitle(q, a.choice);
+}
+const rounds = () => S.scene === 'closing' ? [...PAST, R3_SETTLED] : PAST;
+const active = () => rounds().flatMap(r => r.settled).filter(s => !(S.scene === 'closing' && s.replacedBy));
+
+function answersDoc() {
+  if (S.scene === 'closing') return { round: 4, submittedAt: S.submittedAt, answers: [ { id: 'closing', choice: S.closing.choice, other: '', comment: S.closing.comment } ], reopen: [] };
+  return { round: 3, submittedAt: S.submittedAt, answers: ROUND.questions.map(q => ({ id: q.id, ...ans(q.id) })), reopen: S.reopen };
+}
+function answersText() {
+  if (S.scene === 'closing') return `Closing round: ${S.closing.choice === 'confirm' ? 'Confirm' : 'Not yet'}` + (S.closing.comment.trim() ? `\nWhat is missing: ${S.closing.comment.trim()}` : '');
+  const lines = ['Round 3 answers'];
+  for (const q of ROUND.questions) {
+    lines.push(`${q.id}: ${answerLabel(q)}`);
+    if (ans(q.id).comment.trim()) lines.push(`  comment: ${ans(q.id).comment.trim()}`);
+  }
+  if (S.reopen.length) lines.push(`Reopen: ${S.reopen.join(', ')}`);
+  return lines.join('\n');
+}
+
+/* ---------------- shared fragments ---------------- */
+function statusHTML() {
+  const closing = S.scene === 'closing';
+  switch (S.submit) {
+    case 'sending': return `<div class="st st-sending" role="status"><span class="spin"></span>Saving your answers and waking Claude…</div>`;
+    case 'sent': return `<div class="st st-ok" role="status"><span><b>${closing && S.closing.choice === 'confirm' ? 'Confirmed.' : 'Sent.'}</b> ${closing ? (S.closing.choice === 'confirm' ? 'Claude replied in the thread and is wrapping up the session.' : 'Claude is reading what is missing and will post another round here.') : 'Claude replied in the Submit thread and is writing round 4. It will appear on this page.'}</span></div>`;
+    case 'saved': return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the terminal and the session reads your saved answers.</span><div class="st-row"><button class="btn btn-sm" data-act="retry">Try waking it again</button></div></div>`;
+    case 'neither': return `<div class="st st-bad" role="alert"><span><b>Not saved and not sent.</b> Copy your answers and paste them into the terminal.</span><pre id="fallback-text">${esc(answersText())}</pre><div class="st-row"><button class="btn btn-sm gold" data-act="copy">Copy answers</button><button class="btn btn-sm" data-act="retry">Try again</button><span class="label" id="copied" role="status"></span></div></div>`;
+    default: return '';
+  }
+}
+function carriedNote(q) {
+  const c = q.carriedFrom;
+  if (!c) return '';
+  if (c.reason === 'deferred') return `<p class="carried"><span class="tag park">Carried</span>You deferred this in round ${c.round} (${c.id}).</p>`;
+  return `<p class="carried"><span class="tag park">Reopened</span>You reopened ${c.id}. Your earlier answer: <b>${md(c.earlier)}</b></p>`;
+}
+const fig = (svg, cap) => `<figure class="fig"><div class="fig-scroll">${svg}</div>${cap ? `<figcaption>${md(cap)}</figcaption>` : ''}</figure>`;
+const legend = () => `<ul class="legend">${[['n-settled', 'Settled'], ['n-open', 'Open'], ['n-blocked', 'Blocked'], ['n-deferred', 'Deferred']].map(([c, l]) => `<li><svg viewBox="0 0 18 14" width="18" height="14" aria-hidden="true"><g class="${c}"><rect x="1" y="1" width="16" height="12" rx="3"/></g></svg>${l}</li>`).join('')}<li><svg viewBox="0 0 24 14" width="24" height="14" aria-hidden="true"><path class="edge" d="M1 7H23"/></svg>Builds on</li><li><svg viewBox="0 0 24 14" width="24" height="14" aria-hidden="true"><path class="edge hot" d="M1 7H23"/></svg>Most riding on it</li></ul>`;
+function docsBlock(list, label = 'Written to the repo') {
+  return `<div class="docs"><span class="label">${label}</span>${list.length ? `<ul>${list.map(d => `<li><code>${esc(d.file)}</code> ${md(d.summary)}</li>`).join('')}</ul>` : `<p class="docs-none">Nothing new this round.</p>`}</div>`;
+}
+function reopenCtl(s) {
+  const closing = S.scene === 'closing';
+  if (s.reopened) return `<span class="tag park">${closing ? 'replaced by ' + s.replacedBy : 'reopened · back as ' + s.reopened}</span>`;
+  if (s.carried) return `<span class="tag park">${closing ? 'settled as ' + s.replacedBy : 'carried · back as ' + s.carried}</span>`;
+  if (closing) return '';
+  const on = S.reopen.includes(s.id);
+  return `${on ? '<span class="tag gold">back in round 4</span> ' : ''}<button class="btn-link" data-act="reopen" data-id="${s.id}" aria-pressed="${on}" ${dis()}>${on ? 'Undo' : 'Reopen'}</button>`;
+}
+function howSummary(r) {
+  const n = k => r.settled.filter(s => s.how === k).length;
+  const parts = [];
+  if (n('rec')) parts.push(`${n('rec')} recommendation${n('rec') > 1 ? 's' : ''} taken`);
+  if (n('yours')) parts.push(`${n('yours')} your pick`);
+  if (n('other')) parts.push(`${n('other')} your own answer`);
+  if (n('defer')) parts.push(`${n('defer')} deferred`);
+  return parts.join(', ');
+}
+function closingCtl(p) {
+  const c = S.closing;
+  return `<div class="cl-ctl"><div class="cl-btns"><button class="btn gold" data-act="confirm" ${dis()}>Confirm</button><button class="btn ${c.choice === 'not-yet' ? 'on' : ''}" data-act="notyet" ${dis()}>Not yet</button></div>
+    ${c.choice === 'not-yet' ? `<label class="cl-note" for="closing-${p}"><span class="label">What is missing or wrong?</span><textarea id="closing-${p}" data-field="closing" rows="3" ${dis()}>${esc(c.comment)}</textarea></label><div class="cl-btns"><button class="btn gold" data-act="close-send">Send to Claude</button></div>` : ''}
+    ${statusHTML()}</div>`;
+}
+const otherInput = (p, q) => `<input type="text" id="other-${p}-${q.id}" data-field="other" data-q="${q.id}" value="${esc(ans(q.id).other)}" placeholder="Your answer" aria-label="Your answer for ${q.id}" ${dis()}>`;
+const commentBox = (p, q) => `<textarea id="comment-${p}-${q.id}" data-field="comment" data-q="${q.id}" rows="2" placeholder="Qualify your choice, or leave empty" ${dis()}>${esc(ans(q.id).comment)}</textarea>`;
+const sampleRow = () => `<span class="chip">SAMPLE DATA</span><span class="label">grill-with-artifact · 2026-09-30</span>`;
+
+/* ---------------- A · Column ---------------- */
+function viewA() {
+  const closing = S.scene === 'closing';
+  return `<div class="a-wrap">
+    <header class="a-hdr"><div class="row">${sampleRow()}</div><h1>${TOPIC}</h1>
+      <p class="a-lede">${closing ? 'Nothing is left open. Check the whole design below, then confirm it or say what is missing.' : 'Answer each question here and press Submit. Claude reads your answers, writes any docs they settle, and posts the next round on this page.'}</p></header>
+    ${closing ? '' : fig(ROUND.treeSvg, ROUND.treeCaption) }
+    ${rounds().map((r, i, all) => pastA(r, i === all.length - 1 && !closing)).join('')}
+    ${closing ? closingA() : roundA()}
+  </div>${closing ? '' : barA()}`;
+}
+function pastA(r, open) {
+  return `<section class="a-round"><div class="a-rhead"><h2>Round ${r.round}</h2><span class="tag ok">settled · ${r.settled.length} of ${r.settled.length}</span></div>
+    <details class="a-settled" ${open ? 'open' : ''}><summary>Your answers: ${howSummary(r)}</summary><ol>
+    ${r.settled.map(s => `<li><span class="qid">${s.id}</span><span><b>${esc(s.title)}:</b> ${md(s.answer)}<span class="how">${HOW[s.how]}</span></span><span>${reopenCtl(s)}</span></li>`).join('')}
+    </ol></details>${docsBlock(r.docsWritten)}</section>`;
+}
+function roundA() {
+  return `<section class="a-round"><div class="a-rhead"><h2>Round 3</h2><span class="tag gold">open · ${ROUND.questions.length} questions</span><button class="btn-link" data-act="all" ${dis()}>Take all remaining recommendations</button></div>
+    ${ROUND.questions.map(cardA).join('')}</section>`;
+}
+function cardA(q) {
+  const a = ans(q.id);
+  const radio = v => `<input type="radio" name="a-${q.id}" id="a-${q.id}-${v}" value="${v}" data-q="${q.id}" ${a.choice === v ? 'checked' : ''}>`;
+  return `<article class="a-q" id="a-card-${q.id}" data-qstate="${q.id}">
+    <div class="a-qhead"><span class="qid">${q.id}</span><h3>${esc(q.title)}</h3><span class="qtag" data-qstate="${q.id}" data-qtag></span></div>
+    ${carriedNote(q)}
+    ${q.figureSvg ? fig(q.figureSvg, q.figureCaption) : ''}
+    <fieldset class="a-opts" ${dis()}><legend class="sr">Answer for ${q.id}</legend>
+      ${q.options.map(o => `<label class="a-opt" for="a-${q.id}-${o.id}">${radio(o.id)}<span><span class="t">${o.id}. ${md(o.title)}${o.id === q.recommended ? '<span class="rec">Recommended</span>' : ''}</span><span class="d">${md(o.detail)}</span></span></label>`).join('')}
+      <label class="a-opt" for="a-${q.id}-other">${radio('other')}<span><span class="t">Other</span>${a.choice === 'other' ? otherInput('a', q) : '<span class="d">Give an answer none of these covers.</span>'}</span></label>
+      <label class="a-opt a-defer" for="a-${q.id}-defer">${radio('defer')}<span><span class="t">Defer</span><span class="d">Park it. It comes back in round 4.</span></span></label>
+    </fieldset>
+    <div class="a-why"><span class="label">Why ${q.recommended}</span><p>${md(q.why)}</p></div>
+    <div class="a-foot"><label class="a-comment" for="comment-a-${q.id}"><span class="label">Comment (optional)</span>${commentBox('a', q)}</label>
+      <button class="btn btn-sm" data-act="rec" data-q="${q.id}" ${dis()}>Take recommendation (${q.recommended})</button></div>
+  </article>`;
+}
+function barA() {
+  return `<div class="a-bar"><div class="a-bar-in">
+    <span class="a-count"><b data-ready></b> of ${ROUND.questions.length} ready${S.reopen.length ? ` · ${S.reopen.length} to reopen` : ''}</span>
+    <div class="a-actions"><button class="btn" data-act="all" ${dis()}>Take all remaining</button><button class="btn gold" data-act="submit">Submit round 3</button></div>
+    ${statusHTML()}</div></div>`;
+}
+function closingA() {
+  return `<section class="a-round"><div class="a-rhead"><h2>What we settled</h2><span class="tag ok">3 rounds · ${active().length} decisions</span></div>
+    <div class="a-summary">${CLOSING.summary.map(s => `<h3>${esc(s.heading)}</h3><p>${md(s.text)}</p>`).join('')}</div>
+    <div class="a-summary"><h3>Is this the whole design?</h3><p>Confirm ends the session. Not yet sends Claude what is missing, and it posts another round.</p>${closingCtl('a')}</div></section>`;
+}
+
+/* ---------------- B · Focus ---------------- */
+function viewB() {
+  const closing = S.scene === 'closing';
+  const tabs = [['round', 'Round 3'], ['map', 'Design tree'], ['record', `Settled · ${PAST.length} rounds`]];
+  const top = `<header class="b-top"><div class="b-id">${sampleRow()}</div><h1>${TOPIC}</h1>
+    ${closing ? '' : `<nav class="b-tabs" role="tablist">${tabs.map(([t, l]) => `<button role="tab" aria-selected="${S.tab === t}" data-act="tab" data-t="${t}">${l}</button>`).join('')}</nav>`}</header>`;
+  if (closing) return `<div class="b-shell">${top}<main class="b-stage">${closingB()}</main></div>`;
+  const body = S.tab === 'map' ? `<section class="b-panel">${fig(ROUND.treeSvg, ROUND.treeCaption)}${legend()}</section>`
+    : S.tab === 'record' ? recordB() : roundB();
+  return `<div class="b-shell">${top}<main>${body}</main>${dockB()}</div>`;
+}
+function roundB() {
+  const qs = ROUND.questions, n = qs.length;
+  return `<ol class="b-strip">${qs.map((q, i) => `<li><button class="${i === S.step ? 'on' : ''}" data-act="step" data-i="${i}" data-qstate="${q.id}"><span class="b-dot"></span><span class="mono">${q.id}</span><span class="b-strip-t">${q.short}</span></button></li>`).join('')}
+    <li><button class="${S.step === n ? 'on' : ''}" data-act="step" data-i="${n}"><span class="mono">✓</span><span class="b-strip-t">Review</span></button></li></ol>
+    <section class="b-stage">${S.step < n ? qB(qs[S.step], S.step) : reviewB()}</section>`;
+}
+function qB(q, i) {
+  const a = ans(q.id), n = ROUND.questions.length;
+  const tile = (id, t, d, k) => `<button class="b-tile" role="radio" aria-checked="${a.choice === id}" data-act="pick" data-q="${q.id}" data-o="${id}" ${dis()}><kbd>${k}</kbd>${id === q.recommended ? '<span class="rec">Recommended</span>' : ''}<span class="b-tile-t">${id === 'other' ? '' : id + '. '}${md(t)}</span><span class="b-tile-d">${md(d)}</span></button>`;
+  return `<div class="b-q" data-qstate="${q.id}">
+    <div class="b-meta"><span class="label">Question ${i + 1} of ${n}</span><span class="qtag" data-qstate="${q.id}" data-qtag></span></div>
+    <h2 class="b-title">${esc(q.title)}</h2>
+    ${carriedNote(q)}
+    <div class="b-lean"><div><span class="label">Claude recommends</span><p class="b-lean-pick">${q.recommended}. ${md(optTitle(q, q.recommended))}</p><p class="b-lean-why">${md(q.why)}</p></div>
+      <button class="btn gold" data-act="rec" data-q="${q.id}" ${dis()}>Take it <kbd>R</kbd></button></div>
+    <div class="b-body">
+      ${q.figureSvg ? fig(q.figureSvg, q.figureCaption) : ''}
+      <div class="b-tiles" role="radiogroup" aria-label="Answer for ${q.id}">${q.options.map((o, k) => tile(o.id, o.title, o.detail, k + 1)).join('')}${tile('other', 'Other', 'An answer none of these covers.', q.options.length + 1)}</div>
+    </div>
+    ${a.choice === 'other' ? `<label class="b-other" for="other-b-${q.id}"><span class="label">Your answer</span>${otherInput('b', q)}</label>` : ''}
+    <div class="b-extra"><button class="btn ${a.choice === 'defer' ? 'on' : ''}" data-act="defer" data-q="${q.id}" aria-pressed="${a.choice === 'defer'}" ${dis()}>Defer to round 4 <kbd>D</kbd></button>
+      <label class="b-comment" for="comment-b-${q.id}"><span class="label">Comment (optional)</span>${commentBox('b', q)}</label></div>
+    <div class="b-nav"><button class="btn" data-act="step" data-i="${i - 1}" ${i === 0 ? 'disabled' : ''}>← Previous</button>
+      <span class="label">1–${q.options.length + 1} pick · R recommendation · D defer · J/K move</span>
+      <button class="btn ${qstate(q) === 'ready' || qstate(q) === 'deferred' ? 'gold' : ''}" data-act="step" data-i="${i + 1}">${i === n - 1 ? 'Review' : 'Next'} →</button></div>
+  </div>`;
+}
+function reviewB() {
+  return `<div class="b-review"><h2 class="b-title">Review round 3</h2>
+    <p class="b-sub">Every question needs an answer or a Defer before you submit.</p>
+    <ol class="b-rev-list">${ROUND.questions.map((q, i) => `<li data-qstate="${q.id}"><span class="qid">${q.id}</span><div><p class="b-rev-q">${esc(q.title)}</p><p class="b-rev-a">${md(answerLabel(q))}</p>${ans(q.id).comment.trim() ? `<p class="b-rev-c">Comment: ${esc(ans(q.id).comment)}</p>` : ''}</div><button class="btn btn-sm" data-act="step" data-i="${i}">Change</button></li>`).join('')}</ol>
+    ${S.reopen.length ? `<p class="carried"><span class="tag gold">Reopening</span>${S.reopen.map(id => `<code>${id}</code>`).join(' ')} come back in round 4.</p>` : ''}
+    <div class="b-send"><button class="btn gold btn-lg" data-act="submit">Submit round 3</button>${statusHTML()}</div></div>`;
+}
+function recordB() {
+  return `<section class="b-record">${PAST.map(r => `<article class="b-rr"><header><span class="chip">ROUND ${r.round}</span><span class="label">${howSummary(r)}</span></header>
+    <ul>${r.settled.map(s => `<li><div><span class="qid">${s.id}</span><p class="b-rr-t">${esc(s.title)}</p><p class="b-rr-a">${md(s.answer)}</p><span class="how">${HOW[s.how]}</span></div><div>${reopenCtl(s)}</div></li>`).join('')}</ul>
+    ${docsBlock(r.docsWritten)}</article>`).join('')}</section>`;
+}
+function dockB() {
+  return `<footer class="b-dock"><div class="b-dock-in"><div class="b-meter">${ROUND.questions.map(q => `<span data-qstate="${q.id}"></span>`).join('')}</div>
+    <span class="b-count"><b data-ready></b> of ${ROUND.questions.length} ready${S.reopen.length ? ` · ${S.reopen.length} to reopen` : ''}</span>
+    <button class="btn btn-sm" data-act="all" ${dis()}>Take all remaining</button>
+    <button class="btn btn-sm gold" data-act="review">Review and submit</button></div></footer>`;
+}
+function closingB() {
+  return `<div class="b-sign"><span class="label">Round 4 · closing</span><h2 class="b-title">Is this the whole design?</h2>
+    <p class="b-sub">Nothing is left open. Check every decision, then confirm it or say what is missing.</p>
+    <div class="b-sum">${CLOSING.summary.map(s => `<div><h3>${esc(s.heading)}</h3><p>${md(s.text)}</p></div>`).join('')}</div>
+    <ol class="b-rev-list">${active().map(s => `<li><span class="qid">${s.id}</span><div><p class="b-rev-q">${esc(s.title)}</p><p class="b-rev-a">${md(s.answer)}</p></div><span class="how">${HOW[s.how]}</span></li>`).join('')}</ol>
+    ${docsBlock([...new Map(rounds().flatMap(r => r.docsWritten).map(d => [d.file, d])).values()].map(d => ({ file: d.file, summary: '' })), 'Written to the repo this session')}
+    <div class="b-send">${closingCtl('b')}</div></div>`;
+}
+
+/* ---------------- C · Ledger ---------------- */
+function viewC() {
+  const closing = S.scene === 'closing';
+  const stats = closing ? [['Rounds', 3], ['Decisions', active().length], ['Open', 0], ['Blocked', 0]] : [['Rounds', 3], ['Settled', active().length - 1], ['Open', ROUND.questions.length], ['Blocked', 2]];
+  return `<div class="c-shell">
+    <header class="c-head"><div><div class="b-id">${sampleRow()}</div><h1>${TOPIC}</h1></div>
+      <dl class="c-stats">${stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></header>
+    ${closing ? closingC() : `<section class="c-sec"><div class="c-sec-h"><h2>Design tree</h2><span class="label">round 3 · tap a node to jump to it</span></div>${fig(ROUND.treeSvg, ROUND.treeCaption)}${legend()}</section>${roundC()}`}
+    ${logC(closing)}
+  </div>`;
+}
+function roundC() {
+  return `<section class="c-round"><div class="c-bar">
+      <div class="c-bar-l"><h2>Round 3</h2><span class="c-meter"><b data-ready></b>/${ROUND.questions.length} ready</span>${S.reopen.length ? `<span class="tag gold">${S.reopen.length} to reopen</span>` : ''}</div>
+      <div class="c-bar-r"><button class="btn btn-sm" data-act="all" ${dis()}>Take all remaining</button><button class="btn btn-sm gold" data-act="submit">Submit round 3</button></div>
+      ${statusHTML()}</div>
+    <div class="c-rows">${ROUND.questions.map(rowC).join('')}</div></section>`;
+}
+function rowC(q) {
+  const a = ans(q.id), open = !!S.open[q.id];
+  const seg = (id, label, cls = '') => `<button class="${cls}" role="radio" aria-checked="${a.choice === id}" data-act="pick" data-q="${q.id}" data-o="${id}" ${dis()}>${label}</button>`;
+  return `<article class="c-row" id="c-row-${q.id}" data-qstate="${q.id}"><div class="c-ref">${q.id}</div>
+    <div class="c-body">
+      <div class="c-title"><h3>${esc(q.title)}</h3>${q.carriedFrom ? `<span class="tag park">${q.carriedFrom.reason === 'deferred' ? 'carried from ' : 'reopened '}${q.carriedFrom.id}</span>` : ''}</div>
+      ${q.carriedFrom?.reason === 'reopened' ? `<p class="carried">Your earlier answer: <b>${md(q.carriedFrom.earlier)}</b></p>` : ''}
+      <div class="c-seg" role="radiogroup" aria-label="Answer for ${q.id}">
+        ${q.options.map(o => seg(o.id, `<span class="mono">${o.id}</span>${md(o.title)}${o.id === q.recommended ? '<span class="star" title="Recommended" aria-label="Recommended">★</span>' : ''}`)).join('')}
+        ${seg('other', 'Other')}${seg('defer', 'Defer', 'c-defer')}
+      </div>
+      ${a.choice === 'other' ? otherInput('c', q) : ''}
+      <p class="c-why"><span class="mono">★ ${q.recommended}</span>${md(q.why)}</p>
+      <button class="c-more" data-act="toggle" data-q="${q.id}" aria-expanded="${open}">${open ? 'Hide' : 'Show'} option details${q.figureSvg ? ', figure' : ''} and comment</button>
+      ${open ? `<div class="c-detail"><dl class="c-opts">${q.options.map(o => `<div><dt>${o.id}. ${md(o.title)}</dt><dd>${md(o.detail)}</dd></div>`).join('')}</dl>
+        ${q.figureSvg ? fig(q.figureSvg, q.figureCaption) : ''}
+        <label class="c-comment" for="comment-c-${q.id}"><span class="label">Comment (optional)</span>${commentBox('c', q)}</label></div>` : ''}
+    </div>
+    <div class="c-state"><span class="qtag" data-qstate="${q.id}" data-qtag></span>${a.choice !== q.recommended ? `<button class="btn-link" data-act="rec" data-q="${q.id}" ${dis()}>Take ★ ${q.recommended}</button>` : ''}</div>
+  </article>`;
+}
+function logC(closing) {
+  const list = rounds();
+  return `<section class="c-sec"><div class="c-sec-h"><h2>${closing ? 'Every decision' : 'Decision log'}</h2><span class="label">${list.reduce((n, r) => n + r.settled.length, 0)} entries · ${list.length} rounds</span></div>
+    <div class="c-table" role="table"><div class="c-tr c-th" role="row"><span>Ref</span><span>Decision</span><span>How</span><span></span></div>
+    ${list.map(r => `<div class="c-tr c-group" role="row"><span>ROUND ${r.round}</span><span>${r.docsWritten.length ? 'Wrote ' + r.docsWritten.map(d => `<code>${esc(d.file)}</code> ${md(d.summary)}`).join(' · ') : 'Nothing written to the repo.'}</span></div>
+      ${r.settled.map(s => `<div class="c-tr" role="row"><span class="qid">${s.id}</span><span><b>${esc(s.title)}.</b> ${md(s.answer)}</span><span class="how">${HOW[s.how]}</span><span>${reopenCtl(s)}</span></div>`).join('')}`).join('')}
+    </div></section>`;
+}
+function closingC() {
+  return `<section class="c-round"><div class="c-bar"><div class="c-bar-l"><h2>Sign-off</h2><span class="c-meter"><b>0</b> open · ${active().length} decisions</span></div>${closingCtl('c')}</div>
+    <div class="c-sum">${CLOSING.summary.map(s => `<div><h3>${esc(s.heading)}</h3><p>${md(s.text)}</p></div>`).join('')}</div></section>`;
+}
+
+/* ---------------- render + events ---------------- */
+function render() {
+  const f = document.activeElement, fid = f && f.id;
+  const sel = f && typeof f.selectionStart === 'number' ? [f.selectionStart, f.selectionEnd] : null;
+  const d = DIRS.find(x => x.k === S.dir);
+  $('#stage').innerHTML = `<div class="dir dir-${d.k}">${d.view()}</div>`;
+  $('#p-dir').textContent = `${d.k.toUpperCase()} · ${d.name}`;
+  refresh();
+  if (fid) { const el = document.getElementById(fid); if (el) { el.focus({ preventScroll: true }); if (sel && el.setSelectionRange) try { el.setSelectionRange(...sel); } catch (e) {} } }
+}
+function refresh() {
+  document.querySelectorAll('[data-qstate]').forEach(el => { el.dataset.state = qstate(QS[el.dataset.qstate]); });
+  document.querySelectorAll('[data-qtag]').forEach(el => { el.textContent = QTAG[el.dataset.state]; });
+  document.querySelectorAll('[data-ready]').forEach(el => { el.textContent = readyN(); });
+  document.querySelectorAll('[data-act="submit"]').forEach(b => { b.disabled = !allDone() || locked(); });
+  document.querySelectorAll('[data-act="close-send"]').forEach(b => { b.disabled = !S.closing.comment.trim() || locked(); });
+  const ft = $('#fallback-text'); if (ft) ft.textContent = answersText();
+  const p = $('#p-panel');
+  if (!p.hidden) p.innerHTML = `<h4>${S.scene === 'closing' ? 'answers/round-4' : 'answers/round-3'}: what Submit writes</h4><pre>${esc(JSON.stringify(answersDoc(), null, 2))}</pre>
+    <h4>Figure style contract</h4><pre>Claude's SVGs use only these classes; the page colours them from its tokens.
+n-settled  n-open  n-blocked  n-deferred   on the &lt;g&gt; around a node's &lt;rect&gt; and &lt;text&gt;
+edge   edge hot                            on a &lt;path&gt; or &lt;line&gt;
+box    box hot                             on the &lt;g&gt; around a &lt;rect&gt; and &lt;text&gt;
+lbl                                        on a &lt;text&gt;: small mono label
+No fill or stroke colours inside a figure. Plain text and strokes use currentColor.
+Optional: data-q="Q1" on a node's &lt;g&gt; links it to that question.</pre>`;
+}
+function pick(q, o) { if (locked()) return; ans(q).choice = o; render(); if (o === 'other') document.getElementById(`other-${S.dir}-${q}`)?.focus(); }
+function send() {
+  S.submit = 'sending'; S.submittedAt = new Date().toISOString(); render();
+  setTimeout(() => { S.submit = S.outcome; render(); }, 1100);
+}
+function jump(q) {
+  if (S.dir === 'b') { S.tab = 'round'; S.step = ROUND.questions.findIndex(x => x.id === q); render(); return; }
+  if (S.dir === 'c') { S.open[q] = true; render(); }
+  document.getElementById(S.dir === 'a' ? `a-card-${q}` : `c-row-${q}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+const ACTS = {
+  pick: d => pick(d.q, d.o),
+  rec: d => pick(d.q, QS[d.q].recommended),
+  defer: d => pick(d.q, ans(d.q).choice === 'defer' ? null : 'defer'),
+  all: () => { if (locked()) return; ROUND.questions.forEach(q => { if (!ans(q.id).choice) ans(q.id).choice = q.recommended; }); render(); },
+  reopen: d => { if (locked()) return; S.reopen = S.reopen.includes(d.id) ? S.reopen.filter(x => x !== d.id) : [...S.reopen, d.id]; render(); },
+  submit: () => { if (allDone() && !locked()) send(); },
+  retry: () => send(),
+  copy: () => {
+    const text = answersText(), note = t => { const c = $('#copied'); if (c) c.textContent = t; };
+    const selectIt = () => { const r = document.createRange(); r.selectNodeContents($('#fallback-text')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); note('Selected: press Ctrl+C or Cmd+C'); };
+    try { navigator.clipboard.writeText(text).then(() => note('Copied'), selectIt); } catch (e) { selectIt(); }
+  },
+  step: d => { S.step = Math.max(0, Math.min(ROUND.questions.length, +d.i)); render(); scrollTo({ top: 0 }); },
+  review: () => { S.tab = 'round'; S.step = ROUND.questions.length; render(); scrollTo({ top: 0 }); },
+  tab: d => { S.tab = d.t; render(); },
+  toggle: d => { S.open[d.q] = !S.open[d.q]; render(); },
+  confirm: () => { if (locked()) return; S.closing.choice = 'confirm'; send(); },
+  notyet: () => { if (locked()) return; S.closing.choice = 'not-yet'; render(); document.getElementById(`closing-${S.dir}`)?.focus(); },
+  'close-send': () => { if (S.closing.comment.trim() && !locked()) send(); },
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (t && !t.disabled) { ACTS[t.dataset.act]?.(t.dataset); return; }
+  const node = e.target.closest('svg [data-q]');
+  if (node) jump(node.dataset.q);
+});
+document.addEventListener('change', e => { const t = e.target; if (t.matches('input[type="radio"][data-q]')) pick(t.dataset.q, t.value); });
+document.addEventListener('input', e => {
+  const t = e.target, f = t.dataset.field;
+  if (!f) return;
+  if (f === 'closing') S.closing.comment = t.value; else ans(t.dataset.q)[f] = t.value;
+  refresh();
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select, [contenteditable]') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); cycle(e.key === 'ArrowRight' ? 1 : -1); return; }
+  if (S.dir !== 'b' || S.scene !== 'round' || S.tab !== 'round') return;
+  const q = ROUND.questions[S.step], k = e.key.toLowerCase();
+  if (q && /^[1-9]$/.test(k)) { const id = [...q.options.map(o => o.id), 'other'][+k - 1]; if (id) pick(q.id, id); }
+  else if (q && k === 'r') pick(q.id, q.recommended);
+  else if (q && k === 'd') ACTS.defer({ q: q.id });
+  else if (k === 'j' || k === 'k') ACTS.step({ i: S.step + (k === 'j' ? 1 : -1) });
+});
+
+/* prototype bar */
+function cycle(dx) { const i = DIRS.findIndex(x => x.k === S.dir); setDir(DIRS[(i + dx + DIRS.length) % DIRS.length].k); }
+function setDir(k) { S.dir = k; try { history.replaceState(null, '', '#' + k); } catch (e) {} render(); }
+$('#p-prev').onclick = () => cycle(-1);
+$('#p-next').onclick = () => cycle(1);
+$('#p-scene').onchange = e => { S.scene = e.target.value; reset(); render(); };
+$('#p-outcome').onchange = e => { S.outcome = e.target.value; };
+$('#p-theme').onchange = e => { document.documentElement.dataset.theme = e.target.value; };
+$('#p-width').onchange = e => { document.body.classList.toggle('frame', e.target.value === 'phone'); };
+$('#p-data').onclick = () => { const p = $('#p-panel'); p.hidden = !p.hidden; $('#p-data').setAttribute('aria-expanded', String(!p.hidden)); refresh(); };
+$('#p-reset').onclick = () => { reset(); render(); };
+new ResizeObserver(([en]) => document.documentElement.style.setProperty('--proto-h', Math.ceil(en.target.getBoundingClientRect().height) + 'px')).observe($('#proto'));
+$('#p-theme').value = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+const h = (location.hash || '').slice(1);
+if (DIRS.some(x => x.k === h)) S.dir = h;
+render();
+</script>
