@@ -173,11 +173,11 @@ ciwait() { ( cd "$1" && shift && bash "$root/skills/ship/scripts/ci-wait.sh" 1 "
 pollpr() { ( cd "$1" && shift && bash "$root/skills/ship/scripts/poll-pr.sh" 1 "$@" 2>/dev/null ); }
 
 # The no-checks grace counts from the expected head's arrival, which only a
-# nonzero grace shows: a checkout whose profile names a leg keeps the 120 s one.
-# The head arrives about 20 s in and no check ever registers, so a window of 120 s
-# closes inside the grace: `timeout` on the arrived head, where a grace counted
-# from the start answers `no-checks`. Real time, so it runs in the background on
-# its own fake state while the cases below run.
+# nonzero grace shows: a checkout whose profile names a leg keeps one, shortened
+# to 4 s here. The head arrives about 2 s in and no check ever registers, so a
+# window of 4 s closes inside the grace: `timeout` on the arrived head, where a
+# grace counted from the start answers `no-checks`. Real time, so it runs in the
+# background on its own fake state while the cases below run.
 late=$work/late; mkdir -p "$late/docs/agents"
 printf '# Ship profile\n\nSchema: 3\n\n## CI\n\nLegs: bump-guard: the title\nNo-checks legal: no\nPush policy: Default.\n' \
   > "$late/docs/agents/ship.md"
@@ -188,7 +188,7 @@ late_sha=$(git -C "$late" rev-parse HEAD)
 cp -r "$FAKE" "$work/fake-late"; rm -f "$work/fake-late/pulls.n"
 printf '%s' "$late_sha" > "$work/fake-late/new-sha"; printf '2' > "$work/fake-late/old-polls"
 printf '{"total_count":0,"check_runs":[]}' > "$work/fake-late/check-runs-$late_sha.json"
-( FAKE=$work/fake-late ciwait "$late" --timeout 120 --interval 10 > "$work/late.out" ) &
+( FAKE=$work/fake-late SHIP_CI_WAIT_GRACE=4 ciwait "$late" --timeout 4 --interval 1 >"$work/late.out" ) &
 late_pid=$!
 
 polls 2
