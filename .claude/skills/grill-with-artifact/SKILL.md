@@ -2,6 +2,7 @@
 name: grill-with-artifact
 description: "Grill a plan or design on a private artifact page: each grilling round arrives as question cards you answer and Submit, and the glossary and ADRs are written as answers settle. Runs in the terminal where artifacts are unavailable."
 disable-model-invocation: true
+argument-hint: "[topic]"
 metadata:
   version: 0.1.0
 ---

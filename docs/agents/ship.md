@@ -37,7 +37,8 @@ The one workflow on a PR head, `bump-guard`, reads the PR title and body rather 
 - a mechanic over the real GitHub adapter and a fake `gh` answering per endpoint (`request-review-readback`, `gh-threads-proxy`);
 - one adapter function, its transport redefined as fixtures (`ado-reviews-substantive`, `gh-run-denials`);
 - a shipped template or script over stub tools in a throwaway checkout (`harness-check`, `setup-skills-bootstrap`);
-- a shipped file's text, read as files (`template-pins`, `reviewer-refresh`).
+- a shipped file's text, read as files (`template-pins`, `reviewer-refresh`);
+- a shipped page's script, run headless under `node` over JSON fixtures, its reads recorded through proxies (`grill-with-artifact`).
 
 The catalog's entry trial, `scripts/catalog-trial.sh`, is no gate here: it installs real tools globally, so it runs in a cloud session before an entry merges. A behavioural claim about one of these subjects earns a case here, where it survives the run that made it, instead of a scratchpad probe that does not. A `host_*` function's live call stays its host's verification's job, `github-mechanics` or `ado-mechanics`: a test that reaches a host is that verification, not this gate.
 

@@ -476,7 +476,7 @@ async function boot() {
     render();
   }
   async function rewake(btn) {
-    const anchor = await anchorOf(document.getElementById('submit') || btn);
+    const anchor = await anchorOf(document.getElementById('submit-notyet') || document.getElementById('submit') || btn);
     S.status = 'sending'; render();
     S.status = (await wake(anchor)) ? 'sent' : 'saved';
     render();
