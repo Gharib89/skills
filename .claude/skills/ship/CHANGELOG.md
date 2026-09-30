@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.14.0 (2026-09-30)
+
+### Features
+
+- **ship**: Run the suite in parallel and show every refusal
+  ([#417](https://github.com/Gharib89/skills/pull/417),
+  [`f0510d0`](https://github.com/Gharib89/skills/commit/f0510d0927f3cb7fa0788cb1ca428cf97f6dabed))
+
+
 ## v0.13.0 (2026-09-29)
 
 ### Features
