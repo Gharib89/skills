@@ -73,12 +73,12 @@ current, run `$S/cleanup.sh none` from the main checkout, and stop.
 ### 4. Composed skills at their pins
 
 Run every `composed[].install` line, then `$S/preflight.sh none` and keep its
-`reasons`. An `existing branch` reason naming this run's own branch and a
-`worktree exists` reason naming its own worktree are expected; a profile reason
-is step 6's; any other carries the line that repairs it: run that, then
-preflight again. A consumer repo never installs a drift
-row's `head`: that version is one nobody tested Ship against, and the row
-reaches the source repo in step 7 instead.
+`reasons`. Preflight exiting 1 with only an `existing branch` reason naming this
+run's own branch and a `worktree exists` reason naming its own worktree is the
+expected answer, not a failure; a profile reason is step 6's; any other carries
+the line that repairs it: run that, then preflight again. A consumer repo never
+installs a drift row's `head`: that version is one nobody tested Ship against,
+and the row reaches the source repo in step 7 instead.
 
 ### 5. Other skills
 
@@ -93,17 +93,19 @@ are never in the lock and never touched.
 ### 6. setup-skills sections, then retired terms
 
 `/setup-skills` re-runs when step 4's `reasons` carry `profile missing` or
-`profile invalid`, or `sections` is non-empty. Ask the owner to run it from a
-new session opened at the worktree, and wait: the Skill tool refuses it
-(`disable-model-invocation`), and this session's copy predates the refresh.
-Tell them what to redo: its Re-run path for a profile refusal, and for each
-section only the step-5 item its template feeds:
+`profile invalid`, or `sections` is non-empty. Follow it from this session, by
+hand: read `<worktree>/.claude/skills/setup-skills/SKILL.md`, the refreshed
+copy and never the one loaded at session start, and follow its `## Re-run`
+path, skipping its step-1 install line, which step 2 already ran. A profile
+refusal takes the profile Re-run; `sections` takes "A setup section re-run",
+redoing for each section only the item its template feeds:
 
 | `section` | setup-skills item |
 |---|---|
 | `pr-template` | **PR template** |
 | `reviewer-scaffolding` | **Reviewer scaffolding** |
-| `local-gate` | **Local gate over the harness** or **Self-contained local gate**, whichever setup-skills' harness detection picks |
+| `local-gate` | **Self-contained local gate** |
+| `local-gate-harness` | **Local gate over the harness** |
 | `coding-standards` | **Coding standards** |
 | `dimension-labels` | **Triage labels on the host** and **The `## Dimension labels` section** |
 | `ado-tracker-doc` | step 1.1's Azure DevOps tracker doc |
@@ -111,20 +113,24 @@ section only the step-5 item its template feeds:
 | `cloud-bootstrap` | **Cloud bootstrap** |
 
 A change to setup-skills' `SKILL.md` alone is not a section: its prose moving
-costs no interview. When the owner says it finished, run `$S/preflight.sh none`
-again: the step is done when this run's own `existing branch` and `worktree
-exists` are the only reasons left. Note the profile schema move for step 8: the
+costs no interview. Its proposals and interview questions go to the owner from
+this session, with AskUserQuestion, and writes land on confirm as setup-skills
+says. When the re-run is done, run `$S/preflight.sh none` again: the step is
+done when this run's own `existing branch` and `worktree exists` are the only
+reasons left. Note the profile schema move for step 8: the
 `Schema:` line of `docs/agents/ship.md` at `<old>` against the one now.
 
 **Retired terms**, whether or not setup-skills re-ran. Each `retired` row is a
 word a source-repo skill stopped using inside the range this refresh crosses.
-In a consumer repo, find it in the repo's own files, never the derived copies.
+In a consumer repo, find it in the repo's own files, never the derived copies:
+both commands below exclude `.claude/skills/<name>/` for each skill in
+`skills-lock.json`, so a skill the repo wrote itself is swept.
 A term that is a file name (a Term cell ending in an extension, such as
 `CONTEXT.md`) is renamed first: `git mv` every tracked file of that name to the
 row's `replacement` in the same directory. List them with:
 
 ```sh
-git ls-files -- ':(glob)**/<term>' ':!.claude/skills/'
+bash -c 'T=$1; shift; for s in $(jq -r ".skills | keys[]" skills-lock.json); do set -- "$@" ":!.claude/skills/$s/"; done; git ls-files -- ":(glob)**/$T" "$@"' _ '<term>'
 ```
 
 Three cases rename nothing, each listed for step 8's Needs attention: a file
@@ -134,7 +140,7 @@ target already exists, as `<path>: not renamed, <replacement> exists`; and every
 file of a row whose replacement is null. Then sweep the references:
 
 ```sh
-git grep -n -w -F -e '<term>' -- . ':!.claude/skills/'
+bash -c 'T=$1; shift; for s in $(jq -r ".skills | keys[]" skills-lock.json); do set -- "$@" ":!.claude/skills/$s/"; done; git grep -n -w -F -e "$T" -- . "$@"' _ '<term>'
 ```
 
 Replace each hit with the row's `replacement` where it reads correctly in that
@@ -300,5 +306,5 @@ writes it to the Run file's deviations log, which lands in the merge summary:
 | Step asks | The run records |
 |---|---|
 | Step 5, which other skills to take | none taken; `others not taken: <skill> <old_ref> → <head>` per row |
-| Step 6, the owner re-running `/setup-skills` | not re-run; `setup-skills needed: <section or profile reason>` per item |
+| Step 6, re-running `/setup-skills`, which interviews | not re-run; `setup-skills needed: <section or profile reason>` per item |
 | Step 3, an `unreachable` row | `drift not checked: <skill>: <error>` |

@@ -33,6 +33,9 @@
 #     installed at the head so the next run has a ref to compare.
 #   sections: the setup-skills sections whose template file or directory
 #     differs between the old and new copies; SKILL.md is not a template.
+#     The two local gate templates are told apart by docs/agents/harness.md,
+#     setup-skills' one harness signal: `local-gate-harness` with it,
+#     `local-gate` without, and the other template's move plans nothing.
 #   retired: every row of a source-repo skill's retired-terms.md, in the new
 #     copy, whose version is above old_version and at or below new_version,
 #     compared by release part, an old M.m.p read as 0.M.p when the
@@ -101,9 +104,14 @@ new_blobs() {
   done) | LC_ALL=C sort
 }
 sections='[]'
-for pair in pull_request_template.md:pr-template reviewers:reviewer-scaffolding local-gate.sh:local-gate local-gate-harness.sh:local-gate \
+[ -f "$root/docs/agents/harness.md" ] && harness=true || harness=false
+for pair in pull_request_template.md:pr-template reviewers:reviewer-scaffolding local-gate.sh:local-gate local-gate-harness.sh:local-gate-harness \
   coding-standards.md:coding-standards dimension-labels.md:dimension-labels issue-tracker-ado.md:ado-tracker-doc \
   ship-block.md:ship-block cloud-ship-bootstrap.sh:cloud-bootstrap; do
+  case ${pair#*:} in
+    local-gate) "$harness" && continue ;;
+    local-gate-harness) "$harness" || continue ;;
+  esac
   t=${pair%%:*} p=$skills/setup-skills/${pair%%:*}
   [ "$(old_blobs "$p")" = "$(new_blobs "$p")" ] && continue
   sections=$(jq -c --arg s "${pair#*:}" --arg t "$t" '. + [{section: $s, template: $t}]' <<<"$sections")
