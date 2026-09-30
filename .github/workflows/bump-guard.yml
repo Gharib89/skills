@@ -8,6 +8,12 @@ name: bump-guard
 # without a label. `scripts/check-bump-label.sh` is the whole rule, which is what
 # lets `tests/bump-label.test.sh` drive it.
 #
+# The same job holds the PR body to the template: every `##` heading the template
+# has must be in the body, because ship rewrites a section under its heading and
+# a body without it has nowhere to write. `scripts/check-pr-body.sh` is that rule,
+# driven by `tests/pr-body-headings.test.sh`, and it reads the body from the event
+# rather than through `gh`.
+#
 # Not path-filtered, so it reports on every PR and is the profile's one CI leg.
 
 on:
@@ -43,3 +49,8 @@ jobs:
           PR_COMMITS=$(git log --format=%B "origin/$BASE_REF..HEAD")
           export PR_COMMITS
           scripts/check-bump-label.sh
+
+      - name: Check the PR body carries the template's headings
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n' "$PR_BODY" | scripts/check-pr-body.sh
