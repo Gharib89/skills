@@ -1,8 +1,8 @@
 <title>Grill Page Directions</title>
 <!--
   PROTOTYPE (#435), throwaway. The Column layout (picked from the first round of this prototype) in
-  three palettes, switchable with the bar at the top (arrow keys, or #hero / #glass / #orchid in the
-  link). Dark by default; light applies only when data-theme="light" is set. Sample data only.
+  three Glass variants, switchable with the bar at the top (arrow keys, or #gray / #black / #apple in
+  the link). Dark by default; light applies only when data-theme="light" is set. Sample data only.
   Nothing is saved or sent: Submit is stubbed, and the bar picks its outcome.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: one reading column; rounds stack top to bottom, the open round last, a sticky Submit
-   bar at the foot. Three palettes: Hero (aihero.dev, below on :root), Glass and Orchid. */
+   bar at the foot. Base tokens below; three Glass variants (gray, black, apple.com) override them. */
 :root {
   --page: #080808; --bg: #0b0b0b; --card: #100f0e; --band: #0e0e0d;
   --fg: #f4f3f1; --fg-body: #f4f3f1b8; --fg-muted: #f4f3f199; --fg-label: #f4f3f17a; --fg-faint: #f4f3f14d;
@@ -187,9 +187,9 @@ kbd { font: 500 10px/1.5 var(--f-mono); border: 1px solid var(--line-strong); bo
 }
 
 
-/* ---------- palette: Glass (Apple-style frosted panels over a colour wallpaper) ---------- */
-.pal-glass {
-  --page: #05060a; --bg: #10121acc; --card: #1c1f2a8c; --band: #ffffff0d;
+/* ---------- Glass: frosted panels over a wallpaper; shared by every variant ---------- */
+.glass {
+  --bg: #10121acc; --card: #1c1f2a8c; --band: #ffffff0d;
   --fg: #f5f5f7; --fg-body: #f5f5f7cc; --fg-muted: #ebebf599; --fg-label: #ebebf580; --fg-faint: #ebebf54d;
   --line: #ffffff1f; --line-strong: #ffffff2e; --input: #ffffff2e; --hover: #ffffff14;
   --accent: #0a84ff; --accent-hover: #409cff; --accent-ink: #ffffff; --accent-text: #64b5ff; --accent-edge: #0a84ff;
@@ -197,15 +197,14 @@ kbd { font: 500 10px/1.5 var(--f-mono); border: 1px solid var(--line-strong); bo
   --ok: #30d158; --ok-wash: #30d1581f; --ok-line: #30d15873;
   --park: #bf5af2; --park-wash: #bf5af21f; --park-line: #bf5af273;
   --warn: #ff9f0a; --danger: #ff453a; --link: #64b5ff;
-  --wall-a: #1d4ed8; --wall-b: #3b4452; --wall-c: #0b3d91; --wall-base: #0a0c10;
-  --glass-edge: #ffffff2e; --glass-hi: #ffffff40; --glass-shadow: #0000004d;
+  --glass-edge: #ffffff2e; --glass-hi: #ffffff40; --glass-shadow: #0000004d; --bar: var(--card);
   --r: 14px; --r-card: 22px; --r-btn: 999px;
   --f-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
   --f-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
   color-scheme: dark;
 }
-:root[data-theme="light"] .pal-glass {
-  --page: #eef1f7; --bg: #ffffffb3; --card: #ffffff8c; --band: #ffffff66;
+:root[data-theme="light"] .glass {
+  --bg: #ffffffb3; --card: #ffffff8c; --band: #ffffff66;
   --fg: #1d1d1f; --fg-body: #1d1d1fcc; --fg-muted: #3c3c43b3; --fg-label: #3c3c4399; --fg-faint: #3c3c4359;
   --line: #0000001a; --line-strong: #00000024; --input: #00000026; --hover: #0000000d;
   --accent: #007aff; --accent-hover: #0a6cff; --accent-ink: #ffffff; --accent-text: #0064d2; --accent-edge: #007aff;
@@ -213,55 +212,83 @@ kbd { font: 500 10px/1.5 var(--f-mono); border: 1px solid var(--line-strong); bo
   --ok: #248a3d; --ok-wash: #248a3d1a; --ok-line: #248a3d66;
   --park: #8944ab; --park-wash: #8944ab1a; --park-line: #8944ab66;
   --warn: #c93400; --danger: #d70015; --link: #0064d2;
-  --wall-a: #b7cffb; --wall-b: #d3d8df; --wall-c: #9dbdf2; --wall-base: #eef1f5;
   --glass-edge: #ffffff99; --glass-hi: #ffffffcc; --glass-shadow: #1d1d1f1f;
   color-scheme: light;
 }
-.pal-glass { background:
+.glass { background:
   radial-gradient(55% 45% at 12% 8%, var(--wall-a), transparent 70%),
   radial-gradient(50% 40% at 88% 22%, var(--wall-b), transparent 70%),
   radial-gradient(60% 50% at 70% 92%, var(--wall-c), transparent 70%),
   var(--wall-base); background-attachment: fixed; }
-.pal-glass .a-q, .pal-glass .a-settled, .pal-glass .a-wrap > .fig, .pal-glass .docs, .pal-glass .a-summary, .pal-glass .a-bar {
+.glass .a-q, .glass .a-settled, .glass .a-wrap > .fig, .glass .docs, .glass .a-summary, .glass .a-bar {
   background: var(--card); -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%);
   border: 1px solid var(--glass-edge); border-radius: var(--r-card);
   box-shadow: inset 0 1px 0 var(--glass-hi), 0 10px 40px var(--glass-shadow); }
-.pal-glass .docs { border-radius: var(--r); }
-.pal-glass .a-q[data-state="ready"] { border-color: var(--ok-line); }
-.pal-glass .a-q[data-state="deferred"] { border-color: var(--park-line); }
-.pal-glass .a-bar { bottom: 12px; width: calc(100% - 32px); max-width: 860px; margin: 0 auto 12px; padding: 12px 18px; }
-.pal-glass .a-opt, .pal-glass .a-why, .pal-glass .a-q .fig { background: var(--hover); border-color: var(--glass-edge); }
-.pal-glass .a-opt:has(input:checked) { background: var(--accent-wash); border-color: var(--accent-edge); }
-.pal-glass .a-opt.a-defer:has(input:checked) { background: var(--park-wash); border-color: var(--park); }
-.pal-glass .btn { background: var(--hover); border-color: var(--glass-edge); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-.pal-glass .btn.accent { background: var(--accent); border-color: transparent; color: var(--accent-ink); box-shadow: inset 0 1px 0 var(--glass-hi); }
-.pal-glass .btn.accent:hover:not(:disabled) { background: var(--accent-hover); }
-.pal-glass .tag, .pal-glass .qtag, .pal-glass .rec, .pal-glass .chip { border-radius: 999px; padding-inline: 8px; }
-.pal-glass h1 { letter-spacing: -.025em; }
-.pal-glass .dir code, .pal-glass code { background: var(--hover); border-color: var(--glass-edge); border-radius: 6px; }
+.glass .docs { border-radius: var(--r); }
+.glass .a-q[data-state="ready"] { border-color: var(--ok-line); }
+.glass .a-q[data-state="deferred"] { border-color: var(--park-line); }
+.glass .a-bar { background: var(--bar); bottom: 12px; width: calc(100% - 32px); max-width: 860px; margin: 0 auto 12px; padding: 12px 18px; }
+.glass .a-opt, .glass .a-why, .glass .a-q .fig { background: var(--hover); border-color: var(--glass-edge); }
+.glass .a-opt:has(input:checked) { background: var(--accent-wash); border-color: var(--accent-edge); }
+.glass .a-opt.a-defer:has(input:checked) { background: var(--park-wash); border-color: var(--park); }
+.glass .btn { background: var(--hover); border-color: var(--glass-edge); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.glass .btn.accent { background: var(--accent); border-color: transparent; color: var(--accent-ink); box-shadow: inset 0 1px 0 var(--glass-hi); }
+.glass .btn.accent:hover:not(:disabled) { background: var(--accent-hover); }
+.glass .tag, .glass .qtag, .glass .rec, .glass .chip { border-radius: 999px; padding-inline: 8px; }
+.glass h1 { letter-spacing: -.025em; }
+.glass code { background: var(--hover); border-color: var(--glass-edge); border-radius: 6px; }
 
-/* ---------- palette: Orchid (plum graphite, orchid accent) ---------- */
-.pal-orchid {
-  --page: #0c0a0e; --bg: #110e14; --card: #18141c; --band: #151118;
-  --fg: #f3eef6; --fg-body: #f3eef6b8; --fg-muted: #f3eef699; --fg-label: #f3eef67a; --fg-faint: #f3eef64d;
-  --line: #ffffff14; --line-strong: #ffffff1f; --input: #ffffff1f; --hover: #ffffff10;
-  --accent: #e38cf0; --accent-hover: #eeaaf6; --accent-ink: #1b0f1e; --accent-text: #e9a3f3; --accent-edge: #e38cf0;
-  --accent-wash: #e38cf014; --accent-panel: #231627; --accent-line: #e38cf059;
-  --ok: #6fd6a8; --ok-wash: #6fd6a81a; --ok-line: #6fd6a866;
-  --park: #8fb8ff; --park-wash: #8fb8ff1a; --park-line: #8fb8ff66;
-  --warn: #f0b35a; --danger: #f07178; --link: #e9a3f3;
-  color-scheme: dark;
+/* variant 1: Gray wallpaper */
+.pal-gray { --page: #111316; --wall-a: #5b616b; --wall-b: #353a42; --wall-c: #6b717b; --wall-base: #16181c; --card: #2a2d338c; }
+:root[data-theme="light"] .pal-gray { --page: #e6e8eb; --wall-a: #c9cdd3; --wall-b: #b8bdc5; --wall-c: #dadde2; --wall-base: #eceef1; --card: #ffffff8c; }
+
+/* variant 2: Black, with a faint sheen so the glass still reads */
+.pal-black { --page: #000000; --wall-a: #1f1f22; --wall-b: #151517; --wall-c: #232326; --wall-base: #000000; --card: #ffffff0d; --glass-edge: #ffffff21; --glass-hi: #ffffff2e; --glass-shadow: #000000cc; }
+:root[data-theme="light"] .pal-black { --page: #f2f2f4; --wall-a: #e6e6e9; --wall-b: #efeff1; --wall-c: #e2e2e6; --wall-base: #fafafa; --card: #ffffffa6; --glass-edge: #ffffffcc; --glass-hi: #ffffff; --glass-shadow: #0000001a; }
+
+/* variant 3: apple.com. Solid tiles, big headlines, blur only on the sticky bar. */
+.pal-apple {
+  --page: #000000; --bg: #1d1d1f; --card: #1d1d1f; --band: #2a2a2d; --bar: #1d1d1fb8;
+  --fg: #f5f5f7; --fg-body: #f5f5f7d9; --fg-muted: #a1a1a6; --fg-label: #86868b; --fg-faint: #6e6e73;
+  --line: #ffffff1f; --line-strong: #ffffff2e; --input: #ffffff2e; --hover: #ffffff0f;
+  --accent: #0071e3; --accent-hover: #0077ed; --accent-ink: #ffffff; --accent-text: #2997ff; --accent-edge: #2997ff;
+  --accent-wash: #2997ff1f; --accent-panel: #0071e31a; --accent-line: #2997ff66; --link: #2997ff;
+  --wall-base: #000000;
+  --f-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
 }
-:root[data-theme="light"] .pal-orchid {
-  --page: #f4f1f6; --bg: #fcfafd; --card: #ffffff; --band: #f4f1f6;
-  --fg: #1c1420; --fg-body: #1c1420cc; --fg-muted: #1c1420b3; --fg-label: #1c142099; --fg-faint: #1c142059;
-  --line: #1c14201a; --line-strong: #1c142024; --input: #1c142024; --hover: #1c14200d;
-  --accent: #b43cb8; --accent-hover: #9a2f9e; --accent-ink: #ffffff; --accent-text: #962f9a; --accent-edge: #b43cb8;
-  --accent-wash: #b43cb814; --accent-panel: #f7e9f8; --accent-line: #b43cb866;
-  --ok: #0f7a50; --ok-wash: #0f7a5014; --ok-line: #0f7a5055;
-  --park: #3d63c9; --park-wash: #3d63c914; --park-line: #3d63c955;
-  --warn: #a86400; --danger: #c2303a; --link: #962f9a;
-  color-scheme: light;
+:root[data-theme="light"] .pal-apple {
+  --page: #f5f5f7; --bg: #ffffff; --card: #ffffff; --band: #f5f5f7; --bar: #fbfbfdcc;
+  --fg: #1d1d1f; --fg-body: #1d1d1fd9; --fg-muted: #6e6e73; --fg-label: #86868b; --fg-faint: #d2d2d7;
+  --line: #d2d2d7; --line-strong: #d2d2d7; --input: #d2d2d7; --hover: #f5f5f7;
+  --accent: #0071e3; --accent-hover: #0077ed; --accent-ink: #ffffff; --accent-text: #0066cc; --accent-edge: #0071e3;
+  --accent-wash: #0071e314; --accent-panel: #0071e30d; --accent-line: #0071e366; --link: #0066cc;
+  --warn: #b64400; --danger: #e30000; --wall-base: #f5f5f7;
+}
+.glass.pal-apple { background: var(--wall-base); }
+.glass.pal-apple .a-q, .glass.pal-apple .a-settled, .glass.pal-apple .a-wrap > .fig, .glass.pal-apple .docs, .glass.pal-apple .a-summary {
+  background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; border: 0; box-shadow: none; border-radius: 18px; }
+.glass.pal-apple .a-q[data-state="ready"] { box-shadow: inset 0 0 0 1.5px var(--ok-line); }
+.glass.pal-apple .a-q[data-state="deferred"] { box-shadow: inset 0 0 0 1.5px var(--park-line); }
+.glass.pal-apple .a-bar { bottom: 0; width: auto; max-width: none; margin: 0; padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px)); border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.glass.pal-apple .a-opt, .glass.pal-apple .a-why, .glass.pal-apple .a-q .fig { background: var(--hover); border: 0; border-radius: 12px; }
+.glass.pal-apple .a-opt:has(input:checked) { background: var(--accent-wash); box-shadow: inset 0 0 0 2px var(--accent-edge); }
+.glass.pal-apple .a-opt.a-defer:has(input:checked) { background: var(--park-wash); box-shadow: inset 0 0 0 2px var(--park); }
+.glass.pal-apple .btn { border: 0; background: var(--hover); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.glass.pal-apple .btn.accent { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+.glass.pal-apple .btn-link { color: var(--link); text-decoration: none; }
+.glass.pal-apple .btn-link:hover { text-decoration: underline; }
+.glass.pal-apple .label, .glass.pal-apple .qid { font: 600 12px/1.4 var(--f-sans); letter-spacing: 0; }
+.glass.pal-apple h1 { font-size: 3.5rem; font-weight: 600; letter-spacing: -.015em; line-height: 1.07; }
+.glass.pal-apple h2 { font-size: 2rem; font-weight: 600; letter-spacing: -.009em; }
+.glass.pal-apple h3 { font-weight: 600; }
+.glass.pal-apple .a-lede { font-size: 21px; line-height: 1.38; color: var(--fg-muted); }
+.glass.pal-apple .a-wrap { gap: 48px; }
+@container (max-width: 560px) {
+  .glass.pal-apple h1 { font-size: 2.5rem; }
+  .glass.pal-apple h2 { font-size: 1.6rem; }
+  .glass.pal-apple .a-lede { font-size: 19px; }
+  .glass.pal-apple .a-wrap { gap: 32px; }
+  .glass.pal-apple .a-bar { padding-inline: 16px; }
 }
 </style>
 
@@ -269,7 +296,7 @@ kbd { font: 500 10px/1.5 var(--f-mono); border: 1px solid var(--line-strong); bo
   <div class="proto-in">
     <span class="proto-tag">PROTOTYPE</span>
     <button id="p-prev" aria-label="Previous palette">&lsaquo;</button>
-    <span class="proto-dir" id="p-dir">1 · Hero gold</span>
+    <span class="proto-dir" id="p-dir">1 · Glass gray</span>
     <button id="p-next" aria-label="Next palette">&rsaquo;</button>
     <label>Scene <select id="p-scene"><option value="round">Round 3 open</option><option value="closing">Closing</option></select></label>
     <label>Submit gives <select id="p-outcome"><option value="sent">sent</option><option value="saved">saved, not woken</option><option value="neither">neither</option></select></label>
@@ -384,10 +411,10 @@ const CLOSING = { round: 4, kind: 'closing', summary: [
     { heading: 'Breaking and retrying', text: 'Any ship run may break a stale claim: it comments first, then takes the assignee. One retry is allowed; a second stale run hands the issue back.' } ] };
 
 const HOW = { rec: 'recommendation', yours: 'your pick', other: 'your own answer', defer: 'deferred' };
-const DIRS = [ { k: 'hero', name: 'Hero gold' }, { k: 'glass', name: 'Glass' }, { k: 'orchid', name: 'Orchid' } ];
+const DIRS = [ { k: 'gray', name: 'Glass gray' }, { k: 'black', name: 'Glass black' }, { k: 'apple', name: 'apple.com' } ];
 
 /* ---------------- state (in memory only) ---------------- */
-let S = { dir: 'hero', scene: 'round', outcome: 'sent' };
+let S = { dir: 'gray', scene: 'round', outcome: 'sent' };
 function reset() {
   S = { dir: S.dir, scene: S.scene, outcome: S.outcome, submit: 'idle', submittedAt: null,
     answers: Object.fromEntries(ROUND.questions.map(q => [q.id, { choice: null, other: '', comment: '' }])),
@@ -540,7 +567,7 @@ function render() {
   const f = document.activeElement, fid = f && f.id;
   const sel = f && typeof f.selectionStart === 'number' ? [f.selectionStart, f.selectionEnd] : null;
   const d = DIRS.find(x => x.k === S.dir);
-  $('#stage').innerHTML = `<div class="dir pal-${d.k}">${viewA()}</div>`;
+  $('#stage').innerHTML = `<div class="dir glass pal-${d.k}">${viewA()}</div>`;
   $('#p-dir').textContent = `${DIRS.indexOf(d) + 1} · ${d.name}`;
   refresh();
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus({ preventScroll: true }); if (sel && el.setSelectionRange) try { el.setSelectionRange(...sel); } catch (e) {} } }
@@ -618,7 +645,8 @@ $('#p-data').onclick = () => { const p = $('#p-panel'); p.hidden = !p.hidden; $(
 $('#p-reset').onclick = () => { reset(); render(); };
 new ResizeObserver(([en]) => document.documentElement.style.setProperty('--proto-h', Math.ceil(en.target.getBoundingClientRect().height) + 'px')).observe($('#proto'));
 $('#p-theme').value = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
-const h = (location.hash || '').slice(1);
-if (DIRS.some(x => x.k === h)) S.dir = h;
+const fromHash = () => { const h = (location.hash || '').slice(1); if (DIRS.some(x => x.k === h)) S.dir = h; };
+fromHash();
+addEventListener('hashchange', () => { fromHash(); render(); });
 render();
 </script>
