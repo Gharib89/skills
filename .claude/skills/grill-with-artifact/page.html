@@ -220,7 +220,7 @@ function restoreDraft(S, saved) {
   if (Array.isArray(saved.reopen)) S.draft.reopen = saved.reopen.filter(x => typeof x === 'string');
 }
 
-const locked = S => !S.canEdit || S.status === 'sending' || S.status === 'sent' || !!S.submitted[S.draft.round];
+const locked = S => !S.canEdit || ['sending', 'sent', 'saved'].includes(S.status) || !!S.submitted[S.draft.round];
 const ans = (S, id) => S.draft.answers[id];
 function qstate(S, q) {
   const a = ans(S, q.id);
@@ -264,7 +264,8 @@ function answerLabel(q, a) {
 }
 function answersText(S) {
   const r = openRound(S), n = S.draft.round;
-  const lines = [`grill-with-artifact: round ${n} submitted, saved at answers/round-${n}`];
+  // Names the database document without claiming the save worked: this text is also the fallback.
+  const lines = [`grill-with-artifact: round ${n} answers (database document answers/round-${n})`];
   if (r.kind === 'closing') {
     const c = ans(S, 'closing');
     lines.push(c.choice === 'confirm' ? 'Closing: Confirm' : 'Closing: Not yet');
