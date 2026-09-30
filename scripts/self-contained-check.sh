@@ -10,11 +10,14 @@
 # resolves owner and repo case-insensitively; and outside a code span or a
 # fenced block, where either is an example, `PR #N` or `issue #N` in any case
 # and a relative link leaving the skill, written inline or as a reference
-# definition. A fence opens and closes as CommonMark has it: a closer is its
-# own character at its own length or longer with nothing after it, and a
-# backtick run followed by a backtick is inline code, so a nested example
-# block cannot switch the prose checks off. `CHANGELOG.md` carries provenance and is exempt. The
-# `self-contained` gate in scripts/local-gate.sh runs this.
+# definition, including one whose destination is on the next line or whose
+# label escapes a `]`. A blockquote's `>` markers are stripped first, so its
+# content is read as any other, and a fence opened in one ends with it. A
+# fence opens and closes as CommonMark has it: a closer is its own character
+# at its own length or longer with nothing after it, and a backtick run
+# followed by a backtick is inline code, so a nested example block cannot
+# switch the prose checks off. `CHANGELOG.md` carries provenance and is exempt.
+# The `self-contained` gate in scripts/local-gate.sh runs this.
 #
 #   scripts/self-contained-check.sh [<root>]
 #
@@ -31,7 +34,11 @@ url='(github\.com|raw\.githubusercontent\.com)/gharib89/skills(/[^[:space:])>`"]
 destination='^github\.com/gharib89/skills(/|/issues/?|/issues/new[^/]*)?$'
 number='(^|[^[:alnum:]])(PR|issue) #[0-9]+'
 fence='^[[:space:]]*(`{3,}|~{3,})(.*)$'
-refdef='^ {0,3}\[([^]^][^]]*)?\]:[[:space:]]*(<[^>]*>|[^[:space:]<]+)'
+label='^ {0,3}\[((\\.|[^]\\^])(\\.|[^]\\])*)?\]:[[:space:]]*'
+refdef="$label"'(<[^>]*>|[^[:space:]<]+)'
+refopen="$label"'$'
+destline='^[[:space:]]*(<[^>]*>|[^[:space:]<]+)'
+quote='^ {0,3}> ?(.*)$'
 
 # normalize <path>: `a/b/../c` -> `a/c`, `./` dropped; a `..` above the root is
 # kept, so the prefix test below fails on it. Split by `read`, not an unquoted
@@ -56,26 +63,29 @@ while IFS= read -r f; do
   case $f in */CHANGELOG.md) continue ;; esac
   skill=${f#skills/}; skill=skills/${skill%%/*}
   dir=${f%/*}
-  n=0 fence_char='' fence_len=0
+  n=0 fence_char='' fence_len=0 fence_depth=0 pending=''
   while IFS= read -r line || [ -n "$line" ]; do
     n=$((n + 1))
     if printf '%s\n' "$line" | grep -oiE "$url" | grep -qviE "$destination"; then
       printf '%s:%s: links source-repo material by URL\n' "$f" "$n"; rc=1
     fi
-    if [[ $line =~ $fence ]]; then
+    prev=$pending pending='' body=$line depth=0
+    while [[ $body =~ $quote ]]; do body=${BASH_REMATCH[1]}; depth=$((depth + 1)); done
+    [ "$depth" -lt "$fence_depth" ] && fence_char='' fence_depth=0
+    if [[ $body =~ $fence ]]; then
       run=${BASH_REMATCH[1]} rest=${BASH_REMATCH[2]}
       if [ -z "$fence_char" ]; then
         # a backtick run with a backtick after it is inline code, not a fence
         if [ "${run:0:1}" != '`' ] || [[ $rest != *'`'* ]]; then
-          fence_char=${run:0:1} fence_len=${#run}; continue
+          fence_char=${run:0:1} fence_len=${#run} fence_depth=$depth; continue
         fi
       elif [ "${run:0:1}" = "$fence_char" ] && [ "${#run}" -ge "$fence_len" ] \
         && [[ $rest != *[![:space:]]* ]]; then
-        fence_char=''; continue
+        fence_char='' fence_depth=0; continue
       fi
     fi
     [ -z "$fence_char" ] || continue
-    prose=$(printf '%s\n' "$line" | sed 's/`[^`]*`//g')
+    prose=$(printf '%s\n' "$body" | sed 's/`[^`]*`//g')
     if printf '%s\n' "$prose" | grep -qiE "$number"; then
       printf '%s:%s: cites an issue or PR number\n' "$f" "$n"; rc=1
     fi
@@ -87,8 +97,12 @@ while IFS= read -r f; do
       esac
     done < <(
       printf '%s\n' "$prose" | grep -oE '\]\([^)[:space:]]+' | sed 's/^](//'
-      if [[ $prose =~ $refdef ]]; then t=${BASH_REMATCH[2]}; t=${t#<}; printf '%s\n' "${t%>}"; fi
+      t=''
+      if [[ $prose =~ $refdef ]]; then t=${BASH_REMATCH[4]}
+      elif [ -n "$prev" ] && [[ $prose =~ $destline ]]; then t=${BASH_REMATCH[1]}; fi
+      t=${t#<}; [ -z "$t" ] || printf '%s\n' "${t%>}"
     )
+    [[ $prose =~ $refopen ]] && pending=1
   done < "$root/$f"
 done < <(git -C "$root" ls-files 'skills/*.md')
 exit $rc

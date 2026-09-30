@@ -120,6 +120,30 @@ check_rc "a code span in the label does not hide the destination" 1 "$(rc_of "$d
 d=$(repo refdef-own skills/a/SKILL.md "$(printf '%s\n' '[g]: reference/glossary.md#terms' '[w]: https://example.com/x' '[^1]: a footnote, not a definition')")
 check_rc "a reference definition inside the skill, a URL and a footnote pass" 0 "$(rc_of "$d")"
 
+# CommonMark lets a definition put its destination on the next line, sit in a
+# blockquote, and escape a `]` in its label; each is the same link.
+d=$(repo refdef-nextline skills/a/SKILL.md "$(printf '%s\n' '[g]:' '  ../../GLOSSARY.md')")
+check "a destination on the line after the label fails on that line" \
+  "skills/a/SKILL.md:2: links outside skills/a/: ../../GLOSSARY.md" "$(out_of "$d")"
+
+d=$(repo refdef-quoted skills/a/SKILL.md "$(printf '%s\n' '> See [g].' '>' '> > [g]: ../../GLOSSARY.md')")
+check_rc "a reference definition inside a blockquote fails" 1 "$(rc_of "$d")"
+
+d=$(repo refdef-escaped skills/a/SKILL.md '[a\]b]: ../../x')
+check_rc "an escaped bracket in the label does not hide the destination" 1 "$(rc_of "$d")"
+
+d=$(repo refdef-open-blank skills/a/SKILL.md "$(printf '%s\n' '[g]:' '' '../../x is a path, not a destination')")
+check_rc "a blank line after a bare label ends the definition" 0 "$(rc_of "$d")"
+
+# A fence inside a blockquote is an example as any fence is, and it ends where
+# the blockquote does, so an unclosed one cannot exempt the prose after it.
+d=$(repo quoted-fence skills/a/SKILL.md "$(printf '%s\n' '> ```' '> PR #12 [x](../../y)' '> ```')")
+check_rc "a number and a link inside a quoted fence pass" 0 "$(rc_of "$d")"
+
+d=$(repo quoted-fence-open skills/a/SKILL.md "$(printf '%s\n' '> ```' '> x' '' 'See PR #13.')")
+check "a quoted fence closes with its blockquote" \
+  "skills/a/SKILL.md:4: cites an issue or PR number" "$(out_of "$d")"
+
 # A consumer's own tracker syntax, quoted as an example, is not a citation.
 d=$(repo number-example skills/a/reference/merge-gate.md 'An entry naming an issue by number (`#<n>`, such as `map issue #1`) is kept.')
 check_rc "a number inside a code span passes" 0 "$(rc_of "$d")"
