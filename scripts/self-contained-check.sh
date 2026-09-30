@@ -31,7 +31,7 @@ url='(github\.com|raw\.githubusercontent\.com)/gharib89/skills(/[^[:space:])>`"]
 destination='^github\.com/gharib89/skills(/|/issues/?|/issues/new[^/]*)?$'
 number='(^|[^[:alnum:]])(PR|issue) #[0-9]+'
 fence='^[[:space:]]*(`{3,}|~{3,})(.*)$'
-refdef='^ {0,3}\[[^]^][^]]*\]:[[:space:]]*(<[^>]*>|[^[:space:]<]+)'
+refdef='^ {0,3}\[([^]^][^]]*)?\]:[[:space:]]*(<[^>]*>|[^[:space:]<]+)'
 
 # normalize <path>: `a/b/../c` -> `a/c`, `./` dropped; a `..` above the root is
 # kept, so the prefix test below fails on it. Split by `read`, not an unquoted
@@ -87,7 +87,7 @@ while IFS= read -r f; do
       esac
     done < <(
       printf '%s\n' "$prose" | grep -oE '\]\([^)[:space:]]+' | sed 's/^](//'
-      if [[ $line =~ $refdef ]]; then t=${BASH_REMATCH[1]}; t=${t#<}; printf '%s\n' "${t%>}"; fi
+      if [[ $prose =~ $refdef ]]; then t=${BASH_REMATCH[2]}; t=${t#<}; printf '%s\n' "${t%>}"; fi
     )
   done < "$root/$f"
 done < <(git -C "$root" ls-files 'skills/*.md')

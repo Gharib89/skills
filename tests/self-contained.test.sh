@@ -111,6 +111,12 @@ check_rc "an angle-bracketed reference definition leaving the skill fails" 1 "$(
 d=$(repo refdef-fenced skills/a/SKILL.md "$(printf '%s\n' '```markdown' '[g]: ../../GLOSSARY.md' '```')")
 check_rc "a reference definition inside a fence passes" 0 "$(rc_of "$d")"
 
+d=$(repo refdef-span skills/a/SKILL.md '[g]: `../../../GLOSSARY.md`')
+check_rc "a reference destination quoted in a code span passes" 0 "$(rc_of "$d")"
+
+d=$(repo refdef-span-label skills/a/SKILL.md '[`g`]: ../../GLOSSARY.md')
+check_rc "a code span in the label does not hide the destination" 1 "$(rc_of "$d")"
+
 d=$(repo refdef-own skills/a/SKILL.md "$(printf '%s\n' '[g]: reference/glossary.md#terms' '[w]: https://example.com/x' '[^1]: a footnote, not a definition')")
 check_rc "a reference definition inside the skill, a URL and a footnote pass" 0 "$(rc_of "$d")"
 
