@@ -192,8 +192,8 @@ textarea:disabled, input:disabled { opacity: .6; }
 
 <script>
 /* ---- core: state in, HTML out. No DOM here, so the page can run headless against round-data.md. ---- */
-const HOW = { rec: 'recommendation', pick: 'your pick', other: 'your own answer', defer: 'deferred' };
-const HOWS = { rec: 'recommendations', pick: 'your picks', other: 'your own answers', defer: 'deferred' };
+// How a settled answer was reached: [one, many].
+const HOW = { rec: ['recommendation', 'recommendations'], pick: ['your pick', 'your picks'], other: ['your own answer', 'your own answers'], defer: ['deferred', 'deferred'] };
 const QTAG = { empty: 'Open', incomplete: 'Other needs text', ready: 'Ready', deferred: 'Deferred' };
 
 function newState(topic) {
@@ -289,7 +289,7 @@ const fig = (svg, cap) => `<figure class="fig glass"><div class="fig-scroll">${s
 
 function view(S) {
   const r = openRound(S);
-  if (S.mode === 'nodb') return shell(S, 'This page cannot reach its database here, so no round can load. The session carries on in the terminal.');
+  if (S.mode === 'nodb') return shell(S, 'This page cannot reach its database here, so no round can load. Say so in the terminal, and the session carries on there.');
   if (!r) return shell(S, S.mode === 'loading' ? 'Loading the session.' : 'Waiting for round 1. Claude posts it here in a moment.');
   const closing = r.kind === 'closing';
   const lede = closing ? 'Nothing is left open. Check the whole design below, then confirm it or say what is missing.'
@@ -308,10 +308,10 @@ function shell(S, text) {
 }
 function pastRound(S, d, latest) {
   const n = k => d.settled.filter(s => s.how === k).length;
-  const how = Object.keys(HOW).filter(n).map(k => `${n(k)} ${(n(k) === 1 ? HOW : HOWS)[k]}`).join(', ');
+  const how = Object.keys(HOW).filter(n).map(k => `${n(k)} ${HOW[k][+(n(k) !== 1)]}`).join(', ');
   return `<section class="round"><div class="rhead"><h2>Round ${d.round - 1}</h2><span class="tag ok">settled · ${d.settled.length}</span></div>
     ${d.settled.length ? `<details class="settled glass" ${latest ? 'open' : ''}><summary>Your answers${how ? ': ' + how : ''}</summary><ol>
-      ${d.settled.map(s => `<li><span class="qid">${esc(s.id)}</span><span><b>${esc(s.title)}:</b> ${md(s.answer)}<span class="how">${HOW[s.how] || ''}</span></span><span>${settledCtl(S, s)}</span></li>`).join('')}
+      ${d.settled.map(s => `<li><span class="qid">${esc(s.id)}</span><span><b>${esc(s.title)}:</b> ${md(s.answer)}<span class="how">${HOW[s.how]?.[0] ?? ''}</span></span><span>${settledCtl(S, s)}</span></li>`).join('')}
     </ol></details>` : ''}
     <div class="docs glass"><span class="label">Written to the repo</span>${d.docsWritten.length
       ? `<ul>${d.docsWritten.map(w => `<li><code>${esc(w.file)}</code> ${md(w.summary)}</li>`).join('')}</ul>`

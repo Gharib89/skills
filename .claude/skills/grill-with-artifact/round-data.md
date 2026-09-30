@@ -27,7 +27,7 @@ republished: a new round is a new document.
 
 `round.` is a round document, `answers.` an answers document; `[]` is an array
 element. Required reads `yes` in every round, `questions` or `closing` only in
-a round of that kind, `no` never. The page reads and writes nothing outside
+a round of that kind, `reopened` only on a question reopened, `no` never. The page reads and writes nothing outside
 this table.
 
 | Path | Type | Required | Meaning |
@@ -45,13 +45,13 @@ this table.
 | `round.questions[].options[].detail` | string | no | One line on what the choice means or costs. |
 | `round.questions[].recommended` | string | yes | The recommended option's `id`. Nothing is preselected. |
 | `round.questions[].why` | string | yes | Why the recommendation, in one to three sentences. |
-| `round.questions[].figureSvg` | string | no | A figure, only where a mechanism or a comparison is faster seen than read. |
+| `round.questions[].figureSvg` | string | no | A figure for this question, as one `<svg>`. |
 | `round.questions[].figureCaption` | string | no | What the figure shows, one or two sentences. |
 | `round.questions[].carriedFrom` | object | no | Present on a question that came back: deferred, or reopened. |
 | `round.questions[].carriedFrom.round` | number | yes | The round it was settled or deferred in. |
 | `round.questions[].carriedFrom.id` | string | yes | The `round.settled[].id` it came back from. |
 | `round.questions[].carriedFrom.reason` | `"deferred"` or `"reopened"` | yes | Why it is back. |
-| `round.questions[].carriedFrom.earlier` | string | no | The earlier answer, required when `reason` is `reopened`. |
+| `round.questions[].carriedFrom.earlier` | string | reopened | The earlier answer. |
 | `round.settled` | array | yes | The previous round, collapsed: one entry per question it asked. Empty in round 1. |
 | `round.settled[].id` | string | yes | `R<n>·Q<m>`: the round it was asked in and its question id. What Reopen sends back. |
 | `round.settled[].title` | string | yes | The decision, short. |

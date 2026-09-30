@@ -40,21 +40,26 @@ function checkShape(doc, root, label) {
   const all = objects(doc, root);
   for (const [p, o] of all) for (const k of Object.keys(o)) if (!shape.has(p + '.' + k)) say(label, 'has an undocumented field', p + '.' + k);
   for (const [f, req] of shape) {
-    if (!f.startsWith(root + '.') || !(req === 'yes' || req === doc.kind)) continue;
+    if (!f.startsWith(root + '.') || req === 'no') continue;
     const parent = f.slice(0, f.lastIndexOf('.')), key = f.slice(f.lastIndexOf('.') + 1);
-    for (const [p, o] of all) if (p === parent && !(key in o)) say(label, 'lacks required field', f);
+    for (const [p, o] of all) if (p === parent && !(key in o) && ['yes', doc.kind, o.reason].includes(req)) say(label, 'lacks required field', f);
   }
 }
-function checkFigures(doc, label) {
-  const svgs = [doc.treeSvg, ...(doc.questions ?? []).map(q => q.figureSvg)].filter(Boolean);
+function figureProblems(doc) {
+  const out = [], svgs = [doc.treeSvg, ...(doc.questions ?? []).map(q => q.figureSvg)].filter(Boolean);
   for (const s of svgs) {
-    for (const m of s.matchAll(/class="([^"]*)"/g)) for (const c of m[1].split(/\s+/)) if (!contract.includes(c)) say(label, 'figure uses a class outside the contract:', c);
-    for (const m of s.matchAll(/\s(fill|stroke|style)=/g)) say(label, 'figure carries its own colour:', m[1]);
+    for (const m of s.matchAll(/class=(["'])(.*?)\1/g)) for (const c of m[2].split(/\s+/)) if (c && !contract.includes(c)) out.push('figure uses a class outside the contract: ' + c);
+    for (const m of s.matchAll(/\s(fill|stroke|style)=/g)) out.push('figure carries its own colour: ' + m[1]);
   }
+  return out;
 }
+const styles = (css, c) => new RegExp('\\.' + c + '(?![\\w-])').test(css);
+// The checkers themselves, on inputs they must refuse.
+if (!figureProblems({ treeSvg: "<svg><g class='rogue'></g></svg>" }).length) say('figure check passes a single-quoted class');
+if (styles('.hot-x { }', 'hot')) say('style check counts .hot-x as styling .hot');
 
 const rounds = { questions: sample('round-questions'), carried: sample('round-carried'), closing: sample('round-closing') };
-for (const [k, d] of Object.entries(rounds)) { checkShape(d, 'round', 'sample ' + k); checkFigures(d, 'sample ' + k); }
+for (const [k, d] of Object.entries(rounds)) { checkShape(d, 'round', 'sample ' + k); for (const p of figureProblems(d)) say('sample ' + k, p); }
 
 // The page: one script, one {{TOPIC}} placeholder in its title, a rule for every contract class.
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
@@ -62,7 +67,7 @@ if (scripts.length !== 1) say('page has', scripts.length, 'inline scripts, want 
 const src = scripts[0] ?? '';
 try { new vm.Script(src, { filename: 'page.html' }); } catch (e) { say('page script does not parse:', e.message); process.exit(0); }
 if (!/<title>\{\{TOPIC\}\}<\/title>/.test(html) || html.split('{{TOPIC}}').length !== 2) say('page lacks exactly one <title>{{TOPIC}}</title>');
-for (const c of contract) if (!new RegExp('\\.' + c + '\\b').test(html.split('<script>')[0])) say('page styles no .' + c);
+for (const c of contract) if (!styles(html.split('<script>')[0], c)) say('page styles no .' + c);
 
 // Run the page headless: no document, so it boots nothing and exposes its core.
 const ctx = vm.createContext({ console });
@@ -122,6 +127,19 @@ if (A.answers.length !== 1 || A.answers[0].id !== 'closing' || A.answers[0].choi
 P.ACT.closing(S, { choice: 'not-yet' });
 P.ACT.field(S, { q: 'closing', field: 'comment', value: 'the notice text' });
 if (P.answersDoc(S).answers[0].comment !== 'the notice text') say('answers C: Not yet lost its comment');
+
+// D: a round whose answers are saved takes no more edits, and its text claims no save.
+S = session([rounds.questions]);
+S.status = 'saved';
+P.ACT.pick(S, { q: 'Q1', o: 'a' });
+if (P.answersDoc(S).answers[0].choice !== null) say('answers D: a saved round took an edit');
+if (/saved/i.test(P.answersText(S).split('\n')[0])) say('answers D: the text header claims a save');
+
+// E: counts agree with their nouns, one and many.
+const one = clone(rounds.questions); one.questions = one.questions.slice(0, 1);
+const tally = clone(rounds.carried); tally.settled = ['rec', 'rec', 'pick'].map((how, i) => ({ ...tally.settled[0], id: 'R2·Q' + (i + 1), how }));
+if (!/open · 1 question</.test(P.view(session([one])))) say('view E: one question is not counted as one');
+if (!/2 recommendations, 1 your pick</.test(P.view(session([tally])))) say('view E: settled counts misread');
 
 // Every read the page made is a documented field, and it read the fields it renders.
 for (const p of seen) if (!shape.has(p)) say('page reads an undocumented field', p);
