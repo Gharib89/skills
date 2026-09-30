@@ -70,7 +70,8 @@ check "the finding names the line after the fence" \
 
 # A fence closes only on its own character at its own length or longer, so an
 # example block nested in another one cannot hand the lines after it back to
-# prose early, or keep them as code. Each case is red on a binary toggle.
+# prose early, or keep them as code. Every case is red on a binary toggle except
+# the longer closer and the unclosed fence, which guard what the toggle did.
 d=$(repo tilde-wraps-backtick skills/a/SKILL.md "$(printf '%s\n' '~~~' '```' 'PR #12' '```' '~~~' 'See issue #13.')")
 check "a tilde fence wrapping a backtick fence exempts the inner block and checks the prose after" \
   "skills/a/SKILL.md:6: cites an issue or PR number" "$(out_of "$d")"
@@ -85,6 +86,14 @@ check "a four-backtick fence wrapping a three-backtick fence exempts the inner b
 d=$(repo long-closes skills/a/SKILL.md "$(printf '%s\n' '```' 'PR #12' '`````' 'See PR #13.')")
 check "a longer run closes a shorter fence" \
   "skills/a/SKILL.md:4: cites an issue or PR number" "$(out_of "$d")"
+
+d=$(repo info-closer skills/a/SKILL.md "$(printf '%s\n' '```' 'x' '```bash' 'y' '```' 'See PR #99.')")
+check "a closing line carrying an info string does not close the fence" \
+  "skills/a/SKILL.md:6: cites an issue or PR number" "$(out_of "$d")"
+
+d=$(repo inline-triple skills/a/SKILL.md "$(printf '%s\n' '```x``` is inline code.' 'See PR #2.')")
+check "triple backticks used as inline code do not open a fence" \
+  "skills/a/SKILL.md:2: cites an issue or PR number" "$(out_of "$d")"
 
 d=$(repo unclosed skills/a/SKILL.md "$(printf '%s\n' '```' 'PR #12')")
 check_rc "an unclosed fence exempts the rest of the file" 0 "$(rc_of "$d")"
