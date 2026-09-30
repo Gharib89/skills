@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.1 (2026-09-30)
+
+### Bug Fixes
+
+- Self-contained gate tracks fence length and reference links
+  ([#427](https://github.com/Gharib89/skills/pull/427),
+  [`4a7d28f`](https://github.com/Gharib89/skills/commit/4a7d28faf1017cd1af6aefb618795bdfdf0eb500))
+
+
 ## v0.9.0 (2026-09-29)
 
 ### Features
