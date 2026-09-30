@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.11.1 (2026-09-30)
+
+### Documentation
+
+- **setup-skills**: Carry the three depth checks in the standards template
+  ([#430](https://github.com/Gharib89/skills/pull/430),
+  [`5e55dca`](https://github.com/Gharib89/skills/commit/5e55dca39b7d904d797e752a4b9d1d5bfd23152c))
+
+
 ## v0.11.0 (2026-09-29)
 
 ### Features
