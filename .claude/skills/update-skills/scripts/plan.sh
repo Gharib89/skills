@@ -104,14 +104,11 @@ new_blobs() {
   done) | LC_ALL=C sort
 }
 sections='[]'
-[ -f "$root/docs/agents/harness.md" ] && harness=true || harness=false
-for pair in pull_request_template.md:pr-template reviewers:reviewer-scaffolding local-gate.sh:local-gate local-gate-harness.sh:local-gate-harness \
+gate=local-gate
+[ -f "$root/docs/agents/harness.md" ] && gate=local-gate-harness
+for pair in pull_request_template.md:pr-template reviewers:reviewer-scaffolding "$gate.sh:$gate" \
   coding-standards.md:coding-standards dimension-labels.md:dimension-labels issue-tracker-ado.md:ado-tracker-doc \
   ship-block.md:ship-block cloud-ship-bootstrap.sh:cloud-bootstrap; do
-  case ${pair#*:} in
-    local-gate) "$harness" && continue ;;
-    local-gate-harness) "$harness" || continue ;;
-  esac
   t=${pair%%:*} p=$skills/setup-skills/${pair%%:*}
   [ "$(old_blobs "$p")" = "$(new_blobs "$p")" ] && continue
   sections=$(jq -c --arg s "${pair#*:}" --arg t "$t" '. + [{section: $s, template: $t}]' <<<"$sections")

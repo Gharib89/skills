@@ -93,12 +93,18 @@ are never in the lock and never touched.
 ### 6. setup-skills sections, then retired terms
 
 `/setup-skills` re-runs when step 4's `reasons` carry `profile missing` or
-`profile invalid`, or `sections` is non-empty. Follow it from this session, by
-hand: read `<worktree>/.claude/skills/setup-skills/SKILL.md`, the refreshed
-copy and never the one loaded at session start, and follow its `## Re-run`
-path, skipping its step-1 install line, which step 2 already ran. A profile
-refusal takes the profile Re-run; `sections` takes "A setup section re-run",
-redoing for each section only the item its template feeds:
+`profile invalid`, or `sections` is non-empty. Follow it by hand in this
+session, with no second session or subagent: read
+`<worktree>/.claude/skills/setup-skills/SKILL.md`, the refreshed copy (the main
+checkout's predates the refresh), and take its path from there. A `profile
+missing` takes its `## Process`; a `profile invalid` its `## Re-run`; `sections`
+its "A setup section re-run", redoing for each section only the item its
+template feeds. When a profile reason and `sections` both hold, take the profile
+path first, then the sections. Its step 1 only checks the installs step 2 made,
+so run it as a check: a failure is a stop reported to the owner. Its own
+preflight calls read this run's `existing branch` and `worktree exists` as the
+expected pair. Its proposals and interview questions go to the owner from this
+session, with AskUserQuestion, and writes land on confirm as setup-skills says.
 
 | `section` | setup-skills item |
 |---|---|
@@ -113,9 +119,7 @@ redoing for each section only the item its template feeds:
 | `cloud-bootstrap` | **Cloud bootstrap** |
 
 A change to setup-skills' `SKILL.md` alone is not a section: its prose moving
-costs no interview. Its proposals and interview questions go to the owner from
-this session, with AskUserQuestion, and writes land on confirm as setup-skills
-says. When the re-run is done, run `$S/preflight.sh none` again: the step is
+costs no interview. When the re-run is done, run `$S/preflight.sh none` again: the step is
 done when this run's own `existing branch` and `worktree exists` are the only
 reasons left. Note the profile schema move for step 8: the
 `Schema:` line of `docs/agents/ship.md` at `<old>` against the one now.
@@ -130,7 +134,7 @@ A term that is a file name (a Term cell ending in an extension, such as
 row's `replacement` in the same directory. List them with:
 
 ```sh
-bash -c 'T=$1; shift; for s in $(jq -r ".skills | keys[]" skills-lock.json); do set -- "$@" ":!.claude/skills/$s/"; done; git ls-files -- ":(glob)**/$T" "$@"' _ '<term>'
+bash -c 'T=$1; shift; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git ls-files -- ":(glob)**/$T" "$@"' _ '<term>'
 ```
 
 Three cases rename nothing, each listed for step 8's Needs attention: a file
@@ -140,7 +144,7 @@ target already exists, as `<path>: not renamed, <replacement> exists`; and every
 file of a row whose replacement is null. Then sweep the references:
 
 ```sh
-bash -c 'T=$1; shift; for s in $(jq -r ".skills | keys[]" skills-lock.json); do set -- "$@" ":!.claude/skills/$s/"; done; git grep -n -w -F -e "$T" -- . "$@"' _ '<term>'
+bash -c 'T=$1; shift; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git grep -n -w -F -e "$T" -- . "$@"' _ '<term>'
 ```
 
 Replace each hit with the row's `replacement` where it reads correctly in that
@@ -204,9 +208,12 @@ section carries the content below either way:
   2. **What changes for this repo**: a plain-words list of what a maintainer
      here now meets (an exit word renamed, a profile line to add, a refusal a
      run now makes), drawn from the changelogs and subjects, not restating them.
-  3. **Repo-owned files**: `git diff --name-only <old> -- . ':!.claude/skills/'
-     ':!skills-lock.json'`, the files the refresh changed outside the derived
-     copies.
+  3. **Repo-owned files**: the files the refresh changed outside the derived
+     copies (each lock-listed skill's folder) and the lock, as this lists them:
+
+     ```sh
+     bash -c 'O=$1; shift; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git diff --name-only "$O" -- . ":!skills-lock.json" "$@"' _ <old>
+     ```
 - `## Special things to note`:
   1. `- Door: <one-way|two-way>. Blast radius: <one clause>.`, two-way unless
      setup-skills changed host state a revert does not undo.

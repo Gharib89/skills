@@ -123,25 +123,25 @@ git -C "$repo" checkout -q -- .claude/skills/setup-skills/ship-block.md
 # The two local gate templates feed different setup-skills items, and only the
 # one the checkout uses is planned: setup-skills' one harness signal is
 # docs/agents/harness.md. The cloud bootstrap feeds an item of its own.
-sk=$repo/.claude/skills/setup-skills
-sections() { bash "$plan" "$repo" "$tmp/heads.json" | jq -c '[.sections[] | select(.section | test("^local-gate"))]'; }
-echo new > "$sk/local-gate-harness.sh"
-check "a moved harness gate without harness.md plans no local gate row" '[]' "$(sections)"
+setup=$repo/.claude/skills/setup-skills
+gate_rows() { bash "$plan" "$repo" "$tmp/heads.json" | jq -c '[.sections[] | select(.section | test("^local-gate"))]'; }
+echo new > "$setup/local-gate-harness.sh"
+check "a moved harness gate without harness.md plans no local gate row" '[]' "$(gate_rows)"
 mkdir -p "$repo/docs/agents" && : > "$repo/docs/agents/harness.md"
 check "a moved harness gate with harness.md names local-gate-harness" \
-  '[{"section":"local-gate-harness","template":"local-gate-harness.sh"}]' "$(sections)"
-rm "$sk/local-gate-harness.sh"
-echo new > "$sk/local-gate.sh"
-check "a moved self-contained gate with harness.md plans no local gate row" '[]' "$(sections)"
+  '[{"section":"local-gate-harness","template":"local-gate-harness.sh"}]' "$(gate_rows)"
+rm "$setup/local-gate-harness.sh"
+echo new > "$setup/local-gate.sh"
+check "a moved self-contained gate with harness.md plans no local gate row" '[]' "$(gate_rows)"
 rm "$repo/docs/agents/harness.md"
 check "a moved self-contained gate without harness.md names local-gate" \
-  '[{"section":"local-gate","template":"local-gate.sh"}]' "$(sections)"
+  '[{"section":"local-gate","template":"local-gate.sh"}]' "$(gate_rows)"
 git -C "$repo" checkout -q -- .claude/skills/setup-skills/local-gate.sh
-echo new > "$sk/cloud-ship-bootstrap.sh"
+echo new > "$setup/cloud-ship-bootstrap.sh"
 check "the bootstrap names cloud-bootstrap" \
   '[{"section":"pr-template","template":"pull_request_template.md"},{"section":"cloud-bootstrap","template":"cloud-ship-bootstrap.sh"}]' \
   "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -c .sections)"
-rm "$sk/cloud-ship-bootstrap.sh"
+rm "$setup/cloud-ship-bootstrap.sh"
 
 # With the templates reverted, setup-skills' SKILL.md is the one change left.
 git -C "$repo" checkout -q -- .claude/skills/setup-skills/pull_request_template.md
