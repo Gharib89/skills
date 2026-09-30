@@ -1,0 +1,36 @@
+{
+  "round": 3,
+  "kind": "questions",
+  "treeSvg": "<svg viewBox=\"0 0 600 120\" role=\"img\" aria-label=\"Design tree for round 3: one settled answer and one deferred answer feed two open questions.\"><path class=\"edge\" d=\"M230 52 L340 52\"/><path class=\"edge\" d=\"M230 96 L340 96\"/><g class=\"n-settled\"><rect x=\"20\" y=\"36\" width=\"210\" height=\"28\" rx=\"5\"/><text x=\"30\" y=\"54\">R2·Q1 · Idle, not stuck</text></g><g class=\"n-deferred\"><rect x=\"20\" y=\"80\" width=\"210\" height=\"28\" rx=\"5\"/><text x=\"30\" y=\"98\">R2·Q2 · Retry budget</text></g><g class=\"n-open\" data-q=\"Q1\"><rect x=\"340\" y=\"36\" width=\"230\" height=\"32\" rx=\"6\"/><text x=\"352\" y=\"56\">Q1 · Retry budget</text></g><g class=\"n-open\" data-q=\"Q2\"><rect x=\"340\" y=\"80\" width=\"230\" height=\"32\" rx=\"6\"/><text x=\"352\" y=\"100\">Q2 · Where the comment goes</text></g></svg>",
+  "questions": [
+    {
+      "id": "Q1",
+      "title": "How many times may a broken claim be retried?",
+      "options": [
+        { "id": "a", "title": "Once, then hand back" },
+        { "id": "b", "title": "Up to three times" }
+      ],
+      "recommended": "a",
+      "why": "A second stale run on the same issue usually means the issue is the problem.",
+      "carriedFrom": { "round": 2, "id": "R2·Q2", "reason": "deferred" }
+    },
+    {
+      "id": "Q2",
+      "title": "Where does the claim comment go?",
+      "options": [
+        { "id": "a", "title": "On the issue" },
+        { "id": "b", "title": "On the PR once one exists" }
+      ],
+      "recommended": "a",
+      "why": "Moving it later adds a second place to look.",
+      "carriedFrom": { "round": 1, "id": "R1·Q2", "reason": "reopened", "earlier": "On the issue." }
+    }
+  ],
+  "settled": [
+    { "id": "R2·Q1", "title": "What stale means", "answer": "No activity from the claiming run, judged by pushes and CI.", "how": "rec" },
+    { "id": "R2·Q2", "title": "Retry budget", "answer": "Deferred.", "how": "defer" }
+  ],
+  "docsWritten": [
+    { "file": "GLOSSARY.md", "summary": "New term **Stale claim**." }
+  ]
+}
