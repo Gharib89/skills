@@ -193,6 +193,7 @@ textarea:disabled, input:disabled { opacity: .6; }
 <script>
 /* ---- core: state in, HTML out. No DOM here, so the page can run headless against round-data.md. ---- */
 const HOW = { rec: 'recommendation', pick: 'your pick', other: 'your own answer', defer: 'deferred' };
+const HOWS = { rec: 'recommendations', pick: 'your picks', other: 'your own answers', defer: 'deferred' };
 const QTAG = { empty: 'Open', incomplete: 'Other needs text', ready: 'Ready', deferred: 'Deferred' };
 
 function newState(topic) {
@@ -307,7 +308,7 @@ function shell(S, text) {
 }
 function pastRound(S, d, latest) {
   const n = k => d.settled.filter(s => s.how === k).length;
-  const how = Object.keys(HOW).filter(n).map(k => `${n(k)} ${HOW[k]}`).join(', ');
+  const how = Object.keys(HOW).filter(n).map(k => `${n(k)} ${(n(k) === 1 ? HOW : HOWS)[k]}`).join(', ');
   return `<section class="round"><div class="rhead"><h2>Round ${d.round - 1}</h2><span class="tag ok">settled · ${d.settled.length}</span></div>
     ${d.settled.length ? `<details class="settled glass" ${latest ? 'open' : ''}><summary>Your answers${how ? ': ' + how : ''}</summary><ol>
       ${d.settled.map(s => `<li><span class="qid">${esc(s.id)}</span><span><b>${esc(s.title)}:</b> ${md(s.answer)}<span class="how">${HOW[s.how] || ''}</span></span><span>${settledCtl(S, s)}</span></li>`).join('')}
@@ -325,7 +326,7 @@ function settledCtl(S, s) {
   return `${on ? '<span class="tag accent">back next round</span> ' : ''}<button class="btn-link" data-act="reopen" data-id="${esc(s.id)}" aria-pressed="${on}" ${dis(S)}>${on ? 'Undo' : 'Reopen'}</button>`;
 }
 function openQuestions(S, r) {
-  return `<section class="round"><div class="rhead"><h2>Round ${r.round}</h2><span class="tag accent">open · ${r.questions.length} questions</span>
+  return `<section class="round"><div class="rhead"><h2>Round ${r.round}</h2><span class="tag accent">open · ${r.questions.length} question${r.questions.length === 1 ? '' : 's'}</span>
     <button class="btn-link" data-act="all" ${dis(S)}>Take all remaining recommendations</button></div>
     ${r.questions.map(q => card(S, q, r.round)).join('')}</section>`;
 }
@@ -380,7 +381,7 @@ function status(S) {
   const n = S.draft.round, closing = openRound(S).kind === 'closing', confirmed = closing && ans(S, 'closing').choice === 'confirm';
   switch (S.status) {
     case 'sending': return '<div class="st st-sending" role="status"><span class="spin"></span>Saving your answers and waking Claude.</div>';
-    case 'sent': return `<div class="st st-ok" role="status"><span><b>${confirmed ? 'Confirmed.' : 'Sent to Claude.'}</b> ${confirmed ? 'Claude is wrapping up the session.' : `Claude is writing round ${n + 1}. It appears on this page.`}</span></div>`;
+    case 'sent': return `<div class="st st-ok" role="status"><span><b>${confirmed ? 'Confirmed.' : 'Sent to Claude.'}</b> ${confirmed ? 'Claude is wrapping up the session.' : `Claude is writing round ${n + 1}. It appears on this page; if it does not, type <code>submitted</code> in the terminal.`}</span></div>`;
     case 'saved': return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the terminal and the session reads your saved answers.</span>
       <div class="st-row"><button class="btn btn-sm" data-act="wake">Try waking it again</button></div></div>`;
     case 'neither': return `<div class="st st-bad" role="alert"><span><b>Not saved and not sent.</b> Copy your answers and paste them into the terminal.</span>
@@ -456,6 +457,8 @@ async function boot() {
   async function wake(anchor) {
     if (!comments || !anchor) return false;
     try {
+      // `available` means this viewer may send, not that a session is watching: a send with no watch
+      // lands and wakes nothing, so the sent receipt still names the typed fallback.
       if (await comments.canSendToClaude() !== 'available') return false;
       await comments.sendToClaude({ anchor, text: capped(answersText(S)) });
       return true;
