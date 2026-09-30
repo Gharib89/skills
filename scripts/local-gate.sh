@@ -17,7 +17,7 @@
 # check.sh owns every check it runs, each one a gate of the same name here. This
 # file owns only what check.sh cannot know: `secrets` over base..HEAD and
 # `version-lines`, both relative to the base. The one CI leg, `bump-guard`, reads
-# the PR title, so no gate is ever `deferred-to-ci`; this repo has no
+# the PR title and body, so no gate is ever `deferred-to-ci`; this repo has no
 # dependencies, so no `deps` gate. `--small` runs check.sh's own `FULL_ROWS`
 # checks in place of `check.sh full`, which leaves out only its `runner`, the
 # linters, that the edit and commit hooks run on every change.
