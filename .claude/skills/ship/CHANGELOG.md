@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.14.1 (2026-09-30)
+
+### Bug Fixes
+
+- **ship**: Let the test suite shorten ci-wait's no-checks grace
+  ([#421](https://github.com/Gharib89/skills/pull/421),
+  [`2589a67`](https://github.com/Gharib89/skills/commit/2589a67edfe628d0554c5986f13f0aa2b03590af))
+
+
 ## v0.14.0 (2026-09-30)
 
 ### Features
