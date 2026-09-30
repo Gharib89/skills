@@ -62,11 +62,22 @@ check "results print in file order however the workers finish, then the count" \
 FAIL tests/02-host.test.sh
 FAIL tests/03-fail.test.sh
 ok   tests/04-pass.test.sh
-2 passed, 2 failed' "$(cat "$t/stdout.4")"
+2 passed, 2 failed
+FAIL tests/02-host.test.sh
+FAIL tests/03-fail.test.sh' "$(cat "$t/stdout.4")"
 check_rc "a failing file makes the exit non-zero" 1 "$(cat "$t/rc.4")"
 rm -f "$t/logpaths"; run_in "$t" 1
 check "one worker is the serial run: same report" "$(cat "$t/stdout.4")" "$(cat "$t/stdout.1")"
 check "one worker is the serial run: same exit code" "$(cat "$t/rc.4")" "$(cat "$t/rc.1")"
+
+# The gate keeps only the last 40 lines of the report, so a failing file
+# reported first must still be named there.
+t=$(fixture early-fail)
+fx "$t" 00-fail 'exit 1'
+for i in $(seq 10 50); do fx "$t" "$i-pass" 'true'; done
+SHIP_TEST_JOBS=4 LOGPATHS="$t/logpaths" timeout 60 bash "$t/tests/run.sh" >"$t/out" 2>&1
+check "a failing file reported first is named in the report's last 40 lines" \
+  'FAIL tests/00-fail.test.sh' "$(tail -n 40 "$t/out" | grep '^FAIL tests/00')"
 
 t=$(fixture green)
 fx "$t" 01-pass 'true'

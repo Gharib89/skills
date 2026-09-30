@@ -16,7 +16,7 @@
 #
 #   tests/run.sh
 #
-# stdout: one line per test file, then a count
+# stdout: one line per test file, then a count, then each failing file again
 # stderr: each failing case, named, from the test file itself
 # exit: 0 every case passed · 1 a case failed · 2 no test files found or a bad
 #       $SHIP_TEST_JOBS
@@ -52,7 +52,7 @@ for n in "${!files[@]}"; do
 done
 wait
 
-pass=0 fail=0
+pass=0 fail=0 failed=()
 for n in "${!files[@]}"; do
   t=${files[n]}
   cat "$stub/out.$n"; cat "$stub/err.$n" >&2
@@ -68,8 +68,10 @@ for n in "${!files[@]}"; do
   if [ "$rc" -eq 0 ]; then
     pass=$((pass + 1)); printf 'ok   %s\n' "$t"
   else
-    fail=$((fail + 1)); printf 'FAIL %s\n' "$t"
+    fail=$((fail + 1)); failed+=("$t"); printf 'FAIL %s\n' "$t"
   fi
 done
 printf '%d passed, %d failed\n' "$pass" "$fail"
+# Named again last: the local gate keeps only the report's last 40 lines.
+for t in ${failed[@]+"${failed[@]}"}; do printf 'FAIL %s\n' "$t"; done
 [ "$fail" -eq 0 ]
