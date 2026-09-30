@@ -105,7 +105,7 @@ A verdict that a repo, or one rung of its harness, runs in a local session and n
 _Avoid_: offline, local mode, no-cloud
 
 **Vendored plugin**:
-A Claude Code plugin's config that the harness setup skill copies into a target repo's `.claude/skills/harness-<upstream>/` from one upstream commit, named in its README, so every machine runs the same config; nothing refreshes it but a later harness run. Language servers are wired only this way.
+A Claude Code plugin's config that the harness setup skill copies into a consumer repo's `.claude/skills/harness-<upstream>/` from one upstream commit, named in its README, so every machine runs the same config; nothing refreshes it but a later harness run. Language servers are wired only this way.
 _Avoid_: derived copy (a shared skill installed from the source repo), installed plugin
 
 **Bundle session**:
@@ -121,7 +121,7 @@ Ship's sandbox preparation for one repo, run before any claim in every cloud run
 _Avoid_: cloud setup, setup script, cloud-ship bootstrap
 
 **Trust tier**:
-One of the three ordered sources the harness setup skill installs from: Anthropic-authored plugins and docs; the tool's own vendor (which admits a partner entry in the official marketplace only when the partner makes the tool it wraps); the skill sources the target repo already pins. Being listed in a marketplace is not a tier. Anything outside the tiers is reported as found, not trusted, and never installed.
+One of the three ordered sources the harness setup skill installs from: Anthropic-authored plugins and docs; the tool's own vendor (which admits a partner entry in the official marketplace only when the partner makes the tool it wraps); the skill sources the consumer repo already pins. Being listed in a marketplace is not a tier. Anything outside the tiers is reported as found, not trusted, and never installed.
 _Avoid_: allowlist entry, verified source, trusted marketplace
 
 **Install check**:

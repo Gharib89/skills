@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The em-dash ban from docs/contributing/coding-standards.md, plus no trailing
 # whitespace and a final newline on every non-empty file, over the files this
-# repo authors. A derived repo's stock `trailing-whitespace` and
+# repo authors. A consumer repo's stock `trailing-whitespace` and
 # `end-of-file-fixer` hooks fail on a copied script that breaks either (issue
 # #288). `.claude/skills/` is install output from other repos and is exempt. The
 # `house-style` gate in scripts/local-gate.sh runs this, in every lane.

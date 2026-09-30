@@ -20,7 +20,7 @@ Third-party units only: packages, binaries, pre-commit hook repos, plugins, skil
 
 1. **Anthropic-authored** entries and docs. Being listed in the official marketplace is curation, not a tier.
 2. **The tool's own vendor.** A partner's marketplace entry is admitted only when the partner makes the tool it wraps.
-3. **Skill sources pinned in the target repo's own `skills-lock.json`.** A repo with none has no tier 3.
+3. **Skill sources pinned in the consumer repo's own `skills-lock.json`.** A repo with none has no tier 3.
 
 Anything else is "found, not trusted, not installed". No trust by stars, downloads or recency. A packaged tool's tier is its publisher's, or that of the tier-1 glue that names it; an exact pin is still required. The catalog's `Publisher:` line is the identity the resolved package must carry: check it against the registry (npm `maintainers` and `repository`, PyPI `project_urls` and the uploader's repository, the Go module path, crates.io `owners` and `repository`, NuGet `owners` and `projectUrl`, the Maven `groupId`, whose domain part carries the `Publisher:` (`com.pinterest.ktlint` for `pinterest`), the Docker Hub namespace), and refuse a mismatch.
 
