@@ -11,7 +11,7 @@
 #
 #   scripts/revert-red.sh <test> <path>...
 #
-# <test> and each <path> are files relative to the repo root.
+# <test> and each <path> are files relative to the repo root; a directory is refused.
 # stdout: one line saying whether the test went red
 # stderr: the test's last 40 lines when it went red, the evidence it failed
 # exit: 0 the test went red on the reverted tree · 1 it stayed green, so it does
@@ -34,16 +34,17 @@ base=$(git merge-base HEAD origin/HEAD 2>/dev/null) || {
 
 # A test bash cannot open exits non-zero and would read as red; a mistyped path
 # reverts nothing, so the test stays green and would read as vacuous.
-git cat-file -e "HEAD:$test_path" 2>/dev/null || {
-  echo "revert-red: $test_path is not committed at HEAD" >&2
+[ "$(git cat-file -t "HEAD:$test_path" 2>/dev/null)" = blob ] || {
+  echo "revert-red: $test_path is not a file committed at HEAD" >&2
   exit 2
 }
 for p in "$@"; do
   # The test among its own paths would be deleted or reverted, and bash failing to
   # open it reads as red.
   [ "$p" != "$test_path" ] || { echo "revert-red: $p is the test, not a path to revert" >&2; exit 2; }
-  git cat-file -e "$base:$p" 2>/dev/null || git cat-file -e "HEAD:$p" 2>/dev/null || {
-    echo "revert-red: $p exists at neither the merge base nor HEAD" >&2
+  # A blob, since a directory clears `cat-file -e` and `rm -f` then reverts nothing.
+  [ "$(git cat-file -t "$base:$p" 2>/dev/null)" = blob ] || [ "$(git cat-file -t "HEAD:$p" 2>/dev/null)" = blob ] || {
+    echo "revert-red: $p is a file at neither the merge base nor HEAD" >&2
     exit 2
   }
 done

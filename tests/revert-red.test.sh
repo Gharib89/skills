@@ -96,6 +96,11 @@ check_rc "a test missing at HEAD is refused, not read as red" \
 # open, which reads as red.
 check_rc "the test named among its own paths is refused" \
   2 "$(rc_of tests/answer.test.sh tests/answer.test.sh)"
+# A directory clears an existence check, and reverting it deletes nothing, so the
+# test would stay green and read as the vacuous case.
+check_rc "a directory among the paths is refused" \
+  2 "$(rc_of tests/answer.test.sh tests)"
+check_rc "a directory as the test is refused" 2 "$(rc_of tests lib.sh)"
 # A mistyped path reverts nothing, so the test stays green and would read as
 # the vacuous case.
 check_rc "a path in neither the base nor HEAD is refused" \
