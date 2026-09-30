@@ -11,8 +11,14 @@ metadata:
 Grilling, with a page as the surface. Call the Skill tool twice, for `grilling`
 and `domain-modeling`: they own the design tree, the frontier, "facts are your
 job" and every glossary and ADR write. With either one not installed, print
-`npx skills add mattpocock/skills --skill grilling --skill domain-modeling` for
-the human and stop. This skill replaces only two things in them: how a
+these for the human, at the commits this skill was tested against, and stop:
+
+```sh
+npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill grilling --agent claude-code -y
+npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skill domain-modeling --agent claude-code -y
+```
+
+This skill replaces only two things in them: how a
 **grilling round** is shown (a round document on the page, never the terminal
 format `grilling` gives) and how the answers come back (a Submit on the page).
 
@@ -64,13 +70,14 @@ the session.
    on it, named in `treeCaption`.
 3. Give a question a `figureSvg` only where a mechanism or a comparison is
    faster seen than read. The first time one earns a figure, load
-   `artifact-diagramming` through the Skill tool, and draw it with the figure
+   `artifact-diagramming` (bundled with Claude Code's artifact tools) through
+   the Skill tool, and draw it with the figure
    style contract's classes, which win over any colours that skill suggests.
    With `artifact-diagramming` not installed, the round goes out with no
    figures and stays on the page.
-4. From round 2 on, fill `settled` with one entry per question the previous
-   round asked, and `docsWritten` with every glossary term and ADR written from
-   its answers.
+4. Fill `settled` with one entry per question the previous round asked, and
+   `docsWritten` with every glossary term and ADR written from its answers:
+   both are empty arrays in round 1.
 5. Write the round with `ArtifactData` `set`, collection `rounds`, doc id the
    round number.
 6. Resolve the Submit thread that started this turn, if one did, so an open

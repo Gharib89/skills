@@ -141,6 +141,10 @@ const tally = clone(rounds.carried); tally.settled = ['rec', 'rec', 'pick'].map(
 if (!/open · 1 question</.test(P.view(session([one])))) say('view E: one question is not counted as one');
 if (!/2 recommendations, 1 your pick</.test(P.view(session([tally])))) say('view E: settled counts misread');
 
+// F: a round 1 written without `settled` still lets the closing round render.
+const bare = clone(rounds.questions); delete bare.settled;
+try { P.view(session([bare, rounds.closing])); } catch (e) { say('view F: closing round throws on a round without settled:', e.message); }
+
 // Every read the page made is a documented field, and it read the fields it renders.
 for (const p of seen) if (!shape.has(p)) say('page reads an undocumented field', p);
 for (const p of ['round.treeSvg', 'round.questions[].options[].detail', 'round.questions[].carriedFrom.earlier', 'round.settled[].how', 'round.docsWritten[].summary', 'round.summary[].text', 'answers.round'])

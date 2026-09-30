@@ -365,7 +365,7 @@ function bar(S, r) {
     ${status(S)}</div></div>`;
 }
 function closingRound(S, r) {
-  const decisions = S.rounds.flatMap(d => d.settled).filter(s => s.how !== 'defer' && !carriedTo(S, s.id)).length;
+  const decisions = S.rounds.flatMap(d => d.settled || []).filter(s => s.how !== 'defer' && !carriedTo(S, s.id)).length;
   const c = ans(S, 'closing');
   return `<section class="round"><div class="rhead"><h2>What we settled</h2><span class="tag ok">${r.round - 1} rounds · ${decisions} decisions</span></div>
     <div class="summary glass">${r.summary.map(g => `<h3>${esc(g.heading)}</h3><p>${md(g.text)}</p>`).join('')}</div>
@@ -464,7 +464,8 @@ async function boot() {
       return true;
     } catch (e) { return false; }
   }
-  const anchorOf = btn => (comments ? comments.anchorFor(document.getElementById('submit') || btn).catch(() => null) : Promise.resolve(null));
+  // A Submit anchors on the button pressed (Confirm, Not yet or Submit); a retry anchors on the Submit it retries.
+  const anchorOf = el => (comments ? comments.anchorFor(el).catch(() => null) : Promise.resolve(null));
   async function submit(btn) {
     if (!canSubmit(S) && S.status !== 'neither') return;
     const anchor = await anchorOf(btn), doc = answersDoc(S);
@@ -475,7 +476,7 @@ async function boot() {
     render();
   }
   async function rewake(btn) {
-    const anchor = await anchorOf(btn);
+    const anchor = await anchorOf(document.getElementById('submit') || btn);
     S.status = 'sending'; render();
     S.status = (await wake(anchor)) ? 'sent' : 'saved';
     render();
