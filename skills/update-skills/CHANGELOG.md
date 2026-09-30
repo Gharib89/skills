@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.0 (2026-09-30)
+
+### Features
+
+- **update-skills**: Follow setup-skills in-session instead of handing off
+  ([#433](https://github.com/Gharib89/skills/pull/433),
+  [`b98fed6`](https://github.com/Gharib89/skills/commit/b98fed61c2115036bf3a76e72bb92ce8b7bbc590))
+
+
 ## v0.4.1 (2026-09-30)
 
 ### Bug Fixes
