@@ -36,7 +36,7 @@ registry=$1 name=$2 repo=https://repo1.maven.org/maven2
 fetch() {
   local i body err
   err=$(mktemp) || return 1
-  trap 'rm -f "$err"' RETURN
+  trap 'rm -f "$err"; trap - RETURN' RETURN
   for i in 1 2 3 4 5 6; do
     if body=$(curl -fsSL --compressed --max-time 30 -A 'setup-harness pick-version (https://github.com/Gharib89/skills)' "$@" 2>"$err"); then
       printf '%s' "$body"; return 0

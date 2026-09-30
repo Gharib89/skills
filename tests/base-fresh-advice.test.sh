@@ -46,4 +46,20 @@ check "a detached HEAD, whose push state is unknown, is told to merge the base i
   "branch has not seen these commits on origin/main; merge origin/main in, which keeps the next push a plain one, and re-run:" \
   "$(head -1 "$tmp/err")"
 
+# The evidence on stderr honours the mechanics' 40-line cap however far behind the
+# branch is: the header and the newest 39 commits. The verdict on stdout still
+# carries the full count, since the cap trims the evidence and never the answer.
+{
+  cd "$tmp/w" && g checkout -q main
+  for i in $(seq 1 45); do g commit -q --allow-empty -m "m$i"; done
+  g push -q origin main
+} >/dev/null 2>&1 || { echo "fixture setup failed" >&2; exit 2; }
+g checkout -q fix/local-2
+out=$("$base_fresh" 2>"$tmp/err"); rc=$?
+check_rc "a branch far behind still exits behind" 1 "$rc"
+check "the JSON reports the full behind count" 46 "$(jq .behind <<<"$out")"
+check "the stderr evidence is at most 40 lines" 40 "$(wc -l < "$tmp/err" | tr -d ' ')"
+check "the newest commit is in the evidence" 1 "$(grep -c ' m45$' "$tmp/err")"
+check "the oldest commit is not in the evidence" 0 "$(grep -c ' m1$' "$tmp/err")"
+
 finish

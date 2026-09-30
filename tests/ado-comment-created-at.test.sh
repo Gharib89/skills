@@ -21,12 +21,8 @@ printf 'a comment\n' > "$body"
 invoke() { cat "$FIXTURE"; }
 
 # The thread the POST returns is the case's input; the mechanic's own output is
-# what every case asserts on. The call runs in a subshell because
-# host_pr_comment sets a RETURN trap on a local: called from inside another
-# function, that trap fires again when this helper returns, when the local is
-# already out of scope and `set -u` reports it. Real callers invoke the
-# mechanic from script top level, where it fires once and in scope.
-posted() { printf '%s' "$1" > "$FIXTURE"; ( host_pr_comment 7 "$body" ); }
+# what every case asserts on.
+posted() { printf '%s' "$1" > "$FIXTURE"; host_pr_comment 7 "$body"; }
 
 # The spelling the API returns for a comment: fractional seconds and a Z.
 check "comment publishedDate, fractional seconds stripped" \
