@@ -102,10 +102,12 @@ invalid` takes its `## Re-run`, and `sections` its "A setup section re-run",
 redoing for each section only the item its template feeds; when both hold, the
 `## Re-run` first, then the sections. Its step 1 re-checks what steps 2 and 4
 installed and the parent docs this run never writes, so run it as a check: a
-failure is a stop reported to the owner. Its own preflight calls read this
-run's `existing branch` and `worktree exists` as the expected pair. Its
-proposals and interview questions go to the owner from this session, with
-AskUserQuestion, and writes land on confirm as setup-skills says.
+failure skips the re-run, recorded as `setup-skills needed: <what it printed>`
+for step 8's Needs attention, and the step goes on to the retired terms. Its
+own preflight calls read this run's `existing branch` and `worktree exists` as
+the expected pair. Its proposals and interview questions go to the owner from
+this session, with AskUserQuestion, and writes land on confirm as setup-skills
+says.
 
 | `section` | setup-skills item |
 |---|---|
@@ -122,7 +124,7 @@ AskUserQuestion, and writes land on confirm as setup-skills says.
 A change to setup-skills' `SKILL.md` alone is not a section: its prose moving
 costs no interview. When the re-run is done, run `$S/preflight.sh none` again:
 the step is done when this run's own `existing branch` and `worktree exists` are
-the only reasons left. Note the profile schema move for step 8: the `Schema:`
+the only reasons left, unless the re-run was skipped. Note the profile schema move for step 8: the `Schema:`
 line of `docs/agents/ship.md` at `<old>` against the one now.
 
 **Retired terms**, whether or not setup-skills re-ran. Each `retired` row is a
@@ -214,7 +216,7 @@ section carries the content below either way:
      this lists them:
 
      ```sh
-     bash -c 'O=$1; shift; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git diff --name-only "$O" -- . ":!skills-lock.json" "$@"' _ <old>
+     bash -c 'O=$1; shift; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git diff --name-only "$O" -- . ":!skills-lock.json" "$@"' _ '<old>'
      ```
 - `## Special things to note`:
   1. `- Door: <one-way|two-way>. Blast radius: <one clause>.`, two-way unless
