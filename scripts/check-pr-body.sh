@@ -14,8 +14,8 @@
 # Headings are level 2 and matched whole, ignoring trailing whitespace (a CRLF
 # body's `\r` included); a line inside a fenced block or an HTML comment renders
 # as prose, so it is not a heading in the body or in the template. A fence is
-# closed by the next line opening with three backticks or tildes, so a longer
-# fence holding a shorter one is not tracked, and a heading indented or closed
+# closed by the next line opening with its own marker (three backticks or three
+# tildes), so a longer fence holding a shorter one is not tracked, and a heading indented or closed
 # with `##` is not matched: ship writes neither.
 #
 # stdout: one `pr-body: missing heading: <heading>` line per missing heading
@@ -29,8 +29,9 @@ template=${PR_TEMPLATE:-$(dirname "${BASH_SOURCE[0]}")/../.github/pull_request_t
 headings() {
   awk '
     incomment { if ($0 ~ /-->/) incomment = 0; next }
-    /^[[:space:]]*(```|~~~)/ { fence = !fence; next }
-    fence { next }
+    /^[[:space:]]*```/ && fence != "~" { fence = (fence == "`") ? "" : "`"; next }
+    /^[[:space:]]*~~~/ && fence != "`" { fence = (fence == "~") ? "" : "~"; next }
+    fence != "" { next }
     /^## / { sub(/[[:space:]]+$/, ""); print; next }
     /<!--/ { if ($0 !~ /-->/) incomment = 1 }
   '

@@ -33,8 +33,12 @@ test_path=$1
 shift
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) || exit 2
-cd "$(git rev-parse --show-toplevel)" || exit 2
-root=$PWD
+# `cd ""` succeeds without moving, so the toplevel is read and checked first.
+root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$root" ] || {
+  echo "revert-red: not inside a git repository" >&2
+  exit 2
+}
+cd "$root" || exit 2
 base=$(git merge-base HEAD origin/HEAD 2>/dev/null) || {
   echo "revert-red: no merge base between HEAD and origin/HEAD" >&2
   exit 2

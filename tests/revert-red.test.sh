@@ -120,6 +120,14 @@ check_rc "a directory as the test is refused" 2 "$(rc_of tests lib.sh)"
 check_rc "a path in neither the base nor HEAD is refused" \
   2 "$(rc_of tests/answer.test.sh lib.shh)"
 
+# `cd ""` succeeds, so a failed toplevel read used to fall through to the next
+# guard and name the wrong cause.
+check "outside a repository the cause is named" \
+  "revert-red: not inside a git repository" \
+  "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh 2>&1)"
+check_rc "outside a repository is tooling" \
+  2 "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh >/dev/null 2>&1; printf '%s' "$?")"
+
 # The base is the merge base with origin/HEAD, so no origin/HEAD is no base.
 git -C "$repo" symbolic-ref --delete refs/remotes/origin/HEAD
 check_rc "no origin/HEAD is tooling, not a verdict" \

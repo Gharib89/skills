@@ -82,6 +82,16 @@ check_rc "trailing spaces on a heading are not a different heading" \
 # first case above holds the template side: the body carries neither hidden one).
 check_rc "a heading only inside a fence does not count" \
   1 "$(rc_of "$(body_of '## Why\n## Outline\n```\n## Attribution\n```\n')")"
+check_rc "a heading only inside a tilde fence does not count" \
+  1 "$(rc_of "$(body_of '## Why\n## Outline\n~~~\n## Attribution\n~~~\n')")"
+# A fence is closed by its own marker: the other one inside it is content, and
+# reading it as a closer would hide every heading after the block.
+check_rc "a tilde line inside a backtick fence does not close it" \
+  0 "$(rc_of "$(body_of '## Why\n```\n~~~\n```\n## Outline\n## Attribution\n')")"
+check_rc "a backtick line inside a tilde fence does not close it" \
+  0 "$(rc_of "$(body_of '## Why\n~~~\n```\n~~~\n## Outline\n## Attribution\n')")"
+check_rc "a heading after a tilde line inside a backtick fence still hides" \
+  1 "$(rc_of "$(body_of '## Why\n## Outline\n```\n~~~\n## Attribution\n```\n')")"
 check_rc "a heading only inside a comment does not count" \
   1 "$(rc_of "$(body_of '## Why\n## Outline\n<!--\n## Attribution\n-->\n')")"
 check_rc "a heading only inside a one-line comment does not count" \
