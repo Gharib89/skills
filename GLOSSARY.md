@@ -157,7 +157,7 @@ The copy of a shared skill committed under a repo's `.claude/skills/`, installed
 _Avoid_: vendored fork, sync, symlink, snapshot
 
 **Source repo**:
-This repo, `Gharib89/skills`: where Ship, `cloud-ship`, `setup-skills`, `update-skills` and `setup-harness` are written, and where the versions of their composed skills are tested. Every derived copy of those five is installed from it.
+This repo, `Gharib89/skills`: where Ship, `cloud-ship`, `setup-skills`, `update-skills`, `setup-harness` and `grill-with-artifact` are written, and where the versions of their composed skills are tested. Every derived copy of those six is installed from it.
 _Avoid_: upstream (that is a composed skill's own repo), skills repo, origin
 
 **Consumer repo**:
@@ -311,3 +311,7 @@ _Avoid_: tooling gap, missing helper, upstream bug, profile defect (that is the 
 **Release run**:
 The push-to-main workflow that owns every skill's `metadata.version`: it writes the number and cuts that skill's `CHANGELOG.md`, one run per skill, from the Conventional-Commit type of the squash subject. The `version-lines` gate refuses a PR that writes the line instead. `semantic-release` is the tool that runs it, and the value the ship profile's `Tooling:` line takes.
 _Avoid_: release job, auto-bump, version bump PR
+
+**Grilling round**:
+One frontier of the design tree put to the human at once: every decision whose prerequisites are settled, each numbered and carrying a recommended answer, answered together before the next frontier is computed. In `grill-with-artifact` a round is a section of the artifact, and a round the human submits leaves each question answered or deferred.
+_Avoid_: round alone outside `grill-with-artifact` (elsewhere a round is a reviewer's round), batch, turn, step

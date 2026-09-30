@@ -1,0 +1,15 @@
+{
+  "round": 4,
+  "kind": "closing",
+  "settled": [
+    { "id": "R3·Q1", "title": "Retry budget", "answer": "Once, then hand back.", "how": "rec" },
+    { "id": "R3·Q2", "title": "Where the claim comment goes", "answer": "On the issue, kept after reopening.", "how": "pick" }
+  ],
+  "docsWritten": [
+    { "file": "docs/adr/0007-a-stale-claim-is-broken-by-comment.md", "summary": "Updated with the one-retry budget." }
+  ],
+  "summary": [
+    { "heading": "What a claim is", "text": "The issue's assignee plus a `claim:` comment on the issue." },
+    { "heading": "Breaking and retrying", "text": "A stale claim may be broken once; a second stale run hands the issue back." }
+  ]
+}

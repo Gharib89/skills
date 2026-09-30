@@ -1,0 +1,32 @@
+{
+  "round": 1,
+  "kind": "questions",
+  "treeSvg": "<svg viewBox=\"0 0 600 120\" role=\"img\" aria-label=\"Design tree for round 1: two open questions, one blocked decision waiting on Q1.\"><text class=\"lbl\" x=\"20\" y=\"24\">OPEN · ROUND 1</text><text class=\"lbl\" x=\"360\" y=\"24\">BLOCKED</text><path class=\"edge hot\" d=\"M250 52 L360 70\"/><path class=\"edge\" d=\"M250 96 L360 70\"/><g class=\"n-open\" data-q=\"Q1\"><rect x=\"20\" y=\"36\" width=\"230\" height=\"32\" rx=\"6\"/><text x=\"32\" y=\"56\">Q1 · Claim marker</text></g><g class=\"n-open\" data-q=\"Q2\"><rect x=\"20\" y=\"80\" width=\"230\" height=\"32\" rx=\"6\"/><text x=\"32\" y=\"100\">Q2 · Where the comment goes</text></g><g class=\"n-blocked\"><rect x=\"360\" y=\"54\" width=\"200\" height=\"32\" rx=\"6\"/><text x=\"372\" y=\"74\">Stale-claim rule</text></g></svg>",
+  "treeCaption": "Q1 has the most riding on it: the stale-claim rule waits on it.",
+  "questions": [
+    {
+      "id": "Q1",
+      "title": "What marks an issue as claimed?",
+      "options": [
+        { "id": "a", "title": "The assignee plus a `claim:` comment", "detail": "Two signals, one of them naming the run." },
+        { "id": "b", "title": "A label", "detail": "One signal, but it names no run." }
+      ],
+      "recommended": "a",
+      "why": "A label cannot say which run holds the claim, so a stale one cannot be told from a live one.",
+      "figureSvg": "<svg viewBox=\"0 0 400 60\" role=\"img\" aria-label=\"The assignee and the comment together name the run.\"><g class=\"box\"><rect x=\"10\" y=\"14\" width=\"150\" height=\"32\" rx=\"5\"/><text x=\"22\" y=\"34\">Assignee</text></g><path class=\"edge hot\" d=\"M160 30 L230 30\"/><g class=\"box hot\"><rect x=\"230\" y=\"14\" width=\"150\" height=\"32\" rx=\"5\"/><text x=\"242\" y=\"34\">claim: comment</text></g></svg>",
+      "figureCaption": "The comment is what names the run."
+    },
+    {
+      "id": "Q2",
+      "title": "Where does the claim comment go?",
+      "options": [
+        { "id": "a", "title": "On the issue" },
+        { "id": "b", "title": "On the PR once one exists", "detail": "Reviewers see who holds it." }
+      ],
+      "recommended": "a",
+      "why": "The claim exists before any PR does, and `select` reads issues."
+    }
+  ],
+  "settled": [],
+  "docsWritten": []
+}

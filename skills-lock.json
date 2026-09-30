@@ -27,6 +27,11 @@
       "skillPath": "skills/find-docs/SKILL.md",
       "computedHash": "93ec2d2786d7e83973252383875c4f345a2ee7cbbd08a1ab38e5201b214640ee"
     },
+    "grill-with-artifact": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "73ebdeed52f2b902692fa2f994f984174315a1cfa0256bb67cfd90fab7159f10"
+    },
     "grill-with-docs": {
       "source": "mattpocock/skills",
       "ref": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
