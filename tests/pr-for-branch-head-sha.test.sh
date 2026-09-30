@@ -14,7 +14,7 @@ gh=$(
   SHIP_OWNER=o SHIP_REPO=r
   source skills/ship/scripts/host/github.sh
   # The adapter's `--jq` applied to the raw list, as `gh api --jq` would.
-  api() { jq -c "$3" <<<'[{"number": 285, "state": "closed", "merged_at": "2026-09-20T10:00:00Z",
+  api() { local a prev="" j; for a in "$@"; do [ "$prev" = --jq ] && j=$a; prev=$a; done; jq -c "$j" <<<'[{"number": 285, "state": "closed", "merged_at": "2026-09-20T10:00:00Z",
     "head": {"ref": "fix/free-round-never-queued-284", "sha": "e875c70a792089b949a7c434efbaf62c98ead9b8"}}]'; }
   host_pr_for_branch fix/free-round-never-queued-284
 )

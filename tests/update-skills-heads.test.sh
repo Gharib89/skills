@@ -32,6 +32,8 @@ cat > "$tmp/bin/curl" <<'EOF'
 for url; do :; done
 printf '%s\n' "$url" >> "$FAKE_CURL_LOG"
 printf '%s\n' "$*" >> "$FAKE_CURL_LOG.args"
+# A config read from stdin (`-K -`) is how the token travels; log it.
+case " $* " in *" -K - "*) cat >> "$FAKE_CURL_LOG.stdin" ;; esac
 f=$FAKE_CURL_FIX/$(printf '%s' "${url#https://api.github.com/}" | tr '/' '_')
 [ -f "$f" ] || exit 22
 cat "$f"
@@ -89,6 +91,19 @@ https://api.github.com/repos/z/z/commits/HEAD" "$(sort -u "$tmp/log")"
 check "every request is time-bounded, so a stalled upstream fails into an unreachable row rather than hanging" \
   0 "$(grep -vc -- '--connect-timeout 10 --max-time 30' "$tmp/log.args")"
 check "each upstream's HEAD is asked for once" 1 "$(grep -c 'repos/o/r/commits/HEAD' "$tmp/log")"
+
+# The token is an Authorization header on curl's stdin as a config, never on
+# argv, where any user on the host reads it from /proc/<pid>/cmdline; with no
+# token, no header and no stdin config at all.
+rm -f "$tmp"/log*
+GH_TOKEN=tok-secret-123 GITHUB_TOKEN='' bash "$heads" "$repo" >/dev/null 2>&1
+check "a set token is on no curl argv" 0 "$(grep -c 'tok-secret-123' "$tmp/log.args")"
+check "a set token reaches curl as a config on stdin" \
+  'header = "Authorization: Bearer tok-secret-123"' "$(sort -u "$tmp/log.stdin" 2>/dev/null)"
+rm -f "$tmp"/log*
+env -u GH_TOKEN -u GITHUB_TOKEN bash "$heads" "$repo" >/dev/null 2>&1
+check "with no token, no argv names an Authorization header or a config" 0 "$(grep -cE 'Authorization|-K' "$tmp/log.args")"
+check "with no token, curl gets no stdin config" "" "$(cat "$tmp/log.stdin" 2>/dev/null)"
 
 # A GET that fails is tried again: a flaky route must not empty `heads`. A curl
 # that fails the first attempts at each URL, then answers, gives the same result.

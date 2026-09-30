@@ -40,15 +40,22 @@ lock=$(jq -ce 'select(type == "object")' "$root/skills-lock.json" 2>/dev/null) |
 token=${GH_TOKEN:-${GITHUB_TOKEN:-}}
 
 api=https://api.github.com
+_curl() { curl -fsSL --connect-timeout 10 --max-time 30 -H 'Accept: application/vnd.github+json' "$@"; }
 # get <path>: one GET, the body in $body, curl's own error on stderr as
 # evidence; on failure $err names the request and get returns 1. Bounded in
 # time, so an upstream that accepts and never answers fails here too. A failure
 # is tried again, three attempts in all: one flaky route timed out all 15
 # upstreams in one run, and every skill of a source repo read as unreachable.
+# The token travels as a config on curl's stdin (`-K -`), never as an argument:
+# any user on the host reads argv from /proc/<pid>/cmdline.
 get() {
   local attempt
   for attempt in 1 2 3; do
-    body=$(curl -fsSL --connect-timeout 10 --max-time 30 -H 'Accept: application/vnd.github+json' ${token:+-H "Authorization: Bearer $token"} "$api/$1") && return 0
+    if [ -n "$token" ]; then
+      body=$(printf 'header = "Authorization: Bearer %s"\n' "$token" | _curl -K - "$api/$1") && return 0
+    else
+      body=$(_curl "$api/$1") && return 0
+    fi
     [ "$attempt" -eq 3 ] || sleep "$attempt"
   done
   err="cannot read $api/$1"; return 1
