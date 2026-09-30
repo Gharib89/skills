@@ -7,7 +7,7 @@
 # Each case calls one trapped adapter function from a wrapper function under
 # `set -uo pipefail`, its transport stubbed as a shell function, in a subshell
 # so an abort is an exit code and not the end of this file. A last case reads the
-# adapter sources as files: every RETURN trap under the ship scripts clears itself.
+# adapter sources as files: every RETURN trap under the skills clears itself.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -25,7 +25,7 @@ out=$(
   host_pr_comment() { printf '%s' "$2" > "$tmp/gh-file"; }
   wrapper() { host_issue_comment 1 "a comment"; }
   wrapper
-  echo "survived: $(trap -p RETURN | wc -l)"
+  echo "survived: $(trap -p RETURN | wc -l | tr -d ' ')"
 ) 2>"$tmp/gh-err"; rc=$?
 check_rc "github: the script survives a wrapper's return" 0 "$rc"
 check "github: no RETURN trap is left armed" "survived: 0" "$out"
@@ -40,14 +40,15 @@ out=$(
   invoke() { echo '{"status":"fixed"}'; }
   wrapper() { host_pr_resolve_thread 7 3 >/dev/null; }
   wrapper
-  echo "survived: $(trap -p RETURN | wc -l)"
+  echo "survived: $(trap -p RETURN | wc -l | tr -d ' ')"
 ) 2>"$tmp/ado-err"; rc=$?
 check_rc "azure devops: the script survives a wrapper's return" 0 "$rc"
 check "azure devops: no RETURN trap is left armed" "survived: 0" "$out"
 
 # The rest of the sites share the form; a trap that does not clear itself is the
-# defect, wherever it sits.
-check "no RETURN trap under the ship scripts leaves itself armed" "" \
-  "$(grep -rnE "trap '[^']*' RETURN" skills/ship/scripts | grep -v 'trap - RETURN')"
+# defect, wherever it sits. Any line arming a RETURN trap (its first word is not
+# `-`, which disarms) must end its body with the disarm, in either quote.
+check "no RETURN trap under the skills leaves itself armed" "" \
+  "$(grep -rnE 'trap [^-].* RETURN' skills --include='*.sh' | grep -vE "trap - RETURN['\"] RETURN")"
 
 finish

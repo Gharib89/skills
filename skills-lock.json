@@ -65,7 +65,7 @@
     "setup-harness": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "33e79a481a5f64efdb93a782b080f66577fdc9f95d54e813d814db0fe724f180"
+      "computedHash": "c7f422543ee549640e3b445166d14c81b3f1fac271f20f7c14f1c92c62f2ffce"
     },
     "setup-skills": {
       "source": ".",
@@ -75,7 +75,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "7f7e5536e682ce8ea3004437bbffd37d6c283bbc0cc3cad8fc501eca01df8785"
+      "computedHash": "d9e146dab1178ff782e4551fb39c2fba2f68c350e726f6d6c6182cab7bb72841"
     },
     "show-me": {
       "source": "humanlayer/skills",

@@ -38,8 +38,8 @@ if ! $fresh; then
   if branch=$(git symbolic-ref -q --short HEAD) && ! git rev-parse --verify -q "refs/remotes/origin/$branch" >/dev/null; then
     advice="rebase onto it and re-run:"
   fi
-  # The header plus the newest 39 commits: the 40-line evidence cap the mechanics
-  # share. `behind` in the JSON stays the full count.
+  # The header plus the newest 39 commits: 40 lines in all, the size the
+  # mechanics cap their stderr evidence at. `behind` in the JSON stays the full count.
   { echo "branch has not seen these commits on $base; $advice"; git log --oneline -39 "HEAD..$base"; } >&2
 fi
 jq -n --argjson f "$fresh" --arg b "$base" --argjson behind "$behind" --argjson ahead "$ahead" --argjson fe "$fetched" \
