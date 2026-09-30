@@ -68,6 +68,58 @@ check_rc "a number after a closed fence fails" 1 "$(rc_of "$d")"
 check "the finding names the line after the fence" \
   "skills/a/SKILL.md:4: cites an issue or PR number" "$(out_of "$d")"
 
+# A fence closes only on its own character at its own length or longer, so an
+# example block nested in another one cannot hand the lines after it back to
+# prose early, or keep them as code. Every case is red on a binary toggle except
+# the longer closer and the unclosed fence, which guard what the toggle did.
+d=$(repo tilde-wraps-backtick skills/a/SKILL.md "$(printf '%s\n' '~~~' '```' 'PR #12' '```' '~~~' 'See issue #13.')")
+check "a tilde fence wrapping a backtick fence exempts the inner block and checks the prose after" \
+  "skills/a/SKILL.md:6: cites an issue or PR number" "$(out_of "$d")"
+
+d=$(repo tilde-wraps-open skills/a/SKILL.md "$(printf '%s\n' '~~~' '```' '~~~' 'See issue #13.')")
+check_rc "a lone backtick line inside a tilde fence does not close it" 1 "$(rc_of "$d")"
+
+d=$(repo long-wraps-short skills/a/SKILL.md "$(printf '%s\n' '````' '```' 'PR #12' '```' '````' 'See PR #13.')")
+check "a four-backtick fence wrapping a three-backtick fence exempts the inner block and checks the prose after" \
+  "skills/a/SKILL.md:6: cites an issue or PR number" "$(out_of "$d")"
+
+d=$(repo long-closes skills/a/SKILL.md "$(printf '%s\n' '```' 'PR #12' '`````' 'See PR #13.')")
+check "a longer run closes a shorter fence" \
+  "skills/a/SKILL.md:4: cites an issue or PR number" "$(out_of "$d")"
+
+d=$(repo info-closer skills/a/SKILL.md "$(printf '%s\n' '```' 'x' '```bash' 'y' '```' 'See PR #99.')")
+check "a closing line carrying an info string does not close the fence" \
+  "skills/a/SKILL.md:6: cites an issue or PR number" "$(out_of "$d")"
+
+d=$(repo inline-triple skills/a/SKILL.md "$(printf '%s\n' '```x``` is inline code.' 'See PR #2.')")
+check "triple backticks used as inline code do not open a fence" \
+  "skills/a/SKILL.md:2: cites an issue or PR number" "$(out_of "$d")"
+
+d=$(repo unclosed skills/a/SKILL.md "$(printf '%s\n' '```' 'PR #12')")
+check_rc "an unclosed fence exempts the rest of the file" 0 "$(rc_of "$d")"
+
+# A link-reference definition is a link whose target sits on its own line: the
+# same target rule holds it, and a fence exempts it as it does an inline link.
+d=$(repo refdef skills/a/SKILL.md "$(printf '%s\n' 'See [the glossary][g].' '' '[g]: ../../GLOSSARY.md "Glossary"')")
+check_rc "a reference definition leaving the skill fails" 1 "$(rc_of "$d")"
+check "the message names the line and the target" \
+  "skills/a/SKILL.md:3: links outside skills/a/: ../../GLOSSARY.md" "$(out_of "$d")"
+
+d=$(repo refdef-angle skills/a/reference/f.md '  [g]: <../../GLOSSARY.md>')
+check_rc "an angle-bracketed reference definition leaving the skill fails" 1 "$(rc_of "$d")"
+
+d=$(repo refdef-fenced skills/a/SKILL.md "$(printf '%s\n' '```markdown' '[g]: ../../GLOSSARY.md' '```')")
+check_rc "a reference definition inside a fence passes" 0 "$(rc_of "$d")"
+
+d=$(repo refdef-span skills/a/SKILL.md '[g]: `../../../GLOSSARY.md`')
+check_rc "a reference destination quoted in a code span passes" 0 "$(rc_of "$d")"
+
+d=$(repo refdef-span-label skills/a/SKILL.md '[`g`]: ../../GLOSSARY.md')
+check_rc "a code span in the label does not hide the destination" 1 "$(rc_of "$d")"
+
+d=$(repo refdef-own skills/a/SKILL.md "$(printf '%s\n' '[g]: reference/glossary.md#terms' '[w]: https://example.com/x' '[^1]: a footnote, not a definition')")
+check_rc "a reference definition inside the skill, a URL and a footnote pass" 0 "$(rc_of "$d")"
+
 # A consumer's own tracker syntax, quoted as an example, is not a citation.
 d=$(repo number-example skills/a/reference/merge-gate.md 'An entry naming an issue by number (`#<n>`, such as `map issue #1`) is kept.')
 check_rc "a number inside a code span passes" 0 "$(rc_of "$d")"

@@ -39,7 +39,7 @@ for loc in "" C.UTF-8; do
     "skills/x/SKILL.md:1:one $(printf '\342\200\224') two" "$(out_of "$loc" "$d" | tail -n 1)"
 done
 
-# Trailing whitespace: a derived repo's stock `trailing-whitespace` hook fails on
+# Trailing whitespace: a consumer repo's stock `trailing-whitespace` hook fails on
 # a copied script that carries one (issue #288). No locale enters this rule.
 d=$(checkout trailing-space)
 printf 'text \n' > "$d/skills/x/SKILL.md"; git -C "$d" add -A
