@@ -16,10 +16,10 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 
 `/ship` drives one issue to a merge-ready PR. This repo's ship profile: `docs/agents/ship.md`. Without that file ship refuses: run `/setup-skills`.
 
-Every skill under `.claude/skills/` is a derived copy, changed at its source and refreshed here; `skills-lock.json` records each one's source. This repo is the source of `ship`, `cloud-ship`, `setup-skills`, `update-skills` and `setup-harness`, so its copies are installed from itself; the skills ship composes come from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`. Refresh at project scope, without `-g`; ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`:
+Every skill under `.claude/skills/` is a derived copy, changed at its source and refreshed here; `skills-lock.json` records each one's source. This repo is the source of `ship`, `cloud-ship`, `setup-skills`, `update-skills`, `setup-harness` and `grill-with-artifact`, so its copies are installed from itself; the skills ship composes come from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`. Refresh at project scope, without `-g`; ship's refresh chains its preflight, so a profile the refreshed ship no longer reads is reported now, not on the next `/ship`:
 
 ```sh
-npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --agent claude-code -y \
+npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --agent claude-code -y \
   && .claude/skills/ship/scripts/preflight.sh none
 ```
 
