@@ -39,6 +39,9 @@ git cat-file -e "HEAD:$test_path" 2>/dev/null || {
   exit 2
 }
 for p in "$@"; do
+  # The test among its own paths would be deleted or reverted, and bash failing to
+  # open it reads as red.
+  [ "$p" != "$test_path" ] || { echo "revert-red: $p is the test, not a path to revert" >&2; exit 2; }
   git cat-file -e "$base:$p" 2>/dev/null || git cat-file -e "HEAD:$p" 2>/dev/null || {
     echo "revert-red: $p exists at neither the merge base nor HEAD" >&2
     exit 2

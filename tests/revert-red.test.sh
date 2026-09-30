@@ -57,12 +57,14 @@ out_of() { (cd "$repo" && bash "$script" "$@" 2>/dev/null); }
 
 check_rc "a test that goes red on the revert exits 0" \
   0 "$(rc_of tests/answer.test.sh lib.sh)"
+check "no temp directory remains after a red run" "" "$(ls -A "$TMPDIR")"
 check_rc "a file the fix added is removed by the revert" \
   0 "$(rc_of tests/extra.test.sh extra.sh)"
 check_rc "several paths are reverted together" \
   0 "$(rc_of tests/extra.test.sh lib.sh extra.sh)"
 check_rc "a test that stays green on the revert exits 1" \
   1 "$(rc_of tests/unrelated.test.sh lib.sh)"
+check "no temp directory remains after a green run" "" "$(ls -A "$TMPDIR")"
 # Reverting the wrong file leaves the fix in place, so the test passes: that is
 # the vacuous case the script exists to name.
 check_rc "reverting a file the test does not depend on exits 1" \
@@ -77,8 +79,6 @@ check "a green test names the vacuous test" \
 
 # --- it leaves nothing behind ------------------------------------------------
 
-check "no temp directory remains after a red run" "" "$(ls -A "$TMPDIR")"
-check "no temp directory remains after a green run" "" "$(ls -A "$TMPDIR")"
 check "the fixture repo keeps its one worktree" \
   1 "$(git -C "$repo" worktree list | wc -l | tr -d ' ')"
 check "the fixture's own tree is untouched" \
@@ -92,6 +92,10 @@ check_rc "a test with no path is a usage error" 2 "$(rc_of tests/answer.test.sh)
 # A test file bash cannot open exits non-zero, which would read as red.
 check_rc "a test missing at HEAD is refused, not read as red" \
   2 "$(rc_of tests/nope.test.sh lib.sh)"
+# Reverting the test itself deletes or restores the very file bash then fails to
+# open, which reads as red.
+check_rc "the test named among its own paths is refused" \
+  2 "$(rc_of tests/answer.test.sh tests/answer.test.sh)"
 # A mistyped path reverts nothing, so the test stays green and would read as
 # the vacuous case.
 check_rc "a path in neither the base nor HEAD is refused" \

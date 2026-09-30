@@ -86,6 +86,10 @@ check_rc "a heading only inside a comment does not count" \
   1 "$(rc_of "$(body_of '## Why\n## Outline\n<!--\n## Attribution\n-->\n')")"
 check_rc "a heading only inside a one-line comment does not count" \
   1 "$(rc_of "$(body_of '## Why\n## Outline\n<!-- ## Attribution -->\n')")"
+check_rc "a comment opened mid-line hides the headings inside it" \
+  1 "$(rc_of "$(body_of '## Why\n## Outline\ntext <!--\n## Attribution\n-->\n')")"
+check_rc "an indented comment hides the headings inside it" \
+  1 "$(rc_of "$(body_of '## Why\n## Outline\n  <!--\n## Attribution\n-->\n')")"
 check_rc "a fence after a comment closes normally" \
   0 "$(rc_of "$(body_of '<!--\nx\n-->\n```\ny\n```\n## Why\n## Outline\n## Attribution\n')")"
 # Level, spelling and anchoring.
@@ -122,5 +126,12 @@ check_rc "a body file that is not there is tooling" 2 "$(rc_of "$T/nope.md")"
 # and not a clean bill.
 printf 'Closes #\n\nno headings\n' > "$T/bare.md"
 check_rc "a template with no headings is tooling" 2 "$(rc_of "$body" "$T/bare.md")"
+# grep exits 2 when it fails, and the empty answer it leaves behind must not read
+# as every heading present.
+mkdir "$T/stub"
+printf '#!/bin/sh\nexit 2\n' > "$T/stub/grep"
+chmod +x "$T/stub/grep"
+check_rc "a failing grep is tooling, not a pass" \
+  2 "$(PATH=$T/stub:$PATH rc_of "$body")"
 
 finish

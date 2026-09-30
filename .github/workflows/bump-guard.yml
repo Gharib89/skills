@@ -6,11 +6,11 @@ name: bump-guard
 # title implies a major bump without the maintainer-applied `major` label, so a
 # major bump is never an agent's decision alone; `feat:` and the patch types flow
 # without a label. `scripts/check-bump-label.sh` is the whole rule, which is what
-# lets `tests/bump-label.test.sh` drive it.
+# lets `tests/bump-label.test.sh` drive it. (That is the title rule; the body rule is below.)
 #
 # The same job holds the PR body to the template: every `##` heading the template
-# has must be in the body, because ship rewrites a section under its heading and
-# a body without it has nowhere to write. `scripts/check-pr-body.sh` is that rule,
+# has must be in the body, because a section ship creates instead lands after
+# `## Attribution`, out of template order. `scripts/check-pr-body.sh` is that rule,
 # driven by `tests/pr-body-headings.test.sh`, and it reads the body from the event
 # rather than through `gh`.
 #
@@ -50,7 +50,9 @@ jobs:
           export PR_COMMITS
           scripts/check-bump-label.sh
 
+      # Its own verdict: a red title check must not hide a missing heading.
       - name: Check the PR body carries the template's headings
+        if: ${{ !cancelled() }}
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: printf '%s\n' "$PR_BODY" | scripts/check-pr-body.sh
