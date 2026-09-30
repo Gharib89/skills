@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # ship_body_replace_section: the transformation behind `update-pr-body`.
+# The function is sourced and asserted on as strings: no call here reaches a host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

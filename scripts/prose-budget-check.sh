@@ -10,6 +10,13 @@
 # 350 is ship's SKILL.md after the #308 deletion pass, rounded up to the next 25:
 # a ratchet, so prose that regrows fails here instead of accumulating again.
 #
+# The ship profile's `## Local gate` section, `docs/agents/ship.md`, has a byte
+# budget of its own, 11000: every run reads the profile at its start, and the
+# section once carried a catalogue of every test in one 6 KB line. 11000 is the
+# section after that catalogue became one line per test kind, rounded up to the
+# next 500. The section runs from its heading to the next `## ` line, counted
+# without the fence grammar below, which the profile's section has no use for.
+#
 #   scripts/prose-budget-check.sh [<root>]
 #
 # stdout: one line per violation, nothing when every file is inside the budget
@@ -150,4 +157,11 @@ for f in "$root"/skills/*/reference/*.md; do
     *) printf 'cannot read %s\n' "$f" >&2; exit 2 ;;
   esac
 done
+profile=$root/docs/agents/ship.md
+if [ -f "$profile" ]; then
+  n=$(LC_ALL=C awk '/^## /{on = ($0 == "## Local gate")} on{n += length($0) + 1} END{print n + 0}' "$profile") \
+    || { printf 'cannot read %s\n' "$profile" >&2; exit 2; }
+  [ "$n" -le 11000 ] \
+    || { printf '%s: `## Local gate` is %s bytes, over the 11000-byte budget\n' "${profile#"$root"/}" "$n"; rc=1; }
+fi
 exit $rc

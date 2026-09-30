@@ -75,7 +75,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "76d405d5391a243488f74a59e57b2d0b92c8fe0bd9b0fd7811f7725c6fe8adf1"
+      "computedHash": "87ddf08aa64721cc6b368edd5c289a85d2a860d8d5003b145da5258c29700715"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -115,7 +115,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "d5ca9501efe8fc6cd4878774ab508f60a9ea5191b019f68c083ec6a017975fed"
+      "computedHash": "025fce7c11caa0f88c4581ef542ab4234f8d2f0ed2c56b001bc2c6aed8385dcb"
     },
     "wayfinder": {
       "source": "mattpocock/skills",

@@ -151,6 +151,15 @@ check "skip tells the mirror what to set" completed "$(printf '%s' "$s" | jq -r 
 check_rc "skip refuses an open phase" 1 "$(out open 4 --file "$g" >/dev/null; rc skip 4 "small lane" --file "$g")"
 check_rc "skip needs a reason" 2 "$(rc skip 3 --file "$g")"
 
+# A refusal is on stderr as well as in the JSON on stdout: `| jq -r .mirror` over
+# the stdout alone reads a refusal as `null` and exit 0 (ship #407).
+sout=$(bash "$m" skip 4 "small lane" --file "$g" 2>"$tmp/skip.err"); src=$?
+check "an open phase's refusal is in the JSON error on stdout" \
+  "phase 4 is open; close it before skipping it" "$(jq -r .error <<<"$sout")"
+check "the same refusal is on stderr" \
+  "phase 4 is open; close it before skipping it" "$(cat "$tmp/skip.err")"
+check_rc "the refusal exits 1" 1 "$src"
+
 
 # --- timing --------------------------------------------------------------------
 

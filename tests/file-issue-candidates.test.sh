@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # ship_title_candidates: the duplicate-title matcher behind `file-issue`.
+# The function is sourced and asserted on as strings: no call here reaches a host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

@@ -33,8 +33,8 @@ in the merge summary, so every PR records which ship produced it.
 
 `$ARGUMENTS`:
 
-- `<issue>`: the issue number (work item id on Azure DevOps). Omitted with no
-  flag: ask which issue.
+- `<issue>`: the issue number (work item id on Azure DevOps); `prepare` alone
+  takes none. Omitted with no flag: ask which issue.
 - Free text instead of a number: the task spec itself. No issue fetch, claim,
   `Closes` or reflect, nor the `Done when:` clauses naming them; `none` is the
   issue argument to `preflight`, `isolate`, `open-pr`, `merge` and `cleanup`.
@@ -148,9 +148,11 @@ dispatch the axes, then run this pass inline.
 **Self-review**, unconditional in every lane: invoke `code-review` against the
 diff since `origin/HEAD`, its Standards axis reading the profile's
 `## Coding standards` path, its Spec axis reading the issue, each axis prompt
-carrying its own scratch directory (`standards`, `spec`). **Triage waits for
-every Report file**; one that fails to arrive after the bounded retry is
-`red-after-retry: <axis>`, never a disposition written from memory.
+carrying its own scratch directory (`standards`, `spec`) and saying the Local
+gate runs later in the run, so the axis reads the gate's JSON and never runs
+`check.sh full` or the suite itself. **Triage waits for every Report file**; one
+that fails to arrive after the bounded retry is `red-after-retry: <axis>`, never
+a disposition written from memory.
 **Auto-triage** every finding: harden rather than rip out capability, verify
 nits against the pinned versions, reject known non-issues, fix the valid ones,
 and record a one-line disposition per finding. Two rails on rejecting: a claim

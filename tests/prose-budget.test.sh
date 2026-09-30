@@ -214,6 +214,36 @@ skills/ship/reference/r.md: 101 lines and no \`## Contents\` heading in its firs
 d=$(tree no-reference); rmdir "$d/skills/ship/reference"
 check_rc "a skill with no reference directory passes" 0 "$(rc_of "$d")"
 
+# The profile's `## Local gate` section has a size budget of its own, in bytes:
+# it once carried a catalogue of every test in one 6 KB line, and a profile is
+# read at the start of every run. The section runs from its heading to the next
+# `## ` heading, and a profile without the section, or a tree without a profile,
+# has nothing to hold.
+# <n>: a profile whose `## Local gate` section is exactly n bytes, the heading
+# line and the blank line after it included, followed by another section.
+gate_profile() {
+  local d=$1 n=$2 pad
+  mkdir -p "$d/docs/agents"
+  pad=$((n - $(printf '## Local gate\n\n\n' | wc -c)))
+  { printf '# Ship profile\n\n## Host\n\nHost: github\n\n## Local gate\n\n'
+    head -c "$pad" /dev/zero | tr '\0' 'x'; printf '\n## CI\n\nLegs: none\n'; } > "$d/docs/agents/ship.md"
+}
+
+d=$(tree gate-at-budget); gate_profile "$d" 11000
+check_rc "a Local gate section of 11000 bytes passes" 0 "$(rc_of "$d")"
+
+d=$(tree gate-over-budget); gate_profile "$d" 11001
+check_rc "a Local gate section of 11001 bytes fails" 1 "$(rc_of "$d")"
+check "the message names the file, the section and the count" \
+  'docs/agents/ship.md: `## Local gate` is 11001 bytes, over the 11000-byte budget' "$(out_of "$d")"
+
+# A long neighbour is not the section: the count stops at the next heading.
+d=$(tree gate-neighbour-long); gate_profile "$d" 100; head -c 20000 /dev/zero | tr '\0' 'y' >> "$d/docs/agents/ship.md"
+check_rc "a long section after the Local gate does not count against it" 0 "$(rc_of "$d")"
+
+d=$(tree gate-absent); mkdir -p "$d/docs/agents"; printf '# Ship profile\n\n## Host\n\nHost: github\n' > "$d/docs/agents/ship.md"
+check_rc "a profile without a Local gate section passes" 0 "$(rc_of "$d")"
+
 # The tooling path: a root that is not there answers 2, not a vacuous 0 on a
 # tree whose files no glob matched.
 check_rc "a root that does not exist is tooling" 2 "$(rc_of "$fixture/absent")"
@@ -232,6 +262,12 @@ if [ "$(id -u)" != 0 ]; then
   body 101 > "$d/skills/ship/reference/r.md"; chmod 000 "$d/skills/ship/reference/r.md"
   check_rc "a reference file that cannot be read is tooling" 2 "$(rc_of "$d")"
   chmod 644 "$d/skills/ship/reference/r.md"
+
+  # The profile's byte budget reads the file with awk too, and an unreadable one
+  # must not read as a section of zero bytes.
+  d=$(tree unreadable-profile); gate_profile "$d" 100; chmod 000 "$d/docs/agents/ship.md"
+  check_rc "a profile that cannot be read is tooling" 2 "$(rc_of "$d")"
+  chmod 644 "$d/docs/agents/ship.md"
 fi
 
 finish

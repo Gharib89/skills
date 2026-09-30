@@ -16,7 +16,9 @@ skill's **pinned ref** is the upstream commit the source repo tested, and
 **upstream drift** is that upstream moving past it.
 
 **Attended only.** It asks the repo owner which skills to take and re-runs
-`/setup-skills`, which interviews; no cloud routine runs it.
+`/setup-skills`, which interviews; no cloud routine runs it. The one part a
+Ship run follows without invoking it is [In a Ship run](#in-a-ship-run), for an
+upstream-drift issue in the source repo.
 
 **It calls Ship's generic mechanics by path** from the worktree: `$S` below stands for
 `.claude/skills/ship/scripts` and `$U` for `.claude/skills/update-skills/scripts`.
@@ -58,7 +60,9 @@ $U/plan.sh . <scratch>/heads.json --old <old> > <scratch>/plan.json
 
 `heads` reads GitHub's public API with curl, so it needs no credentials. Its
 `unreachable` rows are skills whose upstream did not answer: no head, so never
-drift or an offered update. Carry them to step 8. The plan's fields drive every
+drift or an offered update. Carry them to step 8. `heads` retries a failed read,
+and exits 1 with the count on stderr when every upstream failed: nothing was
+read, so stop and tell the owner. The plan's fields drive every
 later step; the header comment in `plan.sh` defines each one.
 
 Nothing moved (every `source_skills` entry at its old version, every
@@ -147,10 +151,11 @@ own documents and renames a file whose name is the word, in the same diff.
 
 `drift` non-empty: the source repo keeps one open issue for it. In the source
 repo, run step 9 first, then this step, then step 8. Write a body file holding
-a `## Drift` section and nothing else, its table
-`| Skill | Pinned | Upstream head |` with one row per `drift` entry. The source
-repo is public, so the body carries skill names and refs only: not this repo's
-name, nor anything else about it. Then:
+a `## Drift` section, its table `| Skill | Pinned | Upstream head |` with one
+row per `drift` entry, then a `## Moving the pins` section of one sentence:
+`A Ship run moves these pins by the "In a Ship run" section of update-skills' SKILL.md.`
+The source repo is public, so the body carries skill names and refs only: not
+this repo's name, nor anything else about it. Then:
 
 ```sh
 $S/file-issue.sh --repo Gharib89/skills --title "Upstream drift: composed skills" --body-file <body> --label needs-triage
@@ -159,7 +164,9 @@ $S/file-issue.sh --repo Gharib89/skills --title "Upstream drift: composed skills
 - `filed: true`: that is the drift issue.
 - `filed: false`: the candidate titled exactly
   `Upstream drift: composed skills` is the drift issue. Rewrite its table in
-  place, with a file holding the table alone:
+  place, with a file holding the table alone, then write `Moving the pins` the
+  same way from a file holding its one sentence (a section the issue lacks is
+  added):
 
   ```sh
   $S/update-issue-body.sh <n> --repo Gharib89/skills --section Drift --body-file <table>
@@ -271,3 +278,27 @@ minor: the title is `feat(ship): move show-me to <short sha>`, with no `!`, no
 and no `major` label. State the break in plain words in the commit body and
 under `## Special things to note`. A pin moved on setup-skills' line alone
 refuses nothing and takes no `!` either.
+
+## In a Ship run
+
+A Ship run cannot invoke this skill (`disable-model-invocation`), so on an
+upstream-drift issue in the source repo it follows the steps below by hand, in
+the worktree `isolate` made. `$S` and `$U` are as above. Steps 1, 7 and 8 are
+Ship's: `isolate` is the worktree, the issue being shipped is the drift issue
+step 7 would file, and phase 6 opens the PR with `Closes #<issue>`.
+
+1. `<old>`: `git rev-parse HEAD` in the worktree, before the first edit.
+2. Step 2's source-repo refresh line, from the source repo's CLAUDE.md.
+3. Step 3: `$U/heads.sh .`, then `$U/plan.sh . <heads.json> --old <old>`. A
+   `heads` exit 1 is retried once, then stops the run `red-after-retry: heads`.
+4. Step 9 per `drift` row, which moves the pins, then its refresh line. The
+   local gate is Ship's phase 5, and step 9's title rule is phase 6's title.
+
+Where a step would ask the owner, the run takes the conservative answer and
+writes it to the Run file's deviations log, which lands in the merge summary:
+
+| Step asks | The run records |
+|---|---|
+| Step 5, which other skills to take | none taken; `others not taken: <skill> <old_ref> → <head>` per row |
+| Step 6, the owner re-running `/setup-skills` | not re-run; `setup-skills needed: <section or profile reason>` per item |
+| Step 3, an `unreachable` row | `drift not checked: <skill>: <error>` |
