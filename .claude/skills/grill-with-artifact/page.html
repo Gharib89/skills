@@ -468,16 +468,20 @@ async function boot() {
   const anchorOf = el => (comments ? comments.anchorFor(el).catch(() => null) : Promise.resolve(null));
   async function submit(btn) {
     if (!canSubmit(S) && S.status !== 'neither') return;
-    const anchor = await anchorOf(btn), doc = answersDoc(S);
+    // Lock before any await, so a second click finds the round locked. The render replaces the
+    // pressed button, so the anchor takes its re-rendered twin by id.
+    const doc = answersDoc(S);
     S.status = 'sending'; render();
+    const anchor = await anchorOf(document.getElementById(btn.id) || btn);
     const saved = await db.doc('answers/round-' + doc.round).set(doc).then(() => true, () => false);
     const woke = await wake(anchor);
     S.status = woke ? 'sent' : saved ? 'saved' : 'neither';
     render();
   }
   async function rewake(btn) {
-    const anchor = await anchorOf(document.getElementById('submit-notyet') || document.getElementById('submit') || btn);
+    if (S.status !== 'saved') return;
     S.status = 'sending'; render();
+    const anchor = await anchorOf(document.getElementById('submit-notyet') || document.getElementById('submit') || btn);
     S.status = (await wake(anchor)) ? 'sent' : 'saved';
     render();
   }

@@ -10,6 +10,7 @@ lays nothing out: the design tree and every figure arrive as finished SVG.
 
 - [Documents](#documents)
 - [Fields](#fields)
+- [Answers text](#answers-text)
 - [How the page reads a session](#how-the-page-reads-a-session)
 - [Figure style contract](#figure-style-contract)
 
@@ -74,6 +75,24 @@ this table.
 
 Text fields take plain text with two marks the page renders: `` `code` `` and
 `**bold**`. Nothing else is interpreted.
+
+## Answers text
+
+The Submit comment carries the answers as text, and the page's copy fallback
+shows the same text: the session reads it when `answers/round-<n>` is missing.
+One line per form, in this order:
+
+| Line | When |
+|---|---|
+| `grill-with-artifact: round <n> answers (database document answers/round-<n>)` | always, first |
+| `<id>: <option id>. <option title>` | a question answered with an option |
+| `<id>: Other: <text>` | a question answered with Other |
+| `<id>: Deferred` | a question deferred |
+| `  comment: <text>` | under a question the human commented on |
+| `Reopen: <id>, <id>` | the settled ids pressed Reopen on, when any |
+| `Closing: Confirm` or `Closing: Not yet` | a closing round, in place of the question lines |
+| `What is missing: <text>` | under `Closing: Not yet` |
+| `[cut to fit: read answers/round-<n>]` | last, when the text was cut to a comment's 4 KiB |
 
 ## How the page reads a session
 

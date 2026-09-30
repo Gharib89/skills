@@ -22,6 +22,7 @@ const read = f => { try { return fs.readFileSync(f, 'utf8'); } catch { say('miss
 const html = read(path.join(skill, 'page.html'));
 const shapeDoc = read(path.join(skill, 'round-data.md'));
 const sample = n => JSON.parse(read(path.join(fx, n + '.json')));
+const clone = o => JSON.parse(JSON.stringify(o));
 
 // The documented shape: every table row whose first cell is a round./answers. path.
 const shape = new Map();
@@ -36,15 +37,17 @@ function objects(v, p, acc = []) {
   else if (v && typeof v === 'object') { acc.push([p, v]); for (const k of Object.keys(v)) objects(v[k], p + '.' + k, acc); }
   return acc;
 }
-function checkShape(doc, root, label) {
-  const all = objects(doc, root);
-  for (const [p, o] of all) for (const k of Object.keys(o)) if (!shape.has(p + '.' + k)) say(label, 'has an undocumented field', p + '.' + k);
+function shapeProblems(doc, root) {
+  const out = [], all = objects(doc, root);
+  for (const [p, o] of all) for (const k of Object.keys(o)) if (!shape.has(p + '.' + k)) out.push('has an undocumented field ' + p + '.' + k);
   for (const [f, req] of shape) {
     if (!f.startsWith(root + '.') || req === 'no') continue;
     const parent = f.slice(0, f.lastIndexOf('.')), key = f.slice(f.lastIndexOf('.') + 1);
-    for (const [p, o] of all) if (p === parent && !(key in o) && ['yes', doc.kind, o.reason].includes(req)) say(label, 'lacks required field', f);
+    for (const [p, o] of all) if (p === parent && !(key in o) && ['yes', doc.kind, o.reason].includes(req)) out.push('lacks required field ' + f);
   }
+  return out;
 }
+const checkShape = (doc, root, label) => { for (const p of shapeProblems(doc, root)) say(label, p); };
 function figureProblems(doc) {
   const out = [], svgs = [doc.treeSvg, ...(doc.questions ?? []).map(q => q.figureSvg)].filter(Boolean);
   for (const s of svgs) {
@@ -60,6 +63,10 @@ if (styles('.hot-x { }', 'hot')) say('style check counts .hot-x as styling .hot'
 
 const rounds = { questions: sample('round-questions'), carried: sample('round-carried'), closing: sample('round-closing') };
 for (const [k, d] of Object.entries(rounds)) { checkShape(d, 'round', 'sample ' + k); for (const p of figureProblems(d)) say('sample ' + k, p); }
+const noRec = clone(rounds.questions); delete noRec.questions[0].recommended;
+if (!shapeProblems(noRec, 'round').length) say('shape check passes a question with no recommended');
+const noEarlier = clone(rounds.carried); for (const q of noEarlier.questions) if (q.carriedFrom?.reason === 'reopened') delete q.carriedFrom.earlier;
+if (!shapeProblems(noEarlier, 'round').length) say('shape check passes a reopened question with no earlier');
 
 // The page: one script, one {{TOPIC}} placeholder in its title, a rule for every contract class.
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
@@ -83,7 +90,6 @@ function watch(v, p) {
     return watch(t[k], p + '.' + k);
   } });
 }
-const clone = o => JSON.parse(JSON.stringify(o));
 const W = d => watch(clone(d), 'round');
 function session(docs, answered = []) {
   const S = P.newState('Stale claims in ship');
@@ -107,6 +113,8 @@ let A = P.answersDoc(S);
 checkAnswers(A, 'answers A');
 if (JSON.stringify(A.answers.map(a => a.choice)) !== '["b","other"]') say('answers A: choices', JSON.stringify(A.answers.map(a => a.choice)));
 if (!/Q2: Other: On both/.test(P.answersText(S))) say('answers A: text lacks the Other answer');
+const head = P.answersText(S).split('\n')[0].replace(/\d+/g, '<n>');
+if (!shapeDoc.includes('`' + head + '`')) say('answers A: the text header is not the one round-data.md documents:', head);
 
 // B: a carried round opens alone. Defer one, take the remaining recommendation, reopen a settled answer.
 S = session([rounds.carried]);

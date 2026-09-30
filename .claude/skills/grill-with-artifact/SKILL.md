@@ -96,8 +96,9 @@ this session. It arrives as a comment on the watched artifact, sent to Claude.
 A `submitted` typed in the terminal rings the same bell.
 
 1. Read `answers/round-<n>` with `ArtifactData` `get`. With no such document,
-   take the answers from the comment's text, which carries them too; a pasted
-   answers text in the terminal is the same text. A comment carrying no answers
+   take the answers from the comment's text, whose lines round-data.md's
+   **Answers text** lists; a pasted answers text in the terminal is the same
+   text. A comment carrying no answers
    is the human talking: answer it in the terminal, resolve its thread, and end
    the turn.
 2. Apply each answer as `grilling` and `domain-modeling` say, writing any term
