@@ -58,6 +58,15 @@ d=$(tree cond); sed -i.bak "/setup-skills v'/d; s/ship v')\$/ship v'))) }}/" "$d
 check "a release condition missing a skill fails" \
   "$wf release-commit conditions name ship, the lock's set is setup-skills ship" "$(out_of "$d")"
 
+# A subject quoted in a comment or a SKILLS line under a comment marker is not
+# the condition or the list the release job reads.
+d=$(tree decoy); sed -i.bak "/setup-skills v'/d; s/ship v')\$/ship v'))) }}/" "$d/$wf"
+printf "      # 'chore(release): setup-skills v'\n      # SKILLS: ship setup-skills\n" >> "$d/$wf"
+sed -i.bak 's/SKILLS: ship setup-skills$/SKILLS: ship/' "$d/$wf"
+check "a decoy subject or list in a comment does not satisfy the check" \
+  "$wf SKILLS names ship, the lock's set is setup-skills ship
+$wf release-commit conditions name ship, the lock's set is setup-skills ship" "$(out_of "$d")"
+
 d=$(tree norelease); rm "$d/.release/setup-skills.toml"
 check "a source-. skill with no release configuration fails" \
   "missing release configuration: .release/setup-skills.toml" "$(out_of "$d")"

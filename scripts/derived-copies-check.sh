@@ -43,14 +43,15 @@ for s in $skills; do
 done
 
 # The workflow keeps its literal list, since a job's `if:` cannot read a file;
-# this holds both of its copies to the lock.
+# this holds both of its copies to the lock, reading only the `SKILLS:` key and
+# the `startsWith` lines, so a subject quoted in a comment is no condition.
 wf=.github/workflows/semantic-release.yml
 [ -f "$wf" ] || { echo "cannot read $wf" >&2; exit 2; }
 want=$(tr '\n' ' ' <<<"$skills"); want=${want% }
 got=$(sed -n 's/^ *SKILLS: //p' "$wf" | tr ' ' '\n' | sort | tr '\n' ' ')
 got=${got% }
 [ "$got" = "$want" ] || { echo "$wf SKILLS names $got, the lock's set is $want"; rc=1; }
-got=$(grep -o "'chore(release): [^ ]* v'" "$wf" | sed "s/'chore(release): \(.*\) v'/\1/" | sort | tr '\n' ' ')
+got=$(sed -n "s/^[ &|(]*startsWith(github.event.head_commit.message, 'chore(release): \([^ ]*\) v').*/\1/p" "$wf" | sort | tr '\n' ' ')
 got=${got% }
 [ "$got" = "$want" ] || { echo "$wf release-commit conditions name $got, the lock's set is $want"; rc=1; }
 
