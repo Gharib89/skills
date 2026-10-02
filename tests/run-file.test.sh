@@ -416,9 +416,10 @@ check "neither --file nor --issue is the usage line" "$usage" "$(err close 4)"
 check_rc "neither --file nor --issue is malformed" 2 "$(rc close 4)"
 
 # The refusal names the path it resolved, so a run that brought the wrong
-# scratchpad reads which one it asked for rather than that something was missing.
-check "an --issue with no record names the path it resolved" \
-  "no Run file at $tmp/ship-nothing-here/run.md" \
+# scratchpad reads which one it asked for rather than that something was missing,
+# and the rebuild, for the record a subagent removed rather than overwrote.
+check "an --issue with no record names the path it resolved and the rebuild" \
+  "no Run file at $tmp/ship-nothing-here/run.md: check --scratchpad; if it is right, the Run file was removed; rebuild it with \`run-file init <issue> --scratchpad <dir> --rebuild\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log" \
   "$(err close 4 --issue nothing-here --scratchpad "$tmp")"
 
 # With no --scratchpad the OS temp dir stands, which is where a run whose
