@@ -28,8 +28,8 @@ republished: a new round is a new document.
 
 `round.` is a round document, `answers.` an answers document; `[]` is an array
 element. Required reads `yes` in every round, `questions` or `closing` only in
-a round of that kind, `reopened` only on a question reopened, `no` never. The page reads and writes nothing outside
-this table.
+a round of that kind, `reopened` only on a question reopened, `no` never. The
+page reads and writes nothing outside this table.
 
 | Path | Type | Required | Meaning |
 |---|---|---|---|

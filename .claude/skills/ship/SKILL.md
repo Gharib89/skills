@@ -1,9 +1,6 @@
 ---
 name: ship
-description: >-
-  Drive one tracker issue to a merge-ready PR in a single run, stopping only at
-  the human merge gate. Use when the user wants to ship an issue, or to run the
-  unattended lane.
+description: Drive one tracker issue to a merge-ready PR in a single run, stopping only at the human merge gate. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
   version: 0.15.1
@@ -78,9 +75,9 @@ once its `Done when:` holds, not before.
 mechanic wraps. **Every host write, and every gating read, goes through a
 mechanic**: one no mechanic performs is a **Ship defect** for the merge
 summary's `Ship defects:` row, never a hand-rolled call; merge-gate.md says
-where its draft goes. [reference/mechanics.md](reference/mechanics.md) carries the rule
-in full, the informational reads it admits, the mechanic each phase runs and the
-contract they share, `--help` included.
+where its draft goes. [reference/mechanics.md](reference/mechanics.md) carries
+the rule in full, the informational reads it admits, the mechanic each phase
+runs and the contract they share, `--help` included.
 
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
 preflight proves and refuses, the profile it loads and why the worktree is made
@@ -134,11 +131,12 @@ and the small lane skip this phase.
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
 edits as part of the diff. **Docs-sync fires only when the public surface or
 observable behavior changed**: bring the profile's `Targets:` in line, folding
-the edits into this change, a tracker issue's as a [drafted section](reference/merge-gate.md#a-tracker-issue-on-targets).
-Skip it for internal refactors, a bugfix restoring documented behavior,
-test-only or tooling changes, and comments, and say so in one line at the merge
-gate. **The `writing-for-agents` pass has a trigger of its own**, firing even
-where docs-sync is skipped: whenever the diff touches a target on the profile's
+the edits into this change, a tracker issue's as a
+[drafted section](reference/merge-gate.md#a-tracker-issue-on-targets). Skip it
+for internal refactors, a bugfix restoring documented behavior, test-only or
+tooling changes, and comments, and say so in one line at the merge gate.
+**The `writing-for-agents` pass has a trigger of its own**, firing even where
+docs-sync is skipped: whenever the diff touches a target on the profile's
 `Agent-facing:` line, at the judgment tier, in the `writing` scratch directory,
 over every agent-facing file in the diff. Human prose takes the mechanical pass.
 With docs-sync's edits landed, load `code-review`, then dispatch this pass and
@@ -163,9 +161,10 @@ is still right. A valid finding outside the issue is an adjacent find. Then read
 the diff yourself against the depth checks in the coding-standards file the
 Standards axis reads, by their leading words: a vocabulary the change extends, a
 rule-shaped prose change, new pattern-matching code, a new test run with its fix
-reverted, a fix landed after review, and any the repo adds beside them. Reviewer rounds find these otherwise, serially, at the cost
-of most of a run's wall time, and the reverted-fix one escapes them entirely.
-This self-review plus green CI is the review gate.
+reverted, a fix landed after review, and any the repo adds beside them. Reviewer
+rounds find these otherwise, serially, at the cost of most of a run's wall time,
+and the reverted-fix one escapes them entirely. This self-review plus green CI
+is the review gate.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, and docs-sync landed or is
 skipped in one line.
@@ -240,8 +239,8 @@ owns the step, and a step no mechanic re-does is a Ship defect for the summary.
 Unattended: `comment-pr <pr> --body-file` with the summary, and return.
 **Done when:** attended, `merge`, every `update-issue-body` and `cleanup` exited
 0 with no `false`, and every Ship defect draft is filed, answered with
-candidates, carries its `command` on the row, or was declined; unattended, `comment-pr` posted and the run returned the PR
-link.
+candidates, carries its `command` on the row, or was declined; unattended,
+`comment-pr` posted and the run returned the PR link.
 
 ## The stops
 

@@ -20,13 +20,13 @@ skill's **pinned ref** is the upstream commit the source repo tested, and
 Ship run follows without invoking it is [In a Ship run](#in-a-ship-run), for an
 upstream-drift issue in the source repo.
 
-**It calls Ship's generic mechanics by path** from the worktree: `$S` below stands for
-`.claude/skills/ship/scripts` and `$U` for `.claude/skills/update-skills/scripts`.
-After step 2 those are the scripts it just installed, so it never drives a Ship
-other than the one the PR ships. Each mechanic answers `--help` with its flags.
-Plan files and body files go in your scratchpad, outside the repo. Shell
-variables do not survive between tool calls: a value one step prints, later
-steps write out in full.
+**It calls Ship's generic mechanics by path** from the worktree: `$S` below
+stands for `.claude/skills/ship/scripts` and `$U` for
+`.claude/skills/update-skills/scripts`. After step 2 those are the scripts it
+just installed, so it never drives a Ship other than the one the PR ships. Each
+mechanic answers `--help` with its flags. Plan files and body files go in your
+scratchpad, outside the repo. Shell variables do not survive between tool calls:
+a value one step prints, later steps write out in full.
 
 ## Process
 
@@ -273,8 +273,9 @@ checkout removes the worktree.
 move, in this one PR. It runs before step 7, which then files or finds the
 drift issue this PR closes; steps 5, 6 and 8 run unchanged. Per row:
 
-1. Read what moved: `https://api.github.com/repos/<source>/compare/<pin>...<head>`,
-   the files under the skill's folder with their patches.
+1. Read what moved:
+   `https://api.github.com/repos/<source>/compare/<pin>...<head>`, the files
+   under the skill's folder with their patches.
 2. Re-add the skill at the head, its install line with `#<head>` in place of
    the pin, and move the pin on the `composes` line that names it
    (`skills/ship/SKILL.md` or `skills/setup-skills/SKILL.md`, the composing

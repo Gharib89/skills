@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# scripts/house-style-check.sh: the em-dash ban and the whitespace rules. The
-# em-dash cases' subject is the verdict's independence from the locale: the
-# cloud sandbox runs with LANG and LC_ALL empty, where a `$'\u'` escape stays
-# escape text and the check matched its own source (issue #249). Each runs under
-# both an empty locale and C.UTF-8, against a throwaway checkout that carries a
-# copy of the check itself.
+# scripts/house-style-check.sh: the em-dash ban, the whitespace rules and the
+# wrap width. The em-dash cases' subject is the verdict's independence from the
+# locale: the cloud sandbox runs with LANG and LC_ALL empty, where a `$'\u'`
+# escape stays escape text and the check matched its own source (issue #249).
+# Each runs under both an empty locale and C.UTF-8, against a throwaway checkout
+# that carries a copy of the check itself.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -64,6 +64,61 @@ d=$(checkout symlink)
 printf 'text ' > "$d/outside.txt"; ln -s ../../outside.txt "$d/skills/x/link.md"
 git -C "$d" add skills
 check_rc "a symlink to a file with a trailing blank and no final newline passes" 0 "$(rc_of C.UTF-8 "$d")"
+
+# Wrap width: 80 columns over the files this repo hard-wraps, where a ragged
+# reflow drew review findings. Lines no reflow can shorten are exempt.
+wide=$(printf '%081d' 0 | tr 0 w)
+d=$(checkout wrap-ragged)
+mkdir -p "$d/skills/ship"
+printf 'short line\n%s\n' "$wide" > "$d/skills/ship/SKILL.md"; git -C "$d" add -A
+check_rc "an 81-column prose line in a wrapped file fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the finding names the line" "skills/ship/SKILL.md:2:$wide" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout wrap-exempt)
+mkdir -p "$d/skills/ship"
+{ printf -- '---\ndescription: %s\n---\n' "$wide"
+  printf '```sh\n%s\n```\n' "$wide"
+  printf '| %s |\n' "$wide"
+  printf -- '- [%s](#%s)\n' "$wide" "$wide"
+  printf '[ref]: https://example.com/%s\n' "$wide"
+  printf '`%s`.\n' "$wide"
+  printf '1. item\n\n     ```sh\n     %s\n     ```\n' "$wide"
+} > "$d/skills/ship/SKILL.md"
+printf '%s\n' "$wide" > "$d/skills/ship/CHANGELOG.md"
+printf '%s\n' "$wide" > "$d/skills/x/SKILL.md"
+git -C "$d" add -A
+check_rc "frontmatter, fences (one nested in a list item), table, link-only and code-span-only lines, a changelog and an unwrapped file pass" 0 "$(rc_of C.UTF-8 "$d")"
+
+# Each exemption is the whole line: prose beside a link or a code span still
+# counts, a closed fence ends its exemption, and `---` opens frontmatter only on
+# line 1, so a rule mid-file exempts nothing after it.
+for c in "see [$wide](#a) here" "\`a\` and \`$wide\`" 'fence-closed' 'fence-other-char' 'fence-shorter' 'fence-not-opener' 'rule-mid-file'; do
+  d=$(checkout "wrap-adversarial-${c:0:5}-${#c}")
+  mkdir -p "$d/skills/ship"
+  case $c in
+    fence-closed) printf '```\nx\n```\n%s\n' "$wide" ;;
+    # A fence closes only on its own character, at least as long as its opener.
+    fence-other-char) printf '~~~\n```\n~~~\n%s\n' "$wide" ;;
+    fence-shorter) printf '````md\n```\n````\n%s\n' "$wide" ;;
+    # A backtick in a backtick opener's info string makes it an inline span.
+    fence-not-opener) printf '```a`b\n%s\n' "$wide" ;;
+    rule-mid-file) printf 'text\n---\n%s\n---\n' "$wide" ;;
+    *) printf '%s\n' "$c" ;;
+  esac > "$d/skills/ship/SKILL.md"
+  git -C "$d" add -A
+  check_rc "a long line fails: $c" 1 "$(rc_of C.UTF-8 "$d")"
+done
+
+# Width is counted in characters, so a multibyte character is one column under
+# every locale, the empty one included.
+for loc in "" C.UTF-8; do
+  label=${loc:-empty}
+  d=$(checkout "wrap-multibyte-$label")
+  printf '%s\342\206\222\n' "$(printf '%079d' 0 | tr 0 w)" > "$d/CLAUDE.md"; git -C "$d" add -A
+  check_rc "an 80-character line with a multibyte character passes under the $label locale" 0 "$(rc_of "$loc" "$d")"
+  printf '%s\342\206\222\n' "$(printf '%080d' 0 | tr 0 w)" > "$d/CLAUDE.md"; git -C "$d" add -A
+  check_rc "an 81-character line with a multibyte character fails under the $label locale" 1 "$(rc_of "$loc" "$d")"
+done
 
 # git grep names an unreadable file on stderr and exits 0: that is not clean.
 # Root reads it anyway, so the case only runs where the mode bits bind.

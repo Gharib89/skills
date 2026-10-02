@@ -41,6 +41,6 @@ Local-only: None.
 
 ## Declined
 
-Declined: shfmt: its default tab indent rewrites every indented line of this repo's two-space scripts, a change to all five skills; no Go toolchain on the maintainer's machine
+Declined: shfmt: its default tab indent rewrites every indented line of this repo's two-space scripts, a change across the skills this repo writes; no Go toolchain on the maintainer's machine
 Declined: markdownlint-cli2: 264 findings over the skills' prose (MD024 fires on the catalog's repeated tool headings by design); adopting it is its own ticket, and house-style and prose-budget already hold these files
-Declined: Prettier on Markdown: rewrites 40 files across all five skills; its own ticket, as markdownlint-cli2
+Declined: Prettier on Markdown: rewrites 40 files across the skills this repo writes; its own ticket, as markdownlint-cli2

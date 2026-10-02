@@ -79,10 +79,10 @@ host's `status` beside its `error`: a 5xx or 429 outlasted the mechanic's own
 backoff, so retrying is the fix; any other number is the request itself, so read
 the body you sent; `null` is no HTTP answer at all, so look at the host or the
 tooling in between. `open-pr` and `file-issue` answer with the error alone, and
-their stderr carries the host's message. Under `--repo`, every exit 1 of `file-issue` and
-`update-issue-body`, an unreachable host's or a refused write's, carries a
-`command` beside the `error`: the shell-quoted invocation for the human to run
-where the write succeeds.
+their stderr carries the host's message. Under `--repo`, every exit 1 of
+`file-issue` and `update-issue-body`, an unreachable host's or a refused
+write's, carries a `command` beside the `error`: the shell-quoted invocation for
+the human to run where the write succeeds.
 
 ## The vocabulary a read comes back in
 
@@ -96,4 +96,5 @@ GitHub, the thread's root review comment id, as a string).
 Run mechanics **inline**: they project their own output, so a subagent there
 burns budget to relay what an exit code already says. Poll loops are bounded and
 foreground; reaching the bound leaves the question open, so re-run to extend it,
-or pass a wider `--timeout` up front for a leg you know is slower than the bound.
+or pass a wider `--timeout` up front for a leg you know is slower than the
+bound.
