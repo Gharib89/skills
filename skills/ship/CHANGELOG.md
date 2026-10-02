@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.16.0 (2026-10-02)
+
+### Features
+
+- **ship**: Section surgery keeps <details> records intact
+  ([#450](https://github.com/Gharib89/skills/pull/450),
+  [`ff1b53a`](https://github.com/Gharib89/skills/commit/ff1b53a60749387a90836230484359d91e0db6e9))
+
+
 ## v0.15.2 (2026-10-02)
 
 ### Documentation
