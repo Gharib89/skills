@@ -819,8 +819,8 @@ readonly SHIP_REVIEWER_RUN='
 # so every `## ` heading after it reads as example text and the rewrite
 # swallows the sections between them (run #121 lost four that way). An open
 # record hides every heading after it the same way, so it is reported too,
-# naming the outermost opener as `line <n>: <details>`. This is the one reader of
-# `ship_inert`'s globals rather than its answer: it asks which of the two is
+# naming the outermost opener as `line <n>: <details>`. This is the one reader
+# of `ship_inert`'s globals rather than its answer: it asks which of the two is
 # still open at the end, which the per-line answer does not say.
 ship_fence_unclosed() {
   awk "$SHIP_AWK_FENCE"'
