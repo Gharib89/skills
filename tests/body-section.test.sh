@@ -516,4 +516,13 @@ for rec in '<details open>\n\n## Notes\n\n</details>' \
     "$expected" "$(ship_body_replace_section "$body" Notes "$content")"
 done
 
+# A column-0 prefix that is not a whole tag opens nothing: `<details` alone, or
+# with attributes but no `>`, is prose, so the heading after it is live.
+for line in '<details' '<details open' '<detailsx>'; do
+  body=$(printf '%s\n\n## Notes\n\nplaceholder\n' "$line")
+  check "a line reading '$line' opens no record" \
+    "$(printf '%s\n\n## Notes\n\nline one\nline two' "$line")" \
+    "$(ship_body_replace_section "$body" Notes "$content")"
+done
+
 finish

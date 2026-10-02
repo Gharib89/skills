@@ -432,11 +432,11 @@ ship_missing_skill_reasons() {
 #
 # `ship_inert(line)` is what every `## ` heading reader calls instead of
 # `ship_fence`: 0 for a live line, 1 for a fenced one, 2 for a line of a
-# `<details>` record. Such a record runs from a line opening on `<details>` (or
-# `<details ...>`) at column 0 to its matching line opening on `</details>`,
-# nesting counted, or is that one line where it ends on `</details>`: the
-# superseded original a phase-1 rewrite keeps, or a changelog a PR body folds
-# away. Only a tag at column 0 counts, so prose inside a record that mentions
+# `<details>` record. Such a record runs from a line opening on a whole
+# `<details>` or `<details ...>` tag at column 0 (a `<details` with no `>` is
+# prose) to its matching line opening on `</details>`, nesting counted, or is
+# that one line where it ends on `</details>`: the superseded original a phase-1
+# rewrite keeps, or a changelog a PR body folds away. Only a tag at column 0 counts, so prose inside a record that mentions
 # the tag mid-line neither nests nor closes it. No line of a record is a
 # heading, so the copy of the body's headings it repeats is never matched, never
 # ends a section and never ends the preamble. A fence still wins: a `<details>`
@@ -463,7 +463,7 @@ readonly SHIP_AWK_FENCE='function ship_deindent(s) {
   function ship_inert(line,   f, rec) {
     f = ship_fence(line); rec = _record
     if (f) return rec ? 2 : f
-    if ((line " ") ~ /^<details[ \t\r>]/) {
+    if (line ~ /^<details(>|[ \t][^>]*>)/) {
       _record++; rec = 1
       if (line ~ /<\/details>[ \t\r]*$/) _record--
     }
