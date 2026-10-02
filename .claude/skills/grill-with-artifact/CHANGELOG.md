@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.2.1 (2026-10-02)
+
+### Documentation
+
+- Name the lock as the skill inventory, group the glossary, and hold hard-wrapped prose to 80
+  columns ([#447](https://github.com/Gharib89/skills/pull/447),
+  [`97cd290`](https://github.com/Gharib89/skills/commit/97cd290a2908d0b96d1b39b7766bbb667ebf11af))
+
+
 ## v0.2.0 (2026-10-02)
 
 ### Features
