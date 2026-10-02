@@ -24,9 +24,10 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See
 `skills-lock.json` is the skill inventory: one entry per installed skill, its
 `source` saying where the skill lives. A `source: "."` entry is a skill this
 repo writes: its source is `skills/<name>/`, and `.claude/skills/<name>/` is its
-derived copy, refreshed from it. Every other entry is vendored from its `source`
-repo (the skills ship composes come from `mattpocock/skills`, `upstash/context7`
-and `humanlayer/skills`) and lives only under `.claude/skills/`. Adding a skill
+derived copy, refreshed from it. Every other entry is installed from the
+upstream its `source` names, at the lock's `ref` (the skills ship composes come
+from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`), and lives
+only under `.claude/skills/`. Adding a skill
 this repo writes touches the sites in the checklist at the end of
 `docs/contributing/coding-standards.md`. Refresh at project scope, without `-g`;
 ship's refresh chains its preflight, so a profile the refreshed ship no longer

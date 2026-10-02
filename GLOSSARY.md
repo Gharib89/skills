@@ -34,10 +34,6 @@ _Avoid_: side read, ad-hoc call
 Ship's sandbox preparation for one repo, run before any claim in every cloud run and every unattended run. With a harness it is the cloud setup run again, so a broken sandbox stops before the claim, then only the steps that need something only Ship has, such as the local gate's secrets scanner and a live end-to-end check's credentials; anything the check entry point needs belongs to the cloud setup instead. Without one, it is whatever the repo's own script installs. Setup-skills drafts it.
 _Avoid_: cloud setup, setup script, cloud-ship bootstrap
 
-**Composed skill**:
-A skill Ship takes a phase's logic from at the phase that needs it, rather than reimplementing it: `tdd`, `writing-for-agents`, `code-review`, `find-docs` and `show-me`. Ship loads each through the Skill tool, except `show-me`, which it reads as a file because its upstream disables model invocation. Ship's `metadata.composes` line names each with the repo and pinned ref it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`, or its `skills-lock.json` records it at another ref. Adding one, or moving its pin, is therefore a breaking change for installed consumers. `setup-skills` composes `triage` the same way, so it counts as one wherever composed skills are pinned and checked. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
-_Avoid_: dependency, sub-skill, helper skill
-
 **Sibling skill**:
 A skill that composes Ship rather than reimplementing it. Today there is one: `cloud-ship`, which invokes Ship unattended from a cloud routine and relays its outcome. It adds nothing Ship could do for itself: the cloud bootstrap, the PR cap, the selection, the claim, the branch, the isolation, the hand-back and the merge summary are all Ship's. Only Ship claims an issue: a sibling leaves the claim and every tracker write to Ship, and reaches it through the Skill tool rather than by a script path.
 _Avoid_: wrapper, plugin, variant
@@ -240,12 +236,16 @@ _Avoid_: drift (Upstream drift is a composed skill's), finding (a reviewer's), i
 
 ### Distribution and Refresh
 
+**Composed skill**:
+A skill Ship takes a phase's logic from at the phase that needs it, rather than reimplementing it: `tdd`, `writing-for-agents`, `code-review`, `find-docs` and `show-me`. Ship loads each through the Skill tool, except `show-me`, which it reads as a file because its upstream disables model invocation. Ship's `metadata.composes` line names each with the repo and pinned ref it installs from, and preflight refuses a run before the claim when one is absent from the consumer repo's `.claude/skills/`, or its `skills-lock.json` records it at another ref. Adding one, or moving its pin, is therefore a breaking change for installed consumers. `setup-skills` composes `triage` the same way, so it counts as one wherever composed skills are pinned and checked. The inverse of a sibling skill: Ship composes these, a sibling composes Ship.
+_Avoid_: dependency, sub-skill, helper skill
+
 **Derived copy**:
 The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and left as installed, every change going to the source. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is installed at repo scope, because a personal skill silently shadows a repo's.
 _Avoid_: vendored fork, sync, symlink, snapshot
 
 **Source repo**:
-This repo, `Gharib89/skills`: where the skills its lock, `skills-lock.json`, records with `source: "."` are written, and where the versions of their composed skills are tested. Every derived copy of those skills is installed from it.
+This repo, `Gharib89/skills`: where the skills recorded with `source: "."` in its lock, `skills-lock.json`, are written, and where the versions of their composed skills are tested. Every derived copy of those skills is installed from it.
 _Avoid_: upstream (that is a composed skill's own repo), skills repo, origin
 
 **Consumer repo**:

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The em-dash ban from docs/contributing/coding-standards.md, plus no trailing
 # whitespace and a final newline on every non-empty file, over the files this
-# repo authors. A consumer repo's stock `trailing-whitespace` and
+# repo authors, and an 80-column wrap width over the files it hard-wraps. A consumer repo's stock `trailing-whitespace` and
 # `end-of-file-fixer` hooks fail on a copied script that breaks either (issue
 # #288). `.claude/skills/` is install output from other repos and is exempt. The
 # `house-style` gate in scripts/local-gate.sh runs this, in every lane.
@@ -68,9 +68,9 @@ fi
 
 # The files this repo hard-wraps at 80 columns. The rest of the tree puts one
 # paragraph on a line (a profile's `Label:` line must stay one line), so a new
-# hard-wrapped file joins this list. Exempt are the lines no reflow shortens:
-# frontmatter, fences, tables, a line holding only a link, a code span or a link
-# reference definition, and changelogs, which the release run writes.
+# hard-wrapped file joins this list. Exempt are changelogs, which the release
+# run writes, and the lines no reflow shortens: frontmatter, fences, tables, and
+# a line holding only a link, a code span or a link reference definition.
 wrapped=('skills/ship/*.md' 'skills/cloud-ship/*.md' 'skills/update-skills/*.md'
   'skills/grill-with-artifact/*.md' docs/contributing/coding-standards.md CLAUDE.md
   ':!:*CHANGELOG.md')
@@ -81,10 +81,24 @@ while IFS= read -r -d '' f; do files+=("$f"); done < <(git grep -z -I -l -e '' -
 # leaves one byte per character, under any caller's locale.
 too_wide=
 [ "${#files[@]}" -eq 0 ] || too_wide=$(LC_ALL=C awk '
-  FNR == 1 { fence = 0; front = ($0 == "---"); if (front) next }
+  FNR == 1 { fence = ""; front = ($0 == "---"); if (front) next }
   front { if ($0 == "---") front = 0; next }
-  /^[ \t]*(```|~~~)/ { fence = !fence; next }
-  fence || /^[ \t]*\|/ { next }
+  { t = $0; sub(/^[ \t]*/, "", t) }
+  # A fence closes on a bare run of its own character, at least as long as the
+  # opening run, as CommonMark has it; an unclosed one runs to the end.
+  fence != "" {
+    if (t ~ /^(`+|~+)[ \t]*$/ && substr(t, 1, 1) == substr(fence, 1, 1)) {
+      sub(/[ \t]*$/, "", t)
+      if (length(t) >= length(fence)) fence = ""
+    }
+    next
+  }
+  t ~ /^(```|~~~)/ {
+    fence = t
+    if (substr(t, 1, 1) == "`") sub(/[^`].*$/, "", fence); else sub(/[^~].*$/, "", fence)
+    next
+  }
+  t ~ /^\|/ { next }
   /^[ \t]*([-*+]|[0-9]+\.)?[ \t]*(\[[^]]*\]\([^ )]*\)|`[^`]*`)[.,;:]?$/ || /^[ \t]*\[[^]]*\]:[ \t]/ { next }
   { s = $0; gsub(/[\200-\277]/, "", s); if (length(s) > 80) print FILENAME ":" FNR ":" $0 }
 ' "${files[@]}" 2>"$err") || tooling

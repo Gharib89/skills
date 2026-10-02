@@ -134,8 +134,8 @@ observable behavior changed**: bring the profile's `Targets:` in line, folding
 the edits into this change, a tracker issue's as a
 [drafted section](reference/merge-gate.md#a-tracker-issue-on-targets). Skip it
 for internal refactors, a bugfix restoring documented behavior, test-only or
-tooling changes, and comments, and say so in one line at the merge gate. **The
-`writing-for-agents` pass has a trigger of its own**, firing even where
+tooling changes, and comments, and say so in one line at the merge gate.
+**The `writing-for-agents` pass has a trigger of its own**, firing even where
 docs-sync is skipped: whenever the diff touches a target on the profile's
 `Agent-facing:` line, at the judgment tier, in the `writing` scratch directory,
 over every agent-facing file in the diff. Human prose takes the mechanical pass.

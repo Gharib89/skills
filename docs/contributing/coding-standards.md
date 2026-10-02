@@ -389,7 +389,7 @@ prose is the product as much as the scripts are.
 ## Adding a skill this repo writes
 
 The set of skills this repo writes is the lock's `source: "."` entries, in
-`skills-lock.json`. Four sites name that set and none is written for you:
+`skills-lock.json`. Four sites name that set, and each needs a hand edit:
 
 1. The lock entry: add `--skill <name>` to the Refresh line in CLAUDE.md's
    `### Ship` block and run it, which writes the entry and the derived copy.
@@ -400,5 +400,6 @@ The set of skills this repo writes is the lock's `source: "."` entries, in
    `npx skills add Gharib89/skills --skill <name> --agent claude-code -y`, and a
    pinned line for each skill it composes.
 
-The `derived-copies` gate fails until the first three agree with the lock, and
-`scripts/pin-check.sh` holds the pinned lines of the fourth to it.
+The `derived-copies` gate fails until each `skills/<name>/` has its lock entry,
+derived copy, release configuration and both places in the release workflow;
+`scripts/pin-check.sh` holds the fourth site's pinned lines to the lock.
