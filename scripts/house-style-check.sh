@@ -96,10 +96,13 @@ too_wide=
     }
     next
   }
+  # A backtick in the info string of a backtick opener makes it an inline span,
+  # so that line is prose.
   t ~ /^(```|~~~)/ {
     fence = t
     if (substr(t, 1, 1) == "`") sub(/[^`].*$/, "", fence); else sub(/[^~].*$/, "", fence)
-    next
+    if (substr(t, 1, 1) != "`" || !index(substr(t, length(fence) + 1), "`")) next
+    fence = ""
   }
   t ~ /^\|/ { next }
   /^[ \t]*([-*+]|[0-9]+\.)?[ \t]*(\[[^]]*\]\([^ )]*\)|`[^`]*`)[.,;:]?$/ || /^[ \t]*\[[^]]*\]:[ \t]/ { next }

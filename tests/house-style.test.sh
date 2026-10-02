@@ -92,7 +92,7 @@ check_rc "frontmatter, fences (one nested in a list item), table, link-only and 
 # Each exemption is the whole line: prose beside a link or a code span still
 # counts, a closed fence ends its exemption, and `---` opens frontmatter only on
 # line 1, so a rule mid-file exempts nothing after it.
-for c in "see [$wide](#a) here" "\`a\` and \`$wide\`" 'fence-closed' 'fence-other-char' 'fence-shorter' 'rule-mid-file'; do
+for c in "see [$wide](#a) here" "\`a\` and \`$wide\`" 'fence-closed' 'fence-other-char' 'fence-shorter' 'fence-not-opener' 'rule-mid-file'; do
   d=$(checkout "wrap-adversarial-${c:0:5}-${#c}")
   mkdir -p "$d/skills/ship"
   case $c in
@@ -100,6 +100,8 @@ for c in "see [$wide](#a) here" "\`a\` and \`$wide\`" 'fence-closed' 'fence-othe
     # A fence closes only on its own character, at least as long as its opener.
     fence-other-char) printf '~~~\n```\n~~~\n%s\n' "$wide" ;;
     fence-shorter) printf '````md\n```\n````\n%s\n' "$wide" ;;
+    # A backtick in a backtick opener's info string makes it an inline span.
+    fence-not-opener) printf '```a`b\n%s\n' "$wide" ;;
     rule-mid-file) printf 'text\n---\n%s\n---\n' "$wide" ;;
     *) printf '%s\n' "$c" ;;
   esac > "$d/skills/ship/SKILL.md"
