@@ -35,10 +35,10 @@ write into. Every variant carries:
 - **`## Needs attention`**: every issue the run filed or linked and every Ship
   defect it met, `None.` when there are neither.
 - **`## Verification`**: one line per applicable verification in the merge
-  summary's `Verification` row format, or `None applicable: <reason>`, with three
-  such reasons and no fourth: `class docs`, `small lane`, and a full-lane change
-  where no `Applies when:` line matches (a profile listing zero verifications
-  is that case).
+  summary's `Verification` row format, or `None applicable: <reason>`, with
+  three such reasons and no fourth: `class docs`, `small lane`, and a full-lane
+  change where no `Applies when:` line matches (a profile listing zero
+  verifications is that case).
 - **`## Review`**, one placeholder line per reviewer at open, filled at the
   phase-7 exit in the fixed shape [review-loop.md](review-loop.md) carries.
 - **A count with the command that produced it**, wherever the body measures the

@@ -88,6 +88,21 @@ printf '%s\n' "$wide" > "$d/skills/x/SKILL.md"
 git -C "$d" add -A
 check_rc "frontmatter, fence, table, link-only and code-span-only lines, a changelog and an unwrapped file pass" 0 "$(rc_of C.UTF-8 "$d")"
 
+# Each exemption is the whole line: prose beside a link or a code span still
+# counts, a closed fence ends its exemption, and `---` opens frontmatter only on
+# line 1, so a rule mid-file exempts nothing after it.
+for c in "see [$wide](#a) here" "\`a\` and \`$wide\`" 'fence-closed' 'rule-mid-file'; do
+  d=$(checkout "wrap-adversarial-${c:0:5}")
+  mkdir -p "$d/skills/ship"
+  case $c in
+    fence-closed) printf '```\nx\n```\n%s\n' "$wide" ;;
+    rule-mid-file) printf 'text\n---\n%s\n---\n' "$wide" ;;
+    *) printf '%s\n' "$c" ;;
+  esac > "$d/skills/ship/SKILL.md"
+  git -C "$d" add -A
+  check_rc "a long line fails: $c" 1 "$(rc_of C.UTF-8 "$d")"
+done
+
 # Width is counted in characters, so a multibyte character is one column under
 # every locale, the empty one included.
 for loc in "" C.UTF-8; do

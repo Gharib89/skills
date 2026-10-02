@@ -42,10 +42,10 @@ still a complete run. The levers, in rough order of impact:
 `execute`, `verify`, `standards`, `spec`, `writing`). A subagent handed nowhere
 to write reaches for the scratchpad its own environment block names, which is
 the Run file's parent, and can overwrite the checklist with no failure signal.
-The directory is a **sibling** of the Run file's rather than a child, so a path a
-subagent invents below it still lands clear of the record. Edits to the repo go
-under the worktree prefix. Pass it the way you pass the model tier: written into
-the prompt, every dispatch.
+The directory is a **sibling** of the Run file's rather than a child, so a path
+a subagent invents below it still lands clear of the record. Edits to the repo
+go under the worktree prefix. Pass it the way you pass the model tier: written
+into the prompt, every dispatch.
 
 ## While a subagent is out, end the turn
 

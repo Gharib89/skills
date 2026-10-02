@@ -1,9 +1,6 @@
 ---
 name: ship
-description: >-
-  Drive one tracker issue to a merge-ready PR in a single run, stopping only at
-  the human merge gate. Use when the user wants to ship an issue, or to run the
-  unattended lane.
+description: Drive one tracker issue to a merge-ready PR in a single run, stopping only at the human merge gate. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
   version: 0.15.0
