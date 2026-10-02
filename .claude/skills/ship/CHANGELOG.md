@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.1 (2026-10-02)
+
+### Bug Fixes
+
+- **ship**: Request-review reads a round in flight as landed
+  ([#446](https://github.com/Gharib89/skills/pull/446),
+  [`a2146b0`](https://github.com/Gharib89/skills/commit/a2146b09bdee6386e53af3307d1dadf423793c45))
+
+
 ## v0.15.0 (2026-10-02)
 
 ### Features
