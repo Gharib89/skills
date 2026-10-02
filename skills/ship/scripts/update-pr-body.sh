@@ -17,6 +17,11 @@
 # DIFFERENT heading is a section of its own, not a duplicate, and is replaced
 # like any other.
 #
+# A `<details>` block at column 0 is a record, a changelog folded away say: its
+# `## ` lines are not headings to either mode or to the `sections` list, and a
+# section write keeps every record in the old content, verbatim, below the new
+# content (`ship_inert` in _lib.sh).
+#
 # `--preamble`: the body file is the whole preamble. A preamble is always there,
 # empty at the emptiest, so it is always replaced and the create path is unused.
 # A closing line the old preamble carried and the file does not is carried over,

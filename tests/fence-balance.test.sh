@@ -55,4 +55,10 @@ check "a deeper heading is not a section" \
 check "a body with no heading lists nothing" \
   "" "$(ship_body_headings "$(printf 'just prose\n')")"
 
+# A column-0 `<details>` block is a record: the headings its copy of the body
+# repeats are not sections, so each live heading is listed once.
+check "a heading inside a record is not a section" \
+  "$(printf 'What to build\nAcceptance criteria')" \
+  "$(ship_body_headings "$(printf '## What to build\n\nask\n\n## Acceptance criteria\n\nc\n\n<details><summary>Original</summary>\n\n## What to build\n\n## Acceptance criteria\n\n</details>\n')")"
+
 finish

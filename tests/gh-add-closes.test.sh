@@ -140,4 +140,10 @@ body=$(printf 'Intro\r\n\r\n```md\r\n## Not a heading\r\n```\r\n\r\n## Real head
 expected=$(printf 'Intro\r\n\r\n```md\r\n## Not a heading\r\n```\r\n\r\nCloses #76\n\n## Real heading\r\n\r\ntext\r')
 check "closes a fence whose line ends in CRLF" "$expected" "$(_gh_add_closes "$body" 76)"
 
+# A `## ` inside a record is record text, not the first heading: the closing
+# line goes above the first live heading below it.
+body=$(printf 'Intro\n\n<details>\n\n## Old\n\n</details>\n\n## Summary\n\ntext\n')
+expected=$(printf 'Intro\n\n<details>\n\n## Old\n\n</details>\n\nCloses #76\n\n## Summary\n\ntext')
+check "skips a heading inside a record" "$expected" "$(_gh_add_closes "$body" 76)"
+
 finish

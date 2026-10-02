@@ -432,4 +432,66 @@ check "a backslash in the section name is compared undecoded" \
   "$(printf '## Review\\name\n\nline one\nline two')" \
   "$(ship_body_replace_section "$(printf '## Review\\name\n\nplaceholder\n')" 'Review\name' "$content")"
 
+# A column-0 `<details>` block is a record, here the superseded original a
+# phase-1 rewrite keeps, repeating the live headings: none of its lines is a
+# heading. Replacing the first live section leaves the record byte-identical.
+record=$(cat <<'EOF'
+<details><summary>Original body</summary>
+
+## What to build
+
+old ask
+
+## Acceptance criteria
+
+- [ ] old criterion
+
+</details>
+EOF
+)
+body=$(printf '## What to build\n\nask\n\n## Acceptance criteria\n\n- [ ] criterion\n\n%s\n' "$record")
+expected=$(printf '## What to build\n\nline one\nline two\n\n## Acceptance criteria\n\n- [ ] criterion\n\n%s' "$record")
+actual=$(ship_body_replace_section "$body" "What to build" "$content"); rc=$?
+check    "a record repeating the first live heading is left byte-identical" "$expected" "$actual"
+check_rc "reports replaced for the live section"                           0 "$rc"
+
+# The last live section's old content runs into the record. The record is
+# carried through below the new content, opener to closer, rather than read as
+# the section's end and its copy matched again.
+expected=$(printf '## What to build\n\nask\n\n## Acceptance criteria\n\nline one\nline two\n\n%s' "$record")
+check "replacing the last live section carries the record below its content" \
+  "$expected" "$(ship_body_replace_section "$body" "Acceptance criteria" "$content")"
+
+# The phase-1 layout: a section rewritten in place, its original kept below the
+# rewrite in a record. Another write to that section replaces the prose and
+# keeps the record under the new content, ahead of the next section.
+body=$(printf '## What to build\n\nrewrite\n\n%s\n\nstale note\n\n## Notes\n\ntail\n' "$record")
+expected=$(printf '## What to build\n\nline one\nline two\n\n%s\n\n## Notes\n\ntail' "$record")
+check "a record in the section's old content is kept below the new content" \
+  "$expected" "$(ship_body_replace_section "$body" "What to build" "$content")"
+
+# A fence still wins: a `<details>` line inside a fenced block is example text
+# and opens no record, so the heading after the fence is a live section.
+body=$(printf '## Summary\n\n```\n<details>\n```\n\n## Review\n\nplaceholder\n')
+expected=$(printf '## Summary\n\n```\n<details>\n```\n\n## Review\n\nline one\nline two')
+check "a <details> line inside a fence opens no record" \
+  "$expected" "$(ship_body_replace_section "$body" Review "$content")"
+
+# Nesting is counted: the inner `</details>` does not close the outer record,
+# so the heading between the two closers is still record text.
+nested=$(printf '<details><summary>Original</summary>\n\n<details>\ninner\n</details>\n\n## Review\n\nold\n\n</details>')
+body=$(printf '## Summary\n\nkeep\n\n%s\n' "$nested")
+expected=$(printf '## Summary\n\nkeep\n\n%s\n\n## Review\n\nline one\nline two' "$nested")
+actual=$(ship_body_replace_section "$body" Review "$content"); rc=$?
+check    "a nested record does not close the outer one early" "$expected" "$actual"
+check_rc "a heading only inside a record is absent: created"   1 "$rc"
+
+# A heading that appears only inside a record is no section: the record stays
+# as it was and the section is appended at the end.
+body=$(printf 'Closes #1\n\n%s\n' "$record")
+expected=$(printf 'Closes #1\n\n%s\n\n## What to build\n\nline one\nline two' "$record")
+actual=$(ship_body_replace_section "$body" "What to build" "$content"); rc=$?
+check    "a heading only inside a record leaves the record and appends" "$expected" "$actual"
+check_rc "reports created for a heading only a record carries"          1 "$rc"
+
 finish

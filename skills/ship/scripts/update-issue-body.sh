@@ -10,6 +10,10 @@
 # repo's (ADR 0004). Its host is probed first, and every exit 1 under it, the
 # probe's or a refused write's, carries the command to run by hand as `command`.
 #
+# A `<details>` block at column 0 is a record, the original phase 1 keeps below a
+# rewrite: its `## ` lines are not sections, and a write to the section holding
+# it keeps it, verbatim, below the new content (`ship_inert` in _lib.sh).
+#
 # Section-only by design: no whole-body mode and no preamble, so two runs
 # editing different sections of one issue cannot clobber each other. Phase 9
 # runs it after `merge` has verified the merge, so nothing reaches the issue for

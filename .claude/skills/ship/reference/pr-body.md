@@ -116,7 +116,10 @@ deviations log.
 and writes its `## <name>` line itself, so the file holds the content alone.
 `--preamble` replaces everything above the first heading, where the closing line
 sits, carrying the old closing line over when the new content lacks one; a body
-with no heading is preamble entire.
+with no heading is preamble entire. A column-0 `<details>` block is a
+**record**: its `## ` lines are no section to either mode or to the `sections`
+list, and a section write carries every record in the old content through,
+verbatim, below the new content.
 
 **Every title or body write to an open PR ends with `read-pr <pr>`**, whose
 `## ` headings are checked against the ones the body owes: a section a rewrite

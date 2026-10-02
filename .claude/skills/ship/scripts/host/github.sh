@@ -366,13 +366,14 @@ host_issue_create() { # <title> <body-file> <label>
 # Fenced blocks are skipped by `SHIP_AWK_FENCE`, matching the model
 # `ship_body_closes` uses: a `## ` inside a fence is example text, and a closing
 # line printed into a fence renders as code, so the host registers no link and
-# the keyword test that gates a re-run reads false.
+# the keyword test that gates a re-run reads false. Records are skipped by its
+# `ship_inert` too, so this agrees with `update-pr-body` on the first heading.
 # The heading match stays anchored at column 0 on purpose: it has to agree
 # with `update-pr-body`, whose `^## ` is what decides a section boundary.
 _gh_add_closes() { # <body> <issue>
   awk -v n="$2" "$SHIP_AWK_FENCE"'
-    { fenced = ship_fence($0) }
-    !placed && !fenced && /^## / { print "Closes #" n; print ""; placed = 1 }
+    { inert = ship_inert($0) }
+    !placed && !inert && /^## / { print "Closes #" n; print ""; placed = 1 }
     { print }
     END { if (!placed) printf "\nCloses #%s\n", n }' <<<"$1"
 }

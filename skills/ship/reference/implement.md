@@ -103,7 +103,8 @@ wins:
 
 1. Rewrite the issue section the anchor sits in to match the tree with
    `update-issue-body <issue> --section <name> --body-file <path>`, the
-   original section kept below the rewrite in a `<details>` block. An anchor in
+   original section kept below the rewrite in a `<details>` block, a record
+   the mechanic never matches, ends a section on or deletes. An anchor in
    the preamble, which the mechanic leaves alone, is restated in the section
    whose criteria build on it.
 2. Build against the rewritten criteria, and log the substitution in the
