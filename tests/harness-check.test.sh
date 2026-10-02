@@ -182,10 +182,14 @@ run "$r" full
 check "outside the cloud a LOCAL_ONLY row runs" \
   '{"rung":"full","verdict":"fail","checks":{"semver-core":"fail","after":"pass"}}' "$out"
 
+# check.sh reads a stopped clock here, so the runner always starts a second
+# before the deadline, however late in a second the case begins (#445).
 r=$(repo deadline "FULL_RUN='slow'
 FULL_ROWS='after|ok'")
+clock=$fixture/clock; mkdir -p "$clock"
+printf '#!/bin/sh\necho 1000\n' > "$clock/date"; chmod +x "$clock/date"
 start=$(date +%s)
-out=$(cd "$r" && CHECK_DEADLINE=$((start + 1)) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+out=$(cd "$r" && CHECK_DEADLINE=1001 PATH="$clock:$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
 took=$(( $(date +%s) - start ))
 check "the check running at the deadline is over-budget, the rest skipped" \
   '{"rung":"full","verdict":"over-budget","checks":{"runner":"over-budget","after":"skipped"}}' "$out"
