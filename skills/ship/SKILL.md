@@ -96,13 +96,13 @@ printed, and you **commit as you go**, because the PR needs real commits. A
 **Done when:** `preflight` answered `ok: true`, `isolate` printed its path, and
 any `## Worktree` `Bootstrap:` ran green.
 
-**1 · Understand.** From the `read-issue` result, write what success looks like
-into the Run file as criteria a later phase can check; a later authoritative
-comment supersedes the body (**spec precedence**). Too vague to plan: stop
+**1 · Understand.** Too vague to plan from the `read-issue` result: stop
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
-`manage-issue <issue> take`, held until merge; every stop after it follows the
-stop table. Then **grep each anchor** the issue cites (path, heading, step): one
-the tree contradicts is rewritten ([implement.md](reference/implement.md)).
+`manage-issue <issue> take`, held until merge; later stops follow the stop
+table. Then **grep each anchor** the issue cites, rewriting one the tree
+contradicts ([implement.md](reference/implement.md)), and only then write what
+success looks like into the Run file as criteria a later phase can check; a
+later authoritative comment supersedes the body (**spec precedence**).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
