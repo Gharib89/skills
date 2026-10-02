@@ -116,15 +116,14 @@ deviations log.
 and writes its `## <name>` line itself, so the file holds the content alone.
 `--preamble` replaces everything above the first heading, where the closing line
 sits, carrying the old closing line over when the new content lacks one; a body
-with no heading is preamble entire. A column-0 `<details>` block through its
-`</details>` is a `<details>` record: its `## ` lines are no section to either
-mode or to the `sections` list, and a section write carries every record in the
-old content through, verbatim, below the new content.
+with no heading is preamble entire. A column-0 `<details>` block is a
+`<details>` record, whose rule [mechanics.md](mechanics.md#section-surgery)
+states.
 
 **Every title or body write to an open PR ends with `read-pr <pr>`**, whose
 `## ` headings are checked against the ones the body owes: a section a rewrite
 swallowed is missing there, and that is the only place a swallowed `##
 Attribution` shows while the PR is open. `update-pr-body`'s `sections` list is
-the same check one write earlier. Read the headings fence-aware: a Change
-outline fence over a markdown change carries `## ` lines of its own, which are
-example text and not sections.
+the same check one write earlier. Read the headings fence- and record-aware: a
+Change outline fence over a markdown change carries `## ` lines of its own, and
+so does a `<details>` record, and neither's are sections.

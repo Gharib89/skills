@@ -494,4 +494,26 @@ actual=$(ship_body_replace_section "$body" "What to build" "$content"); rc=$?
 check    "a heading only inside a record leaves the record and appends" "$expected" "$actual"
 check_rc "reports created for a heading only a record carries"          1 "$rc"
 
+# Only a column-0 tag counts. A record's prose that mentions the tag mid-line,
+# as an issue about `<details>` does, neither opens a nested record that never
+# closes nor closes the record early.
+for line in 'keep it in a `<details>` block' 'it ends at `</details>` here'; do
+  mention=$(printf '<details><summary>Original</summary>\n\n%s\n\n## Notes\n\nold\n\n</details>' "$line")
+  body=$(printf '## Summary\n\nkeep\n\n%s\n\n## Notes\n\nplaceholder\n' "$mention")
+  expected=$(printf '## Summary\n\nkeep\n\n%s\n\n## Notes\n\nline one\nline two' "$mention")
+  actual=$(ship_body_replace_section "$body" Notes "$content"); rc=$?
+  check    "a record line reading '$line' is prose" "$expected" "$actual"
+  check_rc "the live section after '$line' is replaced" 0 "$rc"
+done
+
+# The attribute form, a one-line record and a CRLF record are records too.
+for rec in '<details open>\n\n## Notes\n\n</details>' \
+           '<details><summary>a</summary>## Notes</details>' \
+           '<details>\r\n\r\n## Notes\r\n\r\n</details>\r'; do
+  body=$(printf "## Notes\n\nplaceholder\n\n## Tail\n\n$rec\n")
+  expected=$(printf "## Notes\n\nline one\nline two\n\n## Tail\n\n$rec")
+  check "a record of the form $rec is left alone" \
+    "$expected" "$(ship_body_replace_section "$body" Notes "$content")"
+done
+
 finish
