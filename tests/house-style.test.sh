@@ -82,11 +82,12 @@ mkdir -p "$d/skills/ship"
   printf -- '- [%s](#%s)\n' "$wide" "$wide"
   printf '[ref]: https://example.com/%s\n' "$wide"
   printf '`%s`.\n' "$wide"
+  printf '1. item\n\n     ```sh\n     %s\n     ```\n' "$wide"
 } > "$d/skills/ship/SKILL.md"
 printf '%s\n' "$wide" > "$d/skills/ship/CHANGELOG.md"
 printf '%s\n' "$wide" > "$d/skills/x/SKILL.md"
 git -C "$d" add -A
-check_rc "frontmatter, fence, table, link-only and code-span-only lines, a changelog and an unwrapped file pass" 0 "$(rc_of C.UTF-8 "$d")"
+check_rc "frontmatter, fences (one nested in a list item), table, link-only and code-span-only lines, a changelog and an unwrapped file pass" 0 "$(rc_of C.UTF-8 "$d")"
 
 # Each exemption is the whole line: prose beside a link or a code span still
 # counts, a closed fence ends its exemption, and `---` opens frontmatter only on

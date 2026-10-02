@@ -85,7 +85,10 @@ too_wide=
   front { if ($0 == "---") front = 0; next }
   { t = $0; sub(/^[ \t]*/, "", t) }
   # A fence closes on a bare run of its own character, at least as long as the
-  # opening run, as CommonMark has it; an unclosed one runs to the end.
+  # opening run, as CommonMark has it; an unclosed one runs to the end. Indent
+  # is not read: a fence inside a list item sits at the content column of the
+  # item, past the three spaces CommonMark allows (the update-skills SKILL.md
+  # nests one at five).
   fence != "" {
     if (t ~ /^(`+|~+)[ \t]*$/ && substr(t, 1, 1) == substr(fence, 1, 1)) {
       sub(/[ \t]*$/, "", t)
