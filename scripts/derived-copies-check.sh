@@ -27,7 +27,7 @@ rc=0
 for d in skills/*/; do
   [ -d "$d" ] || continue
   s=${d#skills/}; s=${s%/}
-  grep -qxF "$s" <<<"$skills" || { echo "skills/$s is not a source \".\" entry in skills-lock.json; run the refresh line"; rc=1; }
+  grep -qxF "$s" <<<"$skills" || { echo "skills/$s is not a source \".\" entry in skills-lock.json; add --skill $s to the refresh line and run it"; rc=1; }
 done
 for s in $skills; do
   [ -f ".release/$s.toml" ] || { echo "missing release configuration: .release/$s.toml"; rc=1; }
@@ -48,10 +48,12 @@ done
 wf=.github/workflows/semantic-release.yml
 [ -f "$wf" ] || { echo "cannot read $wf" >&2; exit 2; }
 want=$(tr '\n' ' ' <<<"$skills"); want=${want% }
-got=$(sed -n 's/^ *SKILLS: //p' "$wf" | tr ' ' '\n' | sort | tr '\n' ' ')
+got=$(sed -n 's/^ *SKILLS: //p' "$wf" | tr ' ' '\n' | sort | tr '\n' ' ') \
+  || { echo "cannot read $wf" >&2; exit 2; }
 got=${got% }
 [ "$got" = "$want" ] || { echo "$wf SKILLS names $got, the lock's set is $want"; rc=1; }
-got=$(sed -n "s/^[ &|(]*startsWith(github.event.head_commit.message, 'chore(release): \([^ ]*\) v').*/\1/p" "$wf" | sort | tr '\n' ' ')
+got=$(sed -n "s/^[ &|(]*startsWith(github.event.head_commit.message, 'chore(release): \([^ ]*\) v').*/\1/p" "$wf" | sort | tr '\n' ' ') \
+  || { echo "cannot read $wf" >&2; exit 2; }
 got=${got% }
 [ "$got" = "$want" ] || { echo "$wf release-commit conditions name $got, the lock's set is $want"; rc=1; }
 
