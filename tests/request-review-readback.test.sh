@@ -3,10 +3,11 @@
 # as one. `host_pr_request_review` takes it as landed when the timeline gained a
 # `review_requested` event during the call, or when the reviewer is on the
 # pending list under its login less a `[bot]` suffix or under its recorded
-# alias; the timeline's own logins, which keep every earlier request, do not count.
-# A round already in flight counts too: the reviewer's last review event on the
-# timeline is a request it has not answered, which is how a Copilot ruleset's
-# PR-open round reads while Copilot is mid-review and off the pending list (#444).
+# alias; the logins of earlier requests the reviewer answered or that were
+# withdrawn, which the timeline keeps, do not count. A round already in flight
+# does: before the call, the reviewer's last review event on the timeline was a
+# request it had not answered, which is how a Copilot ruleset's PR-open round
+# reads while Copilot is mid-review and off the pending list (#444).
 # The pending list alone must suffice, because the timeline can lag the adapter's
 # wait; Copilot, requested as copilot-pull-request-reviewer[bot] and recorded
 # as `Copilot`, is the alias case (#239).
@@ -130,6 +131,20 @@ reset 'Copilot' 1 "$prior"
 out=$(req copilot); rc=$?
 check_rc "a reviewer already pending reads back as requested" 0 "$rc"
 check    "on the one POST" 1 "$(posts)"
+
+# That round's review lands during the call: it was in flight when the call
+# began, so it still reads as landed, stamped at its request.
+reset '' 1 "$prior" 2 "$prior
+$answered"
+out=$(req copilot); rc=$?
+check_rc "a round answered during the call still reads as landed" 0 "$rc"
+check    "and keeps its request's stamp" 2026-09-21T14:00:00Z "$(jq -r .requested_at <<<"$out")"
+
+# Withdrawn during the call instead: nothing is in flight any more.
+reset '' 1 "$prior" 2 "$prior
+{\"event\":\"review_request_removed\",\"login\":\"Copilot\",\"created_at\":\"2026-09-21T14:01:00Z\"}"
+out=$(req copilot); rc=$?
+check_rc "a round withdrawn during the call does not read as landed" 1 "$rc"
 
 # Neither signal: never-queued, after the one retry.
 reset ''

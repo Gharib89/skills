@@ -654,22 +654,25 @@ host_pr_request_review() { # <pr> <login>
   # lands after this call's `requested_at` and is what the caller waits for:
   # already pending counts as landed. The timeline is chronological, so a new
   # event is the last one.
-  # A round in flight counts as well, whatever the POST answered: the reviewer's
-  # last review event is a request, neither answered nor withdrawn. GitHub drops
-  # a reviewer from the pending list once it starts reviewing and a re-request
-  # writes no event, so a Copilot ruleset's PR-open round reads that way while
-  # Copilot is mid-review, and its request's time is the round's `requested_at`
-  # (#444). An answered request is followed by its review, so an earlier round
+  # A round in flight counts as well, whatever the POST answered: before the
+  # POST, the reviewer's last review event was a request, neither answered nor
+  # withdrawn, and no withdrawal ends the call. GitHub drops a reviewer from the
+  # pending list once it starts reviewing and a re-request writes no event, so a
+  # Copilot ruleset's PR-open round reads that way while Copilot is mid-review,
+  # and its request's time is the round's `requested_at` (#444). Read off the
+  # timeline before the POST, so a review that lands during the call still
+  # counts. An answered request is followed by its review, so an earlier round
   # never reads as this one.
   jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson p "$pending" --argjson rb "$readback" --arg l "$login" --arg alias "$(_gh_alias "$login")" --arg now "$now" \
     "$_gh_recorded_def"'
      def requests: map(select(.event == "review_requested"));
      ($a | requests) as $ar | (($ar | length) > ($b | requests | length)) as $new
-     | ([$a[] | select(.login | recorded)] | last) as $last
-     | ($last.event == "review_requested") as $open
+     | def last_of: [.[] | select(.login | recorded)] | last;
+     ($b | last_of) as $lb
+     | ($lb.event == "review_requested" and ($a | last_of).event != "review_request_removed") as $open
      | {requested: (($ok and ($new or any($p[]; recorded))) or $open),
         readback: $rb,
-        requested_at: (if $new then ($ar[-1].created_at // $now) elif $open then $last.created_at else $now end)}'
+        requested_at: (if $new then ($ar[-1].created_at // $now) elif $open then $lb.created_at else $now end)}'
 }
 
 host_pr_comment() { # <pr> <body-file>
