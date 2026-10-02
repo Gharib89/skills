@@ -812,15 +812,20 @@ readonly SHIP_REVIEWER_RUN='
 # fence state is balanced. `update-pr-body` asks before it rewrites a section:
 # an open fence inverts the in-fence state for the rest of the body, so every
 # `## ` heading after it reads as example text and the rewrite swallows the
-# sections between them (run #121 lost four that way).
+# sections between them (run #121 lost four that way). An open record does the
+# same to every heading after it, so one is reported too, as `line <n>:
+# <details>`, naming the outermost opener.
 ship_fence_unclosed() {
   awk "$SHIP_AWK_FENCE"'
-    { was = fenced; fenced = ship_fence($0)
-      if (!was && fenced) {
+    { was = _fenced; was_rec = _record; ship_inert($0)
+      if (!was && _fenced) {
         open_line = NR; open_run = $0
         open_run = ship_deindent(open_run); sub(/[^`~].*$/, "", open_run)
-      } }
-    END { if (fenced) printf "line %d: %s\n", open_line, open_run }' <<<"$1"
+      }
+      if (!was_rec && _record) rec_line = NR }
+    END {
+      if (_fenced) printf "line %d: %s\n", open_line, open_run
+      else if (_record) printf "line %d: <details>\n", rec_line }' <<<"$1"
 }
 
 # ship_body_headings <body>: the body's `## ` section headings, heading text
