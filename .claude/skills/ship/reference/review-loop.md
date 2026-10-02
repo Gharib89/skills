@@ -29,7 +29,8 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
   no poll. Under the host's own request call, round 1 first polls `--since`
   `open-pr`'s `created_at` at `--timeout 0`: a round the host opened unbidden
   with the PR (a Copilot ruleset, `review_on_push: false`) that has landed is
-  round 1, and the request is sent only where none has.
+  round 1, and the request is sent only where none has. One still in flight
+  reads back off that request, stamped at the host's own request time.
 - **`auto-once`**: nothing to request; poll once with `--since` `open-pr`'s
   `created_at`. That one round is all there is.
 - **`on-push`**: every push earns a round; poll with no `--since`, which counts
