@@ -88,10 +88,8 @@ itself before dispositioning. The Run file's `## Design and plan` names the
 paths; disposition from the file, and quote the merge summary's `Self-review`
 rows from it.
 
-**A clobbered Run file** answers a flip with one of two refusals, each carrying
-the rebuild: `no phase <n> line`, when a subagent wrote over the file, and
-`no Run file at <path>`, when it removed it. The second also fits a run that
-brought the wrong `--scratchpad`, so check the path it names before rebuilding
-over a record that exists elsewhere. A `--state` with no recoverable range is
-`done` bare and reads `unverified` on the `Timing:` row, as does the phase
-re-opened at the rebuild; afterwards re-check the task mirror against the file.
+**A clobbered Run file** answers a flip with a refusal naming a missing line or
+a missing file, and each refusal carries its check and the rebuild. A `--state`
+with no recoverable range is `done` bare and reads `unverified` on the `Timing:`
+row, as does the phase re-opened at the rebuild; afterwards re-check the task
+mirror against the file.

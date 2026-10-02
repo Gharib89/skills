@@ -4,11 +4,11 @@
 # `<owner>/<repo>#<sha>:<skill>`, which ship's preflight prints as the install
 # line, and as a printed install line, `npx skills add <owner>/<repo>#<sha>
 # --skill <name>...` at the start of a line of a skill's SKILL.md or opening an
-# inline code span anywhere in one, which a skill hands a human. An install line with no `#<sha>` is read only for
-# a skill the lock pins, so a pin a line lost is drift, while a line for a skill
-# nothing pins (ship itself) is not a pin at all. Every pin must name the source
-# and ref `skills-lock.json` records for that skill, because the lock is what
-# this repo's runs actually tested. The `derived-copies` gate in scripts/local-gate.sh
+# inline code span anywhere in one, which a skill hands a human. An install line
+# with no `#<sha>` is read only for a skill the lock pins, so a pin a line lost
+# is drift, while a line for a skill nothing pins (ship itself) is not a pin at
+# all. Every pin must name the source and ref `skills-lock.json` records for
+# that skill, because the lock is what this repo's runs actually tested. The `derived-copies` gate in scripts/local-gate.sh
 # runs this, as one of its checks.
 #
 #   scripts/pin-check.sh [<root>]
@@ -37,7 +37,8 @@ pins() {
          m = split(text, f, " ")
          if (f[1] != "npx" || f[2] != "skills" || f[3] != "add") return
          for (j = 5; j < m; j++) if (f[j] == "--skill") row(f[4], f[j + 1], "printed") }
-       !fm { n = split($0, seg, "`"); for (i = 1; i <= n; i += (i == 1 ? 1 : 2)) install(seg[i]) }' "$1"
+       # A span opened by a run of backticks is still one span.
+       !fm { line = $0; gsub(/`+/, "`", line); n = split(line, seg, "`"); for (i = 1; i <= n; i += (i == 1 ? 1 : 2)) install(seg[i]) }' "$1"
 }
 
 rc=0

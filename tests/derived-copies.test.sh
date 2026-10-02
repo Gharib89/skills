@@ -62,6 +62,11 @@ d=$(tree norelease); rm "$d/.release/setup-skills.toml"
 check "a source-. skill with no release configuration fails" \
   "missing release configuration: .release/setup-skills.toml" "$(out_of "$d")"
 
+# Its derived copy goes too, so the only difference left is the missing source.
+d=$(tree nosource); rm -rf "$d/skills/setup-skills" "$d/.claude/skills/setup-skills"
+check "a source-. lock entry with no skills/<name>/ fails on stdout" \
+  "missing source: skills/setup-skills" "$(out_of "$d")"
+
 d=$(tree unlocked); mkdir -p "$d/skills/new" "$d/.claude/skills/new"
 check "a skills/<name>/ the lock does not record as source . fails" \
   "skills/new is not a source \".\" entry in skills-lock.json; run the refresh line" "$(out_of "$d")"

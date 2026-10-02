@@ -98,15 +98,16 @@ the comment as evidence.
 An issue that names a file, a heading or a step number in another skill or
 file records what its author believed when writing it. Grep each one in the
 worktree before planning, because a run that builds on a wrong anchor spends
-its reviewer rounds unwinding it. One the tree contradicts is a measured
-premise, not a spec:
+its reviewer rounds unwinding it. Where the tree contradicts one, the tree
+wins:
 
-1. Rewrite the issue's affected section to match the tree with
+1. Rewrite the issue section the anchor sits in to match the tree with
    `update-issue-body <issue> --section <name> --body-file <path>`, the
-   original section kept below the rewrite in a `<details>` block.
+   original section kept below the rewrite in a `<details>` block. An anchor in
+   the preamble, which the mechanic leaves alone, is restated in the section
+   whose criteria build on it.
 2. Build against the rewritten criteria, and log the substitution in the
-   deviations log, which reaches the merge summary and the PR body's
-   `## Special things to note`.
+   deviations log.
 
-A contradiction that leaves the issue nothing to build is not rewritten: it is
-the `mis-specified` stop.
+A contradiction that leaves the issue nothing to build is the `mis-specified`
+stop instead.

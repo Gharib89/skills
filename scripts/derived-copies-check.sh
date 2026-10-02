@@ -4,13 +4,14 @@
 # that was not followed by the refresh line fails here. The `derived-copies`
 # gate in scripts/local-gate.sh and `scripts/check.sh full` run this.
 #
-# The set of skills this repo writes is the lock's `source: "."` entries and is
-# named nowhere else here. Every other place that names it must agree: each
-# `skills/<n>/` is in the set, each skill in the set has a derived copy and a
-# `.release/<n>.toml`, and the release workflow's `SKILLS` list and its
-# release-commit conditions name the set exactly. Vendored entries are ignored.
+# The set of skills this repo writes is read from the lock's `source: "."`
+# entries, and this script hardcodes none. Every other place that names the set
+# must agree: each `skills/<n>/` is in the set, each skill in the set has a
+# source, a derived copy and a `.release/<n>.toml`, and the release workflow's
+# `SKILLS` list and its release-commit conditions name the set exactly.
+# Vendored entries are ignored.
 #
-#   scripts/derived-copies-check.sh [<root>]
+#   scripts/derived-copies-check.sh [<root>]    <root> defaults to this repo
 #
 # stdout: one line per difference
 # exit: 0 identical · 1 a difference · 2 tooling
@@ -30,6 +31,7 @@ for d in skills/*/; do
 done
 for s in $skills; do
   [ -f ".release/$s.toml" ] || { echo "missing release configuration: .release/$s.toml"; rc=1; }
+  [ -d "skills/$s" ] || { echo "missing source: skills/$s"; rc=1; continue; }
   [ -d ".claude/skills/$s" ] || { echo "missing derived copy: .claude/skills/$s"; rc=1; continue; }
   diff -rq "skills/$s" ".claude/skills/$s" || rc=1
   # diff -rq compares content only. A mechanic that loses its executable bit

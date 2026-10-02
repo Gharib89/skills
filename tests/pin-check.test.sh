@@ -109,6 +109,11 @@ body=$(printf '%s\n\nPrint `npx skills add o/r#%s --skill tdd -y` or `npx skills
 check_rc "a pinned install line in a code span passes, beside an unpinned one for an unpinned skill" 0 \
   "$(rc_of "$(tree span-ok "$ship" "$body" "$lock")")"
 
+body=$(printf '%s\n\nPrint ``npx skills add o/r --skill tdd -y`` and stop.\n' "$setup")
+check "a span opened by two backticks is read the same" \
+  "pin drift: tdd is pinned at o/r#none in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
+  "$(out_of "$(tree span2 "$ship" "$body" "$lock")")"
+
 # A body line shaped like the frontmatter key is prose, not a pin.
 body=$(printf '%s\n\n  composes: o/r#%s:tdd\n' "$setup" "$B")
 check_rc "a composes line below the frontmatter is not read" 0 \

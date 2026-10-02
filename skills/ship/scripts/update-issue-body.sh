@@ -13,7 +13,8 @@
 # Section-only by design: no whole-body mode and no preamble, so two runs
 # editing different sections of one issue cannot clobber each other. Phase 9
 # runs it after `merge` has verified the merge, so nothing reaches the issue for
-# code that has not landed.
+# code that has not landed; phase 1 runs it before any code, to rewrite a
+# section whose anchor the tree contradicts, which describes no code at all.
 #
 # Trailing newlines are normalized: the body is read without them and written
 # ending in exactly one, so a byte diff of a read-back against the body before

@@ -101,8 +101,8 @@ into the Run file as criteria a later phase can check; a later authoritative
 comment supersedes the body (**spec precedence**). Too vague to plan: stop
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
 `manage-issue <issue> take`, held until merge; every stop after it follows the
-stop table. Then **grep each path, heading and step** the issue cites elsewhere:
-one the tree contradicts is rewritten, not built on (implement.md).
+stop table. Then **grep each anchor** the issue cites (path, heading, step): one
+the tree contradicts is rewritten ([implement.md](reference/implement.md)).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the

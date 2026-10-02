@@ -155,7 +155,7 @@ parse_file() { # parse_file "$@": where every flip and timing reads the record
   # The resolved path, not the flags it came from: a run that brought the wrong
   # scratchpad reads which record the mechanic went looking for, and one whose
   # record a subagent removed reads the same recovery as an overwritten one.
-  [ -f "$file" ] || ship_fail "no Run file at $file: check --scratchpad; if it is right, the Run file was removed; $rebuild_hint"
+  [ -f "$file" ] || ship_fail "no Run file at $file: check that path first; if it is the right one, a subagent removed the Run file; $rebuild_hint"
 }
 # The row a flip acts on, or the refusal that it is not there. A missing line
 # for one of the ten phases is the symptom of a Run file a subagent wrote over,
