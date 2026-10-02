@@ -3,7 +3,11 @@
 # as one. `host_pr_request_review` takes it as landed when the timeline gained a
 # `review_requested` event during the call, or when the reviewer is on the
 # pending list under its login less a `[bot]` suffix or under its recorded
-# alias; the timeline's own logins, which keep every earlier request, do not count.
+# alias; the logins of earlier requests the reviewer answered or that were
+# withdrawn, which the timeline keeps, do not count. A round already in flight
+# does: before the call, the reviewer's last review event on the timeline was a
+# request it had not answered, which is how a Copilot ruleset's PR-open round
+# reads while Copilot is mid-review and off the pending list (#444).
 # The pending list alone must suffice, because the timeline can lag the adapter's
 # wait; Copilot, requested as copilot-pull-request-reviewer[bot] and recorded
 # as `Copilot`, is the alias case (#239).
@@ -88,19 +92,37 @@ check_rc "github-actions[bot] read back as github-actions is requested" 0 "$rc"
 check    "and reports requested: true" true "$(jq -r .requested <<<"$out")"
 
 # A timeline that gained the event is the other signal, and its time is the stamp.
-reset '' 2 '{"login":"Copilot","created_at":"2026-09-21T15:00:00Z"}'
+reset '' 2 '{"event":"review_requested","login":"Copilot","created_at":"2026-09-21T15:00:00Z"}'
 out=$(req copilot); rc=$?
 check_rc "a timeline delta alone is a landed request" 0 "$rc"
 check    "and stamps requested_at from the event" 2026-09-21T15:00:00Z "$(jq -r .requested_at <<<"$out")"
 
-# A reviewer requested before on this PR: its event is in the timeline before
-# and after the call, the POST queues nothing, and nothing is pending. The
-# earlier request must not read this one back.
-prior='{"login":"Copilot","created_at":"2026-09-21T14:00:00Z"}'
+# A reviewer requested and answered before on this PR: its events are in the
+# timeline before and after the call, the POST queues nothing, and nothing is
+# pending. The earlier round must not read this one back.
+prior='{"event":"review_requested","login":"Copilot","created_at":"2026-09-21T14:00:00Z"}'
+answered='{"event":"reviewed","login":"Copilot","created_at":"2026-09-21T14:03:00Z"}'
+reset '' 1 "$prior
+$answered"
+out=$(req copilot); rc=$?
+check_rc "an earlier answered request does not read back a new one" 1 "$rc"
+check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
+
+# A request withdrawn before it was answered queues nothing either.
+reset '' 1 "$prior
+{\"event\":\"review_request_removed\",\"login\":\"Copilot\",\"created_at\":\"2026-09-21T14:01:00Z\"}"
+out=$(req copilot); rc=$?
+check_rc "a withdrawn request does not read back a new one" 1 "$rc"
+
+# The field case of #444: a ruleset requested Copilot at PR open, Copilot is
+# mid-review so it is off the pending list, and the re-request writes no event.
+# That round is in flight: the request reads as landed, stamped at the ruleset's
+# event, so a poll --since it catches the round.
 reset '' 1 "$prior"
 out=$(req copilot); rc=$?
-check_rc "an earlier request on the timeline does not read back a new one" 1 "$rc"
-check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
+check_rc "an unanswered request on the timeline is a round in flight" 0 "$rc"
+check    "and stamps requested_at from that request" 2026-09-21T14:00:00Z "$(jq -r .requested_at <<<"$out")"
+check    "on the one POST" 1 "$(posts)"
 
 # A reviewer still pending from an earlier request: GitHub no-ops the POST and
 # writes no event, but the round it owes is queued and unposted, so it lands
@@ -109,6 +131,20 @@ reset 'Copilot' 1 "$prior"
 out=$(req copilot); rc=$?
 check_rc "a reviewer already pending reads back as requested" 0 "$rc"
 check    "on the one POST" 1 "$(posts)"
+
+# That round's review lands during the call: it was in flight when the call
+# began, so it still reads as landed, stamped at its request.
+reset '' 1 "$prior" 2 "$prior
+$answered"
+out=$(req copilot); rc=$?
+check_rc "a round answered during the call still reads as landed" 0 "$rc"
+check    "and keeps its request's stamp" 2026-09-21T14:00:00Z "$(jq -r .requested_at <<<"$out")"
+
+# Withdrawn during the call instead: nothing is in flight any more.
+reset '' 1 "$prior" 2 "$prior
+{\"event\":\"review_request_removed\",\"login\":\"Copilot\",\"created_at\":\"2026-09-21T14:01:00Z\"}"
+out=$(req copilot); rc=$?
+check_rc "a round withdrawn during the call does not read as landed" 1 "$rc"
 
 # Neither signal: never-queued, after the one retry.
 reset ''
