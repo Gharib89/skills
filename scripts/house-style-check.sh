@@ -65,4 +65,32 @@ if [ -n "$missing" ]; then
   printf '%s' "$missing"
   found=1
 fi
+
+# The files this repo hard-wraps at 80 columns. The rest of the tree puts one
+# paragraph on a line (a profile's `Label:` line must stay one line), so a new
+# hard-wrapped file joins this list. Exempt are the lines no reflow shortens:
+# frontmatter, fences, tables, a line holding only a link, a code span or a link
+# reference definition, and changelogs, which the release run writes.
+wrapped=('skills/ship/*.md' 'skills/cloud-ship/*.md' 'skills/update-skills/*.md'
+  'skills/grill-with-artifact/*.md' docs/contributing/coding-standards.md CLAUDE.md
+  ':!:*CHANGELOG.md')
+files=()
+while IFS= read -r -d '' f; do files+=("$f"); done < <(git grep -z -I -l -e '' -- "${wrapped[@]}" 2>"$err")
+[ -s "$err" ] && tooling
+# Columns are characters: under LC_ALL=C, dropping the UTF-8 continuation bytes
+# leaves one byte per character, under any caller's locale.
+too_wide=
+[ "${#files[@]}" -eq 0 ] || too_wide=$(LC_ALL=C awk '
+  FNR == 1 { fence = 0; front = ($0 == "---"); if (front) next }
+  front { if ($0 == "---") front = 0; next }
+  /^[ \t]*(```|~~~)/ { fence = !fence; next }
+  fence || /^[ \t]*\|/ { next }
+  /^[ \t]*([-*+]|[0-9]+\.)?[ \t]*(\[[^]]*\]\([^ )]*\)|`[^`]*`)[.,;:]?$/ || /^[ \t]*\[[^]]*\]:[ \t]/ { next }
+  { s = $0; gsub(/[\200-\277]/, "", s); if (length(s) > 80) print FILENAME ":" FNR ":" $0 }
+' "${files[@]}" 2>"$err") || tooling
+if [ -n "$too_wide" ]; then
+  echo "lines over 80 columns in hard-wrapped files (see docs/contributing/coding-standards.md):"
+  echo "$too_wide"
+  found=1
+fi
 exit "$found"

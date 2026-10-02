@@ -65,6 +65,38 @@ printf 'text ' > "$d/outside.txt"; ln -s ../../outside.txt "$d/skills/x/link.md"
 git -C "$d" add skills
 check_rc "a symlink to a file with a trailing blank and no final newline passes" 0 "$(rc_of C.UTF-8 "$d")"
 
+# Wrap width: 80 columns over the files this repo hard-wraps, where a ragged
+# reflow drew review findings. Lines no reflow can shorten are exempt.
+wide=$(printf '%081d' 0 | tr 0 w)
+d=$(checkout wrap-ragged)
+mkdir -p "$d/skills/ship"
+printf 'short line\n%s\n' "$wide" > "$d/skills/ship/SKILL.md"; git -C "$d" add -A
+check_rc "an 81-column prose line in a wrapped file fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the finding names the line" "skills/ship/SKILL.md:2:$wide" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout wrap-exempt)
+mkdir -p "$d/skills/ship"
+{ printf -- '---\ndescription: %s\n---\n' "$wide"
+  printf '```sh\n%s\n```\n' "$wide"
+  printf '| %s |\n' "$wide"
+  printf -- '- [%s](#%s)\n' "$wide" "$wide"
+  printf '[ref]: https://example.com/%s\n' "$wide"
+  printf '`%s`.\n' "$wide"
+} > "$d/skills/ship/SKILL.md"
+printf '%s\n' "$wide" > "$d/skills/ship/CHANGELOG.md"
+printf '%s\n' "$wide" > "$d/skills/x/SKILL.md"
+git -C "$d" add -A
+check_rc "frontmatter, fence, table, link-only and code-span-only lines, a changelog and an unwrapped file pass" 0 "$(rc_of C.UTF-8 "$d")"
+
+# Width is counted in characters, so a multibyte character is one column under
+# every locale, the empty one included.
+for loc in "" C.UTF-8; do
+  label=${loc:-empty}
+  d=$(checkout "wrap-multibyte-$label")
+  printf '%s\342\206\222\n' "$(printf '%079d' 0 | tr 0 w)" > "$d/CLAUDE.md"; git -C "$d" add -A
+  check_rc "an 80-character line with a multibyte character passes under the $label locale" 0 "$(rc_of "$loc" "$d")"
+done
+
 # git grep names an unreadable file on stderr and exits 0: that is not clean.
 # Root reads it anyway, so the case only runs where the mode bits bind.
 if [ "$(id -u)" != 0 ]; then
