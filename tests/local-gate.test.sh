@@ -152,4 +152,15 @@ out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
 check_rc "template, a real base: exit 0" 0 "$rc"
 check "template, a real base: secrets passes" "pass" "$(jq -r '.gates.secrets' <<<"$out")"
 
+# `--help` and `-h` answer the header's usage line, exit 0, before any check
+# runs, in this repo's gate and in both templates setup-skills lands.
+for f in scripts/local-gate.sh skills/setup-skills/local-gate.sh skills/setup-skills/local-gate-harness.sh; do
+  for flag in --help -h; do
+    out=$(cd "$fixture" && bash "$OLDPWD/$f" "$flag" 2>&1); rc=$?
+    check_rc "$f $flag: exit 0" 0 "$rc"
+    check "$f $flag: the usage line, and nothing else" \
+      "usage: scripts/local-gate.sh [--small <node>] [--base <ref>]" "$out"
+  done
+done
+
 finish
