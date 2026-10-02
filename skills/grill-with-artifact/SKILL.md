@@ -22,6 +22,11 @@ npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skil
 This skill replaces only two things in them: how a
 **grilling round** is shown (a round document on the page, never the terminal
 format `grilling` gives) and how the answers come back (a Submit on the page).
+It is derived from `grill-with-docs` in `mattpocock/skills`, and installs with:
+
+```sh
+npx skills add Gharib89/skills --skill grill-with-artifact --agent claude-code -y
+```
 
 The page is [page.html](page.html), fixed and tested: a session fills its title
 and publishes it once. From then on every grilling round is a document in the
