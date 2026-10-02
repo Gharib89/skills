@@ -4,7 +4,7 @@ description: "Grill a plan or design on a private artifact page: each grilling r
 disable-model-invocation: true
 argument-hint: "[topic]"
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # grill-with-artifact
