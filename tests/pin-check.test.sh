@@ -98,6 +98,17 @@ check "a printed line that dropped the sha of a pinned skill is drift" \
   "pin drift: tdd is pinned at o/r#none in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
   "$(out_of "$d")"
 
+# An install line inside an inline code span is printed for a human just the
+# same, so it is read the way a line-start one is.
+body=$(printf '%s\n\nPrint `npx skills add o/r --skill tdd --agent claude-code -y` and stop.\n' "$setup")
+d=$(tree span "$ship" "$body" "$lock")
+check "an unpinned install line in a code span for a pinned skill is drift" \
+  "pin drift: tdd is pinned at o/r#none in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
+  "$(out_of "$d")"
+body=$(printf '%s\n\nPrint `npx skills add o/r#%s --skill tdd -y` or `npx skills add Gharib89/skills --skill ship -y`.\n' "$setup" "$A")
+check_rc "a pinned install line in a code span passes, beside an unpinned one for an unpinned skill" 0 \
+  "$(rc_of "$(tree span-ok "$ship" "$body" "$lock")")"
+
 # A body line shaped like the frontmatter key is prose, not a pin.
 body=$(printf '%s\n\n  composes: o/r#%s:tdd\n' "$setup" "$B")
 check_rc "a composes line below the frontmatter is not read" 0 \
