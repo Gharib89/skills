@@ -29,6 +29,13 @@ page's database, and the page renders it live. [round-data.md](round-data.md)
 is the contract between the two: read it before writing round 1, and hold every
 document you write to its field table and its figure style contract.
 
+This skill is derived from `grill-with-docs` in `mattpocock/skills`, and
+installs with:
+
+```sh
+npx skills add Gharib89/skills --skill grill-with-artifact --agent claude-code -y
+```
+
 ## 1 · Pick the surface
 
 The page needs the `Artifact`, `ArtifactData` and `ArtifactComments` tools.

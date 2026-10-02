@@ -50,7 +50,7 @@ local-gate contract.
 | `comment-pr` | 7, 9 |
 | `reply-thread` | 7 |
 | `update-pr-body` | 7 |
-| `update-issue-body` | 9, after `merge` answers `merged: true`, once per tracker draft |
+| `update-issue-body` | 1, once per section an anchor the tree contradicts sits in; 9, after `merge` answers `merged: true`, once per tracker draft |
 | `resolve-thread` | 7 |
 | `ci-wait` | 8 |
 | `merge` | 9, on approval |
