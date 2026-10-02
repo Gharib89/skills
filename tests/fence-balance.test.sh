@@ -55,4 +55,18 @@ check "a deeper heading is not a section" \
 check "a body with no heading lists nothing" \
   "" "$(ship_body_headings "$(printf 'just prose\n')")"
 
+# A column-0 `<details>` block is a record: the headings its copy of the body
+# repeats are not sections, so each live heading is listed once.
+check "a heading inside a record is not a section" \
+  "$(printf 'What to build\nAcceptance criteria')" \
+  "$(ship_body_headings "$(printf '## What to build\n\nask\n\n## Acceptance criteria\n\nc\n\n<details><summary>Original</summary>\n\n## What to build\n\n## Acceptance criteria\n\n</details>\n')")"
+
+# An unclosed record hides every heading after it, the way an unclosed fence
+# does, so a body file ending inside one is refused the same way.
+check "a record left open is reported at its opener" \
+  "line 3: <details>" "$(ship_fence_unclosed "$(printf '## Summary\n\n<details><summary>x</summary>\n\n## Review\n')")"
+
+check "a closed record is balanced" \
+  "" "$(ship_fence_unclosed "$(printf '<details>\n\n<details>\nin\n</details>\n\n</details>\n')")"
+
 finish

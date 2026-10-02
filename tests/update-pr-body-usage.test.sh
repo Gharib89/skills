@@ -63,7 +63,7 @@ printf '## Summary\n\n```diff\n- before\n+ after\n' > "$open_fence"
 # sections, and the verdict still said `replaced: true`. The refusal names the
 # fence so the caller can close it rather than hunt for it.
 check "a body file whose fence ends open is refused, naming the fence" \
-  'body file ends inside an unclosed fence (line 3: ```)' \
+  'body file ends inside an unclosed fence or <details> record (line 3: ```)' \
   "$(err 7 --section Summary --body-file "$open_fence")"
 check_rc "an unclosed fence is tooling, not a failed update" \
   2 "$(rc 7 --section Summary --body-file "$open_fence")"
@@ -71,7 +71,7 @@ check_rc "an unclosed fence is tooling, not a failed update" \
 # The preamble file takes the same rule: an open fence there inverts the state
 # for the whole body under it, which is the same swallowed sections.
 check "a preamble file whose fence ends open is refused too" \
-  'body file ends inside an unclosed fence (line 3: ```)' \
+  'body file ends inside an unclosed fence or <details> record (line 3: ```)' \
   "$(err 7 --preamble --body-file "$open_fence")"
 check_rc "an unclosed preamble fence is tooling" 2 "$(rc 7 --preamble --body-file "$open_fence")"
 

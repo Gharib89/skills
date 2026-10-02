@@ -145,4 +145,11 @@ check "an empty new preamble is just the carried line" \
   "$(printf 'Closes #76\n\n## Summary\n\ns')" \
   "$(ship_body_replace_preamble "$(printf 'Closes #76\n\n## Summary\n\ns')" "$new")"
 
+# A `## ` inside a record above the first live heading does not end the
+# preamble: the record is preamble text, replaced with the rest of it.
+printf 'a shape\nand its caption\n' > "$new"
+check "a heading inside a record does not end the preamble" \
+  "$(printf 'a shape\nand its caption\n\nCloses #76\n\n## Summary\n\ns')" \
+  "$(ship_body_replace_preamble "$(printf 'Closes #76\n\n<details>\n\n## Old\n\n</details>\n\n## Summary\n\ns')" "$new")"
+
 finish

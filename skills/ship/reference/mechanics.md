@@ -1,5 +1,13 @@
 # The mechanics: what all of them have in common
 
+## Contents
+
+- [Which calls need a mechanic](#which-calls-need-a-mechanic)
+- [Which mechanic each phase runs](#which-mechanic-each-phase-runs)
+- [Flags, exit codes and failed writes](#flags-exit-codes-and-failed-writes)
+- [Section surgery](#section-surgery)
+- [The vocabulary a read comes back in](#the-vocabulary-a-read-comes-back-in)
+
 `scripts/` holds one executable per deterministic step, and not every one
 touches the host: `run-file` writes the run's own record and nothing else.
 `SKILL.md` says what each phase decides; this file says which mechanic the phase
@@ -83,6 +91,19 @@ their stderr carries the host's message. Under `--repo`, every exit 1 of
 `file-issue` and `update-issue-body`, an unreachable host's or a refused
 write's, carries a `command` beside the `error`: the shell-quoted invocation for
 the human to run where the write succeeds.
+
+## Section surgery
+
+`update-pr-body` and `update-issue-body` share one section surgery. A `## `
+heading counts only at column 0, outside a fence and outside a `<details>`
+record: a line opening on `<details>` or `<details ...>` at column 0 through
+its matching line opening on `</details>`, nesting counted. The record's `## `
+lines are no section to `--section`, to `--preamble`'s boundary or to the
+`sections` list. A section write replaces the section's prose and carries every
+record in its old content through, verbatim and in order, below the new
+content, so no write deletes one. A `## <name>` found only inside a record is
+an absent section, created at the end. A body file that ends inside an open
+fence or record is refused, exit 2.
 
 ## The vocabulary a read comes back in
 

@@ -28,7 +28,7 @@ check "a flag in the section slot is the usage error" "$usage" \
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 printf '```diff\n- before\n' > "$work/open-fence.md"
 check "a body file whose fence ends open is refused, naming the fence" \
-  'body file ends inside an unclosed fence (line 1: ```)' \
+  'body file ends inside an unclosed fence or <details> record (line 1: ```)' \
   "$(err 7 --section X --body-file "$work/open-fence.md")"
 
 repo=$work/repo; export SHIP_FAKE=$work/fake
