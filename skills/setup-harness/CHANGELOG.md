@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.3 (2026-10-03)
+
+### Bug Fixes
+
+- **setup-harness**: Check.sh skips paths outside the repo
+  ([#461](https://github.com/Gharib89/skills/pull/461),
+  [`03cb0e1`](https://github.com/Gharib89/skills/commit/03cb0e1285c6f08d137adc8ac7ce7d2fefc1b9e5))
+
+
 ## v0.9.2 (2026-09-30)
 
 ### Bug Fixes
