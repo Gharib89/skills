@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.1 (2026-10-03)
+
+### Refactoring
+
+- **setup-skills**: Local gate on Bash 3.2, one bootstrap test, stale gate comments
+  ([#463](https://github.com/Gharib89/skills/pull/463),
+  [`75a0de3`](https://github.com/Gharib89/skills/commit/75a0de3ed65528dda3630a8c748d5c9367bed81b))
+
+
 ## v0.12.0 (2026-10-02)
 
 ### Features
