@@ -142,10 +142,13 @@ check "template, a real base: secrets passes" "pass" "$(jq -r '.gates.secrets' <
 
 # The template grades its own gates: a failing gate is exit 1, an unavailable one
 # exit 2, and fail wins over unavailable. Each case fills the gates block the way
-# a consumer might: a placeholder with a failing command, or a `mark`.
+# a consumer might: a placeholder with a failing command, or a `mark`. A gate
+# written twice keeps the worse status, so a later write cannot mask a failure.
 for c in "false|true|run deps  __DEPS__|1 fail fail|a failing gate" \
   "true|true|mark deps unavailable|2 unavailable unavailable|an unavailable gate" \
-  "true|false|mark deps unavailable|1 fail unavailable|a failing gate beside an unavailable one"; do
+  "true|false|mark deps unavailable|1 fail unavailable|a failing gate beside an unavailable one" \
+  "true|true|run deps false; mark deps deferred-to-ci|1 fail fail|a later mark over a failing gate" \
+  "true|true|mark deps unavailable; run deps true|2 unavailable unavailable|a later pass over an unavailable gate"; do
   IFS='|' read -r deps runner line want name <<<"$c"
   sed "s/^run deps  __DEPS__.*/$line/; s/__DEPS__/$deps/; s/__RUNNER__/$runner/" skills/setup-skills/local-gate.sh > "$d/local-gate.sh"
   out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
