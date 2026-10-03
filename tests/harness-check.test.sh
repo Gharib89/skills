@@ -72,6 +72,12 @@ run "$r" edit README.md
 check "a file no glob covers is skipped" '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
 check_rc "a skipped edit exits 0" 0 "$rc"
 
+# A hook sends every Edit or Write path, the agent's own files outside the
+# repo included (#459).
+echo 'x = BAD' > "$fixture/outside.py"
+run "$r" edit "$fixture/outside.py"
+check "a file outside the repo is skipped" '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
+
 r=$(repo fix "EDIT_GLOBS='*.py'
 EDIT_RUN='fmt {files}'")
 echo 'x = UGLY' > "$r/a.py"
@@ -130,6 +136,9 @@ run "$r" turn lib/x.py
 check "an empty prefix is the root member, and an empty typecheck is no check" \
   '{"rung":"turn","verdict":"fail","checks":{"tests:app":"fail"}}' "$out"
 check_rc "a failing test exits 1" 1 "$rc"
+run "$r" turn "$fixture/outside.py"
+check "a file outside the repo is no member's, even the root member's" \
+  '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
 
 # A fixture tree the profile excludes: its files belong to no row, even one
 # whose prefix covers them, and are no new root.
