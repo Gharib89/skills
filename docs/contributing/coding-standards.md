@@ -64,11 +64,12 @@ prose is the product as much as the scripts are.
   check does read placement, by running each mechanic where no origin remote
   resolves, so a `ship_help` below `ship_load_host` fails there. The same gate
   holds every shell file under `skills/` to the Bash 3.2 target below, and
-  refuses any mention of `SHIP_HOST_ADAPTER` under `skills/` outside
-  `_lib.sh`, whose `ship_load_host` is its one reader. It also holds two sentences of ship's prose that nothing
-  else enforces, matched as substrings with their line wraps joined: phase 4's
-  instruction that each axis reads the Local gate's JSON and never runs the
-  suite itself, and context discipline's `Read one reference file per call.`
+  refuses any mention of `SHIP_HOST_ADAPTER` under `skills/` outside `_lib.sh`,
+  whose `ship_load_host` is its one reader. It also holds two sentences of
+  ship's prose that nothing else enforces, matched as substrings with their line
+  wraps joined: phase 4's instruction that each axis reads the Local gate's JSON
+  and never runs the suite itself, and context discipline's `Read one reference
+  file per call.`
 - Ship's own documents inside their line budget, per the `prose-budget` gate:
   `skills/*/SKILL.md` at most 350 lines, and every `skills/*/reference/*.md`
   over 100 lines opening with a `## Contents` heading in its first 15 lines
