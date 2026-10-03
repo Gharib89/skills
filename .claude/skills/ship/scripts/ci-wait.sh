@@ -27,9 +27,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 grace=${SHIP_CI_WAIT_GRACE:-120}
 usage="usage: ci-wait <pr> [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is timeout] [--timeout <s>, at least the no-checks grace (${grace}s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>]"
 ship_help "$usage" "$@"
-[ -n "${1:-}" ] || ship_tooling "$usage"
+ship_args "$usage" pr "$@"
 pr=$1; shift
-case $pr in -*) ship_tooling "$usage" ;; esac
 timeout=1800; interval=30; want=""
 while [ $# -gt 0 ]; do
   case $1 in

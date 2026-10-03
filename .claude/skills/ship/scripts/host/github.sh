@@ -67,7 +67,7 @@ _gh() {
   # The body goes out only on a success. A failed call's body is an error
   # document nothing here reads, and `_gh_create` prints its own JSON after
   # this returns, so emitting both would hand the caller two JSON values where
-  # `ship_fail_host` expects one.
+  # `ship_fail` expects one.
   if [ "$rc" -eq 0 ]; then
     [ -n "$raw" ] && printf '%s\n' "$raw" | awk -v want=body "$_GH_AWK_SPLIT"
   else
@@ -77,7 +77,7 @@ _gh() {
   return $rc
 }
 
-# A failed host call answers with its status, so `ship_fail_host` can tell "the
+# A failed host call answers with its status, so `ship_fail` can tell "the
 # host refused this" from "the host is down". `_gh` leaves the status in a
 # variable, and a pipeline element and a `$( )` are both subshells where one
 # dies unread, so both helpers below print it instead. The `( )` is what makes
@@ -160,10 +160,9 @@ api() {
 # Switching on the host's answer rather than on the environment keeps the
 # sandbox out of the adapter's logic, and a run outside it never meets the
 # refusal, so it never makes a `ccr` call.
-_gh_gql_marker() { printf '%s/ship-gh-graphql-refused.%s.%s' "${TMPDIR:-/tmp}" "${UID:-0}" "$$"; }
 gql() {
   local err rc attempt m
-  m=$(_gh_gql_marker)
+  m="${TMPDIR:-/tmp}/ship-gh-graphql-refused.${UID:-0}.$$"
   [ -d "$m" ] && [ ! -L "$m" ] && [ -O "$m" ] && return 3
   for attempt in 1 2; do
     # stderr into $err, stdout on to the caller, through fd 3.
@@ -288,13 +287,12 @@ host_issue_linked_prs() {
 }
 host_issue_assign()   { api -X POST   "$R/issues/$1/assignees" -f "assignees[]=$2" >/dev/null; }
 host_issue_unassign() { api -X DELETE "$R/issues/$1/assignees" -f "assignees[]=$2" >/dev/null; }
-host_issue_has_label(){ api "$R/issues/$1/labels" --jq '.[].name' | grep -qxF -- "$2"; }
 host_issue_add_label(){ api -X POST "$R/issues/$1/labels" -f "labels[]=$2" >/dev/null; }
 # Check first: a DELETE 404s the same way whether the label was already gone or
 # the call itself failed, and a removal reported on a label still there is
 # exactly the residue this exists to stop.
 host_issue_remove_label() {
-  host_issue_has_label "$1" "$2" || return 0
+  ship_issue_has_label "$1" "$2" || return 0
   api -X DELETE "$R/issues/$1/labels/$(jq -rn --arg l "$2" '$l | @uri')" >/dev/null
 }
 # A create, so it is create-then-verify: a 5xx may have landed the comment, and a
@@ -521,12 +519,11 @@ host_pr_threads() {
 # states it either as a review of its own or as a PR comment (Copilot did the
 # former on PR #154, three times), so both surfaces merge into one time-sorted
 # list and the latest notice wins whichever way it arrived.
-# The login is compared the way `SHIP_LANDED_BY` compares it, so a `Login:` typed
+# The login is compared the way `SHIP_ROUND_BY` compares it, so a `Login:` typed
 # in another case cannot land rounds here and report blocked nowhere.
 # The notice carries the time its row was posted, which is what poll-pr's since
 # rule reads for a comment (#256).
-_gh_blocked_select="$SHIP_BLOCKED_NOTICE"'
-  def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+_gh_blocked_select="$SHIP_BLOCKED_NOTICE$SHIP_LOGIN_NORM"'
   [sort_by(.at)[] | select((.login | norm) == ($l | norm)) | .at as $at
    | (.body // "") | notice_lines | {line: ., at: $at}]
   | last // null'
@@ -623,7 +620,7 @@ _gh_alias() { [ "$1" = "$(host_copilot_login)" ] && printf '%s' "$_gh_copilot_re
 # given $l, its login, and $alias from `_gh_alias`: the login less a `[bot]`
 # suffix (github-actions[bot] reads back as github-actions), or the alias
 # (Copilot), in any case.
-_gh_recorded_def='def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+_gh_recorded_def="$SHIP_LOGIN_NORM"'
   def recorded: norm as $r | [$l, $alias | select(. != "") | norm] | index($r) != null;'
 
 # Request, then read the request back off the host's own record: the login you
@@ -685,7 +682,7 @@ host_pr_comment() { # <pr> <body-file>
   }
   _gh_create_verify _comment_post _comment_find
 }
-# Nothing on success, {"status": <n|null>} on failure: the caller's `ship_fail_host`
+# Nothing on success, {"status": <n|null>} on failure: the caller's `ship_fail`
 # turns that into the verdict.
 host_pr_set_body() { jq -n --rawfile b "$2" '{body: $b}' | _gh_write -X PATCH "$R/pulls/$1" --input -; }
 host_pr_set_title() { jq -n --arg t "$2" '{title: $t}' | _gh_write -X PATCH "$R/pulls/$1" --input -; }

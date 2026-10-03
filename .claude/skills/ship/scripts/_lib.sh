@@ -51,7 +51,6 @@
 #                                           mentions.
 #   host_issue_assign <n> <identity>
 #   host_issue_unassign <n> <identity>
-#   host_issue_has_label <n> <label>     -> exit 0 when present
 #   host_issue_add_label <n> <label>
 #   host_issue_remove_label <n> <label>  (no-op success when absent)
 #   host_issue_comment <n> <body>        (fails with {status})
@@ -111,7 +110,7 @@
 #                                           every comment is a thread that host_pr_reviews already
 #                                           carries, so a notice there reaches poll-pr as a review
 #                                           row, graded by SHIP_SUBSTANTIVE and refused through
-#                                           SHIP_REFUSED_BY.
+#                                           SHIP_ROUND_BY.
 #   host_workflow_runs <file> <since-iso>-> [{status,conclusion,created_at,url,title}] the runs
 #                                           of that workflow file, for the event a comment
 #                                           transport starts, created at or
@@ -168,32 +167,33 @@
 
 SHIP_SCRIPTS=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly SHIP_SCRIPTS
-# shellcheck disable=SC2034  # read by the mechanics that source this library
-readonly SHIP_CLAIM_COMMENT='🤖 Claimed by a ship run: implementation in progress.'
 
 # ship_tooling <msg>: the exit-2 shape. Also used when the host adapter itself
 # cannot load, so a broken install still emits the contract, not "command not found".
 ship_tooling() { jq -n --arg e "$1" '{error: $e}'; exit 2; }
-# SHIP_BY_HAND, set by ship_reach_repo, rides every exit-1 answer as `command`.
-# The message is also written to stderr (here and in ship_fail_host): a caller
-# piping stdout through `jq -r .field` reads a refusal as `null` and exit 0, and
-# stderr is what still shows it.
-ship_fail()    { jq -n --arg e "$1" --arg c "${SHIP_BY_HAND:-}" '{error: $e} + if $c == "" then {} else {command: $c} end'; printf '%s\n' "$1" >&2; exit 1; }
-
-# ship_fail_host <msg> <adapter-answer>: the exit-1 shape for a host write that
-# failed, carrying the HTTP status of the last attempt. Without it a host that
-# is briefly down and a payload the host refuses produce the identical verdict,
-# and the run has no way to tell them apart: PR #170 spent four minutes
-# bisecting a valid body against a burst of 500s. <adapter-answer> is whatever
-# the adapter printed on its failure path; an adapter that reports no status,
-# as `az` does, leaves it empty and the status is null. A guessed status is
-# worse than none, so anything that is not a number reads as null.
-ship_fail_host() { # ship_fail_host <msg> <adapter-answer>
-  local s
-  s=$(jq -r 'if (.status | type) == "number" then .status else "null" end' <<<"${2:-}" 2>/dev/null) || s=null
-  [ -n "$s" ] || s=null
-  jq -n --arg e "$1" --argjson s "$s" --arg c "${SHIP_BY_HAND:-}" \
-    '{error: $e, status: $s} + if $c == "" then {} else {command: $c} end'
+# ship_fail <msg> [<adapter-answer>]: the exit-1 shape. SHIP_BY_HAND, set by
+# ship_reach_repo, rides every exit-1 answer as `command`. The message is also
+# written to stderr: a caller piping stdout through `jq -r .field` reads a
+# refusal as `null` and exit 0, and stderr is what still shows it.
+#
+# A second argument, even an empty one, is a host write that failed, and adds the
+# HTTP status of its last attempt as `status`. Without it a host that is briefly
+# down and a payload the host refuses produce the identical verdict, and the run
+# has no way to tell them apart: PR #170 spent four minutes bisecting a valid
+# body against a burst of 500s. <adapter-answer> is whatever the adapter printed
+# on its failure path; an adapter that reports no status, as `az` does, leaves it
+# empty and the status is null. A guessed status is worse than none, so anything
+# that is not a number reads as null. One argument is a refusal the host never
+# saw, which carries no `status` key.
+ship_fail() {
+  local s=
+  if [ $# -ge 2 ]; then
+    s=$(jq -r 'if (.status | type) == "number" then .status else "null" end' <<<"$2" 2>/dev/null) || s=null
+    [ -n "$s" ] || s=null
+  fi
+  jq -n --arg e "$1" --arg s "$s" --arg c "${SHIP_BY_HAND:-}" \
+    '{error: $e} + (if $s == "" then {} else {status: ($s | fromjson)} end)
+     + if $c == "" then {} else {command: $c} end'
   printf '%s\n' "$1" >&2
   exit 1
 }
@@ -213,13 +213,48 @@ ship_help() { # ship_help <usage> "$@"
   exit 0
 }
 
+# ship_args <usage> <kinds> "$@": the argument check every mechanic runs on the
+# line after `ship_help`, so before `ship_load_host` and before any guard of its
+# own. <kinds> is one space-separated word list naming the leading positionals
+# in order: `issue` and `pr` are a number, `issue|none` a number or the word
+# `none`, `arg` any word. Each is required and none may start with `-`: without
+# that a flag typed where an id belongs is read as the id and asked of the host.
+# A `--body-file` among the rest must name a readable regular file. Every
+# failure is `ship_tooling <usage>`; the mechanic still assigns its own
+# variables and checks its own flags.
+ship_args() { # ship_args <usage> <kinds> "$@"
+  local usage=$1 kind v
+  local -a kinds
+  read -ra kinds <<<"$2"; shift 2
+  for kind in ${kinds[@]+"${kinds[@]}"}; do
+    v=${1:-}
+    case $v in ''|-*) ship_tooling "$usage" ;; esac
+    case $kind in
+      issue|pr) [[ $v =~ ^[0-9]+$ ]] || ship_tooling "$usage" ;;
+      issue\|none) [[ $v =~ ^[0-9]+$ ]] || [ "$v" = none ] || ship_tooling "$usage" ;;
+    esac
+    shift
+  done
+  while [ $# -gt 0 ]; do
+    if [ "$1" = --body-file ]; then
+      [ -f "${2:-}" ] && [ -r "$2" ] || ship_tooling "$usage"
+    fi
+    shift
+  done
+}
+
+# ship_issue_has_label <n> <label>: exit 0 when the issue carries the label,
+# read from `host_issue_get`'s labels[] so no adapter keeps a second read of it.
+ship_issue_has_label() {
+  host_issue_get "$1" | jq -e --arg l "$2" 'any(.labels[]; . == $l)' >/dev/null
+}
+
 # ship_tail40 <file>: a failing step's evidence, the last 40 lines of the log.
 ship_tail40() { tail -n 40 "$1" >&2; }
 
 # Branch convention: <type>/<slug>-<issue>. The "-<issue>" suffix is what
-# preflight greps for on the remote.
-ship_branch()           { printf '%s/%s-%s' "$1" "$2" "$3"; }
-ship_branch_suffix_re() { printf -- '-%s$' "$1"; }
+# preflight greps for on the remote and open-pr checks the branch ends in.
+ship_branch() { printf '%s/%s-%s' "$1" "$2" "$3"; }
 
 # The main checkout, even when run from inside a worktree: --git-common-dir
 # points at the primary .git, so a run started in a worktree lands the new one
@@ -246,7 +281,6 @@ ship_base_ref() {
     || return 1
   printf '%s' "${ref#refs/remotes/}"
 }
-ship_base_branch() { local b; b=$(ship_base_ref) || return 1; printf '%s' "${b#origin/}"; }
 
 # Host detection from the origin remote. Sets SHIP_HOST and the host's
 # identifiers; no --host flag and no env var, because every Bash call is a fresh
@@ -265,35 +299,27 @@ ship_detect_host() {
       SHIP_HOST=ado
       local p=${url#*dev.azure.com/}; p=${p%.git}
       SHIP_ORG=${p%%/*}; p=${p#*/}
-      SHIP_PROJECT=${p%%/_git/*}; SHIP_REPO=${p##*/_git/}
-      SHIP_ORG_URL="https://dev.azure.com/$SHIP_ORG"
-      SHIP_REPO_SLUG="$SHIP_ORG/$SHIP_PROJECT/$SHIP_REPO" ;;
-    *@vs-ssh.visualstudio.com:v3/*)
+      SHIP_PROJECT=${p%%/_git/*}; SHIP_REPO=${p##*/_git/} ;;
+    *@vs-ssh.visualstudio.com:v3/*|*ssh.dev.azure.com:v3/*)
       # git@ssh.dev.azure.com:v3/<org>/<project>/<repo> and the visualstudio.com twin
       SHIP_HOST=ado
       local p=${url#*:v3/}
       SHIP_ORG=${p%%/*}; p=${p#*/}
-      SHIP_PROJECT=${p%%/*}; SHIP_REPO=${p#*/}
-      SHIP_ORG_URL="https://dev.azure.com/$SHIP_ORG"
-      SHIP_REPO_SLUG="$SHIP_ORG/$SHIP_PROJECT/$SHIP_REPO" ;;
-    *ssh.dev.azure.com:v3/*)
-      SHIP_HOST=ado
-      local p=${url#*:v3/}
-      SHIP_ORG=${p%%/*}; p=${p#*/}
-      SHIP_PROJECT=${p%%/*}; SHIP_REPO=${p#*/}
-      SHIP_ORG_URL="https://dev.azure.com/$SHIP_ORG"
-      SHIP_REPO_SLUG="$SHIP_ORG/$SHIP_PROJECT/$SHIP_REPO" ;;
+      SHIP_PROJECT=${p%%/*}; SHIP_REPO=${p#*/} ;;
     *.visualstudio.com/*)
       # https://<org>.visualstudio.com/<project>/_git/<repo> (or DefaultCollection/)
       SHIP_HOST=ado
       local hostpart=${url#*://}; hostpart=${hostpart#*@}
       SHIP_ORG=${hostpart%%.visualstudio.com*}
       local p=${url#*.visualstudio.com/}; p=${p#DefaultCollection/}; p=${p%.git}
-      SHIP_PROJECT=${p%%/_git/*}; SHIP_REPO=${p##*/_git/}
-      SHIP_ORG_URL="https://dev.azure.com/$SHIP_ORG"
-      SHIP_REPO_SLUG="$SHIP_ORG/$SHIP_PROJECT/$SHIP_REPO" ;;
+      SHIP_PROJECT=${p%%/_git/*}; SHIP_REPO=${p##*/_git/} ;;
     *) return 1 ;;
   esac
+  # Before the %20 decode below: the slug keeps the project as the remote spells it.
+  if [ "$SHIP_HOST" = ado ]; then
+    SHIP_ORG_URL="https://dev.azure.com/$SHIP_ORG"
+    SHIP_REPO_SLUG="$SHIP_ORG/$SHIP_PROJECT/$SHIP_REPO"
+  fi
   SHIP_PROJECT=$(printf '%s' "${SHIP_PROJECT:-}" | sed 's/%20/ /g')
   export SHIP_HOST SHIP_OWNER SHIP_REPO SHIP_REPO_SLUG SHIP_ORG SHIP_PROJECT SHIP_ORG_URL
 }
@@ -757,36 +783,37 @@ readonly SHIP_SUBSTANTIVE="$SHIP_BLOCKED_NOTICE"'
     else (.state | IN("approved", "changes")) end;
   .on_head |= map(.substantive = substantive) | .all |= map(.substantive = substantive)'
 
-# poll-pr's two landing rules over a `host_pr_reviews` projection, invoked with
-# `--arg l <normalised login>` and `--arg s <since|"">`. `$l` arrives already
-# lowercased and stripped of a `[bot]` suffix, the row side normalised here to
-# match. Only a SUBSTANTIVE row lands, as `SHIP_SUBSTANTIVE` graded it, which is
-# what keeps a quota notice from answering for a round that has yet to arrive
-# (#155).
-# shellcheck disable=SC2034  # read by poll-pr
-readonly SHIP_LANDED_BY='
-  def mine: [.[] | select(.substantive and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
-  if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
-  else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
-  end'
+# The one rule for matching a login: case-insensitive, less a `[bot]` suffix, so
+# `Copilot` and `copilot[bot]` are one reviewer wherever a login is compared.
+# Prepend it to a jq program that calls `norm`.
+readonly SHIP_LOGIN_NORM='def norm: ascii_downcase | sub("\\[bot\\]$"; "");'
 
-# poll-pr's refusal test, over the same projection and the same two arguments:
-# the rule that admitted a NOTICE row by that login, a row with a body that is
-# not substantive, which is the one kind `is_notice` leaves. A quota notice
-# answers the request it follows, and no round is coming after it: Copilot's
-# quota is the requesting user's and monthly, so waiting the window out, or
-# asking again, buys nothing (#248, #250: every poll spent its whole window on
-# a refusal already posted). Read only when no round landed, so a round that
-# follows a notice still lands. A notice posted as a PR comment rather than as a
-# review leaves no row here: poll-pr admits it from `host_pr_reviewer_blocked`'s
-# `at`, under the since rule only (#256).
+# poll-pr's two row rules over a `host_pr_reviews` projection: `round_by(<row
+# predicate>)`, invoked with `--arg l <login>` and `--arg s <since|"">`, both
+# sides normalised by `norm`. It answers "head" under the head rule (`$s` is
+# empty) when a row on the head satisfies the predicate, "since" under the since
+# rule when a row in `all` submitted at or after `$s` does, else null.
+#
+# Landing passes `.substantive`: only a SUBSTANTIVE row lands, as
+# `SHIP_SUBSTANTIVE` graded it, which is what keeps a quota notice from
+# answering for a round that has yet to arrive (#155).
+#
+# Refusal passes `(.substantive | not) and (.body // "") != ""`: a NOTICE row by
+# that login, the one kind `is_notice` leaves. A quota notice answers the request
+# it follows, and no round is coming after it: Copilot's quota is the requesting
+# user's and monthly, so waiting the window out, or asking again, buys nothing
+# (#248, #250: every poll spent its whole window on a refusal already posted).
+# Read only when no round landed, so a round that follows a notice still lands. A
+# notice posted as a PR comment rather than as a review leaves no row here:
+# poll-pr admits it from `host_pr_reviewer_blocked`'s `at`, under the since rule
+# only (#256).
 # shellcheck disable=SC2034  # read by poll-pr
-readonly SHIP_REFUSED_BY='
-  def refusals: [.[] | select((.substantive | not) and (.body // "") != ""
-                              and ((.login | ascii_downcase | sub("\\[bot\\]$"; "")) == $l))];
-  if $s == "" then (if (.on_head | refusals) != [] then "head" else null end)
-  else (if (.all | refusals | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
-  end'
+readonly SHIP_ROUND_BY="$SHIP_LOGIN_NORM"'
+  def round_by(row):
+    def mine: [.[] | select(row and ((.login | norm) == ($l | norm)))];
+    if $s == "" then (if (.on_head | mine) != [] then "head" else null end)
+    else (if (.all | mine | map(select(.submitted_at != null and .submitted_at >= $s))) != [] then "since" else null end)
+    end;'
 
 # poll-pr's pick of THE run a comment-transport reviewer's round is waiting on,
 # over a `host_workflow_runs` projection, invoked with `--arg t <the PR's title>`.
@@ -1222,8 +1249,7 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # loop reading rounds from the brief is the loop that has to tell a silent
 # reviewer from one whose run is still going.
 ship_brief() {
-  jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" '
-    def norm: ascii_downcase | sub("\\[bot\\]$"; "");
+  jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" "$SHIP_LOGIN_NORM"'
     def by($l): ((.login // "") | norm) == ($l | norm);
     def mine: $me != "" and by($me);
     def awaited($l): $l == "" or by($l);
