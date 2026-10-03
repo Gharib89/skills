@@ -5,6 +5,8 @@
 # profile's `Setup:` path first, a failure there failing the bootstrap, and
 # `Setup: None.` skipping it; then the secrets scanner, installed only when
 # missing. The cloud setup, the scanner and apt are stubs that log their calls.
+# This repo's own scripts/cloud-ship-bootstrap.sh is an installed copy, held to
+# the template outside its configuration block.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -19,10 +21,11 @@ printf '#!%s\necho setup >> "$CALLS"\nexit "${SETUP_RC:-0}"\n' "$bash_bin" > "$d
 git -C "$d" init -q
 # apt-get: logs its arguments; an install fails until an `update` has run, as on
 # a fresh image with no package lists, then creates each package as a tool,
-# unless $APT_INERT is set. sudo passes through.
+# unless $APT_INERT is set; $APT_BROKEN fails every call. sudo passes through.
 cat > "$bin/apt-get" <<FAKE
 #!$bash_bin
 echo "apt-get \$*" >> "\$CALLS"
+[ -n "\${APT_BROKEN:-}" ] && exit 100
 if [ "\$1" = update ]; then : > "$fixture/updated"; exit 0; fi
 [ -e "$fixture/updated" ] || exit 100
 [ -n "\${APT_INERT:-}" ] && exit 0
@@ -80,5 +83,14 @@ check "Setup: None. skips the cloud setup" "apt-get install -y fakescan
 apt-get update
 apt-get install -y fakescan" "$calls"
 check "a scanner still missing after its install fails the bootstrap" nonzero "$([ "$rc" -ne 0 ] && echo nonzero)"
+
+boot APT_BROKEN=1
+check "an apt whose update fails too fails the bootstrap" nonzero "$([ "$rc" -ne 0 ] && echo nonzero)"
+check "an apt whose update fails too: no second install" "apt-get install -y fakescan
+apt-get update" "$calls"
+
+unconfigured() { sed '/^# >>> setup-skills configuration$/,/^# <<< setup-skills configuration$/d' "$1"; }
+check "scripts/cloud-ship-bootstrap.sh is the template outside its configuration block" "" \
+  "$(diff <(unconfigured skills/setup-skills/cloud-ship-bootstrap.sh) <(unconfigured scripts/cloud-ship-bootstrap.sh))"
 
 finish
