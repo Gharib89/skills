@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.16.2 (2026-10-03)
+
+### Bug Fixes
+
+- **ship**: One argument check and login rule; ADO removes a non-last tag
+  ([#457](https://github.com/Gharib89/skills/pull/457),
+  [`551b658`](https://github.com/Gharib89/skills/commit/551b65883a800b9025fc291bc1c5013ae39fcca8))
+
+
 ## v0.16.1 (2026-10-03)
 
 ### Bug Fixes
