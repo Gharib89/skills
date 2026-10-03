@@ -50,7 +50,7 @@ inert=$(copy_mechanics inert)
 
 # The real mechanics and the real skills tree, so this case holds every check
 # against the directory that ships, check 3 included: the tree carries no
-# Bash 4+ construct outside the setup-skills template.
+# Bash 4+ construct.
 run skills/ship/scripts
 check_rc "the current tree holds the contract" 0 "$rc"
 
