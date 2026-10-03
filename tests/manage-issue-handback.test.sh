@@ -23,9 +23,9 @@ reset() {
   printf 'me\n' > "$SHIP_FAKE/host_identity.1.json"
   printf '{"number":7,"state":"open","assignees":["me"],"labels":[]}\n' > "$SHIP_FAKE/host_issue_get.1.json"
   printf '{"number":7,"state":"open","assignees":[],"labels":[]}\n' > "$SHIP_FAKE/host_issue_get.2.json"
-  # The removed label reads absent, the added one present.
-  : > "$SHIP_FAKE/host_issue_has_label.1.fail"
-  printf '' > "$SHIP_FAKE/host_issue_has_label.2.json"
+  # Reads 3 and 4 follow the writes: the removed label reads absent (the
+  # unassigned read repeats), the added one present.
+  printf '{"number":7,"state":"open","assignees":[],"labels":["ready-for-human"]}\n' > "$SHIP_FAKE/host_issue_get.4.json"
 }
 
 reset

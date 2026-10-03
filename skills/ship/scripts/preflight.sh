@@ -49,9 +49,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 
 usage='usage: preflight <issue|none> [--unattended]'
 ship_help "$usage" "$@"
-[ -n "${1:-}" ] || ship_tooling "$usage"
+ship_args "$usage" "issue|none" "$@"
 n=$1; shift
-case $n in -*) ship_tooling "$usage" ;; esac
 unattended=false
 while [ $# -gt 0 ]; do
   case $1 in

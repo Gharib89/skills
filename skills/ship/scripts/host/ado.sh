@@ -118,11 +118,11 @@ host_issue_linked_prs() {
 }
 host_issue_assign()   { azx boards work-item update "${ORG[@]}" --id "$1" --assigned-to "$2" >/dev/null; }
 host_issue_unassign() { azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.AssignedTo=" >/dev/null; }
-_tags() { host_issue_get "$1" | jq -r '.labels | join("; ")'; }
-host_issue_has_label() { host_issue_get "$1" | jq -e --arg l "$2" '.labels | index($l)' >/dev/null; }
 host_issue_add_label() {
-  host_issue_has_label "$1" "$2" && return 0
-  local t; t=$(_tags "$1") || return 1
+  local cur t
+  cur=$(host_issue_get "$1") || return 1
+  jq -e --arg l "$2" 'any(.labels[]; . == $l)' <<<"$cur" >/dev/null && return 0
+  t=$(jq -r '.labels | join("; ")' <<<"$cur")
   azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.Tags=${t:+$t; }$2" >/dev/null
 }
 # Removing the LAST tag needs a json-patch `remove`: the server ignores an empty
@@ -130,7 +130,7 @@ host_issue_add_label() {
 # `az devops invoke` cannot send application/json-patch+json, so this one call is
 # `az rest` on the Entra token (a PAT-only session fails it and reports false).
 host_issue_remove_label() {
-  host_issue_has_label "$1" "$2" || return 0
+  ship_issue_has_label "$1" "$2" || return 0
   local t; t=$(host_issue_get "$1" | jq -r --arg l "$2" '[.labels[] | select(. != $l)] | join("; ")') || return 1
   if [ -n "$t" ]; then
     azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.Tags=$t" >/dev/null

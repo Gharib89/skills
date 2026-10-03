@@ -139,11 +139,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 ceiling=1800
 usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>]"
 ship_help "$usage" "$@"
-[ -n "${1:-}" ] || ship_tooling "$usage"
+ship_args "$usage" pr "$@"
 pr=$1; shift
-# A flag in the positional slot is a malformed invocation, not a PR id: without
-# this, `poll-pr --brief` reads "--brief" as the id and asks the host for it.
-case $pr in -*) ship_tooling "$usage" ;; esac
 timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; after_run=0; want=""
 while [ $# -gt 0 ]; do
   case $1 in
@@ -207,7 +204,6 @@ if $brief; then
   me=$(host_identity) || ship_tooling "cannot read the host identity; --brief cannot drop the run's own rows"
 fi
 
-norm() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/\[bot\]$//'; }
 start=$SECONDS
 while :; do
   prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
@@ -247,12 +243,12 @@ while :; do
   if [ -n "$await" ]; then
     # Both sides are now fixed-width UTC, where a string compare is a
     # chronological one.
-    landed_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" "$SHIP_LANDED_BY" <<<"$reviews")
+    landed_by=$(jq -c --arg l "$await" --arg s "$since" "$SHIP_ROUND_BY"' round_by(.substantive)' <<<"$reviews")
     [ "$landed_by" != null ] || landed=false
     # A refusal the landing rule admits is the answer to that request: no round
     # follows it, so the window closes on it rather than on the clock.
     if [ "$landed" = false ]; then
-      refused_by=$(jq -c --arg l "$(norm "$await")" --arg s "$since" "$SHIP_REFUSED_BY" <<<"$reviews")
+      refused_by=$(jq -c --arg l "$await" --arg s "$since" "$SHIP_ROUND_BY"' round_by((.substantive | not) and (.body // "") != "")' <<<"$reviews")
       # A comment notice has no review row: `host_pr_reviewer_blocked`'s `at`
       # is what the since rule reads, and only that rule (#256).
       if [ "$refused_by" = null ] && [ -n "$since" ]; then

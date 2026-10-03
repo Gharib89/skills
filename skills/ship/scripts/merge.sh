@@ -38,10 +38,8 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: merge <pr> <issue|none> [--worktree <path>]'
 ship_help "$usage" "$@"
-[ -n "${1:-}" ] && [ -n "${2:-}" ] || ship_tooling "$usage"
+ship_args "$usage" "pr issue|none" "$@"
 pr=$1; issue=$2; shift 2
-case $pr in -*) ship_tooling "$usage" ;; esac
-case $issue in -*) ship_tooling "$usage" ;; esac
 wt=""
 while [ $# -gt 0 ]; do
   case $1 in
@@ -149,7 +147,7 @@ if [ "$issue" != none ]; then
   fi
   rfa=$(ship_triage_label ready-for-agent)
   host_issue_remove_label "$issue" "$rfa" >/dev/null 2>&1
-  host_issue_has_label "$issue" "$rfa" || rfa_removed=true
+  ship_issue_has_label "$issue" "$rfa" || rfa_removed=true
 fi
 
 [ "$issue_closed" = true ] && [ "$remote_deleted" = true ] && [ "$base_updated" = true ] \
