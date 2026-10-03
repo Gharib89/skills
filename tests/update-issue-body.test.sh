@@ -12,18 +12,17 @@ T=$'\t'  # the calls log separates arguments with a tab
 mech=$PWD/skills/ship/scripts/update-issue-body.sh
 usage='usage: update-issue-body <issue> [--repo <owner>/<repo>] --section <name> --body-file <path>'
 
+# Any readable file stands in for a body below: `ship_args` refuses one that is not.
 err() { bash "$mech" "$@" 2>/dev/null | jq -r '.error'; }
 rc()  { bash "$mech" "$@" >/dev/null 2>&1; echo $?; }
 
-check "a bare invocation prints the usage line" "$usage" "$(err)"
-check "a flag in the issue slot is the usage error" "$usage" "$(err --section X --body-file /dev/null)"
-check "no --section is the usage error" "$usage" "$(err 7 --body-file /dev/null)"
-check_rc "no --section is tooling" 2 "$(rc 7 --body-file /dev/null)"
+check "no --section is the usage error" "$usage" "$(err 7 --body-file "$mech")"
+check_rc "no --section is tooling" 2 "$(rc 7 --body-file "$mech")"
 # Section-only by design: a whole-body or preamble write is not a mode here.
-check "--preamble is an unknown flag" 'unknown flag: --preamble' "$(err 7 --preamble --body-file /dev/null)"
-check_rc "--preamble is tooling" 2 "$(rc 7 --preamble --body-file /dev/null)"
+check "--preamble is an unknown flag" 'unknown flag: --preamble' "$(err 7 --preamble --body-file "$mech")"
+check_rc "--preamble is tooling" 2 "$(rc 7 --preamble --body-file "$mech")"
 check "a flag in the section slot is the usage error" "$usage" \
-  "$(err 7 --section --body-file /dev/null)"
+  "$(err 7 --section --body-file "$mech")"
 
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 printf '```diff\n- before\n' > "$work/open-fence.md"

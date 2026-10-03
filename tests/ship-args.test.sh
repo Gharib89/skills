@@ -40,6 +40,13 @@ refused "read-issue, a non-numeric issue"               read-issue abc
 refused "cleanup, an issue that is neither a number nor none" cleanup abc
 refused "merge, a non-numeric issue"                    merge 1 abc
 refused "isolate, a flag as the slug"                   isolate 1 feat --slug
+refused "read-pr, a flag in the PR slot"                read-pr --body
+refused "read-pr, an empty PR"                          read-pr ""
+refused "manage-issue, a flag in the issue slot"        manage-issue --json take
+refused "manage-issue, a flag in the verb slot"         manage-issue 1 --json
+refused "request-review, a flag in the PR slot"         request-review --reviewer claude
+refused "update-issue-body, a flag in the issue slot"   update-issue-body --section X --body-file "$readable"
+refused "update-pr-body, a flag in the PR slot"         update-pr-body --section Review --body-file "$readable"
 # root reads any file, so a mode-000 body proves nothing there.
 if [ "$(id -u)" -ne 0 ]; then
   refused "comment-pr, an unreadable body file"         comment-pr 1 --body-file "$unreadable"
