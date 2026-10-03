@@ -6,7 +6,9 @@
 # `Setup: None.` skipping it; then the secrets scanner, installed only when
 # missing. The cloud setup, the scanner and apt are stubs that log their calls.
 # This repo's own scripts/cloud-ship-bootstrap.sh is an installed copy, held to
-# the template outside its configuration block.
+# the template outside the two regions the repo owns (its configuration block and
+# the Ship-only slot that ends the file), and its configuration to the scanner
+# this repo's `secrets` gate runs.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -89,8 +91,13 @@ check "an apt whose update fails too fails the bootstrap" nonzero "$([ "$rc" -ne
 check "an apt whose update fails too: no second install" "apt-get install -y fakescan
 apt-get update" "$calls"
 
-unconfigured() { sed '/^# >>> setup-skills configuration$/,/^# <<< setup-skills configuration$/d' "$1"; }
-check "scripts/cloud-ship-bootstrap.sh is the template outside its configuration block" "" \
+unconfigured() {
+  sed -e '/^# >>> setup-skills configuration$/,/^# <<< setup-skills configuration$/d' \
+    -e "/^# The repo's Ship-only steps go here/,\$d" "$1"
+}
+check "scripts/cloud-ship-bootstrap.sh is the template outside the regions the repo owns" "" \
   "$(diff <(unconfigured skills/setup-skills/cloud-ship-bootstrap.sh) <(unconfigured scripts/cloud-ship-bootstrap.sh))"
+check "scripts/cloud-ship-bootstrap.sh installs gitleaks, the secrets gate's scanner" "SCANNER=gitleaks
+SCANNER_INSTALL='apt_install gitleaks'" "$(grep -E '^SCANNER(_INSTALL)?=' scripts/cloud-ship-bootstrap.sh)"
 
 finish

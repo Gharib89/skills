@@ -9,7 +9,8 @@
 # template refuse a base that is not a commit, before any gate runs. How the
 # full lane grades check.sh's answer (a failing check, exit 2 or 3, output
 # outside its contract) is the harness template's mapping with check.sh's path
-# filled in, and tests/setup-skills-harness-gate.test.sh holds it there.
+# filled in, and tests/setup-skills-harness-gate.test.sh holds it there; a case
+# below holds the two copies of the mapping equal.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -161,5 +162,10 @@ for f in scripts/local-gate.sh skills/setup-skills/local-gate.sh skills/setup-sk
       "usage: scripts/local-gate.sh [--small <node>] [--base <ref>]" "$out"
   done
 done
+
+mapping() { awk '/# No CHECK_DEADLINE/ { p = 1 } p { print } p && /^fi$/ { exit }' "$1"; }
+check "the full-lane mapping is the harness template's, check.sh's path filled in" "" \
+  "$(diff <(mapping skills/setup-skills/local-gate-harness.sh | sed 's|__CHECK__|scripts/check.sh|') <(mapping scripts/local-gate.sh))$(
+    [ -n "$(mapping scripts/local-gate.sh)" ] || echo 'no mapping found in scripts/local-gate.sh')"
 
 finish
