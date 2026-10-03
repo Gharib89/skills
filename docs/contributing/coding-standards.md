@@ -63,13 +63,13 @@ prose is the product as much as the scripts are.
   reads the error's shape and cannot tell which guard produced it. The `--help`
   check does read placement, by running each mechanic where no origin remote
   resolves, so a `ship_help` below `ship_load_host` fails there. The same gate
-  holds every shell file under `skills/` to the Bash 3.2 target below, the
-  `setup-skills` local-gate template excepted, and refuses any mention of
-  `SHIP_HOST_ADAPTER` under `skills/` outside `_lib.sh`, whose `ship_load_host`
-  is its one reader. It also holds two sentences of ship's prose that nothing
-  else enforces, matched as substrings with their line wraps joined: phase 4's
-  instruction that each axis reads the Local gate's JSON and never runs the
-  suite itself, and context discipline's `Read one reference file per call.`
+  holds every shell file under `skills/` to the Bash 3.2 target below, and
+  refuses any mention of `SHIP_HOST_ADAPTER` under `skills/` outside `_lib.sh`,
+  whose `ship_load_host` is its one reader. It also holds two sentences of
+  ship's prose that nothing else enforces, matched as substrings with their line
+  wraps joined: phase 4's instruction that each axis reads the Local gate's JSON
+  and never runs the suite itself, and context discipline's `Read one reference
+  file per call.`
 - Ship's own documents inside their line budget, per the `prose-budget` gate:
   `skills/*/SKILL.md` at most 350 lines, and every `skills/*/reference/*.md`
   over 100 lines opening with a `## Contents` heading in its first 15 lines
@@ -310,12 +310,9 @@ prose is the product as much as the scripts are.
   machine running Bash 5. Scripts under `scripts/` and `tests/` run in this repo
   alone and may require Bash 4, behind a version guard; **precedent for a
   mechanic comes from `skills/` alone**, whatever idiom a repo-local script
-  uses. One file under `skills/` is repo-local for this rule:
-  `skills/setup-skills/local-gate.sh`, a template written into a consumer repo
-  as that repo's own gate, carrying its own guard. The `contract` gate fails on
-  the four constructs named here, in any `*.sh` file under `skills/`; the rule
-  is wider than the grep, so a Bash 4 feature it does not name is still a
-  violation.
+  uses. The `contract` gate fails on the four constructs named here, in any
+  `*.sh` file under `skills/`; the rule is wider than the grep, so a Bash 4
+  feature it does not name is still a violation.
 - **A vocabulary the change extends is swept across the whole `skills/` tree,
   sibling spellings included.** Grep the new term and the ones it sits beside
   (`defer-to-ci` beside `deferred-to-ci`), across every file rather than the

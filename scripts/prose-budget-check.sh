@@ -5,8 +5,9 @@
 # the top rather than at the point a reader gives up. The thresholds and the
 # paths, whole: `skills/*/SKILL.md` at most 350 lines, and every
 # `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
-# inside its first 15 lines whose list matches the file's `## ` headings. The
-# `prose-budget` gate in scripts/local-gate.sh runs this, in every lane.
+# inside its first 15 lines whose list matches the file's `## ` headings.
+# `scripts/check.sh full` runs this as its `prose-budget` row, which
+# scripts/local-gate.sh reports under the same name, in every lane.
 # 350 is ship's SKILL.md after the #308 deletion pass, rounded up to the next 25:
 # a ratchet, so prose that regrows fails here instead of accumulating again.
 #

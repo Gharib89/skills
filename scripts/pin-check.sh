@@ -8,8 +8,9 @@
 # with no `#<sha>` is read only for a skill the lock pins, so a pin a line lost
 # is drift, while a line for a skill nothing pins (ship itself) is not a pin at
 # all. Every pin must name the source and ref `skills-lock.json` records for
-# that skill, because the lock is what this repo's runs actually tested. The `derived-copies` gate in scripts/local-gate.sh
-# runs this, as one of its checks.
+# that skill, because the lock is what this repo's runs actually tested.
+# `scripts/derived-copies-check.sh` runs this as one of its checks, so it
+# reports under `scripts/check.sh full`'s `derived-copies` row.
 #
 #   scripts/pin-check.sh [<root>]
 #

@@ -6,7 +6,11 @@
 # never runs it and runs the `FULL_ROWS` checks it lists instead; its checks
 # become gates by their own names, with no gate of the repo's own duplicating
 # one; `version-lines` is handed the base; `secrets` is in every lane. The base cases sit apart: both this gate and the setup-skills
-# template refuse a base that is not a commit, before any gate runs.
+# template refuse a base that is not a commit, before any gate runs. How the
+# full lane grades check.sh's answer (a failing check, exit 2 or 3, output
+# outside its contract) is the harness template's mapping with check.sh's path
+# filled in, and tests/setup-skills-harness-gate.test.sh holds it there; a case
+# below holds the two copies of the mapping equal.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -70,26 +74,10 @@ check "check.sh runs once, as full, with no CHECK_DEADLINE, and the suite is che
   "check.sh full deadline=unset
 version-line-check.sh base" "$calls"
 
-CHECK_OUT='{"rung":"full","verdict":"fail","checks":{"tests":"pass","runner":"fail"}}' CHECK_RC=1 gate "$d"
-check_rc "a check.sh check failing fails the verdict" 1 "$rc"
-check "the failing check is its own gate, by check.sh's name" "fail pass" "$(jq -r '"\(.gates.runner) \(.gates.tests)"' <<<"$out")"
-
 CHECK_OUT=$ALL_GREEN VERSION_RC=1 gate "$d"
 check_rc "version-lines failing fails the verdict" 1 "$rc"
 check "version-lines failing is graded fail and its log reaches stderr" "fail version log line" \
   "$(jq -r '.gates["version-lines"]' <<<"$out") $err"
-
-CHECK_OUT='{"rung":"full","verdict":"unavailable","checks":{"tests":"pass","runner":"unavailable"}}' CHECK_RC=2 gate "$d"
-check_rc "check.sh answering unavailable (exit 2) is tooling" 2 "$rc"
-check "check.sh answering unavailable (exit 2) keeps each check under its own name" "unavailable pass" \
-  "$(jq -r '"\(.gates.runner) \(.gates.tests)"' <<<"$out")"
-
-CHECK_OUT='{"rung":"full","verdict":"over-budget","checks":{"tests":"pass","runner":"over-budget"}}' CHECK_RC=3 gate "$d"
-check "check.sh over budget (exit 3) folds over-budget into unavailable" "unavailable" "$(jq -r '.gates.runner' <<<"$out")"
-
-CHECK_OUT='not json' CHECK_RC=2 gate "$d"
-check_rc "check.sh outside its contract is tooling" 2 "$rc"
-check "check.sh outside its contract grades one check: unavailable" "unavailable" "$(jq -r '.gates.check' <<<"$out")"
 
 CHECK_OUT=$ALL_GREEN gate "$d" --small docs/note.md
 check_rc "--small, all green: exit 0" 0 "$rc"
@@ -152,6 +140,18 @@ out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
 check_rc "template, a real base: exit 0" 0 "$rc"
 check "template, a real base: secrets passes" "pass" "$(jq -r '.gates.secrets' <<<"$out")"
 
+# The template grades its own gates: a failing gate is exit 1, an unavailable one
+# exit 2, and fail wins over unavailable. Each case fills the gates block the way
+# a consumer might: a placeholder with a failing command, or a `mark`.
+for c in "false|true|run deps  __DEPS__|1 fail fail|a failing gate" \
+  "true|true|mark deps unavailable|2 unavailable unavailable|an unavailable gate" \
+  "true|false|mark deps unavailable|1 fail unavailable|a failing gate beside an unavailable one"; do
+  IFS='|' read -r deps runner line want name <<<"$c"
+  sed "s/^run deps  __DEPS__.*/$line/; s/__DEPS__/$deps/; s/__RUNNER__/$runner/" skills/setup-skills/local-gate.sh > "$d/local-gate.sh"
+  out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
+  check "template, $name: exit, verdict and the deps gate" "$want" "$rc $(jq -r '"\(.verdict) \(.gates.deps)"' <<<"$out")"
+done
+
 # `--help` and `-h` answer the header's usage line, exit 0, before any check
 # runs, in this repo's gate and in both templates setup-skills lands.
 for f in scripts/local-gate.sh skills/setup-skills/local-gate.sh skills/setup-skills/local-gate-harness.sh; do
@@ -162,5 +162,10 @@ for f in scripts/local-gate.sh skills/setup-skills/local-gate.sh skills/setup-sk
       "usage: scripts/local-gate.sh [--small <node>] [--base <ref>]" "$out"
   done
 done
+
+mapping() { awk '/# No CHECK_DEADLINE/ { p = 1 } p { print } p && /^fi$/ { exit }' "$1"; }
+check "the full-lane mapping is the harness template's, check.sh's path filled in" "" \
+  "$(diff <(mapping skills/setup-skills/local-gate-harness.sh | sed 's|__CHECK__|scripts/check.sh|') <(mapping scripts/local-gate.sh))$(
+    [ -n "$(mapping scripts/local-gate.sh)" ] || echo 'no mapping found in scripts/local-gate.sh')"
 
 finish

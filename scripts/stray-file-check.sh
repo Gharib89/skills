@@ -7,8 +7,8 @@
 # the root files `.gitignore`, `.pre-commit-config.yaml`, `CLAUDE.md`, `GLOSSARY.md` and
 # `skills-lock.json`, which is `dirs` and `files` below. A new top-level entry
 # is a decision rather than a side effect, so it is added there in the same
-# commit that tracks it. The `stray-files` gate in scripts/local-gate.sh runs
-# this, in every lane.
+# commit that tracks it. `scripts/check.sh full` runs this as its `stray-files`
+# row, which scripts/local-gate.sh reports under the same name, in every lane.
 #
 #   scripts/stray-file-check.sh [<root>]
 #
