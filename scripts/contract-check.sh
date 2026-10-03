@@ -86,17 +86,14 @@ done
 # Shell files only, because the prose under skills/ names these constructs
 # deliberately. A line whose first non-blank character is `#` is prose too; a
 # mention anywhere else on a line is flagged, which is a loud false positive the
-# author rewords, never a silent pass. The setup-skills local gate is excluded:
-# it is a template written into a consumer repo as that repo's own repo-local
-# gate, behind its own Bash 4 version guard.
+# author rewords, never a silent pass.
 bash4='(^|[^[:alnum:]_])(mapfile|readarray)([^[:alnum:]_]|$)|(declare|local|typeset)([[:space:]]+-[A-Za-z]+)*[[:space:]]+-[A-Za-z]*A|\$\{([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[@*])(\[[^]]*\])?(,|\^)'
 raw=$(grep -rnE --include='*.sh' "$bash4" "$skills"); st=$?
 [ "$st" -le 1 ] || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
-# Both exclusions read the `path:line:content` fields rather than the whole
-# line: a grep for either anywhere in it drops a real violation whose own
-# content happens to carry `:12: #` or the template's path.
-hits=$(printf '%s' "$raw" | awk -F: -v tmpl="$skills/setup-skills/local-gate.sh" '
-  $1 == tmpl { next }
+# The comment exclusion reads the content field rather than the whole line: a
+# grep for `#` anywhere in it drops a real violation whose own content happens
+# to carry `:12: #`.
+hits=$(printf '%s' "$raw" | awk '
   { content = $0; sub(/^[^:]*:[0-9]+:/, "", content); if (content ~ /^[ \t]*#/) next; print }
 ')
 if [ -n "$hits" ]; then

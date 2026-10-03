@@ -302,14 +302,6 @@ printf '\nx=${reason^^}\n' >> "$d/$mechanics"
 run "$inert" "$d"
 check_rc "a \${var^^} under skills/ fails the check" 1 "$rc"
 
-# The setup-skills local gate is a template written into a consumer repo as that
-# repo's own repo-local gate, behind its own Bash 4 version guard. It is
-# repo-local for this rule, so the check never reads it.
-d=$(copy_skills bash4-template)
-printf '\nmapfile -t lines < /dev/null\n' >> "$d/setup-skills/local-gate.sh"
-run "$inert" "$d"
-check_rc "the setup-skills local-gate template is exempt" 0 "$rc"
-
 # A construct named in a comment is prose, not a call: preflight.sh explains in
 # one why it uses a read loop instead of mapfile, and that comment must survive.
 d=$(copy_skills bash4-comment)
@@ -317,17 +309,12 @@ printf '\n# a read loop, not mapfile: the mechanics target Bash 3.2\n' >> "$d/$m
 run "$inert" "$d"
 check_rc "a construct named in a comment does not fail the check" 0 "$rc"
 
-# Both exclusions read a field, not the whole line. A violation whose own content
-# carries the shape of the other exclusion is still a violation.
+# The comment exclusion reads a field, not the whole line. A violation whose own
+# content carries `:N: #` is still a violation.
 d=$(copy_skills bash4-shadowed-comment)
 printf '\ndeclare -A seen # path:12: # a note\n' >> "$d/$mechanics"
 run "$inert" "$d"
 check_rc "a violation carrying :N: # in its content still fails" 1 "$rc"
-
-d=$(copy_skills bash4-shadowed-template)
-printf '\nmapfile -t x < "%s/setup-skills/local-gate.sh:"\n' "$d" >> "$d/$mechanics"
-run "$inert" "$d"
-check_rc "a violation naming the exempt template still fails" 1 "$rc"
 
 # SHIP_HOST_ADAPTER swaps the host adapter for the test suite's Host fake, so
 # `ship_load_host` in `_lib.sh` is its one reader. The untouched copy carries
