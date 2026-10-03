@@ -6,6 +6,7 @@
   "head_sha": "deadbee",
   "head_ref": "fix/fake-1",
   "base_ref": "main",
+  "draft": false,
   "state": "open",
   "mergeable": "clean"
 }
