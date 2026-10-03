@@ -74,6 +74,17 @@ gate '{"checks":{"lint":"pass"}}
 check_rc "two JSON lines: exit 2" 2 "$rc"
 check "two JSON lines: still one verdict object, check unavailable" '{"check":"unavailable","deps":"pass"}' "$(gates)"
 
+# A CI leg the repo named `check`, marked in the Ship-only block as the template's
+# comment says: the mark sits on the gate's own `check` and cannot lower it.
+cp "$d/scripts/local-gate.sh" "$fixture/gate.orig"
+awk '/^# --- end gates/ { print "mark check deferred-to-ci" } { print }' "$fixture/gate.orig" > "$d/scripts/local-gate.sh"
+gate 'not json' 0 ''
+check_rc "a leg named check over check.sh outside its contract: exit 2" 2 "$rc"
+check "a leg named check over check.sh outside its contract: check stays unavailable" '{"check":"unavailable","deps":"pass"}' "$(gates)"
+gate '{"checks":{"lint":"pass"}}' 0 ''
+check "a leg named check over a clean check.sh: the leg reads deferred-to-ci" '{"check":"deferred-to-ci","deps":"pass","lint":"pass"}' "$(gates)"
+cp "$fixture/gate.orig" "$d/scripts/local-gate.sh"
+
 gate '{"rung":"full","verdict":"fail","checks":{"secrets":"fail","deps":"fail"}}' 1 ''
 check_rc "a check named like a Ship gate: its failure is not masked" 1 "$rc"
 check "a check named like a Ship gate: the worse of the two stands" '{"deps":"fail","secrets":"fail"}' \
