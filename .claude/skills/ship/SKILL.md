@@ -236,11 +236,12 @@ near miss is asked back. On approval run `merge <pr> <issue|none> [--worktree
 and a Ship defect draft is filed only on a word of its own; a nonzero
 exit, or a `false` in `merge`'s or `cleanup`'s JSON, re-runs the mechanic that
 owns the step, and a step no mechanic re-does is a Ship defect for the summary.
-Unattended: `comment-pr <pr> --body-file` with the summary, and return.
+Unattended: `comment-pr <pr> --body-file` with the summary. Either lane then
+closes the phase, `run-file close 9` and its task to the `mirror`, and returns.
 **Done when:** attended, `merge`, every `update-issue-body` and `cleanup` exited
 0 with no `false`, and every Ship defect draft is filed, answered with
 candidates, carries its `command` on the row, or was declined; unattended,
-`comment-pr` posted and the run returned the PR link.
+`comment-pr` posted.
 
 ## The stops
 
