@@ -10,7 +10,8 @@ source tests/lib.sh
 m=skills/ship/scripts/update-pr-body.sh
 usage='usage: update-pr-body <pr> (--section <name> | --preamble) --body-file <path>'
 # A readable file, so only the flag under test is what refuses the call.
-body=$(mktemp)
+body=$(mktemp); open_fence=$(mktemp); heading=$(mktemp)
+trap 'rm -f "$body" "$open_fence" "$heading"' EXIT
 
 err() { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
@@ -34,8 +35,6 @@ check_rc "a flag in the section slot is tooling" 2 "$(rc 7 --section --preamble 
 check "a flag in the body-file slot is the usage error" "$usage" \
   "$(err 7 --section Review --body-file --preamble)"
 
-open_fence=$(mktemp); heading=$(mktemp)
-trap 'rm -f "$body" "$open_fence" "$heading"' EXIT
 printf 'a lede\n\n## Summary\n' > "$heading"
 
 # The preamble is what sits above the first heading, so a heading in the file

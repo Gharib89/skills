@@ -176,8 +176,9 @@ ship_tooling() { jq -n --arg e "$1" '{error: $e}'; exit 2; }
 # written to stderr: a caller piping stdout through `jq -r .field` reads a
 # refusal as `null` and exit 0, and stderr is what still shows it.
 #
-# A second argument, even an empty one, is a host write that failed, and adds the
-# HTTP status of its last attempt as `status`. Without it a host that is briefly
+# A second argument, even an empty one, marks a host call that failed (a write,
+# or a read whose answer named a reason), and adds the HTTP status of its last
+# attempt as `status`. Without it a host that is briefly
 # down and a payload the host refuses produce the identical verdict, and the run
 # has no way to tell them apart: PR #170 spent four minutes bisecting a valid
 # body against a burst of 500s. <adapter-answer> is whatever the adapter printed
@@ -213,15 +214,17 @@ ship_help() { # ship_help <usage> "$@"
   exit 0
 }
 
-# ship_args <usage> <kinds> "$@": the argument check every mechanic runs on the
-# line after `ship_help`, so before `ship_load_host` and before any guard of its
-# own. <kinds> is one space-separated word list naming the leading positionals
-# in order: `issue` and `pr` are a number, `issue|none` a number or the word
-# `none`, `arg` any word. Each is required and none may start with `-`: without
+# ship_args <usage> <kinds> "$@": the argument check a mechanic that takes a
+# positional or a `--body-file` runs on the line after `ship_help` (run-file
+# again per verb), so before `ship_load_host` and before any guard of its own.
+# <kinds> is one space-separated word list naming the leading positionals in
+# order: `issue` and `pr` are a number, `issue|none` a number or the word
+# `none`, `arg` any value. Each is required and none may start with `-`: without
 # that a flag typed where an id belongs is read as the id and asked of the host.
-# A `--body-file` among the rest must name a readable regular file. Every
-# failure is `ship_tooling <usage>`; the mechanic still assigns its own
-# variables and checks its own flags.
+# Empty <kinds> checks the `--body-file` alone. Every `--body-file` word among
+# the rest, even one standing as another flag's value, must be followed by a
+# readable regular file. Every failure is `ship_tooling <usage>`; the mechanic
+# still assigns its own variables and checks its own flags.
 ship_args() { # ship_args <usage> <kinds> "$@"
   local usage=$1 kind v
   local -a kinds
@@ -798,8 +801,8 @@ readonly SHIP_LOGIN_NORM='def norm: ascii_downcase | sub("\\[bot\\]$"; "");'
 # `SHIP_SUBSTANTIVE` graded it, which is what keeps a quota notice from
 # answering for a round that has yet to arrive (#155).
 #
-# Refusal passes `(.substantive | not) and (.body // "") != ""`: a NOTICE row by
-# that login, the one kind `is_notice` leaves. A quota notice answers the request
+# Refusal passes a NOTICE predicate: a row by that login that is not
+# substantive and has a body, the one kind `is_notice` leaves. A quota notice answers the request
 # it follows, and no round is coming after it: Copilot's quota is the requesting
 # user's and monthly, so waiting the window out, or asking again, buys nothing
 # (#248, #250: every poll spent its whole window on a refusal already posted).

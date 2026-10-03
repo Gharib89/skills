@@ -519,7 +519,7 @@ host_pr_threads() {
 # states it either as a review of its own or as a PR comment (Copilot did the
 # former on PR #154, three times), so both surfaces merge into one time-sorted
 # list and the latest notice wins whichever way it arrived.
-# The login is compared the way `SHIP_ROUND_BY` compares it, so a `Login:` typed
+# The login is compared through `SHIP_LOGIN_NORM`, so a `Login:` typed
 # in another case cannot land rounds here and report blocked nowhere.
 # The notice carries the time its row was posted, which is what poll-pr's since
 # rule reads for a comment (#256).

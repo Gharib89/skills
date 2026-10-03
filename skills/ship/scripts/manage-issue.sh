@@ -26,7 +26,7 @@ usage='usage: manage-issue <issue> take|release|handback "<reason>"|close'
 ship_help "$usage" "$@"
 ship_args "$usage" "issue arg" "$@"
 n=$1; op=$2
-# $3 is handback's reason, free text rather than an id: it takes no such guard.
+# `ship_args` leaves $3 unchecked: handback's reason is free text, not an id.
 reason=${3:-}
 case $op in
   take|release|close) [ $# -eq 2 ] || ship_tooling "$op takes no further argument" ;;

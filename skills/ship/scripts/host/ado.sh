@@ -128,9 +128,9 @@ host_issue_add_label() {
 # A System.Tags write through `--fields` (an `add` op) merges into the tags
 # already there, so dropping a tag needs a json-patch `replace` with the rest,
 # and dropping the LAST one a `remove`: the server ignores an empty value however
-# it is sent. `az devops invoke` cannot send application/json-patch+json, so this
-# one call is `az rest` on the Entra token (a PAT-only session fails it and
-# reports false).
+# it is sent. `az devops invoke` cannot send application/json-patch+json, so every
+# removal is `az rest` on the Entra token: a PAT-only session fails each one and
+# reports false.
 host_issue_remove_label() {
   local cur patch
   cur=$(host_issue_get "$1") || return 1
@@ -138,9 +138,9 @@ host_issue_remove_label() {
   patch=$(jq -c --arg l "$2" '[.labels[] | select(. != $l)] | join("; ")
     | if . == "" then [{op: "remove", path: "/fields/System.Tags"}]
       else [{op: "replace", path: "/fields/System.Tags", value: .}] end' <<<"$cur")
-  az rest --method patch --url "$SHIP_ORG_URL/_apis/wit/workitems/$1?api-version=7.1" \
+  azx rest --method patch --url "$SHIP_ORG_URL/_apis/wit/workitems/$1?api-version=7.1" \
     --resource 499b84ac-1321-427f-aa17-267ca6975798 --headers "Content-Type=application/json-patch+json" \
-    --body "$patch" -o none 2>/dev/null
+    --body "$patch" >/dev/null
 }
 host_issue_comment() { azx boards work-item update "${ORG[@]}" --id "$1" --discussion "$2" >/dev/null; }
 host_issue_close()   { azx boards work-item update "${ORG[@]}" --id "$1" --state "$ADO_CLOSED" >/dev/null; }

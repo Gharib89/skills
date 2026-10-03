@@ -40,13 +40,18 @@ refused "read-issue, a non-numeric issue"               read-issue abc
 refused "cleanup, an issue that is neither a number nor none" cleanup abc
 refused "merge, a non-numeric issue"                    merge 1 abc
 refused "isolate, a flag as the slug"                   isolate 1 feat --slug
-refused "read-pr, a flag in the PR slot"                read-pr --body
 refused "read-pr, an empty PR"                          read-pr ""
-refused "manage-issue, a flag in the issue slot"        manage-issue --json take
 refused "manage-issue, a flag in the verb slot"         manage-issue 1 --json
-refused "request-review, a flag in the PR slot"         request-review --reviewer claude
-refused "update-issue-body, a flag in the issue slot"   update-issue-body --section X --body-file "$readable"
-refused "update-pr-body, a flag in the PR slot"         update-pr-body --section Review --body-file "$readable"
+# A flag in the first slot is scripts/contract-check.sh check 4's. The id match
+# is anchored and admits `none` only where the kind names it.
+refused "read-issue, an id with a letter in it"         read-issue 12a
+refused "read-issue, a signed id"                       read-issue +3
+refused "read-issue, an id with a space in it"          read-issue "1 2"
+refused "read-pr, none where only a PR fits"            read-pr none
+refused "reflect, none where only an issue fits"        reflect none 1
+refused "comment-pr, --body-file with no value"         comment-pr 1 --body-file
+# The scan reads every `--body-file` word as the flag, whatever precedes it.
+refused "open-pr, --body-file as the title's value"     open-pr 1 --title --body-file
 # root reads any file, so a mode-000 body proves nothing there.
 if [ "$(id -u)" -ne 0 ]; then
   refused "comment-pr, an unreadable body file"         comment-pr 1 --body-file "$unreadable"

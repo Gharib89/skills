@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # manage-issue's subcommand guard: which verbs it names, and what it says about
-# a verb given too many arguments. The id and verb slots are `ship_args`'s. Every case here is malformed, so the guard
-# answers before `ship_load_host` and nothing reaches a host.
+# a verb given too many arguments. The id and verb slots are `ship_args`'s.
+# Every case here is malformed, so the guard answers before `ship_load_host` and
+# nothing reaches a host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
