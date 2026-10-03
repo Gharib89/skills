@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.16.1 (2026-10-03)
+
+### Bug Fixes
+
+- **ship**: Count only the target reviewer's request events in request-review
+  ([#455](https://github.com/Gharib89/skills/pull/455),
+  [`4cc742e`](https://github.com/Gharib89/skills/commit/4cc742e56438093df629ad0d745c16de773ef1c5))
+
+
 ## v0.16.0 (2026-10-02)
 
 ### Features
