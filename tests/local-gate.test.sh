@@ -6,7 +6,10 @@
 # never runs it and runs the `FULL_ROWS` checks it lists instead; its checks
 # become gates by their own names, with no gate of the repo's own duplicating
 # one; `version-lines` is handed the base; `secrets` is in every lane. The base cases sit apart: both this gate and the setup-skills
-# template refuse a base that is not a commit, before any gate runs.
+# template refuse a base that is not a commit, before any gate runs. How the
+# full lane grades check.sh's answer (a failing check, exit 2 or 3, output
+# outside its contract) is the harness template's mapping with check.sh's path
+# filled in, and tests/setup-skills-harness-gate.test.sh holds it there.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -70,26 +73,10 @@ check "check.sh runs once, as full, with no CHECK_DEADLINE, and the suite is che
   "check.sh full deadline=unset
 version-line-check.sh base" "$calls"
 
-CHECK_OUT='{"rung":"full","verdict":"fail","checks":{"tests":"pass","runner":"fail"}}' CHECK_RC=1 gate "$d"
-check_rc "a check.sh check failing fails the verdict" 1 "$rc"
-check "the failing check is its own gate, by check.sh's name" "fail pass" "$(jq -r '"\(.gates.runner) \(.gates.tests)"' <<<"$out")"
-
 CHECK_OUT=$ALL_GREEN VERSION_RC=1 gate "$d"
 check_rc "version-lines failing fails the verdict" 1 "$rc"
 check "version-lines failing is graded fail and its log reaches stderr" "fail version log line" \
   "$(jq -r '.gates["version-lines"]' <<<"$out") $err"
-
-CHECK_OUT='{"rung":"full","verdict":"unavailable","checks":{"tests":"pass","runner":"unavailable"}}' CHECK_RC=2 gate "$d"
-check_rc "check.sh answering unavailable (exit 2) is tooling" 2 "$rc"
-check "check.sh answering unavailable (exit 2) keeps each check under its own name" "unavailable pass" \
-  "$(jq -r '"\(.gates.runner) \(.gates.tests)"' <<<"$out")"
-
-CHECK_OUT='{"rung":"full","verdict":"over-budget","checks":{"tests":"pass","runner":"over-budget"}}' CHECK_RC=3 gate "$d"
-check "check.sh over budget (exit 3) folds over-budget into unavailable" "unavailable" "$(jq -r '.gates.runner' <<<"$out")"
-
-CHECK_OUT='not json' CHECK_RC=2 gate "$d"
-check_rc "check.sh outside its contract is tooling" 2 "$rc"
-check "check.sh outside its contract grades one check: unavailable" "unavailable" "$(jq -r '.gates.check' <<<"$out")"
 
 CHECK_OUT=$ALL_GREEN gate "$d" --small docs/note.md
 check_rc "--small, all green: exit 0" 0 "$rc"
