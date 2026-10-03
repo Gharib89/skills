@@ -309,6 +309,13 @@ printf '\n# a read loop, not mapfile: the mechanics target Bash 3.2\n' >> "$d/$m
 run "$inert" "$d"
 check_rc "a construct named in a comment does not fail the check" 0 "$rc"
 
+# The setup-skills local-gate template is written into consumer repos like the
+# rest of skills/, so it is held to Bash 3.2 too, with no exemption.
+d=$(copy_skills bash4-template)
+printf '\nmapfile -t lines < /dev/null\n' >> "$d/setup-skills/local-gate.sh"
+run "$inert" "$d"
+check_rc "a Bash 4 construct in the setup-skills local-gate template fails the check" 1 "$rc"
+
 # The comment exclusion reads a field, not the whole line. A violation whose own
 # content carries `:N: #` is still a violation.
 d=$(copy_skills bash4-shadowed-comment)
