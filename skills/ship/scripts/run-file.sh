@@ -45,9 +45,8 @@ usage='usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --scratchpad <dir> --rebuild\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log"
 ship_help "$usage" "$@"
-[ -n "${1:-}" ] || ship_tooling "$usage"
+ship_args "$usage" arg "$@"
 verb=$1; shift
-case $verb in -*) ship_tooling "$usage" ;; esac
 
 # The ten items, in the fixed wording. Four carry a tail the ship profile
 # supplies; the rest are the same in every repo.
@@ -181,9 +180,8 @@ flip_json() { # flip_json <state> <line> <mirror> [<reason>]
 
 case $verb in
 init)
-  [ -n "${1:-}" ] || ship_tooling "$usage"
+  ship_args "$usage" arg "$@"
   id=$1; shift
-  case $id in -*) ship_tooling "$usage" ;; esac
   scratchpad="" tripwires=None verifications="None applicable" reviewers=none legs=None
   rebuild=false states=""
   while [ $# -gt 0 ]; do
@@ -293,9 +291,8 @@ close)
   ;;
 skip)
   phase_arg "${1:-}"; n=$1; shift
-  [ -n "${1:-}" ] || ship_tooling "$usage"
+  ship_args "$usage" arg "$@"
   reason=$1; shift
-  case $reason in -*) ship_tooling "$usage" ;; esac
   parse_file "$@"
   take_row "$n"
   is_open "$line" && ship_fail "phase $n is open; close it before skipping it"

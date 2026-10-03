@@ -20,7 +20,7 @@
 # A <fn>.<n>.fail marker makes that call return 1, printing the <fn>.<n>.json
 # beside it where there is one (an adapter that fails with a body, such as
 # reply's {replied:false, detail}), else {"status": <n>} from a
-# <fn>.<n>.status beside it (the failure answer `ship_fail_host` reads), else
+# <fn>.<n>.status beside it (the failure answer `ship_fail` reads), else
 # nothing. A marker is an entry of the sequence like a fixture,
 # so <fn>.1.fail alone fails every call and <fn>.1.fail with <fn>.2.json is one
 # failure then an answer.
@@ -67,7 +67,7 @@ _host_fake() { # <fn> <args...>
 for _fn in host_tooling_reasons host_tooling_install host_identity host_can_push \
   host_copilot_login host_copilot_review_on_push \
   host_issue_get host_issue_comments host_issue_blockers_open host_issue_linked_prs \
-  host_issue_assign host_issue_unassign host_issue_has_label host_issue_add_label \
+  host_issue_assign host_issue_unassign host_issue_add_label \
   host_issue_remove_label host_issue_comment host_issue_close host_issue_create \
   host_issue_body host_issue_set_body \
   host_issues_open host_issues_ready \

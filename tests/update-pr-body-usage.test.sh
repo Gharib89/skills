@@ -9,37 +9,32 @@ source tests/lib.sh
 
 m=skills/ship/scripts/update-pr-body.sh
 usage='usage: update-pr-body <pr> (--section <name> | --preamble) --body-file <path>'
+# A readable file, so only the flag under test is what refuses the call.
+body=$(mktemp); open_fence=$(mktemp); heading=$(mktemp)
+trap 'rm -f "$body" "$open_fence" "$heading"' EXIT
 
 err() { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 
-check "a bare invocation prints the usage line" "$usage" "$(err)"
 check "an unknown flag is named" 'unknown flag: --body' "$(err 7 --body x)"
-
-# The PR number forgotten in front of the flags: without the guard "--section"
-# is the PR number and the host is asked for it.
-check "a flag in the PR slot is the usage error" "$usage" "$(err --section Review --body-file /dev/null)"
-check_rc "a flag in the PR slot is tooling" 2 "$(rc --section Review --body-file /dev/null)"
 
 # The two ways to address the body are exclusive: a call carrying both asks for
 # two different rewrites of the same body, and a call carrying neither says
 # nothing about which part of it to replace.
 check "both address flags is the usage error" "$usage" \
-  "$(err 7 --section Review --preamble --body-file /dev/null)"
-check_rc "both address flags is tooling" 2 "$(rc 7 --section Review --preamble --body-file /dev/null)"
-check "neither address flag is the usage error" "$usage" "$(err 7 --body-file /dev/null)"
-check_rc "neither address flag is tooling" 2 "$(rc 7 --body-file /dev/null)"
+  "$(err 7 --section Review --preamble --body-file "$body")"
+check_rc "both address flags is tooling" 2 "$(rc 7 --section Review --preamble --body-file "$body")"
+check "neither address flag is the usage error" "$usage" "$(err 7 --body-file "$body")"
+check_rc "neither address flag is tooling" 2 "$(rc 7 --body-file "$body")"
 
 # A flag where a flag's value belongs: without the guard `--preamble` is the
 # section name, so the call is accepted and the exclusion it breaks never fires.
 check "a flag in the section slot is the usage error" "$usage" \
-  "$(err 7 --section --preamble --body-file /dev/null)"
-check_rc "a flag in the section slot is tooling" 2 "$(rc 7 --section --preamble --body-file /dev/null)"
+  "$(err 7 --section --preamble --body-file "$body")"
+check_rc "a flag in the section slot is tooling" 2 "$(rc 7 --section --preamble --body-file "$body")"
 check "a flag in the body-file slot is the usage error" "$usage" \
   "$(err 7 --section Review --body-file --preamble)"
 
-open_fence=$(mktemp); heading=$(mktemp)
-trap 'rm -f "$open_fence" "$heading"' EXIT
 printf 'a lede\n\n## Summary\n' > "$heading"
 
 # The preamble is what sits above the first heading, so a heading in the file

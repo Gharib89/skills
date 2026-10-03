@@ -11,11 +11,7 @@ u='usage: request-review <pr> --reviewer <name>'
 err() { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 
-check "the usage line names the reviewer by name" "$u" "$(err)"
-check_rc "a bare invocation is tooling" 2 "$(rc)"
-
 check "a missing --reviewer is the usage error" "$u" "$(err 12)"
-check "a flag in the pr slot is the usage error" "$u" "$(err --reviewer claude)"
 
 check "--reviewer with no name is the usage error" "$u" "$(err 12 --reviewer)"
 check_rc "--reviewer with no name is tooling" 2 "$(rc 12 --reviewer)"

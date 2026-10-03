@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `SHIP_SUBSTANTIVE` and `SHIP_LANDED_BY`: the chain that decides whether a
+# `SHIP_SUBSTANTIVE` and `SHIP_ROUND_BY`: the chain that decides whether a
 # round landed. Ship grades every review row itself, above the host seam, so a
 # quota notice refuses the round on every host alike (#155, #268): a row with a
 # body is a round unless the body is only a refusal notice, and a row with no
@@ -32,8 +32,8 @@ project() {
   local sha=$1; shift
   jq -s --arg sha "$sha" --argjson full '[]' "$_gh_reviews_projection" <<<"$*" | jq "$SHIP_SUBSTANTIVE"
 }
-# landed <normalised-login> <since> <projection>: poll-pr's landing rules.
-landed() { jq -r --arg l "$1" --arg s "$2" "$SHIP_LANDED_BY" <<<"$3"; }
+# landed <login> <since> <projection>: poll-pr's landing rules.
+landed() { jq -r --arg l "$1" --arg s "$2" "$SHIP_ROUND_BY"' round_by(.substantive)' <<<"$3"; }
 # grade <body> [<state>]: the rule's answer for one row, a host-neutral one
 # carrying a `substantive` the rule must overwrite rather than read.
 grade() {

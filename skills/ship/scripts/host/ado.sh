@@ -118,27 +118,29 @@ host_issue_linked_prs() {
 }
 host_issue_assign()   { azx boards work-item update "${ORG[@]}" --id "$1" --assigned-to "$2" >/dev/null; }
 host_issue_unassign() { azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.AssignedTo=" >/dev/null; }
-_tags() { host_issue_get "$1" | jq -r '.labels | join("; ")'; }
-host_issue_has_label() { host_issue_get "$1" | jq -e --arg l "$2" '.labels | index($l)' >/dev/null; }
 host_issue_add_label() {
-  host_issue_has_label "$1" "$2" && return 0
-  local t; t=$(_tags "$1") || return 1
+  local cur t
+  cur=$(host_issue_get "$1") || return 1
+  jq -e --arg l "$2" 'any(.labels[]; . == $l)' <<<"$cur" >/dev/null && return 0
+  t=$(jq -r '.labels | join("; ")' <<<"$cur")
   azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.Tags=${t:+$t; }$2" >/dev/null
 }
-# Removing the LAST tag needs a json-patch `remove`: the server ignores an empty
-# System.Tags value however it is sent (`--fields`, `add ""`, `replace ""`), and
-# `az devops invoke` cannot send application/json-patch+json, so this one call is
-# `az rest` on the Entra token (a PAT-only session fails it and reports false).
+# A System.Tags write through `--fields` (an `add` op) merges into the tags
+# already there, so dropping a tag needs a json-patch `replace` with the rest,
+# and dropping the LAST one a `remove`: the server ignores an empty value however
+# it is sent. `az devops invoke` cannot send application/json-patch+json, so every
+# removal is `az rest` on the Entra token: a PAT-only session fails each one and
+# reports false.
 host_issue_remove_label() {
-  host_issue_has_label "$1" "$2" || return 0
-  local t; t=$(host_issue_get "$1" | jq -r --arg l "$2" '[.labels[] | select(. != $l)] | join("; ")') || return 1
-  if [ -n "$t" ]; then
-    azx boards work-item update "${ORG[@]}" --id "$1" --fields "System.Tags=$t" >/dev/null
-  else
-    az rest --method patch --url "$SHIP_ORG_URL/_apis/wit/workitems/$1?api-version=7.1" \
-      --resource 499b84ac-1321-427f-aa17-267ca6975798 --headers "Content-Type=application/json-patch+json" \
-      --body '[{"op":"remove","path":"/fields/System.Tags"}]' -o none 2>/dev/null
-  fi
+  local cur patch
+  cur=$(host_issue_get "$1") || return 1
+  jq -e --arg l "$2" 'any(.labels[]; . == $l)' <<<"$cur" >/dev/null || return 0
+  patch=$(jq -c --arg l "$2" '[.labels[] | select(. != $l)] | join("; ")
+    | if . == "" then [{op: "remove", path: "/fields/System.Tags"}]
+      else [{op: "replace", path: "/fields/System.Tags", value: .}] end' <<<"$cur")
+  azx rest --method patch --url "$SHIP_ORG_URL/_apis/wit/workitems/$1?api-version=7.1" \
+    --resource 499b84ac-1321-427f-aa17-267ca6975798 --headers "Content-Type=application/json-patch+json" \
+    --body "$patch" >/dev/null
 }
 host_issue_comment() { azx boards work-item update "${ORG[@]}" --id "$1" --discussion "$2" >/dev/null; }
 host_issue_close()   { azx boards work-item update "${ORG[@]}" --id "$1" --state "$ADO_CLOSED" >/dev/null; }
