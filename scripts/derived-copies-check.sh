@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # This repo is both the source of the shared skills and a consumer of them, so
 # `.claude/skills/<n>` must be the bytes of `skills/<n>`. A change to a skill
-# that was not followed by the refresh line fails here. The `derived-copies`
-# gate in scripts/local-gate.sh and `scripts/check.sh full` run this.
+# that was not followed by the refresh line fails here. `scripts/check.sh full`
+# runs this as its `derived-copies` row, which scripts/local-gate.sh reports
+# under the same name.
 #
 # The set of skills this repo writes is read from the lock's `source: "."`
 # entries, and this script hardcodes none. Every other place that names the set

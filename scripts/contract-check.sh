@@ -3,7 +3,8 @@
 # a malformed invocation as {"error": "<usage>"} on stdout with exit 2; the ship
 # profile's `## Public surface` names that as a contract, and a mechanic written
 # with the pre-#62 `${N:?}` idiom reintroduces exit 1 with a bare shell
-# diagnostic and no JSON. The `contract` gate in scripts/local-gate.sh is this.
+# diagnostic and no JSON. `scripts/check.sh full` runs this as its `contract`
+# row, which scripts/local-gate.sh reports under the same name.
 #
 #   scripts/contract-check.sh [<scripts-dir> [<skills-dir>]]
 #

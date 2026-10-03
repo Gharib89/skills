@@ -17,7 +17,8 @@
 # at its own length or longer with nothing after it, and a backtick run
 # followed by a backtick is inline code, so a nested example block cannot
 # switch the prose checks off. `CHANGELOG.md` carries provenance and is exempt.
-# The `self-contained` gate in scripts/local-gate.sh runs this.
+# `scripts/check.sh full` runs this as its `self-contained` row, which
+# scripts/local-gate.sh reports under the same name.
 #
 #   scripts/self-contained-check.sh [<root>]
 #

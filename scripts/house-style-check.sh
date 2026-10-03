@@ -3,8 +3,9 @@
 # whitespace and a final newline on every non-empty file, over the files this
 # repo authors, and an 80-column wrap width over the files it hard-wraps. A consumer repo's stock `trailing-whitespace` and
 # `end-of-file-fixer` hooks fail on a copied script that breaks either (issue
-# #288). `.claude/skills/` is install output from other repos and is exempt. The
-# `house-style` gate in scripts/local-gate.sh runs this, in every lane.
+# #288). `.claude/skills/` is install output from other repos and is exempt.
+# `scripts/check.sh full` runs this as its `house-style` row, which
+# scripts/local-gate.sh reports under the same name, in every lane.
 #
 # Build the dash from its UTF-8 bytes. A `$'\u2014'` escape expands by locale:
 # with LANG and LC_ALL empty (the cloud sandbox) it stays literal escape text and

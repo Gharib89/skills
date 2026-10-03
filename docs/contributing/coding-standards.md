@@ -310,12 +310,9 @@ prose is the product as much as the scripts are.
   machine running Bash 5. Scripts under `scripts/` and `tests/` run in this repo
   alone and may require Bash 4, behind a version guard; **precedent for a
   mechanic comes from `skills/` alone**, whatever idiom a repo-local script
-  uses. One file under `skills/` is repo-local for this rule:
-  `skills/setup-skills/local-gate.sh`, a template written into a consumer repo
-  as that repo's own gate, carrying its own guard. The `contract` gate fails on
-  the four constructs named here, in any `*.sh` file under `skills/`; the rule
-  is wider than the grep, so a Bash 4 feature it does not name is still a
-  violation.
+  uses. The `contract` gate fails on the four constructs named here, in any
+  `*.sh` file under `skills/`, none excepted; the rule is wider than the grep,
+  so a Bash 4 feature it does not name is still a violation.
 - **A vocabulary the change extends is swept across the whole `skills/` tree,
   sibling spellings included.** Grep the new term and the ones it sits beside
   (`defer-to-ci` beside `deferred-to-ci`), across every file rather than the
