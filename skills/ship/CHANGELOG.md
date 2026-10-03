@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.16.4 (2026-10-03)
+
+### Bug Fixes
+
+- **ship**: The merge gate closes phase 9 in both lanes
+  ([#466](https://github.com/Gharib89/skills/pull/466),
+  [`054e04a`](https://github.com/Gharib89/skills/commit/054e04a9e4ee52f45aabd382c04661ddcd962146))
+
+
 ## v0.16.3 (2026-10-03)
 
 ### Bug Fixes
