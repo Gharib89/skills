@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # request-review over the real GitHub adapter: a request that landed reads back
 # as one. `host_pr_request_review` takes it as landed when the timeline gained a
-# `review_requested` event during the call, or when the reviewer is on the
+# `review_requested` event for the reviewer during the call, or when the reviewer is on the
 # pending list under its login less a `[bot]` suffix or under its recorded
 # alias; the logins of earlier requests the reviewer answered or that were
 # withdrawn, which the timeline keeps, do not count. A round already in flight
@@ -96,6 +96,15 @@ reset '' 2 '{"event":"review_requested","login":"Copilot","created_at":"2026-09-
 out=$(req copilot); rc=$?
 check_rc "a timeline delta alone is a landed request" 0 "$rc"
 check    "and stamps requested_at from the event" 2026-09-21T15:00:00Z "$(jq -r .requested_at <<<"$out")"
+
+# Another reviewer is requested during the call: the timeline gains its event,
+# not this reviewer's, and nothing is pending. That event must not read this
+# request back, nor lend it its time (#451).
+reset '' 2 '{"event":"review_requested","login":"someone-else","created_at":"2026-09-21T15:00:00Z"}'
+out=$(req copilot); rc=$?
+check_rc "another reviewer's event during the call does not read back this one" 1 "$rc"
+check    "and reports requested: false" false "$(jq -r .requested <<<"$out")"
+check    "nor takes that event's time" false "$(jq -r '.requested_at == "2026-09-21T15:00:00Z"' <<<"$out")"
 
 # A reviewer requested and answered before on this PR: its events are in the
 # timeline before and after the call, the POST queues nothing, and nothing is
