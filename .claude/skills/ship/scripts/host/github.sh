@@ -639,9 +639,10 @@ host_pr_request_review() { # <pr> <login>
   after=$(_gh_review_events "$pr") || after='[]'
   pending=$(api "$R/pulls/$pr" --jq '.requested_reviewers[].login' | jq -R . | jq -s .)
   readback=$( { jq -r '.[]' <<<"$pending"; jq -r '.[] | select(.event == "review_requested") | .login' <<<"$after"; } | jq -R . | jq -s 'unique')
-  # The request landed if the timeline gained a review_requested event during
-  # this call, or if the reviewer is pending on `requested_reviewers` now under
-  # any name it is recorded as (`recorded`).
+  # The request landed if the timeline gained a review_requested event for the
+  # reviewer during this call, or if the reviewer is pending on
+  # `requested_reviewers` now, under any name it is recorded as (`recorded`)
+  # either way: another reviewer's request in the same window is not this one.
   # The timeline can lag the wait above, so the pending list alone must be
   # enough, or a landed request reads as never-queued. The match reads the
   # pending list and not the timeline's logins, which keep every earlier
@@ -662,7 +663,7 @@ host_pr_request_review() { # <pr> <login>
   # never reads as this one.
   jq -n --argjson ok "$ok" --argjson b "$before" --argjson a "$after" --argjson p "$pending" --argjson rb "$readback" --arg l "$login" --arg alias "$(_gh_alias "$login")" --arg now "$now" \
     "$_gh_recorded_def"'
-     def requests: map(select(.event == "review_requested"));
+     def requests: map(select(.event == "review_requested" and (.login | recorded)));
      ($a | requests) as $ar | (($ar | length) > ($b | requests | length)) as $new
      | def last_of: [.[] | select(.login | recorded)] | last;
      ($b | last_of) as $lb
