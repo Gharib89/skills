@@ -139,6 +139,18 @@ out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
 check_rc "template, a real base: exit 0" 0 "$rc"
 check "template, a real base: secrets passes" "pass" "$(jq -r '.gates.secrets' <<<"$out")"
 
+# The template grades its own gates: a failing gate is exit 1, an unavailable one
+# exit 2, and fail wins over unavailable. Each case fills the gates block the way
+# a consumer might: a placeholder with a failing command, or a `mark`.
+for c in "false|true|run deps  __DEPS__|1 fail fail|a failing gate" \
+  "true|true|mark deps unavailable|2 unavailable unavailable|an unavailable gate" \
+  "true|false|mark deps unavailable|1 fail unavailable|a failing gate beside an unavailable one"; do
+  IFS='|' read -r deps runner line want name <<<"$c"
+  sed "s/^run deps  __DEPS__.*/$line/; s/__DEPS__/$deps/; s/__RUNNER__/$runner/" skills/setup-skills/local-gate.sh > "$d/local-gate.sh"
+  out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
+  check "template, $name: exit, verdict and the deps gate" "$want" "$rc $(jq -r '"\(.verdict) \(.gates.deps)"' <<<"$out")"
+done
+
 # `--help` and `-h` answer the header's usage line, exit 0, before any check
 # runs, in this repo's gate and in both templates setup-skills lands.
 for f in scripts/local-gate.sh skills/setup-skills/local-gate.sh skills/setup-skills/local-gate-harness.sh; do
