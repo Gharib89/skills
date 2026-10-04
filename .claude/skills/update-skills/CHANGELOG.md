@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.2 (2026-10-04)
+
+### Bug Fixes
+
+- **update-skills**: Read upstream subjects by ancestry, not date
+  ([#473](https://github.com/Gharib89/skills/pull/473),
+  [`7a2b340`](https://github.com/Gharib89/skills/commit/7a2b34063b545f3696daf2802ede4a0d8f58d6c2))
+
+
 ## v0.5.1 (2026-10-02)
 
 ### Documentation
