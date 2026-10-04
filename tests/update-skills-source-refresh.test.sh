@@ -3,7 +3,8 @@
 # records from Gharib89/skills, in any case, beside the four Ship needs, so a
 # skill installed beyond those four is never held back at its old version. A
 # lock jq cannot read stops the line before the installer, which given no
-# `--skill` installs every skill in the repo. Each printed line (update-skills
+# `--skill` installs every skill in the repo, and a lock key stays one literal
+# argument, never shell text the line runs. Each printed line (update-skills
 # step 2, the `### Ship` block's) is run in a scratch directory over a fixture
 # lock, `npx` a function that prints its arguments. No call here reaches a host.
 set -uo pipefail
@@ -18,7 +19,8 @@ cat >"$tmp/good/skills-lock.json" <<'EOF'
   "grill-with-artifact": {"source": "gharib89/skills"},
   "setup-harness": {"source": "Gharib89/skills"},
   "ship": {"source": "Gharib89/skills"},
-  "tdd": {"source": "mattpocock/skills"}
+  "tdd": {"source": "mattpocock/skills"},
+  "x$(echo INJECTED)": {"source": "gharib89/skills"}
 }}
 EOF
 
@@ -33,7 +35,7 @@ refresh() {
 # The --skill names the line in <file> installs over the good lock, sorted.
 installed() { refresh "$1" "$tmp/good" | grep -A1 -x -- --skill | grep -v -- '^--' | sort; }
 
-want=$(printf '%s\n' cloud-ship grill-with-artifact setup-harness setup-skills ship update-skills)
+want=$(printf '%s\n' cloud-ship grill-with-artifact setup-harness setup-skills ship update-skills 'x$(echo INJECTED)' | sort)
 check "update-skills step 2 refreshes every source-repo lock entry" "$want" "$(installed skills/update-skills/SKILL.md)"
 check "the ### Ship block's refresh line does too" "$want" "$(installed skills/setup-skills/ship-block.md)"
 for f in skills/update-skills/SKILL.md skills/setup-skills/ship-block.md; do

@@ -75,7 +75,7 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "8927f5e29ea3c01fc2ee50708c04795d6c1993c08e6c950e6b8c02468c4e2709"
+      "computedHash": "560f801c1fe9ea2bcfb7d4f4e05fbaab0f4de38c06b62a99081e6ceecda44f24"
     },
     "ship": {
       "source": ".",
@@ -120,7 +120,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "79ef6dfe1ecd91eb25eedb5155dcbb23cb4b7d3cc73fa24b93312ec764de9e2c"
+      "computedHash": "4142b7c69371e4a4804fc7606d8d3cc381d5ef3d09530908f2ce6cc6198fd776"
     },
     "wayfinder": {
       "source": "mattpocock/skills",
