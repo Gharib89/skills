@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.3.0 (2026-10-04)
+
+### Features
+
+- **grill-with-artifact**: Let the model and wayfinder invoke it
+  ([#468](https://github.com/Gharib89/skills/pull/468),
+  [`908e1e5`](https://github.com/Gharib89/skills/commit/908e1e5190ccb8e58e1835a73588db99b8082262))
+
+
 ## v0.2.1 (2026-10-02)
 
 ### Documentation
