@@ -12,8 +12,10 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-mkdir "$tmp/good" "$tmp/bad"
+mkdir "$tmp/good" "$tmp/bad" "$tmp/empty" "$tmp/blank"
 printf '{"skills": {\n' >"$tmp/bad/skills-lock.json"
+: >"$tmp/empty/skills-lock.json"
+printf '  \n' >"$tmp/blank/skills-lock.json"
 cat >"$tmp/good/skills-lock.json" <<'EOF'
 {"skills": {
   "grill-with-artifact": {"source": "gharib89/skills"},
@@ -39,9 +41,11 @@ want=$(printf '%s\n' cloud-ship grill-with-artifact setup-harness setup-skills s
 check "update-skills step 2 refreshes every source-repo lock entry" "$want" "$(installed skills/update-skills/SKILL.md)"
 check "the ### Ship block's refresh line does too" "$want" "$(installed skills/setup-skills/ship-block.md)"
 for f in skills/update-skills/SKILL.md skills/setup-skills/ship-block.md; do
-  out=$(refresh "$f" "$tmp/bad"); rc=$?
-  check "$f: an unreadable lock never reaches the installer" "" "$out"
-  [ "$rc" -ne 0 ] || check_rc "$f: an unreadable lock fails the line" 1 0
+  for lock in bad empty blank; do
+    out=$(refresh "$f" "$tmp/$lock"); rc=$?
+    check "$f: a $lock lock never reaches the installer" "" "$out"
+    [ "$rc" -ne 0 ] || check_rc "$f: a $lock lock fails the line" 1 0
+  done
 done
 
 finish

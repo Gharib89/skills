@@ -47,7 +47,7 @@ version, and step 3 then reads it as unmoved. A lock jq cannot read stops the
 line before the installer, which given no `--skill` installs every skill.
 
 ```sh
-flags=$(jq -r '[.skills | to_entries[] | select(.value.source | ascii_downcase == "gharib89/skills") | .key] + ["ship", "cloud-ship", "setup-skills", "update-skills"] | unique | map("--skill " + @sh) | join(" ")' skills-lock.json) && eval "npx skills add Gharib89/skills $flags --agent claude-code -y"
+flags=$(jq -er '[.skills | to_entries[] | select(.value.source | ascii_downcase == "gharib89/skills") | .key] + ["ship", "cloud-ship", "setup-skills", "update-skills"] | unique | map("--skill " + @sh) | join(" ")' skills-lock.json) && eval "npx skills add Gharib89/skills $flags --agent claude-code -y"
 ```
 
 In the source repo, whose `skills-lock.json` records `ship`'s source as `.`,
