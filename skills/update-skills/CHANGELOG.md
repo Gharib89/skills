@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.3 (2026-10-04)
+
+### Bug Fixes
+
+- **update-skills**: Expect worktree exists alone before the push
+  ([#474](https://github.com/Gharib89/skills/pull/474),
+  [`8a7eba3`](https://github.com/Gharib89/skills/commit/8a7eba367e94766d27b2409cca0499e7335e0688))
+
+
 ## v0.5.2 (2026-10-04)
 
 ### Bug Fixes
