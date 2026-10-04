@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.0 (2026-10-04)
+
+### Features
+
+- **update-skills**: Refresh every source-repo skill the lock records
+  ([#475](https://github.com/Gharib89/skills/pull/475),
+  [`a4dd316`](https://github.com/Gharib89/skills/commit/a4dd31692f01c34c0d42502a2bf719c798708b53))
+
+
 ## v0.5.3 (2026-10-04)
 
 ### Bug Fixes
