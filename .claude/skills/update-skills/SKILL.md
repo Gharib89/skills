@@ -73,9 +73,10 @@ current, run `$S/cleanup.sh none` from the main checkout, and stop.
 ### 4. Composed skills at their pins
 
 Run every `composed[].install` line, then `$S/preflight.sh none` and keep its
-`reasons`. Preflight exiting 1 with only an `existing branch` reason naming this
-run's own branch and a `worktree exists` reason naming its own worktree is the
-expected answer, not a failure; a profile reason is step 6's; any other carries
+`reasons`. Preflight exiting 1 with only a `worktree exists` reason naming this
+run's own worktree is the expected answer, not a failure. Preflight reads
+`existing branch` from the remote, so one naming this run's own branch joins it
+only once step 8 has pushed. A profile reason is step 6's; any other carries
 the line that repairs it: run that, then preflight again. A consumer repo never
 installs a drift row's `head`: that version is one nobody tested Ship against,
 and the row reaches the source repo in step 7 instead.
@@ -104,8 +105,8 @@ redoing for each section only the item its template feeds; when both hold, the
 installed and the parent docs this run never writes, so run it as a check: a
 failure skips the re-run, recorded as `setup-skills needed: <section or profile
 reason>` per item it would have redone, with what step 1 printed beside it, and
-the step goes on to the retired terms. Its own preflight calls read this run's
-`existing branch` and `worktree exists` as the expected pair. Its proposals and
+the step goes on to the retired terms. Its own preflight calls read step 4's
+expected answer as expected. Its proposals and
 interview questions go to the owner from this session, with AskUserQuestion,
 and writes land on confirm as setup-skills says.
 
@@ -123,8 +124,8 @@ and writes land on confirm as setup-skills says.
 
 A change to setup-skills' `SKILL.md` alone is not a section: its prose moving
 costs no interview. When the re-run is done, run `$S/preflight.sh none` again:
-the step is done when this run's own `existing branch` and `worktree exists` are
-the only reasons left, unless the re-run was skipped. Note the profile schema
+the step is done when step 4's expected answer is all that is left, unless the
+re-run was skipped. Note the profile schema
 move for step 8: the `Schema:` line of `docs/agents/ship.md` at `<old>` against
 the one now.
 
