@@ -257,9 +257,10 @@ folder between the two refs; a null `old_ref` has no subjects.
 The subjects are a read, not a gate: the folder is the lock's `skillPath`
 without `/SKILL.md`, and the commits are those of
 `https://api.github.com/repos/<source>/commits?sha=<new>&path=<folder>` whose
-sha is among the `commits` of `.../compare/<old_ref>...<new>`: ancestry, not
-date, since a merged branch brings commits dated before the old ref. A read
-that fails writes "subjects unavailable" and goes on.
+sha is among the `commits` of `.../compare/<old_ref>...<new>`, every page of
+both read: ancestry, not date, since a merged branch brings commits dated
+before the old ref. A read that fails writes "subjects unavailable" and goes
+on.
 
 Open it with `$S/open-pr.sh none --title "<subject>" --body-file <body>`, a
 Conventional-Commit subject honouring the profile's `Subject constraints:`
