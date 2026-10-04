@@ -41,10 +41,13 @@ before the refresh, which the plan reads as the old side.
 
 ### 2. Refresh the source-repo skills
 
-In a consumer repo:
+In a consumer repo, reinstall the four skills Ship needs and every other skill
+the lock records from `Gharib89/skills`, in any case: one left out keeps its old
+version, and step 3 then reads it as unmoved. A lock jq cannot read stops the
+line before the installer, which given no `--skill` installs every skill.
 
 ```sh
-npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --agent claude-code -y
+flags=$(jq -er '[.skills | to_entries[] | select(.value.source | ascii_downcase == "gharib89/skills") | .key] + ["ship", "cloud-ship", "setup-skills", "update-skills"] | unique | map("--skill " + @sh) | join(" ")' skills-lock.json) && eval "npx skills add Gharib89/skills $flags --agent claude-code -y"
 ```
 
 In the source repo, whose `skills-lock.json` records `ship`'s source as `.`,
