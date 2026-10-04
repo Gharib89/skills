@@ -73,7 +73,12 @@ reader expects has a control-flow shape even though the diff is comments. The
 small lane takes no exemption. `show-me` supplies the form: read it from
 `.claude/skills/show-me/SKILL.md` rather than load it, because its upstream sets
 `disable-model-invocation`, which bars the Skill tool and not a read; the
-constraints are ship's, and its menu of other uses is not.
+constraints are ship's, and its menu of other uses is not. `mattpocock/skills`'s
+`pr` copies the same menu, and ship stays on `show-me`: moving a composed skill
+is a breaking refresh for every consumer and would change no body. Where `pr`
+loads on its own, take only that menu: the template already carries its Summary,
+Evidence and Merge Danger as the Change outline, `## Verification` and the Door
+line.
 
 ## Special things to note: the folded deviations
 
