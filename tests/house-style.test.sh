@@ -163,6 +163,15 @@ printf 'if %s; then\n  %s f\nfi\n' "$root_only" "$cm" > "$d/tests/t.test.sh"; gi
 check_rc "a mode-000 chmod inside an if on id -u -eq 0 fails" 1 "$(rc_of C.UTF-8 "$d")"
 check "the inverted if guard prints the reason" "tests/t.test.sh:2: $cm with no id -u root guard; root reads a mode-000 file" "$(out_of C.UTF-8 "$d" | tail -n 1)"
 
+d=$(checkout chmod-else-arm)
+printf 'if %s; then\n  :\nelse\n  %s f\nfi\n' "$root_guard" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod in the else arm of a root guard fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the else arm prints the reason" "tests/t.test.sh:4: $cm with no id -u root guard; root reads a mode-000 file" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout chmod-elif-guard)
+printf 'if false; then\n  :\nelif %s; then\n  %s f\nfi\n' "$root_guard" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod under an elif root guard passes" 0 "$(rc_of C.UTF-8 "$d")"
+
 d=$(checkout chmod-early-return)
 printf '%s && return\n%s f\n' "$root_only" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
 check_rc "a mode-000 chmod after an early return on a previous line fails" 1 "$(rc_of C.UTF-8 "$d")"

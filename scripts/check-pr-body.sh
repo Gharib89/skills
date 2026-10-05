@@ -74,10 +74,15 @@ fi
 # heading to the next heading.
 outline_violations() {
   awk '
-    function path(line,   n, t, i) {
+    function path(line,   n, t, i, s) {
       n = split(line, t, /[[:space:]]+/)
-      for (i = 1; i <= n; i++)
-        if (index(t[i], "/") || t[i] ~ /\.[A-Za-z0-9][A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[:,]?$/) return 1
+      for (i = 1; i <= n; i++) {
+        if (index(t[i], "/")) return 1
+        if (t[i] !~ /\.[A-Za-z0-9][A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[:,]?$/) continue
+        # A stem of digits and dots is a version (24.2.9), not a file name.
+        s = t[i]; sub(/[:,]$/, "", s); sub(/\.[A-Za-z0-9]+$/, "", s)
+        if (s !~ /^[0-9.]+$/) return 1
+      }
       return 0
     }
     function close_fence() {

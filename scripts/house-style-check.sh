@@ -122,7 +122,8 @@ fi
 # guard has a polarity: the line carries `[ "$(id -u)" -eq 0 ] || chmod ...` or
 # `[ "$(id -u)" -ne 0 ] && chmod ...`, or sits inside an `if` block whose
 # condition line tests `id -u` with `-ne 0`, `!= 0` or `-gt 0`. An inverted
-# guard, or an early `|| return` on an earlier line, is a violation. A one-line
+# guard, an `else` arm under a correct `if` (an `elif` reads its own condition),
+# or an early `|| return` on an earlier line, is a violation. A one-line
 # `if ...; fi` opens and closes nothing. Comment lines are prose, not commands.
 tfiles=()
 while IFS= read -r -d '' f; do tfiles+=("$f"); done < <(git grep -z -I -l -E 'chmod 0{3,4}([^0-9]|$)' -- 'tests/*.test.sh' 2>"$err")
@@ -133,6 +134,8 @@ unguarded=
   /^[ \t]*#/ { next }
   /^[ \t]*if[ \t]/ && $0 !~ /(^|[;&|][ \t]*)fi[ \t]*([;&|)}#]|$)/ { depth++; guard[depth] = ($0 ~ /id -u[^;]*(-ne|-gt|!=)[ \t]*0/); next }
   /^[ \t]*fi[ \t]*([;&|)}#]|$)/ { if (depth > 0) depth--; next }
+  /^[ \t]*else([ \t;]|$)/ && depth > 0 { guard[depth] = 0 }
+  /^[ \t]*elif[ \t]/ && depth > 0 { guard[depth] = ($0 ~ /id -u[^;]*(-ne|-gt|!=)[ \t]*0/) }
   /chmod 0000?([^0-9]|$)/ {
     ok = ($0 ~ /id -u[^|&]*-eq[ \t]*0[ \t]*\]+[ \t]*\|\|/ || $0 ~ /id -u[^|&]*-ne[ \t]*0[ \t]*\]+[ \t]*&&/)
     for (i = 1; i <= depth && !ok; i++) if (guard[i]) ok = 1

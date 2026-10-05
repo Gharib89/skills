@@ -219,6 +219,10 @@ check "a flush-left root is quoted as written, no marker to drop" \
 check_rc "blank fence lines are not roots" 0 "$(oc_rc '```diff\n a.sh\n\n   child()\n```')"
 check_rc "a word ending in a long extension is not a path" \
   1 "$(oc_rc '```diff\n thing.toolong\n```')"
+check_rc "a version number is not a path" \
+  1 "$(oc_rc '```diff\n bump semantic-release to 24.2.9\n```')"
+check_rc "a file name with digits in its stem is a path" \
+  0 "$(oc_rc '```diff\n v2.sh: run()\n```')"
 check_rc "a carrier fence's rootless line is not checked" \
   0 "$(oc_rc "$good_fence\n\n"'```diff\n loose line\n```')"
 
