@@ -213,11 +213,20 @@ check "and the refusal quotes the root, marker dropped" \
 check "a removed root is a root too" \
   "pr-body: change outline: tree root has no file path: old thing" \
   "$(oc_out '```diff\n a.sh\n-old thing\n```')"
+check "a flush-left root is quoted as written, no marker to drop" \
+  "pr-body: change outline: tree root has no file path: run the thing" \
+  "$(oc_out '```diff\nrun the thing\n   child()\n```')"
 check_rc "blank fence lines are not roots" 0 "$(oc_rc '```diff\n a.sh\n\n   child()\n```')"
 check_rc "a word ending in a long extension is not a path" \
   1 "$(oc_rc '```diff\n thing.toolong\n```')"
 check_rc "a carrier fence's rootless line is not checked" \
   0 "$(oc_rc "$good_fence\n\n"'```diff\n loose line\n```')"
+
+# Both classes on one stdout: the missing heading first, then the outline line.
+check "a body short a heading with a prose outline prints both, in that order" \
+  "pr-body: missing heading: ## Attribution
+$neither" \
+  "$(out_of "$(body_of "## Why\n\nx\n\n## Change outline\n\nsome prose\n")" "$tplc")"
 
 # --- the issues a body closes ------------------------------------------------
 

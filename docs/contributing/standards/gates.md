@@ -69,8 +69,9 @@ do to pass.
   as its `--help` usage line, per the `contract` gate.
 - Every value-taking flag answering a leading-dash value (`--title --x`) with
   its usage line and exit 2, per the `contract` gate: take the value through
-  `ship_flag_value` in `_lib.sh`, or refuse `-*` inline where an empty value is
-  legal, as `run-file init` does.
+  `ship_flag_value` in ship's `_lib.sh`, or refuse `-*` inline where an empty
+  value is legal (`run-file init`) or the mechanic is another skill's, which
+  may run beside an older ship (update-skills' `plan`).
 - A mechanic's host failure, driven through the Host fake, printing exactly one
   JSON object on stdout, per the `contract` gate.
 - A mechanic invoked in a skill's Markdown code span carrying every option its

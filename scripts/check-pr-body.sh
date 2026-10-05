@@ -9,13 +9,15 @@
 # body is edited passes. The template is the source of truth: a heading added to it is required
 # of every body from then on.
 #
-# The Change outline is held to the rules skills/ship/reference/pr-body.md sets
-# (`## The Change outline`): a reviewer reads it as the diff's shape, and a prose
-# paragraph, an oversized tree or an unrooted one defeats that. With the heading
-# present, from it to the next `##` heading the outline must hold a `diff` fence
-# or a line starting `Shape: none, mechanical (`; the first `diff` fence holds at
-# most 15 lines between its fence lines; and each root line in it (non-blank,
-# nothing but the diff marker column before its first character) carries a file
+# The Change outline is held to the Shape bullet of
+# docs/contributing/standards/release.md, which is stricter here than ship's
+# shipped pr-body.md ("about 15" lines, with no gate behind it): a reviewer
+# reads it as the diff's shape, and a prose paragraph, an oversized tree or an
+# unrooted one defeats that. With the heading present, from it to the next `##`
+# heading the outline must hold a `diff` fence or a line starting
+# `Shape: none, mechanical (`; the first `diff` fence holds at most 15 lines
+# between its fence lines; and each root line in it (non-blank, nothing but the
+# diff marker column, when it has one, before its first character) carries a file
 # path, a token holding `/` or ending `.<1-5 alphanumerics>`, with an optional
 # `:` or `,`. A later carrier fence is not checked. A body without the heading
 # gets only the missing-heading line.
@@ -66,9 +68,10 @@ else
   body=$(cat)
 fi
 
-# Reads a body on stdin, prints one line per Change outline violation. The fence
-# and comment tracking is `headings`'s, so what renders as prose is skipped here
-# too; `section` is on from the `## Change outline` heading to the next heading.
+# Reads a body as its one argument, prints one line per Change outline
+# violation. The fence and comment tracking is `headings`'s, so what renders as
+# prose is skipped here too; `section` is on from the `## Change outline`
+# heading to the next heading.
 outline_violations() {
   awk '
     function path(line,   n, t, i) {
@@ -106,7 +109,7 @@ outline_violations() {
     fence != "" {
       if (isdiff) {
         lines++
-        rest = substr($0, 2)
+        rest = ($0 ~ /^[-+ ]/) ? substr($0, 2) : $0
         if ($0 !~ /^[[:space:]]*$/ && rest ~ /^[^[:space:]]/) root[++roots] = rest
       }
       next
@@ -145,7 +148,7 @@ closed_issues() {
 # Evidence only: a failing or missing gh must not reach the verdict.
 while read -r n; do
   [ -n "$n" ] || continue
-  title=$(gh issue view "$n" --json title --jq .title 2>/dev/null) && [ -n "$title" ] || title="title unavailable"
+  title=$(gh issue view "$n" --json title --jq .title </dev/null 2>/dev/null) && [ -n "$title" ] || title="title unavailable"
   echo "pr-body: closes #$n: $title" >&2
 done < <(closed_issues <<<"$body")
 
