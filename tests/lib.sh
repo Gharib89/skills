@@ -4,6 +4,7 @@
 #   source tests/lib.sh
 #   check     "<case>" "<expected>" "<actual>"
 #   check_rc  "<case>" <expected-rc> <actual-rc>
+#   skipped   "<case>"           # a case this runner cannot prove, named on stdout
 #   finish                      # exits 0 all cases passed, 1 otherwise
 #
 # A failing case prints its name and a diff on stderr, so `tests/run.sh` and
@@ -25,5 +26,7 @@ check_rc() { # <case> <expected-rc> <actual-rc>
   _failed=1
   printf 'FAIL %s: %s (expected exit %s, got %s)\n' "$TEST_NAME" "$1" "$2" "$3" >&2
 }
+
+skipped() { printf 'skipped %s: %s\n' "$TEST_NAME" "$1"; }
 
 finish() { exit "$_failed"; }

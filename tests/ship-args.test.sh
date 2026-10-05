@@ -19,7 +19,10 @@ printf ': > "%s"\n' "$loaded" > "$work/adapter.sh"
 export SHIP_HOST_ADAPTER=$work/adapter.sh
 
 readable=$work/body.md; printf 'body\n' > "$readable"
-unreadable=$work/locked.md; printf 'body\n' > "$unreadable"; chmod 000 "$unreadable"
+unreadable=$work/locked.md; printf 'body\n' > "$unreadable"
+# Root reads any file, so a mode-000 body proves nothing there: the chmod and the
+# case that relies on it run together, off root only.
+[ "$(id -u)" -eq 0 ] || chmod 000 "$unreadable"
 
 # <case> <mechanic> <args...>: the usage error, exit 2, adapter never sourced.
 refused() {
@@ -55,6 +58,8 @@ refused "open-pr, --body-file as the title's value"     open-pr 1 --title --body
 # root reads any file, so a mode-000 body proves nothing there.
 if [ "$(id -u)" -ne 0 ]; then
   refused "comment-pr, an unreadable body file"         comment-pr 1 --body-file "$unreadable"
+else
+  skipped "comment-pr, an unreadable body file"
 fi
 
 # `none` is the task-spec run's issue wherever a mechanic names it.

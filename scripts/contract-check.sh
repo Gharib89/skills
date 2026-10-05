@@ -40,6 +40,17 @@
 # matched as a substring of the file with its line wraps joined, so the same
 # words turned to the opposite meaning ("and also runs") do not pass.
 #
+# Checks 11 to 14 compare a mechanic's usage line, as `--help` prints it, with
+# the rest of what describes it:
+# 11  the header synopsis names the same flags and leading slots;
+# 12  every flag that takes a value refuses a leading-dash value with the usage
+#     line;
+# 13  every host failure, driven through the Host fake, prints one JSON object;
+# 14  Markdown that invokes a mechanic in a code span names its required flags.
+# Check 15 greps every shell file for three habits that fail silently: a curl
+# with no time limit, a command in a redirect-fed read loop that drains the loop's
+# input, and a fence pattern written by hand instead of SHIP_AWK_FENCE.
+#
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
@@ -153,7 +164,8 @@ done
 # machine that has no origin remote.
 err=$(mktemp) || { echo "cannot create a temp file" >&2; exit 2; }
 nogit=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
-trap 'rm -f "$err"; rm -rf "$nogit"' EXIT
+work=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
+trap 'rm -f "$err"; rm -rf "$nogit" "$work"' EXIT
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ "$m" = _lib ] && continue
@@ -181,6 +193,8 @@ for path in "$dir"/*.sh; do
     rc=1
     continue
   fi
+  # Kept for checks 11 to 14, which compare against what --help printed.
+  printf '%s\n' "$out" > "$work/$m.usage"
   # The same line the guards print. Check 4 reads the error path and this one
   # reads the --help path; nothing compares them, so a mechanic can answer
   # --help with a usage line its guards have since outgrown. With the flags out
@@ -347,5 +361,323 @@ if [ -f "$skills/ship/reference/context-discipline.md" ]; then
   require_sentence "$skills/ship/reference/context-discipline.md" \
     "Read one reference file per call." "must say to read one reference file per call"
 fi
+
+# Checks 11 to 14 share a reading of the usage line. A mechanic whose --help
+# check 5 reported has no line saved and is skipped here, so one fault is one
+# report. `tail_of` drops the name; `usage_alts` splits what is left at the
+# top-level ` | `, a ` | ` inside [...] or (...) belonging to its group.
+tail_of() { local t=${2#"usage: $1"}; printf '%s' "${t# }"; }
+usage_alts() {
+  printf '%s\n' "$1" | awk '{
+    d = 0; cur = ""; n = length($0)
+    for (i = 1; i <= n; i++) {
+      c = substr($0, i, 1)
+      if (c == "[" || c == "(") d++
+      else if (c == "]" || c == ")") d--
+      if (d == 0 && substr($0, i, 3) == " | ") { print cur; cur = ""; i += 2; continue }
+      cur = cur c
+    }
+    print cur }'
+}
+# lead_slots <text>: the <slots> before the first token starting with [, ( or -.
+lead_slots() {
+  local t out=""
+  set -f
+  for t in $1; do
+    case $t in '['*|'('*|-*) break ;; '<'*) out="$out $t" ;; esac
+  done
+  set +f
+  printf '%s' "${out# }"
+}
+# call_slots <text>: the positionals of a valid call, one per line: literal
+# words kept (a verb), an id as 1, <type> as fix, any other <slot> as x. A
+# token ending in a comma ends the slots, so prose after a verb is not one.
+call_slots() {
+  local t lit
+  set -f
+  for t in $1; do
+    case $t in '['*|'('*|-*|'"'*) break ;; esac
+    case $t in
+      '<issue>'|'<pr>'|'<n>'|'<issue|none>') echo 1 ;;
+      '<type>') echo fix ;;
+      '<'*) echo x ;;
+      *) lit=${t%,}; echo "${lit%%|*}" ;;
+    esac
+    case $t in *,) break ;; esac
+  done
+  set +f
+}
+# flags_of <text>: the sorted, space-joined set of --flags in the text.
+flags_of() { printf '%s\n' "$1" | grep -oE -e '--[a-z][a-z-]*' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
+# required_flags <usage tail>: one line per flag the call must carry, the flags
+# of a `( --a <x> | --b )` group joined by `|` (one of them), anything inside
+# [...] left out.
+required_flags() {
+  printf '%s\n' "$1" | awk '
+    function flags(str, sep,   r) {
+      r = ""
+      while (match(str, /--[a-z][a-z-]*/)) { r = r (r == "" ? "" : sep) substr(str, RSTART, RLENGTH); str = substr(str, RSTART + RLENGTH) }
+      return r
+    }
+    { d = 0; g = 0; top = ""; grp = ""; n = length($0)
+      for (i = 1; i <= n; i++) {
+        c = substr($0, i, 1)
+        if (c == "[") { d++; continue }
+        if (c == "]") { d--; continue }
+        if (d > 0) continue
+        if (c == "(") { g = 1; grp = ""; continue }
+        if (c == ")") { g = 0; print flags(grp, "|"); continue }
+        if (g) grp = grp c; else top = top c
+      }
+      n = split(flags(top, " "), f, " ")
+      for (i = 1; i <= n; i++) print f[i] }'
+}
+
+# flag_value <flag>: a value that passes the flag's own guard, for a call that
+# must get past the flags and fail somewhere else.
+flag_value() {
+  case $1 in
+    --body-file) printf '%s' "$work/body.md" ;; --title) printf 'fix: x' ;; --label) printf 'needs-triage' ;;
+    --reviewer) printf 'copilot' ;; --section) printf 'Review' ;; --scratchpad) printf '%s' "$work" ;; *) printf 'x' ;;
+  esac
+}
+# call_args <alt> [<flag>]: sets `args` to a valid call of the alternative, its
+# positionals and every required flag with a valid value, leaving out the
+# requirement <flag> belongs to. Check 12 gives <flag> its own bad value after
+# these: with the others missing, a guard that admits the bad value is hidden
+# behind the usage line the missing flag earns.
+call_args() {
+  local alt=$1 skip=${2:-} a r f
+  args=()
+  while IFS= read -r a; do [ -z "$a" ] || args+=("$a"); done <<EOP
+$(call_slots "$alt")
+EOP
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    if [ -n "$skip" ]; then case "|$r|" in *"|$skip|"*) continue ;; esac; fi
+    f=${r%%|*}
+    case $alt in
+      *"$f <"*|*"$f \"<"*) args+=("$f" "$(flag_value "$f")") ;;
+      *) args+=("$f") ;;
+    esac
+  done <<EOR
+$(required_flags "$alt")
+EOR
+}
+
+printf 'readable body\n' > "$work/body.md" || { echo "cannot create a temp file" >&2; exit 2; }
+
+# 11. The header synopsis agrees with the usage line. The header is what a
+# maintainer reads and the usage line is what a run reads, and they were typed
+# apart: `open-pr` documented `<issue>` for a slot that also takes `none`, and
+# `run-file` named `<where>` where the flags are. Compared as two sets: the
+# --flags, over the synopsis block (the header lines from the first one opening
+# with the mechanic's name to the next line that is exactly `#`) and the usage
+# line, and the leading <slots>, over the block's first line and the usage line.
+# A mechanic with no synopsis block is a stub with no header to compare.
+for path in "$dir"/*.sh; do
+  m=$(basename "$path" .sh)
+  [ -f "$work/$m.usage" ] || continue
+  block=$(awk -v m="$m" '$0 ~ "^#   " m "( |$)" { on = 1 } on && $0 == "#" { exit } on { print }' "$path")
+  [ -n "$block" ] || continue
+  usage=$(cat "$work/$m.usage"); utail=$(tail_of "$m" "$usage")
+  first=$(printf '%s\n' "$block" | head -1); first=${first#"#   $m"}
+  hf=$(flags_of "$block"); uf=$(flags_of "$utail")
+  hs=$(lead_slots "$first"); us=$(lead_slots "$utail")
+  diff=""
+  [ "$hf" = "$uf" ] || diff="flags (header: ${hf:-none}; usage: ${uf:-none})"
+  [ "$hs" = "$us" ] || diff="${diff:+$diff; }leading slots (header: ${hs:-none}; usage: ${us:-none})"
+  [ -z "$diff" ] || { printf '%s: header synopsis and --help usage line disagree: %s\n' "$m" "$diff"; rc=1; }
+done
+
+# 12. Every flag that takes a value refuses a leading-dash one, with the usage
+# line and exit 2. A guard that tests only for an empty value reads the next
+# flag as the value: `open-pr --title --body-file b.md` took `--body-file` as
+# the title. The flags are the usage line's `--flag <value>` pairs; the call
+# gives the flag the positionals of the first alternative that names it, so a
+# verb mechanic sees a verb it knows, and `--x` as its value.
+for path in "$dir"/*.sh; do
+  m=$(basename "$path" .sh)
+  [ -f "$work/$m.usage" ] || continue
+  apath=$(cd "$(dirname "$path")" && pwd)/$(basename "$path")
+  usage=$(cat "$work/$m.usage"); utail=$(tail_of "$m" "$usage")
+  # A variadic flag (`--carry <file>...`) ends its list at the next flag, so a
+  # dash-led token after it is a flag, never its value.
+  variadic=$(printf '%s\n' "$utail" | grep -oE -e '--[a-z][a-z-]* "?<[^ ]*>\.\.\.' | sed 's/ .*//')
+  for f in $(printf '%s\n' "$utail" | grep -oE -e '--[a-z][a-z-]* "?<' | sed 's/ .*//' | sort -u); do
+    case " $(echo $variadic) " in *" $f "*) continue ;; esac
+    alt=$utail
+    while IFS= read -r a; do
+      case $a in *"$f <"*|*"$f \"<"*) alt=$a; break ;; esac
+    done <<EOA
+$(usage_alts "$utail")
+EOA
+    call_args "$alt" "$f"
+    out=$(cd "$nogit" && bash "$apath" ${args[@]+"${args[@]}"} "$f" --x 2>/dev/null); st=$?
+    if [ "$st" -ne 2 ] || ! printf '%s' "$out" | jq -se --arg u "$usage" 'length == 1 and (.[0] | type == "object" and .error == $u)' >/dev/null 2>&1; then
+      printf '%s: %s took a leading-dash value; guard it with ship_flag_value so it answers the usage line and exit 2\n' "$m" "$f"
+      rc=1
+    fi
+  done
+done
+
+# 13. A host failure prints exactly one JSON object. Each mechanic that loads a
+# host adapter is run against the Host fake with every host function failing,
+# from a throwaway checkout whose origin names GitHub, and what it prints on
+# stdout has to be one object whatever its exit code: a run reads the answer
+# with jq, and an exit path that prints nothing or two objects reads as a
+# different failure than the one that happened. The call is a valid one (its
+# positionals, and every required flag with a value that passes its guard), so
+# the failure reached is the host's. `gh` and `az` stubs exit 127 and git may
+# speak only `file:`, so nothing leaves the machine. A tree without the fake has
+# nothing to drive.
+fake=$(dirname "$0")/../tests/host-fake.sh
+if [ -f "$fake" ]; then
+  fake=$(cd "$(dirname "$fake")" && pwd)/host-fake.sh
+  root=$(cd "$(dirname "$0")/.." && pwd)
+  # The function list is the fake's own, so a host function added there is
+  # failed here without this file learning of it.
+  fns=$(sed -n '/^for _fn in/,/; do$/p' "$fake" | tr -s ' \\' '\n\n' | tr -d ';' | grep '^host_')
+  [ -n "$fns" ] || { printf '%s: no host_* function on its `for _fn in` line; check 13 has nothing to fail\n' "$fake"; rc=1; }
+  mkdir -p "$work/bin"
+  for cli in gh az; do printf '#!/bin/sh\nexit 127\n' > "$work/bin/$cli"; chmod +x "$work/bin/$cli"; done
+  for path in "$dir"/*.sh; do
+    [ -n "$fns" ] || break
+    m=$(basename "$path" .sh)
+    [ -f "$work/$m.usage" ] || continue
+    grep -q 'ship_load_host' "$path" || continue
+    apath=$(cd "$(dirname "$path")" && pwd)/$(basename "$path")
+    usage=$(cat "$work/$m.usage"); utail=$(tail_of "$m" "$usage")
+    alt=$(usage_alts "$utail" | head -1)
+    call_args "$alt"
+    repo=$(mktemp -d "$work/repo.XXXXXX") && sf=$(mktemp -d "$work/fake.XXXXXX") || { echo "cannot create a temp directory" >&2; exit 2; }
+    for fn in $fns; do : > "$sf/$fn.1.fail"; done
+    mkdir -p "$repo/docs/agents" "$repo/.github"
+    cp "$root/docs/agents/ship.md" "$repo/docs/agents/" || { printf '%s: check 13 setup failed: cannot copy docs/agents/ship.md\n' "$m"; rc=1; continue; }
+    cp "$root/.github/pull_request_template.md" "$repo/.github/" || { printf '%s: check 13 setup failed: cannot copy .github/pull_request_template.md\n' "$m"; rc=1; continue; }
+    ( cd "$repo" && git init -q . && git remote add origin https://github.com/o/r.git \
+        && git -c user.name=gate -c user.email=gate@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m init ) >/dev/null 2>&1 \
+      || { printf '%s: check 13 setup failed: cannot git init the throwaway checkout\n' "$m"; rc=1; continue; }
+    out=$(cd "$repo" && PATH="$work/bin:$PATH" SHIP_HOST_ADAPTER=$fake SHIP_FAKE=$sf GIT_ALLOW_PROTOCOL=file GIT_TERMINAL_PROMPT=0 \
+      bash "$apath" ${args[@]+"${args[@]}"} 2>/dev/null </dev/null)
+    if ! printf '%s' "$out" | jq -se 'length == 1 and (.[0] | type == "object")' >/dev/null 2>&1; then
+      n="$(printf '%s' "$out" | jq -s length 2>/dev/null) JSON values" || n="unparseable output"
+      call=$m; [ "${#args[@]}" -eq 0 ] || call="$m ${args[*]}"
+      printf '%s: with every host_* failing in the Host fake, `%s` printed %s on stdout; want exactly one object\n' "$m" "$call" "$n"
+      rc=1
+    fi
+  done
+fi
+
+# 14. Markdown that invokes a mechanic names the flags the call requires. A code
+# span opening with `<mechanic> ` is an invocation, and one that leaves out a
+# required flag teaches a call the mechanic refuses: ship's phase 7 wrote
+# `update-pr-body --section` for a call that also needs `--body-file`. The
+# required flags are the usage line's own, outside [...]; a `( --a | --b )`
+# group is satisfied by either. A mechanic with top-level alternatives
+# (`run-file`) has no one flag set to hold. Fenced blocks are samples, so they
+# are skipped, and a CHANGELOG records what once was true.
+: > "$work/required"
+for path in "$dir"/*.sh; do
+  m=$(basename "$path" .sh)
+  [ -f "$work/$m.usage" ] || continue
+  utail=$(tail_of "$m" "$(cat "$work/$m.usage")")
+  [ "$(usage_alts "$utail" | wc -l)" -eq 1 ] || continue
+  reqs=$(required_flags "$utail" | tr '\n' ' ')
+  [ -n "$reqs" ] && printf '%s\t%s\n' "$m" "$reqs" >> "$work/required"
+done
+if [ -s "$work/required" ]; then
+  find "$skills" -name '*.md' ! -name CHANGELOG.md | sort | tr '\n' '\0' | xargs -0 awk -v reqfile="$work/required" '
+      BEGIN { while ((getline l < reqfile) > 0) { split(l, p, "\t"); req[p[1]] = p[2] } }
+      FNR == 1 { fence = ""; flen = 0 }
+      {
+        if (match($0, /^ *(```+|~~~+)/)) {
+          t = substr($0, RSTART, RLENGTH); gsub(/ /, "", t)
+          if (fence == "") { fence = substr(t, 1, 1); flen = length(t); next }
+          if (substr(t, 1, 1) == fence && length(t) >= flen && $0 ~ /^ *[`~]+ *$/) { fence = ""; next }
+        }
+        if (fence != "") next
+        line = $0
+        while ((i = index(line, "`")) > 0) {
+          k = 0; while (substr(line, i + k, 1) == "`") k++
+          rest = substr(line, i + k); delim = ""; for (z = 0; z < k; z++) delim = delim "`"
+          j = index(rest, delim)
+          if (j == 0) break
+          span = substr(rest, 1, j - 1)
+          line = substr(rest, j + k)
+          sub(/^ +/, "", span)
+          for (m in req) {
+            if (index(span, m " ") != 1) continue
+            n = split(req[m], r, " ")
+            for (x = 1; x <= n; x++) {
+              if (r[x] == "") continue
+              na = split(r[x], alt, "|"); ok = 0
+              for (y = 1; y <= na; y++) if (index(span, alt[y]) > 0) ok = 1
+              if (!ok) { gsub(/\|/, " or ", r[x]); printf "%s:%d: `%s` lacks %s from %s\047s usage line\n", FILENAME, FNR, span, r[x], m }
+            }
+          }
+        }
+      }' > "$work/doc-hits"
+  if [ -s "$work/doc-hits" ]; then cat "$work/doc-hits"; rc=1; fi
+fi
+
+# 15. Three habits grep can hold, over every shell file under the skills tree,
+# on lines that are not comments (a line opening with `#` is prose, as in
+# check 3).
+# (a) curl with no --max-time on its logical line, `\` continuations joined: a
+#     hung connection hangs the caller, and a mechanic or hook has no human to
+#     interrupt it. `command -v curl` and a name ending in curl (`_curl`) are
+#     not invocations.
+# (b) a `bash -c`, `sh -c` or `eval` with no stdin redirect (a `<`, `<<` or
+#     `<<<` outside a `$(...)`, and not a `<(`) inside a `while read` loop
+#     whose `done` takes a redirect: a file, a process substitution, a heredoc
+#     or a here-string. A loop fed by a pipe, or written on one line, is not
+#     reached, since the scan anchors on a `done` line. The rule covers command
+#     strings on purpose: a direct filter that reads stdin (`cat`, `sed`) is
+#     visible in the loop, while a command string hides whether it reads stdin. Unredirected, the
+#     command inherits the loop's stdin and drains it: measured on Bash 3.2.57
+#     and 5.3.9, an unredirected `bash -c 'cat'` or `eval` ran 1 of 3 rows, and
+#     `</dev/null` ran all 3.
+# (c) a three-backtick fence pattern outside the SHIP_AWK_FENCE definition in
+#     _lib.sh, the one fence grammar: a second, hand-rolled one, even elsewhere
+#     in _lib.sh, is how a four-backtick fence ended up closed by a
+#     three-backtick line.
+find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills/ship/scripts/_lib.sh" '
+    function indent(s) { match(s, /^[ \t]*/); return substr(s, 1, RLENGTH) }
+    FNR == 1 { delete L; acc = ""; start = 0; def = 0 }
+    { L[FNR] = $0 }
+    FILENAME == lib && /^readonly SHIP_AWK_FENCE=/ { def = FNR }
+    $0 ~ /^[ \t]*#/ { next }
+    {
+      if (!def && (index($0, "```") || $0 ~ /(\\`){3}/ || index($0, "`{3")))
+        printf "%s:%d: a hand-rolled fence pattern; use SHIP_AWK_FENCE from _lib.sh\n", FILENAME, FNR
+      line = $0
+      if (acc == "") start = FNR
+      if (line ~ /\\$/) { sub(/\\$/, "", line); acc = acc line " "; }
+      else {
+        cmd = acc line; acc = ""
+        gsub(/(command|type|which|hash)( +-[a-zA-Z]+)* +curl/, "", cmd)
+        if (cmd ~ /(^|[^A-Za-z0-9_."\047-])curl([^A-Za-z0-9_]|$)/ && cmd !~ /--max-time/)
+          printf "%s:%d: curl without --max-time; a hung download hangs the caller with it\n", FILENAME, start
+      }
+      if ($0 ~ /^[ \t]*done[ \t]*</) {
+        ind = indent($0); open = 0
+        for (k = FNR - 1; k >= 1; k--) {
+          if (L[k] ~ /^[ \t]*#/ || indent(L[k]) != ind) continue
+          if (L[k] ~ /^[ \t]*(while|until|for)[ \t]/) { open = (L[k] ~ /^[ \t]*while .*read/) ? k : 0; break }
+          if (L[k] ~ /^[ \t]*done/) break
+        }
+        for (k = open + 1; open && k < FNR; k++) {
+          s = L[k]; gsub(/\$\([^()]*\)/, "", s)
+          if (s ~ /^[ \t]*#/ || s ~ /<([^(]|$)/) continue
+          if (match(L[k], /(^|[^A-Za-z0-9_])(bash -c|sh -c|eval )/)) {
+            c = substr(L[k], RSTART, RLENGTH); gsub(/^[^a-z]+/, "", c); sub(/ +$/, "", c)
+            printf "%s:%d: %s inside a while-read loop over redirected input reads the loop\047s stdin; give it </dev/null\n", FILENAME, k, c
+          }
+        }
+      }
+      if (def && FNR > def && /\047[ \t]*$/) def = 0
+    }' > "$work/shell-hits"
+if [ -s "$work/shell-hits" ]; then cat "$work/shell-hits"; rc=1; fi
 
 exit $rc

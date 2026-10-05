@@ -49,7 +49,9 @@ STUB
   printf '#!/usr/bin/env bash\necho "version-line-check.sh $*" >> "$CALLS"\necho version log line\nexit "${VERSION_RC:-0}"\n' > "$d/scripts/version-line-check.sh"
   printf '#!/usr/bin/env bash\necho "derived-copies-check.sh" >> "$CALLS"\necho derived log line\nexit "${DERIVED_RC:-0}"\n' > "$d/scripts/derived-copies-check.sh"
   printf '#!/usr/bin/env bash\necho "contract-check.sh $*" >> "$CALLS"\n' > "$d/scripts/contract-check.sh"
-  chmod +x "$d/scripts/derived-copies-check.sh" "$d/scripts/contract-check.sh" "$d/scripts/check.sh" "$d/tests/run.sh" "$d/scripts/version-line-check.sh"
+  # A warning, not a gate: its exit status, here a tooling 2, grades nothing.
+  printf '#!/usr/bin/env bash\nexit 2\n' > "$d/scripts/glossary-warn.sh"
+  chmod +x "$d/scripts/derived-copies-check.sh" "$d/scripts/contract-check.sh" "$d/scripts/check.sh" "$d/tests/run.sh" "$d/scripts/version-line-check.sh" "$d/scripts/glossary-warn.sh"
   git_ "$d" init -q && git_ "$d" add -A && git_ "$d" commit -qm base && git_ "$d" tag base || return 1
   printf '%s' "$d"
 }
