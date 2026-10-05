@@ -58,7 +58,7 @@ case $headsf in -*) ship_tooling "$usage" ;; esac
 old=HEAD
 while [ $# -gt 0 ]; do
   case $1 in
-    --old) [ -n "${2:-}" ] || ship_tooling "$usage"; old=$2; shift 2 ;;
+    --old) ship_flag_value "$usage" "${2:-}"; old=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done

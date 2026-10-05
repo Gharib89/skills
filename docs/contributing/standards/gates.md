@@ -34,6 +34,8 @@ do to pass.
   every non-empty text file there ends in a newline, per the `house-style` gate.
   The last two are what a consumer repo's stock `trailing-whitespace` and
   `end-of-file-fixer` hooks demand of the copies it installs.
+- No `chmod 000` in a `tests/*.test.sh` outside an `id -u` root guard, per the
+  `house-style` gate: root reads a mode-000 file, so the case proves nothing.
 - Prose wrapped at 80 columns in the files this repo hard-wraps, the `wrapped`
   list in `scripts/house-style-check.sh`, per the `house-style` gate.
   Frontmatter, fences, tables, changelogs and a line holding only a link, a code
@@ -61,6 +63,22 @@ do to pass.
   matched as substrings with their line wraps joined: phase 4's instruction
   that each axis reads the Local gate's JSON and never runs the suite itself,
   and context discipline's `Read one reference file per call.`
+- Each mechanic's header synopsis naming the same flags and leading `<slots>`
+  as its `--help` usage line, per the `contract` gate.
+- Every value-taking flag answering a leading-dash value (`--title --x`) with
+  its usage line and exit 2, per the `contract` gate: take the value through
+  `ship_flag_value` in `_lib.sh`.
+- A mechanic's host failure, driven through the Host fake, printing exactly one
+  JSON object on stdout, per the `contract` gate.
+- A mechanic invoked in a skill's Markdown code span carrying every option its
+  usage line requires, per the `contract` gate.
+- No `curl` without `--max-time` in a shell file under `skills/`, per the
+  `contract` gate: a hung download hangs the run that called it.
+- No `bash -c`, `sh -c` or `eval` without an input redirect inside a
+  `while read` loop fed by a heredoc or here-string under `skills/`, per the
+  `contract` gate: it drains the loop's remaining rows on Bash 3.2 and 5.3.
+- No hand-rolled three-backtick fence pattern in a shell file under `skills/`
+  outside `_lib.sh`'s `SHIP_AWK_FENCE`, per the `contract` gate.
 - Ship's own documents inside their line budget, per the `prose-budget` gate:
   `skills/*/SKILL.md` at most 350 lines, and every `skills/*/reference/*.md`
   over 100 lines opening with a `## Contents` list that matches its `## `
@@ -84,6 +102,19 @@ do to pass.
   any commit on the branch implies a major too, because the squash body the
   release run grades is composed from one or the other. How to grade the title
   is [release.md](release.md).
+- A `## Change outline` holding a Shape `diff` fence or a
+  `Shape: none, mechanical (` line, per the `bump-guard` workflow's body check.
+- That Shape fence at most 15 lines, per the same check.
+- Each root of that Shape fence carrying its file path, per the same check.
+- Each `Closes #N` issue's title printed on the check's stderr as evidence,
+  never failing it.
 - `tests/run.sh` green, per the `tests` gate. None of its tests reaches a host.
   The kinds of test it runs are listed in the ship profile's `## Local gate`
   section.
+- The repo's copies of the shipped Local gate, cloud bootstrap and review
+  workflow matching their setup-skills templates outside the consumer-owned
+  regions, per `scripts/template-drift-check.sh` under the `tests` gate: mark a
+  deliberate departure in the workflow between `# >>> repo-owned` and
+  `# <<< repo-owned`.
+- A `GLOSSARY.md` `_Avoid_` word in the diff's added Markdown lines, printed by
+  `scripts/glossary-warn.sh` from the Local gate as a warning only.
