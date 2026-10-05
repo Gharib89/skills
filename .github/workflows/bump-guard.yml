@@ -23,6 +23,7 @@ on:
 
 permissions:
   contents: read
+  issues: read
 
 concurrency:
   group: bump-guard-${{ github.event.pull_request.number }}
@@ -51,9 +52,12 @@ jobs:
           export PR_COMMITS
           scripts/check-bump-label.sh
 
-      # Its own verdict: a red title check must not hide a missing heading.
+      # Its own verdict: a red title check must not hide a missing heading. The
+      # titles of the issues the body closes are printed as evidence for the
+      # reviewer (they need `gh`, hence the token) and never fail the step.
       - name: Check the PR body carries the template's headings
         if: ${{ !cancelled() }}
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          GH_TOKEN: ${{ github.token }}
         run: printf '%s\n' "$PR_BODY" | scripts/check-pr-body.sh
