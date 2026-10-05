@@ -58,6 +58,8 @@ refused "open-pr, --body-file as the title's value"     open-pr 1 --title --body
 # root reads any file, so a mode-000 body proves nothing there.
 if [ "$(id -u)" -ne 0 ]; then
   refused "comment-pr, an unreadable body file"         comment-pr 1 --body-file "$unreadable"
+else
+  skipped "comment-pr, an unreadable body file"
 fi
 
 # `none` is the task-spec run's issue wherever a mechanic names it.

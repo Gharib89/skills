@@ -37,7 +37,8 @@ do to pass.
 - No `chmod 000` in a `tests/*.test.sh` outside a root guard that skips it, per
   the `house-style` gate: an `if` on `[ "$(id -u)" -ne 0 ]`, or
   `[ "$(id -u)" -eq 0 ] || chmod 000` on one line. Root reads a mode-000 file,
-  so the case proves nothing.
+  so the case proves nothing. The case reports itself under root with
+  `skipped` from `tests/lib.sh`; the gate checks the guard only.
 - Prose wrapped at 80 columns in the files this repo hard-wraps, the `wrapped`
   list in `scripts/house-style-check.sh`, per the `house-style` gate.
   Frontmatter, fences, tables, changelogs and a line holding only a link, a code
@@ -79,7 +80,8 @@ do to pass.
 - No `curl` without `--max-time` in a shell file under `skills/`, per the
   `contract` gate: a hung download hangs the run that called it.
 - No `bash -c`, `sh -c` or `eval` without an input redirect inside a
-  `while read` loop fed by a heredoc or here-string under `skills/`, per the
+  `while read` loop fed by a redirect (a file, a process substitution, a
+  heredoc or a here-string) under `skills/`, per the
   `contract` gate: it drains the loop's remaining rows on Bash 3.2 and 5.3.
 - No hand-rolled three-backtick fence pattern in a shell file under `skills/`
   outside `_lib.sh`'s `SHIP_AWK_FENCE`, per the `contract` gate.

@@ -749,7 +749,7 @@ $rows
 EOT'
 check_rc "an unredirected sh -c in a heredoc-fed read loop fails" 1 "$rc"
 check "and is named at its line" \
-  "$sk/zz/bad.sh:3: sh -c inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null" "$out"
+  "$sk/zz/bad.sh:3: sh -c inside a while-read loop over redirected input reads the loop's stdin; give it </dev/null" "$out"
 
 shell_run eval '#!/usr/bin/env bash
 while read -r row; do
@@ -759,7 +759,15 @@ $rows
 EOT'
 check_rc "an unredirected eval in a heredoc-fed read loop fails" 1 "$rc"
 check "and is named at its line" \
-  "$sk/zz/bad.sh:3: eval inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null" "$out"
+  "$sk/zz/bad.sh:3: eval inside a while-read loop over redirected input reads the loop's stdin; give it </dev/null" "$out"
+
+shell_run eval-file '#!/usr/bin/env bash
+while read -r row; do
+  eval "$row"
+done < "$f"'
+check_rc "an unredirected eval in a file-fed read loop fails" 1 "$rc"
+check "and is named at its line" \
+  "$sk/zz/bad.sh:3: eval inside a while-read loop over redirected input reads the loop's stdin; give it </dev/null" "$out"
 
 # A here-string inside a command substitution redirects the substitution's
 # command, not the eval.
@@ -771,7 +779,7 @@ $rows
 EOT'
 check_rc "an eval whose only < is a here-string inside a substitution fails" 1 "$rc"
 check "and is named at its line" \
-  "$sk/zz/bad.sh:3: eval inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null" "$out"
+  "$sk/zz/bad.sh:3: eval inside a while-read loop over redirected input reads the loop's stdin; give it </dev/null" "$out"
 
 shell_run fence '#!/usr/bin/env bash
 grep -c '"'"'```'"'"' "$f"'
@@ -804,8 +812,7 @@ while read -r row; do
 done <<EOT
 $rows
 EOT
-echo "$rows" | while read -r row; do eval "$row"; done
-while read -r row; do eval "$row"; done < file'
+'
 sed -i.bak '/^readonly SHIP_AWK_FENCE=/a\
   x = "```"' "$sk/ship/scripts/_lib.sh"
 rm "$sk/ship/scripts/_lib.sh.bak"
@@ -827,6 +834,8 @@ if [ "$(id -u)" -ne 0 ]; then
   run "$inert" "$d"
   chmod 755 "$d/ship"
   check_rc "a search the tree refuses is tooling, not a pass" 2 "$rc"
+else
+  skipped "a search the tree refuses is tooling, not a pass"
 fi
 
 finish

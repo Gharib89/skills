@@ -127,6 +127,8 @@ if [ "$(id -u)" != 0 ]; then
   chmod 000 "$d/skills/x/SKILL.md"
   check_rc "an unreadable tracked file is tooling" 2 "$(rc_of C.UTF-8 "$d")"
   chmod 644 "$d/skills/x/SKILL.md"
+else
+  skipped "an unreadable tracked file is tooling"
 fi
 
 # chmod 000 in a test: root reads a mode-000 file, so a case built on one passes

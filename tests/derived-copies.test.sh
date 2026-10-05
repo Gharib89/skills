@@ -86,6 +86,8 @@ if [ "$(id -u)" -ne 0 ]; then
   d=$(tree unreadable); chmod 000 "$d/$wf"
   check_rc "an unreadable release workflow is tooling" 2 "$(rc_of "$d")"
   chmod 644 "$d/$wf"
+else
+  skipped "an unreadable release workflow is tooling"
 fi
 
 d="$fixture/nolock"; mkdir -p "$d"

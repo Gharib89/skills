@@ -16,7 +16,8 @@
 #
 #   tests/run.sh
 #
-# stdout: one line per test file, then a count, then each failing file again
+# stdout: one line per test file, after any `skipped` lines it printed, then a
+#         count, then each failing file again
 # stderr: each failing case, named, from the test file itself
 # exit: 0 every case passed · 1 a case failed · 2 no test files found or a bad
 #       $SHIP_TEST_JOBS

@@ -268,6 +268,10 @@ if [ "$(id -u)" != 0 ]; then
   d=$(tree unreadable-profile); gate_profile "$d" 100; chmod 000 "$d/docs/agents/ship.md"
   check_rc "a profile that cannot be read is tooling" 2 "$(rc_of "$d")"
   chmod 644 "$d/docs/agents/ship.md"
+else
+  skipped "a file that cannot be read is tooling"
+  skipped "a reference file that cannot be read is tooling"
+  skipped "a profile that cannot be read is tooling"
 fi
 
 finish

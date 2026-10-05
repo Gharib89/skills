@@ -48,7 +48,7 @@
 # 13  every host failure, driven through the Host fake, prints one JSON object;
 # 14  Markdown that invokes a mechanic in a code span names its required flags.
 # Check 15 greps every shell file for three habits that fail silently: a curl
-# with no time limit, a command in a heredoc-fed read loop that drains the loop's
+# with no time limit, a command in a redirect-fed read loop that drains the loop's
 # input, and a fence pattern written by hand instead of SHIP_AWK_FENCE.
 #
 # stdout: one line per violation, with the offending mechanic or file named
@@ -630,7 +630,9 @@ fi
 #     not invocations.
 # (b) a `bash -c`, `sh -c` or `eval` with no stdin redirect (a `<`, `<<` or
 #     `<<<` outside a `$(...)`, and not a `<(`) inside a `while read` loop
-#     whose `done` takes a heredoc or here-string. The rule covers command
+#     whose `done` takes a redirect: a file, a process substitution, a heredoc
+#     or a here-string. A loop fed by a pipe, or written on one line, is not
+#     reached, since the scan anchors on a `done` line. The rule covers command
 #     strings on purpose: a direct filter that reads stdin (`cat`, `sed`) is
 #     visible in the loop, while a command string hides whether it reads stdin. Unredirected, the
 #     command inherits the loop's stdin and drains it: measured on Bash 3.2.57
@@ -658,7 +660,7 @@ find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills
         if (cmd ~ /(^|[^A-Za-z0-9_."\047-])curl([^A-Za-z0-9_]|$)/ && cmd !~ /--max-time/)
           printf "%s:%d: curl without --max-time; a hung download hangs the caller with it\n", FILENAME, start
       }
-      if ($0 ~ /^[ \t]*done[ \t]*<<<?/) {
+      if ($0 ~ /^[ \t]*done[ \t]*</) {
         ind = indent($0); open = 0
         for (k = FNR - 1; k >= 1; k--) {
           if (L[k] ~ /^[ \t]*#/ || indent(L[k]) != ind) continue
@@ -670,7 +672,7 @@ find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills
           if (s ~ /^[ \t]*#/ || s ~ /<([^(]|$)/) continue
           if (match(L[k], /(^|[^A-Za-z0-9_])(bash -c|sh -c|eval )/)) {
             c = substr(L[k], RSTART, RLENGTH); gsub(/^[^a-z]+/, "", c); sub(/ +$/, "", c)
-            printf "%s:%d: %s inside a while-read loop over a heredoc reads the loop\047s stdin; give it </dev/null\n", FILENAME, k, c
+            printf "%s:%d: %s inside a while-read loop over redirected input reads the loop\047s stdin; give it </dev/null\n", FILENAME, k, c
           }
         }
       }
