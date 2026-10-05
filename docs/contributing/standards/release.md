@@ -1,8 +1,7 @@
 # Standards: release, PR and commits
 
-Read by every PR, and by a diff touching `skills/`, `.release/` or the release
-workflow. The version a consumer reads comes from the PR title, so the grade,
-the title and the body are reviewed here.
+Every PR: the version a consumer reads comes from the PR title, so the grade,
+the title, the body and the commits are reviewed here.
 
 ## Grading a change
 
@@ -25,8 +24,9 @@ below lands as a minor
   renamed, removed or retyped), a mechanic's CLI signature changed so that an
   existing invocation stops working (a new required argument, an existing
   option's meaning or arity changed), a vocabulary value's meaning changed, the
-  local-gate contract's flags, gate statuses or verdict changed, the same
-  exceptions applying. This is what a consumer must read before refreshing.
+  local-gate contract's flags, gate statuses or verdict changed, the profile's
+  structure and `composes` excepted by the bullets below. This is what a
+  consumer must read before refreshing.
 - **A new precondition that stops a consumer's run is breaking.** A check that
   refuses a run until the consumer installs, migrates or configures something
   (a tool on PATH, a file's new shape, a label, a setting) is graded breaking,
@@ -87,7 +87,7 @@ below lands as a minor
   that only adds an optional flag is correctly minor, and a rename of a JSON key
   is breaking whatever verb describes it, so on a 0.x skill it is titled
   `feat(ship):` and not `fix(ship):`. A title whose type under-grades the change
-  is a finding, and so is a version bump in the diff. One title grades every
+  is a finding. One title grades every
   skill the diff touched, because `path_filters` route a commit to a skill by
   path and cannot route a grade: **the title carries the highest grade across
   those skills, and the others take that number.** A patch-sized reword riding

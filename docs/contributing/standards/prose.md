@@ -1,9 +1,8 @@
 # Standards: prose
 
-Read by a diff touching Markdown: a skill's `SKILL.md` or reference file, a
-template a skill lands, the glossary, an ADR, a doc under `docs/`, or the prose
-inside a script's header. Every file here is read by an agent, so these rules
-bind as hard as the shell ones.
+Markdown: a skill's `SKILL.md` or reference file, a template a skill lands, the
+glossary, an ADR, a doc under `docs/`. Every file here is read by an agent, so
+these rules bind as hard as the shell ones.
 
 ## Sources
 
@@ -68,10 +67,6 @@ bind as hard as the shell ones.
   at this head, and an exception it finds is written into the sentence. The
   claim is read as a rule, so a single exception the sentence denies sends the
   next reader the wrong way.
-- **A mechanic's header is its contract.** The header comment of a mechanic or
-  gate script lists its output keys and exit meanings, and each moves in the
-  same hunk as the code that changes it. A header that drifted is what the next
-  author reads instead of the code.
 
 ## Rule-shaped changes
 

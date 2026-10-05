@@ -1,11 +1,11 @@
 # Standards: what the gates enforce
 
-Read by every diff. These rules are enforced by `scripts/local-gate.sh` or the
-`bump-guard` CI leg, so a reviewer cites the gate rather than the rule, and the
-gate's verdict, not a reading of the diff, settles whether one failed. What each
-gate checks in full is its script and the ship profile's `## Local gate` section
-in [docs/agents/ship.md](../../agents/ship.md); this file keeps what an author
-must do to pass.
+The index routes every diff here. These rules are enforced by
+`scripts/local-gate.sh` or the `bump-guard` CI leg, so a reviewer cites the gate
+rather than the rule. What each gate checks in full is its script and the ship
+profile's `## Local gate` section in
+[docs/agents/ship.md](../../agents/ship.md); this file keeps what an author must
+do to pass.
 
 - `shellcheck -x -s bash -P SCRIPTDIR -S warning` over every tracked shell
   script outside `.claude/skills/` and `tests/fixtures/`, per the `shellcheck`
@@ -41,9 +41,10 @@ must do to pass.
   paragraph on a line, and a profile's `Label:` line must stay one line because
   the profile is parsed line by line; a file that starts hard-wrapping joins the
   list.
-- No source-repo URL but the repo root and its issue tracker, no `PR #N` or
-  `issue #N` and no relative link leaving `skills/<name>/` in a skill's
-  Markdown, per the `self-contained` gate. It is the greppable part of
+- No source-repo URL but the repo root and its issue tracker in a skill's
+  Markdown, and, outside a code span or a fenced block, no `PR #N`, no
+  `issue #N` and no relative link leaving `skills/<name>/`, `CHANGELOG.md`
+  exempt, per the `self-contained` gate. It is the greppable part of
   **A skill is self-contained** in [prose.md](prose.md).
 - The mechanics' malformed-invocation contract, per the `contract` gate: no
   `${N:?}` or `${N?}` expansion under the mechanics, a bare invocation answering

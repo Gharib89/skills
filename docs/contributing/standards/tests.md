@@ -1,10 +1,9 @@
 # Standards: tests
 
-Read by a diff touching `tests/` or a `*.test.sh`. The kinds of test this repo
-runs, and how each is driven, are listed once, in the ship profile's
-`## Local gate` section in [docs/agents/ship.md](../../agents/ship.md); a new
-kind adds its line there. The index's clock exception bounds the clock rule
-below.
+Tests: anything under `tests/`. The kinds of test this repo runs, and how each
+is driven, are listed once, in the ship profile's `## Local gate` section in
+[docs/agents/ship.md](../../agents/ship.md); a new kind adds its line there. The
+index's clock exception bounds the clock rule below.
 
 ## Proving a test
 

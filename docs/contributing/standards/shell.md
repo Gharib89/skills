@@ -1,9 +1,8 @@
 # Standards: shell scripts
 
-Read by a diff touching a shell script: a mechanic, a host adapter, a template
-a skill lands, a script under `scripts/` or `tests/`. The index's reviewer
-section bounds these rules: its portability scope and quoting exceptions hold
-here.
+Shell scripts: a mechanic, a host adapter, a template a skill lands, a script
+under `scripts/` or `tests/`. The index's portability scope and quoting
+exceptions bound these rules.
 
 ## The mechanic contract
 
@@ -31,10 +30,12 @@ here.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way
-  `_gh_create_verify` in the GitHub adapter does. A list endpoint is paged until
-  it ends, because one page truncates the list with no error. A path variable
-  (a branch, a ref, a file path) is URI-encoded, because a `/` or `#` in it
-  otherwise addresses another resource.
+  `_gh_create_verify` in the GitHub adapter does. A list endpoint whose whole
+  set decides the answer is paged until it ends, because one page truncates the
+  list with no error. A path variable (a branch, a ref, a file path) is
+  URI-encoded, because a `/` or `#` in it otherwise addresses another resource.
+  A read that needs only the newest items, the verify read after a create, sorts
+  and bounds its page instead, and says so in a comment.
 - **A failed read is never a verdict.** A read that fails (a missing tool, a
   nonzero exit, empty or unparseable output) exits 2 or answers `unavailable`;
   it is never compared, graded or passed on as data. Write the status check
@@ -43,6 +44,10 @@ here.
   arm, and use `jq -e` where the value decides the answer. Every instance is a
   silent pass: jq missing makes both sides of a comparison print nothing, and
   `cmp` of two empty outputs exits 0.
+- **A mechanic's header is its contract.** The header comment of a mechanic or
+  gate script lists its output keys and exit meanings, and each moves in the
+  same hunk as the code that changes it. A header that drifted is what the next
+  author reads instead of the code.
 - **Moving a default or deleting a guard lists every call path that relied on
   it.** Under the PR body's `## Special things to note`, name each caller that
   reached the old default or guard and what it gets now. A PR promising no
@@ -65,12 +70,12 @@ here.
   alone**, whatever idiom a repo-local script uses. The `contract` gate fails on
   the four constructs named here; the rule is wider than the grep, so a Bash 4
   feature it does not name is still a violation.
-- **Every executed script sets `-u` and `-o pipefail`.** A mechanic sets
-  `set -uo pipefail` and no `-e`, so a failed step reaches the code that turns
-  it into a JSON answer; a script with no such answer to give, a landed
-  bootstrap, may add `-e`. A file only ever sourced (`_lib.sh`, a host adapter,
-  `tests/lib.sh`, a fake) inherits its caller's options and sets none, so it
-  does not change them under the caller.
+- **Every executed script sets `-u` and `-o pipefail`.** A mechanic sets `set
+  -uo pipefail` and no `-e`, so a failed step reaches the code that turns it
+  into a JSON answer; a script with no such answer to give, such as the Cloud
+  bootstrap script setup-skills lands, may add `-e`. A file only ever sourced
+  (`_lib.sh`, a host adapter, `tests/lib.sh`, a fake) inherits its caller's
+  options and sets none, so it does not change them under the caller.
 - **Quote every expansion Bash would split or glob.** An unquoted `$var` in a
   command's arguments splits on whitespace and expands `*`, so a path with a
   space becomes two arguments. The places Bash never splits are the index's
