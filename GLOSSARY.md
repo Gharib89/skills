@@ -27,7 +27,7 @@ A host read a phase's `Done when:` or a stop row depends on, such as preflight's
 _Avoid_: check, probe
 
 **Informational read**:
-A host read no phase or stop branches on, made for context alone. Where no mechanic covers it, a run may make it directly through the host's REST form, which the cloud sandbox admits, and lists it in the Run file's `## Direct reads`; one made directly in two runs is a candidate mechanic. Verification scaffolding (a scratch issue or scratch review thread set up by hand) is neither kind of read and sits outside the rule.
+A host read no phase or stop branches on, made for context alone. Where no mechanic covers it, a run may make it directly through the host's REST form, which the cloud sandbox admits, and lists it in the Run file's `## Direct reads`; one made directly in two runs is a candidate mechanic. Verification scaffolding (a scratch issue, scratch review thread or throwaway probe PR set up by hand) is neither kind of read and sits outside the rule.
 _Avoid_: side read, ad-hoc call
 
 **Cloud bootstrap**:
