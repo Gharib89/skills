@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.1 (2026-10-05)
+
+### Bug Fixes
+
+- **ship**: Gate the retro's mechanical review findings
+  ([#482](https://github.com/Gharib89/skills/pull/482),
+  [`0c689e8`](https://github.com/Gharib89/skills/commit/0c689e8e731cc86b56bc2c28035c0e609183563a))
+
+
 ## v0.6.0 (2026-10-04)
 
 ### Features
