@@ -32,6 +32,14 @@ _Avoid_: result, report (the word `report` alone), gate output, raw `gh` call (a
 **Empty**:
 Nothing to avoid.
 _Avoid_:
+
+**Cloud bootstrap**:
+A term holding another entry's avoided word, and avoiding a term.
+_Avoid_: verdict
+
+**Setup skill**:
+Drafts the documents.
+_Avoid_: bootstrap
 G
   printf 'line one\n' > "$d/docs/a.md"
   git_ add -A; git_ commit -q -m base
@@ -55,6 +63,13 @@ check "case is ignored, backticks and parentheticals are stripped from the list"
 'glossary: docs/a.md:2: "autopilot" is on the _Avoid_ list of Ship; use Ship if the word names it
 glossary: docs/a.md:3: "raw gh call" is on the _Avoid_ list of Verdict; use Verdict if the word names it
 glossary: docs/a.md:4: "gate output" is on the _Avoid_ list of Verdict; use Verdict if the word names it' "$(run "$d" main)"
+
+# Two terms may each list the other, and a term may hold another's avoided word:
+# neither is a hit, while the same word standing alone still is.
+d=$(mkrepo terms)
+printf 'line one\nthe cloud bootstrap and the verdict\na bootstrap alone\n' > "$d/docs/a.md"; git_ commit -q -am head
+check "a word that is a term, or sits inside one, is not a hit" \
+  'glossary: docs/a.md:3: "bootstrap" is on the _Avoid_ list of Setup skill; use Setup skill if the word names it' "$(run "$d" main)"
 
 d=$(mkrepo whole-word)
 printf 'line one\nreports and resulting and pipelines\n' > "$d/docs/a.md"; git_ commit -q -am head

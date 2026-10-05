@@ -40,9 +40,10 @@ git rev-parse --verify -q "$base^{commit}" >/dev/null || die "base $base is not 
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-# One `<Term> TAB <word>` line per avoided word.
-awk '
-  /^\*\*.*\*\*:[ \t]*$/ { term = $0; sub(/^\*\*/, "", term); sub(/\*\*:[ \t]*$/, "", term); next }
+# One `<Term> TAB <word>` line per avoided word, and every term, lowercased, in
+# `terms`.
+awk -v tf="$tmp/terms" '
+  /^\*\*.*\*\*:[ \t]*$/ { term = $0; sub(/^\*\*/, "", term); sub(/\*\*:[ \t]*$/, "", term); print tolower(term) > tf; next }
   /^_Avoid_:/ {
     s = $0; sub(/^_Avoid_:/, "", s)
     gsub(/\([^)]*\)/, "", s); gsub(/`/, "", s)
@@ -57,16 +58,25 @@ awk '
 git -c core.quotepath=off diff --no-color --no-ext-diff --unified=0 "$base...HEAD" -- '*.md' > "$tmp/diff" \
   || die "git diff $base...HEAD failed"
 
-# The avoid list first, then the diff: each added line is checked against every
-# word, once per (term, word) pair.
-awk -F'\t' '
+# The terms, the avoid list, then the diff: each added line is checked against
+# every word, once per (term, word) pair. A word that is itself a term is
+# dropped (two terms may each list the other), and every term in the line is
+# blanked first, so the `bootstrap` inside `cloud bootstrap` is no hit.
+awk -F'\t' -v tf="$tmp/terms" -v af="$tmp/avoid" '
   function isword(c) { return c ~ /^[A-Za-z0-9_]$/ }
-  FNR == NR { terms[++n] = $1; words[n] = $2; next }
+  function blank(s, t,   k, pad, j) {
+    pad = ""; for (j = 0; j < length(t); j++) pad = pad " "
+    while ((k = index(s, t)) > 0) s = substr(s, 1, k - 1) pad substr(s, k + length(t))
+    return s
+  }
+  FILENAME == tf { T[++nt] = $0; isterm[$0] = 1; next }
+  FILENAME == af { if (!(tolower($2) in isterm)) { terms[++n] = $1; words[n] = $2 }; next }
   /^\+\+\+ / { file = substr($0, 7); if ($0 == "+++ /dev/null") file = ""; skip = (file ~ /(^|\/)CHANGELOG\.md$/ || file == "GLOSSARY.md" || file ~ /^\.claude\//); next }
   /^@@ / { split($0, f, " "); split(f[3], h, ","); line = substr(h[1], 2) + 0; next }
   /^\+/ {
     if (file != "" && !skip) {
       text = tolower(substr($0, 2))
+      for (j = 1; j <= nt; j++) text = blank(text, T[j])
       for (i = 1; i <= n; i++) {
         w = tolower(words[i]); pos = 1
         while ((k = index(substr(text, pos), w)) > 0) {
@@ -81,5 +91,5 @@ awk -F'\t' '
     }
     line++
   }
-' "$tmp/avoid" "$tmp/diff"
+' "$tmp/terms" "$tmp/avoid" "$tmp/diff"
 exit 0
