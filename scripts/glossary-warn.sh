@@ -15,10 +15,11 @@
 # parenthetical and backticks from each word, and matches it case-insensitively
 # as a whole word or phrase (a letter, digit or underscore beside it is no
 # match). Added lines come from `git diff <base>...HEAD` over `*.md`, minus
-# every CHANGELOG.md (the release run writes those) and the root GLOSSARY.md.
+# every CHANGELOG.md (the release run writes those), the root GLOSSARY.md and
+# anything under `.claude/` (derived copies repeat every hit of `skills/`).
 #
 # stdout: per hit, `glossary: <file>:<line>: "<word>" is on the _Avoid_ list of
-#         <Term>`; nothing when clean
+#         <Term>; use <Term> if the word names it`; nothing when clean
 # stderr: on tooling, the reason
 # exit: 0 it ran, hits or not · 2 tooling (no GLOSSARY.md, base not a commit)
 set -uo pipefail
@@ -61,7 +62,7 @@ git -c core.quotepath=off diff --no-color --no-ext-diff --unified=0 "$base...HEA
 awk -F'\t' '
   function isword(c) { return c ~ /^[A-Za-z0-9_]$/ }
   FNR == NR { terms[++n] = $1; words[n] = $2; next }
-  /^\+\+\+ / { file = substr($0, 7); if ($0 == "+++ /dev/null") file = ""; skip = (file ~ /(^|\/)CHANGELOG\.md$/ || file == "GLOSSARY.md"); next }
+  /^\+\+\+ / { file = substr($0, 7); if ($0 == "+++ /dev/null") file = ""; skip = (file ~ /(^|\/)CHANGELOG\.md$/ || file == "GLOSSARY.md" || file ~ /^\.claude\//); next }
   /^@@ / { split($0, f, " "); split(f[3], h, ","); line = substr(h[1], 2) + 0; next }
   /^\+/ {
     if (file != "" && !skip) {
@@ -71,7 +72,7 @@ awk -F'\t' '
         while ((k = index(substr(text, pos), w)) > 0) {
           at = pos + k - 1
           if (!isword(at > 1 ? substr(text, at - 1, 1) : "") && !isword(substr(text, at + length(w), 1))) {
-            printf "glossary: %s:%d: \"%s\" is on the _Avoid_ list of %s\n", file, line, words[i], terms[i]
+            printf "glossary: %s:%d: \"%s\" is on the _Avoid_ list of %s; use %s if the word names it\n", file, line, words[i], terms[i], terms[i]
             break
           }
           pos = at + 1

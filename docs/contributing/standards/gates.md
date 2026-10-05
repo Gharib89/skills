@@ -34,8 +34,10 @@ do to pass.
   every non-empty text file there ends in a newline, per the `house-style` gate.
   The last two are what a consumer repo's stock `trailing-whitespace` and
   `end-of-file-fixer` hooks demand of the copies it installs.
-- No `chmod 000` in a `tests/*.test.sh` outside an `id -u` root guard, per the
-  `house-style` gate: root reads a mode-000 file, so the case proves nothing.
+- No `chmod 000` in a `tests/*.test.sh` outside a root guard that skips it, per
+  the `house-style` gate: an `if` on `[ "$(id -u)" -ne 0 ]`, or
+  `[ "$(id -u)" -eq 0 ] || chmod 000` on one line. Root reads a mode-000 file,
+  so the case proves nothing.
 - Prose wrapped at 80 columns in the files this repo hard-wraps, the `wrapped`
   list in `scripts/house-style-check.sh`, per the `house-style` gate.
   Frontmatter, fences, tables, changelogs and a line holding only a link, a code
@@ -67,7 +69,8 @@ do to pass.
   as its `--help` usage line, per the `contract` gate.
 - Every value-taking flag answering a leading-dash value (`--title --x`) with
   its usage line and exit 2, per the `contract` gate: take the value through
-  `ship_flag_value` in `_lib.sh`.
+  `ship_flag_value` in `_lib.sh`, or refuse `-*` inline where an empty value is
+  legal, as `run-file init` does.
 - A mechanic's host failure, driven through the Host fake, printing exactly one
   JSON object on stdout, per the `contract` gate.
 - A mechanic invoked in a skill's Markdown code span carrying every option its
@@ -106,15 +109,17 @@ do to pass.
   `Shape: none, mechanical (` line, per the `bump-guard` workflow's body check.
 - That Shape fence at most 15 lines, per the same check.
 - Each root of that Shape fence carrying its file path, per the same check.
-- Each `Closes #N` issue's title printed on the check's stderr as evidence,
-  never failing it.
+- Each `Closes #N` issue's title, printed by that check on stderr as
+  `pr-body: closes #N: <title>`: read it to confirm the PR closes the issue it
+  means to. It never fails the check.
 - `tests/run.sh` green, per the `tests` gate. None of its tests reaches a host.
   The kinds of test it runs are listed in the ship profile's `## Local gate`
   section.
 - The repo's copies of the shipped Local gate, cloud bootstrap and review
-  workflow matching their setup-skills templates outside the consumer-owned
+  workflow matching their setup-skills templates outside the repo-owned
   regions, per `scripts/template-drift-check.sh` under the `tests` gate: mark a
   deliberate departure in the workflow between `# >>> repo-owned` and
   `# <<< repo-owned`.
 - A `GLOSSARY.md` `_Avoid_` word in the diff's added Markdown lines, printed by
-  `scripts/glossary-warn.sh` from the Local gate as a warning only.
+  `scripts/glossary-warn.sh` from the Local gate as a warning only: read each
+  `glossary:` line and use the glossary term where the word names it.

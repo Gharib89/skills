@@ -135,7 +135,8 @@ fi
 # the command from parts so this file does not trip the rule it tests.
 cm="chmod 0$(printf 00)"
 root_guard='[ "$(id -u)" -ne 0 ]'
-unguarded_msg="tests/t.test.sh:1: chmod 000 with no id -u root guard; root reads a mode-000 file"
+root_only='[ "$(id -u)" -eq 0 ]'
+unguarded_msg="tests/t.test.sh:1: $cm with no id -u root guard; root reads a mode-000 file"
 d=$(checkout chmod-bare)
 printf '%s f\n' "$cm" > "$d/tests/t.test.sh"
 git -C "$d" add -A
@@ -150,6 +151,26 @@ d=$(checkout chmod-same-line)
 printf '%s && %s f\n' "$root_guard" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
 check_rc "a mode-000 chmod with id -u on the same line passes" 0 "$(rc_of C.UTF-8 "$d")"
 
+# The guard has a polarity: a same-line guard is `-eq 0 ||` or `-ne 0 &&`, and
+# an enclosing if tests `-ne 0`. The inverted forms run the chmod as root.
+d=$(checkout chmod-inverted-same-line)
+printf '%s && %s f\n' "$root_only" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod after an inverted same-line guard fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the inverted same-line guard prints the reason" "$unguarded_msg" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout chmod-inverted-if)
+printf 'if %s; then\n  %s f\nfi\n' "$root_only" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod inside an if on id -u -eq 0 fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the inverted if guard prints the reason" "tests/t.test.sh:2: $cm with no id -u root guard; root reads a mode-000 file" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout chmod-early-return)
+printf '%s && return\n%s f\n' "$root_only" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod after an early return on a previous line fails" 1 "$(rc_of C.UTF-8 "$d")"
+
+d=$(checkout chmod-eq-or)
+printf '%s || %s f\n' "$root_only" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod after id -u -eq 0 || passes" 0 "$(rc_of C.UTF-8 "$d")"
+
 d=$(checkout chmod-in-guard)
 printf 'if %s; then\n  if true; then\n    %s f\n  fi\n  %s g\nfi\n' "$root_guard" "$cm" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
 check_rc "a mode-000 chmod inside a guarded if, nested ifs included, passes" 0 "$(rc_of C.UTF-8 "$d")"
@@ -158,7 +179,7 @@ check_rc "a mode-000 chmod inside a guarded if, nested ifs included, passes" 0 "
 d=$(checkout chmod-after-guard)
 printf 'if %s; then\n  true\nfi\n%s f\n' "$root_guard" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
 check_rc "a mode-000 chmod after its guard closed fails" 1 "$(rc_of C.UTF-8 "$d")"
-check "the finding is the line after the guard" "tests/t.test.sh:4: chmod 000 with no id -u root guard; root reads a mode-000 file" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+check "the finding is the line after the guard" "tests/t.test.sh:4: $cm with no id -u root guard; root reads a mode-000 file" "$(out_of C.UTF-8 "$d" | tail -n 1)"
 
 d=$(checkout chmod-oneline-if)
 printf 'if true; then :; fi\n%s f\n' "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A

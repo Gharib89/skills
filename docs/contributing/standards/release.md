@@ -118,7 +118,7 @@ below lands as a minor
   tree, control flow, pseudocode or component tree, under `## Change outline`,
   which every body carries because ship writes the heading where no template
   gives it. Text forms only; mermaid and HTML are out. One behavioural fence per
-  PR, about 15 lines or fewer, with a carrier file tree after it only where the
+  PR, 15 lines or fewer, with a carrier file tree after it only where the
   same edit lands in more than two files. Every node is a real symbol, each
   tree's root node carries its file path, and no line carries a line number.
   `Shape: none, mechanical (<kind>).` replaces the fence only where the

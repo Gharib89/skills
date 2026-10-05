@@ -13,15 +13,14 @@
 #   run-file timing <where>
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
-# <where> is `--file <path>`, or `--issue <n|slug> [--scratchpad <dir>]`
-# for the layout `init` wrote, `<scratchpad>/ship-<issue>/run.md`. A left-out
-# `--scratchpad` is `$TMPDIR` or `/tmp`, which is where a run whose harness named
-# no scratchpad put the record; a run whose harness named one passes it, the same
-# directory it passed `init`. `init` owns
-# that layout, so it is the mechanic that resolves it: a run whose context was
-# compacted still has the issue it was invoked on and the scratchpad its
-# environment block names, and called `close` without a path twice for want of
-# the rest (#218). An explicit `--file` wins, and neither given is the usage
+# The `--issue` form reads the layout `init` wrote,
+# `<scratchpad>/ship-<issue>/run.md`. A left-out `--scratchpad` is `$TMPDIR` or
+# `/tmp`, which is where a run whose harness named no scratchpad put the record;
+# a run whose harness named one passes it, the same directory it passed `init`.
+# `init` owns that layout, so it is the mechanic that resolves it: a run whose
+# context was compacted still has the issue it was invoked on and the scratchpad
+# its environment block names, and called `close` without a path twice for want
+# of the rest (#218). An explicit `--file` wins, and neither given is the usage
 # error it always was.
 #
 # `init` writes the ten items and returns them, one per harness task the run

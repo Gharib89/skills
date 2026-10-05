@@ -634,11 +634,11 @@ check "a flag on a second synopsis line is read and prose after the block is not
 runs "$(flag_stub dash-value "$title_header" "$title_usage" "$unguarded")"
 check_rc "a flag that reads a leading-dash value as its value fails" 1 "$rc"
 check "and the violation names the flag" \
-  'read-issue: --title took a leading-dash value; want the usage line and exit 2' "$out"
+  'read-issue: --title took a leading-dash value; guard it with ship_flag_value so it answers the usage line and exit 2' "$out"
 
 runs "$(flag_stub dash-value-optional '#   read-issue <issue> [--title "<t>"]' 'usage: read-issue <issue> [--title "<t>"]' "$unguarded")"
 check "an optional flag is held to the same rule" \
-  'read-issue: --title took a leading-dash value; want the usage line and exit 2' "$out"
+  'read-issue: --title took a leading-dash value; guard it with ship_flag_value so it answers the usage line and exit 2' "$out"
 
 # 13. A failure through the Host fake prints one JSON object. The mechanic is
 # real code against the real `_lib.sh`; only its tail differs per case.
@@ -662,72 +662,156 @@ check "and prints nothing" "" "$out"
 
 runs "$(host_stub host-failure-bare 'host_issue_get "$1" || exit 1')"
 check_rc "a host failure that prints nothing fails" 1 "$rc"
-check "and the violation names the mechanic" \
-  'read-issue: a host failure did not print exactly one JSON object' "$out"
+check "and the violation gives the count and the call" \
+  'read-issue: with every host_* failing in the Host fake, `read-issue 1` printed 0 JSON values on stdout; want exactly one object' "$out"
 
 runs "$(host_stub host-failure-two 'host_issue_get "$1" || { echo "{\"note\":1}"; ship_fail "cannot read issue $1"; }')"
-check "a host failure that prints two objects is named" \
-  'read-issue: a host failure did not print exactly one JSON object' "$out"
+check "a host failure that prints two objects is counted" \
+  'read-issue: with every host_* failing in the Host fake, `read-issue 1` printed 2 JSON values on stdout; want exactly one object' "$out"
 
-# 14. Prose invoking a mechanic carries its required flags, outside fences.
-d=$(copy_mechanics doc-flag comment-issue update-pr-body)
-sk=$(copy_skills doc-flag-tree)
-mkdir -p "$sk/zz"
-cat > "$sk/zz/zz.md" <<'EOF'
-Post it with `comment-issue 5` now.
-Post it with `comment-issue 5 --body-file b.md` now.
-An `update-pr-body --section` and `update-pr-body 5 --preamble --body-file b`.
-`update-pr-body --body-file b` names neither.
+runs "$(host_stub host-failure-garbage 'host_issue_get "$1" || { echo "{not json"; exit 1; }')"
+check "a host failure that prints unparseable output says so" \
+  'read-issue: with every host_* failing in the Host fake, `read-issue 1` printed unparseable output on stdout; want exactly one object' "$out"
+
+# A tree that cannot drive the check is a failure, never a pass: a checker copy
+# whose Host fake lists no host_* function, and one whose root lacks the profile
+# the throwaway checkout is seeded from.
+stage_root() { # <case> <fake-sed>: a root with the checker and a Host fake, no profile
+  local r="$fixture/$1"
+  mkdir -p "$r/scripts" "$r/tests"
+  cp scripts/contract-check.sh "$r/scripts/" && sed "$2" tests/host-fake.sh > "$r/tests/host-fake.sh" || exit 2
+  printf '%s' "$r"
+}
+d=$(host_stub host-setup 'host_issue_get "$1" || ship_fail "cannot read issue $1"')
+r=$(stage_root host-fake-empty 's/^for _fn in/for _fx in/')
+out=$(bash "$r/scripts/contract-check.sh" "$d" "$nodocs" 2>/dev/null); rc=$?
+check_rc "a Host fake that lists no host function fails" 1 "$rc"
+check "and the violation names the fake" \
+  "$r/tests/host-fake.sh: no host_* function on its \`for _fn in\` line; check 13 has nothing to fail" "$out"
+
+r=$(stage_root host-profile-missing 's/^//')
+out=$(bash "$r/scripts/contract-check.sh" "$d" "$nodocs" 2>/dev/null); rc=$?
+check_rc "a root with no ship profile to copy fails" 1 "$rc"
+check "and the violation names the step" \
+  'read-issue: check 13 setup failed: cannot copy docs/agents/ship.md' "$out"
+
+# 14. Prose invoking a mechanic carries its required flags, outside fences. One
+# doc per violation, so the output is the one line under test, and a passing doc
+# alone.
+docmech=$(copy_mechanics doc-flag comment-issue update-pr-body)
+doc_run() { # <case> <doc>: leaves the doc's path in `zz`
+  local sk; sk=$(copy_skills "doc-$1"); mkdir -p "$sk/zz"
+  printf '%s\n' "$2" > "$sk/zz/zz.md"; zz=$sk/zz/zz.md
+  run "$docmech" "$sk"
+}
+doc_run lacks-body 'Post it with `comment-issue 5` now.'
+check_rc "a Markdown invocation without a required flag fails" 1 "$rc"
+check "and the lacking span is named" \
+  "$zz:1: \`comment-issue 5\` lacks --body-file from comment-issue's usage line" "$out"
+
+doc_run lacks-group 'An `update-pr-body --body-file b` names neither.'
+check_rc "an invocation without either flag of a group fails" 1 "$rc"
+check "and the group is named as an either-or" \
+  "$zz:1: \`update-pr-body --body-file b\` lacks --section or --preamble from update-pr-body's usage line" "$out"
+
+doc_run lacks-section 'An `update-pr-body --section` for it.'
+check_rc "an invocation that leaves out the body file fails" 1 "$rc"
+check "and the missing flag is named" \
+  "$zz:1: \`update-pr-body --section\` lacks --body-file from update-pr-body's usage line" "$out"
+
+doc_run complete 'Post it with `comment-issue 5 --body-file b.md` now.
+And `update-pr-body 5 --preamble --body-file b` too.
 ```
 `comment-issue 5` inside a fence is a sample, not an instruction.
-```
-EOF
-run "$d" "$sk"
-check_rc "a Markdown invocation without a required flag fails" 1 "$rc"
-check "and every lacking span is named once, fences skipped" \
-  "$sk/zz/zz.md:1: \`comment-issue 5\` lacks --body-file from comment-issue's usage line
-$sk/zz/zz.md:3: \`update-pr-body --section\` lacks --body-file from update-pr-body's usage line
-$sk/zz/zz.md:4: \`update-pr-body --body-file b\` lacks --section or --preamble from update-pr-body's usage line" "$out"
+```'
+check_rc "invocations with their required flags, and a fenced sample, pass" 0 "$rc"
+check "and print nothing" "" "$out"
 
-# 15. Three shell rules grep can hold. One file carrying each violation, one
-# clean file carrying each near miss.
-sk=$(copy_skills shell-rules)
-mkdir -p "$sk/zz"
-cat > "$sk/zz/bad.sh" <<'EOF'
-#!/usr/bin/env bash
-curl -fsSL "$url" > out
+# 15. Three shell rules grep can hold. One fixture per violation, each asserting
+# the exit code and the one printed reason, and a passing fixture of near misses
+# alone.
+shell_run() { # <case> <file-content>: leaves the fixture's path in `sk`
+  sk=$(copy_skills "shell-$1"); mkdir -p "$sk/zz"
+  printf '%s\n' "$2" > "$sk/zz/bad.sh"
+  run "$inert" "$sk"
+}
+shell_run curl '#!/usr/bin/env bash
+curl -fsSL "$url" > out'
+check_rc "a curl with no --max-time fails" 1 "$rc"
+check "and is named at its line" \
+  "$sk/zz/bad.sh:2: curl without --max-time; a hung download hangs the caller with it" "$out"
+
+shell_run sh-c '#!/usr/bin/env bash
 while read -r row; do
-  bash -c 'cat' <<< "$row"
-  sh -c 'true'
+  sh -c "true"
+done <<EOT
+$rows
+EOT'
+check_rc "an unredirected sh -c in a heredoc-fed read loop fails" 1 "$rc"
+check "and is named at its line" \
+  "$sk/zz/bad.sh:3: sh -c inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null" "$out"
+
+shell_run eval '#!/usr/bin/env bash
+while read -r row; do
   eval "$row"
 done <<EOT
 $rows
-EOT
-grep -c '```' "$f"
-EOF
-cat > "$sk/zz/ok.sh" <<'EOF'
-#!/usr/bin/env bash
+EOT'
+check_rc "an unredirected eval in a heredoc-fed read loop fails" 1 "$rc"
+check "and is named at its line" \
+  "$sk/zz/bad.sh:3: eval inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null" "$out"
+
+# A here-string inside a command substitution redirects the substitution's
+# command, not the eval.
+shell_run eval-subst '#!/usr/bin/env bash
+while read -r row; do
+  eval "$(jq -r .a <<<"$row")"
+done <<EOT
+$rows
+EOT'
+check_rc "an eval whose only < is a here-string inside a substitution fails" 1 "$rc"
+check "and is named at its line" \
+  "$sk/zz/bad.sh:3: eval inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null" "$out"
+
+shell_run fence '#!/usr/bin/env bash
+grep -c '"'"'```'"'"' "$f"'
+check_rc "a hand-rolled fence pattern fails" 1 "$rc"
+check "and is named at its line" \
+  "$sk/zz/bad.sh:2: a hand-rolled fence pattern; use SHIP_AWK_FENCE from _lib.sh" "$out"
+
+# _lib.sh is exempt on the SHIP_AWK_FENCE definition alone.
+shell_run lib-fence 'true'
+lib=$sk/ship/scripts/_lib.sh
+n=$(($(wc -l < "$lib") + 1))
+printf 'x=%s\n' "'"'```'"'" >> "$lib"
+rm "$sk/zz/bad.sh"
+run "$inert" "$sk"
+check_rc "a hand-rolled fence elsewhere in _lib.sh fails" 1 "$rc"
+check "and is named at its line" \
+  "$lib:$n: a hand-rolled fence pattern; use SHIP_AWK_FENCE from _lib.sh" "$out"
+
+shell_run near-misses '#!/usr/bin/env bash
 # curl -fsSL "$url" is prose, and so is a ``` fence in a comment
 command -v curl >/dev/null || exit 2
 _curl() { curl -fsSL --max-time 30 "$@"; }
 curl -fsSL \
   --connect-timeout 30 --max-time 600 "$url"
 while read -r row; do
-  bash -c 'cat' </dev/null
+  bash -c "cat" </dev/null
+  bash -c "cat" < "$f"
   eval "$row" </dev/null
+  bash -c "cat" <<< "$row"
 done <<EOT
 $rows
 EOT
 echo "$rows" | while read -r row; do eval "$row"; done
-while read -r row; do eval "$row"; done < file
-EOF
+while read -r row; do eval "$row"; done < file'
+sed -i.bak '/^readonly SHIP_AWK_FENCE=/a\
+  x = "```"' "$sk/ship/scripts/_lib.sh"
+rm "$sk/ship/scripts/_lib.sh.bak"
 run "$inert" "$sk"
-check_rc "a curl, an unredirected command in a heredoc loop and a fence fail" 1 "$rc"
-check "and each is named at its line" \
-  "$sk/zz/bad.sh:2: curl without --max-time; a hung download hangs the caller with it
-$sk/zz/bad.sh:5: sh -c inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null
-$sk/zz/bad.sh:6: eval inside a while-read loop over a heredoc reads the loop's stdin; give it </dev/null
-$sk/zz/bad.sh:10: a hand-rolled fence pattern; use SHIP_AWK_FENCE from _lib.sh" "$out"
+check_rc "near misses, and a fence pattern inside the SHIP_AWK_FENCE definition, pass" 0 "$rc"
+check "and print nothing" "" "$out"
 
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.

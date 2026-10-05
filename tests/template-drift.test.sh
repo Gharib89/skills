@@ -114,7 +114,7 @@ T
 # <dir>
 rc_of()  { (cd "$1" && bash "$script" "$1" >/dev/null 2>&1); printf '%s' "$?"; }
 out_of() { (cd "$1" && bash "$script" "$1" 2>/dev/null); }
-hdr() { printf 'template-drift: %s differs from %s outside its consumer-owned regions:' "$1" "$2"; }
+hdr() { printf "template-drift: %s differs from %s outside its repo-owned regions; make the copy match the template, or change the template (only the review workflow takes a '# >>> repo-owned' region):" "$1" "$2"; }
 
 d=$(root clean)
 check_rc "matching copies pass" 0 "$(rc_of "$d")"

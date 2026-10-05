@@ -515,7 +515,7 @@ EOA
     call_args "$alt" "$f"
     out=$(cd "$nogit" && bash "$apath" ${args[@]+"${args[@]}"} "$f" --x 2>/dev/null); st=$?
     if [ "$st" -ne 2 ] || ! printf '%s' "$out" | jq -se --arg u "$usage" 'length == 1 and (.[0] | type == "object" and .error == $u)' >/dev/null 2>&1; then
-      printf '%s: %s took a leading-dash value; want the usage line and exit 2\n' "$m" "$f"
+      printf '%s: %s took a leading-dash value; guard it with ship_flag_value so it answers the usage line and exit 2\n' "$m" "$f"
       rc=1
     fi
   done
@@ -538,9 +538,11 @@ if [ -f "$fake" ]; then
   # The function list is the fake's own, so a host function added there is
   # failed here without this file learning of it.
   fns=$(sed -n '/^for _fn in/,/; do$/p' "$fake" | tr -s ' \\' '\n\n' | tr -d ';' | grep '^host_')
+  [ -n "$fns" ] || { printf '%s: no host_* function on its `for _fn in` line; check 13 has nothing to fail\n' "$fake"; rc=1; }
   mkdir -p "$work/bin"
   for cli in gh az; do printf '#!/bin/sh\nexit 127\n' > "$work/bin/$cli"; chmod +x "$work/bin/$cli"; done
   for path in "$dir"/*.sh; do
+    [ -n "$fns" ] || break
     m=$(basename "$path" .sh)
     [ -f "$work/$m.usage" ] || continue
     grep -q 'ship_load_host' "$path" || continue
@@ -551,14 +553,19 @@ if [ -f "$fake" ]; then
     repo=$(mktemp -d "$work/repo.XXXXXX") && sf=$(mktemp -d "$work/fake.XXXXXX") || { echo "cannot create a temp directory" >&2; exit 2; }
     for fn in $fns; do : > "$sf/$fn.1.fail"; done
     mkdir -p "$repo/docs/agents" "$repo/.github"
-    cp "$root/docs/agents/ship.md" "$repo/docs/agents/" 2>/dev/null
-    cp "$root/.github/pull_request_template.md" "$repo/.github/" 2>/dev/null
+    cp "$root/docs/agents/ship.md" "$repo/docs/agents/" || { printf '%s: check 13 setup failed: cannot copy docs/agents/ship.md\n' "$m"; rc=1; continue; }
+    cp "$root/.github/pull_request_template.md" "$repo/.github/" || { printf '%s: check 13 setup failed: cannot copy .github/pull_request_template.md\n' "$m"; rc=1; continue; }
     ( cd "$repo" && git init -q . && git remote add origin https://github.com/o/r.git \
-        && git -c user.name=gate -c user.email=gate@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m init ) >/dev/null 2>&1
+        && git -c user.name=gate -c user.email=gate@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m init ) >/dev/null 2>&1 \
+      || { printf '%s: check 13 setup failed: cannot git init the throwaway checkout\n' "$m"; rc=1; continue; }
     out=$(cd "$repo" && PATH="$work/bin:$PATH" SHIP_HOST_ADAPTER=$fake SHIP_FAKE=$sf GIT_ALLOW_PROTOCOL=file GIT_TERMINAL_PROMPT=0 \
       bash "$apath" ${args[@]+"${args[@]}"} 2>/dev/null </dev/null)
-    printf '%s' "$out" | jq -se 'length == 1 and (.[0] | type == "object")' >/dev/null 2>&1 \
-      || { printf '%s: a host failure did not print exactly one JSON object\n' "$m"; rc=1; }
+    if ! printf '%s' "$out" | jq -se 'length == 1 and (.[0] | type == "object")' >/dev/null 2>&1; then
+      n="$(printf '%s' "$out" | jq -s length 2>/dev/null) JSON values" || n="unparseable output"
+      call=$m; [ "${#args[@]}" -eq 0 ] || call="$m ${args[*]}"
+      printf '%s: with every host_* failing in the Host fake, `%s` printed %s on stdout; want exactly one object\n' "$m" "$call" "$n"
+      rc=1
+    fi
   done
 fi
 
@@ -621,21 +628,26 @@ fi
 #     hung connection hangs the caller, and a mechanic or hook has no human to
 #     interrupt it. `command -v curl` and a name ending in curl (`_curl`) are
 #     not invocations.
-# (b) a `bash -c`, `sh -c` or `eval` with no input redirect inside a `while
-#     read` loop whose `done` takes a heredoc or here-string. The command
-#     inherits the loop's stdin and drains it: measured on Bash 3.2.57 and
-#     5.3.9, an unredirected `bash -c 'cat'` or `eval` ran 1 of 3 rows, and
+# (b) a `bash -c`, `sh -c` or `eval` with no stdin redirect (a `<`, `<<` or
+#     `<<<` outside a `$(...)`, and not a `<(`) inside a `while read` loop
+#     whose `done` takes a heredoc or here-string. The rule covers command
+#     strings on purpose: a direct filter that reads stdin (`cat`, `sed`) is
+#     visible in the loop, while a command string hides whether it reads stdin. Unredirected, the
+#     command inherits the loop's stdin and drains it: measured on Bash 3.2.57
+#     and 5.3.9, an unredirected `bash -c 'cat'` or `eval` ran 1 of 3 rows, and
 #     `</dev/null` ran all 3.
-# (c) a three-backtick fence pattern outside _lib.sh, whose SHIP_AWK_FENCE is
-#     the one fence grammar: a second, hand-rolled one is how a four-backtick
-#     fence ended up closed by a three-backtick line.
+# (c) a three-backtick fence pattern outside the SHIP_AWK_FENCE definition in
+#     _lib.sh, the one fence grammar: a second, hand-rolled one, even elsewhere
+#     in _lib.sh, is how a four-backtick fence ended up closed by a
+#     three-backtick line.
 find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills/ship/scripts/_lib.sh" '
     function indent(s) { match(s, /^[ \t]*/); return substr(s, 1, RLENGTH) }
-    FNR == 1 { delete L; acc = ""; start = 0 }
+    FNR == 1 { delete L; acc = ""; start = 0; def = 0 }
     { L[FNR] = $0 }
+    FILENAME == lib && /^readonly SHIP_AWK_FENCE=/ { def = FNR }
     $0 ~ /^[ \t]*#/ { next }
     {
-      if (FILENAME != lib && (index($0, "```") || $0 ~ /(\\`){3}/ || index($0, "`{3")))
+      if (!def && (index($0, "```") || $0 ~ /(\\`){3}/ || index($0, "`{3")))
         printf "%s:%d: a hand-rolled fence pattern; use SHIP_AWK_FENCE from _lib.sh\n", FILENAME, FNR
       line = $0
       if (acc == "") start = FNR
@@ -654,13 +666,15 @@ find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills
           if (L[k] ~ /^[ \t]*done/) break
         }
         for (k = open + 1; open && k < FNR; k++) {
-          if (L[k] ~ /^[ \t]*#/ || index(L[k], "<")) continue
+          s = L[k]; gsub(/\$\([^()]*\)/, "", s)
+          if (s ~ /^[ \t]*#/ || s ~ /<([^(]|$)/) continue
           if (match(L[k], /(^|[^A-Za-z0-9_])(bash -c|sh -c|eval )/)) {
             c = substr(L[k], RSTART, RLENGTH); gsub(/^[^a-z]+/, "", c); sub(/ +$/, "", c)
             printf "%s:%d: %s inside a while-read loop over a heredoc reads the loop\047s stdin; give it </dev/null\n", FILENAME, k, c
           }
         }
       }
+      if (def && FNR > def && /\047[ \t]*$/) def = 0
     }' > "$work/shell-hits"
 if [ -s "$work/shell-hits" ]; then cat "$work/shell-hits"; rc=1; fi
 

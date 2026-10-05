@@ -45,16 +45,16 @@ rc_of() { local r=$1; shift; (cd "$r" && bash "$script" "$@" >/dev/null 2>&1); p
 d=$(mkrepo hit)
 printf 'line one\nship the pipeline today\n' > "$d/docs/a.md"; git_ commit -q -am head
 check "an added avoided word prints one warning line" \
-  'glossary: docs/a.md:2: "pipeline" is on the _Avoid_ list of Ship' "$(run "$d" main)"
+  'glossary: docs/a.md:2: "pipeline" is on the _Avoid_ list of Ship; use Ship if the word names it' "$(run "$d" main)"
 check_rc "a warning does not fail the run" 0 "$(rc_of "$d" main)"
 
 # Backticks, a parenthetical and case are the glossary's decoration, not the word.
 d=$(mkrepo decoration)
 printf 'line one\nAUTOPILOT here\na raw gh call there\nthe gate output\n' > "$d/docs/a.md"; git_ commit -q -am head
 check "case is ignored, backticks and parentheticals are stripped from the list" \
-'glossary: docs/a.md:2: "autopilot" is on the _Avoid_ list of Ship
-glossary: docs/a.md:3: "raw gh call" is on the _Avoid_ list of Verdict
-glossary: docs/a.md:4: "gate output" is on the _Avoid_ list of Verdict' "$(run "$d" main)"
+'glossary: docs/a.md:2: "autopilot" is on the _Avoid_ list of Ship; use Ship if the word names it
+glossary: docs/a.md:3: "raw gh call" is on the _Avoid_ list of Verdict; use Verdict if the word names it
+glossary: docs/a.md:4: "gate output" is on the _Avoid_ list of Verdict; use Verdict if the word names it' "$(run "$d" main)"
 
 d=$(mkrepo whole-word)
 printf 'line one\nreports and resulting and pipelines\n' > "$d/docs/a.md"; git_ commit -q -am head
@@ -65,8 +65,8 @@ d=$(mkrepo hunk-lines)
 printf 'a\nb\nc\nd\ne\n' > "$d/docs/b.md"; git_ add -A; git_ commit -q -m more; git_ branch -q -f main HEAD
 printf 'a\nb\nc\nd\ne\nresult\nfine\nresult\n' > "$d/docs/b.md"; git_ commit -q -am head
 check "each added line is numbered in the new file" \
-'glossary: docs/b.md:6: "result" is on the _Avoid_ list of Verdict
-glossary: docs/b.md:8: "result" is on the _Avoid_ list of Verdict' "$(run "$d" main)"
+'glossary: docs/b.md:6: "result" is on the _Avoid_ list of Verdict; use Verdict if the word names it
+glossary: docs/b.md:8: "result" is on the _Avoid_ list of Verdict; use Verdict if the word names it' "$(run "$d" main)"
 
 d=$(mkrepo clean)
 printf 'line one\nnothing avoided here\n' > "$d/docs/a.md"; git_ commit -q -am head
@@ -83,6 +83,13 @@ printf '# Changelog\n\n- the pipeline\n' > "$d/docs/CHANGELOG.md"; printf 'pipel
 printf 'plain pipeline\n' > "$d/docs/n.txt"
 git_ add -A; git_ commit -q -m head
 check "CHANGELOG.md files and non-markdown files are not read" "" "$(run "$d" main)"
+
+d=$(mkrepo derived-copy)
+mkdir -p "$d/skills/x" "$d/.claude/skills/x"
+printf 'ship the pipeline\n' > "$d/skills/x/SKILL.md"; printf 'ship the pipeline\n' > "$d/.claude/skills/x/SKILL.md"
+git_ add -A; git_ commit -q -m head
+check "a hit in a derived copy under .claude/ is not repeated" \
+  'glossary: skills/x/SKILL.md:1: "pipeline" is on the _Avoid_ list of Ship; use Ship if the word names it' "$(run "$d" main)"
 
 d=$(mkrepo glossary-itself)
 printf '\n**Other**:\nx\n_Avoid_: pipeline\n' >> "$d/GLOSSARY.md"; git_ commit -q -am head

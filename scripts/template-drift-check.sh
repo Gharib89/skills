@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Template-drift check: each repo copy of a template setup-skills ships matches
-# that template outside the regions the repo owns.
+# that template outside its repo-owned regions.
 #
 # A template is copied into a repo once and owned there. When the template
 # changes (a fixed helper, a reworded prompt line) the copy keeps the old text
@@ -35,7 +35,9 @@
 # prompt is not drift.
 #
 # stdout: per drifting pair, `template-drift: <copy> differs from <template>
-#         outside its consumer-owned regions:` and up to 5 indented diff lines,
+#         outside its repo-owned regions; make the copy match the template, or
+#         change the template (only the review workflow takes a '# >>>
+#         repo-owned' region):` and up to 5 indented diff lines,
 #         `  template: <token>` and `  copy: <token>`; nothing when clean
 # stderr: on tooling, the reason
 # exit: 0 every pair matches · 1 a pair drifts · 2 tooling (a file missing or
@@ -108,7 +110,7 @@ compare() {
   local out
   if ! diff "$3" "$4" >"$tmp/diff"; then
     out=$(grep '^[<>]' "$tmp/diff" | head -n 5 | sed 's/^< /  template: /; s/^> /  copy: /')
-    printf 'template-drift: %s differs from %s outside its consumer-owned regions:\n%s\n' "$1" "$2" "$out"
+    printf "template-drift: %s differs from %s outside its repo-owned regions; make the copy match the template, or change the template (only the review workflow takes a '# >>> repo-owned' region):\n%s\n" "$1" "$2" "$out"
     found=1
   fi
 }

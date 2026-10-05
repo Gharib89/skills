@@ -26,7 +26,9 @@ exceptions bound these rules.
   A second: `update-skills`' `heads` reads GitHub's public REST API with `curl`,
   whatever the checkout's host, because the upstreams it reads are GitHub repos
   and an Azure DevOps checkout has no GitHub adapter or credentials to route
-  through.
+  through. A third: `scripts/check-pr-body.sh` reads each `Closes #N` title with
+  `gh` as printed evidence, which decides nothing, and it runs in the
+  `bump-guard` leg, which loads no adapter.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way
