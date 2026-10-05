@@ -7,6 +7,10 @@ index's clock exception bounds the clock rule below.
 
 ## Proving a test
 
+- **A behavioural claim about a mechanic or gate script earns a case in the
+  suite.** A PR that adds or changes what a script does adds the case that
+  shows it, under `tests/`, where it survives the run that made it; a
+  scratchpad probe does not.
 - **A new test is run once with the fix reverted, and confirmed red.** A test
   written to prove a fix proves nothing until it has failed for the reason it
   exists: revert the hunk, watch the case fail, restore it, watch it pass. A

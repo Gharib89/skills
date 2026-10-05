@@ -1,6 +1,6 @@
 # Standards: what the gates enforce
 
-The index routes every diff here. These rules are enforced by
+The author reads this before pushing. These rules are enforced by
 `scripts/local-gate.sh` or the `bump-guard` CI leg, so a reviewer cites the gate
 rather than the rule. What each gate checks in full is its script and the ship
 profile's `## Local gate` section in

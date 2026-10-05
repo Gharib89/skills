@@ -59,11 +59,14 @@ wrong; each sub-file's rule holds inside them.
 
 ## Routing by path
 
-Always read [standards/gates.md](standards/gates.md), what the Local gate and
-the CI leg already enforce, and [standards/release.md](standards/release.md),
-the glossary and ADRs, the version grade, the PR title and body, commits, and
-adding a skill this repo writes. Then read each file below whose condition a
-path in the diff meets:
+Always read [standards/release.md](standards/release.md), the glossary and
+ADRs, the version grade, the PR title and body, commits, and adding a skill this
+repo writes: every PR has a title, a body and commits. Then read each file below
+whose condition a path in the diff meets. A Reviewer skips
+[standards/gates.md](standards/gates.md), what the Local gate and the CI leg
+already enforce, since a green gate settles its rules; the author reads it
+before pushing, as does a Reviewer whose finding would turn on what a gate
+checks.
 
 - A diff touching a shell script (`*.sh`, or a shell block in a workflow):
   [standards/shell.md](standards/shell.md), the mechanic contract and its
