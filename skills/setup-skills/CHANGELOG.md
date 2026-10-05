@@ -7,6 +7,14 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.1 (2026-10-05)
+
+### Bug Fixes
+
+- **setup-skills**: Have the claude reviewer read the standards files its diff routes to
+  ([`cf5984e`](https://github.com/Gharib89/skills/commit/cf5984e9736850a16552f042b683ddf3f1c9bc7b))
+
+
 ## v0.13.0 (2026-10-04)
 
 ### Features
