@@ -87,10 +87,10 @@ below lands as a minor
   that only adds an optional flag is correctly minor, and a rename of a JSON key
   is breaking whatever verb describes it, so on a 0.x skill it is titled
   `feat(ship):` and not `fix(ship):`. A title whose type under-grades the change
-  is a finding. One title grades every
-  skill the diff touched, because `path_filters` route a commit to a skill by
-  path and cannot route a grade: **the title carries the highest grade across
-  those skills, and the others take that number.** A patch-sized reword riding
+  is a finding. One title grades every skill the diff touched, because
+  `path_filters` route a commit to a skill by path and cannot route a grade:
+  **the title carries the highest grade across those skills, and the others
+  take that number.** A patch-sized reword riding
   along with a `feat` is released minor, which is the cost of one subject, and
   splitting the PR to avoid it is not worth a second review cycle.
 - **Commit subjects** are conventional-commit prefixed and scoped to the skill:

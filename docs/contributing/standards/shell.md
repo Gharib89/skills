@@ -35,7 +35,7 @@ exceptions bound these rules.
   list with no error. A path variable (a branch, a ref, a file path) is
   URI-encoded, because a `/` or `#` in it otherwise addresses another resource.
   A read that needs only the newest items, the verify read after a create, sorts
-  and bounds its page instead, and says so in a comment.
+  and bounds its page instead.
 - **A failed read is never a verdict.** A read that fails (a missing tool, a
   nonzero exit, empty or unparseable output) exits 2 or answers `unavailable`;
   it is never compared, graded or passed on as data. Write the status check
