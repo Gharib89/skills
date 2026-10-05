@@ -55,7 +55,12 @@ do to pass.
   and the `--help` check runs each mechanic where no origin remote resolves, so
   a `ship_help` below `ship_load_host` fails. The same gate holds every shell
   file under `skills/` to the four Bash 4 constructs **Everything under
-  `skills/` targets Bash 3.2** in [shell.md](shell.md) names.
+  `skills/` targets Bash 3.2** in [shell.md](shell.md) names, refuses any
+  mention of `SHIP_HOST_ADAPTER` under `skills/` outside `_lib.sh`, whose
+  `ship_load_host` is its one reader, and holds two sentences of ship's prose,
+  matched as substrings with their line wraps joined: phase 4's instruction
+  that each axis reads the Local gate's JSON and never runs the suite itself,
+  and context discipline's `Read one reference file per call.`
 - Ship's own documents inside their line budget, per the `prose-budget` gate:
   `skills/*/SKILL.md` at most 350 lines, and every `skills/*/reference/*.md`
   over 100 lines opening with a `## Contents` list that matches its `## `
@@ -69,7 +74,9 @@ do to pass.
   `version-lines` gate: the release run on main owns that number and writes it
   from the squash subject. `metadata.profile-schema` is exempt and stays a hand
   edit, and so is the one-time renumber to 0.x
-  ([ADR 0005](../../adr/0005-skills-stay-0x-until-public-release.md)).
+  ([ADR 0005](../../adr/0005-skills-stay-0x-until-public-release.md)). A
+  *removed* version line is what makes a finding, so a new skill's first one
+  and a file that gains a metadata block both pass.
 - The PR title a Conventional Commit of a type the release run reads, a title
   implying a major bump carrying the maintainer's `major` label, and the PR body
   carrying every `##` heading of the PR template, per the `bump-guard` workflow,

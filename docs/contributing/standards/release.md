@@ -28,12 +28,12 @@ below lands as a minor
   structure and `composes` excepted by the bullets below. This is what a
   consumer must read before refreshing.
 - **A new precondition that stops a consumer's run is breaking.** A check that
-  refuses a run until the consumer installs, migrates or configures something
-  (a tool on PATH, a file's new shape, a label, a setting) is graded breaking,
+  refuses a run until the consumer installs, migrates or configures something (a
+  tool on PATH, a file's new shape, a label, a setting) is graded breaking,
   however small the check reads: a consumer that refreshes has its next run
-  refused without having read anything. The two bullets below are instances
-  with their own mechanics. A refusal naming its fix is the mitigation, not a
-  downgrade.
+  refused without having read anything. The profile-structure and `composes`
+  bullets below are instances with their own mechanics. A refusal naming its fix
+  is the mitigation, not a downgrade.
 - **A reword that decides the same thing is a patch.** The test is whether what
   the text decides changed, not whether the words did. A skill's `description`
   is on the list because it decides when an agent reaches the skill, so a reword
