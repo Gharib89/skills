@@ -3,7 +3,7 @@ name: ship
 description: Drive one tracker issue to a merge-ready PR in a single run, stopping only at the human merge gate. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
-  version: 0.16.5
+  version: 0.16.6
   profile-schema: 3
   composes: mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60:tdd mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:code-review upstash/context7#e275a848a420e0d11c2822f61201ee005bfd1133:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
 ---
