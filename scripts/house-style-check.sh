@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The em-dash ban from docs/contributing/standards/gates.md, plus no trailing
 # whitespace and a final newline on every non-empty file, over the files this
-# repo authors, and an 80-column wrap width over the files it hard-wraps. A consumer repo's stock `trailing-whitespace` and
+# repo authors, an 80-column wrap width over the files it hard-wraps, and a root
+# guard on every `chmod 000` in a test. A consumer repo's stock `trailing-whitespace` and
 # `end-of-file-fixer` hooks fail on a copied script that breaks either (issue
 # #288). `.claude/skills/` is install output from other repos and is exempt.
 # `scripts/check.sh full` runs this as its `house-style` row, which
@@ -112,6 +113,33 @@ too_wide=
 if [ -n "$too_wide" ]; then
   echo "lines over 80 columns in hard-wrapped files (see docs/contributing/standards/gates.md):"
   echo "$too_wide"
+  found=1
+fi
+
+# A `chmod 000` in a test needs a root guard: root reads a mode-000 file, so the
+# case passes vacuously or fails spuriously under a root runner (in docker
+# bash:3.2 as uid 0, `cat` of such a file succeeds and `[ -r f ]` is true). The
+# line carries `id -u` itself, or sits inside an `if` block whose condition line
+# does; a one-line `if ...; fi` opens and closes nothing. Comment lines are
+# prose, not commands.
+tfiles=()
+while IFS= read -r -d '' f; do tfiles+=("$f"); done < <(git grep -z -I -l -E 'chmod 0{3,4}([^0-9]|$)' -- 'tests/*.test.sh' 2>"$err")
+[ -s "$err" ] && tooling
+unguarded=
+[ "${#tfiles[@]}" -eq 0 ] || unguarded=$(awk '
+  FNR == 1 { depth = 0 }
+  /^[ \t]*#/ { next }
+  /^[ \t]*if[ \t]/ && $0 !~ /(^|[;&|][ \t]*)fi[ \t]*([;&|)}#]|$)/ { depth++; guard[depth] = ($0 ~ /id -u/); next }
+  /^[ \t]*fi[ \t]*([;&|)}#]|$)/ { if (depth > 0) depth--; next }
+  /chmod 0000?([^0-9]|$)/ {
+    ok = ($0 ~ /id -u/)
+    for (i = 1; i <= depth && !ok; i++) if (guard[i]) ok = 1
+    if (!ok) print FILENAME ":" FNR ": chmod 000 with no id -u root guard; root reads a mode-000 file"
+  }
+' "${tfiles[@]}" 2>"$err") || tooling
+if [ -n "$unguarded" ]; then
+  echo "chmod 000 in tests with no root guard:"
+  echo "$unguarded"
   found=1
 fi
 exit "$found"

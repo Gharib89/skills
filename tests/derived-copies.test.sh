@@ -80,10 +80,13 @@ d=$(tree unlocked); mkdir -p "$d/skills/new" "$d/.claude/skills/new"
 check "a skills/<name>/ the lock does not record as source . fails" \
   "skills/new is not a source \".\" entry in skills-lock.json; add --skill new to the refresh line and run it" "$(out_of "$d")"
 
-# A workflow the check cannot read is tooling, not a list that disagrees.
-d=$(tree unreadable); chmod 000 "$d/$wf"
-check_rc "an unreadable release workflow is tooling" 2 "$(rc_of "$d")"
-chmod 644 "$d/$wf"
+# A workflow the check cannot read is tooling, not a list that disagrees. Root
+# reads a mode-000 file, so the case only runs where the mode bits bind.
+if [ "$(id -u)" -ne 0 ]; then
+  d=$(tree unreadable); chmod 000 "$d/$wf"
+  check_rc "an unreadable release workflow is tooling" 2 "$(rc_of "$d")"
+  chmod 644 "$d/$wf"
+fi
 
 d="$fixture/nolock"; mkdir -p "$d"
 check_rc "a tree with no lock is tooling" 2 "$(rc_of "$d")"

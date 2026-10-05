@@ -15,7 +15,7 @@ check_script=$PWD/scripts/house-style-check.sh
 # <case>: a checkout with a clean skill and the check under scripts/; prints its path.
 checkout() {
   local d="$fixture/$1"
-  mkdir -p "$d/skills/x" "$d/scripts" || return 1
+  mkdir -p "$d/skills/x" "$d/scripts" "$d/tests" || return 1
   printf 'plain text - with a hyphen\n' > "$d/skills/x/SKILL.md"
   cp "$check_script" "$d/scripts/"
   git -C "$d" init -q && git -C "$d" add -A
@@ -128,6 +128,49 @@ if [ "$(id -u)" != 0 ]; then
   check_rc "an unreadable tracked file is tooling" 2 "$(rc_of C.UTF-8 "$d")"
   chmod 644 "$d/skills/x/SKILL.md"
 fi
+
+# chmod 000 in a test: root reads a mode-000 file, so a case built on one passes
+# vacuously or fails spuriously under a root runner. The line must carry the
+# `id -u` guard or sit inside an `if` whose condition does. The fixtures build
+# the command from parts so this file does not trip the rule it tests.
+cm="chmod 0$(printf 00)"
+root_guard='[ "$(id -u)" -ne 0 ]'
+unguarded_msg="tests/t.test.sh:1: chmod 000 with no id -u root guard; root reads a mode-000 file"
+d=$(checkout chmod-bare)
+printf '%s f\n' "$cm" > "$d/tests/t.test.sh"
+git -C "$d" add -A
+check_rc "a bare mode-000 chmod in a test fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the finding names the file and line and the reason" "$unguarded_msg" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout chmod-four-zeros)
+printf '%s0 f\n' "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a bare four-digit mode-0000 chmod in a test fails" 1 "$(rc_of C.UTF-8 "$d")"
+
+d=$(checkout chmod-same-line)
+printf '%s && %s f\n' "$root_guard" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod with id -u on the same line passes" 0 "$(rc_of C.UTF-8 "$d")"
+
+d=$(checkout chmod-in-guard)
+printf 'if %s; then\n  if true; then\n    %s f\n  fi\n  %s g\nfi\n' "$root_guard" "$cm" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod inside a guarded if, nested ifs included, passes" 0 "$(rc_of C.UTF-8 "$d")"
+
+# The guard ends with its fi, and a one-line if opens nothing.
+d=$(checkout chmod-after-guard)
+printf 'if %s; then\n  true\nfi\n%s f\n' "$root_guard" "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod after its guard closed fails" 1 "$(rc_of C.UTF-8 "$d")"
+check "the finding is the line after the guard" "tests/t.test.sh:4: chmod 000 with no id -u root guard; root reads a mode-000 file" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+
+d=$(checkout chmod-oneline-if)
+printf 'if true; then :; fi\n%s f\n' "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a one-line if neither opens nor closes a block" 1 "$(rc_of C.UTF-8 "$d")"
+
+d=$(checkout chmod-unguarded-if)
+printf 'if true; then\n  %s f\nfi\n' "$cm" > "$d/tests/t.test.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod inside an if with no id -u fails" 1 "$(rc_of C.UTF-8 "$d")"
+
+d=$(checkout chmod-not-a-test); mkdir -p "$d/scripts"
+printf '%s f\n' "$cm" > "$d/scripts/helper.sh"; git -C "$d" add -A
+check_rc "a mode-000 chmod outside tests/*.test.sh is not this rule's" 0 "$(rc_of C.UTF-8 "$d")"
 
 # Tooling: outside a checkout there is no listing, which is not a clean tree.
 mkdir -p "$fixture/no-checkout"
