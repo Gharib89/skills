@@ -29,8 +29,9 @@ Every Reviewer reads this section, and so does the author self-reviewing.
   it as a question; the author answers a question with one probe, where a wrong
   finding costs a rebuttal round.
 - **A ShellCheck finding names its code and severity** (`SC2086`, `warning`),
-  since the gates fail at `warning` and above outside the landed scripts, so a
-  `style` or `info` finding there is no failure. Whether a gate failed is the
+  since the severity decides whether it fails: a landed script fails at `style`,
+  and every other script only at `warning` and above, so a `style` or `info`
+  finding outside the landed scripts is no failure. Whether a gate failed is the
   Local gate's JSON verdict to settle, never a reading of the diff: on a green
   head, a gate failure is not a finding.
 - **A finding cites the rule by its bold lead.** The lead survives the next edit
@@ -60,8 +61,9 @@ wrong; each sub-file's rule holds inside them.
 
 Always read [standards/gates.md](standards/gates.md), what the Local gate and
 the CI leg already enforce, and [standards/release.md](standards/release.md),
-the version grade, the PR title and body, commits, and adding a skill this repo
-writes. Then read each file below whose condition a path in the diff meets:
+the glossary and ADRs, the version grade, the PR title and body, commits, and
+adding a skill this repo writes. Then read each file below whose condition a
+path in the diff meets:
 
 - A diff touching a shell script (`*.sh`, or a shell block in a workflow):
   [standards/shell.md](standards/shell.md), the mechanic contract and its

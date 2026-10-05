@@ -85,6 +85,5 @@ do to pass.
   release run grades is composed from one or the other. How to grade the title
   is [release.md](release.md).
 - `tests/run.sh` green, per the `tests` gate. None of its tests reaches a host.
-  The kinds of test it runs, and how each is driven, are listed once, in the
-  ship profile's `## Local gate` section; a new kind adds its line there, and a
-  test's own description goes in its file header.
+  The kinds of test it runs are listed in the ship profile's `## Local gate`
+  section.

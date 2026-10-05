@@ -6,10 +6,6 @@ these rules bind as hard as the shell ones.
 
 ## Sources
 
-- [GLOSSARY.md](../../../GLOSSARY.md) is the glossary. Use its terms in prose,
-  issue titles and commit subjects, and avoid the synonyms each entry lists.
-- [docs/adr/](../../adr/) records decisions. Contradicting one is surfaced, not
-  done silently.
 - The `writing-for-agents` skill governs every document here: context pointers,
   the information hierarchy, leading words, pruning.
 

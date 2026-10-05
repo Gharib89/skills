@@ -1,7 +1,15 @@
 # Standards: release, PR and commits
 
 Every PR: the version a consumer reads comes from the PR title, so the grade,
-the title, the body and the commits are reviewed here.
+the title, the body and the commits are reviewed here, beside the two rules
+that bind every change whatever its paths.
+
+## Every change
+
+- [GLOSSARY.md](../../../GLOSSARY.md) is the glossary. Use its terms in prose,
+  issue titles and commit subjects, and avoid the synonyms each entry lists.
+- [docs/adr/](../../adr/) records decisions. Contradicting one is surfaced, not
+  done silently.
 
 ## Grading a change
 
