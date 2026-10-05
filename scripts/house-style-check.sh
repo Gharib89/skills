@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The em-dash ban from docs/contributing/coding-standards.md, plus no trailing
+# The em-dash ban from docs/contributing/standards/gates.md, plus no trailing
 # whitespace and a final newline on every non-empty file, over the files this
 # repo authors, and an 80-column wrap width over the files it hard-wraps. A consumer repo's stock `trailing-whitespace` and
 # `end-of-file-fixer` hooks fail on a copied script that breaks either (issue
@@ -49,7 +49,7 @@ grep_rule() {
 }
 
 em=$(printf '\342\200\224')
-grep_rule "em dashes in repo-authored files (see docs/contributing/coding-standards.md):" -F -e "$em"
+grep_rule "em dashes in repo-authored files (see docs/contributing/standards/gates.md):" -F -e "$em"
 grep_rule "trailing whitespace in repo-authored files:" -I -e '[[:blank:]]$'
 
 # `-I -l -e ''` lists every text file with a line, which skips binaries,
@@ -73,8 +73,8 @@ fi
 # run writes, and the lines no reflow shortens: frontmatter, fences, tables, and
 # a line holding only a link, a code span or a link reference definition.
 wrapped=('skills/ship/*.md' 'skills/cloud-ship/*.md' 'skills/update-skills/*.md'
-  'skills/grill-with-artifact/*.md' docs/contributing/coding-standards.md CLAUDE.md
-  ':!:*CHANGELOG.md')
+  'skills/grill-with-artifact/*.md' docs/contributing/coding-standards.md
+  'docs/contributing/standards/*.md' CLAUDE.md ':!:*CHANGELOG.md')
 files=()
 while IFS= read -r -d '' f; do files+=("$f"); done < <(git grep -z -I -l -e '' -- "${wrapped[@]}" 2>"$err")
 [ -s "$err" ] && tooling
@@ -110,7 +110,7 @@ too_wide=
   { s = $0; gsub(/[\200-\277]/, "", s); if (length(s) > 80) print FILENAME ":" FNR ":" $0 }
 ' "${files[@]}" 2>"$err") || tooling
 if [ -n "$too_wide" ]; then
-  echo "lines over 80 columns in hard-wrapped files (see docs/contributing/coding-standards.md):"
+  echo "lines over 80 columns in hard-wrapped files (see docs/contributing/standards/gates.md):"
   echo "$too_wide"
   found=1
 fi

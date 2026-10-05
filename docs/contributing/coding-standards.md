@@ -2,401 +2,78 @@
 
 The standards every change in this repo is reviewed against. The `code-review`
 skill's Standards axis and every automated reviewer read this file; the ship
-profile names it under `## Coding standards`.
+profile names it under `## Coding standards`. This file is the index: read the
+reviewer section below whole, then the sub-file each area of your diff routes
+to, and only those.
 
 This repo ships bash and Markdown. Every file in it is read by an agent, so
-prose is the product as much as the scripts are.
+prose is the product as much as the scripts are. **The source is `skills/`,
+and `.claude/skills/` carries install output alone:** a change lands in
+`skills/<name>/` and reaches `.claude/skills/` only through
+`npx skills add . --skill <name> --agent claude-code -y`. **`.claude/skills/`
+is exempt from every rule here but the `derived-copies` gate**, which holds the
+copy of each skill this repo writes byte-identical to its source. The rest is
+install output from other people's repos and is refreshed rather than edited, so
+its prose and its em dashes are not this repo's to fix.
 
-## Enforced by tooling
+## Reviewer section
 
-- `shellcheck -x -s bash -P SCRIPTDIR -S warning` over every tracked shell
-  script outside `.claude/skills/` and `tests/fixtures/`, per the `shellcheck`
-  hook in `.pre-commit-config.yaml`, which the commit hook and
-  `scripts/check.sh` run. Warnings fail; suppress one only with a
-  `# shellcheck disable=<code>` carrying the reason on the same line, and only
-  where the warning actually fires.
-- A second, plain `shellcheck` over the **landed scripts**, the ones
-  setup-harness and setup-skills write into a consumer
-  (`skills/setup-harness/templates/*.sh`, `skills/setup-skills/*.sh`), per the
-  `shellcheck-landed` hook beside it: a consumer wiring the Shell catalog entry
-  runs exactly that, at ShellCheck's default severity `style`, so a finding
-  below `warning` fails there. In a landed script, remove a finding's cause
-  rather than disabling it where the code differs by ShellCheck version, which
-  narrows the rule above: a function called only indirectly is SC2317 on 0.10
-  and SC2329 on 0.11, so a disable must name every version's code and still
-  hides real unreachable code later. A version-stable code may be disabled under
-  the rule above, its reason on the same line.
-  `skills/setup-harness/templates/check.sh` dispatches its rungs with a `case`
-  rather than `"rung_$rung"` for this reason.
-- `gitleaks detect` over the branch's commits, per the `secrets` gate in
-  `scripts/local-gate.sh`.
-- `.claude/skills/<name>/` byte-identical to `skills/<name>/` for every skill
-  whose `skills-lock.json` entry has `source: "."`, per the `derived-copies`
-  gate.
-- No em dashes and no trailing whitespace in any file this repo authors, and
-  every non-empty text file there ends in a newline, per the `house-style` gate.
-  The last two are what a consumer repo's stock `trailing-whitespace` and
-  `end-of-file-fixer` hooks demand of the copies it installs.
-- Prose wrapped at 80 columns in the files this repo hard-wraps, the `wrapped`
-  list in `scripts/house-style-check.sh`, per the `house-style` gate.
-  Frontmatter, fences, tables, changelogs and a line holding only a link, a code
-  span or a link reference definition are exempt. The rest of the tree puts one
-  paragraph on a line, and a profile's `Label:` line must stay one line because
-  the profile is parsed line by line; a file that starts hard-wrapping joins the
-  list.
-- Every tracked `skills/*/**.md` but `CHANGELOG.md` free of source-repo URLs
-  other than the repo root and its issue tracker, in any case, and, outside a
-  code span or a fenced block, of `PR #N` and `issue #N` in any case and of
-  relative links leaving `skills/<name>/`, per the `self-contained` gate, whose
-  rule is `scripts/self-contained-check.sh`. It is the greppable part of the
-  self-contained bullet under Written standards.
-- The mechanics' malformed-invocation contract, per the `contract` gate: no
-  `${N:?}` or `${N?}` expansion under `skills/ship/scripts/` or
-  `skills/update-skills/scripts/`; a mechanic that requires an argument, invoked
-  with none, printing exactly one JSON object with an `error` key and exiting 2;
-  a mechanic with a positional slot answering a leading-dash value other than
-  `--help` there with its own usage line and exit 2; and every mechanic, none
-  exempted, answering `--help` with its own usage line on stdout, exit 0 and
-  nothing on stderr. Keep a new mechanic's guards where the existing ones fire,
-  before the adapter loads: that placement is what keeps the gate off the host,
-  an unguarded positional is what puts it back on, and the bare-invocation check
-  reads the error's shape and cannot tell which guard produced it. The `--help`
-  check does read placement, by running each mechanic where no origin remote
-  resolves, so a `ship_help` below `ship_load_host` fails there. The same gate
-  holds every shell file under `skills/` to the Bash 3.2 target below, and
-  refuses any mention of `SHIP_HOST_ADAPTER` under `skills/` outside `_lib.sh`,
-  whose `ship_load_host` is its one reader. It also holds two sentences of
-  ship's prose that nothing else enforces, matched as substrings with their line
-  wraps joined: phase 4's instruction that each axis reads the Local gate's JSON
-  and never runs the suite itself, and context discipline's `Read one reference
-  file per call.`
-- Ship's own documents inside their line budget, per the `prose-budget` gate:
-  `skills/*/SKILL.md` at most 350 lines, and every `skills/*/reference/*.md`
-  over 100 lines opening with a `## Contents` heading in its first 15 lines
-  whose list carries one entry per `##` in the file: an entry's bracketed link
-  text, or its whole text where it is not a link, matching a heading exactly. An
-  entry may wrap onto indented continuation lines, which are joined into it.
-  Both directions are the gate's, so a heading added without an entry and an
-  entry left behind by a rename fail the same way; a `## ` inside a fence is an
-  example and is neither. The profile's `## Local gate` section, in
-  `docs/agents/ship.md`, stays at 11000 bytes or fewer: one line per test kind,
-  with a test's own description in its file header. A rule that outgrows the
-  file it lives in moves to a reference file and is pointed at, rather than
-  being cut.
-- Every tracked path inside the top-level entries this repo owns, per the
-  `stray-files` gate. A new top-level entry is a decision, so it joins the
-  allowlist in `scripts/stray-file-check.sh` in the commit that tracks it; a
-  file a `git add -A` swept in fails the gate instead.
-- No `metadata.version` line under `skills/` moved by the diff, per the
-  `version-lines` gate: the release run on main owns that number and writes it
-  from the squash subject. `metadata.profile-schema` is exempt and stays a hand
-  edit, and so is the one-time renumber to 0.x
-  ([ADR 0005](../adr/0005-skills-stay-0x-until-public-release.md)). A *removed*
-  version line is what makes a finding, so a new skill's first one and a file
-  that gains a metadata block both pass; `scripts/version-line-check.sh` is the
-  whole rule.
-- The PR title is a Conventional Commit whose type the release run reads (the
-  `patch_tags` in `.release/*.toml`, plus `feat`), and a title implying a major
-  bump carrying the maintainer's `major` label, per the `bump-guard` workflow. A
-  `BREAKING CHANGE:` footer implies one too, in the description or in any commit
-  message on the branch, because the squash body the release run grades is
-  composed from one or the other. A type outside that set parses but grades
-  nothing, so the release is skipped silently; the guard refuses it instead. It
-  is the repo's one CI leg, `scripts/check-bump-label.sh` is the whole title
-  rule, and `tests/bump-label.test.sh` drives that script the way the
-  gate-script tests below drive theirs. The same workflow refuses a PR body
-  missing a `##` heading the PR template has, because ship would create the
-  missing section at the end, after `## Attribution`; the check refuses the
-  absence up front and leaves order to the author, so nothing enforces the
-  footer staying last. `scripts/check-pr-body.sh` is that rule and
-  `tests/pr-body-headings.test.sh` drives it.
-- `tests/run.sh` green, per the `tests` gate. It runs every `tests/*.test.sh`,
-  concurrently and with a host log per file, so a test shares no fixed path with
-  another: the pure transformations the mechanics are built around, sourced and
-  asserted on as strings; the gate scripts, run once against a fixture and
-  asserted on that run's exit code and stdout; the mechanics' usage guards,
-  invoked malformed so the guard answers before the adapter loads; the helpers
-  whose subject is an order of calls, driven by stub closures; a mechanic that
-  touches no host at all, driven end to end against a scratch directory under
-  the OS temp dir; a mechanic driven end to end over the Host fake,
-  `tests/host-fake.sh`, selected by `SHIP_HOST_ADAPTER`; the real GitHub adapter
-  behind a fake `gh` in front of PATH, where the Host fake would replace the
-  very function under test (`api-retry`, `request-review-readback`); and one
-  function of a real adapter, with its transport functions stubbed as shell
-  functions (`ado-comment-created-at`, `ado-reviews-substantive`,
-  `gh-run-denials`). None of them reaches a host. A behavioural claim about any
-  of them earns a case there.
+Every Reviewer reads this section, and so does the author self-reviewing.
 
-## Written standards
+**A finding needs its evidence.**
 
-- [GLOSSARY.md](../../GLOSSARY.md) is the glossary. Use its terms in prose,
-  issue titles and commit subjects, and avoid the synonyms each entry lists.
-- [docs/adr/](../adr/) records decisions. Contradicting one is surfaced, not
-  done silently.
-- The `writing-for-agents` skill governs every document here: context pointers,
-  the information hierarchy, leading words, pruning.
-- **A skill is self-contained: everything its run reads installs with it.** A
-  derived copy carries `skills/<name>/` and nothing above it, into a consumer
-  repo that has none of this repo's files, tracker or history. So a pointer
-  inside `skills/<name>/` names only a file under it, and a term the skill uses
-  is defined where the skill uses it. None of these stands in for that: a
-  relative link above the skill's directory, which dangles in every
-  `.claude/skills/<name>/`; a URL to this repo's `GLOSSARY.md`, ADRs, docs or
-  scripts, which a running agent does not fetch and which drifts from the pinned
-  copy; an issue or PR number, which is tracker state gone stale once it closes,
-  so the reason it records is written out instead; and "this repo" meaning the
-  source repo, which in an installed copy names the consumer. The source repo's
-  URL appears only as a destination (where to file an issue, an install line),
-  never as material to read. Maintainer-only facts (which gate enforces a file,
-  how an entry is trialled) live here or in `docs/agents/ship.md`, not in the
-  skill. `CHANGELOG.md` and code comments carry provenance and are exempt. The
-  `self-contained` gate holds the links and numbers; a bare `#N`, a borrowed
-  term and "this repo" are the reviewer's. PR #212 deviation 3 caught a relative
-  `CONTEXT.md` pointer, and setup-harness 0.5.0 shipped its vocabulary as a
-  `CONTEXT.md` URL and its frozen profile lines as an issue link.
-- [docs/agents/ship.md](../agents/ship.md) `## Public surface` enumerates what a
-  consumer repo depends on. **Grade a change to it before choosing the version
-  number**, because that number is what a consumer reads to decide whether
-  refreshing a derived copy is safe, alongside the separate schema check the
-  profile-structure bullet describes. While a skill is 0.x, every major grade
-  below lands as a minor
-  ([ADR 0005](../adr/0005-skills-stay-0x-until-public-release.md)):
-  - **Additive is a minor bump.** Something is added and nothing already there
-    changes meaning: a mechanic added, an optional flag or a stop reason added,
-    a key added to a mechanic's JSON, a line added to a `setup-skills` template
-    or to the `### Ship` block, the profile's own structure and `ship`'s
-    `composes` line excepted by the bullets below. A consumer that refreshes
-    keeps working without reading anything.
-  - **Breaking is a major bump.** Something already there is removed, renamed or
-    redefined: a mechanic or flag removed, a mechanic's JSON shape changed (a
-    key renamed, removed or retyped), a mechanic's CLI signature changed so that
-    an existing invocation stops working (a new required argument, an existing
-    option's meaning or arity changed), a vocabulary value's meaning changed,
-    the local-gate contract's flags, gate statuses or verdict changed, the same
-    two exceptions applying. This is what a consumer must read before
-    refreshing.
-  - **A reword that decides the same thing is a patch.** The test is whether
-    what the text decides changed, not whether the words did. A skill's
-    `description` is on the list because it decides when an agent reaches the
-    skill, so a reword that keeps every condition under which an agent picks the
-    skill is a patch; one that drops or adds a condition is the redefinition the
-    breaking bullet grades, because a consumer that refreshes then gets
-    different routing without reading anything, where every item the additive
-    bullet lists is inert until something uses it. The same two exceptions
-    apply. PR #201 shortened `cloud-ship`'s `description`, keeping every routing
-    clause and dropping a recitation of what `ship` does unattended, which is
-    `ship`'s own surface and unchanged; a reviewer read that as breaking for
-    three rounds before the patch bump held.
-  - **The profile's structure is graded elsewhere.** A heading or `Label:` line
-    added, renamed, removed or reordered, a `Label:` vocabulary changed, or the
-    `Schema:` number moved, takes the bump rule in
-    [skills/setup-skills/profile-schema.md](../../skills/setup-skills/profile-schema.md):
-    a major bump with a `## Schema N` entry, additive or not. Preflight refuses
-    a schema mismatch in either direction, so an added heading stops an
-    installed profile from running until `setup-skills` migrates it, which is
-    what makes it breaking where an added optional flag is not.
-  - **Adding to `composes` or moving a pin is breaking, removing is additive.**
-    The direction is inverted relative to every other item, so read it before
-    grading one. Adding a skill to `ship`'s `metadata.composes` line is a `ship`
-    major bump: preflight collects one
-    `skill missing: <skill>; run <install line>` reason per composed skill
-    absent from the consumer's `.claude/skills/`, so a consumer that refreshes
-    `ship` alone has its next run refused until it installs the new skill from
-    that skill's own source repo, the same failure shape as an added profile
-    heading. The refusal naming the install line is the mitigation, not a
-    downgrade. Moving a pin is breaking too: preflight collects
-    `skill off pin: <skill> at <ref>, pinned <sha>; run <install line>` for a
-    consumer whose lock records the old ref, until it runs that line. Moving
-    setup-skills' `triage` pin is not breaking: nothing refuses on it, and
-    setup-skills only prints the new line. Removing one is additive, a minor
-    bump, because nothing already installed stops working. PR #127 took a minor
-    bump for an added composed skill; it predates this rule and is not
-    precedent.
-  - **A change that touches no public surface is a patch.**
-  - **The grade is the PR title's conventional-commit type, and the diff never
-    carries the number.** The release run on main reads the squash subject,
-    which is the PR title, so a change graded minor is titled `feat(...)`, and
-    everything else takes whichever type describes it. A breaking change is
-    titled by the skill's release state
-    ([ADR 0005](../adr/0005-skills-stay-0x-until-public-release.md)). While the
-    skill is 0.x, `feat(...)`, which cuts the minor a 0.x break earns: the break
-    is stated in plain words in the commit body and under Special things to
-    note, and the title, every commit and the description carry no `!` and no
-    `BREAKING CHANGE:` footer. The PR releasing it at 1.0, and every breaking
-    change after, carries a `!` and the maintainer's `major` label. Grade first,
-    then pick the type to match, rather than the other way round: a
-    `feat(ship):` that only adds an optional flag is correctly minor, and a
-    rename of a JSON key is breaking whatever verb describes it, so on a 0.x
-    skill it is titled `feat(ship):` and not `fix(ship):`. The `bump-guard` leg
-    refuses a title that is not a Conventional Commit of a type the release run
-    reads, and one implying major without the label; the `version-lines` gate
-    refuses a diff that moves `metadata.version`. One title grades every skill
-    the diff touched, because `path_filters` route a commit to a skill by path
-    and cannot route a grade: **the title carries the highest grade across those
-    skills, and the others take that number.** A patch-sized reword riding along
-    with a `feat` is released minor, which is the cost of one subject, and
-    splitting the PR to avoid it is not worth a second review cycle.
+- **A claim about external behaviour cites a probe or a doc.** How a tool, an
+  API or a format behaves (a `gh` flag, an Azure DevOps response, a CommonMark
+  rule, a semantic-release option) is a finding only beside the exact command
+  you ran and its output, or a link to the current doc. Without either, phrase
+  it as a question; the author answers a question with one probe, where a wrong
+  finding costs a rebuttal round.
+- **A ShellCheck finding names its code and severity** (`SC2086`, `warning`),
+  since the severity decides whether it fails: a landed script fails at `style`,
+  and every other script only at `warning` and above, so a `style` or `info`
+  finding outside the landed scripts is no failure. Whether a gate failed is the
+  Local gate's JSON verdict to settle, never a reading of the diff: on a green
+  head, a gate failure is not a finding.
+- **A finding cites the rule by its bold lead.** The lead survives the next edit
+  to the file; a line number or a paraphrase does not.
+- **A finding anchors on `skills/<name>/`, never on `.claude/skills/<name>/`.**
+  The derived copy is byte-identical by gate, so one defect is one thread.
 
-## Conventions a reviewer should know
+**What the rules cover.** These are the scope facts reviewers most often got
+wrong; each sub-file's rule holds inside them.
 
-- **The source is `skills/`, and `.claude/skills/` carries install output
-  alone.** A change lands in `skills/<name>/` and reaches `.claude/skills/` only
-  through `npx skills add . --skill <name> --agent claude-code -y`.
-- **Mechanics print JSON and nothing else on stdout.** Evidence goes to stderr,
-  capped at the last 40 lines. Exit 0 success, 1 the operation failed, 2
-  tooling. The one call that prints something else is `--help`, which every
-  mechanic answers with its usage line on stdout and exit 0 through `ship_help`,
-  called before `ship_load_host` so the answer reaches no host. What a run makes
-  of all this is
-  [skills/ship/reference/mechanics.md](../../skills/ship/reference/mechanics.md);
-  the `contract` gate enforces it.
-- **No host CLI outside a named mechanic.** In this repo's code, `gh` and `az`
-  are called only from `skills/ship/scripts/host/<host>.sh`; a host write or
-  gating read no mechanic performs is a ship defect, not a prose fallback. A run
-  itself may make an informational read no mechanic covers through the host's
-  REST form, listed in its Run file's `## Direct reads`, and that is no
-  violation of this rule. One documented exception: a CI template under
-  `skills/setup-skills/reviewers/`, and this repo's own copy of one under
-  `.github/workflows/`, calls `gh` directly. It runs on a runner in a consumer
-  repo that has no mechanics checked out, so there is nothing to route through.
-  A second: `update-skills`' `heads` reads GitHub's public REST API with `curl`,
-  whatever the checkout's host, because the upstreams it reads are GitHub repos
-  and an Azure DevOps checkout has no GitHub adapter or credentials to route
-  through.
-- **Commit subjects** are conventional-commit prefixed and scoped to the skill:
-  `fix(ship):`, `docs:`, `feat(setup-skills):`.
-- **`.claude/skills/` is exempt from every rule here.** It is install output
-  from other people's repos and is refreshed rather than edited, so its prose
-  and its em dashes are not this repo's to fix.
-- **Every `mktemp` is paired with a trap.** `trap 'rm -f "$f"' EXIT` at script
-  top level, `trap 'rm -f "$f"; trap - RETURN' RETURN` for a file created inside
-  a function. An interrupted run between the `mktemp` and the `rm -f` otherwise
-  leaves the file in the system temp directory. The RETURN trap clears itself
-  because bash leaves it armed after the function returns, so it would fire
-  again in the caller, where the callee's `local` is out of scope and `set -u`
-  aborts the mechanic. The one exception is a function called from another
-  function that already holds a RETURN trap: a RETURN trap set in the callee
-  REPLACES the caller's rather than nesting under it, so arming one disarms the
-  caller's cleanup. The callee then takes an explicit `rm -f` instead, and only
-  where it has a single exit path for that `rm` to sit on; the comment says
-  which caller's trap it is protecting.
-- **PR body: seven sections, in order.** `## Why the change`,
-  `## Change outline`, `## Special things to note`, `## Needs attention`,
-  `## Verification`, `## Review`, `## Attribution`. Every body carries all
-  seven, template or not, because ship writes the headings it does not find; a
-  missing one is a finding, and `## Attribution` last is what keeps a section
-  rewrite from swallowing the footer.
-- **PR body: `## Change outline` carries a Shape.** A `diff` fence over a call
-  tree, control flow, pseudocode or component tree, under `## Change outline`,
-  which every body carries because ship writes the heading where no template
-  gives it. Text forms only; mermaid and HTML are out. One behavioural fence per
-  PR, about 15 lines or fewer, with a carrier file tree after it only where the
-  same edit lands in more than two files. Every node is a real symbol, each
-  tree's root node carries its file path, and no line carries a line number.
-  `Shape: none, mechanical (<kind>).` replaces the fence only where the
-  reviewer's question is "did the text change correctly", never where it is
-  "what does X now do"; silent absence is a finding either way.
-- **Everything under `skills/` targets Bash 3.2.** A mechanic and its host
-  adapter reach a consumer machine as a derived copy and run in whatever shell
-  that machine provides, macOS's system Bash included: no `mapfile` or
-  `readarray`, no `declare -A`, no `${var,,}` or `${var^^}`. The failure mode is
-  why it is a rule rather than a preference: the mechanics run
-  `set -uo pipefail` with no `set -e`, so on Bash 3.2 `mapfile` prints
-  `command not found`, execution continues, and the mechanic answers on whatever
-  the failed call left behind, which is nothing. A silent pass, where a
-  portability nit would be a loud one. The other constructs fail differently
-  (`declare -A` reports an invalid option, `${var,,}` is a bad substitution that
-  aborts the script), and none of them is caught by reading the diff on a
-  machine running Bash 5. Scripts under `scripts/` and `tests/` run in this repo
-  alone and may require Bash 4, behind a version guard; **precedent for a
-  mechanic comes from `skills/` alone**, whatever idiom a repo-local script
-  uses. The `contract` gate fails on the four constructs named here, in any
-  `*.sh` file under `skills/`; the rule is wider than the grep, so a Bash 4
-  feature it does not name is still a violation.
-- **A vocabulary the change extends is swept across the whole `skills/` tree,
-  sibling spellings included.** Grep the new term and the ones it sits beside
-  (`defer-to-ci` beside `deferred-to-ci`), across every file rather than the
-  ones the diff already opened; a stale spelling left in the copy nobody grepped
-  reads as the current rule to the agent that finds it first.
-- **History keeps the old word through a rename.** The sweep above stops at
-  history: a `CHANGELOG.md` entry, an ADR and a `retired-terms.md` row keep the
-  word as it was, since the row is what `update-skills` searches consumers for.
-- **A word a skill retires gets its `retired-terms.md` row in the same diff.**
-  The row is the version the PR title's grade cuts from the current
-  `metadata.version` (corrected in the same PR if the `major` label lands), the
-  retired word, and its replacement or `None.`; it is how `update-skills` finds
-  the word in consumer repos, so a retirement without its row survives in every
-  one of them.
-- **A rule-shaped prose change reaches every item it governs, one outcome
-  each.** Enumerate the items the rule names (every mechanic, every
-  verification, every trigger) and check the change lands on each exactly once;
-  an item the rewrite skipped, or one left carrying two answers, is where a
-  reviewer finds five rounds of work.
-- **Self-review edits reach every item.** The one-outcome-per-item rule above
-  binds a fix a finding proposes as it binds any rule-shaped change: the finding
-  names one item, and the next round finds its siblings still carrying the old
-  answer.
-- **A prose change to ship's SKILL.md or a reference file names what it removed
-  or folded next to what it added.** One bullet under the PR body's
-  `## Special things to note` names the lines the change cut, or folded into
-  another file or a mechanic's output, beside the lines it wrote. A retro tends
-  to add a clause without deleting one, so the prose a run reads grows unless
-  each change shows its direction; one that adds more than it removes says why
-  in that bullet. The `prose-budget` cap bounds SKILL.md alone, and this check
-  covers the reference files too.
-- **New pattern-matching code is tested against adversarial inputs.** Delimiters
-  inside the field, option groups, field-versus-line anchoring, and the path
-  where the tooling itself fails; ten lines of regex read as correct and answer
-  wrong on the input nobody wrote a case for.
-- **A new test is run once with the fix reverted, and confirmed red.** A test
-  written to prove a fix proves nothing until it has failed for the reason it
-  exists: revert the hunk, watch the case fail, restore it, watch it pass. PR
-  #182 shipped a case that was green with its fix reverted, because every create
-  it drove opened with an identity read that failed first, and the case survived
-  until it happened to be mutated. Neither reviewer can see this from a diff: a
-  vacuous assertion reads exactly like a sound one, so the proof is the author's
-  and belongs before the push. `scripts/revert-red.sh <test> <path>...` runs
-  that revert and exits 0 only when the test goes red; commit the test and the
-  fix first, since it reads committed state.
-- **A negated fixture accompanies a test that asserts on prose.** Assert on a
-  word the change introduced, and run the assertion once against the sentence
-  with its meaning negated: it must fail. An assertion on a word the old text
-  already held stays green whatever the change did.
-- **A stub that is asserted on records to a file on disk.** Any `$( )`, pipe or
-  `&` on the path between the code under test and the stub runs the stub in a
-  subshell, where `LAST_PATH=$1` dies with it and the assertion reads empty
-  whatever the function did: a test that fails on correct code, the expensive
-  direction. `pathlog=$(mktemp)`, paired with its trap, then
-  `api() { printf '%s\n' "$1" > "$pathlog"; ...; }` and assert on
-  `$(cat "$pathlog")`. Check how the code calls the stub before writing the
-  recorder.
-- **A test that asserts on a time reads the clock only through a stub it
-  controls.** A fixture whose result depends on the time of day is a defect
-  rather than a flake, so put a `date` stub on PATH and assert against the time
-  that stub returns. In the #192 run two `run-file` `+1d` fixtures went red in
-  the last minutes before midnight, one hardcoding 23:58 and one computing
-  now+2min, and the stub is what replaced them.
-- **A fix landed after review has its hunk re-read before the push.** Read the
-  changed lines back out of the file, not out of the reply you are about to
-  post; a fix applied to the wrong copy or applied by half costs a whole round
-  to discover.
-- **Commit messages** carry no em dashes either. The `house-style` gate reads
-  files, not messages, so this one is on the author.
+- **Portability scope.** The Bash 3.2 rule in shell.md binds `skills/` alone,
+  because only it reaches consumer machines. Scripts under `scripts/` and
+  `tests/` run in this repo alone and may require Bash 4, behind a version
+  guard; they are not held to consumer portability.
+- **Quoting exceptions.** Bash never word-splits or globs the right side of an
+  assignment (`x=$y`, `local x=$1`), the word of a `case`, or an operand inside
+  `[[ ]]` other than the right side of `=`, `==`, `!=` and `=~`, where an
+  unquoted expansion is a pattern. An unquoted expansion in these places is not
+  a finding.
+- **The clock exception.** An elapsed-time bound proving a watchdog or timeout
+  fired may read the real clock: its result does not depend on the time of day.
+  The stub rule binds only results that do.
+- **Split code spans.** An inline code span broken across a line wrap in
+  hard-wrapped prose is house style, not a rendering defect.
 
-## Adding a skill this repo writes
+## Routing by path
 
-The set of skills this repo writes is the lock's `source: "."` entries, in
-`skills-lock.json`. Four sites name that set, and each needs a hand edit:
+Always read [standards/release.md](standards/release.md), the glossary and
+ADRs, the version grade, the PR title and body, commits, and adding a skill this
+repo writes: every PR has a title, a body and commits. Then read each file below
+whose condition a path in the diff meets. A Reviewer skips
+[standards/gates.md](standards/gates.md), what the Local gate and the CI leg
+already enforce, since a green gate settles its rules; the author reads it
+before pushing, as does a Reviewer whose finding would turn on what a gate
+checks.
 
-1. The lock entry: add `--skill <name>` to the Refresh line in CLAUDE.md's
-   `### Ship` block and run it, which writes the entry and the derived copy.
-2. The release configuration, `.release/<name>.toml`.
-3. The release workflow, `.github/workflows/semantic-release.yml`: its `SKILLS`
-   list and the release-commit conditions above it.
-4. The install lines in the skill's `SKILL.md`: its own
-   `npx skills add Gharib89/skills --skill <name> --agent claude-code -y`, and a
-   pinned line for each skill it composes.
-
-The `derived-copies` gate fails until each `skills/<name>/` has its lock entry,
-derived copy, release configuration and both places in the release workflow;
-`scripts/pin-check.sh` holds the fourth site's pinned lines to the lock.
+- A diff touching a shell script (`*.sh`, or a shell block in a workflow):
+  [standards/shell.md](standards/shell.md), the mechanic contract and its
+  header, Bash 3.2, traps, host calls, quoting, failed reads and matching.
+- A diff touching `tests/` or a `*.test.sh`:
+  [standards/tests.md](standards/tests.md), proving a test, fixtures, fakes and
+  stubs.
+- A diff touching Markdown (`*.md`: a skill's prose, a template, the glossary,
+  an ADR, a doc): [standards/prose.md](standards/prose.md), self-contained
+  skills, runnable recipes, vocabulary, claims and rule-shaped changes.

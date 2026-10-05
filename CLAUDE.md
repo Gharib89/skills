@@ -27,11 +27,11 @@ repo writes: its source is `skills/<name>/`, and `.claude/skills/<name>/` is its
 derived copy, refreshed from it. Every other entry is installed from the
 upstream its `source` names, at the lock's `ref` (the skills ship composes come
 from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`), and lives
-only under `.claude/skills/`. Adding a skill
-this repo writes touches the sites in the checklist at the end of
-`docs/contributing/coding-standards.md`. Refresh at project scope, without `-g`;
-ship's refresh chains its preflight, so a profile the refreshed ship no longer
-reads is reported now, not on the next `/ship`:
+only under `.claude/skills/`. Adding a skill this repo writes touches the sites
+in the checklist under `## Adding a skill this repo writes` in
+`docs/contributing/standards/release.md`. Refresh at project scope, without
+`-g`; ship's refresh chains its preflight, so a profile the refreshed ship no
+longer reads is reported now, not on the next `/ship`:
 
 ```sh
 npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --agent claude-code -y \
