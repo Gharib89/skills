@@ -266,7 +266,7 @@ call_start=$(date +%s)
 key=on_head; [ -z "$since" ] || key=all
 readf=$(mktemp); SHIP_HTTP_STATUS_FILE=$(mktemp)
 trap 'rm -f "$readf" "$SHIP_HTTP_STATUS_FILE"' EXIT
-fails=0; lost=""; ans=""
+fails=0; lost=""; ans=""; sha=""; mergeable=unknown
 
 # One of the loop's host reads, through `ship_poll_read`: 0 answered (the answer
 # in $ans), 3 no answer yet, which `miss` counts; a refusal that carries an HTTP

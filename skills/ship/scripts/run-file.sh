@@ -170,10 +170,11 @@ unflipped() { # unflipped <n>
 # run. For a phase that ran, the recovery is open-then-close: `close` needs it
 # open, and `skip` would record it as not run. A phase that did not run is
 # skipped.
-# <verb> is the flip the caller retries: `open`, or `next` where another phase is
-# open and `open` over it would be refused.
+# <verb> is the recovery flip: `open`, or `next` where another phase is open and
+# `open` over it would be refused. The retry is `open` either way: once the gap
+# is closed no phase is open, which `next` refuses.
 refuse_gap() { # refuse_gap <verb> <gap> <n>
-  ship_fail "phase $2 is neither closed nor skipped. If it ran: \`run-file $1 $2\`, \`run-file close $2\`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: \`run-file skip $2 <reason>\`. Then retry \`run-file $1 $3\`, which names the next such phase if any."
+  ship_fail "phase $2 is neither closed nor skipped. If it ran: \`run-file $1 $2\`, \`run-file close $2\`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: \`run-file skip $2 <reason>\`. Then retry \`run-file open $3\`, which names the next such phase if any."
 }
 
 # Every line the mechanic writes is rendered here, so the flips and `init`'s

@@ -18,6 +18,8 @@ check "a bare Legs: with one leg per line, ended by the next label" lint,test \
 check "a blank line ends the list" lint \
   "$(legs "${ci}Legs:"$'\nlint: ruff check\n\nprose: not a leg')"
 check "Legs: None. names no leg" '' "$(legs "${ci}Legs: None."$'\nNo-checks legal: yes')"
+check "a bare Legs: with indented entries, the indent not part of the name" test,lint \
+  "$(legs "${ci}Legs:"$'\n  test: npm test\n\tlint: ruff\nPush policy: Default.')"
 ship_profile_legs "${ci}Legs: None." >/dev/null; check_rc "None. is an answer" 0 $?
 ship_profile_legs "${ci}Push policy: Default." >/dev/null; check_rc "no Legs: line is unknown" 1 $?
 check "a Legs: line under another heading is prose" '' \

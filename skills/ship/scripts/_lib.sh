@@ -1002,7 +1002,7 @@ ship_no_checks_legal() { # <profile-body>
 # prints nothing; a section with no `Legs:` line fails, which is "unknown", not
 # "none".
 ship_profile_legs() { # <profile-body>
-  awk 'function emit(  n) { n = index($0, ":"); if (n > 1) print substr($0, 1, n - 1) }
+  awk 'function emit(  n) { sub(/^[ \t]+/, ""); n = index($0, ":"); if (n > 1) print substr($0, 1, n - 1) }
     /^## / { f = ($0 ~ /^## CI[ \t\r]*$/); on = 0; next }
     !f { next }
     /^Legs:/ { seen = 1; on = 1; sub(/^Legs:[ \t]*/, ""); sub(/[ \t\r]+$/, "")

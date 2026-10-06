@@ -540,7 +540,7 @@ check "next onto the phase already open is refused" "phase 1 is already open" "$
 check "next over an earlier phase never flipped names it, as open does" \
   "phase 2 is neither closed nor skipped." "$(err next 4 --file "$z" | cut -c1-38)"
 check "next over a gap names the gap with the next recovery" \
-  'phase 2 is neither closed nor skipped. If it ran: `run-file next 2`, `run-file close 2`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: `run-file skip 2 <reason>`. Then retry `run-file next 4`, which names the next such phase if any.' \
+  'phase 2 is neither closed nor skipped. If it ran: `run-file next 2`, `run-file close 2`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: `run-file skip 2 <reason>`. Then retry `run-file open 4`, which names the next such phase if any.' \
   "$(err next 4 --file "$z")"
 check_rc "a refused next exits 1" 1 "$(rc next 4 --file "$z")"
 check "a refused next wrote nothing, not even the close" "$held" "$(cat "$z")"

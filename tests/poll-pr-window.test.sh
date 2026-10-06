@@ -119,6 +119,14 @@ check_rc "one read that gave no answer mid-window keeps the poll going" 0 "$rc"
 check "and the round still lands" since "$(jq -r .landed_by <<<"$out")"
 check "the failed read was read again" 3 "$(n host_pr_get)"
 
+# The first read gives no answer and the call's cap is already spent: the
+# pending answer is still JSON, with no head read yet.
+reset
+fail host_pr_get 1
+out=$(CAP=0 poll --since "$since" 2>/dev/null); rc=$?
+check_rc "a cap spent before the first answered read is pending, exit 1" 1 "$rc"
+check "and its answer is JSON saying so" pending "$(jq -r .status <<<"$out" 2>/dev/null)"
+
 # Two in a row, an answer, two more: the count restarts at an answered pass.
 reset
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
