@@ -446,7 +446,9 @@ gate_phase4() {
     || ship_tooling "cannot read the checkout's diff against $mb"
   untracked=$(git -C "$top" ls-files -z --others --exclude-standard | tr '\0' '\n') \
     || ship_tooling "cannot list the checkout's untracked files"
-  paths=$(printf '%s\n%s\n' "$tracked" "$untracked" | awk 'NF && !seen[$0]++')
+  # The installed copy under .claude/skills mirrors its source, which carries the
+  # evidence, so it is not a second set of paths to answer for.
+  paths=$(printf '%s\n%s\n' "$tracked" "$untracked" | awk 'NF && !seen[$0]++ && $0 !~ /^\.claude\/skills\//')
 
   while IFS= read -r p; do
     [ -n "$p" ] || continue

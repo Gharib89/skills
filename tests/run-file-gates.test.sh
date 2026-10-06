@@ -242,6 +242,10 @@ reset; put tests/new.test.sh 'grep -q a b'; put docs/x.md 'grep -q a b'
 run4; add 'Reverted-fix: tests/new.test.sh: red'; close 4
 admitted "a grep in a test script or a non-script needs no near-miss table"
 
+reset; put .claude/skills/x/scripts/m.sh 'grep -q foo "$f"'
+run4; close 4
+admitted "a matcher in the installed copy under .claude/skills needs no table: its source carries it"
+
 reset; put scripts/m.sh 'grep -q foo "$f"'; g add scripts/m.sh; g commit -q -m 'add m'
 run4; held=$(cat "$rf"); close 4
 refused "a matcher committed on the branch" 'scripts/m.sh has a new pattern matcher'
