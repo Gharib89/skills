@@ -1,4 +1,4 @@
-# Phases 1 and 2: understand, classify, implement (detail)
+# Phases 1, 2 and 4: understand, implement, self-review (detail)
 
 ## Contents
 
@@ -8,6 +8,10 @@
 - [Verify the spec's external-system claims before building on them](#verify-the-specs-external-system-claims-before-building-on-them)
 - [Phase 1 detail: spec precedence](#phase-1-detail-spec-precedence)
 - [Phase 1 detail: anchors the issue cites](#phase-1-detail-anchors-the-issue-cites)
+- [Phase 1 detail: a criterion no mechanic can perform](#phase-1-detail-a-criterion-no-mechanic-can-perform)
+- [Phase 4: triage and depth checks](#phase-4-triage-and-depth-checks)
+- [Phase 4 evidence lines](#phase-4-evidence-lines)
+- [Consult current docs](#consult-current-docs)
 
 ## Phase 2: classify, then implement test-first
 
@@ -69,7 +73,9 @@ phases 4 and 7 send their own out-of-scope findings back here.
   shares three or more tokens with yours, and each candidate is **read**: the
   same finding is linked in the deviations log rather than refiled, and
   `comment-issue` posts any evidence this run adds to it; a different one is
-  refiled with `--distinct-from`.
+  refiled with `--distinct-from`. A find citing a path this PR already changes
+  is refused with `in_diff`, since it is the first disposition's;
+  `--outside-scope "<reason>"` files it where the reason holds.
 - **Stop `mis-specified`**, where the find shows the issue itself is wrong.
 
 The merge summary lists every issue filed and every candidate linked.
@@ -113,3 +119,68 @@ wins:
 
 A contradiction that leaves the issue nothing to build is the `mis-specified`
 stop instead.
+
+## Phase 1 detail: a criterion no mechanic can perform
+
+A criterion that asks for a host action no mechanic performs (a repo setting, a
+branch protection, an installed app) is one the run cannot meet, and a line in
+the merge summary saying so is how it gets lost. Unattended, rewrite it like an
+anchor above, through `update-issue-body`, restated as what the run can deliver
+(the file, or the instruction naming the action), the original kept in
+`<details>` and the substitution in the deviations log. Attended, ask the human
+which way before building.
+
+## Phase 4: triage and depth checks
+
+**Auto-triage** every finding: harden rather than rip out capability, verify
+nits against the pinned versions, reject known non-issues, fix the valid ones,
+and record a one-line disposition per finding. Two rails on rejecting: a claim
+about **what exists in the repo** is checked against `origin/HEAD` rather than
+the worktree, which may predate a merge; and a finding's **evidence and its
+claim are separate**, so a reviewer citing the wrong commit for a real primitive
+is still right. A valid finding outside the issue is an adjacent find.
+
+Then read the diff yourself against the depth checks in the coding-standards
+file the Standards axis reads, and the sub-files it routes to, by their leading
+words: a vocabulary the change extends, a rule-shaped prose change, new
+pattern-matching code, a new test run with its fix reverted, removed lines with
+no new home, a fix landed after review, and any the repo adds beside them.
+Reviewer rounds find these otherwise, serially, at the cost of most of a run's
+wall time, and the reverted-fix one escapes them entirely.
+
+## Phase 4 evidence lines
+
+`run-file close 4` refuses until the Run file carries these lines, each with an
+optional `- ` prefix, written as its check settles:
+
+- **Reverted-fix**, one per test file the diff adds or changes:
+  `Reverted-fix: <test path>: red`, once `revert-red <test> <path>...` exits 0
+  (the test went red with the fix reverted; commit the test and the fix first,
+  it reads committed state), or `Reverted-fix: <test path>: n/a: <reason>` where
+  there is no fix to revert. Exit 1 means the test stayed green: it proves
+  nothing, so fix the test.
+- **Dropped**, one per block `dropped-lines` reports, removed lines in blocks of
+  three or more with no matching added line anywhere in the diff:
+  `Dropped: <file>:<line> re-homed at <path>`, or
+  `Dropped: <file>:<line> dropped on purpose: <why>`.
+- **Near-miss**, for each script whose added lines hold a new pattern matcher, a
+  line per kind, the test path holding a case that must be refused:
+  `Near-miss: <script>: <kind>: <test path>`. The kinds are `partial-token` (the
+  token inside a longer word), `quoted`, `indented`, `unbalanced` (an opener
+  with no closer) and `unreadable` (the input the matcher reads cannot be read).
+  A kind with no case says why, `Near-miss: <script>: <kind>: n/a: <reason>`,
+  and one `Near-miss: <script>: n/a: <reason>` covers all five.
+- **Probe**, one per self-review decline `Declined: <ref>: <reason>` whose
+  reason claims behaviour (already handled, already covered, can't happen, never
+  happens, closes at merge): `Probe: <ref>: <command> => <output>`, the command
+  you ran and the output it printed. A decline that claims no
+  behaviour needs none.
+
+## Consult current docs
+
+While implementing or triaging findings (phases 2, 4 and 7), verify API claims
+against **current** docs through the `find-docs` skill and the extra `Sources:`
+the profile names. For every library on the profile's `Pinned:` line, read the
+installed version from the repo's manifest and confirm the claim against that
+version before acting on it; a remembered API the installed version lacks is a
+regression.

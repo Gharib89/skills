@@ -45,17 +45,20 @@ local-gate contract.
 | `run-file init` | the required first action after `prepare` |
 | `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
 | `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head |
+| `run-file grade` | 2, the version grade `open-pr` and `update-pr-title` hold the title type to |
 | `preflight` | 0 |
 | `read-issue` | 0 |
 | `isolate` | 0 |
 | `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue` | 2, 4, 7; 9 with `--repo`, per Ship defect draft, on the human's word |
+| `dropped-lines` | 4, the removed blocks with no new home, each owed a `Dropped:` line |
+| `revert-red` | 4, a new test run with its fix reverted, each owed a `Reverted-fix:` line |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr` | 6 |
 | `reflect` | 6 |
-| `update-pr-title` | 6, 9 |
-| `read-pr` | 6 and 7, reading a PR back after a title or body write |
+| `update-pr-title` | 6, 7, 9 |
+| `read-pr` | 6 and 7, reading a PR back after a title or body write; its `outline_missing` is 7's check on the Change outline |
 | `poll-pr` | 7, 8 |
 | `request-review` | 7 |
 | `comment-issue` | 2, 4, 7 |
@@ -132,10 +135,14 @@ tool call. A `poll-pr` or `ci-wait` window that outlasts it answers `status:
 "pending"` with a `cursor`, exit 1, and the same command plus `--cursor <c>`,
 with no `--since` and no `--timeout`, resumes that window with its landing rule
 and deadline; repeat until an answer arrives without `pending`. A pending answer
-is not a closed window, so never read it as `silent`. Run either wait in the
-Bash tool's background mode when the run has other work meanwhile, its
-completion notification resuming the run, and start `ci-wait <pr>` that way at
-PR open, alongside the first reviewer poll, since CI runs from there. Inside a
-window a read that fails with no HTTP status is no answer yet: three in a row,
+is not a closed window, so never read it as `silent`. Both waits hold for the
+expected head, `--sha <sha>` else the worktree's `HEAD` when it is on the PR's
+branch, so a read straight after a push never grades the previous head: a
+`timeout` whose `head_sha` is not that head means the host never showed the
+push, so confirm it landed, then re-run. Run either wait in the Bash tool's
+background mode when the run has other work meanwhile, its completion
+notification resuming the run, and start `ci-wait <pr>` that way at PR open,
+alongside the first reviewer poll, since CI runs from there. Inside a window a
+read that fails with no HTTP status is no answer yet: three in a row,
 or the deadline passing while reads still fail, end the call with exit 2, and a
 read the host refused with a status ends it at once.

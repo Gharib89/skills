@@ -55,6 +55,12 @@ right. Small lane: at most one requested round. A lint or flake fix after the
 loop ends earns no new request; an on-push reviewer re-reads it on its own, so
 disposition that round, which opens no further one.
 
+**A cap round whose fixes changed the tree gets one local review before the
+merge gate**: one `code-review` subagent, Standards axis only, over the
+fix-only diff, the commits pushed since the last head a reviewer read. Its
+findings take the dispositions above; `Cap:` is unchanged and no host round is
+requested.
+
 ## Reading a round
 
 `poll-pr` returns the reviewer's rounds, each graded `substantive`, threads with
@@ -104,8 +110,9 @@ observed where no round was admitted.
   body finding with no thread. A finding about the PR body is fixed through the
   writes [pr-body.md](pr-body.md) names.
 - **Write each round to the Run file as you disposition it**, one line per
-  finding with its disposition, and one per round whose `reviewer_run.denied`
-  is numeric, with the run URL: the exit's counts come from them.
+  finding with its disposition, one per round whose `reviewer_run.denied`
+  is numeric, with the run URL, and the round's `Round:` line (formats under
+  The exit): the exit's counts come from them.
 
 ## The exit
 
@@ -141,12 +148,29 @@ land after one that did, or `<N> denied calls (run <url>[, run <url>…])`, N
 summing the numeric `reviewer_run.denied` over the rounds, each non-zero round's
 run URL listed, and nothing added for a total of 0 or no numeric count.
 
+Each reviewer's rounds and stop go in the Run file as lines, which `run-file
+close 7` requires of every reviewer on the phase-7 row, one `Round:` per round
+(`not reviewed` needs none) and one `Stop:`:
+
+```
+Round: <reviewer> <n>: <text>
+Stop: <reviewer>: <reason>
+```
+
+`<text>` is the round's outcome in a line. `<reason>` is one of `cap` (`Cap:`
+spent), `tree unchanged` (a round's dispositions changed no file, so a further
+round would read the same tree), `small lane` (the lane's one requested round),
+`auto-once` (the reviewer fires once, on PR open) or `not reviewed` (no round
+landed).
+
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each
 file carrying its section rebuilt entire: `"Special things to note"` where the
 rounds grew the deviations log, `"Needs attention"` where a round filed or
-linked an issue or met a Ship defect, and `Review` last, so `read-pr` reads all
-three back at once.
+linked an issue or met a Ship defect, `"Change outline"` where `read-pr`'s
+`outline_missing` is non-empty or the rounds changed the change's shape, and
+`Review` last. Then the title is checked against the recorded `Grade:`, a wrong
+type fixed with `update-pr-title`, and `read-pr` reads everything back at once.
 
 ## Fallbacks
 
@@ -171,8 +195,11 @@ Brand-level detail lives in the host adapters; these show the mapping only.
 - **GitHub Copilot as `on-request`**: requested under one login, reviewing under
   another, its check run under a third; the mechanics match each surface to its
   own name. The `copilot_code_review` rule's `review_on_push` fixes the trigger
-  (`true` is `on-push`). Out of quota, the host queues nothing and the request
-  does not read back: `not reviewed: never-queued`.
+  (`true` is `on-push`). Out of quota, the host answers with a quota notice in
+  place of a round: `poll-pr` reads it as `refused_by` and the reviewer exits
+  `not reviewed: blocked`, with no request sent where the notice is already
+  there at round 1's first poll. `never-queued` is the cause only where a sent
+  request does not read back.
 - **CodeRabbit as `on-push`**: reviews every push; `Resolve:` is its resolve
   comment, posted once every thread carries a reply.
 - **Claude Code on GitHub Actions as an `on-request` fallback**: a comment of
