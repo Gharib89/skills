@@ -111,8 +111,8 @@ textarea:disabled, input:disabled { opacity: .6; }
 .carried { font-size: 14px; color: var(--fg-body); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .opts { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
 .opt { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; background: var(--page); border: 1px solid var(--line); border-radius: var(--r-sm); cursor: pointer; line-height: 1.4; }
-.opt:hover, .opt:has(input:checked) { border-color: var(--fg-label); }
-.opt:has(input:checked) { background: var(--card); }
+.opt:hover { border-color: var(--line-strong); }
+.opt:has(input:checked) { border-color: var(--fg-label); background: var(--card); }
 .opt.defer:has(input:checked) { border-color: var(--park); background: var(--park-wash); }
 .opt input[type="radio"] { margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--accent); }
 .opt > span { display: grid; gap: 4px; min-width: 0; }
