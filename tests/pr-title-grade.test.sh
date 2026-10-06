@@ -91,6 +91,23 @@ reset; grade minor
 opn none "fix: x" >/dev/null; rc=$?
 check_rc "open-pr: issue none is never checked" 0 "$rc"
 
+# One shape for the line `run-file grade` writes and this reads: an optional "- "
+# before `Grade:`, and blanks after the heading.
+reset; grade none; mkdir -p "$repo/.git/ship/ship-7"
+printf '# Run 7\n\n## Grade\n\n- Grade: minor\n' > "$runfile"
+out=$(opn 7 "fix(ship): a small thing"); rc=$?
+check_rc "open-pr: a bulleted - Grade: minor line refuses a fix title" 1 "$rc"
+check "open-pr: and names the recorded grade" \
+  'title type fix grades patch, below the recorded Grade: minor; retitle as feat(...)' "$(jq -r .error <<<"$out")"
+reset
+printf '# Run 7\n\n## Grade \t\n\nGrade: minor\n' > "$runfile"
+opn 7 "fix(ship): a small thing" >/dev/null; rc=$?
+check_rc "open-pr: a ## Grade heading with trailing blanks is still read" 1 "$rc"
+reset
+printf '# Run 7\n\n## Notes\n\n- Grade: minor\n' > "$runfile"
+opn 7 "fix(ship): a small thing" >/dev/null; rc=$?
+check_rc "open-pr: a bulleted Grade line outside the section is not read" 0 "$rc"
+
 # --- update-pr-title -------------------------------------------------------
 # The read-back (second host_pr_get) answers with the title the call sets.
 pr_get() { # <head_ref> <old title> <new title>

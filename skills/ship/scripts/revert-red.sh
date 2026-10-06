@@ -5,27 +5,32 @@
 # A test written to prove a fix proves nothing until it has been red without the
 # fix, and a vacuous assertion reads exactly like a sound one in a diff. This
 # does the revert in a temp worktree at HEAD, so the working tree is never
-# touched: each <path> is restored from the merge base with origin/HEAD, or
-# deleted where the fix added it, and the test runs there. It reads committed
-# state, so commit the test and the fix first.
+# touched: the test runs once on the unreverted tree, then each <path> is
+# restored from the merge base with origin/HEAD, or deleted where the fix added
+# it, and the test runs again. A test that is not green at HEAD proves nothing
+# when it goes red later, so that first run is the precondition. It reads
+# committed state, so commit the test and the fix first.
 #
 # The test runs behind a `gh` and an `az` stub this mechanic writes itself, so it
 # needs nothing from the repo it runs in: a revert can take out what swaps in a
 # test's Host fake, and the reverted tree would then call the real host with the
 # developer's own credentials. Each stub records its call and exits 127, the
-# shell's "command not found". A run that reaches a host is exit 2, since the red
-# it shows is the stub's 127.
+# shell's "command not found". A run that reaches a host, at HEAD or reverted, is
+# exit 2, since the red it shows is the stub's 127.
 #
 #   revert-red <test> <path>...
 #
 # <test> and each <path> are files relative to the repo root; a directory is refused.
+# <test> runs under bash, so it is a `.sh` file: another runner's test is refused
+# (revert the path by hand and record `Reverted-fix: <test>: n/a: <reason>`).
 # stdout: {test, paths, red}   red: true when the test failed on the reverted tree
-# stderr: the test's last 40 lines when it went red, the evidence it failed; on a
-#   green run, one line saying the test does not prove the fix
+# stderr: the test's last 40 lines when it went red, the evidence it failed (or,
+#   exit 2, when it was already red at HEAD); on a green run, one line saying the
+#   test does not prove the fix
 # exit: 0 the test went red on the reverted tree · 1 it stayed green, so it does
 #       not prove the fix (the verdict, red false, is still on stdout) · 2 tooling,
-#       a bad call, or a reverted tree that reached a host, none of which is a
-#       verdict
+#       a bad call, a non-`.sh` test, a test already red at HEAD, or a tree that
+#       reached a host, none of which is a verdict
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: revert-red <test> <path>...'
@@ -45,6 +50,13 @@ root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$root" ] || ship_tool
 cd "$root" || ship_tooling "cannot enter $root"
 tip=$(ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
 base=$(git merge-base HEAD "$tip" 2>/dev/null) || ship_tooling "no merge base between HEAD and $tip"
+
+# bash reads any other runner's test as a syntax error, which is red whatever the
+# fix does.
+case $test_path in
+  *.sh) ;;
+  *) ship_tooling "revert-red runs shell tests (a .sh file); for another runner revert the path by hand and record \`Reverted-fix: <test>: n/a: <reason>\`" ;;
+esac
 
 # A test bash cannot open exits non-zero and would read as red; a mistyped path
 # reverts nothing, so the test stays green and would read as vacuous.
@@ -74,6 +86,23 @@ for cli in gh az; do
     && chmod +x "$tmp/stub/$cli" || ship_tooling "cannot write the $cli stub"
 done
 
+# run_test <label>: the test in the temp worktree, its output in $log, its exit
+# status in $rc. A run that reached a host is exit 2 whatever the test answered.
+run_test() {
+  (cd "$wt" && PATH="$tmp/stub:$PATH" SHIP_REVERT_HOSTLOG="$hostlog" bash "$test_path") >"$log" 2>&1
+  rc=$?
+  if [ -s "$hostlog" ]; then
+    ship_tooling "$(echo "revert-red: $test_path reached a host $1:"; head -n 20 "$hostlog" | sed 's/^/    /')"
+  fi
+}
+
+# A test red at HEAD reads red with the fix reverted too, whatever the fix does.
+run_test "at HEAD"
+if [ "$rc" -ne 0 ]; then
+  tail -n 40 "$log" >&2
+  ship_tooling "$test_path is red at HEAD, so a red with the fix reverted proves nothing"
+fi
+
 for p in "$@"; do
   if git cat-file -e "$base:$p" 2>/dev/null; then
     git -C "$wt" checkout -q "$base" -- "$p" || ship_tooling "cannot restore $p from $base"
@@ -82,11 +111,7 @@ for p in "$@"; do
   fi
 done
 
-(cd "$wt" && PATH="$tmp/stub:$PATH" SHIP_REVERT_HOSTLOG="$hostlog" bash "$test_path") >"$log" 2>&1
-rc=$?
-if [ -s "$hostlog" ]; then
-  ship_tooling "$(echo "revert-red: $test_path reached a host with the fix reverted:"; head -n 20 "$hostlog" | sed 's/^/    /')"
-fi
+run_test "with the fix reverted"
 
 list=$(printf '%s, ' "$@")
 list=${list%, }

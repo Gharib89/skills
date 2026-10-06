@@ -96,8 +96,8 @@ observed where no round was admitted.
 
 ## Triage, fix, reply
 
-- **Triage, don't apply**, at the judgment tier, with phase 4's definition and
-  its two rejection rails. Check the reviewer's `Instructions:` file when a
+- **Triage, don't apply**, at the judgment tier, with [phase 4's definition and
+  its two rejection rails](implement.md#phase-4-triage-and-depth-checks). Check the reviewer's `Instructions:` file when a
   finding contradicts it, and cite it when declining. A valid finding outside
   the issue is an adjacent find.
 - **Batch fixes into one push per round.** A fix to a rule goes to every copy of
@@ -112,7 +112,7 @@ observed where no round was admitted.
 - **Write each round to the Run file as you disposition it**, one line per
   finding with its disposition, one per round whose `reviewer_run.denied`
   is numeric, with the run URL, and the round's `Round:` line (formats under
-  The exit): the exit's counts come from them.
+  [The exit](#the-exit)): the exit's counts come from them.
 
 ## The exit
 
@@ -161,7 +161,9 @@ Stop: <reviewer>: <reason>
 spent), `tree unchanged` (a round's dispositions changed no file, so a further
 round would read the same tree), `small lane` (the lane's one requested round),
 `auto-once` (the reviewer fires once, on PR open) or `not reviewed` (no round
-landed).
+was dispositioned: none landed, a fallback was not invoked because its primary
+reviewed, or a round landed whose threads could not be read, which keeps its
+`Round:` line too).
 
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each
@@ -195,11 +197,11 @@ Brand-level detail lives in the host adapters; these show the mapping only.
 - **GitHub Copilot as `on-request`**: requested under one login, reviewing under
   another, its check run under a third; the mechanics match each surface to its
   own name. The `copilot_code_review` rule's `review_on_push` fixes the trigger
-  (`true` is `on-push`). Out of quota, the host answers with a quota notice in
-  place of a round: `poll-pr` reads it as `refused_by` and the reviewer exits
-  `not reviewed: blocked`, with no request sent where the notice is already
-  there at round 1's first poll. `never-queued` is the cause only where a sent
-  request does not read back.
+  (`true` is `on-push`). Out of quota, the request still reads back, then the
+  host answers with a quota notice in place of a round: `poll-pr` reads it as
+  `refused_by` and the reviewer exits `not reviewed: blocked`, with no second
+  request sent. `never-queued` is the cause only where the request does not
+  read back.
 - **CodeRabbit as `on-push`**: reviews every push; `Resolve:` is its resolve
   comment, posted once every thread carries a reply.
 - **Claude Code on GitHub Actions as an `on-request` fallback**: a comment of

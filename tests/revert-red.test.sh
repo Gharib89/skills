@@ -55,6 +55,14 @@ cat > "$repo/tests/unrelated.test.sh" <<'EOF'
 cd "$(dirname "$0")/.." || exit 2
 [ -f lib.sh ]
 EOF
+# Two more: a non-shell test, which bash reads as red whatever the fix does, and a
+# shell test already red at HEAD, whose red says nothing about the reverted path.
+echo 'def test_answer(): assert True' > "$repo/tests/answer_test.py"
+cat > "$repo/tests/redhead.test.sh" <<'EOF2'
+cd "$(dirname "$0")/.." || exit 2
+echo MARKER-RED-AT-HEAD >&2
+exit 1
+EOF2
 git -C "$repo" add -A && git -C "$repo" commit -qm test
 
 # <args>...: the script's exit code, stdout, or stderr, run from the fixture repo.
@@ -103,6 +111,23 @@ check "and the call is named on stderr" \
   "$(err_of tests/hostcall.test.sh lib.sh | grep '^    ')"
 check "and as a JSON error with no verdict on stdout" \
   "true" "$(out_of tests/hostcall.test.sh lib.sh | jq -r 'has("error") and (has("red") | not)')"
+
+# A failed read is never a verdict: bash running a non-shell test, or a test that
+# is red before anything is reverted, reads red whatever the fix does.
+check_rc "a non-shell test is refused, not read as red" \
+  2 "$(rc_of tests/answer_test.py lib.sh)"
+check "and the refusal names the .sh rule and the n/a escape" \
+  "revert-red runs shell tests (a .sh file); for another runner revert the path by hand and record \`Reverted-fix: <test>: n/a: <reason>\`" \
+  "$(out_of tests/answer_test.py lib.sh | jq -r .error)"
+check_rc "a test red at HEAD is refused, not read as red" \
+  2 "$(rc_of tests/redhead.test.sh lib.sh)"
+check "and the error says a red with the fix reverted proves nothing" \
+  "tests/redhead.test.sh is red at HEAD, so a red with the fix reverted proves nothing" \
+  "$(out_of tests/redhead.test.sh lib.sh | jq -r .error)"
+check "and the HEAD run's own output is the evidence on stderr" \
+  "MARKER-RED-AT-HEAD" "$(err_of tests/redhead.test.sh lib.sh | grep MARKER)"
+check "and no verdict is on stdout" \
+  "true" "$(out_of tests/redhead.test.sh lib.sh | jq -r 'has("error") and (has("red") | not)')"
 
 # The stubs are the mechanic's own: copied to a directory with no tests/ beside
 # it, which is what a consumer's skills/ship/scripts is, it still stubs the host.

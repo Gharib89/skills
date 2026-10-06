@@ -128,13 +128,16 @@ the merge summary saying so is how it gets lost. Unattended, rewrite it like an
 anchor above, through `update-issue-body`, restated as what the run can deliver
 (the file, or the instruction naming the action), the original kept in
 `<details>` and the substitution in the deviations log. Attended, ask the human
-which way before building.
+which way before building; an answer that the issue is wrong is the
+`mis-specified` stop.
 
 ## Phase 4: triage and depth checks
 
 **Auto-triage** every finding: harden rather than rip out capability, verify
 nits against the pinned versions, reject known non-issues, fix the valid ones,
-and record a one-line disposition per finding. Two rails on rejecting: a claim
+and record a one-line disposition per finding, a decline written
+`Declined: <ref>: <reason>` (`<ref>` the text before the first `: `), the shape
+the `Probe:` check reads. Two rails on rejecting: a claim
 about **what exists in the repo** is checked against `origin/HEAD` rather than
 the worktree, which may predate a merge; and a finding's **evidence and its
 claim are separate**, so a reviewer citing the wrong commit for a real primitive
@@ -157,22 +160,28 @@ optional `- ` prefix, written as its check settles:
   `Reverted-fix: <test path>: red`, once `revert-red <test> <path>...` exits 0
   (the test went red with the fix reverted; commit the test and the fix first,
   it reads committed state), or `Reverted-fix: <test path>: n/a: <reason>` where
-  there is no fix to revert. Exit 1 means the test stayed green: it proves
+  there is no fix to revert or the test is not a shell test (`revert-red` runs
+  `.sh` tests and refuses another runner's, and a test already red before the
+  revert, since neither answers). A test file is a path with a `tests`, `test`
+  or `__tests__` component, or a basename `*.test.*`, `*.spec.*`, `*_test.*` or
+  `test_*`. Exit 1 means the test stayed green: it proves
   nothing, so fix the test.
 - **Dropped**, one per block `dropped-lines` reports, removed lines in blocks of
   three or more with no matching added line anywhere in the diff:
   `Dropped: <file>:<line> re-homed at <path>`, or
   `Dropped: <file>:<line> dropped on purpose: <why>`.
-- **Near-miss**, for each script whose added lines hold a new pattern matcher, a
-  line per kind, the test path holding a case that must be refused:
+- **Near-miss**, for each `*.sh` file whose added lines hold a new pattern
+  matcher (a `=~`, a `grep` or an `awk` or `sed` regex), a line per kind, the
+  path of an existing test holding a case that must be refused:
   `Near-miss: <script>: <kind>: <test path>`. The kinds are `partial-token` (the
   token inside a longer word), `quoted`, `indented`, `unbalanced` (an opener
   with no closer) and `unreadable` (the input the matcher reads cannot be read).
   A kind with no case says why, `Near-miss: <script>: <kind>: n/a: <reason>`,
   and one `Near-miss: <script>: n/a: <reason>` covers all five.
 - **Probe**, one per self-review decline `Declined: <ref>: <reason>` whose
-  reason claims behaviour (already handled, already covered, can't happen, never
-  happens, closes at merge): `Probe: <ref>: <command> => <output>`, the command
+  reason claims behaviour (already handled, already covered, already guarded,
+  can't happen, cannot happen, can not happen, never happens, closes at merge,
+  in any case): `Probe: <ref>: <command> => <output>`, the command
   you ran and the output it printed. A decline that claims no
   behaviour needs none.
 

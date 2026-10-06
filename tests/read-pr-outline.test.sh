@@ -3,8 +3,9 @@
 # outline` section does not mention. Driven over the Host fake
 # (tests/host-fake.sh) in a throwaway repo with a base branch and a PR branch, so
 # the three-dot diff is a real one. A path is mentioned by its full path or its
-# basename; a derived copy under .claude/skills/ shares its source's basename, so
-# the source's mention covers it; lockfiles and changelogs are never expected.
+# basename when no other changed path shares it; a derived copy under
+# .claude/skills/ mirrors its source, so the source's mention covers it;
+# lockfiles and changelogs are never expected.
 # Off the PR's own branch the paths cannot be known, and the field is null.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -77,6 +78,40 @@ reset; pr_body "$all" some/other-branch
 check "off the PR's own branch the paths are not known" 'null' "$(missing)"
 check "and the rest of the answer still stands" '["Why the change","Change outline","Special things to note"]' \
   "$(run | jq -c .headings)"
+
+# A mention is the whole path or a basename that names one changed file, bounded
+# the way ship_paths_cited bounds a path, so a longer token or a shared name does
+# not cover a file it is not.
+g -C "$repo" checkout -q -b fix/names-1
+mkdir -p "$repo/tests" "$repo/skills/x" "$repo/skills/y" "$repo/.claude/skills/x"
+for f in skills/ship/scripts/_lib.sh tests/lib.sh skills/x/SKILL.md skills/y/SKILL.md .claude/skills/x/SKILL.md; do
+  echo y > "$repo/$f"
+done
+g -C "$repo" add -A && g -C "$repo" commit -q -m names >/dev/null 2>&1
+names=$'## Change outline\n'
+# These mentions cover the files the earlier fixture commit changed.
+names_base="a.sh b.sh docs/n.md"$'\n'
+
+reset; pr_body "$names$names_base"$'`_lib.sh` skills/x/SKILL.md skills/y/SKILL.md\n' fix/names-1
+check "a _lib.sh mention does not cover tests/lib.sh (a partial token)" '["tests/lib.sh"]' "$(missing)"
+
+reset; pr_body "$names$names_base"$'_lib.sh tests/lib.sh SKILL.md\n' fix/names-1
+check "a bare SKILL.md covers neither of two changed SKILL.md files" \
+  '[".claude/skills/x/SKILL.md","skills/x/SKILL.md","skills/y/SKILL.md"]' "$(missing)"
+
+reset; pr_body "$names$names_base"$'_lib.sh tests/lib.sh skills/y/SKILL.md\n' fix/names-1
+check "a full path covers only that SKILL.md" \
+  '[".claude/skills/x/SKILL.md","skills/x/SKILL.md"]' "$(missing)"
+
+reset; pr_body "$names$names_base"$'_lib.sh tests/lib.sh skills/y/SKILL.md skills/x/SKILL.md\n' fix/names-1
+check "a source's full path covers its derived copy" '[]' "$(missing)"
+
+reset; pr_body "$names$names_base"$'`_lib.sh`, `tests/lib.sh`, `skills/x/SKILL.md` and `skills/y/SKILL.md`.\n' fix/names-1
+check "paths in code spans and before a closing period still count" '[]' "$(missing)"
+
+reset; pr_body "$names$names_base"$'x_lib.sh tests/lib.sh skills/x/SKILL.md skills/y/SKILL.md\n' fix/names-1
+check "a longer token that ends in the basename is no mention" '["skills/ship/scripts/_lib.sh"]' "$(missing)"
+g -C "$repo" checkout -q fix/thing-1
 
 g -C "$repo" checkout -q main
 reset; pr_body "$all"

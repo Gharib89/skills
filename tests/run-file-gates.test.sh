@@ -194,6 +194,18 @@ add 'Near-miss: scripts/m.sh: partial-token: tests/nope.test.sh' 'Near-miss: scr
 held=$(cat "$rf"); close 4
 refused "a row naming a test that is not a file, and an n/a with no reason" "no near-miss line for: partial-token, quoted:"
 
+# A test path that is an existing file but leaves the checkout, or climbs through
+# `..`, is no test of this change: it is treated as missing.
+for bad in "$work/tests/m.test.sh" "../$(basename "$work")/tests/m.test.sh" "tests/../tests/m.test.sh"; do
+  run4
+  add "Near-miss: scripts/m.sh: partial-token: $bad" 'Near-miss: scripts/m.sh: quoted: tests/m.test.sh' \
+      'Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unbalanced: tests/m.test.sh' \
+      'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: red'
+  held=$(cat "$rf"); close 4
+  refused "a near-miss test path of $bad" 'no near-miss line for: partial-token:'
+  check "the one bad kind is the only one named for $bad" no "$(has 'quoted' "${err#*no near-miss line for: }")"
+done
+
 run4
 add 'Near-miss: scripts/m.sh: n/a: only a fixed string is searched, no pattern grammar' 'Reverted-fix: tests/m.test.sh: red'
 close 4
@@ -332,6 +344,13 @@ admitted "bulleted stop and round lines"
 run7; add 'Stop: copilot: cap' 'Stop: claude: not reviewed' 'Round: copilot 1: clean'; close 7
 admitted "one reviewer with rounds and one not reviewed"
 
+# `not reviewed` has two meanings: a fallback that was never invoked (no round) and
+# a round that landed whose threads could not be read (a round, then the stop).
+run7; add 'Round: copilot 1: 2 findings, both fixed' 'Stop: copilot: auto-once' 'Stop: claude: not reviewed'; close 7
+admitted "a fallback never invoked: its Stop line alone, the primary's round and auto-once"
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Round: claude 1: landed, threads unreadable' 'Stop: claude: not reviewed'; close 7
+admitted "a Round line beside Stop: not reviewed, a round that landed with unreadable threads"
+
 run7; add 'Stop: copilot: cap' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
 refused "a stopped reviewer with no round" 'no Round line for copilot'
 check "the not-reviewed reviewer is not asked for a round" no "$(has 'no Round line for claude' "$err")"
@@ -397,6 +416,16 @@ call "$work" grade minor --file "$rf"
 check "grade replaces the line in its own section" 'Grade: minor
 why: a typo' "$(sed -n '/^## Grade$/,/^## Notes$/p' "$rf" | grep -v '^$' | grep -v '^## ')"
 check "and leaves a Grade line elsewhere alone" 'Grade: not this one' "$(grep 'not this one' "$rf")"
+# The reader (ship_recorded_grade) and this writer take one shape: an optional "- "
+# before the line and trailing blanks after the heading.
+run4; printf '\n## Grade \n\n- Grade: patch\n\n## Notes\n' >> "$rf"
+call "$work" grade minor --file "$rf"
+check "grade replaces a bulleted line under a heading with trailing blanks" 'Grade: minor' "$(grep 'Grade: ' "$rf")"
+check "and adds no second heading" 1 "$(grep -c '^## Grade' "$rf")"
+run4; printf '\n## Grade \n\nnone yet\n\n## Notes\n' >> "$rf"
+call "$work" grade minor --file "$rf"
+check "grade writes under a heading with trailing blanks, not a new section" 1 "$(grep -c '^## Grade' "$rf")"
+
 run4; printf '\n## Grade\n\nnone yet\n\n## Notes\n\nx\n' >> "$rf"
 call "$work" grade patch --file "$rf"
 check "grade writes into an empty section, above the next" '## Grade

@@ -252,8 +252,9 @@ ship_fail() {
 }
 
 # ship_recorded_grade <issue>: the grade the issue's Run file records, `patch`,
-# `minor` or `breaking`, from the `Grade: <word>` line at column 0 under its
-# `## Grade` heading (`run-file grade` writes it). Prints nothing when there is
+# `minor` or `breaking`, from the `Grade: <word>` line (an optional `- ` before
+# it, nothing else before) under its `## Grade` heading (blanks after it allowed),
+# the one shape `run-file grade` reads and writes. Prints nothing when there is
 # no Run file, no such line or a word that is not one of the three: no recorded
 # grade is no check, since a run that never graded has nothing to enforce.
 ship_recorded_grade() { # <issue>
@@ -262,7 +263,7 @@ ship_recorded_grade() { # <issue>
   file=$root/ship-$1/run.md
   [ -f "$file" ] || return 0
   awk '/^## /{ f = ($0 ~ /^## Grade[ \t\r]*$/) }
-    f && /^Grade: (patch|minor|breaking)[ \t\r]*$/ { sub(/^Grade: /, ""); sub(/[ \t\r]+$/, ""); print; exit }' "$file"
+    f && /^(- )?Grade: (patch|minor|breaking)[ \t\r]*$/ { sub(/^(- )?Grade: /, ""); sub(/[ \t\r]+$/, ""); print; exit }' "$file"
 }
 
 # ship_title_grade <title>: the grade a Conventional-Commit title implies, the
@@ -997,25 +998,53 @@ ship_body_headings() {
 
 # ship_outline_missing <body> <paths>: the paths, one per line, that the body's
 # `## Change outline` section does not mention. <paths> is newline-separated. A
-# path is mentioned when the section text holds its basename (so its full path
-# too), and a derived copy under `.claude/skills/` shares its source's basename,
-# so the source's mention covers it. `skills-lock.json` and any `CHANGELOG.md` are
-# generated, never expected in an outline. The section is found by the same
-# `ship_inert` rule as the headings, so a `## Change outline` in a fence is not
-# one; a body with no such heading mentions nothing, and every expected path is
-# missing.
+# path is mentioned when the section names it by its full path, or by its
+# basename when no other changed path shares that basename (a derived copy whose
+# source twin is changed mirrors it and does not count): both bounded as `ship_paths_cited` bounds a path, so `_lib.sh` is no
+# mention of `tests/lib.sh` and one bare `SKILL.md` covers no two. A derived copy
+# under `.claude/skills/<rest>` is also mentioned when its source twin
+# `skills/<rest>` is changed and mentioned, since the copy mirrors the source.
+# `skills-lock.json` and any `CHANGELOG.md` are generated, never expected in an
+# outline. The section is found by the same `ship_inert` rule as the headings, so
+# a `## Change outline` in a fence is not one; a body with no such heading
+# mentions nothing, and every expected path is missing.
 ship_outline_missing() { # <body> <paths>
-  local text p base
+  local text p twin
   text=$(awk "$SHIP_AWK_FENCE"'
     { inert = ship_inert($0) }
     !inert && /^## / { name = $0; sub(/^## /, "", name); sub(/[ \t\r]+$/, "", name); on = (name == "Change outline"); next }
     on' <<<"$1")
   while IFS= read -r p; do
     [ -n "$p" ] || continue
-    base=${p##*/}
-    case $base in skills-lock.json|CHANGELOG.md) continue ;; esac
-    case $text in *"$base"*) ;; *) printf '%s\n' "$p" ;; esac
+    case ${p##*/} in skills-lock.json|CHANGELOG.md) continue ;; esac
+    _ship_outline_names "$text" "$p" "$2" && continue
+    case $p in
+      .claude/skills/*)
+        twin=skills/${p#.claude/skills/}
+        grep -Fxq -e "$twin" <<<"$2" && _ship_outline_names "$text" "$twin" "$2" && continue ;;
+    esac
+    printf '%s\n' "$p"
   done <<<"$2"
+}
+
+# _ship_outline_names <text> <path> <paths>: true when the text names <path> by
+# its full path, or by its basename when <path>'s basename is shared by no other
+# path of <paths> (a derived copy under `.claude/skills/` whose source twin is in
+# <paths> is a mirror and does not count). One bounded matcher: `ship_paths_cited`.
+_ship_outline_names() { # <text> <path> <paths>
+  local p=$2 base n
+  [ -n "$(ship_paths_cited "$1" "$p")" ] && return 0
+  base=${p##*/}
+  n=$(awk -v b="$base" '
+    { all[NR] = $0; has[$0] = 1 }
+    END {
+      for (i = 1; i <= NR; i++) {
+        f = all[i]; sub(/^.*\//, "", f)
+        mirror = (all[i] ~ /^\.claude\/skills\// && ("skills/" substr(all[i], 16)) in has)
+        if (f == b && !mirror) n++
+      }
+      print n + 0 }' <<<"$3")
+  [ "$n" -eq 1 ] && [ -n "$(ship_paths_cited "$1" "$base")" ]
 }
 
 # ship_paths_cited <text> <paths>: the paths, one per line, that the text cites.

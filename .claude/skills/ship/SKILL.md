@@ -99,7 +99,7 @@ any `## Worktree` `Bootstrap:` ran green.
 `manage-issue <issue> take`, held until merge; later stops follow the stop
 table. Then **grep each anchor** the issue cites, rewriting one the tree
 contradicts, and a criterion needing a host action no mechanic performs,
-through `update-issue-body` ([implement.md](reference/implement.md)), and only
+through `update-issue-body`, or asking, attended ([implement.md](reference/implement.md)), and only
 then write what success looks like into the Run file as criteria a later phase
 can check; a later authoritative comment supersedes the body (**spec
 precedence**).
@@ -121,8 +121,8 @@ and why, keep going; it lands verbatim in the merge summary. If the diff
 outgrows one PR, or the fix demands a redesign the issue did not scope, stop
 `needs-split` with a split proposal.
 **Done when:** the applicable tests are green (red first, per class), the
-tripwires and in-PR requirement have landed, a small-lane diff is counted under
-the cap, and every departure and adjacent find so far is in the Run file with
+tripwires and in-PR requirement have landed, `Grade:` is recorded, a small-lane
+diff is counted under the cap, and every departure and adjacent find so far is in the Run file with
 its disposition.
 
 **3 · Verify.** [reference/verify.md](reference/verify.md) carries the result
@@ -162,7 +162,7 @@ the rails and depth checks in
 [implement.md](reference/implement.md#phase-4-triage-and-depth-checks).
 `run-file close 4` refuses until the Run file holds the
 [evidence lines](reference/implement.md#phase-4-evidence-lines) that section's
-checks leave: reverted-fix, `Dropped:`, near-miss and `Probe:`.
+checks leave: `Reverted-fix:`, `Dropped:`, `Near-miss:` and `Probe:`.
 This self-review plus green CI is the review gate.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the
@@ -212,8 +212,9 @@ Change outline where it fell short, `Review` last, the title checked against the
 earns one local review of those fixes before the merge gate.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned is replied to and resolved per `Resolve:`, every section the rounds
-grew is rewritten, `close 7` took each reviewer's `Round:` and `Stop:` lines,
-and `read-pr` shows a `## Review` line per reviewer.
+grew is rewritten, the title matches `Grade:`, any cap-round fix review is
+dispositioned, `close 7` took each reviewer's `Round:` and `Stop:` lines, and
+`read-pr` shows a `## Review` line per reviewer.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. `ci-wait` and `poll-pr` wait for the expected

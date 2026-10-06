@@ -8,6 +8,9 @@
 # file records a `Grade: minor` or `Grade: breaking`, a title whose type grades
 # patch (anything but `feat` or a `!`) is refused before any host write, even one
 # equal to the current title. No such suffix, Run file or Grade line is no check.
+# The Run file is read at `<git common dir>/ship/ship-<issue>/run.md`, so a run
+# started with `run-file --scratchpad <dir>` keeps its Run file elsewhere and is
+# not checked.
 #
 # stdout: {pr, title, changed}
 # exit: 0 · 1 title grades below the recorded Grade, or update failed (with the host's status where there was one) · 2 usage

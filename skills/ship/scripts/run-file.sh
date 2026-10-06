@@ -301,7 +301,7 @@ closed_line() { # closed_line <open line>: that line, closed at the clock
 # non-blank line, so a section the run wrote below it is not run into.
 append_to_section() { # append_to_section <heading> <line>
   local last
-  last=$(awk -v h="$1" '$0 == h { f = 1; last = NR; next } /^## / { f = 0 } f && NF { last = NR } END { print last + 0 }' "$file")
+  last=$(awk -v h="$1" '{ t = $0; sub(/[ \t\r]+$/, "", t) } t == h { f = 1; last = NR; next } /^## / { f = 0 } f && NF { last = NR } END { print last + 0 }' "$file")
   if [ "$last" -gt 0 ]; then
     repl=$2 awk -v ln="$last" '{ print } NR == ln { print ENVIRON["repl"] }' "$file" > "$file.t" \
       && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
@@ -510,6 +510,7 @@ EORESTS
         r=$(trim_end "$r")
         case $r in
           "n/a: "?*) is_blank "${r#n/a: }" || ok=true ;;
+          /*|..|../*|*/..|*/../*) ;;
           ?*) [ -f "$top/$r" ] && ok=true ;;
         esac
       done <<EORESTS
@@ -799,9 +800,11 @@ grade)
   parse_file "$@"
   no_extra
   # The line lives under `## Grade`: a call replaces the one before it, and a
-  # `Grade:` line in another section is not this one.
-  if awk '/^## / { f = ($0 == "## Grade") } f && /^(- )?Grade: / { found = 1 } END { exit !found }' "$file"; then
-    if ! { repl="Grade: $word" awk '/^## / { f = ($0 == "## Grade") }
+  # `Grade:` line in another section is not this one. The heading and line shapes
+  # are the ones `ship_recorded_grade` reads: blanks after the heading, an optional
+  # `- ` before the line.
+  if awk '/^## / { f = ($0 ~ /^## Grade[ \t\r]*$/) } f && /^(- )?Grade: / { found = 1 } END { exit !found }' "$file"; then
+    if ! { repl="Grade: $word" awk '/^## / { f = ($0 ~ /^## Grade[ \t\r]*$/) }
         f && /^(- )?Grade: / { if (!done) print ENVIRON["repl"]; done = 1; next } { print }' "$file" > "$file.t" \
         && mv "$file.t" "$file"; }; then
       rm -f "$file.t"; ship_tooling "cannot write $file"
