@@ -97,9 +97,9 @@ observed where no round was admitted.
 ## Triage, fix, reply
 
 - **Triage, don't apply**, at the judgment tier, with [phase 4's definition and
-  its two rejection rails](implement.md#phase-4-triage-and-depth-checks). Check the reviewer's `Instructions:` file when a
-  finding contradicts it, and cite it when declining. A valid finding outside
-  the issue is an adjacent find.
+  its two rejection rails](implement.md#phase-4-triage-and-depth-checks). Check
+  the reviewer's `Instructions:` file when a finding contradicts it, and cite it
+  when declining. A valid finding outside the issue is an adjacent find.
 - **Batch fixes into one push per round.** A fix to a rule goes to every copy of
   that rule in the same batch: grep the phrase before you push and read each
   hunk back.

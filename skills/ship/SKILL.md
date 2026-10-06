@@ -99,10 +99,10 @@ any `## Worktree` `Bootstrap:` ran green.
 `manage-issue <issue> take`, held until merge; later stops follow the stop
 table. Then **grep each anchor** the issue cites, rewriting one the tree
 contradicts, and a criterion needing a host action no mechanic performs,
-through `update-issue-body`, or asking, attended ([implement.md](reference/implement.md)), and only
-then write what success looks like into the Run file as criteria a later phase
-can check; a later authoritative comment supersedes the body (**spec
-precedence**).
+through `update-issue-body`, or asking, attended
+([implement.md](reference/implement.md)), and only then write what success looks
+like into the Run file as criteria a later phase can check; a later
+authoritative comment supersedes the body (**spec precedence**).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
@@ -122,8 +122,8 @@ outgrows one PR, or the fix demands a redesign the issue did not scope, stop
 `needs-split` with a split proposal.
 **Done when:** the applicable tests are green (red first, per class), the
 tripwires and in-PR requirement have landed, `Grade:` is recorded, a small-lane
-diff is counted under the cap, and every departure and adjacent find so far is in the Run file with
-its disposition.
+diff is counted under the cap, and every departure and adjacent find so far is
+in the Run file with its disposition.
 
 **3 · Verify.** [reference/verify.md](reference/verify.md) carries the result
 words, the `Without it:` dispositions and what `unexercised` is. Run each

@@ -97,11 +97,11 @@ Verification scoped to the fix before phase 3 closes. `close 3` takes one
 `--result <name>=<word>` per Verification named at init (`n/a` for one whose
 `Applies when:` you judged false) and refuses while one is missing. Close a
 phase only once its `Done when:` holds: the mechanic stamps whatever close it is
-given, except that `close 3`, `close 4` and `close 7` refuse without the results or evidence lines
-[implement.md](implement.md#phase-4-evidence-lines) and
-[review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps all
-ten items and `skip`s each collapsed phase, so the record shows a decision and
-not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
+given, except that `close 3`, `close 4` and `close 7` refuse without the
+results or evidence lines [implement.md](implement.md#phase-4-evidence-lines)
+and [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps
+all ten items and `skip`s each collapsed phase, so the record shows a decision
+and not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
 outgrew. A harness that refuses the task tools has answered: run on the file
 alone.
 
