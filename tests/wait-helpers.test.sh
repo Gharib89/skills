@@ -26,8 +26,9 @@ check "a Legs: line under another heading is prose" '' \
 c=$(ship_cursor_make '{"deadline":12,"since":"2026-01-01T00:00:00Z"}')
 check "a cursor reads back the state it was made from" '{"deadline":12,"since":"2026-01-01T00:00:00Z"}' \
   "$(ship_cursor_read "$c")"
-ship_cursor_read garbage >/dev/null; check_rc "a cursor that is not one is refused" 1 "$([ $? -ne 0 ] && echo 1 || echo 0)"
-ship_cursor_read "$(printf '[1]' | base64)" >/dev/null; check_rc "a cursor holding no object is refused" 1 "$([ $? -ne 0 ] && echo 1 || echo 0)"
+refused() { ship_cursor_read "$1" >/dev/null && echo read || echo refused; }
+check "a cursor that is not one is refused" refused "$(refused garbage)"
+check "a cursor holding no object is refused" refused "$(refused "$(printf '[1]' | base64)")"
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 SHIP_HTTP_STATUS_FILE=$tmp/status

@@ -291,6 +291,9 @@ host_pr_request_review() { # <pr> <login>
   jq -n --argjson ok "$ok" --argjson rb "$rb" --arg l "$2" --arg now "$now" \
     '{requested: ($ok and ([$rb[] | ascii_downcase] | index($l | ascii_downcase) != null)), readback: $rb, requested_at: $now}'
 }
+# Azure DevOps stamps request-review's `requested_at` off the wall clock and keeps
+# no event to read it back from, so there is no instant to give.
+host_pr_requested_at() { return 1; }
 # A closed thread: visible, and a comment-resolution policy reads it as settled.
 host_pr_comment() { # <pr> <body-file>
   local f out; f=$(mktemp); trap 'rm -f "$f"; trap - RETURN' RETURN
@@ -414,6 +417,10 @@ host_issues_ready() { # <label>
 host_workflow_runs() { return 1; } # <workflow-file> <since-iso>
 # With no awaited run there is no run whose denied calls to count.
 host_run_denials() { return 1; } # <run-url>
+# A policy evaluation here is no job this adapter can re-run yet, so `ci-wait
+# --rerun-failed` reports "unavailable" and the run reads the failure by hand.
+host_check_job() { return 1; } # <pr> <head_sha> <name>
+host_check_rerun() { return 1; } # <job_id>
 
 # Azure DevOps has no Copilot-review ruleset, so there is nothing to contradict
 # a profile with. Non-zero and silent is "not checked", the same answer the

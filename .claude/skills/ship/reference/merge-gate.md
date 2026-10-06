@@ -51,13 +51,15 @@ Review                                         (one block per reviewer)
     (a fallback that ran opens with: fallback for <primary>: not reviewed: <reason>)
     (a Gating: yes reviewer's declined finding: override needed: <finding>, <evidence>)
 
-Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>
+Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>[ · at <sha>, <n> commits behind]
 Docs-sync:   <ran: files | skipped: reason>
 Tracker:     <none | one block per drafted section:>
   #<n> `## <section>`:
   <the drafted section, verbatim>
   (unattended: the command a human runs after merging, per the tracker section)
 CI:          <leg> → <green | state> · ...     (from the profile's Legs:)
+  [non-leg red: <check>, ...]                  (ci-wait's non_leg_failing, none of them a leg)
+  [profile drift: <check>, ... not on Legs:]   (ci-wait's unlisted)
 Issues filed: <#n <title>, ... | none>  ·  linked: <#n <title>, ... | none>
 Ship defects: <none | one block per defect:>
   - <missing write, missing gating read, or wrong prose> (phase <n>)
@@ -70,7 +72,8 @@ Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 ```
 
 **Every row is grounded in a result from this run**: `Local gate:` is the
-gate's `gates` object, `CI:` is `ci-wait`'s output, `Issues filed` is this
+gate's `gates` object from the verdict the Run file recorded, `CI:` is
+`ci-wait`'s output, `Issues filed` is this
 run's `file-issue` return values (filed numbers on one side, the candidates it
 answered with instead on the other), and `Verification` and the test counts are
 the phase-3 and phase-2 results. The empty `Verification` case writes the
@@ -81,7 +84,7 @@ to a tool result for is written `unverified`. `Ship defects:` lists every host
 write or gating read no mechanic performs, and prose that promised what a
 mechanic does not do; an informational read made directly goes on `Direct
 reads:` instead. Each defect carries a **drafted issue** for the source repo,
-`Gharib89/skills`, written to `<scratchpad>/ship-<issue>/defect-<k>.md` when it
+`Gharib89/skills`, written to `defect-<k>.md` beside the Run file when it
 is met: a title, then a body naming Ship's version, the mechanic or prose at
 fault and what the run did instead, and no organization identifier, credential
 or client context, because the source repo is public. A gap in the ship profile
@@ -120,7 +123,7 @@ human should read the title that will land.
 A `Targets:` entry naming an issue by number (`#<n>`, such as `map issue #1`) is
 met in phase 4 by a **drafted section**, not a file edit: the new content of
 each `## ` section the change affects, one draft per section, written to
-`<scratchpad>/ship-<issue>/tracker-<n>-<k>.md` beside the Run file (`<n>` the
+`tracker-<n>-<k>.md` beside the Run file (`<n>` the
 tracker issue, `<k>` the draft's ordinal) and named with its heading in the Run
 file's `## Design and plan`. Beside each draft, save the section as `read-issue`
 returned it, as `tracker-<n>-<k>.base.md`. On Azure DevOps that body is the
@@ -153,6 +156,17 @@ part of the summary is asked back, because merging is the step no later phase
 undoes. Never an auto-merge flag either: it can merge the instant CI is green,
 before a reviewer lands.
 
+**The gate's verdict is cited, not re-run, while it still describes the PR.**
+Phase 5 records each verdict with `run-file gate record` against the head it
+ran on; here, `run-file gate read --head <head_sha>`, the head `read-pr`
+returns, answers `current`. `current: true` cites the recorded verdict. `false`
+re-runs the gate from the worktree and records it again, because a commit the
+gate never saw is in the PR; where the gate cannot run here, the row carries
+`at <sha>, <behind> commits behind` from that same answer. `non_leg_failing`
+on the `CI:` row is red the profile does not ask for, so it does not hold the
+merge, and an `unlisted` check is profile drift for the human to add to `Legs:`
+or remove.
+
 **On approval**, from the worktree, `merge <pr> <issue|none> [--worktree
 <path>]`. Its header carries what it does and what each refusal protects
 against: `pr-closed: <state>` and `stale-base: behind <n> on <base>` merge
@@ -160,11 +174,12 @@ nothing (for the second, merge the base in, re-run the local gate and come back
 to this gate); otherwise it squash-merges with the PR title as the subject,
 closes the issue, deletes the remote branch, fast-forwards the local base, and
 releases the claim and strips `ready-for-agent`, so a reopened issue goes back
-through triage. Then each drafted tracker section, then `cleanup <issue|none>`,
-which removes the worktree and force-deletes the local branch. The Run file
-lives in the scratchpad, so `cleanup` leaves it: once its `Done when:` holds,
-every Ship defect draft settled too, `run-file close 9` and set the task to the
-returned `mirror`, so the record and the task list both end with phase 9 done.
+through triage. Then each drafted tracker section. Every Ship defect draft is
+settled before `cleanup`, which deletes the directory the drafts live in, so
+ask for the word on any draft still open. Then `run-file close 9` and set the
+task to the returned `mirror`, and last `cleanup <issue|none>`, which removes
+the worktree, force-deletes the local branch, and removes the Run file and the
+run's Scratch directory, the record's job done.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this

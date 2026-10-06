@@ -42,7 +42,8 @@ local-gate contract.
 |---|---|
 | `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run but the no-issue lane's inner one, before `run-file init` |
 | `run-file init` | the required first action after `prepare` |
-| `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
+| `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
+| `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head |
 | `preflight` | 0 |
 | `read-issue` | 0 |
 | `isolate` | 0 |
@@ -69,8 +70,9 @@ local-gate contract.
 
 ## Flags, exit codes and failed writes
 
-For a mechanic's flags, run `<base directory>/scripts/<mechanic>.sh --help`: its
-usage line on stdout, exit 0, before it loads a host adapter. Only the first
+For a mechanic's flags and output, run `<base directory>/scripts/<mechanic>.sh
+--help`: its usage line, then the fields its JSON carries, on stdout, exit 0,
+before it loads a host adapter. Only the first
 argument is read, so `poll-pr.sh 42 --help` is a poll of PR 42. A mechanic
 acting for one reviewer (`poll-pr`, `request-review`) takes `--reviewer
 <name>`, the `### <name>` heading under `## Reviewers`, and reads the rest off
@@ -81,8 +83,8 @@ stderr, and exits `0` ok, `1` the mechanic's own not-ok answer, `2` tooling. A
 malformed invocation is tooling: it prints `{"error": "<usage>"}` and exits 2.
 Exit 1 is an answer, not always a fault: `nothing-ready` from `select`, a
 not-actionable `preflight` and a `poll-pr` window that closed are all exit 1 and
-none is red. An exit-1 `error` is also written to stderr, so a refusal shows
-there even when `| jq -r .field` over stdout reads `null`.
+none is red. Every exit-1 and exit-2 `error` is also written to stderr, so a
+refusal shows there even when `| jq -r .field` over stdout reads `null`.
 
 A failed write to a PR body or title, a comment or a thread reply carries the
 host's `status` beside its `error`: a 5xx or 429 outlasted the mechanic's own
@@ -113,11 +115,24 @@ Reads come back in one vocabulary on both hosts: checks
 `pending|success|failure`, mergeable `clean|conflict|unknown`, review
 `approved|changes|comment`, and threads as `resolved: true|false` per thread, or
 the whole `threads` field as the string `"unavailable"` when the state could not
-be read. A thread's `id` is what `reply-thread` and `resolve-thread` take (on
-GitHub, the thread's root review comment id, as a string).
+be read. `read-issue` marks each comment `ship: true|false`, true on one Ship
+posted, which carries a hidden `<!-- ship -->` line; `read-pr` adds the body's
+`headings` and the PR template's headings it is `missing`. A thread's `id` is
+what `reply-thread` and `resolve-thread` take (on GitHub, the thread's root
+review comment id, as a string).
 
 Run mechanics **inline**: they project their own output, so a subagent there
-burns budget to relay what an exit code already says. Poll loops are bounded and
-foreground; reaching the bound leaves the question open, so re-run to extend it,
-or pass a wider `--timeout` up front for a leg you know is slower than the
-bound.
+burns budget to relay what an exit code already says.
+
+**No call holds the tool past 540 s**, under the harness's 600 s limit on one
+tool call. A `poll-pr` or `ci-wait` window that outlasts it answers `status:
+"pending"` with a `cursor`, exit 1, and the same command plus `--cursor <c>`,
+with no `--since` and no `--timeout`, resumes that window with its landing rule
+and deadline; repeat until an answer arrives without `pending`. A pending
+answer is not a closed window, so never read it as `silent`. Run either wait in
+the Bash tool's background mode where other work can go on, its completion
+notification resuming the run, and start `ci-wait <pr>` that way at PR open,
+alongside the first reviewer poll, since CI runs from there. Inside a window a
+read that fails with no HTTP status is no answer yet: three in a row, or the
+deadline passing while reads still fail, end the call with exit 2, and a read
+the host refused with a status ends it at once.
