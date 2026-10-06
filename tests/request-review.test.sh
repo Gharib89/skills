@@ -60,7 +60,7 @@ printf '%s\n' '{"id": 5, "url": "https://example.invalid/pull/7#issuecomment-5",
 out=$(run 7 --reviewer claude); rc=$?
 check_rc "the comment transport exits 0" 0 "$rc"
 check "the phrase posted is the block's, then ship's marker" '@claude
-<!-- ship -->' "$(cat "$SHIP_FAKE/posted")"
+<span data-ship=1></span>' "$(cat "$SHIP_FAKE/posted")"
 check "one comment is the whole call list" 'host_pr_comment' "$(cut -f1 "$SHIP_FAKE/calls" | tr '\n' ' ' | sed 's/ $//')"
 check "the comment's created_at is requested_at, with name and login" \
   '{"pr":7,"name":"claude","login":"claude[bot]","requested":true,"readback":["https://example.invalid/pull/7#issuecomment-5"],"requested_at":"2026-09-17T12:01:02Z"}' \

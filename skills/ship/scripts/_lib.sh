@@ -196,8 +196,11 @@ readonly SHIP_SCRIPTS
 # is told from a human's comment by this line, not by its wording, which a human
 # can quote. It sits at the end so a comment-triggered workflow's request phrase
 # still opens the body. A mechanic that posts a comment appends it through
-# `ship_mark` or `ship_mark_file`, once, here rather than in each adapter.
-SHIP_COMMENT_MARKER='<!-- ship -->'
+# `ship_mark` or `ship_mark_file`, once, here rather than in each adapter. An
+# empty span, not an HTML comment: Azure DevOps' work-item sanitizer drops
+# `<!-- -->` and unquotes attributes, so this unquoted form is the one both hosts
+# hand back byte for byte, and neither renders (probed on the lab, #487).
+SHIP_COMMENT_MARKER='<span data-ship=1></span>'
 readonly SHIP_COMMENT_MARKER
 # ship_mark <body>: the body, then the marker on a line of its own.
 ship_mark() {

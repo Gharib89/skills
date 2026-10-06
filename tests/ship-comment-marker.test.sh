@@ -12,7 +12,7 @@ source tests/lib.sh
 T=$'\t'  # the calls log separates arguments with a tab
 
 scripts=$PWD/skills/ship/scripts
-M='<!-- ship -->'
+M='<span data-ship=1></span>'
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; export SHIP_FAKE=$work/fake
 mkdir -p "$repo" "$SHIP_FAKE"

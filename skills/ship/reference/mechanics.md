@@ -116,10 +116,10 @@ Reads come back in one vocabulary on both hosts: checks
 `approved|changes|comment`, and threads as `resolved: true|false` per thread, or
 the whole `threads` field as the string `"unavailable"` when the state could not
 be read. `read-issue` marks each comment `ship: true|false`, true on one Ship
-posted, which carries a hidden `<!-- ship -->` line; `read-pr` adds the body's
-`headings` and the PR template's headings it is `missing`. A thread's `id` is
-what `reply-thread` and `resolve-thread` take (on GitHub, the thread's root
-review comment id, as a string).
+posted, which ends with a hidden `<span data-ship=1></span>`; `read-pr` adds the
+body's `headings` and the PR template's headings it is `missing`. A thread's
+`id` is what `reply-thread` and `resolve-thread` take (on GitHub, the thread's
+root review comment id, as a string).
 
 Run mechanics **inline**: they project their own output, so a subagent there
 burns budget to relay what an exit code already says.

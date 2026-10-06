@@ -6,7 +6,8 @@
 # stdout: {number, title, body, state, is_pr, labels[], assignees[], created_at,
 #          url, comments: [{author, body, created_at, ship}], blockers: [n...] | "unavailable"}
 #   ship: true on a comment a ship mechanic posted, which ends with the hidden
-#   marker line `<!-- ship -->`; false on every other comment, a human's included.
+#   marker `<span data-ship=1></span>`; false on every other comment, a human's
+#   included.
 #   blockers lists OPEN blockers only; "unavailable" means the host's blocker
 #   query exists and failed (stop rather than guess order on it).
 # exit: 0 · 2 the issue could not be read
