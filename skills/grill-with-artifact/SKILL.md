@@ -3,7 +3,7 @@ name: grill-with-artifact
 description: "Grill a plan or design on a private artifact page: each grilling round arrives as question cards the human answers and Submits, and the glossary and ADRs are written as answers settle. Use when the human asks for grilling on a page or an artifact, or names grill-with-artifact, a wayfinder ticket's Notes included."
 argument-hint: "[topic]"
 metadata:
-  version: 0.3.0
+  version: 0.4.0
 ---
 
 # grill-with-artifact

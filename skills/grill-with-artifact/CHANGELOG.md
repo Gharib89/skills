@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.4.0 (2026-10-06)
+
+### Features
+
+- **grill-with-artifact**: Adopt html-plan's look, numbered cards and a next-question jump
+  ([#484](https://github.com/Gharib89/skills/pull/484),
+  [`35ab83f`](https://github.com/Gharib89/skills/commit/35ab83f168dc43569cfde00d6fc3dff874241a22))
+
+
 ## v0.3.0 (2026-10-04)
 
 ### Features
