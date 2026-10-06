@@ -29,7 +29,7 @@ refused() {
   local name=$1 m=$2 out rc want; shift 2
   rm -f "$loaded"
   out=$(cd "$repo" && bash "$dir/$m.sh" "$@" 2>/dev/null); rc=$?
-  want=$(bash "$dir/$m.sh" --help)
+  want=$(bash "$dir/$m.sh" --help | head -1)
   check "$name: the usage line" "$want" "$(jq -r '.error // empty' <<<"$out")"
   check_rc "$name: tooling" 2 "$rc"
   check "$name: the adapter was not loaded" absent "$([ -e "$loaded" ] && echo loaded || echo absent)"

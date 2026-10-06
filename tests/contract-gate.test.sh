@@ -99,7 +99,7 @@ d=$(copy_mechanics excluded)
 # the fixture would fail on check 5 and the case would assert the wrong thing.
 cat > "$d/base-fresh.sh" <<'EOF'
 #!/usr/bin/env bash
-[ "${1:-}" = --help ] && { echo "usage: base-fresh"; exit 0; }
+[ "${1:-}" = --help ] && { echo "usage: base-fresh"; echo "stdout: {fresh}"; exit 0; }
 printf '{"fresh":true}\n'
 exit 0
 EOF
@@ -156,7 +156,7 @@ check "a --help answer that is not the usage line is named" \
   'read-issue: --help did not print its own usage line on stdout' "$out"
 check_rc "a --help answer that is not the usage line fails the check" 1 "$rc"
 
-run "$(help_stub help-noisy '[ "${1:-}" = --help ] && { echo "$usage"; echo noise >&2; exit 0; }')"
+run "$(help_stub help-noisy '[ "${1:-}" = --help ] && { echo "$usage"; echo "stdout: {number}"; echo noise >&2; exit 0; }')"
 check "a --help answer that writes to stderr is named" \
   'read-issue: --help wrote to stderr' "$out"
 check_rc "a --help answer that writes to stderr fails the check" 1 "$rc"
@@ -168,12 +168,19 @@ check "a --help answer naming a longer mechanic is named" \
   'read-issue: --help did not print its own usage line on stdout' "$out"
 check_rc "a --help answer naming a longer mechanic fails the check" 1 "$rc"
 
-# The usage line and nothing under it. A case pattern matches across newlines,
-# so the prefix arm above passes a mechanic that prints its usage and then talks.
+# The usage line, then the stdout field names: a run reads a mechanic's answer
+# shape from --help rather than from a doc. The second line has to open with
+# `stdout:`; a case pattern matches across newlines, so a mechanic that prints
+# its usage and then anything else would otherwise pass.
+run "$(help_stub help-usage-only '[ "${1:-}" = --help ] && { echo "usage: read-issue <issue>"; exit 0; }')"
+check "a --help answer with no stdout line is named" \
+  'read-issue: --help did not print a stdout: line after its usage line' "$out"
+check_rc "a --help answer with no stdout line fails the check" 1 "$rc"
+
 run "$(help_stub help-extra-output '[ "${1:-}" = --help ] && { echo "usage: read-issue <issue>"; echo "and some more"; exit 0; }')"
-check "a --help answer with a second line is named" \
-  'read-issue: --help printed more than its usage line on stdout' "$out"
-check_rc "a --help answer with a second line fails the check" 1 "$rc"
+check "a --help answer whose second line is not a stdout line is named" \
+  'read-issue: --help did not print a stdout: line after its usage line' "$out"
+check_rc "a --help answer whose second line is not a stdout line fails the check" 1 "$rc"
 
 # A guard placed after `ship_load_host` answers --help correctly wherever an
 # adapter loads, which is why check 5 runs from a directory with no origin
@@ -197,13 +204,14 @@ git init -q "$origin" && git -C "$origin" remote add origin https://github.com/e
 root=$PWD
 out=$(cd "$origin" && bash "$root/scripts/contract-check.sh" "$d" "$root/skills" 2>/dev/null); rc=$?
 check "a guard after the adapter load is named" \
-  'read-issue: --help exited 2, expected 0' "$out"
+  'read-issue: --help wrote to stderr
+read-issue: --help exited 2, expected 0' "$out"
 check_rc "a guard after the adapter load fails the check" 1 "$rc"
 
 # The --help answer and the guards' answer are two paths, and check 4 reads only
 # the second. A mechanic that grows a flag and updates one of them leaves the
 # other as the run's stale source.
-run "$(help_stub help-drift '[ "${1:-}" = --help ] && { echo "usage: read-issue"; exit 0; }')"
+run "$(help_stub help-drift '[ "${1:-}" = --help ] && { echo "usage: read-issue"; echo "stdout: {number}"; exit 0; }')"
 check "a --help answer that disagrees with the guard is named" \
   'read-issue: --help and the usage guard print different lines' "$out"
 check_rc "a --help answer that disagrees with the guard fails the check" 1 "$rc"
@@ -217,7 +225,7 @@ d=$(copy_mechanics help-drift-no-positional)
 cat > "$d/file-issue.sh" <<'EOF'
 #!/usr/bin/env bash
 usage='usage: file-issue --title <title> --body-file <path> --label <marker>'
-[ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
+[ "${1:-}" = --help ] && { printf '%s\nstdout: {number}\n' "$usage"; exit 0; }
 printf '{"error":"%s [--distinct-from <n>[,<n>]]"}\n' "$usage"
 exit 2
 EOF
@@ -233,7 +241,7 @@ d=$(copy_mechanics dash-usage-extra)
 cat > "$d/read-issue.sh" <<'EOF'
 #!/usr/bin/env bash
 usage='usage: read-issue <issue>'
-[ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
+[ "${1:-}" = --help ] && { printf '%s\nstdout: {number}\n' "$usage"; exit 0; }
 case ${1:-} in ""|-*) printf '{"error":"%s\\nand more"}\n' "$usage"; exit 2 ;; esac
 printf '{"number":"%s"}\n' "$1"
 EOF
@@ -586,7 +594,7 @@ flag_stub() { # <case-dir> <header-lines> <usage-line> <arm>
     printf "usage='%s'\n" "$3"
     cat <<'EOF'
 fail() { jq -n --arg e "$usage" '{error: $e}'; exit 2; }
-[ "${1:-}" = --help ] && { printf '%s\n' "$usage"; exit 0; }
+[ "${1:-}" = --help ] && { printf '%s\nstdout: {number}\n' "$usage"; exit 0; }
 case ${1:-} in ""|-*) fail ;; esac
 shift
 EOF
@@ -646,6 +654,8 @@ host_stub() { # <case-dir> <tail>
   local d; d=$(copy_mechanics "$1")
   cat > "$d/read-issue.sh" <<EOF
 #!/usr/bin/env bash
+# stdout: {number}
+# exit: 0
 set -uo pipefail
 source "\$(dirname "\${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: read-issue <issue>'

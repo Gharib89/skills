@@ -22,7 +22,7 @@ git -C "$tmp/repo" init -q && git -C "$tmp/repo" remote add origin https://githu
 printf 'a later finding\n\n' > "$tmp/body"
 
 run() { (cd "$tmp/repo" && bash "$m" "$@" 2>/dev/null); }
-posts() { grep -cF '"body": "a later finding\n\n"' "$GH_LOG"; }
+posts() { grep -cF '"body": "a later finding\n\n<!-- ship -->\n"' "$GH_LOG"; }
 
 out=$(run); rc=$?
 check_rc "a bare call is tooling" 2 "$rc"

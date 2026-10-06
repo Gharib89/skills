@@ -119,9 +119,14 @@ refuse "a name no block carries lists the names the profile carries" \
 refuse "--since with an on-push reviewer is refused" \
   'pusher is on-push, whose rounds land on the head: --since does not apply' \
   --reviewer pusher --since "$since"
-refuse "copilot without --since is refused" \
-  'copilot is on-request, whose rounds land by time: --since <iso> is required' \
-  --reviewer copilot
+# Without --since the poll asks the host for the request instant, and only a host
+# with none refuses: the one refusal that does reach a host, with that one read.
+rm -f "$SHIP_FAKE"/*
+out=$(poll --reviewer copilot 2>/dev/null); rc=$?
+check_rc "copilot without --since, and a host with no request instant, is tooling" 2 "$rc"
+check "and it is refused with the rule's own line" \
+  'copilot is on-request, whose rounds land by time: --since <iso> is required' "$(jq -r .error <<<"$out")"
+check "and only the request-instant read reached the host" host_pr_requested_at "$(called)"
 
 rm "$repo/docs/agents/ship.md"
 refuse "a checkout with no profile is refused" \

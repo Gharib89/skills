@@ -23,8 +23,9 @@
 # mechanics that take no positional and check 5 exempts nobody; a mechanic whose
 # `ship_help` landed after `ship_load_host` is what makes it load an adapter.
 #
-# Check 5 is the --help contract: a run asks a mechanic what its flags are by
-# running it, so the answer has to be the usage line, on stdout, exit 0.
+# Check 5 is the --help contract: a run asks a mechanic what its flags and its
+# answer are by running it, so the answer has to be the usage line then its
+# `stdout:` field names, on stdout, exit 0.
 #
 # Check 6 reads the skills tree too, every file in it: SHIP_HOST_ADAPTER has
 # one reader, `ship_load_host` in `_lib.sh`, and a mention anywhere else is a
@@ -150,10 +151,12 @@ for path in "$dir"/*.sh; do
   done
 done
 
-# 5. Every mechanic answers `--help` with its own usage line on stdout, exit 0
-# and nothing on stderr. No mechanic is exempt, the four that take no positional
-# included: a run reads a mechanic's flags by running it, and one that has none
-# still answers with its name.
+# 5. Every mechanic answers `--help` with its own usage line on stdout, then a
+# `stdout:` line naming the fields it answers with (`ship_help` prints both),
+# exit 0 and nothing on stderr. No mechanic is exempt, the four that take no
+# positional included: a run reads a mechanic's flags and answer by running it,
+# and one that has none still answers with its name. update-skills' mechanics
+# share `ship_help`, so the same rule holds for them.
 #
 # Run from a directory with no resolvable origin, which is what makes this check
 # police the guard's PLACEMENT where check 2 cannot. A guard after
@@ -182,17 +185,20 @@ for path in "$dir"/*.sh; do
   fi
   # The name ends at the string or at a space: a bare prefix match takes
   # `usage: read-issue-other` for read-issue's own line.
-  case $out in
+  case $(printf '%s\n' "$out" | sed -n 1p) in
     "usage: $m"|"usage: $m "*) ;;
     *) printf '%s: --help did not print its own usage line on stdout\n' "$m"; rc=1; continue ;;
   esac
-  # The usage line and nothing else: a case pattern matches across newlines, so
-  # the prefix above accepts whatever a mechanic prints under it.
-  if [ "$(printf '%s\n' "$out" | wc -l)" -ne 1 ]; then
-    printf '%s: --help printed more than its usage line on stdout\n' "$m"
-    rc=1
-    continue
-  fi
+  # The usage line, then the stdout field names: the line under it opens with
+  # `stdout:`, so a run reads what a mechanic answers by asking it. A case
+  # pattern matches across newlines, so the prefix above accepts whatever a
+  # mechanic prints under its first line. Reported without `continue`: the
+  # comparison with the guard's usage line below is a separate fault.
+  case $(printf '%s\n' "$out" | sed -n 2p) in
+    stdout:*) ;;
+    *) printf '%s: --help did not print a stdout: line after its usage line\n' "$m"; rc=1 ;;
+  esac
+  out=$(printf '%s\n' "$out" | sed -n 1p)
   # Kept for checks 11 to 14, which compare against what --help printed.
   printf '%s\n' "$out" > "$work/$m.usage"
   # The same line the guards print. Check 4 reads the error path and this one

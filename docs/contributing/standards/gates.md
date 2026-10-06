@@ -55,17 +55,18 @@ do to pass.
   `${N:?}` or `${N?}` expansion under the mechanics, a bare invocation answering
   one JSON `error` object and exit 2, a leading-dash value in a positional slot
   answering the usage line and exit 2, and `--help` answering the usage line on
-  stdout, exit 0. Keep a new mechanic's guards where the existing ones fire,
-  before the adapter loads: that placement is what keeps the gate off the host,
-  and the `--help` check runs each mechanic where no origin remote resolves, so
-  a `ship_help` below `ship_load_host` fails. The same gate holds every shell
-  file under `skills/` to the four Bash 4 constructs **Everything under
-  `skills/` targets Bash 3.2** in [shell.md](shell.md) names, refuses any
-  mention of `SHIP_HOST_ADAPTER` under `skills/` outside `_lib.sh`, whose
-  `ship_load_host` is its one reader, and holds two sentences of ship's prose,
-  matched as substrings with their line wraps joined: phase 4's instruction
-  that each axis reads the Local gate's JSON and never runs the suite itself,
-  and context discipline's `Read one reference file per call.`
+  stdout, then the header's `stdout:` field lines, exit 0. Keep a new mechanic's
+  guards where the existing ones fire, before the adapter loads: that placement
+  is what keeps the gate off the host, and the `--help` check runs each mechanic
+  where no origin remote resolves, so a `ship_help` below `ship_load_host`
+  fails. The same gate holds every shell file under `skills/` to the four Bash 4
+  constructs **Everything under `skills/` targets Bash 3.2** in
+  [shell.md](shell.md) names, refuses any mention of `SHIP_HOST_ADAPTER` under
+  `skills/` outside `_lib.sh`, whose `ship_load_host` is its one reader, and
+  holds two sentences of ship's prose, matched as substrings with their line
+  wraps joined: phase 4's instruction that each axis reads the Local gate's JSON
+  and never runs the suite itself, and context discipline's `Read one reference
+  file per call.`
 - Each mechanic's header synopsis naming the same flags and leading `<slots>`
   as its `--help` usage line, per the `contract` gate.
 - Every value-taking flag answering a leading-dash value (`--title --x`) with

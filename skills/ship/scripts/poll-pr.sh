@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
-# ship phases 7 and 8: one bounded, foreground poll of a PR's head, checks,
-# reviews and threads, then ONE JSON summary.
+# ship phases 7 and 8: a poll of a PR's head, checks, reviews and threads, then
+# ONE JSON summary. No call holds the tool past SHIP_CALL_CAP seconds (540, under
+# the harness's 600 s limit on one tool call): a window still open at the cap
+# answers the snapshot it has with `status: "pending"` and a `cursor`, exit 1,
+# and the caller resumes the SAME window by passing the cursor back.
 #
-#   poll-pr <pr> [--reviewer <name> [--since <iso>]] [--brief, or --brief --full <id>[,<id>]]
-#           [--sha <sha>] [--timeout <s>] [--interval <s>]
+#   poll-pr <pr> [--reviewer <name> [--since <iso>]] [--brief, or --brief --full <id>[,<id>]|open]
+#           [--sha <sha>] [--timeout <s>] [--interval <s>] [--cursor <c>]
+#
+# `--cursor <c>` resumes the window a pending answer carried: its deadline, its
+# landing rule's since instant, its start (so `waited_s` counts from the first
+# call) and the head it waits for. The caller passes <pr> and its --reviewer,
+# --brief and --full flags again, and no --since or --timeout, which the cursor
+# already fixed: both are refused with it, and so is a cursor that does not read.
 #
 # The expected head is `--sha`, else the local HEAD of a checkout of the PR's head
 # branch: while the host shows another head the poll reads nothing on it, so a
@@ -22,6 +31,14 @@
 # signal: Ship's grade of each row, applied here above the host
 # (`SHIP_SUBSTANTIVE` in _lib.sh defines it).
 #
+# A host read that fails with no HTTP status (a dropped connection, a TLS
+# timeout) is no answer yet: the poll keeps its window and reads again, and ends
+# at exit 2 naming the read on the third such iteration in a row, or once the
+# window's deadline has passed while the reads still fail. An iteration whose reads
+# all answered resets the count. A read the host refused WITH a status is a real
+# refusal and is exit 2 at once. The reads that degrade (`threads`,
+# `reviewer_blocked`, `reviewer_run`) keep degrading.
+#
 # Two landing rules, derived from the reviewer's profile `Trigger:`; `landed_by`
 # names the one that matched.
 #   head (on-push): the review sits on the current head. Every push
@@ -31,7 +48,9 @@
 #     and posts it once, so a push between the request and the review leaves
 #     the round keyed to the older head, where the head rule would wait out the
 #     whole window. Pass `request-review`'s `requested_at` or `open-pr`'s
-#     `created_at`. Matching by time rather than by requesting login is
+#     `created_at`; with `--reviewer` and no `--since` the poll asks the host
+#     (`host_pr_requested_at`) for the latest instant that reviewer was requested
+#     and uses it, and is refused only where the host has none. Matching by time rather than by requesting login is
 #     deliberate: the login a request is made under and the login the host
 #     records can differ. A row with a null submitted_at is host state rather
 #     than a timed event (an Azure DevOps vote, which the API leaves
@@ -44,7 +63,8 @@
 # triages from the body, and a round whose findings are in it rather than in
 # threads is invisible without it. `--brief --full` names the round or thread
 # ids to return whole; every other row stays clipped, and an id matching no row
-# changes nothing.
+# changes nothing. `--full open` returns every open thread's lead and every
+# round of the rule's list whole.
 # `threads[]` rows carry the thread's first comment, which `reply-thread` answers,
 # and `replied`, true once this identity has answered in that thread.
 #
@@ -111,7 +131,9 @@
 #
 # `--brief` projects that same JSON, from the same single fetch, down to what a
 # review loop acts on: head, mergeable, `landed_by`, one row per reviewer round
-# (id, submitted_at, substantive, and the body cut to its finding items) and one
+# (id, submitted_at, substantive, and the body cut to its lead line, its
+# `Findings:` line and its finding items, HTML comments and tags gone, the items
+# of a `<details>` block lifted) and one
 # row per OPEN thread (id, path, lead, resolved, replied). `--full` names the
 # rows that come back whole, so `--brief --full <id>` is the summary with that
 # one round verbatim, or that one thread's first comment whole as its `lead`.
@@ -129,19 +151,22 @@
 #          done, waited_s}
 #   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked,
 #             reviewer_run, rounds[], threads}
+#   either shape, at the call cap with the window still open, also carries
+#   status: "pending" and cursor: "<opaque>", with done=false
 # exit: 0 done · 1 window closed first (done=false; `not_reviewed` names why no
 #       round landed, and null beside a landed round means only checks were still
-#       pending; the review loop takes either as the answer) · 2 tooling
+#       pending; the review loop takes either as the answer), or the call cap
+#       reached first (status pending: resume with --cursor) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>] to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>, default the latest request of that reviewer on the host], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>]|open to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>] [--cursor <c>, the cursor a status: pending answer carried, to resume its window; no --since or --timeout; a call holds the tool at most ${SHIP_CALL_CAP}s]"
 ship_help "$usage" "$@"
 ship_args "$usage" pr "$@"
 pr=$1; shift
-timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; after_run=0; want=""
+timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; after_run=0; want=""; cursor=""
 while [ $# -gt 0 ]; do
   case $1 in
     --brief) brief=true; shift ;;
@@ -156,6 +181,7 @@ while [ $# -gt 0 ]; do
     --timeout) ship_flag_value "$usage" "${2:-}"; timeout=$2; shift 2 ;;
     --interval) ship_flag_value "$usage" "${2:-}"; interval=$2; shift 2 ;;
     --sha) case ${2:-} in ''|-*) ship_tooling "$usage" ;; esac; want=$2; shift 2 ;;
+    --cursor) ship_flag_value "$usage" "${2:-}"; cursor=$2; shift 2 ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
 done
@@ -165,6 +191,20 @@ done
 # null each time, with no error to say the pair was wrong (#218).
 [ "$full" = '[]' ] || $brief || ship_tooling "--full needs --brief; $usage"
 [ -z "$since" ] || [ -n "$name" ] || ship_tooling "--since needs --reviewer"
+# The cursor fixed the window's deadline and its landing rule's instant already,
+# so a --since or --timeout beside it would be a second, silent opinion.
+start=""; deadline=""
+if [ -n "$cursor" ]; then
+  [ -z "$since$timeout" ] || ship_tooling "--cursor resumes its own window: drop --since and --timeout"
+  c=$(ship_cursor_read "$cursor") || c=null
+  jq -e '(.start | type) == "number" and (.deadline | type) == "number"' <<<"$c" >/dev/null \
+    || ship_tooling "--cursor does not read: pass the cursor a status: pending answer carried"
+  start=$(jq -r .start <<<"$c"); deadline=$(jq -r .deadline <<<"$c")
+  since=$(jq -r '.since // ""' <<<"$c"); after_run=$(jq -r '.after_run // 0' <<<"$c")
+  [ -n "$want" ] || want=$(jq -r '.want // ""' <<<"$c")
+  timeout=$((deadline - start))
+  [ -z "$since" ] || [ -n "$name" ] || ship_tooling "--cursor holds a --since: pass its --reviewer again"
+fi
 # --since is compared as a string against submitted_at, which every adapter
 # emits as UTC "YYYY-MM-DDTHH:MM:SSZ". Accept only what normalises to that, so
 # an offset this cannot convert (+05:00) is refused outright rather than
@@ -180,13 +220,17 @@ if [ -n "$since" ]; then
   esac
 fi
 # The reviewer is derived from the profile before any host is reached, so a
-# mistyped name or a --since the landing rule refuses costs no host call.
-reviewer=null; await=""; await_run=""
+# mistyped name or a --since the landing rule refuses costs no host call. The one
+# refusal held back is a since-rule reviewer with no --since: the host may know
+# the instant (`host_pr_requested_at`), and only once it is loaded.
+reviewer=null; await=""; await_run=""; phrase=""; refusal=""; need_since=false
 if [ -n "$name" ]; then
   row=$(ship_reviewer_by_name "$name") || ship_tooling "$row"
   d=$(ship_reviewer_derive "$row" "$since")
   refusal=$(jq -r '.refusal // empty' <<<"$d")
-  [ -z "$refusal" ] || ship_tooling "$refusal"
+  if [ -n "$refusal" ] && [ -z "$since" ] && [ "$(jq -r .rule <<<"$d")" = since ]; then need_since=true
+  elif [ -n "$refusal" ]; then ship_tooling "$refusal"; fi
+  phrase=$(jq -r '.phrase // empty' <<<"$d")
   await=$(jq -r '.login // empty' <<<"$d")
   [ -n "$await" ] || ship_tooling "$name has no Login: to await"
   await_run=$(jq -r '.await_run // empty' <<<"$d")
@@ -196,6 +240,17 @@ fi
 [ -n "$timeout" ] || timeout=480
 ship_load_host
 
+# The host's own word for when this reviewer was last asked, so a caller that
+# lost the `requested_at` of its request does not have to guess one. Only an
+# instant in the one UTC spelling the landing rule compares as a string is taken.
+if $need_since; then
+  since=$(host_pr_requested_at "$pr" "$await" ${phrase:+"$phrase"}) || since=""
+  case $since in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z) ;;
+    *) ship_tooling "$refusal" ;;
+  esac
+fi
+
 # --brief promises the run's own rows are gone, and only the identity can tell
 # them apart. Asked before the loop, so an unauthenticated host answers now
 # rather than after the timeout; the full shape needs no identity and runs on.
@@ -204,17 +259,101 @@ if $brief; then
   me=$(host_identity) || ship_tooling "cannot read the host identity; --brief cannot drop the run's own rows"
 fi
 
-start=$SECONDS
+# A call's own clock, apart from the window's: the cap bounds this call, the
+# window's `start` and `deadline` span every call of a cursor chain.
+call_start=$(date +%s)
+[ -n "$start" ] || { start=$call_start; deadline=$((start + timeout)); }
+key=on_head; [ -z "$since" ] || key=all
+readf=$(mktemp); SHIP_HTTP_STATUS_FILE=$(mktemp)
+trap 'rm -f "$readf" "$SHIP_HTTP_STATUS_FILE"' EXIT
+fails=0; lost=""; ans=""
+
+# One of the loop's host reads, through `ship_poll_read`: 0 answered (the answer
+# in $ans), 3 no answer yet, which `miss` counts; a refusal that carries an HTTP
+# status is a real one and ends the poll here, as it always did.
+rd() { # <what> <fn> <args...>
+  local what=$1; shift
+  ship_poll_read "$readf" "$@"
+  case $? in
+    0) ans=$(cat "$readf") ;;
+    1) ship_tooling "cannot read $what" ;;
+    *) lost=$what; return 3 ;;
+  esac
+}
+# The answer so far, as `out`: the one shape a closed window and a pending one
+# are both built from.
+snapshot() {
+  out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
+    --argjson t "$threads" --argjson rv "$reviewer" --argjson b "$blocked" --argjson rr "$reviewer_run" \
+    --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson d "$done" --argjson w "$waited" \
+    --arg aw "$await" --argjson st "$stale" \
+    '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer: $rv, reviewer_blocked: ($b.line? // null),
+      reviewer_run: $rr, landed_by: $lb, refused_by: $rf, done: $d, waited_s: $w}
+     | .not_reviewed = (
+         if $aw == "" then null
+         elif $st and $lb == null then "unreachable"
+         elif $m == "conflict" then null
+         elif $t == "unavailable" then "unreachable"
+         elif $lb != null then null
+         elif $rr == "unavailable" then "unreachable"
+         elif $rf != null then "blocked"
+         elif ($rr | type) == "object" and ($rr.status == "none" or $rr.conclusion == "skipped") then "never-queued"
+         elif ($rr | type) == "object" and $rr.conclusion != "success" then "infra-error"
+         else "silent" end)')
+}
+render() {
+  if $brief; then ship_brief "$out" "$me" "$key" "$full"; else printf '%s\n' "$out"; fi
+}
+# The window is still open and this call has run out of tool time: the snapshot
+# it has, `done` false whatever the pass found since the window stays open, and
+# the cursor that resumes the same window.
+pend() {
+  local cur
+  waited=$(($(date +%s) - start)); done=false; snapshot
+  cur=$(ship_cursor_make "$(jq -cn --argjson s "$start" --argjson d "$deadline" --arg since "$since" \
+    --arg w "$want" --argjson a "$after_run" '{start: $s, deadline: $d, since: $since, want: $w, after_run: $a}')")
+  render | jq -c --arg c "$cur" '. + {status: "pending", cursor: $c}'
+  exit 1
+}
+# Sleep one interval, but never past the call cap: at the cap the call answers
+# pending instead of sleeping on.
+nap() {
+  local left=$((SHIP_CALL_CAP - ($(date +%s) - call_start)))
+  [ "$left" -gt 0 ] || pend
+  if [ "$interval" -lt "$left" ]; then sleep "$interval"; else sleep "$left"; fi
+}
+# A read got no answer: the third in a row, or one past the window's deadline,
+# is exit 2 naming it; otherwise the loop reads again after a nap.
+miss() {
+  fails=$((fails + 1))
+  if [ "$fails" -ge 3 ] || [ "$(date +%s)" -ge "$deadline" ]; then
+    ship_tooling "cannot read $lost: the host gave no answer ($fails in a row)"
+  fi
+  nap
+}
+
 while :; do
-  prj=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
+  # What a pending answer reports when the pass is cut short before a read.
+  checks='[]'; reviews='{"on_head":[],"all":[],"total":0}'; threads=null; blocked=null
+  reviewer_run=null; landed_by=null; refused_by=null; done=false; stale=false
+  waited=$(($(date +%s) - start))
+  rd "PR $pr" host_pr_get "$pr" || { miss; continue; }
+  prj=$ans
   sha=$(jq -r .head_sha <<<"$prj"); mergeable=$(jq -r .mergeable <<<"$prj")
-  stale=false
+  # Frozen on the first pass, so a cursor carries the head it waits for rather
+  # than whatever the checkout is on by the time the next call resumes.
+  if [ -z "$want" ] && [ "$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" = "$(jq -r .head_ref <<<"$prj")" ]; then
+    want=$(git rev-parse HEAD 2>/dev/null) || want=""
+  fi
   if ship_head_stale "$prj" "$want"; then
-    [ $((SECONDS - start)) -ge "$timeout" ] || { sleep "$interval"; continue; }
+    [ "$waited" -ge "$timeout" ] || { fails=0; nap; continue; }
     stale=true
   fi
-  checks=$(host_pr_checks "$pr" "$sha") || ship_tooling "cannot read checks"
-  reviews=$(host_pr_reviews "$pr" "$sha" "$full") || ship_tooling "cannot read reviews"
+  rd "checks" host_pr_checks "$pr" "$sha" || { miss; continue; }
+  checks=$ans
+  rd "reviews" host_pr_reviews "$pr" "$sha" "$full" || { miss; continue; }
+  reviews=$ans
+  fails=0
   # The previous head's rounds are on no head the run is waiting for.
   ! $stale || reviews=$(jq -c '.on_head = []' <<<"$reviews")
   # Ship's grade (`SHIP_SUBSTANTIVE`), before the landing rule, the refusal
@@ -263,7 +402,7 @@ while :; do
   fi
   # A window that closed on the previous head answered nothing on this one.
   ! $stale || done=false
-  waited=$((SECONDS - start))
+  waited=$(($(date +%s) - start))
   run_status=$(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run")
   # A run that ended any way but successfully ends the window with it, wherever
   # `--timeout` stands: no round is coming out of it, and the minutes left on the
@@ -283,17 +422,17 @@ while :; do
       # window above. It buys one more interval for the row to appear, and one
       # only: waiting on a run that is over is waiting on nothing.
       completed)
-        if [ "$after_run" -lt 1 ]; then after_run=1; sleep "$interval"; continue; fi ;;
+        if [ "$after_run" -lt 1 ]; then after_run=1; nap; continue; fi ;;
       # Every other status is a run that has not finished, the host's approval
       # states included, and a round can still come out of it.
-      *) sleep "$interval"; continue ;;
+      *) nap; continue ;;
     esac
   fi
   # A landed round's run is still going: the job posts its review before its
   # denial step raises the count, so the window stays open until the run ends,
   # to the ceiling, and the count below is read from a completed run (#295).
   if $done && [ "$landed" = true ] && [ "$mergeable" != conflict ] && [ "$waited" -lt "$ceiling" ]; then
-    case $run_status in ''|none|completed) ;; *) sleep "$interval"; continue ;; esac
+    case $run_status in ''|none|completed) ;; *) nap; continue ;; esac
   fi
   if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
     # Read here rather than per pass, so a poll that waited out the run reads
@@ -309,31 +448,10 @@ while :; do
       fi
       reviewer_run=$(jq -c --argjson d "$denied" '.denied = $d' <<<"$reviewer_run")
     fi
-    out=$(jq -n --arg sha "$sha" --arg m "$mergeable" --argjson c "$checks" --argjson r "$reviews" \
-      --argjson t "$threads" --argjson rv "$reviewer" --argjson b "$blocked" --argjson rr "$reviewer_run" \
-      --argjson lb "$landed_by" --argjson rf "$refused_by" --argjson d "$done" --argjson w "$waited" \
-      --arg aw "$await" --argjson st "$stale" \
-      '{head_sha: $sha, mergeable: $m, checks: $c, reviews: $r, threads: $t, reviewer: $rv, reviewer_blocked: ($b.line? // null),
-        reviewer_run: $rr, landed_by: $lb, refused_by: $rf, done: $d, waited_s: $w}
-       | .not_reviewed = (
-           if $aw == "" then null
-           elif $st and $lb == null then "unreachable"
-           elif $m == "conflict" then null
-           elif $t == "unavailable" then "unreachable"
-           elif $lb != null then null
-           elif $rr == "unavailable" then "unreachable"
-           elif $rf != null then "blocked"
-           elif ($rr | type) == "object" and ($rr.status == "none" or $rr.conclusion == "skipped") then "never-queued"
-           elif ($rr | type) == "object" and $rr.conclusion != "success" then "infra-error"
-           else "silent" end)')
-    if $brief; then
-      key=on_head; [ -z "$since" ] || key=all
-      ship_brief "$out" "$me" "$key" "$full"
-    else
-      printf '%s\n' "$out"
-    fi
+    snapshot
+    render
     $done
     exit
   fi
-  sleep "$interval"
+  nap
 done

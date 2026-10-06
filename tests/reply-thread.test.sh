@@ -29,8 +29,10 @@ out=$(run); rc=$?
 check_rc "a reply that lands exits 0" 0 "$rc"
 check "the pr and thread are stamped onto the answer" '7 t1 true' \
   "$(jq -r '[.pr, .thread, .replied] | @tsv' <<<"$out" | tr '\t' ' ')"
-check "the call the mechanic hands the host" "host_pr_reply_thread${T}7${T}t1${T}$body" \
-  "$(cat "$SHIP_FAKE/calls")"
+# The host gets a copy of the file with ship's marker appended, so a temp file's
+# path, not $body: tests/ship-comment-marker.test.sh holds the content.
+check "the call the mechanic hands the host" "host_pr_reply_thread${T}7${T}t1" \
+  "$(cut -f1-3 "$SHIP_FAKE/calls")"
 
 reset
 : > "$SHIP_FAKE/host_pr_reply_thread.1.fail"

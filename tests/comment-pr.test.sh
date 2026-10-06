@@ -28,8 +28,10 @@ out=$(run 7 --body-file "$body"); rc=$?
 check_rc "a post that lands exits 0" 0 "$rc"
 check "a post that lands answers the fake's comment" \
   'https://example.invalid/pull/7#issuecomment-1' "$(jq -r .url <<<"$out")"
-check "the call the mechanic hands the host" "host_pr_comment${T}7${T}$body" \
-  "$(cat "$SHIP_FAKE/calls")"
+# The host gets a copy of the file with ship's marker appended, so a temp file's
+# path, not $body: tests/ship-comment-marker.test.sh holds the content.
+check "the call the mechanic hands the host" "host_pr_comment${T}7" \
+  "$(cut -f1,2 "$SHIP_FAKE/calls")"
 
 reset
 : > "$SHIP_FAKE/host_pr_comment.1.fail"
