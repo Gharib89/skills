@@ -393,11 +393,13 @@ ship_worktree_container() {
 }
 
 # The base ref, resolved from origin/HEAD rather than a hardcoded branch (ADO
-# defaults vary). Refreshes the symbolic ref where the clone lacks one.
+# defaults vary). Refreshes the symbolic ref where the clone lacks one, which
+# asks the origin; `--local` reads the ref as it is, for a check that skips when
+# the base is unknown rather than reach a host.
 ship_base_ref() {
   local ref
   ref=$(git symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null) \
-    || { git remote set-head origin -a >/dev/null 2>&1 \
+    || { [ "${1:-}" != --local ] && git remote set-head origin -a >/dev/null 2>&1 \
          && ref=$(git symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null); } \
     || return 1
   printf '%s' "${ref#refs/remotes/}"

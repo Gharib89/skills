@@ -67,7 +67,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$title" ] && [ -n "$file" ] || ship_tooling "$usage"
 if [ -z "$repo" ] && [ -z "$outside" ] \
-   && branch=$(git symbolic-ref -q --short HEAD 2>/dev/null) && base=$(ship_base_ref) && [ "$branch" != "${base#origin/}" ] \
+   && branch=$(git symbolic-ref -q --short HEAD 2>/dev/null) && base=$(ship_base_ref --local) && [ "$branch" != "${base#origin/}" ] \
    && changed=$(git -c core.quotepath=off diff --name-only "$(git merge-base HEAD "$base")" 2>/dev/null) && [ -n "$changed" ]; then
   in_diff=$(ship_paths_cited "$title"$'\n'"$(cat "$file")" "$changed" | jq -R . | jq -sc .)
   if [ "$in_diff" != "[]" ]; then

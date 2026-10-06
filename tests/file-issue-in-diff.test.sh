@@ -99,6 +99,19 @@ check_rc "--outside-scope with no reason is the usage error" 2 "$rc"
 run 'x' "t" --outside-scope "" >/dev/null; rc=$?
 check_rc "--outside-scope with an empty reason is the usage error" 2 "$rc"
 
+# An unresolved base is a skipped check, not a network call: the in_diff check
+# reads origin/HEAD as it is and never asks the origin to refresh it.
+shim=$work/shim; mkdir -p "$shim"
+printf '#!/bin/sh\ncase "$*" in *set-head*) echo "$*" >> %s/set-head.log ;; esac\nexec %s "$@"\n' "$work" "$(command -v git)" > "$shim/git"
+chmod +x "$shim/git"
+git -C "$repo" symbolic-ref --delete refs/remotes/origin/HEAD
+reset
+printf '%s\n' 'see skills/ship/scripts/run-file.sh' > "$body"
+( cd "$repo" && PATH=$shim:$PATH bash "$mech" --title t --body-file "$body" --label needs-triage >/dev/null 2>&1 ); rc=$?
+check_rc "with no origin/HEAD the check is skipped and the find files" 0 "$rc"
+check "and the origin is never asked to refresh its HEAD" "" "$(cat "$work/set-head.log" 2>/dev/null)"
+git -C "$repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+
 # The matcher takes a path as text, not as a pattern: regex characters in a
 # path match only themselves.
 source skills/ship/scripts/_lib.sh

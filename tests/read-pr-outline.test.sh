@@ -79,6 +79,17 @@ check "off the PR's own branch the paths are not known" 'null' "$(missing)"
 check "and the rest of the answer still stands" '["Why the change","Change outline","Special things to note"]' \
   "$(run | jq -c .headings)"
 
+# An unresolved base leaves the field null: origin/HEAD is read as it is, and the
+# origin is never asked to refresh it.
+shim=$work/shim; mkdir -p "$shim"
+printf '#!/bin/sh\ncase "$*" in *set-head*) echo "$*" >> %s/set-head.log ;; esac\nexec %s "$@"\n' "$work" "$(command -v git)" > "$shim/git"
+chmod +x "$shim/git"
+git -C "$repo" symbolic-ref --delete refs/remotes/origin/HEAD
+reset; pr_body "$all"
+check "with no origin/HEAD the paths are not known" 'null' "$(PATH=$shim:$PATH missing)"
+check "and the origin is never asked to refresh its HEAD" "" "$(cat "$work/set-head.log" 2>/dev/null)"
+git -C "$repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+
 # A mention is the whole path or a basename that names one changed file, bounded
 # the way ship_paths_cited bounds a path, so a longer token or a shared name does
 # not cover a file it is not.
