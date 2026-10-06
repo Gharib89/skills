@@ -51,7 +51,7 @@ Review                                         (one block per reviewer)
     (a fallback that ran opens with: fallback for <primary>: not reviewed: <reason>)
     (a Gating: yes reviewer's declined finding: override needed: <finding>, <evidence>)
 
-Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>[ · at <sha>, <n> commits behind]
+Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>[ · at <sha>, <n> commits behind | at <sha>, behind unknown]
 Docs-sync:   <ran: files | skipped: reason>
 Tracker:     <none | one block per drafted section:>
   #<n> `## <section>`:
@@ -157,15 +157,17 @@ undoes. Never an auto-merge flag either: it can merge the instant CI is green,
 before a reviewer lands.
 
 **The gate's verdict is cited, not re-run, while it still describes the PR.**
-Phase 5 records each verdict with `run-file gate record` against the head it
-ran on; here, `run-file gate read --head <head_sha>`, the head `read-pr`
-returns, answers `current`. `current: true` cites the recorded verdict. `false`
-re-runs the gate from the worktree and records it again, because a commit the
-gate never saw is in the PR; where the gate cannot run here, the row carries
-`at <sha>, <behind> commits behind` from that same answer. `non_leg_failing`
-on the `CI:` row is red the profile does not ask for, so it does not hold the
-merge, and an `unlisted` check is profile drift for the human to add to `Legs:`
-or remove.
+Phase 5 records each verdict with `run-file gate record` against the head it ran
+on; here, `run-file gate read --head <head_sha>`, the head `read-pr` returns,
+answers `current`. On `current: true`, cite the recorded verdict: the
+`Local gate:` row reads the `gates` object that answer returns, not a re-run. On
+`current: false`, re-run the gate from the worktree and record it again, because
+a commit the gate never saw is in the PR; where the gate cannot run here, the
+row carries `at <sha>, <n> commits behind`, `<n>` being that answer's `behind`,
+or `at <sha>, behind unknown` when `behind` is `null`. `non_leg_failing` on the
+`CI:` row is red the profile does not ask for, so it does not hold the merge,
+and an `unlisted` check is profile drift for the human to add to `Legs:` or
+remove.
 
 **On approval**, from the worktree, `merge <pr> <issue|none> [--worktree
 <path>]`. Its header carries what it does and what each refusal protects
@@ -179,7 +181,8 @@ settled before `cleanup`, which deletes the directory the drafts live in, so
 ask for the word on any draft still open. Then `run-file close 9` and set the
 task to the returned `mirror`, and last `cleanup <issue|none>`, which removes
 the worktree, force-deletes the local branch, and removes the Run file and the
-run's Scratch directory, the record's job done.
+run's Scratch directory, the record's job done; `cleanup none` leaves both in
+place, and a run that stopped before this gate left its record.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this

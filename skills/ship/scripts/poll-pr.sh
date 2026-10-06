@@ -50,12 +50,12 @@
 #     whole window. Pass `request-review`'s `requested_at` or `open-pr`'s
 #     `created_at`; with `--reviewer` and no `--since` the poll asks the host
 #     (`host_pr_requested_at`) for the latest instant that reviewer was requested
-#     and uses it, and is refused only where the host has none. Matching by time rather than by requesting login is
-#     deliberate: the login a request is made under and the login the host
-#     records can differ. A row with a null submitted_at is host state rather
-#     than a timed event (an Azure DevOps vote, which the API leaves
-#     unstamped): it cannot answer a question about time, so it satisfies the
-#     head rule only.
+#     and uses it, and is refused only where the host has none. Matching by time
+#     rather than by requesting login is deliberate: the login a request is made
+#     under and the login the host records can differ. A row with a null
+#     submitted_at is host state rather than a timed event (an Azure DevOps
+#     vote, which the API leaves unstamped): it cannot answer a question about
+#     time, so it satisfies the head rule only.
 #     Counting it here would land round 2 instantly off round 1's stale vote.
 #
 # Each review row carries the round's own `body` and the `id` the host knows it

@@ -7,6 +7,7 @@
 - [Flags, exit codes and failed writes](#flags-exit-codes-and-failed-writes)
 - [Section surgery](#section-surgery)
 - [The vocabulary a read comes back in](#the-vocabulary-a-read-comes-back-in)
+- [Waits past 540 s](#waits-past-540-s)
 
 `scripts/` holds one executable per deterministic step, and not every one
 touches the host: `run-file` writes the run's own record and nothing else.
@@ -124,15 +125,17 @@ root review comment id, as a string).
 Run mechanics **inline**: they project their own output, so a subagent there
 burns budget to relay what an exit code already says.
 
+## Waits past 540 s
+
 **No call holds the tool past 540 s**, under the harness's 600 s limit on one
 tool call. A `poll-pr` or `ci-wait` window that outlasts it answers `status:
 "pending"` with a `cursor`, exit 1, and the same command plus `--cursor <c>`,
 with no `--since` and no `--timeout`, resumes that window with its landing rule
-and deadline; repeat until an answer arrives without `pending`. A pending
-answer is not a closed window, so never read it as `silent`. Run either wait in
-the Bash tool's background mode where other work can go on, its completion
-notification resuming the run, and start `ci-wait <pr>` that way at PR open,
-alongside the first reviewer poll, since CI runs from there. Inside a window a
-read that fails with no HTTP status is no answer yet: three in a row, or the
-deadline passing while reads still fail, end the call with exit 2, and a read
-the host refused with a status ends it at once.
+and deadline; repeat until an answer arrives without `pending`. A pending answer
+is not a closed window, so never read it as `silent`. Run either wait in the
+Bash tool's background mode when the run has other work meanwhile, its
+completion notification resuming the run, and start `ci-wait <pr>` that way at
+PR open, alongside the first reviewer poll, since CI runs from there. Inside a
+window a read that fails with no HTTP status is no answer yet: three in a row,
+or the deadline passing while reads still fail, end the call with exit 2, and a
+read the host refused with a status ends it at once.

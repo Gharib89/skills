@@ -61,6 +61,16 @@ reset; profile 'Template: None.'; pr_body "$body"
 check "Template: None. means nothing is missing" '[]' "$(run 7 | jq -c .missing)"
 
 reset; profile 'Template: .github/absent.md'; pr_body "$body"
-check "a template file that is not there means nothing is missing" '[]' "$(run 7 | jq -c .missing)"
+check "a template file that is not there is null, not a complete body's []" 'null' "$(run 7 | jq -c .missing)"
+check "and the rest of the answer still stands" '["Summary","Evidence"]' "$(run 7 | jq -c .headings)"
+
+if [ "$(id -u)" -ne 0 ]; then
+  reset; profile 'Template: .github/pull_request_template.md'; pr_body "$body"
+  chmod 000 "$repo/.github/pull_request_template.md"
+  check "a template file that cannot be read is null" 'null' "$(run 7 | jq -c .missing)"
+  chmod 644 "$repo/.github/pull_request_template.md"
+else
+  echo "skip: an unreadable template (root reads past chmod 000)"
+fi
 
 finish

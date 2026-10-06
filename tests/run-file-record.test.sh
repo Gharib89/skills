@@ -10,6 +10,7 @@ source tests/lib.sh
 
 m=$PWD/skills/ship/scripts/run-file.sh
 profile=$PWD/tests/fixtures/run-file/ship-profile.md
+spaced=$PWD/tests/fixtures/run-file/ship-profile-spaced.md
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
@@ -182,6 +183,33 @@ fb=$(at "$repo" init 36 --from-profile "$tmp/bare.md" | jq -r .run_file)
 check "an empty profile leaves legs None." '- [ ] 8 · CI: resolve any conflict, land None. green' "$(grep '^- \[ \] 8 · ' "$fb")"
 check "an empty profile leaves verifications unnamed" 0 "$(grep -c '^## Verification results$' "$fb")"
 
+# Every heading under ## Verification is a name, whatever it holds: a name with a
+# space still gets its results section, and close 3 still refuses while it has
+# no result. A hand-passed list keeps the stricter name-shaped rule.
+rsp=$(at "$repo" init 37 --from-profile "$spaced")
+fs=$(jq -r .run_file <<<"$rsp")
+check "a profile heading with a space is a verification name" \
+  '- Docs check: pending
+- github-mechanics: pending' "$(grep '^- .*: pending$' "$fs")"
+check "the checklist line still joins the headings" \
+  '- [ ] 3 · Verify: Docs check, github-mechanics scoped to what changed' "$(grep '^- \[.\] 3 · ' "$fs")"
+at "$repo" close 0 --file "$fs" >/dev/null
+for p in 1 2; do at "$repo" open "$p" --file "$fs" >/dev/null; at "$repo" close "$p" --file "$fs" >/dev/null; done
+at "$repo" open 3 --file "$fs" >/dev/null
+check "close 3 refuses while the spaced name has no result" \
+  'phase 3 cannot close with verifications pending: Docs check, github-mechanics; record each with `run-file close 3 --result <name>=<pass|fail|deferred-to-ci|unavailable|unexercised|n/a>`' \
+  "$(inerr "$repo" close 3 --file "$fs")"
+at "$repo" close 3 --file "$fs" --result 'Docs check=n/a: no doc touched' --result 'github-mechanics=pass' >/dev/null
+check "a result names the spaced name and splits on the first =" \
+  '- Docs check: n/a: no doc touched' "$(grep '^- Docs check: ' "$fs")"
+check "close 3 passes once the spaced name has its result" 1 \
+  "$(grep -c '^- \[x\] 3 · .*([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9])$' "$fs")"
+check "a hand-passed spaced name list has no results section" 0 \
+  "$(at "$repo" init 38 --verifications 'Docs check, github-mechanics' | jq -r .run_file | xargs grep -c '^## Verification results$')"
+# A name carrying `=` could never be addressed by --result, so init refuses it.
+printf '## Verification\n\n### a=b\n\nText.\n' > "$tmp/eq.md"
+check_rc "a profile heading carrying = is malformed" 2 "$(inrc "$repo" init 39 --from-profile "$tmp/eq.md")"
+
 # --- the gate record ------------------------------------------------------------
 
 fg=$(at "$repo" init 40 | jq -r .run_file)
@@ -190,12 +218,12 @@ check "gate record answers the head and the verdict" "$first pass" "$(jq -r '[.h
 check "gate record names the run file" "$fg" "$(jq -r .run_file <<<"$rec")"
 check "the record is a line in a section at the end" \
   "## Local gate" "$(tail -3 "$fg" | grep '^## ')"
-check "the line is clock, full sha, verdict" 1 "$(grep -cE "^- [0-9]{2}:[0-9]{2} $first pass$" "$fg")"
+check "the line is clock, full sha, verdict, gates" 1 "$(grep -cE "^- [0-9]{2}:[0-9]{2} $first pass \{\}$" "$fg")"
 
 printf '{"verdict":"fail"}' > "$tmp/gate.json"
 at "$repo" gate record "$tmp/gate.json" --file "$fg" --head 1111111111111111111111111111111111111111 >/dev/null
 check "a second record appends to the same section" 1 "$(grep -c '^## Local gate$' "$fg")"
-check "an explicit --head is recorded" 1 "$(grep -cE '^- [0-9]{2}:[0-9]{2} 1{40} fail$' "$fg")"
+check "an explicit --head is recorded, a verdict with no gates carries none" 1 "$(grep -cE '^- [0-9]{2}:[0-9]{2} 1{40} fail$' "$fg")"
 
 # A section the run wrote below the gate record does not take the next line.
 printf '\n## Notes\n\nby hand\n' >> "$fg"
@@ -228,6 +256,34 @@ check "gate read takes the last of several records" "pass" \
   "$(printf '{"verdict":"fail"}' | at "$repo" gate record - --file "$fr" --head "$first" >/dev/null
      printf '{"verdict":"pass"}' | at "$repo" gate record - --file "$fr" --head "$first" >/dev/null
      at "$repo" gate read --head "$first" --file "$fr" | jq -r .verdict)"
+# The gates object rides on the line, so the merge gate can cite it on its Local
+# gate row without re-running the gate.
+fq=$(at "$repo" init 42 | jq -r .run_file)
+printf '{"verdict":"pass","gates":{"lint":"pass","tests":"pass: 12 cases","note":"a b"}}' | at "$repo" gate record - --file "$fq" >/dev/null
+check "the line carries the gates as compact JSON" 1 \
+  "$(grep -cF -- "$second pass {\"lint\":\"pass\",\"tests\":\"pass: 12 cases\",\"note\":\"a b\"}" "$fq")"
+check "gate read returns the gates, spaces inside a value intact" \
+  '{"lint":"pass","tests":"pass: 12 cases","note":"a b"}' "$(at "$repo" gate read --head "$second" --file "$fq" | jq -c .gates)"
+check "gate read still returns the verdict and head beside the gates" "pass $second" \
+  "$(at "$repo" gate read --head "$second" --file "$fq" | jq -r '[.verdict, .head] | join(" ")')"
+printf '{"verdict":"pass"}' | at "$repo" gate record - --file "$fq" --head "$first" >/dev/null
+check "a verdict recorded with no gates reads null" null "$(at "$repo" gate read --head "$first" --file "$fq" | jq -c .gates)"
+printf '{"verdict":"pass","gates":"all"}' | at "$repo" gate record - --file "$fq" --head "$first" >/dev/null
+check "a gates value that is not an object is no gates" null "$(at "$repo" gate read --head "$first" --file "$fq" | jq -c .gates)"
+# A record from before the gates were stored is the old three-field line.
+fo=$(at "$repo" init 43 | jq -r .run_file)
+printf '\n## Local gate\n\n- 10:00 %s pass\n' "$first" >> "$fo"
+check "an old three-field line reads null gates" "pass null" \
+  "$(at "$repo" gate read --head "$first" --file "$fo" | jq -r '[.verdict, (.gates | tostring)] | join(" ")')"
+printf '\n- 10:05 %s pass {not json\n' "$first" >> "$fo"
+check_rc "a gates field that is not JSON is a refusal, not a verdict" 1 "$(inrc "$repo" gate read --head "$first" --file "$fo")"
+
+# One sha pattern for both: 7 to 64 hex digits.
+check_rc "gate read takes a 7-digit head" 0 "$(inrc "$repo" gate read --head "${first:0:7}" --file "$fr")"
+check_rc "gate read refuses a 6-digit head" 2 "$(inrc "$repo" gate read --head "${first:0:6}" --file "$fr")"
+check_rc "gate read refuses a 65-digit head" 2 "$(inrc "$repo" gate read --head "${first}00000000000000000000000000" --file "$fr")"
+check_rc "gate record takes a 7-digit head" 0 "$(printf '{"verdict":"pass"}' | inrc "$repo" gate record - --file "$fr" --head "${first:0:7}")"
+check_rc "gate record refuses a 6-digit head" 2 "$(printf '{"verdict":"pass"}' | inrc "$repo" gate record - --file "$fr" --head "${first:0:6}")"
 check_rc "gate read needs --head" 2 "$(inrc "$repo" gate read --file "$fr")"
 check_rc "gate with no subcommand is malformed" 2 "$(inrc "$repo" gate)"
 

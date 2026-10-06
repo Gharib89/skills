@@ -112,6 +112,7 @@ check_rc "--cursor with --timeout is tooling" 2 "$rc"
 check "and reaches no host" '' "$(cat "$SHIP_FAKE/calls" 2>/dev/null)"
 out=$(ci "$two" --cursor garbage); rc=$?
 check_rc "an unreadable cursor is tooling" 2 "$rc"
+check "and says so in poll-pr's words" '--cursor does not read' "$(jq -r '.error | split(":")[0]' <<<"$out")"
 check "and reaches no host either" '' "$(cat "$SHIP_FAKE/calls" 2>/dev/null)"
 
 # --- reads with no answer ------------------------------------------------------

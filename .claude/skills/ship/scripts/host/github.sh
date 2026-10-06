@@ -451,7 +451,8 @@ host_pr_checks() { # <pr> <head_sha>
 # why the check failed, so a log that cannot be read (expired, still running)
 # leaves log_tail null and does not fail the call.
 host_check_job() { # <pr> <head_sha> <name>
-  local cr id attempt log
+  local cr id attempt log esc bel
+  esc=$(printf '\033') bel=$(printf '\007')
   cr=$(api "$R/commits/$2/check-runs" -X GET -f "check_name=$3" -f per_page=100 \
     --jq '.check_runs | max_by(.id) // empty | {id, actions: (.app.slug == "github-actions")}') || return 1
   [ -n "$cr" ] || return 1
@@ -460,7 +461,13 @@ host_check_job() { # <pr> <head_sha> <name>
   fi
   id=$(jq -r .id <<<"$cr")
   attempt=$(api "$R/actions/jobs/$id" --jq .run_attempt) || return 1
-  if log=$(api "$R/actions/jobs/$id/logs" 2>/dev/null); then log=$(printf '%s\n' "$log" | tail -n 40); else log=; fi
+  # A job log carries colour codes, which the endpoint refuses to hand over
+  # unless asked; they are stripped (CSI, then OSC ended by BEL; the C locale,
+  # since `[@-~]` is no byte range in a UTF-8 one) so the tail is
+  # text and not escapes inside a JSON string.
+  if log=$(api "$R/actions/jobs/$id/logs" --allow-escape-sequences 2>/dev/null); then
+    log=$(printf '%s\n' "$log" | tail -n 40 | LC_ALL=C sed -e "s/$esc\][^$bel]*$bel//g" -e "s/$esc\[[0-9;?]*[@-~]//g")
+  else log=; fi
   jq -n --argjson id "$id" --argjson a "$attempt" --arg l "$log" \
     '{job_id: $id, attempt: $a, log_tail: (if $l == "" then null else $l end)}'
 }
@@ -708,14 +715,14 @@ host_pr_request_review() { # <pr> <login>
 # (<phrase>), the last PR comment opening with the phrase, by anyone, since the
 # request reads the same whoever posted it. Nothing and non-zero where there is none.
 host_pr_requested_at() { # <pr> <login> [<phrase>]
-  local at
+  local at raw
   if [ -n "${3:-}" ]; then
-    at=$(api "$R/issues/$1/comments?per_page=100" --paginate --jq '.[]' \
-      | jq -rs --arg p "$3" '[.[] | select(.body | startswith($p))] | last | .created_at // empty') || return 1
+    raw=$(api "$R/issues/$1/comments?per_page=100" --paginate --jq '.[]') || return 1
+    at=$(jq -rs --arg p "$3" '[.[] | select(.body | startswith($p))] | last | .created_at // empty' <<<"$raw") || return 1
   else
-    at=$(_gh_review_events "$1" \
-      | jq -r --arg l "$2" --arg alias "$(_gh_alias "$2")" "$_gh_recorded_def"'
-          [.[] | select(.event == "review_requested" and (.login | recorded))] | last | .created_at // empty') || return 1
+    raw=$(_gh_review_events "$1") || return 1
+    at=$(jq -r --arg l "$2" --arg alias "$(_gh_alias "$2")" "$_gh_recorded_def"'
+          [.[] | select(.event == "review_requested" and (.login | recorded))] | last | .created_at // empty' <<<"$raw") || return 1
   fi
   [ -n "$at" ] && printf '%s\n' "$at"
 }

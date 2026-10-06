@@ -22,12 +22,12 @@ each round: treat each round as a fresh read of the committed tree.
 The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
 
 - **`on-request`**: `request-review <pr> --reviewer <name>`, then poll with no
-  `--since`: `poll-pr` reads the latest request instant back off the host, and
-  only on a host that reads none back (Azure DevOps) is `--since` its
-  `requested_at`. The block's `Request:` picks the transport (the host's own
-  request call, or a PR comment of the phrase for a comment-triggered workflow),
-  and the mechanic reads the request back off the host; one that does not read
-  back exits 1, and the reviewer is `not reviewed: never-queued`, with no poll.
+  `--since`, since `poll-pr` asks the host when the request was made; on Azure
+  DevOps, which records none, pass `--since` its `requested_at`. The block's
+  `Request:` picks the transport (the host's own request call, or a PR comment
+  of the phrase for a comment-triggered workflow), and `request-review` confirms
+  the request queued; a request it cannot confirm exits 1, and the reviewer is
+  `not reviewed: never-queued`, with no poll.
   Under the host's own request call, round 1 first polls `--since` `open-pr`'s
   `created_at` at `--timeout 0`: a round the host opened unbidden with the PR (a
   Copilot ruleset, `review_on_push: false`) that has landed is round 1, and the
@@ -39,12 +39,12 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
 
 Per round: start it, `poll-pr <pr> --reviewer <name> [--since <iso>] --brief`,
 inline or in the background, resuming a `pending` answer with its `--cursor`
-([mechanics.md](mechanics.md) has the cap), triage what landed, push the fixes
-once, reply. The next round starts only while the latest round's fixes changed
-the tree and `Cap:` has rounds left. The poll takes its bound from the block,
-and a window that closed is the answer rather than a reason to re-poll, except
-after a `conflict`, which says nothing about the reviewer: resolve it (phase 8)
-and poll again.
+([mechanics.md](mechanics.md#waits-past-540-s) has the cap), triage what landed,
+push the fixes once, reply. The next round starts only while the latest round's
+fixes changed the tree and `Cap:` has rounds left. The poll takes its bound from
+the block, and a window that closed is the answer rather than a reason to
+re-poll, except after a `conflict`, which says nothing about the reviewer:
+resolve it (phase 8) and poll again.
 
 **`Cap:`** is the budget on rounds ship starts: a number, or `None.` for an
 uncapped loop; `auto-once` delivers one round whatever it reads, and under

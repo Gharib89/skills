@@ -58,32 +58,35 @@ place where having nothing to do is the correct next action.
 
 **Before phase 0, before the worktree**, run `run-file init <issue|slug>
 --from-profile`, which reads the profile's `Tripwires:`, its Verification
-names, its reviewers and its `Legs:` into the checklist. The record lives in
-the repo's git common directory, `<git common dir>/ship/ship-<issue>/run.md`,
-outside every working tree, so the gate never reads it, the main checkout and
-the worktree resolve the same path, and a wiped temp directory leaves it
-standing; `--scratchpad <dir>` overrides the root. Init also prints `scratch`,
-`<git common dir>/ship/scratch-<issue>`, the run's own scratch root, and opens
-phase 0.
+names, its reviewers and its `Legs:` into the checklist. The record lives at
+`<git common dir>/ship/ship-<issue>/run.md`, outside every working tree, so the
+gate never reads it; `--scratchpad <dir>` overrides the root. Init also prints
+`scratch`, `<git common dir>/ship/scratch-<issue>`, the run's own scratch root,
+and opens phase 0. It refuses an existing record: a resumed run reads that one,
+and a new run of an issue whose earlier run stopped passes `--rebuild` to
+replace it. `cleanup` removes both directories after the merge; a free-text run
+(`cleanup none`) leaves its `ship-<slug>/` and `scratch-<slug>/` in place, and a
+run that stops before the merge gate leaves its record.
 
 The file is the run's **record**, the source of truth for where the run is and
 the home of the design and plan; it survives a mid-run context summary, so work
 straight through one, each phase at the width its lane gives it rather than the
 width the remaining context suggests. Every later call finds it from the issue
-alone, `--issue <issue>`. The task list is its **display**, one harness task per
-open phase: `run-file next <n>` closes the open phase and opens `<n>` in one
-call and returns both `mirror` values, so a phase costs two task calls, a
-`TaskCreate` for the phase it opened and a `TaskUpdate` to complete the one it
-closed. `open`, `close` and `skip` flip one phase. Phase 4 may open while phase
-3 is still open, both stamped; a phase-4 fix that touches a path a Verification
-already ran on re-runs that Verification scoped to the fix before phase 3
-closes. `close 3` takes one `--result <name>=<word>` per Verification named at
-init (`n/a` for one whose `Applies when:` you judged false) and refuses while
-one is missing. Close a phase only once its `Done when:` holds: the mechanic
-stamps whatever close it is given. A **small-lane** run keeps all ten items and
-`skip`s each collapsed phase, so the record shows a decision and not a gap;
-re-running `skip <n> "<reason>"` replaces a reason a wider diff outgrew. A
-harness that refuses the task tools has answered: run on the file alone.
+alone, `--issue <issue>`, plus the same `--scratchpad` if init took one. The
+task list is its **display**, one harness task per open phase: `run-file next
+<n>` closes the open phase and opens `<n>` in one call and returns both `mirror`
+values, so a phase costs two task calls, a `TaskCreate` for the phase it opened
+and a `TaskUpdate` to complete the one it closed. `open`, `close` and `skip`
+flip one phase. Phase 4 may open while phase 3 is still open, both stamped; a
+phase-4 fix that touches a path a Verification already ran on re-runs that
+Verification scoped to the fix before phase 3 closes. `close 3` takes one
+`--result <name>=<word>` per Verification named at init (`n/a` for one whose
+`Applies when:` you judged false) and refuses while one is missing. Close a
+phase only once its `Done when:` holds: the mechanic stamps whatever close it is
+given. A **small-lane** run keeps all ten items and `skip`s each collapsed
+phase, so the record shows a decision and not a gap; re-running `skip <n>
+"<reason>"` replaces a reason a wider diff outgrew. A harness that refuses the
+task tools has answered: run on the file alone.
 
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned**, `<scratch>/<role>/<role>-report.md`, because a

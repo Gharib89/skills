@@ -11,7 +11,7 @@ SHIP_OWNER=o SHIP_REPO=r
 source skills/ship/scripts/host/github.sh
 
 reqs=$(mktemp); trap 'rm -f "$reqs"' EXIT
-APP=github-actions LOGFAIL='' RUN=''
+APP=github-actions LOGFAIL='' RUN='' LOGBODY=''
 # The check-runs read answers what its own `--jq` would print: the latest run's
 # id and whether Actions wrote it, or nothing where no run carries the name.
 api() {
@@ -21,7 +21,11 @@ api() {
   case $p in
     repos/o/r/commits/abc/check-runs) [ -z "$RUN" ] || jq -cn --arg a "$APP" '{id: 55, actions: ($a == "github-actions")}' ;;
     repos/o/r/actions/jobs/55) echo 2 ;;
-    repos/o/r/actions/jobs/55/logs) [ -z "$LOGFAIL" ] || return 1; seq 1 100 ;;
+    repos/o/r/actions/jobs/55/logs)
+      [ -z "$LOGFAIL" ] || return 1
+      # The real endpoint refuses a log carrying escape sequences unless told.
+      case " $* " in *' --allow-escape-sequences '*) ;; *) echo 'the response contains terminal escape sequences; pass --allow-escape-sequences' >&2; return 1 ;; esac
+      if [ -n "$LOGBODY" ]; then printf '%b\n' "$LOGBODY"; else seq 1 100; fi ;;
     repos/o/r/actions/jobs/55/rerun) ;;
     *) echo "unexpected api call: $*" >&2; return 1 ;;
   esac
@@ -36,6 +40,12 @@ check "the check is looked up by name on the head" \
   "$(grep check-runs "$reqs" | sed 's/ --jq.*//')"
 check "the job and its log are read by the check run's id" 'repos/o/r/actions/jobs/55 repos/o/r/actions/jobs/55/logs' \
   "$(grep -o 'repos/o/r/actions/jobs/55[/a-z]*' "$reqs" | paste -sd' ' -)"
+
+check "the log read passes --allow-escape-sequences" 1 "$(grep -c 'jobs/55/logs --allow-escape-sequences' "$reqs")"
+LOGBODY='\033[31mred\033[0m\n\033[1;32mgreen\033[K ok\033[0m\n\033]0;title\007plain'
+check "escape sequences (CSI and OSC) are stripped from the log tail" 'red|green ok|plain' \
+  "$(host_check_job 7 abc test | jq -r '.log_tail | split("\n") | join("|")')"
+LOGBODY=''
 
 LOGFAIL=1
 check "a log that cannot be read is a null tail, not a failed call" '55 null' \

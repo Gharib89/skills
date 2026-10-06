@@ -208,11 +208,13 @@ ship_mark() {
   case $b in ''|*$'\n') ;; *) b+=$'\n' ;; esac
   printf '%s%s\n' "$b" "$SHIP_COMMENT_MARKER"
 }
-# ship_mark_file <src> <dst>: <src>'s bytes then the marker, written to <dst>.
-# The sentinel keeps the file's trailing newlines through `$( )`.
+# ship_mark_file <src> <dst>: <src>'s bytes then the marker, written to <dst>;
+# 1 where <src> cannot be read, with <dst> untouched. The sentinel keeps the
+# file's trailing newlines through `$( )`, and `&&` keeps `cat`'s status as the
+# substitution's, which a `;` would replace with the sentinel's.
 ship_mark_file() {
   local b
-  b=$(cat "$1"; printf x) || return 1
+  b=$(cat "$1" && printf x) || return 1
   ship_mark "${b%x}" > "$2"
 }
 
@@ -984,8 +986,13 @@ ship_no_checks_expected() { # <profile-body>
   local ci
   ci=$(awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$1")
   grep -Eq '^Legs:[[:space:]]*None\.[[:space:]]*$' <<<"$ci" || return 1
-  grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)' <<<"$ci" || return 1
-  return 0
+  ship_no_checks_legal "$1"
+}
+# ship_no_checks_legal <profile-body>: true when the profile's `## CI` block says
+# `No-checks legal: yes`, read in that section only like every profile fact.
+ship_no_checks_legal() { # <profile-body>
+  awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$1" \
+    | grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)'
 }
 
 # ship_profile_legs <profile-body>: the leg names the profile's `Legs:` names
@@ -1013,11 +1020,11 @@ ship_profile_legs() { # <profile-body>
 # in a `$( )` where a variable dies unread; an adapter that never writes it (Azure
 # DevOps, whose `az` reports no status) has every failure read as no answer, so
 # its persistent refusal costs the loop three reads before it ends.
+# The caller sets $SHIP_HTTP_STATUS_FILE to a file it traps for removal.
 # ship_poll_read <out-file> <fn> <args...>: 0 answered, the answer in <out-file>
 # · 1 the host refused, with a status · 3 no answer
 ship_poll_read() {
   local out=$1; shift
-  : "${SHIP_HTTP_STATUS_FILE:=$(mktemp)}"
   : > "$SHIP_HTTP_STATUS_FILE"
   "$@" > "$out" && return 0
   [ -s "$SHIP_HTTP_STATUS_FILE" ] && return 1
@@ -1396,15 +1403,19 @@ ship_brief() {
       gsub("<!--[\\s\\S]*?-->"; "") | gsub("[ \t]*<picture>[\\s\\S]*?</picture>"; "")
       | details | details | details | notags
       | gsub("</?[A-Za-z][^>]*$"; "") | gsub("<!--[\\s\\S]*$"; "");
-    # The lead (the first line with text that is not a heading), the `Findings:`
-    # line and the items. A round with none of the last two is clipped instead.
+    # The lead (the first line with text that is not a heading, behind the h3
+    # verdict heading above it where there is one: an overview states its
+    # severity there and nowhere else), the `Findings:` line and the items. A round with none of the last two is clipped instead.
     def finding_items:
       (if endswith("\n...[truncated]") then "\n...[truncated]" else "" end) as $mark
       | sub("\n\\.\\.\\.\\[truncated\\]$"; "") | unhtml as $body
       | [$body | splits("\n") | sub("[ \t\r]+$"; "") | select(test("^[ \t]*$") | not)] as $lines
       | [$lines[] | select(test("^[ \t]*([-*+]|[0-9]+[.)])[ \t]"))] as $items
       | [$lines[] | select(test("^[ \t*_]*Findings:"))] as $found
-      | ([$lines[] | select(test("^#") | not)][0] // $lines[0] // "") as $lead
+      | ([$lines | to_entries[] | select(.value | test("^#") | not)][0]) as $first
+      | ($first.value // $lines[0] // "") as $text
+      | ([$lines[:($first.key // 0)][] | select(test("^###[ \t]+[^# \t]"))][0] // null) as $verdict
+      | (if $verdict == null then $text else ($verdict | sub("^###[ \t]+"; "")) + ": " + $text end) as $lead
       | if ($items | length) == 0 and ($found | length) == 0 then (($body + $mark) | clip)
         else (reduce ([$lead] + $found + $items)[] as $l ([]; if index([$l]) then . else . + [$l] end)
               | join("\n")) + $mark end;

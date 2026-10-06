@@ -50,7 +50,7 @@ while [ $# -gt 0 ]; do
     --timeout) ship_flag_value "$usage" "${2:-}"; timeout=$2; timeout_set=1; shift 2 ;;
     --interval) ship_flag_value "$usage" "${2:-}"; interval=$2; shift 2 ;;
     --sha) case ${2:-} in ''|-*) ship_tooling "$usage" ;; esac; want=$2; shift 2 ;;
-    --cursor) case ${2:-} in ''|-*) ship_tooling "$usage" ;; esac; cursor=$2; shift 2 ;;
+    --cursor) ship_flag_value "$usage" "${2:-}"; cursor=$2; shift 2 ;;
     --rerun-failed) rerun=1; shift ;;
     *) ship_tooling "unknown flag: $1" ;;
   esac
@@ -72,8 +72,7 @@ if [ -n "$body" ] && ship_no_checks_expected "$body"; then grace=0; fi
 legs_json=null; legal_yes=0
 if [ -n "$body" ]; then
   if names=$(ship_profile_legs "$body"); then legs_json=$(jq -Rn '[inputs | select(. != "")]' <<<"$names"); fi
-  awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$body" \
-    | grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)' && legal_yes=1
+  ship_no_checks_legal "$body" && legal_yes=1
 fi
 if [ -n "$cursor" ]; then
   # The cursor holds the window's own deadline, so a flag that sets another
@@ -81,7 +80,7 @@ if [ -n "$cursor" ]; then
   [ "$timeout_set" -eq 0 ] || ship_tooling "--cursor resumes its own window: not with --timeout"
   cur=$(ship_cursor_read "$cursor") \
     && jq -e '(.deadline | type) == "number" and (.start | type) == "number"' <<<"$cur" >/dev/null \
-    || ship_tooling "unreadable --cursor: pass the cursor a pending answer carried"
+    || ship_tooling "--cursor does not read: pass the cursor a pending answer carried"
   deadline=$(jq -r .deadline <<<"$cur"); start=$(jq -r .start <<<"$cur")
   head_at=$(jq -r '.head_at // ""' <<<"$cur")
   [ -n "$want" ] || want=$(jq -r '.want // ""' <<<"$cur")
@@ -103,12 +102,12 @@ sha=""; checks='[]'; waited=0; fails=0; rerun_json=""
 # view: the legs' reading of $checks, in $view.
 view() {
   view=$(jq -nc --argjson c "$checks" --argjson legs "$legs_json" '
-    def isleg: if $legs == null then true
-      else .name as $n | any($legs[]; . as $l | $n == $l or ($n | startswith($l + " (")))  end;
+    def named($l): .name == $l or (.name | startswith($l + " ("));
+    def isleg: if $legs == null then true else . as $c | any($legs[]; . as $l | $c | named($l)) end;
     ($c | map(select(isleg))) as $lc | ($c | map(select(isleg | not))) as $nl
     | {checks: $c, legs: $legs,
        missing_legs: (if $legs == null then []
-         else [$legs[] | . as $l | select(any($c[]; .name == $l or (.name | startswith($l + " (")))  | not)] end),
+         else [$legs[] | . as $l | select(any($c[]; named($l)) | not)] end),
        failing: [$lc[] | select(.status == "failure") | .name],
        non_leg_failing: [$nl[] | select(.status == "failure") | .name],
        unlisted: [$nl[].name],

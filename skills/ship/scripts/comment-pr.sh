@@ -17,6 +17,6 @@ pr=$1; shift
 ship_load_host
 f=$(mktemp) || ship_tooling "cannot write the comment"
 trap 'rm -f "$f"' EXIT
-ship_mark_file "$2" "$f"
+ship_mark_file "$2" "$f" || ship_tooling "cannot read $2"
 out=$(host_pr_comment "$pr" "$f") || ship_fail "comment failed" "$out"
 printf '%s\n' "$out"

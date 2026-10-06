@@ -54,8 +54,8 @@ do to pass.
 - The mechanics' malformed-invocation contract, per the `contract` gate: no
   `${N:?}` or `${N?}` expansion under the mechanics, a bare invocation answering
   one JSON `error` object and exit 2, a leading-dash value in a positional slot
-  answering the usage line and exit 2, and `--help` answering the usage line on
-  stdout, then the header's `stdout:` field lines, exit 0. Keep a new mechanic's
+  answering the usage line and exit 2, and `--help` answering, on stdout, the
+  usage line then its header's `stdout:` block, exit 0. Keep a new mechanic's
   guards where the existing ones fire, before the adapter loads: that placement
   is what keeps the gate off the host, and the `--help` check runs each mechanic
   where no origin remote resolves, so a `ship_help` below `ship_load_host`

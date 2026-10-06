@@ -261,15 +261,15 @@ overview() { # <fixture>: one round with that file as its body, projected
     threads: []}' | { read -r src; ship_brief "$src" Gharib89 on_head | jq -r '.rounds[0].body'; }
 }
 missed=$(overview copilot-overview.md)
-check "a Findings: None overview keeps its verdict line, its findings line and the missed item" \
-  "Empty or whitespace-only locks still allow installation without skill selectors, installing every upstream skill.|**Findings:** None|- Empty skills lock bypasses guard and installs all skills" \
+check "a Findings: None overview keeps its verdict heading and line, its findings line and the missed item" \
+  "🔵 Needs a closer look: Empty or whitespace-only locks still allow installation without skill selectors, installing every upstream skill.|**Findings:** None|- Empty skills lock bypasses guard and installs all skills" \
   "$(sed -n '1p;2p' <<<"$missed" | paste -sd'|' -)|$(sed -n 3p <<<"$missed" | sed 's/: .*//')"
 check "the missed item rides one line, its location after the title" 3 "$(wc -l <<<"$missed" | tr -d ' ')"
 check "the markup is gone: no tag, no comment" 0 "$(grep -cE '<[A-Za-z/!]' <<<"$missed")"
 check "what a later round resolved is not a finding" 0 "$(grep -c 'Shell command injection' <<<"$missed")"
 open=$(overview copilot-overview-open.md)
 check "an overview with open findings keeps its lead, its count and one item each" \
-  "Compare pagination is unspecified, so ranges exceeding 30 commits can still omit subjects.|$(printf '%s' '**Findings:** 2')|2" \
+  "🟡 Changes recommended: Compare pagination is unspecified, so ranges exceeding 30 commits can still omit subjects.|$(printf '%s' '**Findings:** 2')|2" \
   "$(sed -n 1p <<<"$open")|$(sed -n 2p <<<"$open" | sed 's/ *$//')|$(grep -c '^- ' <<<"$open")"
 check "an overview's open items keep their text and drop the severity badge" 2 \
   "$(grep -c '^- \[Follow pagination when fetching compare commits\](#discussion_r' <<<"$open")"
@@ -283,6 +283,22 @@ synthetic=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
     body: "<!-- v2\nhidden -->\n## Overview\n\nLooks fine.\n\n**Findings:** None\n\n<details><summary>Previously missed</summary>\n\n- item\n</details>"}],
     all: [], total: 1}, threads: []}')
 check "a Findings: None round returns the item in its details block" \
+  "$(printf 'Looks fine.\n**Findings:** None\n- item')" \
+  "$(ship_brief "$synthetic" Gharib89 on_head | jq -r '.rounds[0].body')"
+
+# An overview states its verdict as an h3 heading before the summary sentence, and
+# it is the round's only severity word, so the lead keeps it ahead of the
+# sentence. The h1 and h2 headings above it are titles and stay skipped, and a
+# heading after the lead is not a verdict.
+verdict=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [{id: 1, login: "copilot-pull-request-reviewer[bot]", substantive: true,
+    submitted_at: "2026-09-14T03:00:00Z",
+    body: "# Title\n\n## Overview\n\n### Needs a closer look\n\nSummary sentence.\n\n### Later heading\n\n- item"}],
+    all: [], total: 1}, threads: []}')
+check "an h3 verdict heading leads the summary sentence, hashes stripped, h1 and h2 skipped" \
+  "$(printf 'Needs a closer look: Summary sentence.\n- item')" \
+  "$(ship_brief "$verdict" Gharib89 on_head | jq -r '.rounds[0].body')"
+check "a body with no h3 verdict keeps the bare lead" \
   "$(printf 'Looks fine.\n**Findings:** None\n- item')" \
   "$(ship_brief "$synthetic" Gharib89 on_head | jq -r '.rounds[0].body')"
 

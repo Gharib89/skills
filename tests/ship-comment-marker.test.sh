@@ -115,4 +115,14 @@ mech request-review 7 --reviewer claude >/dev/null
 check "the request comment opens with the phrase and ends with the marker" "@claude
 $M" "$(cat "$SHIP_FAKE/posted")"
 
+# ship_mark_file: a source that cannot be read is no body, so no marker-only
+# comment is written. The mechanics refuse an unreadable --body-file before this
+# (ship_args), so the helper's own answer is what a file lost in between meets.
+( source "$scripts/_lib.sh"
+  ship_mark_file "$work/absent.md" "$work/marked" 2>/dev/null; rc=$?
+  check_rc "an unreadable source fails the marking" 1 "$rc"
+  check "and writes nothing" '' "$(cat "$work/marked" 2>/dev/null)"
+  printf 'a\n\n' > "$work/src"; ship_mark_file "$work/src" "$work/marked"
+  check "a readable source keeps its trailing newlines, then the marker" $'a\n\n'"$M" "$(cat "$work/marked")" )
+
 finish

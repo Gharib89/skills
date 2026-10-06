@@ -106,7 +106,7 @@ check "close on an already closed phase is refused" \
 
 grep -v '^- \[.\] 8 · ' "$g" > "$tmp/gapped.md"
 check "a flip whose line is absent names the line and the rebuild" \
-  "no phase 8 line in $tmp/gapped.md: a subagent overwrote the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log" \
+  "no phase 8 line in $tmp/gapped.md: a subagent overwrote the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
   "$(err open 8 --file "$tmp/gapped.md")"
 # A phase outside the ten is a mistyped number, not a damaged file: advice to
 # rebuild would wipe an intact record.
@@ -240,6 +240,35 @@ check "the run file is reported back" "$rb" "$(printf '%s' "$b" | jq -r '.run_fi
 
 check_rc "two open states are refused" 1 \
   "$(rc init 401 --scratchpad "$tmp" --state 2=open --state 5=open)"
+# The 3/4 overlap is the one pair of open phases a run holds, so it is the one
+# pair a rebuild records; any other pair still contradicts the one-open rule.
+ov=$(out init 406 --scratchpad "$tmp" --state 0=done --state 1=done --state 2=done --state 3=open --state 4=open | jq -r .run_file)
+check "a rebuild records the 3/4 overlap as two open phases" \
+  2 "$(grep -c '^- \[ \] [34] · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$ov")"
+check_rc "the overlap given in the other order is accepted" 0 \
+  "$(rc init 407 --scratchpad "$tmp" --state 4=open --state 3=open)"
+check_rc "open 5 over the rebuilt overlap is still refused" 1 "$(rc open 5 --file "$ov")"
+check_rc "two open states other than 3 and 4 are refused" 1 \
+  "$(rc init 408 --scratchpad "$tmp" --state 3=open --state 5=open)"
+check_rc "3 and 4 with a third open are refused" 1 \
+  "$(rc init 409 --scratchpad "$tmp" --state 3=open --state 4=open --state 5=open)"
+check "the overlap refusal still names the count" \
+  "a Run file holds one open phase, or 3 and 4 together; 2 were given" \
+  "$(err init 410 --scratchpad "$tmp" --state 2=open --state 4=open)"
+
+# A new run of an issue whose earlier run stopped replaces the record; a resumed
+# run reads it. The refusal names both, and the replacement is a bare rebuild.
+out init 411 --scratchpad "$tmp" >/dev/null
+out close 0 --file "$tmp/ship-411/run.md" >/dev/null
+check "an existing Run file is refused with both ways forward" \
+  "Run file exists: $tmp/ship-411/run.md: a resumed run reads that record, and a new run of an issue whose earlier run stopped replaces it with \`run-file init 411 --rebuild\`" \
+  "$(err init 411 --scratchpad "$tmp")"
+check_rc "an existing Run file is refused with exit 1" 1 "$(rc init 411 --scratchpad "$tmp")"
+nr=$(out init 411 --scratchpad "$tmp" --rebuild)
+check "a bare rebuild is a fresh record with phase 0 open" \
+  "0 in_progress 1 0" \
+  "$(jq -r '[.opened, .mirror] | join(" ")' <<<"$nr") $(grep -c 'in_progress' "$tmp/ship-411/run.md") $(grep -c '^- \[x\]' "$tmp/ship-411/run.md")"
+
 check_rc "a state spec that does not parse is malformed" 2 \
   "$(rc init 402 --scratchpad "$tmp" --state 2=running)"
 check_rc "a state naming no phase of the ten is malformed" 2 \
@@ -419,7 +448,7 @@ check_rc "neither --file nor --issue is malformed" 2 "$(rc close 4)"
 # scratchpad reads which one it asked for rather than that something was missing,
 # and the rebuild, for the record a subagent removed rather than overwrote.
 check "an --issue with no record names the path it resolved and the rebuild" \
-  "no Run file at $tmp/ship-nothing-here/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log" \
+  "no Run file at $tmp/ship-nothing-here/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
   "$(err close 4 --issue nothing-here --scratchpad "$tmp")"
 
 # With no --scratchpad the record root is the git common dir's, so a TMPDIR no
@@ -427,7 +456,7 @@ check "an --issue with no record names the path it resolved and the rebuild" \
 # (`tests/run-file-record.test.sh` proves the round trip) and names that path.
 common=$(git rev-parse --path-format=absolute --git-common-dir)
 check "--scratchpad defaults to the git common dir, not the OS temp dir" \
-  "no Run file at $common/ship/ship-218/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log" \
+  "no Run file at $common/ship/ship-218/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
   "$(TMPDIR=$tmp err timing --issue 218)"
 
 # --- phase order ---------------------------------------------------------------
@@ -510,6 +539,9 @@ held=$(cat "$z")
 check "next onto the phase already open is refused" "phase 1 is already open" "$(err next 1 --file "$z")"
 check "next over an earlier phase never flipped names it, as open does" \
   "phase 2 is neither closed nor skipped." "$(err next 4 --file "$z" | cut -c1-38)"
+check "next over a gap names the gap with the next recovery" \
+  'phase 2 is neither closed nor skipped. If it ran: `run-file next 2`, `run-file close 2`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: `run-file skip 2 <reason>`. Then retry `run-file next 4`, which names the next such phase if any.' \
+  "$(err next 4 --file "$z")"
 check_rc "a refused next exits 1" 1 "$(rc next 4 --file "$z")"
 check "a refused next wrote nothing, not even the close" "$held" "$(cat "$z")"
 check_rc "next needs a phase number" 2 "$(rc next --file "$z")"

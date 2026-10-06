@@ -125,8 +125,8 @@ applicable verification's `Run:` line **scoped to what you touched**, on the
 environment the issue was reported against: green elsewhere is not fixed. Noisy
 runs go to a cheap-tier subagent in the `verify` scratch directory. `docs` class
 and the small lane skip this phase.
-**Done when:** `run-file close 3 --result` holds one result word per
-Verification, or `run-file skip 3` recorded what skipped it.
+**Done when:** `run-file close 3` took a `--result` for every Verification, or
+`run-file skip 3` recorded what skipped it.
 
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
 edits as part of the diff. **Docs-sync fires only when the public surface or
@@ -177,15 +177,15 @@ tests the merge ref, so a branch that predates a merge still goes green while
 every "does this exist?" answer taken from the worktree was pre-merge; behind:
 follow its advice, re-run, continue. Confirm every `Carry:` file still matches
 the main checkout's copy; a difference is `carried file modified`, because ship
-has no business editing untracked secrets. Then run the gate at the profile's
-`Location:` from the worktree, inline (small lane: small-lane.md). Its verdict
-is one JSON object: `verdict` `pass|fail|unavailable`, per-gate statuses
-`pass|fail|deferred-to-ci|unavailable`, and `gates.secrets` in every lane;
-unparseable output or a missing `secrets` key reads as `unavailable`. `fail`:
-fix loop. `deferred-to-ci`: proceed, the merge summary naming each deferred
-gate. `unavailable`: stop `local gate unavailable`, the PR unopened.
+never edits untracked secrets. Then run the gate at the profile's `Location:`
+from the worktree, inline, and `run-file gate record` its JSON (small lane:
+small-lane.md). The JSON holds `verdict` `pass|fail|unavailable`, per-gate
+statuses `pass|fail|deferred-to-ci|unavailable` and `gates.secrets` in every
+lane; unparseable output or a missing `secrets` key reads as `unavailable`.
+`fail`: fix loop. `deferred-to-ci`: proceed, the merge summary naming each
+deferred gate. `unavailable`: stop `local gate unavailable`, the PR unopened.
 **Done when:** `base-fresh` answered `fresh: true`, the `Carry:` files match,
-and `run-file gate record` holds `verdict: pass` with `gates.secrets` present.
+and the recorded verdict reads `verdict: pass` with `gates.secrets` present.
 
 **6 · Open PR.** [reference/pr-body.md](reference/pr-body.md) carries what the
 body holds and how it is written and read back. `open-pr <issue> --title
@@ -224,24 +224,24 @@ verification's `Also proven by CI:` line is that verification failing: back to
 phase 2. Red after the reviewers exited: fix, push, proceed on green. Honour
 `Push policy:`: a push spends CI minutes and review quota, so push when the tree
 changed.
-**Done when:** `ci-wait` answered `green`, any `missing_legs` a skip `No-checks
-legal:` admits, or `no-checks` where `No-checks legal:` admits it.
+**Done when:** `ci-wait` answered `green`, each `missing_legs` entry one
+`No-checks legal:` admits, or `no-checks` where it admits that.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
 the summary's shape, what `merge` does, its two refusals and the tracker drafts.
 **Hard stop.** Write the summary per that file, uncompressed. Attended: post it
-in the conversation and wait for an explicit "merge": the word is exact, and a
-near miss is asked back. On approval run `merge <pr> <issue|none> [--worktree
+in the conversation and wait for an explicit "merge": the word is exact, a near
+miss is asked back. On approval run `merge <pr> <issue|none> [--worktree
 <path>]`, `update-issue-body` per tracker draft, settle each Ship defect draft
-(filed only on a word of its own), `run-file close 9`, then `cleanup`, last
-because it removes the Run file; a nonzero exit, or a `false` in `merge`'s or
-`cleanup`'s JSON, re-runs the mechanic that owns the step, and a step no
-mechanic re-does is a Ship defect for the summary. Unattended: `comment-pr <pr>
+(filed on its own word only), `run-file close 9`, then `cleanup <issue|none>`,
+last, as it removes the Run file; a nonzero exit, or a `false` in `merge`'s or
+`cleanup`'s JSON, re-runs the mechanic that owns the step; a step no mechanic
+re-does is a Ship defect for the summary. Unattended: `comment-pr <pr>
 --body-file` with the summary, `run-file close 9`. Either lane then returns.
-**Done when:** attended, `merge`, every `update-issue-body` and `cleanup` exited
-0 with no `false`, and every Ship defect draft is filed, answered with
-candidates, carries its `command` on the row, or was declined; unattended,
-`comment-pr` posted.
+**Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
+`false`, every Ship defect draft is filed, answered with candidates, carries its
+`command` or was declined, then `close 9`, then `cleanup <issue|none>` exited 0
+with no `false`; unattended, `comment-pr` posted.
 
 ## The stops
 

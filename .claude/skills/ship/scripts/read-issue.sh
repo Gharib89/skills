@@ -5,7 +5,7 @@
 #
 # stdout: {number, title, body, state, is_pr, labels[], assignees[], created_at,
 #          url, comments: [{author, body, created_at, ship}], blockers: [n...] | "unavailable"}
-#   ship: true on a comment a ship mechanic posted, which ends with the hidden
+#   ship: true on a comment a ship mechanic posted, which carries the hidden
 #   marker `<span data-ship=1></span>`; false on every other comment, a human's
 #   included.
 #   blockers lists OPEN blockers only; "unavailable" means the host's blocker
