@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.18.0 (2026-10-06)
+
+### Features
+
+- **ship**: Self-review gates what reviewers keep catching
+  ([#494](https://github.com/Gharib89/skills/pull/494),
+  [`5ffa640`](https://github.com/Gharib89/skills/commit/5ffa64042668f61e455249374dc6c221c10ae348))
+
+
 ## v0.17.0 (2026-10-06)
 
 ### Features
