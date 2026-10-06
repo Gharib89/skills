@@ -51,7 +51,10 @@ _host_fake() { # <fn> <args...>
   while [ "$i" -gt 0 ]; do
     if [ -f "$SHIP_FAKE/$fn.$i.fail" ]; then
       if [ -f "$SHIP_FAKE/$fn.$i.json" ]; then cat "$SHIP_FAKE/$fn.$i.json"
-      elif [ -f "$SHIP_FAKE/$fn.$i.status" ]; then printf '{"status":%s}\n' "$(cat "$SHIP_FAKE/$fn.$i.status")"
+      elif [ -f "$SHIP_FAKE/$fn.$i.status" ]; then
+        printf '{"status":%s}\n' "$(cat "$SHIP_FAKE/$fn.$i.status")"
+        # The status a real adapter's `_gh` leaves for `ship_poll_read`.
+        [ -z "${SHIP_HTTP_STATUS_FILE:-}" ] || cat "$SHIP_FAKE/$fn.$i.status" > "$SHIP_HTTP_STATUS_FILE"
       fi
       return 1
     fi

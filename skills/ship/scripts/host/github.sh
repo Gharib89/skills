@@ -64,6 +64,9 @@ _gh() {
   err=$(mktemp) || return 2
   raw=$(gh api -i "$@" 2>"$err"); rc=$?
   SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | awk -v want=status "$_GH_AWK_SPLIT")
+  # A poll loop's read cannot see this variable from inside a `$( )`, so the
+  # status also goes where `ship_poll_read` reads it.
+  [ -z "${SHIP_HTTP_STATUS_FILE:-}" ] || printf '%s' "$SHIP_HTTP_STATUS" > "$SHIP_HTTP_STATUS_FILE"
   # The body goes out only on a success. A failed call's body is an error
   # document nothing here reads, and `_gh_create` prints its own JSON after
   # this returns, so emitting both would hand the caller two JSON values where

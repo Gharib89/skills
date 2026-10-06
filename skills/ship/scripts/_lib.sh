@@ -278,6 +278,16 @@ ship_main_checkout() {
   dirname "$common"
 }
 
+# ship_record_root: where a run keeps its record, <git common dir>/ship. The
+# main checkout and every worktree of it resolve the same directory, git never
+# lists it as a working-tree file, and it outlives a wiped temp directory, which
+# took the record with it in three runs. `run-file` and `cleanup` read it.
+ship_record_root() {
+  local common
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  printf '%s/ship' "$common"
+}
+
 # Sibling container beside the checkout: <parent>/<repo>.worktrees
 ship_worktree_container() {
   local root; root=$(ship_main_checkout) || return 1
@@ -921,6 +931,50 @@ ship_no_checks_expected() { # <profile-body>
   grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)' <<<"$ci" || return 1
   return 0
 }
+
+# ship_profile_legs <profile-body>: the leg names the profile's `Legs:` names
+# under `## CI`, one per line, the text before each entry's first colon. An
+# entry is a `Legs: <name>: <what>` line, repeated or not, or a line below a
+# bare `Legs:`, up to a blank line or the section's next label. `Legs: None.`
+# prints nothing; a section with no `Legs:` line fails, which is "unknown", not
+# "none".
+ship_profile_legs() { # <profile-body>
+  awk 'function emit(  n) { n = index($0, ":"); if (n > 1) print substr($0, 1, n - 1) }
+    /^## / { f = ($0 ~ /^## CI[ \t\r]*$/); on = 0; next }
+    !f { next }
+    /^Legs:/ { seen = 1; on = 1; sub(/^Legs:[ \t]*/, ""); sub(/[ \t\r]+$/, "")
+               if ($0 != "" && $0 != "None.") emit(); next }
+    on && (/^[ \t\r]*$/ || /^(No-checks legal|Push policy):/) { on = 0; next }
+    on { sub(/[ \t\r]+$/, ""); emit() }
+    END { exit !seen }' <<<"$1"
+}
+
+# A poll loop's host read, telling "no answer yet" from an answer. A read that
+# fails with no HTTP status (a dropped connection, a TLS timeout) is no answer
+# yet, so the loop keeps going; one the host answered with a status is a real
+# refusal. The adapter's `_gh` writes each call's status to
+# $SHIP_HTTP_STATUS_FILE, a file rather than a variable because most reads run
+# in a `$( )` where a variable dies unread; an adapter that never writes it (Azure
+# DevOps, whose `az` reports no status) has every failure read as no answer, so
+# its persistent refusal costs the loop three reads before it ends.
+# ship_poll_read <out-file> <fn> <args...>: 0 answered, the answer in <out-file>
+# · 1 the host refused, with a status · 3 no answer
+ship_poll_read() {
+  local out=$1; shift
+  : "${SHIP_HTTP_STATUS_FILE:=$(mktemp)}"
+  : > "$SHIP_HTTP_STATUS_FILE"
+  "$@" > "$out" && return 0
+  [ -s "$SHIP_HTTP_STATUS_FILE" ] && return 1
+  return 3
+}
+
+# A wait's cursor: the window's state, opaque to the caller, which hands it back
+# with `--cursor` to resume the same window. No call holds the tool past
+# SHIP_CALL_CAP seconds (540, under the harness's 600 s limit on one tool call),
+# so a window longer than that is a chain of calls joined by cursors.
+SHIP_CALL_CAP=${SHIP_CALL_CAP:-540}
+ship_cursor_make() { jq -rn --argjson c "$1" '$c | tojson | @base64'; } # <json>
+ship_cursor_read() { jq -cn --arg c "$1" '$c | @base64d | fromjson | if type == "object" then . else error end' 2>/dev/null; } # <cursor>
 
 # ship_head_stale <pr-json> [<sha>]: true while the host shows a PR head other
 # than the expected one, so `ci-wait` and `poll-pr` wait inside their window
