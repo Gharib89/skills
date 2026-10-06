@@ -69,7 +69,8 @@ done
 if [ -z "$repo" ] && [ -z "$outside" ] \
    && branch=$(git symbolic-ref -q --short HEAD 2>/dev/null) && base=$(ship_base_ref --local) && [ "$branch" != "${base#origin/}" ] \
    && changed=$(git -c core.quotepath=off diff --name-only "$(git merge-base HEAD "$base")" 2>/dev/null) && [ -n "$changed" ]; then
-  in_diff=$(ship_paths_cited "$title"$'\n'"$(cat "$file")" "$changed" | jq -R . | jq -sc .)
+  in_diff=$(ship_paths_cited "$title"$'\n'"$(cat "$file")" "$changed" | jq -R . | jq -sc .) \
+    || ship_tooling "cannot read the find against the paths this branch changed"
   if [ "$in_diff" != "[]" ]; then
     msg=$(jq -r 'join(", ") | "the find cites a path this PR already changes: \(.); fix it in this PR or pass --outside-scope \"<reason>\""' <<<"$in_diff")
     jq -n --arg e "$msg" --argjson d "$in_diff" '{error: $e, in_diff: $d}'

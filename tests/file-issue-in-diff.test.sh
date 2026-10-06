@@ -112,6 +112,16 @@ check_rc "with no origin/HEAD the check is skipped and the find files" 0 "$rc"
 check "and the origin is never asked to refresh its HEAD" "" "$(cat "$work/set-head.log" 2>/dev/null)"
 git -C "$repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
 
+# A read that fails is tooling, not the refusal: a jq that dies while the cited
+# paths are collected leaves the check unanswered, exit 2, nothing filed.
+printf '#!/bin/sh\ncase "$*" in "-R .") exit 5 ;; esac\nexec %s "$@"\n' "$(command -v jq)" > "$shim/jq"
+chmod +x "$shim/jq"
+reset
+( cd "$repo" && PATH=$shim:$PATH bash "$mech" --title t --body-file "$body" --label needs-triage >/dev/null 2>&1 ); rc=$?
+check_rc "a failed read of the cited paths is tooling, exit 2" 2 "$rc"
+check "and nothing is filed" "" "$(calls)"
+rm "$shim/jq"
+
 # The matcher takes a path as text, not as a pattern: regex characters in a
 # path match only themselves.
 source skills/ship/scripts/_lib.sh

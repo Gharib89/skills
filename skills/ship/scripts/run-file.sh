@@ -432,7 +432,7 @@ has_matcher() { # has_matcher <added lines>
   esac
 }
 near_kinds="partial-token quoted indented unbalanced unreadable"
-claims_re="already handled|already covered|already guarded|can't happen|cannot happen|can not happen|never happens|closes at merge"
+claims_re="already handled|already covered|already guarded|can't happen|cannot happen|can not happen|never happens|closes at merge|any case"
 
 # Phase 4: every test file changed has its Reverted-fix line, every removed block
 # its disposition, every new matcher its near-miss table, every behaviour claim

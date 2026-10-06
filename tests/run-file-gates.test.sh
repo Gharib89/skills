@@ -269,7 +269,7 @@ refused "a probe with no command" 'Declined: C1 claims behaviour and has no prob
 run4; add 'Declined: C1: already handled upstream' 'Probe: C1: bash x.sh'; held=$(cat "$rf"); close 4
 refused "a probe with no arrow" 'Declined: C1 claims behaviour and has no probe'
 
-for phrase in 'already handled' 'ALREADY COVERED' 'Already guarded' "can't happen" 'cannot happen' 'can not happen' 'never happens' 'closes at merge'; do
+for phrase in 'already handled' 'ALREADY COVERED' 'Already guarded' "can't happen" 'cannot happen' 'can not happen' 'never happens' 'closes at merge' 'handled in any case'; do
   run4; add "Declined: R9: this $phrase here"; held=$(cat "$rf"); close 4
   refused "the claim '$phrase'" 'Declined: R9 claims behaviour and has no probe'
 done
