@@ -153,6 +153,21 @@ if (!/2 recommendations, 1 your pick</.test(P.view(session([tally])))) say('view
 const bare = clone(rounds.questions); delete bare.settled;
 try { P.view(session([bare, rounds.closing])); } catch (e) { say('view F: closing round throws on a round without settled:', e.message); }
 
+// G: the jump button counts the questions left to answer, and hides once none is left or the round locks.
+const jump = v => (v.match(/<button[^>]*data-act="next"[^>]*>[\s\S]*?<\/button>/) ?? [''])[0];
+const hidden = v => /^<button[^>]*\shidden[\s>]/.test(jump(v));
+S = session([rounds.questions]);
+if (!/>2<\/span> to answer/.test(jump(P.view(S))) || hidden(P.view(S))) say('view G: two open questions do not show "2 to answer"');
+if (!/Question 1 of 2/.test(P.view(S))) say('view G: a card lacks "Question 1 of 2"');
+P.ACT.pick(S, { q: 'Q2', o: 'other' });
+if (!/>2<\/span> to answer/.test(jump(P.view(S)))) say('view G: an Other with no text is not counted');
+P.ACT.all(S);
+P.ACT.field(S, { q: 'Q2', field: 'other', value: 'On both' });
+if (!hidden(P.view(S))) say('view G: the jump button shows with every question answered');
+S = session([rounds.questions]);
+S.status = 'saved';
+if (!hidden(P.view(S))) say('view G: the jump button shows on a locked round');
+
 // Every read the page made is a documented field, and it read the fields it renders.
 for (const p of seen) if (!shape.has(p)) say('page reads an undocumented field', p);
 for (const p of ['round.treeSvg', 'round.questions[].options[].detail', 'round.questions[].carriedFrom.earlier', 'round.settled[].how', 'round.docsWritten[].summary', 'round.summary[].text', 'answers.round'])
