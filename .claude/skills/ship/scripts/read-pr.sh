@@ -52,7 +52,7 @@ outline=null
 head_ref=$(jq -r '.head_ref // ""' <<<"$pull")
 if [ -n "$head_ref" ] && [ "$(git symbolic-ref -q --short HEAD 2>/dev/null)" = "$head_ref" ] \
    && base=$(ship_base_ref --local) && paths=$(git -c core.quotepath=off diff --name-only "$base...HEAD" 2>/dev/null); then
-  outline=$(ship_outline_missing "$(jq -r '.body // ""' <<<"$pull")" "$paths" | jq -R . | jq -sc .)
+  outline=$(ship_outline_missing "$(jq -r '.body // ""' <<<"$pull")" "$paths" | jq -R . | jq -sc .) || outline=null
 fi
 jq --argjson h "$headings" --argjson w "$wanted" --argjson o "$outline" \
   '. + {headings: $h, missing: (if $w == null then null else $w - $h end), outline_missing: $o}' <<<"$pull"

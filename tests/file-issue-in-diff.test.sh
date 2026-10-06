@@ -121,6 +121,15 @@ reset
 check_rc "a failed read of the cited paths is tooling, exit 2" 2 "$rc"
 check "and nothing is filed" "" "$(calls)"
 rm "$shim/jq"
+# The same for the matcher: a grep that fails (exit 2, not the exit 1 of no match)
+# is no verdict that the path is uncited.
+printf '#!/bin/sh\ncase "$*" in *A-Za-z0-9_./-*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
+chmod +x "$shim/grep"
+reset
+( cd "$repo" && PATH=$shim:$PATH bash "$mech" --title t --body-file "$body" --label needs-triage >/dev/null 2>&1 ); rc=$?
+check_rc "a grep that fails while matching a path is tooling, exit 2" 2 "$rc"
+check "and nothing is filed on it" "" "$(calls)"
+rm "$shim/grep"
 
 # The matcher takes a path as text, not as a pattern: regex characters in a
 # path match only themselves.

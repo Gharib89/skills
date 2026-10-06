@@ -316,6 +316,16 @@ run4; held=$(cat "$rf"); call "$bare" close 4 --file "$rf"
 check_rc "close 4 where origin/HEAD does not resolve is a tooling error" 2 "$status"
 check "the error names the base" yes "$(has 'origin/HEAD' "$err")"
 check "an unresolved base leaves the record as it was" "$held" "$(cat "$rf")"
+# The mechanic reaches no host: an origin/HEAD that is missing is read as missing,
+# and the origin is never asked to refresh it.
+shim=$tmp/shim; mkdir -p "$shim"
+printf '#!/bin/sh\ncase "$*" in *set-head*) echo "$*" >> %s/set-head.log ;; esac\nexec %s "$@"\n' "$tmp" "$(command -v git)" > "$shim/git"
+chmod +x "$shim/git"
+git -C "$bare" remote add origin https://github.com/owner/repo.git
+run4; PATH=$shim:$PATH call "$bare" close 4 --file "$rf"
+check_rc "close 4 with an origin that has no HEAD is still tooling" 2 "$status"
+check "and the origin is never asked to refresh its HEAD" "" "$(cat "$tmp/set-head.log" 2>/dev/null)"
+git -C "$bare" remote remove origin
 
 # A phase that is not open is refused before any evidence is read.
 reset; put tests/new.test.sh 'echo new'

@@ -90,6 +90,14 @@ check "with no origin/HEAD the paths are not known" 'null' "$(PATH=$shim:$PATH m
 check "and the origin is never asked to refresh its HEAD" "" "$(cat "$work/set-head.log" 2>/dev/null)"
 git -C "$repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
 
+# A grep that fails while matching a mention is no verdict that the path is
+# unmentioned: the paths are not known, null.
+printf '#!/bin/sh\ncase "$*" in *A-Za-z0-9_./-*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
+chmod +x "$shim/grep"
+reset; pr_body "$all"
+check "a grep that fails while matching leaves the paths unknown" 'null' "$(PATH=$shim:$PATH missing)"
+rm "$shim/grep"
+
 # A mention is the whole path or a basename that names one changed file, bounded
 # the way ship_paths_cited bounds a path, so a longer token or a shared name does
 # not cover a file it is not.

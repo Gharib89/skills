@@ -439,7 +439,7 @@ claims_re="already handled|already covered|already guarded|can't happen|cannot h
 # in a decline its probe.
 gate_phase4() {
   local base mb top tracked untracked paths p r ok ids id miss k added here dl ref reason
-  base=$(ship_base_ref) || ship_tooling "close 4 reads the diff against origin/HEAD, which cannot be resolved here"
+  base=$(ship_base_ref --local) || ship_tooling "close 4 reads the diff against origin/HEAD, which cannot be resolved here"
   top=$(git rev-parse --show-toplevel 2>/dev/null) || ship_tooling "close 4 reads the checkout's diff: not inside a git checkout"
   mb=$(git -C "$top" merge-base "$base" HEAD 2>/dev/null) || ship_tooling "close 4 reads the diff against $base: no merge base with HEAD"
   tracked=$(git -C "$top" diff --no-renames --name-status -z "$mb" | tr '\0' '\n' | awk 'NR % 2 == 1 { s = $0; next } s != "D" { print }') \

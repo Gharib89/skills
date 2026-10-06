@@ -1011,7 +1011,7 @@ ship_body_headings() {
 # a `## Change outline` in a fence is not one; a body with no such heading
 # mentions nothing, and every expected path is missing.
 ship_outline_missing() { # <body> <paths>
-  local text p twin
+  local text p twin rc
   text=$(awk "$SHIP_AWK_FENCE"'
     { inert = ship_inert($0) }
     !inert && /^## / { name = $0; sub(/^## /, "", name); sub(/[ \t\r]+$/, "", name); on = (name == "Change outline"); next }
@@ -1019,11 +1019,17 @@ ship_outline_missing() { # <body> <paths>
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     case ${p##*/} in skills-lock.json|CHANGELOG.md) continue ;; esac
-    _ship_outline_names "$text" "$p" "$2" && continue
+    _ship_outline_names "$text" "$p" "$2"; rc=$?
+    [ "$rc" -eq 0 ] && continue
+    [ "$rc" -eq 2 ] && return 2
     case $p in
       .claude/skills/*)
         twin=skills/${p#.claude/skills/}
-        grep -Fxq -e "$twin" <<<"$2" && _ship_outline_names "$text" "$twin" "$2" && continue ;;
+        if grep -Fxq -e "$twin" <<<"$2"; then
+          _ship_outline_names "$text" "$twin" "$2"; rc=$?
+          [ "$rc" -eq 0 ] && continue
+          [ "$rc" -eq 2 ] && return 2
+        fi ;;
     esac
     printf '%s\n' "$p"
   done <<<"$2"
@@ -1033,9 +1039,11 @@ ship_outline_missing() { # <body> <paths>
 # its full path, or by its basename when <path>'s basename is shared by no other
 # path of <paths> (a derived copy under `.claude/skills/` whose source twin is in
 # <paths> is a mirror and does not count). One bounded matcher: `ship_paths_cited`.
+# Exit 0 named, 1 not named, 2 the matcher failed.
 _ship_outline_names() { # <text> <path> <paths>
-  local p=$2 base n
-  [ -n "$(ship_paths_cited "$1" "$p")" ] && return 0
+  local p=$2 base n c
+  c=$(ship_paths_cited "$1" "$p") || return 2
+  [ -n "$c" ] && return 0
   base=${p##*/}
   n=$(awk -v b="$base" '
     { all[NR] = $0; has[$0] = 1 }
@@ -1046,7 +1054,9 @@ _ship_outline_names() { # <text> <path> <paths>
         if (f == b && !mirror) n++
       }
       print n + 0 }' <<<"$3")
-  [ "$n" -eq 1 ] && [ -n "$(ship_paths_cited "$1" "$base")" ]
+  [ "$n" -eq 1 ] || return 1
+  c=$(ship_paths_cited "$1" "$base") || return 2
+  [ -n "$c" ]
 }
 
 # ship_paths_cited <text> <paths>: the paths, one per line, that the text cites.
@@ -1055,14 +1065,16 @@ _ship_outline_names() { # <text> <path> <paths>
 # character ([A-Za-z0-9_./-], bar a leading `./`) and not followed by one
 # ([A-Za-z0-9_/-], or a `.` that opens an extension). So `scripts/run` does not
 # cite `scripts/run-file.sh`, `a/skills/x.sh` does not cite `skills/x.sh`, and a
-# sentence's closing `.` or a `:12` line suffix does not hide a path.
+# sentence's closing `.` or a `:12` line suffix does not hide a path. A grep that
+# fails (exit 2, as against 1 for no match) is no answer: exit 2, never "uncited".
 ship_paths_cited() { # <text> <paths>
-  local p re
+  local p re rc
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     re=$(printf '%s' "$p" | sed 's/[]\\.[*^$+?(){}|]/\\&/g')
     re='(^|[^A-Za-z0-9_./-])(\./)?'$re'($|[^A-Za-z0-9_/.-]|\.($|[^A-Za-z0-9_]))'
-    grep -Eq -e "$re" <<<"$1" && printf '%s\n' "$p"
+    grep -Eq -e "$re" <<<"$1"; rc=$?
+    case $rc in 0) printf '%s\n' "$p" ;; 1) ;; *) return 2 ;; esac
   done <<<"$2"
   return 0
 }
