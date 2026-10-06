@@ -311,7 +311,7 @@ A reviewer's phase-7 exit where at least one of its rounds landed and every find
 _Avoid_: converged, approved, clean, passed
 
 **Not reviewed**:
-A reviewer's phase-7 exit where no round of it landed, or one did and its threads could not be read (unreachable), named by the cause a mechanic observed: poll-pr's `not_reviewed` (unreachable, blocked, never-queued, infra-error, silent) or request-review's exit 1 (never-queued). It still proceeds to the merge gate on green CI, the human's call there rather than a hand-back.
+A reviewer's phase-7 exit where no round of it landed, or one did and its threads could not be read (unreachable), named by the cause a mechanic observed: poll-pr's `not_reviewed` (unreachable, blocked, never-queued, still-running, infra-error, silent) or request-review's exit 1 (never-queued). It still proceeds to the merge gate on green CI, the human's call there rather than a hand-back.
 _Avoid_: degraded, failure, timeout, skipped review
 
 **Not invoked**:

@@ -127,8 +127,9 @@
 #   blocked       `refused_by` is non-null
 #   never-queued  the awaited run's status is `none`, or its conclusion
 #                 `skipped`: the request landed and nothing ran for it
-#   infra-error   the awaited run concluded any other way but `success`, or was
-#                 still live at the ceiling
+#   still-running the awaited run was still live (in progress or queued) when the
+#                 ceiling closed the window: it may yet post a round
+#   infra-error   the awaited run concluded any other way but `success`
 #   silent        the window closed on its bound with nothing admitted
 #
 # `--brief` projects that same JSON, from the same single fetch, down to what a
@@ -301,6 +302,7 @@ snapshot() {
          elif $rr == "unavailable" then "unreachable"
          elif $rf != null then "blocked"
          elif ($rr | type) == "object" and ($rr.status == "none" or $rr.conclusion == "skipped") then "never-queued"
+         elif ($rr | type) == "object" and $rr.status != "completed" then "still-running"
          elif ($rr | type) == "object" and $rr.conclusion != "success" then "infra-error"
          else "silent" end)')
 }
