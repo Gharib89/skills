@@ -18,10 +18,10 @@ index's clock exception bounds the clock rule below.
   fails first, and it survives until someone happens to mutate it. Neither
   reviewer can see this from a diff: a vacuous assertion reads exactly like a
   sound one, so the proof is the author's and belongs before the push.
-  Ship's `revert-red <test> <path>...` mechanic runs that revert and exits 0
-  only when the test goes red; commit the test and the fix first, since it reads
-  committed state. `run-file close 4` refuses without a `Reverted-fix:` line per
-  test file the diff adds or changes.
+  `skills/ship/scripts/revert-red.sh <test> <path>...`, Ship's mechanic, runs
+  that revert and exits 0 only when the test goes red; commit the test and the
+  fix first, since it reads committed state. `run-file close 4` refuses without
+  a `Reverted-fix:` line per test file the diff adds or changes.
 - **A negated fixture accompanies a test that asserts on prose.** Assert on a
   word the change introduced, and run the assertion once against the sentence
   with its meaning negated: it must fail. An assertion on a word the old text

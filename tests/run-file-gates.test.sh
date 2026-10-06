@@ -327,6 +327,24 @@ check_rc "close 4 with an origin that has no HEAD is still tooling" 2 "$status"
 check "and the origin is never asked to refresh its HEAD" "" "$(cat "$tmp/set-head.log" 2>/dev/null)"
 git -C "$bare" remote remove origin
 
+# A grep that fails (exit 2, as against 1 for no match) is a failed read, never a
+# clean answer: the decline reader and the untracked-file lookup both exit 2.
+printf '#!/bin/sh\ncase "$*" in *"already handled"*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
+chmod +x "$shim/grep"
+reset
+run4; add 'Declined: C1: already handled upstream' 'Probe: C1: bash x.sh </dev/null => exit 2'; held=$(cat "$rf")
+PATH=$shim:$PATH call "$work" close 4 --file "$rf"
+check_rc "a grep that fails while reading a decline is tooling" 2 "$status"
+check "and the record is as it was" "$held" "$(cat "$rf")"
+printf '#!/bin/sh\ncase "$*" in *-Fxq*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
+reset; put scripts/m.sh 'grep -q foo "$f"'
+run4; held=$(cat "$rf")
+PATH=$shim:$PATH call "$work" close 4 --file "$rf"
+check_rc "a grep that fails while telling untracked from tracked is tooling" 2 "$status"
+check "and that record is as it was" "$held" "$(cat "$rf")"
+rm "$shim/grep"
+reset
+
 # A phase that is not open is refused before any evidence is read.
 reset; put tests/new.test.sh 'echo new'
 run4; add 'Reverted-fix: tests/new.test.sh: red'; close 4; close 4

@@ -438,7 +438,7 @@ claims_re="already handled|already covered|already guarded|can't happen|cannot h
 # its disposition, every new matcher its near-miss table, every behaviour claim
 # in a decline its probe.
 gate_phase4() {
-  local base mb top tracked untracked paths p r ok ids id miss k added here dl ref reason
+  local base mb top tracked untracked paths p r ok ids id miss k added here dl ref reason rc
   base=$(ship_base_ref --local) || ship_tooling "close 4 reads the diff against origin/HEAD, which cannot be resolved here"
   top=$(git rev-parse --show-toplevel 2>/dev/null) || ship_tooling "close 4 reads the checkout's diff: not inside a git checkout"
   mb=$(git -C "$top" merge-base "$base" HEAD 2>/dev/null) || ship_tooling "close 4 reads the diff against $base: no merge base with HEAD"
@@ -490,12 +490,13 @@ EOIDS
   while IFS= read -r p; do
     case $p in *.sh) ;; *) continue ;; esac
     is_test_path "$p" && continue
-    if grep -Fxq -- "$p" <<<"$untracked"; then
-      added=$(cat "$top/$p") || ship_tooling "cannot read $p"
-    else
-      added=$(git -C "$top" diff --no-renames -U0 "$mb" -- "$p" | awk '/^@@/ { h = 1; next } h && /^\+/ { print substr($0, 2) }') \
-        || ship_tooling "cannot read the diff of $p"
-    fi
+    grep -Fxq -- "$p" <<<"$untracked"; rc=$?
+    case $rc in
+      0) added=$(cat "$top/$p") || ship_tooling "cannot read $p" ;;
+      1) added=$(git -C "$top" diff --no-renames -U0 "$mb" -- "$p" | awk '/^@@/ { h = 1; next } h && /^\+/ { print substr($0, 2) }') \
+           || ship_tooling "cannot read the diff of $p" ;;
+      *) ship_tooling "cannot tell whether $p is untracked" ;;
+    esac
     has_matcher "$added" || continue
     ok=false
     while IFS= read -r r; do
@@ -528,7 +529,8 @@ EOPATHS
   while IFS= read -r r; do
     case $r in *": "*) ;; *) continue ;; esac
     ref=${r%%: *} reason=${r#*: }
-    grep -Eiq -e "$claims_re" <<<"$reason" || continue
+    grep -Eiq -e "$claims_re" <<<"$reason"; rc=$?
+    case $rc in 0) ;; 1) continue ;; *) ship_tooling "cannot read the reason of Declined: $ref" ;; esac
     ok=false
     while IFS= read -r r; do
       case $r in
@@ -830,7 +832,7 @@ gate)
   if [ "$sub" = read ]; then
     [ -n "$head" ] || ship_tooling "$usage"
     [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
-    rec=$(awk '/^## /{ f = ($0 == "## Local gate") } f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' "$file" | tail -n 1)
+    rec=$(awk '/^## /{ f = ($0 ~ /^## Local gate[ \t\r]*$/) } f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' "$file" | tail -n 1)
     [ -n "$rec" ] || ship_fail "no gate record in $file"
     # The line is `- HH:MM <sha> <verdict>[ <gates JSON>]`, and the JSON may hold
     # spaces, so it is cut by position rather than split into words.
