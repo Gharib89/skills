@@ -1000,16 +1000,18 @@ ship_no_checks_legal() { # <profile-body>
 # entry is a `Legs: <name>: <what>` line, repeated or not, or a line below a
 # bare `Legs:`, up to a blank line or the section's next label. `Legs: None.`
 # prints nothing; a section with no `Legs:` line fails, which is "unknown", not
-# "none".
+# "none". An entry that yields no name (no colon, or nothing before it) fails
+# the same way: printed as nothing it would read as `Legs: None.`, and a red
+# check no leg names would then pass as no-checks.
 ship_profile_legs() { # <profile-body>
-  awk 'function emit(  n) { sub(/^[ \t]+/, ""); n = index($0, ":"); if (n > 1) print substr($0, 1, n - 1) }
+  awk 'function emit(  n) { sub(/^[ \t]+/, ""); n = index($0, ":"); if (n > 1) print substr($0, 1, n - 1); else bad = 1 }
     /^## / { f = ($0 ~ /^## CI[ \t\r]*$/); on = 0; next }
     !f { next }
     /^Legs:/ { seen = 1; on = 1; sub(/^Legs:[ \t]*/, ""); sub(/[ \t\r]+$/, "")
                if ($0 != "" && $0 != "None.") emit(); next }
     on && (/^[ \t\r]*$/ || /^(No-checks legal|Push policy):/) { on = 0; next }
     on { sub(/[ \t\r]+$/, ""); emit() }
-    END { exit !seen }' <<<"$1"
+    END { exit (!seen || bad) }' <<<"$1"
 }
 
 # A poll loop's host read, telling "no answer yet" from an answer. A read that

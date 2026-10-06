@@ -5,17 +5,18 @@
 # window, and by SHIP_CALL_CAP seconds (540), the longest one call holds the
 # tool. A window longer than the cap is a chain of calls: the call that would
 # pass the cap answers `pending` with a cursor, and `--cursor` resumes it. The
-# cursor carries the window's deadline, the expected head (frozen on the first
-# pass) and the no-checks grace's clock with the head it started for: a resumed
-# call that finds another head starts that clock over.
+# cursor carries the window's deadline, the expected head only where --sha fixed
+# it, and the no-checks grace's clock with the head it started for: a resumed
+# call, like any pass, that finds another head starts that clock over.
 #
 #   ci-wait <pr> [--sha <sha>] [--timeout <s>, at least the no-checks grace the
 #           profile leaves standing] [--interval <s>] [--rerun-failed]
 #           [--cursor <c>, not with --timeout]
 #
 # The expected head is `--sha`, else the local HEAD of a checkout of the PR's head
-# branch: while the host shows another head the wait grades nothing,
-# and a window that closes first is `timeout` carrying the host's head_sha.
+# branch, read afresh on every pass so a push made while the wait runs moves it:
+# while the host shows another head the wait grades nothing, and a window that
+# closes first is `timeout` carrying the host's head_sha.
 #
 # Only the profile's Legs: grade the PR. A check belongs to a leg when its name
 # is the leg's or starts `<leg> (`, a matrix job. Checks no leg names are
@@ -172,11 +173,6 @@ while :; do
   [ "$rc" -ne 3 ] || { unread "PR $pr"; continue; }
   prj=$(<"$prf"); sha=$(jq -r .head_sha <<<"$prj")
   waited=$(( $(date +%s) - start ))
-  # Frozen on the first pass, so a cursor carries the head it waits for rather
-  # than whatever the checkout is on by the time the next call resumes.
-  if [ -z "$want" ] && [ "$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" = "$(jq -r .head_ref <<<"$prj")" ]; then
-    want=$(git rev-parse HEAD 2>/dev/null) || want=""
-  fi
   if ship_head_stale "$prj" "$want"; then checks='[]'; fails=0; again; continue; fi
   # The grace counts from the expected head's arrival, so a late push cannot
   # spend it on the previous head: a head other than the one the clock was

@@ -22,6 +22,14 @@ check "a bare Legs: with indented entries, the indent not part of the name" test
   "$(legs "${ci}Legs:"$'\n  test: npm test\n\tlint: ruff\nPush policy: Default.')"
 ship_profile_legs "${ci}Legs: None." >/dev/null; check_rc "None. is an answer" 0 $?
 ship_profile_legs "${ci}Push policy: Default." >/dev/null; check_rc "no Legs: line is unknown" 1 $?
+# An entry that names no leg is no answer: read as `Legs: None.` it would let a
+# red check no leg names pass as no-checks.
+ship_profile_legs "${ci}Legs:"$'\ntest\nlint\nPush policy: Default.' >/dev/null
+check_rc "colon-less entries under a bare Legs: are unknown" 1 $?
+ship_profile_legs "${ci}Legs:"$'\ntest: npm test\nlint\nPush policy: Default.' >/dev/null
+check_rc "one good entry beside a colon-less one is unknown" 1 $?
+ship_profile_legs "${ci}Legs: test"$'\nPush policy: Default.' >/dev/null
+check_rc "a colon-less inline entry is unknown" 1 $?
 check "a Legs: line under another heading is prose" '' \
   "$(legs $'## Verification\n\nLegs: stray: prose\n\n## CI\n\nLegs: None.')"
 

@@ -10,14 +10,16 @@
 #
 # `--cursor <c>` resumes the window a pending answer carried: its deadline, its
 # landing rule's since instant, its start (so `waited_s` counts from the first
-# call) and the head it waits for. The caller passes <pr> and its --reviewer,
-# --brief and --full flags again, and no --since or --timeout, which the cursor
-# already fixed: both are refused with it, and so is a cursor that does not read.
+# call) and the head it waits for where --sha fixed one. The caller passes <pr>
+# and its --reviewer, --brief and --full flags again, and no --since or
+# --timeout, which the cursor already fixed: both are refused with it, and so is
+# a cursor that does not read.
 #
 # The expected head is `--sha`, else the local HEAD of a checkout of the PR's head
-# branch: while the host shows another head the poll reads nothing on it, so a
-# round on the previous head never counts as one on this head, and a window that
-# closes first answers `done: false` carrying the host's head_sha.
+# branch, read afresh on every pass so a push made while the poll runs moves it:
+# while the host shows another head the poll reads nothing on it, so a round on
+# the previous head never counts as one on this head, and a window that closes
+# first answers `done: false` carrying the host's head_sha.
 #
 # `--reviewer <name>` names the `### <name>` block under the profile's
 # `## Reviewers`, read before any host is reached; `ship_reviewer_derive` answers
@@ -343,11 +345,6 @@ while :; do
   rd "PR $pr" host_pr_get "$pr" || { miss; continue; }
   prj=$ans
   sha=$(jq -r .head_sha <<<"$prj"); mergeable=$(jq -r .mergeable <<<"$prj")
-  # Frozen on the first pass, so a cursor carries the head it waits for rather
-  # than whatever the checkout is on by the time the next call resumes.
-  if [ -z "$want" ] && [ "$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" = "$(jq -r .head_ref <<<"$prj")" ]; then
-    want=$(git rev-parse HEAD 2>/dev/null) || want=""
-  fi
   if ship_head_stale "$prj" "$want"; then
     [ "$waited" -ge "$timeout" ] || { fails=0; nap; continue; }
     stale=true

@@ -27,6 +27,7 @@ lax=$work/lax; repo "$lax" $'Legs:\ntest: npm test\nlint: ruff' yes
 unk=$work/unk; mkdir -p "$unk/docs/agents"; printf '# Ship profile\n\n## CI\n\nPush policy: Default.\n' > "$unk/docs/agents/ship.md"
 git -C "$unk" init -q; git -C "$unk" remote add origin https://github.com/owner/repo.git
 nol=$work/nol; repo "$nol" 'Legs: None.' yes
+bare=$work/bare; repo "$bare" $'Legs:\ntest\nlint' no
 
 # <n> <json> : the n-th host_pr_checks answer
 ans() { printf '%s\n' "$2" > "$SHIP_FAKE/host_pr_checks.$1.json"; }
@@ -65,6 +66,12 @@ check "and is the failing leg check" 'checks-failed ["test (ubuntu-22.04)"]' \
 reset; ans 1 "$(rows "$(row codeql failure)")"
 out=$(ci "$unk" --timeout 5); rc=$?
 check "a profile with no Legs: line counts every check as a leg" 'checks-failed ["codeql"] null' \
+  "$(jq -r '[.status, (.failing | tojson), (.legs | tojson)] | join(" ")' <<<"$out")"
+
+reset; ans 1 "$(rows "$(row test failure)")"
+out=$(ci "$bare" --timeout 5); rc=$?
+check_rc "colon-less Legs: entries are unknown legs, so a red check fails the PR" 1 "$rc"
+check "checks-failed, legs null" 'checks-failed ["test"] null' \
   "$(jq -r '[.status, (.failing | tojson), (.legs | tojson)] | join(" ")' <<<"$out")"
 
 reset; ans 1 "$(rows "$(row codeql failure)")"
@@ -128,6 +135,43 @@ printf '%s\n' '{"number":7,"head_sha":"bbbbbbb","head_ref":"fix/fake-1","mergeab
 out2=$(GRACE=2 SHIP_CALL_CAP=1 ci "$lax" --sha bbbbbbb --cursor "$cur"); rc=$?
 check_rc "a resumed call on a new head with no checks yet is not answered" 1 "$rc"
 check "no-checks waits for the grace on the new head" 'pending bbbbbbb' "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out2")"
+
+# The local HEAD moving mid-wait (a push of a review fix while a background wait
+# runs) moves the expected head with it, in one call and across a cursor: only
+# a --sha pins it. The host fake's adapter is wrapped so its second PR read
+# moves the checkout to commit B, as a push would, and answers B.
+mv=$work/mv; repo "$mv" 'Legs: test: npm test' no
+git -C "$mv" checkout -q -b fix/fake-1
+for m in a b; do git -C "$mv" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "$m"; done
+sha_a=$(git -C "$mv" rev-parse HEAD~1); sha_b=$(git -C "$mv" rev-parse HEAD)
+cat > "$work/moving-host.sh" <<ADAPTER
+source "$PWD/tests/host-fake.sh"
+eval "\$(declare -f host_pr_get | sed '1s/host_pr_get/fake_pr_get/')"
+host_pr_get() {
+  if [ "\$(cat "\$SHIP_FAKE/host_pr_get.n" 2>/dev/null || echo 0)" -eq "\${MOVE_AFTER:-1}" ]; then
+    git -C "$mv" reset -q --hard $sha_b
+  fi
+  fake_pr_get "\$@"
+}
+ADAPTER
+pr_at() { printf '{"number":7,"head_sha":"%s","head_ref":"fix/fake-1","mergeable":"clean"}\n' "$2" > "$SHIP_FAKE/host_pr_get.$1.json"; }
+
+reset; git -C "$mv" reset -q --hard "$sha_a"
+pr_at 1 "$sha_a"; pr_at 2 "$sha_b"
+ans 1 "$(rows "$(row test pending)")"; ans 2 "$(rows "$(row test success)")"
+out=$(SHIP_HOST_ADAPTER=$work/moving-host.sh ci "$mv" --timeout 20); rc=$?
+check_rc "a HEAD that moves during the call is graded, not timed out on the old one" 0 "$rc"
+check "green on the new head" "green $sha_b" "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out")"
+
+reset; git -C "$mv" reset -q --hard "$sha_a"
+pr_at 1 "$sha_a"; ans 1 "$(rows "$(row test pending)")"
+out=$(SHIP_CALL_CAP=1 ci "$mv" --timeout 60)
+check "the first call is pending on the old head" "pending $sha_a" "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out")"
+cur=$(jq -r .cursor <<<"$out")
+git -C "$mv" reset -q --hard "$sha_b"; reset; pr_at 1 "$sha_b"; ans 1 "$(rows "$(row test success)")"
+out2=$(ci "$mv" --cursor "$cur"); rc=$?
+check_rc "a resumed call follows a HEAD that moved since the cursor was made" 0 "$rc"
+check "green on the new head, resumed" "green $sha_b" "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out2")"
 
 # --- reads with no answer ------------------------------------------------------
 

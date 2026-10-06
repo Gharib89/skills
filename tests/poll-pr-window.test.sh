@@ -233,4 +233,39 @@ check "--full open returns the open thread's lead whole" 606 "$(jq '.threads[0].
 out=$(poll --since "$since" --brief)
 check "without it the same round is cut and marked" 215 "$(jq '.rounds[0].body | length' <<<"$out")"
 
+# The local HEAD moving mid-wait (a push of a review fix while a background poll
+# runs) moves the expected head with it: only a --sha pins it. The adapter is
+# wrapped so its second PR read moves the checkout to commit B, as a push would,
+# and answers B, on whose head the on-push reviewer's round then lands.
+mv=$work/mv
+mkdir -p "$mv/docs/agents"
+git -C "$mv" init -q
+git -C "$mv" remote add origin https://github.com/owner/repo.git
+git -C "$mv" checkout -q -b fix/x-7
+printf '## Reviewers\n\n### pusher\n\nLogin: claude[bot]\nTrigger: on-push\nRequest: None.\nWorkflow: None.\nCap: None.\nGating: no\nFallback-for: None.\n\n## Coding standards\n' \
+  > "$mv/docs/agents/ship.md"
+for m in a b; do git -C "$mv" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "$m"; done
+sha_a=$(git -C "$mv" rev-parse HEAD~1); sha_b=$(git -C "$mv" rev-parse HEAD)
+cat > "$work/moving-host.sh" <<ADAPTER
+source "$PWD/tests/host-fake.sh"
+eval "\$(declare -f host_pr_get | sed '1s/host_pr_get/fake_pr_get/')"
+host_pr_get() {
+  if [ "\$(cat "\$SHIP_FAKE/host_pr_get.n" 2>/dev/null || echo 0)" -eq 1 ]; then
+    git -C "$mv" reset -q --hard $sha_b
+  fi
+  fake_pr_get "\$@"
+}
+ADAPTER
+pr_at() { jq -cn --arg s "$2" '{number: 7, url: "https://example.invalid/7", title: "t", body: "", head_sha: $s,
+  head_ref: "fix/x-7", base_ref: "main", state: "open", mergeable: "clean"}' > "$SHIP_FAKE/host_pr_get.$1.json"; }
+
+reset; git -C "$mv" reset -q --hard "$sha_a"
+pr_at 1 "$sha_a"; pr_at 2 "$sha_b"
+printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
+jq -cn --argjson r "$(round 2026-09-17T12:00:00Z)" '{on_head: [$r], all: [$r], total: 1}' > "$SHIP_FAKE/host_pr_reviews.2.json"
+out=$(cd "$mv" && SHIP_HOST_ADAPTER=$work/moving-host.sh bash "$mech" 7 --reviewer pusher --interval 1 --timeout 6); rc=$?
+check_rc "a HEAD that moves during the call finds the round on the new head" 0 "$rc"
+check "landed on the new head, not unreachable" "true head $sha_b" \
+  "$(jq -r '[.done, .landed_by, .head_sha] | join(" ")' <<<"$out")"
+
 finish
