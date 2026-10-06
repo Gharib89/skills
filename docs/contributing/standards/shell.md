@@ -105,7 +105,9 @@ exceptions bound these rules.
   `..` or an absolute path, a prerelease version, a GFM table's alignment row, a
   title prefix a human can type, and decoy text outside the block being
   validated. Ten lines of regex read as correct and answer wrong on the input
-  nobody wrote a case for.
+  nobody wrote a case for. Ship's `run-file close 4` holds a script whose
+  added lines match a regex to a `Near-miss:` table (the evidence lines in
+  `skills/ship/reference/implement.md`).
 - **Both sides of a comparison pass through one normalising step.** An identity
   (a login's case, a `[bot]` suffix) or a timestamp (`Z` against `+00:00`,
   fractional seconds) read from two sources goes through the same function on

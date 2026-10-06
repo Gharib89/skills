@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The run-file mechanic: the Run file's checklist, its flips and its timing
 # arithmetic. Every case drives the mechanic against a scratch directory under
-# the OS temp dir; the mechanic reaches no host and no repo file.
+# the OS temp dir; the mechanic reaches no host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -10,11 +10,28 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
 
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()   { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
+
+# `close 4` reads the checkout's diff, which here is the change under test. A
+# case that needs only the flip runs it from a repo with no diff, beside a copy
+# of the mechanic whose `dropped-lines` finds nothing; the gates themselves are
+# `tests/run-file-gates.test.sh`'s.
+quiet=$tmp/quiet-bin quietrepo=$tmp/quiet
+mkdir -p "$quiet" "$quietrepo.origin"
+cp skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh "$quiet/"
+printf '#!/usr/bin/env bash\nprintf '"'"'{"base":"x","blocks":[]}\\n'"'"'\n' > "$quiet/dropped-lines.sh"
+git init -q --bare -b main "$quietrepo.origin"
+git init -q -b main "$quietrepo"
+git -C "$quietrepo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m one
+git -C "$quietrepo" remote add origin "$quietrepo.origin"
+git -C "$quietrepo" push -q origin main 2>/dev/null
+git -C "$quietrepo" remote set-head origin main
+qout() { ( cd "$quietrepo" && bash "$quiet/run-file.sh" "$@" 2>/dev/null ); }
+qrc()  { ( cd "$quietrepo" && bash "$quiet/run-file.sh" "$@" >/dev/null 2>&1 ); echo $?; }
 
 # `open` refuses a phase over an earlier one never flipped, so a fixture that
 # opens a later phase first marks the phases below it done.
@@ -422,7 +439,7 @@ check "--issue resolves the record under the scratchpad" \
   "$i" "$(out open 4 --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
 check "the line it flipped is the one --file flips" \
   1 "$(grep -c '^- \[ \] 4 · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$i")"
-check_rc "close by --issue exits ok" 0 "$(rc close 4 --issue 218 --scratchpad "$tmp")"
+check_rc "close by --issue exits ok" 0 "$(qrc close 4 --issue 218 --scratchpad "$tmp")"
 check "skip by --issue carries the reason" \
   'small lane' "$(out skip 3 'small lane' --issue 218 --scratchpad "$tmp" | jq -r '.reason')"
 check "timing by --issue reads the same file" \
@@ -475,7 +492,7 @@ check_rc "open over an earlier phase never flipped exits 1" 1 "$erc"
 check "the refused open left the Run file byte-identical" "$held" "$(cat "$q")"
 
 # Closed, skipped and rebuilt `done` all tick the row, so each admits the open.
-out open 4 --file "$q" >/dev/null; out close 4 --file "$q" >/dev/null
+out open 4 --file "$q" >/dev/null; qout close 4 --file "$q" >/dev/null
 check_rc "open over a closed phase exits ok" 0 "$(rc open 5 --file "$q")"
 out close 5 --file "$q" >/dev/null
 check_rc "open over a skipped phase exits ok" 0 \

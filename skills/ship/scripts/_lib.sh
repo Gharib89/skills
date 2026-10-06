@@ -251,6 +251,47 @@ ship_fail() {
   exit 1
 }
 
+# ship_recorded_grade <issue>: the grade the issue's Run file records, `patch`,
+# `minor` or `breaking`, from the `Grade: <word>` line (an optional `- ` before
+# it, nothing else before) under its `## Grade` heading (blanks after it allowed),
+# the one shape `run-file grade` reads and writes. Prints nothing when there is
+# no Run file, no such line or a word that is not one of the three: no recorded
+# grade is no check, since a run that never graded has nothing to enforce.
+ship_recorded_grade() { # <issue>
+  local root file
+  root=$(ship_record_root 2>/dev/null) || return 0
+  file=$root/ship-$1/run.md
+  [ -f "$file" ] || return 0
+  awk '/^## /{ f = ($0 ~ /^## Grade[ \t\r]*$/) }
+    f && /^(- )?Grade: (patch|minor|breaking)[ \t\r]*$/ { sub(/^(- )?Grade: /, ""); sub(/[ \t\r]+$/, ""); print; exit }' "$file"
+}
+
+# ship_title_grade <title>: the grade a Conventional-Commit title implies, the
+# type before an optional `(scope)` and an optional `!`, then `:`. `!` is
+# `breaking`, `feat` is `minor`, every other type is `patch`. A title that is no
+# Conventional Commit implies nothing and prints nothing: bump-guard owns that.
+ship_title_grade() { # <title>
+  local re='^([A-Za-z]+)(\([^)]*\))?(!)?:'
+  [[ $1 =~ $re ]] || return 0
+  if [ -n "${BASH_REMATCH[3]}" ]; then echo breaking
+  elif [ "${BASH_REMATCH[1]}" = feat ]; then echo minor
+  else echo patch; fi
+}
+
+# ship_require_grade <issue> <title>: exit 1 when the title grades below the
+# issue's recorded grade. `Grade: minor` and `Grade: breaking` both need a
+# `feat` or a `!` title (a 0.x skill's break is titled feat, ADR 0005);
+# `Grade: patch` accepts any. Run before the push or host write the title feeds.
+ship_require_grade() { # <issue> <title>
+  local want have type
+  want=$(ship_recorded_grade "$1")
+  case $want in minor|breaking) ;; *) return 0 ;; esac
+  have=$(ship_title_grade "$2")
+  [ "$have" = patch ] || return 0
+  type=${2%%[(!:]*}
+  ship_fail "title type $type grades patch, below the recorded Grade: $want; retitle as feat(...)"
+}
+
 # ship_help <usage> "$@": the --help contract. A run asks the script what its
 # flags and its answer are rather than reading them out of SKILL.md, so it
 # prints the same usage string the mechanic's guards print, then the calling
@@ -352,11 +393,13 @@ ship_worktree_container() {
 }
 
 # The base ref, resolved from origin/HEAD rather than a hardcoded branch (ADO
-# defaults vary). Refreshes the symbolic ref where the clone lacks one.
+# defaults vary). Refreshes the symbolic ref where the clone lacks one, which
+# asks the origin; `--local` reads the ref as it is, for a check that skips when
+# the base is unknown rather than reach a host.
 ship_base_ref() {
   local ref
   ref=$(git symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null) \
-    || { git remote set-head origin -a >/dev/null 2>&1 \
+    || { [ "${1:-}" != --local ] && git remote set-head origin -a >/dev/null 2>&1 \
          && ref=$(git symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null); } \
     || return 1
   printf '%s' "${ref#refs/remotes/}"
@@ -953,6 +996,87 @@ ship_body_headings() {
   awk "$SHIP_AWK_FENCE"'
     { inert = ship_inert($0) }
     !inert && /^## / { sub(/^## /, ""); sub(/[ \t\r]+$/, ""); print }' <<<"$1"
+}
+
+# ship_outline_missing <body> <paths>: the paths, one per line, that the body's
+# `## Change outline` section does not mention. <paths> is newline-separated. A
+# path is mentioned when the section names it by its full path, or by its
+# basename when no other changed path shares that basename (a derived copy whose
+# source twin is changed mirrors it and does not count): both bounded as `ship_paths_cited` bounds a path, so `_lib.sh` is no
+# mention of `tests/lib.sh` and one bare `SKILL.md` covers no two. A derived copy
+# under `.claude/skills/<rest>` is also mentioned when its source twin
+# `skills/<rest>` is changed and mentioned, since the copy mirrors the source.
+# `skills-lock.json` and any `CHANGELOG.md` are generated, never expected in an
+# outline. The section is found by the same `ship_inert` rule as the headings, so
+# a `## Change outline` in a fence is not one; a body with no such heading
+# mentions nothing, and every expected path is missing.
+ship_outline_missing() { # <body> <paths>
+  local text p twin rc
+  text=$(awk "$SHIP_AWK_FENCE"'
+    { inert = ship_inert($0) }
+    !inert && /^## / { name = $0; sub(/^## /, "", name); sub(/[ \t\r]+$/, "", name); on = (name == "Change outline"); next }
+    on' <<<"$1")
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    case ${p##*/} in skills-lock.json|CHANGELOG.md) continue ;; esac
+    _ship_outline_names "$text" "$p" "$2"; rc=$?
+    [ "$rc" -eq 0 ] && continue
+    [ "$rc" -eq 2 ] && return 2
+    case $p in
+      .claude/skills/*)
+        twin=skills/${p#.claude/skills/}
+        if grep -Fxq -e "$twin" <<<"$2"; then
+          _ship_outline_names "$text" "$twin" "$2"; rc=$?
+          [ "$rc" -eq 0 ] && continue
+          [ "$rc" -eq 2 ] && return 2
+        fi ;;
+    esac
+    printf '%s\n' "$p"
+  done <<<"$2"
+}
+
+# _ship_outline_names <text> <path> <paths>: true when the text names <path> by
+# its full path, or by its basename when <path>'s basename is shared by no other
+# path of <paths> (a derived copy under `.claude/skills/` whose source twin is in
+# <paths> is a mirror and does not count). One bounded matcher: `ship_paths_cited`.
+# Exit 0 named, 1 not named, 2 the matcher failed.
+_ship_outline_names() { # <text> <path> <paths>
+  local p=$2 base n c
+  c=$(ship_paths_cited "$1" "$p") || return 2
+  [ -n "$c" ] && return 0
+  base=${p##*/}
+  n=$(awk -v b="$base" '
+    { all[NR] = $0; has[$0] = 1 }
+    END {
+      for (i = 1; i <= NR; i++) {
+        f = all[i]; sub(/^.*\//, "", f)
+        mirror = (all[i] ~ /^\.claude\/skills\// && ("skills/" substr(all[i], 16)) in has)
+        if (f == b && !mirror) n++
+      }
+      print n + 0 }' <<<"$3")
+  [ "$n" -eq 1 ] || return 1
+  c=$(ship_paths_cited "$1" "$base") || return 2
+  [ -n "$c" ]
+}
+
+# ship_paths_cited <text> <paths>: the paths, one per line, that the text cites.
+# <paths> is newline-separated. A path is cited as a whole token, wherever it
+# sits, a code span, a quote or a link included: it is not preceded by a path
+# character ([A-Za-z0-9_./-], bar a leading `./`) and not followed by one
+# ([A-Za-z0-9_/-], or a `.` that opens an extension). So `scripts/run` does not
+# cite `scripts/run-file.sh`, `a/skills/x.sh` does not cite `skills/x.sh`, and a
+# sentence's closing `.` or a `:12` line suffix does not hide a path. A grep that
+# fails (exit 2, as against 1 for no match) is no answer: exit 2, never "uncited".
+ship_paths_cited() { # <text> <paths>
+  local p re rc
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    re=$(printf '%s' "$p" | sed 's/[]\\.[*^$+?(){}|]/\\&/g')
+    re='(^|[^A-Za-z0-9_./-])(\./)?'$re'($|[^A-Za-z0-9_/.-]|\.($|[^A-Za-z0-9_]))'
+    grep -Eq -e "$re" <<<"$1"; rc=$?
+    case $rc in 0) printf '%s\n' "$p" ;; 1) ;; *) return 2 ;; esac
+  done <<<"$2"
+  return 0
 }
 
 # ship_profile_path: the ship profile in the checkout the caller runs in, rather

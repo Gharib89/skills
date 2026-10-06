@@ -91,7 +91,7 @@ A git repo a pre-merge live run drives a skill in, to prove one path through it 
 _Avoid_: fixture (the host fake's canned answers), test repo, lab
 
 **Run file**:
-The one file a Ship run keeps outside every working tree, in the repo's git common directory at `<git common dir>/ship/ship-<issue>/run.md`, keyed by issue, so the main checkout and the run's worktree resolve the same path and a wiped temp directory leaves it standing. It holds the ten-phase checklist with a clock stamp on every flip, the run's design and plan, each Verification's result and each Local gate verdict with the head it ran on. The run's record, and the harness task list is its display: the source of truth for where the run is and the map back after a mid-run context summary, shown as one task per open phase, created when the phase opens and completed when it closes; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps. `cleanup <issue>` removes it after the merge; a free-text run (`cleanup none`) leaves its `ship-<slug>/` in place, and a run that stops before the merge gate leaves its record, which `init` then refuses to overwrite without `--rebuild`.
+The one file a Ship run keeps outside every working tree, in the repo's git common directory at `<git common dir>/ship/ship-<issue>/run.md`, keyed by issue, so the main checkout and the run's worktree resolve the same path and a wiped temp directory leaves it standing. It holds the ten-phase checklist with a clock stamp on every flip, the run's design and plan, each Verification's result, each Local gate verdict with the head it ran on, the run's `Grade:`, and the evidence lines `run-file close 4` and `close 7` refuse without (`Reverted-fix:`, `Dropped:`, `Near-miss:`, `Declined:` with its `Probe:`, then a `Round:` per round and a `Stop:` per reviewer). The run's record, and the harness task list is its display: the source of truth for where the run is and the map back after a mid-run context summary, shown as one task per open phase, created when the phase opens and completed when it closes; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps. `cleanup <issue>` removes it after the merge; a free-text run (`cleanup none`) leaves its `ship-<slug>/` in place, and a run that stops before the merge gate leaves its record, which `init` then refuses to overwrite without `--rebuild`.
 _Avoid_: task list, scratch file, plan file, todo
 
 **Scratch directory**:
@@ -169,6 +169,10 @@ _Avoid_: layer, stage, level
 **Budget**:
 The seconds one rung, or the cloud setup, may take on a warm run. The harness setup skill ships a default per rung; a repo overrides one only with a reason the human gives, recorded in its harness profile, and the skill never raises one silently. A rung measured over its budget is narrowed, demoted to the next rung, or overridden before its hook is written.
 _Avoid_: timeout (the hook's backstop, derived from the budget), limit, SLA
+
+**Timebox**:
+The optional `Timebox: <n> minutes` line of a ship profile's Verification entry: how long that verification may run. At an overrun, or a second failed rerun, it stops with the result `fail` and its evidence rather than looping. Named apart from a harness rung's Budget.
+_Avoid_: budget, timeout, limit
 
 **Stack**:
 One language and its package manager, rooted at a directory whose manifest owns a lockfile or which a workspace config names: the unit that installs once and runs one set of tool versions. A polyglot repo or a monorepo holds several; a language the harness setup skill has no entry for is reported, never guessed.

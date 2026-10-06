@@ -51,10 +51,11 @@ squash subject is what release tooling reads.
 
 ## The ship profile
 
-Load `docs/agents/ship.md` **once, whole, at preflight**. It has fourteen fixed
-`##` headings, every one always present; a defaulted axis reads `None.` or
-`Default.`. Most facts sit on `Label:` lines; Coding standards, Public surface
-and Triage carry theirs as the section body. Preflight, prepare and the
+Read `docs/agents/ship.md` by `## ` section, naming the heading, for the
+sections a phase uses. It has fourteen fixed `##` headings, every one always
+present; a defaulted axis reads `None.` or `Default.`. Most facts sit on
+`Label:` lines; Coding standards, Public surface and Triage carry theirs as the
+section body. Preflight, prepare and the
 reviewer mechanics read their own lines; everything else you pass as arguments.
 Triage roles (`ready-for-agent`, `ready-for-human`, `needs-triage`) take their
 label strings from `docs/agents/triage-labels.md`, and the tracker's mechanics

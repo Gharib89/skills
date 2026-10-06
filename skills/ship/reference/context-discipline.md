@@ -2,6 +2,7 @@
 
 ## Contents
 
+- [Model tiers](#model-tiers)
 - [While a subagent is out, end the turn](#while-a-subagent-is-out-end-the-turn)
 - [First action: the Run file](#first-action-the-run-file)
 
@@ -47,6 +48,19 @@ child, so a path a subagent invents below it still lands clear of the record.
 Edits to the repo go under the worktree prefix. Pass it the way you pass the
 model tier: written into the prompt, every dispatch.
 
+## Model tiers
+
+Use the cheapest model that fits; reserve the strong tier for judgment.
+
+| Work | Model |
+|---|---|
+| Investigation and mapping | haiku |
+| Phase-2 **execution** from a settled plan; mechanical edits and fixes; the docs-sync pass on human prose; the `code-review` skill's **Spec** axis | sonnet |
+| Phase-2 **judgment** (classification, plan, design, the implementation brief); triage of every finding; the `writing-for-agents` pass; the `code-review` skill's **Standards** axis | opus |
+
+When you invoke `code-review`, tier its two axes yourself. Fall back to the
+nearest available tier rather than running everything on one model.
+
 ## While a subagent is out, end the turn
 
 Dispatch a composed skill's subagents, then **end the turn**. The completion
@@ -83,10 +97,13 @@ Verification scoped to the fix before phase 3 closes. `close 3` takes one
 `--result <name>=<word>` per Verification named at init (`n/a` for one whose
 `Applies when:` you judged false) and refuses while one is missing. Close a
 phase only once its `Done when:` holds: the mechanic stamps whatever close it is
-given. A **small-lane** run keeps all ten items and `skip`s each collapsed
-phase, so the record shows a decision and not a gap; re-running `skip <n>
-"<reason>"` replaces a reason a wider diff outgrew. A harness that refuses the
-task tools has answered: run on the file alone.
+given, except that `close 3`, `close 4` and `close 7` refuse without the
+results or evidence lines [implement.md](implement.md#phase-4-evidence-lines)
+and [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps
+all ten items and `skip`s each collapsed phase, so the record shows a decision
+and not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
+outgrew. A harness that refuses the task tools has answered: run on the file
+alone.
 
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned**, `<scratch>/<role>/<role>-report.md`, because a

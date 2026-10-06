@@ -255,6 +255,16 @@ check "a later head is not current, and counts the commits behind" "false 1" "$(
 check "a short sha matches by prefix" true "$(at "$repo" gate read --head "${first:0:8}" --file "$fr" | jq -r .current)"
 check "the recorded sha may be the short one" true \
   "$(printf '{"verdict":"pass"}' | at "$repo" gate record - --file "$fr" --head "${second:0:9}" >/dev/null; at "$repo" gate read --head "$second" --file "$fr" | jq -r .current)"
+# One heading comparison: `gate record` finds `## Local gate` past trailing
+# blanks, so `gate read` does too, rather than reading none from a heading the
+# record was written under.
+fh=$(at "$repo" init 4242 | jq -r .run_file)
+printf '{"verdict":"fail"}' | at "$repo" gate record - --file "$fh" --head "$second" >/dev/null
+sed -i 's/^## Local gate$/## Local gate  /' "$fh"
+printf '{"verdict":"pass"}' | at "$repo" gate record - --file "$fh" --head "$second" >/dev/null
+check "gate read finds the last record under a heading with trailing blanks" "pass" "$(at "$repo" gate read --head "$second" --file "$fh" | jq -r .verdict)"
+sed -i 's/^## Local gate  $/## Local gates/' "$fh"
+check_rc "a heading that only starts with Local gate is not the section" 1 "$(inrc "$repo" gate read --head "$second" --file "$fh")"
 check "a head git cannot answer for is null behind" null \
   "$(at "$repo" gate read --head deadbeefdeadbeef --file "$fr" | jq -r .behind)"
 check "gate read takes the last of several records" "pass" \

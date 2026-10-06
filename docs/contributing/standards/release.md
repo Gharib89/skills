@@ -61,7 +61,8 @@ below lands as a minor
   same PR and adds that entry. Preflight refuses a schema mismatch in either
   direction, so an added heading stops an installed profile from running until
   `setup-skills` migrates it, which is what makes it breaking where an added
-  optional flag is not.
+  optional flag is not. A line `ship` accepts without expecting, the optional
+  lines paragraph of that file, takes no entry and no bump.
 - **Adding to `composes` or moving a pin is breaking, removing is additive.**
   The direction is inverted relative to every other item, so read it before
   grading one. Adding a skill to `ship`'s `metadata.composes` line is a `ship`

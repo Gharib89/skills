@@ -8,7 +8,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 mech=$PWD/skills/ship/scripts/file-issue.sh
-usage='usage: file-issue [--repo <owner>/<repo>] --title "<title>" --body-file <path> --label <marker> [--distinct-from <n>[,<n>]]'
+usage='usage: file-issue [--repo <owner>/<repo>] --title "<title>" --body-file <path> --label <marker> [--distinct-from <n>[,<n>]] [--outside-scope "<reason>"]'
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; export SHIP_FAKE=$work/fake
 mkdir -p "$repo" "$SHIP_FAKE"
