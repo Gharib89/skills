@@ -255,4 +255,24 @@ git -C "$repo" symbolic-ref --delete refs/remotes/origin/HEAD
 check_rc "no origin/HEAD and no --base is tooling" 2 "$(rc_of)"
 check "--base needs no origin/HEAD" '[]' "$(jq -c .blocks <<<"$(run --base HEAD)")"
 
+# A skill's installed copy under .claude/skills/ mirrors its source, so a drop
+# there is the same drop twice: only the source reports.
+mkrepo mirror
+mkdir -p "$repo/skills/x" "$repo/.claude/skills/x"
+body='top
+m1 one
+m2 two
+m3 three
+m4 four
+m5 five'
+printf '%s\n' "$body" > "$repo/skills/x/a.md"
+printf '%s\n' "$body" > "$repo/.claude/skills/x/a.md"
+commit_base
+printf 'top\n' > "$repo/skills/x/a.md"
+printf 'top\n' > "$repo/.claude/skills/x/a.md"
+commit_all drop
+check "a drop mirrored under .claude/skills reports the source alone" "skills/x/a.md:2" "$(ids "$(run)")"
+printf 'new line\n' > "$repo/.claude/skills/x/fresh.md"
+check "an untracked file under .claude/skills is no move target either" "skills/x/a.md:2" "$(ids "$(run)")"
+
 finish

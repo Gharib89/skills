@@ -9,8 +9,9 @@
 # The diff is `git diff -U0` of the working tree against the base, plus every
 # untracked file as a pure addition, so committed, staged and uncommitted work
 # are all in it and a move into a file git has not been told about is still a
-# move. The base is the merge base of HEAD and origin/HEAD, or the commit
-# --base names.
+# move. `.claude/skills/` is left out whole: it is a skill's installed copy, the
+# same text as its source, so a drop there is the source's drop reported twice.
+# The base is the merge base of HEAD and origin/HEAD, or the commit --base names.
 #
 # A removed line is matched when some added line anywhere in the diff, in any
 # file, equals it once leading and trailing whitespace is trimmed. Blank lines
@@ -61,10 +62,10 @@ base=$(git rev-parse --verify -q "$ref^{commit}") || ship_tooling "$ref is not a
 # pairs a rename would change the headers read below, and a rename is a delete
 # plus an add here, the add being what matches the delete.
 diffopts=(-c core.quotepath=off diff --no-color --no-ext-diff --no-renames -U0 --src-prefix=a/ --dst-prefix=b/)
-stream=$(git "${diffopts[@]}" "$base" --) || ship_tooling "cannot diff against $base"
+stream=$(git "${diffopts[@]}" "$base" -- . ':(exclude).claude/skills') || ship_tooling "cannot diff against $base"
 untracked=$(git ls-files --others --exclude-standard) || ship_tooling "cannot list untracked files"
 while IFS= read -r f; do
-  [ -n "$f" ] || continue
+  case $f in "" | .claude/skills/*) continue ;; esac
   # --no-index exits 1 when the files differ, which an untracked file always does.
   one=$(git "${diffopts[@]}" --no-index -- /dev/null "$f"); st=$?
   [ "$st" -le 1 ] || ship_tooling "cannot diff untracked file $f"
