@@ -168,16 +168,20 @@ is_open()    { case $1 in *" in_progress ("[0-9][0-9]:[0-9][0-9]"→)") return 0
 reject_written_state() { # reject_written_state <rendered line>
   [ "${1%%$'\n'*}" = "$1" ] \
     || ship_tooling "a phase is one line: that reason carries a newline; reword it"
-  printf '%s\n' "$1" \
-    | grep -Eq '\([0-9]{2}:[0-9]{2}→([0-9]{2}:[0-9]{2}(\+1d)?)?\)$' \
-    && ship_tooling "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it"
-  return 0
+  printf '%s\n' "$1" | grep -Eq '\([0-9]{2}:[0-9]{2}→([0-9]{2}:[0-9]{2}(\+1d)?)?\)$'
+  case $? in
+    0) ship_tooling "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it" ;;
+    1) ;;
+    *) ship_tooling "cannot check that reason for the Run file's own state shapes: grep failed" ;;
+  esac
 }
 reject_stamp_tail() { # reject_stamp_tail <flag> <value>
-  printf '%s\n' "$2" \
-    | grep -Eq '\([0-9]{2}:[0-9]{2}→[0-9]{2}:[0-9]{2}(\+1d)?\)|in_progress \([0-9]{2}:[0-9]{2}→\)| skipped \(' \
-    && ship_tooling "$1 cannot carry the Run file's own state shapes ((HH:MM→HH:MM), in_progress (HH:MM→), skipped (<reason>)): a phase line reads them as state"
-  return 0
+  printf '%s\n' "$2" | grep -Eq '\([0-9]{2}:[0-9]{2}→[0-9]{2}:[0-9]{2}(\+1d)?\)|in_progress \([0-9]{2}:[0-9]{2}→\)| skipped \('
+  case $? in
+    0) ship_tooling "$1 cannot carry the Run file's own state shapes ((HH:MM→HH:MM), in_progress (HH:MM→), skipped (<reason>)): a phase line reads them as state" ;;
+    1) ;;
+    *) ship_tooling "cannot check $1 for the Run file's own state shapes: grep failed" ;;
+  esac
 }
 # One phase, one line here too: a line of the checklist's shape copied into the
 # design and plan would otherwise report a phase that is not open. Every open
@@ -268,6 +272,8 @@ parse_file() { # parse_file "$@": where every flip and timing reads the record
 # rebuilding would wipe an intact record.
 take_row() { # take_row <n>: sets line and lineno
   row=$(phase_row "$1")
+  # No match is exit 1 and a grep that failed is 2: only the first is a missing line.
+  [ $? -le 1 ] || ship_tooling "cannot read the phase lines in $file: grep failed"
   if [ -z "$row" ]; then
     case $1 in
       [0-9]) ship_fail "no phase $1 line in $file: a subagent overwrote the Run file; $rebuild_hint" ;;
