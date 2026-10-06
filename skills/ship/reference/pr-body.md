@@ -12,10 +12,11 @@ The body is written once at `open-pr` and rewritten a section at a time after
 that, so it is the one artifact of the run a human reads without the
 transcript. It is written **for the reviewer**, not as the run's record: the
 merge summary is the record, so nothing the body leaves out is lost. Phase 6
-opens it; phase 7 rewrites three of its sections at exit; phase 9 reads it at
-the gate. The three top headings are taken from the `visual-pr` skill's PR
-template (humanlayer/skills): its template text is the source, its workflow is
-not, and ship does not compose it.
+opens it; phase 7 rewrites three of its sections at exit, a fourth, the Change
+outline, where it fell short; phase 9 reads it at the gate. The three top
+headings are taken from the `visual-pr` skill's PR template (humanlayer/skills):
+its template text is the source, its workflow is not, and ship does not compose
+it.
 
 ## What the body carries
 
@@ -53,7 +54,8 @@ write into. Every variant carries:
 ## The Change outline
 
 Draw it from the diff at phase 6, not from phase 2's design; a redraw is not a
-deviation.
+deviation. `read-pr`'s `outline_missing` lists the changed paths the outline
+does not mention, and is the read-back check for it.
 
 It is a `diff` fence over a call tree, control flow, pseudocode or component
 tree, showing what the change **does**. Text forms only: Azure DevOps renders

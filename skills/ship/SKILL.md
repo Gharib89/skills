@@ -52,13 +52,15 @@ its tail: `tooling` as `host-unreachable`, `bootstrap` as `bootstrap-failed`.
 ## Compose, don't reinline
 
 Load `tdd` (phase 2), `writing-for-agents` (phase 4, agent-facing docs),
-`code-review` (phase 4) and `find-docs` (any API claim) through the Skill tool
-when their moment comes, taking each one's logic from the skill itself, and tell
-any composed skill with an unattended mode that the run is unattended,
-explicitly, because it has no other way to know. **Read** `show-me` (phase 6,
-the Change outline) instead; [pr-body.md](reference/pr-body.md) says why. The
-frontmatter's `composes` line names all five, each pinned at the upstream commit
-ship was tested against (`<owner>/<repo>#<sha>:<skill>`), and is what phase 0
+`code-review` (phase 4) and `find-docs` (any API claim, the profile's `Pinned:`
+libraries included: [implement.md](reference/implement.md#consult-current-docs))
+through the Skill tool when their moment comes, taking each one's logic from the
+skill itself, and tell any composed skill with an unattended mode that the run
+is unattended, explicitly, because it has no other way to know. **Read**
+`show-me` (phase 6, the Change outline) instead;
+[pr-body.md](reference/pr-body.md) says why. The frontmatter's `composes` line
+names all five, each pinned at the upstream commit ship was tested against
+(`<owner>/<repo>#<sha>:<skill>`), and is what phase 0
 checks: a skill added here is added there too.
 
 ## The pipeline
@@ -82,8 +84,7 @@ runs and the contract they share, `--help` included.
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
 preflight proves and refuses, the profile it loads and why the worktree is made
 the way it is. Run `preflight <issue>` (`--unattended` in an unattended run):
-every `reasons` entry is a row of the stop table below, and a push-permission
-`unknown` on stderr is carried to the merge summary rather than a stop. Then
+every `reasons` entry is a row of the stop table below. Then
 `read-issue <issue>`, phase 1's input, from which the branch `<type>` (`feat`,
 `fix`, `docs`, ...) and `<slug>` are derived. Then `isolate <issue> <type>
 <slug>` with the profile's `Carry:` files, or `isolate ... --in-place`
@@ -97,9 +98,11 @@ any `## Worktree` `Bootstrap:` ran green.
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
 `manage-issue <issue> take`, held until merge; later stops follow the stop
 table. Then **grep each anchor** the issue cites, rewriting one the tree
-contradicts ([implement.md](reference/implement.md)), and only then write what
-success looks like into the Run file as criteria a later phase can check; a
-later authoritative comment supersedes the body (**spec precedence**).
+contradicts, and a criterion needing a host action no mechanic performs,
+through `update-issue-body` ([implement.md](reference/implement.md)), and only
+then write what success looks like into the Run file as criteria a later phase
+can check; a later authoritative comment supersedes the body (**spec
+precedence**).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
@@ -107,8 +110,11 @@ classes, the TDD override, external-claim probes, the judgment/execution split
 and the adjacent-find dispositions. Classify `docs` / `code` / `infra`;
 **announce the class, the skip path it implies, whether the three lane keys
 hold**, and the applicable verifications from `## Verification` (their `Applies
-when:` lines are prose you judge here). Then implement test-first per class;
-`Tripwires:` and `In-PR requirement:` land in this change whatever the class.
+when:` lines are prose you judge here). Record the version grade of the public
+surface change under the profile's `Subject constraints:` with `run-file grade
+<patch|minor|breaking>`: `open-pr` and `update-pr-title` refuse a title type
+that grades lower. Then implement test-first per class; `Tripwires:` and
+`In-PR requirement:` land in this change whatever the class.
 Keep a **deviations log** from the first edit: whenever the territory forces a
 departure from the issue, brief or plan, take the conservative option, log what
 and why, keep going; it lands verbatim in the merge summary. If the diff
@@ -151,23 +157,16 @@ gate runs later in the run, so the axis reads the gate's JSON and never runs
 `check.sh full` or the suite itself. **Triage waits for every Report file**; one
 that fails to arrive after the bounded retry is `red-after-retry: <axis>`, never
 a disposition written from memory.
-**Auto-triage** every finding: harden rather than rip out capability, verify
-nits against the pinned versions, reject known non-issues, fix the valid ones,
-and record a one-line disposition per finding. Two rails on rejecting: a claim
-about **what exists in the repo** is checked against `origin/HEAD` rather than
-the worktree, which may predate a merge; and a finding's **evidence and its
-claim are separate**, so a reviewer citing the wrong commit for a real primitive
-is still right. A valid finding outside the issue is an adjacent find. Then read
-the diff yourself against the depth checks in the coding-standards file the
-Standards axis reads, and the sub-files it routes to, by their leading words: a
-vocabulary the change extends, a rule-shaped prose change, new pattern-matching
-code, a new test run with its fix reverted, a fix landed after review, and any
-the repo adds beside them. Reviewer rounds find these otherwise, serially, at
-the cost of most of a run's wall time, and the reverted-fix one escapes them
-entirely. This self-review plus green CI is the review gate.
+**Auto-triage** every finding at the judgment tier, one disposition each, under
+the rails and depth checks in
+[implement.md](reference/implement.md#phase-4-triage-and-depth-checks).
+`run-file close 4` refuses until the Run file holds the
+[evidence lines](reference/implement.md#phase-4-evidence-lines) that section's
+checks leave: reverted-fix, `Dropped:`, near-miss and `Probe:`.
+This self-review plus green CI is the review gate.
 **Done when:** every report that fired has its Report file on disk and its path
-in the Run file, every finding carries a disposition, and docs-sync landed or is
-skipped in one line.
+in the Run file, every finding carries a disposition, `close 4` took the
+evidence lines, and docs-sync landed or is skipped in one line.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
@@ -207,23 +206,23 @@ block's `Resolve:`; `Cap:` bounds the rounds. **Every reviewer whose
 `Fallback-for:` reads `None.` first, then the fallbacks.** Exits: `reviewed`,
 `not reviewed: <reason>`, or `not invoked: <primary> reviewed`; `not reviewed`
 proceeds to the merge gate on green CI and is reported there. At exit,
-`update-pr-body --section --body-file` writes the sections the rounds grew,
-`Review` last, then the phase-6 read-back.
+`update-pr-body --section --body-file` writes the sections the rounds grew, the
+Change outline where it fell short, `Review` last, the title checked against the
+`Grade:`, then the phase-6 read-back; a cap round whose fixes changed the tree
+earns one local review of those fixes before the merge gate.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned is replied to and resolved per `Resolve:`, every section the rounds
-grew is rewritten, and `read-pr` shows a `## Review` line per reviewer.
+grew is rewritten, `close 7` took each reviewer's `Round:` and `Stop:` lines,
+and `read-pr` shows a `## Review` line per reviewer.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. `ci-wait` and `poll-pr` wait for the expected
-head, `--sha <sha>` else the worktree's `HEAD` when it is on the PR's branch, so
-a read straight after a push never grades the previous head. A `timeout` whose
-`head_sha` is not that head means the host never showed the push: confirm it
-landed, then re-run. On `conflict`, its stderr carries the recovery.
-`no-checks` is fine only where `No-checks legal:` says so. A red leg named on a
-verification's `Also proven by CI:` line is that verification failing: back to
-phase 2. Red after the reviewers exited: fix, push, proceed on green. Honour
-`Push policy:`: a push spends CI minutes and review quota, so push when the tree
-changed.
+head ([mechanics.md](reference/mechanics.md#waits-past-540-s)). On `conflict`,
+its stderr carries the recovery. `no-checks` is fine only where `No-checks
+legal:` says so. A red leg named on a verification's `Also proven by CI:` line
+is that verification failing: back to phase 2. Red after the reviewers exited:
+fix, push, proceed on green. Honour `Push policy:`: a push spends CI minutes and
+review quota, so push when the tree changed.
 **Done when:** `ci-wait` answered `green`, each `missing_legs` entry one
 `No-checks legal:` admits, or `no-checks` where it admits that.
 
@@ -301,25 +300,17 @@ is not small.
 3. **Contained.** No new dependency, none of the profile's `Tripwires:`
    fired, and the diff inside the size cap small-lane.md counts.
 
-Behavior change is allowed: a bugfix is one. Small: read
+Behavior change is allowed: a bugfix is one. A diff touching a guard,
+allowlist or deny rule is full lane. Small: read
 [reference/small-lane.md](reference/small-lane.md) before continuing. Its floor
 is the same in every repo, and the lane revokes one way only.
 
 ## Model tiers
 
-Use the cheapest model that fits; reserve the strong tier for judgment. Tag
-every subagent with a model explicitly and with its scratch directory
-([reference/context-discipline.md](reference/context-discipline.md)); neither is
-inherited.
-
-| Work | Model |
-|---|---|
-| Investigation and mapping | haiku |
-| Phase-2 **execution** from a settled plan; mechanical edits and fixes; the docs-sync pass on human prose; the `code-review` skill's **Spec** axis | sonnet |
-| Phase-2 **judgment** (classification, plan, design, the implementation brief); triage of every finding; the `writing-for-agents` pass; the `code-review` skill's **Standards** axis | opus |
-
-When you invoke `code-review`, tier its two axes yourself. Fall back to the
-nearest available tier rather than running everything on one model.
+The cheapest model that fits, the strong tier for judgment: haiku maps, sonnet
+executes, opus judges. Tag every subagent with its model and its scratch
+directory; neither is inherited. The table is in
+[context-discipline.md](reference/context-discipline.md#model-tiers).
 
 ## Working standards
 
@@ -339,12 +330,3 @@ These bind every edit a run makes, in every repo, regardless of a personal
   constraints, invariants and workarounds; skip narrative comments on internals.
 - **Concise PR body, always the why.** State what changed and why; the reader
   has the diff for the how. The merge summary is exempt: write it uncompressed.
-
-## Consult current docs
-
-While implementing (phase 2) or triaging findings (phases 4 and 7), verify API
-claims against **current** docs through the `find-docs` skill and the extra
-`Sources:` the profile names. For every library on the profile's `Pinned:`
-line, read the installed version from the repo's manifest and confirm the claim
-against that version before acting on it; a remembered API the installed
-version lacks is a regression.
