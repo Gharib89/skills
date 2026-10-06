@@ -12,6 +12,7 @@
 #   run-file open|next <n> <where>
 #   run-file close <n> [--result <name>=<word>[: <note>]]... <where>
 #   run-file skip <n> <reason> <where>
+#   run-file grade <patch|minor|breaking> <where>
 #   run-file gate record <file|-> [--head <sha>] <where>
 #   run-file gate read --head <sha> <where>
 #   run-file timing <where>
@@ -64,12 +65,49 @@
 # when it does not re-run the gate. Both take `--head` as a full or abbreviated
 # sha, 7 to 64 hex digits.
 #
-# Reaches no host and no repo file: the record root is the only thing it
-# writes.
+# `close 4` and `close 7` hold the self-review and the review loop to the
+# evidence they leave in the Run file: a refused close writes nothing, names
+# everything missing in one message, and `next` over either phase is held the
+# same way. A gate line is a line anywhere in the file, an optional leading
+# `- ` accepted, matched by exact prefix at the line start. `close 4` reads the
+# checkout's own diff (the working tree, untracked files included, against the
+# merge base of HEAD and origin/HEAD) and asks `dropped-lines`; it needs:
+#   `Reverted-fix: <test path>: red` or `Reverted-fix: <test path>: n/a: <reason>`
+#     for each test file the diff adds or changes, deletions aside. A test file
+#     has a path component `tests`, `test` or `__tests__`, or a basename
+#     matching `*.test.*`, `*.spec.*`, `*_test.*` or `test_*`.
+#   `Dropped: <id> re-homed at <path>` or `Dropped: <id> dropped on purpose:
+#     <why>` for each block `dropped-lines` reports, <id> being its `id`.
+#   a near-miss table for each added or changed `*.sh` outside the tests whose
+#     added lines hold a pattern matcher (a heuristic: `=~`, a `grep` or `egrep`
+#     command, or a regex literal in an `awk` or `sed` line, comment lines
+#     aside): one `Near-miss: <script>: <kind>: <test path>` (a file in the
+#     checkout) or `Near-miss: <script>: <kind>: n/a: <reason>` per kind, or one
+#     `Near-miss: <script>: n/a: <reason>` for the script. The kinds are
+#     partial-token (a near-miss token that must not match), quoted (the token
+#     inside a comment, a code span or a quote), indented (indented or nested
+#     input), unbalanced (unbalanced input) and unreadable (unreadable input,
+#     which must exit 2).
+#   `Probe: <ref>: <command> => <output>` for each `Declined: <ref>: <reason>`
+#     whose reason claims behaviour (already handled, already covered, already
+#     guarded, can't happen, cannot happen, can not happen, never happens,
+#     closes at merge, any case); <ref> is the text before the first `: `.
+# `close 7` reads the reviewers from the phase's checklist row (nothing is held
+# where the row names none, or names what is not a list of names) and needs a
+# `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
+# one of cap, tree unchanged, small lane, auto-once or not reviewed, and unless
+# it is `not reviewed` at least one `Round: <reviewer> <n>: <text>`, <n> a
+# positive integer. `grade` writes `Grade: <word>` under the `## Grade` section,
+# replacing the line a call before it wrote.
+#
+# Reaches no host. It writes only the record root; `close 4` reads the
+# checkout's git state and runs the sibling `dropped-lines` mechanic, and a read
+# that fails is exit 2, never a clean diff.
 #
 # stdout: one JSON object per call
 #   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
 #   open, close, skip: {run_file, phase, state, line, mirror[, reason]}
+#   grade: {run_file, grade}
 #   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}}
 #   timing: {run_file, start_to_pr, pr_to_gate, phases{}, row}; a skipped phase
 #     reads `skipped` and a phase with no range `unverified`
@@ -77,11 +115,12 @@
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the
 #     commits between the recorded head and <sha>
-# exit: 0 ok · 1 the mechanic's own refusal · 2 malformed invocation
+# exit: 0 ok · 1 the mechanic's own refusal (a gate's missing evidence among
+#   them) · 2 malformed invocation, or a read a gate needs that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -351,6 +390,201 @@ profile_headings() { # profile_headings <section> <profile-body>
 }
 join_names() { awk '{ out = out (NR > 1 ? ", " : "") $0 } END { print out }'; }
 
+# --- The self-review and review-loop gates -------------------------------------
+# A gate line is a line of the Run file, an optional leading `- ` accepted,
+# matched by exact prefix at the line start: the text after the prefix, one line
+# each. The prefix goes through ENVIRON, so a name's dot or bracket is never a
+# pattern.
+rests() { # rests <prefix>
+  p=$1 awk '{ l = $0; sub(/^- /, "", l) } index(l, ENVIRON["p"]) == 1 { print substr(l, length(ENVIRON["p"]) + 1) }' "$file"
+}
+trim_end() { # trim_end <text>
+  local t=$1
+  printf '%s' "${t%"${t##*[![:space:]]}"}"
+}
+is_blank() { [ -z "${1//[[:space:]]/}" ]; }
+gaps=""
+gap() { gaps="$gaps; $1"; }
+refuse_gaps() { # refuse_gaps <phase>
+  [ -z "$gaps" ] || ship_fail "phase $1 cannot close: ${gaps#; }"
+  return 0
+}
+
+# A path is a test file by a component of it or by its basename.
+is_test_path() {
+  case /$1/ in */tests/* | */test/* | */__tests__/*) return 0 ;; esac
+  case ${1##*/} in *.test.* | *.spec.* | *_test.* | test_*) return 0 ;; esac
+  return 1
+}
+# A heuristic, not a parser: a line holding `=~`, a grep, or an awk or sed with a
+# regex literal. Comment lines are not matchers. A false hit costs the author one
+# `n/a` line; a miss is the gap this gate exists to close.
+q="'"
+matcher_re="=~|(^|[^[:alnum:]_.-])e?grep([[:space:]]|\$)|(^|[^[:alnum:]_-])(awk|sed)[[:space:]].*([~!(&|{;$q\"][[:space:]]*/[^/]+/|[^[:alnum:]_/]s/[^/]+/)"
+has_matcher() { # has_matcher <added lines>
+  local code
+  code=$(printf '%s\n' "$1" | awk '!/^[[:space:]]*#/')
+  grep -Eq -e "$matcher_re" <<<"$code"
+  case $? in
+    0) return 0 ;;
+    1) return 1 ;;
+    *) ship_tooling "cannot read the added lines for a pattern matcher" ;;
+  esac
+}
+near_kinds="partial-token quoted indented unbalanced unreadable"
+claims_re="already handled|already covered|already guarded|can't happen|cannot happen|can not happen|never happens|closes at merge"
+
+# Phase 4: every test file changed has its Reverted-fix line, every removed block
+# its disposition, every new matcher its near-miss table, every behaviour claim
+# in a decline its probe.
+gate_phase4() {
+  local base mb top tracked untracked paths p r ok ids id miss k added here dl ref reason
+  base=$(ship_base_ref) || ship_tooling "close 4 reads the diff against origin/HEAD, which cannot be resolved here"
+  top=$(git rev-parse --show-toplevel 2>/dev/null) || ship_tooling "close 4 reads the checkout's diff: not inside a git checkout"
+  mb=$(git -C "$top" merge-base "$base" HEAD 2>/dev/null) || ship_tooling "close 4 reads the diff against $base: no merge base with HEAD"
+  tracked=$(git -C "$top" diff --no-renames --name-status -z "$mb" | tr '\0' '\n' | awk 'NR % 2 == 1 { s = $0; next } s != "D" { print }') \
+    || ship_tooling "cannot read the checkout's diff against $mb"
+  untracked=$(git -C "$top" ls-files -z --others --exclude-standard | tr '\0' '\n') \
+    || ship_tooling "cannot list the checkout's untracked files"
+  paths=$(printf '%s\n%s\n' "$tracked" "$untracked" | awk 'NF && !seen[$0]++')
+
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    is_test_path "$p" || continue
+    ok=false
+    while IFS= read -r r; do
+      r=$(trim_end "$r")
+      case $r in
+        red | "red: "?*) ok=true ;;
+        "n/a: "?*) is_blank "${r#n/a: }" || ok=true ;;
+      esac
+    done <<EORESTS
+$(rests "Reverted-fix: $p: ")
+EORESTS
+    [ "$ok" = true ] || gap "no Reverted-fix line for $p: add \`Reverted-fix: $p: red\` or \`Reverted-fix: $p: n/a: <reason>\`"
+  done <<EOPATHS
+$paths
+EOPATHS
+
+  here=$(dirname "${BASH_SOURCE[0]}")
+  dl=$(bash "$here/dropped-lines.sh" --base "$mb") \
+    || ship_tooling "dropped-lines failed, so the removed blocks cannot be read"
+  ids=$(jq -r '.blocks[] | (.id | if type == "string" and . != "" then . else error("a block with no id") end)' <<<"$dl" 2>/dev/null) \
+    || ship_tooling "dropped-lines did not print a JSON {blocks: [{id}]} answer"
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    ok=false
+    while IFS= read -r r; do
+      is_blank "$r" || ok=true
+    done <<EORESTS
+$(rests "Dropped: $id re-homed at ")
+$(rests "Dropped: $id dropped on purpose: ")
+EORESTS
+    [ "$ok" = true ] || gap "no disposition for removed block $id: add \`Dropped: $id re-homed at <path>\` or \`Dropped: $id dropped on purpose: <why>\`"
+  done <<EOIDS
+$ids
+EOIDS
+
+  while IFS= read -r p; do
+    case $p in *.sh) ;; *) continue ;; esac
+    is_test_path "$p" && continue
+    if grep -Fxq -- "$p" <<<"$untracked"; then
+      added=$(cat "$top/$p") || ship_tooling "cannot read $p"
+    else
+      added=$(git -C "$top" diff --no-renames -U0 "$mb" -- "$p" | awk '/^@@/ { h = 1; next } h && /^\+/ { print substr($0, 2) }') \
+        || ship_tooling "cannot read the diff of $p"
+    fi
+    has_matcher "$added" || continue
+    ok=false
+    while IFS= read -r r; do
+      r=$(trim_end "$r")
+      case $r in "n/a: "?*) is_blank "${r#n/a: }" || ok=true ;; esac
+    done <<EORESTS
+$(rests "Near-miss: $p: ")
+EORESTS
+    [ "$ok" = true ] && continue
+    miss=""
+    for k in $near_kinds; do
+      ok=false
+      while IFS= read -r r; do
+        r=$(trim_end "$r")
+        case $r in
+          "n/a: "?*) is_blank "${r#n/a: }" || ok=true ;;
+          ?*) [ -f "$top/$r" ] && ok=true ;;
+        esac
+      done <<EORESTS
+$(rests "Near-miss: $p: $k: ")
+EORESTS
+      [ "$ok" = true ] || miss="$miss, $k"
+    done
+    [ -z "$miss" ] || gap "$p has a new pattern matcher and no near-miss line for: ${miss#, }: add one line per kind, \`Near-miss: $p: <kind>: <test path>\` or \`Near-miss: $p: <kind>: n/a: <reason>\`, or \`Near-miss: $p: n/a: <reason>\` for the whole script"
+  done <<EOPATHS
+$paths
+EOPATHS
+
+  while IFS= read -r r; do
+    case $r in *": "*) ;; *) continue ;; esac
+    ref=${r%%: *} reason=${r#*: }
+    grep -Eiq -e "$claims_re" <<<"$reason" || continue
+    ok=false
+    while IFS= read -r r; do
+      case $r in
+        *" => "*) is_blank "${r%% => *}" || is_blank "${r#* => }" || ok=true ;;
+      esac
+    done <<EORESTS
+$(rests "Probe: $ref: ")
+EORESTS
+    [ "$ok" = true ] || gap "Declined: $ref claims behaviour and has no probe: add \`Probe: $ref: <command> => <output>\`"
+  done <<EODECLINED
+$(rests "Declined: ")
+EODECLINED
+  refuse_gaps 4
+}
+
+# Phase 7: each reviewer the checklist row names has its stop reason and, unless
+# it never reviewed, a round.
+stop_reasons="cap, tree unchanged, small lane, auto-once, not reviewed"
+gate_phase7() { # gate_phase7 <phase 7 row>
+  local list names nm stop r ok re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
+  case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
+  list=${1#*"Reviewers: "}; list=${list%%", one bounded pass each"*}
+  case $list in "" | None | None. | none | none.) return 0 ;; esac
+  names=$(printf '%s\n' "$list" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+  while IFS= read -r nm; do
+    [[ $nm =~ ^[A-Za-z0-9][A-Za-z0-9\ ._-]*$ ]] || return 0
+  done <<EONAMES
+$names
+EONAMES
+  while IFS= read -r nm; do
+    stop=$(rests "Stop: $nm: " | tail -n 1)
+    stop=$(trim_end "$stop")
+    case $stop in
+      cap | "tree unchanged" | "small lane" | auto-once | "not reviewed") ;;
+      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged|small lane|auto-once|not reviewed>\`" ;;
+      *) gap "Stop line for $nm has reason '$stop', which is not one of $stop_reasons" ;;
+    esac
+    [ "$stop" = "not reviewed" ] && continue
+    ok=false
+    while IFS= read -r r; do
+      [[ $r =~ $re ]] && ok=true
+    done <<EORESTS
+$(rests "Round: $nm ")
+EORESTS
+    [ "$ok" = true ] || gap "no Round line for $nm: add \`Round: $nm <n>: <text>\`, one per round, unless it stopped \`not reviewed\`"
+  done <<EONAMES
+$names
+EONAMES
+  refuse_gaps 7
+}
+# The gate a phase's close owes, run once the phase is known open and before a
+# line is written, so a refusal leaves the record as it was.
+close_gate() { # close_gate <phase> <its row>
+  case $1 in
+    4) gate_phase4 ;;
+    7) gate_phase7 "$2" ;;
+  esac
+}
+
 case $verb in
 init)
   ship_args "$usage" arg "$@"
@@ -506,6 +740,7 @@ next)
   [ -n "$gap" ] && refuse_gap next "$gap" "$n"
   [ "$c" = 3 ] && refuse_pending
   take_row "$c"
+  close_gate "$c" "$line"
   closed=$(closed_line "$line")
   opened=$(render open "$(item "$next_line")" "$(date -u +%H:%M)")
   write_line "$lineno" "$closed"
@@ -532,6 +767,7 @@ close)
   # The results land before the pending check, so a close refused for one
   # verification still keeps the ones it was given.
   [ "$n" = 3 ] && { record_results; refuse_pending; }
+  close_gate "$n" "$line"
   new=$(closed_line "$line")
   write_line "$lineno" "$new"
   flip_json closed "$new" completed
@@ -556,6 +792,24 @@ skip)
   reject_written_state "$new"
   write_line "$lineno" "$new"
   flip_json skipped "$new" completed "$reason"
+  ;;
+grade)
+  word=${1:-}
+  case $word in patch | minor | breaking) shift ;; *) ship_tooling "$usage" ;; esac
+  parse_file "$@"
+  no_extra
+  # The line lives under `## Grade`: a call replaces the one before it, and a
+  # `Grade:` line in another section is not this one.
+  if awk '/^## / { f = ($0 == "## Grade") } f && /^(- )?Grade: / { found = 1 } END { exit !found }' "$file"; then
+    if ! { repl="Grade: $word" awk '/^## / { f = ($0 == "## Grade") }
+        f && /^(- )?Grade: / { if (!done) print ENVIRON["repl"]; done = 1; next } { print }' "$file" > "$file.t" \
+        && mv "$file.t" "$file"; }; then
+      rm -f "$file.t"; ship_tooling "cannot write $file"
+    fi
+  else
+    append_to_section "## Grade" "Grade: $word"
+  fi
+  jq -n --arg f "$file" --arg g "$word" '{run_file: $f, grade: $g}'
   ;;
 gate)
   sub=${1:-}

@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# scripts/revert-red.sh: does a test go red when the fix under it is reverted?
-# The seam is the script's CLI: `<test> <path>...` in, an exit code and one line
-# out. Driven end to end against a fixture repo with a base, a fix and a test
-# commit, whose `origin/HEAD` is set by hand so no remote is needed.
+# skills/ship/scripts/revert-red.sh: does a test go red when the fix under it is
+# reverted? The seam is the mechanic's CLI: `<test> <path>...` in, an exit code
+# and one JSON verdict out. Driven end to end against a fixture repo with a base,
+# a fix and a test commit, whose `origin/HEAD` is set by hand so no remote is
+# needed. The fixture carries no tests/host-stub.sh: a consumer has none, and the
+# mechanic brings its own host stubs.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-script=$PWD/scripts/revert-red.sh
+script=$PWD/skills/ship/scripts/revert-red.sh
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 # The script's temp worktree lands here, so a leftover is visible.
@@ -31,12 +33,12 @@ echo 'answer() { echo 2; }' > "$repo/lib.sh"
 echo 'extra() { echo yes; }' > "$repo/extra.sh"
 git -C "$repo" add -A && git -C "$repo" commit -qm fix
 
-# Three tests: one red on a reverted lib.sh, one red on a reverted extra.sh, and
-# one that never reads either.
+# Four tests: one red on a reverted lib.sh, one red on a reverted extra.sh, one
+# that calls a host, and one that never reads either file.
 cat > "$repo/tests/answer.test.sh" <<'EOF'
 cd "$(dirname "$0")/.." || exit 2
 source lib.sh
-[ "$(answer)" = 2 ]
+[ "$(answer)" = 2 ] || { echo MARKER-FROM-THE-TEST; exit 1; }
 EOF
 cat > "$repo/tests/extra.test.sh" <<'EOF'
 cd "$(dirname "$0")/.." || exit 2
@@ -55,9 +57,10 @@ cd "$(dirname "$0")/.." || exit 2
 EOF
 git -C "$repo" add -A && git -C "$repo" commit -qm test
 
-# <args>...: the script's exit code, run from the fixture repo.
+# <args>...: the script's exit code, stdout, or stderr, run from the fixture repo.
 rc_of() { (cd "$repo" && bash "$script" "$@" >/dev/null 2>&1); printf '%s' "$?"; }
 out_of() { (cd "$repo" && bash "$script" "$@" 2>/dev/null); }
+err_of() { (cd "$repo" && bash "$script" "$@" 2>&1 >/dev/null | cat); }
 
 # --- red is what the script is for -------------------------------------------
 
@@ -76,12 +79,20 @@ check "no temp directory remains after a green run" "" "$(ls -A "$TMPDIR")"
 check_rc "reverting a file the test does not depend on exits 1" \
   1 "$(rc_of tests/answer.test.sh extra.sh)"
 
-check "a red test says so" \
-  "revert-red: tests/answer.test.sh goes red with lib.sh reverted." \
-  "$(out_of tests/answer.test.sh lib.sh)"
-check "a green test names the vacuous test" \
+check "a red test says so in one JSON verdict" \
+  '{"test":"tests/answer.test.sh","paths":["lib.sh"],"red":true}' \
+  "$(out_of tests/answer.test.sh lib.sh | jq -c .)"
+check "a verdict lists every path reverted, in order" \
+  '{"test":"tests/extra.test.sh","paths":["lib.sh","extra.sh"],"red":true}' \
+  "$(out_of tests/extra.test.sh lib.sh extra.sh | jq -c .)"
+check "a green test says red false" \
+  '{"test":"tests/unrelated.test.sh","paths":["lib.sh"],"red":false}' \
+  "$(out_of tests/unrelated.test.sh lib.sh | jq -c .)"
+check "a green test names the vacuous test on stderr" \
   "revert-red: tests/unrelated.test.sh stays green with lib.sh reverted, so it does not prove the fix." \
-  "$(out_of tests/unrelated.test.sh lib.sh)"
+  "$(err_of tests/unrelated.test.sh lib.sh)"
+check "a red run puts the test's own failure on stderr" \
+  "MARKER-FROM-THE-TEST" "$(err_of tests/answer.test.sh lib.sh)"
 
 # Red for the stub's sake is not red for the fix's: a reverted tree that reaches a
 # host, as one that loses the Host fake would, is not a verdict.
@@ -89,7 +100,22 @@ check_rc "a reverted tree that calls a host is tooling, not red" \
   2 "$(rc_of tests/hostcall.test.sh lib.sh)"
 check "and the call is named on stderr" \
   "    gh api repos/x/y" \
-  "$(cd "$repo" && bash "$script" tests/hostcall.test.sh lib.sh 2>&1 >/dev/null | grep '^    ')"
+  "$(err_of tests/hostcall.test.sh lib.sh | grep '^    ')"
+check "and as a JSON error with no verdict on stdout" \
+  "true" "$(out_of tests/hostcall.test.sh lib.sh | jq -r 'has("error") and (has("red") | not)')"
+
+# The stubs are the mechanic's own: copied to a directory with no tests/ beside
+# it, which is what a consumer's skills/ship/scripts is, it still stubs the host.
+standalone=$T/consumer/skills/ship/scripts
+mkdir -p "$standalone"
+cp "$(dirname "$script")/revert-red.sh" "$(dirname "$script")/_lib.sh" "$standalone/"
+check_rc "with no tests/host-stub.sh anywhere near it, a red test still exits 0" \
+  0 "$(cd "$repo" && bash "$standalone/revert-red.sh" tests/answer.test.sh lib.sh >/dev/null 2>&1; printf '%s' "$?")"
+check_rc "and a reverted tree that calls a host is still tooling" \
+  2 "$(cd "$repo" && bash "$standalone/revert-red.sh" tests/hostcall.test.sh lib.sh >/dev/null 2>&1; printf '%s' "$?")"
+check "and the call is still named" \
+  "    gh api repos/x/y" \
+  "$(cd "$repo" && bash "$standalone/revert-red.sh" tests/hostcall.test.sh lib.sh 2>&1 >/dev/null | grep '^    ')"
 
 # --- it leaves nothing behind ------------------------------------------------
 
@@ -98,10 +124,21 @@ check "the fixture repo keeps its one worktree" \
 check "the fixture's own tree is untouched" \
   "answer() { echo 2; }" "$(cat "$repo/lib.sh")"
 
-# --- inputs that are not a verdict -------------------------------------------
+# --- help and inputs that are not a verdict ----------------------------------
+
+help=$(cd "$T" && bash "$script" --help 2>"$T/err"); rc=$?
+check_rc "--help exits 0 from a directory that is no repository" 0 "$rc"
+check "--help opens with the usage line" \
+  "usage: revert-red <test> <path>..." "$(sed -n 1p <<<"$help")"
+check "--help names its stdout fields next" "stdout:" "$(sed -n 2p <<<"$help" | cut -c1-7)"
+check "--help writes nothing on stderr" "" "$(cat "$T/err")"
 
 # Exit 1 means the test proved nothing, so a malformed call must not share it.
 check_rc "no arguments is a usage error" 2 "$(rc_of)"
+check "a bad call prints one JSON object carrying the usage line" \
+  "usage: revert-red <test> <path>..." "$(out_of | jq -r .error)"
+check "a flag where the test belongs is refused with the usage line" \
+  "usage: revert-red <test> <path>..." "$(out_of --x lib.sh | jq -r .error)"
 check_rc "a test with no path is a usage error" 2 "$(rc_of tests/answer.test.sh)"
 # A test file bash cannot open exits non-zero, which would read as red.
 check_rc "a test missing at HEAD is refused, not read as red" \
@@ -123,8 +160,8 @@ check_rc "a path in neither the base nor HEAD is refused" \
 # `cd ""` succeeds, so a failed toplevel read used to fall through to the next
 # guard and name the wrong cause.
 check "outside a repository the cause is named" \
-  "revert-red: not inside a git repository" \
-  "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh 2>&1)"
+  "not inside a git repository" \
+  "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh 2>&1 >/dev/null)"
 check_rc "outside a repository is tooling" \
   2 "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh >/dev/null 2>&1; printf '%s' "$?")"
 

@@ -251,6 +251,46 @@ ship_fail() {
   exit 1
 }
 
+# ship_recorded_grade <issue>: the grade the issue's Run file records, `patch`,
+# `minor` or `breaking`, from the `Grade: <word>` line at column 0 under its
+# `## Grade` heading (`run-file grade` writes it). Prints nothing when there is
+# no Run file, no such line or a word that is not one of the three: no recorded
+# grade is no check, since a run that never graded has nothing to enforce.
+ship_recorded_grade() { # <issue>
+  local root file
+  root=$(ship_record_root 2>/dev/null) || return 0
+  file=$root/ship-$1/run.md
+  [ -f "$file" ] || return 0
+  awk '/^## /{ f = ($0 ~ /^## Grade[ \t\r]*$/) }
+    f && /^Grade: (patch|minor|breaking)[ \t\r]*$/ { sub(/^Grade: /, ""); sub(/[ \t\r]+$/, ""); print; exit }' "$file"
+}
+
+# ship_title_grade <title>: the grade a Conventional-Commit title implies, the
+# type before an optional `(scope)` and an optional `!`, then `:`. `!` is
+# `breaking`, `feat` is `minor`, every other type is `patch`. A title that is no
+# Conventional Commit implies nothing and prints nothing: bump-guard owns that.
+ship_title_grade() { # <title>
+  local re='^([A-Za-z]+)(\([^)]*\))?(!)?:'
+  [[ $1 =~ $re ]] || return 0
+  if [ -n "${BASH_REMATCH[3]}" ]; then echo breaking
+  elif [ "${BASH_REMATCH[1]}" = feat ]; then echo minor
+  else echo patch; fi
+}
+
+# ship_require_grade <issue> <title>: exit 1 when the title grades below the
+# issue's recorded grade. `Grade: minor` and `Grade: breaking` both need a
+# `feat` or a `!` title (a 0.x skill's break is titled feat, ADR 0005);
+# `Grade: patch` accepts any. Run before the push or host write the title feeds.
+ship_require_grade() { # <issue> <title>
+  local want have type
+  want=$(ship_recorded_grade "$1")
+  case $want in minor|breaking) ;; *) return 0 ;; esac
+  have=$(ship_title_grade "$2")
+  [ "$have" = patch ] || return 0
+  type=${2%%[(!:]*}
+  ship_fail "title type $type grades patch, below the recorded Grade: $want; retitle as feat(...)"
+}
+
 # ship_help <usage> "$@": the --help contract. A run asks the script what its
 # flags and its answer are rather than reading them out of SKILL.md, so it
 # prints the same usage string the mechanic's guards print, then the calling
@@ -953,6 +993,47 @@ ship_body_headings() {
   awk "$SHIP_AWK_FENCE"'
     { inert = ship_inert($0) }
     !inert && /^## / { sub(/^## /, ""); sub(/[ \t\r]+$/, ""); print }' <<<"$1"
+}
+
+# ship_outline_missing <body> <paths>: the paths, one per line, that the body's
+# `## Change outline` section does not mention. <paths> is newline-separated. A
+# path is mentioned when the section text holds its basename (so its full path
+# too), and a derived copy under `.claude/skills/` shares its source's basename,
+# so the source's mention covers it. `skills-lock.json` and any `CHANGELOG.md` are
+# generated, never expected in an outline. The section is found by the same
+# `ship_inert` rule as the headings, so a `## Change outline` in a fence is not
+# one; a body with no such heading mentions nothing, and every expected path is
+# missing.
+ship_outline_missing() { # <body> <paths>
+  local text p base
+  text=$(awk "$SHIP_AWK_FENCE"'
+    { inert = ship_inert($0) }
+    !inert && /^## / { name = $0; sub(/^## /, "", name); sub(/[ \t\r]+$/, "", name); on = (name == "Change outline"); next }
+    on' <<<"$1")
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    base=${p##*/}
+    case $base in skills-lock.json|CHANGELOG.md) continue ;; esac
+    case $text in *"$base"*) ;; *) printf '%s\n' "$p" ;; esac
+  done <<<"$2"
+}
+
+# ship_paths_cited <text> <paths>: the paths, one per line, that the text cites.
+# <paths> is newline-separated. A path is cited as a whole token, wherever it
+# sits, a code span, a quote or a link included: it is not preceded by a path
+# character ([A-Za-z0-9_./-], bar a leading `./`) and not followed by one
+# ([A-Za-z0-9_/-], or a `.` that opens an extension). So `scripts/run` does not
+# cite `scripts/run-file.sh`, `a/skills/x.sh` does not cite `skills/x.sh`, and a
+# sentence's closing `.` or a `:12` line suffix does not hide a path.
+ship_paths_cited() { # <text> <paths>
+  local p re
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    re=$(printf '%s' "$p" | sed 's/[]\\.[*^$+?(){}|]/\\&/g')
+    re='(^|[^A-Za-z0-9_./-])(\./)?'$re'($|[^A-Za-z0-9_/.-]|\.($|[^A-Za-z0-9_]))'
+    grep -Eq -e "$re" <<<"$1" && printf '%s\n' "$p"
+  done <<<"$2"
+  return 0
 }
 
 # ship_profile_path: the ship profile in the checkout the caller runs in, rather

@@ -79,6 +79,15 @@ check_rc "a Schema line below a heading is not read" 1 \
   "$(rc_of "$(tree moved "$(printf '# Ship profile\n\n## Host\n\nSchema: 2\n')" \
     "$(ship_file 2)" "$(doc_file '## Schema 1' '## Schema 2')")")"
 
+# A Verification entry's optional `Timebox:` line is not a schema fact: the
+# check reads the template above its first heading and the doc by exact line,
+# so a template that carries the line, or one that omits it, is the same tree.
+verif_block() { printf '\n## Verification\n\n### real-run\n\nProves: p\nRun: r\n%s' "$1"; }
+check_rc "a Verification entry with a Timebox line agrees" 0 \
+  "$(rc_of "$(tree timebox "$(tmpl_file 2)$(verif_block $'Timebox: 10 minutes\n')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
+check_rc "a Verification entry without a Timebox line agrees" 0 \
+  "$(rc_of "$(tree no-timebox "$(tmpl_file 2)$(verif_block '')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
+
 # A file missing under the root is the tooling path, not drift: the check has
 # nothing to compare rather than something that disagrees.
 missing=$(tree missing "$(tmpl_file 2)" "$(ship_file 2)" "$(doc_file '## Schema 2')")
