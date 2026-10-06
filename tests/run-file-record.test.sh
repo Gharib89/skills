@@ -190,16 +190,21 @@ rsp=$(at "$repo" init 37 --from-profile "$spaced")
 fs=$(jq -r .run_file <<<"$rsp")
 check "a profile heading with a space is a verification name" \
   '- Docs check: pending
+- Build: unit tests: pending
 - github-mechanics: pending' "$(grep '^- .*: pending$' "$fs")"
 check "the checklist line still joins the headings" \
-  '- [ ] 3 · Verify: Docs check, github-mechanics scoped to what changed' "$(grep '^- \[.\] 3 · ' "$fs")"
+  '- [ ] 3 · Verify: Docs check, Build: unit tests, github-mechanics scoped to what changed' "$(grep '^- \[.\] 3 · ' "$fs")"
 at "$repo" close 0 --file "$fs" >/dev/null
 for p in 1 2; do at "$repo" open "$p" --file "$fs" >/dev/null; at "$repo" close "$p" --file "$fs" >/dev/null; done
 at "$repo" open 3 --file "$fs" >/dev/null
 check "close 3 refuses while the spaced name has no result" \
-  'phase 3 cannot close with verifications pending: Docs check, github-mechanics; record each with `run-file close 3 --result <name>=<pass|fail|deferred-to-ci|unavailable|unexercised|n/a>`' \
+  'phase 3 cannot close with verifications pending: Docs check, Build: unit tests, github-mechanics; record each with `run-file close 3 --result <name>=<pass|fail|deferred-to-ci|unavailable|unexercised|n/a>`' \
   "$(inerr "$repo" close 3 --file "$fs")"
-at "$repo" close 3 --file "$fs" --result 'Docs check=n/a: no doc touched' --result 'github-mechanics=pass' >/dev/null
+# A name holding a colon is still pending: it is found by its prefix, as --result finds it.
+check "close 3 refuses while only the colon-bearing name has no result" \
+  'phase 3 cannot close with verifications pending: Build: unit tests; record each with `run-file close 3 --result <name>=<pass|fail|deferred-to-ci|unavailable|unexercised|n/a>`' \
+  "$(inerr "$repo" close 3 --file "$fs" --result 'Docs check=n/a: no doc touched' --result 'github-mechanics=pass: waiting: pending')"
+at "$repo" close 3 --file "$fs" --result 'Build: unit tests=pass' >/dev/null
 check "a result names the spaced name and splits on the first =" \
   '- Docs check: n/a: no doc touched' "$(grep '^- Docs check: ' "$fs")"
 check "close 3 passes once the spaced name has its result" 1 \

@@ -90,6 +90,22 @@ check_rc "--brief at the cap is exit 1" 1 "$rc"
 check "--brief answers pending with a cursor and its rounds" "pending true array" \
   "$(jq -r '"\(.status) \(.cursor | length > 0) \(.rounds | type)"' <<<"$out")"
 
+# A pending answer's window is still open, so it grades no cause: the awaited
+# run being in_progress is not an infra-error, and no round yet is not silence.
+reset
+printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
+jq -cn '[{status: "in_progress", conclusion: null, created_at: "2026-09-17T11:59:00Z",
+          url: "https://example.invalid/runs/10", title: "t"}]' > "$SHIP_FAKE/host_workflow_runs.1.json"
+out=$(WHO=claude CAP=1 poll --since "$since" --timeout 60); rc=$?
+check "a pending answer beside an in-progress run" "pending in_progress null" \
+  "$(jq -r '[.status, .reviewer_run.status, (.not_reviewed | tojson)] | join(" ")' <<<"$out")"
+out=$(WHO=claude CAP=1 poll --since "$since" --timeout 60 --brief)
+check "and the brief answer too" "pending null" "$(jq -r '[.status, (.not_reviewed | tojson)] | join(" ")' <<<"$out")"
+reset
+printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
+out=$(CAP=1 poll --since "$since")
+check "and a pending answer with no run to read" null "$(jq -c .not_reviewed <<<"$out")"
+
 # A cursor is the window: it brings its own deadline and since, and refuses a
 # second opinion on either.
 cursor=$(jq -r .cursor <<<"$out")

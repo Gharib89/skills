@@ -4,7 +4,10 @@
 # check on the head has completed. The wait is bounded twice: by --timeout, the
 # window, and by SHIP_CALL_CAP seconds (540), the longest one call holds the
 # tool. A window longer than the cap is a chain of calls: the call that would
-# pass the cap answers `pending` with a cursor, and `--cursor` resumes it.
+# pass the cap answers `pending` with a cursor, and `--cursor` resumes it. The
+# cursor carries the window's deadline, the expected head (frozen on the first
+# pass) and the no-checks grace's clock with the head it started for: a resumed
+# call that finds another head starts that clock over.
 #
 #   ci-wait <pr> [--sha <sha>] [--timeout <s>, at least the no-checks grace the
 #           profile leaves standing] [--interval <s>] [--rerun-failed]
@@ -82,12 +85,12 @@ if [ -n "$cursor" ]; then
     && jq -e '(.deadline | type) == "number" and (.start | type) == "number"' <<<"$cur" >/dev/null \
     || ship_tooling "--cursor does not read: pass the cursor a pending answer carried"
   deadline=$(jq -r .deadline <<<"$cur"); start=$(jq -r .start <<<"$cur")
-  head_at=$(jq -r '.head_at // ""' <<<"$cur")
+  head_at=$(jq -r '.head_at // ""' <<<"$cur"); head_seen=$(jq -r '.head_sha // ""' <<<"$cur")
   [ -n "$want" ] || want=$(jq -r '.want // ""' <<<"$cur")
 else
   [ "$timeout" -ge "$grace" ] || ship_tooling \
     "--timeout below the ${grace}s no-checks grace: a shorter window reports timeout where this mechanic answers no-checks"
-  start=$(date +%s); deadline=$((start + timeout)); head_at=""
+  start=$(date +%s); deadline=$((start + timeout)); head_at=""; head_seen=""
 fi
 ship_load_host
 
@@ -129,8 +132,8 @@ again() {
   step=$((deadline - now)); [ "$step" -le "$interval" ] || step=$interval
   if [ $((now + step)) -gt "$call_end" ]; then
     view
-    emit pending "$(ship_cursor_make "$(jq -cn --argjson d "$deadline" --argjson s "$start" --arg h "$head_at" --arg w "$want" \
-      '{deadline: $d, start: $s, head_at: (if $h == "" then null else ($h | tonumber) end), want: $w}')")"
+    emit pending "$(ship_cursor_make "$(jq -cn --argjson d "$deadline" --argjson s "$start" --arg h "$head_at" --arg hs "$head_seen" --arg w "$want" \
+      '{deadline: $d, start: $s, head_at: (if $h == "" then null else ($h | tonumber) end), head_sha: $hs, want: $w}')")"
     exit 1
   fi
   sleep "$step"
@@ -169,10 +172,16 @@ while :; do
   [ "$rc" -ne 3 ] || { unread "PR $pr"; continue; }
   prj=$(<"$prf"); sha=$(jq -r .head_sha <<<"$prj")
   waited=$(( $(date +%s) - start ))
+  # Frozen on the first pass, so a cursor carries the head it waits for rather
+  # than whatever the checkout is on by the time the next call resumes.
+  if [ -z "$want" ] && [ "$(git symbolic-ref --quiet --short HEAD 2>/dev/null)" = "$(jq -r .head_ref <<<"$prj")" ]; then
+    want=$(git rev-parse HEAD 2>/dev/null) || want=""
+  fi
   if ship_head_stale "$prj" "$want"; then checks='[]'; fails=0; again; continue; fi
   # The grace counts from the expected head's arrival, so a late push cannot
-  # spend it on the previous head.
-  [ -n "$head_at" ] || head_at=$(date +%s)
+  # spend it on the previous head: a head other than the one the clock was
+  # stamped for, a cursor's included, restarts it.
+  if [ -z "$head_at" ] || [ "$sha" != "$head_seen" ]; then head_at=$(date +%s); head_seen=$sha; fi
   if [ "$(jq -r .mergeable <<<"$prj")" = conflict ]; then
     checks='[]'; view; emit conflict
     echo "PR $pr conflicts with its base: fetch, merge the base in, resolve, re-run base-fresh and the local gate, push." >&2

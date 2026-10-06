@@ -286,13 +286,19 @@ $names
 EONAMES
   printf '%s\n' "$names"
 }
+result_words='pass|fail|deferred-to-ci|unavailable|unexercised|n/a'
 # The section's entries, `- <name>: <what>` each. A note after the word may
 # itself end in `: pending`, so pending is matched on the whole line.
 results_lines() { awk '/^## /{ f = ($0 == "## Verification results") } f && /^- [^:]+: /' "$file"; }
-pending_verifs() { results_lines | grep -E '^- [^:]+: pending$' | sed 's/^- \(.*\): pending$/\1/'; }
+# A name may hold a colon, so an entry is pending when the line ends `: pending`
+# with no result word as a field before it (`- name: pass: waiting: pending` is a
+# result whose note ends so), not when a colon-free name precedes it.
+pending_verifs() {
+  results_lines | w="$result_words" awk '
+    $0 ~ /: pending$/ && $0 !~ ("^- .*: (" ENVIRON["w"] ")(:|$)") { sub(/^- /, ""); sub(/: pending$/, ""); print }'
+}
 # One `--result <name>=<word>[: <note>]`, checked against the names `init`
 # recorded; sets rname, rword and rnote.
-result_words='pass|fail|deferred-to-ci|unavailable|unexercised|n/a'
 parse_result() { # parse_result <arg>
   local rest
   case $1 in *=*) ;; *) ship_tooling "--result takes <name>=<word>[: <note>], word one of ${result_words//|/, }" ;; esac

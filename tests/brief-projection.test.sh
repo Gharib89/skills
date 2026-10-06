@@ -313,4 +313,14 @@ check "a body cut inside a tag loses the tag and keeps the marker" \
   "$(printf 'Lead here\n**Findings:** 1\n...[truncated]')" \
   "$(ship_brief "$cut" Gharib89 on_head | jq -r '.rounds[0].body')"
 
+# A finding that quotes a usage line keeps its placeholders: only real HTML tag
+# names are markup, so `<n>`, `<name>` and `<word>` survive inside a code span
+# and outside one.
+usage=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [{id: 1, login: "copilot-pull-request-reviewer[bot]", substantive: true,
+    submitted_at: "2026-09-14T03:00:00Z",
+    body: "## Overview\n\nLooks fine.\n\n**Findings:** 2\n\n- usage reads run-file close <n> --result <name>=<word> here\n- `run-file close <n> --result <name>=<word>` in a span <b>bold</b>"}],
+    all: [], total: 1}, threads: []}')
+check "a usage line quoted in a finding keeps its placeholders, real tags still go"   "$(printf 'Looks fine.\n**Findings:** 2\n- usage reads run-file close <n> --result <name>=<word> here\n- `run-file close <n> --result <name>=<word>` in a span bold')"   "$(ship_brief "$usage" Gharib89 on_head | jq -r '.rounds[0].body')"
+
 finish

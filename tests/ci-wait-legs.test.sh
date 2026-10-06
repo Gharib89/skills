@@ -115,6 +115,20 @@ check_rc "an unreadable cursor is tooling" 2 "$rc"
 check "and says so in poll-pr's words" '--cursor does not read' "$(jq -r '.error | split(":")[0]' <<<"$out")"
 check "and reaches no host either" '' "$(cat "$SHIP_FAKE/calls" 2>/dev/null)"
 
+# A push between two calls: the resumed call waits for the new head, and the
+# no-checks grace counts from that head's arrival, not from the old head's.
+reset
+ans 1 "$(rows "$(row test pending)" "$(row lint pending)")"
+printf '%s\n' '{"number":7,"head_sha":"aaaaaaa","head_ref":"fix/fake-1","mergeable":"clean"}' > "$SHIP_FAKE/host_pr_get.1.json"
+out=$(GRACE=2 SHIP_CALL_CAP=3 ci "$lax" --sha aaaaaaa --timeout 60)
+check "the first call is pending on the old head" 'pending aaaaaaa' "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out")"
+cur=$(jq -r .cursor <<<"$out")
+reset; ans 1 '[]'
+printf '%s\n' '{"number":7,"head_sha":"bbbbbbb","head_ref":"fix/fake-1","mergeable":"clean"}' > "$SHIP_FAKE/host_pr_get.1.json"
+out2=$(GRACE=2 SHIP_CALL_CAP=1 ci "$lax" --sha bbbbbbb --cursor "$cur"); rc=$?
+check_rc "a resumed call on a new head with no checks yet is not answered" 1 "$rc"
+check "no-checks waits for the grace on the new head" 'pending bbbbbbb' "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out2")"
+
 # --- reads with no answer ------------------------------------------------------
 
 green=$(rows "$(row test success)" "$(row lint success)")

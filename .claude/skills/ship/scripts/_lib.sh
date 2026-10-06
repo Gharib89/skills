@@ -1384,7 +1384,9 @@ ship_brief() {
     def mine: $me != "" and by($me);
     def awaited($l): $l == "" or by($l);
     def clip: if length > 200 then .[0:200] + "\n...[truncated]" else . end;
-    def notags: gsub("</?[A-Za-z][^>]*>"; "");
+    # Only the HTML names a reviewer body carries are markup: a quoted usage line
+    # (`<n>`, `<name>`) is text and stays.
+    def notags: gsub("</?(details|summary|picture|source|img|br|hr|p|a|div|span|sub|sup|b|i|em|strong|code|pre|kbd|table|thead|tbody|tr|td|th|ul|ol|li|h[1-6]|blockquote)(\\s[^>]*)?/?>"; ""; "i");
     # The markup of a round comes off before any line is read. A `<details>` block is
     # replaced by what a loop acts on: `What changed` (the summary of the PR) and
     # `Resolved` (findings an earlier round closed) go, a block holding list

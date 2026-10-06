@@ -152,7 +152,8 @@
 #   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked,
 #             reviewer_run, rounds[], threads}
 #   either shape, at the call cap with the window still open, also carries
-#   status: "pending" and cursor: "<opaque>", with done=false
+#   status: "pending" and cursor: "<opaque>", with done=false and not_reviewed
+#   null: the window is open, so no cause is graded yet
 # exit: 0 done · 1 window closed first (done=false; `not_reviewed` names why no
 #       round landed, and null beside a landed round means only checks were still
 #       pending; the review loop takes either as the answer), or the call cap
@@ -305,11 +306,13 @@ render() {
   if $brief; then ship_brief "$out" "$me" "$key" "$full"; else printf '%s\n' "$out"; fi
 }
 # The window is still open and this call has run out of tool time: the snapshot
-# it has, `done` false whatever the pass found since the window stays open, and
-# the cursor that resumes the same window.
+# it has, `done` false whatever the pass found since the window stays open,
+# `not_reviewed` null since a cause is graded only where the window closes (a run
+# still going is no infra-error), and the cursor that resumes the same window.
 pend() {
   local cur
   waited=$(($(date +%s) - start)); done=false; snapshot
+  out=$(jq -c '.not_reviewed = null' <<<"$out")
   cur=$(ship_cursor_make "$(jq -cn --argjson s "$start" --argjson d "$deadline" --arg since "$since" \
     --arg w "$want" --argjson a "$after_run" '{start: $s, deadline: $d, since: $since, want: $w, after_run: $a}')")
   render | jq -c --arg c "$cur" '. + {status: "pending", cursor: $c}'
