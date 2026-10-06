@@ -203,7 +203,7 @@ check "and it outranks a newer concluded run" 'true since waiting' \
   "$(jq -r '[(.done|tostring), .landed_by, .reviewer_run.status] | join(" ")' <<<"$out")"
 
 # The ceiling is what keeps a run that never finishes from holding the window
-# forever: past it the poll returns with the run as it stands, as infra-error. Driven against a copy of the mechanic whose ceiling
+# forever: past it the poll returns with the run as it stands, as still-running. Driven against a copy of the mechanic whose ceiling
 # is seconds rather than half an hour; everything else is the real mechanic.
 reset
 cp -R skills/ship/scripts "$work/scripts"
@@ -216,7 +216,11 @@ check_rc "a run still going at the ceiling closes the window" 1 "$rc"
 check "and it comes back as it stands, with its URL" \
   'false in_progress https://example.invalid/runs/9' \
   "$(jq -r '[(.done|tostring), .reviewer_run.status, .reviewer_run.url] | join(" ")' <<<"$out")"
-check "a run that outlived the ceiling is infra-error" infra-error "$(jq -r .not_reviewed <<<"$out")"
+check "a run that outlived the ceiling is still-running, not infra-error" still-running "$(jq -r .not_reviewed <<<"$out")"
+run_row queued '' > "$SHIP_FAKE/host_workflow_runs.1.json"
+out=$( cd "$repo" && bash "$work/scripts/poll-pr.sh" 7 --reviewer claude \
+  --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 )
+check "a run still queued at the ceiling is still-running too" still-running "$(jq -r .not_reviewed <<<"$out")"
 
 # A read the host refused says nothing about the reviewer, and must not read as
 # a run that was never created: the window falls back to the constant and the

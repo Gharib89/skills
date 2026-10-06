@@ -125,7 +125,9 @@ Each reviewer exits with one of:
   `comment-pr`. The reason is `not_reviewed` off the last poll, or
   `never-queued` off `request-review`'s exit 1, and never one you infer: a human
   saying a reviewer "can't review" is a claim to check against the poll. The
-  header of `scripts/poll-pr.sh` lists what each cause means.
+  header of `scripts/poll-pr.sh` lists what each cause means. `still-running`
+  is a run live at the ceiling: exit with it as read, with no further window,
+  and the run's URL on `reviewer_run` goes to the merge gate.
 - `not invoked: <primary> reviewed`: a fallback whose primary reviewed.
 
 `not reviewed` proceeds to the merge gate on green CI and is reported there. A
