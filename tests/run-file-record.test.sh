@@ -263,6 +263,8 @@ printf '{"verdict":"fail"}' | at "$repo" gate record - --file "$fh" --head "$sec
 sed -i 's/^## Local gate$/## Local gate  /' "$fh"
 printf '{"verdict":"pass"}' | at "$repo" gate record - --file "$fh" --head "$second" >/dev/null
 check "gate read finds the last record under a heading with trailing blanks" "pass" "$(at "$repo" gate read --head "$second" --file "$fh" | jq -r .verdict)"
+sed -i 's/^## Local gate  $/## Local gates/' "$fh"
+check_rc "a heading that only starts with Local gate is not the section" 1 "$(inrc "$repo" gate read --head "$second" --file "$fh")"
 check "a head git cannot answer for is null behind" null \
   "$(at "$repo" gate read --head deadbeefdeadbeef --file "$fr" | jq -r .behind)"
 check "gate read takes the last of several records" "pass" \

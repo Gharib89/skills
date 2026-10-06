@@ -335,12 +335,14 @@ reset
 run4; add 'Declined: C1: already handled upstream' 'Probe: C1: bash x.sh </dev/null => exit 2'; held=$(cat "$rf")
 PATH=$shim:$PATH call "$work" close 4 --file "$rf"
 check_rc "a grep that fails while reading a decline is tooling" 2 "$status"
+check "and says it is the decline's reason" yes "$(has 'cannot read the reason of Declined: C1' "$err")"
 check "and the record is as it was" "$held" "$(cat "$rf")"
 printf '#!/bin/sh\ncase "$*" in *-Fxq*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
 reset; put scripts/m.sh 'grep -q foo "$f"'
 run4; held=$(cat "$rf")
 PATH=$shim:$PATH call "$work" close 4 --file "$rf"
 check_rc "a grep that fails while telling untracked from tracked is tooling" 2 "$status"
+check "and says which path it could not place" yes "$(has 'cannot tell whether scripts/m.sh is untracked' "$err")"
 check "and that record is as it was" "$held" "$(cat "$rf")"
 rm "$shim/grep"
 reset
