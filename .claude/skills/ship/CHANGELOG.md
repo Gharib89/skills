@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.17.0 (2026-10-06)
+
+### Features
+
+- **ship**: A durable run record, capped waits and answers from what the profile names
+  ([#491](https://github.com/Gharib89/skills/pull/491),
+  [`58c0da4`](https://github.com/Gharib89/skills/commit/58c0da48c47220a26296b2da6f122a96346723a3))
+
+
 ## v0.16.6 (2026-10-05)
 
 ### Bug Fixes
