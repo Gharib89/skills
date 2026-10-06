@@ -70,7 +70,7 @@ if [ "$(id -u)" -ne 0 ]; then
   check "a template file that cannot be read is null" 'null' "$(run 7 | jq -c .missing)"
   chmod 644 "$repo/.github/pull_request_template.md"
 else
-  echo "skip: an unreadable template (root reads past chmod 000)"
+  echo "skip: an unreadable template (root reads a mode-000 file)"
 fi
 
 finish

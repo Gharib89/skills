@@ -6,7 +6,7 @@
 
 Empty or whitespace-only locks still allow installation without skill selectors, installing every upstream skill.
 
-**Review effort:** Balanced  
+**Review effort:** Balanced
 **Findings:** None
 
 <details>
