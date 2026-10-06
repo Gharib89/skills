@@ -177,6 +177,31 @@ check "the same refusal is on stderr" \
   "phase 4 is open; close it before skipping it" "$(cat "$tmp/skip.err")"
 check_rc "the refusal exits 1" 1 "$src"
 
+# A grep that fails (exit 2, as against 1 for no match) is a failed read, never a
+# clean answer: each guard and the phase lookup answer tooling, not a pass and
+# not "a subagent overwrote the Run file".
+gshim=$tmp/gshim; mkdir -p "$gshim"
+shimgrep() { # shimgrep <text>: a grep that exits 2 on a call whose arguments contain <text>
+  printf '#!/bin/sh\ncase "$*" in *"%s"*) exit 2 ;; esac\nexec %s "$@"\n' "$1" "$(command -v grep)" > "$gshim/grep"
+  chmod +x "$gshim/grep"
+}
+gerr() { PATH=$gshim:$PATH bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
+grc()  { PATH=$gshim:$PATH bash "$m" "$@" >/dev/null 2>&1; echo $?; }
+shimgrep '→'
+check_rc "a failing grep in the --tripwires guard is tooling" 2 "$(grc init 310 --scratchpad "$tmp" --tripwires 'x in_progress (10:00→)')"
+check "and says which guard could not read" "cannot check --tripwires for the Run file's own state shapes: grep failed" \
+  "$(gerr init 311 --scratchpad "$tmp" --tripwires 'x')"
+check "and the guard wrote no Run file" "" "$(ls "$tmp/ship-310/run.md" 2>/dev/null)"
+sk=$(out init 312 --scratchpad "$tmp" | jq -r '.run_file'); held=$(cat "$sk")
+check_rc "a failing grep in the skip reason guard is tooling" 2 "$(grc skip 3 'r (10:00→)' --file "$sk")"
+check "and says which guard could not read" "cannot check that reason for the Run file's own state shapes: grep failed" \
+  "$(gerr skip 3 'r' --file "$sk")"
+check "and the Run file is as it was" "$held" "$(cat "$sk")"
+shimgrep ' · '
+check_rc "a failing grep reading a phase line is tooling, not a clobbered Run file" 2 "$(grc open 3 --file "$sk")"
+check "and says the read failed" "cannot read the phase lines in $sk: grep failed" "$(gerr open 3 --file "$sk")"
+rm "$gshim/grep"
+
 
 # --- timing --------------------------------------------------------------------
 
