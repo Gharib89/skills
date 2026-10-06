@@ -16,7 +16,8 @@ tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
 out=$(bash "$heads" --help 2>"$tmp/err"); rc=$?
-check "--help prints its usage" "$usage" "$out"
+check "--help opens with its usage" "$usage" "$(sed -n 1p <<<"$out")"
+check "--help names its stdout fields next" stdout: "$(sed -n 2p <<<"$out" | cut -c1-7)"
 check_rc "--help exits 0" 0 "$rc"
 check "--help writes nothing on stderr" "" "$(cat "$tmp/err")"
 out=$(bash "$heads" 2>/dev/null); rc=$?

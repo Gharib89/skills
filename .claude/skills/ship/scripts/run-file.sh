@@ -1,49 +1,90 @@
 #!/usr/bin/env bash
-# The Run file: a ship run's record, outside the repo, in the session's
-# scratchpad. This mechanic owns the file's shape and every flip of it, so a
-# stamp is a measurement the mechanic took rather than a time a run recalled,
-# and the merge summary's `Timing:` row is arithmetic rather than mental
-# subtraction.
+# The Run file: a ship run's record, outside every working tree, in the repo's
+# git common directory. This mechanic owns the file's shape and every flip of
+# it, so a stamp is a measurement the mechanic took rather than a time a run
+# recalled, and the merge summary's `Timing:` row is arithmetic rather than
+# mental subtraction.
 #
-#   run-file init <issue|slug> --scratchpad <dir> [--rebuild]
+#   run-file init <issue|slug> [--scratchpad <dir>] [--rebuild]
 #                [--state <n>=open|done|done:<HH:MM→HH:MM>|skipped:<reason>]...
 #                [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>]
-#   run-file open|close <n> <where>
+#                [--from-profile [<path>]]
+#   run-file open|next <n> <where>
+#   run-file close <n> [--result <name>=<word>[: <note>]]... <where>
 #   run-file skip <n> <reason> <where>
+#   run-file gate record <file|-> [--head <sha>] <where>
+#   run-file gate read --head <sha> <where>
 #   run-file timing <where>
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
-# The `--issue` form reads the layout `init` wrote,
-# `<scratchpad>/ship-<issue>/run.md`. A left-out `--scratchpad` is `$TMPDIR` or
-# `/tmp`, which is where a run whose harness named no scratchpad put the record;
-# a run whose harness named one passes it, the same directory it passed `init`.
-# `init` owns that layout, so it is the mechanic that resolves it: a run whose
-# context was compacted still has the issue it was invoked on and the scratchpad
-# its environment block names, and called `close` without a path twice for want
-# of the rest (#218). An explicit `--file` wins, and neither given is the usage
-# error it always was.
+# The record root is `<git common dir>/ship`: the main checkout and every
+# worktree of it resolve the same directory, git never lists it as a working-tree
+# file, and it outlives a wiped temp directory, which took the record with it in
+# three runs. `--scratchpad <dir>` names another root; outside a git checkout it
+# is the only one. Under the root, `ship-<issue>/run.md` is the Run file and
+# `scratch-<issue>/` is the run's Scratch directory, which `init` creates and
+# returns as `scratch`; the roles' subdirectories are the callers'. `cleanup`
+# removes both.
+#
+# The `--issue` form reads the layout `init` wrote. `init` owns that layout, so
+# it is the mechanic that resolves it: a run whose context was compacted still
+# has the issue it was invoked on, and called `close` without a path twice for
+# want of the rest (#218). An explicit `--file` wins, and neither given is the
+# usage error it always was.
 #
 # `init` writes the ten items and returns them, one per harness task the run
-# then creates; `--rebuild` with `--state` is the recovery from a Run file a
-# subagent overwrote or removed. A flip returns the `mirror` value for that
-# phase's task.
-# Below the checklist it writes three sections the run fills by hand: `Design
-# and plan`, `Deviations log`, and `Direct reads`, one line per informational
-# read the run made straight through the host's REST form, no mechanic covering
-# it, so one that recurs across runs is visible as a mechanic to promote.
+# then creates, and opens phase 0 (`opened`, `mirror`) unless a `--state` states
+# the run itself; `--rebuild` with `--state` is the recovery from a Run file a
+# subagent overwrote or removed, and `--rebuild` alone replaces the record of an
+# issue whose earlier run stopped with a fresh one. A `--state` set holds one
+# open phase, or 3 and 4 both, the overlap `open 4` allows. `--from-profile`
+# fills `--tripwires`, `--verifications`, `--reviewers` and `--legs` from the
+# ship profile (the `Tripwires:` line under `## Local gate`, the `###` headings
+# under `## Verification` and `## Reviewers`, the leg names under `## CI`); a
+# flag given beside it wins. Each `###` heading under `## Verification` is one
+# Verification name whatever it holds, spaces and punctuation included, except
+# `=`, which `--result` splits on. A flip returns the `mirror` value for that
+# phase's task, and `next <n>` is the close of the one open phase and the open
+# of <n> in one call, refused whole when either half would be. `open 4` is the
+# one open admitted while phase 3 is open, the overlap the run has; any other
+# open over an open phase is refused.
+# Below the checklist it writes sections the run fills: `Verification results`
+# where `--from-profile` took the names from the profile's headings, or
+# `--verifications` names a comma list of name-shaped words (one
+# `- <name>: pending` each, which `close 3 --result <name>=<word>` settles with
+# one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, and which
+# `close 3` will not pass while any is pending), then `Design and plan`,
+# `Deviations log`, and `Direct reads`, one line per informational read the run
+# made straight through the host's REST form, no mechanic covering it, so one
+# that recurs across runs is visible as a mechanic to promote. `gate record`
+# appends the local gate's verdict, the head it ran on and the verdict JSON's
+# `gates` object (compact, one line, absent when the JSON has none) to a
+# `Local gate` section; `gate read` answers whether the head the run is at is
+# still the one that verdict covers, and returns the gates the merge gate cites
+# when it does not re-run the gate. Both take `--head` as a full or abbreviated
+# sha, 7 to 64 hex digits.
 #
-# Reaches no host and no repo file: the scratchpad path is the only thing it
+# Reaches no host and no repo file: the record root is the only thing it
 # writes.
 #
 # stdout: one JSON object per call
+#   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
+#   open, close, skip: {run_file, phase, state, line, mirror[, reason]}
+#   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}}
+#   timing: {run_file, start_to_pr, pr_to_gate, phases{}, row}; a skipped phase
+#     reads `skipped` and a phase with no range `unverified`
+#   gate record: {run_file, head, verdict}
+#   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
+#     for a record made without one; behind is null where git cannot count the
+#     commits between the recorded head and <sha>
 # exit: 0 ok · 1 the mechanic's own refusal · 2 malformed invocation
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> | close <n> | skip <n> <reason> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default $TMPDIR or /tmp] resolving <scratchpad>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
-rebuild_hint="rebuild it with \`run-file init <issue> --scratchpad <dir> --rebuild\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log"
+rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
 ship_help "$usage" "$@"
 ship_args "$usage" arg "$@"
 verb=$1; shift
@@ -100,25 +141,40 @@ reject_stamp_tail() { # reject_stamp_tail <flag> <value>
   return 0
 }
 # One phase, one line here too: a line of the checklist's shape copied into the
-# design and plan would otherwise report a phase that is not open.
-open_phase() {
+# design and plan would otherwise report a phase that is not open. Every open
+# phase, one per line: the run holds one, or two during the 3/4 overlap.
+open_phases() {
   awk '/^- \[.\] [0-9][0-9]* · / {
          p = substr($0, 7); sub(/ .*/, "", p)
          if (p in seen) next
          seen[p] = 1
-         if ($0 ~ / in_progress \([0-9][0-9]:[0-9][0-9]→\)$/) { print p; exit }
+         if ($0 ~ / in_progress \([0-9][0-9]:[0-9][0-9]→\)$/) print p
        }' "$file"
 }
 # The first phase below <n> whose row is not `[x]`: closed, rebuilt `done` and
 # skipped all tick it, so every phase that ran or was skipped passes. Only the
-# first row per phase counts, as in `open_phase`.
+# first row per phase counts, as in `open_phases`. An open phase is not a gap:
+# it is running, and the callers that let one stand while <n> opens (the 3/4
+# overlap, `next`, which closes it) have already decided that.
 unflipped() { # unflipped <n>
   awk -v n="$1" '/^- \[.\] [0-9][0-9]* · / {
          p = substr($0, 7); sub(/ .*/, "", p)
          if (p in seen) next
          seen[p] = 1
+         if ($0 ~ / in_progress \([0-9][0-9]:[0-9][0-9]→\)$/) next
          if (p + 0 < n + 0 && $0 !~ /^- \[x\] /) { print p; exit }
        }' "$file"
+}
+# The refusal for a phase opened over an earlier one never flipped: that one
+# stays unticked and `unverified` on the Timing row for a phase that may have
+# run. For a phase that ran, the recovery is open-then-close: `close` needs it
+# open, and `skip` would record it as not run. A phase that did not run is
+# skipped.
+# <verb> is the recovery flip: `open`, or `next` where another phase is open and
+# `open` over it would be refused. The retry is `open` either way: once the gap
+# is closed no phase is open, which `next` refuses.
+refuse_gap() { # refuse_gap <verb> <gap> <n>
+  ship_fail "phase $2 is neither closed nor skipped. If it ran: \`run-file $1 $2\`, \`run-file close $2\`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: \`run-file skip $2 <reason>\`. Then retry \`run-file open $3\`, which names the next such phase if any."
 }
 
 # Every line the mechanic writes is rendered here, so the flips and `init`'s
@@ -139,18 +195,28 @@ phase_arg() { # phase_arg <value>: the phase number; a flag here is a usage erro
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
   case ${1:-} in '' | *[!0-9]*) ship_tooling "$usage" ;; esac
 }
+# The record root: the --scratchpad named, else the git common dir's `ship`
+# directory. Sets `root` in this shell, because a refusal inside a `$( )` would
+# exit only the substitution.
+resolve_root() {
+  if [ -n "$scratchpad" ]; then root=${scratchpad%/}
+  else root=$(ship_record_root) || ship_tooling "not inside a git checkout: pass --scratchpad <dir>"
+  fi
+}
 parse_file() { # parse_file "$@": where every flip and timing reads the record
-  file="" issue="" scratchpad=${TMPDIR:-/tmp}
+  file="" issue="" scratchpad="" results="" head=""
   while [ $# -gt 0 ]; do
     case $1 in
       --file)       ship_flag_value "$usage" "${2:-}" "--file needs a path"; file=$2; shift 2 ;;
       --issue)      ship_flag_value "$usage" "${2:-}" "--issue needs an issue or slug"; issue=$2; shift 2 ;;
       --scratchpad) ship_flag_value "$usage" "${2:-}" "--scratchpad needs a directory"; scratchpad=$2; shift 2 ;;
+      --result)     ship_flag_value "$usage" "${2:-}" "--result needs <name>=<word>"; results="$results$2"$'\n'; shift 2 ;;
+      --head)       ship_flag_value "$usage" "${2:-}" "--head needs a sha"; head=$2; shift 2 ;;
       *) ship_tooling "unknown flag: $1" ;;
     esac
   done
   [ -n "$file" ] || [ -n "$issue" ] || ship_tooling "$usage"
-  [ -n "$file" ] || file="${scratchpad%/}/ship-$issue/run.md"
+  [ -n "$file" ] || { resolve_root; file="$root/ship-$issue/run.md"; }
   # The resolved path, not the flags it came from: a run that brought the wrong
   # scratchpad reads which record the mechanic went looking for, and one whose
   # record a subagent removed reads the same recovery as an overwritten one.
@@ -178,35 +244,176 @@ flip_json() { # flip_json <state> <line> <mirror> [<reason>]
      | if $r == "" then . else .reason = $r end'
 }
 
+# A flag only one verb takes: every other verb reading it is malformed.
+no_extra() { [ -z "$results$head" ] || ship_tooling "$usage"; }
+# `close` and `next` stamp a close the same way, so the line is built once.
+closed_line() { # closed_line <open line>: that line, closed at the clock
+  local start end
+  start=${1##*in_progress (}
+  start=${start%%→*}
+  end=$(date -u +%H:%M)
+  # A close stamped before its open crossed midnight UTC; the range still reads
+  # left to right, and `timing` adds the day.
+  [ "$end" \< "$start" ] && end="$end+1d"
+  render closed "$(item "$1")" "$start→$end"
+}
+# Insert a line at the end of a `## ` section, creating the section at the end
+# of the file when the run has none. The end of the section is its last
+# non-blank line, so a section the run wrote below it is not run into.
+append_to_section() { # append_to_section <heading> <line>
+  local last
+  last=$(awk -v h="$1" '$0 == h { f = 1; last = NR; next } /^## / { f = 0 } f && NF { last = NR } END { print last + 0 }' "$file")
+  if [ "$last" -gt 0 ]; then
+    repl=$2 awk -v ln="$last" '{ print } NR == ln { print ENVIRON["repl"] }' "$file" > "$file.t" \
+      && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
+  else
+    printf '\n%s\n\n%s\n' "$1" "$2" >> "$file" || ship_tooling "cannot write $file"
+  fi
+}
+
+# --- Phase 3's verifications ---------------------------------------------------
+# The names a comma list names, one per line; nothing for `None.`, `None
+# applicable` or prose that is not a list of names, so a free-text slot still
+# works and simply has no results section to settle.
+verif_names() { # verif_names <verifications>
+  local names n
+  case $1 in "" | "None applicable" | "None." | None | none) return 0 ;; esac
+  names=$(printf '%s\n' "$1" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+  while IFS= read -r n; do
+    [[ $n =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || return 0
+  done <<EONAMES
+$names
+EONAMES
+  printf '%s\n' "$names"
+}
+result_words='pass|fail|deferred-to-ci|unavailable|unexercised|n/a'
+# The section's entries, `- <name>: <what>` each. A note after the word may
+# itself end in `: pending`, so pending is matched on the whole line.
+results_lines() { awk '/^## /{ f = ($0 == "## Verification results") } f && /^- [^:]+: /' "$file"; }
+# A name may hold a colon, so an entry is pending when the line ends `: pending`
+# with no result word as a field before it (`- name: pass: waiting: pending` is a
+# result whose note ends so), not when a colon-free name precedes it.
+pending_verifs() {
+  results_lines | w="$result_words" awk '
+    $0 ~ /: pending$/ && $0 !~ ("^- .*: (" ENVIRON["w"] ")(:|$)") { sub(/^- /, ""); sub(/: pending$/, ""); print }'
+}
+# One `--result <name>=<word>[: <note>]`, checked against the names `init`
+# recorded; sets rname, rword and rnote.
+parse_result() { # parse_result <arg>
+  local rest
+  case $1 in *=*) ;; *) ship_tooling "--result takes <name>=<word>[: <note>], word one of ${result_words//|/, }" ;; esac
+  rname=${1%%=*}; rest=${1#*=}; rword=${rest%%:*}
+  case $rest in *:*) rnote=${rest#*:}; rnote=${rnote# } ;; *) rnote="" ;; esac
+  case $rword in
+    pass | fail | deferred-to-ci | unavailable | unexercised | n/a) ;;
+    *) ship_tooling "--result word '$rword' is not one of ${result_words//|/, }" ;;
+  esac
+  [ "${rnote%%$'\n'*}" = "$rnote" ] || ship_tooling "a result note is one line"
+  # A profile name may hold a colon, so the entry is found by its prefix rather
+  # than by cutting the line at the first one.
+  results_lines | nm=$rname awk 'index($0, "- " ENVIRON["nm"] ": ") == 1 { f = 1 } END { exit !f }' \
+    || ship_tooling "--result names '$rname', which --verifications did not name at init"
+}
+# Every result is checked before any is written, so a bad one leaves the record
+# as it was.
+check_results() {
+  local r
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    parse_result "$r"
+  done <<EORESULTS
+$results
+EORESULTS
+}
+record_results() {
+  local r text
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    parse_result "$r"
+    text=$rword; [ -z "$rnote" ] || text="$rword: $rnote"
+    nm=$rname tx=$text awk '/^## /{ f = ($0 == "## Verification results") }
+      f && index($0, "- " ENVIRON["nm"] ": ") == 1 { print "- " ENVIRON["nm"] ": " ENVIRON["tx"]; next } { print }' \
+      "$file" > "$file.t" && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
+  done <<EORECORD
+$results
+EORECORD
+}
+# Phase 3 closes only once every named verification has a result.
+refuse_pending() {
+  local pend
+  pend=$(pending_verifs | tr '\n' ',' | sed 's/,$//; s/,/, /g')
+  [ -z "$pend" ] || ship_fail "phase 3 cannot close with verifications pending: $pend; record each with \`run-file close 3 --result <name>=<$result_words>\`"
+}
+# Every `###` heading under one `## ` section of a profile, one per line.
+profile_headings() { # profile_headings <section> <profile-body>
+  awk -v s="## $1" '/^## / { f = ($0 == s || $0 == s "\r") ; next }
+    f && /^### / { h = substr($0, 5); sub(/[ \t\r]+$/, "", h); print h }' <<<"$2"
+}
+join_names() { awk '{ out = out (NR > 1 ? ", " : "") $0 } END { print out }'; }
+
 case $verb in
 init)
   ship_args "$usage" arg "$@"
   id=$1; shift
   scratchpad="" tripwires=None verifications="None applicable" reviewers=none legs=None
-  rebuild=false states=""
+  rebuild=false states="" given="" from_profile=false profile_path="" profile_names=""
   while [ $# -gt 0 ]; do
     case $1 in
-      --scratchpad)    [ $# -ge 2 ] || ship_tooling "--scratchpad needs a directory"; case $2 in -*) ship_tooling "$usage" ;; esac; scratchpad=$2; shift 2 ;;
-      --tripwires)     [ $# -ge 2 ] || ship_tooling "--tripwires needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; tripwires=$2; shift 2 ;;
-      --verifications) [ $# -ge 2 ] || ship_tooling "--verifications needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; verifications=$2; shift 2 ;;
-      --reviewers)     [ $# -ge 2 ] || ship_tooling "--reviewers needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; reviewers=$2; shift 2 ;;
-      --legs)          [ $# -ge 2 ] || ship_tooling "--legs needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; legs=$2; shift 2 ;;
+      --scratchpad)    [ $# -ge 2 ] && [ -n "$2" ] || ship_tooling "--scratchpad needs a directory"; case $2 in -*) ship_tooling "$usage" ;; esac; scratchpad=$2; shift 2 ;;
+      --tripwires)     [ $# -ge 2 ] || ship_tooling "--tripwires needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; tripwires=$2; given="$given tripwires"; shift 2 ;;
+      --verifications) [ $# -ge 2 ] || ship_tooling "--verifications needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; verifications=$2; given="$given verifications"; shift 2 ;;
+      --reviewers)     [ $# -ge 2 ] || ship_tooling "--reviewers needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; reviewers=$2; given="$given reviewers"; shift 2 ;;
+      --legs)          [ $# -ge 2 ] || ship_tooling "--legs needs a value"; case $2 in -*) ship_tooling "$usage" ;; esac; legs=$2; given="$given legs"; shift 2 ;;
       --state)         [ $# -ge 2 ] || ship_tooling "--state needs <n>=<spec>"; case $2 in -*) ship_tooling "$usage" ;; esac; states="$states$2
 "; shift 2 ;;
+      # The path is optional, so a value that is a flag is the next flag, not a path.
+      --from-profile)  from_profile=true
+                       if [ $# -ge 2 ]; then case $2 in -*) shift ;; *) profile_path=$2; shift 2 ;; esac; else shift; fi ;;
       --rebuild)       rebuild=true; shift ;;
       *) ship_tooling "unknown flag: $1" ;;
     esac
   done
-  [ -n "$scratchpad" ] || ship_tooling "$usage"
+  # The profile fills the slots a flag did not: the flag is the run's own word
+  # for this run, the profile the repo's standing one.
+  if [ "$from_profile" = true ]; then
+    [ -n "$profile_path" ] || profile_path=$(ship_profile_path) || ship_tooling "not inside a git checkout: pass --from-profile <path>"
+    [ -f "$profile_path" ] && [ -r "$profile_path" ] || ship_tooling "no readable ship profile at $profile_path"
+    profile=$(cat "$profile_path")
+    pf=$(awk '/^## / { f = ($0 ~ /^## Local gate[ \t\r]*$/); next }
+              f && /^Tripwires:/ { sub(/^Tripwires:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }' <<<"$profile")
+    case " $given " in *" tripwires "*) ;; *) [ -z "$pf" ] || tripwires=$pf ;; esac
+    # A heading is a name whatever it holds, so these names skip the name-shape
+    # test a hand-passed list gets; `=` is the one character `--result` cannot
+    # take in one.
+    pn=$(profile_headings Verification "$profile")
+    case " $given " in
+      *" verifications "*) ;;
+      *) if [ -n "$pn" ]; then
+           case $pn in *=*) ship_tooling "a Verification heading cannot carry '=': --result splits the name from the word on it" ;; esac
+           verifications=$(join_names <<<"$pn") profile_names=$pn
+         fi ;;
+    esac
+    pf=$(profile_headings Reviewers "$profile" | join_names)
+    case " $given " in *" reviewers "*) ;; *) [ -z "$pf" ] || reviewers=$pf ;; esac
+    pf=$(ship_profile_legs "$profile" | join_names)
+    case " $given " in *" legs "*) ;; *) legs=${pf:-None.} ;; esac
+  fi
+  resolve_root
   reject_stamp_tail --tripwires "$tripwires"
   reject_stamp_tail --verifications "$verifications"
   reject_stamp_tail --reviewers "$reviewers"
   reject_stamp_tail --legs "$legs"
-  file="$scratchpad/ship-$id/run.md"
+  file="$root/ship-$id/run.md"
+  scratch="$root/scratch-$id"
+  # A run that states no phase is a run starting, and a run starting is in
+  # phase 0: opening it here is the call the run would make next.
+  auto=false
+  [ -n "$states" ] || { states="0=open
+"; auto=true; }
   # Every state is validated before anything is written, so a bad spec leaves
   # no half-built file behind.
   state_usage='--state takes <0-9>=open|done|done:<HH:MM→HH:MM>|skipped:<reason>'
-  open_states=0 stated=""
+  open_states=0 stated="" opened_at=""
   while IFS= read -r st; do
     [ -n "$st" ] || continue
     # One state per phase: two for the same one would apply in order and leave
@@ -214,7 +421,7 @@ init)
     case " $stated " in *" ${st%%=*} "*) ship_tooling "--state names phase ${st%%=*} twice" ;; esac
     stated="$stated${st%%=*} "
     case $st in
-      [0-9]=open) open_states=$((open_states + 1)) ;;
+      [0-9]=open) open_states=$((open_states + 1)); opened_at="$opened_at${st%%=*} " ;;
       [0-9]=done) : ;;
       # The reason is free text, and it is decided here with every other state:
       # under `--rebuild` the write is what the caller is recovering from, so a
@@ -226,15 +433,23 @@ init)
   done <<EOSTATES
 $states
 EOSTATES
-  [ "$open_states" -le 1 ] || ship_fail "a Run file holds one open phase; $open_states were given"
+  # The 3/4 overlap is the one pair `open 4` allows, so it is the one a rebuild
+  # may record.
+  [ "$open_states" -le 1 ] || [ "$opened_at" = "3 4 " ] || [ "$opened_at" = "4 3 " ] \
+    || ship_fail "a Run file holds one open phase, or 3 and 4 together; $open_states were given"
   # The rebuild path: a Run file a subagent overwrote is rebuilt in place, so
   # the guard that keeps a resumed run from wiping its own record steps aside
   # only when the caller says so.
-  [ -e "$file" ] && [ "$rebuild" = false ] && ship_fail "Run file exists: $file (pass --rebuild to rebuild it in place)"
-  mkdir -p "$scratchpad/ship-$id" || ship_tooling "cannot create $scratchpad/ship-$id"
+  [ -e "$file" ] && [ "$rebuild" = false ] && ship_fail "Run file exists: $file: a resumed run reads that record, and a new run of an issue whose earlier run stopped replaces it with \`run-file init $id --rebuild\`"
+  mkdir -p "$root/ship-$id" "$scratch" || ship_tooling "cannot create $root/ship-$id and $scratch"
   items=$(checklist "$tripwires" "$verifications" "$reviewers" "$legs")
+  if [ -n "$profile_names" ]; then names=$profile_names; else names=$(verif_names "$verifications"); fi
   { printf '# ship run · %s\n\n' "$id"
     printf '%s\n' "$items" | sed 's/^/- [ ] /'
+    if [ -n "$names" ]; then
+      printf '\n## Verification results\n\n'
+      printf '%s\n' "$names" | sed 's/$/: pending/; s/^/- /'
+    fi
     printf '\n## Design and plan\n\n(pending)\n\n## Deviations log\n\n(none yet)\n'
     printf '\n## Direct reads\n\n(none yet)\n'
   } > "$file" || ship_tooling "cannot write $file"
@@ -252,40 +467,72 @@ EOSTATES
   done <<EOAPPLY
 $states
 EOAPPLY
-  printf '%s\n' "$items" | jq -Rs --arg f "$file" --arg i "$id" \
-    '{run_file: $f, id: $i, items: (split("\n") | map(select(. != "")))}'
+  printf '%s\n' "$items" | jq -Rs --arg f "$file" --arg i "$id" --arg s "$scratch" --argjson auto "$auto" \
+    '{run_file: $f, id: $i, scratch: $s, items: (split("\n") | map(select(. != "")))}
+     + if $auto then {opened: 0, mirror: "in_progress"} else {} end'
   ;;
 open)
   phase_arg "${1:-}"; n=$1; shift
   parse_file "$@"
+  no_extra
   take_row "$n"
-  busy=$(open_phase)
-  if [ -n "$busy" ]; then
-    [ "$busy" = "$n" ] && ship_fail "phase $n is already open"
-    ship_fail "phase $busy is open; close it before opening $n"
+  opens=$(open_phases | tr '\n' ' ')
+  if [ -n "$opens" ]; then
+    case " $opens " in *" $n "*) ship_fail "phase $n is already open" ;; esac
+    # Phase 4 begins while phase 3's verifications run, so it is the one open
+    # admitted over an open phase, and only over phase 3 alone.
+    [ "$n $opens" = "4 3 " ] || ship_fail "phase ${opens%% *} is open; close it before opening $n"
   fi
-  # A phase opened over one never flipped leaves that one unticked and
-  # `unverified` on the Timing row for a phase that may have run. For a phase
-  # that ran, the recovery is open-then-close: `close` needs it open, and `skip`
-  # would record it as not run. A phase that did not run is skipped.
   gap=$(unflipped "$n")
-  [ -n "$gap" ] && ship_fail "phase $gap is neither closed nor skipped. If it ran: \`run-file open $gap\`, \`run-file close $gap\`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: \`run-file skip $gap <reason>\`. Then retry \`run-file open $n\`, which names the next such phase if any."
+  [ -n "$gap" ] && refuse_gap open "$gap" "$n"
   new=$(render open "$(item "$line")" "$(date -u +%H:%M)")
   write_line "$lineno" "$new"
   flip_json open "$new" in_progress
   ;;
+next)
+  phase_arg "${1:-}"; n=$1; shift
+  parse_file "$@"
+  no_extra
+  take_row "$n"
+  next_line=$line next_lineno=$lineno
+  opens=$(open_phases | tr '\n' ' ')
+  case $opens in
+    '') ship_fail "no phase is open; use \`run-file open $n\`" ;;
+    *" "?*) ship_fail "phases ${opens%% *} and $(printf '%s' "${opens#* }" | tr -d ' ') are both open; close ${opens%% *} first with \`run-file close ${opens%% *}\`, then retry \`run-file next $n\`" ;;
+  esac
+  c=${opens% }
+  [ "$c" = "$n" ] && ship_fail "phase $n is already open"
+  gap=$(unflipped "$n")
+  [ -n "$gap" ] && refuse_gap next "$gap" "$n"
+  [ "$c" = 3 ] && refuse_pending
+  take_row "$c"
+  closed=$(closed_line "$line")
+  opened=$(render open "$(item "$next_line")" "$(date -u +%H:%M)")
+  write_line "$lineno" "$closed"
+  write_line "$next_lineno" "$opened"
+  jq -n --arg f "$file" --argjson c "$c" --arg cl "$closed" --argjson n "$n" --arg ol "$opened" \
+    '{run_file: $f, closed: {phase: $c, line: $cl, mirror: "completed"}, opened: {phase: $n, line: $ol, mirror: "in_progress"}}'
+  ;;
 close)
   phase_arg "${1:-}"; n=$1; shift
   parse_file "$@"
+  [ -z "$head" ] || ship_tooling "$usage"
+  [ -z "$results" ] || [ "$n" = 3 ] || ship_tooling "--result belongs to close 3"
   take_row "$n"
-  is_open "$line" || ship_fail "phase $n is not open"
-  start=${line##*in_progress (}
-  start=${start%%→*}
-  end=$(date -u +%H:%M)
-  # A close stamped before its open crossed midnight UTC; the range still reads
-  # left to right, and `timing` adds the day.
-  [ "$end" \< "$start" ] && end="$end+1d"
-  new=$(render closed "$(item "$line")" "$start→$end")
+  check_results
+  if ! is_open "$line"; then
+    # Never opened is a different mistake from already closed: the way forward
+    # is the open it skipped, so the refusal says so.
+    case $line in
+      "- [ ] "*" in_progress ("*) ;;
+      "- [ ] "*) ship_fail "phase $n was never opened; run \`run-file open $n\` first, then close it" ;;
+    esac
+    ship_fail "phase $n is not open"
+  fi
+  # The results land before the pending check, so a close refused for one
+  # verification still keeps the ones it was given.
+  [ "$n" = 3 ] && { record_results; refuse_pending; }
+  new=$(closed_line "$line")
   write_line "$lineno" "$new"
   flip_json closed "$new" completed
   ;;
@@ -294,6 +541,7 @@ skip)
   ship_args "$usage" arg "$@"
   reason=$1; shift
   parse_file "$@"
+  no_extra
   take_row "$n"
   is_open "$line" && ship_fail "phase $n is open; close it before skipping it"
   # The marker is the mechanic's own record that the phase is done, so it
@@ -309,8 +557,57 @@ skip)
   write_line "$lineno" "$new"
   flip_json skipped "$new" completed "$reason"
   ;;
+gate)
+  sub=${1:-}
+  case $sub in record | read) shift ;; *) ship_tooling "$usage" ;; esac
+  if [ "$sub" = record ]; then
+    # `-` is the verdict on stdin, so it is the one dash-led value a positional may be.
+    src=${1:-}
+    case $src in '' | -?*) ship_tooling "$usage" ;; esac
+    shift
+  fi
+  parse_file "$@"
+  [ -z "$results" ] || ship_tooling "$usage"
+  if [ "$sub" = read ]; then
+    [ -n "$head" ] || ship_tooling "$usage"
+    [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
+    rec=$(awk '/^## /{ f = ($0 == "## Local gate") } f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' "$file" | tail -n 1)
+    [ -n "$rec" ] || ship_fail "no gate record in $file"
+    # The line is `- HH:MM <sha> <verdict>[ <gates JSON>]`, and the JSON may hold
+    # spaces, so it is cut by position rather than split into words.
+    rec=${rec#- ??:?? }
+    rhead=${rec%% *}; rec=${rec#"$rhead"}; rec=${rec# }
+    rverdict=${rec%% *}; rgates=${rec#"$rverdict"}; rgates=${rgates# }
+    [ -z "$rgates" ] || jq -e . >/dev/null 2>&1 <<<"$rgates" \
+      || ship_fail "the gates on the last gate record in $file are not JSON"
+    # A prefix either way is the same commit: the run records the full sha, and a
+    # caller may hold the abbreviated one.
+    current=false
+    case $rhead in "$head"*) current=true ;; esac
+    case $head in "$rhead"*) current=true ;; esac
+    behind=$(git rev-list --count "$rhead..$head" 2>/dev/null) || behind=null
+    jq -n --arg f "$file" --arg v "$rverdict" --arg h "$rhead" --argjson g "${rgates:-null}" --argjson c "$current" --argjson b "${behind:-null}" \
+      '{run_file: $f, verdict: $v, head: $h, gates: $g, current: $c, behind: $b}'
+  else
+    if [ "$src" = - ]; then body=$(cat)
+    else [ -f "$src" ] && [ -r "$src" ] || ship_tooling "cannot read the gate verdict at $src"; body=$(cat "$src")
+    fi
+    verdict=$(jq -rs 'map(select(type == "object" and (.verdict | type) == "string")) | last | .verdict // empty' <<<"$body" 2>/dev/null) \
+      || ship_tooling "the gate verdict is not JSON"
+    [ -n "$verdict" ] || ship_tooling "the gate verdict has no verdict key"
+    # The gates ride on the line so the merge gate can cite them without
+    # re-running the gate; only an object counts, and `jq -c` keeps it one line.
+    gates=$(jq -rsc 'map(select(type == "object" and (.verdict | type) == "string")) | last | (.gates | select(type == "object")) // empty' <<<"$body" 2>/dev/null)
+    [[ $verdict =~ ^[A-Za-z0-9_-]+$ ]] || ship_tooling "the gate's verdict '$verdict' is not one word"
+    [ -n "$head" ] || head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "no --head given and not inside a git checkout"
+    [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
+    append_to_section "## Local gate" "- $(date -u +%H:%M) $head $verdict${gates:+ $gates}"
+    jq -n --arg f "$file" --arg h "$head" --arg v "$verdict" '{run_file: $f, head: $h, verdict: $v}'
+  fi
+  ;;
 timing)
   parse_file "$@"
+  no_extra
   # Every range on every phase line, in minutes. A `+1d` close crossed midnight
   # UTC, so it carries the day; an aggregate whose end lands before its start
   # crossed one too. Times are read by splitting on the arrow rather than by
@@ -323,6 +620,7 @@ timing)
       if (p in seen) next          # one phase, one line: the first, as a flip reads it
       seen[p] = 1
       s = $0
+      skipped = (s ~ / skipped \(.*\)$/)
       sub(/ in_progress \([0-9][0-9]:[0-9][0-9]→\)$/, "", s)
       sub(/ skipped \(.*\)$/, "", s)
       total = 0; found = 0
@@ -341,7 +639,7 @@ timing)
         if (!found) { last[p] = mins(en) + day; found = 1 }
         first[p] = mins(st)        # the scan runs right to left, so this ends leftmost
       }
-      phase[p] = found ? total : "unverified"
+      phase[p] = skipped ? "skipped" : (found ? total : "unverified")
     }
     END {
       for (p in seen) printf "phase\t%s\t%s\n", p, phase[p]
@@ -351,8 +649,8 @@ timing)
       printf "agg\tpr_to_gate\t%s\n", ptg
     }
   ' "$file" | jq -Rs --arg f "$file" '
-    def num: if . == "unverified" then . else tonumber end;
-    def m: if . == "unverified" then . else tostring + "m" end;
+    def num: if . == "unverified" or . == "skipped" then . else tonumber end;
+    def m: if . == "unverified" or . == "skipped" then . else tostring + "m" end;
     [split("\n")[] | select(. != "") | split("\t")] as $rows
     | ($rows | map(select(.[0] == "phase") | {(.[1]): (.[2] | num)}) | add // {}) as $phases
     | ($rows | map(select(.[0] == "agg") | {(.[1]): (.[2] | num)}) | add) as $agg

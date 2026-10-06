@@ -71,6 +71,20 @@
 #   host_pr_for_branch <branch>          -> {number,state,head_sha} of the newest PR whose head branch is <branch>, or null
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
 #                                           status: pending | success | failure.
+#   host_check_job <pr> <head_sha> <name>-> {job_id,attempt,log_tail} the latest check of that
+#                                           name on the head, as the host's re-runnable job.
+#                                           attempt: how many times the job has run on this head,
+#                                           so 1 is not yet re-run. log_tail: the job log's last 40
+#                                           lines as one string, null where the log could not be
+#                                           read. A check that is no job (a commit status, a
+#                                           third-party app) answers job_id, attempt and log_tail
+#                                           all null. Non-zero where the host could not answer or
+#                                           has no job to re-run; always non-zero on Azure DevOps,
+#                                           which has no re-run of a policy evaluation here.
+#                                           ci-wait --rerun-failed reports that as "unavailable".
+#   host_check_rerun <job_id>            (fails with {status}) re-runs that one job and its
+#                                           dependents; ci-wait calls it once per failing leg check
+#                                           whose attempt is 1. Always non-zero on Azure DevOps.
 #   host_pr_reviews <pr> <head_sha> [<full-ids-json>]
 #                                        -> {on_head:[REVIEW],all:[REVIEW],total}
 #                                           REVIEW = {id,login,state,submitted_at,body}
@@ -142,6 +156,15 @@
 #                                           requested_at: ISO-8601 time of the request event, or,
 #                                           where the host records none (always, on Azure DevOps),
 #                                           the wall clock, stamped before the call.
+#   host_pr_requested_at <pr> <login> [<phrase>]
+#                                        -> the UTC time (YYYY-MM-DDTHH:MM:SSZ), alone on a line, the
+#                                           reviewer was last asked for a round, which `poll-pr
+#                                           --reviewer` takes as its --since when none is given: the
+#                                           latest review_requested timeline event for <login>, or,
+#                                           with <phrase> (a comment transport), the latest PR
+#                                           comment opening with it, by anyone. Non-zero and silent
+#                                           where there is none; always, on Azure DevOps, which
+#                                           records no request to read back.
 #   host_pr_comment <pr> <body-file>     -> {id,url,created_at}
 #                                           (fails with {status})
 #                                           id: the comment's id on GitHub, the thread's id on
@@ -168,9 +191,38 @@
 SHIP_SCRIPTS=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly SHIP_SCRIPTS
 
+# The hidden line every issue or PR comment Ship posts ends with. It is how
+# `read-issue` marks a comment `ship: true`: a claim, a hand-back or a PR line
+# is told from a human's comment by this line, not by its wording, which a human
+# can quote. It sits at the end so a comment-triggered workflow's request phrase
+# still opens the body. A mechanic that posts a comment appends it through
+# `ship_mark` or `ship_mark_file`, once, here rather than in each adapter. An
+# empty span, not an HTML comment: Azure DevOps' work-item sanitizer drops
+# `<!-- -->` and unquotes attributes, so this unquoted form is the one both hosts
+# hand back byte for byte, and neither renders (probed on the lab, #487).
+SHIP_COMMENT_MARKER='<span data-ship=1></span>'
+readonly SHIP_COMMENT_MARKER
+# ship_mark <body>: the body, then the marker on a line of its own.
+ship_mark() {
+  local b=$1
+  case $b in ''|*$'\n') ;; *) b+=$'\n' ;; esac
+  printf '%s%s\n' "$b" "$SHIP_COMMENT_MARKER"
+}
+# ship_mark_file <src> <dst>: <src>'s bytes then the marker, written to <dst>;
+# 1 where <src> cannot be read, with <dst> untouched. The sentinel keeps the
+# file's trailing newlines through `$( )`, and `&&` keeps `cat`'s status as the
+# substitution's, which a `;` would replace with the sentinel's.
+ship_mark_file() {
+  local b
+  b=$(cat "$1" && printf x) || return 1
+  ship_mark "${b%x}" > "$2"
+}
+
 # ship_tooling <msg>: the exit-2 shape. Also used when the host adapter itself
 # cannot load, so a broken install still emits the contract, not "command not found".
-ship_tooling() { jq -n --arg e "$1" '{error: $e}'; exit 2; }
+# The message is also written to stderr, as ship_fail does: a caller piping stdout
+# through `jq -r .field` reads a malformed call as `null` and exit 0.
+ship_tooling() { jq -n --arg e "$1" '{error: $e}'; printf '%s\n' "$1" >&2; exit 2; }
 # ship_fail <msg> [<adapter-answer>]: the exit-1 shape. SHIP_BY_HAND, set by
 # ship_reach_repo, rides every exit-1 answer as `command`. The message is also
 # written to stderr: a caller piping stdout through `jq -r .field` reads a
@@ -200,9 +252,12 @@ ship_fail() {
 }
 
 # ship_help <usage> "$@": the --help contract. A run asks the script what its
-# flags are rather than reading them out of SKILL.md, so the answer is the same
-# usage string the mechanic's guards print, on stdout, exit 0, nothing on
-# stderr. Called on the line after the usage assignment, before every other
+# flags and its answer are rather than reading them out of SKILL.md, so it
+# prints the same usage string the mechanic's guards print, then the calling
+# script's own `# stdout:` header block (from that line up to its `# exit:` line,
+# or the end of the header comment), each line with its leading `# ` removed.
+# On stdout, exit 0, nothing on stderr. Called on the line after the usage
+# assignment, before every other
 # guard and before ship_load_host: a guard placed after it answers --help with a
 # tooling error wherever the adapter cannot load, which is exactly where someone
 # is asking what the flags are. Only the first argument is read, because --help
@@ -211,6 +266,8 @@ ship_help() { # ship_help <usage> "$@"
   local usage=$1; shift
   [ "${1:-}" = --help ] || return 0
   printf '%s\n' "$usage"
+  awk '/^# stdout:/ { f = 1 }
+    f { if ($0 !~ /^#/ || /^# exit:/) exit; sub(/^# ?/, ""); print }' "${BASH_SOURCE[1]}"
   exit 0
 }
 
@@ -276,6 +333,16 @@ ship_main_checkout() {
   local common
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
   dirname "$common"
+}
+
+# ship_record_root: where a run keeps its record, <git common dir>/ship. The
+# main checkout and every worktree of it resolve the same directory, git never
+# lists it as a working-tree file, and it outlives a wiped temp directory, which
+# took the record with it in three runs. `run-file` and `cleanup` read it.
+ship_record_root() {
+  local common
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  printf '%s/ship' "$common"
 }
 
 # Sibling container beside the checkout: <parent>/<repo>.worktrees
@@ -739,12 +806,13 @@ ship_id_list() {
 
 # The review-body clip both adapters run, so they clip in one vocabulary: a jq
 # `clip($id)` filter over a body string, invoked with `--argjson full <ids>`.
-# The cut leaves a marker, so a clipped round reads as clipped.
+# The cut leaves a marker, so a clipped round reads as clipped. The id `open`
+# unclips every row (`poll-pr --brief --full open`).
 # `$id | tostring` so a row the host gives no id (an Azure DevOps vote) compares
 # without erroring; such a row carries no body to unclip.
 # shellcheck disable=SC2034  # read by the host adapters that source this library
 readonly SHIP_REVIEW_CLIP='def clip($id):
-  if ($full | index($id | tostring)) then .
+  if ($full | index("open")) or ($full | index($id | tostring)) then .
   elif length > 2000 then .[0:2000] + "\n...[truncated]"
   else . end;'
 
@@ -918,9 +986,60 @@ ship_no_checks_expected() { # <profile-body>
   local ci
   ci=$(awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$1")
   grep -Eq '^Legs:[[:space:]]*None\.[[:space:]]*$' <<<"$ci" || return 1
-  grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)' <<<"$ci" || return 1
-  return 0
+  ship_no_checks_legal "$1"
 }
+# ship_no_checks_legal <profile-body>: true when the profile's `## CI` block says
+# `No-checks legal: yes`, read in that section only like every profile fact.
+ship_no_checks_legal() { # <profile-body>
+  awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$1" \
+    | grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)'
+}
+
+# ship_profile_legs <profile-body>: the leg names the profile's `Legs:` names
+# under `## CI`, one per line, the text before each entry's first colon. An
+# entry is a `Legs: <name>: <what>` line, repeated or not, or a line below a
+# bare `Legs:`, up to a blank line or the section's next label. `Legs: None.`
+# prints nothing; a section with no `Legs:` line fails, which is "unknown", not
+# "none". An entry that yields no name (no colon, or nothing before it) fails
+# the same way: printed as nothing it would read as `Legs: None.`, and a red
+# check no leg names would then pass as no-checks.
+ship_profile_legs() { # <profile-body>
+  awk 'function emit(  n) { sub(/^[ \t]+/, ""); n = index($0, ":"); if (n > 1) print substr($0, 1, n - 1); else bad = 1 }
+    /^## / { f = ($0 ~ /^## CI[ \t\r]*$/); on = 0; next }
+    !f { next }
+    /^Legs:/ { seen = 1; on = 1; sub(/^Legs:[ \t]*/, ""); sub(/[ \t\r]+$/, "")
+               if ($0 != "" && $0 != "None.") emit(); next }
+    on && (/^[ \t\r]*$/ || /^(No-checks legal|Push policy):/) { on = 0; next }
+    on { sub(/[ \t\r]+$/, ""); emit() }
+    END { exit (!seen || bad) }' <<<"$1"
+}
+
+# A poll loop's host read, telling "no answer yet" from an answer. A read that
+# fails with no HTTP status (a dropped connection, a TLS timeout) is no answer
+# yet, so the loop keeps going; one the host answered with a status is a real
+# refusal. The adapter's `_gh` writes each call's status to
+# $SHIP_HTTP_STATUS_FILE, a file rather than a variable because most reads run
+# in a `$( )` where a variable dies unread; an adapter that never writes it (Azure
+# DevOps, whose `az` reports no status) has every failure read as no answer, so
+# its persistent refusal costs the loop three reads before it ends.
+# The caller sets $SHIP_HTTP_STATUS_FILE to a file it traps for removal.
+# ship_poll_read <out-file> <fn> <args...>: 0 answered, the answer in <out-file>
+# · 1 the host refused, with a status · 3 no answer
+ship_poll_read() {
+  local out=$1; shift
+  : > "$SHIP_HTTP_STATUS_FILE"
+  "$@" > "$out" && return 0
+  [ -s "$SHIP_HTTP_STATUS_FILE" ] && return 1
+  return 3
+}
+
+# A wait's cursor: the window's state, opaque to the caller, which hands it back
+# with `--cursor` to resume the same window. No call holds the tool past
+# SHIP_CALL_CAP seconds (540, under the harness's 600 s limit on one tool call),
+# so a window longer than that is a chain of calls joined by cursors.
+SHIP_CALL_CAP=${SHIP_CALL_CAP:-540}
+ship_cursor_make() { jq -rn --argjson c "$1" '$c | tojson | @base64'; } # <json>
+ship_cursor_read() { jq -cn --arg c "$1" '$c | @base64d | fromjson | if type == "object" then . else error end' 2>/dev/null; } # <cursor>
 
 # ship_head_stale <pr-json> [<sha>]: true while the host shows a PR head other
 # than the expected one, so `ci-wait` and `poll-pr` wait inside their window
@@ -1267,13 +1386,43 @@ ship_brief() {
     def mine: $me != "" and by($me);
     def awaited($l): $l == "" or by($l);
     def clip: if length > 200 then .[0:200] + "\n...[truncated]" else . end;
+    # Only the HTML names a reviewer body carries are markup: a quoted usage line
+    # (`<n>`, `<name>`) is text and stays.
+    def notags: gsub("</?(details|summary|picture|source|img|br|hr|p|a|div|span|sub|sup|b|i|em|strong|code|pre|kbd|table|thead|tbody|tr|td|th|ul|ol|li|h[1-6]|blockquote)(\\s[^>]*)?/?>"; ""; "i");
+    # The markup of a round comes off before any line is read. A `<details>` block is
+    # replaced by what a loop acts on: `What changed` (the summary of the PR) and
+    # `Resolved` (findings an earlier round closed) go, a block holding list
+    # items keeps its body, and one holding none is itself a finding (the `Previously missed` of a
+    # Copilot overview, which has no thread to carry it), lifted to its title
+    # and first line. Innermost first, so a block inside a block lifts before
+    # the one around it is read. A `<picture>` is a severity badge and goes with
+    # the space before it.
+    def details:
+      gsub("<details[^>]*>\\s*<summary>(?<t>(?:(?!</summary>)[\\s\\S])*)</summary>(?<b>(?:(?!<details)[\\s\\S])*?)</details>";
+           (.t | notags | gsub("^\\s+|\\s+$"; "")) as $t
+           | if ($t | test("^(What changed|Resolved)")) then ""
+             elif (.b | test("(^|\n)[ \t]*([-*+]|[0-9]+[.)])[ \t]")) then .b
+             else "\n- \($t): \(.b | notags | [splits("\n") | select(test("^\\s*$") | not)][0] // "")\n" end);
+    def unhtml:
+      gsub("<!--[\\s\\S]*?-->"; "") | gsub("[ \t]*<picture>[\\s\\S]*?</picture>"; "")
+      | details | details | details | notags
+      | gsub("</?[A-Za-z][^>]*$"; "") | gsub("<!--[\\s\\S]*$"; "");
+    # The lead (the first line with text that is not a heading, behind the h3
+    # verdict heading above it where there is one: an overview states its
+    # severity there and nowhere else), the `Findings:` line and the items. A round with none of the last two is clipped instead.
     def finding_items:
       (if endswith("\n...[truncated]") then "\n...[truncated]" else "" end) as $mark
-      | [splits("\n") | select(test("^[ \t]*$") | not)] as $lines
+      | sub("\n\\.\\.\\.\\[truncated\\]$"; "") | unhtml as $body
+      | [$body | splits("\n") | sub("[ \t\r]+$"; "") | select(test("^[ \t]*$") | not)] as $lines
       | [$lines[] | select(test("^[ \t]*([-*+]|[0-9]+[.)])[ \t]"))] as $items
-      | if ($items | length) == 0 then clip
-        elif $lines[0] == $items[0] then (($items | join("\n")) + $mark)
-        else ((([$lines[0]] + $items) | join("\n")) + $mark) end;
+      | [$lines[] | select(test("^[ \t*_]*Findings:"))] as $found
+      | ([$lines | to_entries[] | select(.value | test("^#") | not)][0]) as $first
+      | ($first.value // $lines[0] // "") as $text
+      | ([$lines[:($first.key // 0)][] | select(test("^###[ \t]+[^# \t]"))][0] // null) as $verdict
+      | (if $verdict == null then $text else ($verdict | sub("^###[ \t]+"; "")) + ": " + $text end) as $lead
+      | if ($items | length) == 0 and ($found | length) == 0 then (($body + $mark) | clip)
+        else (reduce ([$lead] + $found + $items)[] as $l ([]; if index([$l]) then . else . + [$l] end)
+              | join("\n")) + $mark end;
     def lead: [splits("\n") | select(test("^[ \t\r]*$") | not)] as $lines
       | ($lines[0] // "") as $first | ($first | clip) as $cut
       | if ($lines | length) > 1 and $cut == $first
@@ -1282,12 +1431,12 @@ ship_brief() {
     | {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked, reviewer_run,
      rounds: [.reviews[$key][] | select((mine | not) and awaited($await)) | . as $r
               | {id, submitted_at, substantive,
-                 body: (if ($full | index($r.id | tostring)) then $r.body
+                 body: (if ($full | index("open")) or ($full | index($r.id | tostring)) then $r.body
                         else ($r.body | finding_items) end)}],
      threads: (if (.threads | type) == "array"
                then [.threads[] | select(.resolved | not)
                      | . as $t | {id, path,
-                                  lead: (if ($full | index($t.id | tostring)) then ($t.body // "")
+                                  lead: (if ($full | index("open")) or ($full | index($t.id | tostring)) then ($t.body // "")
                                          else (($t.body // "") | lead) end),
                                   resolved, replied}]
                else .threads end)}' <<<"$1"

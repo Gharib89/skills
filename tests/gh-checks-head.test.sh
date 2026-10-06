@@ -147,10 +147,11 @@ actions_reads() { grep -c '/actions/runs' "$FAKE/calls" 2>/dev/null; }
 
 # --- ci-wait and poll-pr over the expected head --------------------------------
 
-# A GitHub-origin checkout on the PR's head branch, whose profile expects no
-# checks, so the no-checks grace is zero and a short --timeout is admitted.
+# A GitHub-origin checkout on the PR's head branch, whose profile names the one
+# leg the fake checks carry. The grace is zeroed through SHIP_CI_WAIT_GRACE,
+# which a short --timeout needs, because a named leg keeps the grace.
 co=$work/co; mkdir -p "$co/docs/agents"
-printf '# Ship profile\n\nSchema: 3\n\n## CI\n\nLegs: None.\nNo-checks legal: yes, nothing here\nPush policy: Default.\n\n## Reviewers\n\n### rev\n\nLogin: rev\nTrigger: on-request\nRequest: None.\nWorkflow: None.\nCap: 1\nResolve: None.\nGating: no\nFallback-for: None.\nInstructions: None.\n' \
+printf '# Ship profile\n\nSchema: 3\n\n## CI\n\nLegs: bump-guard: the title\nNo-checks legal: yes, nothing here\nPush policy: Default.\n\n## Reviewers\n\n### rev\n\nLogin: rev\nTrigger: on-request\nRequest: None.\nWorkflow: None.\nCap: 1\nResolve: None.\nGating: no\nFallback-for: None.\nInstructions: None.\n' \
   > "$co/docs/agents/ship.md"
 git -C "$co" init -q -b fix/fake-1
 git -C "$co" -c user.name=t -c user.email=t@t commit -q --allow-empty -m one
@@ -169,7 +170,7 @@ jq -n --arg s "$old" '[{id: 9, user: {login: "rev"}, state: "COMMENTED", submitt
   body: "a round on the old head", commit_id: $s}]' > "$FAKE/reviews.json"
 
 polls() { rm -f "$FAKE/pulls.n"; printf '%s' "$1" > "$FAKE/old-polls"; }
-ciwait() { ( cd "$1" && shift && bash "$root/skills/ship/scripts/ci-wait.sh" 1 "$@" 2>/dev/null ); }
+ciwait() { ( cd "$1" && shift && SHIP_CI_WAIT_GRACE=${SHIP_CI_WAIT_GRACE:-0} bash "$root/skills/ship/scripts/ci-wait.sh" 1 "$@" 2>/dev/null ); }
 pollpr() { ( cd "$1" && shift && bash "$root/skills/ship/scripts/poll-pr.sh" 1 "$@" 2>/dev/null ); }
 
 # The no-checks grace counts from the expected head's arrival, which only a

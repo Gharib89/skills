@@ -7,11 +7,12 @@ exceptions bound these rules.
 ## The mechanic contract
 
 - **Mechanics print JSON and nothing else on stdout.** Evidence goes to stderr,
-  capped at the last 40 lines. Exit 0 success, 1 the operation failed, 2
-  tooling. The one call that prints something else is `--help`, which every
-  mechanic answers with its usage line on stdout and exit 0 through `ship_help`,
-  called before `ship_load_host` so the answer reaches no host. What a run makes
-  of all this is
+  capped at the last 40 lines, with the message of every exit-1 and exit-2
+  error. Exit 0 success, 1 the operation failed, 2 tooling. The one call that
+  prints something else is `--help`, which every mechanic answers, on stdout,
+  with its usage line then its header's `stdout:` block and exit 0 through
+  `ship_help`, called before `ship_load_host` so the answer reaches no host.
+  What a run makes of all this is
   [skills/ship/reference/mechanics.md](../../../skills/ship/reference/mechanics.md);
   the `contract` gate enforces it.
 - **No host CLI outside a named mechanic.** In this repo's code, `gh` and `az`

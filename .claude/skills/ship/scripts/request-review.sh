@@ -53,7 +53,7 @@ ship_load_host
 if [ -n "$phrase" ]; then
   f=$(mktemp) || ship_tooling "cannot write the request comment"
   trap 'rm -f "$f"' EXIT
-  printf '%s\n' "$phrase" > "$f"
+  ship_mark "$phrase" > "$f"
   # Read before the post, so the fallback can only be earlier than the comment.
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   c=$(host_pr_comment "$pr" "$f") || ship_fail "comment transport: the request comment did not post" "$c"

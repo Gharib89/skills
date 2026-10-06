@@ -36,4 +36,7 @@ check "--full naming another id leaves this one clipped" \
 check "a row with no id (an ADO vote) is clipped, not matched" \
   "${preamble}${marker}" "$(clip null "$round" '["7"]')"
 
+check "--full open keeps every body whole, a row with an id or not" \
+  "$round|$round" "$(clip 7 "$round" '["open"]')|$(clip null "$round" '["open"]')"
+
 finish

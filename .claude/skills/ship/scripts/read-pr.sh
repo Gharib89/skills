@@ -5,9 +5,14 @@
 #   read-pr <pr>
 #
 # stdout: {number, url, title, body, head_sha, head_ref, base_ref, draft,
-#          state, mergeable}
-#   The adapter's PR object unchanged: the same fields on both hosts. Comments,
-#   review threads and checks come from poll-pr.
+#          state, mergeable, headings[], missing[] | null}
+#   The adapter's PR object: the same fields on both hosts. Comments, review
+#   threads and checks come from poll-pr. headings: the body's `## ` section
+#   headings, in order (the rule `update-pr-body` reports with). missing: the
+#   headings of the profile's `## PR` `Template:` file, read from the checkout
+#   root, that the body lacks; [] where there is no profile or the Template: is
+#   `None.`, null where its file cannot be read (null is no answer, not a body
+#   that lacks nothing).
 # exit: 0 · 2 the PR could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -19,4 +24,16 @@ pr=$1
 ship_load_host
 
 pull=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
-printf '%s\n' "$pull"
+headings=$(ship_body_headings "$(jq -r '.body // ""' <<<"$pull")" | jq -R . | jq -sc .)
+
+wanted='[]'
+if profile=$(ship_profile_path) && [ -f "$profile" ]; then
+  template=$(awk '/^## /{f = ($0 ~ /^## PR[ \t\r]*$/)} f && /^Template:/{sub(/^Template:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit}' "$profile")
+  case $template in
+    ''|None|None.) ;;
+    *) if top=$(git rev-parse --show-toplevel) && tbody=$(cat "$top/$template"); then
+         wanted=$(ship_body_headings "$tbody" | jq -R . | jq -sc .)
+       else wanted=null; fi ;;
+  esac
+fi
+jq --argjson h "$headings" --argjson w "$wanted" '. + {headings: $h, missing: (if $w == null then null else $w - $h end)}' <<<"$pull"

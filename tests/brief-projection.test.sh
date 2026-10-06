@@ -229,4 +229,98 @@ unreadable=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
 check "unreadable thread state passes through as the string" \
   '"unavailable"' "$(ship_brief "$unreadable" Gharib89 on_head | jq -c '.threads')"
 
+# `--full open` is every row whole: the ids a run does not have yet are the ones
+# it wants verbatim.
+bulk=$(jq -cn --arg b "$(rep 240 w)"$'\n\n'"the second paragraph" '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [{id: "r1", login: "claude[bot]", substantive: true, submitted_at: "2026-09-14T04:10:00Z", body: $b}],
+            all: [], total: 1},
+  threads: [{id: "t1", resolved: false, replied: false, author: "claude", path: "x.sh", body: $b},
+            {id: "t2", resolved: true, replied: false, author: "claude", path: "x.sh", body: $b}]}')
+whole_bulk="$(rep 240 w)"$'\n\n'"the second paragraph"
+check "--full open returns every open thread's lead whole" \
+  "$whole_bulk" "$(ship_brief "$bulk" Gharib89 on_head '["open"]' | jq -r '.threads[0].lead')"
+check "--full open returns every round whole" \
+  "$whole_bulk" "$(ship_brief "$bulk" Gharib89 on_head '["open"]' | jq -r '.rounds[0].body')"
+check "--full open leaves the resolved thread out as it always does" 1 \
+  "$(ship_brief "$bulk" Gharib89 on_head '["open"]' | jq '.threads | length')"
+check "without --full the same rows are cut" \
+  "$(printf '%s\n...[truncated]' "$(rep 200 w)")" \
+  "$(ship_brief "$bulk" Gharib89 on_head | jq -r '.threads[0].lead')"
+
+# A Copilot overview review, as the host serves it (tests/fixtures/, PR 475's
+# review 5406886174): HTML comment, tags, nested `<details>` and a `Findings:`
+# count. It says `Findings: None` and still carries a finding, under `Previously
+# missed`, which has no thread and no bullet of its own. The loop acts on its
+# verdict line, its findings line and the open and missed items, not on the
+# markup, the `What changed` table or what a later round already resolved.
+overview() { # <fixture>: one round with that file as its body, projected
+  local f=$1
+  jq -cn --rawfile b "tests/fixtures/$f" '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+    reviews: {on_head: [{id: 1, login: "copilot-pull-request-reviewer[bot]", substantive: true,
+                         submitted_at: "2026-09-14T03:00:00Z", body: $b}], all: [], total: 1},
+    threads: []}' | { read -r src; ship_brief "$src" Gharib89 on_head | jq -r '.rounds[0].body'; }
+}
+missed=$(overview copilot-overview.md)
+check "a Findings: None overview keeps its verdict heading and line, its findings line and the missed item" \
+  "🔵 Needs a closer look: Empty or whitespace-only locks still allow installation without skill selectors, installing every upstream skill.|**Findings:** None|- Empty skills lock bypasses guard and installs all skills" \
+  "$(sed -n '1p;2p' <<<"$missed" | paste -sd'|' -)|$(sed -n 3p <<<"$missed" | sed 's/: .*//')"
+check "the missed item rides one line, its location after the title" 3 "$(wc -l <<<"$missed" | tr -d ' ')"
+check "the markup is gone: no tag, no comment" 0 "$(grep -cE '<[A-Za-z/!]' <<<"$missed")"
+check "what a later round resolved is not a finding" 0 "$(grep -c 'Shell command injection' <<<"$missed")"
+open=$(overview copilot-overview-open.md)
+check "an overview with open findings keeps its lead, its count and one item each" \
+  "🟡 Changes recommended: Compare pagination is unspecified, so ranges exceeding 30 commits can still omit subjects.|$(printf '%s' '**Findings:** 2')|2" \
+  "$(sed -n 1p <<<"$open")|$(sed -n 2p <<<"$open" | sed 's/ *$//')|$(grep -c '^- ' <<<"$open")"
+check "an overview's open items keep their text and drop the severity badge" 2 \
+  "$(grep -c '^- \[Follow pagination when fetching compare commits\](#discussion_r' <<<"$open")"
+check "an overview's What changed block is not a finding" 0 "$(grep -c 'Intersects path-filtered\|Standards' <<<"$open")"
+check "no tag or comment is left in an open-findings overview either" 0 "$(grep -cE '<[A-Za-z/!]' <<<"$open")"
+
+# The same round, written by hand: `Findings: None` plus a `<details>` item.
+synthetic=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [{id: 1, login: "copilot-pull-request-reviewer[bot]", substantive: true,
+    submitted_at: "2026-09-14T03:00:00Z",
+    body: "<!-- v2\nhidden -->\n## Overview\n\nLooks fine.\n\n**Findings:** None\n\n<details><summary>Previously missed</summary>\n\n- item\n</details>"}],
+    all: [], total: 1}, threads: []}')
+check "a Findings: None round returns the item in its details block" \
+  "$(printf 'Looks fine.\n**Findings:** None\n- item')" \
+  "$(ship_brief "$synthetic" Gharib89 on_head | jq -r '.rounds[0].body')"
+
+# An overview states its verdict as an h3 heading before the summary sentence, and
+# it is the round's only severity word, so the lead keeps it ahead of the
+# sentence. The h1 and h2 headings above it are titles and stay skipped, and a
+# heading after the lead is not a verdict.
+verdict=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [{id: 1, login: "copilot-pull-request-reviewer[bot]", substantive: true,
+    submitted_at: "2026-09-14T03:00:00Z",
+    body: "# Title\n\n## Overview\n\n### Needs a closer look\n\nSummary sentence.\n\n### Later heading\n\n- item"}],
+    all: [], total: 1}, threads: []}')
+check "an h3 verdict heading leads the summary sentence, hashes stripped, h1 and h2 skipped" \
+  "$(printf 'Needs a closer look: Summary sentence.\n- item')" \
+  "$(ship_brief "$verdict" Gharib89 on_head | jq -r '.rounds[0].body')"
+check "a body with no h3 verdict keeps the bare lead" \
+  "$(printf 'Looks fine.\n**Findings:** None\n- item')" \
+  "$(ship_brief "$synthetic" Gharib89 on_head | jq -r '.rounds[0].body')"
+
+# The adapter clips at 2000 characters wherever that falls, a tag or a comment
+# included: the cut must not leave `<` behind, and the marker still says so.
+cut=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [{id: 1, login: "copilot-pull-request-reviewer[bot]", substantive: true,
+    submitted_at: "2026-09-14T03:00:00Z",
+    body: "## Overview\n\nLead here\n\n**Findings:** 1 <picture><source media=\"(pref\n...[truncated]"}],
+    all: [], total: 1}, threads: []}')
+check "a body cut inside a tag loses the tag and keeps the marker" \
+  "$(printf 'Lead here\n**Findings:** 1\n...[truncated]')" \
+  "$(ship_brief "$cut" Gharib89 on_head | jq -r '.rounds[0].body')"
+
+# A finding that quotes a usage line keeps its placeholders: only real HTML tag
+# names are markup, so `<n>`, `<name>` and `<word>` survive inside a code span
+# and outside one.
+usage=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
+  reviews: {on_head: [{id: 1, login: "copilot-pull-request-reviewer[bot]", substantive: true,
+    submitted_at: "2026-09-14T03:00:00Z",
+    body: "## Overview\n\nLooks fine.\n\n**Findings:** 2\n\n- usage reads run-file close <n> --result <name>=<word> here\n- `run-file close <n> --result <name>=<word>` in a span <b>bold</b>"}],
+    all: [], total: 1}, threads: []}')
+check "a usage line quoted in a finding keeps its placeholders, real tags still go"   "$(printf 'Looks fine.\n**Findings:** 2\n- usage reads run-file close <n> --result <name>=<word> here\n- `run-file close <n> --result <name>=<word>` in a span bold')"   "$(ship_brief "$usage" Gharib89 on_head | jq -r '.rounds[0].body')"
+
 finish

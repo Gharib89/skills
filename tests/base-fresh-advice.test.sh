@@ -22,7 +22,7 @@ g() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@"; }
   g checkout -q main && g commit -q --allow-empty -m c && g push -q origin main
 } >/dev/null 2>&1 || { echo "fixture setup failed" >&2; exit 2; }
 
-want='{"fresh":false,"base":"origin/main","behind":1,"ahead":1,"fetched":true}'
+want='{"fresh":false,"base":"origin/main","behind":1,"ahead":1,"fetched":true,"branch":"fix/pushed-1"}'
 
 g checkout -q fix/pushed-1
 out=$("$base_fresh" 2>"$tmp/err"); rc=$?
@@ -35,16 +35,26 @@ check "a behind branch on origin is told to merge the base in" \
 g checkout -q fix/local-2
 out=$("$base_fresh" 2>"$tmp/err"); rc=$?
 check_rc "a behind branch not on origin exits behind" 1 "$rc"
-check "a behind branch not on origin keeps the verdict" "$want" "$(jq -c . <<<"$out")"
+check "a behind branch not on origin keeps the verdict" "${want/fix\/pushed-1/fix\/local-2}" "$(jq -c . <<<"$out")"
 check "a behind branch not on origin is told to rebase" \
   "branch has not seen these commits on origin/main; rebase onto it and re-run:" \
   "$(head -1 "$tmp/err")"
 
 g checkout -q --detach fix/local-2
-"$base_fresh" >/dev/null 2>"$tmp/err"
+out=$("$base_fresh" 2>"$tmp/err")
+check "a detached HEAD carries a null branch" '[true,null]' "$(jq -c '[has("branch"), .branch]' <<<"$out")"
 check "a detached HEAD, whose push state is unknown, is told to merge the base in" \
   "branch has not seen these commits on origin/main; merge origin/main in, which keeps the next push a plain one, and re-run:" \
   "$(head -1 "$tmp/err")"
+
+# On the default branch itself the check answers nothing useful (HEAD is the
+# base, so it is always fresh): a run belongs in its worktree, so that is
+# tooling, exit 2, with the instruction on stderr and on stdout.
+g checkout -q main
+out=$("$base_fresh" 2>"$tmp/err"); rc=$?
+check_rc "on the default branch it is a tooling error" 2 "$rc"
+check "stdout names the worktree" true "$(jq '.error | contains("run from the worktree")' <<<"$out")"
+check "stderr says the same" 1 "$(grep -c 'run from the worktree' "$tmp/err")"
 
 # The evidence on stderr honours the mechanics' 40-line cap however far behind the
 # branch is: the header and the newest 39 commits. The verdict on stdout still

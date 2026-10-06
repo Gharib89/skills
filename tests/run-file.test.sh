@@ -10,7 +10,7 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-usage='usage: run-file init <issue|slug> --scratchpad <dir> [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] | open <n> | close <n> | skip <n> <reason> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default $TMPDIR or /tmp] resolving <scratchpad>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
 
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
@@ -47,7 +47,7 @@ check "the fixed wording, with the profile tails substituted" \
 - [ ] 7 · Reviewers: copilot (on-request), claude (on-request), one bounded pass each
 - [ ] 8 · CI: resolve any conflict, land None green
 - [ ] 9 · Merge gate: hard stop for human approval (unattended: summary as PR comment, return)' \
-  "$(grep '^- \[ \] ' "$f")"
+  "$(grep '^- \[ \] ' "$f" | sed 's/ in_progress ([0-9][0-9]:[0-9][0-9]→)$//')"
 
 # The informational reads a run made with no mechanic behind them, one line
 # each, so the ones that recur across runs can be promoted to a mechanic.
@@ -96,8 +96,8 @@ check "a second open is refused" "phase 2 is open; close it before opening 3" "$
 check_rc "a second open exits 1" 1 "$(rc open 3 --file "$g")"
 check "a refused open changes nothing" "$before" "$(cat "$g")"
 
-check "close on a phase that is not open is refused" \
-  "phase 7 is not open" "$(err close 7 --file "$g")"
+check "close on a phase never opened is refused, naming open" \
+  'phase 7 was never opened; run `run-file open 7` first, then close it' "$(err close 7 --file "$g")"
 check_rc "close on a phase that is not open exits 1" 1 "$(rc close 7 --file "$g")"
 
 out close 2 --file "$g" >/dev/null
@@ -106,7 +106,7 @@ check "close on an already closed phase is refused" \
 
 grep -v '^- \[.\] 8 · ' "$g" > "$tmp/gapped.md"
 check "a flip whose line is absent names the line and the rebuild" \
-  "no phase 8 line in $tmp/gapped.md: a subagent overwrote the Run file; rebuild it with \`run-file init <issue> --scratchpad <dir> --rebuild\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log" \
+  "no phase 8 line in $tmp/gapped.md: a subagent overwrote the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
   "$(err open 8 --file "$tmp/gapped.md")"
 # A phase outside the ten is a mistyped number, not a damaged file: advice to
 # rebuild would wipe an intact record.
@@ -186,9 +186,9 @@ tj=$(out timing --file "$t")
 check "start→PR is phase 0's open to phase 6's close" 80 "$(printf '%s' "$tj" | jq -r '.start_to_pr')"
 check "PR→gate is phase 6's close to phase 8's close" 40 "$(printf '%s' "$tj" | jq -r '.pr_to_gate')"
 check "a per-phase field is its own range" 30 "$(printf '%s' "$tj" | jq -r '.phases["2"]')"
-check "a phase with no range is unverified" unverified "$(printf '%s' "$tj" | jq -r '.phases["3"]')"
+check "a skipped phase reads skipped, not unverified" skipped "$(printf '%s' "$tj" | jq -r '.phases["3"]')"
 check "the row is the merge summary's line" \
-  'start→PR 80m · PR→gate 40m · per phase: 0 5 · 1 10 · 2 30 · 3 unverified · 4 15 · 5 10 · 6 10 · 7 30 · 8 10' \
+  'start→PR 80m · PR→gate 40m · per phase: 0 5 · 1 10 · 2 30 · 3 skipped · 4 15 · 5 10 · 6 10 · 7 30 · 8 10' \
   "$(printf '%s' "$tj" | jq -r '.row')"
 check_rc "timing exits ok" 0 "$(rc timing --file "$t")"
 
@@ -240,6 +240,35 @@ check "the run file is reported back" "$rb" "$(printf '%s' "$b" | jq -r '.run_fi
 
 check_rc "two open states are refused" 1 \
   "$(rc init 401 --scratchpad "$tmp" --state 2=open --state 5=open)"
+# The 3/4 overlap is the one pair of open phases a run holds, so it is the one
+# pair a rebuild records; any other pair still contradicts the one-open rule.
+ov=$(out init 406 --scratchpad "$tmp" --state 0=done --state 1=done --state 2=done --state 3=open --state 4=open | jq -r .run_file)
+check "a rebuild records the 3/4 overlap as two open phases" \
+  2 "$(grep -c '^- \[ \] [34] · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$ov")"
+check_rc "the overlap given in the other order is accepted" 0 \
+  "$(rc init 407 --scratchpad "$tmp" --state 4=open --state 3=open)"
+check_rc "open 5 over the rebuilt overlap is still refused" 1 "$(rc open 5 --file "$ov")"
+check_rc "two open states other than 3 and 4 are refused" 1 \
+  "$(rc init 408 --scratchpad "$tmp" --state 3=open --state 5=open)"
+check_rc "3 and 4 with a third open are refused" 1 \
+  "$(rc init 409 --scratchpad "$tmp" --state 3=open --state 4=open --state 5=open)"
+check "the overlap refusal still names the count" \
+  "a Run file holds one open phase, or 3 and 4 together; 2 were given" \
+  "$(err init 410 --scratchpad "$tmp" --state 2=open --state 4=open)"
+
+# A new run of an issue whose earlier run stopped replaces the record; a resumed
+# run reads it. The refusal names both, and the replacement is a bare rebuild.
+out init 411 --scratchpad "$tmp" >/dev/null
+out close 0 --file "$tmp/ship-411/run.md" >/dev/null
+check "an existing Run file is refused with both ways forward" \
+  "Run file exists: $tmp/ship-411/run.md: a resumed run reads that record, and a new run of an issue whose earlier run stopped replaces it with \`run-file init 411 --rebuild\`" \
+  "$(err init 411 --scratchpad "$tmp")"
+check_rc "an existing Run file is refused with exit 1" 1 "$(rc init 411 --scratchpad "$tmp")"
+nr=$(out init 411 --scratchpad "$tmp" --rebuild)
+check "a bare rebuild is a fresh record with phase 0 open" \
+  "0 in_progress 1 0" \
+  "$(jq -r '[.opened, .mirror] | join(" ")' <<<"$nr") $(grep -c 'in_progress' "$tmp/ship-411/run.md") $(grep -c '^- \[x\]' "$tmp/ship-411/run.md")"
+
 check_rc "a state spec that does not parse is malformed" 2 \
   "$(rc init 402 --scratchpad "$tmp" --state 2=running)"
 check_rc "a state naming no phase of the ten is malformed" 2 \
@@ -270,7 +299,7 @@ check "init refuses a tail carrying a skip suffix" "$shapes" \
 a=$(out init 500 --scratchpad "$tmp" | jq -r '.run_file')
 out skip 3 'blocked (10:00→10:30)' --file "$a" >/dev/null
 check "a range inside a skip reason is wording, not time" \
-  unverified "$(out timing --file "$a" | jq -r '.phases["3"]')"
+  skipped "$(out timing --file "$a" | jq -r '.phases["3"]')"
 
 # The design and plan sit below the checklist in the same file, so a line of
 # the checklist's shape can appear there. One phase, one line: the first.
@@ -305,7 +334,7 @@ check "a re-stamp whose reason closes the wrapper into a state shape is refused"
   "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it" \
   "$(err skip 6 'x) in_progress (10:00→' --file "$c")"
 check "timing reads the re-stamped phase as it reads any skipped phase" \
-  unverified "$(out timing --file "$c" | jq -r '.phases["6"]')"
+  skipped "$(out timing --file "$c" | jq -r '.phases["6"]')"
 # The small lane revokes one way only, so a skipped phase can come back.
 out open 6 --file "$c" >/dev/null
 check "re-opening a skipped phase drops the skip" \
@@ -419,13 +448,16 @@ check_rc "neither --file nor --issue is malformed" 2 "$(rc close 4)"
 # scratchpad reads which one it asked for rather than that something was missing,
 # and the rebuild, for the record a subagent removed rather than overwrote.
 check "an --issue with no record names the path it resolved and the rebuild" \
-  "no Run file at $tmp/ship-nothing-here/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --scratchpad <dir> --rebuild\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, no invented range), then log what was lost in the deviations log" \
+  "no Run file at $tmp/ship-nothing-here/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
   "$(err close 4 --issue nothing-here --scratchpad "$tmp")"
 
-# With no --scratchpad the OS temp dir stands, which is where a run whose
-# harness named none put the record in the first place.
-tmpdir_case=$(TMPDIR=$tmp out timing --issue 218 | jq -r '.run_file')
-check "--scratchpad defaults to the OS temp dir" "$i" "$tmpdir_case"
+# With no --scratchpad the record root is the git common dir's, so a TMPDIR no
+# longer decides where a run looks: the lookup lands under the checkout's .git
+# (`tests/run-file-record.test.sh` proves the round trip) and names that path.
+common=$(git rev-parse --path-format=absolute --git-common-dir)
+check "--scratchpad defaults to the git common dir, not the OS temp dir" \
+  "no Run file at $common/ship/ship-218/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
+  "$(TMPDIR=$tmp err timing --issue 218)"
 
 # --- phase order ---------------------------------------------------------------
 
@@ -468,6 +500,99 @@ check_rc "a ticked copy below the checklist does not satisfy the check" 1 "$(rc 
 k=$(out init 605 --scratchpad "$tmp" "${done_below5[@]}" | jq -r '.run_file')
 printf -- '- [ ] 2 · a line copied into the plan\n' >> "$k"
 check_rc "an unticked copy below the checklist does not trip the check" 0 "$(rc open 5 --file "$k")"
+
+
+# --- init opens phase 0 ----------------------------------------------------------
+
+# A bare init is the run starting, so phase 0 opens in the same call and the run
+# spends no `open 0` on it. Any --state is the caller stating the whole run, so
+# it opens nothing of its own.
+ij=$(out init 700 --scratchpad "$tmp")
+z=$(jq -r .run_file <<<"$ij")
+check "a bare init opens phase 0 at the clock" \
+  1 "$(grep -c '^- \[ \] 0 · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$z")"
+check "init says which phase it opened" "0 in_progress" "$(jq -r '[.opened, .mirror] | join(" ")' <<<"$ij")"
+check "init still holds exactly one open phase" 1 "$(grep -c 'in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$z")"
+check "init with a --state opens nothing of its own" \
+  "false" "$(out init 701 --scratchpad "$tmp" --state 0=done | jq 'has("opened") or has("mirror")')"
+check "init with a --state leaves phase 0 as stated" \
+  "1 0" "$(grep '^- \[.\] 0 · ' "$tmp/ship-701/run.md" | grep -c '^- \[x\] ') $(grep -c 'in_progress' "$tmp/ship-701/run.md")"
+
+# --- next ------------------------------------------------------------------------
+
+nj=$(out next 1 --file "$z"); nrc=$?
+check_rc "next exits ok" 0 "$nrc"
+check "next closes the open phase and says what to mirror" \
+  "0 completed" "$(jq -r '[.closed.phase, .closed.mirror] | join(" ")' <<<"$nj")"
+check "next opens the target and says what to mirror" \
+  "1 in_progress" "$(jq -r '[.opened.phase, .opened.mirror] | join(" ")' <<<"$nj")"
+check "next reports the run file" "$z" "$(jq -r .run_file <<<"$nj")"
+check "the closed line is the one close writes" \
+  "$(grep '^- \[.\] 0 · ' "$z")" "$(jq -r .closed.line <<<"$nj")"
+check "the opened line is the one open writes" \
+  "$(grep '^- \[.\] 1 · ' "$z")" "$(jq -r .opened.line <<<"$nj")"
+check "phase 0 is closed with a full range" \
+  1 "$(grep -c '^- \[x\] 0 · .*([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9])$' "$z")"
+check "phase 1 is open" 1 "$(grep -c '^- \[ \] 1 · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$z")"
+
+held=$(cat "$z")
+check "next onto the phase already open is refused" "phase 1 is already open" "$(err next 1 --file "$z")"
+check "next over an earlier phase never flipped names it, as open does" \
+  "phase 2 is neither closed nor skipped." "$(err next 4 --file "$z" | cut -c1-38)"
+check "next over a gap names the gap with the next recovery" \
+  'phase 2 is neither closed nor skipped. If it ran: `run-file next 2`, `run-file close 2`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: `run-file skip 2 <reason>`. Then retry `run-file open 4`, which names the next such phase if any.' \
+  "$(err next 4 --file "$z")"
+check_rc "a refused next exits 1" 1 "$(rc next 4 --file "$z")"
+check "a refused next wrote nothing, not even the close" "$held" "$(cat "$z")"
+check_rc "next needs a phase number" 2 "$(rc next --file "$z")"
+check_rc "next with a flag as the phase is malformed" 2 "$(rc next --x --file "$z")"
+
+out close 1 --file "$z" >/dev/null
+check "next with nothing open points at open" \
+  'no phase is open; use `run-file open 2`' "$(err next 2 --file "$z")"
+check_rc "next with nothing open exits 1" 1 "$(rc next 2 --file "$z")"
+
+# Two open (the 3/4 overlap): next cannot say which to close, so it names one.
+y=$(out init 702 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done | jq -r .run_file)
+out open 3 --file "$y" >/dev/null; out open 4 --file "$y" >/dev/null
+held=$(cat "$y")
+check "next with two phases open names the one to close first" \
+  'phases 3 and 4 are both open; close 3 first with `run-file close 3`, then retry `run-file next 5`' \
+  "$(err next 5 --file "$y")"
+check_rc "next with two phases open exits 1" 1 "$(rc next 5 --file "$y")"
+check "it wrote nothing" "$held" "$(cat "$y")"
+
+# --- close on a phase that was never opened ------------------------------------
+
+p=$(out init 703 --scratchpad "$tmp" | jq -r .run_file)
+check "close on a pending phase names open as the way forward" \
+  'phase 3 was never opened; run `run-file open 3` first, then close it' "$(err close 3 --file "$p")"
+check_rc "close on a pending phase exits 1" 1 "$(rc close 3 --file "$p")"
+out skip 3 'small lane' --file "$p" >/dev/null
+check "close on a skipped phase is the not-open refusal" "phase 3 is not open" "$(err close 3 --file "$p")"
+
+# --- the 3/4 overlap -----------------------------------------------------------
+
+# Phase 4 begins while the phase 3 verifications run, so open 4 admits one open
+# phase and no more; every other open-while-open is the refusal it always was.
+y=$(out init 704 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done | jq -r .run_file)
+out open 3 --file "$y" >/dev/null
+check_rc "open 4 while 3 is open exits ok" 0 "$(rc open 4 --file "$y")"
+check "both phases carry an open stamp" \
+  2 "$(grep -c '^- \[ \] [34] · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$y")"
+check "a fifth open while both are open names the first" \
+  "phase 3 is open; close it before opening 5" "$(err open 5 --file "$y")"
+check "open 3 while 4 is open stays refused" "phase 3 is already open" "$(err open 3 --file "$y")"
+out close 3 --file "$y" >/dev/null
+check "open 3 with only 4 open is the open-phase refusal" \
+  "phase 4 is open; close it before opening 3" "$(err open 3 --file "$y")"
+y=$(out init 705 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done --state 3=done | jq -r .run_file)
+out open 4 --file "$y" >/dev/null
+check "open 5 while 4 is open stays refused" \
+  "phase 4 is open; close it before opening 5" "$(err open 5 --file "$y")"
+y=$(out init 706 --scratchpad "$tmp" --state 0=done --state 1=done --state 2=open | jq -r .run_file)
+check "open 4 while 2 is open stays refused" \
+  "phase 2 is open; close it before opening 4" "$(err open 4 --file "$y")"
 
 
 finish

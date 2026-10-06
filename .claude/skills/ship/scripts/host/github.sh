@@ -64,6 +64,9 @@ _gh() {
   err=$(mktemp) || return 2
   raw=$(gh api -i "$@" 2>"$err"); rc=$?
   SHIP_HTTP_STATUS=$(printf '%s\n' "$raw" | awk -v want=status "$_GH_AWK_SPLIT")
+  # A poll loop's read cannot see this variable from inside a `$( )`, so the
+  # status also goes where `ship_poll_read` reads it.
+  [ -z "${SHIP_HTTP_STATUS_FILE:-}" ] || printf '%s' "$SHIP_HTTP_STATUS" > "$SHIP_HTTP_STATUS_FILE"
   # The body goes out only on a success. A failed call's body is an error
   # document nothing here reads, and `_gh_create` prints its own JSON after
   # this returns, so emitting both would hand the caller two JSON values where
@@ -439,6 +442,39 @@ host_pr_checks() { # <pr> <head_sha>
     | group_by(.name) | map(max_by(.at) | {name, status})'
 }
 
+# The re-runnable job behind a check: an Actions job's id is its check run's id,
+# so the latest check run of that name on the head names the job, and the job
+# says how many times it has run (run_attempt, 1 until a re-run). A check run
+# some other app wrote is no Actions job, and its id would 404 on the jobs
+# routes, so it answers nulls rather than failing: there is nothing to re-run,
+# which is not the host being down. The log is a courtesy for the run reading
+# why the check failed, so a log that cannot be read (expired, still running)
+# leaves log_tail null and does not fail the call.
+host_check_job() { # <pr> <head_sha> <name>
+  local cr id attempt log esc bel
+  esc=$(printf '\033') bel=$(printf '\007')
+  cr=$(api "$R/commits/$2/check-runs" -X GET -f "check_name=$3" -f per_page=100 \
+    --jq '.check_runs | max_by(.id) // empty | {id, actions: (.app.slug == "github-actions")}') || return 1
+  [ -n "$cr" ] || return 1
+  if ! jq -e .actions <<<"$cr" >/dev/null; then
+    printf '{"job_id":null,"attempt":null,"log_tail":null}\n'; return 0
+  fi
+  id=$(jq -r .id <<<"$cr")
+  attempt=$(api "$R/actions/jobs/$id" --jq .run_attempt) || return 1
+  # A job log carries colour codes, which the endpoint refuses to hand over
+  # unless asked; they are stripped (CSI, then OSC ended by BEL; the C locale,
+  # since `[@-~]` is no byte range in a UTF-8 one) so the tail is
+  # text and not escapes inside a JSON string.
+  if log=$(api "$R/actions/jobs/$id/logs" --allow-escape-sequences 2>/dev/null); then
+    log=$(printf '%s\n' "$log" | tail -n 40 | LC_ALL=C sed -e "s/$esc\][^$bel]*$bel//g" -e "s/$esc\[[0-9;?]*[@-~]//g")
+  else log=; fi
+  jq -n --argjson id "$id" --argjson a "$attempt" --arg l "$log" \
+    '{job_id: $id, attempt: $a, log_tail: (if $l == "" then null else $l end)}'
+}
+# Re-runs the one job, not the whole workflow run, so a leg's other jobs keep
+# their results. Nothing on success, the status on failure, like every write.
+host_check_rerun() { _gh_write -X POST "$R/actions/jobs/$1/rerun"; } # <job_id>
+
 # `on_head` is keyed to the current head (a review on an older commit does not
 # count), which poll-pr's default head rule reads; `all` carries every round
 # across heads, for its --since rule. Every review stays in the two lists with
@@ -671,6 +707,24 @@ host_pr_request_review() { # <pr> <login>
      | {requested: (($ok and ($new or any($p[]; recorded))) or $open),
         readback: $rb,
         requested_at: (if $new then ($ar[-1].created_at // $now) elif $open then $lb.created_at else $now end)}'
+}
+
+# The latest instant a round was asked of <login>, for a caller that holds no
+# `requested_at` of its own: the last `review_requested` event on the timeline
+# under any name the reviewer is recorded as, or, under a comment transport
+# (<phrase>), the last PR comment opening with the phrase, by anyone, since the
+# request reads the same whoever posted it. Nothing and non-zero where there is none.
+host_pr_requested_at() { # <pr> <login> [<phrase>]
+  local at raw
+  if [ -n "${3:-}" ]; then
+    raw=$(api "$R/issues/$1/comments?per_page=100" --paginate --jq '.[]') || return 1
+    at=$(jq -rs --arg p "$3" '[.[] | select(.body | startswith($p))] | last | .created_at // empty' <<<"$raw") || return 1
+  else
+    raw=$(_gh_review_events "$1") || return 1
+    at=$(jq -r --arg l "$2" --arg alias "$(_gh_alias "$2")" "$_gh_recorded_def"'
+          [.[] | select(.event == "review_requested" and (.login | recorded))] | last | .created_at // empty' <<<"$raw") || return 1
+  fi
+  [ -n "$at" ] && printf '%s\n' "$at"
 }
 
 host_pr_comment() { # <pr> <body-file>
