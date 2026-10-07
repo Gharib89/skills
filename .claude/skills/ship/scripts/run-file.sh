@@ -638,6 +638,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     /^## / { f = ($0 ~ /^## Verification[ \t\r]*$/); next }
     f && /^### / { sub(/^### /, ""); sub(/[ \t\r]+$/, ""); print "name\t" $0; next }
     f && /^Also proven by CI: / { sub(/^Also proven by CI: /, ""); sub(/[ \t\r]+$/, ""); print "leg\t" $0 }
+    END { if (_fenced) exit 1 }
     ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t")) as $r ([];
       if $r[0] == "name" then . + [{name: $r[1], leg: null}]
       elif length > 0 then .[-1].leg = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
