@@ -43,7 +43,7 @@ Probe: C1: cat notes.txt => exit 0 at $head: line two" \
 probe "$repo" 'copilot r1 t2' --file "$rf" -- sh -c 'echo first; echo why it failed >&2; exit 3'
 check_rc "a command that exits non-zero still exits 0" 0 "$status"
 check "the non-zero exit and the last line of stdout and stderr are recorded" \
-  "Probe: copilot r1 t2: sh -c echo first; echo why it failed >&2; exit 3 => exit 3 at $head: why it failed" \
+  'Probe: copilot r1 t2: sh -c echo\ first\;\ echo\ why\ it\ failed\ \>\&2\;\ exit\ 3 => exit 3 at '"$head"': why it failed' \
   "$(tail -n 1 "$rf")"
 
 probe "$repo" C2 --file "$rf" -- true
@@ -58,7 +58,11 @@ check "the command runs as argv, never through a shell string" no "$([ -e "$repo
 
 probe "$repo" C5 --file "$rf" -- printf '  indented last line  \r\n'
 check "an indented last line is recorded trimmed, carriage return and all" \
-  "Probe: C5: printf   indented last line  \r\n => exit 0 at $head: indented last line" "$(tail -n 1 "$rf")"
+  'Probe: C5: printf \ \ indented\ last\ line\ \ \\r\\n => exit 0 at '"$head"': indented last line' "$(tail -n 1 "$rf")"
+
+probe "$repo" C7 --file "$rf" -- printf '<%s>\n' 'a b'
+check "an argument holding a space keeps its boundary, so the line re-runs as recorded" \
+  'Probe: C7: printf \<%s\>\\n a\ b => exit 0 at '"$head"': <a b>' "$(tail -n 1 "$rf")"
 
 # Every line probe wrote is one close 4 accepts: the gate reads what the verb writes.
 printf '%s\n' 'Declined: C1: claim: notes hold two lines' 'Declined: C5: claim: the output is indented' >> "$rf"
@@ -79,6 +83,9 @@ check "no command answers the usage line" "$usage" "$err"
 probe "$repo" C6 --file "$rf" true
 check_rc "a command without the -- separator is a usage error" 2 "$status"
 check "a missing separator answers the usage line" "$usage" "$err"
+probe "$repo" C6 --file "$rf" -- ''
+check_rc "an empty command word is refused" 2 "$status"
+check "the empty word refusal says why" "probe needs a command: its first word is empty" "$err"
 probe "$repo" 'C6: x' --file "$rf" -- true
 check_rc "a ref holding ': ' names no decline and is refused" 2 "$status"
 check "the ref refusal says why" "a probe's ref is the text before a decline's first ': ', so it cannot hold ': ' or a newline" "$err"

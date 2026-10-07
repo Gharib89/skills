@@ -121,7 +121,8 @@
 # reverted path holding whitespace is refused, since the line could not be read
 # back. `probe` runs <command> as argv, never through a shell string, at the
 # checkout top with stdin from /dev/null, and appends
-# `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>` under
+# `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, <command>
+# shell-quoted word by word (`printf %q`) so it re-runs as recorded, under
 # `## Evidence`, the last nonblank line of stdout and stderr together, or
 # `(no output)`. It exits 0 whatever the command's exit; a ref holding `: ` names
 # no decline and is refused.
@@ -1165,6 +1166,8 @@ probe)
   while [ $# -gt 0 ] && [ "$1" != -- ]; do where+=("$1"); shift; done
   [ "${1:-}" = -- ] && [ $# -ge 2 ] || ship_tooling "$usage"
   shift
+  # An empty first word runs nothing, and its line could never be read back.
+  [ -n "$1" ] || ship_tooling "probe needs a command: its first word is empty"
   parse_file ${where[@]+"${where[@]}"}
   no_extra
   top=$(git rev-parse --show-toplevel 2>/dev/null) || ship_tooling "probe runs its command at the checkout top: not inside a git checkout"
@@ -1176,7 +1179,10 @@ probe)
   last=$(printf '%s\n' "$output" | awk '{ sub(/\r$/, "") } NF { l = $0 } END { sub(/^[ \t]+/, "", l); sub(/[ \t]+$/, "", l); print l }') \
     || ship_tooling "cannot read the last line of the probe's output"
   [ -n "$last" ] || last="(no output)"
-  cmd=$(printf '%s' "$*" | tr '\n' ' ')
+  # Shell-quoted, so each argument's boundary survives on the one line and the
+  # command can be re-run as recorded.
+  cmd=$(printf '%q ' "$@")
+  cmd=${cmd% }
   append_to_section "## Evidence" "Probe: $ref: $cmd => exit $rc at $head: $last"
   jq -n --arg f "$file" --arg r "$ref" --arg c "$cmd" --argjson x "$rc" --arg h "$head" --arg l "$last" \
     '{run_file: $f, ref: $r, command: $c, exit: $x, head: $h, last: $l}'
