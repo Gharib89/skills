@@ -997,7 +997,12 @@ readonly SHIP_REVIEWER_RUN='
 #           row on the head is in; completed/refused beside a notice; in_progress
 #           while the 👀 is on, or the row, touched since the request, is not
 #           Completed; completed/stale-head for a Completed row on another
+#           commit; "unavailable" for a Completed row whose commit cell holds no
+#           backticked sha, since a row this reader cannot parse names no
 #           commit; `none` for silence, which is how an unconnected repo answers.
+#           Completed is the only terminal word the probes showed: a row ending
+#           in another word reads in progress and holds the window to the
+#           ceiling, which then reports still-running.
 # A status comment last edited before <since> belongs to an older request.
 # `Didn.t` matches the apostrophe without one inside this single-quoted string.
 # shellcheck disable=SC2034  # read by poll-pr
@@ -1021,14 +1026,16 @@ readonly SHIP_NATIVE_CODEX="$SHIP_LOGIN_NORM"'
   | ([$c[] | select((is_status | not) and (is_clean | not) and (.created_at | utc) >= $s)] | first) as $reply
   | {rounds: $rounds,
      notice: (if $reply == null then null else {line: (($reply.body // "") | first_line), at: ($reply.created_at | utc)} end),
-     run: ({url: ($st.url // $reply.url // null), denied: null} +
+     run: (if $rounds == [] and $reply == null and $touched and $sha == null
+             and ($row | test("Completed")) then "unavailable"
+           else {url: ($st.url // $reply.url // null), denied: null} +
        if $rounds != [] then {status: "completed", conclusion: "success"}
        elif $reply != null then {status: "completed", conclusion: "refused"}
        elif any(.request_reactions[]; mine and .content == "eyes") then {status: "in_progress", conclusion: null}
        elif $touched and ($row | test("Completed") | not) then {status: "in_progress", conclusion: null}
-       elif $touched and $sha != null and ($h | startswith($sha)) then {status: "completed", conclusion: "success"}
+       elif $touched and ($h | startswith($sha)) then {status: "completed", conclusion: "success"}
        elif $touched then {status: "completed", conclusion: "stale-head"}
-       else {status: "none", conclusion: null, url: null} end)}'
+       else {status: "none", conclusion: null, url: null} end end)}'
 
 # ship_fence_unclosed <text>: does the text end inside a fenced block or a
 # `<details>` record? Prints `line <n>: <run>` naming the opener still open, or

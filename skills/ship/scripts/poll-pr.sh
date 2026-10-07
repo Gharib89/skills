@@ -107,8 +107,9 @@
 # while Codex shows the request in progress and closes on the same terms. Two
 # conclusions are Ship's own words there: `refused` beside a reply that is no
 # round, and `stale-head` for a completed status on another commit with nothing
-# delivered. Its `url` is Codex's status comment, or the reply's where there is
-# none, and `denied` stays null. A clean round, which
+# delivered. A Completed status whose commit this reader cannot parse is
+# "unavailable", a failed read rather than a stale head. Its `url` is Codex's
+# status comment, or the reply's where there is none, and `denied` stays null. A clean round, which
 # Codex posts as a comment and a 👍 with no review, joins `reviews.all` as a row
 # of its own and lands like any round. A reply by the login that is neither the
 # status nor a clean round is reported as the blocked notice, its first line

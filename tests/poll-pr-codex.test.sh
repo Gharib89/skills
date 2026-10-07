@@ -79,6 +79,7 @@ calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 sed 's/✅ \*\*Completed\*\*/⏳ **In progress**/' "$fx/summary-completed.md" > "$work/summary-progress.md"
 # The same Completed row naming a commit that is not the head.
 sed 's/`9ffa460`/`1111111`/' "$fx/summary-completed.md" > "$work/summary-stale.md"
+sed 's/`9ffa460`/9ffa460/' "$fx/summary-completed.md" > "$work/summary-nosha.md"
 
 # The findings round, as #504 delivered it: 👀 and an in-progress row first,
 # then the formal review on the head. The 👀 holds the window past --timeout 0.
@@ -162,6 +163,14 @@ activity 1 "c|summary-stale.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
 out=$(poll); rc=$?
 check "a Completed row on a stale head is not reviewed" '1 stale-head' \
   "$rc $(jq -r .not_reviewed <<<"$out")"
+
+# A Completed row whose commit cell this reader cannot parse names no commit:
+# a failed read, not a stale head.
+reset
+activity 1 "c|summary-nosha.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
+out=$(poll); rc=$?
+check "a Completed row with no readable commit is unreachable" '1 unreachable unavailable' \
+  "$rc $(jq -r '.not_reviewed, .reviewer_run' <<<"$out" | xargs)"
 
 # The read failing is no evidence about the reviewer.
 reset
