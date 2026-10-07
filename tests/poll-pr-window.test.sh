@@ -79,8 +79,8 @@ check "and keeps the snapshot shape" deadbee "$(jq -r .head_sha <<<"$out")"
 check "the call stopped reading at its cap, one read a second plus one" true \
   "$([ "$(n host_pr_reviews)" -le 3 ] && echo true || echo false)"
 cursor=$(jq -r .cursor <<<"$out")
-# The default cap: the resumed call cannot run out of tool time before the
-# round lands, and it answers as soon as it does.
+# The default cap leaves the resumed call minutes for the few reads still to
+# come, and it answers as soon as the round lands.
 out=$(poll --cursor "$cursor"); rc=$?
 check_rc "the resumed call lands the round" 0 "$rc"
 check "by the since the cursor carried" since "$(jq -r .landed_by <<<"$out")"
