@@ -625,7 +625,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     >/dev/null 2>&1 <<<"$ci" || ship_tooling "CI answer is not a valid ci-wait object"
   profile_path=$(ship_profile_path) || ship_tooling "cannot locate ship profile"
   [ -f "$profile_path" ] && [ -r "$profile_path" ] || ship_tooling "cannot read ship profile at $profile_path"
-  profile=$(cat "$profile_path") || ship_tooling "cannot read ship profile at $profile_path"
+  profile=$(awk "$SHIP_AWK_FENCE"'
+    { if (!ship_fence($0)) print }
+    END { if (_fenced) exit 1 }' "$profile_path") || ship_tooling "cannot read profile evidence at $profile_path"
   local names legs no_checks=false
   ship_no_checks_expected "$profile"
   case $? in 0) no_checks=true ;; 1) ;; *) ship_tooling "cannot read profile no-checks policy" ;; esac
@@ -633,12 +635,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   legs=$(jq -Rn '[inputs | select(. != "")]' <<<"$names") || ship_tooling "cannot read profile CI legs"
   reviewers=$(ship_reviewers "$profile") || ship_tooling "cannot read profile reviewers"
   # Keep the association beside its heading, with the profile's exact field.
-  verifications=$(awk "$SHIP_AWK_FENCE"'
-    { if (ship_fence($0)) next }
+  verifications=$(awk '
     /^## / { f = ($0 ~ /^## Verification[ \t\r]*$/); next }
     f && /^### / { sub(/^### /, ""); sub(/[ \t\r]+$/, ""); print "name\t" $0; next }
     f && /^Also proven by CI: / { sub(/^Also proven by CI: /, ""); sub(/[ \t\r]+$/, ""); print "leg\t" $0 }
-    END { if (_fenced) exit 1 }
     ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t")) as $r ([];
       if $r[0] == "name" then . + [{name: $r[1], leg: null}]
       elif length > 0 then .[-1].leg = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
