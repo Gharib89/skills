@@ -683,6 +683,26 @@ runs "$(host_stub host-failure-garbage 'host_issue_get "$1" || { echo "{not json
 check "a host failure that prints unparseable output says so" \
   'read-issue: with every host_* failing in the Host fake, `read-issue 1` printed unparseable output on stdout; want exactly one object' "$out"
 
+# A wait mechanic retries a failing host once per --interval, so check 13 passes
+# the shortest one: at ci-wait's and poll-pr's defaults the check slept 100 s.
+d=$(copy_mechanics host-interval)
+cat > "$d/read-issue.sh" <<'EOF'
+#!/usr/bin/env bash
+# stdout: {number}
+# exit: 0
+set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+usage='usage: read-issue <issue> [--interval <s>]'
+ship_help "$usage" "$@"
+ship_args "$usage" issue "$@"
+ship_load_host
+[ -z "${SHIP_FAKE:-}" ] || printf '%s\n' "$*" > "$ARGS_LOG"
+ship_fail "cannot read issue $1"
+EOF
+ARGS_LOG=$fixture/host-interval.args runs "$d"
+check "a mechanic that takes --interval is driven at --interval 1" \
+  '1 --interval 1' "$(cat "$fixture/host-interval.args" 2>/dev/null)"
+
 # A tree that cannot drive the check is a failure, never a pass: a checker copy
 # whose Host fake lists no host_* function, and one whose root lacks the profile
 # the throwaway checkout is seeded from.
