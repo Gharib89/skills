@@ -227,12 +227,13 @@ on; here, `run-file gate read --head <head_sha>`, the head `read-pr` returns,
 answers `current`. On `current: true`, cite the recorded verdict: the
 `Local gate:` row reads the `gates` object that answer returns, not a re-run. On
 `current: false`, re-run the gate from the worktree and record it again, because
-a commit the gate never saw is in the PR; where the gate cannot run here, the
-row carries `at <sha>, <n> commits behind`, `<n>` being that answer's `behind`,
-or `at <sha>, behind unknown` when `behind` is `null`. `non_leg_failing` on the
-`CI:` row is red the profile does not ask for, so it does not hold the merge,
-and an `unlisted` check is profile drift for the human to add to `Legs:` or
-remove.
+a commit the gate never saw is in the PR: this is the **final head's gate**,
+the one full gate phase 7's round fixes wait for. Where the gate cannot run
+here, the row carries `at <sha>, <n> commits behind`, `<n>` being that
+answer's `behind`, or `at <sha>, behind unknown` when `behind` is `null`.
+`non_leg_failing` on the `CI:` row is red the profile does not ask for, so it
+does not hold the merge, and an `unlisted` check is profile drift for the human
+to add to `Legs:` or remove.
 
 **On explicit approval or a clean opted-in gate**, from the worktree, `merge
 <pr> <issue|none> [--worktree <path>]`. Its header carries what it does and
