@@ -13,7 +13,7 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 bin=$T/bin repo=$T/repo
 mkdir -p "$bin"
-cp skills/ship/scripts/run-file.sh skills/ship/scripts/revert-red.sh skills/ship/scripts/_lib.sh "$bin/"
+cp skills/ship/scripts/run-file.sh skills/ship/scripts/revert-red.sh skills/ship/scripts/dropped-lines.sh skills/ship/scripts/_lib.sh "$bin/"
 
 git init -q -b main "$repo"
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }
@@ -84,5 +84,15 @@ out=$(cd "$repo" && bash "$bin/run-file.sh" prove tests/answer.test.sh lib.sh --
 check_rc "a missing Run file is refused before revert-red runs" 1 "$status"
 check "the refusal names the missing record, not a revert-red answer" yes \
   "$(case $(jq -r .error <<<"$out") in "no Run file at $T/none.md"*) echo yes ;; *) echo no ;; esac)"
+
+# --- the line is one close 4 reads -------------------------------------------------
+
+rf=$(cd "$repo" && bash "$bin/run-file.sh" init 8 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
+prove ./tests/answer.test.sh ././lib.sh
+check_rc "paths typed with a leading ./ prove as any other" 0 "$status"
+check "the line names them as git diff prints them, top-relative with no ./" \
+  "Reverted-fix: tests/answer.test.sh: red at $head reverting lib.sh" "$(tail -n 1 "$rf")"
+out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
+check_rc "close 4 accepts the line prove wrote for the test the diff adds" 0 "$status"
 
 finish

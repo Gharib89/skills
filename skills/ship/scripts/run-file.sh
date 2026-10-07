@@ -117,9 +117,10 @@
 # `prove` runs the sibling `revert-red` on <test> and its <path>s. On its exit 0
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under
 # `## Evidence`, <sha> the HEAD revert-red ran on; on its exit 1 or 2 it writes
-# nothing and exits with that code, passing revert-red's answer through. A
-# reverted path holding whitespace is refused, since the line could not be read
-# back. `probe` runs <command> as argv, never through a shell string, at the
+# nothing and exits with that code, passing revert-red's answer through. It
+# writes each path top-relative with no leading `./`, the form `close 4` looks it
+# up by, and refuses a reverted path holding whitespace, which the line could
+# not be read back from. `probe` runs <command> as argv, never through a shell string, at the
 # checkout top with stdin from /dev/null, and appends
 # `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, <command>
 # shell-quoted word by word (`printf %q`) so it re-runs as recorded, under
@@ -1141,6 +1142,11 @@ prove)
   [ ${#args[@]} -ge 2 ] || ship_tooling "$usage"
   parse_file "$@"
   no_extra
+  # `close 4` looks the line up by the path git diff prints, top-relative with
+  # no leading `./`, so the line is written in that form.
+  for i in "${!args[@]}"; do
+    while [ "${args[i]#./}" != "${args[i]}" ]; do args[i]=${args[i]#./}; done
+  done
   # The line lists the paths space-separated, and `close 4` splits them back on
   # that space.
   for p in "${args[@]:1}"; do
