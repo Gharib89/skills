@@ -25,9 +25,9 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
   `--since`, since `poll-pr` asks the host when the request was made; on Azure
   DevOps, which records none, pass `--since` its `requested_at`. The block's
   `Request:` picks the transport (the host's own request call, or a PR comment
-  of the phrase for a comment-triggered workflow), and `request-review` confirms
-  the request queued; a request it cannot confirm exits 1, and the reviewer is
-  `not reviewed: never-queued`, with no poll.
+  of the phrase for a reviewer a comment triggers), and `request-review`
+  confirms the request queued; a request it cannot confirm exits 1, and the
+  reviewer is `not reviewed: never-queued`, with no poll.
   Under the host's own request call, round 1 first polls `--since` `open-pr`'s
   `created_at` at `--timeout 0`: a round the host opened unbidden with the PR (a
   Copilot ruleset, `review_on_push: false`) that has landed is round 1, and the
@@ -65,10 +65,11 @@ requested.
 
 `poll-pr` returns the reviewer's rounds, each graded `substantive`, threads with
 resolved state, `landed_by` naming the rule that admitted a round, `refused_by`
-a quota or rate-limit notice admitted in its place, `reviewer_run` for a comment
-transport, `reviewer_blocked` a quota notice the rule did not admit (cite it in
-a trailing clause, never as the reason), and `not_reviewed`, the cause the poll
-observed where no round was admitted.
+a quota or rate-limit notice, or a native reviewer's reply, admitted in its
+place, `reviewer_run` for a comment transport, `reviewer_blocked` a quota
+notice the rule did not admit (cite it in a trailing clause, never as the
+reason), and `not_reviewed`, the cause the poll observed where no round was
+admitted.
 
 - **`--brief` is how a round is read**: one `rounds[]` row per round, its body
   stripped of HTML and cut to the lead line, the `Findings:` line and the
@@ -86,9 +87,17 @@ observed where no round was admitted.
 - **The since rule needs a timed round.** An Azure DevOps vote carries no time,
   so a reviewer whose only signal is a vote reads `silent` under it; its
   threads are stamped and land normally.
-- **A comment transport's window is its workflow run**, the one `Workflow:`
-  names, held open while the run is going. Run no `update-pr-title` between that
-  request and its poll: the run is matched by the PR's title.
+- **A comment transport's window is its status source**: the workflow run
+  `Workflow:` names, held open while the run is going, or, under `Workflow:
+  native codex`, Codex's own status on the PR, reported on `reviewer_run` in
+  the run's shape. Run no `update-pr-title` between a workflow request and its
+  poll: the run is matched by the PR's title. A clean Codex round is a landed
+  round with no threads.
+- **Write a comment-transport phrase without its `@` everywhere but the
+  request.** A reply, a thread answer, a PR body or a reflect comment names
+  `codex review`, not the phrase itself: the host delivers every mention, and a
+  stray one starts a round or a Codex task no poll is waiting for (on an issue,
+  Codex answered one with a request to create an environment).
 - **A poll waits for the expected head**, the worktree's `HEAD` on the PR's
   branch or `--sha`. `not_reviewed: unreachable` with a `head_sha` that is not
   that head means the host never showed the push: confirm it landed, then poll
@@ -127,7 +136,9 @@ Each reviewer exits with one of:
   saying a reviewer "can't review" is a claim to check against the poll. The
   header of `scripts/poll-pr.sh` lists what each cause means. `still-running`
   is a run live at the ceiling: exit with it as read, with no further window,
-  and the run's URL on `reviewer_run` goes to the merge gate.
+  and the run's URL on `reviewer_run` goes to the merge gate. `stale-head` is
+  Codex's completed round on an older commit with nothing delivered: exit with
+  it as read, the status comment's URL to the merge gate.
 - `not invoked: <primary> reviewed`: a fallback whose primary reviewed.
 
 `not reviewed` proceeds to the merge gate on green CI and is reported there. A
@@ -214,6 +225,12 @@ Brand-level detail lives in the host adapters; these show the mapping only.
 - **Claude Code on GitHub Actions as an `on-request` fallback**: a comment of
   its phrase starts a workflow run posting under `claude[bot]`; a run that
   failed reads `not reviewed: infra-error` with its URL on `reviewer_run`.
+- **Native Codex review as an independent `on-request` reviewer**: a comment of
+  its phrase, no workflow; `Workflow: native codex` has `poll-pr` read Codex's
+  acknowledgement, status comment and clean comment off the PR, so a clean
+  round lands as `reviewed`, a reply that is no round reads `not reviewed:
+  blocked` with its text, and a completed status on another commit reads `not
+  reviewed: stale-head`.
 - **Claude Code on Azure Pipelines as `on-push`, `Gating: yes`**: a build
   validation policy that fails the build on a critical finding; a declined
   critical is `reviewed`, cited at the merge gate as the override needed.

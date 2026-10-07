@@ -639,6 +639,26 @@ host_run_denials() { # <run-url>
       else error("a claude-review warning leads with no count") end' <<<"$ann"
 }
 
+# What a reviewer integration with no workflow run leaves on the PR, for
+# poll-pr to read its round status from: the PR's comments and the reactions on
+# the PR and on the request comment. A PR's conversation comments and reactions
+# are its issue's on this host. The request comment is the latest one opening
+# with the phrase at or after <since>, the comment `request-review` posted.
+host_pr_native_activity() { # <pr> <since-iso> <phrase>
+  local comments pr_r req_r='[]' id
+  comments=$(api "$R/issues/$1/comments" --paginate \
+    --jq '.[] | {id, login: .user.login, created_at, updated_at, body, url: .html_url}' | jq -s .) || return 1
+  pr_r=$(api "$R/issues/$1/reactions" --paginate --jq '.[] | {content, login: .user.login, created_at}' | jq -s .) || return 1
+  id=$(jq -r --arg s "$2" --arg p "$3" \
+    '[.[] | select(.created_at >= $s and ((.body // "") | startswith($p)))] | last | .id // empty' <<<"$comments") || return 1
+  if [ -n "$id" ]; then
+    req_r=$(api "$R/issues/comments/$id/reactions" --paginate \
+      --jq '.[] | {content, login: .user.login, created_at}' | jq -s .) || return 1
+  fi
+  jq -n --argjson c "$comments" --argjson p "$pr_r" --argjson r "$req_r" \
+    '{comments: $c, pr_reactions: $p, request_reactions: $r}'
+}
+
 # The PR's review events, oldest first, as {event, login, created_at}: each
 # review_requested and review_request_removed under the reviewer it names, and
 # each review under its author.
