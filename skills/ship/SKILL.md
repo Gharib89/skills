@@ -210,23 +210,23 @@ the round per trigger, the cap as a budget, reading a round, the exit lines and
 fallbacks. Best-effort: for each reviewer under `## Reviewers`, per round, start
 it by its `Trigger:`, wait out one `poll-pr --brief` window, triage whatever
 landed, push the fixes once, answer each thread with `reply-thread`, then the
-block's `Resolve:`; `Cap:` bounds the rounds, and a fix diff that classifies
-`docs` ends them. A round's fix is proven by its targeted test nodes plus the
-repo's edit rung (`check.sh edit`) over the files it touched: the full local
-gate runs not per round but on the final head, through the merge gate's `gate
-read`, and never while a `code-review` is out (phase 5). **Every reviewer
-whose `Fallback-for:` reads `None.` first, then the fallbacks.** Exits:
-`reviewed`, `not reviewed: <reason>`, or `not invoked: <primary> reviewed`;
-`not reviewed` proceeds to the merge gate on green CI and is reported there. At
-exit, `update-pr-body --section --body-file` writes the sections the rounds
-grew, the Change outline where it fell short, `Review` last, the title checked
-against the `Grade:`, then the phase-6 read-back; a round that ends the loop
-with fixes that changed the tree earns one local review of those fixes before
-the merge gate.
+block's `Resolve:`; `Cap:` bounds the rounds, and a docs-only fix-only diff ends
+them. A round's fix is proven by its targeted test nodes plus the repo's edit
+rung, the per-file check its harness runs after each edit (`check.sh edit
+<file>...`), over the files it touched. The local gate is not re-run per round:
+the final head's gate is the merge gate's re-run on `gate read`'s `current:
+false`, never while a `code-review` is out (phase 5). **Every reviewer whose
+`Fallback-for:` reads `None.` first, then the fallbacks.** Exits: `reviewed`,
+`not reviewed: <reason>`, or `not invoked: <primary> reviewed`; `not reviewed`
+proceeds to the merge gate on green CI and is reported there. At exit,
+`update-pr-body --section --body-file` writes the sections the rounds grew, the
+Change outline where it fell short, `Review` last, the title checked against the
+`Grade:`, then the phase-6 read-back; a cap round or a docs-only round whose
+fixes changed the tree earns one local review of them before the merge gate.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned is replied to and resolved per `Resolve:`, every section the rounds
-grew is rewritten, the title matches `Grade:`, any end-of-loop fix review is
-dispositioned, `close 7` took each reviewer's `Round:` and `Stop:` lines, and
+grew is rewritten, the title matches `Grade:`, any cap or docs-only fix review
+is dispositioned, `close 7` took each reviewer's `Round:` and `Stop:` lines, and
 `read-pr` shows a `## Review` line per reviewer.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,

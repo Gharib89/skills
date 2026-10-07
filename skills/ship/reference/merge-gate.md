@@ -207,12 +207,13 @@ leg), every profile CI leg green at that head, every Verification `pass` or
 green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
 recorded round. A fallback that stopped so answers for a primary that was not
 reviewed; a fallback skipped because its primary reviewed adds no condition. A
-loop cut short by `Cap:`, the small lane or `auto-once` holds until its last
-round changed no file. Any nonblank `Override:` other than `none` or `None.`,
-any `Ship-defect:` record or `defect-*.md` draft, and any `tracker-*.md` draft
-holds the gate (`*.base.md` files are saved originals, not drafts). Deviations
-alone do not hold it. With no expected CI legs, `no-checks` is clean only when
-the profile declares `Legs: None.` and `No-checks legal: yes`, at the same head.
+loop cut short by `Cap:`, a docs-only fix, the small lane or `auto-once` holds
+until its last round changed no file. Any nonblank `Override:` other than `none`
+or `None.`, any `Ship-defect:` record or `defect-*.md` draft, and any
+`tracker-*.md` draft holds the gate (`*.base.md` files are saved originals, not
+drafts). Deviations alone do not hold it. With no expected CI legs, `no-checks`
+is clean only when the profile declares `Legs: None.` and `No-checks legal:
+yes`, at the same head.
 
 On `clean: true`, post the summary through the `Timing:` row with no reply line,
 then run the merge sequence below without waiting for a reply. On `clean:
@@ -227,8 +228,8 @@ on; here, `run-file gate read --head <head_sha>`, the head `read-pr` returns,
 answers `current`. On `current: true`, cite the recorded verdict: the
 `Local gate:` row reads the `gates` object that answer returns, not a re-run. On
 `current: false`, re-run the gate from the worktree and record it again, because
-a commit the gate never saw is in the PR: this is the **final head's gate**,
-the one full gate phase 7's round fixes wait for. Where the gate cannot run
+a commit the gate never saw is in the PR: this is the final head's gate, the
+one phase 7's round fixes wait for. Where the gate cannot run
 here, the row carries `at <sha>, <n> commits behind`, `<n>` being that
 answer's `behind`, or `at <sha>, behind unknown` when `behind` is `null`.
 `non_leg_failing` on the `CI:` row is red the profile does not ask for, so it
