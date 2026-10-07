@@ -279,7 +279,7 @@ _Avoid_: release job, auto-bump, version bump PR
 ### Review
 
 **Reviewer**:
-One automated review bot the ship profile names for a repo, with its login, its trigger, whether it is gating (a required check that can block the merge), and the reviewer it is a fallback for. A repo lists zero or more; no reviewer means the self-review plus green CI is the whole review gate. Preflight parses the blocks and refuses eight shapes before the claim: a fallback that is not on-request, one naming a reviewer nobody listed, an on-request reviewer with no cap, a `Cap:` that is neither a number nor `None.`, a `Request: comment` with no phrase for the transport to post, a comment transport with no `Workflow:` naming the file its round comes from, a `Workflow:` on a block no comment transport drives, and a `Workflow:` naming a file the checkout does not carry. One reviewer fact the blocks cannot settle themselves comes from the host instead: whether a Copilot reviewer's `Trigger:` matches the `copilot_code_review` ruleset that drives it.
+One automated review bot the ship profile names for a repo, with its login, its trigger, whether it is gating (a required check that can block the merge), and the reviewer it is a fallback for. A repo lists zero or more; no reviewer means the self-review plus green CI is the whole review gate. Preflight parses the blocks and refuses nine shapes before the claim: a fallback that is not on-request, one naming a reviewer nobody listed, an on-request reviewer with no cap, a `Cap:` that is neither a number nor `None.`, a `Request: comment` with no phrase for the transport to post, a comment transport with no `Workflow:` naming the file its round comes from, a `Workflow:` on a block no comment transport drives, a `Workflow:` naming a file the checkout does not carry, and a `Workflow: native <integration>` naming an integration ship has no reader for. One reviewer fact the blocks cannot settle themselves comes from the host instead: whether a Copilot reviewer's `Trigger:` matches the `copilot_code_review` ruleset that drives it.
 _Avoid_: review bot topology (the old three-shape framing), bot lane
 
 **Trigger**:
@@ -291,7 +291,7 @@ A reviewer driven only when the reviewer it names exits not reviewed, for any re
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Request transport**:
-How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer that is a comment-triggered workflow. Either way the request is read back off the host, and the since rule takes its timestamp from that read-back, so the clock is the host's.
+How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer a comment triggers: a comment-triggered workflow, or a native integration such as Codex. Either way the request is read back off the host, and the since rule takes its timestamp from that read-back, so the clock is the host's.
 _Avoid_: request method, trigger phrase (that is the workflow's own setting)
 
 **Landing rule**:
@@ -311,7 +311,7 @@ A reviewer's phase-7 exit where at least one of its rounds landed and every find
 _Avoid_: converged, approved, clean, passed
 
 **Not reviewed**:
-A reviewer's phase-7 exit where no round of it landed, or one did and its threads could not be read (unreachable), named by the cause a mechanic observed: poll-pr's `not_reviewed` (unreachable, blocked, never-queued, still-running, infra-error, silent) or request-review's exit 1 (never-queued). It still proceeds to the merge gate on green CI, the human's call there rather than a hand-back.
+A reviewer's phase-7 exit where no round of it landed, or one did and its threads could not be read (unreachable), named by the cause a mechanic observed: poll-pr's `not_reviewed` (unreachable, blocked, never-queued, still-running, stale-head, infra-error, silent) or request-review's exit 1 (never-queued). It still proceeds to the merge gate on green CI, the human's call there rather than a hand-back.
 _Avoid_: degraded, failure, timeout, skipped review
 
 **Not invoked**:

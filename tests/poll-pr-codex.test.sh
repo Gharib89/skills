@@ -171,3 +171,33 @@ check "an unreadable native status is unreachable" '1 unreachable unavailable' \
   "$rc $(jq -r '.not_reviewed, .reviewer_run' <<<"$out" | xargs)"
 check "the native read names the request it follows" "host_pr_native_activity	7	$since	@codex review" \
   "$(grep '^host_pr_native_activity' "$SHIP_FAKE/calls" | head -1)"
+
+# Decoys: the clean words in a human's comment are no round, and rows the host
+# leaves without a login or a body (a deleted account, an empty reply) are read
+# rather than failing the read.
+reset
+jq -cn --arg b "$(cat "$fx/clean.md")" '{comments: [
+    {id: 1, login: "me", created_at: "2026-10-07T12:28:13Z", updated_at: "2026-10-07T12:28:13Z", body: "@codex review", url: "u"},
+    {id: 2, login: "me", created_at: "2026-10-07T12:30:00Z", updated_at: "2026-10-07T12:30:00Z", body: $b, url: "u"},
+    {id: 3, login: null, created_at: "2026-10-07T12:30:01Z", updated_at: "2026-10-07T12:30:01Z", body: null, url: "u"}],
+  pr_reactions: [], request_reactions: []}' > "$SHIP_FAKE/host_pr_native_activity.1.json"
+out=$(poll); rc=$?
+check "a human comment carrying the clean words lands nothing" '1 null never-queued' \
+  "$rc $(jq -r '.landed_by, .not_reviewed' <<<"$out" | xargs)"
+reset
+jq -cn '{comments: [{id: 4, login: "chatgpt-codex-connector[bot]", created_at: "2026-10-07T12:29:00Z",
+    updated_at: "2026-10-07T12:29:00Z", body: null, url: "u"}], pr_reactions: [], request_reactions: []}' \
+  > "$SHIP_FAKE/host_pr_native_activity.1.json"
+out=$(poll); rc=$?
+check "a bodiless bot reply is still a refusal, not an unreadable status" '1 blocked' \
+  "$rc $(jq -r .not_reviewed <<<"$out")"
+
+# An older quota notice by the same login does not hide this request's reply.
+reset
+echo '{"line":"an older quota notice","at":"2026-10-07T11:00:00Z"}' > "$SHIP_FAKE/host_pr_reviewer_blocked.1.json"
+activity 1 "c|env-reply.md|2026-10-07T12:28:20Z"
+out=$(poll); rc=$?
+check "the native reply outranks an older notice" '1 blocked since' \
+  "$rc $(jq -r '.not_reviewed, .refused_by' <<<"$out" | xargs)"
+
+finish

@@ -999,27 +999,28 @@ readonly SHIP_REVIEWER_RUN='
 #           Completed; completed/stale-head for a Completed row on another
 #           commit; `none` for silence, which is how an unconnected repo answers.
 # A status comment last edited before <since> belongs to an older request.
+# `Didn.t` matches the apostrophe without one inside this single-quoted string.
 # shellcheck disable=SC2034  # read by poll-pr
 readonly SHIP_NATIVE_CODEX="$SHIP_LOGIN_NORM"'
-  def utc: sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z");
+  def utc: (. // "") | sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z");
   def is_status: (.body // "") | contains("<!-- codex-pull-request-review-summary -->");
   def is_clean: (.body // "") | test("^\\s*Codex Review: Didn.t find any major issues");
-  def mine: (.login | norm) == ($l | norm);
+  def mine: ((.login // "") | norm) == ($l | norm);
   def first_line: [splits("\n") | sub("^\\s+"; "") | sub("\\s+$"; "") | select(. != "")] | first // "";
   [.comments[] | select(mine)] as $c
   | ([$c[] | select(is_status)] | last) as $st
   | (($st.body // "") | [splits("\n") | select(test("\\*\\*Code Review\\*\\*"))] | first // "") as $row
   | (($row | capture("`(?<sha>[0-9a-f]{7,40})`").sha) // null) as $sha
   | ($st != null and ($st.updated_at | utc) >= $s) as $touched
-  | [$c[] | select(is_clean and .created_at >= $s)
+  | [$c[] | select(is_clean and (.created_at | utc) >= $s)
      | {id: (.id | tostring), login, state: "comment", submitted_at: .created_at, body}] as $clean
-  | [.pr_reactions[] | select(mine and .content == "+1" and .created_at >= $s)
+  | [.pr_reactions[] | select(mine and .content == "+1" and (.created_at | utc) >= $s)
      | {id: null, login, state: "comment", submitted_at: .created_at,
         body: "Codex Review: reacted 👍 to the PR, posting no findings."}] as $thumbs
   | (if $clean != [] then $clean else $thumbs end) as $rounds
-  | ([$c[] | select((is_status | not) and (is_clean | not) and .created_at >= $s)] | first) as $reply
+  | ([$c[] | select((is_status | not) and (is_clean | not) and (.created_at | utc) >= $s)] | first) as $reply
   | {rounds: $rounds,
-     notice: (if $reply == null then null else {line: ($reply.body | first_line), at: $reply.created_at} end),
+     notice: (if $reply == null then null else {line: (($reply.body // "") | first_line), at: ($reply.created_at | utc)} end),
      run: ({url: ($st.url // $reply.url // null), denied: null} +
        if $rounds != [] then {status: "completed", conclusion: "success"}
        elif $reply != null then {status: "completed", conclusion: "refused"}
@@ -1427,8 +1428,9 @@ ship_reviewer_by_name() {
 # trigger, which posts one round per request on whatever head it lands on.
 # `transport` is `comment` where `Request:` reads `comment <phrase>`, with
 # `phrase` its text and, under the since rule, `await_run` the block's
-# `Workflow:`, the run that separates a round still being written from one that
-# will not come, or `native codex`, whose status poll-pr reads off the PR; the run read is keyed by the --since instant, which a head-rule
+# `Workflow:`: a workflow path, whose run separates a round still being written
+# from one that will not come, or `native codex`, whose status poll-pr reads off
+# the PR instead; the run read is keyed by the --since instant, which a head-rule
 # poll has none of. `host` otherwise, the host's own request-a-reviewer call,
 # with both null. `timeout`
 # is the poll's default bound. Under the head rule it is 480, the bound the
@@ -1443,7 +1445,9 @@ ship_reviewer_by_name() {
 # host creates the
 # `issue_comment` run within seconds of the comment, and from then on the run,
 # not the constant, holds the window. A backed-up queue that outlasts it reads
-# as no run, `never-queued`; a caller expecting one passes `--timeout`.
+# as no run, `never-queued`; a caller expecting one passes `--timeout`. Under
+# `native codex` the same 60 bounds Codex's acknowledgement (👀 or a status
+# edit), which arrived within 11 s on both #500 probe PRs.
 #
 # `refusal` is null, or the line `poll-pr` exits 2 on, where the caller's
 # <since> disagrees with the rule: a --since for an on-push reviewer, or none for

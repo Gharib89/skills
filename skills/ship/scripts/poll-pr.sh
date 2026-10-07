@@ -104,8 +104,11 @@
 # round through its own GitHub integration. The poll then reads the round's
 # status off the PR (`host_pr_native_activity`, graded by `SHIP_NATIVE_CODEX`),
 # which answers on `reviewer_run` in the run's own shape, so the window holds
-# while Codex shows the request in progress and closes on the same terms; its
-# `url` is Codex's status comment and `denied` stays null. A clean round, which
+# while Codex shows the request in progress and closes on the same terms. Two
+# conclusions are Ship's own words there: `refused` beside a reply that is no
+# round, and `stale-head` for a completed status on another commit with nothing
+# delivered. Its `url` is Codex's status comment, or the reply's where there is
+# none, and `denied` stays null. A clean round, which
 # Codex posts as a comment and a 👍 with no review, joins `reviews.all` as a row
 # of its own and lands like any round. A reply by the login that is neither the
 # status nor a clean round is reported as the blocked notice, its first line
@@ -179,7 +182,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>, default the latest request of that reviewer on the host], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>]|open to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>] [--cursor <c>, the cursor a status: pending answer carried, to resume its window; no --since or --timeout; a call holds the tool at most ${SHIP_CALL_CAP}s]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>, default the latest request of that reviewer on the host], whose workflow run or native status, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>]|open to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>] [--cursor <c>, the cursor a status: pending answer carried, to resume its window; no --since or --timeout; a call holds the tool at most ${SHIP_CALL_CAP}s]"
 ship_help "$usage" "$@"
 ship_args "$usage" pr "$@"
 pr=$1; shift
@@ -389,9 +392,11 @@ while :; do
   threads=$(host_pr_threads "$pr") || threads='"unavailable"'
   blocked=null
   [ -z "$await" ] || blocked=$(host_pr_reviewer_blocked "$pr" "$await") || blocked=null
-  # A native reply that is no round is that reviewer's refusal, in words no
-  # notice pattern knows.
-  [ "$native" = null ] || [ "$blocked" != null ] || blocked=$(jq -c .notice <<<"$native")
+  # A native reply that is no round is that reviewer's refusal of this request,
+  # in words no notice pattern knows, so it outranks an older notice.
+  if [ "$native" != null ] && [ "$(jq -c .notice <<<"$native")" != null ]; then
+    blocked=$(jq -c .notice <<<"$native")
+  fi
   # A read the host refused, an outage included, is "unavailable" rather than a
   # missing run: both leave the window at the constant, and only one of them is
   # evidence about the reviewer. A read that answered with something the filter

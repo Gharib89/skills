@@ -110,7 +110,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the eight reviewer shapes ship's preflight refuses:
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the nine reviewer shapes ship's preflight refuses:
 
 - an on-request reviewer with no `Cap:`
 - a `Cap:` that is neither a number nor `None.`

@@ -35,9 +35,9 @@ Migration from Schema 2: **a block whose `Request:` is `comment <phrase>` cannot
 
 ## Schema 4
 
-A comment-transport reviewer whose round comes from no workflow run: native Codex review, which GitHub's Codex integration posts itself. Only the `Workflow:` vocabulary moves; the fourteen headings and every `Label:` line are unchanged from Schema 3.
+A comment-transport reviewer whose round comes from no workflow run: native Codex review, which the ChatGPT Codex Connector GitHub app posts itself. Only the `Workflow:` vocabulary moves; the fourteen headings and every `Label:` line are unchanged from Schema 3.
 
-- `Workflow:` gains the value `native <integration>`, beside a workflow path and `None.`, on a block whose `Request:` is `comment <phrase>`. It names the integration the round's status is read from instead of a run; `native codex` is the one ship reads, and `poll-pr` then reads Codex's acknowledgement, status comment and clean result off the PR. The value names no file, so preflight does not stat it.
-- Two refusals Schema 4 adds at preflight: a `Workflow: native <integration>` naming any integration but `codex`, and `native codex` on a block whose `Request:` is not `comment <phrase>` (the existing refusal of a `Workflow:` on such a block, which now covers this value too).
+- `Workflow:` gains the value `native <integration>`, beside a workflow path and `None.`, on a block whose `Request:` is `comment <phrase>`. It names the integration the round's status is read from instead of a run; `native codex` is the one ship reads, and `poll-pr` then reads Codex's acknowledgement, status comment and clean result off the PR. The value names no file, so preflight does not stat it. It is GitHub-only: on Azure DevOps the read always answers `unavailable`, so setup-skills drafts it only where `Host:` is `github`.
+- One refusal Schema 4 adds at preflight: a `Workflow: native <integration>` naming any integration but `codex`. The existing refusal of a `Workflow:` on a block whose `Request:` is not `comment <phrase>` covers `native codex` too.
 
 Migration from Schema 3: rewrite the `Schema:` line. No block changes, since no Schema 3 profile could carry the new value.
