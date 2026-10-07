@@ -169,7 +169,8 @@ the rails and depth checks in
 [implement.md](reference/implement.md#phase-4-triage-and-depth-checks).
 `run-file close 4` refuses until the Run file holds the
 [evidence lines](reference/implement.md#phase-4-evidence-lines) that section's
-checks leave: `Reverted-fix:`, `Dropped:`, `Near-miss:` and `Probe:`.
+checks leave: `Reverted-fix:`, `Dropped:`, `Near-miss:` and `Probe:`, the red
+and `Probe:` lines written by `run-file prove` and `run-file probe`.
 This self-review plus green CI is the review gate.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the

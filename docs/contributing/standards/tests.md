@@ -20,8 +20,11 @@ index's clock exception bounds the clock rule below.
   sound one, so the proof is the author's and belongs before the push.
   `skills/ship/scripts/revert-red.sh <test> <path>...`, Ship's mechanic, runs
   that revert and exits 0 only when the test goes red; commit the test and the
-  fix first, since it reads committed state. `run-file close 4` refuses without
-  a `Reverted-fix:` line per test file the diff adds or changes.
+  fix first, since it reads committed state. `run-file prove <test> <path>...`
+  runs it and, on that red, writes the `Reverted-fix:` line naming the head it
+  ran on; `run-file close 4` refuses without one per test file the diff adds or
+  changes, and refuses a hand-written red line or one whose test or reverted
+  path changed since that head.
 - **A negated fixture accompanies a test that asserts on prose.** Assert on a
   word the change introduced, and run the assertion once against the sentence
   with its meaning negated: it must fail. An assertion on a word the old text

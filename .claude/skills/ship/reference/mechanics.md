@@ -10,7 +10,8 @@
 - [Waits past 540 s](#waits-past-540-s)
 
 `scripts/` holds one executable per deterministic step, and not every one
-touches the host: `run-file` writes the run's own record and nothing else.
+touches the host: `run-file` writes the run's own record and nothing else,
+though the command `run-file probe` is handed runs as given and may reach one.
 `SKILL.md` says what each phase decides; this file says which mechanic the phase
 runs and how every one of them answers.
 
@@ -52,7 +53,9 @@ local-gate contract.
 | `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue` | 2, 4, 7; 9 with `--repo`, per Ship defect draft, on the human's word |
 | `dropped-lines` | 4, the removed blocks with no new home, each owed a `Dropped:` line |
-| `revert-red` | 4, a new test run with its fix reverted, each owed a `Reverted-fix:` line |
+| `revert-red` | 4, a new test run with its fix reverted, through `run-file prove` |
+| `run-file prove` | 4, per test file the diff adds or changes, writing its red `Reverted-fix:` line |
+| `run-file probe` | 4, per `Declined: <ref>: claim:` decline, writing its `Probe:` line |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr` | 6 |

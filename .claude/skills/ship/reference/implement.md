@@ -140,8 +140,10 @@ The merge summary lists every issue filed and every candidate linked.
 **Auto-triage** every finding: harden rather than rip out capability, verify
 nits against the pinned versions, reject known non-issues, fix the valid ones,
 and record a one-line disposition per finding, a decline written
-`Declined: <ref>: <reason>` (`<ref>` the text before the first `: `), the shape
-the `Probe:` check reads. Two rails on rejecting: a claim
+`Declined: <ref>: claim: <reason>` where the reason asserts how the code behaves
+("the caller already guards it") and `Declined: <ref>: judgment: <reason>`
+where it weighs scope, style or cost (`<ref>` the text before the first `: `).
+Two rails on rejecting: a claim
 about **what exists in the repo** is checked against `origin/HEAD` rather than
 the worktree, which may predate a merge; and a finding's **evidence and its
 claim are separate**, so a reviewer citing the wrong commit for a real primitive
@@ -158,36 +160,50 @@ wall time, and the reverted-fix one escapes them entirely.
 ## Phase 4 evidence lines
 
 `run-file close 4` refuses until the Run file carries these lines, each with an
-optional `- ` prefix, written as its check settles:
+optional `- ` prefix, written as its check settles. The check is a
+**completeness guard**: it holds each line to being present and in its shape,
+and the self-review keeps the judgment of what a line says. Two lines are
+**produced**, written by the `run-file` verb that ran the proof, under the Run
+file's `## Evidence`; every other line is **attested**, written by the run and
+taken at its word.
 
-- **Reverted-fix**, one per test file the diff adds or changes:
-  `Reverted-fix: <test path>: red`, once `revert-red <test> <path>...` exits 0
-  (the test went red with the fix reverted; commit the test and the fix first,
-  it reads committed state), or `Reverted-fix: <test path>: n/a: <reason>` where
-  there is no fix to revert or the test is not a shell test (`revert-red` runs
-  `.sh` tests and refuses another runner's, and a test already red before the
-  revert, since neither answers). A test file is a path with a `tests`, `test`
-  or `__tests__` component, or a basename `*.test.*`, `*.spec.*`, `*_test.*` or
-  `test_*`. Exit 1 means the test stayed green: it proves
-  nothing, so fix the test.
-- **Dropped**, one per block `dropped-lines` reports, removed lines in blocks of
-  three or more with no matching added line anywhere in the diff:
+- **Reverted-fix**, one per test file the diff adds or changes. Produced:
+  `run-file prove <test> <path>...` runs `revert-red` on them and, on its exit
+  0 (the test went red with the fix reverted), writes
+  `Reverted-fix: <test>: red at <sha> reverting <path>...`, `<sha>` the head it
+  ran on. Commit the test and the fix first: `revert-red` reads committed
+  state. The line stands while neither the test nor a listed path has changed
+  since `<sha>` in the working tree, so a fix landed after it means proving
+  again; a hand-written `red` is refused. Exit 1 means the test stayed green:
+  it proves nothing, so fix the test. Attested:
+  `Reverted-fix: <test>: n/a: <reason>` where there is no fix to revert or the
+  test is not a shell test (`revert-red` runs `.sh` tests and refuses another
+  runner's, and a test already red before the revert, since neither answers).
+  A test file is a path with a `tests`, `test` or `__tests__` component, or a
+  basename `*.test.*`, `*.spec.*`, `*_test.*` or `test_*`.
+- **Dropped**, attested, one per block `dropped-lines` reports, removed lines in
+  blocks of three or more with no matching added line anywhere in the diff:
   `Dropped: <file>:<line> re-homed at <path>`, or
   `Dropped: <file>:<line> dropped on purpose: <why>`.
-- **Near-miss**, for each `*.sh` file whose added lines hold a new pattern
-  matcher (a `=~`, a `grep` or an `awk` or `sed` regex), a line per kind, the
-  path of an existing test holding a case that must be refused:
-  `Near-miss: <script>: <kind>: <test path>`. The kinds are `partial-token` (the
-  token inside a longer word), `quoted`, `indented`, `unbalanced` (an opener
-  with no closer) and `unreadable` (the input the matcher reads cannot be read).
-  A kind with no case says why, `Near-miss: <script>: <kind>: n/a: <reason>`,
-  and one `Near-miss: <script>: n/a: <reason>` covers all five.
-- **Probe**, one per self-review decline `Declined: <ref>: <reason>` whose
-  reason claims behaviour (already handled, already covered, already guarded,
-  can't happen, cannot happen, can not happen, never happens, closes at merge,
-  in any case): `Probe: <ref>: <command> => <output>`, the command
-  you ran and the output it printed. A decline that claims no
-  behaviour needs none.
+- **Near-miss**, attested, for each `*.sh` file whose added lines hold a new
+  pattern matcher (a `=~`, a `grep` or an `awk` or `sed` regex), a line per
+  kind, the path of an existing test holding a case that must be refused:
+  `Near-miss: <script>: <kind>: <test path>`. The kinds are `partial-token`
+  (the token inside a longer word), `quoted`, `indented`, `unbalanced` (an
+  opener with no closer) and `unreadable` (the input the matcher reads cannot
+  be read). A kind with no case says why,
+  `Near-miss: <script>: <kind>: n/a: <reason>`, and one
+  `Near-miss: <script>: n/a: <reason>` covers all five.
+- **Probe**, produced, one per `Declined: <ref>: claim: <reason>`:
+  `run-file probe <ref> --issue <issue> -- <command>...` runs the command as
+  argv at the checkout top, stdin from `/dev/null`, and writes
+  `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, whatever
+  the command's exit. A `judgment:` decline needs none, and a decline carrying
+  neither kind is refused. A `Probe:` line in any other shape is refused
+  wherever it stands.
+
+`close 7`'s `Round:` and `Stop:` lines ([review-loop.md](review-loop.md#the-exit))
+are attested the same way.
 
 ## Consult current docs
 

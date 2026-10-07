@@ -69,14 +69,53 @@ run4; held=$(cat "$rf")
 close 4
 admitted "a diff with nothing in it closes with no evidence"
 
+prove_hint='run `run-file prove tests/new.test.sh <path>...` or add `Reverted-fix: tests/new.test.sh: n/a: <reason>`'
 reset; put tests/new.test.sh 'echo new'
 run4; held=$(cat "$rf"); close 4
-refused "an added test file with no Reverted-fix line" 'no Reverted-fix line for tests/new.test.sh: add `Reverted-fix: tests/new.test.sh: red` or `Reverted-fix: tests/new.test.sh: n/a: <reason>`'
-check "close 4 names the phase it refused" 'phase 4 cannot close: no Reverted-fix line for tests/new.test.sh: add `Reverted-fix: tests/new.test.sh: red` or `Reverted-fix: tests/new.test.sh: n/a: <reason>`' "$err"
+refused "an added test file with no Reverted-fix line" "no Reverted-fix line for tests/new.test.sh: $prove_hint"
+check "close 4 names the phase it refused" "phase 4 cannot close: no Reverted-fix line for tests/new.test.sh: $prove_hint" "$err"
 
-add 'Reverted-fix: tests/new.test.sh: red'; close 4
-admitted "a red line for the added test file"
+# A red line is the one `run-file prove` writes: the head revert-red ran on and
+# the paths it reverted, read back against the working tree.
+reset; put tests/new.test.sh 'echo new'; put src/x.txt 'fixed'; g add -A; g commit -q -m 'test and fix'
+at=$(g rev-parse HEAD)
+run4; add "Reverted-fix: tests/new.test.sh: red at $at reverting src/x.txt"; close 4
+admitted "a produced red line for the added test file"
+run4; add "- Reverted-fix: tests/new.test.sh: red at ${at:0:12} reverting src/x.txt keep.txt"; close 4
+admitted "a bulleted red line at an abbreviated head, reverting two paths"
 
+put notes.txt 'a later change touching neither'; g add -A; g commit -q -m later
+run4; add "Reverted-fix: tests/new.test.sh: red at $at reverting src/x.txt"; close 4
+admitted "a later commit touching neither the test nor a reverted path keeps the line"
+
+stale_hint="re-run \`run-file prove tests/new.test.sh <path>...\`"
+put tests/new.test.sh 'echo edited'
+run4; add "Reverted-fix: tests/new.test.sh: red at $at reverting src/x.txt"; held=$(cat "$rf"); close 4
+refused "a red line whose test changed in the working tree since its head" \
+  "Reverted-fix line for tests/new.test.sh is stale: the test or a path it reverted changed since $at: $stale_hint"
+g checkout -q -- tests/new.test.sh
+put src/x.txt 'fixed again'; g add -A; g commit -q -m 'fix again'
+run4; add "Reverted-fix: tests/new.test.sh: red at $at reverting src/x.txt"; held=$(cat "$rf"); close 4
+refused "a red line whose reverted path changed in a later commit" 'Reverted-fix line for tests/new.test.sh is stale'
+run4; add "Reverted-fix: tests/new.test.sh: red at $at reverting keep.txt"; close 4
+admitted "a line reverting another path that is unchanged since its head"
+put src/new.txt 'untracked'
+run4; add "Reverted-fix: tests/new.test.sh: red at $at reverting src/new.txt"; held=$(cat "$rf"); close 4
+refused "a reverted path untracked in the working tree, absent at its head" 'Reverted-fix line for tests/new.test.sh is stale'
+rm "$work/src/new.txt"
+run4; add 'Reverted-fix: tests/new.test.sh: red at 0123456789abcdef reverting src/x.txt'; held=$(cat "$rf"); close 4
+refused "a red line naming a head that is no commit here" \
+  'Reverted-fix line for tests/new.test.sh names 0123456789abcdef, which is no commit here: run `run-file prove tests/new.test.sh <path>...`'
+
+# The hand-written shapes the earlier version accepted are each refused, naming prove.
+old_hint='Reverted-fix line for tests/new.test.sh is hand-written: run `run-file prove tests/new.test.sh <path>...`, which writes `red at <sha> reverting <path>...`'
+for line in 'red' 'red: went red with lib.sh reverted' "red at $at" "red at $at reverting " "red at nothex reverting src/x.txt"; do
+  run4; add "Reverted-fix: tests/new.test.sh: $line"; held=$(cat "$rf"); close 4
+  refused "the hand-written red line '$line'" "$old_hint"
+done
+reset
+
+reset; put tests/new.test.sh 'echo new'
 run4; add '- Reverted-fix: tests/new.test.sh: n/a: pure docs fixture'; close 4
 admitted "a bulleted n/a line with a reason"
 
@@ -87,9 +126,9 @@ run4; add 'Reverted-fix: tests/new.test.sh: n/a:   '; held=$(cat "$rf"); close 4
 refused "an n/a line with a blank reason" 'no Reverted-fix line for tests/new.test.sh'
 run4; add 'Reverted-fix: tests/new.test.sh: maybe'; held=$(cat "$rf"); close 4
 refused "a Reverted-fix word outside red and n/a" 'no Reverted-fix line for tests/new.test.sh'
-run4; add 'Reverted-fix: tests/other.test.sh: red'; held=$(cat "$rf"); close 4
+run4; add 'Reverted-fix: tests/other.test.sh: n/a: elsewhere'; held=$(cat "$rf"); close 4
 refused "a Reverted-fix line for another test file" 'no Reverted-fix line for tests/new.test.sh'
-run4; add '  Reverted-fix: tests/new.test.sh: red'; held=$(cat "$rf"); close 4
+run4; add '  Reverted-fix: tests/new.test.sh: n/a: indented'; held=$(cat "$rf"); close 4
 refused "an indented Reverted-fix line (matched at line start)" 'no Reverted-fix line for tests/new.test.sh'
 
 # What counts as a test file, and as a change.
@@ -176,13 +215,13 @@ put tests/m.test.sh 'echo t'
 run4
 add 'Near-miss: scripts/m.sh: partial-token: tests/m.test.sh' 'Near-miss: scripts/m.sh: quoted: tests/m.test.sh' \
     'Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unbalanced: tests/m.test.sh' \
-    'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: red'
+    'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
 close 4
 admitted "five kinds each naming a test that exists"
 
 run4
 add 'Near-miss: scripts/m.sh: partial-token: tests/m.test.sh' 'Near-miss: scripts/m.sh: quoted: n/a: no comments are parsed' \
-    '- Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: red'
+    '- Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
 held=$(cat "$rf"); close 4
 refused "a table missing the unbalanced kind" 'scripts/m.sh has a new pattern matcher and no near-miss line for: unbalanced:'
 check "the kinds it has are not named as missing" no "$(has 'for: partial-token' "$err")"
@@ -190,7 +229,7 @@ check "the kinds it has are not named as missing" no "$(has 'for: partial-token'
 run4
 add 'Near-miss: scripts/m.sh: partial-token: tests/nope.test.sh' 'Near-miss: scripts/m.sh: quoted: n/a:' \
     'Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unbalanced: tests/m.test.sh' \
-    'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: red'
+    'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
 held=$(cat "$rf"); close 4
 refused "a row naming a test that is not a file, and an n/a with no reason" "no near-miss line for: partial-token, quoted:"
 
@@ -200,21 +239,21 @@ for bad in "$work/tests/m.test.sh" "../$(basename "$work")/tests/m.test.sh" "tes
   run4
   add "Near-miss: scripts/m.sh: partial-token: $bad" 'Near-miss: scripts/m.sh: quoted: tests/m.test.sh' \
       'Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unbalanced: tests/m.test.sh' \
-      'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: red'
+      'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
   held=$(cat "$rf"); close 4
   refused "a near-miss test path of $bad" 'no near-miss line for: partial-token:'
   check "the one bad kind is the only one named for $bad" no "$(has 'quoted' "${err#*no near-miss line for: }")"
 done
 
 run4
-add 'Near-miss: scripts/m.sh: n/a: only a fixed string is searched, no pattern grammar' 'Reverted-fix: tests/m.test.sh: red'
+add 'Near-miss: scripts/m.sh: n/a: only a fixed string is searched, no pattern grammar' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
 close 4
 admitted "one n/a line for the whole script"
 run4
-add 'Near-miss: scripts/m.sh: n/a:' 'Reverted-fix: tests/m.test.sh: red'; held=$(cat "$rf"); close 4
+add 'Near-miss: scripts/m.sh: n/a:' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'; held=$(cat "$rf"); close 4
 refused "a whole-script n/a with no reason" 'scripts/m.sh has a new pattern matcher'
 run4
-add 'Near-miss: scripts/other.sh: n/a: elsewhere' 'Reverted-fix: tests/m.test.sh: red'; held=$(cat "$rf"); close 4
+add 'Near-miss: scripts/other.sh: n/a: elsewhere' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'; held=$(cat "$rf"); close 4
 refused "an n/a line for another script" 'scripts/m.sh has a new pattern matcher'
 
 # What counts as a pattern matcher, and as new.
@@ -239,7 +278,7 @@ run4; held=$(cat "$rf"); close 4
 refused "a matcher among the added lines of a changed script" 'scripts/old.sh has a new pattern matcher'
 
 reset; put tests/new.test.sh 'grep -q a b'; put docs/x.md 'grep -q a b'
-run4; add 'Reverted-fix: tests/new.test.sh: red'; close 4
+run4; add 'Reverted-fix: tests/new.test.sh: n/a: a fixture'; close 4
 admitted "a grep in a test script or a non-script needs no near-miss table"
 
 reset; put .claude/skills/x/scripts/m.sh 'grep -q foo "$f"'
@@ -253,44 +292,56 @@ reset
 
 # --- close 4: declined findings and their probes ---------------------------------
 
-reset
-run4; add 'Declined: copilot r1 t2: the guard is already handled in the caller'; held=$(cat "$rf"); close 4
-refused "a decline claiming behaviour with no probe" 'Declined: copilot r1 t2 claims behaviour and has no probe: add `Probe: copilot r1 t2: <command> => <output>`'
+# A probe line is the one `run-file probe` writes: the command, its exit status
+# and the head it ran on.
+sha=0123456789abcdef0123456789abcdef01234567
+run4; add 'Declined: copilot r1 t2: claim: the guard is already in the caller'; held=$(cat "$rf"); close 4
+refused "a claim with no probe" 'Declined: copilot r1 t2 is a claim and has no probe: run `run-file probe copilot r1 t2 <where> -- <command>...`'
 
-run4; add 'Declined: C1: already handled upstream' 'Probe: C1: bash x.sh </dev/null => exit 2, usage printed'; close 4
-admitted "a behaviour decline with a probe of the same ref"
+run4; add 'Declined: C1: claim: the caller guards it' "Probe: C1: bash x.sh => exit 2 at $sha: usage printed"; close 4
+admitted "a claim with a produced probe of the same ref"
+run4; add 'Declined: C1: claim: the caller guards it' "- Probe: C1: bash x.sh => exit 0 at ${sha:0:7}: (no output)"; close 4
+admitted "a bulleted produced probe at an abbreviated head"
 
-run4; add 'Declined: C1: already handled upstream' 'Probe: C2: bash x.sh => exit 2'; held=$(cat "$rf"); close 4
-refused "a probe for another ref" 'Declined: C1 claims behaviour and has no probe'
-run4; add 'Declined: C1: already handled upstream' 'Probe: C1: bash x.sh =>'; held=$(cat "$rf"); close 4
-refused "a probe with no output" 'Declined: C1 claims behaviour and has no probe'
-run4; add 'Declined: C1: already handled upstream' 'Probe: C1:  => exit 2'; held=$(cat "$rf"); close 4
-refused "a probe with no command" 'Declined: C1 claims behaviour and has no probe'
-run4; add 'Declined: C1: already handled upstream' 'Probe: C1: bash x.sh'; held=$(cat "$rf"); close 4
-refused "a probe with no arrow" 'Declined: C1 claims behaviour and has no probe'
+run4; add 'Declined: copilot:r1: claim: the caller guards it' "Probe: copilot:r1: bash x.sh => exit 2 at $sha: x"; close 4
+admitted "a ref holding a colon with no space after it"
+run4; add 'Declined: C1: claim: the caller guards it' "Probe: C2: bash x.sh => exit 2 at $sha: x"; held=$(cat "$rf"); close 4
+refused "a probe for another ref" 'Declined: C1 is a claim and has no probe'
 
-for phrase in 'already handled' 'ALREADY COVERED' 'Already guarded' "can't happen" 'cannot happen' 'can not happen' 'never happens' 'closes at merge' 'handled in any case'; do
-  run4; add "Declined: R9: this $phrase here"; held=$(cat "$rf"); close 4
-  refused "the claim '$phrase'" 'Declined: R9 claims behaviour and has no probe'
+# The free-text probe the earlier version accepted is refused wherever it stands,
+# naming the mechanic that writes the line now.
+for line in 'bash x.sh => exit 2, usage printed' 'bash x.sh =>' ' => exit 2' 'bash x.sh' "bash x.sh => exit two at $sha: x" 'bash x.sh => exit 2 at HEAD: x' "bash x.sh => exit 2 at $sha"; do
+  run4; add 'Declined: C1: claim: the caller guards it' "Probe: C1: $line"; held=$(cat "$rf"); close 4
+  refused "the free-text probe '$line'" 'Probe: C1 is not a line `run-file probe` wrote: re-run it with `run-file probe C1 <where> -- <command>...`'
+  check "the claim it was meant to back is unbacked too: '$line'" yes "$(has 'Declined: C1 is a claim and has no probe' "$err")"
+done
+run4; add 'Declined: C1: judgment: out of scope' 'Probe: C9: bash x.sh => exit 0'; held=$(cat "$rf"); close 4
+refused "a free-text probe backing no claim" 'Probe: C9 is not a line `run-file probe` wrote'
+
+# The kind is a field, never a phrase in the reason.
+run4; add 'Declined: C1: judgment: a style preference, not the repo house style' 'Declined: C2: judgment: this is already handled in any case'; close 4
+admitted "a judgment decline needs no probe, an old claim phrase in its reason included"
+
+both='write `Declined: C1: claim: <reason>`, which needs `run-file probe C1 <where> -- <command>...`, or `Declined: C1: judgment: <reason>`'
+for line in 'Declined: C1: a style preference' 'Declined: C1: already handled upstream' 'Declined: C1' 'Declined: C1: claim:' 'Declined: C1: judgment:   ' 'Declined: C1: Claim: upper case'; do
+  run4; add "$line"; held=$(cat "$rf"); close 4
+  refused "the unmarked decline '$line'" "Declined: C1 carries neither \`claim:\` nor \`judgment:\` with a reason: $both"
 done
 
-run4; add 'Declined: C1: a style preference, not the repo house style' 'Declined: C2: out of scope for this ticket'; close 4
-admitted "a decline that claims no behaviour needs no probe"
-
-run4; add 'Declined: C1: already handled' 'Declined: C2: cannot happen' 'Probe: C2: x => y'; held=$(cat "$rf"); close 4
-refused "two declines, one probed" 'Declined: C1 claims behaviour'
+run4; add 'Declined: C1: claim: guarded' 'Declined: C2: claim: guarded' "Probe: C2: x => exit 0 at $sha: y"; held=$(cat "$rf"); close 4
+refused "two claims, one probed" 'Declined: C1 is a claim'
 check "the probed ref is not named" no "$(has 'Declined: C2' "$err")"
 
 # --- close 4: every gap in one message, then the single fix ----------------------
 
 reset; put tests/new.test.sh 'echo new'; put scripts/m.sh 'grep -q foo "$f"'; blocks 'src/a.sh:12'
-run4; add 'Declined: C1: cannot happen'; held=$(cat "$rf"); close 4
+run4; add 'Declined: C1: claim: cannot happen'; held=$(cat "$rf"); close 4
 refused "all four gaps at once" 'no Reverted-fix line for tests/new.test.sh'
-for frag in 'no disposition for removed block src/a.sh:12' 'scripts/m.sh has a new pattern matcher' 'Declined: C1 claims behaviour'; do
+for frag in 'no disposition for removed block src/a.sh:12' 'scripts/m.sh has a new pattern matcher' 'Declined: C1 is a claim'; do
   check "the one message also names: $frag" yes "$(has "$frag" "$err")"
 done
-add 'Reverted-fix: tests/new.test.sh: red' 'Dropped: src/a.sh:12 dropped on purpose: replaced' \
-    'Near-miss: scripts/m.sh: n/a: fixed-string search' 'Probe: C1: bash c.sh => exit 0'
+add 'Reverted-fix: tests/new.test.sh: n/a: a fixture' 'Dropped: src/a.sh:12 dropped on purpose: replaced' \
+    'Near-miss: scripts/m.sh: n/a: fixed-string search' "Probe: C1: bash c.sh => exit 0 at $sha: ok"
 close 4
 admitted "close 4 once every item is present"
 check "the closed line carries a range" 1 "$(grep -c '^- \[x\] 4 · .*([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9])$' "$rf")"
@@ -300,7 +351,7 @@ reset
 reset; put tests/new.test.sh 'echo new'
 run4; held=$(cat "$rf"); call "$work" next 5 --file "$rf"
 refused "next 5 over phase 4" 'no Reverted-fix line for tests/new.test.sh'
-add 'Reverted-fix: tests/new.test.sh: red'; call "$work" next 5 --file "$rf"
+add 'Reverted-fix: tests/new.test.sh: n/a: a fixture'; call "$work" next 5 --file "$rf"
 check_rc "next 5 over phase 4 once the line is present" 0 "$status"
 reset
 
@@ -328,16 +379,9 @@ check "and the origin is never asked to refresh its HEAD" "" "$(cat "$tmp/set-he
 git -C "$bare" remote remove origin
 
 # A grep that fails (exit 2, as against 1 for no match) is a failed read, never a
-# clean answer: the decline reader and the untracked-file lookup both exit 2.
-printf '#!/bin/sh\ncase "$*" in *"already handled"*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
-chmod +x "$shim/grep"
-reset
-run4; add 'Declined: C1: already handled upstream' 'Probe: C1: bash x.sh </dev/null => exit 2'; held=$(cat "$rf")
-PATH=$shim:$PATH call "$work" close 4 --file "$rf"
-check_rc "a grep that fails while reading a decline is tooling" 2 "$status"
-check "and says it is the decline's reason" yes "$(has 'cannot read the reason of Declined: C1' "$err")"
-check "and the record is as it was" "$held" "$(cat "$rf")"
+# clean answer: the untracked-file lookup exits 2.
 printf '#!/bin/sh\ncase "$*" in *-Fxq*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
+chmod +x "$shim/grep"
 reset; put scripts/m.sh 'grep -q foo "$f"'
 run4; held=$(cat "$rf")
 PATH=$shim:$PATH call "$work" close 4 --file "$rf"
@@ -349,7 +393,7 @@ reset
 
 # A phase that is not open is refused before any evidence is read.
 reset; put tests/new.test.sh 'echo new'
-run4; add 'Reverted-fix: tests/new.test.sh: red'; close 4; close 4
+run4; add 'Reverted-fix: tests/new.test.sh: n/a: a fixture'; close 4; close 4
 check_rc "closing phase 4 twice" 1 "$status"
 check "the second close is refused as not open" 'phase 4 is not open' "$err"
 reset
