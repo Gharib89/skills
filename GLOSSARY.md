@@ -67,8 +67,12 @@ The container any cloud session runs in, attended or unattended, reaching hosts 
 _Avoid_: cloud env, default env, container
 
 **Merge gate**:
-The hard stop at the end of a Ship run where a human reads the summary and says merge or not. Ship merges on that word alone, and never on its own.
+The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate` authorizes a merge when `run-file gate clean` confirms every recorded condition. An unattended run posts to the PR and returns.
 _Avoid_: approval, sign-off, review
+
+**Clean gate**:
+The recorded conditions permitting an attended run to merge without a reply when its profile opts in: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree (a fallback answers for its primary), every applicable Verification passed or deferred to a green CI leg, and no override, Ship defect or Tracker draft. Deviations alone do not hold it.
+_Avoid_: auto-merge (a host flag that can merge before Ship finishes its reviews)
 
 **Small lane**:
 The collapsed form of a Ship run for a change that is narrow, locally provable, invisible to the public surface and inside the size cap, which is counted on the diff, never estimated; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the test proving the change, or the full gate where more than one test proves it), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.

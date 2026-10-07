@@ -4,7 +4,7 @@ One `## Schema N` entry per number, oldest first, each listing the structural ch
 
 Bump rule: a ship PR that changes what the profile must contain (a heading or `Label:` line added, renamed or removed; a `Label:` vocabulary changed) adds an entry here, moves `metadata.profile-schema` in `skills/ship/SKILL.md` and the `Schema:` line in [ship-profile.md](./ship-profile.md), and is graded a ship major. A PR that edits `ship-profile.md`'s structure without an entry here is incomplete.
 
-Optional lines: a line `ship` accepts without expecting it takes no entry and no bump. A `### <verification>` block under `## Verification` may carry `Timebox: <n> minutes` or `Timebox: <n> min`, after `Claims to probe:`, bounding that verification's run; a block without it has no bound, and `ship` reads a profile either way.
+Optional lines: a line `ship` accepts without expecting it takes no entry and no bump. Under `## PR`, `Merge: on-clean-gate` opts an attended run into merging when its recorded gate is clean; `Merge: Default.` or an absent line keeps the human stop. A re-run preserves an existing `Merge:` choice and leaves an absent line absent, including in new profiles. A `### <verification>` block under `## Verification` may carry `Timebox: <n> minutes` or `Timebox: <n> min`, after `Claims to probe:`, bounding that verification's run; a block without it has no bound, and `ship` reads a profile either way.
 
 ## Schema 1
 

@@ -8,8 +8,8 @@
 - [Filing a Ship defect](#filing-a-ship-defect)
 - [Unattended: post to the PR, then return](#unattended-post-to-the-pr-then-return)
 
-The one guaranteed human stop. Your job is to make the call a ten-second yes or
-no by laying out everything the human would want to check.
+The human stop by default; an attended profile can opt into merging on a
+clean gate. Lay out everything the human would want to check in either case.
 
 **Write it uncompressed.** A session-wide output style or personal brevity rule
 does **not** apply to this summary. It is the evidence a human approves an
@@ -66,10 +66,26 @@ Ship defects: <none | one block per defect:>
     draft for Gharib89/skills: <title> · <draft path>
 Direct reads: <none | <call> · <why>, ...>     (from the Run file's ## Direct reads)
 Timing:      <`run-file timing`'s `row`, verbatim>
+[Clean gate held by: <each held_by reason>]     (opted in, clean: false)
 
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 (with a Ship defect draft: Reply "file defects" to file the drafts at Gharib89/skills.)
 ```
+
+On a clean gate the summary ends with exactly the line below in place of the
+two reply lines above, written once `merge` answers `merged: true`:
+
+```
+Merged on a clean gate: <PR url>
+```
+
+A posted message cannot be edited, so the run posts the summary through the
+`Timing:` row with no reply line, runs the merge sequence, then posts that line
+as the last line of the closing message. In an opted-in run the reply lines
+appear only on `clean: false` or when `merge` refuses, the refusal named under
+them. A step after the merge that fails (a tracker write, cleanup) is reported
+beneath the merged line; report a completed merge only after the mechanic
+confirms it.
 
 **Every row is grounded in a result from this run**: `Local gate:` is the
 gate's `gates` object from the verdict the Run file recorded, `CI:` is
@@ -92,7 +108,9 @@ rather than in Ship is a **profile defect**: an adjacent find of this repo,
 filed here through phase 2's dispositions and listed under `Issues filed`, not
 on this row. Where this repo is the source repo, a Ship defect is an adjacent
 find already (its profile's `## Triage`) and the row names its number instead of
-a draft.
+a draft. In either case, record `Ship-defect: <detail>` in the Run file when
+the defect is met, even if it is fixed or filed during the run: a clean gate
+requires that no Ship defect was met.
 
 **Counts are measurements; tallies are records.** A count that measures the
 tree, here or in the PR body, carries the command that produced it, run on the
@@ -150,11 +168,36 @@ command a human runs after merging, from a file they save the draft to,
 
 ## Attended: post, then wait
 
-Post the summary in the conversation and **wait**. Merge only on an explicit
-"merge", and the word is exact: a typo, a synonym, or approval of some other
-part of the summary is asked back, because merging is the step no later phase
-undoes. Never an auto-merge flag either: it can merge the instant CI is green,
-before a reviewer lands.
+Read the optional `Merge:` line under the profile's `## PR`. An absent line
+or `Merge: Default.` means post the summary in the conversation and **wait**
+for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
+means evaluate the clean gate below. Any other value holds for the human as
+a profile error. The unattended branch never evaluates this option.
+
+For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
+and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
+(`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
+`read-pr`; the mechanic answers `{clean, held_by}` and writes nothing. It
+requires the local gate at that head with every gate `pass` or `deferred-to-ci`
+(held while a CI check outside `Legs:` is not green, since a deferral names no
+leg), every profile CI leg green at that head, every Verification `pass` or
+`n/a` (inapplicable), or `deferred-to-ci` with its `Also proven by CI:` leg
+green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
+recorded round. A fallback that stopped so answers for a primary that was not
+reviewed; a fallback skipped because its primary reviewed adds no condition. A
+loop cut short by `Cap:`, the small lane or `auto-once` holds until its last
+round changed no file. Any nonblank `Override:` other than `none` or `None.`,
+any `Ship-defect:` record or `defect-*.md` draft, and any `tracker-*.md` draft
+holds the gate (`*.base.md` files are saved originals, not drafts). Deviations
+alone do not hold it. With no expected CI legs, `no-checks` is clean only when
+the profile declares `Legs: None.` and `No-checks legal: yes`, at the same head.
+
+On `clean: true`, post the summary through the `Timing:` row with no reply line,
+then run the merge sequence below without waiting for a reply. On `clean:
+false`, post it with `Clean gate held by: <each held_by reason>` and the usual
+reply line, then wait for "merge". Exit 2 is an unreadable decision: name the
+error and wait. An auto-merge flag is never used: authorization is the recorded
+gate, after reviewers have finished.
 
 **The gate's verdict is cited, not re-run, while it still describes the PR.**
 Phase 5 records each verdict with `run-file gate record` against the head it ran
@@ -169,20 +212,22 @@ or `at <sha>, behind unknown` when `behind` is `null`. `non_leg_failing` on the
 and an `unlisted` check is profile drift for the human to add to `Legs:` or
 remove.
 
-**On approval**, from the worktree, `merge <pr> <issue|none> [--worktree
-<path>]`. Its header carries what it does and what each refusal protects
-against: `pr-closed: <state>` and `stale-base: behind <n> on <base>` merge
-nothing (for the second, merge the base in, re-run the local gate and come back
-to this gate); otherwise it squash-merges with the PR title as the subject,
-closes the issue, deletes the remote branch, fast-forwards the local base, and
-releases the claim and strips `ready-for-agent`, so a reopened issue goes back
-through triage. Then each drafted tracker section. Every Ship defect draft is
-settled before `cleanup`, which deletes the directory the drafts live in, so
-ask for the word on any draft still open. Then `run-file close 9` and set the
-task to the returned `mirror`, and last `cleanup <issue|none>`, which removes
-the worktree, force-deletes the local branch, and removes the Run file and the
-run's Scratch directory, the record's job done; `cleanup none` leaves both in
-place, and a run that stopped before this gate left its record.
+**On explicit approval or a clean opted-in gate**, from the worktree, `merge
+<pr> <issue|none> [--worktree <path>]`. Its header carries what it does and
+what each refusal protects against: `pr-closed: <state>` and `stale-base:
+behind <n> on <base>` merge nothing and stop at this gate, including after a
+clean-gate decision (for the second, merge the base in, re-run the local gate
+and come back to this gate); otherwise it squash-merges with the PR title as
+the subject, closes the issue, deletes the remote branch, fast-forwards the
+local base, and releases the claim and strips `ready-for-agent`, so a reopened
+issue goes back through triage. Then each drafted tracker section. Every Ship
+defect draft is settled before `cleanup`, which deletes the directory the
+drafts live in, so ask for the word on any draft still open. Then `run-file
+close 9` and set the task to the returned `mirror`, and last `cleanup
+<issue|none>`, which removes the worktree, force-deletes the local branch, and
+removes the Run file and the run's Scratch directory, the record's job done;
+`cleanup none` leaves both in place, and a run that stopped before this gate
+left its record.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this

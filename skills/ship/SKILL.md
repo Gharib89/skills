@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Drive one tracker issue to a merge-ready PR in a single run, stopping only at the human merge gate. Use when the user wants to ship an issue, or to run the unattended lane.
+description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended]"
 metadata:
   version: 0.18.0
@@ -10,8 +10,9 @@ metadata:
 
 # ship
 
-Drive one issue from nothing to a **merge-ready PR**, hands-off, stopping only
-at the merge gate, so the human runs `/ship <issue>`, walks away, and comes back
+Drive one issue from nothing to a **merge-ready PR**, hands-off, reaching
+the merge gate (or merging on a clean gate where the profile opts in), so the
+human runs `/ship <issue>`, walks away, and comes back
 to a PR implemented test-first, verified against the real thing the repo
 integrates with, self-reviewed, reviewed by every reviewer the repo names,
 CI-green, and summarized for a ten-second approve. This skill is **generic**: it
@@ -229,9 +230,10 @@ review quota, so push when the tree changed.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
 the summary's shape, what `merge` does, its two refusals and the tracker drafts.
-**Hard stop.** Write the summary per that file, uncompressed. Attended: post it
-in the conversation and wait for an explicit "merge": the word is exact, a near
-miss is asked back. On approval run `merge <pr> <issue|none> [--worktree
+Write the summary per that file, uncompressed. Attended: follow its
+`Merge:` branch, waiting for an explicit "merge" by default, or merging when
+`Merge: on-clean-gate` and `run-file gate clean` answers `clean: true`.
+On either authorization run `merge <pr> <issue|none> [--worktree
 <path>]`, `update-issue-body` per tracker draft, settle each Ship defect draft
 (filed on its own word only), `run-file close 9`, then `cleanup <issue|none>`,
 last, as it removes the Run file; a nonzero exit, or a `false` in `merge`'s or
@@ -245,9 +247,10 @@ with no `false`; unattended, `comment-pr` posted.
 
 ## The stops
 
-One guaranteed stop, the **merge gate**: merging is effectively irreversible, so
-a human says merge and ship merges on that word alone, never on its own or
-through an auto-merge flag. Two conditional pauses in an attended run: the
+The **merge gate** stops for the human by default. An attended run with
+`Merge: on-clean-gate` merges on the clean-gate verdict; every other attended
+run waits for the exact word "merge". The unattended lane posts and returns.
+Two conditional pauses in an attended run: the
 `ambiguous` stop (phase 1) and a **hand-off** (phase 3). Everything else,
 triaging your own findings, fixing, re-running, is autonomous. Two guardrails
 hold around that:

@@ -170,13 +170,18 @@ Round: <reviewer> <n>: <text>
 Stop: <reviewer>: <reason>
 ```
 
-`<text>` is the round's outcome in a line. `<reason>` is one of `cap` (`Cap:`
-spent), `tree unchanged` (a round's dispositions changed no file, so a further
-round would read the same tree), `small lane` (the lane's one requested round),
-`auto-once` (the reviewer fires once, on PR open) or `not reviewed` (no round
-was dispositioned: none landed, a fallback was not invoked because its primary
-reviewed, or a round landed whose threads could not be read, which keeps its
-`Round:` line too).
+`<text>` is the round's outcome in a line. When the last fully read and
+dispositioned round changed no file, record `tree unchanged` even at `Cap:`,
+in the small lane or for an `auto-once` trigger. Otherwise
+`<reason>` is one of `cap` (`Cap:` spent), `tree unchanged` (a round's
+dispositions changed no file, so a further round would read the same tree),
+`small lane` (the lane's one requested round), `auto-once` (the reviewer fires
+once, on PR open) or `not reviewed` (no round was dispositioned: none landed,
+a fallback was not invoked because its primary reviewed, or a round landed
+whose threads could not be read, which keeps its `Round:` line too). A
+declined finding from a `Gating: yes` reviewer also leaves `Override:
+<reviewer>: <finding>, <evidence>` in the Run file, so the clean-gate decision
+reads the same override the human sees in the summary.
 
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each
