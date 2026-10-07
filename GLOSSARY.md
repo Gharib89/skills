@@ -83,7 +83,7 @@ An attended stop where Ship prints the exact command and setup, waits for the hu
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
 
 **Unmet criterion**:
-An acceptance criterion asking for a host action no mechanic performs, which an unattended run leaves verbatim in the issue and lists on the merge summary with the action a human must take. Merging needs the human's explicit waiver of each, beside the merge word. An attended run asks before building instead. Not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
+An acceptance criterion asking for a host action no mechanic performs, which a run leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Merging needs the human's explicit waiver of each, beside the merge word. Not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
 _Avoid_: rewritten criterion, descoped criterion
 
 **Host**:
