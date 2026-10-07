@@ -169,9 +169,10 @@ For an opted-in attended run, save the final `ci-wait` JSON beside the Run
 file and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
 (`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
 `read-pr`; the mechanic answers `{clean, held_by}` and writes nothing. It
-requires the local gate at that head with every gate `pass` or `deferred-to-ci` (the green CI legs below cover the latter), every profile
-CI leg green at that head, every Verification `pass` or `n/a` (inapplicable),
-or `deferred-to-ci` with its `Also proven by CI:` leg green, and every reviewer
+requires the local gate at that head with every gate `pass` or
+`deferred-to-ci` (the green CI legs below cover the latter), every profile CI
+leg green at that head, every Verification `pass` or `n/a` (inapplicable), or
+`deferred-to-ci` with its `Also proven by CI:` leg green, and every reviewer
 converged (`Stop: tree unchanged` with a recorded round). A converged fallback
 answers for a primary that was not reviewed; a fallback skipped because its
 primary reviewed adds no condition. A loop cut short by `Cap:`, the small lane
