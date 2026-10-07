@@ -10,8 +10,9 @@
 - [Waits past 540 s](#waits-past-540-s)
 
 `scripts/` holds one executable per deterministic step, and not every one
-touches the host: `run-file` writes the run's own record and nothing else,
-though the command `run-file probe` is handed runs as given and may reach one.
+touches the host: `run-file` writes only the run's own record, except through
+the command handed to `run-file probe`, which runs as given and may reach a host
+or write elsewhere.
 `SKILL.md` says what each phase decides; this file says which mechanic the phase
 runs and how every one of them answers.
 

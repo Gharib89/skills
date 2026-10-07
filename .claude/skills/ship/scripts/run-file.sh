@@ -73,9 +73,11 @@
 # that each line is present and in its shape, and the self-review keeps the
 # judgment of what a line says. Two lines are produced, written by the verb that
 # ran the proof: the red `Reverted-fix:` line by `prove` and the `Probe:` line by
-# `probe`. Every other line is attested, written by the run and taken at its
-# word. A refused close writes nothing, names everything missing in one message,
-# and `next` over either phase is held the same way. A gate line is a line anywhere in the file, an optional leading
+# `probe`. The rest are attested, written by the run and taken at its word: the
+# `n/a` `Reverted-fix:` line, `Dropped:`, `Near-miss:` and `Declined:`, and
+# `close 7`'s `Round:` and `Stop:`. A refused close writes nothing, names
+# everything missing in one message, and `next` over either phase is held the
+# same way. A gate line is a line anywhere in the file, an optional leading
 # `- ` accepted, matched by exact prefix at the line start. `close 4` reads the
 # checkout's own diff (the working tree, untracked files included, against the
 # merge base of HEAD and origin/HEAD) and asks `dropped-lines`; it needs:
@@ -124,10 +126,10 @@
 # `(no output)`. It exits 0 whatever the command's exit; a ref holding `: ` names
 # no decline and is refused.
 #
-# Reaches no host, except through the command `probe` is given, which may. It
-# writes only the record root; `close 4` reads the checkout's git state and runs
-# the sibling `dropped-lines` mechanic, `prove` the sibling `revert-red`, and a
-# read that fails is exit 2, never a clean diff.
+# Reaches no host and writes only the record root, except through the command
+# `probe` is given, which may do either. `close 4` reads the checkout's git
+# state and runs the sibling `dropped-lines` mechanic, `prove` the sibling
+# `revert-red`, and a read that fails is exit 2, never a clean diff.
 #
 # stdout: one JSON object per call
 #   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
@@ -488,6 +490,7 @@ probe_re='^[^[:space:]].* => exit [0-9]+ at [0-9a-f]{7,64}: [^[:space:]]'
 # later commit that touches neither keeps it.
 fresh_red() { # fresh_red <top> <test> <sha> <paths>: 0 fresh, 1 not, with why set
   local -a reverted
+  local others stale="Reverted-fix line for $2 is stale: the test or a path it reverted changed since $3: re-run \`run-file prove $2 <path>...\`"
   read -ra reverted <<<"$4"
   if ! git -C "$1" cat-file -e "$3^{commit}" 2>/dev/null; then
     why="Reverted-fix line for $2 names $3, which is no commit here: run \`run-file prove $2 <path>...\`"
@@ -496,13 +499,12 @@ fresh_red() { # fresh_red <top> <test> <sha> <paths>: 0 fresh, 1 not, with why s
   git -C "$1" diff --quiet "$3" -- "$2" "${reverted[@]}"
   case $? in
     0) ;;
-    1) why="Reverted-fix line for $2 is stale: the test or a path it reverted changed since $3: re-run \`run-file prove $2 <path>...\`"; return 1 ;;
+    1) why=$stale; return 1 ;;
     *) ship_tooling "cannot read the diff of $2 since $3" ;;
   esac
-  [ -z "$(git -C "$1" ls-files --others --exclude-standard -- "$2" "${reverted[@]}")" ] || {
-    why="Reverted-fix line for $2 is stale: the test or a path it reverted changed since $3: re-run \`run-file prove $2 <path>...\`"
-    return 1
-  }
+  others=$(git -C "$1" ls-files --others --exclude-standard -- "$2" "${reverted[@]}") \
+    || ship_tooling "cannot list the untracked files among $2 and the paths it reverted"
+  [ -z "$others" ] || { why=$stale; return 1; }
 }
 
 # Phase 4: every test file changed has its Reverted-fix line, every removed block
@@ -1170,8 +1172,9 @@ probe)
   # argv, never a shell string, and no terminal to wait on.
   output=$(cd "$top" && "$@" </dev/null 2>&1)
   rc=$?
-  last=$(printf '%s\n' "$output" | tr -d '\r' | awk 'NF { l = $0 } END { print l }')
-  last=$(trim_end "$last")
+  # Trimmed both ends: `close 4` reads the line's tail from its first non-space.
+  last=$(printf '%s\n' "$output" | awk '{ sub(/\r$/, "") } NF { l = $0 } END { sub(/^[ \t]+/, "", l); sub(/[ \t]+$/, "", l); print l }') \
+    || ship_tooling "cannot read the last line of the probe's output"
   [ -n "$last" ] || last="(no output)"
   cmd=$(printf '%s' "$*" | tr '\n' ' ')
   append_to_section "## Evidence" "Probe: $ref: $cmd => exit $rc at $head: $last"

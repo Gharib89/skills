@@ -12,18 +12,20 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 bin=$T/bin repo=$T/repo
 mkdir -p "$bin"
-cp skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh "$bin/"
+cp skills/ship/scripts/run-file.sh skills/ship/scripts/dropped-lines.sh skills/ship/scripts/_lib.sh "$bin/"
 
 git init -q -b main "$repo"
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }
 mkdir "$repo/sub"
 printf 'line one\nline two\n' > "$repo/notes.txt"
 g add -A && g commit -qm base
+g update-ref refs/remotes/origin/main HEAD
+g symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
 head=$(g rev-parse HEAD)
 
 rf=$(cd "$repo" && bash "$bin/run-file.sh" init 9 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
 # probe <cwd> <args>...: sets out and status for one call.
-probe() { local d=$1; shift; out=$(cd "$d" && bash "$bin/run-file.sh" probe "$@" 2>/dev/null); status=$?; }
+probe() { local d=$1; shift; out=$(cd "$d" && bash "$bin/run-file.sh" probe "$@" 2>/dev/null); status=$?; err=$(jq -r '.error // empty' <<<"$out" 2>/dev/null); }
 
 # --- the command's exit is recorded, never the probe's own ---------------------------
 
@@ -54,17 +56,32 @@ check "so a command waiting on stdin ends at once" "Probe: C3: cat => exit 0 at 
 probe "$repo" C4 --file "$rf" -- sh -c 'echo "$0"' '$(touch pwned)'
 check "the command runs as argv, never through a shell string" no "$([ -e "$repo/pwned" ] && echo yes || echo no)"
 
+probe "$repo" C5 --file "$rf" -- printf '  indented last line  \r\n'
+check "an indented last line is recorded trimmed, carriage return and all" \
+  "Probe: C5: printf   indented last line  \r\n => exit 0 at $head: indented last line" "$(tail -n 1 "$rf")"
+
+# Every line probe wrote is one close 4 accepts: the gate reads what the verb writes.
+printf '%s\n' 'Declined: C1: claim: notes hold two lines' 'Declined: C5: claim: the output is indented' >> "$rf"
+out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
+check_rc "close 4 accepts every line probe wrote" 0 "$status"
+rf=$(cd "$repo" && bash "$bin/run-file.sh" init 10 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
+
 # --- the call itself -----------------------------------------------------------------
 
 held=$(cat "$rf")
+usage=$(bash "$bin/run-file.sh" --help | head -n 1)
 probe "$repo" --file "$rf" -- true
 check_rc "no ref is a usage error" 2 "$status"
-probe "$repo" C5 --file "$rf" --
+check "no ref answers the usage line" "$usage" "$err"
+probe "$repo" C6 --file "$rf" --
 check_rc "no command is a usage error" 2 "$status"
-probe "$repo" C5 --file "$rf" true
+check "no command answers the usage line" "$usage" "$err"
+probe "$repo" C6 --file "$rf" true
 check_rc "a command without the -- separator is a usage error" 2 "$status"
-probe "$repo" 'C5: x' --file "$rf" -- true
+check "a missing separator answers the usage line" "$usage" "$err"
+probe "$repo" 'C6: x' --file "$rf" -- true
 check_rc "a ref holding ': ' names no decline and is refused" 2 "$status"
+check "the ref refusal says why" "a probe's ref is the text before a decline's first ': ', so it cannot hold ': ' or a newline" "$err"
 check "a refused call writes nothing" "$held" "$(cat "$rf")"
 
 finish

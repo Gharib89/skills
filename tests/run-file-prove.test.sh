@@ -35,7 +35,7 @@ head=$(g rev-parse HEAD)
 
 rf=$(cd "$repo" && bash "$bin/run-file.sh" init 7 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
 # prove <args>...: sets out and status for one call from the fixture repo.
-prove() { out=$(cd "$repo" && bash "$bin/run-file.sh" prove "$@" --file "$rf" 2>"$T/err"); status=$?; }
+prove() { out=$(cd "$repo" && bash "$bin/run-file.sh" prove "$@" --file "$rf" 2>"$T/err"); status=$?; err=$(jq -r '.error // empty' <<<"$out" 2>/dev/null); }
 
 # --- red: the line is written, and the answer carries the verdict ------------------
 
@@ -74,10 +74,15 @@ check "a tooling refusal writes nothing" "$held" "$(cat "$rf")"
 
 prove tests/answer.test.sh
 check_rc "a test with no path to revert is a usage error" 2 "$status"
+check "a test with no path answers the usage line" "$(bash "$bin/run-file.sh" --help | head -n 1)" "$err"
 prove tests/answer.test.sh 'lib .sh'
 check_rc "a reverted path holding whitespace is refused: the line could not be read back" 2 "$status"
+check "the whitespace refusal says why" \
+  "prove cannot record 'lib .sh': a reverted path holding whitespace cannot be read back from its line" "$err"
 check "the whitespace refusal writes nothing" "$held" "$(cat "$rf")"
 out=$(cd "$repo" && bash "$bin/run-file.sh" prove tests/answer.test.sh lib.sh --file "$T/none.md" 2>/dev/null); status=$?
 check_rc "a missing Run file is refused before revert-red runs" 1 "$status"
+check "the refusal names the missing record, not a revert-red answer" yes \
+  "$(case $(jq -r .error <<<"$out") in "no Run file at $T/none.md"*) echo yes ;; *) echo no ;; esac)"
 
 finish

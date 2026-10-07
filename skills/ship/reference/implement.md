@@ -143,7 +143,8 @@ and record a one-line disposition per finding, a decline written
 `Declined: <ref>: claim: <reason>` where the reason asserts how the code behaves
 ("the caller already guards it") and `Declined: <ref>: judgment: <reason>`
 where it weighs scope, style or cost (`<ref>` the text before the first `: `).
-Two rails on rejecting: a claim
+A reason that would be false if the code behaved otherwise is a `claim:`; when
+in doubt, write `claim:`. Two rails on rejecting: an assertion
 about **what exists in the repo** is checked against `origin/HEAD` rather than
 the worktree, which may predate a merge; and a finding's **evidence and its
 claim are separate**, so a reviewer citing the wrong commit for a real primitive
@@ -168,7 +169,7 @@ file's `## Evidence`; every other line is **attested**, written by the run and
 taken at its word.
 
 - **Reverted-fix**, one per test file the diff adds or changes. Produced:
-  `run-file prove <test> <path>...` runs `revert-red` on them and, on its exit
+  `run-file prove <test> <path>... --issue <issue>` runs `revert-red` on them and, on its exit
   0 (the test went red with the fix reverted), writes
   `Reverted-fix: <test>: red at <sha> reverting <path>...`, `<sha>` the head it
   ran on. Commit the test and the fix first: `revert-red` reads committed
@@ -198,8 +199,9 @@ taken at its word.
   `run-file probe <ref> --issue <issue> -- <command>...` runs the command as
   argv at the checkout top, stdin from `/dev/null`, and writes
   `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, whatever
-  the command's exit. A `judgment:` decline needs none, and a decline carrying
-  neither kind is refused. A `Probe:` line in any other shape is refused
+  the command's exit, so read the line before closing: a probe whose output
+  does not bear out the claim turns the decline into a fix. A `judgment:`
+  decline needs none, and a decline carrying neither kind is refused. A `Probe:` line in any other shape is refused
   wherever it stands.
 
 `close 7`'s `Round:` and `Stop:` lines ([review-loop.md](review-loop.md#the-exit))
