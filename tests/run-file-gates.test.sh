@@ -403,7 +403,7 @@ for read in 'diff:--literal-pathspecs diff:cannot read the diff of tests/new.tes
   check "and says which read failed: $name" yes "$(has "$msg" "$err")"
   check "and the record is as it was: $name" "$held" "$(cat "$rf")"
 done
-printf '#!/bin/sh\ncase "$*" in *set-head*) echo "$*" >> %s/set-head.log ;; esac\nexec %s "$@"\n' "$tmp" "$(command -v git)" > "$shim/git"
+rm "$shim/git"
 reset
 
 # A phase that is not open is refused before any evidence is read.

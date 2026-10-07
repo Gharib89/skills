@@ -141,7 +141,8 @@
 #   timing: {run_file, start_to_pr, pr_to_gate, phases{}, row}; a skipped phase
 #     reads `skipped` and a phase with no range `unverified`
 #   prove: {test, paths, red, run_file, head}, revert-red's verdict plus the
-#     record and the head; on a refusal revert-red's own answer
+#     record and the head, its paths as typed where the line normalises them;
+#     on a refusal revert-red's own answer
 #   probe: {run_file, ref, command, exit, head, last}
 #   gate record: {run_file, head, verdict}
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
