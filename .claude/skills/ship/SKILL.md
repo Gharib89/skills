@@ -213,12 +213,13 @@ landed, push the fixes once, answer each thread with `reply-thread`, then the
 block's `Resolve:`; `Cap:` bounds the rounds, and a docs-only fix-only diff ends
 them. A round's fix is proven by its targeted test nodes plus the repo's edit
 rung, the per-file check its harness runs after each edit (`check.sh edit
-<file>...`), over the files it touched. The local gate is not re-run per round:
-the final head's gate is the merge gate's re-run on `gate read`'s `current:
-false`, never while a `code-review` is out (phase 5). **Every reviewer whose
-`Fallback-for:` reads `None.` first, then the fallbacks.** Exits: `reviewed`,
-`not reviewed: <reason>`, or `not invoked: <primary> reviewed`; `not reviewed`
-proceeds to the merge gate on green CI and is reported there. At exit,
+<file>...`), over the files it touched; a repo with no harness, and so no edit
+rung, proves it with the local gate instead. Otherwise the local gate is not
+re-run per round: the final head's gate is the merge gate's re-run on `gate
+read`'s `current: false`, never while a `code-review` is out (phase 5). **Every
+reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks.** Exits:
+`reviewed`, `not reviewed: <reason>`, or `not invoked: <primary> reviewed`; `not
+reviewed` proceeds to the merge gate on green CI and is reported there. At exit,
 `update-pr-body --section --body-file` writes the sections the rounds grew, the
 Change outline where it fell short, `Review` last, the title checked against the
 `Grade:`, then the phase-6 read-back; a cap round or a docs-only round whose
