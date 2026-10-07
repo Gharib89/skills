@@ -10,7 +10,8 @@
 # its `Request:` line picks one of two transports, with the brand left out of
 # it. `Request: None.`: the host's own request-a-reviewer call. `Request:
 # comment <phrase>`: the phrase is posted as a PR comment, which is how a
-# reviewer that is a comment-triggered workflow is asked for a round. The host
+# reviewer a comment triggers (a workflow, or a native integration such as
+# Codex) is asked for a round. The host
 # has no reviewer to add for that one, so there is nothing to read back off a
 # requested-reviewers list; `host_pr_comment` posts and verifies, and the
 # verified comment is the read-back.

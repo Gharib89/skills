@@ -4,7 +4,8 @@
 # because nothing looked for one; a stray file is invisible in a diff nobody
 # scrolls to the end of. The allowlist, whole: the top-level directories `.claude/`,
 # `.github/`, `.out-of-scope/`, `.release/`, `docs/`, `scripts/`, `skills/` and `tests/`, and
-# the root files `.gitignore`, `.pre-commit-config.yaml`, `CLAUDE.md`, `GLOSSARY.md` and
+# the root files `.gitignore`, `.pre-commit-config.yaml`, `AGENTS.md` (the Code
+# Review Rules native Codex review reads), `CLAUDE.md`, `GLOSSARY.md` and
 # `skills-lock.json`, which is `dirs` and `files` below. A new top-level entry
 # is a decision rather than a side effect, so it is added there in the same
 # commit that tracks it. `scripts/check.sh full` runs this as its `stray-files`
@@ -19,7 +20,7 @@ root=${1:-.}
 [ -d "$root" ] || { printf 'not a directory: %s\n' "$root" >&2; exit 2; }
 
 dirs=" .claude .github .out-of-scope .release docs scripts skills tests "
-files=" .gitignore .pre-commit-config.yaml CLAUDE.md GLOSSARY.md skills-lock.json "
+files=" .gitignore .pre-commit-config.yaml AGENTS.md CLAUDE.md GLOSSARY.md skills-lock.json "
 
 # The index, not the working tree: scratch a run leaves behind is not a stray,
 # and a `git ls-files` outside a checkout is tooling rather than a clean answer.

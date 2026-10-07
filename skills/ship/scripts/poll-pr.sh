@@ -100,6 +100,21 @@
 # holds the window until the run completes, to the ceiling (#295). The count
 # never changes the verdict: the review loop carries it onto the Review line.
 #
+# A block whose `Workflow:` reads `native codex` has no run: Codex posts its
+# round through its own GitHub integration. The poll then reads the round's
+# status off the PR (`host_pr_native_activity`, graded by `SHIP_NATIVE_CODEX`),
+# which answers on `reviewer_run` in the run's own shape, so the window holds
+# while Codex shows the request in progress and closes on the same terms. Two
+# conclusions are Ship's own words there: `refused` beside a reply that is no
+# round, and `stale-head` for a completed status on another commit with nothing
+# delivered. A Completed status whose commit this reader cannot parse is
+# "unavailable", a failed read rather than a stale head. Its `url` is Codex's
+# status comment, or the reply's where there is none, and `denied` stays null. A clean round, which
+# Codex posts as a comment and a 👍 with no review, joins `reviews.all` as a row
+# of its own and lands like any round. A reply by the login that is neither the
+# status nor a clean round is reported as the blocked notice, its first line
+# kept.
+#
 # `reviewer_blocked` is the awaited login's latest quota or rate-limit notice,
 # read from its review bodies as well as its PR comments: a reviewer states a
 # notice on either surface, and both are read. `refused_by` names the landing
@@ -129,6 +144,8 @@
 #                 `skipped`: the request landed and nothing ran for it
 #   still-running the awaited run was still live (in progress or queued) when the
 #                 ceiling closed the window: it may yet post a round
+#   stale-head    a native integration's status names a completed round on a
+#                 commit other than the head, and nothing was delivered for it
 #   infra-error   the awaited run concluded any other way but `success`
 #   silent        the window closed on its bound with nothing admitted
 #
@@ -166,7 +183,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>, default the latest request of that reviewer on the host], whose workflow run, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>]|open to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>] [--cursor <c>, the cursor a status: pending answer carried, to resume its window; no --since or --timeout; a call holds the tool at most ${SHIP_CALL_CAP}s]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>, default the latest request of that reviewer on the host], whose workflow run or native status, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>]|open to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>] [--cursor <c>, the cursor a status: pending answer carried, to resume its window; no --since or --timeout; a call holds the tool at most ${SHIP_CALL_CAP}s]"
 ship_help "$usage" "$@"
 ship_args "$usage" pr "$@"
 pr=$1; shift
@@ -303,6 +320,7 @@ snapshot() {
          elif $rf != null then "blocked"
          elif ($rr | type) == "object" and ($rr.status == "none" or $rr.conclusion == "skipped") then "never-queued"
          elif ($rr | type) == "object" and $rr.status != "completed" then "still-running"
+         elif ($rr | type) == "object" and $rr.conclusion == "stale-head" then "stale-head"
          elif ($rr | type) == "object" and $rr.conclusion != "success" then "infra-error"
          else "silent" end)')
 }
@@ -355,6 +373,17 @@ while :; do
   checks=$ans
   rd "reviews" host_pr_reviews "$pr" "$sha" "$full" || { miss; continue; }
   reviews=$ans
+  # A native integration's round status, read beside its rounds: a clean round
+  # it delivers as no review joins them here, before the grade reads a row. A
+  # read that fails, or answers what the reader cannot walk, degrades to an
+  # "unavailable" run the way a workflow-run read does.
+  native=null; native_lost=false
+  if [ "$await_run" = "native codex" ]; then
+    if act=$(host_pr_native_activity "$pr" "$since" "$phrase") \
+       && native=$(jq -ce --arg l "$await" --arg s "$since" --arg h "$sha" "$SHIP_NATIVE_CODEX" <<<"$act" 2>/dev/null); then
+      reviews=$(jq -c --argjson n "$native" '.all += $n.rounds | .total += ($n.rounds | length)' <<<"$reviews")
+    else native=null; native_lost=true; fi
+  fi
   fails=0
   # The previous head's rounds are on no head the run is waiting for.
   ! $stale || reviews=$(jq -c '.on_head = []' <<<"$reviews")
@@ -364,13 +393,22 @@ while :; do
   threads=$(host_pr_threads "$pr") || threads='"unavailable"'
   blocked=null
   [ -z "$await" ] || blocked=$(host_pr_reviewer_blocked "$pr" "$await") || blocked=null
+  # A native reply that is no round is that reviewer's refusal of this request,
+  # in words no notice pattern knows, so it outranks an older notice.
+  if [ "$native" != null ] && [ "$(jq -c .notice <<<"$native")" != null ]; then
+    blocked=$(jq -c .notice <<<"$native")
+  fi
   # A read the host refused, an outage included, is "unavailable" rather than a
   # missing run: both leave the window at the constant, and only one of them is
   # evidence about the reviewer. A read that answered with something the filter
   # cannot walk is the same kind of nothing, and saying so keeps the emit below
   # holding one JSON object rather than a `--argjson` that will not parse.
   reviewer_run=null
-  if [ -n "$await_run" ]; then
+  if $native_lost; then
+    reviewer_run='"unavailable"'
+  elif [ "$native" != null ]; then
+    reviewer_run=$(jq -c .run <<<"$native")
+  elif [ -n "$await_run" ]; then
     if runs=$(host_workflow_runs "$await_run" "$since"); then
       reviewer_run=$(jq -c --arg t "$(jq -r .title <<<"$prj")" "$SHIP_REVIEWER_RUN" <<<"$runs") \
         || reviewer_run='"unavailable"'
