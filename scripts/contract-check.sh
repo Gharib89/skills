@@ -556,6 +556,9 @@ if [ -f "$fake" ]; then
     usage=$(cat "$work/$m.usage"); utail=$(tail_of "$m" "$usage")
     alt=$(usage_alts "$utail" | head -1)
     call_args "$alt"
+    # A wait mechanic retries a failing host once per interval: at ci-wait's and
+    # poll-pr's defaults this check slept 100 s, once per gate.
+    case $utail in *'[--interval <s>]'*) args+=(--interval 1) ;; esac
     repo=$(mktemp -d "$work/repo.XXXXXX") && sf=$(mktemp -d "$work/fake.XXXXXX") || { echo "cannot create a temp directory" >&2; exit 2; }
     for fn in $fns; do : > "$sf/$fn.1.fail"; done
     mkdir -p "$repo/docs/agents" "$repo/.github"
