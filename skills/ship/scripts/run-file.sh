@@ -118,11 +118,12 @@
 #     commits between the recorded head and <sha>
 #   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
 #     check, every profile CI leg succeeded on head, verifications passed or were
-#     inapplicable or deferred to a green associated CI leg, and reviewers
-#     converged (tree unchanged with a dispositioned Round). A not-reviewed
-#     primary may be covered by a converged fallback. Cap, small lane and
-#     auto-once stops, nonblank Override or Ship-defect evidence, and defect or
-#     tracker drafts beside the Run file (excluding .base.md) hold the gate.
+#     inapplicable or deferred to a green associated CI leg, and each
+#     reviewer's loop stopped on tree unchanged with a dispositioned Round. A
+#     not-reviewed primary may be covered by a fallback that stopped so. Cap,
+#     small lane and auto-once stops, nonblank Override or Ship-defect
+#     evidence, and defect or tracker drafts beside the Run file (excluding
+#     .base.md) hold the gate.
 #     An ordinary deviation does not hold it. This read is independent of Merge.
 # exit: 0 ok · 1 the mechanic's own refusal (a gate's missing evidence among
 #   them, or a held clean gate) · 2 malformed invocation, or a read a gate needs that failed
@@ -606,7 +607,7 @@ close_gate() { # close_gate <phase> <its row>
 }
 
 # The clean gate is a read of evidence, independent of the profile's merge opt-in.
-# A stop of tree unchanged proves convergence; trigger and budget stops do not.
+# Only a stop of tree unchanged proves no further round would read anything new.
 gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   local ci profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
   [ -r "$file" ] || ship_tooling "cannot read Run file at $file"
@@ -668,7 +669,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     | def rests($prefix): [$evidence[] | select(startswith($prefix)) | ltrimstr($prefix)];
       def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop");
       def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]");
-      def converged($name): stop($name) == "tree unchanged" and reviewed($name);
+      def settled($name): stop($name) == "tree unchanged" and reviewed($name);
       def greenleg($leg): [$ci.checks[] | select(named($leg))] as $checks
         | ($checks | length) > 0 and all($checks[]; .status == "success") and samehead($ci.head_sha; $head) and $ci.status == "green";
       # Names may contain colons, so a result is cut by its full literal prefix.
@@ -696,8 +697,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            else "verification " + $v.name + ": " + $status end),
        ($reviewers[] as $r
          | if $r.fallback_for != null and reviewed($r.fallback_for) then empty
-           elif converged($r.name) then empty
-           elif stop($r.name) == "not reviewed" and any($reviewers[]; .fallback_for == $r.name and converged(.name)) then empty
+           elif settled($r.name) then empty
+           elif stop($r.name) == "not reviewed" and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
            else "reviewer " + $r.name + ": " + stop($r.name) end),
        (rests("Override: ")[] | select(. != "" and . != "none" and . != "None.") | "override needed: " + .),

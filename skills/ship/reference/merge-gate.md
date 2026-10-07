@@ -72,11 +72,13 @@ Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 (with a Ship defect draft: Reply "file defects" to file the drafts at Gharib89/skills.)
 ```
 
-After a successful clean-gate merge and cleanup, replace the ready-to-merge
-line with exactly `Merged on a clean gate: <PR url>`. A refused merge keeps
-the ready-to-merge line and names the refusal; report a completed merge only
-after the mechanic confirms it. The summary is posted in full before merging
-and finalized with that last line after cleanup.
+Once `merge` answers `merged: true` on a clean gate, replace the
+ready-to-merge line with exactly `Merged on a clean gate: <PR url>`. The line
+names the merge, so a step after it that fails (a tracker write, cleanup) is
+reported beneath it, never by keeping the old line. A refused merge keeps the
+ready-to-merge line and names the refusal; report a completed merge only after
+the mechanic confirms it. The summary is posted in full before merging and
+ends with that last line once `merge` confirms.
 
 **Every row is grounded in a result from this run**: `Local gate:` is the
 gate's `gates` object from the verdict the Run file recorded, `CI:` is
@@ -172,9 +174,9 @@ file and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
 requires the local gate at that head with every gate `pass` or
 `deferred-to-ci` (the green CI legs below cover the latter), every profile CI
 leg green at that head, every Verification `pass` or `n/a` (inapplicable), or
-`deferred-to-ci` with its `Also proven by CI:` leg green, and every reviewer
-converged (`Stop: tree unchanged` with a recorded round). A converged fallback
-answers for a primary that was not reviewed; a fallback skipped because its
+`deferred-to-ci` with its `Also proven by CI:` leg green, and every reviewer's
+loop stopped on `Stop: tree unchanged` with a recorded round. A fallback that
+stopped so answers for a primary that was not reviewed; a fallback skipped because its
 primary reviewed adds no condition. A loop cut short by `Cap:`, the small lane
 or `auto-once` holds until its last round changed no file. Any nonblank
 `Override:` other than `none` or `None.`, any `Ship-defect:` record or

@@ -161,7 +161,7 @@ Stop: <reviewer>: <reason>
 
 `<text>` is the round's outcome in a line. When the last fully read and
 dispositioned round changed no file, record `tree unchanged` even at `Cap:`,
-in the small lane or for an `auto-once` trigger: the loop converged. Otherwise
+in the small lane or for an `auto-once` trigger. Otherwise
 `<reason>` is one of `cap` (`Cap:` spent), `tree unchanged` (a round's
 dispositions changed no file, so a further round would read the same tree),
 `small lane` (the lane's one requested round), `auto-once` (the reviewer fires
