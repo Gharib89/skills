@@ -197,8 +197,9 @@ check    "the run read asks for one page of 100" '100' "$(cat "$bin/limit" 2>/de
 # A full page still inside the window may have cut off the awaited run, so it
 # fails rather than answer; a full page reaching back past the window answers.
 full=$(jq -cn --arg c 2026-09-17T12:00:00Z '[range(100) | {status: "completed", conclusion: "success", createdAt: $c, url: "u", displayTitle: "t", event: "issue_comment"}]')
-( gh() { echo "$full"; }; host_workflow_runs claude-review.yml 2026-09-17T11:58:00Z >/dev/null 2>&1 ); rc=$?
+err=$( ( gh() { echo "$full"; }; host_workflow_runs claude-review.yml 2026-09-17T11:58:00Z ) 2>&1 >/dev/null ); rc=$?
 check_rc "a full page inside the window is no answer" 1 "$rc"
+check    "and says the page may have cut the run off" 1 "$(grep -c 'holds 100 runs inside the window' <<<"$err")"
 ( gh() { echo "$full"; }; host_workflow_runs claude-review.yml 2026-09-17T12:00:01Z >/dev/null 2>&1 ); rc=$?
 check_rc "a full page reaching past the window answers" 0 "$rc"
 
