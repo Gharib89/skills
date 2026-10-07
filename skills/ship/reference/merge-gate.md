@@ -167,23 +167,23 @@ for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
 means evaluate the clean gate below. Any other value holds for the human as
 a profile error. The unattended branch never evaluates this option.
 
-For an opted-in attended run, save the final `ci-wait` JSON beside the Run
-file and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
+For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
+and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
 (`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
 `read-pr`; the mechanic answers `{clean, held_by}` and writes nothing. It
-requires the local gate at that head with every gate `pass` or
-`deferred-to-ci` (the green CI legs below cover the latter), every profile CI
-leg green at that head, every Verification `pass` or `n/a` (inapplicable), or
-`deferred-to-ci` with its `Also proven by CI:` leg green, and every reviewer's
-loop stopped on `Stop: tree unchanged` with a recorded round. A fallback that
-stopped so answers for a primary that was not reviewed; a fallback skipped because its
-primary reviewed adds no condition. A loop cut short by `Cap:`, the small lane
-or `auto-once` holds until its last round changed no file. Any nonblank
-`Override:` other than `none` or `None.`, any `Ship-defect:` record or
-`defect-*.md` draft, and any `tracker-*.md` draft holds the gate (`*.base.md`
-files are saved originals, not drafts). Deviations alone do not hold it.
-With no expected CI legs, `no-checks` is clean only when the profile declares
-`Legs: None.` and `No-checks legal: yes`, at the same head.
+requires the local gate at that head with every gate `pass` or `deferred-to-ci`
+(the green CI legs below cover the latter), every profile CI leg green at that
+head, every Verification `pass` or `n/a` (inapplicable), or `deferred-to-ci`
+with its `Also proven by CI:` leg green, and every reviewer's loop stopped on
+`Stop: tree unchanged` with a recorded round. A fallback that stopped so answers
+for a primary that was not reviewed; a fallback skipped because its primary
+reviewed adds no condition. A loop cut short by `Cap:`, the small lane or
+`auto-once` holds until its last round changed no file. Any nonblank `Override:`
+other than `none` or `None.`, any `Ship-defect:` record or `defect-*.md` draft,
+and any `tracker-*.md` draft holds the gate (`*.base.md` files are saved
+originals, not drafts). Deviations alone do not hold it. With no expected CI
+legs, `no-checks` is clean only when the profile declares `Legs: None.` and
+`No-checks legal: yes`, at the same head.
 
 On `clean: true`, post the full summary, then run the merge sequence below
 without waiting for a reply. On `clean: false`, post it with
