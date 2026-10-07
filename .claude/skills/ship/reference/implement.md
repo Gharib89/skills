@@ -169,8 +169,8 @@ file's `## Evidence`; every other line is **attested**, written by the run and
 taken at its word.
 
 - **Reverted-fix**, one per test file the diff adds or changes. Produced:
-  `run-file prove <test> <path>... --issue <issue>` runs `revert-red` on them and, on its exit
-  0 (the test went red with the fix reverted), writes
+  `run-file prove <test> <path>... --issue <issue>` runs `revert-red` on them
+  and, on its exit 0 (the test went red with the fix reverted), writes
   `Reverted-fix: <test>: red at <sha> reverting <path>...`, `<sha>` the head it
   ran on. Commit the test and the fix first: `revert-red` reads committed
   state. The line stands while neither the test nor a listed path has changed
@@ -201,11 +201,11 @@ taken at its word.
   `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, whatever
   the command's exit, so read the line before closing: a probe whose output
   does not bear out the claim turns the decline into a fix. A `judgment:`
-  decline needs none, and a decline carrying neither kind is refused. A `Probe:` line in any other shape is refused
-  wherever it stands.
+  decline needs none, and a decline carrying neither kind is refused. A
+  `Probe:` line in any other shape is refused wherever it stands.
 
-`close 7`'s `Round:` and `Stop:` lines ([review-loop.md](review-loop.md#the-exit))
-are attested the same way.
+`close 7`'s `Round:` and `Stop:` lines
+([review-loop.md](review-loop.md#the-exit)) are attested the same way.
 
 ## Consult current docs
 
