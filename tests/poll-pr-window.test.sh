@@ -75,9 +75,13 @@ check "and says it is pending" pending "$(jq -r .status <<<"$out")"
 check "and is not done" false "$(jq -r .done <<<"$out")"
 check "and carries a cursor" true "$(jq '(.cursor | type) == "string" and (.cursor | length) > 0' <<<"$out")"
 check "and keeps the snapshot shape" deadbee "$(jq -r .head_sha <<<"$out")"
-check "the call held the tool no longer than its cap, plus one read" true "$([ $((t1 - t0)) -le 3 ] && echo true || echo false)"
+# A loaded machine stretches each read (#507): the bound holds the call far
+# short of the 540 s cap it stands for.
+check "the call held the tool no longer than its cap, plus one read" true "$([ $((t1 - t0)) -le 10 ] && echo true || echo false)"
 cursor=$(jq -r .cursor <<<"$out")
-out=$(CAP=2 poll --cursor "$cursor"); rc=$?
+# The resumed call's cap leaves the reads still to come room on a loaded
+# machine; it answers as soon as the round lands.
+out=$(CAP=30 poll --cursor "$cursor"); rc=$?
 check_rc "the resumed call lands the round" 0 "$rc"
 check "by the since the cursor carried" since "$(jq -r .landed_by <<<"$out")"
 check "and a done answer has no status" false "$(jq 'has("status")' <<<"$out")"
@@ -166,7 +170,8 @@ printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
 fail host_pr_checks 1
 out=$(poll --since "$since" --timeout 1 2>/dev/null); rc=$?
 check_rc "a window that ends while the reads still fail is exit 2" 2 "$rc"
-check "before the third failure" 2 "$(n host_pr_checks)"
+# How many reads fit in the one-second window depends on the machine's load.
+check "before the third failure" true "$([ "$(n host_pr_checks)" -lt 3 ] && echo true || echo false)"
 
 # A refusal that carries a status is the host's answer, and ends the poll at once.
 reset

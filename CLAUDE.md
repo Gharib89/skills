@@ -62,6 +62,5 @@ after every Edit or Write and `turn` at every stop, and the pre-commit runner is
 the commit rung, which also runs the house-style check on Markdown. Harness
 profile: `docs/agents/harness.md`. Re-run `/setup-harness` after adding a stack,
 a member or a tool. Ship's gate, `scripts/local-gate.sh`, calls `full` and adds
-`secrets` and `version-lines`, which need a base ref; Ship's phase 5 runs that
-gate inline. A human or a session outside Ship may still run a standalone `full`
-in the background.
+`secrets` and `version-lines`, which need a base ref. Ship's phase 5 runs that
+gate inline; outside Ship, `full` can run in the background.

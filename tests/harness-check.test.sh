@@ -181,6 +181,8 @@ check "full never runs affected tests" "tests-api
 tests-web
 typecheck-api
 typecheck-web" "$(sort "$ARGS_LOG")"
+check "a member's typecheck runs before its tests" "typecheck-api
+tests-api" "$(grep api "$ARGS_LOG")"
 
 r=$(repo local-only "FULL_ROWS='semver-core|bad
 after|ok'
@@ -235,6 +237,24 @@ out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 2 )) CLAUDE_CODE_REMOTE=true P
 check "every status lands under its own row, in the declared order" \
   '{"rung":"full","verdict":"fail","checks":{"runner":"pass","typecheck:api":"over-budget","tests:api":"skipped","hang":"over-budget","broke":"fail","gone":"unavailable","cloudless":"skipped","later":"pass"}}' "$out"
 check_rc "and the failure decides the exit" 1 "$rc"
+
+# A slot killed before it records anything is its row, unavailable, and never
+# drops the row or repeats the slot before it. `die` kills its own slot: the
+# second-outermost check.sh above it, the outermost being the run itself.
+stub die 'p=$$ s= slot=
+while p=$(ps -o ppid= -p "$p" | tr -d " ") && [ -n "$p" ] && [ "$p" -gt 1 ]; do
+  case $(ps -o args= -p "$p") in *scripts/check.sh*) slot=$s s=$p ;; *) [ -n "$s" ] && break ;; esac
+done
+kill -KILL "$slot"'
+r=$(repo killed "FULL_ROWS='before|ok
+gone|die
+after|ok'")
+run "$r" full
+check "a slot that ended without its records is its row, unavailable" \
+  '{"rung":"full","verdict":"unavailable","checks":{"before":"pass","gone":"unavailable","after":"pass"}}' "$out"
+check_rc "and the rung exits 2" 2 "$rc"
+check "the tail says the slot recorded nothing" "--- gone: unavailable ---
+its slot ended without recording a result" "$err"
 
 # Two failing rows writing as they go: each tail stays whole under its own
 # row's name, in the declared order, however the rows' output interleaved.
