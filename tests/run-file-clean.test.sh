@@ -51,7 +51,7 @@ held() {
   answer=$(call); rc=$?
   check_rc "$name refuses" 1 "$rc"
   check "$name names its hold" true "$(jq -r --arg r "$reason" '.clean == false and (.held_by | index($r) != null)' <<<"$answer")"
-  check "$name reports evidence on stderr" true "$(if rg -Fq "$reason" "$tmp/err"; then echo true; else echo false; fi)"
+  check "$name reports evidence on stderr" true "$(if grep -Fq -- "$reason" "$tmp/err"; then echo true; else echo false; fi)"
 }
 clean() {
   local name=$1 answer rc
@@ -65,10 +65,13 @@ change_ci() { jq "$1" "$ci" > "$ci.new" && mv "$ci.new" "$ci"; }
 base; clean 'all recorded conditions holding'
 base; change_run 's/abcdef0123456789/1111111111111111/'; held 'stale gate' 'local gate: recorded head differs'
 base; change_run '/^- 10:00/d'; held 'missing gate' 'local gate: no record'
-for status in fail unavailable deferred-to-ci; do
+for status in fail unavailable; do
   base; change_run "s/10:00 abcdef0123456789 pass /10:00 abcdef0123456789 $status /"; held "$status verdict" "local gate: $status"
   base; change_run "s/\"tests\":\"pass\"/\"tests\":\"$status\"/"; held "$status gate" "local gate tests: $status"
 done
+# deferred-to-ci is a pass under the local-gate contract: CI green, already required, covers it.
+base; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; clean 'deferred-to-ci gate'
+base; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.status="checks-failed" | .checks[0].status="failure"'; held 'deferred-to-ci gate with red CI' 'CI test: failure'
 base; change_run 's/ {.*}//'; held 'missing gate results' 'local gate: missing gate results'
 base; change_run 's/{.*}/{"tests":"pass"}/'; held 'missing secrets result' 'local gate: missing secrets result'
 base; change_run 's/{.*}/{}/'; held 'empty gate results' 'local gate: missing gate results'
@@ -113,6 +116,8 @@ if [ "$(id -u)" -ne 0 ]; then
   answer=$(call); rc=$?; chmod 755 "$tmp/records/ship-clean"
   check_rc 'unreadable draft directory is tooling' 2 "$rc"
   check 'unreadable draft directory names its path' "cannot read draft directory at $tmp/records/ship-clean" "$(jq -r .error <<<"$answer")"
+else
+  skipped 'unreadable draft directory: chmod does not stop root'
 fi
 base; printf 'Stop: primary: cap\n' >> "$f"; held 'last stop wins' 'reviewer primary: cap'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'fallback not converged' 'reviewer primary: not reviewed'

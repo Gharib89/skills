@@ -116,7 +116,7 @@
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the
 #     commits between the recorded head and <sha>
-#   gate clean: {clean, held_by[]}; clean means the current gate passed every
+#   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
 #     check, every profile CI leg succeeded on head, verifications passed or were
 #     inapplicable or deferred to a green associated CI leg, and reviewers
 #     converged (tree unchanged with a dispositioned Round). A not-reviewed
@@ -681,7 +681,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        elif samehead($rhead; $head) | not then "local gate: recorded head differs" else empty end,
        if $verdict != "" and $verdict != "pass" then "local gate: " + $verdict else empty end,
        if $gates == null or $gates == {} then "local gate: missing gate results"
-       else $gates | to_entries[] | select(.value != "pass") | "local gate " + .key + ": " + .value end,
+       else $gates | to_entries[] | select(.value != "pass" and .value != "deferred-to-ci") | "local gate " + .key + ": " + .value end,
        if $gates != null and $gates != {} and $gates.secrets == null then "local gate: missing secrets result" else empty end,
        if samehead($ci.head_sha; $head) | not then "CI: head differs" else empty end,
        if $ci.status != "green" and ($ci.status != "no-checks" or ($no_checks | not)) then "CI: " + $ci.status else empty end,
