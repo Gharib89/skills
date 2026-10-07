@@ -11,7 +11,7 @@
 #
 # The Change outline is held to the Shape bullet of
 # docs/contributing/standards/release.md, which is stricter here than ship's
-# shipped pr-body.md ("about 15" lines, with no gate behind it): a reviewer
+# shipped pr-body.md ("preferably 15" lines, with no gate behind it): a reviewer
 # reads it as the diff's shape, and a prose paragraph, an oversized tree or an
 # unrooted one defeats that. With the heading present, from it to the next `##`
 # heading the outline must hold a `diff` fence or a line starting
