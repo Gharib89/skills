@@ -120,6 +120,7 @@ Show the full draft of everything below, then let the user edit before writing. 
 - a `Request: comment <phrase>` with no `Workflow:` naming the file its round comes from
 - a `Workflow:` on a block whose `Request:` is not a comment transport
 - a `Workflow:` naming a file the checkout does not carry, a path climbing out of it with `..` included
+- a `Workflow: native <integration>` naming an integration other than `codex`
 
 Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 

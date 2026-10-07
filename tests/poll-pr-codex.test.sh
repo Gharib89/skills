@@ -4,7 +4,8 @@
 # off the PR itself. The payloads under tests/fixtures/codex/ are the bodies
 # Codex posted on the #500 probe PRs (#504 findings, #505 clean) and the reply
 # it posted on issue #500; the only synthesized body is the in-progress status
-# row, a state the probe saw only as "Completed".
+# row, a state the probe saw only as "Completed". Trailing whitespace is
+# stripped from the saved bodies, for the house style; nothing reads it.
 #
 # Driven end to end over the Host fake and a throwaway repo whose origin names
 # GitHub, as reviewer-run.test.sh drives the workflow transport.

@@ -1,6 +1,6 @@
 # Ship profile
 
-Schema: 3
+Schema: 4
 
 Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [GLOSSARY.md](../../GLOSSARY.md).
 
@@ -97,6 +97,24 @@ Fallback-for: copilot
 Instructions: .github/copilot-instructions.md
 
 Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits `not reviewed`, for any reason; on a run where Copilot reviews it reports `not invoked: copilot reviewed` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --reviewer claude --since <iso>` lands, and the action attaches the per-file ones as inline threads on that review, so `Resolve: resolve-thread` the way Copilot's rounds resolve. A finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. `Login:` is `claude[bot]`: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App the workflow's `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` comment below the action runs on `github.token`, and that comment is not a round, so the login the loop awaits is the app's. A round that dies before posting is `not reviewed: infra-error`: `poll-pr --reviewer claude` awaits the run this block's `Workflow:` names and reads its failure directly, a plain comment being no round; the workflow's own `if: failure()` comment names the run on the PR, with the failure subtype where the action left one and `unknown` where it did not, so the PR carries the reason, or the link to it in the Actions log. A cancelled job runs no step and leaves nothing on the PR, and the run read is what still names it: `poll-pr` reports a `cancelled` run as `infra-error`.
+
+### codex
+
+Login: chatgpt-codex-connector[bot]
+Trigger: on-request
+Request: comment @codex review
+Workflow: native codex
+Cap: 3
+Resolve: resolve-thread
+Gating: no
+Fallback-for: None.
+Instructions: AGENTS.md
+
+Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. An independent reviewer, driven on every run beside Copilot rather than only when another fails, and never a gate. `request-review --reviewer codex` posts the phrase; Codex answers under `chatgpt-codex-connector[bot]` with 👀 on the request comment (removed when the round ends) and a status comment it edits in place, then posts findings as a `COMMENTED` review with inline threads badged P1 or P2, or, clean, a `Codex Review: Didn't find any major issues` comment and 👍 on the PR with no review at all. `Workflow: native codex` is what tells `poll-pr --reviewer codex` to read those signals off the PR instead of a run, so a clean round lands as a round and a reply that is neither (a refusal) reads `not reviewed: blocked` with its text. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`.
+
+Setup, once, on the maintainer's ChatGPT account: install the ChatGPT Codex Connector app on the repository (the **Connect GitHub** button in the environment picker on chatgpt.com/codex), turn code review on for this repository at chatgpt.com/codex/settings/code-review, and leave automatic review off there, both for the repository and in personal preferences, so a round runs only when requested. A round run through GitHub counts as Code Review usage against the subscription's Codex allowance, shown on the usage dashboard at chatgpt.com/codex/settings/usage. To disable the reviewer, delete this block, or turn code review off for the repository in those settings, which leaves the request unanswered and the poll reading `never-queued`.
+
+Observed on the #500 probe, against the docs: P2 findings are posted, not only P0 and P1; a draft PR is reviewed on request; the footer saying reviews start when a PR opens describes automatic review, which is off here. Any comment mentioning `@codex` on an issue or PR asks Codex for something, so ship's own comments name the phrase without the at-sign; on an issue it replies asking for a Codex environment, which is no review.
 
 ## Coding standards
 

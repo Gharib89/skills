@@ -88,7 +88,10 @@ observed where no round was admitted.
   threads are stamped and land normally.
 - **A comment transport's window is its workflow run**, the one `Workflow:`
   names, held open while the run is going. Run no `update-pr-title` between that
-  request and its poll: the run is matched by the PR's title.
+  request and its poll: the run is matched by the PR's title. Under `Workflow:
+  native codex` the window is Codex's own status on the PR instead, reported on
+  `reviewer_run` the same way, and a clean round is a landed round with no
+  threads.
 - **A poll waits for the expected head**, the worktree's `HEAD` on the PR's
   branch or `--sha`. `not_reviewed: unreachable` with a `head_sha` that is not
   that head means the host never showed the push: confirm it landed, then poll
@@ -209,6 +212,12 @@ Brand-level detail lives in the host adapters; these show the mapping only.
 - **Claude Code on GitHub Actions as an `on-request` fallback**: a comment of
   its phrase starts a workflow run posting under `claude[bot]`; a run that
   failed reads `not reviewed: infra-error` with its URL on `reviewer_run`.
+- **Native Codex review as an independent `on-request` reviewer**: a comment of
+  its phrase, no workflow; `Workflow: native codex` has `poll-pr` read Codex's
+  acknowledgement, status comment and clean comment off the PR, so a clean
+  round lands as `reviewed`, a reply that is no round reads `not reviewed:
+  blocked` with its text, and a completed status on another commit reads `not
+  reviewed: stale-head`.
 - **Claude Code on Azure Pipelines as `on-push`, `Gating: yes`**: a build
   validation policy that fails the build on a critical finding; a declined
   critical is `reviewed`, cited at the merge gate as the override needed.

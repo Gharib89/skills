@@ -32,3 +32,12 @@ The workflow file a comment-transport reviewer's round comes from, on the block 
 - Four refusals Schema 3 added at preflight, so a migrated profile is checked rather than trusted (ship has grown others since): `Request: comment <phrase>` with no `Workflow:` line or `Workflow: None.`, a `Workflow:` naming a file on a block whose `Request:` is not `comment <phrase>`, a `Workflow:` naming a file the checkout does not carry (a path climbing out of it with `..`, or an absolute one, included), and the `Request:` value the pair keys off: the bare word `comment` with no phrase, which the comment transport has nothing to post.
 
 Migration from Schema 2: **a block whose `Request:` is `comment <phrase>` cannot receive `Workflow: None.`**, or the migrated profile is refused by the first preflight that reads it. Lift the path from that block's prose paragraph when exactly one file path is named there; when the prose names none, or several, stop and ask the human which file it is. Every other block gets `Workflow: None.` The prose keeps whatever it said: it explains the reviewer, and the field is the value a run reads.
+
+## Schema 4
+
+A comment-transport reviewer whose round comes from no workflow run: native Codex review, which GitHub's Codex integration posts itself. Only the `Workflow:` vocabulary moves; the fourteen headings and every `Label:` line are unchanged from Schema 3.
+
+- `Workflow:` gains the value `native <integration>`, beside a workflow path and `None.`, on a block whose `Request:` is `comment <phrase>`. It names the integration the round's status is read from instead of a run; `native codex` is the one ship reads, and `poll-pr` then reads Codex's acknowledgement, status comment and clean result off the PR. The value names no file, so preflight does not stat it.
+- Two refusals Schema 4 adds at preflight: a `Workflow: native <integration>` naming any integration but `codex`, and `native codex` on a block whose `Request:` is not `comment <phrase>` (the existing refusal of a `Workflow:` on such a block, which now covers this value too).
+
+Migration from Schema 3: rewrite the `Schema:` line. No block changes, since no Schema 3 profile could carry the new value.

@@ -1428,7 +1428,7 @@ ship_reviewer_by_name() {
 # `transport` is `comment` where `Request:` reads `comment <phrase>`, with
 # `phrase` its text and, under the since rule, `await_run` the block's
 # `Workflow:`, the run that separates a round still being written from one that
-# will not come; the run read is keyed by the --since instant, which a head-rule
+# will not come, or `native codex`, whose status poll-pr reads off the PR; the run read is keyed by the --since instant, which a head-rule
 # poll has none of. `host` otherwise, the host's own request-a-reviewer call,
 # with both null. `timeout`
 # is the poll's default bound. Under the head rule it is 480, the bound the
