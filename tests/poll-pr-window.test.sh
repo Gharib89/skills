@@ -77,7 +77,7 @@ check "and keeps the snapshot shape" deadbee "$(jq -r .head_sha <<<"$out")"
 # it: a 2 s cap on whole-second clocks with 1 s naps fits at most three passes,
 # and a slower read only means fewer.
 check "the call stopped at its cap, after no more than three passes" true \
-  "$([ "$(n host_pr_reviews)" -le 3 ] && echo true || echo false)"
+  "$([ "$(n host_pr_get)" -le 3 ] && echo true || echo false)"
 cursor=$(jq -r .cursor <<<"$out")
 # The resumed call's cap leaves the reads still to come room on a loaded
 # machine; it answers as soon as the round lands.
