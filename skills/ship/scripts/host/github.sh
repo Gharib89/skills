@@ -587,16 +587,15 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # sharing a title therefore match each other's runs, which costs the poll time
 # and no more, and a title rewritten between the request and the poll matches
 # nothing, which reads as `never-queued`.
-# The event and the window are filtered here rather than by the host: a list
-# filtered by `event` or `created` can leave a live run out for minutes while the
-# same workflow's unfiltered list carries it, and the missing run reads as
-# `never-queued` for a reviewer still running (#496). The list is newest first,
-# so its one page of 100, which covered five days of runs on 2026-10-07, holds
-# any poll window. One page because the cloud sandbox's proxy refuses the
-# numeric-ID URL GitHub's `Link` header names for page two. A read that returns
-# nothing is an answer here rather than a failure, and its stderr is tailed the
-# way `_gh` tails its own, because a CLI diagnostic is unbounded and the caller
-# prints one JSON object.
+#
+# The event and the window are filtered by `host_workflow_runs`' jq, not by the
+# host: a list filtered by `--event` or `--created` can leave a live run out for
+# minutes while the same workflow's unfiltered list carries it, and the missing
+# run reads as `never-queued` for a reviewer still running (#496).
+# `gh run list` rather than `api --paginate`, and one page of 100, because the
+# cloud sandbox's proxy refuses the numeric-ID URL GitHub's `Link` header names
+# for page two. The list is newest first, so a full page drops the oldest runs,
+# and one page spanned five days of this repo's runs on 2026-10-07.
 _gh_run_list() { # <workflow-file>
   gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --limit 100 \
     --json status,conclusion,createdAt,url,displayTitle,event
@@ -614,8 +613,18 @@ host_workflow_runs() { # <workflow-file> <since-iso>
   # one the header names as flaking 401 mid-session, so a bad second would
   # otherwise be read as evidence about a reviewer that is working.
   if [ "$rc" -ne 0 ]; then sleep 2; : > "$err"; out=$(_gh_run_list "$wf" 2>"$err"); rc=$?; fi
+  # The stderr is tailed the way `_gh` tails its own, because a CLI diagnostic is
+  # unbounded and the caller prints one JSON object.
   [ "$rc" -eq 0 ] || { ship_tail40 "$err"; return $rc; }
-  jq -c --arg s "$2" 'map(select(.event == "issue_comment" and .createdAt >= $s)
+  # A full page whose oldest run is still inside the window may have cut off the
+  # run the poll awaits, so the read fails rather than answer without it. An
+  # empty list is still an answer (no run yet), and an empty or unparseable
+  # output is not, which `-e` makes a failure.
+  if jq -e --arg s "$2" 'length >= 100 and .[-1].createdAt >= $s' <<<"$out" >/dev/null; then
+    echo "run list for $wf holds 100 runs inside the window since $2: the oldest may be cut off" >&2
+    return 1
+  fi
+  jq -ce --arg s "$2" 'map(select(.event == "issue_comment" and .createdAt >= $s)
     | {status, conclusion, created_at: .createdAt, url, title: .displayTitle})' <<<"$out"
 }
 
