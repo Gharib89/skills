@@ -18,7 +18,8 @@ the flag.
    narrower too: `ready-for-human` is the stop `ready-for-human: attended only`.
 3. **The merge gate posts and returns.** `comment-pr` with the uncompressed
    summary, then return with the PR link. The claim holds; the open PR is what
-   keeps later fires off the issue.
+   keeps later fires off the issue. `Merge: on-clean-gate` has no effect in
+   this lane: post and return without merging.
 
 Before any of it, **`prepare --unattended`**, which in this lane runs whether
 or not the run is in a cloud sandbox, so a local `ship --unattended` still

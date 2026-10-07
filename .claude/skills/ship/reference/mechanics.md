@@ -44,7 +44,7 @@ local-gate contract.
 | `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run but the no-issue lane's inner one, before `run-file init` |
 | `run-file init` | the required first action after `prepare` |
 | `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
-| `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head |
+| `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head and, attended with `Merge: on-clean-gate`, `clean` against the recorded results and `ci-wait` JSON |
 | `run-file grade` | 2, the version grade `open-pr` and `update-pr-title` hold the title type to |
 | `preflight` | 0 |
 | `read-issue` | 0 |
@@ -68,7 +68,7 @@ local-gate contract.
 | `update-issue-body` | 1, once per section an anchor the tree contradicts sits in; 9, after `merge` answers `merged: true`, once per tracker draft |
 | `resolve-thread` | 7 |
 | `ci-wait` | 8 |
-| `merge` | 9, on approval |
+| `merge` | 9, on explicit approval or a clean opted-in gate |
 | `cleanup` | 9, after merge |
 | `list-prs` and `select` | unattended lane |
 

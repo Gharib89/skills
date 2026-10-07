@@ -10,7 +10,7 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
 
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
@@ -63,7 +63,7 @@ check "the fixed wording, with the profile tails substituted" \
 - [ ] 6 · Open PR: non-draft, Conventional-Commit title, Closes, reflect on the issue
 - [ ] 7 · Reviewers: copilot (on-request), claude (on-request), one bounded pass each
 - [ ] 8 · CI: resolve any conflict, land None green
-- [ ] 9 · Merge gate: hard stop for human approval (unattended: summary as PR comment, return)' \
+- [ ] 9 · Merge gate: summary, default human approval or clean opt-in (unattended: summary as PR comment, return)' \
   "$(grep '^- \[ \] ' "$f" | sed 's/ in_progress ([0-9][0-9]:[0-9][0-9]→)$//')"
 
 # The informational reads a run made with no mechanic behind them, one line

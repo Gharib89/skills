@@ -15,6 +15,7 @@
 #   run-file grade <patch|minor|breaking> <where>
 #   run-file gate record <file|-> [--head <sha>] <where>
 #   run-file gate read --head <sha> <where>
+#   run-file gate clean <ci-file|-> --head <sha> <where>
 #   run-file timing <where>
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
@@ -115,12 +116,22 @@
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the
 #     commits between the recorded head and <sha>
+#   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
+#     check, every profile CI leg succeeded on head, verifications passed or were
+#     inapplicable or deferred to a green associated CI leg, and each
+#     reviewer's loop stopped on tree unchanged with a dispositioned Round. A
+#     not-reviewed primary may be covered by a fallback that stopped so. Cap,
+#     small lane and auto-once stops, a deferred gate beside a non-green check
+#     outside Legs:, nonblank Override or Ship-defect
+#     evidence, and defect or tracker drafts beside the Run file (excluding
+#     .base.md) hold the gate.
+#     An ordinary deviation does not hold it. This read is independent of Merge.
 # exit: 0 ok · 1 the mechanic's own refusal (a gate's missing evidence among
-#   them) · 2 malformed invocation, or a read a gate needs that failed
+#   them, or a held clean gate) · 2 malformed invocation, or a read a gate needs that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -141,7 +152,7 @@ checklist() { # checklist <tripwires> <verifications> <reviewers> <legs>
 6 · Open PR: non-draft, Conventional-Commit title, Closes, reflect on the issue
 7 · Reviewers: $3, one bounded pass each
 8 · CI: resolve any conflict, land $4 green
-9 · Merge gate: hard stop for human approval (unattended: summary as PR comment, return)
+9 · Merge gate: summary, default human approval or clean opt-in (unattended: summary as PR comment, return)
 ITEMS
 }
 
@@ -596,6 +607,117 @@ close_gate() { # close_gate <phase> <its row>
   esac
 }
 
+# The clean gate is a read of evidence, independent of the profile's merge opt-in.
+# Only a stop of tree unchanged proves no further round would read anything new.
+gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
+  local ci profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
+  [ -r "$file" ] || ship_tooling "cannot read Run file at $file"
+  # Fenced examples cannot authorize a merge.
+  lines=$(awk "$SHIP_AWK_FENCE"'
+    { if (!ship_fence($0)) print }
+    END { if (_fenced) exit 1 }' "$file") || ship_tooling "cannot read Run file evidence at $file"
+  if [ "$1" = - ]; then ci=$(cat) || ship_tooling "cannot read CI answer"
+  else
+    [ -f "$1" ] && [ -r "$1" ] || ship_tooling "cannot read CI answer at $1"
+    ci=$(cat "$1") || ship_tooling "cannot read CI answer at $1"
+  fi
+  jq -e 'type == "object" and (.status | IN("green", "no-checks", "conflict", "checks-failed", "timeout", "pending"))
+    and (.head_sha | type == "string" and test("^[0-9a-f]{7,64}$"))
+    and (.checks | type == "array" and all(.[]; type == "object" and (.name | type == "string") and (.status | type == "string")))' \
+    >/dev/null 2>&1 <<<"$ci" || ship_tooling "CI answer is not a valid ci-wait object"
+  profile_path=$(ship_profile_path) || ship_tooling "cannot locate ship profile"
+  [ -f "$profile_path" ] && [ -r "$profile_path" ] || ship_tooling "cannot read ship profile at $profile_path"
+  profile=$(awk "$SHIP_AWK_FENCE"'
+    { if (!ship_fence($0)) print }
+    END { if (_fenced) exit 1 }' "$profile_path") || ship_tooling "cannot read profile evidence at $profile_path"
+  local names legs no_checks=false
+  ship_no_checks_expected "$profile"
+  case $? in 0) no_checks=true ;; 1) ;; *) ship_tooling "cannot read profile no-checks policy" ;; esac
+  names=$(ship_profile_legs "$profile") || ship_tooling "cannot read profile CI legs"
+  legs=$(jq -Rn '[inputs | select(. != "")]' <<<"$names") || ship_tooling "cannot read profile CI legs"
+  reviewers=$(ship_reviewers "$profile") || ship_tooling "cannot read profile reviewers"
+  # Keep the association beside its heading, with the profile's exact field.
+  verifications=$(awk '
+    /^## / { f = ($0 ~ /^## Verification[ \t\r]*$/); next }
+    f && /^### / { sub(/^### /, ""); sub(/[ \t\r]+$/, ""); print "name\t" $0; next }
+    f && /^Also proven by CI: / { sub(/^Also proven by CI: /, ""); sub(/[ \t\r]+$/, ""); print "leg\t" $0 }
+    ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t")) as $r ([];
+      if $r[0] == "name" then . + [{name: $r[1], leg: null}]
+      elif length > 0 then .[-1].leg = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
+  rec=$(awk '/^## / { f = ($0 ~ /^## Local gate[ \t\r]*$/) }
+    f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' <<<"$lines" | tail -n 1) \
+    || ship_tooling "cannot read local gate record"
+  if [ -n "$rec" ]; then
+    rec=${rec#- ??:?? }; rhead=${rec%% *}; rec=${rec#"$rhead"}; rec=${rec# }
+    rverdict=${rec%% *}; rgates=${rec#"$rverdict"}; rgates=${rgates# }; rgates=${rgates:-null}
+    jq -e ' . == null or (type == "object" and all(.[]; type == "string"))' \
+      >/dev/null 2>&1 <<<"$rgates" || ship_tooling "cannot read recorded local gate results"
+  fi
+  record_dir=$(dirname "$file") || ship_tooling "cannot locate Run file drafts"
+  [ -r "$record_dir" ] && [ -x "$record_dir" ] || ship_tooling "cannot read draft directory at $record_dir"
+  for p in "$record_dir"/defect-*.md "$record_dir"/tracker-*.md; do
+    [ -f "$p" ] || continue
+    case $p in *.base.md) continue ;; esac
+    drafts=$(jq -c --arg p "${p##*/}" '. + [$p]' <<<"$drafts") || ship_tooling "cannot read draft paths"
+  done
+  answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
+    --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
+    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" '
+    def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
+    def named($leg): .name == $leg or (.name | startswith($leg + " ("));
+    ($text | split("\n")) as $lines
+    | ($lines | map(sub("^- "; "") | sub("[ \\t\\r]+$"; ""))) as $evidence
+    | def rests($prefix): [$evidence[] | select(startswith($prefix)) | ltrimstr($prefix)];
+      def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop");
+      def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]");
+      def settled($name): stop($name) == "tree unchanged" and reviewed($name);
+      def greenleg($leg): [$ci.checks[] | select(named($leg))] as $checks
+        | ($checks | length) > 0 and all($checks[]; .status == "success") and samehead($ci.head_sha; $head) and $ci.status == "green";
+      # Names may contain colons, so a result is cut by its full literal prefix.
+      def result($name):
+        (reduce $lines[] as $line ({inside: false, rows: []};
+          if $line | startswith("## ") then .inside = ($line | test("^## Verification results[ \\t\\r]*$"))
+          elif .inside and ($line | startswith("- " + $name + ": ")) then .rows += [$line | ltrimstr("- " + $name + ": ")]
+          else . end) | .rows | last // "missing") | split(": ")[0];
+      [if $rhead == "" then "local gate: no record"
+       elif samehead($rhead; $head) | not then "local gate: recorded head differs" else empty end,
+       if $verdict != "" and $verdict != "pass" then "local gate: " + $verdict else empty end,
+       if $gates == null or $gates == {} then "local gate: missing gate results"
+       else $gates | to_entries[] | select(.value != "pass" and .value != "deferred-to-ci") | "local gate " + .key + ": " + .value end,
+       if $gates != null and $gates != {} and $gates.secrets == null then "local gate: missing secrets result" else empty end,
+       # A deferral names no leg, so a check outside Legs: that is not green may be the one covering it.
+       ((($gates // {}) | to_entries[] | select(.value == "deferred-to-ci")) as $g
+         | ($ci.checks[] | . as $c | select(any($legs[]; . as $l | $c | named($l)) | not) | select(.status != "success"))
+         | "local gate " + $g.key + ": deferred-to-ci while CI " + .name + ": " + .status),
+       if samehead($ci.head_sha; $head) | not then "CI: head differs" else empty end,
+       if $ci.status != "green" and ($ci.status != "no-checks" or ($no_checks | not)) then "CI: " + $ci.status else empty end,
+       ($legs[] as $leg | [$ci.checks[] | select(named($leg))] as $checks
+         | if $checks == [] then "CI " + $leg + ": missing"
+           else $checks[] | select(.status != "success") | "CI " + .name + ": " + .status end),
+       ($verifications[] as $v | result($v.name) as $status
+         | if $status == "pass" or $status == "n/a" then empty
+           elif $status == "deferred-to-ci" then
+             if $v.leg != null and ($legs | index($v.leg)) != null and greenleg($v.leg) then empty
+             else "verification " + $v.name + ": no associated green CI leg" end
+           else "verification " + $v.name + ": " + $status end),
+       ($reviewers[] as $r
+         | if $r.fallback_for != null and reviewed($r.fallback_for) then empty
+           elif settled($r.name) then empty
+           elif stop($r.name) == "not reviewed" and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
+           elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
+           else "reviewer " + $r.name + ": " + stop($r.name) end),
+       (rests("Override: ")[] | select(. != "" and . != "none" and . != "None.") | "override needed: " + .),
+       (rests("Ship-defect: ")[] | select(. != "" and . != "none" and . != "None.") | "Ship defect: " + .),
+       ($drafts[] | if startswith("defect-") then "Ship defect draft: " + . else "Tracker draft: " + . end)
+      ] as $held | {clean: ($held == []), held_by: $held}
+    ') || ship_tooling "cannot evaluate clean gate evidence"
+  printf '%s\n' "$answer"
+  jq -e '.clean' >/dev/null <<<"$answer"
+  case $? in 0) return 0 ;; 1) ;; *) ship_tooling "cannot read clean gate verdict" ;; esac
+  jq -r '.held_by[]' <<<"$answer" | tail -n 40 >&2
+  return 1
+}
+
 case $verb in
 init)
   ship_args "$usage" arg "$@"
@@ -826,8 +948,8 @@ grade)
   ;;
 gate)
   sub=${1:-}
-  case $sub in record | read) shift ;; *) ship_tooling "$usage" ;; esac
-  if [ "$sub" = record ]; then
+  case $sub in record | read | clean) shift ;; *) ship_tooling "$usage" ;; esac
+  if [ "$sub" = record ] || [ "$sub" = clean ]; then
     # `-` is the verdict on stdin, so it is the one dash-led value a positional may be.
     src=${1:-}
     case $src in '' | -?*) ship_tooling "$usage" ;; esac
@@ -835,7 +957,12 @@ gate)
   fi
   parse_file "$@"
   [ -z "$results" ] || ship_tooling "$usage"
-  if [ "$sub" = read ]; then
+  if [ "$sub" = clean ]; then
+    [ -n "$head" ] || ship_tooling "$usage"
+    [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
+    gate_clean "$src"
+    exit $?
+  elif [ "$sub" = read ]; then
     [ -n "$head" ] || ship_tooling "$usage"
     [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
     rec=$(awk '/^## /{ f = ($0 ~ /^## Local gate[ \t\r]*$/) } f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' "$file" | tail -n 1)
