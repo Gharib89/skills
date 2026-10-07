@@ -71,7 +71,7 @@ The end of a Ship run where its full summary records the merge decision. By defa
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:
-The recorded conditions permitting an attended run to merge without a reply when its profile opts in: every CI leg green, every local gate passed or deferred to a green CI leg on the PR head, every reviewer's loop stopped on an unchanged tree (a fallback answers for its primary), every applicable Verification passed or deferred to a green CI leg, and no override, Ship defect or Tracker draft. Deviations alone do not hold it.
+The recorded conditions permitting an attended run to merge without a reply when its profile opts in: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree (a fallback answers for its primary), every applicable Verification passed or deferred to a green CI leg, and no override, Ship defect or Tracker draft. Deviations alone do not hold it.
 _Avoid_: auto-merge (a host flag that can merge before Ship finishes its reviews)
 
 **Small lane**:

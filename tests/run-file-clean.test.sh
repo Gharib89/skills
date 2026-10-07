@@ -72,6 +72,10 @@ done
 # deferred-to-ci is a pass under the local-gate contract: CI green, already required, covers it.
 base; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; clean 'deferred-to-ci gate'
 base; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.status="checks-failed" | .checks[0].status="failure"'; held 'deferred-to-ci gate with red CI' 'CI test: failure'
+# A deferral names no leg, so a red or pending check outside Legs: could be the one covering it.
+base; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.checks += [{name:"lint",status:"success"}]'; clean 'deferred-to-ci gate with a green non-leg check'
+base; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.checks += [{name:"lint",status:"failure"}]'; held 'deferred-to-ci gate with a red non-leg check' 'local gate tests: deferred-to-ci while CI lint: failure'
+base; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.checks += [{name:"lint",status:"pending"}]'; held 'deferred-to-ci gate with a pending non-leg check' 'local gate tests: deferred-to-ci while CI lint: pending'
 base; change_run 's/ {.*}//'; held 'missing gate results' 'local gate: missing gate results'
 base; change_run 's/{.*}/{"tests":"pass"}/'; held 'missing secrets result' 'local gate: missing secrets result'
 base; change_run 's/{.*}/{}/'; held 'empty gate results' 'local gate: missing gate results'
@@ -96,7 +100,7 @@ done
 base; printf 'Round: primary 2:   \n' >> "$f"; held 'blank latest round' 'reviewer primary: no dispositioned round'
 base; change_run '/^Round: primary/d'; held 'stop without dispositioned round' 'reviewer primary: no dispositioned round'
 base; change_run '/^Stop: primary/d'; held 'missing reviewer stop' 'reviewer primary: missing stop'
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'not reviewed primary covered by converged fallback'
+base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'not reviewed primary covered by a fallback stopped on tree unchanged'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: cap/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'cap is not rescued by fallback' 'reviewer primary: cap'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: auto-once/'; held 'auto-once changed round' 'reviewer primary: auto-once'
 base; sed 's/Trigger: on-request/Trigger: auto-once/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; clean 'auto-once unchanged round records tree unchanged'
@@ -120,7 +124,7 @@ else
   skipped 'unreadable draft directory: chmod does not stop root'
 fi
 base; printf 'Stop: primary: cap\n' >> "$f"; held 'last stop wins' 'reviewer primary: cap'
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'fallback not converged' 'reviewer primary: not reviewed'
+base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'fallback stopped at cap' 'reviewer primary: not reviewed'
 base; change_ci '.status="no-checks" | .checks=[]'; held 'legal no-checks cannot replace expected green leg' 'CI test: missing'
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_ci '.status="no-checks" | .checks=[]'; held 'no-checks not explicitly legal' 'CI: no-checks'
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; printf '\n' >> "$profile"; sed '/^Legs:/a No-checks legal: yes' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_ci '.status="no-checks" | .checks=[]'; clean 'legal no-checks with no expected legs'

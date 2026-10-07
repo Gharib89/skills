@@ -121,7 +121,8 @@
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged with a dispositioned Round. A
 #     not-reviewed primary may be covered by a fallback that stopped so. Cap,
-#     small lane and auto-once stops, nonblank Override or Ship-defect
+#     small lane and auto-once stops, a deferred gate beside a non-green check
+#     outside Legs:, nonblank Override or Ship-defect
 #     evidence, and defect or tracker drafts beside the Run file (excluding
 #     .base.md) hold the gate.
 #     An ordinary deviation does not hold it. This read is independent of Merge.
@@ -684,6 +685,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        if $gates == null or $gates == {} then "local gate: missing gate results"
        else $gates | to_entries[] | select(.value != "pass" and .value != "deferred-to-ci") | "local gate " + .key + ": " + .value end,
        if $gates != null and $gates != {} and $gates.secrets == null then "local gate: missing secrets result" else empty end,
+       # A deferral names no leg, so a check outside Legs: that is not green may be the one covering it.
+       ((($gates // {}) | to_entries[] | select(.value == "deferred-to-ci")) as $g
+         | ($ci.checks[] | . as $c | select(any($legs[]; . as $l | $c | named($l)) | not) | select(.status != "success"))
+         | "local gate " + $g.key + ": deferred-to-ci while CI " + .name + ": " + .status),
        if samehead($ci.head_sha; $head) | not then "CI: head differs" else empty end,
        if $ci.status != "green" and ($ci.status != "no-checks" or ($no_checks | not)) then "CI: " + $ci.status else empty end,
        ($legs[] as $leg | [$ci.checks[] | select(named($leg))] as $checks

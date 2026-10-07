@@ -72,13 +72,19 @@ Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 (with a Ship defect draft: Reply "file defects" to file the drafts at Gharib89/skills.)
 ```
 
-Once `merge` answers `merged: true` on a clean gate, replace the
-ready-to-merge line with exactly `Merged on a clean gate: <PR url>`. The line
-names the merge, so a step after it that fails (a tracker write, cleanup) is
-reported beneath it, never by keeping the old line. A refused merge keeps the
-ready-to-merge line and names the refusal; report a completed merge only after
-the mechanic confirms it. The summary is posted in full before merging and
-ends with that last line once `merge` confirms.
+On a clean gate the summary ends with exactly the line below in place of the
+two reply lines above, written once `merge` answers `merged: true`:
+
+```
+Merged on a clean gate: <PR url>
+```
+
+A posted message cannot be edited, so the run posts the summary through the
+`Timing:` row with no reply line, runs the merge sequence, then posts that line
+as the last line of the closing message. The reply lines appear only on `clean:
+false` or when `merge` refuses, the refusal named under them. A step after the
+merge that fails (a tracker write, cleanup) is reported beneath the merged line;
+report a completed merge only after the mechanic confirms it.
 
 **Every row is grounded in a result from this run**: `Local gate:` is the
 gate's `gates` object from the verdict the Run file recorded, `CI:` is
@@ -172,25 +178,25 @@ and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
 (`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
 `read-pr`; the mechanic answers `{clean, held_by}` and writes nothing. It
 requires the local gate at that head with every gate `pass` or `deferred-to-ci`
-(the green CI legs below cover the latter), every profile CI leg green at that
-head, every Verification `pass` or `n/a` (inapplicable), or `deferred-to-ci`
-with its `Also proven by CI:` leg green, and every reviewer's loop stopped on
-`Stop: tree unchanged` with a recorded round. A fallback that stopped so answers
-for a primary that was not reviewed; a fallback skipped because its primary
-reviewed adds no condition. A loop cut short by `Cap:`, the small lane or
-`auto-once` holds until its last round changed no file. Any nonblank `Override:`
-other than `none` or `None.`, any `Ship-defect:` record or `defect-*.md` draft,
-and any `tracker-*.md` draft holds the gate (`*.base.md` files are saved
-originals, not drafts). Deviations alone do not hold it. With no expected CI
-legs, `no-checks` is clean only when the profile declares `Legs: None.` and
-`No-checks legal: yes`, at the same head.
+(held while a CI check outside `Legs:` is not green, since a deferral names no
+leg), every profile CI leg green at that head, every Verification `pass` or
+`n/a` (inapplicable), or `deferred-to-ci` with its `Also proven by CI:` leg
+green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
+recorded round. A fallback that stopped so answers for a primary that was not
+reviewed; a fallback skipped because its primary reviewed adds no condition. A
+loop cut short by `Cap:`, the small lane or `auto-once` holds until its last
+round changed no file. Any nonblank `Override:` other than `none` or `None.`,
+any `Ship-defect:` record or `defect-*.md` draft, and any `tracker-*.md` draft
+holds the gate (`*.base.md` files are saved originals, not drafts). Deviations
+alone do not hold it. With no expected CI legs, `no-checks` is clean only when
+the profile declares `Legs: None.` and `No-checks legal: yes`, at the same head.
 
-On `clean: true`, post the full summary, then run the merge sequence below
-without waiting for a reply. On `clean: false`, post it with
-`Clean gate held by: <each held_by reason>` and the usual reply line, then
-wait for "merge". Exit 2 is an unreadable decision: name the error and wait.
-An auto-merge flag is never used: authorization is the recorded gate, after
-reviewers have finished.
+On `clean: true`, post the summary through the `Timing:` row with no reply line,
+then run the merge sequence below without waiting for a reply. On `clean:
+false`, post it with `Clean gate held by: <each held_by reason>` and the usual
+reply line, then wait for "merge". Exit 2 is an unreadable decision: name the
+error and wait. An auto-merge flag is never used: authorization is the recorded
+gate, after reviewers have finished.
 
 **The gate's verdict is cited, not re-run, while it still describes the PR.**
 Phase 5 records each verdict with `run-file gate record` against the head it ran
