@@ -66,23 +66,23 @@ Two workflows are not legs. `.github/workflows/claude-review.yml` is triggered b
 
 ## Reviewers
 
-### copilot
+### codex
 
-Login: copilot-pull-request-reviewer[bot]
+Login: chatgpt-codex-connector[bot]
 Trigger: on-request
-Request: None.
-Workflow: None.
-Cap: 3
+Request: comment @codex review
+Workflow: native codex
+Cap: 2
 Resolve: resolve-thread
 Gating: no
 Fallback-for: None.
-Instructions: .github/copilot-instructions.md
+Instructions: AGENTS.md
 
-The review itself lands under `copilot-pull-request-reviewer[bot]`, which is the login `poll-pr --reviewer copilot` awaits; the inline comments arrive under Copilot's own name, so a thread's author and the round's author differ here. `Request: None.` because the host adds this login to the PR's reviewer list, so `request-review --reviewer copilot` makes the host's own request call and no comment phrase is needed.
+Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. This repo's primary reviewer, driven on every run and capped at two rounds; `claude` below stands in for it when it exits `not reviewed`. `request-review --reviewer codex` posts the phrase; Codex answers under `chatgpt-codex-connector[bot]` with 👀 on the request comment (removed when the round ends) and a status comment it edits in place, then posts findings as a `COMMENTED` review with inline threads badged by priority (P1 and P2 observed), or, clean, a `Codex Review: Didn't find any major issues` comment and 👍 on the PR with no review at all. `Workflow: native codex` is what tells `poll-pr --reviewer codex` to read those signals off the PR instead of a run, so a clean round lands as a round and a reply that is neither (a refusal) reads `not reviewed: blocked` with its text. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`.
 
-Enabled by the repository ruleset **Copilot code review** on the default branch, with `review_on_push: false`. That setting, not the brand, is what fixes the trigger. `false` still opens one round when the PR does, and that one only: a push opens none. The loop polls round 1 from PR creation, so that round is round 1, and one that already landed takes no request; every round after it is a request ship issues, so `Cap: 3` is the number of rounds this reviewer actually gets. Flipping `review_on_push` back to `true` makes it `on-push`, and this block must move with it: preflight reads the ruleset and refuses the pair when they disagree.
+Setup, once, on the maintainer's ChatGPT account: install the ChatGPT Codex Connector app on the repository (the **Connect GitHub** button in the environment picker on chatgpt.com/codex), turn code review on for this repository at chatgpt.com/codex/settings/code-review, and leave automatic review off there, both for the repository and in personal preferences, so a round runs only when requested. A round run through GitHub counts as Code Review usage against the subscription's Codex allowance, shown on the usage dashboard at chatgpt.com/codex/settings/usage. To disable the reviewer, delete this block. Turning code review off in those settings instead leaves ship requesting rounds that nothing answers, each one a window that closes `never-queued` (unprobed).
 
-Under `on-push` the cap is advisory: a ruleset that re-reviews every push keeps posting whatever `Cap:` says, so the number bounds only how long ship waits, and a bound that cannot be enforced is worse than a slower loop that can.
+Observed on the probe PRs #504 and #505 for #500, where the docs say otherwise: P2 findings are posted, not only P0 and P1; a draft PR is reviewed on request; the footer saying reviews start when a PR opens describes automatic review, which is off here. Codex acknowledged a request within 11 s on both, inside the 60 s a comment-transport poll allows for one. A mention of Codex on an issue drew a reply asking for a Codex environment, which is no review.
 
 ### claude
 
@@ -90,31 +90,13 @@ Login: claude[bot]
 Trigger: on-request
 Request: comment @claude
 Workflow: .github/workflows/claude-review.yml
-Cap: 3
+Cap: 2
 Resolve: resolve-thread
 Gating: no
-Fallback-for: copilot
+Fallback-for: codex
 Instructions: .github/copilot-instructions.md
 
-Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Copilot on the month its quota runs out. Driven only when `copilot` exits `not reviewed`, for any reason; on a run where Copilot reviews it reports `not invoked: copilot reviewed` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --reviewer claude --since <iso>` lands, and the action attaches the per-file ones as inline threads on that review, so `Resolve: resolve-thread` the way Copilot's rounds resolve. A finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. `Login:` is `claude[bot]`: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App the workflow's `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` comment below the action runs on `github.token`, and that comment is not a round, so the login the loop awaits is the app's. A round that dies before posting is `not reviewed: infra-error`: `poll-pr --reviewer claude` awaits the run this block's `Workflow:` names and reads its failure directly, a plain comment being no round; the workflow's own `if: failure()` comment names the run on the PR, with the failure subtype where the action left one and `unknown` where it did not, so the PR carries the reason, or the link to it in the Actions log. A cancelled job runs no step and leaves nothing on the PR, and the run read is what still names it: `poll-pr` reports a `cancelled` run as `infra-error`.
-
-### codex
-
-Login: chatgpt-codex-connector[bot]
-Trigger: on-request
-Request: comment @codex review
-Workflow: native codex
-Cap: 3
-Resolve: resolve-thread
-Gating: no
-Fallback-for: None.
-Instructions: AGENTS.md
-
-Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. An independent reviewer, driven on every run beside Copilot rather than only when another fails. `request-review --reviewer codex` posts the phrase; Codex answers under `chatgpt-codex-connector[bot]` with 👀 on the request comment (removed when the round ends) and a status comment it edits in place, then posts findings as a `COMMENTED` review with inline threads badged by priority (P1 and P2 observed), or, clean, a `Codex Review: Didn't find any major issues` comment and 👍 on the PR with no review at all. `Workflow: native codex` is what tells `poll-pr --reviewer codex` to read those signals off the PR instead of a run, so a clean round lands as a round and a reply that is neither (a refusal) reads `not reviewed: blocked` with its text. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`.
-
-Setup, once, on the maintainer's ChatGPT account: install the ChatGPT Codex Connector app on the repository (the **Connect GitHub** button in the environment picker on chatgpt.com/codex), turn code review on for this repository at chatgpt.com/codex/settings/code-review, and leave automatic review off there, both for the repository and in personal preferences, so a round runs only when requested. A round run through GitHub counts as Code Review usage against the subscription's Codex allowance, shown on the usage dashboard at chatgpt.com/codex/settings/usage. To disable the reviewer, delete this block. Turning code review off in those settings instead leaves ship requesting rounds that nothing answers, each one a window that closes `never-queued` (unprobed).
-
-Observed on the probe PRs #504 and #505 for #500, where the docs say otherwise: P2 findings are posted, not only P0 and P1; a draft PR is reviewed on request; the footer saying reviews start when a PR opens describes automatic review, which is off here. Codex acknowledged a request within 11 s on both, inside the 60 s a comment-transport poll allows for one. A mention of Codex on an issue drew a reply asking for a Codex environment, which is no review.
+Claude Code on GitHub Actions, `.github/workflows/claude-review.yml`, standing in for Codex when its round does not come: the subscription's Codex allowance spent, the connector down, a refusal. Driven only when `codex` exits `not reviewed`, for any reason, and then for at most two rounds; on a run where Codex reviews it reports `not invoked: codex reviewed` and costs nothing. The workflow posts its findings as one formal review per round, which is what `poll-pr --reviewer claude --since <iso>` lands, and the action attaches the per-file ones as inline threads on that review, so `Resolve: resolve-thread` the way Codex's rounds resolve. A finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. `Login:` is `claude[bot]`: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App the workflow's `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` comment below the action runs on `github.token`, and that comment is not a round, so the login the loop awaits is the app's. A round that dies before posting is `not reviewed: infra-error`: `poll-pr --reviewer claude` awaits the run this block's `Workflow:` names and reads its failure directly, a plain comment being no round; the workflow's own `if: failure()` comment names the run on the PR, with the failure subtype where the action left one and `unknown` where it did not, so the PR carries the reason, or the link to it in the Actions log. A cancelled job runs no step and leaves nothing on the PR, and the run read is what still names it: `poll-pr` reports a `cancelled` run as `infra-error`.
 
 ## Coding standards
 
