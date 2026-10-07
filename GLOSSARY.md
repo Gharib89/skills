@@ -82,6 +82,10 @@ _Avoid_: fast path, quick mode, hotfix
 An attended stop where Ship prints the exact command and setup, waits for the human to run or confirm it, and resumes. The claim holds. In an unattended run a hand-off becomes a hand-back.
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
 
+**Unmet criterion**:
+An acceptance criterion asking for a host action no mechanic performs, which an unattended run leaves verbatim in the issue and lists on the merge summary with the action a human must take. Merging needs the human's explicit waiver of each, beside the merge word. An attended run asks before building instead.
+_Avoid_: rewritten criterion, descoped criterion
+
 **Host**:
 The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). Ship reads it off the repo's remote and the ship profile names it as a cross-check; every generic mechanic has one adapter per host inside the skill, selected from the ones it carries. A host's own words (label or tag, assignee or Assigned To, review thread or thread) stop at the mechanics, which translate them into Ship's own vocabulary.
 _Avoid_: tracker (Boards is one part of a host), provider, platform

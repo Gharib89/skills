@@ -42,7 +42,7 @@ local-gate contract.
 | Mechanic | Phase |
 |---|---|
 | `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run but the no-issue lane's inner one, before `run-file init` |
-| `run-file init` | the required first action after `prepare` |
+| `run-file init` | after `prepare`, before phase 0 (SKILL.md's pipeline step) |
 | `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
 | `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head and, attended with `Merge: on-clean-gate`, `clean` against the recorded results and `ci-wait` JSON |
 | `run-file grade` | 2, the version grade `open-pr` and `update-pr-title` hold the title type to |

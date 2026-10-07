@@ -2,16 +2,60 @@
 
 ## Contents
 
+- [Phase 1: spec precedence](#phase-1-spec-precedence)
+- [Phase 1: anchors the issue cites](#phase-1-anchors-the-issue-cites)
+- [Phase 1: a criterion no mechanic can perform](#phase-1-a-criterion-no-mechanic-can-perform)
 - [Phase 2: classify, then implement test-first](#phase-2-classify-then-implement-test-first)
+- [Phase 2: verify the spec's external-system claims before building on them](#phase-2-verify-the-specs-external-system-claims-before-building-on-them)
 - [Phase 2: delegate execution, keep judgment](#phase-2-delegate-execution-keep-judgment)
 - [Phase 2: adjacent finds](#phase-2-adjacent-finds)
-- [Verify the spec's external-system claims before building on them](#verify-the-specs-external-system-claims-before-building-on-them)
-- [Phase 1 detail: spec precedence](#phase-1-detail-spec-precedence)
-- [Phase 1 detail: anchors the issue cites](#phase-1-detail-anchors-the-issue-cites)
-- [Phase 1 detail: a criterion no mechanic can perform](#phase-1-detail-a-criterion-no-mechanic-can-perform)
 - [Phase 4: triage and depth checks](#phase-4-triage-and-depth-checks)
 - [Phase 4 evidence lines](#phase-4-evidence-lines)
 - [Consult current docs](#consult-current-docs)
+
+## Phase 1: spec precedence
+
+A later triage brief or authoritative comment can *supersede* the issue body.
+When they conflict (scope reduced, an option chosen, an axis dropped), the
+latest authoritative spec wins and the body's original acceptance criteria no
+longer bind. Note it in the deviations log, and expect a reviewer reading the
+stale body to flag "missing" requirements; reject those in phases 4 and 7 with
+the comment as evidence.
+
+## Phase 1: anchors the issue cites
+
+An issue that names a file, a heading or a step number in another skill or
+file records what its author believed when writing it. Grep each one in the
+worktree before planning, because a run that builds on a wrong anchor spends
+its reviewer rounds unwinding it. Where the tree contradicts one, the tree
+wins:
+
+1. Rewrite the issue section the anchor sits in to match the tree with
+   `update-issue-body <issue> --section <name> --body-file <path>`, the
+   original section kept below the rewrite in a column-0 `<details>` block. The
+   mechanic carries that `<details>` record through every later write to the
+   section, so a later file holds the new content alone. An anchor in
+   the preamble, which the mechanic leaves alone, is restated in the section
+   whose criteria build on it.
+2. Build against the rewritten criteria, and log the substitution in the
+   deviations log.
+
+A contradiction that leaves the issue nothing to build is the `mis-specified`
+stop instead.
+
+## Phase 1: a criterion no mechanic can perform
+
+A criterion that asks for a host action no mechanic performs (a repo setting, a
+branch protection, an installed app) is one the run cannot meet, and the run
+never shrinks the issue's scope on its own authority: the criterion stays
+verbatim in the issue body.
+
+- **Unattended**: deliver the rest, log the gap in the deviations log, and list
+  the criterion on the merge summary's `Unmet criteria` row with the action a
+  human must take. Merging then needs the human's explicit waiver of each one
+  ([merge-gate.md](merge-gate.md#unmet-criteria)).
+- **Attended**: ask the human which way before building; an answer that the
+  issue is wrong is the `mis-specified` stop.
 
 ## Phase 2: classify, then implement test-first
 
@@ -38,6 +82,16 @@ When in doubt between `code` and `docs`, treat it as `code` and write the test.
 **Tripwires are not a class.** Whatever the class, the profile's `Tripwires:`
 and `In-PR requirement:` land in the same change, or a later phase goes red with
 no phase explaining why.
+
+## Phase 2: verify the spec's external-system claims before building on them
+
+When the issue asserts a *causal mechanism* about something outside this
+repo's code (a library behavior, a platform's response, an OS path rule),
+treat it as a **hypothesis**, and confirm it against the real thing with the
+cheapest probe *before* writing the fix around it; the profile's `Claims to
+probe:` lines are this repo's examples. A triage brief's root cause is
+frequently a plausible guess. A probe that contradicts the brief is an early
+`mis-specified` stop, not a phase-3 surprise.
 
 ## Phase 2: delegate execution, keep judgment
 
@@ -79,57 +133,6 @@ phases 4 and 7 send their own out-of-scope findings back here.
 - **Stop `mis-specified`**, where the find shows the issue itself is wrong.
 
 The merge summary lists every issue filed and every candidate linked.
-
-## Verify the spec's external-system claims before building on them
-
-When the issue asserts a *causal mechanism* about something outside this
-repo's code (a library behavior, a platform's response, an OS path rule),
-treat it as a **hypothesis**, and confirm it against the real thing with the
-cheapest probe *before* writing the fix around it; the profile's `Claims to
-probe:` lines are this repo's examples. A triage brief's root cause is
-frequently a plausible guess. A probe that contradicts the brief is an early
-`mis-specified` stop, not a phase-3 surprise.
-
-## Phase 1 detail: spec precedence
-
-A later triage brief or authoritative comment can *supersede* the issue body.
-When they conflict (scope reduced, an option chosen, an axis dropped), the
-latest authoritative spec wins and the body's original acceptance criteria no
-longer bind. Note it in the deviations log, and expect a reviewer reading the
-stale body to flag "missing" requirements; reject those in phases 4 and 7 with
-the comment as evidence.
-
-## Phase 1 detail: anchors the issue cites
-
-An issue that names a file, a heading or a step number in another skill or
-file records what its author believed when writing it. Grep each one in the
-worktree before planning, because a run that builds on a wrong anchor spends
-its reviewer rounds unwinding it. Where the tree contradicts one, the tree
-wins:
-
-1. Rewrite the issue section the anchor sits in to match the tree with
-   `update-issue-body <issue> --section <name> --body-file <path>`, the
-   original section kept below the rewrite in a column-0 `<details>` block. The
-   mechanic carries that `<details>` record through every later write to the
-   section, so a later file holds the new content alone. An anchor in
-   the preamble, which the mechanic leaves alone, is restated in the section
-   whose criteria build on it.
-2. Build against the rewritten criteria, and log the substitution in the
-   deviations log.
-
-A contradiction that leaves the issue nothing to build is the `mis-specified`
-stop instead.
-
-## Phase 1 detail: a criterion no mechanic can perform
-
-A criterion that asks for a host action no mechanic performs (a repo setting, a
-branch protection, an installed app) is one the run cannot meet, and a line in
-the merge summary saying so is how it gets lost. Unattended, rewrite it like an
-anchor above, through `update-issue-body`, restated as what the run can deliver
-(the file, or the instruction naming the action), the original kept in
-`<details>` and the substitution in the deviations log. Attended, ask the human
-which way before building; an answer that the issue is wrong is the
-`mis-specified` stop.
 
 ## Phase 4: triage and depth checks
 

@@ -60,10 +60,10 @@ does not mention, and is the read-back check for it.
 It is a `diff` fence over a call tree, control flow, pseudocode or component
 tree, showing what the change **does**. Text forms only: Azure DevOps renders
 neither mermaid nor HTML, and the `diff` fence shows the before and the after in
-one view. **One behavioural fence per PR**, about 15 lines or fewer; a change
-that needs two is a PR spanning two concerns. A **carrier file tree** may follow
-in a second fence, only when the same edit lands in more than two files; it is
-not behavioural, so the count and the budget are the first fence's alone. Every
+one view. **One behavioural fence per PR**, preferably about 15 lines or fewer.
+A **carrier file tree** may follow in a second fence, only when the same edit
+lands in more than two files; it is not behavioural, so the count and the budget
+are the first fence's alone. Every
 node is a real symbol, each tree's root carries its file path, and no line
 carries a line number: the first review-round push rots them.
 
@@ -80,9 +80,9 @@ constraints are ship's, and its menu of other uses is not.
 ## Special things to note: the folded deviations
 
 What the reviewer must know before reading the diff: warnings, migrations,
-compatibility constraints, deliberate omissions. At most five bullets below the
-Door line, one sentence each; a sixth means the body is becoming the record
-again.
+compatibility constraints, deliberate omissions. Preferably five bullets or
+fewer below the Door line, one sentence each, but **every material compatibility
+or operational risk is included**, related ones grouped into one bullet.
 
 **The first bullet is always the Door line**, in this shape:
 
@@ -93,7 +93,7 @@ again.
 One-way is a merge nobody can walk back: a released breaking change consumers
 have already adopted, a data migration, a deleted artifact. Two-way is a
 revert. The blast radius names who else feels it rather than grading it. The
-line sits **outside the five-bullet ceiling**: a reviewer deciding whether to
+line sits **outside that preference**: a reviewer deciding whether to
 approve reads it first, and a change carrying five warnings is exactly the one
 that needs it.
 

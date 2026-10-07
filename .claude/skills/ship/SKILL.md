@@ -69,10 +69,11 @@ checks: a skill added here is added there too.
 Work the phases in order, keeping the main thread on orchestration and
 decisions. **First**, read
 [reference/context-discipline.md](reference/context-discipline.md): the
-delegation rule, the levers that keep a long run from bloating the window, and
-your **required first action, the Run file** holding the ten-item checklist.
-Each phase below flips it with `run-file next`, `open`, `close` or `skip`, and
-closes once its `Done when:` holds, not before.
+delegation rule and the levers that keep a long run from bloating the window.
+Then the run's **required first action**: after `prepare` and before phase 0,
+`run-file init <issue|slug> --from-profile` initializes the Run file holding the
+ten-item checklist. Each phase below flips it with `run-file next`, `open`,
+`close` or `skip`, and closes once its `Done when:` holds, not before.
 
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every host write, and every gating read, goes through a
@@ -99,11 +100,14 @@ any `## Worktree` `Bootstrap:` ran green.
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
 `manage-issue <issue> take`, held until merge; later stops follow the stop
 table. Then **grep each anchor** the issue cites, rewriting one the tree
-contradicts, and a criterion needing a host action no mechanic performs,
-through `update-issue-body`, or asking, attended
-([implement.md](reference/implement.md)), and only then write what success looks
-like into the Run file as criteria a later phase can check; a later
-authoritative comment supersedes the body (**spec precedence**).
+contradicts through `update-issue-body`
+([implement.md](reference/implement.md#phase-1-anchors-the-issue-cites)). A
+criterion needing a host action no mechanic performs stays verbatim: unattended,
+it is an **unmet criterion** the merge summary lists; attended, ask first
+([implement.md](reference/implement.md#phase-1-a-criterion-no-mechanic-can-perform)).
+Only then write what success looks like into the Run file as criteria a later
+phase can check; a later authoritative comment supersedes the body (**spec
+precedence**).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
@@ -132,7 +136,9 @@ applicable verification's `Run:` line **scoped to what you touched**, on the
 environment the issue was reported against: green elsewhere is not fixed. Noisy
 runs go to a cheap-tier subagent in the `verify` scratch directory. `docs` class
 and the small lane skip this phase.
-**Done when:** `run-file close 3` took a `--result` for every Verification, or
+**Done when:** `run-file close 3` took a `--result` for every Verification and
+every applicable one reads `pass`, `deferred-to-ci` or `unexercised`, else the
+run took the stop the failure names, its result recorded all the same; or
 `run-file skip 3` recorded what skipped it.
 
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
@@ -232,7 +238,8 @@ review quota, so push when the tree changed.
 the summary's shape, what `merge` does, its two refusals and the tracker drafts.
 Write the summary per that file, uncompressed. Attended: follow its
 `Merge:` branch, waiting for an explicit "merge" by default, or merging when
-`Merge: on-clean-gate` and `run-file gate clean` answers `clean: true`.
+`Merge: on-clean-gate` and `run-file gate clean` answers `clean: true`; an
+unmet criterion needs the human's explicit waiver beside the merge word.
 On either authorization run `merge <pr> <issue|none> [--worktree
 <path>]`, `update-issue-body` per tracker draft, settle each Ship defect draft
 (filed on its own word only), `run-file close 9`, then `cleanup <issue|none>`,
@@ -250,10 +257,9 @@ with no `false`; unattended, `comment-pr` posted.
 The **merge gate** stops for the human by default. An attended run with
 `Merge: on-clean-gate` merges on the clean-gate verdict; every other attended
 run waits for the exact word "merge". The unattended lane posts and returns.
-Two conditional pauses in an attended run: the
-`ambiguous` stop (phase 1) and a **hand-off** (phase 3). Everything else,
-triaging your own findings, fixing, re-running, is autonomous. Two guardrails
-hold around that:
+**The stop table below is authoritative**: on any stop, report its name and take
+the claim action its row gives. Everything else, triaging your own findings,
+fixing, re-running, is autonomous. Two guardrails hold around that:
 
 - **Red is fixed or reported.** Any failure before the merge gate gets at most
   two fix-and-retry attempts; still red after the second is `red-after-retry:
@@ -311,10 +317,9 @@ is the same in every repo, and the lane revokes one way only.
 
 ## Model tiers
 
-The cheapest model that fits, the strong tier for judgment: haiku maps, sonnet
-executes, opus judges. Tag every subagent with its model and its scratch
-directory; neither is inherited. The table is in
-[context-discipline.md](reference/context-discipline.md#model-tiers).
+One policy, the tier table in
+[context-discipline.md](reference/context-discipline.md#model-tiers). Tag every
+subagent with its model and its scratch directory; neither is inherited.
 
 ## Working standards
 

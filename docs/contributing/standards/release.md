@@ -58,7 +58,8 @@ below lands as a minor
   [skills/setup-skills/profile-schema.md](../../../skills/setup-skills/profile-schema.md):
   a major bump with a `## Schema N` entry, additive or not. A change to what
   `ship` expects of a profile bumps `metadata.profile-schema` by hand in the
-  same PR and adds that entry. Preflight refuses a schema mismatch in either
+  same PR and adds that entry; a behaviour change that leaves the profile alone
+  moves neither. Preflight refuses a schema mismatch in either
   direction, so an added heading stops an installed profile from running until
   `setup-skills` migrates it, which is what makes it breaking where an added
   optional flag is not. A line `ship` accepts without expecting, the optional

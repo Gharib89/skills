@@ -62,10 +62,10 @@ label strings from `docs/agents/triage-labels.md`, and the tracker's mechanics
 come from `docs/agents/issue-tracker.md`.
 
 Under the `# Ship profile` title the profile carries `Schema: N`, and this skill
-declares the schema it reads as `metadata.profile-schema`. The number moves only
-when ship's expectations of the profile change (a heading or `Label:` line
-added, renamed or removed; a `Label:` vocabulary changed), always graded a ship
-major, and never for a behaviour change that leaves the profile alone.
+declares the schema it reads as `metadata.profile-schema`; a run only compares
+the two. When the number moves is a maintainer rule, kept in the
+[source repo](https://github.com/Gharib89/skills) under
+`docs/contributing/standards/release.md`.
 
 ## What preflight refuses
 
