@@ -191,8 +191,9 @@ command a human runs after merging, from a file they save the draft to,
 Read the optional `Merge:` line under the profile's `## PR`. An absent line
 or `Merge: Default.` means post the summary in the conversation and **wait**
 for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
-means evaluate the clean gate below. Any other value holds for the human as
-a profile error. The unattended branch never evaluates this option.
+means evaluate the clean gate below, unless an unmet criterion is listed, which
+waits for the human's waiver ([Unmet criteria](#unmet-criteria)). Any other
+value holds for the human as a profile error. The unattended branch never evaluates this option.
 
 For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
 and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`

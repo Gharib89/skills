@@ -255,7 +255,8 @@ with no `false`; unattended, `comment-pr` posted.
 ## The stops
 
 The **merge gate** stops for the human by default. An attended run with
-`Merge: on-clean-gate` merges on the clean-gate verdict; every other attended
+`Merge: on-clean-gate` merges on the clean-gate verdict unless an unmet
+criterion is listed, which waits for the human's waiver; every other attended
 run waits for the exact word "merge". The unattended lane posts and returns.
 **The stop table below is authoritative.** Everything else, triaging your own
 findings, fixing, re-running, is autonomous. Two guardrails hold around that:
