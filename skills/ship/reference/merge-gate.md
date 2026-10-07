@@ -179,6 +179,8 @@ or `auto-once` holds until its last round changed no file. Any nonblank
 `Override:` other than `none` or `None.`, any `Ship-defect:` record or
 `defect-*.md` draft, and any `tracker-*.md` draft holds the gate (`*.base.md`
 files are saved originals, not drafts). Deviations alone do not hold it.
+With no expected CI legs, `no-checks` is clean only when the profile declares
+`Legs: None.` and `No-checks legal: yes`, at the same head.
 
 On `clean: true`, post the full summary, then run the merge sequence below
 without waiting for a reply. On `clean: false`, post it with

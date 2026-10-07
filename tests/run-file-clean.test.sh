@@ -113,5 +113,7 @@ base; printf '{}\n' > "$ci"; answer=$(call); check_rc 'empty CI object is toolin
 base; change_run 's/{.*}/{broken}/'; answer=$(call); check_rc 'malformed recorded gates is tooling' 2 "$?"; check 'bad gate JSON names failed read' 'cannot read recorded local gate results' "$(jq -r .error <<<"$answer")"
 base; answer=$(call --result x=pass); check_rc 'result flag is invalid for clean' 2 "$?"
 base; answer=$(cd "$repo" && bash "$m" gate clean - --head "$head" --issue clean --scratchpad "$tmp/records" < "$ci" 2>/dev/null); check 'stdin and issue lookup answer clean' true "$(jq -r .clean <<<"$answer")"
+base; cp "$f" "$repo/run.md"; touch "$repo/defect-relative.md"
+answer=$(call --file run.md); check_rc 'relative Run file draft refuses' 1 "$?"; check 'relative Run file draft names hold' true "$(jq -r '.held_by | index("Ship defect draft: defect-relative.md") != null' <<<"$answer")"
 base; before=$(cat "$f"); call >/dev/null; check 'clean is read-only' "$before" "$(cat "$f")"
 finish

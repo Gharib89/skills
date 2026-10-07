@@ -608,7 +608,7 @@ close_gate() { # close_gate <phase> <its row>
 # The clean gate is a read of evidence, independent of the profile's merge opt-in.
 # A stop of tree unchanged proves convergence; trigger and budget stops do not.
 gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
-  local ci profile_path profile reviewers verifications lines rec rhead='' rverdict='' rgates=null drafts='[]' p answer
+  local ci profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
   [ -r "$file" ] || ship_tooling "cannot read Run file at $file"
   lines=$(cat "$file") || ship_tooling "cannot read Run file at $file"
   if [ "$1" = - ]; then ci=$(cat) || ship_tooling "cannot read CI answer"
@@ -647,7 +647,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     jq -e ' . == null or (type == "object" and all(.[]; type == "string"))' \
       >/dev/null 2>&1 <<<"$rgates" || ship_tooling "cannot read recorded local gate results"
   fi
-  for p in "${file%/*}"/defect-*.md "${file%/*}"/tracker-*.md; do
+  record_dir=$(dirname "$file") || ship_tooling "cannot locate Run file drafts"
+  for p in "$record_dir"/defect-*.md "$record_dir"/tracker-*.md; do
     [ -f "$p" ] || continue
     case $p in *.base.md) continue ;; esac
     drafts=$(jq -c --arg p "${p##*/}" '. + [$p]' <<<"$drafts") || ship_tooling "cannot read draft paths"
@@ -655,7 +656,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
     --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" '
-    def samehead($a; $b): $a != "" and $b != "" and ($a | startswith($b)) or ($b != "" and $a != "" and ($b | startswith($a)));
+    def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
     ($text | split("\n")) as $lines
     | ($lines | map(sub("^- "; "") | sub("[ \\t\\r]+$"; ""))) as $evidence
@@ -700,7 +701,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       ] as $held | {clean: ($held == []), held_by: $held}
     ') || ship_tooling "cannot evaluate clean gate evidence"
   printf '%s\n' "$answer"
-  if jq -e '.clean' >/dev/null <<<"$answer"; then return 0; fi
+  jq -e '.clean' >/dev/null <<<"$answer"
+  case $? in 0) return 0 ;; 1) ;; *) ship_tooling "cannot read clean gate verdict" ;; esac
   jq -r '.held_by[]' <<<"$answer" | tail -n 40 >&2
   return 1
 }
