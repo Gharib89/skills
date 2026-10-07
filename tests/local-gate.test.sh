@@ -106,7 +106,7 @@ check "--small, a row whose tool is missing (127) grades unavailable" "unavailab
 STUB_LOCAL_ONLY=contract CLAUDE_CODE_REMOTE=true gate "$d" --small docs/note.md
 check "--small, a LOCAL_ONLY row in a cloud session is skipped and read as pass" "pass 4" \
   "$(jq -r '.gates.contract' <<<"$out") $(grep -c . <<<"$calls")"
-STUB_LOCAL_ONLY=contract gate "$d" --small docs/note.md
+STUB_LOCAL_ONLY=contract CLAUDE_CODE_REMOTE='' gate "$d" --small docs/note.md
 check "--small, a LOCAL_ONLY row outside a cloud session still runs" "6" "$(grep -c . <<<"$calls")"
 
 # A row runs under pipefail, as check.sh runs it: a failing head of a pipe fails

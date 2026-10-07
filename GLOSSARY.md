@@ -67,7 +67,7 @@ The container any cloud session runs in, attended or unattended, reaching hosts 
 _Avoid_: cloud env, default env, container
 
 **Merge gate**:
-The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate` authorizes a merge when `run-file gate clean` confirms every recorded condition. An unattended run posts to the PR and returns.
+The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate` authorizes a merge when `run-file gate clean` confirms every recorded condition and no unmet criterion is listed, since each needs the human's waiver. An unattended run posts to the PR and returns.
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:
@@ -81,6 +81,10 @@ _Avoid_: fast path, quick mode, hotfix
 **Hand-off**:
 An attended stop where Ship prints the exact command and setup, waits for the human to run or confirm it, and resumes. The claim holds. In an unattended run a hand-off becomes a hand-back.
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
+
+**Unmet criterion**:
+An acceptance criterion asking for a host action no mechanic performs, which a run leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Merging needs the human's explicit waiver of each, beside the merge word. Not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
+_Avoid_: rewritten criterion, descoped criterion
 
 **Host**:
 The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). Ship reads it off the repo's remote and the ship profile names it as a cross-check; every generic mechanic has one adapter per host inside the skill, selected from the ones it carries. A host's own words (label or tag, assignee or Assigned To, review thread or thread) stop at the mechanics, which translate them into Ship's own vocabulary.

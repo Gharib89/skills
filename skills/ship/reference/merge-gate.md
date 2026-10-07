@@ -3,6 +3,7 @@
 ## Contents
 
 - [The summary](#the-summary)
+- [Unmet criteria](#unmet-criteria)
 - [A tracker issue on Targets:](#a-tracker-issue-on-targets)
 - [Attended: post, then wait](#attended-post-then-wait)
 - [Filing a Ship defect](#filing-a-ship-defect)
@@ -13,9 +14,10 @@ clean gate. Lay out everything the human would want to check in either case.
 
 **Write it uncompressed.** A session-wide output style or personal brevity rule
 does **not** apply to this summary. It is the evidence a human approves an
-irreversible squash-merge on, and in the unattended lane it is the only record
-of the run. Keep organization identifiers, credentials and live-system names out
-of it; the repo may be public.
+irreversible squash-merge on, and it carries that evidence itself: in a cloud
+fire, the Run file lives in the sandbox clone and does not outlive it.
+Keep organization identifiers, credentials and live-system names out of it; the
+repo may be public.
 
 ## The summary
 
@@ -33,6 +35,10 @@ Implementation
 
 Deviations from plan
   - <departure: what and why, conservative option taken>   (or: None, plan held)
+
+Unmet criteria
+  - <criterion, verbatim from the issue>: <the host action a human must take>
+  (or: None)
 
 Verification                                   (one row per applicable entry)
   - <name>: <pass | fail | deferred-to-ci: <CI leg> | unavailable | unexercised>   <what ran>
@@ -69,6 +75,7 @@ Timing:      <`run-file timing`'s `row`, verbatim>
 [Clean gate held by: <each held_by reason>]     (opted in, clean: false)
 
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
+(with an unmet criterion: reply "merge" with an explicit waiver of each one.)
 (with a Ship defect draft: Reply "file defects" to file the drafts at Gharib89/skills.)
 ```
 
@@ -136,6 +143,19 @@ file is no longer on disk is `unverified`.
 summary is posted: the merge freezes the PR title as the squash subject, so the
 human should read the title that will land.
 
+## Unmet criteria
+
+An acceptance criterion asking for a host action no mechanic performs stays
+verbatim in the issue
+([implement.md](implement.md#phase-1-a-criterion-no-mechanic-can-perform)). A
+run that hits one, unattended or told to build the rest, lists it on the `Unmet
+criteria` row, verbatim, with the action a human must take, and logs the gap in
+the deviations log. The row is the human's to clear: **merging needs an
+explicit waiver of each unmet criterion, beside the merge word**: "merge" alone,
+or a waiver naming fewer than all of them, is asked back. No mechanic reads the
+row, so with one listed, `Merge: on-clean-gate` does not merge: post the summary
+with the reply line and wait, whatever `gate clean` answers.
+
 ## A tracker issue on Targets:
 
 A `Targets:` entry naming an issue by number (`#<n>`, such as `map issue #1`) is
@@ -171,8 +191,10 @@ command a human runs after merging, from a file they save the draft to,
 Read the optional `Merge:` line under the profile's `## PR`. An absent line
 or `Merge: Default.` means post the summary in the conversation and **wait**
 for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
-means evaluate the clean gate below. Any other value holds for the human as
-a profile error. The unattended branch never evaluates this option.
+means evaluate the clean gate below, unless an unmet criterion is listed, which
+waits for the human's waiver ([Unmet criteria](#unmet-criteria)). Any other
+value holds for the human as a profile error. The unattended branch never
+evaluates this option.
 
 For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
 and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
@@ -250,9 +272,11 @@ where the write succeeds. Before or after the merge, either order holds.
 task set to the returned `mirror`, then **return** with the PR link. Do not
 wait, poll, or merge; the claim stays on the issue, which carries the open PR,
 so later fires skip it until a human merges. The last line becomes "Ready to
-merge: a human merges from the PR." A Ship defect's draft is never
-filed from here, and the comment drops the "file defects" line: it carries each
-draft verbatim under the command a human runs from a file they save it to,
+merge: a human merges from the PR.", and with an unmet criterion it adds "Waive
+each unmet criterion, or take its action, before merging." A Ship defect's
+draft is never filed from here, and the comment drops the "file defects" line:
+it carries each draft verbatim under the command a human runs from a file they
+save it to,
 `.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
 "<title>" --body-file <file> --label needs-triage`. Detail in
 [unattended.md](unattended.md).

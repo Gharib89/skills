@@ -4,7 +4,7 @@
 
 - [Model tiers](#model-tiers)
 - [While a subagent is out, end the turn](#while-a-subagent-is-out-end-the-turn)
-- [First action: the Run file](#first-action-the-run-file)
+- [The Run file](#the-run-file)
 
 A full ship touches many files across many turns. What bloats the window is raw
 tool output landing in the main thread, not the work itself, so spend tokens on
@@ -68,11 +68,12 @@ notification resumes the run on its own: a poll loop, a sleep, a status ping or
 a read of the output file buys nothing it does not deliver. This is the one
 place where having nothing to do is the correct next action.
 
-## First action: the Run file
+## The Run file
 
-**Before phase 0, before the worktree**, run `run-file init <issue|slug>
---from-profile`, which reads the profile's `Tripwires:`, its Verification
-names, its reviewers and its `Legs:` into the checklist. The record lives at
+`run-file init <issue|slug> --from-profile` is the run's first action, placed
+by SKILL.md's [pipeline step](../SKILL.md#the-pipeline). Init reads the
+profile's `Tripwires:`, its Verification names, its reviewers and its `Legs:`
+into the checklist. The record lives at
 `<git common dir>/ship/ship-<issue>/run.md`, outside every working tree, so the
 gate never reads it; `--scratchpad <dir>` overrides the root. Init also prints
 `scratch`, `<git common dir>/ship/scratch-<issue>`, the run's own scratch root,
