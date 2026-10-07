@@ -136,10 +136,10 @@ applicable verification's `Run:` line **scoped to what you touched**, on the
 environment the issue was reported against: green elsewhere is not fixed. Noisy
 runs go to a cheap-tier subagent in the `verify` scratch directory. `docs` class
 and the small lane skip this phase.
-**Done when:** `run-file close 3` took a `--result` for every Verification and
-every applicable one reads `pass`, `deferred-to-ci` or `unexercised`, else the
-run took the stop the failure names, its result recorded all the same; or
-`run-file skip 3` recorded what skipped it.
+**Done when:** `run-file close 3` took a `--result` for every Verification,
+each applicable one `pass`, `deferred-to-ci` or `unexercised`; any other result
+is recorded, then takes its named stop. Or `run-file skip 3` recorded what
+skipped it.
 
 **4 · Sync docs, then self-review.** Docs first, so the review reads the docs
 edits as part of the diff. **Docs-sync fires only when the public surface or
@@ -257,9 +257,8 @@ with no `false`; unattended, `comment-pr` posted.
 The **merge gate** stops for the human by default. An attended run with
 `Merge: on-clean-gate` merges on the clean-gate verdict; every other attended
 run waits for the exact word "merge". The unattended lane posts and returns.
-**The stop table below is authoritative**: on any stop, report its name and take
-the claim action its row gives. Everything else, triaging your own findings,
-fixing, re-running, is autonomous. Two guardrails hold around that:
+**The stop table below is authoritative.** Everything else, triaging your own
+findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 
 - **Red is fixed or reported.** Any failure before the merge gate gets at most
   two fix-and-retry attempts; still red after the second is `red-after-retry:
@@ -317,9 +316,9 @@ is the same in every repo, and the lane revokes one way only.
 
 ## Model tiers
 
-One policy, the tier table in
-[context-discipline.md](reference/context-discipline.md#model-tiers). Tag every
-subagent with its model and its scratch directory; neither is inherited.
+Pick every subagent's model from the one tier table in
+[context-discipline.md](reference/context-discipline.md#model-tiers), and tag
+each with its model and its scratch directory; neither is inherited.
 
 ## Working standards
 

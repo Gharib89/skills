@@ -55,7 +55,8 @@ verbatim in the issue body.
   human must take. Merging then needs the human's explicit waiver of each one
   ([merge-gate.md](merge-gate.md#unmet-criteria)).
 - **Attended**: ask the human which way before building; an answer that the
-  issue is wrong is the `mis-specified` stop.
+  issue is wrong is the `mis-specified` stop, and one to build the rest makes
+  it an unmet criterion as above.
 
 ## Phase 2: classify, then implement test-first
 

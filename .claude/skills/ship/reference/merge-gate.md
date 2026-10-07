@@ -14,8 +14,8 @@ clean gate. Lay out everything the human would want to check in either case.
 
 **Write it uncompressed.** A session-wide output style or personal brevity rule
 does **not** apply to this summary. It is the evidence a human approves an
-irreversible squash-merge on, and it carries that evidence itself: an
-unattended run's Run file lives in the sandbox clone and does not outlive it.
+irreversible squash-merge on, and it carries that evidence itself: in a cloud
+fire, the Run file lives in the sandbox clone and does not outlive it.
 Keep organization identifiers, credentials and live-system names out of it; the
 repo may be public.
 
@@ -75,7 +75,7 @@ Timing:      <`run-file timing`'s `row`, verbatim>
 [Clean gate held by: <each held_by reason>]     (opted in, clean: false)
 
 Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
-(with an unmet criterion: reply "merge" and "waive <criterion>" for each one.)
+(with an unmet criterion: reply "merge" with an explicit waiver of each one.)
 (with a Ship defect draft: Reply "file defects" to file the drafts at Gharib89/skills.)
 ```
 
@@ -147,13 +147,14 @@ human should read the title that will land.
 
 An acceptance criterion asking for a host action no mechanic performs stays
 verbatim in the issue
-([implement.md](implement.md#phase-1-a-criterion-no-mechanic-can-perform)). An
-unattended run that met one lists it on the `Unmet criteria` row, verbatim,
-with the action a human must take, and logs the gap in the deviations log. The
-row is the human's to clear: **merging needs an explicit waiver of each unmet
-criterion, beside the merge word**: "merge" alone, or a waiver naming fewer
-than all of them, is asked back. An attended run asked before building, so its
-row reads `None`.
+([implement.md](implement.md#phase-1-a-criterion-no-mechanic-can-perform)). A
+run that hits one, unattended or told to build the rest, lists it on the `Unmet
+criteria` row, verbatim, with the action a human must take, and logs the gap in
+the deviations log. The row is the human's to clear: **merging needs an
+explicit waiver of each unmet criterion, beside the merge word**: "merge" alone,
+or a waiver naming fewer than all of them, is asked back. No mechanic reads the
+row, so with one listed, `Merge: on-clean-gate` does not merge: post the summary
+with the reply line and wait, whatever `gate clean` answers.
 
 ## A tracker issue on Targets:
 

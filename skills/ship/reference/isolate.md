@@ -63,9 +63,7 @@ come from `docs/agents/issue-tracker.md`.
 
 Under the `# Ship profile` title the profile carries `Schema: N`, and this skill
 declares the schema it reads as `metadata.profile-schema`; a run only compares
-the two. When the number moves is a maintainer rule, kept in the
-[source repo](https://github.com/Gharib89/skills) under
-`docs/contributing/standards/release.md`.
+the two, and when the number moves is the maintainers' rule, not the run's.
 
 ## What preflight refuses
 

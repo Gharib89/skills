@@ -70,8 +70,8 @@ place where having nothing to do is the correct next action.
 
 ## The Run file
 
-SKILL.md's pipeline step makes `run-file init <issue|slug> --from-profile` the
-run's first action, after `prepare` and before phase 0. Init reads the profile's
+`run-file init <issue|slug> --from-profile` is the run's first action, placed
+by [SKILL.md's pipeline step](../SKILL.md#the-pipeline). Init reads the profile's
 `Tripwires:`, its Verification names, its reviewers and its `Legs:` into the
 checklist. The record lives at
 `<git common dir>/ship/ship-<issue>/run.md`, outside every working tree, so the

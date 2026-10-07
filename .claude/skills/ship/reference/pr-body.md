@@ -60,7 +60,7 @@ does not mention, and is the read-back check for it.
 It is a `diff` fence over a call tree, control flow, pseudocode or component
 tree, showing what the change **does**. Text forms only: Azure DevOps renders
 neither mermaid nor HTML, and the `diff` fence shows the before and the after in
-one view. **One behavioural fence per PR**, preferably about 15 lines or fewer.
+one view. **One behavioural fence per PR**, preferably 15 lines or fewer.
 A **carrier file tree** may follow in a second fence, only when the same edit
 lands in more than two files; it is not behavioural, so the count and the budget
 are the first fence's alone. Every
@@ -93,7 +93,7 @@ or operational risk is included**, related ones grouped into one bullet.
 One-way is a merge nobody can walk back: a released breaking change consumers
 have already adopted, a data migration, a deleted artifact. Two-way is a
 revert. The blast radius names who else feels it rather than grading it. The
-line sits **outside that preference**: a reviewer deciding whether to
+line sits **outside that count**: a reviewer deciding whether to
 approve reads it first, and a change carrying five warnings is exactly the one
 that needs it.
 
