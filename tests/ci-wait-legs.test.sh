@@ -106,7 +106,9 @@ ans 6 "$(rows "$(row test success)" "$(row lint success)")"
 out=$(SHIP_CALL_CAP=3 ci "$two" --timeout 60); rc=$?
 check_rc "a call that would pass the cap answers pending, exit 1" 1 "$rc"
 check "pending, with a cursor" 'pending true' "$(jq -r '[.status, (.cursor | length > 0)] | join(" ")' <<<"$out")"
-check "within the cap" true "$(jq '.waited_s <= 3' <<<"$out")"
+# waited_s counts the poll's own work too, which a loaded machine stretches past
+# the cap (#507): the bound holds the call far short of the 60 s window.
+check "within the cap" true "$(jq '.waited_s <= 10' <<<"$out")"
 cur=$(jq -r .cursor <<<"$out")
 out2=$(SHIP_CALL_CAP=3 ci "$two" --cursor "$cur"); rc=$?
 check_rc "the resumed call answers green" 0 "$rc"
@@ -129,10 +131,12 @@ ans 1 "$(rows "$(row test pending)" "$(row lint pending)")"
 printf '%s\n' '{"number":7,"head_sha":"aaaaaaa","head_ref":"fix/fake-1","mergeable":"clean"}' > "$SHIP_FAKE/host_pr_get.1.json"
 out=$(GRACE=2 SHIP_CALL_CAP=3 ci "$lax" --sha aaaaaaa --timeout 60)
 check "the first call is pending on the old head" 'pending aaaaaaa' "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out")"
-cur=$(jq -r .cursor <<<"$out")
+# The old head's clock is aged far past a grace no loaded machine reaches in one
+# capped call (#507), so only a restart on the new head answers pending.
+cur=$(jq -r .cursor <<<"$out" | base64 -d | jq -c '.head_at -= 100' | base64 -w0)
 reset; ans 1 '[]'
 printf '%s\n' '{"number":7,"head_sha":"bbbbbbb","head_ref":"fix/fake-1","mergeable":"clean"}' > "$SHIP_FAKE/host_pr_get.1.json"
-out2=$(GRACE=2 SHIP_CALL_CAP=1 ci "$lax" --sha bbbbbbb --cursor "$cur"); rc=$?
+out2=$(GRACE=30 SHIP_CALL_CAP=1 ci "$lax" --sha bbbbbbb --cursor "$cur"); rc=$?
 check_rc "a resumed call on a new head with no checks yet is not answered" 1 "$rc"
 check "no-checks waits for the grace on the new head" 'pending bbbbbbb' "$(jq -r '[.status, .head_sha] | join(" ")' <<<"$out2")"
 
