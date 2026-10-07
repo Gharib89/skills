@@ -67,17 +67,17 @@ n() { cat "$SHIP_FAKE/$1.n" 2>/dev/null || echo 0; }
 reset
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.5.json"
-t0=$(date +%s)
 out=$(CAP=2 poll --since "$since"); rc=$?
-t1=$(date +%s)
 check_rc "a window still open at the cap answers exit 1" 1 "$rc"
 check "and says it is pending" pending "$(jq -r .status <<<"$out")"
 check "and is not done" false "$(jq -r .done <<<"$out")"
 check "and carries a cursor" true "$(jq '(.cursor | type) == "string" and (.cursor | length) > 0' <<<"$out")"
 check "and keeps the snapshot shape" deadbee "$(jq -r .head_sha <<<"$out")"
-# A loaded machine stretches each read (#507): the bound holds the call far
-# short of the 540 s cap it stands for.
-check "the call held the tool no longer than its cap, plus one read" true "$([ $((t1 - t0)) -le 10 ] && echo true || echo false)"
+# Counted in passes, not seconds, so a loaded machine (#507, #520) cannot fail
+# it: a 2 s cap on whole-second clocks with 1 s naps fits at most three passes,
+# and a slower read only means fewer.
+check "the call stopped at its cap, after no more than three passes" true \
+  "$([ "$(n host_pr_reviews)" -le 3 ] && echo true || echo false)"
 cursor=$(jq -r .cursor <<<"$out")
 # The resumed call's cap leaves the reads still to come room on a loaded
 # machine; it answers as soon as the round lands.
