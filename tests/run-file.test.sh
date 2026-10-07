@@ -10,7 +10,7 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing, each taking --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
 
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
