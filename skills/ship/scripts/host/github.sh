@@ -587,33 +587,36 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # sharing a title therefore match each other's runs, which costs the poll time
 # and no more, and a title rewritten between the request and the poll matches
 # nothing, which reads as `never-queued`.
-# `gh run list` rather than `api`: it builds the `--created` search itself, and
-# a read that returns nothing is an answer here rather than a failure. `--limit`
-# truncates a set `--created` has already bounded to the poll's own window, so
-# it is set far above the runs one such window can hold rather than at the page
-# size: a truncated read drops the run the poll is waiting on and reads as
-# `never-queued`. Its stderr is tailed the way `_gh` tails its own,
-# because a CLI diagnostic is unbounded and the caller prints one JSON object.
-_gh_run_list() { # <workflow-file> <since-iso>
-  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --event issue_comment --created ">=$2" --limit 200 \
-    --json status,conclusion,createdAt,url,displayTitle \
-    --jq 'map({status, conclusion, created_at: .createdAt, url, title: .displayTitle})'
+# The event and the window are filtered here rather than by the host: a list
+# filtered by `event` or `created` can leave a live run out for minutes while the
+# same workflow's unfiltered list carries it, and the missing run reads as
+# `never-queued` for a reviewer still running (#496). The list is newest first,
+# so its one page of 100, which covered five days of runs on 2026-10-07, holds
+# any poll window. One page because the cloud sandbox's proxy refuses the
+# numeric-ID URL GitHub's `Link` header names for page two. A read that returns
+# nothing is an answer here rather than a failure, and its stderr is tailed the
+# way `_gh` tails its own, because a CLI diagnostic is unbounded and the caller
+# prints one JSON object.
+_gh_run_list() { # <workflow-file>
+  gh run list --repo "$SHIP_REPO_SLUG" --workflow "$1" --limit 100 \
+    --json status,conclusion,createdAt,url,displayTitle,event
 }
 # GitHub knows a workflow by its file name, and answers the repo-relative path
 # the profile's `Workflow:` carries with a 404; every workflow sits flat in
 # `.github/workflows/`, so the name alone is unambiguous.
 host_workflow_runs() { # <workflow-file> <since-iso>
-  local err rc wf=${1##*/}
+  local err out rc wf=${1##*/}
   err=$(mktemp) || return 2
   trap 'rm -f "$err"; trap - RETURN' RETURN
-  _gh_run_list "$wf" "$2" 2>"$err"; rc=$?
+  out=$(_gh_run_list "$wf" 2>"$err"); rc=$?
   # The flat one retry `gql` keeps rather than `api`'s backoff: a read that
   # answers non-zero reports the reviewer unreachable, and this CLI family is the
   # one the header names as flaking 401 mid-session, so a bad second would
   # otherwise be read as evidence about a reviewer that is working.
-  if [ "$rc" -ne 0 ]; then sleep 2; : > "$err"; _gh_run_list "$wf" "$2" 2>"$err"; rc=$?; fi
-  [ "$rc" -eq 0 ] || ship_tail40 "$err"
-  return $rc
+  if [ "$rc" -ne 0 ]; then sleep 2; : > "$err"; out=$(_gh_run_list "$wf" 2>"$err"); rc=$?; fi
+  [ "$rc" -eq 0 ] || { ship_tail40 "$err"; return $rc; }
+  jq -c --arg s "$2" 'map(select(.event == "issue_comment" and .createdAt >= $s)
+    | {status, conclusion, created_at: .createdAt, url, title: .displayTitle})' <<<"$out"
 }
 
 # The scaffolded Claude reviewer job raises one warning annotation titled

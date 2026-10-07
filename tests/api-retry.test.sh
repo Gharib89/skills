@@ -168,8 +168,26 @@ unset GH_BODY
 # by its file name alone: `--workflow .github/workflows/claude-review.yml` is a
 # 404, which poll-pr reads as `reviewer_run: "unavailable"` (probed on
 # Gharib89/skills during #235). The read hands gh the file name.
-wf_arg=$( gh() { printf '%s\n' "$@" | grep -A1 -x -- --workflow | tail -1; }
-        host_workflow_runs .github/workflows/claude-review.yml 2026-09-17T11:58:00Z )
-check    "the run read names the workflow by its file name" 'claude-review.yml' "$wf_arg"
+( gh() { printf '%s\n' "$@" | grep -A1 -x -- --workflow | tail -1 > "$bin/workflow"; echo '[]'; }
+  host_workflow_runs .github/workflows/claude-review.yml 2026-09-17T11:58:00Z >/dev/null )
+check    "the run read names the workflow by its file name" 'claude-review.yml' "$(cat "$bin/workflow" 2>/dev/null)"
+
+# #496: a run list filtered by `--event` or `--created` can leave a live run out
+# for minutes while the unfiltered list carries it, which poll-pr reads as
+# `never-queued`. The fake answers a filtered read the way that lagging index
+# did, and the read keeps only the live comment run inside the window.
+live='{"status":"in_progress","conclusion":null,"createdAt":"2026-09-17T12:00:00Z","url":"u/live","displayTitle":"t","event":"issue_comment"}'
+early='{"status":"completed","conclusion":"success","createdAt":"2026-09-17T11:00:00Z","url":"u/early","displayTitle":"t","event":"issue_comment"}'
+other='{"status":"in_progress","conclusion":null,"createdAt":"2026-09-17T12:01:00Z","url":"u/other","displayTitle":"t","event":"pull_request"}'
+runs=$( gh() { case " $* " in *" --event "*|*" --created "*) echo '[]' ;; *) echo "[$other,$live,$early]" ;; esac; }
+        host_workflow_runs claude-review.yml 2026-09-17T11:58:00Z | jq -c . )
+check    "the run read sees a live run the filtered list leaves out" \
+  '[{"status":"in_progress","conclusion":null,"created_at":"2026-09-17T12:00:00Z","url":"u/live","title":"t"}]' "$runs"
+
+# The read is one page: the cloud sandbox's proxy refuses the numeric-ID URL
+# GitHub's `Link` header names for page two, so a larger --limit fails there.
+( gh() { printf '%s\n' "$@" | grep -A1 -x -- --limit | tail -1 > "$bin/limit"; echo '[]'; }
+  host_workflow_runs claude-review.yml 2026-09-17T11:58:00Z >/dev/null )
+check    "the run read asks for one page of 100" '100' "$(cat "$bin/limit" 2>/dev/null)"
 
 finish
