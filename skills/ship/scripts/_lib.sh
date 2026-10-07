@@ -1449,7 +1449,7 @@ ship_stale_base_reason() {
       else "stale-base: base freshness unreadable" end'
 }
 
-# ship_pr_state_reason <state>: the refusal `merge` answers with when the PR is
+# ship_pr_state_reason <state>: the refusal `merge` answers with when the PR
 # no longer admits an authorized merge, or nothing when it does. Both
 # adapters normalise to `open`, `merged` or `closed` (Azure DevOps maps
 # `abandoned` to `closed`), and GitHub's merge endpoint accepts a closed PR, so

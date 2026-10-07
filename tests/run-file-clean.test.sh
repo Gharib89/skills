@@ -103,6 +103,17 @@ base; touch "$tmp/records/ship-clean/defect-1.md"; held 'Ship defect draft' 'Shi
 base; touch "$tmp/records/ship-clean/tracker-1.md"; held 'Tracker draft' 'Tracker draft: tracker-1.md'
 base; touch "$tmp/records/ship-clean/defect-1.base.md"; printf 'Deviation: accepted scoped departure\nOverride: None.\nShip-defect: none\n' >> "$f"; clean 'deviation and draft base are independent'
 base; printf '  Override: quoted\n`Ship-defect: quoted`\nOverrides: partial token\n' >> "$f"; clean 'quoted indented partial evidence does not match'
+base; change_run 's/Stop: primary: tree unchanged/Stop: primary: cap/'; printf '\n```\nStop: primary: tree unchanged\n```\n' >> "$f"; held 'fenced stop cannot override cap' 'reviewer primary: cap'
+base; printf '\n~~~\nOverride: example\nShip-defect: example\n~~~\n' >> "$f"; clean 'fenced examples are not evidence'
+base; change_run 's/"tests":"pass"/"tests":"fail"/'; printf '\n```\n## Local gate\n- 11:00 abcdef0123456789 pass {"tests":"pass","secrets":"pass"}\n```\n' >> "$f"; held 'fenced gate cannot replace failing gate' 'local gate tests: fail'
+base; change_run 's/punctuation: pass/punctuation: fail/'; printf '\n```\n## Verification results\n- live check: punctuation: pass\n```\n' >> "$f"; held 'fenced verification cannot replace failing result' 'verification live check: punctuation: fail'
+base; printf '\n```\n' >> "$f"; answer=$(call); check_rc 'unclosed Run file fence is tooling' 2 "$?"; check 'unclosed fence names its record' "cannot read Run file evidence at $f" "$(jq -r .error <<<"$answer")"
+if [ "$(id -u)" -ne 0 ]; then
+  base; touch "$tmp/records/ship-clean/defect-1.md"; chmod 111 "$tmp/records/ship-clean"
+  answer=$(call); rc=$?; chmod 755 "$tmp/records/ship-clean"
+  check_rc 'unreadable draft directory is tooling' 2 "$rc"
+  check 'unreadable draft directory names its path' "cannot read draft directory at $tmp/records/ship-clean" "$(jq -r .error <<<"$answer")"
+fi
 base; printf 'Stop: primary: cap\n' >> "$f"; held 'last stop wins' 'reviewer primary: cap'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'fallback not converged' 'reviewer primary: not reviewed'
 base; change_ci '.status="no-checks" | .checks=[]'; held 'legal no-checks cannot replace expected green leg' 'CI test: missing'

@@ -610,7 +610,10 @@ close_gate() { # close_gate <phase> <its row>
 gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   local ci profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
   [ -r "$file" ] || ship_tooling "cannot read Run file at $file"
-  lines=$(cat "$file") || ship_tooling "cannot read Run file at $file"
+  # Fenced examples cannot authorize a merge.
+  lines=$(awk "$SHIP_AWK_FENCE"'
+    { if (!ship_fence($0)) print }
+    END { if (_fenced) exit 1 }' "$file") || ship_tooling "cannot read Run file evidence at $file"
   if [ "$1" = - ]; then ci=$(cat) || ship_tooling "cannot read CI answer"
   else
     [ -f "$1" ] && [ -r "$1" ] || ship_tooling "cannot read CI answer at $1"
@@ -639,7 +642,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       if $r[0] == "name" then . + [{name: $r[1], leg: null}]
       elif length > 0 then .[-1].leg = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
   rec=$(awk '/^## / { f = ($0 ~ /^## Local gate[ \t\r]*$/) }
-    f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' "$file" | tail -n 1) \
+    f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' <<<"$lines" | tail -n 1) \
     || ship_tooling "cannot read local gate record"
   if [ -n "$rec" ]; then
     rec=${rec#- ??:?? }; rhead=${rec%% *}; rec=${rec#"$rhead"}; rec=${rec# }
@@ -648,6 +651,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       >/dev/null 2>&1 <<<"$rgates" || ship_tooling "cannot read recorded local gate results"
   fi
   record_dir=$(dirname "$file") || ship_tooling "cannot locate Run file drafts"
+  [ -r "$record_dir" ] && [ -x "$record_dir" ] || ship_tooling "cannot read draft directory at $record_dir"
   for p in "$record_dir"/defect-*.md "$record_dir"/tracker-*.md; do
     [ -f "$p" ] || continue
     case $p in *.base.md) continue ;; esac
