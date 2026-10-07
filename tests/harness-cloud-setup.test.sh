@@ -81,6 +81,30 @@ b
 
 root" "$(cat "$log")"
 
+# The apt row reference/cloud.md gives, as written there, on an image whose
+# package index is empty: the stub apt-get locates no package until an `update`
+# has run. Every apt call carries the dpkg lock timeout. The row runs with its
+# package renamed, so a ShellCheck already on PATH cannot satisfy its done test.
+# This repo's own cloud setup carries the same row.
+abin=$fixture/apt-bin; mkdir -p "$abin"
+cat > "$abin/apt-get" <<'STUB'
+#!/bin/sh
+echo "apt-get $*" >> "$LOG"
+case " $* " in *" update "*) : > "$LOG.lists"; exit 0 ;; esac
+[ -e "$LOG.lists" ] || { echo "E: Unable to locate package fakecheck" >&2; exit 100; }
+printf '#!/bin/sh\n' > "${0%/*}/fakecheck"; chmod +x "${0%/*}/fakecheck"
+STUB
+printf '#!/bin/sh\nexec "$@"\n' > "$abin/sudo"
+chmod +x "$abin/apt-get" "$abin/sudo"
+apt_row=$(sed -n 's/.*(`\(shellcheck|command -v shellcheck|[^`]*\)`).*/\1/p' skills/setup-harness/reference/cloud.md)
+check "cloud.md gives the apt row" 1 "$(printf '%s\n' "$apt_row" | grep -c .)"
+s=$(hook_script apt "STEPS='${apt_row//shellcheck/fakecheck}'")
+rm -f "$log.lists"
+: > "$log"; out=$(cd "$fixture" && PATH="$abin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
+check "the apt row installs on an image with an empty package index" "harness cloud setup: ok" "$out"
+check "and every apt call waits on the dpkg lock" "" "$(grep -v -- '-o DPkg::Lock::Timeout=120 ' "$log")"
+check "this repo's cloud setup carries the apt row" "$apt_row" "$(grep '^STEPS=.shellcheck|' .claude/hooks/cloud-setup.sh | sed "s/^STEPS='//")"
+
 # The dockerd and image rows reference/cloud.md gives a container tool, as
 # written there. dockerd is a daemon: the row detaches it with every fd off
 # the hook's pipes, else the hook waits on it until its timeout. The stub
