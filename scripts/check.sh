@@ -11,9 +11,11 @@
 # stderr: each failing check's last 40 lines
 # exit:   0 pass · 1 fail · 2 unavailable or tooling · 3 over budget
 #
-# CHECK_DEADLINE=<epoch s> stops the run at that time: the check running at
-# it is over-budget (none, when it fell between checks), the rest skipped,
-# exit 3. Without it, exit 3 never occurs.
+# `full` runs the runner, every TURN_ROWS row and every FULL_ROWS row at once,
+# a row's own checks one after another, and reports them in the declared order.
+# CHECK_DEADLINE=<epoch s> stops the run at that time: every check running at
+# it is over-budget (none, when it fell between checks), every check not yet
+# started skipped, exit 3. Without it, exit 3 never occurs.
 #
 # Bash 3.2 and no jq, because hooks run this on every edit on macOS too. Edit
 # the configuration block freely: a setup-harness re-run compares this file by
@@ -67,9 +69,11 @@ cd "$root" || exit 2
 nl='
 '
 deadline=${CHECK_DEADLINE:-}
-# One log for every check in turn; <log>.x is the watchdog's expiry mark.
-log=$(mktemp) || exit 2
-trap 'rm -f "$log" "$log.x"' EXIT
+# The run's scratch: one log for every check in turn, or one per slot under
+# `full`; <log>.x is the watchdog's expiry mark.
+tmp=$(mktemp -d) || exit 2
+trap 'rm -rf "$tmp"' EXIT
+log=$tmp/log
 names='' statuses='' expired=''
 record() { names="$names$1$nl" statuses="$statuses$2$nl"; }
 
@@ -251,11 +255,43 @@ $rows
 EOF
 }
 
+# <command> [<args>...]: run the command in a slot of its own, in the
+# background: a subshell with its own log, writing its records and its failure
+# tails to its own files, so rows running beside each other never share a log
+# or interleave a tail. `full` records nothing before its slots, so each one
+# starts with no records and no expiry.
+slots=0
+spawn() {
+  slots=$((slots + 1))
+  local s=$tmp/$slots
+  (
+    log=$s.log
+    "$@"
+    printf '%s' "$names" > "$s.names"
+    printf '%s' "$statuses" > "$s.statuses"
+    [ -z "$expired" ] || : > "$s.expired"
+  ) < /dev/null 2> "$s.err" &
+}
+
+# Wait for every slot, then take each one's records and tails in slot order,
+# which is the declared order whatever order the slots finished in.
+collect() {
+  local i=0 s x
+  wait
+  while [ "$i" -lt "$slots" ]; do
+    i=$((i + 1)) s=$tmp/$i
+    IFS= read -r -d '' x < "$s.names"; names=$names$x
+    IFS= read -r -d '' x < "$s.statuses"; statuses=$statuses$x
+    [ ! -e "$s.expired" ] || expired=1
+    cat "$s.err" >&2
+  done
+}
+
 rung_full() {
   local row name
-  [ -n "$FULL_RUN" ] && check runner . "$FULL_RUN"
+  [ -n "$FULL_RUN" ] && spawn check runner . "$FULL_RUN"
   while IFS= read -r row; do
-    [ -n "$row" ] && run_row "$row"
+    [ -n "$row" ] && spawn run_row "$row"
   done <<EOF
 $TURN_ROWS
 EOF
@@ -263,12 +299,13 @@ EOF
     [ -n "$row" ] || continue
     name=${row%%|*}
     if [ "${CLAUDE_CODE_REMOTE:-}" = true ]; then
-      case " $LOCAL_ONLY " in *" $name "*) record "$name" skipped; continue ;; esac
+      case " $LOCAL_ONLY " in *" $name "*) spawn record "$name" skipped; continue ;; esac
     fi
-    check "$name" . "${row#*|}"
+    spawn check "$name" . "${row#*|}"
   done <<EOF
 $FULL_ROWS
 EOF
+  collect
   [ -n "$names" ] || record full skipped
 }
 

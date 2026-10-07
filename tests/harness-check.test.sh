@@ -175,10 +175,12 @@ mkdir -p "$r/api" "$r/web"
 run "$r" full
 check "full runs the runner, every member's whole suite and the extra checks" \
   '{"rung":"full","verdict":"pass","checks":{"runner":"pass","typecheck:api":"pass","tests:api":"pass","typecheck:web":"pass","tests:web":"pass","check-target":"pass"}}' "$out"
-check "full never runs affected tests" "typecheck-api
-tests-api
-typecheck-web
-tests-web" "$(cat "$ARGS_LOG")"
+# The members run beside each other, so their lines interleave in any order;
+# within one member the typecheck still runs before the tests.
+check "full never runs affected tests" "tests-api
+tests-web
+typecheck-api
+typecheck-web" "$(sort "$ARGS_LOG")"
 
 r=$(repo local-only "FULL_ROWS='semver-core|bad
 after|ok'
@@ -200,10 +202,55 @@ printf '#!/bin/sh\necho 1000\n' > "$clock/date"; chmod +x "$clock/date"
 start=$(date +%s)
 out=$(cd "$r" && CHECK_DEADLINE=1001 PATH="$clock:$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
 took=$(( $(date +%s) - start ))
-check "the check running at the deadline is over-budget, the rest skipped" \
-  '{"rung":"full","verdict":"over-budget","checks":{"runner":"over-budget","after":"skipped"}}' "$out"
+check "the check running at the deadline is over-budget, one that finished beside it keeps its status" \
+  '{"rung":"full","verdict":"over-budget","checks":{"runner":"over-budget","after":"pass"}}' "$out"
 check_rc "over budget exits 3" 3 "$rc"
 check "the deadline stops the running check rather than waiting it out" yes "$([ "$took" -lt 4 ] && echo yes)"
+
+# Every row starts at once, each with its own log: the rung costs its longest
+# row rather than the sum, and the JSON keeps the declared order, not the order
+# the rows finished in. The slow rows come first and finish last.
+stub nap 'sleep 2'
+r=$(repo concurrent "FULL_ROWS='one|nap
+two|nap
+three|ok'")
+start=$(date +%s)
+run "$r" full
+took=$(( $(date +%s) - start ))
+check "two rows that each sleep 2 s run beside each other" yes "$([ "$took" -lt 4 ] && echo yes)"
+check "the keys keep the declared order, not the finishing order" \
+  '{"rung":"full","verdict":"pass","checks":{"one":"pass","two":"pass","three":"pass"}}' "$out"
+
+stub nobin 'exit 127'
+r=$(repo statuses "FULL_RUN='ok'
+TURN_ROWS='api/|api|*.py|slow|ok|'
+FULL_ROWS='hang|slow
+broke|bad
+gone|nobin
+cloudless|bad
+later|ok'
+LOCAL_ONLY='cloudless'")
+mkdir -p "$r/api"
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 2 )) CLAUDE_CODE_REMOTE=true PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+check "every status lands under its own row, in the declared order" \
+  '{"rung":"full","verdict":"fail","checks":{"runner":"pass","typecheck:api":"over-budget","tests:api":"skipped","hang":"over-budget","broke":"fail","gone":"unavailable","cloudless":"skipped","later":"pass"}}' "$out"
+check_rc "and the failure decides the exit" 1 "$rc"
+
+# Two failing rows writing as they go: each tail stays whole under its own
+# row's name, in the declared order, however the rows' output interleaved.
+stub talk 'for i in 1 2 3; do echo "$1 $i"; sleep 0.2; done; [ "$2" = ok ]'
+r=$(repo tails "FULL_ROWS='first|talk first no
+second|talk second no
+third|talk third ok'")
+run "$r" full
+check "each failing row's tail is its own, under its own name" "--- first ---
+first 1
+first 2
+first 3
+--- second ---
+second 1
+second 2
+second 3" "$err"
 
 r=$(repo both "FULL_RUN='bad'
 FULL_ROWS='slow|slow'")

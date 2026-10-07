@@ -32,3 +32,11 @@ repos:
         entry: prettier --write --ignore-unknown
         language: system
         files: ^\.github/workflows/[^/]+\.ya?ml$
+      # The house-style rules, the 80-column wrap among them, on any Markdown
+      # change. The script reads every file it holds, so it takes no file list.
+      - id: house-style
+        name: house-style
+        entry: scripts/house-style-check.sh
+        language: system
+        types: [markdown]
+        pass_filenames: false

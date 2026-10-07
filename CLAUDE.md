@@ -54,12 +54,14 @@ formats (ShellCheck on scripts; actionlint, zizmor and Prettier on workflows);
 `turn` typechecks and runs the affected tests of every uncommitted change, which
 here is nothing, since this repo has no stack member, so it answers `skipped`;
 and `full` answers for the whole repo: the runner on every file, `tests/run.sh`,
-and the repo's own checks that need no base. `full` took 68 s when measured on
-2026-10-02 and runs in the background, and a probe of the check contract uses a
-throwaway repo from the template with stub `FULL_ROWS`. It prints one JSON line
-and exits 0 pass, 1 fail, 2 unavailable, 3 over budget. Hooks in
-`.claude/settings.json` run `edit` after every Edit or Write and `turn` at every
-stop, and the pre-commit runner is the commit rung. Harness profile:
-`docs/agents/harness.md`. Re-run `/setup-harness` after adding a stack, a member
-or a tool. Ship's gate, `scripts/local-gate.sh`, calls `full` and adds `secrets`
-and `version-lines`, which need a base ref.
+and the repo's own checks that need no base, all at once, so it costs about its
+longest row. A probe of the check contract uses a throwaway repo from the
+template with stub `FULL_ROWS`. It prints one JSON line and exits 0 pass, 1
+fail, 2 unavailable, 3 over budget. Hooks in `.claude/settings.json` run `edit`
+after every Edit or Write and `turn` at every stop, and the pre-commit runner is
+the commit rung, which also runs the house-style check on Markdown. Harness
+profile: `docs/agents/harness.md`. Re-run `/setup-harness` after adding a stack,
+a member or a tool. Ship's gate, `scripts/local-gate.sh`, calls `full` and adds
+`secrets` and `version-lines`, which need a base ref; Ship's phase 5 runs that
+gate inline. A human or a session outside Ship may still run a standalone `full`
+in the background.
