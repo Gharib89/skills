@@ -103,11 +103,11 @@ table. Then **grep each anchor** the issue cites, rewriting one the tree
 contradicts through `update-issue-body`
 ([implement.md](reference/implement.md#phase-1-anchors-the-issue-cites)). A
 criterion needing a host action no mechanic performs stays verbatim: unattended,
-it is an **unmet criterion** the merge summary lists; attended, ask first
-([implement.md](reference/implement.md#phase-1-a-criterion-no-mechanic-can-perform)).
-Only then write what success looks like into the Run file as criteria a later
-phase can check; a later authoritative comment supersedes the body (**spec
-precedence**).
+it is an **unmet criterion** the merge summary lists; attended, ask first, per
+[implement.md](reference/implement.md#phase-1-a-criterion-no-mechanic-can-perform)
+on both. Only then write what success looks like into the Run file as criteria
+a later phase can check; a later authoritative comment supersedes the body
+(**spec precedence**).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
