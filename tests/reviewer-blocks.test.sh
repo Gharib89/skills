@@ -219,6 +219,18 @@ check "refuses an absolute Workflow:, whatever it names" \
   'profile invalid: claude has Workflow: /etc/hostname, which is not in the checkout' \
   "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: /etc/hostname|' <<<"$profile")")"
 
+# `Workflow: native <integration>` names a status source that is no file: the
+# integration posts the round itself, so nothing is statted, and only an
+# integration ship reads is admitted.
+check "admits Workflow: native codex on a comment transport, with no file to stat" \
+  '' "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: native codex|' <<<"$profile")")"
+check "refuses a native integration ship does not read" \
+  'profile invalid: claude has Workflow: native gemini, which names no native integration ship reads (codex)' \
+  "$(reasons "$(sed 's|^Workflow: .github/workflows/claude-review.yml$|Workflow: native gemini|' <<<"$profile")")"
+check "refuses Workflow: native codex on a block whose Request: is not a comment transport" \
+  'profile invalid: copilot has Workflow: native codex but its Request: is None., not comment <phrase>' \
+  "$(reasons "$(sed '0,/^Workflow: None.$/s||Workflow: native codex|' <<<"$profile")")"
+
 # The comment transport has no phrase to post, so a block whose Request: is
 # the bare word cannot be asked for a round at all. It is refused on its own,
 # whether or not a Workflow: sits beside it: read as a transport owing one, the

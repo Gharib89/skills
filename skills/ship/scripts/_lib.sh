@@ -138,6 +138,19 @@
 #                                           Azure DevOps, which has no such read. poll-pr reports
 #                                           either as "unavailable" and holds the window to the
 #                                           constant on.
+#   host_pr_native_activity <pr> <since-iso> <phrase>
+#                                        -> {comments,pr_reactions,request_reactions} what a
+#                                           reviewer integration with no workflow run leaves on
+#                                           the PR: comments, every PR comment as
+#                                           {id,login,created_at,updated_at,body,url};
+#                                           pr_reactions, the reactions on the PR itself, and
+#                                           request_reactions, those on the latest comment
+#                                           opening with <phrase> at or after <since> ([] where
+#                                           none does), each {content,login,created_at}. content
+#                                           is the host's reaction name (`eyes`, `+1`). Non-zero
+#                                           where the host could not answer; always non-zero and
+#                                           silent on Azure DevOps, which has no native reviewer.
+#                                           poll-pr reports either as "unavailable".
 #   host_run_denials <run-url>           -> {denied} the count of tool calls the round in
 #                                           that completed run was refused: the leading
 #                                           numbers of its jobs' `claude-review` warning
@@ -963,6 +976,59 @@ readonly SHIP_REVIEWER_RUN='
      // {status: "none", conclusion: null, url: null})
   | {status, conclusion, url, denied: null}'
 
+# poll-pr's read of a native Codex round (`Workflow: native codex`), over a
+# `host_pr_native_activity` answer, invoked with `--arg l <login> --arg s <since>
+# --arg h <head sha>`. Codex runs no workflow: it acknowledges a request with 👀
+# on the request comment (removed when the round ends), keeps one status comment
+# marked `codex-pull-request-review-summary` edited in place, its Code Review row
+# naming the status, the time and the short commit, and delivers a round either
+# as a formal review (findings) or, clean, as an issue comment opening
+# `Codex Review: Didn't find any major issues` plus 👍 on the PR, with no review
+# at all (probed on #504 and #505 for #500). Answers {run, rounds, notice}:
+#   rounds  each clean delivery at or after <since> as a REVIEW row, so the
+#           landing rule lands a clean round like any other; the 👍 counts only
+#           where no clean comment does.
+#   notice  {line, at} for the first comment by the login at or after <since>
+#           that is neither the status comment nor a clean one: a refusal of a
+#           shape not yet observed (quota, access, a missing environment), whose
+#           first line poll-pr reports as the blocked notice.
+#   run     the `reviewer_run` shape, so the window logic a workflow run drives
+#           drives this too: completed/success once a clean round or a Completed
+#           row on the head is in; completed/refused beside a notice; in_progress
+#           while the 👀 is on, or the row, touched since the request, is not
+#           Completed; completed/stale-head for a Completed row on another
+#           commit; `none` for silence, which is how an unconnected repo answers.
+# A status comment last edited before <since> belongs to an older request.
+# shellcheck disable=SC2034  # read by poll-pr
+readonly SHIP_NATIVE_CODEX="$SHIP_LOGIN_NORM"'
+  def utc: sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z");
+  def is_status: (.body // "") | contains("<!-- codex-pull-request-review-summary -->");
+  def is_clean: (.body // "") | test("^\\s*Codex Review: Didn.t find any major issues");
+  def mine: (.login | norm) == ($l | norm);
+  def first_line: [splits("\n") | sub("^\\s+"; "") | sub("\\s+$"; "") | select(. != "")] | first // "";
+  [.comments[] | select(mine)] as $c
+  | ([$c[] | select(is_status)] | last) as $st
+  | (($st.body // "") | [splits("\n") | select(test("\\*\\*Code Review\\*\\*"))] | first // "") as $row
+  | (($row | capture("`(?<sha>[0-9a-f]{7,40})`").sha) // null) as $sha
+  | ($st != null and ($st.updated_at | utc) >= $s) as $touched
+  | [$c[] | select(is_clean and .created_at >= $s)
+     | {id: (.id | tostring), login, state: "comment", submitted_at: .created_at, body}] as $clean
+  | [.pr_reactions[] | select(mine and .content == "+1" and .created_at >= $s)
+     | {id: null, login, state: "comment", submitted_at: .created_at,
+        body: "Codex Review: reacted 👍 to the PR, posting no findings."}] as $thumbs
+  | (if $clean != [] then $clean else $thumbs end) as $rounds
+  | ([$c[] | select((is_status | not) and (is_clean | not) and .created_at >= $s)] | first) as $reply
+  | {rounds: $rounds,
+     notice: (if $reply == null then null else {line: ($reply.body | first_line), at: $reply.created_at} end),
+     run: ({url: ($st.url // $reply.url // null), denied: null} +
+       if $rounds != [] then {status: "completed", conclusion: "success"}
+       elif $reply != null then {status: "completed", conclusion: "refused"}
+       elif any(.request_reactions[]; mine and .content == "eyes") then {status: "in_progress", conclusion: null}
+       elif $touched and ($row | test("Completed") | not) then {status: "in_progress", conclusion: null}
+       elif $touched and $sha != null and ($h | startswith($sha)) then {status: "completed", conclusion: "success"}
+       elif $touched then {status: "completed", conclusion: "stale-head"}
+       else {status: "none", conclusion: null, url: null} end)}'
+
 # ship_fence_unclosed <text>: does the text end inside a fenced block or a
 # `<details>` record? Prints `line <n>: <run>` naming the opener still open, or
 # nothing when both are balanced. `update-pr-body` asks before it rewrites a
@@ -1266,6 +1332,12 @@ ship_reviewers() {
 # also what keeps a mechanic name out of it: `comment-pr` is a mechanic, and a
 # word boundary in place of the space would read it as a transport.
 #
+# `Workflow: native <integration>` is the other status source a comment
+# transport may name: an integration that posts its round with no workflow run
+# behind it (native Codex review), whose status poll-pr reads off the PR itself.
+# It names no file, so it is never statted, and only an integration poll-pr has
+# a reader for is admitted, since any other would poll on nothing.
+#
 # Anything that is not an array refuses, exactly as `ship_stale_base_reason`
 # refuses an unreadable verdict: a parse that died must not come back as "the
 # blocks hold", or preflight claims the issue on the strength of a check that
@@ -1284,7 +1356,7 @@ ship_reviewer_reasons() {
     [ "$inside" = yes ] && [ -f "$2/$wf" ] ||
       absent=$(jq -c --arg w "$wf" '. + [$w]' <<<"$absent")
   done < <(jq -r 'if type == "array"
-                  then .[].workflow | select(. != null)
+                  then .[].workflow | select(. != null and (startswith("native ") | not))
                   else empty end' <<<"$1" 2>/dev/null)
   jq -rn --arg r "$1" --argjson absent "$absent" '
     (try ($r | fromjson) catch null) as $rows
@@ -1310,6 +1382,8 @@ ship_reviewer_reasons() {
            elif (($x.request // "") | startswith("comment "))
            then (if $x.workflow == null
                  then "profile invalid: \($x.name) has Request: \($x.request) with no Workflow: naming the workflow file its round comes from"
+                 elif ($x.workflow | startswith("native ")) and $x.workflow != "native codex"
+                 then "profile invalid: \($x.name) has Workflow: \($x.workflow), which names no native integration ship reads (codex)"
                  elif ($absent | index($x.workflow)) != null
                  then "profile invalid: \($x.name) has Workflow: \($x.workflow), which is not in the checkout"
                  else empty end)

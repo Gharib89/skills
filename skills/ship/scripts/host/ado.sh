@@ -417,6 +417,9 @@ host_issues_ready() { # <label>
 host_workflow_runs() { return 1; } # <workflow-file> <since-iso>
 # With no awaited run there is no run whose denied calls to count.
 host_run_denials() { return 1; } # <run-url>
+# No reviewer here posts through a native integration, so there is no activity
+# to read a round's status from.
+host_pr_native_activity() { return 1; } # <pr> <since-iso> <phrase>
 # A policy evaluation here is no job this adapter can re-run yet, so `ci-wait
 # --rerun-failed` reports "unavailable" and the run reads the failure by hand.
 host_check_job() { return 1; } # <pr> <head_sha> <name>
