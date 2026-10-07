@@ -8,10 +8,10 @@
     },
     "code-review": {
       "source": "mattpocock/skills",
-      "ref": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+      "ref": "f3fc5632f401156837ee3872f14fe33ccf1024ea",
       "sourceType": "github",
       "skillPath": "skills/engineering/code-review/SKILL.md",
-      "computedHash": "caa9a086baaf9e0f7cd71f64edfa83da6821c05e826b083221f3d02e3d6a1905"
+      "computedHash": "57cfd4ceb011f05e58a1a4f4cad3b2e03419d371f8990f4bcb32ff0d435a039f"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",
@@ -75,12 +75,12 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "b45a725b13a022af4c9452d5ea9e1bd4332f0a0047d2f93c217fbce11284033c"
+      "computedHash": "c8d0e8964d738dbfd822a522b08cb1854e62d2945c8c435a8af49c9c3c00b66b"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "134ada85d8b68caf93248a1eaeed45f09d05f3bd115d3526f919bed09b1be9bf"
+      "computedHash": "217aa517c7fd855dcb584f8e5a5e64eb9a89cdc65b2cb7624ab683b9292a987f"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -91,10 +91,10 @@
     },
     "tdd": {
       "source": "mattpocock/skills",
-      "ref": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
+      "ref": "f3fc5632f401156837ee3872f14fe33ccf1024ea",
       "sourceType": "github",
       "skillPath": "skills/engineering/tdd/SKILL.md",
-      "computedHash": "9ce12c4a1e209e557fcf9d02086ade3d7ffdb976186018fc1b063b4164246004"
+      "computedHash": "daf55026f456af104a72fa43247f7bcec89e5127316dc5b1b8d675d6a9d8ce94"
     },
     "to-spec": {
       "source": "mattpocock/skills",
