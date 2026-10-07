@@ -68,7 +68,7 @@ local-gate contract.
 | `update-issue-body` | 1, once per section an anchor the tree contradicts sits in; 9, after `merge` answers `merged: true`, once per tracker draft |
 | `resolve-thread` | 7 |
 | `ci-wait` | 8 |
-| `merge` | 9, on approval |
+| `merge` | 9, on explicit approval or a clean opted-in gate |
 | `cleanup` | 9, after merge |
 | `list-prs` and `select` | unattended lane |
 

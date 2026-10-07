@@ -1450,11 +1450,11 @@ ship_stale_base_reason() {
 }
 
 # ship_pr_state_reason <state>: the refusal `merge` answers with when the PR is
-# not one a human can still say "merge" about, or nothing when it is. Both
+# no longer admits an authorized merge, or nothing when it does. Both
 # adapters normalise to `open`, `merged` or `closed` (Azure DevOps maps
 # `abandoned` to `closed`), and GitHub's merge endpoint accepts a closed PR, so
 # without this a PR somebody deliberately closed is squashed onto the base by a
-# mechanic whose whole contract is that a human said "merge" about THIS PR.
+# mechanic authorized by an explicit "merge" or a clean opted-in gate.
 #
 # `merged` admits because `merge` skips the merge call for it and still owes the
 # steps after it. Anything else refuses, an unreadable state included: a check
