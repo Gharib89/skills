@@ -81,10 +81,11 @@ Merged on a clean gate: <PR url>
 
 A posted message cannot be edited, so the run posts the summary through the
 `Timing:` row with no reply line, runs the merge sequence, then posts that line
-as the last line of the closing message. The reply lines appear only on `clean:
-false` or when `merge` refuses, the refusal named under them. A step after the
-merge that fails (a tracker write, cleanup) is reported beneath the merged line;
-report a completed merge only after the mechanic confirms it.
+as the last line of the closing message. In an opted-in run the reply lines
+appear only on `clean: false` or when `merge` refuses, the refusal named under
+them. A step after the merge that fails (a tracker write, cleanup) is reported
+beneath the merged line; report a completed merge only after the mechanic
+confirms it.
 
 **Every row is grounded in a result from this run**: `Local gate:` is the
 gate's `gates` object from the verdict the Run file recorded, `CI:` is
