@@ -273,14 +273,16 @@ where the write succeeds. Before or after the merge, either order holds.
 First the final head's gate, as the attended lane runs it: `run-file gate read
 --head <head_sha>`, and on `current: false` the re-run and record
 [above](#attended-post-then-wait), so the `Local gate:` row describes the head a
-human merges. Then `comment-pr <pr> --body-file` with the summary, `run-file
-close 9` with the task set to the returned `mirror`, then **return** with the PR
-link. Do not wait, poll, or merge; the claim stays on the issue, which carries
-the open PR, so later fires skip it until a human merges. The last line becomes
-"Ready to merge: a human merges from the PR.", and with an unmet criterion it
-adds "Waive each unmet criterion, or take its action, before merging." A Ship
-defect's draft is never filed from here, and the comment drops the "file
-defects" line: it carries each draft verbatim under the command a human runs
-from a file they save it to, `.claude/skills/ship/scripts/file-issue.sh --repo
-Gharib89/skills --title "<title>" --body-file <file> --label needs-triage`.
-Detail in [unattended.md](unattended.md).
+human merges. A `fail` there takes phase 5's fix loop; `unavailable` hands back
+`local gate unavailable: <gates>` with the PR left open. Then `comment-pr <pr>
+--body-file` with the summary, `run-file close 9` with the task set to the
+returned `mirror`, then **return** with the PR link. Do not wait, poll, or
+merge; the claim stays on the issue, which carries the open PR, so later fires
+skip it until a human merges. The last line becomes "Ready to merge: a human
+merges from the PR.", and with an unmet criterion it adds "Waive each unmet
+criterion, or take its action, before merging." A Ship defect's draft is never
+filed from here, and the comment drops the "file defects" line: it carries each
+draft verbatim under the command a human runs from a file they save it to,
+`.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
+"<title>" --body-file <file> --label needs-triage`. Detail in
+[unattended.md](unattended.md).
