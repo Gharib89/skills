@@ -498,13 +498,15 @@ fresh_red() { # fresh_red <top> <test> <sha> <paths>: 0 fresh, 1 not, with why s
     why="Reverted-fix line for $2 names $3, which is no commit here: run \`run-file prove $2 <path>...\`"
     return 1
   fi
-  git -C "$1" diff --quiet "$3" -- "$2" "${reverted[@]}"
+  # Literal pathspecs: the line holds file names, and a name like `:x.sh` is
+  # pathspec magic to git otherwise.
+  git -C "$1" --literal-pathspecs diff --quiet "$3" -- "$2" "${reverted[@]}"
   case $? in
     0) ;;
     1) why=$stale; return 1 ;;
     *) ship_tooling "cannot read the diff of $2 since $3" ;;
   esac
-  others=$(git -C "$1" ls-files --others --exclude-standard -- "$2" "${reverted[@]}") \
+  others=$(git -C "$1" --literal-pathspecs ls-files --others --exclude-standard -- "$2" "${reverted[@]}") \
     || ship_tooling "cannot list the untracked files among $2 and the paths it reverted"
   [ -z "$others" ] || { why=$stale; return 1; }
 }
@@ -1143,9 +1145,11 @@ prove)
   parse_file "$@"
   no_extra
   # `close 4` looks the line up by the path git diff prints, top-relative with
-  # no leading `./`, so the line is written in that form.
-  for i in "${!args[@]}"; do
-    while [ "${args[i]#./}" != "${args[i]}" ]; do args[i]=${args[i]#./}; done
+  # no leading `./`, so the line is written in that form. revert-red takes the
+  # paths as typed: a `./` can be what keeps a name like `:x.sh` literal.
+  recorded=("${args[@]}")
+  for i in "${!recorded[@]}"; do
+    while [ "${recorded[i]#./}" != "${recorded[i]}" ]; do recorded[i]=${recorded[i]#./}; done
   done
   # The line lists the paths space-separated, and `close 4` splits them back on
   # that space.
@@ -1158,7 +1162,7 @@ prove)
   [ "$rc" -eq 0 ] || { printf '%s\n' "$answer"; exit "$rc"; }
   out=$(jq -c --arg f "$file" --arg h "$head" '. + {run_file: $f, head: $h}' <<<"$answer" 2>/dev/null) \
     || ship_tooling "revert-red did not print a JSON verdict"
-  append_to_section "## Evidence" "Reverted-fix: ${args[0]}: red at $head reverting ${args[*]:1}"
+  append_to_section "## Evidence" "Reverted-fix: ${recorded[0]}: red at $head reverting ${recorded[*]:1}"
   jq . <<<"$out"
   ;;
 probe)

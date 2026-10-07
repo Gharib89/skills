@@ -87,12 +87,21 @@ check "the refusal names the missing record, not a revert-red answer" yes \
 
 # --- the line is one close 4 reads -------------------------------------------------
 
+# A fix in a file whose name git reads as pathspec magic unless it is written `./`.
+echo 'colon() { echo yes; }' > "$repo/:fix.sh"
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source ./:fix.sh' '[ "$(colon)" = yes ]' > "$repo/tests/colon.test.sh"
+g add -A && g commit -qm 'colon fix and test'
+head=$(g rev-parse HEAD)
+
 rf=$(cd "$repo" && bash "$bin/run-file.sh" init 8 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
+prove tests/colon.test.sh ./:fix.sh
+check_rc "a path kept literal by its ./ reaches revert-red as typed" 0 "$status"
+check "and is recorded without it" "Reverted-fix: tests/colon.test.sh: red at $head reverting :fix.sh" "$(tail -n 1 "$rf")"
 prove ./tests/answer.test.sh ././lib.sh
 check_rc "paths typed with a leading ./ prove as any other" 0 "$status"
 check "the line names them as git diff prints them, top-relative with no ./" \
   "Reverted-fix: tests/answer.test.sh: red at $head reverting lib.sh" "$(tail -n 1 "$rf")"
 out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
-check_rc "close 4 accepts the line prove wrote for the test the diff adds" 0 "$status"
+check_rc "close 4 accepts each line prove wrote for a test the diff adds, a pathspec-magic name included" 0 "$status"
 
 finish

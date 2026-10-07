@@ -389,6 +389,21 @@ check_rc "a grep that fails while telling untracked from tracked is tooling" 2 "
 check "and says which path it could not place" yes "$(has 'cannot tell whether scripts/m.sh is untracked' "$err")"
 check "and that record is as it was" "$held" "$(cat "$rf")"
 rm "$shim/grep"
+
+# The two reads a produced red line takes, the diff since its head and the
+# untracked files among its paths, are tooling when they fail, never fresh.
+reset; put tests/new.test.sh 'echo new'; put src/x.txt 'fixed'; g add -A; g commit -q -m 'test and fix'
+at=$(g rev-parse HEAD)
+for read in 'diff:--literal-pathspecs diff:cannot read the diff of tests/new.test.sh since' 'ls-files:--literal-pathspecs ls-files:cannot list the untracked files among tests/new.test.sh'; do
+  name=${read%%:*} rest=${read#*:} match=${rest%%:*} msg=${rest#*:}
+  printf '#!/bin/sh\ncase "$*" in *"%s"*) exit 2 ;; esac\nexec %s "$@"\n' "$match" "$(command -v git)" > "$shim/git"
+  run4; add "Reverted-fix: tests/new.test.sh: red at $at reverting src/x.txt"; held=$(cat "$rf")
+  PATH=$shim:$PATH call "$work" close 4 --file "$rf"
+  check_rc "a failed $name read of a red line is tooling" 2 "$status"
+  check "and says which read failed: $name" yes "$(has "$msg" "$err")"
+  check "and the record is as it was: $name" "$held" "$(cat "$rf")"
+done
+printf '#!/bin/sh\ncase "$*" in *set-head*) echo "$*" >> %s/set-head.log ;; esac\nexec %s "$@"\n' "$tmp" "$(command -v git)" > "$shim/git"
 reset
 
 # A phase that is not open is refused before any evidence is read.
