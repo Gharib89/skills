@@ -74,6 +74,13 @@ jobs:
       # added, or one whose old tags the 0.x renumber deleted (ADR 0005), carrying
       # the version to start from: HEAD is its baseline, tagged and pushed here,
       # and it releases from the next push that touches it.
+      #
+      # The one gap in "together" is a run whose release commit reached main and
+      # whose tag push the remote then refused (`ship-v0.18.0`, run 112): every run
+      # after it refused here. When no tag of that name exists anywhere and HEAD's
+      # history holds python-semantic-release's own commit for that exact version,
+      # carrying that version, that commit is where the release would have tagged,
+      # so it is tagged here, annotated and by the same tagger as the release's.
       - name: Tag a new skill's baseline, refuse a missing one
         run: |
           for s in $SKILLS; do
@@ -82,6 +89,17 @@ jobs:
             if [ -z "$(git tag -l "$s-v*")" ]; then
               git tag "$s-v$v" && git push origin "refs/tags/$s-v$v" || exit 1
               continue
+            fi
+            if ! git rev-parse -q --verify "refs/tags/$s-v$v" >/dev/null; then
+              c=$(git log --format='%H%x09%an%x09%s' HEAD \
+                | awk -F'\t' -v subj="chore(release): $s v$v" '$2 == "semantic-release" && $3 == subj { print $1; exit }')
+              if [ -n "$c" ] && [ "$(git show "$c:skills/$s/SKILL.md" | sed -n 's/^  version: //p')" = "$v" ]; then
+                echo "tagging $s-v$v at its release commit $c, whose tag push never landed"
+                git -c user.name=semantic-release -c user.email=semantic-release \
+                  tag -a "$s-v$v" -m "$s-v$v" "$c" \
+                  && git push origin "refs/tags/$s-v$v" || exit 1
+                continue
+              fi
             fi
             git merge-base --is-ancestor "$s-v$v" HEAD 2>/dev/null \
               || { echo "skills/$s/SKILL.md is at $v with no $s-v$v tag reachable from HEAD: tag this history at that version before merging"; exit 1; }
