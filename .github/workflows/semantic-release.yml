@@ -81,6 +81,11 @@ jobs:
       # history holds python-semantic-release's own commit for that exact version,
       # carrying that version, that commit is where the release would have tagged,
       # so it is tagged here, annotated and by the same tagger as the release's.
+      # GitHub refuses that push from this job's token when any workflow file at
+      # the release commit differs from main's, counting the new tag as a workflow
+      # change, which needs the `workflows` permission no GITHUB_TOKEN can hold
+      # (run 129 for `ship-v0.18.0`). The refusal names the commit to tag by hand,
+      # from an account that holds it, before re-running.
       - name: Tag a new skill's baseline, refuse a missing one
         run: |
           for s in $SKILLS; do
@@ -96,8 +101,9 @@ jobs:
               if [ -n "$c" ] && [ "$(git show "$c:skills/$s/SKILL.md" | sed -n 's/^  version: //p')" = "$v" ]; then
                 echo "tagging $s-v$v at its release commit $c, whose tag push never landed"
                 git -c user.name=semantic-release -c user.email=semantic-release \
-                  tag -a "$s-v$v" -m "$s-v$v" "$c" \
-                  && git push origin "refs/tags/$s-v$v" || exit 1
+                  tag -a "$s-v$v" -m "$s-v$v" "$c" || exit 1
+                git push origin "refs/tags/$s-v$v" \
+                  || { echo "the remote refused $s-v$v at $c: if it names the workflows permission, tag $c as $s-v$v from an account that holds it (the Releases page can), then re-run this run"; exit 1; }
                 continue
               fi
             fi
