@@ -7,6 +7,37 @@ released version. See
 
 <!-- version list -->
 
+## v0.14.0 (2026-10-08)
+
+### Bug Fixes
+
+- **setup-skills**: Pin claude-code-action v1.0.244 so opus reaches Opus 5.5
+  ([#514](https://github.com/Gharib89/skills/pull/514),
+  [`28342e5`](https://github.com/Gharib89/skills/commit/28342e514254fef5ee3b2d97f832e5f02fd2e614))
+
+### Features
+
+- **ship**: Merge on a clean gate in repos that opt in
+  ([#501](https://github.com/Gharib89/skills/pull/501),
+  [`3d7d8c2`](https://github.com/Gharib89/skills/commit/3d7d8c2d517d558298f6c855dbb8b5a9751dd259))
+
+- **ship**: Move code-review and tdd to f3fc563
+  ([#508](https://github.com/Gharib89/skills/pull/508),
+  [`16646c2`](https://github.com/Gharib89/skills/commit/16646c25737c6b151cee4433afe2bba838d5a09e))
+
+- **ship**: Read native Codex review as a third on-request reviewer
+  ([#513](https://github.com/Gharib89/skills/pull/513),
+  [`e7b6598`](https://github.com/Gharib89/skills/commit/e7b65987e2400571eb9fa790e46227b79f323922))
+
+- **ship**: Self-review gates what reviewers keep catching
+  ([#494](https://github.com/Gharib89/skills/pull/494),
+  [`5ffa640`](https://github.com/Gharib89/skills/commit/5ffa64042668f61e455249374dc6c221c10ae348))
+
+- **ship**: State each rule once and keep unmet criteria verbatim
+  ([#515](https://github.com/Gharib89/skills/pull/515),
+  [`c923bb4`](https://github.com/Gharib89/skills/commit/c923bb4f493ac13c8883a7328c440e3620ea9f5f))
+
+
 ## v0.13.1 (2026-10-05)
 
 ### Bug Fixes
