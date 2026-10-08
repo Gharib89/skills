@@ -41,10 +41,18 @@ Per round: start it, `poll-pr <pr> --reviewer <name> [--since <iso>] --brief`,
 inline or in the background, resuming a `pending` answer with its `--cursor`
 ([mechanics.md](mechanics.md#waits-past-540-s) has the cap), triage what landed,
 push the fixes once, reply. The next round starts only while the latest round's
-fixes changed the tree and `Cap:` has rounds left. The poll takes its bound from
-the block, and a window that closed is the answer rather than a reason to
-re-poll, except after a `conflict`, which says nothing about the reviewer:
-resolve it (phase 8) and poll again.
+fixes changed the tree, the **fix-only diff** (the commits pushed since the last
+head a reviewer read) classifies `code` or `infra` under [phase 2's
+classes](implement.md#phase-2-classify-then-implement-test-first), its
+when-in-doubt rule included, and `Cap:` has rounds left. Here a fix-only diff
+touching a file an agent executes as instructions (a skill's `SKILL.md` or its
+reference files, `CLAUDE.md`, `AGENTS.md`, a rules file) is `code`, though phase
+2 files it under `docs`: a fix to it changes behaviour. Any other `docs`
+fix-only diff is **docs-only** and ends the host loop, because another round
+would buy wording nits. The poll takes its bound from the block, and a window
+that closed is the answer rather than a reason to re-poll, except after a
+`conflict`, which says nothing about the reviewer: resolve it (phase 8) and poll
+again.
 
 **`Cap:`** is the budget on rounds ship starts: a number, or `None.` for an
 uncapped loop; `auto-once` delivers one round whatever it reads, and under
@@ -55,11 +63,10 @@ right. Small lane: at most one requested round. A lint or flake fix after the
 loop ends earns no new request; an on-push reviewer re-reads it on its own, so
 disposition that round, which opens no further one.
 
-**A cap round whose fixes changed the tree gets one local review before the
-merge gate**: one `code-review` subagent, Standards axis only, over the
-fix-only diff, the commits pushed since the last head a reviewer read. Its
-findings take the dispositions above; `Cap:` is unchanged and no host round is
-requested.
+**The cap round and a docs-only round each get one local review before the merge
+gate** when their fixes changed the tree: one `code-review` subagent, Standards
+axis only, over the fix-only diff. Its findings take the dispositions above;
+`Cap:` is unchanged and no host round is requested.
 
 ## Reading a round
 
@@ -156,8 +163,9 @@ summary, in this shape:
 
 A `not reviewed` reviewer with no rounds states its exit alone. A trailing
 clause is added only where the counts leave something out: a cap that ran out
-mid-findings, the primary's reason on a fallback that ran, a round that did not
-land after one that did, or `<N> denied calls (run <url>[, run <url>…])`, N
+mid-findings, `ended: docs-only fix` where a docs-only fix-only diff ended
+the loop, the primary's reason on a fallback that ran, a round that did not land
+after one that did, or `<N> denied calls (run <url>[, run <url>…])`, N
 summing the numeric `reviewer_run.denied` over the rounds, each non-zero round's
 run URL listed, and nothing added for a total of 0 or no numeric count.
 
@@ -171,17 +179,18 @@ Stop: <reviewer>: <reason>
 ```
 
 `<text>` is the round's outcome in a line. When the last fully read and
-dispositioned round changed no file, record `tree unchanged` even at `Cap:`,
-in the small lane or for an `auto-once` trigger. Otherwise
-`<reason>` is one of `cap` (`Cap:` spent), `tree unchanged` (a round's
+dispositioned round changed no file, record `tree unchanged` even at `Cap:`, in
+the small lane or for an `auto-once` trigger. Otherwise `<reason>` is one of
+`cap` (`Cap:` spent, or a docs-only fix-only diff ended the loop: either way the
+last fixes went unread by a host round), `tree unchanged` (a round's
 dispositions changed no file, so a further round would read the same tree),
 `small lane` (the lane's one requested round), `auto-once` (the reviewer fires
-once, on PR open) or `not reviewed` (no round was dispositioned: none landed,
-a fallback was not invoked because its primary reviewed, or a round landed
-whose threads could not be read, which keeps its `Round:` line too). A
-declined finding from a `Gating: yes` reviewer also leaves `Override:
-<reviewer>: <finding>, <evidence>` in the Run file, so the clean-gate decision
-reads the same override the human sees in the summary.
+once, on PR open) or `not reviewed` (no round was dispositioned: none landed, a
+fallback was not invoked because its primary reviewed, or a round landed whose
+threads could not be read, which keeps its `Round:` line too). A declined
+finding from a `Gating: yes` reviewer also leaves `Override: <reviewer>:
+<finding>, <evidence>` in the Run file, so the clean-gate decision reads the
+same override the human sees in the summary.
 
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each

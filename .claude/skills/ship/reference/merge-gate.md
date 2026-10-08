@@ -207,12 +207,13 @@ leg), every profile CI leg green at that head, every Verification `pass` or
 green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
 recorded round. A fallback that stopped so answers for a primary that was not
 reviewed; a fallback skipped because its primary reviewed adds no condition. A
-loop cut short by `Cap:`, the small lane or `auto-once` holds until its last
-round changed no file. Any nonblank `Override:` other than `none` or `None.`,
-any `Ship-defect:` record or `defect-*.md` draft, and any `tracker-*.md` draft
-holds the gate (`*.base.md` files are saved originals, not drafts). Deviations
-alone do not hold it. With no expected CI legs, `no-checks` is clean only when
-the profile declares `Legs: None.` and `No-checks legal: yes`, at the same head.
+loop cut short by `Cap:`, a docs-only fix, the small lane or `auto-once` holds
+until its last round changed no file. Any nonblank `Override:` other than `none`
+or `None.`, any `Ship-defect:` record or `defect-*.md` draft, and any
+`tracker-*.md` draft holds the gate (`*.base.md` files are saved originals, not
+drafts). Deviations alone do not hold it. With no expected CI legs, `no-checks`
+is clean only when the profile declares `Legs: None.` and `No-checks legal:
+yes`, at the same head.
 
 On `clean: true`, post the summary through the `Timing:` row with no reply line,
 then run the merge sequence below without waiting for a reply. On `clean:
@@ -227,12 +228,13 @@ on; here, `run-file gate read --head <head_sha>`, the head `read-pr` returns,
 answers `current`. On `current: true`, cite the recorded verdict: the
 `Local gate:` row reads the `gates` object that answer returns, not a re-run. On
 `current: false`, re-run the gate from the worktree and record it again, because
-a commit the gate never saw is in the PR; where the gate cannot run here, the
-row carries `at <sha>, <n> commits behind`, `<n>` being that answer's `behind`,
-or `at <sha>, behind unknown` when `behind` is `null`. `non_leg_failing` on the
-`CI:` row is red the profile does not ask for, so it does not hold the merge,
-and an `unlisted` check is profile drift for the human to add to `Legs:` or
-remove.
+a commit the gate never saw is in the PR: this is the final head's gate, the
+one phase 7's round fixes wait for. Where the gate cannot run
+here, the row carries `at <sha>, <n> commits behind`, `<n>` being that
+answer's `behind`, or `at <sha>, behind unknown` when `behind` is `null`.
+`non_leg_failing` on the `CI:` row is red the profile does not ask for, so it
+does not hold the merge, and an `unlisted` check is profile drift for the human
+to add to `Legs:` or remove.
 
 **On explicit approval or a clean opted-in gate**, from the worktree, `merge
 <pr> <issue|none> [--worktree <path>]`. Its header carries what it does and
@@ -268,15 +270,19 @@ where the write succeeds. Before or after the merge, either order holds.
 
 ## Unattended: post to the PR, then return
 
-`comment-pr <pr> --body-file` with the summary, `run-file close 9` with the
-task set to the returned `mirror`, then **return** with the PR link. Do not
-wait, poll, or merge; the claim stays on the issue, which carries the open PR,
-so later fires skip it until a human merges. The last line becomes "Ready to
-merge: a human merges from the PR.", and with an unmet criterion it adds "Waive
-each unmet criterion, or take its action, before merging." A Ship defect's
-draft is never filed from here, and the comment drops the "file defects" line:
-it carries each draft verbatim under the command a human runs from a file they
-save it to,
+First the final head's gate, as the attended lane runs it: `run-file gate read
+--head <head_sha>`, and on `current: false` the re-run and record
+[above](#attended-post-then-wait), so the `Local gate:` row describes the head a
+human merges. A `fail` there takes phase 5's fix loop; `unavailable` hands back
+`local gate unavailable: <gates>` with the PR left open. Then `comment-pr <pr>
+--body-file` with the summary, `run-file close 9` with the task set to the
+returned `mirror`, then **return** with the PR link. Do not wait, poll, or
+merge; the claim stays on the issue, which carries the open PR, so later fires
+skip it until a human merges. The last line becomes "Ready to merge: a human
+merges from the PR.", and with an unmet criterion it adds "Waive each unmet
+criterion, or take its action, before merging." A Ship defect's draft is never
+filed from here, and the comment drops the "file defects" line: it carries each
+draft verbatim under the command a human runs from a file they save it to,
 `.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
 "<title>" --body-file <file> --label needs-triage`. Detail in
 [unattended.md](unattended.md).
