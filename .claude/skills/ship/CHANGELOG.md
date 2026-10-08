@@ -7,6 +7,49 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.0 (2026-10-08)
+
+### Bug Fixes
+
+- **ship**: Read the reviewer's workflow runs unfiltered so a live run is seen
+  ([#522](https://github.com/Gharib89/skills/pull/522),
+  [`a16a3f2`](https://github.com/Gharib89/skills/commit/a16a3f26027c491208243f699092d17950f1a9b9))
+
+- **ship**: Run-file guards answer tooling when grep itself fails (#495)
+  ([#498](https://github.com/Gharib89/skills/pull/498),
+  [`d9e1561`](https://github.com/Gharib89/skills/commit/d9e1561a20de8f9d120f196ec31c6c4aa84d7107))
+
+### Features
+
+- **ship**: End host review rounds on a docs-only fix and prove round fixes once
+  ([#525](https://github.com/Gharib89/skills/pull/525),
+  [`a07bbe6`](https://github.com/Gharib89/skills/commit/a07bbe6bea7b6e6dfd61d0e511ac20248dee07f5))
+
+- **ship**: Grade a reviewer run still live at the ceiling still-running, not infra-error
+  ([#497](https://github.com/Gharib89/skills/pull/497),
+  [`620c6d5`](https://github.com/Gharib89/skills/commit/620c6d5962e913620a9d4df54b965707cc612683))
+
+- **ship**: Merge on a clean gate in repos that opt in
+  ([#501](https://github.com/Gharib89/skills/pull/501),
+  [`3d7d8c2`](https://github.com/Gharib89/skills/commit/3d7d8c2d517d558298f6c855dbb8b5a9751dd259))
+
+- **ship**: Move code-review and tdd to f3fc563
+  ([#508](https://github.com/Gharib89/skills/pull/508),
+  [`16646c2`](https://github.com/Gharib89/skills/commit/16646c25737c6b151cee4433afe2bba838d5a09e))
+
+- **ship**: Read native Codex review as a third on-request reviewer
+  ([#513](https://github.com/Gharib89/skills/pull/513),
+  [`e7b6598`](https://github.com/Gharib89/skills/commit/e7b65987e2400571eb9fa790e46227b79f323922))
+
+- **ship**: State each rule once and keep unmet criteria verbatim
+  ([#515](https://github.com/Gharib89/skills/pull/515),
+  [`c923bb4`](https://github.com/Gharib89/skills/commit/c923bb4f493ac13c8883a7328c440e3620ea9f5f))
+
+- **ship**: Write the red and probe evidence lines from the mechanics that ran them
+  ([#521](https://github.com/Gharib89/skills/pull/521),
+  [`86ba015`](https://github.com/Gharib89/skills/commit/86ba015e963032bd921ccf56a5e1ac93909f9f50))
+
+
 ## v0.18.0 (2026-10-06)
 
 ### Features
