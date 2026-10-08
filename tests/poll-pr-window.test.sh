@@ -63,28 +63,30 @@ n() { cat "$SHIP_FAKE/$1.n" 2>/dev/null || echo 0; }
 
 # The cap. The reviewer's round is five reads out, so the first call (cap 2 s)
 # ends with the window open and hands back its cursor; the second resumes it,
-# lands the round and counts its waiting from the first call.
+# lands the round and counts its waiting from the first call. Every bound here
+# is a read count or holds under any load: a nap sleeps a whole second, and the
+# cap is read in whole seconds.
 reset
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.5.json"
-t0=$(date +%s)
 out=$(CAP=2 poll --since "$since"); rc=$?
-t1=$(date +%s)
 check_rc "a window still open at the cap answers exit 1" 1 "$rc"
 check "and says it is pending" pending "$(jq -r .status <<<"$out")"
 check "and is not done" false "$(jq -r .done <<<"$out")"
 check "and carries a cursor" true "$(jq '(.cursor | type) == "string" and (.cursor | length) > 0' <<<"$out")"
 check "and keeps the snapshot shape" deadbee "$(jq -r .head_sha <<<"$out")"
-# A loaded machine stretches each read (#507): the bound holds the call far
-# short of the 540 s cap it stands for.
-check "the call held the tool no longer than its cap, plus one read" true "$([ $((t1 - t0)) -le 10 ] && echo true || echo false)"
+# Two seconds hold at most two naps, so three reads, however slow each is.
+check "the call stopped reading at its cap, one read a second plus one" true \
+  "$([ "$(n host_pr_reviews)" -le 3 ] && echo true || echo false)"
 cursor=$(jq -r .cursor <<<"$out")
-# The resumed call's cap leaves the reads still to come room on a loaded
-# machine; it answers as soon as the round lands.
-out=$(CAP=30 poll --cursor "$cursor"); rc=$?
+# The default cap leaves the resumed call minutes for the few reads still to
+# come, and it answers as soon as the round lands.
+out=$(poll --cursor "$cursor"); rc=$?
 check_rc "the resumed call lands the round" 0 "$rc"
 check "by the since the cursor carried" since "$(jq -r .landed_by <<<"$out")"
 check "and a done answer has no status" false "$(jq 'has("status")' <<<"$out")"
+# Five reads span four naps, and only the one the first call's cap cut is
+# skipped, so the window's start lies at least three seconds back.
 check "waited_s counts from the first call" true "$(jq '.waited_s >= 3' <<<"$out")"
 
 reset
