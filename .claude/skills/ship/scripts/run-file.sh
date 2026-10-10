@@ -109,8 +109,8 @@
 # `close 7` reads the reviewers from the phase's checklist row (nothing is held
 # where the row names none, or names what is not a list of names) and needs a
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
-# one of cap, tree unchanged, small lane, inline lane, auto-once or not
-# reviewed, and unless it is `not reviewed` or `inline lane` at least one
+# one of cap, tree unchanged, small lane, inline lane, auto-once, not landed or
+# not reviewed, and unless it is `not reviewed` or `inline lane` at least one
 # `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
 # it wrote.
@@ -657,7 +657,7 @@ EODECLINED
 
 # Phase 7: each reviewer the checklist row names has its stop reason and, unless
 # it never reviewed, a round.
-stop_reasons="cap, tree unchanged, small lane, inline lane, auto-once, not reviewed"
+stop_reasons="cap, tree unchanged, small lane, inline lane, auto-once, not landed, not reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
   local list names nm stop r ok re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
@@ -673,8 +673,8 @@ EONAMES
     stop=$(rests "Stop: $nm: " | tail -n 1)
     stop=$(trim_end "$stop")
     case $stop in
-      cap | "tree unchanged" | "small lane" | "inline lane" | auto-once | "not reviewed") ;;
-      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged|small lane|inline lane|auto-once|not reviewed>\`" ;;
+      cap | "tree unchanged" | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed") ;;
+      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged|small lane|inline lane|auto-once|not landed|not reviewed>\`" ;;
       *) gap "Stop line for $nm has reason '$stop', which is not one of $stop_reasons" ;;
     esac
     case $stop in "not reviewed" | "inline lane") continue ;; esac
@@ -771,7 +771,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
              | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]"))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
-      def owes_fallback($name): stop($name) == "not reviewed" or cap_spent($name);
+      def owes_fallback($name): (stop($name) | IN("not reviewed", "not landed")) or cap_spent($name);
       # A revocation appends its own Lane: line, so a stale inline stop holds.
       def inline_run: (rests("Lane: ") | last // "") == "inline";
       def greenleg($leg): [$ci.checks[] | select(named($leg))] as $checks

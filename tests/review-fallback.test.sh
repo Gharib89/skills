@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The fallback reviewer over the Host fake. The review loop (review-loop.md)
 # requests a fallback when its primary exits `not reviewed`, the branch this
-# file transcribes, or is capped with findings, which `gate clean` decides from
+# file transcribes, or is capped with findings or stops `not landed`, which
+# `gate clean` decides from
 # the Run file and tests/run-file-clean.test.sh covers. A primary's exit is
 # `not reviewed: <cause>` where no round of it landed, the cause being
 # poll-pr's `not_reviewed` or request-review's exit 1 (never-queued). That

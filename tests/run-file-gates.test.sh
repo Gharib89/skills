@@ -415,9 +415,9 @@ reset
 
 # --- close 7 ---------------------------------------------------------------------
 
-stops='cap, tree unchanged, small lane, inline lane, auto-once, not reviewed'
+stops='cap, tree unchanged, small lane, inline lane, auto-once, not landed, not reviewed'
 run7; held=$(cat "$rf"); close 7
-refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged|small lane|inline lane|auto-once|not reviewed>`'
+refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged|small lane|inline lane|auto-once|not landed|not reviewed>`'
 check "the same refusal names the other reviewer's stop" yes "$(has 'no Stop line for claude' "$err")"
 check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed` or `inline lane`' "$err")"
 check "and the other's" yes "$(has 'no Round line for claude' "$err")"
@@ -447,6 +447,12 @@ run7; add 'Round: copilot 1: 2 findings, both fixed' 'Stop: copilot: auto-once' 
 admitted "a fallback never invoked: its Stop line alone, the primary's round and auto-once"
 run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Round: claude 1: landed, threads unreadable' 'Stop: claude: not reviewed'; close 7
 admitted "a Round line beside Stop: not reviewed, a round that landed with unreadable threads"
+
+# `not landed`: a round was dispositioned, then a later one did not land (#551).
+run7; add 'Round: copilot 1: 1 finding, fixed' 'Stop: copilot: not landed' 'Stop: claude: not reviewed'; close 7
+admitted "a not-landed reviewer with its dispositioned round"
+run7; add 'Stop: copilot: not landed' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
+refused "a not-landed reviewer with no round" 'no Round line for copilot'
 
 run7; add 'Stop: copilot: cap' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
 refused "a stopped reviewer with no round" 'no Round line for copilot'
