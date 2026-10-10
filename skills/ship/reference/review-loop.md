@@ -66,10 +66,11 @@ disposition that round, which opens no further one.
 **The cap round and a docs-only round each get one local review before the merge
 gate** when their fixes changed the tree: one `code-review` subagent, Standards
 axis only, over the fix-only diff. Its findings take the dispositions above;
-`Cap:` is unchanged and no host round is requested. A primary's cap round whose
-fallback then ran gets none, since the fallback's host rounds read those fixes:
-the local review goes to the last reviewer that stopped at `cap`, primary or
-fallback.
+`Cap:` is unchanged and no host round is requested. Skip this review for a
+primary capped with findings whose fallback then exited `reviewed`: the
+fallback's host rounds read those fixes. The review goes to the last reviewer
+that stopped at `cap`, primary or fallback, and to a capped primary whose
+fallback exited `not reviewed`.
 
 ## Reading a round
 
@@ -218,8 +219,8 @@ because a fallback's only input is how its primary exited.
   findings is `Stop: <primary>: cap` after it spent `Cap:` (rounds == Cap) on a
   last round whose fixes changed the tree, so no host round read them. Its exit
   is its own, and its `## Review` line and merge-summary block both name the
-  primary's reason (`codex capped with findings`, say), the only record of why
-  a second reviewer was paid for.
+  primary's reason (`fallback for codex: capped with findings`, say), the only
+  record of why a second reviewer was paid for.
 - Primary `reviewed` otherwise (it stopped on `tree unchanged`, a last round
   whose findings were all declined included, or on `small lane` or `auto-once`,
   or a docs-only fix-only diff ended its loop before `Cap:` was spent): do not

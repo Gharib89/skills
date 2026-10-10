@@ -48,7 +48,7 @@ Workflow: <`comment <phrase>` only: the repo-relative path, from the checkout ro
 Cap: <on-request: max rounds, required, no default; on-push: max rounds, or None. for an uncapped loop; auto-once: None.>
 Resolve: <on-push and on-request: how a dispositioned thread is resolved, else None.>
 Gating: <yes | no>
-Fallback-for: <the reviewer this one stands in for, driven only when that reviewer exits not reviewed or spends its Cap: on a last round whose fixes changed the tree; on-request only, else None.>
+Fallback-for: <the reviewer this one stands in for, driven only when that reviewer exits not reviewed or is capped with findings (its Cap: spent, the last round's fixes changing the tree); on-request only, else None.>
 Instructions: <path of the file this reviewer reads, or None.>
 
 ## Coding standards

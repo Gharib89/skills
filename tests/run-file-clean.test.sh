@@ -60,6 +60,7 @@ clean() {
   check "$name has the public key set" 'clean,held_by' "$(jq -r 'keys | join(",")' <<<"$answer")"
   check "$name has no holds" '{"clean":true,"held_by":[]}' "$(jq -c . <<<"$answer")"
 }
+unheld() { check "$1 does not hold $2" false "$(call | jq -r --arg r "$2" '.held_by | index($r) != null')"; }
 change_run() { sed "$1" "$f" > "$f.new" && mv "$f.new" "$f"; }
 change_ci() { jq "$1" "$ci" > "$ci.new" && mv "$ci.new" "$ci"; }
 base; clean 'all recorded conditions holding'
@@ -104,7 +105,6 @@ base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/';
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: cap/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'cap is not rescued by fallback' 'reviewer primary: cap'
 # A primary that spent its Cap: on a tree-changing last round owes its fallback a run (#531).
 capped() { base; sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_run 's/Stop: primary: tree unchanged/Round: primary 2: fixes pushed\nStop: primary: cap/'; }
-unheld() { check "$1 does not hold $2" false "$(call | jq -r --arg r "$2" '.held_by | index($r) != null')"; }
 capped; held 'capped primary owes its fallback' 'reviewer fallback: not reviewed'
 capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'capped primary covered by a fallback stopped on tree unchanged'
 capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'capped primary with a capped fallback' 'reviewer fallback: cap'

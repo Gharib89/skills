@@ -759,10 +759,12 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop");
       def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]");
       def settled($name): stop($name) == "tree unchanged" and reviewed($name);
-      # Cap: spent on a tree-changing last round, which a docs-only end before the cap is not.
-      def capped($name): stop($name) == "cap"
+      # Capped with findings: Cap: spent on a tree-changing last round, which a
+      # docs-only end before the cap, also `Stop: cap`, is not.
+      def cap_spent($name): stop($name) == "cap"
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
              | $cap != [] and ([rests("Round: " + $name + " ")[] | capture("^(?<n>[1-9][0-9]*):").n] | unique | length) >= $cap[0]);
+      def owes_fallback($name): stop($name) == "not reviewed" or cap_spent($name);
       def greenleg($leg): [$ci.checks[] | select(named($leg))] as $checks
         | ($checks | length) > 0 and all($checks[]; .status == "success") and samehead($ci.head_sha; $head) and $ci.status == "green";
       # Names may contain colons, so a result is cut by its full literal prefix.
@@ -793,9 +795,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
              else "verification " + $v.name + ": no associated green CI leg" end
            else "verification " + $v.name + ": " + $status end),
        ($reviewers[] as $r
-         | if $r.fallback_for != null and reviewed($r.fallback_for) and (capped($r.fallback_for) | not) then empty
+         | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
            elif settled($r.name) then empty
-           elif (stop($r.name) == "not reviewed" or capped($r.name)) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
+           elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
            else "reviewer " + $r.name + ": " + stop($r.name) end),
        (rests("Override: ")[] | select(. != "" and . != "none" and . != "None.") | "override needed: " + .),

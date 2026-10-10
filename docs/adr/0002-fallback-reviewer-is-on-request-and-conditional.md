@@ -24,4 +24,12 @@ The primary's `degraded` exit is now `not reviewed: <reason>`, and a primary who
 
 ## Amended by #531
 
-The #307 amendment's capped primary is reversed for one case: a primary that spent its `Cap:` (rounds == Cap) on a last round whose fixes changed the tree, `Stop: <primary>: cap`, drives the fallback as an ordinary on-request reviewer under its own `Cap:`, because otherwise those fixes reach the merge gate read by no host reviewer, only by the local cap review on the Standards axis. The fallback's host rounds then read them, so the primary's cap round gets no local review of its own; that review goes to the last reviewer that stopped at `cap`. A primary that stopped on `tree unchanged`, a last round whose findings were all declined included, one stopped by the small lane or `auto-once`, and a docs-only fix-only diff that ended the loop before `Cap:` was spent still leave the fallback `not invoked`. It is a global Ship rule, not a profile key, so no schema moves.
+The #307 amendment's capped primary is reversed for one case. A primary **capped with findings**, one that spent its `Cap:` (rounds == Cap) on a last round whose fixes changed the tree and so stopped at `cap`, drives the fallback as an ordinary on-request reviewer under its own `Cap:`. Otherwise those fixes reach the merge gate read by no host reviewer, only by the local cap review on the Standards axis. When the fallback reviews, its host rounds read them, so the primary's cap round gets no local review of its own; that review goes to the last reviewer that stopped at `cap`.
+
+These still leave the fallback `not invoked`:
+
+- a primary that stopped on `tree unchanged`, a last round whose findings were all declined included;
+- a primary stopped by the small lane or `auto-once`;
+- a docs-only fix-only diff that ended the loop before `Cap:` was spent.
+
+It is a global Ship rule, not a profile key, so no schema moves.
