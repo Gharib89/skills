@@ -60,6 +60,7 @@ if [ -f "$roster" ]; then
     && ds_fail "$name is already in the roster $roster"
 else
   mkdir -p "$(dirname "$roster")" || ds_fail "cannot create the roster $roster"
+  ds_write "$roster" .
 fi
 
 ds_herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label "$name" --cwd "$cwd" --no-focus \

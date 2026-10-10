@@ -82,6 +82,7 @@ printf '99' > "$HERDR_FAKE/s6.start-busy"
 out=$(bash "$s/spawn.sh" s6 --roster "$tmp/s6.json" --cwd "$tmp/cwd" --prompt x 2>/dev/null); rc=$?
 check_rc "a pane that never takes claude fails the spawn" 1 "$rc"
 check "the failure names the tab left open" "agent start: pane is not an available shell; tab w1:t-s6 left open" "$(jq -r .error <<<"$out")"
+check "a failed first spawn still leaves an empty roster" '{"sessions":[]}' "$(jq -c . "$tmp/s6.json")"
 calls >/dev/null
 
 # A session that stops on a startup dialog (an untrusted folder) is a row whose
