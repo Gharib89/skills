@@ -65,7 +65,13 @@ ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | str
   || ds_tooling "tab create: unreadable answer from herdr"
 tab=${ids% *} pane=${ids#* }
 
-if ds_herdr agent start "$name" --kind claude --pane "$pane" -- ${args[@]+"${args[@]}"}; then
+# A new tab's shell can still be starting: `agent start` answers
+# `agent_pane_busy` until it is up (measured on herdr 0.9.3), so wait it out.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  ds_herdr agent start "$name" --kind claude --pane "$pane" -- ${args[@]+"${args[@]}"}; started=$?
+  if [ "$started" -ne 0 ] && [ "$ds_code" = agent_pane_busy ]; then sleep 0.5; else break; fi
+done
+if [ "$started" -eq 0 ]; then
   ds_agent_fields "agent start $name"
 elif [ "$ds_code" = agent_not_ready ]; then
   ds_agent "$name" || ds_fail "agent get after a startup dialog: $name is gone; tab $tab left open" agent_not_found

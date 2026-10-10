@@ -70,6 +70,20 @@ bash "$s/spawn.sh" "$long" --roster "$tmp/long.json" --cwd "$tmp/cwd" --prompt x
 check_rc "spawn takes a 32-character name" 0 "$rc"
 calls >/dev/null
 
+# A new tab's shell can still be starting when claude is: `agent start` answers
+# `agent_pane_busy` until it is up.
+printf 'idle 50\n' > "$HERDR_FAKE/s5.states"
+printf '2' > "$HERDR_FAKE/s5.start-busy"
+bash "$s/spawn.sh" s5 --roster "$tmp/s5.json" --cwd "$tmp/cwd" --prompt x >/dev/null; rc=$?
+check_rc "spawn waits out a pane whose shell is still starting" 0 "$rc"
+check "it starts claude again until the pane takes it" 3 "$(calls | grep -c 'agent start s5')"
+printf 'idle 51\n' > "$HERDR_FAKE/s6.states"
+printf '99' > "$HERDR_FAKE/s6.start-busy"
+out=$(bash "$s/spawn.sh" s6 --roster "$tmp/s6.json" --cwd "$tmp/cwd" --prompt x 2>/dev/null); rc=$?
+check_rc "a pane that never takes claude fails the spawn" 1 "$rc"
+check "the failure names the tab left open" "agent start: pane is not an available shell; tab w1:t-s6 left open" "$(jq -r .error <<<"$out")"
+calls >/dev/null
+
 # A session that stops on a startup dialog (an untrusted folder) is a row whose
 # status is blocked and whose task is not yet sent, not a failed spawn.
 printf 'agent_not_ready' > "$HERDR_FAKE/s2.start-error"
@@ -171,6 +185,15 @@ check_rc "answer with keys exits 0" 0 "$rc"
 check "answer records what it sent and the acknowledged sequence number" '{"name":"s2","sent":"keys","seen_seq":21}' "$(jq -c . <<<"$out")"
 check "a blocked session is answered with send-keys" "agent get s2
 agent send-keys s2 1 Enter" "$(calls)"
+
+# Herdr refuses a blocked agent's scrollback past the viewport, so read takes
+# the visible screen, where the dialog is.
+printf 'blocked 22\n' > "$HERDR_FAKE/s2.states"
+out=$(bash "$s/read.sh" s2 --roster "$roster"); rc=$?
+check_rc "read of a blocked session exits 0" 0 "$rc"
+check "read of a blocked session takes the visible screen" "agent get s2
+agent read s2 --source visible" "$(calls)"
+check "and acknowledges the dialog" 22 "$(seen s2)"
 
 # Answering a startup dialog leaves the agent idle, not done: that is an event,
 # because the held-back task is still to be sent.

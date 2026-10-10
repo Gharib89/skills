@@ -11,9 +11,12 @@
 # so the last line repeats. No states file is an agent Herdr does not know:
 # `agent_not_found` on stderr, exit 1, as the real CLI answers. `<name>.start-error`
 # makes `agent start` fail with the code it holds, `<name>.prompt-error` the
-# same for `agent prompt`. `agent prompt` refuses an agent whose current line
-# reads `blocked` with `agent_blocked`. Every call is a line of
-# `$HERDR_FAKE/calls`.
+# same for `agent prompt`; `<name>.start-busy` holds how many `agent start`
+# calls answer `agent_pane_busy` first, the shell not yet up in a new tab.
+# `agent prompt` refuses an agent whose current line reads `blocked` with
+# `agent_blocked`, and `agent read` refuses it any source but `visible` with
+# `agent_not_idle`, as herdr 0.9.3 does past the viewport. Every call is a line
+# of `$HERDR_FAKE/calls`.
 herdr_fake_install() { # <dir>
   cat > "$1/herdr" <<'FAKE'
 #!/usr/bin/env bash
@@ -31,6 +34,8 @@ case "$1 $2" in
     printf '{"result":{"root_pane":{"pane_id":"w1:p-%s"},"tab":{"tab_id":"w1:t-%s"},"type":"tab_created"}}\n' "$label" "$label" ;;
   "agent start")
     [ -f "$HERDR_FAKE/$3.start-error" ] && err "$(cat "$HERDR_FAKE/$3.start-error")" "start failed"
+    busy=$(cat "$HERDR_FAKE/$3.start-busy" 2>/dev/null || echo 0)
+    [ "$busy" -gt 0 ] && { echo $((busy - 1)) > "$HERDR_FAKE/$3.start-busy"; err agent_pane_busy "pane is not an available shell"; }
     known "$3"; read -r st seq < "$HERDR_FAKE/$3.states"
     printf '{"result":{"agent":%s,"type":"agent_started"}}\n' "$(agent "$3" "$st" "$seq")" ;;
   "agent get")
@@ -47,7 +52,8 @@ case "$1 $2" in
     known "$3"
     printf '{"result":{"type":"ok"}}\n' ;;
   "agent read")
-    known "$3"
+    known "$3"; read -r st _ < "$HERDR_FAKE/$3.states"
+    [ "$st" = blocked ] && [ "$5" != visible ] && err agent_not_idle "agent $3 is not idle"
     printf 'output of %s\n' "$3" ;;
   *) err unknown_command "the fake does not answer: $*" ;;
 esac
