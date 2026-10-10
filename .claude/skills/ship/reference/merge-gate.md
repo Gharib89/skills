@@ -206,7 +206,8 @@ requires the local gate at that head with every gate `pass` or `deferred-to-ci`
 leg), every profile CI leg green at that head, every Verification `pass` or
 `n/a` (inapplicable), or `deferred-to-ci` with its `Also proven by CI:` leg
 green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
-recorded round, or on `Stop: inline lane`. A fallback stopped on `tree
+recorded round, or, on-request, on `Stop: inline lane` while the Run file's
+last `Lane:` line reads `inline`. A fallback stopped on `tree
 unchanged` answers for a primary that was not reviewed, or that was capped
 with findings (dispositioned `Round:` lines numbered 1 through the primary's
 `Cap:`); a fallback skipped because its

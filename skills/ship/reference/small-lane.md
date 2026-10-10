@@ -87,12 +87,14 @@ human's approval to merge this one PR on a clean gate, and nothing wider. With
   `auto-once` and `on-push` reviewers behave as in every lane.
 - **Merge:** phase 9 takes merge-gate.md's `on-clean-gate` branch for this PR.
 - **Named:** the run header, the `## Review` section and the merge summary say
-  `inline lane`.
+  `inline lane`. Phase 2 writes `Lane: inline` in the Run file: `gate clean`
+  honours an `inline lane` stop only while the last `Lane:` line reads `inline`.
 
 **Revocation runs inline, then small, then full.** A key failing at phase 2
 makes the run full lane. The count passing 20 drops it to the small lane; a
 trigger under *Revocable, one way* (a guard touch under `--review` excepted)
-drops it straight to the full lane. The approval goes with the lane: phase 9
-follows the profile's `Merge:` line, and each reviewer takes that lane's rounds,
-appending its `Round:` and `Stop:` lines after any `inline lane` stop, since the
-last `Stop:` decides. Say so in the next reply and in the merge summary.
+drops it straight to the full lane. The approval goes with the lane: append
+`Lane: small` or `Lane: full`, phase 9 follows the profile's `Merge:` line, and
+each reviewer takes that lane's rounds, appending its `Round:` and `Stop:` lines
+after any `inline lane` stop, since the last `Stop:` decides. Say so in the next
+reply and in the merge summary.

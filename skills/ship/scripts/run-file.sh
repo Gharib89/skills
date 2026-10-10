@@ -153,8 +153,8 @@
 #     check, every profile CI leg succeeded on head, verifications passed or were
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged with a dispositioned Round, or
-#     on inline lane for an on-request reviewer, the round `--inline` waived,
-#     which covers no primary. A
+#     on inline lane for an on-request reviewer while the last Lane: line
+#     reads inline, the round `--inline` waived, which covers no primary. A
 #     not-reviewed primary, or one that spent its Cap: (dispositioned Round
 #     lines numbered 1 through Cap) and stopped at cap, may be covered by a
 #     fallback that stopped so, and a fallback is owed its own stop only after
@@ -772,6 +772,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
              | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]"))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
       def owes_fallback($name): stop($name) == "not reviewed" or cap_spent($name);
+      # A revocation appends its own Lane: line, so a stale inline stop holds.
+      def inline_run: (rests("Lane: ") | last // "") == "inline";
       def greenleg($leg): [$ci.checks[] | select(named($leg))] as $checks
         | ($checks | length) > 0 and all($checks[]; .status == "success") and samehead($ci.head_sha; $head) and $ci.status == "green";
       # Names may contain colons, so a result is cut by its full literal prefix.
@@ -803,7 +805,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            else "verification " + $v.name + ": " + $status end),
        ($reviewers[] as $r
          | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
-           elif settled($r.name) or (stop($r.name) == "inline lane" and $r.trigger == "on-request") then empty
+           elif settled($r.name) or (stop($r.name) == "inline lane" and $r.trigger == "on-request" and inline_run) then empty
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
            else "reviewer " + $r.name + ": " + stop($r.name) end),
