@@ -287,12 +287,11 @@ finds the drift issue this PR closes; steps 6 and 8 run unchanged. Per row:
    `https://api.github.com/repos/<source>/compare/<from>...<head>`, `<from>`
    a `drift` row's `pin` or an `others` row's `old_ref`, the files under the
    skill's folder with their patches.
-2. A `drift` row: re-add the skill with `#<head>` in place of the pin on its
-   install line, move the pin on the `composes` line that names it
-   (`skills/ship/SKILL.md` or `skills/setup-skills/SKILL.md`, the composing
-   skill) and the sha on every printed install line in setup-skills' step 1.2
-   that installs it, splitting a line that installs several skills at one sha
-   when their pins part. An `others` row: run its `install` line.
+2. A `drift` row: re-add the skill at `#<head>` on its install line and move
+   the pin on the `composes` line naming it (`skills/ship/SKILL.md` or
+   `skills/setup-skills/SKILL.md`, the composing skill). An `others` row: run
+   its `install` line. Either row: move the sha on every printed install line
+   under `skills/` that installs it, splitting a line whose skills' pins part.
 3. Judge the upstream diff for a **break**: for a `drift` row, a change breaking
    a reliance of the composing skill's prose on it; for an `others` row, a
    change to or removal of something this repo's own files (`skills/`, `docs/`,
@@ -309,15 +308,16 @@ the PR body opens with `Closes #<n>`, the drift issue step 7 filed or found, or
 `Refs #<n>` with a row held back, and `## Needs attention` lists each `held
 back` line. With every row held back, open no PR: hand the owner those lines and
 run `$S/cleanup.sh none` from the main checkout. The title is scoped to the
-composing skill, so the release run records the move in its CHANGELOG, or reads
-`chore(skills): move <skills> to <short sha>` for `others` rows alone. A pin
-moved on ship's `composes` line breaks ship, since preflight refuses every
-consumer still at the old ref (`skill off pin`). While ship is 0.x that grades
-minor: the title is `feat(ship): move show-me to <short sha>`, with no `!`, no
-`BREAKING CHANGE:` footer in any commit, since `bump-guard` reads commits too,
-and no `major` label. State the break in plain words in the commit body and
-under `## Special things to note`. A pin moved on setup-skills' line alone
-refuses nothing and takes no `!` either.
+composing skill, so the release run records the move in its CHANGELOG, or for
+`others` rows alone to the skill whose printed line moved, else it reads
+`chore(skills): move <skills> to <short sha>`. A pin moved on ship's `composes`
+line breaks ship, since preflight refuses every consumer still at the old ref
+(`skill off pin`). While ship is 0.x that grades minor: the title is
+`feat(ship): move show-me to <short sha>`, with no `!`, no `BREAKING CHANGE:`
+footer in any commit, since `bump-guard` reads commits too, and no `major`
+label. State the break in plain words in the commit body and under
+`## Special things to note`. A pin moved on setup-skills' line or on a printed
+line alone refuses nothing and takes no `!` either.
 
 ## In a Ship run
 
