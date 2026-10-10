@@ -141,10 +141,11 @@ rerun `/setup-project`; the next run resumes from the files. A row reading
   chooses its mode from the same profile its row read.
 
 **Following a skill** means reading `.claude/skills/<name>/SKILL.md` from this
-repo and carrying out its process here, in this session, as if it had been
-invoked: its own references, gates and stops included. These skills cannot be
-started with the Skill tool, since each refuses model invocation, and none is
-handed to another session.
+repo and carrying out its whole process here, in this session, as if it had
+been invoked: its own references, gates and stops included, and a re-run audit
+in full even when the row reads `done`, never a spot-check. These skills cannot
+be started with the Skill tool, since each refuses model invocation, and none
+is handed to another session.
 
 ### 6. Proof
 
@@ -157,6 +158,9 @@ Re-run step 3's `setup-status.sh`, then:
 The setup is done only when every row but `proof` reads `done` and preflight
 answers `ok: true`; the `proof` row is then done. Otherwise report the rows and
 reasons that are not, which the next run takes up. On `chore/setup-project`
-with commits, push it and open one PR carrying the final status table:
+with commits, push it. When an earlier run already opened its PR, still open
+(`gh pr list --head chore/setup-project --state open`, or
+`az repos pr list --source-branch chore/setup-project --status active`), put
+the final status table in that PR's body; otherwise open one PR carrying it:
 `gh pr create` on GitHub, `az repos pr create` on Azure DevOps. With no
 commits, there is nothing to review: switch back and delete the branch.
