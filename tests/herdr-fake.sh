@@ -13,6 +13,9 @@
 # makes `agent start` fail with the code it holds, `<name>.prompt-error` the
 # same for `agent prompt`; `<name>.start-busy` holds how many `agent start`
 # calls answer `agent_pane_busy` first, the shell not yet up in a new tab.
+# `<name>.prompt-stall` makes `agent prompt --wait` answer `agent_prompt_stalled`,
+# the text sent but no turn started, as herdr 0.9.3 does after 5 s; without
+# `--wait` that prompt succeeds, as the real CLI's does.
 # `agent prompt` refuses an agent whose current line reads `blocked` with
 # `agent_blocked`, and `agent read` refuses it any source but `visible` with
 # `agent_not_idle`, as herdr 0.9.3 does past the viewport. Every call is a line
@@ -47,6 +50,8 @@ case "$1 $2" in
     [ -f "$HERDR_FAKE/$3.prompt-error" ] && err "$(cat "$HERDR_FAKE/$3.prompt-error")" "prompt failed"
     known "$3"; read -r st _ < "$HERDR_FAKE/$3.states"
     [ "$st" = blocked ] && err agent_blocked "agent $3 is blocked and requires interactive input"
+    [ -f "$HERDR_FAKE/$3.prompt-stall" ] && [[ " $* " == *" --wait "* ]] \
+      && err agent_prompt_stalled "agent $3 showed no activity after the prompt"
     printf '{"result":{"type":"agent_prompted"}}\n' ;;
   "agent send-keys")
     known "$3"

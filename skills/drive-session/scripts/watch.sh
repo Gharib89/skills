@@ -11,10 +11,14 @@
 # pane closed or its claude exited. The sequence number is what keeps the
 # previous turn's `done`, which Herdr reports until the next turn starts, from
 # reading as an event. Watch writes nothing: `read` acknowledges an event, so an
-# unread one is reported again. A row `read` marked gone is not watched.
+# unread one is reported again. A row `read` marked gone is not watched. The
+# timeout answer lists what the last poll saw, so a session stuck in `working`
+# or `unknown` shows as a sequence number that stood still.
 #
 # stdout: {name, event, seq} for `idle`, `done` or `blocked`; {name, event} for
-#         `gone`; {"name": null, "event": "timeout"} once --timeout passes
+#         `gone`; {"name": null, "event": "timeout", sessions} once --timeout
+#         passes, `sessions` one {name, status, seq, still_s} per live session,
+#         `still_s` the seconds its seq has stood still while this watch ran
 # exit: 0 an event or the timeout · 1 no live session in the roster, or herdr
 #       refused (its code in `code`) · 2 usage, outside Herdr, an unreadable
 #       roster, or an answer from herdr it cannot read
@@ -35,8 +39,19 @@ done
 case $timeout in *[!0-9]*) ds_tooling "$usage" ;; esac
 ds_in_herdr
 
+# Each session watched, the sequence number it last showed, and since when:
+# indexed arrays, since everything installed targets Bash 3.2.
+tn=() tq=() tt=()
+since() { # <name> <seq>: sets $at to the SECONDS value since which <name> shows <seq>
+  local i=0
+  while [ "$i" -lt "${#tn[@]}" ] && [ "${tn[i]}" != "$1" ]; do i=$((i + 1)); done
+  [ "${tq[i]:-}" = "$2" ] || { tn[i]=$1 tq[i]=$2 tt[i]=$SECONDS; }
+  at=${tt[i]}
+}
+
 start=$SECONDS
 while :; do
+  polled=''
   names=$(jq -r '.sessions[] | select(.gone != true) | .name' "$roster" 2>/dev/null) \
     || ds_tooling "cannot read the roster $roster"
   [ -n "$names" ] || ds_fail "no live session in the roster $roster"
@@ -54,8 +69,11 @@ while :; do
           exit 0
         fi ;;
     esac
+    since "$n" "$ds_seq"
+    polled+="$n $ds_status $ds_seq $((SECONDS - at))"$'\n'
   done
   [ -n "$timeout" ] && [ $(( (SECONDS - start) * 1000 )) -ge "$timeout" ] && break
   sleep 1
 done
-jq -cn '{name: null, event: "timeout"}'
+printf '%s' "$polled" | jq -cRn '{name: null, event: "timeout", sessions: [inputs | split(" ")
+  | {name: .[0], status: .[1], seq: (.[2] | tonumber), still_s: (.[3] | tonumber)}]}'

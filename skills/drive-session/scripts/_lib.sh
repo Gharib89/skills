@@ -51,6 +51,18 @@ ds_herdr() {
   return "$st"
 }
 
+# ds_prompt <name> <text>: `agent prompt`, waiting until the turn starts or
+# opens a dialog. Text that starts no turn (a local slash command, an Enter that
+# did not register) leaves the sequence number where it was, so no `watch` would
+# report the session: herdr answers `agent_prompt_stalled` after 5 s. Returns 2
+# on that or on herdr's own `timeout`, the text having reached the pane, and 1
+# on any other refusal, each with ds_herdr's $ds_code and $ds_msg.
+ds_prompt() {
+  ds_herdr agent prompt "$1" "$2" --wait --until working --until blocked --timeout 8000 && return 0
+  case $ds_code in agent_prompt_stalled | timeout) return 2 ;; esac
+  return 1
+}
+
 # ds_agent_fields <what>: the agent in $ds_out's answer, its status in
 # $ds_status and its sequence number in $ds_seq. An answer missing either is
 # exit 2: a status read as empty would be acknowledged as if it were real.

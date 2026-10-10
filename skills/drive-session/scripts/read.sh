@@ -11,11 +11,11 @@
 # past the viewport with `agent_not_idle`.
 #
 # stdout: {name, status, seq, output}, `output` the last --lines lines (default
-#         120), or the visible screen when blocked; status `gone` with seq and
-#         output null
-# exit: 0 read · 1 the name is not in the roster, the roster cannot be written,
-#       or herdr refused (its code in `code`) · 2 usage, outside Herdr, an
-#       unreadable roster, or an answer from herdr it cannot read
+#         40; read again with more when they fall short), or the visible screen
+#         when blocked; status `gone` with seq and output null
+# exit: 0 read · 1 the name is not in the roster, the roster cannot be written
+#       or locked, or herdr refused (its code in `code`) · 2 usage, outside
+#       Herdr, an unreadable roster, or an answer from herdr it cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -24,7 +24,7 @@ ds_help "$usage" "$@"
 [ -n "${1:-}" ] || ds_tooling "$usage"
 name=$1; shift
 case $name in -*) ds_tooling "$usage" ;; esac
-roster='' lines=120
+roster='' lines=40
 while [ $# -gt 0 ]; do
   case $1 in
     --roster) ds_flag_value "$usage" "${2:-}"; roster=$2; shift 2 ;;

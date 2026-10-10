@@ -32,8 +32,8 @@ from a new turn.
 - `watch --roster <file>` blocks until one session has an **event**, prints it
   and exits: `done`, `idle` or `blocked` past its `seen_seq`, or `gone` (the
   agent exited or its pane closed).
-- `read <name> --roster <file>` prints the session's recent output and
-  acknowledges its event.
+- `read <name> --roster <file>` prints the session's last 40 lines and
+  acknowledges its event; `--lines <n>` reads more when those fall short.
 - `answer <name> --roster <file> --text <t>` sends a prompt;
   `answer <name> --roster <file> --keys <k>...` presses keys into a dialog.
 
@@ -42,18 +42,19 @@ from a new turn.
 1. **Roster.** One per run, in your scratchpad:
    `<scratchpad>/drive-session/roster.json`. Read it back after a compaction.
 2. **Spawn** each session. Name it after its task (`ship-541`), the name
-   doubling as the tab label, one spawn at a time, since each rewrites the
-   roster. `--cwd` is a folder Claude Code already trusts: in any other, claude
-   stops on the trust dialog, `spawn` answers `"prompted": false`, and `watch`
-   reports the dialog as `blocked`. Answer it with keys, and once `watch`
-   reports the session `idle`, send the task as `answer` text. `--model` takes
-   the user's choice: a cheap model for a smoke test, the default for a ship
-   run.
+   doubling as the tab label. `--cwd` is a folder Claude Code already trusts:
+   in any other, claude stops on the trust dialog, `spawn` answers
+   `"prompted": false`, and `watch` reports the dialog as `blocked`. Answer it
+   with keys, and once `watch` reports the session `idle`, send the task as
+   `answer` text. `--model` takes the user's choice: a cheap model for a smoke
+   test, the default for a ship run.
 3. **Watch.** Run `watch --roster <file> --timeout 1500000` with the Bash
    tool's `run_in_background`, then end your turn. Its exit wakes you; a poll
    or a sleep of your own spends context on nothing. The timeout keeps it under
    the background command's own time limit: a `timeout` answer, or an exit
-   with no output, means start step 3 again.
+   with no output, means start step 3 again. A timeout lists each session's
+   `still_s`: one still `working` or `unknown` after most of the timeout gets
+   a `read` before the next watch.
 4. **Read** the session it names with `read`, every time, before deciding.
 5. **Decide**, by the event:
    - `done` or `idle`: the turn ended and the session waits at its prompt
@@ -61,14 +62,20 @@ from a new turn.
      the task is at rest (a smoke test's verdict) or wants a next prompt. A
      ship run's merge summary, a hand-off, or a question ending the turn is a
      stop: take it to the escalation list below.
-   - `blocked`: a question or permission dialog. Answer it from the session's
-     context and the user's rules (CLAUDE.md, `~/.claude/rules/`), or
-     escalate it when the escalation list below names it.
+   - `blocked`: a dialog. A **question dialog** (AskUserQuestion-style: the
+     session asks which way to go) you answer from its context and the user's
+     rules (CLAUDE.md, `~/.claude/rules/`), or escalate when the escalation
+     list below names it. A **permission dialog** (approve a tool call) is
+     always an escalation.
    - `gone`: record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt (`--text=<t>`
    for text opening with `-`). `answer` refuses text to a blocked session,
-   since Herdr would refuse it too.
+   since Herdr would refuse it too. Text that starts no turn (a local slash
+   command such as `/rename`, or an Enter that did not register) is a not-ok
+   answer with `code` `agent_prompt_stalled`, from `spawn` too: the text
+   reached the pane, so `read` the session before sending anything, rather
+   than resending it blindly.
 7. **Loop** from step 3 while any session is running. A session waiting on an
    escalation is at rest; once you relay the user's reply, it runs again, so
    start step 3 again. When `watch` exits 1 on no live session, every session
@@ -83,6 +90,9 @@ Escalate exactly these, and answer everything else yourself:
 - a merge gate, unless the launch prompt granted the merge allowance and the
   gate is clean;
 - an approval for a destructive or irreversible command;
+- every permission dialog: in a supervised session's auto mode, one comes
+  from the owner's own ask rules, held for the human on purpose, and approving
+  it with keys would launder that permission through you;
 - a fork in scope, schema or architecture.
 
 An escalation names the session, quotes its question, and carries your proposed
@@ -90,10 +100,14 @@ answer, so the user can reply in one word. Relay the reply with `answer` to that
 session. While it waits, keep watching the others.
 
 The **merge allowance** is the launch prompt's permission to merge on a clean
-gate ("merge each if all OK"). Ship decides clean, not you: at the gate, ask
-the session with `--text` to run `run-file gate clean` for its run and report
-the answer. Answer `--text merge` only on `clean: true` with no unmet criterion
-in the summary; anything else is an escalation that quotes its `held_by`.
+gate ("merge each if all OK"). A repo whose ship profile carries
+`Merge: on-clean-gate` needs none: ship merges a clean gate itself, so a run
+that stops at the gate there is one ship held, or one whose ship copy predates
+that line. Never ask a session to merge what ship already merged; `read` shows
+which. Ship decides clean, not you: at the gate, ask the session with `--text`
+to run `run-file gate clean` for its run and report the answer. Answer
+`--text merge` only on `clean: true` with no unmet criterion in the summary;
+anything else is an escalation that quotes its `held_by`.
 
 ## Supervised ship runs
 
