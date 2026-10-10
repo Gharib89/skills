@@ -16,8 +16,8 @@
 #   `repo-and-remote`, `installed-skills`, `matts-setup`, `harness`,
 #   `ships-setup`, `proof`; or one {error} on a tooling failure
 # exit: 0 the rows printed · 2 usage, a root that is no directory, jq missing,
-#   or a source lock that is unreadable, not a lock or carries a version that
-#   is no dotted number
+#   setup-project's own `composes:` line unreadable, or a source lock that is
+#   unreadable, not a lock or carries a version that is no dotted number
 set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -35,6 +35,8 @@ if [ -n "$slock" ]; then
     || sp_tooling "source lock unreadable or malformed: $slock"
 fi
 self=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd) || sp_tooling 'cannot find SKILL.md'
+own=$(sp_front "$self/SKILL.md" composes)
+[ -n "$own" ] || sp_tooling "cannot read the composes line of $self/SKILL.md"
 
 ev=()
 row() { # <step> <state>: prints the row with the evidence in $ev, then clears it
@@ -44,7 +46,7 @@ row() { # <step> <state>: prints the row with the evidence in $ev, then clears i
 front() { [ -f "$1" ] && sp_front "$1" "$2"; }
 ver() { "$@" 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+' | head -n 1; }
 # <a> <b>: 0 when dotted number a is lower than b.
-lower() { awk -v a="$1" -v b="$2" 'BEGIN { n = split(a, x, "."); m = split(b, y, "."); if (m > n) n = m
+version_lt() { awk -v a="$1" -v b="$2" 'BEGIN { n = split(a, x, "."); m = split(b, y, "."); if (m > n) n = m
   for (i = 1; i <= n; i++) { if (x[i] + 0 < y[i] + 0) exit 0; if (x[i] + 0 > y[i] + 0) exit 1 }; exit 1 }'; }
 
 origin=''
@@ -97,7 +99,7 @@ jq -e '.skills | type == "object"' "$lock" >/dev/null 2>&1 || lock=''
 entry() { [ -n "$lock" ] && jq -r --arg k "$1" '.skills[$k] // empty | "\(.source // "")#\(.ref // "none")"' "$lock"; }
 state='done'
 [ -n "$slock" ] || ev+=("versions not compared: no source lock")
-pins=$(front "$self/SKILL.md" composes)
+pins=$own
 for s in ship cloud-ship setup-skills update-skills setup-harness; do
   e=$(entry "$s")
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run; continue; fi
@@ -105,14 +107,14 @@ for s in ship cloud-ship setup-skills update-skills setup-harness; do
   v=$(front "$root/.claude/skills/$s/SKILL.md" version)
   want=''; [ -n "$slock" ] && want=$(jq -r --arg k "$s" '.skills[$k].version // empty' "$slock")
   if [ -z "$v" ]; then ev+=("$s version unreadable"); [ "$state" = run ] || state='re-run audit'
-  elif [ -n "$want" ] && lower "$v" "$want"; then ev+=("$s $v behind $want"); [ "$state" = run ] || state='re-run audit'
+  elif [ -n "$want" ] && version_lt "$v" "$want"; then ev+=("$s $v behind $want"); [ "$state" = run ] || state='re-run audit'
   else ev+=("$s $v"); fi
 done
 for p in $pins; do
-  s=${p##*:}; sha=${p%:*}; sha=${sha#*#}
+  s=${p##*:}; pin=${p%:*}
   e=$(entry "$s")
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run
-  elif [ "${e#*#}" != "$sha" ]; then ev+=("$s at ${e#*#}, pinned $sha"); [ "$state" = run ] || state='re-run audit'
+  elif [ "$e" != "$pin" ]; then ev+=("$s at $e, pinned $pin"); [ "$state" = run ] || state='re-run audit'
   else ev+=("$s pinned"); fi
 done
 row installed-skills "$state"

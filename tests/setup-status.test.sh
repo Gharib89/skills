@@ -116,8 +116,15 @@ check "a copy ahead of the source lock by number is not behind" \
 
 d=$(tree offpin); jq --arg B "$B" '.skills.tdd.ref = $B' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
 check "a composed skill off its pin reads re-run audit" "re-run audit" "$(state installed-skills "$d")"
-check "its evidence names the ref and the pin" "tdd at $B, pinned $A" \
+check "its evidence names the ref and the pin" "tdd at o/r#$B, pinned o/r#$A" \
   "$(evidence installed-skills "$d" | grep ', pinned')"
+d=$(tree othersrc); jq '.skills.tdd.source = "x/y"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+check "a composed skill from another source at the pinned sha reads re-run audit" \
+  "re-run audit" "$(state installed-skills "$d")"
+cp -R skills/setup-project "$fixture/sp" && sed -i.bak '/^  composes: /d' "$fixture/sp/SKILL.md"
+d=$(tree nopins); out=$(PATH="$bin:$sys" "$BASH" "$fixture/sp/scripts/setup-status.sh" "$d" 2>/dev/null); rc=$?
+check_rc "setup-project's own composes line unreadable exits 2" 2 "$rc"
+check "with an error object" "true" "$(jq -c 'has("error")' <<<"$out")"
 d=$(tree ownpin); jq --arg B "$B" '.skills["setup-matt-pocock-skills"].ref = $B' "$d/skills-lock.json" > "$d/l" \
   && mv "$d/l" "$d/skills-lock.json"
 check "setup-project's own composed skill off its pin reads re-run audit" \

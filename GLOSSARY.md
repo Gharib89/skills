@@ -153,7 +153,7 @@ The one run that takes a folder, empty or already a repo, to a consumer repo rea
 _Avoid_: bootstrap, onboarding, setup-all, meta-setup
 
 **Setup status**:
-The table a project setup reads at its start and again at its end: one row per step in fixed order (tools, repo and remote, installed skills, Matt's setup, the harness, Ship's setup, the proof), each `done`, `re-run audit` or `run`, read from the files that step leaves behind. The human confirms it once before anything is written, and the run is done when every row reads `done` and Ship's preflight admits a run.
+The table a project setup reads at its start and again at its end: one row per step in fixed order (tools, repo and remote, installed skills, Matt's setup, the harness, Ship's setup, the proof), each `done`, `re-run audit` or `run`, read from the files that step leaves behind. The human confirms it once before anything is written, and the run is done when every other row reads `done` and Ship's preflight admits a run, which settles the proof row.
 _Avoid_: plan, checklist, status report
 
 **Dimension label**:
@@ -265,7 +265,7 @@ A skill Ship takes a phase's logic from at the phase that needs it, rather than 
 _Avoid_: dependency, sub-skill, helper skill
 
 **Derived copy**:
-The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and left as installed, every change going to the source. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is installed at repo scope, because a personal skill silently shadows a repo's.
+The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and left as installed, every change going to the source. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is installed at repo scope, because a personal skill silently shadows a repo's; `setup-project` alone installs at user scope, since it runs before a repo has any (ADR 0007).
 _Avoid_: vendored fork, sync, symlink, snapshot
 
 **Source repo**:
