@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Read a supervised session's recent output and acknowledge its event.
+#
+#   read <name> --roster <file> [--lines <n>]
+#
+# The row's `seen_seq` becomes the sequence number read here, taken before the
+# output, so the next `watch` reports this session again only once it changes.
+# A session Herdr no longer knows is answered `gone` and its row marked so,
+# which takes it off `watch`.
+#
+# stdout: {name, status, seq, output}; status `gone` with seq and output null
+# exit: 0 read · 1 the name is not in the roster, or herdr refused (its code in
+#       `code`) · 2 usage, or outside Herdr
+set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+
+usage='usage: read <name> --roster <file> [--lines <n>]'
+ds_help "$usage" "$@"
+[ -n "${1:-}" ] || ds_tooling "$usage"
+name=$1; shift
+case $name in -*) ds_tooling "$usage" ;; esac
+roster='' lines=120
+while [ $# -gt 0 ]; do
+  case $1 in
+    --roster) ds_flag_value "$usage" "${2:-}"; roster=$2; shift 2 ;;
+    --lines) ds_flag_value "$usage" "${2:-}"; lines=$2; shift 2 ;;
+    *) ds_tooling "$usage" ;;
+  esac
+done
+[ -n "$roster" ] || ds_tooling "$usage"
+case $lines in *[!0-9]*|0) ds_tooling "$usage" ;; esac
+ds_in_herdr
+ds_row "$roster" "$name" >/dev/null
+
+if ! ds_herdr agent get "$name"; then
+  [ "$ds_code" = agent_not_found ] || ds_fail "agent get $name: $ds_msg" "$ds_code"
+  ds_set "$roster" "$name" gone true
+  jq -cn --arg n "$name" '{name: $n, status: "gone", seq: null, output: null}'
+  exit 0
+fi
+status=$(jq -r .result.agent.agent_status <<<"$ds_out")
+seq=$(jq -r .result.agent.state_change_seq <<<"$ds_out")
+ds_herdr agent read "$name" --source recent-unwrapped --lines "$lines" || ds_fail "agent read $name: $ds_msg" "$ds_code"
+ds_set "$roster" "$name" seen_seq "$seq"
+jq -cn --arg n "$name" --arg s "$status" --argjson q "$seq" --arg o "$ds_out" '{name: $n, status: $s, seq: $q, output: $o}'

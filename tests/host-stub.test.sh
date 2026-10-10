@@ -12,7 +12,7 @@ trap 'rm -rf "$d"' EXIT
 ship_test_host_stub "$d"
 export SHIP_TEST_HOSTLOG="$d/calls"
 
-for cli in gh az; do
+for cli in gh az herdr; do
   : > "$SHIP_TEST_HOSTLOG"
   out=$("$d/$cli" api repos/o/r --jq .x 2>&1); rc=$?
   check_rc "the stub $cli fails rather than reaching a host" 127 "$rc"
