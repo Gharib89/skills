@@ -101,6 +101,13 @@ check "an unreadable plan names it" "cannot read plan: $tmp/nope.json" "$(jq -r 
 echo '{"mode": "source"}' > "$tmp/partial.json"
 out=$(bash "$body" "$tmp/partial.json" 2>/dev/null); rc=$?
 check_rc "a plan with no drift array exits 1" 1 "$rc"
+echo '{"mode": "source", "drift": [], "others": {"a": 1}}' > "$tmp/badothers.json"
+out=$(bash "$body" "$tmp/badothers.json" 2>/dev/null); rc=$?
+check_rc "a plan whose others is no array exits 1" 1 "$rc"
+check "a plan whose others is no array names it" "cannot read plan: $tmp/badothers.json" "$(jq -r .error <<<"$out")"
+echo '{"mode": "source", "drift": [{"skill": "tdd", "pin": "x"}]}' > "$tmp/nohead.json"
+out=$(bash "$body" "$tmp/nohead.json" 2>/dev/null); rc=$?
+check_rc "a drift row with no head exits 1" 1 "$rc"
 out=$(bash "$body" "$tmp/source.json" --current "$tmp/nope.md" 2>/dev/null); rc=$?
 check_rc "an unreadable --current exits 1" 1 "$rc"
 check "an unreadable --current names it" "cannot read body: $tmp/nope.md" "$(jq -r .error <<<"$out")"

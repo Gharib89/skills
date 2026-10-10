@@ -59,7 +59,11 @@ jobs:
           else
             "$U/drift-body.sh" "$t/plan.json" > "$t/drift.json"
           fi
-          if [ "$(jq .rows "$t/drift.json")" -eq 0 ]; then
+          # Read as assignments, so set -e stops on a failed jq rather than
+          # taking a branch on its empty output.
+          rows=$(jq -er '.rows | numbers' "$t/drift.json")
+          changed=$(jq -er '.changed | booleans | tostring' "$t/drift.json")
+          if [ "$rows" -eq 0 ]; then
             echo "No upstream drift." >> "$GITHUB_STEP_SUMMARY"; exit 0
           fi
           jq -r .table "$t/drift.json" > "$t/table.md"
@@ -71,7 +75,7 @@ jobs:
               --label ready-for-agent --label enhancement --label XS --label low)
             n=${url##*/}
             echo "Filed $url." >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$(jq .changed "$t/drift.json")" = true ]; then
+          elif [ "$changed" = true ]; then
             "$S/update-issue-body.sh" "$n" --section Drift --body-file "$t/table.md"
             echo "Rewrote the drift table of #$n." >> "$GITHUB_STEP_SUMMARY"
           else

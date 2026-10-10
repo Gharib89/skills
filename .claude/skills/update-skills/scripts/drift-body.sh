@@ -18,7 +18,8 @@
 #
 # stdout: {"rows": <n>, "table": "<markdown, empty with no rows>", "changed": true|false}
 #   changed: true without --current, or where the tables' lines differ
-# exit: 0 · 1 an unreadable plan or body file · 2 usage
+# exit: 0 · 1 an unreadable plan (a row with no string skill or head included)
+#       or body file · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../../ship/scripts/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -35,9 +36,13 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-plan=$(jq -ce 'select(type == "object" and (.drift | type) == "array")' "$planf" 2>/dev/null) || ship_fail "cannot read plan: $planf"
+# A row the table cannot name, a skill or head that is no string, is an
+# unreadable plan rather than a `null` cell.
+plan=$(jq -ce 'def rows: type == "array" and all(.[]; (.skill | type) == "string" and (.head | type) == "string");
+  select(type == "object" and (.drift | rows) and (.others // [] | rows))' "$planf" 2>/dev/null) || ship_fail "cannot read plan: $planf"
 rows=$(jq -c '[(.drift[] | {skill, pinned: .pin, head}),
-  (if .mode == "source" then (.others // [])[] | {skill, pinned: .old_ref, head} else empty end)] | sort_by(.skill)' <<<"$plan")
+  (if .mode == "source" then (.others // [])[] | {skill, pinned: .old_ref, head} else empty end)] | sort_by(.skill)' <<<"$plan") \
+  || ship_fail "cannot read plan: $planf"
 table=$(jq -r 'if length == 0 then empty else
   "| Skill | Pinned | Upstream head |", "|---|---|---|",
   (.[] | "| \(.skill) | \(if .pinned == null then "unpinned" else "`\(.pinned)`" end) | `\(.head)` |") end' <<<"$rows")
