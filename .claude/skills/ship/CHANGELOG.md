@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.21.2 (2026-10-10)
+
+### Bug Fixes
+
+- **ship**: Create all ten phase tasks at init so the human sees what is left
+  ([#549](https://github.com/Gharib89/skills/pull/549),
+  [`736ca51`](https://github.com/Gharib89/skills/commit/736ca51dc971db70f1c93d25741212c5ddbe3586))
+
+
 ## v0.21.1 (2026-10-10)
 
 ### Bug Fixes
