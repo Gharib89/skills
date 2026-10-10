@@ -94,6 +94,11 @@ printf '  ## Drift\n\n%s\n' "$table" > "$tmp/indented.md"
 out=$(bash "$body" "$tmp/source.json" --current "$tmp/indented.md")
 check "an indented Drift heading is no section" true "$(jq -r .changed <<<"$out")"
 
+# A <details> record left open hides what follows it: no table read, changed.
+printf '## Drift\n\n<details><summary>Original</summary>\n\n%s\n' "$table" > "$tmp/unclosed.md"
+out=$(bash "$body" "$tmp/source.json" --current "$tmp/unclosed.md")
+check "a table under an unclosed <details> is changed" true "$(jq -r .changed <<<"$out")"
+
 # Unreadable inputs answer exit 1, never a table.
 out=$(bash "$body" "$tmp/nope.json" 2>/dev/null); rc=$?
 check_rc "an unreadable plan exits 1" 1 "$rc"
