@@ -153,7 +153,8 @@
 #     check, every profile CI leg succeeded on head, verifications passed or were
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged with a dispositioned Round, or
-#     on inline lane, the round `--inline` waived, which covers no primary. A
+#     on inline lane for an on-request reviewer, the round `--inline` waived,
+#     which covers no primary. A
 #     not-reviewed primary, or one that spent its Cap: (dispositioned Round
 #     lines numbered 1 through Cap) and stopped at cap, may be covered by a
 #     fallback that stopped so, and a fallback is owed its own stop only after
@@ -802,7 +803,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            else "verification " + $v.name + ": " + $status end),
        ($reviewers[] as $r
          | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
-           elif settled($r.name) or stop($r.name) == "inline lane" then empty
+           elif settled($r.name) or (stop($r.name) == "inline lane" and $r.trigger == "on-request") then empty
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
            else "reviewer " + $r.name + ": " + stop($r.name) end),
