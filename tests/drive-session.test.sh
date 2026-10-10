@@ -182,6 +182,21 @@ out=$(bash "$s/answer.sh" s2 --roster "$roster" --text "task two")
 check "a session at its prompt is answered with text" "agent get s2
 agent prompt s2 task two" "$(calls)"
 check "answer with text records the sequence number before the prompt" 23 "$(seen s2)"
+# Text opening with a dash goes in the --flag=<value> form, which no flag can
+# be mistaken for.
+calls >/dev/null
+bash "$s/answer.sh" s2 --roster "$roster" --text "- continue" >/dev/null 2>&1; rc=$?
+check_rc "answer refuses a dash-led --text value as a usage error" 2 "$rc"
+out=$(bash "$s/answer.sh" s2 --roster "$roster" --text="- continue"); rc=$?
+check_rc "answer takes dash-led text as --text=" 0 "$rc"
+check "the dash-led text is prompted verbatim" "agent get s2
+agent prompt s2 - continue" "$(calls)"
+bash "$s/answer.sh" s2 --roster "$roster" --text= >/dev/null 2>&1; rc=$?
+check_rc "answer refuses an empty --text=" 2 "$rc"
+printf 'idle 40\n' > "$HERDR_FAKE/s4.states"
+bash "$s/spawn.sh" s4 --roster "$tmp/s4.json" --cwd "$tmp/cwd" --prompt="- review these items" >/dev/null; rc=$?
+check_rc "spawn takes a dash-led task as --prompt=" 0 "$rc"
+check "spawn prompts the dash-led task verbatim" "agent prompt s4 - review these items" "$(calls | grep 'agent prompt')"
 usage_line=$(sed -n 1p <<<"$(bash "$s/answer.sh" --help)")
 out=$(bash "$s/answer.sh" s2 --roster "$roster" --text a --keys b 2>/dev/null); rc=$?
 check_rc "answer takes text or keys, not both" 2 "$rc"

@@ -8,7 +8,8 @@
 # not the state it answered. Text goes through `agent prompt`, without waiting,
 # and is refused to a `blocked` session, which Herdr would refuse with
 # `agent_blocked`: a dialog is answered with keys (`1`, `Enter`, `esc`), sent
-# through `agent send-keys` whatever the status.
+# through `agent send-keys` whatever the status. Text opening with `-` goes as
+# `--text=<t>`, since `--text <t>` refuses a dash-led value as a missing one.
 #
 # stdout: {name, sent, seen_seq}, `sent` being `text` or `keys`
 # exit: 0 sent · 1 the name is not in the roster, the session is gone, the
@@ -28,6 +29,9 @@ while [ $# -gt 0 ]; do
   case $1 in
     --roster) ds_flag_value "$usage" "${2:-}"; roster=$2; shift 2 ;;
     --text) [ -z "$sent" ] || ds_tooling "$usage"; ds_flag_value "$usage" "${2:-}"; text=$2; sent=text; shift 2 ;;
+    --text=*)
+      [ -z "$sent" ] || ds_tooling "$usage"; text=${1#--text=}; sent=text; shift
+      [ -n "$text" ] || ds_tooling "$usage" ;;
     --keys)
       [ -z "$sent" ] || ds_tooling "$usage"; sent=keys; shift
       while [ $# -gt 0 ]; do case $1 in --*) break ;; esac; keys+=("$1"); shift; done

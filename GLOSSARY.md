@@ -363,5 +363,5 @@ A supervised session's question the supervisor forwards to the human instead of 
 _Avoid_: hand-off (that is ship's stop), question, ping
 
 **Merge allowance**:
-The launch prompt's permission for the supervisor to answer a supervised ship run's merge gate with "merge" when that gate is clean. Without it, or on a gate that is not clean, the merge gate is an escalation.
+The launch prompt's permission for the supervisor to answer a supervised ship run's merge gate with "merge" when that gate is clean, by Ship's own `run-file gate clean` verdict. Without it, or on a gate that is not clean, the merge gate is an escalation.
 _Avoid_: auto-merge, merge permission, `Merge: on-clean-gate` (that is the ship profile's opt-in)

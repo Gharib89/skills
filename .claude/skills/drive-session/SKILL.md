@@ -63,8 +63,9 @@ from a new turn.
      escalate it when the escalation list below names it.
    - `gone`: record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
-   `1`, then `Enter`; `esc` to back out), `--text` at a prompt. `answer`
-   refuses text to a blocked session, since Herdr would refuse it too.
+   `1`, then `Enter`; `esc` to back out), `--text` at a prompt (`--text=<t>`
+   for text opening with `-`). `answer` refuses text to a blocked session,
+   since Herdr would refuse it too.
 7. **Loop** from step 3 while any session is running. A session waiting on an
    escalation is at rest; once you relay the user's reply, it runs again, so
    start step 3 again. When `watch` exits 1 on no live session, every session
@@ -85,9 +86,10 @@ answer, so the user can reply in one word. Relay the reply with `answer` to that
 session. While it waits, keep watching the others.
 
 The **merge allowance** is the launch prompt's permission to merge on a clean
-gate ("merge each if all OK"). A gate is clean when the session's merge summary
-shows CI green and lists no unmet criterion and no finding left open; then
-answer the gate with `--text merge`.
+gate ("merge each if all OK"). Ship decides clean, not you: at the gate, ask
+the session with `--text` to run `run-file gate clean` for its run and report
+the answer. Answer `--text merge` only on `clean: true` with no unmet criterion
+in the summary; anything else is an escalation that quotes its `held_by`.
 
 ## Supervised ship runs
 

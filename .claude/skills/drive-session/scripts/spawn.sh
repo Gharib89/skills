@@ -14,7 +14,9 @@
 # startup dialog (an untrusted folder) is no failure: its row is written one
 # short of the dialog's sequence number, so `watch` reports the dialog as the
 # row's `blocked` event, the prompt is held back, and the answer says `blocked`.
-# Spawn one session at a time: each spawn rewrites the whole roster.
+# Spawn one session at a time: each spawn rewrites the whole roster. A task
+# opening with `-` goes as `--prompt=<text>`, since `--prompt <text>` refuses a
+# dash-led value as a missing one.
 #
 # stdout: {roster, name, tab, pane, status, prompted}, `status` the agent's at
 #         start (`blocked` on a startup dialog), `prompted` whether the task went
@@ -37,6 +39,7 @@ while [ $# -gt 0 ]; do
     --roster) ds_flag_value "$usage" "${2:-}"; roster=$2; shift 2 ;;
     --cwd) ds_flag_value "$usage" "${2:-}"; cwd=$2; shift 2 ;;
     --prompt) ds_flag_value "$usage" "${2:-}"; prompt=$2; shift 2 ;;
+    --prompt=*) prompt=${1#--prompt=}; [ -n "$prompt" ] || ds_tooling "$usage"; shift ;;
     --model) ds_flag_value "$usage" "${2:-}"; args+=(--model "$2"); shift 2 ;;
     --) shift; args+=("$@"); break ;;
     *) ds_tooling "$usage" ;;
