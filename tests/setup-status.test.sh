@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# skills/setup-project/scripts/setup-status.sh: the setup status, one JSON line
+# per step, read from a fixture tree. Each case builds a fully set-up consumer
+# under a fresh root and breaks one place, so a failure names the row under
+# test. The script runs on a PATH of its own: fakes for `gh`, `az`, `node`,
+# `npx` and `bun`, which it reads only for their local answers, and links to the
+# few real commands it needs, so a tool installed on this machine never answers.
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
+source tests/lib.sh
+
+fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
+status=skills/setup-project/scripts/setup-status.sh
+A=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; B=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+# setup-project's own pin, read from its SKILL.md: `<source>#<sha>:<skill>`.
+own=$(sed -n 's/^  composes: //p' skills/setup-project/SKILL.md)
+own_src=${own%%#*}; own_sha=${own#*#}; own_sha=${own_sha%%:*}
+
+bin=$fixture/bin sys=$fixture/sys; mkdir -p "$bin" "$sys"
+for c in git jq awk grep head sed dirname; do ln -s "$(command -v "$c")" "$sys/$c" || exit 2; done
+fake() { # <name> <script body>
+  printf '#!/bin/sh\n%s\n' "$2" > "$bin/$1" && chmod +x "$bin/$1"
+}
+fake gh 'case "$1" in --version) echo "gh version 2.60.0 (2024-10-01)" ;;
+  auth) [ -z "${FAKE_GH_SIGNED_OUT:-}" ] && echo gho_x ;; *) exit 127 ;; esac'
+fake node 'echo v22.1.0'
+fake npx 'echo 10.9.0'
+fake bun 'echo 1.1.30'
+fake az 'case "$1" in account) [ -z "${FAKE_AZ_SIGNED_OUT:-}" ] && echo "{}" ;; *) exit 127 ;; esac'
+
+# <case>: a consumer set up end to end, every row done, and $fixture/<case>.lock
+# a source lock at the versions it installed.
+tree() {
+  local d="$fixture/$1" s
+  rm -rf "$d"; mkdir -p "$d/docs/agents" || return 1
+  git -C "$d" init -q && git -C "$d" remote add origin https://github.com/o/r.git || return 1
+  printf '{}\n' > "$d/package.json"
+  for s in ship cloud-ship setup-skills update-skills setup-harness; do
+    mkdir -p "$d/.claude/skills/$s"
+    printf -- '---\nname: %s\nmetadata:\n  version: 0.2.0\n---\n' "$s" > "$d/.claude/skills/$s/SKILL.md"
+  done
+  printf -- '---\nname: ship\nmetadata:\n  version: 0.2.0\n  profile-schema: 4\n  composes: o/r#%s:tdd\n---\n' "$A" \
+    > "$d/.claude/skills/ship/SKILL.md"
+  printf -- '---\nname: setup-harness\nmetadata:\n  version: 0.2.0\n  harness-schema: 3\n---\n' \
+    > "$d/.claude/skills/setup-harness/SKILL.md"
+  mkdir -p "$d/.claude/skills/tdd" "$d/.claude/skills/setup-matt-pocock-skills"
+  jq -n --arg A "$A" --arg osrc "$own_src" --arg osha "$own_sha" '{version: 1, skills: ({
+    ship: {source: "Gharib89/skills"}, "cloud-ship": {source: "Gharib89/skills"},
+    "setup-skills": {source: "Gharib89/skills"}, "update-skills": {source: "gharib89/skills"},
+    "setup-harness": {source: "Gharib89/skills"}, tdd: {source: "o/r", ref: $A}}
+    + {"setup-matt-pocock-skills": {source: $osrc, ref: $osha}})}' > "$d/skills-lock.json"
+  for s in issue-tracker triage-labels domain; do printf '# %s\n' "$s" > "$d/docs/agents/$s.md"; done
+  printf '# Harness profile\n\nSchema: 3\n' > "$d/docs/agents/harness.md"
+  printf '# Ship profile\n\nSchema: 4\n' > "$d/docs/agents/ship.md"
+  git -C "$d" add -A && git -C "$d" -c user.name=t -c user.email=t@t commit -qm init || return 1
+  jq -n '{skills: {ship: {source: "Gharib89/skills", version: "0.2.0"},
+    "setup-skills": {source: "Gharib89/skills", version: "0.2.0"},
+    grilling: {source: "mattpocock/skills", ref: "'"$B"'"}}}' > "$fixture/$1.lock"
+  printf '%s' "$d"
+}
+run()    { PATH="$bin:$sys" "$BASH" "$status" "$@" 2>/dev/null; }
+states() { run "$@" | jq -r '"\(.step) \(.state)"'; }
+# <step> <args>...: that step's evidence, one entry per line.
+evidence() { local s=$1; shift; run "$@" | jq -r --arg s "$s" 'select(.step == $s) | .evidence[]'; }
+state()  { local s=$1; shift; run "$@" | jq -r --arg s "$s" 'select(.step == $s) | .state'; }
+
+done_rows='tools done
+repo-and-remote done
+installed-skills done
+matts-setup done
+harness done
+ships-setup done
+proof run'
+
+d=$(tree full)
+check "a fully set-up repo reads every row done, the proof left to the run's end" \
+  "$done_rows" "$(states "$d" "$fixture/full.lock")"
+check "with no source lock the rows still read, versions left uncompared" \
+  "$done_rows" "$(states "$d")"
+check "the evidence says the versions went uncompared" \
+  "versions not compared: no source lock" "$(evidence installed-skills "$d" | grep 'not compared')"
+check_rc "a readable tree exits 0" 0 "$(run "$d" "$fixture/full.lock" >/dev/null; echo $?)"
+
+for f in issue-tracker triage-labels domain; do
+  d=$(tree "no-$f"); rm "$d/docs/agents/$f.md"
+  check "Matt's setup reads run with docs/agents/$f.md missing" "run" "$(state matts-setup "$d")"
+  check "the evidence names docs/agents/$f.md" "docs/agents/$f.md missing" \
+    "$(evidence matts-setup "$d" | grep missing)"
+done
+
+d=$(tree noharness); rm "$d/docs/agents/harness.md"
+check "the harness reads run with no harness profile" "run" "$(state harness "$d")"
+d=$(tree noship); rm "$d/docs/agents/ship.md"
+check "Ship's setup reads run with no ship profile" "run" "$(state ships-setup "$d")"
+
+d=$(tree oldharness); printf '# Harness profile\n\nSchema: 2\n' > "$d/docs/agents/harness.md"
+check "a harness profile whose schema trails setup-harness reads re-run audit" \
+  "re-run audit" "$(state harness "$d")"
+check "its evidence names both schemas" "docs/agents/harness.md Schema 2, setup-harness reads 3" \
+  "$(evidence harness "$d")"
+d=$(tree oldship); printf '# Ship profile\n\nNo schema line\n' > "$d/docs/agents/ship.md"
+check "a ship profile with no readable schema reads re-run audit" \
+  "re-run audit" "$(state ships-setup "$d")"
+
+d=$(tree behind); jq '.skills.ship.version = "0.10.0"' "$fixture/behind.lock" > "$fixture/behind2.lock"
+check "a source-repo skill behind the source lock reads re-run audit" \
+  "re-run audit" "$(state installed-skills "$d" "$fixture/behind2.lock")"
+check "its evidence names both versions" "ship 0.2.0 behind 0.10.0" \
+  "$(evidence installed-skills "$d" "$fixture/behind2.lock" | grep behind)"
+# Versions compare by number, not as text: 0.10.0 is ahead of 0.9.0.
+printf -- '---\nname: ship\nmetadata:\n  version: 0.10.0\n  profile-schema: 4\n  composes: o/r#%s:tdd\n---\n' "$A" \
+  > "$d/.claude/skills/ship/SKILL.md"
+jq '.skills.ship.version = "0.9.0"' "$fixture/behind.lock" > "$fixture/behind3.lock"
+check "a copy ahead of the source lock by number is not behind" \
+  "done" "$(state installed-skills "$d" "$fixture/behind3.lock")"
+
+d=$(tree offpin); jq --arg B "$B" '.skills.tdd.ref = $B' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+check "a composed skill off its pin reads re-run audit" "re-run audit" "$(state installed-skills "$d")"
+check "its evidence names the ref and the pin" "tdd at $B, pinned $A" \
+  "$(evidence installed-skills "$d" | grep ', pinned')"
+d=$(tree ownpin); jq --arg B "$B" '.skills["setup-matt-pocock-skills"].ref = $B' "$d/skills-lock.json" > "$d/l" \
+  && mv "$d/l" "$d/skills-lock.json"
+check "setup-project's own composed skill off its pin reads re-run audit" \
+  "re-run audit" "$(state installed-skills "$d")"
+
+d=$(tree nocloud); rm -rf "$d/.claude/skills/cloud-ship"
+check "a chain skill with no folder reads run" "run" "$(state installed-skills "$d")"
+check "its evidence names it" "cloud-ship missing" "$(evidence installed-skills "$d" | grep missing)"
+d=$(tree nolock); rm "$d/skills-lock.json"
+check "no lock reads run, every chain skill missing" "run" "$(state installed-skills "$d")"
+
+d=$(tree badlock)
+printf 'not json\n' > "$fixture/bad.lock"
+check_rc "a malformed source lock exits 2" 2 "$(run "$d" "$fixture/bad.lock" >/dev/null; echo $?)"
+check "and prints one error object, no rows" "error" "$(run "$d" "$fixture/bad.lock" | jq -r 'keys[]')"
+printf '{"skills": []}\n' > "$fixture/bad2.lock"
+check_rc "a source lock whose skills is no object exits 2" 2 "$(run "$d" "$fixture/bad2.lock" >/dev/null; echo $?)"
+printf '{"skills": {"ship": {"version": "latest"}}}\n' > "$fixture/bad3.lock"
+check_rc "a source lock whose version is no version exits 2" 2 "$(run "$d" "$fixture/bad3.lock" >/dev/null; echo $?)"
+check_rc "a source lock that cannot be read exits 2" 2 "$(run "$d" "$fixture/none.lock" >/dev/null; echo $?)"
+
+d=$(tree noorigin); git -C "$d" remote remove origin
+check "git with no origin reads the repo row run" "run" "$(state repo-and-remote "$d")"
+check "its evidence names the missing origin" "no origin remote" "$(evidence repo-and-remote "$d" | grep origin)"
+
+d=$fixture/empty; mkdir -p "$d"
+check "an empty folder reads every row but the proof run" \
+  "tools done
+repo-and-remote run
+installed-skills run
+matts-setup run
+harness run
+ships-setup run
+proof run" "$(states "$d")"
+check "its repo evidence names each missing piece" "no .git
+no origin remote
+no stack manifest" "$(evidence repo-and-remote "$d")"
+
+# A stack manifest is the new project's to scaffold: a repo with history already
+# has whatever stack it has, so its absence alone does not make the row run.
+d=$(tree nomanifest); git -C "$d" rm -q package.json && git -C "$d" -c user.name=t -c user.email=t@t commit -qm rm
+check "a repo with commits and no manifest still reads done" "done" "$(state repo-and-remote "$d")"
+d=$fixture/fresh; mkdir -p "$d"; git -C "$d" init -q; git -C "$d" remote add origin https://github.com/o/r.git
+check "a repo with no commits and no manifest reads run" "run" "$(state repo-and-remote "$d")"
+
+d=$(tree signedout)
+check "gh signed out reads the tools row run" "run" "$(FAKE_GH_SIGNED_OUT=1 state tools "$d")"
+check "its evidence says so" "gh signed out" "$(FAKE_GH_SIGNED_OUT=1 evidence tools "$d" | grep gh)"
+d=$(tree ado); git -C "$d" remote set-url origin https://dev.azure.com/o/p/_git/r
+check "an Azure DevOps origin reads az in place of gh" "az signed in" "$(evidence tools "$d" | grep -E '^(az|gh)')"
+check "az signed out reads the tools row run" "run" "$(FAKE_AZ_SIGNED_OUT=1 state tools "$d")"
+d=$(tree uv); rm "$d/package.json"; printf '[project]\n' > "$d/pyproject.toml"
+check "a stack whose tool is missing reads the tools row run" "uv missing" "$(evidence tools "$d" | grep uv)"
+
+check_rc "no root is a usage error" 2 "$(run >/dev/null; echo $?)"
+check "and answers an error object" "error" "$(run | jq -r 'keys[]')"
+check_rc "a root that is no directory exits 2" 2 "$(run "$fixture/nowhere" >/dev/null; echo $?)"
+finish
