@@ -55,13 +55,14 @@ sequence number is what tells that stale `done` from a new one.
    sleep of your own spends context on nothing.
 4. **Read** the session it names with `read`, every time, before deciding.
 5. **Decide**, by the event:
-   - `done`: the turn ended. Judge from the output whether the task is at
-     rest (a ship run's merge summary, a hand-back, a smoke test's verdict) or
-     wants a next prompt.
+   - `done` or `idle`: the turn ended and the session waits at its prompt
+     (Herdr reports a finished turn as either). Judge from the output whether
+     the task is at rest (a ship run's merge summary, a hand-back, a smoke
+     test's verdict) or wants a next prompt, the task held back by a startup
+     dialog included.
    - `blocked`: a question or permission dialog. Answer it from the session's
      context and the user's rules (CLAUDE.md, `~/.claude/rules/`), or
      escalate it when the escalation list below names it.
-   - `idle`: the session waits at its prompt. Send what it waits for.
    - `gone`: the agent exited or its pane closed. Record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt. `answer`
