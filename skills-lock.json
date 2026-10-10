@@ -30,7 +30,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "c6eae90d5fb49200e88381233a8d45b710e3a2b25f5e571b22685b0509274501"
+      "computedHash": "c2ccbdee6d38436cd8a7ef3e3dd79f662bbe3c7e83785c9af1ec5154dfafdcba"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",
@@ -41,10 +41,10 @@
     },
     "grilling": {
       "source": "mattpocock/skills",
-      "ref": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+      "ref": "49dd158d1076134a641b33efb035946536778336",
       "sourceType": "github",
       "skillPath": "skills/productivity/grilling/SKILL.md",
-      "computedHash": "4dd886b0196bf43729d954ae326016f2bd9f5f79d892500b407c33a753362f14"
+      "computedHash": "ef1641a2047b71b60f1942cd35efb47d3afc9d584dff5a0b01f8c7db923aaa08"
     },
     "prototype": {
       "source": "mattpocock/skills",
@@ -105,10 +105,10 @@
     },
     "to-tickets": {
       "source": "mattpocock/skills",
-      "ref": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+      "ref": "49dd158d1076134a641b33efb035946536778336",
       "sourceType": "github",
       "skillPath": "skills/engineering/to-tickets/SKILL.md",
-      "computedHash": "bf5e6ebcb4f1272de0c188d5b3901f265a03d1fa9935a21a7a56938e21e2e761"
+      "computedHash": "5f871bdc46a9212222214ba399be4965374208af1bd7f48f1271bef72841dd31"
     },
     "triage": {
       "source": "mattpocock/skills",
@@ -124,10 +124,10 @@
     },
     "wayfinder": {
       "source": "mattpocock/skills",
-      "ref": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+      "ref": "49dd158d1076134a641b33efb035946536778336",
       "sourceType": "github",
       "skillPath": "skills/engineering/wayfinder/SKILL.md",
-      "computedHash": "fa790eb4255b13d24d7e33ff4891ccd3d621558cc0ab87ae226777538ea16a8f"
+      "computedHash": "71d1296ae9f1ea0397f385f72d11ca3473827f5d067df4d06c58eb03377a57ce"
     },
     "writing-for-agents": {
       "source": "mattpocock/skills",
