@@ -8,9 +8,11 @@
 # A session Herdr no longer knows is answered `gone` and its row marked so,
 # which takes it off `watch`.
 #
-# stdout: {name, status, seq, output}; status `gone` with seq and output null
-# exit: 0 read · 1 the name is not in the roster, or herdr refused (its code in
-#       `code`) · 2 usage, or outside Herdr
+# stdout: {name, status, seq, output}, `output` the last --lines lines (default
+#         120); status `gone` with seq and output null
+# exit: 0 read · 1 the name is not in the roster, the roster cannot be written,
+#       or herdr refused (its code in `code`) · 2 usage, outside Herdr, an
+#       unreadable roster, or an answer from herdr it cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -28,18 +30,16 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$roster" ] || ds_tooling "$usage"
-case $lines in *[!0-9]*|0) ds_tooling "$usage" ;; esac
+[[ $lines =~ ^[1-9][0-9]*$ ]] || ds_tooling "$usage"
 ds_in_herdr
-ds_row "$roster" "$name" >/dev/null
+ds_held "$roster" "$name"
 
-if ! ds_herdr agent get "$name"; then
-  [ "$ds_code" = agent_not_found ] || ds_fail "agent get $name: $ds_msg" "$ds_code"
+if ! ds_agent "$name"; then
   ds_set "$roster" "$name" gone true
   jq -cn --arg n "$name" '{name: $n, status: "gone", seq: null, output: null}'
   exit 0
 fi
-status=$(jq -r .result.agent.agent_status <<<"$ds_out")
-seq=$(jq -r .result.agent.state_change_seq <<<"$ds_out")
+status=$ds_status seq=$ds_seq
 ds_herdr agent read "$name" --source recent-unwrapped --lines "$lines" || ds_fail "agent read $name: $ds_msg" "$ds_code"
 ds_set "$roster" "$name" seen_seq "$seq"
 jq -cn --arg n "$name" --arg s "$status" --argjson q "$seq" --arg o "$ds_out" '{name: $n, status: $s, seq: $q, output: $o}'

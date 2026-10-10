@@ -55,9 +55,20 @@ check "spawn records the row with the sequence number from before the prompt" \
   "$(jq -c '.sessions[0]' "$roster")"
 out=$(bash "$s/spawn.sh" s1 --roster "$roster" --cwd "$tmp/cwd" --prompt again 2>/dev/null); rc=$?
 check_rc "spawn refuses a name already in the roster" 1 "$rc"
+check "the refusal names the roster holding it" "s1 is already in the roster $roster" "$(jq -r .error <<<"$out")"
 check "the refusal reaches no herdr" "" "$(calls)"
-bash "$s/spawn.sh" Bad --roster "$roster" --cwd "$tmp/cwd" --prompt x >/dev/null 2>&1; rc=$?
-check_rc "spawn refuses a name Herdr would refuse" 2 "$rc"
+# Herdr's name rule, [a-z][a-z0-9_-]{0,31}, held on its edges.
+for bad in Bad _s1 1s s.1 "s 1" .. "s1/x" "a$(printf 'b%.0s' {1..32})"; do
+  out=$(bash "$s/spawn.sh" "$bad" --roster "$roster" --cwd "$tmp/cwd" --prompt x 2>/dev/null); rc=$?
+  check_rc "spawn refuses the name '$bad'" 2 "$rc"
+  check "spawn says why it refuses '$bad'" "spawn: $bad is no Herdr agent name; use [a-z][a-z0-9_-]{0,31}" "$(jq -r .error <<<"$out")"
+done
+check "a refused name reaches no herdr" "" "$(calls)"
+long="a$(printf 'b%.0s' {1..31})"
+printf 'idle 5\n' > "$HERDR_FAKE/$long.states"
+bash "$s/spawn.sh" "$long" --roster "$tmp/long.json" --cwd "$tmp/cwd" --prompt x >/dev/null; rc=$?
+check_rc "spawn takes a 32-character name" 0 "$rc"
+calls >/dev/null
 
 # A session that stops on a startup dialog (an untrusted folder) is a row whose
 # status is blocked and whose task is not yet sent, not a failed spawn.
@@ -67,7 +78,21 @@ out=$(bash "$s/spawn.sh" s2 --roster "$roster" --cwd "$tmp/cwd" --prompt "task t
 check_rc "spawn on a startup dialog exits 0" 0 "$rc"
 check "spawn on a startup dialog answers blocked, unprompted" 'blocked false' "$(jq -r '"\(.status) \(.prompted)"' <<<"$out")"
 check "spawn on a startup dialog sends no prompt" 0 "$(calls | grep -c 'agent prompt')"
-check "the blocked row is in the roster" 20 "$(seen s2)"
+check "the blocked row is in the roster, short of the dialog's sequence number" 19 "$(seen s2)"
+out=$(bash "$s/watch.sh" --roster "$roster" --timeout 3000)
+check "watch reports the startup dialog as the row's blocked event" '{"name":"s2","event":"blocked","seq":20}' "$out"
+bash "$s/read.sh" s2 --roster "$roster" >/dev/null
+calls >/dev/null
+
+# A prompt Herdr refuses after the row is written leaves the row and the tab:
+# the answer says so, and how to send the task.
+printf 'idle 30\n' > "$HERDR_FAKE/s3.states"
+printf 'agent_busy' > "$HERDR_FAKE/s3.prompt-error"
+out=$(bash "$s/spawn.sh" s3 --roster "$tmp/s3.json" --cwd "$tmp/cwd" --prompt "task three" 2>/dev/null); rc=$?
+check_rc "spawn whose prompt fails exits 1" 1 "$rc"
+check "the failure names the tab left open and the way to send the task" \
+  "agent prompt: prompt failed; s3 stays in the roster with tab w1:t-s3 open: send the task with answer --text" "$(jq -r .error <<<"$out")"
+calls >/dev/null
 
 # --- watch -----------------------------------------------------------------------
 # The measured trap: after a prompt, status reads the previous turn's `done`
@@ -93,7 +118,21 @@ check "an unread event is reported again" '{"name":"s1","event":"done","seq":12}
 calls >/dev/null
 printf 'done\n' > "$HERDR_FAKE/s1.states"
 bash "$s/watch.sh" --roster "$roster" --timeout 3000 >/dev/null 2>&1; rc=$?
-check_rc "an agent answer watch cannot read fails rather than polling on" 1 "$rc"
+check_rc "an agent answer watch cannot read is exit 2 rather than a poll forever" 2 "$rc"
+for m in "read.sh s1" "answer.sh s1 --keys Enter"; do
+  # shellcheck disable=SC2086  # the call's words are split on purpose
+  out=$(bash $s/$m --roster "$roster" 2>/dev/null); rc=$?
+  check_rc "${m%%.*} on an agent answer it cannot read exits 2" 2 "$rc"
+  check "${m%%.*} names the unreadable answer" "agent get s1: unreadable answer from herdr" "$(jq -r .error <<<"$out")"
+done
+check "nothing was acknowledged from an unreadable answer" 10 "$(seen s1)"
+printf 'not json' > "$tmp/bad.json"
+for m in "watch.sh" "read.sh s1" "answer.sh s1 --keys Enter"; do
+  # shellcheck disable=SC2086  # the call's words are split on purpose
+  out=$(bash $s/$m --roster "$tmp/bad.json" 2>/dev/null); rc=$?
+  check_rc "${m%%.*} on an unreadable roster exits 2" 2 "$rc"
+  check "${m%%.*} names the unreadable roster" "cannot read the roster $tmp/bad.json" "$(jq -r .error <<<"$out")"
+done
 printf 'done 12\n' > "$HERDR_FAKE/s1.states"
 calls >/dev/null
 
@@ -107,8 +146,17 @@ agent read s1 --source recent-unwrapped --lines 40" "$(calls)"
 check "read acknowledges the event" 12 "$(seen s1)"
 out=$(bash "$s/watch.sh" --roster "$roster" --timeout 3000)
 check "after the read, watch moves on to the next session's event" '{"name":"s2","event":"blocked","seq":21}' "$out"
-bash "$s/read.sh" s9 --roster "$roster" >/dev/null 2>&1; rc=$?
+out=$(bash "$s/read.sh" s9 --roster "$roster" 2>/dev/null); rc=$?
 check_rc "read refuses a session the roster does not hold" 1 "$rc"
+check "the refusal names the roster" "s9 is not in the roster $roster" "$(jq -r .error <<<"$out")"
+for n in 0 00 -1 abc 1x; do
+  bash "$s/read.sh" s1 --roster "$roster" --lines "$n" >/dev/null 2>&1; rc=$?
+  check_rc "read refuses --lines $n" 2 "$rc"
+done
+for n in abc 1x -1; do
+  bash "$s/watch.sh" --roster "$roster" --timeout "$n" >/dev/null 2>&1; rc=$?
+  check_rc "watch refuses --timeout $n" 2 "$rc"
+done
 calls >/dev/null
 
 # --- answer --------------------------------------------------------------------
@@ -134,8 +182,10 @@ out=$(bash "$s/answer.sh" s2 --roster "$roster" --text "task two")
 check "a session at its prompt is answered with text" "agent get s2
 agent prompt s2 task two" "$(calls)"
 check "answer with text records the sequence number before the prompt" 23 "$(seen s2)"
-bash "$s/answer.sh" s2 --roster "$roster" --text a --keys b >/dev/null 2>&1; rc=$?
+usage_line=$(sed -n 1p <<<"$(bash "$s/answer.sh" --help)")
+out=$(bash "$s/answer.sh" s2 --roster "$roster" --text a --keys b 2>/dev/null); rc=$?
 check_rc "answer takes text or keys, not both" 2 "$rc"
+check "text and keys together answer the usage line" "$usage_line" "$(jq -r .error <<<"$out")"
 calls >/dev/null
 
 # --- gone ----------------------------------------------------------------------

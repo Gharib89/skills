@@ -10,9 +10,10 @@
 # `agent get` answers the first line and drops it while more than one is left,
 # so the last line repeats. No states file is an agent Herdr does not know:
 # `agent_not_found` on stderr, exit 1, as the real CLI answers. `<name>.start-error`
-# makes `agent start` fail with the code it holds. `agent prompt` refuses an
-# agent whose current line reads `blocked` with `agent_blocked`. Every call is a
-# line of `$HERDR_FAKE/calls`.
+# makes `agent start` fail with the code it holds, `<name>.prompt-error` the
+# same for `agent prompt`. `agent prompt` refuses an agent whose current line
+# reads `blocked` with `agent_blocked`. Every call is a line of
+# `$HERDR_FAKE/calls`.
 herdr_fake_install() { # <dir>
   cat > "$1/herdr" <<'FAKE'
 #!/usr/bin/env bash
@@ -38,6 +39,7 @@ case "$1 $2" in
     [ "$(wc -l < "$f")" -gt 1 ] && { tail -n +2 "$f" > "$f.t"; mv "$f.t" "$f"; }
     printf '{"result":{"agent":%s,"type":"agent_info"}}\n' "$(agent "$3" "$st" "$seq")" ;;
   "agent prompt")
+    [ -f "$HERDR_FAKE/$3.prompt-error" ] && err "$(cat "$HERDR_FAKE/$3.prompt-error")" "prompt failed"
     known "$3"; read -r st _ < "$HERDR_FAKE/$3.states"
     [ "$st" = blocked ] && err agent_blocked "agent $3 is blocked and requires interactive input"
     printf '{"result":{"type":"agent_prompted"}}\n' ;;

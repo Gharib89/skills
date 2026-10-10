@@ -16,7 +16,8 @@
 # stdout: {name, event, seq} for `idle`, `done` or `blocked`; {name, event} for
 #         `gone`; {"name": null, "event": "timeout"} once --timeout passes
 # exit: 0 an event or the timeout · 1 no live session in the roster, or herdr
-#       refused (its code in `code`) · 2 usage, or outside Herdr
+#       refused (its code in `code`) · 2 usage, outside Herdr, an unreadable
+#       roster, or an answer from herdr it cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -37,21 +38,22 @@ ds_in_herdr
 start=$SECONDS
 while :; do
   names=$(jq -r '.sessions[] | select(.gone != true) | .name' "$roster" 2>/dev/null) \
-    || ds_fail "cannot read the roster $roster"
+    || ds_tooling "cannot read the roster $roster"
   [ -n "$names" ] || ds_fail "no live session in the roster $roster"
   for n in $names; do
-    if ! ds_herdr agent get "$n"; then
-      [ "$ds_code" = agent_not_found ] || ds_fail "agent get $n: $ds_msg" "$ds_code"
+    seen=$(jq -er --arg n "$n" '.sessions[] | select(.name == $n) | .seen_seq | numbers' "$roster" 2>/dev/null) \
+      || ds_tooling "cannot read the roster $roster"
+    if ! ds_agent "$n"; then
       jq -cn --arg n "$n" '{name: $n, event: "gone"}'
       exit 0
     fi
-    seen=$(jq -r --arg n "$n" '.sessions[] | select(.name == $n) | .seen_seq' "$roster")
-    jq -ce --arg n "$n" --argjson seen "$seen" '.result.agent
-      | select((.agent_status | IN("idle", "done", "blocked")) and .state_change_seq > $seen)
-      | {name: $n, event: .agent_status, seq: .state_change_seq}' <<<"$ds_out"
-    # jq -e: 0 an event, 4 none; anything else is an answer it could not read,
-    # which would otherwise read as "no event" on every poll, forever.
-    case $? in 0) exit 0 ;; 4) ;; *) ds_fail "agent get $n: unreadable answer" ;; esac
+    case $ds_status in
+      idle | done | blocked)
+        if [ "$ds_seq" -gt "$seen" ]; then
+          jq -cn --arg n "$n" --arg e "$ds_status" --argjson q "$ds_seq" '{name: $n, event: $e, seq: $q}'
+          exit 0
+        fi ;;
+    esac
   done
   [ -n "$timeout" ] && [ $(( (SECONDS - start) * 1000 )) -ge "$timeout" ] && break
   sleep 1

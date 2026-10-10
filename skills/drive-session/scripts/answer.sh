@@ -11,9 +11,10 @@
 # through `agent send-keys` whatever the status.
 #
 # stdout: {name, sent, seen_seq}, `sent` being `text` or `keys`
-# exit: 0 sent · 1 the name is not in the roster, the session is gone, or herdr
-#       refused (its code in `code`) · 2 usage, text to a blocked session, or
-#       outside Herdr
+# exit: 0 sent · 1 the name is not in the roster, the session is gone, the
+#       roster cannot be written, or herdr refused (its code in `code`) · 2
+#       usage, text to a blocked session, outside Herdr, an unreadable roster,
+#       or an answer from herdr it cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -36,12 +37,11 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$roster" ] && [ -n "$sent" ] || ds_tooling "$usage"
 ds_in_herdr
-ds_row "$roster" "$name" >/dev/null
+ds_held "$roster" "$name"
 
-ds_herdr agent get "$name" || ds_fail "agent get $name: $ds_msg" "$ds_code"
-status=$(jq -r .result.agent.agent_status <<<"$ds_out")
-seq=$(jq -r .result.agent.state_change_seq <<<"$ds_out")
-[ "$sent" = text ] && [ "$status" = blocked ] && ds_tooling "answer: $name is blocked on a dialog; answer it with --keys"
+ds_agent "$name" || ds_fail "$name is gone: Herdr no longer knows it" agent_not_found
+seq=$ds_seq
+[ "$sent" = text ] && [ "$ds_status" = blocked ] && ds_tooling "answer: $name is blocked on a dialog; answer it with --keys"
 ds_set "$roster" "$name" seen_seq "$seq"
 if [ "$sent" = text ]; then
   ds_herdr agent prompt "$name" "$text" || ds_fail "agent prompt $name: $ds_msg" "$ds_code"

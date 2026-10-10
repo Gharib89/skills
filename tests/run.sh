@@ -4,10 +4,10 @@
 # script against a fixture and asserts on its exit code, or invokes a mechanic
 # malformed and asserts on the usage error its guard prints. None reaches a host,
 # and `tests/host-stub.sh` is what holds them to it: a `gh`, an `az` and a
-# `herdr` (the live Herdr server drive-session drives is a host too) that record
-# the call and fail sit in front of PATH, and a file whose run leaves entries in
-# the log fails here whatever its own cases said. The local gate's `tests` gate is
-# this script.
+# `herdr` (the live Herdr server drive-session drives, reached the same way)
+# that record the call and fail sit in front of PATH, and a file whose run
+# leaves entries in the log fails here whatever its own cases said. The local
+# gate's `tests` gate is this script.
 #
 # Files run concurrently, at most $SHIP_TEST_JOBS at once (default: the CPU
 # count), because the suite spends its time waiting on subprocesses, not on the

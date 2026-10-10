@@ -1,10 +1,9 @@
 ---
 name: drive-session
 description: >-
-  Supervise Claude sessions in Herdr tabs: spawn one or more, watch them with
-  one background wait, answer or escalate what they ask, report each outcome.
-  Use when the user asks to run, babysit or drive sessions in Herdr (a batch of
-  `/ship` runs, a skill smoke test in another checkout). Needs HERDR_ENV=1.
+  Supervise Claude sessions in Herdr tabs and answer what they ask. Use when
+  the user wants sessions driven in Herdr: a batch of `/ship` runs, or a skill
+  smoke test in another checkout. Needs HERDR_ENV=1.
 metadata:
   version: 0.1.0
 ---
@@ -13,7 +12,7 @@ metadata:
 
 You are the **supervisor**: the main agent driving the run. Each **supervised
 session** is one claude agent in a Herdr tab you created, beside your own tab
-in your workspace. The **roster** is the run's file listing them, so a
+in your workspace. The **roster** is the file listing them, so a
 compaction or a resumed supervisor still knows which sessions it owns.
 
 Herdr is this skill's subject: every script refuses to run without
@@ -24,10 +23,9 @@ Herdr is this skill's subject: every script refuses to run without
 
 They live in `scripts/` under this skill's base directory, each taking the
 roster by `--roster <file>`, and each answers `--help` with its flags and the
-JSON it prints. They are the only way to touch a roster session: each one keeps
-the row's `seen_seq`, the agent's `state_change_seq` when you last looked.
-Herdr reports the previous turn's `done` until the next turn starts, and the
-sequence number is what tells that stale `done` from a new one.
+JSON it prints. Read, wait on and answer a roster session through them alone:
+each keeps the row's sequence number, which is what tells Herdr's stale `done`
+from a new turn.
 
 - `spawn <name> --roster <file> --cwd <dir> --prompt <text> [--model <m>]`
   opens the tab without focus, starts claude, sends the task and adds the row.
@@ -44,12 +42,13 @@ sequence number is what tells that stale `done` from a new one.
 1. **Roster.** One per run, in your scratchpad:
    `<scratchpad>/drive-session/roster.json`. Read it back after a compaction.
 2. **Spawn** each session. Name it after its task (`ship-541`), the name
-   doubling as the tab label. `--cwd` is a folder Claude Code already trusts:
-   in any other, claude stops on the trust dialog, and `spawn` answers
-   `"status": "blocked", "prompted": false`. Answer that dialog with keys, and
-   once `watch` reports the session `idle`, send the task as `answer` text.
-   `--model` takes the user's choice: a cheap model for a smoke test, the
-   default for a ship run.
+   doubling as the tab label, one spawn at a time, since each rewrites the
+   roster. `--cwd` is a folder Claude Code already trusts: in any other, claude
+   stops on the trust dialog, `spawn` answers `"prompted": false`, and `watch`
+   reports the dialog as `blocked`. Answer it with keys, and once `watch`
+   reports the session `idle`, send the task as `answer` text. `--model` takes
+   the user's choice: a cheap model for a smoke test, the default for a ship
+   run.
 3. **Watch.** Run `watch --roster <file>` with the Bash tool's
    `run_in_background`, then end your turn. Its exit wakes you; a poll or a
    sleep of your own spends context on nothing.
@@ -58,16 +57,18 @@ sequence number is what tells that stale `done` from a new one.
    - `done` or `idle`: the turn ended and the session waits at its prompt
      (Herdr reports a finished turn as either). Judge from the output whether
      the task is at rest (a ship run's merge summary, a hand-back, a smoke
-     test's verdict) or wants a next prompt, the task held back by a startup
-     dialog included.
+     test's verdict) or wants a next prompt.
    - `blocked`: a question or permission dialog. Answer it from the session's
      context and the user's rules (CLAUDE.md, `~/.claude/rules/`), or
      escalate it when the escalation list below names it.
-   - `gone`: the agent exited or its pane closed. Record it as crashed.
+   - `gone`: record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt. `answer`
    refuses text to a blocked session, since Herdr would refuse it too.
-7. **Loop** from step 3 until every session is at rest, then report.
+7. **Loop** from step 3 while any session is running. A session waiting on an
+   escalation is at rest; once you relay the user's reply, it runs again, so
+   start step 3 again. When `watch` exits 1 on no live session, every session
+   is gone: report.
 
 ## Escalation
 
@@ -99,7 +100,8 @@ hand-offs and questions the way the user would, by the escalation list.
 When every session is at rest, report one row per session: its name, its task,
 and its resting state (merged, at the merge gate, handed back, escalated and
 waiting, or crashed), with the PR link where there is one. To answer "what is
-`<name>` doing?" mid-run, `read` it and summarize.
+`<name>` doing?" mid-run, `read` it, summarize, and handle what it shows as
+step 5 would: that `read` acknowledges any event `watch` had not yet reported.
 
 Leave every supervised tab open, so the user can read each transcript. Close
 only a tab you created, and only when the user asks.
