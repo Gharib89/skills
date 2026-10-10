@@ -269,7 +269,7 @@ The upstream commit of a composed skill that the source repo tested Ship against
 _Avoid_: tested version, locked version, hash (the lock's `computedHash` is the folder's content hash, not the ref)
 
 **Upstream drift**:
-A composed skill whose upstream has moved past its pinned ref. Reported to the source repo, never acted on in a consumer repo: a consumer that installed the new upstream would run Ship against a version nobody tested.
+A composed skill whose upstream has moved past its pinned ref. Reported to the source repo, never acted on in a consumer repo: a consumer that installed the new upstream would run Ship against a version nobody tested. In the source repo the drift issue also lists every other upstream skill whose upstream moved past its lock ref.
 _Avoid_: outdated skill, stale dependency
 
 **Refresh**:
