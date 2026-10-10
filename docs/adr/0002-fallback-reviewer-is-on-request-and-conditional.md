@@ -37,3 +37,7 @@ It is a global Ship rule, not a profile key, so no schema moves.
 ## Amended by #545
 
 A primary that exits `not reviewed: inline lane` leaves the fallback unrequested too. An inline-lane run without `--review` requests no round of any reviewer: the human waived them by invoking `--inline`, so the fallback records the same `inline lane` stop, and `run-file gate clean` reads that stop as settling its own reviewer only, never as a fallback covering a primary.
+
+## Amended by #551
+
+A primary that reviewed and then stopped short of its cap for want of a round drives the fallback too. Its round's fixes changed the tree, the next requested round did not land (Codex's usage limit, a run that never queued), and so no host round read those fixes: the same condition the #531 amendment covers for a spent cap. It records the new stop `not landed`, which `run-file gate clean` counts as owing the fallback, the same as `not reviewed` and a spent cap. Its exit stays `reviewed`, the cause in a trailing clause, since a round of it was dispositioned.

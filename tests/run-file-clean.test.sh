@@ -127,6 +127,11 @@ capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged/'; clean 
 # A docs-only fix-only diff ends the loop before Cap: is spent: no fallback is owed, and none covers it.
 capped; change_run '/^Round: primary 2/d'; held 'docs-only end before the cap' 'reviewer primary: cap'
 capped; change_run '/^Round: primary 2/d'; unheld 'docs-only end before the cap' 'reviewer fallback: not reviewed'
+# A primary whose later round did not land after a fix changed the tree owes its fallback a run (#551).
+landed() { base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not landed/'; }
+landed; held 'not-landed primary owes its fallback' 'reviewer fallback: not reviewed'
+landed; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'not-landed primary covered by a fallback stopped on tree unchanged'
+landed; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'not-landed primary with a capped fallback' 'reviewer primary: not landed'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: auto-once/'; held 'auto-once changed round' 'reviewer primary: auto-once'
 base; sed 's/Trigger: on-request/Trigger: auto-once/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; clean 'auto-once unchanged round records tree unchanged'
 base; printf 'Override: declined gating finding\n' >> "$f"; held 'override needed' 'override needed: declined gating finding'
