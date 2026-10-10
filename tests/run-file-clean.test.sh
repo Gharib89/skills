@@ -98,6 +98,12 @@ base; change_run 's/punctuation: pass/punctuation: deferred-to-ci: test/'; sed '
 for stop in cap 'small lane' 'not reviewed'; do
   base; change_run "s/Stop: primary: tree unchanged/Stop: primary: $stop/"; held "$stop primary without fallback" "reviewer primary: $stop"
 done
+# An inline run with no --review requested no round: --inline waived it, so the stop settles the reviewer.
+inline() { base; change_run '/^Round: primary/d; s/Stop: primary: tree unchanged/Stop: primary: inline lane/; s/Stop: fallback: not reviewed/Stop: fallback: inline lane/'; }
+inline; clean 'inline-lane stops on the primary and its fallback'
+inline; change_ci '.status="checks-failed" | .checks[0].status="failure"'; held 'inline lane with red CI' 'CI test: failure'
+inline; touch "$tmp/records/ship-clean/defect-1.md"; held 'inline lane with a Ship defect draft' 'Ship defect draft: defect-1.md'
+base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/; s/Stop: fallback: not reviewed/Stop: fallback: inline lane/'; held 'an inline-lane fallback does not cover a primary that was not reviewed' 'reviewer primary: not reviewed'
 base; printf 'Round: primary 2:   \n' >> "$f"; held 'blank latest round' 'reviewer primary: no dispositioned round'
 base; change_run '/^Round: primary/d'; held 'stop without dispositioned round' 'reviewer primary: no dispositioned round'
 base; change_run '/^Stop: primary/d'; held 'missing reviewer stop' 'reviewer primary: missing stop'
