@@ -11,8 +11,8 @@
 # past the viewport with `agent_not_idle`.
 #
 # stdout: {name, status, seq, output}, `output` the last --lines lines (default
-#         40; read again with more when they fall short), or the visible screen
-#         when blocked; status `gone` with seq and output null
+#         40), or the visible screen when blocked, whatever --lines says;
+#         status `gone` with seq and output null
 # exit: 0 read · 1 the name is not in the roster, the roster cannot be written
 #       or locked, or herdr refused (its code in `code`) · 2 usage, outside
 #       Herdr, an unreadable roster, or an answer from herdr it cannot read

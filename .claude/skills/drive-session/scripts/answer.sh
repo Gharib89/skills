@@ -54,8 +54,9 @@ seq=$ds_seq
 if [ "$sent" = text ]; then
   ds_prompt "$name" "$text"
   case $? in
+    0) ;;
     2) ds_fail "agent prompt $name: the text reached the pane but started no turn ($ds_code): read $name before sending anything" "$ds_code" ;;
-    1) ds_fail "agent prompt $name: $ds_msg" "$ds_code" ;;
+    *) ds_fail "agent prompt $name: $ds_msg" "$ds_code" ;;
   esac
 else
   ds_herdr agent send-keys "$name" "${keys[@]}" || ds_fail "agent send-keys $name: $ds_msg" "$ds_code"

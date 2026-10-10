@@ -40,13 +40,13 @@ case $timeout in *[!0-9]*) ds_tooling "$usage" ;; esac
 ds_in_herdr
 
 # Each session watched, the sequence number it last showed, and since when:
-# indexed arrays, since everything installed targets Bash 3.2.
-tn=() tq=() tt=()
-since() { # <name> <seq>: sets $at to the SECONDS value since which <name> shows <seq>
+# indexed arrays, since macOS's /bin/bash is 3.2, which has no associative ones.
+watched_names=() watched_seqs=() watched_since=()
+since() { # <name> <seq>: sets $still_since to the SECONDS value since which <name> shows <seq>
   local i=0
-  while [ "$i" -lt "${#tn[@]}" ] && [ "${tn[i]}" != "$1" ]; do i=$((i + 1)); done
-  [ "${tq[i]:-}" = "$2" ] || { tn[i]=$1 tq[i]=$2 tt[i]=$SECONDS; }
-  at=${tt[i]}
+  while [ "$i" -lt "${#watched_names[@]}" ] && [ "${watched_names[i]}" != "$1" ]; do i=$((i + 1)); done
+  [ "${watched_seqs[i]:-}" = "$2" ] || { watched_names[i]=$1 watched_seqs[i]=$2 watched_since[i]=$SECONDS; }
+  still_since=${watched_since[i]}
 }
 
 start=$SECONDS
@@ -70,7 +70,7 @@ while :; do
         fi ;;
     esac
     since "$n" "$ds_seq"
-    polled+="$n $ds_status $ds_seq $((SECONDS - at))"$'\n'
+    polled+="$n $ds_status $ds_seq $((SECONDS - still_since))"$'\n'
   done
   [ -n "$timeout" ] && [ $(( (SECONDS - start) * 1000 )) -ge "$timeout" ] && break
   sleep 1

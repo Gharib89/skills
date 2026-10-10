@@ -33,7 +33,9 @@ from a new turn.
   and exits: `done`, `idle` or `blocked` past its `seen_seq`, or `gone` (the
   agent exited or its pane closed).
 - `read <name> --roster <file>` prints the session's last 40 lines and
-  acknowledges its event; `--lines <n>` reads more when those fall short.
+  acknowledges its event. When they open mid-message (a summary or question
+  cut at the top), read again with `--lines 200`. A blocked session prints its
+  visible screen whatever `--lines` says.
 - `answer <name> --roster <file> --text <t>` sends a prompt;
   `answer <name> --roster <file> --keys <k>...` presses keys into a dialog.
 
@@ -52,9 +54,11 @@ from a new turn.
    tool's `run_in_background`, then end your turn. Its exit wakes you; a poll
    or a sleep of your own spends context on nothing. The timeout keeps it under
    the background command's own time limit: a `timeout` answer, or an exit
-   with no output, means start step 3 again. A timeout lists each session's
-   `still_s`: one still `working` or `unknown` after most of the timeout gets
-   a `read` before the next watch.
+   with no output, means start step 3 again. A timeout lists each live
+   session's `status` and `still_s`, the seconds its sequence number stood
+   still during that watch. One `working` or `unknown` with `still_s` over 1200
+   (of the 1500 s timeout) gets a `read`, handled as step 5 would, before the
+   next watch.
 4. **Read** the session it names with `read`, every time, before deciding.
 5. **Decide**, by the event:
    - `done` or `idle`: the turn ended and the session waits at its prompt
@@ -62,20 +66,23 @@ from a new turn.
      the task is at rest (a smoke test's verdict) or wants a next prompt. A
      ship run's merge summary, a hand-off, or a question ending the turn is a
      stop: take it to the escalation list below.
-   - `blocked`: a dialog. A **question dialog** (AskUserQuestion-style: the
-     session asks which way to go) you answer from its context and the user's
-     rules (CLAUDE.md, `~/.claude/rules/`), or escalate when the escalation
-     list below names it. A **permission dialog** (approve a tool call) is
-     always an escalation.
+   - `blocked`: a dialog. A **permission dialog** is titled by a tool
+     (`Bash command`), shows the call, and asks "Do you want to proceed?" over
+     Yes and No options; a **question dialog** (AskUserQuestion-style) shows
+     the session's own question and its options. Answer a question dialog
+     from the session's context and the user's rules (CLAUDE.md,
+     `~/.claude/rules/`), and take any other to the escalation list below.
    - `gone`: record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt (`--text=<t>`
    for text opening with `-`). `answer` refuses text to a blocked session,
    since Herdr would refuse it too. Text that starts no turn (a local slash
-   command such as `/rename`, or an Enter that did not register) is a not-ok
-   answer with `code` `agent_prompt_stalled`, from `spawn` too: the text
-   reached the pane, so `read` the session before sending anything, rather
-   than resending it blindly.
+   command such as `/rename`, or an Enter that did not register) comes back
+   from `answer` or `spawn` as a not-ok answer with `code`
+   `agent_prompt_stalled` or `timeout`. The text reached the pane, and `watch`
+   will not report the session until something starts a turn, so `read` it:
+   text still in the input box gets `--keys Enter`; a session back at its
+   prompt gets its next `--text`.
 7. **Loop** from step 3 while any session is running. A session waiting on an
    escalation is at rest; once you relay the user's reply, it runs again, so
    start step 3 again. When `watch` exits 1 on no live session, every session
@@ -90,9 +97,9 @@ Escalate exactly these, and answer everything else yourself:
 - a merge gate, unless the launch prompt granted the merge allowance and the
   gate is clean;
 - an approval for a destructive or irreversible command;
-- every permission dialog: in a supervised session's auto mode, one comes
-  from the owner's own ask rules, held for the human on purpose, and approving
-  it with keys would launder that permission through you;
+- every permission dialog (step 5; the startup trust dialog of step 2 is not
+  one): the session's own permission system held that call for the owner, and
+  approving it with keys would launder that permission through you;
 - a fork in scope, schema or architecture.
 
 An escalation names the session, quotes its question, and carries your proposed
@@ -100,14 +107,15 @@ answer, so the user can reply in one word. Relay the reply with `answer` to that
 session. While it waits, keep watching the others.
 
 The **merge allowance** is the launch prompt's permission to merge on a clean
-gate ("merge each if all OK"). A repo whose ship profile carries
-`Merge: on-clean-gate` needs none: ship merges a clean gate itself, so a run
-that stops at the gate there is one ship held, or one whose ship copy predates
-that line. Never ask a session to merge what ship already merged; `read` shows
-which. Ship decides clean, not you: at the gate, ask the session with `--text`
-to run `run-file gate clean` for its run and report the answer. Answer
-`--text merge` only on `clean: true` with no unmet criterion in the summary;
-anything else is an escalation that quotes its `held_by`.
+gate ("merge each if all OK"). A ship profile's `Merge: on-clean-gate` is not a
+merge allowance. Ship merges a clean gate itself in such a repo, so a run that
+stops at its gate there was held by ship, or runs a ship copy older than that
+line: treat the stop as any other merge gate. A run whose summary reports the
+PR merged is at rest, with nothing left to answer. Ship decides clean, not you:
+at the gate, ask the session with `--text` to run `run-file gate clean` for its
+run and report the answer. Answer `--text merge` only on `clean: true` with no
+unmet criterion in the summary; anything else is an escalation that quotes its
+`held_by`.
 
 ## Supervised ship runs
 

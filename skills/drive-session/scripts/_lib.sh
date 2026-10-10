@@ -103,8 +103,9 @@ ds_held() {
 # missing roster read as an empty one, holding the lock <roster>.lock from the
 # read to the move, so parallel calls each keep their update. The lock is a file
 # Bash creates under noclobber, an O_EXCL open: flock is missing on macOS, and
-# uutils' mkdir (Ubuntu's coreutils) lets two racing calls both succeed. One
-# held past 10 s is a not-ok answer naming it.
+# uutils' mkdir (Ubuntu's coreutils) lets two racing calls both succeed. An EXIT
+# trap frees it if the script is killed while holding it; one held past 10 s is
+# a not-ok answer naming it.
 ds_write() {
   local r=$1 i=0 st; shift
   until (set -C; : > "$r.lock") 2>/dev/null; do
@@ -112,8 +113,9 @@ ds_write() {
     [ "$i" -lt 100 ] || ds_fail "the roster $r stays locked: remove $r.lock once no drive-session script runs"
     sleep 0.1
   done
+  ds_lock=$r.lock; trap 'rm -f "$ds_lock"' EXIT
   { [ -f "$r" ] || printf '{"sessions":[]}\n' > "$r"; } && jq "$@" "$r" > "$r.tmp" && mv "$r.tmp" "$r"; st=$?
-  rm -f "$r.lock"
+  rm -f "$r.lock"; trap - EXIT
   [ "$st" -eq 0 ] || ds_fail "cannot write the roster $r"
 }
 

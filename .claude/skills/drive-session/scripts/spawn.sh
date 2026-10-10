@@ -90,8 +90,9 @@ prompted=false
 if [ "$ds_status" != blocked ]; then
   ds_prompt "$name" "$prompt"
   case $? in
-    2) ds_fail "agent prompt: $name took the text but started no turn ($ds_code); it stays in the roster with tab $tab open: read it before sending anything" "$ds_code" ;;
-    1) ds_fail "agent prompt: $ds_msg; $name stays in the roster with tab $tab open: send the task with answer --text" "$ds_code" ;;
+    0) ;;
+    2) ds_fail "agent prompt: the text reached $name's pane but started no turn ($ds_code); it stays in the roster with tab $tab open: read it before sending anything" "$ds_code" ;;
+    *) ds_fail "agent prompt: $ds_msg; $name stays in the roster with tab $tab open: send the task with answer --text" "$ds_code" ;;
   esac
   prompted=true
 fi
