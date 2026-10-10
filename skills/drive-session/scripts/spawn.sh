@@ -56,7 +56,7 @@ if [ -f "$roster" ]; then
   jq -e --arg n "$name" 'any(.sessions[]; .name == $n)' "$roster" >/dev/null \
     && ds_fail "$name is already in the roster $roster"
 else
-  mkdir -p "$(dirname "$roster")" && printf '{"sessions":[]}\n' > "$roster" || ds_fail "cannot create the roster $roster"
+  mkdir -p "$(dirname "$roster")" || ds_fail "cannot create the roster $roster"
 fi
 
 ds_herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label "$name" --cwd "$cwd" --no-focus \

@@ -87,10 +87,22 @@ ds_held() {
   jq -e --arg n "$2" 'any(.sessions[]; .name == $n)' "$1" >/dev/null || ds_fail "$2 is not in the roster $1"
 }
 
-# ds_write <roster> <jq arg>...: rewrites the roster through one jq filter.
+# ds_write <roster> <jq arg>...: rewrites the roster through one jq filter, a
+# missing roster read as an empty one, holding the lock <roster>.lock from the
+# read to the move, so parallel calls each keep their update. The lock is a file
+# Bash creates under noclobber, an O_EXCL open: flock is missing on macOS, and
+# uutils' mkdir (Ubuntu's coreutils) lets two racing calls both succeed. One
+# held past 10 s is a not-ok answer naming it.
 ds_write() {
-  local r=$1; shift
-  jq "$@" "$r" > "$r.tmp" && mv "$r.tmp" "$r" || ds_fail "cannot write the roster $r"
+  local r=$1 i=0 st; shift
+  until (set -C; : > "$r.lock") 2>/dev/null; do
+    i=$((i + 1))
+    [ "$i" -lt 100 ] || ds_fail "the roster $r stays locked: remove $r.lock once no drive-session script runs"
+    sleep 0.1
+  done
+  { [ -f "$r" ] || printf '{"sessions":[]}\n' > "$r"; } && jq "$@" "$r" > "$r.tmp" && mv "$r.tmp" "$r"; st=$?
+  rm -f "$r.lock"
+  [ "$st" -eq 0 ] || ds_fail "cannot write the roster $r"
 }
 
 # ds_set <roster> <name> <field> <json value>: rewrites one field of one row.

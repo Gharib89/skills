@@ -235,6 +235,27 @@ check_rc "answer takes text or keys, not both" 2 "$rc"
 check "text and keys together answer the usage line" "$usage_line" "$(jq -r .error <<<"$out")"
 calls >/dev/null
 
+# --- parallel calls ------------------------------------------------------------
+# A supervisor reading two sessions in one message runs both reads at once:
+# each read-modify-write of the roster keeps its update, and the roster parses.
+par=$tmp/par.json
+for n in p1 p2; do
+  printf 'idle 1\n' > "$HERDR_FAKE/$n.states"
+  bash "$s/spawn.sh" "$n" --roster "$par" --cwd "$tmp/cwd" --prompt x >/dev/null
+done
+lost=0
+for i in $(seq 2 31); do
+  printf 'done %s\n' "$i" > "$HERDR_FAKE/p1.states"
+  printf 'done %s\n' "$((i + 100))" > "$HERDR_FAKE/p2.states"
+  bash "$s/read.sh" p1 --roster "$par" >/dev/null 2>&1 &
+  bash "$s/read.sh" p2 --roster "$par" >/dev/null 2>&1 &
+  wait
+  [ "$(jq -c '[.sessions[].seen_seq]' "$par" 2>/dev/null)" = "[$i,$((i + 100))]" ] || lost=$((lost + 1))
+done
+check "two reads in parallel each keep their seen_seq, in every one of 30 rounds" 0 "$lost"
+check "and leave no lock behind" "" "$(ls "$par.lock" 2>/dev/null)"
+calls >/dev/null
+
 # --- gone ----------------------------------------------------------------------
 rm "$HERDR_FAKE/s1.states"
 out=$(bash "$s/watch.sh" --roster "$roster" --timeout 3000)
