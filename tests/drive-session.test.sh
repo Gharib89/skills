@@ -205,6 +205,15 @@ out=$(bash "$s/answer.sh" s2 --roster "$roster" --text "task two")
 check "a session at its prompt is answered with text" "agent get s2
 agent prompt s2 task two" "$(calls)"
 check "answer with text records the sequence number before the prompt" 23 "$(seen s2)"
+# A send Herdr refuses acknowledges nothing, so watch reports the event again.
+printf 'idle 24\n' > "$HERDR_FAKE/s2.states"
+printf 'agent_busy' > "$HERDR_FAKE/s2.prompt-error"
+bash "$s/answer.sh" s2 --roster "$roster" --text again >/dev/null 2>&1; rc=$?
+check_rc "an answer Herdr refuses exits 1" 1 "$rc"
+check "a refused send leaves the row's sequence number" 23 "$(seen s2)"
+rm "$HERDR_FAKE/s2.prompt-error"
+bash "$s/answer.sh" s2 --roster "$roster" --text again >/dev/null
+check "a sent answer acknowledges the state it answered" 24 "$(seen s2)"
 # Text opening with a dash goes in the --flag=<value> form, which no flag can
 # be mistaken for.
 calls >/dev/null

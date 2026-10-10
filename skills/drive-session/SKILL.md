@@ -49,15 +49,18 @@ from a new turn.
    reports the session `idle`, send the task as `answer` text. `--model` takes
    the user's choice: a cheap model for a smoke test, the default for a ship
    run.
-3. **Watch.** Run `watch --roster <file>` with the Bash tool's
-   `run_in_background`, then end your turn. Its exit wakes you; a poll or a
-   sleep of your own spends context on nothing.
+3. **Watch.** Run `watch --roster <file> --timeout 1500000` with the Bash
+   tool's `run_in_background`, then end your turn. Its exit wakes you; a poll
+   or a sleep of your own spends context on nothing. The timeout keeps it under
+   the background command's own time limit: a `timeout` answer, or an exit
+   with no output, means start step 3 again.
 4. **Read** the session it names with `read`, every time, before deciding.
 5. **Decide**, by the event:
    - `done` or `idle`: the turn ended and the session waits at its prompt
      (Herdr reports a finished turn as either). Judge from the output whether
-     the task is at rest (a ship run's merge summary, a hand-back, a smoke
-     test's verdict) or wants a next prompt.
+     the task is at rest (a smoke test's verdict) or wants a next prompt. A
+     ship run's merge summary, a hand-off, or a question ending the turn is a
+     stop: take it to the escalation list below.
    - `blocked`: a question or permission dialog. Answer it from the session's
      context and the user's rules (CLAUDE.md, `~/.claude/rules/`), or
      escalate it when the escalation list below names it.
@@ -73,8 +76,9 @@ from a new turn.
 
 ## Escalation
 
-An **escalation** forwards a blocked session's question to the user. Escalate
-exactly these, and answer everything else yourself:
+An **escalation** forwards a session's question or stop to the user, whether
+it came as a dialog (`blocked`) or a turn ending on it (`done`, `idle`).
+Escalate exactly these, and answer everything else yourself:
 
 - a merge gate, unless the launch prompt granted the merge allowance and the
   gate is clean;
