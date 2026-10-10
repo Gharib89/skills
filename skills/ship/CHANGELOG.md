@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.21.0 (2026-10-10)
+
+### Features
+
+- **ship**: A fallback reviewer also stands in for a primary capped with findings
+  ([#534](https://github.com/Gharib89/skills/pull/534),
+  [`da3acb0`](https://github.com/Gharib89/skills/commit/da3acb05d00fee258e13850b566ba89a5764a1d9))
+
+
 ## v0.20.0 (2026-10-10)
 
 ### Features
