@@ -85,6 +85,21 @@ for p in "$r/../outside.py" ../outside.py link/outside.py; do
   check "$p, which leads outside the repo, is skipped" '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
 done
 rm "$r/link"
+# An exported CDPATH naming a repo directory, or a directory whose name starts
+# with `-`, still resolves inside the root, and the runner never takes a path
+# as an option (#554).
+mkdir -p "$fixture/elsewhere/sub"
+export CDPATH=$fixture/elsewhere
+run "$r" edit sub/c.py
+unset CDPATH
+check "an exported CDPATH naming a repo directory still lints the file there" \
+  '{"rung":"edit","verdict":"fail","checks":{"runner":"fail"}}' "$out"
+mkdir -p "$r/-foo"; echo 'x = BAD' > "$r/-foo/d.py"
+run "$r" edit -foo/d.py
+check "a directory whose name starts with - still lints the file there" \
+  '{"rung":"edit","verdict":"fail","checks":{"runner":"fail"}}' "$out"
+check "the runner takes the dash-named file as ./-foo/d.py" "--- runner ---
+lint: ./-foo/d.py: BAD found" "$err"
 
 r=$(repo fix "EDIT_GLOBS='*.py'
 EDIT_RUN='fmt {files}'")
