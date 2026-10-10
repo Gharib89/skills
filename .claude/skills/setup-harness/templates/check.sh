@@ -122,8 +122,9 @@ check() {
   esac
 }
 
-# The files, shell-quoted and space-joined, for a {files} placeholder.
-quoted() { local f q=''; for f; do q="$q $(printf '%q' "$f")"; done; printf '%s' "${q# }"; }
+# The files, shell-quoted and space-joined, for a {files} placeholder; a name
+# starting with `-` gains `./`, so no tool reads it as an option.
+quoted() { local f q=''; for f; do case $f in -*) f=./$f ;; esac; q="$q $(printf '%q' "$f")"; done; printf '%s' "${q# }"; }
 
 matches() { # <file> <globs>: 0 when one of the globs matches the file name
   local g
@@ -152,7 +153,7 @@ EOF
 inside() {
   local d=${1%/*}
   case $1 in */*) d=${d:-/} ;; *) d=. ;; esac
-  d=$(cd "$d" 2>/dev/null && pwd -P) || return 1
+  d=$(CDPATH='' cd -- "$d" 2>/dev/null && pwd -P) || return 1
   case $d in "$root") d='' ;; "$root"/*) d=${d#"$root"/}/ ;; *) return 1 ;; esac
   printf '%s' "$d${1##*/}"
 }
