@@ -67,7 +67,7 @@ The container any cloud session runs in, attended or unattended, reaching hosts 
 _Avoid_: cloud env, default env, container
 
 **Merge gate**:
-The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate` authorizes a merge when `run-file gate clean` confirms every recorded condition and no unmet criterion is listed, since each needs the human's waiver. An unattended run posts to the PR and returns.
+The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate`, or an inline-lane run, authorizes a merge when `run-file gate clean` confirms every recorded condition and no unmet criterion is listed, since each needs the human's waiver. An unattended run posts to the PR and returns.
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:
@@ -79,8 +79,8 @@ The collapsed form of a Ship run for a change that is narrow, locally provable, 
 _Avoid_: fast path, quick mode, hotfix
 
 **Inline lane**:
-The small lane's tier entered only by `/ship <issue> --inline`, attended and for a tracked issue: the same floor, a 20-line cap counted as the small lane counts, no reviewer round unless `--review` buys one, and a merge on a clean gate, the invocation being the human's approval for that one PR. Revocable one way, inline then small then full, and the merge allowance goes with the lane.
-_Avoid_: fast path, quick mode, hotfix
+The small lane's tier entered only by `/ship <issue> --inline`, attended and for a tracked issue: the same floor, a 20-line cap counted as the small lane counts, no reviewer round unless `--review` buys one, and a merge on a clean gate, the invocation being the human's approval for that one PR. Revocable one way, inline then small then full, and the approval goes with the lane.
+_Avoid_: inline fix (the hand-made PR it replaces), one-liner lane
 
 **Hand-off**:
 An attended stop where Ship prints the exact command and setup, waits for the human to run or confirm it, and resumes. The claim holds. In an unattended run a hand-off becomes a hand-back.
@@ -299,7 +299,7 @@ How a reviewer's rounds start: auto-once fires on PR creation and is disposition
 _Avoid_: mode, kind of bot
 
 **Fallback reviewer**:
-A reviewer driven only when the reviewer it names exits not reviewed, for any reason, or is capped with findings; a primary that reviewed otherwise leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary reviewed, the fallback still reports, as not invoked, so the human sees it exists.
+A reviewer driven only when the reviewer it names exits not reviewed, for any reason but the inline lane, or is capped with findings; a primary that reviewed otherwise leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary reviewed, the fallback still reports, as not invoked, so the human sees it exists.
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Capped with findings**:

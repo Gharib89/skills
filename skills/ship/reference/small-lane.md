@@ -21,10 +21,10 @@ revokes to the full lane.
 ## A guard is full lane
 
 A diff touching a guard, an allowlist or a deny rule is full lane, whatever its
-size. What it decides is what the run refuses or admits, a unit test proves only
-the inputs its author thought of, and the line count says nothing about how many
-cases it must hold. Predict it at phase 2 with the keys, and count it as failing
-key 2.
+size, unless it runs inline under `--review` (below). What it decides is what
+the run refuses or admits, a unit test proves only the inputs its author thought
+of, and the line count says nothing about how many cases it must hold. Predict
+it at phase 2 with the keys, and count it as failing key 2.
 
 ## What collapses
 
@@ -72,29 +72,27 @@ Downgrading once is cheap; shipping a non-small change as small is the failure.
 The **inline lane** is the small lane's tier for a fix triage already has in
 hand, entered only by `/ship <issue> --inline [--review]`. Invoking it is the
 human's approval to merge this one PR on a clean gate, and nothing wider. With
-`--unattended`, or with free text in place of an issue, refuse it before
-`prepare` with the usage line `/ship <issue> --inline [--review]`: the merge
-allowance comes only from a human, for a tracked issue.
+`--unattended`, or free text in place of an issue, stop `inline refused` before
+`prepare`, printing the usage line `/ship <issue> --inline [--review]`.
 
 - **Keys:** the small lane's three, plus a **20-line cap** counted the way the
   size cap above counts its 200, at the same moments. A guard, allowlist or
-  deny-rule diff stays inline only with `--review`, and is full lane without.
-- **Everything above holds**: the floor, what collapses, adjacent finds.
+  deny-rule diff stays inline with `--review`, and is full lane without.
+- **Kept from above:** the floor, the local gate, subagents, adjacent finds.
 - **Reviewers:** without `--review`, request no round. Each on-request
   reviewer, fallback included, records `Stop: <reviewer>: inline lane` with no
   `Round:` line, and its `## Review` line reads `not reviewed: inline lane`.
-  With `--review`, the primary takes the small lane's one requested round and
-  its fallback stands in per `Fallback-for:`. `auto-once` and `on-push`
-  reviewers behave as in every lane.
-- **Merge:** phase 9 reads the profile's `Merge:` as `on-clean-gate` for this
-  PR: `run-file gate clean` answering `clean: true` runs the merge sequence
-  with no reply; a held gate posts the summary and waits for "merge".
-- **Named:** the run header, the PR's `## Review` section and the merge summary
-  say `inline lane`.
+  With `--review`, each on-request reviewer that is no fallback takes the small
+  lane's one requested round, and a fallback stands in per `Fallback-for:`.
+  `auto-once` and `on-push` reviewers behave as in every lane.
+- **Merge:** phase 9 takes merge-gate.md's `on-clean-gate` branch for this PR.
+- **Named:** the run header, the `## Review` section and the merge summary say
+  `inline lane`.
 
-**Revocation runs inline, then small, then full.** The count passing 20 drops
-the run to the small lane; a trigger under *Revocable, one way* (a guard touch
-under `--review` excepted) drops it straight to the full lane. The merge
-allowance goes with the lane: the reviewers take that lane's rounds, so no
-`inline lane` stop is written, and phase 9 follows the profile's `Merge:` line.
-Say so in the next reply and in the merge summary.
+**Revocation runs inline, then small, then full.** A key failing at phase 2
+makes the run full lane. The count passing 20 drops it to the small lane; a
+trigger under *Revocable, one way* (a guard touch under `--review` excepted)
+drops it straight to the full lane. The approval goes with the lane: phase 9
+follows the profile's `Merge:` line, and each reviewer takes that lane's rounds,
+appending its `Round:` and `Stop:` lines after any `inline lane` stop, since the
+last `Stop:` decides. Say so in the next reply and in the merge summary.

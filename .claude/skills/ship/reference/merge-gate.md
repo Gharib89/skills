@@ -26,7 +26,7 @@ repo may be public.
 
 PR:        <url>  (<branch> → <default branch>)
 Issue:     <one-line restatement of what was asked>
-Lane:      <full | small: skipped <phase 3 verifications, docs-sync> | inline[: revoked to <lane>: <why>]>
+Lane:      <full | small: skipped <phase 3 verifications, docs-sync> | inline lane[: revoked to <small|full>: <why>]>
 
 Implementation
   - <what was built, 1 to 3 lines>

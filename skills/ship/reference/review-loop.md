@@ -217,11 +217,11 @@ where that primary exits `not reviewed` or is **capped with findings** (ADR
 push cannot be withheld. Drive every non-fallback reviewer to its exit first,
 because a fallback's only input is how its primary exited.
 
-- Primary `not reviewed: <any reason>` but `inline lane`, or capped with
-  findings: drive the fallback as an ordinary on-request reviewer under its own
-  `Cap:`. Capped with findings is `Stop: <primary>: cap` after it spent `Cap:`
-  (rounds == Cap) on a last round whose fixes changed the tree, so no host round
-  read them. Its exit
+- Primary `not reviewed` for any reason other than `inline lane`, or capped
+  with findings: drive the fallback as an ordinary on-request reviewer under its
+  own `Cap:`. Capped with findings is `Stop: <primary>: cap` after it spent
+  `Cap:` (rounds == Cap) on a last round whose fixes changed the tree, so no
+  host round read them. Its exit
   is its own, and its `## Review` line and merge-summary block both name the
   primary's reason (`fallback for codex: capped with findings`, say), the only
   record of why a second reviewer was paid for.
@@ -230,6 +230,9 @@ because a fallback's only input is how its primary exited.
   or a docs-only fix-only diff ended its loop before `Cap:` was spent): do not
   request it; it exits `not invoked: <primary> reviewed`, so a reader sees the
   reviewer exists.
+- Primary `not reviewed: inline lane`: request nothing; the fallback records
+  `Stop: <fallback>: inline lane` too
+  ([small-lane.md](small-lane.md#the-inline-lane)).
 - Nothing is a fallback for a fallback: a chain is one deep.
 
 ## Worked examples
