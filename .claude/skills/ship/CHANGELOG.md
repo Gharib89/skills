@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.0 (2026-10-10)
+
+### Features
+
+- **ship**: An --inline tier of the small lane that merges on a clean gate
+  ([#550](https://github.com/Gharib89/skills/pull/550),
+  [`95656ce`](https://github.com/Gharib89/skills/commit/95656ceb1d42ebdf4b3611f96ff775e770668ae0))
+
+
 ## v0.21.2 (2026-10-10)
 
 ### Bug Fixes
