@@ -51,6 +51,18 @@ ds_herdr() {
   return "$st"
 }
 
+# ds_prompt <name> <text>: `agent prompt`, waiting until the turn starts or
+# opens a dialog. Text that starts no turn (a local slash command, an Enter that
+# did not register) leaves the sequence number where it was, so no `watch` would
+# report the session: herdr answers `agent_prompt_stalled` after 5 s. Returns 2
+# on that or on herdr's own `timeout`, the text having reached the pane, and 1
+# on any other refusal, each with ds_herdr's $ds_code and $ds_msg.
+ds_prompt() {
+  ds_herdr agent prompt "$1" "$2" --wait --until working --until blocked --timeout 8000 && return 0
+  case $ds_code in agent_prompt_stalled | timeout) return 2 ;; esac
+  return 1
+}
+
 # ds_agent_fields <what>: the agent in $ds_out's answer, its status in
 # $ds_status and its sequence number in $ds_seq. An answer missing either is
 # exit 2: a status read as empty would be acknowledged as if it were real.
@@ -87,10 +99,22 @@ ds_held() {
   jq -e --arg n "$2" 'any(.sessions[]; .name == $n)' "$1" >/dev/null || ds_fail "$2 is not in the roster $1"
 }
 
-# ds_write <roster> <jq arg>...: rewrites the roster through one jq filter.
+# ds_write <roster> <jq arg>...: rewrites the roster through one jq filter, a
+# missing roster read as an empty one, holding the lock <roster>.lock from the
+# read to the move, so parallel calls each keep their update. The lock is a file
+# Bash creates under noclobber, an O_EXCL open: flock is missing on macOS, and
+# uutils' mkdir (Ubuntu's coreutils) lets two racing calls both succeed. One
+# held past 10 s is a not-ok answer naming it.
 ds_write() {
-  local r=$1; shift
-  jq "$@" "$r" > "$r.tmp" && mv "$r.tmp" "$r" || ds_fail "cannot write the roster $r"
+  local r=$1 i=0 st; shift
+  until (set -C; : > "$r.lock") 2>/dev/null; do
+    i=$((i + 1))
+    [ "$i" -lt 100 ] || ds_fail "the roster $r stays locked: remove $r.lock once no drive-session script runs"
+    sleep 0.1
+  done
+  { [ -f "$r" ] || printf '{"sessions":[]}\n' > "$r"; } && jq "$@" "$r" > "$r.tmp" && mv "$r.tmp" "$r"; st=$?
+  rm -f "$r.lock"
+  [ "$st" -eq 0 ] || ds_fail "cannot write the roster $r"
 }
 
 # ds_set <roster> <name> <field> <json value>: rewrites one field of one row.
