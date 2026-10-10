@@ -66,8 +66,7 @@ case $rung in
 esac
 root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "check.sh: not in a git repo" >&2; exit 2; }
 cd "$root" || exit 2
-# Every later `cd` takes a path relative to the root, which an exported CDPATH
-# would resolve elsewhere.
+# Every later `cd` is root-relative, which an exported CDPATH would redirect.
 unset CDPATH
 nl='
 '
