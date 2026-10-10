@@ -45,7 +45,9 @@ rows=$(jq -c '[(.drift[] | {skill, pinned: .pin, head}),
   || ship_fail "cannot read plan: $planf"
 table=$(jq -r 'if length == 0 then empty else
   "| Skill | Pinned | Upstream head |", "|---|---|---|",
-  (.[] | "| \(.skill) | \(if .pinned == null then "unpinned" else "`\(.pinned)`" end) | `\(.head)` |") end' <<<"$rows")
+  (.[] | "| \(.skill) | \(if .pinned == null then "unpinned" else "`\(.pinned)`" end) | `\(.head)` |") end' <<<"$rows") \
+  || ship_fail "cannot read plan: $planf"
+n=$(jq length <<<"$rows") || ship_fail "cannot read plan: $planf"
 
 # table_lines: a body's `## Drift` table lines, normalised. The heading is
 # matched whole at column 0, so `## Drifted` or an indented one is no section.
@@ -57,6 +59,8 @@ table_lines() {
 changed=true
 if [ -n "$current" ]; then
   old=$(cat "$current" 2>/dev/null) || ship_fail "cannot read body: $current"
-  [ "$(printf '## Drift\n%s\n' "$table" | table_lines)" != "$(printf '%s\n' "$old" | table_lines)" ] || changed=false
+  new_lines=$(printf '## Drift\n%s\n' "$table" | table_lines) || ship_fail "cannot read plan: $planf"
+  old_lines=$(printf '%s\n' "$old" | table_lines) || ship_fail "cannot read body: $current"
+  [ "$new_lines" != "$old_lines" ] || changed=false
 fi
-jq -cn --argjson n "$(jq length <<<"$rows")" --arg t "$table" --argjson c "$changed" '{rows: $n, table: $t, changed: $c}'
+jq -cn --argjson n "$n" --arg t "$table" --argjson c "$changed" '{rows: $n, table: $t, changed: $c}'
