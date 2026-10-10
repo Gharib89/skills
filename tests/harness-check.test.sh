@@ -85,14 +85,12 @@ for p in "$r/../outside.py" ../outside.py link/outside.py; do
   check "$p, which leads outside the repo, is skipped" '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
 done
 rm "$r/link"
-# An exported CDPATH naming a repo directory, or a directory whose name starts
-# with `-`, still resolves inside the root, and the runner never takes a path
-# as an option (#554).
+# An exported CDPATH holding a directory named like a repo directory, or a
+# directory whose name starts with `-`, still resolves inside the root, and the
+# runner never takes a path as an option (#554).
 mkdir -p "$fixture/elsewhere/sub"
-export CDPATH=$fixture/elsewhere
-run "$r" edit sub/c.py
-unset CDPATH
-check "an exported CDPATH naming a repo directory still lints the file there" \
+CDPATH=$fixture/elsewhere run "$r" edit sub/c.py
+check "an exported CDPATH holding a same-named directory still lints the repo's file" \
   '{"rung":"edit","verdict":"fail","checks":{"runner":"fail"}}' "$out"
 mkdir -p "$r/-foo"; echo 'x = BAD' > "$r/-foo/d.py"
 run "$r" edit -foo/d.py
@@ -153,6 +151,16 @@ check "with no files named, an untracked change is in the file set" \
   '{"rung":"turn","verdict":"pass","checks":{"typecheck:web":"pass","tests:web":"pass"}}' "$out"
 check "the untracked file reaches affected tests" "typecheck-web
 related src/new.ts" "$(cat "$ARGS_LOG")"
+
+# Under an exported CDPATH holding a same-named directory, a member's commands
+# still run in the member's own directory (#554).
+stub where 'pwd -P >> "$ARGS_LOG"'
+r=$(repo cdpath "TURN_ROWS='api/|api|*.py||where|'")
+mkdir -p "$r/api" "$fixture/elsewhere/api"
+: > "$ARGS_LOG"
+CDPATH=$fixture/elsewhere run "$r" turn api/app.py
+check "an exported CDPATH leaves a member's commands in its own directory" \
+  "$(cd "$r/api" && pwd -P)" "$(cat "$ARGS_LOG")"
 
 r=$(repo root "TURN_ROWS='|app|*.py||bad|'")
 run "$r" turn lib/x.py

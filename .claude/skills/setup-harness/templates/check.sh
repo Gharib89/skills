@@ -60,6 +60,9 @@ case $rung in
 esac
 root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "check.sh: not in a git repo" >&2; exit 2; }
 cd "$root" || exit 2
+# Every later `cd` takes a path relative to the root, which an exported CDPATH
+# would resolve elsewhere.
+unset CDPATH
 nl='
 '
 deadline=${CHECK_DEADLINE:-}
@@ -153,7 +156,7 @@ EOF
 inside() {
   local d=${1%/*}
   case $1 in */*) d=${d:-/} ;; *) d=. ;; esac
-  d=$(CDPATH='' cd -- "$d" 2>/dev/null && pwd -P) || return 1
+  d=$(cd -- "$d" 2>/dev/null && pwd -P) || return 1
   case $d in "$root") d='' ;; "$root"/*) d=${d#"$root"/}/ ;; *) return 1 ;; esac
   printf '%s' "$d${1##*/}"
 }
