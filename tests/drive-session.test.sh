@@ -58,7 +58,7 @@ check_rc "spawn refuses a name already in the roster" 1 "$rc"
 check "the refusal names the roster holding it" "s1 is already in the roster $roster" "$(jq -r .error <<<"$out")"
 check "the refusal reaches no herdr" "" "$(calls)"
 # Herdr's name rule, [a-z][a-z0-9_-]{0,31}, held on its edges.
-for bad in Bad _s1 1s s.1 "s 1" .. "s1/x" "a$(printf 'b%.0s' {1..32})"; do
+for bad in Bad _s1 1s s.1 "s 1" " s1" .. "s1/x" "a$(printf 'b%.0s' {1..32})"; do
   out=$(bash "$s/spawn.sh" "$bad" --roster "$roster" --cwd "$tmp/cwd" --prompt x 2>/dev/null); rc=$?
   check_rc "spawn refuses the name '$bad'" 2 "$rc"
   check "spawn says why it refuses '$bad'" "spawn: $bad is no Herdr agent name; use [a-z][a-z0-9_-]{0,31}" "$(jq -r .error <<<"$out")"
@@ -149,7 +149,7 @@ check "after the read, watch moves on to the next session's event" '{"name":"s2"
 out=$(bash "$s/read.sh" s9 --roster "$roster" 2>/dev/null); rc=$?
 check_rc "read refuses a session the roster does not hold" 1 "$rc"
 check "the refusal names the roster" "s9 is not in the roster $roster" "$(jq -r .error <<<"$out")"
-for n in 0 00 -1 abc 1x; do
+for n in 0 00 -1 abc 1x " 5"; do
   bash "$s/read.sh" s1 --roster "$roster" --lines "$n" >/dev/null 2>&1; rc=$?
   check_rc "read refuses --lines $n" 2 "$rc"
 done
