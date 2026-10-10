@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.1 (2026-10-10)
+
+### Bug Fixes
+
+- **update-skills**: An others row moves its printed pins in owned skills
+  ([#541](https://github.com/Gharib89/skills/pull/541),
+  [`26a4fc8`](https://github.com/Gharib89/skills/commit/26a4fc8f865469e8d46c1ab7da570845da758ff6))
+
+
 ## v0.7.0 (2026-10-10)
 
 ### Features
