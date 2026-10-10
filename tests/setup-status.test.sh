@@ -17,7 +17,7 @@ own=$(sed -n 's/^  composes: //p' skills/setup-project/SKILL.md)
 own_src=${own%%#*}; own_sha=${own#*#}; own_sha=${own_sha%%:*}
 
 bin=$fixture/bin sys=$fixture/sys; mkdir -p "$bin" "$sys"
-for c in git jq awk grep head sed dirname; do ln -s "$(command -v "$c")" "$sys/$c" || exit 2; done
+for c in git jq awk grep head sed dirname cat; do ln -s "$(command -v "$c")" "$sys/$c" || exit 2; done
 fake() { # <name> <script body>
   printf '#!/bin/sh\n%s\n' "$2" > "$bin/$1" && chmod +x "$bin/$1"
 }
@@ -175,4 +175,27 @@ check "a stack whose tool is missing reads the tools row run" "uv missing" "$(ev
 check_rc "no root is a usage error" 2 "$(run >/dev/null; echo $?)"
 check "and answers an error object" "error" "$(run | jq -r 'keys[]')"
 check_rc "a root that is no directory exits 2" 2 "$(run "$fixture/nowhere" >/dev/null; echo $?)"
+# source-lock.sh: the source repo's lock with each skill it writes carrying its
+# version. A fake `curl` serves $raw_dir as the raw file host.
+srclock=skills/setup-project/scripts/source-lock.sh
+raw_dir=$fixture/raw; mkdir -p "$raw_dir/skills/ship"
+fake curl 'for a; do u=$a; done; f="$FAKE_RAW/${u#https://raw.githubusercontent.com/Gharib89/skills/main/}"
+  [ -f "$f" ] && cat "$f" || exit 22'
+jq -n '{version: 1, skills: {ship: {source: ".", computedHash: "x"}, tdd: {source: "o/r", ref: "'"$A"'"}}}' \
+  > "$raw_dir/skills-lock.json"
+printf -- '---\nname: ship\nmetadata:\n  version: 0.22.1\n---\n# ship\n' > "$raw_dir/skills/ship/SKILL.md"
+fetched() { FAKE_RAW=$raw_dir PATH="$bin:$sys" "$BASH" "$srclock" "$@" 2>/dev/null; }
+check "the source lock rewrites a source-. skill and carries its version, upstream entries kept" \
+  '{"skills":{"ship":{"source":"Gharib89/skills","version":"0.22.1"},"tdd":{"source":"o/r","ref":"'"$A"'"}}}' \
+  "$(fetched)"
+check "and setup-status takes it as a source lock" "done" "$(fetched > "$fixture/fetched.lock"; d=$(tree fetched)
+  state installed-skills "$d" "$fixture/fetched.lock")"
+printf -- '---\nname: ship\nmetadata:\n  version: latest\n---\n' > "$raw_dir/skills/ship/SKILL.md"
+check_rc "a SKILL.md with no dotted version exits 1" 1 "$(fetched >/dev/null; echo $?)"
+rm "$raw_dir/skills/ship/SKILL.md"
+check_rc "a SKILL.md that cannot be fetched exits 1" 1 "$(fetched >/dev/null; echo $?)"
+printf 'not json\n' > "$raw_dir/skills-lock.json"
+check_rc "a lock that is not JSON exits 1" 1 "$(fetched >/dev/null; echo $?)"
+check "and answers an error object" "error" "$(fetched | jq -r 'keys[]')"
+check_rc "an argument is a usage error" 2 "$(fetched x >/dev/null; echo $?)"
 finish

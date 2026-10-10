@@ -20,35 +20,28 @@
 #   is no dotted number
 set -uo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+
 usage='usage: setup-status <root> [<source-lock>]'
-tooling() {
-  if command -v jq >/dev/null; then jq -cn --arg e "$1" '{error: $e}'; else printf '{"error": "%s"}\n' "$1"; fi
-  printf '%s\n' "$1" >&2; exit 2
-}
-if [ "${1:-}" = --help ]; then
-  printf '%s\n' "$usage"
-  awk '/^# stdout:/ { f = 1 } f { if ($0 !~ /^#/ || /^# exit:/) exit; sub(/^# ?/, ""); print }' "$0"
-  exit 0
-fi
-command -v jq >/dev/null || tooling 'jq not installed'
-case ${1:-} in ''|-*) tooling "$usage" ;; esac
+sp_help "$usage" "$@"
+command -v jq >/dev/null || sp_tooling 'jq not installed'
+case ${1:-} in ''|-*) sp_tooling "$usage" ;; esac
 root=$1
-[ -d "$root" ] || tooling "not a directory: $root"
+[ -d "$root" ] || sp_tooling "not a directory: $root"
 slock=${2:-}
 if [ -n "$slock" ]; then
   jq -e '(.skills | type == "object")
     and ([.skills[] | .version // empty | test("^[0-9]+(\\.[0-9]+)*$")] | all)' "$slock" >/dev/null 2>&1 \
-    || tooling "source lock unreadable or malformed: $slock"
+    || sp_tooling "source lock unreadable or malformed: $slock"
 fi
-self=$(cd "$(dirname "$0")/.." && pwd) || tooling 'cannot find SKILL.md'
+self=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd) || sp_tooling 'cannot find SKILL.md'
 
 ev=()
 row() { # <step> <state>: prints the row with the evidence in $ev, then clears it
   jq -cn --arg s "$1" --arg t "$2" '{step: $s, state: $t, evidence: $ARGS.positional}' --args ${ev[@]+"${ev[@]}"}
   ev=()
 }
-# <file> <key>: a frontmatter `metadata` value, read as the indented `  <key>:`.
-front() { [ -f "$1" ] && awk -v k="  $2:" 'NR>1 && /^---$/{exit} index($0, k) == 1 {sub(/^[^:]*: */, ""); print; exit}' "$1"; }
+front() { [ -f "$1" ] && sp_front "$1" "$2"; }
 ver() { "$@" 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+' | head -n 1; }
 # <a> <b>: 0 when dotted number a is lower than b.
 lower() { awk -v a="$1" -v b="$2" 'BEGIN { n = split(a, x, "."); m = split(b, y, "."); if (m > n) n = m
