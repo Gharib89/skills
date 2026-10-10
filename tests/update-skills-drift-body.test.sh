@@ -117,4 +117,12 @@ out=$(bash "$body" "$tmp/source.json" --current "$tmp/nope.md" 2>/dev/null); rc=
 check_rc "an unreadable --current exits 1" 1 "$rc"
 check "an unreadable --current names it" "cannot read body: $tmp/nope.md" "$(jq -r .error <<<"$out")"
 
+# A read that fails after the plan parsed, here the row count, is no answer.
+mkdir "$tmp/bin"
+printf '#!/bin/sh\n[ "$1" = length ] && exit 5\nexec %s "$@"\n' "$(command -v jq)" > "$tmp/bin/jq"
+chmod +x "$tmp/bin/jq"
+out=$(PATH="$tmp/bin:$PATH" bash "$body" "$tmp/source.json" 2>/dev/null); rc=$?
+check_rc "a failed row count exits 1" 1 "$rc"
+check "a failed row count names the plan" "cannot read plan: $tmp/source.json" "$(jq -r .error <<<"$out")"
+
 finish
