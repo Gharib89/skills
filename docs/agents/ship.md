@@ -138,6 +138,7 @@ The title is therefore load-bearing twice: the `bump-guard` leg holds it to a Co
 ## PR
 
 Template: .github/pull_request_template.md
+Merge: on-clean-gate
 
 ## Public surface
 
