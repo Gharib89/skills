@@ -297,9 +297,9 @@ finds the drift issue this PR closes; steps 6 and 8 run unchanged. Per row:
    a reliance of the composing skill's prose on it; for an `others` row, a
    change to or removal of something this repo's own files (`skills/`, `docs/`,
    `CLAUDE.md`, `AGENTS.md`) name. A row that breaks is **held back**, with no
-   prose reworked to fit it: re-run its install line at `#<from>` (no `#` for a
-   null `old_ref`), put `<from>` back on each line step 2 edited, and record
-   `held back: <skill>: <the reliance it breaks>`.
+   prose reworked: re-run its install line at `#<from>` (a null `old_ref`
+   restores its folder and lock entry from `<old>`), put `<from>` back on each
+   line step 2 edited, and record `held back: <skill>: <reliance it breaks>`.
 
 Then the refresh line, and `scripts/local-gate.sh`, whose `derived-copies` gate
 holds every pin to the lock. A gate red at the new pins holds back the row whose

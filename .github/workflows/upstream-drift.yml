@@ -1,7 +1,7 @@
 # The daily upstream-drift check: update-skills' heads and plan, run with no
 # model, file the source repo's drift issue or rewrite its `## Drift` table
-# when an upstream skill moved, and mention the owner on every such write. A
-# day with nothing new writes nothing. The owner then runs /ship on the issue,
+# when an upstream skill moved, and mention the owner once per table it
+# announces. A day with nothing new writes nothing. The owner then runs /ship on the issue,
 # which moves the pins by update-skills' "In a Ship run".
 name: upstream-drift
 
@@ -78,10 +78,17 @@ jobs:
           elif [ "$changed" = true ]; then
             "$S/update-issue-body.sh" "$n" --section Drift --body-file "$t/table.md"
             echo "Rewrote the drift table of #$n." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "#$n already lists this drift: nothing written." >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          # The mention carries a marker of the table it announces, and a run
+          # finding no comment with the current table's marker posts it: a
+          # mention that failed, or a create whose answer was lost, is posted
+          # by the next run rather than never.
+          mark="<!-- upstream-drift $(sha256sum < "$t/table.md" | cut -c1-16) -->"
+          gh api --paginate "repos/$REPO/issues/$n/comments" --jq '.[].body' > "$t/comments.txt"
+          if grep -qF -- "$mark" "$t/comments.txt"; then
+            echo "#$n already lists and announces this drift: nothing written." >> "$GITHUB_STEP_SUMMARY"; exit 0
           fi
           # shellcheck disable=SC2016  # the backticks are Markdown code spans
-          printf '@%s upstream drift changed: the `## Drift` table above lists what moved. `/ship %s` moves the pins.\n' \
-            "$OWNER" "$n" > "$t/note.md"
+          printf '@%s upstream drift changed: the `## Drift` table above lists what moved. `/ship %s` moves the pins.\n%s\n' \
+            "$OWNER" "$n" "$mark" > "$t/note.md"
           gh issue comment "$n" --repo "$REPO" --body-file "$t/note.md"
