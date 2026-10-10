@@ -152,9 +152,10 @@
 #     check, every profile CI leg succeeded on head, verifications passed or were
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged with a dispositioned Round. A
-#     not-reviewed primary, or one that spent its Cap: (Round lines reaching it)
-#     and stopped at cap, may be covered by a fallback that stopped so, and a
-#     fallback is owed its own stop only after such a primary. Other cap,
+#     not-reviewed primary, or one that spent its Cap: (dispositioned Round
+#     lines numbered 1 through Cap) and stopped at cap, may be covered by a
+#     fallback that stopped so, and a fallback is owed its own stop only after
+#     such a primary. Other cap,
 #     small lane and auto-once stops, a deferred gate beside a non-green check
 #     outside Legs:, nonblank Override or Ship-defect
 #     evidence, and defect or tracker drafts beside the Run file (excluding
