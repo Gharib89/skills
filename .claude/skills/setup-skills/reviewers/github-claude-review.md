@@ -3,7 +3,7 @@
 Scaffold for a repo whose ship profile names Claude Code as a reviewer. It comes in two shapes, on-push and on-request, and a repo takes exactly one; the on-request shape stands alone or as another reviewer's fallback:
 
 - **The on-push shape.** Claude is the only reviewer and reviews every push to an open PR, so it is the whole second pair of eyes, and its job lands a check run on the PR head.
-- **The on-request shape.** A PR comment is the trigger, so nothing fires until a round is asked for. Standalone (`Fallback-for: None.`), it is the repo's reviewer and ship asks for each round, so the cap binds and a small-lane run spends one round. As a fallback, the repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out, so nothing fires while the primary is healthy. A fallback is on-request because a workflow that fires on every push cannot be withheld while the primary is healthy.
+- **The on-request shape.** A PR comment is the trigger, so nothing fires until a round is asked for. Standalone (`Fallback-for: None.`), it is the repo's reviewer and ship asks for each round, so the cap binds and a small-lane run spends one round. As a fallback, the repo already has a reviewer (Copilot, CodeRabbit) and this one stands in for it on the month its quota runs out, or on a run where the primary is capped with findings (its cap spent, the last round's fixes changing the tree), so nothing fires while the primary reviews and converges. A fallback is on-request because a workflow that fires on every push cannot be withheld while the primary is healthy.
 
 What both shapes do the same way, because ship reads a round off the host alone:
 
