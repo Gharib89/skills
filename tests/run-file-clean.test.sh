@@ -102,6 +102,17 @@ base; change_run '/^Round: primary/d'; held 'stop without dispositioned round' '
 base; change_run '/^Stop: primary/d'; held 'missing reviewer stop' 'reviewer primary: missing stop'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'not reviewed primary covered by a fallback stopped on tree unchanged'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: cap/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'cap is not rescued by fallback' 'reviewer primary: cap'
+# A primary that spent its Cap: on a tree-changing last round owes its fallback a run (#531).
+capped() { base; sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_run 's/Stop: primary: tree unchanged/Round: primary 2: fixes pushed\nStop: primary: cap/'; }
+unheld() { check "$1 does not hold $2" false "$(call | jq -r --arg r "$2" '.held_by | index($r) != null')"; }
+capped; held 'capped primary owes its fallback' 'reviewer fallback: not reviewed'
+capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'capped primary covered by a fallback stopped on tree unchanged'
+capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'capped primary with a capped fallback' 'reviewer fallback: cap'
+capped; printf 'Stop: fallback: tree unchanged\n' >> "$f"; held 'capped primary with an undispositioned fallback' 'reviewer fallback: no dispositioned round'
+capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged/'; clean 'primary at its cap with an unchanged tree owes no fallback'
+# A docs-only fix-only diff ends the loop before Cap: is spent: no fallback is owed, and none covers it.
+capped; change_run '/^Round: primary 2/d'; held 'docs-only end before the cap' 'reviewer primary: cap'
+capped; change_run '/^Round: primary 2/d'; unheld 'docs-only end before the cap' 'reviewer fallback: not reviewed'
 base; change_run 's/Stop: primary: tree unchanged/Stop: primary: auto-once/'; held 'auto-once changed round' 'reviewer primary: auto-once'
 base; sed 's/Trigger: on-request/Trigger: auto-once/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; clean 'auto-once unchanged round records tree unchanged'
 base; printf 'Override: declined gating finding\n' >> "$f"; held 'override needed' 'override needed: declined gating finding'
