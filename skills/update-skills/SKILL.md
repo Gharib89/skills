@@ -89,11 +89,11 @@ and the row reaches the source repo in step 7 instead.
 ### 5. Other skills
 
 `others` lists the repo-scoped lock entries, neither from the source repo nor
-composed, whose upstream moved. Non-empty: ask once, with one multi-select
-question per four skills, four questions to an AskUserQuestion call, each
-option the skill's name with `<old_ref, or "no ref"> → <head>` as its
-description. Run the `install` line of each skill ticked. Personal skills under
-`~/.claude/skills` are never in the lock and never touched.
+composed, whose upstream moved. Non-empty, outside the source repo (step 9
+moves every row there): ask once, in multi-select questions of four skills,
+four to an AskUserQuestion call, each option the skill's name described by
+`<old_ref, or "no ref"> → <head>`; run the ticked `install` lines.
+Personal skills (`~/.claude/skills`) are never in the lock, never touched.
 
 ### 6. setup-skills sections, then retired terms
 
