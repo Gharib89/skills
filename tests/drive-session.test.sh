@@ -46,10 +46,10 @@ out=$(bash "$s/spawn.sh" s1 --roster "$roster" --cwd "$tmp/cwd" --prompt "do the
 check_rc "spawn exits 0" 0 "$rc"
 check "spawn answers the session, its tab and pane, and that it prompted" \
   '{"roster":"'"$roster"'","name":"s1","tab":"w1:t-s1","pane":"w1:p-s1","status":"idle","prompted":true}' "$(jq -c . <<<"$out")"
-check "spawn opens an unfocused tab in this workspace, starts claude on the model, then prompts without waiting" \
+check "spawn opens an unfocused tab in this workspace, starts claude on the model, then prompts until the turn starts or opens a dialog" \
   "tab create --workspace w1 --label s1 --cwd $tmp/cwd --no-focus
 agent start s1 --kind claude --pane w1:p-s1 -- --model haiku
-agent prompt s1 do the task" "$(calls)"
+agent prompt s1 do the task --wait --until working --until blocked --timeout 8000" "$(calls)"
 check "spawn records the row with the sequence number from before the prompt" \
   '{"name":"s1","pane":"w1:p-s1","tab":"w1:t-s1","cwd":"'"$tmp/cwd"'","task":"do the task","seen_seq":10}' \
   "$(jq -c '.sessions[0]' "$roster")"
@@ -82,6 +82,7 @@ printf '99' > "$HERDR_FAKE/s6.start-busy"
 out=$(bash "$s/spawn.sh" s6 --roster "$tmp/s6.json" --cwd "$tmp/cwd" --prompt x 2>/dev/null); rc=$?
 check_rc "a pane that never takes claude fails the spawn" 1 "$rc"
 check "the failure names the tab left open" "agent start: pane is not an available shell; tab w1:t-s6 left open" "$(jq -r .error <<<"$out")"
+check "a failed first spawn still leaves an empty roster" '{"sessions":[]}' "$(jq -c . "$tmp/s6.json")"
 calls >/dev/null
 
 # A session that stops on a startup dialog (an untrusted folder) is a row whose
@@ -108,6 +109,20 @@ check "the failure names the tab left open and the way to send the task" \
   "agent prompt: prompt failed; s3 stays in the roster with tab w1:t-s3 open: send the task with answer --text" "$(jq -r .error <<<"$out")"
 calls >/dev/null
 
+# A prompt that starts no turn (a local slash command, an Enter that did not
+# register) never moves the sequence number, so watch would never report it:
+# spawn says so instead, and keeps the row.
+printf 'idle 60\n' > "$HERDR_FAKE/s7.states"
+: > "$HERDR_FAKE/s7.prompt-stall"
+out=$(bash "$s/spawn.sh" s7 --roster "$tmp/s7.json" --cwd "$tmp/cwd" --prompt "/rename x" 2>/dev/null); rc=$?
+check_rc "spawn whose prompt starts no turn exits 1" 1 "$rc"
+check "the answer carries herdr's code" agent_prompt_stalled "$(jq -r .code <<<"$out")"
+check "the answer names the session and says the text reached its pane" \
+  "agent prompt: the text reached s7's pane but started no turn (agent_prompt_stalled); it stays in the roster with tab w1:t-s7 open: read it before sending anything" \
+  "$(jq -r .error <<<"$out")"
+check "the stalled session keeps its row" s7 "$(jq -r '.sessions[0].name' "$tmp/s7.json")"
+calls >/dev/null
+
 # --- watch -----------------------------------------------------------------------
 # The measured trap: after a prompt, status reads the previous turn's `done`
 # until the turn starts. A settled status whose sequence number has not moved
@@ -116,7 +131,20 @@ printf 'done 10\n' > "$HERDR_FAKE/s1.states"
 printf 'blocked 20\n' > "$HERDR_FAKE/s2.states"
 out=$(bash "$s/watch.sh" --roster "$roster" --timeout 1500); rc=$?
 check_rc "watch on stale states exits 0 at its timeout" 0 "$rc"
-check "watch never reports a stale done or an acknowledged blocked" '{"name":null,"event":"timeout"}' "$out"
+check "watch never reports a stale done or an acknowledged blocked" null "$(jq -c .name <<<"$out")"
+check "its timeout lists each session's status and sequence number" \
+  '{"event":"timeout","sessions":[{"name":"s1","status":"done","seq":10},{"name":"s2","status":"blocked","seq":20}]}' \
+  "$(jq -c '{event, sessions: [.sessions[] | {name, status, seq}]}' <<<"$out")"
+check "and how long each sequence number stood still, in seconds" true \
+  "$(jq '[.sessions[].still_s] | all(type == "number" and . >= 1)' <<<"$out")"
+# A sequence number that moves starts its count again: a session working
+# through 70, 71 and 72 has stood still only since 72.
+printf 'idle 69\n' > "$HERDR_FAKE/w1.states"
+bash "$s/spawn.sh" w1 --roster "$tmp/w1.json" --cwd "$tmp/cwd" --prompt x >/dev/null
+printf 'working 70\nworking 71\nworking 72\n' > "$HERDR_FAKE/w1.states"
+out=$(bash "$s/watch.sh" --roster "$tmp/w1.json" --timeout 2500)
+check "a moved sequence number restarts still_s" '72 true' "$(jq -r '.sessions[0] | "\(.seq) \(.still_s <= 1)"' <<<"$out")"
+calls >/dev/null
 
 printf 'working 11\ndone 12\n' > "$HERDR_FAKE/s1.states"
 out=$(bash "$s/watch.sh" --roster "$roster" --timeout 3000)
@@ -158,6 +186,9 @@ check "read answers the status, the sequence number and the recent output" \
 check "read takes the unwrapped recent output" "agent get s1
 agent read s1 --source recent-unwrapped --lines 40" "$(calls)"
 check "read acknowledges the event" 12 "$(seen s1)"
+bash "$s/read.sh" s1 --roster "$roster" >/dev/null
+check "read takes 40 lines by default" "agent get s1
+agent read s1 --source recent-unwrapped --lines 40" "$(calls)"
 out=$(bash "$s/watch.sh" --roster "$roster" --timeout 3000)
 check "after the read, watch moves on to the next session's event" '{"name":"s2","event":"blocked","seq":21}' "$out"
 out=$(bash "$s/read.sh" s9 --roster "$roster" 2>/dev/null); rc=$?
@@ -203,7 +234,7 @@ check "a session settling at idle is an event" '{"name":"s2","event":"idle","seq
 calls >/dev/null
 out=$(bash "$s/answer.sh" s2 --roster "$roster" --text "task two")
 check "a session at its prompt is answered with text" "agent get s2
-agent prompt s2 task two" "$(calls)"
+agent prompt s2 task two --wait --until working --until blocked --timeout 8000" "$(calls)"
 check "answer with text records the sequence number before the prompt" 23 "$(seen s2)"
 # A send Herdr refuses acknowledges nothing, so watch reports the event again.
 printf 'idle 24\n' > "$HERDR_FAKE/s2.states"
@@ -211,6 +242,19 @@ printf 'agent_busy' > "$HERDR_FAKE/s2.prompt-error"
 bash "$s/answer.sh" s2 --roster "$roster" --text again >/dev/null 2>&1; rc=$?
 check_rc "an answer Herdr refuses exits 1" 1 "$rc"
 check "a refused send leaves the row's sequence number" 23 "$(seen s2)"
+rm "$HERDR_FAKE/s2.prompt-error"
+: > "$HERDR_FAKE/s2.prompt-stall"
+out=$(bash "$s/answer.sh" s2 --roster "$roster" --text "/help" 2>/dev/null); rc=$?
+check_rc "an answer that starts no turn exits 1" 1 "$rc"
+check "its answer carries herdr's code and names the session" \
+  "agent_prompt_stalled agent prompt s2: the text reached the pane but started no turn (agent_prompt_stalled): read s2 before sending anything" \
+  "$(jq -r '"\(.code) \(.error)"' <<<"$out")"
+rm "$HERDR_FAKE/s2.prompt-stall"
+printf 'timeout' > "$HERDR_FAKE/s2.prompt-error"
+out=$(bash "$s/answer.sh" s2 --roster "$roster" --text "/help" 2>/dev/null); rc=$?
+check "herdr's own timeout is the same answer" \
+  "1 timeout agent prompt s2: the text reached the pane but started no turn (timeout): read s2 before sending anything" \
+  "$rc $(jq -r '"\(.code) \(.error)"' <<<"$out")"
 rm "$HERDR_FAKE/s2.prompt-error"
 bash "$s/answer.sh" s2 --roster "$roster" --text again >/dev/null
 check "a sent answer acknowledges the state it answered" 24 "$(seen s2)"
@@ -222,17 +266,51 @@ check_rc "answer refuses a dash-led --text value as a usage error" 2 "$rc"
 out=$(bash "$s/answer.sh" s2 --roster "$roster" --text="- continue"); rc=$?
 check_rc "answer takes dash-led text as --text=" 0 "$rc"
 check "the dash-led text is prompted verbatim" "agent get s2
-agent prompt s2 - continue" "$(calls)"
+agent prompt s2 - continue --wait --until working --until blocked --timeout 8000" "$(calls)"
 bash "$s/answer.sh" s2 --roster "$roster" --text= >/dev/null 2>&1; rc=$?
 check_rc "answer refuses an empty --text=" 2 "$rc"
 printf 'idle 40\n' > "$HERDR_FAKE/s4.states"
 bash "$s/spawn.sh" s4 --roster "$tmp/s4.json" --cwd "$tmp/cwd" --prompt="- review these items" >/dev/null; rc=$?
 check_rc "spawn takes a dash-led task as --prompt=" 0 "$rc"
-check "spawn prompts the dash-led task verbatim" "agent prompt s4 - review these items" "$(calls | grep 'agent prompt')"
+check "spawn prompts the dash-led task verbatim" "agent prompt s4 - review these items --wait --until working --until blocked --timeout 8000" "$(calls | grep 'agent prompt')"
 usage_line=$(sed -n 1p <<<"$(bash "$s/answer.sh" --help)")
 out=$(bash "$s/answer.sh" s2 --roster "$roster" --text a --keys b 2>/dev/null); rc=$?
 check_rc "answer takes text or keys, not both" 2 "$rc"
 check "text and keys together answer the usage line" "$usage_line" "$(jq -r .error <<<"$out")"
+calls >/dev/null
+
+# --- parallel calls ------------------------------------------------------------
+# A supervisor reading two sessions in one message runs both reads at once:
+# each read-modify-write of the roster keeps its update, and the roster parses.
+par=$tmp/par.json
+for n in p1 p2; do
+  printf 'idle 1\n' > "$HERDR_FAKE/$n.states"
+  bash "$s/spawn.sh" "$n" --roster "$par" --cwd "$tmp/cwd" --prompt x >/dev/null
+done
+lost=0
+for i in $(seq 2 31); do
+  printf 'done %s\n' "$i" > "$HERDR_FAKE/p1.states"
+  printf 'done %s\n' "$((i + 100))" > "$HERDR_FAKE/p2.states"
+  bash "$s/read.sh" p1 --roster "$par" >/dev/null 2>&1 &
+  bash "$s/read.sh" p2 --roster "$par" >/dev/null 2>&1 &
+  wait
+  [ "$(jq -c '[.sessions[].seen_seq]' "$par" 2>/dev/null)" = "[$i,$((i + 100))]" ] || lost=$((lost + 1))
+done
+check "two reads in parallel each keep their seen_seq, in every one of 30 rounds" 0 "$lost"
+check "and leave no lock behind" "" "$(ls "$par.lock" 2>/dev/null)"
+rm -f "$tmp/par2.json"
+for n in p3 p4; do printf 'idle 1\n' > "$HERDR_FAKE/$n.states"; done
+bash "$s/spawn.sh" p3 --roster "$tmp/par2.json" --cwd "$tmp/cwd" --prompt x >/dev/null 2>&1 &
+bash "$s/spawn.sh" p4 --roster "$tmp/par2.json" --cwd "$tmp/cwd" --prompt x >/dev/null 2>&1 &
+wait
+check "two spawns in parallel each add their row" '["p3","p4"]' "$(jq -c '[.sessions[].name] | sort' "$tmp/par2.json")"
+# A lock a killed script left behind is a not-ok answer naming it, not a hang.
+: > "$par.lock"
+out=$(bash "$s/read.sh" p1 --roster "$par" 2>/dev/null); rc=$?
+check_rc "a roster locked past 10 s fails the write" 1 "$rc"
+check "the failure names the lock to remove" \
+  "the roster $par stays locked: remove $par.lock once no drive-session script runs" "$(jq -r .error <<<"$out")"
+rm -f "$par.lock"
 calls >/dev/null
 
 # --- gone ----------------------------------------------------------------------
@@ -243,7 +321,7 @@ out=$(bash "$s/read.sh" s1 --roster "$roster")
 check "read answers a gone session with no output" '{"name":"s1","status":"gone","seq":null,"output":null}' "$(jq -c . <<<"$out")"
 check "read marks the row gone" true "$(jq -r '.sessions[0].gone' "$roster")"
 out=$(bash "$s/watch.sh" --roster "$roster" --timeout 1000)
-check "a gone row is not watched again" '{"name":null,"event":"timeout"}' "$out"
+check "a gone row is not watched again" '["s2"]' "$(jq -c '[.sessions[].name]' <<<"$out")"
 bash "$s/answer.sh" s1 --roster "$roster" --text hi >/dev/null 2>&1; rc=$?
 check_rc "answer to a gone session exits 1" 1 "$rc"
 rm "$HERDR_FAKE/s2.states"

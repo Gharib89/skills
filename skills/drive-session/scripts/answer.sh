@@ -5,15 +5,20 @@
 #
 # Once the send succeeds, the row's `seen_seq` becomes the session's sequence
 # number from before it, so the next `watch` reports the turn the answer starts
-# and not the state it answered; a send Herdr refuses acknowledges nothing. Text goes through `agent prompt`, without waiting,
-# and is refused to a `blocked` session, which Herdr would refuse with
+# and not the state it answered; a send Herdr refuses acknowledges nothing.
+# Text goes through `agent prompt`, waiting only until the turn starts or opens
+# a dialog: text that starts no turn (a local slash command) is a not-ok answer
+# saying it reached the pane, since `watch` would never report it. Text is
+# refused to a `blocked` session, which Herdr would refuse with
 # `agent_blocked`: a dialog is answered with keys (`1`, `Enter`, `esc`), sent
 # through `agent send-keys` whatever the status. Text opening with `-` goes as
 # `--text=<t>`, since `--text <t>` refuses a dash-led value as a missing one.
 #
 # stdout: {name, sent, seen_seq}, `sent` being `text` or `keys`
 # exit: 0 sent · 1 the name is not in the roster, the session is gone, the
-#       roster cannot be written, or herdr refused (its code in `code`) · 2
+#       roster cannot be written or locked, the text started no turn (`code`
+#       `agent_prompt_stalled` or `timeout`), or herdr refused (its code in
+#       `code`) · 2
 #       usage, text to a blocked session, outside Herdr, an unreadable roster,
 #       or an answer from herdr it cannot read
 set -uo pipefail
@@ -47,7 +52,12 @@ ds_agent "$name" || ds_fail "$name is gone: Herdr no longer knows it" agent_not_
 seq=$ds_seq
 [ "$sent" = text ] && [ "$ds_status" = blocked ] && ds_tooling "answer: $name is blocked on a dialog; answer it with --keys"
 if [ "$sent" = text ]; then
-  ds_herdr agent prompt "$name" "$text" || ds_fail "agent prompt $name: $ds_msg" "$ds_code"
+  ds_prompt "$name" "$text"
+  case $? in
+    0) ;;
+    2) ds_fail "agent prompt $name: the text reached the pane but started no turn ($ds_code): read $name before sending anything" "$ds_code" ;;
+    *) ds_fail "agent prompt $name: $ds_msg" "$ds_code" ;;
+  esac
 else
   ds_herdr agent send-keys "$name" "${keys[@]}" || ds_fail "agent send-keys $name: $ds_msg" "$ds_code"
 fi

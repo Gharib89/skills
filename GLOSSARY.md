@@ -367,7 +367,7 @@ The JSON file listing a supervisor's supervised sessions, one row each with its 
 _Avoid_: session list, registry, run file alone (that is ship's)
 
 **Escalation**:
-A supervised session's question the supervisor forwards to the human instead of answering: a merge gate the merge allowance does not cover (none granted, or the gate not clean), an approval for a destructive command, or a fork in scope, schema or architecture. It names the session, quotes the question and carries a proposed answer.
+A supervised session's question the supervisor forwards to the human instead of answering: a merge gate the merge allowance does not cover (none granted, or the gate not clean), an approval for a destructive command, every permission dialog (one approving a tool call, not the startup trust dialog), or a fork in scope, schema or architecture. It names the session, quotes the question and carries a proposed answer.
 _Avoid_: hand-off (that is ship's stop), question, ping
 
 **Merge allowance**:
