@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.2 (2026-10-10)
+
+### Bug Fixes
+
+- **setup-harness**: Check.sh drops files under an exported CDPATH or a dash-named directory
+  ([#563](https://github.com/Gharib89/skills/pull/563),
+  [`c42be8e`](https://github.com/Gharib89/skills/commit/c42be8e80230776d9dc2603a75756953a25a9123))
+
+
 ## v0.10.1 (2026-10-10)
 
 ### Bug Fixes
