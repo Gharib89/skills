@@ -20,6 +20,11 @@
       "skillPath": "skills/engineering/domain-modeling/SKILL.md",
       "computedHash": "b3eb40152b81f0c98fd2095a023c019452dbdce56f7540cc67fece2972db8369"
     },
+    "drive-session": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "4bfaf27a426eea03eb510efa42f716c7d27028101e3b695696470d00173562f5"
+    },
     "find-docs": {
       "source": "upstash/context7",
       "ref": "522c4db4fa2e1e31f1b320f09fa8c8fab376987a",

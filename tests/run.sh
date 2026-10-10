@@ -3,10 +3,11 @@
 # script: it sources the function under test and asserts on strings, runs a gate
 # script against a fixture and asserts on its exit code, or invokes a mechanic
 # malformed and asserts on the usage error its guard prints. None reaches a host,
-# and `tests/host-stub.sh` is what holds them to it: a `gh` and an `az` that record
-# the call and fail sit in front of PATH, and a file whose run leaves entries in
-# the log fails here whatever its own cases said. The local gate's `tests` gate is
-# this script.
+# and `tests/host-stub.sh` is what holds them to it: a `gh`, an `az` and a
+# `herdr` (the live Herdr server drive-session drives, reached the same way)
+# that record the call and fail sit in front of PATH, and a file whose run
+# leaves entries in the log fails here whatever its own cases said. The local
+# gate's `tests` gate is this script.
 #
 # Files run concurrently, at most $SHIP_TEST_JOBS at once (default: the CPU
 # count), because the suite spends its time waiting on subprocesses, not on the
@@ -36,8 +37,8 @@ workers=${SHIP_TEST_JOBS:-$(nproc 2>/dev/null || echo 1)}
 stub=$(mktemp -d) || exit 2
 trap 'rm -rf "$stub"' EXIT
 ship_test_host_stub "$stub" || exit 2
-# In front of PATH, so a test reaching for `gh` or `az` finds the stub. A test
-# needing one to answer prepends its own fake, later and therefore earlier.
+# In front of PATH, so a test reaching for `gh`, `az` or `herdr` finds the stub.
+# A test needing one to answer prepends its own fake, later and therefore earlier.
 export PATH="$stub:$PATH"
 
 # <n> <file>: one file, its host log and its output kept apart from every other's.
