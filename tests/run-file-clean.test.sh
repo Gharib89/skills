@@ -110,6 +110,7 @@ capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged
 capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'capped primary with a capped fallback' 'reviewer fallback: cap'
 capped; printf 'Stop: fallback: tree unchanged\n' >> "$f"; held 'capped primary with an undispositioned fallback' 'reviewer fallback: no dispositioned round'
 capped; change_run 's/Round: primary 2:/Round: primary 3:/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'gapped round numbers do not spend the cap' 'reviewer primary: cap'
+capped; change_run 's/Round: primary 2: fixes pushed/Round: primary 2:   /'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'a blank round does not spend the cap' 'reviewer primary: cap'
 capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged/'; clean 'primary at its cap with an unchanged tree owes no fallback'
 # A docs-only fix-only diff ends the loop before Cap: is spent: no fallback is owed, and none covers it.
 capped; change_run '/^Round: primary 2/d'; held 'docs-only end before the cap' 'reviewer primary: cap'

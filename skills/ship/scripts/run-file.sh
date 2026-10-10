@@ -760,11 +760,13 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]");
       def settled($name): stop($name) == "tree unchanged" and reviewed($name);
       # Capped with findings: Cap: spent on a tree-changing last round, which a
-      # docs-only end before the cap, also `Stop: cap`, is not. The rounds must
-      # read 1..Cap exactly: a gapped or overrun record is no evidence of a spent cap.
+      # docs-only end before the cap, also `Stop: cap`, is not. The dispositioned
+      # rounds must read 1..Cap exactly: a gapped, blank or overrun record is no
+      # evidence of a spent cap.
       def cap_spent($name): stop($name) == "cap"
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
-             | $cap != [] and ([rests("Round: " + $name + " ")[] | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
+             | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]"))
+                 | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
       def owes_fallback($name): stop($name) == "not reviewed" or cap_spent($name);
       def greenleg($leg): [$ci.checks[] | select(named($leg))] as $checks
         | ($checks | length) > 0 and all($checks[]; .status == "success") and samehead($ci.head_sha; $head) and $ci.status == "green";
