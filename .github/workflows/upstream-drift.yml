@@ -36,6 +36,9 @@ jobs:
       # failed, which fails the job. Drift itself never does.
       # The issue's labels are only ever set when it is filed: a
       # `ready-for-human` on it is the owner's, after a run held a pin back.
+      # A bot-filed issue alone reaches no one's notifications; the mention
+      # does. It posts with gh: comment-issue's create-then-verify reads
+      # GET /user, which a workflow token is refused (403).
       - name: File or update the drift issue
         env:
           GH_TOKEN: ${{ github.token }}
@@ -80,4 +83,4 @@ jobs:
           # shellcheck disable=SC2016  # the backticks are Markdown code spans
           printf '@%s upstream drift changed: the `## Drift` table above lists what moved. `/ship %s` moves the pins.\n' \
             "$OWNER" "$n" > "$t/note.md"
-          "$S/comment-issue.sh" "$n" --body-file "$t/note.md"
+          gh issue comment "$n" --repo "$REPO" --body-file "$t/note.md"
