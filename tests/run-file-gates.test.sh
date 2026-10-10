@@ -415,11 +415,11 @@ reset
 
 # --- close 7 ---------------------------------------------------------------------
 
-stops='cap, tree unchanged, small lane, auto-once, not reviewed'
+stops='cap, tree unchanged, small lane, inline lane, auto-once, not reviewed'
 run7; held=$(cat "$rf"); close 7
-refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged|small lane|auto-once|not reviewed>`'
+refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged|small lane|inline lane|auto-once|not reviewed>`'
 check "the same refusal names the other reviewer's stop" yes "$(has 'no Stop line for claude' "$err")"
-check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed`' "$err")"
+check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed` or `inline lane`' "$err")"
 check "and the other's" yes "$(has 'no Round line for claude' "$err")"
 
 run7; add 'Stop: copilot: cap' 'Stop: claude: auto-once' 'Round: copilot 1: 2 findings, both fixed' 'Round: copilot 2: clean' 'Round: claude 1: clean'
@@ -429,6 +429,10 @@ admitted "a stop and a round for each reviewer"
 run7; add 'Stop: copilot: not reviewed' 'Stop: claude: small lane' 'Round: claude 1: clean'
 close 7
 admitted "a not-reviewed reviewer needs no round"
+
+run7; add 'Stop: copilot: inline lane' 'Stop: claude: inline lane'
+close 7
+admitted "an inline-lane reviewer needs no round"
 
 run7; add '- Stop: copilot: tree unchanged' '- Round: copilot 1: clean' 'Stop: claude: not reviewed'
 close 7

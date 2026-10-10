@@ -26,7 +26,7 @@ repo may be public.
 
 PR:        <url>  (<branch> → <default branch>)
 Issue:     <one-line restatement of what was asked>
-Lane:      <full | small: skipped <phase 3 verifications, docs-sync>>
+Lane:      <full | small: skipped <phase 3 verifications, docs-sync> | inline lane[: revoked to <small|full>: <why>]>
 
 Implementation
   - <what was built, 1 to 3 lines>
@@ -193,8 +193,9 @@ or `Merge: Default.` means post the summary in the conversation and **wait**
 for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
 means evaluate the clean gate below, unless an unmet criterion is listed, which
 waits for the human's waiver ([Unmet criteria](#unmet-criteria)). Any other
-value holds for the human as a profile error. The unattended branch never
-evaluates this option.
+value holds for the human as a profile error. An inline-lane run reads it as
+`on-clean-gate` for its own PR. The unattended branch never evaluates this
+option.
 
 For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
 and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
@@ -205,9 +206,11 @@ requires the local gate at that head with every gate `pass` or `deferred-to-ci`
 leg), every profile CI leg green at that head, every Verification `pass` or
 `n/a` (inapplicable), or `deferred-to-ci` with its `Also proven by CI:` leg
 green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
-recorded round. A fallback that stopped so answers for a primary that was not
-reviewed, or that was capped with findings (dispositioned `Round:` lines
-numbered 1 through the primary's `Cap:`); a fallback skipped because its
+recorded round, or, on-request, on `Stop: inline lane` while the Run file's
+last `Lane:` line reads `inline`. A fallback stopped on `tree
+unchanged` answers for a primary that was not reviewed, or that was capped
+with findings (dispositioned `Round:` lines numbered 1 through the primary's
+`Cap:`); a fallback skipped because its
 primary otherwise reviewed adds no condition. Otherwise a loop cut short by
 `Cap:`, a docs-only fix, the small lane or `auto-once` holds until its last
 round changed no file. Any nonblank `Override:` other than `none`

@@ -59,9 +59,10 @@ uncapped loop; `auto-once` delivers one round whatever it reads, and under
 `on-push` the number ends ship's engagement while the reviewer may carry on. A
 round at the cap is dispositioned in full and ends the loop; say whether it was
 still landing real findings, which tells the human whether the budget was
-right. Small lane: at most one requested round. A lint or flake fix after the
-loop ends earns no new request; an on-push reviewer re-reads it on its own, so
-disposition that round, which opens no further one.
+right. Small lane: at most one requested round; inline lane: none, or that one
+with `--review` ([small-lane.md](small-lane.md#the-inline-lane)). A lint or
+flake fix after the loop ends earns no new request; an on-push reviewer re-reads
+it on its own, so disposition that round, which opens no further one.
 
 **The cap round and a docs-only round each get one local review before the merge
 gate** when their fixes changed the tree: one `code-review` subagent, Standards
@@ -142,8 +143,9 @@ Each reviewer exits with one of:
   that did not land is a trailing clause, not a different exit.
 - `not reviewed: <reason>`: no round landed, or one did and its threads could
   not be read (`unreachable`): triage that one off its body and answer it with
-  `comment-pr`. The reason is `not_reviewed` off the last poll, or
-  `never-queued` off `request-review`'s exit 1, and never one you infer: a human
+  `comment-pr`. The reason is `not_reviewed` off the last poll,
+  `never-queued` off `request-review`'s exit 1, or `inline lane` where that
+  lane requested no round, and never one you infer: a human
   saying a reviewer "can't review" is a claim to check against the poll. The
   header of `scripts/poll-pr.sh` lists what each cause means. `still-running`
   is a run live at the ceiling: exit with it as read, with no further window,
@@ -176,7 +178,7 @@ run URL listed, and nothing added for a total of 0 or no numeric count.
 
 Each reviewer's rounds and stop go in the Run file as lines, which `run-file
 close 7` requires of every reviewer on the phase-7 row, one `Round:` per round
-(`not reviewed` needs none) and one `Stop:`:
+(`not reviewed` and `inline lane` need none) and one `Stop:`:
 
 ```
 Round: <reviewer> <n>: <text>
@@ -189,7 +191,8 @@ the small lane or for an `auto-once` trigger. Otherwise `<reason>` is one of
 `cap` (`Cap:` spent, or a docs-only fix-only diff ended the loop: either way the
 last fixes went unread by a host round), `tree unchanged` (a round's
 dispositions changed no file, so a further round would read the same tree),
-`small lane` (the lane's one requested round), `auto-once` (the reviewer fires
+`small lane` (the lane's one requested round), `inline lane` (the lane
+requested no round), `auto-once` (the reviewer fires
 once, on PR open) or `not reviewed` (no round was dispositioned: none landed, a
 fallback was not invoked because its primary reviewed, or a round landed whose
 threads could not be read, which keeps its `Round:` line too). A declined
@@ -214,10 +217,11 @@ where that primary exits `not reviewed` or is **capped with findings** (ADR
 push cannot be withheld. Drive every non-fallback reviewer to its exit first,
 because a fallback's only input is how its primary exited.
 
-- Primary `not reviewed: <any reason>`, or capped with findings: drive the
-  fallback as an ordinary on-request reviewer under its own `Cap:`. Capped with
-  findings is `Stop: <primary>: cap` after it spent `Cap:` (rounds == Cap) on a
-  last round whose fixes changed the tree, so no host round read them. Its exit
+- Primary `not reviewed` for any reason other than `inline lane`, or capped
+  with findings: drive the fallback as an ordinary on-request reviewer under its
+  own `Cap:`. Capped with findings is `Stop: <primary>: cap` after it spent
+  `Cap:` (rounds == Cap) on a last round whose fixes changed the tree, so no
+  host round read them. Its exit
   is its own, and its `## Review` line and merge-summary block both name the
   primary's reason (`fallback for codex: capped with findings`, say), the only
   record of why a second reviewer was paid for.
@@ -226,6 +230,9 @@ because a fallback's only input is how its primary exited.
   or a docs-only fix-only diff ended its loop before `Cap:` was spent): do not
   request it; it exits `not invoked: <primary> reviewed`, so a reader sees the
   reviewer exists.
+- Primary `not reviewed: inline lane`: request nothing; the fallback records
+  `Stop: <fallback>: inline lane` too
+  ([small-lane.md](small-lane.md#the-inline-lane)).
 - Nothing is a fallback for a fallback: a chain is one deep.
 
 ## Worked examples
