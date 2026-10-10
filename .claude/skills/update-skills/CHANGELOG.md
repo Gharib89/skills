@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.0 (2026-10-10)
+
+### Features
+
+- **update-skills**: Daily upstream drift check files the drift issue and mentions the owner
+  ([#536](https://github.com/Gharib89/skills/pull/536),
+  [`911f84b`](https://github.com/Gharib89/skills/commit/911f84b05b9393baf45e111d6fe02aed7a44efe5))
+
+
 ## v0.6.1 (2026-10-05)
 
 ### Bug Fixes
