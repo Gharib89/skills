@@ -257,7 +257,7 @@ Instructions: __INSTRUCTIONS__
 
 ## The on-request shape
 
-Replace `__PHRASE__` with the phrase that triggers a round, `@claude` unless something else in the repo already answers to it, and, in the fallback block, `__PRIMARY__` with the `### <name>` of the reviewer this one stands in for, exactly as the profile spells it. Both must agree with the profile: ship posts `__PHRASE__` as a PR comment and nothing else starts a round, and it requests a fallback only when `__PRIMARY__` exits `not reviewed`. The `if:` tests for the phrase anywhere in a comment body, so any comment that merely mentions it, a quote of an earlier request included, spends a round: pick a phrase nobody types in passing.
+Replace `__PHRASE__` with the phrase that triggers a round, `@claude` unless something else in the repo already answers to it, and, in the fallback block, `__PRIMARY__` with the `### <name>` of the reviewer this one stands in for, exactly as the profile spells it. Both must agree with the profile: ship posts `__PHRASE__` as a PR comment and nothing else starts a round, and it requests a fallback only when `__PRIMARY__` exits `not reviewed`, or spends its `Cap:` on a last round whose fixes changed the tree. The `if:` tests for the phrase anywhere in a comment body, so any comment that merely mentions it, a quote of an earlier request included, spends a round: pick a phrase nobody types in passing.
 
 ### `.github/workflows/claude-review.yml`
 
@@ -492,7 +492,7 @@ Both shared steps above, then:
    ```
 
    Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review. Ship grades that `never-queued` rather than reading the reviewer as silent, so the loss is named; naming it is not reviewing the PR, which is what this reviewer is there for. A private repo where every commenter can already push needs no commenter line.
-6. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so dropping the step costs the link on the PR: the human then goes to the Actions tab to find the run themselves. A run asks for this reviewer when it needs the review, standalone or covering a primary that was not reviewed, so it is the last reviewer whose failures should send you there.
+6. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so dropping the step costs the link on the PR: the human then goes to the Actions tab to find the run themselves. A run asks for this reviewer when it needs the review, standalone or covering a primary that was not reviewed or ran out of rounds with findings, so it is the last reviewer whose failures should send you there.
 
 ### Profile blocks this produces
 

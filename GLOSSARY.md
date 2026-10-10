@@ -295,7 +295,7 @@ How a reviewer's rounds start: auto-once fires on PR creation and is disposition
 _Avoid_: mode, kind of bot
 
 **Fallback reviewer**:
-A reviewer driven only when the reviewer it names exits not reviewed, for any reason; a primary that reviewed leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary reviewed, the fallback still reports, as not invoked, so the human sees it exists.
+A reviewer driven only when the reviewer it names exits not reviewed, for any reason, or spent its cap on a last round whose fixes changed the tree, which no host round then read; a primary that reviewed otherwise leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary reviewed, the fallback still reports, as not invoked, so the human sees it exists.
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Request transport**:
@@ -323,7 +323,7 @@ A reviewer's phase-7 exit where no round of it landed, or one did and its thread
 _Avoid_: degraded, failure, timeout, skipped review
 
 **Not invoked**:
-The phase-7 exit belonging to a fallback reviewer whose primary reviewed: it went unrequested, so it has no rounds and no findings. Neither reviewed nor not reviewed, and the run carries on past it. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
+The phase-7 exit belonging to a fallback reviewer whose primary reviewed without spending its cap on findings that changed the tree: it went unrequested, so it has no rounds and no findings. Neither reviewed nor not reviewed, and the run carries on past it. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
 _Avoid_: skipped, not needed, n/a
 
 **Shape**:

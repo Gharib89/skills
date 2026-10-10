@@ -217,7 +217,9 @@ rung, the per-file check its harness runs after each edit (`check.sh edit
 rung, proves it with the local gate instead. Otherwise the local gate is not
 re-run per round: the final head's gate is the merge gate's re-run on `gate
 read`'s `current: false`, never while a `code-review` is out (phase 5). **Every
-reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks.** Exits:
+reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks**, each
+driven when its primary exits `not reviewed` or spent `Cap:` on a last round
+whose fixes changed the tree. Exits:
 `reviewed`, `not reviewed: <reason>`, or `not invoked: <primary> reviewed`; `not
 reviewed` proceeds to the merge gate on green CI and is reported there. At exit,
 `update-pr-body --section --body-file` writes the sections the rounds grew, the
