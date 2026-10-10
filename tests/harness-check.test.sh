@@ -161,6 +161,12 @@ mkdir -p "$r/api" "$fixture/elsewhere/api"
 CDPATH=$fixture/elsewhere run "$r" turn api/app.py
 check "an exported CDPATH leaves a member's commands in its own directory" \
   "$(cd "$r/api" && pwd -P)" "$(cat "$ARGS_LOG")"
+r=$(repo dash-member "TURN_ROWS='-foo/|dash|*.py||where|'")
+mkdir -p "$r/-foo"
+: > "$ARGS_LOG"
+run "$r" turn -foo/app.py
+check "a member whose directory starts with - runs its commands there" \
+  "$(cd "$r/-foo" && pwd -P)" "$(cat "$ARGS_LOG")"
 
 r=$(repo root "TURN_ROWS='|app|*.py||bad|'")
 run "$r" turn lib/x.py
