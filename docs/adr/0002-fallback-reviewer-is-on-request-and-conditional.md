@@ -33,3 +33,7 @@ These still leave the fallback `not invoked`:
 - a docs-only fix-only diff that ended the loop before `Cap:` was spent.
 
 It is a global Ship rule, not a profile key, so no schema moves.
+
+## Amended by #545
+
+A primary that exits `not reviewed: inline lane` leaves the fallback unrequested too. An inline-lane run without `--review` requests no round of any reviewer: the human waived them by invoking `--inline`, so the fallback records the same `inline lane` stop, and `run-file gate clean` reads that stop as settling its own reviewer only, never as a fallback covering a primary.

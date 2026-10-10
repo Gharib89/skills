@@ -71,11 +71,15 @@ The end of a Ship run where its full summary records the merge decision. By defa
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:
-The recorded conditions permitting an attended run to merge without a reply when its profile opts in: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree (a fallback answers for its primary), every applicable Verification passed or deferred to a green CI leg, and no override, Ship defect or Tracker draft. Deviations alone do not hold it.
+The recorded conditions permitting an attended run to merge without a reply when its profile opts in: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree (a fallback answers for its primary) or on the inline lane, every applicable Verification passed or deferred to a green CI leg, and no override, Ship defect or Tracker draft. Deviations alone do not hold it.
 _Avoid_: auto-merge (a host flag that can merge before Ship finishes its reviews)
 
 **Small lane**:
-The collapsed form of a Ship run for a change that is narrow, locally provable, invisible to the public surface and inside the size cap, which is counted on the diff, never estimated; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the test proving the change, or the full gate where more than one test proves it), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue.
+The collapsed form of a Ship run for a change that is narrow, locally provable, invisible to the public surface and inside the size cap, which is counted on the diff, never estimated; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the test proving the change, or the full gate where more than one test proves it), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue. Its tier for a fix triage already has in hand is the inline lane.
+_Avoid_: fast path, quick mode, hotfix
+
+**Inline lane**:
+The small lane's tier entered only by `/ship <issue> --inline`, attended and for a tracked issue: the same floor, a 20-line cap counted as the small lane counts, no reviewer round unless `--review` buys one, and a merge on a clean gate, the invocation being the human's approval for that one PR. Revocable one way, inline then small then full, and the merge allowance goes with the lane.
 _Avoid_: fast path, quick mode, hotfix
 
 **Hand-off**:

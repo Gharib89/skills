@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
-argument-hint: "[issue-number] [--unattended]"
+argument-hint: "[issue-number] [--unattended | --inline [--review]]"
 metadata:
   version: 0.21.1
   profile-schema: 4
@@ -41,6 +41,9 @@ in the merge summary, so every PR records which ship produced it.
   blocked stop hands back instead of asking, the sandbox clone is the isolation,
   and the merge gate posts the summary as a PR comment and returns. With no
   `<issue>` it first runs the unattended lane: prepare, PR cap, select.
+- `--inline [--review]`: the **inline lane**, read first from
+  [small-lane.md](reference/small-lane.md#the-inline-lane): it merges on a
+  clean gate, `--review` buys one review round, and `--unattended` refuses it.
 
 Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits. **Preparation**, before `run-file
@@ -246,8 +249,8 @@ review quota, so push when the tree changed.
 the summary's shape, what `merge` does, its two refusals and the tracker drafts.
 Write the summary per that file, uncompressed. Attended: follow its
 `Merge:` branch, waiting for an explicit "merge" by default, or merging when
-`Merge: on-clean-gate` and `run-file gate clean` answers `clean: true`; an
-unmet criterion needs the human's explicit waiver beside the merge word.
+`Merge: on-clean-gate` or the inline lane holds and `run-file gate clean`
+answers `clean: true`; an unmet criterion needs the human's explicit waiver.
 On either authorization run `merge <pr> <issue|none> [--worktree
 <path>]`, `update-issue-body` per tracker draft, settle each Ship defect draft
 (filed on its own word only), `run-file close 9`, then `cleanup <issue|none>`,
@@ -263,10 +266,8 @@ with no `false`; unattended, `comment-pr` posted.
 
 ## The stops
 
-The **merge gate** stops for the human by default. An attended run with
-`Merge: on-clean-gate` merges on the clean-gate verdict unless an unmet
-criterion is listed, which waits for the human's waiver; every other attended
-run waits for the exact word "merge". The unattended lane posts and returns.
+The **merge gate** waits for the human's word unless phase 9 merges on a
+clean gate; the unattended lane posts and returns.
 **The stop table below is authoritative.** Everything else, triaging your own
 findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 
@@ -320,9 +321,8 @@ is not small.
    fired, and the diff inside the size cap small-lane.md counts.
 
 Behavior change is allowed: a bugfix is one. A diff touching a guard,
-allowlist or deny rule is full lane. Small: read
-[reference/small-lane.md](reference/small-lane.md) before continuing. Its floor
-is the same in every repo, and the lane revokes one way only.
+allowlist or deny rule is full lane. Small or inline: read
+[reference/small-lane.md](reference/small-lane.md) before continuing.
 
 ## Model tiers
 

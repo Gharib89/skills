@@ -66,3 +66,35 @@ touch the public surface or a guard, allowlist or deny rule. Downgrade means:
 run the skipped verifications and docs-sync, add the missing test or docs, run
 the full local gate, and apply full-lane review terms, from there on.
 Downgrading once is cheap; shipping a non-small change as small is the failure.
+
+## The inline lane
+
+The **inline lane** is the small lane's tier for a fix triage already has in
+hand, entered only by `/ship <issue> --inline [--review]`. Invoking it is the
+human's approval to merge this one PR on a clean gate, and nothing wider. With
+`--unattended`, or with free text in place of an issue, refuse it before
+`prepare` with the usage line `/ship <issue> --inline [--review]`: the merge
+allowance comes only from a human, for a tracked issue.
+
+- **Keys:** the small lane's three, plus a **20-line cap** counted the way the
+  size cap above counts its 200, at the same moments. A guard, allowlist or
+  deny-rule diff stays inline only with `--review`, and is full lane without.
+- **Everything above holds**: the floor, what collapses, adjacent finds.
+- **Reviewers:** without `--review`, request no round. Each on-request
+  reviewer, fallback included, records `Stop: <reviewer>: inline lane` with no
+  `Round:` line, and its `## Review` line reads `not reviewed: inline lane`.
+  With `--review`, the primary takes the small lane's one requested round and
+  its fallback stands in per `Fallback-for:`. `auto-once` and `on-push`
+  reviewers behave as in every lane.
+- **Merge:** phase 9 reads the profile's `Merge:` as `on-clean-gate` for this
+  PR: `run-file gate clean` answering `clean: true` runs the merge sequence
+  with no reply; a held gate posts the summary and waits for "merge".
+- **Named:** the run header, the PR's `## Review` section and the merge summary
+  say `inline lane`.
+
+**Revocation runs inline, then small, then full.** The count passing 20 drops
+the run to the small lane; a trigger under *Revocable, one way* (a guard touch
+under `--review` excepted) drops it straight to the full lane. The merge
+allowance goes with the lane: the reviewers take that lane's rounds, so no
+`inline lane` stop is written, and phase 9 follows the profile's `Merge:` line.
+Say so in the next reply and in the merge summary.

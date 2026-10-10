@@ -109,10 +109,11 @@
 # `close 7` reads the reviewers from the phase's checklist row (nothing is held
 # where the row names none, or names what is not a list of names) and needs a
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
-# one of cap, tree unchanged, small lane, auto-once or not reviewed, and unless
-# it is `not reviewed` at least one `Round: <reviewer> <n>: <text>`, <n> a
-# positive integer. `grade` writes `Grade: <word>` under the `## Grade` section,
-# replacing the line a call before it wrote.
+# one of cap, tree unchanged, small lane, inline lane, auto-once or not
+# reviewed, and unless it is `not reviewed` or `inline lane` at least one
+# `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
+# `Grade: <word>` under the `## Grade` section, replacing the line a call before
+# it wrote.
 #
 # `prove` runs the sibling `revert-red` on <test> and its <path>s. On its exit 0
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under
@@ -151,7 +152,8 @@
 #   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
 #     check, every profile CI leg succeeded on head, verifications passed or were
 #     inapplicable or deferred to a green associated CI leg, and each
-#     reviewer's loop stopped on tree unchanged with a dispositioned Round. A
+#     reviewer's loop stopped on tree unchanged with a dispositioned Round, or
+#     on inline lane, the round `--inline` waived, which covers no primary. A
 #     not-reviewed primary, or one that spent its Cap: (dispositioned Round
 #     lines numbered 1 through Cap) and stopped at cap, may be covered by a
 #     fallback that stopped so, and a fallback is owed its own stop only after
@@ -654,7 +656,7 @@ EODECLINED
 
 # Phase 7: each reviewer the checklist row names has its stop reason and, unless
 # it never reviewed, a round.
-stop_reasons="cap, tree unchanged, small lane, auto-once, not reviewed"
+stop_reasons="cap, tree unchanged, small lane, inline lane, auto-once, not reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
   local list names nm stop r ok re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
@@ -670,18 +672,18 @@ EONAMES
     stop=$(rests "Stop: $nm: " | tail -n 1)
     stop=$(trim_end "$stop")
     case $stop in
-      cap | "tree unchanged" | "small lane" | auto-once | "not reviewed") ;;
-      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged|small lane|auto-once|not reviewed>\`" ;;
+      cap | "tree unchanged" | "small lane" | "inline lane" | auto-once | "not reviewed") ;;
+      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged|small lane|inline lane|auto-once|not reviewed>\`" ;;
       *) gap "Stop line for $nm has reason '$stop', which is not one of $stop_reasons" ;;
     esac
-    [ "$stop" = "not reviewed" ] && continue
+    case $stop in "not reviewed" | "inline lane") continue ;; esac
     ok=false
     while IFS= read -r r; do
       [[ $r =~ $re ]] && ok=true
     done <<EORESTS
 $(rests "Round: $nm ")
 EORESTS
-    [ "$ok" = true ] || gap "no Round line for $nm: add \`Round: $nm <n>: <text>\`, one per round, unless it stopped \`not reviewed\`"
+    [ "$ok" = true ] || gap "no Round line for $nm: add \`Round: $nm <n>: <text>\`, one per round, unless it stopped \`not reviewed\` or \`inline lane\`"
   done <<EONAMES
 $names
 EONAMES
@@ -800,7 +802,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            else "verification " + $v.name + ": " + $status end),
        ($reviewers[] as $r
          | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
-           elif settled($r.name) then empty
+           elif settled($r.name) or stop($r.name) == "inline lane" then empty
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
            else "reviewer " + $r.name + ": " + stop($r.name) end),
