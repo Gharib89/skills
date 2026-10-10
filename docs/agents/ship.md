@@ -132,7 +132,7 @@ Run: from a session inside Herdr, `spawn` two sessions on a cheap model (`--mode
 Needs: `HERDR_ENV=1`, herdr 0.9.3 or newer, and `claude` on PATH.
 Without it: hand-off
 Also proven by CI: None.
-Claims to probe: that a permission dialog, not only a question dialog, reads `blocked` (measured on herdr 0.9.3 with `--permission-mode default`), and that `agent get` on a closed tab's agent answers `agent_not_found`.
+Claims to probe: that a permission dialog, not only a question dialog, reads `blocked` (it did on herdr 0.9.3, with `--permission-mode default`); that `agent get` on a closed tab's agent, or one whose claude exited with its pane open, answers `agent_not_found`; that a blocked agent's `visible` screen shows the dialog where a 120-line `recent-unwrapped` read is refused with `agent_not_idle`; and that focusing a tab turns `done` into `idle` without moving `state_change_seq` (all measured on herdr 0.9.3), so a glance at a tab wakes no `watch`.
 
 ## Versioning and changelog
 
