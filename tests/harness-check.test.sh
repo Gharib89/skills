@@ -77,6 +77,14 @@ check_rc "a skipped edit exits 0" 0 "$rc"
 echo 'x = BAD' > "$fixture/outside.py"
 run "$r" edit "$fixture/outside.py"
 check "a file outside the repo is skipped" '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
+# A path that only names the root, or a link inside it, can still lead out
+# (#539).
+ln -s "$fixture" "$r/link"
+for p in "$r/../outside.py" ../outside.py link/outside.py; do
+  run "$r" edit "$p"
+  check "$p, which leads outside the repo, is skipped" '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
+done
+rm "$r/link"
 
 r=$(repo fix "EDIT_GLOBS='*.py'
 EDIT_RUN='fmt {files}'")
@@ -139,6 +147,11 @@ check_rc "a failing test exits 1" 1 "$rc"
 run "$r" turn "$fixture/outside.py"
 check "a file outside the repo is no member's, even the root member's" \
   '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
+for p in "$r/../outside.py" ../outside.py ../gone/x.py; do
+  run "$r" turn "$p"
+  check "$p, which leads outside the repo, is no member's" \
+    '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
+done
 
 # A fixture tree the profile excludes: its files belong to no row, even one
 # whose prefix covers them, and are no new root.
@@ -183,6 +196,15 @@ typecheck-api
 typecheck-web" "$(sort "$ARGS_LOG")"
 check "a member's typecheck runs before its tests" "typecheck-api
 tests-api" "$(grep api "$ARGS_LOG")"
+
+# A runner in fix mode rewrites files the rows read, so it runs alone first,
+# however long it takes (#539).
+r=$(repo fix-first "FULL_RUN='sleep 1 && fmt a.py'
+FULL_ROWS='reader|! grep -q UGLY a.py'")
+echo 'x = UGLY' > "$r/a.py"
+run "$r" full
+check "a row reads the tree the runner's fixes left" \
+  '{"rung":"full","verdict":"fail","checks":{"runner":"fail","reader":"pass"}}' "$out"
 
 r=$(repo local-only "FULL_ROWS='semver-core|bad
 after|ok'
@@ -336,6 +358,13 @@ rm "$r/web/gone.ts"
 : > "$ARGS_LOG"
 run "$r" turn
 check "a deleted file alone still checks its member, whole suite" "typecheck
+suite" "$(cat "$ARGS_LOG")"
+mkdir -p "$r/web/old"; echo x > "$r/web/old/gone.ts"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm old
+rm -r "$r/web/old"
+: > "$ARGS_LOG"
+run "$r" turn web/old/gone.ts
+check "a named file deleted with its directory still checks its member" "typecheck
 suite" "$(cat "$ARGS_LOG")"
 
 finish
