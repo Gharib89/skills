@@ -21,3 +21,15 @@ Copilot's review quota is per month and a repo whose only reviewer is Copilot sp
 ## Amended by #307
 
 The primary's `degraded` exit is now `not reviewed: <reason>`, and a primary whose cap ran out is `reviewed`, since its rounds landed: it no longer requests the fallback. The decision stands for every primary that exits `not reviewed`: one that delivered no round, or whose landed round's threads could not be read (`unreachable`).
+
+## Amended by #531
+
+The #307 amendment's capped primary is reversed for one case. A primary **capped with findings**, one that spent its `Cap:` (rounds == Cap) on a last round whose fixes changed the tree and so stopped at `cap`, drives the fallback as an ordinary on-request reviewer under its own `Cap:`. Otherwise those fixes reach the merge gate read by no host reviewer, only by the local cap review on the Standards axis. When the fallback reviews, its host rounds read them, so the primary's cap round gets no local review of its own; that review goes to the last reviewer that stopped at `cap`.
+
+These still leave the fallback `not invoked`:
+
+- a primary that stopped on `tree unchanged`, a last round whose findings were all declined included;
+- a primary stopped by the small lane or `auto-once`;
+- a docs-only fix-only diff that ended the loop before `Cap:` was spent.
+
+It is a global Ship rule, not a profile key, so no schema moves.

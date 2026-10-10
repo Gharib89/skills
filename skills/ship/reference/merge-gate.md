@@ -54,7 +54,7 @@ Review                                         (one block per reviewer)
     (the denied-calls clause as review-loop.md's Review line carries it, only where N > 0)
     - <finding> → <fixed in <sha> | declined: reason | filed: #<n>>
     ...                                        (or: clean, no findings)
-    (a fallback that ran opens with: fallback for <primary>: not reviewed: <reason>)
+    (a fallback that ran opens with: fallback for <primary>: <not reviewed: <reason> | capped with findings>)
     (a Gating: yes reviewer's declined finding: override needed: <finding>, <evidence>)
 
 Local gate:  <derived from the gate's JSON: <gate> <✓ | ✗ | deferred-to-ci | unavailable> · ...>[ · at <sha>, <n> commits behind | at <sha>, behind unknown]
@@ -206,9 +206,11 @@ leg), every profile CI leg green at that head, every Verification `pass` or
 `n/a` (inapplicable), or `deferred-to-ci` with its `Also proven by CI:` leg
 green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
 recorded round. A fallback that stopped so answers for a primary that was not
-reviewed; a fallback skipped because its primary reviewed adds no condition. A
-loop cut short by `Cap:`, a docs-only fix, the small lane or `auto-once` holds
-until its last round changed no file. Any nonblank `Override:` other than `none`
+reviewed, or that was capped with findings (dispositioned `Round:` lines
+numbered 1 through the primary's `Cap:`); a fallback skipped because its
+primary otherwise reviewed adds no condition. Otherwise a loop cut short by
+`Cap:`, a docs-only fix, the small lane or `auto-once` holds until its last
+round changed no file. Any nonblank `Override:` other than `none`
 or `None.`, any `Ship-defect:` record or `defect-*.md` draft, and any
 `tracker-*.md` draft holds the gate (`*.base.md` files are saved originals, not
 drafts). Deviations alone do not hold it. With no expected CI legs, `no-checks`

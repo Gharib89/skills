@@ -66,7 +66,11 @@ disposition that round, which opens no further one.
 **The cap round and a docs-only round each get one local review before the merge
 gate** when their fixes changed the tree: one `code-review` subagent, Standards
 axis only, over the fix-only diff. Its findings take the dispositions above;
-`Cap:` is unchanged and no host round is requested.
+`Cap:` is unchanged and no host round is requested. Skip this review for a
+primary capped with findings whose fallback then exited `reviewed`: the
+fallback's host rounds read those fixes. The review goes to the last reviewer
+that stopped at `cap`, primary or fallback, and to a capped primary whose
+fallback exited `not reviewed`.
 
 ## Reading a round
 
@@ -146,7 +150,8 @@ Each reviewer exits with one of:
   and the run's URL on `reviewer_run` goes to the merge gate. `stale-head` is
   Codex's completed round on an older commit with nothing delivered: exit with
   it as read, the status comment's URL to the merge gate.
-- `not invoked: <primary> reviewed`: a fallback whose primary reviewed.
+- `not invoked: <primary> reviewed`: a fallback whose primary reviewed and was
+  not capped with findings ([Fallbacks](#fallbacks)).
 
 `not reviewed` proceeds to the merge gate on green CI and is reported there. A
 `Gating: yes` reviewer holding the merge on a finding you declined still exits
@@ -204,17 +209,23 @@ type fixed with `update-pr-title`, and `read-pr` reads everything back at once.
 ## Fallbacks
 
 A reviewer whose `Fallback-for:` names another stands in for it, on the runs
-where that primary exits `not reviewed` (ADR 0002); preflight holds it to
-on-request, since a reviewer that fires on every push cannot be withheld. Drive
-every non-fallback reviewer to its exit first, because a fallback's only input
-is how its primary exited.
+where that primary exits `not reviewed` or is **capped with findings** (ADR
+0002); preflight holds it to on-request, since a reviewer that fires on every
+push cannot be withheld. Drive every non-fallback reviewer to its exit first,
+because a fallback's only input is how its primary exited.
 
-- Primary `not reviewed: <any reason>`: drive the fallback as an ordinary
-  on-request reviewer under its own `Cap:`. Its exit is its own, and its `##
-  Review` line and merge-summary block both name the primary's reason, the only
+- Primary `not reviewed: <any reason>`, or capped with findings: drive the
+  fallback as an ordinary on-request reviewer under its own `Cap:`. Capped with
+  findings is `Stop: <primary>: cap` after it spent `Cap:` (rounds == Cap) on a
+  last round whose fixes changed the tree, so no host round read them. Its exit
+  is its own, and its `## Review` line and merge-summary block both name the
+  primary's reason (`fallback for codex: capped with findings`, say), the only
   record of why a second reviewer was paid for.
-- Primary `reviewed`: do not request it; it exits `not invoked: <primary>
-  reviewed`, so a reader sees the reviewer exists.
+- Primary `reviewed` otherwise (it stopped on `tree unchanged`, a last round
+  whose findings were all declined included, or on `small lane` or `auto-once`,
+  or a docs-only fix-only diff ended its loop before `Cap:` was spent): do not
+  request it; it exits `not invoked: <primary> reviewed`, so a reader sees the
+  reviewer exists.
 - Nothing is a fallback for a fallback: a chain is one deep.
 
 ## Worked examples

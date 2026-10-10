@@ -295,8 +295,12 @@ How a reviewer's rounds start: auto-once fires on PR creation and is disposition
 _Avoid_: mode, kind of bot
 
 **Fallback reviewer**:
-A reviewer driven only when the reviewer it names exits not reviewed, for any reason; a primary that reviewed leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary reviewed, the fallback still reports, as not invoked, so the human sees it exists.
+A reviewer driven only when the reviewer it names exits not reviewed, for any reason, or is capped with findings; a primary that reviewed otherwise leaves it unspent. Always on-request, because a reviewer that fires on every push cannot be withheld. When the primary reviewed, the fallback still reports, as not invoked, so the human sees it exists.
 _Avoid_: backup bot, secondary reviewer, second opinion
+
+**Capped with findings**:
+A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of those rounds' fixes changing the tree, so no host round read them. It is the one `reviewed` primary that still drives its fallback. A docs-only fix-only diff that ends the loop before the cap is spent, and a last round whose findings were all declined, are not it.
+_Avoid_: ran out of rounds, hit the cap
 
 **Request transport**:
 How an on-request reviewer is asked for a round, named by its `Request:` line alone, whatever its brand. Two of them: the host's own request-a-reviewer call, for a reviewer the host can add to the PR, and the comment transport, `comment <phrase>`, which posts the phrase as a PR comment for a reviewer a comment triggers: a comment-triggered workflow, or a native integration such as Codex. Either way the request is read back off the host, and the since rule takes its timestamp from that read-back, so the clock is the host's.
@@ -323,7 +327,7 @@ A reviewer's phase-7 exit where no round of it landed, or one did and its thread
 _Avoid_: degraded, failure, timeout, skipped review
 
 **Not invoked**:
-The phase-7 exit belonging to a fallback reviewer whose primary reviewed: it went unrequested, so it has no rounds and no findings. Neither reviewed nor not reviewed, and the run carries on past it. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
+The phase-7 exit belonging to a fallback reviewer whose primary reviewed and was not capped with findings: it went unrequested, so it has no rounds and no findings. Neither reviewed nor not reviewed, and the run carries on past it. It is reported anyway, in the PR body and the merge summary, so a reader sees a reviewer that exists and was deliberately not spent rather than one nobody configured.
 _Avoid_: skipped, not needed, n/a
 
 **Shape**:
