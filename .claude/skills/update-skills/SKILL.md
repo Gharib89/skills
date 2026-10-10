@@ -336,10 +336,10 @@ would file, and phase 6 opens the PR with `Closes #<issue>` but for a hold-back.
    not a fix-and-retry; step 9's title rule is phase 6's title.
 
 A held-back row hands the issue back to the owner. With some rows moved, phase
-6 runs `open-pr none` with `Refs #<issue>` in the body, then `manage-issue
-<issue> handback "<reason>"` naming each `held back` line, before the merge
-gate; `merge` takes `<pr> none`, `cleanup` keeps `<issue>`. With every row held
-back there is no PR: hand back the same way, `cleanup <issue>`, and stop.
+6 runs `open-pr none --title <t> --body-file <f>`, `<f>` saying `Refs #<issue>`,
+then `manage-issue <issue> handback "<reason>"` naming each `held back` line,
+before the merge gate; `merge` takes `<pr> none`, `cleanup` keeps `<issue>`.
+With every row held back there is no PR: hand back, `cleanup <issue>`, and stop.
 
 Where a step would ask the owner, the run takes the conservative answer and
 writes it to the Run file's deviations log, which lands in the merge summary:
