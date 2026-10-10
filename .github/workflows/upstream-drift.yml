@@ -9,8 +9,6 @@ on:
   schedule:
     - cron: "17 5 * * *"
   workflow_dispatch:
-  push:
-    branches: [feat/upstream-drift-check-533]
 
 permissions:
   contents: read
@@ -23,7 +21,6 @@ concurrency:
 
 jobs:
   drift:
-    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
