@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.2 (2026-10-11)
+
+### Bug Fixes
+
+- **ship**: Name the not-landed round in phase 7, drop repo-local ADR numbers, cut dead lines
+  ([#572](https://github.com/Gharib89/skills/pull/572),
+  [`0f925b9`](https://github.com/Gharib89/skills/commit/0f925b9869253d937905ff9aa0b1b4f6003f313a))
+
+
 ## v0.22.1 (2026-10-10)
 
 ### Bug Fixes
