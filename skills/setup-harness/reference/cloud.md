@@ -102,4 +102,4 @@ A passing answer writes `Proof: <sha>` into `docs/agents/harness.md` and commits
 
 The report's **cloud table**: one row per rung, its cloud label, and its times, `full` from the proof's cloud session (first run cold, second warm, judged against its budget) and the cloud setup from the local double run.
 
-A re-run reads the proof as standing while `git diff <sha> -- <Setup: path> .claude/settings.json scripts/check.sh <each root's lockfile> <the runner config>` prints nothing; otherwise, or when the sha is not in the repo, it reports `cloud: unproven (changed since <sha>)` and offers the proof again.
+A re-run reads the proof as standing while `git diff <sha> -- <Setup: path> .claude/settings.json scripts/check.sh <each root's lockfile> <the runner config>` prints nothing; otherwise it reports `cloud: unproven (changed since <sha>)` and offers the proof again. A sha not in the repo is fetched first (`git fetch -q origin <sha>`), and reported the same way only when that fetch fails: a squash merge leaves the setup branch's head off the default branch, and GitHub still serves it from `refs/pull/<n>/head` once the branch is deleted.
