@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.4 (2026-10-11)
+
+### Bug Fixes
+
+- **setup-harness**: Exclude the PR template from markdownlint, name the dev add's lockfile
+  ([#575](https://github.com/Gharib89/skills/pull/575),
+  [`1912043`](https://github.com/Gharib89/skills/commit/1912043fda57bb33d91afa62a9626b4375c7bfaf))
+
+
 ## v0.10.3 (2026-10-11)
 
 ### Bug Fixes
