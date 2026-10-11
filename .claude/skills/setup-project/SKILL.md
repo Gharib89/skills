@@ -99,8 +99,9 @@ installed` reads as the `tools` row at `run` for `jq` alone: take step 5's
 the evidence that decided it. When the `repo-and-remote` evidence reads `no
 origin remote`, interview the owner in the terminal, here and before the
 confirm: the project's name (a repository slug of ASCII letters, digits, `-`,
-`_` and `.`, asked again until it is one), a one-paragraph description, its
-visibility (`private`, `public` or `internal`) and, where the evidence also
+`_` and `.`, with an `<org>/` prefix for an organization's repo, asked again
+until it is one), a one-paragraph description, its visibility (`private`,
+`public`, or `internal` for an organization's repo) and, where the evidence also
 reads `no stack manifest` exactly, its stack (a row of step 5's stack table, or
 another), and nothing else. With an origin and that evidence, ask the stack
 alone: `no stack manifest, history present` needs no stack. Show the answers
@@ -190,13 +191,12 @@ is handed to another session.
      gh repo create <name> --<visibility> --description '<summary>' --source . --remote origin
      ```
 
-     `<name>` is the answer, `<org>/<name>` for an organization's repo;
-     `<visibility>` is the answer as given; `<summary>` is the description's
-     first sentence, each `'` in it written as `'\''` so the shell passes it as
-     typed. In a repo with commits, add `--push`, then run `git remote set-head
-     origin -a`, so its history is the base step 4 reads. A project hosted
-     elsewhere is the owner's to create: they add its repo as `origin`, and the
-     next run reads it.
+     `<name>` is the answer, its `<org>/` prefix included; `<visibility>` is the
+     answer as given; `<summary>` is the description's first sentence, each `'`
+     in it written as `'\''` so the shell passes it as typed. In a repo with
+     commits, add `--push`, then run `git remote set-head origin -a`, so its
+     history is the base step 4 reads. A project hosted elsewhere is the owner's
+     to create: they add its repo as `origin`, and the next run reads it.
 
      Step 4 runs here, if it has not yet.
   3. **`no origin remote`**, continued: write `README.md` (the name as its
@@ -215,12 +215,13 @@ is handed to another session.
      | Go | `go mod init <module>` |
      | .NET | `dotnet new console` |
 
-     `<module>` is the origin URL's host and path, with no scheme and no
-     `.git` (`github.com/<org>/<name>`). `uv init` writes its `.gitignore`
-     only when it creates the git repo itself, so after it, where none exists,
-     write `.venv`, `__pycache__/`, `*.py[oc]`, `build/`, `dist/`, `wheels/`
-     and `*.egg-info`, one per line. Any other stack: ask the owner for its
-     init command and run that; never pick one.
+     `<module>` is the origin URL's host and path, with no scheme, no `git@`, a
+     `:` before the path read as `/`, and no `.git`, so an HTTPS and an SSH
+     origin both give `github.com/<org>/<name>`. `uv init` writes its
+     `.gitignore` only when it creates the git repo itself, so after it, where
+     none exists, write `.venv`, `__pycache__/`, `*.py[oc]`, `build/`, `dist/`,
+     `wheels/` and `*.egg-info`, one per line. Any other stack: ask the owner
+     for its init command and run that; never pick one.
 
   An origin that is neither GitHub nor Azure DevOps is the owner's to repoint:
   print it and stop.
