@@ -15,7 +15,7 @@ Per wired tool, from `anthropics/claude-plugins-official` at the head of `main`.
 3. **Disable the upstream in `.claude/settings.json`**: `"enabledPlugins": {"<upstream>@claude-plugins-official": false}`, merged beside the repo's own keys.
 4. **Pin the binary.** Where the entry's `Constraints:` pin the tool in the stack's own files (typescript-language-server and csharp-ls at the stack root, rust-analyzer with the channel in `rust-toolchain.toml`), the pin is the one Write step 1 wrote there. Otherwise the version rides in the `.lsp.json` launch, which fetches it, so Write step 1 installs nothing for the tool: pyright's `npx --yes --package=pyright@<v>`, gopls's `go run ...@<v>`, jdtls's launcher arguments `<version> <sha256>` (its build downloaded on first launch).
 
-Both are required: the upstream's name or an enabled upstream leaves the vendored server unloaded or unused.
+The new name and the disable are both required: the upstream's name or an enabled upstream leaves the vendored server unloaded or unused.
 
 An existing `.claude/skills/harness-<upstream>/` is the repo's own evidence: keep it and propose only what it lacks, per the Explore step.
 

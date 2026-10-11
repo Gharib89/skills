@@ -70,14 +70,15 @@ below lands as a minor
   PR that changes what the profile must contain (a heading or `Label:` line
   added, renamed or removed; a `Label:` vocabulary changed) adds an entry to
   `skills/setup-harness/harness-schema.md`, moves `metadata.harness-schema` in
-  its `SKILL.md`, the `Schema:` line in `templates/harness-profile.md` and the
-  `schema=` literal and grammar in `scripts/harness-profile-check.sh`, and is
+  its `SKILL.md`, the `Schema:` line in
+  `skills/setup-harness/templates/harness-profile.md` and the `schema=` literal
+  and grammar in `skills/setup-harness/scripts/harness-profile-check.sh`, and is
   graded a setup-harness major. The `contract` gate's schema-equality check
-  fails when the four disagree. Two lines are frozen across every schema,
-  because `setup-skills` reads them with no schema check: `Location:` under
-  `## Check entry point` and `Setup:` under `## Cloud`. Renaming either is a
-  major of both skills in one PR; the `contract` gate's frozen-lines check
-  fails when the profile template lacks either.
+  (check 9) fails when the four disagree. Two lines are frozen across every
+  schema, because `setup-skills` reads them with no schema check: `Location:`
+  under `## Check entry point` and `Setup:` under `## Cloud`. Renaming either is
+  a major of both skills in one PR; the `contract` gate's frozen-lines check
+  (check 8) fails when the profile template lacks either.
 - **Adding to `composes` or moving a pin is breaking, removing is additive.**
   The direction is inverted relative to every other item, so read it before
   grading one. Adding a skill to `ship`'s `metadata.composes` line is a `ship`
