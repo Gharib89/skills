@@ -107,6 +107,21 @@ check "a commented-out line fails" \
 d=$(tree indented); sed -i.bak 's|^.claude/skills/setup-skills/|  &|' "$d/.gitattributes"
 check_rc "an indented line passes, as git reads it" 0 "$(rc_of "$d")"
 
+# The attribute must hold for every file of the copy, not only its SKILL.md.
+d=$(tree narrow); sed -i.bak 's|^.claude/skills/setup-skills/\*\*|.claude/skills/setup-skills/SKILL.md|' "$d/.gitattributes"
+check "a line marking only a source-. skill's SKILL.md fails" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated" "$(out_of "$d")"
+
+d=$(tree nested); printf '.claude/skills/setup-skills/ship-profile.md -linguist-generated\n' >> "$d/.gitattributes"
+check "a later line unmarking one file of a derived copy fails" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated" "$(out_of "$d")"
+
+d=$(tree vendoredfile); printf -- '---\nname: tdd\n---\n' > "$d/.claude/skills/tdd/SKILL.md"
+mkdir -p "$d/.claude/skills/tdd/ref"; printf 'x\n' > "$d/.claude/skills/tdd/ref/a.md"
+printf '.claude/skills/tdd/ref/** linguist-generated\n' >> "$d/.gitattributes"
+check "a line marking one file of a vendored skill fails" \
+  ".gitattributes marks .claude/skills/tdd/** linguist-generated, which is no source \".\" skill's derived copy" "$(out_of "$d")"
+
 d=$(tree globbed); printf '.claude/skills/** linguist-generated\n' >> "$d/.gitattributes"
 check "a glob that also marks a vendored skill fails" \
   ".gitattributes marks .claude/skills/tdd/** linguist-generated, which is no source \".\" skill's derived copy" "$(out_of "$d")"

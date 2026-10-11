@@ -60,22 +60,25 @@ got=${got% }
 
 # GitHub collapses a `linguist-generated` path in a PR diff, so each derived
 # copy is marked by its own line, and a vendored skill, which has no second
-# copy, keeps its diff visible. Git resolves the attribute, so a line a later
-# one undoes counts as no line; a user's own attributes file is left out.
+# copy, keeps its diff visible. Git resolves the attribute for every file of the
+# copy, so a line a later one undoes, or one narrower than the copy, counts as
+# no line; a user's own attributes file is left out.
 if [ -e .gitattributes ] && [ ! -r .gitattributes ]; then echo 'cannot read .gitattributes' >&2; exit 2; fi
-attr() {
-  git -c core.attributesFile=/dev/null check-attr linguist-generated -- ".claude/skills/$1/SKILL.md" \
-    | sed 's/.*: linguist-generated: //'
+# Prints the distinct values the attribute takes over .claude/skills/<s>/.
+attrs() {
+  { echo ".claude/skills/$1/SKILL.md"; [ ! -d ".claude/skills/$1" ] || find ".claude/skills/$1" -type f; } \
+    | git -c core.attributesFile=/dev/null check-attr --stdin linguist-generated \
+    | sed 's/.*: linguist-generated: //' | sort -u
 }
 for s in $skills; do
-  v=$(attr "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
+  v=$(attrs "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
   [ "$v" = set ] || { echo "missing .gitattributes line: .claude/skills/$s/** linguist-generated"; rc=1; }
 done
 vendored=$(jq -r '.skills | to_entries[] | select(.value.source != ".") | .key' skills-lock.json | sort) \
   || { echo 'cannot parse skills-lock.json' >&2; exit 2; }
 for s in $vendored; do
-  v=$(attr "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
-  [ "$v" != set ] || { echo ".gitattributes marks .claude/skills/$s/** linguist-generated, which is no source \".\" skill's derived copy"; rc=1; }
+  v=$(attrs "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
+  ! grep -qx set <<<"$v" || { echo ".gitattributes marks .claude/skills/$s/** linguist-generated, which is no source \".\" skill's derived copy"; rc=1; }
 done
 
 # The profile schema number across its three files: scripts/profile-schema-check.sh.
