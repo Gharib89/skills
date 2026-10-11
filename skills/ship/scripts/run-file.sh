@@ -47,9 +47,10 @@
 # under `## Verification` and `## Reviewers`, the leg names under `## CI`); a
 # flag given beside it wins. Each `###` heading under `## Verification` is one
 # Verification name whatever it holds, spaces and punctuation included, except
-# `=`, which `--result` splits on. A flip returns the `mirror` value for that
-# phase's task, and `next <n>` is the close of the one open phase and the open
-# of <n> in one call, refused whole when either half would be. `open 4` is the
+# `=`, which `--result` splits on, and a result word as a later `: ` field
+# (`Build: pass`). A flip returns the `mirror` value for that phase's task, and
+# `next <n>` is the close of the one open phase and the open of <n> in one
+# call, refused whole when either half would be. `open 4` is the
 # one open admitted while phase 3 is open, the overlap the run has; any other
 # open over an open phase is refused.
 # Below the checklist it writes sections the run fills: `Verification results`
@@ -869,12 +870,16 @@ init)
     case " $given " in *" tripwires "*) ;; *) [ -z "$pf" ] || tripwires=$pf ;; esac
     # A heading is a name whatever it holds, so these names skip the name-shape
     # test a hand-passed list gets; `=` is the one character `--result` cannot
-    # take in one.
+    # take in one, and a result word as a later field is the one shape the
+    # pending test reads as settled (`- Build: pass: pending`).
     pn=$(profile_headings Verification "$profile")
     case " $given " in
       *" verifications "*) ;;
       *) if [ -n "$pn" ]; then
            case $pn in *=*) ship_tooling "a Verification heading cannot carry '=': --result splits the name from the word on it" ;; esac
+           bad=$(w="$result_words" awk '$0 ~ (": (" ENVIRON["w"] ")(:|$)") { print; exit }' <<<"$pn") ||
+             ship_tooling "could not read the Verification headings for result words"
+           [ -z "$bad" ] || ship_tooling "a Verification heading cannot carry a result word as a later field: '$bad' would read as a settled result while pending; rename it"
            verifications=$(join_names <<<"$pn") profile_names=$pn
          fi ;;
     esac
