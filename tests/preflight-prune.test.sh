@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# preflight's prune of sibling worktrees: a worktree goes only when its HEAD is
-# exactly the head of the merged or closed PR its branch names, so a fresh
+# preflight's prune of the container's worktrees: a worktree goes only when its
+# HEAD is exactly the head of the merged or closed PR its branch names, so a fresh
 # worktree reusing an old PR's branch name, or one that gained commits after its
 # PR closed, keeps its work.
 #
 # Driven over the Host fake inside a throwaway GitHub-origin checkout whose
-# sibling container holds one worktree per case. The fake answers the same PR
+# worktree container holds one worktree per case. The fake answers the same PR
 # for every branch, so each case removes its worktree before the next adds one.
 # There is no profile, so preflight's other reasons are present and beside the
 # point.
@@ -24,10 +24,10 @@ g init -q
 g remote add origin https://github.com/owner/repo.git
 g commit -q --allow-empty -m base
 
-# <name>: a sibling worktree on branch fix/<name>, at the base commit.
+# <name>: a container worktree on branch fix/<name>, at the base commit.
 worktree() {
-  g worktree add -q -b "fix/$1" "$work/repo.worktrees/$1" >/dev/null 2>&1
-  printf '%s' "$work/repo.worktrees/$1"
+  g worktree add -q -b "fix/$1" "$repo/.claude/worktrees/$1" >/dev/null 2>&1
+  printf '%s' "$repo/.claude/worktrees/$1"
 }
 # <state> <head_sha>: the PR the fake finds for the one worktree's branch.
 pr() {
