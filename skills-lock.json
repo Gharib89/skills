@@ -4,7 +4,7 @@
     "cloud-ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "a3f62d8f570aa749d87ac8a1631e617d2118a04e1233a69e797f206bae38210b"
+      "computedHash": "3880073b636a78da273ffc1ce14ea9afcef3da60ea084d015119a2ab4080c189"
     },
     "code-review": {
       "source": "mattpocock/skills",
