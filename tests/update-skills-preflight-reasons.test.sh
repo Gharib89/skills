@@ -11,7 +11,9 @@ source tests/lib.sh
 
 skill=skills/update-skills/SKILL.md
 check "update-skills expects no \`existing branch\`" "" "$(grep -nF '`existing branch`' "$skill")"
+# The step-8 `## Verification` bullet, its continuation lines joined.
+verification=$(awk '/^- `## Verification`:/ { f = 1 } f && /^- / && !/Verification/ { f = 0 } f' "$skill" | tr '\n' ' ')
 check "update-skills' Verification item names the expected worktree exists reason" 1 \
-  "$(tr '\n' ' ' <"$skill" | grep -oF 'the expected `worktree exists` reason' | wc -l | tr -d ' ')"
+  "$(grep -oF 'the expected `worktree exists` reason' <<<"$verification" | wc -l | tr -d ' ')"
 
 finish

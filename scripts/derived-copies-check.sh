@@ -60,21 +60,23 @@ got=${got% }
 
 # GitHub collapses a `linguist-generated` path in a PR diff, so each derived
 # copy is marked by its own line, and a vendored skill, which has no second
-# copy, keeps its diff visible. Git ignores a line's leading whitespace, so the
-# pattern is the line's first field.
-marked=
-if [ -e .gitattributes ]; then
-  marked=$(awk '$1 ~ /^\.claude\/skills\// { for (i = 2; i <= NF; i++) if ($i == "linguist-generated") { print $1; break } }' .gitattributes) \
-    || { echo 'cannot read .gitattributes' >&2; exit 2; }
-fi
+# copy, keeps its diff visible. Git resolves the attribute, so a line a later
+# one undoes counts as no line; a user's own attributes file is left out.
+if [ -e .gitattributes ] && [ ! -r .gitattributes ]; then echo 'cannot read .gitattributes' >&2; exit 2; fi
+attr() {
+  git -c core.attributesFile=/dev/null check-attr linguist-generated -- ".claude/skills/$1/SKILL.md" \
+    | sed 's/.*: linguist-generated: //'
+}
 for s in $skills; do
-  grep -qxF ".claude/skills/$s/**" <<<"$marked" || { echo "missing .gitattributes line: .claude/skills/$s/** linguist-generated"; rc=1; }
+  v=$(attr "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
+  [ "$v" = set ] || { echo "missing .gitattributes line: .claude/skills/$s/** linguist-generated"; rc=1; }
 done
-while IFS= read -r p; do
-  [ -n "$p" ] || continue
-  n=${p#.claude/skills/}; n=${n%/\*\*}
-  grep -qxF "$n" <<<"$skills" || { echo ".gitattributes marks $p linguist-generated, which is no source \".\" skill's derived copy"; rc=1; }
-done <<<"$marked"
+vendored=$(jq -r '.skills | to_entries[] | select(.value.source != ".") | .key' skills-lock.json | sort) \
+  || { echo 'cannot parse skills-lock.json' >&2; exit 2; }
+for s in $vendored; do
+  v=$(attr "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
+  [ "$v" != set ] || { echo ".gitattributes marks .claude/skills/$s/** linguist-generated, which is no source \".\" skill's derived copy"; rc=1; }
+done
 
 # The profile schema number across its three files: scripts/profile-schema-check.sh.
 "$here/profile-schema-check.sh" . || rc=1

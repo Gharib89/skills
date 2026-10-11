@@ -14,6 +14,7 @@ fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 tree() {
   local d="$fixture/$1" s; rm -rf "$d"
   mkdir -p "$d/.github/workflows" "$d/.release" "$d/.claude/skills/tdd" || return 1
+  git -C "$d" init -q || return 1
   jq -n '{version: 1, skills: {
     ship: {source: ".", sourceType: "local"},
     "setup-skills": {source: ".", sourceType: "local"},
@@ -89,6 +90,32 @@ d=$(tree vendoredgenerated); printf '.claude/skills/tdd/** linguist-generated\n'
 check "a linguist-generated line naming a vendored skill fails" \
   ".gitattributes marks .claude/skills/tdd/** linguist-generated, which is no source \".\" skill's derived copy" "$(out_of "$d")"
 
+# Git resolves the attribute, so a line that names it but is undone by a later
+# line, or set false on its own, leaves the copy uncollapsed and fails.
+d=$(tree negated); printf '.claude/skills/setup-skills/** -linguist-generated\n' >> "$d/.gitattributes"
+check "a later line unsetting a source-. skill's attribute fails" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated" "$(out_of "$d")"
+
+d=$(tree setfalse); sed -i.bak 's|^\(.claude/skills/setup-skills/\*\* linguist-generated\)$|\1 linguist-generated=false|' "$d/.gitattributes"
+check "a line setting a source-. skill's attribute false fails" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated" "$(out_of "$d")"
+
+d=$(tree commented); sed -i.bak 's|^.claude/skills/setup-skills/|# &|' "$d/.gitattributes"
+check "a commented-out line fails" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated" "$(out_of "$d")"
+
+d=$(tree indented); sed -i.bak 's|^.claude/skills/setup-skills/|  &|' "$d/.gitattributes"
+check_rc "an indented line passes, as git reads it" 0 "$(rc_of "$d")"
+
+d=$(tree globbed); printf '.claude/skills/** linguist-generated\n' >> "$d/.gitattributes"
+check "a glob that also marks a vendored skill fails" \
+  ".gitattributes marks .claude/skills/tdd/** linguist-generated, which is no source \".\" skill's derived copy" "$(out_of "$d")"
+
+d=$(tree noattributes); rm "$d/.gitattributes"
+check "no .gitattributes fails for every source-. skill" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated
+missing .gitattributes line: .claude/skills/ship/** linguist-generated" "$(out_of "$d")"
+
 # A workflow the check cannot read is tooling, not a list that disagrees. Root
 # reads a mode-000 file, so the case only runs where the mode bits bind.
 if [ "$(id -u)" -ne 0 ]; then
@@ -97,6 +124,13 @@ if [ "$(id -u)" -ne 0 ]; then
   chmod 644 "$d/$wf"
 else
   skipped "an unreadable release workflow is tooling"
+fi
+if [ "$(id -u)" -ne 0 ]; then
+  d=$(tree unreadableattributes); chmod 000 "$d/.gitattributes"
+  check_rc "an unreadable .gitattributes is tooling" 2 "$(rc_of "$d")"
+  chmod 644 "$d/.gitattributes"
+else
+  skipped "an unreadable .gitattributes is tooling"
 fi
 
 d="$fixture/nolock"; mkdir -p "$d"
