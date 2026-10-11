@@ -16,9 +16,8 @@
 | `turn` | typecheck plus affected tests of each member the uncommitted changes touch | `Stop` | 60 s / 75 s |
 | commit | the runner's own git hook | `git commit` | 30 s, measured only |
 | `full` | runner on every file first, since a hook in fix mode rewrites files; then every member's typecheck and whole suite and the repo's check target, all at once, so it costs the runner plus its longest row | a human, CI, Ship's local gate | 10 min, measured only |
-| `deps` | only the frozen installs below | the cloud setup's step 3 | none |
 
-Every rung first installs each root whose dependencies are missing from the checkout, as a fresh worktree's are, before anything else runs: a runner hook calling a root's own binary (`web/node_modules/.bin/eslint`) fails until they exist, and a language server stops reporting missing modules once they do. Each install is a `deps:<name>` check, run outside `CHECK_DEADLINE`; a root already present costs one presence test and is not reported.
+Every rung first installs each root whose dependencies are missing from the checkout, as a fresh worktree's are, before anything else runs: a runner hook calling a root's own binary (`web/node_modules/.bin/eslint`) fails until they exist, and a language server stops reporting missing modules once they do. Each install is a `deps:<name>` check, run outside `CHECK_DEADLINE`; a root already present costs one presence test and is not reported. `check.sh deps` runs those installs and nothing else, no rung of its own: it is how the cloud setup's step 3 installs.
 
 `check.sh` calls a linter directly only when the runner cannot take a file list (lint-staged). Typecheck and tests live in `check.sh`. There is no `commit` subcommand: the commit rung is the runner's git hook.
 
