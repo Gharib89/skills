@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.3 (2026-10-11)
+
+### Bug Fixes
+
+- **ship**: Skip 3 settles pending verifications as n/a
+  ([#573](https://github.com/Gharib89/skills/pull/573),
+  [`7f77605`](https://github.com/Gharib89/skills/commit/7f77605d59e08a80b43f50be5942d4108a3b9580))
+
+
 ## v0.22.2 (2026-10-11)
 
 ### Bug Fixes
