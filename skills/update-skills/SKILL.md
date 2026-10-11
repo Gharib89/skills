@@ -15,11 +15,11 @@ see, with a body that says what moved. The **source repo** is
 skill's **pinned ref** is the upstream commit the source repo tested, and
 **upstream drift** is that upstream moving past it.
 
-The one part a Ship run follows without invoking it is
+The one part a Ship run follows without invoking this skill is
 [In a Ship run](#in-a-ship-run), for an upstream-drift issue in the source repo.
 
-**It calls Ship's generic mechanics by path** from the worktree: `$S` below
-stands for `.claude/skills/ship/scripts` and `$U` for
+**This skill calls Ship's generic mechanics by path** from the worktree: `$S`
+below stands for `.claude/skills/ship/scripts` and `$U` for
 `.claude/skills/update-skills/scripts`. Each mechanic answers `--help` with its
 flags. Plan files and body files go in your scratchpad, outside the repo. `$S`
 and `$U` are notation: write the paths out.
@@ -258,9 +258,9 @@ on.
 Open it with `$S/open-pr.sh none --title "<subject>" --body-file <body>`, a
 Conventional-Commit subject honouring the profile's `Subject constraints:`
 (`chore(skills): refresh derived skills` where it has none), then
-`$S/read-pr.sh <pr>`. Hand the owner the link, and `$S/cleanup.sh none` to run
-from the main checkout after the merge, and stop: the PR merges the way the
-repo merges anything.
+`$S/read-pr.sh <pr>`. Hand the owner the link, and
+`.claude/skills/ship/scripts/cleanup.sh none` to run from the main checkout
+after the merge, and stop: the PR merges the way the repo merges anything.
 
 ### 9. Source-repo mode
 
@@ -332,3 +332,4 @@ writes it to the Run file's deviations log, which lands in the merge summary:
 | Step asks | The run records |
 |---|---|
 | Step 6, re-running `/setup-skills`, which interviews | not re-run; `setup-skills needed: <section or profile reason>` per item |
+| Step 3, an `unreachable` row | `drift not checked: <skill>: <error>` |

@@ -14,7 +14,7 @@ You are the **supervisor**: the main agent driving the run. Each **supervised
 session** is one claude agent in a Herdr tab you created, beside your own tab
 in your workspace. The **roster** is the file listing them.
 
-Herdr is this skill's subject: it needs herdr 0.9.3 or newer.
+Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer.
 
 ## The four scripts
 

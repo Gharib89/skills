@@ -135,7 +135,7 @@ below lands as a minor
 ## Adding a skill this repo writes
 
 The set of skills this repo writes is the lock's `source: "."` entries, in
-`skills-lock.json`. Five sites name that set, and each needs a hand edit:
+`skills-lock.json`. Five sites need a hand edit for each skill in that set:
 
 1. The lock entry: add `--skill <name>` to the Refresh line in CLAUDE.md's
    `### Ship` block and run it, which writes the entry and the derived copy.
@@ -143,7 +143,7 @@ The set of skills this repo writes is the lock's `source: "."` entries, in
 3. The release workflow, `.github/workflows/semantic-release.yml`: its `SKILLS`
    list and the release-commit conditions above it.
 4. The install lines in the skill's `SKILL.md`: a pinned line for each skill it
-   composes.
+   composes, if any.
 5. `.gitattributes`: `.claude/skills/<name>/** linguist-generated`, which
    collapses the derived copy in a GitHub PR diff.
 

@@ -23,7 +23,7 @@
     "drive-session": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "bbd85737a9f50b9b41d443d886ecd5cdf8e9410068618d2f79cf95607a99ce88"
+      "computedHash": "b6ea1ae6a63ff49b1ac44147ec6f7815fa53095cdea157d796d640d64e24d244"
     },
     "find-docs": {
       "source": "upstash/context7",
@@ -137,7 +137,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "49328cc40ef218351f8f12093d53befd2b0f046086339b5f041b2ba140c83fa4"
+      "computedHash": "d0cfb9facaed6ef7c440780100339a216608b3a079c733ce5f79305d9ad3ec93"
     },
     "wayfinder": {
       "source": "mattpocock/skills",
