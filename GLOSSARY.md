@@ -148,6 +148,14 @@ _Avoid_: option, knob, setting
 A user-invoked skill that explores a repo and drafts its per-repo documents, confirming with the human before writing, and stopping with the exact command when a prerequisite is missing. Two in the source repo, each a different concern: `setup-skills` drafts what Ship reads, and each later Ship document joins it as one more section; the harness setup skill drafts the agent harness and needs no Ship.
 _Avoid_: init, scaffold, bootstrap
 
+**Project setup**:
+The one run that takes a git repo with an origin to a consumer repo ready for its first Ship run, by following every setup skill in order, each in its own first-run or re-run mode. It holds no record of its own: what is done is read from the per-repo documents those skills write and from the lock. Re-running it is how a repo catches up, since each followed skill proposes only what is missing or behind. `setup-project` performs it.
+_Avoid_: bootstrap, onboarding, setup-all, meta-setup
+
+**Setup status**:
+The table a project setup reads at its start and again at its end: one row per step in fixed order (tools, repo and remote, installed skills, Matt's setup, the harness, Ship's setup, the proof), each `done`, `re-run audit` or `run`, read from the files that step leaves behind. The human confirms it once before anything is written, and the run is done when every other row reads `done` and Ship's preflight admits a run, which settles the proof row.
+_Avoid_: plan, checklist, status report
+
 **Dimension label**:
 A label on one of the three dimensions a repo's tracker carries beside the five triage roles: kind, size and priority, at most one label per dimension on an issue, stamped at triage time. `setup-skills` seeds the vocabulary, creating the labels on the host and writing the `## Dimension labels` section into a `docs/agents/triage-labels.md` that has none; the repo owns the section from then on. Implementation order is derived from priority, size and blocking edges and is never one of them: a rank label rots the moment a higher issue ships.
 _Avoid_: tag, rank label, severity, t-shirt size
@@ -257,7 +265,7 @@ A skill Ship takes a phase's logic from at the phase that needs it, rather than 
 _Avoid_: dependency, sub-skill, helper skill
 
 **Derived copy**:
-The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and left as installed, every change going to the source. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is installed at repo scope, because a personal skill silently shadows a repo's.
+The copy of a shared skill committed under a repo's `.claude/skills/`, installed from this repo and left as installed, every change going to the source. A repo's copy is what runs, in the attended and unattended lanes alike, and refreshing it is the repo owner's act. A shared skill is installed at repo scope, because a personal skill silently shadows a repo's; `setup-project` alone installs at user scope, since it runs before a repo has any (ADR 0007).
 _Avoid_: vendored fork, sync, symlink, snapshot
 
 **Source repo**:

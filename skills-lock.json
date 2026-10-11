@@ -77,6 +77,18 @@
       "sourceType": "local",
       "computedHash": "8fc2b0da45d38514bf8f103ddb164a718dc835fcfeb15822898ab7c40e94a05b"
     },
+    "setup-matt-pocock-skills": {
+      "source": "mattpocock/skills",
+      "ref": "49dd158d1076134a641b33efb035946536778336",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "computedHash": "1d35d0afa3ded88c9324d38db08b2cff91cd03e0e11d64786bee41385cd7b9fb"
+    },
+    "setup-project": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "210fb5bc40631f12b7b3837811ffb5dd4eaac247eb63270189ea84e8c9662563"
+    },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
