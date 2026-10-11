@@ -101,6 +101,15 @@ check "its evidence names both schemas" "docs/agents/harness.md Schema 2, setup-
 d=$(tree oldship); printf '# Ship profile\n\nNo schema line\n' > "$d/docs/agents/ship.md"
 check "a ship profile with no readable schema reads re-run audit" \
   "re-run audit" "$(state ships-setup "$d")"
+# Near misses of the `Schema: N` line: indented, a longer token, quoted.
+for line in '  Schema: 4' 'Schema: 4b' '`Schema: 4`'; do
+  printf '# Ship profile\n\n%s\n' "$line" > "$d/docs/agents/ship.md"
+  check "a ship profile whose schema line is '$line' reads re-run audit" "re-run audit" "$(state ships-setup "$d")"
+done
+# A metadata key nested deeper than the frontmatter's own is not the key.
+d=$(tree nested); sed -i.bak 's/^  version: /    version: /' "$d/.claude/skills/cloud-ship/SKILL.md"
+check "a version nested deeper than metadata reads unreadable" "cloud-ship version unreadable" \
+  "$(evidence installed-skills "$d" | grep '^cloud-ship')"
 
 d=$(tree behind); jq '.skills.ship.version = "0.10.0"' "$fixture/behind.lock" > "$fixture/behind2.lock"
 check "a source-repo skill behind the source lock reads re-run audit" \
@@ -199,6 +208,8 @@ check "and setup-status takes it as a source lock" "done" "$(fetched > "$fixture
   state installed-skills "$d" "$fixture/fetched.lock")"
 printf -- '---\nname: ship\nmetadata:\n  version: latest\n---\n' > "$raw_dir/skills/ship/SKILL.md"
 check_rc "a SKILL.md with no dotted version exits 1" 1 "$(fetched >/dev/null; echo $?)"
+printf -- '---\nname: ship\nmetadata:\n  version: 0.22.1-rc1\n---\n' > "$raw_dir/skills/ship/SKILL.md"
+check_rc "a version with a suffix past the dotted number exits 1" 1 "$(fetched >/dev/null; echo $?)"
 rm "$raw_dir/skills/ship/SKILL.md"
 check_rc "a SKILL.md that cannot be fetched exits 1" 1 "$(fetched >/dev/null; echo $?)"
 printf 'not json\n' > "$raw_dir/skills-lock.json"
