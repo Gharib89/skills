@@ -7,9 +7,9 @@
 #   scripts/check.sh full             the whole repo
 #   scripts/check.sh deps             only the installs below
 #
-# Every rung first installs, frozen and one after another, each DEPS_ROWS root
-# whose present test fails, reported as deps:<name>; a root already present is
-# not reported. The rung still runs after a failed install.
+# Each rung here first installs, frozen and one after another, each DEPS_ROWS
+# root whose present test fails, reported as deps:<name>; a root already present
+# is not reported. The rung still runs after a failed install.
 #
 # stdout: one JSON line {"rung","verdict","checks":{<name>:<status>}}, status
 #         pass | fail | unavailable | skipped | over-budget
@@ -57,8 +57,9 @@ LOCAL_ONLY=''
 EXCLUDED=''
 # The roots whose dependencies install into the checkout, one per line:
 #   <name>|<present test>|<frozen install>
-# Both commands run from the root; the install runs only when the present test
-# fails, and CHECK_DEADLINE never stops it.
+# Both commands run from the repo root, so each names its root's path, and the
+# present test carries no `|`; the install runs only when that test fails, or
+# when an earlier install of the root never passed.
 DEPS_ROWS=''
 # <<< setup-harness configuration
 : "${DEPS_ROWS=}" "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}" "${LOCAL_ONLY=}" "${EXCLUDED=}"
@@ -170,14 +171,19 @@ inside() {
   printf '%s' "$d${1##*/}"
 }
 
-# Each DEPS_ROWS root whose present test fails, installed. A deadline that
-# killed an install would leave a partial tree its present test then passes.
+# Each DEPS_ROWS root whose present test fails, installed. An install the
+# deadline or a hook's timeout kills leaves a partial tree its present test
+# passes, so a mark in this checkout's own git directory, removed only once
+# the install passes, makes the next call install again.
 install_deps() {
-  local name present cmd
+  local name present cmd marks
+  marks=$(git rev-parse --absolute-git-dir)/check-deps
   while IFS='|' read -r name present cmd; do
     [ -n "$name" ] || continue
-    (set +f && eval "$present") < /dev/null > /dev/null 2>&1 && continue
-    deadline='' check "deps:$name" . "$cmd"
+    [ ! -e "$marks/$name" ] && (set +f && eval "$present") < /dev/null > /dev/null 2>&1 && continue
+    mkdir -p "$marks" && : > "$marks/$name"
+    check "deps:$name" . "$cmd"
+    case $statuses in *"pass$nl") rm -f "$marks/$name" ;; esac
   done <<EOF
 $DEPS_ROWS
 EOF

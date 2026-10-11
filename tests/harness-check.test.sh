@@ -398,7 +398,7 @@ suite" "$(cat "$ARGS_LOG")"
 
 # A root's dependencies, missing as in a fresh worktree, are installed before
 # any other check on every rung, so a runner hook that calls a root's own
-# binary finds it on the first call (#586). Each command runs from the root.
+# binary finds it on the first call (#586). Each command runs from the repo root.
 stub install 'echo "install $1" >> "$ARGS_LOG"; mkdir -p "$1/node_modules"'
 stub needs 'echo runner >> "$ARGS_LOG"; test -d web/node_modules'
 r=$(repo deps "EDIT_GLOBS='*.ts'
@@ -418,19 +418,19 @@ check "a root whose present test passes installs nothing and is not reported" \
   '{"rung":"full","verdict":"pass","checks":{"runner":"pass"}}' "$out"
 check "and only the runner ran" runner "$(cat "$ARGS_LOG")"
 run "$r" deps
-check "the deps rung with every root present is skipped" \
+check "check.sh deps with every root present is skipped" \
   '{"rung":"deps","verdict":"skipped","checks":{"deps":"skipped"}}' "$out"
 check_rc "and exits 0" 0 "$rc"
 
 rm -rf "$r/web/node_modules"; : > "$ARGS_LOG"
 run "$r" full
-check "full installs before its runner, in a slot of its own" \
+check "full installs before its runner" \
   '{"rung":"full","verdict":"pass","checks":{"deps:web":"pass","runner":"pass"}}' "$out"
 check "the install ran before the runner on full" "install web
 runner" "$(cat "$ARGS_LOG")"
 rm -rf "$r/web/node_modules"; : > "$ARGS_LOG"
 run "$r" deps
-check "the deps rung runs the installs alone" \
+check "check.sh deps runs the installs alone" \
   '{"rung":"deps","verdict":"pass","checks":{"deps:web":"pass"}}' "$out"
 check "and no runner" "install web" "$(cat "$ARGS_LOG")"
 
@@ -447,11 +447,20 @@ check_rc "a failed install exits 1" 1 "$rc"
 check "the install's output reaches stderr" "--- deps:web ---
 bad: something broke" "$err"
 
-# CHECK_DEADLINE never kills an install: a killed one leaves a partial tree its
-# present test would then pass for good.
-r=$(repo deps-deadline "DEPS_ROWS='web|test -d web/node_modules|sleep 2 && mkdir -p web/node_modules'")
+# An install the deadline, or a hook's timeout, kills leaves a partial tree
+# its present test passes, so the next call installs again until one finishes.
+r=$(repo deps-killed "DEPS_ROWS='web|test -d web/node_modules|mkdir -p web/node_modules && sleep 3'")
 CHECK_DEADLINE=$(($(date +%s) + 1)) run "$r" deps
-check "an install outlasting the deadline completes" \
+check "an install the deadline stops is over budget" \
+  '{"rung":"deps","verdict":"over-budget","checks":{"deps:web":"over-budget"}}' "$out"
+check "its partial tree is left behind" yes "$(test -d "$r/web/node_modules" && echo yes)"
+run "$r" deps
+check "the next call installs again though the present test passes" \
   '{"rung":"deps","verdict":"pass","checks":{"deps:web":"pass"}}' "$out"
+run "$r" deps
+check "and once one finished, none runs" \
+  '{"rung":"deps","verdict":"skipped","checks":{"deps":"skipped"}}' "$out"
+check "the record of a started install stays out of the working tree" '' \
+  "$(git -C "$r" status --porcelain --untracked-files=all | grep -v -e scripts/check.sh -e web/)"
 
 finish

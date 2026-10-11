@@ -73,7 +73,7 @@ Each stack's commands, by its lockfile:
 | `packages.lock.json` | None. | None. | `dotnet restore --locked-mode` | None. |
 | `gradle.lockfile` | None. | None. | `gradle dependencies` | None. |
 
-A present test passes once the frozen install has filled the root; Poetry's environment sits in its cache rather than the root, and `poetry env info -p` exits 1 while the project has none. A `None.` present test is a stack that restores into a cache every checkout shares.
+A present test passes once the frozen install has filled the root; Poetry's environment sits in its cache rather than the root, and `poetry env info -p` exits 1 while the project has none, at the cost of starting Poetry on each check. A `None.` present test is a stack that restores into a cache every checkout shares.
 
 A `None.` exec or dev add means the stack's tools are toolchain components or `Route:` installs, run by their own binary. A root with no lockfile (every Maven root, most Gradle and .NET roots) is `unlocked` and restores from its manifest (`mvn -q dependency:go-offline`, `gradle dependencies`, `dotnet restore`). An `unlocked` root can gain a lockfile from its exact dev add: [reference/detection.md](../reference/detection.md).
 
