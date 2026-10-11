@@ -230,10 +230,15 @@ check "skip of another phase leaves pending results pending" \
 at "$repo" open 3 --file "$sk" >/dev/null
 before=$(cat "$sk")
 check_rc "skip 3 over an open phase 3 is refused" 1 "$(inrc "$repo" skip 3 'docs class' --file "$sk")"
+check "the refusal names the open phase" \
+  'phase 3 is open; close it before skipping it' "$(inerr "$repo" skip 3 'docs class' --file "$sk")"
 check "the refused skip left the Run file byte-for-byte" "$before" "$(cat "$sk")"
 sk2=$(at "$repo" init 62 --from-profile "$spaced" | jq -r .run_file)
 before=$(cat "$sk2")
 check_rc "a multi-line skip 3 reason is malformed" 2 "$(inrc "$repo" skip 3 "$(printf 'docs class\nsecond line')" --file "$sk2")"
+check "the refusal names the newline" \
+  'a phase is one line: that reason carries a newline; reword it' \
+  "$(inerr "$repo" skip 3 "$(printf 'docs class\nsecond line')" --file "$sk2")"
 check "the refused multi-line reason left the Run file byte-for-byte" "$before" "$(cat "$sk2")"
 sj=$(at "$repo" skip 3 'docs class: no verification applies' --file "$sk2")
 check "skip 3 keeps its JSON shape" 'mirror,phase,reason,run_file,state' "$(jq -r 'del(.line) | keys | join(",")' <<<"$sj")"
@@ -255,6 +260,22 @@ check "a result already carrying a word keeps it" \
 check "the pending ones beside it are settled" \
   '- Docs check: n/a: docs class
 - Build: unit tests: n/a: docs class' "$(grep -e '^- Docs check: ' -e '^- Build: unit tests: ' "$sk3")"
+# Only the results section is settled, and each entry by its whole line: a name
+# that begins another settles only its own, and a decoy elsewhere stays.
+printf '## Verification\n\n### lint\n\n### lint: strict\n' > "$tmp/prefix.md"
+sk5=$(at "$repo" init 65 --from-profile "$tmp/prefix.md" | jq -r .run_file)
+sed 's/^- lint: strict: pending$/- lint: strict: pass/' "$sk5" > "$sk5.new" && mv "$sk5.new" "$sk5"
+printf -- '- lint: pending\n' >> "$sk5"
+at "$repo" skip 3 'docs class' --file "$sk5" >/dev/null
+check "a name that begins another settles only its own entry" \
+  '- lint: n/a: docs class
+- lint: strict: pass' "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$sk5" | grep '^- ')"
+check "a pending line outside the results section is left as it is" '- lint: pending' "$(tail -1 "$sk5")"
+# A rebuilt Run file carries a skipped phase 3 with its results pending; a
+# second skip re-stamps it and settles them.
+sk6=$(at "$repo" init 66 --from-profile "$spaced" --state '3=skipped:small lane' | jq -r .run_file)
+at "$repo" skip 3 'small lane' --file "$sk6" >/dev/null
+check "a re-skip settles results a rebuilt skipped phase 3 left pending" 0 "$(grep -c ': pending$' "$sk6")"
 sk4=$(at "$repo" init 64 | jq -r .run_file)
 before=$(cat "$sk4")
 at "$repo" skip 3 'docs class' --file "$sk4" >/dev/null

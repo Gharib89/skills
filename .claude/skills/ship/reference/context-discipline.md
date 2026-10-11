@@ -102,8 +102,8 @@ results or evidence lines [implement.md](implement.md#phase-4-evidence-lines)
 and [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps
 all ten items and `skip`s each collapsed phase, so the record shows a decision
 and not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
-outgrew. A harness that refuses the task tools has answered: run on the file
-alone.
+outgrew, though phase 3's settled results keep the first skip's reason. A
+harness that refuses the task tools has answered: run on the file alone.
 
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned**, `<scratch>/<role>/<role>-report.md`, because a

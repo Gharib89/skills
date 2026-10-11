@@ -57,12 +57,11 @@
 # `--verifications` names a comma list of name-shaped words (one
 # `- <name>: pending` each, which `close 3 --result <name>=<word>` settles with
 # one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, and which
-# `close 3` will not pass while any is pending; `skip 3 <reason>`, which leaves
-# no close to take a result, settles each still pending as `n/a: <reason>`),
-# then `Design and plan`,
+# `close 3` will not pass while any is pending), then `Design and plan`,
 # `Deviations log`, and `Direct reads`, one line per informational read the run
 # made straight through the host's REST form, no mechanic covering it, so one
-# that recurs across runs is visible as a mechanic to promote. `gate record`
+# that recurs across runs is visible as a mechanic to promote. `skip 3 <reason>`
+# settles each still-pending result as `n/a: <reason>`. `gate record`
 # appends the local gate's verdict, the head it ran on and the verdict JSON's
 # `gates` object (compact, one line, absent when the JSON has none) to a
 # `Local gate` section; `gate read` answers whether the head the run is at is
@@ -438,7 +437,8 @@ EORECORD
 }
 # A skipped phase 3 has no close to take a result, so the skip settles each
 # verification still pending as n/a with its reason. The entry is matched as the
-# whole pending line, so a name holding a colon is found by its full name.
+# whole `- <name>: pending` line, not by prefix, so a name that begins another
+# (`lint` beside `lint: strict`) settles only its own entry.
 settle_skipped() { # settle_skipped <reason>
   local pend
   pend=$(pending_verifs) || ship_tooling "cannot read the verification results in $file"
