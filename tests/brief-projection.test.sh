@@ -323,4 +323,26 @@ usage=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
     all: [], total: 1}, threads: []}')
 check "a usage line quoted in a finding keeps its placeholders, real tags still go"   "$(printf 'Looks fine.\n**Findings:** 2\n- usage reads run-file close <n> --result <name>=<word> here\n- `run-file close <n> --result <name>=<word>` in a span bold')"   "$(ship_brief "$usage" Gharib89 on_head | jq -r '.rounds[0].body')"
 
+# review-loop.md is what a run reads a brief by, and a thread row's text is
+# `lead` where a round row's is `body`: a run that read `.body` off a thread got
+# null and took the comment over REST instead (#590). The loop's `--brief`
+# bullet names each field the projection emits on a thread row and says the row
+# has no `body`; a negated copy of the bullet must fail each half.
+loop_brief=$(awk '/^- \*\*`--brief` is how a round is read/ {on=1; print; next}
+  on && /^- \*\*/ {exit} on' skills/ship/reference/review-loop.md)
+thread_keys=$(ship_brief "$poll" Gharib89 on_head | jq -r '.threads[0] | keys_unsorted[]')
+# <bullet>: each thread-row field the bullet leaves unnamed, then `body` where it
+# does not say a thread row has none.
+unnamed() {
+  local k
+  for k in $thread_keys; do grep -qF "\`$k\`" <<<"$1" || echo "$k"; done
+  grep -qF 'A thread row has no `body`' <<<"$1" || echo body
+}
+check "review-loop.md's --brief bullet names every thread-row field and denies a body" "" \
+  "$(unnamed "$loop_brief")"
+check "a bullet saying a thread row has a body is refused" body \
+  "$(unnamed "${loop_brief//has no \`body\`/has a \`body\`}")"
+check "a bullet that does not name \`lead\` is refused" lead \
+  "$(unnamed "${loop_brief//\`lead\`/lead}")"
+
 finish
