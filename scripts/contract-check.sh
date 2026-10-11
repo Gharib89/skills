@@ -324,7 +324,7 @@ if [ -d "$harness" ]; then
 fi
 
 # 9. The harness schema number sits in four places, moved together by the
-# bump rule in harness-schema.md: the skill's metadata.harness-schema, the
+# harness bump rule in docs/contributing/standards/release.md: the skill's metadata.harness-schema, the
 # template's Schema: line, the checker's schema= literal and the doc's own
 # `## Schema <n>` entry. One moved alone ships a template its own checker
 # refuses, or a re-run that migrates by an entry that is not there. Each read

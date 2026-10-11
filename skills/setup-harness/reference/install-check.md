@@ -1,6 +1,6 @@
 # The install check
 
-Every third-party unit passes this before anything of it is written. The check is the skill's, not the human's taste: a unit it refuses is never written, and there is no override inside the skill.
+Every third-party unit passes this before anything of it is written. A unit the check refuses is never written, and there is no override inside the skill.
 
 ## Contents
 
