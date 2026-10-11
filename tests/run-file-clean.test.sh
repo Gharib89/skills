@@ -158,6 +158,14 @@ base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/';
 base; change_ci '.status="no-checks" | .checks=[]'; held 'legal no-checks cannot replace expected green leg' 'CI test: missing'
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_ci '.status="no-checks" | .checks=[]'; held 'no-checks not explicitly legal' 'CI: no-checks'
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; printf '\n' >> "$profile"; sed '/^Legs:/a No-checks legal: yes' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_ci '.status="no-checks" | .checks=[]'; clean 'legal no-checks with no expected legs'
+# A path-filtered leg: No-checks legal: yes admits a leg with no check on the head (#589).
+legal() { sed '/^  test: prove the change$/a\  docs: path-filtered\nNo-checks legal: yes' "$profile" > "$profile.new" && mv "$profile.new" "$profile"; }
+base; legal; change_ci '.legs=["test","docs"] | .missing_legs=["docs"]'; clean 'legal missing leg'
+base; legal; change_ci '.status="no-checks" | .checks=[]'; clean 'legal no-checks with listed legs'
+base; legal; change_ci '.checks[0].status="failure"'; held 'legal policy keeps a red leg' 'CI test: failure'
+base; legal; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.status="no-checks" | .checks=[]'; held 'legal missing leg cannot cover a deferred local gate' 'CI test: missing'
+base; legal; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.legs=["test","docs"] | .missing_legs=["docs"]'; held 'deferred local gate keeps a filtered leg held' 'CI docs: missing'
+base; legal; change_run 's/punctuation: pass/punctuation: deferred-to-ci/'; change_ci '.checks=[]'; held 'legal missing leg proves no deferred verification' 'verification live check: punctuation: no associated green CI leg'
 base; rm "$ci"; answer=$(call); check_rc 'unreadable CI input is tooling' 2 "$?"; check 'unreadable CI names its path' "cannot read CI answer at $ci" "$(jq -r .error <<<"$answer")"
 base; sed '/^## Verification/i ```' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; answer=$(call); check_rc 'unclosed profile fence is tooling' 2 "$?"; check 'unclosed profile fence names failed read' "cannot read profile evidence at $profile" "$(jq -r .error <<<"$answer")"
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; sed '/^Legs:/a No-checks legal: no' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; printf '\n```\n## CI\nLegs: None.\nNo-checks legal: yes\n```\n' >> "$profile"; change_ci '.status="no-checks" | .checks=[]'; held 'fenced CI policy cannot authorize no-checks' 'CI: no-checks'

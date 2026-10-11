@@ -152,7 +152,9 @@
 #     for a record made without one; behind is null where git cannot count the
 #     commits between the recorded head and <sha>
 #   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
-#     check, every profile CI leg succeeded on head, verifications passed or were
+#     check, every profile CI leg succeeded on head or, where No-checks legal:
+#     says yes and no local gate deferred to CI, ran no check there,
+#     verifications passed or were
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged with a dispositioned Round, or
 #     on inline lane for an on-request reviewer while the last Lane: line
@@ -738,8 +740,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   profile=$(awk "$SHIP_AWK_FENCE"'
     { if (!ship_fence($0)) print }
     END { if (_fenced) exit 1 }' "$profile_path") || ship_tooling "cannot read profile evidence at $profile_path"
+  # A legal empty list also admits a path-filtered leg with no check on head (#589).
   local names legs no_checks=false
-  ship_no_checks_expected "$profile"
+  ship_no_checks_legal "$profile"
   case $? in 0) no_checks=true ;; 1) ;; *) ship_tooling "cannot read profile no-checks policy" ;; esac
   names=$(ship_profile_legs "$profile") || ship_tooling "cannot read profile CI legs"
   legs=$(jq -Rn '[inputs | select(. != "")]' <<<"$names") || ship_tooling "cannot read profile CI legs"
@@ -811,7 +814,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        if samehead($ci.head_sha; $head) | not then "CI: head differs" else empty end,
        if $ci.status != "green" and ($ci.status != "no-checks" or ($no_checks | not)) then "CI: " + $ci.status else empty end,
        ($legs[] as $leg | [$ci.checks[] | select(named($leg))] as $checks
-         | if $checks == [] then "CI " + $leg + ": missing"
+         # A deferral names no leg, so it leaves no leg legally missing.
+         | if $checks == [] then (if $no_checks and ([($gates // {})[] | select(. == "deferred-to-ci")] == [])
+             then empty else "CI " + $leg + ": missing" end)
            else $checks[] | select(.status != "success") | "CI " + .name + ": " + .status end),
        ($verifications[] as $v | result($v.name) as $status
          | if $status == "pass" or $status == "n/a" then empty
