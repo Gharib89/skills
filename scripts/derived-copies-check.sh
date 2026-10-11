@@ -62,12 +62,17 @@ got=${got% }
 # copy is marked by its own line, and a vendored skill, which has no second
 # copy, keeps its diff visible. Git resolves the attribute for every file of the
 # copy, so a line a later one undoes, or one narrower than the copy, counts as
-# no line; a user's own attributes file is left out.
+# no line. GitHub reads only the committed files, so git runs against an empty
+# repository with this tree as its work tree: `.git/info/attributes`, a user's
+# own attributes file and the system one are left out.
 if [ -e .gitattributes ] && [ ! -r .gitattributes ]; then echo 'cannot read .gitattributes' >&2; exit 2; fi
+bare=$(mktemp -d) && trap 'rm -rf "$bare"' EXIT && git init -q --bare "$bare" \
+  || { echo 'cannot create a scratch repository' >&2; exit 2; }
 # Prints the distinct values the attribute takes over .claude/skills/<s>/.
 attrs() {
   { echo ".claude/skills/$1/SKILL.md"; [ ! -d ".claude/skills/$1" ] || find ".claude/skills/$1" -type f; } \
-    | git -c core.attributesFile=/dev/null check-attr --stdin linguist-generated \
+    | GIT_DIR=$bare GIT_WORK_TREE=. GIT_ATTR_NOSYSTEM=1 \
+      git -c core.attributesFile=/dev/null check-attr --stdin linguist-generated \
     | sed 's/.*: linguist-generated: //' | sort -u
 }
 for s in $skills; do

@@ -14,7 +14,6 @@ fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 tree() {
   local d="$fixture/$1" s; rm -rf "$d"
   mkdir -p "$d/.github/workflows" "$d/.release" "$d/.claude/skills/tdd" || return 1
-  git -C "$d" init -q || return 1
   jq -n '{version: 1, skills: {
     ship: {source: ".", sourceType: "local"},
     "setup-skills": {source: ".", sourceType: "local"},
@@ -121,6 +120,12 @@ mkdir -p "$d/.claude/skills/tdd/ref"; printf 'x\n' > "$d/.claude/skills/tdd/ref/
 printf '.claude/skills/tdd/ref/** linguist-generated\n' >> "$d/.gitattributes"
 check "a line marking one file of a vendored skill fails" \
   ".gitattributes marks .claude/skills/tdd/** linguist-generated, which is no source \".\" skill's derived copy" "$(out_of "$d")"
+
+# GitHub renders the committed .gitattributes alone, so a local-only rule counts as none.
+d=$(tree localonly); sed -i.bak '/setup-skills/d' "$d/.gitattributes"
+git -C "$d" init -q; printf '.claude/skills/setup-skills/** linguist-generated\n' > "$d/.git/info/attributes"
+check "a line kept only in .git/info/attributes fails" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated" "$(out_of "$d")"
 
 d=$(tree globbed); printf '.claude/skills/** linguist-generated\n' >> "$d/.gitattributes"
 check "a glob that also marks a vendored skill fails" \
