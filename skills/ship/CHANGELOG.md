@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.2 (2026-10-11)
+
+### Bug Fixes
+
+- **ship**: Review-loop.md names the brief thread row's fields
+  ([#592](https://github.com/Gharib89/skills/pull/592),
+  [`6fa6a6c`](https://github.com/Gharib89/skills/commit/6fa6a6cef343739e3890d07a7dcbc9a08aaadf71))
+
+
 ## v0.24.1 (2026-10-11)
 
 ### Bug Fixes
