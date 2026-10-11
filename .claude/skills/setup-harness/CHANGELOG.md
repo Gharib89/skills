@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.5 (2026-10-11)
+
+### Bug Fixes
+
+- **setup-harness**: Fetch a cloud proof sha the clone lacks before calling it unproven
+  ([#580](https://github.com/Gharib89/skills/pull/580),
+  [`2988fcf`](https://github.com/Gharib89/skills/commit/2988fcf1081b3a66767b9b7aec4675e911b11dba))
+
+
 ## v0.10.4 (2026-10-11)
 
 ### Bug Fixes
