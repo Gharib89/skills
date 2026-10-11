@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.0 (2026-10-11)
+
+### Features
+
+- **ship**: Attended runs enter isolate's worktree under .claude/worktrees
+  ([#585](https://github.com/Gharib89/skills/pull/585),
+  [`853a11e`](https://github.com/Gharib89/skills/commit/853a11e5fea8d592c13b506f36f86eb942e5d163))
+
+
 ## v0.23.0 (2026-10-11)
 
 ### Features
