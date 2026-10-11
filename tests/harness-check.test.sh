@@ -449,18 +449,18 @@ bad: something broke" "$err"
 
 # An install the deadline, or a hook's timeout, kills leaves a partial tree
 # its present test passes, so the next call installs again until one finishes.
-r=$(repo deps-killed "DEPS_ROWS='web|test -d web/node_modules|mkdir -p web/node_modules && sleep 3'")
+r=$(repo deps-killed "DEPS_ROWS='packages/web|test -d packages/web/node_modules|mkdir -p packages/web/node_modules && sleep 3'")
 CHECK_DEADLINE=$(($(date +%s) + 1)) run "$r" deps
 check "an install the deadline stops is over budget" \
-  '{"rung":"deps","verdict":"over-budget","checks":{"deps:web":"over-budget"}}' "$out"
-check "its partial tree is left behind" yes "$(test -d "$r/web/node_modules" && echo yes)"
+  '{"rung":"deps","verdict":"over-budget","checks":{"deps:packages/web":"over-budget"}}' "$out"
+check "its partial tree is left behind" yes "$(test -d "$r/packages/web/node_modules" && echo yes)"
 run "$r" deps
 check "the next call installs again though the present test passes" \
-  '{"rung":"deps","verdict":"pass","checks":{"deps:web":"pass"}}' "$out"
+  '{"rung":"deps","verdict":"pass","checks":{"deps:packages/web":"pass"}}' "$out"
 run "$r" deps
 check "and once one finished, none runs" \
   '{"rung":"deps","verdict":"skipped","checks":{"deps":"skipped"}}' "$out"
 check "the record of a started install stays out of the working tree" '' \
-  "$(git -C "$r" status --porcelain --untracked-files=all | grep -v -e scripts/check.sh -e web/)"
+  "$(git -C "$r" status --porcelain --untracked-files=all | grep -v -e scripts/check.sh -e packages/)"
 
 finish

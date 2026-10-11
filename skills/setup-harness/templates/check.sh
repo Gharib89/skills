@@ -181,7 +181,7 @@ install_deps() {
   while IFS='|' read -r name present cmd; do
     [ -n "$name" ] || continue
     [ ! -e "$marks/$name" ] && (set +f && eval "$present") < /dev/null > /dev/null 2>&1 && continue
-    mkdir -p "$marks" && : > "$marks/$name"
+    mkdir -p "$(dirname "$marks/$name")" && : > "$marks/$name"
     check "deps:$name" . "$cmd"
     case $statuses in *"pass$nl") rm -f "$marks/$name" ;; esac
   done <<EOF
