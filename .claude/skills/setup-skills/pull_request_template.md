@@ -26,4 +26,4 @@ Closes #
 
 ## Attribution
 
-<!-- The environment's footer for pull request descriptions, verbatim. It ends the body, below every section a later phase rewrites, which is what keeps a section rewrite from swallowing it. -->
+<!-- The environment's footer for pull request descriptions, verbatim. It ends the body, below every section a later phase rewrites. -->
