@@ -121,12 +121,15 @@ either missing, run step 5's `tools` and the first two pieces of its
 In a repo with no commits yet, the setup commits straight to `main`, and an
 unborn branch of another name becomes `main` with `git symbolic-ref HEAD
 refs/heads/main`. Where `git ls-remote --heads origin` prints a branch, the
-remote already has history a new root commit cannot push onto: stop, and have
-the owner pull it in (`git pull origin <branch>`) and rerun. Files already in
-the folder join the first commit, so show the owner `git status --short` before
-it and add to `.gitignore` whatever they keep out. Push `main` after that
-commit, the `repo-and-remote` step's, so the followed skills and Ship's
-mechanics find the base on origin:
+remote already has history a new root commit cannot push onto: stop, naming its
+default branch (the `refs/heads/<branch>` that `git ls-remote --symref origin
+HEAD` prints), and have the owner bring it in with `git pull origin <branch>`,
+first moving aside each file the folder shares with it, which the pull refuses
+to overwrite, then rerun `/setup-project`. Files already in the folder join the
+first commit, so show the owner `git status --short` before it and add to
+`.gitignore` whatever they keep out. Push `main` after that commit, the
+`repo-and-remote` step's, so the followed skills and Ship's mechanics find the
+base on origin:
 
 ```sh
 git push -u origin main && git remote set-head origin -a
@@ -160,11 +163,11 @@ be started with the Skill tool, since each refuses model invocation, and none
 is handed to another session.
 
 - **`tools`**: when the row reads `run`, step 1 or step 3 named `curl` or `jq`
-  not installed, or the interview chose a stack whose init tool (the stack
-  table below) is not on PATH, list each missing tool with the line that
-  installs it and confirm once, then run the user-space lines, `curl` first,
-  since the others need it. A line that needs sudo is printed for the owner and
-  never run:
+  not installed, or the interview chose a stack whose init tool (the stack table
+  below) is not on PATH, list each missing tool with the line that installs it
+  and confirm once, then run the user-space lines, `curl` first, since the
+  others need it. A line that needs sudo, or one for the owner's shell profile,
+  is printed for the owner and never run:
 
   | Tool | User-space install | Printed for the owner |
   |---|---|---|

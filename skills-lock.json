@@ -87,7 +87,7 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "ced95d48c5f7304ec698bd70101b2d1369bd1c61076a586c09d2788c3b9d0376"
+      "computedHash": "f23daf100e6272c8e377055946a3d6c4efc771c872a6affa6dd2a65510d4d3b4"
     },
     "setup-skills": {
       "source": ".",
