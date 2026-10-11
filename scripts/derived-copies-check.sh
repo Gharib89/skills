@@ -9,8 +9,8 @@
 # entries, and this script hardcodes none. Every other place that names the set
 # must agree: each `skills/<n>/` is in the set, each skill in the set has a
 # source, a derived copy and a `.release/<n>.toml`, and the release workflow's
-# `SKILLS` list and its release-commit conditions name the set exactly.
-# Vendored entries are ignored.
+# `SKILLS` list, its release-commit conditions and the `linguist-generated`
+# lines in `.gitattributes` name the set exactly. Vendored entries are ignored.
 #
 #   scripts/derived-copies-check.sh [<root>]    <root> defaults to this repo
 #
@@ -57,6 +57,34 @@ got=$(sed -n "s/^[ &|(]*startsWith(github.event.head_commit.message, 'chore(rele
   || { echo "cannot read $wf" >&2; exit 2; }
 got=${got% }
 [ "$got" = "$want" ] || { echo "$wf release-commit conditions name $got, the lock's set is $want"; rc=1; }
+
+# GitHub collapses a `linguist-generated` path in a PR diff, so each derived
+# copy is marked by its own line, and a vendored skill, which has no second
+# copy, keeps its diff visible. Git resolves the attribute for every file of the
+# copy, so a line a later one undoes, or one narrower than the copy, counts as
+# no line. GitHub reads only the committed files, so git runs against an empty
+# repository with this tree as its work tree: `.git/info/attributes`, a user's
+# own attributes file and the system one are left out.
+if [ -e .gitattributes ] && [ ! -r .gitattributes ]; then echo 'cannot read .gitattributes' >&2; exit 2; fi
+bare=$(mktemp -d) && trap 'rm -rf "$bare"' EXIT && git init -q --bare "$bare" \
+  || { echo 'cannot create a scratch repository' >&2; exit 2; }
+# Prints the distinct values the attribute takes over .claude/skills/<s>/.
+attrs() {
+  { echo ".claude/skills/$1/SKILL.md"; [ ! -d ".claude/skills/$1" ] || find ".claude/skills/$1" -type f; } \
+    | GIT_DIR=$bare GIT_WORK_TREE=. GIT_ATTR_NOSYSTEM=1 \
+      git -c core.attributesFile=/dev/null check-attr --stdin linguist-generated \
+    | sed 's/.*: linguist-generated: //' | sort -u
+}
+for s in $skills; do
+  v=$(attrs "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
+  [ "$v" = set ] || { echo "missing .gitattributes line: .claude/skills/$s/** linguist-generated"; rc=1; }
+done
+vendored=$(jq -r '.skills | to_entries[] | select(.value.source != ".") | .key' skills-lock.json | sort) \
+  || { echo 'cannot parse skills-lock.json' >&2; exit 2; }
+for s in $vendored; do
+  v=$(attrs "$s") || { echo 'cannot run git check-attr' >&2; exit 2; }
+  ! grep -qx set <<<"$v" || { echo ".gitattributes marks .claude/skills/$s/** linguist-generated, which is no source \".\" skill's derived copy"; rc=1; }
+done
 
 # The profile schema number across its three files: scripts/profile-schema-check.sh.
 "$here/profile-schema-check.sh" . || rc=1

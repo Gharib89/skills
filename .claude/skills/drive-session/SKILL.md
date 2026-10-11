@@ -12,12 +12,9 @@ metadata:
 
 You are the **supervisor**: the main agent driving the run. Each **supervised
 session** is one claude agent in a Herdr tab you created, beside your own tab
-in your workspace. The **roster** is the file listing them, so a
-compaction or a resumed supervisor still knows which sessions it owns.
+in your workspace. The **roster** is the file listing them.
 
-Herdr is this skill's subject: every script refuses to run without
-`HERDR_ENV=1`, and needs herdr 0.9.3 or newer. Install it with
-`npx skills add Gharib89/skills --skill drive-session --agent claude-code -y`.
+Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer.
 
 ## The four scripts
 
@@ -27,17 +24,16 @@ JSON it prints. Read, wait on and answer a roster session through them alone:
 each keeps the row's sequence number, which is what tells Herdr's stale `done`
 from a new turn.
 
-- `spawn <name> --roster <file> --cwd <dir> --prompt <text> [--model <m>]`
-  opens the tab without focus, starts claude, sends the task and adds the row.
-- `watch --roster <file>` blocks until one session has an **event**, prints it
-  and exits: `done`, `idle` or `blocked` past its `seen_seq`, or `gone` (the
-  agent exited or its pane closed).
-- `read <name> --roster <file>` prints the session's last 40 lines and
-  acknowledges its event. When they open mid-message (a summary or question
-  cut at the top), read again with `--lines 200`. A blocked session prints its
-  visible screen whatever `--lines` says.
-- `answer <name> --roster <file> --text <t>` sends a prompt;
-  `answer <name> --roster <file> --keys <k>...` presses keys into a dialog.
+- `spawn` opens the tab without focus, starts claude, sends the task and adds
+  the row.
+- `watch` blocks until one session has an **event**, prints it and exits:
+  `done`, `idle` or `blocked` past its `seen_seq`, or `gone` (the agent exited
+  or its pane closed).
+- `read` prints the session's last 40 lines and acknowledges its event. When
+  they open mid-message (a summary or question cut at the top), read again
+  with `--lines 200`.
+- `answer` sends a prompt with `--text`, or presses keys into a dialog with
+  `--keys`.
 
 ## The run
 
@@ -75,8 +71,7 @@ from a new turn.
    - `gone`: record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt (`--text=<t>`
-   for text opening with `-`). `answer` refuses text to a blocked session,
-   since Herdr would refuse it too. Text that starts no turn (a local slash
+   for text opening with `-`). Text that starts no turn (a local slash
    command such as `/rename`, or an Enter that did not register) comes back
    from `answer` or `spawn` as a not-ok answer with `code`
    `agent_prompt_stalled` or `timeout`. The text reached the pane, and `watch`
@@ -108,14 +103,12 @@ session. While it waits, keep watching the others.
 
 The **merge allowance** is the launch prompt's permission to merge on a clean
 gate ("merge each if all OK"). A ship profile's `Merge: on-clean-gate` is not a
-merge allowance. Ship merges a clean gate itself in such a repo, so a run that
-stops at its gate there was held by ship, or runs a ship copy older than that
-line: treat the stop as any other merge gate. A run whose summary reports the
-PR merged is at rest, with nothing left to answer. Ship decides clean, not you:
-at the gate, ask the session with `--text` to run `run-file gate clean` for its
-run and report the answer. Answer `--text merge` only on `clean: true` with no
-unmet criterion in the summary; anything else is an escalation that quotes its
-`held_by`.
+merge allowance: a run stopped at its gate there is any other merge gate. A
+run whose summary reports the PR merged is at rest, with nothing left to
+answer. Ship decides clean, not you: at the gate, ask the session with `--text`
+to run `run-file gate clean` for its run and report the answer. Answer
+`--text merge` only on `clean: true` with no unmet criterion in the summary;
+anything else is an escalation that quotes its `held_by`.
 
 ## Supervised ship runs
 
@@ -131,5 +124,5 @@ waiting, or crashed), with the PR link where there is one. To answer "what is
 `<name>` doing?" mid-run, `read` it, summarize, and handle what it shows as
 step 5 would: that `read` acknowledges any event `watch` had not yet reported.
 
-Leave every supervised tab open, so the user can read each transcript. Close
-only a tab you created, and only when the user asks.
+Leave every supervised tab open, so the user can read each transcript. Close a
+tab only when the user asks.
