@@ -396,4 +396,62 @@ run "$r" turn web/old/gone.ts
 check "a named file deleted with its directory still checks its member" "typecheck
 suite" "$(cat "$ARGS_LOG")"
 
+# A root's dependencies, missing as in a fresh worktree, are installed before
+# any other check on every rung, so a runner hook that calls a root's own
+# binary finds it on the first call (#586). Each command runs from the root.
+stub install 'echo "install $1" >> "$ARGS_LOG"; mkdir -p "$1/node_modules"'
+stub needs 'echo runner >> "$ARGS_LOG"; test -d web/node_modules'
+r=$(repo deps "EDIT_GLOBS='*.ts'
+EDIT_RUN='needs {files}'
+FULL_RUN='needs'
+DEPS_ROWS='web|test -d web/node_modules|install web'")
+mkdir -p "$r/web"; echo 'x' > "$r/web/a.ts"
+: > "$ARGS_LOG"
+run "$r" edit web/a.ts
+check "a root with no dependencies installs first, and the runner then passes" \
+  '{"rung":"edit","verdict":"pass","checks":{"deps:web":"pass","runner":"pass"}}' "$out"
+check "the install ran before the runner" "install web
+runner" "$(cat "$ARGS_LOG")"
+: > "$ARGS_LOG"
+run "$r" full
+check "a root whose present test passes installs nothing and is not reported" \
+  '{"rung":"full","verdict":"pass","checks":{"runner":"pass"}}' "$out"
+check "and only the runner ran" runner "$(cat "$ARGS_LOG")"
+run "$r" deps
+check "the deps rung with every root present is skipped" \
+  '{"rung":"deps","verdict":"skipped","checks":{"deps":"skipped"}}' "$out"
+check_rc "and exits 0" 0 "$rc"
+
+rm -rf "$r/web/node_modules"; : > "$ARGS_LOG"
+run "$r" full
+check "full installs before its runner, in a slot of its own" \
+  '{"rung":"full","verdict":"pass","checks":{"deps:web":"pass","runner":"pass"}}' "$out"
+check "the install ran before the runner on full" "install web
+runner" "$(cat "$ARGS_LOG")"
+rm -rf "$r/web/node_modules"; : > "$ARGS_LOG"
+run "$r" deps
+check "the deps rung runs the installs alone" \
+  '{"rung":"deps","verdict":"pass","checks":{"deps:web":"pass"}}' "$out"
+check "and no runner" "install web" "$(cat "$ARGS_LOG")"
+
+# A failed install fails the verdict under its own name, and the rung still
+# runs, so the rest of the report stays readable.
+r=$(repo deps-fail "EDIT_GLOBS='*.ts'
+EDIT_RUN='ok'
+DEPS_ROWS='web|test -d web/node_modules|bad'")
+mkdir -p "$r/web"; echo 'x' > "$r/web/a.ts"
+run "$r" edit web/a.ts
+check "a failed install fails the verdict, and the runner still runs" \
+  '{"rung":"edit","verdict":"fail","checks":{"deps:web":"fail","runner":"pass"}}' "$out"
+check_rc "a failed install exits 1" 1 "$rc"
+check "the install's output reaches stderr" "--- deps:web ---
+bad: something broke" "$err"
+
+# CHECK_DEADLINE never kills an install: a killed one leaves a partial tree its
+# present test would then pass for good.
+r=$(repo deps-deadline "DEPS_ROWS='web|test -d web/node_modules|sleep 2 && mkdir -p web/node_modules'")
+CHECK_DEADLINE=$(($(date +%s) + 1)) run "$r" deps
+check "an install outlasting the deadline completes" \
+  '{"rung":"deps","verdict":"pass","checks":{"deps:web":"pass"}}' "$out"
+
 finish
