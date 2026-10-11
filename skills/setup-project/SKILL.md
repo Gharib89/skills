@@ -120,10 +120,13 @@ either missing, run step 5's `tools` and the first two pieces of its
 
 In a repo with no commits yet, the setup commits straight to `main`, and an
 unborn branch of another name becomes `main` with `git symbolic-ref HEAD
-refs/heads/main`. Files already in the folder join the first commit, so show the
-owner `git status --short` before it and add to `.gitignore` whatever they keep
-out. Push `main` after that commit, the `repo-and-remote` step's, so the
-followed skills and Ship's mechanics find the base on origin:
+refs/heads/main`. Where `git ls-remote --heads origin` prints a branch, the
+remote already has history a new root commit cannot push onto: stop, and have
+the owner pull it in (`git pull origin <branch>`) and rerun. Files already in
+the folder join the first commit, so show the owner `git status --short` before
+it and add to `.gitignore` whatever they keep out. Push `main` after that
+commit, the `repo-and-remote` step's, so the followed skills and Ship's
+mechanics find the base on origin:
 
 ```sh
 git push -u origin main && git remote set-head origin -a
@@ -168,7 +171,7 @@ is handed to another session.
   | `uv` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | |
   | `bun` | `curl -fsSL https://bun.com/install \| bash` | |
   | `cargo` | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh -s -- -y` | |
-  | `dotnet` | `curl -sSL https://dot.net/v1/dotnet-install.sh \| bash /dev/stdin --channel LTS` | |
+  | `dotnet` | `curl -sSL https://dot.net/v1/dotnet-install.sh \| bash /dev/stdin --channel LTS` | `export DOTNET_ROOT="$HOME/.dotnet" PATH="$PATH:$HOME/.dotnet"`, for their shell profile: the installer edits none |
   | any other | `brew install <formula>` where `brew` is on PATH | the system package manager's line, such as `sudo apt-get install -y <package>` |
 
   `<formula>` and `<package>` are the tool's package names there: `git`, `curl`,
