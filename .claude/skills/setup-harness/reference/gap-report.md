@@ -9,7 +9,7 @@
 - [Timing on a re-run](#timing-on-a-re-run)
 - [The report](#the-report)
 
-A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. Every re-run ends in the confirm step, or in `harness: no gaps`. On a first run, the comparison in `## Files the skill wrote` and all of `## Pins` apply too, their Offers asked as step 4 questions; the contract check is a re-run's.
+A run that finds `docs/agents/harness.md` is a re-run. Explore runs in full, as on a first run, and what it finds is compared with what the harness already has: each difference is a **gap**, the report lists them, and the run writes only the gaps the human approves. Every re-run ends in the confirm step, or in `harness: no gaps`. On a first run, the Offers of `## Files the skill wrote` and `## Pins` are asked as step 4 questions; the contract check is a re-run's.
 
 ## Dispositions
 
@@ -81,7 +81,7 @@ After the writes, in place of step 6's first timing, every rung the batch touche
 
 Step 4's message on a re-run, in this order:
 
-1. **Header**: skill version, `Schema: N` (and "migrates to M" when it trails), the Claude Code floor against the installed version, the step-1 warnings, the surfaces with their evidence paths.
+1. **Header**: as SKILL.md step 4 item 1.
 2. **Offers**, numbered, each with its recommendation.
 3. **Proposed writes**: one table, `| # | Gap | Path | Now | Proposed |`, with the install-check columns filled on unit rows and each unit's glue in full after it; the migration is row 1, marked undroppable.
 4. **Budgets**: rung, cold, warm, budget, verdict.
