@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.23.0 (2026-10-11)
+
+### Features
+
+- **ship**: Run-file init refuses a Verification heading with a result word as a later field
+  ([#577](https://github.com/Gharib89/skills/pull/577),
+  [`e115a06`](https://github.com/Gharib89/skills/commit/e115a06f2d1077244b24aa04630675ca384e45aa))
+
+
 ## v0.22.3 (2026-10-11)
 
 ### Bug Fixes
