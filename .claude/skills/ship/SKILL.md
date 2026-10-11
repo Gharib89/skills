@@ -10,16 +10,11 @@ metadata:
 
 # ship
 
-Drive one issue from nothing to a **merge-ready PR**, hands-off, reaching
-the merge gate (or merging on a clean gate where the profile opts in), so the
-human runs `/ship <issue>`, walks away, and comes back
-to a PR implemented test-first, verified against the real thing the repo
-integrates with, self-reviewed, reviewed by every reviewer the repo names,
-CI-green, and summarized for a ten-second approve. This skill is **generic**: it
-knows how to ship and nothing about the repo, and every repo fact comes from the
-**ship profile**, `docs/agents/ship.md`. The copy under `.claude/skills/ship` is
-a **derived copy**, changed in its source repo `Gharib89/skills` and refreshed
-through the command the repo's `### Ship` block in CLAUDE.md carries.
+This skill is **generic**: it knows how to ship and nothing about the repo, and
+every repo fact comes from the **ship profile**, `docs/agents/ship.md`. The copy
+under `.claude/skills/ship` is a **derived copy**, changed in its source repo
+`Gharib89/skills` and refreshed through the command the repo's `### Ship` block
+in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
 version once, at the start of the run, with
@@ -61,10 +56,7 @@ through the Skill tool when their moment comes, taking each one's logic from the
 skill itself, and tell any composed skill with an unattended mode that the run
 is unattended, explicitly, because it has no other way to know. **Read**
 `show-me` (phase 6, the Change outline) instead;
-[pr-body.md](reference/pr-body.md) says why. The frontmatter's `composes` line
-names all five, each pinned at the upstream commit ship was tested against
-(`<owner>/<repo>#<sha>:<skill>`), and is what phase 0
-checks: a skill added here is added there too.
+[pr-body.md](reference/pr-body.md) says why.
 
 ## The pipeline
 
@@ -164,8 +156,8 @@ diff since `origin/HEAD`, its Standards axis reading the profile's
 carrying its own scratch directory (`standards`, `spec`) and saying the Local
 gate runs later in the run, so the axis reads the gate's JSON and never runs
 `check.sh full` or the suite itself. **Triage waits for every Report file**; one
-that fails to arrive after the bounded retry is `red-after-retry: <axis>`, never
-a disposition written from memory.
+that fails to arrive after [the stops](#the-stops)' two fix-and-retry attempts
+is `red-after-retry: <axis>`, never a disposition written from memory.
 **Auto-triage** every finding at the judgment tier, one disposition each, under
 the rails and depth checks in
 [implement.md](reference/implement.md#phase-4-triage-and-depth-checks).
@@ -173,15 +165,13 @@ the rails and depth checks in
 [evidence lines](reference/implement.md#phase-4-evidence-lines) that section's
 checks leave: `Reverted-fix:`, `Dropped:`, `Near-miss:` and `Probe:`, the red
 and `Probe:` lines produced by `run-file prove` and `run-file probe`.
-This self-review plus green CI is the review gate.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
 `deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
-finding carries a disposition; otherwise go back. A gate run while `code-review`
-is still out is paid twice when a finding lands. Run `base-fresh` first: CI
+finding carries a disposition; otherwise go back. Run `base-fresh` first: CI
 tests the merge ref, so a branch that predates a merge still goes green while
 every "does this exist?" answer taken from the worktree was pre-merge; behind:
 follow its advice, re-run, continue. Confirm every `Carry:` file still matches
@@ -226,13 +216,13 @@ with findings or stops `not landed`. Exits: `reviewed`, `not reviewed:
 merge gate on green CI and is reported there. At exit, `update-pr-body --section
 --body-file` writes the sections the rounds grew, the Change outline where it
 fell short, `Review` last, the title checked against the `Grade:`, then the
-phase-6 read-back; a cap round or a docs-only round whose fixes changed the tree
-earns one local review before the merge gate.
+phase-6 read-back; the cap, docs-only and not-landed rounds earn the local
+review [review-loop.md](reference/review-loop.md) describes.
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned is replied to and resolved per `Resolve:`, every section the rounds
-grew is rewritten, the title matches `Grade:`, any cap or docs-only fix review
-is dispositioned, `close 7` took each reviewer's `Round:` and `Stop:` lines, and
-`read-pr` shows a `## Review` line per reviewer.
+grew is rewritten, the title matches `Grade:`, any local review a cap, docs-only
+or not-landed round earned is dispositioned, `close 7` took each reviewer's
+`Round:` and `Stop:` lines, and `read-pr` shows a `## Review` line per reviewer.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,
 reading the profile's `Legs:`. `ci-wait` and `poll-pr` wait for the expected
@@ -247,7 +237,7 @@ review quota, so push when the tree changed.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
 the summary's shape, what `merge` does, its two refusals and the tracker drafts.
-Write the summary per that file, uncompressed. Attended: follow its
+Write the summary per that file. Attended: follow its
 `Merge:` branch, waiting for an explicit "merge" by default, or merging when
 `Merge: on-clean-gate` or the run is inline lane and `run-file gate clean`
 answers `clean: true`; an unmet criterion needs the human's explicit waiver.
@@ -275,8 +265,7 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
   <what>`, and a failure saying the approach is wrong stops sooner. Either way
   **stop and report** with the concrete evidence and, if cheap, a
   verified-working alternative, so the report is a fast yes.
-- **Every stop has a name**, reported verbatim, with the claim action below. A
-  sibling maps the name, a human reads it.
+- **Every stop has a name**, reported verbatim, with the claim action below.
 
 | Stop | Reason | Claim |
 |---|---|---|

@@ -39,6 +39,7 @@ exceptions bound these rules.
   `gh auth token --hostname github.com` or `az account show` whether the owner
   is signed in, both local reads that reach no host, because it runs before
   Ship and its adapters are installed; the answer decides only its `tools` row.
+  A read made directly in two runs is a candidate mechanic.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way
