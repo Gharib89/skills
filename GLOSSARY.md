@@ -149,7 +149,7 @@ A user-invoked skill that explores a repo and drafts its per-repo documents, con
 _Avoid_: init, scaffold, bootstrap
 
 **Project setup**:
-The one run that takes a folder, empty or already a git repo, to a consumer repo ready for its first Ship run, by following every setup skill in order, each in its own first-run or re-run mode. It holds no record of its own: what is done is read from the per-repo documents those skills write and from the lock. Re-running it is how a repo catches up, since each followed skill proposes only what is missing or behind. `setup-project` performs it.
+The one run that takes a folder, whether empty, loose code with no git or already a git repo, to a consumer repo ready for its first Ship run, by following every setup skill in order, each in its own first-run or re-run mode. It holds no record of its own: what is done is read from the per-repo documents those skills write and from the lock. Re-running it is how a repo catches up, since each followed skill proposes only what is missing or behind. `setup-project` performs it.
 _Avoid_: bootstrap, onboarding, setup-all, meta-setup
 
 **Setup status**:

@@ -1,10 +1,11 @@
 ---
 name: setup-project
 description: >-
-  Take a folder, empty or already a repo, to a consumer repo ready for its first
-  /ship: show the setup status, then follow setup-matt-pocock-skills,
-  setup-harness and setup-skills in order, each in its first-run or re-run
-  mode, and prove it with Ship's preflight. Run again to catch a repo up.
+  Take a folder, whether empty, loose code with no git or already a repo, to a
+  consumer repo ready for its first /ship: show the setup status, then follow
+  setup-matt-pocock-skills, setup-harness and setup-skills in order, each in
+  its first-run or re-run mode, and prove it with Ship's preflight. Run again
+  to catch a repo up.
 disable-model-invocation: true
 metadata:
   version: 0.1.0
@@ -13,11 +14,11 @@ metadata:
 
 # setup-project
 
-A **project setup** takes a folder, empty or already a repo, to a consumer ready
-for its first Ship run by following every setup skill in order. It keeps no
-record of its own: what is done is read from the files those skills write and
-from `skills-lock.json`, so running it again is how a repo catches up, and a
-stopped run resumes at the first step not done.
+A **project setup** takes a folder, whether empty, loose code with no git or
+already a repo, to a consumer ready for its first Ship run by following every
+setup skill in order. It keeps no record of its own: what is done is read from
+the files those skills write and from `skills-lock.json`, so running it again is
+how a repo catches up, and a stopped run resumes at the first step not done.
 
 Install it at user scope, because it must run in a repo that has no
 project-scope skills yet; everything it installs goes in at project scope, where
@@ -95,23 +96,28 @@ Drop the second argument when step 1 left no file. Show the rows as a table:
 step, state, and the evidence that decided it. When the `repo-and-remote`
 evidence reads `no origin remote`, interview the owner in the terminal, here and
 before the confirm: the project's name, a one-paragraph description, its stack
-and its visibility (`private`, `public` or `internal`), and nothing else. With
-an origin and `no stack manifest`, ask the stack alone. Show the answers under
-the table. Under it, offer the **extras**: each source-lock entry that step 5's
-install lines do not install, that is not `setup-project` itself (it stays at
-user scope), and that this repo's `skills-lock.json` does not hold yet, as
-opt-in choices beside an explicit "no extras". Confirm the table, the answers
-and the extras once. Every followed skill below still asks its own confirmations
-before it writes.
+(a row of step 5's stack table, or another) and its visibility (`private`,
+`public` or `internal`), and nothing else. With an origin and the evidence `no
+stack manifest` exactly, ask the stack alone: `no stack manifest, history
+present` needs no stack. Show the answers under the table. Under it, offer the
+**extras**: each source-lock entry that step 5's install lines do not install,
+that is not `setup-project` itself (it stays at user scope), and that this
+repo's `skills-lock.json` does not hold yet, as opt-in choices beside an
+explicit "no extras". Confirm the table, the answers and the extras once. Every
+followed skill below still asks its own confirmations before it writes.
 
 ### 4. Where the writes land
+
+This step needs a `.git` and an `origin`. Where the `repo-and-remote` row names
+either missing, run step 5's `tools` and the first two pieces of its
+`repo-and-remote` first, then this step, then the rest of step 5.
 
 In a repo with no commits yet, the setup commits straight to `main`, and an
 unborn branch of another name becomes `main` with `git symbolic-ref HEAD
 refs/heads/main`. Files already in the folder join the first commit, so show the
 owner `git status --short` before it and add to `.gitignore` whatever they keep
-out. Push `main` after that commit, so the followed skills and Ship's mechanics
-find the base on origin:
+out. Push `main` after that commit, the `repo-and-remote` step's, so the
+followed skills and Ship's mechanics find the base on origin:
 
 ```sh
 git push -u origin main && git remote set-head origin -a
@@ -155,19 +161,20 @@ is handed to another session.
   | `dotnet` | `curl -sSL https://dot.net/v1/dotnet-install.sh \| bash /dev/stdin --channel LTS` | |
   | any other | `brew install <formula>` where `brew` is on PATH | the system package manager's line, such as `sudo apt-get install -y <package>` |
 
-  `<formula>` and `<package>` are the tool's package name there (`node` for
-  `node` and `npx`, `gh`, `git`, `jq`, `go`). `gh` or `az` signed out is the
+  `<formula>` and `<package>` are the tool's package names there: `git`, `jq`
+  and `gh` in both; `node` from brew and `nodejs npm` from apt for `node` and
+  `npx`; `go` from brew and `golang-go` from apt. `gh` or `az` signed out is the
   owner's to fix: print `! gh auth login` (`! az login` on Azure DevOps) for
-  them to run in this session. Then re-run step 3's `setup-status.sh`, and stop
-  while the row still reads `run`, naming what is left.
+  them to run in this session. Then re-run step 3's `setup-status.sh`, plus
+  `command -v <tool>` for the interview's init tool, and stop while either reads
+  missing, naming what is left. A tool installed into a directory this shell's
+  PATH lacks yet (`~/.bun/bin`, `~/.cargo/bin`, `~/.dotnet`) reads missing too:
+  the owner opens a new terminal and reruns `/setup-project`.
 - **`repo-and-remote`**: act on each missing piece the row's evidence names, on
   its own, in this order, then commit:
   1. **`no .git`**: `git init -b main`, which keeps the files already there.
-  2. **`no origin remote`**: from the interview, write `README.md` (the name as
-     its title, the description under it) and `CLAUDE.md` (the name as its
-     title, the description as its overview), each only where absent. Create
-     no `GLOSSARY.md` or ADR: the domain model grows later. Then create the
-     remote, on GitHub only:
+  2. **`no origin remote`**: create the remote from the interview, on GitHub
+     only:
 
      ```sh
      gh repo create <name> --<visibility> --description "<summary>" --source . --remote origin
@@ -175,25 +182,34 @@ is handed to another session.
 
      `<name>` is the answer, `<org>/<name>` for an organization's repo;
      `<visibility>` is the answer as given; `<summary>` is the description's
-     first sentence. A project hosted elsewhere is the owner's to create: they
-     add its repo as `origin`, and the next run reads it.
-  3. **`no stack manifest`**: run the stack's own init, after the seeding above
-     (`bun init` writes a `CLAUDE.md` where none exists):
+     first sentence. In a repo with commits, add `--push`, then run
+     `git remote set-head origin -a`, so its history is the base step 4
+     reads. A project hosted elsewhere is the owner's to create: they add its
+     repo as `origin`, and the next run reads it.
+
+     Step 4 runs here, if it has not yet.
+  3. **`no origin remote`**, continued: write `README.md` (the name as its
+     title, the description under it) and `CLAUDE.md` (the name as its title,
+     the description as its overview), each only where absent. Create no
+     `GLOSSARY.md` or ADR: the domain model grows later.
+  4. **`no stack manifest`**, that evidence exactly: run the stack's own init,
+     after the seeding above (`bun init` writes a `CLAUDE.md` where none
+     exists):
 
      | Stack | Init |
      |---|---|
      | Python | `uv init` |
      | TypeScript or JavaScript | `bun init -y` |
      | Rust | `cargo init` |
-     | Go | `go mod init github.com/<org>/<name>` |
+     | Go | `go mod init <module>` |
      | .NET | `dotnet new console` |
 
-     `github.com/<org>/<name>` is the repo `gh repo view --json nameWithOwner`
-     names. `uv init` writes its `.gitignore` only when it creates the git
-     repo itself, so after it, where none exists, write `.venv`,
-     `__pycache__/`, `*.py[oc]`, `build/`, `dist/`, `wheels/` and
-     `*.egg-info`, one per line. Any other stack: ask the owner for its init
-     command and run that; never pick one.
+     `<module>` is the origin URL's host and path, with no scheme and no
+     `.git` (`github.com/<org>/<name>`). `uv init` writes its `.gitignore`
+     only when it creates the git repo itself, so after it, where none exists,
+     write `.venv`, `__pycache__/`, `*.py[oc]`, `build/`, `dist/`, `wheels/`
+     and `*.egg-info`, one per line. Any other stack: ask the owner for its
+     init command and run that; never pick one.
 
   An origin that is neither GitHub nor Azure DevOps is the owner's to repoint:
   print it and stop.
