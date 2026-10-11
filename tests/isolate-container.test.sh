@@ -33,7 +33,16 @@ check "the main checkout's status stays clean" "" "$(git -C "$repo" status --por
 
 # Run from inside a worktree: the container is still the main checkout's.
 out=$(cd "$repo/.claude/worktrees/x-7" && bash "$m" 9 feat z 2>/dev/null)
-check "a run from a worktree lands beside it" "$repo/.claude/worktrees/z-9" "$(jq -r .worktree <<<"$out")"
+check "a run from a worktree uses the main checkout's container" "$repo/.claude/worktrees/z-9" "$(jq -r .worktree <<<"$out")"
+
+# The matcher takes whole lines only, and a last line with no newline keeps
+# its own line.
+git clone -q "$tmp/origin.git" "$tmp/edge"
+edge_exclude=$(git -C "$tmp/edge" rev-parse --path-format=absolute --git-common-dir)/info/exclude
+printf '.claude/worktrees/keep\n*.log' >"$edge_exclude"
+( cd "$tmp/edge" && bash "$m" 7 feat x >/dev/null 2>&1 )
+check "a longer path is not the entry, and the unterminated line stays whole" \
+  ".claude/worktrees/keep|*.log|.claude/worktrees/" "$(paste -sd'|' "$edge_exclude")"
 
 clone=$tmp/clone
 out=$(cd "$clone" && bash "$m" 7 feat x --in-place 2>/dev/null); rc=$?

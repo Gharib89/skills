@@ -382,7 +382,7 @@ ship_branch() { printf '%s/%s-%s' "$1" "$2" "$3"; }
 
 # The main checkout, even when run from inside a worktree: --git-common-dir
 # points at the primary .git, so a run started in a worktree lands the new one
-# beside it.
+# in the main checkout's container, not its own.
 ship_main_checkout() {
   local common
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1

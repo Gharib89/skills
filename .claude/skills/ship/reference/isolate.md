@@ -37,17 +37,18 @@ because an absolute main-checkout path silently edits the wrong tree.
 
 Attended, the session then enters the path `isolate` printed with
 `EnterWorktree` (`path` set to it), before any edit and before any `LSP` call.
-Claude Code starts a language server at the first `LSP` call or the first edit
-of a file it serves (a read does not start it), roots it at the session's
-directory at that moment, and never moves it: a session left at the main
-checkout gets every `LSP` answer and diagnostic from the main checkout's code,
-and a Bash `cd` changes nothing. Under `.claude/worktrees/` the switch raises no
-permission prompt; anywhere else it prompts every time, and no
-`permissions.allow` rule admits it. A session that edited a served file before
+Measured on Claude Code 2.1.296: Claude Code starts a language server at the
+first `LSP` call or the first edit of a file it serves (a read does not start
+it), roots it at the session's directory at that moment, and never moves it: a
+session left at the main checkout gets every `LSP` answer and diagnostic from
+the main checkout's code, and a Bash `cd` changes nothing. Under
+`.claude/worktrees/` the switch raises no permission prompt, which is why
+`isolate` creates the worktree there; anywhere else it prompts every time. A
+session that edited a served file before
 `/ship` keeps its server where it started.
 
-The session stays in the worktree through any stop or hand-back, where the
-human picks up. At the merge gate it leaves with `ExitWorktree`
+Through any stop or hand-back the session stays in the worktree, so the human
+picks up there. At the merge gate it leaves with `ExitWorktree`
 (`action: "keep"`) before `cleanup` removes the folder. `CLAUDE_PROJECT_DIR`
 stays the main checkout, so hooks keep running the main checkout's scripts; the
 mechanics resolve the main checkout and the Run file through the git common

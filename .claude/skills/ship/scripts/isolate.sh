@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# ship phase 0: a fresh branch off origin's default, in a worktree under the main
-# checkout's .claude/worktrees/ (attended) or in the current checkout
-# (unattended, --in-place).
+# ship phase 0: a fresh branch off origin's default, in a worktree under
+# the main checkout's .claude/worktrees/ (attended) or in the current
+# checkout (unattended, --in-place).
 #
 #   isolate <issue|none> <type> <slug> [--carry <file>...] [--in-place]
 #
@@ -62,9 +62,14 @@ done
 mkdir -p "$container"
 # The container sits inside the main checkout, so list it in the shared exclude
 # file (once), where the consumer commits nothing and `git status` stays clean.
-exclude=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)/info/exclude
-mkdir -p "$(dirname "$exclude")"
-grep -qxF '.claude/worktrees/' "$exclude" 2>/dev/null || printf '.claude/worktrees/\n' >>"$exclude"
+# A last line with no newline gets one first, or the entry would join it.
+common=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir) || ship_tooling "cannot resolve the git common dir"
+exclude=$common/info/exclude
+if ! grep -qxF '.claude/worktrees/' "$exclude" 2>/dev/null; then
+  mkdir -p "$common/info" \
+    && { [ ! -s "$exclude" ] || [ -z "$(tail -c1 "$exclude")" ] || printf '\n'; printf '.claude/worktrees/\n'; } >>"$exclude" \
+    || ship_tooling "cannot write $exclude"
+fi
 git -C "$root" worktree add "$wt" -b "$branch" "$base" >"$log" 2>&1 || { ship_tail40 "$log"; ship_tooling "git worktree add failed"; }
 
 carried='[]'; missing='[]'
