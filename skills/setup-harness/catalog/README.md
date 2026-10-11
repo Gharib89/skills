@@ -59,19 +59,21 @@ Roles, as `##` headings, from this set only: `lint`, `format`, `typecheck`, `tes
 
 Each stack's commands, by its lockfile:
 
-| Lockfile | Exec | Exact dev add | Frozen install |
-|---|---|---|---|
-| `uv.lock` | `uv run --frozen` | `uv add --dev <t>==<v>` | `uv sync --frozen` |
-| `poetry.lock` | `poetry run` | `poetry add --group dev <t>==<v>` | `poetry sync` |
-| `pdm.lock` | `pdm run` | `pdm add -dG dev <t>==<v>` | `pdm sync` |
-| `pnpm-lock.yaml` | `pnpm exec` | `pnpm add -D -E <t>@<v>` | `pnpm install --frozen-lockfile` |
-| `package-lock.json` | `npx --no-install` | `npm install -D -E <t>@<v>` | `npm ci` |
-| `yarn.lock` | `yarn run` | `yarn add -D -E <t>@<v>` | `yarn install --immutable` (Yarn 1: `--frozen-lockfile`) |
-| `bun.lock` | `bun run` | `bun add -d --exact <t>@<v>` | `bun install --frozen-lockfile` |
-| `go.sum` | None. | None. | `go mod download` |
-| `Cargo.lock` | None. | None. | `cargo fetch --locked` |
-| `packages.lock.json` | None. | None. | `dotnet restore --locked-mode` |
-| `gradle.lockfile` | None. | None. | `gradle dependencies` |
+| Lockfile | Exec | Exact dev add | Frozen install | Present test |
+|---|---|---|---|---|
+| `uv.lock` | `uv run --frozen` | `uv add --dev <t>==<v>` | `uv sync --frozen` | `test -d .venv` |
+| `poetry.lock` | `poetry run` | `poetry add --group dev <t>==<v>` | `poetry sync` | `poetry env info -p` |
+| `pdm.lock` | `pdm run` | `pdm add -dG dev <t>==<v>` | `pdm sync` | `test -d .venv` |
+| `pnpm-lock.yaml` | `pnpm exec` | `pnpm add -D -E <t>@<v>` | `pnpm install --frozen-lockfile` | `test -d node_modules` |
+| `package-lock.json` | `npx --no-install` | `npm install -D -E <t>@<v>` | `npm ci` | `test -d node_modules` |
+| `yarn.lock` | `yarn run` | `yarn add -D -E <t>@<v>` | `yarn install --immutable` (Yarn 1: `--frozen-lockfile`) | `test -e node_modules -o -e .pnp.cjs` |
+| `bun.lock` | `bun run` | `bun add -d --exact <t>@<v>` | `bun install --frozen-lockfile` | `test -d node_modules` |
+| `go.sum` | None. | None. | `go mod download` | None. |
+| `Cargo.lock` | None. | None. | `cargo fetch --locked` | None. |
+| `packages.lock.json` | None. | None. | `dotnet restore --locked-mode` | None. |
+| `gradle.lockfile` | None. | None. | `gradle dependencies` | None. |
+
+A present test passes once the frozen install has filled the root; Poetry's environment sits in its cache rather than the root, and `poetry env info -p` exits 1 while the project has none, at the cost of starting Poetry on each check. A `None.` present test is a stack that restores into a cache every checkout shares.
 
 A `None.` exec or dev add means the stack's tools are toolchain components or `Route:` installs, run by their own binary. A root with no lockfile (every Maven root, most Gradle and .NET roots) is `unlocked` and restores from its manifest (`mvn -q dependency:go-offline`, `gradle dependencies`, `dotnet restore`). An `unlocked` root can gain a lockfile from its exact dev add: [reference/detection.md](../reference/detection.md).
 
