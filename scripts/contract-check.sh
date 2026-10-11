@@ -247,8 +247,7 @@ fi
 # files the entry claims. Browser
 # and public-API tools run on `full` only, and a language server sits on no
 # rung, takes no hook and is `Local-only:` with its reason, because it answers
-# Claude's `LSP` calls rather than a check and no cloud session starts one;
-# `Settings:` is its vendored `.lsp.json` key, so no other tool carries one.
+# Claude's `LSP` calls rather than a check and no cloud session starts one.
 harness=$skills/setup-harness
 if [ -d "$harness/catalog" ]; then
   for entry in "$harness"/catalog/*.md; do
@@ -293,7 +292,6 @@ if [ -d "$harness/catalog" ]; then
       if (label == "Hook" && role == "language server" && v != "None.") bad("### " tool ": a language server takes Hook: None.")
       if (label == "Hook" && role != "language server" && v == "None.") bad("### " tool ": Hook: None. is for a language server only")
       if (label == "Local-only" && v == "") bad("### " tool ": Local-only: wants its reason")
-      if (label == "Settings" && role != "language server") bad("### " tool ": Settings: is for a language server only")
       if (label == "Files") { n = split(v, fx, " "); for (i = 1; i <= n; i++) if (index(exts, " " fx[i] " ") == 0) bad("### " tool ": Files: " fx[i] " is not in Extensions:") }
       if (label != "Rung") next
       if (role == "language server") { if (v != "None.") bad("### " tool ": a language server takes Rung: None.") }
