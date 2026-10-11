@@ -29,7 +29,7 @@ points=(
   'call `findReferences` on it|skip `findReferences` on it'
   'cross-check the list with a grep|trust the list without a grep'
   'only the declaration|any reference'
-  'retry once|give up'
+  'run it twice|run it once'
   'changed through Bash|changed through Edit'
   'in a worktree|in a fresh session'
   'read the main checkout|read the worktree'
