@@ -135,6 +135,9 @@ d=$(tree local); jq '.skills.ship.source = "."' "$d/skills-lock.json" > "$d/l" &
 check "a chain skill recorded as local in a consumer reads run" "run" "$(state installed-skills "$d")"
 git -C "$d" remote set-url origin git@github.com:Gharib89/skills.git
 check "and as local in the source repo itself reads done" "done" "$(state installed-skills "$d")"
+d=$(tree casedsrc); jq '.skills.tdd.source = "O/R"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+check "a composed skill whose lock source differs from its pin only in case reads done" \
+  "done" "$(state installed-skills "$d")"
 d=$(tree othersrc); jq '.skills.tdd.source = "x/y"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
 check "a composed skill from another source at the pinned sha reads re-run audit" \
   "re-run audit" "$(state installed-skills "$d")"

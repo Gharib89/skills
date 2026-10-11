@@ -182,7 +182,9 @@ already opened its PR, return that one:
 .claude/skills/ship/scripts/update-pr-body.sh <pr> --section "Setup status" --body-file <table>
 ```
 
-The body follows the repo's PR template and the final status table goes under
-`## Setup status`; the second command rewrites that table in a PR an earlier
-run opened. With no commits beyond the default branch, there is nothing to
-review: switch back and delete the branch.
+`<body>` and `<table>` are files the run writes first: the body follows the
+repo's PR template with the final status table under `## Setup status`, and
+`<table>` holds the table alone. `<pr>` is the `number` in `open-pr.sh`'s
+answer, which is the earlier run's PR when one is open, so the second command
+rewrites the table there. With no commits beyond the default branch, there is
+nothing to review: switch back and delete the branch.

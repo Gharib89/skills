@@ -132,8 +132,10 @@ done
 for p in $pins; do
   s=${p##*:}; pin=${p%:*}
   e=$(entry "$s")
+  # A source compares without case, as the chain-source check above does.
+  same=''; shopt -s nocasematch; [[ $e == "$pin" ]] && same=1; shopt -u nocasematch
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run
-  elif [ "$e" != "$pin" ]; then ev+=("$s at $e, pinned $pin"); [ "$state" = run ] || state='re-run audit'
+  elif [ -z "$same" ]; then ev+=("$s at $e, pinned $pin"); [ "$state" = run ] || state='re-run audit'
   else ev+=("$s pinned"); fi
 done
 row installed-skills "$state"
