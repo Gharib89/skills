@@ -36,7 +36,7 @@ step leaves behind:
 |---|---|
 | `tools` | git, jq, node and npx, the stack's own tool, and `gh` signed in (`az` on an Azure DevOps origin) |
 | `repo-and-remote` | `.git`, an `origin` remote, and a stack manifest where the repo has no commits |
-| `installed-skills` | the chain set in `skills-lock.json` and under `.claude/skills/` |
+| `installed-skills` | the chain set in `skills-lock.json`, from its source, and under `.claude/skills/` |
 | `matts-setup` | `docs/agents/issue-tracker.md`, `triage-labels.md`, `domain.md` |
 | `harness` | `docs/agents/harness.md`'s `Schema:` against setup-harness's |
 | `ships-setup` | `docs/agents/ship.md`'s `Schema:` against ship's |
@@ -103,10 +103,12 @@ still asks its own confirmations before it writes.
 In a repo with no commits yet, the setup commits straight to the default branch.
 In any other, switch to `chore/setup-project`, so all of setup-project's writes
 land on one branch and one PR. Create it from the default branch. An existing
-`chore/setup-project` is reused only while its PR is open (the check in step 6);
-one with no open PR is left from an earlier setup: stop, naming it for the
-owner to delete, then rerun `/setup-project`. Commit each step's writes before
-the next step starts, because setup-harness requires a clean tree.
+`chore/setup-project` is reused when it holds the default branch's head
+(`git merge-base --is-ancestor <default> chore/setup-project`); one behind it is
+left from an earlier setup or has fallen behind: stop, naming it for the owner
+to merge the default branch in or delete, then rerun `/setup-project`. Commit
+each step's writes before the next step starts, because setup-harness requires
+a clean tree.
 
 ### 5. Each step, in order
 
@@ -170,11 +172,16 @@ answers `ok: true`; the `proof` row is then done. Otherwise report the rows and
 reasons that are not, which the next run takes up.
 
 In a repo that had no commits, push the default branch. On
-`chore/setup-project` with commits beyond the default branch, push it. When an
-earlier run already opened its PR, still open
-(`gh pr list --head chore/setup-project --state open`, or
-`az repos pr list --source-branch chore/setup-project --status active`), put
-the final status table in that PR's body; otherwise open one PR carrying it:
-`gh pr create` on GitHub, `az repos pr create` on Azure DevOps. With no commits
-beyond the default branch, there is nothing to review: switch back and delete
-the branch.
+`chore/setup-project` with commits beyond the default branch, open its PR
+through Ship's mechanics, which push the branch first and, when an earlier run
+already opened its PR, return that one:
+
+```sh
+.claude/skills/ship/scripts/open-pr.sh none --title "chore: set up this repo for Ship" --body-file <body>
+.claude/skills/ship/scripts/update-pr-body.sh <pr> --section "Setup status" --body-file <table>
+```
+
+The body follows the repo's PR template and the final status table goes under
+`## Setup status`; the second command rewrites that table in a PR an earlier
+run opened. With no commits beyond the default branch, there is nothing to
+review: switch back and delete the branch.

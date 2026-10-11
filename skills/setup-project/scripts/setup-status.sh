@@ -103,6 +103,10 @@ pins=$own
 for s in ship cloud-ship setup-skills update-skills setup-harness; do
   e=$(entry "$s")
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run; continue; fi
+  # Only the source repo's copy is the chain skill; `.` is the source repo itself.
+  src=${e%#*}
+  ours=''; shopt -s nocasematch; [[ $src == gharib89/skills || $src == . ]] && ours=1; shopt -u nocasematch
+  if [ -z "$ours" ]; then ev+=("$s from $src, not Gharib89/skills"); state=run; continue; fi
   pins="$pins $(front "$root/.claude/skills/$s/SKILL.md" composes)"
   v=$(front "$root/.claude/skills/$s/SKILL.md" version)
   want=''; [ -n "$slock" ] && want=$(jq -r --arg k "$s" '.skills[$k].version // empty' "$slock")

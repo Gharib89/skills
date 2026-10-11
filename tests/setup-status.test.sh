@@ -127,6 +127,10 @@ d=$(tree offpin); jq --arg B "$B" '.skills.tdd.ref = $B' "$d/skills-lock.json" >
 check "a composed skill off its pin reads re-run audit" "re-run audit" "$(state installed-skills "$d")"
 check "its evidence names the ref and the pin" "tdd at o/r#$B, pinned o/r#$A" \
   "$(evidence installed-skills "$d" | grep ', pinned')"
+d=$(tree forked); jq '.skills.ship.source = "other/ship"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+check "a chain skill installed from another source reads run" "run" "$(state installed-skills "$d")"
+check "its evidence names the source" "ship from other/ship, not Gharib89/skills" \
+  "$(evidence installed-skills "$d" | grep '^ship from')"
 d=$(tree othersrc); jq '.skills.tdd.source = "x/y"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
 check "a composed skill from another source at the pinned sha reads re-run audit" \
   "re-run audit" "$(state installed-skills "$d")"
