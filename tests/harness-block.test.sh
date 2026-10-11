@@ -4,8 +4,8 @@
 # file: its fill comment says when the `LSP` paragraph is written, and that
 # paragraph says when to use `LSP` and when not to trust it, in at most four
 # sentences naming no particular server, since one passage serves every
-# language server the catalog vendors. A copy with one point's meaning negated
-# must fail that point's check alone. Reads files only; no call here reaches a
+# language server the catalog vendors. Each check also runs on a copy with
+# one violation, which it must catch. Reads files only; no call here reaches a
 # host.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -45,30 +45,37 @@ missing_points() {
   done
 }
 
-passage=$(passages "$tpl")
-comment=$(awk '/^<!--/ { c = 1 } c { print } c && /-->$/ { exit }' "$tpl")
+# The shape checks, each a function of a file so a negated copy can be run
+# through it.
+paragraphs() { passages "$1" | awk 'BEGIN { RS = "" } END { print NR }'; }
+short() { passages "$1" | tr '\n' ' ' | grep -o '[.!?]\( \|$\)' | wc -l | awk '{ print ($1 >= 1 && $1 <= 4) ? "yes" : "no" }'; }
+servers() { passages "$1" | grep -oiE 'pyright|typescript-language-server|gopls|rust-analyzer|csharp-ls|jdtls|kotlin-lsp'; }
+fill_rule() { awk '/^<!--/ { c = 1 } c { print } c && /-->$/ { exit }' "$1" | grep -c 'LSP.*language server is wired'; }
 
-check "the block carries exactly one LSP paragraph" 1 \
-  "$(printf '%s' "$passage" | awk 'BEGIN { RS = "" } END { print NR }')"
+text=$(cat "$tpl")
+# <name> <from> <to>: a copy of the template with every <from> made <to>.
+variant() { printf '%s\n' "${text//"$2"/"$3"}" > "$fx/$1.md"; printf '%s' "$fx/$1.md"; }
+
+check "the block carries exactly one LSP paragraph" 1 "$(paragraphs "$tpl")"
+check "a second LSP paragraph is counted" 2 \
+  "$(paragraphs "$(variant two 'use grep there.' 'use grep there.
+
+A second `LSP` paragraph.')")"
 
 check "the LSP paragraph makes every point" "" "$(missing_points "$tpl")"
-
-# One fixture per point, that point alone negated.
-text=$(cat "$tpl")
 for point in "${points[@]}"; do
-  printf '%s\n' "${text//"${point%%|*}"/"${point#*|}"}" > "$fx/negated.md"
-  check "negating \"${point%%|*}\" misses that point alone" "${point%%|*}" "$(missing_points "$fx/negated.md")"
+  check "negating \"${point%%|*}\" misses that point alone" "${point%%|*}" \
+    "$(missing_points "$(variant negated "${point%%|*}" "${point#*|}")")"
 done
 
-check "the LSP paragraph is at most four sentences" yes \
-  "$(printf '%s' "$passage" | tr '\n' ' ' | grep -o '[.!?]\( \|$\)' | wc -l | awk '{ print ($1 >= 1 && $1 <= 4) ? "yes" : "no" }')"
+check "the LSP paragraph is at most four sentences" yes "$(short "$tpl")"
+check "a fifth sentence is refused" no "$(short "$(variant five 'use grep there.' 'use grep there. Then stop.')")"
 
-check "the LSP paragraph names no particular server" "" \
-  "$(printf '%s' "$passage" | grep -oiE 'pyright|typescript-language-server|gopls|rust-analyzer|csharp-ls|jdtls|kotlin-lsp')"
+check "the LSP paragraph names no particular server" "" "$(servers "$tpl")"
+check "a named server is caught" pyright "$(servers "$(variant named 'tool answers' 'tool (pyright) answers')")"
 
-case "$comment" in
-  *'LSP'*'language server is wired'*) ;;
-  *) check "the fill comment says when the LSP paragraph is written" "present" "absent" ;;
-esac
+check "the fill comment says when the LSP paragraph is written" 1 "$(fill_rule "$tpl")"
+check "a fill comment without the rule is caught" 0 \
+  "$(fill_rule "$(variant norule 'language server is wired' 'language server is absent')")"
 
 finish
