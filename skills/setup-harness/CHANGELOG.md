@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.11.1 (2026-10-11)
+
+### Bug Fixes
+
+- **setup-harness**: Pyright finds the main checkout's .venv from a worktree
+  ([#587](https://github.com/Gharib89/skills/pull/587),
+  [`26136b0`](https://github.com/Gharib89/skills/commit/26136b0a725b96d72939faf026e5b20d2a50acb4))
+
+
 ## v0.11.0 (2026-10-11)
 
 ### Features
