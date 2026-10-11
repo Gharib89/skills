@@ -98,17 +98,18 @@ installed` reads as the `tools` row at `run` for `jq` alone: take step 5's
 `tools` for it, then this step again. Show the rows as a table: step, state, and
 the evidence that decided it. When the `repo-and-remote` evidence reads `no
 origin remote`, interview the owner in the terminal, here and before the
-confirm: the project's name, a one-paragraph description, its visibility
-(`private`, `public` or `internal`) and, where the evidence also reads `no stack
-manifest` exactly, its stack (a row of step 5's stack table, or another), and
-nothing else. With an origin and that evidence, ask the stack alone: `no stack
-manifest, history present` needs no stack. Show the answers under the table.
-Under it, offer the **extras**: each source-lock entry that step 5's install
-lines do not install, that is not `setup-project` itself (it stays at user
-scope), and that this repo's `skills-lock.json` does not hold yet, as opt-in
-choices beside an explicit "no extras". Confirm the table, the answers and the
-extras once. Every followed skill below still asks its own confirmations before
-it writes.
+confirm: the project's name (a repository slug of ASCII letters, digits, `-`,
+`_` and `.`, asked again until it is one), a one-paragraph description, its
+visibility (`private`, `public` or `internal`) and, where the evidence also
+reads `no stack manifest` exactly, its stack (a row of step 5's stack table, or
+another), and nothing else. With an origin and that evidence, ask the stack
+alone: `no stack manifest, history present` needs no stack. Show the answers
+under the table. Under it, offer the **extras**: each source-lock entry that
+step 5's install lines do not install, that is not `setup-project` itself (it
+stays at user scope), and that this repo's `skills-lock.json` does not hold yet,
+as opt-in choices beside an explicit "no extras". Confirm the table, the answers
+and the extras once. Every followed skill below still asks its own confirmations
+before it writes.
 
 ### 4. Where the writes land
 
@@ -128,13 +129,15 @@ git push -u origin main && git remote set-head origin -a
 ```
 
 In any other repo, switch to `chore/setup-project`, so all of setup-project's
-writes land on one branch and one PR. Run `git fetch origin` first; the base is
-`origin/HEAD`. With no `chore/setup-project` locally or on origin, create it
-from the base. One that exists is an earlier run's, checked out from origin when
-only origin has it, and is reused while it holds the base (`git merge-base
---is-ancestor origin/HEAD chore/setup-project`). Otherwise stop, naming it for
-the owner: merge the base in while its PR is open, or delete it locally and on
-origin when its PR was merged or closed, then rerun `/setup-project`.
+writes land on one branch and one PR. Run `git fetch origin` first, then `git
+remote set-head origin -a` where `origin/HEAD` is missing (a run stopped after
+creating the remote); the base is `origin/HEAD`. With no `chore/setup-project`
+locally or on origin, create it from the base. One that exists is an earlier
+run's, checked out from origin when only origin has it, and is reused while it
+holds the base (`git merge-base --is-ancestor origin/HEAD chore/setup-project`).
+Otherwise stop, naming it for the owner: merge the base in while its PR is open,
+or delete it locally and on origin when its PR was merged or closed, then rerun
+`/setup-project`.
 
 Either way, commit each step's writes before the next step starts, because
 setup-harness requires a clean tree.
@@ -171,11 +174,12 @@ is handed to another session.
   `jq` and `gh` in both; `node` from brew and `nodejs npm` from apt for `node`
   and `npx`; `go` from brew and `golang-go` from apt. `gh` or `az` signed out is
   the owner's to fix: print `! gh auth login` (`! az login` on Azure DevOps) for
-  them to run in this session. Then re-run step 3's `setup-status.sh`, plus
-  `command -v <tool>` for the interview's init tool, and stop while either reads
-  missing, naming what is left. A tool installed into a directory this shell's
-  PATH lacks yet (`~/.bun/bin`, `~/.cargo/bin`, `~/.dotnet`) reads missing too:
-  the owner opens a new terminal and reruns `/setup-project`.
+  them to run in this session. Then re-run step 1's `source-lock.sh` and step
+  3's `setup-status.sh`, plus `command -v <tool>` for the interview's init tool,
+  and stop while either reads missing, naming what is left. A tool installed
+  into a directory this shell's PATH lacks yet (`~/.bun/bin`, `~/.cargo/bin`,
+  `~/.dotnet`) reads missing too: the owner opens a new terminal and reruns
+  `/setup-project`.
 - **`repo-and-remote`**: act on each missing piece the row's evidence names, on
   its own, in this order, then commit:
   1. **`no .git`**: `git init -b main`, which keeps the files already there.
@@ -188,11 +192,11 @@ is handed to another session.
 
      `<name>` is the answer, `<org>/<name>` for an organization's repo;
      `<visibility>` is the answer as given; `<summary>` is the description's
-     first sentence, each `'` in it written as `'\''` so the shell passes it
-     as typed. In a repo with commits, add `--push`, then run
-     `git remote set-head origin -a`, so its history is the base step 4
-     reads. A project hosted elsewhere is the owner's to create: they add its
-     repo as `origin`, and the next run reads it.
+     first sentence, each `'` in it written as `'\''` so the shell passes it as
+     typed. In a repo with commits, add `--push`, then run `git remote set-head
+     origin -a`, so its history is the base step 4 reads. A project hosted
+     elsewhere is the owner's to create: they add its repo as `origin`, and the
+     next run reads it.
 
      Step 4 runs here, if it has not yet.
   3. **`no origin remote`**, continued: write `README.md` (the name as its
