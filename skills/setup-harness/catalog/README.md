@@ -75,7 +75,7 @@ Each stack's commands, by its lockfile:
 | `packages.lock.json` | None. | None. | `dotnet restore --locked-mode` |
 | `gradle.lockfile` | None. | None. | `gradle dependencies` |
 
-A `None.` exec or dev add means the stack's tools are toolchain components or `Route:` installs, run by their own binary. A root with no lockfile (every Maven root, most Gradle and .NET roots) is `unlocked` and restores from its manifest (`mvn -q dependency:go-offline`, `gradle dependencies`, `dotnet restore`).
+A `None.` exec or dev add means the stack's tools are toolchain components or `Route:` installs, run by their own binary. A root with no lockfile (every Maven root, most Gradle and .NET roots) is `unlocked` and restores from its manifest (`mvn -q dependency:go-offline`, `gradle dependencies`, `dotnet restore`). An `unlocked` root can gain a lockfile from its exact dev add: [reference/detection.md](../reference/detection.md).
 
 ## Yielding to the repo
 

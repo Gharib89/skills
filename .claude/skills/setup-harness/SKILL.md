@@ -55,7 +55,7 @@ On a re-run, the gap report in the layout gap-report.md `## The report` gives, e
 2. **Detection** as detection.md's report lists it.
 3. **Questions**, numbered, each with a recommendation: every new fixture tree and every new candidate root ([reference/detection.md](reference/detection.md)), asking excluded or read, and root or ignored, each with the human's reason, every role with two tools and no caller, a runner choice where more than one config has no shim, the cloud verdict with its evidence, each blocked host a step needs (does the environment's Custom allowlist admit it?), the run recipe Offer where surfaces.md makes one, and each question a catalog `Traps:` line asks (js-ts Playwright Test's `webServer.command`).
 4. **The install-check table**, glue in full after it, then **Found, not installed** with each refusal's reason.
-5. **The writes, as diffs**: runner config additions, the manifest line of each pinned dev dependency, each vendored language server plugin with its `enabledPlugins` line, config files a catalog `Constraints:` or `Traps:` line writes, the `scripts/check.sh` configuration block, `.claude/hooks/check-hook.sh`, the cloud setup's `STEPS` block (or the diff to the repo's own cloud script), the `.claude/settings.json` hook entries, `docs/agents/harness.md` and the `CLAUDE.md` block.
+5. **The writes, as diffs**: runner config additions, the manifest line of each pinned dev dependency (and, on an `unlocked` root, the lockfile its exact dev add writes), each vendored language server plugin with its `enabledPlugins` line, config files a catalog `Constraints:` or `Traps:` line writes, the `scripts/check.sh` configuration block, `.claude/hooks/check-hook.sh`, the cloud setup's `STEPS` block (or the diff to the repo's own cloud script), the `.claude/settings.json` hook entries, `docs/agents/harness.md` and the `CLAUDE.md` block.
 
 ### 5. Confirm
 
@@ -84,7 +84,7 @@ In this order, each step's failure stopping the run with its output:
 ### 8. Report
 
 1. The header from step 4.
-2. What was written, one line per file, `.claude/settings.local.json` entries named machine-specific.
+2. What was written, one line per file, `.claude/settings.local.json` entries named machine-specific, and each lockfile an exact dev add wrote, its root named as moved from `unlocked` to locked ([reference/detection.md](reference/detection.md)).
 3. **Language servers**: one line per wired language from the proof, each `local-only`.
 4. **Budgets**: one row per rung, cold, warm, budget, verdict (`within`, `over: narrowed`, `over: demoted to <rung>`, `over: override <N>s`, `not judged: fail (<check>)`, `not judged: unavailable (<check>)`, `not judged: contract` on a re-run). Then the **cloud** table: per rung its cloud label and cloud times, and the cloud setup's local double run.
 5. **Not acted on**: unclaimed extensions and stacks, unwired tools, Found-not-installed units, `public API: no baseline (<member>)`, `<tool>: <root> not served`, anything "present, not wired".
