@@ -214,6 +214,47 @@ check "a hand-passed spaced name list has no results section" 0 \
 # A name carrying `=` could never be addressed by --result, so init refuses it.
 printf '## Verification\n\n### a=b\n\nText.\n' > "$tmp/eq.md"
 check_rc "a profile heading carrying = is malformed" 2 "$(inrc "$repo" init 39 --from-profile "$tmp/eq.md")"
+# A name with a result word as a later field writes an entry
+# the pending test reads as settled (`- Build: pass: pending` is name `Build`,
+# result `pass`), so init refuses it, names it, and writes nothing.
+printf '## Verification\n\n### lint\n\n### Build: pass\n' > "$tmp/word.md"
+check_rc "a profile heading with a result word as a later field is malformed" 2 "$(inrc "$repo" init 71 --from-profile "$tmp/word.md")"
+check "the refusal names the heading and says why" \
+  "a Verification heading cannot carry a result word as a later field: 'Build: pass' would read as a settled result while pending; rename it" \
+  "$(inerr "$repo" init 71 --from-profile "$tmp/word.md")"
+check "the refused init wrote no Run file" no "$([ -e "$root/ship-71" ] && echo yes || echo no)"
+for w in pass fail deferred-to-ci unavailable unexercised n/a; do
+  printf '## Verification\n\n### x: %s\n' "$w" > "$tmp/word.md"
+  check_rc "a heading ending in the field '$w' is malformed" 2 "$(inrc "$repo" init 72 --from-profile "$tmp/word.md")"
+  printf '## Verification\n\n### x: %s: y\n' "$w" > "$tmp/word.md"
+  check_rc "a heading with the field '$w' before another is malformed" 2 "$(inrc "$repo" init 72 --from-profile "$tmp/word.md")"
+done
+check "the refused inits wrote no Run file" no "$([ -e "$root/ship-72" ] && echo yes || echo no)"
+# A rebuild goes through the same check, and a refused one leaves the record it
+# was asked to replace as it was.
+rb=$(at "$repo" init 73 --verifications lint | jq -r .run_file)
+before=$(cat "$rb")
+printf '## Verification\n\n### Build: pass\n' > "$tmp/word.md"
+check_rc "a rebuild from such a profile is malformed" 2 "$(inrc "$repo" init 73 --rebuild --from-profile "$tmp/word.md")"
+check "the refused rebuild left the Run file byte-for-byte" "$before" "$(cat "$rb")"
+# A result word that is the whole name, part of a longer field or quoted, a
+# name with no result word, and a result-word heading under another section
+# all leave the entry unambiguous.
+printf '## Verification\n\n### Lint: fail-fast\n\n### pass\n\n### Smoke: unavailable offline\n\n### Gate: '"'pass'"'\n\n### live check: punctuation\n\n## Reviewers\n\n### Build: pass\n' > "$tmp/ok.md"
+ok=$(at "$repo" init 74 --from-profile "$tmp/ok.md" | jq -r .run_file)
+check "names whose result words are not a later field are accepted" \
+  "- Lint: fail-fast: pending
+- pass: pending
+- Smoke: unavailable offline: pending
+- Gate: 'pass': pending
+- live check: punctuation: pending" "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$ok" | grep '^- ')"
+# A result whose note ends `pending` is settled: close 3 passes over it.
+printf '## Verification\n\n### github-mechanics\n' > "$tmp/one.md"
+st=$(at "$repo" init 75 --from-profile "$tmp/one.md" | jq -r .run_file)
+sed 's/^- github-mechanics: pending$/- github-mechanics: pass: waiting: pending/' "$st" > "$st.new" && mv "$st.new" "$st"
+at "$repo" close 0 --file "$st" >/dev/null
+for p in 1 2 3; do at "$repo" open "$p" --file "$st" >/dev/null; [ "$p" = 3 ] || at "$repo" close "$p" --file "$st" >/dev/null; done
+check_rc "close 3 passes over a result whose note ends pending" 0 "$(inrc "$repo" close 3 --file "$st")"
 
 # --- skip 3 settles the results -------------------------------------------------
 
