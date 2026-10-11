@@ -56,7 +56,7 @@ if [ -e "$root/.git" ]; then isgit=1; origin=$(git -C "$root" remote get-url ori
 case $origin in
   '') host='' ;;
   *github.com[:/]*) host=github ;;
-  *dev.azure.com/*|*ssh.dev.azure.com:v3/*|*visualstudio.com*) host=ado ;;
+  *dev.azure.com/*|*@vs-ssh.visualstudio.com:v3/*|*ssh.dev.azure.com:v3/*|*.visualstudio.com/*) host=ado ;;
   *) host=other ;;
 esac
 # The source repo records its own skills as `source: "."`.
@@ -67,7 +67,8 @@ for m in pyproject.toml package.json Cargo.toml go.mod; do [ -f "$root/$m" ] && 
 if [ -z "$manifest" ]; then
   for m in "$root"/*.sln "$root"/*.csproj "$root"/*.fsproj; do [ -f "$m" ] && { manifest=${m##*/}; break; }; done
 fi
-# The stack's tool follows its lockfile, as setup-harness's catalog maps it.
+# The stack's tool follows its lockfile, as setup-harness's catalog maps it, plus
+# bun's older bun.lockb.
 lockfor() { # <lockfile>:<tool>...: the tool of the first lockfile present
   local p; for p in "$@"; do [ -f "$root/${p%%:*}" ] && { tool=${p#*:}; return; }; done
 }

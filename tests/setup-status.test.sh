@@ -135,6 +135,8 @@ d=$(tree local); jq '.skills.ship.source = "."' "$d/skills-lock.json" > "$d/l" &
 check "a chain skill recorded as local in a consumer reads run" "run" "$(state installed-skills "$d")"
 git -C "$d" remote set-url origin git@github.com:Gharib89/skills.git
 check "and as local in the source repo itself reads done" "done" "$(state installed-skills "$d")"
+git -C "$d" remote set-url origin https://github.com/Gharib89/skills.git
+check "and over the source repo's HTTPS origin" "done" "$(state installed-skills "$d")"
 d=$(tree casedsrc); jq '.skills.tdd.source = "O/R"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
 check "a composed skill whose lock source differs from its pin only in case reads done" \
   "done" "$(state installed-skills "$d")"
@@ -199,13 +201,22 @@ check "az signed out reads the tools row run" "run" "$(FAKE_AZ_SIGNED_OUT=1 stat
 d=$(tree uv); rm "$d/package.json"; printf '[project]\n' > "$d/pyproject.toml"; : > "$d/uv.lock"
 check "a stack whose tool is missing reads the tools row run" "run" "$(state tools "$d")"
 check "its evidence names the missing tool" "uv missing" "$(evidence tools "$d" | grep uv)"
-# The stack's tool follows its lockfile, as setup-harness's catalog maps it.
+# The stack's tool follows its lockfile, as setup-harness's catalog maps it, plus bun.lockb.
 for pair in pyproject.toml:poetry.lock:poetry pyproject.toml:pdm.lock:pdm package.json:yarn.lock:yarn \
   package.json:package-lock.json:npm package.json:pnpm-lock.yaml:pnpm; do
   IFS=: read -r man lockf tool <<<"$pair"
   d=$(tree "lock-$tool"); rm "$d/package.json"; printf '{}\n' > "$d/$man"; : > "$d/$lockf"
   check "$man with $lockf checks $tool" "$tool missing" "$(evidence tools "$d" | grep "^$tool ")"
 done
+# The origin forms Ship's host detection accepts, and one it refuses.
+for url in git@ssh.dev.azure.com:v3/o/p/r https://o.visualstudio.com/p/_git/r \
+  o@vs-ssh.visualstudio.com:v3/o/p/r; do
+  d=$(tree adoform); git -C "$d" remote set-url origin "$url"
+  check "$url reads as Azure DevOps" "done az signed in" \
+    "$(state repo-and-remote "$d") $(evidence tools "$d" | grep -E '^(az|gh)')"
+done
+d=$(tree adossh); git -C "$d" remote set-url origin ssh://u@vs-ssh.visualstudio.com:22/o/p/r
+check "an Azure DevOps form Ship refuses reads the repo row run" "run" "$(state repo-and-remote "$d")"
 d=$(tree gitlab); git -C "$d" remote set-url origin https://gitlab.com/o/r.git
 check "an origin that is neither GitHub nor Azure DevOps reads the repo row run" "run" "$(state repo-and-remote "$d")"
 check "its evidence names the origin" "origin https://gitlab.com/o/r.git: neither GitHub nor Azure DevOps" \

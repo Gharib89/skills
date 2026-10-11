@@ -103,13 +103,15 @@ still asks its own confirmations before it writes.
 
 In a repo with no commits yet, the setup commits straight to the default branch.
 In any other, switch to `chore/setup-project`, so all of setup-project's writes
-land on one branch and one PR. Create it from the default branch. An existing
-`chore/setup-project` is reused when it holds the default branch's head
-(`git merge-base --is-ancestor <default> chore/setup-project`); one behind it is
-left from an earlier setup or has fallen behind: stop, naming it for the owner
-to merge the default branch in or delete, then rerun `/setup-project`. Commit
-each step's writes before the next step starts, because setup-harness requires
-a clean tree.
+land on one branch and one PR. Run `git fetch origin` first; the base is
+`origin/HEAD`. With no `chore/setup-project` locally or on origin, create it
+from the base. One that exists is an earlier run's, checked out from origin when
+only origin has it, and is reused while it holds the base
+(`git merge-base --is-ancestor origin/HEAD chore/setup-project`). Otherwise
+stop, naming it for the owner: merge the base in while its PR is open, or delete
+it locally and on origin when its PR was merged or closed, then rerun
+`/setup-project`. Commit each step's writes before the next step starts, because
+setup-harness requires a clean tree.
 
 ### 5. Each step, in order
 
