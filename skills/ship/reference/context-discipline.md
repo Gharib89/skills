@@ -6,9 +6,8 @@
 - [While a subagent is out, end the turn](#while-a-subagent-is-out-end-the-turn)
 - [The Run file](#the-run-file)
 
-A full ship touches many files across many turns. What bloats the window is raw
-tool output landing in the main thread, not the work itself, so spend tokens on
-decisions, not dumps.
+What bloats the window is raw tool output landing in the main thread, not the
+work itself, so spend tokens on decisions, not dumps.
 
 **The delegation rule: delegate noise, not size.** A subagent earns its cost
 only when the raw output you would otherwise ingest is much larger than the
@@ -43,10 +42,8 @@ still a complete run. The levers, in rough order of impact:
 `<role>` its job in the run (`map`, `execute`, `verify`, `standards`, `spec`,
 `writing`). A subagent handed nowhere to write reaches for the scratchpad its
 own environment block names, and can write over another run's files with no
-failure signal. The directory is a **sibling** of the Run file's rather than a
-child, so a path a subagent invents below it still lands clear of the record.
-Edits to the repo go under the worktree prefix. Pass it the way you pass the
-model tier: written into the prompt, every dispatch.
+failure signal. Edits to the repo go under the worktree prefix. Pass it the way
+you pass the model tier: written into the prompt, every dispatch.
 
 ## Model tiers
 
@@ -65,8 +62,7 @@ nearest available tier rather than running everything on one model.
 
 Dispatch a composed skill's subagents, then **end the turn**. The completion
 notification resumes the run on its own: a poll loop, a sleep, a status ping or
-a read of the output file buys nothing it does not deliver. This is the one
-place where having nothing to do is the correct next action.
+a read of the output file buys nothing it does not deliver.
 
 ## The Run file
 
@@ -111,11 +107,11 @@ alone.
 dispositioned**, `<scratch>/<role>/<role>-report.md`, because a
 report held in context alone is lost to a compaction the Run file survives. Each
 dispatch names the file, and takes back only the path and a summary of at most
-five lines. No file at the named path is a report that failed to arrive: the
-bounded retry, then `red-after-retry`. An inline pass writes the same file
-itself before dispositioning. The Run file's `## Design and plan` names the
-paths; disposition from the file, and quote the merge summary's `Self-review`
-rows from it.
+five lines. No file at the named path is a report that failed to arrive: two
+fix-and-retry attempts, as SKILL.md's stops allow, then `red-after-retry`. An
+inline pass writes the same file itself before dispositioning. The Run file's
+`## Design and plan` names the paths; disposition from the file, and quote the
+merge summary's `Self-review` rows from it.
 
 **A clobbered Run file** answers a flip with a refusal naming a missing line or
 a missing file, and each refusal carries its check and the rebuild. A `--state`

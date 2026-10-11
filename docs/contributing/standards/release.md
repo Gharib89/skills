@@ -92,7 +92,9 @@ below lands as a minor
   setup-skills' `triage` pin is not breaking: nothing refuses on it, and
   setup-skills only prints the new line. Removing one is additive, a minor bump,
   because nothing already installed stops working. A minor bump taken for an
-  added composed skill before this rule existed is not precedent.
+  added composed skill before this rule existed is not precedent. A skill `ship`
+  newly composes is added to that line in the same PR: preflight checks only the
+  skills the line names.
 - **A change that touches no public surface is a patch.**
 
 ## The PR title and commits

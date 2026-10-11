@@ -20,7 +20,8 @@ exceptions bound these rules.
   gating read no mechanic performs is a ship defect, not a prose fallback. A run
   itself may make an informational read no mechanic covers through the host's
   REST form, listed in its Run file's `## Direct reads`, and that is no
-  violation of this rule. One documented exception: a CI template under
+  violation of this rule. A read made directly in two runs is a candidate
+  mechanic. One documented exception: a CI template under
   `skills/setup-skills/reviewers/`, and this repo's own copy of one under
   `.github/workflows/`, calls `gh` directly. It runs on a runner in a consumer
   repo that has no mechanics checked out, so there is nothing to route through.

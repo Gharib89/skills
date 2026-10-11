@@ -200,25 +200,9 @@ option.
 For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
 and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
 (`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
-`read-pr`; the mechanic answers `{clean, held_by}` and writes nothing. It
-requires the local gate at that head with every gate `pass` or `deferred-to-ci`
-(held while a CI check outside `Legs:` is not green, since a deferral names no
-leg), every profile CI leg green at that head, every Verification `pass` or
-`n/a` (inapplicable), or `deferred-to-ci` with its `Also proven by CI:` leg
-green, and every reviewer's loop stopped on `Stop: tree unchanged` with a
-recorded round, or, on-request, on `Stop: inline lane` while the Run file's
-last `Lane:` line reads `inline`. A fallback stopped on `tree
-unchanged` answers for a primary that was not reviewed, stopped `not landed`,
-or was capped with findings (dispositioned `Round:` lines numbered 1 through
-the primary's `Cap:`); a fallback skipped because its
-primary otherwise reviewed adds no condition. Otherwise a loop cut short by
-`Cap:`, a docs-only fix, the small lane or `auto-once` holds until its last
-round changed no file. Any nonblank `Override:` other than `none`
-or `None.`, any `Ship-defect:` record or `defect-*.md` draft, and any
-`tracker-*.md` draft holds the gate (`*.base.md` files are saved originals, not
-drafts). Deviations alone do not hold it. With no expected CI legs, `no-checks`
-is clean only when the profile declares `Legs: None.` and `No-checks legal:
-yes`, at the same head.
+`read-pr`; the mechanic answers `{clean, held_by}` and writes nothing, and its
+`--help` lists what holds the gate. Any `tracker-*.md` or `defect-*.md` draft
+always holds it (`*.base.md` files are saved originals, not drafts).
 
 On `clean: true`, post the summary through the `Timing:` row with no reply line,
 then run the merge sequence below without waiting for a reply. On `clean:
@@ -246,17 +230,11 @@ to add to `Legs:` or remove.
 what each refusal protects against: `pr-closed: <state>` and `stale-base:
 behind <n> on <base>` merge nothing and stop at this gate, including after a
 clean-gate decision (for the second, merge the base in, re-run the local gate
-and come back to this gate); otherwise it squash-merges with the PR title as
-the subject, closes the issue, deletes the remote branch, fast-forwards the
-local base, and releases the claim and strips `ready-for-agent`, so a reopened
-issue goes back through triage. Then each drafted tracker section. Every Ship
+and come back to this gate). Then each drafted tracker section. Every Ship
 defect draft is settled before `cleanup`, which deletes the directory the
 drafts live in, so ask for the word on any draft still open. Then `run-file
 close 9` and set the task to the returned `mirror`, and last `cleanup
-<issue|none>`, which removes the worktree, force-deletes the local branch, and
-removes the Run file and the run's Scratch directory, the record's job done;
-`cleanup none` leaves both in place, and a run that stopped before this gate
-left its record.
+<issue|none>`.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this
@@ -289,5 +267,4 @@ criterion, or take its action, before merging." A Ship defect's draft is never
 filed from here, and the comment drops the "file defects" line: it carries each
 draft verbatim under the command a human runs from a file they save it to,
 `.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
-"<title>" --body-file <file> --label needs-triage`. Detail in
-[unattended.md](unattended.md).
+"<title>" --body-file <file> --label needs-triage`.
