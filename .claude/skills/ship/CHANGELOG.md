@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.1 (2026-10-11)
+
+### Bug Fixes
+
+- **ship**: Gate clean admits a path-filtered leg No-checks legal: allows
+  ([#591](https://github.com/Gharib89/skills/pull/591),
+  [`497d467`](https://github.com/Gharib89/skills/commit/497d46734b6aeb7dfd0c09572428d5a434c1fe6f))
+
+
 ## v0.24.0 (2026-10-11)
 
 ### Features
