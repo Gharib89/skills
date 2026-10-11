@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.3 (2026-10-11)
+
+### Bug Fixes
+
+- **setup-harness**: Correct the hadolint row placement, move the schema rules, cut dead lines
+  ([#571](https://github.com/Gharib89/skills/pull/571),
+  [`acba298`](https://github.com/Gharib89/skills/commit/acba29869385b7dd5d63903fa4c8badf124c9360))
+
+
 ## v0.10.2 (2026-10-10)
 
 ### Bug Fixes
