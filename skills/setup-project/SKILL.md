@@ -72,12 +72,13 @@ not survive from one command to the next.
   || rm -f "${TMPDIR:-/tmp}/setup-project-source-lock.json"
 ```
 
-When it left no file, say the source repo was unreachable, so versions go
-uncompared and no extras are offered, and go on. Otherwise compare its
-`.skills["setup-project"].version` with this skill's own `metadata.version`.
-When the source lock's is higher, print the install line above for the owner to
-refresh this copy, and go on: the skills this run follows are read fresh from
-project scope.
+When it left no file, say why from its stderr, so versions go uncompared and no
+extras are offered, and go on: `curl` or `jq` not installed joins step 5's
+`tools`, and anything else means the source repo was unreachable. Otherwise
+compare its `.skills["setup-project"].version` with this skill's own
+`metadata.version`. When the source lock's is higher, print the install line
+above for the owner to refresh this copy, and go on: the skills this run follows
+are read fresh from project scope.
 
 ### 2. Clean tree
 
@@ -92,19 +93,22 @@ whole diff.
 "$S/setup-status.sh" . "${TMPDIR:-/tmp}/setup-project-source-lock.json"
 ```
 
-Drop the second argument when step 1 left no file. Show the rows as a table:
-step, state, and the evidence that decided it. When the `repo-and-remote`
-evidence reads `no origin remote`, interview the owner in the terminal, here and
-before the confirm: the project's name, a one-paragraph description, its stack
-(a row of step 5's stack table, or another) and its visibility (`private`,
-`public` or `internal`), and nothing else. With an origin and the evidence `no
-stack manifest` exactly, ask the stack alone: `no stack manifest, history
-present` needs no stack. Show the answers under the table. Under it, offer the
-**extras**: each source-lock entry that step 5's install lines do not install,
-that is not `setup-project` itself (it stays at user scope), and that this
-repo's `skills-lock.json` does not hold yet, as opt-in choices beside an
-explicit "no extras". Confirm the table, the answers and the extras once. Every
-followed skill below still asks its own confirmations before it writes.
+Drop the second argument when step 1 left no file. An exit 2 naming `jq not
+installed` reads as the `tools` row at `run` for `jq` alone: take step 5's
+`tools` for it, then this step again. Show the rows as a table: step, state, and
+the evidence that decided it. When the `repo-and-remote` evidence reads `no
+origin remote`, interview the owner in the terminal, here and before the
+confirm: the project's name, a one-paragraph description, its visibility
+(`private`, `public` or `internal`) and, where the evidence also reads `no stack
+manifest` exactly, its stack (a row of step 5's stack table, or another), and
+nothing else. With an origin and that evidence, ask the stack alone: `no stack
+manifest, history present` needs no stack. Show the answers under the table.
+Under it, offer the **extras**: each source-lock entry that step 5's install
+lines do not install, that is not `setup-project` itself (it stays at user
+scope), and that this repo's `skills-lock.json` does not hold yet, as opt-in
+choices beside an explicit "no extras". Confirm the table, the answers and the
+extras once. Every followed skill below still asks its own confirmations before
+it writes.
 
 ### 4. Where the writes land
 
@@ -148,10 +152,12 @@ in full even when the row reads `done`, never a spot-check. These skills cannot
 be started with the Skill tool, since each refuses model invocation, and none
 is handed to another session.
 
-- **`tools`**: when the row reads `run`, or the interview chose a stack whose
-  init tool (the stack table below) is not on PATH, list each missing tool with
-  the line that installs it and confirm once, then run the user-space lines.
-  A line that needs sudo is printed for the owner and never run:
+- **`tools`**: when the row reads `run`, step 1 or step 3 named `curl` or `jq`
+  not installed, or the interview chose a stack whose init tool (the stack
+  table below) is not on PATH, list each missing tool with the line that
+  installs it and confirm once, then run the user-space lines, `curl` first,
+  since the others need it. A line that needs sudo is printed for the owner and
+  never run:
 
   | Tool | User-space install | Printed for the owner |
   |---|---|---|
@@ -161,10 +167,10 @@ is handed to another session.
   | `dotnet` | `curl -sSL https://dot.net/v1/dotnet-install.sh \| bash /dev/stdin --channel LTS` | |
   | any other | `brew install <formula>` where `brew` is on PATH | the system package manager's line, such as `sudo apt-get install -y <package>` |
 
-  `<formula>` and `<package>` are the tool's package names there: `git`, `jq`
-  and `gh` in both; `node` from brew and `nodejs npm` from apt for `node` and
-  `npx`; `go` from brew and `golang-go` from apt. `gh` or `az` signed out is the
-  owner's to fix: print `! gh auth login` (`! az login` on Azure DevOps) for
+  `<formula>` and `<package>` are the tool's package names there: `git`, `curl`,
+  `jq` and `gh` in both; `node` from brew and `nodejs npm` from apt for `node`
+  and `npx`; `go` from brew and `golang-go` from apt. `gh` or `az` signed out is
+  the owner's to fix: print `! gh auth login` (`! az login` on Azure DevOps) for
   them to run in this session. Then re-run step 3's `setup-status.sh`, plus
   `command -v <tool>` for the interview's init tool, and stop while either reads
   missing, naming what is left. A tool installed into a directory this shell's
@@ -177,12 +183,13 @@ is handed to another session.
      only:
 
      ```sh
-     gh repo create <name> --<visibility> --description "<summary>" --source . --remote origin
+     gh repo create <name> --<visibility> --description '<summary>' --source . --remote origin
      ```
 
      `<name>` is the answer, `<org>/<name>` for an organization's repo;
      `<visibility>` is the answer as given; `<summary>` is the description's
-     first sentence. In a repo with commits, add `--push`, then run
+     first sentence, each `'` in it written as `'\''` so the shell passes it
+     as typed. In a repo with commits, add `--push`, then run
      `git remote set-head origin -a`, so its history is the base step 4
      reads. A project hosted elsewhere is the owner's to create: they add its
      repo as `origin`, and the next run reads it.
