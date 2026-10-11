@@ -84,11 +84,16 @@ every `reasons` entry is a row of the stop table below. Then
 `read-issue <issue>`, phase 1's input, from which the branch `<type>` (`feat`,
 `fix`, `docs`, ...) and `<slug>` are derived. Then `isolate <issue> <type>
 <slug>` with the profile's `Carry:` files, or `isolate ... --in-place`
-unattended. Every edit, commit and the PR happen from the path `isolate`
-printed, and you **commit as you go**, because the PR needs real commits. A
-`Bootstrap:` under `## Worktree` runs once here, after isolate.
-**Done when:** `preflight` answered `ok: true`, `isolate` printed its path, and
-any `## Worktree` `Bootstrap:` ran green.
+unattended. Attended, `EnterWorktree` with `path` set to that path comes right
+after isolate, before any edit or `LSP` call: the language server roots where
+the session stands when it first starts
+([isolate.md](reference/isolate.md#entering-the-worktree)). Every edit, commit
+and the PR happen from the path `isolate` printed, and you **commit as you
+go**, because the PR needs real commits. A `Bootstrap:` under `## Worktree` runs
+once here, after isolate.
+**Done when:** `preflight` answered `ok: true`, `isolate` printed its path, any
+`## Worktree` `Bootstrap:` ran green, and, attended, `EnterWorktree` entered
+that path.
 
 **1 · Understand.** Too vague to plan from the `read-issue` result: stop
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
@@ -243,16 +248,18 @@ Write the summary per that file. Attended: follow its
 answers `clean: true`; an unmet criterion needs the human's explicit waiver.
 On either authorization run `merge <pr> <issue|none> [--worktree
 <path>]`, `update-issue-body` per tracker draft, settle each Ship defect draft
-(filed on its own word only), `run-file close 9`, then `cleanup <issue|none>`,
-last, as it removes the Run file; a nonzero exit, or a `false` in `merge`'s or
-`cleanup`'s JSON, re-runs the mechanic that owns the step; a step no mechanic
-re-does is a Ship defect for the summary. Unattended: the final head's gate,
-then `comment-pr <pr> --body-file` with the summary, `run-file close 9`. Either
-lane then returns.
+(filed on its own word only), `run-file close 9`, `ExitWorktree` with `action:
+"keep"` (`cleanup` owns the removal) so the session is not left in a deleted
+folder, then `cleanup
+<issue|none>`, last, as it removes the Run file; a nonzero exit, or a `false`
+in `merge`'s or `cleanup`'s JSON, re-runs the mechanic that owns the step; a
+step no mechanic re-does is a Ship defect for the summary. Unattended: the
+final head's gate, then `comment-pr <pr> --body-file` with the summary,
+`run-file close 9`. Either lane then returns.
 **Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
 `false`, every Ship defect draft is filed, answered with candidates, carries its
-`command` or was declined, then `close 9`, then `cleanup <issue|none>` exited 0
-with no `false`; unattended, `comment-pr` posted.
+`command` or was declined, then `close 9`, then `ExitWorktree`, then `cleanup
+<issue|none>` exited 0 with no `false`; unattended, `comment-pr` posted.
 
 ## The stops
 

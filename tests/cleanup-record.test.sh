@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # `cleanup` also removes the run's record: <git common dir>/ship/ship-<issue>
 # and scratch-<issue>, before the worktree goes. Driven over a fixture repo with
-# a worktree in the `<repo>.worktrees/<type>-<slug>-<issue>` layout the mechanic
+# a worktree in the `<repo>/.claude/worktrees/<type>-<slug>-<issue>` layout the mechanic
 # globs; cleanup loads no host adapter, so nothing reaches one.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -19,7 +19,7 @@ g commit -q --allow-empty -m one
 root=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)/ship
 
 mk() { # mk <issue>: a worktree, a branch and a record for the issue
-  g worktree add -q "$tmp/repo.worktrees/feat-$1" -b "feat/x-$1"
+  g worktree add -q "$repo/.claude/worktrees/feat-$1" -b "feat/x-$1"
   ( cd "$repo" && bash "$r" init "$1" >/dev/null )
   echo "scratch" > "$root/scratch-$1/note"
 }
@@ -30,8 +30,8 @@ check_rc "cleanup exits ok" 0 "$rc"
 check "the JSON says the record was removed" removed "$(jq -r .record <<<"$out")"
 check "the run file is gone" no "$([ -e "$root/ship-7" ] && echo yes || echo no)"
 check "the scratch directory is gone" no "$([ -e "$root/scratch-7" ] && echo yes || echo no)"
-check "the worktree is still removed" no "$([ -e "$tmp/repo.worktrees/feat-7" ] && echo yes || echo no)"
-check "the worktree fields are unchanged" "$tmp/repo.worktrees/feat-7 feat/x-7 true true" \
+check "the worktree is still removed" no "$([ -e "$repo/.claude/worktrees/feat-7" ] && echo yes || echo no)"
+check "the worktree fields are unchanged" "$repo/.claude/worktrees/feat-7 feat/x-7 true true" \
   "$(jq -r '[.worktree, .branch, .worktree_removed, .branch_deleted] | join(" ")' <<<"$out")"
 
 # Another issue's record is not this issue's to remove.
@@ -41,7 +41,7 @@ check "another issue's record stays" yes "$([ -f "$root/ship-9/run.md" ] && [ -d
 
 # Cleanup run from inside the worktree whose record it removes: the record
 # lives under the common dir, so the worktree's removal is not in its way.
-out=$(cd "$tmp/repo.worktrees/feat-9" && bash "$c" 9 2>/dev/null)
+out=$(cd "$repo/.claude/worktrees/feat-9" && bash "$c" 9 2>/dev/null)
 check "cleanup from inside the worktree removes the record" removed "$(jq -r .record <<<"$out")"
 
 # No record to remove is none, and not a failure: the answer carries no false
@@ -68,7 +68,7 @@ if [ "$(id -u)" -ne 0 ]; then
   chmod 755 "$root"
   check "a record that will not come off answers failed" failed "$(jq -r .record <<<"$out")"
   check_rc "and cleanup exits 1" 1 "$rc"
-  check "the worktree is still torn down" no "$([ -e "$tmp/repo.worktrees/feat-12" ] && echo yes || echo no)"
+  check "the worktree is still torn down" no "$([ -e "$repo/.claude/worktrees/feat-12" ] && echo yes || echo no)"
 else
   skipped "a read-only record root does not stop root"
 fi

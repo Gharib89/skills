@@ -382,7 +382,7 @@ ship_branch() { printf '%s/%s-%s' "$1" "$2" "$3"; }
 
 # The main checkout, even when run from inside a worktree: --git-common-dir
 # points at the primary .git, so a run started in a worktree lands the new one
-# beside it.
+# in the main checkout's container, not its own.
 ship_main_checkout() {
   local common
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
@@ -399,10 +399,12 @@ ship_record_root() {
   printf '%s/ship' "$common"
 }
 
-# Sibling container beside the checkout: <parent>/<repo>.worktrees
+# Container inside the main checkout: <main>/.claude/worktrees. `EnterWorktree`
+# enters a worktree there with no permission prompt and prompts everywhere else,
+# whatever `permissions.allow` says (measured, Claude Code 2.1.296).
 ship_worktree_container() {
   local root; root=$(ship_main_checkout) || return 1
-  printf '%s/%s.worktrees' "$(dirname "$root")" "$(basename "$root")"
+  printf '%s/.claude/worktrees' "$root"
 }
 
 # The base ref, resolved from origin/HEAD rather than a hardcoded branch (ADO
