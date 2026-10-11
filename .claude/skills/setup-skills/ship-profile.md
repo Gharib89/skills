@@ -10,22 +10,18 @@ Every repo-specific fact `/ship` needs, one section per axis. Fourteen `##` head
 
 Host: <github | ado>
 
-<!-- Derived from the origin remote and cross-checked at preflight. Org, project and repo always derive from the remote. -->
-
 ## Worktree
 
 Carry: <comma-separated gitignored files copied one-way into the worktree, or None.>
 Bootstrap: <command run once after isolate in every lane, or None.>
 
-<!-- Location is core: <parent>/<repo>.worktrees/<slug>-<issue>. Only small dotfiles belong on Carry (.env, *.local); dependency install belongs to the local gate. -->
+<!-- Only small dotfiles belong on Carry (.env, *.local); dependency install belongs to the local gate. -->
 
 ## Local gate
 
 Location: <scripts/local-gate.sh>
 Small node: <the syntax of one test node for --small, with an example; then a docs-class line giving the path of the changed document, with an example>
 Tripwires: <anything that must run before the gate, e.g. a bundle rebuild, or None.>
-
-<!-- Output contract, flags and statuses are core. -->
 
 ## CI
 
@@ -82,7 +78,7 @@ Subject constraints: <reserved prefixes or formats for the squash subject, or No
 
 Template: <path; fill it through its own headings rather than a raw body that bypasses it> | None.
 
-<!-- Optional `Merge: on-clean-gate` opts an attended run into merging on a clean gate. An absent line or `Merge: Default.` keeps the human stop; re-runs preserve the choice and leave an absent line absent. -->
+<!-- Optional: `Merge: on-clean-gate` or `Merge: Default.`, per profile-schema.md's Optional lines. -->
 
 <!-- `Closes #<issue>` and the seven sections `## Why the change`, `## Change outline`, `## Special things to note`, `## Needs attention`, `## Verification`, `## Review` and `## Attribution` are core in every repo, in that order. The closing reference sits above the first `## ` heading, where a section rewrite cannot reach it. -->
 

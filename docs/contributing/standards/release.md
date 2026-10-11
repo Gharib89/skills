@@ -52,18 +52,20 @@ below lands as a minor
   something uses it. The same exceptions apply. A shortened `description` that
   keeps every routing clause and drops only a recitation of another skill's
   behaviour is a patch, since that behaviour is the other skill's surface.
-- **The profile's structure is graded elsewhere.** A heading or `Label:` line
-  added, renamed, removed or reordered, a `Label:` vocabulary changed, or the
-  `Schema:` number moved, takes the bump rule in
-  [skills/setup-skills/profile-schema.md](../../../skills/setup-skills/profile-schema.md):
-  a major bump with a `## Schema N` entry, additive or not. A change to what
-  `ship` expects of a profile bumps `metadata.profile-schema` by hand in the
-  same PR and adds that entry; a behaviour change that leaves the profile alone
-  moves neither. Preflight refuses a schema mismatch in either
-  direction, so an added heading stops an installed profile from running until
-  `setup-skills` migrates it, which is what makes it breaking where an added
-  optional flag is not. A line `ship` accepts without expecting, the optional
-  lines paragraph of that file, takes no entry and no bump.
+- **The profile's structure is a ship major.** A heading or `Label:` line added,
+  renamed, removed or reordered, a `Label:` vocabulary changed, or the `Schema:`
+  number moved, is a major bump, additive or not. The same PR moves
+  `metadata.profile-schema` in `skills/ship/SKILL.md` and the `Schema:` line in
+  `skills/setup-skills/ship-profile.md` by hand, and adds the matching
+  `## Schema N` entry to `skills/setup-skills/profile-schema.md`; a PR that
+  edits `ship-profile.md`'s structure without that entry is incomplete. The
+  `derived-copies` gate fails when the three disagree
+  (`scripts/profile-schema-check.sh`). A behaviour change that leaves the
+  profile alone moves none of them. Preflight refuses a schema mismatch in
+  either direction, so an added heading stops an installed profile from running
+  until `setup-skills` migrates it, which is what makes it breaking where an
+  added optional flag is not. A line `ship` accepts without expecting, the
+  optional lines paragraph of `profile-schema.md`, takes no entry and no bump.
 - **Adding to `composes` or moving a pin is breaking, removing is additive.**
   The direction is inverted relative to every other item, so read it before
   grading one. Adding a skill to `ship`'s `metadata.composes` line is a `ship`

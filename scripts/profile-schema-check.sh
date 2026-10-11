@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# The profile schema number lives in three files, and the bump rule in
-# skills/setup-skills/profile-schema.md moves all three together: the `Schema:`
+# The profile schema number lives in three files, and the profile bump rule in
+# docs/contributing/standards/release.md moves all three together: the `Schema:`
 # line of the profile template, `metadata.profile-schema` in ship's SKILL.md,
-# and the `## Schema <n>` entry in the schema doc. Why that rule needs a gate is
-# in docs/agents/ship.md, under `## Local gate`.
+# and the `## Schema <n>` entry in skills/setup-skills/profile-schema.md. Why
+# that rule needs a gate is in docs/agents/ship.md, under `## Local gate`.
 # `scripts/derived-copies-check.sh` runs this as one of its checks, so it
 # reports under `scripts/check.sh full`'s `derived-copies` row.
 #
