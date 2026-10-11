@@ -177,6 +177,7 @@ inside() {
 # the install passes, makes the next call install again.
 install_deps() {
   local name present cmd marks
+  [ -n "$DEPS_ROWS" ] || return 0
   marks=$(git rev-parse --absolute-git-dir)/check-deps
   while IFS='|' read -r name present cmd; do
     [ -n "$name" ] || continue

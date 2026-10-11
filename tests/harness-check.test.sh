@@ -450,7 +450,7 @@ bad: something broke" "$err"
 # An install the deadline, or a hook's timeout, kills leaves a partial tree
 # its present test passes, so the next call installs again until one finishes.
 r=$(repo deps-killed "DEPS_ROWS='packages/web|test -d packages/web/node_modules|mkdir -p packages/web/node_modules && sleep 3'")
-CHECK_DEADLINE=$(($(date +%s) + 1)) run "$r" deps
+out=$(cd "$r" && CHECK_DEADLINE=1001 PATH="$clock:$bin:$PATH" bash scripts/check.sh deps 2>/dev/null)
 check "an install the deadline stops is over budget" \
   '{"rung":"deps","verdict":"over-budget","checks":{"deps:packages/web":"over-budget"}}' "$out"
 check "its partial tree is left behind" yes "$(test -d "$r/packages/web/node_modules" && echo yes)"
