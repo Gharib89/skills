@@ -189,8 +189,11 @@ is handed to another session.
      | .NET | `dotnet new console` |
 
      `github.com/<org>/<name>` is the repo `gh repo view --json nameWithOwner`
-     names. Any other stack: ask the owner for its init command and run that;
-     never pick one.
+     names. `uv init` writes its `.gitignore` only when it creates the git
+     repo itself, so after it, where none exists, write `.venv`,
+     `__pycache__/`, `*.py[oc]`, `build/`, `dist/`, `wheels/` and
+     `*.egg-info`, one per line. Any other stack: ask the owner for its init
+     command and run that; never pick one.
 
   An origin that is neither GitHub nor Azure DevOps is the owner's to repoint:
   print it and stop.
