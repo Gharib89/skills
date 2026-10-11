@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.11.0 (2026-10-11)
+
+### Features
+
+- **setup-harness**: The CLAUDE.md harness block says when to use and distrust LSP
+  ([#583](https://github.com/Gharib89/skills/pull/583),
+  [`dbffccb`](https://github.com/Gharib89/skills/commit/dbffccb734a00414ee252a8bc37302c7e525c560))
+
+
 ## v0.10.5 (2026-10-11)
 
 ### Bug Fixes
