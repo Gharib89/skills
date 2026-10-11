@@ -78,7 +78,7 @@ Subject constraints: <reserved prefixes or formats for the squash subject, or No
 
 Template: <path; fill it through its own headings rather than a raw body that bypasses it> | None.
 
-<!-- Optional: `Merge: on-clean-gate` or `Merge: Default.` -->
+<!-- Optional: `Merge: on-clean-gate` or `Merge: Default.`, per profile-schema.md's Optional lines. -->
 
 <!-- `Closes #<issue>` and the seven sections `## Why the change`, `## Change outline`, `## Special things to note`, `## Needs attention`, `## Verification`, `## Review` and `## Attribution` are core in every repo, in that order. The closing reference sits above the first `## ` heading, where a section rewrite cannot reach it. -->
 

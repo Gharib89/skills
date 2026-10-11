@@ -19,7 +19,7 @@ What both shapes do the same way, because ship reads a round off the host alone:
 - **A step that names denied calls** in the run log, with one warning carrying the count.
 - **A step that speaks when the job fails**, so a failed round is not read as silent. `pull-requests: write` admits `/issues/{n}/comments` on a pull request with no `issues` scope, so a repo may drop `issues: read`.
 
-Where `__INSTRUCTIONS__` is the standards path itself, delete `Read the standards file it points at as well.` from the prompt and keep the routing sentence after it.
+`__INSTRUCTIONS__` is the profile's `Instructions:` path for this reviewer. Where it is the standards path itself, delete `Read the standards file it points at as well.` from the prompt and keep the routing sentence after it.
 
 Two human steps belong to both shapes, so each checklist below carries only what is its own:
 
@@ -251,7 +251,7 @@ Instructions: __INSTRUCTIONS__
 
 ## The on-request shape
 
-Replace `__PHRASE__` with the phrase that triggers a round, `@claude` unless something else in the repo already answers to it, and, in the fallback block, `__PRIMARY__` with the `### <name>` of the reviewer this one stands in for, exactly as the profile spells it. Both must agree with the profile: ship posts `__PHRASE__` as a PR comment and nothing else starts a round, and it requests a fallback only when `__PRIMARY__` meets the fallback condition above. The `if:` tests for the phrase anywhere in a comment body, so any comment that merely mentions it, a quote of an earlier request included, spends a round: pick a phrase nobody types in passing.
+Replace `__PHRASE__` with the phrase that triggers a round, `@claude` unless something else in the repo already answers to it, and, in the fallback block, `__PRIMARY__` with the `### <name>` of the reviewer this one stands in for, exactly as the profile spells it. Both must agree with the profile: ship posts `__PHRASE__` as a PR comment and nothing else starts a round, and it requests a fallback only when `__PRIMARY__` meets one of the fallback cases in the on-request bullet at the top. The `if:` tests for the phrase anywhere in a comment body, so any comment that merely mentions it, a quote of an earlier request included, spends a round: pick a phrase nobody types in passing.
 
 ### `.github/workflows/claude-review.yml`
 
@@ -486,7 +486,7 @@ Both shared steps above, then:
    ```
 
    Weigh it first: whatever identity a ship run requests a round under must fall inside that list, and an unattended run whose identity does not gets no review. Ship grades that `never-queued` rather than reading the reviewer as silent, so the loss is named; naming it is not reviewing the PR, which is what this reviewer is there for. A private repo where every commenter can already push needs no commenter line.
-6. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so dropping the step costs the link on the PR: the human then goes to the Actions tab to find the run themselves. A run asks for this reviewer when it needs the review, standalone or when its primary meets the fallback condition above, so it is the last reviewer whose failures should send you there.
+6. Decide whether the `if: failure()` step stays. It costs one PR comment per failed round and nothing on a round that succeeds. Ship grades a failed round here `infra-error` from the run read either way, so dropping the step costs the link on the PR: the human then goes to the Actions tab to find the run themselves. A run asks for this reviewer when it needs the review, standalone or when its primary meets one of the fallback cases in the on-request bullet at the top, so it is the last reviewer whose failures should send you there.
 
 ### Profile blocks this produces
 
