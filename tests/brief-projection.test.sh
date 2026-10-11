@@ -323,4 +323,15 @@ usage=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
     all: [], total: 1}, threads: []}')
 check "a usage line quoted in a finding keeps its placeholders, real tags still go"   "$(printf 'Looks fine.\n**Findings:** 2\n- usage reads run-file close <n> --result <name>=<word> here\n- `run-file close <n> --result <name>=<word>` in a span bold')"   "$(ship_brief "$usage" Gharib89 on_head | jq -r '.rounds[0].body')"
 
+# review-loop.md is what a run reads a brief by, and a thread row's text is
+# `lead` where a round row's is `body`: a run that read `.body` off a thread got
+# null and took the comment over REST instead (#590). Each field the projection
+# emits on a thread row is named in the loop's `--brief` bullet.
+loop_brief=$(awk '/^- \*\*`--brief` is how a round is read/ {on=1; print; next}
+  on && /^- \*\*/ {exit} on' skills/ship/reference/review-loop.md)
+for k in $(ship_brief "$poll" Gharib89 on_head | jq -r '.threads[0] | keys_unsorted[]'); do
+  check "review-loop.md's --brief bullet names the thread row's \`$k\`" yes \
+    "$(grep -qF "\`$k\`" <<<"$loop_brief" && echo yes || echo no)"
+done
+
 finish

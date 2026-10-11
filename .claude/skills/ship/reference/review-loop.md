@@ -88,7 +88,9 @@ admitted.
   stripped of HTML and cut to the lead line, the `Findings:` line and the
   finding items, the ones inside a `<details>` block included, so a `Findings:
   None` round can still carry a `Previously missed` item; and one row per OPEN
-  thread, the run's own replies dropped. `--brief --full open` returns every
+  thread, the run's own replies dropped: `id`, `path`, `resolved`, `replied`
+  and `lead`, its first comment's text. A thread row has no `body`: under
+  `--full` its `lead` is the whole comment. `--brief --full open` returns every
   round and every open thread whole.
 - **A body or `lead` ending `...[truncated]` has not been read.** Re-poll with
   `--brief --full <id>` for that round or thread before triage. Pass every id
