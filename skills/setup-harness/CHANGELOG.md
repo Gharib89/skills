@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.0 (2026-10-11)
+
+### Features
+
+- **setup-harness**: Check.sh installs a root's missing dependencies first
+  ([#588](https://github.com/Gharib89/skills/pull/588),
+  [`5a71eaf`](https://github.com/Gharib89/skills/commit/5a71eaf52af31eafe656c93d91919d57ae328417))
+
+
 ## v0.11.1 (2026-10-11)
 
 ### Bug Fixes
