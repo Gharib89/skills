@@ -42,8 +42,9 @@ still a complete run. The levers, in rough order of impact:
 `<role>` its job in the run (`map`, `execute`, `verify`, `standards`, `spec`,
 `writing`). A subagent handed nowhere to write reaches for the scratchpad its
 own environment block names, and can write over another run's files with no
-failure signal. Edits to the repo go under the worktree prefix. Pass it the way
-you pass the model tier: written into the prompt, every dispatch.
+failure signal. Edits to the repo go under the worktree prefix. Pass the
+directory the way you pass the model tier: written into the prompt, every
+dispatch.
 
 ## Model tiers
 

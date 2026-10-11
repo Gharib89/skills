@@ -155,7 +155,7 @@
 #     reviewer's loop stopped on tree unchanged with a dispositioned Round, or
 #     on inline lane for an on-request reviewer while the last Lane: line
 #     reads inline, the round `--inline` waived, which covers no primary. A
-#     not-reviewed primary, or one that spent its Cap: (dispositioned Round
+#     not-reviewed or not-landed primary, or one that spent its Cap: (dispositioned Round
 #     lines numbered 1 through Cap) and stopped at cap, may be covered by a
 #     fallback that stopped so, and a fallback is owed its own stop only after
 #     such a primary. Other cap,

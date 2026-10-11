@@ -200,9 +200,9 @@ option.
 For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
 and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
 (`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
-`read-pr`; the mechanic answers `{clean, held_by}` and writes nothing, and its
-`--help` lists what holds the gate. Any `tracker-*.md` or `defect-*.md` draft
-always holds it (`*.base.md` files are saved originals, not drafts).
+`read-pr`; the mechanic answers `{clean, held_by}` and writes nothing, and
+`run-file --help` lists what holds the gate. Any `tracker-*.md` or `defect-*.md`
+draft always holds it (`*.base.md` files are saved originals, not drafts).
 
 On `clean: true`, post the summary through the `Timing:` row with no reply line,
 then run the merge sequence below without waiting for a reply. On `clean:

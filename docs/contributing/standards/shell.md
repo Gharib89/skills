@@ -20,8 +20,7 @@ exceptions bound these rules.
   gating read no mechanic performs is a ship defect, not a prose fallback. A run
   itself may make an informational read no mechanic covers through the host's
   REST form, listed in its Run file's `## Direct reads`, and that is no
-  violation of this rule. A read made directly in two runs is a candidate
-  mechanic. One documented exception: a CI template under
+  violation of this rule. One documented exception: a CI template under
   `skills/setup-skills/reviewers/`, and this repo's own copy of one under
   `.github/workflows/`, calls `gh` directly. It runs on a runner in a consumer
   repo that has no mechanics checked out, so there is nothing to route through.
@@ -40,6 +39,7 @@ exceptions bound these rules.
   `gh auth token --hostname github.com` or `az account show` whether the owner
   is signed in, both local reads that reach no host, because it runs before
   Ship and its adapters are installed; the answer decides only its `tools` row.
+  A read made directly in two runs is a candidate mechanic.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way

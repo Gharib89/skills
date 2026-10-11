@@ -1,7 +1,7 @@
 # Phase 0: preflight, the profile it loads, and isolation
 
-`SKILL.md` names the calls; this file says what each one proves, what it
-refuses and why the worktree is made the way it is.
+`SKILL.md` names the calls; this file says what each one proves, what it admits
+and how the worktree is made.
 
 ## What preflight proves
 

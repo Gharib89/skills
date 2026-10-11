@@ -1,7 +1,7 @@
 # Phase 3: verify where it failed
 
-You judged `Applies when:` at classification; here you run the applicable
-ones.
+You judged each `## Verification` entry's `Applies when:` at classification;
+here you run the applicable entries.
 
 - **Run** its `Run:` line scoped to what you touched, the phase-2 regression
   test in that run and the rest of the suite left to the local gate. Pass is

@@ -35,8 +35,9 @@ cancels, closed unmerged before the merge gate.
 
 A phase that names a mechanic runs it rather than re-deriving what it wraps,
 the host adapter it sources (`scripts/host/github.sh` or `scripts/host/ado.sh`,
-chosen from the `origin` remote) included. The one row that is not a mechanic,
-the repo's own local gate, keeps its flags from the local-gate contract.
+chosen from the `origin` remote) included. The one row with flags,
+the repo's own local gate, is not a mechanic: it takes them from the local-gate
+contract.
 
 | Mechanic | Phase |
 |---|---|
