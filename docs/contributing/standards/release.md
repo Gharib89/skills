@@ -135,17 +135,19 @@ below lands as a minor
 ## Adding a skill this repo writes
 
 The set of skills this repo writes is the lock's `source: "."` entries, in
-`skills-lock.json`. Four sites name that set, and each needs a hand edit:
+`skills-lock.json`. Five sites name that set, and each needs a hand edit:
 
 1. The lock entry: add `--skill <name>` to the Refresh line in CLAUDE.md's
    `### Ship` block and run it, which writes the entry and the derived copy.
 2. The release configuration, `.release/<name>.toml`.
 3. The release workflow, `.github/workflows/semantic-release.yml`: its `SKILLS`
    list and the release-commit conditions above it.
-4. The install lines in the skill's `SKILL.md`: its own
-   `npx skills add Gharib89/skills --skill <name> --agent claude-code -y`, and a
-   pinned line for each skill it composes.
+4. The install lines in the skill's `SKILL.md`: a pinned line for each skill it
+   composes.
+5. `.gitattributes`: `.claude/skills/<name>/** linguist-generated`, which
+   collapses the derived copy in a GitHub PR diff.
 
 The `derived-copies` gate fails until each `skills/<name>/` has its lock entry,
-derived copy, release configuration and both places in the release workflow;
-`scripts/pin-check.sh` holds the fourth site's pinned lines to the lock.
+derived copy, release configuration, both places in the release workflow and
+its `.gitattributes` line; `scripts/pin-check.sh` holds the fourth site's pinned
+lines to the lock.

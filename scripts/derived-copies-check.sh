@@ -9,8 +9,8 @@
 # entries, and this script hardcodes none. Every other place that names the set
 # must agree: each `skills/<n>/` is in the set, each skill in the set has a
 # source, a derived copy and a `.release/<n>.toml`, and the release workflow's
-# `SKILLS` list and its release-commit conditions name the set exactly.
-# Vendored entries are ignored.
+# `SKILLS` list, its release-commit conditions and the `linguist-generated`
+# lines in `.gitattributes` name the set exactly. Vendored entries are ignored.
 #
 #   scripts/derived-copies-check.sh [<root>]    <root> defaults to this repo
 #
@@ -57,6 +57,24 @@ got=$(sed -n "s/^[ &|(]*startsWith(github.event.head_commit.message, 'chore(rele
   || { echo "cannot read $wf" >&2; exit 2; }
 got=${got% }
 [ "$got" = "$want" ] || { echo "$wf release-commit conditions name $got, the lock's set is $want"; rc=1; }
+
+# GitHub collapses a `linguist-generated` path in a PR diff, so each derived
+# copy is marked by its own line, and a vendored skill, which has no second
+# copy, keeps its diff visible. Git ignores a line's leading whitespace, so the
+# pattern is the line's first field.
+marked=
+if [ -e .gitattributes ]; then
+  marked=$(awk '$1 ~ /^\.claude\/skills\// { for (i = 2; i <= NF; i++) if ($i == "linguist-generated") { print $1; break } }' .gitattributes) \
+    || { echo 'cannot read .gitattributes' >&2; exit 2; }
+fi
+for s in $skills; do
+  grep -qxF ".claude/skills/$s/**" <<<"$marked" || { echo "missing .gitattributes line: .claude/skills/$s/** linguist-generated"; rc=1; }
+done
+while IFS= read -r p; do
+  [ -n "$p" ] || continue
+  n=${p#.claude/skills/}; n=${n%/\*\*}
+  grep -qxF "$n" <<<"$skills" || { echo ".gitattributes marks $p linguist-generated, which is no source \".\" skill's derived copy"; rc=1; }
+done <<<"$marked"
 
 # The profile schema number across its three files: scripts/profile-schema-check.sh.
 "$here/profile-schema-check.sh" . || rc=1

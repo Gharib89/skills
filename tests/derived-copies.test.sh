@@ -26,6 +26,7 @@ tree() {
   for s in ship setup-skills; do
     cp -R "$d/skills/$s" "$d/.claude/skills/$s"
     printf 'commit_message = "chore(release): %s v{version}"\n' "$s" > "$d/.release/$s.toml"
+    printf '.claude/skills/%s/** linguist-generated\n' "$s" >> "$d/.gitattributes"
   done
   cat > "$d/.github/workflows/semantic-release.yml" <<'EOF'
 jobs:
@@ -79,6 +80,14 @@ check "a source-. lock entry with no skills/<name>/ fails on stdout" \
 d=$(tree unlocked); mkdir -p "$d/skills/new" "$d/.claude/skills/new"
 check "a skills/<name>/ the lock does not record as source . fails" \
   "skills/new is not a source \".\" entry in skills-lock.json; add --skill new to the refresh line and run it" "$(out_of "$d")"
+
+d=$(tree nogenerated); sed -i.bak '/setup-skills/d' "$d/.gitattributes"
+check "a source-. skill with no linguist-generated line fails" \
+  "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated" "$(out_of "$d")"
+
+d=$(tree vendoredgenerated); printf '.claude/skills/tdd/** linguist-generated\n' >> "$d/.gitattributes"
+check "a linguist-generated line naming a vendored skill fails" \
+  ".gitattributes marks .claude/skills/tdd/** linguist-generated, which is no source \".\" skill's derived copy" "$(out_of "$d")"
 
 # A workflow the check cannot read is tooling, not a list that disagrees. Root
 # reads a mode-000 file, so the case only runs where the mode bits bind.
