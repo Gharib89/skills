@@ -94,8 +94,9 @@ returns the `mirror` its task takes. Phase 4 may open while phase 3 is still
 open, both stamped; a phase-4 fix that touches a path a Verification already ran
 on re-runs that Verification scoped to the fix before phase 3 closes. `close 3`
 takes one `--result <name>=<word>` per Verification named at init (`n/a` for one
-whose `Applies when:` you judged false) and refuses while one is missing. Close
-a phase only once its `Done when:` holds: the mechanic stamps whatever close it
+whose `Applies when:` you judged false) and refuses while one is missing;
+`skip 3 "<reason>"` settles each one still pending as `n/a: <reason>`. Close a
+phase only once its `Done when:` holds: the mechanic stamps whatever close it
 is given, except that `close 3`, `close 4` and `close 7` refuse without the
 results or evidence lines [implement.md](implement.md#phase-4-evidence-lines)
 and [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps

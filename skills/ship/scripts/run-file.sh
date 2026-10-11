@@ -57,7 +57,9 @@
 # `--verifications` names a comma list of name-shaped words (one
 # `- <name>: pending` each, which `close 3 --result <name>=<word>` settles with
 # one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, and which
-# `close 3` will not pass while any is pending), then `Design and plan`,
+# `close 3` will not pass while any is pending; `skip 3 <reason>`, which leaves
+# no close to take a result, settles each still pending as `n/a: <reason>`),
+# then `Design and plan`,
 # `Deviations log`, and `Direct reads`, one line per informational read the run
 # made straight through the host's REST form, no mechanic covering it, so one
 # that recurs across runs is visible as a mechanic to promote. `gate record`
@@ -433,6 +435,19 @@ record_results() {
   done <<EORECORD
 $results
 EORECORD
+}
+# A skipped phase 3 has no close to take a result, so the skip settles each
+# verification still pending as n/a with its reason. The entry is matched as the
+# whole pending line, so a name holding a colon is found by its full name.
+settle_skipped() { # settle_skipped <reason>
+  local pend
+  pend=$(pending_verifs) || ship_tooling "cannot read the verification results in $file"
+  [ -n "$pend" ] || return 0
+  ps=$pend tx="n/a: $1" awk '
+    BEGIN { n = split(ENVIRON["ps"], p, "\n"); for (i = 1; i <= n; i++) want["- " p[i] ": pending"] = p[i] }
+    /^## /{ f = ($0 == "## Verification results") }
+    f && ($0 in want) { print "- " want[$0] ": " ENVIRON["tx"]; next } { print }' \
+    "$file" > "$file.t" && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
 }
 # Phase 3 closes only once every named verification has a result.
 refuse_pending() {
@@ -1027,6 +1042,7 @@ skip)
   new=$(render skipped "$(item "$line")" "$reason")
   reject_written_state "$new"
   write_line "$lineno" "$new"
+  [ "$n" = 3 ] && settle_skipped "$reason"
   flip_json skipped "$new" completed "$reason"
   ;;
 grade)

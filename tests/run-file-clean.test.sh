@@ -169,4 +169,15 @@ base; answer=$(cd "$repo" && bash "$m" gate clean - --head "$head" --issue clean
 base; cp "$f" "$repo/run.md"; touch "$repo/defect-relative.md"
 answer=$(call --file run.md); check_rc 'relative Run file draft refuses' 1 "$?"; check 'relative Run file draft names hold' true "$(jq -r '.held_by | index("Ship defect draft: defect-relative.md") != null' <<<"$answer")"
 base; before=$(cat "$f"); call >/dev/null; check 'clean is read-only' "$before" "$(cat "$f")"
+# A run that skips phase 3 settles its verifications through the skip, so the
+# gate is not held by results no close could record (#564).
+base; printf '### beta\nAlso proven by CI: None.\n' >> "$profile"
+sk=$(cd "$repo" && bash "$m" init skip --scratchpad "$tmp/records" --from-profile 2>/dev/null | jq -r .run_file)
+(cd "$repo" && { bash "$m" close 0 --file "$sk"; for p in 1 2; do bash "$m" open "$p" --file "$sk"; bash "$m" close "$p" --file "$sk"; done
+  bash "$m" skip 3 'docs class: no verification applies' --file "$sk"
+  printf '{"verdict":"pass","gates":{"tests":"pass","secrets":"pass"}}' | bash "$m" gate record - --head "$head" --file "$sk"; } >/dev/null 2>&1)
+printf '## Review evidence\nRound: primary 1: all dispositioned\nStop: primary: tree unchanged\nStop: fallback: not reviewed\n' >> "$sk"
+answer=$(cd "$repo" && bash "$m" gate clean "$ci" --head "$head" --file "$sk" 2>/dev/null); rc=$?
+check_rc 'a skipped phase 3 exits clean' 0 "$rc"
+check 'a skipped phase 3 holds no verification' '{"clean":true,"held_by":[]}' "$(jq -c . <<<"$answer")"
 finish
