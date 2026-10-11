@@ -35,7 +35,10 @@ exceptions bound these rules.
   carries four, and `comment-issue`'s create-then-verify reads `GET /user`,
   which a workflow token is refused, so it re-reads the comments for its
   mention's table marker before posting; its section rewrite goes through
-  `update-issue-body`.
+  `update-issue-body`. A fifth: `setup-project`'s `setup-status` asks
+  `gh auth token --hostname github.com` or `az account show` whether the owner
+  is signed in, both local reads that reach no host, because it runs before
+  Ship and its adapters are installed; the answer decides only its `tools` row.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way

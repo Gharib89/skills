@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The setup status: one JSON line per project-setup step, in fixed order, read
 # from what each step leaves behind. It reads local files, git and the local
-# answers of the tools it lists (`--version`, `gh auth token`,
+# answers of the tools it lists (`--version`, `gh auth token --hostname`,
 # `az account show`), and never a host: the source repo's lock comes in as a
 # file `source-lock.sh` fetched, so the same tree always gives the same table.
 #
@@ -52,16 +52,29 @@ version_lt() { awk -v a="$1" -v b="$2" 'BEGIN { n = split(a, x, "."); m = split(
 origin=''
 isgit=''
 if [ -e "$root/.git" ]; then isgit=1; origin=$(git -C "$root" remote get-url origin 2>/dev/null); fi
+# The host, by the origin forms Ship's adapters accept; `other` is one Ship cannot run on.
+case $origin in
+  '') host='' ;;
+  *github.com[:/]*) host=github ;;
+  *dev.azure.com/*|*ssh.dev.azure.com:v3/*|*visualstudio.com*) host=ado ;;
+  *) host=other ;;
+esac
+# The source repo records its own skills as `source: "."`.
+slug=${origin#*github.com}; slug=${slug#[:/]}; slug=${slug%.git}; slug=${slug%/}
+issource=''; shopt -s nocasematch; [[ $host == github && $slug == gharib89/skills ]] && issource=1; shopt -u nocasematch
 manifest='' tool=''
 for m in pyproject.toml package.json Cargo.toml go.mod; do [ -f "$root/$m" ] && { manifest=$m; break; }; done
 if [ -z "$manifest" ]; then
   for m in "$root"/*.sln "$root"/*.csproj "$root"/*.fsproj; do [ -f "$m" ] && { manifest=${m##*/}; break; }; done
 fi
+# The stack's tool follows its lockfile, as setup-harness's catalog maps it.
+lockfor() { # <lockfile>:<tool>...: the tool of the first lockfile present
+  local p; for p in "$@"; do [ -f "$root/${p%%:*}" ] && { tool=${p#*:}; return; }; done
+}
 case $manifest in
-  pyproject.toml) tool=uv ;; Cargo.toml) tool=cargo ;; go.mod) tool=go ;; '') ;;
-  package.json)
-    if [ -f "$root/pnpm-lock.yaml" ]; then tool=pnpm
-    elif [ -f "$root/bun.lock" ] || [ -f "$root/bun.lockb" ]; then tool=bun; fi ;;
+  Cargo.toml) tool=cargo ;; go.mod) tool=go ;; '') ;;
+  pyproject.toml) lockfor uv.lock:uv poetry.lock:poetry pdm.lock:pdm ;;
+  package.json) lockfor pnpm-lock.yaml:pnpm package-lock.json:npm yarn.lock:yarn bun.lock:bun bun.lockb:bun ;;
   *) tool=dotnet ;;
 esac
 
@@ -71,14 +84,14 @@ for t in git jq node npx $tool; do
   v=''; [ "$t" = go ] && v=$(ver go version) || v=$(ver "$t" --version)
   if command -v "$t" >/dev/null; then ev+=("$t ${v:-version unreadable}"); else ev+=("$t missing"); state=run; fi
 done
-case $origin in
-  *dev.azure.com*|*visualstudio.com*)
+case $host in
+  ado)
     if ! command -v az >/dev/null; then ev+=("az missing"); state=run
     elif az account show >/dev/null 2>&1; then ev+=("az signed in")
     else ev+=("az signed out"); state=run; fi ;;
   *)
     if ! command -v gh >/dev/null; then ev+=("gh missing"); state=run
-    elif gh auth token >/dev/null 2>&1; then ev+=("gh $(ver gh --version) signed in")
+    elif gh auth token --hostname github.com >/dev/null 2>&1; then ev+=("gh $(ver gh --version) signed in")
     else ev+=("gh signed out"); state=run; fi ;;
 esac
 row tools "$state"
@@ -87,7 +100,8 @@ row tools "$state"
 # one with history already has whatever stack it has.
 state='done'
 if [ -n "$isgit" ]; then ev+=(".git present"); else ev+=("no .git"); state=run; fi
-if [ -n "$origin" ]; then ev+=("origin $origin"); else ev+=("no origin remote"); state=run; fi
+if [ "$host" = other ]; then ev+=("origin $origin: neither GitHub nor Azure DevOps"); state=run
+elif [ -n "$origin" ]; then ev+=("origin $origin"); else ev+=("no origin remote"); state=run; fi
 if [ -n "$manifest" ]; then ev+=("manifest $manifest")
 elif [ -n "$isgit" ] && git -C "$root" rev-parse -q --verify HEAD >/dev/null; then ev+=("no stack manifest, history present")
 else ev+=("no stack manifest"); state=run; fi
@@ -103,9 +117,10 @@ pins=$own
 for s in ship cloud-ship setup-skills update-skills setup-harness; do
   e=$(entry "$s")
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run; continue; fi
-  # Only the source repo's copy is the chain skill; `.` is the source repo itself.
+  # Only the source repo's copy is the chain skill, `.` only in the source repo itself.
   src=${e%#*}
-  ours=''; shopt -s nocasematch; [[ $src == gharib89/skills || $src == . ]] && ours=1; shopt -u nocasematch
+  ours=''; shopt -s nocasematch; [[ $src == gharib89/skills ]] && ours=1; shopt -u nocasematch
+  [ "$src" = . ] && ours=$issource
   if [ -z "$ours" ]; then ev+=("$s from $src, not Gharib89/skills"); state=run; continue; fi
   pins="$pins $(front "$root/.claude/skills/$s/SKILL.md" composes)"
   v=$(front "$root/.claude/skills/$s/SKILL.md" version)

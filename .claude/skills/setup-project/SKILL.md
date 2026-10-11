@@ -34,8 +34,8 @@ step leaves behind:
 
 | Step | Reads |
 |---|---|
-| `tools` | git, jq, node and npx, the stack's own tool, and `gh` signed in (`az` on an Azure DevOps origin) |
-| `repo-and-remote` | `.git`, an `origin` remote, and a stack manifest where the repo has no commits |
+| `tools` | git, jq, node and npx, the stack's own tool by its lockfile, and `gh` signed in (`az` on an Azure DevOps origin) |
+| `repo-and-remote` | `.git`, an `origin` on GitHub or Azure DevOps, and a stack manifest where the repo has no commits |
 | `installed-skills` | the chain set in `skills-lock.json`, from its source, and under `.claude/skills/` |
 | `matts-setup` | `docs/agents/issue-tracker.md`, `triage-labels.md`, `domain.md` |
 | `harness` | `docs/agents/harness.md`'s `Schema:` against setup-harness's |

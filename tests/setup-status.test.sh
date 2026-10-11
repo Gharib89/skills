@@ -131,6 +131,10 @@ d=$(tree forked); jq '.skills.ship.source = "other/ship"' "$d/skills-lock.json" 
 check "a chain skill installed from another source reads run" "run" "$(state installed-skills "$d")"
 check "its evidence names the source" "ship from other/ship, not Gharib89/skills" \
   "$(evidence installed-skills "$d" | grep '^ship from')"
+d=$(tree local); jq '.skills.ship.source = "."' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+check "a chain skill recorded as local in a consumer reads run" "run" "$(state installed-skills "$d")"
+git -C "$d" remote set-url origin git@github.com:Gharib89/skills.git
+check "and as local in the source repo itself reads done" "done" "$(state installed-skills "$d")"
 d=$(tree othersrc); jq '.skills.tdd.source = "x/y"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
 check "a composed skill from another source at the pinned sha reads re-run audit" \
   "re-run audit" "$(state installed-skills "$d")"
@@ -189,8 +193,19 @@ check "its evidence says so" "gh signed out" "$(FAKE_GH_SIGNED_OUT=1 evidence to
 d=$(tree ado); git -C "$d" remote set-url origin https://dev.azure.com/o/p/_git/r
 check "an Azure DevOps origin reads az in place of gh" "az signed in" "$(evidence tools "$d" | grep -E '^(az|gh)')"
 check "az signed out reads the tools row run" "run" "$(FAKE_AZ_SIGNED_OUT=1 state tools "$d")"
-d=$(tree uv); rm "$d/package.json"; printf '[project]\n' > "$d/pyproject.toml"
+d=$(tree uv); rm "$d/package.json"; printf '[project]\n' > "$d/pyproject.toml"; : > "$d/uv.lock"
 check "a stack whose tool is missing reads the tools row run" "uv missing" "$(evidence tools "$d" | grep uv)"
+# The stack's tool follows its lockfile, as setup-harness's catalog maps it.
+for pair in pyproject.toml:poetry.lock:poetry pyproject.toml:pdm.lock:pdm package.json:yarn.lock:yarn \
+  package.json:package-lock.json:npm package.json:pnpm-lock.yaml:pnpm; do
+  IFS=: read -r man lockf tool <<<"$pair"
+  d=$(tree "lock-$tool"); rm "$d/package.json"; printf '{}\n' > "$d/$man"; : > "$d/$lockf"
+  check "$man with $lockf checks $tool" "$tool missing" "$(evidence tools "$d" | grep "^$tool ")"
+done
+d=$(tree gitlab); git -C "$d" remote set-url origin https://gitlab.com/o/r.git
+check "an origin that is neither GitHub nor Azure DevOps reads the repo row run" "run" "$(state repo-and-remote "$d")"
+check "its evidence names the origin" "origin https://gitlab.com/o/r.git: neither GitHub nor Azure DevOps" \
+  "$(evidence repo-and-remote "$d" | grep '^origin')"
 
 check_rc "no root is a usage error" 2 "$(run >/dev/null; echo $?)"
 check "and answers an error object" "error" "$(run | jq -r 'keys[]')"
