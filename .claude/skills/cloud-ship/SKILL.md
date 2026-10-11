@@ -56,3 +56,5 @@ bytes everywhere and ship derives the repo from the clone's remote:
 ```
 Run the cloud-ship skill.
 ```
+
+<!-- probe: linguist-generated collapse, do not merge -->
