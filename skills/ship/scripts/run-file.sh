@@ -153,7 +153,8 @@
 #     commits between the recorded head and <sha>
 #   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
 #     check, every profile CI leg succeeded on head or, where No-checks legal:
-#     says yes, ran no check there, verifications passed or were
+#     says yes and no local gate deferred to CI, ran no check there,
+#     verifications passed or were
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged with a dispositioned Round, or
 #     on inline lane for an on-request reviewer while the last Lane: line
@@ -813,7 +814,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        if samehead($ci.head_sha; $head) | not then "CI: head differs" else empty end,
        if $ci.status != "green" and ($ci.status != "no-checks" or ($no_checks | not)) then "CI: " + $ci.status else empty end,
        ($legs[] as $leg | [$ci.checks[] | select(named($leg))] as $checks
-         | if $checks == [] then (if $no_checks then empty else "CI " + $leg + ": missing" end)
+         # A deferral names no leg, so it leaves no leg legally missing.
+         | if $checks == [] then (if $no_checks and ([($gates // {})[] | select(. == "deferred-to-ci")] == [])
+             then empty else "CI " + $leg + ": missing" end)
            else $checks[] | select(.status != "success") | "CI " + .name + ": " + .status end),
        ($verifications[] as $v | result($v.name) as $status
          | if $status == "pass" or $status == "n/a" then empty
