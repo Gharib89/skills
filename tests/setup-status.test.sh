@@ -194,7 +194,8 @@ d=$(tree ado); git -C "$d" remote set-url origin https://dev.azure.com/o/p/_git/
 check "an Azure DevOps origin reads az in place of gh" "az signed in" "$(evidence tools "$d" | grep -E '^(az|gh)')"
 check "az signed out reads the tools row run" "run" "$(FAKE_AZ_SIGNED_OUT=1 state tools "$d")"
 d=$(tree uv); rm "$d/package.json"; printf '[project]\n' > "$d/pyproject.toml"; : > "$d/uv.lock"
-check "a stack whose tool is missing reads the tools row run" "uv missing" "$(evidence tools "$d" | grep uv)"
+check "a stack whose tool is missing reads the tools row run" "run" "$(state tools "$d")"
+check "its evidence names the missing tool" "uv missing" "$(evidence tools "$d" | grep uv)"
 # The stack's tool follows its lockfile, as setup-harness's catalog maps it.
 for pair in pyproject.toml:poetry.lock:poetry pyproject.toml:pdm.lock:pdm package.json:yarn.lock:yarn \
   package.json:package-lock.json:npm package.json:pnpm-lock.yaml:pnpm; do

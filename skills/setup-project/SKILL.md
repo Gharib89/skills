@@ -45,10 +45,11 @@ step leaves behind:
 Each row reads `run` (what the step leaves is missing: its first run),
 `re-run audit` (present but behind) or `done`, with the evidence it read. Matt's
 docs carry no schema to compare, so `matts-setup` reads only `run` or `done`.
-The **chain set** is what setup-skills needs before it runs: `ship`,
-`cloud-ship`, `setup-skills`, `update-skills` and `setup-harness` from the
-source repo, `setup-matt-pocock-skills`, and every skill those compose, each at
-its pinned ref. A source-repo skill is behind when its version trails the source
+The **source repo** is `Gharib89/skills`, where these skills are written. The
+**chain set** is what setup-skills needs before it runs: `ship`, `cloud-ship`,
+`setup-skills`, `update-skills` and `setup-harness` from the source repo,
+`setup-matt-pocock-skills`, and every skill those compose, each at its pinned
+ref. A source-repo skill is behind when its version trails the source
 lock; a composed skill is behind when the lock records it at another source or
 ref than its pin.
 
