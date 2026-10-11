@@ -185,6 +185,20 @@ check "its repo evidence names each missing piece" "no .git
 no origin remote
 no stack manifest" "$(evidence repo-and-remote "$d")"
 
+# Loose code with no git takes the same row logic as an empty folder: each
+# missing piece is read on its own, and the code already there is no evidence of
+# any of them.
+d=$fixture/loose; mkdir -p "$d/src"; printf 'print(1)\n' > "$d/main.py"; printf 'x\n' > "$d/src/util.py"
+check "loose code with no git reads the repo row run" "run" "$(state repo-and-remote "$d")"
+check "its evidence names each missing piece" "no .git
+no origin remote
+no stack manifest" "$(evidence repo-and-remote "$d")"
+d=$fixture/loose-manifest; mkdir -p "$d"; printf '{}\n' > "$d/package.json"; : > "$d/bun.lock"
+check "loose code with a manifest and no git names only the git pieces" "no .git
+no origin remote
+manifest package.json" "$(evidence repo-and-remote "$d")"
+check "and checks the stack's own tool by its lockfile" "bun 1.1.30" "$(evidence tools "$d" | grep '^bun ')"
+
 # A stack manifest is the new project's to scaffold: a repo with history already
 # has whatever stack it has, so its absence alone does not make the row run.
 d=$(tree nomanifest); git -C "$d" rm -q package.json && git -C "$d" -c user.name=t -c user.email=t@t commit -qm rm
