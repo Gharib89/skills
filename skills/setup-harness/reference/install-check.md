@@ -35,7 +35,7 @@ Each pin lives in its tool's own place; the skill adds no lock file of its own.
 
 | Kind | Pin |
 |---|---|
-| Package | exact version as a dev dependency through the stack's exact dev add when its root's stack has one, its `Exact dev add` in [catalog/README.md](../catalog/README.md) not `None.`, lockfile present or not (`uv add --dev ruff==<v>`, `pnpm add -D -E prettier@<v>`): on an `unlocked` root it writes the stack's lockfile, the one exception [detection.md](detection.md) names; else the exact version in the install command (`uv tool install prek==<v>`) |
+| Package | exact version through the stack's exact dev add when the root's stack has one ([catalog/README.md](../catalog/README.md) `Exact dev add` not `None.`), with or without a lockfile (`uv add --dev ruff==<v>`, `pnpm add -D -E prettier@<v>`; on an `unlocked` root see [detection.md](detection.md)); else the exact version in the install command (`uv tool install prek==<v>`) |
 | Pre-commit hook repo | `rev` frozen to a full SHA, reachable from the upstream tag it names (`prek autoupdate --freeze`, then confirm the SHA is on that tag) |
 | apt package | name only, distro-pinned; the installed version is recorded in the report |
 | Direct download | exact-version URL plus a sha256 check |
