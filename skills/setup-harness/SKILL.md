@@ -84,7 +84,7 @@ In this order, each step's failure stopping the run with its output:
 ### 8. Report
 
 1. The header from step 4.
-2. What was written, one line per file, `.claude/settings.local.json` entries named machine-specific.
+2. What was written, one line per file, `.claude/settings.local.json` entries named machine-specific, and a lockfile an exact dev add wrote naming its root as moved from `unlocked` to locked ([reference/detection.md](reference/detection.md)).
 3. **Language servers**: one line per wired language from the proof, each `local-only`.
 4. **Budgets**: one row per rung, cold, warm, budget, verdict (`within`, `over: narrowed`, `over: demoted to <rung>`, `over: override <N>s`, `not judged: fail (<check>)`, `not judged: unavailable (<check>)`, `not judged: contract` on a re-run). Then the **cloud** table: per rung its cloud label and cloud times, and the cloud setup's local double run.
 5. **Not acted on**: unclaimed extensions and stacks, unwired tools, Found-not-installed units, `public API: no baseline (<member>)`, `<tool>: <root> not served`, anything "present, not wired".
