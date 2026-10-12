@@ -44,6 +44,14 @@ check "the overrun message names the file and the count" \
 d=$(tree many-lines); body 1000 > "$d/skills/ship/SKILL.md"
 check_rc "a 1,000-line SKILL.md inside the word budget passes" 0 "$(rc_of "$d")"
 
+# The count is `wc -w`'s, so every whitespace byte it splits on separates words:
+# a vertical tab, a form feed or a carriage return between two words is not one
+# word, which awk's default split on blanks alone would read it as.
+d=$(tree odd-space)
+{ i=0; while [ "$i" -lt 584 ]; do printf 'w\vw\fw\rw w\tw\n'; i=$((i + 1)); done; } > "$d/skills/ship/SKILL.md"
+check "words split by a vertical tab, form feed or carriage return still count" \
+  "skills/ship/SKILL.md: 3504 words, over the 3500-word budget" "$(out_of "$d")"
+
 # Every owned skill is held, not ship alone.
 d=$(tree other-skill); mkdir -p "$d/skills/other"; words 3501 > "$d/skills/other/SKILL.md"
 check "another skill's overrun is reported" \

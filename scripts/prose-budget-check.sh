@@ -33,7 +33,10 @@ shopt -s nullglob
 # awk reports an unreadable file in its exit status, and an ignored status turns
 # that into a count of nothing and a budget answer about a file nobody read.
 lines() { awk 'END{print NR}' "$1"; }
-words() { awk '{n += NF} END{print n + 0}' "$1"; }
+# `wc -w` itself, since awk's default split sees blanks alone and a vertical tab,
+# form feed or carriage return would join two words; `$((n))` drops the padding
+# a BSD `wc` prints.
+words() { local n; n=$(wc -w < "$1") || return; printf '%s\n' "$((n))"; }
 
 # One awk over the whole file rather than `head | grep`, because this script runs
 # under pipefail: a SIGPIPE on the head of that pipeline would read as a file
