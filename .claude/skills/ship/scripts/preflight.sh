@@ -283,8 +283,9 @@ fi
 # `*-<n>` branch on origin, and something to rework it from.
 rework_json=null
 # Both sides of the head-push compare pass this one check: the adapters owe the
-# one UTC spelling, and a time in any other compares as text, so it is unreadable.
-utc='def utc: if type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+# one UTC spelling, and a time spelled any other way would compare as text, so
+# it is unreadable. `\z`, since `$` also matches before a trailing newline.
+strict_utc='def strict_utc: if type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\\z")
   then . else error("not a UTC time") end; '
 if $rework && [ -n "${open_prs:-}" ]; then
   case $(jq length <<<"$open_prs") in
@@ -298,12 +299,12 @@ if $rework && [ -n "${open_prs:-}" ]; then
          || ! open_threads=$(jq -c '[.[] | select(.resolved | not) | .id]' <<<"$threads"); then
          reasons+=("not reworkable: review threads unreadable")
        elif ! comments=$(host_pr_comments "$num") \
-         || ! comments=$(jq -c --arg m "$SHIP_COMMENT_MARKER" "$utc"'[.[]
+         || ! comments=$(jq -c --arg m "$SHIP_COMMENT_MARKER" "$strict_utc"'[.[]
               | select(.writer == true and ((.body // "") | contains($m) | not))
-              | {author, created_at: (.created_at | utc), body}]' <<<"$comments"); then
+              | {author, created_at: (.created_at | strict_utc), body}]' <<<"$comments"); then
          reasons+=("not reworkable: PR comments unreadable")
        elif [ "$comments" != '[]' ] && ! pushed=$(host_pr_pushed_at "$num" "$head" "$(jq -r .head_sha <<<"$pr")" \
-         | jq -Rre "$utc"'utc'); then
+         | jq -Rre "$strict_utc"'strict_utc'); then
          reasons+=("not reworkable: head push unreadable")
        else
          # The head push is the cut-off: a comment older than it was already in

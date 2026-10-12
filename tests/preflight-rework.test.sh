@@ -151,7 +151,8 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
     "$(grep '^host_pr_pushed_at' "$SHIP_FAKE/calls")"
   # A time outside the one UTC spelling would compare as text: unreadable, on
   # either side of the compare.
-  for t in 2026-01-02T00:00:01.250+00:00 2026-01-02T02:00:01+02:00 junk ''; do
+  for t in 2026-01-02T00:00:01.250+00:00 2026-01-02T00:00:01.250Z 2026-01-02T02:00:01+02:00 \
+    $'2026-01-02T00:00:00Z\n' junk ''; do
     threadless; comment w "$t" true
     check "$h: a comment time of '$t' is unreadable" '["not reworkable: PR comments unreadable"]' \
       "$(rw "$(preflight 5 --rework)")"
