@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.1 (2026-10-12)
+
+### Refactoring
+
+- **setup-skills**: Count the prose budget in words, split setup-skills into references
+  ([#618](https://github.com/Gharib89/skills/pull/618),
+  [`858c5ad`](https://github.com/Gharib89/skills/commit/858c5ad8d95c79dbe67272097dec4a917078e65d))
+
+
 ## v0.19.0 (2026-10-12)
 
 ### Features
