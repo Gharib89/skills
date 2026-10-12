@@ -34,16 +34,17 @@ github=$(
     {"user":{"login":"reader"},"body":"r","created_at":"t","author_association":"MEMBER"},
     {"user":{"login":"app[bot]"},"body":"b","created_at":"t","author_association":"NONE"},
     {"user":{"login":"gone"},"body":"g","created_at":"t","author_association":"COLLABORATOR"},
-    {"user":{"login":"admin"},"body":"again","created_at":"t","author_association":"OWNER"}' \
+    {"user":{"login":"admin"},"body":"again","created_at":"t","author_association":"OWNER"},
+    {"user":null,"body":"deleted","created_at":"t"}' \
     > "$work/route.repos_o_r_issues_1_comments"
   perm() { printf '{"permission":"%s","user":{"permissions":{"push":%s}}}\n' "$2" "$3" \
     > "$work/route.repos_o_r_collaborators_$1_permission"; }
   perm admin admin true; perm reader read false; perm 'app%5Bbot%5D' none false
   host_issue_comments 1 | jq -c 'map(if has("writer") then .writer else "absent" end)'
 )
-check "GitHub: push access writes; read and none do not; a failed permission call is null" \
-  '[true,false,false,null,true]' "$github"
-check "GitHub: one permission call per distinct author, the login URI-encoded" \
+check "GitHub: push access writes; read and none do not; a failed call or no author is null" \
+  '[true,false,false,null,true,null]' "$github"
+check "GitHub: one permission call per distinct author, the login URI-encoded, none for no author" \
   'repos/o/r/collaborators/admin/permission
 repos/o/r/collaborators/app%5Bbot%5D/permission
 repos/o/r/collaborators/gone/permission
