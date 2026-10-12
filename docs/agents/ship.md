@@ -136,6 +136,15 @@ Without it: hand-off
 Also proven by CI: None.
 Claims to probe: that a permission dialog, not only a question dialog, reads `blocked` (it did on herdr 0.9.3, with `--permission-mode default`); that `agent get` on a closed tab's agent, or one whose claude exited with its pane open, answers `agent_not_found`; that a blocked agent's `visible` screen shows the dialog where a 120-line `recent-unwrapped` read is refused with `agent_not_idle`; that `agent prompt --wait` answers `agent_prompt_stalled` after 5 s for text that starts no turn, from `done`; and that focusing a tab turns `done` into `idle` without moving `state_change_seq` (all measured on herdr 0.9.3), so a glance at a tab wakes no `watch`.
 
+### ship-live-run
+
+Proves: Ship's prose, as a real model reads it, takes a plain issue to the merge gate and stops `ambiguous` on a vague one with no claim, no branch and no PR.
+Applies when: the change touches `skills/ship/SKILL.md` or `skills/ship/reference/`.
+Run: `scripts/live-run-ship.sh <worktree>` after the refresh, which installs the worktree's Ship into `Gharib89/ship-fixture` and drives one headless `/ship --unattended` turn per path, each capped by budget and wall clock and re-run once on a failure, and prints one JSON line whose `result` is the result word. A pass on the retry is a pass, and its `retried` lines go on the merge summary's `Verification` row. The maintainer can run the same command by hand.
+Needs: `gh` and `claude` signed in, and `Gharib89/ship-fixture` reachable with its `main` at its `seed` tag.
+Without it: hand-off
+Also proven by CI: None.
+
 ## Versioning and changelog
 
 Tooling: semantic-release
