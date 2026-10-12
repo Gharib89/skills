@@ -80,22 +80,32 @@ run_branches() { # -> one branch name per line
   done
 }
 
-# Close the run's issue and PRs and delete its branches.
+# Close the run's issue and PRs and delete its branches. A read or close that
+# fails is said on stderr and returns 2: on the EXIT-trap path no read-back
+# follows, so this is the only report a tooling exit or a Ctrl-C leaves.
 reset_host() {
   [ -n "$issue" ] || return 0
-  local prs mine n h b
+  local prs mine n h b branches rc=0
   if prs=$(open_prs) && mine=$(run_prs "$prs"); then
     while read -r n h; do
       [ -n "$n" ] || continue
       gh api -X PATCH "repos/$repo/pulls/$n" -f state=closed >/dev/null
       run_heads="$run_heads $h"
     done <<<"$mine"
+  else
+    echo "cleanup: unverified, the open PRs could not be read" >&2; rc=2
   fi
-  # The branch is URI-encoded: a `#` in it would otherwise address another ref.
-  for b in $(run_branches); do
-    gh api -X DELETE "repos/$repo/git/refs/heads/$(jq -rn --arg b "$b" '$b | @uri')" >/dev/null
-  done
-  gh api -X PATCH "repos/$repo/issues/$issue" -f state=closed -f state_reason=not_planned >/dev/null
+  if branches=$(run_branches); then
+    # The branch is URI-encoded: a `#` in it would otherwise address another ref.
+    for b in $branches; do
+      gh api -X DELETE "repos/$repo/git/refs/heads/$(jq -rn --arg b "$b" '$b | @uri')" >/dev/null
+    done
+  else
+    echo "cleanup: unverified, the branches could not be read" >&2; rc=2
+  fi
+  gh api -X PATCH "repos/$repo/issues/$issue" -f state=closed -f state_reason=not_planned >/dev/null \
+    || { echo "cleanup: issue #$issue not closed" >&2; rc=2; }
+  return "$rc"
 }
 
 gh repo clone "$repo" "$co" -- -q || tooling "cannot clone $repo"
