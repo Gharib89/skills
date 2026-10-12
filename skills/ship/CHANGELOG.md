@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.30.0 (2026-10-12)
+
+### Features
+
+- **ship**: Rework a merge-gate PR from its open threads and invocation text
+  ([#622](https://github.com/Gharib89/skills/pull/622),
+  [`c7c6fa7`](https://github.com/Gharib89/skills/commit/c7c6fa7605fce1047463724691a8851f0cc454d9))
+
+
 ## v0.29.0 (2026-10-12)
 
 ### Features
