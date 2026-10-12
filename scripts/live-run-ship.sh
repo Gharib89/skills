@@ -91,7 +91,10 @@ reset_host() {
       run_heads="$run_heads $h"
     done <<<"$mine"
   fi
-  for b in $(run_branches); do gh api -X DELETE "repos/$repo/git/refs/heads/$b" >/dev/null; done
+  # The branch is URI-encoded: a `#` in it would otherwise address another ref.
+  for b in $(run_branches); do
+    gh api -X DELETE "repos/$repo/git/refs/heads/$(jq -rn --arg b "$b" '$b | @uri')" >/dev/null
+  done
   gh api -X PATCH "repos/$repo/issues/$issue" -f state=closed -f state_reason=not_planned >/dev/null
 }
 
@@ -107,9 +110,12 @@ gh repo clone "$repo" "$co" -- -q || tooling "cannot clone $repo"
 git -C "$co" checkout -q -- .
 git -C "$co" status --porcelain | sed -n 's/^?? //p' >> "$co/.git/info/exclude"
 
-title='Add a sub helper to calc.sh'
-issue=$(gh api "repos/$repo/issues" -f title="$title" -f 'labels[]=ready-for-agent' \
-  -f body="$(cat <<'BODY'
+# A marker unique to this invocation, so a re-read finds this run's issue and
+# never another run's with the same title.
+mark="<!-- live-run: ${tmp##*/} -->"
+issue=$(gh api "repos/$repo/issues" -f title='Add a sub helper to calc.sh' -f 'labels[]=ready-for-agent' \
+  -f body="$mark
+$(cat <<'BODY'
 ## What to build
 
 `calc.sh` has `add`. Add `sub`, which prints its first argument minus its second, the same way `add` prints a sum.
@@ -121,10 +127,10 @@ issue=$(gh api "repos/$repo/issues" -f title="$title" -f 'labels[]=ready-for-age
 BODY
 )" --jq .number) || issue=""
 # A create whose response was lost may still have landed: re-read the newest
-# open issues for it before calling the create failed, so cleanup can close it.
+# open issues for its marker before calling the create failed, so cleanup can
+# close it.
 [ -n "$issue" ] || issue=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=10" \
-  | jq -r --arg t "$title" \
-    '[.[] | select(.pull_request == null and .title == $t and (.created_at | fromdate) >= now - 600)][0].number // empty')
+  | jq -r --arg m "$mark" '[.[] | select(.pull_request == null and ((.body // "") | contains($m)))][0].number // empty')
 [ -n "$issue" ] || tooling "cannot file the issue on $repo"
 
 start=$(date +%s)
