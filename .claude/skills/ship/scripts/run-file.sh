@@ -57,7 +57,9 @@
 # `--verifications` names a comma list of name-shaped words (one
 # `- <name>: pending` each, which `close 3 --result <name>=<word>` settles with
 # one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, and which
-# `close 3` will not pass while any is pending), then `Design and plan`,
+# `close 3` will not pass while any is pending; a name with no entry that the
+# checkout profile's `## Verification` names, a heading the PR added after init,
+# is appended under the same heading checks init applies), then `Design and plan`,
 # `Deviations log`, and `Direct reads`, one line per informational read the run
 # made straight through the host's REST form, no mechanic covering it, so one
 # that recurs across runs is visible as a mechanic to promote. `skip 3 <reason>`
@@ -407,9 +409,10 @@ pending_verifs() {
     $0 ~ /: pending$/ && $0 !~ ("^- .*: (" ENVIRON["w"] ")(:|$)") { sub(/^- /, ""); sub(/: pending$/, ""); print }'
 }
 # One `--result <name>=<word>[: <note>]`, checked against the names `init`
-# recorded; sets rname, rword and rnote.
+# recorded, then the checkout profile's Verification headings; sets rname, rword,
+# rnote and radd, true for a name only the profile holds.
 parse_result() { # parse_result <arg>
-  local rest
+  local rest path
   case $1 in *=*) ;; *) ship_tooling "--result takes <name>=<word>[: <note>], word one of ${result_words//|/, }" ;; esac
   rname=${1%%=*}; rest=${1#*=}; rword=${rest%%:*}
   case $rest in *:*) rnote=${rest#*:}; rnote=${rnote# } ;; *) rnote="" ;; esac
@@ -420,8 +423,15 @@ parse_result() { # parse_result <arg>
   [ "${rnote%%$'\n'*}" = "$rnote" ] || ship_tooling "a result note is one line"
   # A profile name may hold a colon, so the entry is found by its prefix rather
   # than by cutting the line at the first one.
-  results_lines | nm=$rname awk 'index($0, "- " ENVIRON["nm"] ": ") == 1 { f = 1 } END { exit !f }' \
-    || ship_tooling "--result names '$rname', which --verifications did not name at init"
+  radd=false
+  results_lines | nm=$rname awk 'index($0, "- " ENVIRON["nm"] ": ") == 1 { f = 1 } END { exit !f }' && return 0
+  # `gate clean` judges the profile's headings, not init's list, so a heading the
+  # PR adds after init owes a result that only this fallback can record (#621).
+  if path=$(ship_profile_path) && [ -r "$path" ] &&
+    profile_headings Verification "$(cat "$path")" | nm=$rname awk '$0 == ENVIRON["nm"] { f = 1 } END { exit !f }'; then
+    refuse_bad_headings "$rname"; radd=true; return 0
+  fi
+  ship_tooling "--result names '$rname', which neither the Run file's Verification results nor the profile's Verification headings name"
 }
 # Every result is checked before any is written, so a bad one leaves the record
 # as it was.
@@ -440,9 +450,18 @@ record_results() {
     [ -n "$r" ] || continue
     parse_result "$r"
     text=$rword; [ -z "$rnote" ] || text="$rword: $rnote"
-    nm=$rname tx=$text awk '/^## /{ f = ($0 == "## Verification results") }
-      f && index($0, "- " ENVIRON["nm"] ": ") == 1 { print "- " ENVIRON["nm"] ": " ENVIRON["tx"]; next } { print }' \
-      "$file" > "$file.t" && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
+    if [ "$radd" = true ]; then
+      # After the section's last line, or a new section at the end when init
+      # named no Verification and so wrote none.
+      nm=$rname tx=$text awk 'NR == FNR { if (/^## /) f = ($0 == "## Verification results"); if (f && (/^## / || /^- /)) last = FNR; next }
+        { print } FNR == last { print "- " ENVIRON["nm"] ": " ENVIRON["tx"] }
+        END { if (!last) printf "\n## Verification results\n\n- %s: %s\n", ENVIRON["nm"], ENVIRON["tx"] }' \
+        "$file" "$file" > "$file.t"
+    else
+      nm=$rname tx=$text awk '/^## /{ f = ($0 == "## Verification results") }
+        f && index($0, "- " ENVIRON["nm"] ": ") == 1 { print "- " ENVIRON["nm"] ": " ENVIRON["tx"]; next } { print }' \
+        "$file" > "$file.t"
+    fi && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
   done <<EORECORD
 $results
 EORECORD
@@ -471,6 +490,17 @@ refuse_pending() {
 profile_headings() { # profile_headings <section> <profile-body>
   awk -v s="## $1" '/^## / { f = ($0 == s || $0 == s "\r") ; next }
     f && /^### / { h = substr($0, 5); sub(/[ \t\r]+$/, "", h); print h }' <<<"$2"
+}
+# A heading is a name whatever it holds, so profile names skip the name-shape
+# test a hand-passed list gets; `=` is the one character `--result` cannot take
+# in one, and a result word as a later field is the one shape the pending test
+# reads as settled (`- Build: pass: pending`).
+refuse_bad_headings() { # refuse_bad_headings <names, one per line>
+  local bad
+  case $1 in *=*) ship_tooling "a Verification heading cannot carry '=': --result splits the name from the word on it" ;; esac
+  bad=$(w="$result_words" awk '$0 ~ (": (" ENVIRON["w"] ")(:|$)") { print; exit }' <<<"$1") ||
+    ship_tooling "could not read the Verification headings for result words"
+  [ -z "$bad" ] || ship_tooling "a Verification heading cannot carry a result word as a later field: '$bad' would read as a settled result while pending; rename it"
 }
 join_names() { awk '{ out = out (NR > 1 ? ", " : "") $0 } END { print out }'; }
 
@@ -912,18 +942,11 @@ init)
     pf=$(awk '/^## / { f = ($0 ~ /^## Local gate[ \t\r]*$/); next }
               f && /^Tripwires:/ { sub(/^Tripwires:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }' <<<"$profile")
     case " $given " in *" tripwires "*) ;; *) [ -z "$pf" ] || tripwires=$pf ;; esac
-    # A heading is a name whatever it holds, so these names skip the name-shape
-    # test a hand-passed list gets; `=` is the one character `--result` cannot
-    # take in one, and a result word as a later field is the one shape the
-    # pending test reads as settled (`- Build: pass: pending`).
     pn=$(profile_headings Verification "$profile")
     case " $given " in
       *" verifications "*) ;;
       *) if [ -n "$pn" ]; then
-           case $pn in *=*) ship_tooling "a Verification heading cannot carry '=': --result splits the name from the word on it" ;; esac
-           bad=$(w="$result_words" awk '$0 ~ (": (" ENVIRON["w"] ")(:|$)") { print; exit }' <<<"$pn") ||
-             ship_tooling "could not read the Verification headings for result words"
-           [ -z "$bad" ] || ship_tooling "a Verification heading cannot carry a result word as a later field: '$bad' would read as a settled result while pending; rename it"
+           refuse_bad_headings "$pn"
            verifications=$(join_names <<<"$pn") profile_names=$pn
          fi ;;
     esac
