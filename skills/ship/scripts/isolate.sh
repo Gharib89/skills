@@ -95,8 +95,9 @@ fi
 if ! $rework; then
   add=(-b "$branch" "$base")
 elif git -C "$root" show-ref --verify --quiet "refs/heads/$branch"; then
-  git -C "$root" merge-base --is-ancestor "refs/heads/$branch" "$base" \
-    || ship_fail "existing branch: $branch has commits origin lacks"
+  rc=0; git -C "$root" merge-base --is-ancestor "refs/heads/$branch" "$base" || rc=$?
+  [ "$rc" -ne 1 ] || ship_fail "existing branch: $branch has commits origin lacks"
+  [ "$rc" -eq 0 ] || ship_tooling "cannot compare $branch with origin/$branch"
   git -C "$root" branch -f "$branch" "$base" >"$log" 2>&1 || { ship_tail40 "$log"; ship_tooling "git branch -f failed"; }
   add=("$branch")
 else

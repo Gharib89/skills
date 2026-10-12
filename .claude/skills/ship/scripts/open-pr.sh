@@ -34,7 +34,7 @@
 # failure.
 #
 # stdout: {number, url, created_at, branch, base}
-# exit: 0 · 1 title grades below the recorded Grade, push or create failed, or for --rework no open PR on the branch or the PR unreadable · 2 usage, wrong branch, or the recorded grade could not be read
+# exit: 0 · 1 title grades below the recorded Grade, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade or (--rework) the PR could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path> | open-pr <issue> --rework'
@@ -68,9 +68,9 @@ base=${base#origin/}
 $rework || [ "$n" = none ] || ship_require_grade "$n" "$title"
 
 if $rework; then
-  found=$(host_pr_for_branch "$branch") || ship_fail "cannot read the PR on $branch" "$found"
+  found=$(host_pr_for_branch "$branch") || ship_tooling "cannot read the PR on $branch"
   [ "$(jq -r '.state // empty' <<<"$found")" = open ] || ship_fail "no open PR on $branch to rework"
-  pr=$(host_pr_get "$(jq -r .number <<<"$found")") || ship_fail "cannot read PR #$(jq -r .number <<<"$found")" "$pr"
+  pr=$(host_pr_get "$(jq -r .number <<<"$found")") || ship_tooling "cannot read PR #$(jq -r .number <<<"$found")"
 fi
 
 log=$(mktemp); trap 'rm -f "$log"' EXIT
