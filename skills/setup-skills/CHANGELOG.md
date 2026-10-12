@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.0 (2026-10-12)
+
+### Features
+
+- **ship**: Compose codebase-design, which tdd calls
+  ([#615](https://github.com/Gharib89/skills/pull/615),
+  [`80f9fec`](https://github.com/Gharib89/skills/commit/80f9feca2b70399eab31f134a31da56ab1d9bea0))
+
+
 ## v0.18.0 (2026-10-12)
 
 ### Features
