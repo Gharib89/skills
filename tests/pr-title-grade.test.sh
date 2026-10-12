@@ -5,7 +5,8 @@
 # 0005), before any push or host write. Driven over the Host fake
 # (tests/host-fake.sh) in a throwaway repo whose origin names GitHub and whose
 # pushes land in a local bare repository, so "no push" is read off that bare repo
-# and "no host write" off the fake's calls log. ship_title_grade, the title to
+# and "no host write" off the fake's calls log. The Run file sits under a
+# throwaway XDG_STATE_HOME, at the root run-file resolves from a worktree. ship_title_grade, the title to
 # grade map, is held directly at the end.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -13,6 +14,7 @@ source tests/lib.sh
 T=$'\t'
 
 open=$PWD/skills/ship/scripts/open-pr.sh
+rf=$PWD/skills/ship/scripts/run-file.sh
 retitle=$PWD/skills/ship/scripts/update-pr-title.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; bare=$work/origin.git; export SHIP_FAKE=$work/fake
@@ -27,15 +29,18 @@ g() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@"; }
   git -C "$repo" update-ref refs/remotes/origin/main HEAD
   git -C "$repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
   g -C "$repo" checkout -q -b feat/thing-7
+  git -C "$repo" worktree add -q "$work/wt" -b wt
 } >/dev/null 2>&1 || { echo "fixture setup failed" >&2; exit 2; }
 export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 printf 'body\n' > "$work/body.md"
-runfile=$repo/.git/ship/ship-7/run.md
+export XDG_STATE_HOME=$work/state
+records=$(dirname "$(cd "$work/wt" && bash "$rf" init 7 | jq -r .scratch)")
+runfile=$records/ship-7/run.md
 
 grade() { # <word|none>: the Run file's recorded grade
-  rm -rf "$repo/.git/ship"
+  rm -rf "$records"
   [ "$1" = none ] && return 0
-  mkdir -p "$repo/.git/ship/ship-7"
+  mkdir -p "$records/ship-7"
   printf '# Run 7\n\n## Grade\n\nGrade: %s\n\n## Notes\n' "$1" > "$runfile"
 }
 reset() { rm -f "$SHIP_FAKE"/*; git -C "$bare" update-ref -d refs/heads/feat/thing-7 2>/dev/null; }
@@ -43,6 +48,8 @@ opn()   { ( cd "$repo" && bash "$open" "${1:-7}" --title "$2" --body-file "$work
 pushed() { git -C "$bare" rev-parse -q --verify refs/heads/feat/thing-7 >/dev/null && echo pushed || echo none; }
 
 # --- open-pr ---------------------------------------------------------------
+check "the Run file root sits under the state directory" "$XDG_STATE_HOME/ship" "$(dirname "$records")"
+
 reset; grade minor
 out=$(opn 7 "fix(ship): a small thing"); rc=$?
 check_rc "open-pr: a fix title against Grade: minor exits 1" 1 "$rc"
@@ -59,6 +66,15 @@ check "open-pr: it pushes and creates" "pushed host_pr_create" "$(pushed) $(cut 
 reset; grade none
 opn 7 "fix(ship): a small thing" >/dev/null; rc=$?
 check_rc "open-pr: a Run file with no Grade line is not checked" 0 "$rc"
+
+# The grade a run records through run-file from its worktree, with no
+# --scratchpad, is the one open-pr reads from the main checkout.
+reset; grade none
+( cd "$work/wt" && bash "$rf" init 7 >/dev/null && bash "$rf" grade minor --issue 7 >/dev/null )
+out=$(opn 7 "fix(ship): a small thing"); rc=$?
+check_rc "open-pr: a Grade: minor run-file recorded from a worktree refuses a fix title" 1 "$rc"
+check "open-pr: and names that grade" \
+  'title type fix grades patch, below the recorded Grade: minor; retitle as feat(...)' "$(jq -r .error <<<"$out")"
 
 reset; grade patch
 opn 7 "docs: reword" >/dev/null; rc=$?
@@ -91,9 +107,26 @@ reset; grade minor
 opn none "fix: x" >/dev/null; rc=$?
 check_rc "open-pr: issue none is never checked" 0 "$rc"
 
+# A record root that cannot be named is a failed read, not "no grade": refused.
+reset; grade minor
+badck=$work/badck; mkdir -p "$badck"
+printf '#!/bin/sh\nexit 1\n' > "$badck/cksum"; chmod +x "$badck/cksum"
+out=$( cd "$repo" && PATH=$badck:$PATH bash "$open" 7 --title "fix(ship): a small thing" --body-file "$work/body.md" 2>/dev/null ); rc=$?
+check_rc "open-pr: a failing cksum refuses as tooling rather than skipping the check" 2 "$rc"
+check "open-pr: and names the reason" 'cannot read the recorded grade: the record root or the Run file is unreadable' "$(jq -r .error <<<"$out")"
+if [ "$(id -u)" -ne 0 ]; then
+  reset; grade minor; chmod 000 "$runfile"
+  opn 7 "fix(ship): a small thing" >/dev/null; rc=$?
+  chmod 644 "$runfile"
+  check_rc "open-pr: an unreadable Run file refuses as tooling too" 2 "$rc"
+else
+  skipped "an unreadable Run file does not stop root"
+fi
+check "open-pr: nothing is pushed then" none "$(pushed)"
+
 # One shape for the line `run-file grade` writes and this reads: an optional "- "
 # before `Grade:`, and blanks after the heading.
-reset; grade none; mkdir -p "$repo/.git/ship/ship-7"
+reset; grade none; mkdir -p "$records/ship-7"
 printf '# Run 7\n\n## Grade\n\n- Grade: minor\n' > "$runfile"
 out=$(opn 7 "fix(ship): a small thing"); rc=$?
 check_rc "open-pr: a bulleted - Grade: minor line refuses a fix title" 1 "$rc"
@@ -122,6 +155,11 @@ check_rc "update-pr-title: a fix title against the branch issue's Grade: minor e
 check "update-pr-title: it names the recorded grade, the type and the type to use" \
   'title type fix grades patch, below the recorded Grade: minor; retitle as feat(...)' "$(jq -r .error <<<"$out")"
 check "update-pr-title: the host is read and never written" "host_pr_get${T}12" "$(cat "$SHIP_FAKE/calls")"
+
+reset; grade none; pr_get feat/thing-7 "feat(ship): old" "fix(ship): new"
+( cd "$work/wt" && bash "$rf" init 7 >/dev/null && bash "$rf" grade minor --issue 7 >/dev/null )
+rtl "fix(ship): new" >/dev/null; rc=$?
+check_rc "update-pr-title: a Grade: minor run-file recorded from a worktree refuses a fix title" 1 "$rc"
 
 reset; grade minor; pr_get feat/thing-7 "fix(ship): old" "feat(ship): new"
 out=$(rtl "feat(ship): new"); rc=$?

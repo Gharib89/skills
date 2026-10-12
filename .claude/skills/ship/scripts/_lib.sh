@@ -270,9 +270,11 @@ ship_fail() {
 # the one shape `run-file grade` reads and writes. Prints nothing when there is
 # no Run file, no such line or a word that is not one of the three: no recorded
 # grade is no check, since a run that never graded has nothing to enforce.
+# Returns nonzero when the record root cannot be named or the Run file cannot be
+# read: a failed read, not an absent grade.
 ship_recorded_grade() { # <issue>
   local root file
-  root=$(ship_record_root 2>/dev/null) || return 0
+  root=$(ship_record_root) || return 2
   file=$root/ship-$1/run.md
   [ -f "$file" ] || return 0
   awk '/^## /{ f = ($0 ~ /^## Grade[ \t\r]*$/) }
@@ -294,10 +296,12 @@ ship_title_grade() { # <title>
 # ship_require_grade <issue> <title>: exit 1 when the title grades below the
 # issue's recorded grade. `Grade: minor` and `Grade: breaking` both need a
 # `feat` or a `!` title (a 0.x skill's break is titled feat);
-# `Grade: patch` accepts any. Run before the push or host write the title feeds.
+# `Grade: patch` accepts any. Exit 2 when the recorded grade cannot be read,
+# which is tooling, not a grade. Run before the push or host write the title
+# feeds.
 ship_require_grade() { # <issue> <title>
   local want have type
-  want=$(ship_recorded_grade "$1")
+  want=$(ship_recorded_grade "$1") || ship_tooling "cannot read the recorded grade: the record root or the Run file is unreadable"
   case $want in minor|breaking) ;; *) return 0 ;; esac
   have=$(ship_title_grade "$2")
   [ "$have" = patch ] || return 0
@@ -389,14 +393,31 @@ ship_main_checkout() {
   dirname "$common"
 }
 
-# ship_record_root: where a run keeps its record, <git common dir>/ship. The
-# main checkout and every worktree of it resolve the same directory, git never
-# lists it as a working-tree file, and it outlives a wiped temp directory, which
-# took the record with it in three runs. `run-file` and `cleanup` read it.
+# ship_record_root: where a run keeps its record,
+# ${XDG_STATE_HOME:-$HOME/.local/state}/ship/<repo key>, <repo key> the POSIX
+# `cksum` of the physical git common dir path. Keyed on the common dir, the main
+# checkout and every worktree of it resolve the same directory and two clones
+# get different ones, short of a CRC collision among one user's clones. It sits
+# outside every checkout because a session isolated by `EnterWorktree` refuses
+# an Edit, or a Bash command, that names a `.git` path (measured, Claude Code
+# 2.1.296), so the run could not write its own record there; the key is digits
+# for the same reason, since digits never spell `git`. A relative
+# XDG_STATE_HOME is ignored, as the XDG spec requires, since it would resolve
+# under each worktree's own cwd. `cksum` because POSIX requires it, so no
+# consumer needs a new tool. A state directory, not a temp one, because a wiped
+# temp directory took the record with it in three runs. `run-file`, `cleanup`
+# and the grade check in `open-pr` and `update-pr-title` read it. Returns 1
+# outside a git checkout and 2 when cksum fails, whose empty key would put every
+# repo's records under one root.
 ship_record_root() {
-  local common
+  local common key state=${XDG_STATE_HOME:-}
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
-  printf '%s/ship' "$common"
+  common=$(cd "$common" && pwd -P) || return 1
+  key=$(printf '%s' "$common" | cksum 2>/dev/null) || return 2
+  key=${key%% *}
+  [[ $key =~ ^[0-9]+$ ]] || return 2
+  [[ $state == /* ]] || state=$HOME/.local/state
+  printf '%s/ship/%s' "$state" "$key"
 }
 
 # Container inside the main checkout: <main>/.claude/worktrees. `EnterWorktree`

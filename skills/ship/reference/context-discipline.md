@@ -70,13 +70,16 @@ a read of the output file buys nothing it does not deliver.
 `run-file init <issue|slug> --from-profile` is the run's first action, placed
 by SKILL.md's [pipeline step](../SKILL.md#the-pipeline). Init reads the
 profile's `Tripwires:`, its Verification names, its reviewers and its `Legs:`
-into the checklist. The record lives at
-`<git common dir>/ship/ship-<issue>/run.md`, outside every working tree, so the
-gate never reads it; `--scratchpad <dir>` overrides the root. Init also prints
-`scratch`, `<git common dir>/ship/scratch-<issue>`, the run's own scratch root,
-and opens phase 0. It refuses an existing record: a resumed run reads that one,
-and a new run of an issue whose earlier run stopped passes `--rebuild` to
-replace it. `cleanup` removes both directories after the merge; a free-text run
+into the checklist. The record lives at `<root>/ship-<issue>/run.md`, `<root>`
+being `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` with the key hashed
+from the git common dir, so the main checkout and every worktree share it. It
+sits outside every checkout, so the gate never reads it and a session isolated
+by `EnterWorktree`, which refuses an Edit or a Bash command naming a `.git`
+path, can still write it. `--scratchpad <dir>` overrides the root. Init also
+prints `scratch`, `<root>/scratch-<issue>`, the run's own scratch root, and
+opens phase 0. It refuses an existing record: a resumed run reads that one, and
+a new run of an issue whose earlier run stopped passes `--rebuild` to replace
+it. `cleanup` removes both directories after the merge; a free-text run
 (`cleanup none`) leaves its `ship-<slug>/` and `scratch-<slug>/` in place, and a
 run that stops before the merge gate leaves its record.
 

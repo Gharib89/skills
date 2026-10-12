@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The run-file mechanic's record: where it lives, what init takes from the ship
 # profile, the Phase 3 results and the gate record. Driven end to end over a
-# fixture repo with a worktree, so the record root is the real `git rev-parse
-# --git-common-dir` and not a stand-in; the mechanic reaches no host. The flips
+# fixture repo with a worktree, so the record root's key is derived from the real
+# `git rev-parse --git-common-dir` and not a stand-in, under a throwaway
+# XDG_STATE_HOME; the mechanic reaches no host. The flips
 # and the timing arithmetic are `tests/run-file.test.sh`'s.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -20,8 +21,7 @@ g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$
 g commit -q --allow-empty -m one
 first=$(g rev-parse HEAD)
 g worktree add -q "$wt" -b feat/x-7
-common=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)
-root=$common/ship
+export XDG_STATE_HOME=$tmp/state
 
 # at <dir> <args...>: the mechanic run from a directory, stdout only.
 at()    { local d=$1; shift; ( cd "$d" && bash "$m" "$@" 2>/dev/null ); }
@@ -32,7 +32,12 @@ inerr() { local d=$1; shift; ( cd "$d" && bash "$m" "$@" 2>/dev/null ) | jq -r '
 
 session=$tmp/session-scratchpad; mkdir -p "$session"
 j=$(at "$wt" init 7)
-check "init from a worktree writes under the git common dir" "$root/ship-7/run.md" "$(jq -r .run_file <<<"$j")"
+root=$(dirname "$(jq -r .scratch <<<"$j")")
+key=${root#"$XDG_STATE_HOME/ship/"}
+check "init from a worktree writes under the state directory's ship root" "$XDG_STATE_HOME/ship" "$(dirname "$root")"
+check "the repo key is one path component of digits below that root, so no git text" yes \
+  "$([[ $key != "$root" && $key =~ ^[0-9]+$ ]] && echo yes || echo no)"
+check "the run file sits under that root" "$root/ship-7/run.md" "$(jq -r .run_file <<<"$j")"
 check "init reports the run's scratch directory" "$root/scratch-7" "$(jq -r .scratch <<<"$j")"
 check "the scratch directory exists" yes "$([ -d "$root/scratch-7" ] && echo yes || echo no)"
 check "--issue from the main checkout resolves the same record" \
@@ -51,6 +56,31 @@ check "an explicit --scratchpad is the root" \
   "$tmp/sp/scratch-5" "$(at "$repo" init 5 --scratchpad "$tmp/sp" | jq -r .scratch)"
 check "an explicit --scratchpad holds the run file too" \
   "$tmp/sp/ship-5/run.md" "$(at "$repo" timing --issue 5 --scratchpad "$tmp/sp" | jq -r .run_file)"
+
+# Each clone keys its own root: two clones never share a record.
+git clone -q "$repo" "$tmp/clone"
+other=$(dirname "$(at "$tmp/clone" init 7 | jq -r .scratch)")
+check "a second clone resolves its own root" yes "$([ "$other" != "$root" ] && [ "$(dirname "$other")" = "$XDG_STATE_HOME/ship" ] && echo yes || echo no)"
+# With XDG_STATE_HOME unset, the root falls back to ~/.local/state.
+check "no XDG_STATE_HOME falls back to ~/.local/state" "$tmp/home/.local/state/ship/${root##*/}/ship-7/run.md" \
+  "$(env -u XDG_STATE_HOME HOME="$tmp/home" bash -c 'cd "$1" && bash "$2" init 7' _ "$wt" "$m" 2>/dev/null | jq -r .run_file)"
+# A relative XDG_STATE_HOME is ignored, as the XDG spec requires: it would
+# resolve under each worktree's own cwd.
+check "a relative XDG_STATE_HOME falls back to ~/.local/state" "$tmp/home/.local/state/ship/${root##*/}/ship-8/run.md" \
+  "$(XDG_STATE_HOME=state HOME="$tmp/home" bash -c 'cd "$1" && bash "$2" init 8' _ "$wt" "$m" 2>/dev/null | jq -r .run_file)"
+
+# A cksum that fails would leave the key empty and every repo sharing one root,
+# so init refuses rather than defaulting.
+badck=$tmp/badck; mkdir -p "$badck"
+printf '#!/bin/sh\nexit 1\n' > "$badck/cksum"; chmod +x "$badck/cksum"
+check_rc "init with a failing cksum and no --scratchpad is malformed" 2 \
+  "$(PATH=$badck:$PATH inrc "$wt" init 30)"
+check "the refusal names cksum and --scratchpad" \
+  "cksum failed: pass --scratchpad <dir>" "$(PATH=$badck:$PATH inerr "$wt" init 30)"
+garbage=$tmp/garbage; mkdir -p "$garbage"
+printf '#!/bin/sh\necho 12ab 5\n' > "$garbage/cksum"; chmod +x "$garbage/cksum"
+check_rc "a cksum answering a non-digit key is refused too" 2 \
+  "$(PATH=$garbage:$PATH inrc "$wt" init 31)"
 
 # Outside a checkout there is no root to default to: the refusal names the flag.
 nogit=$tmp/nogit; mkdir -p "$nogit"
