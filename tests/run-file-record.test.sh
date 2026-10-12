@@ -538,5 +538,14 @@ check "each result lands on its own entry" '## Verification results
 
 ## Design and plan' "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$fp")"
 check "gate clean holds neither" '' "$(holds_verif "$fp" lint)"
+# The reverse: init recorded the shorter name, so the added longer entry lands
+# after it, the last row gate clean's prefix would read for it.
+printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n\n### lint\n' > "$added/docs/agents/ship.md"
+fr=$(at "$added" init 83 --from-profile | jq -r .run_file)
+to_phase3 "$fr"
+add_heading 'lint: strict'
+check_rc "a recorded name that prefixes an added heading takes its own result" 0 \
+  "$(inrc "$added" close 3 --file "$fr" --result lint=pass --result 'lint: strict=pass')"
+check "gate clean reads each entry as its own" '' "$(holds_verif "$fr" lint)"
 
 finish

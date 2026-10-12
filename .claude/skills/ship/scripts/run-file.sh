@@ -842,7 +842,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
     --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" \
-    --arg round_re "$round_re" '
+    --arg round_re "$round_re" --arg words "$result_words" '
     def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
     ($text | split("\n")) as $lines
@@ -864,11 +864,15 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       def inline_run: (rests("Lane: ") | last // "") == "inline";
       def greenleg($leg): [$ci.checks[] | select(named($leg))] as $checks
         | ($checks | length) > 0 and all($checks[]; .status == "success") and samehead($ci.head_sha; $head) and $ci.status == "green";
-      # Names may contain colons, so a result is cut by its full literal prefix.
+      # Names may contain colons, so a result is cut by its full literal prefix,
+      # and the rest must open on `pending` or a result word, as `entry_of`
+      # reads it, so `lint` never reads `- lint: strict: pass`.
       def result($name):
         (reduce $lines[] as $line ({inside: false, rows: []};
           if $line | startswith("## ") then .inside = ($line | test("^## Verification results[ \\t\\r]*$"))
-          elif .inside and ($line | startswith("- " + $name + ": ")) then .rows += [$line | ltrimstr("- " + $name + ": ")]
+          elif .inside and ($line | startswith("- " + $name + ": "))
+            and ($line | ltrimstr("- " + $name + ": ") | test("^(pending|" + $words + ")(: |$)"))
+          then .rows += [$line | ltrimstr("- " + $name + ": ")]
           else . end) | .rows | last // "missing") | split(": ")[0];
       [if $rhead == "" then "local gate: no record"
        elif samehead($rhead; $head) | not then "local gate: recorded head differs" else empty end,
