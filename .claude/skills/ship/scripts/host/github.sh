@@ -254,8 +254,11 @@ _norm_issue='{number, title, body: (.body // ""),
   created_at, url: .html_url}'
 
 host_issue_get()      { api "$R/issues/$1" --jq "$_norm_issue"; }
+# `author_association` OWNER, MEMBER and COLLABORATOR are the ones with write
+# access to the repo; a response without the field is a host that did not answer.
 host_issue_comments() {
-  api "$R/issues/$1/comments" --paginate --jq '.[] | {author: .user.login, body, created_at}' | jq -s .
+  api "$R/issues/$1/comments" --paginate --jq '.[] | {author: .user.login, body, created_at,
+    writer: (.author_association | if . == null then null else IN("OWNER", "MEMBER", "COLLABORATOR") end)}' | jq -s .
 }
 # GitHub has native issue dependencies, so a failed query is "unavailable" rather than empty.
 host_issue_blockers_open() {
