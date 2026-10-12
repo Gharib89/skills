@@ -89,7 +89,8 @@ reset_host() {
   if prs=$(open_prs) && mine=$(run_prs "$prs"); then
     while read -r n h; do
       [ -n "$n" ] || continue
-      gh api -X PATCH "repos/$repo/pulls/$n" -f state=closed >/dev/null
+      gh api -X PATCH "repos/$repo/pulls/$n" -f state=closed >/dev/null \
+        || { echo "cleanup: PR #$n not closed" >&2; rc=2; }
       run_heads="$run_heads $h"
     done <<<"$mine"
   else
@@ -98,7 +99,8 @@ reset_host() {
   if branches=$(run_branches); then
     # The branch is URI-encoded: a `#` in it would otherwise address another ref.
     for b in $branches; do
-      gh api -X DELETE "repos/$repo/git/refs/heads/$(jq -rn --arg b "$b" '$b | @uri')" >/dev/null
+      gh api -X DELETE "repos/$repo/git/refs/heads/$(jq -rn --arg b "$b" '$b | @uri')" >/dev/null \
+        || { echo "cleanup: branch $b not deleted" >&2; rc=2; }
     done
   else
     echo "cleanup: unverified, the branches could not be read" >&2; rc=2

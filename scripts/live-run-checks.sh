@@ -14,7 +14,7 @@ set -uo pipefail
 [ $# -eq 3 ] || { echo 'usage: scripts/live-run-checks.sh <run-file> <host-json> <issue>' >&2; exit 2; }
 run=$1 host=$2 issue=$3
 command -v jq >/dev/null || { echo 'jq not installed' >&2; exit 2; }
-jq -e 'has("assignees") and has("open_prs")' "$host" >/dev/null 2>&1 \
+jq -e '(.assignees | type == "array") and (.open_prs | type == "array")' "$host" >/dev/null 2>&1 \
   || { echo "host state unreadable: $host" >&2; exit 2; }
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # ship_body_closes: whether a PR closes the issue is read the way Ship reads it.

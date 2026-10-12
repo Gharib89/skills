@@ -114,4 +114,12 @@ check_rc "a missing Run file is a failed check, not tooling" 1 \
 check "a missing Run file is named" "run file: missing" \
   "$(bash scripts/live-run-checks.sh "$T/nope.md" "$host_ok" 7 2>/dev/null)"
 
+# Host state of the wrong shape is a failed read, not a verdict.
+printf '%s' '{"assignees": ["agent"], "open_prs": null}' > "$T/host-null.json"
+check_rc "a null open_prs is tooling" 2 \
+  "$(verdict "$(good_run)" "$T/host-null.json" | tail -n 1 | sed 's/^rc=//')"
+printf '%s' '{"assignees": true, "open_prs": []}' > "$T/host-bool.json"
+check_rc "a non-array assignees is tooling" 2 \
+  "$(verdict "$(good_run)" "$T/host-bool.json" | tail -n 1 | sed 's/^rc=//')"
+
 finish
