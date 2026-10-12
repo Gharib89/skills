@@ -20,21 +20,32 @@ head=84c7f25fccd0b31fdb95bc19bdd262c9994006d2
   ACTIVITY=''
   api() {
     printf '%s\n' "$*" >> "$log"
-    local a prev='' q='.'
-    for a; do [ "$prev" = --jq ] && q=$a; prev=$a; done
+    local a prev='' q='.' kind=''
+    for a; do
+      [ "$prev" = --jq ] && q=$a
+      [ "$prev" = -f ] && case $a in activity_type=*) kind=${a#*=} ;; esac
+      prev=$a
+    done
     case $1 in
-      repos/o/r/activity) [ -n "$ACTIVITY" ] || return 1; jq -r "$q" <<<"$ACTIVITY" ;;
+      # The API's own activity_type filter, so a call that passes one is held to it.
+      repos/o/r/activity) [ -n "$ACTIVITY" ] || return 1
+        jq -c --arg k "$kind" 'map(select($k == "" or .activity_type == $k))' <<<"$ACTIVITY" | jq -r "$q" ;;
       repos/o/r/issues/9/comments) jq -c "$q" <<<'[{"user": {"login": "w"}, "body": "b", "created_at": "2026-01-02T00:00:01Z"}]' ;;
       repos/o/r/collaborators/w/permission) jq -r "$q" <<<'{"user": {"permissions": {"push": true}}}' ;;
       *) echo "unexpected api call: $*" >&2; return 1 ;;
     esac
   }
-  ACTIVITY='[{"after": "'$head'", "timestamp": "2026-10-12T21:47:48Z"},
-             {"after": "5d62928f", "timestamp": "2026-10-12T21:43:54Z"},
-             {"after": "'$head'", "timestamp": "2026-10-12T21:40:00Z"}]'
+  ACTIVITY='[{"activity_type": "push", "after": "'$head'", "timestamp": "2026-10-12T21:47:48Z"},
+             {"activity_type": "push", "after": "5d62928f", "timestamp": "2026-10-12T21:43:54Z"},
+             {"activity_type": "push", "after": "'$head'", "timestamp": "2026-10-12T21:40:00Z"}]'
   check "github: the newest push of the head sha" 2026-10-12T21:47:48Z "$(host_pr_pushed_at 9 feat/y-9 "$head")"
-  check "github: asks for the branch's pushes on an explicit GET" yes \
-    "$(grep -Fq -- "repos/o/r/activity -X GET -f ref=refs/heads/feat/y-9 -f activity_type=push" "$log" && echo yes)"
+  check "github: asks for the branch's activity on an explicit GET" yes \
+    "$(grep -Fq -- "repos/o/r/activity -X GET -f ref=refs/heads/feat/y-9 -f per_page=100" "$log" && echo yes)"
+  # A branch's first push is logged as its creation, as PR #623's was.
+  for kind in branch_creation force_push; do
+    ACTIVITY='[{"activity_type": "'$kind'", "after": "'$head'", "timestamp": "2026-10-12T22:17:40Z"}]'
+    check "github: a $kind of the head sha is its push" 2026-10-12T22:17:40Z "$(host_pr_pushed_at 9 feat/y-9 "$head")"
+  done
   host_pr_pushed_at 9 feat/y-9 0000000 >/dev/null
   check_rc "github: no push of that sha is non-zero" 1 $?
   ACTIVITY=''
