@@ -2,7 +2,8 @@
 # `preflight <n> --rework` admits a Rework run only when the claim is the
 # signed-in identity's and exactly one open PR closes the issue, its head the one
 # `*-<n>` branch on origin; every other shape is `not reworkable: <detail>`.
-# Admitted with no unresolved review thread and no `--feedback` is `no feedback`.
+# Admitted with no unresolved review thread, no authoritative PR comment since
+# the head's push and no `--feedback` is `no feedback`.
 # A plain run's `already claimed`, `existing PR` and `existing branch` stay out of
 # a rework run's reasons. Each shape runs under a GitHub origin and an Azure
 # DevOps origin: the admission is generic, read through the Host fake
@@ -71,7 +72,7 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   check "$h: the host the fake was loaded under" "$([ "$h" = github.com ] && echo github || echo ado)" \
     "$(cut -d' ' -f1 "$SHIP_FAKE/loaded")"
   check "$h: rework names the PR, its branch, head and open threads" \
-    "$(jq -nc --arg h "$head" '{pr: 9, branch: "feat/y-5", head_sha: $h, worktree: null, threads: ["T1"]}')" \
+    "$(jq -nc --arg h "$head" '{pr: 9, branch: "feat/y-5", head_sha: $h, worktree: null, threads: ["T1"], comments: []}')" \
     "$(jq -c .rework <<<"$out")"
 
   admitted
@@ -109,7 +110,7 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   check "$h: PR unreadable" '["not reworkable: PR #9 unreadable"]' "$(rw "$(preflight 5 --rework)")"
 
   # An answer that does not parse is unreadable too, never data.
-  for fn in host_issue_linked_prs host_pr_get host_pr_threads; do
+  for fn in host_issue_linked_prs host_pr_get host_pr_threads host_pr_comments; do
     admitted
     printf 'not json\n' > "$SHIP_FAKE/$fn.1.json"
     out=$(preflight 5 --rework)
@@ -125,9 +126,49 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
     > "$SHIP_FAKE/host_pr_threads.1.json"
   check "$h: no unresolved thread and no text is no feedback" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
   check "$h: no feedback writes nothing to the host" '' \
-    "$(cut -f1 "$SHIP_FAKE/calls" | grep -vE '^host_(tooling_reasons|identity|can_push|copilot_login|issue_get|issue_linked_prs|pr_get|pr_threads|pr_for_branch)$')"
+    "$(cut -f1 "$SHIP_FAKE/calls" | grep -vE '^host_(tooling_reasons|identity|can_push|copilot_login|issue_get|issue_linked_prs|pr_get|pr_threads|pr_comments|pr_pushed_at|pr_for_branch)$')"
   check "$h: no feedback leaves the branch" "$head" "$(git -C "$work/origin.git" rev-parse feat/y-5)"
   check "$h: --feedback admits a PR with no open thread" '[]' "$(rw "$(preflight 5 --rework --feedback)")"
+
+  # A PR comment is feedback when its author is a writer, ship did not post it,
+  # and it was posted after the push that put the PR's head where it is.
+  comment() { # <author> <created_at> <writer> [<body>]
+    jq -n --arg a "$1" --arg c "$2" --argjson w "$3" --arg b "${4:-please rename x}" \
+      '[{author: $a, body: $b, created_at: $c, writer: $w}]' > "$SHIP_FAKE/host_pr_comments.1.json"
+  }
+  threadless() {
+    admitted
+    jq -n '[{id: "T2", resolved: true, replied: true, author: "r", path: "a", body: "y"}]' \
+      > "$SHIP_FAKE/host_pr_threads.1.json"
+    printf '2026-01-02T00:00:00Z\n' > "$SHIP_FAKE/host_pr_pushed_at.1.json"
+  }
+  threadless; comment w 2026-01-02T00:00:01Z true
+  out=$(preflight 5 --rework)
+  check "$h: a writer's comment after the head's push is feedback" '[]' "$(rw "$out")"
+  check "$h: rework names that comment" '[{"author":"w","created_at":"2026-01-02T00:00:01Z","body":"please rename x"}]' \
+    "$(jq -c .rework.comments <<<"$out")"
+  check "$h: the push read names the PR, its branch and head" "host_pr_pushed_at	9	feat/y-5	$head" \
+    "$(grep '^host_pr_pushed_at' "$SHIP_FAKE/calls")"
+  threadless; comment w 2026-01-01T23:59:59Z true
+  check "$h: a writer's comment before the head's push is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
+  threadless; comment w 2026-01-02T00:00:00Z true
+  check "$h: a writer's comment at the push second is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
+  threadless; comment o 2026-01-02T00:00:01Z false
+  check "$h: a non-writer's comment is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
+  threadless; comment n 2026-01-02T00:00:01Z null
+  check "$h: a comment whose author the host cannot grade is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
+  check "$h: with no candidate comment the push is not read" '' "$(grep '^host_pr_pushed_at' "$SHIP_FAKE/calls")"
+  threadless; comment w 2026-01-02T00:00:01Z true $'merge-gate summary\n<span data-ship=1></span>'
+  check "$h: a comment ship posted is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
+  threadless; comment w 2026-01-02T00:00:01Z true
+  touch "$SHIP_FAKE/host_pr_comments.1.fail"
+  check "$h: comments unreadable" '["not reworkable: PR comments unreadable"]' "$(rw "$(preflight 5 --rework)")"
+  threadless; comment w 2026-01-02T00:00:01Z true
+  touch "$SHIP_FAKE/host_pr_pushed_at.1.fail"
+  check "$h: head push unreadable" '["not reworkable: head push unreadable"]' "$(rw "$(preflight 5 --rework)")"
+  threadless; comment w 2026-01-02T00:00:01Z true
+  : > "$SHIP_FAKE/host_pr_pushed_at.1.json"
+  check "$h: an empty push answer is unreadable too" '["not reworkable: head push unreadable"]' "$(rw "$(preflight 5 --rework)")"
 done
 
 # An origin that cannot be listed is one reason, not a plain run's beside a

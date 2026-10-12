@@ -2,7 +2,14 @@
 
 `/ship <issue> --rework ["<feedback>"]` reworks the PR an earlier run of the
 issue, attended or unattended, left open at the merge gate. The change to make
-is the PR's unresolved review threads plus the feedback text, if any. The run
+is its **feedback**, from three sources: the PR's unresolved review threads,
+the **authoritative comments** on the PR posted after its head's last push, and
+the feedback text, if any. A PR comment is authoritative when the host grades
+its author `writer: true`, the same grade `read-issue` gives an issue comment;
+`false`, and `null` where the host cannot answer (always on Azure DevOps), make
+it context, as does Ship's own marker. The push is the cut-off for an attended
+and an unattended earlier run alike: a comment from before it was there for the
+run that pushed. The run
 keeps the claim, the branch and the PR, and ends at a fresh merge gate. It is
 attended only. `--unattended` and a task-spec run (free text in place of the
 issue number) are refused with preflight's usage line, so `cloud-ship`, which
@@ -28,9 +35,11 @@ text. In place of `already claimed`, `existing PR` and `existing branch` it
 admits the run only when the claim is your identity's and exactly one open PR
 closes the issue, its head being the one `*-<n>` branch on origin. Any other
 shape is `not reworkable: <detail>`. An admitted PR with no unresolved thread,
-and no text from the human, is `no feedback`. Both stops end the run before
-any change and leave the claim as it is: no release, no hand-back. On `ok`,
-preflight's `rework` names `{pr, branch, head_sha, worktree, threads}`.
+no authoritative comment since its head's push and no text from the human is
+`no feedback`. Both stops end the run before any change and leave the claim as
+it is: no release, no hand-back. On `ok`, preflight's `rework` names
+`{pr, branch, head_sha, worktree, threads, comments}`, each comment
+`{author, created_at, body}`.
 
 `isolate <issue> <type> <slug> --rework` with the profile's `Carry:` files,
 where `<type>` and `<slug>` are split from `rework.branch`
@@ -46,10 +55,10 @@ Its `base` is the PR's head before this run: write it to the Run file's
 
 `manage-issue <issue> take` answers `claim: held`, which here meets
 `claim: taken`. Read each thread in `rework.threads` whole with
-`poll-pr <pr> --brief --full open`. Write one criterion per thread, then the
-human's text as criteria; where they conflict, the human's text wins. A thread
-is triaged the way phase 7 triages a reviewer finding: fixed, or declined with
-a reason. The issue body
+`poll-pr <pr> --brief --full open`. Write one criterion per thread, one per
+comment in `rework.comments`, then the human's text as criteria; where they
+conflict, the human's text wins. A thread or comment is triaged the way phase 7
+triages a reviewer finding: fixed, or declined with a reason. The issue body
 still binds wherever the feedback leaves it alone.
 
 ## Phase 2: the lane keys
@@ -84,5 +93,8 @@ Rounds run as usual under a fresh `Cap:`. With `created_at` null:
 
 ## Phase 9: a fresh merge gate
 
-Write the summary as merge-gate.md says, then post it with
-`comment-pr <pr> --body-file`. Then take the attended `Merge:` branch.
+Write the summary as merge-gate.md says, naming each comment from
+`rework.comments` by author and time with what it changed, or why it was
+declined: a comment has no thread to answer in. Then post it with
+`comment-pr <pr> --body-file`, which marks it as Ship's own, so a later rework
+never reads it as feedback. Then take the attended `Merge:` branch.

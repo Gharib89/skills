@@ -99,7 +99,7 @@ The rule that a later triage brief or authoritative comment, each posted by some
 _Avoid_: override, latest-wins
 
 **Authoritative comment**:
-A comment on the issue by someone with write access to the repo. Only it, or a triage brief by such an author, can supersede the issue body under spec precedence; any other comment, a brief by anyone else included, is context, never spec. A comment whose author's access cannot be read is not authoritative, in every lane.
+A comment on the issue, or on a Rework run's PR, by someone with write access to the repo. Only it, or a triage brief by such an author, can supersede the issue body under spec precedence; any other comment, a brief by anyone else included, is context, never spec. A comment whose author's access cannot be read is not authoritative, in every lane.
 _Avoid_: maintainer comment, official comment
 
 **Host**:
