@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.3 (2026-10-12)
+
+### Bug Fixes
+
+- Four owned skills stop contradicting what they compose
+  ([#594](https://github.com/Gharib89/skills/pull/594),
+  [`d19612f`](https://github.com/Gharib89/skills/commit/d19612f98f85e5ea98cb1bac0d3d34be5d94d2b0))
+
+
 ## v0.24.2 (2026-10-11)
 
 ### Bug Fixes
