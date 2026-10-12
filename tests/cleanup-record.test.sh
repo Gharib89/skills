@@ -21,7 +21,7 @@ export XDG_STATE_HOME=$tmp/state
 
 mk() { # mk <issue>: a worktree, a branch and a record for the issue
   g worktree add -q "$repo/.claude/worktrees/feat-$1" -b "feat/x-$1"
-  root=$(dirname "$(dirname "$(cd "$repo" && bash "$r" init "$1" | jq -r .run_file)")")
+  root=$(dirname "$(cd "$repo" && bash "$r" init "$1" | jq -r .scratch)")
   echo "scratch" > "$root/scratch-$1/note"
 }
 
@@ -60,6 +60,16 @@ check_rc "and exits ok" 0 "$rc"
 out=$(cd "$repo" && bash "$c" none 2>/dev/null)
 check "none answers none" none "$(jq -r .record <<<"$out")"
 check "none leaves its record" yes "$([ -f "$root/ship-none/run.md" ] && echo yes || echo no)"
+
+# With no sha256sum or shasum the record root cannot be named: a failed step,
+# not `none`, since a record may well exist.
+nohash=$tmp/nohash; mkdir -p "$nohash"
+for t in sha256sum shasum; do printf '#!/bin/sh\nexit 127\n' > "$nohash/$t"; chmod +x "$nohash/$t"; done
+mk 13
+out=$(cd "$repo" && PATH=$nohash:$PATH bash "$c" 13 2>/dev/null); rc=$?
+check "no hash tool answers failed" failed "$(jq -r .record <<<"$out")"
+check_rc "and cleanup exits 1" 1 "$rc"
+check "and the record is left in place" yes "$([ -f "$root/ship-13/run.md" ] && echo yes || echo no)"
 
 # A record that will not come off is a failed step: the answer says so and the
 # exit is 1. A read-only record root stops the removal; root ignores the mode.

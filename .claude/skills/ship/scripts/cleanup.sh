@@ -16,7 +16,8 @@
 # stdout: {worktree, branch, worktree_removed, branch_deleted, record}
 #   record: "removed" when the run's record and scratch directory came off,
 #     "none" when there was nothing to remove (the issue is `none`, or no record
-#     existed), "failed" when an rm failed
+#     existed), "failed" when an rm failed or the record root could not be
+#     named (no sha256sum or shasum)
 # exit: 0 clean · 1 a step failed (JSON says which) · 2 usage or tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -29,11 +30,14 @@ root=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
 container=$(ship_worktree_container)
 
 record=none
-if [ "$n" != none ] && records=$(ship_record_root); then
-  for r in "$records/ship-$n" "$records/scratch-$n"; do
-    [ -e "$r" ] || continue
-    rm -rf "$r" && record=removed || { record=failed; break; }
-  done
+if [ "$n" != none ]; then
+  if records=$(ship_record_root); then
+    for r in "$records/ship-$n" "$records/scratch-$n"; do
+      [ -e "$r" ] || continue
+      rm -rf "$r" && record=removed || { record=failed; break; }
+    done
+  else record=failed
+  fi
 fi
 
 wt=null; branch=null; wt_removed=true; br_deleted=true

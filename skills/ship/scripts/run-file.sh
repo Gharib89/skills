@@ -21,13 +21,12 @@
 #   run-file probe <ref> <where> -- <command>...
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
-# The record root is `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>`, the
-# key hashed from the git common dir (`ship_record_root` in _lib.sh says why):
-# the main checkout and every worktree of it resolve the same directory, a
-# session isolated by `EnterWorktree` can write it, and it outlives a wiped temp
-# directory, which took the record with it in three runs. `--scratchpad <dir>`
-# names another root; outside a git checkout it is the only one. Under the root, `ship-<issue>/run.md` is the Run file and
-# `scratch-<issue>/` is the run's Scratch directory, which `init` creates and
+# The record root is `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>`,
+# shared by the main checkout and every worktree of it; `ship_record_root` in
+# _lib.sh says why it sits there. `--scratchpad <dir>` names another root;
+# outside a git checkout it is the only one. Under the root,
+# `ship-<issue>/run.md` is the Run file and `scratch-<issue>/` is the run's
+# Scratch directory, which `init` creates and
 # returns as `scratch`; the roles' subdirectories are the callers'. `cleanup`
 # removes both.
 #
@@ -300,12 +299,17 @@ phase_arg() { # phase_arg <value>: the phase number; a flag here is a usage erro
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
   case ${1:-} in '' | *[!0-9]*) ship_tooling "$usage" ;; esac
 }
-# The record root: the --scratchpad named, else `ship_record_root`. Sets `root` in this shell, because a refusal inside a `$( )` would
-# exit only the substitution.
+# The record root: the --scratchpad named, else `ship_record_root`. Sets `root`
+# in this shell, because a refusal inside a `$( )` would exit only the
+# substitution.
 resolve_root() {
-  if [ -n "$scratchpad" ]; then root=${scratchpad%/}
-  else root=$(ship_record_root) || ship_tooling "not inside a git checkout: pass --scratchpad <dir>"
-  fi
+  if [ -n "$scratchpad" ]; then root=${scratchpad%/}; return; fi
+  root=$(ship_record_root)
+  case $? in
+    0) ;;
+    2) ship_tooling "no sha256sum or shasum on PATH: pass --scratchpad <dir>" ;;
+    *) ship_tooling "not inside a git checkout: pass --scratchpad <dir>" ;;
+  esac
 }
 parse_file() { # parse_file "$@": where every flip and timing reads the record
   file="" issue="" scratchpad="" results="" head=""

@@ -34,7 +34,7 @@ g() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@"; }
 export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 printf 'body\n' > "$work/body.md"
 export XDG_STATE_HOME=$work/state
-records=$(dirname "$(dirname "$(cd "$work/wt" && bash "$rf" init 7 | jq -r .run_file)")")
+records=$(dirname "$(cd "$work/wt" && bash "$rf" init 7 | jq -r .scratch)")
 runfile=$records/ship-7/run.md
 
 grade() { # <word|none>: the Run file's recorded grade
