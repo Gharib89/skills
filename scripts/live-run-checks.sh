@@ -14,9 +14,10 @@
 # the code span `ambiguous` (Ship reports a stop's name verbatim, as its stop
 # table spells it, so a bare "ambiguous" in prose does not count), the host
 # shows no claim, no PR closing the issue and no branch, and a Run file, where
-# the run wrote one, shows no work past phase 1. Where the stop lands is not judged: on
-# a vague issue the model decides right after `read-issue`, still in phase 0,
-# and an early stop may leave no Run file at all.
+# the run wrote one, holds all ten checklist lines and shows no work past
+# phase 1. Where the stop lands is not judged: on a vague issue the model
+# decides right after `read-issue`, still in phase 0, and an early stop may
+# leave no Run file at all.
 #
 # stdout: one failed check per line, `<check>: <what failed>`
 # exit:   0 every check passed · 1 a check failed · 2 tooling
@@ -44,6 +45,8 @@ opened() { grep -qE "^- \[x\] $1 · |^- \[ \] $1 · .* \([0-9]{2}:[0-9]{2}→[^)
 if [ "$ambiguous" = true ]; then
   jq -e '.reply | contains("`ambiguous`")' "$host" >/dev/null || fail "stop: the reply does not name ambiguous"
   if [ -f "$run" ]; then
+    # An empty or cut-short Run file proves nothing about the phases it lacks.
+    for n in 0 1 2 3 4 5 6 7 8 9; do grep -q "^- \[[ x]\] $n · " "$run" || fail "phase $n: no checklist line"; done
     grep -q '^- \[x\] 1 · ' "$run" && fail "phase 1: closed"
     for n in 2 3 4 5 6 7 8 9; do opened "$n" && fail "phase $n: opened"; done
   fi

@@ -166,6 +166,14 @@ check "an ambiguous stop in phase 1 passes" "rc=0" "$(amb "$(stop_run | sed \
   -e 's/^- \[ \] 1 · Understand: claim/- [ ] 1 · Understand: claim in_progress (10:01→)/')" "$amb_ok")"
 check "an early stop with no Run file passes" "rc=0" \
   "$(bash scripts/live-run-checks.sh --ambiguous "$T/nope.md" "$amb_ok" 7 2>/dev/null; printf 'rc=%s\n' "$?")"
+check "a cut-short Run file names the phases it lacks" "phase 5: no checklist line
+phase 6: no checklist line
+phase 7: no checklist line
+phase 8: no checklist line
+phase 9: no checklist line
+rc=1" "$(amb "$(stop_run | head -n 7)" "$amb_ok")"
+check "an empty Run file is not a pass" "10 rc=1" \
+  "$(amb '' "$amb_ok" | grep -c 'no checklist line' | tr '\n' ' ')$(amb '' "$amb_ok" | tail -n 1)"
 check "a PR that only mentions the issue still passes" "rc=0" \
   "$(amb "$(stop_run)" "$(amb_host '[]' '[]' 'See #7\n')")"
 check "a reply naming another stop is named" "stop: the reply does not name ambiguous
