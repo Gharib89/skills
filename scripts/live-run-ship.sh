@@ -80,8 +80,8 @@ run_branches() { # -> one branch name per line
   done
 }
 
-# Close the run's issue and PRs and delete its branches. A read or close that
-# fails is said on stderr and returns 2: on the EXIT-trap path no read-back
+# Close the run's issue and PRs and delete its branches. A read, close or delete
+# that fails is said on stderr and returns 2: on the EXIT-trap path no read-back
 # follows, so this is the only report a tooling exit or a Ctrl-C leaves.
 reset_host() {
   [ -n "$issue" ] || return 0
