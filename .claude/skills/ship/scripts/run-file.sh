@@ -170,8 +170,9 @@
 #     such a primary. Other cap,
 #     small lane and auto-once stops, a deferred gate beside a non-green check
 #     outside Legs:, nonblank Override or Ship-defect
-#     evidence, and defect or tracker drafts beside the Run file (excluding
-#     .base.md) hold the gate.
+#     evidence, defect or tracker drafts beside the Run file (excluding
+#     .base.md), and a last `Stop: self-review: cap` where no reviewer stopped
+#     on tree unchanged with a dispositioned Round hold the gate.
 #     An ordinary deviation does not hold it. This read is independent of Merge.
 # exit: 0 ok · 1 the mechanic's own refusal (a gate's missing evidence among
 #   them, a held clean gate, or a test that stayed green under `prove`) · 2
@@ -680,14 +681,20 @@ EORESTS
 $(rests "Declined: ")
 EODECLINED
 
-  # The self-review loop, in close 7's vocabulary: a round, then the stop.
+  # The self-review loop, in close 7's vocabulary: a round, then the stop. Every
+  # round line must be well formed, since no other label starts `self-review `;
+  # close 7 cannot ask that, its `claude` prefix also reading `claude code`'s.
   ok=false
   while IFS= read -r r; do
-    [[ $r =~ $round_re ]] && ok=true
+    if [[ $r =~ $round_re ]]; then
+      ok=true
+    else
+      ok=false; break
+    fi
   done <<EORESTS
 $(rests "Round: self-review ")
 EORESTS
-  [ "$ok" = true ] || gap "no Round line for self-review: add \`Round: self-review <n>: <text>\`, one per self-review round"
+  [ "$ok" = true ] || gap "no Round line for self-review: add \`Round: self-review <n>: <text>\`, one per self-review round, each in that shape"
   r=$(trim_end "$(rests "Stop: self-review: " | tail -n 1)")
   case $r in
     "tree unchanged" | cap) ;;
@@ -855,6 +862,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
            else "reviewer " + $r.name + ": " + stop($r.name) end),
+       # A self-review stopped at its cap left its last fixes unread; a host
+       # reviewer that settled on the final head read them.
+       if (rests("Stop: self-review: ") | last // "") == "cap" and (any($reviewers[]; settled(.name)) | not)
+         then "self-review: stopped at cap, its last fixes read by no reviewer" else empty end,
        (rests("Override: ")[] | select(. != "" and . != "none" and . != "None.") | "override needed: " + .),
        (rests("Ship-defect: ")[] | select(. != "" and . != "none" and . != "None.") | "Ship defect: " + .),
        ($drafts[] | if startswith("defect-") then "Ship defect draft: " + . else "Tracker draft: " + . end)

@@ -441,6 +441,10 @@ refused "a host-loop stop reason" "Stop line for self-review has reason 'small l
 run4bare; add 'Round: self-review 1: clean' 'Stop: self-review: cap' 'Stop: self-review: whenever'; held=$(cat "$rf"); close 4
 refused "the last Stop line decides" "Stop line for self-review has reason 'whenever'"
 
+run4bare; add 'Round: self-review 1: fixed' 'Round: self-review 2:' 'Stop: self-review: cap'; held=$(cat "$rf"); close 4
+refused "a malformed later round beside a good one" 'no Round line for self-review'
+check "and names the shape" yes "$(has 'each in that shape' "$err")"
+
 run4bare; add 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged'; close 4
 admitted "one clean round, stopped on an unchanged tree"
 
