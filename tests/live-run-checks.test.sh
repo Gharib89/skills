@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# scripts/live-run-checks.sh: the happy-path verdict of Ship's live run, read
-# from records alone. The seam is its CLI: a Run file, the host state the driver
-# fetched (issue assignees, open PRs with their bodies) and the issue number in,
+# scripts/live-run-checks.sh: the verdict of one Ship live run, the happy path
+# or, with --ambiguous, the early stop. The seam is its CLI: a Run file, the host
+# state the driver fetched (issue assignees, open PRs with their bodies, and for
+# the early stop the run's branches and final reply) and the issue number in,
 # with the PR template in PR_TEMPLATE; one failed check per stdout line and an
 # exit code out.
 set -uo pipefail
@@ -172,6 +173,8 @@ check "an empty reply is named" "stop: the reply does not name ambiguous
 rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' '')")"
 check "a longer word is not the stop name" "stop: the reply does not name ambiguous
 rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' 'The issue is unambiguous.')")"
+check "the word outside a code span is not the stop name" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' 'The issue is not ambiguous, so I went on.')")"
 check "a claim is named" "issue: claimed
 rc=1" "$(amb "$(stop_run)" "$(amb_host '["agent"]' '[]' '')")"
 check "a PR closing the issue is named" "pr: 1 open PRs close #7, want 0

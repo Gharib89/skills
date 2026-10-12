@@ -99,6 +99,8 @@ case $play in
   budget) echo '{"subtype": "error_max_budget_usd", "is_error": true, "total_cost_usd": 2.6}'; exit 1 ;;
   slow) sleep 5 ;;
   auth) echo 'Invalid API key' >&2; exit 1 ;;
+  killed) kill -9 $$ ;;
+  garbled) echo 'not json'; exit 0 ;;
 esac
 jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s"}'
 CLAUDE
@@ -148,6 +150,11 @@ rc=1' "$(LIVE_RUN_WALL_S=1 drive slow slow ambiguous)"
 
 check "an unreachable fixture repo is unavailable" '{"result":"unavailable","reason":"cannot clone Gharib89/ship-fixture"}
 rc=2' "$(CLONE_FAILS=1 drive happy ambiguous)"
+
+check "a claude killed before the wall clock is not the cap" '{"result":"unavailable","reason":"claude -p failed"}
+rc=2' "$(drive killed)"
+check "claude output that is not JSON is unavailable" '{"result":"unavailable","reason":"claude -p output unreadable"}
+rc=2' "$(drive happy garbled)"
 
 check "claude failing to run is unavailable" '{"result":"unavailable","reason":"claude -p failed"}
 rc=2' "$(drive auth)"

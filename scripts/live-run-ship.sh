@@ -196,20 +196,20 @@ ambiguous_body='Do what we agreed on the call.'
 # One Ship run of <path> on a new issue and a fresh copy of the fixture, judged,
 # then reset. Appends its record to $tmp/runs; returns 0 pass, 1 fail.
 attempt() { # <happy|ambiguous> <attempt>
-  local co=$tmp/$1-$2 failed=$tmp/failed-$1-$2 rc start wall pr="" flag="" run_file assignees prs mine branches state n b
+  local co=$tmp/$1-$2 failed=$tmp/failed-$1-$2 rc start wall pr="" flag="" reply run_file assignees prs mine branches state n b
   cp -a "$base" "$co" || unavailable "cannot copy the fixture clone"
   if [ "$1" = happy ]; then file_issue "$1" "$2" "$happy_title" "$happy_body"
   else file_issue "$1" "$2" "$ambiguous_title" "$ambiguous_body"; flag=--ambiguous; fi
 
   start=$(date +%s)
   # -k: a claude that outlives SIGTERM by a minute is killed, and timeout then
-  # exits 137 instead of 124.
+  # exits 137 instead of 124; a 137 before the cap is claude killed by another hand.
   (cd "$co" && XDG_STATE_HOME=$tmp/state timeout -k 60 "$wall_cap" claude -p --model sonnet --permission-mode auto \
     --max-budget-usd "$budget" --output-format json "/ship $issue --unattended") >"$co.json" 2>"$co.err"
   rc=$?
   wall=$(( $(date +%s) - start ))
   : > "$failed"
-  if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+  if [ "$rc" -eq 124 ] || { [ "$rc" -eq 137 ] && [ "$wall" -ge "$wall_cap" ]; }; then
     echo "cap: wall clock $wall_cap s" >> "$failed"
   elif [ "$rc" -ne 0 ] && [ "$(jq -r '.subtype? // empty' "$co.json" 2>/dev/null)" = error_max_budget_usd ]; then
     echo "cap: budget \$$budget" >> "$failed"
@@ -217,6 +217,7 @@ attempt() { # <happy|ambiguous> <attempt>
     # Any other nonzero exit is claude failing (auth, quota, API), not Ship stopping.
     tail -n 40 "$co.err" >&2; unavailable "claude -p failed"
   else
+    reply=$(jq -r '.result // ""' "$co.json" 2>/dev/null) || unavailable "claude -p output unreadable"
     # The Run file sits under XDG_STATE_HOME, which this script pointed into $tmp.
     run_file=$(find "$tmp/state" -path "*/ship-$issue/run.md" 2>/dev/null | head -n 1)
     assignees=$(gh api "repos/$repo/issues/$issue" --jq '[.assignees[].login]') || unavailable "cannot read issue #$issue"
@@ -224,7 +225,7 @@ attempt() { # <happy|ambiguous> <attempt>
     mine=$(run_prs "$prs") || unavailable "cannot read the open PRs"
     branches=$(run_branches) || unavailable "cannot read the branches"
     jq -n --argjson a "$assignees" --argjson p "$prs" --arg b "$branches" \
-      --arg r "$(jq -r '.result? // ""' "$co.json" 2>/dev/null)" \
+      --arg r "$reply" \
       '{assignees: $a, open_prs: [$p[] | {number, body}], branches: ($b | split("\n") | map(select(. != ""))),
         reply: $r}' > "$co.host.json"
     pr=$(head -n 1 <<<"$mine" | cut -d ' ' -f 1)
@@ -263,7 +264,7 @@ done
 out=$(jq -cs 'def lines: .path as $p | .failed[] | "\($p): \(.)";
   ([.[] | select(.attempt == 1 and .failed != [])]) as $retried
   | ([.[] | select(.attempt == 2 or .failed == [])]) as $final
-  | ([$final[] | lines] + [$retried[] | lines | select(test("^[a-z]+: cleanup: "))]) as $failed
+  | ([$final[] | lines] + [$retried[] | .path as $p | .failed[] | select(startswith("cleanup: ")) | "\($p): \(.)"]) as $failed
   | {result: (if $failed == [] then "pass" else "fail" end),
      failed: $failed, retried: [$retried[] | lines], runs: .}' "$tmp/runs")
 printf '%s\n' "$out"

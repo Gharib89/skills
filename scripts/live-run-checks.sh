@@ -41,7 +41,7 @@ fail() { printf '%s\n' "$1"; failed=1; }
 opened() { grep -qE "^- \[x\] $1 · |^- \[ \] $1 · .* \([0-9]{2}:[0-9]{2}→[^)]*\)\$" "$run"; }
 
 if [ "$ambiguous" = true ]; then
-  jq -e '.reply | test("\\bambiguous\\b")' "$host" >/dev/null || fail "stop: the reply does not name ambiguous"
+  jq -e '.reply | contains("`ambiguous`")' "$host" >/dev/null || fail "stop: the reply does not name ambiguous"
   if [ -f "$run" ]; then
     grep -q '^- \[x\] 1 · ' "$run" && fail "phase 1: closed"
     for n in 2 3 4 5 6 7 8 9; do opened "$n" && fail "phase $n: opened"; done
