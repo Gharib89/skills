@@ -86,6 +86,7 @@ run_branches() { # -> one branch name per line
 marked_issue() {
   local list
   list=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=10") || return 2
+  jq -e 'type == "array"' <<<"$list" >/dev/null 2>&1 || return 2
   jq -r --arg m "$mark" '[.[] | select(.pull_request == null and ((.body // "") | contains($m)))][0].number // empty' \
     <<<"$list" || return 2
 }
