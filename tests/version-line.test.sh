@@ -10,17 +10,24 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
-git_() { git -c user.email=t@example.com -c user.name=t -C "$1" "${@:2}"; }
+# A fixture's mkdir or git step that fails would leave its case running against
+# the wrong base, so it ends the test, naming the case (#597).
+setup_failed() { # <case dir> <step>
+  printf 'FAIL %s: fixture %s: %s failed\n' "$TEST_NAME" "${1##*/}" "$2" >&2; exit 1
+}
+git_() { git -c user.email=t@example.com -c user.name=t -C "$1" "${@:2}" || setup_failed "$1" "git ${*:2}"; }
 
 idiom="Read the version with \`sed -n 's/^  version: //p' SKILL.md\` at load."
 
-# <case>: a checkout whose base commit carries two skills and one doc; prints its
-# path. `base-commit` tags the base so a change committed on top is compared to
+# <case>: sets $d to a checkout whose base commit carries two skills and one doc,
+# in this shell rather than a subshell, so a failed mkdir or git step ends the
+# test. `base-commit` tags the base so a change committed on top is compared to
 # it rather than to itself.
 base_repo() {
-  local d="$fixture/$1"
-  rm -rf "$d"; mkdir -p "$d/skills/ship" "$d/skills/cloud-ship" "$d/skills/setup-skills" "$d/docs" || return 1
-  git_ "$d" init -q || return 1
+  d=$fixture/$1
+  rm -rf "$d"; mkdir -p "$d/skills/ship" "$d/skills/cloud-ship" "$d/skills/setup-skills" "$d/docs" "$d/.release" \
+    || setup_failed "$d" mkdir
+  git_ "$d" init -q
   printf -- '---\nname: ship\nmetadata:\n  version: 7.0.0\n  profile-schema: 3\n---\n\n# ship\n\n%s\n' \
     "$idiom" > "$d/skills/ship/SKILL.md"
   printf -- '---\nname: cloud-ship\nmetadata:\n  version: 1.0.2\n---\n\n# cloud-ship\n' \
@@ -28,10 +35,9 @@ base_repo() {
   printf -- '---\nname: setup-skills\n---\n\n# setup-skills\n' \
     > "$d/skills/setup-skills/SKILL.md"
   printf -- 'A doc that happens to carry one.\n  version: 9.9.9\n' > "$d/docs/note.md"
-  mkdir -p "$d/.release" && for s in ship cloud-ship; do
+  for s in ship cloud-ship; do
     printf 'allow_zero_version = false\n' > "$d/.release/$s.toml"; done
-  git_ "$d" add -Af && git_ "$d" commit -qm base && git_ "$d" tag base-commit || return 1
-  printf '%s' "$d"
+  git_ "$d" add -Af && git_ "$d" commit -qm base && git_ "$d" tag base-commit
 }
 rc_of()  { bash scripts/version-line-check.sh base-commit "$1" >/dev/null 2>&1; printf '%s' "$?"; }
 out_of() { bash scripts/version-line-check.sh base-commit "$1" 2>/dev/null; }
@@ -49,18 +55,18 @@ fi
 
 # --- what the release run owns ----------------------------------------------
 
-d=$(base_repo bumped); sed -i.bak 's/version: 7.0.0/version: 7.0.1/' "$d/skills/ship/SKILL.md"
+base_repo bumped; sed -i.bak 's/version: 7.0.0/version: 7.0.1/' "$d/skills/ship/SKILL.md"
 check_rc "a bumped version line fails" 1 "$(rc_of "$d")"
 check "the message names the file and the line" \
   "skills/ship/SKILL.md: changes a metadata.version line, which the release run owns
     -  version: 7.0.0
     +  version: 7.0.1" "$(out_of "$d")"
 
-d=$(base_repo bumped-committed); sed -i.bak 's/version: 7.0.0/version: 8.0.0/' "$d/skills/ship/SKILL.md"
+base_repo bumped-committed; sed -i.bak 's/version: 7.0.0/version: 8.0.0/' "$d/skills/ship/SKILL.md"
 git_ "$d" add -Af && git_ "$d" commit -qm 'feat(ship)!: x'
 check_rc "a bump already committed fails too" 1 "$(rc_of "$d")"
 
-d=$(base_repo bumped-second); sed -i.bak 's/version: 1.0.2/version: 1.1.0/' "$d/skills/cloud-ship/SKILL.md"
+base_repo bumped-second; sed -i.bak 's/version: 1.0.2/version: 1.1.0/' "$d/skills/cloud-ship/SKILL.md"
 check_rc "a bump in any skill fails" 1 "$(rc_of "$d")"
 
 # --- the renumber to 0.x (#369) ---------------------------------------------
@@ -68,64 +74,64 @@ check_rc "a bump in any skill fails" 1 "$(rc_of "$d")"
 # Every skill moves M.m.p to 0.M.p once, before its public release, in the diff
 # that flips its `allow_zero_version`; the release run then owns the 0.x line.
 flip() { sed -i.bak 's/allow_zero_version = false/allow_zero_version = true/' "$1/.release/$2.toml"; }
-# <case> <old> <new>: ship moved from <old>, committed as the base, to <new>,
-# its toml flipped.
+# <case> <old> <new>: sets $d as base_repo does, ship moved from <old>, committed
+# as the base, to <new>, its toml flipped.
 moved() {
-  local d; d=$(base_repo "$1")
+  base_repo "$1"
   sed -i.bak "s/version: 7.0.0/version: $2/" "$d/skills/ship/SKILL.md"
   git_ "$d" add -Af && git_ "$d" commit -qm base2 && git_ "$d" tag -f base-commit >/dev/null
   sed -i.bak "s/version: $2/version: $3/" "$d/skills/ship/SKILL.md"; flip "$d" ship
-  printf '%s' "$d"
 }
 
-d=$(base_repo renumber)
+base_repo renumber
 sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
 sed -i.bak 's/version: 1.0.2/version: 0.1.2/' "$d/skills/cloud-ship/SKILL.md"
 flip "$d" ship; flip "$d" cloud-ship
 check_rc "the renumber M.m.p to 0.M.p passes" 0 "$(rc_of "$d")"
-check_rc "a multi-digit major with a non-zero minor renumbers, 11.1.4 to 0.11.4" 0 "$(rc_of "$(moved multi 11.1.4 0.11.4)")"
+moved multi 11.1.4 0.11.4
+check_rc "a multi-digit major with a non-zero minor renumbers, 11.1.4 to 0.11.4" 0 "$(rc_of "$d")"
 
-d=$(base_repo renumber-unflipped); sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
+base_repo renumber-unflipped; sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
 check_rc "the renumber without its allow_zero_version flip fails" 1 "$(rc_of "$d")"
 
-d=$(base_repo renumber-other-flip); sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"; flip "$d" cloud-ship
+base_repo renumber-other-flip; sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"; flip "$d" cloud-ship
 check_rc "another skill's flip does not admit this one's renumber" 1 "$(rc_of "$d")"
 
-d=$(base_repo renumber-other); sed -i.bak 's/version: 7.0.0/version: 0.1.0/' "$d/skills/ship/SKILL.md"; flip "$d" ship
+base_repo renumber-other; sed -i.bak 's/version: 7.0.0/version: 0.1.0/' "$d/skills/ship/SKILL.md"; flip "$d" ship
 check_rc "a move to 0.x that is not the renumber fails" 1 "$(rc_of "$d")"
 
-check_rc "a prerelease old version is no renumber" 1 "$(rc_of "$(moved pre 7.0.0-rc.1 0.7.1)")"
-check_rc "a four-part old version is no renumber" 1 "$(rc_of "$(moved four 1.2.3.4 0.1.4)")"
-check_rc "a move out of 0.x back to 0.x is no renumber" 1 "$(rc_of "$(moved zero 0.7.0 0.0.0)")"
+moved pre 7.0.0-rc.1 0.7.1; check_rc "a prerelease old version is no renumber" 1 "$(rc_of "$d")"
+moved four 1.2.3.4 0.1.4; check_rc "a four-part old version is no renumber" 1 "$(rc_of "$d")"
+moved zero 0.7.0 0.0.0; check_rc "a move out of 0.x back to 0.x is no renumber" 1 "$(rc_of "$d")"
 
 # Two version lines in one file: each old line would renumber on its own, but
 # the pair is two moves, and the second must not ride on the first.
-d=$(base_repo two-lines)
+base_repo two-lines
 printf '  version: 8.0.0\n' >> "$d/skills/ship/SKILL.md"
 git_ "$d" add -Af && git_ "$d" commit -qm base2 && git_ "$d" tag -f base-commit >/dev/null
 sed -i.bak -e 's/version: 7.0.0/version: 0.7.0/' -e '/^  version: 8.0.0$/d' "$d/skills/ship/SKILL.md"; flip "$d" ship
 check_rc "a second removed version line is no renumber" 1 "$(rc_of "$d")"
 
-d=$(base_repo zero-bump); sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"; flip "$d" ship
+base_repo zero-bump; sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"; flip "$d" ship
 git_ "$d" add -Af && git_ "$d" commit -qm renumber && git_ "$d" tag -f base-commit >/dev/null
 sed -i.bak 's/version: 0.7.0/version: 0.7.1/' "$d/skills/ship/SKILL.md"
 check_rc "a bump inside 0.x still fails" 1 "$(rc_of "$d")"
 
 # --- what stays a hand edit --------------------------------------------------
 
-d=$(base_repo schema); sed -i.bak 's/profile-schema: 3/profile-schema: 4/' "$d/skills/ship/SKILL.md"
+base_repo schema; sed -i.bak 's/profile-schema: 3/profile-schema: 4/' "$d/skills/ship/SKILL.md"
 check_rc "a profile-schema bump passes" 0 "$(rc_of "$d")"
 
-d=$(base_repo prose); printf 'A new paragraph.\n' >> "$d/skills/ship/SKILL.md"
+base_repo prose; printf 'A new paragraph.\n' >> "$d/skills/ship/SKILL.md"
 check_rc "a prose change passes" 0 "$(rc_of "$d")"
 
-d=$(base_repo untouched)
+base_repo untouched
 check_rc "an unchanged tree passes" 0 "$(rc_of "$d")"
 
 # --- adding a line is not moving one -----------------------------------------
 
 # A new skill arrives carrying its first version line.
-d=$(base_repo added); mkdir -p "$d/skills/new"
+base_repo added; mkdir -p "$d/skills/new" || setup_failed "$d" mkdir
 printf -- '---\nname: new\nmetadata:\n  version: 0.1.0\n---\n' > "$d/skills/new/SKILL.md"
 git_ "$d" add -Af
 check_rc "a new skill's first version line passes" 0 "$(rc_of "$d")"
@@ -133,33 +139,34 @@ check_rc "a new skill's first version line passes" 0 "$(rc_of "$d")"
 # A skill that had no metadata block gains one, in a file that was already there.
 # `--diff-filter` cannot see this: the file is modified, and only the absence of a
 # removed version line says the number was not moved.
-d=$(base_repo gains-a-block)
+base_repo gains-a-block
 printf -- '---\nname: setup-skills\nmetadata:\n  version: 4.0.1\n---\n\n# setup-skills\n' \
   > "$d/skills/setup-skills/SKILL.md"
 check_rc "a version line the file did not have passes" 0 "$(rc_of "$d")"
 
 # A skill removed takes its version line with it, and that is not a bump either.
-d=$(base_repo deleted); git_ "$d" rm -q "skills/cloud-ship/SKILL.md"
+base_repo deleted; git_ "$d" rm -q "skills/cloud-ship/SKILL.md"
 check_rc "a deleted skill passes" 0 "$(rc_of "$d")"
 
 # --- adversarial inputs, per the coding standards ----------------------------
 
 # The documented `sed -n 's/^  version: //p'` idiom is a version line to a grep
 # that reads the key and not the value, and rewording the sentence removes it.
-d=$(base_repo idiom)
+base_repo idiom
 sed -i.bak "s|^Read the version with|Read ship's version with|" "$d/skills/ship/SKILL.md"
 check_rc "the sed idiom reworded is not a version line" 0 "$(rc_of "$d")"
 
 # A version line outside a skill is not this rule's: the release run owns the
 # three under skills/ and nothing else.
-d=$(base_repo elsewhere); sed -i.bak 's/version: 9.9.9/version: 9.9.10/' "$d/docs/note.md"
+base_repo elsewhere; sed -i.bak 's/version: 9.9.9/version: 9.9.10/' "$d/docs/note.md"
 check_rc "a version line outside skills/ passes" 0 "$(rc_of "$d")"
 
 # --- tooling -----------------------------------------------------------------
 
 check_rc "a root that is not a checkout is tooling" 2 "$(rc_of "$fixture/nope")"
+base_repo reffail
 check_rc "a base ref that does not resolve is tooling" 2 \
-  "$(bash scripts/version-line-check.sh no-such-ref "$(base_repo reffail)" >/dev/null 2>&1; printf '%s' "$?")"
+  "$(bash scripts/version-line-check.sh no-such-ref "$d" >/dev/null 2>&1; printf '%s' "$?")"
 check_rc "no base ref is tooling" 2 \
   "$(bash scripts/version-line-check.sh >/dev/null 2>&1; printf '%s' "$?")"
 
