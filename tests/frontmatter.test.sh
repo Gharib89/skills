@@ -58,6 +58,12 @@ skill "$d" quoted name: quoted 'description: "Quoted: with a colon. Use when quo
 skill "$d" manual name: manual 'description: "Run by hand only."' 'disable-model-invocation: true'
 check_rc "folded, quoted and manual-only descriptions pass" 0 "$(rc_of "$d")"
 
+# A YAML comment after an unquoted value is not part of it; inside quotes it is.
+d=$(tree comments)
+skill "$d" manual name: manual 'description: Run by hand only. # no clause' 'disable-model-invocation: true # manual-only'
+skill "$d" hashed name: hashed 'description: "Use when # is in quotes."'
+check_rc "a comment after an unquoted value is dropped" 0 "$(rc_of "$d")"
+
 d=$(tree unknown-key)
 skill "$d" extra name: extra 'description: Use when extra.' 'allowed-tools: Bash'
 check_rc "a key outside the allowlist fails" 1 "$(rc_of "$d")"

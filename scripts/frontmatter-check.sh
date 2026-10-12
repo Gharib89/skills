@@ -24,13 +24,16 @@ names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$r
 # <file>: `key<TAB><key>` per column-0 key, then `dmi<TAB><value>`,
 # `desc<TAB><description>` and `fence<TAB><none|open|closed>`. A
 # description's indented continuation lines join with one space, so plain,
-# quoted and folded scalars all come out as the one line an agent reads.
+# quoted and folded scalars all come out as the one line an agent reads. A `#`
+# comment after an unquoted value is YAML's, not the value's, so it is dropped.
 fields() {
   awk 'NR == 1 { if ($0 != "---") exit; fm = 1; fence = "open"; next }
        fm && $0 == "---" { fence = "closed"; exit }
        /^[^ \t#][^:]*:/ {
          key = substr($0, 1, index($0, ":") - 1); val = substr($0, length(key) + 2)
-         sub(/^[ \t]+/, "", val); sub(/[ \t]+$/, "", val)
+         sub(/^[ \t]+/, "", val)
+         if (val !~ /^["'\'']/) sub(/[ \t]+#.*$/, "", val)
+         sub(/[ \t]+$/, "", val)
          print "key\t" key; indesc = (key == "description")
          if (key == "disable-model-invocation") dmi = val
          if (indesc) desc = (val ~ /^[>|][-+]?$/) ? "" : val
