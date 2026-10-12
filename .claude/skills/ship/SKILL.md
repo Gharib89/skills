@@ -121,9 +121,9 @@ that grades lower. Then implement test-first per class; `Tripwires:` and
 `In-PR requirement:` land in this change whatever the class.
 Keep a **deviations log** from the first edit: whenever the territory forces a
 departure from the issue, brief or plan, take the conservative option, log what
-and why, keep going; it lands verbatim in the merge summary. A change too big
-for one PR, or needing a redesign the issue did not scope, stops `needs-split`
-with a [split proposal](reference/implement.md#phase-2-needs-split).
+and why, keep going; it lands verbatim in the merge summary. A change showing a
+[split tell](reference/implement.md#phase-2-needs-split), too big for one PR or
+needing a redesign the issue did not scope, stops `needs-split` with a proposal.
 **Done when:** the applicable tests are green (red first, per class), the
 tripwires and in-PR requirement have landed, `Grade:` is recorded, a small-lane
 diff is counted under the cap, and every departure and adjacent find so far is

@@ -9,7 +9,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-fixture=$(mktemp -d); trap 'chmod -R u+r "$fixture"; rm -rf "$fixture"' EXIT
+fixture=$(mktemp -d); trap 'chmod -R u+rwx "$fixture"; rm -rf "$fixture"' EXIT
 
 # <case>: a root whose lock lists `clean` as a skill this repo writes and
 # `vendored` as one it installs; prints its path.
@@ -60,7 +60,7 @@ check_rc "folded, quoted and manual-only descriptions pass" 0 "$(rc_of "$d")"
 
 d=$(tree unknown-key)
 skill "$d" extra name: extra 'description: Use when extra.' 'allowed-tools: Bash'
-check_rc "an unknown key fails" 1 "$(rc_of "$d")"
+check_rc "a key outside the allowlist fails" 1 "$(rc_of "$d")"
 check "the message names the file and the key" \
   "skills/extra/SKILL.md: frontmatter key allowed-tools is not allowed" "$(out_of "$d")"
 
@@ -94,6 +94,7 @@ check "the message names the clause" \
 
 d=$(tree invocation-false)
 skill "$d" silent name: silent 'description: Does a thing.' 'disable-model-invocation: false'
+check_rc "disable-model-invocation: false fails" 1 "$(rc_of "$d")"
 check "disable-model-invocation: false still needs the clause" \
   'skills/silent/SKILL.md: description has no "Use when" clause' "$(out_of "$d")"
 
@@ -109,10 +110,17 @@ check_rc "a skill another repo writes is not checked" 0 "$(rc_of "$d")"
 
 d=$(tree unclosed)
 printf -- '---\nname: clean\ndescription: Use when unclosed.\n' > "$d/skills/clean/SKILL.md"
-check "a frontmatter with no closing fence fails" \
+check_rc "a frontmatter with no closing fence fails" 1 "$(rc_of "$d")"
+check "the message names the closing fence" \
   "skills/clean/SKILL.md: frontmatter has no closing ---" "$(out_of "$d")"
 
-check_rc "an unreadable root exits 2" 2 "$(rc_of "$fixture/absent")"
+d=$(tree unopened)
+printf 'name: clean\ndescription: Use when unopened.\n' > "$d/skills/clean/SKILL.md"
+check_rc "a SKILL.md with no opening fence fails" 1 "$(rc_of "$d")"
+check "the message names the opening fence" \
+  "skills/clean/SKILL.md: frontmatter has no opening ---" "$(out_of "$d")"
+
+check_rc "a missing root exits 2" 2 "$(rc_of "$fixture/absent")"
 
 d=$(tree no-lock); rm "$d/skills-lock.json"
 check_rc "a root with no lock exits 2" 2 "$(rc_of "$d")"
@@ -123,6 +131,10 @@ check_rc "a listed skill with no SKILL.md exits 2" 2 "$(rc_of "$d")"
 if [ "$(id -u)" != 0 ]; then
   d=$(tree unreadable-skill); chmod 000 "$d/skills/clean/SKILL.md"
   check_rc "an unreadable SKILL.md exits 2" 2 "$(rc_of "$d")"
+  d=$(tree unreadable-root); chmod 000 "$d"
+  check_rc "an unreadable root exits 2" 2 "$(rc_of "$d")"
+else
+  skipped "an unreadable SKILL.md and an unreadable root: root reads any file"
 fi
 
 finish

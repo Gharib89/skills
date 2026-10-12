@@ -38,9 +38,9 @@ npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill up
   && .claude/skills/ship/scripts/preflight.sh none
 ```
 
-`codebase-design` is no skill ship composes, but `tdd` calls it through the
-Skill tool, so it is installed at `tdd`'s pin, where a cloud sandbox finds it in
-the checkout:
+`tdd` calls `codebase-design` through the Skill tool, so it is installed in
+the checkout, where a cloud sandbox finds it, at `tdd`'s lock `ref`; a move of
+`tdd`'s pin moves this line and re-runs it:
 
 ```sh
 npx skills add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill codebase-design --agent claude-code -y

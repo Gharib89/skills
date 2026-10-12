@@ -21,8 +21,8 @@ still a complete run. The levers, in rough order of impact:
   subagent ("map how X, Y, Z connect; return signatures, call sites and data
   shapes") and read only the exact lines you will edit: a file you only need to
   *understand* stays out of main context. Ask neutral, current-state questions
-  with source pointers, and keep the intended change in the main thread: a
-  brief that names the change gets back a reading bent toward it.
+  that want file and line pointers back, and keep the intended change in the
+  main thread: a brief that names the change gets back a reading bent toward it.
 - **Read one reference file per call.** Several files chained in one `cat`
   can pass the persist limit, and the caller then sees a 2 KB preview of the
   lot and re-reads each file it chained.

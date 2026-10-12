@@ -39,6 +39,13 @@ Every Reviewer reads this section, and so does the author self-reviewing.
 - **A finding anchors on `skills/<name>/`, never on `.claude/skills/<name>/`.**
   The derived copy is byte-identical by gate, so one defect is one thread.
 
+**A diff that lowers the bar says so.** Five moves lower it: a test skipped or
+deleted; assertions removed from a test that stays; a new suppression (a
+`shellcheck disable`, an `eslint-disable`, a `noqa`, a `nosemgrep` or a
+`gitleaks:allow`); a stub or an empty catch standing in for behaviour; and a
+gate threshold or config loosened. Each is a finding unless the PR names it and
+says why, because the diff shows the change and not the coverage it gave up.
+
 **What the rules cover.** These are the scope facts reviewers most often got
 wrong; each sub-file's rule holds inside them.
 
@@ -56,13 +63,6 @@ wrong; each sub-file's rule holds inside them.
   The stub rule binds only results that do.
 - **Split code spans.** An inline code span broken across a line wrap in
   hard-wrapped prose is house style, not a rendering defect.
-
-**A diff that lowers the bar says so.** Five moves lower it: a test skipped or
-deleted; assertions removed from a test that stays; a new suppression (a
-`shellcheck disable`, an `eslint-disable`, a `noqa`, a `nosemgrep` or a
-`gitleaks:allow`); a stub or an empty catch standing in for behaviour; and a
-gate threshold or config loosened. Each is a finding unless the PR names it and
-says why, because the diff shows the change and not the coverage it gave up.
 
 ## Routing by path
 

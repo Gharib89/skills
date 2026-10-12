@@ -128,12 +128,12 @@ not scope, before the diff size does:
 - **A blast radius past 10 call sites**: one signature, file format or
   vocabulary value whose change must reach more than 10 call sites in lockstep.
 
-The split proposal has one shape, expand, migrate, contract, each a ticket
-that lands green on its own: **expand** adds the new shape beside the old one
-with no caller switched; **migrate** moves the callers over in batches sized by
-the blast radius, one ticket per batch; **contract** removes the old shape once
-nothing reaches it. Give each ticket its title, its criteria and the ticket it
-is blocked by.
+The split proposal is a set of tickets, each landing green on its own. Where
+the change reshapes something callers reach, they take one shape: **expand**
+adds the new shape beside the old one with no caller switched; **migrate**
+moves the callers over in batches sized by the blast radius, one ticket per
+batch; **contract** removes the old shape once nothing reaches it. Give each
+ticket its title, its criteria and the ticket it is blocked by.
 
 ## Phase 2: adjacent finds
 

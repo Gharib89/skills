@@ -2,10 +2,10 @@
 # The frontmatter of every skill this repo writes, the lock's `source: "."`
 # entries. An agent picks a skill by its frontmatter alone, so three rules hold:
 # only the keys `name`, `description`, `argument-hint`,
-# `disable-model-invocation` and `metadata` at column 0 (a key the harness does
-# not read is a setting someone believed was in force); a `description` of at
-# most 1,024 characters, counted as the agent reads it, a folded scalar's lines
-# joined by one space; and a "Use when" clause in the `description` of every
+# `disable-model-invocation` and `metadata` at column 0 (a key outside this set
+# is one no skill here relies on, so it is a typo or an untested setting); a
+# `description` of at most 1,024 characters, counted as the agent reads it, a
+# folded scalar's lines joined by one space; and a "Use when" clause in the `description` of every
 # skill without `disable-model-invocation: true`, because that clause is what
 # routes an agent to a skill it may invoke on its own. `scripts/check.sh full`
 # runs this as its `frontmatter` row, which scripts/local-gate.sh reports under
@@ -21,12 +21,13 @@ root=${1:-.}
 names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$root/skills-lock.json") || exit 2
 
 # <file>: `key<TAB><key>` per column-0 key, then `dmi<TAB><value>`,
-# `desc<TAB><description>` and `closed<TAB><0|1>`. A description's indented
-# continuation lines join with one space, so plain, quoted and folded scalars
-# all come out as the one line an agent reads.
+# `desc<TAB><description>` and `fence<TAB><n>`, <n> 0 with no opening `---`,
+# 1 with no closing one and 2 for both. A description's indented continuation
+# lines join with one space, so plain, quoted and folded scalars all come out as
+# the one line an agent reads.
 fields() {
-  awk 'NR == 1 { if ($0 != "---") exit; fm = 1; next }
-       fm && $0 == "---" { closed = 1; exit }
+  awk 'NR == 1 { if ($0 != "---") exit; fm = 1; fence = 1; next }
+       fm && $0 == "---" { fence = 2; exit }
        /^[^ \t#][^:]*:/ {
          key = substr($0, 1, index($0, ":") - 1); val = substr($0, length(key) + 2)
          sub(/^[ \t]+/, "", val); sub(/[ \t]+$/, "", val)
@@ -36,7 +37,7 @@ fields() {
          next }
        indesc && /^[ \t]/ { line = $0; sub(/^[ \t]+/, "", line); desc = (desc == "" ? line : desc " " line) }
        END { if (desc ~ /^".*"$/ || desc ~ /^'\''.*'\''$/) desc = substr(desc, 2, length(desc) - 2)
-             print "dmi\t" dmi; print "desc\t" desc; print "closed\t" (closed ? 1 : 0) }' "$1"
+             print "dmi\t" dmi; print "desc\t" desc; print "fence\t" (fence + 0) }' "$1"
 }
 
 rc=0
@@ -44,7 +45,7 @@ while IFS= read -r n; do
   [ -n "$n" ] || continue
   rel=skills/$n/SKILL.md
   out=$(fields "$root/$rel") || { printf 'cannot read %s\n' "$rel" >&2; exit 2; }
-  dmi='' desc='' closed=0
+  dmi='' desc='' fence=0
   while IFS=$'\t' read -r kind value; do
     case $kind in
       key)
@@ -54,10 +55,11 @@ while IFS= read -r n; do
         esac ;;
       dmi) dmi=$value ;;
       desc) desc=$value ;;
-      closed) closed=$value ;;
+      fence) fence=$value ;;
     esac
   done <<<"$out"
-  [ "$closed" = 1 ] || { echo "$rel: frontmatter has no closing ---"; rc=1; continue; }
+  [ "$fence" != 0 ] || { echo "$rel: frontmatter has no opening ---"; rc=1; continue; }
+  [ "$fence" = 2 ] || { echo "$rel: frontmatter has no closing ---"; rc=1; continue; }
   [ "${#desc}" -le 1024 ] || { echo "$rel: description is ${#desc} characters, over 1024"; rc=1; }
   [ "$dmi" = true ] && continue
   case $desc in *"Use when"*) ;; *) echo "$rel: description has no \"Use when\" clause"; rc=1 ;; esac
