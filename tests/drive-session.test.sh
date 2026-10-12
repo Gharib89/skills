@@ -127,9 +127,11 @@ calls >/dev/null
 # The measured trap: after a prompt, status reads the previous turn's `done`
 # until the turn starts. A settled status whose sequence number has not moved
 # past the row's is no event.
+# A case that asserts on more than one poll gives its timeout room for those
+# polls on a loaded machine, where each one can take seconds (#597).
 printf 'done 10\n' > "$HERDR_FAKE/s1.states"
 printf 'blocked 20\n' > "$HERDR_FAKE/s2.states"
-out=$(bash "$s/watch.sh" --roster "$roster" --timeout 1500); rc=$?
+out=$(bash "$s/watch.sh" --roster "$roster" --timeout 5000); rc=$?
 check_rc "watch on stale states exits 0 at its timeout" 0 "$rc"
 check "watch never reports a stale done or an acknowledged blocked" null "$(jq -c .name <<<"$out")"
 check "its timeout lists each session's status and sequence number" \
@@ -138,16 +140,22 @@ check "its timeout lists each session's status and sequence number" \
 check "and how long each sequence number stood still, in seconds" true \
   "$(jq '[.sessions[].still_s] | all(type == "number" and . >= 1)' <<<"$out")"
 # A sequence number that moves starts its count again: a session working
-# through 70, 71 and 72 has stood still only since 72.
-printf 'idle 69\n' > "$HERDR_FAKE/w1.states"
-bash "$s/spawn.sh" w1 --roster "$tmp/w1.json" --cwd "$tmp/cwd" --prompt x >/dev/null
+# through 70, 71 and 72 has stood still only since 72, at least two seconds (the
+# sleeps before the third poll) less long than one beside it whose number never
+# moved.
+for w in w1 w2; do
+  printf 'idle 69\n' > "$HERDR_FAKE/$w.states"
+  bash "$s/spawn.sh" "$w" --roster "$tmp/w1.json" --cwd "$tmp/cwd" --prompt x >/dev/null
+done
 printf 'working 70\nworking 71\nworking 72\n' > "$HERDR_FAKE/w1.states"
-out=$(bash "$s/watch.sh" --roster "$tmp/w1.json" --timeout 2500)
-check "a moved sequence number restarts still_s" '72 true' "$(jq -r '.sessions[0] | "\(.seq) \(.still_s <= 1)"' <<<"$out")"
+printf 'working 70\n' > "$HERDR_FAKE/w2.states"
+out=$(bash "$s/watch.sh" --roster "$tmp/w1.json" --timeout 8000)
+check "a moved sequence number restarts still_s" '72 true' \
+  "$(jq -r '.sessions | "\(.[0].seq) \(.[0].still_s + 2 <= .[1].still_s)"' <<<"$out")"
 calls >/dev/null
 
 printf 'working 11\ndone 12\n' > "$HERDR_FAKE/s1.states"
-out=$(bash "$s/watch.sh" --roster "$roster" --timeout 3000)
+out=$(bash "$s/watch.sh" --roster "$roster" --timeout 30000)
 check "watch waits out the turn and reports its done" '{"name":"s1","event":"done","seq":12}' "$out"
 
 printf 'done 12\n' > "$HERDR_FAKE/s1.states"
