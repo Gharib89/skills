@@ -445,8 +445,8 @@ check_rc "gate with no subcommand is malformed" 2 "$(inrc "$repo" gate)"
 # takes a result for a heading added there after init, appending its entry.
 added=$tmp/added
 git init -q -b main "$added"; mkdir -p "$added/docs/agents"; cp "$profile" "$added/docs/agents/ship.md"
-add_verif() { # add_verif <heading>: a new first heading under ## Verification
-  awk -v h="$1" '{ print } $0 == "## Verification" { print ""; print "### " h }' "$added/docs/agents/ship.md" > "$tmp/added.md" \
+add_verif() { # add_verif <heading> [<section>]: a new first heading under ## Verification, or <section>
+  awk -v h="$1" -v s="## ${2:-Verification}" '{ print } $0 == s { print ""; print "### " h }' "$added/docs/agents/ship.md" > "$tmp/added.md" \
     && mv "$tmp/added.md" "$added/docs/agents/ship.md"
 }
 to_phase3() { # to_phase3 <run file>
@@ -486,10 +486,13 @@ check "a profile-added heading carrying = cannot be named: its tail is refused a
 check "the refused headings left the record unchanged" "$was" "$(cat "$fa")"
 # The lookup is the whole heading under ## Verification and nowhere else.
 cp "$profile" "$added/docs/agents/ship.md"; add_verif live-run
-check_rc "a prefix of an added heading is no name" 2 "$(inrc "$added" close 3 --file "$fa" --result live=pass)"
-awk '{ print } $0 == "## Reviewers" { print ""; print "### decoy" }' "$added/docs/agents/ship.md" > "$tmp/added.md" \
-  && mv "$tmp/added.md" "$added/docs/agents/ship.md"
-check_rc "a ### heading under another section is no name" 2 "$(inrc "$added" close 3 --file "$fa" --result decoy=pass)"
+check "a prefix of an added heading is no name" \
+  "--result names 'live', which neither the Run file's Verification results nor the profile's Verification headings name" \
+  "$(inerr "$added" close 3 --file "$fa" --result live=pass)"
+add_verif decoy Reviewers
+check "a ### heading under another section is no name" \
+  "--result names 'decoy', which neither the Run file's Verification results nor the profile's Verification headings name" \
+  "$(inerr "$added" close 3 --file "$fa" --result decoy=pass)"
 check "the near misses left the record unchanged" "$was" "$(cat "$fa")"
 cp "$profile" "$added/docs/agents/ship.md"; add_verif 'live-run  '
 check_rc "close 3 takes a result for the heading the profile gained, trailing blanks trimmed as gate clean trims them" 0 \

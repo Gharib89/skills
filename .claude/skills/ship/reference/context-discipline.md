@@ -106,9 +106,8 @@ gate judges the profile's headings: pass it to `close 3` with the rest.
 those init named, so a run whose PR adds a Verification closes phase 3 with a
 `--result` for each instead of skipping it. Close a phase only once its
 `Done when:` holds: the mechanic stamps whatever close it is given, except
-that `close 3`, `close 4` and
-`close 7` refuse without the results or evidence lines
-[implement.md](implement.md#phase-4-evidence-lines) and
+that `close 3`, `close 4` and `close 7` refuse without the results or evidence
+lines [implement.md](implement.md#phase-4-evidence-lines) and
 [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps
 all ten items and `skip`s each collapsed phase, so the record shows a decision
 and not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
