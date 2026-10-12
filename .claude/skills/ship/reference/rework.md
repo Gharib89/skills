@@ -61,8 +61,9 @@ The lane keys, and the small lane's size cap, measure the rework's own diff,
 1. `open-pr <issue> --rework` pushes and answers with the open PR, creating
    none. Its `created_at` is null.
 2. Rewrite the title with `update-pr-title` when it no longer matches `Grade:`.
-3. Rewrite each body section the rework changed with `update-pr-body --section`.
-   The Change outline and Verification sections always need it.
+3. Rewrite each body section the rework changed with
+   `update-pr-body --section --body-file`. The Change outline and Verification
+   sections always need it.
 4. Read the result back with `read-pr`.
 5. Skip `reflect`, since the issue already links the PR.
 6. Answer each feedback thread with `reply-thread`, saying what changed, or why
