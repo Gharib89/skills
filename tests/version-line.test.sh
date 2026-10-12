@@ -131,7 +131,7 @@ check_rc "an unchanged tree passes" 0 "$(rc_of "$d")"
 # --- adding a line is not moving one -----------------------------------------
 
 # A new skill arrives carrying its first version line.
-base_repo added; mkdir -p "$d/skills/new"
+base_repo added; mkdir -p "$d/skills/new" || setup_failed "$d" mkdir
 printf -- '---\nname: new\nmetadata:\n  version: 0.1.0\n---\n' > "$d/skills/new/SKILL.md"
 git_ "$d" add -Af
 check_rc "a new skill's first version line passes" 0 "$(rc_of "$d")"
