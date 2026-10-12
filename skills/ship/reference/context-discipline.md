@@ -79,10 +79,9 @@ path, can still write it. `--scratchpad <dir>` overrides the root. Init also
 prints `scratch`, `<root>/scratch-<issue>`, the run's own scratch root, and
 opens phase 0. It refuses an existing record: a resumed run reads that one, and
 a new run of an issue whose earlier run stopped passes `--rebuild` to replace
-it. `cleanup`
-removes both directories after the merge; a free-text run (`cleanup none`)
-leaves its `ship-<slug>/` and `scratch-<slug>/` in place, and a run that stops
-before the merge gate leaves its record.
+it. `cleanup` removes both directories after the merge; a free-text run
+(`cleanup none`) leaves its `ship-<slug>/` and `scratch-<slug>/` in place, and a
+run that stops before the merge gate leaves its record.
 
 The file is the run's **record**, the source of truth for where the run is and
 the home of the design and plan; it survives a mid-run context summary, so work

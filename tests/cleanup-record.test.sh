@@ -61,13 +61,13 @@ out=$(cd "$repo" && bash "$c" none 2>/dev/null)
 check "none answers none" none "$(jq -r .record <<<"$out")"
 check "none leaves its record" yes "$([ -f "$root/ship-none/run.md" ] && echo yes || echo no)"
 
-# With no sha256sum or shasum the record root cannot be named: a failed step,
-# not `none`, since a record may well exist.
+# With a failing cksum the record root cannot be named: a failed step, not
+# `none`, since a record may well exist.
 nohash=$tmp/nohash; mkdir -p "$nohash"
-for t in sha256sum shasum; do printf '#!/bin/sh\nexit 127\n' > "$nohash/$t"; chmod +x "$nohash/$t"; done
+printf '#!/bin/sh\nexit 1\n' > "$nohash/cksum"; chmod +x "$nohash/cksum"
 mk 13
 out=$(cd "$repo" && PATH=$nohash:$PATH bash "$c" 13 2>/dev/null); rc=$?
-check "no hash tool answers failed" failed "$(jq -r .record <<<"$out")"
+check "a failing cksum answers failed" failed "$(jq -r .record <<<"$out")"
 check_rc "and cleanup exits 1" 1 "$rc"
 check "and the record is left in place" yes "$([ -f "$root/ship-13/run.md" ] && echo yes || echo no)"
 

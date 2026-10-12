@@ -107,6 +107,15 @@ reset; grade minor
 opn none "fix: x" >/dev/null; rc=$?
 check_rc "open-pr: issue none is never checked" 0 "$rc"
 
+# A record root that cannot be named is a failed read, not "no grade": refused.
+reset; grade minor
+nohash=$work/nohash; mkdir -p "$nohash"
+printf '#!/bin/sh\nexit 1\n' > "$nohash/cksum"; chmod +x "$nohash/cksum"
+out=$( cd "$repo" && PATH=$nohash:$PATH bash "$open" 7 --title "fix(ship): a small thing" --body-file "$work/body.md" 2>/dev/null ); rc=$?
+check_rc "open-pr: a failing cksum refuses rather than skipping the check" 1 "$rc"
+check "open-pr: and names the reason" 'cannot read the recorded grade: cksum failed' "$(jq -r .error <<<"$out")"
+check "open-pr: nothing is pushed then" none "$(pushed)"
+
 # One shape for the line `run-file grade` writes and this reads: an optional "- "
 # before `Grade:`, and blanks after the heading.
 reset; grade none; mkdir -p "$records/ship-7"

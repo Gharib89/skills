@@ -26,9 +26,8 @@
 # _lib.sh says why it sits there. `--scratchpad <dir>` names another root;
 # outside a git checkout it is the only one. Under the root,
 # `ship-<issue>/run.md` is the Run file and `scratch-<issue>/` is the run's
-# Scratch directory, which `init` creates and
-# returns as `scratch`; the roles' subdirectories are the callers'. `cleanup`
-# removes both.
+# Scratch directory, which `init` creates and returns as `scratch`; the roles'
+# subdirectories are the callers'. `cleanup` removes both.
 #
 # The `--issue` form reads the layout `init` wrote. `init` owns that layout, so
 # it is the mechanic that resolves it: a run whose context was compacted still
@@ -307,7 +306,7 @@ resolve_root() {
   root=$(ship_record_root)
   case $? in
     0) ;;
-    2) ship_tooling "no sha256sum or shasum on PATH: pass --scratchpad <dir>" ;;
+    2) ship_tooling "cksum failed: pass --scratchpad <dir>" ;;
     *) ship_tooling "not inside a git checkout: pass --scratchpad <dir>" ;;
   esac
 }

@@ -35,8 +35,8 @@ j=$(at "$wt" init 7)
 root=$(dirname "$(jq -r .scratch <<<"$j")")
 key=${root#"$XDG_STATE_HOME/ship/"}
 check "init from a worktree writes under the state directory's ship root" "$XDG_STATE_HOME/ship" "$(dirname "$root")"
-check "the repo key is one path component below that root, carrying no git text" yes \
-  "$([[ $key != "$root" && -n $key && $key != */* && $key != *git* ]] && echo yes || echo no)"
+check "the repo key is one path component of digits below that root, so no git text" yes \
+  "$([[ $key != "$root" && $key =~ ^[0-9]+$ ]] && echo yes || echo no)"
 check "the run file sits under that root" "$root/ship-7/run.md" "$(jq -r .run_file <<<"$j")"
 check "init reports the run's scratch directory" "$root/scratch-7" "$(jq -r .scratch <<<"$j")"
 check "the scratch directory exists" yes "$([ -d "$root/scratch-7" ] && echo yes || echo no)"
@@ -65,14 +65,14 @@ check "a second clone resolves its own root" yes "$([ "$other" != "$root" ] && [
 check "no XDG_STATE_HOME falls back to ~/.local/state" "$tmp/home/.local/state/ship/${root##*/}/ship-7/run.md" \
   "$(env -u XDG_STATE_HOME HOME="$tmp/home" bash -c 'cd "$1" && bash "$2" init 7' _ "$wt" "$m" 2>/dev/null | jq -r .run_file)"
 
-# With no sha256sum or shasum the key would be empty and every repo would share
-# one root, so init refuses rather than defaulting.
+# A cksum that fails would leave the key empty and every repo sharing one root,
+# so init refuses rather than defaulting.
 nohash=$tmp/nohash; mkdir -p "$nohash"
-for t in sha256sum shasum; do printf '#!/bin/sh\nexit 127\n' > "$nohash/$t"; chmod +x "$nohash/$t"; done
-check_rc "init with no hash tool and no --scratchpad is malformed" 2 \
+printf '#!/bin/sh\nexit 1\n' > "$nohash/cksum"; chmod +x "$nohash/cksum"
+check_rc "init with a failing cksum and no --scratchpad is malformed" 2 \
   "$(PATH=$nohash:$PATH inrc "$wt" init 30)"
 check "the refusal names the missing tool and --scratchpad" \
-  "no sha256sum or shasum on PATH: pass --scratchpad <dir>" "$(PATH=$nohash:$PATH inerr "$wt" init 30)"
+  "cksum failed: pass --scratchpad <dir>" "$(PATH=$nohash:$PATH inerr "$wt" init 30)"
 
 # Outside a checkout there is no root to default to: the refusal names the flag.
 nogit=$tmp/nogit; mkdir -p "$nogit"

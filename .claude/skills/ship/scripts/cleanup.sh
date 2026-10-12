@@ -17,7 +17,7 @@
 #   record: "removed" when the run's record and scratch directory came off,
 #     "none" when there was nothing to remove (the issue is `none`, or no record
 #     existed), "failed" when an rm failed or the record root could not be
-#     named (no sha256sum or shasum)
+#     named (cksum failed)
 # exit: 0 clean · 1 a step failed (JSON says which) · 2 usage or tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
