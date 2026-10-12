@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# `cleanup` also removes the run's record: <git common dir>/ship/ship-<issue>
-# and scratch-<issue>, before the worktree goes. Driven over a fixture repo with
+# `cleanup` also removes the run's record: ship-<issue> and scratch-<issue> under
+# the record root, before the worktree goes. Driven over a fixture repo with
 # a worktree in the `<repo>/.claude/worktrees/<type>-<slug>-<issue>` layout the mechanic
-# globs; cleanup loads no host adapter, so nothing reaches one.
+# globs, under a throwaway XDG_STATE_HOME; cleanup loads no host adapter, so
+# nothing reaches one.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -16,17 +17,18 @@ repo=$tmp/repo
 git init -q -b main "$repo"
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }
 g commit -q --allow-empty -m one
-root=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)/ship
+export XDG_STATE_HOME=$tmp/state
 
 mk() { # mk <issue>: a worktree, a branch and a record for the issue
   g worktree add -q "$repo/.claude/worktrees/feat-$1" -b "feat/x-$1"
-  ( cd "$repo" && bash "$r" init "$1" >/dev/null )
+  root=$(dirname "$(dirname "$(cd "$repo" && bash "$r" init "$1" | jq -r .run_file)")")
   echo "scratch" > "$root/scratch-$1/note"
 }
 
 mk 7
 out=$(cd "$repo" && bash "$c" 7 2>/dev/null); rc=$?
 check_rc "cleanup exits ok" 0 "$rc"
+check "the record sat under the state directory" "$XDG_STATE_HOME/ship" "$(dirname "$root")"
 check "the JSON says the record was removed" removed "$(jq -r .record <<<"$out")"
 check "the run file is gone" no "$([ -e "$root/ship-7" ] && echo yes || echo no)"
 check "the scratch directory is gone" no "$([ -e "$root/scratch-7" ] && echo yes || echo no)"
@@ -40,7 +42,7 @@ mk 8; mk 9
 check "another issue's record stays" yes "$([ -f "$root/ship-9/run.md" ] && [ -d "$root/scratch-9" ] && echo yes || echo no)"
 
 # Cleanup run from inside the worktree whose record it removes: the record
-# lives under the common dir, so the worktree's removal is not in its way.
+# lives outside every checkout, so the worktree's removal is not in its way.
 out=$(cd "$repo/.claude/worktrees/feat-9" && bash "$c" 9 2>/dev/null)
 check "cleanup from inside the worktree removes the record" removed "$(jq -r .record <<<"$out")"
 

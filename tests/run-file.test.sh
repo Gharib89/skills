@@ -10,7 +10,7 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
@@ -494,13 +494,13 @@ check "an --issue with no record names the path it resolved and the rebuild" \
   "no Run file at $tmp/ship-nothing-here/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
   "$(err close 4 --issue nothing-here --scratchpad "$tmp")"
 
-# With no --scratchpad the record root is the git common dir's, so a TMPDIR no
-# longer decides where a run looks: the lookup lands under the checkout's .git
-# (`tests/run-file-record.test.sh` proves the round trip) and names that path.
-common=$(git rev-parse --path-format=absolute --git-common-dir)
-check "--scratchpad defaults to the git common dir, not the OS temp dir" \
-  "no Run file at $common/ship/ship-218/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log" \
-  "$(TMPDIR=$tmp err timing --issue 218)"
+# With no --scratchpad the record root is the state directory's, so a TMPDIR no
+# longer decides where a run looks: the lookup lands under XDG_STATE_HOME
+# (`tests/run-file-record.test.sh` proves the round trip and the repo key) and
+# names that path.
+e=$(XDG_STATE_HOME=$tmp/state TMPDIR=$tmp/os err timing --issue 218)
+check "--scratchpad defaults to the state directory, not the OS temp dir" yes \
+  "$([[ $e == "no Run file at $tmp/state/ship/"*"/ship-218/run.md: check that path first; if it is the right one, a subagent removed the Run file; rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`"* ]] && echo yes || echo no)"
 
 # --- phase order ---------------------------------------------------------------
 
