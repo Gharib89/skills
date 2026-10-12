@@ -77,6 +77,18 @@ out=$(cd "$repo" && PATH="$tmp/bin:$PATH" bash "$m" 7 feat x --rework 2>/dev/nul
 check_rc "a failed merge-base exits 2" 2 "$rc"
 check "and names the comparison" "cannot compare feat/x-7 with origin/feat/x-7" "$(jq -r .error <<<"$out")"
 
+# A worktree whose status cannot be read is never taken for clean.
+g -C "$repo" branch -f feat/x-7 "$tip"
+(cd "$repo" && bash "$m" 7 feat x --rework >/dev/null 2>&1)
+cat > "$tmp/bin/git" <<SHIM
+#!/usr/bin/env bash
+[[ " \$* " == *" status --porcelain "* ]] && exit 128
+exec "$(command -v git)" "\$@"
+SHIM
+out=$(cd "$repo" && PATH="$tmp/bin:$PATH" bash "$m" 7 feat x --rework 2>/dev/null); rc=$?
+check_rc "an unreadable worktree status is not reused" 1 "$rc"
+check "the refusal names it" "worktree exists: $wt" "$(jq -r .error <<<"$out")"
+
 check_rc "--rework has no in-place form" 2 \
   "$(cd "$repo" && bash "$m" 7 feat x --rework --in-place >/dev/null 2>&1; echo $?)"
 

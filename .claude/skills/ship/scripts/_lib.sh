@@ -432,11 +432,12 @@ ship_worktree_container() {
 
 # ship_worktree_at <worktree> <branch> <sha>: whether the worktree is on the
 # branch, at the sha, with nothing uncommitted: the one a Rework run reuses, so
-# it never builds on work it cannot see on the PR.
+# it never builds on work it cannot see on the PR. A read that fails is a no.
 ship_worktree_at() {
+  local s
   [ "$(git -C "$1" rev-parse --abbrev-ref HEAD 2>/dev/null)" = "$2" ] \
     && [ "$(git -C "$1" rev-parse HEAD 2>/dev/null)" = "$3" ] \
-    && [ -z "$(git -C "$1" status --porcelain 2>/dev/null)" ]
+    && s=$(git -C "$1" status --porcelain 2>/dev/null) && [ -z "$s" ]
 }
 
 # The base ref, resolved from origin/HEAD rather than a hardcoded branch (ADO
