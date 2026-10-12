@@ -1,0 +1,63 @@
+name: Scope probe
+
+# Throwaway (#616 criterion 6): runs claude-review.yml's `issue` step on
+# github.token for this PR, once with that workflow's permissions block and
+# once without `issues: read`. Deleted in the next commit.
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  with-issues-read:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          awk '/^ *- id: issue$/ { s = 1; next }
+               s && !r && /^ *run: \|$/ { r = 1; next }
+               r { if ($0 == "") { print; next }
+                   match($0, /^ */); if (!ind) ind = RLENGTH
+                   if (RLENGTH < ind) exit; print substr($0, ind + 1) }' \
+            .github/workflows/claude-review.yml > "$RUNNER_TEMP/step.sh"
+          bash -e -o pipefail "$RUNNER_TEMP/step.sh"
+          cat "$RUNNER_TEMP/linked-issue.md"
+          grep -qx '# Issue #616' "$RUNNER_TEMP/linked-issue.md"
+
+  without-issues-read:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          awk '/^ *- id: issue$/ { s = 1; next }
+               s && !r && /^ *run: \|$/ { r = 1; next }
+               r { if ($0 == "") { print; next }
+                   match($0, /^ */); if (!ind) ind = RLENGTH
+                   if (RLENGTH < ind) exit; print substr($0, ind + 1) }' \
+            .github/workflows/claude-review.yml > "$RUNNER_TEMP/step.sh"
+          bash -e -o pipefail "$RUNNER_TEMP/step.sh"
+          cat "$RUNNER_TEMP/linked-issue.md"
+          grep -qx '# Issue #616' "$RUNNER_TEMP/linked-issue.md"
