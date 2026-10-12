@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.0 (2026-10-12)
+
+### Features
+
+- **update-skills**: Plan.sh drops the one-time 0.x renumber crossing
+  ([#595](https://github.com/Gharib89/skills/pull/595),
+  [`70dd4a5`](https://github.com/Gharib89/skills/commit/70dd4a5bb91a1d2408eff85cc7f52ab0fd2a92c8))
+
+
 ## v0.7.3 (2026-10-12)
 
 ### Bug Fixes
