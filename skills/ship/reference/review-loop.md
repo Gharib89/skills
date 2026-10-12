@@ -67,7 +67,8 @@ it on its own, so disposition that round, which opens no further one.
 **The cap round, a docs-only round and a not-landed primary's last round each
 get one local review before the merge gate** when their fixes changed the
 tree: one `code-review` subagent, Standards axis only, over the fix-only
-diff. Its findings take the dispositions above;
+diff, its Report file `<scratch>/standards/standards-report-local.md` so it
+never overwrites phase 4's round 1. Its findings take the dispositions above;
 `Cap:` is unchanged and no host round is requested. Skip this review for a
 primary capped with findings or stopped `not landed` whose fallback then exited
 `reviewed`: the fallback's host rounds read those fixes. The review goes to the

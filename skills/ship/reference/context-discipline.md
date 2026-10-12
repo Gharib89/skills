@@ -116,7 +116,10 @@ failed to arrive: two fix-and-retry attempts, as SKILL.md's stops allow, then
 `red-after-retry`. An inline pass writes the same file itself before
 dispositioning. The Run file's `## Design and plan` names every round's paths
 as each round is dispatched; disposition from the file, and quote the merge
-summary's `Self-review` rows from it.
+summary's `Self-review` rows from it. Phase 7's
+[local review](review-loop.md#the-round) writes
+`<scratch>/standards/standards-report-local.md` under the same rule, a path no
+phase-4 round uses.
 
 **A clobbered Run file** answers a flip with a refusal naming a missing line or
 a missing file, and each refusal carries its check and the rebuild. A `--state`
