@@ -107,6 +107,13 @@ d=$(tree at-1024)
 skill "$d" long name: long "description: $(desc 1024)"
 check_rc "a 1,024-character description passes" 0 "$(rc_of "$d")"
 
+# Characters, not bytes, under any locale: the cloud sandbox runs with LANG and
+# LC_ALL empty, where a shell's own length counts a `·` as two.
+d=$(tree multibyte)
+skill "$d" long name: long "description: ·$(desc 1023)"
+check_rc "a 1,024-character description with a multibyte character passes under LC_ALL=C" \
+  0 "$(LC_ALL=C rc_of "$d")"
+
 d=$(tree over-1024)
 skill "$d" long name: long "description: $(desc 1025)"
 check_rc "a 1,025-character description fails" 1 "$(rc_of "$d")"
