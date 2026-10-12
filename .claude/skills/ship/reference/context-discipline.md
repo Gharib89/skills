@@ -101,10 +101,12 @@ on re-runs that Verification scoped to the fix before phase 3 closes. `close 3`
 takes one `--result <name>=<word>` per Verification named at init (`n/a` for one
 whose `Applies when:` you judged false) and refuses while one is missing. A
 Verification the PR adds to the profile owes a result too, since the merge
-gate judges the profile's headings: `close 3` takes it, re-opened with `open 3`
-if it already closed. `skip 3 "<reason>"` settles each one still pending as
-`n/a: <reason>`. Close a phase only once its `Done when:` holds: the mechanic
-stamps whatever close it is given, except that `close 3`, `close 4` and
+gate judges the profile's headings: pass it to `close 3` with the rest.
+`skip 3 "<reason>"` settles each one still pending as `n/a: <reason>`, and only
+those init named, so a run whose PR adds a Verification closes phase 3 with a
+`--result` for each instead of skipping it. Close a phase only once its
+`Done when:` holds: the mechanic stamps whatever close it is given, except
+that `close 3`, `close 4` and
 `close 7` refuse without the results or evidence lines
 [implement.md](implement.md#phase-4-evidence-lines) and
 [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps

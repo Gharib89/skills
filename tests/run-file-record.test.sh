@@ -457,7 +457,8 @@ to_phase3() { # to_phase3 <run file>
 printf '%s\n' '{"status":"green","head_sha":"abcdef0123456789","checks":[],"legs":[],"missing_legs":[],"failing":[],"non_leg_failing":[],"unlisted":[],"waited_s":0}' > "$tmp/ci.json"
 holds_verif() { # holds_verif <run file> <name>: the gate-clean holds naming that verification
   at "$added" gate clean "$tmp/ci.json" --head abcdef0123456789 --file "$1" \
-    | jq -r --arg v "verification $2:" '[.held_by[] | select(startswith($v))] | join(",")'
+    | jq -r --arg v "verification $2:" 'if (.held_by | type) == "array"
+        then [.held_by[] | select(startswith($v))] | join(",") else "no answer: \(.error)" end'
 }
 fa=$(at "$added" init 80 --from-profile | jq -r .run_file)
 to_phase3 "$fa"
@@ -476,11 +477,22 @@ check_rc "a profile-added heading with a result word as a later field is malform
 check "that refusal is init's" \
   "a Verification heading cannot carry a result word as a later field: 'Build: pass' would read as a settled result while pending; rename it" \
   "$(inerr "$added" close 3 --file "$fa" --result 'Build: pass=n/a')"
+# --result splits the name at its first `=`, so a heading carrying one is never
+# the name looked up: its tail reaches the word check instead.
 add_verif 'a=b'
-check_rc "a profile-added heading carrying = is malformed" 2 "$(inrc "$added" close 3 --file "$fa" --result 'a=b=pass')"
+check "a profile-added heading carrying = cannot be named: its tail is refused as the word" \
+  "--result word 'b=pass' is not one of pass, fail, deferred-to-ci, unavailable, unexercised, n/a" \
+  "$(inerr "$added" close 3 --file "$fa" --result 'a=b=pass')"
 check "the refused headings left the record unchanged" "$was" "$(cat "$fa")"
+# The lookup is the whole heading under ## Verification and nowhere else.
 cp "$profile" "$added/docs/agents/ship.md"; add_verif live-run
-check_rc "close 3 takes a result for the heading the profile gained" 0 \
+check_rc "a prefix of an added heading is no name" 2 "$(inrc "$added" close 3 --file "$fa" --result live=pass)"
+awk '{ print } $0 == "## Reviewers" { print ""; print "### decoy" }' "$added/docs/agents/ship.md" > "$tmp/added.md" \
+  && mv "$tmp/added.md" "$added/docs/agents/ship.md"
+check_rc "a ### heading under another section is no name" 2 "$(inrc "$added" close 3 --file "$fa" --result decoy=pass)"
+check "the near misses left the record unchanged" "$was" "$(cat "$fa")"
+cp "$profile" "$added/docs/agents/ship.md"; add_verif 'live-run  '
+check_rc "close 3 takes a result for the heading the profile gained, trailing blanks trimmed as gate clean trims them" 0 \
   "$(inrc "$added" close 3 --file "$fa" --result github-mechanics=pass --result ado-mechanics=pass --result live-run=n/a)"
 check "the new entry is appended to the results section" \
   '## Verification results
@@ -497,7 +509,7 @@ at "$added" open 3 --file "$fa" >/dev/null
 check_rc "a re-opened phase 3 takes a heading added after it closed" 0 "$(inrc "$added" close 3 --file "$fa" --result second=pass)"
 check "that heading is recorded" '- second: pass' "$(grep '^- second: ' "$fa")"
 # A profile that named no Verification at init has no results section to append to.
-printf '## Local gate\n\nTripwires: None.\n\n## Verification\n' > "$added/docs/agents/ship.md"
+printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n' > "$added/docs/agents/ship.md"
 fe=$(at "$added" init 81 --from-profile | jq -r .run_file)
 to_phase3 "$fe"
 add_verif first-check
@@ -505,5 +517,6 @@ check_rc "the first heading a PR adds is recorded" 0 "$(inrc "$added" close 3 --
 check "it opens the results section" '## Verification results
 
 - first-check: pass' "$(sed -n '/^## Verification results$/,$p' "$fe")"
+check "gate clean reads the section it opened" '' "$(holds_verif "$fe" first-check)"
 
 finish

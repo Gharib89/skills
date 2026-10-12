@@ -57,13 +57,14 @@
 # `--verifications` names a comma list of name-shaped words (one
 # `- <name>: pending` each, which `close 3 --result <name>=<word>` settles with
 # one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, and which
-# `close 3` will not pass while any is pending; a name with no entry that the
-# checkout profile's `## Verification` names, a heading the PR added after init,
-# is appended under the same heading checks init applies), then `Design and plan`,
+# `close 3` will not pass while any is pending), then `Design and plan`,
 # `Deviations log`, and `Direct reads`, one line per informational read the run
 # made straight through the host's REST form, no mechanic covering it, so one
 # that recurs across runs is visible as a mechanic to promote. `skip 3 <reason>`
-# settles each still-pending result as `n/a: <reason>`. `gate record`
+# settles each still-pending result as `n/a: <reason>`. `close 3 --result` also
+# takes a name the Run file lacks when the checkout profile has it as a
+# `## Verification` heading, one the PR added after init: it applies init's
+# heading checks to the name, then appends its entry. `gate record`
 # appends the local gate's verdict, the head it ran on and the verdict JSON's
 # `gates` object (compact, one line, absent when the JSON has none) to a
 # `Local gate` section; `gate read` answers whether the head the run is at is
@@ -409,8 +410,8 @@ pending_verifs() {
     $0 ~ /: pending$/ && $0 !~ ("^- .*: (" ENVIRON["w"] ")(:|$)") { sub(/^- /, ""); sub(/: pending$/, ""); print }'
 }
 # One `--result <name>=<word>[: <note>]`, checked against the names `init`
-# recorded, then the checkout profile's Verification headings; sets rname, rword,
-# rnote and radd, true for a name only the profile holds.
+# recorded, then the checkout profile's Verification headings; sets rname,
+# rword, rnote and radd, true for a name only the profile holds.
 parse_result() { # parse_result <arg>
   local rest path
   case $1 in *=*) ;; *) ship_tooling "--result takes <name>=<word>[: <note>], word one of ${result_words//|/, }" ;; esac
@@ -425,8 +426,9 @@ parse_result() { # parse_result <arg>
   # than by cutting the line at the first one.
   radd=false
   results_lines | nm=$rname awk 'index($0, "- " ENVIRON["nm"] ": ") == 1 { f = 1 } END { exit !f }' && return 0
-  # `gate clean` judges the profile's headings, not init's list, so a heading the
-  # PR adds after init owes a result that only this fallback can record (#621).
+  # `gate clean` judges the profile's headings, not init's list, so a heading
+  # the PR adds after init owes a result that only this fallback can record
+  # (#621).
   if path=$(ship_profile_path) && [ -r "$path" ] &&
     profile_headings Verification "$(cat "$path")" | nm=$rname awk '$0 == ENVIRON["nm"] { f = 1 } END { exit !f }'; then
     refuse_bad_headings "$rname"; radd=true; return 0
