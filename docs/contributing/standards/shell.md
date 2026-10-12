@@ -39,6 +39,10 @@ exceptions bound these rules.
   `gh auth token --hostname github.com` or `az account show` whether the owner
   is signed in, both local reads that reach no host, because it runs before
   Ship and its adapters are installed; the answer decides only its `tools` row.
+  A sixth: `scripts/live-run-ship.sh` files, reads and closes issues and PRs,
+  and deletes branches, on the fixture repo with `gh`, because those writes are
+  a live run's scaffolding around Ship, not Ship's own, and the mechanics are
+  what it tests.
   A read made directly in two runs is a candidate mechanic.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
