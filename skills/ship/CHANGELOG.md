@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.1 (2026-10-12)
+
+### Bug Fixes
+
+- **ship**: Name the phase-7 local review's Report file
+  ([#599](https://github.com/Gharib89/skills/pull/599),
+  [`0d96d44`](https://github.com/Gharib89/skills/commit/0d96d448cc80120d960130ccd3900fb83ecb7972))
+
+
 ## v0.25.0 (2026-10-12)
 
 ### Features
