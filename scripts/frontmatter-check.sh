@@ -79,8 +79,8 @@ while IFS= read -r n; do
   [ "$fence" = closed ] || { echo "$rel: frontmatter has no closing ---"; rc=1; continue; }
   # Characters under any locale: the cloud sandbox runs with LANG and LC_ALL
   # empty, where ${#desc} counts bytes, so drop UTF-8 continuation bytes first.
-  n=$(printf %s "$desc" | LC_ALL=C tr -d '\200-\277' | wc -c) || exit 2
-  [ "$n" -le 1024 ] || { echo "$rel: description is $n characters, over 1024"; rc=1; }
+  len=$(printf %s "$desc" | LC_ALL=C tr -d '\200-\277' | wc -c) || exit 2
+  [ "$len" -le 1024 ] || { echo "$rel: description is $len characters, over 1024"; rc=1; }
   [ "$dmi" = true ] && continue
   case $desc in *"Use when"*) ;; *) echo "$rel: description has no \"Use when\" clause"; rc=1 ;; esac
 done <<<"$names"

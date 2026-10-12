@@ -113,6 +113,10 @@ d=$(tree multibyte)
 skill "$d" long name: long "description: ·$(desc 1023)"
 check_rc "a 1,024-character description with a multibyte character passes under LC_ALL=C" \
   0 "$(LC_ALL=C rc_of "$d")"
+d=$(tree multibyte-over)
+skill "$d" long name: long "description: ·$(desc 1024)"
+check "the multibyte character still counts as one" \
+  "skills/long/SKILL.md: description is 1025 characters, over 1024" "$(LC_ALL=C out_of "$d")"
 
 d=$(tree over-1024)
 skill "$d" long name: long "description: $(desc 1025)"
