@@ -38,6 +38,14 @@ npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill up
   && .claude/skills/ship/scripts/preflight.sh none
 ```
 
+`codebase-design` is no skill ship composes, but `tdd` calls it through the
+Skill tool, so it is installed at `tdd`'s pin, where a cloud sandbox finds it in
+the checkout:
+
+```sh
+npx skills add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill codebase-design --agent claude-code -y
+```
+
 **A change to `skills/<name>/` is not finished until the refresh line has run
 and both trees are in the same commit.** `.claude/skills/` is what actually
 executes, so an unrefreshed change means the run is exercising the previous
