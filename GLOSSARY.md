@@ -90,6 +90,14 @@ _Avoid_: pause, wait-state, hand-back (that releases the claim)
 An acceptance criterion asking for a host action no mechanic performs, which a run leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Merging needs the human's explicit waiver of each, beside the merge word. Not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
 _Avoid_: rewritten criterion, descoped criterion
 
+**Spec precedence**:
+The rule that a later triage brief or authoritative comment, each posted by someone with write access to the repo, supersedes the issue body: where they conflict, the latest one wins and the body's original acceptance criteria no longer bind.
+_Avoid_: override, latest-wins
+
+**Authoritative comment**:
+A comment on the issue by someone with write access to the repo. Only it, or a triage brief by such an author, can supersede the issue body under spec precedence; any other comment, a brief by anyone else included, is context, never spec. A comment whose author's access cannot be read is not authoritative, in every lane.
+_Avoid_: maintainer comment, official comment
+
 **Host**:
 The platform holding a repo's code, pull requests, CI and tracker: GitHub, or Azure DevOps (Repos, Pipelines, Boards). Ship reads it off the repo's remote and the ship profile names it as a cross-check; every generic mechanic has one adapter per host inside the skill, selected from the ones it carries. A host's own words (label or tag, assignee or Assigned To, review thread or thread) stop at the mechanics, which translate them into Ship's own vocabulary.
 _Avoid_: tracker (Boards is one part of a host), provider, platform
