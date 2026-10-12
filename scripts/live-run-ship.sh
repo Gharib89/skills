@@ -40,6 +40,7 @@ trap 'reset_host; rm -rf "$tmp"' EXIT
 trap 'exit 2' INT TERM
 co=$tmp/fixture
 issue=""
+mark="" # set just before the issue create; see marked_issue
 run_heads="" # head branches of the run's PRs, gathered as reset_host closes them
 tooling() { echo "$1" >&2; exit 2; }
 
@@ -80,10 +81,19 @@ run_branches() { # -> one branch name per line
   done
 }
 
+# The open issue carrying this invocation's marker, or nothing.
+marked_issue() {
+  gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=10" \
+    | jq -r --arg m "$mark" '[.[] | select(.pull_request == null and ((.body // "") | contains($m)))][0].number // empty'
+}
+
 # Close the run's issue and PRs and delete its branches. A read, close or delete
 # that fails is said on stderr and returns 2: on the EXIT-trap path no read-back
 # follows, so this is the only report a tooling exit or a Ctrl-C leaves.
 reset_host() {
+  # A signal can land while the create's response is in flight: the issue may
+  # exist with its number unknown, so look for it by the marker.
+  [ -n "$issue" ] || [ -z "$mark" ] || issue=$(marked_issue)
   [ -n "$issue" ] || return 0
   local prs mine n h b branches rc=0
   if prs=$(open_prs) && mine=$(run_prs "$prs"); then
@@ -141,8 +151,7 @@ BODY
 # A create whose response was lost may still have landed: re-read the newest
 # open issues for its marker before calling the create failed, so cleanup can
 # close it.
-[ -n "$issue" ] || issue=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=10" \
-  | jq -r --arg m "$mark" '[.[] | select(.pull_request == null and ((.body // "") | contains($m)))][0].number // empty')
+[ -n "$issue" ] || issue=$(marked_issue)
 [ -n "$issue" ] || tooling "cannot file the issue on $repo"
 
 start=$(date +%s)
