@@ -270,12 +270,11 @@ ship_fail() {
 # the one shape `run-file grade` reads and writes. Prints nothing when there is
 # no Run file, no such line or a word that is not one of the three: no recorded
 # grade is no check, since a run that never graded has nothing to enforce.
-# Returns 2 when the record root cannot be named (cksum failed): that is a failed
-# read, not an absent grade.
+# Returns nonzero when the record root cannot be named or the Run file cannot be
+# read: a failed read, not an absent grade.
 ship_recorded_grade() { # <issue>
   local root file
-  root=$(ship_record_root)
-  case $? in 0) ;; 2) return 2 ;; *) return 0 ;; esac
+  root=$(ship_record_root) || return 2
   file=$root/ship-$1/run.md
   [ -f "$file" ] || return 0
   awk '/^## /{ f = ($0 ~ /^## Grade[ \t\r]*$/) }
@@ -297,12 +296,12 @@ ship_title_grade() { # <title>
 # ship_require_grade <issue> <title>: exit 1 when the title grades below the
 # issue's recorded grade. `Grade: minor` and `Grade: breaking` both need a
 # `feat` or a `!` title (a 0.x skill's break is titled feat);
-# `Grade: patch` accepts any. Also exit 1 when the record root cannot be named,
-# a failed read rather than no grade. Run before the push or host write the
-# title feeds.
+# `Grade: patch` accepts any. Exit 2 when the recorded grade cannot be read,
+# which is tooling, not a grade. Run before the push or host write the title
+# feeds.
 ship_require_grade() { # <issue> <title>
   local want have type
-  want=$(ship_recorded_grade "$1") || ship_fail "cannot read the recorded grade: cksum failed"
+  want=$(ship_recorded_grade "$1") || ship_tooling "cannot read the recorded grade: the record root or the Run file is unreadable"
   case $want in minor|breaking) ;; *) return 0 ;; esac
   have=$(ship_title_grade "$2")
   [ "$have" = patch ] || return 0
@@ -398,7 +397,7 @@ ship_main_checkout() {
 # ${XDG_STATE_HOME:-$HOME/.local/state}/ship/<repo key>, <repo key> the POSIX
 # `cksum` of the physical git common dir path. Keyed on the common dir, the main
 # checkout and every worktree of it resolve the same directory and two clones
-# never share one. It sits outside every checkout because a session isolated by
+# get different ones, short of a CRC collision among one user's clones. It sits outside every checkout because a session isolated by
 # `EnterWorktree` refuses an Edit, or a Bash command, that names a `.git` path
 # (measured, Claude Code 2.1.296), so the run could not write its own record
 # there; the key is digits for the same reason, since digits never spell `git`.

@@ -63,10 +63,10 @@ check "none leaves its record" yes "$([ -f "$root/ship-none/run.md" ] && echo ye
 
 # With a failing cksum the record root cannot be named: a failed step, not
 # `none`, since a record may well exist.
-nohash=$tmp/nohash; mkdir -p "$nohash"
-printf '#!/bin/sh\nexit 1\n' > "$nohash/cksum"; chmod +x "$nohash/cksum"
+badck=$tmp/badck; mkdir -p "$badck"
+printf '#!/bin/sh\nexit 1\n' > "$badck/cksum"; chmod +x "$badck/cksum"
 mk 13
-out=$(cd "$repo" && PATH=$nohash:$PATH bash "$c" 13 2>/dev/null); rc=$?
+out=$(cd "$repo" && PATH=$badck:$PATH bash "$c" 13 2>/dev/null); rc=$?
 check "a failing cksum answers failed" failed "$(jq -r .record <<<"$out")"
 check_rc "and cleanup exits 1" 1 "$rc"
 check "and the record is left in place" yes "$([ -f "$root/ship-13/run.md" ] && echo yes || echo no)"

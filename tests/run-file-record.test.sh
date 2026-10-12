@@ -67,12 +67,16 @@ check "no XDG_STATE_HOME falls back to ~/.local/state" "$tmp/home/.local/state/s
 
 # A cksum that fails would leave the key empty and every repo sharing one root,
 # so init refuses rather than defaulting.
-nohash=$tmp/nohash; mkdir -p "$nohash"
-printf '#!/bin/sh\nexit 1\n' > "$nohash/cksum"; chmod +x "$nohash/cksum"
+badck=$tmp/badck; mkdir -p "$badck"
+printf '#!/bin/sh\nexit 1\n' > "$badck/cksum"; chmod +x "$badck/cksum"
 check_rc "init with a failing cksum and no --scratchpad is malformed" 2 \
-  "$(PATH=$nohash:$PATH inrc "$wt" init 30)"
-check "the refusal names the missing tool and --scratchpad" \
-  "cksum failed: pass --scratchpad <dir>" "$(PATH=$nohash:$PATH inerr "$wt" init 30)"
+  "$(PATH=$badck:$PATH inrc "$wt" init 30)"
+check "the refusal names cksum and --scratchpad" \
+  "cksum failed: pass --scratchpad <dir>" "$(PATH=$badck:$PATH inerr "$wt" init 30)"
+garbage=$tmp/garbage; mkdir -p "$garbage"
+printf '#!/bin/sh\necho 12ab 5\n' > "$garbage/cksum"; chmod +x "$garbage/cksum"
+check_rc "a cksum answering a non-digit key is refused too" 2 \
+  "$(PATH=$garbage:$PATH inrc "$wt" init 31)"
 
 # Outside a checkout there is no root to default to: the refusal names the flag.
 nogit=$tmp/nogit; mkdir -p "$nogit"

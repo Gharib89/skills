@@ -13,7 +13,7 @@
 # breaking`, a title whose type grades patch (anything but `feat` or a `!`) is
 # refused before the push, naming the recorded grade and the type to use. No
 # Run file, no Grade line, `none` or a title that is no Conventional Commit is no
-# check. The Run file is read at
+# check; a record root or Run file that cannot be read is refused, exit 2. The Run file is read at
 # `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>/ship-<issue>/run.md`, so a
 # run started with `run-file --scratchpad <dir>` keeps its Run file elsewhere and
 # is not checked.
@@ -27,7 +27,7 @@
 # failure.
 #
 # stdout: {number, url, created_at, branch, base}
-# exit: 0 · 1 title grades below the recorded Grade, or push or create failed · 2 usage or wrong branch
+# exit: 0 · 1 title grades below the recorded Grade, or push or create failed · 2 usage, wrong branch, or the recorded grade could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path>'

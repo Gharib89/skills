@@ -109,11 +109,19 @@ check_rc "open-pr: issue none is never checked" 0 "$rc"
 
 # A record root that cannot be named is a failed read, not "no grade": refused.
 reset; grade minor
-nohash=$work/nohash; mkdir -p "$nohash"
-printf '#!/bin/sh\nexit 1\n' > "$nohash/cksum"; chmod +x "$nohash/cksum"
-out=$( cd "$repo" && PATH=$nohash:$PATH bash "$open" 7 --title "fix(ship): a small thing" --body-file "$work/body.md" 2>/dev/null ); rc=$?
-check_rc "open-pr: a failing cksum refuses rather than skipping the check" 1 "$rc"
-check "open-pr: and names the reason" 'cannot read the recorded grade: cksum failed' "$(jq -r .error <<<"$out")"
+badck=$work/badck; mkdir -p "$badck"
+printf '#!/bin/sh\nexit 1\n' > "$badck/cksum"; chmod +x "$badck/cksum"
+out=$( cd "$repo" && PATH=$badck:$PATH bash "$open" 7 --title "fix(ship): a small thing" --body-file "$work/body.md" 2>/dev/null ); rc=$?
+check_rc "open-pr: a failing cksum refuses as tooling rather than skipping the check" 2 "$rc"
+check "open-pr: and names the reason" 'cannot read the recorded grade: the record root or the Run file is unreadable' "$(jq -r .error <<<"$out")"
+if [ "$(id -u)" -ne 0 ]; then
+  reset; grade minor; chmod 000 "$runfile"
+  opn 7 "fix(ship): a small thing" >/dev/null; rc=$?
+  chmod 644 "$runfile"
+  check_rc "open-pr: an unreadable Run file refuses as tooling too" 2 "$rc"
+else
+  skipped "an unreadable Run file does not stop root"
+fi
 check "open-pr: nothing is pushed then" none "$(pushed)"
 
 # One shape for the line `run-file grade` writes and this reads: an optional "- "
