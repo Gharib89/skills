@@ -14,7 +14,7 @@ What both shapes do the same way, because ship reads a round off the host alone:
 - **Actions pinned to a commit SHA, and a checkout with `persist-credentials: false`**, which setup-harness's zizmor requires.
 - **`--max-turns 60`**, since a 30-turn cap does not cover a mid-size PR.
 - **An allowlist that covers every step of the prompt.** `sed` and `awk` stay denied on purpose: both execute embedded commands (sed's `e`, awk's `print | "cmd"`).
-- **Who may put text in front of the round**: the on-push shape skips a fork PR and the on-request shape admits only an `OWNER`, `MEMBER` or `COLLABORATOR` author. Issue text reaches the round only from authors who can push: an `issue` step before the action keeps, from each issue the PR closes, the body and comments whose author `GET /repos/{owner}/{repo}/collaborators/{login}/permission` reports with push access.
+- **Who may put text in front of the round**: the on-push shape skips a fork PR and the on-request shape admits only an `OWNER`, `MEMBER` or `COLLABORATOR` author. The issue text the round takes as spec comes only from authors who can push: an `issue` step before the action keeps, from each issue the PR closes, the body and comments whose author `GET /repos/{owner}/{repo}/collaborators/{login}/permission` reports with push access.
 - **A review POST of typed `-F` fields**, since Claude Code refuses a heredoc of JSON.
 - **A step that names denied calls** in the run log, with one warning carrying the count.
 - **A step that speaks when the job fails**, so a failed round is not read as silent. `pull-requests: write` admits `/issues/{n}/comments` on a pull request with no `issues` scope, but `issues: read` stays: the `issue` step reads the linked issue on `github.token`.

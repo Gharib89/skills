@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The Claude reviewer's `id: issue` step writes the text of the issues a PR
 # closes that the round may read as spec, keeping only what an author with push
-# access wrote, asked through the collaborator permission route rather than
+# access wrote, asked through the collaborator permission endpoint rather than
 # `author_association`: an org MEMBER or an outside COLLABORATOR can hold read
 # access only. The step's script is lifted from both template shapes and this
 # repo's workflow, which must carry it unchanged, and run against a `gh` stub
