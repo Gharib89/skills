@@ -112,8 +112,9 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the nine reviewer shapes ship's preflight refuses:
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the ten reviewer shapes ship's preflight refuses:
 
+- a reviewer named `self-review`, or starting `self-review ` and a space, which the Run file reserves for phase 4
 - an on-request reviewer with no `Cap:`
 - a `Cap:` that is neither a number nor `None.`
 - a `Fallback-for:` on a reviewer whose `Trigger:` is not `on-request`
