@@ -68,15 +68,19 @@ base=${base#origin/}
 $rework || [ "$n" = none ] || ship_require_grade "$n" "$title"
 
 if $rework; then
-  found=$(host_pr_for_branch "$branch") || ship_tooling "cannot read the PR on $branch"
-  [ "$(jq -r '.state // empty' <<<"$found")" = open ] || ship_fail "no open PR on $branch to rework"
-  pr=$(host_pr_get "$(jq -r .number <<<"$found")") || ship_tooling "cannot read PR #$(jq -r .number <<<"$found")"
+  found=$(host_pr_for_branch "$branch") && state=$(jq -er '.state // "none"' <<<"$found") \
+    || ship_tooling "cannot read the PR on $branch"
+  [ "$state" = open ] || ship_fail "no open PR on $branch to rework"
+  num=$(jq -r .number <<<"$found")
+  answer=$(host_pr_get "$num" \
+    | jq -e --arg b "$branch" --arg base "$base" 'select(.url) | {number, url, created_at: null, branch: $b, base: $base}') \
+    || ship_tooling "cannot read PR #$num"
 fi
 
 log=$(mktemp); trap 'rm -f "$log"' EXIT
 git push -u origin "HEAD:refs/heads/$branch" >"$log" 2>&1 || { ship_tail40 "$log"; ship_fail "git push failed"; }
 if $rework; then
-  jq --arg b "$branch" --arg base "$base" '{number, url, created_at: null, branch: $b, base: $base}' <<<"$pr"
+  printf '%s\n' "$answer"
   exit 0
 fi
 

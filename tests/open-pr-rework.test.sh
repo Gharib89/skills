@@ -63,6 +63,16 @@ check_rc "an unreadable PR exits 2" 2 "$rc"
 check "and names it" 'cannot read PR #9' "$(jq -r .error <<<"$out")"
 check "and pushes nothing" none "$(pushed)"
 
+# An answer that does not parse is a failed read, caught before the push.
+for fn in host_pr_for_branch host_pr_get; do
+  reset
+  jq -n '{number: 9, state: "open", head_sha: "x"}' > "$SHIP_FAKE/host_pr_for_branch.1.json"
+  printf 'not json\n' > "$SHIP_FAKE/$fn.1.json"
+  ( cd "$repo" && bash "$open" 7 --rework >/dev/null 2>&1 ); rc=$?
+  check_rc "an unparseable $fn exits 2" 2 "$rc"
+  check "and pushes nothing" none "$(pushed)"
+done
+
 check_rc "--rework takes no title" 2 "$( cd "$repo" && bash "$open" 7 --rework --title x >/dev/null 2>&1; echo $? )"
 check_rc "--rework has no free-text form" 2 "$( cd "$repo" && bash "$open" none --rework >/dev/null 2>&1; echo $? )"
 
