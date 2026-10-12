@@ -29,7 +29,8 @@ for t in gh jq git npx claude; do
 done
 repo=${LIVE_RUN_REPO:-Gharib89/ship-fixture}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# ship_body_closes: a PR closes the issue the way Ship reads it.
+# ship_body_closes: a PR closes the issue the way Ship reads it. This checkout's
+# copy, never <ship-source>'s, so a Ship under test cannot change how it is judged.
 # shellcheck source=../skills/ship/scripts/_lib.sh
 source "$here/../skills/ship/scripts/_lib.sh"
 tmp=$(mktemp -d)
