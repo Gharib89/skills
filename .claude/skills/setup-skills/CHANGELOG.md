@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.0 (2026-10-12)
+
+### Features
+
+- **setup-skills**: The claude reviewer trusts issue text only from authors who can push
+  ([#625](https://github.com/Gharib89/skills/pull/625),
+  [`0e523d3`](https://github.com/Gharib89/skills/commit/0e523d38cb30944f59d3a4d725b9cd119f0c9fac))
+
+
 ## v0.19.1 (2026-10-12)
 
 ### Refactoring
