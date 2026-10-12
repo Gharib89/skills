@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
-argument-hint: "[issue-number] [--unattended | --inline [--review]]"
+argument-hint: "[issue-number] [--unattended | --inline [--review]] [--rework [\"<feedback>\"]]"
 metadata:
   version: 0.29.0
   profile-schema: 5

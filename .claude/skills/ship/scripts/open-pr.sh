@@ -34,7 +34,7 @@
 # failure.
 #
 # stdout: {number, url, created_at, branch, base}
-# exit: 0 · 1 title grades below the recorded Grade, or push or create failed · 2 usage, wrong branch, or the recorded grade could not be read
+# exit: 0 · 1 title grades below the recorded Grade, push or create failed, or for --rework no open PR on the branch or the PR unreadable · 2 usage, wrong branch, or the recorded grade could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path> | open-pr <issue> --rework'

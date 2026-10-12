@@ -7,7 +7,8 @@ every repo.
 ## The size cap
 
 Key 3's cap is **200 changed lines**, added plus deleted, as
-`git diff --numstat origin/HEAD...HEAD` counts them. Excluded: test files the
+`git diff --numstat origin/HEAD...HEAD` counts them, or from the rework base in
+a [rework run](rework.md#phase-2-the-lane-keys). Excluded: test files the
 run wrote or edited for its red-first tests, and files the run regenerates
 rather than authors (a derived copy the refresh line writes, `skills-lock.json`,
 a Tripwire's rebuilt bundle). Agent-facing prose counts. The run never edits a

@@ -48,6 +48,23 @@ out=$(cd "$repo" && bash "$m" 8 feat y --rework 2>/dev/null); rc=$?
 check_rc "a branch origin lacks is refused" 1 "$rc"
 check "the refusal names the branch" "no PR branch on origin: feat/y-8" "$(jq -r .error <<<"$out")"
 
+# A local branch with no worktree: behind origin is fast-forwarded, ahead of it
+# is refused, since the PR cannot show commits origin lacks.
+git -C "$repo" worktree remove --force "$wt"
+g -C "$repo" branch -f feat/x-7 "$tip~1"
+out=$(cd "$repo" && bash "$m" 7 feat x --rework 2>/dev/null); rc=$?
+check_rc "a local branch behind origin is taken" 0 "$rc"
+check "and fast-forwarded to the tip" "$tip" "$(git -C "$wt" rev-parse HEAD)"
+
+git -C "$repo" worktree remove --force "$wt"
+g -C "$repo" branch -f feat/x-7 "$tip"
+g -C "$repo" commit-tree -p "$tip" -m local "$tip^{tree}" > "$tmp/ahead"
+g -C "$repo" branch -f feat/x-7 "$(cat "$tmp/ahead")"
+out=$(cd "$repo" && bash "$m" 7 feat x --rework 2>/dev/null); rc=$?
+check_rc "a local branch ahead of origin is refused" 1 "$rc"
+check "the refusal names it" "existing branch: feat/x-7 has commits origin lacks" "$(jq -r .error <<<"$out")"
+check "and leaves the branch where it was" "$(cat "$tmp/ahead")" "$(git -C "$repo" rev-parse feat/x-7)"
+
 check_rc "--rework has no in-place form" 2 \
   "$(cd "$repo" && bash "$m" 7 feat x --rework --in-place >/dev/null 2>&1; echo $?)"
 

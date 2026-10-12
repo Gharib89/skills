@@ -100,6 +100,14 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   touch "$SHIP_FAKE/host_pr_threads.1.fail"
   check "$h: threads unreadable" '["not reworkable: review threads unreadable"]' "$(rw "$(preflight 5 --rework)")"
 
+  admitted
+  touch "$SHIP_FAKE/host_issue_linked_prs.1.fail"
+  check "$h: cross-references unreadable" '["not reworkable: cross-references unreadable"]' "$(rw "$(preflight 5 --rework)")"
+
+  admitted
+  touch "$SHIP_FAKE/host_pr_get.1.fail"
+  check "$h: PR unreadable" '["not reworkable: PR #9 unreadable"]' "$(rw "$(preflight 5 --rework)")"
+
   # No feedback: the claim, the PR and the branch are as they were, since
   # preflight wrote nothing to the host.
   admitted
@@ -111,6 +119,17 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   check "$h: no feedback leaves the branch" "$head" "$(git -C "$work/origin.git" rev-parse feat/y-5)"
   check "$h: --feedback admits a PR with no open thread" '[]' "$(rw "$(preflight 5 --rework --feedback)")"
 done
+
+# An origin that cannot be listed is one reason, not a plain run's beside a
+# branch mismatch.
+admitted
+cat > "$work/bin/git" <<SHIM
+#!/usr/bin/env bash
+[ "\$*" = "remote get-url origin" ] && { echo https://github.com/owner/repo.git; exit 0; }
+[ "\$1 \$2" = "-C $work/repo" ] && [ "\$3" = ls-remote ] && exit 128
+exec "$real_git" "\$@"
+SHIM
+check "origin unreadable" '["not reworkable: remote unreadable"]' "$(rw "$(preflight 5 --rework)")"
 
 # The plain run's stops are unchanged for the same issue.
 shim https://github.com/owner/repo.git
@@ -133,5 +152,7 @@ check_rc "--rework --unattended is a usage error" 2 "$(preflight 5 --rework --un
 check "--rework --unattended names the usage line" 'usage: preflight <issue|none> [--unattended] | preflight <issue> --rework [--feedback]' \
   "$(preflight 5 --rework --unattended | jq -r .error)"
 check_rc "--rework on a free-text run is a usage error" 2 "$(preflight none --rework >/dev/null; echo $?)"
+check_rc "--rework with free text in place of the issue is a usage error" 2 \
+  "$(preflight "fix the thing" --rework >/dev/null; echo $?)"
 
 finish

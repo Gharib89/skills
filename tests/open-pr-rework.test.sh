@@ -49,6 +49,20 @@ jq -n '{number: 9, state: "merged", head_sha: "x"}' > "$SHIP_FAKE/host_pr_for_br
 ( cd "$repo" && bash "$open" 7 --rework >/dev/null 2>&1 ); rc=$?
 check_rc "a merged PR on the branch exits 1" 1 "$rc"
 
+reset
+touch "$SHIP_FAKE/host_pr_for_branch.1.fail"
+( cd "$repo" && bash "$open" 7 --rework >/dev/null 2>&1 ); rc=$?
+check_rc "an unreadable branch lookup exits 1" 1 "$rc"
+check "and pushes nothing" none "$(pushed)"
+
+reset
+jq -n '{number: 9, state: "open", head_sha: "x"}' > "$SHIP_FAKE/host_pr_for_branch.1.json"
+touch "$SHIP_FAKE/host_pr_get.1.fail"
+out=$( cd "$repo" && bash "$open" 7 --rework 2>/dev/null ); rc=$?
+check_rc "an unreadable PR exits 1" 1 "$rc"
+check "and names it" 'cannot read PR #9' "$(jq -r .error <<<"$out")"
+check "and pushes nothing" none "$(pushed)"
+
 check_rc "--rework takes no title" 2 "$( cd "$repo" && bash "$open" 7 --rework --title x >/dev/null 2>&1; echo $? )"
 check_rc "--rework has no free-text form" 2 "$( cd "$repo" && bash "$open" none --rework >/dev/null 2>&1; echo $? )"
 

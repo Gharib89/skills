@@ -14,8 +14,10 @@ check in the merge summary.
 Admission by label is `ready-for-agent` always and `ready-for-human` in an
 attended run only; anything else is `not triaged`. An assignee, your own
 identity included, is `already claimed`: stale-claim recovery is a human
-unassigning by hand. `existing PR` is a live PR whose body **closes** this issue
-or whose head branch ends in `-<issue>`.
+unassigning by hand. A [rework run](rework.md) is the exception: it needs your
+own claim and an open PR, and isolates on that PR's branch. `existing PR` is a
+live PR whose body **closes** this issue or whose head branch ends in
+`-<issue>`.
 
 ## The worktree
 

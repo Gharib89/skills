@@ -21,8 +21,10 @@
 # already on origin, and `base` is origin's tip of it, which the rework's own
 # diff counts from. A `*-<n>` worktree on that branch, clean and at that tip, is
 # reused (`reused: true`, nothing carried); any other one is `worktree exists`.
-# With none, a new worktree checks the branch out, refusing a local branch that
-# differs from origin's.
+# With no such worktree, a new one checks the branch out. A local branch behind
+# origin's is fast-forwarded first; one carrying commits origin lacks is refused
+# (`existing branch: <branch> has commits origin lacks`), since the PR cannot
+# show them.
 #
 # stdout: {worktree, branch, base, in_place, reused, carried[], missing[]}
 # exit: 0 created or reused · 1 branch or worktree exists, no PR branch on origin for --rework, or dirty tree for --in-place · 2 git or usage failure
@@ -92,8 +94,10 @@ if ! grep -qxF '.claude/worktrees/' "$exclude" 2>/dev/null; then
 fi
 if ! $rework; then
   add=(-b "$branch" "$base")
-elif local_tip=$(git -C "$root" rev-parse -q --verify "refs/heads/$branch"); then
-  [ "$local_tip" = "$base" ] || ship_fail "existing branch: $branch differs from origin/$branch"
+elif git -C "$root" show-ref --verify --quiet "refs/heads/$branch"; then
+  git -C "$root" merge-base --is-ancestor "refs/heads/$branch" "$base" \
+    || ship_fail "existing branch: $branch has commits origin lacks"
+  git -C "$root" branch -f "$branch" "$base" >"$log" 2>&1 || { ship_tail40 "$log"; ship_tooling "git branch -f failed"; }
   add=("$branch")
 else
   add=(--track -b "$branch" "origin/$branch")

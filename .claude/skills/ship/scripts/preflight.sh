@@ -26,7 +26,7 @@
 # the signed-in identity's and exactly one open PR closes the issue, its head the
 # one `*-<n>` branch on origin; every other shape is one `not reworkable:
 # <detail>` reason. A `*-<n>` worktree on that branch, clean and at the PR's
-# head, is the one an ended attended run left and is no `worktree exists`.
+# head, is the one an ended attended run left: reused, not `worktree exists`.
 # Admitted with no unresolved review thread is `no feedback`, unless
 # `--feedback` says the human gave the run text of its own.
 #
@@ -62,7 +62,9 @@
 #   1, or when there is no profile to read. rework is null on a plain run, and on
 #   a rework run {pr, branch, head_sha, worktree, threads[]}: the PR being
 #   reworked, its head branch and sha, the reusable worktree's path or null, and
-#   the ids of its unresolved review threads; null where the PR was not found.
+#   the ids of its unresolved review threads; null where no one PR was
+#   admitted: none or several open, one unreadable or on another branch, origin
+#   or its threads unreadable.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -263,8 +265,14 @@ fi
 # A free-text run has no number to match: its `<type>/<slug>-none` branch would
 # collide with any earlier free-text run's, and two of those are not one run.
 if [ "$n" != none ]; then
-  br=$(git -C "$root" ls-remote --heads origin "*-$n" 2>/dev/null | awk '{print $2}' | sed 's|refs/heads/||' | paste -sd, -) \
-    || reasons+=("existing branch: remote unreadable, cannot prove none")
+  if ! br=$(git -C "$root" ls-remote --heads origin "*-$n" 2>/dev/null | awk '{print $2}' | sed 's|refs/heads/||' | paste -sd, -); then
+    if $rework; then
+      reasons+=("not reworkable: remote unreadable")
+      open_prs=""
+    else
+      reasons+=("existing branch: remote unreadable, cannot prove none")
+    fi
+  fi
   $rework || [ -z "$br" ] || reasons+=("existing branch: $br")
 fi
 
