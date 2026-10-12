@@ -28,17 +28,17 @@ if [ ! -f "$run" ]; then
   fail "run file: missing"
 else
   # Every phase before the merge gate is `[x]`, closed or skipped. A closed one
-  # carries `(HH:MM→HH:MM)`, the end `+1d` past midnight; its start may not
-  # precede the last closed phase's start, since `run-file next` opens a phase
-  # only after its predecessor. A drop of 12 hours or more is the clock wrapping
-  # at midnight, not an earlier start.
+  # carries `(HH:MM→HH:MM)`, the end `+1d` past midnight, and a re-open appends
+  # a range after it; its first start may not precede the last closed phase's,
+  # since `run-file next` opens a phase only after its predecessor. A drop of
+  # 12 hours or more is the clock wrapping at midnight, not an earlier start.
   last=""
   for n in 0 1 2 3 4 5 6 7 8; do
     line=$(grep -m1 "^- \[[ x]\] $n · " "$run")
     case $line in "- [x] "*) ;; *) fail "phase $n: not closed"; continue ;; esac
-    start=$(printf '%s' "$line" | sed -n 's/.*(\([0-9][0-9]\):\([0-9][0-9]\)→[0-9:]*\(+1d\)\{0,1\})$/\1 \2/p')
+    start=$(grep -oE '\([0-9]{2}:[0-9]{2}→' <<<"$line" | head -n 1)
     [ -n "$start" ] || continue
-    m=$(( 10#${start% *} * 60 + 10#${start#* } ))
+    m=$(( 10#${start:1:2} * 60 + 10#${start:4:2} ))
     if [ -n "$last" ] && [ "$m" -lt "$last" ] && [ $(( last - m )) -lt 720 ]; then
       fail "phase $n: closed out of order"
     fi
@@ -52,7 +52,12 @@ fi
 bodies=() i=0
 while [ "$i" -lt "$(jq '.open_prs | length' "$host")" ]; do
   body=$(jq -r --argjson i "$i" '.open_prs[$i].body // ""' "$host")
-  ! ship_body_closes "$body" "$issue" || bodies+=("$body")
+  ship_body_closes "$body" "$issue"
+  case $? in
+    0) bodies+=("$body") ;;
+    1) ;;
+    *) echo 'ship_body_closes: tooling failure' >&2; exit 2 ;;
+  esac
   i=$(( i + 1 ))
 done
 if [ "${#bodies[@]}" -ne 1 ]; then

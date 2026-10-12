@@ -89,6 +89,10 @@ check "a run across midnight passes" "rc=0" "$(verdict "$(good_run \
   | sed -e 's/(10:00→10:01)/(23:50→23:51)/' -e 's/(10:01→10:02)/(23:51→23:52)/' \
         -e 's/(10:02→10:05)/(23:52→00:05+1d)/')" "$host_ok")"
 
+# A re-opened phase carries a second range; its first start is what orders it.
+check "a re-opened phase passes" "rc=0" "$(verdict "$(good_run \
+  | sed -e 's/(10:02→10:05)/(10:02→10:05) (10:20→10:22)/' -e 's/(10:10→10:11)/(10:22→10:23)/' -e 's/(10:11→10:11)/(10:23→10:24)/')" "$host_ok")"
+
 check "two PRs closing the issue are named" "pr: 2 open PRs close #7, want 1
 rc=1" "$(verdict "$(good_run)" "$(host_of '["agent"]' "$good_body" "$good_body")")"
 
