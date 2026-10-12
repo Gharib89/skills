@@ -102,6 +102,7 @@ case $play in
   killed) kill -9 $$ ;;
   garbled) echo 'not json'; exit 0 ;;
   silent) exit 0 ;;
+  no-reply) reply="" ;;
 esac
 jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s"}'
 CLAUDE
@@ -156,8 +157,10 @@ check "a claude killed before the wall clock is not the cap" '{"result":"unavail
 rc=2' "$(drive killed)"
 check "claude output that is not JSON is unavailable" '{"result":"unavailable","reason":"claude -p output unreadable"}
 rc=2' "$(drive happy garbled)"
-check "claude exiting 0 with no reply is unavailable" '{"result":"unavailable","reason":"claude -p output unreadable"}
+check "claude exiting 0 with no output is unavailable" '{"result":"unavailable","reason":"claude -p output unreadable"}
 rc=2' "$(drive happy silent)"
+check "claude exiting 0 with an empty reply is unavailable" '{"result":"unavailable","reason":"claude -p output unreadable"}
+rc=2' "$(drive no-reply)"
 
 check "claude failing to run is unavailable" '{"result":"unavailable","reason":"claude -p failed"}
 rc=2' "$(drive auth)"
