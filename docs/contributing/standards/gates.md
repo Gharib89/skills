@@ -95,6 +95,10 @@ do to pass.
 - Every tracked path inside the top-level entries this repo owns, per the
   `stray-files` gate. A new top-level entry is a decision, so it joins the
   allowlist in `scripts/stray-file-check.sh` in the commit that tracks it.
+- The frontmatter of every skill this repo writes holding only `name`,
+  `description`, `argument-hint`, `disable-model-invocation` and `metadata`, a
+  `description` of at most 1,024 characters, and a "Use when" clause in it
+  unless `disable-model-invocation: true`, per the `frontmatter` gate.
 - No `metadata.version` line under `skills/` moved by the diff, per the
   `version-lines` gate: the release run on main owns that number and writes it
   from the squash subject. `metadata.profile-schema` is exempt and stays a hand

@@ -57,6 +57,13 @@ wrong; each sub-file's rule holds inside them.
 - **Split code spans.** An inline code span broken across a line wrap in
   hard-wrapped prose is house style, not a rendering defect.
 
+**A diff that lowers the bar says so.** Five moves lower it: a test skipped or
+deleted; assertions removed from a test that stays; a new suppression (a
+`shellcheck disable`, an `eslint-disable`, a `noqa`, a `nosemgrep` or a
+`gitleaks:allow`); a stub or an empty catch standing in for behaviour; and a
+gate threshold or config loosened. Each is a finding unless the PR names it and
+says why, because the diff shows the change and not the coverage it gave up.
+
 ## Routing by path
 
 Always read [standards/release.md](standards/release.md), the glossary and
