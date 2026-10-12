@@ -44,8 +44,11 @@ reset() { g reset -q --hard "$base"; g clean -fdq; noblocks; }
 # One Run file per case, so a refusal's "changes nothing" is that file's bytes.
 n=100
 rf=""
-run4() { n=$((n + 1)); rf=$(bash "$bin/run-file.sh" init "$n" --scratchpad "$tmp/sp" \
+# run4 carries a finished self-review loop, so each case reads only the evidence
+# it names; run4bare carries none, for the loop's own cases.
+run4bare() { n=$((n + 1)); rf=$(bash "$bin/run-file.sh" init "$n" --scratchpad "$tmp/sp" \
   --state 0=done --state 1=done --state 2=done --state 3=done --state 4=open | jq -r .run_file); }
+run4() { run4bare; printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$rf"; }
 run7() { n=$((n + 1)); rf=$(bash "$bin/run-file.sh" init "$n" --scratchpad "$tmp/sp" --reviewers "${1-copilot, claude}" \
   --state 0=done --state 1=done --state 2=done --state 3=done --state 4=done --state 5=done --state 6=done --state 7=open | jq -r .run_file); }
 add() { printf '%s\n' "$@" >> "$rf"; }
@@ -412,6 +415,40 @@ run4; add 'Reverted-fix: tests/new.test.sh: n/a: a fixture'; close 4; close 4
 check_rc "closing phase 4 twice" 1 "$status"
 check "the second close is refused as not open" 'phase 4 is not open' "$err"
 reset
+
+# --- close 4: the self-review loop -------------------------------------------------
+
+run4bare; held=$(cat "$rf"); close 4
+refused "phase 4 with no self-review round and no stop" 'no Round line for self-review: add `Round: self-review <n>: <text>`, one per self-review round'
+check "the same refusal names the missing stop" yes "$(has 'no Stop line for self-review: add `Stop: self-review: <tree unchanged|cap>`' "$err")"
+
+run4bare; add 'Round: self-review 1: 2 findings, both fixed'; held=$(cat "$rf"); close 4
+refused "a round with no stop" 'no Stop line for self-review'
+check "the round is not asked for" no "$(has 'no Round line' "$err")"
+
+run4bare; add 'Stop: self-review: tree unchanged'; held=$(cat "$rf"); close 4
+refused "a stop with no round" 'no Round line for self-review'
+
+run4bare; add 'Round: self-review 0: clean' 'Stop: self-review: tree unchanged'; held=$(cat "$rf"); close 4
+refused "a round numbered 0" 'no Round line for self-review'
+
+run4bare; add 'Round: self-review 1:' 'Stop: self-review: tree unchanged'; held=$(cat "$rf"); close 4
+refused "a round with no text" 'no Round line for self-review'
+
+run4bare; add 'Round: self-review 1: clean' 'Stop: self-review: small lane'; held=$(cat "$rf"); close 4
+refused "a host-loop stop reason" "Stop line for self-review has reason 'small lane', which is not one of tree unchanged, cap"
+
+run4bare; add 'Round: self-review 1: clean' 'Stop: self-review: cap' 'Stop: self-review: whenever'; held=$(cat "$rf"); close 4
+refused "the last Stop line decides" "Stop line for self-review has reason 'whenever'"
+
+run4bare; add 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged'; close 4
+admitted "one clean round, stopped on an unchanged tree"
+
+run4bare; add '- Round: self-review 1: 1 finding, fixed' '- Round: self-review 2: 1 finding, fixed' '- Stop: self-review: cap'; close 4
+admitted "bulleted rounds stopped at the cap"
+
+run4bare; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged'; held=$(cat "$rf"); close 4
+refused "a host reviewer's lines are not the self-review's" 'no Round line for self-review'
 
 # --- close 7 ---------------------------------------------------------------------
 

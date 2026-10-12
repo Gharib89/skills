@@ -77,7 +77,7 @@
 # ran the proof: the red `Reverted-fix:` line by `prove` and the `Probe:` line by
 # `probe`. The rest are attested, written by the run and taken at its word: the
 # `n/a` `Reverted-fix:` line, `Dropped:`, `Near-miss:` and `Declined:`, and
-# `close 7`'s `Round:` and `Stop:`. A refused close writes nothing, names
+# the `Round:` and `Stop:` lines of `close 4`'s self-review and `close 7`. A refused close writes nothing, names
 # everything missing in one message, and `next` over either phase is held the
 # same way. A gate line is a line anywhere in the file, an optional leading
 # `- ` accepted, matched by exact prefix at the line start. `close 4` reads the
@@ -108,6 +108,10 @@
 #     `judgment`, and a nonblank reason; <ref> is the text before the first
 #     `: `. A `claim:` decline needs a produced `Probe: <ref>:` line, a
 #     `judgment:` one needs none, and the reason's words decide nothing.
+#   the self-review loop in close 7's vocabulary: at least one
+#     `Round: self-review <n>: <text>`, <n> a positive integer, and
+#     `Stop: self-review: <reason>`, the last such line deciding, the reason
+#     tree unchanged or cap.
 # `close 7` reads the reviewers from the phase's checklist row (nothing is held
 # where the row names none, or names what is not a list of names) and needs a
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
@@ -670,6 +674,21 @@ EORESTS
   done <<EODECLINED
 $(rests "Declined: ")
 EODECLINED
+
+  # The self-review loop, in close 7's vocabulary: a round, then the stop.
+  ok=false
+  while IFS= read -r r; do
+    [[ $r =~ ^[1-9][0-9]*:\ [[:space:]]*[^[:space:]] ]] && ok=true
+  done <<EORESTS
+$(rests "Round: self-review ")
+EORESTS
+  [ "$ok" = true ] || gap "no Round line for self-review: add \`Round: self-review <n>: <text>\`, one per self-review round"
+  r=$(trim_end "$(rests "Stop: self-review: " | tail -n 1)")
+  case $r in
+    "tree unchanged" | cap) ;;
+    "") gap "no Stop line for self-review: add \`Stop: self-review: <tree unchanged|cap>\`" ;;
+    *) gap "Stop line for self-review has reason '$r', which is not one of tree unchanged, cap" ;;
+  esac
   refuse_gaps 4
 }
 

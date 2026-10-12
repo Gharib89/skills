@@ -10,6 +10,7 @@
 - [Phase 2: delegate execution, keep judgment](#phase-2-delegate-execution-keep-judgment)
 - [Phase 2: adjacent finds](#phase-2-adjacent-finds)
 - [Phase 4: triage and depth checks](#phase-4-triage-and-depth-checks)
+- [Phase 4: the self-review loop](#phase-4-the-self-review-loop)
 - [Phase 4 evidence lines](#phase-4-evidence-lines)
 - [Consult current docs](#consult-current-docs)
 
@@ -155,6 +156,30 @@ words: a vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, removed lines with
 no new home, a fix landed after review, and any the repo adds beside them.
 
+## Phase 4: the self-review loop
+
+Refactoring belongs to review, not to the red-to-green loop, so the
+self-review repeats while it still finds work. The bound is preflight's
+`self_review_cap`: the profile's `Self-review cap:` line under `## Reviewers`,
+3 where the line is absent. Every lane runs the same loop.
+
+- **Round 1** is both axes, Standards and Spec, over the whole diff.
+- **Round 2 and up** is one `code-review` subagent, Standards axis only, over
+  the previous round's **fix diff**, the commits that round's dispositions
+  added: the shape of the local review after a host reviewer's cap round. Its
+  Report file is `<scratch>/standards/standards-report-<n>.md`, so no round
+  overwrites another's.
+- **The loop stops** at the first round whose dispositions changed no file
+  (every finding declined, or none raised), or at the round numbered
+  `self_review_cap`, its findings dispositioned in full. A cap of 1 is the
+  single round, which a clean round 1 also ends at.
+
+Each round leaves `Round: self-review <n>: <text>`, its outcome in a line, and
+the loop leaves `Stop: self-review: <tree unchanged|cap>`: `tree unchanged`
+when the last round changed no file, even at the cap, and `cap` when the
+rounds reached it with the last fixes unread. The merge summary's `Self-review`
+rows come from these lines and the Report files.
+
 ## Phase 4 evidence lines
 
 `run-file close 4` refuses until the Run file carries these lines, each with an
@@ -200,6 +225,11 @@ taken at its word.
   does not bear out the claim turns the decline into a fix. A `judgment:`
   decline needs none, and a decline carrying neither kind is refused. A
   `Probe:` line in any other shape is refused wherever it stands.
+
+- **Round** and **Stop**, attested, for the
+  [self-review loop](#phase-4-the-self-review-loop): at least one
+  `Round: self-review <n>: <text>`, `<n>` a positive integer, and a
+  `Stop: self-review: <tree unchanged|cap>`, the last such line deciding.
 
 `close 7`'s `Round:` and `Stop:` lines
 ([review-loop.md](review-loop.md#the-exit)) are attested the same way.

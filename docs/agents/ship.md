@@ -1,6 +1,6 @@
 # Ship profile
 
-Schema: 4
+Schema: 5
 
 Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [GLOSSARY.md](../../GLOSSARY.md).
 
@@ -65,6 +65,8 @@ Push policy: Default.
 Two workflows are not legs. `.github/workflows/claude-review.yml` is triggered by an issue comment carrying `@claude` and has no `pull_request` trigger, so it lands no check run on a PR head: it is the `claude` reviewer below. `.github/workflows/semantic-release.yml` runs on push to main, after the merge, so no PR ever sees it.
 
 ## Reviewers
+
+Self-review cap: 3
 
 ### codex
 

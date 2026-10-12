@@ -45,6 +45,7 @@ Verification                                   (one row per applicable entry)
   (or: none applicable: <reason>)
 
 Self-review (code-review skill, the review gate)
+  <n> rounds, stopped: <tree unchanged | cap>  (from the Run file's Round: self-review and Stop: lines)
   - <axis|pass>: <n> findings  ·  report: <path>   (one row per phase-4 report)
   - <finding> → <fixed | rejected: reason>
   ...

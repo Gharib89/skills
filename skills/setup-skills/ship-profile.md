@@ -1,6 +1,6 @@
 # Ship profile
 
-Schema: 4
+Schema: 5
 
 Every repo-specific fact `/ship` needs, one section per axis. Fourteen `##` headings, always present and in this order; a defaulted axis reads `None.` or `Default.` under its own heading. Facts sit on `Label:` lines and nowhere else, and the prose under a heading explains them. The `Schema:` line above is the profile schema `ship` checks at preflight; only a `setup-skills` re-run moves it.
 
@@ -33,7 +33,9 @@ Push policy: <e.g. one push per review round; minutes are metered, or Default.>
 
 ## Reviewers
 
-<!-- Zero or more `### <name>` blocks, or the single line `None.` Trigger fixes how a round starts; brand decides nothing. -->
+Self-review cap: <the most phase-4 self-review rounds a run spends, a whole number of 1 or more; 3 by default>
+
+<!-- Below the `Self-review cap:` line, zero or more `### <name>` blocks, or the single line `None.` Trigger fixes how a round starts; brand decides nothing. -->
 
 ### <reviewer name>
 

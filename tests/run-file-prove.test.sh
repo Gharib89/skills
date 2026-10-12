@@ -107,6 +107,7 @@ out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>/dev/null); s
 check_rc "an edit to a pathspec-magic name since the head is refused" 1 "$status"
 check "as a stale line" yes "$(case $(jq -r .error <<<"$out") in *"Reverted-fix line for tests/colon.test.sh is stale"*) echo yes ;; *) echo no ;; esac)"
 g checkout -q -- ':(literal):fix.sh'
+printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$rf"
 out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
 check_rc "close 4 accepts each line prove wrote for a test the diff adds, a pathspec-magic name included" 0 "$status"
 
