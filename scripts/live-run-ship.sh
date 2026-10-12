@@ -34,8 +34,13 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=../skills/ship/scripts/_lib.sh
 source "$here/../skills/ship/scripts/_lib.sh"
 tmp=$(mktemp -d)
+# Armed before anything else can be interrupted; reset_host is a no-op until
+# the issue exists.
+trap 'reset_host; rm -rf "$tmp"' EXIT
+trap 'exit 2' INT TERM
 co=$tmp/fixture
 issue=""
+run_heads="" # head branches of the run's PRs, gathered as reset_host closes them
 tooling() { echo "$1" >&2; exit 2; }
 
 open_prs() { # -> [{number, body, head}], every page
@@ -45,7 +50,7 @@ open_prs() { # -> [{number, body, head}], every page
 # A PR is the run's when its head is a Ship branch, `<type>/<slug>-<issue>`, or
 # its body closes the issue. Returns 2 when a read fails, so no caller takes a
 # failed read for "not the run's".
-run_prs() { # <open_prs json> -> one PR number per line
+run_prs() { # <open_prs json> -> `<number> <head>` per line
   local i=0 rc
   while [ "$i" -lt "$(jq length <<<"$1")" ]; do
     jq -e --argjson i "$i" --arg s "-$issue" '.[$i].head | endswith($s)' <<<"$1" >/dev/null
@@ -55,29 +60,40 @@ run_prs() { # <open_prs json> -> one PR number per line
       rc=$?
     fi
     case $rc in
-      0) jq --argjson i "$i" '.[$i].number' <<<"$1" ;;
+      0) jq -r --argjson i "$i" '"\(.[$i].number) \(.[$i].head)"' <<<"$1" ;;
       1) ;;
       *) echo 'run_prs: a PR read failed' >&2; return 2 ;;
     esac
     i=$(( i + 1 ))
   done
 }
-run_branches() {
-  gh api --paginate "repos/$repo/branches?per_page=100" --jq ".[].name | select(endswith(\"-$issue\"))"
+# The run's branches: a Ship branch by its suffix, or the head of a PR the run
+# opened, which a body match finds whatever its name.
+run_branches() { # -> one branch name per line
+  local names b
+  names=$(gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name') || return 2
+  for b in $names; do
+    case $b in
+      *"-$issue") echo "$b" ;;
+      *) case " $run_heads " in *" $b "*) echo "$b" ;; esac ;;
+    esac
+  done
 }
 
 # Close the run's issue and PRs and delete its branches.
 reset_host() {
   [ -n "$issue" ] || return 0
-  local prs mine n b
+  local prs mine n h b
   if prs=$(open_prs) && mine=$(run_prs "$prs"); then
-    for n in $mine; do gh api -X PATCH "repos/$repo/pulls/$n" -f state=closed >/dev/null; done
+    while read -r n h; do
+      [ -n "$n" ] || continue
+      gh api -X PATCH "repos/$repo/pulls/$n" -f state=closed >/dev/null
+      run_heads="$run_heads $h"
+    done <<<"$mine"
   fi
   for b in $(run_branches); do gh api -X DELETE "repos/$repo/git/refs/heads/$b" >/dev/null; done
   gh api -X PATCH "repos/$repo/issues/$issue" -f state=closed -f state_reason=not_planned >/dev/null
 }
-trap 'reset_host; rm -rf "$tmp"' EXIT
-trap 'exit 2' INT TERM
 
 gh repo clone "$repo" "$co" -- -q || tooling "cannot clone $repo"
 [ "$(git -C "$co" rev-parse origin/main)" = "$(git -C "$co" rev-parse -q --verify 'seed^{commit}')" ] \
@@ -91,7 +107,8 @@ gh repo clone "$repo" "$co" -- -q || tooling "cannot clone $repo"
 git -C "$co" checkout -q -- .
 git -C "$co" status --porcelain | sed -n 's/^?? //p' >> "$co/.git/info/exclude"
 
-issue=$(gh api "repos/$repo/issues" -f title='Add a sub helper to calc.sh' -f 'labels[]=ready-for-agent' \
+title='Add a sub helper to calc.sh'
+issue=$(gh api "repos/$repo/issues" -f title="$title" -f 'labels[]=ready-for-agent' \
   -f body="$(cat <<'BODY'
 ## What to build
 
@@ -102,7 +119,13 @@ issue=$(gh api "repos/$repo/issues" -f title='Add a sub helper to calc.sh' -f 'l
 - [ ] `sub 5 3` prints `2`, and `sub 3 5` prints `-2`.
 - [ ] `test.sh` checks both cases.
 BODY
-)" --jq .number) || tooling "cannot file the issue on $repo"
+)" --jq .number) || issue=""
+# A create whose response was lost may still have landed: re-read the newest
+# open issues for it before calling the create failed, so cleanup can close it.
+[ -n "$issue" ] || issue=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=10" \
+  | jq -r --arg t "$title" \
+    '[.[] | select(.pull_request == null and .title == $t and (.created_at | fromdate) >= now - 600)][0].number // empty')
+[ -n "$issue" ] || tooling "cannot file the issue on $repo"
 
 start=$(date +%s)
 # A nonzero exit is claude failing (auth, quota, API), not Ship stopping.
@@ -117,7 +140,7 @@ assignees=$(gh api "repos/$repo/issues/$issue" --jq '[.assignees[].login]') || t
 prs=$(open_prs) || tooling "cannot list PRs"
 jq -n --argjson a "$assignees" --argjson p "$prs" '{assignees: $a, open_prs: [$p[] | {number, body}]}' > "$tmp/host.json"
 pr=$(run_prs "$prs") || tooling "cannot read the open PRs"
-pr=$(head -n 1 <<<"$pr")
+pr=$(head -n 1 <<<"$pr" | cut -d ' ' -f 1)
 PR_TEMPLATE=$co/.github/pull_request_template.md \
   "$here/live-run-checks.sh" "${run_file:-$tmp/no-run-file}" "$tmp/host.json" "$issue" > "$tmp/failed"
 [ $? -le 1 ] || tooling "live-run-checks.sh failed as tooling"
@@ -127,7 +150,7 @@ reset_host
 if state=$(gh api "repos/$repo/issues/$issue" --jq .state) && prs=$(open_prs) && mine=$(run_prs "$prs") \
   && branches=$(run_branches); then
   { [ "$state" = closed ] || echo "cleanup: left issue #$issue open"
-    for n in $mine; do echo "cleanup: left PR #$n open"; done
+    while read -r n _; do [ -z "$n" ] || echo "cleanup: left PR #$n open"; done <<<"$mine"
     for b in $branches; do echo "cleanup: left branch $b"; done
   } >> "$tmp/failed"
 else
