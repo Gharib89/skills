@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.31.1 (2026-10-12)
+
+### Bug Fixes
+
+- **ship**: Close 3 records a Verification the PR adds to the profile
+  ([#624](https://github.com/Gharib89/skills/pull/624),
+  [`493503d`](https://github.com/Gharib89/skills/commit/493503db654d65df1de92768d492293054ebdc3a))
+
+
 ## v0.31.0 (2026-10-12)
 
 ### Features
