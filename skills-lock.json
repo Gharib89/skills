@@ -99,12 +99,12 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "601544a1155872652cfc7597580443031e2733d8602e2e2559bddc4f9ec919bf"
+      "computedHash": "a1674d6477a03ee0115357e936a6f3fde76af5e9b83771599bc60a718c658ef9"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "dbce73104041478a82af1fe1c77ae5c52e467c81e4bd45d14e9c82cbe0a1dac3"
+      "computedHash": "0e9265f0936b6283c7271e4ba54cc28f3f547c21049f4bd72aec3c0346f2ece7"
     },
     "show-me": {
       "source": "humanlayer/skills",
