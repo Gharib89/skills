@@ -183,6 +183,17 @@ check "refuses an on-request reviewer with no Cap:" \
 check "an on-push reviewer with no Cap: is allowed" \
   '' "$(reasons "$(sed 's|^Cap: 3$|Cap: None.|' <<<"$profile")")"
 
+# Phase 4 writes `Round: self-review <n>:` and `Stop: self-review:` into the Run
+# file, so a reviewer by that name would close phase 7 on phase 4's record.
+check "refuses a reviewer named self-review" \
+  "profile invalid: self-review is a reviewer name the Run file reserves for phase 4's self-review lines" \
+  "$(reasons "$(sed 's|^### claude$|### self-review|' <<<"$profile")")"
+check "refuses a reviewer name starting self-review and a space" \
+  "profile invalid: self-review bot is a reviewer name the Run file reserves for phase 4's self-review lines" \
+  "$(reasons "$(sed 's|^### claude$|### self-review bot|' <<<"$profile")")"
+check "a longer word is another name" \
+  '' "$(reasons "$(sed 's|^### claude$|### self-reviewer|' <<<"$profile")")"
+
 check "refuses a Cap: that is not a number" \
   'profile invalid: copilot has Cap: three, which is neither a number nor None.' \
   "$(reasons "$(sed 's|^Cap: 3$|Cap: three|' <<<"$profile")")"

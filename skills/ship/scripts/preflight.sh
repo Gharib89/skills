@@ -25,7 +25,7 @@
 # free-text runs are not the same run, so a `*-none` branch is no reason.
 #
 # stdout: {host, repo, identity, profile, ok, reasons[], mentions[], mentioned_by[],
-#          pruned[], reviewers[]}
+#          pruned[], reviewers[], self_review_cap}
 #   reasons use the stop names verbatim, detail after a colon:
 #   closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
@@ -43,7 +43,12 @@
 #   the copilot_code_review ruleset's true or false for the block posting under
 #   the Copilot login, null for every other block and where the host could not
 #   answer. It is the ruleset read the Trigger check rests on, reported for
-#   the human; the review loop does not branch on it.
+#   the human; the review loop does not branch on it. self_review_cap is the
+#   number of phase-4 self-review rounds the profile's `Self-review cap:` line
+#   allows, read at column 0 under `## Reviewers` above its first `###` block
+#   and outside a fence, 3 when the line is absent, and null with a
+#   `profile invalid:` reason when its value is not a whole number of at least
+#   1, or when there is no profile to read.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -84,6 +89,7 @@ esac
 root=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
 reasons=()
 reviewers='[]'
+self_review_cap=null
 
 # Profile: presence, the fourteen headings in order, the Schema line, and the
 # Host cross-check. `ship_profile_path` carries which checkout it is read from,
@@ -114,6 +120,21 @@ else
   esac
   declared=$(awk '/^## Host/{f=1;next} /^## /{f=0} f && /^Host:/{sub(/^Host: */,""); print; exit}' "$profile" | tr -d ' `')
   [ "$declared" = "$SHIP_HOST" ] || reasons+=("profile invalid: Host mismatch (profile says '${declared:-nothing}', remote is $SHIP_HOST)")
+
+  # The phase-4 loop's bound, optional so a profile without the line keeps
+  # running. A value that is not a count is refused rather than read as the
+  # default: a typo there would silently change how many rounds a run spends.
+  line=$(awk "$SHIP_AWK_FENCE"'{ fenced = ship_fence($0) } fenced { next }
+    /^## / { s = $0; sub(/[ \t\r]+$/, "", s); sec = (s == "## Reviewers"); next }
+    /^### / { sec = 0; next }
+    sec && /^Self-review cap:/ { v = $0; sub(/^Self-review cap:[ \t]*/, "", v); sub(/[ \t\r]+$/, "", v); print "=" v; exit }' "$profile")
+  if [ -z "$line" ]; then
+    self_review_cap=3
+  elif [[ ${line#=} =~ ^[1-9][0-9]*$ ]]; then
+    self_review_cap=${line#=}
+  else
+    reasons+=("profile invalid: Self-review cap: ${line#=} is not a whole number of rounds, 1 or more")
+  fi
 
   # The reviewer blocks, through the one parser. Refused here rather than at
   # phase 7 because a run that reaches phase 7 has already spent itself, and
@@ -225,7 +246,8 @@ ok=true; [ "${#reasons[@]}" -eq 0 ] || ok=false
 printf '%s\n' "${reasons[@]+"${reasons[@]}"}" | jq -Rs --arg h "$SHIP_HOST" --arg r "$SHIP_REPO_SLUG" \
   --argjson id "$identity" --arg p "$profile" --argjson ok "$ok" --argjson m "$mentions" \
   --argjson mb "$mentioned_by" --argjson pr "$pruned" --argjson rv "$reviewers" \
+  --argjson sc "$self_review_cap" \
   '{host: $h, repo: $r, identity: $id, profile: $p, ok: $ok,
     reasons: (split("\n") | map(select(. != ""))), mentions: $m, mentioned_by: $mb, pruned: $pr,
-    reviewers: $rv}'
+    reviewers: $rv, self_review_cap: $sc}'
 $ok

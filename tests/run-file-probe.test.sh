@@ -65,7 +65,8 @@ check "an argument holding a space keeps its boundary, so the line re-runs as re
   'Probe: C7: printf \<%s\>\\n a\ b => exit 0 at '"$head"': <a b>' "$(tail -n 1 "$rf")"
 
 # Every line probe wrote is one close 4 accepts: the gate reads what the verb writes.
-printf '%s\n' 'Declined: C1: claim: notes hold two lines' 'Declined: C5: claim: the output is indented' >> "$rf"
+printf '%s\n' 'Declined: C1: claim: notes hold two lines' 'Declined: C5: claim: the output is indented' \
+  'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$rf"
 out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
 check_rc "close 4 accepts every line probe wrote" 0 "$status"
 rf=$(cd "$repo" && bash "$bin/run-file.sh" init 10 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)

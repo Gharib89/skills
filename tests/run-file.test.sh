@@ -464,6 +464,7 @@ check "--issue resolves the record under the scratchpad" \
   "$i" "$(out open 4 --issue 218 --scratchpad "$tmp" | jq -r '.run_file')"
 check "the line it flipped is the one --file flips" \
   1 "$(grep -c '^- \[ \] 4 · .* in_progress ([0-9][0-9]:[0-9][0-9]→)$' "$i")"
+printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$i"
 check_rc "close by --issue exits ok" 0 "$(qrc close 4 --issue 218 --scratchpad "$tmp")"
 check "skip by --issue carries the reason" \
   'small lane' "$(out skip 3 'small lane' --issue 218 --scratchpad "$tmp" | jq -r '.reason')"
@@ -517,7 +518,7 @@ check_rc "open over an earlier phase never flipped exits 1" 1 "$erc"
 check "the refused open left the Run file byte-identical" "$held" "$(cat "$q")"
 
 # Closed, skipped and rebuilt `done` all tick the row, so each admits the open.
-out open 4 --file "$q" >/dev/null; qout close 4 --file "$q" >/dev/null
+out open 4 --file "$q" >/dev/null; printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$q"; qout close 4 --file "$q" >/dev/null
 check_rc "open over a closed phase exits ok" 0 "$(rc open 5 --file "$q")"
 out close 5 --file "$q" >/dev/null
 check_rc "open over a skipped phase exits ok" 0 \

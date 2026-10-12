@@ -4,7 +4,7 @@ description: Drive one tracker issue to a merge-ready PR in a single run, reachi
 argument-hint: "[issue-number] [--unattended | --inline [--review]]"
 metadata:
   version: 0.24.3
-  profile-schema: 4
+  profile-schema: 5
   composes: mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:tdd mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:code-review upstash/context7#522c4db4fa2e1e31f1b320f09fa8c8fab376987a:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
 ---
 
@@ -155,21 +155,25 @@ With docs-sync's edits landed, load `code-review`, then dispatch this pass and
 its two axes in one turn and end it, each naming its Report file. Small lane:
 dispatch the axes, then run this pass inline.
 
-**Self-review**, unconditional in every lane: invoke `code-review` against the
-diff since `origin/HEAD`, its Standards axis reading the profile's
-`## Coding standards` path, its Spec axis reading the issue, each axis prompt
-carrying its own scratch directory (`standards`, `spec`) and saying the Local
-gate runs later in the run, so the axis reads the gate's JSON and never runs
-`check.sh full` or the suite itself. **Triage waits for every Report file**; one
-that fails to arrive after [the stops](#the-stops)' two fix-and-retry attempts
-is `red-after-retry: <axis>`, never a disposition written from memory.
-**Auto-triage** every finding at the judgment tier, one disposition each, under
-the rails and depth checks in
-[implement.md](reference/implement.md#phase-4-triage-and-depth-checks).
+**Self-review**, unconditional in every lane, is a loop. Round 1 invokes
+`code-review` against the diff since `origin/HEAD`, its Standards axis reading
+the profile's `## Coding standards` path, its Spec axis reading the issue, each
+axis prompt carrying its own scratch directory (`standards`, `spec`) and saying
+the Local gate runs later in the run, so the axis reads the gate's JSON and
+never runs `check.sh full` or the suite itself. **Triage waits for every Report
+file**; one that fails to arrive after [the stops](#the-stops)' two
+fix-and-retry attempts is `red-after-retry: <axis>`, never a disposition written
+from memory. **Auto-triage** every finding at the judgment tier, one
+disposition each, under the rails and depth checks in
+[implement.md](reference/implement.md#phase-4-triage-and-depth-checks), then
+[loop](reference/implement.md#phase-4-the-self-review-loop), the Standards
+axis alone over each round's **fix-only diff**, until a round changes no file
+(`tree unchanged`) or reaches preflight's `self_review_cap` (`cap`).
 `run-file close 4` refuses until the Run file holds the
-[evidence lines](reference/implement.md#phase-4-evidence-lines) that section's
-checks leave: `Reverted-fix:`, `Dropped:`, `Near-miss:` and `Probe:`, the red
-and `Probe:` lines produced by `run-file prove` and `run-file probe`.
+[evidence lines](reference/implement.md#phase-4-evidence-lines): each round's
+`Round: self-review` and the loop's `Stop: self-review:`, `Reverted-fix:`,
+`Dropped:`, `Near-miss:` and `Probe:`, the red and `Probe:` lines produced by
+`run-file prove` and `run-file probe`.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.

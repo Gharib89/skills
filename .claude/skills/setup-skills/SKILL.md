@@ -104,7 +104,7 @@ Walk order and the recommendation to lead with:
 - **No harness**, asked first and only where step 3 found no harness profile: "no harness found: run `/setup-harness` first (recommended), or continue without". The first ends the run with nothing written, printing "run `/setup-harness`, then rerun `/setup-skills`", with its install line `npx skills add Gharib89/skills --skill setup-harness --agent claude-code -y` for a repo that lacks it. Continuing takes the **Self-contained local gate** item and skips **Cloud bootstrap**, so the bootstrap stays as step 3 found it. The answer is recorded nowhere, so every run asks it again.
 - **Local gate, small node**: the runner's own node syntax with one example from the repo's tests, and the docs-class value, the path of the changed document, with one example.
 - **CI, push policy**: `one push per review round` on metered minutes (private repos, ADO parallel jobs); `Default.` otherwise.
-- **Reviewers**: each detected reviewer with its inferred trigger; then "any reviewer not detected?". Then **one question for Claude Code**, asked only where exploration found no Claude workflow already. With another reviewer in the draft, lead with the on-request fallback shape, naming that reviewer as the primary it stands in for. With the draft naming none, ask about both shapes in one question with the trade-off, leading with on-request for a repo where ship opens most PRs, on-push otherwise: on-request (comment transport, `Fallback-for: None.`, `Cap: 2`) gives a small-lane run one round and a cap that binds, and any commenter can trigger it; on-push reviews every push, human ones included, and its cap is advisory. That one answer picks the shape step 5 scaffolds; there is no second question. Ask every reviewer its cap: recommend 2 on-request, 3 on-push, `None.` for auto-once.
+- **Reviewers**: each detected reviewer with its inferred trigger; then "any reviewer not detected?". Then **one question for Claude Code**, asked only where exploration found no Claude workflow already. With another reviewer in the draft, lead with the on-request fallback shape, naming that reviewer as the primary it stands in for. With the draft naming none, ask about both shapes in one question with the trade-off, leading with on-request for a repo where ship opens most PRs, on-push otherwise: on-request (comment transport, `Fallback-for: None.`, `Cap: 2`) gives a small-lane run one round and a cap that binds, and any commenter can trigger it; on-push reviews every push, human ones included, and its cap is advisory. That one answer picks the shape step 5 scaffolds; there is no second question. Ask every reviewer its cap: recommend 2 on-request, 3 on-push, `None.` for auto-once. Last, `Self-review cap:`, the most phase-4 self-review rounds a run spends: recommend 3; 1 keeps every run to a single round, as before Schema 5.
 - **Verification**: one block per seed, or `None.` when nothing in the repo talks to a real system.
 - **Versioning**: what exploration found, then `In-PR requirement:`, the one line that changes what ship does.
 - **Public surface**: `Default.` unless the repo publishes more than an API (gate rules, palettes, bundle inputs).
@@ -112,8 +112,9 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the nine reviewer shapes ship's preflight refuses:
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the ten reviewer shapes ship's preflight refuses:
 
+- a reviewer named `self-review`, or starting `self-review ` and a space, which the Run file reserves for phase 4
 - an on-request reviewer with no `Cap:`
 - a `Cap:` that is neither a number nor `None.`
 - a `Fallback-for:` on a reviewer whose `Trigger:` is not `on-request`
@@ -124,7 +125,7 @@ Show the full draft of everything below, then let the user edit before writing. 
 - a `Workflow:` naming a file the checkout does not carry, a path climbing out of it with `..` included
 - a `Workflow: native <integration>` naming an integration other than `codex`
 
-Then: every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
+Then: `Self-review cap:` is a whole number of 1 or more; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
 **`docs/agents/ship.md`** from [ship-profile.md](./ship-profile.md): all fourteen headings, `None.` or `Default.` where an axis is defaulted, template comments removed.
 

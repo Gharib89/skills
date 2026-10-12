@@ -1320,7 +1320,10 @@ ship_reviewers() {
 # its primary degrades is the whole point of a fallback; one naming a reviewer
 # nobody listed has no primary to stand in for, an on-request reviewer with no
 # cap has no bound on its loop, and a `Cap:` that is not a number is a typo that
-# would read as an uncapped one.
+# would read as an uncapped one. A block named `self-review`, or starting
+# `self-review `, would share the Run file's `Round: self-review` and
+# `Stop: self-review:` lines with phase 4, so phase 4's record would close its
+# phase 7.
 #
 # `Workflow:` and `Request:` are refused as a pair, in both directions. A comment
 # transport's round comes from the run that comment starts, and that run is the
@@ -1374,7 +1377,10 @@ ship_reviewer_reasons() {
       else ([$rows[].name]) as $names
         | $rows[]
         | . as $x
-        | (if $x.fallback_for != null and $x.trigger != "on-request"
+        | (if $x.name == "self-review" or ($x.name | startswith("self-review "))
+           then "profile invalid: \($x.name) is a reviewer name the Run file reserves for phase 4'"'"'s self-review lines"
+           else empty end),
+          (if $x.fallback_for != null and $x.trigger != "on-request"
            then "profile invalid: \($x.name) is Fallback-for: \($x.fallback_for) but its Trigger is \($x.trigger), not on-request"
            else empty end),
           (if $x.fallback_for != null and ($names | index($x.fallback_for)) == null

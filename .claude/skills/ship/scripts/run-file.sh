@@ -77,10 +77,11 @@
 # ran the proof: the red `Reverted-fix:` line by `prove` and the `Probe:` line by
 # `probe`. The rest are attested, written by the run and taken at its word: the
 # `n/a` `Reverted-fix:` line, `Dropped:`, `Near-miss:` and `Declined:`, and
-# `close 7`'s `Round:` and `Stop:`. A refused close writes nothing, names
-# everything missing in one message, and `next` over either phase is held the
-# same way. A gate line is a line anywhere in the file, an optional leading
-# `- ` accepted, matched by exact prefix at the line start. `close 4` reads the
+# the `Round:` and `Stop:` lines of `close 4`'s self-review and `close 7`. A
+# refused close writes nothing, names everything missing in one message, and
+# `next` over either phase is held the same way. A gate line is a line anywhere
+# in the file, an optional leading `- ` accepted, matched by exact prefix at the
+# line start. `close 4` reads the
 # checkout's own diff (the working tree, untracked files included, against the
 # merge base of HEAD and origin/HEAD) and asks `dropped-lines`; it needs:
 #   `Reverted-fix: <test path>: red at <sha> reverting <path>...` (produced) or
@@ -108,6 +109,10 @@
 #     `judgment`, and a nonblank reason; <ref> is the text before the first
 #     `: `. A `claim:` decline needs a produced `Probe: <ref>:` line, a
 #     `judgment:` one needs none, and the reason's words decide nothing.
+#   the self-review loop in close 7's vocabulary: at least one
+#     `Round: self-review <n>: <text>`, <n> a positive integer, and
+#     `Stop: self-review: <reason>`, the last such line deciding, the reason
+#     tree unchanged or cap.
 # `close 7` reads the reviewers from the phase's checklist row (nothing is held
 # where the row names none, or names what is not a list of names) and needs a
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
@@ -165,8 +170,9 @@
 #     such a primary. Other cap,
 #     small lane and auto-once stops, a deferred gate beside a non-green check
 #     outside Legs:, nonblank Override or Ship-defect
-#     evidence, and defect or tracker drafts beside the Run file (excluding
-#     .base.md) hold the gate.
+#     evidence, defect or tracker drafts beside the Run file (excluding
+#     .base.md), and a last `Stop: self-review: cap` where no reviewer stopped
+#     on tree unchanged with a dispositioned Round hold the gate.
 #     An ordinary deviation does not hold it. This read is independent of Merge.
 # exit: 0 ok · 1 the mechanic's own refusal (a gate's missing evidence among
 #   them, a held clean gate, or a test that stayed green under `prove`) · 2
@@ -536,6 +542,10 @@ fresh_red() { # fresh_red <top> <test> <sha> <paths>: 0 fresh, 1 not, with why s
   [ -z "$others" ] || { why=$stale; return 1; }
 }
 
+# The rest of a `Round: <name> ` line, close 4's self-review and close 7's
+# reviewers alike: a positive round number, then the outcome.
+round_re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
+
 # Phase 4: every test file changed has its Reverted-fix line, every removed block
 # its disposition, every new matcher its near-miss table, every probe line its
 # produced shape, and every decline its kind, a claim its probe.
@@ -670,6 +680,27 @@ EORESTS
   done <<EODECLINED
 $(rests "Declined: ")
 EODECLINED
+
+  # The self-review loop, in close 7's vocabulary: a round, then the stop. Every
+  # round line must be well formed, since no other label starts `self-review `;
+  # close 7 cannot ask that, its `claude` prefix also reading `claude code`'s.
+  ok=false
+  while IFS= read -r r; do
+    if [[ $r =~ $round_re ]]; then
+      ok=true
+    else
+      ok=false; break
+    fi
+  done <<EORESTS
+$(rests "Round: self-review ")
+EORESTS
+  [ "$ok" = true ] || gap "no Round line for self-review: add \`Round: self-review <n>: <text>\`, one per self-review round, each in that shape"
+  r=$(trim_end "$(rests "Stop: self-review: " | tail -n 1)")
+  case $r in
+    "tree unchanged" | cap) ;;
+    "") gap "no Stop line for self-review: add \`Stop: self-review: <tree unchanged|cap>\`" ;;
+    *) gap "Stop line for self-review has reason '$r', which is not one of tree unchanged, cap" ;;
+  esac
   refuse_gaps 4
 }
 
@@ -677,7 +708,7 @@ EODECLINED
 # it never reviewed, a round.
 stop_reasons="cap, tree unchanged, small lane, inline lane, auto-once, not landed, not reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
-  local list names nm stop r ok re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
+  local list names nm stop r ok
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
   list=${1#*"Reviewers: "}; list=${list%%", one bounded pass each"*}
   case $list in "" | None | None. | none | none.) return 0 ;; esac
@@ -698,7 +729,7 @@ EONAMES
     case $stop in "not reviewed" | "inline lane") continue ;; esac
     ok=false
     while IFS= read -r r; do
-      [[ $r =~ $re ]] && ok=true
+      [[ $r =~ $round_re ]] && ok=true
     done <<EORESTS
 $(rests "Round: $nm ")
 EORESTS
@@ -773,14 +804,15 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   done
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
-    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" '
+    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" \
+    --arg round_re "$round_re" '
     def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
     ($text | split("\n")) as $lines
     | ($lines | map(sub("^- "; "") | sub("[ \\t\\r]+$"; ""))) as $evidence
     | def rests($prefix): [$evidence[] | select(startswith($prefix)) | ltrimstr($prefix)];
       def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop");
-      def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]");
+      def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test($round_re);
       def settled($name): stop($name) == "tree unchanged" and reviewed($name);
       # Capped with findings: Cap: spent on a tree-changing last round, which a
       # docs-only end before the cap, also `Stop: cap`, is not. The dispositioned
@@ -788,7 +820,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # evidence of a spent cap.
       def cap_spent($name): stop($name) == "cap"
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
-             | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]"))
+             | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test($round_re))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
       def owes_fallback($name): (stop($name) | IN("not reviewed", "not landed")) or cap_spent($name);
       # A revocation appends its own Lane: line, so a stale inline stop holds.
@@ -830,6 +862,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
            else "reviewer " + $r.name + ": " + stop($r.name) end),
+       # A self-review stopped at its cap left its last fixes unread; a host
+       # reviewer that settled on the final head read them.
+       if (rests("Stop: self-review: ") | last // "") == "cap" and (any($reviewers[]; settled(.name)) | not)
+         then "self-review: stopped at cap, its last fixes read by no reviewer" else empty end,
        (rests("Override: ")[] | select(. != "" and . != "none" and . != "None.") | "override needed: " + .),
        (rests("Ship-defect: ")[] | select(. != "" and . != "none" and . != "None.") | "Ship defect: " + .),
        ($drafts[] | if startswith("defect-") then "Ship defect draft: " + . else "Tracker draft: " + . end)

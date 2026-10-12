@@ -64,6 +64,12 @@ unheld() { check "$1 does not hold $2" false "$(call | jq -r --arg r "$2" '.held
 change_run() { sed "$1" "$f" > "$f.new" && mv "$f.new" "$f"; }
 change_ci() { jq "$1" "$ci" > "$ci.new" && mv "$ci.new" "$ci"; }
 base; clean 'all recorded conditions holding'
+# A self-review stopped at its cap left fixes unread: a settled reviewer read them.
+capped='self-review: stopped at cap, its last fixes read by no reviewer'
+base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; clean 'a capped self-review a settled reviewer read'
+base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; change_run 's/^Stop: primary: tree unchanged/Stop: primary: not reviewed/'; held 'a capped self-review no reviewer read' "$capped"
+base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; printf '## CI\nLegs:\n  test: prove the change\n\n## Reviewers\nNone.\n' > "$profile"; held 'a capped self-review in a repo with no reviewer' "$capped"
+base; printf '%s\n' 'Stop: self-review: cap' 'Stop: self-review: tree unchanged' >> "$f"; change_run 's/^Stop: primary: tree unchanged/Stop: primary: not reviewed/'; unheld 'a later tree-unchanged stop' "$capped"
 base; change_run 's/abcdef0123456789/1111111111111111/'; held 'stale gate' 'local gate: recorded head differs'
 base; change_run '/^- 10:00/d'; held 'missing gate' 'local gate: no record'
 for status in fail unavailable; do
