@@ -56,6 +56,8 @@ check "an indented line is no label" 3 "$(cap)"
 profile $'```\nSelf-review cap: x\n```\n\nNone.'; out=$(preflight)
 check "a fenced line is an example" 3 "$(cap)"
 check "and no reason" "" "$(reason)"
+profile $'```\nSelf-review cap: x\n\nNone.'; out=$(preflight)
+check "a line under a fence never closed is still fenced" 3 "$(cap)"
 profile $'Self-review caps: x\n\nNone.'; out=$(preflight)
 check "a longer label is another label" 3 "$(cap)"
 printf '## Coding standards\n\nSelf-review cap: x\n' > "$repo/docs/agents/ship.md"; out=$(preflight)

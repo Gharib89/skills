@@ -450,6 +450,16 @@ admitted "bulleted rounds stopped at the cap"
 run4bare; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged'; held=$(cat "$rf"); close 4
 refused "a host reviewer's lines are not the self-review's" 'no Round line for self-review'
 
+run4bare; add 'Round: self-reviewer 1: clean' 'Stop: self-reviewer: tree unchanged'; held=$(cat "$rf"); close 4
+refused "a longer label is another reviewer's" 'no Round line for self-review'
+check "and its stop is not the loop's" yes "$(has 'no Stop line for self-review' "$err")"
+
+run4bare; add '`Round: self-review 1: clean`' '`Stop: self-review: tree unchanged`'; held=$(cat "$rf"); close 4
+refused "a quoted line is an example" 'no Round line for self-review'
+
+run4bare; add '  Round: self-review 1: clean' '  Stop: self-review: tree unchanged'; held=$(cat "$rf"); close 4
+refused "an indented line is no gate line" 'no Round line for self-review'
+
 # --- close 7 ---------------------------------------------------------------------
 
 stops='cap, tree unchanged, small lane, inline lane, auto-once, not landed, not reviewed'
