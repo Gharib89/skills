@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# scripts/prose-budget-check.sh: the line budget on ship's prose. Each case
-# builds a tree at the real relative paths under a fresh root, so a fixture
-# differs from a tree inside the budget only in the overrun under test. The
-# subject is the pair of thresholds, the `## Contents` selector and the list
+# scripts/prose-budget-check.sh: the prose budget on the skills' own documents.
+# Each case builds a tree at the real relative paths under a fresh root, so a
+# fixture differs from a tree inside the budget only in the overrun under test.
+# The subject is the pair of thresholds, the `## Contents` selector and the list
 # under it: both boundaries, the first-15-lines anchor, the heading anchor, the
 # entry grammar in both directions, the empty glob and the path where the tooling
 # itself fails.
@@ -14,6 +14,8 @@ fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 
 # <n>: n lines of body.
 body() { local i=1; while [ "$i" -le "$1" ]; do printf 'line %s\n' "$i"; i=$((i + 1)); done; }
+# <n>: n words on one line, so a case on the word budget has no line count to lean on.
+words() { local i=1; while [ "$i" -le "$1" ]; do printf 'w '; i=$((i + 1)); done; printf '\n'; }
 
 # <case>: a root with an in-budget skill; prints its path. Later helpers add to it.
 tree() {
@@ -29,13 +31,23 @@ out_of() { bash scripts/prose-budget-check.sh "$1" 2>/dev/null; }
 # than leaving every synthetic fixture green.
 check_rc "the current tree is inside the budget" 0 "$(rc_of .)"
 
-d=$(tree at-350); body 350 > "$d/skills/ship/SKILL.md"
-check_rc "a 350-line SKILL.md passes" 0 "$(rc_of "$d")"
+d=$(tree at-3500); words 3500 > "$d/skills/ship/SKILL.md"
+check_rc "a 3,500-word SKILL.md passes" 0 "$(rc_of "$d")"
 
-d=$(tree over-350); body 351 > "$d/skills/ship/SKILL.md"
-check_rc "a 351-line SKILL.md fails" 1 "$(rc_of "$d")"
+d=$(tree over-3500); words 3501 > "$d/skills/ship/SKILL.md"
+check_rc "a 3,501-word SKILL.md fails" 1 "$(rc_of "$d")"
 check "the overrun message names the file and the count" \
-  "skills/ship/SKILL.md: 351 lines, over the 350-line budget" "$(out_of "$d")"
+  "skills/ship/SKILL.md: 3501 words, over the 3500-word budget" "$(out_of "$d")"
+
+# Lines are no longer the measure: a long file inside the word budget passes,
+# which is what keeps a skill from dodging the budget with long lines instead.
+d=$(tree many-lines); body 1000 > "$d/skills/ship/SKILL.md"
+check_rc "a 1,000-line SKILL.md inside the word budget passes" 0 "$(rc_of "$d")"
+
+# Every owned skill is held, not ship alone.
+d=$(tree other-skill); mkdir -p "$d/skills/other"; words 3501 > "$d/skills/other/SKILL.md"
+check "another skill's overrun is reported" \
+  "skills/other/SKILL.md: 3501 words, over the 3500-word budget" "$(out_of "$d")"
 
 d=$(tree at-100); body 100 > "$d/skills/ship/reference/r.md"
 check_rc "a 100-line reference with no ## Contents passes" 0 "$(rc_of "$d")"
@@ -204,9 +216,9 @@ d=$(tree label-bracket)
 check_rc "a bracket inside the label does not break the link" 0 "$(rc_of "$d")"
 
 # Both budgets in one tree: the run reports every overrun, never the first.
-d=$(tree both); body 351 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
+d=$(tree both); words 3501 > "$d/skills/ship/SKILL.md"; body 101 > "$d/skills/ship/reference/r.md"
 check "both overruns are reported" \
-  "skills/ship/SKILL.md: 351 lines, over the 350-line budget
+  "skills/ship/SKILL.md: 3501 words, over the 3500-word budget
 skills/ship/reference/r.md: 101 lines and no \`## Contents\` heading in its first 15 lines" \
   "$(out_of "$d")"
 

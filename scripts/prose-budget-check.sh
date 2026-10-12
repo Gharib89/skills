@@ -3,13 +3,16 @@
 # at load, so a file that outgrows its budget buries the pipeline behind its own
 # reference material, and a reference file long enough to scroll needs a map at
 # the top rather than at the point a reader gives up. The thresholds and the
-# paths, whole: `skills/*/SKILL.md` at most 350 lines, and every
+# paths, whole: `skills/*/SKILL.md` at most 3500 words, and every
 # `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
 # inside its first 15 lines whose list matches the file's `## ` headings.
 # `scripts/check.sh full` runs this as its `prose-budget` row, which
 # scripts/local-gate.sh reports under the same name, in every lane.
-# 350 is ship's SKILL.md after the #308 deletion pass, rounded up to the next 25:
-# a ratchet, so prose that regrows fails here instead of accumulating again.
+# The SKILL.md budget counts words, split on whitespace as `wc -w` splits them,
+# because a line budget let long lines through: setup-skills carried 4,628 words
+# in 184 lines under the old 350-line cap. 3500 is ship's SKILL.md at 3,330 words
+# (#606), rounded up to the next 500: a ratchet, so prose that regrows fails here
+# instead of accumulating again.
 #
 # The ship profile's `## Local gate` section, `docs/agents/ship.md`, has a byte
 # budget of its own, 11000: every run reads the profile at its start, and the
@@ -30,6 +33,7 @@ shopt -s nullglob
 # awk reports an unreadable file in its exit status, and an ignored status turns
 # that into a count of nothing and a budget answer about a file nobody read.
 lines() { awk 'END{print NR}' "$1"; }
+words() { awk '{n += NF} END{print n + 0}' "$1"; }
 
 # One awk over the whole file rather than `head | grep`, because this script runs
 # under pipefail: a SIGPIPE on the head of that pipeline would read as a file
@@ -142,9 +146,9 @@ contents_check() {
 
 rc=0
 for f in "$root"/skills/*/SKILL.md; do
-  n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
-  [ "$n" -le 350 ] \
-    || { printf '%s: %s lines, over the 350-line budget\n' "${f#"$root"/}" "$n"; rc=1; }
+  n=$(words "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
+  [ "$n" -le 3500 ] \
+    || { printf '%s: %s words, over the 3500-word budget\n' "${f#"$root"/}" "$n"; rc=1; }
 done
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
