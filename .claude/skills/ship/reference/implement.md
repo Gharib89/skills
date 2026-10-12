@@ -97,7 +97,7 @@ early `mis-specified` stop, not a phase-3 surprise.
 
 **Judgment** (the classification, the lane keys, spec interpretation,
 external-claim probes, design choices, the brief) stays in the main thread on
-the judgment tier. **Execution** (the failing test, the green, the refactor,
+the judgment tier. **Execution** (the failing test, then the green,
 from a settled plan) is mechanical-tier work: delegate it to ONE subagent when
 the plan is settled and the edit spans files you have not opened; where you can
 point at the files, execute inline. Keep it inline when the issue is
