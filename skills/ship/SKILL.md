@@ -167,7 +167,8 @@ from memory. **Auto-triage** every finding at the judgment tier, one
 disposition each, under the rails and depth checks in
 [implement.md](reference/implement.md#phase-4-triage-and-depth-checks), then
 [loop](reference/implement.md#phase-4-the-self-review-loop), the Standards
-axis alone over each round's fixes, up to the profile's `Self-review cap:`.
+axis alone over each round's **fix-only diff**, until a round changes no file
+(`tree unchanged`) or reaches preflight's `self_review_cap` (`cap`).
 `run-file close 4` refuses until the Run file holds the
 [evidence lines](reference/implement.md#phase-4-evidence-lines): each round's
 `Round: self-review` and the loop's `Stop: self-review:`, `Reverted-fix:`,

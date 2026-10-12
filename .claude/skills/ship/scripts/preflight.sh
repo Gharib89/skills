@@ -45,7 +45,8 @@
 #   answer. It is the ruleset read the Trigger check rests on, reported for
 #   the human; the review loop does not branch on it. self_review_cap is the
 #   number of phase-4 self-review rounds the profile's `Self-review cap:` line
-#   under `## Reviewers` allows, 3 when the line is absent, and null with a
+#   allows, read at column 0 under `## Reviewers` above its first `###` block
+#   and outside a fence, 3 when the line is absent, and null with a
 #   `profile invalid:` reason when its value is not a whole number of at least
 #   1, or when there is no profile to read.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable

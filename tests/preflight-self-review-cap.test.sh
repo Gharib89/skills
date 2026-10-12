@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # preflight's self_review_cap: the number of phase-4 self-review rounds the
-# profile's optional `Self-review cap:` line under `## Reviewers` allows, 3 when
+# profile's optional `Self-review cap:` line allows (column 0, under
+# `## Reviewers` above its first `###` block, outside a fence), 3 when
 # the line is absent, and a `profile invalid:` reason with a null cap when its
 # value is not a whole number of at least 1.
 #

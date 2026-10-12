@@ -79,8 +79,9 @@
 # `n/a` `Reverted-fix:` line, `Dropped:`, `Near-miss:` and `Declined:`, and
 # the `Round:` and `Stop:` lines of `close 4`'s self-review and `close 7`. A
 # refused close writes nothing, names everything missing in one message, and
-# `next` over either phase is held the same way. A gate line is a line anywhere in the file, an optional leading
-# `- ` accepted, matched by exact prefix at the line start. `close 4` reads the
+# `next` over either phase is held the same way. A gate line is a line anywhere
+# in the file, an optional leading `- ` accepted, matched by exact prefix at the
+# line start. `close 4` reads the
 # checkout's own diff (the working tree, untracked files included, against the
 # merge base of HEAD and origin/HEAD) and asks `dropped-lines`; it needs:
 #   `Reverted-fix: <test path>: red at <sha> reverting <path>...` (produced) or
@@ -796,14 +797,15 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   done
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
-    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" '
+    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" \
+    --arg round_re "$round_re" '
     def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
     ($text | split("\n")) as $lines
     | ($lines | map(sub("^- "; "") | sub("[ \\t\\r]+$"; ""))) as $evidence
     | def rests($prefix): [$evidence[] | select(startswith($prefix)) | ltrimstr($prefix)];
       def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop");
-      def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]");
+      def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test($round_re);
       def settled($name): stop($name) == "tree unchanged" and reviewed($name);
       # Capped with findings: Cap: spent on a tree-changing last round, which a
       # docs-only end before the cap, also `Stop: cap`, is not. The dispositioned
@@ -811,7 +813,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # evidence of a spent cap.
       def cap_spent($name): stop($name) == "cap"
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
-             | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test("^[1-9][0-9]*: [[:space:]]*[^[:space:]]"))
+             | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test($round_re))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
       def owes_fallback($name): (stop($name) | IN("not reviewed", "not landed")) or cap_spent($name);
       # A revocation appends its own Lane: line, so a stale inline stop holds.
