@@ -119,6 +119,16 @@
 #                                           outdated: the thread sits on a superseded diff. url:
 #                                           that first comment's page. Azure DevOps rows carry none
 #                                           of the three: the thread id is that reply target already.
+#   host_pr_comments <pr>                -> [{author,body,created_at,writer}] the PR's
+#                                           conversation comments, created_at in the
+#                                           one UTC spelling, writer graded as
+#                                           host_issue_comments grades it (null on Azure
+#                                           DevOps). On Azure DevOps a comment is a PR-level
+#                                           thread's first comment.
+#   host_pr_pushed_at <pr> <head_ref> <head_sha>
+#                                        -> the UTC time (YYYY-MM-DDTHH:MM:SSZ), alone on a line,
+#                                           of the latest push that put <head_sha> at the PR's
+#                                           head. Non-zero where the host has no such push to read.
 #   host_pr_reviewer_blocked <pr> <login>-> {line, at} | null: that login's latest
 #                                           quota or rate-limit notice line, from its review
 #                                           bodies or its PR comments, and the UTC time the row

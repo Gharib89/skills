@@ -27,8 +27,10 @@
 # one `*-<n>` branch on origin; every other shape is one `not reworkable:
 # <detail>` reason. A `*-<n>` worktree on that branch, clean and at the PR's
 # head, is the one an ended attended run left: reused, not `worktree exists`.
-# Admitted with no unresolved review thread is `no feedback`, unless
-# `--feedback` says the human gave the run text of its own.
+# Admitted with no unresolved review thread and no feedback comment is `no
+# feedback`, unless `--feedback` says the human gave the run text of its own. A
+# feedback comment is an authoritative one (`writer: true`) with no Ship marker,
+# posted after the head push: the push that put the PR's head at its sha.
 #
 # `none` as the issue argument is the task-spec run: there is no issue to read,
 # so the issue block is skipped and `none` is the literal branch and worktree
@@ -60,11 +62,12 @@
 #   and outside a fence, 3 when the line is absent, and null with a
 #   `profile invalid:` reason when its value is not a whole number of at least
 #   1, or when there is no profile to read. rework is null on a plain run, and on
-#   a rework run {pr, branch, head_sha, worktree, threads[]}: the PR being
-#   reworked, its head branch and sha, the reusable worktree's path or null, and
-#   the ids of its unresolved review threads; null where no one PR was
-#   admitted: none or several open, one unreadable or on another branch, origin
-#   or its threads unreadable.
+#   a rework run {pr, branch, head_sha, worktree, threads[], comments[]}: the PR
+#   being reworked, its head branch and sha, the reusable worktree's path or
+#   null, the ids of its unresolved review threads, and its feedback comments
+#   as {author, created_at, body}; null where no one PR was admitted: none or
+#   several open, one unreadable or on another branch, origin, its threads, its
+#   comments or its head push unreadable.
 # exit: 0 actionable · 1 not actionable · 2 tooling, or host-unreachable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -279,6 +282,11 @@ fi
 # The Rework run's admission: the one open PR closing the issue, its head the one
 # `*-<n>` branch on origin, and something to rework it from.
 rework_json=null
+# Both sides of the head-push compare pass this one check: the adapters owe the
+# one UTC spelling, and a time spelled any other way would compare as text, so
+# it is unreadable. `\z`, since `$` also matches before a trailing newline.
+strict_utc='def strict_utc: if type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\\z")
+  then . else error("not a UTC time") end; '
 if $rework && [ -n "${open_prs:-}" ]; then
   case $(jq length <<<"$open_prs") in
     0) reasons+=("not reworkable: no open PR") ;;
@@ -290,9 +298,23 @@ if $rework && [ -n "${open_prs:-}" ]; then
        elif ! threads=$(host_pr_threads "$num") \
          || ! open_threads=$(jq -c '[.[] | select(.resolved | not) | .id]' <<<"$threads"); then
          reasons+=("not reworkable: review threads unreadable")
+       elif ! comments=$(host_pr_comments "$num") \
+         || ! comments=$(jq -c --arg m "$SHIP_COMMENT_MARKER" "$strict_utc"'[.[]
+              | select(.writer == true and ((.body // "") | contains($m) | not))
+              | {author, created_at: (.created_at | strict_utc), body}]' <<<"$comments"); then
+         reasons+=("not reworkable: PR comments unreadable")
+       elif [ "$comments" != '[]' ] && ! pushed=$(host_pr_pushed_at "$num" "$head" "$(jq -r .head_sha <<<"$pr")" \
+         | jq -Rre "$strict_utc"'strict_utc'); then
+         reasons+=("not reworkable: head push unreadable")
        else
-         [ "$open_threads" != '[]' ] || $feedback || reasons+=("no feedback")
-         rework_json=$(jq -c --argjson t "$open_threads" '{pr: .number, branch: .head_ref, head_sha, worktree: null, threads: $t}' <<<"$pr")
+         # The head push is the cut-off: a comment older than it was already in
+         # front of the run that pushed. Both sides count whole seconds, and a
+         # comment stamped in the push's own second may predate it, so the
+         # compare is strict.
+         [ "$comments" = '[]' ] || comments=$(jq -c --arg p "$pushed" 'map(select(.created_at > $p))' <<<"$comments")
+         [ "$open_threads$comments" != '[][]' ] || $feedback || reasons+=("no feedback")
+         rework_json=$(jq -c --argjson t "$open_threads" --argjson c "$comments" \
+           '{pr: .number, branch: .head_ref, head_sha, worktree: null, threads: $t, comments: $c}' <<<"$pr")
        fi ;;
     *) reasons+=("not reworkable: several open PRs: $(jq -r 'map("#\(.)") | join(", ")' <<<"$open_prs")") ;;
   esac

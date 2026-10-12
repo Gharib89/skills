@@ -572,6 +572,19 @@ _gh_blocked_select="$SHIP_BLOCKED_NOTICE$SHIP_LOGIN_NORM"'
   [sort_by(.at)[] | select((.login | norm) == ($l | norm)) | .at as $at
    | (.body // "") | notice_lines | {line: ., at: $at}]
   | last // null'
+# A PR's conversation comments are its issue's on this host.
+host_pr_comments() { host_issue_comments "$1"; }
+# The repository activity API keeps each update to a branch with its `after` sha
+# and its own time, newest first; a commit's dates are when it was made, which
+# can be long before the push. No activity_type filter: a branch's first push is
+# logged as `branch_creation`, and a force push as `force_push`.
+host_pr_pushed_at() { # <pr> <head_ref> <head_sha>
+  local t
+  t=$(api "$R/activity" -X GET -f "ref=refs/heads/$2" -f per_page=100 \
+    | jq -r --arg s "$3" '[.[] | select(.after == $s)] | first | .timestamp // empty') || return 1
+  [ -n "$t" ] && printf '%s\n' "$t"
+}
+
 host_pr_reviewer_blocked() { # <pr> <login>
   { api "$R/issues/$1/comments" --paginate --jq '.[] | {login: .user.login, body, at: .created_at}'
     api "$R/pulls/$1/reviews"   --paginate --jq '.[] | {login: .user.login, body, at: .submitted_at}'

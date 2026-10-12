@@ -63,7 +63,7 @@ A Ship run a cloud routine invoked through `cloud-ship`. Admits `ready-for-agent
 _Avoid_: cloud run, headless, autopilot
 
 **Rework run**:
-An attended Ship run a human starts on an issue whose earlier run left its PR open at the merge gate, attended or unattended. It takes the PR's unresolved review threads, the comments authoritative commenters left since its last push, and any feedback the human gives at the start as the change to make, and works it on the same claim, branch and PR, ending at a fresh merge gate. It needs the claim to be the human's own and one open PR on the issue's branch; with no feedback it stops before any change.
+An attended Ship run a human starts on an issue whose earlier run left its PR open at the merge gate, attended or unattended. It takes the PR's unresolved review threads, the authoritative comments left on its PR since the head push (less Ship's own), and any feedback the human gives at the start as the change to make, and works it on the same claim, branch and PR, ending at a fresh merge gate. It needs the claim to be the human's own and one open PR on the issue's branch; with no feedback it stops before any change.
 _Avoid_: resumed run (a run continuing its own record after a context loss), iteration, follow-up run
 
 **Cloud sandbox**:
@@ -99,7 +99,7 @@ The rule that a later triage brief or authoritative comment, each posted by some
 _Avoid_: override, latest-wins
 
 **Authoritative comment**:
-A comment on the issue by someone with write access to the repo. Only it, or a triage brief by such an author, can supersede the issue body under spec precedence; any other comment, a brief by anyone else included, is context, never spec. A comment whose author's access cannot be read is not authoritative, in every lane.
+A comment on the issue, or on a rework run's PR, by someone with write access to the repo. Only it, or a triage brief by such an author, can supersede the issue body under spec precedence; any other comment, a brief by anyone else included, is context, never spec. A comment whose author's access cannot be read is not authoritative, in every lane.
 _Avoid_: maintainer comment, official comment
 
 **Host**:

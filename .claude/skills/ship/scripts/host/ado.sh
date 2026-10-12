@@ -284,6 +284,20 @@ host_pr_threads() {
        replied: ([.comments[] | select('"$_comment_login"' == $me)] | length > 0),
        author: '"$_author_login"', path: .threadContext.filePath, body: .comments[0].content}]'
 }
+# A PR comment is a PR-level thread here, one with no file context, so its
+# first comment is the comment. `writer` is null for the reason host_issue_comments gives.
+host_pr_comments() {
+  _threads_raw "$1" | jq '[.value[] | select(.isDeleted != true) | select(.threadContext == null)
+    | .comments[0] | select(.commentType != "system")
+    | {author: '"$_comment_login"', body: (.content // ""), created_at: (.publishedDate | '"$_utc"'), writer: null}]'
+}
+# Each push makes an iteration carrying the pushed commit and its own time.
+host_pr_pushed_at() { # <pr> <head_ref> <head_sha>
+  local t
+  t=$(invoke GET git pullRequestIterations 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" \
+    | jq -r --arg s "$3" '[.value[] | select(.sourceRefCommit.commitId == $s)] | max_by(.id) | .createdDate // empty | '"$_utc") || return 1
+  [ -n "$t" ] && printf '%s\n' "$t"
+}
 host_pr_reviewer_blocked() { echo null; }
 # Azure DevOps records no time for a reviewer-add, so requested_at is the wall
 # clock in the adapter's one UTC spelling, stamped before the call so a review
