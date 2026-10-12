@@ -82,9 +82,12 @@ run_branches() { # -> one branch name per line
 }
 
 # The open issue carrying this invocation's marker, or nothing.
+# Returns 2 when the read fails, which is not "no such issue".
 marked_issue() {
-  gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=10" \
-    | jq -r --arg m "$mark" '[.[] | select(.pull_request == null and ((.body // "") | contains($m)))][0].number // empty'
+  local list
+  list=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=10") || return 2
+  jq -r --arg m "$mark" '[.[] | select(.pull_request == null and ((.body // "") | contains($m)))][0].number // empty' \
+    <<<"$list" || return 2
 }
 
 # Close the run's issue and PRs and delete its branches. A read, close or delete
@@ -93,7 +96,9 @@ marked_issue() {
 reset_host() {
   # A signal can land while the create's response is in flight: the issue may
   # exist with its number unknown, so look for it by the marker.
-  [ -n "$issue" ] || [ -z "$mark" ] || issue=$(marked_issue)
+  if [ -z "$issue" ] && [ -n "$mark" ]; then
+    issue=$(marked_issue) || { echo "cleanup: unverified, the issue could not be re-read" >&2; return 2; }
+  fi
   [ -n "$issue" ] || return 0
   local prs mine n h b branches rc=0
   if prs=$(open_prs) && mine=$(run_prs "$prs"); then
@@ -151,7 +156,9 @@ BODY
 # A create whose response was lost may still have landed: re-read the newest
 # open issues for its marker before calling the create failed, so cleanup can
 # close it.
-[ -n "$issue" ] || issue=$(marked_issue)
+if [ -z "$issue" ]; then
+  issue=$(marked_issue) || tooling "the issue create on $repo failed and its re-read failed too"
+fi
 [ -n "$issue" ] || tooling "cannot file the issue on $repo"
 
 start=$(date +%s)
