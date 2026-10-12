@@ -62,6 +62,10 @@ _Avoid_: local run, interactive mode
 A Ship run a cloud routine invoked through `cloud-ship`. Admits `ready-for-agent` issues only; a blocked stop hands back.
 _Avoid_: cloud run, headless, autopilot
 
+**Rework run**:
+An attended Ship run a human starts on an issue whose earlier run left its PR open at the merge gate, attended or unattended. It takes the PR's unresolved review threads, the comments authoritative commenters left since its last push, and any feedback the human gives at the start as the change to make, and works it on the same claim, branch and PR, ending at a fresh merge gate. It needs the claim to be the human's own and one open PR on the issue's branch; with no feedback it stops before any change.
+_Avoid_: resumed run (a run continuing its own record after a context loss), iteration, follow-up run
+
 **Cloud sandbox**:
 The container any cloud session runs in, attended or unattended, reaching hosts only through the session proxy. Its image, network policy and refusals (GitHub GraphQL among them) are facts Ship adapts to, not settings a repo owns. The lane decides which issues a run admits; the sandbox decides what the run must prepare before it can work.
 _Avoid_: cloud env, default env, container
