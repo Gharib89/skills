@@ -397,10 +397,11 @@ ship_main_checkout() {
 # ${XDG_STATE_HOME:-$HOME/.local/state}/ship/<repo key>, <repo key> the POSIX
 # `cksum` of the physical git common dir path. Keyed on the common dir, the main
 # checkout and every worktree of it resolve the same directory and two clones
-# get different ones, short of a CRC collision among one user's clones. It sits outside every checkout because a session isolated by
-# `EnterWorktree` refuses an Edit, or a Bash command, that names a `.git` path
-# (measured, Claude Code 2.1.296), so the run could not write its own record
-# there; the key is digits for the same reason, since digits never spell `git`.
+# get different ones, short of a CRC collision among one user's clones. It sits
+# outside every checkout because a session isolated by `EnterWorktree` refuses
+# an Edit, or a Bash command, that names a `.git` path (measured, Claude Code
+# 2.1.296), so the run could not write its own record there; the key is digits
+# for the same reason, since digits never spell `git`.
 # `cksum` because POSIX requires it, so no consumer needs a new tool. A state
 # directory, not a temp one, because a wiped temp directory took the record with
 # it in three runs. `run-file`, `cleanup` and the grade check in `open-pr` and
