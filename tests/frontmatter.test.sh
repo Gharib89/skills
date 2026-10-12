@@ -61,8 +61,22 @@ check_rc "folded, quoted and manual-only descriptions pass" 0 "$(rc_of "$d")"
 # A YAML comment after an unquoted value is not part of it; inside quotes it is.
 d=$(tree comments)
 skill "$d" manual name: manual 'description: Run by hand only. # no clause' 'disable-model-invocation: true # manual-only'
-skill "$d" hashed name: hashed 'description: "Use when # is in quotes."'
-check_rc "a comment after an unquoted value is dropped" 0 "$(rc_of "$d")"
+skill "$d" hashed name: hashed 'description: "Use when # is in quotes."' 'argument-hint: "[topic]" # in the menu'
+check_rc "a comment after an unquoted or a quoted value is dropped" 0 "$(rc_of "$d")"
+
+# A quote a value opens and does not end with is YAML a loader rejects, though
+# the text inside still reads as a description with its clause.
+d=$(tree unclosed-quote)
+skill "$d" open name: open 'description: "Use when a quote is never closed.'
+check "a description opening a quote it never closes fails" \
+  "skills/open/SKILL.md: frontmatter key description has an unbalanced quote" "$(out_of "$d")"
+d=$(tree trailing-quote)
+skill "$d" hint name: hint 'description: Use when hinted.' "argument-hint: '[topic]' extra"
+check "a quoted value with text after its closing quote fails" \
+  "skills/hint/SKILL.md: frontmatter key argument-hint has an unbalanced quote" "$(out_of "$d")"
+d=$(tree folded-quote)
+skill "$d" multi name: multi 'description: "Use when a quoted' '  description folds."'
+check_rc "a quoted description across lines passes" 0 "$(rc_of "$d")"
 
 d=$(tree unknown-key)
 skill "$d" extra name: extra 'description: Use when extra.' 'allowed-tools: Bash'
