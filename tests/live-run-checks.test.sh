@@ -123,9 +123,10 @@ printf '%s' '{"assignees": true, "open_prs": []}' > "$T/host-bool.json"
 check_rc "a non-array assignees is tooling" 2 \
   "$(verdict "$(good_run)" "$T/host-bool.json" | tail -n 1 | sed 's/^rc=//')"
 
-# --ambiguous: the early stop on a vague issue. The reply names the stop, the
-# host shows no claim, no PR closing the issue and no branch of the run, and a
-# Run file, where there is one, shows no work past phase 1.
+# --ambiguous: the early stop on a vague issue. The reply names the stop as the
+# code span `ambiguous`, the host shows no claim, no PR closing the issue and
+# no branch of the run, and a Run file, where there is one, shows no work past
+# phase 1.
 stop_run() {
   cat <<'RUN'
 # ship run · 7

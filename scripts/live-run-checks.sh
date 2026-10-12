@@ -10,10 +10,11 @@
 #   PR_TEMPLATE: the fixture's PR template, which scripts/check-pr-body.sh reads
 #
 # Without a flag it judges the happy path: the run reached the merge gate with
-# one PR. --ambiguous judges the early stop on a vague issue: the reply names the
-# `ambiguous` stop (Ship reports a stop's name verbatim), the host shows no
-# claim, no PR closing the issue and no branch, and a Run file, where the run
-# wrote one, shows no work past phase 1. Where the stop lands is not judged: on
+# one PR. --ambiguous judges the early stop on a vague issue: the reply carries
+# the code span `ambiguous` (Ship reports a stop's name verbatim, as its stop
+# table spells it, so a bare "ambiguous" in prose does not count), the host
+# shows no claim, no PR closing the issue and no branch, and a Run file, where
+# the run wrote one, shows no work past phase 1. Where the stop lands is not judged: on
 # a vague issue the model decides right after `read-issue`, still in phase 0,
 # and an early stop may leave no Run file at all.
 #

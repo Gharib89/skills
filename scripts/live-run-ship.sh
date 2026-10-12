@@ -217,7 +217,9 @@ attempt() { # <happy|ambiguous> <attempt>
     # Any other nonzero exit is claude failing (auth, quota, API), not Ship stopping.
     tail -n 40 "$co.err" >&2; unavailable "claude -p failed"
   else
-    reply=$(jq -r '.result // ""' "$co.json" 2>/dev/null) || unavailable "claude -p output unreadable"
+    # An exit 0 with no reply string (empty, cut short, not JSON) is a failed read.
+    reply=$(jq -er '.result | strings' "$co.json" 2>/dev/null) \
+      || { head -c 2000 "$co.json" >&2; tail -n 40 "$co.err" >&2; unavailable "claude -p output unreadable"; }
     # The Run file sits under XDG_STATE_HOME, which this script pointed into $tmp.
     run_file=$(find "$tmp/state" -path "*/ship-$issue/run.md" 2>/dev/null | head -n 1)
     assignees=$(gh api "repos/$repo/issues/$issue" --jq '[.assignees[].login]') || unavailable "cannot read issue #$issue"
@@ -261,11 +263,11 @@ done
 # A first attempt that failed is the one retried; every other run is its path's
 # final word. A retried run's cleanup failure stays a failure: its leftovers are
 # still on the fixture whatever the retry did.
-out=$(jq -cs 'def lines: .path as $p | .failed[] | "\($p): \(.)";
+out=$(jq -cs 'def lines(f): .path as $p | .failed[] | select(f) | "\($p): \(.)";
   ([.[] | select(.attempt == 1 and .failed != [])]) as $retried
   | ([.[] | select(.attempt == 2 or .failed == [])]) as $final
-  | ([$final[] | lines] + [$retried[] | .path as $p | .failed[] | select(startswith("cleanup: ")) | "\($p): \(.)"]) as $failed
+  | ([$final[] | lines(true)] + [$retried[] | lines(startswith("cleanup: "))]) as $failed
   | {result: (if $failed == [] then "pass" else "fail" end),
-     failed: $failed, retried: [$retried[] | lines], runs: .}' "$tmp/runs")
+     failed: $failed, retried: [$retried[] | lines(true)], runs: .}' "$tmp/runs")
 printf '%s\n' "$out"
 [ "$(jq -r .result <<<"$out")" = pass ]
