@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
-argument-hint: "[issue-number] [--unattended | --inline [--review]]"
+argument-hint: "[issue-number] [--unattended | [--rework [\"<feedback>\"]] [--inline [--review]]]"
 metadata:
   version: 0.29.0
   profile-schema: 5
@@ -38,6 +38,9 @@ in the merge summary, so every PR records which ship produced it.
   `<issue>` it first runs the unattended lane: prepare, PR cap, select.
 - `--inline [--review]`: the **inline lane**; before `prepare`, read
   [small-lane.md](reference/small-lane.md#the-inline-lane) for its rules.
+- `--rework ["<feedback>"]`: the **rework run**, reworking the PR an earlier
+  run left at the merge gate; before `run-file init`, read
+  [rework.md](reference/rework.md). Attended only; `--inline` composes.
 
 Without `--unattended` the run is **attended**: any needed human action stops
 and asks, and the claim holds while it waits. **Preparation**, before `run-file
@@ -284,6 +287,7 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 | A skill ship composes is not installed at its pin, or its pin is malformed | `skill missing: <skill>; run <install line>`, `skill off pin: <skill> at <ref>, pinned <sha>; run <install line>`, `skills lock unreadable: skills-lock.json; repair it, then re-run preflight`, `composes pin invalid: <entry>; want <form>` | no claim |
 | Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | no claim |
 | Issue too vague to plan | `ambiguous` | no claim |
+| A `--rework` run not admitted, or with nothing to rework | `not reworkable: <detail>`, `no feedback` | unchanged |
 | Change outgrows one PR, or needs a redesign the issue did not scope | `needs-split` | attended: ask; unattended: hand back |
 | A find shows the issue is mis-specified | `mis-specified` | attended: ask; unattended: hand back |
 | Verification prerequisite missing | `hand-off` (attended waits, claim holds) / `blocked-verification` | attended: hold; unattended: hand back |
