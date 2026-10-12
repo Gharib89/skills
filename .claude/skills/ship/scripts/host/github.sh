@@ -580,7 +580,7 @@ host_pr_comments() { host_issue_comments "$1"; }
 host_pr_pushed_at() { # <pr> <head_ref> <head_sha>
   local t
   t=$(api "$R/activity" -X GET -f "ref=refs/heads/$2" -f activity_type=push -f per_page=100 \
-    --jq "[.[] | select(.after == \"$3\")] | first | .timestamp // empty") || return 1
+    | jq -r --arg s "$3" '[.[] | select(.after == $s)] | first | .timestamp // empty') || return 1
   [ -n "$t" ] && printf '%s\n' "$t"
 }
 

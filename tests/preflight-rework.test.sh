@@ -149,6 +149,17 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
     "$(jq -c .rework.comments <<<"$out")"
   check "$h: the push read names the PR, its branch and head" "host_pr_pushed_at	9	feat/y-5	$head" \
     "$(grep '^host_pr_pushed_at' "$SHIP_FAKE/calls")"
+  threadless; comment w 2026-01-02T00:00:01.250+00:00 true
+  check "$h: a comment time in another spelling is normalised before the compare" \
+    '[{"author":"w","created_at":"2026-01-02T00:00:01Z","body":"please rename x"}]' \
+    "$(jq -c .rework.comments <<<"$(preflight 5 --rework)")"
+  threadless; comment w 2026-01-02T00:00:01Z true
+  printf '2026-01-02T00:00:00.999+00:00\n' > "$SHIP_FAKE/host_pr_pushed_at.1.json"
+  check "$h: so is the push time" '[]' "$(rw "$(preflight 5 --rework)")"
+  threadless; comment w 2026-01-02T00:00:01Z true
+  printf 'yesterday\n' > "$SHIP_FAKE/host_pr_pushed_at.1.json"
+  check "$h: a push answer that is no time is unreadable" '["not reworkable: head push unreadable"]' \
+    "$(rw "$(preflight 5 --rework)")"
   threadless; comment w 2026-01-01T23:59:59Z true
   check "$h: a writer's comment before the head's push is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
   threadless; comment w 2026-01-02T00:00:00Z true

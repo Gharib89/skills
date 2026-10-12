@@ -3,14 +3,13 @@
 `/ship <issue> --rework ["<feedback>"]` reworks the PR an earlier run of the
 issue, attended or unattended, left open at the merge gate. The change to make
 is its **feedback**, from three sources: the PR's unresolved review threads,
-the **authoritative comments** on the PR posted after its head's last push, and
-the feedback text, if any. A PR comment is authoritative when the host grades
-its author `writer: true`, the same grade `read-issue` gives an issue comment;
-`false`, and `null` where the host cannot answer (always on Azure DevOps), make
-it context, as does Ship's own marker. The push is the cut-off for an attended
-and an unattended earlier run alike: a comment from before it was there for the
-run that pushed. The run
-keeps the claim, the branch and the PR, and ends at a fresh merge gate. It is
+the PR's authoritative comments posted after the **head push** (the push that
+put the PR's head at its sha), less Ship's own, and the feedback text, if any.
+A PR comment is authoritative as
+[implement.md](implement.md#phase-1-spec-precedence) defines it, and preflight
+drops every other one. A comment older than the head push was already in front
+of the run that pushed. The run keeps the claim, the branch and the PR, and
+ends at a fresh merge gate. It is
 attended only. `--unattended` and a task-spec run (free text in place of the
 issue number) are refused with preflight's usage line, so `cloud-ship`, which
 always passes `--unattended`, never starts one. `--inline` composes: the inline
@@ -35,7 +34,7 @@ text. In place of `already claimed`, `existing PR` and `existing branch` it
 admits the run only when the claim is your identity's and exactly one open PR
 closes the issue, its head being the one `*-<n>` branch on origin. Any other
 shape is `not reworkable: <detail>`. An admitted PR with no unresolved thread,
-no authoritative comment since its head's push and no text from the human is
+none of those PR comments and no text from the human is
 `no feedback`. Both stops end the run before any change and leave the claim as
 it is: no release, no hand-back. On `ok`, preflight's `rework` names
 `{pr, branch, head_sha, worktree, threads, comments}`, each comment
