@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.29.0 (2026-10-12)
+
+### Features
+
+- **ship**: Read-issue marks comment writers; only they supersede the body
+  ([#617](https://github.com/Gharib89/skills/pull/617),
+  [`608b6ad`](https://github.com/Gharib89/skills/commit/608b6adf5272c12b368dac2d433fdddd1d3ca931))
+
+
 ## v0.28.0 (2026-10-12)
 
 ### Features
