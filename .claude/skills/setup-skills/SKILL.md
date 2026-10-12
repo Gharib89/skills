@@ -160,4 +160,4 @@ Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>
 
 ## Re-run
 
-**The profile re-run**, when the profile exists, and **a setup section re-run**, when a refresh names setup sections whose templates moved: each is a paragraph of [reference/re-run.md](./reference/re-run.md); take the one whose case holds.
+**The profile re-run**, when the profile exists, and **a setup section re-run**, when a refresh names setup sections whose templates moved: each is a paragraph of [reference/re-run.md](./reference/re-run.md); take each whose case holds, the profile re-run first when both do.
