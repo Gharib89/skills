@@ -14,7 +14,7 @@ What both shapes do the same way, because ship reads a round off the host alone:
 - **Actions pinned to a commit SHA, and a checkout with `persist-credentials: false`**, which setup-harness's zizmor requires.
 - **`--max-turns 60`**, since a 30-turn cap does not cover a mid-size PR.
 - **An allowlist that covers every step of the prompt.** `sed` and `awk` stay denied on purpose: both execute embedded commands (sed's `e`, awk's `print | "cmd"`).
-- **Who may put text in front of the round**: the on-push shape skips a fork PR and the on-request shape admits only an `OWNER`, `MEMBER` or `COLLABORATOR` author.
+- **Who may put text in front of the round**: the on-push shape skips a fork PR and the on-request shape admits only an `OWNER`, `MEMBER` or `COLLABORATOR` author. The text of the issues a PR closes reaches the round only where its author can push, which an `issue` step before the action asks of the collaborator permission route.
 - **A review POST of typed `-F` fields**, since Claude Code refuses a heredoc of JSON.
 - **A step that names denied calls** in the run log, with one warning carrying the count.
 - **A step that speaks when the job fails**, so a failed round is not read as silent. `pull-requests: write` admits `/issues/{n}/comments` on a pull request with no `issues` scope, so a repo may drop `issues: read`.
@@ -66,6 +66,36 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # The issue text the round reads as spec, from authors who can push only.
+      # Push access is asked of the collaborator permission route, because
+      # `author_association` does not imply it: on an org-owned repo a MEMBER
+      # or an outside COLLABORATOR can hold read access only. A failed lookup
+      # is no push access. GitHub's own closing links name the issues, so no
+      # keyword match on the PR body decides what the round trusts.
+      - id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          out=$RUNNER_TEMP/linked-issue.md
+          : > "$out"
+          issues=$(gh pr view "$PR" --repo "$REPO" --json closingIssuesReferences \
+            --jq '.closingIssuesReferences[] | select("\(.repository.owner.login)/\(.repository.name)" == env.REPO) | .number')
+          for n in $issues; do
+            texts=$({ gh api "repos/$REPO/issues/$n" --jq '{login: .user.login, body, kind: "Issue"}'
+                      gh api --paginate "repos/$REPO/issues/$n/comments" --jq '.[] | {login: .user.login, body, kind: "Comment on"}'
+                    } | jq -s .)
+            writers=()
+            for login in $(jq -r '[.[].login | strings] | unique[]' <<<"$texts"); do
+              push=$(gh api "repos/$REPO/collaborators/$(jq -rn --arg l "$login" '$l | @uri')/permission" --jq .user.permissions.push) || push=false
+              if [ "$push" = true ]; then writers+=("$login"); fi
+            done
+            jq -r --arg n "$n" '.[] | select(.login as $l | $ARGS.positional | any(. == $l))
+                                | "# \(.kind) #\($n)\n\n\(.body // "")\n"' --args "${writers[@]}" <<<"$texts" >> "$out"
+          done
+
       - id: review
         uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
         with:
@@ -82,20 +112,16 @@ jobs:
                findings in this repo. Read the standards file it points at as well.
                Where the standards route by path, also read each file they route
                this PR's changed paths to, once step 3's diff names them.
-            2. Run `gh pr view ${{ github.event.pull_request.number }} --json title,body`
-               and find the linked issue (Closes/Fixes/Resolves #N). If one exists,
-               read it with these two commands, which keep only text an OWNER,
-               MEMBER or COLLABORATOR wrote, and treat the requirements they state
-               as the spec for this change:
-               `gh api repos/${{ github.repository }}/issues/N --jq 'select(.author_association | IN("OWNER","MEMBER","COLLABORATOR")) | .body'`
-               `gh api --paginate repos/${{ github.repository }}/issues/N/comments --jq '.[] | select(.author_association | IN("OWNER","MEMBER","COLLABORATOR")) | .body'`
-               These two commands are your only read of the issue. When both print
-               nothing, the issue holds no trusted text: that is the answer, not a
-               failed call, so do not read the issue another way. Review against
-               the brief and the standards alone, and if you then have findings,
-               end `body` with the sentence `The linked issue carried no trusted
-               spec.`; a round with no findings still sends `body` of exactly
-               `no findings`.
+            2. Read `${{ runner.temp }}/linked-issue.md` with the Read tool. It
+               holds the body and comments of each issue this PR closes, keeping
+               only text whose author can push to this repo; treat the
+               requirements they state as the spec for this change. That file is
+               your only read of the issue. When it is empty, the PR closes no
+               issue or its issue holds no trusted text: that is the answer, not
+               a failed read, so do not read the issue another way. Review against the brief and the
+               standards alone, and if you then have findings, end `body` with
+               the sentence `The linked issue carried no trusted spec.`; a round
+               with no findings still sends `body` of exactly `no findings`.
             3. Run `gh pr diff ${{ github.event.pull_request.number }}` once and review
                only the changed lines it returned, against (a) the brief and the
                standards it names and (b) the linked issue. Walking the changed
@@ -174,7 +200,7 @@ jobs:
           claude_args: |
             --model opus
             --max-turns 60
-            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(head:*),Bash(tail:*),Bash(wc:*),Bash(grep:*)"
+            --allowedTools "Read,Grep,Glob,Bash(gh api:*),Bash(gh pr diff:*),Bash(head:*),Bash(tail:*),Bash(wc:*),Bash(grep:*)"
 
       # The action logs `permission_denials_count` and hides which calls were
       # refused, so a round that spent turns on denied calls looks clean. This
@@ -288,7 +314,13 @@ jobs:
     # purpose. The PR author is tested instead: the round runs on the Claude
     # app's installation token, which `permissions:` does not narrow, so an
     # outsider's PR text must not reach it. The on-push shape's fork skip,
-    # there for the secret, has the same effect.
+    # there for the secret, has the same effect. The test stays on
+    # `author_association`, though an org MEMBER or an outside COLLABORATOR can
+    # hold read access only, where the `issue` step asks for push: an `if:`
+    # cannot call the API; the action already refuses a requester who cannot
+    # push; and a step that tested the author would turn a refused round from a
+    # `skipped` run, which ship grades `never-queued`, into a green run with no
+    # review.
     if: >-
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '__PHRASE__') &&
@@ -307,6 +339,36 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # The issue text the round reads as spec, from authors who can push only.
+      # Push access is asked of the collaborator permission route, because
+      # `author_association` does not imply it: on an org-owned repo a MEMBER
+      # or an outside COLLABORATOR can hold read access only. A failed lookup
+      # is no push access. GitHub's own closing links name the issues, so no
+      # keyword match on the PR body decides what the round trusts.
+      - id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          out=$RUNNER_TEMP/linked-issue.md
+          : > "$out"
+          issues=$(gh pr view "$PR" --repo "$REPO" --json closingIssuesReferences \
+            --jq '.closingIssuesReferences[] | select("\(.repository.owner.login)/\(.repository.name)" == env.REPO) | .number')
+          for n in $issues; do
+            texts=$({ gh api "repos/$REPO/issues/$n" --jq '{login: .user.login, body, kind: "Issue"}'
+                      gh api --paginate "repos/$REPO/issues/$n/comments" --jq '.[] | {login: .user.login, body, kind: "Comment on"}'
+                    } | jq -s .)
+            writers=()
+            for login in $(jq -r '[.[].login | strings] | unique[]' <<<"$texts"); do
+              push=$(gh api "repos/$REPO/collaborators/$(jq -rn --arg l "$login" '$l | @uri')/permission" --jq .user.permissions.push) || push=false
+              if [ "$push" = true ]; then writers+=("$login"); fi
+            done
+            jq -r --arg n "$n" '.[] | select(.login as $l | $ARGS.positional | any(. == $l))
+                                | "# \(.kind) #\($n)\n\n\(.body // "")\n"' --args "${writers[@]}" <<<"$texts" >> "$out"
+          done
+
       - id: review
         uses: anthropics/claude-code-action@58985842b834ed26087302ba27d07bc24ca8697a # v1.0.244
         with:
@@ -322,20 +384,19 @@ jobs:
                findings in this repo. Read the standards file it points at as well.
                Where the standards route by path, also read each file they route
                this PR's changed paths to, once step 3's diff names them.
-            2. Run `gh pr view ${{ github.event.issue.number }} --json title,body,headRefOid`
-               and find the linked issue (Closes/Fixes/Resolves #N). If one exists,
-               read it with these two commands, which keep only text an OWNER,
-               MEMBER or COLLABORATOR wrote, and treat the requirements they state
-               as the spec for this change:
-               `gh api repos/${{ github.repository }}/issues/N --jq 'select(.author_association | IN("OWNER","MEMBER","COLLABORATOR")) | .body'`
-               `gh api --paginate repos/${{ github.repository }}/issues/N/comments --jq '.[] | select(.author_association | IN("OWNER","MEMBER","COLLABORATOR")) | .body'`
-               These two commands are your only read of the issue. When both print
-               nothing, the issue holds no trusted text: that is the answer, not a
-               failed call, so do not read the issue another way. Review against
-               the brief and the standards alone, and if you then have findings,
-               end `body` with the sentence `The linked issue carried no trusted
-               spec.`; a round with no findings still sends `body` of exactly
-               `no findings`.
+            2. Run `gh pr view ${{ github.event.issue.number }} --json headRefOid`
+               for the PR head step 3 reads files at. Then read
+               `${{ runner.temp }}/linked-issue.md` with the Read tool. It
+               holds the body and comments of each issue this PR closes, keeping
+               only text whose author can push to this repo; treat the
+               requirements they state as the spec for this change. That file is
+               your only read of the issue. When it is empty, the PR closes no
+               issue or its issue holds no trusted text: that is the answer, not
+               a failed read, so do not read the issue another way. Review
+               against the brief and the standards alone, and if you then have
+               findings, end `body` with the sentence `The linked issue carried
+               no trusted spec.`; a round with no findings still sends `body` of
+               exactly `no findings`.
             3. Run `gh pr diff ${{ github.event.issue.number }}` once and review
                only the changed lines it returned, against (a) the brief and the
                standards it names and (b) the linked issue. Walking the changed
