@@ -22,9 +22,9 @@ root=${1:-.}
 names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$root/skills-lock.json") || exit 2
 
 # <file>: `key<TAB><key>` per column-0 key, then `dmi<TAB><value>`,
-# `desc<TAB><description>` and `fence<TAB><none|open|closed>`. A description's indented continuation
-# lines join with one space, so plain, quoted and folded scalars all come out as
-# the one line an agent reads.
+# `desc<TAB><description>` and `fence<TAB><none|open|closed>`. A
+# description's indented continuation lines join with one space, so plain,
+# quoted and folded scalars all come out as the one line an agent reads.
 fields() {
   awk 'NR == 1 { if ($0 != "---") exit; fm = 1; fence = "open"; next }
        fm && $0 == "---" { fence = "closed"; exit }
