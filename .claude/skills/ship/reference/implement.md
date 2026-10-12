@@ -159,26 +159,34 @@ no new home, a fix landed after review, and any the repo adds beside them.
 ## Phase 4: the self-review loop
 
 Refactoring belongs to review, not to the red-to-green loop, so the
-self-review repeats while it still finds work. The bound is preflight's
-`self_review_cap`: the profile's `Self-review cap:` line under `## Reviewers`,
-3 where the line is absent. Every lane runs the same loop.
+self-review repeats while it still finds work. The bound is the profile's
+`Self-review cap:` line under `## Reviewers`, 3 where the line is absent;
+preflight has already refused a value that is not a whole number of 1 or more
+(its `self_review_cap`), so read it from the profile when the loop starts.
+Every lane runs the same loop.
 
-- **Round 1** is both axes, Standards and Spec, over the whole diff.
+- **Round 1** is the phase's first dispatch: both axes, Standards and Spec,
+  over the whole diff, the `writing-for-agents` pass where it fired, and the
+  depth checks above. Every fix any of them leads to is round 1's. The Spec
+  axis, the pass and the depth checks run in round 1 only.
 - **Round 2 and up** is one `code-review` subagent, Standards axis only, over
-  the previous round's **fix diff**, the commits that round's dispositions
-  added: the shape of the local review after a host reviewer's cap round. Its
-  Report file is `<scratch>/standards/standards-report-<n>.md`, so no round
-  overwrites another's.
-- **The loop stops** at the first round whose dispositions changed no file
-  (every finding declined, or none raised), or at the round numbered
-  `self_review_cap`, its findings dispositioned in full. A cap of 1 is the
-  single round, which a clean round 1 also ends at.
+  the previous round's **fix-only diff**: before triaging a round, note
+  `git rev-parse HEAD` in the Run file as its base, commit its fixes, and hand
+  the next round `git diff <base>..HEAD`. It is dispatched with round 1's
+  Standards prompt, only its diff and Report file changing, and triaged as
+  round 1 is: it waits for the Report file, and a file that never arrives is
+  `red-after-retry: standards`. Its Report file is
+  `<scratch>/standards/standards-report-<n>.md`, `<n>` the round number, so no
+  round overwrites another's.
+- **The loop stops** at the first round whose fix-only diff is empty (every
+  finding declined, or none raised), or at the round the cap allows, its
+  findings dispositioned in full. A cap of 1 is the single round, which a clean
+  round 1 also ends at.
 
 Each round leaves `Round: self-review <n>: <text>`, its outcome in a line, and
 the loop leaves `Stop: self-review: <tree unchanged|cap>`: `tree unchanged`
 when the last round changed no file, even at the cap, and `cap` when the
-rounds reached it with the last fixes unread. The merge summary's `Self-review`
-rows come from these lines and the Report files.
+rounds reached it with the last fixes unread.
 
 ## Phase 4 evidence lines
 

@@ -115,7 +115,7 @@ The file a phase-4 pass writes its report to (a subagent's, where one was dispat
 _Avoid_: axis output, review log, findings dump
 
 **Self-review loop**:
-Ship's phase-4 self-review, repeated while it still finds work, because refactoring belongs to review rather than to the red-to-green loop. Round 1 runs both `code-review` axes over the whole diff; each later round runs the Standards axis alone over the previous round's fixes. The loop stops at the first round whose dispositions change no file, recorded `tree unchanged`, or at the round the profile's `Self-review cap:` allows (3 where the line is absent), recorded `cap`. Every lane runs it, so a clean small-lane run stops after round 1. Distinct from a reviewer's rounds, which a host reviewer reads after the PR opens.
+Ship's phase-4 self-review, repeated while it still finds work, because refactoring belongs to review rather than to the red-to-green loop. Round 1 runs both `code-review` axes over the whole diff, with the `writing-for-agents` pass where it fired and the depth checks; each later round runs the Standards axis alone over the previous round's fix-only diff. The loop stops at the first round whose dispositions change no file, recorded `tree unchanged` even at the cap, or at the round the profile's `Self-review cap:` allows (3 where the line is absent) with that round's fixes unread, recorded `cap`. Every lane runs it, so a clean small-lane run stops after round 1. Distinct from phase 7's reviewer rounds, which a host reviewer runs on the opened PR.
 _Avoid_: re-review, second pass
 
 **Adjacent find**:

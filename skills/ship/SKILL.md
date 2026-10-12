@@ -166,14 +166,13 @@ fix-and-retry attempts is `red-after-retry: <axis>`, never a disposition written
 from memory. **Auto-triage** every finding at the judgment tier, one
 disposition each, under the rails and depth checks in
 [implement.md](reference/implement.md#phase-4-triage-and-depth-checks), then
-[loop](reference/implement.md#phase-4-the-self-review-loop): rounds 2 and up
-run the Standards axis alone over the last round's fixes, until a round's
-dispositions change no file or the rounds reach preflight's `self_review_cap`.
+[loop](reference/implement.md#phase-4-the-self-review-loop), the Standards
+axis alone over each round's fixes, up to the profile's `Self-review cap:`.
 `run-file close 4` refuses until the Run file holds the
 [evidence lines](reference/implement.md#phase-4-evidence-lines): each round's
-`Round: self-review` and the loop's `Stop:`, `Reverted-fix:`, `Dropped:`,
-`Near-miss:` and `Probe:`, the red and `Probe:` lines produced by `run-file
-prove` and `run-file probe`.
+`Round: self-review` and the loop's `Stop: self-review:`, `Reverted-fix:`,
+`Dropped:`, `Near-miss:` and `Probe:`, the red and `Probe:` lines produced by
+`run-file prove` and `run-file probe`.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.

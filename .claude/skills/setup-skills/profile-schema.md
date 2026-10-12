@@ -41,6 +41,6 @@ Migration from Schema 3: rewrite the `Schema:` line. No block changes, since no 
 
 The bound on ship's phase-4 self-review loop. Only `## Reviewers` moves; the fourteen headings and every other `Label:` line are unchanged from Schema 4.
 
-- `## Reviewers` gains a `Self-review cap: <n>` line, directly under the heading and above the `### <reviewer>` blocks or `None.`: the most self-review rounds a run spends in phase 4, a whole number of 1 or more. `1` is the single round every run spent before this schema. Ship reads an absent line as 3, and preflight refuses any other value. The line is no reviewer block's field: the reviewer blocks are read from the first `###` down.
+- `## Reviewers` gains a `Self-review cap: <n>` line, directly under the heading and above the `### <reviewer>` blocks or `None.`: the most self-review rounds a run spends in phase 4, a whole number of 1 or more. `1` is the single round every run spent before this schema. Ship reads an absent line as 3, and preflight refuses a value that is not a whole number of 1 or more rather than reading it as 3. The line is no reviewer block's field: the reviewer blocks are read from the first `###` down.
 
 Migration from Schema 4: write `Self-review cap: 3` under `## Reviewers`, the value ship reads where the line is absent, and rewrite the `Schema:` line.

@@ -125,7 +125,8 @@ else
   # default: a typo there would silently change how many rounds a run spends.
   line=$(awk "$SHIP_AWK_FENCE"'{ fenced = ship_fence($0) } fenced { next }
     /^## / { s = $0; sub(/[ \t\r]+$/, "", s); sec = (s == "## Reviewers"); next }
-    sec && /^Self-review cap:/ { v = substr($0, 17); sub(/^[ \t]+/, "", v); sub(/[ \t\r]+$/, "", v); print "=" v; exit }' "$profile")
+    /^### / { sec = 0; next }
+    sec && /^Self-review cap:/ { v = $0; sub(/^Self-review cap:[ \t]*/, "", v); sub(/[ \t\r]+$/, "", v); print "=" v; exit }' "$profile")
   if [ -z "$line" ]; then
     self_review_cap=3
   elif [[ ${line#=} =~ ^[1-9][0-9]*$ ]]; then

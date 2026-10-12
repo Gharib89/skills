@@ -106,14 +106,17 @@ outgrew, though phase 3's settled results keep the first skip's reason. A
 harness that refuses the task tools has answered: run on the file alone.
 
 **A phase-4 report is written to a Report file before one of its findings is
-dispositioned**, `<scratch>/<role>/<role>-report.md`, because a
-report held in context alone is lost to a compaction the Run file survives. Each
-dispatch names the file, and takes back only the path and a summary of at most
-five lines. No file at the named path is a report that failed to arrive: two
-fix-and-retry attempts, as SKILL.md's stops allow, then `red-after-retry`. An
-inline pass writes the same file itself before dispositioning. The Run file's
-`## Design and plan` names the paths; disposition from the file, and quote the
-merge summary's `Self-review` rows from it.
+dispositioned**, `<scratch>/<role>/<role>-report.md`, or
+`<scratch>/standards/standards-report-<n>.md` for round `<n>` of the
+[self-review loop](implement.md#phase-4-the-self-review-loop) from round 2 on,
+because a report held in context alone is lost to a compaction the Run file
+survives. Each dispatch names the file, and takes back only the path and a
+summary of at most five lines. No file at the named path is a report that
+failed to arrive: two fix-and-retry attempts, as SKILL.md's stops allow, then
+`red-after-retry`. An inline pass writes the same file itself before
+dispositioning. The Run file's `## Design and plan` names every round's paths
+as each round is dispatched; disposition from the file, and quote the merge
+summary's `Self-review` rows from it.
 
 **A clobbered Run file** answers a flip with a refusal naming a missing line or
 a missing file, and each refusal carries its check and the rebuild. A `--state`

@@ -45,7 +45,7 @@ Verification                                   (one row per applicable entry)
   (or: none applicable: <reason>)
 
 Self-review (code-review skill, the review gate)
-  <n> rounds, stopped: <tree unchanged | cap>  (from the Run file's Round: self-review and Stop: lines)
+  <n> rounds, stopped: <tree unchanged | cap>  (from the Run file's Round: self-review and Stop: self-review: lines)
   - <axis|pass>: <n> findings  ·  report: <path>   (one row per phase-4 report)
   - <finding> → <fixed | rejected: reason>
   ...
@@ -137,8 +137,9 @@ folded subset; `Issues filed` and `Ship defects:` are the full set that `##
 Needs attention` lists one line each; each `Review` block is the per-finding
 detail behind that reviewer's `## Review` line; and each `Verification` row is
 the same phase-3 result as its line in `## Verification`. The `Self-review`
-block is read from the phase-4 Report files, one row per report; a row whose
-file is no longer on disk is `unverified`.
+block's rounds line is read from the Run file's `Round: self-review` and
+`Stop: self-review:` lines, and its rows from the phase-4 Report files, one row
+per report; a row whose file is no longer on disk is `unverified`.
 
 **A wrong title is fixed before the merge**, with `update-pr-title`, before the
 summary is posted: the merge freezes the PR title as the squash subject, so the
