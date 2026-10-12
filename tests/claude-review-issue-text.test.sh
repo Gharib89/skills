@@ -32,7 +32,10 @@ check "the on-request shape carries the same step" "$script" "$(step_script "$tp
 check "this repo's workflow carries the same step" "$script" "$(step_script "$own")"
 
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/bin" "$work/fix" "$work/tmp"
+mkdir -p "$work/bin" "$work/fix" "$work/tmp" "$work/cwd"
+# A file `app[bot]` globs to, where the step runs: an unquoted login would
+# turn into its name.
+: > "$work/cwd/appb"
 cat > "$work/bin/gh" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$FIX/calls"
@@ -57,7 +60,7 @@ chmod +x "$work/bin/gh"
 # <pr>: runs the step for that PR; prints its exit code.
 run_step() {
   rm -f "$work/tmp/linked-issue.md"
-  (export PATH="$work/bin:$PATH" FIX="$work/fix" RUNNER_TEMP="$work/tmp" REPO=o/r PR="$1"
+  (cd "$work/cwd" && export PATH="$work/bin:$PATH" FIX="$work/fix" RUNNER_TEMP="$work/tmp" REPO=o/r PR="$1"
    bash -e -o pipefail -c "$script" >/dev/null 2>&1)
   printf '%s' "$?"
 }
@@ -65,6 +68,7 @@ run_step() {
 f=$work/fix
 printf '%s\n' '{"closingIssuesReferences":[
   {"number":5,"repository":{"name":"r","owner":{"login":"o"}}},
+  {"number":6,"repository":{"name":"r","owner":{"login":"o"}}},
   {"number":9,"repository":{"name":"other","owner":{"login":"o"}}}]}' > "$f/pr_1"
 printf '%s\n' '{"user":{"login":"writer"},"body":"the body"}' > "$f/repos_o_r_issues_5"
 printf '[%s]\n' '
@@ -73,19 +77,25 @@ printf '[%s]\n' '
   {"user":{"login":"app[bot]"},"body":"a bot comment"},
   {"user":{"login":"gone"},"body":"a failed lookup comment"},
   {"user":null,"body":"a deleted account comment"}' > "$f/repos_o_r_issues_5_comments"
+printf '%s\n' '{"user":{"login":"reader"},"body":"a reader body"}' > "$f/repos_o_r_issues_6"
+printf '%s\n' '[{"user":{"login":"writer"},"body":"a writer comment on six"}]' > "$f/repos_o_r_issues_6_comments"
 perm() { printf '{"user":{"permissions":{"push":%s}}}\n' "$2" > "$f/repos_o_r_collaborators_$1_permission"; }
 perm writer true; perm reader false; perm 'app%5Bbot%5D' false
 
-check_rc "a PR closing an issue resolves its text" 0 "$(run_step 1)"
+check_rc "a PR closing two issues resolves their text" 0 "$(run_step 1)"
 check "only the text of an author with push reaches the prompt input" "# Issue #5
 
 the body
 
 # Comment on #5
 
-a writer comment" "$(cat "$work/tmp/linked-issue.md")"
+a writer comment
+
+# Comment on #6
+
+a writer comment on six" "$(cat "$work/tmp/linked-issue.md")"
 check "another repo's closing issue is not read" "" "$(grep 'issues/9' "$f/calls")"
-check "one permission call per distinct author, the login URI-encoded" \
+check "one permission call per distinct author across issues, URI-encoded, never globbed" \
   "api repos/o/r/collaborators/app%5Bbot%5D/permission --jq .user.permissions.push
 api repos/o/r/collaborators/gone/permission --jq .user.permissions.push
 api repos/o/r/collaborators/reader/permission --jq .user.permissions.push
@@ -97,5 +107,14 @@ check_rc "a PR closing no issue is not a failure" 0 "$(run_step 2)"
 check "a PR closing no issue leaves the file empty" "0" "$(wc -c < "$work/tmp/linked-issue.md" | tr -d ' ')"
 
 check_rc "a failed read of the PR fails the step" 1 "$(run_step 3)"
+
+# A failed read of the issue or its comments is no verdict: the step fails
+# rather than handing the round part of the spec as the whole of it.
+printf '%s\n' '{"closingIssuesReferences":[{"number":7,"repository":{"name":"r","owner":{"login":"o"}}}]}' > "$f/pr_4"
+cp "$f/repos_o_r_issues_6_comments" "$f/repos_o_r_issues_7_comments"
+check_rc "a failed read of the issue body fails the step" 1 "$(run_step 4)"
+printf '%s\n' '{"closingIssuesReferences":[{"number":8,"repository":{"name":"r","owner":{"login":"o"}}}]}' > "$f/pr_5"
+cp "$f/repos_o_r_issues_5" "$f/repos_o_r_issues_8"
+check_rc "a failed read of the issue comments fails the step" 1 "$(run_step 5)"
 
 finish
