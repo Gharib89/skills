@@ -91,11 +91,11 @@ An acceptance criterion asking for a host action no mechanic performs, which a r
 _Avoid_: rewritten criterion, descoped criterion
 
 **Spec precedence**:
-The rule that a later triage brief or authoritative comment supersedes the issue body: where they conflict, the latest one wins and the body's original acceptance criteria no longer bind.
+The rule that a later triage brief or authoritative comment, each posted by someone with write access to the repo, supersedes the issue body: where they conflict, the latest one wins and the body's original acceptance criteria no longer bind.
 _Avoid_: override, latest-wins
 
 **Authoritative comment**:
-A comment on the issue by someone with write access to the repo. Only it, or a triage brief, can supersede the issue body under spec precedence; any other comment is context, never spec. A comment whose author's access cannot be read is not authoritative, in every lane.
+A comment on the issue by someone with write access to the repo. Only it, or a triage brief by such an author, can supersede the issue body under spec precedence; any other comment, a brief by anyone else included, is context, never spec. A comment whose author's access cannot be read is not authoritative, in every lane.
 _Avoid_: maintainer comment, official comment
 
 **Host**:
