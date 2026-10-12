@@ -254,11 +254,17 @@ _norm_issue='{number, title, body: (.body // ""),
   created_at, url: .html_url}'
 
 host_issue_get()      { api "$R/issues/$1" --jq "$_norm_issue"; }
-# `author_association` OWNER, MEMBER and COLLABORATOR are the ones with write
-# access to the repo; a response without the field is a host that did not answer.
+# `writer` is the author's `push` on the repo, asked once per distinct author;
+# a failed call is null. Not `author_association`: an org MEMBER or an outside
+# COLLABORATOR can hold read access only.
 host_issue_comments() {
-  api "$R/issues/$1/comments" --paginate --jq '.[] | {author: .user.login, body, created_at,
-    writer: (.author_association | if . == null then null else IN("OWNER", "MEMBER", "COLLABORATOR") end)}' | jq -s .
+  local c login push perms='{}'
+  c=$(api "$R/issues/$1/comments" --paginate --jq '.[] | {author: .user.login, body, created_at}' | jq -s .) || return 1
+  while IFS= read -r login; do
+    push=$(api "$R/collaborators/$(jq -rn --arg l "$login" '$l | @uri')/permission" --jq '.user.permissions.push' 2>/dev/null)
+    perms=$(jq -c --arg l "$login" --arg p "$push" '. + {($l): $p}' <<<"$perms")
+  done < <(jq -r '[.[].author] | unique[]' <<<"$c")
+  jq --argjson p "$perms" 'map(. + {writer: ({"true": true, "false": false}[$p[.author // ""]])})' <<<"$c"
 }
 # GitHub has native issue dependencies, so a failed query is "unavailable" rather than empty.
 host_issue_blockers_open() {

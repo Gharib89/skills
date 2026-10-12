@@ -14,24 +14,40 @@ scripts=$PWD/skills/ship/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 FIXTURE=$work/fixture.json
 
-# GitHub: `author_association` is the host's answer. The stub applies the
-# `--jq` filter the adapter hands gh, as gh would.
+# GitHub: the collaborator permission route is the host's answer, `push` being
+# write access. `author_association` is not: an org MEMBER or an outside
+# COLLABORATOR can hold read access only, so the fixture gives them both that
+# association and push false. The stub answers a route from a file named for
+# it, applying the `--jq` filter the adapter hands gh, as gh would, and fails
+# where no file exists; every route asked is logged.
 github=$(
   SHIP_OWNER=o SHIP_REPO=r
   source skills/ship/scripts/_lib.sh
   source skills/ship/scripts/host/github.sh
-  api() { jq -c "${!#}" "$FIXTURE"; }
+  api() {
+    printf '%s\n' "$1" >> "$work/routes"
+    local f; f="$work/route.$(printf '%s' "$1" | tr '/' '_')"
+    [ -f "$f" ] && jq -c "${!#}" "$f"
+  }
   printf '[%s]\n' '
-    {"user":{"login":"owner"},"body":"o","created_at":"t","author_association":"OWNER"},
-    {"user":{"login":"member"},"body":"m","created_at":"t","author_association":"MEMBER"},
-    {"user":{"login":"collab"},"body":"c","created_at":"t","author_association":"COLLABORATOR"},
-    {"user":{"login":"contrib"},"body":"x","created_at":"t","author_association":"CONTRIBUTOR"},
-    {"user":{"login":"stranger"},"body":"s","created_at":"t","author_association":"NONE"},
-    {"user":{"login":"unknown"},"body":"u","created_at":"t"}' > "$FIXTURE"
+    {"user":{"login":"admin"},"body":"a","created_at":"t","author_association":"OWNER"},
+    {"user":{"login":"reader"},"body":"r","created_at":"t","author_association":"MEMBER"},
+    {"user":{"login":"app[bot]"},"body":"b","created_at":"t","author_association":"NONE"},
+    {"user":{"login":"gone"},"body":"g","created_at":"t","author_association":"COLLABORATOR"},
+    {"user":{"login":"admin"},"body":"again","created_at":"t","author_association":"OWNER"}' \
+    > "$work/route.repos_o_r_issues_1_comments"
+  perm() { printf '{"permission":"%s","user":{"permissions":{"push":%s}}}\n' "$2" "$3" \
+    > "$work/route.repos_o_r_collaborators_$1_permission"; }
+  perm admin admin true; perm reader read false; perm 'app%5Bbot%5D' none false
   host_issue_comments 1 | jq -c 'map(if has("writer") then .writer else "absent" end)'
 )
-check "GitHub: OWNER, MEMBER, COLLABORATOR write; CONTRIBUTOR, NONE do not; no answer is null" \
-  '[true,true,true,false,false,null]' "$github"
+check "GitHub: push access writes; read and none do not; a failed permission call is null" \
+  '[true,false,false,null,true]' "$github"
+check "GitHub: one permission call per distinct author, the login URI-encoded" \
+  'repos/o/r/collaborators/admin/permission
+repos/o/r/collaborators/app%5Bbot%5D/permission
+repos/o/r/collaborators/gone/permission
+repos/o/r/collaborators/reader/permission' "$(grep collaborators "$work/routes" | sort)"
 
 # Azure DevOps: write access needs the author's identity descriptor, which only
 # vssps.dev.azure.com serves, outside the cloud sandbox's allowlist, so the

@@ -19,13 +19,15 @@
 
 A later triage brief or authoritative comment can *supersede* the issue body,
 and nothing else can. An **authoritative comment** is one `read-issue` marks
-`writer: true`, its author having write access to the repo; `false` and `null`
-(the host could not answer, always on Azure DevOps) are context, never spec, in
-every lane. When they conflict (scope reduced, an option chosen, an axis
-dropped), the latest authoritative spec wins and the body's original acceptance
-criteria no longer bind. Note it in the deviations log, and expect a reviewer
-reading the stale body to flag "missing" requirements; reject those in phases 4
-and 7 with the comment as evidence.
+`writer: true`, its author having write access to the repo. A **triage brief**
+is the `## Agent Brief` comment triage posts, and it counts only when it is
+`writer: true` too. A comment marked `false` or `null` (the host could not
+answer, always on Azure DevOps) is context, never spec, in every lane. Where the
+latest brief or authoritative comment conflicts with the body (scope reduced, an
+option chosen, an axis dropped), it wins and the body's original acceptance
+criteria no longer bind. Name that comment, by author and date, in the
+deviations log, and expect a reviewer reading the stale body to flag "missing"
+requirements; reject those in phases 4 and 7 with the comment as evidence.
 
 ## Phase 1: anchors the issue cites
 
