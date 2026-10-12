@@ -11,7 +11,8 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-setup=skills/setup-skills/SKILL.md
+rerun=skills/setup-skills/reference/re-run.md
+reviewers=skills/setup-skills/reference/reviewers.md
 update=skills/update-skills/SKILL.md
 scaffold=skills/setup-skills/reviewers/github-claude-review.md
 
@@ -72,16 +73,16 @@ check "re-adding the item to the write-only group is caught beside the propose g
 check "the old item has no compare" "" "$(item_compares "$fx/old.md")"
 check "the new item compares an installed workflow" "compares" "$(item_compares "$fx/new.md")"
 
-check "the re-run paragraph exists to be judged" "yes" "$(para "$setup" 'A setup section re-run' | grep -q . && echo yes || echo no)"
-check "the item exists to be judged" "yes" "$(para "$setup" 'Reviewer scaffolding' | grep -q . && echo yes || echo no)"
+check "the re-run paragraph exists to be judged" "yes" "$(para "$rerun" 'A setup section re-run' | grep -q . && echo yes || echo no)"
+check "the item exists to be judged" "yes" "$(para "$reviewers" 'Reviewer scaffolding' | grep -q . && echo yes || echo no)"
 
-check "the re-run paragraph does not list Reviewer scaffolding as write-only" "" "$(write_only_lists "$setup")"
+check "the re-run paragraph does not list Reviewer scaffolding as write-only" "" "$(write_only_lists "$rerun")"
 
 # The row is what sends an owner to the item, so a row with no compare behind it
 # is the gap this test exists for.
 row=$(grep -c '^| `reviewer-scaffolding` | \*\*Reviewer scaffolding\*\* |$' "$update")
 check "update-skills still routes reviewer-scaffolding to the item" "1" "$row"
-check "the item carries a compare for the section that row routes to it" "compares" "$(item_compares "$setup")"
+check "the item carries a compare for the section that row routes to it" "compares" "$(item_compares "$reviewers")"
 
 check "the GitHub scaffold does not call moving pins the consumer's own edit" "0" "$(grep -c "consumer's own edit" "$scaffold")"
 check "the GitHub scaffold does not say a re-run writes only where none is installed" "0" \
