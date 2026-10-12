@@ -140,10 +140,11 @@ Claims to probe: that a permission dialog, not only a question dialog, reads `bl
 
 Proves: Ship's prose, as a real model reads it, takes a plain issue to the merge gate and stops `ambiguous` on a vague one with no claim, no branch and no PR.
 Applies when: the change touches `skills/ship/SKILL.md` or `skills/ship/reference/`.
-Run: `scripts/live-run-ship.sh <worktree>` after the refresh, which installs the worktree's Ship into `Gharib89/ship-fixture` and drives one headless `/ship --unattended` turn per path, each capped by budget and wall clock and re-run once on a failure, and prints one JSON line whose `result` is the result word. A pass on the retry is a pass, and its `retried` lines go on the merge summary's `Verification` row. The maintainer can run the same command by hand.
+Run: `scripts/live-run-ship.sh <worktree>`. The `result` field of its JSON line is the result word; `unavailable` is a `Needs:` failure, so take `Without it:`. Non-empty `retried` lines go in the `Verification` row's `<what ran>`.
 Needs: `gh` and `claude` signed in, and `Gharib89/ship-fixture` reachable with its `main` at its `seed` tag.
 Without it: hand-off
 Also proven by CI: None.
+Claims to probe: that `claude -p` reports a hit `--max-budget-usd` cap as a nonzero exit with `subtype` `error_max_budget_usd` (it did on 2026-10-12), and that the fixture's `seed` tag still pins every skill Ship composes at the lock's ref.
 
 ## Versioning and changelog
 

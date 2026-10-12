@@ -16,22 +16,25 @@
 #
 # Two paths, each on its own fresh issue and a fresh copy of the fixture: the
 # happy path, a plain issue Ship must take to the merge gate, and the ambiguous
-# path, a deliberately vague issue Ship must stop on in phase 1 with no claim,
+# path, a deliberately vague issue Ship must stop `ambiguous` on with no claim,
 # no branch and no PR. Each runs `claude -p --model sonnet --permission-mode
 # auto` with `/ship <n> --unattended`, then closes the issue and every PR from
 # the run and deletes its branches, pass or fail. That cleanup is this script's
 # scaffolding, not a Ship mechanic.
 #
 # Pass rule: a path that fails re-runs once on a new issue, and a pass on the
-# retry is a pass, its first attempt's failures kept in `retried`. Each run is
-# capped by `--max-budget-usd` and the wall clock; hitting either is a failed
-# check. Only an auth, network or fixture-repo error is `unavailable`.
+# retry is a pass, its first attempt's failures kept in `retried`. A cleanup the
+# first attempt left undone still fails the result. Each run is capped by
+# `--max-budget-usd` and the wall clock; hitting either is a failed check. What
+# keeps a run from happening or from being read (a missing tool, a failed
+# install, claude failing to run, the fixture repo unreachable) is `unavailable`.
 #
 # stdout: one JSON line {result: pass|fail, failed[], retried[], runs[]}, each
 #         failure `<path>: <check>: <what failed>`, each run {path, attempt,
 #         issue, pr, failed[], cost_usd, wall_s, session};
 #         or {result: unavailable, reason}
-# exit:   0 pass · 1 a check failed · 2 unavailable
+# exit:   0 pass · 1 a check failed · 2 unavailable, or a usage error or no jq,
+#         which print on stderr only
 set -uo pipefail
 
 [ $# -eq 1 ] || { echo 'usage: scripts/live-run-ship.sh <ship-source>' >&2; exit 2; }
@@ -185,26 +188,28 @@ happy_body=$(cat <<'BODY'
 - [ ] `test.sh` checks both cases.
 BODY
 )
-# Deliberately vague: nothing in it says what to change, so Ship's phase 1 must
-# stop `ambiguous` before it claims.
-vague_title='Fix calc.sh the way we discussed'
-vague_body='Do what we agreed on the call.'
+# Deliberately vague: nothing in it says what to change, so Ship must stop
+# `ambiguous` before it claims.
+ambiguous_title='Fix calc.sh the way we discussed'
+ambiguous_body='Do what we agreed on the call.'
 
 # One Ship run of <path> on a new issue and a fresh copy of the fixture, judged,
 # then reset. Appends its record to $tmp/runs; returns 0 pass, 1 fail.
 attempt() { # <happy|ambiguous> <attempt>
   local co=$tmp/$1-$2 failed=$tmp/failed-$1-$2 rc start wall pr="" flag="" run_file assignees prs mine branches state n b
-  cp -a "$base" "$co"
+  cp -a "$base" "$co" || unavailable "cannot copy the fixture clone"
   if [ "$1" = happy ]; then file_issue "$1" "$2" "$happy_title" "$happy_body"
-  else file_issue "$1" "$2" "$vague_title" "$vague_body"; flag=--ambiguous; fi
+  else file_issue "$1" "$2" "$ambiguous_title" "$ambiguous_body"; flag=--ambiguous; fi
 
   start=$(date +%s)
-  (cd "$co" && XDG_STATE_HOME=$tmp/state timeout "$wall_cap" claude -p --model sonnet --permission-mode auto \
+  # -k: a claude that outlives SIGTERM by a minute is killed, and timeout then
+  # exits 137 instead of 124.
+  (cd "$co" && XDG_STATE_HOME=$tmp/state timeout -k 60 "$wall_cap" claude -p --model sonnet --permission-mode auto \
     --max-budget-usd "$budget" --output-format json "/ship $issue --unattended") >"$co.json" 2>"$co.err"
   rc=$?
   wall=$(( $(date +%s) - start ))
   : > "$failed"
-  if [ "$rc" -eq 124 ]; then
+  if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
     echo "cap: wall clock $wall_cap s" >> "$failed"
   elif [ "$rc" -ne 0 ] && [ "$(jq -r '.subtype? // empty' "$co.json" 2>/dev/null)" = error_max_budget_usd ]; then
     echo "cap: budget \$$budget" >> "$failed"
@@ -219,7 +224,9 @@ attempt() { # <happy|ambiguous> <attempt>
     mine=$(run_prs "$prs") || unavailable "cannot read the open PRs"
     branches=$(run_branches) || unavailable "cannot read the branches"
     jq -n --argjson a "$assignees" --argjson p "$prs" --arg b "$branches" \
-      '{assignees: $a, open_prs: [$p[] | {number, body}], branches: ($b | split("\n") | map(select(. != "")))}' > "$co.host.json"
+      --arg r "$(jq -r '.result? // ""' "$co.json" 2>/dev/null)" \
+      '{assignees: $a, open_prs: [$p[] | {number, body}], branches: ($b | split("\n") | map(select(. != ""))),
+        reply: $r}' > "$co.host.json"
     pr=$(head -n 1 <<<"$mine" | cut -d ' ' -f 1)
     PR_TEMPLATE=$co/.github/pull_request_template.md \
       "$here/live-run-checks.sh" ${flag:+"$flag"} "${run_file:-$tmp/no-run-file}" "$co.host.json" "$issue" >> "$failed"
@@ -251,11 +258,13 @@ for path in happy ambiguous; do
 done
 
 # A first attempt that failed is the one retried; every other run is its path's
-# final word.
+# final word. A retried run's cleanup failure stays a failure: its leftovers are
+# still on the fixture whatever the retry did.
 out=$(jq -cs 'def lines: .path as $p | .failed[] | "\($p): \(.)";
   ([.[] | select(.attempt == 1 and .failed != [])]) as $retried
   | ([.[] | select(.attempt == 2 or .failed == [])]) as $final
-  | {result: (if all($final[]; .failed == []) then "pass" else "fail" end),
-     failed: [$final[] | lines], retried: [$retried[] | lines], runs: .}' "$tmp/runs")
+  | ([$final[] | lines] + [$retried[] | lines | select(test("^[a-z]+: cleanup: "))]) as $failed
+  | {result: (if $failed == [] then "pass" else "fail" end),
+     failed: $failed, retried: [$retried[] | lines], runs: .}' "$tmp/runs")
 printf '%s\n' "$out"
 [ "$(jq -r .result <<<"$out")" = pass ]

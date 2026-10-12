@@ -122,15 +122,15 @@ printf '%s' '{"assignees": true, "open_prs": []}' > "$T/host-bool.json"
 check_rc "a non-array assignees is tooling" 2 \
   "$(verdict "$(good_run)" "$T/host-bool.json" | tail -n 1 | sed 's/^rc=//')"
 
-# --ambiguous: the early stop. The run stops in phase 1 on a vague issue, so
-# phase 0 is closed, nothing later is opened, and the host shows no claim, no
-# PR closing the issue and no branch of the run.
+# --ambiguous: the early stop on a vague issue. The reply names the stop, the
+# host shows no claim, no PR closing the issue and no branch of the run, and a
+# Run file, where there is one, shows no work past phase 1.
 stop_run() {
   cat <<'RUN'
 # ship run · 7
 
-- [x] 0 · Isolate: preflight (10:00→10:01)
-- [ ] 1 · Understand: claim in_progress (10:01→)
+- [ ] 0 · Isolate: preflight in_progress (10:00→)
+- [ ] 1 · Understand: claim
 - [ ] 2 · Implement: classify
 - [ ] 3 · Verify: none
 - [ ] 4 · Docs-sync + self-review: review
@@ -141,11 +141,13 @@ stop_run() {
 - [ ] 9 · Merge gate: summary
 RUN
 }
-# <assignees json> <branches json> [<body>]: no body, no open PR.
+stopped='Stopped `ambiguous` on issue 7, with no claim taken.'
+# <assignees json> <branches json> [<body> [<reply>]]: no body, no open PR.
 amb_host() {
   local f
   f=$(mktemp "$T/host.XXXXXX")
-  jq -n --argjson a "$1" --argjson b "$2" --arg body "${3:-}" '{assignees: $a, branches: $b,
+  jq -n --argjson a "$1" --argjson b "$2" --arg body "${3:-}" --arg r "${4-$stopped}" '{assignees: $a,
+    branches: $b, reply: $r,
     open_prs: (if $body == "" then [] else [{number: 1, body: ($body | gsub("\\\\n"; "\n"))}] end)}' > "$f"
   printf '%s' "$f"
 }
@@ -156,9 +158,20 @@ amb() {
 }
 amb_ok=$(amb_host '[]' '[]' '')
 
-check "an ambiguous stop in phase 1 passes" "rc=0" "$(amb "$(stop_run)" "$amb_ok")"
+check "an ambiguous stop in phase 0 passes" "rc=0" "$(amb "$(stop_run)" "$amb_ok")"
+check "an ambiguous stop in phase 1 passes" "rc=0" "$(amb "$(stop_run | sed \
+  -e 's/^- \[ \] 0 · Isolate: preflight in_progress (10:00→)/- [x] 0 · Isolate: preflight (10:00→10:01)/' \
+  -e 's/^- \[ \] 1 · Understand: claim/- [ ] 1 · Understand: claim in_progress (10:01→)/')" "$amb_ok")"
+check "an early stop with no Run file passes" "rc=0" \
+  "$(bash scripts/live-run-checks.sh --ambiguous "$T/nope.md" "$amb_ok" 7 2>/dev/null; printf 'rc=%s\n' "$?")"
 check "a PR that only mentions the issue still passes" "rc=0" \
   "$(amb "$(stop_run)" "$(amb_host '[]' '[]' 'See #7\n')")"
+check "a reply naming another stop is named" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' 'Stopped `nothing-ready`.')")"
+check "an empty reply is named" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' '')")"
+check "a longer word is not the stop name" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' 'The issue is unambiguous.')")"
 check "a claim is named" "issue: claimed
 rc=1" "$(amb "$(stop_run)" "$(amb_host '["agent"]' '[]' '')")"
 check "a PR closing the issue is named" "pr: 1 open PRs close #7, want 0
@@ -167,15 +180,11 @@ check "a pushed branch is named" "branch: feat/x-7 pushed
 rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '["feat/x-7"]' '')")"
 check "a run that went past phase 1 is named" "phase 1: closed
 phase 2: opened
-rc=1" "$(amb "$(stop_run | sed -e 's/^- \[ \] 1 · Understand: claim in_progress (10:01→)/- [x] 1 · Understand: claim (10:01→10:02)/' \
+rc=1" "$(amb "$(stop_run | sed -e 's/^- \[ \] 1 · Understand: claim/- [x] 1 · Understand: claim (10:01→10:02)/' \
   -e 's/^- \[ \] 2 · Implement: classify/- [ ] 2 · Implement: classify in_progress (10:02→)/')" "$amb_ok")"
 check "a skipped later phase is named" "phase 3: opened
 rc=1" "$(amb "$(stop_run | sed 's/^- \[ \] 3 · Verify: none/- [x] 3 · Verify: none skipped (docs)/')" "$amb_ok")"
-check "a stop before phase 1 is named" "phase 0: not closed
-rc=1" "$(amb "$(stop_run | sed 's/^- \[x\] 0 · Isolate: preflight (10:00→10:01)/- [ ] 0 · Isolate: preflight in_progress (10:00→)/')" "$amb_ok")"
-check "a missing Run file is named on the ambiguous path" "run file: missing" \
-  "$(bash scripts/live-run-checks.sh --ambiguous "$T/nope.md" "$amb_ok" 7 2>/dev/null)"
-check_rc "ambiguous host state without branches is tooling" 2 \
+check_rc "ambiguous host state without branches or reply is tooling" 2 \
   "$(amb "$(stop_run)" "$host_ok" | tail -n 1 | sed 's/^rc=//')"
 
 finish

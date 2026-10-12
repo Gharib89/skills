@@ -30,13 +30,13 @@ if [ "$1 $2" = "repo clone" ]; then
   exit 0
 fi
 shift # api
-method=GET expr=. path="" body="" title=""
+method=GET expr=. path="" body="" title="" labels=""
 while [ $# -gt 0 ]; do
   case $1 in
     --paginate) ;;
     -X) method=$2; shift ;;
     --jq) expr=$2; shift ;;
-    -f) case $2 in body=*) body=${2#body=} ;; title=*) title=${2#title=} ;; esac
+    -f) case $2 in body=*) body=${2#body=} ;; title=*) title=${2#title=} ;; 'labels[]='*) labels=${2#labels[]=} ;; esac
         [ "$method" != GET ] || method=POST; shift ;;
     *) path=${1#repos/*/*/}; path=${path%%\?*} ;;
   esac
@@ -46,14 +46,16 @@ out() { jq -r "$expr"; }
 case "$method $path" in
   "GET pulls") jq '[.[] | select(.state == "open")]' "$S/pulls.json" | out ;;
   "PATCH pulls/"*) n=${path#pulls/}
+    # One close refused, then the host answers again.
+    [ ! -e "$S/pr-close-fails" ] || { rm "$S/pr-close-fails"; exit 1; }
     jq --argjson n "$n" 'map(if .number == $n then .state = "closed" else . end)' "$S/pulls.json" > "$S/p" \
       && mv "$S/p" "$S/pulls.json" ;;
   "GET branches") jq -R '{name: .}' "$S/branches" | jq -s . | out ;;
   "DELETE git/refs/heads/"*) b=${path#git/refs/heads/}
     grep -vxF "${b//%2F//}" "$S/branches" > "$S/b"; mv "$S/b" "$S/branches" ;;
   "POST issues") n=$(( $(ls "$S/issues" | wc -l) + 1 ))
-    jq -n --argjson n "$n" --arg t "$title" --arg b "$body" \
-      '{number: $n, title: $t, body: $b, state: "open", assignees: []}' > "$S/issues/$n.json"
+    jq -n --argjson n "$n" --arg t "$title" --arg b "$body" --arg l "$labels" \
+      '{number: $n, title: $t, body: $b, labels: [{name: $l}], state: "open", assignees: []}' > "$S/issues/$n.json"
     out < "$S/issues/$n.json" ;;
   "GET issues") jq -s '[.[] | select(.state == "open")] | sort_by(-.number)' "$S"/issues/*.json | out ;;
   "GET issues/"*) out < "$S/issues/${path#issues/}.json" ;;
@@ -88,16 +90,17 @@ ship_pr() { # claim, push a branch, open a PR closing the issue
   jq --argjson n "$n" '. + [{number: (100 + $n), state: "open", head: {ref: "feat/x-\($n)"},
     body: "Closes #\($n)\n\n## Why\n\nx\n\n## Attribution\n\nf\n"}]' "$S/pulls.json" > "$S/p" && mv "$S/p" "$S/pulls.json"
 }
+reply="Done."
 case $play in
   happy) phases 8 9 > "$run"; ship_pr ;;
   happy-skips-gate) phases 4 5 > "$run"; ship_pr ;;
-  ambiguous) phases 0 1 > "$run" ;;
+  ambiguous) rmdir "${run%/*}"; reply='Stopped `ambiguous` on the issue, with no claim taken.' ;;
   ambiguous-claims) phases 1 2 > "$run"; ship_pr ;;
   budget) echo '{"subtype": "error_max_budget_usd", "is_error": true, "total_cost_usd": 2.6}'; exit 1 ;;
   slow) sleep 5 ;;
   auth) echo 'Invalid API key' >&2; exit 1 ;;
 esac
-echo '{"subtype": "success", "total_cost_usd": 1, "session_id": "s"}'
+jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s"}'
 CLAUDE
 
 printf '#!/bin/sh\nexit 0\n' > "$T/bin/npx"
@@ -111,6 +114,7 @@ drive() {
   echo '[]' > "$LIVE_STUB/pulls.json"; : > "$LIVE_STUB/branches"
   printf '%s\n' "$@" > "$LIVE_STUB/script"
   [ -z "${CLONE_FAILS:-}" ] || touch "$LIVE_STUB/clone-fails"
+  [ -z "${PR_CLOSE_FAILS:-}" ] || touch "$LIVE_STUB/pr-close-fails"
   bash scripts/live-run-ship.sh "$PWD" 2>/dev/null | jq -c 'del(.runs)'
   printf 'rc=%s\n' "${PIPESTATUS[0]}"
 }
@@ -118,16 +122,20 @@ drive() {
 check "both paths passing is a pass" '{"result":"pass","failed":[],"retried":[]}
 rc=0' "$(drive happy ambiguous)"
 check "every claude run carries the budget cap" "2" "$(grep -c -- '--max-budget-usd 2.50 ' "$LIVE_STUB/claude.log")"
-check "the vague issue is filed ready for an agent" "1" \
-  "$(jq -s '[.[] | select(.title == "Fix calc.sh the way we discussed")] | length' "$LIVE_STUB"/issues/*.json)"
+check "the vague issue is filed ready for an agent" '["ready-for-agent"]' \
+  "$(jq -sc '[.[] | select(.title == "Fix calc.sh the way we discussed") | .labels[].name]' "$LIVE_STUB"/issues/*.json)"
 check "every run's issue is closed after it" "[]" "$(jq -sc '[.[] | select(.state == "open") | .number]' "$LIVE_STUB"/issues/*.json)"
 
 check "a pass on the retry is a pass that names the first failure" \
   '{"result":"pass","failed":[],"retried":["happy: phase 5: not closed","happy: phase 6: not closed","happy: phase 7: not closed","happy: phase 8: not closed","happy: merge gate: not reached"]}
 rc=0' "$(drive happy-skips-gate happy ambiguous)"
 
+check "a retry does not hide the first attempt's cleanup failure" \
+  '["happy: cleanup: left PR #101 open"]
+rc=1' "$(PR_CLOSE_FAILS=1 drive happy-skips-gate happy ambiguous | sed 's/^{"result":"fail","failed":\(\[[^]]*\]\).*/\1/')"
+
 check "an ambiguous path that claims and opens a PR twice fails" \
-  '{"result":"fail","failed":["ambiguous: phase 1: closed","ambiguous: phase 2: opened","ambiguous: issue: claimed","ambiguous: pr: 1 open PRs close #3, want 0","ambiguous: branch: feat/x-3 pushed"],"retried":["ambiguous: phase 1: closed","ambiguous: phase 2: opened","ambiguous: issue: claimed","ambiguous: pr: 1 open PRs close #2, want 0","ambiguous: branch: feat/x-2 pushed"]}
+  '{"result":"fail","failed":["ambiguous: stop: the reply does not name ambiguous","ambiguous: phase 1: closed","ambiguous: phase 2: opened","ambiguous: issue: claimed","ambiguous: pr: 1 open PRs close #3, want 0","ambiguous: branch: feat/x-3 pushed"],"retried":["ambiguous: stop: the reply does not name ambiguous","ambiguous: phase 1: closed","ambiguous: phase 2: opened","ambiguous: issue: claimed","ambiguous: pr: 1 open PRs close #2, want 0","ambiguous: branch: feat/x-2 pushed"]}
 rc=1' "$(drive happy ambiguous-claims ambiguous-claims)"
 check "the PRs and branches of a failed run are cleaned up" "[] " \
   "$(jq -c '[.[] | select(.state == "open")]' "$LIVE_STUB/pulls.json") $(cat "$LIVE_STUB/branches")"
