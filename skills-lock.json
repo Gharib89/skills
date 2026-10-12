@@ -4,7 +4,7 @@
     "cloud-ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "b1fa65ca527c5aefee6ae431137118891b6f20b4e676a27b85ba6213b4d4a02d"
+      "computedHash": "71de07fb00c70edea10f239e8d860eec0a547d8faca34ef4cc2e94aefd2d9d2a"
     },
     "code-review": {
       "source": "mattpocock/skills",
@@ -12,6 +12,13 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/code-review/SKILL.md",
       "computedHash": "57cfd4ceb011f05e58a1a4f4cad3b2e03419d371f8990f4bcb32ff0d435a039f"
+    },
+    "codebase-design": {
+      "source": "mattpocock/skills",
+      "ref": "f3fc5632f401156837ee3872f14fe33ccf1024ea",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/codebase-design/SKILL.md",
+      "computedHash": "b2888e4f4e8c0af3bfd557575a64b905c44e6248c3101d72077816882b3a92b9"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",
@@ -92,12 +99,12 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "c2c1b60291353401363a81ec32e64e577e0f8cbe143d0475612162bdcd1dff52"
+      "computedHash": "f4a1078e05e08d648bcec65556dbc9ee9e9472bf793f675ede9f10c43154e5b0"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "fd86f2dc13b92de8ad2d765c1246902273f7f411039587f741faa782767fa12a"
+      "computedHash": "8a013cbee9eb35e951c9a55a74743bdb2aba427330be7b1fe74e57ebfa3cfd37"
     },
     "show-me": {
       "source": "humanlayer/skills",

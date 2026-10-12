@@ -8,6 +8,7 @@
 - [Phase 2: classify, then implement test-first](#phase-2-classify-then-implement-test-first)
 - [Phase 2: verify the spec's external-system claims before building on them](#phase-2-verify-the-specs-external-system-claims-before-building-on-them)
 - [Phase 2: delegate execution, keep judgment](#phase-2-delegate-execution-keep-judgment)
+- [Phase 2: needs-split](#phase-2-needs-split)
 - [Phase 2: adjacent finds](#phase-2-adjacent-finds)
 - [Phase 4: triage and depth checks](#phase-4-triage-and-depth-checks)
 - [Phase 4: the self-review loop](#phase-4-the-self-review-loop)
@@ -115,6 +116,26 @@ which lands verbatim in the merge summary. Two hard rules in its prompt:
 - It runs only the **targeted test nodes**; the phase-5 gate stays with the
   orchestrator.
 
+## Phase 2: needs-split
+
+Three tells say the change outgrows one PR, or needs a redesign the issue did
+not scope, before the diff size does:
+
+- **The same workaround recurring**: a third copy of one shim, guard or special
+  case, which the design the issue assumed should have made unnecessary.
+- **Escape-hatch types**: an `any`, a cast, an untyped map or a stringly-typed
+  field added only so the change fits the code around it.
+- **A blast radius past 10 call sites**: one signature, file format or
+  vocabulary value whose change must reach more than 10 call sites in lockstep.
+
+The split proposal is a set of tickets, each landing green on its own. Where
+the change reshapes something callers reach, those tickets follow expand,
+migrate, contract: **expand** adds the new shape beside the old one with no
+caller switched; **migrate** moves the callers over in batches sized by the
+blast radius, one ticket per batch; **contract** removes the old shape once
+nothing reaches it. Give each ticket its title, its criteria and the ticket it
+is blocked by.
+
 ## Phase 2: adjacent finds
 
 A find outside the issue takes one of three dispositions and no fourth, and
@@ -154,7 +175,8 @@ Then read the diff yourself against the depth checks in the coding-standards
 file the Standards axis reads, and the sub-files it routes to, by their leading
 words: a vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, removed lines with
-no new home, a fix landed after review, and any the repo adds beside them.
+no new home, a fix landed after review, a diff that lowers the bar, and any the
+repo adds beside them.
 
 ## Phase 4: the self-review loop
 

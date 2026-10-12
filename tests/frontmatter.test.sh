@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+# scripts/frontmatter-check.sh: the frontmatter of every skill this repo writes.
+# Each case builds a tree at the real relative paths under a fresh root, so a
+# fixture differs from a clean tree only in the defect under test: the key
+# allowlist, both sides of the 1,024-character boundary, the "Use when" clause
+# with and without `disable-model-invocation: true`, the scalar forms a
+# description takes, and the path where the input cannot be read.
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
+source tests/lib.sh
+
+fixture=$(mktemp -d); trap 'chmod -R u+rwx "$fixture"; rm -rf "$fixture"' EXIT
+
+# <case>: a root whose lock lists `clean` as a skill this repo writes and
+# `vendored` as one it installs; prints its path.
+tree() {
+  local d="$fixture/$1"; rm -rf "$d"
+  mkdir -p "$d/skills/clean" || return 1
+  printf '%s\n' '{"version": 1, "skills": {"clean": {"source": "."}, "vendored": {"source": "o/r", "ref": "x"}}}' \
+    > "$d/skills-lock.json"
+  cat > "$d/skills/clean/SKILL.md" <<'MD'
+---
+name: clean
+description: Do the clean thing. Use when the user wants it clean.
+argument-hint: "[topic]"
+metadata:
+  version: 0.1.0
+  composes: o/r#x:other
+---
+
+body: not a key
+MD
+  printf '%s' "$d"
+}
+# <root> <name> <frontmatter line>...: one more skill this repo writes.
+skill() {
+  local d=$1 n=$2; shift 2
+  mkdir -p "$d/skills/$n" || return 1
+  jq --arg n "$n" '.skills[$n] = {source: "."}' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+  { echo ---; printf '%s\n' "$@"; echo ---; } > "$d/skills/$n/SKILL.md"
+}
+rc_of()  { bash scripts/frontmatter-check.sh "$1" >/dev/null 2>&1; printf '%s' "$?"; }
+out_of() { bash scripts/frontmatter-check.sh "$1" 2>/dev/null; }
+# <n>: a description of exactly n characters carrying the clause.
+desc() { local s="Use when"; while [ "${#s}" -lt "$1" ]; do s="${s}x"; done; printf '%s' "$s"; }
+
+# The real tree, so a skill this repo writes that breaks the rules fails a case
+# here rather than leaving every synthetic fixture green.
+check_rc "the current tree passes" 0 "$(rc_of .)"
+
+d=$(tree clean)
+check_rc "a clean tree passes" 0 "$(rc_of "$d")"
+check "a clean tree prints nothing" '' "$(out_of "$d")"
+
+d=$(tree forms)
+skill "$d" folded name: folded 'description: >-' '  Folded across lines.' '  Use when it folds.'
+skill "$d" quoted name: quoted 'description: "Quoted: with a colon. Use when quoted."'
+skill "$d" manual name: manual 'description: "Run by hand only."' 'disable-model-invocation: true'
+check_rc "folded, quoted and manual-only descriptions pass" 0 "$(rc_of "$d")"
+
+# A YAML comment after an unquoted value is not part of it; inside quotes it is.
+d=$(tree comments)
+skill "$d" manual name: manual 'description: Run by hand only. # no clause' 'disable-model-invocation: true # manual-only'
+skill "$d" hashed name: hashed 'description: "Use when # is in quotes."' 'argument-hint: "[topic]" # in the menu'
+skill "$d" apos name: apos "description: 'Use when x.' # don't touch"
+skill "$d" dquote name: dquote 'description: "Use when x." # see "ship'
+skill "$d" lastline name: lastline 'description: "Use when a' '  b." # note'
+check_rc "a comment after an unquoted or a quoted value is dropped" 0 "$(rc_of "$d")"
+
+# A quote a value opens and does not end with is YAML a loader rejects, though
+# the text inside still reads as a description with its clause.
+d=$(tree unclosed-quote)
+skill "$d" open name: open 'description: "Use when a quote is never closed.'
+check "a description opening a quote it never closes fails" \
+  "skills/open/SKILL.md: frontmatter key description has an unbalanced quote" "$(out_of "$d")"
+d=$(tree trailing-quote)
+skill "$d" hint name: hint 'description: Use when hinted.' "argument-hint: '[topic]' extra"
+check "a quoted value with text after its closing quote fails" \
+  "skills/hint/SKILL.md: frontmatter key argument-hint has an unbalanced quote" "$(out_of "$d")"
+d=$(tree escaped-quote)
+skill "$d" esc name: esc 'description: "Use when C:\"'
+check "an escaped final quote does not close the value" \
+  "skills/esc/SKILL.md: frontmatter key description has an unbalanced quote" "$(out_of "$d")"
+
+# A plain value YAML reads as structure: `: ` inside it, or an indicator first.
+d=$(tree plain-colon)
+skill "$d" colon name: colon 'description: Drive one issue: open a PR. Use when shipping.'
+check "a plain value holding ': ' fails" \
+  "skills/colon/SKILL.md: frontmatter key description needs quoting" "$(out_of "$d")"
+d=$(tree plain-flow)
+skill "$d" flow name: flow 'description: Use when flowing.' 'argument-hint: [issue-number] [--unattended]'
+check "a plain value opening with [ fails" \
+  "skills/flow/SKILL.md: frontmatter key argument-hint needs quoting" "$(out_of "$d")"
+d=$(tree plain-backtick)
+skill "$d" tick name: tick 'description: `/ship` drives an issue. Use when shipping.'
+check "a plain value opening with a backtick fails" \
+  "skills/tick/SKILL.md: frontmatter key description needs quoting" "$(out_of "$d")"
+d=$(tree plain-ok)
+skill "$d" url name: url 'description: Use when a URL like https://x.y or C:\dir is given.'
+skill "$d" multi name: multi 'description:' '  Use when the value starts on the next line.'
+check_rc "a plain value with a colon not followed by a space passes" 0 "$(rc_of "$d")"
+
+d=$(tree folded-quote)
+skill "$d" multi name: multi 'description: "Use when a quoted' '  description folds."'
+check_rc "a quoted description across lines passes" 0 "$(rc_of "$d")"
+
+# In a block scalar a quote is literal text: it neither opens a quoted value nor
+# leaves the length when it ends one.
+d=$(tree block-quote)
+skill "$d" lead name: lead 'description: >-' '  "Lead" quote. Use when it leads.'
+check_rc "a block description starting with a quote passes" 0 "$(rc_of "$d")"
+d=$(tree block-indent)
+skill "$d" long name: long 'description: >2-' "  $(desc 1024)"
+check_rc "a block header with an indentation digit is not counted" 0 "$(rc_of "$d")"
+d=$(tree block-quoted-over)
+skill "$d" long name: long 'description: |' "  \"$(desc 1023)\""
+check "a block description's quotes count toward its length" \
+  "skills/long/SKILL.md: description is 1025 characters, over 1024" "$(out_of "$d")"
+
+d=$(tree unknown-key)
+skill "$d" extra name: extra 'description: Use when extra.' 'allowed-tools: Bash'
+check_rc "a key outside the allowlist fails" 1 "$(rc_of "$d")"
+check "the message names the file and the key" \
+  "skills/extra/SKILL.md: frontmatter key allowed-tools is not allowed" "$(out_of "$d")"
+
+# A key the allowlist names, with a suffix, is another key.
+d=$(tree partial-key)
+skill "$d" plural name: plural 'description: Use when plural.' 'descriptions: x'
+check "a longer key sharing an allowed prefix fails" \
+  "skills/plural/SKILL.md: frontmatter key descriptions is not allowed" "$(out_of "$d")"
+
+d=$(tree at-1024)
+skill "$d" long name: long "description: $(desc 1024)"
+check_rc "a 1,024-character description passes" 0 "$(rc_of "$d")"
+
+# Characters, not bytes, under any locale: the cloud sandbox runs with LANG and
+# LC_ALL empty, where a shell's own length counts a `·` as two.
+d=$(tree multibyte)
+skill "$d" long name: long "description: ·$(desc 1023)"
+check_rc "a 1,024-character description with a multibyte character passes under LC_ALL=C" \
+  0 "$(LC_ALL=C rc_of "$d")"
+d=$(tree multibyte-over)
+skill "$d" long name: long "description: ·$(desc 1024)"
+check "the multibyte character still counts as one" \
+  "skills/long/SKILL.md: description is 1025 characters, over 1024" "$(LC_ALL=C out_of "$d")"
+
+d=$(tree over-1024)
+skill "$d" long name: long "description: $(desc 1025)"
+check_rc "a 1,025-character description fails" 1 "$(rc_of "$d")"
+check "the message names the length" \
+  "skills/long/SKILL.md: description is 1025 characters, over 1024" "$(out_of "$d")"
+
+# A folded description is counted as the agent reads it, its lines joined.
+d=$(tree folded-over)
+skill "$d" long name: long 'description: >-' "  $(desc 1000)" "  $(desc 24)"
+check "a folded description is counted joined" \
+  "skills/long/SKILL.md: description is 1025 characters, over 1024" "$(out_of "$d")"
+
+d=$(tree no-use-when)
+skill "$d" silent name: silent 'description: Does a thing.'
+check_rc "a model-invoked skill without Use when fails" 1 "$(rc_of "$d")"
+check "the message names the clause" \
+  'skills/silent/SKILL.md: description has no "Use when" clause' "$(out_of "$d")"
+
+d=$(tree invocation-false)
+skill "$d" silent name: silent 'description: Does a thing.' 'disable-model-invocation: false'
+check_rc "disable-model-invocation: false fails" 1 "$(rc_of "$d")"
+check "disable-model-invocation: false still needs the clause" \
+  'skills/silent/SKILL.md: description has no "Use when" clause' "$(out_of "$d")"
+
+# Only a key at column 0 is a frontmatter key: metadata's children and the body
+# below the closing fence are not.
+d=$(tree indented)
+skill "$d" nested name: nested 'description: Use when nested.' 'metadata:' '  anything: goes'
+check_rc "an indented key under metadata passes" 0 "$(rc_of "$d")"
+
+d=$(tree vendored)
+mkdir -p "$d/skills/vendored" && printf -- '---\nname: vendored\nallowed-tools: Bash\n---\n' > "$d/skills/vendored/SKILL.md"
+check_rc "a skill another repo writes is not checked" 0 "$(rc_of "$d")"
+
+d=$(tree unclosed)
+printf -- '---\nname: clean\ndescription: Use when unclosed.\n' > "$d/skills/clean/SKILL.md"
+check_rc "a frontmatter with no closing fence fails" 1 "$(rc_of "$d")"
+check "the message names the closing fence" \
+  "skills/clean/SKILL.md: frontmatter has no closing ---" "$(out_of "$d")"
+
+d=$(tree unopened)
+printf 'name: clean\ndescription: Use when unopened.\n' > "$d/skills/clean/SKILL.md"
+check_rc "a SKILL.md with no opening fence fails" 1 "$(rc_of "$d")"
+check "the message names the opening fence" \
+  "skills/clean/SKILL.md: frontmatter has no opening ---" "$(out_of "$d")"
+
+check_rc "a missing root exits 2" 2 "$(rc_of "$fixture/absent")"
+
+d=$(tree no-lock); rm "$d/skills-lock.json"
+check_rc "a root with no lock exits 2" 2 "$(rc_of "$d")"
+
+d=$(tree no-skill-file); rm "$d/skills/clean/SKILL.md"
+check_rc "a listed skill with no SKILL.md exits 2" 2 "$(rc_of "$d")"
+
+if [ "$(id -u)" != 0 ]; then
+  d=$(tree unreadable-skill); chmod 000 "$d/skills/clean/SKILL.md"
+  check_rc "an unreadable SKILL.md exits 2" 2 "$(rc_of "$d")"
+  d=$(tree unreadable-root); chmod 000 "$d"
+  check_rc "an unreadable root exits 2" 2 "$(rc_of "$d")"
+else
+  skipped "an unreadable SKILL.md and an unreadable root: root reads any file"
+fi
+
+finish
