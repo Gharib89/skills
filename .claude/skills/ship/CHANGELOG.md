@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.31.0 (2026-10-12)
+
+### Features
+
+- **ship**: Authoritative PR comments since the head push count as rework feedback
+  ([#623](https://github.com/Gharib89/skills/pull/623),
+  [`04b6d24`](https://github.com/Gharib89/skills/commit/04b6d244eec413c62881a17707a15a6406982b5b))
+
+
 ## v0.30.0 (2026-10-12)
 
 ### Features
