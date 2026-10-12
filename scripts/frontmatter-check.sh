@@ -4,9 +4,9 @@
 # a frontmatter opening on line 1 with `---` and closed by another; only the
 # keys `name`, `description`, `argument-hint`, `disable-model-invocation` and
 # `metadata` at column 0 (a key outside this set is one no skill here relies
-# on, so it is a typo or an untested setting); a value that opens a quote ends
-# with it, since a YAML loader rejects the frontmatter otherwise while the text
-# inside still passes the rules below; a `description` of at most 1,024
+# on, so it is a typo or an untested setting); a value that opens a quote
+# closes it, and one YAML would read as structure is quoted, since a YAML loader
+# rejects the frontmatter otherwise while the text still passes the rules below; a `description` of at most 1,024
 # characters, counted as the agent reads it, a folded scalar's lines joined by
 # one space; and a "Use when" clause in the `description` of every skill
 # without `disable-model-invocation: true`, because that clause is what routes
@@ -24,18 +24,24 @@ root=${1:-.}
 names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$root/skills-lock.json") || exit 2
 
 # <file>: `key<TAB><key>` per column-0 key, `unbalanced<TAB><key>` per one
-# whose value opens a quote it does not end with, then `dmi<TAB><value>`,
+# whose value opens a quote it does not close (an escaped `\"` closes nothing),
+# `plain<TAB><key>` per unquoted one YAML reads as structure (a `: ` inside it,
+# or an indicator such as `[` or a backtick first), then `dmi<TAB><value>`,
 # `desc<TAB><description>` and `fence<TAB><none|open|closed>`. A value's
 # indented continuation lines join with one space, so plain, quoted and folded
 # scalars all come out as the one line an agent reads. A `#` comment after an
 # unquoted value, or after a quoted one's closing quote, is YAML's, not the
 # value's, so it is dropped. In a `>` or `|` block scalar a quote is literal
-# text, so it is neither checked for balance nor stripped.
+# text, so it is neither checked nor stripped.
 fields() {
   awk 'function flush() {
-         if (key != "" && !block && v ~ /^["'\'']/) {
-           if (length(v) < 2 || substr(v, length(v)) != substr(v, 1, 1)) print "unbalanced\t" key
-           else v = substr(v, 2, length(v) - 2) }
+         if (key != "" && !block && v ~ /^["\047]/) {
+           if (substr(v, 1, 1) == "\"") closed = match(v, /^"([^"\\]|\\.)*"/)
+           else closed = match(v, "^\047([^\047]|\047\047)*\047")
+           if (!closed || substr(v, RLENGTH + 1) !~ /^([ \t]+#.*)?$/) print "unbalanced\t" key
+           else v = substr(v, 2, RLENGTH - 2) }
+         else if (key != "" && !block && !nested && (v ~ /^[][{}&*!|>%@`]/ || v ~ /:([ \t]|$)/))
+           print "plain\t" key
          if (key == "description") desc = v }
        NR == 1 { if ($0 != "---") exit; fm = 1; fence = "open"; next }
        fm && $0 == "---" { fence = "closed"; exit }
@@ -43,13 +49,11 @@ fields() {
          flush()
          key = substr($0, 1, index($0, ":") - 1); val = substr($0, length(key) + 2)
          sub(/^[ \t]+/, "", val)
-         q = substr(val, 1, 1)
-         if (q == "\"" || q == "'\''") sub(q "[ \t]+#[^" q "]*$", q, val)
-         else sub(/[ \t]+#.*$/, "", val)
+         if (val !~ /^["\047]/) sub(/[ \t]+#.*$/, "", val)
          sub(/[ \t]+$/, "", val)
          print "key\t" key
          if (key == "disable-model-invocation") dmi = val
-         block = (val ~ /^[>|]([1-9]?[-+]?|[-+][1-9])$/); v = block ? "" : val
+         block = (val ~ /^[>|]([1-9]?[-+]?|[-+][1-9])$/); nested = (val == ""); v = block ? "" : val
          next }
        /^[ \t]/ { line = $0; sub(/^[ \t]+/, "", line); v = (v == "" ? line : v " " line) }
        END { flush()
@@ -70,6 +74,7 @@ while IFS= read -r n; do
           *) echo "$rel: frontmatter key $value is not allowed"; rc=1 ;;
         esac ;;
       unbalanced) echo "$rel: frontmatter key $value has an unbalanced quote"; rc=1 ;;
+      plain) echo "$rel: frontmatter key $value needs quoting"; rc=1 ;;
       dmi) dmi=$value ;;
       desc) desc=$value ;;
       fence) fence=$value ;;

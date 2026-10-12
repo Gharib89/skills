@@ -62,6 +62,9 @@ check_rc "folded, quoted and manual-only descriptions pass" 0 "$(rc_of "$d")"
 d=$(tree comments)
 skill "$d" manual name: manual 'description: Run by hand only. # no clause' 'disable-model-invocation: true # manual-only'
 skill "$d" hashed name: hashed 'description: "Use when # is in quotes."' 'argument-hint: "[topic]" # in the menu'
+skill "$d" apos name: apos "description: 'Use when x.' # don't touch"
+skill "$d" dquote name: dquote 'description: "Use when x." # see "ship'
+skill "$d" lastline name: lastline 'description: "Use when a' '  b." # note'
 check_rc "a comment after an unquoted or a quoted value is dropped" 0 "$(rc_of "$d")"
 
 # A quote a value opens and does not end with is YAML a loader rejects, though
@@ -74,6 +77,29 @@ d=$(tree trailing-quote)
 skill "$d" hint name: hint 'description: Use when hinted.' "argument-hint: '[topic]' extra"
 check "a quoted value with text after its closing quote fails" \
   "skills/hint/SKILL.md: frontmatter key argument-hint has an unbalanced quote" "$(out_of "$d")"
+d=$(tree escaped-quote)
+skill "$d" esc name: esc 'description: "Use when C:\"'
+check "an escaped final quote does not close the value" \
+  "skills/esc/SKILL.md: frontmatter key description has an unbalanced quote" "$(out_of "$d")"
+
+# A plain value YAML reads as structure: `: ` inside it, or an indicator first.
+d=$(tree plain-colon)
+skill "$d" colon name: colon 'description: Drive one issue: open a PR. Use when shipping.'
+check "a plain value holding ': ' fails" \
+  "skills/colon/SKILL.md: frontmatter key description needs quoting" "$(out_of "$d")"
+d=$(tree plain-flow)
+skill "$d" flow name: flow 'description: Use when flowing.' 'argument-hint: [issue-number] [--unattended]'
+check "a plain value opening with [ fails" \
+  "skills/flow/SKILL.md: frontmatter key argument-hint needs quoting" "$(out_of "$d")"
+d=$(tree plain-backtick)
+skill "$d" tick name: tick 'description: `/ship` drives an issue. Use when shipping.'
+check "a plain value opening with a backtick fails" \
+  "skills/tick/SKILL.md: frontmatter key description needs quoting" "$(out_of "$d")"
+d=$(tree plain-ok)
+skill "$d" url name: url 'description: Use when a URL like https://x.y or C:\dir is given.'
+skill "$d" multi name: multi 'description:' '  Use when the value starts on the next line.'
+check_rc "a plain value with a colon not followed by a space passes" 0 "$(rc_of "$d")"
+
 d=$(tree folded-quote)
 skill "$d" multi name: multi 'description: "Use when a quoted' '  description folds."'
 check_rc "a quoted description across lines passes" 0 "$(rc_of "$d")"

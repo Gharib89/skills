@@ -97,7 +97,8 @@ do to pass.
   allowlist in `scripts/stray-file-check.sh` in the commit that tracks it.
 - The frontmatter of every skill this repo writes holding only `name`,
   `description`, `argument-hint`, `disable-model-invocation` and `metadata`,
-  each quote a value opens closed at its end, a `description` of at most 1,024
+  each quote a value opens closed, a value holding `: ` or opening with a YAML
+  indicator quoted, a `description` of at most 1,024
   characters, and a "Use when" clause in it unless
   `disable-model-invocation: true`, per the `frontmatter` gate.
 - No `metadata.version` line under `skills/` moved by the diff, per the
