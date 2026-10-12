@@ -64,6 +64,10 @@ check "a second clone resolves its own root" yes "$([ "$other" != "$root" ] && [
 # With XDG_STATE_HOME unset, the root falls back to ~/.local/state.
 check "no XDG_STATE_HOME falls back to ~/.local/state" "$tmp/home/.local/state/ship/${root##*/}/ship-7/run.md" \
   "$(env -u XDG_STATE_HOME HOME="$tmp/home" bash -c 'cd "$1" && bash "$2" init 7' _ "$wt" "$m" 2>/dev/null | jq -r .run_file)"
+# A relative XDG_STATE_HOME is ignored, as the XDG spec requires: it would
+# resolve under each worktree's own cwd.
+check "a relative XDG_STATE_HOME falls back to ~/.local/state" "$tmp/home/.local/state/ship/${root##*/}/ship-8/run.md" \
+  "$(XDG_STATE_HOME=state HOME="$tmp/home" bash -c 'cd "$1" && bash "$2" init 8' _ "$wt" "$m" 2>/dev/null | jq -r .run_file)"
 
 # A cksum that fails would leave the key empty and every repo sharing one root,
 # so init refuses rather than defaulting.

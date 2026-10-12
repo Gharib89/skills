@@ -401,20 +401,23 @@ ship_main_checkout() {
 # outside every checkout because a session isolated by `EnterWorktree` refuses
 # an Edit, or a Bash command, that names a `.git` path (measured, Claude Code
 # 2.1.296), so the run could not write its own record there; the key is digits
-# for the same reason, since digits never spell `git`.
-# `cksum` because POSIX requires it, so no consumer needs a new tool. A state
-# directory, not a temp one, because a wiped temp directory took the record with
-# it in three runs. `run-file`, `cleanup` and the grade check in `open-pr` and
-# `update-pr-title` read it. Returns 1 outside a git checkout and 2 when cksum
-# fails, whose empty key would put every repo's records under one root.
+# for the same reason, since digits never spell `git`. A relative
+# XDG_STATE_HOME is ignored, as the XDG spec requires, since it would resolve
+# under each worktree's own cwd. `cksum` because POSIX requires it, so no
+# consumer needs a new tool. A state directory, not a temp one, because a wiped
+# temp directory took the record with it in three runs. `run-file`, `cleanup`
+# and the grade check in `open-pr` and `update-pr-title` read it. Returns 1
+# outside a git checkout and 2 when cksum fails, whose empty key would put every
+# repo's records under one root.
 ship_record_root() {
-  local common key
+  local common key state=${XDG_STATE_HOME:-}
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
   common=$(cd "$common" && pwd -P) || return 1
   key=$(printf '%s' "$common" | cksum 2>/dev/null) || return 2
   key=${key%% *}
   [[ $key =~ ^[0-9]+$ ]] || return 2
-  printf '%s/ship/%s' "${XDG_STATE_HOME:-$HOME/.local/state}" "$key"
+  [[ $state == /* ]] || state=$HOME/.local/state
+  printf '%s/ship/%s' "$state" "$key"
 }
 
 # Container inside the main checkout: <main>/.claude/worktrees. `EnterWorktree`
