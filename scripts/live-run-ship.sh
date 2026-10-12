@@ -43,14 +43,22 @@ open_prs() { # -> [{number, body, head}], every page
     --jq '.[] | {number, body, head: .head.ref}' | jq -s .
 }
 # A PR is the run's when its head is a Ship branch, `<type>/<slug>-<issue>`, or
-# its body closes the issue.
+# its body closes the issue. Returns 2 when a read fails, so no caller takes a
+# failed read for "not the run's".
 run_prs() { # <open_prs json> -> one PR number per line
-  local i=0
+  local i=0 rc
   while [ "$i" -lt "$(jq length <<<"$1")" ]; do
-    if jq -e --argjson i "$i" --arg s "-$issue" '.[$i].head | endswith($s)' <<<"$1" >/dev/null \
-      || ship_body_closes "$(jq -r --argjson i "$i" '.[$i].body // ""' <<<"$1")" "$issue"; then
-      jq --argjson i "$i" '.[$i].number' <<<"$1"
+    jq -e --argjson i "$i" --arg s "-$issue" '.[$i].head | endswith($s)' <<<"$1" >/dev/null
+    rc=$?
+    if [ "$rc" -eq 1 ]; then
+      ship_body_closes "$(jq -r --argjson i "$i" '.[$i].body // ""' <<<"$1")" "$issue"
+      rc=$?
     fi
+    case $rc in
+      0) jq --argjson i "$i" '.[$i].number' <<<"$1" ;;
+      1) ;;
+      *) echo 'run_prs: a PR read failed' >&2; return 2 ;;
+    esac
     i=$(( i + 1 ))
   done
 }
@@ -61,9 +69,9 @@ run_branches() {
 # Close the run's issue and PRs and delete its branches.
 reset_host() {
   [ -n "$issue" ] || return 0
-  local prs n b
-  if prs=$(open_prs); then
-    for n in $(run_prs "$prs"); do gh api -X PATCH "repos/$repo/pulls/$n" -f state=closed >/dev/null; done
+  local prs mine n b
+  if prs=$(open_prs) && mine=$(run_prs "$prs"); then
+    for n in $mine; do gh api -X PATCH "repos/$repo/pulls/$n" -f state=closed >/dev/null; done
   fi
   for b in $(run_branches); do gh api -X DELETE "repos/$repo/git/refs/heads/$b" >/dev/null; done
   gh api -X PATCH "repos/$repo/issues/$issue" -f state=closed -f state_reason=not_planned >/dev/null
@@ -108,16 +116,18 @@ run_file=$(find "$tmp/state" -path "*/ship-$issue/run.md" 2>/dev/null | head -n 
 assignees=$(gh api "repos/$repo/issues/$issue" --jq '[.assignees[].login]') || tooling "cannot read issue #$issue"
 prs=$(open_prs) || tooling "cannot list PRs"
 jq -n --argjson a "$assignees" --argjson p "$prs" '{assignees: $a, open_prs: [$p[] | {number, body}]}' > "$tmp/host.json"
-pr=$(run_prs "$prs" | head -n 1)
+pr=$(run_prs "$prs") || tooling "cannot read the open PRs"
+pr=$(head -n 1 <<<"$pr")
 PR_TEMPLATE=$co/.github/pull_request_template.md \
   "$here/live-run-checks.sh" "${run_file:-$tmp/no-run-file}" "$tmp/host.json" "$issue" > "$tmp/failed"
 [ $? -le 1 ] || tooling "live-run-checks.sh failed as tooling"
 
 # Reset, then read the fixture back: a read that fails leaves cleanup unproven.
 reset_host
-if state=$(gh api "repos/$repo/issues/$issue" --jq .state) && prs=$(open_prs) && branches=$(run_branches); then
+if state=$(gh api "repos/$repo/issues/$issue" --jq .state) && prs=$(open_prs) && mine=$(run_prs "$prs") \
+  && branches=$(run_branches); then
   { [ "$state" = closed ] || echo "cleanup: left issue #$issue open"
-    for n in $(run_prs "$prs"); do echo "cleanup: left PR #$n open"; done
+    for n in $mine; do echo "cleanup: left PR #$n open"; done
     for b in $branches; do echo "cleanup: left branch $b"; done
   } >> "$tmp/failed"
 else

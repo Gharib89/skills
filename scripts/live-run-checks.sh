@@ -32,11 +32,14 @@ else
   # a range after it; its first start may not precede the last closed phase's,
   # since `run-file next` opens a phase only after its predecessor. A drop of
   # 12 hours or more is the clock wrapping at midnight, not an earlier start.
+  # Only the trailing run of ranges is time, as run-file reads it: a range
+  # inside the item text or a skip reason is wording.
   last=""
   for n in 0 1 2 3 4 5 6 7 8; do
     line=$(grep -m1 "^- \[[ x]\] $n · " "$run")
     case $line in "- [x] "*) ;; *) fail "phase $n: not closed"; continue ;; esac
-    start=$(grep -oE '\([0-9]{2}:[0-9]{2}→' <<<"$line" | head -n 1)
+    start=$(grep -oE '( \([0-9]{2}:[0-9]{2}→[0-9]{2}:[0-9]{2}(\+1d)?\))+$' <<<"$line" \
+      | grep -oE '\([0-9]{2}:[0-9]{2}→' | head -n 1)
     [ -n "$start" ] || continue
     m=$(( 10#${start:1:2} * 60 + 10#${start:4:2} ))
     if [ -n "$last" ] && [ "$m" -lt "$last" ] && [ $(( last - m )) -lt 720 ]; then
