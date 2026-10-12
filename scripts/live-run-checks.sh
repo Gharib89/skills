@@ -17,6 +17,9 @@ command -v jq >/dev/null || { echo 'jq not installed' >&2; exit 2; }
 jq -e 'has("assignees") and has("open_prs")' "$host" >/dev/null 2>&1 \
   || { echo "host state unreadable: $host" >&2; exit 2; }
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# ship_body_closes: whether a PR closes the issue is read the way Ship reads it.
+# shellcheck source=../skills/ship/scripts/_lib.sh
+source "$here/../skills/ship/scripts/_lib.sh"
 
 failed=0
 fail() { printf '%s\n' "$1"; failed=1; }
@@ -25,30 +28,37 @@ if [ ! -f "$run" ]; then
   fail "run file: missing"
 else
   # Every phase before the merge gate is `[x]`, closed or skipped. A closed one
-  # carries `(HH:MM→HH:MM)`; its start may not precede the last closed phase's
-  # start, since `run-file next` opens a phase only after its predecessor.
+  # carries `(HH:MM→HH:MM)`, the end `+1d` past midnight; its start may not
+  # precede the last closed phase's start, since `run-file next` opens a phase
+  # only after its predecessor. A drop of 12 hours or more is the clock wrapping
+  # at midnight, not an earlier start.
   last=""
   for n in 0 1 2 3 4 5 6 7 8; do
     line=$(grep -m1 "^- \[[ x]\] $n · " "$run")
     case $line in "- [x] "*) ;; *) fail "phase $n: not closed"; continue ;; esac
-    start=$(printf '%s' "$line" | sed -n 's/.*(\([0-9][0-9]:[0-9][0-9]\)→[0-9:]*)$/\1/p')
+    start=$(printf '%s' "$line" | sed -n 's/.*(\([0-9][0-9]\):\([0-9][0-9]\)→[0-9:]*\(+1d\)\{0,1\})$/\1 \2/p')
     [ -n "$start" ] || continue
-    if [ -n "$last" ] && [[ "$start" < "$last" ]]; then fail "phase $n: closed out of order"; fi
-    last=$start
+    m=$(( 10#${start% *} * 60 + 10#${start#* } ))
+    if [ -n "$last" ] && [ "$m" -lt "$last" ] && [ $(( last - m )) -lt 720 ]; then
+      fail "phase $n: closed out of order"
+    fi
+    last=$m
   done
   grep -q -E '^- \[x\] 9 · |^- \[ \] 9 · .* in_progress \(' "$run" || fail "merge gate: not reached"
 fi
 
 [ "$(jq '.assignees | length' "$host")" -gt 0 ] || fail "issue: not claimed"
 
-# GitHub's closing keywords, the way the host links a PR to the issue it closes.
-closing=$(jq --arg n "$issue" '[.open_prs[]
-  | select(.body // "" | test("\\b(close[sd]?|fix(e[sd])?|resolve[sd]?) #" + $n + "\\b"; "i"))]' "$host")
-count=$(jq length <<<"$closing")
-if [ "$count" -ne 1 ]; then
-  fail "pr: $count open PRs close #$issue, want 1"
+bodies=() i=0
+while [ "$i" -lt "$(jq '.open_prs | length' "$host")" ]; do
+  body=$(jq -r --argjson i "$i" '.open_prs[$i].body // ""' "$host")
+  ! ship_body_closes "$body" "$issue" || bodies+=("$body")
+  i=$(( i + 1 ))
+done
+if [ "${#bodies[@]}" -ne 1 ]; then
+  fail "pr: ${#bodies[@]} open PRs close #$issue, want 1"
 else
-  out=$(jq -r '.[0].body' <<<"$closing" | bash "$here/check-pr-body.sh" 2>/dev/null)
+  out=$(printf '%s\n' "${bodies[0]}" | bash "$here/check-pr-body.sh" 2>/dev/null)
   case $? in
     0) ;;
     1) while IFS= read -r l; do fail "pr body: $l"; done <<<"$out" ;;

@@ -75,6 +75,20 @@ rc=1" "$(verdict "$(good_run)" "$(host_of '[]' "$good_body")")"
 check "no PR closing the issue is named" "pr: 0 open PRs close #7, want 1
 rc=1" "$(verdict "$(good_run)" "$(host_of '["agent"]' 'Closes #8\n')")"
 
+# Which PR closes the issue is read the way Ship reads it (ship_body_closes):
+# a keyword form, the list form; not a longer number, a bare mention or a span.
+closes() { verdict "$(good_run)" "$(host_of '["agent"]' "$1\n\n## Why\n\nx\n\n## Attribution\n")" | head -n 1; }
+check "Fixes closes the issue" "rc=0" "$(closes 'Fixes #7')"
+check "the list form closes the issue" "rc=0" "$(closes 'Closes #3, #7')"
+check "a longer number does not close it" "pr: 0 open PRs close #7, want 1" "$(closes 'Closes #70')"
+check "a bare mention does not close it" "pr: 0 open PRs close #7, want 1" "$(closes 'See #7')"
+check "a code span does not close it" "pr: 0 open PRs close #7, want 1" "$(closes '`Closes #7`')"
+
+# The clock wraps at midnight: a later phase may start at a smaller HH:MM.
+check "a run across midnight passes" "rc=0" "$(verdict "$(good_run \
+  | sed -e 's/(10:00→10:01)/(23:50→23:51)/' -e 's/(10:01→10:02)/(23:51→23:52)/' \
+        -e 's/(10:02→10:05)/(23:52→00:05+1d)/')" "$host_ok")"
+
 check "two PRs closing the issue are named" "pr: 2 open PRs close #7, want 1
 rc=1" "$(verdict "$(good_run)" "$(host_of '["agent"]' "$good_body" "$good_body")")"
 
