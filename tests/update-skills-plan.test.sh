@@ -167,6 +167,18 @@ check "--old reads the old tree at that ref" \
 jq '.skills.ship.source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a lock recording ship from . is source mode" source "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r .mode)"
 
+# The renumber note carries no meaning to the plan: a refresh from a
+# pre-renumber 5.2.1 to 0.11.4 reads 5.2.1 as it is, so no 0.x row is planned.
+d=$tmp/crossing
+mkdir -p "$d" && git -C "$d" init -q && git -C "$d" config user.email t@t && git -C "$d" config user.name t
+skill "$d" ship 5.2.1; lock "$d" '{"ship": {"source": "Gharib89/skills"}}'
+git -C "$d" add -A && git -C "$d" commit -qm old
+skill "$d" ship 0.11.4; printf '%s\n' '**The renumber to 0.x.** Every entry below predates it.' > "$d/.claude/skills/ship/CHANGELOG.md"
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 0.9.0 | converged | x |' > "$d/.claude/skills/ship/retired-terms.md"
+echo '{"heads": {}, "unreachable": []}' > "$tmp/heads0.json"
+check "a refresh across the renumber reads the installed version as it is" \
+  '[]' "$(bash "$plan" "$d" "$tmp/heads0.json" | jq -c '[.retired[].term]')"
+
 # A prerelease version compares by its release part, in the skill's version
 # and in a row's, and a row with no replacement cell, or a lowercase none, has
 # no replacement. An aligned separator row is no row.
