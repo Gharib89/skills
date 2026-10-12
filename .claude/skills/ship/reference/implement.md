@@ -68,7 +68,7 @@ skipped verification later.
 - **`docs`**: markdown, comments, manifest text with no logic. **Skip TDD**;
   do not manufacture a contrived test. Commit `docs:`.
 - **`code`**: a feature or bugfix in behavior. Invoke the `tdd` skill
-  **autonomously**: red, green, refactor **without pausing for plan approval**
+  **autonomously**: red, then green, **without pausing to confirm seams**
   (you are intentionally overriding tdd's checkpoint; the merge gate is the
   review point). A new test goes where the repo's tests for that area live, and
   a new test file is registered wherever the runner discovers files, which the
