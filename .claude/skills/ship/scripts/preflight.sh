@@ -249,10 +249,10 @@ else
     reasons+=("not triaged: run /triage first")
   fi
 
-  if linked=$(host_issue_linked_prs "$n"); then
+  if linked=$(host_issue_linked_prs "$n") && jq -e '.closing and .mentions' >/dev/null 2>&1 <<<"$linked"; then
     closing=$(jq -r '[.closing[] | "#\(.number) (\(.state))"] | join(", ")' <<<"$linked")
     $rework || [ -z "$closing" ] || reasons+=("existing PR: $closing")
-    open_prs=$(jq -r '[.closing[] | select(.state == "open") | .number]' <<<"$linked")
+    open_prs=$(jq -c '[.closing[] | select(.state == "open") | .number]' <<<"$linked")
     mentions=$(jq -c '[.mentions[] | select(.kind == "pr") | .number]' <<<"$linked")
     mentioned_by=$(jq -c '.mentions' <<<"$linked")
   elif $rework; then
@@ -283,14 +283,14 @@ if $rework && [ -n "${open_prs:-}" ]; then
   case $(jq length <<<"$open_prs") in
     0) reasons+=("not reworkable: no open PR") ;;
     1) num=$(jq '.[0]' <<<"$open_prs")
-       if ! pr=$(host_pr_get "$num"); then
+       if ! pr=$(host_pr_get "$num") || ! head=$(jq -er .head_ref <<<"$pr"); then
          reasons+=("not reworkable: PR #$num unreadable")
-       elif [ "$(jq -r .head_ref <<<"$pr")" != "${br:-}" ]; then
-         reasons+=("not reworkable: branch mismatch: PR #$num heads $(jq -r .head_ref <<<"$pr"), origin has ${br:-no *-$n branch}")
-       elif ! threads=$(host_pr_threads "$num"); then
+       elif [ "$head" != "${br:-}" ]; then
+         reasons+=("not reworkable: branch mismatch: PR #$num heads $head, origin has ${br:-no *-$n branch}")
+       elif ! threads=$(host_pr_threads "$num") \
+         || ! open_threads=$(jq -c '[.[] | select(.resolved | not) | .id]' <<<"$threads"); then
          reasons+=("not reworkable: review threads unreadable")
        else
-         open_threads=$(jq -c '[.[] | select(.resolved | not) | .id]' <<<"$threads")
          [ "$open_threads" != '[]' ] || $feedback || reasons+=("no feedback")
          rework_json=$(jq -c --argjson t "$open_threads" '{pr: .number, branch: .head_ref, head_sha, worktree: null, threads: $t}' <<<"$pr")
        fi ;;

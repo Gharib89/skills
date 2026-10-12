@@ -108,6 +108,16 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   touch "$SHIP_FAKE/host_pr_get.1.fail"
   check "$h: PR unreadable" '["not reworkable: PR #9 unreadable"]' "$(rw "$(preflight 5 --rework)")"
 
+  # An answer that does not parse is unreadable too, never data.
+  for fn in host_issue_linked_prs host_pr_get host_pr_threads; do
+    admitted
+    printf 'not json\n' > "$SHIP_FAKE/$fn.1.json"
+    out=$(preflight 5 --rework)
+    check "$h: unparseable $fn is one unreadable reason" 1 \
+      "$(jq '[.reasons[] | select(test("^not reworkable: .*unreadable$"))] | length' <<<"$out")"
+    check "$h: and admits nothing" 'false null' "$(jq -r '"\(.ok) \(.rework)"' <<<"$out")"
+  done
+
   # No feedback: the claim, the PR and the branch are as they were, since
   # preflight wrote nothing to the host.
   admitted
