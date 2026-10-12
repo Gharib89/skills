@@ -10,22 +10,23 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
-# A fixture's git step that fails would leave its case running against the wrong
-# base, so it ends the test, naming the case (#597).
-git_() {
-  git -c user.email=t@example.com -c user.name=t -C "$1" "${@:2}" \
-    || { printf 'FAIL %s: fixture %s: git %s failed\n' "$TEST_NAME" "${1##*/}" "${*:2}" >&2; exit 1; }
+# A fixture step that fails would leave its case running against the wrong base,
+# so it ends the test, naming the case (#597).
+setup_failed() { # <case dir> <step>
+  printf 'FAIL %s: fixture %s: %s failed\n' "$TEST_NAME" "${1##*/}" "$2" >&2; exit 1
 }
+git_() { git -c user.email=t@example.com -c user.name=t -C "$1" "${@:2}" || setup_failed "$1" "git ${*:2}"; }
 
 idiom="Read the version with \`sed -n 's/^  version: //p' SKILL.md\` at load."
 
 # <case>: sets $d to a checkout whose base commit carries two skills and one doc,
-# in this shell rather than a subshell, so a failed git step ends the test.
+# in this shell rather than a subshell, so a failed step ends the test.
 # `base-commit` tags the base so a change committed on top is compared to it
 # rather than to itself.
 base_repo() {
   d=$fixture/$1
-  rm -rf "$d"; mkdir -p "$d/skills/ship" "$d/skills/cloud-ship" "$d/skills/setup-skills" "$d/docs" || return 1
+  rm -rf "$d"; mkdir -p "$d/skills/ship" "$d/skills/cloud-ship" "$d/skills/setup-skills" "$d/docs" \
+    || setup_failed "$d" mkdir
   git_ "$d" init -q
   printf -- '---\nname: ship\nmetadata:\n  version: 7.0.0\n  profile-schema: 3\n---\n\n# ship\n\n%s\n' \
     "$idiom" > "$d/skills/ship/SKILL.md"

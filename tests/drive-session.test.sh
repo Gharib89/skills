@@ -145,11 +145,11 @@ check "and how long each sequence number stood still, in seconds" true \
 # moved.
 for w in w1 w2; do
   printf 'idle 69\n' > "$HERDR_FAKE/$w.states"
-  bash "$s/spawn.sh" "$w" --roster "$tmp/w1.json" --cwd "$tmp/cwd" --prompt x >/dev/null
+  bash "$s/spawn.sh" "$w" --roster "$tmp/moved.json" --cwd "$tmp/cwd" --prompt x >/dev/null
 done
 printf 'working 70\nworking 71\nworking 72\n' > "$HERDR_FAKE/w1.states"
 printf 'working 70\n' > "$HERDR_FAKE/w2.states"
-out=$(bash "$s/watch.sh" --roster "$tmp/w1.json" --timeout 8000)
+out=$(bash "$s/watch.sh" --roster "$tmp/moved.json" --timeout 8000)
 check "a moved sequence number restarts still_s" '72 true' \
   "$(jq -r '.sessions | "\(.[0].seq) \(.[0].still_s + 2 <= .[1].still_s)"' <<<"$out")"
 calls >/dev/null
