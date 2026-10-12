@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.26.0 (2026-10-12)
+
+### Features
+
+- **ship**: Keep the Run file under the XDG state dir, outside every checkout
+  ([#602](https://github.com/Gharib89/skills/pull/602),
+  [`86a91b7`](https://github.com/Gharib89/skills/commit/86a91b72a98acc0efbca6692d6d71ec160459d40))
+
+
 ## v0.25.1 (2026-10-12)
 
 ### Bug Fixes
