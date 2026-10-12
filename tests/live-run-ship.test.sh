@@ -134,7 +134,7 @@ rc=0' "$(drive happy-skips-gate happy ambiguous)"
 
 check "a retry does not hide the first attempt's cleanup failure" \
   '["happy: cleanup: left PR #101 open"]
-rc=1' "$(PR_CLOSE_FAILS=1 drive happy-skips-gate happy ambiguous | sed 's/^{"result":"fail","failed":\(\[[^]]*\]\).*/\1/')"
+rc=1' "$(PR_CLOSE_FAILS=1 drive happy-skips-gate happy ambiguous | { read -r line; jq -c .failed <<<"$line"; cat; })"
 
 check "an ambiguous path that claims and opens a PR twice fails" \
   '{"result":"fail","failed":["ambiguous: stop: the reply does not name ambiguous","ambiguous: phase 1: closed","ambiguous: phase 2: opened","ambiguous: issue: claimed","ambiguous: pr: 1 open PRs close #3, want 0","ambiguous: branch: feat/x-3 pushed"],"retried":["ambiguous: stop: the reply does not name ambiguous","ambiguous: phase 1: closed","ambiguous: phase 2: opened","ambiguous: issue: claimed","ambiguous: pr: 1 open PRs close #2, want 0","ambiguous: branch: feat/x-2 pushed"]}
