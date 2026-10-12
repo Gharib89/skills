@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The Run file: a ship run's record, outside every working tree, in the repo's
-# git common directory. This mechanic owns the file's shape and every flip of
+# The Run file: a ship run's record, outside every checkout, in the user's
+# state directory. This mechanic owns the file's shape and every flip of
 # it, so a stamp is a measurement the mechanic took rather than a time a run
 # recalled, and the merge summary's `Timing:` row is arithmetic rather than
 # mental subtraction.
@@ -21,11 +21,12 @@
 #   run-file probe <ref> <where> -- <command>...
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
-# The record root is `<git common dir>/ship`: the main checkout and every
-# worktree of it resolve the same directory, git never lists it as a working-tree
-# file, and it outlives a wiped temp directory, which took the record with it in
-# three runs. `--scratchpad <dir>` names another root; outside a git checkout it
-# is the only one. Under the root, `ship-<issue>/run.md` is the Run file and
+# The record root is `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>`, the
+# key hashed from the git common dir (`ship_record_root` in _lib.sh says why):
+# the main checkout and every worktree of it resolve the same directory, a
+# session isolated by `EnterWorktree` can write it, and it outlives a wiped temp
+# directory, which took the record with it in three runs. `--scratchpad <dir>`
+# names another root; outside a git checkout it is the only one. Under the root, `ship-<issue>/run.md` is the Run file and
 # `scratch-<issue>/` is the run's Scratch directory, which `init` creates and
 # returns as `scratch`; the roles' subdirectories are the callers'. `cleanup`
 # removes both.
@@ -299,8 +300,7 @@ phase_arg() { # phase_arg <value>: the phase number; a flag here is a usage erro
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
   case ${1:-} in '' | *[!0-9]*) ship_tooling "$usage" ;; esac
 }
-# The record root: the --scratchpad named, else the git common dir's `ship`
-# directory. Sets `root` in this shell, because a refusal inside a `$( )` would
+# The record root: the --scratchpad named, else `ship_record_root`. Sets `root` in this shell, because a refusal inside a `$( )` would
 # exit only the substitution.
 resolve_root() {
   if [ -n "$scratchpad" ]; then root=${scratchpad%/}

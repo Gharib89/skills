@@ -3,8 +3,9 @@
 # its local branch (a squash-merged branch is not an ancestor of the default
 # branch). Carried files stay in the worktree this removes. The record is the
 # `ship-<issue>` Run file and `scratch-<issue>` Scratch directory under
-# `<git common dir>/ship` that `run-file init` made; it goes first, so a worktree
-# that will not come off still leaves the run's own files cleaned.
+# `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` that `run-file init`
+# made; it goes first, so a worktree that will not come off still leaves the
+# run's own files cleaned.
 #
 #   cleanup <issue|none>
 #

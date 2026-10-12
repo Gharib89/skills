@@ -389,14 +389,23 @@ ship_main_checkout() {
   dirname "$common"
 }
 
-# ship_record_root: where a run keeps its record, <git common dir>/ship. The
-# main checkout and every worktree of it resolve the same directory, git never
-# lists it as a working-tree file, and it outlives a wiped temp directory, which
-# took the record with it in three runs. `run-file` and `cleanup` read it.
+# ship_record_root: where a run keeps its record,
+# ${XDG_STATE_HOME:-$HOME/.local/state}/ship/<key>, <key> the first 12 hex
+# characters of the sha256 of the physical git common dir path. Keyed on the
+# common dir, the main checkout and every worktree of it resolve the same
+# directory and two clones never share one. It sits outside every checkout
+# because a session isolated by `EnterWorktree` refuses an Edit to a path under
+# `.git/` and any Bash command naming `git`, so the run could not write its own
+# record there; the key is hex for the same reason, since hex never spells
+# `git`. A state directory, not a temp one, because a wiped temp directory took
+# the record with it in three runs. `run-file`, `cleanup` and the grade check in
+# `open-pr` and `update-pr-title` read it.
 ship_record_root() {
-  local common
+  local common key
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
-  printf '%s/ship' "$common"
+  common=$(cd "$common" && pwd -P) || return 1
+  key=$(printf '%s' "$common" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -c1-12)
+  printf '%s/ship/%s' "${XDG_STATE_HOME:-$HOME/.local/state}" "$key"
 }
 
 # Container inside the main checkout: <main>/.claude/worktrees. `EnterWorktree`

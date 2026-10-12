@@ -13,7 +13,8 @@
 # breaking`, a title whose type grades patch (anything but `feat` or a `!`) is
 # refused before the push, naming the recorded grade and the type to use. No
 # Run file, no Grade line, `none` or a title that is no Conventional Commit is no
-# check. The Run file is read at `<git common dir>/ship/ship-<issue>/run.md`, so a
+# check. The Run file is read at
+# `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>/ship-<issue>/run.md`, so a
 # run started with `run-file --scratchpad <dir>` keeps its Run file elsewhere and
 # is not checked.
 #

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The Run file: a ship run's record, outside every working tree, in the repo's
-# git common directory. This mechanic owns the file's shape and every flip of
+# The Run file: a ship run's record, outside every checkout, in the user's
+# state directory. This mechanic owns the file's shape and every flip of
 # it, so a stamp is a measurement the mechanic took rather than a time a run
 # recalled, and the merge summary's `Timing:` row is arithmetic rather than
 # mental subtraction.
@@ -21,11 +21,12 @@
 #   run-file probe <ref> <where> -- <command>...
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
-# The record root is `<git common dir>/ship`: the main checkout and every
-# worktree of it resolve the same directory, git never lists it as a working-tree
-# file, and it outlives a wiped temp directory, which took the record with it in
-# three runs. `--scratchpad <dir>` names another root; outside a git checkout it
-# is the only one. Under the root, `ship-<issue>/run.md` is the Run file and
+# The record root is `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>`, the
+# key hashed from the git common dir (`ship_record_root` in _lib.sh says why):
+# the main checkout and every worktree of it resolve the same directory, a
+# session isolated by `EnterWorktree` can write it, and it outlives a wiped temp
+# directory, which took the record with it in three runs. `--scratchpad <dir>`
+# names another root; outside a git checkout it is the only one. Under the root, `ship-<issue>/run.md` is the Run file and
 # `scratch-<issue>/` is the run's Scratch directory, which `init` creates and
 # returns as `scratch`; the roles' subdirectories are the callers'. `cleanup`
 # removes both.
@@ -181,7 +182,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default <git common dir>/ship] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -299,8 +300,7 @@ phase_arg() { # phase_arg <value>: the phase number; a flag here is a usage erro
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
   case ${1:-} in '' | *[!0-9]*) ship_tooling "$usage" ;; esac
 }
-# The record root: the --scratchpad named, else the git common dir's `ship`
-# directory. Sets `root` in this shell, because a refusal inside a `$( )` would
+# The record root: the --scratchpad named, else `ship_record_root`. Sets `root` in this shell, because a refusal inside a `$( )` would
 # exit only the substitution.
 resolve_root() {
   if [ -n "$scratchpad" ]; then root=${scratchpad%/}
