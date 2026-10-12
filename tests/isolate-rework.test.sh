@@ -65,6 +65,18 @@ check_rc "a local branch ahead of origin is refused" 1 "$rc"
 check "the refusal names it" "existing branch: feat/x-7 has commits origin lacks" "$(jq -r .error <<<"$out")"
 check "and leaves the branch where it was" "$(cat "$tmp/ahead")" "$(git -C "$repo" rev-parse feat/x-7)"
 
+# A comparison git cannot make is a failed read, never "has commits origin lacks".
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/git" <<SHIM
+#!/usr/bin/env bash
+[[ " \$* " == *" merge-base "* ]] && exit 128
+exec "$(command -v git)" "\$@"
+SHIM
+chmod +x "$tmp/bin/git"
+out=$(cd "$repo" && PATH="$tmp/bin:$PATH" bash "$m" 7 feat x --rework 2>/dev/null); rc=$?
+check_rc "a failed merge-base exits 2" 2 "$rc"
+check "and names the comparison" "cannot compare feat/x-7 with origin/feat/x-7" "$(jq -r .error <<<"$out")"
+
 check_rc "--rework has no in-place form" 2 \
   "$(cd "$repo" && bash "$m" 7 feat x --rework --in-place >/dev/null 2>&1; echo $?)"
 
