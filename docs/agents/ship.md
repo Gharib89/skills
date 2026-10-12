@@ -140,7 +140,7 @@ Claims to probe: that a permission dialog, not only a question dialog, reads `bl
 
 Proves: Ship's prose, as a real model reads it, takes a plain issue to the merge gate and stops `ambiguous` on a vague one with no claim, no branch and no PR.
 Applies when: the change touches `skills/ship/SKILL.md` or `skills/ship/reference/`.
-Run: `scripts/live-run-ship.sh <worktree>`. The `result` field of its JSON line is the result word; `unavailable` is a `Needs:` failure, so take `Without it:`. Non-empty `retried` lines go in the `Verification` row's `<what ran>`.
+Run: `<main checkout>/scripts/live-run-ship.sh <worktree>`, the main checkout's copy on the default branch and never the worktree's, so a change under test cannot change its own judge. The `result` field of its JSON line is the result word; `unavailable` is a `Needs:` failure, so take `Without it:`. Non-empty `retried` lines go in the `Verification` row's `<what ran>`.
 Needs: `gh` and `claude` signed in, and `Gharib89/ship-fixture` reachable with its `main` at its `seed` tag.
 Without it: hand-off
 Also proven by CI: None.
