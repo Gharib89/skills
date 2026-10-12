@@ -29,11 +29,13 @@ names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$r
 # indented continuation lines join with one space, so plain, quoted and folded
 # scalars all come out as the one line an agent reads. A `#` comment after an
 # unquoted value, or after a quoted one's closing quote, is YAML's, not the
-# value's, so it is dropped.
+# value's, so it is dropped. In a `>` or `|` block scalar a quote is literal
+# text, so it is neither checked for balance nor stripped.
 fields() {
   awk 'function flush() {
-         if (key != "" && v ~ /^["'\'']/ && (length(v) < 2 || substr(v, length(v)) != substr(v, 1, 1)))
-           print "unbalanced\t" key
+         if (key != "" && !block && v ~ /^["'\'']/) {
+           if (length(v) < 2 || substr(v, length(v)) != substr(v, 1, 1)) print "unbalanced\t" key
+           else v = substr(v, 2, length(v) - 2) }
          if (key == "description") desc = v }
        NR == 1 { if ($0 != "---") exit; fm = 1; fence = "open"; next }
        fm && $0 == "---" { fence = "closed"; exit }
@@ -47,11 +49,10 @@ fields() {
          sub(/[ \t]+$/, "", val)
          print "key\t" key
          if (key == "disable-model-invocation") dmi = val
-         v = (val ~ /^[>|][-+]?$/) ? "" : val
+         block = (val ~ /^[>|]([1-9]?[-+]?|[-+][1-9])$/); v = block ? "" : val
          next }
        /^[ \t]/ { line = $0; sub(/^[ \t]+/, "", line); v = (v == "" ? line : v " " line) }
        END { flush()
-             if (desc ~ /^".*"$/ || desc ~ /^'\''.*'\''$/) desc = substr(desc, 2, length(desc) - 2)
              print "dmi\t" dmi; print "desc\t" desc; print "fence\t" (fence == "" ? "none" : fence) }' "$1"
 }
 

@@ -78,6 +78,19 @@ d=$(tree folded-quote)
 skill "$d" multi name: multi 'description: "Use when a quoted' '  description folds."'
 check_rc "a quoted description across lines passes" 0 "$(rc_of "$d")"
 
+# In a block scalar a quote is literal text: it neither opens a quoted value nor
+# leaves the length when it ends one.
+d=$(tree block-quote)
+skill "$d" lead name: lead 'description: >-' '  "Lead" quote. Use when it leads.'
+check_rc "a block description starting with a quote passes" 0 "$(rc_of "$d")"
+d=$(tree block-indent)
+skill "$d" long name: long 'description: >2-' "  $(desc 1024)"
+check_rc "a block header with an indentation digit is not counted" 0 "$(rc_of "$d")"
+d=$(tree block-quoted-over)
+skill "$d" long name: long 'description: |' "  \"$(desc 1023)\""
+check "a block description's quotes count toward its length" \
+  "skills/long/SKILL.md: description is 1025 characters, over 1024" "$(out_of "$d")"
+
 d=$(tree unknown-key)
 skill "$d" extra name: extra 'description: Use when extra.' 'allowed-tools: Bash'
 check_rc "a key outside the allowlist fails" 1 "$(rc_of "$d")"
