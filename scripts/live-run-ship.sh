@@ -53,9 +53,8 @@ budget=2.50
 wall_cap=${LIVE_RUN_WALL_S:-1800}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # ship_body_closes: a PR closes the issue the way Ship reads it. This checkout's
-# copy, never <ship-source>'s, so a Ship under test cannot change how it is judged
-# as long as this checkout is not <ship-source>: the profile's Run line runs the
-# main checkout's copy.
+# copy rather than <ship-source>'s, so a Ship under test cannot change how it is
+# judged; the profile's Run line runs this script from the default branch.
 # shellcheck source=../skills/ship/scripts/_lib.sh
 source "$here/../skills/ship/scripts/_lib.sh"
 tmp=$(mktemp -d)
