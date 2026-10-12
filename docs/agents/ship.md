@@ -136,6 +136,16 @@ Without it: hand-off
 Also proven by CI: None.
 Claims to probe: that a permission dialog, not only a question dialog, reads `blocked` (it did on herdr 0.9.3, with `--permission-mode default`); that `agent get` on a closed tab's agent, or one whose claude exited with its pane open, answers `agent_not_found`; that a blocked agent's `visible` screen shows the dialog where a 120-line `recent-unwrapped` read is refused with `agent_not_idle`; that `agent prompt --wait` answers `agent_prompt_stalled` after 5 s for text that starts no turn, from `done`; and that focusing a tab turns `done` into `idle` without moving `state_change_seq` (all measured on herdr 0.9.3), so a glance at a tab wakes no `watch`.
 
+### ship-live-run
+
+Proves: Ship's prose, as a real model reads it, takes a plain issue to the merge gate and stops `ambiguous` on a vague one with no claim, no branch and no PR.
+Applies when: the change touches `skills/ship/SKILL.md` or `skills/ship/reference/`.
+Run: `git -C <worktree> worktree add --detach <scratch>/verify/live-run-judge origin/HEAD`, then `<scratch>/verify/live-run-judge/scripts/live-run-ship.sh <worktree>`, then `git -C <worktree> worktree remove <scratch>/verify/live-run-judge` whatever the driver exits: the driver and its checks come from the default branch, in an attended worktree and an unattended clone alike, so a change under test cannot change its own judge. The `result` field of its JSON line is the result word; a failed `worktree add`, or a `result` of `unavailable`, is a `Needs:` failure, so take `Without it:`. Non-empty `retried` lines go in the `Verification` row's `<what ran>`.
+Needs: `gh` and `claude` signed in, and `Gharib89/ship-fixture` reachable with its `main` at its `seed` tag.
+Without it: hand-off
+Also proven by CI: None.
+Claims to probe: that `claude -p` reports a hit `--max-budget-usd` cap as a nonzero exit with `subtype` `error_max_budget_usd` (it did on 2026-10-12), and that the fixture's `seed` tag still pins every skill Ship composes at the lock's ref.
+
 ## Versioning and changelog
 
 Tooling: semantic-release

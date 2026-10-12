@@ -42,9 +42,12 @@ npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill up
 and both trees are in the same commit.** `.claude/skills/` is what actually
 executes, so an unrefreshed change means the run is exercising the previous
 version. Run the refresh at the end of the implementation phase, before the
-self-review: the run's remaining phases then invoke the new mechanics, while
-changed `SKILL.md` prose is proven by the next run, because the skill was loaded
-into context at run start. The `derived-copies` gate in `scripts/local-gate.sh`
+self-review: the run's remaining phases then invoke the new mechanics. Changed
+`SKILL.md` prose does not take effect in the run, because the run loaded it at
+its start. Ship's own prose is proven by the
+`ship-live-run` Verification in `docs/agents/ship.md`, which drives the
+worktree's Ship on a fixture repo; any other skill's prose is proven by its
+next run. The `derived-copies` gate in `scripts/local-gate.sh`
 fails when the two trees differ.
 
 ### Harness

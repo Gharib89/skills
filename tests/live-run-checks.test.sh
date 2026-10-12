@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# scripts/live-run-checks.sh: the happy-path verdict of Ship's live run, read
-# from records alone. The seam is its CLI: a Run file, the host state the driver
-# fetched (issue assignees, open PRs with their bodies) and the issue number in,
+# scripts/live-run-checks.sh: the verdict of one Ship live run, the happy path
+# or, with --ambiguous, the early stop. The seam is its CLI: a Run file, the host
+# state the driver fetched (issue assignees, open PRs with their bodies, and for
+# the early stop the run's branches and final reply) and the issue number in,
 # with the PR template in PR_TEMPLATE; one failed check per stdout line and an
 # exit code out.
 set -uo pipefail
@@ -121,5 +122,81 @@ check_rc "a null open_prs is tooling" 2 \
 printf '%s' '{"assignees": true, "open_prs": []}' > "$T/host-bool.json"
 check_rc "a non-array assignees is tooling" 2 \
   "$(verdict "$(good_run)" "$T/host-bool.json" | tail -n 1 | sed 's/^rc=//')"
+
+# --ambiguous: the early stop on a vague issue. The reply names the stop as the
+# code span `ambiguous`, the host shows no claim, no PR closing the issue and
+# no branch of the run, and a Run file, where there is one, shows no work past
+# phase 1.
+stop_run() {
+  cat <<'RUN'
+# ship run · 7
+
+- [ ] 0 · Isolate: preflight in_progress (10:00→)
+- [ ] 1 · Understand: claim
+- [ ] 2 · Implement: classify
+- [ ] 3 · Verify: none
+- [ ] 4 · Docs-sync + self-review: review
+- [ ] 5 · Local gate: gate
+- [ ] 6 · Open PR: open
+- [ ] 7 · Reviewers: none
+- [ ] 8 · CI: ci
+- [ ] 9 · Merge gate: summary
+RUN
+}
+stopped='Stopped `ambiguous` on issue 7, with no claim taken.'
+# <assignees json> <branches json> [<body> [<reply>]]: no body, no open PR.
+amb_host() {
+  local f
+  f=$(mktemp "$T/host.XXXXXX")
+  jq -n --argjson a "$1" --argjson b "$2" --arg body "${3:-}" --arg r "${4-$stopped}" '{assignees: $a,
+    branches: $b, reply: $r,
+    open_prs: (if $body == "" then [] else [{number: 1, body: ($body | gsub("\\\\n"; "\n"))}] end)}' > "$f"
+  printf '%s' "$f"
+}
+amb() {
+  printf '%s\n' "$1" > "$T/run.md"
+  bash scripts/live-run-checks.sh --ambiguous "$T/run.md" "$2" 7 2>/dev/null
+  printf 'rc=%s\n' "$?"
+}
+amb_ok=$(amb_host '[]' '[]' '')
+
+check "an ambiguous stop in phase 0 passes" "rc=0" "$(amb "$(stop_run)" "$amb_ok")"
+check "an ambiguous stop in phase 1 passes" "rc=0" "$(amb "$(stop_run | sed \
+  -e 's/^- \[ \] 0 · Isolate: preflight in_progress (10:00→)/- [x] 0 · Isolate: preflight (10:00→10:01)/' \
+  -e 's/^- \[ \] 1 · Understand: claim/- [ ] 1 · Understand: claim in_progress (10:01→)/')" "$amb_ok")"
+check "an early stop with no Run file passes" "rc=0" \
+  "$(bash scripts/live-run-checks.sh --ambiguous "$T/nope.md" "$amb_ok" 7 2>/dev/null; printf 'rc=%s\n' "$?")"
+check "a cut-short Run file names the phases it lacks" "phase 5: no checklist line
+phase 6: no checklist line
+phase 7: no checklist line
+phase 8: no checklist line
+phase 9: no checklist line
+rc=1" "$(amb "$(stop_run | head -n 7)" "$amb_ok")"
+check "an empty Run file is not a pass" "10 rc=1" \
+  "$(amb '' "$amb_ok" | grep -c 'no checklist line' | tr '\n' ' ')$(amb '' "$amb_ok" | tail -n 1)"
+check "a PR that only mentions the issue still passes" "rc=0" \
+  "$(amb "$(stop_run)" "$(amb_host '[]' '[]' 'See #7\n')")"
+check "a reply naming another stop is named" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' 'Stopped `nothing-ready`.')")"
+check "an empty reply is named" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' '')")"
+check "a longer word is not the stop name" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' 'The issue is unambiguous.')")"
+check "the word outside a code span is not the stop name" "stop: the reply does not name ambiguous
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' '' 'The issue is not ambiguous, so I went on.')")"
+check "a claim is named" "issue: claimed
+rc=1" "$(amb "$(stop_run)" "$(amb_host '["agent"]' '[]' '')")"
+check "a PR closing the issue is named" "pr: 1 open PRs close #7, want 0
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '[]' "$good_body")")"
+check "a pushed branch is named" "branch: feat/x-7 pushed
+rc=1" "$(amb "$(stop_run)" "$(amb_host '[]' '["feat/x-7"]' '')")"
+check "a run that went past phase 1 is named" "phase 1: closed
+phase 2: opened
+rc=1" "$(amb "$(stop_run | sed -e 's/^- \[ \] 1 · Understand: claim/- [x] 1 · Understand: claim (10:01→10:02)/' \
+  -e 's/^- \[ \] 2 · Implement: classify/- [ ] 2 · Implement: classify in_progress (10:02→)/')" "$amb_ok")"
+check "a skipped later phase is named" "phase 3: opened
+rc=1" "$(amb "$(stop_run | sed 's/^- \[ \] 3 · Verify: none/- [x] 3 · Verify: none skipped (docs)/')" "$amb_ok")"
+check_rc "ambiguous host state without branches or reply is tooling" 2 \
+  "$(amb "$(stop_run)" "$host_ok" | tail -n 1 | sed 's/^rc=//')"
 
 finish
