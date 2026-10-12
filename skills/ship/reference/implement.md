@@ -129,11 +129,12 @@ not scope, before the diff size does:
   vocabulary value whose change must reach more than 10 call sites in lockstep.
 
 The split proposal is a set of tickets, each landing green on its own. Where
-the change reshapes something callers reach, they take one shape: **expand**
-adds the new shape beside the old one with no caller switched; **migrate**
-moves the callers over in batches sized by the blast radius, one ticket per
-batch; **contract** removes the old shape once nothing reaches it. Give each
-ticket its title, its criteria and the ticket it is blocked by.
+the change reshapes something callers reach, those tickets follow expand,
+migrate, contract: **expand** adds the new shape beside the old one with no
+caller switched; **migrate** moves the callers over in batches sized by the
+blast radius, one ticket per batch; **contract** removes the old shape once
+nothing reaches it. Give each ticket its title, its criteria and the ticket it
+is blocked by.
 
 ## Phase 2: adjacent finds
 
