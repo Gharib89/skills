@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The prose budget on ship's own documents. A run reads SKILL.md top to bottom
+# The prose budget on the skills' own documents. A run reads SKILL.md top to bottom
 # at load, so a file that outgrows its budget buries the pipeline behind its own
 # reference material, and a reference file long enough to scroll needs a map at
 # the top rather than at the point a reader gives up. The thresholds and the
@@ -9,7 +9,7 @@
 # `scripts/check.sh full` runs this as its `prose-budget` row, which
 # scripts/local-gate.sh reports under the same name, in every lane.
 # The SKILL.md budget counts words, split on whitespace as `wc -w` splits them,
-# because a line budget let long lines through: setup-skills carried 4,628 words
+# because a line budget let long lines through: setup-skills carried 4,631 words
 # in 184 lines under the old 350-line cap. 3500 is ship's SKILL.md at 3,330 words
 # (#606), rounded up to the next 500: a ratchet, so prose that regrows fails here
 # instead of accumulating again.

@@ -104,7 +104,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of the ten reviewer shapes ship's preflight refuses, listed in [reference/reviewers.md](./reference/reviewers.md#validate).
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of each of the ten reviewer shapes ship's preflight refuses: check every one in [reference/reviewers.md](./reference/reviewers.md#validate).
 
 Then: `Self-review cap:` is a whole number of 1 or more; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
@@ -160,4 +160,4 @@ Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>
 
 ## Re-run
 
-Profile exists, or a refresh names setup sections whose templates moved: follow [reference/re-run.md](./reference/re-run.md), which holds both re-runs, the profile re-run and **a setup section re-run**.
+**The profile re-run**, when the profile exists, and **a setup section re-run**, when a refresh names setup sections whose templates moved: each is a paragraph of [reference/re-run.md](./reference/re-run.md); take the one whose case holds.

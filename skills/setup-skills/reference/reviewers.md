@@ -1,6 +1,6 @@
 # Reviewers
 
-The reviewer prose of [SKILL.md](../SKILL.md), whose steps it names: step 3 reads [Detect](#detect), and step 5 reads [Validate](#validate) and [Scaffold](#scaffold).
+Reviewer rules for [setup-skills](../SKILL.md): step 3 runs [Detect](#detect); step 5 checks the draft against [Validate](#validate) and writes [Scaffold](#scaffold), which a setup section re-run naming `reviewer-scaffolding` also runs.
 
 ## Detect
 
