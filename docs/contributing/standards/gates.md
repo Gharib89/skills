@@ -86,12 +86,12 @@ do to pass.
   `contract` gate: it drains the loop's remaining rows on Bash 3.2 and 5.3.
 - No hand-rolled three-backtick fence pattern in a shell file under `skills/`
   outside `_lib.sh`'s `SHIP_AWK_FENCE`, per the `contract` gate.
-- Ship's own documents inside their line budget, per the `prose-budget` gate:
-  `skills/*/SKILL.md` at most 350 lines, and every `skills/*/reference/*.md`
-  over 100 lines opening with a `## Contents` list that matches its `## `
-  headings both ways. The profile's `## Local gate` section stays at 11000
-  bytes or fewer. A rule that outgrows the file it lives in moves to a reference
-  file and is pointed at, rather than being cut.
+- The skills' own documents inside their prose budget, per the `prose-budget`
+  gate: `skills/*/SKILL.md` at most 3500 words, and every
+  `skills/*/reference/*.md` over 100 lines opening with a `## Contents` list
+  that matches its `## ` headings both ways. The profile's `## Local gate`
+  section stays at 11000 bytes or fewer. A rule that outgrows the file it lives
+  in moves to a reference file and is pointed at, rather than being cut.
 - Every tracked path inside the top-level entries this repo owns, per the
   `stray-files` gate. A new top-level entry is a decision, so it joins the
   allowlist in `scripts/stray-file-check.sh` in the commit that tracks it.
