@@ -61,6 +61,9 @@ check "a longer label is another label" 3 "$(cap)"
 printf '## Coding standards\n\nSelf-review cap: x\n' > "$repo/docs/agents/ship.md"; out=$(preflight)
 check "the line under another section is not read" 3 "$(cap)"
 
+profile $'### copilot\n\nLogin: x\nTrigger: auto-once\nSelf-review cap: 7'; out=$(preflight)
+check "a line inside a reviewer block is not the line" 3 "$(cap)"
+
 profile $'Self-review cap: 2\nSelf-review cap: x'; out=$(preflight)
 check "the first line decides" 2 "$(cap)"
 

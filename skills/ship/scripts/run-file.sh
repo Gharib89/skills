@@ -77,9 +77,9 @@
 # ran the proof: the red `Reverted-fix:` line by `prove` and the `Probe:` line by
 # `probe`. The rest are attested, written by the run and taken at its word: the
 # `n/a` `Reverted-fix:` line, `Dropped:`, `Near-miss:` and `Declined:`, and
-# the `Round:` and `Stop:` lines of `close 4`'s self-review and `close 7`. A refused close writes nothing, names
-# everything missing in one message, and `next` over either phase is held the
-# same way. A gate line is a line anywhere in the file, an optional leading
+# the `Round:` and `Stop:` lines of `close 4`'s self-review and `close 7`. A
+# refused close writes nothing, names everything missing in one message, and
+# `next` over either phase is held the same way. A gate line is a line anywhere in the file, an optional leading
 # `- ` accepted, matched by exact prefix at the line start. `close 4` reads the
 # checkout's own diff (the working tree, untracked files included, against the
 # merge base of HEAD and origin/HEAD) and asks `dropped-lines`; it needs:
@@ -540,6 +540,10 @@ fresh_red() { # fresh_red <top> <test> <sha> <paths>: 0 fresh, 1 not, with why s
   [ -z "$others" ] || { why=$stale; return 1; }
 }
 
+# The rest of a `Round: <name> ` line, close 4's self-review and close 7's
+# reviewers alike: a positive round number, then the outcome.
+round_re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
+
 # Phase 4: every test file changed has its Reverted-fix line, every removed block
 # its disposition, every new matcher its near-miss table, every probe line its
 # produced shape, and every decline its kind, a claim its probe.
@@ -678,7 +682,7 @@ EODECLINED
   # The self-review loop, in close 7's vocabulary: a round, then the stop.
   ok=false
   while IFS= read -r r; do
-    [[ $r =~ ^[1-9][0-9]*:\ [[:space:]]*[^[:space:]] ]] && ok=true
+    [[ $r =~ $round_re ]] && ok=true
   done <<EORESTS
 $(rests "Round: self-review ")
 EORESTS
@@ -696,7 +700,7 @@ EORESTS
 # it never reviewed, a round.
 stop_reasons="cap, tree unchanged, small lane, inline lane, auto-once, not landed, not reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
-  local list names nm stop r ok re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
+  local list names nm stop r ok
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
   list=${1#*"Reviewers: "}; list=${list%%", one bounded pass each"*}
   case $list in "" | None | None. | none | none.) return 0 ;; esac
@@ -717,7 +721,7 @@ EONAMES
     case $stop in "not reviewed" | "inline lane") continue ;; esac
     ok=false
     while IFS= read -r r; do
-      [[ $r =~ $re ]] && ok=true
+      [[ $r =~ $round_re ]] && ok=true
     done <<EORESTS
 $(rests "Round: $nm ")
 EORESTS
