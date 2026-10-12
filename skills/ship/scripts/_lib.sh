@@ -38,7 +38,9 @@
 #                                           cannot answer (always, on Azure DevOps, which has
 #                                           no such ruleset), which preflight warns on
 #   host_issue_get <n>                   -> {number,title,body,state,is_pr,labels[],assignees[],created_at,url}
-#   host_issue_comments <n>              -> [{author,body,created_at}]
+#   host_issue_comments <n>              -> [{author,body,created_at,writer}]
+#                                           writer: true/false, null where the host cannot
+#                                           answer (always, on Azure DevOps)
 #   host_issue_blockers_open <n>         -> [n, ...] open blockers; non-zero exit = query unavailable
 #   host_issue_linked_prs <n>            -> {closing:[{number,state}],
 #                                           mentions:[{number,kind,state}]}

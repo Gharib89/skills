@@ -83,10 +83,15 @@ _wi_norm() {
 }
 _wi_show() { azx boards work-item show "${ORG[@]}" --id "$1" --expand relations; }
 host_issue_get() { _wi_show "$1" | _wi_norm; }
+# `writer` is always null: the author's write access is an ACL read
+# (accesscontrollists, Git namespace) that needs their identity descriptor, and
+# only vssps.dev.azure.com resolves one, a host outside the cloud sandbox's
+# default allowlist; the org host 404s the identities and graph routes and reads
+# the comment's own subject descriptor as no permission at all (measured on #605).
 host_issue_comments() {
   # "7.1-preview" exactly: az parses the version as a float and chokes on "7.1-preview.4".
   invoke GET wit comments 7.1-preview --route-parameters project="$SHIP_PROJECT" workItemId="$1" \
-    | jq '[.comments[] | {author: .createdBy.uniqueName, body: .text, created_at: .createdDate}]'
+    | jq '[.comments[] | {author: .createdBy.uniqueName, body: .text, created_at: .createdDate, writer: null}]'
 }
 # Predecessor links (System.LinkTypes.Dependency-Reverse) are the blockers; ADO
 # has the concept, so a failed read is "unavailable" rather than empty.
