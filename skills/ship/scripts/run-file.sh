@@ -409,6 +409,10 @@ pending_verifs() {
   results_lines | w="$result_words" awk '
     $0 ~ /: pending$/ && $0 !~ ("^- .*: (" ENVIRON["w"] ")(:|$)") { sub(/^- /, ""); sub(/: pending$/, ""); print }'
 }
+# An awk test for the results entry of ENVIRON["nm"]: a profile name may hold a
+# colon, so the entry is its prefix followed by `pending` or a result word
+# (ENVIRON["w"]), which keeps `lint` off `- lint: strict: pending`.
+entry_of='index($0, "- " ENVIRON["nm"] ": ") == 1 && substr($0, length(ENVIRON["nm"]) + 5) ~ ("^(pending|" ENVIRON["w"] ")(: |$)")'
 # One `--result <name>=<word>[: <note>]`, checked against the names `init`
 # recorded, then the checkout profile's Verification headings; sets rname,
 # rword, rnote and radd, true for a name only the profile holds.
@@ -422,10 +426,8 @@ parse_result() { # parse_result <arg>
     *) ship_tooling "--result word '$rword' is not one of ${result_words//|/, }" ;;
   esac
   [ "${rnote%%$'\n'*}" = "$rnote" ] || ship_tooling "a result note is one line"
-  # A profile name may hold a colon, so the entry is found by its prefix rather
-  # than by cutting the line at the first one.
   radd=false
-  results_lines | nm=$rname awk 'index($0, "- " ENVIRON["nm"] ": ") == 1 { f = 1 } END { exit !f }' && return 0
+  results_lines | nm=$rname w="$result_words" awk "$entry_of { f = 1 } END { exit !f }" && return 0
   # `gate clean` judges the profile's headings, not init's list, so a heading
   # the PR adds after init owes a result that only this fallback can record
   # (#621).
@@ -460,8 +462,8 @@ record_results() {
         END { if (!last) printf "\n## Verification results\n\n- %s: %s\n", ENVIRON["nm"], ENVIRON["tx"] }' \
         "$file" "$file" > "$file.t"
     else
-      nm=$rname tx=$text awk '/^## /{ f = ($0 == "## Verification results") }
-        f && index($0, "- " ENVIRON["nm"] ": ") == 1 { print "- " ENVIRON["nm"] ": " ENVIRON["tx"]; next } { print }' \
+      nm=$rname tx=$text w="$result_words" awk '/^## /{ f = ($0 == "## Verification results") }
+        f && '"$entry_of"' { print "- " ENVIRON["nm"] ": " ENVIRON["tx"]; next } { print }' \
         "$file" > "$file.t"
     fi && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
   done <<EORECORD

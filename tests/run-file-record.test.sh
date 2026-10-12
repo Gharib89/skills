@@ -524,5 +524,19 @@ check "it opens the results section" '## Verification results
 
 - first-check: pass' "$(sed -n '/^## Verification results$/,$p' "$fe")"
 check "gate clean reads the section it opened" '' "$(holds_verif "$fe" first-check)"
+# An added heading that prefixes one init recorded finds no entry of its own.
+printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n\n### lint: strict\n' > "$added/docs/agents/ship.md"
+fp=$(at "$added" init 82 --from-profile | jq -r .run_file)
+to_phase3 "$fp"
+add_heading lint
+check_rc "an added heading that prefixes a recorded one takes its own result" 0 \
+  "$(inrc "$added" close 3 --file "$fp" --result lint=n/a --result 'lint: strict=pass')"
+check "each result lands on its own entry" '## Verification results
+
+- lint: strict: pass
+- lint: n/a
+
+## Design and plan' "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$fp")"
+check "gate clean holds neither" '' "$(holds_verif "$fp" lint)"
 
 finish
