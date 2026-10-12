@@ -282,9 +282,10 @@ fi
 # The Rework run's admission: the one open PR closing the issue, its head the one
 # `*-<n>` branch on origin, and something to rework it from.
 rework_json=null
-# One UTC spelling for both sides of the head-push compare: the hosts mix
-# fractional seconds and a `+00:00` offset into their times.
-utc='def utc: sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z"); '
+# Both sides of the head-push compare pass this one check: the adapters owe the
+# one UTC spelling, and a time in any other compares as text, so it is unreadable.
+utc='def utc: if type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+  then . else error("not a UTC time") end; '
 if $rework && [ -n "${open_prs:-}" ]; then
   case $(jq length <<<"$open_prs") in
     0) reasons+=("not reworkable: no open PR") ;;
@@ -302,11 +303,11 @@ if $rework && [ -n "${open_prs:-}" ]; then
               | {author, created_at: (.created_at | utc), body}]' <<<"$comments"); then
          reasons+=("not reworkable: PR comments unreadable")
        elif [ "$comments" != '[]' ] && ! pushed=$(host_pr_pushed_at "$num" "$head" "$(jq -r .head_sha <<<"$pr")" \
-         | jq -Rre "$utc"'utc | select(test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"))'); then
+         | jq -Rre "$utc"'utc'); then
          reasons+=("not reworkable: head push unreadable")
        else
          # The head push is the cut-off: a comment older than it was already in
-         # front of the run that pushed. Both sides are cut to the second, and a
+         # front of the run that pushed. Both sides count whole seconds, and a
          # comment stamped in the push's own second may predate it, so the
          # compare is strict.
          [ "$comments" = '[]' ] || comments=$(jq -c --arg p "$pushed" 'map(select(.created_at > $p))' <<<"$comments")

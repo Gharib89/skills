@@ -120,7 +120,8 @@
 #                                           that first comment's page. Azure DevOps rows carry none
 #                                           of the three: the thread id is that reply target already.
 #   host_pr_comments <pr>                -> [{author,body,created_at,writer}] the PR's
-#                                           conversation comments, writer graded as
+#                                           conversation comments, created_at in the
+#                                           one UTC spelling, writer graded as
 #                                           host_issue_comments grades it (null on Azure
 #                                           DevOps). On Azure DevOps a comment is a PR-level
 #                                           thread's first comment.

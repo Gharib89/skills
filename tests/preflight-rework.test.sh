@@ -3,7 +3,7 @@
 # signed-in identity's and exactly one open PR closes the issue, its head the one
 # `*-<n>` branch on origin; every other shape is `not reworkable: <detail>`.
 # Admitted with no unresolved review thread, no authoritative PR comment since
-# the head's push and no `--feedback` is `no feedback`.
+# the head push and no `--feedback` is `no feedback`.
 # A plain run's `already claimed`, `existing PR` and `existing branch` stay out of
 # a rework run's reasons. Each shape runs under a GitHub origin and an Azure
 # DevOps origin: the admission is generic, read through the Host fake
@@ -144,24 +144,24 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   }
   threadless; comment w 2026-01-02T00:00:01Z true
   out=$(preflight 5 --rework)
-  check "$h: a writer's comment after the head's push is feedback" '[]' "$(rw "$out")"
+  check "$h: a writer's comment after the head push is feedback" '[]' "$(rw "$out")"
   check "$h: rework names that comment" '[{"author":"w","created_at":"2026-01-02T00:00:01Z","body":"please rename x"}]' \
     "$(jq -c .rework.comments <<<"$out")"
   check "$h: the push read names the PR, its branch and head" "host_pr_pushed_at	9	feat/y-5	$head" \
     "$(grep '^host_pr_pushed_at' "$SHIP_FAKE/calls")"
-  threadless; comment w 2026-01-02T00:00:01.250+00:00 true
-  check "$h: a comment time in another spelling is normalised before the compare" \
-    '[{"author":"w","created_at":"2026-01-02T00:00:01Z","body":"please rename x"}]' \
-    "$(jq -c .rework.comments <<<"$(preflight 5 --rework)")"
-  threadless; comment w 2026-01-02T00:00:01Z true
-  printf '2026-01-02T00:00:00.999+00:00\n' > "$SHIP_FAKE/host_pr_pushed_at.1.json"
-  check "$h: so is the push time" '[]' "$(rw "$(preflight 5 --rework)")"
-  threadless; comment w 2026-01-02T00:00:01Z true
-  printf 'yesterday\n' > "$SHIP_FAKE/host_pr_pushed_at.1.json"
-  check "$h: a push answer that is no time is unreadable" '["not reworkable: head push unreadable"]' \
-    "$(rw "$(preflight 5 --rework)")"
+  # A time outside the one UTC spelling would compare as text: unreadable, on
+  # either side of the compare.
+  for t in 2026-01-02T00:00:01.250+00:00 2026-01-02T02:00:01+02:00 junk ''; do
+    threadless; comment w "$t" true
+    check "$h: a comment time of '$t' is unreadable" '["not reworkable: PR comments unreadable"]' \
+      "$(rw "$(preflight 5 --rework)")"
+    threadless; comment w 2026-01-02T00:00:01Z true
+    printf '%s\n' "$t" > "$SHIP_FAKE/host_pr_pushed_at.1.json"
+    check "$h: a push time of '$t' is unreadable" '["not reworkable: head push unreadable"]' \
+      "$(rw "$(preflight 5 --rework)")"
+  done
   threadless; comment w 2026-01-01T23:59:59Z true
-  check "$h: a writer's comment before the head's push is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
+  check "$h: a writer's comment before the head push is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
   threadless; comment w 2026-01-02T00:00:00Z true
   check "$h: a writer's comment at the push second is not" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
   threadless; comment o 2026-01-02T00:00:01Z false
