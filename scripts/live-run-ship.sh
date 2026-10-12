@@ -217,8 +217,9 @@ attempt() { # <happy|ambiguous> <attempt>
     # Any other nonzero exit is claude failing (auth, quota, API), not Ship stopping.
     tail -n 40 "$co.err" >&2; unavailable "claude -p failed"
   else
-    # An exit 0 with no reply (no output, cut short, not JSON, "") is a failed read.
-    reply=$(jq -er '.result | strings | select(. != "")' "$co.json" 2>/dev/null) \
+    # An exit 0 with no reply string (no output, cut short, not JSON) is a failed
+    # read; an empty string is what Ship said, and the checks judge it.
+    reply=$(jq -er '.result | strings' "$co.json" 2>/dev/null) \
       || { head -c 2000 "$co.json" >&2; tail -n 40 "$co.err" >&2; unavailable "claude -p output unreadable"; }
     # The Run file sits under XDG_STATE_HOME, which this script pointed into $tmp.
     run_file=$(find "$tmp/state" -path "*/ship-$issue/run.md" 2>/dev/null | head -n 1)

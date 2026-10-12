@@ -159,8 +159,8 @@ check "claude output that is not JSON is unavailable" '{"result":"unavailable","
 rc=2' "$(drive happy garbled)"
 check "claude exiting 0 with no output is unavailable" '{"result":"unavailable","reason":"claude -p output unreadable"}
 rc=2' "$(drive happy silent)"
-check "claude exiting 0 with an empty reply is unavailable" '{"result":"unavailable","reason":"claude -p output unreadable"}
-rc=2' "$(drive no-reply)"
+check "an empty reply is judged, not unavailable" '{"result":"fail","failed":["ambiguous: stop: the reply does not name ambiguous"],"retried":["ambiguous: stop: the reply does not name ambiguous"]}
+rc=1' "$(drive happy no-reply no-reply)"
 
 check "claude failing to run is unavailable" '{"result":"unavailable","reason":"claude -p failed"}
 rc=2' "$(drive auth)"
