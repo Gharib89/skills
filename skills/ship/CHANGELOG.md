@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.0 (2026-10-12)
+
+### Features
+
+- **ship**: Loop the phase-4 self-review up to a profile-set cap
+  ([#598](https://github.com/Gharib89/skills/pull/598),
+  [`ee54529`](https://github.com/Gharib89/skills/commit/ee545296828d962f6420723a8039ec779a0c4fdc))
+
+
 ## v0.24.3 (2026-10-12)
 
 ### Bug Fixes
