@@ -35,11 +35,11 @@ cat > "$FAKE/gql-threads.json" <<'JSON'
  {"id":"PRRT_a","isResolved":false,"isOutdated":false,"path":"a.sh",
   "comments":{"nodes":[{"databaseId":101,"author":{"login":"claude"},"body":"finding one\nmore","url":"u101"}]},
   "mine":{"nodes":[{"viewerDidAuthor":false},{"viewerDidAuthor":true}]},
-  "last":{"nodes":[{"body":"declined: x\n<span data-ship=1></span>\n"}]}},
+  "latest":{"nodes":[{"body":"declined: x\n<span data-ship=1></span>\n"}]}},
  {"id":"PRRT_b","isResolved":true,"isOutdated":true,"path":"b.sh",
   "comments":{"nodes":[{"databaseId":201,"author":{"login":"copilot"},"body":"finding two","url":"u201"}]},
   "mine":{"nodes":[{"viewerDidAuthor":false}]},
-  "last":{"nodes":[{"body":"finding two"}]}}]}}}}}
+  "latest":{"nodes":[{"body":"finding two"}]}}]}}}}}
 JSON
 printf '%s' '{"message":"GitHub GraphQL is not available from Claude Code sessions; use the REST API (gh api repos/{owner}/{repo}/...). For review threads, auto-merge, and draft/ready-for-review use the CCR routes on api.github.com: GET /repos/{owner}/{repo}/pulls/{n}/ccr/review_threads, POST /repos/{owner}/{repo}/pulls/{n}/ccr/comments/{comment_id}/resolve (or /unresolve)."}' \
   > "$FAKE/refusal.json"
@@ -128,10 +128,10 @@ body=$work/body.md; printf 'fixed in abc\n' > "$body"
 rows='[{"id":"101","comment_id":101,"resolved":false,"outdated":false,"path":"a.sh","replied":true,"body":"finding one\nmore","url":"u101"},{"id":"201","comment_id":201,"resolved":true,"outdated":true,"path":"b.sh","replied":false,"body":"finding two","url":"u201"}]'
 norm() { jq -c 'map(del(.author, .ship_last))'; }
 # ship_last per row: thread 101 ends on ship's marked decline, 201 on a finding.
-last() { jq -c 'map(.ship_last)'; }
+ship_lasts() { jq -c 'map(.ship_last)'; }
 # A writer's reply after ship's decline, as the last comment on both paths.
 replied_after() {
-  jq '.data.repository.pullRequest.reviewThreads.nodes[0].last.nodes[0].body = "still wrong"' \
+  jq '.data.repository.pullRequest.reviewThreads.nodes[0].latest.nodes[0].body = "still wrong"' \
     "$FAKE/gql-threads.json" > "$FAKE/g" && mv "$FAKE/g" "$FAKE/gql-threads.json"
   jq '. + [{"id":103,"in_reply_to_id":101,"user":{"login":"claude[bot]"},"body":"still wrong","html_url":"u103"}]' \
     "$FAKE/comments.json" > "$FAKE/c" && mv "$FAKE/c" "$FAKE/comments.json"
@@ -143,7 +143,7 @@ reset
 out=$(host_pr_threads 7); rc=$?
 check_rc "threads read over GraphQL" 0 "$rc"
 check "the GraphQL rows carry the root comment id as the thread id" "$rows" "$(norm <<<"$out")"
-check "the GraphQL rows say whose comment is last" '[true,false]' "$(last <<<"$out")"
+check "the GraphQL rows say whose comment is last" '[true,false]' "$(ship_lasts <<<"$out")"
 check "the GraphQL rows keep the row keys in the contract's order" \
   '["id","comment_id","resolved","outdated","path","replied","ship_last","author","body","url"]' "$(jq -c '.[0] | keys_unsorted' <<<"$out")"
 out=$(host_pr_resolve_thread 7 101); rc=$?
@@ -165,7 +165,7 @@ check_rc "threads read through the ccr route" 0 "$rc"
 check "the switch is said once on stderr" 1 "$(grep -c 'REST routes' "$work/err")"
 check "the ccr rows match the GraphQL rows" "$rows" "$(norm <<<"$out")"
 check "the ccr row takes its author from the root comment" 'claude[bot]' "$(jq -r '.[0].author' <<<"$out")"
-check "the ccr rows say whose comment is last" '[true,false]' "$(last <<<"$out")"
+check "the ccr rows say whose comment is last" '[true,false]' "$(ship_lasts <<<"$out")"
 out=$(host_pr_threads 7)
 out=$(host_pr_resolve_thread 7 101); rc=$?
 check_rc "resolve through the ccr route" 0 "$rc"
@@ -227,9 +227,9 @@ check "neither posts a reply" 0 "$(calls_matching replies)"
 # A reply after ship's decline is the thread's last comment on both paths.
 replied_after
 reset
-check "a reply after ship's is last over GraphQL" '[false,false]' "$(host_pr_threads 7 | last)"
+check "a reply after ship's is last over GraphQL" '[false,false]' "$(host_pr_threads 7 | ship_lasts)"
 reset refused
-check "a reply after ship's is last through the ccr route" '[false,false]' "$(host_pr_threads 7 2>/dev/null | last)"
+check "a reply after ship's is last through the ccr route" '[false,false]' "$(host_pr_threads 7 2>/dev/null | ship_lasts)"
 
 # resolve-thread carries the adapter's reason as its error.
 repo=$work/repo

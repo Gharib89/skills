@@ -507,7 +507,7 @@ _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
       nodes{ id isResolved isOutdated path
         comments(first:1){ nodes{ databaseId author{login} body url } }
         mine: comments(last:100){ nodes{ viewerDidAuthor } }
-        last: comments(last:1){ nodes{ body } } } } } } }'
+        latest: comments(last:1){ nodes{ body } } } } } } }'
 # A thread's id, on both paths, is its root review comment's REST id as a
 # string: the id the reply route posts to and the `ccr` routes key on; REST
 # routes take it, where they cannot take GraphQL's node id. On this path a
@@ -527,7 +527,7 @@ _gh_threads_gql() { # <pr>
       | {id: (.comments.nodes[0].databaseId | tostring), comment_id: .comments.nodes[0].databaseId,
       resolved: .isResolved, outdated: .isOutdated, path,
       replied: ([.mine.nodes[] | select(.viewerDidAuthor)] | length > 0),
-      ship_last: (.last.nodes[0].body // "" | contains($m)),
+      ship_last: (.latest.nodes[0].body // "" | contains($m)),
       author: .comments.nodes[0].author.login, body: .comments.nodes[0].body, url: .comments.nodes[0].url,
       node: .id}]' <<<"$out")
     [ "$(jq -r .pageInfo.hasNextPage <<<"$page")" = true ] || break

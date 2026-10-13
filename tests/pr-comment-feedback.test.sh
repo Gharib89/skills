@@ -85,7 +85,7 @@ head=84c7f25fccd0b31fdb95bc19bdd262c9994006d2
       "publishedDate": "2026-10-01T13:00:00Z", "commentType": "text"}]}]}'
   check "ado: comments are the live PR-level threads, writer null" \
     '[{"author":"h@x","body":"rename x","created_at":"2026-10-01T13:00:00Z","writer":null}]' "$(host_pr_comments 9 | jq -c .)"
-  # ship_last: the thread's latest comment, system comments aside, is ship's.
+  # ship_last: the thread's latest comment, system and deleted ones aside, is ship's.
   host_identity() { echo me@x; }
   ANSWER='{"value": [
     {"id": 1, "status": "active", "threadContext": {"filePath": "/a"}, "comments": [
@@ -98,7 +98,8 @@ head=84c7f25fccd0b31fdb95bc19bdd262c9994006d2
     {"id": 3, "status": "active", "threadContext": {"filePath": "/a"}, "comments": [
       {"author": {"uniqueName": "r@x"}, "content": "finding", "commentType": "text"},
       {"author": {"uniqueName": "me@x"}, "content": "declined: x\n<span data-ship=1></span>\n", "commentType": "text"},
-      {"author": {"uniqueName": "s"}, "content": "status changed", "commentType": "system"}]},
+      {"author": {"uniqueName": "s"}, "content": "status changed", "commentType": "system"},
+      {"author": {"uniqueName": "r@x"}, "content": "", "commentType": "text", "isDeleted": true}]},
     {"id": 4, "status": "active", "threadContext": {"filePath": "/a"}, "comments": [
       {"author": {"uniqueName": "r@x"}, "content": "finding", "commentType": "text"}]}]}'
   check "ado: threads say whether ship's comment is last" '[true,false,true,false]' \

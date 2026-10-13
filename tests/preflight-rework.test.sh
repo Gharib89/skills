@@ -53,8 +53,8 @@ admitted() {
   jq -n '{closing: [{number: 9, state: "open"}], mentions: []}' > "$SHIP_FAKE/host_issue_linked_prs.1.json"
   jq -n --arg h "$head" '{number: 9, state: "open", head_ref: "feat/y-5", head_sha: $h}' \
     > "$SHIP_FAKE/host_pr_get.1.json"
-  jq -n '[{id: "T1", resolved: false, replied: false, author: "r", path: "a", body: "x"},
-          {id: "T2", resolved: true, replied: true, author: "r", path: "a", body: "y"}]' \
+  jq -n '[{id: "T1", resolved: false, replied: false, ship_last: false, author: "r", path: "a", body: "x"},
+          {id: "T2", resolved: true, replied: true, ship_last: false, author: "r", path: "a", body: "y"}]' \
     > "$SHIP_FAKE/host_pr_threads.1.json"
 }
 preflight() { ( cd "$work/repo" && PATH="$work/bin:$PATH" bash "$scripts/preflight.sh" "$@" 2>/dev/null ); }
@@ -137,7 +137,7 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   # No feedback: the claim, the PR and the branch are as they were, since
   # preflight wrote nothing to the host.
   admitted
-  jq -n '[{id: "T2", resolved: true, replied: true, author: "r", path: "a", body: "y"}]' \
+  jq -n '[{id: "T2", resolved: true, replied: true, ship_last: false, author: "r", path: "a", body: "y"}]' \
     > "$SHIP_FAKE/host_pr_threads.1.json"
   check "$h: no unresolved thread and no text is no feedback" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
   check "$h: no feedback writes nothing to the host" '' \
@@ -153,7 +153,7 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
   }
   threadless() {
     admitted
-    jq -n '[{id: "T2", resolved: true, replied: true, author: "r", path: "a", body: "y"}]' \
+    jq -n '[{id: "T2", resolved: true, replied: true, ship_last: false, author: "r", path: "a", body: "y"}]' \
       > "$SHIP_FAKE/host_pr_threads.1.json"
     printf '2026-01-02T00:00:00Z\n' > "$SHIP_FAKE/host_pr_pushed_at.1.json"
   }

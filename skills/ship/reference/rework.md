@@ -9,10 +9,9 @@ Ship's own, and the feedback text, if any.
 A PR comment is authoritative as
 [implement.md](implement.md#phase-1-spec-precedence) defines it, and preflight
 drops every other one. A comment older than the head push was already in front
-of the run that pushed. A thread whose latest comment is Ship's own is one an
-earlier run declined and left open for the human, so it is not feedback until
-someone replies in it. The run keeps the claim, the branch and the PR, and
-ends at a fresh merge gate. It is
+of the run that pushed. Preflight also drops a thread whose latest comment is
+Ship's own until someone replies in it. The run keeps the claim, the branch
+and the PR, and ends at a fresh merge gate. It is
 attended only. `--unattended` and a task-spec run (free text in place of the
 issue number) are refused with preflight's usage line, so `cloud-ship`, which
 always passes `--unattended`, never starts one. `--inline` composes: the inline
@@ -82,8 +81,7 @@ The lane keys, and the small lane's size cap, measure the rework's own diff,
 6. Answer each feedback thread with `reply-thread`, saying what changed, or why
    it was declined.
 7. Run `resolve-thread` on each thread you fixed. A declined thread
-   stays open for the human, and a later rework skips it while step 6's reply
-   is its latest comment.
+   stays open for the human.
 
 ## Phase 7: reviewers
 
