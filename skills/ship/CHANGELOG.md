@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.32.0 (2026-10-13)
+
+### Features
+
+- **ship**: A rework run skips threads whose latest comment is Ship's own
+  ([#628](https://github.com/Gharib89/skills/pull/628),
+  [`f2bae05`](https://github.com/Gharib89/skills/commit/f2bae05e9a8446fe32e55e8d084e28df7af1ee9d))
+
+
 ## v0.31.1 (2026-10-12)
 
 ### Bug Fixes
