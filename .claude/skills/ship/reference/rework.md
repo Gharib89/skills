@@ -2,13 +2,16 @@
 
 `/ship <issue> --rework ["<feedback>"]` reworks the PR an earlier run of the
 issue, attended or unattended, left open at the merge gate. The change to make
-is its **feedback**, from three sources: the PR's unresolved review threads,
-the PR's authoritative comments posted after the **head push** (the push that
-put the PR's head at its sha), less Ship's own, and the feedback text, if any.
+is its **feedback**, from three sources: the PR's unresolved review threads
+whose latest comment is not Ship's own, the PR's authoritative comments posted
+after the **head push** (the push that put the PR's head at its sha), less
+Ship's own, and the feedback text, if any.
 A PR comment is authoritative as
 [implement.md](implement.md#phase-1-spec-precedence) defines it, and preflight
 drops every other one. A comment older than the head push was already in front
-of the run that pushed. The run keeps the claim, the branch and the PR, and
+of the run that pushed. A thread whose latest comment is Ship's own is one an
+earlier run declined and left open for the human, so it is not feedback until
+someone replies in it. The run keeps the claim, the branch and the PR, and
 ends at a fresh merge gate. It is
 attended only. `--unattended` and a task-spec run (free text in place of the
 issue number) are refused with preflight's usage line, so `cloud-ship`, which
@@ -33,7 +36,7 @@ budget for every reviewer, since the budget counts the Run file's rounds.
 text. In place of `already claimed`, `existing PR` and `existing branch` it
 admits the run only when the claim is your identity's and exactly one open PR
 closes the issue, its head being the one `*-<n>` branch on origin. Any other
-shape is `not reworkable: <detail>`. An admitted PR with no unresolved thread,
+shape is `not reworkable: <detail>`. An admitted PR with no feedback thread,
 none of those PR comments and no text from the human is
 `no feedback`. Both stops end the run before any change and leave the claim as
 it is: no release, no hand-back. On `ok`, preflight's `rework` names
@@ -79,7 +82,8 @@ The lane keys, and the small lane's size cap, measure the rework's own diff,
 6. Answer each feedback thread with `reply-thread`, saying what changed, or why
    it was declined.
 7. Run `resolve-thread` on each thread you fixed. A declined thread
-   stays open for the human.
+   stays open for the human, and a later rework skips it while step 6's reply
+   is its latest comment.
 
 ## Phase 7: reviewers
 

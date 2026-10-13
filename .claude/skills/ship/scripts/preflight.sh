@@ -296,7 +296,7 @@ if $rework && [ -n "${open_prs:-}" ]; then
        elif [ "$head" != "${br:-}" ]; then
          reasons+=("not reworkable: branch mismatch: PR #$num heads $head, origin has ${br:-no *-$n branch}")
        elif ! threads=$(host_pr_threads "$num") \
-         || ! open_threads=$(jq -c '[.[] | select(.resolved | not) | .id]' <<<"$threads"); then
+         || ! open_threads=$(jq -c '[.[] | select((.resolved | not) and (.ship_last | not)) | .id]' <<<"$threads"); then
          reasons+=("not reworkable: review threads unreadable")
        elif ! comments=$(host_pr_comments "$num") \
          || ! comments=$(jq -c --arg m "$SHIP_COMMENT_MARKER" "$strict_utc"'[.[]

@@ -119,6 +119,21 @@ for origin in https://github.com/owner/repo.git https://dev.azure.com/org/proj/_
     check "$h: and admits nothing" 'false null' "$(jq -r '"\(.ok) \(.rework)"' <<<"$out")"
   done
 
+  # A thread whose latest comment is ship's own, a decline it left open for the
+  # human, is not feedback; a reply after ship's makes it feedback again.
+  threads() { # <T1 ship_last> [<T2 row too>]
+    jq -n --argjson s "$1" --argjson both "${2:-false}" \
+      '[{id: "T1", resolved: false, replied: true, ship_last: $s, author: "r", path: "a", body: "x"}]
+       + if $both then [{id: "T2", resolved: false, replied: false, ship_last: false, author: "r", path: "a", body: "y"}] else [] end' \
+      > "$SHIP_FAKE/host_pr_threads.1.json"
+  }
+  admitted; threads true true
+  check "$h: a thread ending on ship's comment is not feedback" '["T2"]' "$(preflight 5 --rework | jq -c .rework.threads)"
+  admitted; threads false true
+  check "$h: a reply after ship's makes it feedback again" '["T1","T2"]' "$(preflight 5 --rework | jq -c .rework.threads)"
+  admitted; threads true
+  check "$h: only threads ending on ship's comment is no feedback" '["no feedback"]' "$(rw "$(preflight 5 --rework)")"
+
   # No feedback: the claim, the PR and the branch are as they were, since
   # preflight wrote nothing to the host.
   admitted

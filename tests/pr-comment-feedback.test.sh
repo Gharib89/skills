@@ -2,7 +2,9 @@
 # The two reads a Rework run's preflight takes its PR-comment feedback from, on
 # both real adapters: host_pr_comments, the PR's own conversation comments with
 # the issue comments' `writer` grade, and host_pr_pushed_at, the time of the
-# push that put the head where it is. Each adapter runs with its transport
+# push that put the head where it is; and, on Azure DevOps, host_pr_threads'
+# `ship_last`, which drops a thread ship declined from the threads' feedback
+# (tests/gh-threads-proxy.test.sh has GitHub's). Each adapter runs with its transport
 # (`api` on GitHub, `invoke` on Azure DevOps) redefined to answer from a
 # fixture, GitHub's applying the call's own `--jq` the way `gh` does, so the
 # projection is the subject and no call reaches a host.
@@ -83,6 +85,25 @@ head=84c7f25fccd0b31fdb95bc19bdd262c9994006d2
       "publishedDate": "2026-10-01T13:00:00Z", "commentType": "text"}]}]}'
   check "ado: comments are the live PR-level threads, writer null" \
     '[{"author":"h@x","body":"rename x","created_at":"2026-10-01T13:00:00Z","writer":null}]' "$(host_pr_comments 9 | jq -c .)"
+  # ship_last: the thread's latest comment, system comments aside, is ship's.
+  host_identity() { echo me@x; }
+  ANSWER='{"value": [
+    {"id": 1, "status": "active", "threadContext": {"filePath": "/a"}, "comments": [
+      {"author": {"uniqueName": "r@x"}, "content": "finding", "commentType": "text"},
+      {"author": {"uniqueName": "me@x"}, "content": "declined: x\n<span data-ship=1></span>\n", "commentType": "text"}]},
+    {"id": 2, "status": "active", "threadContext": {"filePath": "/a"}, "comments": [
+      {"author": {"uniqueName": "r@x"}, "content": "finding", "commentType": "text"},
+      {"author": {"uniqueName": "me@x"}, "content": "declined: x\n<span data-ship=1></span>\n", "commentType": "text"},
+      {"author": {"uniqueName": "r@x"}, "content": "still wrong", "commentType": "text"}]},
+    {"id": 3, "status": "active", "threadContext": {"filePath": "/a"}, "comments": [
+      {"author": {"uniqueName": "r@x"}, "content": "finding", "commentType": "text"},
+      {"author": {"uniqueName": "me@x"}, "content": "declined: x\n<span data-ship=1></span>\n", "commentType": "text"},
+      {"author": {"uniqueName": "s"}, "content": "status changed", "commentType": "system"}]},
+    {"id": 4, "status": "active", "threadContext": {"filePath": "/a"}, "comments": [
+      {"author": {"uniqueName": "r@x"}, "content": "finding", "commentType": "text"}]}]}'
+  check "ado: threads say whether ship's comment is last" '[true,false,true,false]' \
+    "$(host_pr_threads 9 | jq -c 'map(.ship_last)')"
+  check "ado: replied is unchanged" '[true,true,true,false]' "$(host_pr_threads 9 | jq -c 'map(.replied)')"
   finish
 ) || _failed=1
 
