@@ -3,6 +3,7 @@
     "id": "T1",
     "resolved": false,
     "replied": false,
+    "ship_last": false,
     "author": "reviewer",
     "path": "README.md",
     "body": "a finding"
