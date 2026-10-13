@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.33.0 (2026-10-13)
+
+### Features
+
+- **ship**: Close 3 records a late Verification result on a closed phase 3
+  ([#629](https://github.com/Gharib89/skills/pull/629),
+  [`5d7eb9e`](https://github.com/Gharib89/skills/commit/5d7eb9ee37a4025eb3fa72f682c4b4600010d6fd))
+
+
 ## v0.32.0 (2026-10-13)
 
 ### Features
