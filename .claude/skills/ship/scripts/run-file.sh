@@ -65,8 +65,8 @@
 # takes a name the Run file lacks when the checkout profile has it as a
 # `## Verification` heading, one the PR added after init: it applies init's
 # heading checks to the name, then appends its entry. Once phase 3 has closed or
-# been skipped, `close 3 --result` still records, whichever phase is open, and
-# leaves phase 3's row as it was. `gate record`
+# been skipped, `close 3 --result` still records, without re-opening phase 3,
+# and leaves phase 3's row as it was. `gate record`
 # appends the local gate's verdict, the head it ran on and the verdict JSON's
 # `gates` object (compact, one line, absent when the JSON has none) to a
 # `Local gate` section; `gate read` answers whether the head the run is at is
@@ -148,8 +148,8 @@
 # stdout: one JSON object per call
 #   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
 #   open, close, skip: {run_file, phase, state, line, mirror[, reason]}
-#   close 3 with results on a closed or skipped phase 3: {run_file, phase, state:
-#     "recorded", line}, the row unchanged and no mirror to flip
+#   close 3 --result on a closed or skipped phase 3: {run_file, phase, state, line}
+#     with state "recorded", the row unchanged and no mirror
 #   grade: {run_file, grade}
 #   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}}
 #   timing: {run_file, start_to_pr, pr_to_gate, phases{}, row}; a skipped phase
@@ -1090,10 +1090,9 @@ close)
   [ -z "$results" ] || [ "$n" = 3 ] || ship_tooling "--result belongs to close 3"
   take_row "$n"
   check_results
-  # A heading a later phase's fix adds to the profile owes a result while that
-  # phase is open, so a closed or skipped phase 3 records it and keeps its row:
-  # re-opening would need the open phase closed first and restamp a finished
-  # one (#626).
+  # A heading a later phase's fix adds owes a result after phase 3 has closed or
+  # been skipped, so this records it and keeps phase 3's row: re-opening would
+  # need the open phase closed first and would restamp a finished phase (#626).
   if [ "$n" = 3 ] && [ -n "$results" ] && [[ $line == "- [x] "* ]]; then
     record_results
     jq -n --arg f "$file" --arg l "$line" '{run_file: $f, phase: 3, state: "recorded", line: $l}'

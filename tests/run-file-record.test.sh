@@ -571,7 +571,10 @@ was=$(cat "$fl")
 check "a name nothing names is refused on a closed phase 3" \
   "--result names 'nope', which neither the Run file's Verification results nor the profile's Verification headings name" \
   "$(inerr "$added" close 3 --file "$fl" --result late-check=fail --result nope=pass)"
-check_rc "a bad word is refused on a closed phase 3" 2 "$(inrc "$added" close 3 --file "$fl" --result late-check=great)"
+check "a bad word is refused on a closed phase 3" \
+  "--result word 'great' is not one of pass, fail, deferred-to-ci, unavailable, unexercised, n/a" \
+  "$(inerr "$added" close 3 --file "$fl" --result late-check=great)"
+check_rc "the bad-word refusal is malformed" 2 "$(inrc "$added" close 3 --file "$fl" --result late-check=great)"
 check "the refusals left the record unchanged" "$was" "$(cat "$fl")"
 check "close 3 with no result on a closed phase 3 is still refused" 'phase 3 is not open' "$(inerr "$added" close 3 --file "$fl")"
 fn=$(at "$added" init 85 --from-profile | jq -r .run_file)
