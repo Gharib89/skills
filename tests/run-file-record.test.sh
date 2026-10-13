@@ -548,4 +548,46 @@ check_rc "a recorded name that prefixes an added heading takes its own result" 0
   "$(inrc "$added" close 3 --file "$fr" --result lint=pass --result 'lint: strict=pass')"
 check "gate clean reads each entry as its own" '' "$(holds_verif "$fr" lint)"
 
+# --- a result recorded after phase 3 closed -----------------------------------------
+# A heading a phase-4 or phase-7 fix adds owes a result while a later phase is
+# open, so close 3 records it on the closed or skipped row and leaves the row as is.
+row3() { grep '^- \[.\] 3 · ' "$1"; }
+cp "$profile" "$added/docs/agents/ship.md"
+fl=$(at "$added" init 84 --from-profile | jq -r .run_file)
+to_phase3 "$fl"
+at "$added" close 3 --file "$fl" --result github-mechanics=pass --result ado-mechanics=pass >/dev/null
+at "$added" open 4 --file "$fl" >/dev/null
+add_heading late-check
+row=$(row3 "$fl")
+r=$(at "$added" close 3 --file "$fl" --result late-check=pass)
+check "close 3 on a closed phase answers recorded, with no mirror" 'recorded false' "$(jq -r '"\(.state) \(has("mirror"))"' <<<"$r")"
+check "the late result is recorded" '- late-check: pass' "$(grep '^- late-check: ' "$fl")"
+check "phase 3's row is unchanged" "$row" "$(row3 "$fl")"
+check "phase 4 is still the open phase" yes "$(grep -q '^- \[ \] 4 · .* in_progress (' "$fl" && echo yes || echo no)"
+check "gate clean no longer holds the late heading" '' "$(holds_verif "$fl" late-check)"
+check_rc "a recorded name on a closed phase 3 takes a new result" 0 "$(inrc "$added" close 3 --file "$fl" --result github-mechanics=fail)"
+check "it replaces the entry" '- github-mechanics: fail' "$(grep '^- github-mechanics: ' "$fl")"
+was=$(cat "$fl")
+check "a name nothing names is refused on a closed phase 3" \
+  "--result names 'nope', which neither the Run file's Verification results nor the profile's Verification headings name" \
+  "$(inerr "$added" close 3 --file "$fl" --result late-check=fail --result nope=pass)"
+check_rc "a bad word is refused on a closed phase 3" 2 "$(inrc "$added" close 3 --file "$fl" --result late-check=great)"
+check "the refusals left the record unchanged" "$was" "$(cat "$fl")"
+check "close 3 with no result on a closed phase 3 is still refused" 'phase 3 is not open' "$(inerr "$added" close 3 --file "$fl")"
+fn=$(at "$added" init 85 --from-profile | jq -r .run_file)
+check "a result on a phase 3 never opened is still refused" \
+  'phase 3 was never opened; run `run-file open 3` first, then close it' \
+  "$(inerr "$added" close 3 --file "$fn" --result github-mechanics=pass)"
+cp "$profile" "$added/docs/agents/ship.md"
+fs=$(at "$added" init 86 --from-profile | jq -r .run_file)
+at "$added" close 0 --file "$fs" >/dev/null
+for p in 1 2; do at "$added" open "$p" --file "$fs" >/dev/null; at "$added" close "$p" --file "$fs" >/dev/null; done
+at "$added" skip 3 'docs only' --file "$fs" >/dev/null
+at "$added" open 4 --file "$fs" >/dev/null
+add_heading late-check
+row=$(row3 "$fs")
+check_rc "a skipped phase 3 records a late result" 0 "$(inrc "$added" close 3 --file "$fs" --result late-check=pass)"
+check "that result is recorded" '- late-check: pass' "$(grep '^- late-check: ' "$fs")"
+check "the skipped row is unchanged" "$row" "$(row3 "$fs")"
+
 finish

@@ -104,7 +104,10 @@ Verification the PR adds to the profile owes a result too, since the merge
 gate judges the profile's headings: pass it to `close 3` with the rest.
 `skip 3 "<reason>"` settles each one still pending as `n/a: <reason>`, and only
 those init named, so a run whose PR adds a Verification closes phase 3 with a
-`--result` for each instead of skipping it. Close a phase only once its
+`--result` for each instead of skipping it. One a later phase's fix adds after
+phase 3 has closed or been skipped takes the same `close 3 --result`, which
+records it whichever phase is open and leaves phase 3's row and task as they
+are. Close a phase only once its
 `Done when:` holds: the mechanic stamps whatever close it is given, except
 that `close 3`, `close 4` and `close 7` refuse without the results or evidence
 lines [implement.md](implement.md#phase-4-evidence-lines) and
