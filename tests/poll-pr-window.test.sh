@@ -232,7 +232,7 @@ reset
 big=$(printf 'w%.0s' $(seq 1 600))
 jq -cn --arg b "$big" '{on_head: [], total: 1, all: [{id: "1", login: "claude[bot]", state: "comment",
   substantive: true, submitted_at: "2026-09-17T12:00:00Z", body: $b}]}' > "$SHIP_FAKE/host_pr_reviews.1.json"
-jq -cn --arg b "$big" '[{id: "t1", resolved: false, replied: false, author: "claude", path: "x.sh", body: ($b + "\n\nmore")}]' \
+jq -cn --arg b "$big" '[{id: "t1", resolved: false, replied: false, ship_last: false, author: "claude", path: "x.sh", body: ($b + "\n\nmore")}]' \
   > "$SHIP_FAKE/host_pr_threads.1.json"
 out=$(poll --since "$since" --brief --full open)
 check "--full open returns the round whole" 600 "$(jq '.rounds[0].body | length' <<<"$out")"

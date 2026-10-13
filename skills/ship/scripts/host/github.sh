@@ -506,7 +506,8 @@ _threads_query='query($o:String!,$r:String!,$n:Int!,$after:String){
       pageInfo{hasNextPage endCursor}
       nodes{ id isResolved isOutdated path
         comments(first:1){ nodes{ databaseId author{login} body url } }
-        mine: comments(last:100){ nodes{ viewerDidAuthor } } } } } } }'
+        mine: comments(last:100){ nodes{ viewerDidAuthor } }
+        latest: comments(last:1){ nodes{ body } } } } } } }'
 # A thread's id, on both paths, is its root review comment's REST id as a
 # string: the id the reply route posts to and the `ccr` routes key on; REST
 # routes take it, where they cannot take GraphQL's node id. On this path a
@@ -522,10 +523,11 @@ _gh_threads_gql() { # <pr>
       $([ "$after" != null ] && printf -- '-F after=%s' "$after") \
       --jq '.data.repository.pullRequest.reviewThreads'); rc=$?
     [ "$rc" -eq 0 ] || { [ "$rc" -eq 3 ] && return 3; return 1; }
-    out=$(jq --argjson p "$page" '. + [$p.nodes[] | select(.comments.nodes[0] != null)
+    out=$(jq --argjson p "$page" --arg m "$SHIP_COMMENT_MARKER" '. + [$p.nodes[] | select(.comments.nodes[0] != null)
       | {id: (.comments.nodes[0].databaseId | tostring), comment_id: .comments.nodes[0].databaseId,
       resolved: .isResolved, outdated: .isOutdated, path,
       replied: ([.mine.nodes[] | select(.viewerDidAuthor)] | length > 0),
+      ship_last: (.latest.nodes[0].body // "" | contains($m)),
       author: .comments.nodes[0].author.login, body: .comments.nodes[0].body, url: .comments.nodes[0].url,
       node: .id}]' <<<"$out")
     [ "$(jq -r .pageInfo.hasNextPage <<<"$page")" = true ] || break
@@ -543,11 +545,12 @@ _gh_threads_ccr() { # <pr>
   comments=$(api "$R/pulls/$1/comments?per_page=100" --paginate \
     --jq '.[] | {id, login: .user.login, body, url: .html_url}' | jq -s .) || return 1
   me=$(host_identity) || return 1
-  jq -n --argjson t "$threads" --argjson c "$comments" --arg me "$me" '
+  jq -n --argjson t "$threads" --argjson c "$comments" --arg me "$me" --arg m "$SHIP_COMMENT_MARKER" '
     (reduce $c[] as $x ({}; .[$x.id | tostring] = $x)) as $by
     | [$t[] | select((.comment_ids | length) > 0) | ($by[.comment_ids[0] | tostring] // {}) as $root
        | {id: (.comment_ids[0] | tostring), comment_id: .comment_ids[0], resolved, outdated, path,
           replied: any(.comment_ids[]; $by[tostring].login == $me),
+          ship_last: ($by[.comment_ids | max | tostring].body // "" | contains($m)),
           author: $root.login, body: $root.body, url: $root.url}]'
 }
 host_pr_threads() {

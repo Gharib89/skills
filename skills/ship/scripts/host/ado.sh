@@ -279,9 +279,10 @@ host_pr_reviews() { # <pr> <head_sha> [<full-ids-json>]
 host_pr_threads() {
   local me
   me=$(host_identity) || return 1
-  _threads_raw "$1" | jq --arg me "$me" '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
+  _threads_raw "$1" | jq --arg me "$me" --arg m "$SHIP_COMMENT_MARKER" '[.value[] | select(.isDeleted != true) | select(.comments[0].commentType != "system")
     | {id: (.id | tostring), resolved: (.status | IN("fixed","closed","wontFix","byDesign")),
        replied: ([.comments[] | select('"$_comment_login"' == $me)] | length > 0),
+       ship_last: ([.comments[] | select(.commentType != "system" and .isDeleted != true)] | last | .content // "" | contains($m)),
        author: '"$_author_login"', path: .threadContext.filePath, body: .comments[0].content}]'
 }
 # A PR comment is a PR-level thread here, one with no file context, so its

@@ -2,18 +2,19 @@
 
 `/ship <issue> --rework ["<feedback>"]` reworks the PR an earlier run of the
 issue, attended or unattended, left open at the merge gate. The change to make
-is its **feedback**, from three sources: the PR's unresolved review threads,
-the PR's authoritative comments posted after the **head push** (the push that
-put the PR's head at its sha), less Ship's own, and the feedback text, if any.
-A PR comment is authoritative as
-[implement.md](implement.md#phase-1-spec-precedence) defines it, and preflight
-drops every other one. A comment older than the head push was already in front
-of the run that pushed. The run keeps the claim, the branch and the PR, and
-ends at a fresh merge gate. It is
-attended only. `--unattended` and a task-spec run (free text in place of the
-issue number) are refused with preflight's usage line, so `cloud-ship`, which
-always passes `--unattended`, never starts one. `--inline` composes: the inline
-lane's rules apply to the rework's own diff.
+is its **feedback**, from three sources: the PR's unresolved review threads
+whose latest comment is not Ship's own, the PR's authoritative comments posted
+after the **head push** (the push that put the PR's head at its sha), less
+Ship's own, and the feedback text, if any. Preflight drops each thread Ship
+answered last, and it is feedback again once someone replies in it. A PR
+comment is authoritative as [implement.md](implement.md#phase-1-spec-precedence)
+defines it, and preflight drops every other one. A comment older than the head
+push was already in front of the run that pushed. The run keeps the claim, the
+branch and the PR, and ends at a fresh merge gate. It is attended only.
+`--unattended` and a task-spec run (free text in place of the issue number) are
+refused with preflight's usage line, so `cloud-ship`, which always passes
+`--unattended`, never starts one. `--inline` composes: the inline lane's rules
+apply to the rework's own diff.
 
 The ten phases run as SKILL.md has them. This file lists only what changes.
 Where a phase's `Done when:` names a step this file replaces, the replacement
@@ -33,7 +34,7 @@ budget for every reviewer, since the budget counts the Run file's rounds.
 text. In place of `already claimed`, `existing PR` and `existing branch` it
 admits the run only when the claim is your identity's and exactly one open PR
 closes the issue, its head being the one `*-<n>` branch on origin. Any other
-shape is `not reworkable: <detail>`. An admitted PR with no unresolved thread,
+shape is `not reworkable: <detail>`. An admitted PR with no feedback thread,
 none of those PR comments and no text from the human is
 `no feedback`. Both stops end the run before any change and leave the claim as
 it is: no release, no hand-back. On `ok`, preflight's `rework` names

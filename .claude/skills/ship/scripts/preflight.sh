@@ -27,8 +27,10 @@
 # one `*-<n>` branch on origin; every other shape is one `not reworkable:
 # <detail>` reason. A `*-<n>` worktree on that branch, clean and at the PR's
 # head, is the one an ended attended run left: reused, not `worktree exists`.
-# Admitted with no unresolved review thread and no feedback comment is `no
-# feedback`, unless `--feedback` says the human gave the run text of its own. A
+# Admitted with no feedback thread and no feedback comment is `no feedback`,
+# unless `--feedback` says the human gave the run text of its own. A feedback
+# thread is an unresolved review thread whose latest comment is not Ship's own
+# (`ship_last` false), so a decline left open for the human is not one. A
 # feedback comment is an authoritative one (`writer: true`) with no Ship marker,
 # posted after the head push: the push that put the PR's head at its sha.
 #
@@ -64,7 +66,7 @@
 #   1, or when there is no profile to read. rework is null on a plain run, and on
 #   a rework run {pr, branch, head_sha, worktree, threads[], comments[]}: the PR
 #   being reworked, its head branch and sha, the reusable worktree's path or
-#   null, the ids of its unresolved review threads, and its feedback comments
+#   null, the ids of its feedback threads, and its feedback comments
 #   as {author, created_at, body}; null where no one PR was admitted: none or
 #   several open, one unreadable or on another branch, origin, its threads, its
 #   comments or its head push unreadable.
@@ -296,7 +298,7 @@ if $rework && [ -n "${open_prs:-}" ]; then
        elif [ "$head" != "${br:-}" ]; then
          reasons+=("not reworkable: branch mismatch: PR #$num heads $head, origin has ${br:-no *-$n branch}")
        elif ! threads=$(host_pr_threads "$num") \
-         || ! open_threads=$(jq -c '[.[] | select(.resolved | not) | .id]' <<<"$threads"); then
+         || ! open_threads=$(jq -c '[.[] | select((.resolved | not) and (.ship_last | not)) | .id]' <<<"$threads"); then
          reasons+=("not reworkable: review threads unreadable")
        elif ! comments=$(host_pr_comments "$num") \
          || ! comments=$(jq -c --arg m "$SHIP_COMMENT_MARKER" "$strict_utc"'[.[]

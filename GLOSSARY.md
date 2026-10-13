@@ -63,7 +63,7 @@ A Ship run a cloud routine invoked through `cloud-ship`. Admits `ready-for-agent
 _Avoid_: cloud run, headless, autopilot
 
 **Rework run**:
-An attended Ship run a human starts on an issue whose earlier run left its PR open at the merge gate, attended or unattended. It takes the PR's unresolved review threads, the authoritative comments left on its PR since the head push (less Ship's own), and any feedback the human gives at the start as the change to make, and works it on the same claim, branch and PR, ending at a fresh merge gate. It needs the claim to be the human's own and one open PR on the issue's branch; with no feedback it stops before any change.
+An attended Ship run a human starts on an issue whose earlier run left its PR open at the merge gate, attended or unattended. It takes the PR's unresolved review threads whose latest comment is not Ship's own, the authoritative comments left on its PR since the head push (less Ship's own), and any feedback the human gives at the start as the change to make, and works it on the same claim, branch and PR, ending at a fresh merge gate. It needs the claim to be the human's own and one open PR on the issue's branch; with no feedback it stops before any change.
 _Avoid_: resumed run (a run continuing its own record after a context loss), iteration, follow-up run
 
 **Cloud sandbox**:
