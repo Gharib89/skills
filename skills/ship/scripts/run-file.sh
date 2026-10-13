@@ -1090,9 +1090,10 @@ close)
   [ -z "$results" ] || [ "$n" = 3 ] || ship_tooling "--result belongs to close 3"
   take_row "$n"
   check_results
-  # A heading a later phase's fix adds owes a result after phase 3 has closed or
-  # been skipped, so this records it and keeps phase 3's row: re-opening would
-  # need the open phase closed first and would restamp a finished phase (#626).
+  # A heading a later phase's fix adds, or a re-run of a recorded one, owes a
+  # result after phase 3 has closed or been skipped, so this records it and keeps
+  # phase 3's row: re-opening would need the open phase closed first and would
+  # restamp a finished phase (#626).
   if [ "$n" = 3 ] && [ -n "$results" ] && [[ $line == "- [x] "* ]]; then
     record_results
     jq -n --arg f "$file" --arg l "$line" '{run_file: $f, phase: 3, state: "recorded", line: $l}'

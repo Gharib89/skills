@@ -549,8 +549,8 @@ check_rc "a recorded name that prefixes an added heading takes its own result" 0
 check "gate clean reads each entry as its own" '' "$(holds_verif "$fr" lint)"
 
 # --- a result recorded after phase 3 closed -----------------------------------------
-# A heading a phase-4 or phase-7 fix adds owes a result while a later phase is
-# open, so close 3 records it on the closed or skipped row and leaves the row as is.
+# A heading a phase-4 or phase-7 fix adds owes a result after phase 3 has closed
+# or been skipped, so close 3 records it there and leaves the row as is.
 row3() { grep '^- \[.\] 3 · ' "$1"; }
 cp "$profile" "$added/docs/agents/ship.md"
 fl=$(at "$added" init 84 --from-profile | jq -r .run_file)
