@@ -5,13 +5,13 @@ issue, attended or unattended, left open at the merge gate. The change to make
 is its **feedback**, from three sources: the PR's unresolved review threads
 whose latest comment is not Ship's own, the PR's authoritative comments posted
 after the **head push** (the push that put the PR's head at its sha), less
-Ship's own, and the feedback text, if any.
+Ship's own, and the feedback text, if any. Preflight does both filters: a
+thread Ship answered last is feedback again once someone replies in it.
 A PR comment is authoritative as
 [implement.md](implement.md#phase-1-spec-precedence) defines it, and preflight
 drops every other one. A comment older than the head push was already in front
-of the run that pushed. Preflight also drops a thread whose latest comment is
-Ship's own until someone replies in it. The run keeps the claim, the branch
-and the PR, and ends at a fresh merge gate. It is
+of the run that pushed. The run keeps the claim, the branch and the PR, and
+ends at a fresh merge gate. It is
 attended only. `--unattended` and a task-spec run (free text in place of the
 issue number) are refused with preflight's usage line, so `cloud-ship`, which
 always passes `--unattended`, never starts one. `--inline` composes: the inline

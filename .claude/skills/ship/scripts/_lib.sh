@@ -110,8 +110,8 @@
 #                                           exit = unavailable. replied: this identity has a comment in
 #                                           the thread, which is how phase 7 skips a thread it already
 #                                           dispositioned in an earlier round.
-#                                           ship_last: the thread's latest comment (system comments
-#                                           aside) carries SHIP_COMMENT_MARKER, so a rework's preflight
+#                                           ship_last: the thread's latest comment (system and deleted
+#                                           comments aside) carries SHIP_COMMENT_MARKER, so a rework's preflight
 #                                           skips a thread ship declined until someone replies.
 #                                           `replied` cannot serve: ship posts as its owner's identity.
 #                                           id: poll-pr --full names ids from here too, to read
