@@ -8,10 +8,11 @@
 #   scripts/live-run-ship.sh <ship-source>
 #   <ship-source>: a checkout of this repo, usually a worktree, whose skills/ship
 #                  is the Ship under test; installed into the fixture with
-#                  `npx skills add <ship-source> --skill ship`
+#                  `npx skills add <ship-source> --skill ship`, then each skill
+#                  on ship's `composes` line that the seed lacks or holds at
+#                  another ref, installed at its pin
 #   LIVE_RUN_REPO: the fixture repo, default Gharib89/ship-fixture. Its `main`
-#                  must sit at its `seed` tag, which carries the ship profile
-#                  and every skill Ship composes at its pin.
+#                  must sit at its `seed` tag, which carries the ship profile.
 #   LIVE_RUN_WALL_S: the wall-clock cap per run in seconds, default 1800
 #
 # Two paths, each on its own fresh issue and a fresh copy of the fixture: the
@@ -27,7 +28,8 @@
 # first attempt left undone still fails the result. Each run is capped by
 # `--max-budget-usd` and the wall clock; hitting either is a failed check. What
 # keeps a run from happening or from being read (a missing tool, a failed
-# install, claude failing to run, the fixture repo unreachable) is `unavailable`.
+# install, a clone ship's skill check would refuse, claude failing to run, the
+# fixture repo unreachable) is `unavailable`.
 #
 # stdout: one JSON line {result: pass|fail, failed[], retried[], runs[]}, each
 #         failure `<path>: <check>: <what failed>`, each run {path, attempt,
@@ -155,13 +157,36 @@ gh repo clone "$repo" "$base" -- -q || unavailable "cannot clone $repo"
 [ "$(git -C "$base" rev-parse origin/main)" = "$(git -C "$base" rev-parse -q --verify 'seed^{commit}')" ] \
   || unavailable "$repo: main is not at its seed tag; reset it before a live run"
 
-# The install edits the tracked skills-lock.json and adds .claude/skills/ship/.
-# Ship's in-place isolation refuses a dirty tree, so restore the one and exclude
-# the other locally; Ship checks only the skills it composes against the lock.
+# Install ship, then each skill on ship's `composes` line that the seed lacks or
+# holds at another ref, installed at its pin with the line preflight prints, so a
+# pin move needs no re-seed. A reason left after the installs (one with no
+# install line, or an install that missed its pin) would stop Ship at preflight,
+# so it is unavailable here, before any paid run. The installs edit tracked files
+# (skills-lock.json, the composed skills) and add untracked ones. Ship's in-place
+# isolation refuses a dirty tree and its switch to origin/HEAD must not put the
+# seed's versions back, so mark the edited tracked files skip-worktree and
+# exclude the new untracked ones, locally: the tree reads clean, the switch
+# keeps the files, and Ship's commits leave them out.
 (cd "$base" && npx -y skills add "$src" --skill ship --agent claude-code -y) >"$tmp/install.log" 2>&1 \
   || { tail -n 40 "$tmp/install.log" >&2; unavailable "ship install from $src failed"; }
-git -C "$base" checkout -q -- .
-git -C "$base" status --porcelain | sed -n 's/^?? //p' >> "$base/.git/info/exclude"
+composes=$(ship_frontmatter "$src/skills/ship/SKILL.md" composes)
+while IFS= read -r reason; do
+  case $reason in *'; run '*) ;; *) continue ;; esac
+  read -ra cmd <<<"${reason##*; run }"
+  # stdin from /dev/null: the reasons stream is the loop's, not the install's.
+  (cd "$base" && "${cmd[@]}") </dev/null >"$tmp/install.log" 2>&1 \
+    || { tail -n 40 "$tmp/install.log" >&2; unavailable "composed skill install failed: ${reason%%; run *}"; }
+done < <(ship_missing_skill_reasons "$base" "$composes")
+left=$(ship_missing_skill_reasons "$base" "$composes")
+[ -z "$left" ] || unavailable "fixture clone fails ship's skill check: $(head -n 1 <<<"$left")"
+git -C "$base" ls-files -m -z | (cd "$base" && xargs -0r git update-index --skip-worktree --)
+# --untracked-files=normal: a status.showUntrackedFiles=no config would hide the
+# new skill directories from both reads.
+git -C "$base" status --porcelain --untracked-files=normal | sed -n 's/^?? //p' >> "$base/.git/info/exclude"
+# Either write can fail (a locked index, a full disk), and Ship would then meet
+# a dirty clone and refuse it as a check failure on a paid run.
+dirty=$(git -C "$base" status --porcelain --untracked-files=normal) && [ -z "$dirty" ] \
+  || unavailable "the fixture clone is not clean after the installs"
 
 file_issue() { # <path> <attempt> <title> <body>: sets issue
   # A marker unique to this attempt, so a re-read finds this run's issue and
