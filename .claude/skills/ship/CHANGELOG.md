@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.37.0 (2026-10-14)
+
+### Features
+
+- **ship**: Exclusive claims, confirmed label reads, atomic Run file init
+  ([#644](https://github.com/Gharib89/skills/pull/644),
+  [`61b6166`](https://github.com/Gharib89/skills/commit/61b6166639604bc8ea0787fc1a6e2ae81ac2f7d1))
+
+
 ## v0.36.0 (2026-10-14)
 
 ### Features
