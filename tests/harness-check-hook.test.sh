@@ -122,6 +122,7 @@ check_rc "an edit in a repo with no check.sh exits 0" 0 "$rc"
 check "an edit in a repo with no check.sh says nothing" "" "$out"
 check "an edit in a repo with no check.sh never runs the cwd repo's check.sh" 0 "$(calls)"
 
+: > "$STUB_LOG"
 STUB_RC=0 cwd=$unharnessed hook edit "$edit_in"
 check "an edit in a harnessed repo is checked from a cwd with no check.sh" 1 "$(calls)"
 
