@@ -28,7 +28,8 @@
 # first attempt left undone still fails the result. Each run is capped by
 # `--max-budget-usd` and the wall clock; hitting either is a failed check. What
 # keeps a run from happening or from being read (a missing tool, a failed
-# install, claude failing to run, the fixture repo unreachable) is `unavailable`.
+# install, a clone ship's skill check would refuse, claude failing to run, the
+# fixture repo unreachable) is `unavailable`.
 #
 # stdout: one JSON line {result: pass|fail, failed[], retried[], runs[]}, each
 #         failure `<path>: <check>: <what failed>`, each run {path, attempt,

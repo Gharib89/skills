@@ -130,12 +130,13 @@ export PATH="$T/bin:$PATH"
 # The seed carries every skill on ship's composes line at its pin, but OFF_PIN,
 # which its lock records at another ref, and MISSING, which it lacks.
 read -ra composes <<<"$(sed -n 's/^  composes: //p' skills/ship/SKILL.md)"
+off_ref=522c4db000000000000000000000000000000000
 seed() {
   local entry k ref lock='{"version": 1, "skills": {}}'
   for entry in "${composes[@]}"; do
     k=${entry##*:} ref=${entry%:*}; ref=${ref##*#}
     [ "$k" != "${MISSING:-}" ] || continue
-    [ "$k" != "${OFF_PIN:-}" ] || ref=522c4db000000000000000000000000000000000
+    [ "$k" != "${OFF_PIN:-}" ] || ref=$off_ref
     mkdir -p "$LIVE_STUB/seed/.claude/skills/$k" && echo seed > "$LIVE_STUB/seed/.claude/skills/$k/SKILL.md"
     lock=$(jq --arg k "$k" --arg r "$ref" '.skills[$k] = {ref: $r}' <<<"$lock")
   done
@@ -171,13 +172,15 @@ rc=0
 skills add '"$(pin tdd) --skill tdd --agent claude-code -y
 skills add $(pin find-docs) --skill find-docs --agent claude-code -y" \
   "$(MISSING=tdd OFF_PIN=find-docs drive happy ambiguous; tail -n +2 "$LIVE_STUB/npx.log")"
-check "Ship meets a clean clone with the installed pin" "$(pin find-docs | sed 's/.*#//')" "$(cat "$LIVE_STUB/clone")"
+src=$(pin find-docs)
+off_pin="skill off pin: find-docs at $off_ref, pinned ${src#*#}"
+check "Ship meets a clean clone with the installed pin" "${src#*#}" "$(cat "$LIVE_STUB/clone")"
 check "a failed composed-skill install is unavailable" \
-  '{"result":"unavailable","reason":"composed skill install failed: skill off pin: find-docs at 522c4db000000000000000000000000000000000, pinned '"$(pin find-docs | sed 's/.*#//')"'"}
-rc=2' "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
+  "{\"result\":\"unavailable\",\"reason\":\"composed skill install failed: $off_pin\"}
+rc=2" "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
 check "an install that exits 0 off its pin is unavailable" \
-  '{"result":"unavailable","reason":"fixture clone fails ship'"'"'s skill check: skill off pin: find-docs at 522c4db000000000000000000000000000000000, pinned '"$(pin find-docs | sed 's/.*#//;s/$/; run npx skills add /')$(pin find-docs)"' --skill find-docs --agent claude-code -y"}
-rc=2' "$(OFF_PIN=find-docs NPX_NOOP=find-docs drive happy ambiguous)"
+  "{\"result\":\"unavailable\",\"reason\":\"fixture clone fails ship's skill check: $off_pin; run npx skills add $src --skill find-docs --agent claude-code -y\"}
+rc=2" "$(OFF_PIN=find-docs NPX_NOOP=find-docs drive happy ambiguous)"
 
 check "a pass on the retry is a pass that names the first failure" \
   '{"result":"pass","failed":[],"retried":["happy: phase 5: not closed","happy: phase 6: not closed","happy: phase 7: not closed","happy: phase 8: not closed","happy: merge gate: not reached"]}
