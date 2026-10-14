@@ -180,10 +180,12 @@ done < <(ship_missing_skill_reasons "$base" "$composes")
 left=$(ship_missing_skill_reasons "$base" "$composes")
 [ -z "$left" ] || unavailable "fixture clone fails ship's skill check: $(head -n 1 <<<"$left")"
 git -C "$base" ls-files -m -z | (cd "$base" && xargs -0r git update-index --skip-worktree --)
-git -C "$base" status --porcelain | sed -n 's/^?? //p' >> "$base/.git/info/exclude"
+# --untracked-files=normal: a status.showUntrackedFiles=no config would hide the
+# new skill directories from both reads.
+git -C "$base" status --porcelain --untracked-files=normal | sed -n 's/^?? //p' >> "$base/.git/info/exclude"
 # Either write can fail (a locked index, a full disk), and Ship would then meet
 # a dirty clone and refuse it as a check failure on a paid run.
-dirty=$(git -C "$base" status --porcelain) && [ -z "$dirty" ] \
+dirty=$(git -C "$base" status --porcelain --untracked-files=normal) && [ -z "$dirty" ] \
   || unavailable "the fixture clone is not clean after the installs"
 
 file_issue() { # <path> <attempt> <title> <body>: sets issue

@@ -70,8 +70,9 @@ cat > "$T/bin/claude" <<'CLAUDE'
 # Plays the next line of $LIVE_STUB/script against the issue in its prompt.
 S=$LIVE_STUB
 printf '%s\n' "$*" >> "$S/claude.log"
-# What Ship's in-place isolation meets: the tree's status, then find-docs' ref.
-{ git status --porcelain; jq -r '.skills["find-docs"].ref' skills-lock.json; } > "$S/clone"
+# What Ship's in-place isolation meets: the tree's status, untracked files shown
+# whatever the config says, then find-docs' ref.
+{ git status --porcelain --untracked-files=normal; jq -r '.skills["find-docs"].ref' skills-lock.json; } > "$S/clone"
 n=${*: -1}; n=${n#/ship }; n=${n%% *}
 play=$(head -n 1 "$S/script"); tail -n +2 "$S/script" > "$S/s"; mv "$S/s" "$S/script"
 run=$XDG_STATE_HOME/ship/key/ship-$n/run.md
@@ -178,6 +179,9 @@ skills add $(pin find-docs) --skill find-docs --agent claude-code -y" \
 src=$(pin find-docs)
 off_pin_reason="skill off pin: find-docs at $off_ref, pinned ${src#*#}"
 check "Ship meets a clean clone with the installed pin" "${src#*#}" "$(cat "$LIVE_STUB/clone")"
+check "a config hiding untracked files still leaves a clean clone" "${src#*#}" \
+  "$(GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=status.showUntrackedFiles GIT_CONFIG_VALUE_0=no \
+    MISSING=tdd drive happy ambiguous >/dev/null; cat "$LIVE_STUB/clone")"
 check "a failed composed-skill install is unavailable" \
   "{\"result\":\"unavailable\",\"reason\":\"composed skill install failed: $off_pin_reason\"}
 rc=2" "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
