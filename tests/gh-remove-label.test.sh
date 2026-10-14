@@ -33,4 +33,10 @@ host_issue_remove_label 7 ready-for-agent; rc=$?
 check_rc "a label read that failed fails the removal" 1 "$rc"
 check "with no DELETE" "" "$(cat "$work/calls" 2>/dev/null)"
 
+# A read that answered with no labels list is unreadable too, not absent.
+labels 'null'
+host_issue_remove_label 7 ready-for-agent; rc=$?
+check_rc "a read with no labels list fails the removal" 1 "$rc"
+check "with no DELETE" "" "$(cat "$work/calls" 2>/dev/null)"
+
 finish

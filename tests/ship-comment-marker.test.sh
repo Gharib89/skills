@@ -82,6 +82,12 @@ printf '{"url":"https://example.invalid/pull/8"}\n' > "$SHIP_FAKE/host_pr_get.1.
 mech reflect 7 8 >/dev/null; rc=$?
 check_rc "a comments read that failed is tooling" 2 "$rc"
 check "and posts nothing" 0 "$(grep -c '^host_issue_comment	' "$SHIP_FAKE/calls")"
+reset
+printf '{"url":"https://example.invalid/pull/8"}\n' > "$SHIP_FAKE/host_pr_get.1.json"
+printf 'null\n' > "$SHIP_FAKE/host_issue_comments.1.json"
+mech reflect 7 8 >/dev/null; rc=$?
+check_rc "a comments read with no list is tooling" 2 "$rc"
+check "and posts nothing" 0 "$(grep -c '^host_issue_comment	' "$SHIP_FAKE/calls")"
 
 # The body-file mechanics: the file the host receives is the caller's file with
 # the marker appended, and the caller's own file is left as it was.

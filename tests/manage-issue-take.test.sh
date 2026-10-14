@@ -48,8 +48,15 @@ check "and answers held" held "$(jq -r .claim <<<"$out")"
 reset '["me"]'
 out=$(run 7 take --fresh); rc=$?
 check_rc "a fresh run refuses an issue this identity already holds" 1 "$rc"
-check "and answers held" held "$(jq -r .claim <<<"$out")"
+check "and answers held, saying it yields" 'held held: another run of this identity holds it' \
+  "$(jq -r '"\(.claim) \(.error)"' <<<"$out")"
 check "and writes nothing" 0 "$(calls 'host_issue_\(assign\|unassign\|comment\)')"
+
+# A read-back whose assignees cannot be read is no verdict on who holds it.
+reset '[]' 'null'
+out=$(run 7 take); rc=$?
+check_rc "a read-back with unreadable assignees fails" 1 "$rc"
+check "and says so" 'cannot read the assignees of issue #7 after assigning' "$(jq -r .error <<<"$out")"
 
 # GitHub: assignees are additive, so the read-back holds both.
 reset '[]' '["bob","me"]'

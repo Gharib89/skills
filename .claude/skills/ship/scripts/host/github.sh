@@ -306,7 +306,7 @@ host_issue_add_label(){ api -X POST "$R/issues/$1/labels" -f "labels[]=$2" >/dev
 # it fails the removal rather than skip the DELETE, as the Azure DevOps one does.
 host_issue_remove_label() {
   ship_issue_has_label "$1" "$2"
-  case $? in 1) return 0 ;; 2) return 1 ;; esac
+  case $? in 0) ;; 1) return 0 ;; *) return 1 ;; esac
   api -X DELETE "$R/issues/$1/labels/$(jq -rn --arg l "$2" '$l | @uri')" >/dev/null
 }
 # A create, so it is create-then-verify: a 5xx may have landed the comment, and a

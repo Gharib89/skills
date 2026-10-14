@@ -1023,7 +1023,7 @@ EOSTATES
       fi
       printf '\n## Design and plan\n\n(pending)\n\n## Deviations log\n\n(none yet)\n'
       printf '\n## Direct reads\n\n(none yet)\n'
-    } > "$file" ) 2>/dev/null; then
+    } > "$file" ); then
     [ "$rebuild" = false ] && [ -e "$file" ] && ship_fail "Run file exists: $file: a resumed run reads that record, and a new run of an issue whose earlier run stopped replaces it with \`run-file init $id --rebuild\`"
     ship_tooling "cannot write $file"
   fi

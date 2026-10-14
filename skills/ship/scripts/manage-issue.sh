@@ -15,16 +15,19 @@
 # its own assignment back and fails. `--fresh` is a run that began at preflight,
 # which read the issue unassigned, so finding it already this identity's means
 # another run of this identity took it since: `held` is then a refusal. A rework
-# or resumed run holds the claim already and calls take bare. A hand-back whose label edit did
-# not land exits 1 even though the claim is gone: the caller is stopping and must
-# say the issue is unlabelled rather than report a clean stop.
+# or resumed run holds the claim already and calls take bare.
+#
+# A hand-back whose label edit did not land exits 1 even though the claim is
+# gone: the caller is stopping and must say the issue is unlabelled rather than
+# report a clean stop.
 #
 # close is the only verb that is not about the claim: it closes any open issue,
 # claimed or not, which is how a verification disposes of the scratch issue it
 # created. `merge` still owns closing the issue a merge resolved.
 #
 # stdout: {issue, identity, claim: taken|held|contested|released, others?,
-#          error?, handed_back?, labels?}
+#          error?, handed_back?, labels?}; `held` exits 0 bare and 1 with
+#          `error` under --fresh, `contested` exits 1 with `others` and `error`
 #         {issue, identity, closed: true, already} for close
 # exit: 0 done · 1 not done (JSON says which step) · 2 usage or tooling
 set -uo pipefail
@@ -71,7 +74,8 @@ case $op in
     [ -z "$others" ] || ship_fail "already claimed: $others"
     host_issue_assign "$n" "$me" || ship_fail "assign call failed"
     issue=$(host_issue_get "$n") || ship_fail "cannot re-read issue #$n after assigning"
-    others=$(jq -c --arg m "$me" '[.assignees[] | select(. != $m)]' <<<"$issue")
+    others=$(jq -c --arg m "$me" '[.assignees[] | select(. != $m)]' <<<"$issue") \
+      || ship_fail "cannot read the assignees of issue #$n after assigning"
     if [ "$others" != '[]' ]; then
       # Only an assignment this run holds is given back: Azure DevOps' field
       # holds one identity, so an unassign there would clear the other's claim.
