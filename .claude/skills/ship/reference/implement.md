@@ -98,7 +98,7 @@ working is an adjacent find and takes one of the
 [dispositions](#phase-2-adjacent-finds). Prefer the standard library or what the
 repo already installs; a new dependency names the requirement neither meets in
 the deviations log and in a bullet under the PR body's
-`## Special things to note`, so a section rewrite from the log keeps it.
+`## Special things to note`.
 
 **Tripwires are not a class.** Whatever the class, the profile's `Tripwires:`
 and `In-PR requirement:` land in the same change, or a later phase goes red with
