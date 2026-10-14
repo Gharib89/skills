@@ -466,9 +466,9 @@ refused "an indented line is no gate line" 'no Round line for self-review'
 
 # --- close 7 ---------------------------------------------------------------------
 
-stops='cap, tree unchanged, small lane, inline lane, auto-once, not landed, not reviewed'
+stops='cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed'
 run7; held=$(cat "$rf"); close 7
-refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged|small lane|inline lane|auto-once|not landed|not reviewed>`'
+refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed>`'
 check "the same refusal names the other reviewer's stop" yes "$(has 'no Stop line for claude' "$err")"
 check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed` or `inline lane`' "$err")"
 check "and the other's" yes "$(has 'no Round line for claude' "$err")"
@@ -485,7 +485,7 @@ run7; add 'Stop: copilot: inline lane' 'Stop: claude: inline lane'
 close 7
 admitted "an inline-lane reviewer needs no round"
 
-run7; add '- Stop: copilot: tree unchanged' '- Round: copilot 1: clean' 'Stop: claude: not reviewed'
+run7; add '- Stop: copilot: tree unchanged at 0123abc' '- Round: copilot 1: clean' 'Stop: claude: not reviewed'
 close 7
 admitted "bulleted stop and round lines"
 
@@ -513,6 +513,12 @@ check "no Stop is asked for" no "$(has 'no Stop line' "$err")"
 run7; add 'Stop: copilot: cap' 'Stop: claude: whenever' 'Round: copilot 1: x' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
 refused "a stop reason outside the list" "Stop line for claude has reason 'whenever', which is not one of $stops"
 check "the valid one is left alone" no "$(has 'copilot' "$err")"
+
+# An unchanged tree settles a reviewer, so it names the head the round read.
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
+refused "a tree-unchanged stop with no head" 'Stop line for copilot has no head: write `Stop: copilot: tree unchanged at <sha>`, the head read-pr returned for the round'
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged at HEAD' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
+refused "a tree-unchanged stop whose head is no sha" "Stop line for copilot has reason 'tree unchanged at HEAD', whose head is not a commit sha"
 
 run7; add 'Stop: copilot: not reviewed: blocked' 'Stop: claude: cap' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
 refused "a reason that only starts with a listed one" "Stop line for copilot has reason 'not reviewed: blocked'"

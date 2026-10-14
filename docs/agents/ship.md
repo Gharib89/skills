@@ -145,6 +145,7 @@ Needs: `gh` and `claude` signed in, and `Gharib89/ship-fixture` reachable with i
 Without it: hand-off
 Also proven by CI: None.
 Claims to probe: that `claude -p` reports a hit `--max-budget-usd` cap as a nonzero exit with `subtype` `error_max_budget_usd` (it did on 2026-10-12), and that the fixture's `seed` tag still pins every skill Ship composes at the lock's ref.
+Paths: skills/ship/SKILL.md, skills/ship/reference/**
 
 ## Versioning and changelog
 

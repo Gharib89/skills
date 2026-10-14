@@ -10,7 +10,7 @@
 #                [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>]
 #                [--from-profile [<path>]]
 #   run-file open|next <n> <where>
-#   run-file close <n> [--result <name>=<word>[: <note>]]... <where>
+#   run-file close <n> [--result <name>=<word>[: <note>]]... [--head <sha>] <where>
 #   run-file skip <n> <reason> <where>
 #   run-file grade <patch|minor|breaking> <where>
 #   run-file gate record <file|-> [--head <sha>] <where>
@@ -56,7 +56,9 @@
 # where `--from-profile` took the names from the profile's headings, or
 # `--verifications` names a comma list of name-shaped words (one
 # `- <name>: pending` each, which `close 3 --result <name>=<word>` settles with
-# one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, and which
+# one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, written
+# `- <name>: <word> at <sha>[: <note>]`, <sha> the `--head` close 3 was given or
+# else the checkout's HEAD, and which
 # `close 3` will not pass while any is pending), then `Design and plan`,
 # `Deviations log`, and `Direct reads`, one line per informational read the run
 # made straight through the host's REST form, no mechanic covering it, so one
@@ -120,8 +122,9 @@
 # `close 7` reads the reviewers from the phase's checklist row (nothing is held
 # where the row names none, or names what is not a list of names) and needs a
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
-# one of cap, tree unchanged, small lane, inline lane, auto-once, not landed or
-# not reviewed, and unless it is `not reviewed` or `inline lane` at least one
+# one of cap, `tree unchanged at <sha>` (<sha> the PR head the round read; a
+# bare `tree unchanged` is refused), small lane, inline lane, auto-once, not
+# landed or not reviewed, and unless it is `not reviewed` or `inline lane` at least one
 # `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
 # it wrote.
@@ -165,9 +168,10 @@
 #   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
 #     check, every profile CI leg succeeded on head or, where No-checks legal:
 #     says yes and no local gate deferred to CI, ran no check there,
-#     verifications passed or were
+#     verifications passed at a covered head or were
 #     inapplicable or deferred to a green associated CI leg, and each
-#     reviewer's loop stopped on tree unchanged with a dispositioned Round, or
+#     reviewer's loop stopped on tree unchanged at a covered head with a
+#     dispositioned Round, or
 #     on inline lane for an on-request reviewer while the last Lane: line
 #     reads inline, the round `--inline` waived, which covers no primary. A
 #     not-reviewed or not-landed primary, or one that spent its Cap: (dispositioned Round
@@ -178,8 +182,20 @@
 #     outside Legs:, nonblank Override or Ship-defect
 #     evidence, defect or tracker drafts beside the Run file (excluding
 #     .base.md), and a last `Stop: self-review: cap` where no reviewer stopped
-#     on tree unchanged with a dispositioned Round hold the gate.
-#     An ordinary deviation does not hold it. This read is independent of Merge.
+#     on tree unchanged at a covered head with a dispositioned Round hold the
+#     gate. An ordinary deviation does not hold it. This read is independent
+#     of Merge.
+#     A stamp covers <sha> when it is <sha>, or when every later commit on
+#     <sha>'s first-parent line is a clean base merge: two parents, the second
+#     an ancestor of the local origin/HEAD (fetch first, or an unfetched base
+#     breaks coverage), its tree the one `git merge-tree --write-tree` gives;
+#     a walk that cannot read origin/HEAD, a commit's parents, the ancestry
+#     check or merge-tree exits 2.
+#     A pass also covers <sha> when its Verification's `Paths:` globs,
+#     comma-separated git `:(glob)` pathspecs, each matching some file, match
+#     no file that differs between its stamp and <sha>. A stop or pass with no
+#     stamp, or one not covering <sha>, holds, named with <sha> and its stamp
+#     where it has one; the Local gate record still needs <sha> itself.
 # exit: 0 ok · 1 the mechanic's own refusal (a gate's missing evidence among
 #   them, a held clean gate, or a test that stayed green under `prove`) · 2
 #   malformed invocation, a read a gate needs that failed, or revert-red's own
@@ -187,7 +203,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -403,6 +419,8 @@ EONAMES
   printf '%s\n' "$names"
 }
 result_words='pass|fail|deferred-to-ci|unavailable|unexercised|n/a'
+# A recorded word, `close 3` stamping it with the head it was recorded on.
+result_re="($result_words)( at [0-9a-f]+)?"
 # The section's entries, `- <name>: <what>` each. A note after the word may
 # itself end in `: pending`, so pending is matched on the whole line.
 results_lines() { awk '/^## /{ f = ($0 == "## Verification results") } f && /^- [^:]+: /' "$file"; }
@@ -410,7 +428,7 @@ results_lines() { awk '/^## /{ f = ($0 == "## Verification results") } f && /^- 
 # with no result word as a field before it (`- name: pass: waiting: pending` is a
 # result whose note ends so), not when a colon-free name precedes it.
 pending_verifs() {
-  results_lines | w="$result_words" awk '
+  results_lines | w="$result_re" awk '
     $0 ~ /: pending$/ && $0 !~ ("^- .*: (" ENVIRON["w"] ")(:|$)") { sub(/^- /, ""); sub(/: pending$/, ""); print }'
 }
 # An awk test for the results entry of ENVIRON["nm"]: a profile name may hold a
@@ -431,7 +449,7 @@ parse_result() { # parse_result <arg>
   esac
   [ "${rnote%%$'\n'*}" = "$rnote" ] || ship_tooling "a result note is one line"
   radd=false
-  results_lines | nm=$rname w="$result_words" awk "$entry_of { f = 1 } END { exit !f }" && return 0
+  results_lines | nm=$rname w="$result_re" awk "$entry_of { f = 1 } END { exit !f }" && return 0
   # `gate clean` judges the profile's headings, not init's list, so a heading
   # the PR adds after init owes a result that only this fallback can record
   # (#621).
@@ -457,7 +475,7 @@ record_results() {
   while IFS= read -r r; do
     [ -n "$r" ] || continue
     parse_result "$r"
-    text=$rword; [ -z "$rnote" ] || text="$rword: $rnote"
+    text="$rword at $head"; [ -z "$rnote" ] || text="$text: $rnote"
     if [ "$radd" = true ]; then
       # After the section's last line, or a new section at the end when init
       # named no Verification and so wrote none.
@@ -466,7 +484,7 @@ record_results() {
         END { if (!last) printf "\n## Verification results\n\n- %s: %s\n", ENVIRON["nm"], ENVIRON["tx"] }' \
         "$file" "$file" > "$file.t.$$"
     else
-      nm=$rname tx=$text w="$result_words" awk '/^## /{ f = ($0 == "## Verification results") }
+      nm=$rname tx=$text w="$result_re" awk '/^## /{ f = ($0 == "## Verification results") }
         f && '"$entry_of"' { print "- " ENVIRON["nm"] ": " ENVIRON["tx"]; next } { print }' \
         "$file" > "$file.t.$$"
     fi && mv "$file.t.$$" "$file" || { rm -f "$file.t.$$"; ship_tooling "cannot write $file"; }
@@ -506,7 +524,7 @@ profile_headings() { # profile_headings <section> <profile-body>
 refuse_bad_headings() { # refuse_bad_headings <names, one per line>
   local bad
   case $1 in *=*) ship_tooling "a Verification heading cannot carry '=': --result splits the name from the word on it" ;; esac
-  bad=$(w="$result_words" awk '$0 ~ (": (" ENVIRON["w"] ")(:|$)") { print; exit }' <<<"$1") ||
+  bad=$(w="$result_re" awk '$0 ~ (": (" ENVIRON["w"] ")(:|$)") { print; exit }' <<<"$1") ||
     ship_tooling "could not read the Verification headings for result words"
   [ -z "$bad" ] || ship_tooling "a Verification heading cannot carry a result word as a later field: '$bad' would read as a settled result while pending; rename it"
 }
@@ -747,7 +765,7 @@ EORESTS
 
 # Phase 7: each reviewer the checklist row names has its stop reason and, unless
 # it never reviewed, a round.
-stop_reasons="cap, tree unchanged, small lane, inline lane, auto-once, not landed, not reviewed"
+stop_reasons="cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
   local list names nm stop r ok
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
@@ -762,9 +780,14 @@ EONAMES
   while IFS= read -r nm; do
     stop=$(rests "Stop: $nm: " | tail -n 1)
     stop=$(trim_end "$stop")
+    # Only an unchanged tree settles a reviewer, so only it names the head it
+    # read: the clean gate holds it once the PR moves past that head.
     case $stop in
-      cap | "tree unchanged" | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed") ;;
-      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged|small lane|inline lane|auto-once|not landed|not reviewed>\`" ;;
+      cap | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed") ;;
+      "tree unchanged at "*) [[ ${stop#"tree unchanged at "} =~ ^[0-9a-f]{7,64}$ ]] ||
+        gap "Stop line for $nm has reason '$stop', whose head is not a commit sha" ;;
+      "tree unchanged") gap "Stop line for $nm has no head: write \`Stop: $nm: tree unchanged at <sha>\`, the head read-pr returned for the round" ;;
+      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed>\`" ;;
       *) gap "Stop line for $nm has reason '$stop', which is not one of $stop_reasons" ;;
     esac
     case $stop in "not reviewed" | "inline lane") continue ;; esac
@@ -789,10 +812,62 @@ close_gate() { # close_gate <phase> <its row>
   esac
 }
 
+# The commit a hash names, where the hash is that commit's or an abbreviation of
+# it: git also resolves a full hash with hex digits appended to it.
+commit_of() { # commit_of <hash>
+  local c
+  c=$(git rev-parse -q --verify "$1^{commit}" 2>/dev/null) || return 1
+  case $c in "$1"*) printf '%s\n' "$c" ;; *) return 1 ;; esac
+}
+# A stamp covers the head when it is the head, or when every later commit on the
+# head's first-parent line is a clean base merge: two parents, the second on the
+# base, and a tree `merge-tree` reproduces. A merge that resolved a conflict, any
+# other commit, or a stamp or head git cannot resolve breaks coverage. Exit 0
+# covered, 1 not, 2 a read the walk needs failed (the base ref, a commit's
+# parents, the ancestry check, git's merge-tree).
+covers() { # covers <stamp> <head>
+  local s c t base parents p=()
+  [ "$1" = "$2" ] && return 0
+  s=$(commit_of "$1") && c=$(commit_of "$2") || return 1
+  [ "$s" = "$c" ] && return 0
+  base=refs/remotes/$(ship_base_ref --local) || return 2
+  while [ "$c" != "$s" ]; do
+    parents=$(git rev-list --parents -n 1 "$c" 2>/dev/null) || return 2
+    read -r -a p <<<"$parents"
+    [ "${#p[@]}" -gt 0 ] || return 2
+    [ "${#p[@]}" -eq 3 ] || return 1
+    git merge-base --is-ancestor "${p[2]}" "$base" 2>/dev/null
+    case $? in 0) ;; 1) return 1 ;; *) return 2 ;; esac
+    t=$(git merge-tree --write-tree "${p[1]}" "${p[2]}" 2>/dev/null)
+    case $? in 0) ;; 1) return 1 ;; *) return 2 ;; esac
+    [ "$t" = "$(git rev-parse "$c^{tree}" 2>/dev/null)" ] || return 1
+    c=${p[1]}
+  done
+}
+# A Verification's `Paths:` globs, comma-separated, as git `:(glob)` pathspecs,
+# where `*` stays inside one directory and `**` crosses them. True when no file
+# they match changed between the stamp and the head; a failed diff is a change,
+# and a glob matching no file at either head (a typo, `None.`) proves nothing.
+untouched() { # untouched <stamp> <head> <paths>
+  local g s h empty globs=() specs=()
+  s=$(commit_of "$1") && h=$(commit_of "$2") || return 1
+  [ -n "$3" ] && empty=$(git hash-object -t tree --stdin </dev/null 2>/dev/null) || return 1
+  IFS=, read -r -a globs <<<"$3"
+  for g in "${globs[@]}"; do
+    g=$(trim_end "${g#"${g%%[![:space:]]*}"}")
+    [ -n "$g" ] || continue
+    ! git diff --quiet "$empty" "$s" -- ":(glob)$g" 2>/dev/null \
+      || ! git diff --quiet "$empty" "$h" -- ":(glob)$g" 2>/dev/null || return 1
+    specs+=(":(glob)$g")
+  done
+  [ "${#specs[@]}" -gt 0 ] && git diff --quiet "$s" "$h" -- "${specs[@]}" 2>/dev/null
+}
+
 # The clean gate is a read of evidence, independent of the profile's merge opt-in.
 # Only a stop of tree unchanged proves no further round would read anything new.
 gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   local ci profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
+  local stamps s cover='{}' scope='{}' vname vpaths
   [ -r "$file" ] || ship_tooling "cannot read Run file at $file"
   # Fenced examples cannot authorize a merge.
   lines=$(awk "$SHIP_AWK_FENCE"'
@@ -824,9 +899,27 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     /^## / { f = ($0 ~ /^## Verification[ \t\r]*$/); next }
     f && /^### / { sub(/^### /, ""); sub(/[ \t\r]+$/, ""); print "name\t" $0; next }
     f && /^Also proven by CI: / { sub(/^Also proven by CI: /, ""); sub(/[ \t\r]+$/, ""); print "leg\t" $0 }
-    ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t")) as $r ([];
-      if $r[0] == "name" then . + [{name: $r[1], leg: null}]
-      elif length > 0 then .[-1].leg = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
+    f && /^Paths: / { sub(/^Paths: /, ""); sub(/[ \t\r]+$/, ""); gsub(/\t/, " "); print "paths\t" $0 }
+    ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t") | [.[0], (.[1:] | join("\t"))]) as $r ([];
+      if $r[0] == "name" then . + [{name: $r[1], leg: null, paths: null}]
+      elif length > 0 then .[-1][$r[0]] = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
+  # Every head a stop or a result was stamped at: whether it covers the PR head,
+  # and, per Verification with `Paths:`, whether its globs saw no change since.
+  # Trimmed as the jq below trims each line, so both read the same stamp.
+  stamps=$(sed $'s/[ \t\r]*$//' <<<"$lines" | grep -oE ' at [0-9a-f]{7,64}(: |$)' | sed 's/^ at //; s/: $//' | sort -u)
+  while IFS= read -r s; do
+    [ -n "$s" ] || continue
+    covers "$s" "$head"
+    case $? in
+      0) cover=$(jq -c --arg s "$s" '.[$s] = true' <<<"$cover") ;;
+      1) ;;
+      *) ship_tooling "cannot read whether $s covers head $head: a read the walk needs failed (origin/HEAD, a commit's parents, the ancestry check, git merge-tree --write-tree)" ;;
+    esac
+    while IFS=$'\t' read -r vname vpaths; do
+      [ -n "$vname" ] || continue
+      untouched "$s" "$head" "$vpaths" && scope=$(jq -c --arg v "$vname" --arg s "$s" '.[$v][$s] = true' <<<"$scope")
+    done <<<"$(jq -r '.[] | select(.paths != null) | [.name, .paths] | @tsv' <<<"$verifications")"
+  done <<<"$stamps"
   rec=$(awk '/^## / { f = ($0 ~ /^## Local gate[ \t\r]*$/) }
     f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' <<<"$lines" | tail -n 1) \
     || ship_tooling "cannot read local gate record"
@@ -845,8 +938,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   done
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
-    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" \
-    --arg round_re "$round_re" --arg words "$result_words" '
+    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" --argjson cover "$cover" --argjson scope "$scope" \
+    --arg round_re "$round_re" --arg words "$result_re" '
     def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
     ($text | split("\n")) as $lines
@@ -854,7 +947,12 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     | def rests($prefix): [$evidence[] | select(startswith($prefix)) | ltrimstr($prefix)];
       def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop");
       def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test($round_re);
-      def settled($name): stop($name) == "tree unchanged" and reviewed($name);
+      # A stamp is the head a stop or result was recorded on, `<word> at <sha>`.
+      def word: sub(" at [0-9a-f]{7,64}$"; "");
+      def stamp: [capture(" at (?<s>[0-9a-f]{7,64})$").s] | first // "";
+      def stale($what; $sha): $what + " at " + $sha + ", which does not cover head " + $head;
+      def unstamped($what): $what + " with no head stamp to cover head " + $head;
+      def settled($name): (stop($name) | word) == "tree unchanged" and reviewed($name) and $cover[stop($name) | stamp] == true;
       # Capped with findings: Cap: spent on a tree-changing last round, which a
       # docs-only end before the cap, also `Stop: cap`, is not. The dispositioned
       # rounds must read 1..Cap exactly: a gapped, blank or overrun record is no
@@ -872,7 +970,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # and the rest must open on `pending` or a result word, as `entry_of`
       # reads it, so `lint` never reads `- lint: strict: pass`.
       def result($name):
-        (reduce $lines[] as $line ({inside: false, rows: []};
+        (reduce ($lines[] | sub("[ \\t\\r]+$"; "")) as $line ({inside: false, rows: []};
           if $line | startswith("## ") then .inside = ($line | test("^## Verification results[ \\t\\r]*$"))
           elif .inside and ($line | startswith("- " + $name + ": "))
             and ($line | ltrimstr("- " + $name + ": ") | test("^(pending|" + $words + ")(: |$)"))
@@ -895,8 +993,14 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
          | if $checks == [] then (if $no_checks and ([($gates // {})[] | select(. == "deferred-to-ci")] == [])
              then empty else "CI " + $leg + ": missing" end)
            else $checks[] | select(.status != "success") | "CI " + .name + ": " + .status end),
-       ($verifications[] as $v | result($v.name) as $status
-         | if $status == "pass" or $status == "n/a" then empty
+       # A pass proves the head it ran on, and any head that head covers; with
+       # `Paths:`, also a head whose changes since touched none of its globs.
+       ($verifications[] as $v | result($v.name) as $r | ($r | word) as $status | ($r | stamp) as $sha
+         | if $status == "pass" then
+             if $sha == "" then unstamped("verification " + $v.name + ": pass")
+             elif $cover[$sha] == true or ($v.paths != null and $scope[$v.name][$sha] == true) then empty
+             else stale("verification " + $v.name + ": pass"; $sha) end
+           elif $status == "n/a" then empty
            elif $status == "deferred-to-ci" then
              if $v.leg != null and ($legs | index($v.leg)) != null and greenleg($v.leg) then empty
              else "verification " + $v.name + ": no associated green CI leg" end
@@ -905,7 +1009,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
          | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
            elif settled($r.name) or (stop($r.name) == "inline lane" and $r.trigger == "on-request" and inline_run) then empty
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
-           elif stop($r.name) == "tree unchanged" then "reviewer " + $r.name + ": no dispositioned round"
+           elif (stop($r.name) | word) == "tree unchanged" then
+             if reviewed($r.name) | not then "reviewer " + $r.name + ": no dispositioned round"
+             elif (stop($r.name) | stamp) == "" then unstamped("reviewer " + $r.name + ": tree unchanged")
+             else stale("reviewer " + $r.name + ": tree unchanged"; stop($r.name) | stamp) end
            else "reviewer " + $r.name + ": " + stop($r.name) end),
        # A self-review stopped at its cap left its last fixes unread; a host
        # reviewer that settled on the final head read them.
@@ -1091,10 +1198,16 @@ next)
 close)
   phase_arg "${1:-}"; n=$1; shift
   parse_file "$@"
-  [ -z "$head" ] || ship_tooling "$usage"
+  [ -z "$head" ] || [ "$n" = 3 ] || ship_tooling "--head belongs to close 3"
   [ -z "$results" ] || [ "$n" = 3 ] || ship_tooling "--result belongs to close 3"
   take_row "$n"
   check_results
+  # Each result records the head it was proven on, so the clean gate can ask
+  # whether that head still covers the PR's.
+  if [ -n "$results" ] && [ -z "$head" ]; then
+    head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "no --head given and not inside a git checkout"
+  fi
+  [ -z "$head" ] || [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
   # A heading a later phase's fix adds, or a re-run of a recorded one, owes a
   # result after phase 3 has closed or been skipped, so this records it and keeps
   # phase 3's row: re-opening would need the open phase closed first and would

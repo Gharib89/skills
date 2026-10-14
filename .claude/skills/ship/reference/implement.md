@@ -231,7 +231,8 @@ Each round leaves `Round: self-review <n>: <text>`, its outcome in a line, and
 the loop leaves `Stop: self-review: <tree unchanged|cap>`: `tree unchanged`
 when the last round changed no file, even at the cap, and `cap` when the
 rounds reached it with the last fixes unread, which holds `run-file gate clean`
-unless a host reviewer stopped `tree unchanged` on the final head.
+unless a host reviewer stopped `tree unchanged at <sha>`, `<sha>` covering the
+final head.
 
 ## Phase 4 evidence lines
 

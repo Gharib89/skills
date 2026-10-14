@@ -241,7 +241,9 @@ this gate, including after a clean-gate decision. Two of them come back here:
   ask again, or re-run `run-file gate clean` with `--head <new head_sha>` when
   opted in.
 - `stale-base`: merge the base in, re-run the local gate and come back to this
-  gate.
+  gate. A merge with no conflict to resolve leaves the reviewer stops and
+  Verification passes covering the new head; one that resolved a conflict
+  breaks that coverage.
 
 Then each drafted tracker section. Every Ship
 defect draft is settled before `cleanup`, which deletes the directory the
@@ -251,7 +253,15 @@ close 9` and set the task to the returned `mirror`, and last `cleanup
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this
-gate. Do not re-open the whole pipeline.
+gate. Do not re-open the whole pipeline. Under `Merge: on-clean-gate` the
+change breaks coverage, so `gate clean` holds, naming each piece of evidence
+with both heads: every reviewer stop, until an on-push reviewer's own round on
+the new head records a new stop
+([review-loop.md](review-loop.md#the-round)), and every Verification pass whose
+`Paths:` the change touched, or that has none or one matching no file, until
+its re-run per
+[verify.md](verify.md)'s **Head** records it again. Request no new review from
+here; while a stop holds, the run waits for "merge".
 
 ## Filing a Ship defect
 
