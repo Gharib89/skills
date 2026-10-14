@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.35.0 (2026-10-14)
+
+### Features
+
+- **ship**: Check callers before changing a contract, and justify a new dependency
+  ([#640](https://github.com/Gharib89/skills/pull/640),
+  [`6c04f11`](https://github.com/Gharib89/skills/commit/6c04f11a517ea4bcd0d09ee412b950d0c3315474))
+
+
 ## v0.34.0 (2026-10-14)
 
 ### Features
