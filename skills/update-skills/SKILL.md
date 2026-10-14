@@ -320,7 +320,8 @@ would file, and phase 6 opens the PR with `Closes #<issue>` but for a hold-back.
 A held-back row hands the issue back to the owner. With some rows moved, phase
 6 runs `open-pr none --title <t> --body-file <f>`, `<f>` saying `Refs #<issue>`,
 then `manage-issue <issue> handback "<reason>"` naming each `held back` line,
-before the merge gate; `merge` takes `<pr> none`, `cleanup` keeps `<issue>`.
+before the merge gate; `merge` takes `none` as its issue, `cleanup`
+keeps `<issue>`.
 With every row held back there is no PR: hand back, `cleanup <issue>`, and stop.
 
 Where a step would ask the owner, the run takes the conservative answer and

@@ -214,7 +214,9 @@
 #   host_pr_resolve_thread <pr> <thread> -> {resolved}
 #                                           A failure may print {resolved,detail}, resolved false,
 #                                           which resolve-thread reports as its error ("no such thread").
-#   host_pr_merge <pr> <subject>         -> exit 0 once the host reports merged
+#   host_pr_merge <pr> <subject> <head>  -> exit 0 once the host reports merged
+#                                           The host refuses the merge when the PR's head is
+#                                           not <head>, the head the merge gate read.
 #   host_prs_open                        -> [{number,title,head_ref,author,url,created_at}]
 #   host_issues_ready <label>            -> [{number,title,created_at}] oldest first, unassigned, not PRs
 

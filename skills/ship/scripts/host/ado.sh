@@ -2,8 +2,10 @@
 # Azure DevOps adapter: the host_* interface from _lib.sh over the `az` CLI with
 # the azure-devops extension, in preference order: `az repos` / `az boards`
 # where a subcommand exists; `az devops invoke` for what they lack (PR threads,
-# iterations, statuses, the json-patch tag removal). Every host API call goes
-# through the CLI, which holds the credential, so none of them is a curl; the only curl in this file is the installer download in
+# iterations, statuses, the json-patch tag removal); `az rest` for the PR
+# completion, whose route invoke cannot reach. Every host API call goes
+# through the CLI, so none of them is a curl (the CLI holds the credential for
+# all but the PR completion, which hands az the PAT itself where one is set); the only curl in this file is the installer download in
 # `host_tooling_install`, which is what puts the CLI on the machine. One
 # credential covers the run: `az login` (Entra) or AZURE_DEVOPS_EXT_PAT. Sourced
 # by _lib.sh's ship_load_host; needs SHIP_ORG_URL, SHIP_PROJECT and SHIP_REPO
@@ -13,7 +15,8 @@
 # issue comment = discussion entry, "Closes #n" = --work-items link plus
 # transition on completion, PR comment = thread with status closed, thread
 # resolved = status fixed|closed|wontFix|byDesign, CI = policy evaluations plus
-# PR statuses, blocked-by = Predecessor links, merge = pr update --status completed.
+# PR statuses, blocked-by = Predecessor links, merge = PR PATCH status completed
+# with lastMergeSourceCommit.
 #
 # Verified live on the onboarding run (map ticket "Onboard the Azure DevOps repo
 # and run ship attended"): every mechanic from preflight to merge and cleanup
@@ -380,9 +383,25 @@ host_pr_resolve_thread() { # <pr> <thread-id>
   local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
   jq '{resolved: (.status | IN("fixed","closed","wontFix","byDesign"))}' <<<"$out"
 }
-host_pr_merge() { # <pr> <subject>
-  azx repos pr update "${ORG[@]}" --id "$1" --status completed --squash true --delete-source-branch true \
-    --transition-work-items true --merge-commit-message "$2" >/dev/null
+# A REST PATCH, not `az repos pr update --status completed`: az fills
+# lastMergeSourceCommit from its own read at call time and takes no head, so a
+# push after the merge gate would land. The host refuses a head that moved.
+# `az rest`, not `invoke`: four git locations are named `pullRequests` and
+# invoke takes the first, the project-level read route, which refuses PATCH. So
+# the call carries the run's credential itself: the PAT as Basic auth where one
+# is set, else an Azure DevOps token from `az login`. The headers ride in a
+# file, read from the environment by jq, so the PAT is never on an argv `ps` shows.
+host_pr_merge() { # <pr> <subject> <head>
+  local f h auth=(--resource 499b84ac-1321-427f-aa17-267ca6975798)
+  f=$(mktemp); h=$(mktemp); trap 'rm -f "$f" "$h"; trap - RETURN' RETURN
+  jq -n --arg m "$2" --arg h "$3" '{status: "completed", lastMergeSourceCommit: {commitId: $h},
+    completionOptions: {mergeStrategy: "squash", deleteSourceBranch: true, transitionWorkItems: true, mergeCommitMessage: $m}}' > "$f"
+  jq -n '{"Content-Type": "application/json"} + (env.AZURE_DEVOPS_EXT_PAT // "" |
+    if . == "" then {} else {Authorization: ("Basic " + (":" + . | @base64))} end)' > "$h"
+  [ -z "${AZURE_DEVOPS_EXT_PAT:-}" ] || auth=(--skip-authorization-header)
+  azx rest --method patch --body "@$f" --headers "@$h" "${auth[@]}" --url "$(jq -rn --arg o "$SHIP_ORG_URL" \
+    --arg p "$SHIP_PROJECT" --arg r "$SHIP_REPO" --arg n "$1" \
+    '"\($o)/\($p | @uri)/_apis/git/repositories/\($r | @uri)/pullRequests/\($n)?api-version=7.1"')" >/dev/null
 }
 host_prs_open() {
   azx repos pr list "${PRJ[@]}" --repository "$SHIP_REPO" --status active --top 100 \
