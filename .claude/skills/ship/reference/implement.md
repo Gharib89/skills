@@ -69,12 +69,13 @@ verbatim in the issue body.
 ## Phase 2: classify, then implement test-first
 
 Classify the change into one of three classes and **announce the class and the
-skip path it implies** ("classified `docs`: skipping TDD and phase 3, straight
-to the local gate"), so a wrong label is a visible decision now, not a silently
-skipped verification later.
+skip path it implies** ("classified `docs`: skipping TDD, and phase 3 with no
+Verification applying"), so a wrong label is a visible decision now, not a
+silently skipped verification later.
 
 - **`docs`**: markdown, comments, manifest text with no logic. **Skip TDD**;
-  do not manufacture a contrived test. Commit `docs:`.
+  do not manufacture a contrived test. Commit `docs:`. The class decides TDD,
+  not phase 3: a Verification whose `Applies when:` holds still runs.
 - **`code`**: a feature or bugfix in behavior. Invoke the `tdd` skill
   **autonomously**: red, then green, **without pausing to confirm seams**
   (you are intentionally overriding tdd's checkpoint; the merge gate is the

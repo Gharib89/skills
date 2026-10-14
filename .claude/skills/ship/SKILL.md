@@ -137,8 +137,8 @@ in the Run file with its disposition.
 words, the `Without it:` dispositions and what `unexercised` is. Run each
 applicable verification's `Run:` line **scoped to what you touched**, on the
 environment the issue was reported against: green elsewhere is not fixed. Noisy
-runs go to a cheap-tier subagent in the `verify` scratch directory. `docs` class
-and the small lane skip this phase.
+runs go to a cheap-tier subagent in the `verify` scratch directory. Skip this
+phase only when no Verification applies, whatever the class.
 **Done when:** `run-file close 3` took a `--result` for every Verification,
 each applicable one `pass`, `deferred-to-ci` or `unexercised`; any other result
 is recorded, then takes its named stop. Or `run-file skip 3` recorded what
@@ -183,7 +183,7 @@ in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.
 
 **5 · Local gate.** *Precondition:* every applicable verification is `pass`,
-`deferred-to-ci` or `unexercised`, or the class is `docs`, **and** every phase-4
+`deferred-to-ci` or `unexercised`, or none applies, **and** every phase-4
 finding carries a disposition; otherwise go back. Run `base-fresh` first: CI
 tests the merge ref, so a branch that predates a merge still goes green while
 every "does this exist?" answer taken from the worktree was pre-merge; behind:
