@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.36.0 (2026-10-14)
+
+### Features
+
+- **ship**: Bind merge to the gated head and delete only the PR's branch
+  ([#642](https://github.com/Gharib89/skills/pull/642),
+  [`b79a318`](https://github.com/Gharib89/skills/commit/b79a318b8edfde7896e1679b9bb6ea2981aa277b))
+
+
 ## v0.35.0 (2026-10-14)
 
 ### Features
