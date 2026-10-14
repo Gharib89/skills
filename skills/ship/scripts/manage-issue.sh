@@ -27,7 +27,7 @@
 #
 # stdout: {issue, identity, claim: taken|held|contested|released, others?,
 #          error?, handed_back?, labels?}; `held` exits 0 bare and 1 with
-#          `error` under --fresh, `contested` exits 1 with `others` and `error`
+#          `error` under --fresh, `contested` exits 1 with `others` and `error`.
 #         {issue, identity, closed: true, already} for close
 # exit: 0 done · 1 not done (JSON says which step) · 2 usage or tooling
 set -uo pipefail
