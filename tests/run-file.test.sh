@@ -311,6 +311,26 @@ check "a bare rebuild is a fresh record with phase 0 open" \
   "0 in_progress 1 0" \
   "$(jq -r '[.opened, .mirror] | join(" ")' <<<"$nr") $(grep -c 'in_progress' "$tmp/ship-411/run.md") $(grep -c '^- \[x\]' "$tmp/ship-411/run.md")"
 
+# Two initializers in one clone (#636): the other one's record lands after this
+# one found no file but before it wrote. A `mkdir` in front of PATH lands it
+# inside that window, so the create itself must refuse an existing file.
+race=$tmp/race-bin; mkdir -p "$race"
+cat > "$race/mkdir" <<EOF
+#!/usr/bin/env bash
+"$(command -v mkdir)" "\$@" || exit
+[ ! -d "$tmp/ship-412" ] || [ -e "$tmp/ship-412/run.md" ] || printf 'the other run\n' > "$tmp/ship-412/run.md"
+EOF
+chmod +x "$race/mkdir"
+check_rc "a Run file created inside the init window is refused" 1 \
+  "$(PATH="$race:$PATH" rc init 412 --scratchpad "$tmp")"
+check "and is left as the other run wrote it" 'the other run' "$(cat "$tmp/ship-412/run.md")"
+# A line write's temp file is this process's own, so another writer's in-flight
+# one is neither overwritten nor moved over the record.
+out init 413 --scratchpad "$tmp" >/dev/null
+printf 'in flight\n' > "$tmp/ship-413/run.md.t"
+out close 0 --file "$tmp/ship-413/run.md" >/dev/null
+check "a line write leaves another writer's temp file alone" 'in flight' "$(cat "$tmp/ship-413/run.md.t" 2>/dev/null)"
+
 check_rc "a state spec that does not parse is malformed" 2 \
   "$(rc init 402 --scratchpad "$tmp" --state 2=running)"
 check_rc "a state naming no phase of the ten is malformed" 2 \

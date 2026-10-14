@@ -69,9 +69,9 @@ verbatim in the issue body.
 ## Phase 2: classify, then implement test-first
 
 Classify the change into one of three classes and **announce the class and the
-skip path it implies** ("classified `docs`: skipping TDD and phase 3, straight
-to the local gate"), so a wrong label is a visible decision now, not a silently
-skipped verification later.
+skip path it implies** ("classified `docs`: skipping TDD; phase 3 runs only the
+Verifications that apply"), so a wrong label is a visible decision now, not a
+silently skipped verification later.
 
 - **`docs`**: markdown, comments, manifest text with no logic. **Skip TDD**;
   do not manufacture a contrived test. Commit `docs:`.

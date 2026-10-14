@@ -302,9 +302,11 @@ host_issue_unassign() { api -X DELETE "$R/issues/$1/assignees" -f "assignees[]=$
 host_issue_add_label(){ api -X POST "$R/issues/$1/labels" -f "labels[]=$2" >/dev/null; }
 # Check first: a DELETE 404s the same way whether the label was already gone or
 # the call itself failed, and a removal reported on a label still there is
-# exactly the residue this exists to stop.
+# exactly the residue this exists to stop. A read that failed is no verdict, so
+# it fails the removal rather than skip the DELETE, as the Azure DevOps one does.
 host_issue_remove_label() {
-  ship_issue_has_label "$1" "$2" || return 0
+  ship_issue_has_label "$1" "$2"
+  case $? in 0) ;; 1) return 0 ;; *) return 1 ;; esac
   api -X DELETE "$R/issues/$1/labels/$(jq -rn --arg l "$2" '$l | @uri')" >/dev/null
 }
 # A create, so it is create-then-verify: a 5xx may have landed the comment, and a

@@ -390,11 +390,19 @@ ship_flag_value() { # ship_flag_value <usage> <value> [<on-empty>]
   [ -n "$2" ] || ship_tooling "${3:-$1}"
 }
 
-# ship_issue_has_label <n> <label>: exit 0 when the issue carries the label,
+# ship_issue_has_label <n> <label>: exit 0 present, 1 absent, 2 unreadable,
 # read from `host_issue_get`'s labels[] so no adapter keeps a second read of it.
+# A failed read is never a verdict, so a caller confirming a removal tests for
+# 1 (`ship_issue_lacks_label`), never for "not 0".
 ship_issue_has_label() {
-  host_issue_get "$1" | jq -e --arg l "$2" 'any(.labels[]; . == $l)' >/dev/null
+  local issue rc
+  issue=$(host_issue_get "$1") || return 2
+  jq -e --arg l "$2" 'any(.labels[]; . == $l)' <<<"$issue" >/dev/null; rc=$?
+  [ "$rc" -le 1 ] || return 2
+  return "$rc"
 }
+# ship_issue_lacks_label <n> <label>: exit 0 only on a confirmed absent.
+ship_issue_lacks_label() { ship_issue_has_label "$1" "$2"; [ $? -eq 1 ]; }
 
 # ship_tail40 <file>: a failing step's evidence, the last 40 lines of the log.
 ship_tail40() { tail -n 40 "$1" >&2; }

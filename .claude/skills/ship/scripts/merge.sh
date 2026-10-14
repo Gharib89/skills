@@ -171,7 +171,7 @@ if [ "$issue" != none ]; then
   fi
   rfa=$(ship_triage_label ready-for-agent)
   host_issue_remove_label "$issue" "$rfa" >/dev/null 2>&1
-  ship_issue_has_label "$issue" "$rfa" || rfa_removed=true
+  ship_issue_lacks_label "$issue" "$rfa" && rfa_removed=true
 fi
 
 [ "$issue_closed" = true ] && [ "$remote_deleted" = true ] && [ "$base_updated" = true ] \

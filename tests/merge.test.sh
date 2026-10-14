@@ -73,4 +73,22 @@ out=$(run 7 none "$A" 2>/dev/null); rc=$?
 check_rc "a re-run whose branch is already gone exits 0" 0 "$rc"
 check "an absent branch reads as deleted" true "$(jq -r .remote_branch_deleted <<<"$out")"
 
+# The issue's reads: 1 finds it closed, 2 and 3 the claim, 4 confirms the
+# ready-for-agent removal. Only a read that answered absent confirms it (#636).
+closed_issue() {
+  printf 'me\n' > "$SHIP_FAKE/host_identity.1.json"
+  printf '{"number":9,"state":"closed","assignees":[],"labels":["ready-for-agent"]}\n' > "$SHIP_FAKE/host_issue_get.1.json"
+}
+reset; pr 1 merged "$A"; closed_issue
+: > "$SHIP_FAKE/host_issue_get.4.fail"
+out=$(run 7 9 "$A" 2>/dev/null); rc=$?
+check_rc "a merge whose label read failed exits 1" 1 "$rc"
+check "and does not report ready-for-agent removed" false "$(jq -r .ready_for_agent_removed <<<"$out")"
+
+reset; pr 1 merged "$A"; closed_issue
+printf '{"number":9,"state":"closed","assignees":[],"labels":[]}\n' > "$SHIP_FAKE/host_issue_get.4.json"
+out=$(run 7 9 "$A" 2>/dev/null); rc=$?
+check_rc "a merge whose label read answered absent exits 0" 0 "$rc"
+check "and reports ready-for-agent removed" true "$(jq -r .ready_for_agent_removed <<<"$out")"
+
 finish

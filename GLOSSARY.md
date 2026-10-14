@@ -47,7 +47,7 @@ The count of open pull requests at which a fire stops before selecting anything,
 _Avoid_: throttle, rate limit, concurrency limit
 
 **Claim**:
-The assignee on a tracker issue, set by Ship before any work. An assigned issue is in flight or awaiting merge and no run takes it; the same rule in every repo, not an axis.
+The assignee on a tracker issue, set by Ship before any work. An assigned issue is in flight or awaiting merge and no run takes it; the same rule in every repo, not an axis. Exclusive: one run holds it. A take that finds another identity beside its own is _contested_ and gives its own assignment back; a run started at preflight that finds its own identity already assigned yields to the run holding it.
 _Avoid_: lock, agent-working, in-progress label
 
 **Hand-back**:

@@ -15,7 +15,7 @@ rc()  { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 # `manage-issue close` is the verb in the issue position: the issue number is
 # missing, so this is the usage error, not an unknown subcommand.
 check "a verb with no issue number is the usage error" \
-  'usage: manage-issue <issue> take|release|handback "<reason>"|close' \
+  'usage: manage-issue <issue> take [--fresh]|release|handback "<reason>"|close' \
   "$(err close)"
 check_rc "a verb with no issue number is tooling" 2 "$(rc close)"
 
@@ -23,6 +23,11 @@ check "close takes no further argument" \
   'close takes no further argument' \
   "$(err 1 close extra)"
 check_rc "close with an extra argument is tooling" 2 "$(rc 1 close extra)"
+
+check "take names a flag it does not know" \
+  'unknown flag: --force' \
+  "$(err 1 take --force)"
+check_rc "take with an unknown flag is tooling" 2 "$(rc 1 take --force)"
 
 check "an unknown verb is still named" \
   'unknown subcommand: abandon' \
