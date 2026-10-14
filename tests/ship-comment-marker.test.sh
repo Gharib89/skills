@@ -75,6 +75,13 @@ printf '[{"author":"me","body":"PR: https://example.invalid/pull/8\\n%s","create
 check "a marked PR line already there is not posted again" false "$(mech reflect 7 8 | jq -r .posted)"
 printf '[{"author":"me","body":"PR: https://example.invalid/pull/8","created_at":"2026-10-01T00:00:00Z"}]\n' > "$SHIP_FAKE/host_issue_comments.1.json"
 check "nor is an unmarked one from before the marker" false "$(mech reflect 7 8 | jq -r .posted)"
+# A comments read that failed is no verdict on the line, so nothing is posted (#636).
+reset
+printf '{"url":"https://example.invalid/pull/8"}\n' > "$SHIP_FAKE/host_pr_get.1.json"
+: > "$SHIP_FAKE/host_issue_comments.1.fail"
+mech reflect 7 8 >/dev/null; rc=$?
+check_rc "a comments read that failed is tooling" 2 "$rc"
+check "and posts nothing" 0 "$(grep -c '^host_issue_comment	' "$SHIP_FAKE/calls")"
 
 # The body-file mechanics: the file the host receives is the caller's file with
 # the marker appended, and the caller's own file is left as it was.

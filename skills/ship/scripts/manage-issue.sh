@@ -79,7 +79,7 @@ case $op in
     fi
     rfa=$(ship_triage_label ready-for-agent); rfh=$(ship_triage_label ready-for-human)
     removed=false; added=false; commented=false
-    host_issue_remove_label "$n" "$rfa" && ! ship_issue_has_label "$n" "$rfa" && removed=true
+    host_issue_remove_label "$n" "$rfa" && ship_issue_lacks_label "$n" "$rfa" && removed=true
     host_issue_add_label "$n" "$rfh" && ship_issue_has_label "$n" "$rfh" && added=true
     host_issue_comment "$n" "$(ship_mark "🤖 Handed back by a ship run: $reason")" >/dev/null && commented=true
     handed=false; [ "$removed" = true ] && [ "$added" = true ] && handed=true

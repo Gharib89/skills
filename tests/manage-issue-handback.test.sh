@@ -44,6 +44,15 @@ check "a hand-back whose label add missed says what to report" \
   'the claim is released but the hand-back is incomplete: report the labels left null under labels, not a clean stop' \
   "$(cat "$work/err")"
 
+# Read 3 confirms the removal: one that failed confirms nothing, so the label
+# is not reported removed and the hand-back is not reported done (#636).
+reset
+: > "$SHIP_FAKE/host_issue_get.3.fail"
+out=$(run 7 handback "a reason"); rc=$?
+check_rc "a hand-back whose removal read failed exits 1" 1 "$rc"
+check "a hand-back whose removal read failed reports no label removed" \
+  'false null' "$(jq -r '"\(.handed_back) \(.labels.removed)"' <<<"$out")"
+
 reset
 : > "$SHIP_FAKE/host_issue_unassign.1.fail"
 out=$(run 7 handback "a reason"); rc=$?
