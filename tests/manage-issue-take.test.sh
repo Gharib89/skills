@@ -48,7 +48,7 @@ check "and answers held" held "$(jq -r .claim <<<"$out")"
 reset '["me"]'
 out=$(run 7 take --fresh); rc=$?
 check_rc "a fresh run refuses an issue this identity already holds" 1 "$rc"
-check "and answers held, naming the run that holds it" 'held held: another run of this identity holds it' \
+check "and answers held, saying another run of this identity holds it" 'held held: another run of this identity holds it' \
   "$(jq -r '"\(.claim) \(.error)"' <<<"$out")"
 check "and writes nothing" 0 "$(calls 'host_issue_\(assign\|unassign\|comment\)')"
 
