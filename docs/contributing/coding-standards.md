@@ -46,6 +46,19 @@ deleted; assertions removed from a test that stays; a new suppression (a
 gate threshold or config loosened. Each is a finding unless the PR names it and
 says why, because the diff shows the change and not the coverage it gave up.
 
+**A contract the change alters has its callers found first.** Before changing a
+function's signature, return value or behavior, grep the symbol across the tree
+for its callers, tests, fixtures, config, exports and string or dynamic
+references, and update each caller the change breaks, keeping its test,
+validation and error handling; the fix lands once in the shared code, not per
+caller. A caller left unchecked breaks where the diff does not show it.
+
+**A dependency the change adds says why the standard library and the repo's own
+do not serve.** Prefer what the language ships or the repo already installs; a
+new dependency names, under the PR body's `## Special things to note`, the
+concrete requirement neither meets, because every one is a supply-chain and
+upgrade cost the repo carries for good.
+
 **What the rules cover.** These are the scope facts reviewers most often got
 wrong; each sub-file's rule holds inside them.
 

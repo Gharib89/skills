@@ -88,6 +88,17 @@ skipped verification later.
 
 When in doubt between `code` and `docs`, treat it as `code` and write the test.
 
+**Callers first, dependencies justified.** Before the first edit to a
+function's signature, return value or behavior, grep the changed symbol across
+the tree: its callers, the tests that exercise it, fixtures, config, exports,
+and string or dynamic references. A caller the change breaks is in scope and is
+updated, its test, validation and error handling kept, and a fix lands once in
+the shared code rather than once per caller. A similar caller the change leaves
+working is an **Adjacent find**, not a drive-by fix. Prefer the standard
+library or what the repo already installs; a new dependency needs a concrete
+reason neither meets the requirement, stated in the PR body's
+`## Special things to note`.
+
 **Tripwires are not a class.** Whatever the class, the profile's `Tripwires:`
 and `In-PR requirement:` land in the same change, or a later phase goes red with
 no phase explaining why.
@@ -181,8 +192,9 @@ Then read the diff yourself against the depth checks in the coding-standards
 file the Standards axis reads, and the sub-files it routes to, by their leading
 words: a vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, removed lines with
-no new home, a fix landed after review, a diff that lowers the bar, and any the
-repo adds beside them.
+no new home, a fix landed after review, a diff that lowers the bar,
+a contract the change alters, a dependency the change adds, and any the repo
+adds beside them.
 
 ## Phase 4: the self-review loop
 
