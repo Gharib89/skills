@@ -6,6 +6,9 @@
 #   check-hook.sh turn   Stop: check.sh turn, skipped when the working tree has
 #                        not changed since the last check
 #
+# The edit rung checks in the edited file's repo, the turn rung in the cwd's;
+# a repo with no $CHECK is skipped in silence.
+#
 # Claude Code sees only exit 2, so a failing check (check.sh exit 1) becomes
 # exit 2 with its output on stderr, capped under the 10k-character limit past
 # which Claude Code swaps it for a file path. A check that is unavailable
@@ -38,9 +41,11 @@ if [ "$rung" = edit ]; then
   [ -n "$file" ] || exit 0
   # The repo that owns the edited file, wherever the shell's cwd has moved.
   root=$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null) || exit 0
+  set -- "$file"
 else
   # The cwd's repo, so a session in a worktree checks the worktree.
   root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+  set --
 fi
 # A repo with no check entry point has no harness, so nothing to check.
 [ -x "$root/$CHECK" ] || exit 0
@@ -56,9 +61,7 @@ say() { # <message>: a systemMessage for the human; never blocks
 # The names of the checks carrying <status> in a check.sh JSON line.
 named() { printf '%s' "$2" | sed 's/.*"checks":{//' | grep -o "\"[^\"]*\":\"$1\"" | sed 's/":".*//; s/^"//' | paste -sd, - | sed 's/,/, /g'; }
 
-if [ "$rung" = edit ]; then
-  set -- "$file"
-else
+if [ "$rung" = turn ]; then
   # A throwaway index seeded from the real one, so the fingerprint costs
   # milliseconds and the real index is never touched. `git add` still writes
   # each changed file's blob to the object store, where gc reclaims it.
@@ -74,7 +77,6 @@ else
     [ "${last#* }" = pass ] || say "harness: turn rung still ${last#* }, unchanged since the last check"
     exit 0
   fi
-  set --
 fi
 
 errf=$(mktemp) || exit 0

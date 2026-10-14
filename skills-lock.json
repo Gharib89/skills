@@ -82,7 +82,7 @@
     "setup-harness": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "dc5d4fd66de9fe74c8ea4b0361594fc8897bbf14fa7c7b3edf625aedd9e708b3"
+      "computedHash": "e7f8cf5ba0520066b5a4ade58926a6643f9978e6e1795b59b59cf1008e6cc6c8"
     },
     "setup-matt-pocock-skills": {
       "source": "mattpocock/skills",

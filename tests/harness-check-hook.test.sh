@@ -108,18 +108,21 @@ check "the real index is untouched by the fingerprint" "?? new.py
 
 # A second repo with no check.sh, such as one the shell has cd'd into: it has
 # no harness, so there is nothing to check and nothing to say.
-bare=$fixture/bare
-mkdir -p "$bare"
-git -C "$bare" init -q
-cwd=$bare hook turn "$stop_in"
+unharnessed=$fixture/unharnessed
+mkdir -p "$unharnessed"
+git -C "$unharnessed" init -q
+cwd=$unharnessed hook turn "$stop_in"
 check_rc "a turn in a repo with no check.sh lets the stop through" 0 "$rc"
 check "a turn in a repo with no check.sh says nothing" "" "$out"
 
-# The edited file's repo decides, not the shell's cwd.
+# The edited file's repo decides, not the shell's cwd, in both directions.
 : > "$STUB_LOG"
-hook edit '{"hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"'$bare'/b.py"}}'
+hook edit '{"hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"'"$unharnessed"'/b.py"}}'
 check_rc "an edit in a repo with no check.sh exits 0" 0 "$rc"
 check "an edit in a repo with no check.sh says nothing" "" "$out"
 check "an edit in a repo with no check.sh never runs the cwd repo's check.sh" 0 "$(calls)"
+
+STUB_RC=0 cwd=$unharnessed hook edit "$edit_in"
+check "an edit in a harnessed repo is checked from a cwd with no check.sh" 1 "$(calls)"
 
 finish
