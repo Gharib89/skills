@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.23.0 (2026-10-14)
+
+### Features
+
+- **ship**: Clean-gate evidence covers the PR head
+  ([#645](https://github.com/Gharib89/skills/pull/645),
+  [`9e1bdb7`](https://github.com/Gharib89/skills/commit/9e1bdb779f973002649eb5020f45615ab9075f66))
+
+
 ## v0.22.0 (2026-10-14)
 
 ### Features
