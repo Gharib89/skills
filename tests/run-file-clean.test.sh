@@ -34,12 +34,12 @@ PROFILE
   cat > "$f" <<'RUN'
 # ship run
 ## Verification results
-- live check: punctuation: pass
+- live check: punctuation: pass at abcdef0123456789
 ## Local gate
 - 10:00 abcdef0123456789 pass {"tests":"pass","secrets":"pass"}
 ## Review evidence
 Round: primary 1: all dispositioned
-Stop: primary: tree unchanged
+Stop: primary: tree unchanged at abcdef0123456789
 Stop: fallback: not reviewed
 RUN
   printf '%s\n' '{"status":"green","head_sha":"abcdef0123456789","checks":[{"name":"test","status":"success"}],"legs":["test"],"missing_legs":[],"failing":[],"non_leg_failing":[],"unlisted":[],"waited_s":0}' > "$ci"
@@ -64,12 +64,16 @@ unheld() { check "$1 does not hold $2" false "$(call | jq -r --arg r "$2" '.held
 change_run() { sed "$1" "$f" > "$f.new" && mv "$f.new" "$f"; }
 change_ci() { jq "$1" "$ci" > "$ci.new" && mv "$ci.new" "$ci"; }
 base; clean 'all recorded conditions holding'
+# Evidence that names no head covers none: an unstamped stop or pass is stale.
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: tree unchanged/'; held 'an unstamped tree-unchanged stop' 'reviewer primary: tree unchanged with no head stamp'
+base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: pass/'; held 'an unstamped verification pass' 'verification live check: punctuation: pass with no head stamp'
+base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: pass at abcdef0: ran the fixture/'; clean 'an abbreviated stamp with a note'
 # A self-review stopped at its cap left fixes unread: a settled reviewer read them.
 capped='self-review: stopped at cap, its last fixes read by no reviewer'
 base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; clean 'a capped self-review a settled reviewer read'
-base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; change_run 's/^Stop: primary: tree unchanged/Stop: primary: not reviewed/'; held 'a capped self-review no reviewer read' "$capped"
+base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; change_run 's/^Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed/'; held 'a capped self-review no reviewer read' "$capped"
 base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; printf '## CI\nLegs:\n  test: prove the change\n\n## Reviewers\nNone.\n' > "$profile"; held 'a capped self-review in a repo with no reviewer' "$capped"
-base; printf '%s\n' 'Stop: self-review: cap' 'Stop: self-review: tree unchanged' >> "$f"; change_run 's/^Stop: primary: tree unchanged/Stop: primary: not reviewed/'; unheld 'a later tree-unchanged stop' "$capped"
+base; printf '%s\n' 'Stop: self-review: cap' 'Stop: self-review: tree unchanged' >> "$f"; change_run 's/^Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed/'; unheld 'a later tree-unchanged stop' "$capped"
 base; change_run 's/abcdef0123456789/1111111111111111/'; held 'stale gate' 'local gate: recorded head differs'
 base; change_run '/^- 10:00/d'; held 'missing gate' 'local gate: no record'
 for status in fail unavailable; do
@@ -95,17 +99,17 @@ base; change_ci '.checks[0].name="testing"'; held 'partial leg token' 'CI test: 
 base; change_ci '.checks[0].name="test (linux)"'; clean 'successful matrix leg'
 base; change_ci '.checks += [{name:"unlisted",status:"failure"}]'; clean 'non-leg red is independent'
 for status in fail unavailable unexercised pending; do
-  base; change_run "s/punctuation: pass/punctuation: $status/"; held "$status verification" "verification live check: punctuation: $status"
+  base; change_run "s/punctuation: pass at abcdef0123456789/punctuation: $status/"; held "$status verification" "verification live check: punctuation: $status"
 done
 base; change_run '/^- live check/d'; held 'missing verification' 'verification live check: punctuation: missing'
-base; change_run 's/punctuation: pass/punctuation: n\/a/'; clean 'inapplicable verification'
-base; change_run 's/punctuation: pass/punctuation: deferred-to-ci: test/'; clean 'deferred verification with green associated leg'
-base; change_run 's/punctuation: pass/punctuation: deferred-to-ci: test/'; sed 's/Also proven by CI: test/Also proven by CI: None./' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; held 'deferred verification without association' 'verification live check: punctuation: no associated green CI leg'
+base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: n\/a/'; clean 'inapplicable verification'
+base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: deferred-to-ci: test/'; clean 'deferred verification with green associated leg'
+base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: deferred-to-ci: test/'; sed 's/Also proven by CI: test/Also proven by CI: None./' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; held 'deferred verification without association' 'verification live check: punctuation: no associated green CI leg'
 for stop in cap 'small lane' 'not reviewed'; do
-  base; change_run "s/Stop: primary: tree unchanged/Stop: primary: $stop/"; held "$stop primary without fallback" "reviewer primary: $stop"
+  base; change_run "s/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: $stop/"; held "$stop primary without fallback" "reviewer primary: $stop"
 done
 # An inline run with no --review requested no round: --inline waived it, so the stop settles the reviewer.
-inline() { base; change_run '/^Round: primary/d; s/Stop: primary: tree unchanged/Stop: primary: inline lane/; s/Stop: fallback: not reviewed/Stop: fallback: inline lane/; $a Lane: inline'; }
+inline() { base; change_run '/^Round: primary/d; s/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: inline lane/; s/Stop: fallback: not reviewed/Stop: fallback: inline lane/; $a Lane: inline'; }
 inline; clean 'inline-lane stops on the primary and its fallback'
 # The last Lane: line decides: a run with none, or one revoked out of the lane, keeps no waiver.
 inline; change_run '/^Lane: inline/d'; held 'inline-lane stops with no Lane: line' 'reviewer primary: inline lane'
@@ -115,30 +119,30 @@ inline; touch "$tmp/records/ship-clean/defect-1.md"; held 'inline lane with a Sh
 for trigger in auto-once on-push; do
   inline; sed "0,/Trigger: on-request/s//Trigger: $trigger/" "$profile" > "$profile.new"; mv "$profile.new" "$profile"; held "an inline-lane stop on an $trigger reviewer" 'reviewer primary: inline lane'
 done
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/; s/Stop: fallback: not reviewed/Stop: fallback: inline lane/'; held 'an inline-lane fallback does not cover a primary that was not reviewed' 'reviewer primary: not reviewed'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed/; s/Stop: fallback: not reviewed/Stop: fallback: inline lane/'; held 'an inline-lane fallback does not cover a primary that was not reviewed' 'reviewer primary: not reviewed'
 base; printf 'Round: primary 2:   \n' >> "$f"; held 'blank latest round' 'reviewer primary: no dispositioned round'
 base; change_run '/^Round: primary/d'; held 'stop without dispositioned round' 'reviewer primary: no dispositioned round'
 base; change_run '/^Stop: primary/d'; held 'missing reviewer stop' 'reviewer primary: missing stop'
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'not reviewed primary covered by a fallback stopped on tree unchanged'
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: cap/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'cap is not rescued by fallback' 'reviewer primary: cap'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'not reviewed primary covered by a fallback stopped on tree unchanged'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'cap is not rescued by fallback' 'reviewer primary: cap'
 # A primary that spent its Cap: on a tree-changing last round owes its fallback a run (#531).
-capped() { base; sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_run 's/Stop: primary: tree unchanged/Round: primary 2: fixes pushed\nStop: primary: cap/'; }
+capped() { base; sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Round: primary 2: fixes pushed\nStop: primary: cap/'; }
 capped; held 'capped primary owes its fallback' 'reviewer fallback: not reviewed'
-capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'capped primary covered by a fallback stopped on tree unchanged'
+capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'capped primary covered by a fallback stopped on tree unchanged'
 capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'capped primary with a capped fallback' 'reviewer fallback: cap'
-capped; printf 'Stop: fallback: tree unchanged\n' >> "$f"; held 'capped primary with an undispositioned fallback' 'reviewer fallback: no dispositioned round'
-capped; change_run 's/Round: primary 2:/Round: primary 3:/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'gapped round numbers do not spend the cap' 'reviewer primary: cap'
-capped; change_run 's/Round: primary 2: fixes pushed/Round: primary 2:   /'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; held 'a blank round does not spend the cap' 'reviewer primary: cap'
-capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged/'; clean 'primary at its cap with an unchanged tree owes no fallback'
+capped; printf 'Stop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'capped primary with an undispositioned fallback' 'reviewer fallback: no dispositioned round'
+capped; change_run 's/Round: primary 2:/Round: primary 3:/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'gapped round numbers do not spend the cap' 'reviewer primary: cap'
+capped; change_run 's/Round: primary 2: fixes pushed/Round: primary 2:   /'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a blank round does not spend the cap' 'reviewer primary: cap'
+capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged at abcdef0123456789/'; clean 'primary at its cap with an unchanged tree owes no fallback'
 # A docs-only fix-only diff ends the loop before Cap: is spent: no fallback is owed, and none covers it.
 capped; change_run '/^Round: primary 2/d'; held 'docs-only end before the cap' 'reviewer primary: cap'
 capped; change_run '/^Round: primary 2/d'; unheld 'docs-only end before the cap' 'reviewer fallback: not reviewed'
 # A primary whose later round did not land after a fix changed the tree owes its fallback a run (#551).
-landed() { base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not landed/'; }
+landed() { base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not landed/'; }
 landed; held 'not-landed primary owes its fallback' 'reviewer fallback: not reviewed'
-landed; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged\n' >> "$f"; clean 'not-landed primary covered by a fallback stopped on tree unchanged'
+landed; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'not-landed primary covered by a fallback stopped on tree unchanged'
 landed; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'not-landed primary with a capped fallback' 'reviewer primary: not landed'
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: auto-once/'; held 'auto-once changed round' 'reviewer primary: auto-once'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: auto-once/'; held 'auto-once changed round' 'reviewer primary: auto-once'
 base; sed 's/Trigger: on-request/Trigger: auto-once/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; clean 'auto-once unchanged round records tree unchanged'
 base; printf 'Override: declined gating finding\n' >> "$f"; held 'override needed' 'override needed: declined gating finding'
 base; printf 'Ship-defect: upstream gap #42\n' >> "$f"; held 'source repo defect without draft' 'Ship defect: upstream gap #42'
@@ -146,10 +150,10 @@ base; touch "$tmp/records/ship-clean/defect-1.md"; held 'Ship defect draft' 'Shi
 base; touch "$tmp/records/ship-clean/tracker-1.md"; held 'Tracker draft' 'Tracker draft: tracker-1.md'
 base; touch "$tmp/records/ship-clean/defect-1.base.md"; printf 'Deviation: accepted scoped departure\nOverride: None.\nShip-defect: none\n' >> "$f"; clean 'deviation and draft base are independent'
 base; printf '  Override: quoted\n`Ship-defect: quoted`\nOverrides: partial token\n' >> "$f"; clean 'quoted indented partial evidence does not match'
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: cap/'; printf '\n```\nStop: primary: tree unchanged\n```\n' >> "$f"; held 'fenced stop cannot override cap' 'reviewer primary: cap'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'; printf '\n```\nStop: primary: tree unchanged at abcdef0123456789\n```\n' >> "$f"; held 'fenced stop cannot override cap' 'reviewer primary: cap'
 base; printf '\n~~~\nOverride: example\nShip-defect: example\n~~~\n' >> "$f"; clean 'fenced examples are not evidence'
 base; change_run 's/"tests":"pass"/"tests":"fail"/'; printf '\n```\n## Local gate\n- 11:00 abcdef0123456789 pass {"tests":"pass","secrets":"pass"}\n```\n' >> "$f"; held 'fenced gate cannot replace failing gate' 'local gate tests: fail'
-base; change_run 's/punctuation: pass/punctuation: fail/'; printf '\n```\n## Verification results\n- live check: punctuation: pass\n```\n' >> "$f"; held 'fenced verification cannot replace failing result' 'verification live check: punctuation: fail'
+base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: fail/'; printf '\n```\n## Verification results\n- live check: punctuation: pass\n```\n' >> "$f"; held 'fenced verification cannot replace failing result' 'verification live check: punctuation: fail'
 base; printf '\n```\n' >> "$f"; answer=$(call); check_rc 'unclosed Run file fence is tooling' 2 "$?"; check 'unclosed fence names its record' "cannot read Run file evidence at $f" "$(jq -r .error <<<"$answer")"
 if [ "$(id -u)" -ne 0 ]; then
   base; touch "$tmp/records/ship-clean/defect-1.md"; chmod 111 "$tmp/records/ship-clean"
@@ -160,7 +164,7 @@ else
   skipped 'unreadable draft directory: chmod does not stop root'
 fi
 base; printf 'Stop: primary: cap\n' >> "$f"; held 'last stop wins' 'reviewer primary: cap'
-base; change_run 's/Stop: primary: tree unchanged/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'fallback stopped at cap' 'reviewer primary: not reviewed'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'fallback stopped at cap' 'reviewer primary: not reviewed'
 base; change_ci '.status="no-checks" | .checks=[]'; held 'legal no-checks cannot replace expected green leg' 'CI test: missing'
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_ci '.status="no-checks" | .checks=[]'; held 'no-checks not explicitly legal' 'CI: no-checks'
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; printf '\n' >> "$profile"; sed '/^Legs:/a No-checks legal: yes' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_ci '.status="no-checks" | .checks=[]'; clean 'legal no-checks with no expected legs'
@@ -171,7 +175,7 @@ base; legal; change_ci '.status="no-checks" | .checks=[]'; clean 'legal no-check
 base; legal; change_ci '.checks[0].status="failure"'; held 'legal policy keeps a red leg' 'CI test: failure'
 base; legal; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.status="no-checks" | .checks=[]'; held 'legal missing leg cannot cover a deferred local gate' 'CI test: missing'
 base; legal; change_run 's/"tests":"pass"/"tests":"deferred-to-ci"/'; change_ci '.legs=["test","docs"] | .missing_legs=["docs"]'; held 'deferred local gate keeps a filtered leg held' 'CI docs: missing'
-base; legal; change_run 's/punctuation: pass/punctuation: deferred-to-ci/'; change_ci '.checks=[]'; held 'legal missing leg proves no deferred verification' 'verification live check: punctuation: no associated green CI leg'
+base; legal; change_run 's/punctuation: pass at abcdef0123456789/punctuation: deferred-to-ci/'; change_ci '.checks=[]'; held 'legal missing leg proves no deferred verification' 'verification live check: punctuation: no associated green CI leg'
 base; rm "$ci"; answer=$(call); check_rc 'unreadable CI input is tooling' 2 "$?"; check 'unreadable CI names its path' "cannot read CI answer at $ci" "$(jq -r .error <<<"$answer")"
 base; sed '/^## Verification/i ```' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; answer=$(call); check_rc 'unclosed profile fence is tooling' 2 "$?"; check 'unclosed profile fence names failed read' "cannot read profile evidence at $profile" "$(jq -r .error <<<"$answer")"
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; sed '/^Legs:/a No-checks legal: no' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; printf '\n```\n## CI\nLegs: None.\nNo-checks legal: yes\n```\n' >> "$profile"; change_ci '.status="no-checks" | .checks=[]'; held 'fenced CI policy cannot authorize no-checks' 'CI: no-checks'
@@ -190,7 +194,7 @@ sk=$(cd "$repo" && bash "$m" init skip --scratchpad "$tmp/records" --from-profil
 (cd "$repo" && { bash "$m" close 0 --file "$sk"; for p in 1 2; do bash "$m" open "$p" --file "$sk"; bash "$m" close "$p" --file "$sk"; done
   bash "$m" skip 3 'docs class: no verification applies' --file "$sk"
   printf '{"verdict":"pass","gates":{"tests":"pass","secrets":"pass"}}' | bash "$m" gate record - --head "$head" --file "$sk"; } >/dev/null 2>&1)
-printf '## Review evidence\nRound: primary 1: all dispositioned\nStop: primary: tree unchanged\nStop: fallback: not reviewed\n' >> "$sk"
+printf '## Review evidence\nRound: primary 1: all dispositioned\nStop: primary: tree unchanged at abcdef0123456789\nStop: fallback: not reviewed\n' >> "$sk"
 answer=$(cd "$repo" && bash "$m" gate clean "$ci" --head "$head" --file "$sk" 2>/dev/null); rc=$?
 check_rc 'a skipped phase 3 exits clean' 0 "$rc"
 check 'a skipped phase 3 holds no verification' '{"clean":true,"held_by":[]}' "$(jq -c . <<<"$answer")"

@@ -27,6 +27,10 @@ export XDG_STATE_HOME=$tmp/state
 at()    { local d=$1; shift; ( cd "$d" && bash "$m" "$@" 2>/dev/null ); }
 inrc()  { local d=$1; shift; ( cd "$d" && bash "$m" "$@" >/dev/null 2>&1 ); echo $?; }
 inerr() { local d=$1; shift; ( cd "$d" && bash "$m" "$@" 2>/dev/null ) | jq -r '.error'; }
+# A result carries the head close 3 recorded it on; the cases about its word and
+# note read it without that stamp, which the stamp cases below assert.
+unstamp() { sed -E 's/ at [0-9a-f]{40}(: |$)/\1/'; }
+entry() { grep "$1" "$2" | unstamp; }
 
 # --- where the record lives -----------------------------------------------------
 
@@ -95,7 +99,7 @@ check_rc "--issue outside a checkout with no --scratchpad is malformed" 2 \
 
 rf=$(at "$repo" init 20 --verifications 'github-mechanics, ado-mechanics' | jq -r .run_file)
 check "init keeps the checklist line's text" \
-  '- [ ] 3 · Verify: github-mechanics, ado-mechanics scoped to what changed' "$(grep '^- \[ \] 3 · ' "$rf")"
+  '- [ ] 3 · Verify: github-mechanics, ado-mechanics scoped to what changed' "$(entry '^- \[ \] 3 · ' "$rf")"
 check "init lists each named verification as pending, between the checklist and the plan" \
   '## Verification results
 
@@ -127,12 +131,12 @@ check "the refused close changed nothing" "$before" "$(cat "$rf")"
 check "a refused close still records the result it was given" \
   'phase 3 cannot close with verifications pending: ado-mechanics; record each with `run-file close 3 --result <name>=<pass|fail|deferred-to-ci|unavailable|unexercised|n/a>`' \
   "$(inerr "$repo" close 3 --file "$rf" --result github-mechanics=pass)"
-check "the recorded result is in the section" '- github-mechanics: pass' "$(grep '^- github-mechanics: ' "$rf")"
-check "the other stays pending" '- ado-mechanics: pending' "$(grep '^- ado-mechanics: ' "$rf")"
+check "the recorded result is in the section" '- github-mechanics: pass' "$(entry '^- github-mechanics: ' "$rf")"
+check "the other stays pending" '- ado-mechanics: pending' "$(entry '^- ado-mechanics: ' "$rf")"
 c=$(at "$repo" close 3 --file "$rf" --result 'ado-mechanics=n/a: Applies when was false'); crc=$?
 check_rc "close 3 exits ok once every name has a result" 0 "$crc"
 check "close 3 answers once every name has a result" completed "$(jq -r .mirror <<<"$c")"
-check "a result may carry a note" '- ado-mechanics: n/a: Applies when was false' "$(grep '^- ado-mechanics: ' "$rf")"
+check "a result may carry a note" '- ado-mechanics: n/a: Applies when was false' "$(entry '^- ado-mechanics: ' "$rf")"
 check "phase 3 is closed" 1 "$(grep -c '^- \[x\] 3 · .*([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9])$' "$rf")"
 
 # A word outside the set, or a name init never saw, is malformed and writes nothing.
@@ -148,9 +152,20 @@ check_rc "--result on another phase is malformed" 2 "$(inrc "$repo" close 4 --fi
 check "the refused results changed nothing" "$was" "$(cat "$rg")"
 for w in pass fail deferred-to-ci unavailable unexercised n/a; do
   at "$repo" close 3 --file "$rg" --result "github-mechanics=$w" >/dev/null 2>&1
-  check "the word $w is recorded" "- github-mechanics: $w" "$(grep '^- github-mechanics: ' "$rg")"
+  check "the word $w is recorded" "- github-mechanics: $w" "$(entry '^- github-mechanics: ' "$rg")"
   at "$repo" open 3 --file "$rg" >/dev/null 2>&1
 done
+
+# Each result records the head it was proven on: the checkout's HEAD by default,
+# or --head, which belongs to close 3 alone.
+check "a result is stamped with the checkout's HEAD" "- ado-mechanics: n/a at $first: Applies when was false" "$(grep '^- ado-mechanics: ' "$rf")"
+at "$repo" close 3 --file "$rg" --result github-mechanics=pass --head 0123abcd >/dev/null
+check "--head names the stamp" '- github-mechanics: pass at 0123abcd' "$(grep '^- github-mechanics: ' "$rg")"
+at "$repo" open 3 --file "$rg" >/dev/null
+was=$(cat "$rg")
+check_rc "a --head that is no sha is malformed" 2 "$(inrc "$repo" close 3 --file "$rg" --result github-mechanics=pass --head HEAD)"
+check "--head on another phase is refused" '--head belongs to close 3' "$(inerr "$repo" close 4 --file "$rg" --head 0123abcd)"
+check "the refused heads changed nothing" "$was" "$(cat "$rg")"
 
 # No verification named: close 3 needs no result, and --result has no name to take.
 rn=$(at "$repo" init 25 | jq -r .run_file)
@@ -176,25 +191,25 @@ check "the refused next wrote nothing" "$was" "$(cat "$rx")"
 rp=$(at "$repo" init 30 --from-profile "$profile")
 fp=$(jq -r .run_file <<<"$rp")
 check "the tripwires slot is the profile's value" \
-  '- [ ] 2 · Implement: classify (docs/code/infra), lane keys, TDD per class, tripwires no raw SQL; no new dependency' "$(grep '^- \[ \] 2 · ' "$fp")"
+  '- [ ] 2 · Implement: classify (docs/code/infra), lane keys, TDD per class, tripwires no raw SQL; no new dependency' "$(entry '^- \[ \] 2 · ' "$fp")"
 check "the verification slot is the headings under ## Verification" \
-  '- [ ] 3 · Verify: github-mechanics, ado-mechanics scoped to what changed' "$(grep '^- \[ \] 3 · ' "$fp")"
+  '- [ ] 3 · Verify: github-mechanics, ado-mechanics scoped to what changed' "$(entry '^- \[ \] 3 · ' "$fp")"
 check "the reviewers slot is the headings under ## Reviewers" \
-  '- [ ] 7 · Reviewers: copilot, claude, one bounded pass each' "$(grep '^- \[ \] 7 · ' "$fp")"
+  '- [ ] 7 · Reviewers: copilot, claude, one bounded pass each' "$(entry '^- \[ \] 7 · ' "$fp")"
 check "the legs slot is the leg names" \
-  '- [ ] 8 · CI: resolve any conflict, land bump-guard, lint green' "$(grep '^- \[ \] 8 · ' "$fp")"
+  '- [ ] 8 · CI: resolve any conflict, land bump-guard, lint green' "$(entry '^- \[ \] 8 · ' "$fp")"
 check "a profile's verifications get their results section" \
   '- github-mechanics: pending
-- ado-mechanics: pending' "$(grep '^- [a-z-]*: pending$' "$fp")"
+- ado-mechanics: pending' "$(entry '^- [a-z-]*: pending$' "$fp")"
 check "a heading outside ## Verification is not a verification" 0 "$(grep -c 'not-a-verification' "$fp")"
 check "the JSON still returns the items" 10 "$(jq '.items | length' <<<"$rp")"
 
 ro=$(at "$repo" init 31 --from-profile "$profile" --legs 'my-leg' --tripwires 'explicit' | jq -r .run_file)
-check "an explicit --legs wins over the profile" '- [ ] 8 · CI: resolve any conflict, land my-leg green' "$(grep '^- \[ \] 8 · ' "$ro")"
+check "an explicit --legs wins over the profile" '- [ ] 8 · CI: resolve any conflict, land my-leg green' "$(entry '^- \[ \] 8 · ' "$ro")"
 check "an explicit --tripwires wins over the profile" \
-  '- [ ] 2 · Implement: classify (docs/code/infra), lane keys, TDD per class, tripwires explicit' "$(grep '^- \[ \] 2 · ' "$ro")"
+  '- [ ] 2 · Implement: classify (docs/code/infra), lane keys, TDD per class, tripwires explicit' "$(entry '^- \[ \] 2 · ' "$ro")"
 check "the slots not given explicitly still come from the profile" \
-  '- [ ] 7 · Reviewers: copilot, claude, one bounded pass each' "$(grep '^- \[ \] 7 · ' "$ro")"
+  '- [ ] 7 · Reviewers: copilot, claude, one bounded pass each' "$(entry '^- \[ \] 7 · ' "$ro")"
 
 # The path left out is the current checkout's own profile.
 mkdir -p "$wt/docs/agents"; cp "$profile" "$wt/docs/agents/ship.md"
@@ -210,7 +225,7 @@ check_rc "no path outside a checkout is malformed" 2 "$(GIT_CEILING_DIRECTORIES=
 # A profile with no Legs line, no verification, no reviewer: the defaults stand.
 printf '## Local gate\n\nTripwires: None.\n' > "$tmp/bare.md"
 fb=$(at "$repo" init 36 --from-profile "$tmp/bare.md" | jq -r .run_file)
-check "an empty profile leaves legs None." '- [ ] 8 · CI: resolve any conflict, land None. green' "$(grep '^- \[ \] 8 · ' "$fb")"
+check "an empty profile leaves legs None." '- [ ] 8 · CI: resolve any conflict, land None. green' "$(entry '^- \[ \] 8 · ' "$fb")"
 check "an empty profile leaves verifications unnamed" 0 "$(grep -c '^## Verification results$' "$fb")"
 
 # Every heading under ## Verification is a name, whatever it holds: a name with a
@@ -221,9 +236,9 @@ fs=$(jq -r .run_file <<<"$rsp")
 check "a profile heading with a space is a verification name" \
   '- Docs check: pending
 - Build: unit tests: pending
-- github-mechanics: pending' "$(grep '^- .*: pending$' "$fs")"
+- github-mechanics: pending' "$(entry '^- .*: pending$' "$fs")"
 check "the checklist line still joins the headings" \
-  '- [ ] 3 · Verify: Docs check, Build: unit tests, github-mechanics scoped to what changed' "$(grep '^- \[.\] 3 · ' "$fs")"
+  '- [ ] 3 · Verify: Docs check, Build: unit tests, github-mechanics scoped to what changed' "$(entry '^- \[.\] 3 · ' "$fs")"
 at "$repo" close 0 --file "$fs" >/dev/null
 for p in 1 2; do at "$repo" open "$p" --file "$fs" >/dev/null; at "$repo" close "$p" --file "$fs" >/dev/null; done
 at "$repo" open 3 --file "$fs" >/dev/null
@@ -236,7 +251,7 @@ check "close 3 refuses while only the colon-bearing name has no result" \
   "$(inerr "$repo" close 3 --file "$fs" --result 'Docs check=n/a: no doc touched' --result 'github-mechanics=pass: waiting: pending')"
 at "$repo" close 3 --file "$fs" --result 'Build: unit tests=pass' >/dev/null
 check "a result names the spaced name and splits on the first =" \
-  '- Docs check: n/a: no doc touched' "$(grep '^- Docs check: ' "$fs")"
+  '- Docs check: n/a: no doc touched' "$(entry '^- Docs check: ' "$fs")"
 check "close 3 passes once the spaced name has its result" 1 \
   "$(grep -c '^- \[x\] 3 · .*([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9])$' "$fs")"
 check "a hand-passed spaced name list has no results section" 0 \
@@ -297,7 +312,7 @@ sed 's/^- github-mechanics: pending$/- github-mechanics: pass: waiting: pending/
 at "$repo" skip 6 'small lane' --file "$sk" >/dev/null
 check "skip of another phase leaves pending results pending" \
   '- Docs check: pending
-- Build: unit tests: pending' "$(grep '^- .*: pending$' "$sk" | grep -v '^- github-mechanics: ')"
+- Build: unit tests: pending' "$(entry '^- .*: pending$' "$sk" | grep -v '^- github-mechanics: ')"
 at "$repo" open 3 --file "$sk" >/dev/null
 before=$(cat "$sk")
 check_rc "skip 3 over an open phase 3 is refused" 1 "$(inrc "$repo" skip 3 'docs class' --file "$sk")"
@@ -327,7 +342,7 @@ sk3=$(at "$repo" init 63 --from-profile "$spaced" | jq -r .run_file)
 sed 's/^- github-mechanics: pending$/- github-mechanics: pass: waiting: pending/' "$sk3" > "$sk3.new" && mv "$sk3.new" "$sk3"
 at "$repo" skip 3 'docs class' --file "$sk3" >/dev/null
 check "a result already carrying a word keeps it" \
-  '- github-mechanics: pass: waiting: pending' "$(grep '^- github-mechanics: ' "$sk3")"
+  '- github-mechanics: pass: waiting: pending' "$(entry '^- github-mechanics: ' "$sk3")"
 check "the pending ones beside it are settled" \
   '- Docs check: n/a: docs class
 - Build: unit tests: n/a: docs class' "$(grep -e '^- Docs check: ' -e '^- Build: unit tests: ' "$sk3")"
@@ -445,6 +460,8 @@ check_rc "gate with no subcommand is malformed" 2 "$(inrc "$repo" gate)"
 # takes a result for a heading added there after init, appending its entry.
 added=$tmp/added
 git init -q -b main "$added"; mkdir -p "$added/docs/agents"; cp "$profile" "$added/docs/agents/ship.md"
+git -C "$added" -c user.email=t@t -c user.name=t -c commit.gpgsign=false commit -q --allow-empty -m one
+added_head=$(git -C "$added" rev-parse HEAD)
 add_heading() { # add_heading <heading> [<section>]: a new first heading under ## Verification, or <section>
   awk -v h="$1" -v s="## ${2:-Verification}" '{ print } $0 == s { print ""; print "### " h }' "$added/docs/agents/ship.md" > "$tmp/added.md" \
     && mv "$tmp/added.md" "$added/docs/agents/ship.md"
@@ -454,9 +471,9 @@ to_phase3() { # to_phase3 <run file>
   for p in 1 2; do at "$added" open "$p" --file "$1" >/dev/null; at "$added" close "$p" --file "$1" >/dev/null; done
   at "$added" open 3 --file "$1" >/dev/null
 }
-printf '%s\n' '{"status":"green","head_sha":"abcdef0123456789","checks":[],"legs":[],"missing_legs":[],"failing":[],"non_leg_failing":[],"unlisted":[],"waited_s":0}' > "$tmp/ci.json"
+printf '{"status":"green","head_sha":"%s","checks":[],"legs":[],"missing_legs":[],"failing":[],"non_leg_failing":[],"unlisted":[],"waited_s":0}\n' "$added_head" > "$tmp/ci.json"
 holds_verif() { # holds_verif <run file> <name>: the gate-clean holds naming that verification
-  at "$added" gate clean "$tmp/ci.json" --head abcdef0123456789 --file "$1" \
+  at "$added" gate clean "$tmp/ci.json" --head "$added_head" --file "$1" \
     | jq -r --arg v "verification $2:" 'if (.held_by | type) == "array"
         then [.held_by[] | select(startswith($v))] | join(",") else "no answer: \(.error)" end'
 }
@@ -508,12 +525,12 @@ check "the new entry is appended to the results section" \
 - live-run: n/a
 
 ## Design and plan' \
-  "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$fa")"
+  "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$fa" | unstamp)"
 check "gate clean no longer holds the added heading" '' "$(holds_verif "$fa" live-run)"
 add_heading second
 at "$added" open 3 --file "$fa" >/dev/null
 check_rc "a re-opened phase 3 takes a heading added after it closed" 0 "$(inrc "$added" close 3 --file "$fa" --result second=pass)"
-check "that heading is recorded" '- second: pass' "$(grep '^- second: ' "$fa")"
+check "that heading is recorded" '- second: pass' "$(entry '^- second: ' "$fa")"
 # A profile that named no Verification at init has no results section to append to.
 printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n' > "$added/docs/agents/ship.md"
 fe=$(at "$added" init 81 --from-profile | jq -r .run_file)
@@ -522,7 +539,7 @@ add_heading first-check
 check_rc "the first heading a PR adds is recorded" 0 "$(inrc "$added" close 3 --file "$fe" --result first-check=pass)"
 check "it opens the results section" '## Verification results
 
-- first-check: pass' "$(sed -n '/^## Verification results$/,$p' "$fe")"
+- first-check: pass' "$(sed -n '/^## Verification results$/,$p' "$fe" | unstamp)"
 check "gate clean reads the section it opened" '' "$(holds_verif "$fe" first-check)"
 # An added heading that prefixes one init recorded finds no entry of its own.
 printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n\n### lint: strict\n' > "$added/docs/agents/ship.md"
@@ -536,7 +553,7 @@ check "each result lands on its own entry" '## Verification results
 - lint: strict: pass
 - lint: n/a
 
-## Design and plan' "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$fp")"
+## Design and plan' "$(sed -n '/^## Verification results$/,/^## Design and plan$/p' "$fp" | unstamp)"
 check "gate clean holds neither" '' "$(holds_verif "$fp" lint)"
 # The reverse: init recorded the shorter name, so the added longer entry lands
 # after it, the last row gate clean's prefix would read for it.
@@ -561,12 +578,13 @@ add_heading late-check
 row=$(row3 "$fl")
 r=$(at "$added" close 3 --file "$fl" --result late-check=pass)
 check "close 3 on a closed phase answers recorded, with no mirror" 'recorded false' "$(jq -r '"\(.state) \(has("mirror"))"' <<<"$r")"
-check "the late result is recorded" '- late-check: pass' "$(grep '^- late-check: ' "$fl")"
+check "the late result is recorded" '- late-check: pass' "$(entry '^- late-check: ' "$fl")"
 check "phase 3's row is unchanged" "$row" "$(row3 "$fl")"
 check "phase 4 is still the open phase" yes "$(grep -q '^- \[ \] 4 · .* in_progress (' "$fl" && echo yes || echo no)"
 check "gate clean no longer holds the late heading" '' "$(holds_verif "$fl" late-check)"
 check_rc "a recorded name on a closed phase 3 takes a new result" 0 "$(inrc "$added" close 3 --file "$fl" --result github-mechanics=fail)"
-check "it replaces the entry" '- github-mechanics: fail' "$(grep '^- github-mechanics: ' "$fl")"
+check "it replaces the entry" '- github-mechanics: fail' "$(entry '^- github-mechanics: ' "$fl")"
+check "a re-run recorded after phase 3 closed carries its head" "- github-mechanics: fail at $added_head" "$(grep '^- github-mechanics: ' "$fl")"
 was=$(cat "$fl")
 check "a name nothing names is refused on a closed phase 3" \
   "--result names 'nope', which neither the Run file's Verification results nor the profile's Verification headings name" \
@@ -590,7 +608,7 @@ at "$added" open 4 --file "$fs" >/dev/null
 add_heading late-check
 row=$(row3 "$fs")
 check_rc "a skipped phase 3 records a late result" 0 "$(inrc "$added" close 3 --file "$fs" --result late-check=pass)"
-check "that result is recorded" '- late-check: pass' "$(grep '^- late-check: ' "$fs")"
+check "that result is recorded" '- late-check: pass' "$(entry '^- late-check: ' "$fs")"
 check "the skipped row is unchanged" "$row" "$(row3 "$fs")"
 
 finish
