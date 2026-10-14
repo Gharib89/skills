@@ -812,6 +812,13 @@ close_gate() { # close_gate <phase> <its row>
   esac
 }
 
+# The commit a hash names, where the hash is that commit's or an abbreviation of
+# it: git also resolves a full hash with hex digits appended to it.
+commit_of() { # commit_of <hash>
+  local c
+  c=$(git rev-parse -q --verify "$1^{commit}" 2>/dev/null) || return 1
+  case $c in "$1"*) printf '%s\n' "$c" ;; *) return 1 ;; esac
+}
 # A stamp covers the head when it is the head, or when every later commit on the
 # head's first-parent line is a clean base merge: two parents, the second on the
 # base, and a tree `merge-tree` reproduces. A merge that resolved a conflict, any
@@ -820,9 +827,9 @@ close_gate() { # close_gate <phase> <its row>
 # parents, the ancestry check, git's merge-tree).
 covers() { # covers <stamp> <head>
   local s c t base parents p=()
-  case $1 in "$2"*) return 0 ;; esac
-  case $2 in "$1"*) return 0 ;; esac
-  s=$(git rev-parse -q --verify "$1^{commit}" 2>/dev/null) && c=$(git rev-parse -q --verify "$2^{commit}" 2>/dev/null) || return 1
+  [ "$1" = "$2" ] && return 0
+  s=$(commit_of "$1") && c=$(commit_of "$2") || return 1
+  [ "$s" = "$c" ] && return 0
   base=refs/remotes/$(ship_base_ref --local) || return 2
   while [ "$c" != "$s" ]; do
     parents=$(git rev-list --parents -n 1 "$c" 2>/dev/null) || return 2
@@ -842,17 +849,18 @@ covers() { # covers <stamp> <head>
 # they match changed between the stamp and the head; a failed diff is a change,
 # and a glob matching no file at either head (a typo, `None.`) proves nothing.
 untouched() { # untouched <stamp> <head> <paths>
-  local g empty globs=() specs=()
+  local g s h empty globs=() specs=()
+  s=$(commit_of "$1") && h=$(commit_of "$2") || return 1
   [ -n "$3" ] && empty=$(git hash-object -t tree --stdin </dev/null 2>/dev/null) || return 1
   IFS=, read -r -a globs <<<"$3"
   for g in "${globs[@]}"; do
     g=$(trim_end "${g#"${g%%[![:space:]]*}"}")
     [ -n "$g" ] || continue
-    ! git diff --quiet "$empty" "$1" -- ":(glob)$g" 2>/dev/null \
-      || ! git diff --quiet "$empty" "$2" -- ":(glob)$g" 2>/dev/null || return 1
+    ! git diff --quiet "$empty" "$s" -- ":(glob)$g" 2>/dev/null \
+      || ! git diff --quiet "$empty" "$h" -- ":(glob)$g" 2>/dev/null || return 1
     specs+=(":(glob)$g")
   done
-  [ "${#specs[@]}" -gt 0 ] && git diff --quiet "$1" "$2" -- "${specs[@]}" 2>/dev/null
+  [ "${#specs[@]}" -gt 0 ] && git diff --quiet "$s" "$h" -- "${specs[@]}" 2>/dev/null
 }
 
 # The clean gate is a read of evidence, independent of the profile's merge opt-in.
@@ -891,8 +899,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     /^## / { f = ($0 ~ /^## Verification[ \t\r]*$/); next }
     f && /^### / { sub(/^### /, ""); sub(/[ \t\r]+$/, ""); print "name\t" $0; next }
     f && /^Also proven by CI: / { sub(/^Also proven by CI: /, ""); sub(/[ \t\r]+$/, ""); print "leg\t" $0 }
-    f && /^Paths: / { sub(/^Paths: /, ""); sub(/[ \t\r]+$/, ""); print "paths\t" $0 }
-    ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t")) as $r ([];
+    f && /^Paths: / { sub(/^Paths: /, ""); sub(/[ \t\r]+$/, ""); gsub(/\t/, " "); print "paths\t" $0 }
+    ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t") | [.[0], (.[1:] | join("\t"))]) as $r ([];
       if $r[0] == "name" then . + [{name: $r[1], leg: null, paths: null}]
       elif length > 0 then .[-1][$r[0]] = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
   # Every head a stop or a result was stamped at: whether it covers the PR head,

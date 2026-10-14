@@ -67,7 +67,7 @@ base; clean 'all recorded conditions holding'
 # Evidence that names no head covers none: an unstamped stop or pass is stale.
 base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: tree unchanged/'; held 'an unstamped tree-unchanged stop' 'reviewer primary: tree unchanged with no head stamp to cover head abcdef0123456789'
 base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: pass/'; held 'an unstamped verification pass' 'verification live check: punctuation: pass with no head stamp to cover head abcdef0123456789'
-base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: pass at abcdef0: ran the fixture/'; clean 'an abbreviated stamp with a note'
+base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: pass at abcdef0123456789: ran the fixture/'; clean 'a stamp with a note'
 # A self-review stopped at its cap left fixes unread: a settled reviewer read them.
 capped='self-review: stopped at cap, its last fixes read by no reviewer'
 base; printf '%s\n' 'Stop: self-review: cap' >> "$f"; clean 'a capped self-review a settled reviewer read'

@@ -132,6 +132,22 @@ holds 'a verification whose Paths: line is indented' "$outside" "$(verif_stale "
 profile
 run "$stamp" "tree unchanged at ${stamp}g" "pass at $stamp"
 holds 'a stop whose stamp runs into a longer word' "$stamp" "reviewer primary: tree unchanged at ${stamp}g"
+# An abbreviated stamp covers the commit it resolves to; a stamp that only
+# starts with the head resolves to nothing.
+run "$stamp" "tree unchanged at ${stamp:0:7}" "pass at ${stamp:0:7}: ran it"
+passes 'an abbreviated stamp of the head' "$stamp"
+run "$stamp" "tree unchanged at ${stamp}0" "pass at $stamp"
+holds 'a stop stamped at the head plus a digit' "$stamp" "$(reviewer_stale "${stamp}0" "$stamp")"
+profile 'Paths: skills/ship/SKILL.md'
+run "$outside" "tree unchanged at $outside" "pass at ${outside}0"
+holds 'a verification stamped at the head plus a digit, under Paths:' "$outside" "$(verif_stale "${outside}0" "$outside")"
+# A tab is whitespace between Paths: globs, like a blank.
+profile $'Paths: notes.txt,\tskills/ship/SKILL.md'
+run "$inside" "tree unchanged at $inside" "pass at $outside"
+holds 'a verification whose tab-separated glob a change matches' "$inside" "$(verif_stale "$outside" "$inside")"
+profile $'Paths: skills/index.md,\tskills/ship/SKILL.md'
+run "$outside" "tree unchanged at $outside" "pass at $stamp"
+passes 'a verification whose tab-separated globs no change matches' "$outside"
 # An unknown stamp proves nothing.
 profile
 run "$stamp" "tree unchanged at $stamp" "pass at 1234567890abcdef"
