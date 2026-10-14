@@ -819,14 +819,15 @@ close_gate() { # close_gate <phase> <its row>
 # covered, 1 not, 2 a read the walk needs failed (the base ref, a commit's
 # parents, the ancestry check, git's merge-tree).
 covers() { # covers <stamp> <head>
-  local s c t base out p=()
+  local s c t base parents p=()
   case $1 in "$2"*) return 0 ;; esac
   case $2 in "$1"*) return 0 ;; esac
   s=$(git rev-parse -q --verify "$1^{commit}" 2>/dev/null) && c=$(git rev-parse -q --verify "$2^{commit}" 2>/dev/null) || return 1
   base=refs/remotes/$(ship_base_ref --local) || return 2
   while [ "$c" != "$s" ]; do
-    out=$(git rev-list --parents -n 1 "$c" 2>/dev/null) || return 2
-    read -r -a p <<<"$out"
+    parents=$(git rev-list --parents -n 1 "$c" 2>/dev/null) || return 2
+    read -r -a p <<<"$parents"
+    [ "${#p[@]}" -gt 0 ] || return 2
     [ "${#p[@]}" -eq 3 ] || return 1
     git merge-base --is-ancestor "${p[2]}" "$base" 2>/dev/null
     case $? in 0) ;; 1) return 1 ;; *) return 2 ;; esac
@@ -904,7 +905,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     case $? in
       0) cover=$(jq -c --arg s "$s" '.[$s] = true' <<<"$cover") ;;
       1) ;;
-      *) ship_tooling "cannot read whether $s covers head $head: needs origin/HEAD and git merge-tree --write-tree" ;;
+      *) ship_tooling "cannot read whether $s covers head $head: a read the walk needs failed (origin/HEAD, a commit's parents, the ancestry check, git merge-tree --write-tree)" ;;
     esac
     while IFS=$'\t' read -r vname vpaths; do
       [ -n "$vname" ] || continue

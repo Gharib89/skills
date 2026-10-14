@@ -79,7 +79,7 @@ The recorded conditions permitting an attended run to merge without a reply when
 _Avoid_: auto-merge (a host flag that can merge before Ship finishes its reviews)
 
 **Covered head**:
-The PR head a piece of clean-gate evidence still answers for. A reviewer's unchanged-tree stop or a Verification's pass covers the head it was recorded on, and a later head reached from it only by clean merges of the base, each one's tree what merging the two parents gives with no conflict to resolve. A Verification whose profile entry names `Paths:` also covers a later head when none of the files those paths match has changed since. The Local gate record covers its own head alone. Evidence that does not cover the PR head holds the clean gate.
+The PR head a piece of clean-gate evidence still answers for. A reviewer's unchanged-tree stop or a Verification's pass covers the head it was recorded on, and a later head reached from it only by clean merges of the base, each one's tree what merging the two parents gives with no conflict to resolve. A Verification whose profile entry names `Paths:` also covers a later head when none of the files those paths match has changed since; a path matching no file at either head proves nothing. The Local gate record covers its own head alone. Evidence that does not cover the PR head holds the clean gate.
 _Avoid_: current, fresh, up to date
 
 **Small lane**:

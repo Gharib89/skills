@@ -139,8 +139,11 @@ holds 'a verification stamped at an unknown commit' "$stamp" "$(verif_stale 1234
 # Trailing blanks or a carriage return leave a stop's stamp the same head.
 run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $clean_merge"
 passes 'stamps with trailing blanks' "$clean_merge"
+# A local branch named like the base does not stand in for it.
+g branch origin/main "$stamp" 2>/dev/null
+passes 'a walk beside a local branch named origin/main' "$clean_merge"
 # A walk that cannot read the base is no verdict.
 g symbolic-ref --delete refs/remotes/origin/HEAD
 check_rc 'a walk with no origin/HEAD is unreadable' 2 "$(gate "$clean_merge" >/dev/null; echo $?)"
-check 'the unreadable walk names what it needs' 1 "$(grep -c "cannot read whether $stamp covers head $clean_merge" "$tmp/err")"
+check 'the unreadable walk names what it needs' 1 "$(grep -cF "cannot read whether $stamp covers head $clean_merge: a read the walk needs failed (origin/HEAD, a commit's parents, the ancestry check, git merge-tree --write-tree)" "$tmp/err")"
 finish

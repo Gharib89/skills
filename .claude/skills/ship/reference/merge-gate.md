@@ -258,7 +258,8 @@ change breaks coverage, so `gate clean` holds, naming each piece of evidence
 with both heads: every reviewer stop, until an on-push reviewer's own round on
 the new head records a new stop
 ([review-loop.md](review-loop.md#the-round)), and every Verification pass whose
-`Paths:` the change touched or that has none, until its re-run per
+`Paths:` the change touched, or that has none or one matching no file, until
+its re-run per
 [verify.md](verify.md)'s **Head** records it again. Request no new review from
 here; while a stop holds, the run waits for "merge".
 
