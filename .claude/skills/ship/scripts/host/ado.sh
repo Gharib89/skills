@@ -380,9 +380,15 @@ host_pr_resolve_thread() { # <pr> <thread-id>
   local rc=$?; rm -f "$f"; [ $rc -eq 0 ] || return 1
   jq '{resolved: (.status | IN("fixed","closed","wontFix","byDesign"))}' <<<"$out"
 }
-host_pr_merge() { # <pr> <subject>
-  azx repos pr update "${ORG[@]}" --id "$1" --status completed --squash true --delete-source-branch true \
-    --transition-work-items true --merge-commit-message "$2" >/dev/null
+# A REST PATCH, not `az repos pr update --status completed`: az fills
+# lastMergeSourceCommit from its own read at call time and takes no head, so a
+# push after the merge gate would land. The host refuses a head that moved.
+host_pr_merge() { # <pr> <subject> <head>
+  local f; f=$(mktemp); trap 'rm -f "$f"; trap - RETURN' RETURN
+  jq -n --arg m "$2" --arg h "$3" '{status: "completed", lastMergeSourceCommit: {commitId: $h},
+    completionOptions: {mergeStrategy: "squash", deleteSourceBranch: true, transitionWorkItems: true, mergeCommitMessage: $m}}' > "$f"
+  invoke PATCH git pullRequests 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1" \
+    --in-file "$f" >/dev/null
 }
 host_prs_open() {
   azx repos pr list "${PRJ[@]}" --repository "$SHIP_REPO" --status active --top 100 \

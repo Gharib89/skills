@@ -228,11 +228,15 @@ does not hold the merge, and an `unlisted` check is profile drift for the human
 to add to `Legs:` or remove.
 
 **On explicit approval or a clean opted-in gate**, from the worktree, `merge
-<pr> <issue|none> [--worktree <path>]`. Its header carries what it does and
-what each refusal protects against: `pr-closed: <state>` and `stale-base:
-behind <n> on <base>` merge nothing and stop at this gate, including after a
-clean-gate decision (for the second, merge the base in, re-run the local gate
-and come back to this gate). Then each drafted tracker section. Every Ship
+<pr> <issue|none> <head> [--worktree <path>]`, `<head>` the `head_sha` this
+gate read from `read-pr`, so the merge lands only the head the summary
+describes. Its header carries what it does and
+what each refusal protects against: `pr-closed: <state>`, `head-moved: <read>
+!= <gated>` and `stale-base: behind <n> on <base>` merge nothing and stop at
+this gate, including after a clean-gate decision (for `head-moved`, read the
+new commits, take the gate's verdict for the new head and come back to this
+gate; for `stale-base`, merge the base in, re-run the local gate and come back
+to this gate). Then each drafted tracker section. Every Ship
 defect draft is settled before `cleanup`, which deletes the directory the
 drafts live in, so ask for the word on any draft still open. Then `run-file
 close 9` and set the task to the returned `mirror`, and last `cleanup

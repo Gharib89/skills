@@ -853,8 +853,8 @@ host_pr_resolve_thread() { # <pr> <thread-id>
 
 # Squash with the PR title as the subject; release tooling reads it. Verified by
 # the caller re-reading host_pr_get rather than by this call's exit code.
-host_pr_merge() { # <pr> <subject>
-  api -X PUT "$R/pulls/$1/merge" -f merge_method=squash -f commit_title="$2" >/dev/null
+host_pr_merge() { # <pr> <subject> <head>
+  api -X PUT "$R/pulls/$1/merge" -f merge_method=squash -f commit_title="$2" -f sha="$3" >/dev/null
 }
 
 host_prs_open() {

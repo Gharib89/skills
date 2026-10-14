@@ -248,13 +248,14 @@ review quota, so push when the tree changed.
 `No-checks legal:` admits, or `no-checks` where it admits that.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
-the summary's shape, what `merge` does, its two refusals and the tracker drafts.
-Write the summary per that file. Attended: follow its
+the summary's shape, what `merge` does, its three refusals and the tracker
+drafts. Write the summary per that file. Attended: follow its
 `Merge:` branch, waiting for an explicit "merge" by default, or merging when
 `Merge: on-clean-gate` or the run is inline lane and `run-file gate clean`
 answers `clean: true`; an unmet criterion needs the human's explicit waiver.
-On either authorization run `merge <pr> <issue|none> [--worktree
-<path>]`, `update-issue-body` per tracker draft, settle each Ship defect draft
+On either authorization run `merge <pr> <issue|none> <head> [--worktree
+<path>]`, `<head>` the `head_sha` the gate read from `read-pr`,
+`update-issue-body` per tracker draft, settle each Ship defect draft
 (filed on its own word only), `run-file close 9`, `ExitWorktree` with `action:
 "keep"` (`cleanup` owns the removal) so the session is not left in a deleted
 folder, then `cleanup
@@ -296,6 +297,7 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 | Red after retries | `red-after-retry: <what>` | attended: ask; unattended: hand back |
 | The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you merge the base in; unattended: hand back |
 | The PR is closed at the merge gate | `pr-closed: <state>` | attended: ask; unattended: hand back |
+| The PR's head moved after the merge gate read it | `head-moved: <read> != <gated>` | attended: holds while the gate re-reads the new head |
 | `--inline` with `--unattended` or free text | `inline refused` | no claim |
 | `prepare` failed its Cloud lane `Bootstrap:` | `bootstrap-failed` | no claim |
 | Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | no claim |
