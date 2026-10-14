@@ -126,4 +126,11 @@ check "an edit in a repo with no check.sh never runs the cwd repo's check.sh" 0 
 STUB_RC=0 cwd=$unharnessed hook edit "$edit_in"
 check "an edit in a harnessed repo is checked from a cwd with no check.sh" 1 "$(calls)"
 
+# A check.sh that exists but cannot run is a broken harness, not a missing one.
+chmod -x "$r/scripts/check.sh"
+hook edit "$edit_in"
+check "a check.sh that cannot run is still reported" \
+  '{"systemMessage":"harness: edit rung unavailable: check.sh exited 126"}' "$out"
+chmod +x "$r/scripts/check.sh"
+
 finish

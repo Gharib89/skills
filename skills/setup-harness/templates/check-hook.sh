@@ -47,8 +47,9 @@ else
   root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
   set --
 fi
-# A repo with no check entry point has no harness, so nothing to check.
-[ -x "$root/$CHECK" ] || exit 0
+# A repo with no check entry point has no harness, so nothing to check; one
+# that exists but cannot run is a broken harness, reported below.
+[ -e "$root/$CHECK" ] || exit 0
 cd "$root" || exit 0
 tmp='' errf=''
 trap 'rm -f "$tmp" "$errf"' EXIT
