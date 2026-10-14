@@ -46,6 +46,13 @@ put notes.txt fix; g commit -q -m 'post-loop fix'
 outside=$(g rev-parse HEAD)
 put skills/ship/SKILL.md two; g commit -q -m 'skill prose'
 inside=$(g rev-parse HEAD)
+# A file its glob matches only at the head (added), or only at the stamp (deleted).
+g checkout -q -b added "$stamp"
+put skills/added.md new; g commit -q -m 'add a file'
+added=$(g rev-parse HEAD)
+g checkout -q -b removed "$stamp"
+g rm -q skills/index.md; g commit -q -m 'remove a file'
+removed=$(g rev-parse HEAD)
 # A clean merge of a branch that is not the base is no base merge.
 g checkout -q -b side "$stamp"
 put side.txt side; g commit -q -m 'side work'
@@ -65,7 +72,7 @@ run() { # run <head> <reviewer stop> <verification result>
     "$3" "$1" "$2" > "$f"
   jq -n --arg h "$1" '{status: "green", head_sha: $h, checks: [{name: "test", status: "success"}], legs: ["test"], missing_legs: [], failing: [], non_leg_failing: [], unlisted: [], waited_s: 0}' > "$ci"
 }
-gate() { (cd "$repo" && bash "$m" gate clean "$ci" --head "$1" --file "$f" 2>/dev/null); }
+gate() { (cd "$repo" && bash "$m" gate clean "$ci" --head "$1" --file "$f" 2>"$tmp/err"); }
 holds() { # holds <case> <head> <reason>
   local answer
   answer=$(gate "$2")
@@ -110,14 +117,30 @@ for p in 'Paths: None.' 'Paths: skill/ship/**' 'Paths: skills/ship/SKILL.md, ski
   profile "$p"
   holds "a verification whose '$p' matches no file" "$outside" "$(verif_stale "$stamp" "$outside")"
 done
+# A glob matching its file at one side only saw that file change.
+profile 'Paths: skills/added.md'
+run "$added" "tree unchanged at $added" "pass at $stamp"
+holds 'a verification whose glob matches a file added since' "$added" "$(verif_stale "$stamp" "$added")"
+profile 'Paths: skills/index.md'
+run "$removed" "tree unchanged at $removed" "pass at $stamp"
+holds 'a verification whose glob matches a file deleted since' "$removed" "$(verif_stale "$stamp" "$removed")"
+# Near misses: an indented Paths: line is no Paths: line, and a stamp inside a
+# longer word is no stamp.
+profile '  Paths: skills/ship/SKILL.md'
+run "$outside" "tree unchanged at $outside" "pass at $stamp"
+holds 'a verification whose Paths: line is indented' "$outside" "$(verif_stale "$stamp" "$outside")"
+profile
+run "$stamp" "tree unchanged at ${stamp}g" "pass at $stamp"
+holds 'a stop whose stamp runs into a longer word' "$stamp" "reviewer primary: tree unchanged at ${stamp}g"
 # An unknown stamp proves nothing.
 profile
 run "$stamp" "tree unchanged at $stamp" "pass at 1234567890abcdef"
 holds 'a verification stamped at an unknown commit' "$stamp" "$(verif_stale 1234567890abcdef "$stamp")"
 # Trailing blanks or a carriage return leave a stop's stamp the same head.
-run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $stamp"
+run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $clean_merge"
 passes 'stamps with trailing blanks' "$clean_merge"
 # A walk that cannot read the base is no verdict.
 g symbolic-ref --delete refs/remotes/origin/HEAD
 check_rc 'a walk with no origin/HEAD is unreadable' 2 "$(gate "$clean_merge" >/dev/null; echo $?)"
+check 'the unreadable walk names what it needs' 1 "$(grep -c "cannot read whether $stamp covers head $clean_merge" "$tmp/err")"
 finish

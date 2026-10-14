@@ -189,7 +189,8 @@
 #     <sha>'s first-parent line is a clean base merge: two parents, the second
 #     an ancestor of the local origin/HEAD (fetch first, or an unfetched base
 #     breaks coverage), its tree the one `git merge-tree --write-tree` gives;
-#     a walk that cannot read origin/HEAD or merge-tree exits 2.
+#     a walk that cannot read origin/HEAD, a commit's parents, the ancestry
+#     check or merge-tree exits 2.
 #     A pass also covers <sha> when its Verification's `Paths:` globs,
 #     comma-separated git `:(glob)` pathspecs, each matching some file, match
 #     no file that differs between its stamp and <sha>. A stop or pass with no
@@ -815,16 +816,17 @@ close_gate() { # close_gate <phase> <its row>
 # head's first-parent line is a clean base merge: two parents, the second on the
 # base, and a tree `merge-tree` reproduces. A merge that resolved a conflict, any
 # other commit, or a stamp or head git cannot resolve breaks coverage. Exit 0
-# covered, 1 not, 2 a read the walk needs failed (the base, git's merge-tree).
+# covered, 1 not, 2 a read the walk needs failed (the base ref, a commit's
+# parents, the ancestry check, git's merge-tree).
 covers() { # covers <stamp> <head>
-  local s c t base p=()
+  local s c t base out p=()
   case $1 in "$2"*) return 0 ;; esac
   case $2 in "$1"*) return 0 ;; esac
   s=$(git rev-parse -q --verify "$1^{commit}" 2>/dev/null) && c=$(git rev-parse -q --verify "$2^{commit}" 2>/dev/null) || return 1
-  base=$(ship_base_ref --local) || return 2
+  base=refs/remotes/$(ship_base_ref --local) || return 2
   while [ "$c" != "$s" ]; do
-    read -r -a p <<<"$(git rev-list --parents -n 1 "$c" 2>/dev/null)"
-    [ "${#p[@]}" -gt 0 ] || return 2
+    out=$(git rev-list --parents -n 1 "$c" 2>/dev/null) || return 2
+    read -r -a p <<<"$out"
     [ "${#p[@]}" -eq 3 ] || return 1
     git merge-base --is-ancestor "${p[2]}" "$base" 2>/dev/null
     case $? in 0) ;; 1) return 1 ;; *) return 2 ;; esac
@@ -895,7 +897,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   # Every head a stop or a result was stamped at: whether it covers the PR head,
   # and, per Verification with `Paths:`, whether its globs saw no change since.
   # Trimmed as the jq below trims each line, so both read the same stamp.
-  stamps=$(sed 's/[[:space:]]*$//' <<<"$lines" | grep -oE ' at [0-9a-f]{7,64}(: |$)' | sed 's/^ at //; s/: $//' | sort -u)
+  stamps=$(sed $'s/[ \t\r]*$//' <<<"$lines" | grep -oE ' at [0-9a-f]{7,64}(: |$)' | sed 's/^ at //; s/: $//' | sort -u)
   while IFS= read -r s; do
     [ -n "$s" ] || continue
     covers "$s" "$head"
@@ -940,6 +942,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       def word: sub(" at [0-9a-f]{7,64}$"; "");
       def stamp: [capture(" at (?<s>[0-9a-f]{7,64})$").s] | first // "";
       def stale($what; $sha): $what + " at " + $sha + ", which does not cover head " + $head;
+      def unstamped($what): $what + " with no head stamp to cover head " + $head;
       def settled($name): (stop($name) | word) == "tree unchanged" and reviewed($name) and $cover[stop($name) | stamp] == true;
       # Capped with findings: Cap: spent on a tree-changing last round, which a
       # docs-only end before the cap, also `Stop: cap`, is not. The dispositioned
@@ -985,7 +988,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        # `Paths:`, also a head whose changes since touched none of its globs.
        ($verifications[] as $v | result($v.name) as $r | ($r | word) as $status | ($r | stamp) as $sha
          | if $status == "pass" then
-             if $sha == "" then "verification " + $v.name + ": pass with no head stamp to cover head " + $head
+             if $sha == "" then unstamped("verification " + $v.name + ": pass")
              elif $cover[$sha] == true or ($v.paths != null and $scope[$v.name][$sha] == true) then empty
              else stale("verification " + $v.name + ": pass"; $sha) end
            elif $status == "n/a" then empty
@@ -999,7 +1002,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif (stop($r.name) | word) == "tree unchanged" then
              if reviewed($r.name) | not then "reviewer " + $r.name + ": no dispositioned round"
-             elif (stop($r.name) | stamp) == "" then "reviewer " + $r.name + ": tree unchanged with no head stamp to cover head " + $head
+             elif (stop($r.name) | stamp) == "" then unstamped("reviewer " + $r.name + ": tree unchanged")
              else stale("reviewer " + $r.name + ": tree unchanged"; stop($r.name) | stamp) end
            else "reviewer " + $r.name + ": " + stop($r.name) end),
        # A self-review stopped at its cap left its last fixes unread; a host

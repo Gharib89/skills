@@ -20,7 +20,8 @@ here you run the applicable entries.
   worktree's `HEAD` unless `--head` names another. A `pass` keeps the clean
   gate only while its head covers the PR head: a later commit other than a
   clean base merge holds the gate, unless no file the entry's `Paths:` globs
-  match differs between the recorded head and the PR head. A later change
+  match differs between the recorded head and the PR head (a glob matching no
+  file at either head proves nothing). A later change
   that holds it, a fix after phase 3 or one the human asked for at the merge
   gate, re-runs the Verification and records it again with
   `close 3 --result`.
