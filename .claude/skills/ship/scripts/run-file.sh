@@ -962,7 +962,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # and the rest must open on `pending` or a result word, as `entry_of`
       # reads it, so `lint` never reads `- lint: strict: pass`.
       def result($name):
-        (reduce $lines[] as $line ({inside: false, rows: []};
+        (reduce ($lines[] | sub("[ \\t\\r]+$"; "")) as $line ({inside: false, rows: []};
           if $line | startswith("## ") then .inside = ($line | test("^## Verification results[ \\t\\r]*$"))
           elif .inside and ($line | startswith("- " + $name + ": "))
             and ($line | ltrimstr("- " + $name + ": ") | test("^(pending|" + $words + ")(: |$)"))

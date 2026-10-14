@@ -136,8 +136,8 @@ holds 'a stop whose stamp runs into a longer word' "$stamp" "reviewer primary: t
 profile
 run "$stamp" "tree unchanged at $stamp" "pass at 1234567890abcdef"
 holds 'a verification stamped at an unknown commit' "$stamp" "$(verif_stale 1234567890abcdef "$stamp")"
-# Trailing blanks or a carriage return leave a stop's stamp the same head.
-run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $clean_merge"
+# Trailing blanks or a carriage return leave a stamp the same head.
+run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $stamp"$' \r'
 passes 'stamps with trailing blanks' "$clean_merge"
 # A local branch named like the base does not stand in for it.
 g branch origin/main "$stamp" 2>/dev/null
