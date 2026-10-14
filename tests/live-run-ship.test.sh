@@ -113,12 +113,14 @@ cat > "$T/bin/npx" <<'NPX'
 #!/usr/bin/env bash
 # `skills add <source> --skill <k> ...`: logs its arguments, then installs <k>
 # into the working directory and records <source>'s `#<ref>` in the lock; a
-# skill named in $LIVE_STUB/npx-fails fails instead.
+# skill named in $LIVE_STUB/npx-fails fails instead, and one in
+# $LIVE_STUB/npx-noop exits 0 having installed nothing.
 S=$LIVE_STUB
 printf '%s\n' "$*" >> "$S/npx.log"
 [ "$1" != -y ] || shift
 src=$3 k=$5
 ! grep -qxF "$k" "$S/npx-fails" 2>/dev/null || { echo "install of $k failed"; exit 1; }
+! grep -qxF "$k" "$S/npx-noop" 2>/dev/null || exit 0
 mkdir -p ".claude/skills/$k" && echo "$src" > ".claude/skills/$k/SKILL.md"
 jq --arg k "$k" --arg r "${src##*#}" '.skills[$k] = {ref: $r}' skills-lock.json > lock && mv lock skills-lock.json
 NPX
@@ -126,12 +128,13 @@ chmod +x "$T/bin/"*
 export PATH="$T/bin:$PATH"
 
 # The seed carries every skill on ship's composes line at its pin, but OFF_PIN,
-# which its lock records at another ref.
-composes=$(sed -n 's/^  composes: //p' skills/ship/SKILL.md)
+# which its lock records at another ref, and MISSING, which it lacks.
+read -ra composes <<<"$(sed -n 's/^  composes: //p' skills/ship/SKILL.md)"
 seed() {
   local entry k ref lock='{"version": 1, "skills": {}}'
-  for entry in $composes; do
+  for entry in "${composes[@]}"; do
     k=${entry##*:} ref=${entry%:*}; ref=${ref##*#}
+    [ "$k" != "${MISSING:-}" ] || continue
     [ "$k" != "${OFF_PIN:-}" ] || ref=522c4db000000000000000000000000000000000
     mkdir -p "$LIVE_STUB/seed/.claude/skills/$k" && echo seed > "$LIVE_STUB/seed/.claude/skills/$k/SKILL.md"
     lock=$(jq --arg k "$k" --arg r "$ref" '.skills[$k] = {ref: $r}' <<<"$lock")
@@ -148,6 +151,7 @@ drive() {
   [ -z "${CLONE_FAILS:-}" ] || touch "$LIVE_STUB/clone-fails"
   [ -z "${PR_CLOSE_FAILS:-}" ] || touch "$LIVE_STUB/pr-close-fails"
   [ -z "${NPX_FAILS:-}" ] || echo "$NPX_FAILS" > "$LIVE_STUB/npx-fails"
+  [ -z "${NPX_NOOP:-}" ] || echo "$NPX_NOOP" > "$LIVE_STUB/npx-noop"
   bash scripts/live-run-ship.sh "$PWD" 2>/dev/null | jq -c 'del(.runs)'
   printf 'rc=%s\n' "${PIPESTATUS[0]}"
 }
@@ -161,16 +165,19 @@ check "every run's issue is closed after it" "[]" "$(jq -sc '[.[] | select(.stat
 
 check "an in-sync seed installs ship alone" "1" "$(wc -l < "$LIVE_STUB/npx.log")"
 
-off=$(tr ' ' '\n' <<<"$composes" | grep ':find-docs$')
-check "a composed skill off its pin in the seed is installed at its pin" '{"result":"pass","failed":[],"retried":[]}
+pin() { local e; for e in "${composes[@]}"; do [ "${e##*:}" != "$1" ] || echo "${e%:*}"; done; }
+check "each composed skill the seed lacks or holds off its pin is installed at its pin" '{"result":"pass","failed":[],"retried":[]}
 rc=0
-skills add '"${off%:*} --skill find-docs --agent claude-code -y" \
-  "$(OFF_PIN=find-docs drive happy ambiguous; tail -n +2 "$LIVE_STUB/npx.log")"
-pin=${off%:*}
-check "Ship meets a clean clone with the installed pin" "${pin#*#}" "$(cat "$LIVE_STUB/clone")"
+skills add '"$(pin tdd) --skill tdd --agent claude-code -y
+skills add $(pin find-docs) --skill find-docs --agent claude-code -y" \
+  "$(MISSING=tdd OFF_PIN=find-docs drive happy ambiguous; tail -n +2 "$LIVE_STUB/npx.log")"
+check "Ship meets a clean clone with the installed pin" "$(pin find-docs | sed 's/.*#//')" "$(cat "$LIVE_STUB/clone")"
 check "a failed composed-skill install is unavailable" \
-  '{"result":"unavailable","reason":"composed skill install failed: find-docs"}
+  '{"result":"unavailable","reason":"composed skill install failed: skill off pin: find-docs at 522c4db000000000000000000000000000000000, pinned '"$(pin find-docs | sed 's/.*#//')"'"}
 rc=2' "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
+check "an install that exits 0 off its pin is unavailable" \
+  '{"result":"unavailable","reason":"fixture clone fails ship'"'"'s skill check: skill off pin: find-docs at 522c4db000000000000000000000000000000000, pinned '"$(pin find-docs | sed 's/.*#//;s/$/; run npx skills add /')$(pin find-docs)"' --skill find-docs --agent claude-code -y"}
+rc=2' "$(OFF_PIN=find-docs NPX_NOOP=find-docs drive happy ambiguous)"
 
 check "a pass on the retry is a pass that names the first failure" \
   '{"result":"pass","failed":[],"retried":["happy: phase 5: not closed","happy: phase 6: not closed","happy: phase 7: not closed","happy: phase 8: not closed","happy: merge gate: not reached"]}

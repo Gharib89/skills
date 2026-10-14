@@ -8,9 +8,9 @@
 #   scripts/live-run-ship.sh <ship-source>
 #   <ship-source>: a checkout of this repo, usually a worktree, whose skills/ship
 #                  is the Ship under test; installed into the fixture with
-#                  `npx skills add <ship-source> --skill ship`, each skill on
-#                  its `composes` line the seed lacks or holds off its pin
-#                  installed at that pin beside it
+#                  `npx skills add <ship-source> --skill ship`, then each skill
+#                  on ship's `composes` line that the seed lacks or holds at
+#                  another ref, installed at its pin
 #   LIVE_RUN_REPO: the fixture repo, default Gharib89/ship-fixture. Its `main`
 #                  must sit at its `seed` tag, which carries the ship profile.
 #   LIVE_RUN_WALL_S: the wall-clock cap per run in seconds, default 1800
@@ -156,21 +156,28 @@ gh repo clone "$repo" "$base" -- -q || unavailable "cannot clone $repo"
 [ "$(git -C "$base" rev-parse origin/main)" = "$(git -C "$base" rev-parse -q --verify 'seed^{commit}')" ] \
   || unavailable "$repo: main is not at its seed tag; reset it before a live run"
 
-# Install ship, then each skill it composes that the seed lacks or holds off the
-# pin <ship-source> names, with the line preflight prints, so a pin move needs
-# no re-seed. The installs edit tracked files (skills-lock.json, the composed
-# skills) and add untracked ones. Ship's in-place isolation refuses a dirty tree
-# and its switch to origin/HEAD must not put the seed's versions back, so mark
-# the one skip-worktree and exclude the other, locally: the tree reads clean,
-# the switch keeps the files, and Ship's commits leave them out.
+# Install ship, then each skill on ship's `composes` line that the seed lacks or
+# holds at another ref, installed at its pin with the line preflight prints, so a
+# pin move needs no re-seed. A reason left after the installs (one with no
+# install line, or an install that missed its pin) would stop Ship at preflight,
+# so it is unavailable here, before any paid run. The installs edit tracked files
+# (skills-lock.json, the composed skills) and add untracked ones. Ship's in-place
+# isolation refuses a dirty tree and its switch to origin/HEAD must not put the
+# seed's versions back, so mark the edited tracked files skip-worktree and
+# exclude the new untracked ones, locally: the tree reads clean, the switch
+# keeps the files, and Ship's commits leave them out.
 (cd "$base" && npx -y skills add "$src" --skill ship --agent claude-code -y) >"$tmp/install.log" 2>&1 \
   || { tail -n 40 "$tmp/install.log" >&2; unavailable "ship install from $src failed"; }
+composes=$(ship_frontmatter "$src/skills/ship/SKILL.md" composes)
 while IFS= read -r reason; do
   case $reason in *'; run '*) ;; *) continue ;; esac
   read -ra cmd <<<"${reason##*; run }"
-  (cd "$base" && "${cmd[@]}") >"$tmp/install.log" 2>&1 \
-    || { tail -n 40 "$tmp/install.log" >&2; unavailable "composed skill install failed: ${cmd[5]}"; }
-done < <(ship_missing_skill_reasons "$base" "$(ship_frontmatter "$src/skills/ship/SKILL.md" composes)")
+  # stdin from /dev/null: the reasons stream is the loop's, not the install's.
+  (cd "$base" && "${cmd[@]}") </dev/null >"$tmp/install.log" 2>&1 \
+    || { tail -n 40 "$tmp/install.log" >&2; unavailable "composed skill install failed: ${reason%%; run *}"; }
+done < <(ship_missing_skill_reasons "$base" "$composes")
+left=$(ship_missing_skill_reasons "$base" "$composes")
+[ -z "$left" ] || unavailable "fixture clone fails ship's skill check: $(head -n 1 <<<"$left")"
 git -C "$base" ls-files -m -z | (cd "$base" && xargs -0r git update-index --skip-worktree --)
 git -C "$base" status --porcelain | sed -n 's/^?? //p' >> "$base/.git/info/exclude"
 
