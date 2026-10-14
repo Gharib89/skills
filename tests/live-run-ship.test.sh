@@ -114,7 +114,8 @@ cat > "$T/bin/npx" <<'NPX'
 # `skills add <source> --skill <k> ...`: logs its arguments, then installs <k>
 # into the working directory and records <source>'s `#<ref>` in the lock; a
 # skill named in $LIVE_STUB/npx-fails fails instead, and one in
-# $LIVE_STUB/npx-noop exits 0 having installed nothing.
+# $LIVE_STUB/npx-noop exits 0 having installed nothing; with
+# $LIVE_STUB/npx-locks it leaves the index locked, as a crashed git would.
 S=$LIVE_STUB
 printf '%s\n' "$*" >> "$S/npx.log"
 [ "$1" != -y ] || shift
@@ -123,6 +124,7 @@ src=$3 k=$5
 ! grep -qxF "$k" "$S/npx-noop" 2>/dev/null || exit 0
 mkdir -p ".claude/skills/$k" && echo "$src" > ".claude/skills/$k/SKILL.md"
 jq --arg k "$k" --arg r "${src##*#}" '.skills[$k] = {ref: $r}' skills-lock.json > lock && mv lock skills-lock.json
+[ ! -e "$S/npx-locks" ] || touch .git/index.lock
 NPX
 chmod +x "$T/bin/"*
 export PATH="$T/bin:$PATH"
@@ -153,6 +155,7 @@ drive() {
   [ -z "${PR_CLOSE_FAILS:-}" ] || touch "$LIVE_STUB/pr-close-fails"
   [ -z "${NPX_FAILS:-}" ] || echo "$NPX_FAILS" > "$LIVE_STUB/npx-fails"
   [ -z "${NPX_NOOP:-}" ] || echo "$NPX_NOOP" > "$LIVE_STUB/npx-noop"
+  [ -z "${NPX_LOCKS:-}" ] || touch "$LIVE_STUB/npx-locks"
   bash scripts/live-run-ship.sh "$PWD" 2>/dev/null | jq -c 'del(.runs)'
   printf 'rc=%s\n' "${PIPESTATUS[0]}"
 }
@@ -181,6 +184,9 @@ rc=2" "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
 check "an install that exits 0 off its pin is unavailable" \
   "{\"result\":\"unavailable\",\"reason\":\"fixture clone fails ship's skill check: $off_pin_reason; run npx skills add $src --skill find-docs --agent claude-code -y\"}
 rc=2" "$(OFF_PIN=find-docs NPX_NOOP=find-docs drive happy ambiguous)"
+check "a clone the installs leave dirty is unavailable" \
+  '{"result":"unavailable","reason":"the fixture clone is not clean after the installs"}
+rc=2' "$(OFF_PIN=find-docs NPX_LOCKS=1 drive happy ambiguous)"
 
 check "a pass on the retry is a pass that names the first failure" \
   '{"result":"pass","failed":[],"retried":["happy: phase 5: not closed","happy: phase 6: not closed","happy: phase 7: not closed","happy: phase 8: not closed","happy: merge gate: not reached"]}
