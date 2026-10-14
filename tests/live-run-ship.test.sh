@@ -23,7 +23,7 @@ S=$LIVE_STUB
 if [ "$1 $2" = "repo clone" ]; then
   [ ! -e "$S/clone-fails" ] || exit 1
   d=$4
-  git init -q "$d" && mkdir -p "$d/.github"
+  git init -q "$d" && mkdir -p "$d/.github" && cp -a "$S/seed/." "$d/"
   printf 'Closes #\n\n## Why\n\n## Attribution\n' > "$d/.github/pull_request_template.md"
   git -C "$d" add -A && git -C "$d" -c user.name=t -c user.email=t@t commit -qm seed
   git -C "$d" tag seed && git -C "$d" update-ref refs/remotes/origin/main HEAD
@@ -70,6 +70,8 @@ cat > "$T/bin/claude" <<'CLAUDE'
 # Plays the next line of $LIVE_STUB/script against the issue in its prompt.
 S=$LIVE_STUB
 printf '%s\n' "$*" >> "$S/claude.log"
+# What Ship's in-place isolation meets: the tree's status, then find-docs' ref.
+{ git status --porcelain; jq -r '.skills["find-docs"].ref' skills-lock.json; } > "$S/clone"
 n=${*: -1}; n=${n#/ship }; n=${n%% *}
 play=$(head -n 1 "$S/script"); tail -n +2 "$S/script" > "$S/s"; mv "$S/s" "$S/script"
 run=$XDG_STATE_HOME/ship/key/ship-$n/run.md
@@ -107,18 +109,45 @@ esac
 jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s"}'
 CLAUDE
 
-printf '#!/bin/sh\nexit 0\n' > "$T/bin/npx"
+cat > "$T/bin/npx" <<'NPX'
+#!/usr/bin/env bash
+# `skills add <source> --skill <k> ...`: logs its arguments, then installs <k>
+# into the working directory and records <source>'s `#<ref>` in the lock; a
+# skill named in $LIVE_STUB/npx-fails fails instead.
+S=$LIVE_STUB
+printf '%s\n' "$*" >> "$S/npx.log"
+[ "$1" != -y ] || shift
+src=$3 k=$5
+! grep -qxF "$k" "$S/npx-fails" 2>/dev/null || { echo "install of $k failed"; exit 1; }
+mkdir -p ".claude/skills/$k" && echo "$src" > ".claude/skills/$k/SKILL.md"
+jq --arg k "$k" --arg r "${src##*#}" '.skills[$k] = {ref: $r}' skills-lock.json > lock && mv lock skills-lock.json
+NPX
 chmod +x "$T/bin/"*
 export PATH="$T/bin:$PATH"
+
+# The seed carries every skill on ship's composes line at its pin, but OFF_PIN,
+# which its lock records at another ref.
+composes=$(sed -n 's/^  composes: //p' skills/ship/SKILL.md)
+seed() {
+  local entry k ref lock='{"version": 1, "skills": {}}'
+  for entry in $composes; do
+    k=${entry##*:} ref=${entry%:*}; ref=${ref##*#}
+    [ "$k" != "${OFF_PIN:-}" ] || ref=522c4db000000000000000000000000000000000
+    mkdir -p "$LIVE_STUB/seed/.claude/skills/$k" && echo seed > "$LIVE_STUB/seed/.claude/skills/$k/SKILL.md"
+    lock=$(jq --arg k "$k" --arg r "$ref" '.skills[$k] = {ref: $r}' <<<"$lock")
+  done
+  printf '%s\n' "$lock" > "$LIVE_STUB/seed/skills-lock.json"
+}
 
 # <script lines...>: one driver run on a fresh fixture; its JSON line with the
 # per-run fields dropped, then its exit code.
 drive() {
-  rm -rf "$LIVE_STUB"; mkdir -p "$LIVE_STUB/issues"
+  rm -rf "$LIVE_STUB"; mkdir -p "$LIVE_STUB/issues"; seed
   echo '[]' > "$LIVE_STUB/pulls.json"; : > "$LIVE_STUB/branches"
   printf '%s\n' "$@" > "$LIVE_STUB/script"
   [ -z "${CLONE_FAILS:-}" ] || touch "$LIVE_STUB/clone-fails"
   [ -z "${PR_CLOSE_FAILS:-}" ] || touch "$LIVE_STUB/pr-close-fails"
+  [ -z "${NPX_FAILS:-}" ] || echo "$NPX_FAILS" > "$LIVE_STUB/npx-fails"
   bash scripts/live-run-ship.sh "$PWD" 2>/dev/null | jq -c 'del(.runs)'
   printf 'rc=%s\n' "${PIPESTATUS[0]}"
 }
@@ -129,6 +158,19 @@ check "every claude run carries the budget cap" "2" "$(grep -c -- '--max-budget-
 check "the vague issue is filed ready for an agent" '["ready-for-agent"]' \
   "$(jq -sc '[.[] | select(.title == "Fix calc.sh the way we discussed") | .labels[].name]' "$LIVE_STUB"/issues/*.json)"
 check "every run's issue is closed after it" "[]" "$(jq -sc '[.[] | select(.state == "open") | .number]' "$LIVE_STUB"/issues/*.json)"
+
+check "an in-sync seed installs ship alone" "1" "$(wc -l < "$LIVE_STUB/npx.log")"
+
+off=$(tr ' ' '\n' <<<"$composes" | grep ':find-docs$')
+check "a composed skill off its pin in the seed is installed at its pin" '{"result":"pass","failed":[],"retried":[]}
+rc=0
+skills add '"${off%:*} --skill find-docs --agent claude-code -y" \
+  "$(OFF_PIN=find-docs drive happy ambiguous; tail -n +2 "$LIVE_STUB/npx.log")"
+pin=${off%:*}
+check "Ship meets a clean clone with the installed pin" "${pin#*#}" "$(cat "$LIVE_STUB/clone")"
+check "a failed composed-skill install is unavailable" \
+  '{"result":"unavailable","reason":"composed skill install failed: find-docs"}
+rc=2' "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
 
 check "a pass on the retry is a pass that names the first failure" \
   '{"result":"pass","failed":[],"retried":["happy: phase 5: not closed","happy: phase 6: not closed","happy: phase 7: not closed","happy: phase 8: not closed","happy: merge gate: not reached"]}
