@@ -182,16 +182,19 @@
 #     outside Legs:, nonblank Override or Ship-defect
 #     evidence, defect or tracker drafts beside the Run file (excluding
 #     .base.md), and a last `Stop: self-review: cap` where no reviewer stopped
-#     on tree unchanged with a dispositioned Round hold the gate.
-#     An ordinary deviation does not hold it. This read is independent of Merge.
+#     on tree unchanged at a covered head with a dispositioned Round hold the
+#     gate. An ordinary deviation does not hold it. This read is independent
+#     of Merge.
 #     A stamp covers <sha> when it is <sha>, or when every later commit on
 #     <sha>'s first-parent line is a clean base merge: two parents, the second
-#     an ancestor of origin/HEAD, its tree the one `git merge-tree --write-tree`
-#     gives. A pass also covers <sha> when its Verification's `Paths:` globs,
-#     comma-separated git `:(glob)` pathspecs, match no file changed since its
-#     stamp. A stop or pass with no stamp, or one not covering <sha>, holds,
-#     named with both heads; the Local gate record still needs <sha> itself.
-#     It reads the checkout's git history for this.
+#     an ancestor of the local origin/HEAD (fetch first, or an unfetched base
+#     breaks coverage), its tree the one `git merge-tree --write-tree` gives;
+#     a walk that cannot read origin/HEAD or merge-tree exits 2.
+#     A pass also covers <sha> when its Verification's `Paths:` globs,
+#     comma-separated git `:(glob)` pathspecs, each matching some file, match
+#     no file that differs between its stamp and <sha>. A stop or pass with no
+#     stamp, or one not covering <sha>, holds, named with <sha> and its stamp
+#     where it has one; the Local gate record still needs <sha> itself.
 # exit: 0 ok · 1 the mechanic's own refusal (a gate's missing evidence among
 #   them, a held clean gate, or a test that stayed green under `prove`) · 2
 #   malformed invocation, a read a gate needs that failed, or revert-red's own
@@ -811,30 +814,40 @@ close_gate() { # close_gate <phase> <its row>
 # A stamp covers the head when it is the head, or when every later commit on the
 # head's first-parent line is a clean base merge: two parents, the second on the
 # base, and a tree `merge-tree` reproduces. A merge that resolved a conflict, any
-# other commit, or a stamp git cannot resolve breaks coverage.
+# other commit, or a stamp or head git cannot resolve breaks coverage. Exit 0
+# covered, 1 not, 2 a read the walk needs failed (the base, git's merge-tree).
 covers() { # covers <stamp> <head>
-  local s c t p=()
+  local s c t base p=()
   case $1 in "$2"*) return 0 ;; esac
   case $2 in "$1"*) return 0 ;; esac
   s=$(git rev-parse -q --verify "$1^{commit}" 2>/dev/null) && c=$(git rev-parse -q --verify "$2^{commit}" 2>/dev/null) || return 1
+  base=$(ship_base_ref --local) || return 2
   while [ "$c" != "$s" ]; do
     read -r -a p <<<"$(git rev-list --parents -n 1 "$c" 2>/dev/null)"
+    [ "${#p[@]}" -gt 0 ] || return 2
     [ "${#p[@]}" -eq 3 ] || return 1
-    git merge-base --is-ancestor "${p[2]}" refs/remotes/origin/HEAD 2>/dev/null || return 1
-    t=$(git merge-tree --write-tree "${p[1]}" "${p[2]}" 2>/dev/null) || return 1
+    git merge-base --is-ancestor "${p[2]}" "$base" 2>/dev/null
+    case $? in 0) ;; 1) return 1 ;; *) return 2 ;; esac
+    t=$(git merge-tree --write-tree "${p[1]}" "${p[2]}" 2>/dev/null)
+    case $? in 0) ;; 1) return 1 ;; *) return 2 ;; esac
     [ "$t" = "$(git rev-parse "$c^{tree}" 2>/dev/null)" ] || return 1
     c=${p[1]}
   done
 }
 # A Verification's `Paths:` globs, comma-separated, as git `:(glob)` pathspecs,
 # where `*` stays inside one directory and `**` crosses them. True when no file
-# they match changed between the stamp and the head; a failed diff is a change.
+# they match changed between the stamp and the head; a failed diff is a change,
+# and a glob matching no file at either head (a typo, `None.`) proves nothing.
 untouched() { # untouched <stamp> <head> <paths>
-  local g globs=() specs=()
+  local g empty globs=() specs=()
+  [ -n "$3" ] && empty=$(git hash-object -t tree --stdin </dev/null 2>/dev/null) || return 1
   IFS=, read -r -a globs <<<"$3"
   for g in "${globs[@]}"; do
     g=$(trim_end "${g#"${g%%[![:space:]]*}"}")
-    [ -z "$g" ] || specs+=(":(glob)$g")
+    [ -n "$g" ] || continue
+    ! git diff --quiet "$empty" "$1" -- ":(glob)$g" 2>/dev/null \
+      || ! git diff --quiet "$empty" "$2" -- ":(glob)$g" 2>/dev/null || return 1
+    specs+=(":(glob)$g")
   done
   [ "${#specs[@]}" -gt 0 ] && git diff --quiet "$1" "$2" -- "${specs[@]}" 2>/dev/null
 }
@@ -881,10 +894,16 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       elif length > 0 then .[-1][$r[0]] = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
   # Every head a stop or a result was stamped at: whether it covers the PR head,
   # and, per Verification with `Paths:`, whether its globs saw no change since.
-  stamps=$(grep -oE ' at [0-9a-f]{7,64}(: |$)' <<<"$lines" | sed 's/^ at //; s/: $//' | sort -u)
+  # Trimmed as the jq below trims each line, so both read the same stamp.
+  stamps=$(sed 's/[[:space:]]*$//' <<<"$lines" | grep -oE ' at [0-9a-f]{7,64}(: |$)' | sed 's/^ at //; s/: $//' | sort -u)
   while IFS= read -r s; do
     [ -n "$s" ] || continue
-    covers "$s" "$head" && cover=$(jq -c --arg s "$s" '.[$s] = true' <<<"$cover")
+    covers "$s" "$head"
+    case $? in
+      0) cover=$(jq -c --arg s "$s" '.[$s] = true' <<<"$cover") ;;
+      1) ;;
+      *) ship_tooling "cannot read whether $s covers head $head: needs origin/HEAD and git merge-tree --write-tree" ;;
+    esac
     while IFS=$'\t' read -r vname vpaths; do
       [ -n "$vname" ] || continue
       untouched "$s" "$head" "$vpaths" && scope=$(jq -c --arg v "$vname" --arg s "$s" '.[$v][$s] = true' <<<"$scope")
@@ -966,7 +985,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        # `Paths:`, also a head whose changes since touched none of its globs.
        ($verifications[] as $v | result($v.name) as $r | ($r | word) as $status | ($r | stamp) as $sha
          | if $status == "pass" then
-             if $sha == "" then "verification " + $v.name + ": pass with no head stamp"
+             if $sha == "" then "verification " + $v.name + ": pass with no head stamp to cover head " + $head
              elif $cover[$sha] == true or ($v.paths != null and $scope[$v.name][$sha] == true) then empty
              else stale("verification " + $v.name + ": pass"; $sha) end
            elif $status == "n/a" then empty
@@ -980,7 +999,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif (stop($r.name) | word) == "tree unchanged" then
              if reviewed($r.name) | not then "reviewer " + $r.name + ": no dispositioned round"
-             elif (stop($r.name) | stamp) == "" then "reviewer " + $r.name + ": tree unchanged with no head stamp"
+             elif (stop($r.name) | stamp) == "" then "reviewer " + $r.name + ": tree unchanged with no head stamp to cover head " + $head
              else stale("reviewer " + $r.name + ": tree unchanged"; stop($r.name) | stamp) end
            else "reviewer " + $r.name + ": " + stop($r.name) end),
        # A self-review stopped at its cap left its last fixes unread; a host
@@ -1173,10 +1192,10 @@ close)
   check_results
   # Each result records the head it was proven on, so the clean gate can ask
   # whether that head still covers the PR's.
-  if [ -n "$results" ]; then
-    [ -n "$head" ] || head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "no --head given and not inside a git checkout"
-    [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
+  if [ -n "$results" ] && [ -z "$head" ]; then
+    head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "no --head given and not inside a git checkout"
   fi
+  [ -z "$head" ] || [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
   # A heading a later phase's fix adds, or a re-run of a recorded one, owes a
   # result after phase 3 has closed or been skipped, so this records it and keeps
   # phase 3's row: re-opening would need the open phase closed first and would

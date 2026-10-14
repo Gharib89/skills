@@ -63,8 +63,8 @@ right. Small lane: at most one requested round; inline lane: none, or that one
 with `--review` ([small-lane.md](small-lane.md#the-inline-lane)). A lint or
 flake fix after the loop ends earns no new request; an on-push reviewer re-reads
 it on its own, so disposition that round, which opens no further one. Where that
-round's dispositions change no file, append a fresh `Stop: <reviewer>: tree
-unchanged at <sha>` for the fix's head, which restores the reviewer's cover;
+round's dispositions change no file, append a new `Stop: <reviewer>: tree
+unchanged at <sha>` for the fix's head, so the stop covers the PR head again;
 otherwise the clean gate holds on the old stop and the human decides.
 
 **The cap round, a docs-only round and a not-landed primary's last round each
@@ -196,8 +196,8 @@ Stop: <reviewer>: <reason>
 dispositioned round changed no file, record `tree unchanged at <sha>` even at
 `Cap:`, in the small lane or for an `auto-once` trigger, `<sha>` the `head_sha`
 `read-pr` returns for the head that round read; `close 7` refuses the stop
-without it, and the clean gate holds it once the PR moves past a head it
-covers. Otherwise `<reason>` is one of
+without it, and `gate clean` holds on the stop once its `<sha>` no longer
+covers the PR head. Otherwise `<reason>` is one of
 `cap` (`Cap:` spent, or a docs-only fix-only diff ended the loop: either way the
 last fixes went unread by a host round), `tree unchanged at <sha>` (a round's
 dispositions changed no file, so a further round would read the same tree),
@@ -238,11 +238,11 @@ exit first, because a fallback's only input is how its primary exited.
   (`fallback for codex: capped with findings` or `fallback for codex: not
   landed: blocked`, say), the only record of why a second reviewer was paid
   for.
-- Primary `reviewed` otherwise (it stopped on `tree unchanged`, a last round
-  whose findings were all declined included, or on `small lane` or `auto-once`,
-  or a docs-only fix-only diff ended its loop before `Cap:` was spent): do not
-  request it; it exits `not invoked: <primary> reviewed`, so a reader sees the
-  reviewer exists.
+- Primary `reviewed` otherwise (it stopped on `tree unchanged at <sha>`, a
+  last round whose findings were all declined included, or on `small lane` or
+  `auto-once`, or a docs-only fix-only diff ended its loop before `Cap:` was
+  spent): do not request it; it exits `not invoked: <primary> reviewed`, so a
+  reader sees the reviewer exists.
 - Primary `not reviewed: inline lane`: request nothing; the fallback records
   `Stop: <fallback>: inline lane` too
   ([small-lane.md](small-lane.md#the-inline-lane)).

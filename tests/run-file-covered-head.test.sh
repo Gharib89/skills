@@ -21,7 +21,7 @@ put() { mkdir -p "$(dirname "$repo/$1")" && printf '%s\n' "$2" > "$repo/$1" && g
 
 # main: c0. PR branch: the stamped commit. main moves on a file the PR never
 # touches, then on the PR's own file, so one merge is clean and one conflicts.
-put docs/agents/ship.md placeholder; put skills/ship/SKILL.md one; put feat.txt base
+put docs/agents/ship.md placeholder; put skills/ship/SKILL.md one; put skills/index.md index; put skills/ship/reference/verify.md v; put feat.txt base
 g commit -q -m c0
 g checkout -q -b pr
 put feat.txt pr; g commit -q -m 'pr work'
@@ -104,8 +104,20 @@ run "$inside" "tree unchanged at $inside" "pass at $stamp"
 holds 'a verification whose Paths: a change matches' "$inside" "$(verif_stale "$stamp" "$inside")"
 profile 'Paths: skills/*.md'
 passes 'a single-star glob does not cross a directory' "$inside"
+# A glob that matches no file, a typo or the sentinel spelling, proves nothing.
+run "$outside" "tree unchanged at $outside" "pass at $stamp"
+for p in 'Paths: None.' 'Paths: skill/ship/**' 'Paths: skills/ship/SKILL.md, skill/ship/**' 'Paths:  '; do
+  profile "$p"
+  holds "a verification whose '$p' matches no file" "$outside" "$(verif_stale "$stamp" "$outside")"
+done
 # An unknown stamp proves nothing.
 profile
 run "$stamp" "tree unchanged at $stamp" "pass at 1234567890abcdef"
 holds 'a verification stamped at an unknown commit' "$stamp" "$(verif_stale 1234567890abcdef "$stamp")"
+# Trailing blanks or a carriage return leave a stop's stamp the same head.
+run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $stamp"
+passes 'stamps with trailing blanks' "$clean_merge"
+# A walk that cannot read the base is no verdict.
+g symbolic-ref --delete refs/remotes/origin/HEAD
+check_rc 'a walk with no origin/HEAD is unreadable' 2 "$(gate "$clean_merge" >/dev/null; echo $?)"
 finish

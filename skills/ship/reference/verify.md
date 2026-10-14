@@ -19,9 +19,11 @@ here you run the applicable entries.
 - **Head.** `close 3` records each result with the head it ran on, the
   worktree's `HEAD` unless `--head` names another. A `pass` keeps the clean
   gate only while its head covers the PR head: a later commit other than a
-  clean base merge holds the gate, unless the entry's `Paths:` globs match no
-  file it changed. A fix after phase 3 that does change such a file re-runs
-  the Verification and records it again with `close 3 --result`.
+  clean base merge holds the gate, unless no file the entry's `Paths:` globs
+  match differs between the recorded head and the PR head. A later change
+  that holds it, a fix after phase 3 or one the human asked for at the merge
+  gate, re-runs the Verification and records it again with
+  `close 3 --result`.
 - **Prerequisite missing** (`Needs:` fails its detection): the disposition is
   the entry's `Without it:` line, one of:
   - `hand-off`: attended, print the exact command and setup, wait for the human

@@ -164,6 +164,7 @@ check "--head names the stamp" '- github-mechanics: pass at 0123abcd' "$(grep '^
 at "$repo" open 3 --file "$rg" >/dev/null
 was=$(cat "$rg")
 check_rc "a --head that is no sha is malformed" 2 "$(inrc "$repo" close 3 --file "$rg" --result github-mechanics=pass --head HEAD)"
+check_rc "a --head that is no sha is malformed with no result too" 2 "$(inrc "$repo" close 3 --file "$rg" --head HEAD)"
 check "--head on another phase is refused" '--head belongs to close 3' "$(inerr "$repo" close 4 --file "$rg" --head 0123abcd)"
 check "the refused heads changed nothing" "$was" "$(cat "$rg")"
 
