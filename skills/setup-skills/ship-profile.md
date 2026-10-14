@@ -57,7 +57,7 @@ Instructions: <path of the file this reviewer reads, or None.>
 
 ## Verification
 
-<!-- Zero or more `### <name>` blocks with exactly these seven lines (and an optional `Timebox:` line after `Claims to probe:`), or the single line `None.` -->
+<!-- Zero or more `### <name>` blocks with exactly these seven lines (and optional `Timebox:` and `Paths:` lines after `Claims to probe:`), or the single line `None.` -->
 
 ### <verification name>
 

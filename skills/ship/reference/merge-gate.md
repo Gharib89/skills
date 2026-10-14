@@ -251,7 +251,13 @@ close 9` and set the task to the returned `mirror`, and last `cleanup
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this
-gate. Do not re-open the whole pipeline.
+gate. Do not re-open the whole pipeline. Under `Merge: on-clean-gate` the gate
+then holds by itself: the reviewer stops, and every Verification pass whose
+`Paths:` the change touched or that has none, were stamped at a head that no
+longer covers the PR, so `gate clean` names each with both heads and the run
+waits for "merge", requesting no new review from here. A
+clean merge of the base after `stale-base` keeps their cover; a merge that
+resolved a conflict does not.
 
 ## Filing a Ship defect
 

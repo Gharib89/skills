@@ -62,7 +62,10 @@ still landing real findings, which tells the human whether the budget was
 right. Small lane: at most one requested round; inline lane: none, or that one
 with `--review` ([small-lane.md](small-lane.md#the-inline-lane)). A lint or
 flake fix after the loop ends earns no new request; an on-push reviewer re-reads
-it on its own, so disposition that round, which opens no further one.
+it on its own, so disposition that round, which opens no further one. Where that
+round's dispositions change no file, append a fresh `Stop: <reviewer>: tree
+unchanged at <sha>` for the fix's head, which restores the reviewer's cover;
+otherwise the clean gate holds on the old stop and the human decides.
 
 **The cap round, a docs-only round and a not-landed primary's last round each
 get one local review before the merge gate** when their fixes changed the
@@ -190,10 +193,13 @@ Stop: <reviewer>: <reason>
 ```
 
 `<text>` is the round's outcome in a line. When the last fully read and
-dispositioned round changed no file, record `tree unchanged` even at `Cap:`, in
-the small lane or for an `auto-once` trigger. Otherwise `<reason>` is one of
+dispositioned round changed no file, record `tree unchanged at <sha>` even at
+`Cap:`, in the small lane or for an `auto-once` trigger, `<sha>` the `head_sha`
+`read-pr` returns for the head that round read; `close 7` refuses the stop
+without it, and the clean gate holds it once the PR moves past a head it
+covers. Otherwise `<reason>` is one of
 `cap` (`Cap:` spent, or a docs-only fix-only diff ended the loop: either way the
-last fixes went unread by a host round), `tree unchanged` (a round's
+last fixes went unread by a host round), `tree unchanged at <sha>` (a round's
 dispositions changed no file, so a further round would read the same tree),
 `small lane` (the lane's one requested round), `inline lane` (the lane requested
 no round), `auto-once` (the reviewer fires once, on PR open), `not landed` (a

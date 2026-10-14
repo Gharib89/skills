@@ -85,6 +85,8 @@ check_rc "a Schema line below a heading is not read" 1 \
 verif_block() { printf '\n## Verification\n\n### real-run\n\nProves: p\nRun: r\n%s' "$1"; }
 check_rc "a Verification entry with a Timebox line agrees" 0 \
   "$(rc_of "$(tree timebox "$(tmpl_file 2)$(verif_block $'Timebox: 10 minutes\n')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
+check_rc "a Verification entry with a Paths line agrees" 0 \
+  "$(rc_of "$(tree paths "$(tmpl_file 2)$(verif_block $'Paths: skills/ship/SKILL.md, skills/ship/reference/**\n')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
 check_rc "a Verification entry without a Timebox line agrees" 0 \
   "$(rc_of "$(tree no-timebox "$(tmpl_file 2)$(verif_block '')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
 
