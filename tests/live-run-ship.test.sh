@@ -173,13 +173,13 @@ skills add '"$(pin tdd) --skill tdd --agent claude-code -y
 skills add $(pin find-docs) --skill find-docs --agent claude-code -y" \
   "$(MISSING=tdd OFF_PIN=find-docs drive happy ambiguous; tail -n +2 "$LIVE_STUB/npx.log")"
 src=$(pin find-docs)
-off_pin="skill off pin: find-docs at $off_ref, pinned ${src#*#}"
+off_pin_reason="skill off pin: find-docs at $off_ref, pinned ${src#*#}"
 check "Ship meets a clean clone with the installed pin" "${src#*#}" "$(cat "$LIVE_STUB/clone")"
 check "a failed composed-skill install is unavailable" \
-  "{\"result\":\"unavailable\",\"reason\":\"composed skill install failed: $off_pin\"}
+  "{\"result\":\"unavailable\",\"reason\":\"composed skill install failed: $off_pin_reason\"}
 rc=2" "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
 check "an install that exits 0 off its pin is unavailable" \
-  "{\"result\":\"unavailable\",\"reason\":\"fixture clone fails ship's skill check: $off_pin; run npx skills add $src --skill find-docs --agent claude-code -y\"}
+  "{\"result\":\"unavailable\",\"reason\":\"fixture clone fails ship's skill check: $off_pin_reason; run npx skills add $src --skill find-docs --agent claude-code -y\"}
 rc=2" "$(OFF_PIN=find-docs NPX_NOOP=find-docs drive happy ambiguous)"
 
 check "a pass on the retry is a pass that names the first failure" \
