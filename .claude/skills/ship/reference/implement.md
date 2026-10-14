@@ -93,9 +93,11 @@ function's signature, return value or behavior, grep the changed symbol across
 the tree: its callers, the tests that exercise it, fixtures, config, exports,
 and string or dynamic references. A caller the change breaks is in scope and is
 updated, its test, validation and error handling kept, and a fix lands once in
-the shared code rather than once per caller. A caller the change leaves working
-stays untouched, and only one showing a concrete problem of its own is an
-adjacent find, taking one of the [dispositions](#phase-2-adjacent-finds).
+the shared code rather than once per caller; past 10 such callers, the
+[needs-split](#phase-2-needs-split) tell decides instead. A caller the change
+leaves working stays untouched, and only one showing a concrete problem of its
+own is an adjacent find, taking one of the
+[dispositions](#phase-2-adjacent-finds).
 Prefer the standard library or what the repo already installs; a new dependency
 names the requirement neither meets in the deviations log and in a bullet under
 the PR body's `## Special things to note`.
