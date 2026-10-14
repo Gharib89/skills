@@ -298,8 +298,8 @@ render() { # render open|closed|rangeless|skipped <item> [<stamp>]
   esac
 }
 write_line() { # write_line <lineno> <replacement>
-  repl=$2 awk -v ln="$1" 'NR == ln { print ENVIRON["repl"]; next } { print }' "$file" > "$file.t" \
-    && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
+  repl=$2 awk -v ln="$1" 'NR == ln { print ENVIRON["repl"]; next } { print }' "$file" > "$file.t.$$" \
+    && mv "$file.t.$$" "$file" || { rm -f "$file.t.$$"; ship_tooling "cannot write $file"; }
 }
 phase_arg() { # phase_arg <value>: the phase number; a flag here is a usage error
   case ${1:-} in -*) ship_tooling "$usage" ;; esac
@@ -380,8 +380,8 @@ append_to_section() { # append_to_section <heading> <line>
   local last
   last=$(awk -v h="$1" '{ t = $0; sub(/[ \t\r]+$/, "", t) } t == h { f = 1; last = NR; next } /^## / { f = 0 } f && NF { last = NR } END { print last + 0 }' "$file")
   if [ "$last" -gt 0 ]; then
-    repl=$2 awk -v ln="$last" '{ print } NR == ln { print ENVIRON["repl"] }' "$file" > "$file.t" \
-      && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
+    repl=$2 awk -v ln="$last" '{ print } NR == ln { print ENVIRON["repl"] }' "$file" > "$file.t.$$" \
+      && mv "$file.t.$$" "$file" || { rm -f "$file.t.$$"; ship_tooling "cannot write $file"; }
   else
     printf '\n%s\n\n%s\n' "$1" "$2" >> "$file" || ship_tooling "cannot write $file"
   fi
@@ -464,12 +464,12 @@ record_results() {
       nm=$rname tx=$text awk 'NR == FNR { if (/^## /) f = ($0 == "## Verification results"); if (f && (/^## / || /^- /)) last = FNR; next }
         { print } FNR == last { print "- " ENVIRON["nm"] ": " ENVIRON["tx"] }
         END { if (!last) printf "\n## Verification results\n\n- %s: %s\n", ENVIRON["nm"], ENVIRON["tx"] }' \
-        "$file" "$file" > "$file.t"
+        "$file" "$file" > "$file.t.$$"
     else
       nm=$rname tx=$text w="$result_words" awk '/^## /{ f = ($0 == "## Verification results") }
         f && '"$entry_of"' { print "- " ENVIRON["nm"] ": " ENVIRON["tx"]; next } { print }' \
-        "$file" > "$file.t"
-    fi && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
+        "$file" > "$file.t.$$"
+    fi && mv "$file.t.$$" "$file" || { rm -f "$file.t.$$"; ship_tooling "cannot write $file"; }
   done <<EORECORD
 $results
 EORECORD
@@ -486,7 +486,7 @@ settle_skipped() { # settle_skipped <reason>
     BEGIN { n = split(ENVIRON["ps"], p, "\n"); for (i = 1; i <= n; i++) want["- " p[i] ": pending"] = p[i] }
     /^## /{ f = ($0 == "## Verification results") }
     f && ($0 in want) { print "- " want[$0] ": " ENVIRON["tx"]; next } { print }' \
-    "$file" > "$file.t" && mv "$file.t" "$file" || { rm -f "$file.t"; ship_tooling "cannot write $file"; }
+    "$file" > "$file.t.$$" && mv "$file.t.$$" "$file" || { rm -f "$file.t.$$"; ship_tooling "cannot write $file"; }
 }
 # Phase 3 closes only once every named verification has a result.
 refuse_pending() {
@@ -1008,20 +1008,25 @@ EOSTATES
     || ship_fail "a Run file holds one open phase, or 3 and 4 together; $open_states were given"
   # The rebuild path: a Run file a subagent overwrote is rebuilt in place, so
   # the guard that keeps a resumed run from wiping its own record steps aside
-  # only when the caller says so.
-  [ -e "$file" ] && [ "$rebuild" = false ] && ship_fail "Run file exists: $file: a resumed run reads that record, and a new run of an issue whose earlier run stopped replaces it with \`run-file init $id --rebuild\`"
+  # only when the caller says so. The create is the guard: under noclobber bash
+  # opens the file O_EXCL, so of two initializers in one clone that both found
+  # no file, the second refuses here rather than wipe the first's record.
   mkdir -p "$root/ship-$id" "$scratch" || ship_tooling "cannot create $root/ship-$id and $scratch"
   items=$(checklist "$tripwires" "$verifications" "$reviewers" "$legs")
   if [ -n "$profile_names" ]; then names=$profile_names; else names=$(verif_names "$verifications"); fi
-  { printf '# ship run · %s\n\n' "$id"
-    printf '%s\n' "$items" | sed 's/^/- [ ] /'
-    if [ -n "$names" ]; then
-      printf '\n## Verification results\n\n'
-      printf '%s\n' "$names" | sed 's/$/: pending/; s/^/- /'
-    fi
-    printf '\n## Design and plan\n\n(pending)\n\n## Deviations log\n\n(none yet)\n'
-    printf '\n## Direct reads\n\n(none yet)\n'
-  } > "$file" || ship_tooling "cannot write $file"
+  if ! ( [ "$rebuild" = true ] || set -C
+    { printf '# ship run · %s\n\n' "$id"
+      printf '%s\n' "$items" | sed 's/^/- [ ] /'
+      if [ -n "$names" ]; then
+        printf '\n## Verification results\n\n'
+        printf '%s\n' "$names" | sed 's/$/: pending/; s/^/- /'
+      fi
+      printf '\n## Design and plan\n\n(pending)\n\n## Deviations log\n\n(none yet)\n'
+      printf '\n## Direct reads\n\n(none yet)\n'
+    } > "$file" ) 2>/dev/null; then
+    [ "$rebuild" = false ] && [ -e "$file" ] && ship_fail "Run file exists: $file: a resumed run reads that record, and a new run of an issue whose earlier run stopped replaces it with \`run-file init $id --rebuild\`"
+    ship_tooling "cannot write $file"
+  fi
   while IFS= read -r st; do
     [ -n "$st" ] || continue
     take_row "${st%%=*}"
@@ -1149,9 +1154,9 @@ grade)
   # `- ` before the line.
   if awk '/^## / { f = ($0 ~ /^## Grade[ \t\r]*$/) } f && /^(- )?Grade: / { found = 1 } END { exit !found }' "$file"; then
     if ! { repl="Grade: $word" awk '/^## / { f = ($0 ~ /^## Grade[ \t\r]*$/) }
-        f && /^(- )?Grade: / { if (!done) print ENVIRON["repl"]; done = 1; next } { print }' "$file" > "$file.t" \
-        && mv "$file.t" "$file"; }; then
-      rm -f "$file.t"; ship_tooling "cannot write $file"
+        f && /^(- )?Grade: / { if (!done) print ENVIRON["repl"]; done = 1; next } { print }' "$file" > "$file.t.$$" \
+        && mv "$file.t.$$" "$file"; }; then
+      rm -f "$file.t.$$"; ship_tooling "cannot write $file"
     fi
   else
     append_to_section "## Grade" "Grade: $word"
