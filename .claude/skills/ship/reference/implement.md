@@ -88,16 +88,17 @@ skipped verification later.
 
 When in doubt between `code` and `docs`, treat it as `code` and write the test.
 
-**Callers first, dependencies justified.** Before the first edit to a
+**Callers found, dependencies justified.** Before the first edit to a
 function's signature, return value or behavior, grep the changed symbol across
 the tree: its callers, the tests that exercise it, fixtures, config, exports,
 and string or dynamic references. A caller the change breaks is in scope and is
 updated, its test, validation and error handling kept, and a fix lands once in
 the shared code rather than once per caller. A similar caller the change leaves
-working is an Adjacent find and takes one of the
+working is an adjacent find and takes one of the
 [dispositions](#phase-2-adjacent-finds). Prefer the standard library or what the
-repo already installs; a new dependency logs a deviation naming the requirement
-neither meets, which reaches the PR body's `## Special things to note`.
+repo already installs; a new dependency names the requirement neither meets in
+the deviations log and in a bullet under the PR body's
+`## Special things to note`, so a section rewrite from the log keeps it.
 
 **Tripwires are not a class.** Whatever the class, the profile's `Tripwires:`
 and `In-PR requirement:` land in the same change, or a later phase goes red with
