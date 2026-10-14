@@ -194,8 +194,13 @@ Stop: <reviewer>: <reason>
 
 `<text>` is the round's outcome in a line. When the last fully read and
 dispositioned round changed no file, record `tree unchanged at <sha>` even at
-`Cap:`, in the small lane or for an `auto-once` trigger, `<sha>` the `head_sha`
-`read-pr` returns for the head that round read; `close 7` refuses the stop
+`Cap:`, in the small lane or for an `auto-once` trigger, `<sha>` the head that
+round read: for a requested round, the PR's head when `request-review` sent it,
+since ship pushes nothing until the round is dispositioned; for an `on-push`
+round, the `head_sha` its poll waited for; for a round the host opened with the
+PR (`auto-once`, or round 1's unbidden one), the head the PR opened on. Take it
+when the round starts, since another reviewer's fixes can move the PR's head
+past what a round read before its poll returns; `close 7` refuses the stop
 without it, and `gate clean` holds on the stop once its `<sha>` no longer
 covers the PR head. Otherwise `<reason>` is one of
 `cap` (`Cap:` spent, or a docs-only fix-only diff ended the loop: either way the
