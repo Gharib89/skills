@@ -45,7 +45,7 @@ check "the refusal names the current head and the gated head" "head-moved: $A !=
 check "and no merge call reaches the host" 0 "$(grep -c '^host_pr_merge' "$SHIP_FAKE/calls")"
 check "and the branch stays on origin" "$A" "$(at)"
 
-for f in head_sha head_ref base_ref; do
+for f in head_sha head_ref base_ref title; do
   reset; push_at "$A"; pr 1 merged "$A"; jq --arg f "$f" 'del(.[$f])' "$SHIP_FAKE/host_pr_get.1.json" > "$work/pr"
   mv "$work/pr" "$SHIP_FAKE/host_pr_get.1.json"
   out=$(run 7 none "$A" 2>/dev/null); rc=$?

@@ -238,7 +238,8 @@ this gate, including after a clean-gate decision. Two of them come back here:
 - `head-moved`: the earlier approval covered the old head only. Re-run
   `read-pr`, read the new commits, cite or re-run the gate for the new
   `head_sha` per **The gate's verdict is cited**, rewrite the summary for it and
-  ask again, or re-run `run-file gate clean` when opted in.
+  ask again, or re-run `run-file gate clean` with `--head <new head_sha>` when
+  opted in.
 - `stale-base`: merge the base in, re-run the local gate and come back to this
   gate.
 
