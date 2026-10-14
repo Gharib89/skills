@@ -7,6 +7,14 @@ released version. See
 
 <!-- version list -->
 
+## v0.34.0 (2026-10-14)
+
+### Features
+
+- **ship**: Move find-docs to 3131245 ([#639](https://github.com/Gharib89/skills/pull/639),
+  [`b67df06`](https://github.com/Gharib89/skills/commit/b67df064a12356b4381e93b4b4fe5556e6613808))
+
+
 ## v0.33.0 (2026-10-13)
 
 ### Features
