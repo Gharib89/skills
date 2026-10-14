@@ -100,9 +100,10 @@ that path.
 
 **1 · Understand.** Too vague to plan from the `read-issue` result: stop
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
-`manage-issue <issue> take`, held until merge; later stops follow the stop
-table. Then **grep each anchor** the issue cites, rewriting one the tree
-contradicts through `update-issue-body`
+`manage-issue <issue> take --fresh` (bare in a rework or resumed run, holding
+it already), held until merge; later stops follow the stop table. Then **grep
+each anchor** the issue cites, rewriting one the tree contradicts through
+`update-issue-body`
 ([implement.md](reference/implement.md#phase-1-anchors-the-issue-cites)). A
 criterion needing a host action no mechanic performs stays verbatim: unattended,
 it is an **unmet criterion** the merge summary lists; attended, ask first, per
@@ -288,6 +289,7 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 | A skill ship composes is not installed at its pin, or its pin is malformed | `skill missing: <skill>; run <install line>`, `skill off pin: <skill> at <ref>, pinned <sha>; run <install line>`, `skills lock unreadable: skills-lock.json; repair it, then re-run preflight`, `composes pin invalid: <entry>; want <form>` | no claim |
 | Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | no claim |
 | Issue too vague to plan | `ambiguous` | no claim |
+| Another run claimed it after preflight | `contested: <others>`, `held: another run of this identity holds it` | `contested`: no claim; `held`: the other run's |
 | A `--rework` run not admitted, or with nothing to rework | `not reworkable: <detail>`, `no feedback` | unchanged |
 | Change outgrows one PR, or needs a redesign the issue did not scope | `needs-split` | attended: ask; unattended: hand back |
 | A find shows the issue is mis-specified | `mis-specified` | attended: ask; unattended: hand back |
