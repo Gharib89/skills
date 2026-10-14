@@ -31,7 +31,19 @@ case $rung in
   *) echo "usage: check-hook.sh edit | turn" >&2; exit 2 ;;
 esac
 input=$(cat)
-root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+if [ "$rung" = edit ]; then
+  # The one string field Claude Code sends that ends in `file_path`; JSON
+  # escapes in a path are rare enough that only \" and \\ are undone.
+  file=$(printf '%s' "$input" | sed -nE 's/.*"file_path"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | sed 's/\\"/"/g; s/\\\\/\\/g')
+  [ -n "$file" ] || exit 0
+  # The repo that owns the edited file, wherever the shell's cwd has moved.
+  root=$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null) || exit 0
+else
+  # The cwd's repo, so a session in a worktree checks the worktree.
+  root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+fi
+# A repo with no check entry point has no harness, so nothing to check.
+[ -x "$root/$CHECK" ] || exit 0
 cd "$root" || exit 0
 tmp='' errf=''
 trap 'rm -f "$tmp" "$errf"' EXIT
@@ -45,10 +57,6 @@ say() { # <message>: a systemMessage for the human; never blocks
 named() { printf '%s' "$2" | sed 's/.*"checks":{//' | grep -o "\"[^\"]*\":\"$1\"" | sed 's/":".*//; s/^"//' | paste -sd, - | sed 's/,/, /g'; }
 
 if [ "$rung" = edit ]; then
-  # The one string field Claude Code sends that ends in `file_path`; JSON
-  # escapes in a path are rare enough that only \" and \\ are undone.
-  file=$(printf '%s' "$input" | sed -nE 's/.*"file_path"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | sed 's/\\"/"/g; s/\\\\/\\/g')
-  [ -n "$file" ] || exit 0
   set -- "$file"
 else
   # A throwaway index seeded from the real one, so the fingerprint costs

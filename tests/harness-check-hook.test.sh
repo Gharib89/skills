@@ -13,7 +13,7 @@ source tests/lib.sh
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 hook=$PWD/skills/setup-harness/templates/check-hook.sh
 r=$fixture/repo
-mkdir -p "$r/scripts"
+mkdir -p "$r/scripts" "$r/src"
 git -C "$r" init -q
 cat > "$r/scripts/check.sh" <<'STUB'
 #!/bin/sh
@@ -26,10 +26,10 @@ chmod +x "$r/scripts/check.sh"
 export STUB_LOG=$fixture/log
 mkdir -p "$fixture/bin"; printf '#!/bin/sh\necho 1000000000\n' > "$fixture/bin/date"; chmod +x "$fixture/bin/date"
 
-# <rung> <stdin>: run the hook in the repo; leaves stdout in `out`, stderr in
-# `err` and the exit code in `rc`.
+# <rung> <stdin>: run the hook in the repo, or in `cwd` when set; leaves stdout
+# in `out`, stderr in `err` and the exit code in `rc`.
 hook() {
-  out=$(cd "$r" && printf '%s' "$2" | PATH="$fixture/bin:$PATH" bash "$hook" "$1" 2>"$fixture/err"); rc=$?
+  out=$(cd "${cwd:-$r}" && printf '%s' "$2" | PATH="$fixture/bin:$PATH" bash "$hook" "$1" 2>"$fixture/err"); rc=$?
   err=$(cat "$fixture/err")
 }
 calls() { wc -l < "$STUB_LOG" | tr -d ' '; }
@@ -105,5 +105,21 @@ check "a tooling failure with no JSON line still says what happened" \
 
 check "the real index is untouched by the fingerprint" "?? new.py
 ?? scripts/" "$(git -C "$r" status --porcelain)"
+
+# A second repo with no check.sh, such as one the shell has cd'd into: it has
+# no harness, so there is nothing to check and nothing to say.
+bare=$fixture/bare
+mkdir -p "$bare"
+git -C "$bare" init -q
+cwd=$bare hook turn "$stop_in"
+check_rc "a turn in a repo with no check.sh lets the stop through" 0 "$rc"
+check "a turn in a repo with no check.sh says nothing" "" "$out"
+
+# The edited file's repo decides, not the shell's cwd.
+: > "$STUB_LOG"
+hook edit '{"hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"'$bare'/b.py"}}'
+check_rc "an edit in a repo with no check.sh exits 0" 0 "$rc"
+check "an edit in a repo with no check.sh says nothing" "" "$out"
+check "an edit in a repo with no check.sh never runs the cwd repo's check.sh" 0 "$(calls)"
 
 finish
