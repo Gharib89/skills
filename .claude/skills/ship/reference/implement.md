@@ -94,10 +94,10 @@ the tree: its callers, the tests that exercise it, fixtures, config, exports,
 and string or dynamic references. A caller the change breaks is in scope and is
 updated, its test, validation and error handling kept, and a fix lands once in
 the shared code rather than once per caller. A similar caller the change leaves
-working is an **Adjacent find**, not a drive-by fix. Prefer the standard
-library or what the repo already installs; a new dependency needs a concrete
-reason neither meets the requirement, stated in the PR body's
-`## Special things to note`.
+working is an Adjacent find and takes one of the
+[dispositions](#phase-2-adjacent-finds). Prefer the standard library or what the
+repo already installs; a new dependency logs a deviation naming the requirement
+neither meets, which reaches the PR body's `## Special things to note`.
 
 **Tripwires are not a class.** Whatever the class, the profile's `Tripwires:`
 and `In-PR requirement:` land in the same change, or a later phase goes red with

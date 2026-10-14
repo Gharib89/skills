@@ -348,10 +348,11 @@ These bind every edit a run makes, in every repo, regardless of a personal
 - **Root cause, not symptom.** No temporary patches, no swallowed errors, no
   `TODO` standing in for the fix; if the real fix is out of scope, say so and
   file it.
-- **Callers and dependencies first.** Before changing a contract, find its
-  callers and tests and update each one the change breaks; prefer the standard
-  library or what the repo already installs, and justify a new dependency in
-  the PR body; [implement.md](reference/implement.md)'s phase 2 says how.
+- **Callers found, dependencies justified.** Before changing a contract, find
+  its callers and tests and update each one the change breaks; prefer the
+  standard library or what the repo already installs, and justify a new
+  dependency in the PR body; [implement.md](reference/implement.md)'s phase 2
+  says how.
 - **Comments record the why.** Document public APIs and non-obvious
   constraints, invariants and workarounds; skip narrative comments on internals.
 - **Concise PR body, always the why.** State what changed and why; the reader
