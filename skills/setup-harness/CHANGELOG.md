@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.1 (2026-10-14)
+
+### Bug Fixes
+
+- **setup-harness**: Check-hook stays quiet in a repo with no check.sh
+  ([#634](https://github.com/Gharib89/skills/pull/634),
+  [`211da1d`](https://github.com/Gharib89/skills/commit/211da1de1feda0e8da921800a45c1a3c054120de))
+
+
 ## v0.12.0 (2026-10-11)
 
 ### Features
