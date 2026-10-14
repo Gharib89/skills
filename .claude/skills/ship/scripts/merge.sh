@@ -82,7 +82,11 @@ state=$(jq -r '.state // ""' <<<"$prj")
 # and a stale-base refusal there would name the wrong reason.
 closed=$(ship_pr_state_reason "$state")
 [ -z "$closed" ] || ship_fail "$closed"
-title=$(jq -r .title <<<"$prj"); branch=$(jq -r .head_ref <<<"$prj"); base=$(jq -r .base_ref <<<"$prj")
+title=$(jq -r .title <<<"$prj")
+# The branch, base and head decide what is merged and deleted, so a missing one
+# is a tooling error, never the string `null`.
+branch=$(jq -er '.head_ref // empty' <<<"$prj") || ship_tooling "PR $pr has no head_ref"
+base=$(jq -er '.base_ref // empty' <<<"$prj") || ship_tooling "PR $pr has no base_ref"
 head=$(jq -er '.head_sha // empty' <<<"$prj") || ship_tooling "PR $pr has no head_sha"
 [ "$branch" != "$base" ] || ship_tooling "PR head is the base branch; refusing"
 

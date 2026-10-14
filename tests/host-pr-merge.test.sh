@@ -26,8 +26,8 @@ merge_method=squash
 commit_title=fix: x (#7)
 sha=abc123" "$(grep -v '^-' "$work/gh")"
 
-ado() { # [pat]: runs the ADO adapter's merge with az stubbed, keeping its argv and body
-  rm -f "$work/az" "$work/body"
+ado() { # [pat]: runs the ADO adapter's merge with az stubbed, keeping its argv, body and headers
+  rm -f "$work/az" "$work/body" "$work/headers"
   (
     SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT="my proj" SHIP_REPO="my repo"
     if [ -n "${1:-}" ]; then export AZURE_DEVOPS_EXT_PAT=$1; else unset AZURE_DEVOPS_EXT_PAT; fi
@@ -60,7 +60,8 @@ check "and sends no Authorization header of its own" '{"Content-Type":"applicati
 ado s3cret
 check "a PAT session sends the PAT as Basic auth instead" \
   '{"Content-Type":"application/json","Authorization":"Basic OnMzY3JldA=="}' "$(jq -c . "$work/headers")"
-check "and asks az for no token" "true " "$(has --skip-authorization-header) $(has --resource)"
-check "and the PAT is on no argv" "" "$(grep -l s3cret\\\|OnMzY3JldA "$work/az")"
+check "and asks az to send no token of its own" true "$(has --skip-authorization-header)"
+check "nor names a token resource" "" "$(has --resource)"
+check "and the PAT is on no argv" "" "$(grep -l 's3cret\|OnMzY3JldA' "$work/az")"
 
 finish

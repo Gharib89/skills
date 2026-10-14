@@ -45,11 +45,13 @@ check "the refusal names the current head and the gated head" "head-moved: $A !=
 check "and no merge call reaches the host" 0 "$(grep -c '^host_pr_merge' "$SHIP_FAKE/calls")"
 check "and the branch stays on origin" "$A" "$(at)"
 
-reset; push_at "$A"; pr 1 open ""; jq 'del(.head_sha)' "$SHIP_FAKE/host_pr_get.1.json" > "$work/pr"
-mv "$work/pr" "$SHIP_FAKE/host_pr_get.1.json"
-out=$(run 7 none "$A" 2>/dev/null); rc=$?
-check_rc "a PR read with no head_sha is a tooling error, not a moved head" 2 "$rc"
-check "and no merge call reaches the host" 0 "$(grep -c '^host_pr_merge' "$SHIP_FAKE/calls")"
+for f in head_sha head_ref base_ref; do
+  reset; push_at "$A"; pr 1 merged "$A"; jq --arg f "$f" 'del(.[$f])' "$SHIP_FAKE/host_pr_get.1.json" > "$work/pr"
+  mv "$work/pr" "$SHIP_FAKE/host_pr_get.1.json"
+  out=$(run 7 none "$A" 2>/dev/null); rc=$?
+  check_rc "a PR read with no $f is a tooling error, not a verdict" 2 "$rc"
+  check "and the branch stays on origin with no $f" "$A" "$(at)"
+done
 
 reset; push_at "$A"; pr 1 open "$A"; pr 2 merged "$A"
 out=$(run 7 none "$A" 2>/dev/null); rc=$?

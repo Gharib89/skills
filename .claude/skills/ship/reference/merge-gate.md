@@ -233,12 +233,16 @@ gate read from `read-pr`, so the merge lands only the head the summary
 describes. Its header carries what it does and
 what each refusal protects against: `pr-closed: <state>`, `head-moved: <current>
 != <gated>` and `stale-base: behind <n> on <base>` merge nothing and stop at
-this gate, including after a clean-gate decision (for `head-moved`, re-run
-`read-pr`, read the new commits, cite or re-run the gate for the new `head_sha`
-per **The gate's verdict is cited**, rewrite the summary for it and ask again,
-or re-run `gate clean` when opted in: the earlier approval covered the old head
-only; for `stale-base`, merge the base in, re-run the local gate and come back
-to this gate). Then each drafted tracker section. Every Ship
+this gate, including after a clean-gate decision. Two of them come back here:
+
+- `head-moved`: the earlier approval covered the old head only. Re-run
+  `read-pr`, read the new commits, cite or re-run the gate for the new
+  `head_sha` per **The gate's verdict is cited**, rewrite the summary for it and
+  ask again, or re-run `run-file gate clean` when opted in.
+- `stale-base`: merge the base in, re-run the local gate and come back to this
+  gate.
+
+Then each drafted tracker section. Every Ship
 defect draft is settled before `cleanup`, which deletes the directory the
 drafts live in, so ask for the word on any draft still open. Then `run-file
 close 9` and set the task to the returned `mirror`, and last `cleanup
