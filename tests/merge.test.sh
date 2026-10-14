@@ -41,9 +41,15 @@ check "and names the head in its usage line" true \
 reset; push_at "$A"; pr 1 open "$A"
 out=$(run 7 none "$C" 2>/dev/null); rc=$?
 check_rc "an open PR whose head moved past the gated head is refused" 1 "$rc"
-check "the refusal names the head read and the head gated" "head-moved: $A != $C" "$(jq -r .error <<<"$out")"
+check "the refusal names the current head and the gated head" "head-moved: $A != $C" "$(jq -r .error <<<"$out")"
 check "and no merge call reaches the host" 0 "$(grep -c '^host_pr_merge' "$SHIP_FAKE/calls")"
 check "and the branch stays on origin" "$A" "$(at)"
+
+reset; push_at "$A"; pr 1 open ""; jq 'del(.head_sha)' "$SHIP_FAKE/host_pr_get.1.json" > "$work/pr"
+mv "$work/pr" "$SHIP_FAKE/host_pr_get.1.json"
+out=$(run 7 none "$A" 2>/dev/null); rc=$?
+check_rc "a PR read with no head_sha is a tooling error, not a moved head" 2 "$rc"
+check "and no merge call reaches the host" 0 "$(grep -c '^host_pr_merge' "$SHIP_FAKE/calls")"
 
 reset; push_at "$A"; pr 1 open "$A"; pr 2 merged "$A"
 out=$(run 7 none "$A" 2>/dev/null); rc=$?
@@ -54,11 +60,11 @@ check "the branch at the PR's head is deleted" "" "$(at)"
 check "and reported deleted" true "$(jq -r .remote_branch_deleted <<<"$out")"
 
 reset; push_at "$C"; pr 1 merged "$A"
-err=$(run 7 none "$A" 2>&1 >/dev/null); out=$(run 7 none "$A" 2>/dev/null); rc=$?
+out=$(run 7 none "$A" 2>"$work/err"); rc=$?
 check_rc "a re-run whose branch was recreated at another commit is not a false step" 0 "$rc"
 check "the recreated branch keeps its commits" "$C" "$(at)"
 check "and is reported as no longer the PR's branch" true "$(jq -r .remote_branch_deleted <<<"$out")"
-check "with a note on stderr naming both commits" 1 "$(grep -c "$C.*$A\|$A.*$C" <<<"$err")"
+check "with a note on stderr naming both commits" 1 "$(grep -c "$C.*$A\|$A.*$C" "$work/err")"
 
 reset; g push -q origin --delete fix/x 2>/dev/null; pr 1 merged "$A"
 out=$(run 7 none "$A" 2>/dev/null); rc=$?

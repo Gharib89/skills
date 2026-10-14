@@ -23,7 +23,7 @@
 # endpoint accepts a closed PR, so a run that comes back to a stale PR number
 # would otherwise land a branch somebody deliberately closed. Then an open PR
 # whose head is not `<head>` carries commits nobody read at the merge gate:
-# exit 1 `head-moved: <read> != <gated>`. Then the branch is
+# exit 1 `head-moved: <current> != <gated>`. Then the branch is
 # proven fresh against its base: the base can move between phase 5's
 # `base-fresh` and merge authorization, and the squash would land a branch blind
 # to those commits, which leaves the summary they approved written against a
@@ -32,7 +32,7 @@
 # The remote branch is deleted under a lease on the PR's head, so a branch
 # recreated under the same name after the merge keeps its commits: it is noted
 # on stderr and left, and `remote_branch_deleted` reads true, since no ref on
-# origin holds the PR's branch any more.
+# origin still points at the PR's head.
 #
 # stdout: {merged, issue_closed, remote_branch_deleted, base_updated,
 #          claim_released, ready_for_agent_removed}
@@ -40,7 +40,7 @@
 # exit: 0 every step true · 1 a step is false (re-run merge: an already-merged
 #       PR skips straight to the remaining steps), the PR is
 #       neither open nor already merged (`{"error": "pr-closed: <state>"}`), its
-#       head moved (`{"error": "head-moved: <read> != <gated>"}`), or the base
+#       head moved (`{"error": "head-moved: <current> != <gated>"}`), or the base
 #       moved
 #       (`{"error": "stale-base: behind <n> on <base>"}`); none merges anything
 #       · 2 usage or tooling
@@ -83,7 +83,7 @@ state=$(jq -r '.state // ""' <<<"$prj")
 closed=$(ship_pr_state_reason "$state")
 [ -z "$closed" ] || ship_fail "$closed"
 title=$(jq -r .title <<<"$prj"); branch=$(jq -r .head_ref <<<"$prj"); base=$(jq -r .base_ref <<<"$prj")
-head=$(jq -r .head_sha <<<"$prj")
+head=$(jq -er '.head_sha // empty' <<<"$prj") || ship_tooling "PR $pr has no head_sha"
 [ "$branch" != "$base" ] || ship_tooling "PR head is the base branch; refusing"
 
 # 1. Merge, then verify: the read-back is what says the call took.
@@ -100,8 +100,8 @@ else
   stale=$(ship_stale_base_reason "$fresh")
   [ -z "$stale" ] || ship_fail "$stale"
   host_pr_merge "$pr" "$title (#$pr)" "$gated" >/dev/null 2>&1 || echo "merge call failed; verifying state anyway" >&2
-  # Azure DevOps completes asynchronously: `pr update --status completed` returns
-  # the still-active PR and the merge lands a few seconds later, so poll for it.
+  # Azure DevOps completes asynchronously: the completion PATCH returns the
+  # still-active PR and the merge lands a few seconds later, so poll for it.
   for _ in $(seq 1 10); do
     [ "$(host_pr_get "$pr" | jq -r .state)" = merged ] && merged=true && break
     sleep 3
@@ -123,7 +123,7 @@ fi
 
 # 3. Remote branch: delete under a lease on the PR's head, then prove. ls-remote
 # --exit-code returns 2 only when no ref matches; 0 at another commit is a branch
-# recreated under the name, kept; anything else (128 transient) is not proof.
+# recreated under the name, kept; anything else (0 at the PR's head, 128 transient) is not proof.
 git -C "$main" push --force-with-lease="refs/heads/$branch:$head" origin --delete "$branch" >/dev/null 2>&1 || true
 at=$(git -C "$main" ls-remote --exit-code origin "refs/heads/$branch" 2>/dev/null); rc=$?
 at=${at%%[[:space:]]*}
