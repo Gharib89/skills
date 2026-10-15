@@ -10,10 +10,15 @@ const win = process.platform === "win32";
 // Children write to stderr, so stdout carries only setup's own table.
 const quiet = ["ignore", 2, 2];
 
+// The lock's only install scripts are esbuild's and onnxruntime-node's, and
+// neither is needed: esbuild's binary arrives as an optional dependency, the
+// onnxruntime CPU binding ships in its tarball. Ignoring them keeps npm 10 and
+// npm 11 alike, and stops npm 11's unapproved-script warning, which agents
+// misread as a step left to do.
 export async function npmCi(dir, env) {
   // npm is npm.cmd on Windows, which spawn runs only through a shell.
   return (
-    spawnSync("npm", ["ci", "--no-audit", "--no-fund"], {
+    spawnSync("npm", ["ci", "--no-audit", "--no-fund", "--ignore-scripts"], {
       cwd: dir,
       env,
       stdio: quiet,
