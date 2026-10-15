@@ -138,6 +138,8 @@ const changed = old
       (k) => JSON.stringify(old[k]) !== JSON.stringify(brief[k]),
     )
   : null;
+// A new video's brief is the first stage to write its run folder.
+fs.mkdirSync(run, { recursive: true });
 fs.writeFileSync(file, JSON.stringify(brief, null, 2) + "\n");
 if (!changed) console.log("brief: written -> brief.json");
 else if (!changed.length) console.log("brief: unchanged");

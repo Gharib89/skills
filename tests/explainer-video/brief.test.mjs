@@ -81,6 +81,14 @@ test("a bare brief is the defaults, written to brief.json and echoed one line pe
   ]);
 });
 
+test("a new video's brief makes its run folder", () => {
+  const fx = fixture();
+  fs.rmSync(fx.dir, { recursive: true });
+  const r = brief(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(read(fx, "brief.json").length, 2);
+});
+
 test("knobs and lists lay over the defaults, and the project's default style is the style default", () => {
   const fx = fixture();
   const styles = path.join(fx.tmp, "explainers", ".styles");
