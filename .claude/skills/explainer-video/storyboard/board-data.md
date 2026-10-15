@@ -1,0 +1,108 @@
+# Board data
+
+The one contract between a run and [page.html](page.html), the storyboard
+page. `scripts/storyboard/board.mjs build` writes one **board document** per
+board version; the page writes one **answers document** per Submit. On the
+artifact page both live in the page's database, written and read with
+`ArtifactData`. Without one, `build` writes the board into the run folder's
+`storyboard.html`, and the human pastes the page's answers text back.
+
+## Contents
+
+- [Documents](#documents)
+- [Fields](#fields)
+- [Card status](#card-status)
+- [Answers text](#answers-text)
+- [Media](#media)
+
+## Documents
+
+| Document | Written by | When |
+|---|---|---|
+| collection `boards`, doc id `<n>` (`1`, `2`, ...) | the run, `ArtifactData` `set` with `board/<n>.json`'s contents | once per board version |
+| collection `answers`, doc id `board-<n>` | the page, on Submit | once per Submit of version `<n>` |
+
+A board version is never rewritten once the human can see it, and the page is
+never republished: a revision, a gate stop and the delivery are each a new
+version.
+
+## Fields
+
+`board.` is a board document, `answers.` an answers document; `[]` is an array
+element. Required reads `yes` in every version, `delivered` only in a version
+of that kind, `no` never. The page reads and writes nothing outside this table.
+
+| Path | Type | Required | Meaning |
+|---|---|---|---|
+| `board.version` | number | yes | The version's number, the same as its doc id. |
+| `board.kind` | `"review"` or `"delivered"` | yes | Cards to approve or revise, or the finished video's clips. |
+| `board.title` | string | yes | The scene file's title. |
+| `board.brief` | array | yes | The brief, one entry per knob and list, in `brief.json` order. |
+| `board.brief[].knob` | string | yes | `focus`, `length`, `audience`, `language`, `style`, `voice`, `aspect`, `must` or `avoid`. |
+| `board.brief[].value` | string | yes | The value; a list's items joined by `; `. |
+| `board.sources` | array | yes | The source pack, one entry per source. Empty for narration the user wrote. |
+| `board.sources[].id` | string | yes | The source's id. |
+| `board.sources[].kind` | string | yes | `repo`, `page`, `pdf`, ... |
+| `board.sources[].title` | string | yes | The source's title. |
+| `board.sources[].summary` | string | yes | Its reader's summary. |
+| `board.sources[].excerpts` | number | yes | How many excerpts the pack holds from it. |
+| `board.banner` | object | no | Present on the version a gate stop posted. |
+| `board.banner.text` | string | yes | Why the run stopped, one sentence. |
+| `board.banner.gates` | array | yes | Each red gate's line as `gates.mjs` printed it. |
+| `board.scenes` | array | yes | One card per scene, in order. |
+| `board.scenes[].id` | string | yes | The scene id. |
+| `board.scenes[].title` | string | yes | The scene's title. |
+| `board.scenes[].role` | string | no | Its role (`hook`, `context`, `point`, `recap`, `end`). |
+| `board.scenes[].seconds` | number | yes | Its voiced length in seconds. |
+| `board.scenes[].narration` | string | yes | The scene file's narration lines for the scene, exactly as written, numbers, `{written\|spoken}` and cites included. |
+| `board.scenes[].style` | string | yes | Style notes: the visual's component, the profile and the narrator. |
+| `board.scenes[].still` | string | yes | The scene's settled still, a [media](#media) URL. |
+| `board.scenes[].audio` | string | yes | The scene's narration WAV, a media URL. |
+| `board.scenes[].clip` | string | delivered | The delivered video's stretch for this scene, an MP4 media URL. |
+| `board.scenes[].status` | `"open"`, `"approved"` or `"reopened"` | yes | See [Card status](#card-status). |
+| `answers.version` | number | yes | The version answered. |
+| `answers.submittedAt` | string | yes | ISO 8601 time of the Submit. |
+| `answers.scenes` | array | yes | One entry per card, in order. |
+| `answers.scenes[].id` | string | yes | The scene id. |
+| `answers.scenes[].choice` | `"approve"` or `"revise"` | yes | The human's answer. |
+| `answers.scenes[].note` | string | yes | What to change; empty when none. |
+| `answers.scenes[].narration` | string | yes | The edited narration lines; empty when unedited. |
+| `answers.brief` | array | yes | `<knob>=<value>` arguments for `brief.mjs`, one per changed knob and one per list item of a changed list; empty when none changed. |
+
+Text fields are plain text; the page interprets nothing in them.
+
+## Card status
+
+- `open`: new or changed since the last version the human answered. Needs an
+  answer before Submit.
+- `approved`: approved on the last version and unchanged since. Shown
+  collapsed; it can still be revised.
+- `reopened`: named by a red gate's evidence on the version a gate stop
+  posted. Needs an answer before Submit.
+
+A `delivered` version holds every card `approved`, and its page takes no
+answers.
+
+## Answers text
+
+The Submit comment carries the answers as text, and the page's copy fallback
+(and the local `storyboard.html`) shows the same text: `board.mjs apply` reads
+either it or the answers document. One line per form, in this order:
+
+| Line | When |
+|---|---|
+| `explainer-video: board <n> answers (database document answers/board-<n>)` | always, first |
+| `<id>: Approve` or `<id>: Revise` | each card |
+| `  note: <text>` | under a card with a note; a note's own line breaks become spaces |
+| `  narration:` | under a card whose narration was edited |
+| `    <line>` | each edited narration line, under `  narration:`, four spaces then the line as written |
+| `Brief: <knob>=<value>` | each `answers.brief` entry |
+| `[cut to fit: read answers/board-<n>]` | last, when the text was cut to a comment's 4 KiB |
+
+## Media
+
+`still`, `audio` and `clip` are URLs the page puts in `src` as given. On the
+artifact page each is the URL the asset upload returned, recorded with
+`board.mjs asset`; in `storyboard.html` each is the file's path relative to
+the run folder. `build` refuses a media file over 15 MB, the asset cap. The
+page drops a URL that is not `https:`, `/_blob/` or a relative path.

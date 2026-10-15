@@ -1,6 +1,6 @@
 // The render stage: the voiced script to a captioned MP4, SRT and poster.
 //
-//   node render.mjs <run-folder>
+//   node render.mjs <run-folder> [--stills]
 //
 // Reads <run>/script.json and <run>/voice.json and the run's style profile
 // (lib/style.mjs). Times every scene back to back at its voice duration, the
@@ -9,7 +9,8 @@
 // scene and then the video with HyperFrames, each cached in <run>/.cache/ by
 // content hash, runs the gates stage (gates/gates.mjs) on out/, checks the MP4
 // with ffprobe, and copies MP4, SRT and poster to the videos folder. A red gate
-// or a failed check empties out/ and delivers nothing.
+// or a failed check empties out/ and delivers nothing. With `--stills` it stops
+// after the stills: no video, gates, delivery or manifest, for the storyboard.
 // stdout: the gates stage's lines, one `delivery <check>: pass|fail:
 //         <measured> vs <wanted>` line per check, `delivered: <path>`, then
 //         `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
@@ -18,6 +19,9 @@
 //         .cache/render/, out/<slug>.mp4|.srt, out/poster.png, manifest.json,
 //         and the gates stage's files; <videos>/explainer-video/<repo>/<slug>/;
 //         explainers/.gitignore
+//         `--stills`: `render: stills <hit>/<n> cached`, writing only
+//         <run>/stills.json (every scene's still, relative to the run), the
+//         timeline, composition/ and .cache/stills/
 // exit:   0 delivered · 1 refused or failed, `render: <why>` on stderr, a gate
 //         red, or a delivery check failed · 2 usage
 import { spawnSync } from "node:child_process";
@@ -48,8 +52,9 @@ import {
 } from "./compose.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
-if (!run || rest.length) {
-  console.error("usage: node render.mjs <run-folder>");
+const stillsOnly = rest[0] === "--stills";
+if (!run || rest.length > (stillsOnly ? 1 : 0)) {
+  console.error("usage: node render.mjs <run-folder> [--stills]");
   process.exit(2);
 }
 function fail(why) {
@@ -379,6 +384,27 @@ if (missing.length) {
     ),
   );
   fs.rmSync(work, { recursive: true, force: true });
+}
+
+// Every scene's settled still, for the storyboard (path relative to the run).
+fs.writeFileSync(
+  path.join(run, "stills.json"),
+  JSON.stringify(
+    {
+      scenes: script.scenes.map((s, i) => ({
+        id: s.id,
+        still: path.relative(run, stills[i]),
+      })),
+    },
+    null,
+    2,
+  ) + "\n",
+);
+if (stillsOnly) {
+  console.log(
+    `render: stills ${scenes.length - missing.length}/${scenes.length} cached`,
+  );
+  process.exit(0);
 }
 
 // The video, keyed by every file the composition holds.

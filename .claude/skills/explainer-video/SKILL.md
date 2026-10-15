@@ -12,19 +12,18 @@ metadata:
 # explainer-video
 
 An **explainer video** is a narrated video, one to five minutes by default,
-made from one or more sources. This version carries seven stages: **setup**,
+made from one or more sources. This version carries eight stages: **setup**,
 which every run starts with; the **brief**, the user's words laid over the
 defaults; **source**, each source read into a source pack; **script**, a cited
 scene file written from the pack and held to the script gates; **voice**,
-English narration; **render**, the scene file turned into a captioned MP4; and
-**gates**, which the render runs and which block a video below the floors. The
-storyboard is not in this version.
+English narration; the **storyboard**, where the user approves or revises each
+scene; **render**, the scene file turned into a captioned MP4; and **gates**,
+which the render runs and which block a video below the floors.
 Asked for a video from sources, run the stages in order (brief, source,
-script, voice, render) without waiting for the user's approval, pausing only
-where a stage says to stop or ask; say in one line that the storyboard, where
-they would approve the script, is not in this version. Asked for a video of a
-topic alone, say that topic research is not in this version and ask for a
-source. Asked for narration the user writes, skip to Voice or Render.
+script, voice, storyboard, render), stopping for the user only at the
+storyboard and where a stage says to stop or ask. Asked for a video of a topic
+alone, say that topic research is not in this version and ask for a source.
+Asked for narration the user writes, skip to Voice or Render.
 
 ## Setup
 
@@ -183,7 +182,8 @@ to the **script gates**.
    stop: report each failing sentence and ask the user what the video may say.
    The stop holds, whatever the next rewrite, until the support gate passes
    or a brief change redoes the script.
-6. **On exit 0**, report the summary line and go on to Voice.
+6. **On exit 0**, report the summary line and go on to Voice, then the
+   Storyboard.
 
 ## Voice
 
@@ -228,6 +228,78 @@ match nothing in the text and cost precision.
    a scene with no narration, a failed synthesis): relay the stderr message as
    printed.
 
+## Storyboard
+
+The **storyboard** is the run's one stop for the user: one card per scene with
+its narration, a still, its voiced length and style notes, beside the brief
+and the source pack, playable as an **animatic** (each still over its scene's
+real narration, in order). The user approves or revises each card, may edit
+its narration in place, and presses Submit. Its page is
+[storyboard/page.html](storyboard/page.html), fixed and tested, and
+[storyboard/board-data.md](storyboard/board-data.md) is the contract between
+the page and `<skill>/scripts/storyboard/board.mjs`: each **board version** is
+one document, and a revision, a gate stop and the delivery each post a new
+one. `board` below is `node <skill>/scripts/storyboard/board.mjs
+explainers/<slug>`.
+
+1. **Stills.** `node <skill>/scripts/render/render.mjs explainers/<slug>
+   --stills` renders one settled still per scene and nothing else, printing
+   `render: stills <hit>/<n> cached`; a scene unchanged since its last still is
+   a cache hit. A failure reads as under Render step 7.
+2. **Surface.** The page needs the `Artifact`, `ArtifactData` and
+   `ArtifactComments` tools. With any of them missing, or when the user says
+   the page cannot reach its database, the board is **local**: skip to step 4,
+   and say in one line that the board is `explainers/<slug>/storyboard.html`,
+   opened in a browser, and that the user pastes its answers text back here.
+3. **Publish, once per run.** `board page` writes `board/page.html`, the page
+   with the video's title. Publish that file as a new artifact:
+   `capabilities` `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon`
+   `video`, a one-sentence `description`. Refused: the board is local (step 2).
+   Never publish it again: every later change is a board version. Record its
+   URL with `board page <url>`, which keeps it in `manifest.json`. A Submit
+   wakes this session only while the artifact's watch shows auto-replies armed;
+   when the publish result's subscription line leaves that in doubt, check with
+   `ArtifactComments` `watch` and no `url`. Unarmed, tell the user to type
+   `submitted` here after each Submit.
+4. **Build.** `board build`. Exit 1 with `board: no <file>` or `no still`
+   names the stage to run first. On a published page it first lists
+   `board: upload <path> (<size>)` per still, narration or clip the page does
+   not hold yet: upload them all in one `Artifact` publish with `url` the page,
+   `asset: true` and `file_paths` those paths under the run folder, record each
+   with `board asset <path>=<url> ...`, the `url` exactly as the upload result
+   gives it, and build again. `<path> is <n> MB, over the 15 MB asset cap`
+   means that file cannot go on the page: relay it. On exit 0 it prints `board
+   <n>: <kind>, <k> card(s), <o> to answer -> board/<n>.json`. Published: write
+   that file with `ArtifactData` `set`, collection `boards`, doc id `<n>`,
+   `file_path` the file. Then print the page link, or the local file's path,
+   and `Board <n> posted. Cards to answer: <o>.`, and end the turn.
+5. **Read a Submit.** The Submit comment on the page, a `submitted` typed
+   here, or a pasted answers text, starts the next turn. Published:
+   `ArtifactData` `get` collection `answers`, doc id `board-<n>`, with `out_dir`
+   `explainers/<slug>/board/inbox`, and run `board apply` on the file it saved.
+   With no such document, or local, write the comment's or the pasted text to
+   `explainers/<slug>/board/inbox/answers.txt` and apply that. A comment
+   carrying no answers is the user talking: answer it here. Resolve the Submit
+   thread once the next version is posted, or once the run goes on to Render.
+6. **Apply.** `board apply <file>` writes an edited narration into the scene
+   file, touching only that scene, and prints one `board <id>: approve` or
+   `revise: <note>` line per card. `board: approved`: go on to Render. `board:
+   redo <ids>`: first run `brief.mjs` with the `; brief` arguments it lists, if
+   any, and follow its redo line; then, for each card revised with a note,
+   change that scene in `script.md` as the note asks; then Script steps 2 to 6,
+   Voice and step 1 again, each reusing its cache for every scene not changed,
+   and build the next version (step 4). A note asking for a claim the sources
+   do not support follows the Script stage's support stop. `answers for board
+   <a>, the latest is board <b>` or `cut to fit`: read the latest version's
+   answers document instead.
+7. **Gate stop.** On Render's `stop`, run `board build` and post its version
+   (step 4): it carries a banner with each red gate's line and reopens every
+   card the gates' findings name. End the turn; the revisions come back through
+   step 5.
+8. **After delivery**, `board build` once more: it cuts each scene's stretch of
+   the delivered MP4 into a clip under 15 MB, and its `delivered` version plays
+   them on the cards. Post it as in step 4, then report the delivery.
+
 ## Render
 
 The render stage turns a **scene file**, the script's Markdown form at
@@ -271,8 +343,9 @@ narrator: am_fenrir
   sentence starts.
 
 1. **Draft.** From sources, the Script stage above wrote and checked the scene
-   file. With none, write it with the user from what they want the video to
-   say, done when they approve the draft.
+   file, and the user approved it on the Storyboard. With none, write it with
+   the user from what they want the video to say, done when they approve the
+   draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
    `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows. Run the
@@ -375,8 +448,9 @@ dBTP, no lower than -8.5, lower).
 ## Recipe
 
 The run folder's **recipe**, `brief.json`, `excerpts.json`, `outline.md`,
-`script.md`, `style.json`, `gates.md` and `manifest.json` (skill version, lock
-hash, profile, narrator, delivered path), is committed. `explainers/.gitignore`
+`script.md`, `style.json`, `gates.md` and `manifest.json` (the storyboard
+page's URL, skill version, lock hash, profile, narrator, delivered path), is
+committed. `explainers/.gitignore`
 ignores the rest: the snapshots and drafts, the compiled script, the voice and
 timeline files, `check.json`, `support.json`, `gates.json`, the caches, the
 composition and `out/`. Every stage writes those lines between its
