@@ -115,7 +115,7 @@ const plan = timeline.scenes.map((sc) => {
     cacheDir,
     `${hash(
       read(`composition/scenes/${sc.id}.html`),
-      [sc.start, sc.duration, sc.sentences],
+      [times, W, H, sc.duration, sc.sentences],
       profile,
       script.title,
       inputs,
@@ -329,11 +329,11 @@ const prev = fs.existsSync(recordFile)
   ? JSON.parse(fs.readFileSync(recordFile, "utf8"))
   : null;
 const gates = {};
+const again = prev?.script === scriptHash && prev.render === renderHash;
 for (const [name, [evidence, measured, wanted]] of Object.entries(judged)) {
   const status = evidence.length ? "fail" : "pass";
   const before =
     prev?.script === scriptHash ? (prev.gates[name]?.attempts ?? 0) : 0;
-  const again = prev?.script === scriptHash && prev.render === renderHash;
   gates[name] = {
     status,
     measured,
