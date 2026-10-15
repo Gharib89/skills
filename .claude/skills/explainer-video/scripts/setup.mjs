@@ -15,8 +15,15 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { userDirs } from "./lib/paths.mjs";
+import {
+  TOOL_DIRS,
+  catalogue as readCatalogue,
+  dest,
+  lockHash,
+  loadBackend,
+  skill,
+} from "./lib/tools.mjs";
 
 const usage = "usage: node setup.mjs check|install [--all]";
 const [mode, ...flags] = process.argv.slice(2);
@@ -26,20 +33,9 @@ if (!["check", "install"].includes(mode) || flags.some((f) => f !== "--all")) {
 }
 const all = flags.includes("--all");
 
-const skill = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const override = process.env.EXPLAINER_VIDEO_BACKEND;
-const backend = await import(
-  override ? pathToFileURL(path.resolve(override)).href : "./lib/backend.mjs"
-);
+const backend = await loadBackend();
 const dirs = userDirs();
-const lockHash = crypto
-  .createHash("sha256")
-  .update(fs.readFileSync(path.join(skill, "package-lock.json")))
-  .digest("hex")
-  .slice(0, 16);
-const catalogue = JSON.parse(
-  fs.readFileSync(path.join(skill, "setup", "rows.json"), "utf8"),
-).rows;
+const catalogue = readCatalogue();
 
 // Every row without a `when`; opt-in rows under --all; a `when: python` row
 // (uv) only beside a row that runs Python.
@@ -57,12 +53,8 @@ const quietEnv = {
   HYPERFRAMES_NO_UPDATE_CHECK: "1",
 };
 
-// The tool cache's folder per row kind, each holding one install per lock hash.
-const TOOL_DIRS = { npm: "node", chrome: "chrome" };
-const dest = (r) =>
-  r.kind === "font"
-    ? path.join(dirs.data, "fonts", `${r.family}@${r.version}`)
-    : path.join(dirs.cache, TOOL_DIRS[r.kind], lockHash);
+// A model row's size is its files'.
+const size = (r) => r.size ?? r.files?.reduce((n, f) => n + f.size, 0);
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
   const s = fs.lstatSync(p);
@@ -106,11 +98,22 @@ function stale() {
   return out;
 }
 
+// Fill `<dir>.part`, then rename it over `dir`, so a failed fill never leaves a
+// half-written folder where status() looks.
+async function staged(dir, fill) {
+  const part = `${dir}.part`;
+  fs.rmSync(part, { recursive: true, force: true });
+  fs.mkdirSync(part, { recursive: true });
+  await fill(part);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.renameSync(part, dir);
+}
+
 async function install(r) {
   const dir = dest(r);
   // A missing row's folder can hold what an earlier install left half done.
-  // A font is written beside it and renamed in, so it never is.
-  if (r.kind !== "font") {
+  // A font or a model is written beside it and renamed in, so it never is.
+  if (r.kind !== "font" && r.kind !== "model") {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -135,17 +138,31 @@ async function install(r) {
     const meta = await backend.fontMeta(r.family);
     if (!LICENCES.includes(meta.license))
       return `refused: licence ${meta.license}, only ${LICENCES.join(" or ")}`;
-    const part = `${dir}.part`;
-    fs.rmSync(part, { recursive: true, force: true });
-    fs.mkdirSync(part, { recursive: true });
-    for (const f of r.files) {
-      await backend.download(
-        `https://cdn.jsdelivr.net/fontsource/fonts/${r.family}@${r.version}/${f}.woff2`,
-        path.join(part, `${f}.woff2`),
-      );
-    }
-    fs.rmSync(dir, { recursive: true, force: true });
-    fs.renameSync(part, dir);
+    await staged(dir, async (part) => {
+      for (const f of r.files)
+        await backend.download(
+          `https://cdn.jsdelivr.net/fontsource/fonts/${r.family}@${r.version}/${f}.woff2`,
+          path.join(part, `${f}.woff2`),
+        );
+    });
+  } else if (r.kind === "model") {
+    // Pinned by revision and checked by sha256, as ADR 0017 hosts models.
+    await staged(dir, async (part) => {
+      for (const f of r.files) {
+        const file = path.join(part, ...f.path.split("/"));
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        await backend.download(
+          `https://huggingface.co/${r.repo}/resolve/${r.revision}/${f.path}`,
+          file,
+        );
+        const sum = crypto
+          .createHash("sha256")
+          .update(fs.readFileSync(file))
+          .digest("hex");
+        if (sum !== f.sha256)
+          throw new Error(`${f.path} has sha256 ${sum}, pinned ${f.sha256}`);
+      }
+    });
   }
   fs.writeFileSync(stamp(dir), "");
   return "present";
@@ -166,7 +183,7 @@ function report(state, staleInstalls) {
   for (const r of rows) {
     const where = r.kind === "system" ? "system, you install it" : dest(r);
     lines.push(
-      `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${r.size ? formatSize(r.size) : "-"} | ${r.licence} | ${where} |`,
+      `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${size(r) ? formatSize(size(r)) : "-"} | ${r.licence} | ${where} |`,
     );
   }
   for (const s of staleInstalls)
@@ -186,7 +203,7 @@ function report(state, staleInstalls) {
   const missing = rows.filter((r) => state.get(r) !== "present");
   const parts = [];
   // A system package has no size: setup installs none of them.
-  const total = missing.reduce((n, r) => n + (r.size || 0), 0);
+  const total = missing.reduce((n, r) => n + (size(r) || 0), 0);
   if (missing.length)
     parts.push(
       `not present: ${missing.map((r) => r.id).join(", ")}${total ? ` (${formatSize(total)} to install)` : ""}`,

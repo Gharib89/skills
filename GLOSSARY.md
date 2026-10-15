@@ -444,6 +444,10 @@ _Avoid_: glossary term, untranslated word, loanword
 The voice that reads a run's narration, named by the brief's voice knob. Each language has a default female and male narrator; another is used only when the brief asks for it.
 _Avoid_: speaker, TTS voice, voice-over
 
+**Voice QC**:
+The check each voiced scene must pass before the run uses its audio: the aligner's transcript is compared with the narration for content-word recall and precision, and the speaking rate must sit inside a band. A failing scene is not cached, so the next run voices it again. A numeral in the narration costs precision, since the words it is spoken as match nothing in the text.
+_Avoid_: TTS check, audio QA
+
 **Own voice**:
 A narrator that speaks in a real person's voice, made by converting a default narrator's render to a recorded clip of that person. It is used only when the brief names it, and only for a speaker whose consent is on record.
 _Avoid_: clone, voice clone, custom voice
@@ -485,7 +489,7 @@ An independent reviewer that reads a run's contact sheets: its hard failures (un
 _Avoid_: judge, grader, reviewer
 
 **Tool cache**:
-The per-user folder setup installs a run's tools into: the npm packages, Chrome and models, each under the lockfile's hash, so copies of the skill at different versions coexist. An install no run has used for 30 days under another hash is stale, and setup's install removes it.
+The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model under its pinned revision, so copies of the skill at different versions coexist. An npm or Chrome install under another hash that no run has used for 30 days is stale, and setup's install removes it; a model at an older revision stays.
 _Avoid_: node_modules, tools folder
 
 **Font store**:
