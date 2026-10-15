@@ -272,13 +272,14 @@ self-review's judgment, recorded in the Run file where it helps the summary.
   it: `run-file prove tests/test_x.py src/x.py --issue 12 -- uv run pytest
   tests/test_x.py`. The command runs at the top of a fresh temporary worktree
   with nothing installed, so it builds its own environment (`uv run` does);
-  an install step goes in as `bash -c 'bun install && bun test "$0"' <test>`,
-  which keeps the test a word. The written line is unchanged; only the JSON
-  answer's `command` records what ran. Attested:
+  an install step goes in as `bash -c 'bun install && bun test "./$0"' <test>`,
+  which keeps the test a word (the `./` because `bun test` reads a bare path
+  as a filter). The written line names no command; only the JSON answer's
+  `command` records what ran. Attested:
   `Reverted-fix: <test>: n/a: <reason>` where there is no fix to revert, where
   the test needs a database or service the command cannot start itself in a
-  fresh checkout, where its runner selects tests by package or module rather
-  than by file (`go test ./pkg`), so no word can name it, or where it is
+  fresh checkout, where its runner cannot run that one file alone
+  (`go test` runs a whole package), or where it is
   already red before the revert, since none of these can show the test going
   red for the fix's absence.
   A test file is a path with a `tests`, `test` or `__tests__` component, or a
