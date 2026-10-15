@@ -95,12 +95,18 @@ const cues = [
 
 // Per scene: its samples, and its layout and contrast evidence, cached by
 // everything that draws its frames, every floor that judges them, and the
-// code that measures and judges: this file, the probe and the contrast maths.
+// code that draws, measures and judges: the root page's composer, this file,
+// the probe and the contrast maths.
 const inputs = renderInputs([
   ...new Set(["title", "text", "code"].map((r) => profile.type[r].font)),
 ]);
-const source = ["gates.mjs", "../lib/backend.mjs", "../lib/style.mjs"].map(
-  (f) => fs.readFileSync(fileURLToPath(new URL(f, import.meta.url)), "utf8"),
+const source = [
+  "../render/compose.mjs",
+  "gates.mjs",
+  "../lib/backend.mjs",
+  "../lib/style.mjs",
+].map((f) =>
+  fs.readFileSync(fileURLToPath(new URL(f, import.meta.url)), "utf8"),
 );
 const cacheDir = path.join(run, ".cache", "gates");
 fs.mkdirSync(cacheDir, { recursive: true });
@@ -142,9 +148,15 @@ if (todo.length) {
       `hyperframes check: ${checked.error ?? "no layout or contrast result"}`,
     );
   const frames = await orFail(() => backend.probe(comp, times, { env }));
-  // A scene with no text in any sample is a probe that saw nothing, not a pass.
+  // A scene with no text of its own in any sample is a probe that saw nothing,
+  // not a pass: captions and the header draw over every scene.
   for (const p of todo)
-    if (!frames.some((f) => p.times.includes(f.t) && f.elements.length))
+    if (
+      !frames.some(
+        (f) =>
+          p.times.includes(f.t) && f.elements.some((e) => e.scene === p.sc.id),
+      )
+    )
       fail(`layout probe: no text in scene ${p.sc.id}`);
   for (const p of todo) p.found = { layout: [], contrast: [] };
   // One defect held across a scene is one finding: its first time, and the

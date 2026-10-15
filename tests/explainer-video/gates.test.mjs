@@ -422,6 +422,20 @@ test("a probe that finds no text in a scene stops the gates as a tool error, not
   assert.ok(!fs.existsSync(path.join(fx.tmp, "videos")));
 });
 
+test("a scene drawing no text of its own stops the gates, though captions show over it", () => {
+  const fx = fixture();
+  const r = render(
+    fx,
+    SCRIPT.replace(
+      '"props": { "kicker": "Ship", "title": "Issue to pull request", "subtitle": "One run, one merge" }',
+      '"props": { "title": "" }',
+    ),
+  );
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^gates: layout probe: no text in scene hook$/m);
+  assert.ok(!fs.existsSync(path.join(fx.tmp, "videos")));
+});
+
 test("findChrome finds Windows' chrome-headless-shell.exe", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-chrome-"));
   temps.push(home);
