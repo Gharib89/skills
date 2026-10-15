@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.43.0 (2026-10-15)
+
+### Features
+
+- **ship**: Close 7 takes a not-invoked stop for a fallback whose primary reviewed
+  ([#689](https://github.com/Gharib89/skills/pull/689),
+  [`b64d2da`](https://github.com/Gharib89/skills/commit/b64d2da07f74a8f3ca980b99fe851ac53d5158fd))
+
+
 ## v0.42.0 (2026-10-15)
 
 ### Features
