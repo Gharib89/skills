@@ -160,24 +160,17 @@ to the **script gates**.
 4. **Script gates.** `node <skill>/scripts/script/check.mjs explainers/<slug>`
    prints one line per gate, `script <gate>: pass` or `fail: <findings>`
    (`sentences` warns instead of failing), then `script: <p> pass, <f> fail,
-   <w> warn`:
-   - `arc`: the roles in order, each scene with its role line.
-   - `budget`: each scene 12 to 30 s with its words within 10 percent of its
-     seconds at the narrator's rate, and the scenes within 10 percent of the
-     brief's length.
-   - `cites`: every cite in `excerpts.json`, and still word for word in its
+   <w> warn`. `arc`, `budget`, `dashes` and `sentences` hold step 1's rules;
+   the others:
+   - `cites`: every cite in `excerpts.json`, still word for word in its
      snapshot.
    - `support`: every sentence judged `supported` or `connective` on its
      present wording.
-   - `coverage`: each `must` item said or shown, no `avoid` item anywhere,
-     each matched as whole words in any case (`must=merge` is not met by
-     "merges").
-   - `reading`: each visual item on screen long enough to read, counted from
-     the sentence it rises at to the scene's end. A text of three words or
-     fewer needs 0.8 s; a longer one needs 0.3 s a word, and at least 1.2 s;
-     an item's texts (a card's label, value and note) add up.
-   - `dashes`: no em or en dash in the scene file.
-   - `sentences`: a sentence over 25 words warns and does not block.
+   - `coverage`: the `must` and `avoid` items, each matched as whole words in
+     any case (`must=merge` is not met by "merges").
+   - `reading`: each visual item on screen, from the sentence it rises at to
+     the scene's end, long enough to read: 0.8 s for three words or fewer,
+     else 0.3 s a word and at least 1.2 s; a card's texts add up.
 5. **On exit 1** with `script: no <input>: <why>` on stderr and no gate lines,
    run what `<why>` names, then the script gates again. Otherwise fix what each
    `fail` line names in the scene file, compile, then run the support check
