@@ -66,6 +66,14 @@ check_rc "an Authorization header is refused" 1 "$status"
 check "the credential refusal leaves the command out" "$cred_err" "$err"
 call 'auth' --file "$rf" -- gh api repos/o/r '--header=authorization:token s3cr3t'
 check_rc "an attached lower-case header is refused" 1 "$status"
+call 'auth' --file "$rf" -- gh api -HAuthorization:s3cr3t repos/o/r
+check_rc "an attached short header is refused" 1 "$status"
+call 'auth' --file "$rf" -- gh api '-H=Authorization: s3cr3t' repos/o/r
+check_rc "a short header with = is refused" 1 "$status"
+call 'auth' --file "$rf" -- gh api repos/o/r -H ' authorization : s3cr3t'
+check_rc "a header with spaces around its name is refused" 1 "$status"
+call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers '{ "Authorization": "Bearer s3cr3t"}'
+check_rc "a spaced JSON Authorization header is refused" 1 "$status"
 call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers 'Authorization=Bearer s3cr3t'
 check_rc "an az rest Authorization header is refused" 1 "$status"
 call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers '{"Authorization": "Bearer s3cr3t"}'

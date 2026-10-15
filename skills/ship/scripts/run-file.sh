@@ -1465,11 +1465,16 @@ call)
   # refusal leaves the command out, so the credential reaches no output either.
   for w in "$@"; do
     lw=$(printf '%s' "$w" | tr '[:upper:]' '[:lower:]')
-    lw=${lw#--header=}
+    # A header's value in each spelling gh's and az's flag parsers accept:
+    # `--header=v`, `--headers=v`, `-Hv`, `-H=v`, then a JSON object's opening.
     lw=${lw#--headers=}
-    lw=${lw#\{}
-    lw=${lw#\"}
-    case $lw in authorization:* | authorization=* | 'authorization '* | authorization\"*)
+    lw=${lw#--header=}
+    lw=${lw#-h=}
+    lw=${lw#-h}
+    while :; do
+      case $lw in [\{\ \"\']*) lw=${lw#?} ;; *) break ;; esac
+    done
+    case $lw in authorization[:=]* | authorization[\ \"\']*)
       ship_fail "a direct call carries no credential: the host CLI authenticates it, so drop the Authorization header"
       ;;
     esac
