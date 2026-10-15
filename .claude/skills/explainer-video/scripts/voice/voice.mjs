@@ -51,6 +51,9 @@ if (empty) {
   process.exit(1);
 }
 
+// The last pass's timeline no longer describes this script until it passes.
+fs.rmSync(path.join(run, "voice.json"), { force: true });
+
 const tools = toolPaths();
 const backend = await loadBackend();
 
@@ -154,11 +157,18 @@ const missing = scenes.filter((s) => !s.cached);
 const groups =
   missing.length === scenes.length ? [missing] : missing.map((s) => [s]);
 let failed = 0;
+// Scenes with the same narration share a cache key and so one WAV: the first
+// slice voiced is the one written, and a repeat takes its entry.
+const byKey = new Map();
 try {
   // Every scene cached needs no model.
   const ctc = groups.length ? await backend.aligner({ language, tools }) : null;
   for (const g of groups)
     for (const v of await voice(g, ctc)) {
+      if (byKey.has(v.scene.key)) {
+        v.scene.voiced = byKey.get(v.scene.key);
+        continue;
+      }
       const entry = {
         audio: path.join(".cache", "voice", `${v.scene.key}.wav`),
         duration: +(v.samples.length / v.sampleRate).toFixed(3),
@@ -166,6 +176,7 @@ try {
         qc: v.qc,
       };
       v.scene.voiced = entry;
+      byKey.set(v.scene.key, entry);
       if (v.qc.failures.length) continue;
       wav(path.join(run, entry.audio), v.samples, v.sampleRate);
       fs.writeFileSync(

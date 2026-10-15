@@ -213,3 +213,35 @@ for (const [name, sentence, why] of [
     assert.match(line(again.out, "hook"), /: cached ·/);
   });
 }
+
+test("a rerun that fails QC removes the timeline the last pass wrote", () => {
+  const fx = fixture();
+  assert.equal(run(fx).code, 0);
+  const scenes = structuredClone(SCENES);
+  scenes[2].narration = ["This garbled sentence comes out as noise."];
+  write(fx, scenes);
+  assert.equal(run(fx).code, 1);
+  assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
+});
+
+test("two scenes with the same narration share one WAV that matches both entries", () => {
+  const fx = fixture([SCENES[0], { ...SCENES[0], id: "again" }, SCENES[2]]);
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const timeline = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "voice.json"), "utf8"),
+  );
+  for (const s of timeline.scenes) {
+    const seconds = wavSeconds(path.join(fx.dir, s.audio));
+    assert.ok(Math.abs(seconds - s.duration) < 0.01, `${s.id} duration`);
+  }
+});
+
+test("a narration of function words only passes QC when the transcript matches", () => {
+  const scenes = structuredClone(SCENES);
+  scenes[1].narration = ["Here we are."];
+  const fx = fixture(scenes);
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(line(r.out, "context"), /· pass$/);
+});

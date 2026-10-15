@@ -84,7 +84,8 @@ match nothing in the text and cost precision.
 4. **On a fail** (exit 1) with scene lines, relay each failing scene's line as
    printed: it names the measure, its value and the floor or band it missed.
    Rewrite that scene's narration in spoken form and voice again; the scenes
-   that passed are cached. No `voice.json` is written until every scene passes.
+   that passed are cached. The run folder holds no `voice.json`, not even an
+   earlier pass's, until every scene passes.
    Exit 1 with no scene lines is an input or tool error (an unknown narrator,
    a scene with no narration, a failed synthesis): relay the stderr message as
    printed.

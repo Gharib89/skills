@@ -67,7 +67,7 @@ export function check(narration, transcript, seconds) {
   });
   const count = (xs) => xs.filter(Boolean).length;
   const recall = ref.length ? count(hit) / ref.length : 1;
-  const precision = hyp.length ? count(used) / hyp.length : 0;
+  const precision = hyp.length ? count(used) / hyp.length : 1;
   const rate = seconds > 0 ? narration.length / seconds : 0;
   const r2 = (n) => Math.round(n * 100) / 100;
   const out = {
