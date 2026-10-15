@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&family=Instrument+Sans:wght@400;500;600&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Markazi+Text:wght@500;700&family=Noto+Naskh+Arabic:wght@600&family=Rubik:wght@500;700;800&family=Source+Serif+4:opsz,wght@8..60,600&family=Unbounded:wght@700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&family=Instrument+Sans:wght@400;500;600&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Markazi+Text:wght@500;700&family=Noto+Naskh+Arabic:wght@600&family=Poppins:wght@500;600&family=Readex+Pro:wght@500&family=Rubik:wght@500;700;800&family=Source+Serif+4:opsz,wght@8..60,600&family=Unbounded:wght@700;900&display=swap">
 <!-- PROTOTYPE, throwaway (#664): five style directions as storyboards, before any video is rendered. -->
 <style>
   /* Layout: a review desk. Style tabs, one live animatic, the four-scene storyboard, then the decision form. */
@@ -252,12 +252,64 @@
   .s5 .rtl .a:not(.on), .s5 .a.rtl:not(.on) { transform: translateX(120px); }
   .s5 .chain { position: absolute; left: 72px; right: 72px; top: 650px; display: flex; gap: 24px; font: 700 40px "JetBrains Mono"; }
   .s5 .chain span { padding: 14px 24px; border: 3px solid #ffffff; }
+
+  /* 6 ITWorx (measured from itworx.com: Poppins headings, Inter text, black and indigo grounds, periwinkle pills) */
+  .s6 { background: #000000; color: #ffffff; font-family: "Inter", sans-serif; }
+  .s6.light { background: #ffffff; color: #0a0f4f; }
+  .s6.indigo { background: #171c8f; }
+  .s6 .ring { position: absolute; left: 50%; top: 50%; width: 1500px; height: 760px; margin: -380px 0 0 -750px; border-radius: 50%; background: conic-gradient(from 200deg, #2a3bd8, #7b3cff, #d04bf0, #f2a7ff, #6d5cff, #2a3bd8); transform: rotate(-14deg); }
+  .s6 .ring::after { content: ""; position: absolute; inset: 120px 170px; border-radius: 50%; background: #000000; }
+  .s6 .ring.a:not(.on) { transform: rotate(-30deg) scale(0.92); }
+  .s6 .ring.a { transition-duration: 1.2s !important; }
+  .s6 .ring.rtl { transform: rotate(14deg); }
+  .s6 .ring.rtl.a:not(.on) { transform: rotate(30deg) scale(0.92); }
+  .s6 h1 { position: absolute; left: 0; right: 0; top: 330px; margin: 0; text-align: center; font: 500 104px/1.22 "Poppins", sans-serif; }
+  .s6 .mw { display: inline-block; overflow: hidden; vertical-align: bottom; padding: 0 0.12em 0.08em; margin: 0 -0.06em; }
+  .s6 .mw > span { display: inline-block; }
+  .s6 .mw > span.a:not(.on) { transform: translateY(105%); opacity: 1; }
+  .s6 .pill { display: inline-block; background: #4b56da; color: #ffffff; font: 600 34px "Poppins"; padding: 24px 56px; border-radius: 999px; }
+  .s6 .pill.a:not(.on) { transform: translateY(16px); }
+  .s6 .nav { position: absolute; left: 120px; right: 120px; top: 56px; display: flex; justify-content: space-between; align-items: center; font: 600 28px "Poppins"; }
+  .s6 .nav .pill { font-size: 26px; padding: 14px 34px; }
+  .s6 .kick { font: 600 26px "Poppins"; color: #4b56da; }
+  .s6.light h2 { margin: 0; font: 500 76px/1.15 "Poppins"; color: #0a0f4f; }
+  .s6 .cols { position: absolute; left: 120px; right: 120px; top: 380px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 36px; }
+  .s6 .col { text-align: center; }
+  .s6 .tile { width: 170px; height: 170px; margin: 0 auto 28px; border-radius: 40px; background: #eeedfc; display: grid; place-items: center; font: 600 64px "Poppins"; color: #4b56da; }
+  .s6 .col .t { font: 500 40px/1.25 "Poppins"; color: #303133; }
+  .s6 .col .s { margin-top: 14px; font: 600 26px "Inter"; display: inline-block; padding: 8px 22px; border-radius: 999px; }
+  .s6 .col .a:not(.on), .s6 .col.a:not(.on) { transform: translateY(24px); }
+  .s6 .line { position: absolute; left: 330px; right: 330px; top: 465px; height: 4px; background: #4b56da; transform-origin: left center; }
+  .s6 .line.a:not(.on) { transform: scaleX(0); opacity: 1; }
+  .s6 .line.a { transition-duration: 2.6s !important; transition-timing-function: linear !important; }
+  .s6 .gate-card { position: absolute; left: 980px; top: 210px; width: 820px; background: #ffffff; color: #0a0f4f; border-radius: 32px; padding: 44px 52px; }
+  .s6 .gate-card.a:not(.on) { transform: translateY(30px); }
+  .s6 .gr { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid #e3e2f5; font: 500 34px "Inter"; }
+  .s6 .gr .st { width: 44px; height: 44px; border-radius: 50%; background: #eeedfc; color: #6b6e75; display: grid; place-items: center; font: 700 26px "Inter"; }
+  .s6 .gr .st.on { background: #17734b; color: #ffffff; }
+  .s6 .gr .st.a:not(.on) { opacity: 1; }
+  .s6 .cap { position: absolute; left: 120px; right: 120px; top: 930px; text-align: center; font: 500 40px/1.35 "Inter"; color: #8e8aa8; }
+  .s6.light .cap { color: #8d90a6; }
+  .s6 .cap .w { margin: 0 0.1em; }
+  .s6 .cap .w.on { color: #ffffff; }
+  .s6.light .cap .w.on { color: #0a0f4f; }
+  .s6 .cap .w.cur { color: #9aa2ff; }
+  .s6.light .cap .w.cur { color: #4b56da; }
+  .s6 .cap.rtl { font: 500 42px/1.75 "Readex Pro", sans-serif; color: #ffffff; }
+  .s6 [dir="rtl"] { font-family: "Readex Pro", sans-serif; }
+  .s6 .ar-h { position: absolute; left: 0; right: 0; top: 250px; text-align: center; font: 500 92px/1.55 "Readex Pro"; }
+  .s6 .ar-h bdi, .s6 .ar-steps bdi { font-family: "Poppins"; }
+  .s6 .ar-steps { position: absolute; left: 160px; right: 160px; top: 560px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+  .s6 .ar-steps .pill { font: 500 34px/1.5 "Readex Pro"; padding: 16px 40px; background: rgba(255, 255, 255, 0.12); border: 2px solid #9aa2ff; }
+  .s6 .ar-steps .pill.last { background: #4b56da; border-color: #4b56da; }
+  .s6 .ar-steps .pill.a:not(.on) { transform: translateX(24px); }
+  .s6 .ar-steps i { flex: 1; height: 3px; background: #9aa2ff; }
 </style>
 
 <div class="wrap">
   <header class="top">
     <div class="meta">explainer-video · style prototypes · storyboard first</div>
-    <h1>Five styles, one script</h1>
+    <h1>Six styles, one script</h1>
     <p>Each tab is the same 16-second explainer in a different style, laid out as the storyboard a real run would show you: four scenes, each with its frame, narration, timing and style notes. The last scene shows how the style handles Egyptian Arabic, right to left. Press Play to watch the rough animatic with the Kokoro <code>bf_emma</code> narration. Then pick a style or blend parts of several, and save.</p>
   </header>
 
@@ -556,10 +608,55 @@ const STYLES = [
         <div class="ar-big a rtl" dir="rtl" data-in="arabic:flip" style="top:400px"><span class="slab amber">${lat("لـ pull request")}</span></div>${arCap()}`,
     },
   },
+  {
+    key: "s6", name: "ITWorx", lineage: "itworx.com, extracted from the live site",
+    swatch: ["#000000", "#171c8f", "#0a0f4f", "#4b56da", "#eeedfc", "#ffffff", "#7b3cff", "#d04bf0"],
+    type: "Poppins headings, Inter text, as itworx.com sets them. Arabic: Readex Pro, a geometric companion to Poppins (Poppins has no Arabic).",
+    layout: "Centred headlines and alternating grounds, as the site's sections run: black hero, white service columns, indigo band. Rounded pill buttons.",
+    motion: "Headline words rise out of a mask one at a time, like the site's headline reveal; the hero ring turns slowly into place. Medium pace.",
+    risk: "A corporate look: polished, but the gradient ring is the site's hero art redrawn, and the owner's no-glow rule keeps it flat (no blur or bloom).",
+    frameClass: { diagram: "light", code: "indigo" },
+    notes: {
+      title: "Black hero with the site's purple-blue ring. Each headline word rises out of its mask as it is spoken; a periwinkle pill follows.",
+      diagram: "White section in the site's service-column layout: four lavender tiles with Poppins labels. The test pill turns from red to green on \"pass\".",
+      code: "Indigo band with a white rounded card listing the checks; each tick goes green on \"green\" and a pill reads \"Pull request opened\" on \"opens\".",
+      arabic: "The ring mirrors, the Readex Pro headline is centred, and the four steps run right to left as pills. English terms stay in Poppins.",
+    },
+    scenes: (() => {
+      const mask = (id) => S[id].text.replace(/[.,]/g, "").split(" ").map((w, i) => `<span class="mw"><span class="a" data-in="${S[id].words[i].s - 0.05}">${w === "Ship" ? `<b style="font-weight:600">${w}</b>` : w}</span></span>`).join(" ");
+      return {
+        title: () => `<div class="ring a" data-in="title:start"></div>
+          <div class="nav"><span>Ship</span><span class="pill">Open the issue</span></div>
+          <h1>${mask("title")}</h1>
+          <div style="position:absolute;left:0;right:0;top:640px;text-align:center"><span class="pill a" data-in="title:request+0.3">From issue to merge-ready</span></div>${cap("title")}`,
+        diagram: () => `<div style="position:absolute;left:0;right:0;top:110px;text-align:center"><div class="kick a" data-in="diagram:start">How Ship works</div><h2 class="a" data-in="diagram:start+0.1" style="margin-top:12px">A failing test comes first</h2></div>
+          <div class="line a" data-in="diagram:issue"></div>
+          <div class="cols">
+            <div class="col a" data-in="diagram:issue-0.1"><div class="tile">#</div><div class="t">Issue</div><div class="s" style="background:#eeedfc;color:#0a0f4f">#650</div></div>
+            <div class="col a" data-in="diagram:failing"><div class="tile">✗</div><div class="t">Failing test</div>
+              <div class="s a" data-in="diagram:failing" data-out="diagram:pass" style="background:#d4365c;color:#ffffff">red</div>
+              <div class="s a" data-in="diagram:pass" style="background:#17734b;color:#ffffff;margin-top:-50px">green</div></div>
+            <div class="col a" data-in="diagram:makes"><div class="tile">{ }</div><div class="t">Code</div><div class="s" style="background:#eeedfc;color:#0a0f4f">+42 −7</div></div>
+            <div class="col a" data-in="diagram:pass+0.4"><div class="tile">↗</div><div class="t">Pull request</div><div class="s" style="background:#4b56da;color:#ffffff">next</div></div>
+          </div>${cap("diagram")}`,
+        code: () => `<div style="position:absolute;left:120px;top:300px;width:760px"><div class="kick a" data-in="code:start" style="color:#c9ccff">The gate</div>
+            <h1 style="position:static;text-align:left;font-size:84px;margin-top:14px">${mask("code")}</h1></div>
+          <div class="gate-card a" data-in="code:every">
+            <div style="font:600 30px Poppins;margin-bottom:10px">Checks on #650</div>
+            ${["local-gate / full", "secrets", "version-lines", "bump-guard"].map((g, i) => `<div class="gr a" data-in="code:gate+${(i * 0.12).toFixed(2)}"><span class="st a" data-in="code:green+${(i * 0.1).toFixed(1)}">✓</span><span>${g}</span></div>`).join("")}
+            <div style="margin-top:28px"><span class="pill a" data-in="code:opens" style="font-size:28px;padding:16px 36px">Pull request opened</span></div>
+          </div>${cap("code")}`,
+        arabic: () => `<div class="ring rtl a" data-in="arabic:start"></div>
+          <div class="nav" dir="rtl"><span>${lat("الـ Ship")}</span><span class="pill">${lat("افتح الـ issue")}</span></div>
+          <div class="ar-h a" dir="rtl" data-in="arabic:start+0.2">${lat(A.title)}</div>
+          <div class="ar-steps" dir="rtl">${A.steps.map((s, i) => `<span class="pill a${i === 3 ? " last" : ""}" data-in="arabic:flip+${(i * 0.3).toFixed(1)}">${lat(s)}</span>`).join("<i></i>")}</div>${arCap()}`,
+      };
+    })(),
+  },
 ];
 
 // ---------- rendering and time ----------
-function frameHTML(st, id) { return `<div class="f ${st.key}" data-scene="${id}">${st.scenes[id]()}</div>`; }
+function frameHTML(st, id) { return `<div class="f ${st.key} ${(st.frameClass || {})[id] || ""}" data-scene="${id}">${st.scenes[id]()}</div>`; }
 function prep(root) {
   for (const el of root.querySelectorAll("[data-in]")) {
     el._in = tt(el.dataset.in); el._out = tt(el.dataset.out); el._cur = el.dataset.cur ? parseFloat(el.dataset.cur) : null;
@@ -622,7 +719,7 @@ for (const id of ORDER) {
 function renderStyle() {
   const st = STYLES[cur];
   for (const b of document.querySelectorAll(".tab")) b.setAttribute("aria-selected", String(b.dataset.i == cur));
-  document.getElementById("profile").innerHTML = `<div class="meta">Style ${cur + 1} of 5 · after ${st.lineage}</div><h2>${st.name}</h2>
+  document.getElementById("profile").innerHTML = `<div class="meta">Style ${cur + 1} of ${STYLES.length} · after ${st.lineage}</div><h2>${st.name}</h2>
     <dl><div><dt>Palette</dt><dd><div class="sw">${st.swatch.map((c) => `<i style="background:${c}" title="${c}"></i>`).join("")}</div></dd></div>
     <div><dt>Type</dt><dd>${st.type}</dd></div><div><dt>Layout</dt><dd>${st.layout}</dd></div>
     <div><dt>Motion and pacing</dt><dd>${st.motion}</dd></div><div><dt>Risk to watch</dt><dd class="risk">${st.risk}</dd></div></dl>`;
@@ -650,7 +747,7 @@ STYLES.forEach((st, i) => {
 });
 tabs.addEventListener("keydown", (e) => {
   if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-  cur = (cur + (e.key === "ArrowRight" ? 1 : 4)) % 5; renderStyle(); tabs.children[cur].focus();
+  cur = (cur + (e.key === "ArrowRight" ? 1 : STYLES.length - 1)) % STYLES.length; renderStyle(); tabs.children[cur].focus();
 });
 
 const PARTS = [["palette", "Palette"], ["type", "Type"], ["layout", "Layout"], ["motion", "Motion and pacing"], ["captions", "Captions"], ["arabic", "Arabic treatment"]];
@@ -705,7 +802,7 @@ document.getElementById("decide").addEventListener("submit", async (e) => {
   catch (err) { status.textContent = `Not saved: ${err?.message || err?.code || "the store refused the write"}`; status.classList.add("err"); }
 });
 
-try { const s = parseInt(localStorage.getItem("style-tab"), 10); if (s >= 0 && s < 5) cur = s; } catch (e) {}
+try { const s = parseInt(localStorage.getItem("style-tab"), 10); if (s >= 0 && s < STYLES.length) cur = s; } catch (e) {}
 document.fonts.ready.then(() => renderStyle());
 renderStyle();
 </script>
