@@ -235,8 +235,8 @@ fs.mkdirSync(snaps, { recursive: true });
 const backend = await loadBackend();
 const sources = [];
 const report = [];
-// This video's output is never its source: a repo source skips the
-// `explainers/` folder holding the run, or the run alone when it sits elsewhere.
+// A video's output is never its source: a repo source skips the `explainers/`
+// folder holding the run, or the run alone when it sits elsewhere.
 const parent = path.dirname(path.resolve(run));
 const skipUnder =
   path.basename(parent) === "explainers" ? parent : path.resolve(run);
