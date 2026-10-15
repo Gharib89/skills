@@ -149,10 +149,10 @@
 #   infra-error   the awaited run concluded any other way but `success`
 #   silent        the window closed on its bound with nothing admitted
 #
-# `--brief` projects that same JSON plus the poll's `stale`, from the same single
-# fetch, down to what a review loop acts on: head, mergeable, `landed_by`, `done`
-# with the `pending_checks` and `stale` that explain a false one beside a landed
-# round, one row per reviewer round
+# `--brief` projects that same JSON plus the poll's `stale`, from the same
+# single fetch, down to what a review loop acts on: head, mergeable,
+# `landed_by`, `done` with the `pending_checks` and `stale` that explain a false
+# one beside a landed round, one row per reviewer round
 # (id, submitted_at, substantive, and the body cut to its lead line, its
 # `Findings:` line and its finding items, HTML comments and tags gone, the items
 # of a `<details>` block lifted) and one
@@ -180,7 +180,7 @@
 #       round landed, and null beside a landed round means a check on the head
 #       was still pending, or the host still showed another head than the
 #       expected one, which the brief names as `pending_checks` and `stale`;
-#       the review loop takes both outcomes as the answer), or the call cap
+#       the review loop takes every such exit 1 as the answer), or the call cap
 #       reached first (status pending: resume with --cursor) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
