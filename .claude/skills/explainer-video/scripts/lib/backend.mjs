@@ -320,15 +320,17 @@ export async function loudness(file) {
 }
 
 // Two-pass loudnorm to `lufs` integrated and `peak` true peak (LRA 11), as
-// 16-bit PCM WAV at the input's rate. Pass 2 is linear from pass 1's
-// measurements, so speech keeps its dynamics.
+// 16-bit stereo PCM WAV at the input's rate. Pass 2 is linear from pass 1's
+// measurements, so speech keeps its dynamics. Mastered as stereo, both
+// channels the source's: HyperFrames upmixes a mono track at full level into
+// each channel (pan FL=FL+FC), which reads 3 LU louder than the mono master.
 export async function master(input, output, { lufs, peak }) {
-  const target = `I=${lufs}:TP=${peak}:LRA=11`;
+  const target = `pan=stereo|c0=c0|c1=c0,loudnorm=I=${lufs}:TP=${peak}:LRA=11`;
   const err = ffmpeg([
     "-i",
     input,
     "-af",
-    `loudnorm=${target}:print_format=json`,
+    `${target}:print_format=json`,
     "-f",
     "null",
     "-",
@@ -360,7 +362,7 @@ export async function master(input, output, { lufs, peak }) {
     "-i",
     input,
     "-af",
-    `loudnorm=${target}:measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}:offset=${j.target_offset}:linear=true`,
+    `${target}:measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}:offset=${j.target_offset}:linear=true`,
     "-ar",
     String(rate),
     "-c:a",
