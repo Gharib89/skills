@@ -73,12 +73,13 @@ ten-item checklist. Each phase below flips it with `run-file next`, `open`,
 `close` or `skip`, and closes once its `Done when:` holds, not before.
 
 **A phase runs the mechanic it names**, rather than re-deriving what that
-mechanic wraps. **Every host write, and every gating read, goes through a
-mechanic**: one no mechanic performs is a **Ship defect** for the merge
-summary's `Ship defects:` row, never a hand-rolled call; merge-gate.md says
-where its draft goes. [reference/mechanics.md](reference/mechanics.md) carries
-the rule in full, the informational reads it admits, the mechanic each phase
-runs and the contract they share, `--help` included.
+mechanic wraps. **Every gating call goes through a mechanic**, a host call a
+later phase, stop, merge or release depends on: one no mechanic performs is a
+**Ship defect** for the merge summary, never hand-rolled, and never holds the
+clean gate. Any other is a **direct call** through `gh api` or `az rest`,
+logged first with `run-file call`; worked-around friction is a **Ship note**.
+[reference/mechanics.md](reference/mechanics.md) lists the gating calls, each
+phase's mechanic and their shared contract, `--help` included.
 
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
 preflight proves and refuses, the profile it loads and why the worktree is made
@@ -256,8 +257,8 @@ waiting for an explicit "merge" by default, or merging when
 answers `clean: true`; an unmet criterion needs the human's explicit waiver.
 On either authorization run `merge <pr> <issue|none> <head> [--worktree
 <path>]`, `<head>` the gate's `head_sha`,
-`update-issue-body` per tracker draft, settle each Ship defect draft
-(filed on its own word only), `run-file close 9`, `ExitWorktree` with `action:
+`update-issue-body` per tracker draft, file Ship defect drafts on the human's
+word, `run-file close 9`, `ExitWorktree` with `action:
 "keep"` (`cleanup` owns the removal) so the session is not left in a deleted
 folder, then `cleanup
 <issue|none>`, last, as it removes the Run file; a nonzero exit, or a `false`
@@ -266,8 +267,7 @@ step no mechanic re-does is a Ship defect for the summary. Unattended: the
 final head's gate, then `comment-pr <pr> --body-file` with the summary,
 `run-file close 9`. Either lane then returns.
 **Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
-`false`, every Ship defect draft is filed, answered with candidates, carries its
-`command` or was declined, then `close 9`, then `ExitWorktree`, then `cleanup
+`false`, then `close 9`, then `ExitWorktree`, then `cleanup
 <issue|none>` exited 0 with no `false`; unattended, `comment-pr` posted.
 
 ## The stops

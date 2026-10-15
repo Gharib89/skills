@@ -16,11 +16,11 @@ exceptions bound these rules.
   [skills/ship/reference/mechanics.md](../../../skills/ship/reference/mechanics.md);
   the `contract` gate enforces it.
 - **No host CLI outside a named mechanic.** In this repo's code, `gh` and `az`
-  are called only from `skills/ship/scripts/host/<host>.sh`; a host write or
-  gating read no mechanic performs is a ship defect, not a prose fallback. A run
-  itself may make an informational read no mechanic covers through the host's
-  REST form, listed in its Run file's `## Direct reads`, and that is no
-  violation of this rule. One documented exception: a CI template under
+  are called only from `skills/ship/scripts/host/<host>.sh`; a gating call no
+  mechanic performs is a ship defect, not a prose fallback. A run itself may
+  make a direct call no mechanic covers through the host's REST form, logged in
+  its Run file's `## Direct calls` by `run-file call`, and that is no violation
+  of this rule. One documented exception: a CI template under
   `skills/setup-skills/reviewers/`, and this repo's own copy of one under
   `.github/workflows/`, calls `gh` directly. It runs on a runner in a consumer
   repo that has no mechanics checked out, so there is nothing to route through.
