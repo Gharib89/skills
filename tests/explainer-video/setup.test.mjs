@@ -4,7 +4,6 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -121,14 +120,10 @@ test("install is the yes: it installs every row, npm ci skips the onnxruntime pr
   );
 });
 
-test("install clears what an earlier install of a missing row left half done", () => {
+test("install clears what an earlier Chrome install left half done", () => {
   const fx = fixture();
-  const hash = crypto
-    .createHash("sha256")
-    .update(fs.readFileSync(path.join(fx.skill, "package-lock.json")))
-    .digest("hex")
-    .slice(0, 16);
-  const leftover = path.join(cacheDir(fx), "chrome", hash, "partial-download");
+  const chromeDir = row(run(fx, ["check"]).out, "chrome")[5];
+  const leftover = path.join(chromeDir, "partial-download");
   fs.mkdirSync(path.dirname(leftover), { recursive: true });
   fs.writeFileSync(leftover, "x");
   const r = run(fx, ["install"]);

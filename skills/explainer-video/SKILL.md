@@ -41,6 +41,6 @@ being the folder this file is in:
    install lines from the output, ask the user to run the one for their OS,
    then check again. A `refused` or `failed` row: relay the reason as printed.
 
-To remove the tools, the user deletes the folders the `writes to` column names.
-Setup deletes inside those folders alone, and only after the yes: the stale
-installs, and what an earlier install of a missing row left half done.
+To remove the tools, the user deletes the `explainer-video` folders that the
+`writes to` paths sit in. Setup deletes only after the yes: the stale installs,
+and what an earlier install of a missing row left half done.
