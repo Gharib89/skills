@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.0 (2026-10-15)
+
+### Features
+
+- **explainer-video**: Source stage snapshots repos, pages and documents into a source pack
+  ([#719](https://github.com/Gharib89/skills/pull/719),
+  [`4ca5b29`](https://github.com/Gharib89/skills/commit/4ca5b292f517a46bdd016f27e520969068210600))
+
+
 ## v0.4.0 (2026-10-15)
 
 ### Features
