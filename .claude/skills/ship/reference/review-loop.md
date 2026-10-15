@@ -120,6 +120,11 @@ admitted.
   branch or `--sha`. `not_reviewed: unreachable` with a `head_sha` that is not
   that head means the host never showed the push: confirm it landed, then poll
   again.
+- **Exit 1 beside a landed round is still the answer.** A non-null
+  `landed_by` with `done: false` and no `status` is triaged like any other; the
+  brief's `pending_checks` names the checks still pending when the window
+  closed, and `stale: true` says the host still showed another head than the
+  expected one; a round the since rule landed stands even so.
 
 ## Triage, fix, reply
 

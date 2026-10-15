@@ -1677,6 +1677,12 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # through whole, the string "unavailable" included: it is four fields, and a
 # loop reading rounds from the brief is the loop that has to tell a silent
 # reviewer from one whose run is still going.
+#
+# `pending_checks` (the names of the head's checks still pending) and `stale`
+# (the host showing another head than the expected one, which the poll adds to
+# its JSON for this projection alone) say why a window with a landed round
+# closed `done: false`, exit 1. The full shape answers through `checks` and
+# `head_sha`, the brief through these two (#667).
 ship_brief() {
   jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" "$SHIP_LOGIN_NORM"'
     def by($l): ((.login // "") | norm) == ($l | norm);
@@ -1725,7 +1731,9 @@ ship_brief() {
       | if ($lines | length) > 1 and $cut == $first
         then $first + "\n...[truncated]" else $cut end;
     (.reviewer.login // "") as $await
-    | {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked, reviewer_run,
+    | {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, done,
+     pending_checks: [.checks[]? | select(.status == "pending") | .name], stale: (.stale // false),
+     reviewer_blocked, reviewer_run,
      rounds: [.reviews[$key][] | select((mine | not) and awaited($await)) | . as $r
               | {id, submitted_at, substantive,
                  body: (if ($full | index("open")) or ($full | index($r.id | tostring)) then $r.body

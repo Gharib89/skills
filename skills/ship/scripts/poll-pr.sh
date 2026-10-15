@@ -149,8 +149,10 @@
 #   infra-error   the awaited run concluded any other way but `success`
 #   silent        the window closed on its bound with nothing admitted
 #
-# `--brief` projects that same JSON, from the same single fetch, down to what a
-# review loop acts on: head, mergeable, `landed_by`, one row per reviewer round
+# `--brief` projects that same JSON plus the poll's `stale`, from the same
+# single fetch, down to what a review loop acts on: head, mergeable,
+# `landed_by`, `done` with the `pending_checks` and `stale` that explain a false
+# one beside a landed round, one row per reviewer round
 # (id, submitted_at, substantive, and the body cut to its lead line, its
 # `Findings:` line and its finding items, HTML comments and tags gone, the items
 # of a `<details>` block lifted) and one
@@ -169,14 +171,16 @@
 # stdout: {head_sha, mergeable, checks[], reviews: {on_head[], all[], total},
 #          threads, reviewer, reviewer_blocked, reviewer_run, landed_by, refused_by, not_reviewed,
 #          done, waited_s}
-#   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, reviewer_blocked,
-#             reviewer_run, rounds[], threads}
+#   --brief: {head_sha, mergeable, reviewer, landed_by, refused_by, not_reviewed, done,
+#             pending_checks[], stale, reviewer_blocked, reviewer_run, rounds[], threads}
 #   either shape, at the call cap with the window still open, also carries
 #   status: "pending" and cursor: "<opaque>", with done=false and not_reviewed
 #   null: the window is open, so no cause is graded yet
 # exit: 0 done · 1 window closed first (done=false; `not_reviewed` names why no
-#       round landed, and null beside a landed round means only checks were still
-#       pending; the review loop takes either as the answer), or the call cap
+#       round landed, and null beside a landed round means a check on the head
+#       was still pending, or the host still showed another head than the
+#       expected one, which the brief names as `pending_checks` and `stale`;
+#       the review loop takes every such exit 1 as the answer), or the call cap
 #       reached first (status pending: resume with --cursor) · 2 tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -325,7 +329,8 @@ snapshot() {
          else "silent" end)')
 }
 render() {
-  if $brief; then ship_brief "$out" "$me" "$key" "$full"; else printf '%s\n' "$out"; fi
+  if $brief; then ship_brief "$(jq -c --argjson st "$stale" '.stale = $st' <<<"$out")" "$me" "$key" "$full"
+  else printf '%s\n' "$out"; fi
 }
 # The window is still open and this call has run out of tool time: the snapshot
 # it has, `done` false whatever the pass found since the window stays open,
