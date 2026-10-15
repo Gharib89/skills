@@ -344,7 +344,8 @@ const prev = fs.existsSync(recordFile)
   : null;
 const same = prev?.script === scriptHash;
 const again = same && prev.render === renderHash;
-const count = (red, before) => (!red ? 0 : again ? before || 1 : before + 1);
+const count = (failing, before) =>
+  !failing ? 0 : again ? before || 1 : before + 1;
 const gates = {};
 for (const [name, [evidence, measured, wanted]] of Object.entries(judged))
   gates[name] = {

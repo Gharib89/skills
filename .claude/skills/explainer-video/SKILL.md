@@ -220,9 +220,10 @@ readable report with every red gate's findings.
 approved script**: the visual's layout, its text size, colours within the
 profile, timing, or re-voiced audio, never the narration, the scene order or
 the scene count. Compile, voice if the audio changed, and render again. The
-attempt counts live in `gates.json`: each gate's resets when that gate passes,
-and the run's, which `stop` reads, when every gate passes; both reset when the
-narration changes, so a red that moves from one gate to another still stops.
+attempt counts live in `gates.json`: each gate's count resets when that gate
+passes, and the run's count, which `stop` reads, when every gate passes. Both
+reset when the narration changes, so a red that moves from one gate to another
+still stops.
 On `stop`, stop with no video and report each red gate's line and `gates.md`;
 a fix that needs the narration, order or count changed is a revision of the
 script the user approved, so ask the user.
