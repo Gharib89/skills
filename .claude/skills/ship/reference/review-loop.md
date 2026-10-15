@@ -178,7 +178,7 @@ run URL.
 
 Each reviewer's rounds and stop go in the Run file as lines, which `run-file
 close 7` requires of every reviewer on the phase-7 row, one `Round:` per round
-(`not reviewed` and `inline lane` need none) and one `Stop:`:
+(`not reviewed`, `not invoked` and `inline lane` need none) and one `Stop:`:
 
 ```
 Round: <reviewer> <n>: <text>
@@ -202,13 +202,13 @@ dispositions changed no file, so a further round would read the same tree),
 `small lane` (the lane's one requested round), `inline lane` (the lane requested
 no round), `auto-once` (the reviewer fires once, on PR open), `not landed` (a
 dispositioned round's fixes changed the tree, then the next requested round did
-not land, so no host round read them; its cause goes on the `## Review` line) or
-`not reviewed` (no round was dispositioned: none landed, a fallback was not
-invoked because its primary reviewed, or a round landed whose threads could not
-be read, which keeps its `Round:` line too). A declined finding from a `Gating:
-yes` reviewer also leaves `Override: <reviewer>: <finding>, <evidence>` in the
-Run file, so the clean-gate decision reads the same override the human sees in
-the summary.
+not land, so no host round read them; its cause goes on the `## Review` line),
+`not reviewed` (no round was dispositioned: none landed, or a round landed whose
+threads could not be read, which keeps its `Round:` line too) or `not invoked:
+<primary> reviewed` (a fallback whose primary reviewed, its exit word). A
+declined finding from a `Gating: yes` reviewer also leaves `Override:
+<reviewer>: <finding>, <evidence>` in the Run file, so the clean-gate decision
+reads the same override the human sees in the summary.
 
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each file

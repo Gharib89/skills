@@ -105,7 +105,9 @@
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
 # one of cap, `tree unchanged at <sha>` (<sha> the PR head the round read; a
 # bare `tree unchanged` is refused), small lane, inline lane, auto-once, not
-# landed or not reviewed, and unless it is `not reviewed` or `inline lane` at least one
+# landed, not reviewed or `not invoked: <primary> reviewed` (a fallback whose
+# primary reviewed), and unless it is `not reviewed`, `not invoked: <primary>
+# reviewed` or `inline lane` at least one
 # `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
 # it wrote.
@@ -640,7 +642,7 @@ EORESTS
 
 # Phase 7: each reviewer the checklist row names has its stop reason and, unless
 # it never reviewed, a round.
-stop_reasons="cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed"
+stop_reasons="cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
   local list names nm stop r ok
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
@@ -658,21 +660,21 @@ EONAMES
     # Only an unchanged tree settles a reviewer, so only it names the head it
     # read: the clean gate holds it once the PR moves past that head.
     case $stop in
-      cap | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed") ;;
+      cap | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed" | "not invoked: "?*" reviewed") ;;
       "tree unchanged at "*) [[ ${stop#"tree unchanged at "} =~ ^[0-9a-f]{7,64}$ ]] ||
         gap "Stop line for $nm has reason '$stop', whose head is not a commit sha" ;;
       "tree unchanged") gap "Stop line for $nm has no head: write \`Stop: $nm: tree unchanged at <sha>\`, the head read-pr returned for the round" ;;
-      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed>\`" ;;
+      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed|not invoked: <primary> reviewed>\`" ;;
       *) gap "Stop line for $nm has reason '$stop', which is not one of $stop_reasons" ;;
     esac
-    case $stop in "not reviewed" | "inline lane") continue ;; esac
+    case $stop in "not reviewed" | "not invoked: "?*" reviewed" | "inline lane") continue ;; esac
     ok=false
     while IFS= read -r r; do
       [[ $r =~ $round_re ]] && ok=true
     done <<EORESTS
 $(rests "Round: $nm ")
 EORESTS
-    [ "$ok" = true ] || gap "no Round line for $nm: add \`Round: $nm <n>: <text>\`, one per round, unless it stopped \`not reviewed\` or \`inline lane\`"
+    [ "$ok" = true ] || gap "no Round line for $nm: add \`Round: $nm <n>: <text>\`, one per round, unless it stopped \`not reviewed\`, \`not invoked: <primary> reviewed\` or \`inline lane\`"
   done <<EONAMES
 $names
 EONAMES
