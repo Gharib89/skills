@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.45.1 (2026-10-15)
+
+### Bug Fixes
+
+- **ship**: Revert-red keeps runner-command words jq reads as options
+  ([#715](https://github.com/Gharib89/skills/pull/715),
+  [`91754cf`](https://github.com/Gharib89/skills/commit/91754cf4965380b2132856d7f04ba0a6ce7ef1bd))
+
+
 ## v0.45.0 (2026-10-15)
 
 ### Features

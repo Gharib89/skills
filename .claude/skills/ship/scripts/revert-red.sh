@@ -56,11 +56,12 @@ if [ $# -gt 0 ]; then
 fi
 set -- "${paths[@]}"
 
-# verdict <red> <path>...: the one JSON answer.
+# verdict <red> <path>...: the one JSON answer. jq reads options after `--args`,
+# so `--` keeps a word like `--test` or `-c` a word.
 verdict() {
   local red=$1; shift
-  jq -n --arg t "$test_path" --argjson r "$red" --argjson c "$(jq -nc '$ARGS.positional' --args "${command[@]}")" \
-    '{test: $t, paths: $ARGS.positional, red: $r, command: $c}' --args "$@"
+  jq -n --arg t "$test_path" --argjson r "$red" --argjson c "$(jq -nc '$ARGS.positional' --args -- "${command[@]}")" \
+    '{test: $t, paths: $ARGS.positional, red: $r, command: $c}' --args -- "$@"
 }
 
 # `cd ""` succeeds without moving, so the toplevel is read and checked first.

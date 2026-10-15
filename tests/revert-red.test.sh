@@ -68,6 +68,7 @@ EOF2
 printf '%s\n' 'import sys' "sys.exit(0 if 'echo 2' in open('lib.sh').read() else 1)" > "$repo/tests/answer_check.py"
 printf '%s\n' 'import sys' 'print("MARKER-PY-RED-AT-HEAD")' 'sys.exit(1)' > "$repo/tests/redhead_check.py"
 printf '%s\n' 'import subprocess' 'subprocess.run(["gh", "api", "repos/x/y"])' > "$repo/tests/hostcall_check.py"
+printf '%s\n' "require('node:test')('answer', () => require('node:assert').match(require('node:fs').readFileSync('lib.sh', 'utf8'), /echo 2/))" > "$repo/tests/answer.check.js"
 git -C "$repo" add -A && git -C "$repo" commit -qm test
 
 # <args>...: the script's exit code, stdout, or stderr, run from the fixture repo.
@@ -174,6 +175,14 @@ check_rc "a test typed with a leading ./ matches a command naming it bare" \
   0 "$(rc_of ./tests/answer_check.py lib.sh -- python3 tests/answer_check.py)"
 check_rc "a command naming a node ID under the test runs" \
   0 "$(rc_of tests/answer_check.py lib.sh -- sh -c 'exec python3 tests/answer_check.py' tests/answer_check.py::test_answer)"
+# A command word that looks like a jq option (`--test`, `-c`) is still a word of
+# the command, never an option to the jq that writes the verdict.
+check "a command with a long-option word keeps it in the verdict" \
+  '{"test":"tests/answer.check.js","paths":["lib.sh"],"red":true,"command":["node","--test","tests/answer.check.js"]}' \
+  "$(out_of tests/answer.check.js lib.sh -- node --test tests/answer.check.js | jq -c .)"
+check "a command with a short-option word keeps it in the verdict" \
+  '["sh","-c","exec python3 \"$0\"","tests/answer_check.py"]' \
+  "$(out_of tests/answer_check.py lib.sh -- sh -c 'exec python3 "$0"' tests/answer_check.py | jq -c .command)"
 # A command that names another test could go red for that test, and the line
 # would credit this one.
 check_rc "a command that does not name the test is refused" \
