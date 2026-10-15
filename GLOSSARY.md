@@ -485,7 +485,7 @@ An independent reviewer that reads a run's contact sheets: its hard failures (un
 _Avoid_: judge, grader, reviewer
 
 **Tool cache**:
-The per-user folder setup installs a run's tools into: the npm packages and Chrome, each under the lockfile's hash, so copies of the skill at different versions coexist. An install no run has used for 30 days under another hash is stale, and setup's install removes it.
+The per-user folder setup installs a run's tools into: the npm packages, Chrome and models, each under the lockfile's hash, so copies of the skill at different versions coexist. An install no run has used for 30 days under another hash is stale, and setup's install removes it.
 _Avoid_: node_modules, tools folder
 
 **Font store**:

@@ -7,7 +7,7 @@
 //                                    every stale install, print the table again
 //
 // --all adds the opt-in rows. A system package (ffmpeg, uv) is never installed:
-// its apt, brew and winget lines are printed for the human to run.
+// its install lines (Linux, brew, winget) are printed for the human to run.
 // stdout: the table (row, needed by, status, size, licence, writes to), the
 //         install lines of each missing system package, one summary line
 // exit:   0 every row present, nothing stale · 1 a row missing, refused or
@@ -57,12 +57,12 @@ const quietEnv = {
   HYPERFRAMES_NO_UPDATE_CHECK: "1",
 };
 
+// The tool cache's folder per row kind, each holding one install per lock hash.
+const TOOL_DIRS = { npm: "node", chrome: "chrome" };
 const dest = (r) =>
-  ({
-    npm: path.join(dirs.cache, "node", lockHash),
-    chrome: path.join(dirs.cache, "chrome", lockHash),
-    font: path.join(dirs.data, "fonts", `${r.family}@${r.version}`),
-  })[r.kind];
+  r.kind === "font"
+    ? path.join(dirs.data, "fonts", `${r.family}@${r.version}`)
+    : path.join(dirs.cache, TOOL_DIRS[r.kind], lockHash);
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
   const s = fs.lstatSync(p);
@@ -83,16 +83,17 @@ function status(r) {
   return "present";
 }
 
-// Installs under the tool cache's node/ and chrome/ for another lock hash,
-// whose stamp no run has touched in 30 days.
+// Installs in the tool cache for another lock hash, whose stamp no run has
+// touched in 30 days. One with no stamp never finished, and ages by its folder.
 function stale() {
   const out = [];
-  for (const kind of ["node", "chrome"]) {
+  for (const kind of Object.values(TOOL_DIRS)) {
     const base = path.join(dirs.cache, kind);
     for (const name of fs.existsSync(base) ? fs.readdirSync(base).sort() : []) {
       const dir = path.join(base, name);
-      const st = fs.statSync(stamp(dir), { throwIfNoEntry: false });
-      const age = st ? Date.now() - st.mtimeMs : 0;
+      const st =
+        fs.statSync(stamp(dir), { throwIfNoEntry: false }) ?? fs.statSync(dir);
+      const age = Date.now() - st.mtimeMs;
       if (name !== lockHash && age > STALE_MS)
         out.push({
           id: `stale ${kind}/${name}`,
@@ -123,6 +124,8 @@ async function install(r) {
     const nodeDir = dest({ kind: "npm" });
     if (!fs.existsSync(stamp(nodeDir)))
       throw new Error("needs npm-packages first");
+    // A missing row's folder can hold a download an earlier install left half done.
+    fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
     const code = await backend.ensureChrome(nodeDir, dir, quietEnv);
     if (code !== 0)
@@ -147,14 +150,14 @@ async function install(r) {
   return "present";
 }
 
-const mb = (n) =>
+const formatSize = (n) =>
   n >= 1e9
     ? `${(n / 1e9).toFixed(1)} GB`
     : n >= 1e6
       ? `${Math.round(n / 1e6)} MB`
       : `${Math.max(1, Math.round(n / 1e3))} KB`;
 
-function report(state, old) {
+function report(state, staleInstalls) {
   const lines = [
     "| row | needed by | status | size | licence | writes to |",
     "| --- | --- | --- | --- | --- | --- |",
@@ -162,12 +165,12 @@ function report(state, old) {
   for (const r of rows) {
     const where = r.kind === "system" ? "system, you install it" : dest(r);
     lines.push(
-      `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${r.size ? mb(r.size) : "-"} | ${r.licence} | ${where} |`,
+      `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${r.size ? formatSize(r.size) : "-"} | ${r.licence} | ${where} |`,
     );
   }
-  for (const s of old)
+  for (const s of staleInstalls)
     lines.push(
-      `| ${s.id} | nothing | stale, unused ${s.days} days | ${mb(s.size)} | - | ${s.dir} |`,
+      `| ${s.id} | nothing | stale, unused ${s.days} days | ${formatSize(s.size)} | - | ${s.dir} |`,
     );
   for (const r of rows.filter(
     (r) => r.kind === "system" && state.get(r) !== "present",
@@ -181,13 +184,15 @@ function report(state, old) {
   }
   const missing = rows.filter((r) => state.get(r) !== "present");
   const parts = [];
+  // A system package has no size: setup installs none of them.
+  const total = missing.reduce((n, r) => n + (r.size || 0), 0);
   if (missing.length)
     parts.push(
-      `not present: ${missing.map((r) => r.id).join(", ")} (${mb(missing.reduce((n, r) => n + (r.size || 0), 0))} to install)`,
+      `not present: ${missing.map((r) => r.id).join(", ")}${total ? ` (${formatSize(total)} to install)` : ""}`,
     );
-  if (old.length)
+  if (staleInstalls.length)
     parts.push(
-      `stale: ${old.length} install(s), ${mb(old.reduce((n, s) => n + s.size, 0))} to free`,
+      `stale: ${staleInstalls.length} install(s), ${formatSize(staleInstalls.reduce((n, s) => n + s.size, 0))} to free`,
     );
   lines.push("", parts.length ? parts.join("; ") : "ready: every row present");
   console.log(lines.join("\n"));

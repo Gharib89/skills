@@ -128,6 +128,7 @@ test("ffmpeg missing prints its apt, brew and winget lines and installs nothing 
   assert.match(r.out, /apt: sudo apt install ffmpeg/);
   assert.match(r.out, /brew: brew install ffmpeg/);
   assert.match(r.out, /winget: winget install/);
+  assert.match(r.out, /^not present: ffmpeg$/m, "a system package has no size");
   assert.ok(calls(fx).every((c) => c.call !== "system"));
 });
 
@@ -241,20 +242,19 @@ test("an install unused for 30 days is listed with its size and pruned under the
   const fx = fixture([]);
   const day = 24 * 60 * 60;
   const now = Date.now() / 1000;
-  const make = (rel, ageDays) => {
+  // An install that never finished has no stamp, and ages by its folder.
+  const make = (rel, ageDays, stamped = true) => {
     const dir = path.join(cacheDir(fx), rel);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "blob"), "x".repeat(2048));
-    fs.writeFileSync(path.join(dir, ".stamp"), "");
-    fs.utimesSync(
-      path.join(dir, ".stamp"),
-      now - ageDays * day,
-      now - ageDays * day,
-    );
+    const aged = stamped ? path.join(dir, ".stamp") : dir;
+    if (stamped) fs.writeFileSync(aged, "");
+    fs.utimesSync(aged, now - ageDays * day, now - ageDays * day);
     return dir;
   };
   const old = make(path.join("node", "aaaaaaaaaaaaaaaa"), 31);
   const oldChrome = make(path.join("chrome", "aaaaaaaaaaaaaaaa"), 45);
+  const unfinished = make(path.join("node", "cccccccccccccccc"), 40, false);
   const fresh = make(path.join("node", "bbbbbbbbbbbbbbbb"), 3);
   const c = run(fx, ["check"]);
   assert.equal(c.code, 1, c.out + c.err);
@@ -263,12 +263,14 @@ test("an install unused for 30 days is listed with its size and pruned under the
   assert.match(cells[2], /^stale, unused 31 days/);
   assert.match(cells[3], /KB/);
   assert.ok(row(c.out, "stale chrome/aaaaaaaaaaaaaaaa"));
+  assert.ok(row(c.out, "stale node/cccccccccccccccc"), c.out);
   assert.equal(row(c.out, "stale node/bbbbbbbbbbbbbbbb"), undefined);
   assert.ok(fs.existsSync(old), "check removed a stale install");
   const i = run(fx, ["install"]);
   assert.equal(i.code, 0, i.out + i.err);
   assert.ok(!fs.existsSync(old));
   assert.ok(!fs.existsSync(oldChrome));
+  assert.ok(!fs.existsSync(unfinished));
   assert.ok(fs.existsSync(fresh));
 });
 
