@@ -75,7 +75,8 @@ conversation, so a large repo does not crowd out the work.
    <n>, ...`, the budget being 8 per minute, at least 12. A repo snapshot
    holds only the text files git tracks or would track, never an ignored one,
    a binary file, a symlink or anything under the `explainers/` folder
-   holding this run.
+   holding this run. A page's URL is kept without its credentials, query or
+   fragment, since the pack is committed.
 2. **On exit 1**, there is no `sources.json`: relay each `source <source>:
    <why>` line. On `source: <row> is not installed`, run the setup steps
    above, then snapshot again. A scanned PDF has no text to read, and a folder

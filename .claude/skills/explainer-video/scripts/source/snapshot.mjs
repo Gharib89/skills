@@ -7,11 +7,12 @@
 // lists as tracked or untracked and not ignored, less the `explainers/` folder
 // holding the run (the run alone when it sits elsewhere), `.env*` files and
 // any file whose name or text matches a secret pattern; binary files, symlinks
-// and the skipped folder leave no line. A page, and an HTML file, render in HyperFrames' Chrome first; HTML
-// and DOCX end as Markdown, a PDF as one block per page, a PPTX as one per
-// slide and one per slide's notes, each after a `<!-- page <n> -->` or
-// `<!-- slide <n>[ notes] -->` marker line. Markdown and text are copied as
-// they are.
+// and the skipped folder leave no line. A page, and an HTML file, render in
+// HyperFrames' Chrome first; HTML and DOCX end as Markdown, a PDF as one block
+// per page, a PPTX as one per slide and one per slide's notes, each after a
+// `<!-- page <n> -->` or `<!-- slide <n>[ notes] -->` marker line. Markdown
+// and text are copied as they are. A page's URL is kept, and printed, without
+// its credentials, query or fragment.
 // stdout: `source <id>: <kind> · <n> <unit> · <source>` per source,
 //         each followed by `withheld <id>/<path>: <why>` per repo file
 //         withheld for a secret, then
@@ -102,7 +103,7 @@ const errors = [];
 const refuse = (source, why) => errors.push(`source ${source}: ${why}`);
 
 function kindOf(s) {
-  if (isUrl(s)) return "page";
+  if (isUrl(s)) return URL.canParse(s) ? "page" : refuse(s, "not a valid URL");
   const st = fs.statSync(s, { throwIfNoEntry: false });
   if (!st) return refuse(s, "no such file or folder");
   if (st.isDirectory()) return "repo";
@@ -242,9 +243,21 @@ const runParent = path.dirname(path.resolve(run));
 const skipUnder =
   path.basename(runParent) === "explainers" ? runParent : path.resolve(run);
 
+// A page's URL as the pack keeps it: the pack is committed, so no
+// credentials, query or fragment, any of which can carry a token.
+function bare(s) {
+  const u = new URL(s);
+  u.username = "";
+  u.password = "";
+  u.search = "";
+  u.hash = "";
+  return u.href;
+}
+
 for (const [i, s] of given.entries()) {
   const kind = kinds[i];
   const id = idOf(s, kind);
+  const shown = kind === "page" ? bare(s) : s;
   const name = path.basename(s);
   let title = name;
   let text;
@@ -318,7 +331,7 @@ for (const [i, s] of given.entries()) {
     } else {
       const url = kind === "page" ? s : pathToFileURL(path.resolve(s)).href;
       const page = await backend.renderPage(url, { env: hyperframesEnv() });
-      title = page.title?.trim() || (kind === "page" ? s : name);
+      title = page.title?.trim() || (kind === "page" ? shown : name);
       text = titled(title, await backend.toMarkdown(page.html));
     }
   } catch (e) {
@@ -328,9 +341,9 @@ for (const [i, s] of given.entries()) {
   const snapshot = kind === "repo" ? id : `${id}.md`;
   if (text !== undefined) fs.writeFileSync(path.join(snaps, snapshot), text);
   count ??= sections(text).length;
-  sources.push({ id, kind, source: s, title, snapshot });
+  sources.push({ id, kind, source: shown, title, snapshot });
   report.push(
-    `source ${id}: ${kind} · ${count} ${UNIT[kind]} · ${s}`,
+    `source ${id}: ${kind} · ${count} ${UNIT[kind]} · ${shown}`,
     ...withheld,
   );
 }

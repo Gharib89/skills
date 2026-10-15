@@ -428,6 +428,29 @@ test("a web page renders in Chrome and its excerpt locates by section", () => {
   );
 });
 
+test("a page URL is kept without its credentials, query or fragment, and a malformed URL is refused by name", () => {
+  const fx = fixture();
+  const url = "https://me:pw@docs.example.com/guide/intro?token=s3cret#t=key";
+  const pages = JSON.stringify({
+    [url]: { title: "", html: "<h2>Install</h2><p>Run the setup once.</p>" },
+  });
+  const s = snapshot(fx, [url], { EXPLAINER_VIDEO_FAKE_PAGES: pages });
+  assert.equal(s.code, 0, s.out + s.err);
+  draft(fx, "docs-example-com-intro", [["§ Install", "Run the setup once."]]);
+  assert.equal(pack(fx).code, 0);
+  const kept = [
+    s.out,
+    fs.readFileSync(path.join(fx.dir, "snapshots", "sources.json"), "utf8"),
+    fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
+    fs.readFileSync(path.join(fx.dir, "outline.md"), "utf8"),
+  ].join("\n");
+  assert.doesNotMatch(kept, /s3cret|pw@|token|key/);
+  assert.match(kept, /Source: https:\/\/docs\.example\.com\/guide\/intro\n/);
+  const bad = snapshot(fx, ["http://["]);
+  assert.equal(bad.code, 1);
+  assert.equal(bad.err.trim(), "source http://[: not a valid URL");
+});
+
 test("a scanned PDF with no text layer stops the stage with a clear message and no sources.json", () => {
   const fx = fixture();
   const good = write(fx, "good.md", "# Good\n\nText.\n");
