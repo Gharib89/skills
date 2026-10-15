@@ -29,6 +29,8 @@
   .stage { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
   @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); } }
   .player { display: grid; gap: 10px; min-width: 0; }
+  .render video { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; background: #0a0f4f; }
+  .render { display: grid; gap: 10px; }
   .ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .btn { appearance: none; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: 8px 14px; font: 600 14px var(--f-ui); cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
@@ -90,36 +92,38 @@
   .f bdi { unicode-bidi: isolate; }
 
   /* 1 Claude Code dark */
-  .s1 { background: #1a1915; color: #f5f3ec; font-family: "Inter", sans-serif; }
-  .s1 .hd { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid #3d3a33; }
-  .s1 .mk { width: 18px; height: 18px; border-radius: 4px; background: #dc7a5a; }
-  .s1 .kk { font: 600 26px "Inter"; color: #b8b3a6; letter-spacing: 0.04em; flex: 1; }
-  .s1 .sn { font: 400 24px "JetBrains Mono"; color: #b8b3a6; }
+  .s1 { --c-bg: #1a1915; --c-panel: #262420; --c-line: #3d3a33; --c-text: #f5f3ec; --c-dim: #b8b3a6; --c-faint: #8f897c; --c-accent: #dc7a5a; --c-ok: #8fae6b; --c-stop: #e47460; }
+  .s1.blend { --c-bg: #0a0f4f; --c-panel: #171c8f; --c-line: #2c33a8; --c-text: #ffffff; --c-dim: #c9ccff; --c-faint: #8f95d8; --c-accent: #9aa2ff; --c-ok: #5fe0a8; --c-stop: #ff8fa8; }
+  .s1 { background: var(--c-bg); color: var(--c-text); font-family: "Inter", sans-serif; }
+  .s1 .hd { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--c-line); }
+  .s1 .mk { width: 18px; height: 18px; border-radius: 4px; background: var(--c-accent); }
+  .s1 .kk { font: 600 26px "Inter"; color: var(--c-dim); letter-spacing: 0.04em; flex: 1; }
+  .s1 .sn { font: 400 24px "JetBrains Mono"; color: var(--c-dim); }
   .s1 .ct { position: absolute; left: 80px; top: 178px; width: 1760px; height: 690px; }
   .s1 h1 { position: absolute; left: 0; top: 150px; margin: 0; font: 600 124px/1.1 "Source Serif 4", serif; letter-spacing: -0.01em; }
-  .s1 h1 em { font-style: normal; color: #dc7a5a; }
-  .s1 .sub { position: absolute; left: 4px; top: 450px; font: 400 38px "Inter"; color: #b8b3a6; margin: 0; }
+  .s1 h1 em { font-style: normal; color: var(--c-accent); }
+  .s1 .sub { position: absolute; left: 4px; top: 450px; font: 400 38px "Inter"; color: var(--c-dim); margin: 0; }
   .s1 .a:not(.on) { transform: translateY(22px); }
   .s1 .rail { position: absolute; left: 0; right: 0; top: 150px; display: flex; align-items: center; }
-  .s1 .cd { width: 350px; height: 270px; background: #262420; border: 2px solid #3d3a33; border-radius: 18px; padding: 34px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); flex: none; }
-  .s1 .cd .k { font: 600 24px "Inter"; color: #b8b3a6; letter-spacing: 0.06em; }
+  .s1 .cd { width: 350px; height: 270px; background: var(--c-panel); border: 2px solid var(--c-line); border-radius: 18px; padding: 34px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); flex: none; }
+  .s1 .cd .k { font: 600 24px "Inter"; color: var(--c-dim); letter-spacing: 0.06em; }
   .s1 .cd .v { margin-top: 24px; font: 600 54px/1.1 "Source Serif 4", serif; }
   .s1 .cd .b { margin-top: 22px; font: 400 30px "JetBrains Mono"; }
-  .s1 .cd.hot { border-color: #dc7a5a; }
-  .s1 .ar { flex: 1; height: 3px; background: #3d3a33; margin: 0 16px; transform-origin: left center; }
+  .s1 .cd.hot { border-color: var(--c-accent); }
+  .s1 .ar { flex: 1; height: 3px; background: var(--c-line); margin: 0 16px; transform-origin: left center; }
   .s1 .ar:not(.on) { transform: scaleX(0); opacity: 1; }
-  .s1 .term { position: absolute; left: 240px; top: 20px; width: 1280px; height: 620px; background: #262420; border: 2px solid #3d3a33; border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); overflow: hidden; }
+  .s1 .term { position: absolute; left: 240px; top: 20px; width: 1280px; height: 620px; background: var(--c-panel); border: 2px solid var(--c-line); border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); overflow: hidden; }
   .s1 .term.a:not(.on) { transform: perspective(1600px) rotateX(20deg) translateY(40px); }
-  .s1 .tb { height: 60px; border-bottom: 1px solid #3d3a33; display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 24px "JetBrains Mono"; color: #b8b3a6; }
-  .s1 .tb i { width: 14px; height: 14px; border-radius: 50%; background: #3d3a33; }
+  .s1 .tb { height: 60px; border-bottom: 1px solid var(--c-line); display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 24px "JetBrains Mono"; color: var(--c-dim); }
+  .s1 .tb i { width: 14px; height: 14px; border-radius: 50%; background: var(--c-line); }
   .s1 .tbd { padding: 34px 48px; font: 400 36px/1.75 "JetBrains Mono", monospace; }
   .s1 .tbd .r { display: flex; gap: 26px; }
-  .s1 .tbd .p { color: #dc7a5a; }
-  .s1 .tbd .g { color: #8fae6b; }
+  .s1 .tbd .p { color: var(--c-accent); }
+  .s1 .tbd .g { color: var(--c-ok); }
   .s1 .tbd .r.a:not(.on) { transform: none; }
-  .s1 .cap { position: absolute; left: 80px; right: 80px; top: 910px; height: 110px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; font: 400 44px/1.3 "Inter"; color: #8f897c; gap: 0 0.28em; }
-  .s1 .cap .w.on { color: #f5f3ec; }
-  .s1 .cap.rtl { font: 400 44px/1.75 "IBM Plex Sans Arabic", sans-serif; color: #f5f3ec; }
+  .s1 .cap { position: absolute; left: 80px; right: 80px; top: 910px; height: 110px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; font: 400 44px/1.3 "Inter"; color: var(--c-faint); gap: 0 0.28em; }
+  .s1 .cap .w.on { color: var(--c-text); }
+  .s1 .cap.rtl { font: 400 44px/1.75 "IBM Plex Sans Arabic", sans-serif; color: var(--c-text); }
   .s1 .rtl .hd { flex-direction: row; }
   .s1 .art { position: absolute; right: 0; top: 0; margin: 0; font: 600 84px/1.6 "Noto Naskh Arabic", serif; text-align: right; }
   .s1 .art bdi, .s1 .cd bdi { font-family: "Source Serif 4", serif; }
@@ -310,7 +314,7 @@
   <header class="top">
     <div class="meta">explainer-video · style prototypes · storyboard first</div>
     <h1>Six styles, one script</h1>
-    <p>Each tab is the same 16-second explainer in a different style, laid out as the storyboard a real run would show you: four scenes, each with its frame, narration, timing and style notes. The last scene shows how the style handles Egyptian Arabic, right to left. Press Play to watch the rough animatic with the Kokoro <code>bf_emma</code> narration. Then pick a style or blend parts of several, and save.</p>
+    <p>Each tab is the same 16-second explainer in a different style, laid out as the storyboard a real run would show you: four scenes, each with its frame, narration, timing and style notes. The last scene shows how the style handles Egyptian Arabic, right to left. Press Play to watch the rough animatic with the Kokoro <code>bf_emma</code> narration. Then pick a style or blend parts of several, and save. The seventh tab, Your blend, is the saved pick: Claude Code dark with the ITWorx palette.</p>
   </header>
 
   <div class="tabs" role="tablist" id="tabs"></div>
@@ -325,6 +329,11 @@
       </div>
     </div>
     <aside class="profile" id="profile"></aside>
+  </section>
+
+  <section class="render" id="render" hidden>
+    <div class="section-h"><h2>Rendered video</h2><span class="meta">HyperFrames 0.8.160 · 1920 by 1080 · 30 fps · 16.4 s · rendered with --strict</span></div>
+    <video controls preload="metadata" playsinline src="__VIDEO__"></video>
   </section>
 
   <section>
@@ -380,7 +389,7 @@ function cap(id, cls = "cap") {
 }
 const arCap = (cls = "cap rtl") => `<div class="${cls} a" dir="rtl" data-in="arabic:flip">${lat(A.caption)}</div>`;
 
-// ---------- the five styles: each scene is its own composition, not a recolour ----------
+// ---------- the styles: each scene is its own composition, not a recolour ----------
 const STYLES = [
   {
     key: "s1", name: "Claude Code dark", lineage: "the house ship explainer",
@@ -400,13 +409,13 @@ const STYLES = [
         <div class="ct"><h1 class="a" data-in="title:how">How <em>Ship</em> lands<br>a pull request</h1><p class="sub a" data-in="title:pull">One skill, one issue, one merge-ready pull request</p></div>${cap("title")}`,
       diagram: () => `<div class="hd"><i class="mk"></i><span class="kk">HOW IT WORKS</span><span class="sn">2 / 4</span></div>
         <div class="ct"><div class="rail">
-          <div class="cd a" data-in="diagram:issue-0.1"><div class="k">INPUT</div><div class="v">issue</div><div class="b" style="color:#b8b3a6">#650</div></div>
+          <div class="cd a" data-in="diagram:issue-0.1"><div class="k">INPUT</div><div class="v">issue</div><div class="b" style="color:var(--c-dim)">#650</div></div>
           <div class="ar a" data-in="diagram:writes"></div>
           <div class="cd a hot" data-in="diagram:failing"><div class="k">FIRST</div><div class="v">test</div>
-            <div class="b a" style="color:#e47460" data-in="diagram:failing" data-out="diagram:pass">✗ failing</div>
-            <div class="b a" style="color:#8fae6b;margin-top:-52px" data-in="diagram:pass">✓ passing</div></div>
+            <div class="b a" style="color:var(--c-stop)" data-in="diagram:failing" data-out="diagram:pass">✗ failing</div>
+            <div class="b a" style="color:var(--c-ok);margin-top:-52px" data-in="diagram:pass">✓ passing</div></div>
           <div class="ar a" data-in="diagram:then"></div>
-          <div class="cd a" data-in="diagram:makes"><div class="k">THEN</div><div class="v">code</div><div class="b" style="color:#8fae6b">+42 −7</div></div>
+          <div class="cd a" data-in="diagram:makes"><div class="k">THEN</div><div class="v">code</div><div class="b" style="color:var(--c-ok)">+42 −7</div></div>
           <div class="ar a" data-in="diagram:pass+0.3"></div>
           <div class="cd a" data-in="diagram:pass+0.5" style="border-style:dashed"><div class="k">NEXT</div><div class="v">pull request</div></div>
         </div></div>${cap("diagram")}`,
@@ -415,7 +424,7 @@ const STYLES = [
           <div class="tbd">
             <div class="r"><span class="p">$</span><span>scripts/local-gate.sh</span></div>
             ${["lint and format", "tests/run.sh", "secrets", "version-lines"].map((g, i) => `<div class="r a" data-in="code:gate+${(i * 0.12).toFixed(2)}"><span class="a g" data-in="code:green+${(i * 0.08).toFixed(2)}" style="width:40px">✓</span><span>${g}</span></div>`).join("")}
-            <div class="r a" data-in="code:opens"><span class="p">→</span><span>gh pr create · <span style="color:#dc7a5a">#650 opened</span></span></div>
+            <div class="r a" data-in="code:opens"><span class="p">→</span><span>gh pr create · <span style="color:var(--c-accent)">#650 opened</span></span></div>
           </div></div></div>${cap("code")}`,
       arabic: () => `<div class="hd rtl" dir="rtl"><i class="mk"></i><span class="kk" dir="rtl">${lat("الـ Ship · من issue لـ pull request")}</span><span class="sn">4 / 4</span></div>
         <div class="ct"><h1 class="art a" dir="rtl" data-in="arabic:start+0.1">${lat(A.title)}</h1>
@@ -655,8 +664,16 @@ const STYLES = [
   },
 ];
 
+// the owner's pick (decision/owner): Claude Code dark's structure, type and motion with the ITWorx palette
+STYLES.push({
+  ...STYLES[0], key: "blend", cls: "s1 blend", name: "Your blend", lineage: "Claude Code dark, recoloured with the ITWorx palette",
+  swatch: ["#0a0f4f", "#171c8f", "#2c33a8", "#ffffff", "#c9ccff", "#9aa2ff", "#5fe0a8", "#ff8fa8"],
+  notes: { ...STYLES[0].notes, title: "Serif title rises in on \"How\"; the dek follows on \"pull\". Ship in periwinkle, the one accent." },
+  risk: "Every text colour clears 4.5:1 on the navy ground (white 17.6, dim 11.4, faint 6.3, accent 7.5). The faint caption sits at 4.7:1 on the indigo panel, the lowest pair.",
+});
+
 // ---------- rendering and time ----------
-function frameHTML(st, id) { return `<div class="f ${st.key} ${(st.frameClass || {})[id] || ""}" data-scene="${id}">${st.scenes[id]()}</div>`; }
+function frameHTML(st, id) { return `<div class="f ${st.cls || st.key} ${(st.frameClass || {})[id] || ""}" data-scene="${id}">${st.scenes[id]()}</div>`; }
 function prep(root) {
   for (const el of root.querySelectorAll("[data-in]")) {
     el._in = tt(el.dataset.in); el._out = tt(el.dataset.out); el._cur = el.dataset.cur ? parseFloat(el.dataset.cur) : null;
@@ -724,6 +741,7 @@ function renderStyle() {
     <div><dt>Type</dt><dd>${st.type}</dd></div><div><dt>Layout</dt><dd>${st.layout}</dd></div>
     <div><dt>Motion and pacing</dt><dd>${st.motion}</dd></div><div><dt>Risk to watch</dt><dd class="risk">${st.risk}</dd></div></dl>`;
   document.getElementById("board-h").textContent = `Storyboard · ${st.name}`;
+  document.getElementById("render").hidden = st.key !== "blend";
   const board = document.getElementById("board"); board.innerHTML = "";
   ORDER.forEach((id, i) => {
     const [a, z] = BOUNDS[id], sc = S[id];

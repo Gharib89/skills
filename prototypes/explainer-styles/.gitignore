@@ -4,3 +4,6 @@ shared/*.wav
 v*/narration.wav
 v*/fonts/
 v*/timing.js
+v*/gsap.min.js
+out/*.mp4
+v*/.hyperframes/
