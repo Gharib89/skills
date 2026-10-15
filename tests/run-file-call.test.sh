@@ -46,6 +46,12 @@ check_rc "gh api graphql is refused" 1 "$status"
 check "the graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api graphql -f query=\{viewer\{login\}\}" "$err"
 call 'graphql late' --file "$rf" -- gh api -H 'X: y' graphql
 check_rc "a graphql endpoint after a flag is refused" 1 "$status"
+check "the late graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api -H X:\ y graphql" "$err"
+call 'graphql path' --file "$rf" -- gh api /graphql -f 'query=x'
+check_rc "a /graphql path is refused" 1 "$status"
+call 'graphql url' --file "$rf" -- gh api https://api.github.com/graphql
+check_rc "a graphql URL is refused" 1 "$status"
+check "the graphql URL refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api https://api.github.com/graphql" "$err"
 check "a refused call writes nothing" "$before" "$(cat "$rf")"
 
 usage=$(bash "$m" --help | head -n 1)

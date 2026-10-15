@@ -1463,8 +1463,9 @@ call)
   cmd=${cmd% }
   rest=false
   { [ "$1 ${2:-}" = "gh api" ] || [ "$1 ${2:-}" = "az rest" ]; } && [ $# -ge 3 ] && rest=true
-  # `graphql` is the one `gh api` endpoint that is not REST.
-  if [ "$1" = gh ]; then for w in "${@:3}"; do [ "$w" != graphql ] || rest=false; done; fi
+  # `graphql` is the one `gh api` endpoint that is not REST, as a word, a path
+  # or a URL.
+  if [ "$1" = gh ]; then for w in "${@:3}"; do case $w in graphql | */graphql) rest=false ;; esac; done; fi
   [ "$rest" = true ] || ship_fail "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: $cmd"
   append_to_section "## Direct calls" "- $cmd · $why"
   jq -n --arg f "$file" --arg c "$cmd" --arg w "$why" '{run_file: $f, command: $c, why: $w}'
