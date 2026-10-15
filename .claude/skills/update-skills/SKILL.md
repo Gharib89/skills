@@ -213,8 +213,9 @@ section carries the content below either way:
      bash -c 'O=$1; shift; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git diff --name-only "$O" -- . ":!skills-lock.json" "$@"' _ '<old>'
      ```
 - `## Special things to note`:
-  1. `- Door: <one-way|two-way>. Blast radius: <one clause>.`, two-way unless
-     setup-skills changed host state a revert does not undo.
+  1. `- 🟢 Door: two-way. Blast radius: <who else feels it>.`, or
+     `- 🔴 Door: one-way. Blast radius: <who else feels it>.` when setup-skills
+     changed host state a revert does not undo.
   2. One line folding every empty outcome among other skills, upstream drift
      and unreachable upstreams, e.g. `- No other skills moved, no upstream
      drift, every upstream answered.` Each non-empty one gets its own line
