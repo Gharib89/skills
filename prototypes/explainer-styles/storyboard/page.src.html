@@ -1,0 +1,711 @@
+<title>Explainer Style Storyboards</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&family=Instrument+Sans:wght@400;500;600&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Markazi+Text:wght@500;700&family=Noto+Naskh+Arabic:wght@600&family=Rubik:wght@500;700;800&family=Source+Serif+4:opsz,wght@8..60,600&family=Unbounded:wght@700;900&display=swap">
+<!-- PROTOTYPE, throwaway (#664): five style directions as storyboards, before any video is rendered. -->
+<style>
+  /* Layout: a review desk. Style tabs, one live animatic, the four-scene storyboard, then the decision form. */
+  :root {
+    --bg: #f3f4f6; --surface: #ffffff; --line: #d6d9df; --fg: #16181d; --muted: #555b66; --accent: #2f5d8a; --accent-ink: #ffffff; --ok: #2f6b3a; --warn: #8a5a00; --stop: #a3321f;
+    --f-ui: "Instrument Sans", system-ui, sans-serif; --f-data: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121417; --surface: #1b1e23; --line: #30343c; --fg: #eceef2; --muted: #a2a8b3; --accent: #8fb4dd; --accent-ink: #0f1a26; --ok: #8fc79a; --warn: #e3c07a; --stop: #f08a76; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #121417; --surface: #1b1e23; --line: #30343c; --fg: #eceef2; --muted: #a2a8b3; --accent: #8fb4dd; --accent-ink: #0f1a26; --ok: #8fc79a; --warn: #e3c07a; --stop: #f08a76; color-scheme: dark; }
+  body { background: var(--bg); color: var(--fg); font: 400 15px/1.5 var(--f-ui); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  header.top h1 { font: 600 30px/1.15 var(--f-ui); letter-spacing: -0.01em; }
+  header.top p { margin: 8px 0 0; color: var(--muted); max-width: 70ch; }
+  .meta { font: 400 12.5px var(--f-data); color: var(--muted); letter-spacing: 0.02em; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tab { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 8px 14px; font: 500 14px var(--f-ui); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+  .tab .n { font: 500 12px var(--f-data); color: var(--muted); }
+  .tab[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .tab[aria-selected="true"] .n { color: var(--bg); opacity: 0.7; }
+  .tab .v { font: 500 11px var(--f-data); padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+  .tab .v:empty { display: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+  .player { display: grid; gap: 10px; min-width: 0; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn { appearance: none; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: 8px 14px; font: 600 14px var(--f-ui); cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+  .scrub { flex: 1; min-width: 160px; display: flex; gap: 2px; height: 30px; }
+  .scrub button { appearance: none; border: 0; padding: 0 8px; background: var(--surface); color: var(--muted); font: 500 12px var(--f-data); cursor: pointer; position: relative; overflow: hidden; text-align: left; border-radius: 4px; }
+  .scrub button .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--line); }
+  .scrub button span { position: relative; }
+  .clock { font: 500 13px var(--f-data); font-variant-numeric: tabular-nums; color: var(--muted); min-width: 92px; }
+  .profile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 14px; }
+  .profile h2 { font: 600 20px/1.2 var(--f-ui); }
+  .profile dl { margin: 0; display: grid; gap: 10px; }
+  .profile dt { font: 500 11.5px var(--f-data); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .profile dd { margin: 2px 0 0; }
+  .sw { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line); }
+  .risk { color: var(--warn); }
+  .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 1000px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .board { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+  .card .body { padding: 12px 14px 14px; display: grid; gap: 8px; align-content: start; }
+  .card .row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .card h3 { font: 600 14px var(--f-ui); }
+  .card .say { margin: 0; font-size: 14px; }
+  .card .say[dir="rtl"] { font-family: "IBM Plex Sans Arabic", var(--f-ui); font-size: 15px; line-height: 1.7; }
+  .card .note { margin: 0; color: var(--muted); font-size: 13px; }
+  .section-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .section-h h2 { font: 600 18px var(--f-ui); }
+  /* decision */
+  form.decide { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 20px; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+  @media (max-width: 800px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+  fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+  legend { font: 600 15px var(--f-ui); margin-bottom: 6px; padding: 0; }
+  .vrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg label { cursor: pointer; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: block; padding: 5px 10px; font: 500 13px var(--f-ui); color: var(--muted); }
+  .seg input:checked + span { background: var(--fg); color: var(--bg); }
+  .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .brow { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px; align-items: center; }
+  select, textarea { font: 400 14px var(--f-ui); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; min-width: 0; width: 100%; box-sizing: border-box; }
+  textarea { min-height: 96px; resize: vertical; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0; }
+  .save { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .status { font: 500 13px var(--f-data); color: var(--muted); }
+  .status.err { color: var(--stop); }
+
+  /* ---------- frames: 1920x1080 compositions scaled into their box ---------- */
+  .fbox { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #000; }
+  .f { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; }
+  .f * { box-sizing: border-box; }
+  .f .a { transition: opacity 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), clip-path 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), stroke-dashoffset 0.6s ease, background-color 0.2s, color 0.2s, border-color 0.2s; }
+  .f .a:not(.on) { opacity: 0; }
+  .f .w { transition: color 0.12s, background-color 0.12s; }
+  .still .a, .still .w { transition: none !important; }
+  @media (prefers-reduced-motion: reduce) { .f .a, .f .w { transition: none !important; } }
+  .f bdi { unicode-bidi: isolate; }
+
+  /* 1 Claude Code dark */
+  .s1 { background: #1a1915; color: #f5f3ec; font-family: "Inter", sans-serif; }
+  .s1 .hd { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid #3d3a33; }
+  .s1 .mk { width: 18px; height: 18px; border-radius: 4px; background: #dc7a5a; }
+  .s1 .kk { font: 600 26px "Inter"; color: #b8b3a6; letter-spacing: 0.04em; flex: 1; }
+  .s1 .sn { font: 400 24px "JetBrains Mono"; color: #b8b3a6; }
+  .s1 .ct { position: absolute; left: 80px; top: 178px; width: 1760px; height: 690px; }
+  .s1 h1 { position: absolute; left: 0; top: 150px; margin: 0; font: 600 124px/1.1 "Source Serif 4", serif; letter-spacing: -0.01em; }
+  .s1 h1 em { font-style: normal; color: #dc7a5a; }
+  .s1 .sub { position: absolute; left: 4px; top: 450px; font: 400 38px "Inter"; color: #b8b3a6; margin: 0; }
+  .s1 .a:not(.on) { transform: translateY(22px); }
+  .s1 .rail { position: absolute; left: 0; right: 0; top: 150px; display: flex; align-items: center; }
+  .s1 .cd { width: 350px; height: 270px; background: #262420; border: 2px solid #3d3a33; border-radius: 18px; padding: 34px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); flex: none; }
+  .s1 .cd .k { font: 600 24px "Inter"; color: #b8b3a6; letter-spacing: 0.06em; }
+  .s1 .cd .v { margin-top: 24px; font: 600 54px/1.1 "Source Serif 4", serif; }
+  .s1 .cd .b { margin-top: 22px; font: 400 30px "JetBrains Mono"; }
+  .s1 .cd.hot { border-color: #dc7a5a; }
+  .s1 .ar { flex: 1; height: 3px; background: #3d3a33; margin: 0 16px; transform-origin: left center; }
+  .s1 .ar:not(.on) { transform: scaleX(0); opacity: 1; }
+  .s1 .term { position: absolute; left: 240px; top: 20px; width: 1280px; height: 620px; background: #262420; border: 2px solid #3d3a33; border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); overflow: hidden; }
+  .s1 .term.a:not(.on) { transform: perspective(1600px) rotateX(20deg) translateY(40px); }
+  .s1 .tb { height: 60px; border-bottom: 1px solid #3d3a33; display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 24px "JetBrains Mono"; color: #b8b3a6; }
+  .s1 .tb i { width: 14px; height: 14px; border-radius: 50%; background: #3d3a33; }
+  .s1 .tbd { padding: 34px 48px; font: 400 36px/1.75 "JetBrains Mono", monospace; }
+  .s1 .tbd .r { display: flex; gap: 26px; }
+  .s1 .tbd .p { color: #dc7a5a; }
+  .s1 .tbd .g { color: #8fae6b; }
+  .s1 .tbd .r.a:not(.on) { transform: none; }
+  .s1 .cap { position: absolute; left: 80px; right: 80px; top: 910px; height: 110px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; font: 400 44px/1.3 "Inter"; color: #8f897c; gap: 0 0.28em; }
+  .s1 .cap .w.on { color: #f5f3ec; }
+  .s1 .cap.rtl { font: 400 44px/1.75 "IBM Plex Sans Arabic", sans-serif; color: #f5f3ec; }
+  .s1 .rtl .hd { flex-direction: row; }
+  .s1 .art { position: absolute; right: 0; top: 0; margin: 0; font: 600 84px/1.6 "Noto Naskh Arabic", serif; text-align: right; }
+  .s1 .art bdi, .s1 .cd bdi { font-family: "Source Serif 4", serif; }
+  .s1 .rail.rtl { top: 250px; }
+  .s1 .rail.rtl .cd { text-align: right; }
+  .s1 .rail.rtl .cd .v { font: 600 46px/1.45 "IBM Plex Sans Arabic", sans-serif; }
+  .s1 .rail.rtl .cd .k { font: 600 26px "IBM Plex Sans Arabic"; letter-spacing: 0; }
+  .s1 .rail.rtl .ar { transform-origin: right center; }
+  .s1 .kk[dir="rtl"] { font: 600 28px "IBM Plex Sans Arabic"; letter-spacing: 0; text-align: right; }
+  .s1 .kk bdi { font-family: "Inter"; }
+
+  /* 2 Chalkboard math */
+  .s2 { background: #0e1116; color: #ece8df; font-family: "IBM Plex Sans", sans-serif; }
+  .s2 .ctr { position: absolute; inset: 0; display: grid; place-items: center; }
+  .s2 h1 { margin: 0; font: 300 104px/1.15 "IBM Plex Sans"; text-align: center; letter-spacing: -0.01em; }
+  .s2 h1 b { font-weight: 600; color: #58c4dd; }
+  .s2 .eq { position: absolute; left: 0; right: 0; text-align: center; font: 400 52px "IBM Plex Mono"; color: #8a93a3; }
+  .s2 svg { position: absolute; inset: 0; }
+  .s2 svg text { font-family: "IBM Plex Sans"; fill: #ece8df; }
+  .s2 .ln { stroke: #8a93a3; stroke-width: 4; fill: none; stroke-dasharray: 400; }
+  .s2 .ln:not(.on) { stroke-dashoffset: 400; opacity: 1; }
+  .s2 .ln.on { stroke-dashoffset: 0; }
+  .s2 .nd.a:not(.on) { transform: scale(0.6); transform-box: fill-box; transform-origin: center; }
+  .s2 .lbl { font: 400 40px "IBM Plex Sans"; color: #ece8df; position: absolute; text-align: center; width: 360px; }
+  .s2 .lbl small { display: block; font: 400 30px "IBM Plex Mono"; color: #8a93a3; margin-top: 6px; }
+  .s2 .set { position: absolute; left: 0; right: 0; top: 560px; text-align: center; font: 400 56px "IBM Plex Mono"; }
+  .s2 .set .g { color: #8a93a3; }
+  .s2 .set .g.on { color: #83c167; }
+  .s2 .set .g.a:not(.on) { opacity: 1; }
+  .s2 .big { position: absolute; left: 0; right: 0; top: 330px; text-align: center; font: 400 76px "IBM Plex Sans"; }
+  .s2 .big i { font-family: "IBM Plex Mono"; font-style: normal; color: #58c4dd; }
+  .s2 .cap { position: absolute; left: 160px; right: 160px; top: 930px; text-align: center; font: 400 40px/1.35 "IBM Plex Sans"; color: #5d6676; }
+  .s2 .cap .w { margin: 0 0.12em; }
+  .s2 .cap .w.on { color: #ece8df; }
+  .s2 .cap.rtl { font: 400 42px/1.75 "IBM Plex Sans Arabic"; color: #ece8df; }
+  .s2 .ar-t { position: absolute; left: 0; right: 0; top: 140px; text-align: center; font: 400 64px/1.6 "IBM Plex Sans Arabic"; }
+  .s2 .ar-t bdi, .s2 .lbl bdi { font-family: "IBM Plex Sans"; }
+  .s2 .lbl[dir="rtl"] { font: 400 40px/1.5 "IBM Plex Sans Arabic"; }
+
+  /* 3 Flat vector world */
+  .s3 { background: #1d2142; color: #fff7e8; font-family: "Rubik", sans-serif; }
+  .s3 svg { position: absolute; inset: 0; }
+  .s3 h1 { position: absolute; left: 0; right: 0; top: 170px; margin: 0; text-align: center; font: 800 112px/1.05 "Rubik"; letter-spacing: -0.01em; }
+  .s3 h1 span { color: #ffc857; }
+  .s3 .a:not(.on) { transform: scale(0.85) translateY(18px); }
+  .s3 .tag { position: absolute; transform: translateX(-50%); background: #fff7e8; color: #1d2142; font: 700 34px "Rubik"; padding: 10px 24px; border-radius: 999px; white-space: nowrap; }
+  .s3 .tag.a:not(.on) { transform: translateX(-50%) scale(0.7); }
+  .s3 .tag.c { background: #ff6b6b; color: #1d2142; }
+  .s3 .tag.t { background: #4ecdc4; color: #1d2142; }
+  .s3 .tag[dir="rtl"] { font: 700 36px/1.4 "Rubik"; }
+  .s3 .boat.a:not(.on) { transform: translateX(-80px); opacity: 0; }
+  .s3 .boat { transition-duration: 0.9s !important; }
+  .s3 .cap { position: absolute; left: 50%; transform: translateX(-50%); top: 935px; max-width: 1600px; background: rgba(13, 15, 36, 0.78); border-radius: 999px; padding: 14px 40px; font: 500 40px/1.3 "Rubik"; color: #b9bde0; white-space: nowrap; }
+  .s3 .cap .w { margin: 0 0.1em; }
+  .s3 .cap .w.on { color: #fff7e8; }
+  .s3 .cap.rtl { font: 500 40px/1.6 "Rubik"; color: #fff7e8; }
+  .s3 .ar-t { position: absolute; left: 0; right: 0; top: 120px; text-align: center; font: 800 84px/1.45 "Rubik"; }
+  .s3 .ar-t span { color: #ffc857; }
+
+  /* 4 Editorial paper */
+  .s4 { background: #f2ede3; color: #141210; font-family: "Inter", sans-serif; }
+  .s4 .grain { position: absolute; inset: 0; opacity: 0.10; background-image: radial-gradient(rgba(20, 18, 16, 0.6) 1px, transparent 1.2px); background-size: 5px 5px; mix-blend-mode: multiply; }
+  .s4 .col { position: absolute; left: 96px; top: 120px; width: 600px; }
+  .s4 .kick { font: 600 24px "Inter"; letter-spacing: 0.14em; color: #c8321c; text-transform: uppercase; }
+  .s4 .rule { height: 3px; background: #141210; margin: 18px 0 28px; width: 100%; }
+  .s4 h1 { margin: 0; font: 700 96px/1.02 "Fraunces", serif; letter-spacing: -0.02em; }
+  .s4 h2 { margin: 0; font: 700 64px/1.08 "Fraunces", serif; letter-spacing: -0.01em; }
+  .s4 .dek { margin: 26px 0 0; font: 400 32px/1.4 "Inter"; color: #5e574c; }
+  .s4 mark { background: linear-gradient(transparent 52%, #ffe14d 52%, #ffe14d 92%, transparent 92%); color: inherit; padding: 0 4px; }
+  .s4 .ev { position: absolute; left: 780px; top: 110px; width: 1044px; }
+  .s4 .doc { background: #fffdf8; border: 1px solid #d8d0c0; box-shadow: 0 2px 0 #d8d0c0, 0 18px 40px rgba(60, 40, 10, 0.12); padding: 40px 48px; font: 400 30px/1.5 "Inter"; }
+  .s4 .doc.a:not(.on) { clip-path: inset(0 100% 0 0); opacity: 1; }
+  .s4 .doc.on { clip-path: inset(0 0 0 0); }
+  .s4 .doc .h { font: 600 40px/1.25 "Inter"; }
+  .s4 .doc .m { font: 400 26px "Inter"; color: #5e574c; margin-top: 10px; }
+  .s4 .pill { display: inline-block; font: 600 24px "Inter"; padding: 4px 16px; border-radius: 999px; background: #2f6b3a; color: #fffdf8; vertical-align: 4px; margin-right: 12px; }
+  .s4 code, .s4 .mono { font-family: "JetBrains Mono", monospace; }
+  .s4 .ln { font: 400 30px/1.7 "JetBrains Mono"; white-space: pre; }
+  .s4 .ln.del { color: #c8321c; text-decoration: line-through; text-decoration-thickness: 3px; }
+  .s4 .ln.add { color: #2f6b3a; }
+  .s4 .ln.a:not(.on) { opacity: 0; }
+  .s4 .ann { position: absolute; font: italic 500 46px/1.15 "Fraunces", serif; color: #c8321c; }
+  .s4 .ann[dir="rtl"] { font: 700 50px/1.4 "Markazi Text", serif; }
+  .s4 .ann.a:not(.on) { transform: translateY(10px) rotate(-2deg); }
+  .s4 svg.ink { position: absolute; overflow: visible; }
+  .s4 svg.ink path { fill: none; stroke: #c8321c; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1400; }
+  .s4 svg.ink path:not(.on) { stroke-dashoffset: 1400; opacity: 1; }
+  .s4 svg.ink path.on { stroke-dashoffset: 0; transition-duration: 0.7s; }
+  .s4 .sk { position: absolute; left: -6px; right: -6px; top: 50%; height: 5px; background: #c8321c; transform-origin: left center; border-radius: 3px; }
+  .s4 .sk:not(.on) { transform: scaleX(0); opacity: 1; }
+  .s4 .ln .ann { font: italic 500 40px/1.15 "Fraunces", serif; }
+  .s4 .chk { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 14px 0; border-bottom: 1px solid #e3dccd; font: 400 30px "Inter"; }
+  .s4 .chk .st { font: 700 32px "Inter"; color: #8a8173; }
+  .s4 .chk .st.on { color: #2f6b3a; }
+  .s4 .chk .st.a:not(.on) { opacity: 1; }
+  .s4 .chk .d { font: 400 24px "JetBrains Mono"; color: #5e574c; }
+  .s4 .cap { position: absolute; left: 96px; right: 96px; top: 940px; font: 400 40px/1.35 "Inter"; color: #8a8173; display: flex; flex-wrap: wrap; gap: 0 0.26em; }
+  .s4 .cap .w.on { color: #141210; }
+  .s4 .cap .w.cur { background: #ffe14d; }
+  .s4 .cap.rtl { font: 400 42px/1.75 "IBM Plex Sans Arabic"; color: #141210; justify-content: flex-start; }
+  .s4 .rtl-col { left: auto; right: 96px; text-align: right; }
+  .s4 .rtl-col h2 { font: 700 84px/1.35 "Markazi Text", serif; letter-spacing: 0; }
+  .s4 .rtl-col .kick { font: 600 28px "IBM Plex Sans Arabic"; letter-spacing: 0; }
+  .s4 .rtl-col .dek { font: 400 32px/1.7 "IBM Plex Sans Arabic"; }
+  .s4 .rtl-col bdi { font-family: "Fraunces", serif; }
+  .s4 .rtl-col .dek bdi { font-family: "Inter"; }
+
+  /* 5 Kinetic dev poster */
+  .s5 { background: #0a0b10; color: #ffffff; font-family: "Unbounded", sans-serif; }
+  .s5 .rl { position: absolute; left: 72px; right: 72px; top: 48px; display: flex; justify-content: space-between; font: 700 26px "JetBrains Mono"; color: #a0a0a1; letter-spacing: 0.08em; }
+  .s5 .rl b { color: #ffb020; }
+  .s5 .big { position: absolute; left: 72px; font: 900 168px/0.98 "Unbounded"; letter-spacing: -0.03em; white-space: nowrap; }
+  .s5 .slab { display: inline-block; padding: 6px 28px 14px; color: #0a0b10; box-shadow: 14px 14px 0 #ffffff; }
+  .s5 .amber { background: #ffb020; }
+  .s5 .coral { background: #ff4d6d; }
+  .s5 .mint { background: #2ef0b0; }
+  .s5 .a:not(.on) { transform: translateX(-120px); opacity: 0; }
+  .s5 .a { transition-duration: 0.22s !important; transition-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1) !important; }
+  .s5 .code { position: absolute; left: 72px; right: 72px; top: 150px; height: 520px; background: #12141c; border: 3px solid #ffffff; box-shadow: 14px 14px 0 #ffb020; padding: 36px 48px; font: 400 40px/1.6 "JetBrains Mono"; }
+  .s5 .code .p { color: #ffb020; }
+  .s5 .code .g { color: #2ef0b0; }
+  .s5 .code .r.a:not(.on) { transform: none; }
+  .s5 .cap { position: absolute; left: 0; right: 0; top: 900px; height: 140px; text-align: center; font: 700 76px/140px "JetBrains Mono"; color: #ffffff; }
+  .s5 .cap .w { display: none; }
+  .s5 .cap .w.cur { display: inline; }
+  .still .s5 .cap .w.on { display: inline; font-size: 40px; color: #a0a0a1; }
+  .s5 .cap.rtl { font: 700 52px/140px "Alexandria"; }
+  .s5 .ar-big { position: absolute; right: 72px; left: 72px; text-align: right; font: 800 132px/1.5 "Alexandria"; white-space: nowrap; }
+  .s5 .ar-big bdi { font-family: "Unbounded"; font-weight: 900; letter-spacing: -0.03em; }
+  .s5 .rtl .a:not(.on), .s5 .a.rtl:not(.on) { transform: translateX(120px); }
+  .s5 .chain { position: absolute; left: 72px; right: 72px; top: 650px; display: flex; gap: 24px; font: 700 40px "JetBrains Mono"; }
+  .s5 .chain span { padding: 14px 24px; border: 3px solid #ffffff; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="meta">explainer-video · style prototypes · storyboard first</div>
+    <h1>Five styles, one script</h1>
+    <p>Each tab is the same 16-second explainer in a different style, laid out as the storyboard a real run would show you: four scenes, each with its frame, narration, timing and style notes. The last scene shows how the style handles Egyptian Arabic, right to left. Press Play to watch the rough animatic with the Kokoro <code>bf_emma</code> narration. Then pick a style or blend parts of several, and save.</p>
+  </header>
+
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <section class="stage">
+    <div class="player">
+      <div class="fbox" id="pbox"></div>
+      <div class="ctl">
+        <button class="btn" id="play" type="button">Play</button>
+        <div class="scrub" id="scrub"></div>
+        <span class="clock" id="clock">0.0 / 16.4 s</span>
+      </div>
+    </div>
+    <aside class="profile" id="profile"></aside>
+  </section>
+
+  <section>
+    <div class="section-h"><h2 id="board-h">Storyboard</h2><span class="meta">frames show each scene at rest, after its last reveal</span></div>
+    <div class="board" id="board" style="margin-top: 12px"></div>
+  </section>
+
+  <form class="decide" id="decide">
+    <div class="section-h"><h2>Your pick</h2><span class="meta" id="who"></span></div>
+    <div class="grid2">
+      <fieldset id="verdicts"><legend>Verdict per style</legend></fieldset>
+      <fieldset>
+        <legend>Default style profile</legend>
+        <div class="brow"><label for="base">Start from</label><select id="base"></select></div>
+        <p class="hint">To blend, start from one style and take single parts from others. Leave a part on "same as start" to keep it.</p>
+        <div id="blend" style="display: grid; gap: 8px"></div>
+      </fieldset>
+    </div>
+    <fieldset>
+      <legend><label for="notes">Notes</label></legend>
+      <textarea id="notes" placeholder="What to keep, what to change, anything the video render should try"></textarea>
+    </fieldset>
+    <div class="save"><button class="btn" type="submit" id="savebtn">Save pick</button><span class="status" id="status" role="status">Not saved yet</span></div>
+  </form>
+</div>
+
+<audio id="aud" preload="auto" src="__AUDIO__"></audio>
+
+<script>
+const T = __TIMING__;
+const S = Object.fromEntries(T.scenes.map((s) => [s.id, s]));
+const A = T.arabic;
+const END = T.duration;
+const ORDER = ["title", "diagram", "code", "arabic"];
+const BOUNDS = { title: [0, S.diagram.start], diagram: [S.diagram.start, S.code.start], code: [S.code.start, S.arabic.start], arabic: [S.arabic.start, END] };
+const lat = (s, cls = "") => s.replace(/([A-Za-z][A-Za-z -]*[A-Za-z]|[A-Za-z])/g, `<bdi${cls ? ` class="${cls}"` : ""}>$1</bdi>`);
+
+// Resolve "scene:word", "scene:word+0.3" or a number to seconds.
+function tt(spec) {
+  if (spec === undefined || spec === null || spec === "") return null;
+  const m = String(spec).match(/^(\w+):([\w-]+)([+-][\d.]+)?$/);
+  if (!m) return parseFloat(spec);
+  const [, sc, word, off] = m;
+  const base = word === "start" ? BOUNDS[sc][0] : S[sc].words.find((w) => w.w.toLowerCase() === word).s;
+  return base + (off ? parseFloat(off) : 0);
+}
+function cap(id, cls = "cap") {
+  const sc = S[id], words = sc.text.split(" ");
+  return `<div class="${cls}">` + words.map((w, i) => {
+    const nxt = i + 1 < sc.words.length ? sc.words[i + 1].s : BOUNDS[id][1];
+    return `<span class="w" data-in="${sc.words[i].s}" data-cur="${nxt}">${w}</span>`;
+  }).join(" ") + `</div>`;
+}
+const arCap = (cls = "cap rtl") => `<div class="${cls} a" dir="rtl" data-in="arabic:flip">${lat(A.caption)}</div>`;
+
+// ---------- the five styles: each scene is its own composition, not a recolour ----------
+const STYLES = [
+  {
+    key: "s1", name: "Claude Code dark", lineage: "the house ship explainer",
+    swatch: ["#1a1915", "#262420", "#f5f3ec", "#dc7a5a", "#8fae6b", "#e47460"],
+    type: "Source Serif 4 titles, Inter captions, JetBrains Mono code. Arabic: Noto Naskh Arabic titles, IBM Plex Sans Arabic text.",
+    layout: "Header band, a 1760 by 690 content box, a caption band. Cards, terminals and rails.",
+    motion: "Calm and sentence-led. An item rises in at the word that names it and keeps a flat highlight. Terminals tip up and type.",
+    risk: "Quiet by design: may feel flat for a general audience.",
+    notes: {
+      title: "Serif title rises in on \"How\"; the dek follows on \"pull\". Ship in clay, the one accent.",
+      diagram: "Cards reveal on the word that names them. The failing test's border goes red on \"failing\", then the badge turns green on \"pass\".",
+      code: "The terminal tips up from 20 degrees and types the gate command. Rows tick green on \"green\"; the PR line lands on \"opens\".",
+      arabic: "Header, title and rail mirror; English terms stay isolated left-to-right runs in the Latin serif. Naskh title, Plex Arabic caption at line-height 1.75.",
+    },
+    scenes: {
+      title: () => `<div class="hd"><i class="mk"></i><span class="kk">SHIP · ISSUE TO PULL REQUEST</span><span class="sn">1 / 4</span></div>
+        <div class="ct"><h1 class="a" data-in="title:how">How <em>Ship</em> lands<br>a pull request</h1><p class="sub a" data-in="title:pull">One skill, one issue, one merge-ready pull request</p></div>${cap("title")}`,
+      diagram: () => `<div class="hd"><i class="mk"></i><span class="kk">HOW IT WORKS</span><span class="sn">2 / 4</span></div>
+        <div class="ct"><div class="rail">
+          <div class="cd a" data-in="diagram:issue-0.1"><div class="k">INPUT</div><div class="v">issue</div><div class="b" style="color:#b8b3a6">#650</div></div>
+          <div class="ar a" data-in="diagram:writes"></div>
+          <div class="cd a hot" data-in="diagram:failing"><div class="k">FIRST</div><div class="v">test</div>
+            <div class="b a" style="color:#e47460" data-in="diagram:failing" data-out="diagram:pass">✗ failing</div>
+            <div class="b a" style="color:#8fae6b;margin-top:-52px" data-in="diagram:pass">✓ passing</div></div>
+          <div class="ar a" data-in="diagram:then"></div>
+          <div class="cd a" data-in="diagram:makes"><div class="k">THEN</div><div class="v">code</div><div class="b" style="color:#8fae6b">+42 −7</div></div>
+          <div class="ar a" data-in="diagram:pass+0.3"></div>
+          <div class="cd a" data-in="diagram:pass+0.5" style="border-style:dashed"><div class="k">NEXT</div><div class="v">pull request</div></div>
+        </div></div>${cap("diagram")}`,
+      code: () => `<div class="hd"><i class="mk"></i><span class="kk">THE GATE</span><span class="sn">3 / 4</span></div>
+        <div class="ct"><div class="term a" data-in="code:start+0.1"><div class="tb"><i></i><i></i><i></i><span style="margin-left:14px">~/skills · prototype/explainer-styles</span></div>
+          <div class="tbd">
+            <div class="r"><span class="p">$</span><span>scripts/local-gate.sh</span></div>
+            ${["lint and format", "tests/run.sh", "secrets", "version-lines"].map((g, i) => `<div class="r a" data-in="code:gate+${(i * 0.12).toFixed(2)}"><span class="a g" data-in="code:green+${(i * 0.08).toFixed(2)}" style="width:40px">✓</span><span>${g}</span></div>`).join("")}
+            <div class="r a" data-in="code:opens"><span class="p">→</span><span>gh pr create · <span style="color:#dc7a5a">#650 opened</span></span></div>
+          </div></div></div>${cap("code")}`,
+      arabic: () => `<div class="hd rtl" dir="rtl"><i class="mk"></i><span class="kk" dir="rtl">${lat("الـ Ship · من issue لـ pull request")}</span><span class="sn">4 / 4</span></div>
+        <div class="ct"><h1 class="art a" dir="rtl" data-in="arabic:start+0.1">${lat(A.title)}</h1>
+          <div class="rail rtl" dir="rtl">${A.steps.map((s, i) => `<div class="cd a" data-in="arabic:flip+${(i * 0.35).toFixed(2)}"><div class="k">${["المدخل", "الأول", "بعد كده", "الناتج"][i]}</div><div class="v">${lat(s)}</div></div>`).join(`<div class="ar a" data-in="arabic:flip+0.2"></div>`)}</div>
+        </div>${arCap()}`,
+    },
+  },
+  {
+    key: "s2", name: "Chalkboard math", lineage: "3Blue1Brown, the lab's manim run",
+    swatch: ["#0e1116", "#ece8df", "#8a93a3", "#58c4dd", "#f0ac5f", "#fc6255", "#83c167"],
+    type: "IBM Plex Sans and Plex Mono; maths typeset in the composer. Arabic: IBM Plex Sans Arabic, the same superfamily.",
+    layout: "One centred stage, no chrome. The diagram owns the frame; labels sit beside their object.",
+    motion: "Continuous transformation: a node becomes the next idea instead of being replaced. Colour is a quantity's identity across scenes. Slow, with holds.",
+    risk: "Best for algorithms and graphs; reads academic on workflow topics.",
+    notes: {
+      title: "Light Plex title alone on the stage, Ship in the blue that will mean \"issue\" for the whole video.",
+      diagram: "A three-node graph draws edge by edge. The test node transforms in place, red to green, on \"pass\": the same object, a new state.",
+      code: "The gate as a statement: the pull request opens if and only if every gate is green. Set members tick green on \"green\".",
+      arabic: "The same graph flows right to left; node colours keep their meaning. Labels in Plex Arabic beside their nodes, English terms isolated.",
+    },
+    scenes: {
+      title: () => `<div class="ctr"><h1 class="a" data-in="title:how">How <b>Ship</b> lands<br>a pull request</h1></div>
+        <div class="eq a" data-in="title:pull" style="top:720px">issue → test → pull request</div>${cap("title")}`,
+      diagram: () => {
+        const xs = [420, 960, 1500];
+        return `<svg viewBox="0 0 1920 1080">
+          <path class="ln a" data-in="diagram:writes" d="M ${xs[0] + 70} 430 L ${xs[1] - 70} 430"/>
+          <path class="ln a" data-in="diagram:pass+0.2" d="M ${xs[1] + 70} 430 L ${xs[2] - 70} 430"/>
+          <circle class="nd a" data-in="diagram:issue-0.1" cx="${xs[0]}" cy="430" r="62" fill="#58c4dd"/>
+          <circle class="nd a" data-in="diagram:failing" data-out="diagram:pass" cx="${xs[1]}" cy="430" r="62" fill="#fc6255"/>
+          <circle class="nd a" data-in="diagram:pass" cx="${xs[1]}" cy="430" r="62" fill="#83c167"/>
+          <circle class="nd a" data-in="diagram:pass+0.4" cx="${xs[2]}" cy="430" r="62" fill="none" stroke="#f0ac5f" stroke-width="6"/>
+        </svg>
+        <div class="lbl a" data-in="diagram:issue" style="left:${xs[0] - 180}px;top:530px">issue<small>#650</small></div>
+        <div class="lbl a" data-in="diagram:failing" style="left:${xs[1] - 180}px;top:530px">test
+          <small class="a" data-in="diagram:failing" data-out="diagram:pass" style="color:#fc6255">fail</small>
+          <small class="a" data-in="diagram:pass" style="color:#83c167;margin-top:-38px">pass</small></div>
+        <div class="lbl a" data-in="diagram:pass+0.4" style="left:${xs[2] - 180}px;top:530px">pull request<small>next</small></div>
+        <div class="eq a" data-in="diagram:then" style="top:170px">test(code) : <span style="color:#fc6255">0</span> → <span style="color:#83c167">1</span></div>
+        ${cap("diagram")}`;
+      },
+      code: () => `<div class="big a" data-in="code:every">open(<i>PR</i>) ⟺ ∀ g ∈ G : g = <span style="color:#83c167">✓</span></div>
+        <div class="set a" data-in="code:gate">G = { ${["lint", "tests", "secrets", "version-lines"].map((g, i) => `<span class="g a" data-in="code:green+${(i * 0.1).toFixed(1)}">${g}</span>`).join(", ")} }</div>
+        <div class="eq a" data-in="code:opens" style="top:740px;color:#f0ac5f">⇒ pull request #650 opens</div>${cap("code")}`,
+      arabic: () => {
+        const xs = [1500, 960, 420];
+        const l = ["issue", "test بيعدّي", "pull request"];
+        return `<div class="ar-t a" dir="rtl" data-in="arabic:start+0.1">${lat(A.title)}</div>
+        <svg viewBox="0 0 1920 1080">
+          <path class="ln a" data-in="arabic:flip" d="M ${xs[0] - 70} 520 L ${xs[1] + 70} 520"/>
+          <path class="ln a" data-in="arabic:flip+0.35" d="M ${xs[1] - 70} 520 L ${xs[2] + 70} 520"/>
+          <circle class="nd a" data-in="arabic:start+0.3" cx="${xs[0]}" cy="520" r="62" fill="#58c4dd"/>
+          <circle class="nd a" data-in="arabic:flip+0.2" cx="${xs[1]}" cy="520" r="62" fill="#83c167"/>
+          <circle class="nd a" data-in="arabic:flip+0.55" cx="${xs[2]}" cy="520" r="62" fill="none" stroke="#f0ac5f" stroke-width="6"/>
+        </svg>
+        ${l.map((s, i) => `<div class="lbl a" dir="rtl" data-in="arabic:flip+${(i * 0.3).toFixed(1)}" style="left:${xs[i] - 180}px;top:620px">${lat(s)}</div>`).join("")}
+        ${arCap()}`;
+      },
+    },
+  },
+  {
+    key: "s3", name: "Flat vector world", lineage: "Kurzgesagt",
+    swatch: ["#1d2142", "#2b3168", "#3b4285", "#fff7e8", "#ffc857", "#ff6b6b", "#4ecdc4"],
+    type: "Rubik for titles and labels; its family carries Arabic, so one face covers both scripts.",
+    layout: "Full-bleed illustrated scenes in layers, horizon near the lower third, one subject. Text limited to short tags.",
+    motion: "Idle motion and parallax drift; match cuts from one metaphor to the next. Here: Ship is a boat, gates are locks on a canal.",
+    risk: "Without hand illustration it can read as clip art. Every topic needs a metaphor, which a run must invent.",
+    notes: {
+      title: "A boat on a night sea carries the pull request crate. Title pops in with a soft scale.",
+      diagram: "The route is a voyage: an issue buoy, a test flag that turns from coral to teal on \"pass\", a harbour ahead.",
+      code: "The gate as four canal locks; each lamp turns teal on \"green\" and the boat reaches the harbour on \"opens\".",
+      arabic: "The voyage runs right to left and the boat faces the other way. Rubik Arabic tags; the illustration itself carries no text.",
+    },
+    scenes: (() => {
+      const land = (flip = false) => `<g ${flip ? 'transform="translate(1920 0) scale(-1 1)"' : ""}>
+        <circle cx="1560" cy="250" r="110" fill="#ffc857"/>
+        <path d="M0 640 Q 300 520 640 600 T 1300 580 T 1920 560 L1920 1080 L0 1080Z" fill="#3b4285"/>
+        <path d="M0 720 Q 420 640 860 700 T 1920 680 L1920 1080 L0 1080Z" fill="#2b3168"/>
+        <rect x="0" y="760" width="1920" height="320" fill="#232856"/>
+        <path d="M0 790 q 40 -14 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0 t 80 0" stroke="#3b4285" stroke-width="6" fill="none"/></g>`;
+      const boat = (x, y, flip = false) => `<g transform="translate(${x} ${y}) ${flip ? "scale(-1 1)" : ""}">
+        <path d="M-130 0 L130 0 L95 60 L-95 60Z" fill="#ff6b6b"/><rect x="-6" y="-170" width="12" height="170" fill="#fff7e8"/>
+        <path d="M6 -160 L110 -20 L6 -20Z" fill="#fff7e8"/><rect x="-100" y="-56" width="80" height="56" rx="6" fill="#ffc857"/>
+        <text x="-60" y="-18" text-anchor="middle" font-family="Rubik" font-weight="700" font-size="26" fill="#1d2142">PR</text></g>`;
+      const flag = (x, col, extra = "") => `<g transform="translate(${x} 700)" ${extra}><rect x="-5" y="-180" width="10" height="180" fill="#fff7e8"/><path d="M5 -180 L105 -150 L5 -120Z" fill="${col}"/><ellipse cx="0" cy="8" rx="70" ry="16" fill="#3b4285"/></g>`;
+      return {
+        title: () => `<svg viewBox="0 0 1920 1080">${land()}<g class="boat a on" style="opacity:1">${boat(960, 800)}</g></svg>
+          <h1 class="a" data-in="title:how">How <span>Ship</span> lands<br>a pull request</h1>${cap("title")}`,
+        diagram: () => `<svg viewBox="0 0 1920 1080">${land()}
+          <path d="M260 830 C 600 900, 800 760, 1100 830 S 1500 900, 1700 800" stroke="#fff7e8" stroke-width="6" stroke-dasharray="4 22" stroke-linecap="round" fill="none" opacity="0.5"/>
+          <g class="a" data-in="diagram:issue-0.1"><rect x="230" y="560" width="70" height="90" rx="8" fill="#fff7e8"/><rect x="246" y="584" width="38" height="6" fill="#1d2142"/><rect x="246" y="602" width="30" height="6" fill="#1d2142"/><rect x="260" y="650" width="10" height="70" fill="#fff7e8"/></g>
+          <g class="a" data-in="diagram:failing" data-out="diagram:pass">${flag(960, "#ff6b6b")}</g>
+          <g class="a" data-in="diagram:pass">${flag(960, "#4ecdc4")}</g>
+          <g class="a" data-in="diagram:pass+0.4"><rect x="1600" y="560" width="200" height="160" fill="#3b4285"/><path d="M1580 560 L1700 480 L1820 560Z" fill="#ffc857"/></g>
+          <g class="boat a" data-in="diagram:writes">${boat(640, 840)}</g></svg>
+          <div class="tag a" data-in="diagram:issue" style="left:265px;top:470px">issue</div>
+          <div class="tag c a" data-in="diagram:failing" data-out="diagram:pass" style="left:1010px;top:440px">failing test</div>
+          <div class="tag t a" data-in="diagram:pass" style="left:1010px;top:440px">test passes</div>
+          <div class="tag a" data-in="diagram:pass+0.4" style="left:1700px;top:400px">harbour</div>${cap("diagram")}`,
+        code: () => `<svg viewBox="0 0 1920 1080">${land()}
+          ${[480, 800, 1120, 1440].map((x, i) => `<g><rect x="${x - 70}" y="560" width="22" height="260" fill="#3b4285"/><rect x="${x + 48}" y="560" width="22" height="260" fill="#3b4285"/><rect x="${x - 70}" y="540" width="140" height="28" rx="6" fill="#3b4285"/>
+            <circle cx="${x}" cy="510" r="26" fill="#ff6b6b"/><circle class="a" data-in="code:green+${(i * 0.12).toFixed(2)}" cx="${x}" cy="510" r="26" fill="#4ecdc4"/></g>`).join("")}
+          <g class="boat a on" style="opacity:1">${boat(1740, 840)}</g></svg>
+          ${["lint", "tests", "secrets", "version"].map((g, i) => `<div class="tag a" data-in="code:gate+${(i * 0.12).toFixed(2)}" style="left:${480 + i * 320}px;top:390px;font-size:28px">${g}</div>`).join("")}
+          <div class="tag t a" data-in="code:opens" style="left:1740px;top:560px">PR opens</div>${cap("code")}`,
+        arabic: () => `<svg viewBox="0 0 1920 1080">${land(true)}
+          <path d="M1660 830 C 1320 900, 1120 760, 820 830 S 420 900, 220 800" stroke="#fff7e8" stroke-width="6" stroke-dasharray="4 22" stroke-linecap="round" fill="none" opacity="0.5"/>
+          <g class="a" data-in="arabic:flip">${flag(960, "#4ecdc4")}</g>
+          <g class="boat a" data-in="arabic:start+0.2">${boat(1300, 840, true)}</g></svg>
+          <div class="ar-t a" dir="rtl" data-in="arabic:start+0.1">${lat(A.title).replace("Ship", "<span>Ship</span>")}</div>
+          <div class="tag a" dir="rtl" data-in="arabic:flip+0.2" style="left:1660px;top:640px">${lat("issue")}</div>
+          <div class="tag t a" dir="rtl" data-in="arabic:flip+0.4" style="left:960px;top:440px">${lat("test بيعدّي")}</div>
+          <div class="tag a" dir="rtl" data-in="arabic:flip+0.6" style="left:300px;top:640px">${lat("pull request")}</div>${arCap()}`,
+      };
+    })(),
+  },
+  {
+    key: "s4", name: "Editorial paper", lineage: "Vox, the lab's hyperframes and remotion-markup runs",
+    swatch: ["#f2ede3", "#141210", "#5e574c", "#ffe14d", "#c8321c", "#1f2bd9", "#2f6b3a"],
+    type: "Fraunces display, Inter text, JetBrains Mono for quoted code. Arabic: Markazi Text headlines, IBM Plex Sans Arabic text.",
+    layout: "Editorial grid: a narrow text column beside a wide evidence column holding the real issue, diff or checks.",
+    motion: "Documents wipe in like paper slid under the camera; highlighter sweeps; red ink circles and strikes by hand.",
+    risk: "The only light style: needs real artefacts to show, and is weaker on a topic source with nothing to quote.",
+    notes: {
+      title: "Headline in Fraunces with a highlighter under \"pull request\"; the real issue card slides in as evidence.",
+      diagram: "The evidence is the test file itself: the failing line is struck in red ink on \"pass\" and the passing line appears beneath, annotated by hand.",
+      code: "The pull request's checks list, ticking green on \"green\"; red ink circles the merge-ready status on \"opens\".",
+      arabic: "The grid mirrors: the text column moves right with a Markazi headline. The evidence stays as it is, left to right, since it is a real artefact.",
+    },
+    scenes: {
+      title: () => `<div class="grain"></div><div class="col a" data-in="title:how"><div class="kick">Explainer · ship</div><div class="rule"></div>
+          <h1>How Ship lands a <mark class="a" data-in="title:pull">pull request</mark></h1><p class="dek">From one issue to a pull request that is ready to merge.</p></div>
+        <div class="ev"><div class="doc a" data-in="title:lands" style="margin-top:60px"><div class="m">Gharib89/skills · issue</div><div class="h" style="margin-top:12px">ship_args stops its --body-file scan at -- <span style="color:#5e574c;font-weight:400">#650</span></div>
+          <div class="m" style="margin-top:22px"><span class="pill">Open</span>bug · S · ready-for-agent</div></div></div>${cap("title")}`,
+      diagram: () => `<div class="grain"></div><div class="col a" data-in="diagram:start"><div class="kick">Step one</div><div class="rule"></div><h2>A test that fails, <mark class="a" data-in="diagram:pass">then passes</mark></h2></div>
+        <div class="ev"><div class="doc a" data-in="diagram:issue" style="padding:36px 44px">
+          <div class="m mono" style="margin:0 0 18px">tests/ship_args.bats</div>
+          <div class="ln a" data-in="diagram:test">@test "stops at --" {</div>
+          <div class="ln a" data-in="diagram:test">  run ship_args --body-file x -- y</div>
+          <div class="ln a" data-in="diagram:failing">  [ "$output" = "x" ]</div>
+          <div class="ln">}</div>
+          <div class="ln a" data-in="diagram:failing" style="margin-top:24px;color:#c8321c;position:relative;display:inline-block">✗ not ok 1 stops at --<i class="sk a" data-in="diagram:pass"></i></div>
+          <div class="ln a add" data-in="diagram:pass" style="position:relative">✓ ok 1 stops at --<span class="ann a" data-in="diagram:pass+0.2" style="left:470px;top:-30px;width:420px;white-space:normal">red first, then green</span></div>
+        </div></div>${cap("diagram")}`,
+      code: () => `<div class="grain"></div><div class="col a" data-in="code:start"><div class="kick">Step two</div><div class="rule"></div><h2>Every gate goes <mark class="a" data-in="code:green">green</mark> first</h2></div>
+        <div class="ev"><div class="doc a" data-in="code:every" style="padding:30px 44px">
+          <div class="h" style="font-size:34px">fix(ship): ship_args stops its --body-file scan at -- <span style="color:#5e574c;font-weight:400">#650</span></div>
+          <div style="margin-top:18px">${[["local-gate / full", "2m 41s"], ["secrets", "4s"], ["version-lines", "3s"], ["bump-guard", "6s"]].map(([g, d], i) =>
+            `<div class="chk a" data-in="code:gate+${(i * 0.12).toFixed(2)}"><span class="st a" data-in="code:green+${(i * 0.1).toFixed(1)}">✓</span><span>${g}</span><span class="d">${d}</span></div>`).join("")}</div>
+          <div class="m a" data-in="code:opens" style="margin-top:22px;font-weight:600;color:#2f6b3a;font-size:30px;position:relative;display:inline-block">All checks have passed · ready to merge
+            <svg class="ink" style="left:-30px;top:-22px" width="720" height="90" viewBox="0 0 720 90"><path class="a" data-in="code:opens+0.1" d="M40 50 C 40 6, 690 0, 700 44 C 710 86, 60 92, 24 56 C 14 40, 70 14, 150 10"/></svg></div></div>
+        </div>${cap("code")}`,
+      arabic: () => `<div class="grain"></div><div class="col rtl-col a" dir="rtl" data-in="arabic:start+0.1"><div class="kick">${lat("شرح · ship")}</div><div class="rule"></div>
+          <h2>${lat(A.title)}</h2><p class="dek">${lat("من issue واحد لـ pull request جاهز للـ merge.")}</p></div>
+        <div class="ev" style="left:96px;width:1000px"><div class="doc a" data-in="arabic:flip" style="margin-top:60px"><div class="m">Gharib89/skills · pull request</div><div class="h" style="margin-top:12px">fix(ship): ship_args stops its --body-file scan at --</div>
+          <div class="m" style="margin-top:22px;color:#2f6b3a;font-weight:600">All checks have passed</div></div>
+          <div class="ann a" dir="rtl" data-in="arabic:flip+0.4" style="left:520px;top:360px;width:480px;text-align:right">${lat("الـ evidence بيفضل زي ما هو")}</div></div>${arCap()}`,
+    },
+  },
+  {
+    key: "s5", name: "Kinetic dev poster", lineage: "Fireship, the lab's anything2explainer and hyperframes runs",
+    swatch: ["#0a0b10", "#ffffff", "#a0a0a1", "#ffb020", "#ff4d6d", "#2ef0b0"],
+    type: "Unbounded display, JetBrains Mono code and captions. Arabic: Alexandria, a wide geometric by an Egyptian designer.",
+    layout: "Poster cards: two to four words fill the frame; a code panel takes the full width; a constant top rail.",
+    motion: "Words slam in hard and fast, no fades; hard offset shadows instead of glow; one word on screen at a time in the caption.",
+    risk: "Tiring past two minutes, and the default length is up to five.",
+    notes: {
+      title: "\"SHIP\" fills the frame, then an amber slab slams in with the payoff. One spoken word at a time in the caption.",
+      diagram: "Three poster lines stack: ISSUE, a coral FAILING TEST slab that is replaced by a mint PASS slab on \"pass\".",
+      code: "A full-width code panel with an amber offset shadow; checks go mint on \"green\" and the PR line lands on \"opens\".",
+      arabic: "Alexandria fills the frame right-aligned and slams in from the right; English terms stay in Unbounded. The rail keeps Western digits.",
+    },
+    scenes: {
+      title: () => `<div class="rl"><span><b>■</b> SHIP</span><span>01 / 04</span></div>
+        <div class="big a" data-in="title:how" style="top:240px">HOW SHIP</div>
+        <div class="big a" data-in="title:lands" style="top:440px"><span class="slab amber">LANDS A PR</span></div>${cap("title")}`,
+      diagram: () => `<div class="rl"><span><b>■</b> SHIP</span><span>02 / 04</span></div>
+        <div class="big a" data-in="diagram:issue" style="top:170px;font-size:140px">ISSUE →</div>
+        <div class="big a" data-in="diagram:failing" data-out="diagram:pass" style="top:370px;font-size:140px"><span class="slab coral">TEST ✗</span></div>
+        <div class="big a" data-in="diagram:pass" style="top:370px;font-size:140px"><span class="slab mint">TEST ✓</span></div>
+        <div class="big a" data-in="diagram:pass+0.3" style="top:600px;font-size:140px;color:#a0a0a1">→ PR</div>${cap("diagram")}`,
+      code: () => `<div class="rl"><span><b>■</b> SHIP</span><span>03 / 04</span></div>
+        <div class="code a" data-in="code:start+0.05">
+          <div class="r"><span class="p">$ </span>scripts/local-gate.sh</div>
+          ${["lint", "tests", "secrets", "version-lines"].map((g, i) => `<div class="r a" data-in="code:gate+${(i * 0.1).toFixed(1)}"><span class="a g" data-in="code:green+${(i * 0.06).toFixed(2)}">✓ </span>${g}</div>`).join("")}
+          <div class="r a" data-in="code:opens"><span class="p">→ </span>gh pr create <span class="g">#650</span></div></div>
+        <div class="chain"><span class="a" data-in="code:green" style="background:#2ef0b0;color:#0a0b10;border-color:#2ef0b0">ALL GREEN</span><span class="a" data-in="code:opens">PR OPEN</span></div>${cap("code")}`,
+      arabic: () => `<div class="rl rtl" dir="rtl"><span><b>■</b> ${lat("الـ SHIP")}</span><span>04 / 04</span></div>
+        <div class="ar-big a rtl" dir="rtl" data-in="arabic:start+0.1" style="top:150px">${lat("من issue")}</div>
+        <div class="ar-big a rtl" dir="rtl" data-in="arabic:flip" style="top:400px"><span class="slab amber">${lat("لـ pull request")}</span></div>${arCap()}`,
+    },
+  },
+];
+
+// ---------- rendering and time ----------
+function frameHTML(st, id) { return `<div class="f ${st.key}" data-scene="${id}">${st.scenes[id]()}</div>`; }
+function prep(root) {
+  for (const el of root.querySelectorAll("[data-in]")) {
+    el._in = tt(el.dataset.in); el._out = tt(el.dataset.out); el._cur = el.dataset.cur ? parseFloat(el.dataset.cur) : null;
+  }
+}
+function applyTime(root, t) {
+  for (const el of root.querySelectorAll("[data-in]")) {
+    const on = t >= el._in && (el._out === null || t < el._out);
+    el.classList.toggle("on", on);
+    if (el._cur !== null) el.classList.toggle("cur", on && t < el._cur);
+  }
+}
+function fit(box) {
+  const f = box.querySelector(".f"); if (!f) return;
+  f.style.transform = `scale(${box.clientWidth / 1920})`;
+}
+const ro = new ResizeObserver((es) => es.forEach((e) => fit(e.target)));
+
+let cur = 0, playing = false, shownScene = null, raf = 0;
+const pbox = document.getElementById("pbox"), aud = document.getElementById("aud");
+const sceneAt = (t) => ORDER.find((id) => t < BOUNDS[id][1]) || "arabic";
+const LABEL = { title: "Title", diagram: "Diagram", code: "Code", arabic: "Arabic, RTL" };
+
+function showPlayer(t, animate) {
+  const st = STYLES[cur], id = sceneAt(t);
+  if (id !== shownScene || pbox.dataset.style !== st.key) {
+    pbox.innerHTML = frameHTML(st, id); pbox.dataset.style = st.key; shownScene = id;
+    const root = pbox.querySelector(".f"); prep(root); fit(pbox);
+    if (animate) { pbox.classList.remove("still"); applyTime(root, BOUNDS[id][0] - 0.01); void root.offsetWidth; }
+  }
+  pbox.classList.toggle("still", !animate);
+  applyTime(pbox.querySelector(".f"), t);
+  document.getElementById("clock").textContent = `${t.toFixed(1)} / ${END.toFixed(1)} s`;
+  for (const b of document.querySelectorAll("#scrub button")) {
+    const [a, z] = BOUNDS[b.dataset.id];
+    b.querySelector(".fill").style.width = `${Math.max(0, Math.min(1, (t - a) / (z - a))) * 100}%`;
+  }
+}
+function tick() {
+  const t = aud.currentTime;
+  if (aud.ended || t >= END) { stop(); showPlayer(END - 0.01, false); return; }
+  showPlayer(t, true); raf = requestAnimationFrame(tick);
+}
+function stop() { playing = false; aud.pause(); cancelAnimationFrame(raf); document.getElementById("play").textContent = "Play"; }
+document.getElementById("play").addEventListener("click", async () => {
+  if (playing) { stop(); return; }
+  if (aud.currentTime >= END - 0.05) aud.currentTime = 0;
+  try { await aud.play(); } catch (e) { return; }
+  playing = true; document.getElementById("play").textContent = "Pause"; shownScene = null; tick();
+});
+const scrub = document.getElementById("scrub");
+for (const id of ORDER) {
+  const [a, z] = BOUNDS[id];
+  const b = document.createElement("button"); b.type = "button"; b.dataset.id = id; b.style.flex = String(z - a);
+  b.innerHTML = `<i class="fill"></i><span>${LABEL[id]}</span>`;
+  b.addEventListener("click", () => { aud.currentTime = a; if (!playing) showPlayer(z - 0.01, false); });
+  scrub.appendChild(b);
+}
+
+function renderStyle() {
+  const st = STYLES[cur];
+  for (const b of document.querySelectorAll(".tab")) b.setAttribute("aria-selected", String(b.dataset.i == cur));
+  document.getElementById("profile").innerHTML = `<div class="meta">Style ${cur + 1} of 5 · after ${st.lineage}</div><h2>${st.name}</h2>
+    <dl><div><dt>Palette</dt><dd><div class="sw">${st.swatch.map((c) => `<i style="background:${c}" title="${c}"></i>`).join("")}</div></dd></div>
+    <div><dt>Type</dt><dd>${st.type}</dd></div><div><dt>Layout</dt><dd>${st.layout}</dd></div>
+    <div><dt>Motion and pacing</dt><dd>${st.motion}</dd></div><div><dt>Risk to watch</dt><dd class="risk">${st.risk}</dd></div></dl>`;
+  document.getElementById("board-h").textContent = `Storyboard · ${st.name}`;
+  const board = document.getElementById("board"); board.innerHTML = "";
+  ORDER.forEach((id, i) => {
+    const [a, z] = BOUNDS[id], sc = S[id];
+    const say = id === "arabic" ? `<p class="say">“${sc.text}”</p><p class="say" dir="rtl">${A.caption}</p>` : `<p class="say">“${sc.text}”</p>`;
+    const c = document.createElement("article"); c.className = "card";
+    c.innerHTML = `<div class="fbox still">${frameHTML(st, id)}</div><div class="body"><div class="row"><h3>${i + 1} · ${LABEL[id]}</h3><span class="meta">${a.toFixed(1)}–${z.toFixed(1)} s</span></div>${say}<p class="note">${st.notes[id]}</p></div>`;
+    board.appendChild(c);
+    const box = c.querySelector(".fbox"), root = box.querySelector(".f"); prep(root); applyTime(root, z - 0.01); ro.observe(box); fit(box);
+  });
+  stop(); shownScene = null; showPlayer(BOUNDS.title[1] - 0.01, false); aud.currentTime = 0;
+}
+ro.observe(pbox);
+
+// ---------- tabs and the decision form ----------
+const tabs = document.getElementById("tabs");
+STYLES.forEach((st, i) => {
+  const b = document.createElement("button"); b.className = "tab"; b.type = "button"; b.role = "tab"; b.dataset.i = i;
+  b.innerHTML = `<span class="n">${i + 1}</span>${st.name}<span class="v" id="tv-${st.key}"></span>`;
+  b.addEventListener("click", () => { cur = i; renderStyle(); try { localStorage.setItem("style-tab", String(i)); } catch (e) {} });
+  tabs.appendChild(b);
+});
+tabs.addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+  cur = (cur + (e.key === "ArrowRight" ? 1 : 4)) % 5; renderStyle(); tabs.children[cur].focus();
+});
+
+const PARTS = [["palette", "Palette"], ["type", "Type"], ["layout", "Layout"], ["motion", "Motion and pacing"], ["captions", "Captions"], ["arabic", "Arabic treatment"]];
+const VERD = [["keep", "Keep"], ["maybe", "Maybe"], ["drop", "Drop"]];
+const vf = document.getElementById("verdicts");
+STYLES.forEach((st) => {
+  const r = document.createElement("div"); r.className = "vrow";
+  r.innerHTML = `<span>${st.name}</span><span class="seg" role="radiogroup" aria-label="${st.name}">${VERD.map(([v, l]) =>
+    `<label><input type="radio" name="v-${st.key}" id="v-${st.key}-${v}" value="${v}"><span>${l}</span></label>`).join("")}</span>`;
+  vf.appendChild(r);
+});
+const base = document.getElementById("base");
+base.innerHTML = `<option value="">Choose a style</option>` + STYLES.map((s) => `<option value="${s.key}">${s.name}</option>`).join("");
+document.getElementById("blend").innerHTML = PARTS.map(([k, l]) =>
+  `<div class="brow"><label for="p-${k}">${l}</label><select id="p-${k}"><option value="">same as start</option>${STYLES.map((s) => `<option value="${s.key}">${s.name}</option>`).join("")}</select></div>`).join("");
+function syncTabs() {
+  for (const st of STYLES) {
+    const v = document.querySelector(`input[name="v-${st.key}"]:checked`)?.value || "";
+    document.getElementById(`tv-${st.key}`).textContent = v ? (VERD.find((x) => x[0] === v)[1]) : "";
+  }
+}
+document.getElementById("decide").addEventListener("change", syncTabs);
+
+function readForm() {
+  const verdicts = {}; for (const st of STYLES) verdicts[st.key] = document.querySelector(`input[name="v-${st.key}"]:checked`)?.value || null;
+  const blend = {}; for (const [k] of PARTS) blend[k] = document.getElementById(`p-${k}`).value || null;
+  return { verdicts, base: base.value || null, blend, notes: document.getElementById("notes").value, names: Object.fromEntries(STYLES.map((s) => [s.key, s.name])) };
+}
+function fillForm(d) {
+  for (const [k, v] of Object.entries(d.verdicts || {})) { const el = v && document.getElementById(`v-${k}-${v}`); if (el) el.checked = true; }
+  base.value = d.base || ""; for (const [k] of PARTS) document.getElementById(`p-${k}`).value = (d.blend || {})[k] || "";
+  document.getElementById("notes").value = d.notes || ""; syncTabs();
+}
+const status = document.getElementById("status");
+let db = null;
+(async () => {
+  db = await window.claude?.use?.("db").catch(() => null);
+  if (!db) { status.textContent = "Saving is unavailable in this view"; return; }
+  try {
+    const snap = await db.doc("decision/owner").get();
+    const d = snap && (snap.data ? snap.data() : snap);
+    if (d && d.verdicts) { fillForm(d); status.textContent = d.savedAt ? `Saved ${new Date(d.savedAt).toLocaleString()}` : "Saved"; }
+  } catch (e) { status.textContent = "Could not load the saved pick"; status.classList.add("err"); }
+})();
+document.getElementById("decide").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const d = readForm();
+  if (!d.base) { status.textContent = "Choose a style to start from first"; status.classList.add("err"); base.focus(); return; }
+  if (!db) { status.textContent = "Saving is unavailable in this view"; status.classList.add("err"); return; }
+  status.classList.remove("err"); status.textContent = "Saving…";
+  try { d.savedAt = new Date().toISOString(); await db.doc("decision/owner").set(d); status.textContent = `Saved ${new Date(d.savedAt).toLocaleString()}`; }
+  catch (err) { status.textContent = `Not saved: ${err?.message || err?.code || "the store refused the write"}`; status.classList.add("err"); }
+});
+
+try { const s = parseInt(localStorage.getItem("style-tab"), 10); if (s >= 0 && s < 5) cur = s; } catch (e) {}
+document.fonts.ready.then(() => renderStyle());
+renderStyle();
+</script>

@@ -1,0 +1,6 @@
+node_modules/
+out/*.log
+shared/*.wav
+v*/narration.wav
+v*/fonts/
+v*/timing.js

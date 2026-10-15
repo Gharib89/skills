@@ -1,0 +1,195 @@
+<!doctype html>
+<!-- PROTOTYPE, throwaway (#664): style direction 1, Claude Code dark (house). -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Claude Code dark</title>
+    <script src="../node_modules/gsap/dist/gsap.min.js"></script>
+    <script src="timing.js"></script>
+    <style>
+      @font-face { font-family: "Source Serif 4"; src: url("fonts/source-serif-4-latin-600-normal.woff2"); font-weight: 600; font-display: block; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-400-normal.woff2"); font-weight: 400; font-display: block; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-600-normal.woff2"); font-weight: 600; font-display: block; }
+      @font-face { font-family: "JetBrains Mono"; src: url("fonts/jetbrains-mono-latin-400-normal.woff2"); font-weight: 400; font-display: block; }
+      @font-face { font-family: "Noto Naskh Arabic"; src: url("fonts/noto-naskh-arabic-arabic-600-normal.woff2"); font-weight: 600; font-display: block; }
+      @font-face { font-family: "IBM Plex Sans Arabic"; src: url("fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2"); font-weight: 400; font-display: block; }
+      @font-face { font-family: "IBM Plex Sans Arabic"; src: url("fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2"); font-weight: 600; font-display: block; }
+      :root {
+        --bg: #1a1915; --panel: #262420; --line: #3d3a33; --text: #f5f3ec; --dim: #b8b3a6;
+        --clay: #dc7a5a; --ok: #8fae6b; --warn: #e3c07a; --stop: #e47460;
+      }
+      body { margin: 0; background: var(--bg); }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Inter", sans-serif; }
+      .clip { position: absolute; inset: 0; }
+      .header { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); }
+      .mark { width: 18px; height: 18px; border-radius: 4px; background: var(--clay); }
+      .kicker { font: 600 26px "Inter"; color: var(--dim); letter-spacing: 0.04em; }
+      .content { position: absolute; left: 80px; top: 178px; width: 1760px; height: 690px; }
+      .caption { position: absolute; left: 80px; right: 80px; top: 900px; height: 120px; display: flex; align-items: center; justify-content: center; font: 400 44px/1.3 "Inter"; color: var(--dim); }
+      .caption .w { margin: 0 0.14em; }
+      /* title */
+      .t-title { position: absolute; left: 0; top: 190px; font: 600 120px/1.1 "Source Serif 4", serif; letter-spacing: -0.01em; }
+      .t-title .accent { color: var(--clay); }
+      .t-sub { position: absolute; left: 4px; top: 360px; font: 400 36px "Inter"; color: var(--dim); }
+      /* diagram */
+      .rail { position: absolute; left: 0; right: 0; top: 160px; display: flex; align-items: center; justify-content: space-between; }
+      .card { width: 340px; height: 260px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 34px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); }
+      .card .k { font: 600 24px "Inter"; color: var(--dim); letter-spacing: 0.06em; }
+      .card .v { margin-top: 26px; font: 600 54px/1.1 "Source Serif 4", serif; }
+      .card .badge { margin-top: 22px; font: 400 28px "JetBrains Mono"; }
+      .arrow { flex: 1; height: 3px; background: var(--line); margin: 0 18px; transform-origin: left center; }
+      /* terminal */
+      .term { position: absolute; left: 260px; top: 30px; width: 1240px; height: 600px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); overflow: hidden; }
+      .term-bar { height: 56px; border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 24px "JetBrains Mono"; color: var(--dim); }
+      .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--line); }
+      .term-body { padding: 34px 44px; font: 400 34px/1.7 "JetBrains Mono", monospace; }
+      .row { display: flex; gap: 24px; }
+      .row .st { width: 48px; }
+      .prompt { color: var(--clay); }
+      .cursor { display: inline-block; width: 18px; height: 38px; background: var(--text); vertical-align: -6px; }
+      /* arabic */
+      .ar { font-family: "IBM Plex Sans Arabic", sans-serif; }
+      .ar-title { position: absolute; right: 0; top: 10px; font: 600 84px/1.6 "Noto Naskh Arabic", serif; }
+      .lat { font-family: "Source Serif 4", serif; unicode-bidi: isolate; }
+      .rail-ar { top: 250px; }
+      .rail-ar .card { direction: rtl; text-align: right; }
+      .rail-ar .card .v { font: 600 46px/1.5 "IBM Plex Sans Arabic", sans-serif; }
+      .rail-ar .arrow { transform-origin: right center; }
+      .caption.ar { font: 400 44px/1.7 "IBM Plex Sans Arabic", sans-serif; color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="16.35">
+      <div class="header">
+        <div class="mark"></div>
+        <div class="kicker" id="kicker">SHIP · ISSUE TO PULL REQUEST</div>
+      </div>
+
+      <div id="s-title" class="clip" data-start="0" data-duration="2.875">
+        <div class="content">
+          <div class="t-title" id="t-title"></div>
+          <div class="t-sub" id="t-sub">One skill, one issue, one merge-ready pull request</div>
+        </div>
+        <div class="caption" data-cap="title"></div>
+      </div>
+
+      <div id="s-diagram" class="clip" data-start="2.875" data-duration="4.475">
+        <div class="content">
+          <div class="rail" id="rail-en">
+            <div class="card" id="c1"><div class="k">INPUT</div><div class="v">issue</div><div class="badge" style="color: var(--dim)">#664</div></div>
+            <div class="arrow" id="a1"></div>
+            <div class="card" id="c2"><div class="k">FIRST</div><div class="v">test</div><div class="badge" id="c2b" style="color: var(--stop)">✗ failing</div></div>
+            <div class="arrow" id="a2"></div>
+            <div class="card" id="c3"><div class="k">THEN</div><div class="v">code</div><div class="badge" style="color: var(--ok)">✓ passing</div></div>
+            <div class="arrow" id="a3"></div>
+            <div class="card" id="c4"><div class="k">OUTPUT</div><div class="v">pull request</div></div>
+          </div>
+        </div>
+        <div class="caption" data-cap="diagram"></div>
+      </div>
+
+      <div id="s-code" class="clip" data-start="7.35" data-duration="4.175">
+        <div class="content" style="perspective: 1600px">
+          <div class="term" id="term">
+            <div class="term-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left: 16px">scripts/local-gate.sh</span></div>
+            <div class="term-body">
+              <div class="row"><span class="prompt">$</span><span id="cmd"></span><span class="cursor" id="cur"></span></div>
+              <div class="row g"><span class="st">✓</span><span>lint and format</span></div>
+              <div class="row g"><span class="st">✓</span><span>tests/run.sh</span></div>
+              <div class="row g"><span class="st">✓</span><span>secrets</span></div>
+              <div class="row g"><span class="st">✓</span><span>version-lines</span></div>
+              <div class="row" id="pr"><span class="prompt">→</span><span>gh pr create · <span style="color: var(--clay)">#672 opened</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="caption" data-cap="code"></div>
+      </div>
+
+      <div id="s-arabic" class="clip" data-start="11.525" data-duration="4.825">
+        <div class="content">
+          <div class="ar-title" dir="rtl" id="ar-title"></div>
+          <div class="rail rail-ar" id="rail-ar" dir="rtl"></div>
+        </div>
+        <div class="caption ar" dir="rtl" id="ar-cap"></div>
+      </div>
+
+      <audio id="narration" src="narration.wav" data-start="0" data-duration="16.35" data-volume="1"></audio>
+    </div>
+
+    <script>
+      const T = window.TIMING;
+      const S = Object.fromEntries(T.scenes.map((s) => [s.id, s]));
+      const at = (id, word) => S[id].words.find((w) => w.w.toLowerCase() === word).s;
+      const lat = (s) => s.replace(/([A-Za-z][A-Za-z ]*[A-Za-z]|[A-Za-z])/g, '<bdi class="lat">$1</bdi>');
+
+      // Static text built from the shared script, before the timeline.
+      document.getElementById("t-title").innerHTML = 'How <span class="accent">Ship</span> lands<br />a pull request';
+      for (const el of document.querySelectorAll("[data-cap]")) {
+        const sc = S[el.dataset.cap];
+        el.innerHTML = sc.text.split(" ").map((w, i) => `<span class="w" data-i="${i}">${w}</span>`).join("");
+      }
+      const A = T.arabic;
+      document.getElementById("ar-title").innerHTML = lat(A.title);
+      document.getElementById("ar-cap").innerHTML = lat(A.caption);
+      document.getElementById("rail-ar").innerHTML = A.steps
+        .map((s, i) => `<div class="card ar-c"><div class="k ar">${["المدخل", "الأول", "بعد كده", "الناتج"][i]}</div><div class="v">${lat(s)}</div></div>`)
+        .join('<div class="arrow ar-a"></div>');
+
+      document.fonts.ready.then(() => {
+        const tl = gsap.timeline({ paused: true });
+        const ease = "power2.out";
+
+        // Word-timed captions: the spoken word brightens, earlier words stay readable.
+        for (const el of document.querySelectorAll("[data-cap]")) {
+          const sc = S[el.dataset.cap];
+          el.querySelectorAll(".w").forEach((w, i) => {
+            tl.set(w, { color: "#f5f3ec" }, sc.words[i].s);
+          });
+        }
+
+        // Title
+        tl.fromTo("#t-title", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease }, 0.15);
+        tl.fromTo("#t-sub", { opacity: 0 }, { opacity: 1, duration: 0.4 }, at("title", "pull"));
+
+        // Diagram: each card reveals at the word that names it; the failing test turns green on "pass".
+        const d0 = S.diagram.start;
+        tl.set(["#c1", "#c2", "#c3", "#c4"], { opacity: 0 }, 0);
+        tl.set([".rail .arrow"], { scaleX: 0 }, 0);
+        tl.fromTo("#c1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, ease }, at("diagram", "issue") - 0.1);
+        tl.to("#a1", { scaleX: 1, duration: 0.3, ease }, at("diagram", "writes"));
+        tl.fromTo("#c2", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, ease }, at("diagram", "failing"));
+        tl.to("#c2", { borderColor: "#e47460", duration: 0.2 }, at("diagram", "failing"));
+        tl.to("#a2", { scaleX: 1, duration: 0.3, ease }, at("diagram", "then"));
+        tl.fromTo("#c3", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, ease }, at("diagram", "makes"));
+        tl.to("#c2", { borderColor: "#3d3a33", duration: 0.2 }, at("diagram", "pass"));
+        tl.to("#c2b", { color: "#8fae6b", duration: 0.2 }, at("diagram", "pass"));
+        tl.set("#c2b", { textContent: "✓ passing" }, at("diagram", "pass"));
+        tl.to("#c3", { borderColor: "#8fae6b", duration: 0.2 }, at("diagram", "pass"));
+        tl.to("#a3", { scaleX: 1, duration: 0.3, ease }, at("diagram", "pass") + 0.3);
+        tl.fromTo("#c4", { opacity: 0, y: 20 }, { opacity: 0.55, y: 0, duration: 0.35, ease }, at("diagram", "pass") + 0.5);
+
+        // Terminal tips up, types the gate, rows go green on "green", the PR opens on "opens".
+        tl.fromTo("#term", { opacity: 0, rotationX: 20, y: 40 }, { opacity: 1, rotationX: 0, y: 0, duration: 0.45, ease }, S.code.start + 0.05);
+        const cmd = "scripts/local-gate.sh";
+        for (let i = 1; i <= cmd.length; i++) tl.set("#cmd", { textContent: cmd.slice(0, i) }, S.code.start + 0.3 + i * 0.025);
+        const rows = gsap.utils.toArray(".row.g");
+        tl.set(rows, { opacity: 0 }, 0);
+        rows.forEach((r, i) => tl.set(r, { opacity: 1 }, at("code", "gate") + i * 0.12));
+        tl.to(".row.g .st", { color: "#8fae6b", duration: 0.2, stagger: 0.08 }, at("code", "green"));
+        tl.set("#cur", { opacity: 0 }, at("code", "gate"));
+        tl.fromTo("#pr", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.3, ease }, at("code", "opens"));
+
+        // Arabic frame: the same rail, mirrored by dir="rtl"; English terms stay isolated LTR runs.
+        tl.fromTo("#ar-title", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.45, ease }, S.arabic.start + 0.1);
+        const arCards = gsap.utils.toArray(".ar-c"), arArrows = gsap.utils.toArray(".ar-a");
+        arCards.forEach((c, i) => tl.fromTo(c, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, ease }, at("arabic", "flip") + i * 0.35));
+        arArrows.forEach((a, i) => tl.fromTo(a, { scaleX: 0 }, { scaleX: 1, duration: 0.25, ease }, at("arabic", "flip") + 0.2 + i * 0.35));
+        tl.fromTo("#ar-cap", { opacity: 0 }, { opacity: 1, duration: 0.35 }, at("arabic", "flip"));
+        tl.set("#kicker", { textContent: "ARABIC · RIGHT TO LEFT" }, S.arabic.start);
+
+        window.__timelines["main"] = tl;
+      });
+    </script>
+  </body>
+</html>

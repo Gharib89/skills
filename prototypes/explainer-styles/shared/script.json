@@ -1,0 +1,14 @@
+{
+  "voice": "bf_emma",
+  "scenes": [
+    {"id": "title",   "text": "How Ship lands a pull request."},
+    {"id": "diagram", "text": "It reads the issue, writes a failing test, then makes it pass."},
+    {"id": "code",    "text": "Every gate goes green before the pull request opens."},
+    {"id": "arabic",  "text": "And every frame can flip right to left, in Egyptian Arabic."}
+  ],
+  "arabic": {
+    "title": "إزاي الـ Ship بيوصل لـ pull request",
+    "steps": ["issue", "test فاشل", "test بيعدّي", "pull request"],
+    "caption": "وكل frame ممكن يتقلب من اليمين للشمال، بالمصري."
+  }
+}
