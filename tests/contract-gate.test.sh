@@ -552,26 +552,6 @@ rm "$d/setup-harness/harness-schema.md"
 run "$inert" "$d"
 check_rc "a missing harness-schema.md is tooling" 2 "$rc"
 
-# 10. Two rules ship's prose states that nothing else enforces. Each case
-# rewrites the governed sentence to its opposite, which every word a looser grep
-# would look for still appears in, so a check that passes it proves nothing.
-d=$(copy_skills phase4-negated)
-sed -i.bak "s/^never runs \`check.sh full\`/also runs \`check.sh full\`/" "$d/ship/SKILL.md"
-run "$inert" "$d"
-check_rc "a phase 4 that tells the axes to run the suite too fails" 1 "$rc"
-check "and names the file and the rule" 0 "$(named "$d/ship/SKILL.md: phase 4 must tell each axis the Local gate runs later, so it reads the gate's JSON and never runs check.sh full or the suite")"
-
-d=$(copy_skills phase4-absent)
-sed -i.bak "/^the Local gate runs later in the run,/d" "$d/ship/SKILL.md"
-run "$inert" "$d"
-check_rc "a phase 4 missing a line of the sentence fails" 1 "$rc"
-
-d=$(copy_skills discipline-negated)
-sed -i.bak 's/Read one reference file per call\./Read several reference files per call./' "$d/ship/reference/context-discipline.md"
-run "$inert" "$d"
-check_rc "a context discipline that reads several files per call fails" 1 "$rc"
-check "and names the file and the rule" 0 "$(named "$d/ship/reference/context-discipline.md: must say to read one reference file per call")"
-
 # 11 to 14 read a mechanic's usage line against its header, its flag guards, a
 # failing host and the prose that names it. `flag_stub` is a read-issue that
 # answers every call checks 2, 4 and 5 make with its usage line, so the one

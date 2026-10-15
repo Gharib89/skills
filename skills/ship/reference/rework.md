@@ -63,7 +63,7 @@ still binds wherever the feedback leaves it alone.
 
 ## Phase 2: the lane keys
 
-The lane keys, and the small lane's size cap, measure the rework's own diff,
+The lane keys, and the small lane's size, measure the rework's own diff,
 `git diff --numstat <rework base>..HEAD`, not the PR's diff against
 `origin/HEAD`.
 

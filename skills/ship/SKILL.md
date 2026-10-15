@@ -18,9 +18,9 @@ in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
 version once, at the start of the run, with
-`sed -n 's/^  version: //p' <base directory>/SKILL.md`, then print
-`ship <version>` in the run header, the first line of the first reply, and again
-in the merge summary, so every PR records which ship produced it.
+`sed -n 's/^  version: //p' <base directory>/SKILL.md`; by default print
+`ship <version>` in the first reply and the merge summary, so the PR records
+which ship produced it.
 
 ## Argument and flags
 
@@ -65,8 +65,8 @@ is unattended, explicitly, because it has no other way to know. **Read**
 
 Work the phases in order, keeping the main thread on orchestration and
 decisions. **First**, read
-[reference/context-discipline.md](reference/context-discipline.md): the
-delegation rule and the levers that keep a long run from bloating the window.
+[reference/context-discipline.md](reference/context-discipline.md): defaults
+that keep a long run from bloating the window, and what it still requires.
 Then the run's **required first action**: after `prepare` and before phase 0,
 `run-file init <issue|slug> --from-profile` initializes the Run file holding the
 ten-item checklist. Each phase below flips it with `run-file next`, `open`,
@@ -116,23 +116,24 @@ a later phase can check; a later triage brief or authoritative comment, each
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
 classes, the TDD override, external-claim probes, the judgment/execution split
-and the adjacent-find dispositions. Classify `docs` / `code` / `infra`;
-**announce the class, the skip path it implies, whether the three lane keys
-hold**, and the applicable verifications from `## Verification` (their `Applies
-when:` lines are prose you judge here). Record the version grade of the public
+and the adjacent-find dispositions. Classify `docs` / `code` / `infra`, judge
+the three lane keys and the applicable verifications from `## Verification`
+(their `Applies when:` lines are prose you judge here), and by default say
+what you chose. Record the version grade of the public
 surface change under the profile's `Subject constraints:` with `run-file grade
 <patch|minor|breaking>`: `open-pr` and `update-pr-title` refuse a title type
 that grades lower. Then implement test-first per class; `Tripwires:` and
 `In-PR requirement:` land in this change whatever the class.
 Keep a **deviations log** from the first edit: whenever the territory forces a
 departure from the issue, brief or plan, take the conservative option, log what
-and why, keep going; it lands verbatim in the merge summary. A change showing a
-[split tell](reference/implement.md#phase-2-needs-split), too big for one PR or
-needing a redesign the issue did not scope, stops `needs-split` with a proposal.
+and why, keep going; it lands verbatim in the merge summary. A change you judge
+too big for one PR, or needing a redesign the issue did not scope, stops
+`needs-split` with a proposal;
+[implement.md](reference/implement.md#phase-2-needs-split) lists tells.
 **Done when:** the applicable tests are green (red first, per class), the
 tripwires and in-PR requirement have landed, `Grade:` is recorded, a small-lane
-diff is counted under the cap, and every departure and adjacent find so far is
-in the Run file with its disposition.
+diff is counted, and every departure and adjacent find so far is in the Run
+file with its disposition.
 
 **3 · Verify.** [reference/verify.md](reference/verify.md) carries the result
 words, the `Without it:` dispositions and what `unexercised` is. Run each
@@ -163,22 +164,21 @@ dispatch the axes, then run this pass inline.
 **Self-review**, unconditional in every lane, is a loop. Round 1 invokes
 `code-review` against the diff since `origin/HEAD`, its Standards axis reading
 the profile's `## Coding standards` path, its Spec axis reading the issue, each
-axis prompt carrying its own scratch directory (`standards`, `spec`) and saying
-the Local gate runs later in the run, so the axis reads the gate's JSON and
-never runs `check.sh full` or the suite itself. **Triage waits for every Report
-file**; one that fails to arrive after [the stops](#the-stops)' two
-fix-and-retry attempts is `red-after-retry: <axis>`, never a disposition written
-from memory. **Auto-triage** every finding at the judgment tier, one
-disposition each, under the rails and depth checks in
+axis prompt carrying its own scratch directory (`standards`, `spec`) and, by
+default, saying the Local gate runs the suite later. **Triage waits for every
+Report file**; one that never arrives once [retries](#the-stops) stop helping is
+`red-after-retry: <axis>`, never a disposition written from memory.
+**Auto-triage** every finding at the judgment tier, one disposition each, under
+the rails and depth checks in
 [implement.md](reference/implement.md#phase-4-triage-and-depth-checks), then
 [loop](reference/implement.md#phase-4-the-self-review-loop), the Standards
 axis alone over each round's **fix-only diff**, until a round changes no file
 (`tree unchanged`) or reaches preflight's `self_review_cap` (`cap`).
 `run-file close 4` refuses until the Run file holds the
 [evidence lines](reference/implement.md#phase-4-evidence-lines): each round's
-`Round: self-review` and the loop's `Stop: self-review:`, `Reverted-fix:`,
-`Dropped:`, `Near-miss:` and `Probe:`, the red and `Probe:` lines produced by
-`run-file prove` and `run-file probe`.
+`Round: self-review`, the loop's `Stop: self-review:`, and a `Reverted-fix:`
+per test file the diff adds or changes, the red one written by `run-file
+prove`.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.
@@ -276,11 +276,11 @@ The **merge gate** stops as phase 9 says; the unattended lane posts and returns.
 **The stop table below is authoritative.** Everything else, triaging your own
 findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 
-- **Red is fixed or reported.** Any failure before the merge gate gets at most
-  two fix-and-retry attempts; still red after the second is `red-after-retry:
-  <what>`, and a failure saying the approach is wrong stops sooner. Either way
-  **stop and report** with the concrete evidence and, if cheap, a
-  verified-working alternative, so the report is a fast yes.
+- **Red is fixed or reported.** Retry a failure before the merge gate while
+  retries make progress (two attempts is a fair mark); once they stop, it is
+  `red-after-retry: <what>`, and one saying the approach is wrong stops at
+  once. Either way **stop and report** with the concrete evidence and, if
+  cheap, a verified-working alternative, so the report is a fast yes.
 - **Every stop has a name**, reported verbatim, with the claim action below.
 
 | Stop | Reason | Claim |
@@ -316,8 +316,7 @@ the agent queue, which loops forever.
 ## The lanes
 
 Every run is **full lane** until the change proves it **small**: all three keys
-hold, asserted by you at phase 2 and announced with the class. When unsure, it
-is not small.
+hold, as you judge them at phase 2. When unsure, it is not small.
 
 1. **No public-surface change.** The public surface is the profile's
    `## Public surface`; `Default.` means the exported or published API, CLI
@@ -326,7 +325,7 @@ is not small.
    it, or the class is `docs` and there is no behavior to test; either way no
    verification in the profile's `## Verification` applies.
 3. **Contained.** No new dependency, none of the profile's `Tripwires:`
-   fired, and the diff inside the size cap small-lane.md counts.
+   fired, and the diff within the size small-lane.md describes.
 
 Behavior change is allowed: a bugfix is one. A diff touching a guard,
 allowlist or deny rule is full lane, inline under `--review` aside. Small or
@@ -334,9 +333,10 @@ inline: read [reference/small-lane.md](reference/small-lane.md) first.
 
 ## Model tiers
 
-Pick every subagent's model from the one tier table in
-[context-discipline.md](reference/context-discipline.md#model-tiers), and tag
-each with its model and its scratch directory; neither is inherited.
+The tier table in
+[context-discipline.md](reference/context-discipline.md#model-tiers) is each
+subagent's default model. Every subagent prompt names its scratch directory,
+which is not inherited.
 
 ## Working standards
 

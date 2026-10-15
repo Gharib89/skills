@@ -80,17 +80,15 @@
 # `close 4` and `close 7` hold the self-review and the review loop to the
 # evidence they leave in the Run file. They are completeness guards: they check
 # that each line is present and in its shape, and the self-review keeps the
-# judgment of what a line says. Two lines are produced, written by the verb that
-# ran the proof: the red `Reverted-fix:` line by `prove` and the `Probe:` line by
-# `probe`. The rest are attested, written by the run and taken at its word: the
-# `n/a` `Reverted-fix:` line, `Dropped:`, `Near-miss:` and `Declined:`, and
-# the `Round:` and `Stop:` lines of `close 4`'s self-review and `close 7`. A
-# refused close writes nothing, names everything missing in one message, and
-# `next` over either phase is held the same way. A gate line is a line anywhere
-# in the file, an optional leading `- ` accepted, matched by exact prefix at the
-# line start. `close 4` reads the
-# checkout's own diff (the working tree, untracked files included, against the
-# merge base of HEAD and origin/HEAD) and asks `dropped-lines`; it needs:
+# judgment of what a line says. The red `Reverted-fix:` line is produced, written
+# by `prove`, the verb that ran the proof. The rest are attested, written by the
+# run and taken at its word: the `n/a` `Reverted-fix:` line, and the `Round:`
+# and `Stop:` lines of `close 4`'s self-review and `close 7`. A refused close
+# writes nothing, names everything missing in one message, and `next` over
+# either phase is held the same way. A gate line is a line anywhere in the file,
+# an optional leading `- ` accepted, matched by exact prefix at the line start.
+# `close 4` reads the checkout's own diff (the working tree, untracked files
+# included, against the merge base of HEAD and origin/HEAD); it needs:
 #   `Reverted-fix: <test path>: red at <sha> reverting <path>...` (produced) or
 #     `Reverted-fix: <test path>: n/a: <reason>` (attested) for each test file
 #     the diff adds or changes, deletions aside. A red line stands while neither
@@ -98,24 +96,6 @@
 #     untracked files included; a hand-written `red` or `red: <text>` is
 #     refused. A test file has a path component `tests`, `test` or `__tests__`,
 #     or a basename matching `*.test.*`, `*.spec.*`, `*_test.*` or `test_*`.
-#   `Dropped: <id> re-homed at <path>` or `Dropped: <id> dropped on purpose:
-#     <why>` for each block `dropped-lines` reports, <id> being its `id`.
-#   a near-miss table for each added or changed `*.sh` outside the tests whose
-#     added lines hold a pattern matcher (a heuristic: `=~`, a `grep` or `egrep`
-#     command, or a regex literal in an `awk` or `sed` line, comment lines
-#     aside): one `Near-miss: <script>: <kind>: <test path>` (a file in the
-#     checkout) or `Near-miss: <script>: <kind>: n/a: <reason>` per kind, or one
-#     `Near-miss: <script>: n/a: <reason>` for the script. The kinds are
-#     partial-token (a near-miss token that must not match), quoted (the token
-#     inside a comment, a code span or a quote), indented (indented or nested
-#     input), unbalanced (unbalanced input) and unreadable (unreadable input,
-#     which must exit 2).
-#   every `Probe:` line in the produced shape,
-#     `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`.
-#   every `Declined: <ref>: <kind>: <reason>` carrying its kind, `claim` or
-#     `judgment`, and a nonblank reason; <ref> is the text before the first
-#     `: `. A `claim:` decline needs a produced `Probe: <ref>:` line, a
-#     `judgment:` one needs none, and the reason's words decide nothing.
 #   the self-review loop in close 7's vocabulary: at least one
 #     `Round: self-review <n>: <text>`, <n> a positive integer, and
 #     `Stop: self-review: <reason>`, the last such line deciding, the reason
@@ -134,15 +114,16 @@
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under
 # `## Evidence`, <sha> the HEAD revert-red ran on; on its exit 1 or 2 it writes
 # nothing and exits with that code, passing revert-red's answer through. It
-# writes each path top-relative with no leading `./`, the form `close 4` looks it
-# up by, and refuses a reverted path holding whitespace, which the line could
-# not be read back from. `probe` runs <command> as argv, never through a shell string, at the
-# checkout top with stdin from /dev/null, and appends
+# writes each path top-relative with no leading `./`, the form `close 4` looks
+# it up by, and refuses a reverted path holding whitespace, which the line could
+# not be read back from. `probe` runs <command> as argv, never through a shell
+# string, at the checkout top with stdin from /dev/null, and appends
 # `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, <command>
 # shell-quoted word by word (`printf %q`) so it re-runs as recorded, under
 # `## Evidence`, the last nonblank line of stdout and stderr together, or
-# `(no output)`. It exits 0 whatever the command's exit; a ref holding `: ` names
-# no decline and is refused. `call` runs nothing: it appends
+# `(no output)`. It exits 0 whatever the command's exit; a ref holding `: `
+# blurs where the ref ends for the line's readers and is refused. `call` runs
+# nothing: it appends
 # `- <command> · <why>` under `## Direct calls`, <command> quoted as `probe`
 # quotes it, before the run makes the call, and refuses (exit 1) a command that
 # does not open on `gh api` or `az rest` and an argument, a `gh api` naming
@@ -152,8 +133,8 @@
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git
-# state and runs the sibling `dropped-lines` mechanic, `prove` the sibling
-# `revert-red`, and a read that fails is exit 2, never a clean diff.
+# state, `prove` runs the sibling `revert-red`, and a read that fails is exit 2,
+# never a clean diff.
 #
 # stdout: one JSON object per call
 #   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
@@ -564,27 +545,9 @@ is_test_path() {
   case ${1##*/} in *.test.* | *.spec.* | *_test.* | test_*) return 0 ;; esac
   return 1
 }
-# A heuristic, not a parser: a line holding `=~`, a grep, or an awk or sed with a
-# regex literal. Comment lines are not matchers. A false hit costs the author one
-# `n/a` line; a miss is the gap this gate exists to close.
-q="'"
-matcher_re="=~|(^|[^[:alnum:]_.-])e?grep([[:space:]]|\$)|(^|[^[:alnum:]_-])(awk|sed)[[:space:]].*([~!(&|{;$q\"][[:space:]]*/[^/]+/|[^[:alnum:]_/]s/[^/]+/)"
-has_matcher() { # has_matcher <added lines>
-  local code
-  code=$(printf '%s\n' "$1" | awk '!/^[[:space:]]*#/')
-  grep -Eq -e "$matcher_re" <<<"$code"
-  case $? in
-    0) return 0 ;;
-    1) return 1 ;;
-    *) ship_tooling "cannot read the added lines for a pattern matcher" ;;
-  esac
-}
-near_kinds="partial-token quoted indented unbalanced unreadable"
-# The two produced lines, by the shape their verbs write. A red line names the
-# head revert-red ran on and the paths it reverted; a probe line, after its
-# `<ref>: `, the command, its exit status and the head it ran on.
+# A produced red line, by the shape `prove` writes: the head revert-red ran on
+# and the paths it reverted.
 red_re='^red at ([0-9a-f]{7,64}) reverting ([^[:space:]].*)$'
-probe_re='^[^[:space:]].* => exit [0-9]+ at [0-9a-f]{7,64}: [^[:space:]]'
 # A red line stands while neither its test nor a path it reverted has changed
 # since its head, read against the working tree, untracked files included: a
 # later commit that touches neither keeps it.
@@ -613,11 +576,10 @@ fresh_red() { # fresh_red <top> <test> <sha> <paths>: 0 fresh, 1 not, with why s
 # reviewers alike: a positive round number, then the outcome.
 round_re='^[1-9][0-9]*: [[:space:]]*[^[:space:]]'
 
-# Phase 4: every test file changed has its Reverted-fix line, every removed block
-# its disposition, every new matcher its near-miss table, every probe line its
-# produced shape, and every decline its kind, a claim its probe.
+# Phase 4: every test file changed has its Reverted-fix line, and the self-review
+# loop its rounds and its stop.
 gate_phase4() {
-  local base mb top tracked untracked paths p r ok ids id miss k added here dl ref reason rc why
+  local base mb top tracked untracked paths p r ok why
   base=$(ship_base_ref --local) || ship_tooling "close 4 reads the diff against origin/HEAD, which cannot be resolved here"
   top=$(git rev-parse --show-toplevel 2>/dev/null) || ship_tooling "close 4 reads the checkout's diff: not inside a git checkout"
   mb=$(git -C "$top" merge-base "$base" HEAD 2>/dev/null) || ship_tooling "close 4 reads the diff against $base: no merge base with HEAD"
@@ -652,101 +614,6 @@ EORESTS
   done <<EOPATHS
 $paths
 EOPATHS
-
-  here=$(dirname "${BASH_SOURCE[0]}")
-  dl=$(bash "$here/dropped-lines.sh" --base "$mb") \
-    || ship_tooling "dropped-lines failed, so the removed blocks cannot be read"
-  ids=$(jq -r '.blocks[] | (.id | if type == "string" and . != "" then . else error("a block with no id") end)' <<<"$dl" 2>/dev/null) \
-    || ship_tooling "dropped-lines did not print a JSON {blocks: [{id}]} answer"
-  while IFS= read -r id; do
-    [ -n "$id" ] || continue
-    ok=false
-    while IFS= read -r r; do
-      is_blank "$r" || ok=true
-    done <<EORESTS
-$(rests "Dropped: $id re-homed at ")
-$(rests "Dropped: $id dropped on purpose: ")
-EORESTS
-    [ "$ok" = true ] || gap "no disposition for removed block $id: add \`Dropped: $id re-homed at <path>\` or \`Dropped: $id dropped on purpose: <why>\`"
-  done <<EOIDS
-$ids
-EOIDS
-
-  while IFS= read -r p; do
-    case $p in *.sh) ;; *) continue ;; esac
-    is_test_path "$p" && continue
-    grep -Fxq -- "$p" <<<"$untracked"; rc=$?
-    case $rc in
-      0) added=$(cat "$top/$p") || ship_tooling "cannot read $p" ;;
-      1) added=$(git -C "$top" diff --no-renames -U0 "$mb" -- "$p" | awk '/^@@/ { h = 1; next } h && /^\+/ { print substr($0, 2) }') \
-           || ship_tooling "cannot read the diff of $p" ;;
-      *) ship_tooling "cannot tell whether $p is untracked" ;;
-    esac
-    has_matcher "$added" || continue
-    ok=false
-    while IFS= read -r r; do
-      r=$(trim_end "$r")
-      case $r in "n/a: "?*) is_blank "${r#n/a: }" || ok=true ;; esac
-    done <<EORESTS
-$(rests "Near-miss: $p: ")
-EORESTS
-    [ "$ok" = true ] && continue
-    miss=""
-    for k in $near_kinds; do
-      ok=false
-      while IFS= read -r r; do
-        r=$(trim_end "$r")
-        case $r in
-          "n/a: "?*) is_blank "${r#n/a: }" || ok=true ;;
-          /*|..|../*|*/..|*/../*) ;;
-          ?*) [ -f "$top/$r" ] && ok=true ;;
-        esac
-      done <<EORESTS
-$(rests "Near-miss: $p: $k: ")
-EORESTS
-      [ "$ok" = true ] || miss="$miss, $k"
-    done
-    [ -z "$miss" ] || gap "$p has a new pattern matcher and no near-miss line for: ${miss#, }: add one line per kind, \`Near-miss: $p: <kind>: <test path>\` or \`Near-miss: $p: <kind>: n/a: <reason>\`, or \`Near-miss: $p: n/a: <reason>\` for the whole script"
-  done <<EOPATHS
-$paths
-EOPATHS
-
-  # Every probe line is one `run-file probe` wrote, wherever it stands.
-  while IFS= read -r r; do
-    r=$(trim_end "$r")
-    [ -n "$r" ] || continue
-    ref=${r%%: *}
-    [ "$ref" != "$r" ] && [[ ${r#*: } =~ $probe_re ]] && continue
-    gap "Probe: $ref is not a line \`run-file probe\` wrote: re-run it with \`run-file probe $ref <where> -- <command>...\`"
-  done <<EOPROBES
-$(rests "Probe: ")
-EOPROBES
-
-  # The kind of a decline is its field, never a phrase in its reason.
-  while IFS= read -r r; do
-    r=$(trim_end "$r")
-    [ -n "$r" ] || continue
-    ref=${r%%: *} reason=${r#*: }
-    [ "$ref" = "$r" ] && reason=""
-    case $reason in
-      "judgment: "*) is_blank "${reason#judgment: }" || continue ;;
-      "claim: "*)
-        if ! is_blank "${reason#claim: }"; then
-          ok=false
-          while IFS= read -r p; do
-            p=$(trim_end "$p")
-            [[ $p =~ $probe_re ]] && ok=true
-          done <<EORESTS
-$(rests "Probe: $ref: ")
-EORESTS
-          [ "$ok" = true ] || gap "Declined: $ref is a claim and has no probe: run \`run-file probe $ref <where> -- <command>...\`"
-          continue
-        fi ;;
-    esac
-    gap "Declined: $ref carries neither \`claim:\` nor \`judgment:\` with a reason: write \`Declined: $ref: claim: <reason>\`, which needs \`run-file probe $ref <where> -- <command>...\`, or \`Declined: $ref: judgment: <reason>\`"
-  done <<EODECLINED
-$(rests "Declined: ")
-EODECLINED
 
   # The self-review loop, in close 7's vocabulary: a round, then the stop. Every
   # round line must be well formed, since no other label starts `self-review `;
@@ -1421,9 +1288,9 @@ probe)
   ref=${1:-}
   case $ref in '' | -*) ship_tooling "$usage" ;; esac
   shift
-  # A decline's ref is the text before its first `: `, so a ref holding one, or
-  # a newline, names no decline.
-  case $ref in *": "* | *$'\n'*) ship_tooling "a probe's ref is the text before a decline's first ': ', so it cannot hold ': ' or a newline" ;; esac
+  # A ref holding `: ` or a newline blurs where the ref ends for the line's
+  # readers: the self-review and the merge summary quoting it.
+  case $ref in *": "* | *$'\n'*) ship_tooling "a probe's ref ends at its line's first ': ', so it cannot hold ': ' or a newline" ;; esac
   where=()
   while [ $# -gt 0 ] && [ "$1" != -- ]; do where+=("$1"); shift; done
   [ "${1:-}" = -- ] && [ $# -ge 2 ] || ship_tooling "$usage"
@@ -1437,7 +1304,7 @@ probe)
   # argv, never a shell string, and no terminal to wait on.
   output=$(cd "$top" && "$@" </dev/null 2>&1)
   rc=$?
-  # Trimmed both ends: `close 4` reads the line's tail from its first non-space.
+  # Trimmed both ends, so the line reads the same however the output was padded.
   last=$(printf '%s\n' "$output" | awk '{ sub(/\r$/, "") } NF { l = $0 } END { sub(/^[ \t]+/, "", l); sub(/[ \t]+$/, "", l); print l }') \
     || ship_tooling "cannot read the last line of the probe's output"
   [ -n "$last" ] || last="(no output)"

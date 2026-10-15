@@ -68,10 +68,10 @@ verbatim in the issue body.
 
 ## Phase 2: classify, then implement test-first
 
-Classify the change into one of three classes and **announce the class and the
-skip path it implies** ("classified `docs`: skipping TDD; phase 3 runs only the
-Verifications that apply"), so a wrong label is a visible decision now, not a
-silently skipped verification later.
+Classify the change into one of three classes. By default, say the class and
+the skip path it implies ("classified `docs`: skipping TDD; phase 3 runs only
+the Verifications that apply"), so a wrong label is a visible decision now, not
+a silently skipped verification later.
 
 - **`docs`**: markdown, comments, manifest text with no logic. **Skip TDD**;
   do not manufacture a contrived test. Commit `docs:`.
@@ -93,8 +93,8 @@ function's signature, return value or behavior, grep the changed symbol across
 the tree: its callers, the tests that exercise it, fixtures, config, exports,
 and string or dynamic references. A caller the change breaks is in scope and is
 updated, its test, validation and error handling kept, and a fix lands once in
-the shared code rather than once per caller; past 10 such callers, the
-[needs-split](#phase-2-needs-split) tell decides instead. A caller the change
+the shared code rather than once per caller; when the callers are many, weigh
+the [needs-split](#phase-2-needs-split) tells instead. A caller the change
 leaves working stays untouched, and only one showing a concrete problem of its
 own is an adjacent find, taking one of the
 [dispositions](#phase-2-adjacent-finds).
@@ -138,15 +138,16 @@ which lands verbatim in the merge summary. Two hard rules in its prompt:
 
 ## Phase 2: needs-split
 
-Three tells say the change outgrows one PR, or needs a redesign the issue did
-not scope, before the diff size does:
+Whether the change outgrows one PR, or needs a redesign the issue did not
+scope, is judgment, and it often shows before the diff size does. Tells worth
+weighing, as examples rather than thresholds:
 
-- **The same workaround recurring**: a third copy of one shim, guard or special
+- **The same workaround recurring**: another copy of one shim, guard or special
   case, which the design the issue assumed should have made unnecessary.
 - **Escape-hatch types**: an `any`, a cast, an untyped map or a stringly-typed
   field added only so the change fits the code around it.
-- **A blast radius past 10 call sites**: one signature, file format or
-  vocabulary value whose change must reach more than 10 call sites in lockstep.
+- **A wide blast radius**: one signature, file format or vocabulary value whose
+  change must reach many call sites in lockstep (ten or so is a fair mark).
 
 The split proposal is a set of tickets, each landing green on its own. Where
 the change reshapes something callers reach, those tickets follow expand,
@@ -180,16 +181,16 @@ The merge summary lists every issue filed and every candidate linked.
 
 **Auto-triage** every finding: harden rather than rip out capability, verify
 nits against the pinned versions, reject known non-issues, fix the valid ones,
-and record a one-line disposition per finding, a decline written
-`Declined: <ref>: claim: <reason>` where the reason asserts how the code behaves
-("the caller already guards it") and `Declined: <ref>: judgment: <reason>`
-where it weighs scope, style or cost (`<ref>` the text before the first `: `).
-A reason that would be false if the code behaved otherwise is a `claim:`; when
-in doubt, write `claim:`. Two rails on rejecting: an assertion
-about **what exists in the repo** is checked against `origin/HEAD` rather than
-the worktree, which may predate a merge; and a finding's **evidence and its
-claim are separate**, so a reviewer citing the wrong commit for a real primitive
-is still right.
+and record a one-line disposition per finding. A decline whose reason asserts
+how the code behaves ("the caller already guards it") is worth a probe before it
+stands: `run-file probe <ref> --issue <issue> -- <command>...`, `<ref>` naming
+the finding (no `: ` in it), runs the command at the checkout top and writes
+what it printed as a `Probe:` line under `## Evidence`, and output that does not
+bear the claim out turns the decline into a fix. Two rails on rejecting: an
+assertion about **what exists in the repo** is checked against `origin/HEAD`
+rather than the worktree, which may predate a merge; and a finding's **evidence
+and its claim are separate**, so a reviewer citing the wrong commit for a real
+primitive is still right.
 
 Then read the diff yourself against the depth checks in the coding-standards
 file the Standards axis reads, and the sub-files it routes to, by their leading
@@ -197,29 +198,31 @@ words: a vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, removed lines with
 no new home, a fix landed after review, a diff that lowers the bar,
 a contract the change alters, a dependency the change adds, and any the repo
-adds beside them.
+adds beside them. How deep each goes is judgment. Two aids: `dropped-lines`
+lists removed blocks with no matching added line, and a new pattern matcher is
+worth cases that must be refused (a near-miss token, quoted, indented,
+unbalanced and unreadable input).
 
 ## Phase 4: the self-review loop
 
 Refactoring belongs to review, not to the red-to-green loop, so the
 self-review repeats while it still finds work. The bound is preflight's
 `self_review_cap`, the profile's `Self-review cap:` line as preflight reads it,
-3 where the line is absent. Write it as `Cap: self-review: <n>` when the loop
-starts, because a compaction takes preflight's phase-0 answer; after one,
-`preflight none` answers it again, `none` skipping the issue's own checks.
-Every lane runs the same loop.
+3 where the line is absent; after a compaction, `preflight none` answers it
+again, `none` skipping the issue's own checks. Every lane runs the same loop.
 
 - **Round 1** is the phase's first dispatch: both axes, Standards and Spec,
   over the whole diff, the `writing-for-agents` pass where it fired, and the
   depth checks above. Every fix any of them leads to is round 1's. The Spec
   axis, the pass and the depth checks run in round 1 only.
 - **Round 2 and up** is one `code-review` subagent, Standards axis only, over
-  the previous round's **fix-only diff**: before triaging round `<n>`, write
-  `Base: self-review <n>: <sha>`, `<sha>` from `git rev-parse HEAD`, commit its
-  fixes, and hand the next round `git diff <sha>..HEAD`. It is dispatched with
-  round 1's Standards prompt, only its diff and Report file changing, and
-  triaged as round 1 is: it waits for the Report file, and a file that never
-  arrives is `red-after-retry: standards`. Its Report file is
+  the previous round's **fix-only diff**: write the head into the Run file
+  before triaging round `<n>`, where a compaction cannot lose it, commit its
+  fixes, and hand the next round `git diff <head>..HEAD`. It
+  is dispatched with round 1's Standards prompt, only its diff and Report file
+  changing, and triaged as round 1 is: it waits for the Report file, and a file
+  that never arrives once retries stop helping is
+  `red-after-retry: standards`. Its Report file is
   `<scratch>/standards/standards-report-<n>.md`, `<n>` the round number, so no
   round overwrites another's.
 - **The loop stops** at the first round whose fix-only diff is empty (no
@@ -239,10 +242,14 @@ final head.
 `run-file close 4` refuses until the Run file carries these lines, each with an
 optional `- ` prefix, written as its check settles. The check is a
 **completeness guard**: it holds each line to being present and in its shape,
-and the self-review keeps the judgment of what a line says. Two lines are
-**produced**, written by the `run-file` verb that ran the proof, under the Run
-file's `## Evidence`; every other line is **attested**, written by the run and
-taken at its word.
+and the self-review keeps the judgment of what a line says. The red
+`Reverted-fix:` line is **produced**, written under the Run file's
+`## Evidence` by the `run-file` verb that ran the proof; every other line is
+**attested**, written by the run and taken at its word. They are kept because
+something reads them: the red line proves a new test fails on the old code, and
+`run-file gate clean` reads the loop's `Stop:` line. What the depth checks
+found (removed blocks, matcher cases, declines and their probes) is the
+self-review's judgment, recorded in the Run file where it helps the summary.
 
 - **Reverted-fix**, one per test file the diff adds or changes. Produced:
   `run-file prove <test> <path>... --issue <issue>` runs `revert-red` on them
@@ -258,28 +265,6 @@ taken at its word.
   runner's, and a test already red before the revert, since neither answers).
   A test file is a path with a `tests`, `test` or `__tests__` component, or a
   basename `*.test.*`, `*.spec.*`, `*_test.*` or `test_*`.
-- **Dropped**, attested, one per block `dropped-lines` reports, removed lines in
-  blocks of three or more with no matching added line anywhere in the diff:
-  `Dropped: <file>:<line> re-homed at <path>`, or
-  `Dropped: <file>:<line> dropped on purpose: <why>`.
-- **Near-miss**, attested, for each `*.sh` file whose added lines hold a new
-  pattern matcher (a `=~`, a `grep` or an `awk` or `sed` regex), a line per
-  kind, the path of an existing test holding a case that must be refused:
-  `Near-miss: <script>: <kind>: <test path>`. The kinds are `partial-token`
-  (the token inside a longer word), `quoted`, `indented`, `unbalanced` (an
-  opener with no closer) and `unreadable` (the input the matcher reads cannot
-  be read). A kind with no case says why,
-  `Near-miss: <script>: <kind>: n/a: <reason>`, and one
-  `Near-miss: <script>: n/a: <reason>` covers all five.
-- **Probe**, produced, one per `Declined: <ref>: claim: <reason>`:
-  `run-file probe <ref> --issue <issue> -- <command>...` runs the command as
-  argv at the checkout top, stdin from `/dev/null`, and writes
-  `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, whatever
-  the command's exit, so read the line before closing: a probe whose output
-  does not bear out the claim turns the decline into a fix. A `judgment:`
-  decline needs none, and a decline carrying neither kind is refused. A
-  `Probe:` line in any other shape is refused wherever it stands.
-
 - **Round** and **Stop**, attested, for the
   [self-review loop](#phase-4-the-self-review-loop): at least one
   `Round: self-review <n>: <text>`, `<n>` a positive integer, and a
