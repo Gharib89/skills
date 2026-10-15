@@ -66,7 +66,7 @@ is unattended, explicitly, because it has no other way to know. **Read**
 Work the phases in order, keeping the main thread on orchestration and
 decisions. **First**, read
 [reference/context-discipline.md](reference/context-discipline.md): defaults
-that keep a long run from bloating the window, and the three it requires.
+that keep a long run from bloating the window, and what it still requires.
 Then the run's **required first action**: after `prepare` and before phase 0,
 `run-file init <issue|slug> --from-profile` initializes the Run file holding the
 ten-item checklist. Each phase below flips it with `run-file next`, `open`,
