@@ -288,11 +288,11 @@ refused "an indented line is no gate line" 'no Round line for self-review'
 
 # --- close 7 ---------------------------------------------------------------------
 
-stops='cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed'
+stops='cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed'
 run7; held=$(cat "$rf"); close 7
-refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed>`'
+refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed|not invoked: <primary> reviewed>`'
 check "the same refusal names the other reviewer's stop" yes "$(has 'no Stop line for claude' "$err")"
-check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed` or `inline lane`' "$err")"
+check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed`, `not invoked: <primary> reviewed` or `inline lane`' "$err")"
 check "and the other's" yes "$(has 'no Round line for claude' "$err")"
 
 run7; add 'Stop: copilot: cap' 'Stop: claude: auto-once' 'Round: copilot 1: 2 findings, both fixed' 'Round: copilot 2: clean' 'Round: claude 1: clean'
@@ -314,10 +314,22 @@ admitted "bulleted stop and round lines"
 run7; add 'Stop: copilot: cap' 'Stop: claude: not reviewed' 'Round: copilot 1: clean'; close 7
 admitted "one reviewer with rounds and one not reviewed"
 
-# `not reviewed` has two meanings: a fallback that was never invoked (no round) and
-# a round that landed whose threads could not be read (a round, then the stop).
-run7; add 'Round: copilot 1: 2 findings, both fixed' 'Stop: copilot: auto-once' 'Stop: claude: not reviewed'; close 7
+# A fallback whose primary reviewed was never invoked: its stop says so, with no
+# round (#672). `not reviewed` with no round is a round that never landed; with
+# one, a round that landed whose threads could not be read.
+run7; add 'Round: copilot 1: 2 findings, both fixed' 'Stop: copilot: auto-once' 'Stop: claude: not invoked: copilot reviewed'; close 7
 admitted "a fallback never invoked: its Stop line alone, the primary's round and auto-once"
+run7 'Codex, Claude Code'; add 'Round: Codex 1: clean' 'Stop: Codex: tree unchanged at 0123abc' 'Stop: Claude Code: not invoked: Codex reviewed'; close 7
+admitted "a not-invoked fallback whose name has a space"
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Stop: claude: not invoked: copilot'; held=$(cat "$rf"); close 7
+refused "a not-invoked stop that names no reviewed primary" "Stop line for claude has reason 'not invoked: copilot'"
+# The named primary must be on the row and have stopped on a reviewed stop.
+for p in 'not reviewed' 'not landed' 'inline lane'; do
+  run7; add 'Round: copilot 1: clean' "Stop: copilot: $p" 'Stop: claude: not invoked: copilot reviewed'; held=$(cat "$rf"); close 7
+  refused "a not-invoked fallback whose primary stopped $p" "Stop line for claude says copilot reviewed, but copilot stopped '$p'"
+done
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Stop: claude: not invoked: codex reviewed'; held=$(cat "$rf"); close 7
+refused "a not-invoked fallback naming a reviewer off the row" "Stop line for claude names codex, which is not a reviewer on the phase 7 row"
 run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Round: claude 1: landed, threads unreadable' 'Stop: claude: not reviewed'; close 7
 admitted "a Round line beside Stop: not reviewed, a round that landed with unreadable threads"
 
