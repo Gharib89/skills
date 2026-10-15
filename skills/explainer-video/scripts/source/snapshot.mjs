@@ -4,14 +4,14 @@
 //
 // A source is a git repo folder, a web page URL, or a .pdf, .md, .txt, .html,
 // .docx or .pptx file. A repo snapshot is a byte copy of the text files git
-// lists as tracked or untracked and not ignored, less every run folder (the
-// `explainers/` folder holding the run), `.env*` files and any file whose name
-// or text matches a secret pattern; binary files, symlinks and the runs are
-// skipped without a line. A page, and an HTML file, render in HyperFrames'
-// Chrome first; HTML and DOCX end as Markdown, a PDF as one block
-// per page, a PPTX as one per slide and one per slide's notes, each after a
-// `<!-- page <n> -->` or `<!-- slide <n>[ notes] -->` marker line. Markdown
-// and text are copied as they are.
+// lists as tracked or untracked and not ignored, less the `explainers/` folder
+// holding the run, `.env*` files and any file whose name or text matches a
+// secret pattern; binary files, symlinks and that folder are skipped without a
+// line. A page, and an HTML file, render in HyperFrames' Chrome first; HTML
+// and DOCX end as Markdown, a PDF as one block per page, a PPTX as one per
+// slide and one per slide's notes, each after a `<!-- page <n> -->` or
+// `<!-- slide <n>[ notes] -->` marker line. Markdown and text are copied as
+// they are.
 // stdout: `source <id>: <kind> · <n> <unit> · <source>` per source,
 //         each followed by `withheld <id>/<path>: <why>` per repo file
 //         withheld for a secret, then
@@ -235,6 +235,11 @@ fs.mkdirSync(snaps, { recursive: true });
 const backend = await loadBackend();
 const sources = [];
 const report = [];
+// This video's output is never its source: a repo source skips the
+// `explainers/` folder holding the run, or the run alone when it sits elsewhere.
+const parent = path.dirname(path.resolve(run));
+const skipUnder =
+  path.basename(parent) === "explainers" ? parent : path.resolve(run);
 
 for (const [i, s] of given.entries()) {
   const kind = kinds[i];
@@ -256,13 +261,9 @@ for (const [i, s] of given.entries()) {
       else {
         count = 0;
         title = path.basename(path.resolve(s));
-        // A run folder's files are a video's output, never its source.
-        const parent = path.dirname(path.resolve(run));
-        const runs =
-          path.basename(parent) === "explainers" ? parent : path.resolve(run);
         for (const f of files) {
           const from = path.join(s, f);
-          if (!path.relative(runs, path.resolve(from)).startsWith(".."))
+          if (!path.relative(skipUnder, path.resolve(from)).startsWith(".."))
             continue;
           const st = fs.lstatSync(from, { throwIfNoEntry: false });
           if (!st?.isFile()) continue;

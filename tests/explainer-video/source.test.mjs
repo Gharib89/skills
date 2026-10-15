@@ -213,7 +213,7 @@ test("a repo holding the explainers folder leaves every run's files out, and a s
   assert.equal(held, "./README.md");
 });
 
-test("a repo file is copied byte for byte, and a run folder outside explainers/ hides only itself", () => {
+test("a repo file is copied byte for byte, and a run folder outside explainers/ hides nothing beside it", () => {
   const fx = fixture();
   const repo = path.join(fx.tmp, "lib");
   fs.mkdirSync(repo);

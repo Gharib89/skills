@@ -18,8 +18,9 @@ Your inputs, filled in by the run that dispatched you:
 Read the snapshot with Read, Grep and Glob. Never open the source itself: for
 a repo, the snapshot left out ignored files, `.env` files and files matching
 known secret patterns, and opening the repo would read them anyway. A file the
-snapshot lacks does not exist for this video. The pack is committed, so copy
-no key, token or password into an excerpt even where the snapshot holds one.
+snapshot lacks does not exist for this video. `excerpts.json` is committed, so
+copy no key, token or password into an excerpt even where the snapshot holds
+one.
 
 ## Pick the excerpts
 
