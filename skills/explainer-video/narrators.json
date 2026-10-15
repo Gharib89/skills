@@ -1,0 +1,28 @@
+{
+  "narrators": [
+    {
+      "id": "bf_emma",
+      "language": "en",
+      "gender": "female",
+      "backend": "kokoro",
+      "voice": "bf_emma",
+      "style": null,
+      "licence": "Apache-2.0",
+      "leavesMachine": false,
+      "rate": null,
+      "default": true
+    },
+    {
+      "id": "am_fenrir",
+      "language": "en",
+      "gender": "male",
+      "backend": "kokoro",
+      "voice": "am_fenrir",
+      "style": null,
+      "licence": "Apache-2.0",
+      "leavesMachine": false,
+      "rate": null,
+      "default": true
+    }
+  ]
+}

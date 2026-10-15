@@ -4,6 +4,7 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,17 +18,23 @@ after(() =>
   temps.forEach((t) => fs.rmSync(t, { recursive: true, force: true })),
 );
 
-// A copy of the skill in a fresh temp dir, its catalogue replaced when `rows` is given.
+// The sha256 of what the fake `download` writes.
+const FAKE_SHA = crypto.createHash("sha256").update("woff2").digest("hex");
+
+// A copy of the skill in a fresh temp dir, its catalogue replaced when `rows` is
+// given; otherwise the real catalogue, each model file pinned to the fake's body.
 function fixture(rows) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-video-"));
   temps.push(tmp);
   const skill = path.join(tmp, "skill");
   fs.cpSync(source, skill, { recursive: true });
-  if (rows)
-    fs.writeFileSync(
-      path.join(skill, "setup", "rows.json"),
-      JSON.stringify({ rows }),
-    );
+  const catalogue = path.join(skill, "setup", "rows.json");
+  rows ??= JSON.parse(fs.readFileSync(catalogue, "utf8")).rows.map((r) =>
+    r.kind === "model"
+      ? { ...r, files: r.files.map((f) => ({ ...f, sha256: FAKE_SHA })) }
+      : r,
+  );
+  fs.writeFileSync(catalogue, JSON.stringify({ rows }));
   return { tmp, skill, log: path.join(tmp, "calls.jsonl") };
 }
 
@@ -250,6 +257,57 @@ test("a font whose licence is neither OFL nor Apache is refused and nothing is w
   assert.match(row(r.out, "font:ubuntu")[2], /^refused: licence UFL-1\.0/);
   assert.ok(calls(fx).every((c) => c.call !== "download"));
   assert.ok(!fs.existsSync(path.join(fontDir(fx), "ubuntu@5.2.0")));
+});
+
+const modelRow = (sha256) => ({
+  id: "model:aligner",
+  kind: "model",
+  repo: "org/aligner",
+  revision: "0123456789abcdef0123456789abcdef01234567",
+  files: [
+    { path: "vocab.json", size: 358, sha256: FAKE_SHA },
+    { path: "onnx/model_int8.onnx", size: 95286006, sha256 },
+  ],
+  neededBy: "voice",
+  licence: "Apache-2.0",
+});
+
+test("a model is its own row with its files' size, fetched at its pinned revision into the tool cache", () => {
+  const fx = fixture([modelRow(FAKE_SHA)]);
+  const c = run(fx, ["check"]);
+  assert.equal(row(c.out, "model:aligner")[3], "95 MB");
+  const where = row(c.out, "model:aligner")[5];
+  assert.equal(
+    where,
+    path.join(cacheDir(fx), "models", "aligner@0123456789ab"),
+  );
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    calls(fx)
+      .filter((x) => x.call === "download")
+      .map((x) => x.url),
+    [
+      "https://huggingface.co/org/aligner/resolve/0123456789abcdef0123456789abcdef01234567/vocab.json",
+      "https://huggingface.co/org/aligner/resolve/0123456789abcdef0123456789abcdef01234567/onnx/model_int8.onnx",
+    ],
+  );
+  assert.ok(fs.existsSync(path.join(where, "onnx", "model_int8.onnx")));
+  assert.equal(row(run(fx, ["check"]).out, "model:aligner")[2], "present");
+});
+
+test("a model file whose sha256 differs from its pin fails the row and leaves nothing installed", () => {
+  const fx = fixture([modelRow("0".repeat(64))]);
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    row(r.out, "model:aligner")[2],
+    /^failed: onnx\/model_int8\.onnx has sha256 [0-9a-f]{64}, pinned 0{64}/,
+  );
+  assert.ok(
+    !fs.existsSync(path.join(cacheDir(fx), "models", "aligner@0123456789ab")),
+  );
+  assert.equal(row(run(fx, ["check"]).out, "model:aligner")[2], "missing");
 });
 
 test("an install unused for 30 days is listed with its size and pruned under the yes; a fresh one is kept", () => {
