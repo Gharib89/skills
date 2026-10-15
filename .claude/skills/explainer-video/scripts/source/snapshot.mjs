@@ -3,15 +3,18 @@
 //   node snapshot.mjs <run-folder> [--minutes <n>] <source>...
 //
 // A source is a git repo folder, a web page URL, or a .pdf, .md, .txt, .html,
-// .docx or .pptx file. A repo snapshot is a copy of the files git lists as
-// tracked or untracked and not ignored, less the explainers folder holding
-// the run, `.env*` files and any file whose name or text matches a secret pattern. A page, and an HTML file, render in
-// HyperFrames' Chrome first; HTML and DOCX end as Markdown, a PDF as one block
+// .docx or .pptx file. A repo snapshot is a byte copy of the text files git
+// lists as tracked or untracked and not ignored, less every run folder (the
+// `explainers/` folder holding the run), `.env*` files and any file whose name
+// or text matches a secret pattern; binary files, symlinks and the runs are
+// skipped without a line. A page, and an HTML file, render in HyperFrames'
+// Chrome first; HTML and DOCX end as Markdown, a PDF as one block
 // per page, a PPTX as one per slide and one per slide's notes, each after a
 // `<!-- page <n> -->` or `<!-- slide <n>[ notes] -->` marker line. Markdown
 // and text are copied as they are.
 // stdout: `source <id>: <kind> · <n> <unit> · <source>` per source,
-//         `withheld <id>/<path>: <why>` per repo file left out, then
+//         each followed by `withheld <id>/<path>: <why>` per repo file
+//         withheld for a secret, then
 //         `budget: <b> excerpts (...); shares <id> <n>, ...`
 // writes: <run>/snapshots/ (replaced whole), its sources.json, and
 //         explainers/.gitignore
@@ -28,12 +31,13 @@ import { marker, sections } from "./locators.mjs";
 const args = process.argv.slice(2);
 const run = args.shift();
 let minutes = 2;
+const isUrl = (s) => /^https?:\/\//i.test(s);
 const named = new Map();
 while (args.length) {
   const a = args.shift();
   if (a === "--minutes") minutes = Number(args.shift());
   // A source named twice (`.` and `./`) is read once.
-  else named.set(/^https?:\/\//i.test(a) ? a : path.resolve(a), a);
+  else named.set(isUrl(a) ? a : path.resolve(a), a);
 }
 const given = [...named.values()];
 if (!run || !given.length || !(minutes > 0)) {
@@ -98,7 +102,7 @@ const errors = [];
 const refuse = (source, why) => errors.push(`source ${source}: ${why}`);
 
 function kindOf(s) {
-  if (/^https?:\/\//i.test(s)) return "page";
+  if (isUrl(s)) return "page";
   const st = fs.statSync(s, { throwIfNoEntry: false });
   if (!st) return refuse(s, "no such file or folder");
   if (st.isDirectory()) return "repo";
@@ -230,7 +234,7 @@ fs.rmSync(snaps, { recursive: true, force: true });
 fs.mkdirSync(snaps, { recursive: true });
 const backend = await loadBackend();
 const sources = [];
-const lines = [];
+const report = [];
 
 for (const [i, s] of given.entries()) {
   const kind = kinds[i];
@@ -252,14 +256,13 @@ for (const [i, s] of given.entries()) {
       else {
         count = 0;
         title = path.basename(path.resolve(s));
+        // A run folder's files are a video's output, never its source.
+        const parent = path.dirname(path.resolve(run));
+        const runs =
+          path.basename(parent) === "explainers" ? parent : path.resolve(run);
         for (const f of files) {
           const from = path.join(s, f);
-          // Every run folder's files are a video's output, not its source.
-          if (
-            !path
-              .relative(path.dirname(path.resolve(run)), path.resolve(from))
-              .startsWith("..")
-          )
+          if (!path.relative(runs, path.resolve(from)).startsWith(".."))
             continue;
           const st = fs.lstatSync(from, { throwIfNoEntry: false });
           if (!st?.isFile()) continue;
@@ -279,7 +282,7 @@ for (const [i, s] of given.entries()) {
           }
           const to = path.join(snaps, id, f);
           fs.mkdirSync(path.dirname(to), { recursive: true });
-          fs.writeFileSync(to, body);
+          fs.writeFileSync(to, buf);
           count++;
         }
       }
@@ -324,7 +327,7 @@ for (const [i, s] of given.entries()) {
   if (text !== undefined) fs.writeFileSync(path.join(snaps, snapshot), text);
   count ??= sections(text).length;
   sources.push({ id, kind, source: s, title, snapshot });
-  lines.push(
+  report.push(
     `source ${id}: ${kind} · ${count} ${UNIT[kind]} · ${s}`,
     ...withheld,
   );
@@ -343,7 +346,7 @@ fs.writeFileSync(
   JSON.stringify({ minutes, budget, sources }, null, 2) + "\n",
 );
 writeIgnore(run);
-for (const l of lines) console.log(l);
+for (const l of report) console.log(l);
 console.log(
   `budget: ${budget} excerpts (${minutes} min at 8 per minute, at least 12); shares ${sources.map((s) => `${s.id} ${s.share}`).join(", ")}`,
 );

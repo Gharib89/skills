@@ -16,9 +16,10 @@ Your inputs, filled in by the run that dispatched you:
 ## Read the snapshot only
 
 Read the snapshot with Read, Grep and Glob. Never open the source itself: for
-a repo, the snapshot left out every ignored file, `.env` file and file holding
-a secret, and opening the repo would read them anyway. A file the snapshot
-lacks does not exist for this video.
+a repo, the snapshot left out ignored files, `.env` files and files matching
+known secret patterns, and opening the repo would read them anyway. A file the
+snapshot lacks does not exist for this video. The pack is committed, so copy
+no key, token or password into an excerpt even where the snapshot holds one.
 
 ## Pick the excerpts
 
@@ -37,7 +38,7 @@ the numbers and names a viewer should leave with. Each excerpt is:
   | `md` | `§ Install`, the nearest heading above the text, or `line 12`, `lines 12-14` |
   | `txt` | `line 12` or `lines 12-14` |
   | `html`, `docx`, `page` | `§ Install`, the nearest heading above the text |
-  | `repo` | `src/app.js:12` or `src/app.js:12-14`, the path inside the snapshot |
+  | `repo` | `src/app.js:12` or `src/app.js:12-14`, the path relative to `{run}/snapshots/{snapshot}/` |
 
   A `§` locator is the heading's text without its `#` marks.
 
@@ -64,9 +65,10 @@ Write `{run}/snapshots/{id}.draft.json`:
 
 Run the pack check. It prints `pack {id}: <n> of {share} excerpt(s): pass`
 on a pass, or one line per problem: an excerpt whose words are not in its
-locator's stretch, a locator this kind does not take, or more excerpts than
-the share. Fix each problem by re-copying the text from the snapshot or by
-correcting the locator, and run the check again until it passes.
+locator's stretch, a locator this kind does not take, a missing field, or more
+excerpts than the share. Fix each line: re-copy the text from the snapshot,
+correct the locator, fill the field, or drop the excerpt. Run the check again;
+drop any excerpt you cannot make pass, since fewer excerpts always pass.
 
 ## Report
 

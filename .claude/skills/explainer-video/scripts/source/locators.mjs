@@ -34,7 +34,7 @@ export function sections(text) {
 }
 
 // Pages and slides: the lines after each marker, up to the next one.
-function marked(text) {
+function byMarker(text) {
   const out = new Map();
   let at = null;
   for (const line of text.split("\n")) {
@@ -96,7 +96,7 @@ export function segment(run, source, locator) {
   if (["pdf", "pptx"].includes(source.kind)) {
     const want = source.kind === "pdf" ? /^page \d+$/ : /^slide \d+( notes)?$/;
     if (want.test(locator)) {
-      const text = marked(read()).get(locator);
+      const text = byMarker(read()).get(locator);
       return text === undefined ? { error: `no ${locator}` } : { text };
     }
   }

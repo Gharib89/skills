@@ -213,6 +213,28 @@ test("a repo holding the explainers folder leaves every run's files out, and a s
   assert.equal(held, "./README.md");
 });
 
+test("a repo file is copied byte for byte, and a run folder outside explainers/ hides only itself", () => {
+  const fx = fixture();
+  const repo = path.join(fx.tmp, "lib");
+  fs.mkdirSync(repo);
+  const latin1 = Buffer.from("caf\xe9 au lait\n", "latin1");
+  fs.writeFileSync(path.join(repo, "menu.txt"), latin1);
+  git(repo, "init", "-q");
+  git(repo, "add", "menu.txt");
+  // The run sits beside the repo, so their shared parent is no explainers/.
+  const r = spawnSync(
+    process.execPath,
+    [path.join(scripts, "snapshot.mjs"), path.join(fx.tmp, "run1"), repo],
+    { env: fx.env, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^source lib: repo · 1 file\(s\)/);
+  assert.deepEqual(
+    fs.readFileSync(path.join(fx.tmp, "run1", "snapshots", "lib", "menu.txt")),
+    latin1,
+  );
+});
+
 test("a folder outside git is refused, since nothing says which of its files are ignored", () => {
   const fx = fixture();
   const s = snapshot(fx, [fx.docs]);
@@ -521,6 +543,7 @@ test("a converter source with its tools not installed is refused before any read
     s.err.trim(),
     "source: npm-packages is not installed: run /explainer-video setup",
   );
+  assert.ok(!fs.existsSync(fx.env.EXPLAINER_VIDEO_FAKE_LOG));
   // Markdown and text need no tool.
   assert.equal(snapshot(fx, [write(fx, "a.md", "# A\n")]).code, 0);
 });

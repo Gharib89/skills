@@ -18,7 +18,8 @@ which every run starts with; **source**, each source read into a source pack;
 turned into a captioned MP4; and **gates**, which the render runs and which
 block a video below the floors. The brief, the storyboard and writing the
 script from the pack are not in this version.
-Asked for a video, say so in one line; given sources, run the source stage,
+Asked for a video, say in one line that the brief and the storyboard are not
+in this version; given sources, run the source stage,
 then offer to write the scene file with the user from the pack's outline, then
 voice and render it.
 
@@ -64,33 +65,33 @@ for this repo), a web page URL, or a `.pdf`, `.md`, `.txt`, `.html`, `.docx` or
 `.pptx` file. Subagents read the snapshots; only the outline enters this
 conversation, so a large repo does not crowd out the work.
 
-1. **Tools.** A page, HTML, PDF, DOCX or PPTX source needs `npm-packages`, a
-   page or HTML file `chrome` too; a repo, Markdown or text needs neither. On
-   `source: <row> is not installed`, run the setup steps above.
-2. **Snapshot.** `node <skill>/scripts/source/snapshot.mjs explainers/<slug>
+1. **Snapshot.** `node <skill>/scripts/source/snapshot.mjs explainers/<slug>
    [--minutes <n>] <source>...`, `--minutes` the target length (default 2).
-   It prints `source <id>: <kind> · <n> <unit> · <source>` per source, then
-   `withheld <id>/<path>: <why>` for each repo file it left out (a `.env`
-   file, a secret file name, a secret pattern in its text: relay these), then
-   `budget: <b> excerpts (...); shares <id> <n>, ...`, the budget being 8 per
-   minute, at least 12. A repo snapshot holds only the files git tracks or
-   would track, never an ignored one, and nothing under `explainers/`.
-3. **On exit 1**, nothing was read: relay each `source <source>: <why>` line.
-   A scanned PDF has no text to read, and a folder outside git cannot say
-   which of its files are ignored: ask the user for the source in another
-   form, or to drop it, then snapshot again.
-4. **Read.** Dispatch one subagent per source, all in one turn, each with
+   It replaces `snapshots/` whole, drafts included, so every reader runs again
+   after it. It prints `source <id>: <kind> · <n> <unit> · <source>` per
+   source, a repo's followed by `withheld <id>/<path>: <why>` for each file
+   withheld for a secret (a `.env` file, a secret file name, a secret pattern
+   in its text: relay these), then `budget: <b> excerpts (...); shares <id>
+   <n>, ...`, the budget being 8 per minute, at least 12. A repo snapshot
+   holds only the text files git tracks or would track, never an ignored one,
+   a binary file, a symlink or anything under `explainers/`.
+2. **On exit 1**, there is no `sources.json`: relay each `source <source>:
+   <why>` line. On `source: <row> is not installed`, run the setup steps
+   above, then snapshot again. A scanned PDF has no text to read, and a folder
+   outside git cannot say which of its files are ignored: ask the user for the
+   source in another form, or to drop it, then snapshot again.
+3. **Read.** Dispatch one subagent per source, all in one turn, each with
    `<skill>/agents/source-reader.md` as its prompt, its placeholders filled
    from that source's entry in `explainers/<slug>/snapshots/sources.json`
    (`{id}`, `{kind}`, `{source}`, `{snapshot}`, `{share}`), `{run}` the run
    folder, `{skill}` this skill's folder, and `{focus}` what the user wants the
    video to say, else "the source's main ideas". Each writes its draft and
    replies with its check's pass line. Never read a snapshot or a draft here.
-5. **Pack.** `node <skill>/scripts/source/pack.mjs explainers/<slug>` checks
+4. **Pack.** `node <skill>/scripts/source/pack.mjs explainers/<slug>` checks
    every draft again, numbers the excerpts `ex-1`, `ex-2`, ... across the
    pack, and writes `excerpts.json` and `outline.md`. On exit 1, send each
    `pack <id>: ...` line to that source's reader to fix, then pack again.
-6. **Outline.** Read `outline.md`: each source with its summary, each excerpt
+5. **Outline.** Read `outline.md`: each source with its summary, each excerpt
    by id, locator and note. A scene file cites an excerpt by id, `[ex-3]`.
 
 ## Voice
@@ -174,8 +175,9 @@ narrator: am_fenrir
   `at*`, `text*`). `at` is a sentence number: that item rises in as the
   sentence starts.
 
-1. **Draft.** Write the scene file with the user from what they want the video
-   to say. Done when the user approves the draft.
+1. **Draft.** Write the scene file with the user from the pack's `outline.md`,
+   citing excerpt ids, or with no sources from what they want the video to
+   say. Done when the user approves the draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
    `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows. Run the

@@ -332,6 +332,7 @@ export async function toMarkdown(html) {
 }
 
 export async function pdfPages(file) {
+  log({ call: "pdfPages", file });
   return JSON.parse(fs.readFileSync(file, "utf8")).pages;
 }
 
