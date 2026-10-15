@@ -323,6 +323,13 @@ run7 'Codex, Claude Code'; add 'Round: Codex 1: clean' 'Stop: Codex: tree unchan
 admitted "a not-invoked fallback whose name has a space"
 run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Stop: claude: not invoked: copilot'; held=$(cat "$rf"); close 7
 refused "a not-invoked stop that names no reviewed primary" "Stop line for claude has reason 'not invoked: copilot'"
+# The named primary must be on the row and have stopped on a reviewed stop.
+for p in 'not reviewed' 'not landed' 'inline lane'; do
+  run7; add 'Round: copilot 1: clean' "Stop: copilot: $p" 'Stop: claude: not invoked: copilot reviewed'; held=$(cat "$rf"); close 7
+  refused "a not-invoked fallback whose primary stopped $p" "Stop line for claude says copilot reviewed, but copilot stopped '$p'"
+done
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Stop: claude: not invoked: codex reviewed'; held=$(cat "$rf"); close 7
+refused "a not-invoked fallback naming a reviewer off the row" "Stop line for claude names codex, which is not a reviewer on the phase 7 row"
 run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Round: claude 1: landed, threads unreadable' 'Stop: claude: not reviewed'; close 7
 admitted "a Round line beside Stop: not reviewed, a round that landed with unreadable threads"
 

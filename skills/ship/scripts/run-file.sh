@@ -106,7 +106,8 @@
 # one of cap, `tree unchanged at <sha>` (<sha> the PR head the round read; a
 # bare `tree unchanged` is refused), small lane, inline lane, auto-once, not
 # landed, not reviewed or `not invoked: <primary> reviewed` (a fallback whose
-# primary reviewed), and unless it is `not reviewed`, `not invoked: <primary>
+# primary, a reviewer on the row, stopped on none of not reviewed, not landed,
+# inline lane or not invoked), and unless it is `not reviewed`, `not invoked: <primary>
 # reviewed` or `inline lane` at least one
 # `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
@@ -644,7 +645,7 @@ EORESTS
 # it never reviewed, a round.
 stop_reasons="cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
-  local list names nm stop r ok
+  local list names nm stop r ok p ps
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
   list=${1#*"Reviewers: "}; list=${list%%", one bounded pass each"*}
   case $list in "" | None | None. | none | none.) return 0 ;; esac
@@ -666,6 +667,18 @@ EONAMES
       "tree unchanged") gap "Stop line for $nm has no head: write \`Stop: $nm: tree unchanged at <sha>\`, the head read-pr returned for the round" ;;
       "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed|not invoked: <primary> reviewed>\`" ;;
       *) gap "Stop line for $nm has reason '$stop', which is not one of $stop_reasons" ;;
+    esac
+    # A fallback not invoked names a primary on the row that stopped reviewed;
+    # whether its cap was spent with findings is left to the clean gate.
+    case $stop in "not invoked: "?*" reviewed")
+      p=${stop#"not invoked: "}; p=${p%" reviewed"}
+      if ! grep -qxF -- "$p" <<<"$names"; then
+        gap "Stop line for $nm names $p, which is not a reviewer on the phase 7 row"
+      else
+        ps=$(trim_end "$(rests "Stop: $p: " | tail -n 1)")
+        case $ps in "not reviewed" | "not landed" | "inline lane" | "not invoked: "* | "")
+          gap "Stop line for $nm says $p reviewed, but $p stopped '$ps'" ;; esac
+      fi ;;
     esac
     case $stop in "not reviewed" | "not invoked: "?*" reviewed" | "inline lane") continue ;; esac
     ok=false
