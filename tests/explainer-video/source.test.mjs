@@ -188,6 +188,28 @@ test("a repo source snapshots tracked and unignored files and never an ignored f
   );
 });
 
+test("a repo holding the run folder leaves the run's own files out, and a source named twice is read once", () => {
+  const fx = fixture();
+  const proj = path.join(fx.tmp, "proj");
+  fs.writeFileSync(path.join(proj, "README.md"), "# Proj\n");
+  fs.writeFileSync(path.join(fx.dir, "outline.md"), "# An earlier pack\n");
+  fs.mkdirSync(path.join(fx.dir, "snapshots"));
+  fs.writeFileSync(path.join(fx.dir, "snapshots", "old.md"), "stale\n");
+  git(proj, "init", "-q");
+  git(proj, "add", "README.md");
+  const s = snapshot(fx, [proj, `${proj}/`]);
+  assert.equal(s.code, 0, s.out + s.err);
+  assert.deepEqual(
+    sourcesOf(fx).sources.map((x) => x.id),
+    ["proj"],
+  );
+  const held = spawnSync("find", [".", "-type", "f"], {
+    cwd: path.join(fx.dir, "snapshots", "proj"),
+    encoding: "utf8",
+  }).stdout.trim();
+  assert.equal(held, "./README.md");
+});
+
 test("a folder outside git is refused, since nothing says which of its files are ignored", () => {
   const fx = fixture();
   const s = snapshot(fx, [fx.docs]);

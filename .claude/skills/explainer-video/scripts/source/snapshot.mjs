@@ -4,8 +4,8 @@
 //
 // A source is a git repo folder, a web page URL, or a .pdf, .md, .txt, .html,
 // .docx or .pptx file. A repo snapshot is a copy of the files git lists as
-// tracked or untracked and not ignored, less `.env*` files and any file whose
-// name or text matches a secret pattern. A page, and an HTML file, render in
+// tracked or untracked and not ignored, less the run folder's own files,
+// `.env*` files and any file whose name or text matches a secret pattern. A page, and an HTML file, render in
 // HyperFrames' Chrome first; HTML and DOCX end as Markdown, a PDF as one block
 // per page, a PPTX as one per slide and one per slide's notes, each after a
 // `<!-- page <n> -->` or `<!-- slide <n>[ notes] -->` marker line. Markdown
@@ -28,12 +28,14 @@ import { marker, sections } from "./locators.mjs";
 const args = process.argv.slice(2);
 const run = args.shift();
 let minutes = 2;
-const given = [];
+const named = new Map();
 while (args.length) {
   const a = args.shift();
   if (a === "--minutes") minutes = Number(args.shift());
-  else given.push(a);
+  // A source named twice (`.` and `./`) is read once.
+  else named.set(/^https?:\/\//i.test(a) ? a : path.resolve(a), a);
 }
+const given = [...named.values()];
 if (!run || !given.length || !(minutes > 0)) {
   console.error(
     "usage: node snapshot.mjs <run-folder> [--minutes <n>] <source>...",
@@ -252,6 +254,13 @@ for (const [i, s] of given.entries()) {
         title = path.basename(path.resolve(s));
         for (const f of files) {
           const from = path.join(s, f);
+          // The run folder's own files are this video's output, not its source.
+          if (
+            !path
+              .relative(path.resolve(run), path.resolve(from))
+              .startsWith("..")
+          )
+            continue;
           const st = fs.lstatSync(from, { throwIfNoEntry: false });
           if (!st?.isFile()) continue;
           const buf = fs.readFileSync(from);
