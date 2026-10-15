@@ -93,7 +93,8 @@
 
   /* 1 Claude Code dark */
   .s1 { --c-bg: #1a1915; --c-panel: #262420; --c-line: #3d3a33; --c-text: #f5f3ec; --c-dim: #b8b3a6; --c-faint: #8f897c; --c-accent: #dc7a5a; --c-ok: #8fae6b; --c-stop: #e47460; }
-  .s1.blend { --c-bg: #0a0f4f; --c-panel: #171c8f; --c-line: #2c33a8; --c-text: #ffffff; --c-dim: #c9ccff; --c-faint: #8f95d8; --c-accent: #9aa2ff; --c-ok: #5fe0a8; --c-stop: #ff8fa8; }
+  .s1.blend { --c-bg: #ffffff; --c-panel: #eeedfc; --c-line: #b8bcf0; --c-text: #161b8c; --c-dim: #4a4f73; --c-faint: #6b6f8f; --c-accent: #c03020; --c-ok: #17734b; --c-stop: #b01820; }
+  .s1.blend .cd, .s1.blend .term { box-shadow: 0 18px 40px rgba(22, 27, 140, 0.08); }
   .s1 { background: var(--c-bg); color: var(--c-text); font-family: "Inter", sans-serif; }
   .s1 .hd { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--c-line); }
   .s1 .mk { width: 18px; height: 18px; border-radius: 4px; background: var(--c-accent); }
@@ -666,10 +667,10 @@ const STYLES = [
 
 // the owner's pick (decision/owner): Claude Code dark's structure, type and motion with the ITWorx palette
 STYLES.push({
-  ...STYLES[0], key: "blend", cls: "s1 blend", name: "Your blend", lineage: "Claude Code dark, recoloured with the ITWorx palette",
-  swatch: ["#0a0f4f", "#171c8f", "#2c33a8", "#ffffff", "#c9ccff", "#9aa2ff", "#5fe0a8", "#ff8fa8"],
-  notes: { ...STYLES[0].notes, title: "Serif title rises in on \"How\"; the dek follows on \"pull\". Ship in periwinkle, the one accent." },
-  risk: "Every text colour clears 4.5:1 on the navy ground (white 17.6, dim 11.4, faint 6.3, accent 7.5). The faint caption sits at 4.7:1 on the indigo panel, the lowest pair.",
+  ...STYLES[0], key: "blend", cls: "s1 blend", name: "Your blend", lineage: "Claude Code dark, recoloured from the owner's ITWorx decks",
+  swatch: ["#ffffff", "#eeedfc", "#b8bcf0", "#161b8c", "#4a4f73", "#c03020", "#17734b"],
+  notes: { ...STYLES[0].notes, title: "Serif title rises in on \"How\"; the dek follows on \"pull\". Ship in ITWorx red, the one accent." },
+  risk: "White ground as the ITWorx decks run it: indigo text 13.4:1, red accent 5.7:1, green 5.9:1 on white. The unspoken caption grey is the lowest pair at 4.9:1. The decks set bold sans headlines; this keeps the Claude Code serif, as picked.",
 });
 
 // ---------- rendering and time ----------
