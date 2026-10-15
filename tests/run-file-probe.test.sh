@@ -81,7 +81,7 @@ probe "$repo" C6 --file "$rf" -- ''
 check_rc "an empty command word is refused" 2 "$status"
 check "the empty word refusal says why" "probe needs a command: its first word is empty" "$err"
 probe "$repo" 'C6: x' --file "$rf" -- true
-check_rc "a ref holding ': ' names no decline and is refused" 2 "$status"
+check_rc "a ref holding ': ' is refused" 2 "$status"
 check "the ref refusal says why" "a probe's ref ends at its line's first ': ', so it cannot hold ': ' or a newline" "$err"
 check "a refused call writes nothing" "$held" "$(cat "$rf")"
 

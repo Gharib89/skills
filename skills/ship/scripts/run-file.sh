@@ -121,8 +121,8 @@
 # `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, <command>
 # shell-quoted word by word (`printf %q`) so it re-runs as recorded, under
 # `## Evidence`, the last nonblank line of stdout and stderr together, or
-# `(no output)`. It exits 0 whatever the command's exit; a ref holding `: ` could
-# not be read back and is refused. `call` runs nothing: it appends
+# `(no output)`. It exits 0 whatever the command's exit; a ref holding `: `
+# blurs where the ref ends for the line's readers and is refused. `call` runs nothing: it appends
 # `- <command> · <why>` under `## Direct calls`, <command> quoted as `probe`
 # quotes it, before the run makes the call, and refuses (exit 1) a command that
 # does not open on `gh api` or `az rest` and an argument, a `gh api` naming
@@ -1287,7 +1287,8 @@ probe)
   ref=${1:-}
   case $ref in '' | -*) ship_tooling "$usage" ;; esac
   shift
-  # A ref holding `: ` or a newline could not be read back from its line.
+  # A ref holding `: ` or a newline blurs where the ref ends for the line's
+  # readers: the self-review and the merge summary quoting it.
   case $ref in *": "* | *$'\n'*) ship_tooling "a probe's ref ends at its line's first ': ', so it cannot hold ': ' or a newline" ;; esac
   where=()
   while [ $# -gt 0 ] && [ "$1" != -- ]; do where+=("$1"); shift; done

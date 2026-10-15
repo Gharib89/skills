@@ -15,7 +15,7 @@ rather than authors (a derived copy the refresh line writes, `skills-lock.json`,
 a Tripwire's rebuilt bundle). Agent-facing prose counts. The run never edits a
 CHANGELOG.
 
-**Measured, not estimated.** Phase 2 predicts the lane. Count at phase 2's
+**Count, then judge.** Phase 2 predicts the lane. Count at phase 2's
 `Done when:`, with every edit committed, and again before a push that grew the
 diff, for example after a review round's fixes. A diff you judge past that
 size revokes to the full lane.
