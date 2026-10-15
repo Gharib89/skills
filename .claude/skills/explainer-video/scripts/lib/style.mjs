@@ -42,10 +42,12 @@ function failures(profile) {
   const c = profile.colors ?? {};
   const out = [];
   for (const role of ROLES) {
-    const floor = Math.max(
-      FLOORS[role.floor],
-      profile.gates?.contrast?.[role.floor] ?? 0,
-    );
+    const own = profile.gates?.contrast?.[role.floor];
+    if (own !== undefined && !Number.isFinite(own)) {
+      out.push(`gates.contrast.${role.floor}: not a number`);
+      continue;
+    }
+    const floor = Math.max(FLOORS[role.floor], own ?? 0);
     for (const t of role.tokens)
       for (const s of role.on) {
         if (

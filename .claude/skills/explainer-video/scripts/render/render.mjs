@@ -32,7 +32,15 @@ import {
   skill,
   toolPaths,
 } from "../lib/tools.mjs";
-import { FPS, H, W, sceneFile, stillsPage, videoPage } from "./compose.mjs";
+import {
+  CUE_CHARS,
+  FPS,
+  H,
+  W,
+  sceneFile,
+  stillsPage,
+  videoPage,
+} from "./compose.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -45,9 +53,6 @@ function fail(why) {
 }
 const slug = path.basename(path.resolve(run));
 const HOLD = 1.0;
-// 40 px Inter fits about 73 characters a line in the 1760 px band: 84 is at
-// most two lines.
-const CUE_CHARS = 84;
 const LATIN = ["title", "text", "code"];
 const r3 = (n) => +n.toFixed(3);
 const hash = (...parts) => {
@@ -101,7 +106,15 @@ if (voice.narrator !== narrator || voice.language !== script.language)
 
 // The rows this stage reads, each installed by setup.
 const rows = catalogue();
-const fontRows = [...new Set(LATIN.map((r) => profile.type[r].font))].map(
+const fontRows = [
+  ...new Set(
+    LATIN.map(
+      (r) =>
+        profile.type?.[r]?.font ??
+        fail(`style profile ${profile.name} names no ${r} font`),
+    ),
+  ),
+].map(
   (font) =>
     rows.find((r) => r.kind === "font" && r.family === font) ??
     fail(

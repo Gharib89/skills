@@ -123,8 +123,9 @@ narrator: am_fenrir
 - **Narration.** Numbered sentences in spoken form; an indented line continues
   the sentence above, so its cites go on the last line. `{written|spoken}`
   shows the written form in the captions and voices the spoken one; backticks
-  are dropped. Every sentence ends in `[a, b]`, its cites, or in `[no-claim]`
-  when it makes no claim.
+  are dropped. A caption breaks only between written tokens, so each holds at
+  most 84 characters. Every sentence ends in `[a, b]`, its cites, or in
+  `[no-claim]` when it makes no claim.
 - **Visual.** One JSON block per scene, one component, required props marked
   `*`: `title` (`kicker`, `title*`, `subtitle`), `cards` (`items*`, each
   `at*`, `label*`, `value*`, `note`), or `terminal` (`title`, `lines*`, each
@@ -157,8 +158,9 @@ narrator: am_fenrir
 7. **On a fail** (exit 1), relay what was printed. A `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
    and `out/` was emptied, an earlier render's files too. `style profile <name>
-   fails contrast: <token> on <surface> ...` names each pair under its floor:
-   fix those colours or choose another profile. `<row> is not installed`: run
+   fails contrast: <token> on <surface> ...` names each pair under its floor,
+   and `gates.contrast.<role>: not a number` a floor that is no number: fix
+   those values or choose another profile. `<row> is not installed`: run
    setup. `no script.json`, `no voice.json`, `voice.json does not match` or
    `voice.json holds narrator` names the stage to run first. `no render fonts
    for language <x>`: this

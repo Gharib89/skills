@@ -5,6 +5,9 @@
 export const W = 1920;
 export const H = 1080;
 export const FPS = 30;
+// 40 px Inter fits about 73 characters a line in the 1760 px band: 84 is at
+// most two lines.
+export const CUE_CHARS = 84;
 const RISE = '{ opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }';
 
 export const esc = (s) =>

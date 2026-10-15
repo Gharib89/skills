@@ -212,6 +212,24 @@ for (const [name, from, to, why] of [
     /^compile: hook: Here is how\. ends in no \[<cites>\] or \[no-claim\]/m,
   ],
   [
+    "a written token longer than a caption",
+    "2. Here is how. [no-claim]",
+    `2. Here is {${"x".repeat(85)}|how}. [no-claim]`,
+    /^compile: hook: x{85}\. is longer than a caption's 84 characters/m,
+  ],
+  [
+    "a visual that is not an object",
+    '{ "component": "title", "props": { "kicker": "Ship", "title": "Issue to pull request", "subtitle": "One run, one merge" } }',
+    "null",
+    /^compile: hook: visual is not a JSON object/m,
+  ],
+  [
+    "a cards item that is not an object",
+    '{ "at": 3, "label": "Then", "value": "code" }',
+    "null",
+    /^compile: steps: a cards item is not a JSON object/m,
+  ],
+  [
     "a heading that is not a scene",
     "## Scene gate · The gate",
     "## Gate",

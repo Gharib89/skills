@@ -490,6 +490,17 @@ for (const [name, arrange, why, voiced = true] of [
     /^render: style profile odd names font comic, which no setup row installs/m,
   ],
   [
+    "a profile with no text font",
+    (fx) => styled(fx, {}, { type: { ...latin, text: undefined } }),
+    /^render: style profile odd names no text font/m,
+  ],
+  [
+    "a contrast floor that is not a number",
+    (fx) => styled(fx, {}, { gates: { contrast: { body: "bogus" } } }),
+    /^render: style profile odd fails contrast: gates\.contrast\.body: not a number/m,
+    false,
+  ],
+  [
     "a profile colour that is not #rrggbb",
     (fx) => styled(fx, { muted: "grey" }),
     /^render: style profile odd fails contrast: muted on bg: not a #rrggbb colour/m,
