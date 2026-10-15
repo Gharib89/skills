@@ -28,25 +28,27 @@ write into. Every variant carries:
 - **`Closes #<issue>` on its own line above the first `## ` heading**, where no
   section rewrite reaches it. The mechanic translates it for the host, and puts
   it there itself when the body arrives without one.
-- **`## Why the change`**: exactly one sentence, the problem and what becomes
-  possible now.
+- **`## Why the change`**: the problem and what becomes possible now.
 - **`## Change outline`**: the behavioural fence below.
 - **`## Special things to note`**: the Door line first, then the reviewer's
-  warnings and the folded deviations, so it is never `None.`.
+  warnings, the folded adjacent finds and the folded deviations, so it is never
+  `None.`.
 - **`## Needs attention`**: every issue the run filed or linked, every Ship
   defect it met and every Ship note.
-- **`## Verification`**: one line per applicable verification in the merge
-  summary's `Verification` row format, or `None applicable: <reason>`, with
-  two such reasons and no third: `small lane`, and a change where no `Applies
-  when:` line matches (a profile listing zero verifications is that case).
+- **`## Verification`**: each applicable verification's phase-3 result and what
+  ran, or `None applicable: <reason>`.
 - **`## Review`**, one placeholder line per reviewer at open, filled at the
-  phase-7 exit in the fixed shape [review-loop.md](review-loop.md) carries.
-- **A count with the command that produced it**, wherever the body measures the
-  tree, under the rule [merge-gate.md](merge-gate.md) carries.
+  phase-7 exit with its exit word and what its rounds found
+  ([review-loop.md](review-loop.md#the-exit)).
 - **The attribution footer**, where the environment provides one for pull
   request descriptions, in the body file `open-pr` is handed. The body **ends**
   with it, under a `## ` heading of its own that ship adds where no template
   carries one (`## Attribution`), after every section a later phase rewrites.
+
+The `Closes` line, the headings verbatim, attribution last and the Door line
+are the body's rules, because the host's close, `open-pr`, later section writes
+and the reviewer read them. What each section says, and at what length, is
+written for its reader.
 
 ## The Change outline
 
@@ -77,22 +79,23 @@ constraints are ship's, and its menu of other uses is not.
 ## Special things to note: the folded deviations
 
 What the reviewer must know before reading the diff: warnings, migrations,
-compatibility constraints, deliberate omissions. Preferably five bullets or
-fewer below the Door line, one sentence each, but **every material compatibility
-or operational risk is included**, related ones grouped into one bullet.
+compatibility constraints, deliberate omissions, and each adjacent find folded
+into this PR ([implement.md](implement.md#phase-2-adjacent-finds)). **Every
+material compatibility or operational risk is included**, related ones grouped
+into one bullet.
 
-**The first bullet is always the Door line**, in this shape:
+**The first bullet is always the Door line**, in one of these shapes:
 
 ```text
-- Door: <one-way|two-way>. Blast radius: <one clause>.
+- 🟢 Door: two-way. Blast radius: <who else feels it>.
+- 🔴 Door: one-way. Blast radius: <who else feels it>.
 ```
 
 One-way is a merge nobody can walk back: a released breaking change consumers
 have already adopted, a data migration, a deleted artifact. Two-way is a
 revert. The blast radius names who else feels it rather than grading it. The
-line sits **outside that count**: a reviewer deciding whether to
-approve reads it first, and a change carrying five warnings is exactly the one
-that needs it.
+circle lets a reviewer deciding whether to approve see the door at a glance, and
+it renders as text on GitHub and Azure DevOps alike.
 
 The deviations log stays verbatim in the merge summary. What reaches this
 section is the subset that would change how the reviewer reads the diff,
@@ -105,10 +108,10 @@ reviewing the diff would act on does not appear.
 One line per issue the run filed or linked, `- #<n> <title>: <one line why it
 matters>`, one per Ship defect met, `- Ship defect: <what>`, and one per Ship
 note, `- Ship note: <what>`, beside them, so a retro finds the friction after
-the run's files are gone. `None.` when there are none. Nothing else belongs
-here: an adjacent find is filed or fixed inline by phase 2's dispositions, so an
-observation parked here is a find that skipped its disposition. It is written
-from the Run file's record, not the deviations log.
+the run's files are gone. `None.` when there are none. An adjacent find appears
+here only once filed: a folded one goes under `## Special things to note`, and a
+noted one stays in the merge summary. It is written from the Run file's record,
+not the deviations log.
 
 ## Writing and reading it back
 

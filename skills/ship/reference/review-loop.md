@@ -168,20 +168,13 @@ Each reviewer exits with one of:
 the override the human decides on.
 
 One line per reviewer goes in the PR body's `## Review` section and the merge
-summary, in this shape:
-
-```
-- <reviewer>: <exit>, <n> rounds, <raised> findings: <accepted> accepted, <declined> declined, <filed> filed
-- <fallback>: not invoked: <primary> reviewed
-```
-
-A `not reviewed` reviewer with no rounds states its exit alone. A trailing
-clause is added only where the counts leave something out: a cap that ran out
-mid-findings, `ended: docs-only fix` where a docs-only fix-only diff ended
-the loop, the primary's reason on a fallback that ran, a round that did not land
-after one that did, or `<N> denied calls (run <url>[, run <url>…])`, N
-summing the numeric `reviewer_run.denied` over the rounds, each non-zero round's
-run URL listed, and nothing added for a total of 0 or no numeric count.
+summary: its exit word, then what its rounds found and what became of the
+findings, read from its `Round:` lines below. Add whatever the reader needs
+beyond that: a cap that ran out mid-findings, a docs-only fix-only diff that
+ended the loop, the primary's reason on a fallback that ran, a round that did
+not land after one that did, or the calls the reviewer was denied, summed from
+the numeric `reviewer_run.denied` over the rounds, with each non-zero round's
+run URL.
 
 Each reviewer's rounds and stop go in the Run file as lines, which `run-file
 close 7` requires of every reviewer on the phase-7 row, one `Round:` per round

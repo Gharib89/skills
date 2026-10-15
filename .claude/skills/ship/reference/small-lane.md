@@ -53,8 +53,8 @@ On top of that:
 5. CI green plus every reviewer per its trigger
 6. The merge gate
 
-Adjacent finds are still filed: an unfiled find is lost and filing costs one
-call.
+Adjacent finds still take their dispositions (fold, file or note): a find with
+none is lost, and filing costs one call.
 
 ## Revocable, one way
 

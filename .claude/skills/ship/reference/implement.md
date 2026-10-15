@@ -36,7 +36,8 @@ An issue that names a file, a heading or a step number in another skill or
 file records what its author believed when writing it. Grep each one in the
 worktree before planning, because a run that builds on a wrong anchor spends
 its reviewer rounds unwinding it. Where the tree contradicts one, the tree
-wins:
+wins. A wrong anchor that changes no acceptance criterion goes in the
+deviations log alone. One that changes a criterion rewrites the issue body:
 
 1. Rewrite the issue section the anchor sits in to match the tree with
    `update-issue-body <issue> --section <name> --body-file <path>`, the
@@ -159,23 +160,27 @@ is blocked by.
 
 ## Phase 2: adjacent finds
 
-A find outside the issue takes one of three dispositions and no fourth, and
-phases 4 and 7 send their own out-of-scope findings back here.
+A find outside the issue is folded, filed or noted, and phases 4 and 7 send
+their own out-of-scope findings back here. A find showing the issue itself is
+wrong is the `mis-specified` stop instead.
 
-- **Fix it inline** and log the deviation, where an acceptance criterion names
-  it, the fix lands in a file this PR already changes, or a reviewer of this PR
-  would flag it.
-- **`file-issue` it** with the profile's triage marker and leave it. The
-  mechanic answers `filed: false` with candidates when an open issue's title
-  shares three or more tokens with yours, and each candidate is **read**: the
-  same finding is linked in the deviations log rather than refiled, and
-  `comment-issue` posts any evidence this run adds to it; a different one is
-  refiled with `--distinct-from`. A find citing a path this PR already changes
-  is refused with `in_diff`, since it is the first disposition's;
-  `--outside-scope "<reason>"` files it where the reason holds.
-- **Stop `mis-specified`**, where the find shows the issue itself is wrong.
+- **Fold** a find that fits what this PR is about and does not raise its
+  release grade (a `fix` PR that would become a `feat` files it instead). Log
+  the deviation and name the fold under the PR body's `## Special things to
+  note`. Folded lines count toward the inline lane's 20-line cap.
+- **File** anything else through `file-issue`, with the profile's triage
+  marker, and leave it. The mechanic answers `filed: false` with candidates
+  when an open issue's title shares three or more tokens with yours, and each
+  candidate is **read**: the same finding is linked in the deviations log
+  rather than refiled, and `comment-issue` posts any evidence this run adds to
+  it; a different one is refiled with `--distinct-from`. A find citing a path
+  this PR already changes is refused with `in_diff`, since a find there usually
+  folds; `--outside-scope "<reason>"` files it where the reason holds.
+- **Note** a trivial find: one line in the Run file, which the merge summary
+  carries.
 
-The merge summary lists every issue filed and every candidate linked.
+The merge summary lists every issue filed, every candidate linked and every
+noted find.
 
 ## Phase 4: triage and depth checks
 
