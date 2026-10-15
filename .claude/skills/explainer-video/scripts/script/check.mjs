@@ -15,8 +15,8 @@
 //         a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
 //         unsupported claims after two fix attempts`
 // writes: <run>/check.json, the machine record and the support attempts
-// exit:   0 no gate failed · 1 a gate failed, or `script: <why>` on stderr
-//         when an input is missing · 2 usage
+// exit:   0 no gate failed · 1 a gate failed, or `script: no <input>: <why>`
+//         on stderr when an input is missing or names no narrator · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,6 +30,7 @@ if (!run || rest.length) {
   process.exit(2);
 }
 const file = (f) => path.join(run, f);
+const FIX_ATTEMPTS = 2;
 function need(f, why) {
   if (!fs.existsSync(file(f))) {
     console.error(`script: no ${f}: ${why}`);
@@ -51,7 +52,9 @@ const narrator = narrators.find((n) =>
     : n.language === script.language && n.default,
 );
 if (!narrator) {
-  console.error(`script: no narrator ${script.narrator ?? script.language}`);
+  console.error(
+    `script: no narrator ${script.narrator ?? script.language}: set the brief's voice and compile again`,
+  );
   process.exit(1);
 }
 const words = (s) => s.split(/\s+/).filter(Boolean).length;
@@ -161,16 +164,14 @@ let red = false;
       .digest("hex");
     const prev = record?.support ?? support;
     // A red set of failing sentences is one fix attempt, however often it is
-    // judged; after a stop the next red set starts the count again.
+    // judged; past the last fix attempt the stop holds until the gate passes.
     red = judged && f.length > 0;
     support = red
       ? {
-          attempts:
-            prev.judged === hash
-              ? prev.attempts
-              : prev.attempts >= 3
-                ? 1
-                : prev.attempts + 1,
+          attempts: Math.min(
+            FIX_ATTEMPTS + 1,
+            prev.attempts + (prev.judged === hash ? 0 : 1),
+          ),
           judged: hash,
         }
       : judged
@@ -287,9 +288,9 @@ console.log(
   `script: ${Object.keys(checks).length - failed - (warns.length ? 1 : 0)} pass, ${failed} fail, ${warns.length ? 1 : 0} warn${
     !red
       ? ""
-      : support.attempts >= 3
+      : support.attempts > FIX_ATTEMPTS
         ? "; stop: unsupported claims after two fix attempts"
-        : `; next: fix attempt ${support.attempts} of 2`
+        : `; next: fix attempt ${support.attempts} of ${FIX_ATTEMPTS}`
   }`,
 );
 process.exit(failed ? 1 : 0);
