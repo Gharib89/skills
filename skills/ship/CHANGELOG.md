@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.44.0 (2026-10-15)
+
+### Features
+
+- **ship**: Poll-pr --brief names why a landed round closed done: false
+  ([#691](https://github.com/Gharib89/skills/pull/691),
+  [`1b6fc6d`](https://github.com/Gharib89/skills/commit/1b6fc6d4126cf3cdd337ab25af46b3ae1c688cd9))
+
+
 ## v0.43.0 (2026-10-15)
 
 ### Features
