@@ -19,7 +19,7 @@ import { userDirs } from "./lib/paths.mjs";
 import {
   TOOL_DIRS,
   catalogue as readCatalogue,
-  dest as destIn,
+  dest,
   lockHash,
   loadBackend,
   skill,
@@ -53,7 +53,6 @@ const quietEnv = {
   HYPERFRAMES_NO_UPDATE_CHECK: "1",
 };
 
-const dest = (r) => destIn(r, dirs);
 // A model row's size is its files'.
 const size = (r) => r.size ?? r.files?.reduce((n, f) => n + f.size, 0);
 const stamp = (dir) => path.join(dir, ".stamp");
@@ -99,6 +98,17 @@ function stale() {
   return out;
 }
 
+// Fill `<dir>.part`, then rename it over `dir`, so a failed fill never leaves a
+// half-written folder where status() looks.
+async function staged(dir, fill) {
+  const part = `${dir}.part`;
+  fs.rmSync(part, { recursive: true, force: true });
+  fs.mkdirSync(part, { recursive: true });
+  await fill(part);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.renameSync(part, dir);
+}
+
 async function install(r) {
   const dir = dest(r);
   // A missing row's folder can hold what an earlier install left half done.
@@ -128,37 +138,31 @@ async function install(r) {
     const meta = await backend.fontMeta(r.family);
     if (!LICENCES.includes(meta.license))
       return `refused: licence ${meta.license}, only ${LICENCES.join(" or ")}`;
-    const part = `${dir}.part`;
-    fs.rmSync(part, { recursive: true, force: true });
-    fs.mkdirSync(part, { recursive: true });
-    for (const f of r.files) {
-      await backend.download(
-        `https://cdn.jsdelivr.net/fontsource/fonts/${r.family}@${r.version}/${f}.woff2`,
-        path.join(part, `${f}.woff2`),
-      );
-    }
-    fs.rmSync(dir, { recursive: true, force: true });
-    fs.renameSync(part, dir);
+    await staged(dir, async (part) => {
+      for (const f of r.files)
+        await backend.download(
+          `https://cdn.jsdelivr.net/fontsource/fonts/${r.family}@${r.version}/${f}.woff2`,
+          path.join(part, `${f}.woff2`),
+        );
+    });
   } else if (r.kind === "model") {
     // Pinned by revision and checked by sha256, as ADR 0017 hosts models.
-    const part = `${dir}.part`;
-    fs.rmSync(part, { recursive: true, force: true });
-    for (const f of r.files) {
-      const file = path.join(part, ...f.path.split("/"));
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      await backend.download(
-        `https://huggingface.co/${r.repo}/resolve/${r.revision}/${f.path}`,
-        file,
-      );
-      const sum = crypto
-        .createHash("sha256")
-        .update(fs.readFileSync(file))
-        .digest("hex");
-      if (sum !== f.sha256)
-        throw new Error(`${f.path} has sha256 ${sum}, pinned ${f.sha256}`);
-    }
-    fs.rmSync(dir, { recursive: true, force: true });
-    fs.renameSync(part, dir);
+    await staged(dir, async (part) => {
+      for (const f of r.files) {
+        const file = path.join(part, ...f.path.split("/"));
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        await backend.download(
+          `https://huggingface.co/${r.repo}/resolve/${r.revision}/${f.path}`,
+          file,
+        );
+        const sum = crypto
+          .createHash("sha256")
+          .update(fs.readFileSync(file))
+          .digest("hex");
+        if (sum !== f.sha256)
+          throw new Error(`${f.path} has sha256 ${sum}, pinned ${f.sha256}`);
+      }
+    });
   }
   fs.writeFileSync(stamp(dir), "");
   return "present";

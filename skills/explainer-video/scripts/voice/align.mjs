@@ -4,13 +4,13 @@
 // switch; everything here is plain JS over its output.
 
 // wav2vec2-style models read 16 kHz mono and emit one frame per 320 samples.
-export const RATE = 16000;
+const SAMPLE_RATE = 16000;
 const HOP = 320;
-export const FRAME = HOP / RATE;
+export const FRAME = HOP / SAMPLE_RATE;
 
 // Windowed-sinc resampling, so a 24 kHz render reaches the model without the
 // aliasing linear interpolation would fold into its speech band.
-export function resample(x, from, to = RATE) {
+function resample(x, from, to = SAMPLE_RATE) {
   if (from === to) return x;
   const ratio = to / from;
   const fc = Math.min(1, ratio);
@@ -38,7 +38,7 @@ export function resample(x, from, to = RATE) {
 // because every offset is a whole number of hops.
 const WINDOW = 1500 * HOP;
 const MARGIN = 50 * HOP;
-export async function logProbs(x, logits) {
+async function logProbs(x, logits) {
   const parts = [];
   let classes = 0;
   for (let s0 = 0; s0 < x.length; s0 += WINDOW) {
@@ -76,7 +76,7 @@ const spell = (word, vocab) =>
 
 // Start and end in seconds for every word, in order. A word with nothing the
 // model can spell (a number, a symbol) takes the gap between its neighbours.
-export function forceAlign({ lp, frames, classes }, words, vocab) {
+function forceAlign({ lp, frames, classes }, words, vocab) {
   const blank = vocab["<pad>"];
   const sep = vocab["|"];
   const tgt = [];
@@ -159,6 +159,14 @@ export function forceAlign({ lp, frames, classes }, words, vocab) {
     w.end = after ? after.start : +(frames * FRAME).toFixed(3);
   });
   return out;
+}
+
+// Time `words` in audio at any sample rate with the backend's CTC model `ctc`:
+// the frames' log-probabilities, which `transcribe` reads, and each word's
+// start and end in seconds.
+export async function align(samples, sampleRate, words, ctc) {
+  const em = await logProbs(resample(samples, sampleRate), ctc.logits);
+  return { em, words: forceAlign(em, words, ctc.vocab) };
 }
 
 // The model's own reading of frames [from, to): best class per frame, repeats

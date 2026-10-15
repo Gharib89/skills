@@ -18,14 +18,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { loadBackend, skill, toolPaths } from "../lib/tools.mjs";
-import {
-  FRAME,
-  RATE,
-  forceAlign,
-  logProbs,
-  resample,
-  transcribe,
-} from "./align.mjs";
+import { FRAME, align, transcribe } from "./align.mjs";
 import { check } from "./qc.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
@@ -33,9 +26,6 @@ if (!run || rest.length) {
   console.error("usage: node voice.mjs <run-folder>");
   process.exit(2);
 }
-
-// One aligner per language; Arabic arrives with its own row.
-const ALIGNERS = { en: "model:wav2vec2-base-960h" };
 
 const script = JSON.parse(
   fs.readFileSync(path.join(run, "script.json"), "utf8"),
@@ -53,14 +43,21 @@ if (!narrator) {
   console.error(`no narrator ${script.narrator ?? "default"} for ${language}`);
   process.exit(1);
 }
-if (!ALIGNERS[language]) {
-  console.error(`no aligner for language ${language}`);
+const empty = script.scenes.find((s) => !s.narration?.join("").trim());
+if (empty) {
+  console.error(`scene ${empty.id} has no narration`);
   process.exit(1);
 }
 
 const tools = toolPaths();
 const backend = await loadBackend();
-const ctc = await backend.aligner({ language, tools });
+let ctc;
+try {
+  ctc = await backend.aligner({ language, tools });
+} catch (e) {
+  console.error(`voice: ${e.message}`);
+  process.exit(1);
+}
 
 const cacheDir = path.join(run, ".cache", "voice");
 fs.mkdirSync(cacheDir, { recursive: true });
@@ -72,13 +69,15 @@ const scenes = script.scenes.map((s) => {
     .digest("hex")
     .slice(0, 16);
   const meta = path.join(cacheDir, `${key}.json`);
+  // The WAV is written before its metadata, but either can be deleted by hand.
+  const hit =
+    fs.existsSync(meta) && fs.existsSync(path.join(cacheDir, `${key}.wav`));
   return {
     id: s.id,
     text,
+    words: text.split(/\s+/),
     key,
-    cached: fs.existsSync(meta)
-      ? JSON.parse(fs.readFileSync(meta, "utf8"))
-      : null,
+    cached: hit ? JSON.parse(fs.readFileSync(meta, "utf8")) : null,
   };
 });
 
@@ -91,19 +90,18 @@ async function voice(group) {
     language,
     tools,
   });
-  const em = await logProbs(resample(samples, sampleRate, RATE), ctc.logits);
-  const counts = group.map((s) => s.text.split(/\s+/).length);
-  const words = forceAlign(
-    em,
-    group.flatMap((s) => s.text.split(/\s+/)),
-    ctc.vocab,
+  const { em, words } = await align(
+    samples,
+    sampleRate,
+    group.flatMap((s) => s.words),
+    ctc,
   );
   const total = samples.length / sampleRate;
   let first = 0;
   let cut = 0;
-  return group.map((s, i) => {
-    const own = words.slice(first, first + counts[i]);
-    first += counts[i];
+  return group.map((s) => {
+    const own = words.slice(first, first + s.words.length);
+    first += s.words.length;
     const next = words[first];
     const end = next ? (own.at(-1).end + next.start) / 2 : total;
     const start = cut;

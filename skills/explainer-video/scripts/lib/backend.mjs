@@ -1,7 +1,6 @@
 // Everything setup and the stages reach outside the machine or the skill: npm,
 // HyperFrames' Chrome download, the Fontsource API and CDN, Hugging Face, PATH,
-// and the models. EXPLAINER_VIDEO_BACKEND names a module with these same
-// exports to use instead, which is how tests select canned fakes.
+// and the models. Callers load it through tools.mjs's loadBackend.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -91,6 +90,8 @@ export async function synthesize({ text, narrator, tools }) {
   const req = fromCache(tools.node);
   const { KokoroTTS, TextSplitterStream } = req("kokoro-js");
   if (!kokoro) {
+    // kokoro-js's own dependency, pinned by the lock: requiring it from the same
+    // install yields the instance kokoro-js reads its settings from.
     const { env } = req("@huggingface/transformers");
     env.allowRemoteModels = false;
     // An absolute path is read as a folder; a name under localModelPath must
@@ -113,10 +114,15 @@ export async function synthesize({ text, narrator, tools }) {
   return { samples, sampleRate: 24000 };
 }
 
-// The English CTC model: its vocabulary, and its logits for 16 kHz audio,
+// One CTC model per language (ADR 0016); Arabic arrives with its own row.
+const ALIGNERS = { en: "model:wav2vec2-base-960h" };
+
+// A language's CTC model: its vocabulary, and its logits for 16 kHz audio,
 // normalised as its feature extractor does.
-export async function aligner({ tools }) {
-  const dir = tools.models["model:wav2vec2-base-960h"];
+export async function aligner({ language, tools }) {
+  if (!ALIGNERS[language])
+    throw new Error(`no aligner for language ${language}`);
+  const dir = tools.models[ALIGNERS[language]];
   const ort = fromCache(tools.node)("onnxruntime-node");
   const session = await ort.InferenceSession.create(
     path.join(dir, "onnx", "model_int8.onnx"),

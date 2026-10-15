@@ -154,6 +154,30 @@ test("changing one scene's text re-voices only that scene; the others are cache 
   assert.equal(timeline.scenes[1].words[7].text, "takes");
 });
 
+test("a scene whose cached WAV is gone is voiced again, not reported cached", () => {
+  const fx = fixture();
+  assert.equal(run(fx).code, 0);
+  const timeline = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "voice.json"), "utf8"),
+  );
+  fs.rmSync(path.join(fx.dir, timeline.scenes[0].audio));
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(line(r.out, "hook"), /: voiced ·/);
+  assert.match(line(r.out, "context"), /: cached ·/);
+  assert.ok(fs.existsSync(path.join(fx.dir, timeline.scenes[0].audio)));
+});
+
+test("a scene with no narration is refused by name before anything is voiced", () => {
+  const scenes = structuredClone(SCENES);
+  scenes[1].narration = [];
+  const fx = fixture(scenes);
+  const r = run(fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /scene context has no narration/);
+  assert.equal(synths(fx).length, 0);
+});
+
 // Each misrender the fake can make, the floor it misses, and the value the
 // verdict line must carry: worked from the fake's frame layout.
 for (const [name, sentence, why] of [

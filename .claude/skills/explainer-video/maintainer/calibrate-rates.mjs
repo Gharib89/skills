@@ -11,12 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { loadBackend, skill, toolPaths } from "../scripts/lib/tools.mjs";
-import {
-  RATE,
-  forceAlign,
-  logProbs,
-  resample,
-} from "../scripts/voice/align.mjs";
+import { align } from "../scripts/voice/align.mjs";
 
 // Explainer narration in the house register, numbers spelled out.
 const TEXTS = {
@@ -49,8 +44,7 @@ try {
       language,
       tools,
     });
-    const em = await logProbs(resample(samples, sampleRate, RATE), ctc.logits);
-    const timed = forceAlign(em, words, ctc.vocab);
+    const timed = (await align(samples, sampleRate, words, ctc)).words;
     n.rate = +(words.length / (timed.at(-1).end - timed[0].start)).toFixed(2);
     console.log(`calibrate ${n.id}: ${n.rate} words/s`);
   }
