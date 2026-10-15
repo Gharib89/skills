@@ -235,6 +235,30 @@ test("a repo file is copied byte for byte, and a run folder outside explainers/ 
   );
 });
 
+test("a run folder inside a repo but outside explainers/ hides itself and nothing else", () => {
+  const fx = fixture();
+  const repo = path.join(fx.tmp, "site");
+  const run = path.join(repo, "videos", "demo");
+  const other = path.join(repo, "videos", "other");
+  fs.mkdirSync(run, { recursive: true });
+  fs.mkdirSync(other);
+  fs.writeFileSync(path.join(run, "outline.md"), "# This video\n");
+  fs.writeFileSync(path.join(other, "notes.md"), "# Beside it\n");
+  git(repo, "init", "-q");
+  git(repo, "add", "videos");
+  const r = spawnSync(
+    process.execPath,
+    [path.join(scripts, "snapshot.mjs"), run, repo],
+    { env: fx.env, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const held = spawnSync("find", [".", "-type", "f"], {
+    cwd: path.join(run, "snapshots", "site"),
+    encoding: "utf8",
+  }).stdout.trim();
+  assert.equal(held, "./videos/other/notes.md");
+});
+
 test("a folder outside git is refused, since nothing says which of its files are ignored", () => {
   const fx = fixture();
   const s = snapshot(fx, [fx.docs]);

@@ -5,9 +5,9 @@
 // A source is a git repo folder, a web page URL, or a .pdf, .md, .txt, .html,
 // .docx or .pptx file. A repo snapshot is a byte copy of the text files git
 // lists as tracked or untracked and not ignored, less the `explainers/` folder
-// holding the run, `.env*` files and any file whose name or text matches a
-// secret pattern; binary files, symlinks and that folder are skipped without a
-// line. A page, and an HTML file, render in HyperFrames' Chrome first; HTML
+// holding the run (the run alone when it sits elsewhere), `.env*` files and
+// any file whose name or text matches a secret pattern; binary files, symlinks
+// and the skipped folder leave no line. A page, and an HTML file, render in HyperFrames' Chrome first; HTML
 // and DOCX end as Markdown, a PDF as one block per page, a PPTX as one per
 // slide and one per slide's notes, each after a `<!-- page <n> -->` or
 // `<!-- slide <n>[ notes] -->` marker line. Markdown and text are copied as
@@ -237,9 +237,9 @@ const sources = [];
 const report = [];
 // A video's output is never its source: a repo source skips the `explainers/`
 // folder holding the run, or the run alone when it sits elsewhere.
-const parent = path.dirname(path.resolve(run));
+const runParent = path.dirname(path.resolve(run));
 const skipUnder =
-  path.basename(parent) === "explainers" ? parent : path.resolve(run);
+  path.basename(runParent) === "explainers" ? runParent : path.resolve(run);
 
 for (const [i, s] of given.entries()) {
   const kind = kinds[i];
