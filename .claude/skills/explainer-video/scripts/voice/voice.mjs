@@ -26,6 +26,8 @@ if (!run || rest.length) {
   console.error("usage: node voice.mjs <run-folder>");
   process.exit(2);
 }
+// The last pass's timeline no longer describes this script until it passes.
+fs.rmSync(path.join(run, "voice.json"), { force: true });
 
 const script = JSON.parse(
   fs.readFileSync(path.join(run, "script.json"), "utf8"),
@@ -50,9 +52,6 @@ if (empty) {
   console.error(`voice: scene ${empty.id} has no narration`);
   process.exit(1);
 }
-
-// The last pass's timeline no longer describes this script until it passes.
-fs.rmSync(path.join(run, "voice.json"), { force: true });
 
 const tools = toolPaths();
 const backend = await loadBackend();

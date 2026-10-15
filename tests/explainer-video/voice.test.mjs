@@ -224,6 +224,19 @@ test("a rerun that fails QC removes the timeline the last pass wrote", () => {
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
 });
 
+test("a rerun refused for its input removes the timeline the last pass wrote", () => {
+  const fx = fixture();
+  assert.equal(run(fx).code, 0);
+  fs.writeFileSync(
+    path.join(fx.dir, "script.json"),
+    JSON.stringify({ language: "en", narrator: "nobody", scenes: SCENES }),
+  );
+  const r = run(fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /no narrator nobody/);
+  assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
+});
+
 test("two scenes with the same narration share one WAV that matches both entries", () => {
   const fx = fixture([SCENES[0], { ...SCENES[0], id: "again" }, SCENES[2]]);
   const r = run(fx);
