@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.41.0 (2026-10-15)
+
+### Features
+
+- **ship**: Phase-4 evidence, fixed numbers and run choreography become judgment
+  ([#679](https://github.com/Gharib89/skills/pull/679),
+  [`6d33765`](https://github.com/Gharib89/skills/commit/6d337656d23bfb144acb8e9ab5555005784336b6))
+
+
 ## v0.40.0 (2026-10-15)
 
 ### Features
