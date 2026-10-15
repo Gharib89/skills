@@ -11,9 +11,11 @@ metadata:
 # explainer-video
 
 An **explainer video** is a narrated video, one to five minutes by default,
-made from one or more sources. This version carries only the first stage every
-run starts with, **setup**: the video stages after it are not in this version.
-Asked for a video, say so in one line and offer `setup` instead.
+made from one or more sources. This version carries two stages: **setup**,
+which every run starts with, and **voice**, English narration for a script the
+user supplies. The stages that write the script and render the video are not
+in this version. Asked for a video, say so in one line and offer `setup`, or
+voicing a narration the user writes.
 
 ## Setup
 
@@ -44,3 +46,38 @@ being the folder this file is in:
 To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
 and what an earlier install of a missing row left half done.
+
+## Voice
+
+The voice stage turns each scene's narration into audio with every word timed,
+then runs **voice QC**, which blocks. It reads a **run folder**,
+`explainers/<slug>/` by default, holding `script.json`:
+
+```json
+{
+  "language": "en",
+  "narrator": "am_fenrir",
+  "scenes": [{ "id": "hook", "narration": ["First sentence.", "Second."] }]
+}
+```
+
+`narrator` is optional: without it the stage takes the language's first default
+in `<skill>/narrators.json` (`bf_emma`). Narration is the **spoken form**: write
+numbers, dates and symbols out as words ("forty two", not "42"), because QC
+compares the text against what the aligner hears and a numeral fails it.
+
+1. **Tools.** Voice needs the npm packages, `model:kokoro-82m` and
+   `model:wav2vec2-base-960h`. Run the setup check first; any of them missing,
+   run the setup steps above before voicing.
+2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
+   prints one line per scene, `voiced` or `cached` with its recall, precision
+   and rate, then a summary line. A scene whose narration, narrator and
+   language are unchanged is a cache hit and is not voiced again.
+3. **On a pass** (exit 0), the stage has written `voice.json` in the run
+   folder: per scene its WAV under `.cache/voice/`, its duration and each
+   word's start and end in seconds. Report the summary line.
+4. **On a fail** (exit 1), relay each failing scene's line as printed: it names
+   the measure and value that missed (content-word recall under 0.8, precision
+   under 0.85, or a rate outside 9 to 22 characters per second). Rewrite that
+   scene's narration in spoken form and voice again; the scenes that passed
+   are cached. No `voice.json` is written until every scene passes.

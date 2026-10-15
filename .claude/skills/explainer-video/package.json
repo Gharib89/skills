@@ -7,6 +7,10 @@
   },
   "dependencies": {
     "hyperframes": "0.8.160",
+    "kokoro-js": "1.2.1",
     "onnxruntime-node": "1.30.0"
+  },
+  "overrides": {
+    "onnxruntime-node": "$onnxruntime-node"
   }
 }
