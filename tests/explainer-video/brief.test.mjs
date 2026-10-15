@@ -142,11 +142,14 @@ test("changing one knob keeps the rest and names only the stages it feeds", () =
 
   stale();
   r = brief(fx, ["audience=managers"]);
-  assert.match(r.out, /^brief: audience changed: redo script$/m);
+  assert.match(r.out, /^brief: audience changed: redo script, voice, render$/m);
   // The compiled script holds no audience, so it stays.
   assert.ok(has("script.json") && !has("check.json"));
   r = brief(fx, ["length=3", "aspect=16:9", "style=claude-code"]);
-  assert.match(r.out, /^brief: length changed: redo source, script$/m);
+  assert.match(
+    r.out,
+    /^brief: length changed: redo source, script, voice, render$/m,
+  );
   r = brief(fx, ["focus=merging", "voice=bf_emma"]);
   assert.match(
     r.out,

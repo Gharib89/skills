@@ -9,7 +9,8 @@
 // any given replaces that list (`must=` alone empties it).
 // stdout: `brief <knob>: <value>` per knob, then `brief: written -> brief.json`
 //         for a new brief, `brief: unchanged`, or `brief: <knobs> changed:
-//         redo <stages>`, naming only the stages those knobs feed
+//         redo <stages>`: the first stage those knobs feed and every stage
+//         after it, since each stage feeds the next
 // writes: <run>/brief.json; a language, voice or style change removes
 //         <run>/script.json, since the compiled script carries all three, and
 //         a change the script stage redoes removes <run>/check.json, so the
@@ -31,18 +32,18 @@ const KNOBS = [
   "aspect",
 ];
 const LISTS = ["must", "avoid"];
-// The stages each knob feeds, in run order.
+// The stages in run order, and the first one each knob feeds.
 const STAGES = ["source", "script", "voice", "render"];
 const FEEDS = {
-  focus: ["source", "script"],
-  length: ["source", "script"],
-  audience: ["script"],
-  language: ["script", "voice", "render"],
-  style: ["render"],
-  voice: ["script", "voice", "render"],
-  aspect: ["render"],
-  must: ["script"],
-  avoid: ["script"],
+  focus: "source",
+  length: "source",
+  audience: "script",
+  language: "script",
+  style: "render",
+  voice: "script",
+  aspect: "render",
+  must: "script",
+  avoid: "script",
 };
 
 const [run, ...args] = process.argv.slice(2);
@@ -156,7 +157,9 @@ else {
   // script gates' fix attempts belong to the script being rewritten.
   if (changed.some((k) => ["language", "voice", "style"].includes(k)))
     fs.rmSync(path.join(run, "script.json"), { force: true });
-  const redo = STAGES.filter((s) => changed.some((k) => FEEDS[k].includes(s)));
+  const redo = STAGES.slice(
+    Math.min(...changed.map((k) => STAGES.indexOf(FEEDS[k]))),
+  );
   if (redo.includes("script"))
     fs.rmSync(path.join(run, "check.json"), { force: true });
   console.log(`brief: ${changed.join(", ")} changed: redo ${redo.join(", ")}`);

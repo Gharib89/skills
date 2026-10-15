@@ -89,7 +89,7 @@ must include and must avoid. The user's request beside the sources, the
    the knobs that change; the others keep their values, but a language
    change without a voice takes that language's default narrator, and a list
    given replaces that list. It prints `brief: unchanged`, nothing to redo, or
-   `brief: <knobs> changed: redo <stages>`: redo only those stages, in order,
+   `brief: <knobs> changed: redo <stages>`: redo those stages, in order,
    each reusing its cached work for whatever did not change. A language, voice
    or style change deletes the compiled `script.json`, so compile before the
    first stage it names.
