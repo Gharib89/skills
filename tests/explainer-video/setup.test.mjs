@@ -4,6 +4,7 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -118,6 +119,22 @@ test("install is the yes: it installs every row, npm ci skips the onnxruntime pr
     1,
     "the second check installed something",
   );
+});
+
+test("install clears what an earlier install of a missing row left half done", () => {
+  const fx = fixture();
+  const hash = crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(path.join(fx.skill, "package-lock.json")))
+    .digest("hex")
+    .slice(0, 16);
+  const leftover = path.join(cacheDir(fx), "chrome", hash, "partial-download");
+  fs.mkdirSync(path.dirname(leftover), { recursive: true });
+  fs.writeFileSync(leftover, "x");
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.ok(!fs.existsSync(leftover), "the half-done download survived");
+  assert.ok(fs.existsSync(path.join(path.dirname(leftover), ".stamp")));
 });
 
 test("ffmpeg missing prints its apt, brew and winget lines and installs nothing system-wide", () => {

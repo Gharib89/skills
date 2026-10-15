@@ -42,4 +42,5 @@ being the folder this file is in:
    then check again. A `refused` or `failed` row: relay the reason as printed.
 
 To remove the tools, the user deletes the folders the `writes to` column names.
-The skill itself deletes only stale installs, and only after the yes.
+Setup deletes inside those folders alone, and only after the yes: the stale
+installs, and what an earlier install of a missing row left half done.

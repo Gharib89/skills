@@ -87,8 +87,8 @@ function status(r) {
 // touched in 30 days. One with no stamp never finished, and ages by its folder.
 function stale() {
   const out = [];
-  for (const kind of Object.values(TOOL_DIRS)) {
-    const base = path.join(dirs.cache, kind);
+  for (const folder of Object.values(TOOL_DIRS)) {
+    const base = path.join(dirs.cache, folder);
     for (const name of fs.existsSync(base) ? fs.readdirSync(base).sort() : []) {
       const dir = path.join(base, name);
       const st =
@@ -96,7 +96,7 @@ function stale() {
       const age = Date.now() - st.mtimeMs;
       if (name !== lockHash && age > STALE_MS)
         out.push({
-          id: `stale ${kind}/${name}`,
+          id: `stale ${folder}/${name}`,
           dir,
           days: Math.floor(age / 864e5),
           size: du(dir),
@@ -108,9 +108,13 @@ function stale() {
 
 async function install(r) {
   const dir = dest(r);
-  if (r.kind === "npm") {
+  // A missing row's folder can hold what an earlier install left half done.
+  // A font is written beside it and renamed in, so it never is.
+  if (r.kind !== "font") {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
+  }
+  if (r.kind === "npm") {
     for (const f of ["package.json", "package-lock.json"])
       fs.copyFileSync(path.join(skill, f), path.join(dir, f));
     // onnxruntime-node's postinstall otherwise fetches the CUDA 12 provider from
@@ -124,9 +128,6 @@ async function install(r) {
     const nodeDir = dest({ kind: "npm" });
     if (!fs.existsSync(stamp(nodeDir)))
       throw new Error("needs npm-packages first");
-    // A missing row's folder can hold a download an earlier install left half done.
-    fs.rmSync(dir, { recursive: true, force: true });
-    fs.mkdirSync(dir, { recursive: true });
     const code = await backend.ensureChrome(nodeDir, dir, quietEnv);
     if (code !== 0)
       throw new Error(`hyperframes browser ensure exited ${code}`);
