@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.0 (2026-10-15)
+
+### Features
+
+- **explainer-video**: Brief and cited script, from a document to a video
+  ([#721](https://github.com/Gharib89/skills/pull/721),
+  [`317691b`](https://github.com/Gharib89/skills/commit/317691bc73d6e5d5ab9c30632b6dcf99befe8622))
+
+
 ## v0.5.0 (2026-10-15)
 
 ### Features
