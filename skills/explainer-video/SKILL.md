@@ -187,7 +187,8 @@ to the **script gates**.
    does say it, and give an `unmarked` sentence the cites for its claim or turn
    it into a transition. On `stop: unsupported claims after two fix attempts`,
    stop: report each failing sentence and ask the user what the video may say.
-   The stop holds, whatever the next rewrite, until the support gate passes.
+   The stop holds, whatever the next rewrite, until the support gate passes
+   or a brief change redoes the script.
 6. **On exit 0**, report the summary line and go on to Voice.
 
 ## Voice

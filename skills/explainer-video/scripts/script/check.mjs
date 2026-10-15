@@ -30,7 +30,6 @@ if (!run || rest.length) {
   process.exit(2);
 }
 const file = (f) => path.join(run, f);
-const FIX_ATTEMPTS = 2;
 function need(f, why) {
   if (!fs.existsSync(file(f))) {
     console.error(`script: no ${f}: ${why}`);
@@ -168,10 +167,7 @@ let red = false;
     red = judged && f.length > 0;
     support = red
       ? {
-          attempts: Math.min(
-            FIX_ATTEMPTS + 1,
-            prev.attempts + (prev.judged === hash ? 0 : 1),
-          ),
+          attempts: prev.attempts + (prev.judged === hash ? 0 : 1),
           judged: hash,
         }
       : judged
@@ -288,9 +284,9 @@ console.log(
   `script: ${Object.keys(checks).length - failed - (warns.length ? 1 : 0)} pass, ${failed} fail, ${warns.length ? 1 : 0} warn${
     !red
       ? ""
-      : support.attempts > FIX_ATTEMPTS
+      : support.attempts > 2
         ? "; stop: unsupported claims after two fix attempts"
-        : `; next: fix attempt ${support.attempts} of ${FIX_ATTEMPTS}`
+        : `; next: fix attempt ${support.attempts} of 2`
   }`,
 );
 process.exit(failed ? 1 : 0);
