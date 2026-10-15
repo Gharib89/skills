@@ -60,7 +60,7 @@ never shrinks the issue's scope on its own authority: the criterion stays
 verbatim in the issue body.
 
 - **Unattended**: deliver the rest, log the gap in the deviations log, and list
-  the criterion on the merge summary's `Unmet criteria` row with the action a
+  the criterion on the merge summary's `Unmet criteria` item with the action a
   human must take. Merging then needs the human's explicit waiver of each one
   ([merge-gate.md](merge-gate.md#unmet-criteria)).
 - **Attended**: ask the human which way before building; an answer that the
@@ -175,8 +175,8 @@ wrong is the `mis-specified` stop instead.
   rather than refiled, and `comment-issue` posts any evidence this run adds to
   it; a different one is refiled with `--distinct-from`. A find citing a path
   this PR already changes is refused with `in_diff`, since a find there folds
-  unless it would raise the release grade or reaches another skill's surface;
-  `--outside-scope "<reason>"` files that case.
+  unless it fails the fold's test; `--outside-scope "<reason>"` files that
+  case.
 - **Note** a find not worth a fold or an issue (a typo outside the diff, a
   cosmetic nit): record `Noted: <find>` in the Run file when it is met, so the
   merge summary can list it after a compaction.
