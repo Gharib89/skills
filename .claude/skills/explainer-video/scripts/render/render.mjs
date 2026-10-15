@@ -89,6 +89,15 @@ script.scenes.forEach((s, i) => {
 });
 if (voice.scenes.length !== script.scenes.length)
   fail("voice.json does not match script.json: run the voice stage again");
+const narrator =
+  script.narrator ??
+  json(path.join(skill, "narrators.json")).narrators.find(
+    (n) => n.language === script.language && n.default,
+  )?.id;
+if (voice.narrator !== narrator || voice.language !== script.language)
+  fail(
+    `voice.json holds narrator ${voice.narrator}, the script asks for ${narrator}: run the voice stage again`,
+  );
 
 // The rows this stage reads, each installed by setup.
 const rows = catalogue();
@@ -171,8 +180,10 @@ const clock = (t) => {
   const pad = (n, w = 2) => String(n).padStart(w, "0");
   return `${pad(Math.floor(ms / 3600000))}:${pad(Math.floor(ms / 60000) % 60)}:${pad(Math.floor(ms / 1000) % 60)},${pad(ms % 1000, 3)}`;
 };
+// out/ holds one render's files or none: cleared now, and again on a failed check.
 const out = path.join(run, "out");
-fs.mkdirSync(out, { recursive: true });
+fs.rmSync(out, { recursive: true, force: true });
+fs.mkdirSync(out);
 const srt = path.join(out, `${slug}.srt`);
 fs.writeFileSync(
   srt,
@@ -422,7 +433,10 @@ for (const [name, got, want, ok = got === want] of checks) {
   if (!ok) failed++;
   console.log(`delivery ${name}: ${ok ? "pass" : `fail: ${got} vs ${want}`}`);
 }
-if (failed) process.exit(1);
+if (failed) {
+  fs.rmSync(out, { recursive: true, force: true });
+  process.exit(1);
+}
 
 fs.copyFileSync(video, path.join(out, `${slug}.mp4`));
 fs.copyFileSync(stills[0], path.join(out, "poster.png"));

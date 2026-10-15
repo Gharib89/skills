@@ -123,8 +123,8 @@ narrator: am_fenrir
 - **Narration.** Numbered sentences in spoken form; an indented line continues
   the sentence above, so its cites go on the last line. `{written|spoken}`
   shows the written form in the captions and voices the spoken one; backticks
-  are dropped. A trailing `[a, b]` lists the sentence's cites, `[no-claim]`
-  none.
+  are dropped. Every sentence ends in `[a, b]`, its cites, or in `[no-claim]`
+  when it makes no claim.
 - **Visual.** One JSON block per scene, one component, required props marked
   `*`: `title` (`kicker`, `title*`, `subtitle`), `cards` (`items*`, each
   `at*`, `label*`, `value*`, `note`), or `terminal` (`title`, `lines*`, each
@@ -155,11 +155,13 @@ narrator: am_fenrir
    Windows), so the video outlives the run folder. Report the last line and
    that path.
 7. **On a fail** (exit 1), relay what was printed. A `delivery <check>: fail:
-   <measured> vs <wanted>` line means nothing was copied. `style profile <name>
+   <measured> vs <wanted>` line means nothing was copied to the videos folder
+   and `out/` was emptied, an earlier render's files too. `style profile <name>
    fails contrast: <token> on <surface> ...` names each pair under its floor:
    fix those colours or choose another profile. `<row> is not installed`: run
-   setup. `no script.json`, `no voice.json` or `voice.json does not match`
-   names the stage to run first. `no render fonts for language <x>`: this
+   setup. `no script.json`, `no voice.json`, `voice.json does not match` or
+   `voice.json holds narrator` names the stage to run first. `no render fonts
+   for language <x>`: this
    version renders English only. A profile's layout, motion or font this
    version cannot draw: choose another profile. Any other `render: <why>`
    line, a HyperFrames or ffprobe failure among them: relay it with the
@@ -175,6 +177,7 @@ copy to take up the edit, or name another profile in `style:`.
 
 The run folder's **recipe**, `script.md`, `style.json` and `manifest.json`
 (skill version, lock hash, profile, narrator, delivered path), is committed.
-`explainers/.gitignore`, which every stage writes, ignores the rest: the
-compiled script, the voice and timeline files, the caches, the composition and
-`out/`.
+`explainers/.gitignore` ignores the rest: the compiled script, the voice and
+timeline files, the caches, the composition and `out/`. Every stage writes
+those lines between its `# explainer-video: begin` and `end` markers and
+leaves the file's other lines alone.

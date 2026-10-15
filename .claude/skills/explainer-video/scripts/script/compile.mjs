@@ -8,7 +8,7 @@
 // sentences (an indented line continues the one above) and one `### Visual`
 // block of JSON. In a sentence `{written|spoken}`
 // shows the written form on screen and voices the spoken one, backticks are
-// dropped, and a trailing `[a, b]` lists its cites (`[no-claim]`: none).
+// dropped, and every sentence ends in `[a, b]`, its cites, or `[no-claim]`.
 // stdout: `compile: <n> scene(s) -> script.json`
 // writes: <run>/script.json, and explainers/.gitignore
 // exit:   0 compiled · 1 the file is malformed, `compile: [<scene>: ]<what>`
@@ -95,13 +95,12 @@ const BRACES = /\{([^|}]*)\|([^}]*)\}/g;
 // count of spoken words it covers, and its cites.
 function sentence(raw, id) {
   const m = raw.match(/^(.*?)\s*\[([^\]]*)\]\s*$/);
-  const body = m ? m[1] : raw;
-  const cites = m
-    ? m[2]
-        .split(",")
-        .map((c) => c.trim())
-        .filter((c) => c && c !== "no-claim")
-    : [];
+  if (!m?.[2].trim()) fail(id, `${raw} ends in no [<cites>] or [no-claim]`);
+  const body = m[1];
+  const cites = m[2]
+    .split(",")
+    .map((c) => c.trim())
+    .filter((c) => c && c !== "no-claim");
   const said = [];
   const captions = [];
   for (const chunk of body.match(/(?:\{[^}]*\}|\S)+/g) ?? []) {

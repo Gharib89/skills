@@ -137,6 +137,19 @@ test("compile writes explainers/.gitignore so compiled files, caches and output 
   assert.ok(!/script\.md|style\.json|manifest\.json/.test(ignore));
 });
 
+test("compile keeps the user's own ignore lines and writes its block once", () => {
+  const fx = fixture();
+  const file = path.join(fx.tmp, "explainers", ".gitignore");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, "drafts/\n");
+  assert.equal(run(fx).code, 0);
+  fs.appendFileSync(file, "*.tmp\n");
+  assert.equal(run(fx).code, 0);
+  const lines = fs.readFileSync(file, "utf8").split("\n");
+  assert.ok(lines.includes("drafts/") && lines.includes("*.tmp"));
+  assert.equal(lines.filter((l) => l === "*/out/").length, 1);
+});
+
 test("the voice stage voices a compiled script unchanged", () => {
   const fx = fixture();
   assert.equal(run(fx).code, 0);
@@ -191,6 +204,12 @@ for (const [name, from, to, why] of [
     "2. It writes a failing test. [ex-2]",
     "   2. It writes a failing test. [ex-2]",
     /^compile: steps: not a numbered sentence: +2\. It writes/m,
+  ],
+  [
+    "a sentence with no cites and no [no-claim]",
+    "2. Here is how. [no-claim]",
+    "2. Here is how.",
+    /^compile: hook: Here is how\. ends in no \[<cites>\] or \[no-claim\]/m,
   ],
   [
     "a heading that is not a scene",

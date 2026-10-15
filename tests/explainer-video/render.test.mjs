@@ -305,6 +305,25 @@ test("a video a second longer than the timeline fails the duration check", () =>
     /^delivery duration: fail: [\d.]+ s vs [\d.]+ s within 0\.25 s$/m,
   );
   assert.ok(!fs.existsSync(path.join(fx.tmp, "videos")));
+  // The earlier render's MP4 and poster go too, not left beside a new SRT.
+  assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
+});
+
+test("a narrator change after voicing asks for the voice stage again", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  put(
+    fx.dir,
+    "script.md",
+    SCRIPT.replace("narrator: am_fenrir", "narrator: bf_emma"),
+  );
+  assert.equal(stage(fx, "script/compile.mjs").code, 0);
+  const r = stage(fx, "render/render.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^render: voice\.json holds narrator am_fenrir, the script asks for bf_emma: run the voice stage again/m,
+  );
 });
 
 test("render before the voice stage says which stage to run", () => {
