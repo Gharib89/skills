@@ -20,7 +20,8 @@
 // the content band with the palette's text on its bg, all in bounds. An
 // element whose text names a marker word misrenders: `clipped` overflows
 // (scrollW 4000 in 1600) past its clip box, and check reports it as a layout
-// error `text_box_overflow`; `tiny` is 12 px; `dim` is #c8c8c0; `edge` sits at
+// error `text_box_overflow`; `tiny` is 12 px; `dim` is #c8c8c0; `small` is 20 px
+// in the palette's accent; `edge` sits at
 // left 40, inside the safe margin; `stacked` starts halfway down the element
 // before it, so the two overlap. EXPLAINER_VIDEO_FAKE_BLANK=1 makes probe find
 // no text at all.
@@ -277,7 +278,7 @@ export async function probe(dir, times) {
           text,
           scene,
           rect,
-          fontPx: /\btiny\b/.test(text) ? 12 : 40,
+          fontPx: /\btiny\b/.test(text) ? 12 : /\bsmall\b/.test(text) ? 20 : 40,
           weight: 400,
           inline: false,
           scrollW: clipped ? 4000 : 1600,
@@ -286,7 +287,11 @@ export async function probe(dir, times) {
           clientH: 48,
           opacity: 1,
           clip: clipped ? { ...rect, right: 1000 } : null,
-          color: /\bdim\b/.test(text) ? "#c8c8c0" : color("text"),
+          color: /\bdim\b/.test(text)
+            ? "#c8c8c0"
+            : /\bsmall\b/.test(text)
+              ? color("accent")
+              : color("text"),
           bg: color("bg"),
         };
       }),

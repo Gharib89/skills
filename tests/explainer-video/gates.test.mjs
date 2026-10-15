@@ -266,6 +266,17 @@ test("a dim title fails contrast on the frames, and passes on the fix", () => {
   assertGreen(fx, render(fx, SCRIPT));
 });
 
+test("small text in the accent is held to the body floor on the frames", () => {
+  const fx = fixture();
+  assertRed(
+    fx,
+    render(fx, titled("small")),
+    "contrast",
+    '"Issue to small request" #cc6c54 on #f5f4ed 3\\.26:1 under 4\\.5:1',
+  );
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
 test("a hot mix fails loudness, and passes when the mix is fixed", () => {
   const fx = fixture();
   const r = render(fx, undefined, {

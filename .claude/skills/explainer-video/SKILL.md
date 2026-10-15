@@ -199,8 +199,10 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   nothing clipped or overflowing its box, every text box inside the 5 percent
   safe margin, no text box overlapping another), on frames every 15 frames
   and on each scene's settled last frame.
-- `contrast`: 4.5:1 for body text, 3:1 for large or faint, on the same frames
-  (the palette is checked when the profile loads).
+- `contrast`: 4.5:1 for body text and 3:1 for large text (24 px, or 18.66 px
+  bold), on the same frames. The palette check when the profile loads holds
+  the faint, accent and status colours to 3:1 only, since the scenes draw them
+  large; text drawn small in one of them is held to 4.5:1.
 - `loudness`: -14 LUFS plus or minus 1 and a true peak at most -1 dBTP,
   measured on the encoded MP4.
 - `captions`: every word timed in order inside its scene, every cue non-empty,
