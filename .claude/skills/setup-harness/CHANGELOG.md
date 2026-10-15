@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.2 (2026-10-15)
+
+### Bug Fixes
+
+- **setup-harness**: Check.sh skips installed skills with no Excluded: line
+  ([#714](https://github.com/Gharib89/skills/pull/714),
+  [`ce88761`](https://github.com/Gharib89/skills/commit/ce88761915cb75acbea9ab5aba691140cf39468e))
+
+
 ## v0.12.1 (2026-10-14)
 
 ### Bug Fixes
