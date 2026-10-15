@@ -45,13 +45,13 @@ write into. Every variant carries:
   with it, under a `## ` heading of its own that ship adds where no template
   carries one (`## Attribution`), after every section a later phase rewrites.
 
-The `Closes` line, the headings verbatim, attribution last and the Door line
-are the body's rules, because the host's close, `open-pr`, later section writes
-and the reviewer read them. The Change outline keeps the shape
-[below](#the-change-outline), and `Needs attention`, `Verification` and `Review`
-keep one line per entry, with `None.` or `None applicable: <reason>` when
-there is none; past those, what a section says, and at what length, is written
-for its reader.
+The `Closes` line, the headings and the attribution verbatim, attribution last
+and the Door line are the body's rules, because the host's close, `open-pr`,
+later section writes and the reviewer read them. The Change outline keeps the
+shape [below](#the-change-outline), and `Needs attention`, `Verification` and
+`Review` keep one line per entry, with `None.` or `None applicable: <reason>`
+when there is none; past those, what a section says, and at what length, is
+written for its reader.
 
 ## The Change outline
 
