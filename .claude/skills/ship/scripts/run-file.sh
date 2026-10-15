@@ -1463,18 +1463,21 @@ call)
   # A credential would land in the Run file and in the summary an unattended run
   # posts to the PR, and the host CLI authenticates a direct call itself. The
   # refusal leaves the command out, so the credential reaches no output either.
+  # `authorization` keyed by `:` or `=` anywhere in a word covers every header
+  # spelling (`-H v`, `-Hv`, `--header=v`, a JSON `--headers` object with it at
+  # any key); a field's value (gh's -f and -F, az's --body) is request content.
+  skip=false
   for w in "$@"; do
+    if [ "$skip" = true ]; then
+      skip=false
+      continue
+    fi
+    case $w in
+    -f | -F | --raw-field | --field | --body) skip=true && continue ;;
+    -f* | -F* | --raw-field=* | --field=* | --body=*) continue ;;
+    esac
     lw=$(printf '%s' "$w" | tr '[:upper:]' '[:lower:]')
-    # A header's value in each spelling gh's and az's flag parsers accept:
-    # `--header=v`, `--headers=v`, `-Hv`, `-H=v`, then a JSON object's opening.
-    lw=${lw#--headers=}
-    lw=${lw#--header=}
-    lw=${lw#-h=}
-    lw=${lw#-h}
-    while :; do
-      case $lw in [\{\ \"\']*) lw=${lw#?} ;; *) break ;; esac
-    done
-    case $lw in authorization[:=]* | authorization[\ \"\']*)
+    case $lw in *authorization[:=]* | *authorization[\ \"\']*[:=]*)
       ship_fail "a direct call carries no credential: the host CLI authenticates it, so drop the Authorization header"
       ;;
     esac
