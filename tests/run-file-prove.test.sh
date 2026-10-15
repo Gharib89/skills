@@ -34,15 +34,21 @@ g add -A && g commit -qm test
 head=$(g rev-parse HEAD)
 
 rf=$(cd "$repo" && bash "$bin/run-file.sh" init 7 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
-# prove <args>...: sets out and status for one call from the fixture repo.
-prove() { out=$(cd "$repo" && bash "$bin/run-file.sh" prove "$@" --file "$rf" 2>"$T/err"); status=$?; err=$(jq -r '.error // empty' <<<"$out" 2>/dev/null); }
+# prove <args>... [-- <command>...]: sets out and status for one call from the
+# fixture repo, its --file placed before any command.
+prove() {
+  local a=()
+  while [ $# -gt 0 ] && [ "$1" != -- ]; do a+=("$1"); shift; done
+  out=$(cd "$repo" && bash "$bin/run-file.sh" prove "${a[@]}" --file "$rf" "$@" 2>"$T/err"); status=$?
+  err=$(jq -r '.error // empty' <<<"$out" 2>/dev/null)
+}
 
 # --- red: the line is written, and the answer carries the verdict ------------------
 
 prove tests/answer.test.sh lib.sh
 check_rc "a test that goes red with its fix reverted exits 0" 0 "$status"
 check "the answer is revert-red's verdict plus the record and the head" \
-  "{\"test\":\"tests/answer.test.sh\",\"paths\":[\"lib.sh\"],\"red\":true,\"run_file\":\"$rf\",\"head\":\"$head\"}" \
+  "{\"test\":\"tests/answer.test.sh\",\"paths\":[\"lib.sh\"],\"red\":true,\"command\":[\"bash\",\"tests/answer.test.sh\"],\"run_file\":\"$rf\",\"head\":\"$head\"}" \
   "$(jq -c . <<<"$out")"
 check "the red line lands under ## Evidence, naming the head and the reverted paths" \
   "## Evidence
@@ -110,5 +116,38 @@ g checkout -q -- ':(literal):fix.sh'
 printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$rf"
 out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
 check_rc "close 4 accepts each line prove wrote for a test the diff adds, a pathspec-magic name included" 0 "$status"
+
+# --- another runner's test, through its command after -- ------------------------
+
+# python3 stands in for pytest: the command runs as argv at the tree's top.
+printf '%s\n' 'import sys' "sys.exit(0 if 'echo 2' in open('lib.sh').read() else 1)" > "$repo/tests/answer_check.py"
+g add -A && g commit -qm 'python test'
+head=$(g rev-parse HEAD)
+# A record of its own, holding a line for each shell test the diff adds, so the
+# close 4 below has only the command's line left to judge.
+rf=$(cd "$repo" && bash "$bin/run-file.sh" init 9 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
+prove tests/answer.test.sh lib.sh
+prove tests/colon.test.sh ./:fix.sh
+prove tests/answer_check.py lib.sh -- python3 tests/answer_check.py
+check_rc "a non-shell test run by its command goes red and exits 0" 0 "$status"
+check "the answer carries the command beside the verdict" \
+  "{\"test\":\"tests/answer_check.py\",\"paths\":[\"lib.sh\"],\"red\":true,\"command\":[\"python3\",\"tests/answer_check.py\"],\"run_file\":\"$rf\",\"head\":\"$head\"}" \
+  "$(jq -c . <<<"$out")"
+check "the line keeps its shape, the command left out of it" \
+  "Reverted-fix: tests/answer_check.py: red at $head reverting lib.sh" "$(tail -n 1 "$rf")"
+held=$(cat "$rf")
+prove tests/answer_check.py other.sh -- python3 tests/answer_check.py
+check_rc "a command that stays green exits 1" 1 "$status"
+prove tests/answer_check.py lib.sh -- python3 tests/other_check.py
+check_rc "a command that does not name the test exits 2" 2 "$status"
+prove tests/answer_check.py lib.sh
+check_rc "a non-shell test with no command is still refused" 2 "$status"
+check "and the refusal names the -- form" yes "$(case $err in *'-- <command>...'*) echo yes ;; *) echo no ;; esac)"
+check "none of them writes a line" "$held" "$(cat "$rf")"
+out=$(cd "$repo" && bash "$bin/run-file.sh" prove tests/answer_check.py lib.sh --file "$rf" -- 2>/dev/null); status=$?
+check_rc "a -- with no command is a usage error" 2 "$status"
+printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$rf"
+out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
+check_rc "close 4 accepts the line a command's red wrote" 0 "$status"
 
 finish
