@@ -1,0 +1,145 @@
+// The brief: the steering prompt's values laid over the run's last brief, or
+// over the defaults when there is none, one value per knob plus the
+// must-include and avoid lists.
+//
+//   node brief.mjs <run-folder> [<knob>=<value>]...
+//
+// Knobs: focus, length (minutes, 1 to 5), audience, language, style, voice
+// (a narrator id), aspect; `must=` and `avoid=` add one list item each, and
+// any given replaces that list (`must=` alone empties it).
+// stdout: `brief <knob>: <value>` per knob, then `brief: written -> brief.json`
+//         for a new brief, `brief: unchanged`, or `brief: <knobs> changed:
+//         redo <stages>`, naming only the stages those knobs feed
+// writes: <run>/brief.json; a change removes <run>/script.json, since the
+//         compiled script carries the brief's language, narrator and style
+// exit:   0 written · 1 a value this version cannot make, `brief <knob>
+//         <value>: <why>` on stderr · 2 usage
+import fs from "node:fs";
+import path from "node:path";
+import { skill } from "../lib/tools.mjs";
+import { FALLBACK, stores } from "../lib/style.mjs";
+
+const KNOBS = [
+  "focus",
+  "length",
+  "audience",
+  "language",
+  "style",
+  "voice",
+  "aspect",
+];
+const LISTS = ["must", "avoid"];
+// The stages each knob feeds, in run order.
+const STAGES = ["source", "script", "voice", "render"];
+const FEEDS = {
+  focus: ["source", "script"],
+  length: ["source", "script"],
+  audience: ["script"],
+  language: ["script", "voice", "render"],
+  style: ["render"],
+  voice: ["voice", "render"],
+  aspect: ["render"],
+  must: ["script"],
+  avoid: ["script"],
+};
+
+const [run, ...args] = process.argv.slice(2);
+const usage = () => {
+  console.error(
+    `usage: node brief.mjs <run-folder> [<knob>=<value>]...\n  knobs: ${[...KNOBS, ...LISTS].join(", ")}`,
+  );
+  process.exit(2);
+};
+if (!run) usage();
+
+const file = path.join(run, "brief.json");
+const old = fs.existsSync(file)
+  ? JSON.parse(fs.readFileSync(file, "utf8"))
+  : null;
+const given = {};
+const lists = {};
+for (const a of args) {
+  const m = a.match(/^([a-z]+)=(.*)$/s);
+  if (!m || ![...KNOBS, ...LISTS].includes(m[1])) usage();
+  if (LISTS.includes(m[1]))
+    (lists[m[1]] ??= []).push(...(m[2].trim() ? [m[2].trim()] : []));
+  else given[m[1]] = m[2].trim();
+}
+
+function refuse(knob, value, why) {
+  console.error(
+    `brief ${knob}${value === undefined ? "" : ` ${value}`}: ${why}`,
+  );
+  process.exit(1);
+}
+
+const narrators = JSON.parse(
+  fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
+).narrators;
+const styles = stores(path.dirname(path.resolve(run)));
+const read = (f) =>
+  fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim() || null : null;
+
+const brief = {
+  focus: given.focus ?? old?.focus ?? "the source's main ideas",
+  length: given.length ?? old?.length ?? 2,
+  audience: given.audience ?? old?.audience ?? "a developer new to the source",
+  language: given.language ?? old?.language ?? "en",
+  style:
+    given.style ??
+    old?.style ??
+    styles.map((d) => read(path.join(d, "default"))).find(Boolean) ??
+    FALLBACK,
+  voice: given.voice ?? old?.voice,
+  aspect: given.aspect ?? old?.aspect ?? "16:9",
+  must: lists.must ?? old?.must ?? [],
+  avoid: lists.avoid ?? old?.avoid ?? [],
+};
+
+for (const k of ["focus", "audience"])
+  if (!brief[k]) refuse(k, undefined, "empty");
+const minutes = Number(brief.length);
+if (!(minutes >= 1 && minutes <= 5))
+  refuse("length", brief.length, "a number of minutes from 1 to 5");
+brief.length = minutes;
+const speakers = narrators.filter((n) => n.language === brief.language);
+if (!speakers.length)
+  refuse(
+    "language",
+    brief.language,
+    `no narrator speaks ${brief.language} (${[...new Set(narrators.map((n) => n.language))].join(", ")})`,
+  );
+brief.voice ??= speakers.find((n) => n.default).id;
+if (!speakers.some((n) => n.id === brief.voice))
+  refuse(
+    "voice",
+    brief.voice,
+    `no ${brief.language} narrator (${speakers.map((n) => n.id).join(", ")})`,
+  );
+if (!styles.some((d) => fs.existsSync(path.join(d, `${brief.style}.json`))))
+  refuse(
+    "style",
+    brief.style,
+    `no style profile ${brief.style} in ${styles.join(", ")}`,
+  );
+if (brief.aspect !== "16:9")
+  refuse("aspect", brief.aspect, "this version renders 16:9 only");
+
+for (const k of KNOBS)
+  console.log(`brief ${k}: ${brief[k]}${k === "length" ? " min" : ""}`);
+for (const k of LISTS)
+  console.log(`brief ${k}: ${brief[k].join("; ") || "none"}`);
+
+const changed = old
+  ? [...KNOBS, ...LISTS].filter(
+      (k) => JSON.stringify(old[k]) !== JSON.stringify(brief[k]),
+    )
+  : null;
+fs.writeFileSync(file, JSON.stringify(brief, null, 2) + "\n");
+if (!changed) console.log("brief: written -> brief.json");
+else if (!changed.length) console.log("brief: unchanged");
+else {
+  fs.rmSync(path.join(run, "script.json"), { force: true });
+  const redo = STAGES.filter((s) => changed.some((k) => FEEDS[k].includes(s)));
+  console.log(`brief: ${changed.join(", ")} changed: redo ${redo.join(", ")}`);
+}

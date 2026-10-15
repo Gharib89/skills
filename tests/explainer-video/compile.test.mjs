@@ -128,13 +128,15 @@ test("compile writes explainers/.gitignore so compiled files, caches and output 
     "*/script.json",
     "*/timeline.json",
     "*/gates.json",
+    "*/check.json",
+    "*/support.json",
     "*/snapshots/",
     "*/.cache/",
     "*/composition/",
     "*/out/",
   ])
     assert.ok(ignore.split("\n").includes(entry), entry);
-  assert.ok(!/script\.md|style\.json|manifest\.json/.test(ignore));
+  assert.ok(!/brief\.json|script\.md|style\.json|manifest\.json/.test(ignore));
 });
 
 test("compile keeps the user's own ignore lines and writes its block once", () => {
@@ -305,3 +307,23 @@ for (const [name, from, to, why] of [
     assert.ok(!fs.existsSync(path.join(fx.dir, "script.json")));
   });
 }
+
+test("a scene's role line gives its role and seconds, and a malformed one is refused", () => {
+  let fx = fixture(
+    SCRIPT.replace("target: about fifteen seconds", "role: hook · 15 s"),
+  );
+  assert.equal(run(fx).code, 0);
+  const [hook, steps] = compiled(fx).scenes;
+  assert.deepEqual([hook.role, hook.seconds], ["hook", 15]);
+  assert.ok(!("role" in steps) && !("seconds" in steps));
+  for (const bad of ["role: intro · 15 s", "role: hook", "role: hook · fast"]) {
+    fx = fixture(SCRIPT.replace("target: about fifteen seconds", bad));
+    const r = run(fx);
+    assert.equal(r.code, 1, bad);
+    assert.match(
+      r.err,
+      /^compile: hook: role: .* is not <hook\|context\|point\|recap\|end> · <n> s$/m,
+      bad,
+    );
+  }
+});
