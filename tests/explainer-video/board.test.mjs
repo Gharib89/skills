@@ -153,6 +153,10 @@ test("render --stills renders the stills only, and build writes an open board wi
   for (const c of d.scenes)
     for (const f of [c.still, c.audio])
       assert.ok(fs.existsSync(path.join(fx.dir, f)), f);
+  // The asset upload takes video types but no audio type, so each narration
+  // card plays an audio-only WebM cut once from the voice WAV.
+  for (const c of d.scenes) assert.match(c.audio, /\.webm$/);
+  assert.equal(calls(fx, "narration").length, 3);
   assert.ok(!fs.existsSync(path.join(fx.dir, "board", "page.html")));
 
   const local = read(fx.dir, "storyboard.html");
@@ -162,6 +166,9 @@ test("render --stills renders the stills only, and build writes an open board wi
   assert.deepEqual(JSON.parse(embedded), d);
   assert.ok(!embedded.includes("<"));
   assert.match(local, /<title>How Ship lands a pull request<\/title>/);
+
+  ok(board(fx, "build"), "build");
+  assert.equal(calls(fx, "narration").length, 3);
 });
 
 test("page with no url writes the page to publish with its title filled and no board", () => {
@@ -206,8 +213,18 @@ test("a published page needs every media file uploaded and recorded before build
   const files = uploads.map((l) => l.match(/upload (\S+) /)[1]);
   assert.equal(board(fx, "asset", `${files[0]}=http://x/a`).code, 1);
   assert.equal(board(fx, "asset", "nope.png=https://x/a").code, 1);
+  assert.equal(board(fx, "asset", `${files[0]}=/_blob/../x`).code, 1);
+  assert.ok(files.every((f) => !f.endsWith(".wav")));
+  // The Artifact upload answers with /_blob/<id>; an https URL is kept too.
+  const blob = (i) => `/_blob/${String(i).padStart(32, "0")}`;
   r = ok(
-    board(fx, "asset", ...files.map((f, i) => `${f}=https://cdn.x/${i}?a=b`)),
+    board(
+      fx,
+      "asset",
+      ...files.map((f, i) =>
+        i % 2 ? `${f}=${blob(i)}` : `${f}=https://cdn.x/${i}?a=b`,
+      ),
+    ),
     "asset",
   );
   assert.match(r.out, /^board: 6 asset\(s\) recorded$/m);
@@ -216,8 +233,8 @@ test("a published page needs every media file uploaded and recorded before build
   assert.match(r.out, /^board: post board\/1\.json to boards\/1$/m);
   const d = doc(fx, 1);
   for (const c of d.scenes) {
-    assert.match(c.still, /^https:\/\/cdn\.x\//);
-    assert.match(c.audio, /^https:\/\/cdn\.x\//);
+    assert.match(c.still, /^(https:\/\/cdn\.x\/|\/_blob\/[0-9a-f]{32}$)/);
+    assert.match(c.audio, /^(https:\/\/cdn\.x\/|\/_blob\/[0-9a-f]{32}$)/);
   }
 });
 

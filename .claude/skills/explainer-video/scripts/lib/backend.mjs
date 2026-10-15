@@ -307,6 +307,12 @@ export async function clip(input, output, { start, duration }) {
   ]);
 }
 
+// A scene's narration WAV as audio-only WebM (Opus): the artifact asset upload
+// takes video types but no audio type, and a card's <audio> plays it as is.
+export async function narration(input, output) {
+  ffmpeg(["-y", "-i", input, "-vn", "-c:a", "libopus", "-b:a", "64k", output]);
+}
+
 // Integrated loudness (LUFS) and true peak (dBTP) of a file's audio, as
 // ffmpeg's ebur128 summary prints them.
 export async function loudness(file) {

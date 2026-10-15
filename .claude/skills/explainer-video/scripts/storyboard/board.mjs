@@ -147,7 +147,8 @@ if (cmd === "asset") {
       !fs.statSync(abs).isFile()
     )
       fail(`${rel || a} is not a file under the run folder`);
-    if (!url.startsWith("https://")) fail(`${url} is not an https:// URL`);
+    if (!url.startsWith("https://") && !/^\/_blob\/[0-9a-f]{32}$/.test(url))
+      fail(`${url} is neither an https:// URL nor /_blob/<id>`);
     assets[path.relative(root, abs)] = url;
   }
   write(file, assets);
@@ -301,13 +302,31 @@ const cards = script.scenes.map((s, i) => ({
   status: "open",
 }));
 
+const backend = await loadBackend();
+// The voice WAV's name is its content hash, so the WebM cut from it is too.
+for (const c of cards) {
+  const webm = path.join(
+    ".cache",
+    "board-audio",
+    `${path.basename(c.audio, ".wav")}.webm`,
+  );
+  if (!fs.existsSync(at(webm))) {
+    fs.mkdirSync(at(".cache", "board-audio"), { recursive: true });
+    try {
+      await backend.narration(at(c.audio), at(webm));
+    } catch (e) {
+      fail(e.message);
+    }
+  }
+  c.audio = webm;
+}
+
 if (delivered) {
   const timeline = json(at("timeline.json"));
   const sha = crypto
     .createHash("sha256")
     .update(fs.readFileSync(mp4))
     .digest("hex");
-  const backend = await loadBackend();
   for (const c of cards) {
     const t = timeline.scenes.find((x) => x.id === c.id);
     c.clip = path.join(

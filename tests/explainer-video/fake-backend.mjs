@@ -226,6 +226,12 @@ export async function clip(input, output, { start, duration }) {
   );
 }
 
+export async function narration(input, output) {
+  log({ call: "narration", input, output });
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  fs.copyFileSync(input, output);
+}
+
 // What shows at t: each mounted scene's own text elements, and the caption
 // cue's words joined.
 function showing(dir, t) {
