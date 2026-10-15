@@ -9,7 +9,7 @@
       "style": null,
       "licence": "Apache-2.0",
       "leavesMachine": false,
-      "rate": null,
+      "rate": 3.12,
       "default": true
     },
     {
@@ -21,7 +21,7 @@
       "style": null,
       "licence": "Apache-2.0",
       "leavesMachine": false,
-      "rate": null,
+      "rate": 3.07,
       "default": true
     }
   ]

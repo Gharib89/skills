@@ -17,8 +17,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { userDirs } from "../lib/paths.mjs";
-import { catalogue, dest, loadBackend, skill } from "../lib/tools.mjs";
+import { loadBackend, skill, toolPaths } from "../lib/tools.mjs";
 import {
   FRAME,
   RATE,
@@ -59,14 +58,7 @@ if (!ALIGNERS[language]) {
   process.exit(1);
 }
 
-const dirs = userDirs();
-const rows = catalogue();
-const tools = {
-  node: dest({ kind: "npm" }, dirs),
-  models: Object.fromEntries(
-    rows.filter((r) => r.kind === "model").map((r) => [r.id, dest(r, dirs)]),
-  ),
-};
+const tools = toolPaths();
 const backend = await loadBackend();
 const ctc = await backend.aligner({ language, tools });
 
@@ -97,6 +89,7 @@ async function voice(group) {
     text: group.map((s) => s.text).join(" "),
     narrator,
     language,
+    tools,
   });
   const em = await logProbs(resample(samples, sampleRate, RATE), ctc.logits);
   const counts = group.map((s) => s.text.split(/\s+/).length);

@@ -74,8 +74,13 @@ const VOCAB = Object.fromEntries(
   ),
 );
 
-export async function synthesize({ text, narrator }) {
-  log({ call: "synthesize", text, voice: narrator.voice });
+export async function synthesize({ text, narrator, tools }) {
+  log({
+    call: "synthesize",
+    text,
+    voice: narrator.voice,
+    model: tools.models["model:kokoro-82m"],
+  });
   const frames = new Array(10).fill(0);
   for (const sentence of text.split(/(?<=[.!?])\s+/)) {
     let words = sentence.toUpperCase().match(/[A-Z']+/g) ?? [];

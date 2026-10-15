@@ -47,3 +47,15 @@ export function dest(r, dirs = userDirs()) {
     );
   return path.join(dirs.cache, TOOL_DIRS[r.kind], lockHash);
 }
+
+// What a backend loads from: the npm install, and each model's folder by id.
+export function toolPaths(dirs = userDirs()) {
+  return {
+    node: dest({ kind: "npm" }, dirs),
+    models: Object.fromEntries(
+      catalogue()
+        .filter((r) => r.kind === "model")
+        .map((r) => [r.id, dest(r, dirs)]),
+    ),
+  };
+}

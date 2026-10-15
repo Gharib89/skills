@@ -105,6 +105,7 @@ test("a first run voices the whole narration in one call and writes a WAV and wo
     synths(fx)[0].text,
     SCENES.flatMap((s) => s.narration).join(" "),
   );
+  assert.match(synths(fx)[0].model, /models\/kokoro-82m@1939ad2a8e41$/);
   const timeline = JSON.parse(
     fs.readFileSync(path.join(fx.dir, "voice.json"), "utf8"),
   );

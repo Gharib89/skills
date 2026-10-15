@@ -91,11 +91,11 @@ export async function synthesize({ text, narrator, tools }) {
   const req = fromCache(tools.node);
   const { KokoroTTS, TextSplitterStream } = req("kokoro-js");
   if (!kokoro) {
-    const dir = tools.models["model:kokoro-82m"];
     const { env } = req("@huggingface/transformers");
     env.allowRemoteModels = false;
-    env.localModelPath = path.dirname(dir) + path.sep;
-    kokoro = await KokoroTTS.from_pretrained(path.basename(dir), {
+    // An absolute path is read as a folder; a name under localModelPath must
+    // pass the hub's model-id check, which the `@` in the cache name fails.
+    kokoro = await KokoroTTS.from_pretrained(tools.models["model:kokoro-82m"], {
       dtype: "fp32",
       device: "cpu",
     });
