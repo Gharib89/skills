@@ -96,6 +96,29 @@ reset 'claude[bot]'
 out=$(poll --reviewer claude --since "$since" --timeout 5)
 check "a --timeout given wins over the derived bound" 5 "$(jq -r .reviewer.timeout <<<"$out")"
 
+# A landed round beside exit 1: the brief names why the window did not finish
+# (#667), since it carries neither `checks` nor the host head's staleness.
+cause() { jq -c '{done, pending_checks, stale, not_reviewed}' <<<"$1"; }
+reset 'claude[bot]'
+out=$(poll --reviewer claude --since "$since" --brief); rc=$?
+check_rc "a landed round on the current head with every check done is exit 0" 0 "$rc"
+check "and the brief says done, no check pending, the head current" \
+  '{"done":true,"pending_checks":[],"stale":false,"not_reviewed":null}' "$(cause "$out")"
+
+reset 'claude[bot]'
+echo '[{"name":"lint","status":"pending"},{"name":"fake-leg","status":"success"}]' \
+  > "$SHIP_FAKE/host_pr_checks.1.json"
+out=$(poll --reviewer claude --since "$since" --brief --timeout 2); rc=$?
+check_rc "a landed round with a check still pending at --timeout is exit 1" 1 "$rc"
+check "and the brief names the pending check, the head current" \
+  '{"done":false,"pending_checks":["lint"],"stale":false,"not_reviewed":null}' "$(cause "$out")"
+
+reset 'claude[bot]'
+out=$(poll --reviewer claude --since "$since" --brief --timeout 2 --sha 0ther); rc=$?
+check_rc "a since-landed round with the host on another head is exit 1" 1 "$rc"
+check "and the brief says the head is stale, no check pending, the verdict kept" \
+  '{"done":false,"pending_checks":[],"stale":true,"not_reviewed":null}' "$(cause "$out")"
+
 reset 'pusher[bot]'
 jq -cn --argjson r "$(round 'pusher[bot]')" '{on_head: [$r], all: [$r], total: 1}' \
   > "$SHIP_FAKE/host_pr_reviews.1.json"
