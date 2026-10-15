@@ -267,21 +267,19 @@ self-review's judgment, recorded in the Run file where it helps the summary.
   since `<sha>` in the working tree, so a fix landed after it means proving
   again; a hand-written `red` is refused. Exit 1 means the test stayed green:
   it proves nothing, so fix the test. A test that is not a `.sh` file passes
-  its runner's command as argv after `--`, which runs in place of
-  `bash <test>` and must name the test as one of its words or a node ID under
-  it: `run-file prove tests/test_x.py src/x.py --issue 12 -- uv run pytest
-  tests/test_x.py`. The command runs at the top of a fresh temporary worktree
-  with nothing installed, so it builds its own environment (`uv run` does);
-  an install step goes in as `bash -c 'bun install && bun test "./$0"' <test>`,
-  which keeps the test a word (the `./` because `bun test` reads a bare path
-  as a filter). The written line names no command; only the JSON answer's
-  `command` records what ran. Attested:
-  `Reverted-fix: <test>: n/a: <reason>` where there is no fix to revert, where
-  the test needs a database or service the command cannot start itself in a
-  fresh checkout, where its runner cannot run that one file on its own, or
-  where it is
-  already red before the revert, since none of these can show the test going
-  red for the fix's absence.
+  its runner's command as argv after `--`, run in place of `bash <test>` at
+  the top of a fresh temporary worktree with nothing installed; it names the
+  test as one of its words or a node ID under it: `run-file prove
+  tests/test_x.py src/x.py --issue 12 -- uv run pytest tests/test_x.py` (`uv
+  run` builds its own environment). An install step goes in as
+  `bash -c 'bun install && bun test "./$0"' <test>` (`./`: `bun test` reads a
+  bare path as a filter). The written line names no command; the JSON
+  answer's `command` records what ran. Attested:
+  `Reverted-fix: <test>: n/a: <reason>` where there is no fix to revert, the
+  test needs a database or service the command cannot start in a fresh
+  checkout, its runner cannot run that one file on its own, or it is already
+  red before the revert, since none of these can show the test going red for
+  the fix's absence.
   A test file is a path with a `tests`, `test` or `__tests__` component, or a
   basename `*.test.*`, `*.spec.*`, `*_test.*` or `test_*`.
 - **Round** and **Stop**, attested, for the
