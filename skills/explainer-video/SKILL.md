@@ -226,7 +226,8 @@ revision of the script the user approved, so ask the user.
 **Floors** are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:
 `contrast` (`body`, `large`, raise), `layout` (`textPx`, `margin` as a
-fraction, raise), `loudness` (`tolerance` in LU, `peak` in dBTP, lower).
+fraction, raise), `loudness` (`tolerance` in LU, above 0, and `peak` in
+dBTP, no lower than -8.5, lower).
 
 ## Recipe
 

@@ -553,6 +553,12 @@ for (const [name, arrange, why, voiced = true] of [
     false,
   ],
   [
+    "a peak floor under what the master can aim beneath",
+    (fx) => styled(fx, {}, { gates: { loudness: { peak: -9 } } }),
+    /^render: style profile odd: gates\.loudness\.peak -9 is under -8\.5, the lowest the master reaches$/m,
+    false,
+  ],
+  [
     "a profile naming a floor the skill has not",
     (fx) => styled(fx, {}, { gates: { layout: { width: 2 } } }),
     /^render: style profile odd: gates\.layout\.width: no such floor$/m,

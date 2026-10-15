@@ -36,6 +36,10 @@ export function floors(profile) {
       if (!Number.isFinite(v)) refuse(`${g}.${k}: not a number`);
       if (g === "loudness" && k === "tolerance" && v <= 0)
         refuse(`${g}.${k} ${v} must be above 0`);
+      // The master aims half a dB under the peak floor, and loudnorm's TP stops
+      // at -9 dBTP.
+      if (g === "loudness" && k === "peak" && v < -8.5)
+        refuse(`${g}.${k} ${v} is under -8.5, the lowest the master reaches`);
       if (g === "loudness" ? v > f : v < f)
         refuse(`${g}.${k} ${v} lowers the skill's floor ${f}`);
       out[g][k] = v;
