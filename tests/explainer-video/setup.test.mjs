@@ -141,7 +141,9 @@ test("ffmpeg missing prints its apt, brew and winget lines and installs nothing 
   assert.match(r.out, /brew: brew install ffmpeg/);
   assert.match(r.out, /winget: winget install/);
   assert.match(r.out, /^not present: ffmpeg$/m, "a system package has no size");
-  assert.ok(calls(fx).every((c) => c.call !== "system"));
+  const tools = ["npmCi", "ensureChrome", "fontMeta", "download"];
+  for (const c of calls(fx)) assert.ok(tools.includes(c.call), c.call);
+  assert.equal(row(run(fx, ["check"], "").out, "ffmpeg")[2], "missing");
 });
 
 const pyRows = [
