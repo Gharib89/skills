@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.39.0 (2026-10-15)
+
+### Features
+
+- **ship**: Open-pr refuses a body lacking a template heading
+  ([#648](https://github.com/Gharib89/skills/pull/648),
+  [`98a4531`](https://github.com/Gharib89/skills/commit/98a453110b33e8c0728c1144ccac926942784e20))
+
+
 ## v0.38.0 (2026-10-14)
 
 ### Features
