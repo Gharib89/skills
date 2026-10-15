@@ -109,22 +109,23 @@ lists every gap in Ship that broke or misled the run: a gating call no mechanic
 performs, or a mechanic or prose whose wrong answer the run acted on. Friction
 the run worked around by judgment (a rule that did not fit the case, prose that
 left it guessing) goes on `Ship notes:` instead, one line each and no draft, and
-so does a direct call the run made twice or an earlier run's summary on this
-repo also lists; record `Ship-note: <what>` in the Run file when it is met.
-Every direct call goes on `Direct calls:`, read from the Run file's `## Direct
-calls`. Each defect carries a **drafted issue** for the source repo,
-`Gharib89/skills`, written to `defect-<k>.md` beside the Run file when it is
-met: a title, then a body naming Ship's version, the mechanic or prose at fault
-and what the run did instead, and no organization identifier, credential or
-client context, because the source repo is public. A gap in the ship profile
-rather than in Ship is a **profile defect**: an adjacent find of this repo,
-filed here through phase 2's dispositions and listed under `Issues filed`, not
-on this row. Where this repo is the source repo, a Ship defect is an adjacent
-find already (its profile's `## Triage`) and the row names its number instead of
-a draft. In either case, record `Ship-defect: <detail>` in the Run file when the
-defect is met, even if it is fixed or filed during the run, so the row survives
-a compaction; neither that line nor a draft holds the clean gate, since a defect
-that breaks a gating step already fails that step's evidence.
+so does a direct call made in two runs where this run can see the other, per
+[mechanics.md](mechanics.md#which-calls-need-a-mechanic); record `Ship-note:
+<what>` in the Run file when it is met. Every direct call goes on `Direct
+calls:`, read from the Run file's `## Direct calls`. Each defect carries a
+**drafted issue** for the source repo, `Gharib89/skills`, written to
+`defect-<k>.md` beside the Run file when it is met: a title, then a body naming
+Ship's version, the mechanic or prose at fault and what the run did instead, and
+no organization identifier, credential or client context, because the source
+repo is public. A gap in the ship profile rather than in Ship is a **profile
+defect**: an adjacent find of this repo, filed here through phase 2's
+dispositions and listed under `Issues filed`, not on this row. Where this repo
+is the source repo, a Ship defect is an adjacent find already (its profile's `##
+Triage`) and the row names its number instead of a draft. In either case, record
+`Ship-defect: <detail>` in the Run file when the defect is met, even if it is
+fixed or filed during the run, so the row survives a compaction; neither that
+line nor a draft holds the clean gate, since a defect that breaks a gating step
+already fails that step's evidence.
 
 **Counts are measurements; tallies are records.** A count that measures the
 tree, here or in the PR body, carries the command that produced it, run on the
@@ -254,10 +255,11 @@ this gate, including after a clean-gate decision. Two of them come back here:
   breaks that coverage.
 
 Then each drafted tracker section. A Ship defect draft not yet filed goes into
-the closing message verbatim under the command a human runs from a file they
-save it to, as the unattended lane carries it, because `cleanup` deletes the
-directory the drafts live in; nothing waits on it. Then `run-file close 9` and
-set the task to the returned `mirror`, and last `cleanup <issue|none>`.
+the closing message the way the [unattended
+lane](#unattended-post-to-the-pr-then-return) carries it, because `cleanup`
+deletes the directory the drafts live in; nothing waits on it. Then `run-file
+close 9` and set the task to the returned `mirror`, and last `cleanup
+<issue|none>`.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this
