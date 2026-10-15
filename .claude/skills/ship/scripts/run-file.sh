@@ -114,15 +114,16 @@
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under
 # `## Evidence`, <sha> the HEAD revert-red ran on; on its exit 1 or 2 it writes
 # nothing and exits with that code, passing revert-red's answer through. It
-# writes each path top-relative with no leading `./`, the form `close 4` looks it
-# up by, and refuses a reverted path holding whitespace, which the line could
-# not be read back from. `probe` runs <command> as argv, never through a shell string, at the
-# checkout top with stdin from /dev/null, and appends
+# writes each path top-relative with no leading `./`, the form `close 4` looks
+# it up by, and refuses a reverted path holding whitespace, which the line could
+# not be read back from. `probe` runs <command> as argv, never through a shell
+# string, at the checkout top with stdin from /dev/null, and appends
 # `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, <command>
 # shell-quoted word by word (`printf %q`) so it re-runs as recorded, under
 # `## Evidence`, the last nonblank line of stdout and stderr together, or
 # `(no output)`. It exits 0 whatever the command's exit; a ref holding `: `
-# blurs where the ref ends for the line's readers and is refused. `call` runs nothing: it appends
+# blurs where the ref ends for the line's readers and is refused. `call` runs
+# nothing: it appends
 # `- <command> · <why>` under `## Direct calls`, <command> quoted as `probe`
 # quotes it, before the run makes the call, and refuses (exit 1) a command that
 # does not open on `gh api` or `az rest` and an argument, a `gh api` naming
