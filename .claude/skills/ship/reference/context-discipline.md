@@ -7,9 +7,12 @@
 - [The Run file](#the-run-file)
 
 What bloats the window is raw tool output landing in the main thread, not the
-work itself, so spend tokens on decisions, not dumps.
+work itself, so spend tokens on decisions, not dumps. Everything here is a
+default you apply with judgment, except three requirements nothing else
+replaces: the scratch directory each subagent prompt names, edits under the
+worktree prefix, and the ten tasks created at `init`.
 
-**The delegation rule: delegate noise, not size.** A subagent earns its cost
+**Delegate noise, not size.** A subagent earns its cost
 only when the raw output you would otherwise ingest is much larger than the
 conclusion you need: a multi-file map, a verification run, CI logs. When you
 can already point at the target (one or two known files, a single test node,
@@ -23,7 +26,7 @@ still a complete run. The levers, in rough order of impact:
   *understand* stays out of main context. Ask neutral, current-state questions
   that want file and line pointers back, and keep the intended change in the
   main thread: a brief that names the change gets back a reading bent toward it.
-- **Read one reference file per call.** Several files chained in one `cat`
+- **One reference file per call.** Several files chained in one `cat`
   can pass the persist limit, and the caller then sees a 2 KB preview of the
   lot and re-reads each file it chained.
 - **Read the profile by `##` section**, naming the heading (`## Reviewers`,
@@ -50,7 +53,8 @@ dispatch.
 
 ## Model tiers
 
-Use the cheapest model that fits; reserve the strong tier for judgment.
+Use the cheapest model that fits; reserve the strong tier for judgment. The
+table is the default, and a case it does not fit takes the tier it needs.
 
 | Work | Model |
 |---|---|
@@ -125,8 +129,8 @@ dispositioned**, `<scratch>/<role>/<role>-report.md`, or
 because a report held in context alone is lost to a compaction the Run file
 survives. Each dispatch names the file, and takes back only the path and a
 summary of at most five lines. No file at the named path is a report that
-failed to arrive: two fix-and-retry attempts, as SKILL.md's stops allow, then
-`red-after-retry`. An inline pass writes the same file itself before
+failed to arrive: retry while retries make progress, as SKILL.md's stops say,
+then `red-after-retry`. An inline pass writes the same file itself before
 dispositioning. The Run file's `## Design and plan` names every round's paths
 as each round is dispatched; disposition from the file, and quote the merge
 summary's `Self-review` rows from it. Phase 7's

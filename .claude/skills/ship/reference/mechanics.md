@@ -67,10 +67,10 @@ contract.
 | `isolate` | 0 |
 | `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue` | 2, 4, 7; 9 with `--repo`, per Ship defect draft, on the human's word |
-| `dropped-lines` | 4, the removed blocks with no new home, each owed a `Dropped:` line |
+| `dropped-lines` | 4, the removed blocks with no new home, for the self-review to weigh |
 | `revert-red` | 4, a new test run with its fix reverted, through `run-file prove` |
 | `run-file prove` | 4, per test file the diff adds or changes, writing its red `Reverted-fix:` line |
-| `run-file probe` | 4, per `Declined: <ref>: claim:` decline, writing its `Probe:` line |
+| `run-file probe` | 4, a decline's claim, run and recorded as a `Probe:` line |
 | `run-file call` | any phase, before each direct call, writing its `## Direct calls` line |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
