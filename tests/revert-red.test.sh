@@ -122,7 +122,7 @@ check "and as a JSON error with no verdict on stdout" \
 check_rc "a non-shell test is refused, not read as red" \
   2 "$(rc_of tests/answer_test.py lib.sh)"
 check "and the refusal names the .sh rule, the command form and the n/a escape" \
-  "revert-red runs a .sh test under bash; for another runner pass its command after \`--\` (\`revert-red <test> <path>... -- <command>...\`), or record \`Reverted-fix: <test>: n/a: <reason>\`" \
+  "revert-red runs a .sh test under bash; for another runner pass its command after \`--\` (\`revert-red <test> <path>... -- <command>...\`); record \`Reverted-fix: <test>: n/a: <reason>\` only where no command can run it" \
   "$(out_of tests/answer_test.py lib.sh | jq -r .error)"
 check_rc "a test red at HEAD is refused, not read as red" \
   2 "$(rc_of tests/redhead.test.sh lib.sh)"
@@ -186,6 +186,9 @@ check_rc "a word that only starts with the test's name is not the test" \
   2 "$(rc_of tests/answer_check.py lib.sh -- python3 tests/answer_check.pyc)"
 check_rc "a -- with no command is a usage error" \
   2 "$(rc_of tests/answer_check.py lib.sh --)"
+check "an empty first word is a usage error even where a later word names the test" \
+  "usage: revert-red <test> <path>... [-- <command>...]" \
+  "$(out_of tests/answer_check.py lib.sh -- '' tests/answer_check.py | jq -r .error)"
 check_rc "a -- with no path before it is a usage error" \
   2 "$(rc_of tests/answer_check.py -- python3 tests/answer_check.py)"
 

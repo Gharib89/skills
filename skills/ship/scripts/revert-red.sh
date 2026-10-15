@@ -24,9 +24,10 @@
 # With no <command>, <test> runs under bash, so it is a `.sh` file and another
 # runner's test is refused. With one, <command> runs as argv, never through a
 # shell string, at the temp worktree's top in place of `bash <test>`, and must
-# name <test> as one of its words, or a node ID under it (`<test>::<name>`), a
-# leading `./` on either side aside: a command that names no word of it could go
-# red for another test, and the line would credit this one.
+# name <test> as one of its words, or a node ID under it (`<test>::<name>`),
+# ignoring a leading `./` on either. That checks the command's words, not what
+# it runs: it refuses the command that names no word of <test>, which could go
+# red for another test while the line credits this one.
 # stdout: {test, paths, red, command}   red: true when the test failed on the
 #   reverted tree; command: the argv that ran, `["bash", <test>]` by default
 # stderr: the test's last 40 lines when it went red, the evidence it failed (or,
@@ -73,7 +74,7 @@ base=$(git merge-base HEAD "$tip" 2>/dev/null) || ship_tooling "no merge base be
 if ! $given; then
   case $test_path in
     *.sh) ;;
-    *) ship_tooling "revert-red runs a .sh test under bash; for another runner pass its command after \`--\` (\`revert-red <test> <path>... -- <command>...\`), or record \`Reverted-fix: <test>: n/a: <reason>\`" ;;
+    *) ship_tooling "revert-red runs a .sh test under bash; for another runner pass its command after \`--\` (\`revert-red <test> <path>... -- <command>...\`); record \`Reverted-fix: <test>: n/a: <reason>\` only where no command can run it" ;;
   esac
 fi
 # undot <path>: the path with every leading `./` taken off.

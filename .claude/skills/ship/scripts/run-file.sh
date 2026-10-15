@@ -113,9 +113,9 @@
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
 # it wrote.
 #
-# `prove` runs the sibling `revert-red` on <test> and its <path>s, and on the
-# <command> after `--` where one is given, which runs another runner's test in
-# place of `bash <test>` and must name <test>. On its exit 0
+# `prove` runs the sibling `revert-red` on <test> and its <path>s, passing any
+# `-- <command>...` tail to it as typed (`revert-red --help` says what the
+# command must be). On its exit 0
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under
 # `## Evidence`, <sha> the HEAD revert-red ran on; on its exit 1 or 2 it writes
 # nothing and exits with that code, passing revert-red's answer through. It
