@@ -365,6 +365,7 @@ test("render on a mistyped run folder says which stage to run and writes nothing
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(r.err, /^render: no script\.json: run the compile stage first/m);
   assert.ok(!fs.existsSync(path.join(fx.tmp, ".gitignore")));
+  assert.ok(!fs.existsSync(path.join(fx.tmp, "typo")));
 });
 
 // Style profile lookup: the script names no style, so the stores decide.

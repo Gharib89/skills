@@ -12,8 +12,8 @@
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
 //         rate · pass|fail: <why>`, then one summary line
 // writes: <run>/voice.json, the word timeline, only when every scene passes
-// exit:   0 every scene passes · 1 a scene fails QC, or synthesis or alignment
-//         failed · 2 usage
+// exit:   0 every scene passes · 1 refused for its input, a scene fails QC,
+//         or synthesis or alignment failed · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
