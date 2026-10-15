@@ -33,8 +33,8 @@ write into. Every variant carries:
 - **`## Change outline`**: the behavioural fence below.
 - **`## Special things to note`**: the Door line first, then the reviewer's
   warnings and the folded deviations, so it is never `None.`.
-- **`## Needs attention`**: every issue the run filed or linked and every Ship
-  defect it met.
+- **`## Needs attention`**: every issue the run filed or linked, every Ship
+  defect it met and every Ship note.
 - **`## Verification`**: one line per applicable verification in the merge
   summary's `Verification` row format, or `None applicable: <reason>`, with
   two such reasons and no third: `small lane`, and a change where no `Applies

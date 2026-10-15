@@ -145,9 +145,10 @@
 # no decline and is refused. `call` runs nothing: it appends
 # `- <command> · <why>` under `## Direct calls`, <command> quoted as `probe`
 # quotes it, before the run makes the call, and refuses (exit 1) a command that
-# does not open on `gh api` or `az rest` and an argument, or a `gh api` naming
-# the `graphql` endpoint: the cloud sandbox's proxy refuses GitHub GraphQL,
-# which `gh issue edit` and its kin use (#254).
+# does not open on `gh api` or `az rest` and an argument, a `gh api` naming
+# the `graphql` endpoint (the cloud sandbox's proxy refuses GitHub GraphQL,
+# which `gh issue edit` and its kin use, #254), or one carrying an
+# `Authorization` header, whose credential the line would publish.
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git
@@ -1459,13 +1460,28 @@ call)
   shift
   parse_file ${where[@]+"${where[@]}"}
   no_extra
+  # A credential would land in the Run file and in the summary an unattended run
+  # posts to the PR, and the host CLI authenticates a direct call itself. The
+  # refusal leaves the command out, so the credential reaches no output either.
+  for w in "$@"; do
+    lw=$(printf '%s' "$w" | tr '[:upper:]' '[:lower:]')
+    lw=${lw#--header=}
+    lw=${lw#--headers=}
+    lw=${lw#\{}
+    lw=${lw#\"}
+    case $lw in authorization:* | authorization=* | 'authorization '* | authorization\"*)
+      ship_fail "a direct call carries no credential: the host CLI authenticates it, so drop the Authorization header"
+      ;;
+    esac
+  done
   cmd=$(printf '%q ' "$@")
   cmd=${cmd% }
   rest=false
   { [ "$1 ${2:-}" = "gh api" ] || [ "$1 ${2:-}" = "az rest" ]; } && [ $# -ge 3 ] && rest=true
   # `graphql` is the one `gh api` endpoint that is not REST, as a word, a path
   # or a URL. Only the endpoint, the first word that is neither a flag nor a
-  # flag's value, is matched, so a field value naming graphql is still REST.
+  # flag's value, is matched, so a field value naming graphql is still REST, and
+  # its query string or fragment is stripped first, since gh sends neither.
   if [ "$1" = gh ]; then
     set -- "${@:3}"
     while [ $# -gt 0 ]; do
@@ -1473,7 +1489,7 @@ call)
       -X | --method | -H | --header | -f | --raw-field | -F | --field | --input | -q | --jq | -t | --template | --cache | -p | --preview | --hostname) shift 2 || break ;;
       -*) shift ;;
       *)
-        ep=${1%%\?*}
+        ep=${1%%[?#]*}
         case ${ep%/} in graphql | */graphql) rest=false ;; esac
         break
         ;;

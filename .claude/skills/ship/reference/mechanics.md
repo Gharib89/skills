@@ -38,13 +38,14 @@ only, `gh api <REST path>` (never its `graphql` endpoint) or `az rest`, which
 the cloud sandbox admits where its proxy refuses GitHub GraphQL with a 403, so
 `gh issue edit` and its kin are out. Log it before making it with `run-file call
 "<why>" --issue <issue> -- gh api ...`, which writes the line under the Run
-file's `## Direct calls` and refuses, exit 1, any other form. A direct call made
-in two runs, where this run can see the other (an earlier unattended summary
-comment on this repo's PRs lists it), is raised as a Ship note: it may earn a
-mechanic. Verification scaffolding sits outside the rule: a scratch issue or
-scratch review thread a `Run:` line sets up by hand, or a throwaway probe PR an
-acceptance criterion asks for, with its pushes and CI cancels, closed unmerged
-before the merge gate.
+file's `## Direct calls` and refuses, exit 1, any other form, and one carrying
+an `Authorization` header, because the line reaches the summary and the host CLI
+authenticates the call itself. A direct call made in two runs, where this run
+can see the other (an earlier unattended summary comment on this repo's PRs
+lists it), is raised as a Ship note: it may earn a mechanic. Verification
+scaffolding sits outside the rule: a scratch issue or scratch review thread a
+`Run:` line sets up by hand, or a throwaway probe PR an acceptance criterion
+asks for, with its pushes and CI cancels, closed unmerged before the merge gate.
 
 ## Which mechanic each phase runs
 
@@ -82,7 +83,7 @@ contract.
 | `comment-issue` | 2, 4, 7 |
 | `comment-pr` | 7, 9 |
 | `reply-thread` | 7 |
-| `update-pr-body` | 7 |
+| `update-pr-body` | 7; 9, a Ship defect or Ship note met after phase 7 |
 | `update-issue-body` | 1, once per section an anchor the tree contradicts sits in; 9, after `merge` answers `merged: true`, once per tracker draft |
 | `resolve-thread` | 7 |
 | `ci-wait` | 8 |

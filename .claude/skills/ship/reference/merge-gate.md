@@ -147,7 +147,9 @@ per-finding detail behind that reviewer's `## Review` line; and each
 The `Self-review` block's rounds line is read from the Run file's `Round:
 self-review` and `Stop: self-review:` lines, and its rows from the phase-4
 Report files, one row per report; a row whose file is no longer on disk is
-`unverified`.
+`unverified`. A Ship defect or Ship note met after phase 7's body rewrite is
+written into `## Needs attention` with `update-pr-body <pr> --section "Needs
+attention"`, then `read-pr`, before the summary, so that pair still agrees.
 
 **A wrong title is fixed before the merge**, with `update-pr-title`, before the
 summary is posted: the merge freezes the PR title as the squash subject, so the
