@@ -74,6 +74,10 @@ call 'auth' --file "$rf" -- gh api repos/o/r -H ' authorization : s3cr3t'
 check_rc "a header with spaces around its name is refused" 1 "$status"
 call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers '{ "Authorization": "Bearer s3cr3t"}'
 check_rc "a spaced JSON Authorization header is refused" 1 "$status"
+call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers '{"Content-Type":"application/json","Authorization":"Bearer s3cr3t"}'
+check_rc "a JSON header object with Authorization as a later key is refused" 1 "$status"
+call 'auth' --file "$rf" -- gh api -iHAuthorization:s3cr3t repos/o/r
+check_rc "a header in a short-flag cluster is refused" 1 "$status"
 call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers 'Authorization=Bearer s3cr3t'
 check_rc "an az rest Authorization header is refused" 1 "$status"
 call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers '{"Authorization": "Bearer s3cr3t"}'
@@ -83,6 +87,10 @@ check "a refused call writes nothing" "$before" "$(cat "$rf")"
 call 'comment' --file "$rf" -- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql -f 'title=Authorization: how'
 check_rc "a REST call whose field values name graphql or Authorization is accepted" 0 "$status"
 check "the decoy call is logged" "- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql -f title=Authorization:\\ how · comment" "$(section | grep '^- ' | tail -n 1)"
+call 'saml' --file "$rf" -- gh api orgs/o/credential-authorizations
+check_rc "an endpoint naming authorizations is accepted" 0 "$status"
+call 'body' --file "$rf" -- az rest --method post --url https://dev.azure.com/o/_apis/x --body '{"text":"Authorization: see docs"}'
+check_rc "an az rest body naming Authorization is accepted" 0 "$status"
 before=$(cat "$rf")
 
 usage=$(bash "$m" --help | head -n 1)
