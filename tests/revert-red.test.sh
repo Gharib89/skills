@@ -186,7 +186,7 @@ check_rc "a word that only starts with the test's name is not the test" \
   2 "$(rc_of tests/answer_check.py lib.sh -- python3 tests/answer_check.pyc)"
 check_rc "a -- with no command is a usage error" \
   2 "$(rc_of tests/answer_check.py lib.sh --)"
-check_rc "an empty first word is tooling even where a later word names the test" \
+check_rc "an empty first word is a usage error even where a later word names the test" \
   2 "$(rc_of tests/answer_check.py lib.sh -- '' tests/answer_check.py)"
 check "and it answers the usage line" \
   "usage: revert-red <test> <path>... [-- <command>...]" \

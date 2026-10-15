@@ -278,8 +278,8 @@ self-review's judgment, recorded in the Run file where it helps the summary.
   `command` records what ran. Attested:
   `Reverted-fix: <test>: n/a: <reason>` where there is no fix to revert, where
   the test needs a database or service the command cannot start itself in a
-  fresh checkout, where its runner cannot run that one file alone
-  (`go test` runs a whole package), or where it is
+  fresh checkout, where its runner cannot run that one file on its own, or
+  where it is
   already red before the revert, since none of these can show the test going
   red for the fix's absence.
   A test file is a path with a `tests`, `test` or `__tests__` component, or a
