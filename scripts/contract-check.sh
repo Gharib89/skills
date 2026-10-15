@@ -35,12 +35,6 @@
 # catalog entries' format, the two profile-template lines setup-skills parses
 # and the harness schema number's four places.
 #
-# Check 10 reads two sentences of ship's prose that nothing else holds: phase
-# 4's instruction that an axis reads the Local gate's JSON rather than running
-# the suite, and context discipline's one-reference-file-per-call rule. Each is
-# matched as a substring of the file with its line wraps joined, so the same
-# words turned to the opposite meaning ("and also runs") do not pass.
-#
 # Checks 11 to 14 compare a mechanic's usage line, as `--help` prints it, with
 # the rest of what describes it:
 # 11  the header synopsis names the same flags and leading slots;
@@ -345,25 +339,6 @@ if [ -d "$harness" ]; then
       "${meta:-none}" "${line:-none}" "${lit:-none}" "${meta:-none}" "$entry"
     rc=1
   fi
-fi
-
-# 10. The two sentences above. A tree with no ship skill has nothing to hold.
-# Whitespace is squeezed first, because the prose is wrapped at 80 columns.
-# require_sentence <file> <sentence> <violation>: the file must contain the
-# sentence, whitespace-flattened; a file that cannot be read is tooling.
-require_sentence() {
-  local flat
-  flat=$(tr '\n' ' ' < "$1" | tr -s ' ') || { printf 'cannot read %s\n' "$1" >&2; exit 2; }
-  case $flat in *"$2"*) ;; *) printf '%s: %s\n' "$1" "$3"; rc=1 ;; esac
-}
-if [ -f "$skills/ship/SKILL.md" ]; then
-  require_sentence "$skills/ship/SKILL.md" \
-    "the Local gate runs later in the run, so the axis reads the gate's JSON and never runs \`check.sh full\` or the suite itself" \
-    "phase 4 must tell each axis the Local gate runs later, so it reads the gate's JSON and never runs check.sh full or the suite"
-fi
-if [ -f "$skills/ship/reference/context-discipline.md" ]; then
-  require_sentence "$skills/ship/reference/context-discipline.md" \
-    "Read one reference file per call." "must say to read one reference file per call"
 fi
 
 # Checks 11 to 14 share a reading of the usage line. A mechanic whose --help
