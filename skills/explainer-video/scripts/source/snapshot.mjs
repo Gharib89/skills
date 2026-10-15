@@ -162,12 +162,13 @@ const xmlText = (s) =>
         )
       : (XML_ENT[e] ?? m),
   );
-// A shape tree's text, one line per paragraph, runs joined.
+// A shape tree's text, one line per paragraph, runs joined and a line break
+// kept as one.
 const paragraphs = (xml) =>
   [...xml.matchAll(/<a:p[ >][\s\S]*?<\/a:p>/g)]
     .map((p) =>
-      [...p[0].matchAll(/<a:t>([^<]*)<\/a:t>/g)]
-        .map((t) => xmlText(t[1]))
+      [...p[0].matchAll(/<a:t(?:\s[^>]*)?>([^<]*)<\/a:t>|<a:br\b[^>]*\/>/g)]
+        .map((t) => (t[1] === undefined ? "\n" : xmlText(t[1])))
         .join(""),
     )
     .filter((t) => t.trim())
@@ -205,7 +206,7 @@ function pptx(parts) {
       const notesXml = notesRel
         ? (parts[partOf(slide, notesRel.target)] ?? "")
         : "";
-      const body = [...notesXml.matchAll(/<p:sp>[\s\S]*?<\/p:sp>/g)]
+      const body = [...notesXml.matchAll(/<p:sp[ >][\s\S]*?<\/p:sp>/g)]
         .map((s) => s[0])
         .filter((s) => /<p:ph [^>]*type="body"/.test(s));
       return {

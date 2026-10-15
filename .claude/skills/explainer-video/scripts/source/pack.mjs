@@ -59,7 +59,7 @@ for (const src of chosen) {
     );
     continue;
   }
-  const excerpts = Array.isArray(draft.excerpts) ? draft.excerpts : null;
+  const excerpts = Array.isArray(draft?.excerpts) ? draft.excerpts : null;
   if (!excerpts || typeof draft.summary !== "string" || !draft.summary.trim()) {
     problem(src.id, 'a draft holds a "summary" and an "excerpts" list');
     continue;
@@ -71,6 +71,8 @@ for (const src of chosen) {
     );
   excerpts.forEach((ex, k) => {
     const at = `excerpt ${k + 1}`;
+    if (typeof ex !== "object" || ex === null)
+      return problem(src.id, `${at}: not an object`);
     for (const f of ["locator", "text", "note"])
       if (typeof ex[f] !== "string" || !ex[f].trim())
         return problem(src.id, `${at}: no ${f}`);

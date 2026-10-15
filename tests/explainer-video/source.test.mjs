@@ -368,7 +368,7 @@ test("a PPTX excerpt locates by slide in the deck's order, and its notes by slid
   const sp = (ph, text) =>
     `<p:sp><p:nvSpPr><p:nvPr><p:ph type="${ph}"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>${text}</a:t></a:r></a:p></p:txBody></p:sp>`;
   const slide = (title, body) =>
-    `<p:sld ${P}><p:cSld><p:spTree>${sp("title", title)}<p:sp><p:txBody><a:p><a:r><a:t>${body.split(" ")[0]} </a:t></a:r><a:r><a:t>${body.split(" ").slice(1).join(" ")}</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`;
+    `<p:sld ${P}><p:cSld><p:spTree>${sp("title", title)}<p:sp useBgFill="1"><p:txBody><a:p><a:r><a:t>${body.split(" ")[0]}</a:t></a:r><a:br/><a:r><a:t xml:space="preserve">${body.split(" ").slice(1).join(" ")}</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`;
   const rel = (id, type, target) =>
     `<Relationship Id="${id}" Type="http://x/${type}" Target="${target}"/>`;
   const f = write(fx, "deck.pptx", {
@@ -488,6 +488,22 @@ test("an excerpt passes only word for word: whitespace may differ, a paraphrase 
   assert.match(pack(fx, ["n"]).err, /not word for word in lines 1-2/);
   draft(fx, "n", [["line 1", ""]]);
   assert.match(pack(fx, ["n"]).err, /excerpt 1: no text/);
+});
+
+test("a malformed draft gets a pack line to fix, not a crash", () => {
+  const fx = fixture();
+  const f = write(fx, "n.txt", "The gate blocks a red render.\n");
+  assert.equal(snapshot(fx, [f]).code, 0);
+  const at = path.join(fx.dir, "snapshots", "n.draft.json");
+  for (const [body, why] of [
+    ['{"summary":"ok","excerpts":[null]}', "pack n: excerpt 1: not an object"],
+    ["null", 'pack n: a draft holds a "summary" and an "excerpts" list'],
+  ]) {
+    fs.writeFileSync(at, body);
+    const r = pack(fx, ["n"]);
+    assert.equal(r.code, 1);
+    assert.equal(r.err.trim(), why);
+  }
 });
 
 test("the merge numbers every excerpt across the pack and writes the excerpts and the outline, both committed", () => {
