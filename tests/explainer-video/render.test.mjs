@@ -535,6 +535,48 @@ for (const [name, arrange, why, voiced = true] of [
     false,
   ],
   [
+    "a profile that lowers a contrast floor",
+    (fx) => styled(fx, {}, { gates: { contrast: { body: 3 } } }),
+    /^render: style profile odd: gates\.contrast\.body 3 lowers the skill's floor 4\.5$/m,
+    false,
+  ],
+  [
+    "a profile that loosens the peak floor",
+    (fx) => styled(fx, {}, { gates: { loudness: { peak: 0 } } }),
+    /^render: style profile odd: gates\.loudness\.peak 0 lowers the skill's floor -1$/m,
+    false,
+  ],
+  [
+    "a loudness tolerance of zero",
+    (fx) => styled(fx, {}, { gates: { loudness: { tolerance: 0 } } }),
+    /^render: style profile odd: gates\.loudness\.tolerance 0 must be above 0$/m,
+    false,
+  ],
+  [
+    "a peak floor under what the master can aim beneath",
+    (fx) => styled(fx, {}, { gates: { loudness: { peak: -9 } } }),
+    /^render: style profile odd: gates\.loudness\.peak -9 is under -8\.5, the lowest the master reaches$/m,
+    false,
+  ],
+  [
+    "a profile naming a floor the skill has not",
+    (fx) => styled(fx, {}, { gates: { layout: { width: 2 } } }),
+    /^render: style profile odd: gates\.layout\.width: no such floor$/m,
+    false,
+  ],
+  [
+    "a profile naming a gate group the skill has not",
+    (fx) => styled(fx, {}, { gates: { motion: { speed: 2 } } }),
+    /^render: style profile odd: gates\.motion: no such floor$/m,
+    false,
+  ],
+  [
+    "a layout floor that is not a number",
+    (fx) => styled(fx, {}, { gates: { layout: { textPx: "big" } } }),
+    /^render: style profile odd: gates\.layout\.textPx: not a number$/m,
+    false,
+  ],
+  [
     "a profile colour that is not #rrggbb",
     (fx) => styled(fx, { muted: "grey" }),
     /^render: style profile odd fails contrast: muted on bg: not a #rrggbb colour/m,

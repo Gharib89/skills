@@ -5,30 +5,35 @@
 // Reads <run>/script.json and <run>/voice.json and the run's style profile
 // (lib/style.mjs). Times every scene back to back at its voice duration, the
 // last held 1 s, cues captions from the word timings, composes the video in
-// <run>/composition/, renders a settled still per scene and then the video
-// with HyperFrames, each cached in <run>/.cache/ by content hash, checks the
-// MP4 with ffprobe, and copies MP4, SRT and poster to the videos folder.
-// stdout: one `delivery <check>: pass|fail: <measured> vs <wanted>` line per
-//         check, `delivered: <path>`, then
+// <run>/composition/ with the narration mastered, renders a settled still per
+// scene and then the video with HyperFrames, each cached in <run>/.cache/ by
+// content hash, runs the gates stage (gates/gates.mjs) on out/, checks the MP4
+// with ffprobe, and copies MP4, SRT and poster to the videos folder. A red gate
+// or a failed check empties out/ and delivers nothing.
+// stdout: the gates stage's lines, one `delivery <check>: pass|fail:
+//         <measured> vs <wanted>` line per check, `delivered: <path>`, then
 //         `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
 //         cached, video cached|rendered`
 // writes: <run>/style.json, timeline.json, composition/, .cache/stills/,
-//         .cache/render/, out/<slug>.mp4|.srt, out/poster.png, manifest.json;
-//         <videos>/explainer-video/<repo>/<slug>/; explainers/.gitignore
-// exit:   0 delivered · 1 refused or failed, `render: <why>` on stderr, or a
-//         delivery check failed · 2 usage
+//         .cache/render/, out/<slug>.mp4|.srt, out/poster.png, manifest.json,
+//         and the gates stage's files; <videos>/explainer-video/<repo>/<slug>/;
+//         explainers/.gitignore
+// exit:   0 delivered · 1 refused or failed, `render: <why>` on stderr, a gate
+//         red, or a delivery check failed · 2 usage
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { loadStyle } from "../lib/style.mjs";
+import { LUFS, floors, loadStyle } from "../lib/style.mjs";
 import {
   catalogue,
   dest,
+  hyperframesEnv,
   loadBackend,
   lockHash,
+  renderInputs,
   skill,
   toolPaths,
 } from "../lib/tools.mjs";
@@ -269,7 +274,20 @@ function narration(file) {
   h.writeUInt32LE(data.length, 40);
   fs.writeFileSync(file, Buffer.concat([h, data]));
 }
-narration(path.join(comp, "narration.wav"));
+// Mastered to -14 LUFS, its peak half a dB under the loudness gate's ceiling.
+const backend = await loadBackend();
+const raw = path.join(run, ".cache", "narration.wav");
+fs.mkdirSync(path.dirname(raw), { recursive: true });
+narration(raw);
+try {
+  await backend.master(raw, path.join(comp, "narration.wav"), {
+    lufs: LUFS,
+    peak: floors(profile).loudness.peak - 0.5,
+  });
+} catch (e) {
+  fail(e.message);
+}
+fs.rmSync(raw);
 
 const timing = (sc) => ({
   duration: sc.duration,
@@ -285,18 +303,7 @@ fs.writeFileSync(
   videoPage({ title: script.title, profile, fonts, scenes, cues, total }),
 );
 
-const backend = await loadBackend();
-// HyperFrames finds Chrome under its home folder, where setup put it, and
-// keeps its own state files there too.
-const home = dest({ kind: "chrome" });
-const env = {
-  ...process.env,
-  HYPERFRAMES_NO_TELEMETRY: "1",
-  DO_NOT_TRACK: "1",
-  HYPERFRAMES_NO_UPDATE_CHECK: "1",
-  HOME: home,
-  USERPROFILE: home,
-};
+const env = hyperframesEnv();
 async function hyperframes(what, args, cwd) {
   const code = await backend.hyperframes(
     [
@@ -314,12 +321,7 @@ async function hyperframes(what, args, cwd) {
   if (code !== 0) fail(`hyperframes render of the ${what} exited ${code}`);
 }
 
-// What draws a frame beyond the composition's own files: the npm install
-// (HyperFrames, GSAP) and Chrome by the lock, and each font row's version.
-const renderInputs = [
-  lockHash,
-  ...fontRows.map((r) => `${r.family}@${r.version}`),
-];
+const inputs = renderInputs(fontRows.map((r) => r.family));
 
 // Stills: the uncached scenes in one stills page, a frame each.
 const stillDir = path.join(run, ".cache", "stills");
@@ -327,7 +329,7 @@ fs.mkdirSync(stillDir, { recursive: true });
 const stills = script.scenes.map((s, i) =>
   path.join(
     stillDir,
-    `${hash(files[i], profile, timing(scenes[i]), script.title, renderInputs)}.png`,
+    `${hash(files[i], profile, timing(scenes[i]), script.title, inputs)}.png`,
   ),
 );
 const missing = script.scenes.filter((s, i) => !fs.existsSync(stills[i]));
@@ -386,7 +388,7 @@ const listing = (dir) =>
     .filter((e) => e.isFile())
     .map((e) => path.relative(dir, path.join(e.parentPath, e.name)))
     .sort();
-const key = crypto.createHash("sha256").update(JSON.stringify(renderInputs));
+const key = crypto.createHash("sha256").update(JSON.stringify(inputs));
 for (const f of listing(comp))
   key.update(f).update(fs.readFileSync(path.join(comp, f)));
 const renderDir = path.join(run, ".cache", "render");
@@ -401,6 +403,20 @@ if (!cached) {
     comp,
   );
   fs.renameSync(part, video);
+}
+fs.copyFileSync(video, path.join(out, `${slug}.mp4`));
+fs.copyFileSync(stills[0], path.join(out, "poster.png"));
+
+// The gates judge out/; a red one leaves no video. The cached render stays: a
+// red gate is deterministic, so rendering it again would change nothing.
+const gates = spawnSync(
+  process.execPath,
+  [path.join(skill, "scripts", "gates", "gates.mjs"), run],
+  { stdio: "inherit" },
+);
+if (gates.status !== 0) {
+  fs.rmSync(out, { recursive: true, force: true });
+  fail("the gates did not pass: nothing delivered");
 }
 
 // Delivery checks, every one printed before any verdict.
@@ -451,9 +467,6 @@ if (failed) {
   fs.rmSync(video, { force: true });
   process.exit(1);
 }
-
-fs.copyFileSync(video, path.join(out, `${slug}.mp4`));
-fs.copyFileSync(stills[0], path.join(out, "poster.png"));
 
 // The videos folder, under the repo's name: a worktree's is its main repo's.
 // A submodule's or a separate git dir's common dir is no `<repo>/.git`, so

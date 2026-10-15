@@ -10,10 +10,46 @@ import { skill } from "./tools.mjs";
 
 export const FALLBACK = "claude-code";
 
-// The skill's contrast floors (WCAG 2.1); a profile's `gates.contrast` may only
-// raise them. Body text sits on every surface; large or faint text (captions
-// before their word, accents, status colours) never on the label chip.
-const FLOORS = { body: 4.5, large: 3 };
+// The loudness target the master aims at and the gate judges around.
+export const LUFS = -14;
+
+// The skill's gate floors; a profile's `gates` block may only tighten them:
+// raise contrast (WCAG 2.1) and layout's text size and safe margin, lower
+// loudness's tolerance around -14 LUFS and its true peak in dBTP.
+const FLOORS = {
+  contrast: { body: 4.5, large: 3 },
+  layout: { textPx: 18, margin: 0.05 },
+  loudness: { tolerance: 1, peak: -1 },
+};
+
+// The floors a run is judged by: the skill's, as the profile tightens them.
+export function floors(profile) {
+  const refuse = (why) => {
+    throw new Error(`style profile ${profile.name}: gates.${why}`);
+  };
+  const out = structuredClone(FLOORS);
+  for (const [g, keys] of Object.entries(profile.gates ?? {})) {
+    if (!Object.hasOwn(FLOORS, g)) refuse(`${g}: no such floor`);
+    for (const [k, v] of Object.entries(keys ?? {})) {
+      if (!Object.hasOwn(FLOORS[g], k)) refuse(`${g}.${k}: no such floor`);
+      const f = FLOORS[g][k];
+      if (!Number.isFinite(v)) refuse(`${g}.${k}: not a number`);
+      if (g === "loudness" && k === "tolerance" && v <= 0)
+        refuse(`${g}.${k} ${v} must be above 0`);
+      // The master aims half a dB under the peak floor, and loudnorm's TP stops
+      // at -9 dBTP.
+      if (g === "loudness" && k === "peak" && v < -8.5)
+        refuse(`${g}.${k} ${v} is under -8.5, the lowest the master reaches`);
+      if (g === "loudness" ? v > f : v < f)
+        refuse(`${g}.${k} ${v} lowers the skill's floor ${f}`);
+      out[g][k] = v;
+    }
+  }
+  return out;
+}
+
+// Body text sits on every surface; large or faint text (captions before their
+// word, accents, status colours) never on the label chip.
 const ROLES = [
   { floor: "body", tokens: ["text", "muted"], on: ["bg", "panel", "chip"] },
   {
@@ -47,7 +83,7 @@ function failures(profile) {
       out.push(`gates.contrast.${role.floor}: not a number`);
       continue;
     }
-    const floor = Math.max(FLOORS[role.floor], own ?? 0);
+    const floor = Math.max(FLOORS.contrast[role.floor], own ?? 0);
     for (const t of role.tokens)
       for (const s of role.on) {
         if (
@@ -103,6 +139,7 @@ export function loadStyle(run, name, dirs = userDirs()) {
     throw new Error(
       `style profile ${profile.name} fails contrast: ${bad.join("; ")}`,
     );
+  floors(profile);
   fs.writeFileSync(own, JSON.stringify(profile, null, 2) + "\n");
   return profile;
 }

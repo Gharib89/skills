@@ -12,9 +12,10 @@ metadata:
 # explainer-video
 
 An **explainer video** is a narrated video, one to five minutes by default,
-made from one or more sources. This version carries three stages: **setup**,
-which every run starts with; **voice**, English narration; and **render**, a
-scene file written with the user turned into a captioned MP4. Reading sources,
+made from one or more sources. This version carries four stages: **setup**,
+which every run starts with; **voice**, English narration; **render**, a
+scene file written with the user turned into a captioned MP4; and **gates**,
+which the render runs and which block a video below the floors. Reading sources,
 the brief, the storyboard and writing the script from sources are not in this
 version.
 Asked for a video, say so in one line and offer to write the scene file with
@@ -144,30 +145,38 @@ narrator: am_fenrir
 4. **Voice.** Run the voice stage above on the same run folder, again after
    any narration edit.
 5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`. It
-   prints one `delivery <check>: pass|fail` line per delivery check
-   (`resolution`, `frame rate`, `aspect`, `duration`, `audio`, `srt`), then
-   `delivered: <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s),
-   stills <hit>/<n> cached, video cached|rendered`. A scene still and the
-   video are cached by content, so an unchanged run renders nothing again.
+   masters the narration to -14 LUFS, renders, then runs the gates (see
+   Gates) and prints their lines. Only when every gate passes does it print
+   one `delivery <check>: pass|fail` line per delivery check (`resolution`,
+   `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
+   <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
+   cached, video cached|rendered`. A scene still and the video are cached by
+   content, so an unchanged run renders nothing again.
 6. **On a pass** (exit 0), the run folder's `out/` holds `<slug>.mp4`,
    `<slug>.srt` and `poster.png`, and the same three are copied to the printed
    path, `explainer-video/<repo>/<slug>/` in the user's videos folder (the XDG
    videos folder on Linux, `~/Movies` on macOS, `%USERPROFILE%\Videos` on
    Windows), so the video outlives the run folder. Report the last line and
    that path.
-7. **On a fail** (exit 1), relay what was printed. A `delivery <check>: fail:
+7. **On a fail** (exit 1), relay what was printed. A `gate <name>: fail` line
+   means nothing was delivered and `out/` was emptied: follow Gates below. A
+   `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
    and `out/` was emptied, an earlier render's files too. `style profile <name>
    fails contrast: <token> on <surface> ...` names each pair under its floor,
-   and `gates.contrast.<role>: not a number` a floor that is no number: fix
-   those values or choose another profile. `<row> is not installed`: run
+   and `gates.contrast.<role>: not a number` a floor that is no number;
+   `style profile <name>: gates.<group>.<key> <v> lowers the skill's floor
+   <f>` or `no such floor` names a gates block the skill refuses: fix those
+   values or choose another profile. `<row> is not installed`: run
    setup. `no script.json`, `no voice.json`, `voice.json does not match` or
    `voice.json holds narrator` names the stage to run first. `no render fonts
    for language <x>`: this
    version renders English only. A profile's layout, motion or font this
    version cannot draw: choose another profile. Any other `render: <why>`
    line, a HyperFrames or ffprobe failure among them: relay it with the
-   output printed above it.
+   output printed above it. A `gates: <why>` line with no `gate` line above
+   it means the gates could not run: `no Chrome under`: run setup; any other,
+   relay it with the output above it.
 
 **Style profiles** are looked up in three stores, first match winning: the
 project's `explainers/.styles/`, the user config store's `styles/`, and the
@@ -177,9 +186,60 @@ the first store holding a `default` file (one profile name) decides, else
 that copy, so a later edit to a store never changes this video; delete the
 copy to take up the edit, or name another profile in `style:`.
 
-The run folder's **recipe**, `script.md`, `style.json` and `manifest.json`
-(skill version, lock hash, profile, narrator, delivered path), is committed.
-`explainers/.gitignore` ignores the rest: the compiled script, the voice and
-timeline files, the caches, the composition and `out/`. Every stage writes
+## Gates
+
+A **video gate** checks the rendered video against a floor and blocks: a red
+gate means no video. The render stage runs them all after every render;
+`node <skill>/scripts/gates/gates.mjs explainers/<slug>` re-judges the render
+still in `out/`, which only a green render leaves (a red render empties
+`out/`, so render again, which reuses the cached video), and deletes nothing.
+Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
+
+- `layout`: HyperFrames' check, plus the layout probe (text at least 18 px,
+  nothing clipped or overflowing its box, every text box inside the 5 percent
+  safe margin, no text box overlapping another), on frames every 15 frames
+  and on each scene's settled last frame.
+- `contrast`: 4.5:1 for body text and 3:1 for large text (24 px, or 18.66 px
+  bold), on the same frames. The palette check when the profile loads holds
+  the faint, accent and status colours to 3:1 only, since the scenes draw them
+  large; text drawn small in one of them is held to 4.5:1.
+- `loudness`: -14 LUFS plus or minus 1 and a true peak at most -1 dBTP,
+  measured on the encoded MP4.
+- `captions`: every word timed in order inside its scene, every cue non-empty,
+  in order, at most 84 characters and inside the video, and the SRT equal to
+  the burned-in cues.
+
+A summary line follows, `gates: <n> pass, <m> fail`, ending on a red run with
+`next: fix attempt <a> of 2` or `stop: red after two fix attempts, no video`.
+Layout and contrast results are cached per scene by everything that draws it,
+so a fix re-gates only the scenes it touched; loudness and captions run every
+time. The stage writes `gates.json`, the machine record, and `gates.md`, the
+readable report with every red gate's findings.
+
+**On a red gate**, relay its line and fix what its findings name **inside the
+approved script**: the visual's layout, its text size, colours within the
+profile, timing, or re-voiced audio, never the narration, the scene order or
+the scene count. Compile, voice if the audio changed, and render again. The
+attempt counts live in `gates.json`: each gate's count resets when that gate
+passes, and the run's count, which `stop` reads, when every gate passes. Both
+reset when the narration changes, so a red that moves from one gate to another
+still stops.
+On `stop`, stop with no video and report each red gate's line and `gates.md`;
+a fix that needs the narration, order or count changed is a revision of the
+script the user approved, so ask the user.
+
+**Floors** are set in the skill. A profile's optional `gates` block may only
+tighten them, and the tightened value is the one applied and printed:
+`contrast` (`body`, `large`, raise), `layout` (`textPx`, `margin` as a
+fraction, raise), `loudness` (`tolerance` in LU, above 0, and `peak` in
+dBTP, no lower than -8.5, lower).
+
+## Recipe
+
+The run folder's **recipe**, `script.md`, `style.json`, `gates.md` and
+`manifest.json` (skill version, lock hash, profile, narrator, delivered path),
+is committed. `explainers/.gitignore` ignores the rest: the compiled script,
+the voice and timeline files, `gates.json`, the caches, the composition and
+`out/`. Every stage writes
 those lines between its `# explainer-video: begin` and `end` markers and
 leaves the file's other lines alone.
