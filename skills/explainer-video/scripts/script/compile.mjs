@@ -60,7 +60,7 @@ for (const line of lines) {
     section = null;
   } else if (!scene) {
     if (!title && (m = line.match(/^# (.+?)\s*$/))) title = m[1];
-    else if (title && (m = line.match(/^([a-z]+):\s*(.+?)\s*$/))) {
+    else if (title && (m = line.match(/^([A-Za-z]+):\s*(.+?)\s*$/))) {
       if (!["language", "narrator", "style"].includes(m[1]))
         fail(null, `unknown header key ${m[1]} (language, narrator, style)`);
       header[m[1]] = m[2];
@@ -72,10 +72,13 @@ for (const line of lines) {
   else if (
     section === "narration" &&
     /^\s+\S/.test(line) &&
+    !/^\s+\d+\.\s/.test(line) &&
     scene.sentences.length
-  )
+  ) {
+    if (/\]\s*$/.test(scene.sentences.at(-1)))
+      fail(scene.id, `${line.trim()} continues a sentence past its cites`);
     scene.sentences.push(`${scene.sentences.pop()} ${line.trim()}`);
-  else if (section === "narration" && line.trim())
+  } else if (section === "narration" && line.trim())
     fail(scene.id, `not a numbered sentence: ${line}`);
   else if (section === "visual" && /^```json\s*$/.test(line)) {
     if (scene.visual !== null) fail(scene.id, "a second ```json visual block");

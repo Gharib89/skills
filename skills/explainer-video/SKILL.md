@@ -121,9 +121,10 @@ narrator: am_fenrir
   `en`, the only language render draws; `narrator` and `style` are optional.
 - **Scenes.** `## Scene <id> · <title>`, the id kebab-case and not `main`.
 - **Narration.** Numbered sentences in spoken form; an indented line continues
-  the sentence above. `{written|spoken}` shows the written form in the
-  captions and voices the spoken one; backticks are dropped. A trailing
-  `[a, b]` lists the sentence's cites, `[no-claim]` none.
+  the sentence above, so its cites go on the last line. `{written|spoken}`
+  shows the written form in the captions and voices the spoken one; backticks
+  are dropped. A trailing `[a, b]` lists the sentence's cites, `[no-claim]`
+  none.
 - **Visual.** One JSON block per scene, one component, required props marked
   `*`: `title` (`kicker`, `title*`, `subtitle`), `cards` (`items*`, each
   `at*`, `label*`, `value*`, `note`), or `terminal` (`title`, `lines*`, each
@@ -158,8 +159,11 @@ narrator: am_fenrir
    fails contrast: <token> on <surface> ...` names each pair under its floor:
    fix those colours or choose another profile. `<row> is not installed`: run
    setup. `no script.json`, `no voice.json` or `voice.json does not match`
-   names the stage to run first. Any other `render: <why>` line names its fix:
-   follow it.
+   names the stage to run first. `no render fonts for language <x>`: this
+   version renders English only. A profile's layout, motion or font this
+   version cannot draw: choose another profile. Any other `render: <why>`
+   line, a HyperFrames or ffprobe failure among them: relay it with the
+   output printed above it.
 
 **Style profiles** are looked up in three stores, first match winning: the
 project's `explainers/.styles/`, the user config store's `styles/`, and the

@@ -487,7 +487,7 @@ for (const [name, arrange, why, voiced = true] of [
     /^render: the scenes' WAVs differ in sample rate: run the voice stage again/m,
   ],
 ]) {
-  test(`render refuses ${name}, naming the fix, before any HyperFrames call`, () => {
+  test(`render refuses ${name} by name, before any HyperFrames call`, () => {
     const fx = fixture();
     if (voiced)
       for (const s of ["script/compile.mjs", "voice/voice.mjs"])

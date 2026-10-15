@@ -293,7 +293,10 @@ async function hyperframes(what, args, cwd) {
 
 // What draws a frame beyond the composition's own files: the npm install
 // (HyperFrames, GSAP) and Chrome by the lock, and each font row's version.
-const kit = [lockHash, ...fontRows.map((r) => `${r.family}@${r.version}`)];
+const renderInputs = [
+  lockHash,
+  ...fontRows.map((r) => `${r.family}@${r.version}`),
+];
 
 // Stills: the uncached scenes in one stills page, a frame each.
 const stillDir = path.join(run, ".cache", "stills");
@@ -301,7 +304,7 @@ fs.mkdirSync(stillDir, { recursive: true });
 const stills = script.scenes.map((s, i) =>
   path.join(
     stillDir,
-    `${hash(files[i], profile, timing(scenes[i]), script.title, kit)}.png`,
+    `${hash(files[i], profile, timing(scenes[i]), script.title, renderInputs)}.png`,
   ),
 );
 const missing = script.scenes.filter((s, i) => !fs.existsSync(stills[i]));
@@ -360,7 +363,7 @@ const listing = (dir) =>
     .filter((e) => e.isFile())
     .map((e) => path.relative(dir, path.join(e.parentPath, e.name)))
     .sort();
-const key = crypto.createHash("sha256").update(JSON.stringify(kit));
+const key = crypto.createHash("sha256").update(JSON.stringify(renderInputs));
 for (const f of listing(comp))
   key.update(f).update(fs.readFileSync(path.join(comp, f)));
 const renderDir = path.join(run, ".cache", "render");

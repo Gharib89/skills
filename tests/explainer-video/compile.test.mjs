@@ -175,6 +175,24 @@ for (const [name, from, to, why] of [
     /^compile: unknown header key narator \(language, narrator, style\)/m,
   ],
   [
+    "a header key in the wrong case",
+    "narrator: am_fenrir",
+    "Narrator: am_fenrir",
+    /^compile: unknown header key Narrator/m,
+  ],
+  [
+    "a line continuing a sentence past its cites",
+    "1. It reads the issue. [ex-1]",
+    "1. It reads the issue. [ex-1]\n   More words.",
+    /^compile: steps: More words\. continues a sentence past its cites/m,
+  ],
+  [
+    "an indented numbered line",
+    "2. It writes a failing test. [ex-2]",
+    "   2. It writes a failing test. [ex-2]",
+    /^compile: steps: not a numbered sentence: +2\. It writes/m,
+  ],
+  [
     "a heading that is not a scene",
     "## Scene gate · The gate",
     "## Gate",
