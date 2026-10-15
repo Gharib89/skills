@@ -43,7 +43,7 @@ function similar(a, b) {
   return 1 - d[b.length] / Math.max(a.length, b.length) >= 0.6;
 }
 
-// One scene's verdict: each measured value, and a failure line per floor missed.
+// One scene's verdict: each measured value, and a failure line per floor or band missed.
 export function check(narration, transcript, seconds) {
   const ref = content(words(narration));
   const hyp = content(words(transcript));

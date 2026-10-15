@@ -53,7 +53,6 @@ if (empty) {
 
 const tools = toolPaths();
 const backend = await loadBackend();
-let ctc;
 
 const cacheDir = path.join(run, ".cache", "voice");
 fs.mkdirSync(cacheDir, { recursive: true });
@@ -79,7 +78,7 @@ const scenes = script.scenes.map((s) => {
 
 // Synthesise `group`'s narration in one call, align it, and cut it into one
 // result per scene at the midpoints of the gaps between scenes.
-async function voice(group) {
+async function voice(group, ctc) {
   const { samples, sampleRate } = await backend.synthesize({
     text: group.map((s) => s.text).join(" "),
     narrator,
@@ -156,9 +155,10 @@ const groups =
   missing.length === scenes.length ? [missing] : missing.map((s) => [s]);
 let failed = 0;
 try {
-  ctc = await backend.aligner({ language, tools });
+  // Every scene cached needs no model.
+  const ctc = groups.length ? await backend.aligner({ language, tools }) : null;
   for (const g of groups)
-    for (const v of await voice(g)) {
+    for (const v of await voice(g, ctc)) {
       const entry = {
         audio: path.join(".cache", "voice", `${v.scene.key}.wav`),
         duration: +(v.samples.length / v.sampleRate).toFixed(3),
