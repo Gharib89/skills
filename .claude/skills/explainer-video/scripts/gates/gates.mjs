@@ -301,8 +301,10 @@ else
   });
 
 // The verdicts. A gate's attempts count its consecutive red renders of this
-// script: a pass, or a changed script, starts it again, and the same render
-// judged again is no new attempt.
+// script, and the run's attempts every red render of it since the last green
+// one, so a red that moves between gates still stops: a pass, or a changed
+// script, starts a count again, and the same render judged again is no new
+// attempt.
 const summary = (ev) =>
   `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;
 const layoutFindings = plan.flatMap((p) => p.found.layout);
@@ -340,28 +342,29 @@ const recordFile = path.join(run, "gates.json");
 const prev = fs.existsSync(recordFile)
   ? JSON.parse(fs.readFileSync(recordFile, "utf8"))
   : null;
+const same = prev?.script === scriptHash;
+const again = same && prev.render === renderHash;
+const count = (red, before) => (!red ? 0 : again ? before || 1 : before + 1);
 const gates = {};
-const again = prev?.script === scriptHash && prev.render === renderHash;
-for (const [name, [evidence, measured, wanted]] of Object.entries(judged)) {
-  const status = evidence.length ? "fail" : "pass";
-  const before =
-    prev?.script === scriptHash ? (prev.gates[name]?.attempts ?? 0) : 0;
+for (const [name, [evidence, measured, wanted]] of Object.entries(judged))
   gates[name] = {
-    status,
+    status: evidence.length ? "fail" : "pass",
     measured,
     floor: wanted,
-    attempts: status === "pass" ? 0 : again ? before || 1 : before + 1,
+    attempts: count(evidence.length, same ? prev.gates[name].attempts : 0),
     evidence,
   };
-}
+const red = Object.entries(gates).filter(([, g]) => g.status === "fail");
+const attempts = count(red.length, same ? prev.attempts : 0);
 fs.writeFileSync(
   recordFile,
-  JSON.stringify({ script: scriptHash, render: renderHash, gates }, null, 2) +
-    "\n",
+  JSON.stringify(
+    { script: scriptHash, render: renderHash, attempts, gates },
+    null,
+    2,
+  ) + "\n",
 );
 
-const red = Object.entries(gates).filter(([, g]) => g.status === "fail");
-const most = Math.max(0, ...red.map(([, g]) => g.attempts));
 const cell = (s) => String(s).replaceAll("|", "\\|");
 fs.writeFileSync(
   path.join(run, "gates.md"),
@@ -388,9 +391,9 @@ console.log(
   `gates: ${Object.keys(gates).length - red.length} pass, ${red.length} fail${
     !red.length
       ? ""
-      : most >= 3
+      : attempts >= 3
         ? "; stop: red after two fix attempts, no video"
-        : `; next: fix attempt ${most} of 2`
+        : `; next: fix attempt ${attempts} of 2`
   }`,
 );
 process.exit(red.length ? 1 : 0);

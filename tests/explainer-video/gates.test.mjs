@@ -101,12 +101,14 @@ function assertRed(fx, r, gate, why) {
   assert.ok(!fs.existsSync(delivered(fx)));
   assert.equal(record(fx).gates[gate].status, "fail");
   assert.equal(record(fx).gates[gate].attempts, 1);
+  assert.equal(record(fx).attempts, 1);
 }
 // Green on the fix: every gate passes, attempts back to 0, the video delivered.
 function assertGreen(fx, r) {
   assert.equal(r.code, 0, r.out + r.err);
   assert.match(r.out, /^gates: 4 pass, 0 fail$/m);
   for (const g of Object.values(record(fx).gates)) assert.equal(g.attempts, 0);
+  assert.equal(record(fx).attempts, 0);
   assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
 }
 
@@ -347,6 +349,26 @@ test("a gate red three times in a row stops; a changed script starts the count a
     /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
+});
+
+test("a red that moves from layout to contrast and back still stops", () => {
+  const fx = fixture();
+  assertRed(fx, render(fx, titled("clipped")), "layout", "clipped");
+  const second = render(fx, titled("dim"));
+  assert.match(
+    second.out,
+    /^gates: 3 pass, 1 fail; next: fix attempt 2 of 2$/m,
+  );
+  assert.equal(record(fx).gates.layout.attempts, 0);
+  assert.equal(record(fx).gates.contrast.attempts, 1);
+  const third = render(fx, titled("clipped"));
+  assert.equal(third.code, 1);
+  assert.match(
+    third.out,
+    /^gates: 3 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+  );
+  assert.equal(record(fx).gates.layout.attempts, 1);
+  assert.equal(record(fx).attempts, 3);
 });
 
 test("the same red render judged again keeps its attempt count", () => {

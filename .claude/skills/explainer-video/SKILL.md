@@ -220,10 +220,12 @@ readable report with every red gate's findings.
 approved script**: the visual's layout, its text size, colours within the
 profile, timing, or re-voiced audio, never the narration, the scene order or
 the scene count. Compile, voice if the audio changed, and render again. The
-attempt count lives in `gates.json` and resets when the narration changes or
-the gate passes. On `stop`, stop with no video and report each red gate's line
-and `gates.md`; a fix that needs the narration, order or count changed is a
-revision of the script the user approved, so ask the user.
+attempt counts live in `gates.json`: each gate's resets when that gate passes,
+and the run's, which `stop` reads, when every gate passes; both reset when the
+narration changes, so a red that moves from one gate to another still stops.
+On `stop`, stop with no video and report each red gate's line and `gates.md`;
+a fix that needs the narration, order or count changed is a revision of the
+script the user approved, so ask the user.
 
 **Floors** are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:
