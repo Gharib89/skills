@@ -4,11 +4,15 @@
 //
 // Reads <run>/script.md: a `# <title>` line, `key: value` header lines
 // (language, default en; narrator; style), then per scene a
-// `## Scene <id> · <title>` heading, a `### Narration` list of numbered
+// `## Scene <id> · <title>` heading, an optional `role: <role> · <n> s` line
+// (hook, context, point, recap or end, and its seconds), a `### Narration`
+// list of numbered
 // sentences (an indented line continues the one above) and one `### Visual`
 // block of JSON. In a sentence `{written|spoken}`
 // shows the written form on screen and voices the spoken one, backticks are
 // dropped, and every sentence ends in `[a, b]`, its cites, or `[no-claim]`.
+// With <run>/brief.json, language, narrator and style come from the brief, and
+// a header key naming another value is refused.
 // stdout: `compile: <n> scene(s) -> script.json`
 // writes: <run>/script.json, and explainers/.gitignore
 // exit:   0 compiled · 1 the file is malformed, `compile: [<scene>: ]<what>`
@@ -35,6 +39,7 @@ const file = path.join(run, "script.md");
 if (!fs.existsSync(file)) fail(null, `no ${file}`);
 const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
 
+const ROLES = ["hook", "context", "point", "recap", "end"];
 let title = null;
 const header = {};
 const scenes = [];
@@ -66,6 +71,12 @@ for (const line of lines) {
         fail(null, `unknown header key ${m[1]} (language, narrator, style)`);
       header[m[1]] = m[2];
     }
+  } else if (!section && (m = line.match(/^role:\s*(.*?)\s*$/))) {
+    const r = m[1].match(/^([a-z]+)\s*·\s*(\d+(?:\.\d+)?)\s*s$/);
+    if (!r || !ROLES.includes(r[1]))
+      fail(scene.id, `role: ${m[1]} is not <${ROLES.join("|")}> · <n> s`);
+    scene.role = r[1];
+    scene.seconds = Number(r[2]);
   } else if (/^### Narration\s*$/.test(line)) section = "narration";
   else if (/^### Visual\s*$/.test(line)) section = "visual";
   else if (section === "narration" && (m = line.match(/^\d+\.\s+(.+)$/)))
@@ -89,6 +100,24 @@ for (const line of lines) {
 if (fence) fail(scene.id, "the ```json visual block is never closed");
 if (!title) fail(null, "no `# <title>` line");
 if (!scenes.length) fail(null, "no `## Scene <id> · <title>` heading");
+
+// The brief, when the run has one, decides the header.
+const briefFile = path.join(run, "brief.json");
+if (fs.existsSync(briefFile)) {
+  const brief = JSON.parse(fs.readFileSync(briefFile, "utf8"));
+  for (const [key, knob] of [
+    ["language", "language"],
+    ["narrator", "voice"],
+    ["style", "style"],
+  ]) {
+    if (header[key] && header[key] !== brief[knob])
+      fail(
+        null,
+        `header ${key} ${header[key]} differs from the brief's ${knob} ${brief[knob]}`,
+      );
+    header[key] = brief[knob];
+  }
+}
 
 const BRACES = /\{([^|}]*)\|([^}]*)\}/g;
 
@@ -171,6 +200,7 @@ const compiled = scenes.map((s) => {
   return {
     id: s.id,
     title: s.title,
+    ...(s.role && { role: s.role, seconds: s.seconds }),
     narration: parts.map((x) => x.narration),
     captions: parts.map((x) => x.captions),
     cites: parts.map((x) => x.cites),

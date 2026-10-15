@@ -1,5 +1,5 @@
 // The `explainers/` folder every run folder sits in. Its `.gitignore` keeps a
-// run's recipe (script.md, style.json, manifest.json) committed and everything
+// run's recipe (brief.json, script.md, style.json, manifest.json) committed and everything
 // a stage can rebuild out of git.
 import fs from "node:fs";
 import path from "node:path";
@@ -11,6 +11,8 @@ const BLOCK = `${BEGIN} (each run folder commits its recipe only)
 */voice.json
 */timeline.json
 */gates.json
+*/check.json
+*/support.json
 */snapshots/
 */.cache/
 */composition/

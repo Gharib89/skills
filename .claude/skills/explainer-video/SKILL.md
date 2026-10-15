@@ -12,16 +12,17 @@ metadata:
 # explainer-video
 
 An **explainer video** is a narrated video, one to five minutes by default,
-made from one or more sources. This version carries five stages: **setup**,
-which every run starts with; **source**, each source read into a source pack;
-**voice**, English narration; **render**, a scene file written with the user
-turned into a captioned MP4; and **gates**, which the render runs and which
-block a video below the floors. The brief, the storyboard and writing the
-script from the pack are not in this version.
-Asked for a video, say in one line that the brief and the storyboard are not
-in this version; given sources, run the source stage,
-then offer to write the scene file with the user from the pack's outline, then
-voice and render it.
+made from one or more sources. This version carries seven stages: **setup**,
+which every run starts with; the **brief**, the user's words laid over the
+defaults; **source**, each source read into a source pack; **script**, a cited
+scene file written from the pack and held to the script gates; **voice**,
+English narration; **render**, the scene file turned into a captioned MP4; and
+**gates**, which the render runs and which block a video below the floors. The
+storyboard is not in this version.
+Asked for a video from sources, run the stages in order, brief, source,
+script, voice, render, without stopping for the user: say in one line that the
+storyboard, where they would approve the script, is not in this version. Asked
+for narration the user writes, skip to Voice or Render.
 
 ## Setup
 
@@ -54,6 +55,39 @@ To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
 and what an earlier install of a missing row left half done.
 
+## Brief
+
+The **brief** is the run's settings, one value per knob, plus what the video
+must include and must avoid. The user's request beside the sources, the
+**steering prompt**, moves knobs off their defaults:
+
+| Knob | Default | Takes |
+| --- | --- | --- |
+| `focus` | the source's main ideas | what the video should say |
+| `length` | 2 | minutes, 1 to 5 |
+| `audience` | a developer new to the source | who watches |
+| `language` | `en` | `en` in this version |
+| `style` | the store default (see Render) | a style profile name |
+| `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
+| `aspect` | `16:9` | `16:9` in this version |
+| `must` | none | a topic or term the video says or shows |
+| `avoid` | none | a topic or term the video never touches |
+
+1. **Write.** Choose a short kebab-case `<slug>` for the video
+   (`ship-overview`), then run `node <skill>/scripts/brief/brief.mjs
+   explainers/<slug> [<knob>=<value>]...`, one argument per knob the steering
+   prompt moves, and `must=<item>` or `avoid=<item>` per list item. A male or
+   female voice asked for is that language's default narrator of that gender.
+   It prints one `brief <knob>: <value>` line per knob: show these lines to the
+   user as the brief. It never stops the run.
+2. **On exit 1**, `brief <knob> <value>: <why>` names a value this version
+   cannot make: tell the user in one line, run again without it, and go on.
+3. **A later change**, from the user or a fix, is the same command with just
+   the knobs that change; the others keep their values, and a list given
+   replaces that list. It prints `brief: <knobs> changed: redo <stages>`:
+   redo only those stages, in order, each reusing its cached work for whatever
+   did not change. The compiled script goes stale, so compile again first.
+
 ## Source
 
 The source stage reads each source into the **source pack**, in the **run
@@ -66,7 +100,7 @@ for this repo), a web page URL, or a `.pdf`, `.md`, `.txt`, `.html`, `.docx` or
 conversation, so a large repo does not crowd out the work.
 
 1. **Snapshot.** `node <skill>/scripts/source/snapshot.mjs explainers/<slug>
-   [--minutes <n>] <source>...`, `--minutes` the target length (default 2).
+   [--minutes <n>] <source>...`, `--minutes` the brief's length.
    It replaces `snapshots/` whole, drafts included, so every reader runs again
    after it. It prints `source <id>: <kind> · <n> <unit> · <source>` per
    source, a repo's followed by `withheld <id>/<path>: <why>` for each file
@@ -86,8 +120,8 @@ conversation, so a large repo does not crowd out the work.
    `<skill>/agents/source-reader.md` as its prompt, its placeholders filled
    from that source's entry in `explainers/<slug>/snapshots/sources.json`
    (`{id}`, `{kind}`, `{source}`, `{snapshot}`, `{share}`), `{run}` the run
-   folder, `{skill}` this skill's folder, and `{focus}` what the user wants the
-   video to say, else "the source's main ideas". Each writes its draft and
+   folder, `{skill}` this skill's folder, and `{focus}` the brief's focus.
+   Each writes its draft and
    replies with its check's pass line. Never read a snapshot or a draft here.
 4. **Pack.** `node <skill>/scripts/source/pack.mjs explainers/<slug>` checks
    every draft again, numbers the excerpts `ex-1`, `ex-2`, ... across the
@@ -95,6 +129,55 @@ conversation, so a large repo does not crowd out the work.
    `pack <id>: ...` line to that source's reader to fix, then pack again.
 5. **Outline.** Read `outline.md`: each source with its summary, each excerpt
    by id, locator and note. A scene file cites an excerpt by id, `[ex-3]`.
+
+## Script
+
+The script stage writes the **scene file**, `explainers/<slug>/script.md` (its
+format is under Render), from the pack's outline and the brief, then holds it
+to the **script gates**.
+
+1. **Write.** Five roles in order, one scene each but `point`, which takes one
+   or more: `hook` (why watch), `context` (what the thing is), `point` (one
+   idea each), `recap` (the points again in brief), `end` (one closing line).
+   Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
+   up to the brief's length. A scene's spoken words are its seconds times the
+   narrator's `rate` in `<skill>/narrators.json`, within 10 percent. Write for
+   the brief's audience, about its focus; say or show each `must` item and none
+   of the `avoid` items. Every sentence that states a fact cites the excerpts
+   that state it; a transition or framing question is `[no-claim]`. No em or
+   en dashes anywhere, and at most 25 words a sentence. Leave the header's
+   `language`, `narrator` and `style` out: the brief supplies them.
+2. **Compile.** As under Render, step 3.
+3. **Support check.** Dispatch one subagent with
+   `<skill>/agents/support-checker.md` as its prompt, `{run}` the run folder
+   and `{skill}` this skill's folder. It writes `support.json`, its verdict on
+   every sentence, and replies with its `script support:` line.
+4. **Gates.** `node <skill>/scripts/script/check.mjs explainers/<slug>` prints
+   one line per gate, `script <gate>: pass`, `fail: <findings>` or `warn:
+   <findings>`, then `script: <p> pass, <f> fail, <w> warn`:
+   - `arc`: the roles in order, each scene with its role line.
+   - `budget`: each scene 12 to 30 s with its words within 10 percent of its
+     seconds at the narrator's rate, and the scenes within 10 percent of the
+     brief's length.
+   - `cites`: every cite in `excerpts.json`, and still word for word in its
+     snapshot.
+   - `support`: every sentence judged `supported` or `connective` on its
+     present wording.
+   - `coverage`: each `must` item said or shown, no `avoid` item anywhere.
+   - `reading`: each visual item on screen long enough to read, from the
+     sentence it rises at to the scene's end: 0.8 s a label of up to three
+     words, else 0.3 s a word and 1.2 s at least, an item's texts added up.
+   - `dashes`: no em or en dash in the scene file.
+   - `sentences`: a sentence over 25 words warns and does not block.
+5. **On exit 1**, fix what each `fail` line names in the scene file, compile,
+   then run the support check again whenever the narration changed, and the
+   gates again. A red `support` line ends the summary in `next: fix attempt <a>
+   of 2`: rewrite each failing sentence to say only what its excerpts say, cite
+   the excerpt that does say it, and give an `unmarked` sentence the cites for
+   its claim or turn it into a transition. On `stop: unsupported claims after
+   two fix attempts`, stop: report each failing sentence and ask the user what
+   the video may say. `script: no <file>` names the stage to run first.
+6. **On exit 0**, report the summary line and go on to Voice.
 
 ## Voice
 
@@ -164,7 +247,11 @@ narrator: am_fenrir
 
 - **Header.** Only `language`, `narrator` and `style`. `language` defaults to
   `en`, the only language render draws; `narrator` and `style` are optional.
-- **Scenes.** `## Scene <id> · <title>`, the id kebab-case and not `main`.
+  With a brief in the run folder, compile takes all three from it and refuses
+  a header key that names another value.
+- **Scenes.** `## Scene <id> · <title>`, the id kebab-case and not `main`,
+  then optionally `role: <role> · <n> s` (see Script), which the script gates
+  need.
 - **Narration.** Numbered sentences in spoken form; an indented line continues
   the sentence above, so its cites go on the last line. `{written|spoken}`
   shows the written form in the captions and voices the spoken one; backticks
@@ -177,9 +264,9 @@ narrator: am_fenrir
   `at*`, `text*`). `at` is a sentence number: that item rises in as the
   sentence starts.
 
-1. **Draft.** Write the scene file with the user from the pack's `outline.md`,
-   citing excerpt ids, or with no sources from what they want the video to
-   say. Done when the user approves the draft.
+1. **Draft.** From sources, the Script stage above wrote and checked the scene
+   file. With none, write it with the user from what they want the video to
+   say, done when they approve the draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
    `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows. Run the
@@ -262,7 +349,7 @@ time. The stage writes `gates.json`, the machine record, and `gates.md`, the
 readable report with every red gate's findings.
 
 **On a red gate**, relay its line and fix what its findings name **inside the
-approved script**: the visual's layout, its text size, colours within the
+script**: the visual's layout, its text size, colours within the
 profile, timing, or re-voiced audio, never the narration, the scene order or
 the scene count. Compile, voice if the audio changed, and render again. The
 attempt counts live in `gates.json`: each gate's count resets when that gate
@@ -271,7 +358,7 @@ reset when the narration changes, so a red that moves from one gate to another
 still stops.
 On `stop`, stop with no video and report each red gate's line and `gates.md`;
 a fix that needs the narration, order or count changed is a revision of the
-script the user approved, so ask the user.
+script, so ask the user.
 
 **Floors** are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:
@@ -281,10 +368,11 @@ dBTP, no lower than -8.5, lower).
 
 ## Recipe
 
-The run folder's **recipe**, `excerpts.json`, `outline.md`, `script.md`,
-`style.json`, `gates.md` and `manifest.json` (skill version, lock hash,
-profile, narrator, delivered path), is committed. `explainers/.gitignore`
+The run folder's **recipe**, `brief.json`, `excerpts.json`, `outline.md`,
+`script.md`, `style.json`, `gates.md` and `manifest.json` (skill version, lock
+hash, profile, narrator, delivered path), is committed. `explainers/.gitignore`
 ignores the rest: the snapshots and drafts, the compiled script, the voice and
-timeline files, `gates.json`, the caches, the composition and `out/`. Every
-stage writes those lines between its `# explainer-video: begin` and `end`
-markers and leaves the file's other lines alone.
+timeline files, `check.json`, `support.json`, `gates.json`, the caches, the
+composition and `out/`. Every stage writes those lines between its
+`# explainer-video: begin` and `end` markers and leaves the file's other lines
+alone.
