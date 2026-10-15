@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.40.0 (2026-10-15)
+
+### Features
+
+- **ship**: Mechanics cover gating calls only; direct calls, Ship notes, and a defect never holds
+  the gate ([#675](https://github.com/Gharib89/skills/pull/675),
+  [`9aaf1be`](https://github.com/Gharib89/skills/commit/9aaf1be800a576b118246e2882b6a899a014ab9d))
+
+
 ## v0.39.1 (2026-10-15)
 
 ### Bug Fixes
