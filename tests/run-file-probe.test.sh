@@ -12,7 +12,7 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 bin=$T/bin repo=$T/repo
 mkdir -p "$bin"
-cp skills/ship/scripts/run-file.sh skills/ship/scripts/dropped-lines.sh skills/ship/scripts/_lib.sh "$bin/"
+cp skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh "$bin/"
 
 git init -q -b main "$repo"
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }
@@ -63,13 +63,6 @@ check "an indented last line is recorded trimmed, carriage return and all" \
 probe "$repo" C7 --file "$rf" -- printf '<%s>\n' 'a b'
 check "an argument holding a space keeps its boundary, so the line re-runs as recorded" \
   'Probe: C7: printf \<%s\>\\n a\ b => exit 0 at '"$head"': <a b>' "$(tail -n 1 "$rf")"
-
-# Every line probe wrote is one close 4 accepts: the gate reads what the verb writes.
-printf '%s\n' 'Declined: C1: claim: notes hold two lines' 'Declined: C5: claim: the output is indented' \
-  'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$rf"
-out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
-check_rc "close 4 accepts every line probe wrote" 0 "$status"
-rf=$(cd "$repo" && bash "$bin/run-file.sh" init 10 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
 
 # --- the call itself -----------------------------------------------------------------
 

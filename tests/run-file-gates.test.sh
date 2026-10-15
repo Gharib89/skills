@@ -3,8 +3,8 @@
 # carries the evidence the diff calls for, `close 7` until each reviewer has a
 # stop reason and a round, and `grade` writes the run's grade. Driven over a
 # fixture repo with an origin, so the diff is the real `git diff` against the
-# real merge base; `dropped-lines` is a stub beside a copy of the mechanic, so
-# each case names the blocks it wants and the suite stands on this mechanic alone.
+# real merge base, beside a `dropped-lines` stub that always reports a removed
+# block, which close 4 leaves to the self-review.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -17,13 +17,8 @@ mkdir -p "$bin"
 cp skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh "$bin/"
 cat > "$bin/dropped-lines.sh" <<'STUB'
 #!/usr/bin/env bash
-printf '%s\n' "$*" > "$DL_ARGS"
-if [ -n "${DL_JSON+x}" ]; then printf '%s\n' "$DL_JSON"; else printf '{"base":"x","blocks":[]}\n'; fi
-exit "${DL_RC:-0}"
+printf '{"base":"x","blocks":[{"id":"scripts/old.sh:1","file":"scripts/old.sh","line":1,"lines":3,"text":"t"}]}\n'
 STUB
-export DL_ARGS=$tmp/dl.args
-blocks() { DL_JSON=$(jq -nc '{base: "x", blocks: [$ARGS.positional[] | {id: ., file: "f", line: 1, lines: 3, text: "t"}]}' --args "$@"); export DL_JSON; }
-noblocks() { unset DL_JSON DL_RC; }
 
 git init -q --bare -b main "$origin"
 git init -q -b main "$work"
@@ -39,7 +34,7 @@ g push -q origin main 2>/dev/null
 g remote set-head origin main
 base=$(g rev-parse HEAD)
 g checkout -q -b feat/x-488
-reset() { g reset -q --hard "$base"; g clean -fdq; noblocks; }
+reset() { g reset -q --hard "$base"; g clean -fdq; }
 
 # One Run file per case, so a refusal's "changes nothing" is that file's bytes.
 n=100
@@ -163,188 +158,27 @@ run4; held=$(cat "$rf"); close 4
 refused "a test file committed on the branch" 'no Reverted-fix line for tests/new.test.sh'
 reset
 
-# --- close 4: dropped-lines ------------------------------------------------------
+# --- close 4: what the self-review weighs is not a gate ----------------------------
 
-blocks 'src/a.sh:12' 'old.sh:3'
-run4; held=$(cat "$rf"); close 4
-refused "dropped blocks with no disposition" 'no disposition for removed block src/a.sh:12: add `Dropped: src/a.sh:12 re-homed at <path>` or `Dropped: src/a.sh:12 dropped on purpose: <why>`'
-check "every undisposed block is named in the one message" yes "$(has 'no disposition for removed block old.sh:3' "$err")"
-check "the read was taken from the diff's merge base" "--base $base" "$(cat "$DL_ARGS")"
-
-run4; add 'Dropped: src/a.sh:12 re-homed at src/b.sh' 'Dropped: old.sh:3 dropped on purpose: obsolete flag'; close 4
-admitted "a re-homed line and a dropped-on-purpose line"
-
-run4; add 'Dropped: src/a.sh:12 re-homed at src/b.sh'; held=$(cat "$rf"); close 4
-refused "one block left undisposed" 'no disposition for removed block old.sh:3'
-check "the disposed block is not named" no "$(has 'removed block src/a.sh:12' "$err")"
-
-run4; add 'Dropped: src/a.sh:12 re-homed at ' 'Dropped: old.sh:3 dropped on purpose:'; held=$(cat "$rf"); close 4
-refused "dispositions with no path and no reason" 'no disposition for removed block src/a.sh:12'
-check "a dropped-on-purpose with no why is refused too" yes "$(has 'no disposition for removed block old.sh:3' "$err")"
-
-blocks 'src/a.sh:12'
-run4; add 'Dropped: src/a.sh:1 re-homed at src/b.sh'; held=$(cat "$rf"); close 4
-refused "a disposition for a block whose id is a prefix of this one" 'no disposition for removed block src/a.sh:12'
-
-blocks 'my file.sh:7'
-run4; add 'Dropped: my file.sh:7 dropped on purpose: moved by hand'; close 4
-admitted "an id holding a space, matched by exact prefix"
-
-# The read failing is a tooling answer, never a clean diff.
-blocks 'src/a.sh:12'; export DL_RC=3
-run4; held=$(cat "$rf"); close 4
-check_rc "dropped-lines exiting non-zero is a tooling error" 2 "$status"
-check "the tooling error names dropped-lines" yes "$(has 'dropped-lines' "$err")"
-check "a tooling error leaves the record as it was" "$held" "$(cat "$rf")"
-noblocks; export DL_JSON='not json'
-run4; held=$(cat "$rf"); close 4
-check_rc "dropped-lines printing non-JSON is a tooling error" 2 "$status"
-check "the non-JSON error names dropped-lines" yes "$(has 'dropped-lines' "$err")"
-check "the non-JSON error leaves the record as it was" "$held" "$(cat "$rf")"
-export DL_JSON='{"base":"x"}'
+# Removed blocks, a new pattern matcher and declined findings are the
+# self-review's judgment: close 4 asks for no Dropped, Near-miss, Declined or
+# Probe line, and a free-text one is not refused.
+reset; put scripts/m.sh 'grep -q foo "$f"'; printf 'gone\n' > "$work/scripts/old.sh"
 run4; close 4
-check_rc "dropped-lines printing no blocks list is a tooling error" 2 "$status"
-noblocks
-
-# --- close 4: near-miss tables ---------------------------------------------------
-
-kinds='partial-token, quoted, indented, unbalanced, unreadable'
-reset; put scripts/m.sh 'grep -q foo "$f"'
-run4; held=$(cat "$rf"); close 4
-refused "a new grep with no near-miss table" "scripts/m.sh has a new pattern matcher and no near-miss line for: $kinds"
-check "the refusal says how to answer each kind" yes "$(has 'add one line per kind, `Near-miss: scripts/m.sh: <kind>: <test path>` or `Near-miss: scripts/m.sh: <kind>: n/a: <reason>`, or `Near-miss: scripts/m.sh: n/a: <reason>` for the whole script' "$err")"
-
-put tests/m.test.sh 'echo t'
-run4
-add 'Near-miss: scripts/m.sh: partial-token: tests/m.test.sh' 'Near-miss: scripts/m.sh: quoted: tests/m.test.sh' \
-    'Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unbalanced: tests/m.test.sh' \
-    'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
-close 4
-admitted "five kinds each naming a test that exists"
-
-run4
-add 'Near-miss: scripts/m.sh: partial-token: tests/m.test.sh' 'Near-miss: scripts/m.sh: quoted: n/a: no comments are parsed' \
-    '- Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
-held=$(cat "$rf"); close 4
-refused "a table missing the unbalanced kind" 'scripts/m.sh has a new pattern matcher and no near-miss line for: unbalanced:'
-check "the kinds it has are not named as missing" no "$(has 'for: partial-token' "$err")"
-
-run4
-add 'Near-miss: scripts/m.sh: partial-token: tests/nope.test.sh' 'Near-miss: scripts/m.sh: quoted: n/a:' \
-    'Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unbalanced: tests/m.test.sh' \
-    'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
-held=$(cat "$rf"); close 4
-refused "a row naming a test that is not a file, and an n/a with no reason" "no near-miss line for: partial-token, quoted:"
-
-# A test path that is an existing file but leaves the checkout, or climbs through
-# `..`, is no test of this change: it is treated as missing.
-for bad in "$work/tests/m.test.sh" "../$(basename "$work")/tests/m.test.sh" "tests/../tests/m.test.sh"; do
-  run4
-  add "Near-miss: scripts/m.sh: partial-token: $bad" 'Near-miss: scripts/m.sh: quoted: tests/m.test.sh' \
-      'Near-miss: scripts/m.sh: indented: tests/m.test.sh' 'Near-miss: scripts/m.sh: unbalanced: tests/m.test.sh' \
-      'Near-miss: scripts/m.sh: unreadable: tests/m.test.sh' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
-  held=$(cat "$rf"); close 4
-  refused "a near-miss test path of $bad" 'no near-miss line for: partial-token:'
-  check "the one bad kind is the only one named for $bad" no "$(has 'quoted' "${err#*no near-miss line for: }")"
-done
-
-run4
-add 'Near-miss: scripts/m.sh: n/a: only a fixed string is searched, no pattern grammar' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'
-close 4
-admitted "one n/a line for the whole script"
-run4
-add 'Near-miss: scripts/m.sh: n/a:' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'; held=$(cat "$rf"); close 4
-refused "a whole-script n/a with no reason" 'scripts/m.sh has a new pattern matcher'
-run4
-add 'Near-miss: scripts/other.sh: n/a: elsewhere' 'Reverted-fix: tests/m.test.sh: n/a: a near-miss fixture'; held=$(cat "$rf"); close 4
-refused "an n/a line for another script" 'scripts/m.sh has a new pattern matcher'
-
-# What counts as a pattern matcher, and as new.
-for body in 'if [[ $x =~ ^a ]]; then :; fi' 'egrep "a|b" f' 'echo x | sed "s/a/b/"' "awk '/^x/ { print }' f" "sed -n '/^x/p' f"; do
-  reset; put scripts/m.sh "$body"
-  run4; held=$(cat "$rf"); close 4
-  refused "the matcher $body" 'scripts/m.sh has a new pattern matcher'
-done
-
-for body in 'echo hello' '# grep -q a b, in a comment' 'case $x in a*) ;; esac' 'cat "$f"'; do
-  reset; put scripts/m.sh "$body"
-  run4; close 4
-  admitted "no matcher in: $body"
-done
-
-reset; put scripts/old.sh $'grep -q a b\necho added'
-run4; close 4
-admitted "a matcher already in the file, with no matcher among the added lines"
-
-reset; put scripts/old.sh $'grep -q a b\ngrep -q c d'
-run4; held=$(cat "$rf"); close 4
-refused "a matcher among the added lines of a changed script" 'scripts/old.sh has a new pattern matcher'
-
-reset; put tests/new.test.sh 'grep -q a b'; put docs/x.md 'grep -q a b'
-run4; add 'Reverted-fix: tests/new.test.sh: n/a: a fixture'; close 4
-admitted "a grep in a test script or a non-script needs no near-miss table"
-
-reset; put .claude/skills/x/scripts/m.sh 'grep -q foo "$f"'
-run4; close 4
-admitted "a matcher in the installed copy under .claude/skills needs no table: its source carries it"
-
-reset; put scripts/m.sh 'grep -q foo "$f"'; g add scripts/m.sh; g commit -q -m 'add m'
-run4; held=$(cat "$rf"); close 4
-refused "a matcher committed on the branch" 'scripts/m.sh has a new pattern matcher'
+admitted "a new matcher and a removed line, with no Near-miss or Dropped line"
+run4; add 'Declined: C1: claim: the caller guards it' 'Declined: C2: out of scope' 'Probe: C9: bash x.sh => exit 2, usage printed'; close 4
+admitted "a claim with no probe, an unmarked decline and a free-text probe"
 reset
-
-# --- close 4: declined findings and their probes ---------------------------------
-
-# A probe line is the one `run-file probe` writes: the command, its exit status
-# and the head it ran on.
-sha=0123456789abcdef0123456789abcdef01234567
-run4; add 'Declined: copilot r1 t2: claim: the guard is already in the caller'; held=$(cat "$rf"); close 4
-refused "a claim with no probe" 'Declined: copilot r1 t2 is a claim and has no probe: run `run-file probe copilot r1 t2 <where> -- <command>...`'
-
-run4; add 'Declined: C1: claim: the caller guards it' "Probe: C1: bash x.sh => exit 2 at $sha: usage printed"; close 4
-admitted "a claim with a produced probe of the same ref"
-run4; add 'Declined: C1: claim: the caller guards it' "- Probe: C1: bash x.sh => exit 0 at ${sha:0:7}: (no output)"; close 4
-admitted "a bulleted produced probe at an abbreviated head"
-
-run4; add 'Declined: copilot:r1: claim: the caller guards it' "Probe: copilot:r1: bash x.sh => exit 2 at $sha: x"; close 4
-admitted "a ref holding a colon with no space after it"
-run4; add 'Declined: C1: claim: the caller guards it' "Probe: C2: bash x.sh => exit 2 at $sha: x"; held=$(cat "$rf"); close 4
-refused "a probe for another ref" 'Declined: C1 is a claim and has no probe'
-
-# The free-text probe the earlier version accepted is refused wherever it stands,
-# naming the mechanic that writes the line now.
-for line in 'bash x.sh => exit 2, usage printed' 'bash x.sh =>' ' => exit 2' 'bash x.sh' "bash x.sh => exit two at $sha: x" 'bash x.sh => exit 2 at HEAD: x' "bash x.sh => exit 2 at $sha"; do
-  run4; add 'Declined: C1: claim: the caller guards it' "Probe: C1: $line"; held=$(cat "$rf"); close 4
-  refused "the free-text probe '$line'" 'Probe: C1 is not a line `run-file probe` wrote: re-run it with `run-file probe C1 <where> -- <command>...`'
-  check "the claim it was meant to back is unbacked too: '$line'" yes "$(has 'Declined: C1 is a claim and has no probe' "$err")"
-done
-run4; add 'Declined: C1: judgment: out of scope' 'Probe: C9: bash x.sh => exit 0'; held=$(cat "$rf"); close 4
-refused "a free-text probe backing no claim" 'Probe: C9 is not a line `run-file probe` wrote'
-
-# The kind is a field, never a phrase in the reason.
-run4; add 'Declined: C1: judgment: a style preference, not the repo house style' 'Declined: C2: judgment: this is already handled in any case'; close 4
-admitted "a judgment decline needs no probe, an old claim phrase in its reason included"
-
-both='write `Declined: C1: claim: <reason>`, which needs `run-file probe C1 <where> -- <command>...`, or `Declined: C1: judgment: <reason>`'
-for line in 'Declined: C1: a style preference' 'Declined: C1: already handled upstream' 'Declined: C1' 'Declined: C1: claim:' 'Declined: C1: judgment:   ' 'Declined: C1: Claim: upper case'; do
-  run4; add "$line"; held=$(cat "$rf"); close 4
-  refused "the unmarked decline '$line'" "Declined: C1 carries neither \`claim:\` nor \`judgment:\` with a reason: $both"
-done
-
-run4; add 'Declined: C1: claim: guarded' 'Declined: C2: claim: guarded' "Probe: C2: x => exit 0 at $sha: y"; held=$(cat "$rf"); close 4
-refused "two claims, one probed" 'Declined: C1 is a claim'
-check "the probed ref is not named" no "$(has 'Declined: C2' "$err")"
 
 # --- close 4: every gap in one message, then the single fix ----------------------
 
-reset; put tests/new.test.sh 'echo new'; put scripts/m.sh 'grep -q foo "$f"'; blocks 'src/a.sh:12'
-run4; add 'Declined: C1: claim: cannot happen'; held=$(cat "$rf"); close 4
-refused "all four gaps at once" 'no Reverted-fix line for tests/new.test.sh'
-for frag in 'no disposition for removed block src/a.sh:12' 'scripts/m.sh has a new pattern matcher' 'Declined: C1 is a claim'; do
+reset; put tests/new.test.sh 'echo new'
+run4bare; held=$(cat "$rf"); close 4
+refused "all three gaps at once" 'no Reverted-fix line for tests/new.test.sh'
+for frag in 'no Round line for self-review' 'no Stop line for self-review'; do
   check "the one message also names: $frag" yes "$(has "$frag" "$err")"
 done
-add 'Reverted-fix: tests/new.test.sh: n/a: a fixture' 'Dropped: src/a.sh:12 dropped on purpose: replaced' \
-    'Near-miss: scripts/m.sh: n/a: fixed-string search' "Probe: C1: bash c.sh => exit 0 at $sha: ok"
+add 'Reverted-fix: tests/new.test.sh: n/a: a fixture' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged'
 close 4
 admitted "close 4 once every item is present"
 check "the closed line carries a range" 1 "$(grep -c '^- \[x\] 4 · .*([0-9][0-9]:[0-9][0-9]→[0-9][0-9]:[0-9][0-9])$' "$rf")"
@@ -380,18 +214,6 @@ run4; PATH=$shim:$PATH call "$bare" close 4 --file "$rf"
 check_rc "close 4 with an origin that has no HEAD is still tooling" 2 "$status"
 check "and the origin is never asked to refresh its HEAD" "" "$(cat "$tmp/set-head.log" 2>/dev/null)"
 git -C "$bare" remote remove origin
-
-# A grep that fails (exit 2, as against 1 for no match) is a failed read, never a
-# clean answer: the untracked-file lookup exits 2.
-printf '#!/bin/sh\ncase "$*" in *-Fxq*) exit 2 ;; esac\nexec %s "$@"\n' "$(command -v grep)" > "$shim/grep"
-chmod +x "$shim/grep"
-reset; put scripts/m.sh 'grep -q foo "$f"'
-run4; held=$(cat "$rf")
-PATH=$shim:$PATH call "$work" close 4 --file "$rf"
-check_rc "a grep that fails while telling untracked from tracked is tooling" 2 "$status"
-check "and says which path it could not place" yes "$(has 'cannot tell whether scripts/m.sh is untracked' "$err")"
-check "and that record is as it was" "$held" "$(cat "$rf")"
-rm "$shim/grep"
 
 # The two reads a produced red line takes, the diff since its head and the
 # untracked files among its paths, are tooling when they fail, never fresh.

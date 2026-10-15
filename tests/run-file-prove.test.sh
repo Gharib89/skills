@@ -13,7 +13,7 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 bin=$T/bin repo=$T/repo
 mkdir -p "$bin"
-cp skills/ship/scripts/run-file.sh skills/ship/scripts/revert-red.sh skills/ship/scripts/dropped-lines.sh skills/ship/scripts/_lib.sh "$bin/"
+cp skills/ship/scripts/run-file.sh skills/ship/scripts/revert-red.sh skills/ship/scripts/_lib.sh "$bin/"
 
 git init -q -b main "$repo"
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }

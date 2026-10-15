@@ -17,13 +17,11 @@ err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
 rc()   { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 
 # `close 4` reads the checkout's diff, which here is the change under test. A
-# case that needs only the flip runs it from a repo with no diff, beside a copy
-# of the mechanic whose `dropped-lines` finds nothing; the gates themselves are
-# `tests/run-file-gates.test.sh`'s.
+# case that needs only the flip runs it from a repo with no diff, with a copy of
+# the mechanic; the gates themselves are `tests/run-file-gates.test.sh`'s.
 quiet=$tmp/quiet-bin quietrepo=$tmp/quiet
 mkdir -p "$quiet" "$quietrepo.origin"
 cp skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh "$quiet/"
-printf '#!/usr/bin/env bash\nprintf '"'"'{"base":"x","blocks":[]}\\n'"'"'\n' > "$quiet/dropped-lines.sh"
 git init -q --bare -b main "$quietrepo.origin"
 git init -q -b main "$quietrepo"
 git -C "$quietrepo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m one
