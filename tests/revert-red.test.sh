@@ -63,6 +63,11 @@ cd "$(dirname "$0")/.." || exit 2
 echo MARKER-RED-AT-HEAD >&2
 exit 1
 EOF2
+# Another runner's tests, run through a command: one red on a reverted lib.sh,
+# one red at HEAD, and one that calls a host before it passes.
+printf '%s\n' 'import sys' "sys.exit(0 if 'echo 2' in open('lib.sh').read() else 1)" > "$repo/tests/answer_check.py"
+printf '%s\n' 'import sys' 'print("MARKER-PY-RED-AT-HEAD")' 'sys.exit(1)' > "$repo/tests/redhead_check.py"
+printf '%s\n' 'import subprocess' 'subprocess.run(["gh", "api", "repos/x/y"])' > "$repo/tests/hostcall_check.py"
 git -C "$repo" add -A && git -C "$repo" commit -qm test
 
 # <args>...: the script's exit code, stdout, or stderr, run from the fixture repo.
@@ -88,13 +93,13 @@ check_rc "reverting a file the test does not depend on exits 1" \
   1 "$(rc_of tests/answer.test.sh extra.sh)"
 
 check "a red test says so in one JSON verdict" \
-  '{"test":"tests/answer.test.sh","paths":["lib.sh"],"red":true}' \
+  '{"test":"tests/answer.test.sh","paths":["lib.sh"],"red":true,"command":["bash","tests/answer.test.sh"]}' \
   "$(out_of tests/answer.test.sh lib.sh | jq -c .)"
 check "a verdict lists every path reverted, in order" \
-  '{"test":"tests/extra.test.sh","paths":["lib.sh","extra.sh"],"red":true}' \
+  '{"test":"tests/extra.test.sh","paths":["lib.sh","extra.sh"],"red":true,"command":["bash","tests/extra.test.sh"]}' \
   "$(out_of tests/extra.test.sh lib.sh extra.sh | jq -c .)"
 check "a green test says red false" \
-  '{"test":"tests/unrelated.test.sh","paths":["lib.sh"],"red":false}' \
+  '{"test":"tests/unrelated.test.sh","paths":["lib.sh"],"red":false,"command":["bash","tests/unrelated.test.sh"]}' \
   "$(out_of tests/unrelated.test.sh lib.sh | jq -c .)"
 check "a green test names the vacuous test on stderr" \
   "revert-red: tests/unrelated.test.sh stays green with lib.sh reverted, so it does not prove the fix." \
@@ -116,8 +121,8 @@ check "and as a JSON error with no verdict on stdout" \
 # is red before anything is reverted, reads red whatever the fix does.
 check_rc "a non-shell test is refused, not read as red" \
   2 "$(rc_of tests/answer_test.py lib.sh)"
-check "and the refusal names the .sh rule and the n/a escape" \
-  "revert-red runs shell tests (a .sh file); for another runner revert the path by hand and record \`Reverted-fix: <test>: n/a: <reason>\`" \
+check "and the refusal names the .sh rule, the command form and the n/a escape" \
+  "revert-red runs a .sh test under bash; for another runner pass its command after \`--\` (\`revert-red <test> <path>... -- <command>...\`), or record \`Reverted-fix: <test>: n/a: <reason>\`" \
   "$(out_of tests/answer_test.py lib.sh | jq -r .error)"
 check_rc "a test red at HEAD is refused, not read as red" \
   2 "$(rc_of tests/redhead.test.sh lib.sh)"
@@ -142,6 +147,48 @@ check "and the call is still named" \
   "    gh api repos/x/y" \
   "$(cd "$repo" && bash "$standalone/revert-red.sh" tests/hostcall.test.sh lib.sh 2>&1 >/dev/null | grep '^    ')"
 
+# --- another runner's test, through its command --------------------------------
+
+# python3 stands in for any runner: the command is argv, run at the tree's top.
+check_rc "a non-shell test run by its command goes red on the revert and exits 0" \
+  0 "$(rc_of tests/answer_check.py lib.sh -- python3 tests/answer_check.py)"
+check "and the verdict carries the command as argv" \
+  '{"test":"tests/answer_check.py","paths":["lib.sh"],"red":true,"command":["python3","tests/answer_check.py"]}' \
+  "$(out_of tests/answer_check.py lib.sh -- python3 tests/answer_check.py | jq -c .)"
+check_rc "a command that stays green on the revert exits 1" \
+  1 "$(rc_of tests/answer_check.py extra.sh -- python3 tests/answer_check.py)"
+check_rc "a command red at HEAD is refused, not read as red" \
+  2 "$(rc_of tests/redhead_check.py lib.sh -- python3 tests/redhead_check.py)"
+check "and the HEAD run's own output is the evidence on stderr" \
+  "MARKER-PY-RED-AT-HEAD" "$(err_of tests/redhead_check.py lib.sh -- python3 tests/redhead_check.py | grep MARKER)"
+check_rc "a command that calls a host is tooling, not red" \
+  2 "$(rc_of tests/hostcall_check.py lib.sh -- python3 tests/hostcall_check.py)"
+check "and the call is named on stderr" \
+  "    gh api repos/x/y" \
+  "$(err_of tests/hostcall_check.py lib.sh -- python3 tests/hostcall_check.py | grep '^    ')"
+# The word that names the test may carry a leading ./ on either side, or be a
+# pytest node ID under it.
+check_rc "a command naming the test with a leading ./ runs" \
+  0 "$(rc_of tests/answer_check.py lib.sh -- python3 ./tests/answer_check.py)"
+check_rc "a test typed with a leading ./ matches a command naming it bare" \
+  0 "$(rc_of ./tests/answer_check.py lib.sh -- python3 tests/answer_check.py)"
+check_rc "a command naming a node ID under the test runs" \
+  0 "$(rc_of tests/answer_check.py lib.sh -- sh -c 'exec python3 tests/answer_check.py' tests/answer_check.py::test_answer)"
+# A command that names another test could go red for that test, and the line
+# would credit this one.
+check_rc "a command that does not name the test is refused" \
+  2 "$(rc_of tests/answer_check.py lib.sh -- touch "$T/ran")"
+check "and nothing ran" "" "$(ls "$T/ran" 2>/dev/null)"
+check "and the refusal says the command must name the test" \
+  "the command after -- must name tests/answer_check.py as one of its words (or a node ID under it, tests/answer_check.py::<name>), so its red is that test's" \
+  "$(out_of tests/answer_check.py lib.sh -- touch "$T/ran" | jq -r .error)"
+check_rc "a word that only starts with the test's name is not the test" \
+  2 "$(rc_of tests/answer_check.py lib.sh -- python3 tests/answer_check.pyc)"
+check_rc "a -- with no command is a usage error" \
+  2 "$(rc_of tests/answer_check.py lib.sh --)"
+check_rc "a -- with no path before it is a usage error" \
+  2 "$(rc_of tests/answer_check.py -- python3 tests/answer_check.py)"
+
 # --- it leaves nothing behind ------------------------------------------------
 
 check "the fixture repo keeps its one worktree" \
@@ -154,16 +201,16 @@ check "the fixture's own tree is untouched" \
 help=$(cd "$T" && bash "$script" --help 2>"$T/err"); rc=$?
 check_rc "--help exits 0 from a directory that is no repository" 0 "$rc"
 check "--help opens with the usage line" \
-  "usage: revert-red <test> <path>..." "$(sed -n 1p <<<"$help")"
+  "usage: revert-red <test> <path>... [-- <command>...]" "$(sed -n 1p <<<"$help")"
 check "--help names its stdout fields next" "stdout:" "$(sed -n 2p <<<"$help" | cut -c1-7)"
 check "--help writes nothing on stderr" "" "$(cat "$T/err")"
 
 # Exit 1 means the test proved nothing, so a malformed call must not share it.
 check_rc "no arguments is a usage error" 2 "$(rc_of)"
 check "a bad call prints one JSON object carrying the usage line" \
-  "usage: revert-red <test> <path>..." "$(out_of | jq -r .error)"
+  "usage: revert-red <test> <path>... [-- <command>...]" "$(out_of | jq -r .error)"
 check "a flag where the test belongs is refused with the usage line" \
-  "usage: revert-red <test> <path>..." "$(out_of --x lib.sh | jq -r .error)"
+  "usage: revert-red <test> <path>... [-- <command>...]" "$(out_of --x lib.sh | jq -r .error)"
 check_rc "a test with no path is a usage error" 2 "$(rc_of tests/answer.test.sh)"
 # A test file bash cannot open exits non-zero, which would read as red.
 check_rc "a test missing at HEAD is refused, not read as red" \

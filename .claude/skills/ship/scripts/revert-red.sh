@@ -18,31 +18,48 @@
 # shell's "command not found". A run that reaches a host, at HEAD or reverted, is
 # exit 2, since the red it shows is the stub's 127.
 #
-#   revert-red <test> <path>...
+#   revert-red <test> <path>... [-- <command>...]
 #
 # <test> and each <path> are files relative to the repo root; a directory is refused.
-# <test> runs under bash, so it is a `.sh` file: another runner's test is refused
-# (revert the path by hand and record `Reverted-fix: <test>: n/a: <reason>`).
-# stdout: {test, paths, red}   red: true when the test failed on the reverted tree
+# With no <command>, <test> runs under bash, so it is a `.sh` file and another
+# runner's test is refused. With one, <command> runs as argv, never through a
+# shell string, at the temp worktree's top in place of `bash <test>`, and must
+# name <test> as one of its words, or a node ID under it (`<test>::<name>`), a
+# leading `./` on either side aside: a command that names no word of it could go
+# red for another test, and the line would credit this one.
+# stdout: {test, paths, red, command}   red: true when the test failed on the
+#   reverted tree; command: the argv that ran, `["bash", <test>]` by default
 # stderr: the test's last 40 lines when it went red, the evidence it failed (or,
 #   exit 2, when it was already red at HEAD); on a green run, one line saying the
 #   test does not prove the fix
 # exit: 0 the test went red on the reverted tree · 1 it stayed green, so it does
 #       not prove the fix (the verdict, red false, is still on stdout) · 2 tooling,
-#       a bad call, a non-`.sh` test, a test already red at HEAD, or a tree that
-#       reached a host, none of which is a verdict
+#       a bad call, a non-`.sh` test with no command, a command not naming the
+#       test, a test already red at HEAD, or a tree that reached a host, none of
+#       which is a verdict
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: revert-red <test> <path>...'
+usage='usage: revert-red <test> <path>... [-- <command>...]'
 ship_help "$usage" "$@"
 ship_args "$usage" "arg arg" "$@"
 test_path=$1
 shift
+paths=()
+while [ $# -gt 0 ] && [ "$1" != -- ]; do paths+=("$1"); shift; done
+given=false command=(bash "$test_path")
+if [ $# -gt 0 ]; then
+  shift
+  # An empty first word runs nothing.
+  [ -n "${1:-}" ] || ship_tooling "$usage"
+  given=true command=("$@")
+fi
+set -- "${paths[@]}"
 
 # verdict <red> <path>...: the one JSON answer.
 verdict() {
   local red=$1; shift
-  jq -n --arg t "$test_path" --argjson r "$red" '{test: $t, paths: $ARGS.positional, red: $r}' --args "$@"
+  jq -n --arg t "$test_path" --argjson r "$red" --argjson c "$(jq -nc '$ARGS.positional' --args "${command[@]}")" \
+    '{test: $t, paths: $ARGS.positional, red: $r, command: $c}' --args "$@"
 }
 
 # `cd ""` succeeds without moving, so the toplevel is read and checked first.
@@ -53,10 +70,21 @@ base=$(git merge-base HEAD "$tip" 2>/dev/null) || ship_tooling "no merge base be
 
 # bash reads any other runner's test as a syntax error, which is red whatever the
 # fix does.
-case $test_path in
-  *.sh) ;;
-  *) ship_tooling "revert-red runs shell tests (a .sh file); for another runner revert the path by hand and record \`Reverted-fix: <test>: n/a: <reason>\`" ;;
-esac
+if ! $given; then
+  case $test_path in
+    *.sh) ;;
+    *) ship_tooling "revert-red runs a .sh test under bash; for another runner pass its command after \`--\` (\`revert-red <test> <path>... -- <command>...\`), or record \`Reverted-fix: <test>: n/a: <reason>\`" ;;
+  esac
+fi
+# undot <path>: the path with every leading `./` taken off.
+undot() { local p=$1; while [ "${p#./}" != "$p" ]; do p=${p#./}; done; printf '%s' "$p"; }
+want=$(undot "$test_path")
+named=false
+for w in "${command[@]}"; do
+  w=$(undot "$w")
+  case $w in "$want" | "$want"::*) named=true; break ;; esac
+done
+$named || ship_tooling "the command after -- must name $test_path as one of its words (or a node ID under it, $test_path::<name>), so its red is that test's"
 
 # A test bash cannot open exits non-zero and would read as red; a mistyped path
 # reverts nothing, so the test stays green and would read as vacuous.
@@ -89,7 +117,7 @@ done
 # run_test <label>: the test in the temp worktree, its output in $log, its exit
 # status in $rc. A run that reached a host is exit 2 whatever the test answered.
 run_test() {
-  (cd "$wt" && PATH="$tmp/stub:$PATH" SHIP_REVERT_HOSTLOG="$hostlog" bash "$test_path") >"$log" 2>&1
+  (cd "$wt" && PATH="$tmp/stub:$PATH" SHIP_REVERT_HOSTLOG="$hostlog" "${command[@]}" </dev/null) >"$log" 2>&1
   rc=$?
   if [ -s "$hostlog" ]; then
     ship_tooling "$(echo "revert-red: $test_path reached a host $1:"; head -n 20 "$hostlog" | sed 's/^/    /')"

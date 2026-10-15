@@ -17,7 +17,7 @@
 #   run-file gate read --head <sha> <where>
 #   run-file gate clean <ci-file|-> --head <sha> <where>
 #   run-file timing <where>
-#   run-file prove <test> <path>... <where>
+#   run-file prove <test> <path>... <where> [-- <command>...]
 #   run-file probe <ref> <where> -- <command>...
 #   run-file call <why> <where> -- <command>...
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
@@ -113,7 +113,9 @@
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
 # it wrote.
 #
-# `prove` runs the sibling `revert-red` on <test> and its <path>s. On its exit 0
+# `prove` runs the sibling `revert-red` on <test> and its <path>s, and on the
+# <command> after `--` where one is given, which runs another runner's test in
+# place of `bash <test>` and must name <test>. On its exit 0
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under
 # `## Evidence`, <sha> the HEAD revert-red ran on; on its exit 1 or 2 it writes
 # nothing and exits with that code, passing revert-red's answer through. It
@@ -148,7 +150,7 @@
 #   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}}
 #   timing: {run_file, start_to_pr, pr_to_gate, phases{}, row}; a skipped phase
 #     reads `skipped` and a phase with no range `unverified`
-#   prove: {test, paths, red, run_file, head}, revert-red's verdict plus the
+#   prove: {test, paths, red, command, run_file, head}, revert-red's verdict plus the
 #     record and the head, its paths as typed where the line normalises them;
 #     on a refusal revert-red's own answer
 #   probe: {run_file, ref, command, exit, head, last}
@@ -195,7 +197,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>... | call <why> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -1276,7 +1278,11 @@ prove)
   args=()
   while [ $# -gt 0 ]; do case $1 in --*) break ;; esac; args+=("$1"); shift; done
   [ ${#args[@]} -ge 2 ] || ship_tooling "$usage"
-  parse_file "$@"
+  # <where> ends at `--`; the command tail, `--` included, goes to revert-red as
+  # typed.
+  where=()
+  while [ $# -gt 0 ] && [ "$1" != -- ]; do where+=("$1"); shift; done
+  parse_file ${where[@]+"${where[@]}"}
   no_extra
   # `close 4` looks the line up by the path git diff prints, top-relative with
   # no leading `./`, so the line is written in that form. revert-red takes the
@@ -1291,7 +1297,7 @@ prove)
     case $p in *[[:space:]]*) ship_tooling "prove cannot record '$p': a reverted path holding whitespace cannot be read back from its line" ;; esac
   done
   head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "prove records the head revert-red runs on: not inside a git checkout with a commit"
-  answer=$(bash "$(dirname "${BASH_SOURCE[0]}")/revert-red.sh" "${args[@]}")
+  answer=$(bash "$(dirname "${BASH_SOURCE[0]}")/revert-red.sh" "${args[@]}" "$@")
   rc=$?
   [ "$rc" -eq 0 ] || { printf '%s\n' "$answer"; exit "$rc"; }
   out=$(jq -c --arg f "$file" --arg h "$head" '. + {run_file: $f, head: $h}' <<<"$answer" 2>/dev/null) \
