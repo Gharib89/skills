@@ -74,7 +74,7 @@ conversation, so a large repo does not crowd out the work.
    file, a secret file name, a secret pattern in its text: relay these), then
    `budget: <b> excerpts (...); shares <id> <n>, ...`, the budget being 8 per
    minute, at least 12. A repo snapshot holds only the files git tracks or
-   would track, never an ignored one.
+   would track, never an ignored one, and nothing under `explainers/`.
 3. **On exit 1**, nothing was read: relay each `source <source>: <why>` line.
    A scanned PDF has no text to read, and a folder outside git cannot say
    which of its files are ignored: ask the user for the source in another

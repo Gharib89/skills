@@ -4,8 +4,8 @@
 //
 // A source is a git repo folder, a web page URL, or a .pdf, .md, .txt, .html,
 // .docx or .pptx file. A repo snapshot is a copy of the files git lists as
-// tracked or untracked and not ignored, less the run folder's own files,
-// `.env*` files and any file whose name or text matches a secret pattern. A page, and an HTML file, render in
+// tracked or untracked and not ignored, less the explainers folder holding
+// the run, `.env*` files and any file whose name or text matches a secret pattern. A page, and an HTML file, render in
 // HyperFrames' Chrome first; HTML and DOCX end as Markdown, a PDF as one block
 // per page, a PPTX as one per slide and one per slide's notes, each after a
 // `<!-- page <n> -->` or `<!-- slide <n>[ notes] -->` marker line. Markdown
@@ -254,10 +254,10 @@ for (const [i, s] of given.entries()) {
         title = path.basename(path.resolve(s));
         for (const f of files) {
           const from = path.join(s, f);
-          // The run folder's own files are this video's output, not its source.
+          // Every run folder's files are a video's output, not its source.
           if (
             !path
-              .relative(path.resolve(run), path.resolve(from))
+              .relative(path.dirname(path.resolve(run)), path.resolve(from))
               .startsWith("..")
           )
             continue;

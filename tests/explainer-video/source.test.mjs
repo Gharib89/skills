@@ -188,15 +188,18 @@ test("a repo source snapshots tracked and unignored files and never an ignored f
   );
 });
 
-test("a repo holding the run folder leaves the run's own files out, and a source named twice is read once", () => {
+test("a repo holding the explainers folder leaves every run's files out, and a source named twice is read once", () => {
   const fx = fixture();
   const proj = path.join(fx.tmp, "proj");
   fs.writeFileSync(path.join(proj, "README.md"), "# Proj\n");
   fs.writeFileSync(path.join(fx.dir, "outline.md"), "# An earlier pack\n");
   fs.mkdirSync(path.join(fx.dir, "snapshots"));
   fs.writeFileSync(path.join(fx.dir, "snapshots", "old.md"), "stale\n");
+  const other = path.join(proj, "explainers", "other");
+  fs.mkdirSync(other);
+  fs.writeFileSync(path.join(other, "outline.md"), "# Another video\n");
   git(proj, "init", "-q");
-  git(proj, "add", "README.md");
+  git(proj, "add", "README.md", "explainers/other/outline.md");
   const s = snapshot(fx, [proj, `${proj}/`]);
   assert.equal(s.code, 0, s.out + s.err);
   assert.deepEqual(
