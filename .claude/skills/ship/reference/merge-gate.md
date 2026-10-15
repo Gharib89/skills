@@ -119,9 +119,9 @@ result is the same phase-3 result as its line in `## Verification`. The
 `Self-review` rounds and stop are read from the Run file's `Round: self-review`
 and `Stop: self-review:` lines, and its reports from the phase-4 Report files; a
 report whose file is no longer on disk is `unverified`. A Ship defect or Ship
-note met after phase 7's body rewrite is written into `## Needs attention`
-with `update-pr-body <pr> --section "Needs attention"`, then `read-pr`, before
-the summary, so that pair still agrees.
+note met after phase 7's body rewrite is written into `## Needs attention` with
+`update-pr-body <pr> --section "Needs attention" --body-file <file>`, then
+`read-pr`, before the summary, so that pair still agrees.
 
 **A wrong title is fixed before the merge**, with `update-pr-title`, before the
 summary is posted: the merge freezes the PR title as the squash subject, so the
