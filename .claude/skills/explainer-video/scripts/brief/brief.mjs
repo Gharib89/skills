@@ -10,14 +10,16 @@
 // stdout: `brief <knob>: <value>` per knob, then `brief: written -> brief.json`
 //         for a new brief, `brief: unchanged`, or `brief: <knobs> changed:
 //         redo <stages>`, naming only the stages those knobs feed
-// writes: <run>/brief.json; a change removes <run>/script.json, since the
-//         compiled script carries the brief's language, narrator and style
+// writes: <run>/brief.json; a language, voice or style change removes
+//         <run>/script.json, since the compiled script carries all three, and
+//         a change the script stage redoes removes <run>/check.json, so the
+//         new script's support fix attempts count from none
 // exit:   0 written · 1 a value this version cannot make, `brief <knob>
 //         <value>: <why>` on stderr · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { skill } from "../lib/tools.mjs";
-import { FALLBACK, stores } from "../lib/style.mjs";
+import { defaultStyle, stores } from "../lib/style.mjs";
 
 const KNOBS = [
   "focus",
@@ -37,7 +39,7 @@ const FEEDS = {
   audience: ["script"],
   language: ["script", "voice", "render"],
   style: ["render"],
-  voice: ["voice", "render"],
+  voice: ["script", "voice", "render"],
   aspect: ["render"],
   must: ["script"],
   avoid: ["script"],
@@ -65,6 +67,13 @@ for (const a of args) {
     (lists[m[1]] ??= []).push(...(m[2].trim() ? [m[2].trim()] : []));
   else given[m[1]] = m[2].trim();
 }
+// A narrator kept from the last brief only while it speaks the language.
+if (
+  !("voice" in given) &&
+  old &&
+  (given.language ?? old.language) === old.language
+)
+  given.voice = old.voice;
 
 function refuse(knob, value, why) {
   console.error(
@@ -77,20 +86,14 @@ const narrators = JSON.parse(
   fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
 ).narrators;
 const styles = stores(path.dirname(path.resolve(run)));
-const read = (f) =>
-  fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim() || null : null;
 
 const brief = {
   focus: given.focus ?? old?.focus ?? "the source's main ideas",
   length: given.length ?? old?.length ?? 2,
   audience: given.audience ?? old?.audience ?? "a developer new to the source",
   language: given.language ?? old?.language ?? "en",
-  style:
-    given.style ??
-    old?.style ??
-    styles.map((d) => read(path.join(d, "default"))).find(Boolean) ??
-    FALLBACK,
-  voice: given.voice ?? old?.voice,
+  style: given.style ?? old?.style ?? defaultStyle(styles),
+  voice: given.voice,
   aspect: given.aspect ?? old?.aspect ?? "16:9",
   must: lists.must ?? old?.must ?? [],
   avoid: lists.avoid ?? old?.avoid ?? [],
@@ -139,7 +142,12 @@ fs.writeFileSync(file, JSON.stringify(brief, null, 2) + "\n");
 if (!changed) console.log("brief: written -> brief.json");
 else if (!changed.length) console.log("brief: unchanged");
 else {
-  fs.rmSync(path.join(run, "script.json"), { force: true });
+  // The compiled script carries the language, narrator and style, and the
+  // script gates' fix attempts belong to the script being rewritten.
+  if (changed.some((k) => ["language", "voice", "style"].includes(k)))
+    fs.rmSync(path.join(run, "script.json"), { force: true });
   const redo = STAGES.filter((s) => changed.some((k) => FEEDS[k].includes(s)));
+  if (redo.includes("script"))
+    fs.rmSync(path.join(run, "check.json"), { force: true });
   console.log(`brief: ${changed.join(", ")} changed: redo ${redo.join(", ")}`);
 }
