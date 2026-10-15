@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.0 (2026-10-15)
+
+### Features
+
+- **setup-skills**: Template and update-skills write the coloured Door line
+  ([#688](https://github.com/Gharib89/skills/pull/688),
+  [`8237b02`](https://github.com/Gharib89/skills/commit/8237b02c5a1627d9a3806fbef5cbec8c1f92ca94))
+
+
 ## v0.23.0 (2026-10-14)
 
 ### Features
