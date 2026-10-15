@@ -148,9 +148,11 @@ matches() { # <file> <globs>: 0 when one of the globs matches the file name
   return 1
 }
 
-# <file>: 0 when the file sits under an EXCLUDED prefix.
+# <file>: 0 when the file sits under an EXCLUDED prefix, or under .claude/skills/:
+# installed skills, which detection and the runner config skip with no line.
 excluded() {
   local p
+  case $1 in .claude/skills/*) return 0 ;; esac
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     case $1 in "$p"*) return 0 ;; esac

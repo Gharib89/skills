@@ -209,6 +209,20 @@ run "$r" turn tests/fixtures/app.py
 check "a file under an EXCLUDED prefix is not the root member's" \
   '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
 
+# Installed skills: derived copies detection never scans, excluded with no
+# profile line.
+r=$(repo installed "EDIT_GLOBS='*.mjs'
+EDIT_RUN='lint {files}'
+TURN_ROWS='skills/x/|x|*.mjs|ok|ok|'")
+mkdir -p "$r/.claude/skills/x"
+echo 'BAD' > "$r/.claude/skills/x/a.mjs"
+run "$r" turn .claude/skills/x/a.mjs
+check "an installed skill's file is no new root without an Excluded: line" \
+  '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' "$out"
+run "$r" edit .claude/skills/x/a.mjs
+check "the edit rung skips an installed skill's file" \
+  '{"rung":"edit","verdict":"skipped","checks":{"runner":"skipped"}}' "$out"
+
 r=$(repo full "FULL_RUN='ok'
 TURN_ROWS='$rows'
 FULL_ROWS='check-target|ok'")
