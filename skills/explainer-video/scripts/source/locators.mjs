@@ -54,8 +54,8 @@ function lines(text, a, b) {
 // Whitespace runs as one space: word for word, not byte for byte.
 export const squash = (s) => s.replace(/\s+/g, " ").trim();
 
-// The text a locator names in a source's snapshot, or `{error}` saying why
-// there is none.
+// The stretches a locator names in a source's snapshot, one per section for a
+// heading used twice, or `{error}` saying why there are none.
 export function segment(run, source, locator) {
   const snap = path.join(run, "snapshots", source.snapshot);
   const read = () => fs.readFileSync(snap, "utf8");
@@ -74,14 +74,16 @@ export function segment(run, source, locator) {
     const text = lines(fs.readFileSync(file, "utf8"), a, b);
     return text === null
       ? { error: `no lines ${a}-${b} in ${m[1]}` }
-      : { text };
+      : { texts: [text] };
   }
   if (["md", "txt"].includes(source.kind)) {
     m = locator.match(/^lines? (\d+)(?:-(\d+))?$/);
     if (m) {
       const [a, b] = range(m);
       const text = lines(read(), a, b);
-      return text === null ? { error: `no lines ${a}-${b}` } : { text };
+      return text === null
+        ? { error: `no lines ${a}-${b}` }
+        : { texts: [text] };
     }
   }
   if (["md", "html", "docx", "page"].includes(source.kind)) {
@@ -89,7 +91,7 @@ export function segment(run, source, locator) {
     if (m) {
       const hits = sections(read()).filter((s) => s.heading === squash(m[1]));
       return hits.length
-        ? { text: hits.map((s) => s.text).join("\n") }
+        ? { texts: hits.map((s) => s.text) }
         : { error: `no section "${m[1]}"` };
     }
   }
@@ -97,7 +99,9 @@ export function segment(run, source, locator) {
     const want = source.kind === "pdf" ? /^page \d+$/ : /^slide \d+( notes)?$/;
     if (want.test(locator)) {
       const text = byMarker(read()).get(locator);
-      return text === undefined ? { error: `no ${locator}` } : { text };
+      return text === undefined
+        ? { error: `no ${locator}` }
+        : { texts: [text] };
     }
   }
   return {

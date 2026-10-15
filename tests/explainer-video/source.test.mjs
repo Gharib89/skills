@@ -311,6 +311,23 @@ test("a Markdown excerpt locates by section or by line", () => {
   assert.match(snapshot(fx, [f]).out, /^source guide: md · 3 section\(s\) · /);
 });
 
+test("a heading used twice locates in either section, never across the two", () => {
+  const fx = fixture();
+  const f = write(
+    fx,
+    "ex.md",
+    "# Ex\n\n## Example\n\nAlpha ends.\n\n## Other\n\nMiddle.\n\n## Example\n\nBeta starts.\n",
+  );
+  assert.equal(snapshot(fx, [f]).code, 0);
+  draft(fx, "ex", [
+    ["§ Example", "Alpha ends."],
+    ["§ Example", "Beta starts."],
+  ]);
+  assert.equal(pack(fx, ["ex"]).code, 0);
+  draft(fx, "ex", [["§ Example", "Alpha ends. ## Example Beta starts."]]);
+  assert.match(pack(fx, ["ex"]).err, /not word for word in § Example/);
+});
+
 test("a text excerpt locates by line", () => {
   const fx = fixture();
   const f = write(fx, "notes.txt", "first line\nsecond line\nthird line\n");

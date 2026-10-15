@@ -78,7 +78,7 @@ for (const src of chosen) {
         return problem(src.id, `${at}: no ${f}`);
     const seg = segment(run, src, ex.locator.trim());
     if (seg.error) return problem(src.id, `${at}: ${ex.locator}: ${seg.error}`);
-    if (!squash(seg.text).includes(squash(ex.text)))
+    if (!seg.texts.some((t) => squash(t).includes(squash(ex.text))))
       problem(src.id, `${at}: not word for word in ${ex.locator}`);
   });
   drafts.set(src.id, draft);

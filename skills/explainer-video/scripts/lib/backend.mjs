@@ -492,19 +492,27 @@ export async function aligner({ language, tools }) {
 // finds no article in keeps its whole body.
 export async function renderPage(url, { env }) {
   const req = fromCache(toolPaths().node);
-  const browser = await req("puppeteer-core").launch({
-    headless: true,
-    executablePath: findChrome(env.HOME),
-    args: ["--no-sandbox"],
-  });
+  // A page from the internet gets Chrome's sandbox where it starts; it does
+  // not where the kernel bars unprivileged user namespaces (Ubuntu's AppArmor
+  // default) or as root, and there the page runs unsandboxed.
+  const launch = (args) =>
+    req("puppeteer-core").launch({
+      headless: true,
+      executablePath: findChrome(env.HOME),
+      args,
+    });
+  const browser = await launch([]).catch(() => launch(["--no-sandbox"]));
   try {
     const page = await browser.newPage();
+    // The page's own CSP would block the injected Readability script.
+    await page.setBypassCSP(true);
     // A page that never goes idle (a poll, a stream) is read as it stands.
-    await page
+    const res = await page
       .goto(url, { waitUntil: "networkidle0", timeout: 30000 })
       .catch((e) => {
         if (e.name !== "TimeoutError") throw e;
       });
+    if (res && !res.ok()) throw new Error(`HTTP ${res.status()} at ${url}`);
     await page.addScriptTag({
       path: req.resolve("@mozilla/readability/Readability.js"),
     });
