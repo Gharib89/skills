@@ -163,7 +163,7 @@ let red = false;
           f.push(`${s.id} ${i + 1} not judged: run the support check`);
         } else if (!["supported", "connective"].includes(v.verdict)) {
           f.push(`${s.id} ${i + 1} ${v.verdict}: ${v.why}`);
-          failing.push([s.id, i + 1, text, v.verdict]);
+          failing.push([s.id, i + 1, text, s.cites[i], v.verdict]);
         }
       });
     const hash = crypto

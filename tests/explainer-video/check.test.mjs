@@ -336,6 +336,18 @@ test("a verdict for another wording of the sentence is not a verdict for this on
   assert.doesNotMatch(r.out, /attempt/);
 });
 
+test("a fix that changes only a sentence's cites is a fix attempt", () => {
+  const fx = fixture();
+  judge(fx, { "steps 1": "unsupported" });
+  assert.match(check(fx).out, /; next: fix attempt 1 of 2$/m);
+  const file = path.join(fx.dir, "script.json");
+  const s = JSON.parse(fs.readFileSync(file, "utf8"));
+  s.scenes.find((sc) => sc.id === "steps").cites[0] = ["ex-3"];
+  fs.writeFileSync(file, JSON.stringify(s));
+  judge(fx, { "steps 1": "unsupported" });
+  assert.match(check(fx).out, /; next: fix attempt 2 of 2$/m);
+});
+
 test("a verdict on other cites, or older than the source pack, is not a verdict", () => {
   const fx = fixture();
   const file = path.join(fx.dir, "support.json");

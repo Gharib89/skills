@@ -119,7 +119,15 @@ if (!speakers.some((n) => n.id === brief.voice))
     brief.voice,
     `no ${brief.language} narrator (${speakers.map((n) => n.id).join(", ")})`,
   );
-if (!styles.some((d) => fs.existsSync(path.join(d, `${brief.style}.json`))))
+// The run keeps the profile it copied even after a store drops it.
+const own = path.join(run, "style.json");
+const held =
+  fs.existsSync(own) &&
+  JSON.parse(fs.readFileSync(own, "utf8")).name === brief.style;
+if (
+  !held &&
+  !styles.some((d) => fs.existsSync(path.join(d, `${brief.style}.json`)))
+)
   refuse(
     "style",
     brief.style,

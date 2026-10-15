@@ -180,6 +180,21 @@ test("a value this version cannot make is refused and nothing is written", () =>
   }
 });
 
+test("a style the run already copied stays valid after its store drops it", () => {
+  const fx = fixture();
+  const profile = JSON.parse(
+    fs.readFileSync(path.join(scripts, "..", "styles", "claude-code.json")),
+  );
+  fs.writeFileSync(
+    path.join(fx.dir, "style.json"),
+    JSON.stringify({ ...profile, name: "gone" }),
+  );
+  const r = brief(fx, ["style=gone"]);
+  assert.equal(r.code, 0, r.err);
+  assert.equal(brief(fx, ["audience=managers"]).code, 0);
+  assert.equal(read(fx, "brief.json").style, "gone");
+});
+
 test("compile takes language, narrator and style from the brief and refuses a header that disagrees", () => {
   const fx = fixture();
   assert.equal(brief(fx, ["voice=bf_emma"]).code, 0);
