@@ -436,6 +436,10 @@ _Avoid_: snippet, fact, citation
 A run's scenes in order, each with its role in the video, its narration sentences and what is on screen. Every sentence that makes a claim cites its excerpts; a connective sentence (a transition, a framing question) is marked as making none. The storyboard is built from it.
 _Avoid_: storyboard, outline, transcript
 
+**Script gate**:
+One of the automated checks the script must pass before it is voiced: the scene arc, each scene's word budget, every cite found word for word in the source pack, every sentence judged supported or connective by the support checker, the brief's must-include and avoid lists, reading time and house rules. A support verdict still red after two fix attempts stops the run.
+_Avoid_: lint, script check, video gate
+
 **Kept term**:
 A word an Arabic run leaves in English (a code name, a product name, an acronym), spoken, shown and captioned the same way everywhere in the video. The storyboard lists a run's kept terms, and the human can change them.
 _Avoid_: glossary term, untranslated word, loanword

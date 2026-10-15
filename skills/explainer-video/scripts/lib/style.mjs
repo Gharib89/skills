@@ -112,6 +112,11 @@ export function stores(explainers, dirs = userDirs()) {
 const read = (f) =>
   fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim() || null : null;
 
+// The profile a run takes when it names none: the first store's `default`
+// file, else the fallback.
+export const defaultStyle = (list) =>
+  list.map((d) => read(path.join(d, "default"))).find(Boolean) ?? FALLBACK;
+
 // The profile a run uses: `<run>/style.json` when the run already holds the
 // one it asks for, else the named or default profile from the stores, copied
 // into the run so a later edit to the store never changes this video.
@@ -122,10 +127,7 @@ export function loadStyle(run, name, dirs = userDirs()) {
     : null;
   if (!profile || (name && profile.name !== name)) {
     const list = stores(path.dirname(path.resolve(run)), dirs);
-    const want =
-      name ??
-      list.map((d) => read(path.join(d, "default"))).find(Boolean) ??
-      FALLBACK;
+    const want = name ?? defaultStyle(list);
     const file = list
       .map((d) => path.join(d, `${want}.json`))
       .find((f) => fs.existsSync(f));
