@@ -483,3 +483,11 @@ _Avoid_: QA, check, local gate
 **Critic**:
 An independent reviewer that reads a run's contact sheets: its hard failures (unreadable or invented content, a broken right-to-left layout) block like a video gate, and its scores only advise.
 _Avoid_: judge, grader, reviewer
+
+**Tool cache**:
+The per-user folder setup installs a run's tools into: the npm packages and Chrome, each under the lockfile's hash, so copies of the skill at different versions coexist. An install no run has used for 30 days under another hash is stale, and setup's install removes it.
+_Avoid_: node_modules, tools folder
+
+**Font store**:
+The per-user folder of fonts setup fetches by family at a pinned version, OFL or Apache faces only, shared by every run and style profile.
+_Avoid_: font cache, fonts folder
