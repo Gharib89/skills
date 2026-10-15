@@ -12,14 +12,15 @@ metadata:
 # explainer-video
 
 An **explainer video** is a narrated video, one to five minutes by default,
-made from one or more sources. This version carries four stages: **setup**,
-which every run starts with; **voice**, English narration; **render**, a
-scene file written with the user turned into a captioned MP4; and **gates**,
-which the render runs and which block a video below the floors. Reading sources,
-the brief, the storyboard and writing the script from sources are not in this
-version.
-Asked for a video, say so in one line and offer to write the scene file with
-the user, then voice and render it.
+made from one or more sources. This version carries five stages: **setup**,
+which every run starts with; **source**, each source read into a source pack;
+**voice**, English narration; **render**, a scene file written with the user
+turned into a captioned MP4; and **gates**, which the render runs and which
+block a video below the floors. The brief, the storyboard and writing the
+script from the pack are not in this version.
+Asked for a video, say so in one line; given sources, run the source stage,
+then offer to write the scene file with the user from the pack's outline, then
+voice and render it.
 
 ## Setup
 
@@ -51,6 +52,46 @@ in:
 To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
 and what an earlier install of a missing row left half done.
+
+## Source
+
+The source stage reads each source into the **source pack**, in the **run
+folder** `explainers/<slug>/` (see Voice): a verbatim **snapshot** per source,
+the **excerpts** a script may cite, each the source's own words at a
+**locator** (`page 4`, `slide 2 notes`, `§ Install`, `lines 12-14`,
+`src/app.js:12-14`), and the **outline**. A source is a git repo folder (`.`
+for this repo), a web page URL, or a `.pdf`, `.md`, `.txt`, `.html`, `.docx` or
+`.pptx` file. Subagents read the snapshots; only the outline enters this
+conversation, so a large repo does not crowd out the work.
+
+1. **Tools.** A page, HTML, PDF, DOCX or PPTX source needs `npm-packages`, a
+   page or HTML file `chrome` too; a repo, Markdown or text needs neither. On
+   `source: <row> is not installed`, run the setup steps above.
+2. **Snapshot.** `node <skill>/scripts/source/snapshot.mjs explainers/<slug>
+   [--minutes <n>] <source>...`, `--minutes` the target length (default 2).
+   It prints `source <id>: <kind> · <n> <unit> · <source>` per source, then
+   `withheld <id>/<path>: <why>` for each repo file it left out (a `.env`
+   file, a secret file name, a secret pattern in its text: relay these), then
+   `budget: <b> excerpts (...); shares <id> <n>, ...`, the budget being 8 per
+   minute, at least 12. A repo snapshot holds only the files git tracks or
+   would track, never an ignored one.
+3. **On exit 1**, nothing was read: relay each `source <source>: <why>` line.
+   A scanned PDF has no text to read, and a folder outside git cannot say
+   which of its files are ignored: ask the user for the source in another
+   form, or to drop it, then snapshot again.
+4. **Read.** Dispatch one subagent per source, all in one turn, each with
+   `<skill>/agents/source-reader.md` as its prompt, its placeholders filled
+   from that source's entry in `explainers/<slug>/snapshots/sources.json`
+   (`{id}`, `{kind}`, `{source}`, `{snapshot}`, `{share}`), `{run}` the run
+   folder, `{skill}` this skill's folder, and `{focus}` what the user wants the
+   video to say, else "the source's main ideas". Each writes its draft and
+   replies with its check's pass line. Never read a snapshot or a draft here.
+5. **Pack.** `node <skill>/scripts/source/pack.mjs explainers/<slug>` checks
+   every draft again, numbers the excerpts `ex-1`, `ex-2`, ... across the
+   pack, and writes `excerpts.json` and `outline.md`. On exit 1, send each
+   `pack <id>: ...` line to that source's reader to fix, then pack again.
+6. **Outline.** Read `outline.md`: each source with its summary, each excerpt
+   by id, locator and note. A scene file cites an excerpt by id, `[ex-3]`.
 
 ## Voice
 
@@ -236,10 +277,10 @@ dBTP, no lower than -8.5, lower).
 
 ## Recipe
 
-The run folder's **recipe**, `script.md`, `style.json`, `gates.md` and
-`manifest.json` (skill version, lock hash, profile, narrator, delivered path),
-is committed. `explainers/.gitignore` ignores the rest: the compiled script,
-the voice and timeline files, `gates.json`, the caches, the composition and
-`out/`. Every stage writes
-those lines between its `# explainer-video: begin` and `end` markers and
-leaves the file's other lines alone.
+The run folder's **recipe**, `excerpts.json`, `outline.md`, `script.md`,
+`style.json`, `gates.md` and `manifest.json` (skill version, lock hash,
+profile, narrator, delivered path), is committed. `explainers/.gitignore`
+ignores the rest: the snapshots and drafts, the compiled script, the voice and
+timeline files, `gates.json`, the caches, the composition and `out/`. Every
+stage writes those lines between its `# explainer-video: begin` and `end`
+markers and leaves the file's other lines alone.
