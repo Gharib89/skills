@@ -4,8 +4,9 @@ The one contract between a run and [page.html](page.html), the storyboard
 page. `scripts/storyboard/board.mjs build` writes one **board document** per
 board version; the page writes one **answers document** per Submit. On the
 artifact page both live in the page's database, written and read with
-`ArtifactData`. Without one, `build` writes the board into the run folder's
-`storyboard.html`, and the human pastes the page's answers text back.
+`ArtifactData`. Every `build` also writes the board into the run folder's
+`storyboard.html`; without a database the human opens that file and pastes
+its answers text back.
 
 ## Contents
 
@@ -102,7 +103,8 @@ either it or the answers document. One line per form, in this order:
 ## Media
 
 `still`, `audio` and `clip` are URLs the page puts in `src` as given. On the
-artifact page each is the URL the asset upload returned, recorded with
-`board.mjs asset`; in `storyboard.html` each is the file's path relative to
-the run folder. `build` refuses a media file over 15 MB, the asset cap. The
+artifact page, and in `storyboard.html` once `board.mjs page <url>` has
+recorded a page, each is the URL the asset upload returned, recorded with
+`board.mjs asset`; before that, each is the file's path relative to the run
+folder. `build` refuses a media file over 15 MB, the asset cap. The
 page drops a URL that is not `https:`, `/_blob/` or a relative path.

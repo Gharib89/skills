@@ -404,6 +404,30 @@ test("a red gate record of this script at its third attempt reopens the scenes i
     d.scenes.map((s) => s.status),
     ["open", "reopened", "open"],
   );
+
+  // Answered, the same red record is spent: the revision's build posts no
+  // banner and reopens nothing until a render writes a new record.
+  const file = path.join(fx.tmp, "answers.txt");
+  fs.writeFileSync(
+    file,
+    [
+      "explainer-video: board 2 answers (database document answers/board-2)",
+      "hook: Approve",
+      "steps: Revise",
+      "  note: larger text",
+      "gate: Approve",
+    ].join("\n"),
+  );
+  ok(board(fx, "apply", file), "apply");
+  r = ok(board(fx, "build"), "build");
+  assert.ok(!("banner" in doc(fx, 3)));
+  assert.deepEqual(
+    doc(fx, 3).scenes.map((s) => s.status),
+    ["approved", "open", "approved"],
+  );
+  record(4);
+  ok(board(fx, "build"), "build");
+  assert.ok("banner" in doc(fx, 4));
 });
 
 test("a delivered run builds a clip per scene once, from the timeline, and refuses a clip over the asset cap", () => {

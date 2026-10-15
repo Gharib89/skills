@@ -1,4 +1,4 @@
-// The storyboard stage: one board version per round of review, from the run's
+// The storyboard stage: one board version per review, from the run's
 // compiled, voiced and stilled script, and the human's answers back into it.
 //
 //   node board.mjs <run-folder> build
@@ -27,7 +27,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { esc } from "../render/compose.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 
 const [run, cmd, ...args] = process.argv.slice(2);
@@ -77,15 +79,9 @@ const versions = () =>
         .map(Number)
         .sort((a, b) => a - b)
     : [];
-const escapeHtml = (s) =>
-  s.replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
-  );
 const template = () =>
   fs.readFileSync(path.join(skill, "storyboard", "page.html"), "utf8");
-const filled = (title) =>
-  template().replace("{{TITLE}}", () => escapeHtml(title));
+const filled = (title) => template().replace("{{TITLE}}", () => esc(title));
 
 function needScript() {
   if (!fs.existsSync(at("script.json")))
@@ -303,22 +299,23 @@ const cards = script.scenes.map((s, i) => ({
 }));
 
 const backend = await loadBackend();
+// A media file under .cache/, named for its inputs, made once.
+const cached = async (rel, make) => {
+  if (fs.existsSync(at(rel))) return rel;
+  fs.mkdirSync(path.dirname(at(rel)), { recursive: true });
+  try {
+    await make(at(rel));
+  } catch (e) {
+    fail(e.message);
+  }
+  return rel;
+};
 // The voice WAV's name is its content hash, so the WebM cut from it is too.
 for (const c of cards) {
-  const webm = path.join(
-    ".cache",
-    "board-audio",
-    `${path.basename(c.audio, ".wav")}.webm`,
+  const name = `${path.basename(c.audio, ".wav")}.webm`;
+  c.audio = await cached(path.join(".cache", "board-audio", name), (out) =>
+    backend.narration(at(c.audio), out),
   );
-  if (!fs.existsSync(at(webm))) {
-    fs.mkdirSync(at(".cache", "board-audio"), { recursive: true });
-    try {
-      await backend.narration(at(c.audio), at(webm));
-    } catch (e) {
-      fail(e.message);
-    }
-  }
-  c.audio = webm;
 }
 
 if (delivered) {
@@ -329,22 +326,10 @@ if (delivered) {
     .digest("hex");
   for (const c of cards) {
     const t = timeline.scenes.find((x) => x.id === c.id);
-    c.clip = path.join(
-      ".cache",
-      "clips",
-      `${hash(sha, c.id, t.start, t.duration)}.mp4`,
+    const name = `${hash(sha, c.id, t.start, t.duration)}.mp4`;
+    c.clip = await cached(path.join(".cache", "clips", name), (out) =>
+      backend.clip(mp4, out, { start: t.start, duration: t.duration }),
     );
-    if (!fs.existsSync(at(c.clip))) {
-      fs.mkdirSync(at(".cache", "clips"), { recursive: true });
-      try {
-        await backend.clip(mp4, at(c.clip), {
-          start: t.start,
-          duration: t.duration,
-        });
-      } catch (e) {
-        fail(e.message);
-      }
-    }
   }
 }
 
@@ -359,8 +344,14 @@ const keys = Object.fromEntries(
   cards.map((c, i) => [c.id, key(c, script.scenes[i])]),
 );
 
-// Gate stop: the gates stage's script hash, mirrored from gates.mjs, says the
-// red record is of this script; its evidence names the scenes to reopen.
+const all = versions();
+const prev = all.at(-1) ?? 0;
+const answersFile = at("board", `answers-${prev}.json`);
+const answered = maybe(answersFile);
+
+// Gate stop: the gates record's script hash says it is of this script; its
+// evidence names the scenes to reopen. Answers written after the record
+// spent it: the revision's board waits for the next render's record.
 const gates = delivered ? null : maybe(at("gates.json"));
 const red = Object.entries(gates?.gates ?? {}).filter(
   ([, g]) => g.status === "fail",
@@ -368,9 +359,13 @@ const red = Object.entries(gates?.gates ?? {}).filter(
 let banner;
 if (
   gates &&
-  gates.script === hash(script.scenes.map((s) => [s.id, s.narration])) &&
-  gates.attempts >= 3 &&
-  red.length
+  gates.script === scriptHash(script) &&
+  stopped(gates.attempts) &&
+  red.length &&
+  !(
+    answered &&
+    fs.statSync(answersFile).mtimeMs >= fs.statSync(at("gates.json")).mtimeMs
+  )
 ) {
   banner = {
     text: "The video gates stayed red after two fix attempts, so no video was made. Revise the reopened cards.",
@@ -380,9 +375,6 @@ if (
   };
 }
 
-const all = versions();
-const prev = all.at(-1) ?? 0;
-const answered = maybe(at("board", `answers-${prev}.json`));
 const before = maybe(at("board", `keys-${prev}.json`));
 for (const c of cards) {
   if (delivered) c.status = "approved";
@@ -406,24 +398,10 @@ const doc = {
   version: prev + 1,
   kind,
   title: script.title,
-  brief: [
-    "focus",
-    "length",
-    "audience",
-    "language",
-    "style",
-    "voice",
-    "aspect",
-    "must",
-    "avoid",
-  ]
-    .filter((k) => brief && k in brief)
-    .map((knob) => ({
-      knob,
-      value: Array.isArray(brief[knob])
-        ? brief[knob].join("; ")
-        : String(brief[knob] ?? ""),
-    })),
+  brief: Object.entries(brief ?? {}).map(([knob, v]) => ({
+    knob,
+    value: Array.isArray(v) ? v.join("; ") : String(v ?? ""),
+  })),
   sources: (pack?.sources ?? []).map((s) => ({
     id: s.id,
     kind: s.kind,

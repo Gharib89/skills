@@ -264,9 +264,10 @@ explainers/<slug>`.
 4. **Build.** `board build`. Exit 1 with `board: no <file>` or `no still`
    names the stage to run first. On a published page it first lists
    `board: upload <path> (<size>)` per still, narration or clip the page does
-   not hold yet: upload them all in one `Artifact` publish with `url` the page,
-   `asset: true` and `file_paths` those paths under the run folder, record each
-   with `board asset <path>=<url> ...`, the `url` exactly as the upload result
+   not hold yet: upload them with `Artifact` publishes of up to 25 files each,
+   `url` the page, `asset: true` and `file_paths` each path prefixed with
+   `explainers/<slug>/`, record each with `board asset <path>=<url> ...`,
+   `<path>` as `board` printed it and the `url` exactly as the upload result
    gives it, and build again. `<path> is <n> MB, over the 15 MB asset cap`
    means that file cannot go on the page: relay it. On exit 0 it prints `board
    <n>: <kind>, <k> card(s), <o> to answer -> board/<n>.json`. Published: write
@@ -286,19 +287,24 @@ explainers/<slug>`.
    `revise: <note>` line per card. `board: approved`: go on to Render. `board:
    redo <ids>`: first run `brief.mjs` with the `; brief` arguments it lists, if
    any, and follow its redo line; then, for each card revised with a note,
-   change that scene in `script.md` as the note asks; then Script steps 2 to 6,
+   change that scene in `script.md` as the note asks (a `revise: no note` line
+   without `, narration edited` names nothing to change: ask the user what to
+   change before rebuilding); then Script steps 2 to 6,
    Voice and step 1 again, each reusing its cache for every scene not changed,
    and build the next version (step 4). A note asking for a claim the sources
    do not support follows the Script stage's support stop. `answers for board
    <a>, the latest is board <b>` or `cut to fit`: read the latest version's
-   answers document instead.
+   answers document instead. Any other `board:` refusal: relay it as printed
+   and ask the user to copy the answers again.
 7. **Gate stop.** On Render's `stop`, run `board build` and post its version
    (step 4): it carries a banner with each red gate's line and reopens every
-   card the gates' findings name. End the turn; the revisions come back through
-   step 5.
+   card the gates' findings name. A finding that names no scene (`loudness`,
+   `captions`) reopens no card: relay its line as Render's stop says. End the
+   turn; the revisions come back through step 5.
 8. **After delivery**, `board build` once more: it cuts each scene's stretch of
    the delivered MP4 into a clip under 15 MB, and its `delivered` version plays
-   them on the cards. Post it as in step 4, then report the delivery.
+   them on the cards. Post it as in step 4, then report Render's last line and
+   the videos-folder path.
 
 ## Render
 
@@ -367,8 +373,8 @@ narrator: am_fenrir
    `<slug>.srt` and `poster.png`, and the same three are copied to the printed
    path, `explainer-video/<repo>/<slug>/` in the user's videos folder (the XDG
    videos folder on Linux, `~/Movies` on macOS, `%USERPROFILE%\Videos` on
-   Windows), so the video outlives the run folder. Report the last line and
-   that path.
+   Windows), so the video outlives the run folder. Then run Storyboard step 8,
+   which reports the delivery.
 7. **On a fail** (exit 1), relay what was printed. A `gate <name>: fail` line
    means nothing was delivered and `out/` was emptied: follow Gates below. A
    `delivery <check>: fail:
@@ -435,9 +441,9 @@ attempt counts live in `gates.json`: each gate's count resets when that gate
 passes, and the run's count, which `stop` reads, when every gate passes. Both
 reset when the narration changes, so a red that moves from one gate to another
 still stops.
-On `stop`, stop with no video and report each red gate's line and `gates.md`;
-a fix that needs the narration, order or count changed is a revision of the
-script, so ask the user.
+On `stop`, stop with no video, report each red gate's line and `gates.md`,
+and post the gate stop's board version (Storyboard step 7): a fix that needs
+the narration, order or count changed is a revision the user makes there.
 
 **Floors** are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:
@@ -450,9 +456,9 @@ dBTP, no lower than -8.5, lower).
 The run folder's **recipe**, `brief.json`, `excerpts.json`, `outline.md`,
 `script.md`, `style.json`, `gates.md` and `manifest.json` (the storyboard
 page's URL, skill version, lock hash, profile, narrator, delivered path), is
-committed. `explainers/.gitignore`
-ignores the rest: the snapshots and drafts, the compiled script, the voice and
-timeline files, `check.json`, `support.json`, `gates.json`, the caches, the
-composition and `out/`. Every stage writes those lines between its
-`# explainer-video: begin` and `end` markers and leaves the file's other lines
-alone.
+committed. `explainers/.gitignore` ignores the rest: the snapshots and
+drafts, the compiled script, the voice and timeline files, `check.json`,
+`support.json`, `gates.json`, `stills.json`, the caches, the composition,
+`board/`, `storyboard.html` and `out/`. Every stage writes those lines
+between its `# explainer-video: begin` and `end` markers and leaves the file's
+other lines alone.

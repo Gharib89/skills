@@ -15,8 +15,8 @@
 //         <measured> vs <wanted>` line per check, `delivered: <path>`, then
 //         `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
 //         cached, video cached|rendered`
-// writes: <run>/style.json, timeline.json, composition/, .cache/stills/,
-//         .cache/render/, out/<slug>.mp4|.srt, out/poster.png, manifest.json,
+// writes: <run>/style.json, stills.json, timeline.json, composition/,
+//         .cache/stills/, .cache/render/, out/<slug>.mp4|.srt, out/poster.png, manifest.json,
 //         and the gates stage's files; <videos>/explainer-video/<repo>/<slug>/;
 //         explainers/.gitignore
 //         `--stills`: `render: stills <hit>/<n> cached`, writing only

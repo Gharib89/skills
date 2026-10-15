@@ -20,6 +20,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { scriptHash as hashScript, stopped } from "../lib/gatestop.mjs";
 import { LUFS, contrast, floors, loadStyle } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { CUE_CHARS, FPS, H, W } from "../render/compose.mjs";
@@ -327,7 +328,7 @@ const judged = {
   ],
   captions: [caps, `${cues.length} cue(s), ${summary(caps)}`, "none"],
 };
-const scriptHash = hash(script.scenes.map((s) => [s.id, s.narration]));
+const scriptHash = hashScript(script);
 const renderHash = hash(
   read("composition/index.html"),
   ...fs
@@ -392,7 +393,7 @@ console.log(
   `gates: ${Object.keys(gates).length - red.length} pass, ${red.length} fail${
     !red.length
       ? ""
-      : attempts >= 3
+      : stopped(attempts)
         ? "; stop: red after two fix attempts, no video"
         : `; next: fix attempt ${attempts} of 2`
   }`,
