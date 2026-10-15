@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.3.0 (2026-10-15)
+
+### Features
+
+- **explainer-video**: Render a hand-written script to a captioned MP4
+  ([#717](https://github.com/Gharib89/skills/pull/717),
+  [`770ad60`](https://github.com/Gharib89/skills/commit/770ad6043350e5c380c86f2d5f34575ce9e8aad7))
+
+
 ## v0.2.0 (2026-10-15)
 
 ### Features
