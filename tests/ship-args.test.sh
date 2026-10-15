@@ -62,6 +62,14 @@ else
   skipped "comment-pr, an unreadable body file"
 fi
 
+# The scan stops at `--`: what follows is a probed command's argv, not the
+# mechanic's flags, so its `--body-file` reaches the probe (here, the missing
+# Run file's refusal) rather than the usage line.
+usage=$(bash "$dir/run-file.sh" --help | head -1)
+out=$(cd "$repo" && bash "$dir/run-file.sh" probe x --file "$work/run.md" -- true --body-file "$work/missing.md" 2>/dev/null)
+check "run-file probe, --body-file after --: not the usage line" "" \
+  "$(jq -r --arg u "$usage" '.error // empty | select(. == $u)' <<<"$out")"
+
 # `none` is the task-spec run's issue wherever a mechanic names it.
 out=$(cd "$repo" && bash "$dir/cleanup.sh" none 2>/dev/null)
 check "cleanup accepts none" "" "$(jq -r '.error // empty' <<<"$out")"

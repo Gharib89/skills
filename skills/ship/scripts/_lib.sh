@@ -357,7 +357,8 @@ ship_help() { # ship_help <usage> "$@"
 # that a flag typed where an id belongs is read as the id and asked of the host.
 # Empty <kinds> checks the `--body-file` alone. Every `--body-file` word among
 # the rest, even one standing as another flag's value, must be followed by a
-# readable regular file. Every failure is `ship_tooling <usage>`; the mechanic
+# readable regular file; the scan stops at `--`, after which run-file probe's
+# words are its command's own. Every failure is `ship_tooling <usage>`; the mechanic
 # still assigns its own variables and checks its own flags.
 ship_args() { # ship_args <usage> <kinds> "$@"
   local usage=$1 kind v
@@ -373,6 +374,7 @@ ship_args() { # ship_args <usage> <kinds> "$@"
     shift
   done
   while [ $# -gt 0 ]; do
+    [ "$1" = -- ] && break
     if [ "$1" = --body-file ]; then
       [ -f "${2:-}" ] && [ -r "$2" ] || ship_tooling "$usage"
     fi
