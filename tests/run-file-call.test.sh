@@ -57,11 +57,24 @@ call 'graphql slash' --file "$rf" -- gh api graphql/
 check_rc "a graphql endpoint with a trailing slash is refused" 1 "$status"
 call 'graphql query' --file "$rf" -- gh api 'https://api.github.com/graphql?x=1'
 check_rc "a graphql URL with a query string is refused" 1 "$status"
+call 'graphql fragment' --file "$rf" -- gh api 'https://api.github.com/graphql#frag'
+check_rc "a graphql URL with a fragment is refused" 1 "$status"
+# A credential would reach the Run file and the summary an unattended run posts.
+cred_err="a direct call carries no credential: the host CLI authenticates it, so drop the Authorization header"
+call 'auth' --file "$rf" -- gh api repos/o/r -H 'Authorization: Bearer s3cr3t'
+check_rc "an Authorization header is refused" 1 "$status"
+check "the credential refusal leaves the command out" "$cred_err" "$err"
+call 'auth' --file "$rf" -- gh api repos/o/r '--header=authorization:token s3cr3t'
+check_rc "an attached lower-case header is refused" 1 "$status"
+call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers 'Authorization=Bearer s3cr3t'
+check_rc "an az rest Authorization header is refused" 1 "$status"
+call 'auth' --file "$rf" -- az rest --url https://dev.azure.com/o/_apis/x --headers '{"Authorization": "Bearer s3cr3t"}'
+check_rc "a JSON Authorization header is refused" 1 "$status"
 check "a refused call writes nothing" "$before" "$(cat "$rf")"
 
-call 'comment' --file "$rf" -- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql
-check_rc "a REST call whose field values name graphql is accepted" 0 "$status"
-check "the decoy call is logged" "- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql · comment" "$(section | grep '^- ' | tail -n 1)"
+call 'comment' --file "$rf" -- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql -f 'title=Authorization: how'
+check_rc "a REST call whose field values name graphql or Authorization is accepted" 0 "$status"
+check "the decoy call is logged" "- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql -f title=Authorization:\\ how · comment" "$(section | grep '^- ' | tail -n 1)"
 before=$(cat "$rf")
 
 usage=$(bash "$m" --help | head -n 1)
