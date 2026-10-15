@@ -298,3 +298,47 @@ export async function probe(dir, times) {
     };
   });
 }
+
+// The source readers. A fixture .pdf holds `{"pages": [...]}` and a .pptx
+// `{"parts": {path: xml}}`, both JSON; a .docx holds the HTML mammoth would
+// give. renderPage answers a URL from the JSON map in
+// $EXPLAINER_VIDEO_FAKE_PAGES ({url: {title, html}}), a file: URL from the
+// file, as the page Chrome would hand Readability once its scripts ran.
+export async function renderPage(url) {
+  log({ call: "renderPage", url });
+  if (url.startsWith("file:")) {
+    const html = fs.readFileSync(new URL(url), "utf8");
+    return {
+      title: html.match(/<title>([^<]*)<\/title>/)?.[1] ?? "",
+      html: html.replace(/^[\s\S]*<body>|<\/body>[\s\S]*$/g, ""),
+    };
+  }
+  const page = JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_PAGES ?? "{}")[url];
+  if (!page) throw new Error(`net::ERR_NAME_NOT_RESOLVED at ${url}`);
+  return page;
+}
+
+// Headings to `#` lines, each block its own paragraph, other tags dropped.
+export async function toMarkdown(html) {
+  return html
+    .replace(
+      /<h([1-6])>([\s\S]*?)<\/h\1>/g,
+      (_, n, t) => `\n\n${"#".repeat(n)} ${t}\n\n`,
+    )
+    .replace(/<\/(p|li|div)>/g, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export async function pdfPages(file) {
+  return JSON.parse(fs.readFileSync(file, "utf8")).pages;
+}
+
+export async function docxHtml(file) {
+  return fs.readFileSync(file, "utf8");
+}
+
+export async function unzip(file) {
+  return JSON.parse(fs.readFileSync(file, "utf8")).parts;
+}
