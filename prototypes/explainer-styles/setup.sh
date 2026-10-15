@@ -2,7 +2,7 @@
 # PROTOTYPE, throwaway (#664): copy the shared narration, timing and the OFL fonts into each variant project.
 set -euo pipefail
 cd "$(dirname "$0")"
-for v in v1-claude-dark v2-chalkboard v3-flat-world v4-editorial v5-kinetic v7-blend; do
+for v in v1-claude v2-chalkboard v3-flat-world v4-editorial v5-kinetic v7-blend; do
   mkdir -p "$v/fonts"
   cp shared/narration.wav "$v/narration.wav"
   cp node_modules/gsap/dist/gsap.min.js "$v/gsap.min.js"

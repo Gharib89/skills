@@ -91,9 +91,9 @@
   @media (prefers-reduced-motion: reduce) { .f .a, .f .w { transition: none !important; } }
   .f bdi { unicode-bidi: isolate; }
 
-  /* 1 Claude Code dark */
-  .s1 { --c-bg: #1a1915; --c-panel: #262420; --c-line: #3d3a33; --c-text: #f5f3ec; --c-dim: #b8b3a6; --c-faint: #8f897c; --c-accent: #dc7a5a; --c-ok: #8fae6b; --c-stop: #e47460; }
-  .s1.blend { --c-bg: #ffffff; --c-panel: #eeedfc; --c-line: #b8bcf0; --c-text: #161b8c; --c-dim: #4a4f73; --c-faint: #6b6f8f; --c-accent: #c03020; --c-ok: #17734b; --c-stop: #b01820; }
+  /* 1 Claude Code */
+  .s1 { --c-bg: #f5f4ed; --c-panel: #fbf9f5; --c-line: #c1c1b8; --c-rule: #8f8e86; --c-text: #141413; --c-dim: #5e5d59; --c-faint: #73726c; --c-accent: #cc6c54; --c-ok: #4f7a3a; --c-stop: #b0442c; }
+  .s1.blend { --c-bg: #ffffff; --c-panel: #eeedfc; --c-line: #b8bcf0; --c-rule: #b8bcf0; --c-text: #161b8c; --c-dim: #4a4f73; --c-faint: #6b6f8f; --c-accent: #c03020; --c-ok: #17734b; --c-stop: #b01820; }
   .s1.blend .cd, .s1.blend .term { box-shadow: 0 18px 40px rgba(22, 27, 140, 0.08); }
   .s1 { background: var(--c-bg); color: var(--c-text); font-family: "Inter", sans-serif; }
   .s1 .hd { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--c-line); }
@@ -106,14 +106,14 @@
   .s1 .sub { position: absolute; left: 4px; top: 450px; font: 400 38px "Inter"; color: var(--c-dim); margin: 0; }
   .s1 .a:not(.on) { transform: translateY(22px); }
   .s1 .rail { position: absolute; left: 0; right: 0; top: 150px; display: flex; align-items: center; }
-  .s1 .cd { width: 350px; height: 270px; background: var(--c-panel); border: 2px solid var(--c-line); border-radius: 18px; padding: 34px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); flex: none; }
+  .s1 .cd { width: 350px; height: 270px; background: var(--c-panel); border: 2px solid var(--c-line); border-radius: 18px; padding: 34px; box-shadow: 0 12px 32px rgba(20, 20, 19, 0.06); flex: none; }
   .s1 .cd .k { font: 600 24px "Inter"; color: var(--c-dim); letter-spacing: 0.06em; }
   .s1 .cd .v { margin-top: 24px; font: 600 54px/1.1 "Source Serif 4", serif; }
   .s1 .cd .b { margin-top: 22px; font: 400 30px "JetBrains Mono"; }
   .s1 .cd.hot { border-color: var(--c-accent); }
-  .s1 .ar { flex: 1; height: 3px; background: var(--c-line); margin: 0 16px; transform-origin: left center; }
+  .s1 .ar { flex: 1; height: 2px; background: var(--c-rule); margin: 0 16px; transform-origin: left center; }
   .s1 .ar:not(.on) { transform: scaleX(0); opacity: 1; }
-  .s1 .term { position: absolute; left: 240px; top: 20px; width: 1280px; height: 620px; background: var(--c-panel); border: 2px solid var(--c-line); border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); overflow: hidden; }
+  .s1 .term { position: absolute; left: 240px; top: 20px; width: 1280px; height: 620px; background: var(--c-panel); border: 2px solid var(--c-line); border-radius: 18px; box-shadow: 0 18px 48px rgba(20, 20, 19, 0.08); overflow: hidden; }
   .s1 .term.a:not(.on) { transform: perspective(1600px) rotateX(20deg) translateY(40px); }
   .s1 .tb { height: 60px; border-bottom: 1px solid var(--c-line); display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 24px "JetBrains Mono"; color: var(--c-dim); }
   .s1 .tb i { width: 14px; height: 14px; border-radius: 50%; background: var(--c-line); }
@@ -315,7 +315,7 @@
   <header class="top">
     <div class="meta">explainer-video · style prototypes · storyboard first</div>
     <h1>Six styles, one script</h1>
-    <p>Each tab is the same 16-second explainer in a different style, laid out as the storyboard a real run would show you: four scenes, each with its frame, narration, timing and style notes. The last scene shows how the style handles Egyptian Arabic, right to left. Press Play to watch the rough animatic with the Kokoro <code>bf_emma</code> narration. Then pick a style or blend parts of several, and save. The seventh tab, Your blend, is the saved pick: Claude Code dark with the ITWorx palette.</p>
+    <p>Each tab is the same 16-second explainer in a different style, laid out as the storyboard a real run would show you: four scenes, each with its frame, narration, timing and style notes. The last scene shows how the style handles Egyptian Arabic, right to left. Press Play to watch the rough animatic with the Kokoro <code>bf_emma</code> narration. Then pick a style or blend parts of several, and save. The seventh tab, Your blend, is the saved pick: the Claude Code layout with the ITWorx deck palette.</p>
   </header>
 
   <div class="tabs" role="tablist" id="tabs"></div>
@@ -334,7 +334,7 @@
 
   <section class="render" id="render" hidden>
     <div class="section-h"><h2>Rendered video</h2><span class="meta">HyperFrames 0.8.160 · 1920 by 1080 · 30 fps · 16.4 s · rendered with --strict</span></div>
-    <video controls preload="metadata" playsinline src="__VIDEO__"></video>
+    <video controls preload="metadata" playsinline id="rvid"></video>
   </section>
 
   <section>
@@ -393,12 +393,12 @@ const arCap = (cls = "cap rtl") => `<div class="${cls} a" dir="rtl" data-in="ara
 // ---------- the styles: each scene is its own composition, not a recolour ----------
 const STYLES = [
   {
-    key: "s1", name: "Claude Code dark", lineage: "the house ship explainer",
-    swatch: ["#1a1915", "#262420", "#f5f3ec", "#dc7a5a", "#8fae6b", "#e47460"],
+    key: "s1", name: "Claude Code", lineage: "Anthropic's Claude Code explainer videos, from the owner's references",
+    swatch: ["#f5f4ed", "#fbf9f5", "#c1c1b8", "#141413", "#5e5d59", "#cc6c54", "#4f7a3a"],
     type: "Source Serif 4 titles, Inter captions, JetBrains Mono code. Arabic: Noto Naskh Arabic titles, IBM Plex Sans Arabic text.",
     layout: "Header band, a 1760 by 690 content box, a caption band. Cards, terminals and rails.",
     motion: "Calm and sentence-led. An item rises in at the word that names it and keeps a flat highlight. Terminals tip up and type.",
-    risk: "Quiet by design: may feel flat for a general audience.",
+    risk: "Quiet by design: may feel flat for a general audience. Clay is 3.3:1 on cream, so it carries only large text (the 124px title word, 36px code), never small labels.",
     notes: {
       title: "Serif title rises in on \"How\"; the dek follows on \"pull\". Ship in clay, the one accent.",
       diagram: "Cards reveal on the word that names them. The failing test's border goes red on \"failing\", then the badge turns green on \"pass\".",
@@ -665,13 +665,16 @@ const STYLES = [
   },
 ];
 
-// the owner's pick (decision/owner): Claude Code dark's structure, type and motion with the ITWorx palette
+// the owner's pick (decision/owner): Claude Code's structure, type and motion with the ITWorx deck palette
 STYLES.push({
-  ...STYLES[0], key: "blend", cls: "s1 blend", name: "Your blend", lineage: "Claude Code dark, recoloured from the owner's ITWorx decks",
+  ...STYLES[0], key: "blend", cls: "s1 blend", name: "Your blend", lineage: "Claude Code's layout, recoloured from the owner's ITWorx decks",
   swatch: ["#ffffff", "#eeedfc", "#b8bcf0", "#161b8c", "#4a4f73", "#c03020", "#17734b"],
   notes: { ...STYLES[0].notes, title: "Serif title rises in on \"How\"; the dek follows on \"pull\". Ship in ITWorx red, the one accent." },
   risk: "White ground as the ITWorx decks run it: indigo text 13.4:1, red accent 5.7:1, green 5.9:1 on white. The unspoken caption grey is the lowest pair at 4.9:1. The decks set bold sans headlines; this keeps the Claude Code serif, as picked.",
 });
+
+// rendered HyperFrames videos, inlined by build.py; only rendered styles have one
+const VIDEOS = { s1: "__VIDEO_S1__", blend: "__VIDEO_BLEND__" };
 
 // ---------- rendering and time ----------
 function frameHTML(st, id) { return `<div class="f ${st.cls || st.key} ${(st.frameClass || {})[id] || ""}" data-scene="${id}">${st.scenes[id]()}</div>`; }
@@ -742,7 +745,9 @@ function renderStyle() {
     <div><dt>Type</dt><dd>${st.type}</dd></div><div><dt>Layout</dt><dd>${st.layout}</dd></div>
     <div><dt>Motion and pacing</dt><dd>${st.motion}</dd></div><div><dt>Risk to watch</dt><dd class="risk">${st.risk}</dd></div></dl>`;
   document.getElementById("board-h").textContent = `Storyboard · ${st.name}`;
-  document.getElementById("render").hidden = st.key !== "blend";
+  const vsrc = VIDEOS[st.key], rv = document.getElementById("rvid");
+  document.getElementById("render").hidden = !vsrc;
+  if (vsrc && rv.getAttribute("src") !== vsrc) rv.setAttribute("src", vsrc);
   const board = document.getElementById("board"); board.innerHTML = "";
   ORDER.forEach((id, i) => {
     const [a, z] = BOUNDS[id], sc = S[id];

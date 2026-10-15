@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- PROTOTYPE, throwaway (#664): style direction 1, Claude Code dark (house). -->
+<!-- PROTOTYPE, throwaway (#664): style direction 1, Claude Code, from the owner's Claude Code video references. -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Claude Code dark</title>
-    <script src="../node_modules/gsap/dist/gsap.min.js"></script>
+    <title>Claude Code</title>
+    <script src="gsap.min.js"></script>
     <script src="timing.js"></script>
     <style>
       @font-face { font-family: "Source Serif 4"; src: url("fonts/source-serif-4-latin-600-normal.woff2"); font-weight: 600; font-display: block; }
@@ -16,8 +16,8 @@
       @font-face { font-family: "IBM Plex Sans Arabic"; src: url("fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2"); font-weight: 400; font-display: block; }
       @font-face { font-family: "IBM Plex Sans Arabic"; src: url("fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2"); font-weight: 600; font-display: block; }
       :root {
-        --bg: #1a1915; --panel: #262420; --line: #3d3a33; --text: #f5f3ec; --dim: #b8b3a6;
-        --clay: #dc7a5a; --ok: #8fae6b; --warn: #e3c07a; --stop: #e47460;
+        --bg: #f5f4ed; --panel: #fbf9f5; --line: #c1c1b8; --rule: #8f8e86; --text: #141413; --dim: #5e5d59; --faint: #73726c;
+        --clay: #cc6c54; --ok: #4f7a3a; --warn: #8a5a00; --stop: #b0442c;
       }
       body { margin: 0; background: var(--bg); }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Inter", sans-serif; }
@@ -26,21 +26,21 @@
       .mark { width: 18px; height: 18px; border-radius: 4px; background: var(--clay); }
       .kicker { font: 600 26px "Inter"; color: var(--dim); letter-spacing: 0.04em; }
       .content { position: absolute; left: 80px; top: 178px; width: 1760px; height: 690px; }
-      .caption { position: absolute; left: 80px; right: 80px; top: 900px; height: 120px; display: flex; align-items: center; justify-content: center; font: 400 44px/1.3 "Inter"; color: var(--dim); }
+      .caption { position: absolute; left: 80px; right: 80px; top: 900px; height: 120px; display: flex; align-items: center; justify-content: center; font: 400 44px/1.3 "Inter"; color: var(--faint); }
       .caption .w { margin: 0 0.14em; }
       /* title */
-      .t-title { position: absolute; left: 0; top: 190px; font: 600 120px/1.1 "Source Serif 4", serif; letter-spacing: -0.01em; }
+      .t-title { position: absolute; left: 0; top: 150px; font: 600 124px/1.1 "Source Serif 4", serif; letter-spacing: -0.01em; }
       .t-title .accent { color: var(--clay); }
-      .t-sub { position: absolute; left: 4px; top: 360px; font: 400 36px "Inter"; color: var(--dim); }
+      .t-sub { position: absolute; left: 4px; top: 450px; font: 400 38px "Inter"; color: var(--dim); }
       /* diagram */
       .rail { position: absolute; left: 0; right: 0; top: 160px; display: flex; align-items: center; justify-content: space-between; }
-      .card { width: 340px; height: 260px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 34px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); }
+      .card { width: 340px; height: 260px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 34px; box-shadow: 0 12px 32px rgba(20, 20, 19, 0.06); }
       .card .k { font: 600 24px "Inter"; color: var(--dim); letter-spacing: 0.06em; }
       .card .v { margin-top: 26px; font: 600 54px/1.1 "Source Serif 4", serif; }
       .card .badge { margin-top: 22px; font: 400 28px "JetBrains Mono"; }
-      .arrow { flex: 1; height: 3px; background: var(--line); margin: 0 18px; transform-origin: left center; }
+      .arrow { flex: 1; height: 2px; background: var(--rule); margin: 0 18px; transform-origin: left center; }
       /* terminal */
-      .term { position: absolute; left: 260px; top: 30px; width: 1240px; height: 600px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); overflow: hidden; }
+      .term { position: absolute; left: 260px; top: 30px; width: 1240px; height: 600px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; box-shadow: 0 18px 48px rgba(20, 20, 19, 0.08); overflow: hidden; }
       .term-bar { height: 56px; border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 24px "JetBrains Mono"; color: var(--dim); }
       .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--line); }
       .term-body { padding: 34px 44px; font: 400 34px/1.7 "JetBrains Mono", monospace; }
@@ -77,11 +77,11 @@
       <div id="s-diagram" class="clip" data-start="2.875" data-duration="4.475">
         <div class="content">
           <div class="rail" id="rail-en">
-            <div class="card" id="c1"><div class="k">INPUT</div><div class="v">issue</div><div class="badge" style="color: var(--dim)">#664</div></div>
+            <div class="card" id="c1"><div class="k">INPUT</div><div class="v">issue</div><div class="badge" style="color: var(--dim)">#650</div></div>
             <div class="arrow" id="a1"></div>
             <div class="card" id="c2"><div class="k">FIRST</div><div class="v">test</div><div class="badge" id="c2b" style="color: var(--stop)">✗ failing</div></div>
             <div class="arrow" id="a2"></div>
-            <div class="card" id="c3"><div class="k">THEN</div><div class="v">code</div><div class="badge" style="color: var(--ok)">✓ passing</div></div>
+            <div class="card" id="c3"><div class="k">THEN</div><div class="v">code</div><div class="badge" style="color: var(--ok)">+42 −7</div></div>
             <div class="arrow" id="a3"></div>
             <div class="card" id="c4"><div class="k">OUTPUT</div><div class="v">pull request</div></div>
           </div>
@@ -99,7 +99,7 @@
               <div class="row g"><span class="st">✓</span><span>tests/run.sh</span></div>
               <div class="row g"><span class="st">✓</span><span>secrets</span></div>
               <div class="row g"><span class="st">✓</span><span>version-lines</span></div>
-              <div class="row" id="pr"><span class="prompt">→</span><span>gh pr create · <span style="color: var(--clay)">#672 opened</span></span></div>
+              <div class="row" id="pr"><span class="prompt">→</span><span>gh pr create · <span style="color: var(--clay)">#650 opened</span></span></div>
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@
         <div class="caption ar" dir="rtl" id="ar-cap"></div>
       </div>
 
-      <audio id="narration" src="narration.wav" data-start="0" data-duration="16.35" data-volume="1"></audio>
+      <audio id="narration" src="narration.wav" data-start="0" data-duration="15.95" data-volume="1"></audio>
     </div>
 
     <script>
@@ -131,10 +131,15 @@
       }
       const A = T.arabic;
       document.getElementById("ar-title").innerHTML = lat(A.title);
-      document.getElementById("ar-cap").innerHTML = lat(A.caption);
+      // One span, so the flex caption keeps the spaces around the isolated Latin runs.
+      document.getElementById("ar-cap").innerHTML = `<span>${lat(A.caption)}</span>`;
       document.getElementById("rail-ar").innerHTML = A.steps
         .map((s, i) => `<div class="card ar-c"><div class="k ar">${["المدخل", "الأول", "بعد كده", "الناتج"][i]}</div><div class="v">${lat(s)}</div></div>`)
         .join('<div class="arrow ar-a"></div>');
+
+      // GSAP tweens need resolved colours, so read the palette once from :root.
+      const css = getComputedStyle(document.documentElement);
+      const C = (name) => css.getPropertyValue(`--${name}`).trim();
 
       document.fonts.ready.then(() => {
         const tl = gsap.timeline({ paused: true });
@@ -144,7 +149,7 @@
         for (const el of document.querySelectorAll("[data-cap]")) {
           const sc = S[el.dataset.cap];
           el.querySelectorAll(".w").forEach((w, i) => {
-            tl.set(w, { color: "#f5f3ec" }, sc.words[i].s);
+            tl.set(w, { color: C("text") }, sc.words[i].s);
           });
         }
 
@@ -159,13 +164,13 @@
         tl.fromTo("#c1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, ease }, at("diagram", "issue") - 0.1);
         tl.to("#a1", { scaleX: 1, duration: 0.3, ease }, at("diagram", "writes"));
         tl.fromTo("#c2", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, ease }, at("diagram", "failing"));
-        tl.to("#c2", { borderColor: "#e47460", duration: 0.2 }, at("diagram", "failing"));
+        tl.to("#c2", { borderColor: C("stop"), duration: 0.2 }, at("diagram", "failing"));
         tl.to("#a2", { scaleX: 1, duration: 0.3, ease }, at("diagram", "then"));
         tl.fromTo("#c3", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, ease }, at("diagram", "makes"));
-        tl.to("#c2", { borderColor: "#3d3a33", duration: 0.2 }, at("diagram", "pass"));
-        tl.to("#c2b", { color: "#8fae6b", duration: 0.2 }, at("diagram", "pass"));
+        tl.to("#c2", { borderColor: C("line"), duration: 0.2 }, at("diagram", "pass"));
+        tl.to("#c2b", { color: C("ok"), duration: 0.2 }, at("diagram", "pass"));
         tl.set("#c2b", { textContent: "✓ passing" }, at("diagram", "pass"));
-        tl.to("#c3", { borderColor: "#8fae6b", duration: 0.2 }, at("diagram", "pass"));
+        tl.to("#c3", { borderColor: C("ok"), duration: 0.2 }, at("diagram", "pass"));
         tl.to("#a3", { scaleX: 1, duration: 0.3, ease }, at("diagram", "pass") + 0.3);
         tl.fromTo("#c4", { opacity: 0, y: 20 }, { opacity: 0.55, y: 0, duration: 0.35, ease }, at("diagram", "pass") + 0.5);
 
@@ -176,7 +181,7 @@
         const rows = gsap.utils.toArray(".row.g");
         tl.set(rows, { opacity: 0 }, 0);
         rows.forEach((r, i) => tl.set(r, { opacity: 1 }, at("code", "gate") + i * 0.12));
-        tl.to(".row.g .st", { color: "#8fae6b", duration: 0.2, stagger: 0.08 }, at("code", "green"));
+        tl.to(".row.g .st", { color: C("ok"), duration: 0.2, stagger: 0.08 }, at("code", "green"));
         tl.set("#cur", { opacity: 0 }, at("code", "gate"));
         tl.fromTo("#pr", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.3, ease }, at("code", "opens"));
 
