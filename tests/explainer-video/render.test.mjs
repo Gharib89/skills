@@ -359,12 +359,12 @@ test("render before the voice stage says which stage to run", () => {
 test("render on a mistyped run folder says which stage to run and writes nothing", () => {
   const fx = fixture();
   const r = stage(
-    { ...fx, dir: path.join(fx.tmp, "typo", "demo") },
+    { ...fx, dir: path.join(fx.tmp, "typo") },
     "render/render.mjs",
   );
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(r.err, /^render: no script\.json: run the compile stage first/m);
-  assert.ok(!fs.existsSync(path.join(fx.tmp, "typo")));
+  assert.ok(!fs.existsSync(path.join(fx.tmp, ".gitignore")));
 });
 
 // Style profile lookup: the script names no style, so the stores decide.

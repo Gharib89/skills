@@ -29,6 +29,12 @@ if (!run || rest.length) {
 }
 // The last pass's timeline no longer describes this script until it passes.
 fs.rmSync(path.join(run, "voice.json"), { force: true });
+if (!fs.existsSync(path.join(run, "script.json"))) {
+  console.error(
+    "voice: no script.json: run the compile stage first (script/compile.mjs)",
+  );
+  process.exit(1);
+}
 const script = JSON.parse(
   fs.readFileSync(path.join(run, "script.json"), "utf8"),
 );
