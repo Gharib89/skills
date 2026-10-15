@@ -289,6 +289,28 @@ test("a delivery check that fails names the measure, exits 1 and copies nothing"
   assert.match(r.out, /^delivery resolution: pass$/m);
   assert.ok(!fs.existsSync(path.join(fx.tmp, "videos")));
   assert.ok(!fs.existsSync(path.join(fx.dir, "out", "demo.mp4")));
+  // The failed video is not cached: the next run renders it again.
+  const before = calls(fx).length;
+  const again = stage(fx, "render/render.mjs");
+  assert.equal(again.code, 0, again.out + again.err);
+  assert.equal(calls(fx).length, before + 1);
+  assert.match(again.out, /video rendered$/m);
+});
+
+test("a project with a separate git dir delivers under its own folder's name", () => {
+  const fx = fixture();
+  const git = spawnSync(
+    "git",
+    [
+      ...["init", "-q", "--separate-git-dir", path.join(fx.tmp, "gd")],
+      path.join(fx.tmp, "proj"),
+    ],
+    { env: fx.env },
+  );
+  assert.equal(git.status, 0);
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
 });
 
 test("a video a second longer than the timeline fails the duration check", () => {

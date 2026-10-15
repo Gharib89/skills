@@ -448,6 +448,8 @@ for (const [name, got, want, ok = got === want] of checks) {
 }
 if (failed) {
   fs.rmSync(out, { recursive: true, force: true });
+  // A failed video never stands in the cache as a later run's hit.
+  fs.rmSync(video, { force: true });
   process.exit(1);
 }
 
@@ -455,15 +457,23 @@ fs.copyFileSync(video, path.join(out, `${slug}.mp4`));
 fs.copyFileSync(stills[0], path.join(out, "poster.png"));
 
 // The videos folder, under the repo's name: a worktree's is its main repo's.
+// A submodule's or a separate git dir's common dir is no `<repo>/.git`, so
+// those take their top level's name.
 const git = spawnSync(
   "git",
-  ["-C", run, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+  [
+    ...["-C", run, "rev-parse", "--path-format=absolute"],
+    ...["--git-common-dir", "--show-toplevel"],
+  ],
   { encoding: "utf8" },
 );
+const [common, top] = git.stdout.trim().split("\n");
 const repo =
-  git.status === 0
-    ? path.basename(path.dirname(git.stdout.trim()))
-    : path.basename(path.dirname(path.dirname(path.resolve(run))));
+  git.status !== 0
+    ? path.basename(path.dirname(path.dirname(path.resolve(run))))
+    : path.basename(common) === ".git"
+      ? path.basename(path.dirname(common))
+      : path.basename(top);
 const delivered = path.join(videosDir(), "explainer-video", repo, slug);
 fs.mkdirSync(delivered, { recursive: true });
 for (const f of [`${slug}.mp4`, `${slug}.srt`, "poster.png"])
