@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.45.0 (2026-10-15)
+
+### Features
+
+- **ship**: Run-file prove and revert-red take a runner command after --
+  ([#710](https://github.com/Gharib89/skills/pull/710),
+  [`385c216`](https://github.com/Gharib89/skills/commit/385c216109a0958da9e22a354b2c41de5bc2fa54))
+
+
 ## v0.44.0 (2026-10-15)
 
 ### Features
