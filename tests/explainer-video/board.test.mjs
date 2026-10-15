@@ -428,6 +428,15 @@ test("a red gate record of this script at its third attempt reopens the scenes i
   record(4);
   ok(board(fx, "build"), "build");
   assert.ok("banner" in doc(fx, 4));
+  assert.match(doc(fx, 4).banner.text, /Revise the reopened cards\.$/);
+
+  // A red gate naming no scene reopens no card, so the banner asks for none.
+  const g = JSON.parse(read(fx.dir, "gates.json"));
+  g.gates.layout.evidence = ["integrated loudness -9.0 LUFS"];
+  fs.writeFileSync(path.join(fx.dir, "gates.json"), JSON.stringify(g));
+  ok(board(fx, "build"), "build");
+  assert.ok(!doc(fx, 5).scenes.some((s) => s.status === "reopened"));
+  assert.doesNotMatch(doc(fx, 5).banner.text, /Revise/);
 });
 
 test("a delivered run builds a clip per scene once, from the timeline, and refuses a clip over the asset cap", () => {

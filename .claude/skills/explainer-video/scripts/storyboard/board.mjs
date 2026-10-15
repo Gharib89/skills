@@ -29,8 +29,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { esc } from "../render/compose.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
+import { esc } from "../render/compose.mjs";
 
 const [run, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
@@ -69,6 +69,17 @@ const hash = (...parts) => {
       typeof p === "string" || Buffer.isBuffer(p) ? p : JSON.stringify(p),
     );
   return h.digest("hex").slice(0, 16);
+};
+// A media file under .cache/, named for its inputs, made once.
+const cached = async (rel, make) => {
+  if (fs.existsSync(at(rel))) return rel;
+  fs.mkdirSync(path.dirname(at(rel)), { recursive: true });
+  try {
+    await make(at(rel));
+  } catch (e) {
+    fail(e.message);
+  }
+  return rel;
 };
 const versions = () =>
   fs.existsSync(at("board"))
@@ -299,17 +310,6 @@ const cards = script.scenes.map((s, i) => ({
 }));
 
 const backend = await loadBackend();
-// A media file under .cache/, named for its inputs, made once.
-const cached = async (rel, make) => {
-  if (fs.existsSync(at(rel))) return rel;
-  fs.mkdirSync(path.dirname(at(rel)), { recursive: true });
-  try {
-    await make(at(rel));
-  } catch (e) {
-    fail(e.message);
-  }
-  return rel;
-};
 // The voice WAV's name is its content hash, so the WebM cut from it is too.
 for (const c of cards) {
   const name = `${path.basename(c.audio, ".wav")}.webm`;
@@ -368,7 +368,7 @@ if (
   )
 ) {
   banner = {
-    text: "The video gates stayed red after two fix attempts, so no video was made. Revise the reopened cards.",
+    text: "The video gates stayed red after two fix attempts, so no video was made.",
     gates: red.map(
       ([name, g]) => `gate ${name}: fail: ${g.measured} vs ${g.floor}`,
     ),
@@ -391,6 +391,8 @@ if (banner)
       const c = cards.find((x) => x.id === id);
       if (c) c.status = "reopened";
     }
+if (cards.some((c) => c.status === "reopened"))
+  banner.text += " Revise the reopened cards.";
 
 const brief = maybe(at("brief.json"));
 const pack = maybe(at("excerpts.json"));

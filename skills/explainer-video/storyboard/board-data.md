@@ -48,7 +48,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.sources[].summary` | string | yes | Its reader's summary. |
 | `board.sources[].excerpts` | number | yes | How many excerpts the pack holds from it. |
 | `board.banner` | object | no | Present on the version a gate stop posted. |
-| `board.banner.text` | string | yes | Why the run stopped, one sentence. |
+| `board.banner.text` | string | yes | Why the run stopped, then a sentence asking to revise the reopened cards when any reopened. |
 | `board.banner.gates` | array | yes | Each red gate's line as `gates.mjs` printed it. |
 | `board.scenes` | array | yes | One card per scene, in order. |
 | `board.scenes[].id` | string | yes | The scene id. |
