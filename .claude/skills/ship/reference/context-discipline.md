@@ -134,13 +134,13 @@ failed to arrive: retry while retries make progress, as SKILL.md's stops say,
 then `red-after-retry`. An inline pass writes the same file itself before
 dispositioning. The Run file's `## Design and plan` names every round's paths
 as each round is dispatched; disposition from the file, and quote the merge
-summary's `Self-review` rows from it. Phase 7's
+summary's `Self-review` item from it. Phase 7's
 [local review](review-loop.md#the-round) writes
 `<scratch>/standards/standards-report-local.md` under the same rule, a path no
 phase-4 round uses.
 
 **A clobbered Run file** answers a flip with a refusal naming a missing line or
 a missing file, and each refusal carries its check and the rebuild. A `--state`
-with no recoverable range is `done` bare and reads `unverified` on the `Timing:`
-row, as does the phase re-opened at the rebuild; afterwards re-check the task
+with no recoverable range is `done` bare and reads `unverified` on the `Timing`
+item, as does the phase re-opened at the rebuild; afterwards re-check the task
 mirror against the file.

@@ -174,10 +174,12 @@ wrong is the `mis-specified` stop instead.
   candidate is **read**: the same finding is linked in the deviations log
   rather than refiled, and `comment-issue` posts any evidence this run adds to
   it; a different one is refiled with `--distinct-from`. A find citing a path
-  this PR already changes is refused with `in_diff`, since a find there usually
-  folds; `--outside-scope "<reason>"` files it where the reason holds.
-- **Note** a trivial find: one line in the Run file, which the merge summary
-  carries.
+  this PR already changes is refused with `in_diff`, since a find there folds
+  unless it would raise the release grade or reaches another skill's surface;
+  `--outside-scope "<reason>"` files that case.
+- **Note** a find not worth a fold or an issue (a typo outside the diff, a
+  cosmetic nit): record `Noted: <find>` in the Run file when it is met, so the
+  merge summary can list it after a compaction.
 
 The merge summary lists every issue filed, every candidate linked and every
 noted find.

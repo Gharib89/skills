@@ -147,7 +147,7 @@ An open issue whose title shares three or more tokens with an adjacent find the 
 _Avoid_: duplicate, match, near-miss, collision
 
 **Ship defect**:
-A gap in Ship itself that broke or misled a run: a gating call no generic mechanic performs, or a mechanic or prose whose wrong answer the run acted on. It never holds a clean gate on its own. Reported by name in the merge summary with a drafted issue for the source repo, which Ship files there only on the human's word at the merge gate, printing the command where the run cannot reach the source repo's host; never a hand-rolled call. A gap in the ship profile rather than in Ship is a profile defect: an adjacent find of the consumer repo, filed there. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
+A gap in Ship itself that broke or misled a run: a gating call no generic mechanic performs, or a mechanic or prose whose wrong answer the run acted on. It never holds a clean gate on its own. Reported by name in the merge summary with a drafted issue for the source repo, which Ship files there only on the human's word at the merge gate, printing the command where the run cannot reach the source repo's host; never a hand-rolled call. A gap in the ship profile rather than in Ship is a profile defect: an adjacent find of the consumer repo, filed there. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named under the merge summary's `Ship defects`.
 _Avoid_: tooling gap, missing helper, upstream bug, profile defect (that is the consumer repo's)
 
 **Ship note**:

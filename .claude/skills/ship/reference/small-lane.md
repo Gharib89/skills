@@ -74,7 +74,8 @@ human's approval to merge this one PR on a clean gate, and nothing wider. With
 `prepare`, printing the usage line `/ship <issue> --inline [--review]`.
 
 - **Keys:** the small lane's three, plus a **20-line cap**, a rule rather than a
-  mark: counted by *The size*'s `--numstat` command and exclusions, at phase 2's
+  mark: counted by *The size*'s `--numstat` command and exclusions, folded
+  adjacent finds included, at phase 2's
   `Done when:` and again before every later push. A guard, allowlist or
   deny-rule diff stays inline with `--review`, and is full lane without.
 - **Kept from above:** the floor, the local gate, subagents, adjacent finds.

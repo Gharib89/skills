@@ -85,29 +85,29 @@ than a command. A value you cannot point to a tool result for is written
 `unverified`. A **tally of the run's own work** has no tool to re-run, so it is
 **written to the Run file at the moment it happens** and read back from there,
 which is what survives a compaction: a `file-issue` result when the call
-answers, a Ship defect or Ship note when it is met, and a reviewer's round when
-it is dispositioned ([review-loop.md](review-loop.md)). `Ship defects`
-lists every gap in Ship that broke or misled the run: a gating call no mechanic
-performs, or a mechanic or prose whose wrong answer the run acted on. Friction
-the run worked around by judgment (a rule that did not fit the case, prose that
-left it guessing) goes on `Ship notes:` instead, one line each and no draft, and
-so does a direct call made in two runs where this run can see the other, per
-[mechanics.md](mechanics.md#which-calls-need-a-mechanic); record `Ship-note:
-<what>` in the Run file when it is met. Every direct call goes on `Direct
-calls:`, read from the Run file's `## Direct calls`. Each defect carries a
-**drafted issue** for the source repo, `Gharib89/skills`, written to
-`defect-<k>.md` beside the Run file when it is met: a title, then a body naming
-Ship's version, the mechanic or prose at fault and what the run did instead, and
-no organization identifier, credential or client context, because the source
-repo is public. A gap in the ship profile rather than in Ship is a **profile
-defect**: an adjacent find of this repo, filed here through phase 2's
-dispositions and listed under `Issues filed`, not on this row. Where this repo
-is the source repo, a Ship defect is an adjacent find already (its profile's `##
-Triage`) and the row names its number instead of a draft. In either case, record
-`Ship-defect: <detail>` in the Run file when the defect is met, even if it is
-fixed or filed during the run, so the row survives a compaction; neither that
-line nor a draft holds the clean gate, since a defect that breaks a gating step
-already fails that step's evidence.
+answers, a Ship defect, Ship note or `Noted:` find when it is met, and a
+reviewer's round when it is dispositioned ([review-loop.md](review-loop.md)).
+`Ship defects` lists every gap in Ship that broke or misled the run: a gating
+call no mechanic performs, or a mechanic or prose whose wrong answer the run
+acted on. Friction the run worked around by judgment (a rule that did not fit
+the case, prose that left it guessing) goes under `Ship notes` instead, one line
+each and no draft, and so does a direct call made in two runs where this run can
+see the other, per [mechanics.md](mechanics.md#which-calls-need-a-mechanic);
+record `Ship-note: <what>` in the Run file when it is met. Every direct call
+goes under `Direct calls`, read from the Run file's `## Direct calls`. Each
+defect carries a **drafted issue** for the source repo, `Gharib89/skills`,
+written to `defect-<k>.md` beside the Run file when it is met: a title, then a
+body naming Ship's version, the mechanic or prose at fault and what the run did
+instead, and no organization identifier, credential or client context, because
+the source repo is public. A gap in the ship profile rather than in Ship is a
+**profile defect**: an adjacent find of this repo, filed here through phase 2's
+dispositions and listed under `Issues filed`, not under `Ship defects`. Where
+this repo is the source repo, a Ship defect is an adjacent find already (its
+profile's `## Triage`) and the item names its number instead of a draft. In
+either case, record `Ship-defect: <detail>` in the Run file when the defect is
+met, even if it is fixed or filed during the run, so the item survives a
+compaction; neither that line nor a draft holds the clean gate, since a defect
+that breaks a gating step already fails that step's evidence.
 
 **The body is the short form of this record** ([pr-body.md](pr-body.md)), each
 pair written from one result so the two cannot disagree: `Deviations from plan`
@@ -133,12 +133,12 @@ An acceptance criterion asking for a host action no mechanic performs stays
 verbatim in the issue
 ([implement.md](implement.md#phase-1-a-criterion-no-mechanic-can-perform)). A
 run that hits one, unattended or told to build the rest, lists it on the `Unmet
-criteria` row, verbatim, with the action a human must take, and logs the gap in
-the deviations log. The row is the human's to clear: **merging needs an
+criteria` item, verbatim, with the action a human must take, and logs the gap in
+the deviations log. The item is the human's to clear: **merging needs an
 explicit waiver of each unmet criterion, beside the merge word**: "merge" alone,
 or a waiver naming fewer than all of them, is asked back. No mechanic reads the
-row, so with one listed, `Merge: on-clean-gate` does not merge: post the summary
-with the reply line and wait, whatever `gate clean` answers.
+item, so with one listed, `Merge: on-clean-gate` does not merge: post the
+summary with the reply line and wait, whatever `gate clean` answers.
 
 ## A tracker issue on Targets:
 
@@ -249,14 +249,14 @@ here; while a stop holds, the run waits for "merge".
 
 ## Filing a Ship defect
 
-A Ship defect draft reaches the source repo on the human's word alone,
-and "merge" is not that word: it approves the PR, not publishing the run's
-context to a public repo. On "file defects", or a word naming one draft, run
-`file-issue --repo Gharib89/skills --title "<title>" --body-file <draft> --label
-needs-triage` per Ship defect draft and put its answer on the row: the number
-filed, the candidates it answered with instead, each read the way phase 2 reads
-one, or, on exit 1 with a `command`, that command verbatim for the human to run
-where the write succeeds. Before or after the merge, either order holds.
+A Ship defect draft reaches the source repo on the human's word alone, and
+"merge" is not that word: it approves the PR, not publishing the run's context
+to a public repo. On "file defects", or a word naming one draft, run `file-issue
+--repo Gharib89/skills --title "<title>" --body-file <draft> --label
+needs-triage` per Ship defect draft and put its answer under `Ship defects`: the
+number filed, the candidates it answered with instead, each read the way phase 2
+reads one, or, on exit 1 with a `command`, that command verbatim for the human
+to run where the write succeeds. Before or after the merge, either order holds.
 
 ## Unattended: post to the PR, then return
 

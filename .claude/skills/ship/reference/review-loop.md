@@ -84,7 +84,7 @@ not-landed primary whose fallback exited `not reviewed`.
 resolved state, `landed_by` naming the rule that admitted a round, `refused_by`
 a quota or rate-limit notice, or a native reviewer's reply, admitted in its
 place, `reviewer_run` for a comment transport, `reviewer_blocked` a quota
-notice the rule did not admit (cite it in a trailing clause, never as the
+notice the rule did not admit (cite it on the `## Review` line, never as the
 reason), and `not_reviewed`, the cause the poll observed where no round was
 admitted.
 
@@ -139,14 +139,14 @@ admitted.
 - **Write each round to the Run file as you disposition it**, one line per
   finding with its disposition, one per round whose `reviewer_run.denied`
   is numeric, with the run URL, and the round's `Round:` line (formats under
-  [The exit](#the-exit)): the exit's counts come from them.
+  [The exit](#the-exit)): the `## Review` line is read from them.
 
 ## The exit
 
 Each reviewer exits with one of:
 
 - `reviewed`: at least one round landed and was dispositioned. A later round
-  that did not land is a trailing clause, not a different exit.
+  that did not land goes on the `## Review` line, not a different exit.
 - `not reviewed: <reason>`: no round landed, or one did and its threads could
   not be read (`unreachable`): triage that one off its body and answer it with
   `comment-pr`. The reason is `not_reviewed` off the last poll,
@@ -169,7 +169,7 @@ the override the human decides on.
 
 One line per reviewer goes in the PR body's `## Review` section and the merge
 summary: its exit word, then what its rounds found and what became of the
-findings, read from its `Round:` lines below. Add whatever the reader needs
+findings, read from its Run-file lines below. Add whatever the reader needs
 beyond that: a cap that ran out mid-findings, a docs-only fix-only diff that
 ended the loop, the primary's reason on a fallback that ran, a round that did
 not land after one that did, or the calls the reviewer was denied, summed from
@@ -202,7 +202,7 @@ dispositions changed no file, so a further round would read the same tree),
 `small lane` (the lane's one requested round), `inline lane` (the lane requested
 no round), `auto-once` (the reviewer fires once, on PR open), `not landed` (a
 dispositioned round's fixes changed the tree, then the next requested round did
-not land, so no host round read them; its cause goes in the trailing clause) or
+not land, so no host round read them; its cause goes on the `## Review` line) or
 `not reviewed` (no round was dispositioned: none landed, a fallback was not
 invoked because its primary reviewed, or a round landed whose threads could not
 be read, which keeps its `Round:` line too). A declined finding from a `Gating:

@@ -103,8 +103,8 @@ that path.
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
 `manage-issue <issue> take --fresh` (bare in a rework or resumed run, holding
 it already), held until merge; later stops follow the stop table. Then **grep
-each anchor** the issue cites, rewriting one the tree contradicts through
-`update-issue-body`
+each anchor** the issue cites; one the tree contradicts rewrites the body
+through `update-issue-body` only when it changes a criterion, else it is logged
 ([implement.md](reference/implement.md#phase-1-anchors-the-issue-cites)). A
 criterion needing a host action no mechanic performs stays verbatim: unattended,
 it is an **unmet criterion** the merge summary lists; attended, ask first, per
