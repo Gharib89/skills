@@ -10,7 +10,7 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>... | call <why> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
@@ -66,14 +66,14 @@ check "the fixed wording, with the profile tails substituted" \
 - [ ] 9 · Merge gate: summary, default human approval or clean opt-in (unattended: summary as PR comment, return)' \
   "$(grep '^- \[ \] ' "$f" | sed 's/ in_progress ([0-9][0-9]:[0-9][0-9]→)$//')"
 
-# The informational reads a run made with no mechanic behind them, one line
-# each, so the ones that recur across runs can be promoted to a mechanic.
-check "init gives direct reads a section of their own, after the deviations log" \
+# The direct calls a run made with no mechanic behind them, one line each, so
+# the ones that recur across runs can be promoted to a mechanic.
+check "init gives direct calls a section of their own, after the deviations log" \
   '## Deviations log
 
 (none yet)
 
-## Direct reads
+## Direct calls
 
 (none yet)' \
   "$(sed -n '/^## Deviations log$/,$p' "$f")"

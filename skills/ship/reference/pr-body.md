@@ -33,8 +33,8 @@ write into. Every variant carries:
 - **`## Change outline`**: the behavioural fence below.
 - **`## Special things to note`**: the Door line first, then the reviewer's
   warnings and the folded deviations, so it is never `None.`.
-- **`## Needs attention`**: every issue the run filed or linked and every Ship
-  defect it met.
+- **`## Needs attention`**: every issue the run filed or linked, every Ship
+  defect it met and every Ship note.
 - **`## Verification`**: one line per applicable verification in the merge
   summary's `Verification` row format, or `None applicable: <reason>`, with
   two such reasons and no third: `small lane`, and a change where no `Applies
@@ -103,11 +103,12 @@ reviewing the diff would act on does not appear.
 ## Needs attention: what the run left for someone
 
 One line per issue the run filed or linked, `- #<n> <title>: <one line why it
-matters>`, and one per Ship defect met, `- Ship defect: <what>`. `None.` when
-there are neither. Nothing else belongs here: an adjacent find is filed or fixed
-inline by phase 2's dispositions, so an observation parked here is a find that
-skipped its disposition. It is written from the Run file's record, not the
-deviations log.
+matters>`, one per Ship defect met, `- Ship defect: <what>`, and one per Ship
+note, `- Ship note: <what>`, beside them, so a retro finds the friction after
+the run's files are gone. `None.` when there are none. Nothing else belongs
+here: an adjacent find is filed or fixed inline by phase 2's dispositions, so an
+observation parked here is a find that skipped its disposition. It is written
+from the Run file's record, not the deviations log.
 
 ## Writing and reading it back
 

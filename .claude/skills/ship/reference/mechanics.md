@@ -18,18 +18,34 @@ runs and how every one of them answers.
 
 ## Which calls need a mechanic
 
-Every host **write**, and every **gating read** (one a phase's `Done when:` or a
-stop row depends on: `preflight`, `poll-pr`, `ci-wait`, `base-fresh` and the
-like), goes through a mechanic, so create-then-verify, the host status on a
-failed write and the same verdict from the same host state all hold. One no
-mechanic performs is a Ship defect. An **informational read**, one no phase or
-stop branches on, may be made directly where no mechanic covers it: through the
-host's REST form (`gh api`, `az rest`), which the cloud sandbox admits where it
-refuses GitHub GraphQL, with one line in the Run file's `## Direct reads`
-naming the call and why. Verification scaffolding sits outside the rule: a
-scratch issue or scratch review thread a `Run:` line sets up by hand, or a
-throwaway probe PR an acceptance criterion asks for, with its pushes and CI
-cancels, closed unmerged before the merge gate.
+Only a **gating call** goes through a mechanic: a host read or write that a
+later phase, a stop row, the merge or the release depends on, so
+create-then-verify, the host status on a failed write and the same verdict from
+the same host state all hold. The gating calls are preflight's admission, the
+claim and its labels (`manage-issue`), `read-issue`, `base-fresh`, `poll-pr` and
+the review round it reads (`request-review`, `reply-thread`, `resolve-thread`),
+`ci-wait`, `open-pr`, the PR's title and body (`update-pr-title`,
+`update-pr-body`, `read-pr`), `merge`, the issue close, `file-issue`, and
+`update-issue-body` with the tracker drafts, and the unattended lane's
+`list-prs` and `select`. One no mechanic performs is a Ship defect, which never
+holds the clean gate on its own: a defect that breaks a gating step already
+fails that step's evidence.
+
+A non-gating call a mechanic already covers (`reflect`, `comment-issue`,
+`comment-pr`, `isolate`, `cleanup`) still runs through it. Any other host call
+is a **direct call**: the run makes it itself, through the host's REST form
+only, `gh api <REST path>` (never its `graphql` endpoint) or `az rest`, which
+the cloud sandbox admits where its proxy refuses GitHub GraphQL with a 403, so
+`gh issue edit` and its kin are out. Log it before making it with `run-file call
+"<why>" --issue <issue> -- gh api ...`, which writes the line under the Run
+file's `## Direct calls` and refuses, exit 1, any other form, and one carrying
+an `Authorization` header, because the line reaches the summary and the host CLI
+authenticates the call itself. A direct call made in two runs, where this run
+can see the other (an earlier unattended summary comment on this repo's PRs
+lists it), is raised as a Ship note: it may earn a mechanic. Verification
+scaffolding sits outside the rule: a scratch issue or scratch review thread a
+`Run:` line sets up by hand, or a throwaway probe PR an acceptance criterion
+asks for, with its pushes and CI cancels, closed unmerged before the merge gate.
 
 ## Which mechanic each phase runs
 
@@ -55,6 +71,7 @@ contract.
 | `revert-red` | 4, a new test run with its fix reverted, through `run-file prove` |
 | `run-file prove` | 4, per test file the diff adds or changes, writing its red `Reverted-fix:` line |
 | `run-file probe` | 4, per `Declined: <ref>: claim:` decline, writing its `Probe:` line |
+| `run-file call` | any phase, before each direct call, writing its `## Direct calls` line |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr` | 6 |
@@ -66,7 +83,7 @@ contract.
 | `comment-issue` | 2, 4, 7 |
 | `comment-pr` | 7, 9 |
 | `reply-thread` | 7 |
-| `update-pr-body` | 7 |
+| `update-pr-body` | 7; 9, a Ship defect or Ship note met after phase 7 |
 | `update-issue-body` | 1, once per section an anchor the tree contradicts sits in; 9, after `merge` answers `merged: true`, once per tracker draft |
 | `resolve-thread` | 7 |
 | `ci-wait` | 8 |

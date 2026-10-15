@@ -218,10 +218,10 @@ Run file, so the clean-gate decision reads the same override the human sees in
 the summary.
 
 At exit, from the Run file and never from the body the write replaces, one
-`update-pr-body <pr> --section <name> --body-file <path>` per section, each
-file carrying its section rebuilt entire: `"Special things to note"` where the
-rounds grew the deviations log, `"Needs attention"` where a round filed or
-linked an issue or met a Ship defect, `"Change outline"` where `read-pr`'s
+`update-pr-body <pr> --section <name> --body-file <path>` per section, each file
+carrying its section rebuilt entire: `"Special things to note"` where the rounds
+grew the deviations log, `"Needs attention"` where a round filed or linked an
+issue or met a Ship defect or a Ship note, `"Change outline"` where `read-pr`'s
 `outline_missing` is non-empty or the rounds changed the change's shape, and
 `Review` last. Then the title is checked against the recorded `Grade:`, a wrong
 type fixed with `update-pr-title`, and `read-pr` reads everything back at once.

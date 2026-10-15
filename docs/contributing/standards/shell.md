@@ -16,11 +16,11 @@ exceptions bound these rules.
   [skills/ship/reference/mechanics.md](../../../skills/ship/reference/mechanics.md);
   the `contract` gate enforces it.
 - **No host CLI outside a named mechanic.** In this repo's code, `gh` and `az`
-  are called only from `skills/ship/scripts/host/<host>.sh`; a host write or
-  gating read no mechanic performs is a ship defect, not a prose fallback. A run
-  itself may make an informational read no mechanic covers through the host's
-  REST form, listed in its Run file's `## Direct reads`, and that is no
-  violation of this rule. One documented exception: a CI template under
+  are called only from `skills/ship/scripts/host/<host>.sh`; a gating call no
+  mechanic performs is a ship defect, not a prose fallback. A run itself may
+  make a direct call no mechanic covers through the host's REST form, logged in
+  its Run file's `## Direct calls` by `run-file call`, and that is no violation
+  of this rule. One documented exception: a CI template under
   `skills/setup-skills/reviewers/`, and this repo's own copy of one under
   `.github/workflows/`, calls `gh` directly. It runs on a runner in a consumer
   repo that has no mechanics checked out, so there is nothing to route through.
@@ -43,7 +43,8 @@ exceptions bound these rules.
   and deletes branches, on the fixture repo with `gh`, because those writes are
   a live run's scaffolding around Ship, not Ship's own, and the mechanics are
   what it tests.
-  A read made directly in two runs is a candidate mechanic.
+  A direct call made in two runs, where this run can see the other, is a
+  candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way
