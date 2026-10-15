@@ -69,6 +69,9 @@ if [ "$(id -u)" -ne 0 ]; then
   chmod 000 "$repo/.github/pull_request_template.md"
   check "a template file that cannot be read is null" 'null' "$(run 7 | jq -c .missing)"
   chmod 644 "$repo/.github/pull_request_template.md"
+  chmod 000 "$repo/docs/agents/ship.md"
+  check "a profile that cannot be read is null, not an empty profile's []" 'null' "$(run 7 | jq -c .missing)"
+  chmod 644 "$repo/docs/agents/ship.md"
 else
   echo "skip: an unreadable template (root reads a mode-000 file)"
 fi
