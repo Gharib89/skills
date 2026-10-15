@@ -32,6 +32,11 @@
       "sourceType": "local",
       "computedHash": "adca5746095b76b3f0422cc63ebddfbe891b8ffa0eb0310f77f5ea918e429d42"
     },
+    "explainer-video": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "f58bcc7bd8a95429e6406adedac0f7e2fc01fb86ee45c8a00f2dff709dd88d6c"
+    },
     "find-docs": {
       "source": "upstash/context7",
       "ref": "3131245817e9e40626d8f43ce85dabab09d4ff35",

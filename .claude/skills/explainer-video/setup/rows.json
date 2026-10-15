@@ -1,0 +1,73 @@
+{
+  "rows": [
+    {
+      "id": "npm-packages",
+      "kind": "npm",
+      "neededBy": "render, voice",
+      "size": 404784108,
+      "licence": "Apache-2.0 (hyperframes), MIT (onnxruntime-node), and their dependencies"
+    },
+    {
+      "id": "chrome",
+      "kind": "chrome",
+      "neededBy": "sources, render",
+      "size": 272381534,
+      "licence": "BSD-3-Clause (Chrome Headless Shell, pinned by hyperframes)"
+    },
+    {
+      "id": "font:source-serif-4",
+      "kind": "font",
+      "family": "source-serif-4",
+      "version": "5.3.0",
+      "files": ["latin-600-normal"],
+      "neededBy": "render",
+      "size": 21532,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:inter",
+      "kind": "font",
+      "family": "inter",
+      "version": "5.3.0",
+      "files": ["latin-400-normal", "latin-600-normal"],
+      "neededBy": "render",
+      "size": 48116,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:jetbrains-mono",
+      "kind": "font",
+      "family": "jetbrains-mono",
+      "version": "5.3.0",
+      "files": ["latin-400-normal"],
+      "neededBy": "render",
+      "size": 21168,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "ffmpeg",
+      "kind": "system",
+      "command": "ffmpeg",
+      "neededBy": "voice, score, render, gates",
+      "licence": "LGPL-2.1-or-later or GPL-2.0-or-later, by build",
+      "install": {
+        "apt": "sudo apt install ffmpeg",
+        "brew": "brew install ffmpeg",
+        "winget": "winget install --id Gyan.FFmpeg -e"
+      }
+    },
+    {
+      "id": "uv",
+      "kind": "system",
+      "command": "uv",
+      "when": "python",
+      "neededBy": "opt-in Python rows",
+      "licence": "MIT OR Apache-2.0",
+      "install": {
+        "linux": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+        "brew": "brew install uv",
+        "winget": "winget install --id astral-sh.uv -e"
+      }
+    }
+  ]
+}

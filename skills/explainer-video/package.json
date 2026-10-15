@@ -1,0 +1,12 @@
+{
+  "name": "explainer-video-tools",
+  "private": true,
+  "description": "The tools explainer-video installs into its per-user tool cache with npm ci; never installed in the skill's own folder.",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "hyperframes": "0.8.160",
+    "onnxruntime-node": "1.30.0"
+  }
+}
