@@ -146,6 +146,12 @@ check "a body short of the repo's last heading is refused" \
 # the check takes as ordinary section text, in either colour.
 check "the repo's template asks for the coloured Door line" 1 \
   "$(grep -c '`- 🟢 Door: two-way\..*`- 🔴 Door: one-way\.' .github/pull_request_template.md)"
+# The template setup-skills installs carries the same instructions as this
+# repo's, and update-skills writes the Door line in the same coloured shapes.
+check "setup-skills' template matches the repo's" "" \
+  "$(diff .github/pull_request_template.md skills/setup-skills/pull_request_template.md)"
+check "update-skills writes the coloured Door line" 2 \
+  "$(grep -cE '`- (🟢 Door: two-way|🔴 Door: one-way)\.' skills/update-skills/SKILL.md)"
 awk '{ print } /^## Special things to note/ { print "\n- 🟢 Door: two-way. Blast radius: this repo.\n- 🔴 Door: one-way. Blast radius: consumers." }' \
   "$T/tplbody.md" > "$T/door.md"
 check_rc "a body with coloured Door lines passes" \
