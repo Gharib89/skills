@@ -181,6 +181,8 @@ test("a gate stop shows its red gate lines, keeps Submit off until the reopened 
       g,
     );
   assert.ok(v.includes(board.banner.text));
+  // The count names cards approved on an earlier board, not this board's picks.
+  assert.match(v, /of 1 to answer done · 2 already approved/);
   assert.ok(submitDisabled(v));
   assert.deepEqual(clone(P.answersDoc(S).scenes.map((s) => s.choice)), [
     "approve",

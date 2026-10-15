@@ -272,7 +272,7 @@ function bar(S, b) {
     ? `<button class="btn accent" data-act="copy" ${left ? 'disabled' : ''}>Copy answers</button>`
     : `<button class="btn accent" id="submit" data-act="submit" ${canSubmit(S) ? '' : 'disabled'}>Submit board ${esc(b.version)}</button>`;
   return `<div class="bar panel"><div class="bar-in">
-    <span class="count"><b data-ready>${need - left}</b> of ${need} to answer done · ${b.scenes.length - need} approved</span>
+    <span class="count"><b data-ready>${need - left}</b> of ${need} to answer done · ${b.scenes.length - need} already approved</span>
     <div>${act}</div>${S.local ? localNote(S) : status(S)}</div></div>`;
 }
 function localNote(S) {
