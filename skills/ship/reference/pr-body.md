@@ -47,8 +47,9 @@ write into. Every variant carries:
 
 The `Closes` line, the headings verbatim, attribution last and the Door line
 are the body's rules, because the host's close, `open-pr`, later section writes
-and the reviewer read them. What each section says, and at what length, is
-written for its reader.
+and the reviewer read them. The Change outline keeps the shape
+[below](#the-change-outline); what every other section says, and at what
+length, is written for its reader.
 
 ## The Change outline
 
