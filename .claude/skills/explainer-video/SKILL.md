@@ -22,8 +22,9 @@ storyboard is not in this version.
 Asked for a video from sources, run the stages in order (brief, source,
 script, voice, render) without waiting for the user's approval, pausing only
 where a stage says to stop or ask; say in one line that the storyboard, where
-they would approve the script, is not in this version. Asked for narration the
-user writes, skip to Voice or Render.
+they would approve the script, is not in this version. Asked for a video of a
+topic alone, say that topic research is not in this version and ask for a
+source. Asked for narration the user writes, skip to Voice or Render.
 
 ## Setup
 

@@ -100,6 +100,7 @@ function judge(fx, verdicts = {}) {
       scene: sc.id,
       n: i + 1,
       text,
+      cites: sc.cites[i],
       verdict:
         verdicts[`${sc.id} ${i + 1}`] ??
         (sc.cites[i].length ? "supported" : "connective"),
@@ -333,6 +334,26 @@ test("a verdict for another wording of the sentence is not a verdict for this on
     "script support: fail: hook 1 not judged: run the support check",
   );
   assert.doesNotMatch(r.out, /attempt/);
+});
+
+test("a verdict on other cites, or older than the source pack, is not a verdict", () => {
+  const fx = fixture();
+  const file = path.join(fx.dir, "support.json");
+  const s = JSON.parse(fs.readFileSync(file, "utf8"));
+  s.sentences[0].cites = ["ex-2"];
+  fs.writeFileSync(file, JSON.stringify(s));
+  assert.equal(
+    line(check(fx), "support"),
+    "script support: fail: hook 1 not judged: run the support check",
+  );
+
+  judge(fx);
+  const later = new Date(Date.now() + 60_000);
+  fs.utimesSync(path.join(fx.dir, "excerpts.json"), later, later);
+  assert.equal(
+    line(check(fx), "support"),
+    "script support: fail: support.json predates excerpts.json: run the support check",
+  );
 });
 
 test("every must-include item is said or shown and no avoid item is", () => {

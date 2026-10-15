@@ -5,9 +5,10 @@
 //
 // Reads <run>/script.json, script.md, brief.json, excerpts.json, the
 // snapshots when present, and support.json, which the support checker writes:
-//   { "sentences": [{ "scene", "n", "text", "verdict", "why" }] }
-// `text` is the sentence's compiled narration, so a verdict on another
-// wording judges nothing; `verdict` is supported or connective (a pass),
+//   { "sentences": [{ "scene", "n", "text", "cites", "verdict", "why" }] }
+// `text` and `cites` are the sentence's compiled narration and excerpt ids,
+// so a verdict on another wording or other cites, or one older than
+// excerpts.json, judges nothing; `verdict` is supported or connective (a pass),
 // unsupported or unmarked (a [no-claim] sentence that makes a claim).
 // stdout: `script <gate>: pass|fail: <findings>|warn: <findings>` per gate
 //         (arc, budget, cites, support, coverage, reading, dashes,
@@ -137,8 +138,12 @@ let support = { attempts: 0, judged: null };
 let red = false;
 {
   const f = [];
+  const mtime = (f) => fs.statSync(file(f)).mtimeMs;
   if (!fs.existsSync(file("support.json")))
     f.push("no support.json: run the support check");
+  // A new pack can put other words behind the same excerpt id.
+  else if (mtime("excerpts.json") > mtime("support.json"))
+    f.push("support.json predates excerpts.json: run the support check");
   else {
     const raw = fs.readFileSync(file("support.json"), "utf8");
     const verdicts = JSON.parse(raw).sentences ?? [];
@@ -147,7 +152,11 @@ let red = false;
     for (const s of scenes)
       s.narration.forEach((text, i) => {
         const v = verdicts.find(
-          (x) => x.scene === s.id && x.n === i + 1 && x.text === text,
+          (x) =>
+            x.scene === s.id &&
+            x.n === i + 1 &&
+            x.text === text &&
+            JSON.stringify(x.cites) === JSON.stringify(s.cites[i]),
         );
         if (!v) {
           judged = false;

@@ -50,6 +50,7 @@ Write `{run}/support.json`, one entry per sentence of every scene, in order:
       "scene": "hook",
       "n": 1,
       "text": "The sentence exactly as it stands in script.json.",
+      "cites": ["ex-3", "ex-4"],
       "verdict": "supported",
       "why": "ex-3 states the merge; ex-4 gives the count."
     }
@@ -57,9 +58,10 @@ Write `{run}/support.json`, one entry per sentence of every scene, in order:
 }
 ```
 
-`scene` is the scene's `id`, `n` the sentence's number from 1, and `text` copied
-exactly from `narration`: the check matches a verdict to its sentence by all
-three, so a verdict on another wording counts as no verdict. `why` is one
+`scene` is the scene's `id`, `n` the sentence's number from 1, `text` copied
+exactly from `narration` and `cites` from `cites`: the check matches a verdict
+to its sentence by all four, so a verdict on another wording or other cites
+counts as no verdict. `why` is one
 sentence; for a failing verdict it names the words the excerpts do not back.
 
 ## Check it
@@ -68,7 +70,7 @@ Run the script gates. Their `script support:` line reads `pass`, or names each
 failing sentence with its verdict and your reason. A sentence it calls `not
 judged` has no entry matching it: fix the entry's `scene`, `n` or `text` and
 run the script gates again, at most twice. Keep each verdict as you judged it:
-fix only `scene`, `n` and `text`.
+fix only `scene`, `n`, `text` and `cites`.
 
 ## Report
 
