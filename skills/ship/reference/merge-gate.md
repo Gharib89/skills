@@ -38,10 +38,11 @@ references call each item, not a layout:
   ran, or the reason the PR body gives for none applying.
 - **Self-review**: its rounds and stop, each phase-4 report with its path, and
   each finding with its disposition.
-- **Review**: each reviewer's exit and rounds, each finding with its
-  disposition (fixed in a commit, declined with the reason, filed), the reason
-  a fallback ran, and any `Gating: yes` reviewer's declined finding as an
-  override the human decides on, with its evidence.
+- **Review**: each reviewer's trigger, exit and rounds, any calls it was denied
+  with each run's link, each finding with its disposition (fixed in a commit,
+  declined with the reason, filed), the reason a fallback ran, and any
+  `Gating: yes` reviewer's declined finding as an override the human decides
+  on, with its evidence.
 - **Local gate**: each gate's status, at the head the verdict covers
   ([below](#attended-post-then-wait)).
 - **Docs-sync**: the files it changed, or why it was skipped.
