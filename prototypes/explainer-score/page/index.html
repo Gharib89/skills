@@ -1,0 +1,200 @@
+<title>Score Blind Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column; each blind score is a panel with its player and a scene strip that follows the playhead. */
+:root {
+  --bg: #1a1915; --panel: #262420; --line: #3a3732; --fg: #f5f3ec; --muted: #b5b0a3;
+  --accent: #d97757; --accent-ink: #1a1915; --ok: #8a9a5b; --chip: #312e29; --speech: #4a463f;
+  --serif: "Source Serif 4", Georgia, serif;
+  --sans: Inter, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f5f3ec; --panel: #ebe7dc; --line: #d6d0c2; --fg: #1a1915; --muted: #5e594f;
+  --accent: #b5532f; --accent-ink: #fff; --ok: #5d6e2e; --chip: #e0dbcd; --speech: #cfc8b8; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f5f3ec; --panel: #ebe7dc; --line: #d6d0c2; --fg: #1a1915; --muted: #5e594f;
+  --accent: #b5532f; --accent-ink: #fff; --ok: #5d6e2e; --chip: #e0dbcd; --speech: #cfc8b8; color-scheme: light; }
+
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 760px; margin: 0 auto; padding-block: 40px 80px; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 2.1rem; line-height: 1.15; }
+h2 { font-size: 1.35rem; }
+p { margin: 0; max-width: 65ch; }
+.muted { color: var(--muted); }
+.eyebrow { font: 500 0.75rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+header { display: grid; gap: 12px; }
+ol.how { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--muted); }
+
+#clips { display: grid; gap: 16px; }
+section.clip { background: var(--panel); border: 1px solid transparent; border-radius: 10px; padding: 16px 18px; display: grid; gap: 10px; }
+section.clip.picked { border-color: var(--accent); }
+section.clip.control { background: transparent; border: 1px dashed var(--line); }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.head h2 { display: flex; align-items: baseline; gap: 10px; }
+.head h2 small { font: 400 0.85rem var(--sans); color: var(--muted); }
+audio { width: 100%; height: 34px; }
+
+.strip { position: relative; height: 30px; border-radius: 6px; overflow: hidden; background: var(--bg); cursor: pointer; }
+.strip .scene { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+.strip .scene:first-child { border-left: 0; }
+.strip .card { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.strip .speech { position: absolute; bottom: 0; height: 8px; background: var(--speech); }
+.strip .head-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); left: 0; }
+.strip .label { position: absolute; top: 3px; font: 500 0.66rem var(--mono); color: var(--muted); white-space: nowrap; padding-left: 4px; }
+.now { font: 0.8rem var(--mono); color: var(--muted); min-height: 1.3em; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+button { font: inherit; cursor: pointer; }
+.pick { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--chip); color: var(--fg); font-weight: 500; }
+.picked .pick { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+label.ok { font-size: 0.85rem; color: var(--muted); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+label.ok input { accent-color: var(--ok); }
+.reveal { font-size: 0.85rem; color: var(--muted); }
+.reveal b { color: var(--fg); font-weight: 600; }
+textarea { width: 100%; box-sizing: border-box; min-height: 4rem; resize: vertical; font: inherit; color: var(--fg);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.submit-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.primary { padding: 10px 20px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.status { color: var(--muted); }
+pre.fallback { overflow-x: auto; background: var(--panel); padding: 12px; border-radius: 8px; font: 0.8rem var(--mono); }
+@media (max-width: 480px) { .strip .label { display: none; } }
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">explainer-video · default score</span>
+    <h1>Score Blind Test</h1>
+    <p class="muted">One 30-second cut: a title card, the Kokoro <code>bf_emma</code> narration, an end card. Each lettered clip puts a different score under it, ducked from the same word timings and mastered the same way. Which way of making the score wins as the default?</p>
+    <ol class="how">
+      <li>Play each clip; only one plays at a time. The strip under it shows the scenes (tinted: title and end cards; grey bars: speech). Click the strip to jump.</li>
+      <li>Listen for: does the score sit under the voice, does it lift on the cards, does it change where the scenes change, does it get tiresome.</li>
+      <li>Pick one winner. Tick "Acceptable as the default" on every score you would ship, winner included.</li>
+      <li>Save. The page then reveals how each score was made, its licence and its measured loudness.</li>
+    </ol>
+  </header>
+
+  <div id="clips"></div>
+
+  <textarea id="note" placeholder="Notes (optional): what made the winner win, anything to change in the duck, the level, the mood"></textarea>
+
+  <div class="submit-row">
+    <button class="primary" id="save" disabled>Save pick and reveal</button>
+    <span class="status" id="status">Pick a winner to save.</span>
+  </div>
+  <pre class="fallback" id="fallback" hidden></pre>
+</main>
+
+<script>
+// Scene timings and speech spans of the cut (raw/cut.json).
+const CUT = __CUT__;
+const LETTERS = __LETTERS__;
+const state = { pick: null, ok: [], note: "" };
+const root = document.getElementById("clips");
+const fmt = s => s.toFixed(1).padStart(4, " ") + " s";
+
+function strip() {
+  const el = document.createElement("div"); el.className = "strip";
+  const pct = s => (100 * s / CUT.total) + "%";
+  for (const [i, sc] of CUT.scenes.entries()) {
+    const d = document.createElement("div");
+    d.className = "scene" + (i === 0 || i === CUT.scenes.length - 1 ? " card" : "");
+    d.style.left = pct(sc.s); d.style.width = pct(sc.e - sc.s);
+    const l = document.createElement("span"); l.className = "label";
+    l.textContent = i === 0 ? "Title" : i === CUT.scenes.length - 1 ? "End card" : String(i);
+    d.append(l); el.append(d);
+  }
+  for (const [s, e] of CUT.speech) {
+    const d = document.createElement("div"); d.className = "speech";
+    d.style.left = pct(s); d.style.width = pct(e - s); el.append(d);
+  }
+  const h = document.createElement("div"); h.className = "head-line"; el.append(h);
+  return el;
+}
+
+function addClip(id, title, sub, control) {
+  const sec = document.createElement("section");
+  sec.className = "clip" + (control ? " control" : ""); sec.dataset.id = id;
+  sec.innerHTML = `<div class="head"><h2>${title} <small>${sub}</small></h2></div>
+    <audio controls preload="metadata" src="clips/${id}.mp4"></audio><div class="now"></div><div class="reveal" hidden></div>`;
+  const s = strip(); sec.querySelector("audio").after(s);
+  const audio = sec.querySelector("audio"), line = s.querySelector(".head-line"), now = sec.querySelector(".now");
+  const tick = () => {
+    const t = audio.currentTime; line.style.left = (100 * t / CUT.total) + "%";
+    const sc = CUT.scenes.find(x => t >= x.s && t < x.e) || CUT.scenes.at(-1);
+    now.textContent = `${fmt(t)} · ${sc.name}`;
+    if (!audio.paused) requestAnimationFrame(tick);
+  };
+  audio.addEventListener("play", tick); audio.addEventListener("seeked", tick); audio.addEventListener("timeupdate", tick);
+  s.onclick = e => { const r = s.getBoundingClientRect(); audio.currentTime = CUT.total * (e.clientX - r.left) / r.width; };
+  if (!control) {
+    const c = document.createElement("div"); c.className = "controls";
+    c.innerHTML = `<button class="pick" type="button">Pick as winner</button>
+      <label class="ok"><input type="checkbox"> Acceptable as the default</label>`;
+    c.querySelector(".pick").onclick = () => { state.pick = state.pick === id ? null : id; paint(); };
+    c.querySelector("input").onchange = e => {
+      state.ok = e.target.checked ? [...new Set([...state.ok, id])] : state.ok.filter(x => x !== id);
+    };
+    sec.append(c);
+  }
+  root.append(sec);
+  tick();
+}
+
+for (const L of LETTERS) addClip(L, `Score ${L}`, "", false);
+addClip("no-score", "Control", "narration only, no score: the baseline the map's off switch gives", true);
+
+document.addEventListener("play", e => {
+  for (const a of document.querySelectorAll("audio")) if (a !== e.target) a.pause();
+}, true);
+document.getElementById("note").oninput = e => { state.note = e.target.value; };
+
+function paint() {
+  for (const sec of document.querySelectorAll("section.clip")) {
+    sec.classList.toggle("picked", sec.dataset.id === state.pick);
+    const b = sec.querySelector(".pick"); if (b) b.textContent = sec.dataset.id === state.pick ? "Winner" : "Pick as winner";
+  }
+  document.getElementById("save").disabled = !state.pick;
+  document.getElementById("status").textContent = state.pick ? "Ready to save." : "Pick a winner to save.";
+}
+paint();
+
+document.getElementById("save").onclick = async () => {
+  const btn = document.getElementById("save"), status = document.getElementById("status");
+  btn.disabled = true; status.textContent = "Saving...";
+  const record = { ...state, savedAt: new Date().toISOString() };
+  let saved = false;
+  try {
+    const db = await claude.use("db");
+    if (db) { await db.collection("picks").doc().set(record); saved = true; }
+  } catch (e) { status.textContent = `Could not save (${e.code || e.message}).`; }
+  if (saved) status.textContent = "Saved. Claude can read it now; tell the session you are done.";
+  else {
+    const fb = document.getElementById("fallback");
+    fb.textContent = JSON.stringify(record, null, 1); fb.hidden = false;
+    status.textContent = "Saving is unavailable here: copy the JSON below into the session.";
+  }
+  reveal();
+};
+
+async function reveal() {
+  const key = await (await fetch("key.json")).json();
+  for (const v of key) {
+    const el = document.querySelector(`section.clip[data-id="${v.id}"] .reveal`);
+    el.innerHTML = `<b></b> · <span class="lic"></span><br><span class="how"></span><br>` +
+      `${v.lufs} LUFS · ${v.true_peak} dBTP on the encoded file` + (v.bed_under_voice_db == null ? "" : ` · bed ${-v.bed_under_voice_db} dB under the voice`);
+    el.querySelector("b").textContent = v.name;
+    el.querySelector(".lic").textContent = v.licence;
+    el.querySelector(".how").textContent = v.how;
+    el.hidden = false;
+  }
+}
+</script>

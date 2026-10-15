@@ -1,0 +1,6 @@
+raw/**/*.wav
+raw/*.mp3
+raw/log-*.txt
+.venv-*/
+ace-step/
+page/out/
