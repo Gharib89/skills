@@ -19,6 +19,7 @@
 #   run-file timing <where>
 #   run-file prove <test> <path>... <where>
 #   run-file probe <ref> <where> -- <command>...
+#   run-file call <why> <where> -- <command>...
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
 # The record root is `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>`,
@@ -60,9 +61,9 @@
 # `- <name>: <word> at <sha>[: <note>]`, <sha> the `--head` close 3 was given or
 # else the checkout's HEAD, and which
 # `close 3` will not pass while any is pending), then `Design and plan`,
-# `Deviations log`, and `Direct reads`, one line per informational read the run
-# made straight through the host's REST form, no mechanic covering it, so one
-# that recurs across runs is visible as a mechanic to promote. `skip 3 <reason>`
+# `Deviations log`, and `Direct calls`, one line per direct call the run made
+# straight through the host's REST form, no mechanic covering it, so one that
+# recurs across runs is visible as a mechanic to promote. `skip 3 <reason>`
 # settles each still-pending result as `n/a: <reason>`. `close 3 --result` also
 # takes a name the Run file lacks when the checkout profile has it as a
 # `## Verification` heading, one the PR added after init: it applies init's
@@ -141,7 +142,11 @@
 # shell-quoted word by word (`printf %q`) so it re-runs as recorded, under
 # `## Evidence`, the last nonblank line of stdout and stderr together, or
 # `(no output)`. It exits 0 whatever the command's exit; a ref holding `: ` names
-# no decline and is refused.
+# no decline and is refused. `call` runs nothing: it appends
+# `- <command> · <why>` under `## Direct calls`, <command> quoted as `probe`
+# quotes it, before the run makes the call, and refuses (exit 1) a command that
+# does not open on `gh api` or `az rest` and an endpoint, the cloud sandbox's
+# proxy refusing GitHub GraphQL, which `gh issue edit` and its kin use (#254).
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git
@@ -179,11 +184,11 @@
 #     fallback that stopped so, and a fallback is owed its own stop only after
 #     such a primary. Other cap,
 #     small lane and auto-once stops, a deferred gate beside a non-green check
-#     outside Legs:, nonblank Override or Ship-defect
-#     evidence, defect or tracker drafts beside the Run file (excluding
-#     .base.md), and a last `Stop: self-review: cap` where no reviewer stopped
+#     outside Legs:, nonblank Override evidence, tracker drafts beside the
+#     Run file (excluding .base.md), and a last `Stop: self-review: cap` where no reviewer stopped
 #     on tree unchanged at a covered head with a dispositioned Round hold the
-#     gate. An ordinary deviation does not hold it. This read is independent
+#     gate. An ordinary deviation, a Ship-defect line or a defect draft does not
+#     hold it: a defect that breaks a gating step fails that step's evidence. This read is independent
 #     of Merge.
 #     A stamp covers <sha> when it is <sha>, or when every later commit on
 #     <sha>'s first-parent line is a clean base merge: two parents, the second
@@ -203,7 +208,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... | probe <ref> <where> -- <command>... | call <why> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers and --legs the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -931,7 +936,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   fi
   record_dir=$(dirname "$file") || ship_tooling "cannot locate Run file drafts"
   [ -r "$record_dir" ] && [ -x "$record_dir" ] || ship_tooling "cannot read draft directory at $record_dir"
-  for p in "$record_dir"/defect-*.md "$record_dir"/tracker-*.md; do
+  for p in "$record_dir"/tracker-*.md; do
     [ -f "$p" ] || continue
     case $p in *.base.md) continue ;; esac
     drafts=$(jq -c --arg p "${p##*/}" '. + [$p]' <<<"$drafts") || ship_tooling "cannot read draft paths"
@@ -1019,8 +1024,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        if (rests("Stop: self-review: ") | last // "") == "cap" and (any($reviewers[]; settled(.name)) | not)
          then "self-review: stopped at cap, its last fixes read by no reviewer" else empty end,
        (rests("Override: ")[] | select(. != "" and . != "none" and . != "None.") | "override needed: " + .),
-       (rests("Ship-defect: ")[] | select(. != "" and . != "none" and . != "None.") | "Ship defect: " + .),
-       ($drafts[] | if startswith("defect-") then "Ship defect draft: " + . else "Tracker draft: " + . end)
+       ($drafts[] | "Tracker draft: " + .)
       ] as $held | {clean: ($held == []), held_by: $held}
     ') || ship_tooling "cannot evaluate clean gate evidence"
   printf '%s\n' "$answer"
@@ -1129,7 +1133,7 @@ EOSTATES
         printf '%s\n' "$names" | sed 's/$/: pending/; s/^/- /'
       fi
       printf '\n## Design and plan\n\n(pending)\n\n## Deviations log\n\n(none yet)\n'
-      printf '\n## Direct reads\n\n(none yet)\n'
+      printf '\n## Direct calls\n\n(none yet)\n'
     } > "$file" ); then
     [ "$rebuild" = false ] && [ -e "$file" ] && ship_fail "Run file exists: $file: a resumed run reads that record, and a new run of an issue whose earlier run stopped replaces it with \`run-file init $id --rebuild\`"
     ship_tooling "cannot write $file"
@@ -1441,6 +1445,24 @@ probe)
   append_to_section "## Evidence" "Probe: $ref: $cmd => exit $rc at $head: $last"
   jq -n --arg f "$file" --arg r "$ref" --arg c "$cmd" --argjson x "$rc" --arg h "$head" --arg l "$last" \
     '{run_file: $f, ref: $r, command: $c, exit: $x, head: $h, last: $l}'
+  ;;
+call)
+  why=${1:-}
+  case $why in '' | -*) ship_tooling "$usage" ;; esac
+  case $why in *$'\n'*) ship_tooling "a direct call's why is one line" ;; esac
+  shift
+  where=()
+  while [ $# -gt 0 ] && [ "$1" != -- ]; do where+=("$1"); shift; done
+  [ "${1:-}" = -- ] && [ $# -ge 2 ] || ship_tooling "$usage"
+  shift
+  parse_file ${where[@]+"${where[@]}"}
+  no_extra
+  cmd=$(printf '%q ' "$@")
+  cmd=${cmd% }
+  { [ "$1 ${2:-}" = "gh api" ] || [ "$1 ${2:-}" = "az rest" ]; } && [ $# -ge 3 ] \
+    || ship_fail "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: $cmd"
+  append_to_section "## Direct calls" "- $cmd · $why"
+  jq -n --arg f "$file" --arg c "$cmd" --arg w "$why" '{run_file: $f, command: $c, why: $w}'
   ;;
 *)
   ship_tooling "$usage"

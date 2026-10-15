@@ -69,9 +69,10 @@ CI:          <leg> → <green | state> · ...     (from the profile's Legs:)
   [profile drift: <check>, ... not on Legs:]   (ci-wait's unlisted)
 Issues filed: <#n <title>, ... | none>  ·  linked: <#n <title>, ... | none>
 Ship defects: <none | one block per defect:>
-  - <missing write, missing gating read, or wrong prose> (phase <n>)
+  - <missing gating call, or a mechanic or prose whose wrong answer the run acted on> (phase <n>)
     draft for Gharib89/skills: <title> · <draft path>
-Direct reads: <none | <call> · <why>, ...>     (from the Run file's ## Direct reads)
+Ship notes:   <none | <friction worked around by judgment>, ...>
+Direct calls: <none | <call> · <why>, ...>     (from the Run file's ## Direct calls)
 Timing:      <`run-file timing`'s `row`, verbatim>
 [Clean gate held by: <each held_by reason>]     (opted in, clean: false)
 
@@ -104,21 +105,26 @@ the phase-3 and phase-2 results. The empty `Verification` case writes the
 reason phase 6 wrote into the PR body, one of the three
 [pr-body.md](pr-body.md) names. On an `unexercised` row, `<what ran>` names the
 **subject that did not exist** rather than a command. A value you cannot point
-to a tool result for is written `unverified`. `Ship defects:` lists every host
-write or gating read no mechanic performs, and prose that promised what a
-mechanic does not do; an informational read made directly goes on `Direct
-reads:` instead. Each defect carries a **drafted issue** for the source repo,
-`Gharib89/skills`, written to `defect-<k>.md` beside the Run file when it
-is met: a title, then a body naming Ship's version, the mechanic or prose at
-fault and what the run did instead, and no organization identifier, credential
-or client context, because the source repo is public. A gap in the ship profile
+to a tool result for is written `unverified`. `Ship defects:` lists every gap in
+Ship that broke or misled the run: a gating call no mechanic performs, or a
+mechanic or prose whose wrong answer the run acted on. Friction the run worked
+around by judgment (a rule that did not fit the case, prose that left it
+guessing) goes on `Ship notes:` instead, one line each and no draft, and so does
+a direct call an earlier run also made. Every direct call goes on `Direct
+calls:`, read from the Run file's `## Direct calls`. Each defect carries a
+**drafted issue** for the source repo, `Gharib89/skills`, written to
+`defect-<k>.md` beside the Run file when it is met: a title, then a body naming
+Ship's version, the mechanic or prose at fault and what the run did instead, and
+no organization identifier, credential or client context, because the source
+repo is public. A gap in the ship profile
 rather than in Ship is a **profile defect**: an adjacent find of this repo,
 filed here through phase 2's dispositions and listed under `Issues filed`, not
 on this row. Where this repo is the source repo, a Ship defect is an adjacent
 find already (its profile's `## Triage`) and the row names its number instead of
 a draft. In either case, record `Ship-defect: <detail>` in the Run file when
-the defect is met, even if it is fixed or filed during the run: a clean gate
-requires that no Ship defect was met.
+the defect is met, even if it is fixed or filed during the run, so the row
+survives a compaction; neither that line nor a draft holds the clean gate, since
+a defect that breaks a gating step already fails that step's evidence.
 
 **Counts are measurements; tallies are records.** A count that measures the
 tree, here or in the PR body, carries the command that produced it, run on the
@@ -203,8 +209,9 @@ For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
 and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
 (`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
 `read-pr`; the mechanic answers `{clean, held_by}` and writes nothing, and
-`run-file --help` lists what holds the gate. Any `tracker-*.md` or `defect-*.md`
-draft always holds it (`*.base.md` files are saved originals, not drafts).
+`run-file --help` lists what holds the gate. Any `tracker-*.md` draft always
+holds it, and a `defect-*.md` draft never does (`*.base.md` files are saved
+originals, not drafts).
 
 On `clean: true`, post the summary through the `Timing:` row with no reply line,
 then run the merge sequence below without waiting for a reply. On `clean:
@@ -245,9 +252,10 @@ this gate, including after a clean-gate decision. Two of them come back here:
   Verification passes covering the new head; one that resolved a conflict
   breaks that coverage.
 
-Then each drafted tracker section. Every Ship
-defect draft is settled before `cleanup`, which deletes the directory the
-drafts live in, so ask for the word on any draft still open. Then `run-file
+Then each drafted tracker section. A Ship defect draft
+still open is offered once before `cleanup`, which deletes the directory the
+drafts live in; its title stays on the summary's row, and nothing waits on the
+answer. Then `run-file
 close 9` and set the task to the returned `mirror`, and last `cleanup
 <issue|none>`.
 
