@@ -17,6 +17,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { writeIgnore } from "../lib/runfolder.mjs";
 import { loadBackend, skill, toolPaths } from "../lib/tools.mjs";
 import { FRAME, align, transcribe } from "./align.mjs";
 import { check } from "./qc.mjs";
@@ -28,6 +29,7 @@ if (!run || rest.length) {
 }
 // The last pass's timeline no longer describes this script until it passes.
 fs.rmSync(path.join(run, "voice.json"), { force: true });
+writeIgnore(run);
 
 const script = JSON.parse(
   fs.readFileSync(path.join(run, "script.json"), "utf8"),
