@@ -142,6 +142,14 @@ grep -v '^## Attribution' "$T/tplbody.md" > "$T/short.md"
 check "a body short of the repo's last heading is refused" \
   "pr-body: missing heading: ## Attribution" \
   "$(env -u PR_TEMPLATE bash scripts/check-pr-body.sh "$T/short.md" 2>/dev/null)"
+# The Door line opens with its coloured circle, which the template asks for and
+# the check takes as ordinary section text, in either colour.
+check "the repo's template asks for the coloured Door line" 1 \
+  "$(grep -c '`- 🟢 Door: two-way\..*`- 🔴 Door: one-way\.' .github/pull_request_template.md)"
+awk '{ print } /^## Special things to note/ { print "\n- 🟢 Door: two-way. Blast radius: this repo.\n- 🔴 Door: one-way. Blast radius: consumers." }' \
+  "$T/tplbody.md" > "$T/door.md"
+check_rc "a body with coloured Door lines passes" \
+  0 "$(env -u PR_TEMPLATE bash scripts/check-pr-body.sh "$T/door.md" >/dev/null 2>&1; printf '%s' "$?")"
 
 # --- the Change outline ------------------------------------------------------
 

@@ -59,7 +59,7 @@ contract.
 |---|---|
 | `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run but the no-issue lane's inner one, before `run-file init` |
 | `run-file init` | the first action, placed by SKILL.md's pipeline step |
-| `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing:` row |
+| `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing` item |
 | `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head and, attended with `Merge: on-clean-gate` or in the inline lane, `clean` against the recorded results and `ci-wait` JSON |
 | `run-file grade` | 2, the version grade `open-pr` and `update-pr-title` hold the title type to |
 | `preflight` | 0 |

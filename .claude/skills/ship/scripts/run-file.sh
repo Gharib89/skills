@@ -2,7 +2,7 @@
 # The Run file: a ship run's record, outside every checkout, in the user's
 # state directory. This mechanic owns the file's shape and every flip of
 # it, so a stamp is a measurement the mechanic took rather than a time a run
-# recalled, and the merge summary's `Timing:` row is arithmetic rather than
+# recalled, and the merge summary's `Timing` item is arithmetic rather than
 # mental subtraction.
 #
 #   run-file init <issue|slug> [--scratchpad <dir>] [--rebuild]
@@ -281,7 +281,7 @@ unflipped() { # unflipped <n>
        }' "$file"
 }
 # The refusal for a phase opened over an earlier one never flipped: that one
-# stays unticked and `unverified` on the Timing row for a phase that may have
+# stays unticked and `unverified` on the Timing item for a phase that may have
 # run. For a phase that ran, the recovery is open-then-close: `close` needs it
 # open, and `skip` would record it as not run. A phase that did not run is
 # skipped.

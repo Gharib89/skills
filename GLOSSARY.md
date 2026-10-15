@@ -131,7 +131,7 @@ The directory a Ship run names in every subagent prompt as the one place that su
 _Avoid_: scratch file (that names the Run file, and is avoided there too), temp directory, workspace
 
 **Report file**:
-The file a phase-4 pass writes its report to (a subagent's, where one was dispatched), at the path named in the producing role's Scratch directory, `<scratch>/<role>/<role>-report.md`, `<scratch>` being the directory `run-file init` printed, a subagent handing back only the path and a summary of at most five lines: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. A later round of the Self-review loop writes `<scratch>/standards/standards-report-<n>.md`, so no round overwrites another's, and phase 7's local review writes `<scratch>/standards/standards-report-local.md`. No file there at hand-back is a report that failed to arrive. A report held in context alone is taken by a compaction, so the file is what a disposition and the merge summary's `Self-review` rows are read from; a row whose file is no longer on disk reads `unverified`.
+The file a phase-4 pass writes its report to (a subagent's, where one was dispatched), at the path named in the producing role's Scratch directory, `<scratch>/<role>/<role>-report.md`, `<scratch>` being the directory `run-file init` printed, a subagent handing back only the path and a summary of at most five lines: one per `code-review` axis, and one for the `writing-for-agents` pass where it fired. A later round of the Self-review loop writes `<scratch>/standards/standards-report-<n>.md`, so no round overwrites another's, and phase 7's local review writes `<scratch>/standards/standards-report-local.md`. No file there at hand-back is a report that failed to arrive. A report held in context alone is taken by a compaction, so the file is what a disposition and the merge summary's `Self-review` item are read from; a report whose file is no longer on disk reads `unverified`.
 _Avoid_: axis output, review log, findings dump
 
 **Self-review loop**:
@@ -147,7 +147,7 @@ An open issue whose title shares three or more tokens with an adjacent find the 
 _Avoid_: duplicate, match, near-miss, collision
 
 **Ship defect**:
-A gap in Ship itself that broke or misled a run: a gating call no generic mechanic performs, or a mechanic or prose whose wrong answer the run acted on. It never holds a clean gate on its own. Reported by name in the merge summary with a drafted issue for the source repo, which Ship files there only on the human's word at the merge gate, printing the command where the run cannot reach the source repo's host; never a hand-rolled call. A gap in the ship profile rather than in Ship is a profile defect: an adjacent find of the consumer repo, filed there. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
+A gap in Ship itself that broke or misled a run: a gating call no generic mechanic performs, or a mechanic or prose whose wrong answer the run acted on. It never holds a clean gate on its own. Reported by name in the merge summary with a drafted issue for the source repo, which Ship files there only on the human's word at the merge gate, printing the command where the run cannot reach the source repo's host; never a hand-rolled call. A gap in the ship profile rather than in Ship is a profile defect: an adjacent find of the consumer repo, filed there. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named under the merge summary's `Ship defects`.
 _Avoid_: tooling gap, missing helper, upstream bug, profile defect (that is the consumer repo's)
 
 **Ship note**:
@@ -343,7 +343,7 @@ A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of th
 _Avoid_: ran out of rounds, hit the cap
 
 **Not landed**:
-A reviewer's `Stop:` reason where a dispositioned round's fixes changed the tree and the next requested round did not land (blocked, never-queued, infra-error and the other `not_reviewed` causes), so no host round read those fixes. Its exit is still `reviewed`, the cause in a trailing clause, and like a primary capped with findings it drives its fallback.
+A reviewer's `Stop:` reason where a dispositioned round's fixes changed the tree and the next requested round did not land (blocked, never-queued, infra-error and the other `not_reviewed` causes), so no host round read those fixes. Its exit is still `reviewed`, the cause on its `## Review` line, and like a primary capped with findings it drives its fallback.
 _Avoid_: blocked stop, half reviewed
 
 **Request transport**:
