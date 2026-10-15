@@ -1678,11 +1678,11 @@ ship_pr_state_reason() { # ship_pr_state_reason <state>
 # loop reading rounds from the brief is the loop that has to tell a silent
 # reviewer from one whose run is still going.
 #
-# `done`, `pending_checks` (the names of the head's checks still pending) and
-# `stale` (the host showing another head than the expected one, which the poll
-# adds to its JSON for this projection alone) say why a window with a landed
-# round still closed `done: false`, exit 1: the full shape answers that through
-# `checks`, the brief through these (#667).
+# `pending_checks` (the names of the head's checks still pending) and `stale`
+# (the host showing another head than the expected one, which the poll adds to
+# its JSON for this projection alone) say why a window with a landed round
+# closed `done: false`, exit 1. The full shape answers through `checks` and
+# `head_sha`, the brief through these two (#667).
 ship_brief() {
   jq -c --arg me "$2" --arg key "$3" --argjson full "${4:-[]}" "$SHIP_LOGIN_NORM"'
     def by($l): ((.login // "") | norm) == ($l | norm);
