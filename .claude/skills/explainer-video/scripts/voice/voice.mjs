@@ -40,24 +40,20 @@ const narrator = narrators.find((n) =>
     : n.language === language && n.default,
 );
 if (!narrator) {
-  console.error(`no narrator ${script.narrator ?? "default"} for ${language}`);
+  console.error(
+    `voice: no narrator ${script.narrator ?? "default"} for ${language}`,
+  );
   process.exit(1);
 }
 const empty = script.scenes.find((s) => !s.narration?.join("").trim());
 if (empty) {
-  console.error(`scene ${empty.id} has no narration`);
+  console.error(`voice: scene ${empty.id} has no narration`);
   process.exit(1);
 }
 
 const tools = toolPaths();
 const backend = await loadBackend();
 let ctc;
-try {
-  ctc = await backend.aligner({ language, tools });
-} catch (e) {
-  console.error(`voice: ${e.message}`);
-  process.exit(1);
-}
 
 const cacheDir = path.join(run, ".cache", "voice");
 fs.mkdirSync(cacheDir, { recursive: true });
@@ -160,6 +156,7 @@ const groups =
   missing.length === scenes.length ? [missing] : missing.map((s) => [s]);
 let failed = 0;
 try {
+  ctc = await backend.aligner({ language, tools });
   for (const g of groups)
     for (const v of await voice(g)) {
       const entry = {

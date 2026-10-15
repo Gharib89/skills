@@ -10,7 +10,8 @@ export const FRAME = HOP / SAMPLE_RATE;
 
 // Windowed-sinc resampling, so a 24 kHz render reaches the model without the
 // aliasing linear interpolation would fold into its speech band.
-function resample(x, from, to = SAMPLE_RATE) {
+function resample(x, from) {
+  const to = SAMPLE_RATE;
   if (from === to) return x;
   const ratio = to / from;
   const fc = Math.min(1, ratio);

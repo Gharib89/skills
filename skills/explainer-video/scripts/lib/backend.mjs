@@ -114,7 +114,7 @@ export async function synthesize({ text, narrator, tools }) {
   return { samples, sampleRate: 24000 };
 }
 
-// One CTC model per language (ADR 0016); Arabic arrives with its own row.
+// One CTC model per language (ADR 0016).
 const ALIGNERS = { en: "model:wav2vec2-base-960h" };
 
 // A language's CTC model: its vocabulary, and its logits for 16 kHz audio,
