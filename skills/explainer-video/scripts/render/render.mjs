@@ -32,7 +32,7 @@ import {
   skill,
   toolPaths,
 } from "../lib/tools.mjs";
-import { sceneFile, stillsPage, videoPage } from "./compose.mjs";
+import { FPS, H, W, sceneFile, stillsPage, videoPage } from "./compose.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -45,7 +45,6 @@ function fail(why) {
 }
 const slug = path.basename(path.resolve(run));
 const HOLD = 1.0;
-const FPS = 30;
 // 40 px Inter fits about 73 characters a line in the 1760 px band: 84 is at
 // most two lines.
 const CUE_CHARS = 84;
@@ -84,7 +83,7 @@ script.scenes.forEach((s, i) => {
   const v = voice.scenes[i];
   if (
     v?.id !== s.id ||
-    v.words.length !== s.narration.join(" ").split(/\s+/).length
+    v.words.map((w) => w.text).join(" ") !== s.narration.join(" ")
   )
     fail(`voice.json does not match scene ${s.id}: run the voice stage again`);
 });
@@ -292,13 +291,17 @@ async function hyperframes(what, args, cwd) {
   if (code !== 0) fail(`hyperframes render of the ${what} exited ${code}`);
 }
 
+// What draws a frame beyond the composition's own files: the npm install
+// (HyperFrames, GSAP) and Chrome by the lock, and each font row's version.
+const kit = [lockHash, ...fontRows.map((r) => `${r.family}@${r.version}`)];
+
 // Stills: the uncached scenes in one stills page, a frame each.
 const stillDir = path.join(run, ".cache", "stills");
 fs.mkdirSync(stillDir, { recursive: true });
 const stills = script.scenes.map((s, i) =>
   path.join(
     stillDir,
-    `${hash(files[i], profile, timing(scenes[i]), script.title)}.png`,
+    `${hash(files[i], profile, timing(scenes[i]), script.title, kit)}.png`,
   ),
 );
 const missing = script.scenes.filter((s, i) => !fs.existsSync(stills[i]));
@@ -357,7 +360,7 @@ const listing = (dir) =>
     .filter((e) => e.isFile())
     .map((e) => path.relative(dir, path.join(e.parentPath, e.name)))
     .sort();
-const key = crypto.createHash("sha256");
+const key = crypto.createHash("sha256").update(JSON.stringify(kit));
 for (const f of listing(comp))
   key.update(f).update(fs.readFileSync(path.join(comp, f)));
 const renderDir = path.join(run, ".cache", "render");
@@ -392,9 +395,10 @@ const ratio =
     ? vs.display_aspect_ratio
     : `${vs.width / gcd(vs.width, vs.height)}:${vs.height / gcd(vs.width, vs.height)}`;
 const seconds = +probe.format.duration;
-const srtCues = fs.readFileSync(srt, "utf8").trim() ? cues.length : 0;
+const srtCues = (fs.readFileSync(srt, "utf8").match(/^\d+\n.+ --> .+$/gm) ?? [])
+  .length;
 const checks = [
-  ["resolution", `${vs.width}x${vs.height}`, "1920x1080"],
+  ["resolution", `${vs.width}x${vs.height}`, `${W}x${H}`],
   ["frame rate", fps, FPS],
   ["aspect", ratio, "16:9"],
   [
@@ -408,7 +412,7 @@ const checks = [
     probe.streams.some((s) => s.codec_type === "audio") ? "a stream" : "none",
     "a stream",
   ],
-  ["srt", `${srtCues} cue(s)`, `${cues.length} cue(s)`, srtCues > 0],
+  ["srt", `${srtCues} cue(s)`, `${cues.length} cue(s)`],
 ];
 let failed = 0;
 for (const [name, got, want, ok = got === want] of checks) {

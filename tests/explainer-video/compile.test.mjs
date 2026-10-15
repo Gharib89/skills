@@ -153,7 +153,69 @@ test("the voice stage voices a compiled script unchanged", () => {
   assert.equal(voiced.scenes[0].words[2].text, "issue");
 });
 
+test("an indented line continues the sentence above, cites and all", () => {
+  const fx = fixture(
+    SCRIPT.replace(
+      "1. It reads the issue. [ex-1]",
+      "1. It reads\n   the issue. [ex-1]",
+    ),
+  );
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const steps = compiled(fx).scenes[1];
+  assert.equal(steps.narration[0], "It reads the issue.");
+  assert.deepEqual(steps.cites[0], ["ex-1"]);
+});
+
 for (const [name, from, to, why] of [
+  [
+    "an unknown header key",
+    "narrator: am_fenrir",
+    "narator: am_fenrir",
+    /^compile: unknown header key narator \(language, narrator, style\)/m,
+  ],
+  [
+    "a heading that is not a scene",
+    "## Scene gate · The gate",
+    "## Gate",
+    /^compile: not a scene heading: ## Gate/m,
+  ],
+  [
+    "a scene id used twice",
+    "## Scene gate · The gate",
+    "## Scene hook · The gate",
+    /^compile: hook: scene id used twice/m,
+  ],
+  [
+    "the reserved scene id main",
+    "## Scene hook · The promise",
+    "## Scene main · The promise",
+    /^compile: main: scene id main is reserved/m,
+  ],
+  [
+    "a narration line that is neither numbered nor indented",
+    "1. It reads the issue. [ex-1]",
+    "1. It reads\nthe issue. [ex-1]",
+    /^compile: steps: not a numbered sentence: the issue\. \[ex-1\]/m,
+  ],
+  [
+    "a token with no spoken form",
+    "2. Here is how. [no-claim]",
+    "2. Here is {how.|} [no-claim]",
+    /^compile: hook: \{how\.\|\} has no spoken form/m,
+  ],
+  [
+    "a second visual block",
+    '"gh pr create" } ] } }\n```\n',
+    '"gh pr create" } ] } }\n```\n```json\n{ "component": "title", "props": { "title": "x" } }\n```\n',
+    /^compile: gate: a second ```json visual block/m,
+  ],
+  [
+    "a visual block never closed",
+    '"gh pr create" } ] } }\n```\n',
+    '"gh pr create" } ] } }\n',
+    /^compile: gate: the ```json visual block is never closed/m,
+  ],
   [
     "an unknown component",
     '"component": "cards"',
@@ -179,7 +241,7 @@ for (const [name, from, to, why] of [
     /^compile: steps: no narration/m,
   ],
 ]) {
-  test(`compile refuses ${name}, naming the scene, and writes no script`, () => {
+  test(`compile refuses ${name}, naming what to fix, and writes no script`, () => {
     assert.ok(SCRIPT.includes(from), from);
     const fx = fixture(SCRIPT.replace(from, to));
     const r = run(fx);

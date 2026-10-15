@@ -5,13 +5,14 @@
 // Reads <run>/script.md: a `# <title>` line, `key: value` header lines
 // (language, default en; narrator; style), then per scene a
 // `## Scene <id> · <title>` heading, a `### Narration` list of numbered
-// sentences and a `### Visual` block of JSON. In a sentence `{written|spoken}`
+// sentences (an indented line continues the one above) and one `### Visual`
+// block of JSON. In a sentence `{written|spoken}`
 // shows the written form on screen and voices the spoken one, backticks are
 // dropped, and a trailing `[a, b]` lists its cites (`[no-claim]`: none).
 // stdout: `compile: <n> scene(s) -> script.json`
 // writes: <run>/script.json, and explainers/.gitignore
-// exit:   0 compiled · 1 the file is malformed, `compile: <scene>: <what>` on
-//         stderr · 2 usage
+// exit:   0 compiled · 1 the file is malformed, `compile: [<scene>: ]<what>`
+//         on stderr · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
@@ -59,14 +60,29 @@ for (const line of lines) {
     section = null;
   } else if (!scene) {
     if (!title && (m = line.match(/^# (.+?)\s*$/))) title = m[1];
-    else if (title && (m = line.match(/^([a-z]+):\s*(.+?)\s*$/)))
+    else if (title && (m = line.match(/^([a-z]+):\s*(.+?)\s*$/))) {
+      if (!["language", "narrator", "style"].includes(m[1]))
+        fail(null, `unknown header key ${m[1]} (language, narrator, style)`);
       header[m[1]] = m[2];
+    }
   } else if (/^### Narration\s*$/.test(line)) section = "narration";
   else if (/^### Visual\s*$/.test(line)) section = "visual";
   else if (section === "narration" && (m = line.match(/^\d+\.\s+(.+)$/)))
     scene.sentences.push(m[1]);
-  else if (section === "visual" && /^```json\s*$/.test(line)) fence = [];
+  else if (
+    section === "narration" &&
+    /^\s+\S/.test(line) &&
+    scene.sentences.length
+  )
+    scene.sentences.push(`${scene.sentences.pop()} ${line.trim()}`);
+  else if (section === "narration" && line.trim())
+    fail(scene.id, `not a numbered sentence: ${line}`);
+  else if (section === "visual" && /^```json\s*$/.test(line)) {
+    if (scene.visual !== null) fail(scene.id, "a second ```json visual block");
+    fence = [];
+  }
 }
+if (fence) fail(scene.id, "the ```json visual block is never closed");
 if (!title) fail(null, "no `# <title>` line");
 if (!scenes.length) fail(null, "no `## Scene <id> · <title>` heading");
 

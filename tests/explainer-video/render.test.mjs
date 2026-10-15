@@ -384,3 +384,118 @@ test("a profile with a pair under its contrast floor refuses the run by name bef
   assert.equal(calls(fx).length, 0);
   assert.ok(!fs.existsSync(path.join(fx.dir, "style.json")));
 });
+
+test("a narration edit that keeps the word count still asks for the voice stage again", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  put(
+    fx.dir,
+    "script.md",
+    SCRIPT.replace("It reads the issue.", "It ignores the issue."),
+  );
+  assert.equal(stage(fx, "script/compile.mjs").code, 0);
+  const r = stage(fx, "render/render.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^render: voice\.json does not match scene steps: run the voice stage again/m,
+  );
+});
+
+// A WAV header field rewritten in place, 16-bit or 32-bit little-endian.
+const patchWav = (fx, scene, at, value, bits = 16) => {
+  const v = JSON.parse(read(fx.dir, "voice.json")).scenes[scene];
+  const f = path.join(fx.dir, v.audio);
+  const b = fs.readFileSync(f);
+  if (bits === 16) b.writeUInt16LE(value, at);
+  else b.writeUInt32LE(value, at);
+  fs.writeFileSync(f, b);
+};
+// A project profile `odd` the script names, then compiled.
+const styled = (fx, colors, extra) => {
+  const p = JSON.parse(profile("odd", colors));
+  put(
+    path.join(fx.tmp, "proj", "explainers", ".styles"),
+    "odd.json",
+    JSON.stringify({ ...p, ...extra }),
+  );
+  put(fx.dir, "script.md", SCRIPT.replace("style: claude-code", "style: odd"));
+  assert.equal(stage(fx, "script/compile.mjs").code, 0);
+};
+const latin = JSON.parse(read(skill, "styles", "claude-code.json")).type;
+
+for (const [name, arrange, why, voiced = true] of [
+  [
+    "a run with no compiled script",
+    () => {},
+    /^render: no script\.json: run the compile stage first/m,
+    false,
+  ],
+  [
+    "a setup row that is not installed",
+    (fx) =>
+      fs.rmSync(
+        path.join(
+          dest(
+            catalogue().find((r) => r.id === "font:inter"),
+            fx.dirs,
+          ),
+          ".stamp",
+        ),
+      ),
+    /^render: font:inter is not installed: run \/explainer-video setup/m,
+  ],
+  [
+    "a language with no render fonts",
+    (fx) => {
+      put(fx.dir, "script.md", SCRIPT.replace("language: en", "language: de"));
+      assert.equal(stage(fx, "script/compile.mjs").code, 0);
+    },
+    /^render: no render fonts for language de/m,
+    false,
+  ],
+  [
+    "a profile in a layout this version does not draw",
+    (fx) => styled(fx, {}, { layout: "grid" }),
+    /^render: style profile odd: this version draws layout bands with motion rise, not grid with rise/m,
+    false,
+  ],
+  [
+    "a profile naming a font no setup row installs",
+    (fx) =>
+      styled(
+        fx,
+        {},
+        { type: { ...latin, text: { font: "comic", weight: 400 } } },
+      ),
+    /^render: style profile odd names font comic, which no setup row installs/m,
+  ],
+  [
+    "a profile colour that is not #rrggbb",
+    (fx) => styled(fx, { muted: "grey" }),
+    /^render: style profile odd fails contrast: muted on bg: not a #rrggbb colour/m,
+    false,
+  ],
+  [
+    "a scene WAV that is not mono PCM",
+    (fx) => patchWav(fx, 0, 22, 2),
+    /^render: \.cache\/voice\/\w+\.wav is not 16-bit mono PCM: run the voice stage again/m,
+  ],
+  [
+    "scene WAVs at different sample rates",
+    (fx) => patchWav(fx, 1, 24, 8000, 32),
+    /^render: the scenes' WAVs differ in sample rate: run the voice stage again/m,
+  ],
+]) {
+  test(`render refuses ${name}, naming the fix, before any HyperFrames call`, () => {
+    const fx = fixture();
+    if (voiced)
+      for (const s of ["script/compile.mjs", "voice/voice.mjs"])
+        assert.equal(stage(fx, s).code, 0, s);
+    arrange(fx);
+    const r = stage(fx, "render/render.mjs");
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.match(r.err, why);
+    assert.equal(calls(fx).length, 0);
+  });
+}

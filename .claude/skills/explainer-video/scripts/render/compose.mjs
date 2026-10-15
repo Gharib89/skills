@@ -2,8 +2,9 @@
 // per render (the video's index.html, or a stills page), and one sub-composition
 // file per scene whose visual is a component. The palette comes from the style
 // profile as CSS custom properties; every font is a file beside the page.
-const W = 1920;
-const H = 1080;
+export const W = 1920;
+export const H = 1080;
+export const FPS = 30;
 const RISE = '{ opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }';
 
 export const esc = (s) =>
@@ -128,7 +129,7 @@ html, body { margin: 0; width: ${W}px; height: ${H}px; overflow: hidden; backgro
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-fps="30" data-duration="${duration}">
+    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-fps="${FPS}" data-duration="${duration}">
       <div class="header"><div class="mark"></div><div class="kicker">${esc(title)}</div></div>
 ${body}
     </div>
@@ -183,7 +184,7 @@ export function videoPage({ title, profile, fonts, scenes, cues, total }) {
 // One frame per scene, each scene settled at its end. data-no-timeline stops
 // HyperFrames waiting for the timelines the scenes leave unregistered.
 export function stillsPage({ title, profile, fonts, ids }) {
-  const frame = 1 / 30;
+  const frame = 1 / FPS;
   return page({
     title,
     profile,
