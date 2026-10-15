@@ -1,10 +1,12 @@
 // Everything setup and the stages reach outside the machine or the skill: npm,
-// HyperFrames' Chrome download, the Fontsource API and CDN, Hugging Face, PATH,
-// and the models. Callers load it through tools.mjs's loadBackend.
+// HyperFrames' Chrome download and render, ffprobe, the Fontsource API and CDN,
+// Hugging Face, PATH, and the models. Callers load it through tools.mjs's
+// loadBackend.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { toolPaths } from "./tools.mjs";
 
 const win = process.platform === "win32";
 // Children write to stderr, so stdout carries only setup's own table.
@@ -46,6 +48,33 @@ export async function ensureChrome(nodeDir, home, env) {
       stdio: quiet,
     }).status ?? 1
   );
+}
+
+// The render stage's HyperFrames calls, through the CLI in the tool cache. The
+// stage builds `env` (Chrome's home, the no-telemetry variables).
+export async function hyperframes(args, { cwd, env }) {
+  const cli = path.join(
+    toolPaths().node,
+    "node_modules",
+    "hyperframes",
+    "bin",
+    "hyperframes.mjs",
+  );
+  return (
+    spawnSync(process.execPath, [cli, ...args], { cwd, env, stdio: quiet })
+      .status ?? 1
+  );
+}
+
+export async function ffprobe(file) {
+  const r = spawnSync(
+    "ffprobe",
+    ["-v", "error", "-show_streams", "-show_format", "-of", "json", file],
+    { encoding: "utf8" },
+  );
+  if (r.status !== 0)
+    throw new Error(`ffprobe ${file}: ${r.stderr.trim() || r.error?.message}`);
+  return JSON.parse(r.stdout);
 }
 
 export async function fontMeta(id) {
