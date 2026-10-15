@@ -154,7 +154,7 @@ tracker issue, `<k>` the draft's ordinal) and named with its heading in the Run
 file's `## Design and plan`. Beside each draft, save the section as `read-issue`
 returned it, as `tracker-<n>-<k>.base.md`. On Azure DevOps that body is the
 description's HTML: for the `<pre>` block ship writes, the markdown is the text
-inside it, entities decoded. The summary's `Tracker:` block shows each draft
+inside it, entities decoded. The summary's `Tracker` item shows each draft
 verbatim, so the human approves the text with the merge. The unit is the whole
 section, because `update-issue-body` replaces nothing smaller.
 
