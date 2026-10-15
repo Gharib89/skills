@@ -31,7 +31,7 @@ shopt -u patsub_replacement 2>/dev/null || :
 # >>> setup-harness configuration
 # Files the edit rung covers, as shell globs on the file name; any other file
 # is `skipped`.
-EDIT_GLOBS='*.sh *.yml *.yaml'
+EDIT_GLOBS='*.sh *.yml *.yaml *.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts'
 # The runner on a file list ({files}), and on every file for `full`.
 EDIT_RUN='prek run --files {files}'
 FULL_RUN='prek run --all-files'
@@ -41,7 +41,8 @@ FULL_RUN='prek run --all-files'
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
 # member's directory; <affected tests> takes {files}, relative to it, and an
 # empty one runs <tests>. An empty command is no check.
-TURN_ROWS=''
+TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json||../../tests/explainer-video.test.sh|
+tests/explainer-video/|explainer-video-tests|*.mjs||../explainer-video.test.sh|'
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS='tests|tests/run.sh
 derived-copies|scripts/derived-copies-check.sh
@@ -56,7 +57,8 @@ contract|scripts/contract-check.sh skills/ship/scripts skills && scripts/contrac
 LOCAL_ONLY=''
 # The profile's Excluded: prefixes, one per line: the edit rung skips a file
 # under one, which belongs to no TURN_ROWS row and is no new root.
-EXCLUDED='tests/fixtures/'
+EXCLUDED='tests/fixtures/
+.claude/skills/'
 # <<< setup-harness configuration
 : "${EDIT_GLOBS=}" "${EDIT_RUN=}" "${FULL_RUN=}" "${TURN_ROWS=}" "${FULL_ROWS=}" "${LOCAL_ONLY=}" "${EXCLUDED=}"
 

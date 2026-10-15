@@ -30,6 +30,7 @@ Proof: 2feca7bfc75121cd7266074b2a8fce112328e544
 ## Excluded
 
 Excluded: tests/fixtures/: catalog-trial fixtures, deliberately bad or byte-exact inputs scripts/catalog-trial.sh reads, not code this repo ships
+Excluded: .claude/skills/: derived skill copies, refreshed from skills/ and pinned by skills-lock.json; the runner already skips them, and without this a refresh reports a new root on every turn
 
 ## Roots
 
@@ -45,3 +46,5 @@ Declined: shfmt: its default tab indent rewrites every indented line of this rep
 Declined: markdownlint-cli2: 264 findings over the skills' prose (MD024 fires on the catalog's repeated tool headings by design); adopting it is its own ticket, and house-style and prose-budget already hold these files
 Declined: Prettier on Markdown: rewrites 40 files across the skills this repo writes; its own ticket, as markdownlint-cli2
 Declined: *.md *.markdown in EDIT_GLOBS: house-style is a whole-repo check that #518 placed at the commit rung, so a Markdown edit does not pay it on every write
+Declined: skills/explainer-video npm ci in DEPS_ROWS: its dependencies (hyperframes, onnxruntime-node) are the per-user tool cache's payload, which setup.mjs installs there and never in the skill's own folder; its tests run on a fake backend and need none of them
+Declined: ESLint on skills/explainer-video: the default adds eslint and @eslint/js to a manifest setup.mjs installs with npm ci into every user's tool cache, and moves the lock hash that keys that cache

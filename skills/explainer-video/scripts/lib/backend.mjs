@@ -2,17 +2,24 @@
 // Chrome download, the Fontsource API and CDN, and PATH. EXPLAINER_VIDEO_BACKEND
 // names a module with these same exports to use instead, which is how tests
 // select canned fakes.
-import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
-const win = process.platform === 'win32';
+const win = process.platform === "win32";
 // Children write to stderr, so stdout carries only setup's own table.
-const quiet = ['ignore', 2, 2];
+const quiet = ["ignore", 2, 2];
 
 export async function npmCi(dir, env) {
   // npm is npm.cmd on Windows, which spawn runs only through a shell.
-  return spawnSync('npm', ['ci', '--no-audit', '--no-fund'], { cwd: dir, env, stdio: quiet, shell: win }).status ?? 1;
+  return (
+    spawnSync("npm", ["ci", "--no-audit", "--no-fund"], {
+      cwd: dir,
+      env,
+      stdio: quiet,
+      shell: win,
+    }).status ?? 1
+  );
 }
 
 // HyperFrames downloads its pinned Chrome to `homedir()/.cache/hyperframes/chrome`
@@ -21,13 +28,27 @@ export async function npmCi(dir, env) {
 export async function ensureChrome(nodeDir, home, env) {
   const childEnv = { ...env, HOME: home, USERPROFILE: home };
   delete childEnv.HYPERFRAMES_BROWSER_PATH;
-  const cli = path.join(nodeDir, 'node_modules', 'hyperframes', 'bin', 'hyperframes.mjs');
-  return spawnSync(process.execPath, [cli, 'browser', 'ensure'], { env: childEnv, stdio: quiet }).status ?? 1;
+  const cli = path.join(
+    nodeDir,
+    "node_modules",
+    "hyperframes",
+    "bin",
+    "hyperframes.mjs",
+  );
+  return (
+    spawnSync(process.execPath, [cli, "browser", "ensure"], {
+      env: childEnv,
+      stdio: quiet,
+    }).status ?? 1
+  );
 }
 
 export async function fontMeta(id) {
-  const r = await fetch(`https://api.fontsource.org/v1/fonts/${encodeURIComponent(id)}`);
-  if (!r.ok) throw new Error(`Fontsource has no family ${id} (HTTP ${r.status})`);
+  const r = await fetch(
+    `https://api.fontsource.org/v1/fonts/${encodeURIComponent(id)}`,
+  );
+  if (!r.ok)
+    throw new Error(`Fontsource has no family ${id} (HTTP ${r.status})`);
   return r.json();
 }
 
@@ -38,8 +59,10 @@ export async function download(url, file) {
 }
 
 export function which(cmd) {
-  const exts = win ? (process.env.PATHEXT || '.EXE;.CMD;.BAT').split(';') : [''];
-  for (const dir of (process.env.PATH || '').split(path.delimiter)) {
+  const exts = win
+    ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";")
+    : [""];
+  for (const dir of (process.env.PATH || "").split(path.delimiter)) {
     for (const ext of exts) {
       const f = path.join(dir, cmd + ext);
       if (fs.statSync(f, { throwIfNoEntry: false })?.isFile()) return f;
