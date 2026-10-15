@@ -19,16 +19,16 @@ The local gate's one answer: pass, fail, or unavailable, built from a status per
 _Avoid_: result, report, gate output
 
 **Generic mechanic**:
-A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, prepare, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-issue, comment-pr, reply-thread, update-pr-body, update-pr-title, update-issue-body, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every host write and every gating read in a Ship run goes through one of them, and a missing one is a Ship defect, not a prose fallback; an informational read no mechanic covers is the one host call a run may make directly. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) or to an issue (a comment, its body) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
-_Avoid_: helper, util, raw `gh` or `az` call (for a write or a gating read)
+A Ship script whose behavior is the same in every repo once the profile supplies its parameters: run-file, prepare, tooling, preflight, read-issue, manage-issue (take, release, hand back, close), isolate, base-fresh, open-pr, reflect, read-pr, poll-pr, request-review, comment-issue, comment-pr, reply-thread, update-pr-body, update-pr-title, update-issue-body, resolve-thread, CI wait, merge, cleanup, file-issue, list-prs, select. Every gating call in a Ship run goes through one of them, and a missing one is a Ship defect, not a prose fallback; any other host call may be a direct call. Not every one reaches a host: `run-file` writes the run's own record and nothing else. Their reads speak one vocabulary on every host, and a failed write to a PR (its body, its title, a comment, a thread reply) or to an issue (a comment, its body) answers with the HTTP status of the last attempt, `null` where the host reported none, so a run can tell a payload the host refused from a host that was briefly down. Every one of them answers `--help` with its usage line on stdout and exit 0, reaching no host: that is where a run reads a mechanic's flags.
+_Avoid_: helper, util, raw `gh` or `az` call (for a gating call)
 
-**Gating read**:
-A host read a phase's `Done when:` or a stop row depends on, such as preflight's admission, poll-pr's round, CI wait's legs or base-fresh's answer. It stays a generic mechanic, so the same host state always gives the same verdict.
-_Avoid_: check, probe
+**Gating call**:
+A host read or write that a later phase, a stop row, the merge or the release depends on, such as preflight's admission, poll-pr's round, CI wait's legs, the claim, the PR's title and body, or the merge itself. It goes through a generic mechanic, so the same host state always gives the same verdict and every write is read back. A gating read and a gating write are its two kinds.
+_Avoid_: load-bearing call, check, probe
 
-**Informational read**:
-A host read no phase or stop branches on, made for context alone. Where no mechanic covers it, a run may make it directly through the host's REST form, which the cloud sandbox admits, and lists it in the Run file's `## Direct reads`; one made directly in two runs is a candidate mechanic. Verification scaffolding (a scratch issue, scratch review thread or throwaway probe PR set up by hand) is neither kind of read and sits outside the rule.
-_Avoid_: side read, ad-hoc call
+**Direct call**:
+A host read or write that no phase, stop, merge or release depends on, made by the run itself through the host's REST form where no mechanic covers it, and logged in the Run file. One made in two runs is a candidate mechanic, raised as a Ship note. Verification scaffolding (a scratch issue, scratch review thread or throwaway probe PR set up by hand) is not a direct call and sits outside the rule.
+_Avoid_: informational read, side call, ad-hoc call
 
 **Cloud bootstrap**:
 Ship's sandbox preparation for one repo, run before any claim in every cloud run and every unattended run. With a harness it is the cloud setup run again, so a broken sandbox stops before the claim, then only the steps that need something only Ship has, such as the local gate's secrets scanner and a live end-to-end check's credentials; anything the check entry point needs belongs to the cloud setup instead. Without one, it is whatever the repo's own script installs. Setup-skills drafts it.
@@ -75,7 +75,7 @@ The end of a Ship run where its full summary records the merge decision. By defa
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:
-The recorded conditions permitting an attended run to merge without a reply when its profile opts in or the run is in the inline lane: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree at a covered head (a fallback answers for its primary) or on the inline lane, every applicable Verification passed at a covered head or deferred to a green CI leg, and no override, Ship defect or Tracker draft. Deviations alone do not hold it.
+The recorded conditions permitting an attended run to merge without a reply when its profile opts in or the run is in the inline lane: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree at a covered head (a fallback answers for its primary) or on the inline lane, every applicable Verification passed at a covered head or deferred to a green CI leg, and no override or Tracker draft. Deviations and Ship defects alone do not hold it.
 _Avoid_: auto-merge (a host flag that can merge before Ship finishes its reviews)
 
 **Covered head**:
@@ -83,11 +83,11 @@ The PR head a piece of clean-gate evidence still answers for. A reviewer's uncha
 _Avoid_: current, fresh, up to date
 
 **Small lane**:
-The collapsed form of a Ship run for a change that is narrow, locally provable, invisible to the public surface and inside the size cap, which is counted on the diff, never estimated; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the test proving the change, or the full gate where more than one test proves it), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue. Its tier for a fix triage already has in hand is the inline lane.
+The collapsed form of a Ship run for a change that is narrow, locally provable, invisible to the public surface and inside the size cap, a judgment the run confirms on the diff when it opens the PR; revocable mid-run. It drops planning breadth and keeps every check: the floor is the same in every repo and is worktree isolation, the local gate's small floor (the repo's security check plus the test proving the change, or the full gate where more than one test proves it), the self-review, the PR, CI plus every reviewer per its trigger, and the merge gate. The self-review runs at full width in every lane, whether or not a reviewer exists, because it is the only check that reads the diff against the issue. Its tier for a fix triage already has in hand is the inline lane.
 _Avoid_: fast path, quick mode, hotfix
 
 **Inline lane**:
-The small lane's tier entered only by `/ship <issue> --inline`, attended and for a tracked issue: the same floor, a 20-line cap counted as the small lane counts, no reviewer round unless `--review` buys one, and a merge on a clean gate, the invocation being the human's approval for that one PR. Revocable one way, inline then small then full, and the approval goes with the lane.
+The small lane's tier entered only by `/ship <issue> --inline`, attended and for a tracked issue: the same floor, a 20-line cap counted on the diff, no reviewer round unless `--review` buys one, and a merge on a clean gate, the invocation being the human's approval for that one PR. Revocable one way, inline then small then full, and the approval goes with the lane.
 _Avoid_: inline fix (the hand-made PR it replaces), one-liner lane
 
 **Hand-off**:
@@ -139,7 +139,7 @@ Ship's phase-4 self-review, repeated while it still finds work, because refactor
 _Avoid_: re-review, second pass
 
 **Adjacent find**:
-A problem outside the claimed issue that Ship meets while working it, whether the agent spotted it or a reviewer raised it. Filed for triage and left alone, unless an acceptance criterion names it, its fix lands in a file the PR already changes, or a reviewer of the PR would flag it, in which case it is fixed inline and logged as a deviation. Filing goes through `file-issue`, which answers with an existing open issue rather than creating a second one for the same find. Distinct from a deviation, which is the claimed issue's own work departing from its plan.
+A problem outside the claimed issue that Ship meets while working it, whether the agent spotted it or a reviewer raised it. Folded into the PR, and named in its body, when it fits inside what the PR is about and does not raise its release grade; filed for triage when it is not; just noted when it is trivial. Filing goes through `file-issue`, which answers with an existing open issue rather than creating a second one for the same find. Distinct from a deviation, which is the claimed issue's own work departing from its plan.
 _Avoid_: drive-by fix, scope creep, nit, out-of-scope finding
 
 **Candidate**:
@@ -147,8 +147,12 @@ An open issue whose title shares three or more tokens with an adjacent find the 
 _Avoid_: duplicate, match, near-miss, collision
 
 **Ship defect**:
-A gap in Ship itself met during a run: a host write or gating read no generic mechanic performs, or prose that promises what a mechanic does not do. Reported by name in the merge summary with a drafted issue for the source repo, which Ship files there only on the human's word at the merge gate, printing the command where the run cannot reach the source repo's host; never a hand-rolled call. A gap in the ship profile rather than in Ship is a profile defect: an adjacent find of the consumer repo, filed there. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
+A gap in Ship itself that broke or misled a run: a gating call no generic mechanic performs, or a mechanic or prose whose wrong answer the run acted on. It never holds a clean gate on its own. Reported by name in the merge summary with a drafted issue for the source repo, which Ship files there only on the human's word at the merge gate, printing the command where the run cannot reach the source repo's host; never a hand-rolled call. A gap in the ship profile rather than in Ship is a profile defect: an adjacent find of the consumer repo, filed there. In Ship's own source repo the run is already upstream, so a Ship defect is also an adjacent find and takes its dispositions, and is still named on the summary's row.
 _Avoid_: tooling gap, missing helper, upstream bug, profile defect (that is the consumer repo's)
+
+**Ship note**:
+Friction in Ship that a run worked around by judgment, such as a rule that did not fit the case or prose that left the run guessing. One line on the merge summary and in the PR body, with no drafted issue.
+_Avoid_: minor defect, nit
 
 ### Profiles
 
