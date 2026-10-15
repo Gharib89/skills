@@ -62,11 +62,10 @@ const hash = (...parts) => {
   return h.digest("hex").slice(0, 16);
 };
 const json = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
-writeIgnore(run);
-
 if (!fs.existsSync(path.join(run, "script.json")))
   fail("no script.json: run the compile stage first (script/compile.mjs)");
 const script = json(path.join(run, "script.json"));
+writeIgnore(run);
 
 let profile;
 try {

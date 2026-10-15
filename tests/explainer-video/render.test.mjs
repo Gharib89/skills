@@ -356,6 +356,17 @@ test("render before the voice stage says which stage to run", () => {
   assert.match(r.err, /^render: no voice\.json: run the voice stage first/m);
 });
 
+test("render on a mistyped run folder says which stage to run and writes nothing", () => {
+  const fx = fixture();
+  const r = stage(
+    { ...fx, dir: path.join(fx.tmp, "typo", "demo") },
+    "render/render.mjs",
+  );
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^render: no script\.json: run the compile stage first/m);
+  assert.ok(!fs.existsSync(path.join(fx.tmp, "typo")));
+});
+
 // Style profile lookup: the script names no style, so the stores decide.
 const unstyled = SCRIPT.replace("style: claude-code\n", "");
 const profile = (label, colors = {}) => {

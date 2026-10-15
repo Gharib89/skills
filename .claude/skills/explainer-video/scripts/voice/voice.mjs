@@ -29,11 +29,10 @@ if (!run || rest.length) {
 }
 // The last pass's timeline no longer describes this script until it passes.
 fs.rmSync(path.join(run, "voice.json"), { force: true });
-writeIgnore(run);
-
 const script = JSON.parse(
   fs.readFileSync(path.join(run, "script.json"), "utf8"),
 );
+writeIgnore(run);
 const language = script.language ?? "en";
 const narrators = JSON.parse(
   fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
