@@ -85,8 +85,9 @@ must include and must avoid. The user's request beside the sources, the
 2. **On exit 1**, `brief <knob> <value>: <why>` names a value this version
    cannot make: tell the user in one line, run again without it, and go on.
 3. **A later change**, from the user or a fix, is the same command with just
-   the knobs that change; the others keep their values, and a list given
-   replaces that list. It prints `brief: unchanged`, nothing to redo, or
+   the knobs that change; the others keep their values, but a language
+   change without a voice takes that language's default narrator, and a list
+   given replaces that list. It prints `brief: unchanged`, nothing to redo, or
    `brief: <knobs> changed: redo <stages>`: redo only those stages, in order,
    each reusing its cached work for whatever did not change. A language, voice
    or style change deletes the compiled `script.json`, so compile before the
@@ -168,14 +169,16 @@ to the **script gates**.
      snapshot.
    - `support`: every sentence judged `supported` or `connective` on its
      present wording.
-   - `coverage`: each `must` item said or shown, no `avoid` item anywhere.
+   - `coverage`: each `must` item said or shown, no `avoid` item anywhere,
+     each matched as whole words in any case (`must=merge` is not met by
+     "merges").
    - `reading`: each visual item on screen long enough to read, counted from
      the sentence it rises at to the scene's end. A text of three words or
      fewer needs 0.8 s; a longer one needs 0.3 s a word, and at least 1.2 s;
      an item's texts (a card's label, value and note) add up.
    - `dashes`: no em or en dash in the scene file.
    - `sentences`: a sentence over 25 words warns and does not block.
-5. **On exit 1** with `script: no <file>: <why>` on stderr and no gate lines,
+5. **On exit 1** with `script: no <input>: <why>` on stderr and no gate lines,
    run what `<why>` names, then the script gates again. Otherwise fix what each
    `fail` line names in the scene file, compile, then run the support check
    again whenever the narration changed, and the script gates again. A red
@@ -184,6 +187,7 @@ to the **script gates**.
    does say it, and give an `unmarked` sentence the cites for its claim or turn
    it into a transition. On `stop: unsupported claims after two fix attempts`,
    stop: report each failing sentence and ask the user what the video may say.
+   The stop holds, whatever the next rewrite, until the support gate passes.
 6. **On exit 0**, report the summary line and go on to Voice.
 
 ## Voice

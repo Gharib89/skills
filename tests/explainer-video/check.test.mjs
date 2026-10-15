@@ -305,12 +305,12 @@ test("support blocks an unsupported claim, counts two fix attempts, then stops",
   assert.equal(r.code, 1);
   assert.match(r.out, /; stop: unsupported claims after two fix attempts$/m);
 
-  // After a stop, the next red set the user's revision brings counts afresh.
+  // A third rewrite brings no third attempt: the stop holds until it passes.
   judge(fx, { "why 1": "unsupported" });
-  assert.match(check(fx).out, /; next: fix attempt 1 of 2$/m);
-  // A new reason on the same failing sentences is not another attempt.
-  judge(fx, { "why 1": "unsupported" });
-  assert.match(check(fx).out, /; next: fix attempt 1 of 2$/m);
+  assert.match(
+    check(fx).out,
+    /; stop: unsupported claims after two fix attempts$/m,
+  );
 
   judge(fx);
   r = check(fx);
