@@ -1,6 +1,6 @@
 # PROTOTYPE, throwaway: Whisper round-trip error rate for every clip in raw/ (#662).
 # English: word error rate. Arabic: character error rate (spelling of Egyptian words varies).
-import json, re, subprocess, unicodedata
+import json, re, subprocess, sys, unicodedata
 from pathlib import Path
 
 import numpy as np
@@ -36,7 +36,10 @@ def rate(ref, hyp, lang):
 
 model = WhisperModel("deepdml/faster-whisper-large-v3-turbo-ct2", device="cpu", compute_type="int8")
 out = {}
-for f in sorted((HERE / "raw").glob("*.[wm][ap][v3]")):
+# optional args (#676): a glob inside raw/ and the output file
+GLOB = sys.argv[1] if len(sys.argv) > 1 else "*.[wm][ap][v3]"
+OUT = sys.argv[2] if len(sys.argv) > 2 else "raw/scores.json"
+for f in sorted((HERE / "raw").glob(GLOB)):
     lang = f.name[:2]
     # decode with ffmpeg: faster-whisper's PyAV call breaks on this av version
     pcm = subprocess.run(["ffmpeg", "-v", "error", "-i", str(f), "-f", "f32le", "-ac", "1", "-ar", "16000", "-"], capture_output=True, check=True).stdout
@@ -44,4 +47,4 @@ for f in sorted((HERE / "raw").glob("*.[wm][ap][v3]")):
     hyp = " ".join(s.text for s in segs)
     out[f.stem] = {"rate": round(rate(TEXT[lang], hyp, lang), 3), "hyp": hyp.strip()}
     print(f"{out[f.stem]['rate']:.3f}  {f.stem}", flush=True)
-(HERE / "raw/scores.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
+(HERE / OUT).write_text(json.dumps(out, ensure_ascii=False, indent=1))

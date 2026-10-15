@@ -1,0 +1,47 @@
+[
+ {
+  "id": "A",
+  "file": "ar-A.mp3",
+  "name": "Gemini 3.8 TTS ar-eg-commercial-11 (male)",
+  "licence": "API, Gemini key",
+  "cost": "API call",
+  "seconds": 28.6,
+  "error_rate": 0.373
+ },
+ {
+  "id": "B",
+  "file": "ar-B.mp3",
+  "name": "NAMAA-Egyptian-TTS (Chatterbox), clone of your clip",
+  "licence": "Clone opt-in, MIT weights",
+  "cost": "61.2 s wall, 5464 MiB VRAM",
+  "seconds": 34.4,
+  "error_rate": 0.381
+ },
+ {
+  "id": "C",
+  "file": "ar-C.mp3",
+  "name": "chatterbox-egyptian-v0, clone of your clip",
+  "licence": "Clone opt-in, MIT weights",
+  "cost": "207.6 s wall, 5523 MiB VRAM",
+  "seconds": 42.0,
+  "error_rate": 0.378
+ },
+ {
+  "id": "D",
+  "file": "ar-D.mp3",
+  "name": "Gemini 3.8 TTS ar-eg-csagent-2 (female)",
+  "licence": "API, Gemini key",
+  "cost": "API call",
+  "seconds": 30.6,
+  "error_rate": 0.362
+ },
+ {
+  "id": "E",
+  "file": "ar-E.mp3",
+  "name": "Habibi-TTS EGY, clone of your clip",
+  "licence": "Clone opt-in, Apache-2.0 weights",
+  "cost": "25.2 s wall, 1754 MiB VRAM",
+  "seconds": 28.4,
+  "error_rate": 0.364
+ }
+]

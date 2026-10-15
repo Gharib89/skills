@@ -1,0 +1,5 @@
+{
+ "source": "Arabic Clone Blind Test, https://claude.ai/artifact/9WzSWqnqgvCzYBXUx7GMpd, collection rankings",
+ "round1": {"key": "page-r1/key.json", "order": ["A", "B", "D", "C", "E"], "ok": ["B", "D", "A"], "like": ["B"], "savedAt": "2026-10-15T10:16:49.352Z"},
+ "round2": {"key": "page/key.json", "order": ["C", "A", "B", "D", "E"], "ok": ["C", "A"], "like": ["A"], "savedAt": "2026-10-15T10:24:23.081Z"}
+}

@@ -1,0 +1,47 @@
+[
+ {
+  "id": "A",
+  "file": "ar-A.mp3",
+  "name": "Gemini ar-eg-commercial-11 converted to your voice (Chatterbox VC)",
+  "licence": "API, Gemini key, then local VC, MIT",
+  "cost": "Gemini API call, then 4.7 s wall, 5119 MiB VRAM",
+  "seconds": 28.6,
+  "error_rate": 0.326
+ },
+ {
+  "id": "B",
+  "file": "ar-B.mp3",
+  "name": "NAMAA clone, exaggeration 0.7, cfg 0.3, sentence splits",
+  "licence": "Clone opt-in, MIT weights",
+  "cost": "24.3 s wall, 5119 MiB VRAM",
+  "seconds": 28.6,
+  "error_rate": 0.408
+ },
+ {
+  "id": "C",
+  "file": "ar-C.mp3",
+  "name": "Gemini 3.8 TTS ar-eg-commercial-11 (male)",
+  "licence": "API, Gemini key",
+  "cost": "API call",
+  "seconds": 28.6,
+  "error_rate": 0.373
+ },
+ {
+  "id": "D",
+  "file": "ar-D.mp3",
+  "name": "NAMAA clone, exaggeration 0.9, cfg 0.3, sentence splits",
+  "licence": "Clone opt-in, MIT weights",
+  "cost": "24.6 s wall, 5119 MiB VRAM",
+  "seconds": 30.0,
+  "error_rate": 0.458
+ },
+ {
+  "id": "E",
+  "file": "ar-E.mp3",
+  "name": "Round 1 NAMAA clone (exaggeration 0.5, cfg 0.5, comma splits)",
+  "licence": "Clone opt-in, MIT weights",
+  "cost": "61.2 s wall, 5464 MiB VRAM",
+  "seconds": 34.4,
+  "error_rate": 0.381
+ }
+]

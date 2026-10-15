@@ -1,3 +1,7 @@
 raw/*.wav
 raw/*.mp3
 raw/log-*.txt
+.venv-*/
+clone/ref/*
+# owner-voice audio stays off this public branch (#676)
+clone/page*/clips/
