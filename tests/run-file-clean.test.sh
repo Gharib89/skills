@@ -115,7 +115,7 @@ inline; clean 'inline-lane stops on the primary and its fallback'
 inline; change_run '/^Lane: inline/d'; held 'inline-lane stops with no Lane: line' 'reviewer primary: inline lane'
 inline; change_run '$a Lane: small'; held 'inline-lane stops after a revocation to the small lane' 'reviewer primary: inline lane'
 inline; change_ci '.status="checks-failed" | .checks[0].status="failure"'; held 'inline lane with red CI' 'CI test: failure'
-inline; touch "$tmp/records/ship-clean/defect-1.md"; held 'inline lane with a Ship defect draft' 'Ship defect draft: defect-1.md'
+inline; touch "$tmp/records/ship-clean/tracker-1.md"; held 'inline lane with a Tracker draft' 'Tracker draft: tracker-1.md'
 for trigger in auto-once on-push; do
   inline; sed "0,/Trigger: on-request/s//Trigger: $trigger/" "$profile" > "$profile.new"; mv "$profile.new" "$profile"; held "an inline-lane stop on an $trigger reviewer" 'reviewer primary: inline lane'
 done
@@ -145,8 +145,9 @@ landed; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"
 base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: auto-once/'; held 'auto-once changed round' 'reviewer primary: auto-once'
 base; sed 's/Trigger: on-request/Trigger: auto-once/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; clean 'auto-once unchanged round records tree unchanged'
 base; printf 'Override: declined gating finding\n' >> "$f"; held 'override needed' 'override needed: declined gating finding'
-base; printf 'Ship-defect: upstream gap #42\n' >> "$f"; held 'source repo defect without draft' 'Ship defect: upstream gap #42'
-base; touch "$tmp/records/ship-clean/defect-1.md"; held 'Ship defect draft' 'Ship defect draft: defect-1.md'
+# A Ship defect never holds the gate on its own: a defect that breaks a gating
+# step already fails that step's evidence (ADR 0010).
+base; printf 'Ship-defect: upstream gap #42\n' >> "$f"; touch "$tmp/records/ship-clean/defect-1.md"; clean 'a Ship-defect line and a defect draft'
 base; touch "$tmp/records/ship-clean/tracker-1.md"; held 'Tracker draft' 'Tracker draft: tracker-1.md'
 base; touch "$tmp/records/ship-clean/defect-1.base.md"; printf 'Deviation: accepted scoped departure\nOverride: None.\nShip-defect: none\n' >> "$f"; clean 'deviation and draft base are independent'
 base; printf '  Override: quoted\n`Ship-defect: quoted`\nOverrides: partial token\n' >> "$f"; clean 'quoted indented partial evidence does not match'
@@ -156,7 +157,7 @@ base; change_run 's/"tests":"pass"/"tests":"fail"/'; printf '\n```\n## Local gat
 base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: fail/'; printf '\n```\n## Verification results\n- live check: punctuation: pass\n```\n' >> "$f"; held 'fenced verification cannot replace failing result' 'verification live check: punctuation: fail'
 base; printf '\n```\n' >> "$f"; answer=$(call); check_rc 'unclosed Run file fence is tooling' 2 "$?"; check 'unclosed fence names its record' "cannot read Run file evidence at $f" "$(jq -r .error <<<"$answer")"
 if [ "$(id -u)" -ne 0 ]; then
-  base; touch "$tmp/records/ship-clean/defect-1.md"; chmod 111 "$tmp/records/ship-clean"
+  base; touch "$tmp/records/ship-clean/tracker-1.md"; chmod 111 "$tmp/records/ship-clean"
   answer=$(call); rc=$?; chmod 755 "$tmp/records/ship-clean"
   check_rc 'unreadable draft directory is tooling' 2 "$rc"
   check 'unreadable draft directory names its path' "cannot read draft directory at $tmp/records/ship-clean" "$(jq -r .error <<<"$answer")"
@@ -184,8 +185,8 @@ base; printf '{}\n' > "$ci"; answer=$(call); check_rc 'empty CI object is toolin
 base; change_run 's/{.*}/{broken}/'; answer=$(call); check_rc 'malformed recorded gates is tooling' 2 "$?"; check 'bad gate JSON names failed read' 'cannot read recorded local gate results' "$(jq -r .error <<<"$answer")"
 base; answer=$(call --result x=pass); check_rc 'result flag is invalid for clean' 2 "$?"
 base; answer=$(cd "$repo" && bash "$m" gate clean - --head "$head" --issue clean --scratchpad "$tmp/records" < "$ci" 2>/dev/null); check 'stdin and issue lookup answer clean' true "$(jq -r .clean <<<"$answer")"
-base; cp "$f" "$repo/run.md"; touch "$repo/defect-relative.md"
-answer=$(call --file run.md); check_rc 'relative Run file draft refuses' 1 "$?"; check 'relative Run file draft names hold' true "$(jq -r '.held_by | index("Ship defect draft: defect-relative.md") != null' <<<"$answer")"
+base; cp "$f" "$repo/run.md"; touch "$repo/tracker-relative.md"
+answer=$(call --file run.md); check_rc 'relative Run file draft refuses' 1 "$?"; check 'relative Run file draft names hold' true "$(jq -r '.held_by | index("Tracker draft: tracker-relative.md") != null' <<<"$answer")"
 base; before=$(cat "$f"); call >/dev/null; check 'clean is read-only' "$before" "$(cat "$f")"
 # A run that skips phase 3 settles its verifications through the skip, so the
 # gate is not held by results no close could record (#564).
