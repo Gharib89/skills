@@ -2,7 +2,9 @@
 // exports, answering from fixtures and logging each call as one JSON line to
 // $EXPLAINER_VIDEO_FAKE_LOG, so a test asserts on what a stage asked for.
 //   EXPLAINER_VIDEO_FAKE_PRESENT  comma-separated commands `which` finds
-//   EXPLAINER_VIDEO_FAKE_PROBE    JSON fields overriding what ffprobe answers
+//   EXPLAINER_VIDEO_FAKE_PROBE    JSON fields overriding what ffprobe and
+//                                 loudness answer
+//   EXPLAINER_VIDEO_FAKE_CHECK    JSON check answers in place of its own
 // The family `ubuntu` answers with its real, non-OFL licence.
 //
 // Fake audio is 16 kHz and spells its text: each letter holds 3 frames of 320
@@ -12,6 +14,13 @@
 // the real Viterbi pass. A sentence naming a marker word misrenders:
 // `garbled` speaks every word as "mumble", `looped` speaks the sentence twice,
 // `slowly` holds each letter 8 frames.
+//
+// The gates' measures read the composition: probe reports each text element of
+// the scenes mounted at a time, and the caption cue showing then, at 40 px in
+// the content band with the palette's text on its bg, all in bounds. An
+// element whose text names a marker word misrenders: `clipped` overflows
+// (scrollW 4000 in 1600) past its clip box, and check reports it as a layout
+// error `text_box_overflow`; `tiny` is 12 px; `dim` is #c8c8c0.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -157,6 +166,8 @@ export async function hyperframes(args, { cwd, env }) {
         fps: 30,
         duration,
         audio: true,
+        lufs: -14.0,
+        peak: -1.6,
       }),
     );
   }
@@ -183,4 +194,97 @@ export async function ffprobe(file) {
     ],
     format: { duration: String(v.duration) },
   };
+}
+
+// Integrated loudness and true peak, from the fake render's file as ffprobe.
+export async function loudness(file) {
+  const v = {
+    ...JSON.parse(fs.readFileSync(file, "utf8")),
+    ...JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_PROBE ?? "{}"),
+  };
+  log({ call: "loudness", file });
+  return { lufs: v.lufs ?? -14.0, peak: v.peak ?? -1.6 };
+}
+
+export async function master(input, output, { lufs, peak }) {
+  log({ call: "master", input, output, lufs, peak });
+  fs.copyFileSync(input, output);
+}
+
+// What shows at t: each mounted scene's own text elements, and the caption
+// cue's words joined.
+function showing(dir, t) {
+  const html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
+  const on = (start, duration) => t >= +start && t < +start + +duration;
+  const texts = [];
+  for (const m of html.matchAll(
+    /data-composition-id="([^"]+)" data-composition-src="[^"]+" data-start="([\d.]+)" data-duration="([\d.]+)"/g,
+  ))
+    if (on(m[2], m[3]))
+      for (const e of fs
+        .readFileSync(path.join(dir, "scenes", `${m[1]}.html`), "utf8")
+        .matchAll(/<(?:div|span)[^>]*>([^<]+)</g))
+        if (e[1].trim()) texts.push({ scene: m[1], text: e[1].trim() });
+  for (const m of html.matchAll(
+    /<div class="cue clip" data-start="([\d.]+)" data-duration="([\d.]+)"[^>]*>(.*?)<\/div>/g,
+  ))
+    if (on(m[1], m[2]))
+      texts.push({ scene: null, text: m[3].replace(/<[^>]+>/g, "") });
+  return { html, texts };
+}
+
+export async function check(dir, times) {
+  log({ call: "check", times });
+  if (process.env.EXPLAINER_VIDEO_FAKE_CHECK)
+    return JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_CHECK);
+  const findings = times.flatMap((t) =>
+    showing(dir, t)
+      .texts.filter((e) => /\bclipped\b/.test(e.text))
+      .map((e) => ({
+        code: "text_box_overflow",
+        severity: "error",
+        time: t,
+        message: "text overflows its box",
+        text: e.text,
+        sourceFile: `scenes/${e.scene}.html`,
+      })),
+  );
+  return {
+    ok: !findings.length,
+    layout: { findings },
+    contrast: { findings: [] },
+  };
+}
+
+export async function probe(dir, times) {
+  log({ call: "probe", times });
+  return times.map((t) => {
+    const { html, texts } = showing(dir, t);
+    const color = (k) => html.match(new RegExp(`--${k}: (#[0-9a-f]{6});`))[1];
+    return {
+      t,
+      elements: texts.map(({ scene, text }, i) => {
+        const top = scene ? 200 + i * 50 : 920;
+        const rect = { left: 160, top, right: 1760, bottom: top + 48 };
+        const clipped = /\bclipped\b/.test(text);
+        return {
+          text,
+          scene,
+          rect,
+          fontPx: /\btiny\b/.test(text) ? 12 : 40,
+          weight: 400,
+          inline: false,
+          scrollW: clipped ? 4000 : 1600,
+          scrollH: 48,
+          clientW: 1600,
+          clientH: 48,
+          ellipsis: false,
+          opacity: 1,
+          clip: clipped ? { ...rect, right: 1000 } : null,
+          color: /\bdim\b/.test(text) ? "#c8c8c0" : color("text"),
+          bg: color("bg"),
+        };
+      }),
+    };
+  });
 }

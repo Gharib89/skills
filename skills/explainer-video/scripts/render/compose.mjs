@@ -5,7 +5,7 @@
 export const W = 1920;
 export const H = 1080;
 export const FPS = 30;
-// 40 px Inter fits about 73 characters a line in the 1760 px band: 84 is at
+// 40 px Inter fits about 70 characters a line in the 1680 px band: 84 is at
 // most two lines.
 export const CUE_CHARS = 84;
 const RISE = '{ opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }';
@@ -81,7 +81,7 @@ export function sceneFile(scene, timing, profile) {
   <div data-composition-id="${id}" data-width="${W}" data-height="${H}" data-duration="${timing.duration}">
     <div class="content">${c.html}</div>
     <style>
-${scope} .content { position: absolute; left: 80px; top: 178px; width: 1760px; height: 690px; }
+${scope} .content { position: absolute; left: 120px; top: 178px; width: 1680px; height: 690px; }
 ${css}
     </style>
     <script>
@@ -124,10 +124,10 @@ ${faces}
 html, body { margin: 0; width: ${W}px; height: ${H}px; overflow: hidden; background: var(--bg); }
 #root { position: relative; width: ${W}px; height: ${H}px; overflow: hidden; background: var(--bg); color: var(--text); font-family: ${text}; }
 .clip { position: absolute; inset: 0; }
-.header { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); }
+.header { position: absolute; left: 120px; right: 120px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); }
 .mark { width: 18px; height: 18px; border-radius: 4px; background: var(--accent); }
 .kicker { font: 600 26px ${text}; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
-.captions { position: absolute; left: 80px; right: 80px; top: 908px; height: 104px; }
+.captions { position: absolute; left: 120px; right: 120px; top: 908px; height: 104px; }
 .cue { display: flex; align-items: center; justify-content: center; text-align: center; font: 400 40px/1.3 ${text}; color: var(--faint); overflow: hidden; }
     </style>
   </head>

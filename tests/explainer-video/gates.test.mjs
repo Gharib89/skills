@@ -1,0 +1,360 @@
+// The video gates through their process doors: a run rendered with the canned
+// backend, whose marker words (fake-backend.mjs) break one gate each, and the
+// gates stage run on its own against what the render left.
+import { after, test } from "node:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
+import {
+  catalogue,
+  dest,
+} from "../../skills/explainer-video/scripts/lib/tools.mjs";
+import { SCRIPT } from "./scene-file.mjs";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const skill = path.join(here, "..", "..", "skills", "explainer-video");
+
+const temps = [];
+after(() =>
+  temps.forEach((t) => fs.rmSync(t, { recursive: true, force: true })),
+);
+
+// A temp machine as render.test.mjs lays it out.
+function fixture(text = SCRIPT) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-gates-"));
+  temps.push(tmp);
+  const env = {
+    PATH: process.env.PATH,
+    HOME: path.join(tmp, "home"),
+    XDG_CONFIG_HOME: path.join(tmp, "config"),
+    XDG_DATA_HOME: path.join(tmp, "data"),
+    XDG_CACHE_HOME: path.join(tmp, "cache"),
+    XDG_VIDEOS_DIR: path.join(tmp, "videos"),
+    EXPLAINER_VIDEO_BACKEND: path.join(here, "fake-backend.mjs"),
+    EXPLAINER_VIDEO_FAKE_LOG: path.join(tmp, "calls.jsonl"),
+  };
+  const dirs = userDirs({ platform: "linux", env, home: env.HOME });
+  for (const r of catalogue().filter((r) =>
+    ["npm", "chrome", "font"].includes(r.kind),
+  )) {
+    const d = dest(r, dirs);
+    fs.mkdirSync(d, { recursive: true });
+    fs.writeFileSync(path.join(d, ".stamp"), "");
+    for (const f of r.files ?? [])
+      fs.writeFileSync(path.join(d, `${f}.woff2`), "woff2");
+  }
+  const gsap = path.join(dest({ kind: "npm" }, dirs), "node_modules", "gsap");
+  fs.mkdirSync(path.join(gsap, "dist"), { recursive: true });
+  fs.writeFileSync(path.join(gsap, "dist", "gsap.min.js"), "/* gsap */");
+  const dir = path.join(tmp, "proj", "explainers", "demo");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "script.md"), text);
+  return { tmp, dir, env, log: env.EXPLAINER_VIDEO_FAKE_LOG };
+}
+
+function stage(fx, script, extra = {}) {
+  const r = spawnSync(
+    process.execPath,
+    [path.join(skill, "scripts", script), fx.dir],
+    { env: { ...fx.env, ...extra }, encoding: "utf8" },
+  );
+  return { code: r.status, out: r.stdout, err: r.stderr };
+}
+
+// The script written, compiled and voiced, then rendered.
+function render(fx, text, extra) {
+  if (text) fs.writeFileSync(path.join(fx.dir, "script.md"), text);
+  for (const s of ["script/compile.mjs", "voice/voice.mjs"]) {
+    const r = stage(fx, s);
+    assert.equal(r.code, 0, `${s}: ${r.out}${r.err}`);
+  }
+  return stage(fx, "render/render.mjs", extra);
+}
+
+const calls = (fx, name) =>
+  fs.existsSync(fx.log)
+    ? fs
+        .readFileSync(fx.log, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l))
+        .filter((c) => c.call === name)
+    : [];
+const read = (...p) => fs.readFileSync(path.join(...p), "utf8");
+const record = (fx) => JSON.parse(read(fx.dir, "gates.json"));
+const delivered = (fx) =>
+  path.join(fx.tmp, "videos", "explainer-video", "proj", "demo");
+const titled = (word) =>
+  SCRIPT.replace("Issue to pull request", `Issue to ${word} request`);
+
+// A red render: the gate's line, exit 1, nothing delivered, out/ gone.
+function assertRed(fx, r, gate, why) {
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.out, new RegExp(`^gate ${gate}: fail: .*${why}`, "m"));
+  assert.match(r.out, /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
+  assert.ok(!fs.existsSync(delivered(fx)));
+  assert.equal(record(fx).gates[gate].status, "fail");
+  assert.equal(record(fx).gates[gate].attempts, 1);
+}
+// Green on the fix: every gate passes, attempts back to 0, the video delivered.
+function assertGreen(fx, r) {
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^gates: 4 pass, 0 fail$/m);
+  for (const g of Object.values(record(fx).gates)) assert.equal(g.attempts, 0);
+  assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
+}
+
+test("a clean render passes all four gates, writes the record and the report, and delivers", () => {
+  const fx = fixture();
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const lines = r.out.split("\n").filter((l) => /^gates?\b/.test(l));
+  assert.deepEqual(lines, [
+    "gate layout: pass: 0 finding(s) vs none, text >= 18 px, margin 5%",
+    "gate contrast: pass: 0 finding(s) vs body 4.5:1, large 3:1",
+    "gate loudness: pass: -14.0 LUFS, peak -1.6 dBTP vs -14 +-1 LUFS, peak <= -1 dBTP",
+    lines[3],
+    "gates: 4 pass, 0 fail",
+  ]);
+  assert.match(
+    lines[3],
+    /^gate captions: pass: \d+ cue\(s\), 0 finding\(s\) vs none$/,
+  );
+  const gates = record(fx);
+  assert.match(gates.script, /^[0-9a-f]{16}$/);
+  assert.deepEqual(Object.keys(gates.gates), [
+    "layout",
+    "contrast",
+    "loudness",
+    "captions",
+  ]);
+  assert.deepEqual(gates.gates.loudness, {
+    status: "pass",
+    measured: "-14.0 LUFS, peak -1.6 dBTP",
+    floor: "-14 +-1 LUFS, peak <= -1 dBTP",
+    attempts: 0,
+    evidence: [],
+  });
+  const md = read(fx.dir, "gates.md");
+  assert.match(md, /^# Video gates\n/);
+  assert.match(md, /^\| gate \| status \| measured \| floor \| attempts \|$/m);
+  assert.match(
+    md,
+    /^\| loudness \| pass \| -14\.0 LUFS, peak -1\.6 dBTP \| -14 \+-1 LUFS, peak <= -1 dBTP \| 0 \|$/m,
+  );
+  assert.ok(!/\d{4}-\d\d-\d\d/.test(md), "no date in the report");
+  assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
+  assert.match(r.out, /^delivered: /m);
+  // Samples: every 15 frames from each scene's start, plus its settled last frame.
+  const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  const want = timeline.scenes.flatMap((s) => {
+    const last = s.start + s.duration - 1 / 30;
+    const ts = [];
+    for (let k = 0; s.start + k * 0.5 < last - 1e-6; k++)
+      ts.push(+(s.start + k * 0.5).toFixed(3));
+    return [...ts, +last.toFixed(3)];
+  });
+  assert.deepEqual(calls(fx, "probe")[0].times, want);
+  assert.deepEqual(calls(fx, "check")[0].times, want);
+});
+
+test("the narration is mastered to -14 LUFS under the peak floor before the video renders", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const m = calls(fx, "master");
+  assert.equal(m.length, 1);
+  assert.equal(m[0].lufs, -14);
+  assert.equal(m[0].peak, -1.5);
+  assert.equal(path.basename(m[0].output), "narration.wav");
+  assert.equal(path.basename(path.dirname(m[0].output)), "composition");
+});
+
+test("a clipped title fails layout, delivers nothing, and passes on the fix", () => {
+  const fx = fixture();
+  const r = render(fx, titled("clipped"));
+  assertRed(fx, r, "layout", 'text_box_overflow "Issue to clipped request"');
+  assert.match(
+    r.out,
+    /^gate layout: fail: \d+ finding\(s\), first: [\d.]+ s hook: /m,
+  );
+  assert.match(r.err, /^render: a gate failed: nothing delivered/m);
+  const ev = record(fx).gates.layout.evidence;
+  for (const kind of [
+    "text_box_overflow",
+    "overflow 4000x48 in 1600x48",
+    "clipped",
+  ]) {
+    // A defect held across the scene is one line, counting its samples.
+    const hits = ev.filter((e) => e.includes(`: ${kind}`));
+    assert.equal(hits.length, 1, `${kind}: ${hits.join(" | ")}`);
+    assert.match(hits[0], /\(\d+ samples\)$/);
+  }
+  assert.match(read(fx.dir, "gates.md"), /^## layout$/m);
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("a tiny title fails layout as small text, and passes on the fix", () => {
+  const fx = fixture();
+  assertRed(
+    fx,
+    render(fx, titled("tiny")),
+    "layout",
+    'small 12 px "Issue to tiny request"',
+  );
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("a dim title fails contrast on the frames, and passes on the fix", () => {
+  const fx = fixture();
+  assertRed(
+    fx,
+    render(fx, titled("dim")),
+    "contrast",
+    '"Issue to dim request" #c8c8c0 on #f5f4ed 1\\.\\d\\d:1 under 3:1',
+  );
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("a hot mix fails loudness, and passes when the mix is fixed", () => {
+  const fx = fixture();
+  const r = render(fx, undefined, {
+    EXPLAINER_VIDEO_FAKE_PROBE: '{"lufs":-9,"peak":0.4}',
+  });
+  assertRed(
+    fx,
+    r,
+    "loudness",
+    "-9\\.0 LUFS, peak 0\\.4 dBTP vs -14 \\+-1 LUFS",
+  );
+  assert.deepEqual(record(fx).gates.loudness.evidence, [
+    "integrated -9.0 LUFS is 5.0 LU off -14",
+    "true peak 0.4 dBTP over -1",
+  ]);
+  assertGreen(fx, stage(fx, "render/render.mjs"));
+});
+
+test("an SRT edited after a green render fails captions in the gates stage alone, which deletes nothing", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const srt = path.join(fx.dir, "out", "demo.srt");
+  const good = read(srt);
+  fs.writeFileSync(srt, good.replace("merged pull request", "merged request"));
+  const r = stage(fx, "gates/gates.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate captions: fail: \d+ cue\(s\), 1 finding\(s\), first: SRT cue 1 reads "Ship drives #626 to a merged request\.", the composition "Ship drives #626 to a merged pull request\." vs none$/m,
+  );
+  assert.ok(fs.existsSync(srt));
+  fs.writeFileSync(srt, good);
+  const fixed = stage(fx, "gates/gates.mjs");
+  assert.equal(fixed.code, 0, fixed.out + fixed.err);
+  assert.equal(record(fx).gates.captions.attempts, 0);
+});
+
+test("a gate red three times in a row stops; a changed script starts the count again", () => {
+  const fx = fixture();
+  const clipped = titled("clipped");
+  render(fx, clipped);
+  const second = stage(fx, "render/render.mjs");
+  assert.match(
+    second.out,
+    /^gates: 3 pass, 1 fail; next: fix attempt 2 of 2$/m,
+  );
+  assert.equal(record(fx).gates.layout.attempts, 2);
+  const third = stage(fx, "render/render.mjs");
+  assert.equal(third.code, 1);
+  assert.match(
+    third.out,
+    /^gates: 3 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+  );
+  assert.equal(record(fx).gates.layout.attempts, 3);
+  const renarrated = render(
+    fx,
+    clipped.replace("Here is how.", "Here is why."),
+  );
+  assert.match(
+    renarrated.out,
+    /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m,
+  );
+  assert.equal(record(fx).gates.layout.attempts, 1);
+});
+
+test("a tightened floor is the floor applied and printed", () => {
+  const fx = fixture();
+  const p = JSON.parse(read(skill, "styles", "claude-code.json"));
+  const styles = path.join(fx.tmp, "proj", "explainers", ".styles");
+  fs.mkdirSync(styles, { recursive: true });
+  fs.writeFileSync(
+    path.join(styles, "big.json"),
+    JSON.stringify({ ...p, gates: { layout: { textPx: 48 } } }),
+  );
+  const r = render(fx, SCRIPT.replace("style: claude-code", "style: big"));
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate layout: fail: \d+ finding\(s\), first: [\d.]+ s hook: small 40 px .* vs none, text >= 48 px, margin 5%$/m,
+  );
+});
+
+test("a second gates run with nothing changed calls neither check nor probe, yet measures loudness and captions", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const r = stage(fx, "gates/gates.mjs");
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(calls(fx, "check").length, 1);
+  assert.equal(calls(fx, "probe").length, 1);
+  assert.equal(calls(fx, "loudness").length, 2);
+  assert.match(r.out, /^gate captions: pass: /m);
+});
+
+test("one changed scene re-gates only that scene's samples", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const r = render(
+    fx,
+    SCRIPT.replace('"value": "code"', '"value": "the code"'),
+  );
+  assert.equal(r.code, 0, r.out + r.err);
+  const [first, again] = calls(fx, "probe");
+  const steps = JSON.parse(read(fx.dir, "timeline.json")).scenes[1];
+  assert.ok(again.times.length > 1);
+  assert.deepEqual(
+    again.times,
+    first.times.filter(
+      (t) => t >= steps.start && t < steps.start + steps.duration,
+    ),
+  );
+  assert.deepEqual(calls(fx, "check")[1].times, again.times);
+});
+
+test("the gates stage before a render says which stage to run", () => {
+  const fx = fixture();
+  assert.equal(stage(fx, "script/compile.mjs").code, 0);
+  const r = stage(fx, "gates/gates.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^gates: no timeline\.json: run the render stage first$/m,
+  );
+  const usage = spawnSync(process.execPath, [
+    path.join(skill, "scripts", "gates", "gates.mjs"),
+  ]);
+  assert.equal(usage.status, 2);
+});
+
+test("a check that never reached the browser stops the gates as a tool error, not a pass", () => {
+  const fx = fixture();
+  const r = render(fx, SCRIPT, {
+    EXPLAINER_VIDEO_FAKE_CHECK: '{"ok":false,"error":"Command failed"}',
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^gates: hyperframes check: Command failed$/m);
+  assert.ok(!/^gate layout: pass/m.test(r.out), r.out);
+  assert.ok(!fs.existsSync(path.join(fx.tmp, "videos")));
+});
