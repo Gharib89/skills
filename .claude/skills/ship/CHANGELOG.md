@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.42.0 (2026-10-15)
+
+### Features
+
+- **ship**: PR body keeps its structure and a coloured Door line; summary keeps its content; finds
+  fold, file or note ([#681](https://github.com/Gharib89/skills/pull/681),
+  [`c7c8ff2`](https://github.com/Gharib89/skills/commit/c7c8ff28a54b7479c63e476bf1c6b96b90757bb0))
+
+
 ## v0.41.0 (2026-10-15)
 
 ### Features
