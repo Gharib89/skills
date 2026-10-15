@@ -1,0 +1,130 @@
+{
+ "ar-edge-ar-EG-SalmaNeural": {
+  "rate": 0.367,
+  "hyp": "خليني أوريك إيه اللي بيحص لما تعمل شب ليشو  الشب بيقرأ التكت ويفتح كت وركتري جديد ويكتب تست فاشل الأول  بعد كده بيخلي التست يعدي ويشغل الفول كت ويفتح ببول ريكوست  فيه رفيور باوت بيسيب كومنتس على الدف  والشب بيرد على كل ثريد ويعمل ببوش لي فكس واسد في كل رند  ويستن السيي لحد ما يبقى أخضر  وبعدها بيس بيع المرد والبرانتش بيضف لوحده"
+ },
+ "ar-edge-ar-EG-ShakirNeural": {
+  "rate": 0.378,
+  "hyp": "خليني أوريك إي اللي بيحصل ما تعمل شيب لي إشو  الشيب يقرأ التيكت ويفتح كتورك تري جديد ويكتب تسفاشل الأول  بعد كده بيخلي التست يعدي ويشغول الفول كت ويفتح بول ريكوست  فيه رفيور بود بي سيب كومانتس على الدف  والشيب بيرد على كل ثريد ويعمل بوش لي فكس واحد في كل رند  ويستنى السياء لحد ما يبقى أخضر  وبعدها بسبيع الماج والبرانش بيضف لوحده"
+ },
+ "ar-gemini-ar-eg-commercial-11": {
+  "rate": 0.373,
+  "hyp": "خليني وريك اللي بيحصل لما تعمل شيب لإشيو  الشيب بيقرى لتيكت ويفتح جيت وركتري جديد  ويكتب تيست فاشل الأول  بعد كده بيخلي التيست يعدي ويشغل الفول جيت ويفتح بور ريكوست  فيه ريفيو أرباط بيسيب كومنس على الدف  والشيب بيرد على كل ثراد ويعمل بوش لفيكس واحد في كل راوند  ويستنى لسي آي لحد ما يبقى أخضر  وبعدها بس بيعمل ميرج والبرانش بيتنظف لوحده"
+ },
+ "ar-gemini-ar-eg-csagent-2": {
+  "rate": 0.362,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شب لإشو  الشب بيقرأ تيكت ويفتح جيت وورك تري جديد ويكتب تاست فاشل الأول  بعد كده بيخلي التاست يعدي ويشغل الفول جيت ويفتح بول ريكوست  في ريفيو ورباط بيسيب كومنتس على الدف  والشب بيرد على كل ثرد ويعمل بوش لفيكس واحد في كل راوند  ويستنى لسي آي لحد ما يبقى أخضر  وبعدها بس بيعمل ميرنش والبرانش بيتنظف لوحده"
+ },
+ "ar-omnivoice-teacher": {
+  "rate": 0.26,
+  "hyp": "خليني أوريك أي اللي بيحصل لما تعمل شبلي إشيو.  أجشب بيكرة تيكت ويفتحكت ويكتب تست فاشل الأول.  بعد كذا بيخلي التست يأودي ويجغل الفول gate ويفتح pull request.  فيه reviewer bought بيسيب comments على الدف.  ويشب بيارد على كل thread.  ويعمل push لفقس واحد في كل round.  ويستند سياء لحد ما يبقى أخضر.  وبعدها بس بيعمل merge.  ويو branch بيتنظف لوحدة."
+ },
+ "ar-supertonic-F1-scout": {
+  "rate": 0.353,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب لإيشو.  الشيب بيقرن تيكت ويفتح جيت ورك تري جديد ويكتب تاست فاش الأول.  بعد كده بيخلي التاست يعدي ويشغل الفول جيت ويفتح بول ريكوست.  في ريفيور بوت بيسيب كومنس على الديف.  والشيب بيرد على كل تريد ويعمل بوش لفيكس واحد في كل راوند ويستنى الـ CI لحد ما يبقى أخضر.  وبعدها بس بيعمل ميرج والبرانش بيتنظف لوحدي."
+ },
+ "ar-supertonic-F2-scout": {
+  "rate": 0.282,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب الإشو، الشيب بيقرى التيكات، ويفتح Get Work 3 جديد، ويقل تاست فاشل الأول، بعد كده بيخلي التاست يعدي، ويشغل الفول جيت ويفتح Pull Request، فيه Reviewer بوت بيسيب كومنتز على الديف، والشيب بيرد على كل تراد، ويعمل بوش لفيكس واحد في كل راوند، ويستنى الـ CI لحد ما يبقى أخضر، وبعدها بس بيعمل مرجاج،  والبرانش بيتنظف لوحدة"
+ },
+ "ar-supertonic-F3-scout": {
+  "rate": 0.279,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب لإيشو.  الشيب بيقرن التيكت، ويفتح Get Work 3 جديد، ويكتب تاست فاشل الأول.  بعد كده بيخلي التاست يعدي، ويشغل الفول جيت، ويفتح Pull Request.  فيه ريفيور بوت بيسيب كومنتز على الديف.  والشيب بيرد على كل ثراد، ويعمل بوش لفيكس واحد في كل راوند،  ويستنى الـ CI لحد ما يبقى أخضر، وبعدها بس بيعمل Merge، والبرانش بيتنظف لوحده."
+ },
+ "ar-supertonic-F4-scout": {
+  "rate": 0.37,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب الإشيو، الشيب بيقون التيكيت ويفحتها جيدورك تري جديد ويكتست فاشل الأول، بعد كده بيخلي التيست يععي ويشغل الفول جيت ويفتح بول ريكوست، فيهي فيور بوت بيسيب كومنتس على الديف، والشيب بيود على كل تراد، ويعمل بوش لفيكس واحد في كل راوند ويستنى الـ CI لحد ما يبقى أخضر، وبعدها بس بيعمل ماجة والبرانش بيتنظف لوحدة."
+ },
+ "ar-supertonic-F5-scout": {
+  "rate": 0.362,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب لإشو، الشيب بيقرى التكت ويفتح كتورك تري جديد ويكتب تاست فاشل الأول، بعد كده بيخلي التاست يعدي ويشغل الفول جيت ويفتح بول ريكوست.  فيه ريفيور بوت بوت بيسيب كومنتس على الديف، والشيب بيرد على كل ثريد ويعمل بوش لفيكس واحد في كل راوند، ويستنى لسي آي لحد ما يبقى أخضر، وبعدها بس بيعمل ميرج، والبرانج بيتنظف لوحده."
+ },
+ "ar-supertonic-M1-scout": {
+  "rate": 0.34,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب لإشو.  الشيب بيقرأ التيكت ويفتح جيت وورك تري جديد ويكتب تاست فاشل الأول.  بعد كده بيخلي التاست يعدي ويشغل الفول جيت ويفتح بول ريكواست.  فيه ريفيور بوت بي سيب كومنتس على الديف.  والشيب بيرد على كل ثرد ويعمل بوش لفيكس واحد في كل راوند.  ويستنى الـ CI لحد ما يبقى أخضر وبعدها بس بيعمل ميرج والبرانش بيتنظف لوحده."
+ },
+ "ar-supertonic-M2-scout": {
+  "rate": 0.362,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب لإشيو.  الشيب بيقرأ لتيكت ويفتح جيت ورق تري جديد ويكتب تاست فاشي للأول.  بعد كده بيخلي التاست يعدي ويشغل الفول جيت ويفتح بول ريكوست.  فيه ريفيور بوت بيسيب كومينتس على الديف.  والشيب بيرد على كل ثرد ويعمل بوش لفيكس واحد في كل راوند ويستنى لسياي لحد ما يبقى خضر.  وبعدها بس بيعمل ميرج والبرانش بيتنظف لوحده."
+ },
+ "ar-supertonic-M3-scout": {
+  "rate": 0.416,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل  الشيب لإشو  الشيب بيق بين التيكيت ويفتحتح  جيت ورق تري جديد ويكتب تاس فاشل الأول  بعد كده ده بيخلي التاست يعدي  وياشل فول قي ويفتح  فول ريكوست فيه ريفيور بوت  بيسيب كومنتس على الديف  والشيب بيرد على كل ثراد  ويعمل بوش لفكس واحد في كل راحد  في كل راوند ويستنى الـCI لحي  لحد ما يبقى أخضر وبعدها  بس بيعمل ميرج والبرانش بيتنظف  لوحدة"
+ },
+ "ar-supertonic-M4-scout": {
+  "rate": 0.356,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب لإشيو، الشيب بيقرن التيكت، ويفتح جيت ورك تري جديد، ويكتب تاست فاشل الأول، بعد كده بيخلي التاست يعدي، ويشغل الفول جيت، ويفتح بول ريكوست، فيه ريفيور بوت بيسيب كومنتس على الديف، والشيب بيرد على كل تريد، ويعمل بوش لفيكس واحد في كل راوند، ويستنى لسي ياي لحد ما يبقى أخضر،  وبعدها بس بيعمل ميرج، والبرانش بيتنظف لوحده."
+ },
+ "ar-supertonic-M5-scout": {
+  "rate": 0.353,
+  "hyp": "خليني أوريك إيه اللي بيحصل لما تعمل شيب لإشو  الشيب بيقرأ التيكت ويفتح جيت وارك تري جديد ويكتب تاست فاشل الأول  بعد كده بيخلي التاست يعدي ويشغل الفول جيت ويفتح بول ريكوست  فيه ريفيور بوت بيسيب كومنتس على الديف  والشيب بيرد على كل ثريد ويعمل بوش لفيكس واحد في كل راوند  ويستنى لسي آي لحد ما يبقى أخطر وبعدها بس بيعمل ميرج والبرانش بيتنظف لوحده"
+ },
+ "en-gemini-autonoe": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-gemini-charon": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-kokoro-af_bella": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-kokoro-am_fenrir": {
+  "rate": 0.0,
+  "hyp": "Here's what happens when you ship an issue. Ship reads the ticket, opens a fresh git  worktree and writes a failing test first, then it makes the test pass, runs the full gate and  opens a pull request. A reviewer bot leaves comments on the diff. Ship answers each thread,  pushes one fix per round and waits for CI to turn green.  Only then does it merge and the branch is cleaned up for you."
+ },
+ "en-kokoro-am_michael": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-kokoro-bf_emma": {
+  "rate": 0.0,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git worktree and writes a failing test first.  Then it makes the test pass, runs the full gate and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round and waits for CI to turn green.  Only then does it merge and the branch is cleaned up for you."
+ },
+ "en-omnivoice-teacher": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue. Ship reads the ticket, opens a fresh Git work tree,  and writes a failing test first. Then it makes the test pass, runs the full gate,  and opens a pull request. A reviewer bot leaves comments on the diff. Ship answers each thread,  pushes one fix per round, and waits for CI to turn green.  Only then does it merge and the branch is cleaned up for you."
+ },
+ "en-supertonic-F1-scout": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git Work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-supertonic-F2-scout": {
+  "rate": 0.039,
+  "hyp": "Here's what happens when you ship an issue. Ship reads the ticket, opens a fresh get work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request. A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green. Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-supertonic-F3-scout": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-supertonic-F4-scout": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue. Ship reads the ticket, opens a fresh git work  tree and writes a failing test first. Then it makes the test pass, runs the full gate,  and opens a pull request. A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green. Only  then does it merge and the branch is cleaned up for you."
+ },
+ "en-supertonic-F5-scout": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge and the branch is cleaned up for you."
+ },
+ "en-supertonic-M1-scout": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-supertonic-M2-scout": {
+  "rate": 0.0,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh git worktree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge and the branch is cleaned up for you."
+ },
+ "en-supertonic-M3-scout": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue. Ship reads the ticket, opens a fresh git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request. A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green. Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-supertonic-M4-scout": {
+  "rate": 0.026,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh git work tree, and writes a failing test first.  Then it makes the test pass, runs the full gate, and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round, and waits for CI to turn green.  Only then does it merge, and the branch is cleaned up for you."
+ },
+ "en-supertonic-M5-scout": {
+  "rate": 0.066,
+  "hyp": "Here's what happens when you ship an issue.  Ship reads the ticket, opens a fresh Git work tree and writes a failing test first.  That makes the test pass, runs the full gate and opens a pull request.  A reviewer bot leaves comments on the diff.  Ship answers each thread, pushes one fix per round and waits for CI to turn green and then  does it merge and the branch is cleaned up for you."
+ }
+}

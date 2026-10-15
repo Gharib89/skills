@@ -1,0 +1,187 @@
+<title>Narrator Blind Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column; four voice groups as quiet panels, each a list of lettered clips with rank chips. */
+:root {
+  --bg: #1a1915; --panel: #262420; --line: #3a3732; --fg: #f5f3ec; --muted: #b5b0a3;
+  --accent: #d97757; --accent-ink: #1a1915; --ok: #8a9a5b; --chip: #312e29;
+  --serif: "Source Serif 4", Georgia, serif;
+  --sans: Inter, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --arabic: "IBM Plex Sans Arabic", "Noto Sans Arabic", Tahoma, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f5f3ec; --panel: #ebe7dc; --line: #d6d0c2; --fg: #1a1915; --muted: #5e594f;
+  --accent: #b5532f; --accent-ink: #fff; --ok: #5d6e2e; --chip: #e0dbcd; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f5f3ec; --panel: #ebe7dc; --line: #d6d0c2; --fg: #1a1915; --muted: #5e594f;
+  --accent: #b5532f; --accent-ink: #fff; --ok: #5d6e2e; --chip: #e0dbcd; color-scheme: light; }
+
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 760px; margin: 0 auto; padding-block: 40px 80px; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 2.1rem; line-height: 1.15; }
+h2 { font-size: 1.35rem; }
+p { margin: 0; max-width: 65ch; }
+.muted { color: var(--muted); }
+.eyebrow { font: 500 0.75rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+header { display: grid; gap: 12px; }
+ol.how { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--muted); }
+
+details.script { border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+details.script summary { cursor: pointer; font-weight: 500; }
+.script-body { display: grid; gap: 12px; margin-top: 12px; }
+.ar { font-family: var(--arabic); font-size: 1.05rem; line-height: 1.9; }
+
+section.group { background: var(--panel); border-radius: 10px; padding: 20px; display: grid; gap: 14px; }
+.group-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.clips { display: grid; gap: 10px; }
+.clip { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.clip[data-rank] { border-color: var(--accent); }
+.letter { font: 600 1.3rem var(--serif); text-align: center; }
+.mid { display: grid; gap: 6px; min-width: 0; }
+audio { width: 100%; height: 34px; }
+.reveal { font-size: 0.85rem; color: var(--muted); }
+.reveal b { color: var(--fg); font-weight: 600; }
+.controls { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+button { font: inherit; cursor: pointer; }
+.rank { min-width: 5.5rem; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--chip); color: var(--fg); font-weight: 500; font-variant-numeric: tabular-nums; }
+.clip[data-rank] .rank { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+label.ok { font-size: 0.82rem; color: var(--muted); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+label.ok input { accent-color: var(--ok); }
+textarea { width: 100%; box-sizing: border-box; min-height: 3.2rem; resize: vertical; font: inherit; color: var(--fg);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.submit-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.primary { padding: 10px 20px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.status { color: var(--muted); }
+pre.fallback { overflow-x: auto; background: var(--panel); padding: 12px; border-radius: 8px; font: 0.8rem var(--mono); }
+@media (max-width: 480px) { .clip { grid-template-columns: 1.6rem minmax(0, 1fr); } .controls { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; } }
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">explainer-video · narrator pick</span>
+    <h1>Narrator Blind Test</h1>
+    <p class="muted">The same 30-second script, read by each shortlisted voice. Names stay hidden until you save your ranking.</p>
+    <ol class="how">
+      <li>Play each clip in a group. Only one plays at a time.</li>
+      <li>Tap the rank chips in order of preference: first tap is 1st. Tap a ranked clip again to clear it.</li>
+      <li>Tick "Good enough to ship" on every clip you would accept as the default, even if it ranks low.</li>
+      <li>Save. The page then reveals each voice, its licence class and a Whisper error rate.</li>
+    </ol>
+  </header>
+
+  <details class="script">
+    <summary>Read the script</summary>
+    <div class="script-body">
+      <p>Here's what happens when you ship an issue. Ship reads the ticket, opens a fresh git worktree, and writes a failing test first. Then it makes the test pass, runs the full gate, and opens a pull request. A reviewer bot leaves comments on the diff. Ship answers each thread, pushes one fix per round, and waits for CI to turn green. Only then does it merge, and the branch is cleaned up for you.</p>
+      <p class="ar" dir="rtl" lang="ar-EG">خليني أوريك إيه اللي بيحصل لما تعمل <span dir="ltr">ship</span> لـ <span dir="ltr">issue</span>. الـ <span dir="ltr">Ship</span> بيقرا الـ <span dir="ltr">ticket</span>، ويفتح <span dir="ltr">git worktree</span> جديد، ويكتب <span dir="ltr">test</span> فاشل الأول. بعد كده بيخلي الـ <span dir="ltr">test</span> يعدّي، ويشغّل الـ <span dir="ltr">full gate</span>، ويفتح <span dir="ltr">pull request</span>. فيه <span dir="ltr">reviewer bot</span> بيسيب <span dir="ltr">comments</span> على الـ <span dir="ltr">diff</span>. والـ <span dir="ltr">Ship</span> بيرد على كل <span dir="ltr">thread</span>، ويعمل <span dir="ltr">push</span> لـ <span dir="ltr">fix</span> واحد في كل <span dir="ltr">round</span>، ويستنى الـ <span dir="ltr">CI</span> لحد ما يبقى أخضر. وبعدها بس بيعمل <span dir="ltr">merge</span>، والـ <span dir="ltr">branch</span> بيتنضف لوحده.</p>
+    </div>
+  </details>
+
+  <div id="groups"></div>
+
+  <div class="submit-row">
+    <button class="primary" id="save" disabled>Save ranking and reveal</button>
+    <span class="status" id="status">Rank every clip in all four groups to save.</span>
+  </div>
+  <pre class="fallback" id="fallback" hidden></pre>
+</main>
+
+<script>
+const GROUPS = [
+  { id: "en-female", title: "English, female", letters: "ABCDE" },
+  { id: "en-male", title: "English, male", letters: "ABCD" },
+  { id: "ar-female", title: "Egyptian Arabic, female", letters: "ABCD" },
+  { id: "ar-male", title: "Egyptian Arabic, male", letters: "ABC" },
+];
+const ORD = ["1st", "2nd", "3rd", "4th", "5th"];
+const state = Object.fromEntries(GROUPS.map(g => [g.id, { order: [], ok: [], note: "" }]));
+
+const root = document.getElementById("groups");
+root.style.display = "grid"; root.style.gap = "20px";
+for (const g of GROUPS) {
+  const sec = document.createElement("section");
+  sec.className = "group"; sec.id = g.id;
+  sec.innerHTML = `<div class="group-head"><h2>${g.title}</h2><span class="muted">${g.letters.length} voices</span></div><div class="clips"></div>
+    <textarea id="note-${g.id}" placeholder="Notes for this group (optional): pronunciation of the English terms, pace, warmth"></textarea>`;
+  const clips = sec.querySelector(".clips");
+  for (const L of g.letters) {
+    const row = document.createElement("div");
+    row.className = "clip"; row.dataset.letter = L;
+    row.innerHTML = `<div class="letter">${L}</div>
+      <div class="mid"><audio controls preload="none" src="clips/${g.id}-${L}.mp3"></audio><div class="reveal" hidden></div></div>
+      <div class="controls"><button class="rank" id="rank-${g.id}-${L}" type="button">Rank</button>
+      <label class="ok"><input type="checkbox" id="ok-${g.id}-${L}"> Good enough to ship</label></div>`;
+    row.querySelector(".rank").onclick = () => {
+      const s = state[g.id], i = s.order.indexOf(L);
+      i >= 0 ? s.order.splice(i, 1) : s.order.push(L);
+      paint();
+    };
+    row.querySelector("input").onchange = e => {
+      const s = state[g.id];
+      s.ok = e.target.checked ? [...new Set([...s.ok, L])] : s.ok.filter(x => x !== L);
+    };
+    clips.append(row);
+  }
+  sec.querySelector("textarea").oninput = e => { state[g.id].note = e.target.value; };
+  root.append(sec);
+}
+// One clip at a time.
+document.addEventListener("play", e => {
+  for (const a of document.querySelectorAll("audio")) if (a !== e.target) a.pause();
+}, true);
+
+function complete() { return GROUPS.every(g => state[g.id].order.length === g.letters.length); }
+function paint() {
+  for (const g of GROUPS) for (const L of g.letters) {
+    const row = document.querySelector(`#${g.id} .clip[data-letter="${L}"]`);
+    const r = state[g.id].order.indexOf(L);
+    if (r >= 0) row.dataset.rank = r + 1; else delete row.dataset.rank;
+    row.querySelector(".rank").textContent = r >= 0 ? ORD[r] : "Rank";
+  }
+  const left = GROUPS.reduce((n, g) => n + g.letters.length - state[g.id].order.length, 0);
+  document.getElementById("save").disabled = !complete();
+  document.getElementById("status").textContent = left ? `${left} clip${left > 1 ? "s" : ""} left to rank.` : "Ready to save.";
+}
+paint();
+
+document.getElementById("save").onclick = async () => {
+  const btn = document.getElementById("save"), status = document.getElementById("status");
+  btn.disabled = true; status.textContent = "Saving...";
+  const record = { groups: state, savedAt: new Date().toISOString() };
+  let saved = false;
+  try {
+    const db = await claude.use("db");
+    if (db) { await db.collection("rankings").doc().set(record); saved = true; }
+  } catch (e) { status.textContent = `Could not save (${e.code || e.message}).`; }
+  if (saved) status.textContent = "Saved. Claude can read it now; tell the session you are done.";
+  else {
+    const fb = document.getElementById("fallback");
+    fb.textContent = JSON.stringify(record, null, 1); fb.hidden = false;
+    status.textContent = "Saving is unavailable here: copy the JSON below into the session.";
+  }
+  reveal();
+};
+
+async function reveal() {
+  const key = await (await fetch("key.json")).json();
+  for (const g of GROUPS) for (const v of key[g.id]) {
+    const el = document.querySelector(`#${g.id} .clip[data-letter="${v.id}"] .reveal`);
+    const unit = g.id.startsWith("ar") ? "character error" : "word error";
+    el.innerHTML = `<b></b> · <span class="lic"></span> · ${v.seconds}s · ${(v.error_rate * 100).toFixed(1)}% ${unit}`;
+    el.querySelector("b").textContent = v.name;
+    el.querySelector(".lic").textContent = v.licence;
+    el.hidden = false;
+  }
+}
+</script>

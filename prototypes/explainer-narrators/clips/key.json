@@ -1,0 +1,138 @@
+{
+ "en-female": [
+  {
+   "id": "A",
+   "file": "en-female-A.mp3",
+   "name": "Supertonic 3 F3",
+   "licence": "Safe, local",
+   "seconds": 25.9,
+   "error_rate": 0.026
+  },
+  {
+   "id": "B",
+   "file": "en-female-B.mp3",
+   "name": "Kokoro bf_emma",
+   "licence": "Safe, local",
+   "seconds": 21.2,
+   "error_rate": 0.0
+  },
+  {
+   "id": "C",
+   "file": "en-female-C.mp3",
+   "name": "OmniVoice house teacher voice",
+   "licence": "Opt-in, CC-BY-NC",
+   "seconds": 22.5,
+   "error_rate": 0.026
+  },
+  {
+   "id": "D",
+   "file": "en-female-D.mp3",
+   "name": "Gemini 3.8 TTS Autonoe",
+   "licence": "API, Gemini key",
+   "seconds": 24.9,
+   "error_rate": 0.026
+  },
+  {
+   "id": "E",
+   "file": "en-female-E.mp3",
+   "name": "Kokoro af_bella",
+   "licence": "Safe, local",
+   "seconds": 23.5,
+   "error_rate": 0.026
+  }
+ ],
+ "en-male": [
+  {
+   "id": "A",
+   "file": "en-male-A.mp3",
+   "name": "Kokoro am_michael",
+   "licence": "Safe, local",
+   "seconds": 24.8,
+   "error_rate": 0.026
+  },
+  {
+   "id": "B",
+   "file": "en-male-B.mp3",
+   "name": "Gemini 3.8 TTS Charon",
+   "licence": "API, Gemini key",
+   "seconds": 25.1,
+   "error_rate": 0.026
+  },
+  {
+   "id": "C",
+   "file": "en-male-C.mp3",
+   "name": "Kokoro am_fenrir",
+   "licence": "Safe, local",
+   "seconds": 19.6,
+   "error_rate": 0.0
+  },
+  {
+   "id": "D",
+   "file": "en-male-D.mp3",
+   "name": "Supertonic 3 M1",
+   "licence": "Safe, local",
+   "seconds": 25.2,
+   "error_rate": 0.026
+  }
+ ],
+ "ar-female": [
+  {
+   "id": "A",
+   "file": "ar-female-A.mp3",
+   "name": "OmniVoice house teacher voice",
+   "licence": "Opt-in, CC-BY-NC",
+   "seconds": 27.5,
+   "error_rate": 0.26
+  },
+  {
+   "id": "B",
+   "file": "ar-female-B.mp3",
+   "name": "Azure ar-EG-SalmaNeural (via edge-tts)",
+   "licence": "API, Azure key",
+   "seconds": 37.8,
+   "error_rate": 0.367
+  },
+  {
+   "id": "C",
+   "file": "ar-female-C.mp3",
+   "name": "Gemini 3.8 TTS ar-eg-csagent-2",
+   "licence": "API, Gemini key",
+   "seconds": 30.6,
+   "error_rate": 0.362
+  },
+  {
+   "id": "D",
+   "file": "ar-female-D.mp3",
+   "name": "Supertonic 3 F3",
+   "licence": "Safe, local",
+   "seconds": 33.8,
+   "error_rate": 0.279
+  }
+ ],
+ "ar-male": [
+  {
+   "id": "A",
+   "file": "ar-male-A.mp3",
+   "name": "Supertonic 3 M1",
+   "licence": "Safe, local",
+   "seconds": 32.9,
+   "error_rate": 0.34
+  },
+  {
+   "id": "B",
+   "file": "ar-male-B.mp3",
+   "name": "Azure ar-EG-ShakirNeural (via edge-tts)",
+   "licence": "API, Azure key",
+   "seconds": 31.8,
+   "error_rate": 0.378
+  },
+  {
+   "id": "C",
+   "file": "ar-male-C.mp3",
+   "name": "Gemini 3.8 TTS ar-eg-commercial-11",
+   "licence": "API, Gemini key",
+   "seconds": 28.6,
+   "error_rate": 0.373
+  }
+ ]
+}
