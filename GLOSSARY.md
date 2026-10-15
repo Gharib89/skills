@@ -464,6 +464,10 @@ _Avoid_: outline, shot list, script
 The storyboard's stills played in scene order over the run's real narration, so the human judges pace by ear before anything renders.
 _Avoid_: preview, rough cut, slideshow
 
+**Board version**:
+One state of a run's storyboard, posted as one document the page renders: the first cards, each revision, a gate stop's banner with the failing cards reopened, and the delivered video's clips. A version is never rewritten once the human can see it; a change is the next version.
+_Avoid_: round, board update
+
 **Style profile**:
 A saved, named look (palette, type, motion and layout rules) that a run can use. One profile is the default; a profile can come from a prototype, screenshots, a website or a deck.
 _Avoid_: theme, preset, template

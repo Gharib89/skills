@@ -296,6 +296,17 @@ function ffmpeg(args) {
   return r.stderr;
 }
 
+// One scene's stretch of the delivered video as a small MP4: a board card plays
+// its own scene, and 960 wide keeps a 30 s scene well under the 15 MB asset cap.
+export async function clip(input, output, { start, duration }) {
+  ffmpeg([
+    ...["-y", "-ss", String(start), "-t", String(duration), "-i", input],
+    ...["-vf", "scale=960:-2", "-c:v", "libx264", "-preset", "veryfast"],
+    ...["-crf", "30", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart"],
+    output,
+  ]);
+}
+
 // Integrated loudness (LUFS) and true peak (dBTP) of a file's audio, as
 // ffmpeg's ebur128 summary prints them.
 export async function loudness(file) {
