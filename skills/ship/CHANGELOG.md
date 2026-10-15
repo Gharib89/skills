@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.39.1 (2026-10-15)
+
+### Bug Fixes
+
+- **ship**: Ship_args stops its --body-file scan at --
+  ([#650](https://github.com/Gharib89/skills/pull/650),
+  [`946adcb`](https://github.com/Gharib89/skills/commit/946adcbefcaa6be2b25d10c771af0dc81aca8fbd))
+
+
 ## v0.39.0 (2026-10-15)
 
 ### Features
