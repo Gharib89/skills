@@ -8,6 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { findChrome } from "../../skills/explainer-video/scripts/lib/backend.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import {
   catalogue,
@@ -182,7 +183,7 @@ test("a clipped title fails layout, delivers nothing, and passes on the fix", ()
     r.out,
     /^gate layout: fail: \d+ finding\(s\), first: [\d.]+ s hook: /m,
   );
-  assert.match(r.err, /^render: a gate failed: nothing delivered/m);
+  assert.match(r.err, /^render: the gates did not pass: nothing delivered/m);
   const ev = record(fx).gates.layout.evidence;
   for (const kind of [
     "text_box_overflow",
@@ -207,6 +208,51 @@ test("a tiny title fails layout as small text, and passes on the fix", () => {
     'small 12 px "Issue to tiny request"',
   );
   assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("a title in the margin fails layout as outside the safe margin, and passes on the fix", () => {
+  const fx = fixture();
+  assertRed(
+    fx,
+    render(fx, titled("edge")),
+    "layout",
+    'outside the safe margin "Issue to edge request"',
+  );
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("a title stacked on the kicker fails layout as an overlap, and passes on the fix", () => {
+  const fx = fixture();
+  assertRed(
+    fx,
+    render(fx, titled("stacked")),
+    "layout",
+    '"Ship" overlaps "Issue to stacked request"',
+  );
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("a contrast error from HyperFrames' check fails contrast", () => {
+  const fx = fixture();
+  const r = render(fx, SCRIPT, {
+    EXPLAINER_VIDEO_FAKE_CHECK: JSON.stringify({
+      ok: false,
+      layout: { findings: [] },
+      contrast: {
+        findings: [
+          {
+            code: "low_contrast",
+            severity: "error",
+            time: 0,
+            text: "x",
+            ratio: 2.1,
+            requiredRatio: 4.5,
+          },
+        ],
+      },
+    }),
+  });
+  assertRed(fx, r, "contrast", 'low_contrast "x" 2\\.1:1 under 4\\.5:1');
 });
 
 test("a dim title fails contrast on the frames, and passes on the fix", () => {
@@ -261,13 +307,20 @@ test("a gate red three times in a row stops; a changed script starts the count a
   const fx = fixture();
   const clipped = titled("clipped");
   render(fx, clipped);
-  const second = stage(fx, "render/render.mjs");
+  // Each attempt changes the render: a card's value, the title still clipped.
+  const second = render(
+    fx,
+    clipped.replace('"value": "code"', '"value": "the code"'),
+  );
   assert.match(
     second.out,
     /^gates: 3 pass, 1 fail; next: fix attempt 2 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 2);
-  const third = stage(fx, "render/render.mjs");
+  const third = render(
+    fx,
+    clipped.replace('"value": "code"', '"value": "more code"'),
+  );
   assert.equal(third.code, 1);
   assert.match(
     third.out,
@@ -282,6 +335,17 @@ test("a gate red three times in a row stops; a changed script starts the count a
     renarrated.out,
     /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m,
   );
+  assert.equal(record(fx).gates.layout.attempts, 1);
+});
+
+test("the same red render judged again keeps its attempt count", () => {
+  const fx = fixture();
+  render(fx, titled("clipped"));
+  assert.match(record(fx).render, /^[0-9a-f]{16}$/);
+  // out/ is emptied on red, so the render stage runs again on its cached video.
+  const again = stage(fx, "render/render.mjs");
+  assert.equal(again.code, 1, again.out + again.err);
+  assert.match(again.out, /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.equal(record(fx).gates.layout.attempts, 1);
 });
 
@@ -346,6 +410,29 @@ test("the gates stage before a render says which stage to run", () => {
     path.join(skill, "scripts", "gates", "gates.mjs"),
   ]);
   assert.equal(usage.status, 2);
+});
+
+test("a probe that finds no text in a scene stops the gates as a tool error, not a pass", () => {
+  const fx = fixture();
+  const r = render(fx, SCRIPT, { EXPLAINER_VIDEO_FAKE_BLANK: "1" });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^gates: layout probe: no text in scene hook$/m);
+  assert.match(r.err, /^render: the gates did not pass: nothing delivered$/m);
+  assert.ok(!/^gate layout: pass/m.test(r.out), r.out);
+  assert.ok(!fs.existsSync(path.join(fx.tmp, "videos")));
+});
+
+test("findChrome finds Windows' chrome-headless-shell.exe", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-chrome-"));
+  temps.push(home);
+  const dir = path.join(
+    home,
+    ...[".cache", "hyperframes", "chrome", "win64-x"],
+    "chrome-headless-shell-win64",
+  );
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "chrome-headless-shell.exe"), "");
+  assert.equal(findChrome(home), path.join(dir, "chrome-headless-shell.exe"));
 });
 
 test("a check that never reached the browser stops the gates as a tool error, not a pass", () => {

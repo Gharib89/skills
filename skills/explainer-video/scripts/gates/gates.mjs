@@ -20,8 +20,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { contrast, floors, loadStyle } from "../lib/style.mjs";
-import { catalogue, dest, loadBackend, lockHash } from "../lib/tools.mjs";
+import { LUFS, contrast, floors, loadStyle } from "../lib/style.mjs";
+import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { CUE_CHARS, FPS, H, W } from "../render/compose.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
@@ -33,7 +33,7 @@ function fail(why) {
   console.error(`gates: ${why}`);
   process.exit(1);
 }
-async function measure(call) {
+async function orFail(call) {
   try {
     return await call();
   } catch (e) {
@@ -45,7 +45,9 @@ const r3 = (n) => +n.toFixed(3);
 const hash = (...parts) => {
   const h = crypto.createHash("sha256");
   for (const p of parts)
-    h.update(typeof p === "string" ? p : JSON.stringify(p));
+    h.update(
+      typeof p === "string" || Buffer.isBuffer(p) ? p : JSON.stringify(p),
+    );
   return h.digest("hex").slice(0, 16);
 };
 const read = (f) => fs.readFileSync(path.join(run, f), "utf8");
@@ -92,18 +94,14 @@ const cues = [
 }));
 
 // Per scene: its samples, and its layout and contrast evidence, cached by
-// everything that draws its frames and every floor that judges them.
-const fonts = new Set(
-  ["title", "text", "code"].map((r) => profile.type[r].font),
+// everything that draws its frames, every floor that judges them, and the
+// code that measures and judges: this file, the probe and the contrast maths.
+const inputs = renderInputs([
+  ...new Set(["title", "text", "code"].map((r) => profile.type[r].font)),
+]);
+const source = ["gates.mjs", "../lib/backend.mjs", "../lib/style.mjs"].map(
+  (f) => fs.readFileSync(fileURLToPath(new URL(f, import.meta.url)), "utf8"),
 );
-const renderInputs = [
-  lockHash,
-  ...[...fonts].map(
-    (f) =>
-      `${f}@${catalogue().find((r) => r.kind === "font" && r.family === f)?.version}`,
-  ),
-];
-const source = fs.readFileSync(fileURLToPath(import.meta.url), "utf8");
 const cacheDir = path.join(run, ".cache", "gates");
 fs.mkdirSync(cacheDir, { recursive: true });
 const plan = timeline.scenes.map((sc) => {
@@ -120,7 +118,7 @@ const plan = timeline.scenes.map((sc) => {
       [sc.start, sc.duration, sc.sentences],
       profile,
       script.title,
-      renderInputs,
+      inputs,
       cues.filter((c) => c.start >= sc.start && c.start < end),
       floor,
       source,
@@ -134,24 +132,20 @@ const plan = timeline.scenes.map((sc) => {
 
 const todo = plan.filter((p) => !p.found);
 if (todo.length) {
-  const home = dest({ kind: "chrome" });
-  const env = {
-    ...process.env,
-    HYPERFRAMES_NO_TELEMETRY: "1",
-    DO_NOT_TRACK: "1",
-    HYPERFRAMES_NO_UPDATE_CHECK: "1",
-    HOME: home,
-    USERPROFILE: home,
-  };
+  const env = hyperframesEnv();
   const comp = path.join(run, "composition");
   const times = todo.flatMap((p) => p.times);
-  const checked = await measure(() => backend.check(comp, times, { env }));
+  const checked = await orFail(() => backend.check(comp, times, { env }));
   // A check that never reached the browser answers {ok: false, error} alone.
   if (!checked.layout || !checked.contrast)
     fail(
       `hyperframes check: ${checked.error ?? "no layout or contrast result"}`,
     );
-  const frames = await measure(() => backend.probe(comp, times, { env }));
+  const frames = await orFail(() => backend.probe(comp, times, { env }));
+  // A scene with no text in any sample is a probe that saw nothing, not a pass.
+  for (const p of todo)
+    if (!frames.some((f) => p.times.includes(f.t) && f.elements.length))
+      fail(`layout probe: no text in scene ${p.sc.id}`);
   for (const p of todo) p.found = { layout: [], contrast: [] };
   // One defect held across a scene is one finding: its first time, and the
   // number of samples it showed in.
@@ -195,8 +189,8 @@ if (todo.length) {
     outside(a, b, 0) &&
     outside(b, a, 0);
   for (const { t, elements } of frames) {
-    // Mid-reveal and deliberately truncated text is judged once it settles.
-    const shown = elements.filter((e) => e.opacity >= 0.99 && !e.ellipsis);
+    // Mid-reveal text is judged once it settles.
+    const shown = elements.filter((e) => e.opacity >= 0.99);
     shown.forEach((e, i) => {
       const bad = (what) => add("layout", t, `${what} "${e.text}"`);
       if (e.fontPx < textPx - 0.5) bad(`small ${e.fontPx} px`);
@@ -226,14 +220,14 @@ if (todo.length) {
 }
 
 // Loudness, on the encoded MP4.
-const { lufs, peak } = await measure(() =>
+const { lufs, peak } = await orFail(() =>
   backend.loudness(path.join(run, mp4)),
 );
 const { tolerance, peak: ceiling } = floor.loudness;
 const loud = [];
-if (Math.abs(lufs + 14) > tolerance)
+if (Math.abs(lufs - LUFS) > tolerance)
   loud.push(
-    `integrated ${lufs.toFixed(1)} LUFS is ${Math.abs(lufs + 14).toFixed(1)} LU off -14`,
+    `integrated ${lufs.toFixed(1)} LUFS is ${Math.abs(lufs - LUFS).toFixed(1)} LU off ${LUFS}`,
   );
 if (peak > ceiling)
   loud.push(`true peak ${peak.toFixed(1)} dBTP over ${ceiling}`);
@@ -294,31 +288,42 @@ else
       );
   });
 
-// The verdicts. A gate's attempts count its consecutive red runs on this
-// script: a pass, or a changed script, starts it again.
-const found = (ev) =>
+// The verdicts. A gate's attempts count its consecutive red renders of this
+// script: a pass, or a changed script, starts it again, and the same render
+// judged again is no new attempt.
+const summary = (ev) =>
   `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;
-const layout = plan.flatMap((p) => p.found.layout);
-const shade = plan.flatMap((p) => p.found.contrast);
+const layoutFindings = plan.flatMap((p) => p.found.layout);
+const contrastFindings = plan.flatMap((p) => p.found.contrast);
 const judged = {
   layout: [
-    layout,
-    found(layout),
+    layoutFindings,
+    summary(layoutFindings),
     `none, text >= ${textPx} px, margin ${r3(margin * 100)}%`,
   ],
   contrast: [
-    shade,
-    found(shade),
+    contrastFindings,
+    summary(contrastFindings),
     `body ${floor.contrast.body}:1, large ${floor.contrast.large}:1`,
   ],
   loudness: [
     loud,
     `${lufs.toFixed(1)} LUFS, peak ${peak.toFixed(1)} dBTP`,
-    `-14 +-${tolerance} LUFS, peak <= ${ceiling} dBTP`,
+    `${LUFS} +-${tolerance} LUFS, peak <= ${ceiling} dBTP`,
   ],
-  captions: [caps, `${cues.length} cue(s), ${found(caps)}`, "none"],
+  captions: [caps, `${cues.length} cue(s), ${summary(caps)}`, "none"],
 };
 const scriptHash = hash(script.scenes.map((s) => [s.id, s.narration]));
+const renderHash = hash(
+  read("composition/index.html"),
+  ...fs
+    .readdirSync(path.join(run, "composition", "scenes"))
+    .filter((f) => f.endsWith(".html"))
+    .sort()
+    .map((f) => read(`composition/scenes/${f}`)),
+  fs.readFileSync(path.join(run, mp4)),
+  read(srtFile),
+);
 const recordFile = path.join(run, "gates.json");
 const prev = fs.existsSync(recordFile)
   ? JSON.parse(fs.readFileSync(recordFile, "utf8"))
@@ -328,17 +333,19 @@ for (const [name, [evidence, measured, wanted]] of Object.entries(judged)) {
   const status = evidence.length ? "fail" : "pass";
   const before =
     prev?.script === scriptHash ? (prev.gates[name]?.attempts ?? 0) : 0;
+  const again = prev?.script === scriptHash && prev.render === renderHash;
   gates[name] = {
     status,
     measured,
     floor: wanted,
-    attempts: status === "fail" ? before + 1 : 0,
+    attempts: status === "pass" ? 0 : again ? before || 1 : before + 1,
     evidence,
   };
 }
 fs.writeFileSync(
   recordFile,
-  JSON.stringify({ script: scriptHash, gates }, null, 2) + "\n",
+  JSON.stringify({ script: scriptHash, render: renderHash, gates }, null, 2) +
+    "\n",
 );
 
 const red = Object.entries(gates).filter(([, g]) => g.status === "fail");
@@ -366,7 +373,7 @@ fs.writeFileSync(
 for (const [name, g] of Object.entries(gates))
   console.log(`gate ${name}: ${g.status}: ${g.measured} vs ${g.floor}`);
 console.log(
-  `gates: ${4 - red.length} pass, ${red.length} fail${
+  `gates: ${Object.keys(gates).length - red.length} pass, ${red.length} fail${
     !red.length
       ? ""
       : most >= 3

@@ -174,7 +174,9 @@ narrator: am_fenrir
    version renders English only. A profile's layout, motion or font this
    version cannot draw: choose another profile. Any other `render: <why>`
    line, a HyperFrames or ffprobe failure among them: relay it with the
-   output printed above it.
+   output printed above it. A `gates: <why>` line with no `gate` line above
+   it means the gates could not run: `no Chrome under`: run setup; any other,
+   relay it with the output above it.
 
 **Style profiles** are looked up in three stores, first match winning: the
 project's `explainers/.styles/`, the user config store's `styles/`, and the
@@ -188,11 +190,12 @@ copy to take up the edit, or name another profile in `style:`.
 
 A **video gate** checks the rendered video against a floor and blocks: a red
 gate means no video. The render stage runs them all after every render;
-`node <skill>/scripts/gates/gates.mjs explainers/<slug>` re-judges the last
-render alone and deletes nothing. Each prints `gate <name>: pass|fail:
-<measured> vs <floor>`:
+`node <skill>/scripts/gates/gates.mjs explainers/<slug>` re-judges the render
+still in `out/`, which only a green render leaves (a red render empties
+`out/`, so render again, which reuses the cached video), and deletes nothing.
+Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 
-- `layout`: HyperFrames' check, plus the house probe (text at least 18 px,
+- `layout`: HyperFrames' check, plus the layout probe (text at least 18 px,
   nothing clipped or overflowing its box, every text box inside the 5 percent
   safe margin, no text box overlapping another), on frames every 15 frames
   and on each scene's settled last frame.

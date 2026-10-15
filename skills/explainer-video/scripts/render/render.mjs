@@ -26,12 +26,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { floors, loadStyle } from "../lib/style.mjs";
+import { LUFS, floors, loadStyle } from "../lib/style.mjs";
 import {
   catalogue,
   dest,
+  hyperframesEnv,
   loadBackend,
   lockHash,
+  renderInputs,
   skill,
   toolPaths,
 } from "../lib/tools.mjs";
@@ -279,7 +281,7 @@ fs.mkdirSync(path.dirname(raw), { recursive: true });
 narration(raw);
 try {
   await backend.master(raw, path.join(comp, "narration.wav"), {
-    lufs: -14,
+    lufs: LUFS,
     peak: floors(profile).loudness.peak - 0.5,
   });
 } catch (e) {
@@ -301,17 +303,7 @@ fs.writeFileSync(
   videoPage({ title: script.title, profile, fonts, scenes, cues, total }),
 );
 
-// HyperFrames finds Chrome under its home folder, where setup put it, and
-// keeps its own state files there too.
-const home = dest({ kind: "chrome" });
-const env = {
-  ...process.env,
-  HYPERFRAMES_NO_TELEMETRY: "1",
-  DO_NOT_TRACK: "1",
-  HYPERFRAMES_NO_UPDATE_CHECK: "1",
-  HOME: home,
-  USERPROFILE: home,
-};
+const env = hyperframesEnv();
 async function hyperframes(what, args, cwd) {
   const code = await backend.hyperframes(
     [
@@ -329,12 +321,7 @@ async function hyperframes(what, args, cwd) {
   if (code !== 0) fail(`hyperframes render of the ${what} exited ${code}`);
 }
 
-// What draws a frame beyond the composition's own files: the npm install
-// (HyperFrames, GSAP) and Chrome by the lock, and each font row's version.
-const renderInputs = [
-  lockHash,
-  ...fontRows.map((r) => `${r.family}@${r.version}`),
-];
+const inputs = renderInputs(fontRows.map((r) => r.family));
 
 // Stills: the uncached scenes in one stills page, a frame each.
 const stillDir = path.join(run, ".cache", "stills");
@@ -342,7 +329,7 @@ fs.mkdirSync(stillDir, { recursive: true });
 const stills = script.scenes.map((s, i) =>
   path.join(
     stillDir,
-    `${hash(files[i], profile, timing(scenes[i]), script.title, renderInputs)}.png`,
+    `${hash(files[i], profile, timing(scenes[i]), script.title, inputs)}.png`,
   ),
 );
 const missing = script.scenes.filter((s, i) => !fs.existsSync(stills[i]));
@@ -401,7 +388,7 @@ const listing = (dir) =>
     .filter((e) => e.isFile())
     .map((e) => path.relative(dir, path.join(e.parentPath, e.name)))
     .sort();
-const key = crypto.createHash("sha256").update(JSON.stringify(renderInputs));
+const key = crypto.createHash("sha256").update(JSON.stringify(inputs));
 for (const f of listing(comp))
   key.update(f).update(fs.readFileSync(path.join(comp, f)));
 const renderDir = path.join(run, ".cache", "render");
@@ -429,7 +416,7 @@ const gates = spawnSync(
 );
 if (gates.status !== 0) {
   fs.rmSync(out, { recursive: true, force: true });
-  fail("a gate failed: nothing delivered");
+  fail("the gates did not pass: nothing delivered");
 }
 
 // Delivery checks, every one printed before any verdict.

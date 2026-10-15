@@ -547,6 +547,12 @@ for (const [name, arrange, why, voiced = true] of [
     false,
   ],
   [
+    "a loudness tolerance of zero",
+    (fx) => styled(fx, {}, { gates: { loudness: { tolerance: 0 } } }),
+    /^render: style profile odd: gates\.loudness\.tolerance 0 must be above 0$/m,
+    false,
+  ],
+  [
     "a profile naming a floor the skill has not",
     (fx) => styled(fx, {}, { gates: { layout: { width: 2 } } }),
     /^render: style profile odd: gates\.layout\.width: no such floor$/m,

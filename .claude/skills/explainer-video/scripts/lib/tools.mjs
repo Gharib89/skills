@@ -48,6 +48,30 @@ export function dest(r, dirs = userDirs()) {
   return path.join(dirs.cache, TOOL_DIRS[r.kind], lockHash);
 }
 
+// The environment HyperFrames runs in: it finds Chrome under its home folder,
+// where setup put it, and keeps its own state files there too.
+export function hyperframesEnv() {
+  const home = dest({ kind: "chrome" });
+  return {
+    ...process.env,
+    HYPERFRAMES_NO_TELEMETRY: "1",
+    DO_NOT_TRACK: "1",
+    HYPERFRAMES_NO_UPDATE_CHECK: "1",
+    HOME: home,
+    USERPROFILE: home,
+  };
+}
+
+// What draws a frame beyond the composition's own files: the npm install
+// (HyperFrames, GSAP) and Chrome by the lock, and each font family's version.
+export const renderInputs = (families) => [
+  lockHash,
+  ...families.map(
+    (f) =>
+      `${f}@${catalogue().find((r) => r.kind === "font" && r.family === f)?.version}`,
+  ),
+];
+
 // What a backend loads from: the npm install, and each model's folder by id.
 export function toolPaths(dirs = userDirs()) {
   return {

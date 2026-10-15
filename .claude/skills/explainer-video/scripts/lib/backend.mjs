@@ -167,7 +167,6 @@ function measureFrame() {
       scrollH: el.scrollHeight,
       clientW: el.clientWidth,
       clientH: el.clientHeight,
-      ellipsis: cs.textOverflow === "ellipsis",
       opacity,
       clip,
       color: hex(cs.color),
@@ -177,15 +176,14 @@ function measureFrame() {
   return out;
 }
 
-function findChrome(home) {
+export function findChrome(home) {
   const root = path.join(home, ".cache", "hyperframes", "chrome");
   const stack = [root];
   while (stack.length) {
     for (const e of fs.readdirSync(stack.pop(), { withFileTypes: true })) {
       const f = path.join(e.parentPath, e.name);
       if (e.isDirectory()) stack.push(f);
-      else if (e.name === "chrome-headless-shell" || e.name === "chrome")
-        return f;
+      else if (/^chrome(-headless-shell)?(\.exe)?$/.test(e.name)) return f;
     }
   }
   throw new Error(`no Chrome under ${root}`);

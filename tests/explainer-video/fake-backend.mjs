@@ -20,7 +20,10 @@
 // the content band with the palette's text on its bg, all in bounds. An
 // element whose text names a marker word misrenders: `clipped` overflows
 // (scrollW 4000 in 1600) past its clip box, and check reports it as a layout
-// error `text_box_overflow`; `tiny` is 12 px; `dim` is #c8c8c0.
+// error `text_box_overflow`; `tiny` is 12 px; `dim` is #c8c8c0; `edge` sits at
+// left 40, inside the safe margin; `stacked` starts halfway down the element
+// before it, so the two overlap. EXPLAINER_VIDEO_FAKE_BLANK=1 makes probe find
+// no text at all.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -261,11 +264,14 @@ export async function probe(dir, times) {
   return times.map((t) => {
     const { html, texts } = showing(dir, t);
     const color = (k) => html.match(new RegExp(`--${k}: (#[0-9a-f]{6});`))[1];
+    if (process.env.EXPLAINER_VIDEO_FAKE_BLANK) return { t, elements: [] };
     return {
       t,
       elements: texts.map(({ scene, text }, i) => {
-        const top = scene ? 200 + i * 50 : 920;
-        const rect = { left: 160, top, right: 1760, bottom: top + 48 };
+        const row = /\bstacked\b/.test(text) ? i - 0.5 : i;
+        const top = scene ? 200 + row * 50 : 920;
+        const left = /\bedge\b/.test(text) ? 40 : 160;
+        const rect = { left, top, right: 1760, bottom: top + 48 };
         const clipped = /\bclipped\b/.test(text);
         return {
           text,
@@ -278,7 +284,6 @@ export async function probe(dir, times) {
           scrollH: 48,
           clientW: 1600,
           clientH: 48,
-          ellipsis: false,
           opacity: 1,
           clip: clipped ? { ...rect, right: 1000 } : null,
           color: /\bdim\b/.test(text) ? "#c8c8c0" : color("text"),

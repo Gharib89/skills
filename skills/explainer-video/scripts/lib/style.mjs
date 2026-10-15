@@ -10,6 +10,9 @@ import { skill } from "./tools.mjs";
 
 export const FALLBACK = "claude-code";
 
+// The loudness target the master aims at and the gate judges around.
+export const LUFS = -14;
+
 // The skill's gate floors; a profile's `gates` block may only tighten them:
 // raise contrast (WCAG 2.1) and layout's text size and safe margin, lower
 // loudness's tolerance around -14 LUFS and its true peak in dBTP.
@@ -31,6 +34,8 @@ export function floors(profile) {
       if (!Object.hasOwn(FLOORS[g], k)) refuse(`${g}.${k}: no such floor`);
       const f = FLOORS[g][k];
       if (!Number.isFinite(v)) refuse(`${g}.${k}: not a number`);
+      if (g === "loudness" && k === "tolerance" && v <= 0)
+        refuse(`${g}.${k} ${v} must be above 0`);
       if (g === "loudness" ? v > f : v < f)
         refuse(`${g}.${k} ${v} lowers the skill's floor ${f}`);
       out[g][k] = v;
