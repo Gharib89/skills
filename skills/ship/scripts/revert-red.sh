@@ -117,7 +117,7 @@ done
 # run_test <label>: the test in the temp worktree, its output in $log, its exit
 # status in $rc. A run that reached a host is exit 2 whatever the test answered.
 run_test() {
-  (cd "$wt" && PATH="$tmp/stub:$PATH" SHIP_REVERT_HOSTLOG="$hostlog" "${command[@]}" </dev/null) >"$log" 2>&1
+  (cd "$wt" && PATH="$tmp/stub:$PATH" SHIP_REVERT_HOSTLOG="$hostlog" "${command[@]}") >"$log" 2>&1
   rc=$?
   if [ -s "$hostlog" ]; then
     ship_tooling "$(echo "revert-red: $test_path reached a host $1:"; head -n 20 "$hostlog" | sed 's/^/    /')"
