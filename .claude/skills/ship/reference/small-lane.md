@@ -17,8 +17,8 @@ CHANGELOG.
 
 **Measured, not estimated.** Phase 2 predicts the lane. Count at phase 2's
 `Done when:`, with every edit committed, and again before a push that grew the
-diff, for example after a review round's fixes. A diff that outgrew the mark
-revokes to the full lane.
+diff, for example after a review round's fixes. A diff you judge past that
+size revokes to the full lane.
 
 ## A guard is full lane
 
@@ -59,7 +59,7 @@ call.
 ## Revocable, one way
 
 Any of these **downgrades to the full lane** for the remaining phases: the diff
-counted past the size mark, CI red on behavior, a reviewer or the self-review
+judged past the size, CI red on behavior, a reviewer or the self-review
 flags a real bug, the local gate's floor check hits, or the change turns out to
 touch the public surface or a guard, allowlist or deny rule. Downgrade means:
 run the skipped verifications and docs-sync, add the missing test or docs, run
@@ -73,8 +73,8 @@ human's approval to merge this one PR on a clean gate, and nothing wider. With
 `--unattended`, or free text in place of an issue, stop `inline refused` before
 `prepare`, printing the usage line `/ship <issue> --inline [--review]`.
 
-- **Keys:** the small lane's three, plus a **20-line cap**, a rule rather than
-  a mark: counted with the size above's command and exclusions, at phase 2's
+- **Keys:** the small lane's three, plus a **20-line cap**, a rule rather than a
+  mark: counted by *The size*'s `--numstat` command and exclusions, at phase 2's
   `Done when:` and again before every later push. A guard, allowlist or
   deny-rule diff stays inline with `--review`, and is full lane without.
 - **Kept from above:** the floor, the local gate, subagents, adjacent finds.
@@ -85,7 +85,7 @@ human's approval to merge this one PR on a clean gate, and nothing wider. With
   lane's one requested round, and a fallback stands in per `Fallback-for:`.
   `auto-once` and `on-push` reviewers behave as in every lane.
 - **Merge:** phase 9 takes merge-gate.md's `on-clean-gate` branch for this PR.
-- **Named:** the run header, the `## Review` section and the merge summary say
+- **Named:** the first reply, the `## Review` section and the merge summary say
   `inline lane`. Phase 2 writes `Lane: inline` in the Run file: `gate clean`
   honours an `inline lane` stop only while the last `Lane:` line reads `inline`.
 

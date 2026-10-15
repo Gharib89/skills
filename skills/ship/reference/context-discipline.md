@@ -7,10 +7,11 @@
 - [The Run file](#the-run-file)
 
 What bloats the window is raw tool output landing in the main thread, not the
-work itself, so spend tokens on decisions, not dumps. Everything here is a
-default you apply with judgment, except three requirements nothing else
-replaces: the scratch directory each subagent prompt names, edits under the
-worktree prefix, and the ten tasks created at `init`.
+work itself, so spend tokens on decisions, not dumps. The levers and the model
+tiers below are defaults you apply with judgment. What stays required: the
+scratch directory and Report file each subagent prompt names, edits under the
+worktree prefix, the ten tasks created at `init`, and what the Run file's
+mechanics refuse.
 
 **Delegate noise, not size.** A subagent earns its cost
 only when the raw output you would otherwise ingest is much larger than the

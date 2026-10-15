@@ -82,7 +82,7 @@ check_rc "an empty command word is refused" 2 "$status"
 check "the empty word refusal says why" "probe needs a command: its first word is empty" "$err"
 probe "$repo" 'C6: x' --file "$rf" -- true
 check_rc "a ref holding ': ' names no decline and is refused" 2 "$status"
-check "the ref refusal says why" "a probe's ref is the text before a decline's first ': ', so it cannot hold ': ' or a newline" "$err"
+check "the ref refusal says why" "a probe's ref ends at its line's first ': ', so it cannot hold ': ' or a newline" "$err"
 check "a refused call writes nothing" "$held" "$(cat "$rf")"
 
 finish

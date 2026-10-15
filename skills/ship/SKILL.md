@@ -118,8 +118,8 @@ a later phase can check; a later triage brief or authoritative comment, each
 classes, the TDD override, external-claim probes, the judgment/execution split
 and the adjacent-find dispositions. Classify `docs` / `code` / `infra`, judge
 the three lane keys and the applicable verifications from `## Verification`
-(their `Applies when:` lines are prose you judge here), saying which by
-default. Record the version grade of the public
+(their `Applies when:` lines are prose you judge here), and by default say
+what you chose. Record the version grade of the public
 surface change under the profile's `Subject constraints:` with `run-file grade
 <patch|minor|breaking>`: `open-pr` and `update-pr-title` refuse a title type
 that grades lower. Then implement test-first per class; `Tripwires:` and
@@ -177,7 +177,8 @@ axis alone over each round's **fix-only diff**, until a round changes no file
 `run-file close 4` refuses until the Run file holds the
 [evidence lines](reference/implement.md#phase-4-evidence-lines): each round's
 `Round: self-review`, the loop's `Stop: self-review:`, and a `Reverted-fix:`
-per new or changed test, the red one produced by `run-file prove`.
+per test file the diff adds or changes, the red one written by `run-file
+prove`.
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.

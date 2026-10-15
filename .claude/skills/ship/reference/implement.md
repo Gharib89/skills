@@ -68,10 +68,10 @@ verbatim in the issue body.
 
 ## Phase 2: classify, then implement test-first
 
-Classify the change into one of three classes and **announce the class and the
-skip path it implies** ("classified `docs`: skipping TDD; phase 3 runs only the
-Verifications that apply"), so a wrong label is a visible decision now, not a
-silently skipped verification later.
+Classify the change into one of three classes. By default, say the class and
+the skip path it implies ("classified `docs`: skipping TDD; phase 3 runs only
+the Verifications that apply"), so a wrong label is a visible decision now, not
+a silently skipped verification later.
 
 - **`docs`**: markdown, comments, manifest text with no logic. **Skip TDD**;
   do not manufacture a contrived test. Commit `docs:`.
@@ -93,8 +93,8 @@ function's signature, return value or behavior, grep the changed symbol across
 the tree: its callers, the tests that exercise it, fixtures, config, exports,
 and string or dynamic references. A caller the change breaks is in scope and is
 updated, its test, validation and error handling kept, and a fix lands once in
-the shared code rather than once per caller; past 10 such callers, the
-[needs-split](#phase-2-needs-split) tell decides instead. A caller the change
+the shared code rather than once per caller; when the callers are many, weigh
+the [needs-split](#phase-2-needs-split) tells instead. A caller the change
 leaves working stays untouched, and only one showing a concrete problem of its
 own is an adjacent find, taking one of the
 [dispositions](#phase-2-adjacent-finds).
@@ -183,13 +183,14 @@ The merge summary lists every issue filed and every candidate linked.
 nits against the pinned versions, reject known non-issues, fix the valid ones,
 and record a one-line disposition per finding. A decline whose reason asserts
 how the code behaves ("the caller already guards it") is worth a probe before it
-stands: `run-file probe <ref> --issue <issue> -- <command>...` runs the command
-at the checkout top and records what it printed, and output that does not bear
-the claim out turns the decline into a fix. Two rails on rejecting: an assertion
-about **what exists in the repo** is checked against `origin/HEAD` rather than
-the worktree, which may predate a merge; and a finding's **evidence and its
-claim are separate**, so a reviewer citing the wrong commit for a real primitive
-is still right.
+stands: `run-file probe <ref> --issue <issue> -- <command>...`, `<ref>` naming
+the finding (no `: ` in it), runs the command at the checkout top and writes
+what it printed as a `Probe:` line under `## Evidence`, and output that does not
+bear the claim out turns the decline into a fix. Two rails on rejecting: an
+assertion about **what exists in the repo** is checked against `origin/HEAD`
+rather than the worktree, which may predate a merge; and a finding's **evidence
+and its claim are separate**, so a reviewer citing the wrong commit for a real
+primitive is still right.
 
 Then read the diff yourself against the depth checks in the coding-standards
 file the Standards axis reads, and the sub-files it routes to, by their leading
@@ -215,8 +216,9 @@ again, `none` skipping the issue's own checks. Every lane runs the same loop.
   depth checks above. Every fix any of them leads to is round 1's. The Spec
   axis, the pass and the depth checks run in round 1 only.
 - **Round 2 and up** is one `code-review` subagent, Standards axis only, over
-  the previous round's **fix-only diff**: note the head before triaging round
-  `<n>`, commit its fixes, and hand the next round `git diff <head>..HEAD`. It
+  the previous round's **fix-only diff**: write the head into the Run file
+  before triaging round `<n>`, where a compaction cannot lose it, commit its
+  fixes, and hand the next round `git diff <head>..HEAD`. It
   is dispatched with round 1's Standards prompt, only its diff and Report file
   changing, and triaged as round 1 is: it waits for the Report file, and a file
   that never arrives once retries stop helping is
@@ -247,7 +249,7 @@ and the self-review keeps the judgment of what a line says. The red
 something reads them: the red line proves a new test fails on the old code, and
 `run-file gate clean` reads the loop's `Stop:` line. What the depth checks
 found (removed blocks, matcher cases, declines and their probes) is the
-self-review's judgment, recorded in the Run file as it helps the summary.
+self-review's judgment, recorded in the Run file where it helps the summary.
 
 - **Reverted-fix**, one per test file the diff adds or changes. Produced:
   `run-file prove <test> <path>... --issue <issue>` runs `revert-red` on them

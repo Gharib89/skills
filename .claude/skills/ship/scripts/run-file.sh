@@ -121,8 +121,8 @@
 # `Probe: <ref>: <command> => exit <n> at <sha>: <last output line>`, <command>
 # shell-quoted word by word (`printf %q`) so it re-runs as recorded, under
 # `## Evidence`, the last nonblank line of stdout and stderr together, or
-# `(no output)`. It exits 0 whatever the command's exit; a ref holding `: ` names
-# no decline and is refused. `call` runs nothing: it appends
+# `(no output)`. It exits 0 whatever the command's exit; a ref holding `: ` could
+# not be read back and is refused. `call` runs nothing: it appends
 # `- <command> · <why>` under `## Direct calls`, <command> quoted as `probe`
 # quotes it, before the run makes the call, and refuses (exit 1) a command that
 # does not open on `gh api` or `az rest` and an argument, a `gh api` naming
@@ -1287,9 +1287,8 @@ probe)
   ref=${1:-}
   case $ref in '' | -*) ship_tooling "$usage" ;; esac
   shift
-  # A decline's ref is the text before its first `: `, so a ref holding one, or
-  # a newline, names no decline.
-  case $ref in *": "* | *$'\n'*) ship_tooling "a probe's ref is the text before a decline's first ': ', so it cannot hold ': ' or a newline" ;; esac
+  # A ref holding `: ` or a newline could not be read back from its line.
+  case $ref in *": "* | *$'\n'*) ship_tooling "a probe's ref ends at its line's first ': ', so it cannot hold ': ' or a newline" ;; esac
   where=()
   while [ $# -gt 0 ] && [ "$1" != -- ]; do where+=("$1"); shift; done
   [ "${1:-}" = -- ] && [ $# -ge 2 ] || ship_tooling "$usage"
@@ -1303,7 +1302,7 @@ probe)
   # argv, never a shell string, and no terminal to wait on.
   output=$(cd "$top" && "$@" </dev/null 2>&1)
   rc=$?
-  # Trimmed both ends: `close 4` reads the line's tail from its first non-space.
+  # Trimmed both ends, so the line reads the same however the output was padded.
   last=$(printf '%s\n' "$output" | awk '{ sub(/\r$/, "") } NF { l = $0 } END { sub(/^[ \t]+/, "", l); sub(/[ \t]+$/, "", l); print l }') \
     || ship_tooling "cannot read the last line of the probe's output"
   [ -n "$last" ] || last="(no output)"

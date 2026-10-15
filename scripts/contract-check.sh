@@ -35,6 +35,9 @@
 # catalog entries' format, the two profile-template lines setup-skills parses
 # and the harness schema number's four places.
 #
+# Check 10 is retired: the two sentences of ship's prose it pinned are defaults
+# now, with no reader to guard (ADR 0011).
+#
 # Checks 11 to 14 compare a mechanic's usage line, as `--help` prints it, with
 # the rest of what describes it:
 # 11  the header synopsis names the same flags and leading slots;
