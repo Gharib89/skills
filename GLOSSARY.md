@@ -27,7 +27,7 @@ A host read or write that a later phase, a stop row, the merge or the release de
 _Avoid_: load-bearing call, check, probe
 
 **Direct call**:
-A host read or write that no phase, stop, merge or release depends on, made by the run itself through the host's REST form where no mechanic covers it, and logged in the Run file. One made in two runs is a candidate mechanic, raised as a Ship note. Verification scaffolding (a scratch issue, scratch review thread or throwaway probe PR set up by hand) is not a direct call and sits outside the rule.
+A host read or write that no phase, stop, merge or release depends on, made by the run itself through the host's REST form where no mechanic covers it, and logged in the Run file. One made in two runs, where this run can see the other, is a candidate mechanic, raised as a Ship note. Verification scaffolding (a scratch issue, scratch review thread or throwaway probe PR set up by hand) is not a direct call and sits outside the rule.
 _Avoid_: informational read, side call, ad-hoc call
 
 **Cloud bootstrap**:

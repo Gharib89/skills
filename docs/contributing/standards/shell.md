@@ -43,7 +43,8 @@ exceptions bound these rules.
   and deletes branches, on the fixture repo with `gh`, because those writes are
   a live run's scaffolding around Ship, not Ship's own, and the mechanics are
   what it tests.
-  A direct call made in two runs is a candidate mechanic, raised as a Ship note.
+  A direct call made in two runs, where this run can see the other, is a
+  candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way

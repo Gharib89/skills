@@ -49,10 +49,20 @@ check_rc "a graphql endpoint after a flag is refused" 1 "$status"
 check "the late graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api -H X:\ y graphql" "$err"
 call 'graphql path' --file "$rf" -- gh api /graphql -f 'query=x'
 check_rc "a /graphql path is refused" 1 "$status"
+check "the /graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api /graphql -f query=x" "$err"
 call 'graphql url' --file "$rf" -- gh api https://api.github.com/graphql
 check_rc "a graphql URL is refused" 1 "$status"
 check "the graphql URL refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api https://api.github.com/graphql" "$err"
+call 'graphql slash' --file "$rf" -- gh api graphql/
+check_rc "a graphql endpoint with a trailing slash is refused" 1 "$status"
+call 'graphql query' --file "$rf" -- gh api 'https://api.github.com/graphql?x=1'
+check_rc "a graphql URL with a query string is refused" 1 "$status"
 check "a refused call writes nothing" "$before" "$(cat "$rf")"
+
+call 'comment' --file "$rf" -- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql
+check_rc "a REST call whose field values name graphql is accepted" 0 "$status"
+check "the decoy call is logged" "- gh api repos/o/r/issues/9/comments -f body=see/graphql -f note=graphql · comment" "$(section | grep '^- ' | tail -n 1)"
+before=$(cat "$rf")
 
 usage=$(bash "$m" --help | head -n 1)
 call --file "$rf" -- gh api repos/o/r
