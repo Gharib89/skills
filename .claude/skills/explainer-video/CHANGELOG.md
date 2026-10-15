@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.4.0 (2026-10-15)
+
+### Features
+
+- **explainer-video**: Blocking video gates and the gates report
+  ([#718](https://github.com/Gharib89/skills/pull/718),
+  [`0366a6d`](https://github.com/Gharib89/skills/commit/0366a6dab2ae993c77f834a9fcc9181374369fa0))
+
+
 ## v0.3.0 (2026-10-15)
 
 ### Features
