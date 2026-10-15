@@ -38,8 +38,8 @@ write into. Every variant carries:
 - **`## Verification`**: each applicable verification's phase-3 result and what
   ran, or `None applicable: <reason>`.
 - **`## Review`**, one placeholder line per reviewer at open, filled at the
-  phase-7 exit with its exit word and what its rounds found
-  ([review-loop.md](review-loop.md#the-exit)).
+  phase-7 exit with its exit word, what its rounds found and what became of
+  the findings ([review-loop.md](review-loop.md#the-exit)).
 - **The attribution footer**, where the environment provides one for pull
   request descriptions, in the body file `open-pr` is handed. The body **ends**
   with it, under a `## ` heading of its own that ship adds where no template
@@ -48,8 +48,10 @@ write into. Every variant carries:
 The `Closes` line, the headings verbatim, attribution last and the Door line
 are the body's rules, because the host's close, `open-pr`, later section writes
 and the reviewer read them. The Change outline keeps the shape
-[below](#the-change-outline); what every other section says, and at what
-length, is written for its reader.
+[below](#the-change-outline), and `Needs attention`, `Verification` and `Review`
+keep one line per entry, with `None.` or `None applicable: <reason>` when
+there is none; past those, what a section says, and at what length, is written
+for its reader.
 
 ## The Change outline
 
