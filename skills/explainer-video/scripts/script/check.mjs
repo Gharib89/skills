@@ -50,6 +50,10 @@ const narrator = narrators.find((n) =>
     ? n.id === script.narrator
     : n.language === script.language && n.default,
 );
+if (!narrator) {
+  console.error(`script: no narrator ${script.narrator ?? script.language}`);
+  process.exit(1);
+}
 const words = (s) => s.split(/\s+/).filter(Boolean).length;
 const scenes = script.scenes.map((s) => ({
   ...s,
@@ -75,7 +79,7 @@ const gates = {};
 // brief's length.
 {
   const f = [];
-  for (const s of scenes.filter((s) => s.seconds)) {
+  for (const s of scenes.filter((s) => s.seconds !== undefined)) {
     if (s.seconds < 12 || s.seconds > 30)
       f.push(`${s.id} ${s.seconds} s is outside 12 to 30 s`);
     const budget = s.seconds * narrator.rate;
@@ -114,7 +118,8 @@ const gates = {};
         if (!src || seen.has(id)) continue;
         seen.add(id);
         const seg = segment(run, src, ex.locator);
-        if (!seg.texts?.some((t) => squash(t).includes(squash(ex.text))))
+        if (seg.error) f.push(`${id}: ${ex.locator}: ${seg.error}`);
+        else if (!seg.texts.some((t) => squash(t).includes(squash(ex.text))))
           f.push(`${id} is no longer word for word in ${ex.locator}`);
       }
     });
@@ -136,6 +141,7 @@ let red = false;
     const raw = fs.readFileSync(file("support.json"), "utf8");
     const verdicts = JSON.parse(raw).sentences ?? [];
     let judged = true;
+    const failing = [];
     for (const s of scenes)
       s.narration.forEach((text, i) => {
         const v = verdicts.find(
@@ -144,17 +150,27 @@ let red = false;
         if (!v) {
           judged = false;
           f.push(`${s.id} ${i + 1} not judged: run the support check`);
-        } else if (!["supported", "connective"].includes(v.verdict))
+        } else if (!["supported", "connective"].includes(v.verdict)) {
           f.push(`${s.id} ${i + 1} ${v.verdict}: ${v.why}`);
+          failing.push([s.id, i + 1, text, v.verdict]);
+        }
       });
-    const hash = crypto.createHash("sha256").update(raw).digest("hex");
+    const hash = crypto
+      .createHash("sha256")
+      .update(JSON.stringify(failing))
+      .digest("hex");
     const prev = record?.support ?? support;
-    // A red verdict is a fix attempt once per set of verdicts, so judging the
-    // same verdicts again counts nothing.
+    // A red set of failing sentences is one fix attempt, however often it is
+    // judged; after a stop the next red set starts the count again.
     red = judged && f.length > 0;
     support = red
       ? {
-          attempts: prev.judged === hash ? prev.attempts : prev.attempts + 1,
+          attempts:
+            prev.judged === hash
+              ? prev.attempts
+              : prev.attempts >= 3
+                ? 1
+                : prev.attempts + 1,
           judged: hash,
         }
       : judged
@@ -182,11 +198,19 @@ let red = false;
     ]
       .join("\n")
       .toLowerCase();
+  // A whole-word match, so `avoid=AI` is not hit by "explain".
+  const has = (s, item) => {
+    const quoted = item.toLowerCase().replace(/[.*+?^$|()[\]{}\\]/g, "\\$&");
+    return new RegExp(
+      `(?<![\\p{L}\\p{N}])${quoted}(?![\\p{L}\\p{N}])`,
+      "u",
+    ).test(text(s));
+  };
   for (const m of brief.must)
-    if (!scenes.some((s) => text(s).includes(m.toLowerCase())))
+    if (!scenes.some((s) => has(s, m)))
       f.push(`must "${m}" is not said or shown`);
   for (const a of brief.avoid) {
-    const hit = scenes.filter((s) => text(s).includes(a.toLowerCase()));
+    const hit = scenes.filter((s) => has(s, a));
     if (hit.length)
       f.push(`avoid "${a}" is in ${hit.map((s) => s.id).join(", ")}`);
   }
@@ -203,7 +227,7 @@ let red = false;
     const n = words(String(t ?? ""));
     return !n ? 0 : n <= 3 ? 0.8 : Math.max(1.2, 0.3 * n);
   };
-  for (const s of scenes.filter((s) => s.seconds)) {
+  for (const s of scenes.filter((s) => s.seconds !== undefined)) {
     const p = s.visual.props;
     const items =
       s.visual.component === "title"
@@ -219,10 +243,10 @@ let red = false;
     for (const [name, at, texts] of items) {
       const after = s.counts.slice(at - 1).reduce((a, b) => a + b, 0);
       const shown = (s.seconds * after) / total;
-      const need = texts.reduce((a, t) => a + floor(t), 0);
-      if (shown < need)
+      const read = texts.reduce((a, t) => a + floor(t), 0);
+      if (shown < read)
         f.push(
-          `${s.id} ${name}: ${shown.toFixed(1)} s on screen vs ${need.toFixed(1)} s to read`,
+          `${s.id} ${name}: ${shown.toFixed(1)} s on screen vs ${read.toFixed(1)} s to read`,
         );
     }
   }

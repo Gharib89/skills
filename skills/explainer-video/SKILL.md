@@ -19,10 +19,11 @@ scene file written from the pack and held to the script gates; **voice**,
 English narration; **render**, the scene file turned into a captioned MP4; and
 **gates**, which the render runs and which block a video below the floors. The
 storyboard is not in this version.
-Asked for a video from sources, run the stages in order, brief, source,
-script, voice, render, without stopping for the user: say in one line that the
-storyboard, where they would approve the script, is not in this version. Asked
-for narration the user writes, skip to Voice or Render.
+Asked for a video from sources, run the stages in order (brief, source,
+script, voice, render) without waiting for the user's approval, pausing only
+where a stage says to stop or ask; say in one line that the storyboard, where
+they would approve the script, is not in this version. Asked for narration the
+user writes, skip to Voice or Render.
 
 ## Setup
 
@@ -78,15 +79,18 @@ must include and must avoid. The user's request beside the sources, the
    explainers/<slug> [<knob>=<value>]...`, one argument per knob the steering
    prompt moves, and `must=<item>` or `avoid=<item>` per list item. A male or
    female voice asked for is that language's default narrator of that gender.
-   It prints one `brief <knob>: <value>` line per knob: show these lines to the
-   user as the brief. It never stops the run.
+   It prints one `brief <knob>: <value>` line per knob, then `brief: written
+   -> brief.json`: show the knob lines to the user as the brief and go on
+   without waiting for their approval.
 2. **On exit 1**, `brief <knob> <value>: <why>` names a value this version
    cannot make: tell the user in one line, run again without it, and go on.
 3. **A later change**, from the user or a fix, is the same command with just
    the knobs that change; the others keep their values, and a list given
-   replaces that list. It prints `brief: <knobs> changed: redo <stages>`:
-   redo only those stages, in order, each reusing its cached work for whatever
-   did not change. The compiled script goes stale, so compile again first.
+   replaces that list. It prints `brief: unchanged`, nothing to redo, or
+   `brief: <knobs> changed: redo <stages>`: redo only those stages, in order,
+   each reusing its cached work for whatever did not change. A language, voice
+   or style change deletes the compiled `script.json`, so compile before the
+   first stage it names.
 
 ## Source
 
@@ -152,9 +156,10 @@ to the **script gates**.
    `<skill>/agents/support-checker.md` as its prompt, `{run}` the run folder
    and `{skill}` this skill's folder. It writes `support.json`, its verdict on
    every sentence, and replies with its `script support:` line.
-4. **Gates.** `node <skill>/scripts/script/check.mjs explainers/<slug>` prints
-   one line per gate, `script <gate>: pass`, `fail: <findings>` or `warn:
-   <findings>`, then `script: <p> pass, <f> fail, <w> warn`:
+4. **Script gates.** `node <skill>/scripts/script/check.mjs explainers/<slug>`
+   prints one line per gate, `script <gate>: pass` or `fail: <findings>`
+   (`sentences` warns instead of failing), then `script: <p> pass, <f> fail,
+   <w> warn`:
    - `arc`: the roles in order, each scene with its role line.
    - `budget`: each scene 12 to 30 s with its words within 10 percent of its
      seconds at the narrator's rate, and the scenes within 10 percent of the
@@ -164,19 +169,21 @@ to the **script gates**.
    - `support`: every sentence judged `supported` or `connective` on its
      present wording.
    - `coverage`: each `must` item said or shown, no `avoid` item anywhere.
-   - `reading`: each visual item on screen long enough to read, from the
-     sentence it rises at to the scene's end: 0.8 s a label of up to three
-     words, else 0.3 s a word and 1.2 s at least, an item's texts added up.
+   - `reading`: each visual item on screen long enough to read, counted from
+     the sentence it rises at to the scene's end. A text of three words or
+     fewer needs 0.8 s; a longer one needs 0.3 s a word, and at least 1.2 s;
+     an item's texts (a card's label, value and note) add up.
    - `dashes`: no em or en dash in the scene file.
    - `sentences`: a sentence over 25 words warns and does not block.
-5. **On exit 1**, fix what each `fail` line names in the scene file, compile,
-   then run the support check again whenever the narration changed, and the
-   gates again. A red `support` line ends the summary in `next: fix attempt <a>
-   of 2`: rewrite each failing sentence to say only what its excerpts say, cite
-   the excerpt that does say it, and give an `unmarked` sentence the cites for
-   its claim or turn it into a transition. On `stop: unsupported claims after
-   two fix attempts`, stop: report each failing sentence and ask the user what
-   the video may say. `script: no <file>` names the stage to run first.
+5. **On exit 1** with `script: no <file>: <why>` on stderr and no gate lines,
+   run what `<why>` names, then the script gates again. Otherwise fix what each
+   `fail` line names in the scene file, compile, then run the support check
+   again whenever the narration changed, and the script gates again. A red
+   `support` line ends the summary in `next: fix attempt <a> of 2`: rewrite each
+   failing sentence to say only what its excerpts say, cite the excerpt that
+   does say it, and give an `unmarked` sentence the cites for its claim or turn
+   it into a transition. On `stop: unsupported claims after two fix attempts`,
+   stop: report each failing sentence and ask the user what the video may say.
 6. **On exit 0**, report the summary line and go on to Voice.
 
 ## Voice

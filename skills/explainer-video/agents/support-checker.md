@@ -11,15 +11,15 @@ Your inputs, filled in by the run that dispatched you:
 - **Script:** `{run}/script.json`, the compiled script
 - **Excerpts:** `{run}/excerpts.json`
 - **Brief:** `{run}/brief.json`
-- **Script check:** `node {skill}/scripts/script/check.mjs {run}`
+- **Script gates:** `node {skill}/scripts/script/check.mjs {run}`
 
 ## Read
 
 Read `script.json`: each scene's `narration` is its sentences in spoken form,
 and `cites` holds each sentence's excerpt ids, empty for a sentence marked
-`[no-claim]`. Read each cited excerpt's `text` in `excerpts.json`. Judge from
-those words alone: not the snapshots, not the source, not what you know about
-the subject.
+`[no-claim]`. Read each cited excerpt's `text` in `excerpts.json`, and the
+`avoid` list in `brief.json`. Judge from those words alone: not the snapshots,
+not the source, not what you know about the subject.
 
 ## Judge every sentence
 
@@ -64,11 +64,12 @@ sentence; for a failing verdict it names the words the excerpts do not back.
 
 ## Check it
 
-Run the script check. Its `script support:` line reads `pass`, or names each
+Run the script gates. Their `script support:` line reads `pass`, or names each
 failing sentence with its verdict and your reason. A sentence it calls `not
 judged` has no entry matching it: fix the entry's `scene`, `n` or `text` and
-run the check again. Never change a verdict to make the check pass.
+run the script gates again, at most twice. Keep each verdict as you judged it:
+fix only `scene`, `n` and `text`.
 
 ## Report
 
-Reply with the check's `script support:` line and nothing else.
+Reply with the `script support:` line as it last read, and nothing else.

@@ -225,6 +225,8 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds at the
     line(r, "budget"),
     "script budget: fail: steps 25 words vs 37 (12 s at 3.12/s) ±10%",
   );
+  r = check(fixture({ scenes: edit(SCENES, 0, { seconds: 0 }) }));
+  assert.match(line(r, "budget"), /hook 0 s is outside 12 to 30 s/);
   r = check(fixture({ brief: ["length=2", "must=local gate"] }));
   assert.equal(
     line(r, "budget"),
@@ -255,6 +257,15 @@ test("every cite names an excerpt still word for word in its snapshot", () => {
     line(r, "cites"),
     /^script cites: fail: .*ex-2 is no longer word for word in § Gate/,
   );
+
+  // A locator the snapshot no longer holds says so.
+  fx = fixture();
+  const file = path.join(fx.dir, "excerpts.json");
+  const pack = JSON.parse(fs.readFileSync(file, "utf8"));
+  pack.excerpts[1].locator = "§ Nope";
+  fs.writeFileSync(file, JSON.stringify(pack));
+  r = check(fx);
+  assert.match(line(r, "cites"), /ex-2: § Nope: no section "Nope"/);
 
   // With no snapshot the pack's own check stands.
   fx = fixture();
@@ -294,6 +305,13 @@ test("support blocks an unsupported claim, counts two fix attempts, then stops",
   assert.equal(r.code, 1);
   assert.match(r.out, /; stop: unsupported claims after two fix attempts$/m);
 
+  // After a stop, the next red set the user's revision brings counts afresh.
+  judge(fx, { "why 1": "unsupported" });
+  assert.match(check(fx).out, /; next: fix attempt 1 of 2$/m);
+  // A new reason on the same failing sentences is not another attempt.
+  judge(fx, { "why 1": "unsupported" });
+  assert.match(check(fx).out, /; next: fix attempt 1 of 2$/m);
+
   judge(fx);
   r = check(fx);
   assert.equal(r.code, 0, r.out);
@@ -329,6 +347,13 @@ test("every must-include item is said or shown and no avoid item is", () => {
   assert.match(
     line(r, "coverage"),
     /^script coverage: fail: avoid "FAILING test" is in hook/,
+  );
+  // Whole words only: "ai" inside "failing" and "read" inside "reads" match
+  // nothing.
+  r = check(fixture({ brief: ["length=1", "must=read", "avoid=ai"] }));
+  assert.equal(
+    line(r, "coverage"),
+    'script coverage: fail: must "read" is not said or shown',
   );
 });
 
@@ -369,6 +394,15 @@ test("an em or en dash anywhere in the scene file fails, and a sentence over 25 
   let r = check(fixture({ md }));
   assert.equal(r.code, 1);
   assert.equal(line(r, "dashes"), "script dashes: fail: line 1 has an em dash");
+  r = check(
+    fixture({
+      md: sceneFile(SCENES).replace(
+        "# How Ship lands",
+        `# How Ship ${String.fromCharCode(0x2013)} lands`,
+      ),
+    }),
+  );
+  assert.equal(line(r, "dashes"), "script dashes: fail: line 1 has an en dash");
 
   r = check(
     fixture({

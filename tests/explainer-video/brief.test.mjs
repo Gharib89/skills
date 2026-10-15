@@ -111,22 +111,32 @@ test("knobs and lists lay over the defaults, and the project's default style is 
 
 test("changing one knob keeps the rest and names only the stages it feeds", () => {
   const fx = fixture();
+  const has = (f) => fs.existsSync(path.join(fx.dir, f));
+  const stale = () =>
+    ["script.json", "check.json"].forEach((f) =>
+      fs.writeFileSync(path.join(fx.dir, f), "{}"),
+    );
   assert.equal(brief(fx, ["must=the gate"]).code, 0);
-  fs.writeFileSync(path.join(fx.dir, "script.json"), "{}");
+  stale();
   let r = brief(fx, ["style=claude-code"]);
   assert.equal(r.code, 0, r.err);
   assert.match(r.out, /^brief: unchanged$/m);
-  assert.ok(fs.existsSync(path.join(fx.dir, "script.json")));
+  assert.ok(has("script.json") && has("check.json"));
 
+  // The narrator's rate sets the scene budgets, so the script is checked again.
   r = brief(fx, ["voice=am_fenrir"]);
   assert.equal(r.code, 0, r.err);
-  assert.match(r.out, /^brief: voice changed: redo voice, render$/m);
+  assert.match(r.out, /^brief: voice changed: redo script, voice, render$/m);
   assert.deepEqual(read(fx, "brief.json").must, ["the gate"]);
-  // The compiled script carries the brief's narrator, so it goes stale.
-  assert.ok(!fs.existsSync(path.join(fx.dir, "script.json")));
+  // The compiled script carries the narrator, and the rewritten script's fix
+  // attempts start again.
+  assert.ok(!has("script.json") && !has("check.json"));
 
+  stale();
   r = brief(fx, ["audience=managers"]);
   assert.match(r.out, /^brief: audience changed: redo script$/m);
+  // The compiled script holds no audience, so it stays.
+  assert.ok(has("script.json") && !has("check.json"));
   r = brief(fx, ["length=3", "aspect=16:9", "style=claude-code"]);
   assert.match(r.out, /^brief: length changed: redo source, script$/m);
   r = brief(fx, ["focus=merging", "voice=bf_emma"]);
