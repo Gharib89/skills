@@ -145,8 +145,9 @@
 # no decline and is refused. `call` runs nothing: it appends
 # `- <command> · <why>` under `## Direct calls`, <command> quoted as `probe`
 # quotes it, before the run makes the call, and refuses (exit 1) a command that
-# does not open on `gh api` or `az rest` and an endpoint, the cloud sandbox's
-# proxy refusing GitHub GraphQL, which `gh issue edit` and its kin use (#254).
+# does not open on `gh api` or `az rest` and an argument, or a `gh api` naming
+# the `graphql` endpoint: the cloud sandbox's proxy refuses GitHub GraphQL,
+# which `gh issue edit` and its kin use (#254).
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git
@@ -166,6 +167,7 @@
 #     record and the head, its paths as typed where the line normalises them;
 #     on a refusal revert-red's own answer
 #   probe: {run_file, ref, command, exit, head, last}
+#   call: {run_file, command, why}
 #   gate record: {run_file, head, verdict}
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the
@@ -185,11 +187,11 @@
 #     such a primary. Other cap,
 #     small lane and auto-once stops, a deferred gate beside a non-green check
 #     outside Legs:, nonblank Override evidence, tracker drafts beside the
-#     Run file (excluding .base.md), and a last `Stop: self-review: cap` where no reviewer stopped
-#     on tree unchanged at a covered head with a dispositioned Round hold the
-#     gate. An ordinary deviation, a Ship-defect line or a defect draft does not
-#     hold it: a defect that breaks a gating step fails that step's evidence. This read is independent
-#     of Merge.
+#     Run file (excluding .base.md), and a last `Stop: self-review: cap`
+#     where no reviewer stopped on tree unchanged at a covered head with a
+#     dispositioned Round hold the gate. An ordinary deviation, a Ship-defect
+#     line or a defect draft does not hold it: a defect that breaks a gating
+#     step fails that step's evidence. This read is independent of Merge.
 #     A stamp covers <sha> when it is <sha>, or when every later commit on
 #     <sha>'s first-parent line is a clean base merge: two parents, the second
 #     an ancestor of the local origin/HEAD (fetch first, or an unfetched base
@@ -1459,8 +1461,11 @@ call)
   no_extra
   cmd=$(printf '%q ' "$@")
   cmd=${cmd% }
-  { [ "$1 ${2:-}" = "gh api" ] || [ "$1 ${2:-}" = "az rest" ]; } && [ $# -ge 3 ] \
-    || ship_fail "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: $cmd"
+  rest=false
+  { [ "$1 ${2:-}" = "gh api" ] || [ "$1 ${2:-}" = "az rest" ]; } && [ $# -ge 3 ] && rest=true
+  # `graphql` is the one `gh api` endpoint that is not REST.
+  if [ "$1" = gh ]; then for w in "${@:3}"; do [ "$w" != graphql ] || rest=false; done; fi
+  [ "$rest" = true ] || ship_fail "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: $cmd"
   append_to_section "## Direct calls" "- $cmd · $why"
   jq -n --arg f "$file" --arg c "$cmd" --arg w "$why" '{run_file: $f, command: $c, why: $w}'
   ;;

@@ -106,10 +106,9 @@ One line per issue the run filed or linked, `- #<n> <title>: <one line why it
 matters>`, one per Ship defect met, `- Ship defect: <what>`, and one per Ship
 note, `- Ship note: <what>`, beside them, so a retro finds the friction after
 the run's files are gone. `None.` when there are none. Nothing else belongs
-here: an adjacent find is filed or fixed
-inline by phase 2's dispositions, so an observation parked here is a find that
-skipped its disposition. It is written from the Run file's record, not the
-deviations log.
+here: an adjacent find is filed or fixed inline by phase 2's dispositions, so an
+observation parked here is a find that skipped its disposition. It is written
+from the Run file's record, not the deviations log.
 
 ## Writing and reading it back
 

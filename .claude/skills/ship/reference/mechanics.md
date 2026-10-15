@@ -30,13 +30,16 @@ the review round it reads (`request-review`, `reply-thread`, `resolve-thread`),
 defect, which never holds the clean gate on its own: a defect that breaks a
 gating step already fails that step's evidence.
 
-Any other host call is a **direct call**: the run makes it itself, through the
-host's REST form only (`gh api`, `az rest`), which the cloud sandbox admits
-where its proxy refuses GitHub GraphQL with a 403 (#254), so `gh issue edit`
-and its kin are out. Log it before making it with `run-file call "<why>"
---issue <issue> -- gh api ...`, which writes the line under the Run file's
-`## Direct calls` and refuses, exit 1, any other form. A direct call an earlier
-run also made is raised as a Ship note: it may earn a mechanic. Verification
+A non-gating call a mechanic already covers (`reflect`, `comment-issue`,
+`comment-pr`, `isolate`, `cleanup`) still runs through it. Any other host call
+is a **direct call**: the run makes it itself, through the host's REST form
+only, `gh api <REST path>` (never its `graphql` endpoint) or `az rest`, which
+the cloud sandbox admits where its proxy refuses GitHub GraphQL with a 403, so
+`gh issue edit` and its kin are out. Log it before making it with `run-file
+call "<why>" --issue <issue> -- gh api ...`, which writes the line under the
+Run file's `## Direct calls` and refuses, exit 1, any other form. A direct call
+the run makes twice, or one an earlier run's summary on this repo also lists,
+is raised as a Ship note: it may earn a mechanic. Verification
 scaffolding sits outside the rule: a scratch issue or scratch review thread a
 `Run:` line sets up by hand, or a throwaway probe PR an acceptance criterion
 asks for, with its pushes and CI cancels, closed unmerged before the merge gate.

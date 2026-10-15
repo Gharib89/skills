@@ -75,11 +75,11 @@ ten-item checklist. Each phase below flips it with `run-file next`, `open`,
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every gating call goes through a mechanic**, a host call a
 later phase, stop, merge or release depends on: one no mechanic performs is a
-**Ship defect** for the merge summary, never hand-rolled, and never holds the
-clean gate. Any other is a **direct call** through `gh api` or `az rest`,
-logged first with `run-file call`; worked-around friction is a **Ship note**.
-[reference/mechanics.md](reference/mechanics.md) lists the gating calls, each
-phase's mechanic and their shared contract, `--help` included.
+**Ship defect** for the summary, never hand-rolled, and never holds the clean
+gate. Any other uncovered call is a **direct call** through `gh api` or `az
+rest`, logged first with `run-file call`; worked-around friction is a **Ship
+note**. [reference/mechanics.md](reference/mechanics.md) lists the gating calls,
+each phase's mechanic and their shared contract, `--help` included.
 
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
 preflight proves and refuses, the profile it loads and why the worktree is made
