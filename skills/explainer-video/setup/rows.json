@@ -4,8 +4,8 @@
       "id": "npm-packages",
       "kind": "npm",
       "neededBy": "render, voice",
-      "size": 404784108,
-      "licence": "Apache-2.0 (hyperframes), MIT (onnxruntime-node), and their dependencies"
+      "size": 604418850,
+      "licence": "Apache-2.0 (hyperframes, kokoro-js, transformers.js), MIT (onnxruntime-node), and their dependencies"
     },
     {
       "id": "model:kokoro-82m",
