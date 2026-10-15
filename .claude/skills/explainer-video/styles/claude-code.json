@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "name": "claude-code",
+  "label": "Claude Code",
+  "source": "Measured from frames of Anthropic's Claude Code explainer videos, 2026-10-15",
+  "colors": {
+    "bg": "#f5f4ed",
+    "panel": "#fbf9f5",
+    "chip": "#e6e5dc",
+    "line": "#c1c1b8",
+    "rule": "#8f8e86",
+    "text": "#141413",
+    "muted": "#5e5d59",
+    "faint": "#73726c",
+    "accent": "#cc6c54",
+    "ok": "#4f7a3a",
+    "warn": "#8a5a00",
+    "stop": "#b0442c"
+  },
+  "type": {
+    "title": { "font": "source-serif-4", "weight": 600 },
+    "text": { "font": "inter", "weight": 400 },
+    "code": { "font": "jetbrains-mono", "weight": 400 },
+    "arTitle": { "font": "noto-naskh-arabic", "weight": 600 },
+    "arText": { "font": "ibm-plex-sans-arabic", "weight": 400 }
+  },
+  "layout": "bands",
+  "motion": "rise"
+}

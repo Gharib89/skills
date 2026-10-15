@@ -237,6 +237,15 @@ test("a rerun refused for its input removes the timeline the last pass wrote", (
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
 });
 
+test("voice on a mistyped run folder says which stage to run and writes nothing", () => {
+  const fx = fixture();
+  const r = run({ ...fx, dir: path.join(fx.tmp, "typo") });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^voice: no script\.json: run the compile stage first/m);
+  assert.ok(!fs.existsSync(path.join(fx.tmp, ".gitignore")));
+  assert.ok(!fs.existsSync(path.join(fx.tmp, "typo")));
+});
+
 test("two scenes with the same narration share one WAV that matches both entries", () => {
   const fx = fixture([SCENES[0], { ...SCENES[0], id: "again" }, SCENES[2]]);
   const r = run(fx);

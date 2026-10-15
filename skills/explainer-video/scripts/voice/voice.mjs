@@ -12,11 +12,12 @@
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
 //         rate · pass|fail: <why>`, then one summary line
 // writes: <run>/voice.json, the word timeline, only when every scene passes
-// exit:   0 every scene passes · 1 a scene fails QC, or synthesis or alignment
-//         failed · 2 usage
+// exit:   0 every scene passes · 1 refused for its input, a scene fails QC,
+//         or synthesis or alignment failed · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { writeIgnore } from "../lib/runfolder.mjs";
 import { loadBackend, skill, toolPaths } from "../lib/tools.mjs";
 import { FRAME, align, transcribe } from "./align.mjs";
 import { check } from "./qc.mjs";
@@ -28,10 +29,16 @@ if (!run || rest.length) {
 }
 // The last pass's timeline no longer describes this script until it passes.
 fs.rmSync(path.join(run, "voice.json"), { force: true });
-
+if (!fs.existsSync(path.join(run, "script.json"))) {
+  console.error(
+    "voice: no script.json: run the compile stage first (script/compile.mjs)",
+  );
+  process.exit(1);
+}
 const script = JSON.parse(
   fs.readFileSync(path.join(run, "script.json"), "utf8"),
 );
+writeIgnore(run);
 const language = script.language ?? "en";
 const narrators = JSON.parse(
   fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),

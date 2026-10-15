@@ -12,11 +12,13 @@ metadata:
 # explainer-video
 
 An **explainer video** is a narrated video, one to five minutes by default,
-made from one or more sources. This version carries two stages: **setup**,
-which every run starts with, and **voice**, English narration for a script the
-user supplies. The stages that write the script and render the video are not
-in this version. Asked for a video, say so in one line and offer `setup`, or
-voicing a narration the user writes.
+made from one or more sources. This version carries three stages: **setup**,
+which every run starts with; **voice**, English narration; and **render**, a
+scene file written with the user turned into a captioned MP4. Reading sources,
+the brief, the storyboard and writing the script from sources are not in this
+version.
+Asked for a video, say so in one line and offer to write the scene file with
+the user, then voice and render it.
 
 ## Setup
 
@@ -54,7 +56,9 @@ and what an earlier install of a missing row left half done.
 The voice stage turns each scene's narration into audio with every word timed,
 then runs **voice QC**, which blocks. It reads a **run folder**,
 `explainers/<slug>/` by default, `<slug>` a short kebab-case name for the video
-that you choose (`ship-overview`), holding `script.json`:
+that you choose (`ship-overview`), holding `script.json`, which the compile
+stage writes from the scene file (see Render) or you write by hand for voice
+alone (render needs the compiled one):
 
 ```json
 {
@@ -89,3 +93,93 @@ match nothing in the text and cost precision.
    Exit 1 with no scene lines is an input or tool error (an unknown narrator,
    a scene with no narration, a failed synthesis): relay the stderr message as
    printed.
+
+## Render
+
+The render stage turns a **scene file**, the script's Markdown form at
+`explainers/<slug>/script.md`, into a captioned MP4 with an SRT and a poster.
+Its shape:
+
+````markdown
+# How Ship lands a pull request
+language: en
+narrator: am_fenrir
+
+## Scene hook · The promise
+
+### Narration
+1. Ship opens {42|forty two} pull requests, each one `merged`. [ex-3]
+2. Here is how. [no-claim]
+
+### Visual
+```json
+{ "component": "title", "props": { "kicker": "Ship", "title": "Issue to pull request" } }
+```
+````
+
+- **Header.** Only `language`, `narrator` and `style`. `language` defaults to
+  `en`, the only language render draws; `narrator` and `style` are optional.
+- **Scenes.** `## Scene <id> · <title>`, the id kebab-case and not `main`.
+- **Narration.** Numbered sentences in spoken form; an indented line continues
+  the sentence above, so its cites go on the last line. `{written|spoken}`
+  shows the written form in the captions and voices the spoken one; backticks
+  are dropped. A caption breaks only between written tokens, so each holds at
+  most 84 characters. Every sentence ends in `[a, b]`, its cites, or in
+  `[no-claim]` when it makes no claim.
+- **Visual.** One JSON block per scene, one component, required props marked
+  `*`: `title` (`kicker`, `title*`, `subtitle`), `cards` (`items*`, each
+  `at*`, `label*`, `value*`, `note`), or `terminal` (`title`, `lines*`, each
+  `at*`, `text*`). `at` is a sentence number: that item rises in as the
+  sentence starts.
+
+1. **Draft.** Write the scene file with the user from what they want the video
+   to say. Done when the user approves the draft.
+2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
+   its style profile names (for `claude-code`: `font:source-serif-4`,
+   `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows. Run the
+   setup check first; any of them missing, run the setup steps above.
+3. **Compile.** `node <skill>/scripts/script/compile.mjs explainers/<slug>`
+   prints `compile: <n> scene(s) -> script.json`. Exit 1 prints
+   `compile: [<scene>: ]<what>` on stderr: fix what it names and compile again.
+4. **Voice.** Run the voice stage above on the same run folder, again after
+   any narration edit.
+5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`. It
+   prints one `delivery <check>: pass|fail` line per delivery check
+   (`resolution`, `frame rate`, `aspect`, `duration`, `audio`, `srt`), then
+   `delivered: <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s),
+   stills <hit>/<n> cached, video cached|rendered`. A scene still and the
+   video are cached by content, so an unchanged run renders nothing again.
+6. **On a pass** (exit 0), the run folder's `out/` holds `<slug>.mp4`,
+   `<slug>.srt` and `poster.png`, and the same three are copied to the printed
+   path, `explainer-video/<repo>/<slug>/` in the user's videos folder (the XDG
+   videos folder on Linux, `~/Movies` on macOS, `%USERPROFILE%\Videos` on
+   Windows), so the video outlives the run folder. Report the last line and
+   that path.
+7. **On a fail** (exit 1), relay what was printed. A `delivery <check>: fail:
+   <measured> vs <wanted>` line means nothing was copied to the videos folder
+   and `out/` was emptied, an earlier render's files too. `style profile <name>
+   fails contrast: <token> on <surface> ...` names each pair under its floor,
+   and `gates.contrast.<role>: not a number` a floor that is no number: fix
+   those values or choose another profile. `<row> is not installed`: run
+   setup. `no script.json`, `no voice.json`, `voice.json does not match` or
+   `voice.json holds narrator` names the stage to run first. `no render fonts
+   for language <x>`: this
+   version renders English only. A profile's layout, motion or font this
+   version cannot draw: choose another profile. Any other `render: <why>`
+   line, a HyperFrames or ffprobe failure among them: relay it with the
+   output printed above it.
+
+**Style profiles** are looked up in three stores, first match winning: the
+project's `explainers/.styles/`, the user config store's `styles/`, and the
+skill's bundled `<skill>/styles/`. The header's `style:` names one; without it,
+the first store holding a `default` file (one profile name) decides, else
+`claude-code`. A run copies its profile to `<run>/style.json` and keeps using
+that copy, so a later edit to a store never changes this video; delete the
+copy to take up the edit, or name another profile in `style:`.
+
+The run folder's **recipe**, `script.md`, `style.json` and `manifest.json`
+(skill version, lock hash, profile, narrator, delivered path), is committed.
+`explainers/.gitignore` ignores the rest: the compiled script, the voice and
+timeline files, the caches, the composition and `out/`. Every stage writes
+those lines between its `# explainer-video: begin` and `end` markers and
+leaves the file's other lines alone.
