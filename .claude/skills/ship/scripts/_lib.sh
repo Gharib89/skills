@@ -1132,23 +1132,23 @@ ship_body_headings() {
 }
 
 # ship_template_missing <body>: the headings of the profile's `## PR`
-# `Template:` file that <body> lacks, one per line in template order, read by
+# `Template:` file that <body> lacks, as a JSON array in template order, read by
 # `ship_body_headings` on both sides, so a heading inside a fence or a
-# `<details>` record is not present. Nothing where there is no profile or the
+# `<details>` record is not present. `[]` where there is no profile or the
 # Template: is `None.`. Returns 1, printing the Template: path, when that file
 # cannot be read from the checkout root: no answer, not a body that lacks
 # nothing. One rule for `open-pr`, which refuses on it, and `read-pr`, which
 # reports it as `missing`.
 ship_template_missing() { # <body>
   local profile template top tbody
-  profile=$(ship_profile_path) && [ -f "$profile" ] || return 0
+  profile=$(ship_profile_path) && [ -f "$profile" ] || { echo '[]'; return 0; }
   template=$(awk '/^## /{f = ($0 ~ /^## PR[ \t\r]*$/)} f && /^Template:/{sub(/^Template:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit}' "$profile")
-  case $template in ''|None|None.) return 0 ;; esac
+  case $template in ''|None|None.) echo '[]'; return 0 ;; esac
   if ! top=$(git rev-parse --show-toplevel) || ! tbody=$(cat "$top/$template" 2>/dev/null); then
     printf '%s\n' "$template"; return 1
   fi
-  jq -rn --argjson w "$(ship_body_headings "$tbody" | jq -R . | jq -sc .)" \
-    --argjson h "$(ship_body_headings "$1" | jq -R . | jq -sc .)" '($w - $h)[]'
+  jq -cn --argjson w "$(ship_body_headings "$tbody" | jq -R . | jq -sc .)" \
+    --argjson h "$(ship_body_headings "$1" | jq -R . | jq -sc .)" '$w - $h'
 }
 
 # ship_outline_missing <body> <paths>: the paths, one per line, that the body's

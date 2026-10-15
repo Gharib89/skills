@@ -40,7 +40,7 @@
 # failure.
 #
 # stdout: {number, url, created_at, branch, base}
-# exit: 0 · 1 title grades below the recorded Grade, body lacks a template heading, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade, the body file, its template or (--rework) the PR could not be read
+# exit: 0 · 1 title grades below the recorded Grade, body lacks a template heading, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade, the PR template or (--rework) the PR could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path> | open-pr <issue> --rework'
@@ -73,9 +73,8 @@ base=${base#origin/}
 [ "$branch" != "$base" ] || ship_tooling "refusing to open a PR from the base branch $base"
 $rework || [ "$n" = none ] || ship_require_grade "$n" "$title"
 if ! $rework; then
-  body=$(cat "$file") || ship_tooling "cannot read $file"
-  lacks=$(ship_template_missing "$body") || ship_tooling "cannot read the PR template $lacks"
-  [ -z "$lacks" ] || ship_fail "body lacks the template headings: $(awk 'NR > 1 {printf ", "} {printf "%s", $0}' <<<"$lacks")"
+  lacks=$(ship_template_missing "$(cat "$file")") || ship_tooling "cannot read the PR template $lacks"
+  [ "$lacks" = '[]' ] || ship_fail "body lacks the template headings: $(jq -r 'join(", ")' <<<"$lacks")"
 fi
 
 if $rework; then

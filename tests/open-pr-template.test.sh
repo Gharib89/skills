@@ -5,7 +5,8 @@
 # reworded section back. Driven over the Host fake (tests/host-fake.sh) in a
 # throwaway repo whose origin names GitHub and whose pushes land in a local bare
 # repository, so "no push" is read off that bare repo and "no create" off the
-# fake's calls log. XDG_STATE_HOME is empty, so no Run file grades the title.
+# fake's calls log. XDG_STATE_HOME points at a fresh directory, so no Run file
+# grades the title.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

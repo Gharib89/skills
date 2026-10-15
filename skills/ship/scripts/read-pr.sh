@@ -34,9 +34,7 @@ ship_load_host
 pull=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
 headings=$(ship_body_headings "$(jq -r '.body // ""' <<<"$pull")" | jq -R . | jq -sc .)
 
-if lacks=$(ship_template_missing "$(jq -r '.body // ""' <<<"$pull")"); then
-  missing=$(printf '%s' "$lacks" | jq -R . | jq -sc .)
-else missing=null; fi
+missing=$(ship_template_missing "$(jq -r '.body // ""' <<<"$pull")") || missing=null
 
 # The changed paths are known only from a checkout on the PR's head branch: the
 # host adapters carry no file list, and a diff from any other branch is another

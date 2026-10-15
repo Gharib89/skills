@@ -37,6 +37,17 @@ check "it answers with the open PR" '{"number":9,"url":"https://example.invalid/
 check "it pushes the branch" "$(git -C "$repo" rev-parse HEAD)" "$(pushed)"
 check "it finds the PR and creates none" 'host_pr_for_branch host_pr_get' "$(cut -f1 "$SHIP_FAKE/calls" | paste -sd' ')"
 
+# --rework takes no body file, so the template-heading check (#647) does not
+# run: a profile naming a template that cannot be read still reworks.
+reset
+mkdir -p "$repo/docs/agents"
+printf '## PR\n\nTemplate: .github/absent.md\n' > "$repo/docs/agents/ship.md"
+jq -n '{number: 9, state: "open", head_sha: "x"}' > "$SHIP_FAKE/host_pr_for_branch.1.json"
+jq -n '{number: 9, url: "https://example.invalid/pull/9", head_ref: "feat/thing-7"}' > "$SHIP_FAKE/host_pr_get.1.json"
+( cd "$repo" && bash "$open" 7 --rework >/dev/null 2>&1 ); rc=$?
+check_rc "open-pr --rework runs no template-heading check" 0 "$rc"
+rm -rf "$repo/docs"
+
 reset
 printf 'null\n' > "$SHIP_FAKE/host_pr_for_branch.1.json"
 out=$( cd "$repo" && bash "$open" 7 --rework 2>/dev/null ); rc=$?
