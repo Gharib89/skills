@@ -1,0 +1,412 @@
+<title>Arabic Scene Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- PROTOTYPE, throwaway (#686): how an Arabic run looks in the Claude Code profile. Never merged. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Sans:wght@400;600&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&family=Markazi+Text:wght@600&family=Noto+Naskh+Arabic:wght@600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
+<style>
+  /* Layout: a workbench shell (controls, frame grid, caption lab, verdict) around 1920x1080 frames drawn in the Claude Code profile. */
+  :root {
+    --bg: #e8ebee; --surface: #f7f8fa; --ink: #1b1f24; --muted: #56606b; --line: #cdd3d9; --accent: #2c5a85; --bad: #a3361f; --good: #3d6b2c;
+    --ui: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14171b; --surface: #1d2127; --ink: #e5e8ec; --muted: #9ba4ae; --line: #343a42; --accent: #86b4e0; --bad: #ec8a72; --good: #9cc781; color-scheme: dark } }
+  :root[data-theme="dark"] { --bg: #14171b; --surface: #1d2127; --ink: #e5e8ec; --muted: #9ba4ae; --line: #343a42; --accent: #86b4e0; --bad: #ec8a72; --good: #9cc781; color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--ui); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 96px; }
+  .wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 28px; }
+  h1 { font: 600 28px/1.2 var(--ui); margin: 0; text-wrap: balance; }
+  h2 { font: 600 19px/1.3 var(--ui); margin: 0; }
+  p { margin: 0; max-width: 72ch; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); }
+  .intro { display: grid; gap: 10px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+  legend { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; }
+  .opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: start; cursor: pointer; padding: 6px 8px; border-radius: 6px; border: 1px solid transparent; }
+  .opt:has(input:checked) { border-color: var(--accent); }
+  .opt input { margin-top: 4px; accent-color: var(--accent); }
+  .opt b { font-weight: 600; }
+  .opt small { grid-column: 2; color: var(--muted); font-size: 13px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button { font: 600 14px var(--ui); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 14px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 18px; }
+  figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+  figcaption { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  figure.big { grid-column: 1 / -1; }
+  .fw { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; border: 1px solid var(--line); cursor: zoom-in; }
+  figure.big .fw { cursor: zoom-out; }
+  .lab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 18px; }
+  @media (max-width: 820px) { .lab { grid-template-columns: 1fr; } }
+  .strip { position: relative; width: 100%; aspect-ratio: 1920 / 300; overflow: hidden; border-radius: 6px; border: 1px solid var(--line); }
+  .sliders { display: grid; gap: 12px; }
+  .sliders label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  .sliders label span { color: var(--ink); font: 400 14px var(--mono); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  select, textarea { font: 400 14px var(--ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; max-width: 100%; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 90px; resize: vertical; }
+  .readout { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+  .readout dt { color: var(--muted); }
+  .readout dd { margin: 0; font: 400 13px var(--mono); font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 600 12px var(--ui); border: 1px solid currentColor; }
+  .pill.ok { color: var(--good); } .pill.no { color: var(--bad); }
+  .status { font-size: 13px; color: var(--muted); }
+  .switcher { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px; background: var(--ink); color: var(--bg); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); font: 600 13px var(--ui); max-width: calc(100vw - 32px); }
+  .switcher button { background: transparent; color: var(--bg); border: 0; padding: 6px 12px; border-radius: 999px; }
+  .switcher span { padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- the frame: Claude Code profile, fixed look, real pixel sizes ---------- */
+  .frame { --f-bg: #f5f4ed; --f-panel: #fbf9f5; --f-line: #c1c1b8; --f-rule: #8f8e86; --f-text: #141413; --f-dim: #5e5d59; --f-faint: #73726c; --f-clay: #cc6c54; --f-ok: #4f7a3a; --f-stop: #b0442c;
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; transform: scale(var(--k, 0.3)); background: var(--f-bg); color: var(--f-text); overflow: hidden; font-family: var(--ar-body); }
+  .frame .hdr { position: absolute; left: 80px; right: 80px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--f-line); }
+  .frame .mark { width: 18px; height: 18px; border-radius: 4px; background: var(--f-clay); flex: none; }
+  .frame .kick { font: 600 28px/1.4 var(--ar-body); color: var(--f-dim); }
+  .frame .count { margin-inline-start: auto; font: 400 24px "JetBrains Mono", monospace; color: var(--f-faint); direction: ltr; }
+  .frame .box { position: absolute; left: 80px; top: 178px; width: 1760px; height: 690px; }
+  .frame .cap { position: absolute; left: 50%; bottom: 54px; transform: translateX(-50%); width: var(--cap-w, 1760px); text-align: center; font: 400 var(--cap-size, 44px)/var(--cap-lh, 1.7) var(--ar-body); color: var(--f-faint); }
+  .frame .cap .w.on { color: var(--f-text); }
+  .frame .lat { font-family: var(--lat-body); unicode-bidi: isolate; }
+  .frame .ttl .lat, .frame .sub .lat, .frame .cap .lat, .frame .kick .lat, .frame h3 .lat { white-space: nowrap; }
+  .frame .ttl .lat, .frame .v .lat, .frame h3 .lat { font-family: var(--lat-title); }
+  .frame .ttl { font: 600 calc(104px * var(--t-scale)) / var(--t-lh) var(--ar-title); max-width: 1500px; margin-top: 90px; }
+  .frame .ttl .accent { color: var(--f-clay); }
+  .frame .sub { font: 400 40px/1.6 var(--ar-body); color: var(--f-dim); margin-top: 28px; max-width: 1500px; }
+  .frame .flow { display: flex; align-items: center; margin-top: 170px; }
+  .frame .card { width: 340px; height: 270px; box-sizing: border-box; background: var(--f-panel); border: 2px solid var(--f-line); border-radius: 18px; padding: 30px 34px; box-shadow: 0 12px 32px rgba(20, 20, 19, 0.06); text-align: start; }
+  .frame .card .k { font: 600 28px/1.4 var(--ar-body); color: var(--f-dim); }
+  .frame .card .v { font: 600 calc(54px * var(--t-scale)) / var(--t-lh) var(--ar-title); margin-top: 14px; }
+  .frame .card .b { font: 400 30px/1.5 var(--ar-body); margin-top: 10px; }
+  .frame .mono { font-family: "JetBrains Mono", monospace; direction: ltr; unicode-bidi: isolate; }
+  .frame .arrow { flex: 1; height: 2px; background: var(--f-rule); margin: 0 18px; position: relative; }
+  .frame .arrow::after { content: ""; position: absolute; top: -8px; inset-inline-end: -2px; border-block: 9px solid transparent; border-inline-start: 14px solid var(--f-rule); }
+  .frame .split { display: flex; gap: 70px; align-items: center; height: 100%; }
+  .frame .term { flex: none; width: 980px; height: 560px; box-sizing: border-box; background: var(--f-panel); border: 2px solid var(--f-line); border-radius: 18px; box-shadow: 0 18px 48px rgba(20, 20, 19, 0.08); overflow: hidden; direction: ltr; text-align: left; font-family: "JetBrains Mono", monospace; }
+  .frame .term-bar { height: 56px; border-bottom: 1px solid var(--f-line); display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 24px "JetBrains Mono", monospace; color: var(--f-dim); }
+  .frame .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--f-line); }
+  .frame .term-body { padding: 30px 40px; font: 400 32px/1.7 "JetBrains Mono", monospace; }
+  .frame .term-body .ok { color: var(--f-ok); } .frame .term-body .p { color: var(--f-clay); }
+  .frame .explain { flex: 1; min-width: 0; }
+  .frame h3 { font: 600 calc(60px * var(--t-scale)) / var(--t-lh) var(--ar-title); margin: 0 0 24px; }
+  .frame ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font: 400 36px/1.6 var(--ar-body); }
+  .frame ul .tick { color: var(--f-ok); margin-inline-end: 14px; }
+  .frame .stops { display: grid; gap: 26px; margin-top: 10px; }
+  .frame .stop { display: flex; align-items: center; gap: 30px; }
+  .frame .num { flex: none; width: 76px; height: 76px; border-radius: 50%; background: var(--f-clay); color: #fff; display: grid; place-items: center; font: 600 40px "Inter", sans-serif; }
+  .frame .stop p { margin: 0; max-width: none; font: 400 44px/1.6 var(--ar-body); }
+  .frame .meta { margin-top: 34px; font: 400 32px/1.6 var(--ar-body); color: var(--f-dim); }
+  .frame .guide { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed; pointer-events: none; }
+  .frame .guide i { position: absolute; top: 4px; left: 16px; font: 600 22px var(--ui); font-style: normal; }
+
+  /* Mirroring variants. A: whole frame mirrors. B: content mirrors, header chrome keeps its English side. C: nothing mirrors; only text runs right to left. */
+  [data-mirror="A"] .frame .hdr { direction: rtl; }
+  [data-mirror="B"] .frame .hdr, [data-mirror="C"] .frame .hdr { direction: ltr; }
+  [data-mirror="A"] .frame .box, [data-mirror="B"] .frame .box { direction: rtl; }
+  [data-mirror="C"] .frame .box { direction: ltr; }
+  [data-mirror="C"] .frame .ttl, [data-mirror="C"] .frame .sub, [data-mirror="C"] .frame .stop p, [data-mirror="C"] .frame .explain, [data-mirror="C"] .frame h3, [data-mirror="C"] .frame .meta { width: fit-content; }
+  [data-mirror="C"] .frame .stop p { flex: 1; text-align: right; }
+
+  /* Type pairings: Arabic title face over the shared Arabic body face. */
+  [data-pair="P1"] { --ar-title: "Noto Naskh Arabic", serif; --t-scale: 1; --t-lh: 1.5; }
+  [data-pair="P2"] { --ar-title: "IBM Plex Sans Arabic", sans-serif; --t-scale: 0.94; --t-lh: 1.45; }
+  [data-pair="P3"] { --ar-title: "Markazi Text", serif; --t-scale: 1.2; --t-lh: 1.35; }
+  [data-pair] { --ar-body: "IBM Plex Sans Arabic", sans-serif; }
+  [data-latin="profile"] { --lat-title: "Source Serif 4", serif; --lat-body: "Inter", sans-serif; }
+  [data-latin="own"] { --lat-title: var(--ar-title); --lat-body: var(--ar-body); }
+
+  @media (prefers-reduced-motion: reduce) { .frame * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap" id="lab" data-mirror="A" data-pair="P1" data-latin="profile">
+  <header class="intro">
+    <p class="muted">Explainer video map · <a href="https://github.com/Gharib89/skills/issues/686" target="_blank" rel="noopener">Arabic scene prototype</a></p>
+    <h1>How should an Egyptian Arabic run look on screen?</h1>
+    <p>Four scenes of the Ship explainer, rebuilt in Arabic over the default Claude Code profile. Flip the three choices below; every frame redraws. Click a frame to enlarge it, press Play to see the reveal order and the word-timed caption. Then set the caption numbers in the lab and save your verdict at the bottom.</p>
+  </header>
+
+  <section class="panel" aria-label="Choices">
+    <div class="controls">
+      <fieldset>
+        <legend>1 · What mirrors</legend>
+        <label class="opt"><input type="radio" name="mirror" id="m-A" value="A" checked><b>A · Full mirror</b><small>Header, flow, panels and lists all start on the right. Terminal and code stay left to right inside.</small></label>
+        <label class="opt"><input type="radio" name="mirror" id="m-B" value="B"><b>B · Mirror content, keep chrome</b><small>Content mirrors as in A; the header mark and scene counter keep their English sides.</small></label>
+        <label class="opt"><input type="radio" name="mirror" id="m-C" value="C"><b>C · Text only</b><small>Every block keeps its English position and order; only the words run right to left.</small></label>
+      </fieldset>
+      <fieldset>
+        <legend>2 · Arabic title face</legend>
+        <label class="opt"><input type="radio" name="pair" id="p-P1" value="P1" checked><b>Noto Naskh Arabic</b><small>In the profile today. A book Naskh beside Source Serif titles.</small></label>
+        <label class="opt"><input type="radio" name="pair" id="p-P2" value="P2"><b>IBM Plex Sans Arabic</b><small>One sans for titles and text; drops the serif tone in Arabic.</small></label>
+        <label class="opt"><input type="radio" name="pair" id="p-P3" value="P3"><b>Markazi Text</b><small>An editorial text Naskh, narrower and calmer. Set 1.2x to match size.</small></label>
+        <p class="muted" style="font-size:13px">Body and captions stay IBM Plex Sans Arabic in all three.</p>
+      </fieldset>
+      <fieldset>
+        <legend>3 · English terms inside Arabic</legend>
+        <label class="opt"><input type="radio" name="latin" id="l-profile" value="profile" checked><b>Profile Latin faces</b><small>Source Serif 4 in titles, Inter in text: the same faces as an English run.</small></label>
+        <label class="opt"><input type="radio" name="latin" id="l-own" value="own"><b>The Arabic face's own Latin</b><small>Each Arabic face draws its own Latin letters, so a line uses one family.</small></label>
+        <div class="row" style="margin-top:6px">
+          <button class="primary" id="play" type="button">Play</button>
+          <label class="row" style="gap:6px;font-size:13px" for="guides"><input type="checkbox" id="guides"> Show safe margin and content box</label>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+
+  <section class="grid" id="frames" aria-label="Arabic scenes"></section>
+
+  <section class="panel" aria-labelledby="lab-h">
+    <h2 id="lab-h">Caption lab</h2>
+    <p class="muted">The bottom of the frame at full width. The caption sits on the 5 percent safe margin (y 1026) and grows upward; above it, the content box ends at y 868. The quality gates allow at most two lines. The ink floor is measured live: the tallest Arabic ascender plus the deepest descender across every caption, divided by the size, is the line height at which two lines touch.</p>
+    <div class="lab">
+      <div style="display:grid;gap:10px;min-width:0">
+        <div class="strip" id="strip"></div>
+        <div class="row">
+          <label for="sample" class="muted" style="font-size:13px">Caption</label>
+          <select id="sample"></select>
+        </div>
+      </div>
+      <div class="sliders">
+        <label for="cs">Caption size <span id="cs-v"></span><input type="range" id="cs" min="34" max="60" step="1" value="44"></label>
+        <label for="cl">Line height <span id="cl-v"></span><input type="range" id="cl" min="1.1" max="2.1" step="0.05" value="1.7"></label>
+        <label for="cw">Max width <span id="cw-v"></span><input type="range" id="cw" min="900" max="1760" step="20" value="1760"></label>
+        <dl class="readout" id="readout"></dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="v-h">
+    <h2 id="v-h">Your verdict</h2>
+    <p class="muted">Saves the three choices above, the caption numbers and your note. Claude reads it from this page.</p>
+    <label for="notes" class="muted" style="font-size:13px">Note (what to steal from another option, what looks wrong)</label>
+    <textarea id="notes" placeholder="e.g. A, but keep the mark on the left; captions read heavy at 48"></textarea>
+    <div class="row"><button class="primary" id="save" type="button">Save verdict</button><span class="status" id="save-st">Not saved yet.</span></div>
+  </section>
+</div>
+
+<nav class="switcher" aria-label="Mirroring variant">
+  <button type="button" id="sw-prev" aria-label="Previous variant">←</button>
+  <span id="sw-label">A · Full mirror</span>
+  <button type="button" id="sw-next" aria-label="Next variant">→</button>
+</nav>
+
+<script>
+  const lab = document.getElementById("lab");
+  const NAMES = { A: "A · Full mirror", B: "B · Mirror content, keep chrome", C: "C · Text only" };
+  // Wrap each Latin run (with its inner spaces, digits and dashes) in an isolated span.
+  const lat = (s) => s.replace(/([A-Za-z#][A-Za-z0-9#\- ]*[A-Za-z0-9]|[A-Za-z])/g, '<bdi class="lat">$1</bdi>');
+  // A caption token is a whole English term: one span per Latin word puts "pull request" on screen as "request pull".
+  const words = (s) => s.split(" ").reduce((acc, w) => {
+    const latin = /^[A-Za-z0-9#\-]+$/.test(w);
+    if (latin && acc.length && acc[acc.length - 1].latin) acc[acc.length - 1].t += " " + w;
+    else acc.push({ t: w, latin });
+    return acc;
+  }, []).map((x) => `<span class="w">${lat(x.t)}</span>`).join(" ");
+
+  const CAPS = [
+    "خلّينا نشوف الـ Ship بيعمل إيه، من أول الـ issue لحد الـ merge.",
+    "بيقرا الـ issue، يكتب test فاشل، وبعدين يكتب الكود اللي يخلّيه يعدّي.",
+    "كل gate لازم تبقى خضرا قبل ما الـ pull request يتفتح.",
+    "ولو الـ CI فشل مرتين ورا بعض، الـ run بيقف لوحده ويكتب report فيه السبب وآخر log.",
+  ];
+  const STRESS = "إلى أي reviewer: اتأكّد إنّ كل الـ gates عدّت قبل ما تعمل merge، وإلّا الـ run هيرجع لأوّل خطوة.";
+
+  const SCENES = [
+    { name: "Title", body: `
+      <div class="ttl" dir="rtl" data-seq>إزاي الـ <bdi class="lat accent">Ship</bdi> بيوصّل الـ ${lat("issue")} لـ ${lat("pull request")}</div>
+      <div class="sub" dir="rtl" data-seq>${lat("skill")} واحدة، ${lat("issue")} واحدة، و${lat("pull request")} جاهز للـ ${lat("merge")}</div>` },
+    { name: "Flow", body: `
+      <div class="flow">
+        <div class="card" dir="rtl" data-seq><div class="k">المدخل</div><div class="v">${lat("issue")}</div><div class="b mono" style="color:var(--f-dim)">#650</div></div>
+        <div class="arrow" data-seq></div>
+        <div class="card" dir="rtl" data-seq style="border-color:var(--f-stop)"><div class="k">الأول</div><div class="v">${lat("test")}</div><div class="b" style="color:var(--f-stop)">✗ فاشل</div></div>
+        <div class="arrow" data-seq></div>
+        <div class="card" dir="rtl" data-seq><div class="k">بعدها</div><div class="v">الكود</div><div class="b mono" style="color:var(--f-ok)">+42 −7</div></div>
+        <div class="arrow" data-seq></div>
+        <div class="card" dir="rtl" data-seq style="opacity:.6"><div class="k">الناتج</div><div class="v">${lat("pull request")}</div></div>
+      </div>` },
+    { name: "Terminal", body: `
+      <div class="split">
+        <div class="explain" dir="rtl" data-seq>
+          <h3>الـ ${lat("gate")} لازم تخضرّ كلها</h3>
+          <ul>
+            <li><span class="tick">✓</span>الـ ${lat("lint")} والـ ${lat("format")}</li>
+            <li><span class="tick">✓</span>الـ ${lat("tests")} كلها بتعدّي</li>
+            <li><span class="tick">✓</span>مفيش ${lat("secrets")} في الكود</li>
+            <li><span class="tick">✓</span>الـ ${lat("version-lines")} متظبطة</li>
+          </ul>
+        </div>
+        <div class="term" data-seq>
+          <div class="term-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:16px">scripts/local-gate.sh</span></div>
+          <div class="term-body">
+            <div><span class="p">$</span> scripts/local-gate.sh</div>
+            <div><span class="ok">✓</span> lint and format</div>
+            <div><span class="ok">✓</span> tests/run.sh</div>
+            <div><span class="ok">✓</span> secrets</div>
+            <div><span class="ok">✓</span> version-lines</div>
+            <div><span class="p">→</span> gh pr create · <span class="p">#650 opened</span></div>
+          </div>
+        </div>
+      </div>` },
+    { name: "List", body: `
+      <h3 dir="rtl" data-seq style="margin-top:10px">3 حاجات بتوقّف الـ ${lat("run")}</h3>
+      <div class="stops">
+        <div class="stop" data-seq><span class="num">1</span><p dir="rtl">الـ ${lat("CI")} يفشل مرتين ورا بعض</p></div>
+        <div class="stop" data-seq><span class="num">2</span><p dir="rtl">${lat("review")} فيه ${lat("findings")} مفتوحة بعد الـ ${lat("cap")}</p></div>
+        <div class="stop" data-seq><span class="num">3</span><p dir="rtl">الـ ${lat("merge")} مستني موافقة الـ ${lat("owner")}</p></div>
+      </div>
+      <p class="meta" dir="rtl" data-seq>آخر مرة: ${lat("run")} رقم 1287 وقف بعد 2 ${lat("rounds")} من الـ ${lat("review")}، في ${lat("PR #679")}.</p>` },
+  ];
+
+  const KICK = `الـ ${lat("Ship")} · من الـ ${lat("issue")} لحد الـ ${lat("pull request")}`;
+  const frameHTML = (i, body, cap) => `
+    <div class="hdr"><div class="mark"></div><div class="kick" dir="rtl">${KICK}</div><div class="count">${i + 1} / 4</div></div>
+    <div class="box">${body}</div>
+    <div class="cap" dir="rtl">${words(cap)}</div>
+    <div class="guide" style="top:868px;color:#2c5a85" hidden><i>content box ends · 868</i></div>
+    <div class="guide" style="top:1026px;color:#b0442c" hidden><i>safe margin · 1026</i></div>`;
+
+  // Frames, scaled to their wrapper.
+  const grid = document.getElementById("frames");
+  SCENES.forEach((s, i) => {
+    const fig = document.createElement("figure");
+    fig.innerHTML = `<div class="fw" tabindex="0" role="button" aria-label="Enlarge ${s.name} scene"><div class="frame">${frameHTML(i, s.body, CAPS[i])}</div></div><figcaption><span>Scene ${i + 1} · ${s.name}</span><span>16:9 · 1920 by 1080</span></figcaption>`;
+    const fw = fig.querySelector(".fw");
+    const toggle = () => { fig.classList.toggle("big"); };
+    fw.addEventListener("click", toggle);
+    fw.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+    grid.appendChild(fig);
+  });
+  const strip = document.getElementById("strip");
+  strip.innerHTML = `<div class="frame" style="top:0;transform-origin:0 0">${frameHTML(3, "", CAPS[3])}</div>`;
+  const stripFrame = strip.querySelector(".frame");
+  stripFrame.querySelectorAll(".guide").forEach((g) => (g.hidden = false));
+
+  const ro = new ResizeObserver((es) => {
+    for (const e of es) {
+      const k = e.contentRect.width / 1920;
+      const f = e.target.querySelector(".frame");
+      f.style.setProperty("--k", k);
+      if (e.target === strip) f.style.transform = `scale(${k}) translateY(-780px)`;
+    }
+  });
+  document.querySelectorAll(".fw").forEach((fw) => ro.observe(fw));
+  ro.observe(strip);
+
+  // Choices.
+  const state = { mirror: "A", pair: "P1", latin: "profile", capSize: 44, capLh: 1.7, capWidth: 1760, sample: 3 };
+  function apply() {
+    lab.dataset.mirror = state.mirror; lab.dataset.pair = state.pair; lab.dataset.latin = state.latin;
+    for (const k of ["mirror", "pair", "latin"]) { const el = document.querySelector(`input[name="${k}"][value="${state[k]}"]`); if (el) el.checked = true; }
+    lab.style.setProperty("--cap-size", state.capSize + "px");
+    lab.style.setProperty("--cap-lh", state.capLh);
+    lab.style.setProperty("--cap-w", state.capWidth + "px");
+    document.getElementById("cs").value = state.capSize; document.getElementById("cl").value = state.capLh; document.getElementById("cw").value = state.capWidth;
+    document.getElementById("cs-v").textContent = state.capSize + " px";
+    document.getElementById("cl-v").textContent = (+state.capLh).toFixed(2);
+    document.getElementById("cw-v").textContent = state.capWidth + " px";
+    document.getElementById("sw-label").textContent = NAMES[state.mirror];
+    try { history.replaceState(null, "", "#" + state.mirror); } catch {}
+    requestAnimationFrame(measure);
+  }
+  document.querySelectorAll('input[type="radio"]').forEach((r) => r.addEventListener("change", () => { state[r.name] = r.value; apply(); }));
+  document.getElementById("cs").addEventListener("input", (e) => { state.capSize = +e.target.value; apply(); });
+  document.getElementById("cl").addEventListener("input", (e) => { state.capLh = +e.target.value; apply(); });
+  document.getElementById("cw").addEventListener("input", (e) => { state.capWidth = +e.target.value; apply(); });
+  document.getElementById("guides").addEventListener("change", (e) => {
+    document.querySelectorAll("#frames .guide").forEach((g) => (g.hidden = !e.target.checked));
+  });
+  const order = ["A", "B", "C"];
+  const step = (d) => { state.mirror = order[(order.indexOf(state.mirror) + d + 3) % 3]; apply(); };
+  document.getElementById("sw-prev").addEventListener("click", () => step(-1));
+  document.getElementById("sw-next").addEventListener("click", () => step(1));
+  document.addEventListener("keydown", (e) => {
+    if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") step(-1);
+    if (e.key === "ArrowRight") step(1);
+  });
+  const h = (location.hash || "").slice(1);
+  if (order.includes(h)) state.mirror = h;
+
+  // Caption lab samples.
+  const sel = document.getElementById("sample");
+  [...CAPS.map((c, i) => [`Scene ${i + 1}`, c]), ["Stress: hamza below, shadda", STRESS]].forEach(([n], i) => sel.add(new Option(n, i)));
+  sel.value = state.sample;
+  sel.addEventListener("change", () => { state.sample = +sel.value; stripFrame.querySelector(".cap").innerHTML = words([...CAPS, STRESS][state.sample]); measure(); });
+
+  // Ink floor: worst ascender plus worst descender over every caption word, per em.
+  const ctx = document.createElement("canvas").getContext("2d");
+  function inkFloor(family, texts, rtl) {
+    ctx.font = `400 100px ${family}`; ctx.direction = rtl ? "rtl" : "ltr";
+    let asc = 0, desc = 0;
+    for (const t of texts) for (const w of t.split(" ")) { const m = ctx.measureText(w); asc = Math.max(asc, m.actualBoundingBoxAscent); desc = Math.max(desc, m.actualBoundingBoxDescent); }
+    return { asc: asc / 100, desc: desc / 100, floor: (asc + desc) / 100 };
+  }
+  let floors = null;
+  function measure() {
+    const cap = stripFrame.querySelector(".cap");
+    const tops = new Map();
+    cap.querySelectorAll(".w").forEach((w) => { const t = w.offsetTop; tops.set(t, (tops.get(t) || "") + w.textContent + " "); });
+    const lines = [...tops.values()];
+    const height = cap.offsetHeight;
+    const room = 1026 - 868 - 12; // 12 px clear of the content box
+    const longest = Math.max(...lines.map((l) => l.trim().length));
+    const rd = document.getElementById("readout");
+    const pill = (ok, y, n) => `<span class="pill ${ok ? "ok" : "no"}">${ok ? y : n}</span>`;
+    rd.innerHTML = `
+      <dt>Lines</dt><dd>${lines.length} ${pill(lines.length <= 2, "within 2", "over 2")}</dd>
+      <dt>Longest line</dt><dd>${longest} chars</dd>
+      <dt>Caption height</dt><dd>${height} px of ${room} ${pill(height <= room, "fits", "hits content")}</dd>
+      <dt>Arabic ink floor</dt><dd>${floors ? floors.ar.floor.toFixed(2) + " (" + floors.ar.asc.toFixed(2) + " up, " + floors.ar.desc.toFixed(2) + " down)" : "measuring"} ${floors ? pill(state.capLh >= floors.ar.floor, "clear", "lines touch") : ""}</dd>
+      <dt>Latin ink floor</dt><dd>${floors ? floors.en.floor.toFixed(2) + " (Inter, English run)" : ""}</dd>
+      <dt>Two-line block</dt><dd>${(2 * state.capSize * state.capLh).toFixed(0)} px at 2 lines</dd>`;
+  }
+  document.fonts.ready.then(async () => {
+    await Promise.all([document.fonts.load('400 44px "IBM Plex Sans Arabic"', "عربي"), document.fonts.load('400 44px "Inter"', "Ag")]);
+    floors = {
+      ar: inkFloor('"IBM Plex Sans Arabic"', [...CAPS, STRESS], true),
+      en: inkFloor('"Inter"', ["How Ship lands a pull request, gated and green; quickly judge every typo."], false),
+    };
+    window.__floors = floors;
+    measure();
+  });
+
+  // Animatic: blocks rise in DOM order (logical reading order), then caption words light up one by one.
+  document.getElementById("play").addEventListener("click", () => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    document.querySelectorAll("#frames .frame").forEach((f) => {
+      f.querySelectorAll("[data-seq]").forEach((el, i) => el.animate([{ opacity: 0, transform: "translateY(20px)" }, { opacity: getComputedStyle(el).opacity, transform: "none" }], { duration: 350, delay: 200 + i * 380, easing: "ease-out", fill: "backwards" }));
+      const ws = f.querySelectorAll(".cap .w");
+      ws.forEach((w) => w.classList.remove("on"));
+      ws.forEach((w, i) => setTimeout(() => w.classList.add("on"), 300 + i * 260));
+    });
+  });
+
+  // Verdict: one shared doc, decision/owner.
+  const st = document.getElementById("save-st");
+  let db = null;
+  (async () => {
+    db = await window.claude?.use?.("db");
+    if (!db) { st.textContent = "Saving is off in this view. Tell Claude your picks in chat instead."; return; }
+    try {
+      const snap = await db.doc("decision/owner").get();
+      const d = snap.data();
+      if (d) {
+        for (const k of ["mirror", "pair", "latin", "capSize", "capLh", "capWidth"]) if (d[k] !== undefined) state[k] = d[k];
+        document.getElementById("notes").value = d.notes || "";
+        st.textContent = "Loaded your saved verdict.";
+        apply();
+      }
+    } catch (e) { st.textContent = "Could not load a saved verdict: " + (e.message || e.code); }
+  })();
+  document.getElementById("save").addEventListener("click", async () => {
+    if (!db) { st.textContent = "Saving is off in this view. Tell Claude your picks in chat instead."; return; }
+    const { sample, ...pick } = state;
+    try {
+      await db.doc("decision/owner").set({ ...pick, notes: document.getElementById("notes").value, floor: floors ? +floors.ar.floor.toFixed(3) : null, savedAt: new Date().toISOString() });
+      st.textContent = "Saved. Claude can read it now.";
+    } catch (e) { st.textContent = "Not saved: " + (e.message || e.code) + ". Tell Claude your picks in chat."; }
+  });
+
+  apply();
+</script>
