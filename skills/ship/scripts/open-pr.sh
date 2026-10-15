@@ -29,7 +29,7 @@
 # `Template:` is refused before the push, naming each one, by the rule read-pr
 # reports `missing` with (ship_template_missing): once the PR is open, no
 # mechanic renames a reworded section back. No profile or `Template: None.` is
-# no check; a template file that cannot be read is refused, exit 2.
+# no check; a profile or template file that cannot be read is refused, exit 2.
 #
 # `created_at` is the PR's creation time, which is when an `auto-once` reviewer
 # fires: phase 7 passes it to `poll-pr --since` so that one round counts on
@@ -40,7 +40,7 @@
 # failure.
 #
 # stdout: {number, url, created_at, branch, base}
-# exit: 0 · 1 title grades below the recorded Grade, body lacks a template heading, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade, the PR template or (--rework) the PR could not be read
+# exit: 0 · 1 title grades below the recorded Grade, body lacks a template heading, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade, the profile or its PR template or (--rework) the PR could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path> | open-pr <issue> --rework'
@@ -73,7 +73,7 @@ base=${base#origin/}
 [ "$branch" != "$base" ] || ship_tooling "refusing to open a PR from the base branch $base"
 $rework || [ "$n" = none ] || ship_require_grade "$n" "$title"
 if ! $rework; then
-  lacks=$(ship_template_missing "$(cat "$file")") || ship_tooling "cannot read the PR template $lacks"
+  lacks=$(ship_template_missing "$(cat "$file")") || ship_tooling "cannot read $lacks"
   [ "$lacks" = '[]' ] || ship_fail "body lacks the template headings: $(jq -r 'join(", ")' <<<"$lacks")"
 fi
 

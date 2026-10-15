@@ -69,8 +69,22 @@ check_rc "Template: None. means no check" 0 "$rc"
 reset; profile 'Template: .github/absent.md'
 out=$(opn "$full"); rc=$?
 check_rc "a template file that cannot be read is tooling" 2 "$rc"
-check "it names the file" 'cannot read the PR template .github/absent.md' "$(jq -r .error <<<"$out")"
+check "it names the file" 'cannot read .github/absent.md' "$(jq -r .error <<<"$out")"
 check "and nothing is pushed" none "$(pushed)"
 check "nor created" "" "$(created)"
+
+# A profile that is there but cannot be read is no answer either: read as an
+# empty one, it would skip the check and open the PR.
+if [ "$(id -u)" -ne 0 ]; then
+  reset; profile 'Template: .github/pull_request_template.md'
+  chmod 000 "$repo/docs/agents/ship.md"
+  out=$(opn "$reworded"); rc=$?
+  chmod 644 "$repo/docs/agents/ship.md"
+  check_rc "a profile that cannot be read is tooling" 2 "$rc"
+  check "it names the profile" "cannot read $repo/docs/agents/ship.md" "$(jq -r .error <<<"$out")"
+  check "and nothing is pushed" none "$(pushed)"
+else
+  echo "skip: an unreadable profile (root reads a mode-000 file)"
+fi
 
 finish

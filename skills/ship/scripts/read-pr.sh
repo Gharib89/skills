@@ -12,8 +12,8 @@
 #   headings, in order (the rule `update-pr-body` reports with). missing: the
 #   headings of the profile's `## PR` `Template:` file, read from the checkout
 #   root, that the body lacks; [] where there is no profile or the Template: is
-#   `None.`, null where its file cannot be read (null is no answer, not a body
-#   that lacks nothing). outline_missing: the paths this branch changes against
+#   `None.`, null where the profile or its file cannot be read (null is no
+#   answer, not a body that lacks nothing). outline_missing: the paths this branch changes against
 #   the base (the three-dot diff to HEAD) that the body's `## Change outline`
 #   section does not mention, [] when it mentions each. A path is mentioned by
 #   its full path or its basename, which a derived copy under `.claude/skills/`
