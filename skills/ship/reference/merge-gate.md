@@ -82,7 +82,7 @@ Ready to merge. Reply "merge" to squash-merge, close the issue, and clean up.
 ```
 
 On a clean gate the summary ends with exactly the line below in place of the
-two reply lines above, written once `merge` answers `merged: true`:
+reply lines above, written once `merge` answers `merged: true`:
 
 ```
 Merged on a clean gate: <PR url>
@@ -96,56 +96,57 @@ them. A step after the merge that fails (a tracker write, cleanup) is reported
 beneath the merged line; report a completed merge only after the mechanic
 confirms it.
 
-**Every row is grounded in a result from this run**: `Local gate:` is the
-gate's `gates` object from the verdict the Run file recorded, `CI:` is
-`ci-wait`'s output, `Issues filed` is this
-run's `file-issue` return values (filed numbers on one side, the candidates it
-answered with instead on the other), and `Verification` and the test counts are
-the phase-3 and phase-2 results. The empty `Verification` case writes the
-reason phase 6 wrote into the PR body, one of the three
-[pr-body.md](pr-body.md) names. On an `unexercised` row, `<what ran>` names the
-**subject that did not exist** rather than a command. A value you cannot point
-to a tool result for is written `unverified`. `Ship defects:` lists every gap in
-Ship that broke or misled the run: a gating call no mechanic performs, or a
-mechanic or prose whose wrong answer the run acted on. Friction the run worked
-around by judgment (a rule that did not fit the case, prose that left it
-guessing) goes on `Ship notes:` instead, one line each and no draft, and so does
-a direct call an earlier run also made. Every direct call goes on `Direct
-calls:`, read from the Run file's `## Direct calls`. Each defect carries a
-**drafted issue** for the source repo, `Gharib89/skills`, written to
-`defect-<k>.md` beside the Run file when it is met: a title, then a body naming
-Ship's version, the mechanic or prose at fault and what the run did instead, and
-no organization identifier, credential or client context, because the source
-repo is public. A gap in the ship profile
+**Every row is grounded in a result from this run**: `Local gate:` is the gate's
+`gates` object from the verdict the Run file recorded, `CI:` is `ci-wait`'s
+output, `Issues filed` is this run's `file-issue` return values (filed numbers
+on one side, the candidates it answered with instead on the other), and
+`Verification` and the test counts are the phase-3 and phase-2 results. The
+empty `Verification` case writes the reason phase 6 wrote into the PR body, one
+of the three [pr-body.md](pr-body.md) names. On an `unexercised` row, `<what
+ran>` names the **subject that did not exist** rather than a command. A value
+you cannot point to a tool result for is written `unverified`. `Ship defects:`
+lists every gap in Ship that broke or misled the run: a gating call no mechanic
+performs, or a mechanic or prose whose wrong answer the run acted on. Friction
+the run worked around by judgment (a rule that did not fit the case, prose that
+left it guessing) goes on `Ship notes:` instead, one line each and no draft, and
+so does a direct call the run made twice or an earlier run's summary on this
+repo also lists; record `Ship-note: <what>` in the Run file when it is met.
+Every direct call goes on `Direct calls:`, read from the Run file's `## Direct
+calls`. Each defect carries a **drafted issue** for the source repo,
+`Gharib89/skills`, written to `defect-<k>.md` beside the Run file when it is
+met: a title, then a body naming Ship's version, the mechanic or prose at fault
+and what the run did instead, and no organization identifier, credential or
+client context, because the source repo is public. A gap in the ship profile
 rather than in Ship is a **profile defect**: an adjacent find of this repo,
 filed here through phase 2's dispositions and listed under `Issues filed`, not
 on this row. Where this repo is the source repo, a Ship defect is an adjacent
 find already (its profile's `## Triage`) and the row names its number instead of
-a draft. In either case, record `Ship-defect: <detail>` in the Run file when
-the defect is met, even if it is fixed or filed during the run, so the row
-survives a compaction; neither that line nor a draft holds the clean gate, since
-a defect that breaks a gating step already fails that step's evidence.
+a draft. In either case, record `Ship-defect: <detail>` in the Run file when the
+defect is met, even if it is fixed or filed during the run, so the row survives
+a compaction; neither that line nor a draft holds the clean gate, since a defect
+that breaks a gating step already fails that step's evidence.
 
 **Counts are measurements; tallies are records.** A count that measures the
 tree, here or in the PR body, carries the command that produced it, run on the
 PR head, with a word counted by `grep -ow` so a longer word carrying it does not
-inflate the total. A **tally of the run's own work** has no command to
-reproduce it, so it is **written to the Run file at the moment it happens** and
-read back from there, which is what survives a compaction: a `file-issue`
-result when the call answers, a Ship defect when it is met, and a reviewer's
-round when it is dispositioned ([review-loop.md](review-loop.md)). The PR body's
-`## Review` line is entirely such a tally.
+inflate the total. A **tally of the run's own work** has no command to reproduce
+it, so it is **written to the Run file at the moment it happens** and read back
+from there, which is what survives a compaction: a `file-issue` result when the
+call answers, a Ship defect or Ship note when it is met, and a reviewer's round
+when it is dispositioned ([review-loop.md](review-loop.md)). The PR body's `##
+Review` line is entirely such a tally.
 
 **The body is the short form of this record** ([pr-body.md](pr-body.md)), each
 pair written from one result so the two cannot disagree: `Deviations from plan`
 is the phase-2 log verbatim, of which `## Special things to note` carries the
-folded subset; `Issues filed` and `Ship defects:` are the full set that `##
-Needs attention` lists one line each; each `Review` block is the per-finding
-detail behind that reviewer's `## Review` line; and each `Verification` row is
-the same phase-3 result as its line in `## Verification`. The `Self-review`
-block's rounds line is read from the Run file's `Round: self-review` and
-`Stop: self-review:` lines, and its rows from the phase-4 Report files, one row
-per report; a row whose file is no longer on disk is `unverified`.
+folded subset; `Issues filed`, `Ship defects:` and `Ship notes:` are the full
+set that `## Needs attention` lists one line each; each `Review` block is the
+per-finding detail behind that reviewer's `## Review` line; and each
+`Verification` row is the same phase-3 result as its line in `## Verification`.
+The `Self-review` block's rounds line is read from the Run file's `Round:
+self-review` and `Stop: self-review:` lines, and its rows from the phase-4
+Report files, one row per report; a row whose file is no longer on disk is
+`unverified`.
 
 **A wrong title is fixed before the merge**, with `update-pr-title`, before the
 summary is posted: the merge freezes the PR title as the squash subject, so the
@@ -252,12 +253,11 @@ this gate, including after a clean-gate decision. Two of them come back here:
   Verification passes covering the new head; one that resolved a conflict
   breaks that coverage.
 
-Then each drafted tracker section. A Ship defect draft
-still open is offered once before `cleanup`, which deletes the directory the
-drafts live in; its title stays on the summary's row, and nothing waits on the
-answer. Then `run-file
-close 9` and set the task to the returned `mirror`, and last `cleanup
-<issue|none>`.
+Then each drafted tracker section. A Ship defect draft not yet filed goes into
+the closing message verbatim under the command a human runs from a file they
+save it to, as the unattended lane carries it, because `cleanup` deletes the
+directory the drafts live in; nothing waits on it. Then `run-file close 9` and
+set the task to the returned `mirror`, and last `cleanup <issue|none>`.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, come back to this

@@ -36,8 +36,16 @@ check_rc "a gh issue edit call is refused" 1 "$status"
 check "the refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh issue edit 9 --title x" "$err"
 call 'partial token' --file "$rf" -- gh apix repos/o/r
 check_rc "a word that only starts with api is refused" 1 "$status"
+check "the partial-token refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh apix repos/o/r" "$err"
 call 'bare' --file "$rf" -- gh api
-check_rc "gh api with no endpoint is refused" 1 "$status"
+check_rc "gh api with no argument is refused" 1 "$status"
+check "the bare refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api" "$err"
+# `gh api graphql` is GraphQL, which the cloud proxy refuses as `gh issue edit`'s calls are.
+call 'graphql' --file "$rf" -- gh api graphql -f 'query={viewer{login}}'
+check_rc "gh api graphql is refused" 1 "$status"
+check "the graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: gh api graphql -f query=\{viewer\{login\}\}" "$err"
+call 'graphql late' --file "$rf" -- gh api -H 'X: y' graphql
+check_rc "a graphql endpoint after a flag is refused" 1 "$status"
 check "a refused call writes nothing" "$before" "$(cat "$rf")"
 
 usage=$(bash "$m" --help | head -n 1)
@@ -46,8 +54,10 @@ check_rc "no why is a usage error" 2 "$status"
 check "no why answers the usage line" "$usage" "$err"
 call 'why' --file "$rf" gh api repos/o/r
 check_rc "a command without the -- separator is a usage error" 2 "$status"
+check "a missing separator answers the usage line" "$usage" "$err"
 call $'two\nlines' --file "$rf" -- gh api repos/o/r
 check_rc "a why holding a newline is refused" 2 "$status"
+check "the newline refusal says why" "a direct call's why is one line" "$err"
 check "a refused usage writes nothing" "$before" "$(cat "$rf")"
 
 finish
