@@ -134,7 +134,7 @@ const gates = {};
 const record = fs.existsSync(file("check.json"))
   ? JSON.parse(fs.readFileSync(file("check.json"), "utf8"))
   : null;
-let support = { attempts: 0, judged: null };
+let support = record?.support ?? { attempts: 0, judged: null };
 let red = false;
 {
   const f = [];
@@ -170,7 +170,7 @@ let red = false;
       .createHash("sha256")
       .update(JSON.stringify(failing))
       .digest("hex");
-    const prev = record?.support ?? support;
+    const prev = support;
     // A red set of failing sentences is one fix attempt, however often it is
     // judged; past the last fix attempt the stop holds until the gate passes.
     red = judged && f.length > 0;

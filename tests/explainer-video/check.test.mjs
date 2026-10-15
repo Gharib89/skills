@@ -336,6 +336,26 @@ test("a verdict for another wording of the sentence is not a verdict for this on
   assert.doesNotMatch(r.out, /attempt/);
 });
 
+test("the stop holds while support.json is missing or older than the pack", () => {
+  const fx = fixture();
+  for (const k of ["hook 1", "steps 1", "steps 2"]) {
+    judge(fx, { [k]: "unsupported" });
+    check(fx);
+  }
+  const stop = /; stop: unsupported claims after two fix attempts$/m;
+  fs.rmSync(path.join(fx.dir, "support.json"));
+  check(fx);
+  judge(fx, { "why 1": "unsupported" });
+  assert.match(check(fx).out, stop);
+
+  const later = new Date(Date.now() + 60_000);
+  fs.utimesSync(path.join(fx.dir, "excerpts.json"), later, later);
+  check(fx);
+  judge(fx, { "hook 1": "unsupported" });
+  fs.utimesSync(path.join(fx.dir, "support.json"), later, later);
+  assert.match(check(fx).out, stop);
+});
+
 test("a fix that changes only a sentence's cites is a fix attempt", () => {
   const fx = fixture();
   judge(fx, { "steps 1": "unsupported" });
