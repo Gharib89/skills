@@ -34,16 +34,9 @@ ship_load_host
 pull=$(host_pr_get "$pr") || ship_tooling "cannot read PR $pr"
 headings=$(ship_body_headings "$(jq -r '.body // ""' <<<"$pull")" | jq -R . | jq -sc .)
 
-wanted='[]'
-if profile=$(ship_profile_path) && [ -f "$profile" ]; then
-  template=$(awk '/^## /{f = ($0 ~ /^## PR[ \t\r]*$/)} f && /^Template:/{sub(/^Template:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit}' "$profile")
-  case $template in
-    ''|None|None.) ;;
-    *) if top=$(git rev-parse --show-toplevel) && tbody=$(cat "$top/$template"); then
-         wanted=$(ship_body_headings "$tbody" | jq -R . | jq -sc .)
-       else wanted=null; fi ;;
-  esac
-fi
+if lacks=$(ship_template_missing "$(jq -r '.body // ""' <<<"$pull")"); then
+  missing=$(printf '%s' "$lacks" | jq -R . | jq -sc .)
+else missing=null; fi
 
 # The changed paths are known only from a checkout on the PR's head branch: the
 # host adapters carry no file list, and a diff from any other branch is another
@@ -54,5 +47,5 @@ if [ -n "$head_ref" ] && [ "$(git symbolic-ref -q --short HEAD 2>/dev/null)" = "
    && base=$(ship_base_ref --local) && paths=$(git -c core.quotepath=off diff --name-only "$base...HEAD" 2>/dev/null); then
   outline=$(ship_outline_missing "$(jq -r '.body // ""' <<<"$pull")" "$paths" | jq -R . | jq -sc .) || outline=null
 fi
-jq --argjson h "$headings" --argjson w "$wanted" --argjson o "$outline" \
-  '. + {headings: $h, missing: (if $w == null then null else $w - $h end), outline_missing: $o}' <<<"$pull"
+jq --argjson h "$headings" --argjson m "$missing" --argjson o "$outline" \
+  '. + {headings: $h, missing: $m, outline_missing: $o}' <<<"$pull"

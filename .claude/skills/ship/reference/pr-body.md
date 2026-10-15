@@ -17,7 +17,9 @@ outline, where it fell short; phase 9 reads it at the gate.
 
 ## What the body carries
 
-The repo's template per the profile's `## PR`, filled through its own headings;
+The repo's template per the profile's `## PR`, filled through its own headings,
+each kept verbatim: `open-pr` refuses a body lacking one, naming it, because no
+section write renames a reworded heading back once the PR is open;
 **with no template, the run writes the headings below itself**, because
 `open-pr` synthesizes none and a body that skips one is a body phase 7 cannot
 write into. Every variant carries:

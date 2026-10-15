@@ -25,6 +25,12 @@
 # run started with `run-file --scratchpad <dir>` keeps its Run file elsewhere and
 # is not checked.
 #
+# Heading check. A body file lacking a heading of the profile's `## PR`
+# `Template:` is refused before the push, naming each one, by the rule read-pr
+# reports `missing` with (ship_template_missing): once the PR is open, no
+# mechanic renames a reworded section back. No profile or `Template: None.` is
+# no check; a template file that cannot be read is refused, exit 2.
+#
 # `created_at` is the PR's creation time, which is when an `auto-once` reviewer
 # fires: phase 7 passes it to `poll-pr --since` so that one round counts on
 # whatever head it lands on.
@@ -34,7 +40,7 @@
 # failure.
 #
 # stdout: {number, url, created_at, branch, base}
-# exit: 0 · 1 title grades below the recorded Grade, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade or (--rework) the PR could not be read
+# exit: 0 · 1 title grades below the recorded Grade, body lacks a template heading, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade, the body file, its template or (--rework) the PR could not be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path> | open-pr <issue> --rework'
@@ -66,6 +72,11 @@ base=$(ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
 base=${base#origin/}
 [ "$branch" != "$base" ] || ship_tooling "refusing to open a PR from the base branch $base"
 $rework || [ "$n" = none ] || ship_require_grade "$n" "$title"
+if ! $rework; then
+  body=$(cat "$file") || ship_tooling "cannot read $file"
+  lacks=$(ship_template_missing "$body") || ship_tooling "cannot read the PR template $lacks"
+  [ -z "$lacks" ] || ship_fail "body lacks the template headings: $(awk 'NR > 1 {printf ", "} {printf "%s", $0}' <<<"$lacks")"
+fi
 
 if $rework; then
   found=$(host_pr_for_branch "$branch") && state=$(jq -er '.state // "none"' <<<"$found") \
