@@ -75,7 +75,7 @@ fi
 # a line holding only a link, a code span or a link reference definition.
 wrapped=('skills/ship/*.md' 'skills/cloud-ship/*.md' 'skills/update-skills/*.md'
   'skills/grill-with-artifact/*.md' 'skills/drive-session/*.md'
-  'skills/setup-project/*.md' docs/contributing/coding-standards.md
+  'skills/setup-project/*.md' 'skills/explainer-video/*.md' docs/contributing/coding-standards.md
   'docs/contributing/standards/*.md' CLAUDE.md ':!:*CHANGELOG.md')
 files=()
 while IFS= read -r -d '' f; do files+=("$f"); done < <(git grep -z -I -l -e '' -- "${wrapped[@]}" 2>"$err")

@@ -31,7 +31,7 @@ repos:
         name: prettier
         entry: prettier --write --ignore-unknown
         language: system
-        files: ^\.github/workflows/[^/]+\.ya?ml$
+        files: ^(\.github/workflows/[^/]+\.ya?ml|.*\.(js|jsx|mjs|cjs|ts|tsx|mts|cts))$
       # The house-style rules, the 80-column wrap among them, on any Markdown
       # change. The script reads every file it holds, so it takes no file list.
       - id: house-style

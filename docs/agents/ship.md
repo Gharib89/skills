@@ -36,7 +36,7 @@ The one workflow on a PR head, `bump-guard`, reads the PR title and body rather 
 - a mechanic over the Host fake, `SHIP_HOST_ADAPTER` at `tests/host-fake.sh` (`reviewer-run`, `host-contract`);
 - a mechanic over the real GitHub adapter and a fake `gh` answering per endpoint (`request-review-readback`, `gh-threads-proxy`), or over a fake `herdr` (`drive-session`);
 - one adapter function, its transport redefined as fixtures (`ado-reviews-substantive`, `gh-run-denials`);
-- a shipped template or script over stub tools in a throwaway checkout (`harness-check`, `setup-skills-bootstrap`);
+- a shipped template or script over stub tools in a throwaway checkout (`harness-check`, `setup-skills-bootstrap`, `explainer-video`);
 - a shipped file's text, read as files (`template-pins`, `reviewer-refresh`);
 - a shipped page's script, run headless under `node` over JSON fixtures, its reads recorded through proxies (`grill-with-artifact`).
 

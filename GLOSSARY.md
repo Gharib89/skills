@@ -409,3 +409,85 @@ _Avoid_: hand-off (that is ship's stop), question, ping
 **Merge allowance**:
 The launch prompt's permission for the supervisor to answer a supervised ship run's merge gate with "merge" when that gate is clean, by Ship's own `run-file gate clean` verdict. Without it, or on a gate that is not clean, the merge gate is an escalation.
 _Avoid_: auto-merge, merge permission, `Merge: on-clean-gate` (that is the ship profile's opt-in)
+
+### Explainer video
+
+**Explainer video**:
+A narrated video, one to five minutes by default, that the `explainer-video` skill makes from one or more sources: repos, documents, URLs, or a topic researched on the web.
+_Avoid_: promo, trailer, reel
+
+**Steering prompt**:
+Free text given with a run that moves the brief off its defaults, such as a narrower focus, a longer cut or another style.
+_Avoid_: flags, options, instructions
+
+**Brief**:
+One run's settings, one value per knob (focus, length, audience, language, style, voice, aspect), plus what the video must include and must avoid: the steering prompt laid over the defaults. The storyboard shows it, so a misread is caught before anything renders.
+_Avoid_: config, settings, spec
+
+**Source pack**:
+Everything a run read, kept word for word, with the numbered excerpts its script may cite. A topic with no source gets a source pack too, from the pages researched for it, and the storyboard lists what the pack holds.
+_Avoid_: context, corpus, research notes
+
+**Excerpt**:
+A passage quoted word for word from one source in the source pack, with where it was found (a file and line, a page, a section of a web page). A narration sentence that makes a claim cites the excerpts that support it.
+_Avoid_: snippet, fact, citation
+
+**Script**:
+A run's scenes in order, each with its role in the video, its narration sentences and what is on screen. Every sentence that makes a claim cites its excerpts; a connective sentence (a transition, a framing question) is marked as making none. The storyboard is built from it.
+_Avoid_: storyboard, outline, transcript
+
+**Kept term**:
+A word an Arabic run leaves in English (a code name, a product name, an acronym), spoken, shown and captioned the same way everywhere in the video. The storyboard lists a run's kept terms, and the human can change them.
+_Avoid_: glossary term, untranslated word, loanword
+
+**Narrator**:
+The voice that reads a run's narration, named by the brief's voice knob. Each language has a default female and male narrator; another is used only when the brief asks for it.
+_Avoid_: speaker, TTS voice, voice-over
+
+**Own voice**:
+A narrator that speaks in a real person's voice, made by converting a default narrator's render to a recorded clip of that person. It is used only when the brief names it, and only for a speaker whose consent is on record.
+_Avoid_: clone, voice clone, custom voice
+
+**Storyboard**:
+A browser page with one card per scene (its narration, a still rendered in the run's style, its timing and style notes) that the human approves or revises scene by scene. It is the one human checkpoint before production; everything after it runs behind video gates.
+_Avoid_: outline, shot list, script
+
+**Animatic**:
+The storyboard's stills played in scene order over the run's real narration, so the human judges pace by ear before anything renders.
+_Avoid_: preview, rough cut, slideshow
+
+**Style profile**:
+A saved, named look (palette, type, motion and layout rules) that a run can use. One profile is the default; a profile can come from a prototype, screenshots, a website or a deck.
+_Avoid_: theme, preset, template
+
+**Style card**:
+A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast, that the human approves before the profile is saved or used once.
+_Avoid_: style preview, mood board
+
+**Reference image**:
+An image a draft style profile's colours are measured from: a screenshot, a slide, a video frame, or a page of a website as rendered. Every source of a style becomes reference images first; a colour the source declares counts only where its reference images show it.
+_Avoid_: sample, screenshot (for the general case), mood image
+
+**Composer**:
+The one engine that lays out every scene of an explainer video on a single timeline, so captions, the score and word timing run unbroken from the first scene to the last.
+_Avoid_: renderer, backend, framework
+
+**Clip insert**:
+A pre-rendered video made outside the composer (a maths animation, a cached 3D shot, a screen recording) that fills one scene's slot on the composer's timeline.
+_Avoid_: embed, sub-render, segment
+
+**Video gate**:
+An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness or caption timing. Each has a floor the skill sets and a style profile may only tighten; a gate still failing after two fix attempts stops the run, and no video ships.
+_Avoid_: QA, check, local gate
+
+**Critic**:
+An independent reviewer that reads a run's contact sheets: its hard failures (unreadable or invented content, a broken right-to-left layout) block like a video gate, and its scores only advise.
+_Avoid_: judge, grader, reviewer
+
+**Tool cache**:
+The per-user folder setup installs a run's tools into: the npm packages, Chrome and models, each under the lockfile's hash, so copies of the skill at different versions coexist. An install no run has used for 30 days under another hash is stale, and setup's install removes it.
+_Avoid_: node_modules, tools folder
+
+**Font store**:
+The per-user folder of fonts setup fetches by family at a pinned version, OFL or Apache faces only, shared by every run and style profile.
+_Avoid_: font cache, fonts folder
