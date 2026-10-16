@@ -500,6 +500,10 @@ _Avoid_: QA, check, local gate
 An independent reviewer that reads a run's contact sheets: its hard failures (unreadable or invented content, a broken right-to-left layout) block like a video gate, and its scores only advise.
 _Avoid_: judge, grader, reviewer
 
+**Contact sheet**:
+One image per scene of a rendered explainer video: four of its frames (its quarter marks and its last frame), cut from the encoded video and tiled two by two, that the critic reads in place of the video.
+_Avoid_: snapshot, thumbnail, filmstrip
+
 **Tool cache**:
 The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model under its pinned revision, so copies of the skill at different versions coexist. An npm or Chrome install under another hash that no run has used for 30 days is stale, and setup's install removes it; a model at an older revision stays.
 _Avoid_: node_modules, tools folder

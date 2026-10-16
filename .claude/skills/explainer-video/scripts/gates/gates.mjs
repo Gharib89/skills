@@ -8,14 +8,19 @@
 // HyperFrames' check and the layout probe measure the samples of every scene
 // not cached in <run>/.cache/gates/, judged here for layout and contrast.
 // Loudness, captions and the sound effects per minute are measured on every
-// run. Deletes nothing: the render stage acts on the verdict.
+// run. The critic gate reads the verdicts the critic subagents wrote beside
+// this render's contact sheets, in <run>/.cache/critic/<render>/, cutting a
+// sheet per scene first when a verdict is missing. Deletes nothing: the render
+// stage acts on the verdict.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` for layout, contrast,
-//         loudness, captions and sfx, then `gates: <n> pass, <m> fail`, when red
-//         ending `; next: fix attempt <a> of 2` or `; stop: red after two fix
-//         attempts, no video`
-// writes: <run>/gates.json, gates.md, .cache/gates/
-// exit:   0 every gate passes · 1 a gate fails, or `gates: <why>` on stderr ·
-//         2 usage
+//         loudness, captions, sfx and critic (or `gate critic: pending: ...`),
+//         then `gates: <n> pass, <m> fail[, 1 pending]`, when red ending
+//         `; next: fix attempt <a> of 2` or `; stop: red after two fix
+//         attempts, no video`, when only pending `; next: run the critic,
+//         round <r> of 2`
+// writes: <run>/gates.json, gates.md, .cache/gates/, .cache/critic/
+// exit:   0 every gate passes · 1 a gate fails or is pending, or `gates: <why>`
+//         on stderr · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -368,6 +373,103 @@ const same = prev?.script === scriptKey;
 const again = same && prev.render === renderHash;
 const count = (failing, before) =>
   !failing ? 0 : again ? before || 1 : before + 1;
+
+// The critic: Claude subagents each judge one scene's contact sheet, cut from
+// the MP4 by ffmpeg (never HyperFrames' snapshot, which sends frames to
+// Gemini), and write <scene>.json beside it. A hard failure blocks; scores
+// advise. Two rounds of one script at most: once two renders are judged, a
+// later one carries the second round's verdict rather than ask for a third.
+const KINDS = ["unreadable", "invented"];
+const SCORES = ["clarity", "legibility", "fit"];
+const sheetsOf = (h) => path.posix.join(".cache", "critic", h);
+const verdicts = (h) =>
+  timeline.scenes.map((sc) => {
+    const f = path.join(run, sheetsOf(h), `${sc.id}.json`);
+    if (!fs.existsSync(f)) return null;
+    const bad = (why) => fail(`critic verdict ${sc.id}.json: ${why}`);
+    let v;
+    try {
+      v = JSON.parse(fs.readFileSync(f, "utf8"));
+    } catch (e) {
+      bad(e.message);
+    }
+    if (!Array.isArray(v?.failures)) bad("no failures list");
+    v.failures.forEach((x, i) => {
+      if (!KINDS.includes(x?.kind))
+        bad(`failure ${i + 1} kind "${x?.kind}" is not unreadable or invented`);
+      if (typeof x.what !== "string" || !x.what.trim())
+        bad(`failure ${i + 1} says nothing`);
+    });
+    for (const k of SCORES)
+      if (![1, 2, 3, 4, 5].includes(v.scores?.[k]))
+        bad(`score ${k} is not a whole number 1 to 5`);
+    return { ...v, id: sc.id, start: sc.start };
+  });
+const rounds = same ? (prev.gates.critic?.rounds ?? []) : [];
+let judgedBy;
+const own = verdicts(renderHash);
+if (own.every(Boolean)) {
+  if (!rounds.includes(renderHash)) rounds.push(renderHash);
+  judgedBy = { vs: own, round: rounds.indexOf(renderHash) + 1 };
+} else if (rounds.length >= 2) {
+  const vs = verdicts(rounds[1]);
+  if (vs.every(Boolean)) judgedBy = { vs, round: 2, carried: true };
+}
+const wantCritic = "no unreadable or invented content; scores advise";
+let critic;
+if (judgedBy) {
+  const { vs, round, carried } = judgedBy;
+  // Led by the scene's start, as layout's lines are, so the storyboard's gate
+  // stop reopens the scene's card.
+  const evidence = vs.flatMap((v) =>
+    v.failures.map(
+      (x) => `${v.start.toFixed(2)} s ${v.id}: ${x.kind}: ${x.what}`,
+    ),
+  );
+  const mean = (k) =>
+    (vs.reduce((n, v) => n + v.scores[k], 0) / vs.length).toFixed(1);
+  critic = {
+    status: evidence.length ? "fail" : "pass",
+    measured: `${summary(evidence).replace("finding(s)", "hard failure(s)")}, mean scores ${SCORES.map((k) => `${k} ${mean(k)}`).join(", ")}, round ${round} of 2${carried ? ", carried: no third round" : ""}`,
+    floor: wantCritic,
+    attempts: count(
+      evidence.length,
+      same ? (prev.gates.critic?.attempts ?? 0) : 0,
+    ),
+    evidence,
+    sheets: sheetsOf(carried ? rounds[1] : renderHash),
+    rounds,
+    scores: vs.map((v) => ({
+      scene: v.id,
+      ...Object.fromEntries(SCORES.map((k) => [k, v.scores[k]])),
+      note: v.note ?? "",
+    })),
+  };
+} else {
+  const dir = sheetsOf(renderHash);
+  fs.mkdirSync(path.join(run, dir), { recursive: true });
+  for (const sc of timeline.scenes) {
+    const png = path.join(run, dir, `${sc.id}.png`);
+    if (!fs.existsSync(png))
+      await orFail(() =>
+        backend.sheet(path.join(run, mp4), png, {
+          start: sc.start,
+          duration: sc.duration,
+          fps: FPS,
+        }),
+      );
+  }
+  critic = {
+    status: "pending",
+    measured: `round ${rounds.length + 1} of 2, ${own.filter(Boolean).length} of ${own.length} scene(s) judged, contact sheets in ${dir}`,
+    floor: wantCritic,
+    attempts: same ? (prev.gates.critic?.attempts ?? 0) : 0,
+    evidence: [],
+    sheets: dir,
+    rounds,
+  };
+}
+
 const gates = {};
 for (const [name, [evidence, measured, wanted]] of Object.entries(judged))
   gates[name] = {
@@ -380,7 +482,9 @@ for (const [name, [evidence, measured, wanted]] of Object.entries(judged))
     ),
     evidence,
   };
+gates.critic = critic;
 const red = Object.entries(gates).filter(([, g]) => g.status === "fail");
+const pending = critic.status === "pending";
 const attempts = count(red.length, same ? prev.attempts : 0);
 fs.writeFileSync(
   recordFile,
@@ -409,17 +513,32 @@ fs.writeFileSync(
       "",
       ...g.evidence.map((e) => `- ${e}`),
     ]),
+    ...(critic.scores
+      ? [
+          "",
+          "## Critic scores",
+          "",
+          `| scene | ${SCORES.join(" | ")} | note |`,
+          `| --- | ${SCORES.map(() => "---").join(" | ")} | --- |`,
+          ...critic.scores.map(
+            (s) =>
+              `| ${s.scene} | ${SCORES.map((k) => s[k]).join(" | ")} | ${cell(s.note)} |`,
+          ),
+        ]
+      : []),
   ].join("\n") + "\n",
 );
 for (const [name, g] of Object.entries(gates))
   console.log(`gate ${name}: ${g.status}: ${g.measured} vs ${g.floor}`);
 console.log(
-  `gates: ${Object.keys(gates).length - red.length} pass, ${red.length} fail${
-    !red.length
-      ? ""
-      : stopped(attempts)
+  `gates: ${Object.keys(gates).length - red.length - pending} pass, ${red.length} fail${pending ? ", 1 pending" : ""}${
+    red.length
+      ? stopped(attempts)
         ? "; stop: red after two fix attempts, no video"
         : `; next: fix attempt ${attempts} of 2`
+      : pending
+        ? `; next: run the critic, round ${rounds.length + 1} of 2`
+        : ""
   }`,
 );
-process.exit(red.length ? 1 : 0);
+process.exit(red.length || pending ? 1 : 0);
