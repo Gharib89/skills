@@ -7,7 +7,7 @@ description: >-
   screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
-  version: 0.15.0
+  version: 0.16.0
 ---
 
 # explainer-video

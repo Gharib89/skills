@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.16.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Arabic video with kept terms and a mirrored layout
+  ([#741](https://github.com/Gharib89/skills/pull/741),
+  [`4f77123`](https://github.com/Gharib89/skills/commit/4f771235832d085e313ab3c0068583d61389122e))
+
+
 ## v0.15.0 (2026-10-16)
 
 ### Features
