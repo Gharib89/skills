@@ -19,7 +19,7 @@ const RULES = {
 };
 
 // cues: [{type, t}]. A whoosh rises into its time, so it lands on the cut.
-export function renderSfx(cues, total, { seed, offset = 0 }) {
+export function renderSfx(cues, total, { seed, offset }) {
   D.setSeed(seed);
   const out = D.stereo(Math.round(total * D.SR));
   for (const c of cues) {

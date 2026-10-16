@@ -34,10 +34,10 @@ export function stereo(n) {
 export function fromMono(x) {
   return { L: x, R: Float32Array.from(x) };
 }
-export function len(b) {
+function len(b) {
   return b.L.length;
 }
-export function clone(b) {
+function clone(b) {
   return { L: Float32Array.from(b.L), R: Float32Array.from(b.R) };
 }
 
@@ -52,11 +52,11 @@ export function place(buf, x, t, g = 1, panPos = 0) {
     buf.R[i0 + k] += x.R[k] * g * r;
   }
 }
-export function mixInto(dst, src, g = 1) {
+export function mixInto(dst, src) {
   const n = Math.min(len(dst), len(src));
   for (let i = 0; i < n; i++) {
-    dst.L[i] += src.L[i] * g;
-    dst.R[i] += src.R[i] * g;
+    dst.L[i] += src.L[i];
+    dst.R[i] += src.R[i];
   }
 }
 export function gain(b, g) {

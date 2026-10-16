@@ -5,10 +5,10 @@
 // Reads <run>/script.json and <run>/voice.json and the run's style profile
 // (lib/style.mjs). Times every scene back to back at its voice duration, the
 // last held 1 s, cues captions from the word timings, composes the video in
-// <run>/composition/ with the narration mastered (the score mixed under it
-// unless brief.json turns it off, score/score.mjs), renders a settled still per
-// scene and then the video with HyperFrames, each cached in <run>/.cache/ by
-// content hash, runs the gates stage (gates/gates.mjs) on out/, checks the MP4
+// <run>/composition/ with the narration mastered (the score from
+// score/score.mjs mixed under it, unless brief.json turns it off), renders a
+// settled still per scene and then the video with HyperFrames, each cached in
+// <run>/.cache/ by content hash, runs the gates stage (gates/gates.mjs) on out/, checks the MP4
 // with ffprobe, and copies MP4, SRT and poster to the videos folder. A red gate
 // or a failed check empties out/ and delivers nothing. With `--stills` it stops
 // after the stills: no video, gates, delivery or manifest, for the storyboard.
@@ -279,7 +279,8 @@ fs.mkdirSync(path.dirname(raw), { recursive: true });
 const voiced = narration(raw);
 
 // The score, unless the brief turns it off or only stills are wanted: cached
-// in .cache/score/ by the timings, roles, seed, level and the engine's code,
+// in .cache/score/ by the timings, roles, seed, level, sfx floor and the
+// engine's code,
 // since a 2-minute score takes seconds to synthesise.
 const briefFile = path.join(run, "brief.json");
 const scored =
@@ -290,6 +291,7 @@ if (scored) {
   const roles = script.scenes.map((s) => s.role);
   const seed = parseInt(hash(slug).slice(0, 8), 16);
   const level = r3(bedLevel(voiced.pcm, voiced.rate, scenes));
+  const { perMinute } = floors(profile).sfx;
   const engine = path.join(skill, "scripts", "score");
   const code = fs
     .readdirSync(engine)
@@ -302,12 +304,13 @@ if (scored) {
     roles,
     seed,
     level,
+    perMinute,
     ...code,
   );
   const dir = path.join(run, ".cache", "score");
   bed = path.join(dir, `${key}.wav`);
   if (!fs.existsSync(bed)) {
-    const s = score({ scenes, roles, total, seed, level });
+    const s = score({ scenes, roles, total, seed, level, perMinute });
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(
       path.join(dir, `${key}.json`),

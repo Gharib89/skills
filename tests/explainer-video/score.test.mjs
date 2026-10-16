@@ -94,6 +94,24 @@ test("the score arranges one section per scene at the scene's start", () => {
   );
 });
 
+test("a cue past the sfx floor's count in its minute is dropped", () => {
+  const short = [0, 1, 2, 3, 4, 5].map((i) => ({
+    id: `s${i}`,
+    start: i,
+    duration: 1,
+    words: [{ text: "w", start: i + 0.2, end: i + 0.8 }],
+  }));
+  const at = (perMinute) =>
+    score({ scenes: short, total: 6, seed: 5, level: -28, perMinute }).cues;
+  assert.equal(at(24).length, 6);
+  assert.deepEqual(at(2), [
+    { type: "whoosh", t: 1 },
+    { type: "whoosh", t: 2 },
+  ]);
+  assert.deepEqual(at(1), [{ type: "whoosh", t: 1 }]);
+  assert.deepEqual(at(0), []);
+});
+
 test("a whoosh marks each cut and a sting the last word's end", () => {
   const r = score({ scenes: SCENES, total: 8, seed: 5, level: -28 });
   assert.deepEqual(r.cues, [

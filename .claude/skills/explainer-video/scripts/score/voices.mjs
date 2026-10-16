@@ -8,7 +8,9 @@ import {
   biquadMono,
   filt,
   fromMono,
+  gain,
   midiHz,
+  peak,
   rand,
   randn,
   stereo,
@@ -16,17 +18,7 @@ import {
 
 const N = (d) => Math.max(1, Math.round(d * SR));
 
-export function norm(b, to = 1) {
-  let p = 0;
-  for (let i = 0; i < b.L.length; i++)
-    p = Math.max(p, Math.abs(b.L[i]), Math.abs(b.R[i]));
-  const g = to / (p + 1e-9);
-  for (let i = 0; i < b.L.length; i++) {
-    b.L[i] *= g;
-    b.R[i] *= g;
-  }
-  return b;
-}
+const norm = (b) => gain(b, 1 / (peak(b) + 1e-9));
 
 // FM electric piano.
 export function epNote(midi, dur, vel = 0.8, bright = 1) {
@@ -95,8 +87,9 @@ export function roundBass(freq, dur) {
   return fromMono(x);
 }
 
-export function softKick(dur = 0.35, tone = 52) {
-  const n = N(dur);
+export function softKick() {
+  const tone = 52;
+  const n = N(0.35);
   const x = new Float32Array(n);
   let ph = 0;
   for (let i = 0; i < n; i++) {

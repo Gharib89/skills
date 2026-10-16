@@ -71,7 +71,7 @@ must include and must avoid. The user's request beside the sources, the
 | `style` | the store default (see Render) | a style profile name |
 | `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
-| `score` | `on` | `on`, music and sound effects under the narration, or `off` |
+| `score` | `on` | `on` (music and sound effects under the narration) or `off` |
 | `must` | none | a topic or term the video says or shows |
 | `avoid` | none | a topic or term the video never touches |
 
@@ -356,7 +356,8 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   in order, at most 84 characters and inside the video, and the SRT equal to
   the burned-in cues.
 - `sfx`: at most 24 sound effects in any minute, counted from `score.json`'s
-  cues.
+  cues. The score drops a cue that would break the floor, so a red `sfx` is a
+  skill defect: relay it with no fix attempt.
 
 A summary line follows, `gates: <n> pass, <m> fail`, ending on a red run with
 `next: fix attempt <a> of 2` or `stop: red after two fix attempts, no video`.

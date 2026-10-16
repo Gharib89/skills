@@ -7,7 +7,7 @@
 // each scene every 15 frames from its start and at its settled last frame;
 // HyperFrames' check and the layout probe measure the samples of every scene
 // not cached in <run>/.cache/gates/, judged here for layout and contrast.
-// Loudness, captions and the sound effects a minute are measured on every
+// Loudness, captions and the sound effects per minute are measured on every
 // run. Deletes nothing: the render stage acts on the verdict.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` for layout, contrast,
 //         loudness, captions and sfx, then `gates: <n> pass, <m> fail`, when red

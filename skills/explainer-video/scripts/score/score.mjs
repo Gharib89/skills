@@ -24,7 +24,8 @@ const SECTION = {
   recap: "breakdown",
   end: "outro",
 };
-// The sound effects' rule levels sit a mix under a bed at this RMS (dBFS).
+// The music level (dBFS RMS) the sound effects' own levels are set against;
+// they move with the score's music level by its distance from this.
 const SFX_BED = -20;
 // The music's RMS before the duck, in dB under the narration's speech RMS.
 const UNDER = 8;
@@ -85,8 +86,17 @@ export function duck(scenes, total) {
 
 // The score as a 48 kHz stereo buffer `total` s long, its music at `level`
 // dBFS RMS before the duck. roles: each scene's script role, if any.
+// perMinute: the sfx gate's floor; a cue is dropped when the minute ending at
+// it already holds that many, so no minute holds more.
 // Returns {buf, cues: [{type, t}], spec: {preset, seed, sections}}.
-export function score({ scenes, roles = [], total, seed, level }) {
+export function score({
+  scenes,
+  roles = [],
+  total,
+  seed,
+  level,
+  perMinute = 24,
+}) {
   const names = Object.keys(PRESETS);
   const preset = names[seed % names.length];
   const sections = scenes.map((sc, i) => ({
@@ -108,10 +118,12 @@ export function score({ scenes, roles = [], total, seed, level }) {
     buf.R[i] *= g;
   }
   const last = scenes.at(-1).words.at(-1);
-  const cues = [
+  const cues = [];
+  for (const c of [
     ...scenes.slice(1).map((sc) => ({ type: "whoosh", t: sc.start })),
     ...(last ? [{ type: "sting", t: last.end }] : []),
-  ];
+  ])
+    if (cues.filter((k) => k.t > c.t - 60).length < perMinute) cues.push(c);
   D.mixInto(buf, renderSfx(cues, total, { seed, offset: level - SFX_BED }));
   return { buf, cues, spec: { preset, seed, sections } };
 }

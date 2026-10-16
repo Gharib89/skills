@@ -361,6 +361,22 @@ export async function master(input, output, { lufs, peak, bed }) {
   if (!m)
     throw new Error(`loudnorm pass 1 printed no measurements for ${input}`);
   const j = JSON.parse(m);
+  // With a score, its rate; without, the narration's own.
+  const rate = bed ? 48000 : sampleRate(input);
+  ffmpeg([
+    "-y",
+    ...inputs,
+    filter,
+    `${target}:measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}:offset=${j.target_offset}:linear=true`,
+    "-ar",
+    String(rate),
+    "-c:a",
+    "pcm_s16le",
+    output,
+  ]);
+}
+
+function sampleRate(input) {
   const probed = spawnSync(
     "ffprobe",
     [
@@ -379,17 +395,7 @@ export async function master(input, output, { lufs, peak, bed }) {
   const rate = parseInt(probed.stdout, 10);
   if (probed.status !== 0 || !rate)
     throw new Error(`ffprobe ${input}: no audio sample rate`);
-  ffmpeg([
-    "-y",
-    ...inputs,
-    filter,
-    `${target}:measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}:offset=${j.target_offset}:linear=true`,
-    "-ar",
-    String(bed ? 48000 : rate),
-    "-c:a",
-    "pcm_s16le",
-    output,
-  ]);
+  return rate;
 }
 
 export async function ffprobe(file) {

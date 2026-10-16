@@ -214,7 +214,7 @@ const SECTION_GAIN = { intro: 1.5, breakdown: -1.0 };
 
 // `sections`: [{type, start}] in time order, the first at 0; each runs to the
 // next one's start, the last to `total` seconds. A section's last bar is cut
-// at its end: no note starts past it, so two sections never sound at once.
+// at its end: no note starts past it.
 export function renderMusic({ sections, total, preset, seed }) {
   const s = PRESETS[preset];
   const chords = PROGRESSIONS[s.progression];
@@ -332,7 +332,7 @@ export function renderMusic({ sections, total, preset, seed }) {
           for (const p of [12, 13, 14, 15])
             put(T.snare, K.snap, t0 + swingT(p), 0.12 + 0.05 * (p - 12));
       }
-      if (name === "main" && s.lead !== "none") {
+      if (name === "main") {
         const mel =
           b % 2 === 0
             ? [

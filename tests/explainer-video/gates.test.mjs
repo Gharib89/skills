@@ -470,7 +470,7 @@ test("a tightened floor is the floor applied and printed", () => {
   );
 });
 
-test("more sound effects in a minute than the floor fails sfx", () => {
+test("a tightened sfx floor thins the score's cues to it", () => {
   const fx = fixture();
   const p = JSON.parse(read(skill, "styles", "claude-code.json"));
   const styles = path.join(fx.tmp, "proj", "explainers", ".styles");
@@ -480,10 +480,29 @@ test("more sound effects in a minute than the floor fails sfx", () => {
     JSON.stringify({ ...p, gates: { sfx: { perMinute: 1 } } }),
   );
   const r = render(fx, SCRIPT.replace("style: claude-code", "style: calm"));
-  assertRed(fx, r, "sfx", "vs <= 1 a minute$");
-  const cues = JSON.parse(read(fx.dir, "score.json")).cues;
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate sfx: pass: 1 cue\(s\), at most 1 in a minute vs <= 1 a minute$/m,
+  );
+});
+
+test("more sound effects in a minute than the floor fails sfx", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const cues = Array.from({ length: 25 }, (_, i) => ({ type: "whoosh", t: i }));
+  fs.writeFileSync(
+    path.join(fx.dir, "score.json"),
+    JSON.stringify({ score: "on", cues }),
+  );
+  const r = stage(fx, "gates/gates.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate sfx: fail: 25 cue\(s\), at most 25 in a minute vs <= 24 a minute$/m,
+  );
   assert.deepEqual(record(fx).gates.sfx.evidence, [
-    `${cues.length} cues in the minute from ${cues[0].t.toFixed(2)} s, over 1`,
+    "25 cues in the minute from 0.00 s, over 24",
   ]);
 });
 
