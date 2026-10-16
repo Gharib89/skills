@@ -97,7 +97,7 @@ const cues = [
   start: +m[1],
   end: +m[1] + +m[2],
   text: [...m[3].matchAll(/<span class="w"[^>]*>(.*?)<\/span>/g)]
-    .map((w) => unescape(w[1]))
+    .map((w) => unescape(w[1].replace(/<[^>]+>/g, "")))
     .join(" "),
 }));
 

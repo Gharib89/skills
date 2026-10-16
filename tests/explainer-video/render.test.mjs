@@ -16,7 +16,7 @@ import {
   lockHash,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
 import { SLIDE } from "./fake-backend.mjs";
-import { DIAGRAMS, SCRIPT } from "./scene-file.mjs";
+import { ARABIC, DIAGRAMS, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
@@ -869,4 +869,44 @@ test("a draft naming a family no setup row installs renders it from the font sto
       .includes("noto-serif-latin-400-normal.woff2"),
   );
   assert.match(comp(fx), /\.cue \{[^}]*font: 400 40px\/1\.3 "noto-serif"/);
+});
+
+test("an Arabic script renders right to left on its text boxes, its English terms whole and left to right", () => {
+  const fx = fixture(ARABIC);
+  fx.env.GEMINI_API_KEY = "test-key";
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+
+  const index = comp(fx);
+  assert.match(index, /<html lang="ar">/);
+  assert.doesNotMatch(index, /<(html|body)[^>]* dir=/);
+  assert.doesNotMatch(index, /id="root"[^>]* dir=/);
+  assert.match(index, /<div class="header" dir="rtl">/);
+  for (const family of ["noto-naskh-arabic", "ibm-plex-sans-arabic"])
+    assert.match(index, new RegExp(`@font-face \\{ font-family: "${family}"`));
+  assert.match(
+    index,
+    /\.cue \{[^}]*font: 400 40px\/1\.7 "ibm-plex-sans-arabic", "inter"/,
+  );
+  assert.match(index, /\.lat \{ font-family: "inter"; white-space: nowrap; \}/);
+  const cues = [...index.matchAll(/<div class="cue clip"[^>]*>/g)];
+  assert.ok(cues.length > 0);
+  for (const [cue] of cues) assert.match(cue, / dir="rtl"/);
+  // A multi-word term is one caption token, isolated, so it keeps its order.
+  assert.match(
+    index,
+    /<span class="w" data-at="[\d.]+"><bdi class="lat">pull request<\/bdi><\/span>/,
+  );
+
+  const steps = comp(fx, "scenes/steps.html");
+  assert.match(steps, /<div class="content" dir="rtl">/);
+  assert.match(steps, /<bdi class="lat ti">branch<\/bdi>/);
+  assert.match(steps, /\.label \{[^}]*"noto-naskh-arabic", "source-serif-4"/);
+  const code = comp(fx, "scenes/code.html");
+  assert.match(code, /<div class="code rt" dir="ltr">/);
+  assert.doesNotMatch(code, /<bdi/);
+  assert.match(
+    comp(fx, "scenes/hook.html"),
+    /<bdi class="lat ti">pull request<\/bdi>/,
+  );
 });

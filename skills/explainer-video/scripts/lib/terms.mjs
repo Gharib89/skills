@@ -10,6 +10,9 @@ const RUN =
 
 export const latinRuns = (text) => text.match(RUN) ?? [];
 
+// The text cut around its Latin runs: the runs at odd indexes.
+export const splitLatin = (text) => text.split(new RegExp(`(${RUN.source})`));
+
 // A written caption token of Latin letters and no Arabic ones.
 export const isLatin = (token) =>
   /[A-Za-z]/.test(token) && !/\p{Script=Arabic}/u.test(token);

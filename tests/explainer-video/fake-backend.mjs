@@ -166,6 +166,7 @@ const SAID = {
   profile: "بروفايل",
   issue: "ايشو",
   agent: "ايجنت",
+  ship: "شيب",
 };
 
 const synthCalls = () =>
