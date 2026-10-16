@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Style card page, profile save and the ITWorx profile
+  ([#731](https://github.com/Gharib89/skills/pull/731),
+  [`b9dade7`](https://github.com/Gharib89/skills/commit/b9dade7b27fdca723ea9dfcb0ad2e79e7acf02b5))
+
+
 ## v0.11.0 (2026-10-16)
 
 ### Features
