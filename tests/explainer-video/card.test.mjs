@@ -602,6 +602,7 @@ test("a draft carrying a family it fetched builds with it, offers it, and shows 
     id: "font:noto-serif",
     kind: "font",
     family: "noto-serif",
+    class: "serif",
     version: "5.3.0",
     files: ["latin-600-normal"],
     licence: "OFL-1.1",
@@ -653,6 +654,12 @@ test("a draft carrying a family it fetched builds with it, offers it, and shows 
     mark: "edited",
     why: "edited on the style card",
   });
+  assert.deepEqual(json(fx.dir, "style-draft", "acme.json").type.arText, {
+    font: "noto-naskh-arabic",
+    weight: 400,
+    mark: "derived",
+    why: "the serif companion of noto-serif",
+  });
 });
 
 test("edits go into the draft, marked, and need the next version; answers to an old version are refused", () => {
@@ -677,6 +684,13 @@ test("edits go into the draft, marked, and need the next version; answers to an 
   });
   assert.equal(draft.type.title.font, "inter");
   assert.equal(draft.type.title.mark, "edited");
+  // A sans title takes the sans Arabic companion.
+  assert.deepEqual(draft.type.arTitle, {
+    font: "ibm-plex-sans-arabic",
+    weight: 600,
+    mark: "derived",
+    why: "the sans companion of inter",
+  });
   built(fx);
   const c = latestCard(fx);
   assert.equal(c.version, 2);

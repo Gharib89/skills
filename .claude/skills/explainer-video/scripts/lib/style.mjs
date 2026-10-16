@@ -10,6 +10,16 @@ import { skill } from "./tools.mjs";
 
 export const FALLBACK = "claude-code";
 
+// The Arabic type role beside each Latin one, and the Arabic family that
+// companions a font of each class (#678's lists, first of each).
+export const ARABIC = { title: "arTitle", text: "arText" };
+export const COMPANION = {
+  serif: "noto-naskh-arabic",
+  sans: "ibm-plex-sans-arabic",
+  mono: "ibm-plex-sans-arabic",
+  display: "noto-kufi-arabic",
+};
+
 // The loudness target the master aims at and the gate judges around.
 export const LUFS = -14;
 

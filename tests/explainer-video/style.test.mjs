@@ -546,6 +546,7 @@ test("a declared family Fontsource holds under an admitted licence plays its rol
       id: "font:noto-serif",
       kind: "font",
       family: "noto-serif",
+      class: "serif",
       version: "5.3.0",
       files: ["latin-600-normal"],
       licence: "OFL-1.1",

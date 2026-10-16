@@ -30,6 +30,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  ARABIC,
+  COMPANION,
   FALLBACK,
   ROLES,
   contrast,
@@ -201,13 +203,6 @@ const CLASS = {
   cursive: "display",
   fantasy: "display",
 };
-const COMPANION = {
-  serif: "noto-naskh-arabic",
-  sans: "ibm-plex-sans-arabic",
-  mono: "ibm-plex-sans-arabic",
-  display: "noto-kufi-arabic",
-};
-const ARABIC = { title: "arTitle", text: "arText" };
 const slug = (family) =>
   family
     .toLowerCase()
@@ -277,6 +272,7 @@ for (const f of found.fonts.filter(
     id: `font:${font}`,
     kind: "font",
     family: font,
+    class: cls,
     version: meta.npmVersion,
     files: [],
     licence: meta.license,

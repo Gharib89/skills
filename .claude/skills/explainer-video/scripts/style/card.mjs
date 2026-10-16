@@ -34,7 +34,14 @@ import path from "node:path";
 import { judge } from "../lib/layout.mjs";
 import { userDirs } from "../lib/paths.mjs";
 import { recordAssets } from "../lib/runfolder.mjs";
-import { ROLES, floors, saveScope, validate } from "../lib/style.mjs";
+import {
+  ARABIC,
+  COMPANION,
+  ROLES,
+  floors,
+  saveScope,
+  validate,
+} from "../lib/style.mjs";
 import {
   catalogue,
   compositionAssets,
@@ -230,6 +237,15 @@ if (cmd === "apply") {
         mark: "edited",
         why: "edited on the style card",
       };
+      const ar = ARABIC[r];
+      const cls = fontRow(draft, font).class;
+      if (ar)
+        draft.type[ar] = {
+          ...draft.type[ar],
+          font: COMPANION[cls],
+          mark: "derived",
+          why: `the ${cls} companion of ${font}`,
+        };
     }
   }
   draft.name = a.name;
