@@ -34,10 +34,10 @@ in Arabic.
    narrator and language (and, for an own voice, the enrolled clip) are
    unchanged is a cache hit and is not voiced again. Once every scene passes,
    with a `brief.json` in the run folder, a `voice length: pass|fail` line
-   follows the scene lines: the scenes' voiced seconds, each scene's, and
-   whether they and the render's closing hold land within 10 percent of the
-   brief's `length`. Before voicing an own voice on the CPU, tell the user the
-   time setup's cost line gives for this narration's length.
+   follows the scene lines: the scenes' total voiced seconds, then each
+   scene's, and whether they and the render's closing hold land within 10
+   percent of the brief's `length`. Before voicing an own voice on the CPU,
+   tell the user the time setup's cost line gives for this narration's length.
 3. **On a pass** (exit 0), the stage has written `voice.json` in the run
    folder: per scene its WAV under `.cache/voice/`, its duration and each
    word's start and end in seconds from the start of that scene's WAV. Report
@@ -54,7 +54,7 @@ in Arabic.
    `script.md`, then compile, run the support check and the script gates, and
    voice again. If that rewrite fails the script's `budget` gate, or a
    rewrite that passes the `budget` gate fails `voice length` again, stop and
-   relay both lines.
+   relay the `script budget` line and the latest `voice length` line.
    Exit 1 with no scene lines and no `voice: <vendor> quota reached` (step 5)
    is an input or tool error (an unknown narrator, a scene with no narration,
    a Gemini narrator or own voice with no `GEMINI_API_KEY`, an ElevenLabs
