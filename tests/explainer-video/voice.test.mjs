@@ -448,3 +448,47 @@ test("an ElevenLabs narrator with its key voices through the elevenlabs backend"
     [["elevenlabs", "JBFqnCBsd6RMkjVDRZzb"]],
   );
 });
+
+test("an ElevenLabs quota stop names ElevenLabs and keeps nothing it did not voice", () => {
+  const fx = fixture();
+  ELEVEN(fx);
+  const r = run(fx, {
+    ELEVENLABS_API_KEY: "test-key",
+    EXPLAINER_VIDEO_FAKE_QUOTA: "0",
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: ElevenLabs quota reached \(ElevenLabs answered HTTP 401: This request exceeds your quota limit\); 0 scene\(s\) voiced before it are kept\./m,
+  );
+  assert.equal(synths(fx).length, 0);
+});
+
+// The real backend on a stubbed fetch: ElevenLabs answers a spent quota with
+// 400 or 401 and `detail.status: "quota_exceeded"` (backend.mjs cites the
+// doc), not 429.
+test("the real ElevenLabs backend reads quota_exceeded as a quota stop and invalid_api_key as not one", async () => {
+  const { synthesize } =
+    await import("../../skills/explainer-video/scripts/lib/backend.mjs");
+  const real = globalThis.fetch;
+  const answer = (status) => async () =>
+    new Response(
+      JSON.stringify({ detail: { status, message: `${status} message` } }),
+      { status: 401 },
+    );
+  const narrator = { backend: "elevenlabs", voice: "JBFqnCBsd6RMkjVDRZzb" };
+  try {
+    globalThis.fetch = answer("quota_exceeded");
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: true,
+      vendor: "ElevenLabs",
+      message: "ElevenLabs answered HTTP 401: quota_exceeded message",
+    });
+    globalThis.fetch = answer("invalid_api_key");
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: false,
+    });
+  } finally {
+    globalThis.fetch = real;
+  }
+});

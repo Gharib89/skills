@@ -648,6 +648,11 @@ test("an ElevenLabs key it refuses reads refused with its reason; one it takes i
     calls(fx).map((c) => c.call),
     ["elevenlabsKey", "elevenlabsKey"],
   );
+  // Each check reads the narrator's own voice.
+  const george = JSON.parse(
+    fs.readFileSync(path.join(source, "narrators.json"), "utf8"),
+  ).narrators.find((n) => n.id === "elevenlabs-george").voice;
+  assert.ok(calls(fx).every((c) => c.voice === george));
   assert.ok(!fs.existsSync(settings(fx)));
 });
 
@@ -666,7 +671,11 @@ const enrolled = (fx, name = "maya") => {
   fs.writeFileSync(path.join(dir, "clip.wav"), "wav");
   fs.writeFileSync(
     path.join(dir, "consent.json"),
-    JSON.stringify({ speaker: name, gender: "female", clip: "ab".repeat(32) }),
+    JSON.stringify({
+      name,
+      gender: "female",
+      clip: crypto.createHash("sha256").update("wav").digest("hex"),
+    }),
   );
 };
 

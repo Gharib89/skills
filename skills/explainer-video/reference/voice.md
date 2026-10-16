@@ -23,17 +23,18 @@ in Arabic.
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
    `model:kokoro-82m` and `model:wav2vec2-base-960h`; Egyptian Arabic
    `model:egyptian-arabic-wav2vec2` and `key:gemini`; an ElevenLabs narrator
-   `key:elevenlabs` with the English aligner; an own voice (`own:<name>`) the
-   Arabic rows plus `own-voice` and `uv`. Run the setup check with `--voice`
-   set to the narrator this stage uses (`narrator`, else the language's
-   default above) first; any row missing, run SKILL.md's Setup steps before
-   voicing.
+   `key:elevenlabs` and `model:wav2vec2-base-960h`; an own voice
+   (`own:<name>`) the Arabic rows plus `own-voice` and `uv`. Run the setup
+   check with `--voice` set to the narrator this stage uses (`narrator`, else
+   the language's default above) first; any row missing, run SKILL.md's Setup
+   steps before voicing.
 2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
    prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
    rate · pass|fail: <why>`, then a summary line. A scene whose narration,
    narrator and language (and, for an own voice, the enrolled clip) are
-   unchanged is a cache hit and is not voiced again. An own voice converts
-   each render on this machine, on the CPU at about the cost setup printed.
+   unchanged is a cache hit and is not voiced again. Before voicing an own
+   voice on the CPU, tell the user the time setup's cost line gives for this
+   narration's length.
 3. **On a pass** (exit 0), the stage has written `voice.json` in the run
    folder: per scene its WAV under `.cache/voice/`, its duration and each
    word's start and end in seconds from the start of that scene's WAV. Report

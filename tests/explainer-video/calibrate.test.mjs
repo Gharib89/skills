@@ -66,7 +66,7 @@ test("calibration measures each English narrator's rate in words per second and 
   const { out, calls, before, after } = calibrateCopy("en");
   assert.deepEqual(
     calls.map((c) => c.voice),
-    ["bf_emma", "am_fenrir"],
+    ["bf_emma", "am_fenrir", "JBFqnCBsd6RMkjVDRZzb"],
   );
   const want = fakeRate(calls[0].text);
   for (const n of after.filter((n) => n.language === "en")) {

@@ -63,10 +63,10 @@ export function dest(r, dirs = userDirs()) {
   return path.join(dirs.cache, TOOL_DIRS[r.kind], lockHash);
 }
 
-// ACE-Step's device for a card's compute capability (null with no NVIDIA
-// card): CUDA from 8.0, which has bfloat16; under it acestep runs CUDA in
-// float16, which gives NaN, so the CPU.
-export const aceDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
+// The torch device ACE-Step and the own voice's conversion run on, for a card's
+// compute capability (null with no NVIDIA card): CUDA from 8.0, which has
+// bfloat16; under it acestep runs CUDA in float16, which gives NaN, so the CPU.
+export const torchDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
 
 // The licences a font must carry for setup to install it or a draft to name it.
 export const LICENCES = ["OFL-1.1", "Apache-2.0"];

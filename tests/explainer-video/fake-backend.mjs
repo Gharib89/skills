@@ -22,8 +22,9 @@
 // `garbled` speaks every word as "mumble", `looped` speaks the sentence twice,
 // `slowly` holds each letter 8 frames. A `gemini` narrator speaks Arabic the
 // same way in the Egyptian aligner's vocabulary (see gemini below), and
-//   EXPLAINER_VIDEO_FAKE_QUOTA  a Gemini call throws the real quota error once
-//                               this many synthesize calls are in the log
+//   EXPLAINER_VIDEO_FAKE_QUOTA  a Gemini or ElevenLabs call throws its vendor's
+//                               quota error once this many synthesize calls
+//                               are in the log
 // geminiKey refuses the key `bad-key` as API_KEY_INVALID and takes any other;
 // elevenlabsKey refuses it as invalid_api_key. An `elevenlabs` narrator speaks
 // English like Kokoro, and an `own` one Arabic like its base Gemini narrator.
@@ -190,16 +191,18 @@ const toSamples = (frames) => {
   return { samples, sampleRate: 16000 };
 };
 
+// The vendor's quota error once EXPLAINER_VIDEO_FAKE_QUOTA calls are logged.
+function quota(vendor, message) {
+  const at = process.env.EXPLAINER_VIDEO_FAKE_QUOTA;
+  if (at && synthCalls() >= +at)
+    throw Object.assign(new Error(message), { quota: true, vendor });
+}
+
 // A Gemini narrator speaks Arabic in the Arabic vocabulary's ids, blanks as
 // `[PAD]`; its markers are مشوش (every word ممم), مكرر (the sentence twice) and
 // ببطء (each letter held 8 frames).
 function gemini(text, entry) {
-  const quota = process.env.EXPLAINER_VIDEO_FAKE_QUOTA;
-  if (quota && synthCalls() >= +quota)
-    throw Object.assign(
-      new Error("Gemini answered HTTP 429: You exceeded your current quota"),
-      { quota: true },
-    );
+  quota("Gemini", "Gemini answered HTTP 429: You exceeded your current quota");
   log({ call: "synthesize", ...entry, text });
   const pad = AR_VOCAB["[PAD]"];
   const clean = text.normalize("NFKC").replace(/[ً-ْٰـ]/g, "");
@@ -233,8 +236,8 @@ export async function geminiKey(key) {
 }
 
 // A key check that spends no credits.
-export async function elevenlabsKey(key) {
-  log({ call: "elevenlabsKey" });
+export async function elevenlabsKey(key, voice) {
+  log({ call: "elevenlabsKey", voice });
   return key === "bad-key"
     ? { ok: false, reason: "invalid_api_key" }
     : { ok: true };
@@ -276,6 +279,12 @@ export async function synthesize({ text, narrator, tools }) {
       base: narrator.base.id,
       clipHash: narrator.clipHash,
     });
+  // ElevenLabs' message for a spent quota (docs changelog 2025-05-05).
+  if (narrator.backend === "elevenlabs")
+    quota(
+      "ElevenLabs",
+      "ElevenLabs answered HTTP 401: This request exceeds your quota limit",
+    );
   log(
     narrator.backend === "elevenlabs"
       ? {

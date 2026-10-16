@@ -117,10 +117,7 @@ if (!speakers.length)
     `no narrator speaks ${brief.language} (${[...new Set(all.map((n) => n.language))].join(", ")})`,
   );
 brief.voice ??= speakers.find((n) => n.default).id;
-if (
-  !speakers.some((n) => n.id === brief.voice) &&
-  !narrator(brief.voice, brief.language)
-)
+if (!narrator(brief.voice, brief.language))
   refuse(
     "voice",
     brief.voice,

@@ -8,15 +8,14 @@
 // reads, 8 to 30 s of one speaker; enrolling a name again replaces it.
 // stdout: one line, the enrollment or the removal
 // writes: <data>/voices/<name>/clip.wav (16-bit PCM, 24 kHz, mono) and
-//         consent.json { speaker, gender, statement, date, clip: sha256 of
+//         consent.json { name, gender, statement, date, clip: sha256 of
 //         clip.wav, seconds }; remove deletes the folder
 // stderr: a clip outside 8 to 30 s is refused and nothing is kept; removing a
 //         name nobody enrolled
 // exit:   0 done · 1 refused · 2 usage
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { OWN_NAME, ownVoiceDir } from "../lib/narrators.mjs";
+import { clipHash, OWN_NAME, ownVoiceDir } from "../lib/narrators.mjs";
 import { loadBackend } from "../lib/tools.mjs";
 
 const usage =
@@ -81,14 +80,11 @@ try {
     path.join(dir, "consent.json"),
     JSON.stringify(
       {
-        speaker: name,
+        name,
         gender,
         statement,
         date: new Date().toISOString(),
-        clip: crypto
-          .createHash("sha256")
-          .update(fs.readFileSync(path.join(dir, "clip.wav")))
-          .digest("hex"),
+        clip: clipHash(path.join(dir, "clip.wav")),
         seconds: s,
       },
       null,

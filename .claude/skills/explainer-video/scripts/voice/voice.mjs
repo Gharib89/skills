@@ -16,16 +16,16 @@
 // writes: <run>/voice.json, the word timeline, only when every scene passes
 // stderr: a Gemini or ElevenLabs narrator with no key (an own voice speaks
 //         through Gemini), or an own voice with no consent record, is refused
-//         before any synthesis; a quota stop (HTTP 429) counts the scenes kept
+//         before any synthesis; a quota stop counts the scenes kept
 // exit:   0 every scene passes · 1 refused for its input or a missing key, a
 //         scene fails QC, a quota stop, or synthesis or alignment failed ·
 //         2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { OWN, narrator as findNarrator } from "../lib/narrators.mjs";
+import { OWN_PREFIX, narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { loadBackend, toolPaths } from "../lib/tools.mjs";
+import { catalogue, loadBackend, toolPaths } from "../lib/tools.mjs";
 import { FRAME, align, transcribe } from "./align.mjs";
 import { check } from "./qc.mjs";
 
@@ -50,8 +50,8 @@ const language = script.language ?? "en";
 const narrator = findNarrator(script.narrator, language);
 if (!narrator) {
   console.error(
-    script.narrator?.startsWith(OWN)
-      ? `voice: own voice ${script.narrator.slice(OWN.length)} is not enrolled with a consent record: enroll it (own-voice.mjs enroll) or choose another narrator in the brief`
+    script.narrator?.startsWith(OWN_PREFIX)
+      ? `voice: own voice ${script.narrator.slice(OWN_PREFIX.length)} is not enrolled with a consent record for its clip: enroll it (own-voice.mjs enroll) or choose another narrator in the brief`
       : `voice: no narrator ${script.narrator ?? "default"} for ${language}`,
   );
   process.exit(1);
@@ -169,20 +169,17 @@ function wav(file, samples, rate) {
 }
 
 const missing = scenes.filter((s) => !s.cached);
-// A Gemini or ElevenLabs narrator speaks only on the user's own key: no other
-// narrator stands in, since the brief chose this voice. An own voice speaks
-// through its base narrator's.
-const KEYS = {
-  gemini: ["GEMINI_API_KEY", "https://aistudio.google.com/apikey"],
-  elevenlabs: [
-    "ELEVENLABS_API_KEY",
-    "https://elevenlabs.io/app/settings/api-keys",
-  ],
-};
-const [keyEnv, keyUrl] = KEYS[narrator.base?.backend ?? narrator.backend] ?? [];
-if (missing.length && keyEnv && !process.env[keyEnv]) {
+// A Gemini or ElevenLabs narrator speaks only on the user's own key, its
+// backend's key row in setup/rows.json: no other narrator stands in, since the
+// brief chose this voice. An own voice speaks through its base narrator's.
+const keyRow = catalogue().find(
+  (r) =>
+    r.kind === "key" &&
+    r.backend === (narrator.base?.backend ?? narrator.backend),
+);
+if (missing.length && keyRow && !process.env[keyRow.env]) {
   console.error(
-    `voice: narrator ${narrator.id} needs ${keyEnv}: get a free key at ${keyUrl}, or choose another narrator in the brief`,
+    `voice: narrator ${narrator.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in the brief`,
   );
   process.exit(1);
 }
@@ -229,7 +226,7 @@ try {
   // Each group is cached as it passes, so a rerun voices only what is missing.
   if (e.quota)
     console.error(
-      `voice: ${narrator.backend === "elevenlabs" ? "ElevenLabs" : "Gemini"} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota), which voices only the missing scenes; use a paid key; or choose another narrator in the brief`,
+      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota), which voices only the missing scenes; use a paid key; or choose another narrator in the brief`,
     );
   else console.error(`voice: ${e.message}`);
   process.exit(1);

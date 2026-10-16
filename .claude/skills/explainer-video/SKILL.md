@@ -72,28 +72,8 @@ To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
 and what an earlier install of a missing row left half done.
 
-## Own voice
-
-An **own voice** narrates Arabic in a real person's voice: the default Arabic
-narrator of the speaker's gender is voiced through Gemini, then converted on
-this machine to an enrolled clip with Chatterbox VC. Enroll one only when the
-user asks for their own voice, never on your own initiative.
-
-1. **Consent.** Ask the user who the speaker is and to confirm that the
-   speaker consents to narrating videos in this voice. Without a clear yes,
-   enroll nothing. Keep their answer, word for word, as the statement.
-2. **Enroll.** `node <skill>/scripts/voice/own-voice.mjs enroll <name> <clip>
-   --gender female|male --consent "<statement>"`, `<name>` a short lowercase
-   name and `<clip>` 8 to 30 s of the speaker alone, in any format ffmpeg
-   reads. It converts the clip to 24 kHz mono and stores it with the consent
-   record in the user data store. Exit 1 names a clip outside 8 to 30 s:
-   relay it and ask for another clip.
-3. **Use.** The brief's `voice=own:<name>`, with `language=ar`, names it;
-   setup's `--voice own:<name>` lists its rows (`own-voice`, `uv`,
-   `key:gemini`).
-4. **Remove.** When the user withdraws consent or asks to remove the voice,
-   `node <skill>/scripts/voice/own-voice.mjs remove <name>` deletes the clip
-   and the consent record; a brief naming it is then refused.
+When the user asks for their own voice, or to remove one, read
+[reference/own-voice.md](reference/own-voice.md) and run its steps.
 
 ## Brief
 
@@ -121,7 +101,8 @@ must include and must avoid. The user's request beside the sources, the
    female voice asked for is that language's default narrator of that gender.
    An ElevenLabs narrator (`elevenlabs-george`, on the user's
    `ELEVENLABS_API_KEY`) or an own voice is the `voice` only when the steering
-   prompt names it.
+   prompt asks for it; for "my voice" with no enrolled name, enroll one first
+   (Setup).
    It prints one `brief <knob>: <value>` line per knob, then `brief: written
    -> brief.json`: show the knob lines to the user as the brief and go on
    without waiting for their approval.

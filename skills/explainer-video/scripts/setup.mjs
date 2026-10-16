@@ -29,11 +29,14 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { OWN, narrator as findNarrator, narrators } from "./lib/narrators.mjs";
+import {
+  OWN_PREFIX,
+  narrator as findNarrator,
+  narrators,
+} from "./lib/narrators.mjs";
 import { userDirs } from "./lib/paths.mjs";
 import {
   TOOL_DIRS,
-  aceDevice,
   catalogue as readCatalogue,
   dest,
   installFont,
@@ -41,6 +44,7 @@ import {
   loadBackend,
   skill,
   staged,
+  torchDevice,
 } from "./lib/tools.mjs";
 
 const usage = "usage: node setup.mjs check|install [--all] [--voice <id>]";
@@ -56,7 +60,7 @@ if (
   process.exit(2);
 }
 const all = flags.includes("--all");
-const narrator = voiceId?.startsWith(OWN)
+const narrator = voiceId?.startsWith(OWN_PREFIX)
   ? findNarrator(voiceId, "ar")
   : narrators().find((n) =>
       voiceId ? n.id === voiceId : n.language === "en" && n.default,
@@ -102,11 +106,12 @@ const filesSize = (r) => r.files?.reduce((n, f) => n + f.size, 0);
 const size = (r) =>
   r.kind === "uv" ? r.size + filesSize(r) : (r.size ?? filesSize(r));
 
-// A row with a CPU cost (ACE-Step) runs on the device aceDevice picks; on the
-// CPU, a machine with less RAM than the cost names is refused before download.
+// A row with a CPU cost (ACE-Step, own voice) runs on the device torchDevice
+// picks; on the CPU, a machine with less RAM than the cost names is refused
+// before download.
 const cap = rows.some((r) => r.cpu) ? await backend.computeCapability() : null;
 const shortOfRam = (r) =>
-  r.cpu && aceDevice(cap) === "cpu" && backend.memory() < r.cpu.ram;
+  r.cpu && torchDevice(cap) === "cpu" && backend.memory() < r.cpu.ram;
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
   const s = fs.lstatSync(p);
@@ -123,7 +128,7 @@ for (const r of rows.filter((r) => r.kind === "key")) {
   keys.set(
     r,
     value
-      ? await backend[CHECKS[r.backend]](value).then(
+      ? await backend[CHECKS[r.backend]](value, narrator.voice).then(
           (k) =>
             k.ok
               ? "present"
@@ -304,7 +309,7 @@ function report(state, staleInstalls) {
     const s = r.cpu.seconds;
     lines.push(
       "",
-      aceDevice(cap) === "cuda"
+      torchDevice(cap) === "cuda"
         ? `${r.id} runs on the GPU here (compute capability ${cap.toFixed(1)}).`
         : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0${r.cpu.why ? `: ${r.cpu.why}` : ""}` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of ${r.cpu.of}.`,
     );

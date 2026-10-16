@@ -37,7 +37,6 @@ import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
 import { ACE_CAPTION, bedLevel, score } from "../score/score.mjs";
 import {
-  aceDevice,
   catalogue,
   compositionAssets,
   dest,
@@ -47,6 +46,7 @@ import {
   lockHash,
   renderInputs,
   skill,
+  torchDevice,
 } from "../lib/tools.mjs";
 import {
   CUE_CHARS,
@@ -288,7 +288,7 @@ if (scored) {
   const seed = parseInt(hash(slug).slice(0, 8), 16);
   const level = r3(bedLevel(voiced.pcm, voiced.rate, scenes));
   const { perMinute } = floors(profile).sfx;
-  const device = ace && aceDevice(await backend.computeCapability());
+  const device = ace && torchDevice(await backend.computeCapability());
   const engine = path.join(skill, "scripts", "score");
   const code = fs
     .readdirSync(engine)

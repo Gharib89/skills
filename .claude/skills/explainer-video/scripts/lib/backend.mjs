@@ -11,7 +11,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
-import { aceDevice, skill, toolPaths } from "./tools.mjs";
+import { skill, toolPaths, torchDevice } from "./tools.mjs";
 
 const win = process.platform === "win32";
 // Children write to stderr, so stdout carries only setup's own table.
@@ -618,7 +618,7 @@ async function geminiError(r) {
   } catch {}
   return Object.assign(
     new Error(`Gemini answered HTTP ${r.status}: ${message}`),
-    { quota: r.status === 429 },
+    { quota: r.status === 429, vendor: "Gemini" },
   );
 }
 
@@ -682,16 +682,20 @@ export async function geminiKey(key) {
 
 const ELEVENLABS = "https://api.elevenlabs.io/v1";
 
-// An ElevenLabs answer's error message: its JSON's detail, else its text.
+// An ElevenLabs answer's error message: its JSON's detail, else its text. A
+// spent quota answers 400 or 401 with `detail.status: "quota_exceeded"`
+// (https://elevenlabs.io/docs/help-center/technical/api-error-code-400-or-401).
 async function elevenlabsError(r) {
   const body = await r.text();
-  let message = body;
+  let detail = {};
   try {
-    message = JSON.parse(body).detail?.message ?? body;
+    detail = JSON.parse(body).detail ?? {};
   } catch {}
   return Object.assign(
-    new Error(`ElevenLabs answered HTTP ${r.status}: ${message}`),
-    { quota: r.status === 429 },
+    new Error(
+      `ElevenLabs answered HTTP ${r.status}: ${detail.message ?? body}`,
+    ),
+    { quota: detail.status === "quota_exceeded", vendor: "ElevenLabs" },
   );
 }
 
@@ -717,10 +721,10 @@ async function elevenlabs(text, narrator) {
   return { samples, sampleRate: 24000 };
 }
 
-// Whether ElevenLabs takes `key`, read from a voice's metadata so no credits
-// are spent; a bad key answers `{"detail":{"status":"invalid_api_key"}}`.
-export async function elevenlabsKey(key) {
-  const r = await fetch(`${ELEVENLABS}/voices/JBFqnCBsd6RMkjVDRZzb`, {
+// Whether ElevenLabs takes `key`, read from the narrator's voice metadata so no
+// credits are spent; a bad key answers `{"detail":{"status":"invalid_api_key"}}`.
+export async function elevenlabsKey(key, voice) {
+  const r = await fetch(`${ELEVENLABS}/voices/${voice}`, {
     headers: { "xi-api-key": key },
   });
   if (r.status === 200) return { ok: true };
@@ -781,7 +785,7 @@ async function ownVoice(text, narrator, tools) {
       inWav,
     ]);
     const dir = tools.ownVoice;
-    const device = aceDevice(await computeCapability());
+    const device = torchDevice(await computeCapability());
     const r = spawnSync(
       "uv",
       [

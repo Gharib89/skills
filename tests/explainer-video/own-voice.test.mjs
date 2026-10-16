@@ -64,7 +64,7 @@ const consent = (fx, name = "maya") =>
     fs.readFileSync(path.join(voices(fx), name, "consent.json"), "utf8"),
   );
 
-test("enroll writes a 24 kHz mono 16-bit clip and a consent record naming the speaker, statement, hash and length", () => {
+test("enroll writes a 24 kHz mono 16-bit clip and a consent record naming the voice, statement, hash and length", () => {
   const fx = fixture();
   const r = enroll(fx);
   assert.equal(r.code, 0, r.out + r.err);
@@ -83,11 +83,11 @@ test("enroll writes a 24 kHz mono 16-bit clip and a consent record naming the sp
     "clip",
     "date",
     "gender",
+    "name",
     "seconds",
-    "speaker",
     "statement",
   ]);
-  assert.equal(c.speaker, "maya");
+  assert.equal(c.name, "maya");
   assert.equal(c.gender, "female");
   assert.equal(c.statement, "I am Maya and I agree.");
   assert.equal(c.seconds, 12);
@@ -228,7 +228,7 @@ test("the voice stage speaks an Arabic script through the own voice, caches by t
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(
     r.err,
-    /^voice: own voice maya is not enrolled with a consent record: enroll it \(own-voice\.mjs enroll\) or choose another narrator in the brief$/m,
+    /^voice: own voice maya is not enrolled with a consent record for its clip: enroll it \(own-voice\.mjs enroll\) or choose another narrator in the brief$/m,
   );
   assert.equal(synths(fx).length, 2);
 });
@@ -242,6 +242,20 @@ test("an own voice with no GEMINI_API_KEY is refused with the Gemini message nam
   assert.match(
     r.err,
     /^voice: narrator own:maya needs GEMINI_API_KEY: get a free key at https:\/\/aistudio\.google\.com\/apikey, or choose another narrator in the brief$/m,
+  );
+  assert.ok(!fs.existsSync(fx.log) || !synths(fx).length);
+});
+
+test("a clip changed after enrollment has no consent record for it: the voice stage refuses before any synthesis", () => {
+  const fx = fixture();
+  assert.equal(enroll(fx).code, 0);
+  script(fx);
+  fs.appendFileSync(path.join(voices(fx), "maya", "clip.wav"), "another voice");
+  const r = voice(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: own voice maya is not enrolled with a consent record for its clip: /m,
   );
   assert.ok(!fs.existsSync(fx.log) || !synths(fx).length);
 });
