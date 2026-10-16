@@ -81,8 +81,8 @@ delivery it reports Render's last line and the videos-folder path.
    (step 4): it carries a banner with each red gate's line and reopens every
    card the gates' findings name. A fix that changes the narration, order or
    count is the user's revision there. A finding that names no scene
-   (`loudness`, `captions`) reopens no card: relay its line and `gates.md`.
-   End the turn; the revisions come back through step 5.
+   (`loudness`, `captions`, `sfx`) reopens no card: relay its line and
+   `gates.md`. End the turn; the revisions come back through step 5.
 8. **After delivery**, build once more (step 4): it cuts each scene's stretch of
    the delivered MP4 into a clip under 15 MB, and its `delivered` version plays
    them on the cards. Post it as in step 4, then report Render's last line and

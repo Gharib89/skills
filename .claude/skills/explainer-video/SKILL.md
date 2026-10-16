@@ -289,8 +289,9 @@ narrator: am_fenrir
 4. **Voice.** Run the voice stage above on the same run folder, again after
    any narration edit.
 5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`. It
-   mixes the **score** under the narration unless the brief turns it off,
-   masters to -14 LUFS, renders, then runs the gates (see Gates) and prints
+   mixes in the **score**, synthesised music ducked under speech with sound
+   effects at the cuts and the end, unless the brief turns it off, masters to
+   -14 LUFS, renders, then runs the gates (see Gates) and prints
    their lines. Only when every gate passes does it print one `delivery
    <check>: pass|fail` line per delivery check (`resolution`, `frame rate`,
    `aspect`, `duration`, `audio`, `srt`), then `delivered:
@@ -307,9 +308,8 @@ narrator: am_fenrir
    `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
    and `out/` was emptied, an earlier render's files too. A `style profile
-   <name>` line names what the skill refuses in that profile (a colour pair
-   under its contrast floor, or a `gates` value): fix it or choose another
-   profile. `<row> is not installed`: run
+   <name>` line names a colour pair or `gates` value the skill refuses: fix it
+   or choose another profile. `<row> is not installed`: run
    setup. `no script.json`, `no voice.json`, `voice.json does not match` or
    `voice.json holds narrator` names the stage to run first. `no render fonts
    for language <x>`: this
@@ -350,8 +350,7 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 - `captions`: every word timed in order inside its scene, every cue non-empty,
   in order, at most 84 characters and inside the video, and the SRT equal to
   the burned-in cues.
-- `sfx`: at most 24 sound effects in any minute of `score.json`, which the
-  score keeps under.
+- `sfx`: at most 24 sound effects in any minute of `score.json`.
 
 A summary line follows, `gates: <n> pass, <m> fail`, ending on a red run with
 `next: fix attempt <a> of 2` or `stop: red after two fix attempts, no video`.
