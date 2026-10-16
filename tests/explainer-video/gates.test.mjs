@@ -177,6 +177,70 @@ test("the narration is mastered to -14 LUFS under the peak floor before the vide
   assert.equal(path.basename(path.dirname(m[0].output)), "composition");
 });
 
+const wav = (f) => {
+  const b = fs.readFileSync(f);
+  return {
+    channels: b.readUInt16LE(22),
+    rate: b.readUInt32LE(24),
+    bits: b.readUInt16LE(34),
+    seconds: b.readUInt32LE(40) / b.readUInt32LE(28),
+  };
+};
+
+test("by default a score of the whole timeline is mixed under the narration, its cues on the cuts", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const [m] = calls(fx, "master");
+  const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  assert.deepEqual(wav(m.bed), {
+    channels: 2,
+    rate: 48000,
+    bits: 24,
+    seconds: Math.round(timeline.total * 48000) / 48000,
+  });
+  const s = JSON.parse(read(fx.dir, "score.json"));
+  assert.equal(s.score, "on");
+  assert.ok(s.preset && Number.isInteger(s.seed), JSON.stringify(s));
+  const last = timeline.scenes.at(-1).words.at(-1);
+  assert.deepEqual(s.cues, [
+    ...timeline.scenes.slice(1).map((sc) => ({ type: "whoosh", t: sc.start })),
+    { type: "sting", t: last.end },
+  ]);
+});
+
+test("the same timings render the cached score again", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const first = calls(fx, "master")[0].bed;
+  const before = fs.statSync(first).mtimeMs;
+  assert.equal(stage(fx, "render/render.mjs").code, 0);
+  const again = calls(fx, "master")[1].bed;
+  assert.equal(again, first);
+  assert.equal(fs.statSync(again).mtimeMs, before);
+});
+
+test("a brief with the score off masters the narration alone", () => {
+  const fx = fixture();
+  const b = spawnSync(
+    process.execPath,
+    [
+      path.join(skill, "scripts", "brief", "brief.mjs"),
+      fx.dir,
+      "voice=am_fenrir",
+      "score=off",
+    ],
+    { env: fx.env, encoding: "utf8" },
+  );
+  assert.equal(b.status, 0, b.stderr);
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(calls(fx, "master")[0].bed, undefined);
+  assert.deepEqual(JSON.parse(read(fx.dir, "score.json")), {
+    score: "off",
+    cues: [],
+  });
+});
+
 test("a clipped title fails layout, delivers nothing, and passes on the fix", () => {
   const fx = fixture();
   const r = render(fx, titled("clipped"));

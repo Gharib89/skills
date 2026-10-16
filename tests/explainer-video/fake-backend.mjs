@@ -211,8 +211,8 @@ export async function loudness(file) {
   return { lufs: v.lufs ?? -14.0, peak: v.peak ?? -1.6 };
 }
 
-export async function master(input, output, { lufs, peak }) {
-  log({ call: "master", input, output, lufs, peak });
+export async function master(input, output, { lufs, peak, bed }) {
+  log({ call: "master", input, output, lufs, peak, bed });
   fs.copyFileSync(input, output);
 }
 

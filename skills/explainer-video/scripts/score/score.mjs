@@ -26,6 +26,26 @@ const SECTION = {
 };
 // The sound effects' rule levels sit a mix under a bed at this RMS (dBFS).
 const SFX_BED = -20;
+// The music's RMS before the duck, in dB under the narration's speech RMS.
+const UNDER = 8;
+
+// The bed level (dBFS RMS) for a narration: its RMS over the words' spans,
+// UNDER dB down. pcm: 16-bit mono samples at `rate`; scenes' times absolute.
+export function bedLevel(pcm, rate, scenes) {
+  let e = 0;
+  let count = 0;
+  for (const sc of scenes)
+    for (const w of sc.words)
+      for (
+        let i = Math.round(w.start * rate);
+        i < Math.min(pcm.length, Math.round(w.end * rate));
+        i++
+      ) {
+        e += (pcm[i] / 32768) ** 2;
+        count++;
+      }
+  return D.toDb(Math.sqrt(e / Math.max(1, count))) - UNDER;
+}
 
 // The duck curve over `total` s: {rate, db}, db[k] the gain in dB at k / rate s.
 // scenes: [{start, duration, words: [{start, end}]}], times absolute.
