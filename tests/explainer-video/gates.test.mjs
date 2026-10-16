@@ -733,6 +733,23 @@ test("the critic judges two rounds of one script at most: a third render carries
   );
   assert.equal(calls(fx, "sheet").length, 6, "no sheets for the third render");
   assert.equal(record(fx).gates.critic.rounds.length, 2);
+  // Verdicts that appear for the third render add no third round.
+  const g = record(fx);
+  const third = path.join(fx.dir, ".cache", "critic", g.render);
+  fs.mkdirSync(third, { recursive: true });
+  for (const f of fs.readdirSync(path.join(fx.dir, g.gates.critic.sheets)))
+    if (f.endsWith(".png"))
+      fs.writeFileSync(
+        path.join(third, f.replace(/\.png$/, ".json")),
+        JSON.stringify({
+          ...CLEAN,
+          failures: [{ kind: "invented", what: "x" }],
+        }),
+      );
+  const r3b = stage(fx, "render/render.mjs");
+  assert.equal(r3b.code, 0, r3b.out + r3b.err);
+  assert.match(r3b.out, /^gate critic: pass: .*carried: no third round vs /m);
+  assert.equal(record(fx).gates.critic.rounds.length, 2);
   // New narration is a new script: its critic starts at round 1.
   const r4 = renderUnjudged(fx, SCRIPT.replace("Here is how.", "Here is why."));
   assert.match(r4.out, /^gate critic: pending: round 1 of 2, /m);
@@ -745,7 +762,7 @@ test("a malformed verdict stops the gates, naming the scene and what is wrong", 
   const hook = path.join(fx.dir, record(fx).gates.critic.sheets, "hook.json");
   const scores = CLEAN.scores;
   for (const [verdict, why] of [
-    ["{", /Expected property name|JSON/],
+    ["{", /JSON/],
     [{ scores }, /no failures list/],
     [
       { failures: [{ kind: "ugly", what: "x" }], scores },

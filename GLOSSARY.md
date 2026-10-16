@@ -493,7 +493,7 @@ The music and sound effects an explainer video carries under its narration, synt
 _Avoid_: soundtrack, background music, BGM
 
 **Video gate**:
-An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness, caption timing or sound effects per minute. Each but the critic has a floor the skill sets and a style profile may only tighten; a gate still failing after two fix attempts stops the run, and no video ships.
+An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness, caption timing or sound effects per minute. Each has a floor the skill sets, and a style profile may only tighten every one but the critic's; a gate still failing after two fix attempts stops the run, and no video ships.
 _Avoid_: QA, check, local gate
 
 **Critic**:
