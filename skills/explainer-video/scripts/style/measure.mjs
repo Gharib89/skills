@@ -129,15 +129,43 @@ function theme(parts) {
       /<a:(?:srgbClr val|sysClr [^>]*lastClr)="([0-9A-Fa-f]{6})"/g,
     ),
   ].map((m) => `#${m[1].toLowerCase()}`);
-  const fonts = ["majorFont", "minorFont"]
-    .map(
-      (f) =>
-        xml.match(
-          new RegExp(`<a:${f}>[\\s\\S]*?<a:latin typeface="([^"]+)"`),
-        )?.[1],
-    )
-    .filter(Boolean);
+  const fonts = [
+    ["majorFont", "title"],
+    ["minorFont", "text"],
+  ]
+    .map(([f, role]) => ({
+      role,
+      stack: xml.match(
+        new RegExp(`<a:${f}>[\\s\\S]*?<a:latin typeface="([^"]+)"`),
+      )?.[1],
+    }))
+    .filter((f) => f.stack);
   return { colors, fonts };
+}
+
+// The CSS generic families a font stack can fall back to.
+const GENERIC = [
+  "serif",
+  "sans-serif",
+  "monospace",
+  "cursive",
+  "fantasy",
+  "system-ui",
+  "ui-serif",
+  "ui-sans-serif",
+  "ui-monospace",
+  "ui-rounded",
+];
+// A declared stack's first family and the generic it falls back to; a stack
+// whose first entry is a generic names no family.
+function declaredFont({ role, stack }) {
+  const names = stack
+    .split(",")
+    .map((n) => n.replace(/["']/g, "").trim())
+    .filter(Boolean);
+  if (!names.length || GENERIC.includes(names[0])) return null;
+  const generic = names.find((n) => GENERIC.includes(n));
+  return { family: names[0], role, ...(generic && { generic }) };
 }
 
 fs.rmSync(refs, { recursive: true, force: true });
@@ -317,7 +345,14 @@ fs.writeFileSync(
     {
       sources: given.map((source, i) => ({ kind: kinds[i], source })),
       images: images.map(({ name, source }) => ({ name, source })),
-      fonts: [...new Set(fonts)],
+      fonts: [
+        ...new Map(
+          fonts
+            .map(declaredFont)
+            .filter(Boolean)
+            .map((f) => [`${f.role} ${f.family}`, f]),
+        ).values(),
+      ],
       surfaces,
       accents,
     },

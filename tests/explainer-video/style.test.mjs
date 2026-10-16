@@ -122,7 +122,15 @@ test("a website's declared colours count only where its pages show them, and a d
     "https://acme.test/": {
       pages: [SLIDE, SLIDE],
       colors: ["#cc6c55", "#00ff00"],
-      fonts: ["Source Serif 4"],
+      fonts: [
+        {
+          role: "text",
+          stack: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+        },
+        { role: "title", stack: "'Source Serif 4', serif" },
+        { role: "title", stack: "'Source Serif 4', serif" },
+        { role: "text", stack: "system-ui" },
+      ],
     },
   });
   const r = node("measure.mjs", [run, "https://acme.test/"], env);
@@ -140,7 +148,12 @@ test("a website's declared colours count only where its pages show them, and a d
     declared: true,
   });
   assert.ok(![...c.surfaces, ...c.accents].some((x) => x.hex === "#00ff00"));
-  assert.deepEqual(c.fonts, ["Source Serif 4"]);
+  // Each family keeps the role it plays and its stack's generic family; a
+  // stack naming only a generic declares no family.
+  assert.deepEqual(c.fonts, [
+    { family: "Helvetica Neue", role: "text", generic: "sans-serif" },
+    { family: "Source Serif 4", role: "title", generic: "serif" },
+  ]);
   assert.match(
     r.stdout,
     /^style declared #00ff00: not in the reference images, dropped$/m,
@@ -259,7 +272,10 @@ test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", ()
   assert.equal(both.status, 0, both.stderr);
   const c = candidates(run);
   assert.equal(c.accents[0].hex, "#cc6c55");
-  assert.deepEqual(c.fonts, ["Georgia", "Inter"]);
+  assert.deepEqual(c.fonts, [
+    { family: "Georgia", role: "title" },
+    { family: "Inter", role: "text" },
+  ]);
   assert.match(
     both.stdout,
     /^style declared #000000: not in the reference images, dropped$/m,
