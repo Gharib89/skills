@@ -89,14 +89,7 @@ export function duck(scenes, total) {
 // perMinute: the sfx gate's floor; a cue is dropped when the minute ending at
 // it already holds that many, so no minute holds more.
 // Returns {buf, cues: [{type, t}], spec: {preset, seed, sections}}.
-export function score({
-  scenes,
-  roles = [],
-  total,
-  seed,
-  level,
-  perMinute = 24,
-}) {
+export function score({ scenes, roles = [], total, seed, level, perMinute }) {
   const names = Object.keys(PRESETS);
   const preset = names[seed % names.length];
   const sections = scenes.map((sc, i) => ({

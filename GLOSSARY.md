@@ -489,7 +489,7 @@ A pre-rendered video made outside the composer (a maths animation, a cached 3D s
 _Avoid_: embed, sub-render, segment
 
 **Score**:
-The music and sound effects an explainer video carries under its narration, synthesised in code and arranged to the scene timings: the music ducks under speech, and a sound effect marks each cut and the end of the narration. The same timings and seed give the same score.
+The music and sound effects an explainer video carries under its narration, synthesised in code and arranged to the scene timings: the music ducks under speech, and sound effects mark the cuts and the end of the narration, never more in a minute than the sfx gate's floor. The same timings and seed give the same score.
 _Avoid_: soundtrack, background music, BGM
 
 **Video gate**:

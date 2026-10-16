@@ -73,9 +73,27 @@ const bytes = (r) =>
   Buffer.concat([r.buf.L, r.buf.R].map((x) => Buffer.from(x.buffer)));
 
 test("the same scene timings and seed make the same score, another seed another", () => {
-  const a = score({ scenes: SCENES, total: 8, seed: 5, level: -28 });
-  const b = score({ scenes: SCENES, total: 8, seed: 5, level: -28 });
-  const c = score({ scenes: SCENES, total: 8, seed: 6, level: -28 });
+  const a = score({
+    scenes: SCENES,
+    total: 8,
+    seed: 5,
+    level: -28,
+    perMinute: 24,
+  });
+  const b = score({
+    scenes: SCENES,
+    total: 8,
+    seed: 5,
+    level: -28,
+    perMinute: 24,
+  });
+  const c = score({
+    scenes: SCENES,
+    total: 8,
+    seed: 6,
+    level: -28,
+    perMinute: 24,
+  });
   assert.equal(a.buf.L.length, 8 * 48000);
   assert.ok(bytes(a).equals(bytes(b)), "same seed, same samples");
   assert.deepEqual(a.cues, b.cues);
@@ -84,7 +102,13 @@ test("the same scene timings and seed make the same score, another seed another"
 });
 
 test("the score arranges one section per scene at the scene's start", () => {
-  const r = score({ scenes: SCENES, total: 8, seed: 5, level: -28 });
+  const r = score({
+    scenes: SCENES,
+    total: 8,
+    seed: 5,
+    level: -28,
+    perMinute: 24,
+  });
   assert.deepEqual(
     r.spec.sections.map((s) => [s.type, s.start]),
     [
@@ -113,7 +137,13 @@ test("a cue past the sfx floor's count in its minute is dropped", () => {
 });
 
 test("a whoosh marks each cut and a sting the last word's end", () => {
-  const r = score({ scenes: SCENES, total: 8, seed: 5, level: -28 });
+  const r = score({
+    scenes: SCENES,
+    total: 8,
+    seed: 5,
+    level: -28,
+    perMinute: 24,
+  });
   assert.deepEqual(r.cues, [
     { type: "whoosh", t: 4.5 },
     { type: "sting", t: 6 },

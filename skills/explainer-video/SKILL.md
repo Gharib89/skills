@@ -357,7 +357,7 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   the burned-in cues.
 - `sfx`: at most 24 sound effects in any minute, counted from `score.json`'s
   cues. The score drops a cue that would break the floor, so a red `sfx` is a
-  skill defect: relay it with no fix attempt.
+  skill defect (see On a red gate).
 
 A summary line follows, `gates: <n> pass, <m> fail`, ending on a red run with
 `next: fix attempt <a> of 2` or `stop: red after two fix attempts, no video`.
@@ -374,7 +374,9 @@ attempt counts live in `gates.json`: each gate's count resets when that gate
 passes, and the run's count, which `stop` reads, when every gate passes. Both
 reset when the narration changes, so a red that moves from one gate to another
 still stops.
-On `stop`, stop with no video and run Storyboard step 7.
+On `stop`, stop with no video and run Storyboard step 7. A red `sfx` gets no
+fix attempt, whatever `next:` says: no script change can fix it, so relay its
+line, stop as on `stop`, and say it is a skill defect.
 
 **Floors** are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:

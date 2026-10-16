@@ -8,9 +8,10 @@
 // <run>/composition/ with the narration mastered (the score from
 // score/score.mjs mixed under it, unless brief.json turns it off), renders a
 // settled still per scene and then the video with HyperFrames, each cached in
-// <run>/.cache/ by content hash, runs the gates stage (gates/gates.mjs) on out/, checks the MP4
-// with ffprobe, and copies MP4, SRT and poster to the videos folder. A red gate
-// or a failed check empties out/ and delivers nothing. With `--stills` it stops
+// <run>/.cache/ by content hash, runs the gates stage (gates/gates.mjs) on
+// out/, checks the MP4 with ffprobe, and copies MP4, SRT and poster to the
+// videos folder. A red gate or a failed check empties out/ and delivers
+// nothing. With `--stills` it stops
 // after the stills: no video, gates, delivery or manifest, for the storyboard.
 // stdout: the gates stage's lines, one `delivery <check>: pass|fail:
 //         <measured> vs <wanted>` line per check, `delivered: <path>`, then
@@ -280,8 +281,7 @@ const voiced = narration(raw);
 
 // The score, unless the brief turns it off or only stills are wanted: cached
 // in .cache/score/ by the timings, roles, seed, level, sfx floor and the
-// engine's code,
-// since a 2-minute score takes seconds to synthesise.
+// engine's code, since a 2-minute score takes seconds to synthesise.
 const briefFile = path.join(run, "brief.json");
 const scored =
   !stillsOnly &&
