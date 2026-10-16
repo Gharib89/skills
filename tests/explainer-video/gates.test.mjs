@@ -530,6 +530,14 @@ test("an Arabic render passes the right to left checks, and each broken reading 
   assert.equal(fixed.code, 0, fixed.out + fixed.err);
 });
 
+test("Arabic text in a code frame, which reads left to right as written, passes the reading checks", () => {
+  const fx = fixture(ARABIC.replace("\\ngh pr create", '\\necho \\"تم\\"'));
+  fx.env.GEMINI_API_KEY = "test-key";
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^gate layout: pass: /m);
+});
+
 test("a gate red three times in a row stops; a changed script starts the count again", () => {
   const fx = fixture();
   const clipped = titled("clipped");

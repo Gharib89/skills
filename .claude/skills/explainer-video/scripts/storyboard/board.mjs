@@ -134,11 +134,11 @@ function narrationBlocks(lines) {
   return blocks;
 }
 
-// A kept term spelled anew across script.md, in place: the title, each scene's
-// narration (its cites aside) and its visual's screen text. The ids of the
-// scenes it changed.
-function renameKept(lines, from, to) {
-  const swap = (t) => rename(t, from, to);
+// Kept terms spelled anew across script.md, in place, from a Map of term to
+// new spelling: the title, each scene's narration (its cites aside) and its
+// visual's screen text. The ids of the scenes they changed.
+function renameKept(lines, spellings) {
+  const swap = (t) => rename(t, spellings);
   // A braced `{written|spoken}` whose written term is respelt loses its
   // spoken form, which spelt out the old term: the new one is said as written.
   const respellNarration = (t) =>
@@ -308,8 +308,8 @@ if (cmd === "apply") {
   const renamed = new Set();
   if (answers.kept?.length) {
     const lines = fs.readFileSync(at("script.md"), "utf8").split("\n");
-    for (const k of answers.kept)
-      for (const id of renameKept(lines, k.term, k.to.trim())) renamed.add(id);
+    const spellings = new Map(answers.kept.map((k) => [k.term, k.to.trim()]));
+    for (const id of renameKept(lines, spellings)) renamed.add(id);
     fs.writeFileSync(at("script.md"), lines.join("\n"));
   }
   for (const s of answers.scenes)

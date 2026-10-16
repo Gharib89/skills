@@ -394,15 +394,28 @@ function showing(dir, t) {
         path.join(dir, "scenes", `${m[1]}.html`),
         "utf8",
       );
-      const rtl = /dir="rtl"/.test(scene);
-      for (const e of scene.matchAll(/<(div|span|bdi)[^>]*>([^<]+)</g))
-        if (e[2].trim())
+      // Each element's `dir`, or null, open around the text: the nearest one
+      // outside it is the box it sits in.
+      const dirs = [];
+      for (const e of scene.matchAll(
+        /<(\/?)(div|span|bdi)\b([^>]*)>([^<]*)/g,
+      )) {
+        if (e[1]) {
+          dirs.pop();
+          continue;
+        }
+        const within = dirs.findLast(Boolean) ?? null;
+        const own = e[3].match(/\sdir="(\w+)"/)?.[1] ?? null;
+        dirs.push(own);
+        if (e[4].trim())
           texts.push({
             scene: m[1],
-            text: e[2].trim(),
-            bdi: e[1] === "bdi",
-            rtl,
+            text: e[4].trim(),
+            bdi: e[2] === "bdi",
+            rtl: (own ?? within) === "rtl",
+            within,
           });
+      }
     }
   for (const m of html.matchAll(
     /<div class="cue clip" data-start="([\d.]+)" data-duration="([\d.]+)"[^>]*>(.*?)<\/div>/g,
@@ -446,17 +459,17 @@ export async function check(dir, times) {
 }
 
 // An element's reading direction as the composition sets it: Arabic text reads
-// right to left in a scene or cue marked so; a Latin run's <bdi>
-// sits in one, isolated unless the `.lat` rule says otherwise, on one line
-// where it says so. A caption
+// right to left in a box or cue marked so, and `within` is the `dir` of the
+// box a scene's element sits in; a Latin run's <bdi> sits in one, isolated
+// unless the `.lat` rule says otherwise, on one line where it says so. A caption
 // word's line height is the `.cue` rule's, against the ink #686 measured for
 // IBM Plex Sans Arabic (1.46 em) and Inter (0.98 em).
-function reading(html, scene, text, bdi, rtl) {
+function reading(html, scene, text, bdi, rtl, within) {
   const cue = html.match(/\.cue \{[^}]*font: \d+ [\d.]+px\/([\d.]+) "([^"]+)"/);
   const arabic = /\p{Script=Arabic}/u.test(text);
   return {
     dir: arabic && rtl ? "rtl" : "ltr",
-    within: bdi && rtl ? "rtl" : null,
+    within: within !== undefined ? within : bdi && rtl ? "rtl" : null,
     bidi:
       bdi && !/\.lat \{[^}]*unicode-bidi: normal/.test(html)
         ? "isolate"
@@ -479,7 +492,7 @@ export async function probe(dir, times) {
     if (process.env.EXPLAINER_VIDEO_FAKE_BLANK) return { t, elements: [] };
     return {
       t,
-      elements: texts.map(({ scene, text, bdi, rtl }, i) => {
+      elements: texts.map(({ scene, text, bdi, rtl, within }, i) => {
         const row = /\bstacked\b/.test(text) ? i - 0.5 : i;
         const top = scene ? 200 + row * 50 : 920;
         const left = /\bedge\b/.test(text) ? 40 : 160;
@@ -504,7 +517,7 @@ export async function probe(dir, times) {
               ? color("accent")
               : color("text"),
           bg: color("bg"),
-          ...reading(html, scene, text, bdi, rtl),
+          ...reading(html, scene, text, bdi, rtl, within),
         };
       }),
       rootDir: [

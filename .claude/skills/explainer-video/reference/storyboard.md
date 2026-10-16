@@ -64,11 +64,12 @@ delivery it reports Render's last line and the videos-folder path.
    carrying no answers is the user talking: answer it here. Resolve the Submit
    thread once the next version is posted, or once the run goes on to Render.
 6. **Apply.** `board apply <file>` writes an edited narration into the scene
-   file, touching only that scene, then each respelt kept term over the title,
-   the narration and the screen text, and prints one `board <id>: approve` or
-   `revise: <note>` line per card and a `board kept: <term> -> <to>` line per
-   term; a scene a respelt term changed is in the redo list. `board: approved`:
-   go on to Render. `board: redo <ids>`: first run `brief.mjs` with the
+   file, touching only that scene, then every respelt kept term at once (so two
+   can swap) over the title, the narration and the screen text, and prints one
+   `board <id>: approve` or `revise: <note>` line per card and a
+   `board kept: <term> -> <to>` line per term; a scene a respelt term changed
+   is in the redo list. `board: approved`: go on to Render.
+   `board: redo <ids>`: first run `brief.mjs` with the
    `; brief` arguments it lists, if any, and follow its redo line; then, for
    each card revised with a note,
    change that scene in `script.md` as the note asks (a `revise: no note` line

@@ -65,9 +65,11 @@ export function keptTerms(script) {
   return [...seen];
 }
 
-// Each Latin run that is `from` replaced by `to`. A longer run holding it
-// (`CI/CD`, `pull request review`) is a kept term of its own, left as it is.
-export const rename = (text, from, to) =>
+// Each Latin run that is a key of `spellings` (a Map of kept term to its new
+// spelling) replaced by its value, all in one pass, so two terms can swap. A
+// longer run holding one (`CI/CD`, `pull request review`) is a kept term of its
+// own, left as it is.
+export const rename = (text, spellings) =>
   splitLatin(text)
-    .map((p, i) => (i % 2 && p === from ? to : p))
+    .map((p, i) => (i % 2 && spellings.has(p) ? spellings.get(p) : p))
     .join("");

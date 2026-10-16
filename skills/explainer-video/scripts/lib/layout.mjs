@@ -14,8 +14,10 @@ const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 // checks per frame): Arabic text reads right to left with no Latin run left in
 // it; a Latin run in it is isolated and on one line, so a term keeps its word
 // order; and Arabic text's line height is at least the ink its own text spans
-// in its face.
+// in its face. Text in a box marked `dir="ltr"` (a code frame, a terminal) is
+// code, which reads left to right as written whatever script it holds.
 function rtl(e, bad) {
+  if (e.within === "ltr") return;
   if (ARABIC_SCRIPT.test(e.text)) {
     if (e.dir !== "rtl") bad(`Arabic reads ${e.dir}`);
     if (/[A-Za-z]/.test(e.text)) bad("Latin run not isolated in");

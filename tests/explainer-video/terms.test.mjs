@@ -9,18 +9,24 @@ import {
 test("a respelt kept term changes only where it stands as a whole Latin run", () => {
   // `CI/CD`, `node.js` and `pull request review` are kept terms of their own.
   assert.equal(
-    rename("الـ CI و CI/CD", "CI", "GitHub Actions"),
+    rename("الـ CI و CI/CD", new Map([["CI", "GitHub Actions"]])),
     "الـ GitHub Actions و CI/CD",
   );
   assert.equal(
-    rename("نشغل node.js و node", "node", "Node"),
+    rename("نشغل node.js و node", new Map([["node", "Node"]])),
     "نشغل node.js و Node",
   );
   assert.equal(
-    rename("نعمل pull request review و review", "review", "code review"),
+    rename(
+      "نعمل pull request review و review",
+      new Map([["review", "code review"]]),
+    ),
     "نعمل pull request review و code review",
   );
-  assert.equal(rename("وpull request،", "pull request", "PR"), "وPR،");
+  assert.equal(
+    rename("وpull request،", new Map([["pull request", "PR"]])),
+    "وPR،",
+  );
 });
 
 test("a token ends in a Latin word whatever Arabic prefix it carries, and not on punctuation, digits or Arabic", () => {

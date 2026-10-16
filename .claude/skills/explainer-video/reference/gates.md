@@ -17,7 +17,8 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   English term isolated on one line (`Latin run not isolated`, `Latin run
   wraps`), and a line height no less than the ink the text spans in its own
   face, measured in the browser (`line height <h> under the ink <i> of
-  <face>`).
+  <face>`). Code frames and terminals read left to right as written, so their
+  text is exempt.
 - `contrast`: 4.5:1 for body text and 3:1 for large text (24 px, or 18.66 px
   bold), on the same frames. The palette check when the profile loads holds
   the faint, accent and status colours to 3:1 only, since the scenes draw them

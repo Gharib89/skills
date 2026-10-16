@@ -425,6 +425,29 @@ test("an Arabic board lists its kept terms, and one edited changes speech, scree
   assert.ok(!said.some((t) => t.includes("سي آي")), said);
 });
 
+test("kept terms edited together are respelt from the text as it stood, so two can swap", () => {
+  const fx = fixture(ARABIC);
+  fx.env.GEMINI_API_KEY = "test-key";
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  const file = path.join(fx.tmp, "answers.txt");
+  fs.writeFileSync(
+    file,
+    [
+      "explainer-video: board 1 answers (database document answers/board-1)",
+      "hook: Approve",
+      "steps: Approve",
+      "code: Approve",
+      "Kept: branch -> merge",
+      "Kept: merge -> branch",
+    ].join("\n"),
+  );
+  ok(board(fx, "apply", file), "apply");
+  const md = read(fx.dir, "script.md");
+  assert.match(md, /الأول بيعمل merge جديد\./);
+  assert.match(md, /بيطلب review قبل الـ branch\./);
+});
+
 test("apply refuses answers for a stale version and a text cut to fit a comment", () => {
   const fx = fixture();
   prep(fx);
