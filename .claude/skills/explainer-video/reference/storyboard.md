@@ -73,10 +73,17 @@ SKILL.md's.
    printed and ask the user to copy the answers again.
 7. **Gate stop.** On Render's `stop`, build and post the next version
    (step 4): it carries a banner with each red gate's line and reopens every
-   card the gates' findings name. A finding that names no scene (`loudness`,
-   `captions`) reopens no card: relay its line and `gates.md`. End the
-   turn; the revisions come back through step 5.
+   card the gates' findings name. A fix that changes the narration, order or
+   count is the user's revision there. A finding that names no scene
+   (`loudness`, `captions`) reopens no card: relay its line and `gates.md`.
+   End the turn; the revisions come back through step 5.
 8. **After delivery**, build once more (step 4): it cuts each scene's stretch of
    the delivered MP4 into a clip under 15 MB, and its `delivered` version plays
    them on the cards. Post it as in step 4, then report Render's last line and
    the videos-folder path.
+
+A run that skipped this stage (narration the user writes, which goes straight
+to Voice or Render) has no board to post to. At a gate stop it reports each
+red gate's line and `gates.md` instead of step 7, and asks the user about a fix
+that changes the narration, order or count. After delivery it reports Render's
+last line and the videos-folder path instead of step 8.

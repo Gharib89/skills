@@ -366,8 +366,7 @@ attempt counts live in `gates.json`: each gate's count resets when that gate
 passes, and the run's count, which `stop` reads, when every gate passes. Both
 reset when the narration changes, so a red that moves from one gate to another
 still stops.
-On `stop`, stop with no video and run Storyboard step 7: a fix that
-changes the narration, order or count is the user's revision there.
+On `stop`, stop with no video and run Storyboard step 7.
 
 **Floors** are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:
