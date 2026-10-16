@@ -660,11 +660,11 @@ test("a published card needs every font uploaded first, then loads them from the
     (m) => m[1],
   );
   assert.ok(uploads.length > 0);
-  r = card(fx, [
-    "asset",
-    ...uploads.map((u, i) => `${u}=/_blob/${String(i).padStart(32, "0")}`),
-  ]);
-  assert.equal(r.code, 0, r.err);
+  // One call per upload: each keeps the entries the calls before it recorded.
+  uploads.forEach((u, i) => {
+    r = card(fx, ["asset", `${u}=/_blob/${String(i).padStart(32, "0")}`]);
+    assert.equal(r.code, 0, r.err);
+  });
   r = built(fx);
   assert.match(r.out, /^card: post style-draft\/card\/1\.json to cards\/1$/m);
   assert.ok(latestCard(fx).fonts.every((f) => f.url.startsWith("/_blob/")));
