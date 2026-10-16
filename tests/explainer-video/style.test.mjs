@@ -136,3 +136,93 @@ test("screenshots measure into the same candidates every time", () => {
   );
   assert.match(first.stdout, /^style: measured 2 reference image\(s\) -> /m);
 });
+
+test("a website's declared colours count only where its pages show them", () => {
+  const { run, env } = fixture();
+  env.EXPLAINER_VIDEO_FAKE_SITE = JSON.stringify({
+    "https://acme.test/": {
+      pages: [SLIDE, SLIDE],
+      colors: ["#cc6c55", "#00ff00"],
+      fonts: ["Source Serif 4"],
+    },
+  });
+  const r = node("measure.mjs", [run, "https://acme.test/"], env);
+  assert.equal(r.status, 0, r.stderr);
+  const c = candidates(run);
+  assert.deepEqual(
+    c.images.map((i) => i.name),
+    ["acme-test-1.ppm", "acme-test-2.ppm"],
+  );
+  assert.deepEqual(c.accents[0], {
+    id: "a1",
+    hex: "#cc6c55",
+    share: 0.06,
+    images: ["acme-test-1.ppm", "acme-test-2.ppm"],
+    declared: true,
+  });
+  assert.ok(![...c.surfaces, ...c.accents].some((x) => x.hex === "#00ff00"));
+  assert.deepEqual(c.fonts, ["Source Serif 4"]);
+  assert.match(
+    r.stdout,
+    /^style declared #00ff00: not in the reference images, dropped$/m,
+  );
+  const call = fs
+    .readFileSync(env.EXPLAINER_VIDEO_FAKE_LOG, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => JSON.parse(l))
+    .find((l) => l.call === "capturePages");
+  assert.equal(call.max, 5);
+});
+
+test("a deck and a video become at most twelve images each", () => {
+  const { run, docs, env } = fixture();
+  fs.writeFileSync(path.join(docs, "deck.pdf"), "pdf");
+  fs.writeFileSync(path.join(docs, "talk.mp4"), "mp4");
+  env.EXPLAINER_VIDEO_FAKE_FRAMES = "15";
+  const r = node(
+    "measure.mjs",
+    [run, path.join(docs, "deck.pdf"), path.join(docs, "talk.mp4")],
+    env,
+  );
+  assert.equal(r.status, 0, r.stderr);
+  const names = candidates(run).images.map((i) => i.name);
+  assert.equal(names.filter((n) => n.startsWith("deck-")).length, 12);
+  assert.equal(names.filter((n) => n.startsWith("talk-")).length, 12);
+  assert.match(r.stdout, /^style ref deck-1\.ppm: pdf · /m);
+  assert.match(r.stdout, /^style ref talk-1\.ppm: video · /m);
+});
+
+test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", () => {
+  const { run, docs, env } = fixture();
+  const deck = path.join(docs, "deck.pptx");
+  // The fake unzip reads a JSON file of parts.
+  fs.writeFileSync(
+    deck,
+    JSON.stringify({
+      parts: {
+        "ppt/theme/theme1.xml":
+          '<a:theme><a:themeElements><a:clrScheme name="Acme"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:accent1><a:srgbClr val="CC6C55"/></a:accent1></a:clrScheme><a:fontScheme><a:majorFont><a:latin typeface="Georgia"/></a:majorFont><a:minorFont><a:latin typeface="Inter"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>',
+      },
+    }),
+  );
+  const alone = node("measure.mjs", [run, deck], env);
+  assert.equal(alone.status, 1);
+  assert.match(alone.stderr, /export the deck to PDF/);
+  assert.ok(!fs.existsSync(path.join(run, "style-draft", "candidates.json")));
+
+  fs.writeFileSync(path.join(docs, "deck.pdf"), "pdf");
+  const both = node(
+    "measure.mjs",
+    [run, deck, path.join(docs, "deck.pdf")],
+    env,
+  );
+  assert.equal(both.status, 0, both.stderr);
+  const c = candidates(run);
+  assert.equal(c.accents[0].hex, "#cc6c55");
+  assert.deepEqual(c.fonts, ["Georgia", "Inter"]);
+  assert.match(
+    both.stdout,
+    /^style declared #000000: not in the reference images, dropped$/m,
+  );
+});

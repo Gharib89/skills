@@ -289,8 +289,9 @@ for (const hex of [...new Set(declared)]) {
     dropped.push(hex);
     continue;
   }
+  const was = hit.hex;
   for (const c of [...surfaces, ...accents])
-    if (c.hex === hit.hex) Object.assign(c, { hex, declared: true });
+    if (c.hex === was) Object.assign(c, { hex, declared: true });
 }
 
 const out = path.join(draft, "candidates.json");
