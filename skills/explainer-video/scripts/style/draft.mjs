@@ -64,6 +64,10 @@ for (const [t, pick] of Object.entries(roles)) {
     errors.push(`style role ${t}: not a token (${TOKENS.join(", ")})`);
   else if (!byId.has(pick?.candidate))
     errors.push(`style role ${t}: no candidate ${pick?.candidate}`);
+  else if (typeof pick.why !== "string" || !/^[^\n]*\S[^\n]*$/.test(pick.why))
+    errors.push(
+      `style role ${t}: needs a one-line why, where the images show it`,
+    );
 }
 for (const t of ["bg", "text"])
   if (!roles[t])

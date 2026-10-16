@@ -423,11 +423,16 @@ test("a role names a candidate id, never a colour, and bg and text are required"
     bg: { candidate: "s1", why: "ground" },
     accent: { candidate: "#ff0000", why: "made up" },
     brand: { candidate: "a1", why: "not a token" },
+    panel: { candidate: "s2" },
   });
   const r = node("draft.mjs", [run, "acme"], env);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /^style role accent: no candidate #ff0000$/m);
   assert.match(r.stderr, /^style role brand: not a token \(bg, /m);
+  assert.match(
+    r.stderr,
+    /^style role panel: needs a one-line why, where the images show it$/m,
+  );
   assert.match(
     r.stderr,
     /^style role text: required, every reference image shows a ground and its text$/m,
