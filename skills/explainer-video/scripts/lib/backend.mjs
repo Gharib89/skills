@@ -682,8 +682,10 @@ export async function geminiKey(key) {
 
 const ELEVENLABS = "https://api.elevenlabs.io/v1";
 
-// An ElevenLabs answer's error message: its JSON's detail, else its text. A
-// spent quota answers 400 or 401 with `detail.status: "quota_exceeded"`
+// An ElevenLabs answer's error message: its JSON's detail, else its text. Spent
+// credits answer 402 with `detail.code: "insufficient_credits"`
+// (https://elevenlabs.io/docs/eleven-api/resources/errors); the legacy answer,
+// 400 or 401 with `detail.status: "quota_exceeded"`, is still read
 // (https://elevenlabs.io/docs/help-center/technical/api-error-code-400-or-401).
 async function elevenlabsError(r) {
   const body = await r.text();
@@ -695,7 +697,12 @@ async function elevenlabsError(r) {
     new Error(
       `ElevenLabs answered HTTP ${r.status}: ${detail.message ?? body}`,
     ),
-    { quota: detail.status === "quota_exceeded", vendor: "ElevenLabs" },
+    {
+      quota:
+        detail.code === "insufficient_credits" ||
+        detail.status === "quota_exceeded",
+      vendor: "ElevenLabs",
+    },
   );
 }
 
@@ -722,18 +729,20 @@ async function elevenlabs(text, narrator) {
 }
 
 // Whether ElevenLabs takes `key`, read from the narrator's voice metadata so no
-// credits are spent; a bad key answers `{"detail":{"status":"invalid_api_key"}}`.
+// credits are spent; a bad key answers `detail.code` (legacy `detail.status`)
+// `invalid_api_key`.
 export async function elevenlabsKey(key, voice) {
   const r = await fetch(`${ELEVENLABS}/voices/${voice}`, {
     headers: { "xi-api-key": key },
   });
   if (r.status === 200) return { ok: true };
-  if (r.status === 401 || r.status === 403)
+  if (r.status === 401 || r.status === 403) {
+    const detail = (await r.json().catch(() => ({}))).detail;
     return {
       ok: false,
-      reason:
-        (await r.json().catch(() => ({}))).detail?.status ?? `HTTP ${r.status}`,
+      reason: detail?.code ?? detail?.status ?? `HTTP ${r.status}`,
     };
+  }
   throw await elevenlabsError(r);
 }
 

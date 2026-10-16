@@ -464,27 +464,37 @@ test("an ElevenLabs quota stop names ElevenLabs and keeps nothing it did not voi
   assert.equal(synths(fx).length, 0);
 });
 
-// The real backend on a stubbed fetch: ElevenLabs answers a spent quota with
-// 400 or 401 and `detail.status: "quota_exceeded"` (backend.mjs cites the
-// doc), not 429.
-test("the real ElevenLabs backend reads quota_exceeded as a quota stop and invalid_api_key as not one", async () => {
+// The real backend on a stubbed fetch: ElevenLabs answers spent credits with
+// 402 and `detail.code: "insufficient_credits"`, and its legacy answer is 400 or
+// 401 with `detail.status: "quota_exceeded"` (backend.mjs cites both docs), not
+// 429.
+test("the real ElevenLabs backend reads spent credits as a quota stop and invalid_api_key as not one", async () => {
   const { synthesize } =
     await import("../../skills/explainer-video/scripts/lib/backend.mjs");
   const real = globalThis.fetch;
-  const answer = (status) => async () =>
-    new Response(
-      JSON.stringify({ detail: { status, message: `${status} message` } }),
-      { status: 401 },
-    );
+  const answer = (status, detail) => async () =>
+    new Response(JSON.stringify({ detail }), { status });
   const narrator = { backend: "elevenlabs", voice: "JBFqnCBsd6RMkjVDRZzb" };
   try {
-    globalThis.fetch = answer("quota_exceeded");
+    globalThis.fetch = answer(402, {
+      type: "payment_required",
+      code: "insufficient_credits",
+      message: "insufficient_credits message",
+    });
     await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
       quota: true,
       vendor: "ElevenLabs",
+      message: "ElevenLabs answered HTTP 402: insufficient_credits message",
+    });
+    globalThis.fetch = answer(401, {
+      status: "quota_exceeded",
+      message: "quota_exceeded message",
+    });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: true,
       message: "ElevenLabs answered HTTP 401: quota_exceeded message",
     });
-    globalThis.fetch = answer("invalid_api_key");
+    globalThis.fetch = answer(401, { code: "invalid_api_key" });
     await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
       quota: false,
     });
