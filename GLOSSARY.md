@@ -481,7 +481,7 @@ An image a draft style profile's colours are measured from: a screenshot, a slid
 _Avoid_: sample, screenshot (for the general case), mood image
 
 **Colour candidate**:
-A colour measured from a draft style profile's reference images, a surface ranked by its area or an accent among the saturated pixels, with its share and the images that show it. Claude assigns each colour token a colour candidate by its id, never a hex, and a colour a page or a deck theme declares counts only where a colour candidate confirms it.
+A colour measured from a draft style profile's reference images, a surface ranked by its area or an accent among the saturated pixels, with its share and the images that show it. Claude assigns each colour token a colour candidate by its id, never a hex.
 _Avoid_: candidate (that is `file-issue`'s open-issue match), swatch
 
 **Composer**:

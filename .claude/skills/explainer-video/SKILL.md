@@ -3,7 +3,7 @@ name: explainer-video
 description: >-
   Make a narrated explainer video from a repo, a document, a web page or a
   topic, or voice a narration the user writes. Use when the user asks for an
-  explainer video or narration audio, for a video style drawn from
+  explainer video or narration audio, for a style profile drawn from
   screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:

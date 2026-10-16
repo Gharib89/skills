@@ -18,10 +18,12 @@ deck's title).
    `.webm`, `.mkv`). It prints `style ref <image>: <kind> · <source>` per
    reference image, `style candidate <id>: <hex> · <share>% · <images>` per
    colour candidate (`s<n>` a surface, ranked by area; `a<n>` an accent, a
-   saturated colour), and `style declared <hex>: ... dropped` per colour a
-   page or deck theme declares that no image shows. On exit 1 relay the stderr
-   lines; a PPTX alone carries no pixels, so ask the user to export the deck to
-   PDF and measure again with both files.
+   saturated colour), and `style declared <hex>: not in the reference images,
+   dropped` per colour a page or deck theme declares that no image shows. On
+   exit 1, a `style: <row> is not installed` line means run
+   `/explainer-video setup` and measure again; a PPTX alone carries no pixels,
+   so ask the user to export the deck to PDF and measure again with both files;
+   relay any other stderr line.
 2. **Assign.** Look at each image in `explainers/<slug>/style-draft/refs/` with
    the Read tool, then write `explainers/<slug>/style-draft/roles.json`: for
    each token an image shows, the colour candidate playing it and one line on
@@ -50,11 +52,14 @@ deck's title).
    its `was` and ratios are in the draft's `marks`), then the draft's path,
    `explainers/<slug>/style-draft/<name>.json`. Show the token lines to the
    user. On exit 1, a `style role` line names a role to fix in `roles.json`;
-   fix it and run the draft again. Writing the draft deletes the reference
-   images, since a deck may be confidential.
+   a `no lightness passes` or `fails contrast` line means the assigned `bg`
+   and `text` cannot pass together, so assign one of them another colour
+   candidate. Fix `roles.json` and run the draft again. Writing the draft
+   deletes the reference images, since a deck may be confidential.
 
-The draft keeps the default profile's type, layout, motion, look and effects;
-the font names the sources declare are in `candidates.json`'s `fonts`. This
+The draft keeps the bundled `claude-code` profile's type, layout, motion, look
+and effects, and derives each token you leave out from its colours; the font
+names the sources declare are in `candidates.json`'s `fonts`. This
 version has no style card or save: tell the user the draft's path, and that
 copying it to `explainers/.styles/<name>.json` makes it a project profile a run
 can name in `style:`.
