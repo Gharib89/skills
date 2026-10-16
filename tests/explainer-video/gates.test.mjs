@@ -496,7 +496,7 @@ test("an Arabic render passes the right to left checks, and each broken reading 
     [good.replaceAll(' dir="rtl"', ""), 'Arabic reads ltr "'],
     [
       good.replace("40px/1.7", "40px/1.3"),
-      'line height 1.3 under the ink 1.46 of ibm-plex-sans-arabic "',
+      'line height 1.3 under the ink 1.35 of ibm-plex-sans-arabic "',
     ],
     [
       good.replace(" white-space: nowrap;", ""),

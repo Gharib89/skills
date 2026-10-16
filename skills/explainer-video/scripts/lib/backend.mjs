@@ -139,15 +139,26 @@ function measureFrame() {
     bottom: r1(r.bottom),
   });
   const sub = '[data-composition-id]:not([data-composition-id="main"])';
-  // The ink an element's own text spans in its face, in ems, as canvas
-  // measures it: the least line height that keeps two lines of it apart.
+  // The ink Arabic's letters span in an element's face and weight, in ems, as
+  // canvas measures it once per face: the least line height that keeps two
+  // lines of them apart. Every letter and hamza seat, no marks: the floor is
+  // the face's, not the line's, and a stress line of stacked marks (1.6 em in
+  // IBM Plex Sans Arabic) would fail the profiles' own 1.5 and 1.6 heights.
   const pen = document.createElement("canvas").getContext("2d");
-  const ink = (text, cs) => {
-    pen.font = `${cs.fontWeight} 100px ${cs.fontFamily}`;
-    const m = pen.measureText(text);
-    return (
-      Math.round(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) / 100
-    );
+  const LETTERS = "ءآأإئابةتثجحخدذرزسشصضطظعغفقكلمنهوىي";
+  const inks = new Map();
+  const ink = (cs) => {
+    const key = `${cs.fontWeight} ${cs.fontFamily}`;
+    if (!inks.has(key)) {
+      pen.font = `${cs.fontWeight} 100px ${cs.fontFamily}`;
+      const m = pen.measureText(LETTERS);
+      inks.set(
+        key,
+        Math.round(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) /
+          100,
+      );
+    }
+    return inks.get(key);
   };
   const out = [];
   for (const el of document.querySelectorAll("#root *")) {
@@ -198,7 +209,7 @@ function measureFrame() {
               (parseFloat(cs.lineHeight) / parseFloat(cs.fontSize)) * 100,
             ) / 100,
       face: cs.fontFamily.split(",")[0].replace(/["']/g, "").trim(),
-      ink: ink(own, cs),
+      ink: ink(cs),
     });
   }
   return out;

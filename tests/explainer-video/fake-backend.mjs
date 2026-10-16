@@ -462,8 +462,9 @@ export async function check(dir, times) {
 // right to left in a box or cue marked so, and `within` is the `dir` of the
 // box a scene's element sits in; a Latin run's <bdi> sits in one, isolated
 // unless the `.lat` rule says otherwise, on one line where it says so. A caption
-// word's line height is the `.cue` rule's, against the ink #686 measured for
-// IBM Plex Sans Arabic (1.46 em) and Inter (0.98 em).
+// word's line height is the `.cue` rule's, against the ink Arabic's letters
+// span in a caption's IBM Plex Sans Arabic, as the real probe measured it on a
+// live render (1.35 em, Chromium 152).
 function reading(html, scene, text, bdi, rtl, within) {
   const cue = html.match(/\.cue \{[^}]*font: \d+ [\d.]+px\/([\d.]+) "([^"]+)"/);
   const arabic = /\p{Script=Arabic}/u.test(text);
@@ -480,7 +481,7 @@ function reading(html, scene, text, bdi, rtl, within) {
         : "normal",
     lineH: scene === null && cue ? +cue[1] : null,
     face: cue?.[2] ?? null,
-    ink: arabic ? 1.46 : 0.98,
+    ink: 1.35,
   };
 }
 
