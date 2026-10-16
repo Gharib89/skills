@@ -42,7 +42,9 @@ import {
   fontRow,
   hyperframesEnv,
   loadBackend,
+  nearest,
   skill,
+  weights,
 } from "../lib/tools.mjs";
 import { esc, framePage, sceneFile, stillsPage } from "../render/compose.mjs";
 
@@ -222,14 +224,8 @@ if (cmd === "apply") {
     // The weight the family holds nearest the role's: a family the draft
     // fetched holds only the weights its roles took.
     for (const [r, font] of Object.entries(type)) {
-      const want = draft.type[r]?.weight;
-      const held = fontRow(draft, font).files.map(
-        (f) => +f.match(/-(\d+)-/)[1],
-      );
       draft.type[r] = {
-        weight: held.reduce((a, b) =>
-          Math.abs(b - want) < Math.abs(a - want) ? b : a,
-        ),
+        weight: nearest(draft.type[r]?.weight, weights(fontRow(draft, font))),
         font,
         mark: "edited",
         why: "edited on the style card",

@@ -44,7 +44,9 @@ import {
   dest,
   installFont,
   loadBackend,
+  nearest,
   skill,
+  weights,
 } from "../lib/tools.mjs";
 
 const [run, name] = process.argv.slice(2);
@@ -211,8 +213,6 @@ const slug = (family) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-const nearest = (w, ws) =>
-  ws.reduce((a, b) => (Math.abs(b - w) < Math.abs(a - w) ? b : a));
 const admitted = (meta) => LICENCES.includes(meta.license);
 const backend = await loadBackend();
 
@@ -262,7 +262,7 @@ for (const f of found.fonts.filter(
   const row = catalogue().find((r) => r.kind === "font" && r.family === font);
   const weight = nearest(
     base.type[f.role].weight,
-    row ? row.files.map((x) => +x.match(/-(\d+)-/)[1]) : meta.weights,
+    row ? weights(row) : meta.weights,
   );
   type[f.role] = { font, weight, ...mark };
   const ar = ARABIC[f.role];

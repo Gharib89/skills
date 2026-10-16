@@ -304,9 +304,7 @@ narrator: am_fenrir
    draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
-   `font:inter`, `font:jetbrains-mono`; a family its draft fetched is in the
-   font store of the machine that drafted it, and setup does not list it),
-   beside the voice stage's rows. Run the
+   `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows. Run the
    setup check first; any of them missing, run the setup steps above.
 3. **Compile.** `node <skill>/scripts/script/compile.mjs explainers/<slug>`
    prints `compile: <n> scene(s) -> script.json`. Exit 1 prints

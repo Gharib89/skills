@@ -57,6 +57,13 @@ export const fontRow = (profile, family) =>
   catalogue().find((r) => r.kind === "font" && r.family === family) ??
   profile.fonts?.find((r) => r.family === family);
 
+// The weights a font row's files hold, each named `<subset>-<weight>-<style>`.
+export const weights = (r) => r.files.map((f) => +f.match(/-(\d+)-/)[1]);
+
+// The weight in `ws` nearest `w`.
+export const nearest = (w, ws) =>
+  ws.reduce((a, b) => (Math.abs(b - w) < Math.abs(a - w) ? b : a));
+
 // Fill `<dir>.part`, then rename it over `dir`, so a failed fill never leaves a
 // half-written folder where an install is looked for.
 export async function staged(dir, fill) {
