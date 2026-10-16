@@ -216,55 +216,8 @@ then runs **voice QC**, which blocks. It reads a **run folder**,
 `explainers/<slug>/` by default, `<slug>` a short kebab-case name for the video
 that you choose (`ship-overview`), holding `script.json`, which the compile
 stage writes from the scene file (see Render) or you write by hand for voice
-alone (render needs the compiled one):
-
-```json
-{
-  "language": "en",
-  "narrator": "am_fenrir",
-  "scenes": [{ "id": "hook", "narration": ["First sentence.", "Second."] }]
-}
-```
-
-`narrator` is optional: without it the stage takes the language's first default
-in `<skill>/narrators.json` (`bf_emma` for `en`, `ar-eg-csagent-2` for `ar`).
-Narration is the **spoken form**: write numbers, dates and symbols out as words
-("forty two", not "42"), because QC compares the text against what the aligner
-hears: a numeral's spoken words match nothing in the text and cost precision.
-In Egyptian Arabic narration, keep English terms in Latin letters (`pull
-request`); QC spells them in Arabic letters as a speaker says them. An acronym
-of more than four capitals QC reads as a word: write it as its letters' names
-in Arabic.
-
-1. **Tools.** Voice needs the npm packages and its narrator's rows: English
-   `model:kokoro-82m` and `model:wav2vec2-base-960h`; Egyptian Arabic
-   `model:egyptian-arabic-wav2vec2` and `key:gemini`. Run the setup check with
-   `--voice` set to the narrator this stage uses (`narrator`, else the
-   language's default above) first; any row missing, run the setup steps above
-   before voicing.
-2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
-   prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
-   rate · pass|fail: <why>`, then a summary line. A scene whose narration,
-   narrator and language are unchanged is a cache hit and is not voiced again.
-3. **On a pass** (exit 0), the stage has written `voice.json` in the run
-   folder: per scene its WAV under `.cache/voice/`, its duration and each
-   word's start and end in seconds from the start of that scene's WAV. Report
-   the summary line.
-4. **On a fail** (exit 1) with scene lines, relay each failing scene's line as
-   printed: it names the measure, its value and the floor or band it missed.
-   Rewrite that scene's narration in spoken form and voice again; the scenes
-   that passed are cached. The run folder holds no `voice.json`, not even an
-   earlier pass's, until every scene passes.
-   Exit 1 with no scene lines and no `voice: Gemini quota reached` (step 5)
-   is an input or tool error (an unknown narrator, a scene with no narration,
-   a Gemini narrator with no `GEMINI_API_KEY`, a failed synthesis): relay the
-   stderr message as printed. Keep the brief's narrator: only the user moves
-   `voice`.
-5. **On `voice: Gemini quota reached`**, the key has hit a Gemini limit, whose
-   own message the line quotes. The scenes it counts as kept are cached. Relay
-   the line and ask the user to pick one: voice again once the quota resets,
-   which voices only the missing scenes; set a paid key and voice again; or
-   move the brief's `voice` to another narrator.
+alone (render needs the compiled one). Read
+[reference/voice.md](reference/voice.md) now and run its steps.
 
 ## Storyboard
 
