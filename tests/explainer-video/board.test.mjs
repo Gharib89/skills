@@ -466,7 +466,7 @@ test("a red gate record of this script at its third attempt reopens the scenes i
   assert.doesNotMatch(doc(fx, 5).banner.text, /Revise/);
 });
 
-test("a delivered run builds a clip per scene once, from the timeline, and refuses a clip over the asset cap", () => {
+test("a delivered run builds a clip per scene once, from the timeline, refuses a clip over the asset cap, and reviews again after new stills", () => {
   const fx = fixture();
   compile(fx);
   voice(fx);
@@ -489,6 +489,11 @@ test("a delivered run builds a clip per scene once, from the timeline, and refus
   );
   ok(board(fx, "build"), "build again");
   assert.equal(calls(fx, "clip").length, 3);
+  // New stills start a review: the delivered MP4 is of an earlier script.
+  stills(fx);
+  r = ok(board(fx, "build"), "build after stills");
+  assert.match(r.out, /^board 3: review, /m);
+  assert.ok(fs.existsSync(path.join(fx.dir, "out", "demo.mp4")));
 
   const big = fixture();
   compile(big);

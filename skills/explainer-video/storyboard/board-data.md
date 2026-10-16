@@ -82,7 +82,9 @@ Text fields are plain text; the page interprets nothing in them.
   posted. Needs an answer before Submit.
 
 A `delivered` version holds every card `approved`, and its page takes no
-answers.
+answers. `build` makes one only while the delivered MP4 is at least as new as
+`stills.json`: new stills mean a changed script, so the next version is a
+review.
 
 ## Answers text
 

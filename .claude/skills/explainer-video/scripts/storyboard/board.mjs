@@ -12,7 +12,8 @@
 // writes the next board/<n>.json (a card is `approved` when the last answers
 // approved it and nothing in it changed since), board/keys-<n>.json (the
 // content keys that decide that), and the local storyboard.html. A delivered
-// run gets one clip per scene, cut into .cache/clips/. With a published page
+// run (its MP4 at least as new as stills.json) gets one clip per scene, cut
+// into .cache/clips/. With a published page
 // (`page <url>`) every media file needs an uploaded URL, recorded by `asset`;
 // `--local` builds for storyboard.html alone, the page out of reach.
 // `page` with no url writes board/page.html, the file a session publishes
@@ -292,7 +293,12 @@ for (const s of script.scenes) {
 const slug = path.basename(path.resolve(run));
 const manifest = maybe(at("manifest.json")) ?? {};
 const mp4 = at("out", `${slug}.mp4`);
-const delivered = !!manifest.delivered && fs.existsSync(mp4);
+// Delivered while the MP4 is at least as new as the stills: a render writes
+// the stills first, and `render --stills` after it starts a new review.
+const delivered =
+  !!manifest.delivered &&
+  fs.existsSync(mp4) &&
+  fs.statSync(mp4).mtimeMs >= fs.statSync(at("stills.json")).mtimeMs;
 const kind = delivered ? "delivered" : "review";
 const md = fs.readFileSync(at("script.md"), "utf8").split("\n");
 const blocks = narrationBlocks(md);
