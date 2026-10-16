@@ -1,5 +1,6 @@
 // Style extraction's first half: every source turned into reference images,
-// and their colours measured into candidates a role can be assigned from.
+// and their colours measured into colour candidates a role can be assigned
+// from.
 //
 //   node measure.mjs <run-folder> <source>...
 //
@@ -9,16 +10,17 @@
 // raster media hidden; a PDF's pages render in HyperFrames' Chrome; a video
 // gives its scene-change frames; at most twelve images per source. A PPTX
 // gives its theme's colours and fonts and no image. Colours a page or a theme
-// declares count only where a measured candidate confirms them.
+// declares count only where a measured colour candidate confirms them.
 // stdout: `style ref <image>: <kind> · <source>` per reference image, then
-//         `style candidate <id>: <hex> · <share>% · <images>` per candidate,
-//         `style declared <hex>: not in the reference images, dropped` per
-//         declared colour no candidate confirms, then
+//         `style candidate <id>: <hex> · <share>% · <images>` per colour
+//         candidate, `style declared <hex>: not in the reference images,
+//         dropped` per declared colour no colour candidate confirms, then
 //         `style: measured <n> reference image(s) -> <candidates.json>`
 // writes: <run>/style-draft/refs/ and candidates.json (both replaced whole),
 //         and explainers/.gitignore
 // exit:   0 measured · 1 a source refused or unreadable, `source <source>:
-//         <why>` on stderr, and no candidates.json · 2 usage
+//         <why>` or a setup row's `style: <row> is not installed` on stderr,
+//         and no candidates.json · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
@@ -73,7 +75,7 @@ function kindOf(s) {
     EXT[path.extname(s).toLowerCase()] ??
     refuse(
       s,
-      `cannot take ${path.extname(s) || "a file with no extension"}: give a screenshot (.png, .jpg, .jpeg, .webp), a web page URL, a .pdf or .pptx deck, or a video (.mp4, .mov, .webm, .mkv)`,
+      `cannot take ${path.extname(s) || "a file with no extension"}: give a web page URL or a file ending ${Object.keys(EXT).join(", ")}`,
     )
   );
 }
@@ -182,7 +184,7 @@ if (!errors.length && !images.length)
   );
 if (errors.length) stop();
 
-// A binary PPM's size and its RGB bytes.
+// A binary PPM's size and its RGB bytes, decoded once per image.
 function decode(buf) {
   const m = buf
     .subarray(0, 64)
@@ -191,9 +193,16 @@ function decode(buf) {
   if (!m) throw new Error("not a binary PPM");
   return { w: +m[1], h: +m[2], px: buf.subarray(m[0].length) };
 }
+for (const img of images)
+  try {
+    img.pixels = decode(await backend.ppm(img.file));
+  } catch (e) {
+    refuse(img.source, `could not read ${img.name}: ${e.message}`);
+  }
+if (errors.length) stop();
 
-// HLS saturation and lightness, as #664 measured them: a pixel is a colour
-// candidate when saturated (S at least `floor`) and neither near black nor
+// HLS saturation and lightness, as #664 measured them: a pixel counts toward
+// an accent when saturated (S at least `floor`) and neither near black nor
 // near white (L 0.15 to 0.85).
 function saturated(r, g, b, floor) {
   const hi = Math.max(r, g, b) / 255;
@@ -206,10 +215,10 @@ function saturated(r, g, b, floor) {
 const hexOf = (k) => "#" + k.toString(16).padStart(6, "0");
 // Per image, each 4-bit bucket's area share and the exact colours inside it,
 // so every image weighs the same whatever its size.
-async function tally(floor) {
+function tally(floor) {
   const all = new Map();
   for (const img of images) {
-    const { w, h, px } = decode(await backend.ppm(img.file));
+    const { w, h, px } = img.pixels;
     const n = w * h;
     const mine = new Map();
     for (let o = 0; o < n * 3; o += 3) {
@@ -255,16 +264,16 @@ function rank(all, min, top, prefix) {
     .map((c, n) => ({ id: `${prefix}${n + 1}`, ...c }));
 }
 
-const surfaces = rank(await tally(null), 0.005, 10, "s");
+const surfaces = rank(tally(null), 0.005, 10, "s");
 // A monochrome brand: the floor drops once before there are no accents.
-let accents = rank(await tally(0.4), 0.001, 8, "a");
-if (!accents.length) accents = rank(await tally(0.2), 0.001, 8, "a");
+let accents = rank(tally(0.4), 0.001, 8, "a");
+if (!accents.length) accents = rank(tally(0.2), 0.001, 8, "a");
 
 // How near a declared colour sits to a measured one, in OKLab.
 const near = (a, b) => Math.hypot(...oklab(a).map((v, i) => v - oklab(b)[i]));
 
-// A declared colour within 0.04 in OKLab of a candidate names that candidate
-// exactly; one no candidate confirms is dropped.
+// A declared colour within 0.04 in OKLab of a colour candidate names it
+// exactly; one no colour candidate confirms is dropped.
 const dropped = [];
 for (const hex of [...new Set(declared)]) {
   const hit = [...surfaces, ...accents]
@@ -284,7 +293,7 @@ fs.writeFileSync(
   out,
   JSON.stringify(
     {
-      sources: given,
+      sources: given.map((source, i) => ({ kind: kinds[i], source })),
       images: images.map(({ name, source }) => ({ name, source })),
       fonts: [...new Set(fonts)],
       surfaces,

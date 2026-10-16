@@ -400,8 +400,9 @@ export async function ppm(file) {
 }
 
 // A binary PPM 50 wide, filled top to bottom by the bands, each `[hex, rows]`:
-// the fake's every captured page, PDF page and video frame.
-function bandsPpm(bands) {
+// the fake's every captured page, PDF page and video frame, written under the
+// `.png` name the real capture gives it.
+export function bandsPpm(bands) {
   const w = 50;
   const h = bands.reduce((n, [, rows]) => n + rows, 0);
   const px = Buffer.alloc(w * h * 3);
@@ -411,7 +412,8 @@ function bandsPpm(bands) {
       for (const at of [1, 3, 5]) px[o++] = parseInt(hex.slice(at, at + 2), 16);
   return Buffer.concat([Buffer.from(`P6\n${w} ${h}\n255\n`), px]);
 }
-const SLIDE = [
+// A cream slide: ground, white panel, dark text, a clay accent.
+export const SLIDE = [
   ["#f5f4ed", 70],
   ["#ffffff", 14],
   ["#141413", 10],
@@ -420,7 +422,7 @@ const SLIDE = [
 function writeImages(out, list) {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   return list.map((bands, n) => {
-    const f = `${out}-${n + 1}.ppm`;
+    const f = `${out}-${n + 1}.png`;
     fs.writeFileSync(f, bandsPpm(bands));
     return f;
   });

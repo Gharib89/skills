@@ -1,7 +1,7 @@
 // Style extraction through its process doors: sources turned into reference
 // images and measured into colour candidates, then roles assigned by id and a
 // draft profile written. The fake backend stands in for Chrome, pdf.js and
-// ffmpeg: every reference image it writes or decodes is a binary PPM.
+// ffmpeg: every reference image it writes or decodes holds a binary PPM.
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -9,6 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { SLIDE, bandsPpm } from "./fake-backend.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import { loadStyle } from "../../skills/explainer-video/scripts/lib/style.mjs";
 import {
@@ -32,30 +33,7 @@ after(() =>
   temps.forEach((t) => fs.rmSync(t, { recursive: true, force: true })),
 );
 
-// A binary PPM of `w` by `h`, filled top to bottom by `bands`, each
-// `[hex, rows]`.
-function ppm(w, bands) {
-  const h = bands.reduce((n, [, rows]) => n + rows, 0);
-  const head = Buffer.from(`P6\n${w} ${h}\n255\n`);
-  const px = Buffer.alloc(w * h * 3);
-  let o = 0;
-  for (const [hex, rows] of bands)
-    for (let i = 0; i < w * rows; i++) {
-      px[o++] = parseInt(hex.slice(1, 3), 16);
-      px[o++] = parseInt(hex.slice(3, 5), 16);
-      px[o++] = parseInt(hex.slice(5, 7), 16);
-    }
-  return Buffer.concat([head, px]);
-}
-
-// A cream slide: ground, white panel, dark text, a clay accent.
-const SLIDE = [
-  ["#f5f4ed", 70],
-  ["#ffffff", 14],
-  ["#141413", 10],
-  ["#cc6c54", 6],
-];
-// The same look with no colour above the saturation floor.
+// The cream slide's look with no colour above the saturation floor.
 const GREY = [
   ["#f5f4ed", 80],
   ["#141413", 20],
@@ -99,8 +77,8 @@ const candidates = (run) =>
 
 test("screenshots measure into the same candidates every time", () => {
   const { run, docs, env } = fixture();
-  fs.writeFileSync(path.join(docs, "one.png"), ppm(50, SLIDE));
-  fs.writeFileSync(path.join(docs, "two.png"), ppm(50, SLIDE));
+  fs.writeFileSync(path.join(docs, "one.png"), bandsPpm(SLIDE));
+  fs.writeFileSync(path.join(docs, "two.png"), bandsPpm(SLIDE));
   const args = [run, path.join(docs, "one.png"), path.join(docs, "two.png")];
   const first = node("measure.mjs", args, env);
   assert.equal(first.status, 0, first.stderr);
@@ -151,13 +129,13 @@ test("a website's declared colours count only where its pages show them", () => 
   const c = candidates(run);
   assert.deepEqual(
     c.images.map((i) => i.name),
-    ["acme-test-1.ppm", "acme-test-2.ppm"],
+    ["acme-test-1.png", "acme-test-2.png"],
   );
   assert.deepEqual(c.accents[0], {
     id: "a1",
     hex: "#cc6c55",
     share: 0.06,
-    images: ["acme-test-1.ppm", "acme-test-2.ppm"],
+    images: ["acme-test-1.png", "acme-test-2.png"],
     declared: true,
   });
   assert.ok(![...c.surfaces, ...c.accents].some((x) => x.hex === "#00ff00"));
@@ -173,6 +151,22 @@ test("a website's declared colours count only where its pages show them", () => 
     .map((l) => JSON.parse(l))
     .find((l) => l.call === "capturePages");
   assert.equal(call.max, 5);
+
+  fs.writeFileSync(
+    path.join(run, "style-draft", "roles.json"),
+    JSON.stringify({
+      bg: { candidate: "s1", why: "ground" },
+      text: { candidate: "s3", why: "text" },
+      accent: { candidate: "a1", why: "the declared brand colour" },
+    }),
+  );
+  const d = node("draft.mjs", [run, "acme"], env);
+  assert.equal(d.status, 0, d.stderr);
+  const p = JSON.parse(
+    fs.readFileSync(path.join(run, "style-draft", "acme.json"), "utf8"),
+  );
+  assert.equal(p.source, "Extracted from website https://acme.test/");
+  assert.equal(p.marks.accent.declared, true);
 });
 
 test("a deck and a video become at most twelve images each", () => {
@@ -189,8 +183,8 @@ test("a deck and a video become at most twelve images each", () => {
   const names = candidates(run).images.map((i) => i.name);
   assert.equal(names.filter((n) => n.startsWith("deck-")).length, 12);
   assert.equal(names.filter((n) => n.startsWith("talk-")).length, 12);
-  assert.match(r.stdout, /^style ref deck-1\.ppm: pdf · /m);
-  assert.match(r.stdout, /^style ref talk-1\.ppm: video · /m);
+  assert.match(r.stdout, /^style ref deck-1\.png: pdf · /m);
+  assert.match(r.stdout, /^style ref talk-1\.png: video · /m);
 });
 
 test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", () => {
@@ -227,12 +221,51 @@ test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", ()
   );
 });
 
+test("a source measure cannot take is refused by name, and nothing is written", () => {
+  const { run, docs, env } = fixture({ tools: false });
+  fs.writeFileSync(path.join(docs, "notes.txt"), "notes");
+  const r = node(
+    "measure.mjs",
+    [
+      run,
+      path.join(docs, "gone.png"),
+      path.join(docs, "notes.txt"),
+      "https://acme.test/",
+    ],
+    env,
+  );
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /^source .*gone\.png: no such file$/m);
+  assert.match(
+    r.stderr,
+    /^source .*notes\.txt: cannot take \.txt: give a web page URL or a file ending \.png, /m,
+  );
+  assert.match(
+    r.stderr,
+    /^style: chrome is not installed: run \/explainer-video setup$/m,
+  );
+  assert.ok(!fs.existsSync(path.join(run, "style-draft", "candidates.json")));
+});
+
+test("an image measure cannot decode is refused by its source, not a stack trace", () => {
+  const { run, docs, env } = fixture();
+  fs.writeFileSync(path.join(docs, "broken.png"), "not an image");
+  const r = node("measure.mjs", [run, path.join(docs, "broken.png")], env);
+  assert.equal(r.status, 1);
+  assert.match(
+    r.stderr,
+    /^source .*broken\.png: could not read broken-1\.png: not a binary PPM$/m,
+  );
+  assert.doesNotMatch(r.stderr, /\n\s+at /);
+  assert.ok(!fs.existsSync(path.join(run, "style-draft", "candidates.json")));
+});
+
 // A run measured from two screenshots of `bands`, with `roles` written as
 // Claude writes them.
 function measuredRun(bands, roles) {
   const f = fixture();
-  fs.writeFileSync(path.join(f.docs, "one.png"), ppm(50, bands));
-  fs.writeFileSync(path.join(f.docs, "two.png"), ppm(50, bands));
+  fs.writeFileSync(path.join(f.docs, "one.png"), bandsPpm(bands));
+  fs.writeFileSync(path.join(f.docs, "two.png"), bandsPpm(bands));
   const r = node(
     "measure.mjs",
     [f.run, path.join(f.docs, "one.png"), path.join(f.docs, "two.png")],
@@ -337,10 +370,12 @@ test("a role names a candidate id, never a colour, and bg and text are required"
   const { run, env } = measuredRun(SLIDE, {
     bg: { candidate: "s1", why: "ground" },
     accent: { candidate: "#ff0000", why: "made up" },
+    brand: { candidate: "a1", why: "not a token" },
   });
   const r = node("draft.mjs", [run, "acme"], env);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /^style role accent: no candidate #ff0000$/m);
+  assert.match(r.stderr, /^style role brand: not a token \(bg, /m);
   assert.match(
     r.stderr,
     /^style role text: required, every reference image shows a ground and its text$/m,

@@ -1,18 +1,18 @@
 // Style extraction's second half: the roles Claude assigned from the measured
-// candidates turned into a draft style profile that passes contrast by role.
+// colour candidates turned into a draft style profile that passes contrast by
+// role.
 //
 //   node draft.mjs <run-folder> <name>
 //
 // Reads <run>/style-draft/candidates.json and roles.json, which maps a colour
 // token to `{ "candidate": "<id>", "why": "<one line>" }`; `bg` and `text` are
-// required. A token with no role is derived from the default profile: the
-// neutrals (panel, chip, line, rule, muted, faint) mixed in OKLab between
-// `text` and `bg` where the default profile sets them, the hues (accent, ok,
-// warn, stop) at the default profile's hue and chroma, re-lit to its contrast
-// on this `bg`. A token under its contrast floor is then moved in OKLCH
-// lightness, hue and chroma kept, to the nearest value passing on every
-// surface its role sits on. Type, layout, motion, look and effects are the
-// default profile's.
+// required. A token with no role is derived from the bundled `claude-code`
+// profile: the neutrals (panel, chip, line, rule, muted, faint) mixed in OKLab
+// between `text` and `bg` where `claude-code` sets them, the hues (accent, ok,
+// warn, stop) at its hue and chroma, re-lit to its contrast on this `bg`. A
+// token under its contrast floor is then moved in OKLCH lightness, hue and
+// chroma kept, to the nearest value passing on every surface its role sits on.
+// Type, layout, motion, look and effects are `claude-code`'s.
 // stdout: `style <token>: <hex> · <measured|derived|adjusted> · <why>` per
 //         token, then `style: draft <name> -> <file>`
 // writes: <run>/style-draft/<name>.json, each token's mark under `marks`, and
@@ -46,16 +46,24 @@ const base = JSON.parse(
 );
 const TOKENS = Object.keys(base.colors);
 const NEUTRAL = ["panel", "chip", "line", "rule", "muted", "faint"];
+// What the profile's `source` calls each kind measure took.
+const KIND_WORD = {
+  image: "screenshot",
+  page: "website",
+  pdf: "deck",
+  pptx: "deck",
+  video: "video",
+};
 
 const errors = [];
 const byId = new Map(
   [...found.surfaces, ...found.accents].map((c) => [c.id, c]),
 );
-for (const [t, r] of Object.entries(roles)) {
+for (const [t, pick] of Object.entries(roles)) {
   if (!TOKENS.includes(t))
     errors.push(`style role ${t}: not a token (${TOKENS.join(", ")})`);
-  else if (!byId.has(r?.candidate))
-    errors.push(`style role ${t}: no candidate ${r?.candidate}`);
+  else if (!byId.has(pick?.candidate))
+    errors.push(`style role ${t}: no candidate ${pick?.candidate}`);
 }
 for (const t of ["bg", "text"])
   if (!roles[t])
@@ -69,14 +77,15 @@ if (errors.length) {
 
 const colors = {};
 const marks = {};
-for (const [t, r] of Object.entries(roles)) {
-  const c = byId.get(r.candidate);
+for (const [t, pick] of Object.entries(roles)) {
+  const c = byId.get(pick.candidate);
   colors[t] = c.hex;
   marks[t] = {
     mark: "measured",
     candidate: c.id,
     images: c.images,
-    why: r.why,
+    ...(c.declared && { declared: true }),
+    why: pick.why,
   };
 }
 
@@ -90,7 +99,7 @@ const [text, bg] = [oklab(colors.text), oklab(colors.bg)];
 const light = bg[0] > 0.5;
 for (const t of TOKENS.filter((t) => !colors[t])) {
   if (NEUTRAL.includes(t)) {
-    // Where the default profile sets this token between its text and bg.
+    // Where `claude-code` sets this token between its text and bg.
     const at = (oklab(base.colors[t])[0] - tL) / (bL - tL);
     colors[t] = fromOklab(text.map((v, i) => v + at * (bg[i] - v)));
     marks[t] = {
@@ -98,8 +107,8 @@ for (const t of TOKENS.filter((t) => !colors[t])) {
       why: `mixed between text and bg as ${FALLBACK}'s ${t}`,
     };
   } else {
-    // The default's hue and chroma at the lightness, on the side away from
-    // bg, nearest the contrast the default holds on its own bg.
+    // `claude-code`'s hue and chroma at the lightness, on the side away from
+    // bg, nearest the contrast it holds on its own bg.
     const [, C, h] = lch(base.colors[t]);
     const want = contrast(base.colors[t], base.colors.bg);
     let best;
@@ -127,7 +136,7 @@ for (const role of ROLES)
     const passes = (hex) =>
       role.on.every((s) => contrast(hex, colors[s]) >= min);
     if (passes(colors[t])) continue;
-    const s = role.on.find((s) => contrast(colors[t], colors[s]) < min);
+    const surface = role.on.find((s) => contrast(colors[t], colors[s]) < min);
     const [L, C, h] = lch(colors[t]);
     let moved;
     for (let d = 1; d <= 1000 && !moved; d++)
@@ -140,12 +149,12 @@ for (const role of ROLES)
       );
       process.exit(1);
     }
-    const r = (a, b) => contrast(a, b).toFixed(2);
+    const ratio = (hex) => contrast(hex, colors[surface]).toFixed(2);
     marks[t] = {
       mark: "adjusted",
       was: colors[t],
       from: marks[t].mark,
-      why: `${t} on ${s} ${r(colors[t], colors[s])}:1 under ${min}:1, moved to ${r(moved, colors[s])}:1`,
+      why: `${t} on ${surface} ${ratio(colors[t])}:1 under ${min}:1, moved to ${ratio(moved)}:1`,
     };
     colors[t] = moved;
   }
@@ -154,7 +163,7 @@ const profile = {
   ...base,
   name,
   label: name,
-  source: `Extracted from ${found.sources.join(", ")}`,
+  source: `Extracted from ${found.sources.map(({ kind, source }) => `${KIND_WORD[kind]} ${source}`).join(", ")}`,
   colors: Object.fromEntries(TOKENS.map((t) => [t, colors[t]])),
   marks: Object.fromEntries(TOKENS.map((t) => [t, marks[t]])),
 };
