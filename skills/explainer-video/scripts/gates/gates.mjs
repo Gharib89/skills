@@ -9,9 +9,9 @@
 // not cached in <run>/.cache/gates/, judged here for layout and contrast.
 // Loudness, captions and the sound effects per minute are measured on every
 // run. The critic gate reads the verdicts the critic subagents wrote beside
-// this render's contact sheets, in <run>/.cache/critic/<render>/, cutting a
-// sheet per scene first when a verdict is missing. Deletes nothing: the render
-// stage acts on the verdict.
+// this render's contact sheets, in <run>/.cache/critic/<key>/ (the render and
+// the cites it read), cutting a sheet per scene first when a verdict is
+// missing. Deletes nothing: the render stage acts on the verdict.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` for layout, contrast,
 //         loudness, captions, sfx and critic (or `gate critic: pending: ...`),
 //         then `gates: <n> pass, <m> fail[, 1 pending]`, when red ending
@@ -381,6 +381,23 @@ const count = (failing, before) =>
 // later one carries the second round's verdict rather than ask for a third.
 const KINDS = ["unreadable", "invented"];
 const SCORES = ["clarity", "legibility", "fit"];
+// A verdict stands for the render and for what else the critic read: the
+// title, each sentence's cites and the cited excerpts' text.
+const excerptsFile = path.join(run, "excerpts.json");
+const excerptText = new Map(
+  fs.existsSync(excerptsFile)
+    ? JSON.parse(fs.readFileSync(excerptsFile, "utf8")).excerpts.map((x) => [
+        x.id,
+        x.text,
+      ])
+    : [],
+);
+const criticKey = hash(renderHash, [
+  script.title,
+  script.scenes.map((s) =>
+    s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
+  ),
+]);
 const sheetsOf = (h) => path.posix.join(".cache", "critic", h);
 const verdicts = (h) =>
   timeline.scenes.map((sc) => {
@@ -408,10 +425,10 @@ const verdicts = (h) =>
 const rounds = same ? (prev.gates.critic?.rounds ?? []) : [];
 const criticAttempts = same ? (prev.gates.critic?.attempts ?? 0) : 0;
 let judgedBy;
-const own = verdicts(renderHash);
-if (own.every(Boolean) && (rounds.includes(renderHash) || rounds.length < 2)) {
-  if (!rounds.includes(renderHash)) rounds.push(renderHash);
-  judgedBy = { vs: own, round: rounds.indexOf(renderHash) + 1 };
+const own = verdicts(criticKey);
+if (own.every(Boolean) && (rounds.includes(criticKey) || rounds.length < 2)) {
+  if (!rounds.includes(criticKey)) rounds.push(criticKey);
+  judgedBy = { vs: own, round: rounds.indexOf(criticKey) + 1 };
 } else if (rounds.length >= 2) {
   const vs = verdicts(rounds[1]);
   if (vs.every(Boolean)) judgedBy = { vs, round: 2, carried: true };
@@ -435,7 +452,7 @@ if (judgedBy) {
     floor: wantCritic,
     attempts: count(evidence.length, criticAttempts),
     evidence,
-    sheets: sheetsOf(carried ? rounds[1] : renderHash),
+    sheets: sheetsOf(carried ? rounds[1] : criticKey),
     rounds,
     scores: vs.map((v) => ({
       scene: v.id,
@@ -444,7 +461,7 @@ if (judgedBy) {
     })),
   };
 } else {
-  const dir = sheetsOf(renderHash);
+  const dir = sheetsOf(criticKey);
   fs.mkdirSync(path.join(run, dir), { recursive: true });
   for (const sc of timeline.scenes) {
     const png = path.join(run, dir, `${sc.id}.png`);
@@ -480,7 +497,7 @@ for (const [name, [evidence, measured, wanted]] of Object.entries(judged))
     ),
     evidence,
   };
-gates.critic = critic;
+gates.critic = { ...critic, key: criticKey };
 const red = Object.entries(gates).filter(([, g]) => g.status === "fail");
 const pending = critic.status === "pending";
 // A hard failure in the critic's last round is final: no third round can

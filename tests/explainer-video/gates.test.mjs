@@ -738,7 +738,8 @@ test("the critic judges two rounds of one script at most: a third render carries
   assert.equal(record(fx).gates.critic.rounds.length, 2);
   // Verdicts that appear for the third render add no third round.
   const g = record(fx);
-  const third = path.join(fx.dir, ".cache", "critic", g.render);
+  assert.ok(!g.gates.critic.rounds.includes(g.gates.critic.key));
+  const third = path.join(fx.dir, ".cache", "critic", g.gates.critic.key);
   fs.mkdirSync(third, { recursive: true });
   for (const f of fs.readdirSync(path.join(fx.dir, g.gates.critic.sheets)))
     if (f.endsWith(".png"))
@@ -824,4 +825,27 @@ test("a hard failure in the critic's second round stops the run: no third round 
     /^gates: 5 pass, 1 fail; stop: the critic's second round is red, no video$/m,
   );
   assert.ok(record(fx).attempts >= 3, "the storyboard reads it as stopped");
+});
+
+test("a verdict stands only for the evidence it read: new cites or a changed cited excerpt is judged again", () => {
+  const fx = fixture();
+  const excerpts = (text) =>
+    fs.writeFileSync(
+      path.join(fx.dir, "excerpts.json"),
+      JSON.stringify({ excerpts: [{ id: "ex-1", text }] }),
+    );
+  excerpts("Ship reads the issue first.");
+  assert.equal(render(fx).code, 0);
+  excerpts("Ship reads the issue and its comments.");
+  const r1 = stage(fx, "render/render.mjs");
+  assert.equal(r1.code, 1, r1.out + r1.err);
+  assert.match(r1.out, /^gate critic: pending: round 2 of 2, /m);
+  const fresh = fixture();
+  assert.equal(render(fresh).code, 0);
+  const r2 = renderUnjudged(
+    fresh,
+    SCRIPT.replace("It reads the issue. [ex-1]", "It reads the issue. [ex-2]"),
+  );
+  assert.equal(r2.code, 1, r2.out + r2.err);
+  assert.match(r2.out, /^gate critic: pending: round 2 of 2, /m);
 });
