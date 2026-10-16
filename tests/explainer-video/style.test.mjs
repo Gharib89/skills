@@ -115,7 +115,7 @@ test("screenshots measure into the same candidates every time", () => {
   assert.match(first.stdout, /^style: measured 2 reference image\(s\) -> /m);
 });
 
-test("a website's declared colours count only where its pages show them", () => {
+test("a website's declared colours count only where its pages show them, and a draft marks them declared", () => {
   const { run, env } = fixture();
   env.EXPLAINER_VIDEO_FAKE_SITE = JSON.stringify({
     "https://acme.test/": {
@@ -169,7 +169,7 @@ test("a website's declared colours count only where its pages show them", () => 
   assert.equal(p.marks.accent.declared, true);
 });
 
-test("a deck and a video become at most twelve images each", () => {
+test("a deck and a video become at most twelve images each, named by kind in a draft", () => {
   const { run, docs, env } = fixture();
   fs.writeFileSync(path.join(docs, "deck.pdf"), "pdf");
   fs.writeFileSync(path.join(docs, "talk.mp4"), "mp4");
@@ -185,6 +185,23 @@ test("a deck and a video become at most twelve images each", () => {
   assert.equal(names.filter((n) => n.startsWith("talk-")).length, 12);
   assert.match(r.stdout, /^style ref deck-1\.png: pdf · /m);
   assert.match(r.stdout, /^style ref talk-1\.png: video · /m);
+
+  fs.writeFileSync(
+    path.join(run, "style-draft", "roles.json"),
+    JSON.stringify({
+      bg: { candidate: "s1", why: "ground" },
+      text: { candidate: "s3", why: "text" },
+    }),
+  );
+  const d = node("draft.mjs", [run, "talk"], env);
+  assert.equal(d.status, 0, d.stderr);
+  const p = JSON.parse(
+    fs.readFileSync(path.join(run, "style-draft", "talk.json"), "utf8"),
+  );
+  assert.equal(
+    p.source,
+    `Extracted from deck ${path.join(docs, "deck.pdf")}, video ${path.join(docs, "talk.mp4")}`,
+  );
 });
 
 test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", () => {
@@ -224,27 +241,25 @@ test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", ()
 test("a source measure cannot take is refused by name, and nothing is written", () => {
   const { run, docs, env } = fixture({ tools: false });
   fs.writeFileSync(path.join(docs, "notes.txt"), "notes");
-  const r = node(
-    "measure.mjs",
+  for (const [source, line] of [
+    [path.join(docs, "gone.png"), /^source .*gone\.png: no such file$/m],
     [
-      run,
-      path.join(docs, "gone.png"),
       path.join(docs, "notes.txt"),
-      "https://acme.test/",
+      /^source .*notes\.txt: cannot take \.txt: give a web page URL or a file ending \.png, /m,
     ],
-    env,
-  );
-  assert.equal(r.status, 1);
-  assert.match(r.stderr, /^source .*gone\.png: no such file$/m);
-  assert.match(
-    r.stderr,
-    /^source .*notes\.txt: cannot take \.txt: give a web page URL or a file ending \.png, /m,
-  );
-  assert.match(
-    r.stderr,
-    /^style: chrome is not installed: run \/explainer-video setup$/m,
-  );
-  assert.ok(!fs.existsSync(path.join(run, "style-draft", "candidates.json")));
+    [
+      "https://acme.test/",
+      /^style: chrome is not installed: run \/explainer-video setup$/m,
+    ],
+  ]) {
+    const r = node("measure.mjs", [run, source], env);
+    assert.equal(r.status, 1, source);
+    assert.match(r.stderr, line);
+    assert.ok(
+      !fs.existsSync(path.join(run, "style-draft", "candidates.json")),
+      source,
+    );
+  }
 });
 
 test("an image measure cannot decode is refused by its source, not a stack trace", () => {
@@ -301,6 +316,10 @@ test("a draft marks each token measured or derived, loads, and keeps no referenc
   const file = path.join(run, "style-draft", "acme.json");
   const p = JSON.parse(fs.readFileSync(file, "utf8"));
   assert.equal(p.name, "acme");
+  assert.match(
+    p.source,
+    /^Extracted from screenshot .*one\.png, screenshot .*two\.png$/,
+  );
   assert.deepEqual(
     [p.colors.bg, p.colors.panel, p.colors.text, p.colors.accent],
     ["#f5f4ed", "#ffffff", "#141413", "#cc6c54"],

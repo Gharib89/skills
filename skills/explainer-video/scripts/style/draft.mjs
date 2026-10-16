@@ -159,11 +159,14 @@ for (const role of ROLES)
     colors[t] = moved;
   }
 
+const named = found.sources.map(
+  ({ kind, source }) => `${KIND_WORD[kind]} ${source}`,
+);
 const profile = {
   ...base,
   name,
   label: name,
-  source: `Extracted from ${found.sources.map(({ kind, source }) => `${KIND_WORD[kind]} ${source}`).join(", ")}`,
+  source: `Extracted from ${named.join(", ")}`,
   colors: Object.fromEntries(TOKENS.map((t) => [t, colors[t]])),
   marks: Object.fromEntries(TOKENS.map((t) => [t, marks[t]])),
 };

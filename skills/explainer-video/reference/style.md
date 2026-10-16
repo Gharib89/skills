@@ -49,7 +49,8 @@ deck's title).
 3. **Draft.** `node <skill>/scripts/style/draft.mjs explainers/<slug>
    <name>` prints `style <token>: <hex> · <mark> · <why>` per token, each mark
    `measured`, `derived` or `adjusted` (moved in lightness to pass contrast;
-   its `was` and ratios are in the draft's `marks`), then the draft's path,
+   its `was` and ratios are in the draft's `marks`, beside `declared: true`
+   on a measured colour a page or theme declared), then the draft's path,
    `explainers/<slug>/style-draft/<name>.json`. Show the token lines to the
    user. On exit 1, a `style role` line names a role to fix in `roles.json`;
    a `no lightness passes` or `fails contrast` line means the assigned `bg`
