@@ -7,6 +7,14 @@ released version. See
 
 <!-- version list -->
 
+## v0.14.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: ACE-Step opt-in score ([#736](https://github.com/Gharib89/skills/pull/736),
+  [`deb57cc`](https://github.com/Gharib89/skills/commit/deb57cce929ff5adca508d8069d742b4a085e5f9))
+
+
 ## v0.13.0 (2026-10-16)
 
 ### Features
