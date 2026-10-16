@@ -6,7 +6,8 @@
 //                                 loudness answer
 //   EXPLAINER_VIDEO_FAKE_CHECK    JSON check answers in place of its own
 //   EXPLAINER_VIDEO_FAKE_CLIP_BYTES  size of each clip written (default 1000)
-// The family `ubuntu` answers with its real, non-OFL licence.
+// The family `ubuntu` answers with its real, non-OFL licence; `helvetica-neue`
+// and `georgia`, as on the real Fontsource, with no family at all.
 //
 // Fake audio is 16 kHz and spells its text: each letter holds 3 frames of 320
 // samples (2 at the letter's vocabulary id / 100, 1 silent), each word ends on
@@ -58,11 +59,21 @@ export async function ensureChrome(nodeDir, home) {
   return 0;
 }
 
+// Fontsource holds every family but `helvetica-neue` and `georgia`; a
+// family's category is its entry in CATEGORY, else sans-serif.
+const CATEGORY = {
+  "source-serif-4": "serif",
+  "noto-serif": "serif",
+  "jetbrains-mono": "monospace",
+};
 export async function fontMeta(id) {
   log({ call: "fontMeta", id });
+  if (["helvetica-neue", "georgia"].includes(id)) return null;
   return {
     id,
+    category: CATEGORY[id] ?? "sans-serif",
     license: id === "ubuntu" ? "UFL-1.0" : "OFL-1.1",
+    npmVersion: "5.3.0",
     weights: [400, 600],
     subsets: ["latin"],
     styles: ["normal"],

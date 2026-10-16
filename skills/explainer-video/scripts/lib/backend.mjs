@@ -436,10 +436,12 @@ export async function ffprobe(file) {
   return JSON.parse(r.stdout);
 }
 
+// A Fontsource family's metadata, or null for a family it does not hold.
 export async function fontMeta(id) {
   const r = await fetch(
     `https://api.fontsource.org/v1/fonts/${encodeURIComponent(id)}`,
   );
+  if (r.status === 404) return null;
   if (!r.ok)
     throw new Error(`Fontsource has no family ${id} (HTTP ${r.status})`);
   return r.json();

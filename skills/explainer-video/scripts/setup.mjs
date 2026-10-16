@@ -20,9 +20,11 @@ import {
   TOOL_DIRS,
   catalogue as readCatalogue,
   dest,
+  installFont,
   lockHash,
   loadBackend,
   skill,
+  staged,
 } from "./lib/tools.mjs";
 
 const usage = "usage: node setup.mjs check|install [--all]";
@@ -43,7 +45,6 @@ const rows = catalogue.filter((r) => !r.when || (all && r.when === "opt-in"));
 if (rows.some((r) => r.python))
   rows.push(...catalogue.filter((r) => r.when === "python"));
 
-const LICENCES = ["OFL-1.1", "Apache-2.0"];
 const STALE_MS = 30 * 24 * 60 * 60 * 1000;
 // HyperFrames phones home and checks for updates unless told not to.
 const quietEnv = {
@@ -98,22 +99,12 @@ function stale() {
   return out;
 }
 
-// Fill `<dir>.part`, then rename it over `dir`, so a failed fill never leaves a
-// half-written folder where status() looks.
-async function staged(dir, fill) {
-  const part = `${dir}.part`;
-  fs.rmSync(part, { recursive: true, force: true });
-  fs.mkdirSync(part, { recursive: true });
-  await fill(part);
-  fs.rmSync(dir, { recursive: true, force: true });
-  fs.renameSync(part, dir);
-}
-
 async function install(r) {
+  if (r.kind === "font") return installFont(r, backend);
   const dir = dest(r);
   // A missing row's folder can hold what an earlier install left half done.
-  // A font or a model is written beside it and renamed in, so it never is.
-  if (r.kind !== "font" && r.kind !== "model") {
+  // A model is written beside it and renamed in, so it never is.
+  if (r.kind !== "model") {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -134,17 +125,6 @@ async function install(r) {
     const code = await backend.ensureChrome(nodeDir, dir, quietEnv);
     if (code !== 0)
       throw new Error(`hyperframes browser ensure exited ${code}`);
-  } else if (r.kind === "font") {
-    const meta = await backend.fontMeta(r.family);
-    if (!LICENCES.includes(meta.license))
-      return `refused: licence ${meta.license}, only ${LICENCES.join(" or ")}`;
-    await staged(dir, async (part) => {
-      for (const f of r.files)
-        await backend.download(
-          `https://cdn.jsdelivr.net/fontsource/fonts/${r.family}@${r.version}/${f}.woff2`,
-          path.join(part, `${f}.woff2`),
-        );
-    });
   } else if (r.kind === "model") {
     // Pinned by revision and checked by sha256, as ADR 0017 hosts models.
     await staged(dir, async (part) => {

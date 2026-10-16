@@ -30,7 +30,14 @@ import {
   fromOklab,
   oklab,
 } from "../lib/style.mjs";
-import { skill } from "../lib/tools.mjs";
+import {
+  LICENCES,
+  catalogue,
+  dest,
+  installFont,
+  loadBackend,
+  skill,
+} from "../lib/tools.mjs";
 
 const [run, name] = process.argv.slice(2);
 if (!run || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name ?? "")) {
@@ -40,7 +47,7 @@ if (!run || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name ?? "")) {
 const dir = path.join(run, "style-draft");
 const read = (f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
 const found = read("candidates.json");
-const roles = read("roles.json");
+const { fonts: replacements = {}, ...roles } = read("roles.json");
 const base = JSON.parse(
   fs.readFileSync(path.join(skill, "styles", `${FALLBACK}.json`), "utf8"),
 );
@@ -163,6 +170,125 @@ for (const role of ROLES)
     colors[t] = moved;
   }
 
+// Type: the first family a source declares per role plays it when Fontsource
+// holds it under an admitted licence, else the replacement roles.json names
+// for it under `fonts`, confirmed on Fontsource, admitted and of its class:
+// the stack's generic family, else the class the replacement names. The
+// Arabic role beside it takes its class's companion (#678's lists, first).
+const CLASS = {
+  serif: "serif",
+  "ui-serif": "serif",
+  sans: "sans",
+  "sans-serif": "sans",
+  "system-ui": "sans",
+  "ui-sans-serif": "sans",
+  "ui-rounded": "sans",
+  mono: "mono",
+  monospace: "mono",
+  "ui-monospace": "mono",
+  display: "display",
+  handwriting: "display",
+  cursive: "display",
+  fantasy: "display",
+};
+const COMPANION = {
+  serif: "noto-naskh-arabic",
+  sans: "ibm-plex-sans-arabic",
+  mono: "ibm-plex-sans-arabic",
+  display: "noto-kufi-arabic",
+};
+const ARABIC = { title: "arTitle", text: "arText" };
+const slug = (family) =>
+  family
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+const nearest = (w, ws) =>
+  ws.reduce((a, b) => (Math.abs(b - w) < Math.abs(a - w) ? b : a));
+const admitted = (meta) => LICENCES.includes(meta.license);
+const backend = await loadBackend();
+
+// The Fontsource family a declared font becomes and its mark, or why not.
+async function played(f) {
+  const own = await backend.fontMeta(slug(f.family));
+  if (own && admitted(own))
+    return {
+      meta: own,
+      mark: {
+        mark: "measured",
+        why: `the source's ${f.role} font, ${own.license}`,
+      },
+    };
+  const pick = replacements[f.family];
+  if (!pick?.font || !/^[^\n]*\S[^\n]*$/.test(pick.why ?? ""))
+    return `${own ? `licence ${own.license}` : "not on Fontsource"}: name an admitted replacement in roles.json \`fonts\`, { "font": "<Fontsource id>", "why": "<one line>" }`;
+  const want = CLASS[f.generic] ?? CLASS[pick.class];
+  if (!want)
+    return "its stack names no generic family: give its class (serif, sans, mono or display) as the replacement's `class`";
+  const meta = await backend.fontMeta(pick.font);
+  if (!meta) return `Fontsource has no family ${pick.font}`;
+  if (!admitted(meta))
+    return `${pick.font} has licence ${meta.license}, only ${LICENCES.join(" or ")}`;
+  if (CLASS[meta.category] !== want)
+    return `${pick.font} is ${CLASS[meta.category]}, the source's is ${want}`;
+  return { meta, mark: { mark: "replaced", was: f.family, why: pick.why } };
+}
+
+const type = structuredClone(base.type);
+const carried = new Map();
+for (const f of found.fonts.filter(
+  (f, i, all) => all.findIndex((g) => g.role === f.role) === i,
+)) {
+  const got = await played(f);
+  if (typeof got === "string") {
+    errors.push(`style font ${f.family}: ${got}`);
+    continue;
+  }
+  const { meta, mark } = got;
+  const font = meta.id;
+  const cls = CLASS[meta.category];
+  // A catalogue family plays a weight setup installs; any other is fetched at
+  // the weight Fontsource holds nearest the bundled role's.
+  const row = catalogue().find((r) => r.kind === "font" && r.family === font);
+  const weight = nearest(
+    base.type[f.role].weight,
+    row ? row.files.map((x) => +x.match(/-(\d+)-/)[1]) : meta.weights,
+  );
+  type[f.role] = { font, weight, ...mark };
+  const ar = ARABIC[f.role];
+  type[ar] = {
+    ...base.type[ar],
+    font: COMPANION[cls],
+    mark: "derived",
+    why: `the ${cls} companion of ${font}`,
+  };
+  if (row) continue;
+  const fetched = carried.get(font) ?? {
+    id: `font:${font}`,
+    kind: "font",
+    family: font,
+    version: meta.npmVersion,
+    files: [],
+    licence: meta.license,
+  };
+  fetched.files = [...new Set([...fetched.files, `latin-${weight}-normal`])];
+  carried.set(font, fetched);
+}
+if (errors.length) {
+  for (const e of errors) console.error(e);
+  process.exit(1);
+}
+// Each carried family into the font store render reads, unless it holds the
+// files already.
+for (const r of carried.values())
+  if (!r.files.every((f) => fs.existsSync(path.join(dest(r), `${f}.woff2`))))
+    try {
+      await installFont(r, backend);
+    } catch (e) {
+      console.error(`style font ${r.family}: could not fetch it: ${e.message}`);
+      process.exit(1);
+    }
+
 const named = found.sources.map(
   ({ kind, source }) => `${KIND_WORD[kind]} ${source}`,
 );
@@ -173,6 +299,8 @@ const profile = {
   source: `Extracted from ${named.join(", ")}`,
   colors: Object.fromEntries(TOKENS.map((t) => [t, colors[t]])),
   marks: Object.fromEntries(TOKENS.map((t) => [t, marks[t]])),
+  type,
+  ...(carried.size && { fonts: [...carried.values()] }),
 };
 const bad = failures(profile);
 if (bad.length) {
@@ -186,4 +314,6 @@ fs.writeFileSync(out, JSON.stringify(profile, null, 2) + "\n");
 fs.rmSync(path.join(dir, "refs"), { recursive: true, force: true });
 for (const t of TOKENS)
   console.log(`style ${t}: ${colors[t]} · ${marks[t].mark} · ${marks[t].why}`);
+for (const [r, { font, mark, why }] of Object.entries(type))
+  if (mark) console.log(`style type ${r}: ${font} · ${mark} · ${why}`);
 console.log(`style: draft ${name} -> ${out}`);
