@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Storyboard page with animatic and per-card revise
+  ([#722](https://github.com/Gharib89/skills/pull/722),
+  [`da0ebc6`](https://github.com/Gharib89/skills/commit/da0ebc6b1ce1804a2183a7bc695b69271e037548))
+
+
 ## v0.6.0 (2026-10-15)
 
 ### Features
