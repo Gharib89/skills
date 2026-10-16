@@ -154,7 +154,7 @@
       "version": "5.3.0",
       "files": ["arabic-600-normal"],
       "language": "ar",
-      "neededBy": "render and the style card (Arabic titles)",
+      "neededBy": "render, style card (Arabic titles)",
       "size": 56648,
       "licence": "OFL-1.1"
     },
@@ -166,7 +166,7 @@
       "version": "5.3.0",
       "files": ["arabic-400-normal", "arabic-600-normal"],
       "language": "ar",
-      "neededBy": "render and the style card (Arabic text and captions)",
+      "neededBy": "render, style card (Arabic text and captions)",
       "size": 88536,
       "licence": "OFL-1.1"
     },
@@ -178,7 +178,7 @@
       "version": "5.3.0",
       "files": ["arabic-400-normal", "arabic-600-normal"],
       "language": "ar",
-      "neededBy": "render and the style card (Arabic beside a display face)",
+      "neededBy": "render, style card (Arabic companion of a display face)",
       "size": 91356,
       "licence": "OFL-1.1"
     },

@@ -506,6 +506,11 @@ test("a usage error exits 2", () => {
 
 const AR = ["--voice", "ar-eg-csagent-2"];
 const AR_MODEL = "model:egyptian-arabic-wav2vec2";
+const ARABIC_FONTS = [
+  "font:noto-naskh-arabic",
+  "font:ibm-plex-sans-arabic",
+  "font:noto-kufi-arabic",
+];
 const settings = (fx) =>
   path.join(fx.tmp, "config", "explainer-video", "settings.json");
 
@@ -530,18 +535,15 @@ test("check --voice for a Gemini narrator lists its key and the Arabic aligner, 
   assert.ok(row(r.out, "npm-packages"));
   assert.equal(row(r.out, "model:kokoro-82m"), undefined, r.out);
   assert.equal(row(r.out, "model:wav2vec2-base-960h"), undefined, r.out);
-  // Arabic renders in its own faces, and the style card's Arabic frame shows
-  // them whatever the narrator, so an English run fetches them too.
-  const en = run(fx, ["check"]).out;
-  for (const font of [
-    "font:noto-naskh-arabic",
-    "font:ibm-plex-sans-arabic",
-    "font:noto-kufi-arabic",
-  ]) {
+  for (const font of ARABIC_FONTS)
     assert.equal(row(r.out, font)[2], "missing", r.out);
-    assert.equal(row(en, font)?.[2], "missing", en);
-  }
   assert.deepEqual(calls(fx), [], "no key, no call to Google");
+});
+
+test("an English-only check lists the Arabic font rows, which the style card's Arabic frame draws whatever the narrator", () => {
+  const out = run(fixture(), ["check"]).out;
+  for (const font of ARABIC_FONTS)
+    assert.equal(row(out, font)?.[2], "missing", out);
 });
 
 test("a key Google refuses reads refused with Google's reason", () => {
