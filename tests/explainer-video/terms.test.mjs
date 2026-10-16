@@ -1,0 +1,47 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  endsLatin,
+  keptTerms,
+  rename,
+} from "../../skills/explainer-video/scripts/lib/terms.mjs";
+
+test("a respelt kept term changes only where it stands as a whole Latin run", () => {
+  // `CI/CD`, `node.js` and `pull request review` are kept terms of their own.
+  assert.equal(
+    rename("الـ CI و CI/CD", "CI", "GitHub Actions"),
+    "الـ GitHub Actions و CI/CD",
+  );
+  assert.equal(
+    rename("نشغل node.js و node", "node", "Node"),
+    "نشغل node.js و Node",
+  );
+  assert.equal(
+    rename("نعمل pull request review و review", "review", "code review"),
+    "نعمل pull request review و code review",
+  );
+  assert.equal(rename("وpull request،", "pull request", "PR"), "وPR،");
+});
+
+test("a token ending in a Latin word takes the next Latin token, whatever Arabic prefix it carries", () => {
+  assert.ok(endsLatin("pull"));
+  assert.ok(endsLatin("وpull"));
+  assert.ok(endsLatin("C++"));
+  assert.ok(!endsLatin("request،"));
+  assert.ok(!endsLatin("pull."));
+  assert.ok(!endsLatin("و2024"));
+  assert.ok(!endsLatin("بيوصل"));
+});
+
+test("a Latin term used only in the video's title is kept", () => {
+  const script = {
+    title: "إزاي Ship بيوصل لـ GitHub",
+    scenes: [
+      {
+        captions: [[{ text: "Ship" }, { text: "بيشتغل" }]],
+        visual: { component: "title", props: { title: "Ship" } },
+      },
+    ],
+  };
+  assert.deepEqual(keptTerms(script), ["Ship", "GitHub"]);
+});

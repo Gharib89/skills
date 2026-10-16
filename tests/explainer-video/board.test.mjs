@@ -362,7 +362,10 @@ test("apply redoes an approved card whose narration was edited", () => {
 });
 
 test("an Arabic board lists its kept terms, and one edited changes speech, screen and captions alike", () => {
-  const fx = fixture(ARABIC);
+  // A spoken form spelt for the old term goes with it.
+  const fx = fixture(
+    ARABIC.replace("1. الـ CI بيشغل", "1. الـ {CI|سي آي} بيشغل"),
+  );
   fx.env.GEMINI_API_KEY = "test-key";
   prep(fx);
   ok(board(fx, "build"), "build");
@@ -396,6 +399,7 @@ test("an Arabic board lists its kept terms, and one edited changes speech, scree
   const md = read(fx.dir, "script.md");
   assert.doesNotMatch(md, /\bCI\b/);
   assert.match(md, /بيشغل الـ GitHub Actions على الـ branch\. \[ex-3\]/);
+  assert.match(md, /1\. الـ GitHub Actions بيشغل الأمر/);
   // Code stays as written.
   assert.match(md, /scripts\/local-gate\.sh\\ngh pr create/);
 
@@ -409,8 +413,16 @@ test("an Arabic board lists its kept terms, and one edited changes speech, scree
   );
   assert.ok(script.kept.includes("GitHub Actions"));
   assert.ok(!script.kept.includes("CI"));
+  const before = calls(fx, "synthesize").length;
   voice(fx);
-  assert.match(calls(fx, "synthesize").at(-1).text, /الـ GitHub Actions/);
+  const said = calls(fx, "synthesize")
+    .slice(before)
+    .map((c) => c.text);
+  assert.ok(
+    said.some((t) => /الـ GitHub Actions بيشغل/.test(t)),
+    said,
+  );
+  assert.ok(!said.some((t) => t.includes("سي آي")), said);
 });
 
 test("apply refuses answers for a stale version and a text cut to fit a comment", () => {

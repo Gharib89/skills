@@ -447,7 +447,8 @@ export async function check(dir, times) {
 
 // An element's reading direction as the composition sets it: Arabic text reads
 // right to left in a scene or cue marked so; a Latin run's <bdi>
-// sits in one, isolated, on one line where the `.lat` rule says so. A caption
+// sits in one, isolated unless the `.lat` rule says otherwise, on one line
+// where it says so. A caption
 // word's line height is the `.cue` rule's, against the ink #686 measured for
 // IBM Plex Sans Arabic (1.46 em) and Inter (0.98 em).
 function reading(html, scene, text, bdi, rtl) {
@@ -456,7 +457,10 @@ function reading(html, scene, text, bdi, rtl) {
   return {
     dir: arabic && rtl ? "rtl" : "ltr",
     within: bdi && rtl ? "rtl" : null,
-    bidi: bdi ? "isolate" : "normal",
+    bidi:
+      bdi && !/\.lat \{[^}]*unicode-bidi: normal/.test(html)
+        ? "isolate"
+        : "normal",
     wrap:
       bdi && /\.lat \{[^}]*white-space: nowrap/.test(html)
         ? "nowrap"

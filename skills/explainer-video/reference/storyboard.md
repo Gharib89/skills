@@ -67,7 +67,7 @@ delivery it reports Render's last line and the videos-folder path.
    file, touching only that scene, then each respelt kept term over the title,
    the narration and the screen text, and prints one `board <id>: approve` or
    `revise: <note>` line per card and a `board kept: <term> -> <to>` line per
-   term; a scene a respelling changed is in the redo list. `board: approved`:
+   term; a scene a respelt term changed is in the redo list. `board: approved`:
    go on to Render. `board: redo <ids>`: first run `brief.mjs` with the
    `; brief` arguments it lists, if any, and follow its redo line; then, for
    each card revised with a note,

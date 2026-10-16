@@ -139,6 +139,10 @@ function narrationBlocks(lines) {
 // scenes it changed.
 function renameKept(lines, from, to) {
   const swap = (t) => rename(t, from, to);
+  // A braced `{written|spoken}` whose written term is respelt loses its
+  // spoken form, which spelt out the old term: the new one is said as written.
+  const said = (t) =>
+    swap(t.replace(/\{([^|}]*)\|[^}]*\}/g, (m, w) => (swap(w) === w ? m : w)));
   const touched = new Set();
   let id = null;
   let part = null;
@@ -153,7 +157,7 @@ function renameKept(lines, from, to) {
     else if (part === "Narration" && line.trim()) {
       const next = line.replace(
         /^(.*?)((?:\s*\[[^\]]*\])*\s*)$/,
-        (_, said, cites) => swap(said) + cites,
+        (_, text, cites) => said(text) + cites,
       );
       if (next !== line) {
         lines[i] = next;

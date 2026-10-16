@@ -21,7 +21,7 @@ import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { CUE_CHARS } from "../render/compose.mjs";
 import { checkVisual } from "../lib/visuals.mjs";
-import { isLatin, keptTerms } from "../lib/terms.mjs";
+import { endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -148,13 +148,7 @@ function sentence(raw, id) {
     const text = chunk.replace(BRACES, "$1").replaceAll("`", "");
     said.push(...words);
     const last = captions.at(-1);
-    if (
-      language === "ar" &&
-      last &&
-      isLatin(text) &&
-      /[A-Za-z][A-Za-z0-9#+._/-]*$/.test(last.text) &&
-      /[A-Za-z0-9#+]$/.test(last.text)
-    ) {
+    if (language === "ar" && last && isLatin(text) && endsLatin(last.text)) {
       last.text += ` ${text}`;
       last.words += words.length;
     } else captions.push({ text, words: words.length });

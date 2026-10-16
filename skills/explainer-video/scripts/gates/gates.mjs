@@ -27,7 +27,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
-import { ARABIC, LUFS, floors, loadStyle } from "../lib/style.mjs";
+import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { CUE_CHARS, FPS, H, W } from "../render/compose.mjs";
 
@@ -106,16 +106,7 @@ const cues = [
 // code that draws, measures and judges: the root page's composer, this file,
 // the probe, the contrast maths and the reading rules.
 const inputs = renderInputs(
-  [
-    ...new Set(
-      [
-        "title",
-        "text",
-        "code",
-        ...(script.language === "ar" ? Object.values(ARABIC) : []),
-      ].map((r) => profile.type[r].font),
-    ),
-  ],
+  [...new Set(typeRoles(script.language).map((r) => profile.type[r].font))],
   profile,
 );
 const source = [

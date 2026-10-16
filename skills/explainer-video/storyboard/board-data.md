@@ -70,9 +70,9 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `answers.scenes[].note` | string | yes | What to change; empty when none. |
 | `answers.scenes[].narration` | string | yes | The edited narration lines; empty when unedited. |
 | `answers.brief` | array | yes | `<knob>=<value>` arguments for `brief.mjs`, one per changed knob and one per list item of a changed list; empty when none changed. |
-| `answers.kept` | array | no | Present when the board has `kept`: one entry per kept term given a new spelling; empty when none changed. |
+| `answers.kept` | array | no | Present when the board has `kept`: one entry per kept term respelt; empty when none changed. |
 | `answers.kept[].term` | string | yes | The kept term as the board listed it. |
-| `answers.kept[].to` | string | yes | Its new spelling, never empty. `apply` writes it over the term in the title, the narration and the screen text, so speech, screen and captions change alike. |
+| `answers.kept[].to` | string | yes | Its new spelling, never empty. |
 
 Text fields are plain text; the page interprets nothing in them.
 

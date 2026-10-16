@@ -503,6 +503,13 @@ test("an Arabic render passes the right to left checks, and each broken reading 
       'Latin run wraps "pull request"',
     ],
     [
+      good.replace(
+        " white-space: nowrap;",
+        " white-space: nowrap; unicode-bidi: normal;",
+      ),
+      'Latin run not isolated "pull request"',
+    ],
+    [
       good.replaceAll('<bdi class="lat">pull request</bdi>', "pull request"),
       'Latin run not isolated in "',
     ],

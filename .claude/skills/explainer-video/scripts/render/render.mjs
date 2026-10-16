@@ -33,7 +33,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { ARABIC, LUFS, floors, loadStyle } from "../lib/style.mjs";
+import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
 import { ACE_CAPTION, bedLevel, score } from "../score/score.mjs";
 import {
@@ -98,7 +98,7 @@ if (!["en", "ar"].includes(script.language))
   fail(`no render fonts for language ${script.language}`);
 // Arabic reads right to left, in the Arabic type roles beside the Latin ones.
 const dir = script.language === "ar" ? "rtl" : "ltr";
-const roles = dir === "rtl" ? [...LATIN, ...Object.values(ARABIC)] : LATIN;
+const roles = typeRoles(script.language);
 
 if (!fs.existsSync(path.join(run, "voice.json")))
   fail("no voice.json: run the voice stage first (voice/voice.mjs)");

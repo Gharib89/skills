@@ -13,9 +13,17 @@ export const latinRuns = (text) => text.match(RUN) ?? [];
 // The text cut around its Latin runs: the runs at odd indexes.
 export const splitLatin = (text) => text.split(new RegExp(`(${RUN.source})`));
 
+export const ARABIC_SCRIPT = /\p{Script=Arabic}/u;
+
 // A written caption token of Latin letters and no Arabic ones.
 export const isLatin = (token) =>
-  /[A-Za-z]/.test(token) && !/\p{Script=Arabic}/u.test(token);
+  /[A-Za-z]/.test(token) && !ARABIC_SCRIPT.test(token);
+
+// Whether a written token ends in a Latin run holding a letter (`pull`,
+// `وpull`), so a Latin token after it continues the same term.
+const LAST_RUN = new RegExp(`(?:${RUN.source})$`);
+export const endsLatin = (token) =>
+  /[A-Za-z]/.test(token.match(LAST_RUN)?.[0] ?? "");
 
 // A visual with each screen string passed through `fn`. Code frames and
 // terminal lines are code, kept as written, so they hold no kept term; nor do
@@ -38,7 +46,8 @@ export function mapScreen(visual, fn) {
   return walk(visual);
 }
 
-// A compiled script's kept terms, in order of first use.
+// A compiled script's kept terms, in order of first use in the scenes, then
+// the title's.
 export function keptTerms(script) {
   const seen = new Set();
   const add = (text) => {
@@ -49,14 +58,13 @@ export function keptTerms(script) {
     s.captions.flat().forEach((c) => add(c.text));
     mapScreen(s.visual, add);
   }
+  add(script.title);
   return [...seen];
 }
 
-const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-// `from` replaced by `to` wherever it stands whole, not inside a longer word.
+// Each Latin run that is `from` replaced by `to`. A longer run holding it
+// (`CI/CD`, `pull request review`) is a kept term of its own, left as it is.
 export const rename = (text, from, to) =>
-  text.replace(
-    new RegExp(`(?<![A-Za-z0-9#+_-])${escape(from)}(?![A-Za-z0-9#+_-])`, "g"),
-    to,
-  );
+  splitLatin(text)
+    .map((p, i) => (i % 2 && p === from ? to : p))
+    .join("");

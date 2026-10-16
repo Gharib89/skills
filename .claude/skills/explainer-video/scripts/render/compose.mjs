@@ -500,15 +500,14 @@ export function videoPage({
 // A caption cue held still with its first half said: those words in the text
 // colour, the rest faint. Right to left, a Latin run is one word, so a
 // multi-word term keeps its order.
-function stillCue(text, attrs, f, dir) {
-  const words =
-    dir === "rtl"
-      ? splitLatin(text).flatMap((p, i) =>
-          i % 2 ? [p] : p.split(/\s+/).filter(Boolean),
-        )
-      : text.split(/\s+/);
+function stillCue(text, attrs, f) {
+  const words = f.rtl
+    ? splitLatin(text).flatMap((p, i) =>
+        i % 2 ? [p] : p.split(/\s+/).filter(Boolean),
+      )
+    : text.split(/\s+/);
   const said = Math.ceil(words.length / 2);
-  return `<div class="cue clip"${attrs}${dir === "rtl" ? ' dir="rtl"' : ""}><span>${words
+  return `<div class="cue clip"${attrs}${f.rtl ? ' dir="rtl"' : ""}><span>${words
     .map(
       (w, i) =>
         `<span class="w"${i < said ? ' style="color: var(--text)"' : ""}>${f.t(w)}</span>`,
@@ -554,7 +553,6 @@ export function stillsPage({
                 cues[id],
                 `${at(ids.indexOf(id))} data-track-index="2" id="cue-${id}"`,
                 f,
-                dir,
               ),
             )
             .join("")}</div>`
@@ -590,7 +588,7 @@ export async function framePage({
     duration: 1,
     body: `      <div class="clip" data-composition-id="${scene.id}">
 ${html}
-      </div>${cue ? `\n      <div class="captions">${stillCue(cue, "", faces(profile, dir), dir)}</div>` : ""}`,
+      </div>${cue ? `\n      <div class="captions">${stillCue(cue, "", faces(profile, dir))}</div>` : ""}`,
     script: "",
   });
 }

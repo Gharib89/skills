@@ -6,9 +6,8 @@
 // to `add(gate, time, what)`, `gate` `layout` or `contrast`.
 import { H, W } from "../render/compose.mjs";
 import { contrast } from "./style.mjs";
-import { isLatin } from "./terms.mjs";
+import { ARABIC_SCRIPT, isLatin } from "./terms.mjs";
 
-const ARABIC = /\p{Script=Arabic}/u;
 const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 
 // Right to left (with `dir` on the text boxes, never a page root, which judge
@@ -17,7 +16,7 @@ const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 // order; and Arabic text's line height is at least the ink its own text spans
 // in its face.
 function rtl(e, bad) {
-  if (ARABIC.test(e.text)) {
+  if (ARABIC_SCRIPT.test(e.text)) {
     if (e.dir !== "rtl") bad(`Arabic reads ${e.dir}`);
     if (/[A-Za-z]/.test(e.text)) bad("Latin run not isolated in");
     if (e.lineH !== null && e.lineH < e.ink)

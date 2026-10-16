@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
-import { SCRIPT } from "./scene-file.mjs";
+import { ARABIC, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
@@ -316,7 +316,7 @@ test("a board with kept terms shows each one editable, and an edited term reads 
   );
   temps.push(path.dirname(dir));
   fs.mkdirSync(path.join(dir, "board"), { recursive: true });
-  fs.writeFileSync(path.join(dir, "script.md"), SCRIPT);
+  fs.writeFileSync(path.join(dir, "script.md"), ARABIC);
   fs.writeFileSync(path.join(dir, "board", "1.json"), JSON.stringify(board));
   const file = path.join(dir, "answers.txt");
   fs.writeFileSync(file, P.answersText(S));

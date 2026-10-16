@@ -174,9 +174,9 @@ to the **script gates**.
    of the `avoid` items. Every sentence that states a fact cites the excerpts
    that state it; a transition or framing question is `[no-claim]`. No em or
    en dashes anywhere, and at most 25 words a sentence. Leave the header's
-   `language`, `narrator` and `style` out: the brief supplies them. With
-   `language: ar`, write the narration and the screen text in Egyptian Arabic
-   directly, never translated from English. **Kept terms** (code identifiers,
+   `language`, `narrator` and `style` out: the brief supplies them. In an
+   Arabic run (`language: ar`), write the narration and the screen text in
+   Egyptian Arabic from the first draft. **Kept terms** (code identifiers,
    product names, acronyms, and any the user names) stay in English letters:
    said, shown and captioned as written.
 2. **Compile.** As under Render, step 3.
@@ -287,10 +287,11 @@ narrator: am_fenrir
    draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
-   `font:inter`, `font:jetbrains-mono`; in Arabic, `font:noto-naskh-arabic`
-   and `font:ibm-plex-sans-arabic` too), beside the voice stage's rows, and
-   `ace-step` and `uv` when the brief's `score` is `ace-step`. Run the setup
-   check first; any of them missing, run the setup steps above.
+   `font:inter`, `font:jetbrains-mono`; in an Arabic run,
+   `font:noto-naskh-arabic` and `font:ibm-plex-sans-arabic` too), beside the
+   voice stage's rows, and `ace-step` and `uv` when the brief's `score` is
+   `ace-step`. Run the setup check first; any of them missing, run the setup
+   steps above.
 3. **Compile.** `node <skill>/scripts/script/compile.mjs explainers/<slug>`
    prints `compile: <n> scene(s) -> script.json`. Exit 1 prints
    `compile: [<scene>: ]<what>` on stderr: fix what it names and compile again.
@@ -323,7 +324,7 @@ narrator: am_fenrir
    skill refuses: fix it or choose another profile. `<row> is not installed`:
    run setup. `no script.json`, `no voice.json`, `voice.json does not match` or
    `voice.json holds narrator` names the stage to run first. `no render fonts
-   for language <x>`: this version renders English and Arabic only. A
+   for language <x>`: set the brief's `language` to `en` or `ar`. A
    profile's layout, motion or font this version cannot draw: choose another
    profile. Any other `render: <why>`
    line, a HyperFrames or ffprobe failure among them: relay it with the
