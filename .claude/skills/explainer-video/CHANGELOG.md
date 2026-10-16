@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.18.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Style card's Arabic frame loads the Arabic fonts
+  ([#745](https://github.com/Gharib89/skills/pull/745),
+  [`37c6840`](https://github.com/Gharib89/skills/commit/37c68406c5bf4c4222fe2068adf899170c48037b))
+
+
 ## v0.17.0 (2026-10-16)
 
 ### Features
