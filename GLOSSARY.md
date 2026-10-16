@@ -480,6 +480,10 @@ _Avoid_: style preview, mood board
 An image a draft style profile's colours are measured from: a screenshot, a slide, a video frame, or a page of a website as rendered. Every source of a style becomes reference images first; a colour the source declares counts only where its reference images show it.
 _Avoid_: sample, screenshot (for the general case), mood image
 
+**Colour candidate**:
+A colour measured from a draft style profile's reference images, a surface ranked by its area or an accent among the saturated pixels, with its share and the images that show it. Claude assigns each colour token a colour candidate by its id, never a hex.
+_Avoid_: candidate (that is `file-issue`'s open-issue match), swatch
+
 **Composer**:
 The one engine that lays out every scene of an explainer video on a single timeline, so captions, the score and word timing run unbroken from the first scene to the last.
 _Avoid_: renderer, backend, framework
