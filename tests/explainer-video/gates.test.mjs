@@ -530,6 +530,13 @@ test("an Arabic render passes the right to left checks, and each broken reading 
   assert.equal(fixed.code, 0, fixed.out + fixed.err);
 });
 
+test("an English run quoting an Arabic word is not held to the right to left reading rules", () => {
+  const fx = fixture();
+  const r = render(fx, SCRIPT.replace('"value": "code"', '"value": "كود"'));
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^gate layout: pass: /m);
+});
+
 test("Arabic text in a code frame, which reads left to right as written, passes the reading checks", () => {
   const fx = fixture(ARABIC.replace("\\ngh pr create", '\\necho \\"تم\\"'));
   fx.env.GEMINI_API_KEY = "test-key";

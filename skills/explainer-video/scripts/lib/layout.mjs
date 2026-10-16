@@ -13,9 +13,11 @@ const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 // Right to left (with `dir` on the text boxes, never a page root, which judge
 // checks per frame): Arabic text reads right to left with no Latin run left in
 // it; a Latin run in it is isolated and on one line, so a term keeps its word
-// order; and Arabic text's line height is at least the ink its own text spans
-// in its face. Text in a box marked `dir="ltr"` (a code frame, a terminal) is
-// code, which reads left to right as written whatever script it holds.
+// order; and Arabic text's line height is at least the ink Arabic's letters
+// span in its face and weight, as the probe measures it once per face. Text in
+// a box marked `dir="ltr"` is exempt: a code frame or terminal, which reads
+// left to right as written whatever script it holds, and every text box of an
+// English run, whose content, header and cues are marked so.
 function rtl(e, bad) {
   if (e.within === "ltr") return;
   if (ARABIC_SCRIPT.test(e.text)) {
