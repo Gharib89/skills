@@ -152,13 +152,14 @@ export const VISUALS = {
       at(p.at, n);
     },
     items: (p) => {
+      const before = lines(p.before);
       const after = lines(p.after);
       return [
-        ["code", 1, [p.file, ...lines(p.before)]],
+        ["code", 1, [p.file, ...before]],
         [
           "diff",
           p.at,
-          diff(lines(p.before), after)
+          diff(before, after)
             .filter(([op]) => op === "add")
             .map(([, , j]) => after[j]),
         ],

@@ -448,7 +448,7 @@ test("a code diff's reader reads the lines the render adds, a moved line among t
     at: 2,
   });
   assert.equal(at, 2);
-  assert.equal(added.length, 1);
+  assert.deepEqual(added, ["two();"]);
 });
 
 test("an em or en dash anywhere in the scene file fails, and a sentence over 25 words warns", () => {

@@ -214,7 +214,7 @@ ${sketchCss(x.look)}`,
     ],
   }),
   code: async (p, f, x) => {
-    const lines = await x.highlight(p.code, p.lang);
+    const rows = await x.highlight(p.code, p.lang);
     const marks = x.effects.has("highlight") ? (p.highlights ?? []) : [];
     const bars = marks
       .map(
@@ -226,7 +226,7 @@ ${sketchCss(x.look)}`,
       ...codeFrame(
         p,
         f,
-        bars + lines.map((l) => `<div class="ln">${tokens(l)}</div>`).join(""),
+        bars + rows.map((l) => `<div class="ln">${tokens(l)}</div>`).join(""),
       ),
       reveals: [[".rt", 1]],
       tweens: marks.map((h, k) => [

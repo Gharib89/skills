@@ -53,8 +53,8 @@ export function floors(profile) {
   return out;
 }
 
-// The effects a profile may allow, each a GSAP tween in the composition:
-// `draw` strokes a flow's arrows on; `highlight` marks the code lines a
+// The effects a profile may allow, each a GSAP tween in the composition (an
+// effect comes only from a commercial-safe source, ADR 0012): `draw` strokes a flow's arrows on; `highlight` marks the code lines a
 // sentence names. A profile with no `effects` allows none.
 const EFFECTS = ["draw", "highlight"];
 const LOOKS = ["clean", "sketch"];
