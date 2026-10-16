@@ -10,15 +10,20 @@
 // (ADR 0016), an own voice's also under its clip's hash. With no scene cached,
 // the whole narration is one synthesis call, split per scene at the aligner's
 // word times; otherwise each uncached scene is its own call. A scene failing
-// voice QC is not cached.
+// voice QC is not cached. With <run>/brief.json, the voiced scenes and the
+// render's closing hold must land within 10 percent of the brief's `length`.
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
-//         rate · pass|fail: <why>`, then one summary line
-// writes: <run>/voice.json, the word timeline, only when every scene passes
+//         rate · pass|fail: <why>`, with a brief and every scene passing
+//         `voice length: pass|fail: <measured> vs <wanted> ±10%`, then one
+//         summary line
+// writes: <run>/voice.json, the word timeline, only when every scene and the
+//         length pass
 // stderr: a Gemini or ElevenLabs narrator with no key (an own voice speaks
 //         through Gemini), or an own voice with no consent record, is refused
 //         before any synthesis; a quota stop counts the scenes kept
 // exit:   0 every scene passes · 1 refused for its input or a missing key, a
-//         scene fails QC, a quota stop, or synthesis or alignment failed ·
+//         scene fails QC, the length fails, a quota stop, or synthesis or
+//         alignment failed ·
 //         2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -26,6 +31,7 @@ import path from "node:path";
 import { OWN_PREFIX, narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { catalogue, loadBackend, toolPaths } from "../lib/tools.mjs";
+import { HOLD } from "../render/compose.mjs";
 import { FRAME, align, transcribe } from "./align.mjs";
 import { check } from "./qc.mjs";
 
@@ -246,6 +252,24 @@ const summary = `${scenes.length} scene(s), ${missing.length} voiced in ${calls}
 if (failed) {
   console.log(`voice QC failed: ${failed} scene(s); ${summary}`);
   process.exit(1);
+}
+// length: with a brief, the voiced scenes and the render's closing hold within
+// 10 percent of the brief's length, which the script's budget only predicts.
+const briefFile = path.join(run, "brief.json");
+if (fs.existsSync(briefFile)) {
+  const want = JSON.parse(fs.readFileSync(briefFile, "utf8")).length * 60;
+  const voiced = scenes.reduce(
+    (a, s) => a + (s.cached ?? s.voiced).duration,
+    0,
+  );
+  const ok = Math.abs(voiced + HOLD - want) <= want * 0.1;
+  console.log(
+    `voice length: ${ok ? "pass" : `fail: the scenes voice ${voiced.toFixed(1)} s and the ${HOLD} s hold vs the brief's ${want} s ±10%`}`,
+  );
+  if (!ok) {
+    console.log(`voice length failed; ${summary}`);
+    process.exit(1);
+  }
 }
 fs.writeFileSync(
   path.join(run, "voice.json"),

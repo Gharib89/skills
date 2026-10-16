@@ -36,8 +36,9 @@ const say = (n, cites = "[ex-1]") =>
 
 const TITLE = { component: "title", props: { title: "The local gate" } };
 
-// bf_emma speaks 3.12 words a second, so a 12 s scene budgets 37 words and a
-// one-minute brief five such scenes.
+// bf_emma speaks 3.51 words a second and pauses 1.12 s a sentence, so a 12 s
+// scene of three sentences budgets (12 - 3.36) x 3.51 = 30 words, and a
+// one-minute brief takes five such scenes and the 1 s hold.
 const SCENES = [
   { id: "hook", role: "hook" },
   { id: "why", role: "context" },
@@ -47,7 +48,7 @@ const SCENES = [
 ].map((s) => ({
   ...s,
   seconds: 12,
-  sentences: [say(13), say(12, "[no-claim]"), say(12, "[ex-2, ex-3]")],
+  sentences: [say(10), say(10, "[no-claim]"), say(10, "[ex-2, ex-3]")],
   visual: TITLE,
 }));
 
@@ -210,36 +211,36 @@ test("the arc wants hook, context, one or more points, recap, end, each scene wi
   assert.match(r.out, /^script: \d+ pass, \d+ fail, 0 warn$/m);
 });
 
-test("a scene runs 12 to 30 s, its words within 10 percent of its seconds at the narrator's rate, and the scenes the brief's length", () => {
+test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a pause a sentence at the narrator's rate, and the scenes and hold the brief's length", () => {
   let r = check(fixture({ scenes: edit(SCENES, 0, { seconds: 31 }) }));
   assert.equal(r.code, 1);
   assert.match(line(r, "budget"), /hook 31 s is outside 12 to 30 s/);
   assert.match(
     line(r, "budget"),
-    /hook 37 words vs 97 \(31 s at 3\.12\/s\) ±10%/,
+    /hook 30 words vs 97 \(31 s less 3 sentences at 1\.12 s, at 3\.51 words\/s\) ±10%/,
   );
   r = check(
     fixture({
-      scenes: edit(SCENES, 2, { sentences: [say(13), say(12, "[no-claim]")] }),
+      scenes: edit(SCENES, 2, { sentences: [say(10), say(10, "[no-claim]")] }),
     }),
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 25 words vs 37 (12 s at 3.12/s) ±10%",
+    "script budget: fail: steps 20 words vs 34 (12 s less 2 sentences at 1.12 s, at 3.51 words/s) ±10%",
   );
   r = check(fixture({ scenes: edit(SCENES, 0, { seconds: 0 }) }));
   assert.match(line(r, "budget"), /hook 0 s is outside 12 to 30 s/);
   r = check(fixture({ brief: ["length=2", "must=local gate"] }));
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: the scenes run 60 s vs the brief's 120 s ±10%",
+    "script budget: fail: the scenes run 60 s and the 1 s hold vs the brief's 120 s ±10%",
   );
 });
 
 test("every cite names an excerpt still word for word in its snapshot", () => {
   let fx = fixture({
     scenes: edit(SCENES, 1, {
-      sentences: [say(13, "[ex-9]"), say(12), say(12)],
+      sentences: [say(10, "[ex-9]"), say(10), say(10)],
     }),
   });
   let r = check(fx);
@@ -472,7 +473,7 @@ test("an em or en dash anywhere in the scene file fails, and a sentence over 25 
   r = check(
     fixture({
       scenes: edit(SCENES, 0, {
-        sentences: [say(26), say(5, "[no-claim]"), say(6)],
+        sentences: [say(26), say(2, "[no-claim]"), say(2)],
       }),
     }),
   );

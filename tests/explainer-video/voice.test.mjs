@@ -238,6 +238,44 @@ test("a rerun refused for its input removes the timeline the last pass wrote", (
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
 });
 
+// Five scenes of `n` sentences; the fake voices each sentence in about 2.95 s,
+// so four a scene voice about 59 s and six 88.6 s.
+const long = (n) =>
+  ["one", "two", "three", "four", "five"].map((w) => ({
+    id: `scene-${w}`,
+    narration: new Array(n).fill(
+      `Scene ${w} reads the issue and then writes it.`,
+    ),
+  }));
+
+test("with a brief, the voiced timeline and the closing hold must land within 10 percent of the brief's length", () => {
+  const fx = fixture(long(4));
+  fs.writeFileSync(
+    path.join(fx.dir, "brief.json"),
+    JSON.stringify({ length: 1 }),
+  );
+  let r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^voice length: pass$/m);
+  assert.ok(fs.existsSync(path.join(fx.dir, "voice.json")));
+
+  write(fx, long(6));
+  r = run(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^voice length: fail: the scenes voice 88\.6 s and the 1 s hold vs the brief's 60 s ±10%$/m,
+  );
+  assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
+});
+
+test("with no brief, as when voicing a narration alone, no length is checked", () => {
+  const fx = fixture(long(6));
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.doesNotMatch(r.out, /^voice length:/m);
+});
+
 test("voice on a mistyped run folder says which stage to run and writes nothing", () => {
   const fx = fixture();
   const r = run({ ...fx, dir: path.join(fx.tmp, "typo") });
