@@ -610,13 +610,17 @@ export async function capturePages(url, out, { env, max }) {
       if (seen.has(u)) continue;
       seen.add(u);
       // A page that never goes idle (a poll, a stream) is taken as it stands.
+      // A linked page that fails (a dead link, a PDF) is skipped; only the
+      // start page refuses the site.
+      let failed;
       const res = await page
         .goto(u, { waitUntil: "networkidle0", timeout: 30000 })
         .catch((e) => {
-          if (e.name !== "TimeoutError") throw e;
+          if (e.name !== "TimeoutError") failed = e;
         });
-      if (res && !res.ok()) {
-        if (u === url) throw new Error(`HTTP ${res.status()} at ${u}`);
+      if (failed || (res && !res.ok())) {
+        if (u === url)
+          throw failed ?? new Error(`HTTP ${res.status()} at ${u}`);
         continue;
       }
       const found = await page.evaluate(() => {

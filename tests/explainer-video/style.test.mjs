@@ -404,6 +404,27 @@ test("a token under its contrast floor is nudged in lightness and marked adjuste
   assert.equal(loads(file, "pale").name, "pale");
 });
 
+test("a token no lightness can lift over its floor is refused, and nothing is written", () => {
+  const SPLIT = [
+    ["#f5f4ed", 60],
+    ["#303030", 25],
+    ["#141413", 15],
+  ];
+  const { run, env } = measuredRun(SPLIT, {
+    bg: { candidate: "s1", why: "ground" },
+    panel: { candidate: "s2", why: "the dark cards" },
+    text: { candidate: "s3", why: "the body text" },
+  });
+  const r = node("draft.mjs", [run, "split"], env);
+  assert.equal(r.status, 1);
+  assert.match(
+    r.stderr,
+    /^style text: no lightness passes 4\.5:1 on bg and panel and chip$/m,
+  );
+  assert.ok(!fs.existsSync(path.join(run, "style-draft", "split.json")));
+  assert.ok(fs.existsSync(path.join(run, "style-draft", "refs")));
+});
+
 test("a monochrome source gets the default accent hue, derived", () => {
   const { run, env } = measuredRun(GREY, {
     bg: { candidate: "s1", why: "ground" },
