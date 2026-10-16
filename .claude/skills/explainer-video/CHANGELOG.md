@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.1 (2026-10-16)
+
+### Chores
+
+- **explainer-video**: Host the Egyptian Arabic aligner on Hugging Face
+  ([#730](https://github.com/Gharib89/skills/pull/730),
+  [`5a5091c`](https://github.com/Gharib89/skills/commit/5a5091ce78ae59b720d41d61b7df19cf26c173ac))
+
+
 ## v0.10.0 (2026-10-16)
 
 ### Features
