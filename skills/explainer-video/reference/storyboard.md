@@ -13,6 +13,12 @@ one. `board` below is `node <skill>/scripts/storyboard/board.mjs
 explainers/<slug>`. Stage and step names (Script, Voice, Render) are
 SKILL.md's.
 
+A run that skipped the Storyboard (narration the user writes, which goes
+straight to Voice or Render) has no board to post to, so steps 7 and 8 do not
+apply to it. At a gate stop it relays each red gate's line and `gates.md` and
+asks the user about a fix that changes the narration, order or count. After
+delivery it reports Render's last line and the videos-folder path.
+
 1. **Stills.** `node <skill>/scripts/render/render.mjs explainers/<slug>
    --stills` renders one settled still per scene and nothing else, printing
    `render: stills <hit>/<n> cached`; a scene unchanged since its last still is
@@ -81,9 +87,3 @@ SKILL.md's.
    the delivered MP4 into a clip under 15 MB, and its `delivered` version plays
    them on the cards. Post it as in step 4, then report Render's last line and
    the videos-folder path.
-
-A run that skipped this stage (narration the user writes, which goes straight
-to Voice or Render) has no board to post to. At a gate stop it reports each
-red gate's line and `gates.md` instead of step 7, and asks the user about a fix
-that changes the narration, order or count. After delivery it reports Render's
-last line and the videos-folder path instead of step 8.
