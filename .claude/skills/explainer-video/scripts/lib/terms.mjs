@@ -73,3 +73,29 @@ export const rename = (text, spellings) =>
   splitLatin(text)
     .map((p, i) => (i % 2 && spellings.has(p) ? spellings.get(p) : p))
     .join("");
+
+// A narration line renamed as `rename` does, its terms read as written: a
+// braced `{written|spoken}` inside a respelt term (`{pull|بول} request`) loses
+// its spoken form, which spelt out the old term, so the new one is said as
+// written. Every other brace stays.
+export function respell(text, spellings) {
+  const spans = [];
+  let shift = 0;
+  const written = text.replace(BRACES, (m, w, _s, at) => {
+    spans.push([at - shift, at - shift + w.length]);
+    shift += m.length - w.length;
+    return w;
+  });
+  const hit = [];
+  let at = 0;
+  splitLatin(written).forEach((p, i) => {
+    if (i % 2 && spellings.has(p)) hit.push([at, at + p.length]);
+    at += p.length;
+  });
+  let n = 0;
+  const unbraced = text.replace(BRACES, (m, w) => {
+    const [a, b] = spans[n++];
+    return hit.some(([x, y]) => a < y && x < b) ? w : m;
+  });
+  return rename(unbraced, spellings);
+}

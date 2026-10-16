@@ -4,6 +4,7 @@ import {
   endsLatin,
   keptTerms,
   rename,
+  respell,
 } from "../../skills/explainer-video/scripts/lib/terms.mjs";
 
 test("a respelt kept term changes only where it stands as a whole Latin run", () => {
@@ -50,4 +51,19 @@ test("a Latin term used only in the video's title is kept", () => {
     ],
   };
   assert.deepEqual(keptTerms(script), ["Ship", "GitHub"]);
+});
+
+test("a respelt term drops the spoken form of a brace it covers, even one holding part of it", () => {
+  const spellings = new Map([
+    ["pull request", "PR"],
+    ["CI", "GitHub Actions"],
+  ]);
+  assert.equal(
+    respell("نفتح {pull|بول} request و {AI|ايه اي}", spellings),
+    "نفتح PR و {AI|ايه اي}",
+  );
+  assert.equal(
+    respell("الـ {CI|سي آي} بيشغل", spellings),
+    "الـ GitHub Actions بيشغل",
+  );
 });

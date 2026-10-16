@@ -33,7 +33,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
-import { BRACES, mapScreen, rename } from "../lib/terms.mjs";
+import { mapScreen, rename, respell } from "../lib/terms.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { esc } from "../render/compose.mjs";
 
@@ -139,10 +139,6 @@ function narrationBlocks(lines) {
 // visual's screen text. The ids of the scenes they changed.
 function renameKept(lines, spellings) {
   const swap = (t) => rename(t, spellings);
-  // A braced `{written|spoken}` whose written term is respelt loses its
-  // spoken form, which spelt out the old term: the new one is said as written.
-  const respellNarration = (t) =>
-    swap(t.replace(BRACES, (m, w) => (swap(w) === w ? m : w)));
   const touched = new Set();
   let id = null;
   let part = null;
@@ -157,7 +153,7 @@ function renameKept(lines, spellings) {
     else if (part === "Narration" && line.trim()) {
       const next = line.replace(
         /^(.*?)((?:\s*\[[^\]]*\])*\s*)$/,
-        (_, text, cites) => respellNarration(text) + cites,
+        (_, text, cites) => respell(text, spellings) + cites,
       );
       if (next !== line) {
         lines[i] = next;
