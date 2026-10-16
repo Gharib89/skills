@@ -305,7 +305,7 @@ try {
   fail(e.message);
 }
 const rows = catalogue();
-const fontRows = [...new Set(LATIN.map((r) => draft.type?.[r]?.font))].map(
+const fontRows = [...new Set(ROLE_NAMES.map((r) => draft.type?.[r]?.font))].map(
   (font) =>
     fontRow(draft, font) ??
     fail(`the draft names font ${font}, which no setup row installs`),
@@ -389,11 +389,6 @@ const SAMPLES = [
     },
   },
 ];
-const arabic = {
-  ...draft,
-  type: { ...draft.type, title: draft.type.arTitle, text: draft.type.arText },
-};
-const profileOf = (s) => (s.dir === "rtl" ? arabic : draft);
 
 const backend = await loadBackend();
 const frames = at("frames");
@@ -404,7 +399,7 @@ const timing = { duration: 1, sentences: [0] };
 for (const s of SAMPLES)
   fs.writeFileSync(
     path.join(frames, "scenes", `${s.id}.html`),
-    await sceneFile(s, timing, profileOf(s), { backend, dir: s.dir }),
+    await sceneFile(s, timing, draft, { backend, dir: s.dir }),
   );
 fs.writeFileSync(
   path.join(frames, "index.html"),
@@ -458,7 +453,7 @@ for (const s of SAMPLES)
     label: s.label,
     html: await framePage({
       title: label,
-      profile: profileOf(s),
+      profile: draft,
       fonts,
       scene: s,
       cue: s.cue,
