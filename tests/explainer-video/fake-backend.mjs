@@ -226,6 +226,11 @@ export async function clip(input, output, { start, duration }) {
   );
 }
 
+export async function sheet(input, output, { start, duration, fps }) {
+  log({ call: "sheet", input, output, start, duration, fps });
+  fs.writeFileSync(output, `sheet of ${path.basename(output, ".png")}`);
+}
+
 export async function narration(input, output) {
   log({ call: "narration", input, output });
   fs.mkdirSync(path.dirname(output), { recursive: true });

@@ -493,12 +493,16 @@ The music and sound effects an explainer video carries under its narration, synt
 _Avoid_: soundtrack, background music, BGM
 
 **Video gate**:
-An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness, caption timing or sound effects per minute. Each has a floor the skill sets and a style profile may only tighten; a gate still failing after two fix attempts stops the run, and no video ships.
+An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness, caption timing or sound effects per minute. Each has a floor the skill sets, and a style profile may only tighten every one but the critic's; a gate still failing after two fix attempts stops the run, and no video ships.
 _Avoid_: QA, check, local gate
 
 **Critic**:
 An independent reviewer that reads a run's contact sheets: its hard failures (unreadable or invented content, a broken right-to-left layout) block like a video gate, and its scores only advise.
 _Avoid_: judge, grader, reviewer
+
+**Contact sheet**:
+One image per scene of a rendered explainer video: four of its frames (its quarter marks and its last frame), cut from the encoded video and tiled two by two, that the critic reads in place of the video.
+_Avoid_: snapshot, thumbnail, filmstrip
 
 **Tool cache**:
 The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model under its pinned revision, so copies of the skill at different versions coexist. An npm or Chrome install under another hash that no run has used for 30 days is stale, and setup's install removes it; a model at an older revision stays.

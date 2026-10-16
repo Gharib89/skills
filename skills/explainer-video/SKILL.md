@@ -18,12 +18,13 @@ defaults; **source**, each source read into a source pack; **script**, a cited
 scene file written from the pack and held to the script gates; **voice**,
 English narration; the **storyboard**, where the user approves or revises each
 scene; **render**, the scene file turned into a captioned MP4; and **gates**,
-which the render runs and which block a video below the floors.
+which the render runs and which block a video below the floors or one
+the critic fails.
 Asked for a video from sources, run the stages in order (brief, source,
 script, voice, storyboard, render), stopping for the user only at the
 storyboard and where a stage says to stop or ask. Asked for a video of a topic
-alone, say that topic research is not in this version and ask for a source.
-Asked for narration the user writes, skip to Voice or Render.
+alone, the source stage researches it first. Asked for narration the user
+writes, skip to Voice or Render.
 
 ## Setup
 
@@ -105,8 +106,16 @@ for this repo), a web page URL, or a `.pdf`, `.md`, `.txt`, `.html`, `.docx` or
 `.pptx` file. Subagents read the snapshots; only the outline enters this
 conversation, so a large repo does not crowd out the work.
 
+0. **Topic.** Given a topic and no source, dispatch one subagent with
+   `<skill>/agents/researcher.md` as its prompt, `{topic}` the topic, `{focus}`
+   and `{audience}` the brief's, `{avoid}` none. Its reply, 3 to 8 page URLs,
+   is the sources: snapshot them with `--topic "<topic>"`, which refuses any
+   other source or count. A page snapshot cannot read: dispatch it once more
+   with `{avoid}` every page refused so far, and snapshot its new list. On
+   `too few`, or a second refusal, relay it and ask the user for a source.
 1. **Snapshot.** `node <skill>/scripts/source/snapshot.mjs explainers/<slug>
-   [--minutes <n>] <source>...`, `--minutes` the brief's length.
+   [--minutes <n>] [--topic "<topic>"] <source>...`, `--minutes` the brief's
+   length.
    It replaces `snapshots/` whole, drafts included, so every reader runs again
    after it. It prints `source <id>: <kind> · <n> <unit> · <source>` per
    source, a repo's followed by `withheld <id>/<path>: <why>` for each file
@@ -292,9 +301,10 @@ narrator: am_fenrir
    mixes in the **score**, synthesised music ducked under speech with sound
    effects at the cuts and the end, unless the brief turns it off, masters to
    -14 LUFS, renders, then runs the gates (see Gates) and prints
-   their lines. Only when every gate passes does it print one `delivery
-   <check>: pass|fail` line per delivery check (`resolution`, `frame rate`,
-   `aspect`, `duration`, `audio`, `srt`), then `delivered:
+   their lines. A first render always ends with the critic pending (see
+   Gates). Only when every gate passes does it print one
+   `delivery <check>: pass|fail` line per delivery check (`resolution`,
+   `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
    cached, video cached|rendered`. A scene still, the score and the video are
    cached by content, so an unchanged run renders nothing again.
@@ -303,7 +313,7 @@ narrator: am_fenrir
    path, `explainer-video/<repo>/<slug>/` in the user's videos folder (the XDG
    videos folder on Linux, `~/Movies` on macOS, `%USERPROFILE%\Videos` on
    Windows), so the video outlives the run folder. Then run Storyboard step 8.
-7. **On a fail** (exit 1), relay what was printed. A `gate <name>: fail` line
+7. **On a fail** (exit 1), relay what was printed. A `gate` line not `pass`
    means nothing was delivered and `out/` was emptied: follow Gates below. A
    `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
@@ -330,50 +340,8 @@ copy to take up the edit, or name another profile in `style:`.
 
 ## Gates
 
-A **video gate** checks the rendered video against a floor and blocks: a red
-gate means no video. The render stage runs them all after every render;
-`node <skill>/scripts/gates/gates.mjs explainers/<slug>` re-judges the render
-still in `out/`, which only a green render leaves (a red render empties
-`out/`, so render again, which reuses the cached video), and deletes nothing.
-Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
-
-- `layout`: HyperFrames' check, plus the layout probe (text at least 18 px,
-  nothing clipped or overflowing its box, every text box inside the 5 percent
-  safe margin, no text box overlapping another), on frames every 15 frames
-  and on each scene's settled last frame.
-- `contrast`: 4.5:1 for body text and 3:1 for large text (24 px, or 18.66 px
-  bold), on the same frames. The palette check when the profile loads holds
-  the faint, accent and status colours to 3:1 only, since the scenes draw them
-  large; text drawn small in one of them is held to 4.5:1.
-- `loudness`: -14 LUFS plus or minus 1 and a true peak at most -1 dBTP,
-  measured on the encoded MP4.
-- `captions`: every word timed in order inside its scene, every cue non-empty,
-  in order, at most 84 characters and inside the video, and the SRT equal to
-  the burned-in cues.
-- `sfx`: at most 24 sound effects in any minute of `score.json`.
-
-A summary line follows, `gates: <n> pass, <m> fail`, ending on a red run with
-`next: fix attempt <a> of 2` or `stop: red after two fix attempts, no video`.
-Layout and contrast results are cached per scene by everything that draws it,
-so a fix re-gates only the scenes it touched; loudness, captions and sfx run
-every time. The stage writes `gates.json`, the machine record, and `gates.md`,
-the readable report with every red gate's findings.
-
-**On a red gate**, relay its line and fix what its findings name **inside the
-script**: the visual's layout, its text size, colours within the
-profile, timing, or re-voiced audio, never the narration, the scene order or
-the scene count. Compile, voice if the audio changed, and render again. The
-attempt counts live in `gates.json`: each gate's count resets when that gate
-passes, and the run's count, which `stop` reads, when every gate passes. Both
-reset when the narration changes, so a red that moves from one gate to another
-still stops.
-On `stop`, stop with no video and run Storyboard step 7.
-
-**Floors** are set in the skill. A profile's optional `gates` block may only
-tighten them, and the tightened value is the one applied and printed:
-`contrast` (`body`, `large`, raise), `layout` (`textPx`, `margin` as a
-fraction, raise), `loudness` (`tolerance` in LU, above 0, and `peak` in
-dBTP, no lower than -8.5, lower), `sfx` (`perMinute`, lower).
+Read [reference/gates.md](reference/gates.md) when a render prints a `gate`
+line that is not `pass`, and follow it.
 
 ## Recipe
 

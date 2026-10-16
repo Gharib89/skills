@@ -8,6 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { judged } from "./critic.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import {
   catalogue,
@@ -67,13 +68,14 @@ function stage(fx, script, extra = {}) {
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
 
-// compile and voice, then render.
+// compile and voice, then render, a clean critic round taken when the critic
+// alone holds the render.
 function render(fx, extra) {
   for (const s of ["script/compile.mjs", "voice/voice.mjs"]) {
     const r = stage(fx, s);
     assert.equal(r.code, 0, `${s}: ${r.out}${r.err}`);
   }
-  return stage(fx, "render/render.mjs", extra);
+  return judged(fx.dir, () => stage(fx, "render/render.mjs", extra));
 }
 
 const calls = (fx, name = "hyperframes") =>
@@ -241,9 +243,18 @@ test("render composes every scene, renders with the CLI's guards, delivers and r
   ]);
   assert.equal(read(where, "poster.png"), "still of hook");
   assert.equal(read(fx.dir, "out", "poster.png"), "still of hook");
+  // The render the critic held drew the stills and the video; the one after
+  // reused both.
+  assert.match(r.held.out, /^gates: 5 pass, 0 fail, 1 pending; next: /m);
+  assert.deepEqual(
+    calls(fx)
+      .map((c) => (c.args.includes("png-sequence") ? "stills" : "video"))
+      .sort(),
+    ["stills", "video"],
+  );
   assert.match(
     r.out.trim().split("\n").at(-1),
-    /^render: demo\.mp4 \d+\.\d\d s, 3 scene\(s\), stills 0\/3 cached, video rendered$/,
+    /^render: demo\.mp4 \d+\.\d\d s, 3 scene\(s\), stills 3\/3 cached, video cached$/,
   );
 
   const manifest = JSON.parse(read(fx.dir, "manifest.json"));
@@ -273,12 +284,13 @@ test("a second render with nothing changed calls HyperFrames no more; one change
   );
   const changed = render(fx);
   assert.equal(changed.code, 0, changed.out + changed.err);
+  assert.ok(changed.held, "the changed video goes to the critic again");
   const fresh = calls(fx).slice(first);
   assert.equal(fresh.length, 2);
   assert.deepEqual(fresh.find((c) => c.args.includes("png-sequence")).hosts, [
     "steps",
   ]);
-  assert.match(changed.out, /stills 2\/3 cached, video rendered$/m);
+  assert.match(changed.out, /stills 3\/3 cached, video cached$/m);
 });
 
 test("a delivery check that fails names the measure, exits 1 and copies nothing", () => {
@@ -291,7 +303,7 @@ test("a delivery check that fails names the measure, exits 1 and copies nothing"
   assert.ok(!fs.existsSync(path.join(fx.dir, "out", "demo.mp4")));
   // The failed video is not cached: the next run renders it again.
   const before = calls(fx).length;
-  const again = stage(fx, "render/render.mjs");
+  const again = judged(fx.dir, () => stage(fx, "render/render.mjs"));
   assert.equal(again.code, 0, again.out + again.err);
   assert.equal(calls(fx).length, before + 1);
   assert.match(again.out, /video rendered$/m);

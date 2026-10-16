@@ -8,12 +8,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { findChrome } from "../../skills/explainer-video/scripts/lib/backend.mjs";
+import {
+  findChrome,
+  sheetFrames,
+} from "../../skills/explainer-video/scripts/lib/backend.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import {
   catalogue,
   dest,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
+import { CLEAN, critique, judged } from "./critic.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -66,14 +70,15 @@ function stage(fx, script, extra = {}) {
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
 
-// The script written, compiled and voiced, then rendered.
+// The script written, compiled and voiced, then rendered, a clean critic round
+// taken when the critic alone holds the render.
 function render(fx, text, extra) {
   if (text) fs.writeFileSync(path.join(fx.dir, "script.md"), text);
   for (const s of ["script/compile.mjs", "voice/voice.mjs"]) {
     const r = stage(fx, s);
     assert.equal(r.code, 0, `${s}: ${r.out}${r.err}`);
   }
-  return stage(fx, "render/render.mjs", extra);
+  return judged(fx.dir, () => stage(fx, "render/render.mjs", extra));
 }
 
 const calls = (fx, name) =>
@@ -96,7 +101,10 @@ const titled = (word) =>
 function assertRed(fx, r, gate, why) {
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(r.out, new RegExp(`^gate ${gate}: fail: .*${why}`, "m"));
-  assert.match(r.out, /^gates: 4 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(
+    r.out,
+    /^gates: 4 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
+  );
   assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
   assert.ok(!fs.existsSync(delivered(fx)));
   assert.equal(record(fx).gates[gate].status, "fail");
@@ -106,13 +114,13 @@ function assertRed(fx, r, gate, why) {
 // Green on the fix: every gate passes, attempts back to 0, the video delivered.
 function assertGreen(fx, r) {
   assert.equal(r.code, 0, r.out + r.err);
-  assert.match(r.out, /^gates: 5 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 6 pass, 0 fail$/m);
   for (const g of Object.values(record(fx).gates)) assert.equal(g.attempts, 0);
   assert.equal(record(fx).attempts, 0);
   assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
 }
 
-test("a clean render passes all five gates, writes the record and the report, and delivers", () => {
+test("a clean render passes all six gates, writes the record and the report, and delivers", () => {
   const fx = fixture();
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
@@ -123,7 +131,8 @@ test("a clean render passes all five gates, writes the record and the report, an
     "gate loudness: pass: -14.0 LUFS, peak -1.6 dBTP vs -14 +-1 LUFS, peak <= -1 dBTP",
     lines[3],
     lines[4],
-    "gates: 5 pass, 0 fail",
+    "gate critic: pass: 0 hard failure(s), mean scores clarity 4.0, legibility 5.0, fit 4.0, round 1 of 2 vs no unreadable or invented content; scores advise",
+    "gates: 6 pass, 0 fail",
   ]);
   assert.match(
     lines[3],
@@ -142,6 +151,7 @@ test("a clean render passes all five gates, writes the record and the report, an
     "loudness",
     "captions",
     "sfx",
+    "critic",
   ]);
   assert.deepEqual(gates.gates.loudness, {
     status: "pass",
@@ -175,7 +185,8 @@ test("a clean render passes all five gates, writes the record and the report, an
 
 test("the narration is mastered to -14 LUFS under the peak floor before the video renders", () => {
   const fx = fixture();
-  assert.equal(render(fx).code, 0);
+  const r = renderUnjudged(fx, SCRIPT);
+  assert.match(r.out, /^gates: 5 pass, 0 fail, 1 pending/m, r.out + r.err);
   const m = calls(fx, "master");
   assert.equal(m.length, 1);
   assert.equal(m[0].lufs, -14);
@@ -365,7 +376,10 @@ test("a hot mix fails loudness, and passes when the mix is fixed", () => {
     "integrated -9.0 LUFS is 5.0 LU off -14",
     "true peak 0.4 dBTP over -1",
   ]);
-  assertGreen(fx, stage(fx, "render/render.mjs"));
+  assertGreen(
+    fx,
+    judged(fx.dir, () => stage(fx, "render/render.mjs")),
+  );
 });
 
 test("an SRT edited after a green render fails captions in the gates stage alone, which deletes nothing", () => {
@@ -398,7 +412,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   );
   assert.match(
     second.out,
-    /^gates: 4 pass, 1 fail; next: fix attempt 2 of 2$/m,
+    /^gates: 4 pass, 1 fail, 1 pending; next: fix attempt 2 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 2);
   const third = render(
@@ -408,7 +422,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   assert.equal(third.code, 1);
   assert.match(
     third.out,
-    /^gates: 4 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+    /^gates: 4 pass, 1 fail, 1 pending; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 3);
   const renarrated = render(
@@ -417,7 +431,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   );
   assert.match(
     renarrated.out,
-    /^gates: 4 pass, 1 fail; next: fix attempt 1 of 2$/m,
+    /^gates: 4 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
 });
@@ -428,7 +442,7 @@ test("a red that moves from layout to contrast and back still stops", () => {
   const second = render(fx, titled("dim"));
   assert.match(
     second.out,
-    /^gates: 4 pass, 1 fail; next: fix attempt 2 of 2$/m,
+    /^gates: 4 pass, 1 fail, 1 pending; next: fix attempt 2 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 0);
   assert.equal(record(fx).gates.contrast.attempts, 1);
@@ -436,7 +450,7 @@ test("a red that moves from layout to contrast and back still stops", () => {
   assert.equal(third.code, 1);
   assert.match(
     third.out,
-    /^gates: 4 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+    /^gates: 4 pass, 1 fail, 1 pending; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
   assert.equal(record(fx).attempts, 3);
@@ -449,7 +463,10 @@ test("the same red render judged again keeps its attempt count", () => {
   // out/ is emptied on red, so the render stage runs again on its cached video.
   const again = stage(fx, "render/render.mjs");
   assert.equal(again.code, 1, again.out + again.err);
-  assert.match(again.out, /^gates: 4 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(
+    again.out,
+    /^gates: 4 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
+  );
   assert.equal(record(fx).gates.layout.attempts, 1);
 });
 
@@ -513,7 +530,8 @@ test("a second gates run with nothing changed calls neither check nor probe, yet
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(calls(fx, "check").length, 1);
   assert.equal(calls(fx, "probe").length, 1);
-  assert.equal(calls(fx, "loudness").length, 2);
+  // The render, its critic round's render again, and this run.
+  assert.equal(calls(fx, "loudness").length, 3);
   assert.match(r.out, /^gate captions: pass: /m);
 });
 
@@ -598,4 +616,236 @@ test("a check that never reached the browser stops the gates as a tool error, no
   assert.match(r.err, /^gates: hyperframes check: Command failed$/m);
   assert.ok(!/^gate layout: pass/m.test(r.out), r.out);
   assert.ok(!fs.existsSync(path.join(fx.tmp, "videos")));
+});
+
+// The render stage alone, no critic round taken.
+function renderUnjudged(fx, text) {
+  fs.writeFileSync(path.join(fx.dir, "script.md"), text);
+  for (const s of ["script/compile.mjs", "voice/voice.mjs"])
+    assert.equal(stage(fx, s).code, 0, s);
+  return stage(fx, "render/render.mjs");
+}
+
+test("a render the critic has not judged is held: critic pending, a contact sheet per scene cut from the MP4, no HyperFrames snapshot, no attempt", () => {
+  const fx = fixture();
+  const r = renderUnjudged(fx, SCRIPT);
+  assert.equal(r.code, 1, r.out + r.err);
+  const g = record(fx);
+  assert.match(g.gates.critic.sheets, /^\.cache\/critic\/[0-9a-f]{16}$/);
+  assert.ok(
+    r.out.includes(
+      `gate critic: pending: round 1 of 2, 0 of 3 scene(s) judged, contact sheets in ${g.gates.critic.sheets} vs no unreadable or invented content; scores advise\n`,
+    ),
+    r.out,
+  );
+  assert.match(
+    r.out,
+    /^gates: 5 pass, 0 fail, 1 pending; next: run the critic, round 1 of 2$/m,
+  );
+  assert.equal(g.attempts, 0);
+  assert.equal(g.gates.critic.status, "pending");
+  assert.ok(!fs.existsSync(delivered(fx)));
+  const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  const sheets = calls(fx, "sheet");
+  assert.deepEqual(
+    sheets.map((c) => [path.basename(c.output), c.start, c.duration]),
+    timeline.scenes.map((s) => [`${s.id}.png`, s.start, s.duration]),
+  );
+  for (const c of sheets) {
+    assert.equal(path.basename(c.input), "demo.mp4");
+    assert.ok(fs.existsSync(c.output), c.output);
+  }
+  for (const c of calls(fx, "hyperframes"))
+    assert.ok(!c.args.includes("snapshot"), JSON.stringify(c.args));
+  // The critic's round, then the render again on its cached video: delivered.
+  assert.deepEqual(critique(fx.dir).sort(), ["gate", "hook", "steps"]);
+  assertGreen(fx, stage(fx, "render/render.mjs"));
+  assert.equal(calls(fx, "sheet").length, 3, "the sheets are cut once");
+});
+
+test("invented content on screen fails the critic, delivers nothing, and passes on the fix", () => {
+  const fx = fixture();
+  renderUnjudged(
+    fx,
+    SCRIPT.replace('"value": "code"', '"value": "ten times faster"'),
+  );
+  critique(fx.dir, (id) =>
+    id === "steps"
+      ? {
+          failures: [
+            {
+              kind: "invented",
+              what: 'the card "ten times faster" is in no narration sentence or excerpt',
+            },
+          ],
+          scores: { clarity: 3, legibility: 5, fit: 2 },
+        }
+      : CLEAN,
+  );
+  const r = stage(fx, "render/render.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate critic: fail: 1 hard failure\(s\), first: [\d.]+ s steps: invented: the card "ten times faster" .* vs /m,
+  );
+  assert.match(r.out, /^gates: 5 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
+  assert.ok(!fs.existsSync(delivered(fx)));
+  assert.equal(record(fx).gates.critic.attempts, 1);
+  assert.equal(record(fx).attempts, 1);
+  assert.match(read(fx.dir, "gates.md"), /^## critic$/m);
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("low scores with no hard failure pass the critic, the scores in the gates report", () => {
+  const fx = fixture();
+  renderUnjudged(fx, SCRIPT);
+  critique(fx.dir, () => ({
+    failures: [],
+    scores: { clarity: 1, legibility: 2, fit: 1 },
+    note: "The card says little.",
+  }));
+  const r = stage(fx, "render/render.mjs");
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate critic: pass: 0 hard failure\(s\), mean scores clarity 1\.0, legibility 2\.0, fit 1\.0, round 1 of 2 vs /m,
+  );
+  const md = read(fx.dir, "gates.md");
+  assert.match(md, /^## Critic scores$/m);
+  assert.match(md, /^\| steps \| 1 \| 2 \| 1 \| The card says little\. \|$/m);
+});
+
+test("the critic judges two rounds of one script at most: a third render carries round two's verdict", () => {
+  const fx = fixture();
+  const r1 = render(
+    fx,
+    SCRIPT.replace('"value": "code"', '"value": "the code"'),
+  );
+  assert.equal(r1.code, 0, r1.out + r1.err);
+  const r2 = render(
+    fx,
+    SCRIPT.replace('"value": "code"', '"value": "some code"'),
+  );
+  assert.match(r2.out, /^gate critic: pass: .*round 2 of 2 vs /m);
+  const r3 = renderUnjudged(fx, SCRIPT);
+  assert.equal(r3.code, 0, r3.out + r3.err);
+  assert.match(
+    r3.out,
+    /^gate critic: pass: .*round 2 of 2, carried: no third round vs /m,
+  );
+  assert.equal(calls(fx, "sheet").length, 6, "no sheets for the third render");
+  assert.equal(record(fx).gates.critic.rounds.length, 2);
+  // Verdicts that appear for the third render add no third round.
+  const g = record(fx);
+  assert.ok(!g.gates.critic.rounds.includes(g.gates.critic.key));
+  const third = path.join(fx.dir, ".cache", "critic", g.gates.critic.key);
+  fs.mkdirSync(third, { recursive: true });
+  for (const f of fs.readdirSync(path.join(fx.dir, g.gates.critic.sheets)))
+    if (f.endsWith(".png"))
+      fs.writeFileSync(
+        path.join(third, f.replace(/\.png$/, ".json")),
+        JSON.stringify({
+          ...CLEAN,
+          failures: [{ kind: "invented", what: "x" }],
+        }),
+      );
+  const r3b = stage(fx, "render/render.mjs");
+  assert.equal(r3b.code, 0, r3b.out + r3b.err);
+  assert.match(r3b.out, /^gate critic: pass: .*carried: no third round vs /m);
+  assert.equal(record(fx).gates.critic.rounds.length, 2);
+  // New narration is a new script: its critic starts at round 1.
+  const r4 = renderUnjudged(fx, SCRIPT.replace("Here is how.", "Here is why."));
+  assert.match(r4.out, /^gate critic: pending: round 1 of 2, /m);
+});
+
+test("a malformed verdict stops the gates, naming the scene and what is wrong", () => {
+  const fx = fixture();
+  renderUnjudged(fx, SCRIPT);
+  critique(fx.dir);
+  const hook = path.join(fx.dir, record(fx).gates.critic.sheets, "hook.json");
+  const scores = CLEAN.scores;
+  for (const [verdict, why] of [
+    ["{", /JSON/],
+    [{ scores }, /no failures list/],
+    [
+      { failures: [{ kind: "ugly", what: "x" }], scores },
+      /failure 1 kind "ugly" is not unreadable or invented/,
+    ],
+    [
+      { failures: [{ kind: "invented", what: " " }], scores },
+      /failure 1 says nothing/,
+    ],
+    [
+      { failures: [], scores: { ...scores, fit: 4.5 } },
+      /score fit is not a whole number 1 to 5/,
+    ],
+  ]) {
+    fs.writeFileSync(
+      hook,
+      typeof verdict === "string" ? verdict : JSON.stringify(verdict),
+    );
+    const r = stage(fx, "render/render.mjs");
+    assert.equal(r.code, 1, r.out + r.err);
+    const line = r.err.match(/^gates: critic verdict hook\.json: (.*)$/m);
+    assert.ok(line, r.err);
+    assert.match(line[1], why);
+  }
+});
+
+test("a contact sheet shows the scene's quarter marks and its own last frame, even for a scene starting between frames", () => {
+  assert.deepEqual(sheetFrames({ start: 2, duration: 4, fps: 30 }), [
+    60,
+    [90, 120, 150, 179],
+  ]);
+  // 28.25 s to 45.9 s at 30 fps: frames 848 to 1376; 1377 is the next scene's.
+  assert.deepEqual(sheetFrames({ start: 28.25, duration: 17.65, fps: 30 }), [
+    848,
+    [980, 1112, 1244, 1376],
+  ]);
+});
+
+test("a hard failure in the critic's second round stops the run: no third round could judge a fix", () => {
+  const fx = fixture();
+  const invented = () => ({
+    ...CLEAN,
+    failures: [{ kind: "invented", what: "a figure no sentence states" }],
+  });
+  renderUnjudged(fx, SCRIPT);
+  critique(fx.dir, invented);
+  const r1 = stage(fx, "render/render.mjs");
+  assert.match(r1.out, /^gates: 5 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  renderUnjudged(fx, SCRIPT.replace('"value": "code"', '"value": "the code"'));
+  critique(fx.dir, invented);
+  const r2 = stage(fx, "render/render.mjs");
+  assert.equal(r2.code, 1, r2.out + r2.err);
+  assert.match(r2.out, /^gate critic: fail: .*round 2 of 2 vs /m);
+  assert.match(
+    r2.out,
+    /^gates: 5 pass, 1 fail; stop: the critic's second round is red, no video$/m,
+  );
+  assert.ok(record(fx).attempts >= 3, "the storyboard reads it as stopped");
+});
+
+test("a verdict stands only for the evidence it read: new cites or a changed cited excerpt is judged again", () => {
+  const fx = fixture();
+  const excerpts = (text) =>
+    fs.writeFileSync(
+      path.join(fx.dir, "excerpts.json"),
+      JSON.stringify({ excerpts: [{ id: "ex-1", text }] }),
+    );
+  excerpts("Ship reads the issue first.");
+  assert.equal(render(fx).code, 0);
+  excerpts("Ship reads the issue and its comments.");
+  const r1 = stage(fx, "render/render.mjs");
+  assert.equal(r1.code, 1, r1.out + r1.err);
+  assert.match(r1.out, /^gate critic: pending: round 2 of 2, /m);
+  const fresh = fixture();
+  assert.equal(render(fresh).code, 0);
+  const r2 = renderUnjudged(
+    fresh,
+    SCRIPT.replace("It reads the issue. [ex-1]", "It reads the issue. [ex-2]"),
+  );
+  assert.equal(r2.code, 1, r2.out + r2.err);
+  assert.match(r2.out, /^gate critic: pending: round 2 of 2, /m);
 });

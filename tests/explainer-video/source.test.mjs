@@ -627,3 +627,56 @@ test("a converter source with its tools not installed is refused before any read
   // Markdown and text need no tool.
   assert.equal(snapshot(fx, [write(fx, "a.md", "# A\n")]).code, 0);
 });
+
+test("a topic run takes three to eight web pages, refuses anything else before a read, and records the topic", () => {
+  const fx = fixture();
+  const urls = "abcdefghi"
+    .split("")
+    .map((h) => `https://${h}.example.com/topic/page`);
+  const env = {
+    EXPLAINER_VIDEO_FAKE_PAGES: JSON.stringify(
+      Object.fromEntries(
+        urls.map((u, i) => [
+          u,
+          { title: `Page ${i + 1}`, html: "<h2>Merge</h2><p>It merges.</p>" },
+        ]),
+      ),
+    ),
+  };
+  const log = path.join(fx.tmp, "calls.jsonl");
+  const refused = (args, why) => {
+    const r = snapshot(fx, ["--topic", "How ship merges", ...args], env);
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.equal(r.err.trim(), why);
+    assert.ok(!fs.existsSync(log), "nothing read");
+  };
+  refused(urls.slice(0, 2), "source: a topic takes 3 to 8 web pages, got 2");
+  refused(urls, "source: a topic takes 3 to 8 web pages, got 9");
+  const notes = write(fx, "notes.md", "# Notes\n");
+  refused(
+    [...urls.slice(0, 3), notes],
+    `source ${notes}: a topic takes web pages only`,
+  );
+  const ok = snapshot(
+    fx,
+    ["--topic", "How ship merges", ...urls.slice(0, 3)],
+    env,
+  );
+  assert.equal(ok.code, 0, ok.out + ok.err);
+  assert.match(ok.out, /^topic: How ship merges · 3 page\(s\)$/m);
+  const s = sourcesOf(fx);
+  assert.equal(s.topic, "How ship merges");
+  assert.deepEqual(
+    s.sources.map((x) => [x.kind, x.source]),
+    urls.slice(0, 3).map((u) => ["page", u]),
+  );
+  // A --topic with no topic after it is a usage error, not a source run.
+  for (const args of [
+    [...urls.slice(0, 3), "--topic"],
+    ["--topic", ...urls.slice(0, 3)],
+  ])
+    assert.equal(snapshot(fx, args, env).code, 2, args.join(" "));
+  // A run from sources records no topic.
+  assert.equal(snapshot(fx, [urls[0]], env).code, 0);
+  assert.equal(sourcesOf(fx).topic, undefined);
+});
