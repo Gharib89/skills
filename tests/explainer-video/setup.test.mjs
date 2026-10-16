@@ -263,7 +263,7 @@ test("ace-step runs on the GPU from compute capability 8.0, and on the CPU with 
   assert.doesNotMatch(ampere.out, /per 30 s of score/);
   assert.match(
     run(fx, ["check", "--all"], "ffmpeg,uv", machine(8.0)).out,
-    /^ace-step runs on the GPU here \(compute capability 8\)\.$/m,
+    /^ace-step runs on the GPU here \(compute capability 8\.0\)\.$/m,
   );
   const none = run(fx, ["check", "--all"], "ffmpeg,uv", machine(null));
   assert.match(
@@ -325,6 +325,7 @@ test("an ace-step checkpoint whose sha256 differs from its pin fails the row and
     row(r.out, "ace-step")[2],
     /^failed: dit\/model\.safetensors has sha256 [0-9a-f]{64}, pinned 0{64}/,
   );
+  assert.match(r.out, /^not present: ace-step \(10\.8 GB to install\)$/m);
   assert.equal(
     row(
       run(fx, ["check", "--all"], "ffmpeg,uv", machine(7.5)).out,

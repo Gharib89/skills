@@ -204,8 +204,8 @@ function report(state, staleInstalls) {
     lines.push(
       "",
       aceDevice(cap) === "cuda"
-        ? `${r.id} runs on the GPU here (compute capability ${cap}).`
-        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap}, under 8.0: no bfloat16, and float16 gives NaN` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of score.`,
+        ? `${r.id} runs on the GPU here (compute capability ${cap.toFixed(1)}).`
+        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0: no bfloat16, and float16 gives NaN` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of score.`,
     );
   }
   for (const r of rows.filter(
@@ -222,7 +222,7 @@ function report(state, staleInstalls) {
   const parts = [];
   // A system package has no size: setup installs none of them, nor a refused row.
   const total = missing
-    .filter((r) => state.get(r) === "missing")
+    .filter((r) => !state.get(r).startsWith("refused"))
     .reduce((n, r) => n + (size(r) || 0), 0);
   if (missing.length)
     parts.push(
