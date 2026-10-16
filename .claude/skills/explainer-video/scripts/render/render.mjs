@@ -11,8 +11,8 @@
 // <run>/.cache/ by content hash, runs the gates stage (gates/gates.mjs) on
 // out/, checks the MP4 with ffprobe, and copies MP4, SRT and poster to the
 // videos folder. A red gate or a failed check empties out/ and delivers
-// nothing. With `--stills` it stops
-// after the stills: no video, gates, delivery or manifest, for the storyboard.
+// nothing. With `--stills` it stops after the stills: no video, gates,
+// delivery or manifest, for the storyboard.
 // stdout: the gates stage's lines, one `delivery <check>: pass|fail:
 //         <measured> vs <wanted>` line per check, `delivered: <path>`, then
 //         `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
