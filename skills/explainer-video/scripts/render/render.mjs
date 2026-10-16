@@ -5,7 +5,8 @@
 // Reads <run>/script.json and <run>/voice.json and the run's style profile
 // (lib/style.mjs). Times every scene back to back at its voice duration, the
 // last held 1 s, cues captions from the word timings, composes the video in
-// <run>/composition/ with the narration mastered, renders a settled still per
+// <run>/composition/ with the narration mastered (the score mixed under it
+// unless brief.json turns it off, score/score.mjs), renders a settled still per
 // scene and then the video with HyperFrames, each cached in <run>/.cache/ by
 // content hash, runs the gates stage (gates/gates.mjs) on out/, checks the MP4
 // with ffprobe, and copies MP4, SRT and poster to the videos folder. A red gate
@@ -15,8 +16,9 @@
 //         <measured> vs <wanted>` line per check, `delivered: <path>`, then
 //         `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
 //         cached, video cached|rendered`
-// writes: <run>/style.json, stills.json, timeline.json, composition/,
-//         .cache/stills/, .cache/render/, out/<slug>.mp4|.srt, out/poster.png, manifest.json,
+// writes: <run>/style.json, stills.json, timeline.json, score.json,
+//         composition/, .cache/stills/, .cache/score/, .cache/render/,
+//         out/<slug>.mp4|.srt, out/poster.png, manifest.json,
 //         and the gates stage's files; <videos>/explainer-video/<repo>/<slug>/;
 //         explainers/.gitignore
 //         `--stills`: `render: stills <hit>/<n> cached`, writing only

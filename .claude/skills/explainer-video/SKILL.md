@@ -71,6 +71,7 @@ must include and must avoid. The user's request beside the sources, the
 | `style` | the store default (see Render) | a style profile name |
 | `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
+| `score` | `on` | `on`, music and sound effects under the narration, or `off` |
 | `must` | none | a topic or term the video says or shows |
 | `avoid` | none | a topic or term the video never touches |
 
@@ -287,14 +288,18 @@ narrator: am_fenrir
    `compile: [<scene>: ]<what>` on stderr: fix what it names and compile again.
 4. **Voice.** Run the voice stage above on the same run folder, again after
    any narration edit.
-5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`. It
-   masters the narration to -14 LUFS, renders, then runs the gates (see
-   Gates) and prints their lines. Only when every gate passes does it print
-   one `delivery <check>: pass|fail` line per delivery check (`resolution`,
-   `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
+5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`.
+   Unless the brief's `score` is `off`, it synthesises a **score** arranged to
+   the scenes (one section per scene, ducked under the words, a whoosh on each
+   cut and a sting after the last word) and mixes it under the narration,
+   writing `score.json` (its preset, seed and cues). It masters the mix to -14
+   LUFS, renders, then runs the gates (see Gates) and prints their lines.
+   Only when every gate passes does it print one `delivery <check>:
+   pass|fail` line per delivery check (`resolution`, `frame rate`, `aspect`,
+   `duration`, `audio`, `srt`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
-   cached, video cached|rendered`. A scene still and the video are cached by
-   content, so an unchanged run renders nothing again.
+   cached, video cached|rendered`. A scene still, the score and the video are
+   cached by content, so an unchanged run renders nothing again.
 6. **On a pass** (exit 0), the run folder's `out/` holds `<slug>.mp4`,
    `<slug>.srt` and `poster.png`, and the same three are copied to the printed
    path, `explainer-video/<repo>/<slug>/` in the user's videos folder (the XDG
@@ -350,13 +355,15 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 - `captions`: every word timed in order inside its scene, every cue non-empty,
   in order, at most 84 characters and inside the video, and the SRT equal to
   the burned-in cues.
+- `sfx`: at most 24 sound effects in any minute, counted from `score.json`'s
+  cues.
 
 A summary line follows, `gates: <n> pass, <m> fail`, ending on a red run with
 `next: fix attempt <a> of 2` or `stop: red after two fix attempts, no video`.
 Layout and contrast results are cached per scene by everything that draws it,
-so a fix re-gates only the scenes it touched; loudness and captions run every
-time. The stage writes `gates.json`, the machine record, and `gates.md`, the
-readable report with every red gate's findings.
+so a fix re-gates only the scenes it touched; loudness, captions and sfx run
+every time. The stage writes `gates.json`, the machine record, and `gates.md`,
+the readable report with every red gate's findings.
 
 **On a red gate**, relay its line and fix what its findings name **inside the
 script**: the visual's layout, its text size, colours within the
@@ -372,7 +379,7 @@ On `stop`, stop with no video and run Storyboard step 7.
 tighten them, and the tightened value is the one applied and printed:
 `contrast` (`body`, `large`, raise), `layout` (`textPx`, `margin` as a
 fraction, raise), `loudness` (`tolerance` in LU, above 0, and `peak` in
-dBTP, no lower than -8.5, lower).
+dBTP, no lower than -8.5, lower), `sfx` (`perMinute`, 0 or more, lower).
 
 ## Recipe
 
