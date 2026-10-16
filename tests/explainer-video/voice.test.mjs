@@ -44,25 +44,26 @@ const SCENES = [
   },
 ];
 
-function fixture(scenes = SCENES) {
+function fixture(scenes = SCENES, language = "en") {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-voice-"));
   temps.push(tmp);
   const dir = path.join(tmp, "explainers", "demo");
   fs.mkdirSync(dir, { recursive: true });
   const fx = { tmp, dir, log: path.join(tmp, "calls.jsonl") };
-  write(fx, scenes);
+  write(fx, scenes, language);
   return fx;
 }
 
-const write = (fx, scenes) =>
+const write = (fx, scenes, language = "en") =>
   fs.writeFileSync(
     path.join(fx.dir, "script.json"),
-    JSON.stringify({ language: "en", scenes }),
+    JSON.stringify({ language, scenes }),
   );
 
-function run(fx) {
+function run(fx, extra = {}) {
   const r = spawnSync(process.execPath, [voice, fx.dir], {
     env: {
+      ...extra,
       PATH: process.env.PATH,
       HOME: path.join(fx.tmp, "home"),
       XDG_CACHE_HOME: path.join(fx.tmp, "cache"),
@@ -266,4 +267,151 @@ test("a narration of function words only passes QC when the transcript matches",
   const r = run(fx);
   assert.equal(r.code, 0, r.out + r.err);
   assert.match(line(r.out, "context"), /· pass$/);
+});
+
+// Egyptian Arabic narration with English terms kept in Latin letters, as the
+// script stage writes it; the default Arabic narrator is a Gemini voice.
+const AR_SCENES = [
+  {
+    id: "hook",
+    narration: ["شيب بياخد مهمة واحدة ويوصلها لحد pull request متراجع."],
+  },
+  {
+    id: "context",
+    narration: [
+      "الأول بيقرا الـ profile بتاع الريبو.",
+      "بعدين بيعمل branch جديد ويشغل الـ CI.",
+    ],
+  },
+  {
+    id: "recap",
+    narration: ["كل تغيير بيدخل من خلال review قبل الـ merge."],
+  },
+];
+const KEY = { GEMINI_API_KEY: "test-key" };
+
+test("an Arabic script voices in one Gemini call, passes QC and times every word", () => {
+  const fx = fixture(AR_SCENES, "ar");
+  const r = run(fx, KEY);
+  assert.equal(r.code, 0, r.out + r.err);
+  const calls = synths(fx);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].backend, "gemini");
+  assert.equal(calls[0].voice, "ar-eg-csagent-2");
+  assert.equal(calls[0].text, AR_SCENES.flatMap((s) => s.narration).join(" "));
+  const timeline = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "voice.json"), "utf8"),
+  );
+  assert.equal(timeline.narrator, "ar-eg-csagent-2");
+  for (const [i, s] of timeline.scenes.entries()) {
+    assert.match(line(r.out, s.id), /recall 1 · precision 1 · .* · pass$/);
+    assert.deepEqual(
+      s.words.map((w) => w.text),
+      AR_SCENES[i].narration.join(" ").split(" "),
+    );
+    let t = 0;
+    for (const w of s.words) {
+      assert.ok(w.start >= t && w.end > w.start, JSON.stringify(w));
+      t = w.end;
+    }
+  }
+});
+
+for (const [name, sentence, why] of [
+  ["a garbled", "الجملة دي طالعة مشوش خالص.", /recall 0 under 0\.8/],
+  ["a looped", "الجملة دي مكرر كلامها مرتين.", /precision 0\.5 under 0\.85/],
+  [
+    "a dragged",
+    "الجملة دي بتتقري ببطء.",
+    /rate \d+(\.\d+)? chars\/s outside 9 to 22/,
+  ],
+]) {
+  test(`voice QC blocks ${name} Arabic render with the measured value`, () => {
+    const scenes = structuredClone(AR_SCENES);
+    scenes[2].narration = [sentence];
+    const fx = fixture(scenes, "ar");
+    const r = run(fx, KEY);
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.match(line(r.out, "recap"), why);
+    assert.match(line(r.out, "hook"), /· pass$/);
+    assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
+  });
+}
+
+test("a Gemini narrator with no GEMINI_API_KEY is refused with where to get one, before any synthesis", () => {
+  for (const extra of [{}, { GEMINI_API_KEY: "" }]) {
+    const fx = fixture(AR_SCENES, "ar");
+    const r = run(fx, extra);
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.match(
+      r.err,
+      /^voice: narrator ar-eg-csagent-2 needs GEMINI_API_KEY: get a free key at https:\/\/aistudio\.google\.com\/apikey, or choose another narrator in the brief$/m,
+    );
+    assert.equal(synths(fx).length, 0);
+  }
+});
+
+test("a narrator who does not speak the script's language is refused before any synthesis", () => {
+  const fx = fixture(AR_SCENES, "ar");
+  fs.writeFileSync(
+    path.join(fx.dir, "script.json"),
+    JSON.stringify({ language: "ar", narrator: "bf_emma", scenes: AR_SCENES }),
+  );
+  const r = run(fx, KEY);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^voice: no narrator bf_emma for ar$/m);
+  assert.equal(synths(fx).length, 0);
+});
+
+test("two changed scenes with the same narration cost one Gemini call on a rerun", () => {
+  const fx = fixture(AR_SCENES, "ar");
+  assert.equal(run(fx, KEY).code, 0);
+  const changed = structuredClone(AR_SCENES);
+  changed[0].narration = changed[2].narration = [
+    "كل تغيير بيعدي على review قبل الـ merge.",
+  ];
+  write(fx, changed, "ar");
+  const r = run(fx, KEY);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(synths(fx).length, 2);
+  assert.match(line(r.out, "hook"), /: voiced ·.*· pass$/);
+  assert.match(line(r.out, "recap"), /: voiced ·.*· pass$/);
+});
+
+test("an English script with GEMINI_API_KEY set still voices on Kokoro", () => {
+  const fx = fixture();
+  const r = run(fx, KEY);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    synths(fx).map((c) => [c.voice, c.backend]),
+    [["bf_emma", undefined]],
+  );
+});
+
+test("a Gemini quota stop keeps the scenes voiced before it, and the next run voices only the rest", () => {
+  const fx = fixture(AR_SCENES, "ar");
+  assert.equal(run(fx, KEY).code, 0);
+  const changed = structuredClone(AR_SCENES);
+  changed[0].narration = [
+    "شيب بياخد مهمة جديدة ويوصلها لحد pull request متراجع.",
+  ];
+  changed[2].narration = ["كل تغيير بيعدي على review قبل الـ merge."];
+  write(fx, changed, "ar");
+  const stopped = run(fx, { ...KEY, EXPLAINER_VIDEO_FAKE_QUOTA: "2" });
+  assert.equal(stopped.code, 1, stopped.out + stopped.err);
+  assert.match(
+    stopped.err,
+    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\), which voices only the missing scenes; use a paid key; or choose another narrator in the brief$/m,
+  );
+  assert.equal(synths(fx).length, 2);
+  assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
+  const resumed = run(fx, KEY);
+  assert.equal(resumed.code, 0, resumed.out + resumed.err);
+  assert.match(line(resumed.out, "hook"), /: cached ·/);
+  assert.match(line(resumed.out, "context"), /: cached ·/);
+  assert.match(line(resumed.out, "recap"), /: voiced ·/);
+  assert.match(resumed.out, /3 scene\(s\), 1 voiced in 1 call\(s\), 2 cached/);
+  const calls = synths(fx);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].text, changed[2].narration.join(" "));
 });

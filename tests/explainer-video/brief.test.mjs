@@ -172,7 +172,7 @@ test("a value this version cannot make is refused and nothing is written", () =>
   for (const [arg, why] of [
     ["length=6", /^brief length 6: a number of minutes from 1 to 5$/m],
     ["length=two", /^brief length two: a number of minutes from 1 to 5$/m],
-    ["language=ar", /^brief language ar: no narrator speaks ar \(en\)$/m],
+    ["language=fr", /^brief language fr: no narrator speaks fr \(en, ar\)$/m],
     [
       "voice=nobody",
       /^brief voice nobody: no en narrator \(bf_emma, am_fenrir\)$/m,

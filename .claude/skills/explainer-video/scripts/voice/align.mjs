@@ -2,6 +2,7 @@
 // are force-aligned with a Viterbi pass, and a greedy decode of the same frames
 // is the transcript voice QC reads. The model itself sits behind the backend
 // switch; everything here is plain JS over its output.
+import { toArabic } from "./arabic.mjs";
 
 // wav2vec2-style models read 16 kHz mono and emit one frame per 320 samples.
 const SAMPLE_RATE = 16000;
@@ -70,15 +71,24 @@ async function logProbs(x, logits) {
 }
 
 // The vocabulary's ids for one word: upper case, letters and apostrophes only.
+// An Arabic vocabulary hears English terms as Arabic letters, and an
+// acronym's letter names as words of their own.
 const spell = (word, vocab) =>
-  [...word.toUpperCase()]
-    .filter((ch) => /[A-Z']/.test(ch) && ch in vocab)
-    .map((ch) => vocab[ch]);
+  "ا" in vocab
+    ? [...toArabic(word).replaceAll(" ", "|")]
+        .filter((ch) => ch in vocab)
+        .map((ch) => vocab[ch])
+    : [...word.toUpperCase()]
+        .filter((ch) => /[A-Z']/.test(ch) && ch in vocab)
+        .map((ch) => vocab[ch]);
+
+// The CTC blank: English wav2vec2 names it `<pad>`, the Egyptian model `[PAD]`.
+const blankOf = (vocab) => vocab["<pad>"] ?? vocab["[PAD]"];
 
 // Start and end in seconds for every word, in order. A word with nothing the
 // model can spell (a number, a symbol) takes the gap between its neighbours.
 function forceAlign({ lp, frames, classes }, words, vocab) {
-  const blank = vocab["<pad>"];
+  const blank = blankOf(vocab);
   const sep = vocab["|"];
   const tgt = [];
   const owner = [];
@@ -171,12 +181,13 @@ export async function align(samples, sampleRate, words, ctc) {
 }
 
 // The model's own reading of frames [from, to): best class per frame, repeats
-// merged, blanks dropped, the separator read as a space.
+// merged, blanks dropped, the separator read as a space. A class the
+// vocabulary does not name (the Egyptian model's <s> and </s>) reads as nothing.
 export function transcribe({ lp, classes }, vocab, from, to) {
   const chars = Object.fromEntries(
     Object.entries(vocab).map(([k, v]) => [v, k]),
   );
-  const blank = vocab["<pad>"];
+  const blank = blankOf(vocab);
   let out = "";
   let last = -1;
   for (let t = from; t < to; t++) {
@@ -185,7 +196,11 @@ export function transcribe({ lp, classes }, vocab, from, to) {
       if (lp[t * classes + c] > lp[t * classes + best]) best = c;
     if (best !== last && best !== blank)
       out +=
-        chars[best] === "|" ? " " : chars[best].length === 1 ? chars[best] : "";
+        chars[best] === "|"
+          ? " "
+          : chars[best]?.length === 1
+            ? chars[best]
+            : "";
     last = best;
   }
   return out.replace(/\s+/g, " ").trim().toLowerCase();

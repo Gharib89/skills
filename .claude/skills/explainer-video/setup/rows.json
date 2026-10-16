@@ -10,6 +10,8 @@
     {
       "id": "model:kokoro-82m",
       "kind": "model",
+      "when": "voice",
+      "language": "en",
       "repo": "onnx-community/Kokoro-82M-v1.0-ONNX",
       "revision": "1939ad2a8e416c0acfeecc08a694d14ef25f2231",
       "files": [
@@ -40,6 +42,8 @@
     {
       "id": "model:wav2vec2-base-960h",
       "kind": "model",
+      "when": "voice",
+      "language": "en",
       "repo": "Xenova/wav2vec2-base-960h",
       "revision": "a19f851b3d42865797e410752b4c570c871e4825",
       "files": [
@@ -56,6 +60,38 @@
       ],
       "neededBy": "voice (English aligner)",
       "licence": "Apache-2.0 (facebook/wav2vec2-base-960h)"
+    },
+    {
+      "id": "model:egyptian-arabic-wav2vec2",
+      "kind": "model",
+      "when": "voice",
+      "language": "ar",
+      "repo": "agharib/egyptian-arabic-wav2vec2-xlsr-53-onnx",
+      "revision": "888b8be067d3a1ac2ca72806832f29e8786a3341",
+      "files": [
+        {
+          "path": "vocab.json",
+          "size": 491,
+          "sha256": "5249032aba7fc3c10f199a813fa5e45b779731e6d9bc7061c56e1f55c78f8aba"
+        },
+        {
+          "path": "onnx/model_int8.onnx",
+          "size": 317268245,
+          "sha256": "2d8525c7b0e27eff0d43aa061c440b95105ce994f0c76f398e75a4d7659bbcc6"
+        }
+      ],
+      "neededBy": "voice (Arabic aligner)",
+      "licence": "Apache-2.0 (IbrahimAmin/egyptian-arabic-wav2vec2-xlsr-53)"
+    },
+    {
+      "id": "key:gemini",
+      "kind": "key",
+      "when": "voice",
+      "backend": "gemini",
+      "env": "GEMINI_API_KEY",
+      "get": "https://aistudio.google.com/apikey",
+      "neededBy": "voice (Gemini narrators)",
+      "licence": "Gemini API terms"
     },
     {
       "id": "chrome",

@@ -557,10 +557,85 @@ export function which(cmd) {
 const fromCache = (nodeDir) =>
   createRequire(path.join(nodeDir, "package.json"));
 
+const GEMINI = "https://generativelanguage.googleapis.com/v1beta";
+const GEMINI_TTS = "gemini-3.8-flash-tts";
+
+// A Gemini answer's error message: its JSON's, else its text.
+async function geminiError(r) {
+  const body = await r.text();
+  let message = body;
+  try {
+    message = JSON.parse(body).error?.message ?? body;
+  } catch {}
+  return Object.assign(
+    new Error(`Gemini answered HTTP ${r.status}: ${message}`),
+    { quota: r.status === 429 },
+  );
+}
+
+// Gemini TTS on the user's key, the whole text in one Interactions call; its
+// audio is 16-bit little-endian PCM, mono, 24 kHz, split across content items.
+async function gemini(text, narrator) {
+  const r = await fetch(`${GEMINI}/interactions`, {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": process.env.GEMINI_API_KEY,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GEMINI_TTS,
+      input: [
+        {
+          type: "user_input",
+          content: [
+            {
+              type: "text",
+              text,
+              annotations: [{ type: "speech_metadata", style: narrator.style }],
+            },
+          ],
+        },
+      ],
+      response_format: {
+        type: "audio",
+        mime_type: "audio/l16",
+        sample_rate: 24000,
+      },
+      generation_config: { speech_config: [{ voice: narrator.voice }] },
+    }),
+  });
+  if (r.status !== 200) throw await geminiError(r);
+  const pcm = Buffer.concat(
+    (await r.json()).steps
+      .flatMap((s) => s.content ?? [])
+      .filter((c) => c.type === "audio")
+      .map((c) => Buffer.from(c.data, "base64")),
+  );
+  const samples = new Float32Array(pcm.length >> 1);
+  for (let i = 0; i < samples.length; i++)
+    samples[i] = pcm.readInt16LE(2 * i) / 32768;
+  return { samples, sampleRate: 24000 };
+}
+
+// Whether Google takes `key`, read from the TTS model's metadata so no TTS
+// request is spent. Nothing tells a free-tier key from a paid one.
+export async function geminiKey(key) {
+  const r = await fetch(`${GEMINI}/models/${GEMINI_TTS}`, {
+    headers: { "x-goog-api-key": key },
+  });
+  if (r.status === 200) return { ok: true };
+  const error = (await r.json().catch(() => ({}))).error;
+  return {
+    ok: false,
+    reason: error?.details?.[0]?.reason ?? error?.status ?? `HTTP ${r.status}`,
+  };
+}
+
 // A narrator adapter: text in, audio out, never timings (ADR 0016). Kokoro
 // reads one sentence per inference, so the whole text goes through its splitter.
 let kokoro;
 export async function synthesize({ text, narrator, tools }) {
+  if (narrator.backend === "gemini") return gemini(text, narrator);
   if (narrator.backend !== "kokoro")
     throw new Error(`no adapter for backend ${narrator.backend}`);
   const req = fromCache(tools.node);
@@ -591,7 +666,10 @@ export async function synthesize({ text, narrator, tools }) {
 }
 
 // One CTC model per language (ADR 0016).
-const ALIGNERS = { en: "model:wav2vec2-base-960h" };
+const ALIGNERS = {
+  en: "model:wav2vec2-base-960h",
+  ar: "model:egyptian-arabic-wav2vec2",
+};
 
 // A language's CTC model: its vocabulary, and its logits for 16 kHz audio,
 // normalised as its feature extractor does.

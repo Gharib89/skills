@@ -20,6 +20,14 @@ const TEXTS = {
     "The agent reads the issue, checks out a fresh branch, and writes the change with its tests. " +
     "Then it runs the gate, opens the pull request, and waits for review. " +
     "When the checks pass and the reviewers agree, the change merges, and the issue closes on its own.",
+  // Egyptian Arabic, the same workflow, English terms kept in Latin letters as
+  // the script stage writes them.
+  ar:
+    "كل pull request بيبدأ بمشكلة حد كتبها في issue. " +
+    "الـ agent بيقرا الـ issue، وبيعمل branch جديد، وبيكتب التغيير مع الاختبارات بتاعته. " +
+    "بعد كده بيشغل الـ CI، وبيفتح الـ pull request، وبيستنى الـ review. " +
+    "لما الفحوصات تعدي والمراجعين يوافقوا، التغيير بيتعمل له merge، والـ issue بتتقفل لوحدها. " +
+    "والموضوع كله بياخد ساعة أو اتنين بس، ومحدش محتاج يراجع كل خطوة بإيده.",
 };
 
 const [language, file = path.join(skill, "narrators.json"), ...rest] =

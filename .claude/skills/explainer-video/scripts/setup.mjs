@@ -2,16 +2,27 @@
 // missing ones after the human's one yes. Tools go to the per-user tool cache,
 // keyed by the lockfile's hash, fonts to the font store (ADR 0017).
 //
-//   node setup.mjs check [--all]     print the table; installs nothing
-//   node setup.mjs install [--all]   the yes: install every missing row, prune
-//                                    every stale install, print the table again
+//   node setup.mjs check [--all] [--voice <id>]    print the table; installs
+//                                                  nothing
+//   node setup.mjs install [--all] [--voice <id>]  the yes: install every
+//                                                  missing row, prune every
+//                                                  stale install, print the
+//                                                  table again
 //
-// --all adds the opt-in rows. A system package (ffmpeg, uv) is never installed:
-// its install lines (Linux, brew, winget) are printed for the human to run.
+// --all adds the opt-in rows. --voice names the narrator whose voice rows are
+// listed (default: the English default narrator). A system package (ffmpeg,
+// uv) is never installed: its install lines (Linux, brew, winget) are printed
+// for the human to run. Nor is a key (GEMINI_API_KEY): it is checked with
+// Google by a call that spends no TTS request, and never stored or printed.
 // stdout: the table (row, needed by, status, size, licence, writes to), the
-//         install lines of each missing system package, one summary line
+//         install lines of each missing system package, where to get each key
+//         not present, Gemini's data notice the first time a key is present,
+//         one summary line
+// writes: the key's fingerprint (a hash) to <config>/settings.json once its
+//         data notice is shown
 // exit:   0 every row present, nothing stale · 1 a row missing, refused or
-//         failed, or an install stale · 2 usage
+//         failed, or an install stale · 2 usage, or a --voice id not in
+//         narrators.json
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -28,21 +39,44 @@ import {
   staged,
 } from "./lib/tools.mjs";
 
-const usage = "usage: node setup.mjs check|install [--all]";
+const usage = "usage: node setup.mjs check|install [--all] [--voice <id>]";
 const [mode, ...flags] = process.argv.slice(2);
-if (!["check", "install"].includes(mode) || flags.some((f) => f !== "--all")) {
+const voiceAt = flags.indexOf("--voice");
+const voiceId = voiceAt < 0 ? undefined : flags.splice(voiceAt, 2)[1];
+if (
+  !["check", "install"].includes(mode) ||
+  flags.some((f) => f !== "--all") ||
+  (voiceAt >= 0 && !voiceId)
+) {
   console.error(usage);
   process.exit(2);
 }
 const all = flags.includes("--all");
+const narrator = JSON.parse(
+  fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
+).narrators.find((n) =>
+  voiceId ? n.id === voiceId : n.language === "en" && n.default,
+);
+if (!narrator) {
+  console.error(`setup: no narrator ${voiceId}\n${usage}`);
+  process.exit(2);
+}
 
 const backend = await loadBackend();
 const dirs = userDirs();
 const catalogue = readCatalogue();
 
-// Every row without a `when`; opt-in rows under --all; a `when: python` row
-// (uv) only beside a row that runs Python.
-const rows = catalogue.filter((r) => !r.when || (all && r.when === "opt-in"));
+// Every row without a `when`; opt-in rows under --all; a `when: voice` row
+// whose language and backend, where it names them, are the narrator's; a
+// `when: python` row (uv) only beside a row that runs Python.
+const forNarrator = (r) =>
+  ["language", "backend"].every((k) => !(k in r) || r[k] === narrator[k]);
+const rows = catalogue.filter(
+  (r) =>
+    !r.when ||
+    (all && r.when === "opt-in") ||
+    (r.when === "voice" && forNarrator(r)),
+);
 if (rows.some((r) => r.python))
   rows.push(...catalogue.filter((r) => r.when === "python"));
 
@@ -74,9 +108,26 @@ const du = (p) => {
     : s.size;
 };
 
+// A key is present once Google takes it.
+const keys = new Map();
+for (const r of rows.filter((r) => r.kind === "key")) {
+  const value = process.env[r.env];
+  keys.set(
+    r,
+    value
+      ? await backend.geminiKey(value).then(
+          (k) =>
+            k.ok ? "present" : `refused: Google refused ${r.env} (${k.reason})`,
+          (e) => `failed: ${e.message}`,
+        )
+      : "missing",
+  );
+}
+
 // An install is present once its stamp is written, the last step of its install.
 // Checking it touches the stamp, so an install a run still uses never goes stale.
 function status(r) {
+  if (r.kind === "key") return keys.get(r);
   if (r.kind === "system")
     return backend.which(r.command) ? "present" : "missing";
   const s = stamp(dest(r));
@@ -188,13 +239,38 @@ const formatSize = (n) =>
       ? `${Math.round(n / 1e6)} MB`
       : `${Math.max(1, Math.round(n / 1e3))} KB`;
 
+// Whether a key's data notice is due, recording that it was shown. No tier
+// can be read from a key, so every key sees it once, remembered by a
+// fingerprint: never the key itself.
+function firstNotice(key) {
+  const file = path.join(dirs.config, "settings.json");
+  const settings = fs.existsSync(file)
+    ? JSON.parse(fs.readFileSync(file, "utf8"))
+    : {};
+  const fingerprint = crypto
+    .createHash("sha256")
+    .update(key)
+    .digest("hex")
+    .slice(0, 16);
+  if (settings.geminiNotice?.includes(fingerprint)) return false;
+  settings.geminiNotice = [...(settings.geminiNotice ?? []), fingerprint];
+  fs.mkdirSync(dirs.config, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
+  return true;
+}
+
 function report(state, staleInstalls) {
   const lines = [
     "| row | needed by | status | size | licence | writes to |",
     "| --- | --- | --- | --- | --- | --- |",
   ];
   for (const r of rows) {
-    const where = r.kind === "system" ? "system, you install it" : dest(r);
+    const where =
+      r.kind === "system"
+        ? "system, you install it"
+        : r.kind === "key"
+          ? `nothing, you set ${r.env}`
+          : dest(r);
     lines.push(
       `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${size(r) ? formatSize(size(r)) : "-"} | ${r.licence} | ${where} |`,
     );
@@ -222,6 +298,18 @@ function report(state, staleInstalls) {
     for (const [via, line] of Object.entries(r.install))
       lines.push(`  ${via}: ${line}`);
   }
+  for (const r of rows.filter((r) => r.kind === "key")) {
+    if (state.get(r) !== "present")
+      lines.push(
+        "",
+        `${r.id} is a key you set yourself: get a free one at ${r.get}, then set ${r.env} and check again.`,
+      );
+    else if (firstNotice(process.env[r.env]))
+      lines.push(
+        "",
+        "Gemini data notice (shown once for this key): narration text goes to Google to be voiced. On the free tier Google may use it and the audio to improve its products, and people may review them; a paid key's data is not used that way.",
+      );
+  }
   const missing = rows.filter((r) => state.get(r) !== "present");
   const parts = [];
   // A system package has no size: setup installs none of them, nor a refused row.
@@ -244,7 +332,8 @@ function report(state, staleInstalls) {
 const state = new Map(rows.map((r) => [r, status(r)]));
 if (mode === "install") {
   for (const r of rows) {
-    if (state.get(r) !== "missing" || r.kind === "system") continue;
+    if (state.get(r) !== "missing" || ["system", "key"].includes(r.kind))
+      continue;
     try {
       state.set(r, await install(r));
     } catch (e) {

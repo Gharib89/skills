@@ -16,16 +16,17 @@ An **explainer video** is a narrated video, one to five minutes by default,
 made from one or more sources. This version carries eight stages: **setup**,
 which every run starts with; the **brief**, the user's words laid over the
 defaults; **source**, each source read into a source pack; **script**, a cited
-scene file written from the pack and held to the script gates; **voice**,
-English narration; the **storyboard**, where the user approves or revises each
-scene; **render**, the scene file turned into a captioned MP4; and **gates**,
-which the render runs and which block a video below the floors or one
-the critic fails.
+scene file written from the pack and held to the script gates; **voice**, the
+narration in English or Egyptian Arabic; the **storyboard**, where the user
+approves or revises each scene; **render**, the scene file turned into a
+captioned MP4; and **gates**, which the render runs and which block a video
+below the floors or one the critic fails.
 Asked for a video from sources, run the stages in order (brief, source,
 script, voice, storyboard, render), stopping for the user only at the
 storyboard and where a stage says to stop or ask. Asked for a video of a topic
 alone, the source stage researches it first. Asked for narration the user
-writes, skip to Voice or Render.
+writes, skip to Voice or Render. With `language: ar`, the run ends after Voice:
+report the voice summary line and that this version renders English only.
 
 ## Setup
 
@@ -39,22 +40,32 @@ script by the skill's own path, `<skill>` below being the folder this file is
 in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
-   user asked for every opt-in row too, or the brief's `score` is `ace-step`.
-   Exit 0 means every row is present and nothing is stale: say so, with any
-   line under the table, and stop.
+   user asked for every opt-in row too, or the brief's `score` is `ace-step`,
+   and `--voice <id>` with the narrator the voice stage will use (the brief's
+   `voice`, or `script.json`'s `narrator`): the voice rows listed are that
+   narrator's (without it, the English default's). Exit 0 means every row
+   is present and nothing is stale: say so, with any line under the table, and
+   stop.
 2. **One yes.** Show the table as printed, with any line under it (the
    `ace-step` row's: GPU or CPU here, and on the CPU its cost per 30 s of
    score), then ask once for the whole table, naming the total it prints: one
    yes installs every missing row and removes every stale install. Run install
-   only after the yes. When every missing row is a system package and nothing
-   is stale, skip the question and go to step 4.
+   only after the yes. When every missing row is a system package or a key and
+   nothing is stale, skip the question and go to step 4.
 3. **Install.** `node <skill>/scripts/setup.mjs install`, with the same
-   `--all`. It installs into the tool cache and the font store, removes the
-   stale installs, then prints the table again.
+   `--all` and `--voice`. It installs into the tool cache and the font store,
+   removes the stale installs, then prints the table again.
 4. **Report.** Show the latest table. A `missing` system package (ffmpeg, or
    `uv` beside an opt-in Python row) is one the skill never installs: relay its
    install lines from the output, ask the user to run the one for their OS,
-   then check again. A `refused` or `failed` row: relay the reason as printed.
+   then check again. A `missing` or `refused` key (`key:gemini`, the Egyptian
+   Arabic narrators' `GEMINI_API_KEY`) is one the user sets: relay the line
+   under the table with its link to a free key, then check again; Voice waits
+   until `key:gemini` reads `present`. Any other `refused` or `failed` row:
+   relay the reason as printed.
+
+Whenever the **Gemini data notice** prints under a table, relay it word for
+word: setup prints it once per key, the first time Google accepts that key.
 
 To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
@@ -71,9 +82,9 @@ must include and must avoid. The user's request beside the sources, the
 | `focus` | the source's main ideas | what the video should say |
 | `length` | 2 | minutes, 1 to 5 |
 | `audience` | a developer new to the source | who watches |
-| `language` | `en` | `en` in this version |
+| `language` | `en` | `en`, or `ar` (Egyptian Arabic: this version voices it but does not render it) |
 | `style` | the store default (see Render) | a style profile name |
-| `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
+| `voice` | the language's default narrator (`bf_emma`, `ar-eg-csagent-2`) | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
 | `score` | `on` | `on`, `off`, or `ace-step` (music made by the ACE-Step model) |
 | `must` | none | a topic or term the video says or shows |
@@ -205,41 +216,8 @@ then runs **voice QC**, which blocks. It reads a **run folder**,
 `explainers/<slug>/` by default, `<slug>` a short kebab-case name for the video
 that you choose (`ship-overview`), holding `script.json`, which the compile
 stage writes from the scene file (see Render) or you write by hand for voice
-alone (render needs the compiled one):
-
-```json
-{
-  "language": "en",
-  "narrator": "am_fenrir",
-  "scenes": [{ "id": "hook", "narration": ["First sentence.", "Second."] }]
-}
-```
-
-`narrator` is optional: without it the stage takes the language's first default
-in `<skill>/narrators.json` (`bf_emma`). Narration is the **spoken form**: write
-numbers, dates and symbols out as words ("forty two", not "42"), because QC
-compares the text against what the aligner hears: a numeral's spoken words
-match nothing in the text and cost precision.
-
-1. **Tools.** Voice needs the npm packages, `model:kokoro-82m` and
-   `model:wav2vec2-base-960h`. Run the setup check first; any of them missing,
-   run the setup steps above before voicing.
-2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
-   prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
-   rate · pass|fail: <why>`, then a summary line. A scene whose narration,
-   narrator and language are unchanged is a cache hit and is not voiced again.
-3. **On a pass** (exit 0), the stage has written `voice.json` in the run
-   folder: per scene its WAV under `.cache/voice/`, its duration and each
-   word's start and end in seconds from the start of that scene's WAV. Report
-   the summary line.
-4. **On a fail** (exit 1) with scene lines, relay each failing scene's line as
-   printed: it names the measure, its value and the floor or band it missed.
-   Rewrite that scene's narration in spoken form and voice again; the scenes
-   that passed are cached. The run folder holds no `voice.json`, not even an
-   earlier pass's, until every scene passes.
-   Exit 1 with no scene lines is an input or tool error (an unknown narrator,
-   a scene with no narration, a failed synthesis): relay the stderr message as
-   printed.
+alone (render needs the compiled one). Read
+[reference/voice.md](reference/voice.md) now and run its steps.
 
 ## Storyboard
 

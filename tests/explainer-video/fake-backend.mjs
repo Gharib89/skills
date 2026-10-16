@@ -17,7 +17,11 @@
 // reads a frame's id back from its first sample, so word timings come out of
 // the real Viterbi pass. A sentence naming a marker word misrenders:
 // `garbled` speaks every word as "mumble", `looped` speaks the sentence twice,
-// `slowly` holds each letter 8 frames.
+// `slowly` holds each letter 8 frames. A `gemini` narrator speaks Arabic the
+// same way in the Egyptian aligner's vocabulary (see gemini below), and
+//   EXPLAINER_VIDEO_FAKE_QUOTA  a Gemini call throws the real quota error once
+//                               this many synthesize calls are in the log
+// geminiKey refuses the key `bad-key` as API_KEY_INVALID and takes any other.
 //
 // The gates' measures read the composition: probe reports each text element of
 // the scenes mounted at a time, and the caption cue showing then, at 40 px in
@@ -138,8 +142,90 @@ const VOCAB = Object.fromEntries(
     (c, i) => [c, i],
   ),
 );
+// The Egyptian Arabic aligner's vocabulary as its vocab.json holds it: `|` is
+// 0, `[PAD]` (40) the blank, and the model's logits carry two classes more.
+const AR_VOCAB = Object.fromEntries([
+  ["|", 0],
+  ..."ءآأإئابةتثجحخدذرزسشصضطظعغفقكلمنهوىيڨیﻻ"
+    .split("")
+    .map((c, i) => [c, i + 1]),
+  ["[UNK]", 39],
+  ["[PAD]", 40],
+]);
+const AR_CLASSES = 43;
+
+// English terms as an Egyptian speaker says them, not as any rule spells them.
+const SAID = {
+  pull: "بول",
+  request: "ريكويست",
+  branch: "برانش",
+  git: "جيت",
+  ci: "سي اي",
+  review: "ريفيو",
+  merge: "ميرج",
+  profile: "بروفايل",
+  issue: "ايشو",
+  agent: "ايجنت",
+};
+
+const synthCalls = () =>
+  fs.existsSync(process.env.EXPLAINER_VIDEO_FAKE_LOG)
+    ? fs
+        .readFileSync(process.env.EXPLAINER_VIDEO_FAKE_LOG, "utf8")
+        .split("\n")
+        .filter((l) => l.includes('"call":"synthesize"')).length
+    : 0;
+
+const toSamples = (frames) => {
+  const samples = new Float32Array(frames.length * HOP);
+  frames.forEach((id, f) => samples.fill(id / 100, f * HOP, (f + 1) * HOP));
+  return { samples, sampleRate: 16000 };
+};
+
+// A Gemini narrator speaks Arabic in the Arabic vocabulary's ids, blanks as
+// `[PAD]`; its markers are مشوش (every word ممم), مكرر (the sentence twice) and
+// ببطء (each letter held 8 frames).
+function gemini(text, narrator) {
+  const quota = process.env.EXPLAINER_VIDEO_FAKE_QUOTA;
+  if (quota && synthCalls() >= +quota)
+    throw Object.assign(
+      new Error("Gemini answered HTTP 429: You exceeded your current quota"),
+      { quota: true },
+    );
+  log({ call: "synthesize", backend: "gemini", voice: narrator.voice, text });
+  const pad = AR_VOCAB["[PAD]"];
+  const clean = text.normalize("NFKC").replace(/[ً-ْٰـ]/g, "");
+  const frames = new Array(10).fill(pad);
+  for (const sentence of clean.split(/(?<=[.!?؟])\s+/)) {
+    let words = (sentence.match(/[ء-ي]+|[A-Za-z]+/g) ?? []).flatMap((w) => {
+      if (!/[A-Za-z]/.test(w)) return [w];
+      if (!SAID[w.toLowerCase()])
+        throw new Error(`the fake cannot say ${w}: add it to SAID`);
+      return SAID[w.toLowerCase()].split(" ");
+    });
+    const hold = sentence.includes("ببطء") ? 8 : 2;
+    if (sentence.includes("مشوش")) words = words.map(() => "ممم");
+    if (sentence.includes("مكرر")) words = [...words, ...words];
+    for (const w of words) {
+      for (const ch of w)
+        frames.push(...new Array(hold).fill(AR_VOCAB[ch]), pad);
+      frames.push(AR_VOCAB["|"], pad, pad);
+    }
+    frames.push(...new Array(10).fill(pad));
+  }
+  return toSamples(frames);
+}
+
+// A key check that spends no TTS request; the key itself is never logged.
+export async function geminiKey(key) {
+  log({ call: "geminiKey" });
+  return key === "bad-key"
+    ? { ok: false, reason: "API_KEY_INVALID" }
+    : { ok: true };
+}
 
 export async function synthesize({ text, narrator, tools }) {
+  if (narrator.backend === "gemini") return gemini(text, narrator);
   log({
     call: "synthesize",
     text,
@@ -158,15 +244,14 @@ export async function synthesize({ text, narrator, tools }) {
     }
     frames.push(...new Array(10).fill(0));
   }
-  const samples = new Float32Array(frames.length * HOP);
-  frames.forEach((id, f) => samples.fill(id / 100, f * HOP, (f + 1) * HOP));
-  return { samples, sampleRate: 16000 };
+  return toSamples(frames);
 }
 
-export async function aligner() {
-  const classes = Object.keys(VOCAB).length;
+export async function aligner({ language }) {
+  const vocab = language === "ar" ? AR_VOCAB : VOCAB;
+  const classes = language === "ar" ? AR_CLASSES : Object.keys(VOCAB).length;
   return {
-    vocab: VOCAB,
+    vocab,
     async logits(x) {
       const frames = Math.floor(x.length / HOP);
       const data = new Float32Array(frames * classes);
