@@ -289,11 +289,13 @@ narrator: am_fenrir
   - `panels`: 2 or 3 side by side (`items*`, each `at*`, `title*`, `body*`).
   - `list`: 1 to 6 points (`title`, `items*`, each `at*`, `text*`).
   - `code`: a highlighted code frame (`lang*`, a Shiki language id; `code*`,
-    at most 12 lines; `file`; `highlights`, each `at*` and `lines*`, a first
-    and last line `[a, b]`).
+    one string with `\n` between lines, at most 12 lines; `file`;
+    `highlights`, each `at*` and `lines*`, `[first, last]` counted from 1).
+    The highlights draw only when the style profile's `effects` lists
+    `highlight`; otherwise they are dropped with no error.
   - `codediff`: a code frame that turns `before*` into `after*` at `at*`, the
     removed lines closing and the added ones opening (`lang*`, `file`; each
-    side at most 12 lines).
+    side one string like `code`, at most 12 lines).
 
 1. **Draft.** From sources, the Script stage above wrote and checked the scene
    file, and the user approved it on the Storyboard. With none, write it with
@@ -348,12 +350,13 @@ the first store holding a `default` file (one profile name) decides, else
 `claude-code`. A run copies its profile to `<run>/style.json` and keeps using
 that copy, so a later edit to a store never changes this video; delete the
 copy to take up the edit, or name another profile in `style:`. Two of a
-profile's keys choose how the diagrams draw: `look`, `clean` (the default) or
-`sketch`, which outlines flow steps and panels by hand with a seed taken from
-the scene and the element, so a render repeats exactly; and `effects`, the
-effects a video may use, from `draw` (flow arrows stroke on) and `highlight`
-(code lines a sentence names). A profile with no `effects` allows none, and
-an effect it leaves out never reaches the video.
+profile's keys choose how diagrams and code frames draw: `look`, `clean` (the
+default) or `sketch`, which outlines flow steps and panels by hand with a seed
+taken from the scene and the element, so a render repeats exactly; and
+`effects`, the motion effects a video may use, from `draw` (flow arrows stroke
+on) and `highlight` (code lines a sentence names). A profile with no `effects`
+allows none, and a motion effect it leaves out never reaches the video. The
+score's sound effects are separate: `effects` never mutes them.
 
 ## Gates
 

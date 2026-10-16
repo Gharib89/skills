@@ -748,6 +748,46 @@ test("a seeded sketch renders identically twice, each outline at its own seed", 
   assert.ok(twice[0].seeds.every((s) => Number.isInteger(s) && s > 0));
 });
 
+test("a right-to-left scene mirrors its flow and keeps its code left to right", async () => {
+  process.env.EXPLAINER_VIDEO_FAKE_LOG = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "ev-rtl-")),
+    "calls.jsonl",
+  );
+  const { sceneFile } =
+    await import("../../skills/explainer-video/scripts/render/compose.mjs");
+  const backend = await import("./fake-backend.mjs");
+  const profile = JSON.parse(read(skill, "styles", "claude-code.json"));
+  const timing = { duration: 6, sentences: [0.2, 2, 4] };
+  const scene = (component, props) => ({
+    id: component,
+    visual: { component, props },
+  });
+  const flow = await sceneFile(
+    scene("flow", {
+      steps: [
+        { at: 1, label: "Issue" },
+        { at: 2, label: "Test" },
+      ],
+    }),
+    timing,
+    profile,
+    { backend, dir: "rtl" },
+  );
+  assert.match(flow, /class="content" dir="rtl"/);
+  assert.match(
+    flow,
+    /\[data-composition-id="flow"\] \[dir="rtl"\] \.arrow svg \{ transform: scaleX\(-1\); \}/,
+  );
+  const code = await sceneFile(
+    scene("code", { lang: "js", code: "let a = 1;" }),
+    timing,
+    profile,
+    { backend, dir: "rtl" },
+  );
+  assert.match(code, /class="content" dir="rtl"/);
+  assert.match(code, /class="code rt" dir="ltr"/);
+});
+
 test("a profile that disallows an effect keeps it out of the composition", () => {
   const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
   profiled(fx, "plain", { effects: [] });

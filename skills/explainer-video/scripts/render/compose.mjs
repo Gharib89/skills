@@ -3,6 +3,7 @@
 // file per scene whose visual is a component. The palette comes from the style
 // profile as CSS custom properties; every font is a file beside the page.
 import crypto from "node:crypto";
+import { diff, lines } from "../lib/visuals.mjs";
 
 export const W = 1920;
 export const H = 1080;
@@ -86,30 +87,6 @@ const codeFrame = (p, f, rows) => ({
 .add { box-shadow: inset 6px 0 var(--ok); }
 .del { box-shadow: inset 6px 0 var(--stop); }`,
 });
-
-// The lines of `a` and `b` as keep, del and add rows, the longest common
-// subsequence kept.
-function diff(a, b) {
-  const L = Array.from({ length: a.length + 1 }, () =>
-    new Array(b.length + 1).fill(0),
-  );
-  for (let i = a.length - 1; i >= 0; i--)
-    for (let j = b.length - 1; j >= 0; j--)
-      L[i][j] =
-        a[i] === b[j]
-          ? L[i + 1][j + 1] + 1
-          : Math.max(L[i + 1][j], L[i][j + 1]);
-  const out = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length || j < b.length)
-    if (i < a.length && j < b.length && a[i] === b[j])
-      out.push(["keep", i++, j++]);
-    else if (j < b.length && (i === a.length || L[i][j + 1] >= L[i + 1][j]))
-      out.push(["add", i, j++]);
-    else out.push(["del", i++, j]);
-  return out;
-}
 
 // Each component: its markup, its scoped CSS, what reveals when, as [selector,
 // sentence number] pairs, and its other tweens, as [selector, from, to,
@@ -270,18 +247,16 @@ ${sketchCss(x.look)}`,
     const open = { height: LH, opacity: 1 };
     const go = { duration: 0.5, ease: "power2.inOut" };
     const tweens = [];
-    const rows = diff(p.before.split("\n"), p.after.split("\n")).map(
-      ([op, i, j]) => {
-        if (op === "keep") return `<div class="ln">${tokens(was[i])}</div>`;
-        const cls = `${op}${k[op]++}`;
-        tweens.push(
-          op === "del"
-            ? [`.${cls}`, open, { ...shut, ...go }, p.at]
-            : [`.${cls}`, shut, { ...open, ...go }, p.at],
-        );
-        return `<div class="ln ${op} ${cls}">${tokens(op === "del" ? was[i] : now[j])}</div>`;
-      },
-    );
+    const rows = diff(lines(p.before), lines(p.after)).map(([op, i, j]) => {
+      if (op === "keep") return `<div class="ln">${tokens(was[i])}</div>`;
+      const cls = `${op}${k[op]++}`;
+      tweens.push(
+        op === "del"
+          ? [`.${cls}`, open, { ...shut, ...go }, p.at]
+          : [`.${cls}`, shut, { ...open, ...go }, p.at],
+      );
+      return `<div class="ln ${op} ${cls}">${tokens(op === "del" ? was[i] : now[j])}</div>`;
+    });
     return {
       ...codeFrame(p, f, rows.join("")),
       reveals: [[".rt", 1]],
@@ -324,7 +299,7 @@ export async function sceneFile(
   const x = {
     look,
     effects: new Set(profile.effects ?? []),
-    highlight: (code, lang) => backend.highlight(code, lang),
+    highlight: backend.highlight,
     sketch: async (shapes) =>
       look === "sketch"
         ? backend.sketch(

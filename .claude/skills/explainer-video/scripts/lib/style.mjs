@@ -54,11 +54,10 @@ export function floors(profile) {
 }
 
 // The effects a profile may allow, each a GSAP tween in the composition:
-// effects come only from commercial-safe sources (GSAP, Lottie,
-// gl-transitions). `draw` strokes a flow's arrows on; `highlight` marks the code
-// lines a sentence names. A profile with no `effects` allows none.
-export const EFFECTS = ["draw", "highlight"];
-export const LOOKS = ["clean", "sketch"];
+// `draw` strokes a flow's arrows on; `highlight` marks the code lines a
+// sentence names. A profile with no `effects` allows none.
+const EFFECTS = ["draw", "highlight"];
+const LOOKS = ["clean", "sketch"];
 
 // The profile's look and effects, refused by name when unknown.
 function features(profile) {

@@ -4,8 +4,32 @@
 // checks, the script gates time the reading; render/compose.mjs draws each.
 
 // A code frame holds this many lines at 30 px: longer code is a second scene.
-export const CODE_LINES = 12;
+const CODE_LINES = 12;
 export const lines = (code) => code.split("\n");
+
+// The lines of `a` and `b` as keep, del and add rows, the longest common
+// subsequence kept: what a code diff draws and what its reader reads.
+export function diff(a, b) {
+  const L = Array.from({ length: a.length + 1 }, () =>
+    new Array(b.length + 1).fill(0),
+  );
+  for (let i = a.length - 1; i >= 0; i--)
+    for (let j = b.length - 1; j >= 0; j--)
+      L[i][j] =
+        a[i] === b[j]
+          ? L[i + 1][j + 1] + 1
+          : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length)
+    if (i < a.length && j < b.length && a[i] === b[j])
+      out.push(["keep", i++, j++]);
+    else if (j < b.length && (i === a.length || L[i][j + 1] >= L[i + 1][j]))
+      out.push(["add", i, j++]);
+    else out.push(["del", i++, j]);
+  return out;
+}
 
 const fail = (why) => {
   throw new Error(why);
@@ -128,10 +152,16 @@ export const VISUALS = {
       at(p.at, n);
     },
     items: (p) => {
-      const was = new Set(lines(p.before));
+      const after = lines(p.after);
       return [
         ["code", 1, [p.file, ...lines(p.before)]],
-        ["diff", p.at, lines(p.after).filter((l) => !was.has(l))],
+        [
+          "diff",
+          p.at,
+          diff(lines(p.before), after)
+            .filter(([op]) => op === "add")
+            .map(([, , j]) => after[j]),
+        ],
       ];
     },
   },

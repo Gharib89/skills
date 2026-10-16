@@ -469,7 +469,7 @@ One state of a run's storyboard, posted as one document the page renders: the fi
 _Avoid_: round, board update
 
 **Style profile**:
-A saved, named look (palette, type, motion and layout rules, whether diagrams draw clean or sketched, and the effects a video may use) that a run can use. One profile is the default; a profile can come from a prototype, screenshots, a website or a deck.
+A saved, named look (palette, type, motion and layout rules, whether diagrams draw clean or sketched, and the motion effects a video may use) that a run can use. One profile is the default; a profile can come from a prototype, screenshots, a website or a deck.
 _Avoid_: theme, preset, template
 
 **Style card**:
