@@ -1,0 +1,100 @@
+{
+  "version": 3,
+  "kind": "review",
+  "title": "How Ship lands a pull request",
+  "brief": [
+    {
+      "knob": "focus",
+      "value": "how Ship lands a pull request"
+    },
+    {
+      "knob": "length",
+      "value": "2"
+    },
+    {
+      "knob": "audience",
+      "value": "a developer new to Ship"
+    },
+    {
+      "knob": "language",
+      "value": "en"
+    },
+    {
+      "knob": "style",
+      "value": "claude-code"
+    },
+    {
+      "knob": "voice",
+      "value": "am_fenrir"
+    },
+    {
+      "knob": "aspect",
+      "value": "16:9"
+    },
+    {
+      "knob": "must",
+      "value": "name the gate; show the merge"
+    },
+    {
+      "knob": "avoid",
+      "value": "jargon"
+    }
+  ],
+  "sources": [
+    {
+      "id": "s1",
+      "kind": "repo",
+      "title": "skills repo",
+      "summary": "The skills repository and its ship skill.",
+      "excerpts": 7
+    },
+    {
+      "id": "s2",
+      "kind": "page",
+      "title": "Ship docs page",
+      "summary": "How the unattended lane picks an issue.",
+      "excerpts": 3
+    }
+  ],
+  "banner": {
+    "text": "The video gates stayed red after two fix attempts, so no video was made. Revise the reopened cards.",
+    "gates": [
+      "gate layout: fail: 1 finding(s), first: 1.5 s steps: text 12 px under 18 px vs none, text >= 18 px, margin 5%"
+    ]
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "title": "The promise",
+      "role": "hook",
+      "seconds": 9.4,
+      "narration": "1. Ship drives {#626|issue six two six} to a `merged` pull request. [ex-3, ex-4]\n2. Here is how. [no-claim]",
+      "style": "title · claude-code · am_fenrir",
+      "still": ".cache/stills/hook.png",
+      "audio": ".cache/voice/hook.wav",
+      "status": "approved"
+    },
+    {
+      "id": "steps",
+      "title": "The steps",
+      "role": "point",
+      "seconds": 12.1,
+      "narration": "1. It reads the issue. [ex-1]\n2. It writes a failing test. [ex-2]\n3. Then the code makes it pass. [ex-5]",
+      "style": "cards · claude-code · am_fenrir",
+      "still": ".cache/stills/steps.png",
+      "audio": ".cache/voice/steps.wav",
+      "status": "reopened"
+    },
+    {
+      "id": "gate",
+      "title": "The gate",
+      "role": "recap",
+      "seconds": 8.3,
+      "narration": "1. The local gate runs every check. [ex-6]\n2. Then it opens the pull request. [ex-7]",
+      "style": "terminal · claude-code · am_fenrir",
+      "still": ".cache/stills/gate.png",
+      "audio": ".cache/voice/gate.wav",
+      "status": "approved"
+    }
+  ]
+}

@@ -20,6 +20,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { LUFS, contrast, floors, loadStyle } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { CUE_CHARS, FPS, H, W } from "../render/compose.mjs";
@@ -327,7 +328,7 @@ const judged = {
   ],
   captions: [caps, `${cues.length} cue(s), ${summary(caps)}`, "none"],
 };
-const scriptHash = hash(script.scenes.map((s) => [s.id, s.narration]));
+const scriptKey = scriptHash(script);
 const renderHash = hash(
   read("composition/index.html"),
   ...fs
@@ -342,7 +343,7 @@ const recordFile = path.join(run, "gates.json");
 const prev = fs.existsSync(recordFile)
   ? JSON.parse(fs.readFileSync(recordFile, "utf8"))
   : null;
-const same = prev?.script === scriptHash;
+const same = prev?.script === scriptKey;
 const again = same && prev.render === renderHash;
 const count = (failing, before) =>
   !failing ? 0 : again ? before || 1 : before + 1;
@@ -360,7 +361,7 @@ const attempts = count(red.length, same ? prev.attempts : 0);
 fs.writeFileSync(
   recordFile,
   JSON.stringify(
-    { script: scriptHash, render: renderHash, attempts, gates },
+    { script: scriptKey, render: renderHash, attempts, gates },
     null,
     2,
   ) + "\n",
@@ -392,7 +393,7 @@ console.log(
   `gates: ${Object.keys(gates).length - red.length} pass, ${red.length} fail${
     !red.length
       ? ""
-      : attempts >= 3
+      : stopped(attempts)
         ? "; stop: red after two fix attempts, no video"
         : `; next: fix attempt ${attempts} of 2`
   }`,

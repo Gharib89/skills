@@ -12,19 +12,18 @@ metadata:
 # explainer-video
 
 An **explainer video** is a narrated video, one to five minutes by default,
-made from one or more sources. This version carries seven stages: **setup**,
+made from one or more sources. This version carries eight stages: **setup**,
 which every run starts with; the **brief**, the user's words laid over the
 defaults; **source**, each source read into a source pack; **script**, a cited
 scene file written from the pack and held to the script gates; **voice**,
-English narration; **render**, the scene file turned into a captioned MP4; and
-**gates**, which the render runs and which block a video below the floors. The
-storyboard is not in this version.
+English narration; the **storyboard**, where the user approves or revises each
+scene; **render**, the scene file turned into a captioned MP4; and **gates**,
+which the render runs and which block a video below the floors.
 Asked for a video from sources, run the stages in order (brief, source,
-script, voice, render) without waiting for the user's approval, pausing only
-where a stage says to stop or ask; say in one line that the storyboard, where
-they would approve the script, is not in this version. Asked for a video of a
-topic alone, say that topic research is not in this version and ask for a
-source. Asked for narration the user writes, skip to Voice or Render.
+script, voice, storyboard, render), stopping for the user only at the
+storyboard and where a stage says to stop or ask. Asked for a video of a topic
+alone, say that topic research is not in this version and ask for a source.
+Asked for narration the user writes, skip to Voice or Render.
 
 ## Setup
 
@@ -183,7 +182,8 @@ to the **script gates**.
    stop: report each failing sentence and ask the user what the video may say.
    The stop holds, whatever the next rewrite, until the support gate passes
    or a brief change redoes the script.
-6. **On exit 0**, report the summary line and go on to Voice.
+6. **On exit 0**, report the summary line and go on to Voice, then the
+   Storyboard.
 
 ## Voice
 
@@ -228,6 +228,10 @@ match nothing in the text and cost precision.
    a scene with no narration, a failed synthesis): relay the stderr message as
    printed.
 
+## Storyboard
+
+Read [reference/storyboard.md](reference/storyboard.md) now and run its steps.
+
 ## Render
 
 The render stage turns a **scene file**, the script's Markdown form at
@@ -271,8 +275,9 @@ narrator: am_fenrir
   sentence starts.
 
 1. **Draft.** From sources, the Script stage above wrote and checked the scene
-   file. With none, write it with the user from what they want the video to
-   say, done when they approve the draft.
+   file, and the user approved it on the Storyboard. With none, write it with
+   the user from what they want the video to say, done when they approve the
+   draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
    `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows. Run the
@@ -294,8 +299,7 @@ narrator: am_fenrir
    `<slug>.srt` and `poster.png`, and the same three are copied to the printed
    path, `explainer-video/<repo>/<slug>/` in the user's videos folder (the XDG
    videos folder on Linux, `~/Movies` on macOS, `%USERPROFILE%\Videos` on
-   Windows), so the video outlives the run folder. Report the last line and
-   that path.
+   Windows), so the video outlives the run folder. Then run Storyboard step 8.
 7. **On a fail** (exit 1), relay what was printed. A `gate <name>: fail` line
    means nothing was delivered and `out/` was emptied: follow Gates below. A
    `delivery <check>: fail:
@@ -362,9 +366,7 @@ attempt counts live in `gates.json`: each gate's count resets when that gate
 passes, and the run's count, which `stop` reads, when every gate passes. Both
 reset when the narration changes, so a red that moves from one gate to another
 still stops.
-On `stop`, stop with no video and report each red gate's line and `gates.md`;
-a fix that needs the narration, order or count changed is a revision of the
-script, so ask the user.
+On `stop`, stop with no video and run Storyboard step 7.
 
 **Floors** are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:
@@ -375,10 +377,11 @@ dBTP, no lower than -8.5, lower).
 ## Recipe
 
 The run folder's **recipe**, `brief.json`, `excerpts.json`, `outline.md`,
-`script.md`, `style.json`, `gates.md` and `manifest.json` (skill version, lock
-hash, profile, narrator, delivered path), is committed. `explainers/.gitignore`
-ignores the rest: the snapshots and drafts, the compiled script, the voice and
-timeline files, `check.json`, `support.json`, `gates.json`, the caches, the
-composition and `out/`. Every stage writes those lines between its
-`# explainer-video: begin` and `end` markers and leaves the file's other lines
-alone.
+`script.md`, `style.json`, `gates.md` and `manifest.json` (the storyboard
+page's URL, skill version, lock hash, profile, narrator, delivered path), is
+committed. `explainers/.gitignore` ignores the rest: the snapshots and
+drafts, the compiled script, the voice and timeline files, `check.json`,
+`support.json`, `gates.json`, `stills.json`, the caches, the composition,
+`board/`, `storyboard.html` and `out/`. Every stage writes those lines
+between its `# explainer-video: begin` and `end` markers and leaves the file's
+other lines alone.

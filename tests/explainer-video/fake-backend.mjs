@@ -5,6 +5,7 @@
 //   EXPLAINER_VIDEO_FAKE_PROBE    JSON fields overriding what ffprobe and
 //                                 loudness answer
 //   EXPLAINER_VIDEO_FAKE_CHECK    JSON check answers in place of its own
+//   EXPLAINER_VIDEO_FAKE_CLIP_BYTES  size of each clip written (default 1000)
 // The family `ubuntu` answers with its real, non-OFL licence.
 //
 // Fake audio is 16 kHz and spells its text: each letter holds 3 frames of 320
@@ -212,6 +213,27 @@ export async function loudness(file) {
 
 export async function master(input, output, { lufs, peak }) {
   log({ call: "master", input, output, lufs, peak });
+  fs.copyFileSync(input, output);
+}
+
+export async function clip(input, output, { start, duration }) {
+  log({ call: "clip", input, output, start, duration });
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  fs.writeFileSync(output, "");
+  fs.truncateSync(
+    output,
+    Number(process.env.EXPLAINER_VIDEO_FAKE_CLIP_BYTES ?? 1000),
+  );
+}
+
+export async function narration(input, output) {
+  log({ call: "narration", input, output });
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  if (process.env.EXPLAINER_VIDEO_FAKE_NARRATION_FAIL) {
+    // ffmpeg -y opens its output before it encodes, so a failure leaves a part.
+    fs.writeFileSync(output, "part");
+    throw new Error("ffmpeg: encode failed");
+  }
   fs.copyFileSync(input, output);
 }
 
