@@ -555,7 +555,13 @@ for (const [name, arrange, why, voiced = true] of [
   [
     "a negative sound effect floor",
     (fx) => styled(fx, {}, { gates: { sfx: { perMinute: -1 } } }),
-    /^render: style profile odd: gates\.sfx\.perMinute -1 must be 0 or more$/m,
+    /^render: style profile odd: gates\.sfx\.perMinute -1 must be a whole number 0 or more$/m,
+    false,
+  ],
+  [
+    "a fractional sound effect floor",
+    (fx) => styled(fx, {}, { gates: { sfx: { perMinute: 0.5 } } }),
+    /^render: style profile odd: gates\.sfx\.perMinute 0\.5 must be a whole number 0 or more$/m,
     false,
   ],
   [

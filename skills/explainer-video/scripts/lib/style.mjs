@@ -43,7 +43,8 @@ export function floors(profile) {
       // at -9 dBTP.
       if (g === "loudness" && k === "peak" && v < -8.5)
         refuse(`${g}.${k} ${v} is under -8.5, the lowest the master reaches`);
-      if (g === "sfx" && v < 0) refuse(`${g}.${k} ${v} must be 0 or more`);
+      if (g === "sfx" && !(Number.isInteger(v) && v >= 0))
+        refuse(`${g}.${k} ${v} must be a whole number 0 or more`);
       if (LOWER.has(g) ? v > f : v < f)
         refuse(`${g}.${k} ${v} lowers the skill's floor ${f}`);
       out[g][k] = v;
