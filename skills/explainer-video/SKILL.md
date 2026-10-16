@@ -65,7 +65,7 @@ in:
    relay the reason as printed.
 
 Whenever the **Gemini data notice** prints under a table, relay it word for
-word: setup prints it once per key and never again.
+word: setup prints it once per key, the first time it checks that key.
 
 To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,

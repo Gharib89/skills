@@ -43,9 +43,8 @@ const keep = (w) =>
   w.length > 1 && !/\d/.test(w) && !STOP_AR.has(w.toLowerCase());
 // The model glues a tatweel clitic to the word after it (الـ pull request is
 // heard as البلركوست), so the narration's is glued too. Words then compare as
-// consonant skeletons, as the alignment research measured: no article, and
-// none of the vowel letters, hamza or ain that speakers and the model write
-// either way.
+// consonant skeletons: no article, and none of the vowel letters, hamza or
+// ain that speakers and the model write either way.
 const skeleton = (w) =>
   w
     .replace(/^(و|ف|ب|ل)?ال(?=..)/, "")
