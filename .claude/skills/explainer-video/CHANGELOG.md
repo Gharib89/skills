@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.11.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Style extraction to a draft profile
+  ([#729](https://github.com/Gharib89/skills/pull/729),
+  [`ab2067b`](https://github.com/Gharib89/skills/commit/ab2067bca57eb6401c2dd22084a5db19a5f4f7ca))
+
+
 ## v0.10.1 (2026-10-16)
 
 ### Chores
