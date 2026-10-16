@@ -16,9 +16,9 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   Latin run left in it (`Arabic reads <dir>`, `Latin run not isolated in`), each
   English term isolated on one line (`Latin run not isolated`, `Latin run
   wraps`), and a line height no less than the ink Arabic's letters span in
-  the text's face, measured once per face in the browser (`line height <h>
-  under the ink <i> of <face>`). Code frames and terminals read left to right
-  as written, so their text is exempt.
+  the text's face and weight, measured once per face and weight in the browser
+  (`line height <h> under the ink <i> of <face>`). Code frames and terminals
+  read left to right as written, so their text is exempt.
 - `contrast`: 4.5:1 for body text and 3:1 for large text (24 px, or 18.66 px
   bold), on the same frames. The palette check when the profile loads holds
   the faint, accent and status colours to 3:1 only, since the scenes draw them

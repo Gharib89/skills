@@ -140,10 +140,11 @@ function measureFrame() {
   });
   const sub = '[data-composition-id]:not([data-composition-id="main"])';
   // The ink Arabic's letters span in an element's face and weight, in ems, as
-  // canvas measures it once per face: the least line height that keeps two
-  // lines of them apart. Every letter and hamza seat, no marks: the floor is
-  // the face's, not the line's, and a stress line of stacked marks (1.6 em in
-  // IBM Plex Sans Arabic) would fail the profiles' own 1.5 and 1.6 heights.
+  // canvas measures it once per face and weight: the least line height that
+  // keeps two lines of them apart. Every letter and hamza seat, no marks: the
+  // floor is the face's, not the line's, and a stress line of stacked marks
+  // (1.6 em in IBM Plex Sans Arabic) would fail the profiles' own 1.5 and 1.6
+  // heights.
   const pen = document.createElement("canvas").getContext("2d");
   const LETTERS = "ءآأإئابةتثجحخدذرزسشصضطظعغفقكلمنهوىي";
   const inks = new Map();
