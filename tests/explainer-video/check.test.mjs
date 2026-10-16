@@ -234,7 +234,8 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   assert.equal(
     line(r, "budget"),
     "script budget: fail: the scenes run 60 s and the 1 s hold vs the brief's 120 s ±10%",
-  ); // 66 s of scenes is at the edge of a one-minute brief's band: the hold
+  );
+  // 66 s of scenes is at the edge of a one-minute brief's band: the hold
   // takes it past.
   r = check(
     fixture({
