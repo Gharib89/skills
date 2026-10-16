@@ -391,3 +391,10 @@ export async function sketch(shapes) {
     stroke: `M0 0 L${s.seed % 997} ${s.rect?.[1] ?? 40}`,
   }));
 }
+
+// Style extraction's decode: every reference image the fake writes or a test
+// hands in is a binary PPM already.
+export async function ppm(file) {
+  log({ call: "ppm", file: path.basename(file) });
+  return fs.readFileSync(file);
+}
