@@ -348,10 +348,8 @@ narrator: am_fenrir
 project's `explainers/.styles/`, the user config store's `styles/`, and the
 skill's bundled `<skill>/styles/`. The header's `style:` names one; without it,
 the first store holding a `default` file (one profile name) decides, else
-`claude-code`. The skill bundles `claude-code` (cream ground, clay accent) and
-`itworx` (white ground, indigo, red accent). A run copies its profile to
-`<run>/style.json` and keeps using that copy, so a later edit to a store never
-changes this video; delete the
+`claude-code`. A run copies its profile to `<run>/style.json` and keeps using
+that copy, so a later edit to a store never changes this video; delete the
 copy to take up the edit, or name another profile in `style:`. Two of a
 profile's keys choose how diagrams and code frames draw: `look`, `clean` (the
 default) or `sketch`, which outlines flow steps and panels by hand with a seed

@@ -400,6 +400,8 @@ async function boot() {
     S.local = true; setCards(S, [doc]); restoreDraft(); render();
   }
   const use = n => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  // Declared before the await, not as a const destructure: the listeners above
+  // read them, and one fired during the await would hit the TDZ.
   let db = null, comments = null, user = null;
   [db, comments, user] = await Promise.all([use('db'), use('comments'), use('user')]);
   if (!db) return localMode();

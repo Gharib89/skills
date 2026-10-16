@@ -81,47 +81,56 @@ is `node <skill>/scripts/style/card.mjs explainers/<slug> <name>`.
 
 1. **Surface.** As the storyboard's step 2
    ([storyboard.md](storyboard.md)): with `Artifact`, `ArtifactData` or
-   `ArtifactComments` missing, or no database, the card is **local**: skip to
-   step 3 with `card build --local`, and tell the user the card is
+   `ArtifactComments` missing, or when the user says the page cannot reach its
+   database, the card is **local**: skip to step 3 with `card build --local`,
+   and tell the user the card is
    `explainers/<slug>/style-draft/card/stylecard.html`, opened in a browser,
    and that they paste its answers text back here.
 2. **Publish, once per card.** `card page` writes `style-draft/card/page.html`.
    Publish it as a new artifact: `capabilities` `{"db": {}, "user": {},
    "comments": {}, "assets": {}}`, `icon` `palette`, a one-sentence
-   `description`. Refused: the card is local (step 1). Never publish it again.
-   Record its URL with `card page <url>`. Arm the watch as the storyboard's
-   step 3 says.
-3. **Build.** `card build` (or `--local`). Exit 1 with `card: ... is not
-   installed` means run `/explainer-video setup`; `fails contrast` or `names
-   font` names what to fix in the draft; relay any other `card:` line. On a
-   published page it first lists `card: upload <path> (<size>)` per font file
-   the page does not hold: upload them as the storyboard's step 4 uploads,
-   record each with `card asset <path>=<url> ...`, and build again. On exit 0
-   it prints `card <n>: 5 frame(s), <k> finding(s) -> style-draft/card/<n>.json`
-   and a `card <gate> <frame>: <what>` line per finding. Published: write that
-   file with `ArtifactData` `set`, collection `cards`, doc id `<n>`. Then print
-   the page link or the local path and `Style card <n> posted.`, and end the
-   turn. A finding blocks Save and Use once on the page: say which frame broke
-   which rule.
-4. **Read a Submit.** As the storyboard's step 5, with collection `answers`,
-   doc id `card-<n>`, and `explainers/<slug>/style-draft/card/inbox/`.
-5. **Apply.** `card apply <file>`; add `--project` when the user asked for a
-   project profile. It prints:
-   - `card: rebuild`: the edits are in the draft; build the next version
-     (step 3).
+   `description`. Refused: the card is local (step 1). Never publish it again:
+   every later change is a card version. Record its URL with `card page
+   <url>`. Arm the watch as the storyboard's step 3 says.
+3. **Build.** `card build`, adding `--local` on a local card, and `--project`
+   when the user asked for a project profile, so the card names the store Save
+   writes (by default the user store when this copy of the skill sits under
+   `~/.claude/skills` or `~/.agents/skills`, else the project's
+   `explainers/.styles/`). Exit 1 with `card: ... is not installed` means run
+   `/explainer-video setup`; `fails contrast` or `names font` names what to fix
+   in the draft; relay any other `card:` line. On a published page it first
+   lists `card: upload <path> (<size>)` per font file the page does not hold:
+   upload them as the storyboard's step 4 uploads, record each with `card
+   asset <path>=<url> ...`, and build again. On exit 0 it prints `card <n>: 5
+   frame(s), <k> finding(s) -> style-draft/card/<n>.json` and a `card <gate>
+   <frame>: <what>` line per finding; a finding blocks Save and Use once on the
+   page, so say which frame broke which rule. Published: write that file with
+   `ArtifactData` `set`, collection `cards`, doc id `<n>`, `file_path` the
+   file. Then print the page link or the local path and `Style card <n>
+   posted.`, and end the turn.
+4. **Read a Submit.** As the storyboard's step 5: published, `ArtifactData`
+   `get` collection `answers`, doc id `card-<n>`, with `out_dir`
+   `explainers/<slug>/style-draft/card/inbox`; with no such document, or
+   local, write the comment's or the pasted text to
+   `explainers/<slug>/style-draft/card/inbox/answers.txt`. Run step 5 on the
+   file, and resolve the Submit thread once the next version is posted or the
+   profile is saved or used.
+5. **Apply.** `card apply <file>`, adding `--project` as step 3 did. It
+   prints:
+   - `card: rebuild`: the edits are in the draft, whatever the choice; build
+     the next version (step 3).
    - `card: revise: <note>`: change `roles.json` as the note asks, run the
      draft again (it needs no reference images), then build the next
      version. A note that needs a hex no candidate holds is a colour edit on
-     the card: ask the user to make it there.
+     the card: build the next version unchanged and ask the user to make the
+     edit there.
    - `card: saved <name> -> <file>[, default of the <scope> store]`: tell the
-     user the profile is saved there, and that `style: <name>` names it. Save
-     writes the user store when this copy of the skill sits under
-     `~/.claude/skills` or `~/.agents/skills`, else the project's
-     `explainers/.styles/`.
+     user the profile is saved there, and that `style: <name>` names it.
    - `card: once <name> -> style.json`: the profile is this run's alone. Run
      `brief.mjs explainers/<slug> style=<name>` and go on with the video.
 
    `answers for card <a>, the latest is card <b>`: read the latest version's
-   answers instead. Any other `card:` refusal (a name the store took since
-   the card was built, a finding): relay it as printed and build the next
-   version (step 3), which the page answers afresh.
+   answers instead; with none, ask the user to Submit card `<b>`. Any other
+   `card:` refusal (a name the store took since the card was built, a
+   project profile of the name hiding a user save, a finding): relay it as
+   printed and build the next version (step 3), which the page answers afresh.

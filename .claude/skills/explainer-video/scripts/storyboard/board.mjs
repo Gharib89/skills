@@ -30,7 +30,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
-import { writeIgnore } from "../lib/runfolder.mjs";
+import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { esc } from "../render/compose.mjs";
 
@@ -149,25 +149,11 @@ if (cmd === "page") {
 
 if (cmd === "asset") {
   const file = at("board", "assets.json");
-  const assets = maybe(file) ?? {};
-  const root = path.resolve(run);
-  for (const a of args) {
-    const i = a.indexOf("=");
-    const rel = i < 0 ? "" : a.slice(0, i);
-    const url = a.slice(i + 1);
-    const abs = path.resolve(root, rel);
-    if (
-      !rel ||
-      !abs.startsWith(root + path.sep) ||
-      !fs.existsSync(abs) ||
-      !fs.statSync(abs).isFile()
-    )
-      fail(`${rel || a} is not a file under the run folder`);
-    if (!url.startsWith("https://") && !/^\/_blob\/[0-9a-f]{32}$/.test(url))
-      fail(`${url} is neither an https:// URL nor /_blob/<id>`);
-    assets[path.relative(root, abs)] = url;
+  try {
+    write(file, recordAssets(run, args, maybe(file) ?? {}));
+  } catch (e) {
+    fail(e.message);
   }
-  write(file, assets);
   console.log(`board: ${args.length} asset(s) recorded`);
   process.exit(0);
 }

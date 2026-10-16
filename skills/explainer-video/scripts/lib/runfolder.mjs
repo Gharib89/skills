@@ -38,3 +38,29 @@ export function writeIgnore(run) {
       : old + (old && !old.endsWith("\n") ? "\n" : "") + BLOCK;
   if (next !== old) fs.writeFileSync(file, next);
 }
+
+// Records uploaded media for a page: each `<path>=<url>` names a file under
+// the run folder and the URL its upload returned, which must be https:// or
+// the asset store's /_blob/<id>. Returns `assets` with each added under its
+// run-relative path, `/`-joined as the build commands print it; throws on the
+// first pair it cannot record.
+export function recordAssets(run, pairs, assets) {
+  const root = path.resolve(run);
+  for (const a of pairs) {
+    const i = a.indexOf("=");
+    const rel = i < 0 ? "" : a.slice(0, i);
+    const url = a.slice(i + 1);
+    const abs = path.resolve(root, rel);
+    if (
+      !rel ||
+      !abs.startsWith(root + path.sep) ||
+      !fs.existsSync(abs) ||
+      !fs.statSync(abs).isFile()
+    )
+      throw new Error(`${rel || a} is not a file under the run folder`);
+    if (!url.startsWith("https://") && !/^\/_blob\/[0-9a-f]{32}$/.test(url))
+      throw new Error(`${url} is neither an https:// URL nor /_blob/<id>`);
+    assets[path.relative(root, abs).split(path.sep).join("/")] = url;
+  }
+  return assets;
+}

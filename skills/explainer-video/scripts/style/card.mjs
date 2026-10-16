@@ -3,7 +3,7 @@
 // layout, gated by the video gates' layout and contrast rules, then saved to a
 // store or used once.
 //
-//   node card.mjs <run-folder> <draft> build [--local]
+//   node card.mjs <run-folder> <draft> build [--local] [--project]
 //   node card.mjs <run-folder> <draft> page [<url>]
 //   node card.mjs <run-folder> <draft> asset <path>=<url>...
 //   node card.mjs <run-folder> <draft> apply <answers-file> [--project]
@@ -19,12 +19,12 @@
 // copies) into answers-<n>.json: edited colours or fonts go into the draft,
 // which needs the next version; otherwise Save writes the draft to the user
 // store when this copy of the skill is user-scoped, else to the project's
-// explainers/.styles/ (`--project` forces the project), and Use once writes
-// it to <run>/style.json.
+// explainers/.styles/ (`--project` forces the project, and on `build` names
+// that store on the card), and Use once writes it to <run>/style.json.
 // stdout: build `card <n>: <f> frame(s), <k> finding(s) -> style-draft/card/
 //         <n>.json`, then where the page is; apply `card: rebuild`, `card:
-//         revise: <note>`, `card: saved <name> -> <file>[, default]` or `card:
-//         once <name> -> style.json`
+//         revise: <note>`, `card: saved <name> -> <file>[, default of the
+//         <scope> store]` or `card: once <name> -> style.json`
 // writes: <run>/style-draft/card/, the draft, a store's <name>.json and
 //         default, <run>/style.json
 // exit:   0 ok · 1 refused, `card: <why>` on stderr · 2 usage
@@ -33,6 +33,7 @@ import os from "node:os";
 import path from "node:path";
 import { judge } from "../lib/layout.mjs";
 import { userDirs } from "../lib/paths.mjs";
+import { recordAssets } from "../lib/runfolder.mjs";
 import { ROLES, floors, saveScope, validate } from "../lib/style.mjs";
 import {
   catalogue,
@@ -47,7 +48,7 @@ import { esc, framePage, sceneFile, stillsPage } from "../render/compose.mjs";
 const [run, draftName, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
-    "usage: node card.mjs <run-folder> <draft> build [--local] | page [<url>] | asset <path>=<url>... | apply <answers-file> [--project]",
+    "usage: node card.mjs <run-folder> <draft> build [--local] [--project] | page [<url>] | asset <path>=<url>... | apply <answers-file> [--project]",
   );
   process.exit(2);
 };
@@ -55,7 +56,9 @@ if (
   !run ||
   !draftName ||
   !["build", "page", "asset", "apply"].includes(cmd) ||
-  (cmd === "build" && !["", "--local"].includes(args.join(" "))) ||
+  (cmd === "build" &&
+    (new Set(args).size < args.length ||
+      !args.every((a) => ["--local", "--project"].includes(a)))) ||
   (cmd === "page" && args.length > 1) ||
   (cmd === "asset" && !args.length) ||
   (cmd === "apply" &&
@@ -98,6 +101,10 @@ const storeOf = (scope) =>
   scope === "user"
     ? path.join(userDirs().config, "styles")
     : path.join(path.dirname(path.resolve(run)), ".styles");
+const scope = args.includes("--project")
+  ? "project"
+  : saveScope(skill, os.homedir());
+const store = storeOf(scope);
 const families = () =>
   catalogue()
     .filter((r) => r.kind === "font")
@@ -128,20 +135,11 @@ if (cmd === "page") {
 // Uploaded media by its path under the run folder, as `build` prints it.
 if (cmd === "asset") {
   const file = at("assets.json");
-  const assets = maybe(file) ?? {};
-  const root = path.resolve(run);
-  for (const a of args) {
-    const i = a.indexOf("=");
-    const rel = i < 0 ? "" : a.slice(0, i);
-    const url = a.slice(i + 1);
-    const abs = path.resolve(root, rel);
-    if (!rel || !abs.startsWith(root + path.sep) || !fs.existsSync(abs))
-      fail(`${rel || a} is not a file under the run folder`);
-    if (!url.startsWith("https://") && !/^\/_blob\/[0-9a-f]{32}$/.test(url))
-      fail(`${url} is neither an https:// URL nor /_blob/<id>`);
-    assets[path.relative(root, abs).split(path.sep).join("/")] = url;
+  try {
+    write(file, recordAssets(run, args, maybe(file) ?? {}));
+  } catch (e) {
+    fail(e.message);
   }
-  write(file, assets);
   console.log(`card: ${args.length} asset(s) recorded`);
   process.exit(0);
 }
@@ -186,8 +184,9 @@ if (cmd === "apply") {
       fail(`${t} ${hex} is not a #rrggbb colour`);
   }
   for (const [r, font] of Object.entries(type)) {
-    if (!ROLE_NAMES.includes(r)) fail(`no type role ${r}`);
-    if (LATIN.includes(r) && !families().includes(font))
+    // The card offers no Arabic family: the catalogue has none to pick.
+    if (!LATIN.includes(r)) fail(`no type role ${r} on the card`);
+    if (!families().includes(font))
       fail(
         `font ${font} for ${r} is not one setup installs (${families().join(", ")})`,
       );
@@ -235,20 +234,26 @@ if (cmd === "apply") {
   }
   if (card.findings.length)
     fail(
-      `card ${n} has ${card.findings.length} layout finding(s): revise the draft before ${a.choice === "save" ? "saving" : "using"} it`,
+      `card ${n} has ${card.findings.length} finding(s): revise the draft before ${a.choice === "save" ? "saving" : "using"} it`,
     );
   if (a.choice === "once") {
     write(path.join(run, "style.json"), draft);
     console.log(`card: once ${draft.name} -> style.json`);
     process.exit(0);
   }
-  const scope =
-    args[1] === "--project" ? "project" : saveScope(skill, os.homedir());
-  const store = storeOf(scope);
   const out = path.join(store, `${draft.name}.json`);
   if (fs.existsSync(out) && !a.replace)
     fail(
       `${draft.name} is saved in the ${scope} store already: tick Replace on the card`,
+    );
+  // A run reads the project store first, so a project profile of this name
+  // would hide the one saved here.
+  if (
+    scope === "user" &&
+    fs.existsSync(path.join(storeOf("project"), `${draft.name}.json`))
+  )
+    fail(
+      `the project store holds a ${draft.name} that would hide this one: pick another name`,
     );
   write(out, draft);
   if (a.default)
@@ -443,8 +448,6 @@ if (published && media.some((f) => !assets[f])) {
   );
 }
 
-const scope = saveScope(skill, os.homedir());
-const store = storeOf(scope);
 const marks = draft.marks ?? {};
 const doc = {
   version: (versions().at(-1) ?? 0) + 1,

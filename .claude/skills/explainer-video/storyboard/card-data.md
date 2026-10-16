@@ -78,14 +78,9 @@ frame's `html` only in a sandboxed frame that runs no script.
 Submit stays off until a choice is picked, the name is kebab-case, every
 colour passes contrast by role with the edits applied, Replace is ticked when
 Save names a profile the store holds, and, when the card has findings, the
-choice is Revise or a colour or font is edited. `card.mjs apply` then:
-
-- edited colours or fonts: writes them into the draft and prints `card:
-  rebuild`, whatever the choice; the run builds and posts the next version.
-- `revise`: prints `card: revise: <note>`; the run revises the draft by hand,
-  then builds the next version.
-- `once`: writes the draft to `<run>/style.json`, no store touched.
-- `save`: writes `<store>/<name>.json`, and `<store>/default` when `default`.
+choice is Revise or a colour or font is edited. What `card.mjs apply` then
+writes and prints is in step 5 of
+[reference/style.md](../reference/style.md#the-style-card).
 
 ## Answers text
 

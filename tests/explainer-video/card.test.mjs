@@ -489,7 +489,7 @@ test("Save writes the project store from a project copy, refuses a taken name wi
   );
 });
 
-test("a copy of the skill under ~/.claude/skills saves to the user store, and --project forces the project", () => {
+test("a copy of the skill under ~/.claude/skills saves to the user store, --project forces the project, and a project profile of the name refuses a user save", () => {
   const fx = fixture();
   const copy = path.join(fx.env.HOME, ".claude", "skills", "explainer-video");
   fs.cpSync(skill, copy, { recursive: true });
@@ -508,6 +508,65 @@ test("a copy of the skill under ~/.claude/skills saves to the user store, and --
   r = card(fx, ["apply", f, "--project"], { at: copy });
   assert.equal(r.code, 0, r.err);
   assert.ok(fs.existsSync(path.join(fx.project, "acme.json")));
+  fs.appendFileSync(f, "Replace: yes\n");
+  r = card(fx, ["apply", f], { at: copy });
+  assert.equal(r.code, 1);
+  assert.match(
+    r.err,
+    /the project store holds a acme that would hide this one/,
+  );
+  r = card(fx, ["build", "--project"], { at: copy });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(latestCard(fx).scope, "project");
+  assert.deepEqual(latestCard(fx).taken, ["acme"]);
+});
+
+test("card refuses what it cannot apply or record, naming why", () => {
+  const fx = fixture();
+  built(fx);
+  const head =
+    "explainer-video: style card 1 answers (database document answers/card-1)\n";
+  for (const [body, why] of [
+    [
+      "Choice: Save\nName: acme\nShade: red\n",
+      /cannot read this answers line: Shade: red/,
+    ],
+    ["Name: acme\n", /the answers hold no choice/],
+    ["Choice: Save\nName: Acme Co\n", /name Acme Co is not kebab-case/],
+    [
+      "Choice: Save\nName: acme\nColour glow: #ffffff\n",
+      /no colour token glow/,
+    ],
+    [
+      "Choice: Save\nName: acme\nColour bg: white\n",
+      /bg white is not a #rrggbb colour/,
+    ],
+    [
+      "Choice: Save\nName: acme\nFont arTitle: inter\n",
+      /no type role arTitle on the card/,
+    ],
+    [
+      "Choice: Save\nName: acme\nFont title: comic-sans\n",
+      /font comic-sans for title is not one setup installs/,
+    ],
+  ]) {
+    const r = answer(fx, head + body);
+    assert.equal(r.code, 1, body);
+    assert.match(r.err, why, body);
+  }
+  for (const [args, why] of [
+    [["page", "http://claude.ai/x"], /is not an https:\/\/ URL/],
+    [["asset", "../x.woff2=https://a/b"], /is not a file under the run folder/],
+    [
+      ["asset", "style-draft/acme.json=ftp://a/b"],
+      /neither an https:\/\/ URL nor \/_blob/,
+    ],
+    [["build", "--local", "--local"], /usage/],
+  ]) {
+    const r = card(fx, args);
+    assert.notEqual(r.code, 0, args.join(" "));
+    assert.match(r.err, why, args.join(" "));
+  }
 });
 
 test("Use once writes the draft to the run's style.json and no store; the run keeps it when it names it", () => {
@@ -574,7 +633,7 @@ test("an edit under the contrast floor and a findings card's Save are refused by
   assert.equal(r.code, 1);
   assert.match(
     r.err,
-    /card 1 has 1 layout finding\(s\): revise the draft before using it/,
+    /card 1 has 1 finding\(s\): revise the draft before using it/,
   );
   r = answer(fx, head + "Choice: Save\nName: acme\nColour muted: #c8c8c0\n");
   assert.equal(r.code, 1);
