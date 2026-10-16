@@ -2,10 +2,10 @@
 
 **Style extraction** turns a look the user points at into a draft style
 profile. Every source becomes **reference images** first, a script measures
-their colours into **candidates**, you assign the twelve colour tokens from
-those candidates by id, and a second script derives what the images never show
-and adjusts what fails contrast. You never write a hex: every colour in the
-draft is measured, derived or adjusted by a script.
+their colours into **colour candidates**, you assign the twelve colour tokens
+from those colour candidates by id, and a second script derives what the
+images never show and adjusts what fails contrast. You never write a hex:
+every colour in the draft is measured, derived or adjusted by a script.
 
 Work in a run folder, `explainers/<slug>/`: the video's own run when the
 steering prompt points at references, else one named for the profile. Propose
@@ -17,15 +17,15 @@ deck's title).
    a web page URL, a `.pdf` or `.pptx` deck, or a video (`.mp4`, `.mov`,
    `.webm`, `.mkv`). It prints `style ref <image>: <kind> · <source>` per
    reference image, `style candidate <id>: <hex> · <share>% · <images>` per
-   candidate (`s<n>` a surface, ranked by area; `a<n>` an accent, a saturated
-   colour), and `style declared <hex>: ... dropped` per colour a page or deck
-   theme declares that no image shows. On exit 1 relay the stderr lines; a
-   PPTX alone carries no pixels, so ask the user to export the deck to PDF and
-   measure again with both files.
+   colour candidate (`s<n>` a surface, ranked by area; `a<n>` an accent, a
+   saturated colour), and `style declared <hex>: ... dropped` per colour a
+   page or deck theme declares that no image shows. On exit 1 relay the stderr
+   lines; a PPTX alone carries no pixels, so ask the user to export the deck to
+   PDF and measure again with both files.
 2. **Assign.** Look at each image in `explainers/<slug>/style-draft/refs/` with
    the Read tool, then write `explainers/<slug>/style-draft/roles.json`: for
-   each token an image shows, the candidate playing it and one line on where
-   you saw it.
+   each token an image shows, the colour candidate playing it and one line on
+   where you saw it.
 
    ```json
    { "bg": { "candidate": "s1", "why": "the ground of every slide" } }
