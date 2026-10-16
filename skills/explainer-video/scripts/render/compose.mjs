@@ -283,12 +283,21 @@ const seed = (id, key) =>
 // same whenever HyperFrames seeks to it. A stills page sets window.__stills, so
 // the timeline jumps to its end and stays unregistered: HyperFrames never seeks
 // it back. `dir` is the scene's reading direction; code stays left to right.
-export async function sceneFile(
-  scene,
-  timing,
-  profile,
-  { backend, dir = "ltr" },
-) {
+export async function sceneFile(scene, timing, profile, opts) {
+  const { html, script } = await sceneParts(scene, timing, profile, opts);
+  return `<template id="${scene.id}-template">
+  <div data-composition-id="${scene.id}" data-width="${W}" data-height="${H}" data-duration="${timing.duration}">
+${html}
+    <script>
+${script}
+    </script>
+  </div>
+</template>
+`;
+}
+
+// A scene's markup with its scoped style, and its timeline script, apart.
+async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   const id = scene.id;
   const f = {
     text: family(profile, "text"),
@@ -320,15 +329,13 @@ export async function sceneFile(
     ...c.reveals.map(([sel, at]) => [sel, ...RISE, t(at)]),
     ...(c.tweens ?? []).map(([sel, from, to, at]) => [sel, from, to, t(at)]),
   ];
-  return `<template id="${id}-template">
-  <div data-composition-id="${id}" data-width="${W}" data-height="${H}" data-duration="${timing.duration}">
-    <div class="content" dir="${dir}">${c.html}</div>
+  return {
+    html: `    <div class="content" dir="${dir}">${c.html}</div>
     <style>
 ${scope} .content { position: absolute; left: 120px; top: 178px; width: 1680px; height: 690px; }
 ${css}
-    </style>
-    <script>
-      (function () {
+    </style>`,
+    script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
         for (const [sel, from, to, t] of tweens)
@@ -336,11 +343,8 @@ ${css}
         window.__timelines = window.__timelines || {};
         if (window.__stills) tl.progress(1);
         else window.__timelines["${id}"] = tl;
-      })();
-    </script>
-  </div>
-</template>
-`;
+      })();`,
+  };
 }
 
 // A full page: fonts, palette, the header band, then `body` inside the root.
@@ -428,23 +432,80 @@ export function videoPage({ title, profile, fonts, scenes, cues, total }) {
   });
 }
 
-// One frame per scene, each scene settled at its end. data-no-timeline stops
-// HyperFrames waiting for the timelines the scenes leave unregistered.
-export function stillsPage({ title, profile, fonts, ids }) {
+// A caption cue held still with its first half said: those words in the text
+// colour, the rest faint.
+function stillCue(text, attrs) {
+  const words = text.split(/\s+/);
+  const said = Math.ceil(words.length / 2);
+  return `<div class="cue clip"${attrs}><span>${words
+    .map(
+      (w, i) =>
+        `<span class="w"${i < said ? ' style="color: var(--text)"' : ""}>${esc(w)}</span>`,
+    )
+    .join(" ")}</span></div>`;
+}
+
+// One frame per scene, each scene settled at its end; `cues` holds a still
+// caption for a scene by its id. data-no-timeline stops HyperFrames waiting
+// for the timelines the scenes leave unregistered.
+export function stillsPage({ title, profile, fonts, ids, cues = {} }) {
   const frame = 1 / FPS;
+  const at = (i) =>
+    ` data-start="${+(i * frame).toFixed(6)}" data-duration="${+frame.toFixed(6)}"`;
+  const held = ids.filter((id) => cues[id]);
   return page({
     title,
     profile,
     fonts,
     duration: +(ids.length * frame).toFixed(6),
     head: "    <script>window.__stills = true;</script>\n",
-    body: ids
-      .map(
-        (id, i) =>
-          `      <div id="scene-${id}" class="clip" data-composition-id="${id}" data-composition-src="scenes/${id}.html" data-start="${+(i * frame).toFixed(6)}" data-duration="${+frame.toFixed(6)}" data-track-index="1" data-no-timeline></div>`,
-      )
-      .join("\n"),
+    body:
+      ids
+        .map(
+          (id, i) =>
+            `      <div id="scene-${id}" class="clip" data-composition-id="${id}" data-composition-src="scenes/${id}.html"${at(i)} data-track-index="1" data-no-timeline></div>`,
+        )
+        .join("\n") +
+      (held.length
+        ? `\n      <div class="captions">${held
+            .map((id) =>
+              stillCue(
+                cues[id],
+                `${at(ids.indexOf(id))} data-track-index="2" id="cue-${id}"`,
+              ),
+            )
+            .join("")}</div>`
+        : ""),
     script: `      window.__timelines = window.__timelines || {};
       window.__timelines["main"] = gsap.timeline({ paused: true });`,
+  });
+}
+
+// One settled scene as a static page with no script of its own, its markup
+// inline and an optional still caption: the style card shows it in a frame
+// that runs no script.
+export async function framePage({
+  title,
+  profile,
+  fonts,
+  scene,
+  cue,
+  ...opts
+}) {
+  const { html } = await sceneParts(
+    scene,
+    { duration: 1, sentences: [] },
+    profile,
+    opts,
+  );
+  return page({
+    title,
+    profile,
+    fonts,
+    duration: 1,
+    body: `      <div class="clip" data-composition-id="${scene.id}">
+${html}
+      </div>${cue ? `\n      <div class="captions">${stillCue(cue, "")}</div>` : ""}`,
+    script: "",
   });
 }
