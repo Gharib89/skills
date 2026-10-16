@@ -10,7 +10,14 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 - `layout`: HyperFrames' check, plus the layout probe (text at least 18 px,
   nothing clipped or overflowing its box, every text box inside the 5 percent
   safe margin, no text box overlapping another), on frames every 15 frames
-  and on each scene's settled last frame.
+  and on each scene's settled last frame. Right to left, the probe also holds
+  the reading rules: `dir` on the text boxes and never on a page root
+  (`dir on the page root <el>`), Arabic text reading right to left with no
+  Latin run left in it (`Arabic reads ltr`, `Latin run not isolated in`), each
+  English term isolated on one line (`Latin run not isolated`, `Latin run
+  wraps`), and a line height no less than the ink the text spans in its own
+  face, measured in the browser (`line height <h> under the ink <i> of
+  <face>`).
 - `contrast`: 4.5:1 for body text and 3:1 for large text (24 px, or 18.66 px
   bold), on the same frames. The palette check when the profile loads holds
   the faint, accent and status colours to 3:1 only, since the scenes draw them

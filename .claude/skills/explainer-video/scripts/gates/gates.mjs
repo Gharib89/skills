@@ -27,7 +27,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
-import { LUFS, floors, loadStyle } from "../lib/style.mjs";
+import { ARABIC, LUFS, floors, loadStyle } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { CUE_CHARS, FPS, H, W } from "../render/compose.mjs";
 
@@ -97,16 +97,25 @@ const cues = [
   start: +m[1],
   end: +m[1] + +m[2],
   text: [...m[3].matchAll(/<span class="w"[^>]*>(.*?)<\/span>/g)]
-    .map((w) => unescape(w[1]))
+    .map((w) => unescape(w[1].replace(/<[^>]+>/g, "")))
     .join(" "),
 }));
 
 // Per scene: its samples, and its layout and contrast evidence, cached by
 // everything that draws its frames, every floor that judges them, and the
 // code that draws, measures and judges: the root page's composer, this file,
-// the probe and the contrast maths.
+// the probe, the contrast maths and the reading rules.
 const inputs = renderInputs(
-  [...new Set(["title", "text", "code"].map((r) => profile.type[r].font))],
+  [
+    ...new Set(
+      [
+        "title",
+        "text",
+        "code",
+        ...(script.language === "ar" ? Object.values(ARABIC) : []),
+      ].map((r) => profile.type[r].font),
+    ),
+  ],
   profile,
 );
 const source = [
@@ -114,6 +123,7 @@ const source = [
   "gates.mjs",
   "../lib/backend.mjs",
   "../lib/layout.mjs",
+  "../lib/terms.mjs",
   "../lib/style.mjs",
 ].map((f) =>
   fs.readFileSync(fileURLToPath(new URL(f, import.meta.url)), "utf8"),
