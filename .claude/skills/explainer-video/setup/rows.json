@@ -153,9 +153,8 @@
       "class": "serif",
       "version": "5.3.0",
       "files": ["arabic-600-normal"],
-      "when": "voice",
       "language": "ar",
-      "neededBy": "render (Arabic titles)",
+      "neededBy": "render and the style card (Arabic titles)",
       "size": 56648,
       "licence": "OFL-1.1"
     },
@@ -166,10 +165,21 @@
       "class": "sans",
       "version": "5.3.0",
       "files": ["arabic-400-normal", "arabic-600-normal"],
-      "when": "voice",
       "language": "ar",
-      "neededBy": "render (Arabic text and captions)",
+      "neededBy": "render and the style card (Arabic text and captions)",
       "size": 88536,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:noto-kufi-arabic",
+      "kind": "font",
+      "family": "noto-kufi-arabic",
+      "class": "sans",
+      "version": "5.3.0",
+      "files": ["arabic-400-normal", "arabic-600-normal"],
+      "language": "ar",
+      "neededBy": "render and the style card (Arabic beside a display face)",
+      "size": 91356,
       "licence": "OFL-1.1"
     },
     {

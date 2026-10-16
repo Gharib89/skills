@@ -530,10 +530,16 @@ test("check --voice for a Gemini narrator lists its key and the Arabic aligner, 
   assert.ok(row(r.out, "npm-packages"));
   assert.equal(row(r.out, "model:kokoro-82m"), undefined, r.out);
   assert.equal(row(r.out, "model:wav2vec2-base-960h"), undefined, r.out);
-  // Arabic renders in its own faces; an English run never fetches them.
-  for (const font of ["font:noto-naskh-arabic", "font:ibm-plex-sans-arabic"]) {
+  // Arabic renders in its own faces, and the style card's Arabic frame shows
+  // them whatever the narrator, so an English run fetches them too.
+  const en = run(fx, ["check"]).out;
+  for (const font of [
+    "font:noto-naskh-arabic",
+    "font:ibm-plex-sans-arabic",
+    "font:noto-kufi-arabic",
+  ]) {
     assert.equal(row(r.out, font)[2], "missing", r.out);
-    assert.equal(row(run(fx, ["check"]).out, font), undefined);
+    assert.equal(row(en, font)?.[2], "missing", en);
   }
   assert.deepEqual(calls(fx), [], "no key, no call to Google");
 });

@@ -247,6 +247,33 @@ test("build gates five sample frames with check and the probe, each mid-way thro
     );
 });
 
+test("the Arabic frame loads the draft's Arabic title and text faces, each stacked once over its Latin face", () => {
+  const itworx = json(skill, "styles", "itworx.json").type;
+  // A display-class title takes the Kufi companion, which setup installs too.
+  for (const arTitle of ["noto-naskh-arabic", "noto-kufi-arabic"]) {
+    const fx = fixture({
+      type: { ...itworx, arTitle: { font: arTitle, weight: 600 } },
+    });
+    built(fx);
+    const c = latestCard(fx);
+    const arabic = c.frames.find((f) => f.id === "arabic").html;
+    for (const family of [arTitle, "ibm-plex-sans-arabic"]) {
+      const font = c.fonts.find((f) => f.file.startsWith(`${family}-arabic-`));
+      assert.ok(font, `${family} not among ${c.fonts.map((f) => f.file)}`);
+      assert.ok(
+        fs.existsSync(path.join(fx.dir, "style-draft", "card", font.url)),
+      );
+      assert.match(
+        arabic,
+        new RegExp(`@font-face \\{ font-family: "${family}"; src: url\\(`),
+      );
+    }
+    assert.match(arabic, new RegExp(`"${arTitle}", "source-serif-4"`));
+    assert.match(arabic, /"ibm-plex-sans-arabic", "inter"/);
+    assert.doesNotMatch(arabic, /("[a-z0-9-]+"), \1/);
+  }
+});
+
 test("the built card holds to the documented shape, and the checker refuses a malformed one", () => {
   const fx = fixture();
   built(fx);
