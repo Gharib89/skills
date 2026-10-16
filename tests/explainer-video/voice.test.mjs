@@ -374,7 +374,7 @@ test("a Gemini quota stop keeps the scenes voiced before it, and the next run vo
   assert.equal(stopped.code, 1, stopped.out + stopped.err);
   assert.match(
     stopped.err,
-    /^voice: Gemini quota reached \(HTTP 429\); 1 scene\(s\) voiced before it are kept\. Resume tomorrow \(voicing again voices only the missing scenes\), use a paid key, or choose another narrator in the brief$/m,
+    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\), which voices only the missing scenes; use a paid key; or choose another narrator in the brief$/m,
   );
   assert.equal(synths(fx).length, 2);
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));

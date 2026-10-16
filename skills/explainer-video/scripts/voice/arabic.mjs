@@ -10,14 +10,14 @@ export const clean = (s) => s.normalize("NFKC").replace(/[ً-ْٰـ]/g, "");
 export const fold = (s) =>
   clean(s).replace(/[أإآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه");
 
-// An acronym's letters by name, A to Z, as Egyptian speakers say them (P is
-// "bi"), then spelled by the rule table like any other word.
+// An acronym's letters by name, A to Z, in the Arabic letters Egyptian
+// speakers say them in (P is بي, like B).
 const LETTER =
-  "ei bi si di i ef ji eitsh ay jei kei el em en o bi kyu ar es ti yu fi dablyu eks way zed".split(
+  "ايه بي سي دي اي اف جي اتش اي جاي كاي ال ام ان او بي كيو ار اس تي يو في دبليو اكس واي زد".split(
     " ",
   );
 
-// The spec's rule table, from the alignment research (tuned on 20 terms):
+// The rule table from #703's alignment research (tuned on 20 terms):
 // applied in this order as global replaces, so a digraph goes before its
 // letters.
 const EN2AR = [
@@ -59,16 +59,22 @@ const EN2AR = [
 ];
 
 // One word with its Latin letters spelled in Arabic: an Arabic prefix (a
-// clitic such as ال) is kept, an acronym of 2 to 4 capitals reads as its
-// letters' names, and a doubled letter in the result is said once.
+// clitic such as ال) is kept; an acronym of 2 to 4 capitals, plural or not
+// (PRs), reads as its letters' names; any other word goes through the rule
+// table, a doubled letter in the result said once.
 export function toArabic(word) {
   const w = clean(word);
-  let lat = w.replace(/[^A-Za-z]/g, "");
-  if (!lat) return w;
-  lat = /^[A-Z]{2,4}$/.test(lat)
-    ? [...lat].map((c) => LETTER[c.charCodeAt(0) - 65]).join(" ")
-    : lat.toLowerCase().replace(/e$/, "");
-  for (const [a, b] of EN2AR) lat = lat.replaceAll(a, b);
+  const latin = w.replace(/[^A-Za-z]/g, "");
+  if (!latin) return w;
   const prefix = w.replace(/[^ء-يڨی]/g, "");
-  return prefix + lat.replace(/(.)\1+/g, "$1");
+  const acronym = latin.match(/^([A-Z]{2,4})(s?)$/);
+  if (acronym)
+    return (
+      prefix +
+      [...acronym[1]].map((c) => LETTER[c.charCodeAt(0) - 65]).join(" ") +
+      (acronym[2] ? "ز" : "")
+    );
+  let spelt = latin.toLowerCase().replace(/e$/, "");
+  for (const [a, b] of EN2AR) spelt = spelt.replaceAll(a, b);
+  return prefix + spelt.replace(/(.)\1+/g, "$1");
 }

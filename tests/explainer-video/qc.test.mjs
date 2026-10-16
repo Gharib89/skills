@@ -33,6 +33,19 @@ test("an Arabic transcript with the English terms spoken in Arabic letters passe
   assert.equal(q.rate, 13);
 });
 
+// A live Gemini render (#703's live run): the model writes a tatweel clitic
+// glued to its English term, and a term in its own spelling, so `الـ pull
+// request` comes back as one word and `الـ merge` as المرج.
+test("a live Arabic render whose clitics glue to their English terms passes", () => {
+  const narration =
+    "أهلا بيك. النهارده هنشوف إزاي الـ pull request بيوصل لحد الـ merge.";
+  const heard = "اهلا بيك النهاردة هنشوف ازاي البلركوست بيوصل لحد المرج";
+  const q = check(narration, heard, seconds(narration, 13), "ar");
+  assert.deepEqual(q.failures, []);
+  assert.equal(q.recall, 1);
+  assert.equal(q.precision, 1);
+});
+
 test("a cut Arabic transcript fails recall at 0.8", () => {
   const cut = HEARD.split(" ").slice(0, 6).join(" ");
   const q = check(NARRATION, cut, seconds(NARRATION, 13), "ar");
@@ -58,6 +71,10 @@ test("an English term matches its Arabic spelling only through transliteration",
   assert.equal(toArabic("request"), "ريكويست");
   assert.equal(toArabic("pull"), "بول");
   assert.equal(toArabic("CI"), "سي اي");
+  // An acronym's letters by their Arabic names, A included, plural or not.
+  assert.equal(toArabic("AI"), "ايه اي");
+  assert.equal(toArabic("API"), "ايه بي اي");
+  assert.equal(toArabic("PRs"), "بي ارز");
   const terms = "pull request review branch git CI";
   const heard = "بول ريكويست ريفيو برانش جيت سي اي";
   assert.deepEqual(check(terms, heard, seconds(terms, 13), "ar").failures, []);

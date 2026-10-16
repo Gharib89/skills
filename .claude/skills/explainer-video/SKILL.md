@@ -16,16 +16,17 @@ An **explainer video** is a narrated video, one to five minutes by default,
 made from one or more sources. This version carries eight stages: **setup**,
 which every run starts with; the **brief**, the user's words laid over the
 defaults; **source**, each source read into a source pack; **script**, a cited
-scene file written from the pack and held to the script gates; **voice**,
-English narration; the **storyboard**, where the user approves or revises each
-scene; **render**, the scene file turned into a captioned MP4; and **gates**,
-which the render runs and which block a video below the floors or one
-the critic fails.
+scene file written from the pack and held to the script gates; **voice**, the
+narration in English or Egyptian Arabic; the **storyboard**, where the user
+approves or revises each scene; **render**, the scene file turned into a
+captioned MP4; and **gates**, which the render runs and which block a video
+below the floors or one the critic fails.
 Asked for a video from sources, run the stages in order (brief, source,
 script, voice, storyboard, render), stopping for the user only at the
 storyboard and where a stage says to stop or ask. Asked for a video of a topic
 alone, the source stage researches it first. Asked for narration the user
-writes, skip to Voice or Render.
+writes, skip to Voice or Render. With `language: ar`, the run ends after Voice:
+report the voice summary line and that this version renders English only.
 
 ## Setup
 
@@ -40,8 +41,9 @@ in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
    user asked for every opt-in row too, or the brief's `score` is `ace-step`,
-   and `--voice <id>` once a brief names its `voice`: the voice rows listed are
-   that narrator's (without it, the English default's). Exit 0 means every row
+   and `--voice <id>` with the narrator the voice stage will use (the brief's
+   `voice`, or `script.json`'s `narrator`): the voice rows listed are that
+   narrator's (without it, the English default's). Exit 0 means every row
    is present and nothing is stale: say so, with any line under the table, and
    stop.
 2. **One yes.** Show the table as printed, with any line under it (the
@@ -58,11 +60,12 @@ in:
    install lines from the output, ask the user to run the one for their OS,
    then check again. A `missing` or `refused` key (`key:gemini`, the Egyptian
    Arabic narrators' `GEMINI_API_KEY`) is one the user sets: relay the line
-   under the table with its link to a free key, then check again; the run does
-   not go on to voice without it, and no other narrator stands in unless the
-   user names one in the brief. Relay the **Gemini data notice** when it prints:
-   it shows once per key. Any other `refused` or `failed` row: relay the reason
-   as printed.
+   under the table with its link to a free key, then check again; Voice waits
+   until `key:gemini` reads `present`. Any other `refused` or `failed` row:
+   relay the reason as printed.
+
+Whenever the **Gemini data notice** prints under a table, relay it word for
+word: setup prints it once per key and never again.
 
 To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
@@ -81,7 +84,7 @@ must include and must avoid. The user's request beside the sources, the
 | `audience` | a developer new to the source | who watches |
 | `language` | `en` | `en`, or `ar` (Egyptian Arabic: this version voices it but does not render it) |
 | `style` | the store default (see Render) | a style profile name |
-| `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
+| `voice` | the language's default narrator (`bf_emma`, `ar-eg-csagent-2`) | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
 | `score` | `on` | `on`, `off`, or `ace-step` (music made by the ACE-Step model) |
 | `must` | none | a topic or term the video says or shows |
@@ -229,12 +232,15 @@ Narration is the **spoken form**: write numbers, dates and symbols out as words
 ("forty two", not "42"), because QC compares the text against what the aligner
 hears: a numeral's spoken words match nothing in the text and cost precision.
 In Egyptian Arabic narration, keep English terms in Latin letters (`pull
-request`); QC spells them in Arabic letters as a speaker says them.
+request`); QC spells them in Arabic letters as a speaker says them. An acronym
+of more than four capitals QC reads as a word: write it as its letters' names
+in Arabic.
 
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
    `model:kokoro-82m` and `model:wav2vec2-base-960h`; Egyptian Arabic
    `model:egyptian-arabic-wav2vec2` and `key:gemini`. Run the setup check with
-   `--voice <narrator>` first; any row missing, run the setup steps above
+   `--voice` set to the narrator this stage uses (`narrator`, else the
+   language's default above) first; any row missing, run the setup steps above
    before voicing.
 2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
    prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
@@ -249,15 +255,16 @@ request`); QC spells them in Arabic letters as a speaker says them.
    Rewrite that scene's narration in spoken form and voice again; the scenes
    that passed are cached. The run folder holds no `voice.json`, not even an
    earlier pass's, until every scene passes.
-   Exit 1 with no scene lines is an input or tool error (an unknown narrator,
-   a scene with no narration, a Gemini narrator with no `GEMINI_API_KEY`, a
-   failed synthesis): relay the stderr message as printed. Never switch the
-   narrator yourself to get past a missing key.
-5. **On `voice: Gemini quota reached`**, the key has spent its day's requests
-   (10 on the free tier). The scenes it names are kept. Relay the line and ask
-   the user to pick one: voice again tomorrow, which voices only the missing
-   scenes; set a paid key and voice again; or move the brief's `voice` to
-   another narrator.
+   Exit 1 with no scene lines and no `voice: Gemini quota reached` (step 5)
+   is an input or tool error (an unknown narrator, a scene with no narration,
+   a Gemini narrator with no `GEMINI_API_KEY`, a failed synthesis): relay the
+   stderr message as printed. Keep the brief's narrator: only the user moves
+   `voice`.
+5. **On `voice: Gemini quota reached`**, the key has hit a Gemini limit, whose
+   own message the line quotes. The scenes it counts as kept are cached. Relay
+   the line and ask the user to pick one: voice again once the quota resets,
+   which voices only the missing scenes; set a paid key and voice again; or
+   move the brief's `voice` to another narrator.
 
 ## Storyboard
 

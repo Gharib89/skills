@@ -13,7 +13,7 @@
 //         rate · pass|fail: <why>`, then one summary line
 // writes: <run>/voice.json, the word timeline, only when every scene passes
 // stderr: a Gemini narrator with no GEMINI_API_KEY is refused before any
-//         synthesis; a Gemini quota stop (HTTP 429) names the scenes kept
+//         synthesis; a Gemini quota stop (HTTP 429) counts the scenes kept
 // exit:   0 every scene passes · 1 refused for its input or a missing key, a
 //         scene fails QC, a quota stop, or synthesis or alignment failed ·
 //         2 usage
@@ -212,7 +212,7 @@ try {
   // Each group is cached as it passes, so a rerun voices only what is missing.
   if (e.quota)
     console.error(
-      `voice: Gemini quota reached (HTTP 429); ${kept} scene(s) voiced before it are kept. Resume tomorrow (voicing again voices only the missing scenes), use a paid key, or choose another narrator in the brief`,
+      `voice: Gemini quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota), which voices only the missing scenes; use a paid key; or choose another narrator in the brief`,
     );
   else console.error(`voice: ${e.message}`);
   process.exit(1);

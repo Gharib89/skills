@@ -21,7 +21,8 @@
 // writes: the key's fingerprint (a hash) to <config>/settings.json once its
 //         data notice is shown
 // exit:   0 every row present, nothing stale · 1 a row missing, refused or
-//         failed, or an install stale · 2 usage
+//         failed, or an install stale · 2 usage, or a --voice id not in
+//         narrators.json
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -40,12 +41,12 @@ import {
 
 const usage = "usage: node setup.mjs check|install [--all] [--voice <id>]";
 const [mode, ...flags] = process.argv.slice(2);
-const at = flags.indexOf("--voice");
-const voiceId = at < 0 ? undefined : flags.splice(at, 2)[1];
+const voiceAt = flags.indexOf("--voice");
+const voiceId = voiceAt < 0 ? undefined : flags.splice(voiceAt, 2)[1];
 if (
   !["check", "install"].includes(mode) ||
   flags.some((f) => f !== "--all") ||
-  (at >= 0 && !voiceId)
+  (voiceAt >= 0 && !voiceId)
 ) {
   console.error(usage);
   process.exit(2);
@@ -68,13 +69,13 @@ const catalogue = readCatalogue();
 // Every row without a `when`; opt-in rows under --all; a `when: voice` row
 // whose language and backend, where it names them, are the narrator's; a
 // `when: python` row (uv) only beside a row that runs Python.
-const voices = (r) =>
+const forNarrator = (r) =>
   ["language", "backend"].every((k) => !(k in r) || r[k] === narrator[k]);
 const rows = catalogue.filter(
   (r) =>
     !r.when ||
     (all && r.when === "opt-in") ||
-    (r.when === "voice" && voices(r)),
+    (r.when === "voice" && forNarrator(r)),
 );
 if (rows.some((r) => r.python))
   rows.push(...catalogue.filter((r) => r.when === "python"));
@@ -246,13 +247,13 @@ function firstNotice(key) {
   const settings = fs.existsSync(file)
     ? JSON.parse(fs.readFileSync(file, "utf8"))
     : {};
-  const print = crypto
+  const fingerprint = crypto
     .createHash("sha256")
     .update(key)
     .digest("hex")
     .slice(0, 16);
-  if (settings.geminiNotice?.includes(print)) return false;
-  settings.geminiNotice = [...(settings.geminiNotice ?? []), print];
+  if (settings.geminiNotice?.includes(fingerprint)) return false;
+  settings.geminiNotice = [...(settings.geminiNotice ?? []), fingerprint];
   fs.mkdirSync(dirs.config, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
   return true;

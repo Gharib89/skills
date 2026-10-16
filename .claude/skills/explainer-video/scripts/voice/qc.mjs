@@ -41,13 +41,25 @@ const STOP_AR = new Set(
 // function word on both sides.
 const keep = (w) =>
   w.length > 1 && !/\d/.test(w) && !STOP_AR.has(w.toLowerCase());
+// The model glues a tatweel clitic to the word after it (الـ pull request is
+// heard as البلركوست), so the narration's is glued too. Words then compare as
+// consonant skeletons, as the alignment research measured: no article, and
+// none of the vowel letters, hamza or ain that speakers and the model write
+// either way.
+const skeleton = (w) =>
+  w
+    .replace(/^(و|ف|ب|ل)?ال(?=..)/, "")
+    .replace(/[اويءئؤع]/g, "")
+    .replace(/(.)\1+/g, "$1");
 const arabicContent = (text) =>
-  fold(text)
+  fold(text.replace(/ـ\s+/g, ""))
     .replace(/[^ء-يڨیA-Za-z0-9']+/g, " ")
     .split(/\s+/)
     .filter(keep)
     .flatMap((w) => fold(toArabic(w)).split(" "))
-    .filter(keep);
+    .filter(keep)
+    .map(skeleton)
+    .filter(Boolean);
 
 function similar(a, b) {
   if (a === b) return true;
@@ -78,9 +90,19 @@ export function check(narration, transcript, seconds, language = "en") {
   const hit = new Array(ref.length).fill(false);
   const used = new Array(hyp.length).fill(false);
   const free = (k) => k < hyp.length && !used[k];
+  // Exact matches first, a word or two adjacent narration words joined, so a
+  // near match cannot take a word an exact one owns.
+  ref.forEach((w, i) => {
+    let k = hyp.findIndex((h, j) => free(j) && h === w);
+    if (k >= 0) return (hit[i] = used[k] = true);
+    if (i + 1 >= ref.length || hit[i + 1]) return;
+    k = hyp.findIndex((h, j) => free(j) && h === w + ref[i + 1]);
+    if (k >= 0) hit[i] = hit[i + 1] = used[k] = true;
+  });
   // The model splits or joins compounds ("work tree" for "worktree", "readyfull"
   // for "ready pull"), so a word also matches two adjacent words of the other side.
   ref.forEach((w, i) => {
+    if (hit[i]) return;
     let k = hyp.findIndex((h, j) => free(j) && similar(w, h));
     if (k >= 0) return (hit[i] = used[k] = true);
     k = hyp.findIndex(
