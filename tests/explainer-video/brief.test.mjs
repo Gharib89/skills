@@ -175,7 +175,7 @@ test("a value this version cannot make is refused and nothing is written", () =>
     ["language=fr", /^brief language fr: no narrator speaks fr \(en, ar\)$/m],
     [
       "voice=nobody",
-      /^brief voice nobody: no en narrator \(bf_emma, am_fenrir\)$/m,
+      /^brief voice nobody: no en narrator \(bf_emma, am_fenrir, elevenlabs-george\)$/m,
     ],
     ["style=nope", /^brief style nope: no style profile nope in /m],
     ["aspect=9:16", /^brief aspect 9:16: this version renders 16:9 only$/m],

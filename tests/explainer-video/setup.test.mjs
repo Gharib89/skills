@@ -225,7 +225,12 @@ const aceRow = (sha256 = FAKE_SHA) => ({
     { path: "vae/config.json", size: 425, sha256: FAKE_SHA },
   ],
   size: 6000000000,
-  cpu: { seconds: 88, ram: 15000000000 },
+  cpu: {
+    seconds: 88,
+    ram: 15000000000,
+    of: "score",
+    why: "no bfloat16, and float16 gives NaN",
+  },
   neededBy: "score (ace-step)",
   licence: "MIT",
 });
@@ -604,6 +609,129 @@ test("install --voice for a Gemini narrator fetches the Arabic aligner at its pi
     [`${base}/vocab.json`, `${base}/onnx/model_int8.onnx`],
   );
   assert.match(r.out, /^not present: key:gemini$/m);
+});
+
+const EL = ["--voice", "elevenlabs-george"];
+
+test("a default check and a check --all list no ElevenLabs key; check --voice elevenlabs-george lists it with where to get one, and the English aligner but not Kokoro", () => {
+  const fx = fixture();
+  for (const args of [["check"], ["check", "--all"]])
+    assert.equal(row(run(fx, args).out, "key:elevenlabs"), undefined);
+  const r = run(fx, ["check", ...EL]);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(row(r.out, "key:elevenlabs")[2], "missing");
+  assert.match(
+    r.out,
+    /^key:elevenlabs is a key you set yourself: get a free one at https:\/\/elevenlabs\.io\/app\/settings\/api-keys, then set ELEVENLABS_API_KEY and check again\.$/m,
+  );
+  assert.equal(row(r.out, "model:kokoro-82m"), undefined, r.out);
+  assert.equal(row(r.out, "key:gemini"), undefined, r.out);
+  assert.ok(row(r.out, "model:wav2vec2-base-960h"));
+  assert.deepEqual(calls(fx), []);
+});
+
+test("an ElevenLabs key it refuses reads refused with its reason; one it takes is present, checked once, with no Gemini data notice", () => {
+  const fx = fixture();
+  const bad = run(fx, ["check", ...EL], "ffmpeg", {
+    ELEVENLABS_API_KEY: "bad-key",
+  });
+  assert.equal(
+    row(bad.out, "key:elevenlabs")[2],
+    "refused: ElevenLabs refused ELEVENLABS_API_KEY (invalid_api_key)",
+  );
+  const good = run(fx, ["check", ...EL], "ffmpeg", {
+    ELEVENLABS_API_KEY: "good-key-123",
+  });
+  assert.equal(row(good.out, "key:elevenlabs")[2], "present");
+  assert.doesNotMatch(good.out, /Gemini data notice/);
+  assert.deepEqual(
+    calls(fx).map((c) => c.call),
+    ["elevenlabsKey", "elevenlabsKey"],
+  );
+  assert.ok(!fs.existsSync(settings(fx)));
+});
+
+// The real catalogue with the own-voice checkpoint pinned to the fake's body.
+const realRows = () =>
+  JSON.parse(
+    fs.readFileSync(path.join(source, "setup", "rows.json"), "utf8"),
+  ).rows.map((r) =>
+    r.kind === "model" || r.id === "own-voice"
+      ? { ...r, files: r.files.map((f) => ({ ...f, sha256: FAKE_SHA })) }
+      : r,
+  );
+const enrolled = (fx, name = "maya") => {
+  const dir = path.join(fx.tmp, "data", "explainer-video", "voices", name);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "clip.wav"), "wav");
+  fs.writeFileSync(
+    path.join(dir, "consent.json"),
+    JSON.stringify({ speaker: name, gender: "female", clip: "ab".repeat(32) }),
+  );
+};
+
+test("check --voice own:<name> lists the own-voice row, uv, Gemini's key and the Arabic aligner, with the CPU cost per 30 s of narration", () => {
+  const fx = fixture(realRows());
+  enrolled(fx);
+  const r = run(
+    fx,
+    ["check", "--voice", "own:maya"],
+    "ffmpeg,uv",
+    machine(7.5),
+  );
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(row(r.out, "own-voice")[2], "missing");
+  assert.ok(row(r.out, "uv"));
+  assert.equal(row(r.out, "key:gemini")[2], "missing");
+  assert.equal(row(r.out, AR_MODEL)[2], "missing");
+  assert.equal(row(r.out, "ace-step"), undefined);
+  assert.equal(row(r.out, "model:kokoro-82m"), undefined);
+  assert.match(
+    r.out,
+    /^own-voice runs on the CPU here \(compute capability 7\.5, under 8\.0\): about .* per 30 s of narration\.$/m,
+  );
+  assert.doesNotMatch(r.out, /per 30 s of score/);
+});
+
+test("install --voice own:<name> copies the skill's pyproject and lock, syncs them, and fetches the checkpoint at its pinned revision", () => {
+  const fx = fixture(realRows());
+  enrolled(fx);
+  const r = run(
+    fx,
+    ["install", "--voice", "own:maya"],
+    "ffmpeg,uv",
+    machine(7.5),
+  );
+  const where = row(r.out, "own-voice")[5];
+  assert.equal(row(r.out, "own-voice")[2], "present", r.out + r.err);
+  const vc = path.join(fx.skill, "scripts", "voice", "vc");
+  for (const f of ["pyproject.toml", "uv.lock"])
+    assert.equal(
+      fs.readFileSync(path.join(where, "src", f), "utf8"),
+      fs.readFileSync(path.join(vc, f), "utf8"),
+    );
+  const urls = calls(fx)
+    .filter((c) => c.call === "download")
+    .map((c) => c.url);
+  assert.ok(!urls.some((u) => u.includes("codeload")), urls.join());
+  assert.ok(
+    urls.includes(
+      "https://huggingface.co/ResembleAI/chatterbox/resolve/5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18/s3gen.safetensors",
+    ),
+    urls.join(),
+  );
+  const sync = calls(fx).find((c) => c.call === "uvSync");
+  assert.equal(sync.dir, path.join(where, "src"));
+  assert.ok(
+    fs.existsSync(path.join(where, "checkpoints", "s3gen.safetensors")),
+  );
+});
+
+test("--voice own:<name> with nobody enrolled is a usage error", () => {
+  const fx = fixture();
+  const r = run(fx, ["check", "--voice", "own:nobody"]);
+  assert.equal(r.code, 2, r.out + r.err);
+  assert.match(r.err, /own:nobody/);
 });
 
 test("--voice with a narrator nobody ships is a usage error naming it", () => {

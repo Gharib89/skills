@@ -415,3 +415,36 @@ test("a Gemini quota stop keeps the scenes voiced before it, and the next run vo
   assert.equal(calls.length, 3);
   assert.equal(calls[2].text, changed[2].narration.join(" "));
 });
+
+const ELEVEN = (fx) =>
+  fs.writeFileSync(
+    path.join(fx.dir, "script.json"),
+    JSON.stringify({
+      language: "en",
+      narrator: "elevenlabs-george",
+      scenes: SCENES,
+    }),
+  );
+
+test("an ElevenLabs narrator with no ELEVENLABS_API_KEY is refused with where to get one, before any synthesis", () => {
+  const fx = fixture();
+  ELEVEN(fx);
+  const r = run(fx, KEY);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: narrator elevenlabs-george needs ELEVENLABS_API_KEY: get a free key at https:\/\/elevenlabs\.io\/app\/settings\/api-keys, or choose another narrator in the brief$/m,
+  );
+  assert.equal(synths(fx).length, 0);
+});
+
+test("an ElevenLabs narrator with its key voices through the elevenlabs backend", () => {
+  const fx = fixture();
+  ELEVEN(fx);
+  const r = run(fx, { ELEVENLABS_API_KEY: "test-key" });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    synths(fx).map((c) => [c.backend, c.voice]),
+    [["elevenlabs", "JBFqnCBsd6RMkjVDRZzb"]],
+  );
+});

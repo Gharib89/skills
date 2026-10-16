@@ -47,6 +47,18 @@
       "leavesMachine": true,
       "rate": 2.45,
       "default": true
+    },
+    {
+      "id": "elevenlabs-george",
+      "language": "en",
+      "gender": "male",
+      "backend": "elevenlabs",
+      "voice": "JBFqnCBsd6RMkjVDRZzb",
+      "style": null,
+      "licence": "ElevenLabs terms",
+      "leavesMachine": true,
+      "rate": 3.07,
+      "default": false
     }
   ]
 }
