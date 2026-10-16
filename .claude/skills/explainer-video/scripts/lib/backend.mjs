@@ -311,14 +311,27 @@ export async function clip(input, output, { start, duration }) {
 // quarter marks and its settled last frame) at half size on a 2x2 grid. Cut by
 // ffmpeg, never by HyperFrames' snapshot, which sends frames to Gemini.
 export async function sheet(input, output, { start, duration, fps }) {
-  const n = Math.round(duration * fps);
-  const picks = [n / 4, n / 2, (3 * n) / 4, n - 1].map(Math.floor);
+  const [first, picks] = sheetFrames({ start, duration, fps });
   ffmpeg([
     ...["-y", "-ss", String(start), "-t", String(duration), "-i", input],
     "-vf",
-    `select='${picks.map((f) => `eq(n,${f})`).join("+")}',scale=960:540,tile=2x2`,
+    `select='${picks.map((f) => `eq(n,${f - first})`).join("+")}',scale=960:540,tile=2x2`,
     ...["-frames:v", "1", output],
   ]);
+}
+
+// The scene's first frame and the four a sheet shows, as indices into the
+// video. A scene owns the frames from the first at or after its start to the
+// last before its end, so one starting between frames (28.25 s at 30 fps) never
+// shows the next scene's first frame as its last.
+export function sheetFrames({ start, duration, fps }) {
+  const at = (t) => Math.ceil(t * fps - 1e-6);
+  const first = at(start);
+  const n = at(start + duration) - first;
+  return [
+    first,
+    [n / 4, n / 2, (3 * n) / 4, n - 1].map((f) => first + Math.floor(f)),
+  ];
 }
 
 // A scene's narration WAV as audio-only WebM (Opus): the artifact asset upload

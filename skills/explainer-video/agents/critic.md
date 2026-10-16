@@ -21,8 +21,10 @@ Your inputs, filled in by the run that dispatched you:
 
 Read the contact sheet with Read. In `script.json`, find the scene whose `id`
 is `{scene}`: its `narration` sentences, each sentence's `cites`, and its
-`visual`, the JSON of what the scene draws. Read each cited excerpt's `text` in
-`excerpts.json`. The captions along the bottom are the narration, and a header
+`visual`, the JSON of what the scene draws. Read too the video's `title` and
+every other scene's `narration`: a hook or an end card may name what other
+scenes say. Read each excerpt the script cites, its `text` in `excerpts.json`.
+The captions along the bottom are the narration, and a header or a title card
 may carry the video's title; neither is ever `invented`. Judge the rest of the
 sheet against these words alone: not the snapshots, not the source, not what
 you know about the subject.
@@ -33,9 +35,10 @@ you know about the subject.
   in place of letters, text cut off by an edge or by another box, text over
   text, text lost against what is behind it. The tiles are half size, so text
   is never unreadable for its size alone; the layout gate measures size.
-- `invented`: a name, number, label or claim on screen that neither the
-  scene's narration nor its cited excerpts state, or one that contradicts them.
-  A label that names the scene's own idea in other words is not invented.
+- `invented`: a name, number, label or claim on screen that no narration
+  sentence of the video and no excerpt it cites state, or one that contradicts
+  them. A label that names an idea the video states in other words is not
+  invented; one shown in the wrong scene costs `fit`, not a failure.
 
 Each failure's `what` quotes the words on screen and says what is wrong, in at
 most 25 words. A scene with no failure has an empty list.

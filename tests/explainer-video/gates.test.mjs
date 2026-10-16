@@ -8,7 +8,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { findChrome } from "../../skills/explainer-video/scripts/lib/backend.mjs";
+import {
+  findChrome,
+  sheetFrames,
+} from "../../skills/explainer-video/scripts/lib/backend.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import {
   catalogue,
@@ -787,4 +790,16 @@ test("a malformed verdict stops the gates, naming the scene and what is wrong", 
     assert.ok(line, r.err);
     assert.match(line[1], why);
   }
+});
+
+test("a contact sheet shows the scene's quarter marks and its own last frame, even for a scene starting between frames", () => {
+  assert.deepEqual(sheetFrames({ start: 2, duration: 4, fps: 30 }), [
+    60,
+    [90, 120, 150, 179],
+  ]);
+  // 28.25 s to 45.9 s at 30 fps: frames 848 to 1376; 1377 is the next scene's.
+  assert.deepEqual(sheetFrames({ start: 28.25, duration: 17.65, fps: 30 }), [
+    848,
+    [980, 1112, 1244, 1376],
+  ]);
 });
