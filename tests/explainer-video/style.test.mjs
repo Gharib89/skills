@@ -226,3 +226,125 @@ test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", ()
     /^style declared #000000: not in the reference images, dropped$/m,
   );
 });
+
+// A run measured from two screenshots of `bands`, with `roles` written as
+// Claude writes them.
+function measuredRun(bands, roles) {
+  const f = fixture();
+  fs.writeFileSync(path.join(f.docs, "one.png"), ppm(50, bands));
+  fs.writeFileSync(path.join(f.docs, "two.png"), ppm(50, bands));
+  const r = node(
+    "measure.mjs",
+    [f.run, path.join(f.docs, "one.png"), path.join(f.docs, "two.png")],
+    f.env,
+  );
+  assert.equal(r.status, 0, r.stderr);
+  fs.writeFileSync(
+    path.join(f.run, "style-draft", "roles.json"),
+    JSON.stringify(roles),
+  );
+  return f;
+}
+
+// The draft as the skill's own loader takes it: contrast by role, floors,
+// look and effects, or a throw.
+function loads(file, name) {
+  const run = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-style-load-"));
+  temps.push(run);
+  fs.copyFileSync(file, path.join(run, "style.json"));
+  return loadStyle(run, name);
+}
+
+test("a draft marks each token measured or derived, loads, and keeps no reference image", () => {
+  const { run, env } = measuredRun(SLIDE, {
+    bg: { candidate: "s1", why: "the ground of every slide" },
+    panel: { candidate: "s2", why: "the cards" },
+    text: { candidate: "s3", why: "the body text" },
+    accent: { candidate: "a1", why: "the one brand colour" },
+  });
+  assert.ok(fs.existsSync(path.join(run, "style-draft", "refs")));
+  const r = node("draft.mjs", [run, "acme"], env);
+  assert.equal(r.status, 0, r.stderr);
+  const file = path.join(run, "style-draft", "acme.json");
+  const p = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.equal(p.name, "acme");
+  assert.deepEqual(
+    [p.colors.bg, p.colors.panel, p.colors.text, p.colors.accent],
+    ["#f5f4ed", "#ffffff", "#141413", "#cc6c54"],
+  );
+  assert.deepEqual(p.marks.bg, {
+    mark: "measured",
+    candidate: "s1",
+    images: ["one-1.png", "two-1.png"],
+    why: "the ground of every slide",
+  });
+  for (const t of ["chip", "line", "rule", "muted", "faint", "ok", "warn"])
+    assert.equal(p.marks[t].mark, "derived", t);
+  assert.equal(Object.keys(p.marks).length, 12);
+  assert.equal(loads(file, "acme").name, "acme");
+  assert.ok(!fs.existsSync(path.join(run, "style-draft", "refs")));
+  assert.match(
+    fs.readFileSync(path.join(run, "..", ".gitignore"), "utf8"),
+    /^\*\/style-draft\/$/m,
+  );
+  assert.match(
+    r.stdout,
+    /^style bg: #f5f4ed · measured · the ground of every slide$/m,
+  );
+  assert.match(r.stdout, /^style: draft acme -> .*acme\.json$/m);
+});
+
+test("a token under its contrast floor is nudged in lightness and marked adjusted", () => {
+  const PALE = [
+    ["#f5f4ed", 80],
+    ["#141413", 14],
+    ["#e8a090", 6],
+  ];
+  const { run, env } = measuredRun(PALE, {
+    bg: { candidate: "s1", why: "ground" },
+    text: { candidate: "s2", why: "text" },
+    accent: { candidate: "a1", why: "the pale brand colour" },
+  });
+  const r = node("draft.mjs", [run, "pale"], env);
+  assert.equal(r.status, 0, r.stderr);
+  const file = path.join(run, "style-draft", "pale.json");
+  const p = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.equal(p.marks.accent.mark, "adjusted");
+  assert.equal(p.marks.accent.was, "#e8a090");
+  assert.notEqual(p.colors.accent, "#e8a090");
+  assert.match(
+    p.marks.accent.why,
+    /^accent on bg 1\.\d\d:1 under 3:1, moved to 3\.\d\d:1$/,
+  );
+  assert.equal(loads(file, "pale").name, "pale");
+});
+
+test("a monochrome source gets the default accent hue, derived", () => {
+  const { run, env } = measuredRun(GREY, {
+    bg: { candidate: "s1", why: "ground" },
+    text: { candidate: "s2", why: "text" },
+  });
+  assert.deepEqual(candidates(run).accents, []);
+  const r = node("draft.mjs", [run, "grey"], env);
+  assert.equal(r.status, 0, r.stderr);
+  const p = JSON.parse(
+    fs.readFileSync(path.join(run, "style-draft", "grey.json"), "utf8"),
+  );
+  assert.equal(p.marks.accent.mark, "derived");
+});
+
+test("a role names a candidate id, never a colour, and bg and text are required", () => {
+  const { run, env } = measuredRun(SLIDE, {
+    bg: { candidate: "s1", why: "ground" },
+    accent: { candidate: "#ff0000", why: "made up" },
+  });
+  const r = node("draft.mjs", [run, "acme"], env);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /^style role accent: no candidate #ff0000$/m);
+  assert.match(
+    r.stderr,
+    /^style role text: required, every reference image shows a ground and its text$/m,
+  );
+  assert.ok(!fs.existsSync(path.join(run, "style-draft", "acme.json")));
+  assert.ok(fs.existsSync(path.join(run, "style-draft", "refs")));
+});

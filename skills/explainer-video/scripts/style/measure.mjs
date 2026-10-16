@@ -22,6 +22,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { oklab } from "../lib/style.mjs";
 import { catalogue, dest, hyperframesEnv, loadBackend } from "../lib/tools.mjs";
 
 const args = process.argv.slice(2);
@@ -259,23 +260,7 @@ const surfaces = rank(await tally(null), 0.005, 10, "s");
 let accents = rank(await tally(0.4), 0.001, 8, "a");
 if (!accents.length) accents = rank(await tally(0.2), 0.001, 8, "a");
 
-// OKLab, for how near a declared colour sits to a measured one.
-function oklab(hex) {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
-  const [l, m, s] = [
-    0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
-    0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
-    0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b,
-  ].map(Math.cbrt);
-  return [
-    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-  ];
-}
+// How near a declared colour sits to a measured one, in OKLab.
 const near = (a, b) => Math.hypot(...oklab(a).map((v, i) => v - oklab(b)[i]));
 
 // A declared colour within 0.04 in OKLab of a candidate names that candidate

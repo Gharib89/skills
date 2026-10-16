@@ -77,7 +77,7 @@ function features(profile) {
 
 // Body text sits on every surface; large or faint text (captions before their
 // word, accents, status colours) never on the label chip.
-const ROLES = [
+export const ROLES = [
   { floor: "body", tokens: ["text", "muted"], on: ["bg", "panel", "chip"] },
   {
     floor: "large",
@@ -99,9 +99,52 @@ export function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+// OKLab (Björn Ottosson's), where style extraction mixes, compares and re-lights
+// colours: `[L, a, b]` from a #rrggbb, and back, each channel clipped to sRGB.
+export function oklab(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  const [l, m, s] = [
+    0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
+    0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+    0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b,
+  ].map(Math.cbrt);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+export function fromOklab([L, a, b]) {
+  const [l, m, s] = [
+    L + 0.3963377774 * a + 0.2158037573 * b,
+    L - 0.1055613458 * a - 0.0638541728 * b,
+    L - 0.0894841775 * a - 1.291485548 * b,
+  ].map((v) => v ** 3);
+  return (
+    "#" +
+    [
+      4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+      -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+    ]
+      .map((v) => {
+        const c = Math.min(1, Math.max(0, v));
+        const e = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+        return Math.round(e * 255)
+          .toString(16)
+          .padStart(2, "0");
+      })
+      .join("")
+  );
+}
+
 // Every token pair below its role's floor, as `<token> on <surface> <ratio>:1,
 // floor <n>:1`.
-function failures(profile) {
+export function failures(profile) {
   const c = profile.colors ?? {};
   const out = [];
   for (const role of ROLES) {
