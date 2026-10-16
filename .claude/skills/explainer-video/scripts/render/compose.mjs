@@ -226,7 +226,7 @@ ${sketchCss(x.look)}`,
       ...codeFrame(
         p,
         f,
-        bars + rows.map((l) => `<div class="ln">${tokens(l)}</div>`).join(""),
+        bars + rows.map((row) => `<div class="ln">${tokens(row)}</div>`).join(""),
       ),
       reveals: [[".rt", 1]],
       tweens: marks.map((h, k) => [
