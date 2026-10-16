@@ -83,3 +83,31 @@ export function toolPaths(dirs = userDirs()) {
     ),
   };
 }
+
+// GSAP and each font row's files copied into a composition folder, as
+// HyperFrames lint refuses `../` asset paths; returns the faces the page
+// declares, `{family, file, weight, style}` each.
+export function compositionAssets(fontRows, dir) {
+  fs.mkdirSync(path.join(dir, "fonts"), { recursive: true });
+  fs.copyFileSync(
+    path.join(toolPaths().node, "node_modules", "gsap", "dist", "gsap.min.js"),
+    path.join(dir, "gsap.min.js"),
+  );
+  const fonts = [];
+  for (const r of fontRows)
+    for (const f of fs
+      .readdirSync(dest(r))
+      .filter((f) => f.endsWith(".woff2"))
+      .sort()) {
+      const file = `${r.family}-${f}`;
+      fs.copyFileSync(path.join(dest(r), f), path.join(dir, "fonts", file));
+      const m = f.match(/-(\d+)-(normal|italic)\.woff2$/);
+      fonts.push({
+        family: r.family,
+        file,
+        weight: m?.[1] ?? 400,
+        style: m?.[2] ?? "normal",
+      });
+    }
+  return fonts;
+}

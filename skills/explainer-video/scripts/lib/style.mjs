@@ -206,6 +206,14 @@ export function loadStyle(run, name, dirs = userDirs()) {
     profile = JSON.parse(fs.readFileSync(file, "utf8"));
     profile.name = want;
   }
+  validate(profile);
+  fs.writeFileSync(own, JSON.stringify(profile, null, 2) + "\n");
+  return profile;
+}
+
+// Every check a profile passes at load: contrast by role, its gates only
+// tightening, its look and effects known.
+export function validate(profile) {
   const bad = failures(profile);
   if (bad.length)
     throw new Error(
@@ -213,6 +221,18 @@ export function loadStyle(run, name, dirs = userDirs()) {
     );
   floors(profile);
   features(profile);
-  fs.writeFileSync(own, JSON.stringify(profile, null, 2) + "\n");
-  return profile;
+}
+
+// Where a saved profile goes: the user store when the running copy of the
+// skill sits under a user skills directory (a personal copy shadows the
+// project's, so the running copy is the install that counts), else the
+// project's `explainers/.styles/`.
+export function saveScope(skillDir, home) {
+  const under = (d) => {
+    const rel = path.relative(d, path.resolve(skillDir));
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+  };
+  return [".claude", ".agents"].some((d) => under(path.join(home, d, "skills")))
+    ? "user"
+    : "project";
 }

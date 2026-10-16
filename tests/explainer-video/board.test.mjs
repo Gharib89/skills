@@ -166,6 +166,8 @@ test("render --stills renders the stills only, and build writes an open board wi
   assert.ok(!fs.existsSync(path.join(fx.dir, "board", "page.html")));
 
   const local = read(fx.dir, "storyboard.html");
+  // Opened as a file, the page has no skeleton to name its encoding.
+  assert.match(local, /^<!doctype html>\n<meta charset="utf-8">\n<title>/);
   const embedded = local.match(
     /<script type="application\/json" id="board">(.*?)<\/script>/s,
   )[1];

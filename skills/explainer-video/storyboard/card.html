@@ -1,0 +1,460 @@
+<title>{{TITLE}}</title>
+<!--
+  explainer-video's fixed style card page. A session copies it (`card.mjs page`), publishes it once
+  with the db, user, comments and assets capabilities, and from then on writes card versions to its
+  database; card-data.md is the contract. Nothing here is republished per version. `card.mjs build`
+  also embeds one card in stylecard.html, the local copy that needs no database.
+
+  Credits: the palette, type, panels and Submit bar follow page.html, the storyboard page, which
+  follows grill-with-artifact's page, itself derived from html-plan's htmlplan.css
+  (claude-community marketplace, MIT, Thariq Shihipar).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..700&display=swap">
+<style>
+/* Layout: one reading column. Header, the findings, the sample frames, the palette and type to
+   edit, the decision, and a floating Submit bar at the foot. Warm paper, one accent, hairlines. */
+:root {
+  --page: #faf9f5; --card: #ffffff; --hover: #f0eee6;
+  --fg: #141413; --fg-body: #3d3d3a; --fg-label: #73726c;
+  --line: #1f1e1d14; --line-strong: #1f1e1d26;
+  --accent: #c6613f; --accent-ink: #ffffff; --accent-wash: #f6e7df; --accent-line: #c6613f66;
+  --ok: #2c7a39; --ok-wash: #e2efdf;
+  --warn: #946410; --warn-wash: #f4ead2; --danger: #b3261e;
+  --r: 12px; --r-sm: 8px; --r-btn: 999px;
+  --f-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-serif: ui-serif, Georgia, "Times New Roman", serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #262624; --card: #30302e; --hover: #1f1e1d;
+    --fg: #faf9f5; --fg-body: #c2c0b6; --fg-label: #9c9a92;
+    --line: #dedcd114; --line-strong: #dedcd126;
+    --accent: #d97757; --accent-ink: #141413; --accent-wash: #46302a; --accent-line: #d9775780;
+    --ok: #6fb37a; --ok-wash: #26372a;
+    --warn: #d9a441; --warn-wash: #3d331f; --danger: #e5776e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #262624; --card: #30302e; --hover: #1f1e1d;
+  --fg: #faf9f5; --fg-body: #c2c0b6; --fg-label: #9c9a92;
+  --line: #dedcd114; --line-strong: #dedcd126;
+  --accent: #d97757; --accent-ink: #141413; --accent-wash: #46302a; --accent-line: #d9775780;
+  --ok: #6fb37a; --ok-wash: #26372a;
+  --warn: #d9a441; --warn-wash: #3d331f; --danger: #e5776e;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { color: var(--fg); font: 430 16px/1.6 var(--f-sans); -webkit-font-smoothing: antialiased; background: var(--page); }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-family: var(--f-serif); font-weight: 500; }
+h1 { font-size: clamp(28px, 4.4vw, 38px); line-height: 1.15; }
+h2 { font-size: 22px; line-height: 1.25; }
+p { margin: 0; max-width: 68ch; }
+code { font: .86em var(--f-mono); background: var(--hover); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; overflow-wrap: anywhere; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.label { font: 430 12px/1.4 var(--f-mono); color: var(--fg-label); }
+.tag { font: 430 12px/1.5 var(--f-mono); border-radius: 999px; padding: 1px 8px; white-space: nowrap; color: var(--fg-body); background: var(--hover); }
+.tag.ok { color: var(--ok); background: var(--ok-wash); }
+.tag.accent { color: var(--accent); background: var(--accent-wash); }
+.tag.warn { color: var(--warn); background: var(--warn-wash); }
+
+.btn { font: 550 14px/1.2 var(--f-sans); color: var(--fg); background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r-btn); padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.btn:hover:not(:disabled) { border-color: var(--fg-label); }
+.btn.accent { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
+.btn.accent:hover:not(:disabled) { filter: brightness(.95); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-sm { padding: 6px 11px; font-size: 14px; }
+textarea, input[type="text"], select { width: 100%; font: 14px/1.5 var(--f-sans); color: var(--fg); background: var(--page); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px 10px; }
+textarea { resize: vertical; min-height: 2.6em; }
+textarea:focus, input[type="text"]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+textarea:disabled, input:disabled, select:disabled { opacity: .6; }
+
+.panel { background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); }
+.wrap { max-width: 960px; margin: 0 auto; padding-inline: 24px; padding-block: 40px 32px; display: grid; gap: 28px; }
+.hdr { display: grid; gap: 12px; }
+.lede { font-size: 16px; line-height: 1.5; color: var(--fg-body); max-width: 62ch; }
+.notice { padding: 20px; color: var(--fg-body); }
+.banner { padding: 16px 20px; display: grid; gap: 8px; background: var(--warn-wash); border-color: var(--warn); color: var(--fg); }
+.banner pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 var(--f-mono); color: var(--fg-body); }
+.frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 16px; }
+.shot { padding: 12px; display: grid; gap: 8px; min-width: 0; margin: 0; }
+.frame { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--hover); }
+.frame iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; }
+.edit { padding: 16px 20px 20px; display: grid; gap: 12px; }
+.rows { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 7rem 2.4rem 7.5rem 1fr; gap: 8px 12px; align-items: center; }
+.row input[type="color"] { width: 2.4rem; height: 2rem; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: none; cursor: pointer; }
+.row .why { font-size: 13px; color: var(--fg-body); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; }
+.trow { display: grid; grid-template-columns: 7rem 1fr; gap: 8px 12px; align-items: center; }
+.fails { margin: 0; padding: 10px 12px; list-style: none; font: 12px/1.6 var(--f-mono); border-radius: var(--r-sm); border-left: 3px solid var(--danger); background: var(--page); }
+.ok-line { font-size: 14px; color: var(--ok); }
+.choices { border: 0; margin: 0; padding: 0; display: flex; gap: 16px; flex-wrap: wrap; }
+.choices label, .check { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-weight: 550; }
+.choices input, .check input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.field { display: grid; gap: 4px; }
+.bar { position: sticky; bottom: 12px; z-index: 5; width: calc(100% - 32px); max-width: 960px; margin: 0 auto 12px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.bar-in { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.count { color: var(--fg-body); font-size: 14px; }
+.st { flex-basis: 100%; font-size: 14px; color: var(--fg-body); display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--fg-label); border-radius: var(--r-sm); background: var(--page); }
+.st b { color: var(--fg); }
+.st-ok { border-left-color: var(--ok); }
+.st-warn { border-left-color: var(--warn); }
+.st-bad { border-left-color: var(--danger); }
+.st pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 var(--f-mono); color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px; max-height: 12em; overflow: auto; }
+.st-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 560px) {
+  h2 { font-size: 20px; }
+  .wrap { padding-inline: 16px; padding-block: 24px; gap: 24px; }
+  .edit { padding: 14px 16px 16px; }
+  .row { grid-template-columns: 6rem 2.4rem 1fr; }
+  .row .why { grid-column: 1 / -1; }
+  .trow { grid-template-columns: 1fr; }
+}
+</style>
+
+<main id="app"></main>
+
+<script type="application/json" id="card">null</script>
+
+<script>
+/* ---- core: state in, HTML out. No DOM here, so the page can run headless against card-data.md. ---- */
+const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const HEX = /^#[0-9a-f]{6}$/i;
+const CHOICES = [['save', 'Save'], ['once', 'Use once'], ['revise', 'Revise']];
+// The roles a card offers fonts for: the catalogue holds Latin families only.
+const LATIN = ['title', 'text', 'code'];
+
+function newState(title) {
+  return { title, cards: [], submitted: {}, drafts: {}, status: 'idle', mode: 'loading', canEdit: true, local: false };
+}
+const latest = S => S.cards[S.cards.length - 1];
+function newDraft(c) {
+  return { choice: null, name: c.name, note: '', replace: false, default: false,
+    colors: Object.fromEntries(c.colors.map(x => [x.token, x.hex])),
+    type: Object.fromEntries(c.type.map(x => [x.role, x.font])) };
+}
+function draftOf(S) {
+  const c = latest(S);
+  if (!S.drafts[c.version]) S.drafts[c.version] = newDraft(c);
+  return S.drafts[c.version];
+}
+function setCards(S, docs) {
+  const was = latest(S) && latest(S).version;
+  S.cards = docs.slice().sort((a, b) => a.version - b.version);
+  S.mode = 'ready';
+  if (latest(S) && latest(S).version !== was) S.status = 'idle';
+}
+function setAnswers(S, docs) { S.submitted = Object.fromEntries(docs.map(d => [d.version, true])); }
+
+const locked = S => !S.canEdit || ['sending', 'sent', 'saved'].includes(S.status) || !!S.submitted[latest(S).version];
+// A failed save leaves the comment as the only copy, so it counts as sent only when it held the whole answers.
+const outcome = (saved, woke, whole) => woke && (saved || whole) ? 'sent' : saved ? 'saved' : 'neither';
+
+// WCAG 2.1 contrast, the same sums as lib/style.mjs.
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => { const v = parseInt(hex.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+// Every pair the card's roles hold below its floor, with the edited colours.
+function failing(S) {
+  const c = latest(S), d = draftOf(S), out = [];
+  for (const r of c.roles) for (const t of r.tokens) for (const s of r.on) {
+    if (!HEX.test(d.colors[t] || '') || !HEX.test(d.colors[s] || '')) { out.push(`${t} on ${s}: not a #rrggbb colour`); continue; }
+    const x = contrast(d.colors[t], d.colors[s]);
+    if (x < r.min) out.push(`${t} on ${s} ${x.toFixed(2)}:1, floor ${r.min}:1`);
+  }
+  return out;
+}
+function edits(S) {
+  const c = latest(S), d = draftOf(S);
+  return {
+    colors: Object.fromEntries(c.colors.filter(x => d.colors[x.token].toLowerCase() !== x.hex.toLowerCase()).map(x => [x.token, d.colors[x.token].toLowerCase()])),
+    type: Object.fromEntries(c.type.filter(x => d.type[x.role] !== x.font).map(x => [x.role, d.type[x.role]])),
+  };
+}
+const edited = S => { const e = edits(S); return Object.keys(e.colors).length + Object.keys(e.type).length > 0; };
+const taken = S => draftOf(S).choice === 'save' && latest(S).taken.includes(draftOf(S).name);
+// Why Submit is off, one line each; none means it is on.
+function blockers(S) {
+  const c = latest(S), d = draftOf(S), out = [];
+  if (!d.choice) out.push('Pick Save, Use once or Revise.');
+  if (!KEBAB.test(d.name)) out.push('The name is lowercase words joined by hyphens, like itworx-dark.');
+  if (failing(S).length) out.push('A colour fails contrast: fix it before submitting.');
+  if (taken(S) && !d.replace) out.push(`${d.name} is saved in the ${c.scope} store already: tick Replace, or rename it.`);
+  if (c.findings.length && ['save', 'once'].includes(d.choice) && !edited(S)) out.push('The frames break the layout rules: edit the draft or ask for a revision.');
+  return out;
+}
+const canSubmit = S => !!latest(S) && !locked(S) && blockers(S).length === 0;
+
+const ACT = {
+  color(S, d) { if (!locked(S)) draftOf(S).colors[d.token] = d.hex; },
+  font(S, d) { if (!locked(S)) draftOf(S).type[d.role] = d.font; },
+  set(S, d) { if (!locked(S)) draftOf(S)[d.field] = d.value; },
+};
+
+function answersDoc(S, at = new Date().toISOString()) {
+  const d = draftOf(S), e = edits(S);
+  return { version: latest(S).version, submittedAt: at, choice: d.choice, name: d.name.trim(),
+    colors: e.colors, type: e.type, note: d.note.trim(), replace: taken(S) && d.replace, default: d.choice === 'save' && d.default };
+}
+function answersText(S) {
+  const n = latest(S).version, a = answersDoc(S);
+  // Names the database document without claiming the save worked: this text is also the fallback.
+  const lines = [`explainer-video: style card ${n} answers (database document answers/card-${n})`];
+  const choice = CHOICES.find(x => x[0] === a.choice);
+  if (choice) lines.push('Choice: ' + choice[1]);
+  lines.push('Name: ' + a.name);
+  for (const [t, hex] of Object.entries(a.colors)) lines.push(`Colour ${t}: ${hex}`);
+  for (const [r, f] of Object.entries(a.type)) lines.push(`Font ${r}: ${f}`);
+  if (a.replace) lines.push('Replace: yes');
+  if (a.default) lines.push('Default: yes');
+  if (a.note) lines.push('Note: ' + a.note.replace(/\s*\n\s*/g, ' '));
+  return lines.join('\n');
+}
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// A media URL is https, the artifact's own /_blob/, or a path relative to the page; nothing else reaches src.
+function mediaUrl(u) {
+  const s = String(u == null ? '' : u);
+  if (/["'()\\\s]/.test(s)) return '';
+  if (/^https:/i.test(s) || s.startsWith('/_blob/')) return s;
+  return /^[a-z][a-z0-9+.-]*:/i.test(s) || s.startsWith('/') ? '' : s;
+}
+// The edited palette as CSS: the frame's own palette comes first, so this one wins.
+const paletteCss = S => ':root { ' + Object.entries(draftOf(S).colors).filter(([, v]) => HEX.test(v)).map(([k, v]) => `--${k}: ${v};`).join(' ') + ' }';
+// A frame's page with no script, its fonts at their URLs and the edited palette appended.
+function frameDoc(S, f) {
+  const urls = Object.fromEntries(latest(S).fonts.map(x => [x.file, mediaUrl(x.url)]));
+  return f.html.replace(/<script\b[\s\S]*?<\/script>/gi, '').replace(/url\("fonts\/([^"]+)"\)/g, (m, file) => `url("${urls[file] || ''}")`)
+    .replace('</head>', () => `<style id="edits">${paletteCss(S)}</style></head>`);
+}
+
+function view(S) {
+  const c = latest(S);
+  if (S.mode === 'nodb') return shell(S, 'This page cannot reach its database here, so no card can load. Say so in the terminal, and the session carries on there.');
+  if (!c) return shell(S, S.mode === 'loading' ? 'Loading the style card.' : 'Waiting for card 1. Claude posts it here in a moment.');
+  return `<div class="wrap">
+    <header class="hdr"><span class="label">explainer-video · style card ${esc(c.version)}</span><h1>${esc(c.label)}</h1>
+      <p class="lede">The draft profile on five sample frames. Edit a colour or a font right here, then save the profile, use it once for this video, or ask for a revision.</p>
+      ${c.source ? `<p class="label">${esc(c.source)}</p>` : ''}
+      ${S.canEdit ? '' : '<p class="label">Only an editor of this page answers its cards.</p>'}</header>
+    ${c.findings.length ? `<div class="banner panel" role="alert"><b>These frames break the video gates' layout rules, so Save and Use once wait for an edit or a revision.</b><pre>${c.findings.map(esc).join('\n')}</pre></div>` : ''}
+    <section class="frames" id="frames">${c.frames.map(f =>
+      `<figure class="shot panel"><span class="label">${esc(f.label)}</span><div class="frame"><iframe sandbox="allow-same-origin" title="${esc(f.label)} frame" data-frame="${esc(f.id)}" srcdoc="${esc(frameDoc(S, f))}"></iframe></div></figure>`).join('')}</section>
+    ${palettePanel(S, c)}
+    ${typePanel(S, c)}
+    ${decision(S, c)}
+  </div>${bar(S, c)}`;
+}
+function shell(S, text) {
+  return `<div class="wrap"><header class="hdr"><span class="label">explainer-video · style card</span><h1>${esc(S.title)}</h1></header><p class="notice panel" role="status">${esc(text)}</p></div>`;
+}
+function contrastNote(S) {
+  const bad = failing(S);
+  return `<div data-live="contrast">${bad.length
+    ? `<ul class="fails" role="alert">${bad.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`
+    : '<p class="ok-line">Every colour passes contrast by role.</p>'}</div>`;
+}
+function palettePanel(S, c) {
+  const d = draftOf(S), dis = locked(S) ? 'disabled' : '';
+  return `<section class="edit panel"><h2>Colours</h2><div class="rows">${c.colors.map(x => {
+    const v = d.colors[x.token], changed = v.toLowerCase() !== x.hex.toLowerCase();
+    return `<div class="row"><span class="label">${esc(x.token)}</span>
+      <input type="color" id="pick-${esc(x.token)}" data-color="${esc(x.token)}" value="${esc(HEX.test(v) ? v.toLowerCase() : x.hex)}" aria-label="${esc(x.token)} colour" ${dis}>
+      <input type="text" id="hex-${esc(x.token)}" data-hex="${esc(x.token)}" value="${esc(v)}" spellcheck="false" aria-label="${esc(x.token)} hex" ${dis}>
+      <span class="why" data-live="why-${esc(x.token)}"><span class="tag${changed ? ' accent' : ''}">${changed ? 'edited' : esc(x.mark)}</span>${x.why ? `<span>${esc(x.why)}</span>` : ''}</span></div>`;
+  }).join('')}</div>${contrastNote(S)}</section>`;
+}
+function typePanel(S, c) {
+  const d = draftOf(S), dis = locked(S) ? 'disabled' : '';
+  return `<section class="edit panel"><h2>Type</h2><div class="rows">${c.type.map(x => LATIN.includes(x.role)
+    ? `<label class="trow"><span class="label">${esc(x.role)}</span><select id="font-${esc(x.role)}" data-font="${esc(x.role)}" ${dis}>${c.families.map(f =>
+      `<option value="${esc(f)}" ${d.type[x.role] === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></label>`
+    : `<div class="trow"><span class="label">${esc(x.role)}</span><span>${esc(x.font)}</span></div>`).join('')}</div>
+    <p class="label">A font change shows on the next card, once the run has gated it.</p></section>`;
+}
+function decision(S, c) {
+  const d = draftOf(S), dis = locked(S) ? 'disabled' : '';
+  const radio = ([v, label]) => `<label><input type="radio" name="choice" value="${v}" ${d.choice === v ? 'checked' : ''} ${dis}>${label}</label>`;
+  return `<section class="edit panel"><h2>Your answer</h2>
+    <fieldset class="choices"><legend class="label">Save it to the ${esc(c.scope)} store, use it for this video only, or ask for a revision</legend>${CHOICES.map(radio).join('')}</fieldset>
+    <label class="field"><span class="label">Name (lowercase words joined by hyphens)</span><input type="text" id="name" data-set="name" value="${esc(d.name)}" spellcheck="false" ${dis}></label>
+    <div data-live="options">${taken(S) ? `<label class="check"><input type="checkbox" id="replace" data-set="replace" ${d.replace ? 'checked' : ''} ${dis}>Replace the saved ${esc(d.name)}</label>` : ''}
+    ${d.choice === 'save' ? `<label class="check"><input type="checkbox" id="default" data-set="default" ${d.default ? 'checked' : ''} ${dis}>Make it the ${esc(c.scope)} store's default</label>` : ''}</div>
+    <label class="field"><span class="label">Note (what to change, optional)</span><textarea rows="2" id="note" data-set="note" ${dis}>${esc(d.note)}</textarea></label></section>`;
+}
+function bar(S, c) {
+  if (!S.canEdit) return '';
+  const why = blockers(S);
+  const act = S.local
+    ? `<button class="btn accent" data-act="copy" ${why.length ? 'disabled' : ''}>Copy answers</button>`
+    : `<button class="btn accent" id="submit" data-act="submit" ${canSubmit(S) ? '' : 'disabled'}>Submit card ${esc(c.version)}</button>`;
+  return `<div class="bar panel" data-live="bar"><div class="bar-in">
+    <span class="count">${why.length && !S.submitted[c.version] ? esc(why[0]) : 'Ready to submit.'}</span>
+    <div>${act}</div>${S.local ? localNote(S) : status(S)}</div></div>`;
+}
+function localNote(S) {
+  return `<div class="st"><span>Copy the answers, paste them into the terminal, and Claude reads them.</span>
+    <pre id="fallback-text">${esc(answersText(S))}</pre><span class="label" id="copied" role="status"></span></div>`;
+}
+function status(S) {
+  const n = latest(S).version;
+  switch (S.status) {
+    case 'sending': return '<div class="st" role="status">Saving your answers and waking Claude.</div>';
+    case 'sent': return '<div class="st st-ok" role="status"><span><b>Sent to Claude.</b> An edit or revision brings the next card to this page; Save and Use once carry on in the terminal. If nothing happens, type <code>submitted</code> in the terminal.</span></div>';
+    case 'saved': return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the terminal and the session reads your saved answers.</span>
+      <div class="st-row"><button class="btn btn-sm" data-act="wake">Try waking it again</button></div></div>`;
+    case 'neither': return `<div class="st st-bad" role="alert"><span><b>Your answers were not saved.</b> Copy them and paste them into the terminal.</span>
+      <pre id="fallback-text">${esc(answersText(S))}</pre>
+      <div class="st-row"><button class="btn btn-sm accent" data-act="copy">Copy answers</button><button class="btn btn-sm" data-act="submit">Try again</button><span class="label" id="copied" role="status"></span></div></div>`;
+  }
+  if (S.submitted[n]) return `<div class="st st-ok" role="status"><span><b>Submitted.</b> If no new card appears and the terminal shows nothing, type <code>submitted</code> there.</span></div>`;
+  return '';
+}
+
+/* ---- boot: the browser only. Wires the capabilities, the live cards, drafts, live colours and Submit. ---- */
+if (typeof document !== 'undefined') boot();
+
+async function boot() {
+  const S = newState(document.title);
+  const app = document.getElementById('app');
+  const key = () => 'card-draft-' + latest(S).version;
+  const saveDraft = () => { try { localStorage.setItem(key(), JSON.stringify(draftOf(S))); } catch (e) {} };
+  function restoreDraft() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(key()) || 'null'); } catch (e) {}
+    if (!saved || S.drafts[latest(S).version]) return;
+    const d = draftOf(S);
+    for (const f of ['colors', 'type']) for (const [k, v] of Object.entries(saved[f] || {})) if (k in d[f] && typeof v === 'string') d[f][k] = v;
+    for (const f of ['name', 'note']) if (typeof saved[f] === 'string') d[f] = saved[f];
+    for (const f of ['replace', 'default']) if (typeof saved[f] === 'boolean') d[f] = saved[f];
+    if (CHOICES.some(x => x[0] === saved.choice)) d.choice = saved.choice;
+  }
+  // Each frame is drawn at 1920x1080 and scaled to its box.
+  function fit() { document.querySelectorAll('.frame').forEach(b => { const f = b.firstElementChild; if (f) f.style.transform = `scale(${b.clientWidth / 1920})`; }); }
+  // Live colours: the frames keep their documents and take the edited palette.
+  function repaint() {
+    if (!latest(S)) return;
+    document.querySelectorAll('iframe[data-frame]').forEach(f => { const s = f.contentDocument && f.contentDocument.getElementById('edits'); if (s) s.textContent = paletteCss(S); });
+  }
+  function render() {
+    const f = document.activeElement, fid = f && (f.id || null);
+    const t = document.createElement('template');
+    // The frames reload here, their documents built with the edited palette.
+    t.innerHTML = view(S);
+    app.replaceChildren(t.content);
+    const el = fid && document.getElementById(fid);
+    if (el) el.focus({ preventScroll: true });
+    fit(); repaint();
+  }
+  // While typing: only the parts that follow the edit change, so the input keeps its caret.
+  function refresh() {
+    const t = document.createElement('template');
+    t.innerHTML = view(S);
+    document.querySelectorAll('[data-live]').forEach(el => { const n = t.content.querySelector(`[data-live="${el.dataset.live}"]`); if (n) el.replaceWith(n); });
+    repaint();
+  }
+  addEventListener('resize', fit);
+  render();
+  // Listeners first: a local page returns before the capabilities below.
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-act]');
+    if (!t || t.disabled) return;
+    const act = t.dataset.act;
+    if (act === 'submit') return submit(t);
+    if (act === 'wake') return rewake(t);
+    if (act === 'copy') return copy();
+  });
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (t.name === 'choice') ACT.set(S, { field: 'choice', value: t.value });
+    else if (t.type === 'checkbox' && t.dataset.set) ACT.set(S, { field: t.dataset.set, value: t.checked });
+    else if (t.dataset.font) ACT.font(S, { role: t.dataset.font, font: t.value });
+    else return;
+    saveDraft(); render();
+  });
+  document.addEventListener('input', e => {
+    const t = e.target, token = t.dataset.color || t.dataset.hex;
+    if (token) {
+      const v = t.value.trim();
+      ACT.color(S, { token, hex: v });
+      // The picker and the hex field show one value; the picker takes only a whole colour.
+      const other = document.getElementById((t.dataset.color ? 'hex-' : 'pick-') + token);
+      if (other && HEX.test(v)) other.value = t.dataset.color ? v : v.toLowerCase();
+    } else if (t.dataset.set === 'name' || t.dataset.set === 'note') ACT.set(S, { field: t.dataset.set, value: t.value });
+    else return;
+    saveDraft(); refresh();
+  });
+
+  const embedded = () => { try { return JSON.parse(document.getElementById('card').textContent); } catch (e) { return null; } };
+  function localMode() {
+    const doc = embedded();
+    if (!doc || typeof doc !== 'object') { S.mode = 'nodb'; render(); return; }
+    S.local = true; setCards(S, [doc]); restoreDraft(); render();
+  }
+  const use = n => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  // Declared before the await, not as a const destructure: the listeners above
+  // read them, and one fired during the await would hit the TDZ.
+  let db = null, comments = null, user = null;
+  [db, comments, user] = await Promise.all([use('db'), use('comments'), use('user')]);
+  if (!db) return localMode();
+  if (user) S.canEdit = await user.canEdit().catch(() => true);
+
+  db.collection('cards').orderBy('version').onSnapshot(snap => {
+    const was = latest(S) && latest(S).version;
+    setCards(S, snap.docs.map(d => d.data()));
+    if (latest(S) && latest(S).version !== was) restoreDraft();
+    render();
+  }, () => { S.mode = 'nodb'; render(); });
+  db.collection('answers').onSnapshot(snap => { setAnswers(S, snap.docs.map(d => d.data())); render(); }, () => {});
+
+  // The comment is the doorbell: the one page action that starts a turn in the watching session.
+  // It carries the answers too, cut to the 4 KiB a comment holds.
+  function capped(text) {
+    const enc = new TextEncoder(), tail = `\n[cut to fit: read answers/card-${latest(S).version}]`;
+    if (enc.encode(text).length <= 4096) return text;
+    let s = text;
+    while (enc.encode(s + tail).length > 4096) s = s.slice(0, -64);
+    return s + tail;
+  }
+  async function wake(anchor) {
+    if (!comments || !anchor) return false;
+    try {
+      if (await comments.canSendToClaude() !== 'available') return false;
+      await comments.sendToClaude({ anchor, text: capped(answersText(S)) });
+      return true;
+    } catch (e) { return false; }
+  }
+  const anchorOf = el => (comments ? comments.anchorFor(el).catch(() => null) : Promise.resolve(null));
+  async function submit(btn) {
+    if (!canSubmit(S) && S.status !== 'neither') return;
+    // Lock before any await, so a second click finds the card locked.
+    const doc = answersDoc(S);
+    S.status = 'sending'; render();
+    const anchor = await anchorOf(document.getElementById(btn.id) || btn);
+    const saved = await db.doc('answers/card-' + doc.version).set(doc).then(() => true, () => false);
+    const woke = await wake(anchor), text = answersText(S);
+    S.status = outcome(saved, woke, capped(text) === text);
+    render();
+  }
+  async function rewake(btn) {
+    if (S.status !== 'saved') return;
+    S.status = 'sending'; render();
+    const anchor = await anchorOf(document.getElementById('submit') || btn);
+    S.status = (await wake(anchor)) ? 'sent' : 'saved';
+    render();
+  }
+  function copy() {
+    const note = t => { const c = document.getElementById('copied'); if (c) c.textContent = t; };
+    const selectIt = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById('fallback-text')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); note('Selected: press Ctrl+C or Cmd+C'); };
+    try { navigator.clipboard.writeText(answersText(S)).then(() => note('Copied'), selectIt); } catch (e) { selectIt(); }
+  }
+}
+</script>

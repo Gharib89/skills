@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "name": "itworx",
+  "label": "ITWorx",
+  "source": "Measured from ten ITWorx deck and social slides (white ground, indigo headlines, red accent, lavender cards), 2026-10-15",
+  "colors": {
+    "bg": "#ffffff",
+    "panel": "#eeedfc",
+    "chip": "#e1e0f7",
+    "line": "#b8bcf0",
+    "rule": "#4850e0",
+    "text": "#161b8c",
+    "muted": "#4a4f73",
+    "faint": "#6b6f8f",
+    "accent": "#c03020",
+    "ok": "#17734b",
+    "warn": "#8a5a00",
+    "stop": "#b01820"
+  },
+  "type": {
+    "title": { "font": "source-serif-4", "weight": 600 },
+    "text": { "font": "inter", "weight": 400 },
+    "code": { "font": "jetbrains-mono", "weight": 400 },
+    "arTitle": { "font": "noto-naskh-arabic", "weight": 600 },
+    "arText": { "font": "ibm-plex-sans-arabic", "weight": 400 }
+  },
+  "layout": "bands",
+  "motion": "rise",
+  "look": "clean",
+  "effects": ["draw", "highlight"]
+}

@@ -361,7 +361,8 @@ score's sound effects are separate: `effects` never mutes them.
 
 Asked for a style profile from a look (screenshots, a website, a PDF or PPTX
 deck, a video), read [reference/style.md](reference/style.md) and run its
-steps.
+steps, which end on the style card where the user saves the profile or uses
+it once.
 
 ## Gates
 

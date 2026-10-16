@@ -30,7 +30,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
-import { writeIgnore } from "../lib/runfolder.mjs";
+import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { esc } from "../render/compose.mjs";
 
@@ -149,25 +149,11 @@ if (cmd === "page") {
 
 if (cmd === "asset") {
   const file = at("board", "assets.json");
-  const assets = maybe(file) ?? {};
-  const root = path.resolve(run);
-  for (const a of args) {
-    const i = a.indexOf("=");
-    const rel = i < 0 ? "" : a.slice(0, i);
-    const url = a.slice(i + 1);
-    const abs = path.resolve(root, rel);
-    if (
-      !rel ||
-      !abs.startsWith(root + path.sep) ||
-      !fs.existsSync(abs) ||
-      !fs.statSync(abs).isFile()
-    )
-      fail(`${rel || a} is not a file under the run folder`);
-    if (!url.startsWith("https://") && !/^\/_blob\/[0-9a-f]{32}$/.test(url))
-      fail(`${url} is neither an https:// URL nor /_blob/<id>`);
-    assets[path.relative(root, abs)] = url;
+  try {
+    write(file, { ...maybe(file), ...recordAssets(run, args) });
+  } catch (e) {
+    fail(e.message);
   }
-  write(file, assets);
   console.log(`board: ${args.length} asset(s) recorded`);
   process.exit(0);
 }
@@ -439,13 +425,15 @@ if (published && media.some((f) => !assets[f])) {
     console.error(`board: upload ${f} (${MB(fs.statSync(at(f)).size)})`);
   fail(`record each upload with: node board.mjs ${run} asset <path>=<url>`);
 }
+// The local copy declares its encoding: no publish wraps it in a skeleton.
 fs.writeFileSync(
   at("storyboard.html"),
-  filled(script.title).replace(
-    '<script type="application/json" id="board">null</script>',
-    () =>
-      `<script type="application/json" id="board">${JSON.stringify(doc).replaceAll("<", "\\u003c")}</script>`,
-  ),
+  '<!doctype html>\n<meta charset="utf-8">\n' +
+    filled(script.title).replace(
+      '<script type="application/json" id="board">null</script>',
+      () =>
+        `<script type="application/json" id="board">${JSON.stringify(doc).replaceAll("<", "\\u003c")}</script>`,
+    ),
 );
 if (published)
   for (const c of cards)
