@@ -21,8 +21,8 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { HOLD, fitsLength } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
-import { HOLD } from "../render/compose.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
@@ -73,27 +73,25 @@ const gates = {};
 }
 
 // budget: 12 to 30 s a scene, its spoken words within 10 percent of its
-// seconds, less the narrator's pause after each sentence, at the narrator's
-// rate, and the scenes with the render's closing hold within 10 percent of the
+// seconds, less the narrator's pause a sentence, at the narrator's rate, and the scenes with the render's closing hold within 10 percent of the
 // brief's length.
 {
   const f = [];
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {
     if (s.seconds < 12 || s.seconds > 30)
       f.push(`${s.id} ${s.seconds} s is outside 12 to 30 s`);
-    const k = s.counts.length;
-    const budget = (s.seconds - k * narrator.pause) * narrator.rate;
+    const sentences = s.counts.length;
+    const budget = (s.seconds - sentences * narrator.pause) * narrator.rate;
     const n = s.counts.reduce((a, b) => a + b, 0);
     if (Math.abs(n - budget) > budget * 0.1)
       f.push(
-        `${s.id} ${n} words vs ${Math.round(budget)} (${s.seconds} s less ${k} sentences at ${narrator.pause} s, at ${narrator.rate} words/s) ±10%`,
+        `${s.id} ${n} words vs ${Math.round(budget)} (${s.seconds} s less ${sentences} sentences at ${narrator.pause} s, at ${narrator.rate} words/s) ±10%`,
       );
   }
   const total = scenes.reduce((a, s) => a + (s.seconds ?? 0), 0);
-  const want = brief.length * 60;
-  if (Math.abs(total + HOLD - want) > want * 0.1)
+  if (!fitsLength(total, brief.length))
     f.push(
-      `the scenes run ${total} s and the ${HOLD} s hold vs the brief's ${want} s ±10%`,
+      `the scenes run ${total} s and the ${HOLD} s hold vs the brief's ${brief.length * 60} s ±10%`,
     );
   gates.budget = f;
 }

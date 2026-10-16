@@ -237,8 +237,6 @@ test("the same timings render the cached score again", () => {
   assert.equal(fs.statSync(again).mtimeMs, before);
 });
 
-// The brief set to score=ace-step; `installed` stamps the ace-step row as
-// setup leaves it.
 // The fixture's script voices about 15 s, under any length brief.mjs takes,
 // so a score test's brief asks for a quarter minute to pass the voice stage.
 function quarterMinute(fx) {
@@ -249,6 +247,8 @@ function quarterMinute(fx) {
   );
 }
 
+// The brief set to score=ace-step; `installed` stamps the ace-step row as
+// setup leaves it.
 function aceBrief(fx, installed = true) {
   const b = spawnSync(
     process.execPath,

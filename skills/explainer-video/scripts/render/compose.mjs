@@ -10,8 +10,6 @@ import { splitLatin } from "../lib/terms.mjs";
 export const W = 1920;
 export const H = 1080;
 export const FPS = 30;
-// The last scene's hold, silent after its narration.
-export const HOLD = 1;
 // 40 px Inter fits about 70 characters a line in the 1680 px band: 84 is at
 // most two lines.
 export const CUE_CHARS = 84;

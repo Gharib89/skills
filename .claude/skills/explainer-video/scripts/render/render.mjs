@@ -31,6 +31,7 @@ import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { HOLD } from "../lib/length.mjs";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
@@ -52,7 +53,6 @@ import {
   CUE_CHARS,
   FPS,
   H,
-  HOLD,
   W,
   sceneFile,
   stillsPage,
