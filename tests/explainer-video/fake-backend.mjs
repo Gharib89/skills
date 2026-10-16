@@ -387,16 +387,36 @@ function showing(dir, t) {
   for (const m of html.matchAll(
     /data-composition-id="([^"]+)" data-composition-src="[^"]+" data-start="([\d.]+)" data-duration="([\d.]+)"/g,
   ))
-    if (on(m[2], m[3]))
-      for (const e of fs
-        .readFileSync(path.join(dir, "scenes", `${m[1]}.html`), "utf8")
-        .matchAll(/<(?:div|span)[^>]*>([^<]+)</g))
-        if (e[1].trim()) texts.push({ scene: m[1], text: e[1].trim() });
+    if (on(m[2], m[3])) {
+      const scene = fs.readFileSync(
+        path.join(dir, "scenes", `${m[1]}.html`),
+        "utf8",
+      );
+      const rtl = /dir="rtl"/.test(scene);
+      for (const e of scene.matchAll(/<(div|span|bdi)[^>]*>([^<]+)</g))
+        if (e[2].trim())
+          texts.push({
+            scene: m[1],
+            text: e[2].trim(),
+            bdi: e[1] === "bdi",
+            rtl,
+          });
+    }
   for (const m of html.matchAll(
     /<div class="cue clip" data-start="([\d.]+)" data-duration="([\d.]+)"[^>]*>(.*?)<\/div>/g,
   ))
-    if (on(m[1], m[2]))
-      texts.push({ scene: null, text: m[3].replace(/<[^>]+>/g, "") });
+    if (on(m[1], m[2])) {
+      // A Latin run's <bdi> is an element of its own, as the browser sees it.
+      const text = m[3]
+        .replace(/<bdi[^>]*>[^<]*<\/bdi>/g, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const rtl = /^[^>]* dir="rtl"/.test(m[0]);
+      if (text) texts.push({ scene: null, text, rtl });
+      for (const r of m[3].matchAll(/<bdi[^>]*>([^<]+)<\/bdi>/g))
+        texts.push({ scene: null, text: r[1], bdi: true, rtl });
+    }
   return { html, texts };
 }
 
@@ -423,6 +443,28 @@ export async function check(dir, times) {
   };
 }
 
+// An element's reading direction as the composition sets it: Arabic text reads
+// right to left in a scene or cue marked so; a Latin run's <bdi>
+// sits in one, isolated, on one line where the `.lat` rule says so. A caption
+// word's line height is the `.cue` rule's, against the ink #686 measured for
+// IBM Plex Sans Arabic (1.46 em) and Inter (0.98 em).
+function reading(html, scene, text, bdi, rtl) {
+  const cue = html.match(/\.cue \{[^}]*font: \d+ [\d.]+px\/([\d.]+) "([^"]+)"/);
+  const arabic = /\p{Script=Arabic}/u.test(text);
+  return {
+    dir: arabic && rtl ? "rtl" : "ltr",
+    within: bdi && rtl ? "rtl" : null,
+    bidi: bdi ? "isolate" : "normal",
+    wrap:
+      bdi && /\.lat \{[^}]*white-space: nowrap/.test(html)
+        ? "nowrap"
+        : "normal",
+    lineH: scene === null && cue ? +cue[1] : null,
+    face: cue?.[2] ?? null,
+    ink: arabic ? 1.46 : 0.98,
+  };
+}
+
 export async function probe(dir, times) {
   log({ call: "probe", times });
   return times.map((t) => {
@@ -431,7 +473,7 @@ export async function probe(dir, times) {
     if (process.env.EXPLAINER_VIDEO_FAKE_BLANK) return { t, elements: [] };
     return {
       t,
-      elements: texts.map(({ scene, text }, i) => {
+      elements: texts.map(({ scene, text, bdi, rtl }, i) => {
         const row = /\bstacked\b/.test(text) ? i - 0.5 : i;
         const top = scene ? 200 + row * 50 : 920;
         const left = /\bedge\b/.test(text) ? 40 : 160;
@@ -456,8 +498,16 @@ export async function probe(dir, times) {
               ? color("accent")
               : color("text"),
           bg: color("bg"),
+          ...reading(html, scene, text, bdi, rtl),
         };
       }),
+      rootDir: [
+        ["html", /<html[^>]*\sdir=/],
+        ["body", /<body[^>]*\sdir=/],
+        ["#root", /<div id="root"[^>]*\sdir=/],
+      ]
+        .filter(([, re]) => re.test(html))
+        .map(([r]) => r),
     };
   });
 }
