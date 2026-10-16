@@ -34,8 +34,10 @@ posts, and pages that only restate another page you keep.
 ## Choose
 
 Keep 3 to 8 pages: enough that the focus rests on more than one source, and
-no more than the video needs. Leave out every page in **Pages to avoid**.
+no more than the video needs. Leave out every page in **Pages to avoid**. When
+fewer than 3 pages meet the bar above, never pad the list: reply
+`too few: <n>`, the number that do, and nothing else.
 
 ## Report
 
-Reply with the URLs, one per line, best first, and nothing else.
+Otherwise reply with the URLs, one per line, best first, and nothing else.

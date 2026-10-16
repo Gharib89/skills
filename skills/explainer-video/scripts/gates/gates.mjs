@@ -327,8 +327,8 @@ const sfx =
 // one, so a red that moves between gates still stops: a pass, or a changed
 // script, starts a count again, and the same render judged again is no new
 // attempt.
-const summary = (ev) =>
-  `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;
+const summary = (ev, noun = "finding(s)") =>
+  `${ev.length} ${noun}${ev.length ? `, first: ${ev[0]}` : ""}`;
 const layoutFindings = plan.flatMap((p) => p.found.layout);
 const contrastFindings = plan.flatMap((p) => p.found.contrast);
 const judged = {
@@ -396,7 +396,7 @@ const verdicts = (h) =>
     if (!Array.isArray(v?.failures)) bad("no failures list");
     v.failures.forEach((x, i) => {
       if (!KINDS.includes(x?.kind))
-        bad(`failure ${i + 1} kind "${x?.kind}" is not unreadable or invented`);
+        bad(`failure ${i + 1} kind "${x?.kind}" is not ${KINDS.join(" or ")}`);
       if (typeof x.what !== "string" || !x.what.trim())
         bad(`failure ${i + 1} says nothing`);
     });
@@ -406,16 +406,17 @@ const verdicts = (h) =>
     return { ...v, id: sc.id, start: sc.start };
   });
 const rounds = same ? (prev.gates.critic?.rounds ?? []) : [];
+const criticAttempts = same ? (prev.gates.critic?.attempts ?? 0) : 0;
 let judgedBy;
 const own = verdicts(renderHash);
-if (own.every(Boolean)) {
+if (own.every(Boolean) && (rounds.includes(renderHash) || rounds.length < 2)) {
   if (!rounds.includes(renderHash)) rounds.push(renderHash);
   judgedBy = { vs: own, round: rounds.indexOf(renderHash) + 1 };
 } else if (rounds.length >= 2) {
   const vs = verdicts(rounds[1]);
   if (vs.every(Boolean)) judgedBy = { vs, round: 2, carried: true };
 }
-const wantCritic = "no unreadable or invented content; scores advise";
+const wantCritic = `no ${KINDS.join(" or ")} content; scores advise`;
 let critic;
 if (judgedBy) {
   const { vs, round, carried } = judgedBy;
@@ -430,12 +431,9 @@ if (judgedBy) {
     (vs.reduce((n, v) => n + v.scores[k], 0) / vs.length).toFixed(1);
   critic = {
     status: evidence.length ? "fail" : "pass",
-    measured: `${summary(evidence).replace("finding(s)", "hard failure(s)")}, mean scores ${SCORES.map((k) => `${k} ${mean(k)}`).join(", ")}, round ${round} of 2${carried ? ", carried: no third round" : ""}`,
+    measured: `${summary(evidence, "hard failure(s)")}, mean scores ${SCORES.map((k) => `${k} ${mean(k)}`).join(", ")}, round ${round} of 2${carried ? ", carried: no third round" : ""}`,
     floor: wantCritic,
-    attempts: count(
-      evidence.length,
-      same ? (prev.gates.critic?.attempts ?? 0) : 0,
-    ),
+    attempts: count(evidence.length, criticAttempts),
     evidence,
     sheets: sheetsOf(carried ? rounds[1] : renderHash),
     rounds,
@@ -463,7 +461,7 @@ if (judgedBy) {
     status: "pending",
     measured: `round ${rounds.length + 1} of 2, ${own.filter(Boolean).length} of ${own.length} scene(s) judged, contact sheets in ${dir}`,
     floor: wantCritic,
-    attempts: same ? (prev.gates.critic?.attempts ?? 0) : 0,
+    attempts: criticAttempts,
     evidence: [],
     sheets: dir,
     rounds,

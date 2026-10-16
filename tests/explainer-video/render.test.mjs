@@ -243,8 +243,15 @@ test("render composes every scene, renders with the CLI's guards, delivers and r
   ]);
   assert.equal(read(where, "poster.png"), "still of hook");
   assert.equal(read(fx.dir, "out", "poster.png"), "still of hook");
-  // The render the critic held drew the video; the one after reused it.
+  // The render the critic held drew the stills and the video; the one after
+  // reused both.
   assert.match(r.held.out, /^gates: 5 pass, 0 fail, 1 pending; next: /m);
+  assert.deepEqual(
+    calls(fx)
+      .map((c) => (c.args.includes("png-sequence") ? "stills" : "video"))
+      .sort(),
+    ["stills", "video"],
+  );
   assert.match(
     r.out.trim().split("\n").at(-1),
     /^render: demo\.mp4 \d+\.\d\d s, 3 scene\(s\), stills 3\/3 cached, video cached$/,
@@ -277,6 +284,7 @@ test("a second render with nothing changed calls HyperFrames no more; one change
   );
   const changed = render(fx);
   assert.equal(changed.code, 0, changed.out + changed.err);
+  assert.ok(changed.held, "the changed video goes to the critic again");
   const fresh = calls(fx).slice(first);
   assert.equal(fresh.length, 2);
   assert.deepEqual(fresh.find((c) => c.args.includes("png-sequence")).hosts, [

@@ -41,12 +41,18 @@ const named = new Map();
 while (args.length) {
   const a = args.shift();
   if (a === "--minutes") minutes = Number(args.shift());
-  else if (a === "--topic") topic = args.shift()?.trim();
+  else if (a === "--topic") topic = args.shift()?.trim() ?? "";
   // A source named twice (`.` and `./`) is read once.
   else named.set(isUrl(a) ? a : path.resolve(a), a);
 }
 const given = [...named.values()];
-if (!run || !given.length || !(minutes > 0) || topic === "") {
+if (
+  !run ||
+  !given.length ||
+  !(minutes > 0) ||
+  topic === "" ||
+  isUrl(topic ?? "")
+) {
   console.error(
     "usage: node snapshot.mjs <run-folder> [--minutes <n>] [--topic <topic>] <source>...",
   );

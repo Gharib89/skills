@@ -18,7 +18,8 @@ defaults; **source**, each source read into a source pack; **script**, a cited
 scene file written from the pack and held to the script gates; **voice**,
 English narration; the **storyboard**, where the user approves or revises each
 scene; **render**, the scene file turned into a captioned MP4; and **gates**,
-which the render runs and which block a video below the floors.
+which the render runs and which block a video below the floors or one
+the critic fails.
 Asked for a video from sources, run the stages in order (brief, source,
 script, voice, storyboard, render), stopping for the user only at the
 storyboard and where a stage says to stop or ask. Asked for a video of a topic
@@ -109,8 +110,9 @@ conversation, so a large repo does not crowd out the work.
    `<skill>/agents/researcher.md` as its prompt, `{topic}` the topic, `{focus}`
    and `{audience}` the brief's, `{avoid}` none. Its reply, 3 to 8 page URLs,
    is the sources: snapshot them with `--topic "<topic>"`, which refuses any
-   other source or count. A page snapshot cannot read: dispatch it again with
-   `{avoid}` naming the refused pages, and snapshot its new list.
+   other source or count. A page snapshot cannot read: dispatch it once more
+   with `{avoid}` every page refused so far, and snapshot its new list. On
+   `too few`, or a second refusal, relay it and ask the user for a source.
 1. **Snapshot.** `node <skill>/scripts/source/snapshot.mjs explainers/<slug>
    [--minutes <n>] [--topic "<topic>"] <source>...`, `--minutes` the brief's
    length.
@@ -299,8 +301,8 @@ narrator: am_fenrir
    mixes in the **score**, synthesised music ducked under speech with sound
    effects at the cuts and the end, unless the brief turns it off, masters to
    -14 LUFS, renders, then runs the gates (see Gates) and prints
-   their lines. A first render always ends with the critic pending: run the
-   critic round in Gates. Only when every gate passes does it print one
+   their lines. A first render always ends with the critic pending (see
+   Gates). Only when every gate passes does it print one
    `delivery <check>: pass|fail` line per delivery check (`resolution`,
    `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>

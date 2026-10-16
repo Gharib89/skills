@@ -670,6 +670,12 @@ test("a topic run takes three to eight web pages, refuses anything else before a
     s.sources.map((x) => [x.kind, x.source]),
     urls.slice(0, 3).map((u) => ["page", u]),
   );
+  // A --topic with no topic after it is a usage error, not a source run.
+  for (const args of [
+    [...urls.slice(0, 3), "--topic"],
+    ["--topic", ...urls.slice(0, 3)],
+  ])
+    assert.equal(snapshot(fx, args, env).code, 2, args.join(" "));
   // A run from sources records no topic.
   assert.equal(snapshot(fx, [urls[0]], env).code, 0);
   assert.equal(sourcesOf(fx).topic, undefined);

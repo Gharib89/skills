@@ -182,7 +182,8 @@ test("a clean render passes all six gates, writes the record and the report, and
 
 test("the narration is mastered to -14 LUFS under the peak floor before the video renders", () => {
   const fx = fixture();
-  rendered(fx, SCRIPT);
+  const r = renderUnjudged(fx, SCRIPT);
+  assert.match(r.out, /^gates: 5 pass, 0 fail, 1 pending/m, r.out + r.err);
   const m = calls(fx, "master");
   assert.equal(m.length, 1);
   assert.equal(m[0].lufs, -14);
@@ -615,7 +616,7 @@ test("a check that never reached the browser stops the gates as a tool error, no
 });
 
 // The render stage alone, no critic round taken.
-function rendered(fx, text) {
+function renderUnjudged(fx, text) {
   fs.writeFileSync(path.join(fx.dir, "script.md"), text);
   for (const s of ["script/compile.mjs", "voice/voice.mjs"])
     assert.equal(stage(fx, s).code, 0, s);
@@ -624,7 +625,7 @@ function rendered(fx, text) {
 
 test("a render the critic has not judged is held: critic pending, a contact sheet per scene cut from the MP4, no HyperFrames snapshot, no attempt", () => {
   const fx = fixture();
-  const r = rendered(fx, SCRIPT);
+  const r = renderUnjudged(fx, SCRIPT);
   assert.equal(r.code, 1, r.out + r.err);
   const g = record(fx);
   assert.match(g.gates.critic.sheets, /^\.cache\/critic\/[0-9a-f]{16}$/);
@@ -661,7 +662,7 @@ test("a render the critic has not judged is held: critic pending, a contact shee
 
 test("invented content on screen fails the critic, delivers nothing, and passes on the fix", () => {
   const fx = fixture();
-  rendered(
+  renderUnjudged(
     fx,
     SCRIPT.replace('"value": "code"', '"value": "ten times faster"'),
   );
@@ -695,7 +696,7 @@ test("invented content on screen fails the critic, delivers nothing, and passes 
 
 test("low scores with no hard failure pass the critic, the scores in the gates report", () => {
   const fx = fixture();
-  rendered(fx, SCRIPT);
+  renderUnjudged(fx, SCRIPT);
   critique(fx.dir, () => ({
     failures: [],
     scores: { clarity: 1, legibility: 2, fit: 1 },
@@ -724,7 +725,7 @@ test("the critic judges two rounds of one script at most: a third render carries
     SCRIPT.replace('"value": "code"', '"value": "some code"'),
   );
   assert.match(r2.out, /^gate critic: pass: .*round 2 of 2 vs /m);
-  const r3 = rendered(fx, SCRIPT);
+  const r3 = renderUnjudged(fx, SCRIPT);
   assert.equal(r3.code, 0, r3.out + r3.err);
   assert.match(
     r3.out,
@@ -733,22 +734,40 @@ test("the critic judges two rounds of one script at most: a third render carries
   assert.equal(calls(fx, "sheet").length, 6, "no sheets for the third render");
   assert.equal(record(fx).gates.critic.rounds.length, 2);
   // New narration is a new script: its critic starts at round 1.
-  const r4 = rendered(fx, SCRIPT.replace("Here is how.", "Here is why."));
+  const r4 = renderUnjudged(fx, SCRIPT.replace("Here is how.", "Here is why."));
   assert.match(r4.out, /^gate critic: pending: round 1 of 2, /m);
 });
 
-test("a malformed verdict stops the gates, naming the scene", () => {
+test("a malformed verdict stops the gates, naming the scene and what is wrong", () => {
   const fx = fixture();
-  rendered(fx, SCRIPT);
-  critique(fx.dir, (id) =>
-    id === "hook"
-      ? { failures: [{ kind: "ugly", what: "x" }], scores: CLEAN.scores }
-      : CLEAN,
-  );
-  const r = stage(fx, "render/render.mjs");
-  assert.equal(r.code, 1, r.out + r.err);
-  assert.match(
-    r.err,
-    /^gates: critic verdict hook\.json: failure 1 kind "ugly" is not unreadable or invented$/m,
-  );
+  renderUnjudged(fx, SCRIPT);
+  critique(fx.dir);
+  const hook = path.join(fx.dir, record(fx).gates.critic.sheets, "hook.json");
+  const scores = CLEAN.scores;
+  for (const [verdict, why] of [
+    ["{", /Expected property name|JSON/],
+    [{ scores }, /no failures list/],
+    [
+      { failures: [{ kind: "ugly", what: "x" }], scores },
+      /failure 1 kind "ugly" is not unreadable or invented/,
+    ],
+    [
+      { failures: [{ kind: "invented", what: " " }], scores },
+      /failure 1 says nothing/,
+    ],
+    [
+      { failures: [], scores: { ...scores, fit: 4.5 } },
+      /score fit is not a whole number 1 to 5/,
+    ],
+  ]) {
+    fs.writeFileSync(
+      hook,
+      typeof verdict === "string" ? verdict : JSON.stringify(verdict),
+    );
+    const r = stage(fx, "render/render.mjs");
+    assert.equal(r.code, 1, r.out + r.err);
+    const line = r.err.match(/^gates: critic verdict hook\.json: (.*)$/m);
+    assert.ok(line, r.err);
+    assert.match(line[1], why);
+  }
 });

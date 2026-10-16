@@ -44,8 +44,9 @@ Run it when the summary ends `next: run the critic`; a pending critic beside a
 red gate waits for that gate's fix, so no round is spent on a render the fix
 replaces.
 
-1. Dispatch one subagent per scene whose `<sheets>/<scene>.png` has no
-   `<sheets>/<scene>.json` beside it, all in one turn, each with
+1. Dispatch one subagent per scene whose `<run>/<sheets>/<scene>.png` has
+   no `<scene>.json` beside it (`<sheets>` is relative to the run folder,
+   `<run>`), all in one turn, each with
    `<skill>/agents/critic.md` as its prompt, `{run}` the run folder, `{scene}`
    the scene id and `{sheets}` the folder the pending line names. Each writes
    its verdict and replies with one `critic <scene>:` line. Never read a sheet

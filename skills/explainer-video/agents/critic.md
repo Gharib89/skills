@@ -23,8 +23,9 @@ Read the contact sheet with Read. In `script.json`, find the scene whose `id`
 is `{scene}`: its `narration` sentences, each sentence's `cites`, and its
 `visual`, the JSON of what the scene draws. Read each cited excerpt's `text` in
 `excerpts.json`. The captions along the bottom are the narration, and a header
-may carry the video's title. Judge what the sheet shows against these words
-alone: not the snapshots, not the source, not what you know about the subject.
+may carry the video's title; neither is ever `invented`. Judge the rest of the
+sheet against these words alone: not the snapshots, not the source, not what
+you know about the subject.
 
 ## Hard failures
 
