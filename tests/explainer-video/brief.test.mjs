@@ -162,6 +162,8 @@ test("changing one knob keeps the rest and names only the stages it feeds", () =
   r = brief(fx, ["score=off"]);
   assert.match(r.out, /^brief score: off$/m);
   assert.match(r.out, /^brief: score changed: redo render$/m);
+  r = brief(fx, ["score=ace-step"]);
+  assert.match(r.out, /^brief score: ace-step$/m);
   assert.ok(has("script.json") && has("check.json"));
 });
 
@@ -178,7 +180,7 @@ test("a value this version cannot make is refused and nothing is written", () =>
     ["style=nope", /^brief style nope: no style profile nope in /m],
     ["aspect=9:16", /^brief aspect 9:16: this version renders 16:9 only$/m],
     ["focus=", /^brief focus: empty$/m],
-    ["score=loud", /^brief score loud: on or off$/m],
+    ["score=loud", /^brief score loud: on, off or ace-step$/m],
   ]) {
     const r = brief(fx, [arg]);
     assert.equal(r.code, 1, arg);

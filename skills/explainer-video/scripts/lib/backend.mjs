@@ -6,7 +6,10 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { toolPaths } from "./tools.mjs";
 
@@ -447,11 +450,49 @@ export async function fontMeta(id) {
   return r.json();
 }
 
+// Streamed to disk: a checkpoint can outgrow what one buffer holds.
 export async function download(url, file) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-  fs.writeFileSync(file, Buffer.from(await r.arrayBuffer()));
+  await pipeline(Readable.fromWeb(r.body), fs.createWriteStream(file));
 }
+
+// A GitHub source archive into `dir`, its one top folder stripped.
+export async function extract(zip, dir) {
+  const JSZip = fromCache(toolPaths().node)("jszip");
+  const archive = await JSZip.loadAsync(fs.readFileSync(zip));
+  for (const f of Object.values(archive.files)) {
+    const rel = f.name.split("/").slice(1).join("/");
+    if (!rel || f.dir) continue;
+    const out = path.join(dir, ...rel.split("/"));
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, await f.async("nodebuffer"));
+  }
+}
+
+// A uv project's .venv from its own lockfile, exactly.
+export async function uvSync(dir) {
+  return (
+    spawnSync("uv", ["sync", "--frozen", "--no-dev"], {
+      cwd: dir,
+      stdio: quiet,
+    }).status ?? 1
+  );
+}
+
+// The first NVIDIA card's compute capability, as nvidia-smi reports it; null
+// with no card or no nvidia-smi.
+export async function computeCapability() {
+  const r = spawnSync(
+    "nvidia-smi",
+    ["--query-gpu=compute_cap", "--format=csv,noheader"],
+    { encoding: "utf8" },
+  );
+  const cap = parseFloat(r.stdout ?? "");
+  return r.status === 0 && cap ? cap : null;
+}
+
+export const memory = () => os.totalmem();
 
 export function which(cmd) {
   const exts = win

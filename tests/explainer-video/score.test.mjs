@@ -84,6 +84,27 @@ test("the same scene timings and seed make the same score, another seed another"
   assert.ok(!bytes(a).equals(bytes(c)), "another seed, other samples");
 });
 
+test("music made elsewhere (ACE-Step) takes the synth's place: set to the level, then ducked under speech", () => {
+  const n = 8 * 48000;
+  const square = Float32Array.from({ length: n }, (_, i) =>
+    i % 2 ? 0.3 : -0.3,
+  );
+  const r = score({
+    ...ARGS,
+    perMinute: 0,
+    music: { L: square, R: Float32Array.from(square) },
+  });
+  const rms = (t) => {
+    let e = 0;
+    const a = Math.round(t * 48000);
+    for (let i = a; i < a + 4800; i++) e += r.buf.L[i] ** 2;
+    return 20 * Math.log10(Math.sqrt(e / 4800));
+  };
+  near(rms(7.5), -28, "no narration: the level");
+  near(rms(5.4), -43, "under speech: 15 dB down");
+  assert.deepEqual(r.spec, { seed: 5 });
+});
+
 test("the score arranges one section per scene at the scene's start", () => {
   const r = score(ARGS);
   assert.deepEqual(

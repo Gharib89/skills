@@ -88,8 +88,19 @@ export function duck(scenes, total) {
 // dBFS RMS before the duck. roles: each scene's script role, if any.
 // perMinute: the sfx gate's floor; a cue is dropped when the minute ending at
 // it already holds that many, so no minute holds more.
-// Returns {buf, cues: [{type, t}], spec: {preset, seed, sections}}.
-export function score({ scenes, roles = [], total, seed, level, perMinute }) {
+// music: a 48 kHz stereo buffer `total` s long made elsewhere (ACE-Step),
+// levelled, ducked and given its effects in the synth's place.
+// Returns {buf, cues: [{type, t}], spec: {preset, seed, sections}}, spec
+// {seed} for given music.
+export function score({
+  scenes,
+  roles = [],
+  total,
+  seed,
+  level,
+  perMinute,
+  music,
+}) {
   const names = Object.keys(PRESETS);
   const preset = names[seed % names.length];
   const sections = scenes.map((sc, i) => ({
@@ -98,7 +109,7 @@ export function score({ scenes, roles = [], total, seed, level, perMinute }) {
       (i === 0 ? "intro" : i === scenes.length - 1 ? "outro" : "main"),
     start: sc.start,
   }));
-  const buf = renderMusic({ sections, total, preset, seed });
+  const buf = music ?? renderMusic({ sections, total, preset, seed });
   let e = 0;
   for (let i = 0; i < buf.L.length; i++) e += buf.L[i] ** 2 + buf.R[i] ** 2;
   D.gain(buf, D.db(level - D.toDb(Math.sqrt(e / (2 * buf.L.length)))));
@@ -118,5 +129,9 @@ export function score({ scenes, roles = [], total, seed, level, perMinute }) {
   ])
     if (cues.filter((k) => k.t > c.t - 60).length < perMinute) cues.push(c);
   D.mixInto(buf, renderSfx(cues, total, { seed, offset: level - SFX_BED }));
-  return { buf, cues, spec: { preset, seed, sections } };
+  return {
+    buf,
+    cues,
+    spec: music ? { seed } : { preset, seed, sections },
+  };
 }
