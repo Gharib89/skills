@@ -221,7 +221,7 @@ function view(S) {
   const lede = delivered ? 'The video is made. Each card plays its own stretch of it; nothing is left to answer.'
     : 'Check each scene: approve it or revise it, edit its narration right on the card, and change the brief if the whole video should differ. Then submit.';
   return `<div class="wrap">
-    <header class="hdr"><span class="label">explainer-video · board ${esc(b.version)}</span><h1>${esc(b.title)}</h1><p class="lede">${lede}</p>
+    <header class="hdr"><span class="label">explainer-video · board ${esc(b.version)}</span><h1 dir="auto">${esc(b.title)}</h1><p class="lede">${lede}</p>
       ${S.canEdit || delivered ? '' : '<p class="label">Only an editor of this page answers its boards.</p>'}</header>
     ${b.banner ? banner(b.banner) : ''}
     ${player(S, b)}
@@ -231,7 +231,7 @@ function view(S) {
   </div>${delivered ? '' : bar(S, b)}`;
 }
 function shell(S, text) {
-  return `<div class="wrap"><header class="hdr"><span class="label">explainer-video · board</span><h1>${esc(S.title)}</h1></header><p class="notice panel" role="status">${esc(text)}</p></div>`;
+  return `<div class="wrap"><header class="hdr"><span class="label">explainer-video · board</span><h1 dir="auto">${esc(S.title)}</h1></header><p class="notice panel" role="status">${esc(text)}</p></div>`;
 }
 function banner(x) {
   return `<div class="banner panel" role="alert"><b>${esc(x.text)}</b><pre>${x.gates.map(esc).join('\n')}</pre></div>`;
@@ -265,15 +265,15 @@ function card(S, b, c) {
   const media = delivered && c.clip
     ? `<video controls preload="none" src="${esc(mediaUrl(c.clip))}" poster="${esc(mediaUrl(c.still))}"></video>`
     : `<img alt="Still of scene ${esc(c.id)}" src="${esc(mediaUrl(c.still))}">`;
-  const body = `<div class="chead"><h3>${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ''}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
+  const body = `<div class="chead"><h3 dir="auto">${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ''}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
     ${media}
     <span class="style">${esc(c.style)}</span>
     <audio controls preload="none" src="${esc(mediaUrl(c.audio))}"></audio>
-    ${delivered ? `<p>${esc(c.narration).replace(/\n/g, '<br>')}</p>` : `<label class="field"><span class="label">Narration (edit to reword)</span>
-      <textarea rows="4" data-field="narration" data-id="${esc(c.id)}" ${dis}>${esc(d.narr[c.id])}</textarea></label>
+    ${delivered ? `<p dir="auto">${esc(c.narration).replace(/\n/g, '<br>')}</p>` : `<label class="field"><span class="label">Narration (edit to reword)</span>
+      <textarea dir="auto" rows="4" data-field="narration" data-id="${esc(c.id)}" ${dis}>${esc(d.narr[c.id])}</textarea></label>
     <fieldset class="choices"><legend class="label">Your answer</legend>${radio('approve', 'Approve')}${radio('revise', 'Revise')}</fieldset>
     <label class="field"><span class="label">Note (what to change, optional)</span>
-      <textarea rows="2" data-field="note" data-id="${esc(c.id)}" ${dis}>${esc(d.notes[c.id])}</textarea></label>`}`;
+      <textarea dir="auto" rows="2" data-field="note" data-id="${esc(c.id)}" ${dis}>${esc(d.notes[c.id])}</textarea></label>`}`;
   const cls = `card panel${S.playing === c.id ? ' playing' : ''}`;
   return c.status === 'approved' && !delivered
     ? `<details class="${cls}" id="card-${esc(c.id)}" data-card="${esc(c.id)}" data-state="approved"><summary>${esc(c.id)} · ${esc(c.title)} <span class="tag ok">Approved</span></summary>${body}</details>`

@@ -295,6 +295,12 @@ test("a board with kept terms shows each one editable, and an edited term reads 
   const v = P.view(S);
   assert.match(v, /data-kept="Ship" value="Ship"/);
   assert.match(v, /data-kept="pull request" value="pull request"/);
+  // An Arabic run's title, card titles, narration and notes read in their
+  // own direction, not the page's.
+  assert.match(v, /<h1 dir="auto">/);
+  assert.match(v, /<h3 dir="auto">/);
+  assert.match(v, /<textarea dir="auto" rows="4" data-field="narration"/);
+  assert.match(v, /<textarea dir="auto" rows="2" data-field="note"/);
   for (const id of ["hook", "steps", "gate"])
     P.ACT.choose(S, { id, choice: "approve" });
   P.ACT.kept(S, { term: "pull request", value: " PR " });
