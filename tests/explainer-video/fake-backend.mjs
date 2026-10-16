@@ -370,3 +370,24 @@ export async function docxHtml(file) {
 export async function unzip(file) {
   return JSON.parse(fs.readFileSync(file, "utf8")).parts;
 }
+
+// Each line's first word a keyword, the rest plain.
+export async function highlight(code, lang) {
+  log({ call: "highlight", lang });
+  return code.split("\n").map((l) => {
+    const [, word, rest] = l.match(/^(\S*)(.*)$/);
+    return [
+      { text: word, color: "var(--code-token-keyword)" },
+      { text: rest, color: "var(--code-foreground)" },
+    ].filter((t) => t.text);
+  });
+}
+
+// Path data that spells each shape's size and seed.
+export async function sketch(shapes) {
+  log({ call: "sketch", shapes });
+  return shapes.map((s) => ({
+    fill: s.rect ? `M0 0 H${s.rect[0]} V${s.rect[1]} H0 Z` : "",
+    stroke: `M0 0 L${s.seed % 997} ${s.rect?.[1] ?? 40}`,
+  }));
+}

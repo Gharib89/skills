@@ -8,7 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { SCRIPT } from "./scene-file.mjs";
+import { DIAGRAMS, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scripts = path.join(
@@ -309,6 +309,75 @@ for (const [name, from, to, why] of [
     assert.equal(r.code, 1, r.out + r.err);
     assert.match(r.err, why);
     assert.ok(!fs.existsSync(path.join(fx.dir, "script.json")));
+  });
+}
+
+test("the diagram and code components compile with their props", () => {
+  const fx = fixture(DIAGRAMS);
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    compiled(fx).scenes.map((s) => s.visual.component),
+    ["flow", "panels", "list", "code", "codediff"],
+  );
+});
+
+for (const [name, from, to, why] of [
+  [
+    "a flow of one step",
+    ', { "at": 2, "label": "Test", "note": "red" }, { "at": 3, "label": "Code", "note": "green" }',
+    "",
+    /^compile: flow: flow needs 2 to 5 steps/m,
+  ],
+  [
+    "a flow step with no label",
+    '"label": "Issue"',
+    '"name": "Issue"',
+    /^compile: flow: flow needs a label per step/m,
+  ],
+  [
+    "a panel with no body",
+    '"body": "Untouched until the merge"',
+    '"text": "Untouched"',
+    /^compile: sides: panels needs a body per item/m,
+  ],
+  [
+    "a list item at a sentence past the last",
+    '{ "at": 2, "text": "Run every test" }',
+    '{ "at": 3, "text": "Run every test" }',
+    /^compile: gates: at 3 is not a sentence \(1 to 2\)/m,
+  ],
+  [
+    "code with no language",
+    '"lang": "bash", ',
+    "",
+    /^compile: code: code needs a lang/m,
+  ],
+  [
+    "code longer than the frame",
+    '"code": "set -euo pipefail\\nscripts/check.sh full"',
+    `"code": "${"x\\n".repeat(12)}x"`,
+    /^compile: code: code runs 13 lines; a frame holds 12/m,
+  ],
+  [
+    "a highlight past the code's last line",
+    '"lines": [2, 2]',
+    '"lines": [2, 3]',
+    /^compile: code: highlight lines 2 to 3 are not lines of the code \(1 to 2\)/m,
+  ],
+  [
+    "a diff with no after",
+    '"after": ',
+    '"later": ',
+    /^compile: diff: codediff needs an after/m,
+  ],
+]) {
+  test(`compile refuses ${name}, naming what to fix`, () => {
+    assert.ok(DIAGRAMS.includes(from), from);
+    const fx = fixture(DIAGRAMS.replace(from, to));
+    const r = run(fx);
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.match(r.err, why);
   });
 }
 

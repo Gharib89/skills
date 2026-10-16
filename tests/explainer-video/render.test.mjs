@@ -15,7 +15,7 @@ import {
   dest,
   lockHash,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
-import { SCRIPT } from "./scene-file.mjs";
+import { DIAGRAMS, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
@@ -630,6 +630,146 @@ for (const [name, arrange, why, voiced = true] of [
         assert.equal(stage(fx, s).code, 0, s);
     arrange(fx);
     const r = stage(fx, "render/render.mjs");
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.match(r.err, why);
+    assert.equal(calls(fx).length, 0);
+  });
+}
+
+// A scene file's tweens: [selector, from, to, seconds into the scene].
+const tweens = (fx, id) =>
+  JSON.parse(
+    comp(fx, `scenes/${id}.html`).match(/const tweens = (\[.*\]);/)[1],
+  );
+const at = (fx, id, n) => {
+  const s = JSON.parse(read(fx.dir, "timeline.json")).scenes.find(
+    (s) => s.id === id,
+  );
+  return s.sentences[n - 1] - s.start;
+};
+const near = (a, b) => Math.abs(a - b) < 0.002;
+const profiled = (fx, name, extra) =>
+  put(
+    path.join(fx.tmp, "proj", "explainers", ".styles"),
+    `${name}.json`,
+    JSON.stringify({
+      ...JSON.parse(read(skill, "styles", "claude-code.json")),
+      ...extra,
+    }),
+  );
+
+test("each diagram and code component composes onto its scene's paused timeline, each reveal at its sentence, nothing on the clock", () => {
+  const fx = fixture(DIAGRAMS);
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  for (const id of ["flow", "sides", "gates", "code", "diff"]) {
+    const html = comp(fx, `scenes/${id}.html`);
+    assert.doesNotMatch(
+      html,
+      /transition|animation|@keyframes|setTimeout|setInterval|requestAnimationFrame|Date\.now|performance\.now|Math\.random/,
+      id,
+    );
+    assert.match(html, /gsap\.timeline\(\{ paused: true \}\)/, id);
+    assert.ok(tweens(fx, id).length, id);
+  }
+
+  const flow = comp(fx, "scenes/flow.html");
+  assert.equal([...flow.matchAll(/class="node /g)].length, 3);
+  assert.equal([...flow.matchAll(/class="arrow /g)].length, 2);
+  const steps = tweens(fx, "flow").filter(([s]) => /^\.n\d$/.test(s));
+  assert.deepEqual(
+    steps.map(([s, , , t]) => [s, near(t, at(fx, "flow", +s.slice(2) + 1))]),
+    [
+      [".n0", true],
+      [".n1", true],
+      [".n2", true],
+    ],
+  );
+  // draw: the arrow into a step strokes on as that step rises.
+  const drawn = tweens(fx, "flow").filter(([, f]) => "strokeDashoffset" in f);
+  assert.equal(drawn.length, 2);
+  assert.ok(near(drawn[1][3], at(fx, "flow", 3)));
+
+  for (const id of ["flow", "sides", "gates"])
+    assert.match(comp(fx, `scenes/${id}.html`), /class="content" dir="ltr"/);
+
+  // Shiki colours each token from the profile's palette; code stays left to
+  // right whatever the scene's direction.
+  const code = comp(fx, "scenes/code.html");
+  // (the critic's round renders a second time)
+  assert.deepEqual(
+    calls(fx, "highlight")
+      .slice(0, 3)
+      .map((c) => c.lang),
+    ["bash", "js", "js"],
+  );
+  assert.match(code, /<span style="color:var\(--code-[a-z-]+\)">/);
+  assert.match(code, /--code-token-keyword: var\(--accent\);/);
+  assert.match(code, /class="code rt" dir="ltr"/);
+  const bar = tweens(fx, "code").find(([s]) => s === ".hl0");
+  assert.ok(near(bar[3], at(fx, "code", 2)));
+
+  // The diff: the removed line closes and the added one opens at sentence 2,
+  // by tweens on the timeline, the kept lines untouched.
+  const diff = tweens(fx, "diff");
+  const del = diff.filter(([s]) => s.startsWith(".del"));
+  const add = diff.filter(([s]) => s.startsWith(".add"));
+  assert.equal(del.length, 1);
+  assert.equal(add.length, 1);
+  assert.equal(del[0][2].height, 0);
+  assert.equal(add[0][1].height, 0);
+  for (const [, , , t] of [...del, ...add])
+    assert.ok(near(t, at(fx, "diff", 2)), String(t));
+  const rows = comp(fx, "scenes/diff.html");
+  assert.match(rows, /class="ln del del0">.*a - b;/);
+  assert.match(rows, /class="ln add add0">.*a \+ b;/);
+});
+
+test("a seeded sketch renders identically twice, each outline at its own seed", () => {
+  const twice = [0, 1].map(() => {
+    const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: rough"));
+    profiled(fx, "rough", { look: "sketch" });
+    const r = render(fx);
+    assert.equal(r.code, 0, r.out + r.err);
+    return {
+      scenes: ["flow", "sides"].map((id) => comp(fx, `scenes/${id}.html`)),
+      seeds: calls(fx, "sketch").flatMap((c) => c.shapes.map((s) => s.seed)),
+    };
+  });
+  assert.deepEqual(twice[0], twice[1]);
+  for (const s of twice[0].scenes) assert.match(s, /<svg class="sk"/);
+  // three nodes, two arrows and two panels, each at its own seed
+  assert.equal(new Set(twice[0].seeds).size, 7);
+  assert.ok(twice[0].seeds.every((s) => Number.isInteger(s) && s > 0));
+});
+
+test("a profile that disallows an effect keeps it out of the composition", () => {
+  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
+  profiled(fx, "plain", { effects: [] });
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.ok(!tweens(fx, "flow").some(([, f]) => "strokeDashoffset" in f));
+  assert.doesNotMatch(comp(fx, "scenes/flow.html"), /stroke-dasharray/);
+  assert.ok(!tweens(fx, "code").some(([s]) => s.startsWith(".hl")));
+  assert.doesNotMatch(comp(fx, "scenes/code.html"), /class="hl /);
+});
+
+for (const [name, extra, why] of [
+  [
+    "an unknown effect",
+    { effects: ["draw", "confetti"] },
+    /^render: style profile odd: effects: confetti is not an effect \(draw, highlight\)/m,
+  ],
+  [
+    "an unknown look",
+    { look: "neon" },
+    /^render: style profile odd: look neon is not clean or sketch/m,
+  ],
+]) {
+  test(`a profile naming ${name} refuses the run by name before any render`, () => {
+    const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: odd"));
+    profiled(fx, "odd", extra);
+    const r = render(fx);
     assert.equal(r.code, 1, r.out + r.err);
     assert.match(r.err, why);
     assert.equal(calls(fx).length, 0);

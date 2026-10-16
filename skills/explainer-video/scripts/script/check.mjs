@@ -23,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { skill } from "../lib/tools.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { VISUALS } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
@@ -234,17 +235,7 @@ let red = false;
     return !n ? 0 : n <= 3 ? 0.8 : Math.max(1.2, 0.3 * n);
   };
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {
-    const p = s.visual.props;
-    const items =
-      s.visual.component === "title"
-        ? [["title", 1, [p.kicker, p.title, p.subtitle]]]
-        : s.visual.component === "cards"
-          ? p.items.map((x, i) => [
-              `item ${i + 1}`,
-              x.at,
-              [x.label, x.value, x.note],
-            ])
-          : p.lines.map((x, i) => [`line ${i + 1}`, x.at, [x.text]]);
+    const items = VISUALS[s.visual.component].items(s.visual.props);
     const total = s.counts.reduce((a, b) => a + b, 0);
     for (const [name, at, texts] of items) {
       const after = s.counts.slice(at - 1).reduce((a, b) => a + b, 0);

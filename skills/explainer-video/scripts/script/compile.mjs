@@ -20,6 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { CUE_CHARS } from "../render/compose.mjs";
+import { checkVisual } from "../lib/visuals.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -149,42 +150,6 @@ function sentence(raw, id) {
   return { narration: said.join(" "), captions, cites };
 }
 
-// What each component's props must hold; `at` names a sentence by number.
-function check(visual, n, id) {
-  const object = (x, what) => {
-    if (x === null || typeof x !== "object" || Array.isArray(x))
-      fail(id, `${what} is not a JSON object`);
-  };
-  object(visual, "visual");
-  const p = visual.props ?? {};
-  const at = (x) => {
-    if (!Number.isInteger(x.at) || x.at < 1 || x.at > n)
-      fail(id, `at ${x.at} is not a sentence (1 to ${n})`);
-  };
-  const text = (v, what) => {
-    if (typeof v !== "string") fail(id, `${visual.component} needs ${what}`);
-  };
-  if (visual.component === "title") text(p.title, "a title");
-  else if (visual.component === "cards") {
-    if (!Array.isArray(p.items) || !p.items.length)
-      fail(id, "cards needs items");
-    for (const x of p.items) {
-      object(x, "a cards item");
-      at(x);
-      text(x.label, "a label per item");
-      text(x.value, "a value per item");
-    }
-  } else if (visual.component === "terminal") {
-    if (!Array.isArray(p.lines) || !p.lines.length)
-      fail(id, "terminal needs lines");
-    for (const x of p.lines) {
-      object(x, "a terminal line");
-      at(x);
-      text(x.text, "a text per line");
-    }
-  } else fail(id, `unknown component ${visual.component}`);
-}
-
 const compiled = scenes.map((s) => {
   if (!s.sentences.length) fail(s.id, "no narration");
   if (s.visual === null) fail(s.id, "no ```json visual block");
@@ -194,7 +159,11 @@ const compiled = scenes.map((s) => {
   } catch (e) {
     fail(s.id, `visual is not JSON: ${e.message}`);
   }
-  check(visual, s.sentences.length, s.id);
+  try {
+    checkVisual(visual, s.sentences.length);
+  } catch (e) {
+    fail(s.id, e.message);
+  }
   const parts = s.sentences.map((x) => sentence(x, s.id));
   return {
     id: s.id,

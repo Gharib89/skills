@@ -53,6 +53,28 @@ export function floors(profile) {
   return out;
 }
 
+// The effects a profile may allow, each a GSAP tween in the composition:
+// effects come only from commercial-safe sources (GSAP, Lottie,
+// gl-transitions). `draw` strokes a flow's arrows on; `highlight` marks the code
+// lines a sentence names. A profile with no `effects` allows none.
+export const EFFECTS = ["draw", "highlight"];
+export const LOOKS = ["clean", "sketch"];
+
+// The profile's look and effects, refused by name when unknown.
+function features(profile) {
+  const refuse = (why) => {
+    throw new Error(`style profile ${profile.name}: ${why}`);
+  };
+  const look = profile.look ?? "clean";
+  if (!LOOKS.includes(look))
+    refuse(`look ${look} is not ${LOOKS.join(" or ")}`);
+  const effects = profile.effects ?? [];
+  if (!Array.isArray(effects)) refuse("effects is not a list");
+  for (const e of effects)
+    if (!EFFECTS.includes(e))
+      refuse(`effects: ${e} is not an effect (${EFFECTS.join(", ")})`);
+}
+
 // Body text sits on every surface; large or faint text (captions before their
 // word, accents, status colours) never on the label chip.
 const ROLES = [
@@ -147,6 +169,7 @@ export function loadStyle(run, name, dirs = userDirs()) {
       `style profile ${profile.name} fails contrast: ${bad.join("; ")}`,
     );
   floors(profile);
+  features(profile);
   fs.writeFileSync(own, JSON.stringify(profile, null, 2) + "\n");
   return profile;
 }
