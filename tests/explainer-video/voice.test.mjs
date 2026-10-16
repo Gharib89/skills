@@ -351,6 +351,33 @@ test("a Gemini narrator with no GEMINI_API_KEY is refused with where to get one,
   }
 });
 
+test("a narrator who does not speak the script's language is refused before any synthesis", () => {
+  const fx = fixture(AR_SCENES, "ar");
+  fs.writeFileSync(
+    path.join(fx.dir, "script.json"),
+    JSON.stringify({ language: "ar", narrator: "bf_emma", scenes: AR_SCENES }),
+  );
+  const r = run(fx, KEY);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^voice: no narrator bf_emma for ar$/m);
+  assert.equal(synths(fx).length, 0);
+});
+
+test("two changed scenes with the same narration cost one Gemini call on a rerun", () => {
+  const fx = fixture(AR_SCENES, "ar");
+  assert.equal(run(fx, KEY).code, 0);
+  const changed = structuredClone(AR_SCENES);
+  changed[0].narration = changed[2].narration = [
+    "كل تغيير بيعدي على review قبل الـ merge.",
+  ];
+  write(fx, changed, "ar");
+  const r = run(fx, KEY);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(synths(fx).length, 2);
+  assert.match(line(r.out, "hook"), /: voiced ·.*· pass$/);
+  assert.match(line(r.out, "recap"), /: voiced ·.*· pass$/);
+});
+
 test("an English script with GEMINI_API_KEY set still voices on Kokoro", () => {
   const fx = fixture();
   const r = run(fx, KEY);

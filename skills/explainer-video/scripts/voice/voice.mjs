@@ -46,10 +46,10 @@ const language = script.language ?? "en";
 const narrators = JSON.parse(
   fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
 ).narrators;
-const narrator = narrators.find((n) =>
-  script.narrator
-    ? n.id === script.narrator
-    : n.language === language && n.default,
+const narrator = narrators.find(
+  (n) =>
+    n.language === language &&
+    (script.narrator ? n.id === script.narrator : n.default),
 );
 if (!narrator) {
   console.error(
@@ -176,8 +176,14 @@ if (
   );
   process.exit(1);
 }
+// A repeat of a missing scene's narration takes its entry rather than a call
+// of its own, which on Gemini is a request off the quota.
 const groups =
-  missing.length === scenes.length ? [missing] : missing.map((s) => [s]);
+  missing.length === scenes.length
+    ? [missing]
+    : missing
+        .filter((s, i) => missing.findIndex((m) => m.key === s.key) === i)
+        .map((s) => [s]);
 let failed = 0;
 // Scenes with the same narration share a cache key and so one WAV: the first
 // slice voiced is the one written, and a repeat takes its entry.
@@ -208,6 +214,7 @@ try {
       );
       kept++;
     }
+  for (const s of missing) s.voiced ??= byKey.get(s.key);
 } catch (e) {
   // Each group is cached as it passes, so a rerun voices only what is missing.
   if (e.quota)
