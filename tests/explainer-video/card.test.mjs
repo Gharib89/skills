@@ -597,6 +597,71 @@ test("Use once writes the draft to the run's style.json and no store; the run ke
   );
 });
 
+test("a draft carrying a family it fetched builds with it, offers it, and shows the font it replaced", () => {
+  const row = {
+    id: "font:noto-serif",
+    kind: "font",
+    family: "noto-serif",
+    class: "serif",
+    version: "5.3.0",
+    files: ["latin-600-normal"],
+    licence: "OFL-1.1",
+  };
+  const fx = fixture({
+    type: {
+      ...json(skill, "styles", "itworx.json").type,
+      title: {
+        font: "noto-serif",
+        weight: 600,
+        mark: "replaced",
+        was: "Georgia",
+        why: "a transitional serif like Georgia",
+      },
+    },
+    fonts: [row],
+  });
+  const store = dest(
+    row,
+    userDirs({ platform: "linux", env: fx.env, home: fx.env.HOME }),
+  );
+  fs.mkdirSync(store, { recursive: true });
+  fs.writeFileSync(path.join(store, ".stamp"), "");
+  fs.writeFileSync(path.join(store, "latin-600-normal.woff2"), "woff2");
+  built(fx);
+  const c = latestCard(fx);
+  assert.ok(c.families.includes("noto-serif"));
+  assert.deepEqual(
+    c.type.find((x) => x.role === "title"),
+    {
+      role: "title",
+      font: "noto-serif",
+      mark: "replaced",
+      why: "a transitional serif like Georgia",
+    },
+  );
+  assert.ok(
+    c.fonts.some((f) => f.file === "noto-serif-latin-600-normal.woff2"),
+  );
+  const r = answer(
+    fx,
+    "explainer-video: style card 1 answers (database document answers/card-1)\nChoice: Save\nName: acme\nFont text: noto-serif\n",
+  );
+  assert.equal(r.code, 0, r.err);
+  // The draft fetched noto-serif at 600 only, so text takes that weight.
+  assert.deepEqual(json(fx.dir, "style-draft", "acme.json").type.text, {
+    weight: 600,
+    font: "noto-serif",
+    mark: "edited",
+    why: "edited on the style card",
+  });
+  assert.deepEqual(json(fx.dir, "style-draft", "acme.json").type.arText, {
+    font: "noto-naskh-arabic",
+    weight: 400,
+    mark: "derived",
+    why: "the serif companion of noto-serif",
+  });
+});
+
 test("edits go into the draft, marked, and need the next version; answers to an old version are refused", () => {
   const fx = fixture();
   built(fx);
@@ -618,6 +683,14 @@ test("edits go into the draft, marked, and need the next version; answers to an 
     why: "edited on the style card",
   });
   assert.equal(draft.type.title.font, "inter");
+  assert.equal(draft.type.title.mark, "edited");
+  // A sans title takes the sans Arabic companion.
+  assert.deepEqual(draft.type.arTitle, {
+    font: "ibm-plex-sans-arabic",
+    weight: 600,
+    mark: "derived",
+    why: "the sans companion of inter",
+  });
   built(fx);
   const c = latestCard(fx);
   assert.equal(c.version, 2);

@@ -34,14 +34,24 @@ import path from "node:path";
 import { judge } from "../lib/layout.mjs";
 import { userDirs } from "../lib/paths.mjs";
 import { recordAssets } from "../lib/runfolder.mjs";
-import { ROLES, floors, saveScope, validate } from "../lib/style.mjs";
+import {
+  ARABIC,
+  COMPANION,
+  ROLES,
+  floors,
+  saveScope,
+  validate,
+} from "../lib/style.mjs";
 import {
   catalogue,
   compositionAssets,
   dest,
+  fontRow,
   hyperframesEnv,
   loadBackend,
+  nearest,
   skill,
+  weights,
 } from "../lib/tools.mjs";
 import { esc, framePage, sceneFile, stillsPage } from "../render/compose.mjs";
 
@@ -105,10 +115,14 @@ const scope = args.includes("--project")
   ? "project"
   : saveScope(skill, os.homedir());
 const store = storeOf(scope);
-const families = () =>
-  catalogue()
-    .filter((r) => r.kind === "font")
-    .map((r) => r.family);
+// The families a role can take: setup's, and those the draft fetched.
+const families = () => [
+  ...new Set(
+    [...catalogue(), ...(draft.fonts ?? [])]
+      .filter((r) => r.kind === "font")
+      .map((r) => r.family),
+  ),
+];
 
 if (!fs.existsSync(draftFile))
   fail(`no ${draftFile}: run style/draft.mjs first`);
@@ -188,7 +202,7 @@ if (cmd === "apply") {
     if (!LATIN.includes(r)) fail(`no type role ${r} on the card`);
     if (!families().includes(font))
       fail(
-        `font ${font} for ${r} is not one setup installs (${families().join(", ")})`,
+        `font ${font} for ${r} is not one setup installs or the draft fetched (${families().join(", ")})`,
       );
   }
   write(at(`answers-${n}.json`), {
@@ -214,8 +228,25 @@ if (cmd === "apply") {
       };
       draft.colors[t] = hex.toLowerCase();
     }
-    for (const [r, font] of Object.entries(type))
-      draft.type[r] = { ...draft.type[r], font };
+    // The weight the family holds nearest the role's: a family the draft
+    // fetched holds only the weights its roles took.
+    for (const [r, font] of Object.entries(type)) {
+      draft.type[r] = {
+        weight: nearest(draft.type[r]?.weight, weights(fontRow(draft, font))),
+        font,
+        mark: "edited",
+        why: "edited on the style card",
+      };
+      const ar = ARABIC[r];
+      const cls = fontRow(draft, font).class;
+      if (ar)
+        draft.type[ar] = {
+          ...draft.type[ar],
+          font: COMPANION[cls],
+          mark: "derived",
+          why: `the ${cls} companion of ${font}`,
+        };
+    }
   }
   draft.name = a.name;
   try {
@@ -275,7 +306,7 @@ try {
 const rows = catalogue();
 const fontRows = [...new Set(LATIN.map((r) => draft.type?.[r]?.font))].map(
   (font) =>
-    rows.find((r) => r.kind === "font" && r.family === font) ??
+    fontRow(draft, font) ??
     fail(`the draft names font ${font}, which no setup row installs`),
 );
 for (const r of [
@@ -465,7 +496,10 @@ const doc = {
     tokens: r.tokens,
     on: r.on,
   })),
-  type: ROLE_NAMES.map((role) => ({ role, font: draft.type[role].font })),
+  type: ROLE_NAMES.map((role) => {
+    const { font, mark, why } = draft.type[role];
+    return { role, font, ...(mark && { mark, why }) };
+  }),
   families: families(),
   fonts: fonts.map((f, i) => ({
     file: f.file,

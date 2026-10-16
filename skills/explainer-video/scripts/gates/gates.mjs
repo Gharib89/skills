@@ -105,9 +105,10 @@ const cues = [
 // everything that draws its frames, every floor that judges them, and the
 // code that draws, measures and judges: the root page's composer, this file,
 // the probe and the contrast maths.
-const inputs = renderInputs([
-  ...new Set(["title", "text", "code"].map((r) => profile.type[r].font)),
-]);
+const inputs = renderInputs(
+  [...new Set(["title", "text", "code"].map((r) => profile.type[r].font))],
+  profile,
+);
 const source = [
   "../render/compose.mjs",
   "gates.mjs",

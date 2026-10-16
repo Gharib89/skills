@@ -122,7 +122,15 @@ test("a website's declared colours count only where its pages show them, and a d
     "https://acme.test/": {
       pages: [SLIDE, SLIDE],
       colors: ["#cc6c55", "#00ff00"],
-      fonts: ["Source Serif 4"],
+      fonts: [
+        {
+          role: "text",
+          stack: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+        },
+        { role: "title", stack: "'Source Serif 4', serif" },
+        { role: "title", stack: "'Source Serif 4', serif" },
+        { role: "text", stack: "system-ui" },
+      ],
     },
   });
   const r = node("measure.mjs", [run, "https://acme.test/"], env);
@@ -140,7 +148,12 @@ test("a website's declared colours count only where its pages show them, and a d
     declared: true,
   });
   assert.ok(![...c.surfaces, ...c.accents].some((x) => x.hex === "#00ff00"));
-  assert.deepEqual(c.fonts, ["Source Serif 4"]);
+  // Each family keeps the role it plays and its stack's generic family; a
+  // stack naming only a generic declares no family.
+  assert.deepEqual(c.fonts, [
+    { family: "Helvetica Neue", role: "text", generic: "sans-serif" },
+    { family: "Source Serif 4", role: "title", generic: "serif" },
+  ]);
   assert.match(
     r.stdout,
     /^style declared #00ff00: not in the reference images, dropped$/m,
@@ -159,6 +172,7 @@ test("a website's declared colours count only where its pages show them, and a d
       bg: { candidate: "s1", why: "ground" },
       text: { candidate: "s3", why: "text" },
       accent: { candidate: "a1", why: "the declared brand colour" },
+      fonts: { "Helvetica Neue": { font: "inter", why: "a neutral sans" } },
     }),
   );
   const d = node("draft.mjs", [run, "acme"], env);
@@ -259,7 +273,10 @@ test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", ()
   assert.equal(both.status, 0, both.stderr);
   const c = candidates(run);
   assert.equal(c.accents[0].hex, "#cc6c55");
-  assert.deepEqual(c.fonts, ["Georgia", "Inter"]);
+  assert.deepEqual(c.fonts, [
+    { family: "Georgia", role: "title" },
+    { family: "Inter", role: "text" },
+  ]);
   assert.match(
     both.stdout,
     /^style declared #000000: not in the reference images, dropped$/m,
@@ -460,4 +477,203 @@ test("a role names a candidate id, never a colour, and bg and text are required"
   );
   assert.ok(!fs.existsSync(path.join(run, "style-draft", "acme.json")));
   assert.ok(fs.existsSync(path.join(run, "style-draft", "refs")));
+});
+
+// A site declaring the given font stacks, measured, with bg and text assigned;
+// `roles(more)` rewrites roles.json with `more` beside them.
+function fontRun(fonts) {
+  const f = fixture();
+  f.env.EXPLAINER_VIDEO_FAKE_SITE = JSON.stringify({
+    "https://acme.test/": { pages: [SLIDE], colors: [], fonts },
+  });
+  const r = node("measure.mjs", [f.run, "https://acme.test/"], f.env);
+  assert.equal(r.status, 0, r.stderr);
+  f.roles = (more) =>
+    fs.writeFileSync(
+      path.join(f.run, "style-draft", "roles.json"),
+      JSON.stringify({
+        bg: { candidate: "s1", why: "ground" },
+        text: { candidate: "s3", why: "text" },
+        ...more,
+      }),
+    );
+  f.roles();
+  f.out = path.join(f.run, "style-draft", "acme.json");
+  f.draft = () => node("draft.mjs", [f.run, "acme"], f.env);
+  f.profile = () => JSON.parse(fs.readFileSync(f.out, "utf8"));
+  return f;
+}
+
+const BUNDLED = JSON.parse(
+  fs.readFileSync(
+    path.join(scripts, "..", "..", "styles", "claude-code.json"),
+    "utf8",
+  ),
+);
+
+test("a declared family Fontsource holds under an admitted licence plays its role, fetched into the font store", () => {
+  const f = fontRun([
+    { role: "title", stack: "'Noto Serif', Georgia, serif" },
+    { role: "text", stack: "Inter, sans-serif" },
+  ]);
+  const r = f.draft();
+  assert.equal(r.status, 0, r.stderr);
+  const p = f.profile();
+  assert.deepEqual(p.type.title, {
+    font: "noto-serif",
+    weight: 600,
+    mark: "measured",
+    why: "the source's title font, OFL-1.1",
+  });
+  assert.deepEqual(p.type.text, {
+    font: "inter",
+    weight: 400,
+    mark: "measured",
+    why: "the source's text font, OFL-1.1",
+  });
+  assert.deepEqual(p.type.code, BUNDLED.type.code);
+  assert.deepEqual(p.type.arTitle, {
+    font: "noto-naskh-arabic",
+    weight: 600,
+    mark: "derived",
+    why: "the serif companion of noto-serif",
+  });
+  assert.equal(p.type.arText.font, "ibm-plex-sans-arabic");
+  // Inter is a catalogue family; Noto Serif is not, so the draft carries its
+  // row.
+  assert.deepEqual(p.fonts, [
+    {
+      id: "font:noto-serif",
+      kind: "font",
+      family: "noto-serif",
+      class: "serif",
+      version: "5.3.0",
+      files: ["latin-600-normal"],
+      licence: "OFL-1.1",
+    },
+  ]);
+  const dir = dest(
+    p.fonts[0],
+    userDirs({ platform: "linux", env: f.env, home: f.env.HOME }),
+  );
+  assert.ok(fs.existsSync(path.join(dir, ".stamp")));
+  assert.ok(fs.existsSync(path.join(dir, "latin-600-normal.woff2")));
+  const downloads = fs
+    .readFileSync(f.env.EXPLAINER_VIDEO_FAKE_LOG, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => JSON.parse(l))
+    .filter((l) => l.call === "download")
+    .map((l) => l.url);
+  assert.deepEqual(downloads, [
+    "https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@5.3.0/latin-600-normal.woff2",
+  ]);
+  assert.equal(loads(f.out, "acme").name, "acme");
+  assert.match(
+    r.stdout,
+    /^style type title: noto-serif · measured · the source's title font, OFL-1\.1$/m,
+  );
+});
+
+test("a draft fetching another weight of a family keeps the weight an earlier draft fetched", () => {
+  const f = fontRun([{ role: "title", stack: "'Noto Serif', serif" }]);
+  assert.equal(f.draft().status, 0);
+  f.env.EXPLAINER_VIDEO_FAKE_SITE = JSON.stringify({
+    "https://acme.test/": {
+      pages: [SLIDE],
+      colors: [],
+      fonts: [{ role: "text", stack: "'Noto Serif', serif" }],
+    },
+  });
+  assert.equal(
+    node("measure.mjs", [f.run, "https://acme.test/"], f.env).status,
+    0,
+  );
+  f.roles();
+  const r = f.draft();
+  assert.equal(r.status, 0, r.stderr);
+  const dir = dest(
+    f.profile().fonts[0],
+    userDirs({ platform: "linux", env: f.env, home: f.env.HOME }),
+  );
+  assert.deepEqual(fs.readdirSync(dir).sort(), [
+    ".stamp",
+    "latin-400-normal.woff2",
+    "latin-600-normal.woff2",
+  ]);
+});
+
+test("a family Fontsource cannot hold is replaced by the admitted family roles.json names, of the same class", () => {
+  const f = fontRun([
+    { role: "title", stack: "Georgia" },
+    { role: "text", stack: '"Helvetica Neue", Arial, sans-serif' },
+  ]);
+  const refused = (fonts, why) => {
+    f.roles({ fonts });
+    const r = f.draft();
+    assert.equal(r.status, 1, r.stdout);
+    assert.match(r.stderr, why);
+    assert.ok(!fs.existsSync(f.out));
+  };
+  refused(
+    {},
+    /^style font Helvetica Neue: not on Fontsource: name an admitted replacement in roles\.json `fonts`/m,
+  );
+  const sans = { font: "open-sans", why: "the nearest neutral sans" };
+  refused(
+    { "Helvetica Neue": sans, Georgia: { font: "noto-serif", why: "x" } },
+    /^style font Georgia: its stack names no generic family: give its class/m,
+  );
+  refused(
+    {
+      "Helvetica Neue": { font: "noto-serif", why: "x" },
+      Georgia: { font: "noto-serif", class: "serif", why: "x" },
+    },
+    /^style font Helvetica Neue: noto-serif is serif, the source's is sans$/m,
+  );
+  refused(
+    {
+      "Helvetica Neue": { font: "ubuntu", why: "x" },
+      Georgia: { font: "noto-serif", class: "serif", why: "x" },
+    },
+    /^style font Helvetica Neue: ubuntu has licence UFL-1\.0, only OFL-1\.1 or Apache-2\.0$/m,
+  );
+
+  f.roles({
+    fonts: {
+      "Helvetica Neue": sans,
+      Georgia: {
+        font: "noto-serif",
+        class: "serif",
+        why: "a transitional serif like Georgia",
+      },
+    },
+  });
+  const r = f.draft();
+  assert.equal(r.status, 0, r.stderr);
+  const p = f.profile();
+  assert.deepEqual(p.type.text, {
+    font: "open-sans",
+    weight: 400,
+    mark: "replaced",
+    was: "Helvetica Neue",
+    why: "the nearest neutral sans",
+  });
+  assert.equal(p.type.title.was, "Georgia");
+  assert.equal(p.type.arTitle.font, "noto-naskh-arabic");
+  assert.equal(p.type.arText.font, "ibm-plex-sans-arabic");
+  assert.deepEqual(
+    p.fonts.map((r) => r.id),
+    ["font:noto-serif", "font:open-sans"],
+  );
+});
+
+test("a source declaring no family keeps the bundled type roles", () => {
+  const f = fontRun([{ role: "text", stack: "system-ui, sans-serif" }]);
+  const r = f.draft();
+  assert.equal(r.status, 0, r.stderr);
+  const p = f.profile();
+  assert.deepEqual(p.type, BUNDLED.type);
+  assert.ok(!("fonts" in p));
+  assert.doesNotMatch(r.stdout, /^style type/m);
 });

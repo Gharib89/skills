@@ -89,6 +89,7 @@ textarea:disabled, input:disabled, select:disabled { opacity: .6; }
 .row input[type="color"] { width: 2.4rem; height: 2rem; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: none; cursor: pointer; }
 .row .why { font-size: 13px; color: var(--fg-body); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; }
 .trow { display: grid; grid-template-columns: 7rem 1fr; gap: 8px 12px; align-items: center; }
+.trow .why { grid-column: 2; }
 .fails { margin: 0; padding: 10px 12px; list-style: none; font: 12px/1.6 var(--f-mono); border-radius: var(--r-sm); border-left: 3px solid var(--danger); background: var(--page); }
 .ok-line { font-size: 14px; color: var(--ok); }
 .choices { border: 0; margin: 0; padding: 0; display: flex; gap: 16px; flex-wrap: wrap; }
@@ -112,6 +113,7 @@ textarea:disabled, input:disabled, select:disabled { opacity: .6; }
   .row { grid-template-columns: 6rem 2.4rem 1fr; }
   .row .why { grid-column: 1 / -1; }
   .trow { grid-template-columns: 1fr; }
+  .trow .why { grid-column: 1; }
 }
 </style>
 
@@ -274,10 +276,11 @@ function palettePanel(S, c) {
 }
 function typePanel(S, c) {
   const d = draftOf(S), dis = locked(S) ? 'disabled' : '';
+  const why = x => x.mark ? `<span class="why"><span class="tag">${esc(x.mark)}</span><span>${esc(x.why)}</span></span>` : '';
   return `<section class="edit panel"><h2>Type</h2><div class="rows">${c.type.map(x => LATIN.includes(x.role)
     ? `<label class="trow"><span class="label">${esc(x.role)}</span><select id="font-${esc(x.role)}" data-font="${esc(x.role)}" ${dis}>${c.families.map(f =>
-      `<option value="${esc(f)}" ${d.type[x.role] === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></label>`
-    : `<div class="trow"><span class="label">${esc(x.role)}</span><span>${esc(x.font)}</span></div>`).join('')}</div>
+      `<option value="${esc(f)}" ${d.type[x.role] === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>${why(x)}</label>`
+    : `<div class="trow"><span class="label">${esc(x.role)}</span><span>${esc(x.font)}</span>${why(x)}</div>`).join('')}</div>
     <p class="label">A font change shows on the next card, once the run has gated it.</p></section>`;
 }
 function decision(S, c) {
