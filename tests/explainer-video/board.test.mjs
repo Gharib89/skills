@@ -15,7 +15,7 @@ import {
   catalogue,
   dest,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
-import { SCRIPT } from "./scene-file.mjs";
+import { ARABIC, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
@@ -359,6 +359,58 @@ test("apply redoes an approved card whose narration was edited", () => {
   const r = ok(board(fx, "apply", file), "apply");
   assert.match(r.out, /^board steps: approve, narration edited$/m);
   assert.match(r.out, /^board: redo steps$/m);
+});
+
+test("an Arabic board lists its kept terms, and one edited changes speech, screen and captions alike", () => {
+  const fx = fixture(ARABIC);
+  fx.env.GEMINI_API_KEY = "test-key";
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  assert.deepEqual(doc(fx, 1).kept, [
+    "Ship",
+    "issue",
+    "pull request",
+    "merge",
+    "branch",
+    "CI",
+    "review",
+  ]);
+  const file = path.join(fx.tmp, "answers.txt");
+  const answers = (kept) =>
+    [
+      "explainer-video: board 1 answers (database document answers/board-1)",
+      "hook: Approve",
+      "steps: Approve",
+      "code: Approve",
+      kept,
+    ].join("\n");
+  fs.writeFileSync(file, answers("Kept: shell -> سكريبت"));
+  assert.match(
+    board(fx, "apply", file).err,
+    /^board: the answers edit shell, which board 1 does not keep$/m,
+  );
+  fs.writeFileSync(file, answers("Kept: CI -> GitHub Actions"));
+  const r = ok(board(fx, "apply", file), "apply");
+  assert.match(r.out, /^board kept: CI -> GitHub Actions$/m);
+  assert.match(r.out, /^board: redo steps,code$/m);
+  const md = read(fx.dir, "script.md");
+  assert.doesNotMatch(md, /\bCI\b/);
+  assert.match(md, /بيشغل الـ GitHub Actions على الـ branch\. \[ex-3\]/);
+  // Code stays as written.
+  assert.match(md, /scripts\/local-gate\.sh\\ngh pr create/);
+
+  compile(fx);
+  const script = JSON.parse(read(fx.dir, "script.json"));
+  const steps = script.scenes.find((s) => s.id === "steps");
+  assert.equal(steps.visual.props.steps[1].label, "GitHub Actions");
+  assert.ok(
+    steps.captions.flat().some((c) => c.text === "GitHub Actions"),
+    JSON.stringify(steps.captions),
+  );
+  assert.ok(script.kept.includes("GitHub Actions"));
+  assert.ok(!script.kept.includes("CI"));
+  voice(fx);
+  assert.match(calls(fx, "synthesize").at(-1).text, /الـ GitHub Actions/);
 });
 
 test("apply refuses answers for a stale version and a text cut to fit a comment", () => {

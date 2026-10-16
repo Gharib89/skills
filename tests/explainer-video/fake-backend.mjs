@@ -167,6 +167,8 @@ const SAID = {
   issue: "ايشو",
   agent: "ايجنت",
   ship: "شيب",
+  github: "جيثوب",
+  actions: "اكتيونس",
 };
 
 const synthCalls = () =>
