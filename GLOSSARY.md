@@ -473,7 +473,7 @@ A saved, named look (palette, type, motion and layout rules, whether diagrams dr
 _Avoid_: theme, preset, template
 
 **Style card**:
-A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast, that the human approves before the profile is saved or used once.
+A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast. The human edits a colour or a font on the card itself, then saves the profile, uses it once, or asks for a revision; each state of the card is one card version, never rewritten once shown, as a board version is.
 _Avoid_: style preview, mood board
 
 **Reference image**:
