@@ -33,7 +33,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { LUFS, floors, loadStyle } from "../lib/style.mjs";
+import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
 import { ACE_CAPTION, bedLevel, score } from "../score/score.mjs";
 import {
@@ -70,7 +70,6 @@ function fail(why) {
 }
 const slug = path.basename(path.resolve(run));
 const HOLD = 1.0;
-const LATIN = ["title", "text", "code"];
 const r3 = (n) => +n.toFixed(3);
 const hash = (...parts) => {
   const h = crypto.createHash("sha256");
@@ -94,8 +93,11 @@ if (profile.layout !== "bands" || profile.motion !== "rise")
   fail(
     `style profile ${profile.name}: this version draws layout bands with motion rise, not ${profile.layout} with ${profile.motion}`,
   );
-if (script.language !== "en")
+if (!["en", "ar"].includes(script.language))
   fail(`no render fonts for language ${script.language}`);
+// Arabic reads right to left, in the Arabic type roles beside the Latin ones.
+const dir = script.language === "ar" ? "rtl" : "ltr";
+const roles = typeRoles(script.language);
 
 if (!fs.existsSync(path.join(run, "voice.json")))
   fail("no voice.json: run the voice stage first (voice/voice.mjs)");
@@ -125,7 +127,7 @@ if (voice.narrator !== narrator || voice.language !== script.language)
 const rows = catalogue();
 const fontRows = [
   ...new Set(
-    LATIN.map(
+    roles.map(
       (r) =>
         profile.type?.[r]?.font ??
         fail(`style profile ${profile.name} names no ${r} font`),
@@ -368,7 +370,7 @@ const files = [];
 for (const [i, s] of script.scenes.entries()) {
   let html;
   try {
-    html = await sceneFile(s, timing(scenes[i]), profile, { backend });
+    html = await sceneFile(s, timing(scenes[i]), profile, { backend, dir });
   } catch (e) {
     fail(`scene ${s.id}: ${e.message}`);
   }
@@ -377,7 +379,7 @@ for (const [i, s] of script.scenes.entries()) {
 }
 fs.writeFileSync(
   path.join(comp, "index.html"),
-  videoPage({ title: script.title, profile, fonts, scenes, cues, total }),
+  videoPage({ title: script.title, profile, fonts, scenes, cues, total, dir }),
 );
 
 const env = hyperframesEnv();
@@ -436,6 +438,7 @@ if (missing.length) {
       profile,
       fonts,
       ids: missing.map((s) => s.id),
+      dir,
     }),
   );
   const frames = path.join(work, "frames");

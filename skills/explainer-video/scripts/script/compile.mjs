@@ -21,6 +21,7 @@ import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { CUE_CHARS } from "../render/compose.mjs";
 import { checkVisual } from "../lib/visuals.mjs";
+import { BRACES, endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -119,10 +120,13 @@ if (fs.existsSync(briefFile)) {
   }
 }
 
-const BRACES = /\{([^|}]*)\|([^}]*)\}/g;
+const language = header.language ?? "en";
 
 // One numbered sentence: its spoken form, its written tokens, each with the
-// count of spoken words it covers, and its cites.
+// count of spoken words it covers, and its cites. In Arabic, Latin words in a
+// row are one English term and so one token: a token per word would run a
+// right-to-left caption's `pull request` as `request pull`. The first word
+// may carry an Arabic prefix (`وpull request`).
 function sentence(raw, id) {
   const m = raw.match(/^(.*?)\s*\[([^\]]*)\]\s*$/);
   if (!m?.[2].trim()) fail(id, `${raw} ends in no [<cites>] or [no-claim]`);
@@ -141,12 +145,17 @@ function sentence(raw, id) {
       .filter(Boolean);
     if (!words.length) fail(id, `${chunk} has no spoken form`);
     const text = chunk.replace(BRACES, "$1").replaceAll("`", "");
-    // A cue breaks only between tokens, so a longer one overflows the band.
+    said.push(...words);
+    const last = captions.at(-1);
+    if (language === "ar" && last && isLatin(text) && endsLatin(last.text)) {
+      last.text += ` ${text}`;
+      last.words += words.length;
+    } else captions.push({ text, words: words.length });
+  }
+  // A cue breaks only between tokens, so a longer one overflows the band.
+  for (const { text } of captions)
     if (text.length > CUE_CHARS)
       fail(id, `${text} is longer than a caption's ${CUE_CHARS} characters`);
-    said.push(...words);
-    captions.push({ text, words: words.length });
-  }
   return { narration: said.join(" "), captions, cites };
 }
 
@@ -176,19 +185,14 @@ const compiled = scenes.map((s) => {
   };
 });
 
-fs.writeFileSync(
-  out,
-  JSON.stringify(
-    {
-      title,
-      language: header.language ?? "en",
-      ...(header.narrator && { narrator: header.narrator }),
-      ...(header.style && { style: header.style }),
-      scenes: compiled,
-    },
-    null,
-    2,
-  ) + "\n",
-);
+const script = {
+  title,
+  language,
+  ...(header.narrator && { narrator: header.narrator }),
+  ...(header.style && { style: header.style }),
+  scenes: compiled,
+};
+if (language === "ar") script.kept = keptTerms(script);
+fs.writeFileSync(out, JSON.stringify(script, null, 2) + "\n");
 writeIgnore(run);
 console.log(`compile: ${compiled.length} scene(s) -> script.json`);

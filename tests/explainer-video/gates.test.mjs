@@ -18,7 +18,7 @@ import {
   dest,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
 import { CLEAN, critique, judged } from "./critic.mjs";
-import { SCRIPT } from "./scene-file.mjs";
+import { ARABIC, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
@@ -479,6 +479,70 @@ test("an SRT edited after a green render fails captions in the gates stage alone
   const fixed = stage(fx, "gates/gates.mjs");
   assert.equal(fixed.code, 0, fixed.out + fixed.err);
   assert.equal(record(fx).gates.captions.attempts, 0);
+});
+
+test("an Arabic render passes the right to left checks, and each broken reading rule fails layout", () => {
+  const fx = fixture(ARABIC);
+  fx.env.GEMINI_API_KEY = "test-key";
+  const green = render(fx);
+  assert.equal(green.code, 0, green.out + green.err);
+  const index = path.join(fx.dir, "composition", "index.html");
+  const good = read(index);
+  for (const [broken, why] of [
+    [
+      good.replace('<html lang="ar">', '<html lang="ar" dir="rtl">'),
+      "dir on the page root html",
+    ],
+    [good.replaceAll(' dir="rtl"', ""), 'Arabic reads ltr "'],
+    [
+      good.replace("40px/1.7", "40px/1.3"),
+      'line height 1.3 under the ink 1.35 of ibm-plex-sans-arabic "',
+    ],
+    [
+      good.replace(" white-space: nowrap;", ""),
+      'Latin run wraps "pull request"',
+    ],
+    [
+      good.replace(
+        " white-space: nowrap;",
+        " white-space: nowrap; unicode-bidi: normal;",
+      ),
+      'Latin run not isolated "pull request"',
+    ],
+    [
+      good.replaceAll('<bdi class="lat">pull request</bdi>', "pull request"),
+      'Latin run not isolated in "',
+    ],
+  ]) {
+    fs.writeFileSync(index, broken);
+    fs.rmSync(path.join(fx.dir, ".cache", "gates"), { recursive: true });
+    const r = stage(fx, "gates/gates.mjs");
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.match(r.out, /^gate layout: fail: /m);
+    assert.ok(
+      record(fx).gates.layout.evidence.some((e) => e.includes(why)),
+      `${why}: ${record(fx).gates.layout.evidence.join(" | ")}`,
+    );
+  }
+  fs.writeFileSync(index, good);
+  fs.rmSync(path.join(fx.dir, ".cache", "gates"), { recursive: true });
+  const fixed = stage(fx, "gates/gates.mjs");
+  assert.equal(fixed.code, 0, fixed.out + fixed.err);
+});
+
+test("an English run quoting an Arabic word is not held to the right to left reading rules", () => {
+  const fx = fixture();
+  const r = render(fx, SCRIPT.replace('"value": "code"', '"value": "كود"'));
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^gate layout: pass: /m);
+});
+
+test("Arabic text in a code frame, which reads left to right as written, passes the reading checks", () => {
+  const fx = fixture(ARABIC.replace("\\ngh pr create", '\\necho \\"تم\\"'));
+  fx.env.GEMINI_API_KEY = "test-key";
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^gate layout: pass: /m);
 });
 
 test("a gate red three times in a row stops; a changed script starts the count again", () => {

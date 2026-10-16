@@ -15,7 +15,7 @@ import {
   catalogue,
   dest,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
-import { SCRIPT } from "./scene-file.mjs";
+import { ARABIC, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
@@ -359,6 +359,93 @@ test("apply redoes an approved card whose narration was edited", () => {
   const r = ok(board(fx, "apply", file), "apply");
   assert.match(r.out, /^board steps: approve, narration edited$/m);
   assert.match(r.out, /^board: redo steps$/m);
+});
+
+test("an Arabic board lists its kept terms, and one edited changes speech, screen and captions alike", () => {
+  // A spoken form spelt for the old term goes with it.
+  const fx = fixture(
+    ARABIC.replace("1. الـ CI بيشغل", "1. الـ {CI|سي آي} بيشغل"),
+  );
+  fx.env.GEMINI_API_KEY = "test-key";
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  assert.deepEqual(doc(fx, 1).kept, [
+    "Ship",
+    "issue",
+    "pull request",
+    "merge",
+    "branch",
+    "CI",
+    "review",
+  ]);
+  const file = path.join(fx.tmp, "answers.txt");
+  const answers = (kept) =>
+    [
+      "explainer-video: board 1 answers (database document answers/board-1)",
+      "hook: Approve",
+      "steps: Approve",
+      "code: Approve",
+      kept,
+    ].join("\n");
+  fs.writeFileSync(file, answers("Kept: shell -> سكريبت"));
+  assert.match(
+    board(fx, "apply", file).err,
+    /^board: the answers edit shell, which board 1 does not keep$/m,
+  );
+  fs.writeFileSync(file, answers("Kept: CI -> GitHub Actions"));
+  const r = ok(board(fx, "apply", file), "apply");
+  assert.match(r.out, /^board kept: CI -> GitHub Actions$/m);
+  assert.match(r.out, /^board: redo steps,code$/m);
+  const md = read(fx.dir, "script.md");
+  assert.doesNotMatch(md, /\bCI\b/);
+  assert.match(md, /بيشغل الـ GitHub Actions على الـ branch\. \[ex-3\]/);
+  assert.match(md, /1\. الـ GitHub Actions بيشغل الأمر/);
+  // Code stays as written.
+  assert.match(md, /scripts\/local-gate\.sh\\ngh pr create/);
+
+  compile(fx);
+  const script = JSON.parse(read(fx.dir, "script.json"));
+  const steps = script.scenes.find((s) => s.id === "steps");
+  assert.equal(steps.visual.props.steps[1].label, "GitHub Actions");
+  assert.ok(
+    steps.captions.flat().some((c) => c.text === "GitHub Actions"),
+    JSON.stringify(steps.captions),
+  );
+  assert.ok(script.kept.includes("GitHub Actions"));
+  assert.ok(!script.kept.includes("CI"));
+  const before = calls(fx, "synthesize").length;
+  voice(fx);
+  const said = calls(fx, "synthesize")
+    .slice(before)
+    .map((c) => c.text);
+  assert.ok(
+    said.some((t) => /الـ GitHub Actions بيشغل/.test(t)),
+    said,
+  );
+  assert.ok(!said.some((t) => t.includes("سي آي")), said);
+});
+
+test("kept terms edited together are respelt from the text as it stood, so two can swap", () => {
+  const fx = fixture(ARABIC);
+  fx.env.GEMINI_API_KEY = "test-key";
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  const file = path.join(fx.tmp, "answers.txt");
+  fs.writeFileSync(
+    file,
+    [
+      "explainer-video: board 1 answers (database document answers/board-1)",
+      "hook: Approve",
+      "steps: Approve",
+      "code: Approve",
+      "Kept: branch -> merge",
+      "Kept: merge -> branch",
+    ].join("\n"),
+  );
+  ok(board(fx, "apply", file), "apply");
+  const md = read(fx.dir, "script.md");
+  assert.match(md, /الأول بيعمل merge جديد\./);
+  assert.match(md, /بيطلب review قبل الـ branch\./);
 });
 
 test("apply refuses answers for a stale version and a text cut to fit a comment", () => {

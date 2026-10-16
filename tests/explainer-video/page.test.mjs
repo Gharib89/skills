@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
-import { SCRIPT } from "./scene-file.mjs";
+import { ARABIC, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
@@ -286,6 +286,54 @@ test("the answers text of an edited board reads back through apply to the same a
   const want = clone(P.answersDoc(S));
   assert.deepEqual(got.scenes, want.scenes);
   assert.deepEqual(got.brief, want.brief);
+});
+
+test("a board with kept terms shows each one editable, and an edited term reads back through apply", () => {
+  const board = { ...sample("board-review"), kept: ["Ship", "pull request"] };
+  assert.deepEqual(shapeProblems(board, "board"), []);
+  const S = session([board]);
+  const v = P.view(S);
+  assert.match(v, /data-kept="Ship" value="Ship"/);
+  assert.match(v, /data-kept="pull request" value="pull request"/);
+  // An Arabic run's title, card titles, narration and notes read in their
+  // own direction, not the page's.
+  assert.match(v, /<h1 dir="auto">/);
+  assert.match(v, /<h3 dir="auto">/);
+  assert.match(v, /<textarea dir="auto" rows="4" data-field="narration"/);
+  assert.match(v, /<textarea dir="auto" rows="2" data-field="note"/);
+  for (const id of ["hook", "steps", "gate"])
+    P.ACT.choose(S, { id, choice: "approve" });
+  P.ACT.kept(S, { term: "pull request", value: " PR " });
+  P.ACT.kept(S, { term: "Ship", value: "" });
+  const a = clone(P.answersDoc(S));
+  assert.deepEqual(shapeProblems(a, "answers"), []);
+  assert.deepEqual(a.kept, [{ term: "pull request", to: "PR" }]);
+  assert.match(P.answersText(S), /^Kept: pull request -> PR$/m);
+
+  const dir = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "explainer-page-")),
+    "demo",
+  );
+  temps.push(path.dirname(dir));
+  fs.mkdirSync(path.join(dir, "board"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "script.md"), ARABIC);
+  fs.writeFileSync(path.join(dir, "board", "1.json"), JSON.stringify(board));
+  const file = path.join(dir, "answers.txt");
+  fs.writeFileSync(file, P.answersText(S));
+  const r = spawnSync(
+    process.execPath,
+    [
+      path.join(skill, "scripts", "storyboard", "board.mjs"),
+      dir,
+      "apply",
+      file,
+    ],
+    { encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const got = JSON.parse(read(path.join(dir, "board", "answers-1.json")));
+  assert.deepEqual(got.kept, a.kept);
+  assert.doesNotMatch(read(path.join(dir, "script.md")), /pull request/);
 });
 
 test("every field the page reads is documented, and it reads the ones it renders", () => {

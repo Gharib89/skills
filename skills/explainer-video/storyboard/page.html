@@ -132,9 +132,10 @@ function newState(title) {
 }
 const latest = S => S.boards[S.boards.length - 1];
 function newDraft(b) {
-  const d = { choices: {}, narr: {}, notes: {}, brief: {} };
+  const d = { choices: {}, narr: {}, notes: {}, brief: {}, kept: {} };
   for (const c of b.scenes) { d.choices[c.id] = c.status === 'approved' ? 'approve' : null; d.narr[c.id] = c.narration; d.notes[c.id] = ''; }
   for (const k of b.brief) d.brief[k.knob] = k.value;
+  for (const t of b.kept || []) d.kept[t] = t;
   return d;
 }
 function draftOf(S) {
@@ -161,7 +162,14 @@ const ACT = {
   choose(S, d) { if (!locked(S)) draftOf(S).choices[d.id] = d.choice; },
   field(S, d) { if (!locked(S)) draftOf(S)[d.field === 'note' ? 'notes' : 'narr'][d.id] = d.value; },
   brief(S, d) { if (!locked(S)) draftOf(S).brief[d.knob] = d.value; },
+  kept(S, d) { if (!locked(S)) draftOf(S).kept[d.term] = d.value; },
 };
+
+// Each kept term edited to a new non-empty spelling, as `{term, to}`.
+function keptEdits(S) {
+  const b = latest(S), d = draftOf(S);
+  return (b.kept || []).filter(t => d.kept[t].trim() && d.kept[t].trim() !== t).map(t => ({ term: t, to: d.kept[t].trim() }));
+}
 
 // Changed knobs as `knob=value`; a changed list is one `knob=<item>` per item, an emptied one a lone `knob=`.
 function briefArgs(S) {
@@ -180,7 +188,7 @@ function answersDoc(S, at = new Date().toISOString()) {
   const b = latest(S), d = draftOf(S);
   return { version: b.version, submittedAt: at,
     scenes: b.scenes.map(c => ({ id: c.id, choice: d.choices[c.id], note: d.notes[c.id].trim(), narration: d.narr[c.id].trim() && d.narr[c.id] !== c.narration ? d.narr[c.id] : '' })),
-    brief: briefArgs(S) };
+    brief: briefArgs(S), ...(b.kept && { kept: keptEdits(S) }) };
 }
 function answersText(S) {
   const n = latest(S).version;
@@ -193,6 +201,7 @@ function answersText(S) {
     if (c.narration) lines.push('  narration:', ...c.narration.split('\n').map(l => '    ' + l));
   }
   for (const a of doc.brief) lines.push('Brief: ' + a);
+  for (const k of doc.kept || []) lines.push('Kept: ' + k.term + ' -> ' + k.to);
   return lines.join('\n');
 }
 
@@ -212,7 +221,7 @@ function view(S) {
   const lede = delivered ? 'The video is made. Each card plays its own stretch of it; nothing is left to answer.'
     : 'Check each scene: approve it or revise it, edit its narration right on the card, and change the brief if the whole video should differ. Then submit.';
   return `<div class="wrap">
-    <header class="hdr"><span class="label">explainer-video · board ${esc(b.version)}</span><h1>${esc(b.title)}</h1><p class="lede">${lede}</p>
+    <header class="hdr"><span class="label">explainer-video · board ${esc(b.version)}</span><h1 dir="auto">${esc(b.title)}</h1><p class="lede">${lede}</p>
       ${S.canEdit || delivered ? '' : '<p class="label">Only an editor of this page answers its boards.</p>'}</header>
     ${b.banner ? banner(b.banner) : ''}
     ${player(S, b)}
@@ -222,7 +231,7 @@ function view(S) {
   </div>${delivered ? '' : bar(S, b)}`;
 }
 function shell(S, text) {
-  return `<div class="wrap"><header class="hdr"><span class="label">explainer-video · board</span><h1>${esc(S.title)}</h1></header><p class="notice panel" role="status">${esc(text)}</p></div>`;
+  return `<div class="wrap"><header class="hdr"><span class="label">explainer-video · board</span><h1 dir="auto">${esc(S.title)}</h1></header><p class="notice panel" role="status">${esc(text)}</p></div>`;
 }
 function banner(x) {
   return `<div class="banner panel" role="alert"><b>${esc(x.text)}</b><pre>${x.gates.map(esc).join('\n')}</pre></div>`;
@@ -237,9 +246,12 @@ function player(S, b) {
 }
 function briefPanel(S, b) {
   const d = draftOf(S), dis = locked(S) ? 'disabled' : '';
-  if (!b.brief.length) return '';
+  const kept = b.kept || [];
+  if (!b.brief.length && !kept.length) return '';
+  // Kept terms stay English in speech, on screen and in captions; a new spelling here changes all three.
   return `<section class="brief panel"><span class="label">Brief</span><div class="knobs">${b.brief.map(k =>
-    `<label class="knob"><span class="label">${esc(k.knob)}</span><input type="text" data-brief="${esc(k.knob)}" value="${esc(d.brief[k.knob])}" ${dis}></label>`).join('')}</div></section>`;
+    `<label class="knob"><span class="label">${esc(k.knob)}</span><input type="text" data-brief="${esc(k.knob)}" value="${esc(d.brief[k.knob])}" ${dis}></label>`).join('')}</div>${kept.length ? `<span class="label">Kept terms</span><div class="knobs">${kept.map(t =>
+    `<label class="knob"><span class="label">${esc(t)}</span><input type="text" dir="auto" data-kept="${esc(t)}" value="${esc(d.kept[t])}" ${dis}></label>`).join('')}</div>` : ''}</section>`;
 }
 function sourcesPanel(b) {
   if (!b.sources.length) return '';
@@ -253,15 +265,15 @@ function card(S, b, c) {
   const media = delivered && c.clip
     ? `<video controls preload="none" src="${esc(mediaUrl(c.clip))}" poster="${esc(mediaUrl(c.still))}"></video>`
     : `<img alt="Still of scene ${esc(c.id)}" src="${esc(mediaUrl(c.still))}">`;
-  const body = `<div class="chead"><h3>${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ''}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
+  const body = `<div class="chead"><h3 dir="auto">${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ''}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
     ${media}
     <span class="style">${esc(c.style)}</span>
     <audio controls preload="none" src="${esc(mediaUrl(c.audio))}"></audio>
-    ${delivered ? `<p>${esc(c.narration).replace(/\n/g, '<br>')}</p>` : `<label class="field"><span class="label">Narration (edit to reword)</span>
-      <textarea rows="4" data-field="narration" data-id="${esc(c.id)}" ${dis}>${esc(d.narr[c.id])}</textarea></label>
+    ${delivered ? `<p dir="auto">${esc(c.narration).replace(/\n/g, '<br>')}</p>` : `<label class="field"><span class="label">Narration (edit to reword)</span>
+      <textarea dir="auto" rows="4" data-field="narration" data-id="${esc(c.id)}" ${dis}>${esc(d.narr[c.id])}</textarea></label>
     <fieldset class="choices"><legend class="label">Your answer</legend>${radio('approve', 'Approve')}${radio('revise', 'Revise')}</fieldset>
     <label class="field"><span class="label">Note (what to change, optional)</span>
-      <textarea rows="2" data-field="note" data-id="${esc(c.id)}" ${dis}>${esc(d.notes[c.id])}</textarea></label>`}`;
+      <textarea dir="auto" rows="2" data-field="note" data-id="${esc(c.id)}" ${dis}>${esc(d.notes[c.id])}</textarea></label>`}`;
   const cls = `card panel${S.playing === c.id ? ' playing' : ''}`;
   return c.status === 'approved' && !delivered
     ? `<details class="${cls}" id="card-${esc(c.id)}" data-card="${esc(c.id)}" data-state="approved"><summary>${esc(c.id)} · ${esc(c.title)} <span class="tag ok">Approved</span></summary>${body}</details>`
@@ -309,7 +321,7 @@ async function boot() {
     try { saved = JSON.parse(localStorage.getItem(key()) || 'null'); } catch (e) {}
     if (!saved || S.drafts[latest(S).version]) return;
     const d = draftOf(S);
-    for (const f of ['choices', 'narr', 'notes', 'brief']) for (const [k, v] of Object.entries(saved[f] || {})) if (k in d[f] && (typeof v === 'string' || v === null)) d[f][k] = v;
+    for (const f of ['choices', 'narr', 'notes', 'brief', 'kept']) for (const [k, v] of Object.entries(saved[f] || {})) if (k in d[f] && (typeof v === 'string' || v === null)) d[f][k] = v;
   }
   function render() {
     const f = document.activeElement, fid = f && (f.id || null);
@@ -351,6 +363,7 @@ async function boot() {
     const t = e.target;
     if (t.dataset.field) ACT.field(S, { id: t.dataset.id, field: t.dataset.field, value: t.value });
     else if (t.dataset.brief) ACT.brief(S, { knob: t.dataset.brief, value: t.value });
+    else if (t.dataset.kept) ACT.kept(S, { term: t.dataset.kept, value: t.value });
     else return;
     saveDraft(); refresh();
   });

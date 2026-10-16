@@ -115,11 +115,12 @@ const scope = args.includes("--project")
   ? "project"
   : saveScope(skill, os.homedir());
 const store = storeOf(scope);
-// The families a role can take: setup's, and those the draft fetched.
+// The families a role can take: setup's Latin ones, and those the draft
+// fetched.
 const families = () => [
   ...new Set(
     [...catalogue(), ...(draft.fonts ?? [])]
-      .filter((r) => r.kind === "font")
+      .filter((r) => r.kind === "font" && r.language !== "ar")
       .map((r) => r.family),
   ),
 ];
@@ -198,7 +199,7 @@ if (cmd === "apply") {
       fail(`${t} ${hex} is not a #rrggbb colour`);
   }
   for (const [r, font] of Object.entries(type)) {
-    // The card offers no Arabic family: the catalogue has none to pick.
+    // The card offers no Arabic role: each takes its class's companion.
     if (!LATIN.includes(r)) fail(`no type role ${r} on the card`);
     if (!families().includes(font))
       fail(

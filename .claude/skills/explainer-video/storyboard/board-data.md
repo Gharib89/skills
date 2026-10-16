@@ -47,6 +47,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.sources[].title` | string | yes | The source's title. |
 | `board.sources[].summary` | string | yes | Its reader's summary. |
 | `board.sources[].excerpts` | number | yes | How many excerpts the pack holds from it. |
+| `board.kept` | array | no | An Arabic run's kept terms, in order of first use in the scenes, then any the title alone uses: the English words it says, shows and captions as written. Shown editable with the brief. |
 | `board.banner` | object | no | Present on the version a gate stop posted. |
 | `board.banner.text` | string | yes | Why the run stopped, then a sentence asking to revise the reopened cards when any reopened. |
 | `board.banner.gates` | array | yes | Each red gate's line as `gates.mjs` printed it. |
@@ -69,6 +70,9 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `answers.scenes[].note` | string | yes | What to change; empty when none. |
 | `answers.scenes[].narration` | string | yes | The edited narration lines; empty when unedited. |
 | `answers.brief` | array | yes | `<knob>=<value>` arguments for `brief.mjs`, one per changed knob and one per list item of a changed list; empty when none changed. |
+| `answers.kept` | array | no | Present when the board has `kept`: one entry per kept term respelt; empty when none changed. |
+| `answers.kept[].term` | string | yes | The kept term as the board listed it. |
+| `answers.kept[].to` | string | yes | Its new spelling, never empty. |
 
 Text fields are plain text; the page interprets nothing in them.
 
@@ -100,6 +104,7 @@ either it or the answers document. One line per form, in this order:
 | `  narration:` | under a card whose narration was edited |
 | `    <line>` | each edited narration line, under `  narration:`, four spaces then the line as written |
 | `Brief: <knob>=<value>` | each `answers.brief` entry |
+| `Kept: <term> -> <to>` | each `answers.kept` entry |
 | `[cut to fit: read answers/board-<n>]` | last, when the text was cut to a comment's 4 KiB |
 
 ## Media

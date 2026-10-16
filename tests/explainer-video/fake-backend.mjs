@@ -166,6 +166,9 @@ const SAID = {
   profile: "بروفايل",
   issue: "ايشو",
   agent: "ايجنت",
+  ship: "شيب",
+  github: "جيثوب",
+  actions: "اكتيونس",
 };
 
 const synthCalls = () =>
@@ -386,16 +389,49 @@ function showing(dir, t) {
   for (const m of html.matchAll(
     /data-composition-id="([^"]+)" data-composition-src="[^"]+" data-start="([\d.]+)" data-duration="([\d.]+)"/g,
   ))
-    if (on(m[2], m[3]))
-      for (const e of fs
-        .readFileSync(path.join(dir, "scenes", `${m[1]}.html`), "utf8")
-        .matchAll(/<(?:div|span)[^>]*>([^<]+)</g))
-        if (e[1].trim()) texts.push({ scene: m[1], text: e[1].trim() });
+    if (on(m[2], m[3])) {
+      const scene = fs.readFileSync(
+        path.join(dir, "scenes", `${m[1]}.html`),
+        "utf8",
+      );
+      // Each element's `dir`, or null, open around the text: the nearest one
+      // outside it is the box it sits in.
+      const dirs = [];
+      for (const e of scene.matchAll(
+        /<(\/?)(div|span|bdi)\b([^>]*)>([^<]*)/g,
+      )) {
+        if (e[1]) {
+          dirs.pop();
+          continue;
+        }
+        const within = dirs.findLast(Boolean) ?? null;
+        const own = e[3].match(/\sdir="(\w+)"/)?.[1] ?? null;
+        dirs.push(own);
+        if (e[4].trim())
+          texts.push({
+            scene: m[1],
+            text: e[4].trim(),
+            bdi: e[2] === "bdi",
+            rtl: (own ?? within) === "rtl",
+            within,
+          });
+      }
+    }
   for (const m of html.matchAll(
     /<div class="cue clip" data-start="([\d.]+)" data-duration="([\d.]+)"[^>]*>(.*?)<\/div>/g,
   ))
-    if (on(m[1], m[2]))
-      texts.push({ scene: null, text: m[3].replace(/<[^>]+>/g, "") });
+    if (on(m[1], m[2])) {
+      // A Latin run's <bdi> is an element of its own, as the browser sees it.
+      const text = m[3]
+        .replace(/<bdi[^>]*>[^<]*<\/bdi>/g, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const rtl = /^[^>]* dir="rtl"/.test(m[0]);
+      if (text) texts.push({ scene: null, text, rtl });
+      for (const r of m[3].matchAll(/<bdi[^>]*>([^<]+)<\/bdi>/g))
+        texts.push({ scene: null, text: r[1], bdi: true, rtl });
+    }
   return { html, texts };
 }
 
@@ -422,6 +458,33 @@ export async function check(dir, times) {
   };
 }
 
+// An element's reading direction as the composition sets it: Arabic text reads
+// right to left in a box or cue marked so, and `within` is the `dir` of the
+// box a scene's element sits in; a Latin run's <bdi> sits in one, isolated
+// unless the `.lat` rule says otherwise, on one line where it says so. A caption
+// word's line height is the `.cue` rule's, against the ink Arabic's letters
+// span in a caption's IBM Plex Sans Arabic, as the real probe measured it on a
+// live render (1.35 em, Chromium 152).
+function reading(html, scene, text, bdi, rtl, within) {
+  const cue = html.match(/\.cue \{[^}]*font: \d+ [\d.]+px\/([\d.]+) "([^"]+)"/);
+  const arabic = /\p{Script=Arabic}/u.test(text);
+  return {
+    dir: arabic && rtl ? "rtl" : "ltr",
+    within: within !== undefined ? within : bdi && rtl ? "rtl" : null,
+    bidi:
+      bdi && !/\.lat \{[^}]*unicode-bidi: normal/.test(html)
+        ? "isolate"
+        : "normal",
+    wrap:
+      bdi && /\.lat \{[^}]*white-space: nowrap/.test(html)
+        ? "nowrap"
+        : "normal",
+    lineH: scene === null && cue ? +cue[1] : null,
+    face: cue?.[2] ?? null,
+    ink: 1.35,
+  };
+}
+
 export async function probe(dir, times) {
   log({ call: "probe", times });
   return times.map((t) => {
@@ -430,7 +493,7 @@ export async function probe(dir, times) {
     if (process.env.EXPLAINER_VIDEO_FAKE_BLANK) return { t, elements: [] };
     return {
       t,
-      elements: texts.map(({ scene, text }, i) => {
+      elements: texts.map(({ scene, text, bdi, rtl, within }, i) => {
         const row = /\bstacked\b/.test(text) ? i - 0.5 : i;
         const top = scene ? 200 + row * 50 : 920;
         const left = /\bedge\b/.test(text) ? 40 : 160;
@@ -455,8 +518,16 @@ export async function probe(dir, times) {
               ? color("accent")
               : color("text"),
           bg: color("bg"),
+          ...reading(html, scene, text, bdi, rtl, within),
         };
       }),
+      rootDir: [
+        ["html", /<html[^>]*\sdir=/],
+        ["body", /<body[^>]*\sdir=/],
+        ["#root", /<div id="root"[^>]*\sdir=/],
+      ]
+        .filter(([, re]) => re.test(html))
+        .map(([r]) => r),
     };
   });
 }

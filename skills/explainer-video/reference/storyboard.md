@@ -4,7 +4,8 @@ The **storyboard** is the run's one stop for the user: one card per scene with
 its narration, a still, its voiced length and style notes, beside the brief
 and the source pack, playable as an **animatic** (each still over its scene's
 real narration, in order). The user approves or revises each card, may edit
-its narration in place, and presses Submit. Its page is
+its narration in place (and, in an Arabic run, respell a kept term beside the
+brief), and presses Submit. Its page is
 [storyboard/page.html](../storyboard/page.html), fixed and tested, and
 [storyboard/board-data.md](../storyboard/board-data.md) is the contract between
 the page and `<skill>/scripts/storyboard/board.mjs`: each **board version** is
@@ -63,10 +64,14 @@ delivery it reports Render's last line and the videos-folder path.
    carrying no answers is the user talking: answer it here. Resolve the Submit
    thread once the next version is posted, or once the run goes on to Render.
 6. **Apply.** `board apply <file>` writes an edited narration into the scene
-   file, touching only that scene, and prints one `board <id>: approve` or
-   `revise: <note>` line per card. `board: approved`: go on to Render. `board:
-   redo <ids>`: first run `brief.mjs` with the `; brief` arguments it lists, if
-   any, and follow its redo line; then, for each card revised with a note,
+   file, touching only that scene, then every respelt kept term at once (so two
+   can swap) over the title, the narration and the screen text, and prints one
+   `board <id>: approve` or `revise: <note>` line per card and a
+   `board kept: <term> -> <to>` line per term; a scene a respelt term changed
+   is in the redo list. `board: approved`: go on to Render.
+   `board: redo <ids>`: first run `brief.mjs` with the
+   `; brief` arguments it lists, if any, and follow its redo line; then, for
+   each card revised with a note,
    change that scene in `script.md` as the note asks (a `revise: no note` line
    without `, narration edited` names nothing to change: ask the user what to
    change before rebuilding); then Script steps 2 to 6,

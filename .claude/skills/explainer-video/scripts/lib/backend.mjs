@@ -139,6 +139,28 @@ function measureFrame() {
     bottom: r1(r.bottom),
   });
   const sub = '[data-composition-id]:not([data-composition-id="main"])';
+  // The ink Arabic's letters span in an element's face and weight, in ems, as
+  // canvas measures it once per face and weight: the least line height that
+  // keeps two lines of them apart. Every letter and hamza seat, no marks: the
+  // floor is the face's, not the line's, and a stress line of stacked marks
+  // (1.6 em in IBM Plex Sans Arabic) would fail the profiles' own 1.5 and 1.6
+  // heights.
+  const pen = document.createElement("canvas").getContext("2d");
+  const LETTERS = "ءآأإئابةتثجحخدذرزسشصضطظعغفقكلمنهوىي";
+  const inks = new Map();
+  const ink = (cs) => {
+    const key = `${cs.fontWeight} ${cs.fontFamily}`;
+    if (!inks.has(key)) {
+      pen.font = `${cs.fontWeight} 100px ${cs.fontFamily}`;
+      const m = pen.measureText(LETTERS);
+      inks.set(
+        key,
+        Math.round(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) /
+          100,
+      );
+    }
+    return inks.get(key);
+  };
   const out = [];
   for (const el of document.querySelectorAll("#root *")) {
     const own = [...el.childNodes]
@@ -175,6 +197,20 @@ function measureFrame() {
       clip,
       color: hex(cs.color),
       bg: bg ?? "#ffffff",
+      // Reading direction: the element's own, the `dir` it sits in, how it
+      // is isolated and wrapped, and its line height against its ink.
+      dir: cs.direction,
+      within: el.parentElement?.closest("[dir]")?.getAttribute("dir") ?? null,
+      bidi: cs.unicodeBidi,
+      wrap: cs.whiteSpace,
+      lineH:
+        cs.lineHeight === "normal"
+          ? null
+          : Math.round(
+              (parseFloat(cs.lineHeight) / parseFloat(cs.fontSize)) * 100,
+            ) / 100,
+      face: cs.fontFamily.split(",")[0].replace(/["']/g, "").trim(),
+      ink: ink(cs),
     });
   }
   return out;
@@ -278,7 +314,20 @@ export async function probe(dir, times, { env }) {
         );
         await new Promise((r) => setTimeout(r, 120));
       }, t);
-      frames.push({ t, elements: await page.evaluate(measureFrame) });
+      frames.push({
+        t,
+        elements: await page.evaluate(measureFrame),
+        // The page roots carrying a `dir`, which belongs on text boxes alone.
+        rootDir: await page.evaluate(() =>
+          [
+            document.documentElement,
+            document.body,
+            document.getElementById("root"),
+          ]
+            .filter((e) => e?.hasAttribute("dir"))
+            .map((e) => (e.id ? `#${e.id}` : e.localName)),
+        ),
+      });
     }
     return frames;
   } finally {

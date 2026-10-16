@@ -25,8 +25,7 @@ Asked for a video from sources, run the stages in order (brief, source,
 script, voice, storyboard, render), stopping for the user only at the
 storyboard and where a stage says to stop or ask. Asked for a video of a topic
 alone, the source stage researches it first. Asked for narration the user
-writes, skip to Voice or Render. With `language: ar`, the run ends after Voice:
-report the voice summary line and that this version renders English only.
+writes, skip to Voice or Render.
 
 ## Setup
 
@@ -82,7 +81,7 @@ must include and must avoid. The user's request beside the sources, the
 | `focus` | the source's main ideas | what the video should say |
 | `length` | 2 | minutes, 1 to 5 |
 | `audience` | a developer new to the source | who watches |
-| `language` | `en` | `en`, or `ar` (Egyptian Arabic: this version voices it but does not render it) |
+| `language` | `en` | `en`, or `ar` (Egyptian Arabic, rendered right to left) |
 | `style` | the store default (see Render) | a style profile name |
 | `voice` | the language's default narrator (`bf_emma`, `ar-eg-csagent-2`) | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
@@ -175,7 +174,11 @@ to the **script gates**.
    of the `avoid` items. Every sentence that states a fact cites the excerpts
    that state it; a transition or framing question is `[no-claim]`. No em or
    en dashes anywhere, and at most 25 words a sentence. Leave the header's
-   `language`, `narrator` and `style` out: the brief supplies them.
+   `language`, `narrator` and `style` out: the brief supplies them. In an
+   Arabic run (`language: ar`), write the narration and the screen text in
+   Egyptian Arabic from the first draft. **Kept terms** (code identifiers,
+   product names, acronyms, and any the user names) stay in English letters:
+   said, shown and captioned as written.
 2. **Compile.** As under Render, step 3.
 3. **Support check.** Dispatch one subagent with
    `<skill>/agents/support-checker.md` as its prompt, `{run}` the run folder
@@ -247,7 +250,7 @@ narrator: am_fenrir
 ````
 
 - **Header.** Only `language`, `narrator` and `style`. `language` defaults to
-  `en`, the only language render draws; `narrator` and `style` are optional.
+  `en`; `narrator` and `style` are optional.
   With a brief in the run folder, compile takes all three from it and refuses
   a header key that names another value.
 - **Scenes.** `## Scene <id> · <title>`, the id kebab-case and not `main`,
@@ -284,9 +287,11 @@ narrator: am_fenrir
    draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
-   `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows, and
-   `ace-step` and `uv` when the brief's `score` is `ace-step`. Run the setup
-   check first; any of them missing, run the setup steps above.
+   `font:inter`, `font:jetbrains-mono`; in an Arabic run,
+   `font:noto-naskh-arabic` and `font:ibm-plex-sans-arabic` too), beside the
+   voice stage's rows, and `ace-step` and `uv` when the brief's `score` is
+   `ace-step`. Run the setup check first; any of them missing, run the setup
+   steps above.
 3. **Compile.** `node <skill>/scripts/script/compile.mjs explainers/<slug>`
    prints `compile: <n> scene(s) -> script.json`. Exit 1 prints
    `compile: [<scene>: ]<what>` on stderr: fix what it names and compile again.
@@ -319,9 +324,9 @@ narrator: am_fenrir
    skill refuses: fix it or choose another profile. `<row> is not installed`:
    run setup. `no script.json`, `no voice.json`, `voice.json does not match` or
    `voice.json holds narrator` names the stage to run first. `no render fonts
-   for language <x>`: this
-   version renders English only. A profile's layout, motion or font this
-   version cannot draw: choose another profile. Any other `render: <why>`
+   for language <x>`: set the brief's `language` to `en` or `ar`. A
+   profile's layout, motion or font this version cannot draw: choose another
+   profile. Any other `render: <why>`
    line, a HyperFrames or ffprobe failure among them: relay it with the
    output printed above it. A `gates: <why>` line with no `gate` line above
    it means the gates could not run: `no Chrome under`: run setup; any other,

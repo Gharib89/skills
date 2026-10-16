@@ -19,11 +19,13 @@
 // `page` with no url writes board/page.html, the file a session publishes
 // once; with a url it records the published page in manifest.json. `apply`
 // reads the answers (the answers document, or the text the page copies) into
-// board/answers-<n>.json and writes edited narration back into script.md.
+// board/answers-<n>.json and writes edited narration, then each edited kept
+// term (in the title, the narration and the screen text), back into script.md.
 // stdout: build `board <n>: <kind>, <k> card(s), <o> to answer[, banner: <g> red
 //         gate(s)] -> board/<n>.json`, then where the page is; apply one line
-//         per card, `board brief: <arg>` per brief change, and `board:
-//         approved` or `board: redo <ids>[; brief <args>]`
+//         per card, `board brief: <arg>` per brief change, `board kept: <term>
+//         -> <to>` per kept term edited, and `board: approved` or `board: redo
+//         <ids>[; brief <args>]`
 // writes: <run>/board/, storyboard.html, manifest.json (`board`), script.md
 // exit:   0 ok · 1 refused, `board: <why>` on stderr · 2 usage
 import crypto from "node:crypto";
@@ -31,6 +33,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
+import { mapScreen, rename, respell } from "../lib/terms.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { esc } from "../render/compose.mjs";
 
@@ -131,6 +134,48 @@ function narrationBlocks(lines) {
   return blocks;
 }
 
+// Kept terms spelled anew across script.md, in place, from a Map of term to
+// new spelling: the title, each scene's narration (its cites aside) and its
+// visual's screen text. The ids of the scenes they changed.
+function renameKept(lines, spellings) {
+  const swap = (t) => rename(t, spellings);
+  const touched = new Set();
+  let id = null;
+  let part = null;
+  let fence = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const m = line.match(/^## Scene\s+([A-Za-z0-9-]+)\s+·/);
+    if (m) [id, part] = [m[1], null];
+    else if (!id && /^# /.test(line)) lines[i] = swap(line);
+    else if (/^### /.test(line))
+      part = line.match(/^### (Narration|Visual)\s*$/)?.[1] ?? null;
+    else if (part === "Narration" && line.trim()) {
+      const next = line.replace(
+        /^(.*?)((?:\s*\[[^\]]*\])*\s*)$/,
+        (_, text, cites) => respell(text, spellings) + cites,
+      );
+      if (next !== line) {
+        lines[i] = next;
+        touched.add(id);
+      }
+    } else if (part === "Visual" && fence === null && /^```json\s*$/.test(line))
+      fence = i + 1;
+    else if (part === "Visual" && fence !== null && /^```\s*$/.test(line)) {
+      const visual = JSON.parse(lines.slice(fence, i).join("\n"));
+      const next = mapScreen(visual, swap);
+      if (JSON.stringify(next) !== JSON.stringify(visual)) {
+        const out = JSON.stringify(next, null, i - fence > 1 ? 2 : undefined);
+        lines.splice(fence, i - fence, ...out.split("\n"));
+        i = fence + out.split("\n").length;
+        touched.add(id);
+      }
+      [part, fence] = [null, null];
+    }
+  }
+  return [...touched];
+}
+
 if (cmd === "page") {
   const [url] = args;
   if (!url) {
@@ -204,6 +249,9 @@ if (cmd === "apply") {
       } else if ((m = line.match(/^Brief: (.+)$/))) {
         answers.brief.push(m[1]);
         inNarration = false;
+      } else if ((m = line.match(/^Kept: (.+?) -> (.+)$/))) {
+        (answers.kept ??= []).push({ term: m[1], to: m[2] });
+        inNarration = false;
       } else if (line.trim()) fail(`cannot read this answers line: ${line}`);
     }
   }
@@ -228,6 +276,12 @@ if (cmd === "apply") {
     };
   });
   answers.brief ??= [];
+  if (board.kept) answers.kept ??= [];
+  for (const k of answers.kept ?? []) {
+    if (!board.kept?.includes(k.term))
+      fail(`the answers edit ${k.term}, which board ${n} does not keep`);
+    if (!k.to?.trim()) fail(`kept term ${k.term} is edited to nothing`);
+  }
   write(at("board", `answers-${n}.json`), answers);
 
   const edited = (s) =>
@@ -247,17 +301,27 @@ if (cmd === "apply") {
       );
     fs.writeFileSync(at("script.md"), lines.join("\n"));
   }
+  const renamed = new Set();
+  if (answers.kept?.length) {
+    const lines = fs.readFileSync(at("script.md"), "utf8").split("\n");
+    const spellings = new Map(answers.kept.map((k) => [k.term, k.to.trim()]));
+    for (const id of renameKept(lines, spellings)) renamed.add(id);
+    fs.writeFileSync(at("script.md"), lines.join("\n"));
+  }
   for (const s of answers.scenes)
     console.log(
       `board ${s.id}: ${s.choice === "approve" ? "approve" : `revise: ${s.note || "no note"}`}${edited(s) ? ", narration edited" : ""}`,
     );
   for (const a of answers.brief) console.log(`board brief: ${a}`);
-  // An approved card whose narration was edited still needs its scene redone.
+  for (const k of answers.kept ?? [])
+    console.log(`board kept: ${k.term} -> ${k.to.trim()}`);
+  // An approved card whose narration or kept terms were edited still needs
+  // its scene redone.
   const redo = answers.scenes
-    .filter((s) => s.choice === "revise" || edited(s))
+    .filter((s) => s.choice === "revise" || edited(s) || renamed.has(s.id))
     .map((s) => s.id);
   console.log(
-    !redo.length && !answers.brief.length
+    !redo.length && !answers.brief.length && !answers.kept?.length
       ? "board: approved"
       : `board: redo ${redo.join(",") || "none"}${answers.brief.length ? `; brief ${answers.brief.join(" ")}` : ""}`,
   );
@@ -412,6 +476,7 @@ const doc = {
     summary: s.summary,
     excerpts: pack.excerpts.filter((e) => e.source === s.id).length,
   })),
+  ...(script.kept && { kept: script.kept }),
   ...(banner && { banner }),
   scenes: cards,
 };

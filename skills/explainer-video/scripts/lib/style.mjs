@@ -13,6 +13,14 @@ export const FALLBACK = "claude-code";
 // The Arabic type role beside each Latin one, and the Arabic family that
 // companions a font of each class (#678's lists, first of each).
 export const ARABIC = { title: "arTitle", text: "arText" };
+// The type roles a video in `language` draws: an Arabic one keeps the Latin
+// roles too, for its English terms and its code.
+export const typeRoles = (language) => [
+  "title",
+  "text",
+  "code",
+  ...(language === "ar" ? Object.values(ARABIC) : []),
+];
 export const COMPANION = {
   serif: "noto-naskh-arabic",
   sans: "ibm-plex-sans-arabic",
