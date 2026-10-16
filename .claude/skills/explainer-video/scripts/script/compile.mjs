@@ -126,7 +126,8 @@ const language = header.language ?? "en";
 // One numbered sentence: its spoken form, its written tokens, each with the
 // count of spoken words it covers, and its cites. In Arabic, Latin words in a
 // row are one English term and so one token: a token per word would run a
-// right-to-left caption's `pull request` as `request pull`.
+// right-to-left caption's `pull request` as `request pull`. The first word
+// may carry an Arabic prefix (`وpull request`).
 function sentence(raw, id) {
   const m = raw.match(/^(.*?)\s*\[([^\]]*)\]\s*$/);
   if (!m?.[2].trim()) fail(id, `${raw} ends in no [<cites>] or [no-claim]`);
@@ -151,7 +152,7 @@ function sentence(raw, id) {
       language === "ar" &&
       last &&
       isLatin(text) &&
-      isLatin(last.text) &&
+      /[A-Za-z][A-Za-z0-9#+._/-]*$/.test(last.text) &&
       /[A-Za-z0-9#+]$/.test(last.text)
     ) {
       last.text += ` ${text}`;

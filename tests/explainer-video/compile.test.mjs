@@ -428,6 +428,20 @@ test("an Arabic scene file keeps each multi-word English term one caption token 
   ]);
 });
 
+test("an English term written after an Arabic prefix is still one caption token and one kept term", () => {
+  const fx = fixture(
+    ARABIC.replace("خلينا نشوف إزاي.", "خلينا نشوف الـ branch وpull request."),
+  );
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const s = compiled(fx);
+  assert.deepEqual(
+    s.scenes[0].captions[1].find((t) => t.text.includes("pull")),
+    { text: "وpull request.", words: 2 },
+  );
+  assert.ok(!s.kept.includes("pull") && !s.kept.includes("request"), s.kept);
+});
+
 test("an English scene file lists no kept terms and captions each Latin word alone", () => {
   const fx = fixture();
   assert.equal(run(fx).code, 0);
