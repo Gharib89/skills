@@ -21,6 +21,7 @@ const BLOCK = `${BEGIN} (each run folder commits its recipe only)
 */.cache/
 */composition/
 */out/
+*/style-draft/
 ${END}
 `;
 

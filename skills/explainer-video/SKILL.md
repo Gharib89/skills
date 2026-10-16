@@ -3,7 +3,8 @@ name: explainer-video
 description: >-
   Make a narrated explainer video from a repo, a document, a web page or a
   topic, or voice a narration the user writes. Use when the user asks for an
-  explainer video or narration audio, or for its tools to be checked or
+  explainer video or narration audio, for a video style drawn from
+  screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
   version: 0.10.0
@@ -357,6 +358,10 @@ taken from the scene and the element, so a render repeats exactly; and
 on) and `highlight` (code lines a sentence names). A profile with no `effects`
 allows none, and a motion effect it leaves out never reaches the video. The
 score's sound effects are separate: `effects` never mutes them.
+
+Asked for a style profile from a look (screenshots, a website, a PDF or PPTX
+deck, a video), read [reference/style.md](reference/style.md) and run its
+steps.
 
 ## Gates
 
