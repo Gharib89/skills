@@ -41,11 +41,12 @@ export function writeIgnore(run) {
 
 // Records uploaded media for a page: each `<path>=<url>` names a file under
 // the run folder and the URL its upload returned, which must be https:// or
-// the asset store's /_blob/<id>. Returns `assets` with each added under its
-// run-relative path, `/`-joined as the build commands print it; throws on the
-// first pair it cannot record.
-export function recordAssets(run, pairs, assets) {
+// the asset store's /_blob/<id>. Returns the URLs by run-relative path,
+// `/`-joined as the build commands print it; throws on the first pair it
+// cannot record.
+export function recordAssets(run, pairs) {
   const root = path.resolve(run);
+  const assets = {};
   for (const a of pairs) {
     const i = a.indexOf("=");
     const rel = i < 0 ? "" : a.slice(0, i);

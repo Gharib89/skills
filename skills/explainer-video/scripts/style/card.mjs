@@ -136,7 +136,7 @@ if (cmd === "page") {
 if (cmd === "asset") {
   const file = at("assets.json");
   try {
-    write(file, recordAssets(run, args, maybe(file) ?? {}));
+    write(file, { ...maybe(file), ...recordAssets(run, args) });
   } catch (e) {
     fail(e.message);
   }

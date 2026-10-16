@@ -554,17 +554,27 @@ test("card refuses what it cannot apply or record, naming why", () => {
     assert.equal(r.code, 1, body);
     assert.match(r.err, why, body);
   }
-  for (const [args, why] of [
-    [["page", "http://claude.ai/x"], /is not an https:\/\/ URL/],
-    [["asset", "../x.woff2=https://a/b"], /is not a file under the run folder/],
+  for (const [args, code, why] of [
+    [["page", "http://claude.ai/x"], 1, /is not an https:\/\/ URL/],
+    [
+      ["asset", "../x.woff2=https://a/b"],
+      1,
+      /is not a file under the run folder/,
+    ],
+    [
+      ["asset", "style-draft=https://a/b"],
+      1,
+      /style-draft is not a file under the run folder/,
+    ],
     [
       ["asset", "style-draft/acme.json=ftp://a/b"],
+      1,
       /neither an https:\/\/ URL nor \/_blob/,
     ],
-    [["build", "--local", "--local"], /usage/],
+    [["build", "--local", "--local"], 2, /usage/],
   ]) {
     const r = card(fx, args);
-    assert.notEqual(r.code, 0, args.join(" "));
+    assert.equal(r.code, code, args.join(" "));
     assert.match(r.err, why, args.join(" "));
   }
 });
