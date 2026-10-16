@@ -9,6 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { judged } from "./critic.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import {
   catalogue,
@@ -485,7 +486,10 @@ test("a delivered run builds a clip per scene once, from the timeline, refuses a
   const fx = fixture();
   compile(fx);
   voice(fx);
-  ok(run(fx, "render/render.mjs"), "render");
+  ok(
+    judged(fx.dir, () => run(fx, "render/render.mjs")),
+    "render",
+  );
   const timeline = JSON.parse(read(fx.dir, "timeline.json")).scenes;
   let r = ok(board(fx, "build"), "build");
   assert.match(r.out, /^board 1: delivered, 3 card\(s\), 0 to answer/m);
@@ -513,7 +517,10 @@ test("a delivered run builds a clip per scene once, from the timeline, refuses a
   const big = fixture();
   compile(big);
   voice(big);
-  ok(run(big, "render/render.mjs"), "render");
+  ok(
+    judged(big.dir, () => run(big, "render/render.mjs")),
+    "render",
+  );
   r = run(big, "storyboard/board.mjs", ["build"], {
     EXPLAINER_VIDEO_FAKE_CLIP_BYTES: "16000000",
   });
