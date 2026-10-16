@@ -78,7 +78,6 @@ function fail(why) {
 const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const LATIN = ["title", "text", "code"];
 const ROLE_NAMES = [...LATIN, "arTitle", "arText"];
-const CAP = 15_000_000;
 const draftFile = path.join(run, "style-draft", `${draftName}.json`);
 const cardDir = path.join(run, "style-draft", "card");
 const at = (...p) => path.join(cardDir, ...p);
@@ -99,6 +98,12 @@ const versions = () =>
     : [];
 const template = () =>
   fs.readFileSync(path.join(skill, "storyboard", "card.html"), "utf8");
+// The store Save writes to: the user config store's styles/, or the project's
+// explainers/.styles/.
+const storeOf = (scope) =>
+  scope === "user"
+    ? path.join(userDirs().config, "styles")
+    : path.join(path.dirname(path.resolve(run)), ".styles");
 const families = () =>
   catalogue()
     .filter((r) => r.kind === "font")
@@ -245,10 +250,7 @@ if (cmd === "apply") {
   }
   const scope =
     args[1] === "--project" ? "project" : saveScope(skill, os.homedir());
-  const store =
-    scope === "user"
-      ? path.join(userDirs().config, "styles")
-      : path.join(path.dirname(path.resolve(run)), ".styles");
+  const store = storeOf(scope);
   const out = path.join(store, `${draft.name}.json`);
   if (fs.existsSync(out) && !a.replace)
     fail(
@@ -433,10 +435,6 @@ for (const s of SAMPLES)
     }),
   });
 const media = fonts.map((f) => `style-draft/card/frames/fonts/${f.file}`);
-for (const f of media) {
-  const size = fs.statSync(path.join(run, f)).size;
-  if (size > CAP) fail(`${f} is over the 15 MB asset cap`);
-}
 const page = maybe(at("page.json"));
 const published = !!page && args[0] !== "--local";
 const assets = maybe(at("assets.json")) ?? {};
@@ -451,10 +449,7 @@ if (published && media.some((f) => !assets[f])) {
 }
 
 const scope = saveScope(skill, os.homedir());
-const store =
-  scope === "user"
-    ? path.join(userDirs().config, "styles")
-    : path.join(path.dirname(path.resolve(run)), ".styles");
+const store = storeOf(scope);
 const marks = draft.marks ?? {};
 const doc = {
   version: (versions().at(-1) ?? 0) + 1,

@@ -38,13 +38,13 @@ import { writeWav } from "../score/dsp.mjs";
 import { bedLevel, score } from "../score/score.mjs";
 import {
   catalogue,
+  compositionAssets,
   dest,
   hyperframesEnv,
   loadBackend,
   lockHash,
   renderInputs,
   skill,
-  toolPaths,
 } from "../lib/tools.mjs";
 import {
   CUE_CHARS,
@@ -212,27 +212,7 @@ const clock = (t) => {
 const comp = path.join(run, "composition");
 fs.rmSync(comp, { recursive: true, force: true });
 fs.mkdirSync(path.join(comp, "scenes"), { recursive: true });
-fs.mkdirSync(path.join(comp, "fonts"));
-fs.copyFileSync(
-  path.join(toolPaths().node, "node_modules", "gsap", "dist", "gsap.min.js"),
-  path.join(comp, "gsap.min.js"),
-);
-const fonts = [];
-for (const r of fontRows)
-  for (const f of fs
-    .readdirSync(dest(r))
-    .filter((f) => f.endsWith(".woff2"))
-    .sort()) {
-    const file = `${r.family}-${f}`;
-    fs.copyFileSync(path.join(dest(r), f), path.join(comp, "fonts", file));
-    const m = f.match(/-(\d+)-(normal|italic)\.woff2$/);
-    fonts.push({
-      family: r.family,
-      file,
-      weight: m?.[1] ?? 400,
-      style: m?.[2] ?? "normal",
-    });
-  }
+const fonts = compositionAssets(fontRows, comp);
 
 function narration(file) {
   const parts = voice.scenes.map((v) => {
