@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Diagram and code components
+  ([#727](https://github.com/Gharib89/skills/pull/727),
+  [`cf38cba`](https://github.com/Gharib89/skills/commit/cf38cba50d052b187f15c2ba466493b4209bc091))
+
+
 ## v0.9.0 (2026-10-16)
 
 ### Features
