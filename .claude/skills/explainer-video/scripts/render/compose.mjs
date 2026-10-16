@@ -446,10 +446,17 @@ function stillCue(text, attrs) {
 }
 
 // One frame per scene, each scene settled at its end; `cues` holds a still
-// caption for a scene by its id. data-no-timeline stops HyperFrames waiting
-// for the timelines the scenes leave unregistered.
-export function stillsPage({ title, profile, fonts, ids, cues = {} }) {
-  const frame = 1 / FPS;
+// caption for a scene by its id, and `frame` is each scene's stretch in
+// seconds. data-no-timeline stops HyperFrames waiting for the timelines the
+// scenes leave unregistered.
+export function stillsPage({
+  title,
+  profile,
+  fonts,
+  ids,
+  cues = {},
+  frame = 1 / FPS,
+}) {
   const at = (i) =>
     ` data-start="${+(i * frame).toFixed(6)}" data-duration="${+frame.toFixed(6)}"`;
   const held = ids.filter((id) => cues[id]);

@@ -42,13 +42,7 @@ import {
   loadBackend,
   skill,
 } from "../lib/tools.mjs";
-import {
-  FPS,
-  esc,
-  framePage,
-  sceneFile,
-  stillsPage,
-} from "../render/compose.mjs";
+import { esc, framePage, sceneFile, stillsPage } from "../render/compose.mjs";
 
 const [run, draftName, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
@@ -369,7 +363,7 @@ const frames = at("frames");
 fs.rmSync(frames, { recursive: true, force: true });
 fs.mkdirSync(path.join(frames, "scenes"), { recursive: true });
 const fonts = compositionAssets(fontRows, frames);
-const timing = { duration: 1 / FPS, sentences: [0] };
+const timing = { duration: 1, sentences: [0] };
 for (const s of SAMPLES)
   fs.writeFileSync(
     path.join(frames, "scenes", `${s.id}.html`),
@@ -382,15 +376,17 @@ fs.writeFileSync(
     profile: draft,
     fonts,
     ids: SAMPLES.map((s) => s.id),
+    frame: 1,
     cues: Object.fromEntries(
       SAMPLES.filter((s) => s.cue).map((s) => [s.id, s.cue]),
     ),
   }),
 );
 
-// The gate: frame i sits at i/FPS. A frame with no text of its own is a probe
-// that saw nothing, not a pass.
-const times = SAMPLES.map((_, i) => +(i / FPS).toFixed(6));
+// The gate: frame i holds second i and is measured mid-way, as HyperFrames'
+// seek leaves some clips a frame long unmounted. A frame with no text of its
+// own is a probe that saw nothing, not a pass.
+const times = SAMPLES.map((_, i) => i + 0.5);
 const env = hyperframesEnv();
 let checked, probed;
 try {
@@ -403,8 +399,7 @@ try {
 } catch (e) {
   fail(e.message);
 }
-const frameAt = (t) =>
-  SAMPLES[Math.min(SAMPLES.length - 1, Math.round(t * FPS))];
+const frameAt = (t) => SAMPLES[Math.min(SAMPLES.length - 1, Math.floor(t))];
 for (const s of SAMPLES)
   if (
     !probed.some(
@@ -484,15 +479,17 @@ const doc = {
     : [],
 };
 write(at(`${doc.version}.json`), doc);
+// The local copy declares its encoding: no publish wraps it in a skeleton.
 fs.writeFileSync(
   at("stylecard.html"),
-  template()
-    .replace("{{TITLE}}", () => esc(title))
-    .replace(
-      '<script type="application/json" id="card">null</script>',
-      () =>
-        `<script type="application/json" id="card">${JSON.stringify({ ...doc, fonts: doc.fonts.map((f) => ({ ...f, url: `frames/fonts/${f.file}` })) }).replaceAll("<", "\\u003c")}</script>`,
-    ),
+  '<!doctype html>\n<meta charset="utf-8">\n' +
+    template()
+      .replace("{{TITLE}}", () => esc(title))
+      .replace(
+        '<script type="application/json" id="card">null</script>',
+        () =>
+          `<script type="application/json" id="card">${JSON.stringify({ ...doc, fonts: doc.fonts.map((f) => ({ ...f, url: `frames/fonts/${f.file}` })) }).replaceAll("<", "\\u003c")}</script>`,
+      ),
 );
 console.log(
   `card ${doc.version}: ${SAMPLES.length} frame(s), ${findings.length} finding(s) -> style-draft/card/${doc.version}.json`,

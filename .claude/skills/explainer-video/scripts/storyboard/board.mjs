@@ -439,13 +439,15 @@ if (published && media.some((f) => !assets[f])) {
     console.error(`board: upload ${f} (${MB(fs.statSync(at(f)).size)})`);
   fail(`record each upload with: node board.mjs ${run} asset <path>=<url>`);
 }
+// The local copy declares its encoding: no publish wraps it in a skeleton.
 fs.writeFileSync(
   at("storyboard.html"),
-  filled(script.title).replace(
-    '<script type="application/json" id="board">null</script>',
-    () =>
-      `<script type="application/json" id="board">${JSON.stringify(doc).replaceAll("<", "\\u003c")}</script>`,
-  ),
+  '<!doctype html>\n<meta charset="utf-8">\n' +
+    filled(script.title).replace(
+      '<script type="application/json" id="board">null</script>',
+      () =>
+        `<script type="application/json" id="board">${JSON.stringify(doc).replaceAll("<", "\\u003c")}</script>`,
+    ),
 );
 if (published)
   for (const c of cards)

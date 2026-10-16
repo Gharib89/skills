@@ -331,6 +331,29 @@ async function boot() {
     if (ft) ft.textContent = answersText(S);
   }
   render();
+  // Listeners first: a local page returns before the capabilities below.
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-act]');
+    if (!t || t.disabled) return;
+    const act = t.dataset.act;
+    if (act === 'submit') return submit(t);
+    if (act === 'wake') return rewake(t);
+    if (act === 'copy') return copy();
+    if (act === 'play') return playFrom(0);
+    if (act === 'stop') return stop();
+  });
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (!t.matches('input[type="radio"][data-id]')) return;
+    ACT.choose(S, { id: t.dataset.id, choice: t.value }); saveDraft(); render();
+  });
+  document.addEventListener('input', e => {
+    const t = e.target;
+    if (t.dataset.field) ACT.field(S, { id: t.dataset.id, field: t.dataset.field, value: t.value });
+    else if (t.dataset.brief) ACT.brief(S, { knob: t.dataset.brief, value: t.value });
+    else return;
+    saveDraft(); refresh();
+  });
 
   // The animatic: each card's narration in order, its still shown and its card ringed.
   const audio = () => document.getElementById('player-audio');
@@ -352,7 +375,8 @@ async function boot() {
     S.local = true; setBoards(S, [doc]); restoreDraft(); render();
   }
   const use = n => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
-  const [db, comments, user] = await Promise.all([use('db'), use('comments'), use('user')]);
+  let db = null, comments = null, user = null;
+  [db, comments, user] = await Promise.all([use('db'), use('comments'), use('user')]);
   if (!db) return localMode();
   if (user) S.canEdit = await user.canEdit().catch(() => true);
 
@@ -407,28 +431,5 @@ async function boot() {
     const selectIt = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById('fallback-text')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); note('Selected: press Ctrl+C or Cmd+C'); };
     try { navigator.clipboard.writeText(answersText(S)).then(() => note('Copied'), selectIt); } catch (e) { selectIt(); }
   }
-
-  document.addEventListener('click', e => {
-    const t = e.target.closest('[data-act]');
-    if (!t || t.disabled) return;
-    const act = t.dataset.act;
-    if (act === 'submit') return submit(t);
-    if (act === 'wake') return rewake(t);
-    if (act === 'copy') return copy();
-    if (act === 'play') return playFrom(0);
-    if (act === 'stop') return stop();
-  });
-  document.addEventListener('change', e => {
-    const t = e.target;
-    if (!t.matches('input[type="radio"][data-id]')) return;
-    ACT.choose(S, { id: t.dataset.id, choice: t.value }); saveDraft(); render();
-  });
-  document.addEventListener('input', e => {
-    const t = e.target;
-    if (t.dataset.field) ACT.field(S, { id: t.dataset.id, field: t.dataset.field, value: t.value });
-    else if (t.dataset.brief) ACT.brief(S, { knob: t.dataset.brief, value: t.value });
-    else return;
-    saveDraft(); refresh();
-  });
 }
 </script>

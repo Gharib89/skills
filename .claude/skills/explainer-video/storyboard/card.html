@@ -229,10 +229,10 @@ function mediaUrl(u) {
 }
 // The edited palette as CSS: the frame's own palette comes first, so this one wins.
 const paletteCss = S => ':root { ' + Object.entries(draftOf(S).colors).filter(([, v]) => HEX.test(v)).map(([k, v]) => `--${k}: ${v};`).join(' ') + ' }';
-// A frame's page with its fonts at their URLs and the edited palette appended.
+// A frame's page with no script, its fonts at their URLs and the edited palette appended.
 function frameDoc(S, f) {
   const urls = Object.fromEntries(latest(S).fonts.map(x => [x.file, mediaUrl(x.url)]));
-  return f.html.replace(/url\("fonts\/([^"]+)"\)/g, (m, file) => `url("${urls[file] || ''}")`)
+  return f.html.replace(/<script\b[\s\S]*?<\/script>/gi, '').replace(/url\("fonts\/([^"]+)"\)/g, (m, file) => `url("${urls[file] || ''}")`)
     .replace('</head>', () => `<style id="edits">${paletteCss(S)}</style></head>`);
 }
 
@@ -246,7 +246,7 @@ function view(S) {
       ${c.source ? `<p class="label">${esc(c.source)}</p>` : ''}
       ${S.canEdit ? '' : '<p class="label">Only an editor of this page answers its cards.</p>'}</header>
     ${c.findings.length ? `<div class="banner panel" role="alert"><b>These frames break the video gates' layout rules, so Save and Use once wait for an edit or a revision.</b><pre>${c.findings.map(esc).join('\n')}</pre></div>` : ''}
-    <section class="frames" id="frames" data-version="${esc(c.version)}">${c.frames.map(f =>
+    <section class="frames" id="frames">${c.frames.map(f =>
       `<figure class="shot panel"><span class="label">${esc(f.label)}</span><div class="frame"><iframe sandbox="allow-same-origin" title="${esc(f.label)} frame" data-frame="${esc(f.id)}" srcdoc="${esc(frameDoc(S, f))}"></iframe></div></figure>`).join('')}</section>
     ${palettePanel(S, c)}
     ${typePanel(S, c)}
@@ -347,10 +347,8 @@ async function boot() {
   function render() {
     const f = document.activeElement, fid = f && (f.id || null);
     const t = document.createElement('template');
+    // The frames reload here, their documents built with the edited palette.
     t.innerHTML = view(S);
-    // The frames stay across renders of one version, so an edit does not reload them.
-    const old = document.getElementById('frames'), fresh = t.content.getElementById('frames');
-    if (old && fresh && old.dataset.version === fresh.dataset.version) fresh.replaceWith(old);
     app.replaceChildren(t.content);
     const el = fid && document.getElementById(fid);
     if (el) el.focus({ preventScroll: true });
@@ -365,6 +363,35 @@ async function boot() {
   }
   addEventListener('resize', fit);
   render();
+  // Listeners first: a local page returns before the capabilities below.
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-act]');
+    if (!t || t.disabled) return;
+    const act = t.dataset.act;
+    if (act === 'submit') return submit(t);
+    if (act === 'wake') return rewake(t);
+    if (act === 'copy') return copy();
+  });
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (t.name === 'choice') ACT.set(S, { field: 'choice', value: t.value });
+    else if (t.type === 'checkbox' && t.dataset.set) ACT.set(S, { field: t.dataset.set, value: t.checked });
+    else if (t.dataset.font) ACT.font(S, { role: t.dataset.font, font: t.value });
+    else return;
+    saveDraft(); render();
+  });
+  document.addEventListener('input', e => {
+    const t = e.target, token = t.dataset.color || t.dataset.hex;
+    if (token) {
+      const v = t.value.trim();
+      ACT.color(S, { token, hex: v });
+      // The picker and the hex field show one value; the picker takes only a whole colour.
+      const other = document.getElementById((t.dataset.color ? 'hex-' : 'pick-') + token);
+      if (other && HEX.test(v)) other.value = t.dataset.color ? v : v.toLowerCase();
+    } else if (t.dataset.set === 'name' || t.dataset.set === 'note') ACT.set(S, { field: t.dataset.set, value: t.value });
+    else return;
+    saveDraft(); refresh();
+  });
 
   const embedded = () => { try { return JSON.parse(document.getElementById('card').textContent); } catch (e) { return null; } };
   function localMode() {
@@ -373,7 +400,8 @@ async function boot() {
     S.local = true; setCards(S, [doc]); restoreDraft(); render();
   }
   const use = n => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
-  const [db, comments, user] = await Promise.all([use('db'), use('comments'), use('user')]);
+  let db = null, comments = null, user = null;
+  [db, comments, user] = await Promise.all([use('db'), use('comments'), use('user')]);
   if (!db) return localMode();
   if (user) S.canEdit = await user.canEdit().catch(() => true);
 
@@ -426,34 +454,5 @@ async function boot() {
     const selectIt = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById('fallback-text')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); note('Selected: press Ctrl+C or Cmd+C'); };
     try { navigator.clipboard.writeText(answersText(S)).then(() => note('Copied'), selectIt); } catch (e) { selectIt(); }
   }
-
-  document.addEventListener('click', e => {
-    const t = e.target.closest('[data-act]');
-    if (!t || t.disabled) return;
-    const act = t.dataset.act;
-    if (act === 'submit') return submit(t);
-    if (act === 'wake') return rewake(t);
-    if (act === 'copy') return copy();
-  });
-  document.addEventListener('change', e => {
-    const t = e.target;
-    if (t.name === 'choice') ACT.set(S, { field: 'choice', value: t.value });
-    else if (t.type === 'checkbox' && t.dataset.set) ACT.set(S, { field: t.dataset.set, value: t.checked });
-    else if (t.dataset.font) ACT.font(S, { role: t.dataset.font, font: t.value });
-    else return;
-    saveDraft(); render();
-  });
-  document.addEventListener('input', e => {
-    const t = e.target, token = t.dataset.color || t.dataset.hex;
-    if (token) {
-      const v = t.value.trim();
-      ACT.color(S, { token, hex: v });
-      // The picker and the hex field show one value; the picker takes only a whole colour.
-      const other = document.getElementById((t.dataset.color ? 'hex-' : 'pick-') + token);
-      if (other && HEX.test(v)) other.value = t.dataset.color ? v : v.toLowerCase();
-    } else if (t.dataset.set === 'name' || t.dataset.set === 'note') ACT.set(S, { field: t.dataset.set, value: t.value });
-    else return;
-    saveDraft(); refresh();
-  });
 }
 </script>

@@ -129,6 +129,13 @@ test("the page is one inline code script with the title placeholder once", () =>
     html,
     /<script type="application\/json" id="board">null<\/script>/,
   );
+  // A local page returns at its capability check, so its listeners come first.
+  for (const ev of ["click", "change", "input"])
+    assert.ok(
+      scripts[0].indexOf(`document.addEventListener('${ev}'`) <
+        scripts[0].indexOf("return localMode()"),
+      ev,
+    );
 });
 
 test("a review board takes choices, edits and brief changes, and the answers match the shape", () => {

@@ -193,7 +193,7 @@ function session(docs, answered = []) {
 }
 const submitOff = (v) => /<button[^>]*id="submit"[^>]*\sdisabled/.test(v);
 
-test("build gates five sample frames with check and the probe, one frame a time step apart, and writes card 1", () => {
+test("build gates five sample frames with check and the probe, each mid-way through its own second, and writes card 1", () => {
   const fx = fixture();
   const r = built(fx);
   assert.match(
@@ -201,7 +201,9 @@ test("build gates five sample frames with check and the probe, one frame a time 
     /^card 1: 5 frame\(s\), 0 finding\(s\) -> style-draft\/card\/1\.json$/m,
   );
   assert.match(r.out, /^card: local page style-draft\/card\/stylecard\.html$/m);
-  const times = [0, 1, 2, 3, 4].map((i) => +(i / 30).toFixed(6));
+  // Each frame holds a second, measured mid-way: HyperFrames' seek leaves
+  // some clips a frame long unmounted.
+  const times = [0.5, 1.5, 2.5, 3.5, 4.5];
   assert.deepEqual(calls(fx, "check")[0].times, times);
   assert.deepEqual(calls(fx, "probe")[0].times, times);
   const c = latestCard(fx);
@@ -228,7 +230,10 @@ test("build gates five sample frames with check and the probe, one frame a time 
   );
   // The local page embeds the same card, its fonts beside it.
   const local = read(fx.dir, "style-draft", "card", "stylecard.html");
-  assert.match(local, /<title>Style card: Acme<\/title>/);
+  assert.match(
+    local,
+    /^<!doctype html>\n<meta charset="utf-8">\n<title>Style card: Acme<\/title>/,
+  );
   const embedded = JSON.parse(
     local.match(
       /<script type="application\/json" id="card">(.*?)<\/script>/s,
@@ -269,6 +274,14 @@ test("the page is one inline code script with the title placeholder once and an 
     html,
     /<script type="application\/json" id="card">null<\/script>/,
   );
+  // A local page returns at its capability check, so its listeners come first.
+  const code = scripts[0];
+  for (const ev of ["click", "change", "input"])
+    assert.ok(
+      code.indexOf(`document.addEventListener('${ev}'`) <
+        code.indexOf("return localMode()"),
+      ev,
+    );
   // A frame runs no script but stays readable for the live palette.
   assert.match(html, /<iframe sandbox="allow-same-origin" /);
 });
@@ -339,6 +352,7 @@ test("a colour edit recolours the frames, fails contrast live and blocks Submit 
   assert.match(v, /muted on bg/);
   const frame = P.frameDoc(S, c.frames[0]);
   assert.match(frame, /<style id="edits">:root \{[^}]*--muted: #c8c8c0;/);
+  assert.ok(!/<script/i.test(frame), "a frame carries no script");
   P.ACT.color(S, { token: "muted", hex: "#3a3f63" });
   assert.deepEqual(clone(P.failing(S)), []);
   assert.ok(!submitOff(P.view(S)));
