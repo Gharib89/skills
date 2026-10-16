@@ -46,22 +46,24 @@ in:
    is present and nothing is stale: say so, with any line under the table, and
    stop.
 2. **One yes.** Show the table as printed, with any line under it (the
-   `ace-step` row's: GPU or CPU here, and on the CPU its cost per 30 s of
-   score), then ask once for the whole table, naming the total it prints: one
-   yes installs every missing row and removes every stale install. Run install
-   only after the yes. When every missing row is a system package or a key and
-   nothing is stale, skip the question and go to step 4.
+   `ace-step` and `own-voice` rows': GPU or CPU here, and on the CPU its cost
+   per 30 s of score or narration), then ask once for the whole table, naming
+   the total it prints: one yes installs every missing row and removes every
+   stale install. Run install only after the yes. When every missing row is a
+   system package or a key and nothing is stale, skip the question and go to
+   step 4.
 3. **Install.** `node <skill>/scripts/setup.mjs install`, with the same
    `--all` and `--voice`. It installs into the tool cache and the font store,
    removes the stale installs, then prints the table again.
 4. **Report.** Show the latest table. A `missing` system package (ffmpeg, or
    `uv` beside an opt-in Python row) is one the skill never installs: relay its
    install lines from the output, ask the user to run the one for their OS,
-   then check again. A `missing` or `refused` key (`key:gemini`, the Egyptian
-   Arabic narrators' `GEMINI_API_KEY`) is one the user sets: relay the line
-   under the table with its link to a free key, then check again; Voice waits
-   until `key:gemini` reads `present`. Any other `refused` or `failed` row:
-   relay the reason as printed.
+   then check again. A `missing` or `refused` key (`key:gemini`, the
+   `GEMINI_API_KEY` of the Egyptian Arabic narrators and own voices;
+   `key:elevenlabs`, an ElevenLabs narrator's `ELEVENLABS_API_KEY`) is one the
+   user sets: relay the line under the table with its link to a key, then
+   check again; Voice waits until the key reads `present`. Any other `refused`
+   or `failed` row: relay the reason as printed.
 
 Whenever the **Gemini data notice** prints under a table, relay it word for
 word: setup prints it once per key, the first time Google accepts that key.
@@ -69,6 +71,9 @@ word: setup prints it once per key, the first time Google accepts that key.
 To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
 and what an earlier install of a missing row left half done.
+
+When the user asks for their own voice, or to remove one, read
+[reference/own-voice.md](reference/own-voice.md) and run its steps.
 
 ## Brief
 
@@ -83,7 +88,7 @@ must include and must avoid. The user's request beside the sources, the
 | `audience` | a developer new to the source | who watches |
 | `language` | `en` | `en`, or `ar` (Egyptian Arabic, rendered right to left) |
 | `style` | the store default (see Render) | a style profile name |
-| `voice` | the language's default narrator (`bf_emma`, `ar-eg-csagent-2`) | a narrator id in `<skill>/narrators.json` |
+| `voice` | the language's default narrator (`bf_emma`, `ar-eg-csagent-2`) | a narrator id in `<skill>/narrators.json`, or `own:<name>` for an enrolled own voice (Arabic) |
 | `aspect` | `16:9` | `16:9` in this version |
 | `score` | `on` | `on`, `off`, or `ace-step` (music made by the ACE-Step model) |
 | `must` | none | a topic or term the video says or shows |
@@ -94,6 +99,10 @@ must include and must avoid. The user's request beside the sources, the
    explainers/<slug> [<knob>=<value>]...`, one argument per knob the steering
    prompt moves, and `must=<item>` or `avoid=<item>` per list item. A male or
    female voice asked for is that language's default narrator of that gender.
+   An ElevenLabs narrator (`elevenlabs-george`, on the user's
+   `ELEVENLABS_API_KEY`) or an own voice is the `voice` only when the steering
+   prompt asks for it; for "my voice" with no enrolled name, enroll one first
+   (Setup).
    It prints one `brief <knob>: <value>` line per knob, then `brief: written
    -> brief.json`: show the knob lines to the user as the brief and go on
    without waiting for their approval.

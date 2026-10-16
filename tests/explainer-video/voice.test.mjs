@@ -415,3 +415,90 @@ test("a Gemini quota stop keeps the scenes voiced before it, and the next run vo
   assert.equal(calls.length, 3);
   assert.equal(calls[2].text, changed[2].narration.join(" "));
 });
+
+const ELEVEN = (fx) =>
+  fs.writeFileSync(
+    path.join(fx.dir, "script.json"),
+    JSON.stringify({
+      language: "en",
+      narrator: "elevenlabs-george",
+      scenes: SCENES,
+    }),
+  );
+
+test("an ElevenLabs narrator with no ELEVENLABS_API_KEY is refused with where to get one, before any synthesis", () => {
+  const fx = fixture();
+  ELEVEN(fx);
+  const r = run(fx, KEY);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: narrator elevenlabs-george needs ELEVENLABS_API_KEY: get a free key at https:\/\/elevenlabs\.io\/app\/settings\/api-keys, or choose another narrator in the brief$/m,
+  );
+  assert.equal(synths(fx).length, 0);
+});
+
+test("an ElevenLabs narrator with its key voices through the elevenlabs backend", () => {
+  const fx = fixture();
+  ELEVEN(fx);
+  const r = run(fx, { ELEVENLABS_API_KEY: "test-key" });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    synths(fx).map((c) => [c.backend, c.voice]),
+    [["elevenlabs", "JBFqnCBsd6RMkjVDRZzb"]],
+  );
+});
+
+test("an ElevenLabs quota stop names ElevenLabs and keeps nothing it did not voice", () => {
+  const fx = fixture();
+  ELEVEN(fx);
+  const r = run(fx, {
+    ELEVENLABS_API_KEY: "test-key",
+    EXPLAINER_VIDEO_FAKE_QUOTA: "0",
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: ElevenLabs quota reached \(ElevenLabs answered HTTP 401: This request exceeds your quota limit\); 0 scene\(s\) voiced before it are kept\./m,
+  );
+  assert.equal(synths(fx).length, 0);
+});
+
+// The real backend on a stubbed fetch: ElevenLabs answers spent credits with
+// 402 and `detail.code: "insufficient_credits"`, and its legacy answer is 400 or
+// 401 with `detail.status: "quota_exceeded"` (backend.mjs cites both docs), not
+// 429.
+test("the real ElevenLabs backend reads spent credits as a quota stop and invalid_api_key as not one", async () => {
+  const { synthesize } =
+    await import("../../skills/explainer-video/scripts/lib/backend.mjs");
+  const real = globalThis.fetch;
+  const answer = (status, detail) => async () =>
+    new Response(JSON.stringify({ detail }), { status });
+  const narrator = { backend: "elevenlabs", voice: "JBFqnCBsd6RMkjVDRZzb" };
+  try {
+    globalThis.fetch = answer(402, {
+      type: "payment_required",
+      code: "insufficient_credits",
+      message: "insufficient_credits message",
+    });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: true,
+      vendor: "ElevenLabs",
+      message: "ElevenLabs answered HTTP 402: insufficient_credits message",
+    });
+    globalThis.fetch = answer(401, {
+      status: "quota_exceeded",
+      message: "quota_exceeded message",
+    });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: true,
+      message: "ElevenLabs answered HTTP 401: quota_exceeded message",
+    });
+    globalThis.fetch = answer(401, { code: "invalid_api_key" });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: false,
+    });
+  } finally {
+    globalThis.fetch = real;
+  }
+});

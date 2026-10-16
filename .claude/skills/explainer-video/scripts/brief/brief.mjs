@@ -5,7 +5,8 @@
 //   node brief.mjs <run-folder> [<knob>=<value>]...
 //
 // Knobs: focus, length (minutes, 1 to 5), audience, language, style, voice
-// (a narrator id), aspect, score (on, off or ace-step); `must=` and `avoid=`
+// (a narrator id, or `own:<name>` for an own voice enrolled with
+// voice/own-voice.mjs, Arabic only), aspect, score (on, off or ace-step); `must=` and `avoid=`
 // add one list item each, and any given replaces that list (`must=` alone
 // empties it).
 // stdout: `brief <knob>: <value>` per knob, then `brief: written -> brief.json`
@@ -20,7 +21,7 @@
 //         <value>: <why>` on stderr · 2 usage
 import fs from "node:fs";
 import path from "node:path";
-import { skill } from "../lib/tools.mjs";
+import { narrator, narrators } from "../lib/narrators.mjs";
 import { defaultStyle, stores } from "../lib/style.mjs";
 
 const KNOBS = [
@@ -86,9 +87,7 @@ function refuse(knob, value, why) {
   process.exit(1);
 }
 
-const narrators = JSON.parse(
-  fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
-).narrators;
+const all = narrators();
 const styles = stores(path.dirname(path.resolve(run)));
 
 const brief = {
@@ -110,19 +109,19 @@ const minutes = Number(brief.length);
 if (!(minutes >= 1 && minutes <= 5))
   refuse("length", brief.length, "a number of minutes from 1 to 5");
 brief.length = minutes;
-const speakers = narrators.filter((n) => n.language === brief.language);
+const speakers = all.filter((n) => n.language === brief.language);
 if (!speakers.length)
   refuse(
     "language",
     brief.language,
-    `no narrator speaks ${brief.language} (${[...new Set(narrators.map((n) => n.language))].join(", ")})`,
+    `no narrator speaks ${brief.language} (${[...new Set(all.map((n) => n.language))].join(", ")})`,
   );
 brief.voice ??= speakers.find((n) => n.default).id;
-if (!speakers.some((n) => n.id === brief.voice))
+if (!narrator(brief.voice, brief.language))
   refuse(
     "voice",
     brief.voice,
-    `no ${brief.language} narrator (${speakers.map((n) => n.id).join(", ")})`,
+    `no ${brief.language} narrator (${speakers.map((n) => n.id).join(", ")}${brief.language === "ar" ? " or own:<name> for an enrolled own voice" : ""})`,
   );
 // The run keeps the profile it copied even after a store drops it.
 const own = path.join(run, "style.json");

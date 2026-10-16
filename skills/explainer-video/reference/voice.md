@@ -22,14 +22,19 @@ in Arabic.
 
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
    `model:kokoro-82m` and `model:wav2vec2-base-960h`; Egyptian Arabic
-   `model:egyptian-arabic-wav2vec2` and `key:gemini`. Run the setup check with
-   `--voice` set to the narrator this stage uses (`narrator`, else the
-   language's default above) first; any row missing, run SKILL.md's Setup
+   `model:egyptian-arabic-wav2vec2` and `key:gemini`; an ElevenLabs narrator
+   `key:elevenlabs` and `model:wav2vec2-base-960h`; an own voice
+   (`own:<name>`) the Arabic rows plus `own-voice` and `uv`. Run the setup
+   check with `--voice` set to the narrator this stage uses (`narrator`, else
+   the language's default above) first; any row missing, run SKILL.md's Setup
    steps before voicing.
 2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
    prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
    rate · pass|fail: <why>`, then a summary line. A scene whose narration,
-   narrator and language are unchanged is a cache hit and is not voiced again.
+   narrator and language (and, for an own voice, the enrolled clip) are
+   unchanged is a cache hit and is not voiced again. Before voicing an own
+   voice on the CPU, tell the user the time setup's cost line gives for this
+   narration's length.
 3. **On a pass** (exit 0), the stage has written `voice.json` in the run
    folder: per scene its WAV under `.cache/voice/`, its duration and each
    word's start and end in seconds from the start of that scene's WAV. Report
@@ -39,13 +44,15 @@ in Arabic.
    Rewrite that scene's narration in spoken form and voice again; the scenes
    that passed are cached. The run folder holds no `voice.json`, not even an
    earlier pass's, until every scene passes.
-   Exit 1 with no scene lines and no `voice: Gemini quota reached` (step 5)
+   Exit 1 with no scene lines and no `voice: <vendor> quota reached` (step 5)
    is an input or tool error (an unknown narrator, a scene with no narration,
-   a Gemini narrator with no `GEMINI_API_KEY`, a failed synthesis): relay the
-   stderr message as printed. Keep the brief's narrator: only the user moves
-   `voice`.
-5. **On `voice: Gemini quota reached`**, the key has hit a Gemini limit, whose
-   own message the line quotes. The scenes it counts as kept are cached. Relay
-   the line and ask the user to pick one: voice again once the quota resets,
-   which voices only the missing scenes; set a paid key and voice again; or
-   move the brief's `voice` to another narrator.
+   a Gemini narrator or own voice with no `GEMINI_API_KEY`, an ElevenLabs
+   narrator with no `ELEVENLABS_API_KEY`, an own voice no longer enrolled, a
+   failed synthesis): relay the stderr message as printed. Keep the brief's
+   narrator: only the user moves `voice`.
+5. **On `voice: Gemini quota reached`** (or `ElevenLabs`), the key has hit
+   that vendor's limit, whose own message the line quotes. The scenes it
+   counts as kept are cached. Relay the line and ask the user to pick one:
+   voice again once the quota resets, which voices only the missing scenes;
+   set a paid key and voice again; or move the brief's `voice` to another
+   narrator.

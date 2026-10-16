@@ -42,7 +42,9 @@ test("every narrator carries the contract's fields, and each language has a defa
 });
 
 test("the English narrators ship with a calibrated rate in words per second", () => {
-  const english = narrators.filter((n) => n.language === "en");
+  const english = narrators.filter(
+    (n) => n.language === "en" && n.backend === "kokoro",
+  );
   assert.deepEqual(
     english.map((n) => n.id),
     ["bf_emma", "am_fenrir"],
@@ -65,5 +67,17 @@ test("the Egyptian Arabic narrators are Gemini voices whose text leaves the mach
     assert.equal(n.voice, n.id);
     assert.equal(n.leavesMachine, true, n.id);
     assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} rate ${n.rate}`);
+  }
+});
+
+test("the ElevenLabs narrator is opt-in: never a default, and its text leaves the machine", () => {
+  const eleven = narrators.filter((n) => n.backend === "elevenlabs");
+  assert.deepEqual(
+    eleven.map((n) => [n.id, n.language, n.voice]),
+    [["elevenlabs-george", "en", "JBFqnCBsd6RMkjVDRZzb"]],
+  );
+  for (const n of eleven) {
+    assert.equal(n.default, false, n.id);
+    assert.equal(n.leavesMachine, true, n.id);
   }
 });

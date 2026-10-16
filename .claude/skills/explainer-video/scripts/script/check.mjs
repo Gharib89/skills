@@ -21,7 +21,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { skill } from "../lib/tools.mjs";
+import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
@@ -44,14 +44,7 @@ const brief = JSON.parse(need("brief.json", "run brief.mjs first"));
 const pack = JSON.parse(need("excerpts.json", "run the source stage first"));
 const md = need("script.md", "write the scene file first");
 
-const narrators = JSON.parse(
-  fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
-).narrators;
-const narrator = narrators.find((n) =>
-  script.narrator
-    ? n.id === script.narrator
-    : n.language === script.language && n.default,
-);
+const narrator = findNarrator(script.narrator, script.language);
 if (!narrator) {
   console.error(
     `script: no narrator ${script.narrator ?? script.language}: set the brief's voice and compile again`,

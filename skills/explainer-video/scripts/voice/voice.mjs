@@ -4,24 +4,28 @@
 //
 // Reads <run>/script.json: { language, narrator?, scenes: [{ id, narration:
 // [sentence, ...] }] }; the narrator defaults to the language's first default
-// one in narrators.json. Each scene's audio and timings are cached in
+// one in narrators.json; `own:<name>` is an own voice enrolled with
+// own-voice.mjs. Each scene's audio and timings are cached in
 // <run>/.cache/voice/ under the hash of its narration, narrator and language
-// (ADR 0016). With no scene cached, the whole narration is one synthesis call,
-// split per scene at the aligner's word times; otherwise each uncached scene
-// is its own call. A scene failing voice QC is not cached.
+// (ADR 0016), an own voice's also under its clip's hash. With no scene cached,
+// the whole narration is one synthesis call, split per scene at the aligner's
+// word times; otherwise each uncached scene is its own call. A scene failing
+// voice QC is not cached.
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
 //         rate · pass|fail: <why>`, then one summary line
 // writes: <run>/voice.json, the word timeline, only when every scene passes
-// stderr: a Gemini narrator with no GEMINI_API_KEY is refused before any
-//         synthesis; a Gemini quota stop (HTTP 429) counts the scenes kept
+// stderr: a Gemini or ElevenLabs narrator with no key (an own voice speaks
+//         through Gemini), or an own voice with no consent record, is refused
+//         before any synthesis; a quota stop counts the scenes kept
 // exit:   0 every scene passes · 1 refused for its input or a missing key, a
 //         scene fails QC, a quota stop, or synthesis or alignment failed ·
 //         2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { OWN_PREFIX, narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { loadBackend, skill, toolPaths } from "../lib/tools.mjs";
+import { catalogue, loadBackend, toolPaths } from "../lib/tools.mjs";
 import { FRAME, align, transcribe } from "./align.mjs";
 import { check } from "./qc.mjs";
 
@@ -43,17 +47,12 @@ const script = JSON.parse(
 );
 writeIgnore(run);
 const language = script.language ?? "en";
-const narrators = JSON.parse(
-  fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
-).narrators;
-const narrator = narrators.find(
-  (n) =>
-    n.language === language &&
-    (script.narrator ? n.id === script.narrator : n.default),
-);
+const narrator = findNarrator(script.narrator, language);
 if (!narrator) {
   console.error(
-    `voice: no narrator ${script.narrator ?? "default"} for ${language}`,
+    script.narrator?.startsWith(OWN_PREFIX)
+      ? `voice: own voice ${script.narrator.slice(OWN_PREFIX.length)} is not enrolled with a consent record for its clip: enroll it (own-voice.mjs enroll) or choose another narrator in the brief`
+      : `voice: no narrator ${script.narrator ?? "default"} for ${language}`,
   );
   process.exit(1);
 }
@@ -72,7 +71,13 @@ const scenes = script.scenes.map((s) => {
   const text = s.narration.join(" ");
   const key = crypto
     .createHash("sha256")
-    .update(JSON.stringify([text, narrator.id, language]))
+    .update(
+      JSON.stringify(
+        narrator.clipHash
+          ? [text, narrator.id, language, narrator.clipHash]
+          : [text, narrator.id, language],
+      ),
+    )
     .digest("hex")
     .slice(0, 16);
   const meta = path.join(cacheDir, `${key}.json`);
@@ -164,15 +169,17 @@ function wav(file, samples, rate) {
 }
 
 const missing = scenes.filter((s) => !s.cached);
-// A Gemini narrator speaks only on the user's own key: no other narrator
-// stands in, since the brief chose this voice.
-if (
-  missing.length &&
-  narrator.backend === "gemini" &&
-  !process.env.GEMINI_API_KEY
-) {
+// A Gemini or ElevenLabs narrator speaks only on the user's own key, its
+// backend's key row in setup/rows.json: no other narrator stands in, since the
+// brief chose this voice. An own voice speaks through its base narrator's.
+const keyRow = catalogue().find(
+  (r) =>
+    r.kind === "key" &&
+    r.backend === (narrator.base?.backend ?? narrator.backend),
+);
+if (missing.length && keyRow && !process.env[keyRow.env]) {
   console.error(
-    `voice: narrator ${narrator.id} needs GEMINI_API_KEY: get a free key at https://aistudio.google.com/apikey, or choose another narrator in the brief`,
+    `voice: narrator ${narrator.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in the brief`,
   );
   process.exit(1);
 }
@@ -219,7 +226,7 @@ try {
   // Each group is cached as it passes, so a rerun voices only what is missing.
   if (e.quota)
     console.error(
-      `voice: Gemini quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota), which voices only the missing scenes; use a paid key; or choose another narrator in the brief`,
+      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota), which voices only the missing scenes; use a paid key; or choose another narrator in the brief`,
     );
   else console.error(`voice: ${e.message}`);
   process.exit(1);

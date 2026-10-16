@@ -6,6 +6,9 @@
 //                                 loudness answer
 //   EXPLAINER_VIDEO_FAKE_CHECK    JSON check answers in place of its own
 //   EXPLAINER_VIDEO_FAKE_CLIP_BYTES  size of each clip written (default 1000)
+//   EXPLAINER_VIDEO_FAKE_CLIP_SECONDS  length of the own-voice clip voiceClip
+//                                  writes, its samples a function of the input
+//                                  file's bytes (default 12)
 //   EXPLAINER_VIDEO_FAKE_ACE_EXIT  ACE-Step's exit code, thrown as the real
 //                                  one throws it (unset, it makes the music)
 // The family `ubuntu` answers with its real, non-OFL licence; `helvetica-neue`
@@ -19,9 +22,12 @@
 // `garbled` speaks every word as "mumble", `looped` speaks the sentence twice,
 // `slowly` holds each letter 8 frames. A `gemini` narrator speaks Arabic the
 // same way in the Egyptian aligner's vocabulary (see gemini below), and
-//   EXPLAINER_VIDEO_FAKE_QUOTA  a Gemini call throws the real quota error once
-//                               this many synthesize calls are in the log
-// geminiKey refuses the key `bad-key` as API_KEY_INVALID and takes any other.
+//   EXPLAINER_VIDEO_FAKE_QUOTA  a Gemini or ElevenLabs call throws its vendor's
+//                               quota error once this many synthesize calls
+//                               are in the log
+// geminiKey refuses the key `bad-key` as API_KEY_INVALID and takes any other;
+// elevenlabsKey refuses it as invalid_api_key. An `elevenlabs` narrator speaks
+// English like Kokoro, and an `own` one Arabic like its base Gemini narrator.
 //
 // The gates' measures read the composition: probe reports each text element of
 // the scenes mounted at a time, and the caption cue showing then, at 40 px in
@@ -185,17 +191,19 @@ const toSamples = (frames) => {
   return { samples, sampleRate: 16000 };
 };
 
+// The vendor's quota error once EXPLAINER_VIDEO_FAKE_QUOTA calls are logged.
+function quota(vendor, message) {
+  const at = process.env.EXPLAINER_VIDEO_FAKE_QUOTA;
+  if (at && synthCalls() >= +at)
+    throw Object.assign(new Error(message), { quota: true, vendor });
+}
+
 // A Gemini narrator speaks Arabic in the Arabic vocabulary's ids, blanks as
 // `[PAD]`; its markers are مشوش (every word ممم), مكرر (the sentence twice) and
 // ببطء (each letter held 8 frames).
-function gemini(text, narrator) {
-  const quota = process.env.EXPLAINER_VIDEO_FAKE_QUOTA;
-  if (quota && synthCalls() >= +quota)
-    throw Object.assign(
-      new Error("Gemini answered HTTP 429: You exceeded your current quota"),
-      { quota: true },
-    );
-  log({ call: "synthesize", backend: "gemini", voice: narrator.voice, text });
+function gemini(text, entry) {
+  quota("Gemini", "Gemini answered HTTP 429: You exceeded your current quota");
+  log({ call: "synthesize", ...entry, text });
   const pad = AR_VOCAB["[PAD]"];
   const clean = text.normalize("NFKC").replace(/[ً-ْٰـ]/g, "");
   const frames = new Array(10).fill(pad);
@@ -227,14 +235,71 @@ export async function geminiKey(key) {
     : { ok: true };
 }
 
+// A key check that spends no credits.
+export async function elevenlabsKey(key, voice) {
+  log({ call: "elevenlabsKey", voice });
+  return key === "bad-key"
+    ? { ok: false, reason: "invalid_api_key" }
+    : { ok: true };
+}
+
+// A 16-bit 24 kHz mono WAV of the clip's length, its samples a function of the
+// input file's bytes: two inputs give two clips.
+export async function voiceClip(input, output) {
+  log({ call: "voiceClip" });
+  const bytes = fs.readFileSync(input);
+  const n = +(process.env.EXPLAINER_VIDEO_FAKE_CLIP_SECONDS ?? 12) * 24000;
+  const b = Buffer.alloc(44 + n * 2);
+  b.write("RIFF", 0, "ascii");
+  b.writeUInt32LE(36 + n * 2, 4);
+  b.write("WAVEfmt ", 8, "ascii");
+  b.writeUInt32LE(16, 16);
+  b.writeUInt16LE(1, 20);
+  b.writeUInt16LE(1, 22);
+  b.writeUInt32LE(24000, 24);
+  b.writeUInt32LE(48000, 28);
+  b.writeUInt16LE(2, 32);
+  b.writeUInt16LE(16, 34);
+  b.write("data", 36, "ascii");
+  b.writeUInt32LE(n * 2, 40);
+  for (let i = 0; i < n; i++)
+    b.writeInt16LE(
+      ((bytes[i % bytes.length] * 131 + i) % 2001) - 1000,
+      44 + i * 2,
+    );
+  fs.writeFileSync(output, b);
+}
+
 export async function synthesize({ text, narrator, tools }) {
-  if (narrator.backend === "gemini") return gemini(text, narrator);
-  log({
-    call: "synthesize",
-    text,
-    voice: narrator.voice,
-    model: tools.models["model:kokoro-82m"],
-  });
+  if (narrator.backend === "gemini")
+    return gemini(text, { backend: "gemini", voice: narrator.voice });
+  if (narrator.backend === "own")
+    return gemini(text, {
+      backend: "own",
+      base: narrator.base.id,
+      clipHash: narrator.clipHash,
+    });
+  // ElevenLabs' message for a spent quota (docs changelog 2025-05-05).
+  if (narrator.backend === "elevenlabs")
+    quota(
+      "ElevenLabs",
+      "ElevenLabs answered HTTP 401: This request exceeds your quota limit",
+    );
+  log(
+    narrator.backend === "elevenlabs"
+      ? {
+          call: "synthesize",
+          backend: "elevenlabs",
+          voice: narrator.voice,
+          text,
+        }
+      : {
+          call: "synthesize",
+          text,
+          voice: narrator.voice,
+          model: tools.models["model:kokoro-82m"],
+        },
+  );
   const frames = new Array(10).fill(0);
   for (const sentence of text.split(/(?<=[.!?])\s+/)) {
     let words = sentence.toUpperCase().match(/[A-Z']+/g) ?? [];
