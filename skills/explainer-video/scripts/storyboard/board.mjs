@@ -384,15 +384,16 @@ for (const c of cards) {
   )
     c.status = "approved";
 }
-if (banner)
+if (banner) {
   for (const [, g] of red)
     for (const e of g.evidence) {
       const id = e.match(/\bs ([A-Za-z0-9-]+):/)?.[1];
       const c = cards.find((x) => x.id === id);
       if (c) c.status = "reopened";
     }
-if (cards.some((c) => c.status === "reopened"))
-  banner.text += " Revise the reopened cards.";
+  if (cards.some((c) => c.status === "reopened"))
+    banner.text += " Revise the reopened cards.";
+}
 
 const brief = maybe(at("brief.json"));
 const pack = maybe(at("excerpts.json"));

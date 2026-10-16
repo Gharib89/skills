@@ -349,7 +349,7 @@ test("apply refuses answers for a stale version and a text cut to fit a comment"
   assert.match(ok1.out, /^board: approved$/m);
 });
 
-test("a red gate record of this script at its third attempt reopens the scenes its evidence names", () => {
+test("a red gate record of this script at its third attempt reopens the scenes its evidence names, asks for no revision when it names none, and is spent once answered", () => {
   const fx = fixture();
   prep(fx);
   const script = JSON.parse(read(fx.dir, "script.json"));
