@@ -633,3 +633,55 @@ export async function unzip(file) {
       out[f.name] = await f.async("string");
   return out;
 }
+
+// A code frame's Shiki tokens, one array per line, each `{ text, color }` with
+// `color` a `var(--code-...)` the composition sets from the style profile.
+let shiki;
+export async function highlight(code, lang) {
+  if (!shiki) {
+    const req = fromCache(toolPaths().node);
+    const [{ codeToTokens }, { createCssVariablesTheme }] = await Promise.all(
+      ["shiki", "shiki/core"].map(
+        (m) => import(pathToFileURL(req.resolve(m)).href),
+      ),
+    );
+    const theme = createCssVariablesTheme({
+      name: "profile",
+      variablePrefix: "--code-",
+      fontStyle: false,
+    });
+    shiki = (c, l) => codeToTokens(c, { lang: l, theme });
+  }
+  const { tokens } = await shiki(code, lang);
+  return tokens.map((line) =>
+    line.map((t) => ({ text: t.content, color: t.color })),
+  );
+}
+
+// rough.js outlines, each shape `{ rect: [w, h] }` or `{ line: [[x, y], ...] }`
+// at its `seed`, as SVG path data: `fill` a rect's body, `stroke` its outline.
+// A rect sits 3 px inside its box so the wobble stays in view.
+let rough;
+export async function sketch(shapes) {
+  if (!rough) {
+    const m = fromCache(toolPaths().node)("roughjs");
+    rough = (m.default ?? m).generator();
+  }
+  return shapes.map(({ rect, line, seed }) => {
+    const paths = rough.toPaths(
+      rect
+        ? rough.rectangle(3, 3, rect[0] - 6, rect[1] - 6, {
+            seed,
+            fill: "#000",
+            fillStyle: "solid",
+          })
+        : rough.linearPath(line, { seed }),
+    );
+    const d = (k) =>
+      paths
+        .filter((p) => p[k] !== "none")
+        .map((p) => p.d)
+        .join(" ");
+    return { fill: d("fill"), stroke: d("stroke") };
+  });
+}

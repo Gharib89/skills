@@ -9,6 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { VISUALS } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scripts = path.join(
@@ -437,6 +438,17 @@ test("a visual item stays on screen long enough to read: 0.8 s a label, 0.3 s a 
     line(r, "reading"),
     "script reading: fail: steps item 2: 0.6 s on screen vs 3.2 s to read",
   );
+});
+
+test("a code diff's reader reads the lines the render adds, a moved line among them", () => {
+  const [, [, at, added]] = VISUALS.codediff.items({
+    lang: "js",
+    before: "one();\ntwo();",
+    after: "two();\none();",
+    at: 2,
+  });
+  assert.equal(at, 2);
+  assert.deepEqual(added, ["two();"]);
 });
 
 test("an em or en dash anywhere in the scene file fails, and a sentence over 25 words warns", () => {

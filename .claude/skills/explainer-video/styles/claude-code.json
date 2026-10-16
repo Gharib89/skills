@@ -25,5 +25,7 @@
     "arText": { "font": "ibm-plex-sans-arabic", "weight": 400 }
   },
   "layout": "bands",
-  "motion": "rise"
+  "motion": "rise",
+  "look": "clean",
+  "effects": ["draw", "highlight"]
 }
