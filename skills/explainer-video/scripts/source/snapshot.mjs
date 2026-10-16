@@ -1,6 +1,6 @@
 // The source stage's first half: each source read into a verbatim snapshot.
 //
-//   node snapshot.mjs <run-folder> [--minutes <n>] <source>...
+//   node snapshot.mjs <run-folder> [--minutes <n>] [--topic <topic>] <source>...
 //
 // A source is a git repo folder, a web page URL, or a .pdf, .md, .txt, .html,
 // .docx or .pptx file. A repo snapshot is a byte copy of the text files git
@@ -12,12 +12,15 @@
 // per page, a PPTX as one per slide and one per slide's notes, each after a
 // `<!-- page <n> -->` or `<!-- slide <n>[ notes] -->` marker line. Markdown
 // and text are copied as they are. A page's URL is kept, and printed, without
-// its credentials, query or fragment.
-// stdout: `source <id>: <kind> · <n> <unit> · <source>` per source,
+// its credentials, query or fragment. With `--topic`, the sources are the
+// pages researched for that topic: 3 to 8 web page URLs and nothing else.
+// stdout: with `--topic`, `topic: <topic> · <n> page(s)` first, then
+//         `source <id>: <kind> · <n> <unit> · <source>` per source,
 //         each followed by `withheld <id>/<path>: <why>` per repo file
 //         withheld for a secret, then
 //         `budget: <b> excerpts (...); shares <id> <n>, ...`
-// writes: <run>/snapshots/ (replaced whole), its sources.json, and
+// writes: <run>/snapshots/ (replaced whole), its sources.json (with the topic
+//         when given), and
 //         explainers/.gitignore
 // exit:   0 read · 1 a source refused or unreadable, `source <source>: <why>`
 //         on stderr, and no sources.json · 2 usage
@@ -32,18 +35,20 @@ import { marker, sections } from "./locators.mjs";
 const args = process.argv.slice(2);
 const run = args.shift();
 let minutes = 2;
+let topic;
 const isUrl = (s) => /^https?:\/\//i.test(s);
 const named = new Map();
 while (args.length) {
   const a = args.shift();
   if (a === "--minutes") minutes = Number(args.shift());
+  else if (a === "--topic") topic = args.shift()?.trim();
   // A source named twice (`.` and `./`) is read once.
   else named.set(isUrl(a) ? a : path.resolve(a), a);
 }
 const given = [...named.values()];
-if (!run || !given.length || !(minutes > 0)) {
+if (!run || !given.length || !(minutes > 0) || topic === "") {
   console.error(
-    "usage: node snapshot.mjs <run-folder> [--minutes <n>] <source>...",
+    "usage: node snapshot.mjs <run-folder> [--minutes <n>] [--topic <topic>] <source>...",
   );
   process.exit(2);
 }
@@ -117,6 +122,14 @@ function kindOf(s) {
 }
 
 const kinds = given.map(kindOf);
+if (topic !== undefined) {
+  given.forEach((s, i) => {
+    if (kinds[i] && kinds[i] !== "page")
+      refuse(s, "a topic takes web pages only");
+  });
+  if (given.length < 3 || given.length > 8)
+    errors.push(`source: a topic takes 3 to 8 web pages, got ${given.length}`);
+}
 const rows = catalogue();
 for (const k of new Set(kinds.flatMap((k) => NEEDS[k] ?? [])))
   for (const r of rows.filter((r) => r.kind === k))
@@ -358,9 +371,11 @@ sources.forEach((src, i) => {
 });
 fs.writeFileSync(
   path.join(snaps, "sources.json"),
-  JSON.stringify({ minutes, budget, sources }, null, 2) + "\n",
+  JSON.stringify({ topic, minutes, budget, sources }, null, 2) + "\n",
 );
 writeIgnore(run);
+if (topic !== undefined)
+  console.log(`topic: ${topic} · ${sources.length} page(s)`);
 for (const l of report) console.log(l);
 console.log(
   `budget: ${budget} excerpts (${minutes} min at 8 per minute, at least 12); shares ${sources.map((s) => `${s.id} ${s.share}`).join(", ")}`,

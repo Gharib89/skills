@@ -403,7 +403,7 @@ const verdicts = (h) =>
     for (const k of SCORES)
       if (![1, 2, 3, 4, 5].includes(v.scores?.[k]))
         bad(`score ${k} is not a whole number 1 to 5`);
-    return { id: sc.id, ...v };
+    return { ...v, id: sc.id, start: sc.start };
   });
 const rounds = same ? (prev.gates.critic?.rounds ?? []) : [];
 let judgedBy;
@@ -419,8 +419,12 @@ const wantCritic = "no unreadable or invented content; scores advise";
 let critic;
 if (judgedBy) {
   const { vs, round, carried } = judgedBy;
+  // Led by the scene's start, as layout's lines are, so the storyboard's gate
+  // stop reopens the scene's card.
   const evidence = vs.flatMap((v) =>
-    v.failures.map((x) => `${v.id}: ${x.kind}: ${x.what}`),
+    v.failures.map(
+      (x) => `${v.start.toFixed(2)} s ${v.id}: ${x.kind}: ${x.what}`,
+    ),
   );
   const mean = (k) =>
     (vs.reduce((n, v) => n + v.scores[k], 0) / vs.length).toFixed(1);

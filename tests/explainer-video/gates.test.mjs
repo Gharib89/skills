@@ -682,7 +682,7 @@ test("invented content on screen fails the critic, delivers nothing, and passes 
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(
     r.out,
-    /^gate critic: fail: 1 hard failure\(s\), first: steps: invented: the card "ten times faster" .* vs /m,
+    /^gate critic: fail: 1 hard failure\(s\), first: [\d.]+ s steps: invented: the card "ten times faster" .* vs /m,
   );
   assert.match(r.out, /^gates: 5 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
