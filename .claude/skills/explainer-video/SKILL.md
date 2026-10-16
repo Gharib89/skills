@@ -71,7 +71,7 @@ must include and must avoid. The user's request beside the sources, the
 | `style` | the store default (see Render) | a style profile name |
 | `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
-| `score` | `on` | `on` (music and sound effects under the narration) or `off` |
+| `score` | `on` | `on` or `off` |
 | `must` | none | a topic or term the video says or shows |
 | `avoid` | none | a topic or term the video never touches |
 
@@ -288,15 +288,12 @@ narrator: am_fenrir
    `compile: [<scene>: ]<what>` on stderr: fix what it names and compile again.
 4. **Voice.** Run the voice stage above on the same run folder, again after
    any narration edit.
-5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`.
-   Unless the brief's `score` is `off`, it synthesises a **score** arranged to
-   the scenes (one section per scene, ducked under the words, a whoosh on each
-   cut and a sting after the last word) and mixes it under the narration,
-   writing `score.json` (its preset, seed and cues). It masters the mix to -14
-   LUFS, renders, then runs the gates (see Gates) and prints their lines.
-   Only when every gate passes does it print one `delivery <check>:
-   pass|fail` line per delivery check (`resolution`, `frame rate`, `aspect`,
-   `duration`, `audio`, `srt`), then `delivered:
+5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`. It
+   mixes the **score** under the narration unless the brief turns it off,
+   masters to -14 LUFS, renders, then runs the gates (see Gates) and prints
+   their lines. Only when every gate passes does it print one `delivery
+   <check>: pass|fail` line per delivery check (`resolution`, `frame rate`,
+   `aspect`, `duration`, `audio`, `srt`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
    cached, video cached|rendered`. A scene still, the score and the video are
    cached by content, so an unchanged run renders nothing again.
@@ -309,12 +306,10 @@ narrator: am_fenrir
    means nothing was delivered and `out/` was emptied: follow Gates below. A
    `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
-   and `out/` was emptied, an earlier render's files too. `style profile <name>
-   fails contrast: <token> on <surface> ...` names each pair under its floor,
-   and `gates.contrast.<role>: not a number` a floor that is no number;
-   `style profile <name>: gates.<group>.<key> <v> lowers the skill's floor
-   <f>` or `no such floor` names a gates block the skill refuses: fix those
-   values or choose another profile. `<row> is not installed`: run
+   and `out/` was emptied, an earlier render's files too. A `style profile
+   <name>` line names what the skill refuses in that profile (a colour pair
+   under its contrast floor, or a `gates` value): fix it or choose another
+   profile. `<row> is not installed`: run
    setup. `no script.json`, `no voice.json`, `voice.json does not match` or
    `voice.json holds narrator` names the stage to run first. `no render fonts
    for language <x>`: this
@@ -355,10 +350,8 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 - `captions`: every word timed in order inside its scene, every cue non-empty,
   in order, at most 84 characters and inside the video, and the SRT equal to
   the burned-in cues.
-- `sfx`: at most 24 sound effects in any minute, counted from `score.json`'s
-  cues. The score drops a cue that would break the floor, so a red `sfx`
-  means `score.json` changed after the render: render again, which writes it
-  anew.
+- `sfx`: at most 24 sound effects in any minute of `score.json`, which the
+  score keeps under.
 
 A summary line follows, `gates: <n> pass, <m> fail`, ending on a red run with
 `next: fix attempt <a> of 2` or `stop: red after two fix attempts, no video`.
@@ -381,7 +374,7 @@ On `stop`, stop with no video and run Storyboard step 7.
 tighten them, and the tightened value is the one applied and printed:
 `contrast` (`body`, `large`, raise), `layout` (`textPx`, `margin` as a
 fraction, raise), `loudness` (`tolerance` in LU, above 0, and `peak` in
-dBTP, no lower than -8.5, lower), `sfx` (`perMinute`, 0 or more, lower).
+dBTP, no lower than -8.5, lower), `sfx` (`perMinute`, lower).
 
 ## Recipe
 
