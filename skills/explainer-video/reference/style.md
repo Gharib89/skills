@@ -19,11 +19,11 @@ deck's title).
    reference image, `style candidate <id>: <hex> · <share>% · <images>` per
    colour candidate (`s<n>` a surface, ranked by area; `a<n>` an accent, a
    saturated colour), and `style declared <hex>: not in the reference images,
-   dropped` per colour a page or deck theme declares that no image shows. On
-   exit 1, a `style: <row> is not installed` line means run
-   `/explainer-video setup` and measure again; a PPTX alone carries no pixels,
-   so ask the user to export the deck to PDF and measure again with both files;
-   relay any other stderr line.
+   dropped` per colour a page declares that none of its own images shows, or
+   a deck theme declares that its PDF does not show. On exit 1, a
+   `style: <row> is not installed` line means run `/explainer-video setup` and
+   measure again; a PPTX alone carries no pixels, so ask the user to export the
+   deck to PDF and measure again with both files; relay any other stderr line.
 2. **Assign.** Look at each image in `explainers/<slug>/style-draft/refs/` with
    the Read tool, then write `explainers/<slug>/style-draft/roles.json`: for
    each token an image shows, the colour candidate playing it and one line on

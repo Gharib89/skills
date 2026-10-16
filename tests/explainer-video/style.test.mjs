@@ -48,6 +48,7 @@ function fixture({ tools = true } = {}) {
     XDG_CACHE_HOME: path.join(tmp, "cache"),
     EXPLAINER_VIDEO_BACKEND: path.join(here, "fake-backend.mjs"),
     EXPLAINER_VIDEO_FAKE_LOG: path.join(tmp, "calls.jsonl"),
+    EXPLAINER_VIDEO_FAKE_PRESENT: tools ? "ffmpeg" : "",
   };
   if (tools)
     for (const r of catalogue().filter((r) =>
@@ -169,6 +170,33 @@ test("a website's declared colours count only where its pages show them, and a d
   assert.equal(p.marks.accent.declared, true);
 });
 
+test("a declared colour counts only where its own source's images show it", () => {
+  const { run, docs, env } = fixture();
+  env.EXPLAINER_VIDEO_FAKE_SITE = JSON.stringify({
+    "https://acme.test/": { pages: [SLIDE], colors: ["#00ff00"], fonts: [] },
+  });
+  fs.writeFileSync(
+    path.join(docs, "green.png"),
+    bandsPpm([
+      ["#f5f4ed", 80],
+      ["#00ff00", 20],
+    ]),
+  );
+  const r = node(
+    "measure.mjs",
+    [run, "https://acme.test/", path.join(docs, "green.png")],
+    env,
+  );
+  assert.equal(r.status, 0, r.stderr);
+  const green = candidates(run).accents.find((a) => a.hex === "#00ff00");
+  assert.deepEqual(green.images, ["green-1.png"]);
+  assert.equal(green.declared, undefined);
+  assert.match(
+    r.stdout,
+    /^style declared #00ff00: not in the reference images, dropped$/m,
+  );
+});
+
 test("a deck and a video become at most twelve images each, named by kind in a draft", () => {
   const { run, docs, env } = fixture();
   fs.writeFileSync(path.join(docs, "deck.pdf"), "pdf");
@@ -241,6 +269,7 @@ test("a PPTX alone has no pixels; beside its PDF its theme confirms colours", ()
 test("a source measure cannot take is refused by name, and nothing is written", () => {
   const { run, docs, env } = fixture({ tools: false });
   fs.writeFileSync(path.join(docs, "notes.txt"), "notes");
+  fs.writeFileSync(path.join(docs, "shot.png"), bandsPpm(SLIDE));
   for (const [source, line] of [
     [path.join(docs, "gone.png"), /^source .*gone\.png: no such file$/m],
     [
@@ -250,6 +279,10 @@ test("a source measure cannot take is refused by name, and nothing is written", 
     [
       "https://acme.test/",
       /^style: chrome is not installed: run \/explainer-video setup$/m,
+    ],
+    [
+      path.join(docs, "shot.png"),
+      /^style: ffmpeg is not installed: run \/explainer-video setup$/m,
     ],
   ]) {
     const r = node("measure.mjs", [run, source], env);

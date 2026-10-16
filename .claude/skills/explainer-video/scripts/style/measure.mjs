@@ -9,8 +9,9 @@
 // with up to four same-site pages its navigation links, at 1440 by 900 with
 // raster media hidden; a PDF's pages render in HyperFrames' Chrome; a video
 // gives its scene-change frames; at most twelve images per source. A PPTX
-// gives its theme's colours and fonts and no image. Colours a page or a theme
-// declares count only where a measured colour candidate confirms them.
+// gives its theme's colours and fonts and no image. Colours a page declares
+// count only where a colour candidate its own images show confirms them, and a
+// PPTX theme's only where its exported PDF's pages do.
 // stdout: `style ref <image>: <kind> · <source>` per reference image, then
 //         `style candidate <id>: <hex> · <share>% · <images>` per colour
 //         candidate, `style declared <hex>: not in the reference images,
@@ -49,12 +50,15 @@ const EXT = {
   ".webm": "video",
   ".mkv": "video",
 };
-// The rows a kind captures with: Chrome for what renders, the npm install for
-// puppeteer, pdf.js and the PPTX unzip.
+// The setup rows a kind captures with: Chrome for what renders, the npm
+// install for puppeteer, pdf.js and the PPTX unzip, ffmpeg for every image
+// decoded and video frame cut.
 const NEEDS = {
-  page: ["npm", "chrome"],
-  pdf: ["npm", "chrome"],
-  pptx: ["npm"],
+  image: ["ffmpeg"],
+  page: ["npm-packages", "chrome", "ffmpeg"],
+  pdf: ["npm-packages", "chrome", "ffmpeg"],
+  pptx: ["npm-packages"],
+  video: ["ffmpeg"],
 };
 
 const errors = [];
@@ -81,12 +85,16 @@ function kindOf(s) {
 }
 
 const kinds = given.map(kindOf);
-for (const k of new Set(kinds.flatMap((k) => NEEDS[k] ?? [])))
-  for (const r of catalogue().filter((r) => r.kind === k))
-    if (!fs.existsSync(path.join(dest(r), ".stamp")))
-      errors.push(
-        `style: ${r.id} is not installed: run /explainer-video setup`,
-      );
+const backend = await loadBackend();
+for (const r of catalogue().filter((r) =>
+  kinds.some((k) => NEEDS[k]?.includes(r.id)),
+))
+  if (
+    r.kind === "system"
+      ? !backend.which(r.command)
+      : !fs.existsSync(path.join(dest(r), ".stamp"))
+  )
+    errors.push(`style: ${r.id} is not installed: run /explainer-video setup`);
 if (errors.length) stop();
 
 // Ids from each source's name, kebab-case, a repeat numbered.
@@ -135,7 +143,6 @@ function theme(parts) {
 fs.rmSync(refs, { recursive: true, force: true });
 fs.mkdirSync(refs, { recursive: true });
 writeIgnore(run);
-const backend = await loadBackend();
 const images = [];
 const declared = [];
 const fonts = [];
@@ -153,7 +160,7 @@ for (const [i, s] of given.entries()) {
     } else if (kind === "pptx") {
       const t = theme(await backend.unzip(s));
       if (!t.colors.length) refuse(s, "no theme colours in the deck");
-      declared.push(...t.colors);
+      declared.push(...t.colors.map((hex) => ({ hex, kind, source: s })));
       fonts.push(...t.fonts);
     } else {
       const out = path.join(refs, id);
@@ -164,7 +171,7 @@ for (const [i, s] of given.entries()) {
       else {
         const site = await backend.capturePages(s, out, { ...opts, max: 5 });
         files = site.images;
-        declared.push(...site.colors);
+        declared.push(...site.colors.map((hex) => ({ hex, kind, source: s })));
         fonts.push(...site.fonts);
       }
       if (!files.length) refuse(s, "gave no image");
@@ -174,7 +181,7 @@ for (const [i, s] of given.entries()) {
   }
   if (errors.length > before) continue;
   for (const f of files.slice(0, MAX)) {
-    images.push({ name: path.basename(f), file: f, source: s });
+    images.push({ name: path.basename(f), file: f, kind, source: s });
     report.push(`style ref ${path.basename(f)}: ${kind} · ${s}`);
   }
 }
@@ -272,21 +279,36 @@ if (!accents.length) accents = rank(tally(0.2), 0.001, 8, "a");
 // How near a declared colour sits to a measured one, in OKLab.
 const near = (a, b) => Math.hypot(...oklab(a).map((v, i) => v - oklab(b)[i]));
 
-// A declared colour within 0.04 in OKLab of a colour candidate names it
-// exactly; one no colour candidate confirms is dropped.
-const dropped = [];
-for (const hex of [...new Set(declared)]) {
+// The reference images that may confirm a declaration: a page's own, and a
+// PPTX theme's exported PDF pages.
+const shownBy = (d) =>
+  new Set(
+    images
+      .filter((i) =>
+        d.kind === "pptx" ? i.kind === "pdf" : i.source === d.source,
+      )
+      .map((i) => i.name),
+  );
+
+// A declared colour within 0.04 in OKLab of a colour candidate those images
+// show names it exactly; one no such colour candidate confirms is dropped.
+const confirmed = new Set();
+const unconfirmed = new Set();
+for (const { hex, ...d } of declared) {
+  const by = shownBy(d);
   const hit = [...surfaces, ...accents]
-    .filter((c) => near(c.hex, hex) <= 0.04)
+    .filter((c) => c.images.some((i) => by.has(i)) && near(c.hex, hex) <= 0.04)
     .sort((x, y) => near(x.hex, hex) - near(y.hex, hex))[0];
   if (!hit) {
-    dropped.push(hex);
+    unconfirmed.add(hex);
     continue;
   }
+  confirmed.add(hex);
   const was = hit.hex;
   for (const c of [...surfaces, ...accents])
     if (c.hex === was) Object.assign(c, { hex, declared: true });
 }
+const dropped = [...unconfirmed].filter((hex) => !confirmed.has(hex));
 
 const out = path.join(draft, "candidates.json");
 fs.writeFileSync(
