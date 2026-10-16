@@ -5,8 +5,9 @@
 //   node brief.mjs <run-folder> [<knob>=<value>]...
 //
 // Knobs: focus, length (minutes, 1 to 5), audience, language, style, voice
-// (a narrator id), aspect, score (on or off); `must=` and `avoid=` add one
-// list item each, and any given replaces that list (`must=` alone empties it).
+// (a narrator id), aspect, score (on, off or ace-step); `must=` and `avoid=`
+// add one list item each, and any given replaces that list (`must=` alone
+// empties it).
 // stdout: `brief <knob>: <value>` per knob, then `brief: written -> brief.json`
 //         for a new brief, `brief: unchanged`, or `brief: <knobs> changed:
 //         redo <stages>`: the first stage those knobs feed and every stage
@@ -139,8 +140,8 @@ if (
   );
 if (brief.aspect !== "16:9")
   refuse("aspect", brief.aspect, "this version renders 16:9 only");
-if (!["on", "off"].includes(brief.score))
-  refuse("score", brief.score, "on or off");
+if (!["on", "off", "ace-step"].includes(brief.score))
+  refuse("score", brief.score, "on, off or ace-step");
 
 for (const k of KNOBS)
   console.log(`brief ${k}: ${brief[k]}${k === "length" ? " min" : ""}`);

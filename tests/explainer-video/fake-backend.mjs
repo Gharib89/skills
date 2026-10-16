@@ -6,6 +6,8 @@
 //                                 loudness answer
 //   EXPLAINER_VIDEO_FAKE_CHECK    JSON check answers in place of its own
 //   EXPLAINER_VIDEO_FAKE_CLIP_BYTES  size of each clip written (default 1000)
+//   EXPLAINER_VIDEO_FAKE_ACE_EXIT  ACE-Step's exit code, thrown as the real
+//                                  one throws it (unset, it makes the music)
 // The family `ubuntu` answers with its real, non-OFL licence; `helvetica-neue`
 // and `georgia`, as on the real Fontsource, with no family at all.
 //
@@ -83,6 +85,43 @@ export async function fontMeta(id) {
 export async function download(url, file) {
   log({ call: "download", url });
   fs.writeFileSync(file, "woff2");
+}
+
+// A source archive extracts to a pyproject; uv sync leaves a .venv beside it.
+export async function extract(zip, dir) {
+  log({ call: "extract", zip, dir });
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "pyproject.toml"), "[project]\n");
+}
+
+export async function uvSync(dir) {
+  log({ call: "uvSync", dir });
+  fs.mkdirSync(path.join(dir, ".venv"), { recursive: true });
+  return 0;
+}
+
+// ACE-Step's music: a tone the seed tunes, 48 kHz stereo, `seconds` long.
+export async function aceStep({ dir, device, seconds, seed, caption }) {
+  log({ call: "aceStep", dir, device, seconds, seed, caption });
+  const exit = process.env.EXPLAINER_VIDEO_FAKE_ACE_EXIT;
+  if (exit) throw new Error(`ace-step exited ${exit}`);
+  const n = Math.round(seconds * 48000);
+  const hz = 110 + (seed % 200);
+  const L = Float32Array.from({ length: n }, (_, i) =>
+    Math.sin((2 * Math.PI * hz * i) / 48000),
+  );
+  return { L, R: Float32Array.from(L) };
+}
+
+// The machine: EXPLAINER_VIDEO_FAKE_GPU a compute capability (unset, no NVIDIA
+// card), EXPLAINER_VIDEO_FAKE_RAM its bytes of RAM (default 64 GB).
+export async function computeCapability() {
+  const cap = process.env.EXPLAINER_VIDEO_FAKE_GPU;
+  return cap ? +cap : null;
+}
+
+export function memory() {
+  return +(process.env.EXPLAINER_VIDEO_FAKE_RAM ?? 64e9);
 }
 
 export function which(cmd) {

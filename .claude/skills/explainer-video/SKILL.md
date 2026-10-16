@@ -39,13 +39,15 @@ script by the skill's own path, `<skill>` below being the folder this file is
 in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
-   user asked for every opt-in row too. Exit 0 means every row is present and
-   nothing is stale: say so and stop.
-2. **One yes.** Show the table as printed, then ask once for the whole table,
-   naming the total it prints: one yes installs every missing row and removes
-   every stale install. Run install only after the yes. When every missing row
-   is a system package and nothing is stale, skip the question and go to step
-   4.
+   user asked for every opt-in row too, or the brief's `score` is `ace-step`.
+   Exit 0 means every row is present and nothing is stale: say so, with any
+   line under the table, and stop.
+2. **One yes.** Show the table as printed, with any line under it (the
+   `ace-step` row's: GPU or CPU here, and on the CPU its cost per 30 s of
+   score), then ask once for the whole table, naming the total it prints: one
+   yes installs every missing row and removes every stale install. Run install
+   only after the yes. When every missing row is a system package and nothing
+   is stale, skip the question and go to step 4.
 3. **Install.** `node <skill>/scripts/setup.mjs install`, with the same
    `--all`. It installs into the tool cache and the font store, removes the
    stale installs, then prints the table again.
@@ -73,7 +75,7 @@ must include and must avoid. The user's request beside the sources, the
 | `style` | the store default (see Render) | a style profile name |
 | `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
-| `score` | `on` | `on` or `off` |
+| `score` | `on` | `on`, `off`, or `ace-step` (music made by the ACE-Step model) |
 | `must` | none | a topic or term the video says or shows |
 | `avoid` | none | a topic or term the video never touches |
 
@@ -304,19 +306,22 @@ narrator: am_fenrir
    draft.
 2. **Tools.** Rendering needs `npm-packages`, `chrome`, `ffmpeg` and the fonts
    its style profile names (for `claude-code`: `font:source-serif-4`,
-   `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows. Run the
-   setup check first; any of them missing, run the setup steps above.
+   `font:inter`, `font:jetbrains-mono`), beside the voice stage's rows, and
+   `ace-step` and `uv` when the brief's `score` is `ace-step`. Run the setup
+   check first; any of them missing, run the setup steps above.
 3. **Compile.** `node <skill>/scripts/script/compile.mjs explainers/<slug>`
    prints `compile: <n> scene(s) -> script.json`. Exit 1 prints
    `compile: [<scene>: ]<what>` on stderr: fix what it names and compile again.
 4. **Voice.** Run the voice stage above on the same run folder, again after
    any narration edit.
 5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`. It
-   mixes in the **score**, synthesised music ducked under speech with sound
-   effects at the cuts and the end, unless the brief turns it off, masters to
+   mixes in the **score**, synthesised music (or ACE-Step's, by the brief)
+   ducked under speech with sound effects at the cuts and the end, unless the
+   brief turns it off, masters to
    -14 LUFS, renders, then runs the gates (see Gates) and prints
-   their lines. A first render always ends with the critic pending (see
-   Gates). Only when every gate passes does it print one
+   their lines. With `score` `ace-step` on the CPU, render takes minutes: run
+   it in the background and wait for its exit. A first render always ends with
+   the critic pending (see Gates). Only when every gate passes does it print one
    `delivery <check>: pass|fail` line per delivery check (`resolution`,
    `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>

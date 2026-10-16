@@ -6,9 +6,12 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
-import { toolPaths } from "./tools.mjs";
+import { skill, toolPaths } from "./tools.mjs";
 
 const win = process.platform === "win32";
 // Children write to stderr, so stdout carries only setup's own table.
@@ -447,10 +450,93 @@ export async function fontMeta(id) {
   return r.json();
 }
 
+// Streamed to disk: a checkpoint can outgrow what one buffer holds.
 export async function download(url, file) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-  fs.writeFileSync(file, Buffer.from(await r.arrayBuffer()));
+  await pipeline(Readable.fromWeb(r.body), fs.createWriteStream(file));
+}
+
+// A GitHub source archive into `dir`, its one top folder stripped.
+export async function extract(zip, dir) {
+  const JSZip = fromCache(toolPaths().node)("jszip");
+  const archive = await JSZip.loadAsync(fs.readFileSync(zip));
+  for (const f of Object.values(archive.files)) {
+    const rel = f.name.split("/").slice(1).join("/");
+    if (!rel || f.dir) continue;
+    const out = path.join(dir, ...rel.split("/"));
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, await f.async("nodebuffer"));
+  }
+}
+
+// A uv project's .venv from its own lockfile, exactly.
+export async function uvSync(dir) {
+  return (
+    spawnSync("uv", ["sync", "--frozen", "--no-dev"], {
+      cwd: dir,
+      stdio: quiet,
+    }).status ?? 1
+  );
+}
+
+// The first NVIDIA card's compute capability, as nvidia-smi reports it; null
+// with no card or no nvidia-smi.
+export async function computeCapability() {
+  const r = spawnSync(
+    "nvidia-smi",
+    ["--query-gpu=compute_cap", "--format=csv,noheader"],
+    { encoding: "utf8" },
+  );
+  const cap = parseFloat(r.stdout ?? "");
+  return r.status === 0 && cap ? cap : null;
+}
+
+export const memory = () => os.totalmem();
+
+// ACE-Step's music: scripts/score/ace.py under uv in the ace-step row's folder
+// `dir`, as a 48 kHz stereo buffer exactly `seconds` long.
+export async function aceStep({ dir, device, seconds, seed, caption }) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ace-step-"));
+  try {
+    const wav = path.join(tmp, "music.wav");
+    const script = path.join(skill, "scripts", "score", "ace.py");
+    const args = [
+      path.join(dir, "checkpoints"),
+      device,
+      seconds,
+      seed,
+      caption,
+    ];
+    const r = spawnSync(
+      "uv",
+      [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "python",
+        script,
+        ...args.map(String),
+        wav,
+      ],
+      { cwd: path.join(dir, "src"), stdio: quiet },
+    );
+    if (r.status !== 0)
+      throw new Error(`ace-step exited ${r.status ?? r.error?.message}`);
+    const raw = path.join(tmp, "music.f32");
+    ffmpeg(["-y", "-i", wav, "-ar", "48000", "-ac", "2", "-f", "f32le", raw]);
+    const b = fs.readFileSync(raw);
+    const x = new Float32Array(b.buffer, b.byteOffset, b.length / 4);
+    const n = Math.round(seconds * 48000);
+    const out = { L: new Float32Array(n), R: new Float32Array(n) };
+    for (let i = 0; i < Math.min(n, x.length / 2); i++) {
+      out.L[i] = x[2 * i];
+      out.R[i] = x[2 * i + 1];
+    }
+    return out;
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 export function which(cmd) {

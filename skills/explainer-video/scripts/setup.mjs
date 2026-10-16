@@ -18,6 +18,7 @@ import path from "node:path";
 import { userDirs } from "./lib/paths.mjs";
 import {
   TOOL_DIRS,
+  aceDevice,
   catalogue as readCatalogue,
   dest,
   installFont,
@@ -54,8 +55,17 @@ const quietEnv = {
   HYPERFRAMES_NO_UPDATE_CHECK: "1",
 };
 
-// A model row's size is its files'.
-const size = (r) => r.size ?? r.files?.reduce((n, f) => n + f.size, 0);
+// A model row's size is its files'; a uv row's, its environment's and its
+// checkpoints'.
+const filesSize = (r) => r.files?.reduce((n, f) => n + f.size, 0);
+const size = (r) =>
+  r.kind === "uv" ? r.size + filesSize(r) : (r.size ?? filesSize(r));
+
+// A row with a CPU cost (ACE-Step) runs on the device aceDevice picks; on the
+// CPU, a machine with less RAM than the cost names is refused before download.
+const cap = rows.some((r) => r.cpu) ? await backend.computeCapability() : null;
+const shortOfRam = (r) =>
+  r.cpu && aceDevice(cap) === "cpu" && backend.memory() < r.cpu.ram;
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
   const s = fs.lstatSync(p);
@@ -70,7 +80,14 @@ function status(r) {
   if (r.kind === "system")
     return backend.which(r.command) ? "present" : "missing";
   const s = stamp(dest(r));
-  if (!fs.existsSync(s)) return "missing";
+  if (!fs.existsSync(s)) {
+    if (shortOfRam(r))
+      return `refused: the CPU path needs ${formatSize(r.cpu.ram)} RAM, this machine has ${formatSize(backend.memory())}`;
+    // uv syncs the row's env, so without it the download would end in a failed row.
+    if (r.kind === "uv" && !backend.which("uv"))
+      return "refused: install uv first, then check again";
+    return "missing";
+  }
   const now = new Date();
   fs.utimesSync(s, now, now);
   return "present";
@@ -97,6 +114,25 @@ function stale() {
     }
   }
   return out;
+}
+
+// A row's files from Hugging Face into `dir`, pinned by revision and checked by
+// sha256, as ADR 0017 hosts models. Hashed as a stream: a checkpoint can pass
+// the 2 GiB a file read takes.
+async function fetchFiles(r, dir) {
+  for (const f of r.files) {
+    const file = path.join(dir, ...f.path.split("/"));
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    await backend.download(
+      `https://huggingface.co/${r.repo}/resolve/${r.revision}/${f.path}`,
+      file,
+    );
+    const hash = crypto.createHash("sha256");
+    for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+    const sum = hash.digest("hex");
+    if (sum !== f.sha256)
+      throw new Error(`${f.path} has sha256 ${sum}, pinned ${f.sha256}`);
+  }
 }
 
 async function install(r) {
@@ -126,23 +162,20 @@ async function install(r) {
     if (code !== 0)
       throw new Error(`hyperframes browser ensure exited ${code}`);
   } else if (r.kind === "model") {
-    // Pinned by revision and checked by sha256, as ADR 0017 hosts models.
-    await staged(dir, async (part) => {
-      for (const f of r.files) {
-        const file = path.join(part, ...f.path.split("/"));
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        await backend.download(
-          `https://huggingface.co/${r.repo}/resolve/${r.revision}/${f.path}`,
-          file,
-        );
-        const sum = crypto
-          .createHash("sha256")
-          .update(fs.readFileSync(file))
-          .digest("hex");
-        if (sum !== f.sha256)
-          throw new Error(`${f.path} has sha256 ${sum}, pinned ${f.sha256}`);
-      }
-    });
+    await staged(dir, (part) => fetchFiles(r, part));
+  } else if (r.kind === "uv") {
+    // The code at its pinned commit, synced from its own lockfile into a .venv
+    // beside it. Filled in place, not staged: the venv records its absolute path.
+    const zip = path.join(dir, "source.zip");
+    await backend.download(
+      `https://codeload.github.com/${r.source.repo}/zip/${r.source.revision}`,
+      zip,
+    );
+    await backend.extract(zip, path.join(dir, "src"));
+    fs.rmSync(zip);
+    const code = await backend.uvSync(path.join(dir, "src"));
+    if (code !== 0) throw new Error(`uv sync exited ${code}`);
+    await fetchFiles(r, path.join(dir, "checkpoints"));
   }
   fs.writeFileSync(stamp(dir), "");
   return "present";
@@ -170,6 +203,15 @@ function report(state, staleInstalls) {
     lines.push(
       `| ${s.id} | nothing | stale, unused ${s.days} days | ${formatSize(s.size)} | - | ${s.dir} |`,
     );
+  for (const r of rows.filter((r) => r.cpu)) {
+    const s = r.cpu.seconds;
+    lines.push(
+      "",
+      aceDevice(cap) === "cuda"
+        ? `${r.id} runs on the GPU here (compute capability ${cap.toFixed(1)}).`
+        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0: no bfloat16, and float16 gives NaN` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of score.`,
+    );
+  }
   for (const r of rows.filter(
     (r) => r.kind === "system" && state.get(r) !== "present",
   )) {
@@ -182,8 +224,10 @@ function report(state, staleInstalls) {
   }
   const missing = rows.filter((r) => state.get(r) !== "present");
   const parts = [];
-  // A system package has no size: setup installs none of them.
-  const total = missing.reduce((n, r) => n + (size(r) || 0), 0);
+  // A system package has no size: setup installs none of them, nor a refused row.
+  const total = missing
+    .filter((r) => !state.get(r).startsWith("refused"))
+    .reduce((n, r) => n + (size(r) || 0), 0);
   if (missing.length)
     parts.push(
       `not present: ${missing.map((r) => r.id).join(", ")}${total ? ` (${formatSize(total)} to install)` : ""}`,
