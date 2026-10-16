@@ -64,6 +64,7 @@ test("a bare brief is the defaults, written to brief.json and echoed one line pe
     style: "claude-code",
     voice: "bf_emma",
     aspect: "16:9",
+    score: "on",
     must: [],
     avoid: [],
   });
@@ -75,6 +76,7 @@ test("a bare brief is the defaults, written to brief.json and echoed one line pe
     "brief style: claude-code",
     "brief voice: bf_emma",
     "brief aspect: 16:9",
+    "brief score: on",
     "brief must: none",
     "brief avoid: none",
     "brief: written -> brief.json",
@@ -155,6 +157,12 @@ test("changing one knob keeps the rest and names only the stages it feeds", () =
     r.out,
     /^brief: focus, voice changed: redo source, script, voice, render$/m,
   );
+  // The score is made at render, from the voice's word timings.
+  stale();
+  r = brief(fx, ["score=off"]);
+  assert.match(r.out, /^brief score: off$/m);
+  assert.match(r.out, /^brief: score changed: redo render$/m);
+  assert.ok(has("script.json") && has("check.json"));
 });
 
 test("a value this version cannot make is refused and nothing is written", () => {
@@ -170,6 +178,7 @@ test("a value this version cannot make is refused and nothing is written", () =>
     ["style=nope", /^brief style nope: no style profile nope in /m],
     ["aspect=9:16", /^brief aspect 9:16: this version renders 16:9 only$/m],
     ["focus=", /^brief focus: empty$/m],
+    ["score=loud", /^brief score loud: on or off$/m],
   ]) {
     const r = brief(fx, [arg]);
     assert.equal(r.code, 1, arg);

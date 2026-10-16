@@ -39,7 +39,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.kind` | `"review"` or `"delivered"` | yes | Cards to approve or revise, or the finished video's clips. |
 | `board.title` | string | yes | The scene file's title. |
 | `board.brief` | array | yes | The brief, one entry per knob and list, in `brief.json` order. |
-| `board.brief[].knob` | string | yes | `focus`, `length`, `audience`, `language`, `style`, `voice`, `aspect`, `must` or `avoid`. |
+| `board.brief[].knob` | string | yes | `focus`, `length`, `audience`, `language`, `style`, `voice`, `aspect`, `score`, `must` or `avoid`. |
 | `board.brief[].value` | string | yes | The value; a list's items joined by `; `. |
 | `board.sources` | array | yes | The source pack, one entry per source. Empty for narration the user wrote. |
 | `board.sources[].id` | string | yes | The source's id. |

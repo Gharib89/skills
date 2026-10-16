@@ -340,12 +340,18 @@ export async function loudness(file) {
 // measurements, so speech keeps its dynamics. Mastered as stereo, both
 // channels the source's: HyperFrames upmixes a mono track at full level into
 // each channel (pan FL=FL+FC), which reads 3 LU louder than the mono master.
-export async function master(input, output, { lufs, peak }) {
-  const target = `pan=stereo|c0=c0|c1=c0,loudnorm=I=${lufs}:TP=${peak}:LRA=11`;
+// A `bed` (a stereo WAV, the score) is summed under the narration before the
+// loudnorm, and the master then takes the bed's 48 kHz.
+export async function master(input, output, { lufs, peak, bed }) {
+  const loud = `loudnorm=I=${lufs}:TP=${peak}:LRA=11`;
+  const target = bed
+    ? `[0:a]pan=stereo|c0=c0|c1=c0[v];[v][1:a]amix=inputs=2:duration=first:normalize=0,${loud}`
+    : `pan=stereo|c0=c0|c1=c0,${loud}`;
+  const inputs = ["-i", input, ...(bed ? ["-i", bed] : [])];
+  const filter = bed ? "-filter_complex" : "-af";
   const err = ffmpeg([
-    "-i",
-    input,
-    "-af",
+    ...inputs,
+    filter,
     `${target}:print_format=json`,
     "-f",
     "null",
@@ -355,6 +361,22 @@ export async function master(input, output, { lufs, peak }) {
   if (!m)
     throw new Error(`loudnorm pass 1 printed no measurements for ${input}`);
   const j = JSON.parse(m);
+  // With a score, its rate; without, the narration's own.
+  const rate = bed ? 48000 : sampleRate(input);
+  ffmpeg([
+    "-y",
+    ...inputs,
+    filter,
+    `${target}:measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}:offset=${j.target_offset}:linear=true`,
+    "-ar",
+    String(rate),
+    "-c:a",
+    "pcm_s16le",
+    output,
+  ]);
+}
+
+function sampleRate(input) {
   const probed = spawnSync(
     "ffprobe",
     [
@@ -373,18 +395,7 @@ export async function master(input, output, { lufs, peak }) {
   const rate = parseInt(probed.stdout, 10);
   if (probed.status !== 0 || !rate)
     throw new Error(`ffprobe ${input}: no audio sample rate`);
-  ffmpeg([
-    "-y",
-    "-i",
-    input,
-    "-af",
-    `${target}:measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}:offset=${j.target_offset}:linear=true`,
-    "-ar",
-    String(rate),
-    "-c:a",
-    "pcm_s16le",
-    output,
-  ]);
+  return rate;
 }
 
 export async function ffprobe(file) {

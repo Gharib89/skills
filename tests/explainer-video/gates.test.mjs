@@ -96,7 +96,7 @@ const titled = (word) =>
 function assertRed(fx, r, gate, why) {
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(r.out, new RegExp(`^gate ${gate}: fail: .*${why}`, "m"));
-  assert.match(r.out, /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(r.out, /^gates: 4 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
   assert.ok(!fs.existsSync(delivered(fx)));
   assert.equal(record(fx).gates[gate].status, "fail");
@@ -106,13 +106,13 @@ function assertRed(fx, r, gate, why) {
 // Green on the fix: every gate passes, attempts back to 0, the video delivered.
 function assertGreen(fx, r) {
   assert.equal(r.code, 0, r.out + r.err);
-  assert.match(r.out, /^gates: 4 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 5 pass, 0 fail$/m);
   for (const g of Object.values(record(fx).gates)) assert.equal(g.attempts, 0);
   assert.equal(record(fx).attempts, 0);
   assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
 }
 
-test("a clean render passes all four gates, writes the record and the report, and delivers", () => {
+test("a clean render passes all five gates, writes the record and the report, and delivers", () => {
   const fx = fixture();
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
@@ -122,11 +122,17 @@ test("a clean render passes all four gates, writes the record and the report, an
     "gate contrast: pass: 0 finding(s) vs body 4.5:1, large 3:1",
     "gate loudness: pass: -14.0 LUFS, peak -1.6 dBTP vs -14 +-1 LUFS, peak <= -1 dBTP",
     lines[3],
-    "gates: 4 pass, 0 fail",
+    lines[4],
+    "gates: 5 pass, 0 fail",
   ]);
   assert.match(
     lines[3],
     /^gate captions: pass: \d+ cue\(s\), 0 finding\(s\) vs none$/,
+  );
+  const sfx = JSON.parse(read(fx.dir, "score.json")).cues.length;
+  assert.equal(
+    lines[4],
+    `gate sfx: pass: ${sfx} cue(s), at most ${sfx} in a minute vs <= 24 a minute`,
   );
   const gates = record(fx);
   assert.match(gates.script, /^[0-9a-f]{16}$/);
@@ -135,6 +141,7 @@ test("a clean render passes all four gates, writes the record and the report, an
     "contrast",
     "loudness",
     "captions",
+    "sfx",
   ]);
   assert.deepEqual(gates.gates.loudness, {
     status: "pass",
@@ -175,6 +182,70 @@ test("the narration is mastered to -14 LUFS under the peak floor before the vide
   assert.equal(m[0].peak, -1.5);
   assert.equal(path.basename(m[0].output), "narration.wav");
   assert.equal(path.basename(path.dirname(m[0].output)), "composition");
+});
+
+const wav = (f) => {
+  const b = fs.readFileSync(f);
+  return {
+    channels: b.readUInt16LE(22),
+    rate: b.readUInt32LE(24),
+    bits: b.readUInt16LE(34),
+    seconds: b.readUInt32LE(40) / b.readUInt32LE(28),
+  };
+};
+
+test("by default a score of the whole timeline is mixed under the narration, its cues on the cuts", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const [m] = calls(fx, "master");
+  const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  assert.deepEqual(wav(m.bed), {
+    channels: 2,
+    rate: 48000,
+    bits: 24,
+    seconds: Math.round(timeline.total * 48000) / 48000,
+  });
+  const s = JSON.parse(read(fx.dir, "score.json"));
+  assert.equal(s.score, "on");
+  assert.ok(s.preset && Number.isInteger(s.seed), JSON.stringify(s));
+  const last = timeline.scenes.at(-1).words.at(-1);
+  assert.deepEqual(s.cues, [
+    ...timeline.scenes.slice(1).map((sc) => ({ type: "whoosh", t: sc.start })),
+    { type: "sting", t: last.end },
+  ]);
+});
+
+test("the same timings render the cached score again", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const first = calls(fx, "master")[0].bed;
+  const before = fs.statSync(first).mtimeMs;
+  assert.equal(stage(fx, "render/render.mjs").code, 0);
+  const again = calls(fx, "master")[1].bed;
+  assert.equal(again, first);
+  assert.equal(fs.statSync(again).mtimeMs, before);
+});
+
+test("a brief with the score off masters the narration alone", () => {
+  const fx = fixture();
+  const b = spawnSync(
+    process.execPath,
+    [
+      path.join(skill, "scripts", "brief", "brief.mjs"),
+      fx.dir,
+      "voice=am_fenrir",
+      "score=off",
+    ],
+    { env: fx.env, encoding: "utf8" },
+  );
+  assert.equal(b.status, 0, b.stderr);
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(calls(fx, "master")[0].bed, undefined);
+  assert.deepEqual(JSON.parse(read(fx.dir, "score.json")), {
+    score: "off",
+    cues: [],
+  });
 });
 
 test("a clipped title fails layout, delivers nothing, and passes on the fix", () => {
@@ -327,7 +398,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   );
   assert.match(
     second.out,
-    /^gates: 3 pass, 1 fail; next: fix attempt 2 of 2$/m,
+    /^gates: 4 pass, 1 fail; next: fix attempt 2 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 2);
   const third = render(
@@ -337,7 +408,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   assert.equal(third.code, 1);
   assert.match(
     third.out,
-    /^gates: 3 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+    /^gates: 4 pass, 1 fail; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 3);
   const renarrated = render(
@@ -346,7 +417,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   );
   assert.match(
     renarrated.out,
-    /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m,
+    /^gates: 4 pass, 1 fail; next: fix attempt 1 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
 });
@@ -357,7 +428,7 @@ test("a red that moves from layout to contrast and back still stops", () => {
   const second = render(fx, titled("dim"));
   assert.match(
     second.out,
-    /^gates: 3 pass, 1 fail; next: fix attempt 2 of 2$/m,
+    /^gates: 4 pass, 1 fail; next: fix attempt 2 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 0);
   assert.equal(record(fx).gates.contrast.attempts, 1);
@@ -365,7 +436,7 @@ test("a red that moves from layout to contrast and back still stops", () => {
   assert.equal(third.code, 1);
   assert.match(
     third.out,
-    /^gates: 3 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+    /^gates: 4 pass, 1 fail; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
   assert.equal(record(fx).attempts, 3);
@@ -378,7 +449,7 @@ test("the same red render judged again keeps its attempt count", () => {
   // out/ is emptied on red, so the render stage runs again on its cached video.
   const again = stage(fx, "render/render.mjs");
   assert.equal(again.code, 1, again.out + again.err);
-  assert.match(again.out, /^gates: 3 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(again.out, /^gates: 4 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.equal(record(fx).gates.layout.attempts, 1);
 });
 
@@ -397,6 +468,42 @@ test("a tightened floor is the floor applied and printed", () => {
     r.out,
     /^gate layout: fail: \d+ finding\(s\), first: [\d.]+ s hook: small 40 px .* vs none, text >= 48 px, margin 5%$/m,
   );
+});
+
+test("a tightened sfx floor thins the score's cues to it", () => {
+  const fx = fixture();
+  const p = JSON.parse(read(skill, "styles", "claude-code.json"));
+  const styles = path.join(fx.tmp, "proj", "explainers", ".styles");
+  fs.mkdirSync(styles, { recursive: true });
+  fs.writeFileSync(
+    path.join(styles, "calm.json"),
+    JSON.stringify({ ...p, gates: { sfx: { perMinute: 1 } } }),
+  );
+  const r = render(fx, SCRIPT.replace("style: claude-code", "style: calm"));
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate sfx: pass: 1 cue\(s\), at most 1 in a minute vs <= 1 a minute$/m,
+  );
+});
+
+test("more sound effects in a minute than the floor fails sfx", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const cues = Array.from({ length: 25 }, (_, i) => ({ type: "whoosh", t: i }));
+  fs.writeFileSync(
+    path.join(fx.dir, "score.json"),
+    JSON.stringify({ score: "on", cues }),
+  );
+  const r = stage(fx, "gates/gates.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate sfx: fail: 25 cue\(s\), at most 25 in a minute vs <= 24 a minute$/m,
+  );
+  assert.deepEqual(record(fx).gates.sfx.evidence, [
+    "25 cues in the minute from 0.00 s, over 24",
+  ]);
 });
 
 test("a second gates run with nothing changed calls neither check nor probe, yet measures loudness and captions", () => {

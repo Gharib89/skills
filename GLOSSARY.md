@@ -488,8 +488,12 @@ _Avoid_: renderer, backend, framework
 A pre-rendered video made outside the composer (a maths animation, a cached 3D shot, a screen recording) that fills one scene's slot on the composer's timeline.
 _Avoid_: embed, sub-render, segment
 
+**Score**:
+The music and sound effects an explainer video carries under its narration, synthesised in code and arranged to the scene timings: the music ducks under speech, and sound effects mark the cuts and the end of the narration, never more in a minute than the sfx gate's floor. The same timings and seed give the same score.
+_Avoid_: soundtrack, background music, BGM
+
 **Video gate**:
-An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness or caption timing. Each has a floor the skill sets and a style profile may only tighten; a gate still failing after two fix attempts stops the run, and no video ships.
+An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness, caption timing or sound effects per minute. Each has a floor the skill sets and a style profile may only tighten; a gate still failing after two fix attempts stops the run, and no video ships.
 _Avoid_: QA, check, local gate
 
 **Critic**:
