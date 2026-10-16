@@ -1,11 +1,18 @@
 # Style extraction
 
+## Contents
+
+- [Extracting the draft](#extracting-the-draft)
+- [The style card](#the-style-card)
+
 **Style extraction** turns a look the user points at into a draft style
 profile. Every source becomes **reference images** first, a script measures
 their colours into **colour candidates**, you assign the twelve colour tokens
 from those colour candidates by id, and a second script derives what the
 images never show and adjusts what fails contrast. You never write a hex:
 every colour in the draft is measured, derived or adjusted by a script.
+
+## Extracting the draft
 
 Work in a run folder, `explainers/<slug>/`: the video's own run when the
 steering prompt points at references, else one named for the profile. Propose
