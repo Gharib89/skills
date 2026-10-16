@@ -17,7 +17,6 @@ const RULES = {
     sound: () => D.gain(V.chime([77, 84, 89, 96], 2.0, 0.05), 0.8),
   },
 };
-export const SFX = Object.keys(RULES);
 
 // cues: [{type, t}]. A whoosh rises into its time, so it lands on the cut.
 export function renderSfx(cues, total, { seed, offset = 0 }) {

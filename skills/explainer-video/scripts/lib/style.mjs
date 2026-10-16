@@ -15,12 +15,15 @@ export const LUFS = -14;
 
 // The skill's gate floors; a profile's `gates` block may only tighten them:
 // raise contrast (WCAG 2.1) and layout's text size and safe margin, lower
-// loudness's tolerance around -14 LUFS and its true peak in dBTP.
+// loudness's tolerance around -14 LUFS, its true peak in dBTP and the sound
+// effects allowed in any minute.
 const FLOORS = {
   contrast: { body: 4.5, large: 3 },
   layout: { textPx: 18, margin: 0.05 },
   loudness: { tolerance: 1, peak: -1 },
+  sfx: { perMinute: 24 },
 };
+const LOWER = new Set(["loudness", "sfx"]);
 
 // The floors a run is judged by: the skill's, as the profile tightens them.
 export function floors(profile) {
@@ -40,7 +43,8 @@ export function floors(profile) {
       // at -9 dBTP.
       if (g === "loudness" && k === "peak" && v < -8.5)
         refuse(`${g}.${k} ${v} is under -8.5, the lowest the master reaches`);
-      if (g === "loudness" ? v > f : v < f)
+      if (g === "sfx" && v < 0) refuse(`${g}.${k} ${v} must be 0 or more`);
+      if (LOWER.has(g) ? v > f : v < f)
         refuse(`${g}.${k} ${v} lowers the skill's floor ${f}`);
       out[g][k] = v;
     }
