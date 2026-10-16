@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.17.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: ElevenLabs backend and Arabic own voice
+  ([#742](https://github.com/Gharib89/skills/pull/742),
+  [`0adc871`](https://github.com/Gharib89/skills/commit/0adc87135d4598c6eb15b578de26dc40b1843deb))
+
+
 ## v0.16.0 (2026-10-16)
 
 ### Features
