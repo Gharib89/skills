@@ -39,22 +39,30 @@ script by the skill's own path, `<skill>` below being the folder this file is
 in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
-   user asked for every opt-in row too, or the brief's `score` is `ace-step`.
-   Exit 0 means every row is present and nothing is stale: say so, with any
-   line under the table, and stop.
+   user asked for every opt-in row too, or the brief's `score` is `ace-step`,
+   and `--voice <id>` once a brief names its `voice`: the voice rows listed are
+   that narrator's (without it, the English default's). Exit 0 means every row
+   is present and nothing is stale: say so, with any line under the table, and
+   stop.
 2. **One yes.** Show the table as printed, with any line under it (the
    `ace-step` row's: GPU or CPU here, and on the CPU its cost per 30 s of
    score), then ask once for the whole table, naming the total it prints: one
    yes installs every missing row and removes every stale install. Run install
-   only after the yes. When every missing row is a system package and nothing
-   is stale, skip the question and go to step 4.
+   only after the yes. When every missing row is a system package or a key and
+   nothing is stale, skip the question and go to step 4.
 3. **Install.** `node <skill>/scripts/setup.mjs install`, with the same
-   `--all`. It installs into the tool cache and the font store, removes the
-   stale installs, then prints the table again.
+   `--all` and `--voice`. It installs into the tool cache and the font store,
+   removes the stale installs, then prints the table again.
 4. **Report.** Show the latest table. A `missing` system package (ffmpeg, or
    `uv` beside an opt-in Python row) is one the skill never installs: relay its
    install lines from the output, ask the user to run the one for their OS,
-   then check again. A `refused` or `failed` row: relay the reason as printed.
+   then check again. A `missing` or `refused` key (`key:gemini`, the Egyptian
+   Arabic narrators' `GEMINI_API_KEY`) is one the user sets: relay the line
+   under the table with its link to a free key, then check again; the run does
+   not go on to voice without it, and no other narrator stands in unless the
+   user names one in the brief. Relay the **Gemini data notice** when it prints:
+   it shows once per key. Any other `refused` or `failed` row: relay the reason
+   as printed.
 
 To remove the tools, the user deletes the `explainer-video` folders that the
 `writes to` paths sit in. Setup deletes only after the yes: the stale installs,
@@ -71,7 +79,7 @@ must include and must avoid. The user's request beside the sources, the
 | `focus` | the source's main ideas | what the video should say |
 | `length` | 2 | minutes, 1 to 5 |
 | `audience` | a developer new to the source | who watches |
-| `language` | `en` | `en` in this version |
+| `language` | `en` | `en`, or `ar` (Egyptian Arabic: this version voices it but does not render it) |
 | `style` | the store default (see Render) | a style profile name |
 | `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
@@ -216,14 +224,18 @@ alone (render needs the compiled one):
 ```
 
 `narrator` is optional: without it the stage takes the language's first default
-in `<skill>/narrators.json` (`bf_emma`). Narration is the **spoken form**: write
-numbers, dates and symbols out as words ("forty two", not "42"), because QC
-compares the text against what the aligner hears: a numeral's spoken words
-match nothing in the text and cost precision.
+in `<skill>/narrators.json` (`bf_emma` for `en`, `ar-eg-csagent-2` for `ar`).
+Narration is the **spoken form**: write numbers, dates and symbols out as words
+("forty two", not "42"), because QC compares the text against what the aligner
+hears: a numeral's spoken words match nothing in the text and cost precision.
+In Egyptian Arabic narration, keep English terms in Latin letters (`pull
+request`); QC spells them in Arabic letters as a speaker says them.
 
-1. **Tools.** Voice needs the npm packages, `model:kokoro-82m` and
-   `model:wav2vec2-base-960h`. Run the setup check first; any of them missing,
-   run the setup steps above before voicing.
+1. **Tools.** Voice needs the npm packages and its narrator's rows: English
+   `model:kokoro-82m` and `model:wav2vec2-base-960h`; Egyptian Arabic
+   `model:egyptian-arabic-wav2vec2` and `key:gemini`. Run the setup check with
+   `--voice <narrator>` first; any row missing, run the setup steps above
+   before voicing.
 2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
    prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
    rate · pass|fail: <why>`, then a summary line. A scene whose narration,
@@ -238,8 +250,14 @@ match nothing in the text and cost precision.
    that passed are cached. The run folder holds no `voice.json`, not even an
    earlier pass's, until every scene passes.
    Exit 1 with no scene lines is an input or tool error (an unknown narrator,
-   a scene with no narration, a failed synthesis): relay the stderr message as
-   printed.
+   a scene with no narration, a Gemini narrator with no `GEMINI_API_KEY`, a
+   failed synthesis): relay the stderr message as printed. Never switch the
+   narrator yourself to get past a missing key.
+5. **On `voice: Gemini quota reached`**, the key has spent its day's requests
+   (10 on the free tier). The scenes it names are kept. Relay the line and ask
+   the user to pick one: voice again tomorrow, which voices only the missing
+   scenes; set a paid key and voice again; or move the brief's `voice` to
+   another narrator.
 
 ## Storyboard
 

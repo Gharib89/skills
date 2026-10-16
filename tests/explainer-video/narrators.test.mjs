@@ -50,3 +50,20 @@ test("the English narrators ship with a calibrated rate in words per second", ()
   for (const n of english)
     assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} rate ${n.rate}`);
 });
+
+test("the Egyptian Arabic narrators are Gemini voices whose text leaves the machine", () => {
+  const arabic = narrators.filter((n) => n.language === "ar");
+  assert.deepEqual(
+    arabic.map((n) => [n.id, n.gender]),
+    [
+      ["ar-eg-csagent-2", "female"],
+      ["ar-eg-commercial-11", "male"],
+    ],
+  );
+  for (const n of arabic) {
+    assert.equal(n.backend, "gemini", n.id);
+    assert.equal(n.voice, n.id);
+    assert.equal(n.leavesMachine, true, n.id);
+    assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} rate ${n.rate}`);
+  }
+});

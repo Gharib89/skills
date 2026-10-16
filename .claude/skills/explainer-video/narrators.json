@@ -23,6 +23,30 @@
       "leavesMachine": false,
       "rate": 3.07,
       "default": true
+    },
+    {
+      "id": "ar-eg-csagent-2",
+      "language": "ar",
+      "gender": "female",
+      "backend": "gemini",
+      "voice": "ar-eg-csagent-2",
+      "style": "a clear, warm, friendly narrator explaining a software workflow",
+      "licence": "Gemini API terms",
+      "leavesMachine": true,
+      "rate": 2.39,
+      "default": true
+    },
+    {
+      "id": "ar-eg-commercial-11",
+      "language": "ar",
+      "gender": "male",
+      "backend": "gemini",
+      "voice": "ar-eg-commercial-11",
+      "style": "a clear, warm, friendly narrator explaining a software workflow",
+      "licence": "Gemini API terms",
+      "leavesMachine": true,
+      "rate": 2.55,
+      "default": true
     }
   ]
 }

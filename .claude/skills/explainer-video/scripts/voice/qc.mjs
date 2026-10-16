@@ -2,6 +2,8 @@
 // so a garbled, cut or looped render blocks before anything is built on it.
 // Floors from the spec: content-word recall 0.8 (cuts and mumbles), precision
 // 0.85 (loops and invented speech), and 9 to 22 characters per second.
+import { fold, toArabic } from "./arabic.mjs";
+
 export const FLOORS = { recall: 0.8, precision: 0.85, rate: [9, 22] };
 
 // English function words: a content word is any other word of two letters or more.
@@ -22,6 +24,30 @@ const words = (text) =>
     .filter(Boolean);
 const content = (ws) =>
   ws.filter((w) => w.length > 1 && !STOP.has(w) && !/\d/.test(w));
+
+// Egyptian Arabic function words from the alignment research, folded, with the
+// clitics ال and لل that a split word leaves.
+const STOP_AR = new Set(
+  `اللي لما على علي في فيه من ده دي دا و بس كل لحد ما عن مع بعد كده قبل لو ولا إيه
+  ايه هي هو عشان اللى الى إلى الي ل ب يا انا أنا انت إنت ليها ليه بتاع بتاعك
+  بتاعة وبعدين بعدها وبعدها نفس أي اي the a an of to for and or in on لل ال`
+    .split(/\s+/)
+    .map(fold),
+);
+
+// Arabic content words, each English term in the Arabic letters the model
+// writes for it, so "request" meets ريكويست. An acronym's letter names are
+// words of their own, filtered again, as the transcript's are: CI's اي is a
+// function word on both sides.
+const keep = (w) =>
+  w.length > 1 && !/\d/.test(w) && !STOP_AR.has(w.toLowerCase());
+const arabicContent = (text) =>
+  fold(text)
+    .replace(/[^ء-يڨیA-Za-z0-9']+/g, " ")
+    .split(/\s+/)
+    .filter(keep)
+    .flatMap((w) => fold(toArabic(w)).split(" "))
+    .filter(keep);
 
 function similar(a, b) {
   if (a === b) return true;
@@ -44,9 +70,11 @@ function similar(a, b) {
 }
 
 // One scene's verdict: each measured value, and a failure line per floor or band missed.
-export function check(narration, transcript, seconds) {
-  const ref = content(words(narration));
-  const hyp = content(words(transcript));
+export function check(narration, transcript, seconds, language = "en") {
+  const read =
+    language === "ar" ? arabicContent : (text) => content(words(text));
+  const ref = read(narration);
+  const hyp = read(transcript);
   const hit = new Array(ref.length).fill(false);
   const used = new Array(hyp.length).fill(false);
   const free = (k) => k < hyp.length && !used[k];

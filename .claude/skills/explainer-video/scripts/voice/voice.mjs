@@ -12,8 +12,11 @@
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
 //         rate · pass|fail: <why>`, then one summary line
 // writes: <run>/voice.json, the word timeline, only when every scene passes
-// exit:   0 every scene passes · 1 refused for its input, a scene fails QC,
-//         or synthesis or alignment failed · 2 usage
+// stderr: a Gemini narrator with no GEMINI_API_KEY is refused before any
+//         synthesis; a Gemini quota stop (HTTP 429) names the scenes kept
+// exit:   0 every scene passes · 1 refused for its input or a missing key, a
+//         scene fails QC, a quota stop, or synthesis or alignment failed ·
+//         2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -130,6 +133,7 @@ async function voice(group, ctc) {
           Math.floor(end / FRAME),
         ),
         own.at(-1).end - own[0].start,
+        language,
       ),
     };
   });
@@ -160,12 +164,25 @@ function wav(file, samples, rate) {
 }
 
 const missing = scenes.filter((s) => !s.cached);
+// A Gemini narrator speaks only on the user's own key: no other narrator
+// stands in, since the brief chose this voice.
+if (
+  missing.length &&
+  narrator.backend === "gemini" &&
+  !process.env.GEMINI_API_KEY
+) {
+  console.error(
+    `voice: narrator ${narrator.id} needs GEMINI_API_KEY: get a free key at https://aistudio.google.com/apikey, or choose another narrator in the brief`,
+  );
+  process.exit(1);
+}
 const groups =
   missing.length === scenes.length ? [missing] : missing.map((s) => [s]);
 let failed = 0;
 // Scenes with the same narration share a cache key and so one WAV: the first
 // slice voiced is the one written, and a repeat takes its entry.
 const byKey = new Map();
+let kept = 0;
 try {
   // Every scene cached needs no model.
   const ctc = groups.length ? await backend.aligner({ language, tools }) : null;
@@ -189,9 +206,15 @@ try {
         path.join(cacheDir, `${v.scene.key}.json`),
         JSON.stringify(entry),
       );
+      kept++;
     }
 } catch (e) {
-  console.error(`voice: ${e.message}`);
+  // Each group is cached as it passes, so a rerun voices only what is missing.
+  if (e.quota)
+    console.error(
+      `voice: Gemini quota reached (HTTP 429); ${kept} scene(s) voiced before it are kept. Resume tomorrow (voicing again voices only the missing scenes), use a paid key, or choose another narrator in the brief`,
+    );
+  else console.error(`voice: ${e.message}`);
   process.exit(1);
 }
 

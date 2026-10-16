@@ -17,19 +17,6 @@ after(() =>
   temps.forEach((t) => fs.rmSync(t, { recursive: true, force: true })),
 );
 
-const ARABIC = {
-  id: "ar-eg-csagent-2",
-  language: "ar",
-  gender: "female",
-  backend: "gemini",
-  voice: "ar-eg-csagent-2",
-  style: "warm",
-  licence: "Gemini API terms",
-  leavesMachine: true,
-  rate: 2.1,
-  default: true,
-};
-
 // The fake's frame layout, worked by hand: a word holds 3 frames per letter,
 // then a `|` frame; words are 2 silent frames apart, sentences 12. Frames are
 // 20 ms. The span runs from the first word's first letter to the last `|`.
@@ -45,17 +32,16 @@ function fakeRate(text) {
   return words.length / (frames * 0.02);
 }
 
-test("calibration measures each English narrator's rate in words per second and leaves the rest of narrators.json alone", () => {
+// Calibrate `language` on a copy of the shipped narrators.json: the exit, the
+// synthesize calls, and the narrators before and after.
+function calibrateCopy(language) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-calibrate-"));
   temps.push(tmp);
   const file = path.join(tmp, "narrators.json");
-  const before = JSON.parse(
-    fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
-  );
-  before.narrators.push(ARABIC);
-  fs.writeFileSync(file, JSON.stringify(before));
+  fs.copyFileSync(path.join(skill, "narrators.json"), file);
+  const before = JSON.parse(fs.readFileSync(file, "utf8")).narrators;
   const log = path.join(tmp, "calls.jsonl");
-  const r = spawnSync(process.execPath, [calibrate, "en", file], {
+  const r = spawnSync(process.execPath, [calibrate, language, file], {
     env: {
       PATH: process.env.PATH,
       HOME: path.join(tmp, "home"),
@@ -72,22 +58,49 @@ test("calibration measures each English narrator's rate in words per second and 
     .split("\n")
     .map((l) => JSON.parse(l))
     .filter((c) => c.call === "synthesize");
+  const after = JSON.parse(fs.readFileSync(file, "utf8")).narrators;
+  return { out: r.stdout, calls, before, after };
+}
+
+test("calibration measures each English narrator's rate in words per second and leaves the rest of narrators.json alone", () => {
+  const { out, calls, before, after } = calibrateCopy("en");
   assert.deepEqual(
     calls.map((c) => c.voice),
     ["bf_emma", "am_fenrir"],
   );
   const want = fakeRate(calls[0].text);
-  const after = JSON.parse(fs.readFileSync(file, "utf8")).narrators;
   for (const n of after.filter((n) => n.language === "en")) {
     assert.ok(Math.abs(n.rate - want) / want < 0.02, `${n.id} ${n.rate}`);
-    assert.match(
-      r.stdout,
-      new RegExp(`^calibrate ${n.id}: ${n.rate} words/s`, "m"),
-    );
+    assert.match(out, new RegExp(`^calibrate ${n.id}: ${n.rate} words/s`, "m"));
   }
   assert.deepEqual(
     after.map(({ rate, ...n }) => n),
-    before.narrators.map(({ rate, ...n }) => n),
+    before.map(({ rate, ...n }) => n),
   );
-  assert.deepEqual(after.at(-1), ARABIC);
+  const arabic = before.filter((n) => n.language === "ar");
+  assert.ok(arabic.length);
+  assert.deepEqual(
+    after.filter((n) => n.language === "ar"),
+    arabic,
+  );
+});
+
+test("calibration on the Arabic text voices it on each Gemini narrator and writes their rates", () => {
+  const { out, calls, before, after } = calibrateCopy("ar");
+  assert.deepEqual(
+    calls.map((c) => [c.backend, c.voice]),
+    [
+      ["gemini", "ar-eg-csagent-2"],
+      ["gemini", "ar-eg-commercial-11"],
+    ],
+  );
+  assert.ok(calls[0].text.split(/\s+/).length >= 55, calls[0].text);
+  for (const n of after.filter((n) => n.language === "ar")) {
+    assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} ${n.rate}`);
+    assert.match(out, new RegExp(`^calibrate ${n.id}: ${n.rate} words/s`, "m"));
+  }
+  assert.deepEqual(
+    after.filter((n) => n.language === "en"),
+    before.filter((n) => n.language === "en"),
+  );
 });
