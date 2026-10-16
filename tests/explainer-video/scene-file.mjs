@@ -112,3 +112,44 @@ style: claude-code
 { "component": "codediff", "props": { "lang": "js", "file": "src/sum.js", "before": "export function sum(a, b) {\\n  return a - b;\\n}", "after": "export function sum(a, b) {\\n  return a + b;\\n}", "at": 2 } }
 \`\`\`
 `;
+
+// An Egyptian Arabic scene file, written in Arabic with its kept terms in
+// Latin letters: a title, a flow and a code frame, for the Arabic tests.
+export const ARABIC = `# إزاي Ship بيوصل لحد pull request
+language: ar
+narrator: ar-eg-csagent-2
+style: claude-code
+
+## Scene hook · الوعد
+
+### Narration
+1. Ship بياخد issue واحدة ويوصلها لحد pull request متراجع. [ex-1]
+2. خلينا نشوف إزاي. [no-claim]
+
+### Visual
+\`\`\`json
+{ "component": "title", "props": { "kicker": "Ship", "title": "من issue لحد pull request", "subtitle": "تشغيلة واحدة و merge واحد" } }
+\`\`\`
+
+## Scene steps · الخطوات
+
+### Narration
+1. الأول بيعمل branch جديد. [ex-2]
+2. بعدين بيشغل الـ CI على الـ branch. [ex-3]
+3. وفي الآخر بيطلب review قبل الـ merge. [ex-4]
+
+### Visual
+\`\`\`json
+{ "component": "flow", "props": { "steps": [ { "at": 1, "label": "branch", "note": "جديد" }, { "at": 2, "label": "CI" }, { "at": 3, "label": "review", "note": "قبل الـ merge" } ] } }
+\`\`\`
+
+## Scene code · الأمر
+
+### Narration
+1. الـ CI بيشغل الأمر ده على كل pull request. [ex-5]
+
+### Visual
+\`\`\`json
+{ "component": "code", "props": { "lang": "sh", "file": "local-gate.sh", "code": "scripts/local-gate.sh\\ngh pr create" } }
+\`\`\`
+`;

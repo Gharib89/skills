@@ -8,7 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DIAGRAMS, SCRIPT } from "./scene-file.mjs";
+import { ARABIC, DIAGRAMS, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scripts = path.join(
@@ -399,4 +399,39 @@ test("a scene's role line gives its role and seconds, and a malformed one is ref
       bad,
     );
   }
+});
+
+test("an Arabic scene file keeps each multi-word English term one caption token and lists its kept terms", () => {
+  const fx = fixture(ARABIC);
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const s = compiled(fx);
+  assert.equal(s.language, "ar");
+  const [hook] = s.scenes;
+  assert.deepEqual(
+    hook.captions[0].find((t) => t.text.startsWith("pull")),
+    { text: "pull request", words: 2 },
+  );
+  assert.equal(
+    hook.captions[0].reduce((n, t) => n + t.words, 0),
+    hook.narration[0].split(" ").length,
+  );
+  // The code frame's `scripts/local-gate.sh` and `gh pr create` are code.
+  assert.deepEqual(s.kept, [
+    "Ship",
+    "issue",
+    "pull request",
+    "merge",
+    "branch",
+    "CI",
+    "review",
+  ]);
+});
+
+test("an English scene file lists no kept terms and captions each Latin word alone", () => {
+  const fx = fixture();
+  assert.equal(run(fx).code, 0);
+  const s = compiled(fx);
+  assert.ok(!("kept" in s));
+  assert.ok(s.scenes[0].captions[0].some((t) => t.text === "pull"));
 });
