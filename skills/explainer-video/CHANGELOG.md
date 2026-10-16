@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Critic gate and topic research
+  ([#726](https://github.com/Gharib89/skills/pull/726),
+  [`3b4ecb9`](https://github.com/Gharib89/skills/commit/3b4ecb9a79bb467450a55901f5b3768cb95bfabf))
+
+
 ## v0.8.0 (2026-10-16)
 
 ### Features
