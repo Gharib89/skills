@@ -350,11 +350,17 @@ const timing = (sc) => ({
   duration: sc.duration,
   sentences: sc.sentences.map((t) => r3(t - sc.start)),
 });
-const files = script.scenes.map((s, i) => {
-  const html = sceneFile(s, timing(scenes[i]), profile);
+const files = [];
+for (const [i, s] of script.scenes.entries()) {
+  let html;
+  try {
+    html = await sceneFile(s, timing(scenes[i]), profile, { backend });
+  } catch (e) {
+    fail(`scene ${s.id}: ${e.message}`);
+  }
   fs.writeFileSync(path.join(comp, "scenes", `${s.id}.html`), html);
-  return html;
-});
+  files.push(html);
+}
 fs.writeFileSync(
   path.join(comp, "index.html"),
   videoPage({ title: script.title, profile, fonts, scenes, cues, total }),

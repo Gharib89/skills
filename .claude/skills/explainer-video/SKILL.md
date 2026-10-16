@@ -279,10 +279,21 @@ narrator: am_fenrir
   most 84 characters. Every sentence ends in `[a, b]`, its cites, or in
   `[no-claim]` when it makes no claim.
 - **Visual.** One JSON block per scene, one component, required props marked
-  `*`: `title` (`kicker`, `title*`, `subtitle`), `cards` (`items*`, each
-  `at*`, `label*`, `value*`, `note`), or `terminal` (`title`, `lines*`, each
-  `at*`, `text*`). `at` is a sentence number: that item rises in as the
-  sentence starts.
+  `*`. `at` is a sentence number: that item rises in, or that change plays, as
+  the sentence starts.
+  - `title` (`kicker`, `title*`, `subtitle`).
+  - `cards` (`items*`, each `at*`, `label*`, `value*`, `note`).
+  - `terminal` (`title`, `lines*`, each `at*`, `text*`).
+  - `flow`: a chain of 2 to 5 steps joined by arrows (`steps*`, each `at*`,
+    `label*`, `note`).
+  - `panels`: 2 or 3 side by side (`items*`, each `at*`, `title*`, `body*`).
+  - `list`: 1 to 6 points (`title`, `items*`, each `at*`, `text*`).
+  - `code`: a highlighted code frame (`lang*`, a Shiki language id; `code*`,
+    at most 12 lines; `file`; `highlights`, each `at*` and `lines*`, a first
+    and last line `[a, b]`).
+  - `codediff`: a code frame that turns `before*` into `after*` at `at*`, the
+    removed lines closing and the added ones opening (`lang*`, `file`; each
+    side at most 12 lines).
 
 1. **Draft.** From sources, the Script stage above wrote and checked the scene
    file, and the user approved it on the Storyboard. With none, write it with
@@ -318,9 +329,9 @@ narrator: am_fenrir
    `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
    and `out/` was emptied, an earlier render's files too. A `style profile
-   <name>` line names a colour pair or `gates` value the skill refuses: fix it
-   or choose another profile. `<row> is not installed`: run
-   setup. `no script.json`, `no voice.json`, `voice.json does not match` or
+   <name>` line names a colour pair, `gates`, `look` or `effects` value the
+   skill refuses: fix it or choose another profile. `<row> is not installed`:
+   run setup. `no script.json`, `no voice.json`, `voice.json does not match` or
    `voice.json holds narrator` names the stage to run first. `no render fonts
    for language <x>`: this
    version renders English only. A profile's layout, motion or font this
@@ -336,7 +347,13 @@ skill's bundled `<skill>/styles/`. The header's `style:` names one; without it,
 the first store holding a `default` file (one profile name) decides, else
 `claude-code`. A run copies its profile to `<run>/style.json` and keeps using
 that copy, so a later edit to a store never changes this video; delete the
-copy to take up the edit, or name another profile in `style:`.
+copy to take up the edit, or name another profile in `style:`. Two of a
+profile's keys choose how the diagrams draw: `look`, `clean` (the default) or
+`sketch`, which outlines flow steps and panels by hand with a seed taken from
+the scene and the element, so a render repeats exactly; and `effects`, the
+effects a video may use, from `draw` (flow arrows stroke on) and `highlight`
+(code lines a sentence names). A profile with no `effects` allows none, and
+an effect it leaves out never reaches the video.
 
 ## Gates
 

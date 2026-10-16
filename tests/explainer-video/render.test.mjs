@@ -671,6 +671,11 @@ test("each diagram and code component composes onto its scene's paused timeline,
     );
     assert.match(html, /gsap\.timeline\(\{ paused: true \}\)/, id);
     assert.ok(tweens(fx, id).length, id);
+    // Every scoped line opens a rule: a bare selector swallows the page's
+    // next rule, as a clean look's empty sketch CSS once did.
+    const style = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+    for (const l of style.split("\n").filter((l) => l.trim()))
+      assert.match(l, /\{/, `${id}: ${l}`);
   }
 
   const flow = comp(fx, "scenes/flow.html");

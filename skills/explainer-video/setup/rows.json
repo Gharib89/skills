@@ -4,7 +4,7 @@
       "id": "npm-packages",
       "kind": "npm",
       "neededBy": "sources, render, voice",
-      "size": 693588408,
+      "size": 708925810,
       "licence": "Apache-2.0 (hyperframes, kokoro-js, transformers.js, pdfjs-dist, Readability), MIT (onnxruntime-node, Turndown, JSZip, Shiki, rough.js), BSD-2-Clause (mammoth), the GSAP Standard License (gsap), and their dependencies"
     },
     {

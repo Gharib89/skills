@@ -336,6 +336,7 @@ export async function sceneFile(
   const scope = `[data-composition-id="${id}"]`;
   const css = c.css
     .split("\n")
+    .filter((l) => l.trim())
     .map((l) => `${scope} ${l}`)
     .join("\n");
   const t = (at) => timing.sentences[at - 1];
