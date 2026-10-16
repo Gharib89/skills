@@ -48,6 +48,45 @@ export function dest(r, dirs = userDirs()) {
   return path.join(dirs.cache, TOOL_DIRS[r.kind], lockHash);
 }
 
+// The licences a font must carry for setup to install it or a draft to name it.
+export const LICENCES = ["OFL-1.1", "Apache-2.0"];
+
+// A profile's font row by family: the catalogue's, else the one the profile
+// carries for a family a draft fetched.
+export const fontRow = (profile, family) =>
+  catalogue().find((r) => r.kind === "font" && r.family === family) ??
+  profile.fonts?.find((r) => r.family === family);
+
+// Fill `<dir>.part`, then rename it over `dir`, so a failed fill never leaves a
+// half-written folder where an install is looked for.
+export async function staged(dir, fill) {
+  const part = `${dir}.part`;
+  fs.rmSync(part, { recursive: true, force: true });
+  fs.mkdirSync(part, { recursive: true });
+  await fill(part);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.renameSync(part, dir);
+}
+
+// A font row's files from Fontsource into the font store, stamped last;
+// `present`, or a refusal naming a licence outside LICENCES.
+export async function installFont(r, backend) {
+  const meta = await backend.fontMeta(r.family);
+  if (!meta) throw new Error(`Fontsource has no family ${r.family}`);
+  if (!LICENCES.includes(meta.license))
+    return `refused: licence ${meta.license}, only ${LICENCES.join(" or ")}`;
+  const dir = dest(r);
+  await staged(dir, async (part) => {
+    for (const f of r.files)
+      await backend.download(
+        `https://cdn.jsdelivr.net/fontsource/fonts/${r.family}@${r.version}/${f}.woff2`,
+        path.join(part, `${f}.woff2`),
+      );
+  });
+  fs.writeFileSync(path.join(dir, ".stamp"), "");
+  return "present";
+}
+
 // The environment HyperFrames runs in: it finds Chrome under its home folder,
 // where setup put it, and keeps its own state files there too.
 export function hyperframesEnv() {
@@ -64,12 +103,9 @@ export function hyperframesEnv() {
 
 // What draws a frame beyond the composition's own files: the npm install
 // (HyperFrames, GSAP) and Chrome by the lock, and each font family's version.
-export const renderInputs = (families) => [
+export const renderInputs = (families, profile) => [
   lockHash,
-  ...families.map(
-    (f) =>
-      `${f}@${catalogue().find((r) => r.kind === "font" && r.family === f)?.version}`,
-  ),
+  ...families.map((f) => `${f}@${fontRow(profile, f)?.version}`),
 ];
 
 // What a backend loads from: the npm install, and each model's folder by id.

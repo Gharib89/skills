@@ -473,7 +473,7 @@ A saved, named look (palette, type, motion and layout rules, whether diagrams dr
 _Avoid_: theme, preset, template
 
 **Style card**:
-A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast. The human edits a colour or a font on the card itself, then saves the profile, uses it once, or asks for a revision.
+A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast, and each font a source decided marked as its own, the replacement for one it names, or an Arabic companion. The human edits a colour or a font on the card itself, then saves the profile, uses it once, or asks for a revision.
 _Avoid_: style preview, mood board
 
 **Card version**:
@@ -517,5 +517,5 @@ The per-user folder setup installs a run's tools into: the npm packages and Chro
 _Avoid_: node_modules, tools folder
 
 **Font store**:
-The per-user folder of fonts setup fetches by family at a pinned version, OFL or Apache faces only, shared by every run and style profile.
+The per-user folder of fonts setup, or a draft style profile naming a family setup does not install, fetches by family at a pinned version, OFL or Apache faces only, shared by every run and style profile.
 _Avoid_: font cache, fonts folder

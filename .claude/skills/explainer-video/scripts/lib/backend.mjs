@@ -436,10 +436,12 @@ export async function ffprobe(file) {
   return JSON.parse(r.stdout);
 }
 
+// A Fontsource family's metadata, or null for a family it does not hold.
 export async function fontMeta(id) {
   const r = await fetch(
     `https://api.fontsource.org/v1/fonts/${encodeURIComponent(id)}`,
   );
+  if (r.status === 404) return null;
   if (!r.ok)
     throw new Error(`Fontsource has no family ${id} (HTTP ${r.status})`);
   return r.json();
@@ -602,7 +604,7 @@ export async function capturePages(url, out, { env, max }) {
     await page.setViewport({ width: 1440, height: 900 });
     const images = [];
     const colors = new Set();
-    const fonts = new Set();
+    const fonts = [];
     const queue = [url];
     const seen = new Set();
     while (queue.length && images.length < max) {
@@ -653,12 +655,8 @@ export async function capturePages(url, out, { env, max }) {
           if (parseFloat(cs.borderTopWidth) > 0) own.push(cs.borderTopColor);
           for (const c of own) if (hex(c)) colors.push(hex(c));
         }
-        const family = (el) =>
-          el &&
-          getComputedStyle(el)
-            .fontFamily.split(",")[0]
-            .replace(/["']/g, "")
-            .trim();
+        const stack = (el, role) =>
+          el && { role, stack: getComputedStyle(el).fontFamily };
         const links = [
           ...document.querySelectorAll("nav a[href], header a[href]"),
         ]
@@ -667,9 +665,10 @@ export async function capturePages(url, out, { env, max }) {
           .map((l) => l.origin + l.pathname + l.search);
         return {
           colors,
-          fonts: [document.body, document.querySelector("h1, h2")]
-            .map(family)
-            .filter(Boolean),
+          fonts: [
+            stack(document.body, "text"),
+            stack(document.querySelector("h1, h2"), "title"),
+          ].filter(Boolean),
           links,
         };
       });
@@ -677,10 +676,10 @@ export async function capturePages(url, out, { env, max }) {
       await page.screenshot({ path: f });
       images.push(f);
       found.colors.forEach((c) => colors.add(c));
-      found.fonts.forEach((c) => fonts.add(c));
+      fonts.push(...found.fonts);
       if (u === url) queue.push(...found.links);
     }
-    return { images, colors: [...colors], fonts: [...fonts] };
+    return { images, colors: [...colors], fonts };
   } finally {
     await browser.close();
   }

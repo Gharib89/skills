@@ -40,6 +40,7 @@ import {
   catalogue,
   compositionAssets,
   dest,
+  fontRow,
   hyperframesEnv,
   loadBackend,
   lockHash,
@@ -118,7 +119,8 @@ if (voice.narrator !== narrator || voice.language !== script.language)
     `voice.json holds narrator ${voice.narrator}, the script asks for ${narrator}: run the voice stage again`,
   );
 
-// The rows this stage reads, each installed by setup.
+// The rows this stage reads, each installed by setup, or a font by the draft
+// that named it.
 const rows = catalogue();
 const fontRows = [
   ...new Set(
@@ -130,7 +132,7 @@ const fontRows = [
   ),
 ].map(
   (font) =>
-    rows.find((r) => r.kind === "font" && r.family === font) ??
+    fontRow(profile, font) ??
     fail(
       `style profile ${profile.name} names font ${font}, which no setup row installs`,
     ),
@@ -364,7 +366,10 @@ async function hyperframes(what, args, cwd) {
   if (code !== 0) fail(`hyperframes render of the ${what} exited ${code}`);
 }
 
-const inputs = renderInputs(fontRows.map((r) => r.family));
+const inputs = renderInputs(
+  fontRows.map((r) => r.family),
+  profile,
+);
 
 // Stills: the uncached scenes in one stills page, a frame each.
 const stillDir = path.join(run, ".cache", "stills");

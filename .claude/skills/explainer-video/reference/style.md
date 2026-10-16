@@ -53,13 +53,33 @@ deck's title).
    | `ok`, `warn`, `stop` | status colours |
 
    Leave out a token no image shows: the next step derives it.
+
+   `candidates.json`'s `fonts` lists each family a source declares, with the
+   role it plays (`title` or `text`) and its stack's generic family. The draft
+   keeps one Fontsource holds under OFL-1.1 or Apache-2.0. For any other,
+   name the nearest admitted Fontsource family under `fonts` in `roles.json`,
+   with one line on why it is nearest; add its `class` (`serif`, `sans`,
+   `mono` or `display`) when the family carries no `generic`:
+
+   ```json
+   { "fonts": { "Helvetica Neue": { "font": "inter", "class": "sans", "why": "a neo-grotesque of the same width" } } }
+   ```
 3. **Draft.** `node <skill>/scripts/style/draft.mjs explainers/<slug>
    <name>` prints `style <token>: <hex> · <mark> · <why>` per token, each mark
    `measured`, `derived` or `adjusted` (moved in lightness to pass contrast;
    its `was` and ratios are in the draft's `marks`, beside `declared: true`
-   on a measured colour a page or theme declared), then the draft's path,
-   `explainers/<slug>/style-draft/<name>.json`. Show the token lines to the
+   on a measured colour a page or theme declared), and `style type <role>:
+   <font> · <mark> · <why>` per type role a source decided, each mark
+   `measured` (the source's own family), `replaced` (its `was` is the family
+   it replaced) or `derived` (an Arabic role's companion of the same class),
+   then the draft's path, `explainers/<slug>/style-draft/<name>.json`. A family
+   setup does not install is fetched into the font store render reads, and its
+   row is carried in the draft's `fonts`. Show the token and type lines to the
    user. On exit 1, a `style role` line names a role to fix in `roles.json`;
+   a `style font <family>` line names a family to give, or fix, a replacement
+   for under `fonts` (it is not on Fontsource, its licence is not admitted,
+   its stack names no class, or the replacement fails one of those or is of
+   another class), or one the fetch failed for;
    a `style <token>: no lightness passes <n>:1 on <surfaces>` or
    `fails contrast` line means no lightness of that token passes on every
    surface it names, which happens when those surfaces sit on opposite sides
@@ -69,10 +89,10 @@ deck's title).
    and run the draft again. Writing the draft
    deletes the reference images, since a deck may be confidential.
 
-The draft keeps the bundled `claude-code` profile's type, layout, motion, look
-and effects, and derives each token you leave out from its colours; the font
-names the sources declare are in `candidates.json`'s `fonts`. Show the draft
-on the style card next.
+The draft keeps the bundled `claude-code` profile's layout, motion, look and
+effects, and its type for each role no source declares a family for, and
+derives each token you leave out from its colours. Show the draft on the style
+card next.
 
 ## The style card
 

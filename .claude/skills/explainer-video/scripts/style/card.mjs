@@ -39,6 +39,7 @@ import {
   catalogue,
   compositionAssets,
   dest,
+  fontRow,
   hyperframesEnv,
   loadBackend,
   skill,
@@ -105,10 +106,14 @@ const scope = args.includes("--project")
   ? "project"
   : saveScope(skill, os.homedir());
 const store = storeOf(scope);
-const families = () =>
-  catalogue()
-    .filter((r) => r.kind === "font")
-    .map((r) => r.family);
+// The families a role can take: setup's, and those the draft fetched.
+const families = () => [
+  ...new Set(
+    [...catalogue(), ...(draft.fonts ?? [])]
+      .filter((r) => r.kind === "font")
+      .map((r) => r.family),
+  ),
+];
 
 if (!fs.existsSync(draftFile))
   fail(`no ${draftFile}: run style/draft.mjs first`);
@@ -215,7 +220,12 @@ if (cmd === "apply") {
       draft.colors[t] = hex.toLowerCase();
     }
     for (const [r, font] of Object.entries(type))
-      draft.type[r] = { ...draft.type[r], font };
+      draft.type[r] = {
+        weight: draft.type[r]?.weight,
+        font,
+        mark: "edited",
+        why: "edited on the style card",
+      };
   }
   draft.name = a.name;
   try {
@@ -275,7 +285,7 @@ try {
 const rows = catalogue();
 const fontRows = [...new Set(LATIN.map((r) => draft.type?.[r]?.font))].map(
   (font) =>
-    rows.find((r) => r.kind === "font" && r.family === font) ??
+    fontRow(draft, font) ??
     fail(`the draft names font ${font}, which no setup row installs`),
 );
 for (const r of [
@@ -465,7 +475,10 @@ const doc = {
     tokens: r.tokens,
     on: r.on,
   })),
-  type: ROLE_NAMES.map((role) => ({ role, font: draft.type[role].font })),
+  type: ROLE_NAMES.map((role) => {
+    const { font, mark, why } = draft.type[role];
+    return { role, font, ...(mark && { mark, why }) };
+  }),
   families: families(),
   fonts: fonts.map((f, i) => ({
     file: f.file,
