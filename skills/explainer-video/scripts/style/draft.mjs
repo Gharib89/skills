@@ -12,13 +12,21 @@
 // warn, stop) at its hue and chroma, re-lit to its contrast on this `bg`. A
 // token under its contrast floor is then moved in OKLCH lightness, hue and
 // chroma kept, to the nearest value passing on every surface its role sits on.
-// Type, layout, motion, look and effects are `claude-code`'s.
+// Each type role a source declares a family for takes it when Fontsource holds
+// it under an admitted licence, else the replacement roles.json names for it
+// under `fonts` (`{ "<family>": { "font", "class"?, "why" } }`), and its
+// Arabic role the companion of its class; a family setup does not install is
+// fetched into the font store. The rest of the type, layout, motion, look and
+// effects are `claude-code`'s.
 // stdout: `style <token>: <hex> · <measured|derived|adjusted> · <why>` per
-//         token, then `style: draft <name> -> <file>`
-// writes: <run>/style-draft/<name>.json, each token's mark under `marks`, and
-//         deletes <run>/style-draft/refs/
-// exit:   0 written · 1 a role refused or no passing value, `style ...: <why>`
-//         on stderr, nothing written · 2 usage
+//         token, `style type <role>: <font> · <measured|replaced|derived> ·
+//         <why>` per type role a source decided, then `style: draft <name> ->
+//         <file>`
+// writes: <run>/style-draft/<name>.json, each token's mark under `marks`, each
+//         decided type role's in the role, each fetched family's row under
+//         `fonts`; the font store; and deletes <run>/style-draft/refs/
+// exit:   0 written · 1 a role or font refused, a fetch failed or no passing
+//         value, `style ...: <why>` on stderr, nothing written · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import {
