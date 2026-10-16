@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Synthesised score and sound effects
+  ([#723](https://github.com/Gharib89/skills/pull/723),
+  [`095ba55`](https://github.com/Gharib89/skills/commit/095ba5554cb30647f8346dc2ed13d9e0b94d6488))
+
+
 ## v0.7.0 (2026-10-16)
 
 ### Features

@@ -6,7 +6,7 @@ description: >-
   explainer video or narration audio, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
-  version: 0.7.0
+  version: 0.8.0
 ---
 
 # explainer-video
