@@ -3,14 +3,14 @@
 //   node gates.mjs <run-folder>
 //
 // Reads <run>/script.json, timeline.json, style.json (its floors through
-// lib/style.mjs), composition/ and out/<slug>.mp4|.srt. Samples each scene
-// every 15 frames from its start and at its settled last frame; HyperFrames'
-// check and the layout probe measure the samples of every scene not cached in
-// <run>/.cache/gates/, judged here for layout and contrast. Loudness and
-// captions are measured on every run. Deletes nothing: the render stage acts
-// on the verdict.
+// lib/style.mjs), score.json, composition/ and out/<slug>.mp4|.srt. Samples
+// each scene every 15 frames from its start and at its settled last frame;
+// HyperFrames' check and the layout probe measure the samples of every scene
+// not cached in <run>/.cache/gates/, judged here for layout and contrast.
+// Loudness, captions and the sound effects a minute are measured on every
+// run. Deletes nothing: the render stage acts on the verdict.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` for layout, contrast,
-//         loudness and captions, then `gates: <n> pass, <m> fail`, when red
+//         loudness, captions and sfx, then `gates: <n> pass, <m> fail`, when red
 //         ending `; next: fix attempt <a> of 2` or `; stop: red after two fix
 //         attempts, no video`
 // writes: <run>/gates.json, gates.md, .cache/gates/
@@ -59,6 +59,7 @@ for (const f of [
   "timeline.json",
   "style.json",
   "composition/index.html",
+  "score.json",
   mp4,
   srtFile,
 ])
@@ -301,6 +302,21 @@ else
       );
   });
 
+// Sound effects: the most cues the score puts in any minute.
+const sfxCues = JSON.parse(read("score.json")).cues;
+const { perMinute } = floor.sfx;
+let busiest = { n: 0, t: 0 };
+for (const c of sfxCues) {
+  const n = sfxCues.filter((o) => o.t >= c.t && o.t < c.t + 60).length;
+  if (n > busiest.n) busiest = { n, t: c.t };
+}
+const sfx =
+  busiest.n > perMinute
+    ? [
+        `${busiest.n} cues in the minute from ${busiest.t.toFixed(2)} s, over ${perMinute}`,
+      ]
+    : [];
+
 // The verdicts. A gate's attempts count its consecutive red renders of this
 // script, and the run's attempts every red render of it since the last green
 // one, so a red that moves between gates still stops: a pass, or a changed
@@ -327,6 +343,11 @@ const judged = {
     `${LUFS} +-${tolerance} LUFS, peak <= ${ceiling} dBTP`,
   ],
   captions: [caps, `${cues.length} cue(s), ${summary(caps)}`, "none"],
+  sfx: [
+    sfx,
+    `${sfxCues.length} cue(s), at most ${busiest.n} in a minute`,
+    `<= ${perMinute} a minute`,
+  ],
 };
 const scriptKey = scriptHash(script);
 const renderHash = hash(
@@ -353,7 +374,10 @@ for (const [name, [evidence, measured, wanted]] of Object.entries(judged))
     status: evidence.length ? "fail" : "pass",
     measured,
     floor: wanted,
-    attempts: count(evidence.length, same ? prev.gates[name].attempts : 0),
+    attempts: count(
+      evidence.length,
+      same ? (prev.gates[name]?.attempts ?? 0) : 0,
+    ),
     evidence,
   };
 const red = Object.entries(gates).filter(([, g]) => g.status === "fail");

@@ -31,6 +31,8 @@ import path from "node:path";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { LUFS, floors, loadStyle } from "../lib/style.mjs";
+import { writeWav } from "../score/dsp.mjs";
+import { bedLevel, score } from "../score/score.mjs";
 import {
   catalogue,
   dest,
@@ -264,16 +266,75 @@ function narration(file) {
   h.write("data", 36, "ascii");
   h.writeUInt32LE(data.length, 40);
   fs.writeFileSync(file, Buffer.concat([h, data]));
+  return {
+    rate,
+    pcm: new Int16Array(data.buffer, data.byteOffset, data.length / 2),
+  };
 }
-// Mastered to -14 LUFS, its peak half a dB under the loudness gate's ceiling.
 const backend = await loadBackend();
 const raw = path.join(run, ".cache", "narration.wav");
 fs.mkdirSync(path.dirname(raw), { recursive: true });
-narration(raw);
+const voiced = narration(raw);
+
+// The score, unless the brief turns it off or only stills are wanted: cached
+// in .cache/score/ by the timings, roles, seed, level and the engine's code,
+// since a 2-minute score takes seconds to synthesise.
+const briefFile = path.join(run, "brief.json");
+const scored =
+  !stillsOnly &&
+  (fs.existsSync(briefFile) ? json(briefFile).score : "on") !== "off";
+let bed;
+if (scored) {
+  const roles = script.scenes.map((s) => s.role);
+  const seed = parseInt(hash(slug).slice(0, 8), 16);
+  const level = r3(bedLevel(voiced.pcm, voiced.rate, scenes));
+  const engine = path.join(skill, "scripts", "score");
+  const code = fs
+    .readdirSync(engine)
+    .filter((f) => f.endsWith(".mjs"))
+    .sort()
+    .map((f) => fs.readFileSync(path.join(engine, f), "utf8"));
+  const key = hash(
+    scenes.map((s) => [s.start, s.words]),
+    total,
+    roles,
+    seed,
+    level,
+    ...code,
+  );
+  const dir = path.join(run, ".cache", "score");
+  bed = path.join(dir, `${key}.wav`);
+  if (!fs.existsSync(bed)) {
+    const s = score({ scenes, roles, total, seed, level });
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, `${key}.json`),
+      JSON.stringify({ preset: s.spec.preset, seed, cues: s.cues }),
+    );
+    writeWav(`${bed}.part`, s.buf);
+    fs.renameSync(`${bed}.part`, bed);
+  }
+  fs.writeFileSync(
+    path.join(run, "score.json"),
+    JSON.stringify(
+      { score: "on", ...json(path.join(dir, `${key}.json`)) },
+      null,
+      2,
+    ) + "\n",
+  );
+} else if (!stillsOnly)
+  fs.writeFileSync(
+    path.join(run, "score.json"),
+    JSON.stringify({ score: "off", cues: [] }, null, 2) + "\n",
+  );
+
+// The narration, the score mixed under it, mastered to -14 LUFS, its peak half
+// a dB under the loudness gate's ceiling.
 try {
   await backend.master(raw, path.join(comp, "narration.wav"), {
     lufs: LUFS,
     peak: floors(profile).loudness.peak - 0.5,
+    bed,
   });
 } catch (e) {
   fail(e.message);
