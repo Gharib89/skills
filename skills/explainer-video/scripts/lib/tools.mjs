@@ -35,10 +35,17 @@ export function loadBackend() {
 export const TOOL_DIRS = { npm: "node", chrome: "chrome" };
 
 // A font by family and version in the font store; a model by its pinned
-// revision; npm packages and Chrome by the lockfile's hash.
+// revision; a uv row by its code's and its checkpoints'; npm packages and
+// Chrome by the lockfile's hash.
 export function dest(r, dirs = userDirs()) {
   if (r.kind === "font")
     return path.join(dirs.data, "fonts", `${r.family}@${r.version}`);
+  if (r.kind === "uv")
+    return path.join(
+      dirs.cache,
+      "python",
+      `${r.id}@${r.source.revision.slice(0, 7)}-${r.revision.slice(0, 7)}`,
+    );
   if (r.kind === "model")
     return path.join(
       dirs.cache,
@@ -47,6 +54,11 @@ export function dest(r, dirs = userDirs()) {
     );
   return path.join(dirs.cache, TOOL_DIRS[r.kind], lockHash);
 }
+
+// ACE-Step's device for a card's compute capability (null with no NVIDIA
+// card): CUDA from 8.0, which has bfloat16; under it acestep runs CUDA in
+// float16, which gives NaN, so the CPU.
+export const aceDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
 
 // The licences a font must carry for setup to install it or a draft to name it.
 export const LICENCES = ["OFL-1.1", "Apache-2.0"];

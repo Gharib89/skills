@@ -85,6 +85,30 @@ export async function download(url, file) {
   fs.writeFileSync(file, "woff2");
 }
 
+// A source archive extracts to a pyproject; uv sync leaves a .venv beside it.
+export async function extract(zip, dir) {
+  log({ call: "extract", zip, dir });
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "pyproject.toml"), "[project]\n");
+}
+
+export async function uvSync(dir) {
+  log({ call: "uvSync", dir });
+  fs.mkdirSync(path.join(dir, ".venv"), { recursive: true });
+  return 0;
+}
+
+// The machine: EXPLAINER_VIDEO_FAKE_GPU a compute capability (unset, no NVIDIA
+// card), EXPLAINER_VIDEO_FAKE_RAM its bytes of RAM (default 64 GB).
+export async function computeCapability() {
+  const cap = process.env.EXPLAINER_VIDEO_FAKE_GPU;
+  return cap ? +cap : null;
+}
+
+export function memory() {
+  return +(process.env.EXPLAINER_VIDEO_FAKE_RAM ?? 64e9);
+}
+
 export function which(cmd) {
   return (process.env.EXPLAINER_VIDEO_FAKE_PRESENT ?? "")
     .split(",")
