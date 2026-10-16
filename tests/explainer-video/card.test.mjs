@@ -646,10 +646,13 @@ test("a draft carrying a family it fetched builds with it, offers it, and shows 
     "explainer-video: style card 1 answers (database document answers/card-1)\nChoice: Save\nName: acme\nFont text: noto-serif\n",
   );
   assert.equal(r.code, 0, r.err);
-  assert.equal(
-    json(fx.dir, "style-draft", "acme.json").type.text.font,
-    "noto-serif",
-  );
+  // The draft fetched noto-serif at 600 only, so text takes that weight.
+  assert.deepEqual(json(fx.dir, "style-draft", "acme.json").type.text, {
+    weight: 600,
+    font: "noto-serif",
+    mark: "edited",
+    why: "edited on the style card",
+  });
 });
 
 test("edits go into the draft, marked, and need the next version; answers to an old version are refused", () => {

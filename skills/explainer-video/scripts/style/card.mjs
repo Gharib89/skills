@@ -193,7 +193,7 @@ if (cmd === "apply") {
     if (!LATIN.includes(r)) fail(`no type role ${r} on the card`);
     if (!families().includes(font))
       fail(
-        `font ${font} for ${r} is not one setup installs (${families().join(", ")})`,
+        `font ${font} for ${r} is not one setup installs or the draft fetched (${families().join(", ")})`,
       );
   }
   write(at(`answers-${n}.json`), {
@@ -219,13 +219,22 @@ if (cmd === "apply") {
       };
       draft.colors[t] = hex.toLowerCase();
     }
-    for (const [r, font] of Object.entries(type))
+    // The weight the family holds nearest the role's: a family the draft
+    // fetched holds only the weights its roles took.
+    for (const [r, font] of Object.entries(type)) {
+      const want = draft.type[r]?.weight;
+      const held = fontRow(draft, font).files.map(
+        (f) => +f.match(/-(\d+)-/)[1],
+      );
       draft.type[r] = {
-        weight: draft.type[r]?.weight,
+        weight: held.reduce((a, b) =>
+          Math.abs(b - want) < Math.abs(a - want) ? b : a,
+        ),
         font,
         mark: "edited",
         why: "edited on the style card",
       };
+    }
   }
   draft.name = a.name;
   try {

@@ -247,7 +247,9 @@ const carried = new Map();
 for (const f of found.fonts.filter(
   (f, i, all) => all.findIndex((g) => g.role === f.role) === i,
 )) {
-  const got = await played(f);
+  const got = await played(f).catch(
+    (e) => `could not reach Fontsource: ${e.message}`,
+  );
   if (typeof got === "string") {
     errors.push(`style font ${f.family}: ${got}`);
     continue;
@@ -286,16 +288,6 @@ if (errors.length) {
   for (const e of errors) console.error(e);
   process.exit(1);
 }
-// Each carried family into the font store render reads, unless it holds the
-// files already.
-for (const r of carried.values())
-  if (!r.files.every((f) => fs.existsSync(path.join(dest(r), `${f}.woff2`))))
-    try {
-      await installFont(r, backend);
-    } catch (e) {
-      console.error(`style font ${r.family}: could not fetch it: ${e.message}`);
-      process.exit(1);
-    }
 
 const named = found.sources.map(
   ({ kind, source }) => `${KIND_WORD[kind]} ${source}`,
@@ -314,6 +306,28 @@ const bad = failures(profile);
 if (bad.length) {
   console.error(`style: the draft fails contrast: ${bad.join("; ")}`);
   process.exit(1);
+}
+// Each carried family into the font store render reads, unless it holds the
+// files already. The folder is shared by every profile at that version, so
+// the fetch keeps the files another draft fetched into it.
+for (const r of carried.values()) {
+  const at = dest(r);
+  if (r.files.every((f) => fs.existsSync(path.join(at, `${f}.woff2`))))
+    continue;
+  const held = fs.existsSync(at)
+    ? fs
+        .readdirSync(at)
+        .filter((f) => f.endsWith(".woff2"))
+        .map((f) => f.slice(0, -".woff2".length))
+    : [];
+  const got = await installFont(
+    { ...r, files: [...new Set([...held, ...r.files])] },
+    backend,
+  ).catch((e) => e.message);
+  if (got !== "present") {
+    console.error(`style font ${r.family}: could not fetch it: ${got}`);
+    process.exit(1);
+  }
 }
 const out = path.join(dir, `${name}.json`);
 fs.writeFileSync(out, JSON.stringify(profile, null, 2) + "\n");

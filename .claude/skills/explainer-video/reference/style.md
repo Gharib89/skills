@@ -55,9 +55,10 @@ deck's title).
    Leave out a token no image shows: the next step derives it.
 
    `candidates.json`'s `fonts` lists each family a source declares, with the
-   role it plays (`title` or `text`) and its stack's generic family. The draft
-   keeps one Fontsource holds under OFL-1.1 or Apache-2.0. For any other,
-   name the nearest admitted Fontsource family under `fonts` in `roles.json`,
+   role it plays (`title` or `text`) and its stack's generic family. The first
+   family per role plays it when Fontsource holds it under OFL-1.1 or
+   Apache-2.0. For a first family Fontsource lacks or does not admit, name the
+   nearest admitted Fontsource family under `fonts` in `roles.json`,
    with one line on why it is nearest; add its `class` (`serif`, `sans`,
    `mono` or `display`) when the family carries no `generic`:
 
@@ -76,10 +77,12 @@ deck's title).
    setup does not install is fetched into the font store render reads, and its
    row is carried in the draft's `fonts`. Show the token and type lines to the
    user. On exit 1, a `style role` line names a role to fix in `roles.json`;
-   a `style font <family>` line names a family to give, or fix, a replacement
-   for under `fonts` (it is not on Fontsource, its licence is not admitted,
-   its stack names no class, or the replacement fails one of those or is of
-   another class), or one the fetch failed for;
+   a `style font <family>` line naming `not on Fontsource` or a licence means
+   name its replacement under `fonts`, `names no generic family` means add
+   the replacement's `class`, one naming the replacement (not on Fontsource,
+   its licence, another class) means pick another, and `could not reach
+   Fontsource` or `could not fetch it` means run the draft again, relaying
+   the line if it repeats;
    a `style <token>: no lightness passes <n>:1 on <surfaces>` or
    `fails contrast` line means no lightness of that token passes on every
    surface it names, which happens when those surfaces sit on opposite sides

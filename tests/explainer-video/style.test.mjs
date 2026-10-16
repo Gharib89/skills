@@ -574,6 +574,34 @@ test("a declared family Fontsource holds under an admitted licence plays its rol
   );
 });
 
+test("a draft fetching another weight of a family keeps the weight an earlier draft fetched", () => {
+  const f = fontRun([{ role: "title", stack: "'Noto Serif', serif" }]);
+  assert.equal(f.draft().status, 0);
+  f.env.EXPLAINER_VIDEO_FAKE_SITE = JSON.stringify({
+    "https://acme.test/": {
+      pages: [SLIDE],
+      colors: [],
+      fonts: [{ role: "text", stack: "'Noto Serif', serif" }],
+    },
+  });
+  assert.equal(
+    node("measure.mjs", [f.run, "https://acme.test/"], f.env).status,
+    0,
+  );
+  f.roles();
+  const r = f.draft();
+  assert.equal(r.status, 0, r.stderr);
+  const dir = dest(
+    f.profile().fonts[0],
+    userDirs({ platform: "linux", env: f.env, home: f.env.HOME }),
+  );
+  assert.deepEqual(fs.readdirSync(dir).sort(), [
+    ".stamp",
+    "latin-400-normal.woff2",
+    "latin-600-normal.woff2",
+  ]);
+});
+
 test("a family Fontsource cannot hold is replaced by the admitted family roles.json names, of the same class", () => {
   const f = fontRun([
     { role: "title", stack: "Georgia" },
