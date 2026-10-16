@@ -57,14 +57,14 @@ const quietEnv = {
 
 // A model row's size is its files'; a uv row's, its environment's and its
 // checkpoints'.
-const files = (r) => r.files?.reduce((n, f) => n + f.size, 0);
+const filesSize = (r) => r.files?.reduce((n, f) => n + f.size, 0);
 const size = (r) =>
-  r.kind === "uv" ? r.size + files(r) : (r.size ?? files(r));
+  r.kind === "uv" ? r.size + filesSize(r) : (r.size ?? filesSize(r));
 
 // A row with a CPU cost (ACE-Step) runs on the device aceDevice picks; on the
 // CPU, a machine with less RAM than the cost names is refused before download.
 const cap = rows.some((r) => r.cpu) ? await backend.computeCapability() : null;
-const short = (r) =>
+const shortOfRam = (r) =>
   r.cpu && aceDevice(cap) === "cpu" && backend.memory() < r.cpu.ram;
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
@@ -81,7 +81,7 @@ function status(r) {
     return backend.which(r.command) ? "present" : "missing";
   const s = stamp(dest(r));
   if (!fs.existsSync(s))
-    return short(r)
+    return shortOfRam(r)
       ? `refused: the CPU path needs ${formatSize(r.cpu.ram)} RAM, this machine has ${formatSize(backend.memory())}`
       : "missing";
   const now = new Date();
@@ -205,7 +205,7 @@ function report(state, staleInstalls) {
       "",
       aceDevice(cap) === "cuda"
         ? `${r.id} runs on the GPU here (compute capability ${cap}).`
-        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap}, under 8.0: no bfloat16, and float16 gives NaN` : "no NVIDIA card"}): about ${s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`} and ${formatSize(r.cpu.ram)} RAM per 30 s of score.`,
+        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap}, under 8.0: no bfloat16, and float16 gives NaN` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of score.`,
     );
   }
   for (const r of rows.filter(
@@ -220,8 +220,10 @@ function report(state, staleInstalls) {
   }
   const missing = rows.filter((r) => state.get(r) !== "present");
   const parts = [];
-  // A system package has no size: setup installs none of them.
-  const total = missing.reduce((n, r) => n + (size(r) || 0), 0);
+  // A system package has no size: setup installs none of them, nor a refused row.
+  const total = missing
+    .filter((r) => state.get(r) === "missing")
+    .reduce((n, r) => n + (size(r) || 0), 0);
   if (missing.length)
     parts.push(
       `not present: ${missing.map((r) => r.id).join(", ")}${total ? ` (${formatSize(total)} to install)` : ""}`,

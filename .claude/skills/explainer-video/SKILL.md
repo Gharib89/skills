@@ -40,15 +40,14 @@ in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
    user asked for every opt-in row too, or the brief's `score` is `ace-step`.
-   Exit 0 means every row is present and nothing is stale: say so and stop.
-   With the `ace-step` row, a line under the table says whether it runs on the
-   GPU or the CPU here, and on the CPU its cost per 30 s of score.
-2. **One yes.** Show the table as printed, with any line under it, then ask
-   once for the whole table,
-   naming the total it prints: one yes installs every missing row and removes
-   every stale install. Run install only after the yes. When every missing row
-   is a system package and nothing is stale, skip the question and go to step
-   4.
+   Exit 0 means every row is present and nothing is stale: say so, with any
+   line under the table, and stop.
+2. **One yes.** Show the table as printed, with any line under it (the
+   `ace-step` row's: GPU or CPU here, and on the CPU its cost per 30 s of
+   score), then ask once for the whole table, naming the total it prints: one
+   yes installs every missing row and removes every stale install. Run install
+   only after the yes. When every missing row is a system package and nothing
+   is stale, skip the question and go to step 4.
 3. **Install.** `node <skill>/scripts/setup.mjs install`, with the same
    `--all`. It installs into the tool cache and the font store, removes the
    stale installs, then prints the table again.
@@ -76,7 +75,7 @@ must include and must avoid. The user's request beside the sources, the
 | `style` | the store default (see Render) | a style profile name |
 | `voice` | `bf_emma` | a narrator id in `<skill>/narrators.json` |
 | `aspect` | `16:9` | `16:9` in this version |
-| `score` | `on` | `on`, `off`, or `ace-step` (opt-in model-made music, minutes to make) |
+| `score` | `on` | `on`, `off`, or `ace-step` (music made by the ACE-Step model) |
 | `must` | none | a topic or term the video says or shows |
 | `avoid` | none | a topic or term the video never touches |
 
@@ -320,8 +319,9 @@ narrator: am_fenrir
    ducked under speech with sound effects at the cuts and the end, unless the
    brief turns it off, masters to
    -14 LUFS, renders, then runs the gates (see Gates) and prints
-   their lines. A first render always ends with the critic pending (see
-   Gates). Only when every gate passes does it print one
+   their lines. With `score` `ace-step` on the CPU, render takes minutes: run
+   it in the background and wait for its exit. A first render always ends with
+   the critic pending (see Gates). Only when every gate passes does it print one
    `delivery <check>: pass|fail` line per delivery check (`resolution`,
    `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>

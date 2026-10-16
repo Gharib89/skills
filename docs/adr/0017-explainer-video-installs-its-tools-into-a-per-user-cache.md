@@ -9,6 +9,6 @@
 
 ## Consequences
 
-- ADR 0014 gains a third per-user directory, cache, under `explainer-video/`: `$XDG_CACHE_HOME` or `~/.cache` on Linux, `~/Library/Caches` on macOS, `%LOCALAPPDATA%` on Windows. It holds `node/<lock-hash>/`, Chrome and `models/`.
+- ADR 0014 gains a third per-user directory, cache, under `explainer-video/`: `$XDG_CACHE_HOME` or `~/.cache` on Linux, `~/Library/Caches` on macOS, `%LOCALAPPDATA%` on Windows. It holds `node/<lock-hash>/`, Chrome, `models/`, and `python/` for an opt-in model's code, its `uv` environment and its weights, one folder per pinned code and weights revision.
 - Models the skill exports itself (the Egyptian Arabic aligner, later the English one) are hosted in a Hugging Face model repo under the owner's account, pinned by commit and checked by sha256, the same route `kokoro-js` downloads Kokoro by.
 - Stage caches (voice, stills, renders, scene gates, 3D clips) are not tools: they live in the run folder, `explainers/<slug>/.cache/`, and go with the run.

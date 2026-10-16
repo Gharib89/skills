@@ -227,17 +227,17 @@ const aceRow = (sha256 = FAKE_SHA) => ({
   neededBy: "score (ace-step)",
   licence: "MIT",
 });
-const gpu = (cap, ram = 32e9) => ({
+const machine = (cap, ram = 32e9) => ({
   ...(cap ? { EXPLAINER_VIDEO_FAKE_GPU: String(cap) } : {}),
   EXPLAINER_VIDEO_FAKE_RAM: String(ram),
 });
 
 test("ace-step is listed only when asked, and on a card under compute capability 8.0 it shows the CPU path's cost per 30 s of score", () => {
   const fx = fixture([...pyRows.slice(0, 2), aceRow()]);
-  const plain = run(fx, ["check"], "ffmpeg,uv", gpu(7.5));
+  const plain = run(fx, ["check"], "ffmpeg,uv", machine(7.5));
   assert.equal(row(plain.out, "ace-step"), undefined, plain.out);
   assert.doesNotMatch(plain.out, /per 30 s of score/);
-  const all = run(fx, ["check", "--all"], "ffmpeg,uv", gpu(7.5));
+  const all = run(fx, ["check", "--all"], "ffmpeg,uv", machine(7.5));
   assert.equal(all.code, 1, all.out + all.err);
   assert.equal(row(all.out, "ace-step")[2], "missing");
   assert.equal(row(all.out, "ace-step")[3], "10.8 GB");
@@ -250,7 +250,7 @@ test("ace-step is listed only when asked, and on a card under compute capability
 
 test("ace-step runs on the GPU from compute capability 8.0, and on the CPU with no NVIDIA card", () => {
   const fx = fixture([...pyRows.slice(0, 2), aceRow()]);
-  const ampere = run(fx, ["check", "--all"], "ffmpeg,uv", gpu(8.6, 4e9));
+  const ampere = run(fx, ["check", "--all"], "ffmpeg,uv", machine(8.6, 4e9));
   assert.equal(
     row(ampere.out, "ace-step")[2],
     "missing",
@@ -261,7 +261,11 @@ test("ace-step runs on the GPU from compute capability 8.0, and on the CPU with 
     /^ace-step runs on the GPU here \(compute capability 8\.6\)\.$/m,
   );
   assert.doesNotMatch(ampere.out, /per 30 s of score/);
-  const none = run(fx, ["check", "--all"], "ffmpeg,uv", gpu(null));
+  assert.match(
+    run(fx, ["check", "--all"], "ffmpeg,uv", machine(8.0)).out,
+    /^ace-step runs on the GPU here \(compute capability 8\)\.$/m,
+  );
+  const none = run(fx, ["check", "--all"], "ffmpeg,uv", machine(null));
   assert.match(
     none.out,
     /^ace-step runs on the CPU here \(no NVIDIA card\): about 1 min 28 s/m,
@@ -270,19 +274,20 @@ test("ace-step runs on the GPU from compute capability 8.0, and on the CPU with 
 
 test("a machine short of the CPU path's RAM is refused before any download", () => {
   const fx = fixture([...pyRows.slice(0, 2), aceRow()]);
-  const r = run(fx, ["install", "--all"], "ffmpeg,uv", gpu(7.5, 8e9));
+  const r = run(fx, ["install", "--all"], "ffmpeg,uv", machine(7.5, 8e9));
   assert.equal(r.code, 1, r.out + r.err);
   assert.equal(
     row(r.out, "ace-step")[2],
     "refused: the CPU path needs 15.0 GB RAM, this machine has 8.0 GB",
   );
+  assert.doesNotMatch(r.out, /to install/, "a refused row is not installed");
   assert.deepEqual(calls(fx), []);
   assert.ok(!fs.existsSync(path.join(cacheDir(fx), "python")));
 });
 
 test("ace-step installs its code at the pinned commit, syncs it under uv from its own lock, and fetches its checkpoints at their pinned revision", () => {
   const fx = fixture([...pyRows.slice(0, 2), aceRow()]);
-  const r = run(fx, ["install", "--all"], "ffmpeg,uv", gpu(7.5));
+  const r = run(fx, ["install", "--all"], "ffmpeg,uv", machine(7.5));
   assert.equal(r.code, 0, r.out + r.err);
   const where = path.join(cacheDir(fx), "python", "ace-step@fedcba9-0123456");
   assert.equal(row(r.out, "ace-step")[5], where);
@@ -304,21 +309,27 @@ test("ace-step installs its code at the pinned commit, syncs it under uv from it
   );
   assert.ok(!fs.existsSync(path.join(where, "source.zip")));
   assert.equal(
-    row(run(fx, ["check", "--all"], "ffmpeg,uv", gpu(7.5)).out, "ace-step")[2],
+    row(
+      run(fx, ["check", "--all"], "ffmpeg,uv", machine(7.5)).out,
+      "ace-step",
+    )[2],
     "present",
   );
 });
 
 test("an ace-step checkpoint whose sha256 differs from its pin fails the row and leaves it missing", () => {
   const fx = fixture([...pyRows.slice(0, 2), aceRow("0".repeat(64))]);
-  const r = run(fx, ["install", "--all"], "ffmpeg,uv", gpu(7.5));
+  const r = run(fx, ["install", "--all"], "ffmpeg,uv", machine(7.5));
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(
     row(r.out, "ace-step")[2],
     /^failed: dit\/model\.safetensors has sha256 [0-9a-f]{64}, pinned 0{64}/,
   );
   assert.equal(
-    row(run(fx, ["check", "--all"], "ffmpeg,uv", gpu(7.5)).out, "ace-step")[2],
+    row(
+      run(fx, ["check", "--all"], "ffmpeg,uv", machine(7.5)).out,
+      "ace-step",
+    )[2],
     "missing",
   );
 });
