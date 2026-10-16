@@ -15,6 +15,7 @@ import {
   dest,
   lockHash,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
+import { SLIDE } from "./fake-backend.mjs";
 import { DIAGRAMS, SCRIPT } from "./scene-file.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -820,3 +821,52 @@ for (const [name, extra, why] of [
     assert.equal(calls(fx).length, 0);
   });
 }
+
+test("a draft naming a family no setup row installs renders it from the font store its draft fetched it into", () => {
+  const fx = fixture();
+  const env = {
+    ...fx.env,
+    EXPLAINER_VIDEO_FAKE_PRESENT: "ffmpeg",
+    EXPLAINER_VIDEO_FAKE_SITE: JSON.stringify({
+      "https://acme.test/": {
+        pages: [SLIDE],
+        colors: [],
+        fonts: [{ role: "text", stack: "'Noto Serif', serif" }],
+      },
+    }),
+  };
+  const acme = path.join(fx.tmp, "proj", "explainers", "acme");
+  const style = (script, ...args) =>
+    spawnSync(
+      process.execPath,
+      [path.join(skill, "scripts", "style", script), acme, ...args],
+      { env, encoding: "utf8" },
+    );
+  let r = style("measure.mjs", "https://acme.test/");
+  assert.equal(r.status, 0, r.stderr);
+  put(
+    path.join(acme, "style-draft"),
+    "roles.json",
+    JSON.stringify({
+      bg: { candidate: "s1", why: "ground" },
+      text: { candidate: "s3", why: "text" },
+    }),
+  );
+  r = style("draft.mjs", "odd");
+  assert.equal(r.status, 0, r.stderr);
+  put(
+    path.join(fx.tmp, "proj", "explainers", ".styles"),
+    "odd.json",
+    read(acme, "style-draft", "odd.json"),
+  );
+  put(fx.dir, "script.md", SCRIPT.replace("style: claude-code", "style: odd"));
+
+  const done = render(fx);
+  assert.equal(done.code, 0, done.out + done.err);
+  assert.ok(
+    fs
+      .readdirSync(path.join(fx.dir, "composition", "fonts"))
+      .includes("noto-serif-latin-400-normal.woff2"),
+  );
+  assert.match(comp(fx), /\.cue \{[^}]*font: 400 40px\/1\.3 "noto-serif"/);
+});

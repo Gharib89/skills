@@ -49,7 +49,9 @@ token or type role. The page reads and writes nothing outside this table.
 | `card.type` | array | yes | One entry per type role: `title`, `text`, `code`, `arTitle`, `arText`. |
 | `card.type[].role` | string | yes | The role. |
 | `card.type[].font` | string | yes | The font family the draft names. |
-| `card.families` | array | yes | The font families setup installs, the choices for `title`, `text` and `code`. |
+| `card.type[].mark` | string | no | How the family was reached: `measured` (the source's own), `replaced` (the nearest admitted family for one the source names), `derived` (an Arabic role's companion) or `edited`; absent for a bundled role. |
+| `card.type[].why` | string | no | The mark's reason, present with `mark`. |
+| `card.families` | array | yes | The font families setup installs and those the draft fetched, the choices for `title`, `text` and `code`. |
 | `card.fonts` | array | yes | The font files the frames load. |
 | `card.fonts[].file` | string | yes | The file name a frame's `url("fonts/<file>")` names. |
 | `card.fonts[].url` | string | yes | Where the page loads it from, a [media](#media) URL. |
