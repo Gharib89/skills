@@ -35,8 +35,9 @@ import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { LUFS, floors, loadStyle } from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
-import { bedLevel, score } from "../score/score.mjs";
+import { ACE_CAPTION, bedLevel, score } from "../score/score.mjs";
 import {
+  aceDevice,
   catalogue,
   compositionAssets,
   dest,
@@ -143,6 +144,19 @@ for (const r of [
 ])
   if (!fs.existsSync(path.join(dest(r), ".stamp")))
     fail(`${r.id} is not installed: run /explainer-video setup`);
+
+// The score the brief asks for: on (synthesised), off, or ace-step, the
+// opt-in row setup installs only when asked for.
+const briefFile = path.join(run, "brief.json");
+const scoreMode = fs.existsSync(briefFile) ? json(briefFile).score : "on";
+const ace =
+  !stillsOnly && scoreMode === "ace-step"
+    ? rows.find((r) => r.id === "ace-step")
+    : null;
+if (ace && !fs.existsSync(path.join(dest(ace), ".stamp")))
+  fail(
+    "ace-step is not installed: run /explainer-video setup, asking for ace-step",
+  );
 
 // Timeline: scenes back to back, every word and sentence start absolute.
 let at = 0;
@@ -263,21 +277,20 @@ const voiced = narration(raw);
 
 // The score, unless the brief turns it off or only stills are wanted: cached
 // in .cache/score/ by the timings, roles, seed, level, sfx floor and the
-// engine's code, since a 2-minute score takes seconds to synthesise.
-const briefFile = path.join(run, "brief.json");
-const scored =
-  !stillsOnly &&
-  (fs.existsSync(briefFile) ? json(briefFile).score : "on") !== "off";
+// engine's code, since a 2-minute score takes seconds to synthesise; an
+// ACE-Step score also by its row's pins and its device, and takes minutes.
+const scored = !stillsOnly && scoreMode !== "off";
 let bed;
 if (scored) {
   const roles = script.scenes.map((s) => s.role);
   const seed = parseInt(hash(slug).slice(0, 8), 16);
   const level = r3(bedLevel(voiced.pcm, voiced.rate, scenes));
   const { perMinute } = floors(profile).sfx;
+  const device = ace && aceDevice(await backend.computeCapability());
   const engine = path.join(skill, "scripts", "score");
   const code = fs
     .readdirSync(engine)
-    .filter((f) => f.endsWith(".mjs"))
+    .filter((f) => /\.(mjs|py)$/.test(f))
     .sort()
     .map((f) => fs.readFileSync(path.join(engine, f), "utf8"));
   const key = hash(
@@ -288,15 +301,29 @@ if (scored) {
     level,
     perMinute,
     ...code,
+    ...(ace ? [ace.source.revision, ace.revision, device] : []),
   );
   const dir = path.join(run, ".cache", "score");
   bed = path.join(dir, `${key}.wav`);
   if (!fs.existsSync(bed)) {
-    const s = score({ scenes, roles, total, seed, level, perMinute });
+    const music =
+      ace &&
+      (await backend.aceStep({
+        dir: dest(ace),
+        device,
+        seconds: total,
+        seed,
+        caption: ACE_CAPTION,
+      }));
+    const s = score({ scenes, roles, total, seed, level, perMinute, music });
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(
       path.join(dir, `${key}.json`),
-      JSON.stringify({ preset: s.spec.preset, seed, cues: s.cues }),
+      JSON.stringify(
+        ace
+          ? { seed, device, cues: s.cues }
+          : { preset: s.spec.preset, seed, cues: s.cues },
+      ),
     );
     writeWav(`${bed}.part`, s.buf);
     fs.renameSync(`${bed}.part`, bed);
@@ -304,7 +331,7 @@ if (scored) {
   fs.writeFileSync(
     path.join(run, "score.json"),
     JSON.stringify(
-      { score: "on", ...json(path.join(dir, `${key}.json`)) },
+      { score: scoreMode, ...json(path.join(dir, `${key}.json`)) },
       null,
       2,
     ) + "\n",

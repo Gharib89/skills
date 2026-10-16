@@ -58,7 +58,7 @@ function fixture(text = SCRIPT) {
   const dir = path.join(tmp, "proj", "explainers", "demo");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "script.md"), text);
-  return { tmp, dir, env, log: env.EXPLAINER_VIDEO_FAKE_LOG };
+  return { tmp, dir, env, dirs, log: env.EXPLAINER_VIDEO_FAKE_LOG };
 }
 
 function stage(fx, script, extra = {}) {
@@ -235,6 +235,77 @@ test("the same timings render the cached score again", () => {
   const again = calls(fx, "master")[1].bed;
   assert.equal(again, first);
   assert.equal(fs.statSync(again).mtimeMs, before);
+});
+
+// The brief set to score=ace-step; `installed` stamps the ace-step row as
+// setup leaves it.
+function aceBrief(fx, installed = true) {
+  const b = spawnSync(
+    process.execPath,
+    [
+      path.join(skill, "scripts", "brief", "brief.mjs"),
+      fx.dir,
+      "voice=am_fenrir",
+      "score=ace-step",
+    ],
+    { env: fx.env, encoding: "utf8" },
+  );
+  assert.equal(b.status, 0, b.stderr);
+  const d = dest(
+    catalogue().find((r) => r.id === "ace-step"),
+    fx.dirs,
+  );
+  if (installed) {
+    fs.mkdirSync(d, { recursive: true });
+    fs.writeFileSync(path.join(d, ".stamp"), "");
+  }
+  return d;
+}
+
+test("a brief with score=ace-step mixes ACE-Step's music under the narration on the device the card allows, once per seed", () => {
+  const fx = fixture();
+  const dir = aceBrief(fx);
+  const env = { EXPLAINER_VIDEO_FAKE_GPU: "7.5" };
+  const r = render(fx, undefined, env);
+  assert.equal(r.code, 0, r.out + r.err);
+  const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  const [a] = calls(fx, "aceStep");
+  const s = JSON.parse(read(fx.dir, "score.json"));
+  assert.deepEqual(
+    { ...a, caption: typeof a.caption },
+    {
+      call: "aceStep",
+      dir,
+      device: "cpu",
+      seconds: timeline.total,
+      seed: s.seed,
+      caption: "string",
+    },
+  );
+  assert.equal(s.score, "ace-step");
+  assert.equal(s.device, "cpu");
+  assert.equal(s.preset, undefined);
+  const [m] = calls(fx, "master");
+  assert.equal(wav(m.bed).seconds, Math.round(timeline.total * 48000) / 48000);
+  assert.equal(stage(fx, "render/render.mjs", env).code, 0);
+  assert.equal(
+    calls(fx, "aceStep").length,
+    1,
+    "the same seed made the music again",
+  );
+  assert.equal(calls(fx, "master")[1].bed, m.bed);
+});
+
+test("a brief with score=ace-step before setup installed it says to run setup", () => {
+  const fx = fixture();
+  aceBrief(fx, false);
+  const r = render(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^render: ace-step is not installed: run \/explainer-video setup, asking for ace-step$/m,
+  );
+  assert.deepEqual(calls(fx, "aceStep"), []);
 });
 
 test("a brief with the score off masters the narration alone", () => {

@@ -98,6 +98,17 @@ export async function uvSync(dir) {
   return 0;
 }
 
+// ACE-Step's music: a tone the seed tunes, 48 kHz stereo, `seconds` long.
+export async function aceStep({ dir, device, seconds, seed, caption }) {
+  log({ call: "aceStep", dir, device, seconds, seed, caption });
+  const n = Math.round(seconds * 48000);
+  const hz = 110 + (seed % 200);
+  const L = Float32Array.from({ length: n }, (_, i) =>
+    Math.sin((2 * Math.PI * hz * i) / 48000),
+  );
+  return { L, R: Float32Array.from(L) };
+}
+
 // The machine: EXPLAINER_VIDEO_FAKE_GPU a compute capability (unset, no NVIDIA
 // card), EXPLAINER_VIDEO_FAKE_RAM its bytes of RAM (default 64 GB).
 export async function computeCapability() {

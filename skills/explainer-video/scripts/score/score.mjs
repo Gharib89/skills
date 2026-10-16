@@ -29,6 +29,9 @@ const SECTION = {
 const SFX_BED = -20;
 // The music's RMS before the duck, in dB under the narration's speech RMS.
 const UNDER = 8;
+// What ACE-Step is asked for: music that sits under an explainer's narration.
+export const ACE_CAPTION =
+  "calm instrumental background music for a software tutorial video, soft electric piano, warm bass, light brushed drums, gentle and unobtrusive, steady groove, no vocals";
 
 // The bed level (dBFS RMS) for a narration: its RMS over the words' spans,
 // UNDER dB down. pcm: 16-bit mono samples at `rate`; scenes' times absolute.

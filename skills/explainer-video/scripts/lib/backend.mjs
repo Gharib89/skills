@@ -11,7 +11,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
-import { toolPaths } from "./tools.mjs";
+import { skill, toolPaths } from "./tools.mjs";
 
 const win = process.platform === "win32";
 // Children write to stderr, so stdout carries only setup's own table.
@@ -493,6 +493,51 @@ export async function computeCapability() {
 }
 
 export const memory = () => os.totalmem();
+
+// ACE-Step's music: scripts/score/ace.py under uv in the ace-step row's folder
+// `dir`, as a 48 kHz stereo buffer exactly `seconds` long.
+export async function aceStep({ dir, device, seconds, seed, caption }) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ace-step-"));
+  try {
+    const wav = path.join(tmp, "music.wav");
+    const script = path.join(skill, "scripts", "score", "ace.py");
+    const args = [
+      path.join(dir, "checkpoints"),
+      device,
+      seconds,
+      seed,
+      caption,
+    ];
+    const r = spawnSync(
+      "uv",
+      [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "python",
+        script,
+        ...args.map(String),
+        wav,
+      ],
+      { cwd: path.join(dir, "src"), stdio: quiet },
+    );
+    if (r.status !== 0)
+      throw new Error(`ace-step exited ${r.status ?? r.error?.message}`);
+    const raw = path.join(tmp, "music.f32");
+    ffmpeg(["-y", "-i", wav, "-ar", "48000", "-ac", "2", "-f", "f32le", raw]);
+    const b = fs.readFileSync(raw);
+    const x = new Float32Array(b.buffer, b.byteOffset, b.length / 4);
+    const n = Math.round(seconds * 48000);
+    const out = { L: new Float32Array(n), R: new Float32Array(n) };
+    for (let i = 0; i < Math.min(n, x.length / 2); i++) {
+      out.L[i] = x[2 * i];
+      out.R[i] = x[2 * i + 1];
+    }
+    return out;
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
 
 export function which(cmd) {
   const exts = win
