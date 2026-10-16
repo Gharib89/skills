@@ -80,10 +80,14 @@ function status(r) {
   if (r.kind === "system")
     return backend.which(r.command) ? "present" : "missing";
   const s = stamp(dest(r));
-  if (!fs.existsSync(s))
-    return shortOfRam(r)
-      ? `refused: the CPU path needs ${formatSize(r.cpu.ram)} RAM, this machine has ${formatSize(backend.memory())}`
-      : "missing";
+  if (!fs.existsSync(s)) {
+    if (shortOfRam(r))
+      return `refused: the CPU path needs ${formatSize(r.cpu.ram)} RAM, this machine has ${formatSize(backend.memory())}`;
+    // uv syncs the row's env, so without it the download would end in a failed row.
+    if (r.kind === "uv" && !backend.which("uv"))
+      return "refused: install uv first, then check again";
+    return "missing";
+  }
   const now = new Date();
   fs.utimesSync(s, now, now);
   return "present";

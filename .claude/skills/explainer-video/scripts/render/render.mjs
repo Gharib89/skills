@@ -306,15 +306,20 @@ if (scored) {
   const dir = path.join(run, ".cache", "score");
   bed = path.join(dir, `${key}.wav`);
   if (!fs.existsSync(bed)) {
-    const music =
-      ace &&
-      (await backend.aceStep({
-        dir: dest(ace),
-        device,
-        seconds: total,
-        seed,
-        caption: ACE_CAPTION,
-      }));
+    let music;
+    try {
+      music =
+        ace &&
+        (await backend.aceStep({
+          dir: dest(ace),
+          device,
+          seconds: total,
+          seed,
+          caption: ACE_CAPTION,
+        }));
+    } catch (e) {
+      fail(e.message);
+    }
     const s = score({ scenes, roles, total, seed, level, perMinute, music });
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(

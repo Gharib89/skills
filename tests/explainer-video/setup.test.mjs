@@ -285,6 +285,20 @@ test("a machine short of the CPU path's RAM is refused before any download", () 
   assert.ok(!fs.existsSync(path.join(cacheDir(fx), "python")));
 });
 
+test("ace-step without uv is refused before any download", () => {
+  const fx = fixture([...pyRows.slice(0, 2), aceRow()]);
+  const r = run(fx, ["install", "--all"], "ffmpeg", machine(7.5));
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(row(r.out, "uv")[2], "missing");
+  assert.equal(
+    row(r.out, "ace-step")[2],
+    "refused: install uv first, then check again",
+  );
+  assert.doesNotMatch(r.out, /to install/, "a refused row is not installed");
+  assert.deepEqual(calls(fx), []);
+  assert.ok(!fs.existsSync(path.join(cacheDir(fx), "python")));
+});
+
 test("ace-step installs its code at the pinned commit, syncs it under uv from its own lock, and fetches its checkpoints at their pinned revision", () => {
   const fx = fixture([...pyRows.slice(0, 2), aceRow()]);
   const r = run(fx, ["install", "--all"], "ffmpeg,uv", machine(7.5));

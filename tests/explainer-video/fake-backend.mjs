@@ -6,6 +6,8 @@
 //                                 loudness answer
 //   EXPLAINER_VIDEO_FAKE_CHECK    JSON check answers in place of its own
 //   EXPLAINER_VIDEO_FAKE_CLIP_BYTES  size of each clip written (default 1000)
+//   EXPLAINER_VIDEO_FAKE_ACE_EXIT  ACE-Step's exit code, thrown as the real
+//                                  one throws it (unset, it makes the music)
 // The family `ubuntu` answers with its real, non-OFL licence; `helvetica-neue`
 // and `georgia`, as on the real Fontsource, with no family at all.
 //
@@ -101,6 +103,8 @@ export async function uvSync(dir) {
 // ACE-Step's music: a tone the seed tunes, 48 kHz stereo, `seconds` long.
 export async function aceStep({ dir, device, seconds, seed, caption }) {
   log({ call: "aceStep", dir, device, seconds, seed, caption });
+  const exit = process.env.EXPLAINER_VIDEO_FAKE_ACE_EXIT;
+  if (exit) throw new Error(`ace-step exited ${exit}`);
   const n = Math.round(seconds * 48000);
   const hz = 110 + (seed % 200);
   const L = Float32Array.from({ length: n }, (_, i) =>

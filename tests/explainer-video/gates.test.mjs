@@ -296,6 +296,15 @@ test("a brief with score=ace-step mixes ACE-Step's music under the narration on 
   assert.equal(calls(fx, "master")[1].bed, m.bed);
 });
 
+test("an ACE-Step run that fails stops render with its reason", () => {
+  const fx = fixture();
+  aceBrief(fx);
+  const r = render(fx, undefined, { EXPLAINER_VIDEO_FAKE_ACE_EXIT: "1" });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^render: ace-step exited 1$/m);
+  assert.deepEqual(calls(fx, "master"), []);
+});
+
 test("a brief with score=ace-step before setup installed it says to run setup", () => {
   const fx = fixture();
   aceBrief(fx, false);
