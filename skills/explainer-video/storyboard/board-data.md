@@ -103,8 +103,8 @@ either it or the answers document. One line per form, in this order:
 ## Media
 
 `still`, `audio` and `clip` are URLs the page puts in `src` as given. On the
-artifact page, and in `storyboard.html` once `board.mjs page <url>` has
-recorded a page, each is the URL the asset upload returned, recorded with
-`board.mjs asset`; before that, each is the file's path relative to the run
-folder. `build` refuses a media file over 15 MB, the asset cap. The
+artifact page each is the URL the asset upload returned, recorded with
+`board.mjs asset`. In `storyboard.html`, and in every version built before a
+page is recorded or with `build --local`, each is the file's path relative to
+the run folder. `build` refuses a media file over 15 MB, the asset cap. The
 page drops a URL that is not `https:`, `/_blob/` or a relative path.

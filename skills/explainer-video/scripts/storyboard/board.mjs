@@ -1,7 +1,7 @@
 // The storyboard stage: one board version per review, from the run's
 // compiled, voiced and stilled script, and the human's answers back into it.
 //
-//   node board.mjs <run-folder> build
+//   node board.mjs <run-folder> build [--local]
 //   node board.mjs <run-folder> page [<url>]
 //   node board.mjs <run-folder> asset <path>=<url>...
 //   node board.mjs <run-folder> apply <answers-file>
@@ -13,7 +13,8 @@
 // approved it and nothing in it changed since), board/keys-<n>.json (the
 // content keys that decide that), and the local storyboard.html. A delivered
 // run gets one clip per scene, cut into .cache/clips/. With a published page
-// (`page <url>`) every media file needs an uploaded URL, recorded by `asset`.
+// (`page <url>`) every media file needs an uploaded URL, recorded by `asset`;
+// `--local` builds for storyboard.html alone, the page out of reach.
 // `page` with no url writes board/page.html, the file a session publishes
 // once; with a url it records the published page in manifest.json. `apply`
 // reads the answers (the answers document, or the text the page copies) into
@@ -35,14 +36,14 @@ import { esc } from "../render/compose.mjs";
 const [run, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
-    "usage: node board.mjs <run-folder> build | page [<url>] | asset <path>=<url>... | apply <answers-file>",
+    "usage: node board.mjs <run-folder> build [--local] | page [<url>] | asset <path>=<url>... | apply <answers-file>",
   );
   process.exit(2);
 };
 if (
   !run ||
   !["build", "page", "asset", "apply"].includes(cmd) ||
-  (cmd === "build" && args.length) ||
+  (cmd === "build" && !["", "--local"].includes(args.join(" "))) ||
   (cmd === "page" && args.length > 1) ||
   (cmd === "asset" && !args.length) ||
   (cmd === "apply" && args.length !== 1)
@@ -416,21 +417,15 @@ const doc = {
   scenes: cards,
 };
 
-// A published page reads uploaded URLs; the local page reads the run's paths.
-if (manifest.board) {
-  const assets = maybe(at("board", "assets.json")) ?? {};
-  const todo = media.filter((f) => !assets[f]);
-  if (todo.length) {
-    for (const f of todo)
-      console.error(`board: upload ${f} (${MB(fs.statSync(at(f)).size)})`);
-    fail(`record each upload with: node board.mjs ${run} asset <path>=<url>`);
-  }
-  for (const c of cards)
-    for (const k of ["still", "audio", "clip"]) if (c[k]) c[k] = assets[c[k]];
+// A published page reads uploaded URLs; storyboard.html, opened from the run
+// folder, reads the run's paths.
+const published = !!manifest.board && args[0] !== "--local";
+const assets = maybe(at("board", "assets.json")) ?? {};
+if (published && media.some((f) => !assets[f])) {
+  for (const f of media.filter((f) => !assets[f]))
+    console.error(`board: upload ${f} (${MB(fs.statSync(at(f)).size)})`);
+  fail(`record each upload with: node board.mjs ${run} asset <path>=<url>`);
 }
-
-write(at("board", `${doc.version}.json`), doc);
-write(at("board", `keys-${doc.version}.json`), keys);
 fs.writeFileSync(
   at("storyboard.html"),
   filled(script.title).replace(
@@ -439,12 +434,17 @@ fs.writeFileSync(
       `<script type="application/json" id="board">${JSON.stringify(doc).replaceAll("<", "\\u003c")}</script>`,
   ),
 );
+if (published)
+  for (const c of cards)
+    for (const k of ["still", "audio", "clip"]) if (c[k]) c[k] = assets[c[k]];
+write(at("board", `${doc.version}.json`), doc);
+write(at("board", `keys-${doc.version}.json`), keys);
 const open = cards.filter((c) => c.status !== "approved").length;
 console.log(
   `board ${doc.version}: ${kind}, ${cards.length} card(s), ${open} to answer${banner ? `, banner: ${red.length} red gate(s)` : ""} -> board/${doc.version}.json`,
 );
 console.log(
-  manifest.board
+  published
     ? `board: post board/${doc.version}.json to boards/${doc.version}`
     : "board: local page storyboard.html",
 );

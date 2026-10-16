@@ -202,20 +202,6 @@ const clock = (t) => {
   const pad = (n, w = 2) => String(n).padStart(w, "0");
   return `${pad(Math.floor(ms / 3600000))}:${pad(Math.floor(ms / 60000) % 60)}:${pad(Math.floor(ms / 1000) % 60)},${pad(ms % 1000, 3)}`;
 };
-// out/ holds one render's files or none: cleared now, and again on a failed check.
-const out = path.join(run, "out");
-fs.rmSync(out, { recursive: true, force: true });
-fs.mkdirSync(out);
-const srt = path.join(out, `${slug}.srt`);
-fs.writeFileSync(
-  srt,
-  cues
-    .map(
-      (c, i) => `${i + 1}\n${clock(c.start)} --> ${clock(c.end)}\n${c.text}\n`,
-    )
-    .join("\n"),
-);
-
 // The composition: fonts and GSAP copied in from setup's stores, the scenes'
 // WAVs joined into one narration with the hold as silence.
 const comp = path.join(run, "composition");
@@ -406,6 +392,20 @@ if (stillsOnly) {
   );
   process.exit(0);
 }
+
+// out/ holds one render's files or none: cleared now, and again on a failed check.
+const out = path.join(run, "out");
+fs.rmSync(out, { recursive: true, force: true });
+fs.mkdirSync(out);
+const srt = path.join(out, `${slug}.srt`);
+fs.writeFileSync(
+  srt,
+  cues
+    .map(
+      (c, i) => `${i + 1}\n${clock(c.start)} --> ${clock(c.end)}\n${c.text}\n`,
+    )
+    .join("\n"),
+);
 
 // The video, keyed by every file the composition holds.
 const listing = (dir) =>

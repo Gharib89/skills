@@ -151,6 +151,8 @@ function setBoards(S, docs) {
 function setAnswers(S, docs) { S.submitted = Object.fromEntries(docs.map(d => [d.version, true])); }
 
 const locked = S => { const b = latest(S); return !S.canEdit || b.kind === 'delivered' || ['sending', 'sent', 'saved'].includes(S.status) || !!S.submitted[b.version]; };
+// A failed save leaves the comment as the only copy, so it counts as sent only when it held the whole answers.
+const outcome = (saved, woke, whole) => woke && (saved || whole) ? 'sent' : saved ? 'saved' : 'neither';
 const needs = c => c.status !== 'approved';
 const todoN = S => latest(S).scenes.filter(c => needs(c) && !draftOf(S).choices[c.id]).length;
 const canSubmit = S => !!latest(S) && !locked(S) && todoN(S) === 0;
@@ -286,7 +288,7 @@ function status(S) {
     case 'sent': return '<div class="st st-ok" role="status"><span><b>Sent to Claude.</b> The next board appears on this page; if it does not, type <code>submitted</code> in the terminal.</span></div>';
     case 'saved': return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the terminal and the session reads your saved answers.</span>
       <div class="st-row"><button class="btn btn-sm" data-act="wake">Try waking it again</button></div></div>`;
-    case 'neither': return `<div class="st st-bad" role="alert"><span><b>Not saved and not sent.</b> Copy your answers and paste them into the terminal.</span>
+    case 'neither': return `<div class="st st-bad" role="alert"><span><b>Your answers were not saved.</b> Copy them and paste them into the terminal.</span>
       <pre id="fallback-text">${esc(answersText(S))}</pre>
       <div class="st-row"><button class="btn btn-sm accent" data-act="copy">Copy answers</button><button class="btn btn-sm" data-act="submit">Try again</button><span class="label" id="copied" role="status"></span></div></div>`;
   }
@@ -389,8 +391,8 @@ async function boot() {
     S.status = 'sending'; render();
     const anchor = await anchorOf(document.getElementById(btn.id) || btn);
     const saved = await db.doc('answers/board-' + doc.version).set(doc).then(() => true, () => false);
-    const woke = await wake(anchor);
-    S.status = woke ? 'sent' : saved ? 'saved' : 'neither';
+    const woke = await wake(anchor), text = answersText(S);
+    S.status = outcome(saved, woke, capped(text) === text);
     render();
   }
   async function rewake(btn) {

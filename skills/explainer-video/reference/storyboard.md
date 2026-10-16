@@ -19,9 +19,10 @@ SKILL.md's.
    a cache hit. A failure reads as under Render step 7.
 2. **Surface.** The page needs the `Artifact`, `ArtifactData` and
    `ArtifactComments` tools. With any of them missing, or when the user says
-   the page cannot reach its database, the board is **local**: skip to step 4,
-   and say in one line that the board is `explainers/<slug>/storyboard.html`,
-   opened in a browser, and that the user pastes its answers text back here.
+   the page cannot reach its database, the board is **local** for the rest of
+   the run: skip to step 4, and say in one line that the board is
+   `explainers/<slug>/storyboard.html`, opened in a browser, and that the user
+   pastes its answers text back here.
 3. **Publish, once per run.** `board page` writes `board/page.html`, the page
    with the video's title. Publish that file as a new artifact:
    `capabilities` `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon`
@@ -32,8 +33,10 @@ SKILL.md's.
    when the publish result's subscription line leaves that in doubt, check with
    `ArtifactComments` `watch` and no `url`. Unarmed, tell the user to type
    `submitted` here after each Submit.
-4. **Build.** `board build`. Exit 1 with `board: no <file>` or `no still`
-   names the stage to run first. On a published page it first lists
+4. **Build.** `board build`, or `board build --local` on a local board (a
+   page recorded earlier would otherwise ask for uploads). Exit 1 with
+   `board: no <file>` or `no still` names the stage to run first. On a
+   published page it first lists
    `board: upload <path> (<size>)` per still, narration or clip the page does
    not hold yet: upload them with `Artifact` publishes of up to 25 files each,
    `url` the page, `asset: true` and `file_paths` each path prefixed with
@@ -65,14 +68,15 @@ SKILL.md's.
    and build the next version (step 4). A note asking for a claim the sources
    do not support follows the Script stage's support stop. `answers for board
    <a>, the latest is board <b>` or `cut to fit`: read the latest version's
-   answers document instead. Any other `board:` refusal: relay it as printed
-   and ask the user to copy the answers again.
-7. **Gate stop.** On Render's `stop`, run `board build` and post its version
+   answers document instead; with none, ask the user to copy the answers the
+   page shows and paste them here. Any other `board:` refusal: relay it as
+   printed and ask the user to copy the answers again.
+7. **Gate stop.** On Render's `stop`, build and post the next version
    (step 4): it carries a banner with each red gate's line and reopens every
    card the gates' findings name. A finding that names no scene (`loudness`,
    `captions`) reopens no card: relay its line and `gates.md`. End the
    turn; the revisions come back through step 5.
-8. **After delivery**, `board build` once more: it cuts each scene's stretch of
+8. **After delivery**, build once more (step 4): it cuts each scene's stretch of
    the delivered MP4 into a clip under 15 MB, and its `delivered` version plays
    them on the cards. Post it as in step 4, then report Render's last line and
    the videos-folder path.

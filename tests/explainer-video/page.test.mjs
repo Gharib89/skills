@@ -65,7 +65,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
 const ctx = vm.createContext({ console });
 vm.runInContext(
   scripts[0] +
-    "\n;globalThis.__page = { newState, setBoards, setAnswers, view, ACT, answersDoc, answersText, mediaUrl };",
+    "\n;globalThis.__page = { newState, setBoards, setAnswers, view, ACT, answersDoc, answersText, mediaUrl, outcome };",
   ctx,
 );
 const P = ctx.__page;
@@ -218,6 +218,14 @@ test("a board whose answers are submitted takes no more edits", () => {
   P.ACT.choose(S, { id: "hook", choice: "approve" });
   assert.equal(P.answersDoc(S).scenes[0].choice, null);
   assert.ok(submitDisabled(P.view(S)));
+});
+
+test("a submit whose save failed reads as sent only when the comment carried the whole answers", () => {
+  assert.equal(P.outcome(true, true, false), "sent");
+  assert.equal(P.outcome(true, false, true), "saved");
+  assert.equal(P.outcome(false, true, true), "sent");
+  assert.equal(P.outcome(false, true, false), "neither");
+  assert.equal(P.outcome(false, false, true), "neither");
 });
 
 test("a media URL is kept when https, a blob or relative and dropped otherwise", () => {

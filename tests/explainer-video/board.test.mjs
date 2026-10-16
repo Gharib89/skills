@@ -125,6 +125,11 @@ test("render --stills renders the stills only, and build writes an open board wi
   assert.equal(hf.length, 1);
   assert.ok(hf[0].args.includes("png-sequence"));
   assert.ok(!fs.existsSync(path.join(fx.dir, "out", "demo.mp4")));
+  // A delivered run's out/ is left alone: stills again keep its video.
+  fs.mkdirSync(path.join(fx.dir, "out"));
+  fs.writeFileSync(path.join(fx.dir, "out", "demo.mp4"), "video");
+  stills(fx);
+  assert.equal(read(fx.dir, "out/demo.mp4"), "video");
   const list = JSON.parse(read(fx.dir, "stills.json"));
   assert.deepEqual(
     list.scenes.map((s) => s.id),
@@ -188,7 +193,7 @@ test("page with no url writes the page to publish with its title filled and no b
   assert.match(page, /id="board">null<\/script>/);
 });
 
-test("a published page needs every media file uploaded and recorded before build writes URLs", () => {
+test("a published page needs every media file uploaded and recorded before build writes URLs, and --local builds without it", () => {
   const fx = fixture();
   prep(fx);
   let r = board(fx, "page", "http://x/page");
@@ -236,6 +241,28 @@ test("a published page needs every media file uploaded and recorded before build
     assert.match(c.still, /^(https:\/\/cdn\.x\/|\/_blob\/[0-9a-f]{32}$)/);
     assert.match(c.audio, /^(https:\/\/cdn\.x\/|\/_blob\/[0-9a-f]{32}$)/);
   }
+  // storyboard.html is opened from the run folder, so it reads the run's paths.
+  const embedded = () =>
+    JSON.parse(
+      read(fx.dir, "storyboard.html").match(
+        /<script type="application\/json" id="board">(.*?)<\/script>/s,
+      )[1],
+    );
+  assert.deepEqual(
+    embedded().scenes.map((c) => c.still),
+    files.filter((f) => f.endsWith(".png")),
+  );
+
+  // The page out of reach: --local builds the next version with no uploads.
+  fs.rmSync(path.join(fx.dir, "board", "assets.json"));
+  assert.equal(board(fx, "build", "--x").code, 2);
+  r = ok(board(fx, "build", "--local"), "build --local");
+  assert.match(r.out, /^board: local page storyboard\.html$/m);
+  assert.deepEqual(
+    doc(fx, 2).scenes.map((c) => c.still),
+    embedded().scenes.map((c) => c.still),
+  );
+  assert.ok(doc(fx, 2).scenes.every((c) => c.still.startsWith(".cache/")));
 });
 
 test("apply writes edited narration into script.md only, and the revised scene alone reruns through voice and stills", () => {
