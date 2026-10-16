@@ -53,9 +53,13 @@ deck's title).
    on a measured colour a page or theme declared), then the draft's path,
    `explainers/<slug>/style-draft/<name>.json`. Show the token lines to the
    user. On exit 1, a `style role` line names a role to fix in `roles.json`;
-   a `no lightness passes` or `fails contrast` line means the assigned `bg`
-   and `text` cannot pass together, so assign one of them another colour
-   candidate. Fix `roles.json` and run the draft again. Writing the draft
+   a `style <token>: no lightness passes <n>:1 on <surfaces>` or
+   `fails contrast` line means no lightness of that token passes on every
+   surface it names, which happens when those surfaces sit on opposite sides
+   of the lightness scale (a dark `panel` on a light `bg`): assign the
+   surface on the other side of the ground another colour candidate, or leave
+   it out so the draft derives it, before you touch `text`. Fix `roles.json`
+   and run the draft again. Writing the draft
    deletes the reference images, since a deck may be confidential.
 
 The draft keeps the bundled `claude-code` profile's type, layout, motion, look

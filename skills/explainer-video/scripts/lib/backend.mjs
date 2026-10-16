@@ -624,16 +624,21 @@ export async function capturePages(url, out, { env, max }) {
         hide.textContent =
           "img,picture,video,canvas,iframe,embed,object,svg image{visibility:hidden!important}*,*::before,*::after{background-image:none!important}";
         document.head.append(hide);
+        // A computed colour keeps its own syntax (oklch, lab, color()), so
+        // each is painted on a 1x1 canvas and read back as the sRGB pixel.
+        const ctx = Object.assign(document.createElement("canvas"), {
+          width: 1,
+          height: 1,
+        }).getContext("2d", { willReadFrequently: true });
         const hex = (c) => {
-          const m = c.match(
-            /^rgba?\((\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)(?:,\s*([\d.]+))?\)$/,
-          );
-          if (!m || (m[4] !== undefined && +m[4] === 0)) return null;
+          ctx.clearRect(0, 0, 1, 1);
+          ctx.fillStyle = "transparent";
+          ctx.fillStyle = c;
+          ctx.fillRect(0, 0, 1, 1);
+          const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+          if (a === 0) return null;
           return (
-            "#" +
-            [m[1], m[2], m[3]]
-              .map((v) => Math.round(+v).toString(16).padStart(2, "0"))
-              .join("")
+            "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")
           );
         };
         const colors = [];
