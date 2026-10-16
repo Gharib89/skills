@@ -12,8 +12,11 @@
 // --all adds the opt-in rows. --voice names the narrator whose voice rows are
 // listed (default: the English default narrator). A system package (ffmpeg,
 // uv) is never installed: its install lines (Linux, brew, winget) are printed
-// for the human to run. Nor is a key (GEMINI_API_KEY): it is checked with
-// Google by a call that spends no TTS request, and never stored or printed.
+// for the human to run. Nor is a key (GEMINI_API_KEY, ELEVENLABS_API_KEY): it
+// is checked with its vendor by a call that spends no TTS request or credits,
+// and never stored or printed. `--voice own:<name>` names an enrolled own
+// voice (voice/own-voice.mjs): its rows are Chatterbox's, Gemini's key and the
+// Arabic aligner.
 // stdout: the table (row, needed by, status, size, licence, writes to), the
 //         install lines of each missing system package, where to get each key
 //         not present, Gemini's data notice the first time a key is present,
@@ -26,6 +29,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { OWN, narrator as findNarrator, narrators } from "./lib/narrators.mjs";
 import { userDirs } from "./lib/paths.mjs";
 import {
   TOOL_DIRS,
@@ -52,11 +56,11 @@ if (
   process.exit(2);
 }
 const all = flags.includes("--all");
-const narrator = JSON.parse(
-  fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
-).narrators.find((n) =>
-  voiceId ? n.id === voiceId : n.language === "en" && n.default,
-);
+const narrator = voiceId?.startsWith(OWN)
+  ? findNarrator(voiceId, "ar")
+  : narrators().find((n) =>
+      voiceId ? n.id === voiceId : n.language === "en" && n.default,
+    );
 if (!narrator) {
   console.error(`setup: no narrator ${voiceId}\n${usage}`);
   process.exit(2);
@@ -67,10 +71,13 @@ const dirs = userDirs();
 const catalogue = readCatalogue();
 
 // Every row without a `when`; opt-in rows under --all; a `when: voice` row
-// whose language and backend, where it names them, are the narrator's; a
-// `when: python` row (uv) only beside a row that runs Python.
+// whose language and backend, where it names them, are the narrator's or its
+// base narrator's (an own voice speaks through one); a `when: python` row (uv)
+// only beside a row that runs Python.
 const forNarrator = (r) =>
-  ["language", "backend"].every((k) => !(k in r) || r[k] === narrator[k]);
+  ["language", "backend"].every(
+    (k) => !(k in r) || r[k] === narrator[k] || r[k] === narrator.base?.[k],
+  );
 const rows = catalogue.filter(
   (r) =>
     !r.when ||
@@ -108,16 +115,19 @@ const du = (p) => {
     : s.size;
 };
 
-// A key is present once Google takes it.
+// A key is present once its vendor takes it.
+const CHECKS = { gemini: "geminiKey", elevenlabs: "elevenlabsKey" };
 const keys = new Map();
 for (const r of rows.filter((r) => r.kind === "key")) {
   const value = process.env[r.env];
   keys.set(
     r,
     value
-      ? await backend.geminiKey(value).then(
+      ? await backend[CHECKS[r.backend]](value).then(
           (k) =>
-            k.ok ? "present" : `refused: Google refused ${r.env} (${k.reason})`,
+            k.ok
+              ? "present"
+              : `refused: ${r.vendor} refused ${r.env} (${k.reason})`,
           (e) => `failed: ${e.message}`,
         )
       : "missing",
@@ -215,15 +225,26 @@ async function install(r) {
   } else if (r.kind === "model") {
     await staged(dir, (part) => fetchFiles(r, part));
   } else if (r.kind === "uv") {
-    // The code at its pinned commit, synced from its own lockfile into a .venv
-    // beside it. Filled in place, not staged: the venv records its absolute path.
-    const zip = path.join(dir, "source.zip");
-    await backend.download(
-      `https://codeload.github.com/${r.source.repo}/zip/${r.source.revision}`,
-      zip,
-    );
-    await backend.extract(zip, path.join(dir, "src"));
-    fs.rmSync(zip);
+    // The code at its pinned commit (or, for a row the skill carries, its
+    // project folder's pyproject and lock), synced from its own lockfile into a
+    // .venv beside it. Filled in place, not staged: the venv records its
+    // absolute path.
+    if (r.source.path) {
+      fs.mkdirSync(path.join(dir, "src"));
+      for (const f of ["pyproject.toml", "uv.lock"])
+        fs.copyFileSync(
+          path.join(skill, r.source.path, f),
+          path.join(dir, "src", f),
+        );
+    } else {
+      const zip = path.join(dir, "source.zip");
+      await backend.download(
+        `https://codeload.github.com/${r.source.repo}/zip/${r.source.revision}`,
+        zip,
+      );
+      await backend.extract(zip, path.join(dir, "src"));
+      fs.rmSync(zip);
+    }
     const code = await backend.uvSync(path.join(dir, "src"));
     if (code !== 0) throw new Error(`uv sync exited ${code}`);
     await fetchFiles(r, path.join(dir, "checkpoints"));
@@ -285,7 +306,7 @@ function report(state, staleInstalls) {
       "",
       aceDevice(cap) === "cuda"
         ? `${r.id} runs on the GPU here (compute capability ${cap.toFixed(1)}).`
-        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0: no bfloat16, and float16 gives NaN` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of score.`,
+        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0${r.cpu.why ? `: ${r.cpu.why}` : ""}` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of ${r.cpu.of}.`,
     );
   }
   for (const r of rows.filter(
@@ -304,7 +325,7 @@ function report(state, staleInstalls) {
         "",
         `${r.id} is a key you set yourself: get a free one at ${r.get}, then set ${r.env} and check again.`,
       );
-    else if (firstNotice(process.env[r.env]))
+    else if (r.backend === "gemini" && firstNotice(process.env[r.env]))
       lines.push(
         "",
         "Gemini data notice (shown once for this key): narration text goes to Google to be voiced. On the free tier Google may use it and the audio to improve its products, and people may review them; a paid key's data is not used that way.",

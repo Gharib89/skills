@@ -12,6 +12,7 @@
       "kind": "model",
       "when": "voice",
       "language": "en",
+      "backend": "kokoro",
       "repo": "onnx-community/Kokoro-82M-v1.0-ONNX",
       "revision": "1939ad2a8e416c0acfeecc08a694d14ef25f2231",
       "files": [
@@ -88,10 +89,22 @@
       "kind": "key",
       "when": "voice",
       "backend": "gemini",
+      "vendor": "Google",
       "env": "GEMINI_API_KEY",
       "get": "https://aistudio.google.com/apikey",
       "neededBy": "voice (Gemini narrators)",
       "licence": "Gemini API terms"
+    },
+    {
+      "id": "key:elevenlabs",
+      "kind": "key",
+      "when": "voice",
+      "backend": "elevenlabs",
+      "vendor": "ElevenLabs",
+      "env": "ELEVENLABS_API_KEY",
+      "get": "https://elevenlabs.io/app/settings/api-keys",
+      "neededBy": "voice (ElevenLabs narrators)",
+      "licence": "ElevenLabs terms"
     },
     {
       "id": "chrome",
@@ -260,10 +273,39 @@
       "size": 8027342846,
       "cpu": {
         "seconds": 88,
-        "ram": 15539236864
+        "ram": 15539236864,
+        "of": "score",
+        "why": "no bfloat16, and float16 gives NaN"
       },
       "neededBy": "score (ace-step)",
       "licence": "MIT (ACE-Step 1.5 code and weights)"
+    },
+    {
+      "id": "own-voice",
+      "kind": "uv",
+      "when": "voice",
+      "backend": "own",
+      "python": true,
+      "source": {
+        "path": "scripts/voice/vc"
+      },
+      "repo": "ResembleAI/chatterbox",
+      "revision": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
+      "files": [
+        {
+          "path": "s3gen.safetensors",
+          "size": 1056484620,
+          "sha256": "2b78103c654207393955e4900aac14a12de8ef25f4b09424f1ef91941f161d4e"
+        }
+      ],
+      "size": 6266019818,
+      "cpu": {
+        "seconds": 70,
+        "ram": 3317739520,
+        "of": "narration"
+      },
+      "neededBy": "voice (own voice, Chatterbox VC)",
+      "licence": "MIT"
     },
     {
       "id": "ffmpeg",

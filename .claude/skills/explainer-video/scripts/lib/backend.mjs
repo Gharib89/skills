@@ -11,7 +11,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
-import { skill, toolPaths } from "./tools.mjs";
+import { aceDevice, skill, toolPaths } from "./tools.mjs";
 
 const win = process.platform === "win32";
 // Children write to stderr, so stdout carries only setup's own table.
@@ -680,11 +680,158 @@ export async function geminiKey(key) {
   };
 }
 
+const ELEVENLABS = "https://api.elevenlabs.io/v1";
+
+// An ElevenLabs answer's error message: its JSON's detail, else its text.
+async function elevenlabsError(r) {
+  const body = await r.text();
+  let message = body;
+  try {
+    message = JSON.parse(body).detail?.message ?? body;
+  } catch {}
+  return Object.assign(
+    new Error(`ElevenLabs answered HTTP ${r.status}: ${message}`),
+    { quota: r.status === 429 },
+  );
+}
+
+// ElevenLabs TTS on the user's key; the audio is raw 16-bit little-endian PCM,
+// mono, 24 kHz.
+async function elevenlabs(text, narrator) {
+  const r = await fetch(
+    `${ELEVENLABS}/text-to-speech/${narrator.voice}?output_format=pcm_24000`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": process.env.ELEVENLABS_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" }),
+    },
+  );
+  if (r.status !== 200) throw await elevenlabsError(r);
+  const pcm = Buffer.from(await r.arrayBuffer());
+  const samples = new Float32Array(pcm.length >> 1);
+  for (let i = 0; i < samples.length; i++)
+    samples[i] = pcm.readInt16LE(2 * i) / 32768;
+  return { samples, sampleRate: 24000 };
+}
+
+// Whether ElevenLabs takes `key`, read from a voice's metadata so no credits
+// are spent; a bad key answers `{"detail":{"status":"invalid_api_key"}}`.
+export async function elevenlabsKey(key) {
+  const r = await fetch(`${ELEVENLABS}/voices/JBFqnCBsd6RMkjVDRZzb`, {
+    headers: { "xi-api-key": key },
+  });
+  if (r.status === 200) return { ok: true };
+  if (r.status === 401 || r.status === 403)
+    return {
+      ok: false,
+      reason:
+        (await r.json().catch(() => ({}))).detail?.status ?? `HTTP ${r.status}`,
+    };
+  throw await elevenlabsError(r);
+}
+
+// An enrolled clip as 16-bit PCM, 24 kHz, mono WAV, whatever ffmpeg reads.
+export async function voiceClip(input, output) {
+  ffmpeg([
+    "-y",
+    "-i",
+    input,
+    "-ac",
+    "1",
+    "-ar",
+    "24000",
+    "-c:a",
+    "pcm_s16le",
+    "-f",
+    "wav",
+    output,
+  ]);
+}
+
+// A narrator's render converted to an own voice's clip by Chatterbox VC:
+// scripts/voice/vc/vc.py under uv in the own-voice row's folder.
+async function ownVoice(text, narrator, tools) {
+  const { samples, sampleRate } = await synthesize({
+    text,
+    narrator: narrator.base,
+    tools,
+  });
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "own-voice-"));
+  try {
+    const inRaw = path.join(tmp, "in.f32");
+    const inWav = path.join(tmp, "in.wav");
+    const outWav = path.join(tmp, "out.wav");
+    fs.writeFileSync(
+      inRaw,
+      Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength),
+    );
+    ffmpeg([
+      "-y",
+      "-f",
+      "f32le",
+      "-ar",
+      String(sampleRate),
+      "-ac",
+      "1",
+      "-i",
+      inRaw,
+      inWav,
+    ]);
+    const dir = tools.ownVoice;
+    const device = aceDevice(await computeCapability());
+    const r = spawnSync(
+      "uv",
+      [
+        "run",
+        "--frozen",
+        "--no-sync",
+        "python",
+        path.join(skill, "scripts", "voice", "vc", "vc.py"),
+        path.join(dir, "checkpoints"),
+        device,
+        inWav,
+        narrator.clip,
+        outWav,
+      ],
+      { cwd: path.join(dir, "src"), stdio: quiet },
+    );
+    if (r.status !== 0)
+      throw new Error(`chatterbox exited ${r.status ?? r.error?.message}`);
+    const raw = path.join(tmp, "out.f32");
+    ffmpeg([
+      "-y",
+      "-i",
+      outWav,
+      "-ar",
+      "24000",
+      "-ac",
+      "1",
+      "-f",
+      "f32le",
+      raw,
+    ]);
+    const f = fs.readFileSync(raw);
+    return {
+      samples: new Float32Array(
+        f.buffer.slice(f.byteOffset, f.byteOffset + f.length),
+      ),
+      sampleRate: 24000,
+    };
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 // A narrator adapter: text in, audio out, never timings (ADR 0016). Kokoro
 // reads one sentence per inference, so the whole text goes through its splitter.
 let kokoro;
 export async function synthesize({ text, narrator, tools }) {
   if (narrator.backend === "gemini") return gemini(text, narrator);
+  if (narrator.backend === "elevenlabs") return elevenlabs(text, narrator);
+  if (narrator.backend === "own") return ownVoice(text, narrator, tools);
   if (narrator.backend !== "kokoro")
     throw new Error(`no adapter for backend ${narrator.backend}`);
   const req = fromCache(tools.node);
