@@ -9,3 +9,11 @@ export function fitsLength(seconds, minutes) {
   const want = minutes * 60;
   return Math.abs(seconds + HOLD - want) <= want * 0.1;
 }
+
+// The sentences Kokoro voices one inference each, so each spends the narrator's
+// `pause`: its splitter breaks where a full stop, ! or ? meets a space, not at
+// a script's numbered items, so three items with no full stop are one
+// sentence and one item of three sentences is three.
+export function sentences(text) {
+  return text.split(/(?<=[.!?])\s+/);
+}

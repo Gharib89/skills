@@ -30,9 +30,10 @@ const VOCAB =
   "ship reads the issue then writes a failing test and the code that makes it pass before review".split(
     " ",
   );
+const spoken = (n) =>
+  Array.from({ length: n }, (_, i) => VOCAB[i % VOCAB.length]).join(" ");
 // A sentence of n spoken words ending in its cites.
-const say = (n, cites = "[ex-1]") =>
-  `${Array.from({ length: n }, (_, i) => VOCAB[i % VOCAB.length]).join(" ")}. ${cites}`;
+const say = (n, cites = "[ex-1]") => `${spoken(n)}. ${cites}`;
 
 const TITLE = { component: "title", props: { title: "The local gate" } };
 
@@ -228,6 +229,32 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
     line(r, "budget"),
     "script budget: fail: steps 20 words vs 34 (12 s less 2 sentences at 1.12 s, at 3.51 words/s) ±10%",
   );
+  // Kokoro voices a sentence where a full stop, ! or ? meets a space, not a
+  // numbered item: three items with no full stop run as one sentence, and one
+  // item of three sentences as three.
+  r = check(
+    fixture({
+      scenes: edit(SCENES, 2, {
+        sentences: [
+          `${spoken(10)} [ex-1]`,
+          `${spoken(10)} [no-claim]`,
+          `${spoken(10)} [ex-2, ex-3]`,
+        ],
+      }),
+    }),
+  );
+  assert.equal(
+    line(r, "budget"),
+    "script budget: fail: steps 30 words vs 38 (12 s less 1 sentences at 1.12 s, at 3.51 words/s) ±10%",
+  );
+  r = check(
+    fixture({
+      scenes: edit(SCENES, 2, {
+        sentences: [`${spoken(10)}. ${spoken(10)}. ${spoken(10)}. [ex-1]`],
+      }),
+    }),
+  );
+  assert.equal(line(r, "budget"), "script budget: pass");
   r = check(fixture({ scenes: edit(SCENES, 0, { seconds: 0 }) }));
   assert.match(line(r, "budget"), /hook 0 s is outside 12 to 30 s/);
   r = check(fixture({ brief: ["length=2", "must=local gate"] }));

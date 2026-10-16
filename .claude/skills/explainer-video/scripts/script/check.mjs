@@ -21,7 +21,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { HOLD, fitsLength } from "../lib/length.mjs";
+import { HOLD, fitsLength, sentences as split } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
@@ -81,7 +81,7 @@ const gates = {};
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {
     if (s.seconds < 12 || s.seconds > 30)
       f.push(`${s.id} ${s.seconds} s is outside 12 to 30 s`);
-    const sentences = s.counts.length;
+    const sentences = split(s.narration.join(" ")).length;
     const budget = (s.seconds - sentences * narrator.pause) * narrator.rate;
     const n = s.counts.reduce((a, b) => a + b, 0);
     if (Math.abs(n - budget) > budget * 0.1)

@@ -17,6 +17,7 @@
 // exit:   0 written · 1 synthesis or alignment failed · 2 usage
 import fs from "node:fs";
 import path from "node:path";
+import { sentences as split } from "../scripts/lib/length.mjs";
 import { loadBackend, skill, toolPaths } from "../scripts/lib/tools.mjs";
 import { align } from "../scripts/voice/align.mjs";
 
@@ -72,7 +73,7 @@ try {
   for (const n of doc.narrators.filter((n) => n.language === language)) {
     const sum = { words: 0, speech: 0, silence: 0, sentences: 0 };
     for (const [k, text] of TEXTS[language].entries()) {
-      const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.split(/\s+/));
+      const sentences = split(text).map((s) => s.split(/\s+/));
       const { samples, sampleRate } = await backend.synthesize({
         text,
         narrator: n,
