@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Egyptian Arabic narration through Gemini and the Arabic aligner
+  ([#739](https://github.com/Gharib89/skills/pull/739),
+  [`600451f`](https://github.com/Gharib89/skills/commit/600451f609954c6acbdba6a4da358235b6bfeaaa))
+
+
 ## v0.14.0 (2026-10-16)
 
 ### Features
