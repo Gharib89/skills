@@ -193,6 +193,21 @@ test("page with no url writes the page to publish with its title filled and no b
   assert.match(page, /id="board">null<\/script>/);
 });
 
+test("a media file whose encode failed is made again on the next build, not served from the cache", () => {
+  const fx = fixture();
+  prep(fx);
+  const r = run(fx, "storyboard/board.mjs", ["build"], {
+    EXPLAINER_VIDEO_FAKE_NARRATION_FAIL: "1",
+  });
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^board: ffmpeg: encode failed$/m);
+  assert.equal(calls(fx, "narration").length, 1);
+  ok(board(fx, "build"), "build");
+  assert.equal(calls(fx, "narration").length, 4);
+  for (const c of doc(fx, 1).scenes)
+    assert.notEqual(read(fx.dir, c.audio), "part");
+});
+
 test("a published page needs every media file uploaded and recorded before build writes URLs, and --local builds without it", () => {
   const fx = fixture();
   prep(fx);

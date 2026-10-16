@@ -72,15 +72,22 @@ const hash = (...parts) => {
     );
   return h.digest("hex").slice(0, 16);
 };
-// A media file under .cache/, named for its inputs, made once.
+// A media file under .cache/, named for its inputs, made once. It is made
+// under a partial- name and renamed on success, so a failed or interrupted
+// encode never reads as made.
 const cached = async (rel, make) => {
   if (fs.existsSync(at(rel))) return rel;
-  fs.mkdirSync(path.dirname(at(rel)), { recursive: true });
+  const part = path.join(
+    path.dirname(at(rel)),
+    `partial-${path.basename(rel)}`,
+  );
+  fs.mkdirSync(path.dirname(part), { recursive: true });
   try {
-    await make(at(rel));
+    await make(part);
   } catch (e) {
     fail(e.message);
   }
+  fs.renameSync(part, at(rel));
   return rel;
 };
 const versions = () =>

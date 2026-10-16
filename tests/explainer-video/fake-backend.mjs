@@ -229,6 +229,11 @@ export async function clip(input, output, { start, duration }) {
 export async function narration(input, output) {
   log({ call: "narration", input, output });
   fs.mkdirSync(path.dirname(output), { recursive: true });
+  if (process.env.EXPLAINER_VIDEO_FAKE_NARRATION_FAIL) {
+    // ffmpeg -y opens its output before it encodes, so a failure leaves a part.
+    fs.writeFileSync(output, "part");
+    throw new Error("ffmpeg: encode failed");
+  }
   fs.copyFileSync(input, output);
 }
 
