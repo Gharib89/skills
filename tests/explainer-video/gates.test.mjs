@@ -803,3 +803,25 @@ test("a contact sheet shows the scene's quarter marks and its own last frame, ev
     [980, 1112, 1244, 1376],
   ]);
 });
+
+test("a hard failure in the critic's second round stops the run: no third round could judge a fix", () => {
+  const fx = fixture();
+  const invented = () => ({
+    ...CLEAN,
+    failures: [{ kind: "invented", what: "a figure no sentence states" }],
+  });
+  renderUnjudged(fx, SCRIPT);
+  critique(fx.dir, invented);
+  const r1 = stage(fx, "render/render.mjs");
+  assert.match(r1.out, /^gates: 5 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  renderUnjudged(fx, SCRIPT.replace('"value": "code"', '"value": "the code"'));
+  critique(fx.dir, invented);
+  const r2 = stage(fx, "render/render.mjs");
+  assert.equal(r2.code, 1, r2.out + r2.err);
+  assert.match(r2.out, /^gate critic: fail: .*round 2 of 2 vs /m);
+  assert.match(
+    r2.out,
+    /^gates: 5 pass, 1 fail; stop: the critic's second round is red, no video$/m,
+  );
+  assert.ok(record(fx).attempts >= 3, "the storyboard reads it as stopped");
+});

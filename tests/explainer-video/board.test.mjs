@@ -438,7 +438,7 @@ test("a red gate record of this script at its third attempt reopens the scenes i
   const d = doc(fx, 2);
   assert.match(
     d.banner.text,
-    /^The video gates stayed red after two fix attempts/,
+    /^The video gates stayed red with no fix attempt left/,
   );
   assert.deepEqual(d.banner.gates, [
     "gate layout: fail: 1 finding(s), first: 1.5 s steps: text 12 px under 18 px vs none, text >= 18 px, margin 5%",

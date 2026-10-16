@@ -57,7 +57,7 @@
     }
   ],
   "banner": {
-    "text": "The video gates stayed red after two fix attempts, so no video was made. Revise the reopened cards.",
+    "text": "The video gates stayed red with no fix attempt left, so no video was made. Revise the reopened cards.",
     "gates": [
       "gate layout: fail: 1 finding(s), first: 1.5 s steps: text 12 px under 18 px vs none, text >= 18 px, margin 5%"
     ]

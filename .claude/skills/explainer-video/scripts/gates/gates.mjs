@@ -483,7 +483,13 @@ for (const [name, [evidence, measured, wanted]] of Object.entries(judged))
 gates.critic = critic;
 const red = Object.entries(gates).filter(([, g]) => g.status === "fail");
 const pending = critic.status === "pending";
-const attempts = count(red.length, same ? prev.attempts : 0);
+// A hard failure in the critic's last round is final: no third round can
+// judge a fix, so the run stops now rather than spend an attempt it cannot win.
+const criticFinal = critic.status === "fail" && judgedBy.round === 2;
+const attempts = Math.max(
+  count(red.length, same ? prev.attempts : 0),
+  criticFinal ? 3 : 0,
+);
 fs.writeFileSync(
   recordFile,
   JSON.stringify(
@@ -531,9 +537,11 @@ for (const [name, g] of Object.entries(gates))
 console.log(
   `gates: ${Object.keys(gates).length - red.length - pending} pass, ${red.length} fail${pending ? ", 1 pending" : ""}${
     red.length
-      ? stopped(attempts)
-        ? "; stop: red after two fix attempts, no video"
-        : `; next: fix attempt ${attempts} of 2`
+      ? criticFinal
+        ? "; stop: the critic's second round is red, no video"
+        : stopped(attempts)
+          ? "; stop: red after two fix attempts, no video"
+          : `; next: fix attempt ${attempts} of 2`
       : pending
         ? `; next: run the critic, round ${rounds.length + 1} of 2`
         : ""

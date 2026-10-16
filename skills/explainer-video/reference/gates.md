@@ -55,9 +55,11 @@ replaces.
 3. On `gates: critic verdict <scene>.json: <why>`, send the line to that
    scene's critic to fix, then render again.
 
-The critic judges two renders of one script at most. A third render carries
-the second round's verdict, its line ending `carried: no third round`; new
-narration is a new script and starts at round 1.
+The critic judges two renders of one script at most. A hard failure in the
+second round is final, so the summary ends `stop: the critic's second round is
+red, no video`. A third render carries the second round's verdict, its line
+ending `carried: no third round`; new narration is a new script and starts at
+round 1.
 
 ## On a red gate
 

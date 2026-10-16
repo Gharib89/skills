@@ -382,7 +382,7 @@ if (
   )
 ) {
   banner = {
-    text: "The video gates stayed red after two fix attempts, so no video was made.",
+    text: "The video gates stayed red with no fix attempt left, so no video was made.",
     gates: red.map(
       ([name, g]) => `gate ${name}: fail: ${g.measured} vs ${g.floor}`,
     ),
