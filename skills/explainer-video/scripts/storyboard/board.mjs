@@ -33,7 +33,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
-import { mapScreen, rename } from "../lib/terms.mjs";
+import { BRACES, mapScreen, rename } from "../lib/terms.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { esc } from "../render/compose.mjs";
 
@@ -141,8 +141,8 @@ function renameKept(lines, from, to) {
   const swap = (t) => rename(t, from, to);
   // A braced `{written|spoken}` whose written term is respelt loses its
   // spoken form, which spelt out the old term: the new one is said as written.
-  const said = (t) =>
-    swap(t.replace(/\{([^|}]*)\|[^}]*\}/g, (m, w) => (swap(w) === w ? m : w)));
+  const respellNarration = (t) =>
+    swap(t.replace(BRACES, (m, w) => (swap(w) === w ? m : w)));
   const touched = new Set();
   let id = null;
   let part = null;
@@ -157,7 +157,7 @@ function renameKept(lines, from, to) {
     else if (part === "Narration" && line.trim()) {
       const next = line.replace(
         /^(.*?)((?:\s*\[[^\]]*\])*\s*)$/,
-        (_, text, cites) => said(text) + cites,
+        (_, text, cites) => respellNarration(text) + cites,
       );
       if (next !== line) {
         lines[i] = next;

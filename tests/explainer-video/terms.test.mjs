@@ -23,7 +23,7 @@ test("a respelt kept term changes only where it stands as a whole Latin run", ()
   assert.equal(rename("وpull request،", "pull request", "PR"), "وPR،");
 });
 
-test("a token ending in a Latin word takes the next Latin token, whatever Arabic prefix it carries", () => {
+test("a token ends in a Latin word whatever Arabic prefix it carries, and not on punctuation, digits or Arabic", () => {
   assert.ok(endsLatin("pull"));
   assert.ok(endsLatin("وpull"));
   assert.ok(endsLatin("C++"));

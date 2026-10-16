@@ -21,7 +21,7 @@ import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { CUE_CHARS } from "../render/compose.mjs";
 import { checkVisual } from "../lib/visuals.mjs";
-import { endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
+import { BRACES, endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -120,7 +120,6 @@ if (fs.existsSync(briefFile)) {
   }
 }
 
-const BRACES = /\{([^|}]*)\|([^}]*)\}/g;
 const language = header.language ?? "en";
 
 // One numbered sentence: its spoken form, its written tokens, each with the

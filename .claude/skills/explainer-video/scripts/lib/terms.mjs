@@ -15,6 +15,9 @@ export const splitLatin = (text) => text.split(new RegExp(`(${RUN.source})`));
 
 export const ARABIC_SCRIPT = /\p{Script=Arabic}/u;
 
+// A narration's `{written|spoken}` pair: the term as captioned, then as said.
+export const BRACES = /\{([^|}]*)\|([^}]*)\}/g;
+
 // A written caption token of Latin letters and no Arabic ones.
 export const isLatin = (token) =>
   /[A-Za-z]/.test(token) && !ARABIC_SCRIPT.test(token);

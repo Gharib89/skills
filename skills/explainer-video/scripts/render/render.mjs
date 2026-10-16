@@ -70,7 +70,6 @@ function fail(why) {
 }
 const slug = path.basename(path.resolve(run));
 const HOLD = 1.0;
-const LATIN = ["title", "text", "code"];
 const r3 = (n) => +n.toFixed(3);
 const hash = (...parts) => {
   const h = crypto.createHash("sha256");
