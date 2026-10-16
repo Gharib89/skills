@@ -84,3 +84,30 @@ test("an English term matches its Arabic spelling only through transliteration",
     /^recall 0 under 0\.8/,
   );
 });
+
+test("issue said as ايشو passes, its ssu heard as sh", () => {
+  assert.equal(toArabic("issue"), "يشو");
+  const q = check("issue", "ايشو", seconds("issue", 13), "ar");
+  assert.deepEqual(q.failures, []);
+});
+
+test("an acronym of function words or vowel letters still counts", () => {
+  for (const [acronym, said] of [
+    ["AI", "ايه اي"],
+    ["UI", "يو اي"],
+    ["IO", "اي او"],
+  ]) {
+    const narration = `ده ${acronym}`;
+    const heard = `ده ${said}`;
+    assert.deepEqual(
+      check(narration, heard, seconds(narration, 13), "ar").failures,
+      [],
+      acronym,
+    );
+    assert.match(
+      check(narration, "ده", seconds(narration, 13), "ar").failures.join("; "),
+      /^recall 0 under 0\.8$/,
+      acronym,
+    );
+  }
+});

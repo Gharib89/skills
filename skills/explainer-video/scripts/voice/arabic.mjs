@@ -17,10 +17,11 @@ const LETTER =
     " ",
   );
 
-// The rule table from #703's alignment research (tuned on 20 terms):
-// applied in this order as global replaces, so a digraph goes before its
-// letters.
+// The rule table from #703's alignment research (tuned on 20 terms), plus
+// ssu, said sh (issue): applied in this order as global replaces, so a digraph
+// goes before its letters.
 const EN2AR = [
+  ["ssu", "شو"],
   ["tch", "تش"],
   ["sh", "ش"],
   ["ch", "تش"],

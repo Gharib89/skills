@@ -26,10 +26,11 @@ const content = (ws) =>
   ws.filter((w) => w.length > 1 && !STOP.has(w) && !/\d/.test(w));
 
 // Egyptian Arabic function words from the alignment research, folded, with the
-// clitics ال and لل that a split word leaves.
+// clitics ال and لل that a split word leaves. ايه is not one: it is A's name,
+// and an acronym of function words alone (AI) would count for nothing.
 const STOP_AR = new Set(
-  `اللي لما على علي في فيه من ده دي دا و بس كل لحد ما عن مع بعد كده قبل لو ولا إيه
-  ايه هي هو عشان اللى الى إلى الي ل ب يا انا أنا انت إنت ليها ليه بتاع بتاعك
+  `اللي لما على علي في فيه من ده دي دا و بس كل لحد ما عن مع بعد كده قبل لو ولا
+  هي هو عشان اللى الى إلى الي ل ب يا انا أنا انت إنت ليها ليه بتاع بتاعك
   بتاعة وبعدين بعدها وبعدها نفس أي اي the a an of to for and or in on لل ال`
     .split(/\s+/)
     .map(fold),
@@ -44,12 +45,13 @@ const keep = (w) =>
 // The model glues a tatweel clitic to the word after it (الـ pull request is
 // heard as البلركوست), so the narration's is glued too. Words then compare as
 // consonant skeletons: no article, and none of the vowel letters, hamza or
-// ain that speakers and the model write either way.
+// ain that speakers and the model write either way. A word of vowel letters
+// alone (يو, U's name) keeps its letters, so it still counts.
 const skeleton = (w) =>
   w
     .replace(/^(و|ف|ب|ل)?ال(?=..)/, "")
     .replace(/[اويءئؤع]/g, "")
-    .replace(/(.)\1+/g, "$1");
+    .replace(/(.)\1+/g, "$1") || w;
 const arabicContent = (text) =>
   fold(text.replace(/ـ\s+/g, ""))
     .replace(/[^ء-يڨیA-Za-z0-9']+/g, " ")
@@ -57,8 +59,7 @@ const arabicContent = (text) =>
     .filter(keep)
     .flatMap((w) => fold(toArabic(w)).split(" "))
     .filter(keep)
-    .map(skeleton)
-    .filter(Boolean);
+    .map(skeleton);
 
 function similar(a, b) {
   if (a === b) return true;
