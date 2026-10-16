@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.0 (2026-10-16)
+
+### Features
+
+- **explainer-video**: Source-named fonts in a draft style profile
+  ([#733](https://github.com/Gharib89/skills/pull/733),
+  [`87c5cb3`](https://github.com/Gharib89/skills/commit/87c5cb33f7ddc58281ad5d7b5076246d5a9d000e))
+
+
 ## v0.12.0 (2026-10-16)
 
 ### Features
