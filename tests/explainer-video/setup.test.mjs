@@ -868,12 +868,15 @@ test("on Linux and Windows x64 the torch rows are offered as before", () => {
   }
 });
 
-test("a macOS version is compared by its numbers, and an unknown one refuses nothing", () => {
+test("ace-step's macOS 14 floor compares versions by their numbers, and an unknown version passes it", () => {
   const fx = fixture(realRows());
   const ace = (p) =>
     row(run(fx, ["check", "--all"], "ffmpeg,uv", on(p)).out, "ace-step")[2];
-  assert.match(ace("darwin/arm64/13.6.1"), /^refused: unavailable on/);
-  assert.match(ace("darwin/arm64/9.9"), /^refused: unavailable on/);
+  for (const v of ["13.6.1", "9.9"])
+    assert.equal(
+      ace(`darwin/arm64/${v}`),
+      `refused: unavailable on darwin/arm64 ${v}: mlx 0.30.6 has wheels for macOS 14 and later only`,
+    );
   for (const p of ["darwin/arm64/14", "darwin/arm64/14.0.1", "darwin/arm64"])
     assert.equal(ace(p), "missing", p);
 });
