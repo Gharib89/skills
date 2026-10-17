@@ -119,11 +119,18 @@ export function check(narration, transcript, seconds, language = "en") {
   const recall = ref.length ? count(hit) / ref.length : 1;
   const precision = hyp.length ? count(used) / hyp.length : 1;
   const rate = seconds > 0 ? narration.length / seconds : 0;
-  const r2 = (n) => Math.round(n * 100) / 100;
+  // Two decimal places, and more while rounding would print a floor or band
+  // edge the value does not equal, so 0.849 never prints as the 0.85 floor it
+  // fails. The edges have two places, so rounding lands on one, never past it.
+  const shown = (n, ...edges) => {
+    let p = 2;
+    while (p < 6 && edges.some((e) => n !== e && +n.toFixed(p) === e)) p++;
+    return +n.toFixed(p);
+  };
   const out = {
-    recall: r2(recall),
-    precision: r2(precision),
-    rate: r2(rate),
+    recall: shown(recall, FLOORS.recall),
+    precision: shown(precision, FLOORS.precision),
+    rate: shown(rate, ...FLOORS.rate),
     failures: [],
   };
   if (recall < FLOORS.recall)

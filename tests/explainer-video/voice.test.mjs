@@ -215,6 +215,24 @@ for (const [name, sentence, why] of [
   });
 }
 
+// #725: a failed scene kept no record of what the aligner heard, so the
+// misheard word had to be guessed.
+test("a failed scene keeps what the aligner heard beside its voice outputs and names it", () => {
+  const scenes = structuredClone(SCENES);
+  scenes[2].narration = ["This looped sentence plays its words twice."];
+  const fx = fixture(scenes);
+  const r = run(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  const m = line(r.out, "recap").match(
+    /heard: (\.cache\/voice\/\w+\.heard\.txt)$/,
+  );
+  assert.ok(m, line(r.out, "recap"));
+  assert.equal(
+    fs.readFileSync(path.join(fx.dir, m[1]), "utf8").trim(),
+    "this looped sentence plays its words twice this looped sentence plays its words twice",
+  );
+});
+
 test("a rerun that fails QC removes the timeline the last pass wrote", () => {
   const fx = fixture();
   assert.equal(run(fx).code, 0);

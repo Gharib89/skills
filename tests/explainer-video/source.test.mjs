@@ -311,6 +311,77 @@ test("a Markdown excerpt locates by section or by line", () => {
   assert.match(snapshot(fx, [f]).out, /^source guide: md · 3 section\(s\) · /);
 });
 
+// #725: a page heading holding an anchor link reached outline.md as
+// `§ [Validation](#validation)`.
+test("a heading holding a Markdown link reads as its text in the pack, and either form locates", () => {
+  const fx = fixture();
+  const f = write(
+    fx,
+    "cache.md",
+    "# Caching\n\n## [Validation](#validation)\n\nAn ETag names a version.\n",
+  );
+  assert.equal(snapshot(fx, [f]).code, 0);
+  for (const locator of ["§ [Validation](#validation)", "§ Validation"]) {
+    draft(fx, "cache", [[locator, "An ETag names a version."]]);
+    const r = pack(fx);
+    assert.equal(r.code, 0, r.out + r.err);
+    const outline = fs.readFileSync(path.join(fx.dir, "outline.md"), "utf8");
+    assert.match(outline, /^- ex-1 · § Validation · note for /m);
+    const { excerpts } = JSON.parse(
+      fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
+    );
+    assert.equal(excerpts[0].locator, "§ Validation");
+  }
+  // A link around a badge image reads as the image's text, and the stored
+  // locator still finds its section.
+  const g = write(
+    fx,
+    "readme.md",
+    "# Project [![CI](x/badge.svg)](x/actions)\n\nIt builds.\n\n## [API](https://e.org/a_(b))\n\nIt serves.\n\n## [Array [T]](#array-t)\n\nIt holds.\n",
+  );
+  assert.equal(snapshot(fx, [g]).code, 0);
+  draft(fx, "readme", [
+    ["§ Project [![CI](x/badge.svg)](x/actions)", "It builds."],
+    ["§ [API](https://e.org/a_(b))", "It serves."],
+    ["§ [Array [T]](#array-t)", "It holds."],
+  ]);
+  draft(fx, "cache", [["§ Validation", "An ETag names a version."]]);
+  assert.equal(pack(fx).code, 0);
+  const { excerpts } = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
+  );
+  const [badge, api, array] = excerpts.filter((x) => x.source === "readme");
+  assert.equal(badge.locator, "§ Project CI");
+  // A destination holding balanced parentheses is read whole, and so is a
+  // label holding balanced brackets.
+  assert.equal(api.locator, "§ API");
+  assert.equal(array.locator, "§ Array [T]");
+  draft(fx, "readme", [
+    [badge.locator, "It builds."],
+    [api.locator, "It serves."],
+    [array.locator, "It holds."],
+  ]);
+  assert.equal(pack(fx, ["readme"]).code, 0);
+});
+
+test("a repo locator is stored as written, brackets and spaces included", () => {
+  const fx = fixture();
+  const repo = path.join(fx.tmp, "app");
+  fs.mkdirSync(path.join(repo, "§ docs"), { recursive: true });
+  const file = "§ docs/[id](x)  notes.md";
+  fs.writeFileSync(path.join(repo, file), "It ships.\n");
+  git(repo, "init", "-q");
+  git(repo, "add", ".");
+  assert.equal(snapshot(fx, [repo]).code, 0);
+  draft(fx, "app", [[`${file}:1`, "It ships."]]);
+  const r = pack(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const { excerpts } = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
+  );
+  assert.equal(excerpts[0].locator, `${file}:1`);
+});
+
 test("a heading used twice locates in either section, never across the two", () => {
   const fx = fixture();
   const f = write(

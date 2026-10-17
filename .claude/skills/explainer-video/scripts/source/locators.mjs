@@ -27,7 +27,7 @@ export function sections(text) {
     const f = line.match(/^ {0,3}(`{3,}|~{3,})/);
     if (f && (!fence || f[1][0] === fence[0])) fence = fence ? null : f[1];
     const h = !fence && !f && line.match(/^ {0,3}#{1,6}\s+(.*?)(?:\s+#+)?\s*$/);
-    if (h) out.push({ heading: squash(h[1]), lines: [line] });
+    if (h) out.push({ heading: plain(h[1]), lines: [line] });
     else out.at(-1)?.lines.push(line);
   }
   return out.map((s) => ({ heading: s.heading, text: s.lines.join("\n") }));
@@ -53,6 +53,28 @@ function lines(text, a, b) {
 
 // Whitespace runs as one space: word for word, not byte for byte.
 export const squash = (s) => s.replace(/\s+/g, " ").trim();
+
+// A heading as read: a Markdown link or image reads as its text, so a page
+// heading carrying its anchor (`[Validation](#validation)`) is `Validation`,
+// and a linked badge (`[![CI](badge)](runs)`) is `CI`. Innermost first, until
+// none is left, so reading a heading twice reads it the same. A label may
+// hold balanced brackets (`Array [T]`), a destination balanced parentheses
+// (`a_(b)`), one level deep.
+export function plain(s) {
+  const link = /!?\[((?:[^[\]]|\[[^[\]]*\])*)\]\((?:[^()]|\([^()]*\))*\)/g;
+  for (let t; (t = s.replace(link, "$1")) !== s;) s = t;
+  return squash(s);
+}
+
+// The kinds whose locators can name a section, `§ <heading>`.
+const HEADED = ["md", "html", "docx", "page"];
+
+// A locator as the pack stores it: a section's heading as read, any other
+// form as written, since a repo path may hold `§ `, brackets or spaces.
+export const stored = (locator, kind) =>
+  HEADED.includes(kind)
+    ? locator.trim().replace(/^§ (.+)$/, (_, h) => `§ ${plain(h)}`)
+    : locator.trim();
 
 // The stretches a locator names in a source's snapshot, one per section for a
 // heading used twice, or `{error}` saying why there are none.
@@ -86,10 +108,10 @@ export function segment(run, source, locator) {
         : { texts: [text] };
     }
   }
-  if (["md", "html", "docx", "page"].includes(source.kind)) {
+  if (HEADED.includes(source.kind)) {
     m = locator.match(/^§ (.+)$/);
     if (m) {
-      const hits = sections(read()).filter((s) => s.heading === squash(m[1]));
+      const hits = sections(read()).filter((s) => s.heading === plain(m[1]));
       return hits.length
         ? { texts: hits.map((s) => s.text) }
         : { error: `no section "${m[1]}"` };
