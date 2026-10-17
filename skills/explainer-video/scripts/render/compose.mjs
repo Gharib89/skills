@@ -1,5 +1,5 @@
-// The HyperFrames composition in the `bands` layout with `rise` or `spring` motion: a page
-// per render (the video's index.html, or a stills page), and one sub-composition
+// The HyperFrames composition in the `bands` layout, its motion `rise` or
+// `spring`: a page per render (the video's index.html, or a stills page), and one sub-composition
 // file per scene whose visual is a component. The palette comes from the style
 // profile as CSS custom properties; every font is a file beside the page.
 import crypto from "node:crypto";
@@ -17,7 +17,7 @@ export const CONTENT = { left: 120, top: 178, width: 1680, height: 690 };
 // most two lines.
 export const CUE_CHARS = 84;
 const RISE = [
-  { opacity: 0, y: 20 },
+  { opacity: 0, y: RISE_PX },
   { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
 ];
 // A reveal under `spring`: the opacity, position and scale it starts from and
@@ -414,7 +414,7 @@ const play = (scope, tweens) =>
           }
           const { opacity: o0, ...move } = from;
           const { opacity: o1, duration, ...end } = to;
-          tl.fromTo('${scope} ' + sel, { opacity: o0 }, { opacity: o1, duration: 0.35, ease: "power2.out" }, t);
+          tl.fromTo('${scope} ' + sel, { opacity: o0 }, { opacity: o1, duration: ${RISE[1].duration}, ease: "${RISE[1].ease}" }, t);
           tl.fromTo('${scope} ' + sel, move, { ...end, duration, ease: (p) => p >= 1 ? 1 : step(SPRING[cls], p * duration) }, t);
         }`
     : `        for (const [sel, from, to, t] of tweens)

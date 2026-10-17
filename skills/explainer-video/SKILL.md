@@ -356,10 +356,9 @@ taken from the scene and the element, so a render repeats exactly; and
 on) and `highlight` (code lines a sentence names). A profile with no `effects`
 allows none, and a motion effect it leaves out never reaches the video. The
 score's sound effects are separate: `effects` never mutes them. A profile's
-`motion` is `rise` (every reveal slides up 20 px in 0.35 s) or `spring`
-(a headline lands with one overshoot, panels, cards and frames settle with a
-soft one, list items, arrows and terminal lines snap); the bundled profiles
-say `rise`, and `spring` is a profile's own choice.
+`motion` is `rise` (every reveal slides up and fades in on one ease) or
+`spring` (a headline lands with one overshoot, panels, cards and frames settle
+with a soft one, list items, arrows and terminal lines snap).
 
 Asked for a style profile from a look (screenshots, a website, a PDF or PPTX
 deck, a video), read [reference/style.md](reference/style.md) and run its

@@ -56,7 +56,7 @@ for (const [cls, over, settle, humps] of [
       settleTime(SPRING[cls]) <= settle,
       `settle ${settleTime(SPRING[cls])}`,
     );
-    // visible classes overshoot more than a half percent, snap not at all to the eye
+    // the classes with a soft or visible overshoot go over by more than 5 percent
     if (humps) assert.ok(peak > 0.05, `overshoot ${peak}`);
     // after its one overshoot the ring-back stays within 3 percent of the target
     const first = pts.findIndex(([, v]) => v > 1);

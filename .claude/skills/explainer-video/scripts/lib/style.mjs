@@ -233,7 +233,7 @@ export function loadStyle(run, name, dirs = userDirs()) {
 }
 
 // Every check a profile passes at load: contrast by role, its gates only
-// tightening, its look and effects known.
+// tightening, its look, motion and effects known.
 export function validate(profile) {
   const bad = failures(profile);
   if (bad.length)
