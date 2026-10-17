@@ -140,6 +140,9 @@ below lands as a minor
   PR, 15 lines or fewer, with a carrier file tree after it only where the
   same edit lands in more than two files. Every node is a real symbol, each
   tree's root node carries its file path, and no line carries a line number.
+  `scripts/check-pr-body.sh` holds the fence limit, the root path and the
+  symbols: a call node one level under a root must be a word of that root's
+  file.
   `Shape: none, mechanical (<kind>).` replaces the fence only where the
   reviewer's question is "did the text change correctly", never where it is
   "what does X now do"; the diff being comments or prose does not settle which.

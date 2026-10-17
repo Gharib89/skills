@@ -22,6 +22,13 @@
 # `:` or `,`. A later carrier fence is not checked. A body without the heading
 # gets only the missing-heading line.
 #
+# Each first-level call node under a root (`name(`, the shallowest indent among
+# that root's nodes, not removed with `-`) must be a symbol of the root's file:
+# a whole word of that file, or of any file under it for a directory root. A
+# node whose symbol is absent, or whose file cannot be read, is a violation
+# naming both. A root with a glob is not resolved. The file is read under
+# PR_ROOT, default the checkout holding this script, which is the PR's head in CI.
+#
 # Each distinct `Closes #N` (or close/fix/resolve in their forms) outside a
 # fence is also echoed on stderr with its issue title, so a reviewer confirms
 # the PR closes the issue it means to. That is evidence, not a rule: it reads
@@ -33,7 +40,8 @@
 # `--help` prints that usage line and exits 0; any other argument starting with
 # `-` is a usage error, exit 2, never read as a file.
 #
-# PR_TEMPLATE overrides the template, default .github/pull_request_template.md.
+# PR_TEMPLATE overrides the template, default .github/pull_request_template.md;
+# PR_ROOT overrides the directory the outline's files are read under.
 # Headings are level 2 and matched whole, ignoring trailing whitespace (a CRLF
 # body's `\r` included); a line inside a fenced block or an HTML comment renders
 # as prose, so it is not a heading in the body or in the template. A fence is
@@ -55,6 +63,7 @@ esac
 
 template=${PR_TEMPLATE:-$(dirname "${BASH_SOURCE[0]}")/../.github/pull_request_template.md}
 [ -r "$template" ] || { echo "pr-body: cannot read the template $template" >&2; exit 2; }
+root=${PR_ROOT:-$(dirname "${BASH_SOURCE[0]}")/..}
 
 # Reads a document on stdin, prints its level-2 headings.
 headings() {
@@ -83,22 +92,42 @@ fi
 # heading to the next heading.
 outline_violations() {
   awk '
-    function path(line,   n, t, i, s) {
+    # The first file path in a root line, without its `:` or `,`; empty when none.
+    function ptok(line,   n, t, i, s) {
       n = split(line, t, /[[:space:]]+/)
       for (i = 1; i <= n; i++) {
-        if (index(t[i], "/")) return 1
+        s = t[i]; sub(/[:,]$/, "", s)
+        if (index(s, "/")) return s
         if (t[i] !~ /\.[A-Za-z0-9][A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[:,]?$/) continue
         # A stem of digits and dots is a version (24.2.9), not a file name.
-        s = t[i]; sub(/[:,]$/, "", s); sub(/\.[A-Za-z0-9]+$/, "", s)
-        if (s !~ /^[0-9.]+$/) return 1
+        sub(/\.[A-Za-z0-9]+$/, "", s)
+        if (s !~ /^[0-9.]+$/) return t[i] ~ /[:,]$/ ? substr(t[i], 1, length(t[i]) - 1) : t[i]
       }
-      return 0
+      return ""
+    }
+    # Prints the first-level nodes of the last root as `@sym<TAB>file<TAB>symbol`
+    # lines for the caller to look up: a node is a call (`name(`, any `a.b.` or
+    # `a::` qualifier dropped), first-level is the shallowest indent among the
+    # root nodes, and a removed node or root is gone from the file.
+    function flush_root(   i, min, f, sym) {
+      f = ptok(root[roots])
+      if (f != "" && !index(f, "*") && rootmark != "-") {
+        min = 1000
+        for (i = 1; i <= nn; i++) if (nmark[i] != "-" && nind[i] < min) min = nind[i]
+        for (i = 1; i <= nn; i++) {
+          if (nmark[i] == "-" || nind[i] != min || !match(ntext[i], /^[A-Za-z_][A-Za-z0-9_.:]*\(/)) continue
+          sym = substr(ntext[i], 1, RLENGTH - 1); sub(/^.*(\.|::)/, "", sym)
+          if (sym != "") print "@sym\t" f "\t" sym
+        }
+      }
+      nn = 0
     }
     function close_fence() {
       if (!isdiff || seen_diff) return
       seen_diff = 1
+      if (roots) flush_root()
       if (lines > 15) print "pr-body: change outline: the Shape fence is " lines " lines, over 15"
-      for (i = 1; i <= roots; i++) if (!path(root[i])) print "pr-body: change outline: tree root has no file path: " root[i]
+      for (i = 1; i <= roots; i++) if (ptok(root[i]) == "") print "pr-body: change outline: tree root has no file path: " root[i]
     }
     function end_section() {
       if (section && !seen_diff && !shape) print "pr-body: change outline: neither a Shape diff fence nor a \"Shape: none, mechanical (\" line"
@@ -112,7 +141,7 @@ outline_violations() {
         fence = marker; info = $0
         sub(/^[[:space:]]*(```|~~~)[`~]*[[:space:]]*/, "", info); sub(/[[:space:]]+$/, "", info)
         isdiff = section && info == "diff" && !seen_diff
-        lines = 0; roots = 0
+        lines = 0; roots = 0; nn = 0
       } else {
         fence = ""
         if (isdiff) close_fence()
@@ -123,8 +152,16 @@ outline_violations() {
     fence != "" {
       if (isdiff) {
         lines++
+        mark = ($0 ~ /^[-+ ]/) ? substr($0, 1, 1) : " "
         rest = ($0 ~ /^[-+ ]/) ? substr($0, 2) : $0
-        if ($0 !~ /^[[:space:]]*$/ && rest ~ /^[^[:space:]]/) root[++roots] = rest
+        if ($0 ~ /^[[:space:]]*$/) next
+        if (rest ~ /^[^[:space:]]/) {
+          if (roots) flush_root()
+          root[++roots] = rest; rootmark = mark
+        } else if (roots) {
+          match(rest, /[^[:space:]]/)
+          nn++; nmark[nn] = mark; nind[nn] = RSTART - 1; ntext[nn] = substr(rest, RSTART)
+        }
       }
       next
     }
@@ -174,7 +211,22 @@ case $? in
   0) missing=$(printf '%s\n' "$missing" | sed 's/^/pr-body: missing heading: /') ;;
   *) echo "pr-body: grep failed" >&2; exit 2 ;;
 esac
-violations=$(outline_violations "$body")
+found=$(outline_violations "$body")
+violations=$(grep -v '^@sym' <<<"$found")
+# A node the outline names must be a symbol in its root's file (or under it,
+# for a directory), so an outline cannot name a function the change never wrote.
+while IFS=$'\t' read -r _ file sym; do
+  [ -n "$sym" ] || continue
+  target=$root/$file
+  if [ -d "$target" ]; then grep -rqwF -- "$sym" "$target"; rc=$?
+  elif [ -r "$target" ]; then grep -qwF -- "$sym" "$target"; rc=$?
+  else rc=2; fi
+  case $rc in
+    0) ;;
+    1) violations+=${violations:+$'\n'}"pr-body: change outline: node $sym is not in $file" ;;
+    *) violations+=${violations:+$'\n'}"pr-body: change outline: node $sym: file not found: $file" ;;
+  esac
+done < <(grep '^@sym' <<<"$found")
 
 [ -n "$missing$violations" ] || exit 0
 printf '%s\n' "$missing${missing:+${violations:+$'\n'}}$violations"

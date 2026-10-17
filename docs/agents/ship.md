@@ -56,7 +56,7 @@ The catalog's entry trial, `scripts/catalog-trial.sh`, is no gate here: it insta
 
 ## CI
 
-Legs: bump-guard: the PR title is a Conventional Commit of a type the release run reads, and a title implying a major bump carries the `major` label; the PR body carries every `##` heading of the PR template; its `## Change outline` holds a `diff` fence or a `Shape: none, mechanical (` line, the first `diff` fence is at most 15 lines, and each root line in it carries a file path
+Legs: bump-guard: the PR title is a Conventional Commit of a type the release run reads, and a title implying a major bump carries the `major` label; the PR body carries every `##` heading of the PR template; its `## Change outline` holds a `diff` fence or a `Shape: none, mechanical (` line, the first `diff` fence is at most 15 lines, each root line in it carries a file path, and each call node one level under a root is a word of that root's file
 No-checks legal: no, `bump-guard` is not path-filtered and reports on every PR
 Push policy: Default.
 
@@ -161,6 +161,7 @@ The title is therefore load-bearing twice: the `bump-guard` leg holds it to a Co
 ## PR
 
 Template: .github/pull_request_template.md
+Body-check: scripts/check-pr-body.sh
 Merge: on-clean-gate
 
 ## Public surface

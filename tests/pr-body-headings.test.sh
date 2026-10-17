@@ -167,6 +167,14 @@ oc_rc() { rc_of "$(outline_body "$1")" "$tplc"; }
 oc_out() { out_of "$(outline_body "$1")" "$tplc"; }
 err_of() { { PR_TEMPLATE=${2:-$tplc} bash scripts/check-pr-body.sh "$1" >/dev/null; } 2>&1; }
 
+# The symbol check reads the files the outline names under PR_ROOT: a fixture
+# tree holding every symbol the fixtures below call a node.
+export PR_ROOT=$T/root
+mkdir -p "$PR_ROOT/scripts"
+{ printf 'helper() { :; }\nchild() { :; }\nother() { :; }\nrun() { :; }\n'
+  for i in $(seq 1 30); do printf 'node%s() { :; }\n' "$i"; done; } > "$PR_ROOT/a.sh"
+cp "$PR_ROOT/a.sh" "$PR_ROOT/scripts/a.sh"
+
 neither='pr-body: change outline: neither a Shape diff fence nor a "Shape: none, mechanical (" line'
 good_fence='```diff\n scripts/a.sh\n+  helper()\n-  old()\n```'
 
@@ -239,6 +247,41 @@ check_rc "a file name with digits in its stem is a path" \
   0 "$(oc_rc '```diff\n v2.sh: run()\n```')"
 check_rc "a carrier fence's rootless line is not checked" \
   0 "$(oc_rc "$good_fence\n\n"'```diff\n loose line\n```')"
+
+# Every depth-1 call node under a root is a symbol in the root's file.
+absent='pr-body: change outline: node missing_fn is not in scripts/a.sh'
+check_rc "a node whose symbol is absent from its root's file fails" \
+  1 "$(oc_rc '```diff\n scripts/a.sh\n+  missing_fn()\n```')"
+check "and the refusal names the node and the file" \
+  "$absent" "$(oc_out '```diff\n scripts/a.sh\n+  missing_fn()\n```')"
+check_rc "a node whose symbol is in the file passes" \
+  0 "$(oc_rc '```diff\n scripts/a.sh\n+  helper()\n```')"
+check_rc "a qualified node is matched by its last part" \
+  0 "$(oc_rc '```diff\n scripts/a.sh\n+  Foo.helper()\n+  Foo::child()\n```')"
+check "and the refusal names the last part" \
+  "$absent" "$(oc_out '```diff\n scripts/a.sh\n+  Foo::missing_fn()\n```')"
+check_rc "a symbol is a whole word, not a prefix of one" \
+  1 "$(oc_rc '```diff\n scripts/a.sh\n+  help()\n```')"
+check_rc "a removed node is not checked" \
+  0 "$(oc_rc '```diff\n scripts/a.sh\n-  gone()\n```')"
+check_rc "a removed root's nodes are not checked" \
+  0 "$(oc_rc '```diff\n-scripts/gone.sh\n-  gone()\n```')"
+check_rc "a node deeper than the first level is not checked" \
+  0 "$(oc_rc '```diff\n scripts/a.sh\n   child()\n     deep_missing()\n```')"
+check_rc "a node that is not a call is not checked" \
+  0 "$(oc_rc '```diff\n scripts/a.sh\n+  refuses a missing thing\n```')"
+check_rc "a root naming a directory searches under it" \
+  0 "$(oc_rc '```diff\n scripts/\n+  helper()\n```')"
+check_rc "a root with a glob is not resolved" \
+  0 "$(oc_rc '```diff\n scripts/*.sh\n+  missing_fn()\n```')"
+check "a root whose file is absent is named" \
+  "pr-body: change outline: node helper: file not found: scripts/none.sh" \
+  "$(oc_out '```diff\n scripts/none.sh\n+  helper()\n```')"
+check "each root's nodes are read against that root's file" \
+  "pr-body: change outline: node other is not in b.sh" \
+  "$({ printf 'helper() { :; }\n' > "$PR_ROOT/b.sh"; oc_out '```diff\n a.sh\n+  other()\n b.sh\n+  helper()\n+  other()\n```'; })"
+check_rc "the root defaults to the script's own checkout" \
+  0 "$(env -u PR_ROOT PR_TEMPLATE=$tplc bash scripts/check-pr-body.sh "$(outline_body '```diff\n scripts/check-pr-body.sh\n+  outline_violations()\n```')" >/dev/null 2>&1; printf '%s' "$?")"
 
 # Both classes on one stdout: the missing heading first, then the outline line.
 check "a body short a heading with a prose outline prints both, in that order" \
