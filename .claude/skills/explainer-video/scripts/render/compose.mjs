@@ -10,6 +10,8 @@ import { splitLatin } from "../lib/terms.mjs";
 export const W = 1920;
 export const H = 1080;
 export const FPS = 30;
+// The content band every scene draws in, between the header and the captions.
+export const CONTENT = { left: 120, top: 178, width: 1680, height: 690 };
 // 40 px Inter fits about 70 characters a line in the 1680 px band: 84 is at
 // most two lines.
 export const CUE_CHARS = 84;
@@ -367,7 +369,7 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   return {
     html: `    <div class="content" dir="${dir}">${c.html}</div>
     <style>
-${scope} .content { position: absolute; left: 120px; top: 178px; width: 1680px; height: 690px; }
+${scope} .content { position: absolute; left: ${CONTENT.left}px; top: ${CONTENT.top}px; width: ${CONTENT.width}px; height: ${CONTENT.height}px; }
 ${css}
     </style>`,
     script: `      (function () {

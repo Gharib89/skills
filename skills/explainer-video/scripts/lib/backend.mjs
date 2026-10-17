@@ -2,7 +2,8 @@
 // HyperFrames' Chrome download and render, ffprobe, the Fontsource API and CDN,
 // Hugging Face, PATH, the models, and the source readers. Callers load it
 // through tools.mjs's loadBackend.
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import { createRequire } from "node:module";
@@ -11,7 +12,9 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
+import { CONTENT } from "../render/compose.mjs";
 import { sentences } from "./length.mjs";
+import { meanDiff, sceneFrames } from "./motion.mjs";
 import { skill, toolPaths, torchDevice } from "./tools.mjs";
 
 const win = process.platform === "win32";
@@ -230,11 +233,11 @@ export function findChrome(home) {
   throw new Error(`no Chrome under ${root}`);
 }
 
-// The layout probe's measurements at `times`, unjudged. The composition is
-// served as `hyperframes check` sees it: its folder over HTTP with the
-// HyperFrames runtime injected into index.html, which mounts the
-// data-composition-src scenes and sets window.__renderReady.
-export async function probe(dir, times, { env }) {
+// The composition open in a fresh browser, ready to seek. It is served as
+// `hyperframes check` sees it: its folder over HTTP with the HyperFrames
+// runtime injected into index.html, which mounts the data-composition-src
+// scenes and sets window.__renderReady.
+async function openComposition(dir, env) {
   const nodeDir = toolPaths().node;
   const runtime = path.join(
     nodeDir,
@@ -271,6 +274,10 @@ export async function probe(dir, times, { env }) {
   });
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   let browser;
+  const close = async () => {
+    await browser?.close();
+    server.close();
+  };
   try {
     browser = await fromCache(nodeDir)("puppeteer-core").launch({
       headless: true,
@@ -294,27 +301,43 @@ export async function probe(dir, times, { env }) {
     if (typeof startup === "string")
       throw new Error(`composition startup error: ${startup}`);
     if (!ready) throw new Error("composition not render-ready within 10 s");
+    return { page, close };
+  } catch (e) {
+    await close();
+    throw e;
+  }
+}
+
+// The page seeked to `t` and settled: fonts loaded, two frames painted.
+function seek(page, t) {
+  return page.evaluate(async (t) => {
+    // The seek targets `hyperframes check` tries, in its order.
+    const { __player: p, __hf: hf, __timelines: tls, gsap } = window;
+    if (p?.renderSeek) p.renderSeek(t);
+    else if (hf?.seek) hf.seek(t);
+    else if (p?.seek) p.seek(t);
+    else
+      for (const tl of Object.values(tls ?? {})) {
+        tl.pause();
+        tl.seek(t);
+      }
+    gsap?.ticker?.tick();
+    await window.__hfWaitForSeekCompletion?.();
+    await document.fonts.ready;
+    await new Promise((r) =>
+      requestAnimationFrame(() => requestAnimationFrame(r)),
+    );
+    await new Promise((r) => setTimeout(r, 120));
+  }, t);
+}
+
+// The layout probe's measurements at `times`, unjudged.
+export async function probe(dir, times, { env }) {
+  const { page, close } = await openComposition(dir, env);
+  try {
     const frames = [];
     for (const t of times) {
-      await page.evaluate(async (t) => {
-        // The seek targets `hyperframes check` tries, in its order.
-        const { __player: p, __hf: hf, __timelines: tls, gsap } = window;
-        if (p?.renderSeek) p.renderSeek(t);
-        else if (hf?.seek) hf.seek(t);
-        else if (p?.seek) p.seek(t);
-        else
-          for (const tl of Object.values(tls ?? {})) {
-            tl.pause();
-            tl.seek(t);
-          }
-        gsap?.ticker?.tick();
-        await window.__hfWaitForSeekCompletion?.();
-        await document.fonts.ready;
-        await new Promise((r) =>
-          requestAnimationFrame(() => requestAnimationFrame(r)),
-        );
-        await new Promise((r) => setTimeout(r, 120));
-      }, t);
+      await seek(page, t);
       frames.push({
         t,
         elements: await page.evaluate(measureFrame),
@@ -332,9 +355,38 @@ export async function probe(dir, times, { env }) {
     }
     return frames;
   } finally {
-    await browser?.close();
-    server.close();
+    await close();
   }
+}
+
+// The composition's frame at `t` as a PNG, in a browser launched for it alone:
+// the probe's seek then a screenshot, the route that needs no second renderer.
+export async function frame(dir, t, out, { env }) {
+  const { page, close } = await openComposition(dir, env);
+  try {
+    await seek(page, t);
+    await page.screenshot({ path: out, type: "png" });
+  } finally {
+    await close();
+  }
+}
+
+// The SHA-256 of an image's decoded pixels (RGB at full size), never of its
+// file, so encoder metadata can neither pass nor fail a comparison.
+export async function framePixels(file) {
+  const r = spawnSync(
+    "ffmpeg",
+    [
+      ...["-hide_banner", "-v", "error", "-i", file, "-frames:v", "1"],
+      ...["-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+    ],
+    { maxBuffer: 1 << 28 },
+  );
+  if (r.status !== 0)
+    throw new Error(
+      `ffmpeg could not decode ${file}: ${(r.stderr?.toString() || r.error?.message || "").trim().split("\n").pop()}`,
+    );
+  return crypto.createHash("sha256").update(r.stdout).digest("hex");
 }
 
 function ffmpeg(args) {
@@ -373,14 +425,64 @@ export async function sheet(input, output, { start, duration, fps }) {
   ]);
 }
 
+// A scene's motion strip for the critic: 12 consecutive frames of the encoded
+// video from frame `first`, 320x180 a tile, tiled 6x2 in reading order.
+export async function strip(input, output, { first, fps }) {
+  ffmpeg([
+    // Half a frame early, so the seek lands on frame `first` and not after it.
+    ...["-y", "-ss", String(Math.max(0, (first - 0.5) / fps)), "-i", input],
+    ...["-vf", "scale=320:180,tile=6x2", "-frames:v", "1", output],
+  ]);
+}
+
+// The mean absolute difference between each frame of a scene and the one
+// before it, over the content band alone (the caption words recolour at every
+// word, so the whole frame would peak on a caption): the band downscaled to
+// 420x172 grey, frame by frame off ffmpeg's pipe so a long scene never sits in
+// memory whole. Entry k compares frame first+k+1 with frame first+k.
+export async function bandMotion(input, { start, duration, fps }) {
+  const { first, n } = sceneFrames({ start, duration, fps });
+  const [w, h] = [420, 172];
+  const { left, top, width, height } = CONTENT;
+  const child = spawn(
+    "ffmpeg",
+    [
+      ...["-hide_banner", "-v", "error", "-ss", String(start), "-i", input],
+      ...["-frames:v", String(n), "-fps_mode", "passthrough"],
+      ...[
+        "-vf",
+        `crop=${width}:${height}:${left}:${top},scale=${w}:${h}:flags=area,format=gray`,
+      ],
+      ...["-f", "rawvideo", "-"],
+    ],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  const diffs = [];
+  let before = null;
+  let pending = Buffer.alloc(0);
+  let err = "";
+  child.stderr.on("data", (d) => (err += d));
+  child.stdout.on("data", (d) => {
+    pending = Buffer.concat([pending, d]);
+    while (pending.length >= w * h) {
+      const f = Buffer.from(pending.subarray(0, w * h));
+      pending = pending.subarray(w * h);
+      if (before) diffs.push(meanDiff(before, f));
+      before = f;
+    }
+  });
+  const code = await new Promise((done) => child.on("close", done));
+  if (code !== 0 || diffs.length !== n - 1)
+    throw new Error(
+      `ffmpeg read ${diffs.length + 1} of ${n} frame(s) of ${input} from ${start} s${err.trim() ? `: ${err.trim().split("\n").pop()}` : ""}`,
+    );
+  return diffs;
+}
+
 // The scene's first frame and the four a sheet shows, as indices into the
-// video. A scene owns the frames from the first at or after its start to the
-// last before its end, so one starting between frames (28.25 s at 30 fps) never
-// shows the next scene's first frame as its last.
-export function sheetFrames({ start, duration, fps }) {
-  const at = (t) => Math.ceil(t * fps - 1e-6);
-  const first = at(start);
-  const n = at(start + duration) - first;
+// video.
+export function sheetFrames(scene) {
+  const { first, n } = sceneFrames(scene);
   return [
     first,
     [n / 4, n / 2, (3 * n) / 4, n - 1].map((f) => first + Math.floor(f)),
