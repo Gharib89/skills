@@ -111,10 +111,12 @@ check_rc "a bang inside the scope is not the breaking marker" \
 # The footer is line-anchored: a mention of the words mid-sentence is prose.
 # A footer on the first line of a body past a pipe buffer (64 KiB): the reader
 # exits on the match while the writer is still writing, and under pipefail the
-# writer's SIGPIPE must not read as "no footer" (#758).
+# writer's SIGPIPE must not read as "no footer" (#758). The commits repeat the
+# body because one environment variable tops out near 128 KiB, and the writer
+# must outrun the pipe's 64 KiB plus what the reader has already taken.
 big_body=$(printf 'BREAKING CHANGE: gone.\n'; awk 'BEGIN { for (i = 0; i < 2200; i++) print "padding line padding line padding line " i }')
 check_rc "a BREAKING CHANGE footer ahead of a body past a pipe buffer still fails" \
-  1 "$(rc_of 'fix(ship): drop a stop reason' "$big_body" '')"
+  1 "$(rc_of 'fix(ship): drop a stop reason' "$big_body" '' "$big_body")"
 
 check_rc "BREAKING CHANGE mid-line in the body is prose" \
   0 "$(rc_of 'fix: x' 'This is not a BREAKING CHANGE: it restores documented behavior.' '')"
