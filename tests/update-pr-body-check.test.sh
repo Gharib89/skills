@@ -119,5 +119,7 @@ if [ "$(id -u)" -ne 0 ]; then
   check_rc "an unreadable profile is tooling" 2 "$rc"
   check "and nothing is written" no "$(wrote)"
   chmod 600 "$repo/docs/agents/ship.md"
+else
+  skipped "unreadable profile is tooling: running as root"
 fi
 finish

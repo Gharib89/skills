@@ -277,6 +277,7 @@ check_rc "a node the root file calls but another file defines passes" \
 check "an absolute root is read under the root, not the filesystem" \
   "pr-body: change outline: node helper: file not found: /etc/hostname" \
   "$(oc_out '```diff\n /etc/hostname\n+  helper()\n```')"
+printf 'helper\n' > "$T/a.sh" # outside PR_ROOT, where `../a.sh` would land
 check "a root that climbs out of the tree is not found" \
   "pr-body: change outline: node helper: file not found: ../a.sh" \
   "$(oc_out '```diff\n ../a.sh\n+  helper()\n```')"
@@ -295,6 +296,8 @@ if [ "$(id -u)" -ne 0 ]; then # a mode-000 file stays readable to root
   check_rc "a directory root with an unreadable file is tooling" \
     2 "$(oc_rc '```diff\n lockdir/\n+  helper()\n```')"
   chmod 600 "$PR_ROOT/locked.sh" "$PR_ROOT/lockdir/f.sh"
+else
+  skipped "unreadable root file and directory cases: running as root"
 fi
 check "each root's nodes are read against that root's file" \
   "pr-body: change outline: node other is not in b.sh" \

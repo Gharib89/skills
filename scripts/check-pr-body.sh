@@ -26,7 +26,8 @@
 # that root's nodes, not removed with `-`) must be a symbol of the root's file:
 # a whole word of that file, or of any file under it for a directory root. A
 # node whose symbol is absent, or whose file cannot be read, is a violation
-# naming both. A root with a glob is not resolved. The file is read under
+# naming both. A root with a glob is not resolved, one with a `..` component is
+# not found, so a lookup stays inside PR_ROOT. The file is read under
 # PR_ROOT, default the checkout holding this script: the PR's head in a ship run,
 # the merge commit in CI, where checkout takes no `ref`. A file that exists and
 # cannot be read is tooling (exit 2), not a violation.
@@ -220,6 +221,7 @@ violations=$(sed '/^@sym/d' <<<"$found")
 while IFS=$'\t' read -r _ file sym; do
   [ -n "$sym" ] || continue
   target=$root/$file
+  case /$file/ in */../*) target=/nonexistent ;; esac
   if [ -d "$target" ]; then grep -rqwF -- "$sym" "$target"; rc=$?; [ "$rc" -le 1 ] || rc=3
   elif [ -r "$target" ]; then grep -qwF -- "$sym" "$target"; rc=$?
   elif [ -e "$target" ]; then rc=3
