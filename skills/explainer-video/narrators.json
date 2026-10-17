@@ -35,8 +35,8 @@
       "style": "a clear, warm, friendly narrator explaining a software workflow",
       "licence": "Gemini API terms",
       "leavesMachine": true,
-      "rate": 2.32,
-      "pause": 0.84,
+      "rate": 2.51,
+      "pause": 0.7,
       "default": true
     },
     {
@@ -48,8 +48,8 @@
       "style": "a clear, warm, friendly narrator explaining a software workflow",
       "licence": "Gemini API terms",
       "leavesMachine": true,
-      "rate": 2.73,
-      "pause": 0.7,
+      "rate": 2.77,
+      "pause": 0.66,
       "default": true
     },
     {
