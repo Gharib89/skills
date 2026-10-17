@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.45.4 (2026-10-17)
+
+### Bug Fixes
+
+- **ship**: Answer check-pr-body --help and state prove's verbatim-word rule in run-file --help
+  ([#769](https://github.com/Gharib89/skills/pull/769),
+  [`1f4f441`](https://github.com/Gharib89/skills/commit/1f4f441babe7f838f002e0cf8054c0db6c833df8))
+
+
 ## v0.45.3 (2026-10-17)
 
 ### Bug Fixes
