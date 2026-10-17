@@ -10,11 +10,11 @@ export function fitsLength(seconds, minutes) {
   return Math.abs(seconds + HOLD - want) <= want * 0.1;
 }
 
-// The sentences a narrator voices, each spending its `pause`: Kokoro voices
-// one inference each, its splitter breaking where a full stop, ! or ? meets a
-// space, not at a script's numbered items, so three items with no full stop
-// are one sentence and one item of three sentences is three. Arabic narration
-// also ends a sentence at ؟.
+// The sentences a narrator voices, each spending its `pause`: Kokoro's adapter
+// packs these whole into its calls, a sentence ending where a full stop, ! or ?
+// meets a space, not at a script's numbered items, so three items with no full
+// stop are one sentence and one item of three sentences is three. Arabic
+// narration also ends a sentence at ؟.
 export function sentences(text) {
   return text.split(/(?<=[.!?؟])\s+/);
 }

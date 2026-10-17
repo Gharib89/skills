@@ -9,8 +9,8 @@
       "style": null,
       "licence": "Apache-2.0",
       "leavesMachine": false,
-      "rate": 3.51,
-      "pause": 1.12,
+      "rate": 3.8,
+      "pause": 0.78,
       "default": true
     },
     {
@@ -22,8 +22,8 @@
       "style": null,
       "licence": "Apache-2.0",
       "leavesMachine": false,
-      "rate": 3.39,
-      "pause": 0.91,
+      "rate": 3.6,
+      "pause": 0.57,
       "default": true
     },
     {
