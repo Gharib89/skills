@@ -337,28 +337,34 @@ test("a heading holding a Markdown link reads as its text in the pack, and eithe
   const g = write(
     fx,
     "readme.md",
-    "# Project [![CI](x/badge.svg)](x/actions)\n\nIt builds.\n",
+    "# Project [![CI](x/badge.svg)](x/actions)\n\nIt builds.\n\n## [API](https://e.org/a_(b))\n\nIt serves.\n",
   );
   assert.equal(snapshot(fx, [g]).code, 0);
   draft(fx, "readme", [
     ["§ Project [![CI](x/badge.svg)](x/actions)", "It builds."],
+    ["§ [API](https://e.org/a_(b))", "It serves."],
   ]);
   draft(fx, "cache", [["§ Validation", "An ETag names a version."]]);
   assert.equal(pack(fx).code, 0);
   const { excerpts } = JSON.parse(
     fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
   );
-  const badge = excerpts.find((x) => x.source === "readme");
+  const [badge, api] = excerpts.filter((x) => x.source === "readme");
   assert.equal(badge.locator, "§ Project CI");
-  draft(fx, "readme", [[badge.locator, "It builds."]]);
+  // A destination holding balanced parentheses is read whole.
+  assert.equal(api.locator, "§ API");
+  draft(fx, "readme", [
+    [badge.locator, "It builds."],
+    [api.locator, "It serves."],
+  ]);
   assert.equal(pack(fx, ["readme"]).code, 0);
 });
 
 test("a repo locator is stored as written, brackets and spaces included", () => {
   const fx = fixture();
   const repo = path.join(fx.tmp, "app");
-  fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
-  const file = "docs/[id](x)  notes.md";
+  fs.mkdirSync(path.join(repo, "§ docs"), { recursive: true });
+  const file = "§ docs/[id](x)  notes.md";
   fs.writeFileSync(path.join(repo, file), "It ships.\n");
   git(repo, "init", "-q");
   git(repo, "add", ".");
