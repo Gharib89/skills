@@ -53,7 +53,7 @@ function run(fx, args, present = "ffmpeg", extra = {}) {
   const r = spawnSync(
     process.execPath,
     [path.join(fx.skill, "scripts", "setup.mjs"), ...args],
-    { env, encoding: "utf8" },
+    { env, encoding: "utf8", cwd: fx.cwd },
   );
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
@@ -879,4 +879,101 @@ test("ace-step's macOS 14 floor compares versions by their numbers, and an unkno
     );
   for (const p of ["darwin/arm64/14", "darwin/arm64/14.0.1", "darwin/arm64"])
     assert.equal(ace(p), "missing", p);
+});
+
+// A profile carrying `fonts` rows, saved into the project store or a run folder
+// under `<fx.cwd>/explainers`, where setup looks for them.
+const LORA = {
+  id: "font:lora",
+  kind: "font",
+  family: "lora",
+  class: "serif",
+  version: "5.3.0",
+  files: ["latin-400-normal", "latin-600-normal"],
+  licence: "OFL-1.1",
+};
+const INTER = {
+  id: "font:inter",
+  kind: "font",
+  family: "inter",
+  version: "5.3.0",
+  files: ["latin-400-normal"],
+  size: 48116,
+  neededBy: "render",
+  licence: "OFL-1.1",
+};
+function withProfile(fx, where, fonts) {
+  fx.cwd = path.join(fx.tmp, "project");
+  const file = path.join(fx.cwd, "explainers", ...where);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(
+    file,
+    typeof fonts === "string" ? fonts : JSON.stringify({ fonts }),
+  );
+}
+
+test("a profile's fetched font shows as missing in the check and installs on the yes", () => {
+  const fx = fixture([INTER]);
+  withProfile(fx, [".styles", "mine.json"], [LORA]);
+  const c = run(fx, ["check"]);
+  assert.equal(c.code, 1, c.out + c.err);
+  assert.equal(row(c.out, "font:lora")?.[2], "missing", c.out);
+  assert.ok(!fs.existsSync(path.join(fontDir(fx), "lora@5.3.0")));
+  const i = run(fx, ["install"]);
+  assert.equal(i.code, 0, i.out + i.err);
+  for (const f of LORA.files)
+    assert.ok(
+      fs.existsSync(path.join(fontDir(fx), "lora@5.3.0", `${f}.woff2`)),
+    );
+  assert.ok(fs.existsSync(path.join(fontDir(fx), "lora@5.3.0", ".stamp")));
+  assert.equal(run(fx, ["check"]).code, 0);
+});
+
+test("the same family and version in a store and a run's style.json is one row", () => {
+  const fx = fixture([INTER]);
+  withProfile(fx, [".styles", "a.json"], [LORA]);
+  withProfile(fx, ["demo", "style.json"], [LORA]);
+  const lines = run(fx, ["check"])
+    .out.split("\n")
+    .filter((l) => l.startsWith("| font:lora |"));
+  assert.equal(lines.length, 1);
+});
+
+test("a catalogue font a profile also lists is not duplicated", () => {
+  const fx = fixture([INTER]);
+  withProfile(fx, [".styles", "a.json"], [INTER]);
+  const lines = run(fx, ["check"])
+    .out.split("\n")
+    .filter((l) => l.startsWith("| font:inter |"));
+  assert.equal(lines.length, 1);
+});
+
+test("a profile that does not parse is a row in the table, not a crash", () => {
+  const fx = fixture([INTER]);
+  withProfile(fx, [".styles", "broken.json"], "{ not json");
+  const r = run(fx, ["check"], "ffmpeg");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.out, /^\| profile:.*broken\.json \|.*\| refused: /m);
+});
+
+test("a font folder holding the stamp but lacking one of its files is missing and installs again", () => {
+  const fx = fixture([
+    INTER,
+    {
+      ...INTER,
+      id: "font:inter2",
+      family: "inter2",
+      files: ["latin-400-normal", "latin-600-normal"],
+    },
+  ]);
+  assert.equal(run(fx, ["install"]).code, 0);
+  fs.rmSync(path.join(fontDir(fx), "inter2@5.3.0", "latin-600-normal.woff2"));
+  const c = run(fx, ["check"]);
+  assert.equal(row(c.out, "font:inter2")[2], "missing", c.out);
+  assert.equal(run(fx, ["install"]).code, 0);
+  assert.ok(
+    fs.existsSync(
+      path.join(fontDir(fx), "inter2@5.3.0", "latin-600-normal.woff2"),
+    ),
+  );
 });

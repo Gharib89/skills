@@ -512,6 +512,14 @@ for (const [name, arrange, why, voiced = true] of [
     /^render: font:inter is not installed: run \/explainer-video setup/m,
   ],
   [
+    "a font folder that holds the stamp but lacks one of its files",
+    (fx) => {
+      const row = catalogue().find((r) => r.id === "font:inter");
+      fs.rmSync(path.join(dest(row, fx.dirs), `${row.files[0]}.woff2`));
+    },
+    /^render: font:inter lacks latin-\d+-normal\.woff2: run \/explainer-video setup/m,
+  ],
+  [
     "a language with no render fonts",
     (fx) => {
       put(fx.dir, "script.md", SCRIPT.replace("language: en", "language: de"));
