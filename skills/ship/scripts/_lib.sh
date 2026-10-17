@@ -1045,8 +1045,9 @@ readonly SHIP_REVIEWER_RUN='
 # naming the status, the time and the short commit, and delivers a round either
 # as a formal review (findings) or, clean, as an issue comment whose first prose
 # line is `Codex Review: Didn't find any major issues` plus 👍 on the PR, with no
-# review at all (probed on #504 and #505 for #500). Prose skips `<!-- ... -->`
-# marker lines: since #736 the clean comment opens with
+# review at all (probed on #504 and #505 for #500). A comment's first prose line
+# is its first non-blank line, trimmed, that is not a whole-line `<!-- ... -->`
+# marker; since #736 the clean comment opens with
 # `<!-- codex-review-receipt:v1 -->`. Answers {run, rounds, notice}:
 #   rounds  each clean delivery at or after <since> as a REVIEW row, so the
 #           landing rule lands a clean round like any other; the 👍 counts only
@@ -1072,9 +1073,9 @@ readonly SHIP_REVIEWER_RUN='
 readonly SHIP_NATIVE_CODEX="$SHIP_LOGIN_NORM"'
   def utc: (. // "") | sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z");
   def is_status: (.body // "") | contains("<!-- codex-pull-request-review-summary -->");
-  def first_line: [(.body // "") | splits("\n") | sub("^\\s+"; "") | sub("\\s+$"; "")
-    | select(. != "" and (test("^<!--.*-->$") | not))] | first // "";
-  def is_clean: first_line | test("^Codex Review: Didn.t find any major issues");
+  def first_prose_line: [(.body // "") | splits("\n") | sub("^\\s+"; "") | sub("\\s+$"; "")
+    | select(. != "" and (test("^<!--(?:(?!-->).)*-->$") | not))] | first // "";
+  def is_clean: first_prose_line | test("^Codex Review: Didn.t find any major issues");
   def mine: ((.login // "") | norm) == ($l | norm);
   [.comments[] | select(mine)] as $c
   | ([$c[] | select(is_status)] | last) as $st
@@ -1089,7 +1090,7 @@ readonly SHIP_NATIVE_CODEX="$SHIP_LOGIN_NORM"'
   | (if $clean != [] then $clean else $thumbs end) as $rounds
   | ([$c[] | select((is_status | not) and (is_clean | not) and (.created_at | utc) >= $s)] | first) as $reply
   | {rounds: $rounds,
-     notice: (if $reply == null then null else {line: ($reply | first_line), at: ($reply.created_at | utc)} end),
+     notice: (if $reply == null then null else {line: ($reply | first_prose_line), at: ($reply.created_at | utc)} end),
      run: (if $rounds == [] and $reply == null and $touched and $sha == null
              and ($row | test("Completed")) then "unavailable"
            else {url: ($st.url // $reply.url // null), denied: null} +

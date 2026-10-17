@@ -112,8 +112,9 @@
 # status comment, or the reply's where there is none, and `denied` stays null. A clean round, which
 # Codex posts as a comment and a 👍 with no review, joins `reviews.all` as a row
 # of its own and lands like any round. A reply by the login that is neither the
-# status nor a clean round is reported as the blocked notice, its first line
-# kept.
+# status nor a clean round is reported as the blocked notice, its first prose
+# line kept: the first non-blank line that is not a whole-line `<!-- ... -->`
+# marker.
 #
 # `reviewer_blocked` is the awaited login's latest quota or rate-limit notice,
 # read from its review bodies as well as its PR comments: a reviewer states a
