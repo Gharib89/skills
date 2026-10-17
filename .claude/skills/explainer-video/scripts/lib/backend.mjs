@@ -873,13 +873,31 @@ export async function synthesize({ text, narrator, tools }) {
   // (`a…`) in en-us, British ones in en.
   const { phonemize } = req("phonemizer");
   const lang = narrator.voice.startsWith("a") ? "en-us" : "en";
-  const calls = [];
+  const count = async (s) => (await phonemize(s, lang)).join(" ").length;
+  // A sentence over the budget breaks between words, at the last that fits.
+  const units = [];
   for (const s of sentences(text.trim())) {
-    const n = (await phonemize(s, lang)).join(" ").length;
+    if ((await count(s)) <= KOKORO_TOKENS) {
+      units.push(s);
+      continue;
+    }
+    let piece = "";
+    for (const w of s.split(/\s+/)) {
+      const next = piece ? `${piece} ${w}` : w;
+      if (piece && (await count(next)) > KOKORO_TOKENS) {
+        units.push(piece);
+        piece = w;
+      } else piece = next;
+    }
+    units.push(piece);
+  }
+  const calls = [];
+  for (const u of units) {
+    const n = await count(u);
     const last = calls.at(-1);
     if (last && last.n + 1 + n <= KOKORO_TOKENS)
-      Object.assign(last, { text: `${last.text} ${s}`, n: last.n + 1 + n });
-    else calls.push({ text: s, n });
+      Object.assign(last, { text: `${last.text} ${u}`, n: last.n + 1 + n });
+    else calls.push({ text: u, n });
   }
   const parts = [];
   for (const c of calls)
