@@ -20,6 +20,7 @@
 #   run-file prove <test> <path>... <where> [-- <command>...]
 #   run-file probe <ref> <where> -- <command>...
 #   run-file call <why> <where> -- <command>...
+#   run-file note <section> <line> <where>
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
 # The record root is `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>`,
@@ -113,9 +114,10 @@
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
 # one of cap, `tree unchanged at <sha>` (<sha> the PR head the round read; a
 # bare `tree unchanged` is refused), small lane, inline lane, auto-once, not
-# landed, not reviewed or `not invoked: <primary> reviewed` (a fallback whose
-# primary, a reviewer on the row, stopped on none of not reviewed, not landed,
-# inline lane or not invoked), and unless it is `not reviewed`, `not invoked: <primary>
+# landed, not reviewed (also spelled `not reviewed: <reason>`, read as the same
+# stop here and in `gate clean`) or `not invoked: <primary> reviewed` (a fallback
+# whose primary, a reviewer on the row, stopped on none of not reviewed, not
+# landed, inline lane or not invoked), and unless it is `not reviewed`, `not invoked: <primary>
 # reviewed` or `inline lane` at least one
 # `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
@@ -142,7 +144,13 @@
 # does not open on `gh api` or `az rest` and an argument, a `gh api` naming
 # the `graphql` endpoint (the cloud sandbox's proxy refuses GitHub GraphQL,
 # which `gh issue edit` and its kin use, #254), or one carrying an
-# `Authorization` header, whose credential the line would publish.
+# `Authorization` header, whose credential the line would publish. `note`
+# appends <line> under `## <section>`, creating the section at the end of the
+# file when the record has none: the one way a run writes its `Round:`, `Stop:`,
+# `Criterion` and evidence lines, since a heredoc edit of the record from a
+# worktree-isolated session is refused (#787). <section> is the heading's name
+# without its `## `, and <line> is one line that opens on neither `-` nor `#`,
+# so it is never a flag and never a heading.
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git
@@ -164,6 +172,7 @@
 #     <command>, character for character, or a node ID under it (<test>::<name>)
 #   probe: {run_file, ref, command, exit, head, last}
 #   call: {run_file, command, why}
+#   note: {run_file, section, line}
 #   gate record: {run_file, head, verdict}
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the
@@ -210,7 +219,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>..., each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers, --legs and --criteria the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -676,7 +685,7 @@ EONAMES
     # Only an unchanged tree settles a reviewer, so only it names the head it
     # read: the clean gate holds it once the PR moves past that head.
     case $stop in
-      cap | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed" | "not invoked: "?*" reviewed") ;;
+      cap | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed" | "not reviewed: "?* | "not invoked: "?*" reviewed") ;;
       "tree unchanged at "*) [[ ${stop#"tree unchanged at "} =~ ^[0-9a-f]{7,64}$ ]] ||
         gap "Stop line for $nm has reason '$stop', whose head is not a commit sha" ;;
       "tree unchanged") gap "Stop line for $nm has no head: write \`Stop: $nm: tree unchanged at <sha>\`, the head read-pr returned for the round" ;;
@@ -691,11 +700,11 @@ EONAMES
         gap "Stop line for $nm names $p, which is not a reviewer on the phase 7 row"
       else
         ps=$(trim_end "$(rests "Stop: $p: " | tail -n 1)")
-        case $ps in "not reviewed" | "not landed" | "inline lane" | "not invoked: "* | "")
+        case $ps in "not reviewed" | "not reviewed: "* | "not landed" | "inline lane" | "not invoked: "* | "")
           gap "Stop line for $nm says $p reviewed, but $p stopped '$ps'" ;; esac
       fi ;;
     esac
-    case $stop in "not reviewed" | "not invoked: "?*" reviewed" | "inline lane") continue ;; esac
+    case $stop in "not reviewed" | "not reviewed: "?* | "not invoked: "?*" reviewed" | "inline lane") continue ;; esac
     ok=false
     while IFS= read -r r; do
       [[ $r =~ $round_re ]] && ok=true
@@ -771,7 +780,7 @@ untouched() { # untouched <stamp> <head> <paths>
 # The clean gate is a read of evidence, independent of the profile's merge opt-in.
 # Only a stop of tree unchanged proves no further round would read anything new.
 gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
-  local ci profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
+  local ci first profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
   local stamps s cover='{}' scope='{}' vname vpaths
   [ -r "$file" ] || ship_tooling "cannot read Run file at $file"
   # Fenced examples cannot authorize a merge.
@@ -783,6 +792,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     [ -f "$1" ] && [ -r "$1" ] || ship_tooling "cannot read CI answer at $1"
     ci=$(cat "$1") || ship_tooling "cannot read CI answer at $1"
   fi
+  # The answer is the first JSON value: a background task's output file ends in
+  # an exit-code trailer, which a whole-input parse would refuse. A parse error
+  # before the first value leaves the input as is, for the check below to name.
+  first=$(jq -c -n 'first(inputs)' <<<"$ci" 2>/dev/null) && [ -n "$first" ] && ci=$first
   jq -e 'type == "object" and (.status | IN("green", "no-checks", "conflict", "checks-failed", "timeout", "pending"))
     and (.head_sha | type == "string" and test("^[0-9a-f]{7,64}$"))
     and (.checks | type == "array" and all(.[]; type == "object" and (.name | type == "string") and (.status | type == "string")))' \
@@ -850,7 +863,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     ($text | split("\n")) as $lines
     | ($lines | map(sub("^- "; "") | sub("[ \\t\\r]+$"; ""))) as $evidence
     | def rests($prefix): [$evidence[] | select(startswith($prefix)) | ltrimstr($prefix)];
-      def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop");
+      # `not reviewed: <reason>` is `not reviewed` with its reason attached.
+      def stop($name): (rests("Stop: " + $name + ": ") | last // "missing stop")
+        | if startswith("not reviewed: ") then "not reviewed" else . end;
       def reviewed($name): (rests("Round: " + $name + " ") | last // "") | test($round_re);
       # A stamp is the head a stop or result was recorded on, `<word> at <sha>`.
       def word: sub(" at [0-9a-f]{7,64}$"; "");
@@ -1442,6 +1457,16 @@ call)
   [ "$rest" = true ] || ship_fail "a direct call goes through the host's REST form, \`gh api\` or \`az rest\`: $cmd"
   append_to_section "## Direct calls" "- $cmd · $why"
   jq -n --arg f "$file" --arg c "$cmd" --arg w "$why" '{run_file: $f, command: $c, why: $w}'
+  ;;
+note)
+  sect=${1:-}; text=${2:-}
+  case $sect in '' | -* | '#'* | *$'\n'*) ship_tooling "$usage" ;; esac
+  case $text in '' | -* | '#'* | *$'\n'*) ship_tooling "$usage" ;; esac
+  shift 2
+  parse_file "$@"
+  no_extra
+  append_to_section "## $sect" "$text"
+  jq -n --arg f "$file" --arg s "$sect" --arg l "$text" '{run_file: $f, section: $s, line: $l}'
   ;;
 *)
   ship_tooling "$usage"

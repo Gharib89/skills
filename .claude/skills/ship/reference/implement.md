@@ -194,21 +194,29 @@ wrong is the `mis-specified` stop instead.
   release grade (a `fix` PR that would become a `feat` files it instead). Log
   the deviation and name the fold under the PR body's `## Special things to
   note`. Folded lines count toward the inline lane's 20-line cap.
-- **File** a find worth an issue that fails the fold's test through
-  `file-issue`, with the profile's triage marker, and leave it. The mechanic
+- **File** a find worth an issue that fails the fold's test through a real
+  `file-issue` call made inside the run, with the profile's triage marker, and
+  leave it: a find is filed when the call's answer says `filed: true`, not when
+  the run says it would be, and one left for the human to ask for is unfiled.
+  The mechanic
   answers `filed: false` with candidates when an open issue's title shares three
   or more tokens with yours, and each candidate is **read**: the same finding is
   linked in the deviations log rather than refiled, and `comment-issue` posts
   any evidence this run adds to it; a different one is refiled with
   `--distinct-from`. A find citing a path this PR already changes is refused
   with `in_diff`, since a find there folds unless it fails the fold's test;
-  `--outside-scope "<reason>"` files that case.
+  a find that does fail it is filed in that same call with
+  `--outside-scope "<reason>"`, not declined for the refusal. A refusal or
+  failure is reported only as the call's own answer: never write "refused" or
+  "filed" for a call that was not made, or whose answer said otherwise.
 - **Note** a find not worth a fold or an issue (a typo outside the diff, a
-  cosmetic nit): record `Noted: <find>` in the Run file when it is met, so the
-  merge summary can list it after a compaction.
+  cosmetic nit): record `Noted: <find>` in the Run file when it is met
+  (`run-file note`, [below](#phase-4-evidence-lines)), so the merge summary can
+  list it after a compaction. A filed find is recorded the same way, as
+  `Filed: <issue link>: <find>`, from the `file-issue` answer's own link.
 
-The merge summary lists every issue filed, every candidate linked and every
-noted find.
+The merge summary lists every issue filed with its link, every candidate linked
+and every noted find.
 
 ## Phase 4: triage and depth checks
 
@@ -315,6 +323,11 @@ self-review's judgment, recorded in the Run file where it helps the summary.
 
 `close 7`'s `Round:` and `Stop:` lines
 ([review-loop.md](review-loop.md#the-exit)) are attested the same way.
+
+**Write every attested line with `run-file note <section> <line> --issue
+<issue>`**, `Evidence` for the lines above, `Criterion <n>:` and `Noted:` lines
+included: it appends under the section and creates a missing one, where a
+heredoc edit of the Run file from the worktree draws a guard refusal.
 
 ## Consult current docs
 

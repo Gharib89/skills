@@ -124,6 +124,11 @@ and not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
 outgrew, though phase 3's settled results keep the first skip's reason. A
 harness that refuses the task tools has answered: run on the file alone.
 
+**A line the run writes into the Run file goes through `run-file note <section>
+<line> --issue <issue>`**: it appends under `## <section>` and creates one the
+record lacks, where an editor or heredoc write to the file from a
+worktree-isolated session draws a guard refusal.
+
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned**, `<scratch>/<role>/<role>-report.md`, or
 `<scratch>/standards/standards-report-<n>.md` for round `<n>` of the
