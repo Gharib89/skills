@@ -287,6 +287,15 @@ check_rc "a root with a glob is not resolved" \
 check "a root whose file is absent is named" \
   "pr-body: change outline: node helper: file not found: scripts/none.sh" \
   "$(oc_out '```diff\n scripts/none.sh\n+  helper()\n```')"
+if [ "$(id -u)" -ne 0 ]; then # a mode-000 file stays readable to root
+  printf 'helper\n' > "$PR_ROOT/locked.sh"; chmod 000 "$PR_ROOT/locked.sh"
+  check_rc "a root file that exists but cannot be read is tooling" \
+    2 "$(oc_rc '```diff\n locked.sh\n+  helper()\n```')"
+  mkdir -p "$PR_ROOT/lockdir"; printf 'x\n' > "$PR_ROOT/lockdir/f.sh"; chmod 000 "$PR_ROOT/lockdir/f.sh"
+  check_rc "a directory root with an unreadable file is tooling" \
+    2 "$(oc_rc '```diff\n lockdir/\n+  helper()\n```')"
+  chmod 600 "$PR_ROOT/locked.sh" "$PR_ROOT/lockdir/f.sh"
+fi
 check "each root's nodes are read against that root's file" \
   "pr-body: change outline: node other is not in b.sh" \
   "$({ printf 'helper() { :; }\n' > "$PR_ROOT/b.sh"; oc_out '```diff\n a.sh\n+  other()\n b.sh\n+  helper()\n+  other()\n```'; })"

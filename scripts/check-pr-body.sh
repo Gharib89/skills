@@ -27,7 +27,9 @@
 # a whole word of that file, or of any file under it for a directory root. A
 # node whose symbol is absent, or whose file cannot be read, is a violation
 # naming both. A root with a glob is not resolved. The file is read under
-# PR_ROOT, default the checkout holding this script, which is the PR's head in CI.
+# PR_ROOT, default the checkout holding this script: the PR's head in a ship run,
+# the merge commit in CI, where checkout takes no `ref`. A file that exists and
+# cannot be read is tooling (exit 2), not a violation.
 #
 # Each distinct `Closes #N` (or close/fix/resolve in their forms) outside a
 # fence is also echoed on stderr with its issue title, so a reviewer confirms
@@ -218,13 +220,15 @@ violations=$(sed '/^@sym/d' <<<"$found")
 while IFS=$'\t' read -r _ file sym; do
   [ -n "$sym" ] || continue
   target=$root/$file
-  if [ -d "$target" ]; then grep -rqwF -- "$sym" "$target"; rc=$?
+  if [ -d "$target" ]; then grep -rqwF -- "$sym" "$target"; rc=$?; [ "$rc" -le 1 ] || rc=3
   elif [ -r "$target" ]; then grep -qwF -- "$sym" "$target"; rc=$?
+  elif [ -e "$target" ]; then rc=3
   else rc=2; fi
   case $rc in
     0) ;;
     1) violations+=${violations:+$'\n'}"pr-body: change outline: node $sym is not in $file" ;;
-    *) violations+=${violations:+$'\n'}"pr-body: change outline: node $sym: file not found: $file" ;;
+    2) violations+=${violations:+$'\n'}"pr-body: change outline: node $sym: file not found: $file" ;;
+    *) echo "pr-body: cannot read $file" >&2; exit 2 ;;
   esac
 done < <(sed -n '/^@sym/p' <<<"$found")
 
