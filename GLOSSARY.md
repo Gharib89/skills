@@ -413,8 +413,12 @@ _Avoid_: auto-merge, merge permission, `Merge: on-clean-gate` (that is the ship 
 ### Explainer video
 
 **Explainer video**:
-A narrated video, one to five minutes by default, that the `explainer-video` skill makes from one or more sources: repos, documents, URLs, or a topic researched on the web.
+A narrated video, as long as the operator asks for (two minutes by default), that the `explainer-video` skill makes from one or more sources: repos, documents, URLs, or a topic researched on the web.
 _Avoid_: promo, trailer, reel
+
+**Part**:
+One of the explainer videos a long request is split into, on the operator's yes: the parts share the brief, the source pack and the style profile, and each is delivered as its own video.
+_Avoid_: clip (that is the clip insert), episode, chapter
 
 **Steering prompt**:
 Free text given with a run that moves the brief off its defaults, such as a narrower focus, a longer cut or another style.
