@@ -7,6 +7,7 @@ import {
   duck,
   score,
 } from "../../skills/explainer-video/scripts/score/score.mjs";
+import { SR } from "../../skills/explainer-video/scripts/score/dsp.mjs";
 
 const SCORE = new URL(
   "../../skills/explainer-video/scripts/score/score.mjs",
@@ -140,7 +141,7 @@ test("a cue past the sfx floor's count in its minute is dropped", () => {
   assert.deepEqual(at(0), []);
 });
 
-test("a 60 s score peaks under ten full-length stereo buffers, not eight tracks at once plus their chains", () => {
+test("a 60 s score peaks under ten full-length stereo buffers", () => {
   // In its own process, so the peak is the score's alone.
   const total = 60;
   const src = `
@@ -159,7 +160,7 @@ test("a 60 s score peaks under ten full-length stereo buffers, not eight tracks 
   });
   assert.equal(r.status, 0, r.stderr);
   const kb = Number(r.stdout);
-  const buffer = (total * 48000 * 2 * 4) / 1024;
+  const buffer = (total * SR * 2 * 4) / 1024;
   assert.ok(
     kb < 10 * buffer,
     `peak grew ${Math.round(kb / 1024)} MB, ${(kb / buffer).toFixed(1)} buffers`,

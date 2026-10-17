@@ -226,9 +226,10 @@ export function renderMusic({ sections, total, preset, seed }) {
   const n = Math.round(total * SR);
   // Each track is a list of [voice, t, gain, pan] notes, built into a
   // full-length buffer only when its chain runs, so one track is live at a
-  // time rather than eight (a 300 s stereo track is 115 MB). A note's voice is
-  // made where the arrangement reaches it, to move the generator on, then
-  // dropped; `make` and the generator state it started from make it again.
+  // time rather than eight (a 300 s stereo track is 115 MB). A voice is a
+  // buffer, when one is shared by many notes (the drum one-shots, the fx), or
+  // a {make, state} record: made where the arrangement reaches it, to move the
+  // generator on, then dropped, and made again from that state when built.
   const T = Object.fromEntries(
     ["kick", "bass", "snare", "hats", "keys", "pad", "bell", "fx"].map((k) => [
       k,
@@ -242,9 +243,12 @@ export function renderMusic({ sections, total, preset, seed }) {
   };
   const build = (notes) => {
     const x = D.stereo(n);
-    for (const [v, t, g, pan] of notes) {
-      if (v.make) D.restoreSeed(v.state);
-      D.place(x, v.make ? v.make() : v, t, g, pan);
+    for (let [v, t, g, pan] of notes) {
+      if (v.make) {
+        D.restoreSeed(v.state);
+        v = v.make();
+      }
+      D.place(x, v, t, g, pan);
     }
     return x;
   };

@@ -130,8 +130,9 @@ export function biquadCoefs(type, f, q = 0.707, gainDb = 0) {
   return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
 }
 // biquadMono, filt, compress, withReverb, delay and chorus work in place on
-// their input and return it, so a 300 s track's chain holds no full-length
-// copy per stage; reverb alone returns a new (wet) buffer.
+// their input and return it, so a 300 s track's chain holds no stereo copy
+// per stage: chorus and delay hold one mono channel, reverb returns its wet
+// buffer new.
 export function biquadMono(x, co) {
   const [b0, b1, b2, a1, a2] = co;
   let x1 = 0,
