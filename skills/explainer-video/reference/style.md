@@ -98,6 +98,11 @@ effects, and its type for each role no source declares a family for, and
 derives each token you leave out from its colours. Show the draft on the style
 card next.
 
+A profile's `motion` is `rise` (every reveal slides up and fades in on one
+ease) or `spring` (a headline lands with one overshoot, panels, cards, frames
+and flow nodes settle with a soft one, list items, arrows and terminal lines
+snap). The card shows settled frames, where the two look the same.
+
 ## The style card
 
 The **style card** shows the draft on five sample frames (a title, a diagram,

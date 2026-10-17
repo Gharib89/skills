@@ -348,17 +348,15 @@ skill's bundled `<skill>/styles/`. The header's `style:` names one; without it,
 the first store holding a `default` file (one profile name) decides, else
 `claude-code`. A run copies its profile to `<run>/style.json` and keeps using
 that copy, so a later edit to a store never changes this video; delete the
-copy to take up the edit, or name another profile in `style:`. Two of a
-profile's keys choose how diagrams and code frames draw: `look`, `clean` (the
-default) or `sketch`, which outlines flow steps and panels by hand with a seed
-taken from the scene and the element, so a render repeats exactly; and
-`effects`, the motion effects a video may use, from `draw` (flow arrows stroke
-on) and `highlight` (code lines a sentence names). A profile with no `effects`
-allows none, and a motion effect it leaves out never reaches the video. The
-score's sound effects are separate: `effects` never mutes them. A profile's
-`motion` is `rise` (every reveal slides up and fades in on one ease) or
-`spring` (a headline lands with one overshoot, panels, cards and frames settle
-with a soft one, list items, arrows and terminal lines snap).
+copy to take up the edit, or name another profile in `style:`. Two profile
+keys choose how diagrams and code frames draw: `look`, `clean` (the default) or
+`sketch`, which outlines flow steps and panels by hand, seeded per scene and
+element so a render repeats exactly; and `effects`, the ones a video may use,
+from `draw` (flow arrows stroke on) and `highlight` (code lines a sentence
+names). A profile with no `effects` allows none, and one it leaves out never
+reaches the video. The score's sound effects are separate: `effects` never
+mutes them. A profile's `motion` is `rise` or `spring`
+(see [reference/style.md](reference/style.md)).
 
 Asked for a style profile from a look (screenshots, a website, a PDF or PPTX
 deck, a video), read [reference/style.md](reference/style.md) and run its
