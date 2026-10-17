@@ -71,11 +71,11 @@ The container any cloud session runs in, attended or unattended, reaching hosts 
 _Avoid_: cloud env, default env, container
 
 **Merge gate**:
-The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate`, or an inline-lane run, authorizes a merge when `run-file gate clean` confirms every recorded condition and no unmet criterion is listed, since each needs the human's waiver. An unattended run posts to the PR and returns.
+The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate`, or an inline-lane run, authorizes a merge when `run-file gate clean` confirms every recorded condition, including that no criterion is unmet, since each needs the human's waiver. An unattended run posts to the PR and returns.
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:
-The recorded conditions permitting an attended run to merge without a reply when its profile opts in or the run is in the inline lane: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree at a covered head (a fallback answers for its primary) or on the inline lane, every applicable Verification passed at a covered head or deferred to a green CI leg, and no override or Tracker draft. Deviations and Ship defects alone do not hold it.
+The recorded conditions permitting an attended run to merge without a reply when its profile opts in or the run is in the inline lane: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree at a covered head (a fallback answers for its primary) or on the inline lane, every applicable Verification passed at a covered head or deferred to a green CI leg, no unmet criterion, and no override or Tracker draft. Deviations and Ship defects alone do not hold it.
 _Avoid_: auto-merge (a host flag that can merge before Ship finishes its reviews)
 
 **Covered head**:
@@ -95,7 +95,7 @@ An attended stop where Ship prints the exact command and setup, waits for the hu
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
 
 **Unmet criterion**:
-An acceptance criterion asking for a host action no mechanic performs, which a run leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Merging needs the human's explicit waiver of each, beside the merge word. Not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
+Any checkbox criterion of the issue the run did not meet, recorded in the Run file as `Criterion <n>: not met: <reason>`, or owed a line and given none. The kind a run cannot meet is a criterion asking for a host action no mechanic performs, which it leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Either kind holds the clean gate, and merging needs the human's explicit waiver of each, beside the merge word. A host-action criterion is not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
 _Avoid_: rewritten criterion, descoped criterion
 
 **Spec precedence**:
@@ -339,7 +339,7 @@ A reviewer driven only when the reviewer it names exits not reviewed, for any re
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Capped with findings**:
-A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of those rounds' fixes changing the tree, so no host round read them. It and a not-landed primary are the `reviewed` primaries that still drive their fallback. A docs-only fix-only diff that ends the loop before the cap is spent, and a last round whose findings were all declined, are not it.
+A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of those rounds' fixes changing the tree, so no host round read them. It and a not-landed primary are the `reviewed` primaries that still drive their fallback. A docs-only fix-only diff that ends the loop before the cap is spent, a last round whose findings were all declined, and a cap from a re-raised declined finding, are not it.
 _Avoid_: ran out of rounds, hit the cap
 
 **Not landed**:

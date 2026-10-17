@@ -5,6 +5,7 @@
 - [Phase 1: spec precedence](#phase-1-spec-precedence)
 - [Phase 1: anchors the issue cites](#phase-1-anchors-the-issue-cites)
 - [Phase 1: a criterion no mechanic can perform](#phase-1-a-criterion-no-mechanic-can-perform)
+- [Phase 1: criteria the run owes](#phase-1-criteria-the-run-owes)
 - [Phase 2: classify, then implement test-first](#phase-2-classify-then-implement-test-first)
 - [Phase 2: verify the spec's external-system claims before building on them](#phase-2-verify-the-specs-external-system-claims-before-building-on-them)
 - [Phase 2: delegate execution, keep judgment](#phase-2-delegate-execution-keep-judgment)
@@ -66,6 +67,31 @@ verbatim in the issue body.
 - **Attended**: ask the human which way before building; an answer that the
   issue is wrong is the `mis-specified` stop, and one to build the rest makes
   it an unmet criterion as above.
+
+## Phase 1: criteria the run owes
+
+An issue's run reads the issue first, `read-issue <issue>`, a read that claims
+nothing (a failed read stops the run there, `host-unreachable`), and settles the
+effective spec by [spec precedence](#phase-1-spec-precedence): the body's
+checkboxes, less each a later `writer: true` brief or comment drops or revises,
+plus the checkboxes it adds. `run-file init <issue> --from-profile --criteria -`
+takes that text as a heredoc, so the issue's own words never pass a file or a
+pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
+entry under the Run file's `## Criteria`, `- <n>: <text>`. It refuses the text
+`null`. Phase 0 reuses this read. A free-text run has no issue and passes none.
+A phase-1 anchor rewrite that changes a criterion adds each replacement
+checkbox to `## Criteria` under the next number, owing its own line, and the
+original's `Criterion` line names them.
+
+Every entry is owed one line, anywhere in the file, written by the run as it
+settles the criterion: `Criterion <n>: met: <proof>`, the proof a test, a
+command or a grep, never a bare "done", or `Criterion <n>: not met: <reason>`,
+the host action a human must take where that is the reason. The last line for
+an `<n>` decides, so a later `met` replaces an earlier `not met`. A criterion is
+met by what the diff and its checks show, never by the summary's account of
+them: one the run declined, deferred or covered with a "gap" is `not met`.
+`run-file gate clean` holds the merge on each entry that is `not met` or has no
+line ([merge-gate.md](merge-gate.md#unmet-criteria)).
 
 ## Phase 2: classify, then implement test-first
 

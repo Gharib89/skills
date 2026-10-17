@@ -66,11 +66,13 @@ is unattended, explicitly, because it has no other way to know. **Read**
 Work the phases in order, keeping the main thread on orchestration and
 decisions. **First**, read
 [reference/context-discipline.md](reference/context-discipline.md): defaults
-that keep a long run from bloating the window, and what it still requires.
-Then the run's **required first action**: after `prepare` and before phase 0,
-`run-file init <issue|slug> --from-profile` initializes the Run file holding the
-ten-item checklist. Each phase below flips it with `run-file next`, `open`,
-`close` or `skip`, and closes once its `Done when:` holds, not before.
+that keep a long run from bloating the window, and what it still requires. Then
+the run's **first write**: after `prepare`, an issue's `read-issue` and
+before phase 0, `run-file init <issue|slug> --from-profile` initializes the Run
+file holding the ten-item checklist; an issue's run adds `--criteria -`,
+per [implement.md](reference/implement.md#phase-1-criteria-the-run-owes). Each
+phase below flips it with `run-file next`, `open`, `close` or `skip`, and closes
+once its `Done when:` holds, not before.
 
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every gating call goes through a mechanic**, a host call a
@@ -84,17 +86,17 @@ each phase's mechanic and their shared contract, `--help` included.
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
 preflight proves and refuses, the profile it loads and why the worktree is made
 the way it is. Run `preflight <issue>` (`--unattended` in an unattended run):
-every `reasons` entry is a row of the stop table below. Then
-`read-issue <issue>`, phase 1's input, from which the branch `<type>` (`feat`,
-`fix`, `docs`, ...) and `<slug>` are derived. Then `isolate <issue> <type>
-<slug>` with the profile's `Carry:` files, or `isolate ... --in-place`
+every `reasons` entry is a row of the stop table below. Then `read-issue
+<issue>` (reused for an issue), phase 1's input, from which the branch `<type>`
+(`feat`, `fix`, `docs`, ...) and `<slug>` are derived. Then `isolate <issue>
+<type> <slug>` with the profile's `Carry:` files, or `isolate ... --in-place`
 unattended. Attended, `EnterWorktree` with `path` set to that path comes right
 after isolate, before any edit or `LSP` call: the language server roots where
 the session stands when it first starts
 ([isolate.md](reference/isolate.md#entering-the-worktree)). Every edit, commit
-and the PR happen from the path `isolate` printed, and you **commit as you
-go**, because the PR needs real commits. A `Bootstrap:` under `## Worktree` runs
-once here, after isolate.
+and the PR happen from the path `isolate` printed, and you **commit as you go**,
+because the PR needs real commits. A `Bootstrap:` under `## Worktree` runs once
+here, after isolate.
 **Done when:** `preflight` answered `ok: true`, `isolate` printed its path, any
 `## Worktree` `Bootstrap:` ran green, and, attended, `EnterWorktree` entered
 that path.
@@ -109,9 +111,10 @@ through `update-issue-body` only when it changes a criterion, else it is logged
 criterion needing a host action no mechanic performs stays verbatim: unattended,
 it is an **unmet criterion** the merge summary lists; attended, ask first, per
 [implement.md](reference/implement.md#phase-1-a-criterion-no-mechanic-can-perform)
-on both. Only then write what success looks like into the Run file as criteria
-a later phase can check; a later triage brief or authoritative comment, each
-`writer: true`, supersedes the body (**spec precedence**).
+on both. Only then settle what success looks like in the Run file: an issue's
+`## Criteria` as init recorded them, else criteria a later phase can check; a
+later triage brief or authoritative comment, each `writer: true`, supersedes the
+body (**spec precedence**).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
