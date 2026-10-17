@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.7 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Setup installs the fonts rows saved style profiles carry
+  ([#759](https://github.com/Gharib89/skills/pull/759),
+  [`57fccb3`](https://github.com/Gharib89/skills/commit/57fccb3a2692fe56ab51c97eb9907062f19a2c57))
+
+
 ## v0.19.6 (2026-10-17)
 
 ### Bug Fixes
