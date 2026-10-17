@@ -999,6 +999,10 @@ test("a malformed verdict stops the gates, naming the scene and what is wrong", 
     ],
     [{ failures: [], scores, worst: [null] }, /worst 1 is not an object/],
     [
+      { failures: [], scores, worst: worst(1, { at: "0.5" }) },
+      /worst 1 at 0.5 is not a time inside the scene/,
+    ],
+    [
       { failures: [], scores, worst: worst(1, { fix: " " }) },
       /worst 1 has no fix/,
     ],
@@ -1232,4 +1236,34 @@ test("verdicts cached in the old format are judged again, not refused by the new
     r.out,
     /^gate critic: pending: round 1 of 2, 0 of 3 scene\(s\) judged, /m,
   );
+});
+
+test("two old-format rounds recorded in gates.json are dropped, not read by the new validator", () => {
+  const fx = fixture();
+  assert.equal(renderUnjudged(fx, SCRIPT).code, 1);
+  const g = record(fx);
+  const script = JSON.parse(read(fx.dir, "script.json"));
+  // A record from before the format: two rounds, no format field.
+  const rounds = ["a".repeat(16), "b".repeat(16)];
+  delete g.gates.critic.format;
+  g.gates.critic.rounds = rounds;
+  fs.writeFileSync(path.join(fx.dir, "gates.json"), JSON.stringify(g));
+  const dir = path.join(fx.dir, ".cache", "critic", rounds[1]);
+  fs.mkdirSync(dir, { recursive: true });
+  for (const s of script.scenes)
+    fs.writeFileSync(
+      path.join(dir, `${s.id}.json`),
+      JSON.stringify({
+        failures: [],
+        scores: { clarity: 4, legibility: 5, fit: 4 },
+      }),
+    );
+  const r = stage(fx, "render/render.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.ok(!/critic verdict/.test(r.err), r.err);
+  assert.match(
+    r.out,
+    /^gate critic: pending: round 1 of 2, 0 of 3 scene\(s\) judged, /m,
+  );
+  assert.equal(record(fx).gates.critic.format, 2);
 });

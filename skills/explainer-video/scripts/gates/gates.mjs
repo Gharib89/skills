@@ -13,12 +13,14 @@
 // the cites it read), cutting a sheet per scene first when a verdict is
 // missing. Deletes nothing: the render stage acts on the verdict.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` for layout, contrast,
-//         loudness, captions, sfx and critic (or `gate critic: pending: ...`),
-//         then `gates: <n> pass, <m> fail[, 1 pending]`, when red ending
-//         `; next: fix attempt <a> of 2` or `; stop: red after two fix
-//         attempts, no video`, when only pending `; next: run the critic,
-//         round <r> of 2`
-// writes: <run>/gates.json, gates.md, .cache/gates/, .cache/critic/
+//         loudness, captions, sfx, determinism and critic (or `gate critic:
+//         pending: ...`), then `gates: <n> pass, <m> fail[, 1 pending]`, when
+//         red ending `; next: fix attempt <a> of 2` or `; stop: red after two
+//         fix attempts, no video` (`; stop: determinism is red, a skill defect
+//         to report, no fix attempt, no video` when determinism is red), when
+//         only pending `; next: run the critic, round <r> of 2`
+// writes: <run>/gates.json, gates.md, .cache/gates/ (with the frames each
+//         determinism check rendered), .cache/critic/
 // exit:   0 every gate passes · 1 a gate fails or is pending, or `gates: <why>`
 //         on stderr · 2 usage
 import crypto from "node:crypto";
@@ -440,7 +442,11 @@ const verdicts = (h) =>
       bad(`worst holds ${v.worst.length} entries, at most 3`);
     v.worst.forEach((x, i) => {
       if (!x || typeof x !== "object") bad(`worst ${i + 1} is not an object`);
-      if (!(x?.at >= sc.start && x.at <= sc.start + sc.duration))
+      if (!(
+        Number.isFinite(x?.at) &&
+        x.at >= sc.start &&
+        x.at <= sc.start + sc.duration
+      ))
         bad(`worst ${i + 1} at ${x?.at} is not a time inside the scene`);
       for (const k of ["what", "evidence", "fix"])
         if (typeof x[k] !== "string" || !x[k].trim())
@@ -448,8 +454,11 @@ const verdicts = (h) =>
     });
     return { ...v, id: sc.id, start: sc.start };
   });
-const rounds = same ? (prev.gates.critic?.rounds ?? []) : [];
-const criticAttempts = same ? (prev.gates.critic?.attempts ?? 0) : 0;
+// Rounds judged in another verdict format are not carried: their verdicts would
+// meet the validator, which refuses them, and are judged again instead.
+const keptRounds = same && prev.gates.critic?.format === CRITIC_FORMAT;
+const rounds = keptRounds ? (prev.gates.critic.rounds ?? []) : [];
+const criticAttempts = keptRounds ? (prev.gates.critic.attempts ?? 0) : 0;
 let judgedBy;
 const own = verdicts(criticKey);
 if (own.every(Boolean) && (rounds.includes(criticKey) || rounds.length < 2)) {
@@ -480,6 +489,7 @@ if (judgedBy) {
     evidence,
     sheets: sheetsOf(carried ? rounds[1] : criticKey),
     rounds,
+    format: CRITIC_FORMAT,
     scores: vs.map((v) => ({
       scene: v.id,
       ...Object.fromEntries(SCORES.map((k) => [k, v.scores[k]])),
@@ -541,6 +551,7 @@ if (judgedBy) {
     evidence: [],
     sheets: dir,
     rounds,
+    format: CRITIC_FORMAT,
   };
 }
 
