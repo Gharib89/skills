@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.1 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Render the score one track at a time, its effect stages in place
+  ([#748](https://github.com/Gharib89/skills/pull/748),
+  [`31cf446`](https://github.com/Gharib89/skills/commit/31cf4461a3dc79ea342dc1b1ec6f15d49c361def))
+
+
 ## v0.19.0 (2026-10-17)
 
 ### Features
