@@ -163,8 +163,11 @@ const filesSize = (r) => r.files?.reduce((n, f) => n + f.size, 0);
 
 // A row with a CPU cost (ACE-Step, own voice) runs on the device torchDevice
 // picks; on the CPU, a machine with less RAM than the cost names is refused
-// before download.
-const cap = rows.some((r) => r.cpu) ? await backend.computeCapability() : null;
+// before download. Read for any catalogue row with one, listed or not: the
+// stale sweep keeps each row's folder for this device.
+const cap = catalogue.some((r) => r.cpu)
+  ? await backend.computeCapability()
+  : null;
 const device = (r) => (r.cpu ? torchDevice(cap) : undefined);
 const shortOfRam = (r) => device(r) === "cpu" && backend.memory() < r.cpu.ram;
 // A uv env's size is the CPU-only pin's, where the row has one and runs on the CPU.
@@ -227,18 +230,27 @@ function status(r) {
   return "present";
 }
 
-// Installs in the tool cache for another lock hash, whose stamp no run has
-// touched in 30 days. One with no stamp never finished, and ages by its folder.
+// Installs in the tool cache that no catalogue row lands in on this machine
+// (npm and Chrome under another lock hash, an env or model at another revision
+// or for the other device), whose stamp no run has touched in 30 days. Every
+// catalogue row counts, listed or not, since only a listed row's check touches
+// its stamp. One with no stamp never finished, and ages by its folder.
 function stale() {
+  const current = new Set([
+    ...Object.values(TOOL_DIRS).map((f) => path.join(dirs.cache, f, lockHash)),
+    ...catalogue
+      .filter((r) => ["uv", "model"].includes(r.kind))
+      .map(installDir),
+  ]);
   const out = [];
-  for (const folder of Object.values(TOOL_DIRS)) {
+  for (const folder of [...Object.values(TOOL_DIRS), "python", "models"]) {
     const base = path.join(dirs.cache, folder);
     for (const name of fs.existsSync(base) ? fs.readdirSync(base).sort() : []) {
       const dir = path.join(base, name);
       const st =
         fs.statSync(stamp(dir), { throwIfNoEntry: false }) ?? fs.statSync(dir);
       const age = Date.now() - st.mtimeMs;
-      if (name !== lockHash && age > STALE_MS)
+      if (!current.has(dir) && age > STALE_MS)
         out.push({
           id: `stale ${folder}/${name}`,
           dir,
