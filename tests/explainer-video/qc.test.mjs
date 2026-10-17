@@ -111,3 +111,18 @@ test("an acronym of function words or vowel letters still counts", () => {
     );
   }
 });
+
+// #725: a precision of 11 in 13 rounds to the 0.85 floor it fails, so the
+// verdict printed `precision 0.85 under 0.85`.
+test("a value that rounds onto the floor it fails prints enough places to differ from it", () => {
+  const narration =
+    "Caching keeps copies close, servers answer faster, browsers revalidate stale responses.";
+  const heard = `${narration} purple elephants`;
+  const q = check(narration, heard, seconds(narration, 13));
+  assert.equal(q.precision, 0.846);
+  assert.deepEqual(q.failures, ["precision 0.846 under 0.85"]);
+  assert.equal(
+    check(narration, narration, seconds(narration, 13)).precision,
+    1,
+  );
+});

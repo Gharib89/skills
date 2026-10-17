@@ -119,11 +119,17 @@ export function check(narration, transcript, seconds, language = "en") {
   const recall = ref.length ? count(hit) / ref.length : 1;
   const precision = hyp.length ? count(used) / hyp.length : 1;
   const rate = seconds > 0 ? narration.length / seconds : 0;
-  const r2 = (n) => Math.round(n * 100) / 100;
+  // Two places, or more where two would print an edge the value is not: a
+  // floor and band edges have two places, so rounding lands on one, never past.
+  const shown = (n, ...edges) => {
+    let p = 2;
+    while (p < 6 && edges.some((e) => n !== e && +n.toFixed(p) === e)) p++;
+    return +n.toFixed(p);
+  };
   const out = {
-    recall: r2(recall),
-    precision: r2(precision),
-    rate: r2(rate),
+    recall: shown(recall, FLOORS.recall),
+    precision: shown(precision, FLOORS.precision),
+    rate: shown(rate, ...FLOORS.rate),
     failures: [],
   };
   if (recall < FLOORS.recall)

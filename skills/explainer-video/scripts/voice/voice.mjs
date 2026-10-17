@@ -14,12 +14,13 @@
 // voiced scenes and the render's closing hold must land within 10 percent of
 // the brief's `length`.
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
-//         rate · pass|fail: <why>`; once every scene passes, with a brief,
+//         rate · pass|fail: <why>; heard: <file>`, the file holding what the
+//         aligner heard; once every scene passes, with a brief,
 //         `voice length: pass|fail: the scenes voice <s> s (<id> <s> s, ...)
 //         and the <hold> s hold vs the brief's <s> s ±10%`; then one summary
 //         line
 // writes: <run>/voice.json, the word timeline, only when every scene and the
-//         length pass
+//         length pass; <run>/.cache/voice/<key>.heard.txt per voiced scene
 // stderr: a Gemini or ElevenLabs narrator with no key (an own voice speaks
 //         through Gemini), or an own voice with no consent record, is refused
 //         before any synthesis; a quota stop counts the scenes kept
@@ -74,6 +75,9 @@ const backend = await loadBackend();
 
 const cacheDir = path.join(run, ".cache", "voice");
 fs.mkdirSync(cacheDir, { recursive: true });
+// What the aligner heard of a voiced scene, kept pass or fail, so a QC failure
+// can be read word by word against the narration.
+const heardFile = (key) => path.join(cacheDir, `${key}.heard.txt`);
 const scenes = script.scenes.map((s) => {
   const text = s.narration.join(" ");
   const key = crypto
@@ -127,6 +131,12 @@ async function voice(group, ctc) {
     cut = end;
     const from = Math.round(start * sampleRate);
     const to = Math.round(end * sampleRate);
+    const heard = transcribe(
+      em,
+      ctc.vocab,
+      Math.floor(start / FRAME),
+      Math.floor(end / FRAME),
+    );
     return {
       scene: s,
       samples: samples.subarray(from, to),
@@ -136,17 +146,8 @@ async function voice(group, ctc) {
         start: +(w.start - start).toFixed(3),
         end: +(w.end - start).toFixed(3),
       })),
-      qc: check(
-        s.text,
-        transcribe(
-          em,
-          ctc.vocab,
-          Math.floor(start / FRAME),
-          Math.floor(end / FRAME),
-        ),
-        own.at(-1).end - own[0].start,
-        language,
-      ),
+      heard,
+      qc: check(s.text, heard, own.at(-1).end - own[0].start, language),
     };
   });
 }
@@ -220,6 +221,7 @@ try {
       };
       v.scene.voiced = entry;
       byKey.set(v.scene.key, entry);
+      fs.writeFileSync(heardFile(v.scene.key), v.heard + "\n");
       if (v.qc.failures.length) continue;
       wav(path.join(run, entry.audio), v.samples, v.sampleRate);
       fs.writeFileSync(
@@ -242,7 +244,9 @@ try {
 for (const s of scenes) {
   const e = s.cached ?? s.voiced;
   const q = e.qc;
-  const verdict = q.failures.length ? `fail: ${q.failures.join("; ")}` : "pass";
+  const verdict = q.failures.length
+    ? `fail: ${q.failures.join("; ")}; heard: ${path.relative(run, heardFile(s.key))}`
+    : "pass";
   if (q.failures.length) failed++;
   console.log(
     `voice ${s.id}: ${s.cached ? "cached" : "voiced"} · recall ${q.recall} · precision ${q.precision} · rate ${q.rate} chars/s · ${verdict}`,
