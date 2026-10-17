@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { judged } from "./critic.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
+import { FPS } from "../../skills/explainer-video/scripts/render/compose.mjs";
 import {
   catalogue,
   dest,
@@ -895,8 +896,8 @@ test("a spring profile renders: each reveal carries its class at its sentence, n
       assert.equal(to.ease(1), 1);
       assert.equal(to.ease(0), 0);
       assert.ok(
-        start + to.duration <= duration,
-        `${id} settles in ${duration}`,
+        start + to.duration <= duration - 1 / FPS,
+        `${id} settles before the last frame of ${duration}`,
       );
       for (let p = 0; p <= 1; p += 0.01) assert.ok(to.ease(p) <= 1.2, id);
       assert.equal(from.y, 20);
