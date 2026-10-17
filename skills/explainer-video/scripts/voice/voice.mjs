@@ -236,7 +236,7 @@ try {
   // Each group is cached as it passes, so a rerun voices only what is missing.
   if (e.quota)
     console.error(
-      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota), which voices only the missing scenes; use a paid key; or choose another narrator in the brief`,
+      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota) or the credits are topped up, which voices only the missing scenes; set another key (a paid one, for a free-tier limit); or choose another narrator in the brief`,
     );
   else console.error(`voice: ${e.message}`);
   process.exit(1);
