@@ -178,9 +178,7 @@ to the **script gates**.
    idea each), `recap` (the points again in brief), `end` (one closing line).
    Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
    up to the brief's length less the 1 s hold the render closes on. A scene's
-   spoken words (a `{written|spoken}` pair counts its spoken form, so
-   `{304|three oh four}` is three) land within 10 percent of
-   (seconds - sentences × `pause`) ×
+   spoken words land within 10 percent of (seconds - sentences × `pause`) ×
    `rate`, the narrator's in `<skill>/narrators.json`: a sentence spends
    `pause` on silence, and ends at its one full stop, `!`, `?` or `؟`. Write
    for the brief's audience, about its focus; say or show each `must` item
@@ -195,22 +193,18 @@ to the **script gates**.
 2. **Compile.** As under Render, step 3.
 3. **Support check.** Dispatch one subagent with
    `<skill>/agents/support-checker.md` as its prompt, `{run}` the run folder
-   and `{skill}` this skill's folder. It writes `support.json`, its verdict on
-   every sentence, and replies with its `script support:` line.
+   and `{skill}` this skill's folder. It writes `support.json` and replies
+   with its `script support:` line.
 4. **Script gates.** `node <skill>/scripts/script/check.mjs explainers/<slug>`
-   prints one line per gate, `script <gate>: pass`, `fail: <findings>` or
-   `warn: <findings>` (`sentences` warns instead of failing, `support` on
-   drift alone), then `script: <p> pass, <f> fail,
-   <w> warn`. `arc`, `budget`, `dashes` and `sentences` hold step 1's rules;
-   the others:
+   prints one line per gate, `script <gate>: pass`, `warn` or
+   `fail: <findings>` (`sentences` and `support`'s `drift` warn instead of
+   failing), then `script: <p> pass, <f> fail, <w> warn`. `arc`, `budget`,
+   `dashes` and `sentences` hold step 1's rules; the others:
    - `cites`: every cite in `excerpts.json`, still word for word in its
      snapshot.
    - `support`: every sentence judged `supported` or `connective` on its
-     present wording. A sentence whose place, words, cites and cited
-     excerpts are unchanged keeps the first verdict it got, so a kept
-     failure clears when one of those changes, or when a brief change sends
-     the run back to the script stage; a later checker's different verdict
-     on it prints as `drift`, a warn that adds no failure and no fix attempt.
+     present wording; an unchanged sentence keeps its first verdict, and a
+     different later one is `drift`.
    - `coverage`: the `must` and `avoid` items, each matched as whole words in
      any case (`must=merge` is not met by "merges").
    - `reading`: each visual item on screen, from the sentence it rises at to
@@ -218,18 +212,15 @@ to the **script gates**.
      else 0.3 s a word and at least 1.2 s; a card's texts add up.
 5. **On exit 1** with `script: no <input>: <why>` on stderr and no gate lines,
    run what `<why>` names, then the script gates again. Otherwise fix what each
-   `fail` line names in the scene file (a `drift` finding needs no fix, even
-   inside a `fail` line), compile, then run the support check
+   `fail` line names in the scene file, compile, then run the support check
    again whenever the narration changed, and the script gates again. A red
    `support` line ends the summary in `next: fix attempt <a> of 2`: rewrite each
    failing sentence to say only what its excerpts say, cite the excerpt that
    does say it, and give an `unmarked` sentence the cites for its claim or turn
    it into a transition. On `stop: unsupported claims after two fix attempts`,
    stop: report each failing sentence and ask the user what the video may say.
-   The stop holds, whatever the next rewrite, until the support gate passes
-   or a brief change redoes the script.
-6. **On exit 0**, report the summary line and each `warn` line, and go on to
-   Voice, then the Storyboard.
+6. **On exit 0**, report the summary and `warn` lines, and go on to Voice,
+   then the Storyboard.
 
 ## Voice
 
