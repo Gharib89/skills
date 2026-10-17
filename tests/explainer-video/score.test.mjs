@@ -1,11 +1,17 @@
 // The score through its module door: the duck curve read off a worked word
-// timeline, and the synthesised score's determinism.
+// timeline, and the synthesised score's determinism and peak memory.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   duck,
   score,
 } from "../../skills/explainer-video/scripts/score/score.mjs";
+
+const SCORE = new URL(
+  "../../skills/explainer-video/scripts/score/score.mjs",
+  import.meta.url,
+).href;
 
 // One 10 s scene: two words close enough to share a speech span, a pause, a
 // third word, then no narration to the scene's end.
@@ -132,6 +138,32 @@ test("a cue past the sfx floor's count in its minute is dropped", () => {
   ]);
   assert.deepEqual(at(1), [{ type: "whoosh", t: 1 }]);
   assert.deepEqual(at(0), []);
+});
+
+test("a 60 s score peaks under ten full-length stereo buffers, not eight tracks at once plus their chains", () => {
+  // In its own process, so the peak is the score's alone.
+  const total = 60;
+  const src = `
+    import { score } from ${JSON.stringify(SCORE)};
+    const T = ${total};
+    const scenes = [0, 1, 2].map((i) => ({
+      id: "s" + i, start: (i * T) / 3, duration: T / 3,
+      words: [{ text: "w", start: (i * T) / 3 + 1, end: (i * T) / 3 + 2 }],
+    }));
+    const before = process.resourceUsage().maxRSS;
+    score({ scenes, total: T, seed: 1, level: -28, perMinute: 4 });
+    console.log(process.resourceUsage().maxRSS - before);
+  `;
+  const r = spawnSync(process.execPath, ["--input-type=module", "-e", src], {
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0, r.stderr);
+  const kb = Number(r.stdout);
+  const buffer = (total * 48000 * 2 * 4) / 1024;
+  assert.ok(
+    kb < 10 * buffer,
+    `peak grew ${Math.round(kb / 1024)} MB, ${(kb / buffer).toFixed(1)} buffers`,
+  );
 });
 
 test("a whoosh marks each cut and a sting the last word's end", () => {

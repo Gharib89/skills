@@ -224,12 +224,30 @@ export function renderMusic({ sections, total, preset, seed }) {
   const bar = beat * 4;
   const six = beat / 4;
   const n = Math.round(total * SR);
+  // Each track is a list of [voice, t, gain, pan] notes, built into a
+  // full-length buffer only when its chain runs, so one track is live at a
+  // time rather than eight (a 300 s stereo track is 115 MB). A note's voice is
+  // made where the arrangement reaches it, to move the generator on, then
+  // dropped; `make` and the generator state it started from make it again.
   const T = Object.fromEntries(
     ["kick", "bass", "snare", "hats", "keys", "pad", "bell", "fx"].map((k) => [
       k,
-      D.stereo(n),
+      [],
     ]),
   );
+  const voice = (make) => {
+    const state = D.seedState();
+    make();
+    return { make, state };
+  };
+  const build = (notes) => {
+    const x = D.stereo(n);
+    for (const [v, t, g, pan] of notes) {
+      if (v.make) D.restoreSeed(v.state);
+      D.place(x, v.make ? v.make() : v, t, g, pan);
+    }
+    return x;
+  };
   const swingT = (st) =>
     Math.floor(st / 2) * (beat / 2) + (st % 2) * (beat / 2) * s.swing;
   const K = {
@@ -246,7 +264,7 @@ export function renderMusic({ sections, total, preset, seed }) {
     const end = sections[si + 1]?.start ?? total;
     const count = Math.max(1, Math.ceil((end - sec.start) / bar - 1e-6));
     const put = (buf, x, t, g, pan) => {
-      if (t < end) D.place(buf, x, t, g, pan);
+      if (t < end) buf.push([x, t, g, pan]);
     };
     for (let b = 0; b < count; b++) {
       const t0 = sec.start + b * bar;
@@ -272,13 +290,15 @@ export function renderMusic({ sections, total, preset, seed }) {
         for (const m of voic)
           put(
             T.keys,
-            V.epNote(m, L * six * 1.1, 0.55, s.brightness),
+            voice(() => V.epNote(m, L * six * 1.1, 0.55, s.brightness)),
             t0 + swingT(p),
             0.3,
           );
       put(
         T.pad,
-        V.supersaw(voic, bar * 1.1, { bright: 1600 * s.brightness }),
+        voice(() =>
+          V.supersaw(voic, bar * 1.1, { bright: 1600 * s.brightness }),
+        ),
         t0,
         0.22,
       );
@@ -294,14 +314,14 @@ export function renderMusic({ sections, total, preset, seed }) {
         for (const [p, L] of bl)
           put(
             T.bass,
-            V.roundBass(D.midiHz(bassM), L * six * 0.95),
+            voice(() => V.roundBass(D.midiHz(bassM), L * six * 0.95)),
             t0 + swingT(p),
             0.7,
           );
         if (drums && b % 2 === 1)
           put(
             T.bass,
-            V.roundBass(D.midiHz(bassM + 7), six * 1.8),
+            voice(() => V.roundBass(D.midiHz(bassM + 7), six * 1.8)),
             t0 + swingT(14),
             0.5,
           );
@@ -315,7 +335,7 @@ export function renderMusic({ sections, total, preset, seed }) {
         for (const p of kp) {
           const t = t0 + swingT(p);
           if (t >= end) continue;
-          D.place(T.kick, V.softKick(), t, 0.9);
+          T.kick.push([voice(V.softKick), t, 0.9]);
           kicks.push(t);
         }
         if (dr.snare)
@@ -350,12 +370,13 @@ export function renderMusic({ sections, total, preset, seed }) {
               ];
         for (const [p, iv] of mel) {
           const m = 60 + ((key + iv) % 24) + (key + iv < 12 ? 12 : 0);
-          const v =
+          const v = voice(() =>
             s.lead === "glock"
               ? V.glock(m + 12, 1.0, 0.5)
               : s.lead === "pluck"
                 ? V.pluck(m, 0.7, 0.55)
-                : V.marimba(m, 0.9);
+                : V.marimba(m, 0.9),
+          );
           put(T.bell, v, t0 + swingT(p), 0.35, ((p % 3) - 1) * 0.25);
         }
       }
@@ -375,8 +396,8 @@ export function renderMusic({ sections, total, preset, seed }) {
           48 + npc + iv >= 53 ? 48 + npc + iv : 60 + npc + iv,
         ),
       );
-      D.place(T.fx, sw, Math.max(sec.start, end - sw.L.length / SR), 0.25);
-      D.place(T.fx, D.filt(V.hat(true), "lp", 7000), end, 0.3);
+      T.fx.push([sw, Math.max(sec.start, end - sw.L.length / SR), 0.25]);
+      T.fx.push([D.filt(V.hat(true), "lp", 7000), end, 0.3]);
     }
   });
   const chain = {
@@ -443,7 +464,8 @@ export function renderMusic({ sections, total, preset, seed }) {
     }
   }
   const mix = D.stereo(n);
-  for (const [k, x] of Object.entries(T)) {
+  for (const [k, notes] of Object.entries(T)) {
+    const x = build(notes);
     const y = D.peak(x) > 0 ? chain[k](x) : x;
     D.gain(y, D.db(levels[k]));
     if (["bass", "keys", "pad"].includes(k))

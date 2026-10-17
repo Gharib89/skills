@@ -9,6 +9,11 @@ let seed = 7;
 export function setSeed(s) {
   seed = s >>> 0 || 7;
 }
+// The generator's raw state, read and restored as is: setSeed maps 0 to 7.
+export const seedState = () => seed;
+export function restoreSeed(s) {
+  seed = s;
+}
 // mulberry32
 export function rand() {
   seed |= 0;
@@ -36,9 +41,6 @@ export function fromMono(x) {
 }
 function len(b) {
   return b.L.length;
-}
-function clone(b) {
-  return { L: Float32Array.from(b.L), R: Float32Array.from(b.R) };
 }
 
 export function place(buf, x, t, g = 1, panPos = 0) {
@@ -127,22 +129,25 @@ export function biquadCoefs(type, f, q = 0.707, gainDb = 0) {
   }
   return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
 }
+// biquadMono, filt, compress, withReverb, delay and chorus work in place on
+// their input and return it, so a 300 s track's chain holds no full-length
+// copy per stage; reverb alone returns a new (wet) buffer.
 export function biquadMono(x, co) {
   const [b0, b1, b2, a1, a2] = co;
   let x1 = 0,
     x2 = 0,
     y1 = 0,
     y2 = 0;
-  const y = new Float32Array(x.length);
   for (let i = 0; i < x.length; i++) {
-    const v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    const xi = x[i];
+    const v = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
     x2 = x1;
-    x1 = x[i];
+    x1 = xi;
     y2 = y1;
     y1 = v;
-    y[i] = v;
+    x[i] = v;
   }
-  return y;
+  return x;
 }
 export function filt(b, type, f, q, g) {
   const co = biquadCoefs(type, f, q, g);
@@ -154,16 +159,15 @@ export function compress(b, thrDb, ratio, attMs, relMs) {
   const at = Math.exp(-1 / ((attMs * SR) / 1000));
   const rt = Math.exp(-1 / ((relMs * SR) / 1000));
   let env = 0;
-  const out = clone(b);
   for (let i = 0; i < len(b); i++) {
     const lv = Math.max(Math.abs(b.L[i]), Math.abs(b.R[i]));
     env = lv > env ? at * env + (1 - at) * lv : rt * env + (1 - rt) * lv;
     const over = toDb(env) - thrDb;
     const g = db(-(over > 0 ? over * (1 - 1 / ratio) : 0));
-    out.L[i] *= g;
-    out.R[i] *= g;
+    b.L[i] *= g;
+    b.R[i] *= g;
   }
-  return out;
+  return b;
 }
 
 // Freeverb-style reverb, wet only.
@@ -173,7 +177,7 @@ export function reverb(b, room = 0.5, damp = 0.5, wet = 0.25) {
   const n = len(b);
   const scale = SR / 44100;
   const fb = 0.7 + room * 0.28;
-  const out = stereo(n);
+  const out = {};
   for (const [ch, spread] of [
     ["L", 0],
     ["R", 23],
@@ -210,41 +214,39 @@ export function reverb(b, room = 0.5, damp = 0.5, wet = 0.25) {
   return gain(out, wet);
 }
 export function withReverb(b, room, damp, wet, dry = 1) {
-  const o = gain(clone(b), dry);
-  mixInto(o, reverb(b, room, damp, wet));
-  return o;
+  const w = reverb(b, room, damp, wet);
+  mixInto(gain(b, dry), w);
+  return b;
 }
 
 export function delay(b, timeS, fbk = 0.3, mix = 0.2) {
   const d = Math.round(timeS * SR);
   const n = len(b);
-  const o = clone(b);
   for (const ch of ["L", "R"]) {
     const y = new Float32Array(n);
     for (let i = 0; i < n; i++) y[i] = b[ch][i] + (i >= d ? y[i - d] * fbk : 0);
-    for (let i = d; i < n; i++) o[ch][i] += y[i - d] * mix;
+    for (let i = d; i < n; i++) b[ch][i] += y[i - d] * mix;
   }
-  return o;
+  return b;
 }
 export function chorus(b, rate = 0.9, depthMs = 3, mix = 0.35) {
   const n = len(b);
-  const o = clone(b);
   const base = 0.012 * SR;
   const dep = (depthMs / 1000) * SR;
   for (const [ch, ph] of [
     ["L", 0],
     ["R", Math.PI / 2],
   ]) {
-    const x = b[ch];
+    const x = Float32Array.from(b[ch]);
     for (let i = 0; i < n; i++) {
       const p = i - (base + dep * Math.sin((2 * Math.PI * rate * i) / SR + ph));
       const k = Math.floor(p);
       const fr = p - k;
       const v = k >= 1 ? x[k] * (1 - fr) + x[k + 1] * fr : 0;
-      o[ch][i] = x[i] * (1 - mix) + v * mix;
+      b[ch][i] = x[i] * (1 - mix) + v * mix;
     }
   }
-  return o;
+  return b;
 }
 
 export function fadeOut(b, sec) {
