@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.46.0 (2026-10-17)
+
+### Features
+
+- **ship**: Unmet checkbox criteria hold the clean gate, and a re-raised declined finding caps its
+  reviewer ([#790](https://github.com/Gharib89/skills/pull/790),
+  [`0db4985`](https://github.com/Gharib89/skills/commit/0db4985e961d50fd0e4c9fe4cb58dba4d82f5ba2))
+
+
 ## v0.45.4 (2026-10-17)
 
 ### Bug Fixes
