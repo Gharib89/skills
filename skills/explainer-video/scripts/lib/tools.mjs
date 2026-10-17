@@ -102,6 +102,18 @@ export const fontRow = (profile, family) =>
   catalogue().find((r) => r.kind === "font" && r.family === family) ??
   profile.fonts?.find((r) => r.family === family);
 
+// Why a font row is not usable, or undefined: its stamp (written last) is
+// absent, or the folder lacks one of the row's files.
+export function fontGap(r) {
+  const dir = dest(r);
+  if (!fs.existsSync(path.join(dir, ".stamp")))
+    return `${r.id} is not installed`;
+  const lost = r.files.find(
+    (f) => !fs.existsSync(path.join(dir, `${f}.woff2`)),
+  );
+  return lost && `${r.id} lacks ${lost}.woff2`;
+}
+
 // The weights a font row's files hold, each named `<subset>-<weight>-<style>`.
 export const weights = (r) => r.files.map((f) => +f.match(/-(\d+)-/)[1]);
 

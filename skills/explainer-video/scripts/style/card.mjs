@@ -46,6 +46,7 @@ import {
   catalogue,
   compositionAssets,
   dest,
+  fontGap,
   fontRow,
   hyperframesEnv,
   loadBackend,
@@ -310,12 +311,13 @@ const fontRows = [...new Set(ROLE_NAMES.map((r) => draft.type?.[r]?.font))].map(
     fontRow(draft, font) ??
     fail(`the draft names font ${font}, which no setup row installs`),
 );
-for (const r of [
-  ...rows.filter((r) => ["npm", "chrome"].includes(r.kind)),
-  ...fontRows,
-])
+for (const r of rows.filter((r) => ["npm", "chrome"].includes(r.kind)))
   if (!fs.existsSync(path.join(dest(r), ".stamp")))
     fail(`${r.id} is not installed: run /explainer-video setup`);
+for (const r of fontRows) {
+  const gap = fontGap(r);
+  if (gap) fail(`${gap}: run /explainer-video setup`);
+}
 
 // The sample frames: what a video shows most, each over the header and
 // caption bands. The Arabic frame sets its title and text in the Arabic roles,

@@ -425,6 +425,42 @@ test("a store's default file is honoured, and the project store beats the user s
   assert.equal(own(fx2).label, "project");
 });
 
+test("a font only the profile carries is refused until setup's install lands it, then renders", () => {
+  const fx = fixture();
+  for (const s of ["script/compile.mjs", "voice/voice.mjs"])
+    assert.equal(stage(fx, s).code, 0, s);
+  const lora = {
+    id: "font:lora",
+    kind: "font",
+    family: "lora",
+    class: "serif",
+    version: "5.3.0",
+    files: ["latin-400-normal"],
+    licence: "OFL-1.1",
+  };
+  styled(
+    fx,
+    {},
+    {
+      fonts: [lora],
+      type: { ...latin, title: { ...latin.title, font: "lora" } },
+    },
+  );
+  const before = render(fx);
+  assert.equal(before.code, 1, before.out + before.err);
+  assert.match(
+    before.err,
+    /^render: font:lora is not installed: run \/explainer-video setup/m,
+  );
+  // What `setup install` writes for the row: its files, then the stamp.
+  const dir = dest(lora, fx.dirs);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "latin-400-normal.woff2"), "woff2");
+  fs.writeFileSync(path.join(dir, ".stamp"), "");
+  const after = render(fx);
+  assert.equal(after.code, 0, after.out + after.err);
+});
+
 test("the run keeps its own style.json after the store's copy is edited", () => {
   const fx = fixture(unstyled);
   const project = path.join(fx.tmp, "proj", "explainers", ".styles");
@@ -510,6 +546,14 @@ for (const [name, arrange, why, voiced = true] of [
         ),
       ),
     /^render: font:inter is not installed: run \/explainer-video setup/m,
+  ],
+  [
+    "a font folder that holds the stamp but lacks one of its files",
+    (fx) => {
+      const row = catalogue().find((r) => r.id === "font:inter");
+      fs.rmSync(path.join(dest(row, fx.dirs), `${row.files[0]}.woff2`));
+    },
+    /^render: font:inter lacks latin-\d+-normal\.woff2: run \/explainer-video setup/m,
   ],
   [
     "a language with no render fonts",

@@ -193,6 +193,22 @@ function session(docs, answered = []) {
 }
 const submitOff = (v) => /<button[^>]*id="submit"[^>]*\sdisabled/.test(v);
 
+test("build refuses a font folder that holds the stamp but lacks one of its files, by name", () => {
+  const fx = fixture();
+  const dirs = userDirs({ platform: "linux", env: fx.env, home: fx.env.HOME });
+  const family = json(skill, "styles", "itworx.json").type.title.font;
+  const row = catalogue().find((r) => r.kind === "font" && r.family === family);
+  fs.rmSync(path.join(dest(row, dirs), `${row.files[0]}.woff2`));
+  const r = card(fx, ["build"]);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    new RegExp(
+      `${row.id} lacks ${row.files[0]}\\.woff2: run /explainer-video setup`,
+    ),
+  );
+});
+
 test("build gates five sample frames with check and the probe, each mid-way through its own second, and writes card 1", () => {
   const fx = fixture();
   const r = built(fx);

@@ -35,10 +35,12 @@ import {
   narrators,
 } from "./lib/narrators.mjs";
 import { userDirs } from "./lib/paths.mjs";
+import { stores } from "./lib/style.mjs";
 import {
   TOOL_DIRS,
   catalogue as readCatalogue,
   dest,
+  fontGap,
   installFont,
   lockHash,
   loadBackend,
@@ -91,6 +93,59 @@ const rows = catalogue.filter(
 );
 if (rows.some((r) => r.python))
   rows.push(...catalogue.filter((r) => r.when === "python"));
+
+// The `fonts` rows saved style profiles carry (a draft fetched a family no row
+// installs): every profile in the folders profiles are saved to (stores()) and
+// each run's style.json under ./explainers, one row per family and version,
+// none a catalogue row. A file that does not parse is a row of its own,
+// refused.
+const profileFiles = (explainers) => {
+  const jsonIn = (d) =>
+    fs.existsSync(d)
+      ? fs
+          .readdirSync(d)
+          .filter((f) => f.endsWith(".json"))
+          .map((f) => path.join(d, f))
+      : [];
+  return [
+    ...stores(explainers, dirs).flatMap(jsonIn),
+    ...(fs.existsSync(explainers)
+      ? fs
+          .readdirSync(explainers, { withFileTypes: true })
+          .filter((e) => e.isDirectory())
+          .map((e) => path.join(explainers, e.name, "style.json"))
+          .filter((f) => fs.existsSync(f))
+      : []),
+  ];
+};
+const carried = new Map();
+const unreadable = new Map();
+for (const file of profileFiles(path.resolve("explainers"))) {
+  try {
+    const profile = JSON.parse(fs.readFileSync(file, "utf8"));
+    for (const r of profile.fonts ?? [])
+      if (!rows.some((c) => c.kind === "font" && c.family === r.family)) {
+        // Drafts of one family each carry the weights they use: keep them all.
+        const key = `${r.family}@${r.version}`;
+        const files = [
+          ...new Set([...(carried.get(key)?.files ?? []), ...r.files]),
+        ];
+        carried.set(key, { neededBy: "render", size: 0, ...r, files });
+      }
+  } catch (e) {
+    // Bad JSON, or a shape the loop cannot read: one refused row, no crash.
+    unreadable.set(file, e.message);
+  }
+}
+rows.push(...carried.values());
+for (const [file, why] of unreadable)
+  rows.push({
+    id: `profile:${path.relative(".", file)}`,
+    kind: "profile",
+    neededBy: "render",
+    licence: "-",
+    why,
+  });
 
 const STALE_MS = 30 * 24 * 60 * 60 * 1000;
 // HyperFrames phones home and checks for updates unless told not to.
@@ -148,6 +203,8 @@ function status(r) {
   if (r.kind === "key") return keys.get(r);
   if (r.kind === "system")
     return backend.which(r.command) ? "present" : "missing";
+  if (r.kind === "profile") return `refused: ${r.why}`;
+  if (r.kind === "font" && fontGap(r)) return "missing";
   const s = stamp(dest(r));
   if (!fs.existsSync(s)) {
     // No wheels here: refused before download, since its uv sync could only fail.
@@ -302,7 +359,9 @@ function report(state, staleInstalls) {
         ? "system, you install it"
         : r.kind === "key"
           ? `nothing, you set ${r.env}`
-          : dest(r);
+          : r.kind === "profile"
+            ? "nothing, fix the file"
+            : dest(r);
     lines.push(
       `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${size(r) ? formatSize(size(r)) : "-"} | ${r.licence} | ${where} |`,
     );

@@ -517,5 +517,5 @@ The per-user folder setup installs a run's tools into: the npm packages and Chro
 _Avoid_: node_modules, tools folder
 
 **Font store**:
-The per-user folder of fonts fetched by family at a pinned version, OFL or Apache faces only, by setup, or by a draft style profile for a family setup does not install; shared by every run and style profile.
+The per-user folder of fonts fetched by family at a pinned version, OFL or Apache faces only, by setup (which also installs the `fonts` rows saved style profiles carry), or by a draft style profile for a family setup does not install; shared by every run and style profile.
 _Avoid_: font cache, fonts folder

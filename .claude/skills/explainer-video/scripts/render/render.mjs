@@ -41,6 +41,7 @@ import {
   catalogue,
   compositionAssets,
   dest,
+  fontGap,
   fontRow,
   hyperframesEnv,
   loadBackend,
@@ -140,12 +141,13 @@ const fontRows = [
       `style profile ${profile.name} names font ${font}, which no setup row installs`,
     ),
 );
-for (const r of [
-  ...rows.filter((r) => ["npm", "chrome"].includes(r.kind)),
-  ...fontRows,
-])
+for (const r of rows.filter((r) => ["npm", "chrome"].includes(r.kind)))
   if (!fs.existsSync(path.join(dest(r), ".stamp")))
     fail(`${r.id} is not installed: run /explainer-video setup`);
+for (const r of fontRows) {
+  const gap = fontGap(r);
+  if (gap) fail(`${gap}: run /explainer-video setup`);
+}
 
 // The score the brief asks for: on (synthesised), off, or ace-step, the
 // opt-in row setup installs only when asked for.
