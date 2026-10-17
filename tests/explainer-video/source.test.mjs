@@ -311,6 +311,29 @@ test("a Markdown excerpt locates by section or by line", () => {
   assert.match(snapshot(fx, [f]).out, /^source guide: md · 3 section\(s\) · /);
 });
 
+// #725: a page heading holding an anchor link reached outline.md as
+// `§ [Validation](#validation)`.
+test("a heading holding a Markdown link reads as its text in the pack, and either form locates", () => {
+  const fx = fixture();
+  const f = write(
+    fx,
+    "cache.md",
+    "# Caching\n\n## [Validation](#validation)\n\nAn ETag names a version.\n",
+  );
+  assert.equal(snapshot(fx, [f]).code, 0);
+  for (const locator of ["§ [Validation](#validation)", "§ Validation"]) {
+    draft(fx, "cache", [[locator, "An ETag names a version."]]);
+    const r = pack(fx);
+    assert.equal(r.code, 0, r.out + r.err);
+    const outline = fs.readFileSync(path.join(fx.dir, "outline.md"), "utf8");
+    assert.match(outline, /^- ex-1 · § Validation · note for /m);
+    const { excerpts } = JSON.parse(
+      fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
+    );
+    assert.equal(excerpts[0].locator, "§ Validation");
+  }
+});
+
 test("a heading used twice locates in either section, never across the two", () => {
   const fx = fixture();
   const f = write(
