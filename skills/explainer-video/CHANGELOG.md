@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.0 (2026-10-17)
+
+### Features
+
+- **explainer-video**: Budget a pause a sentence and hold the voiced length to the brief
+  ([#746](https://github.com/Gharib89/skills/pull/746),
+  [`9479dd8`](https://github.com/Gharib89/skills/commit/9479dd893747bb1a3b7ddabd9fbc9b0f6267291c))
+
+
 ## v0.18.0 (2026-10-16)
 
 ### Features
