@@ -272,6 +272,8 @@ check_rc "a node that is not a call is not checked" \
   0 "$(oc_rc '```diff\n scripts/a.sh\n+  refuses a missing thing\n```')"
 check_rc "a root naming a directory searches under it" \
   0 "$(oc_rc '```diff\n scripts/\n+  helper()\n```')"
+check_rc "a node the root file calls but another file defines passes" \
+  0 "$({ printf 'source lib.sh\nhelper\n' > "$PR_ROOT/c.sh"; oc_rc '```diff\n c.sh\n+  helper()\n```'; })"
 check_rc "a root with a glob is not resolved" \
   0 "$(oc_rc '```diff\n scripts/*.sh\n+  missing_fn()\n```')"
 check "a root whose file is absent is named" \
