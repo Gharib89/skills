@@ -309,5 +309,7 @@ check "--help names the script's call" "1" "$(printf '%s\n' "$help_out" | grep -
 dash_out=$(bash scripts/check-pr-body.sh -x 2>/dev/null)
 check_rc "an unknown dash argument is tooling" 2 "$(bash scripts/check-pr-body.sh -x >/dev/null 2>&1; printf '%s' "$?")"
 check "an unknown dash argument prints no violation" "" "$dash_out"
+check "an unknown dash argument answers the usage line on stderr" "1" \
+  "$(bash scripts/check-pr-body.sh -x 2>&1 >/dev/null | grep -c '^usage: scripts/check-pr-body.sh')"
 
 finish
