@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.21.0 (2026-10-17)
+
+### Features
+
+- **explainer-video**: Spring motion, a second motion part beside rise
+  ([#764](https://github.com/Gharib89/skills/pull/764),
+  [`9fbac49`](https://github.com/Gharib89/skills/commit/9fbac49cb4bac8f902654a75d66f0ada792a7ea7))
+
+
 ## v0.20.0 (2026-10-17)
 
 ### Features
