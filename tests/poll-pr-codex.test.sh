@@ -133,9 +133,9 @@ check "a clean comment opening with a marker line is a landed round" '0 since nu
 { echo '<!-- codex-review-state:v1 {"status":"completed"} -->'; cat "$work/summary-clean.md"; } > "$work/summary-marked.md"
 reset "$clean_head"
 activity 1 "c|summary-marked.md|2026-10-07T12:36:32Z|2026-10-07T12:38:05Z"
-out=$(poll --brief)
-check "a status comment with two markers is neither a round nor a notice" '0 null' \
-  "$(jq -r '(.rounds | length), .reviewer_blocked' <<<"$out" | xargs)"
+out=$(poll --brief); rc=$?
+check "a status comment with two markers is neither a round nor a notice" '1 0 null' \
+  "$rc $(jq -r '(.rounds | length), .reviewer_blocked' <<<"$out" | xargs)"
 # Clean words below another first prose line make no clean round, whatever the
 # marker's name.
 printf '<!-- codex-future:v2 -->\n\nSomething went wrong.\n\nCodex Review: Didn'"'"'t find any major issues.\n' > "$work/clean-late.md"
