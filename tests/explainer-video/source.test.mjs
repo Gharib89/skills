@@ -337,25 +337,29 @@ test("a heading holding a Markdown link reads as its text in the pack, and eithe
   const g = write(
     fx,
     "readme.md",
-    "# Project [![CI](x/badge.svg)](x/actions)\n\nIt builds.\n\n## [API](https://e.org/a_(b))\n\nIt serves.\n",
+    "# Project [![CI](x/badge.svg)](x/actions)\n\nIt builds.\n\n## [API](https://e.org/a_(b))\n\nIt serves.\n\n## [Array [T]](#array-t)\n\nIt holds.\n",
   );
   assert.equal(snapshot(fx, [g]).code, 0);
   draft(fx, "readme", [
     ["§ Project [![CI](x/badge.svg)](x/actions)", "It builds."],
     ["§ [API](https://e.org/a_(b))", "It serves."],
+    ["§ [Array [T]](#array-t)", "It holds."],
   ]);
   draft(fx, "cache", [["§ Validation", "An ETag names a version."]]);
   assert.equal(pack(fx).code, 0);
   const { excerpts } = JSON.parse(
     fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
   );
-  const [badge, api] = excerpts.filter((x) => x.source === "readme");
+  const [badge, api, array] = excerpts.filter((x) => x.source === "readme");
   assert.equal(badge.locator, "§ Project CI");
-  // A destination holding balanced parentheses is read whole.
+  // A destination holding balanced parentheses is read whole, and so is a
+  // label holding balanced brackets.
   assert.equal(api.locator, "§ API");
+  assert.equal(array.locator, "§ Array [T]");
   draft(fx, "readme", [
     [badge.locator, "It builds."],
     [api.locator, "It serves."],
+    [array.locator, "It holds."],
   ]);
   assert.equal(pack(fx, ["readme"]).code, 0);
 });

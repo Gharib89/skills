@@ -57,10 +57,11 @@ export const squash = (s) => s.replace(/\s+/g, " ").trim();
 // A heading as read: a Markdown link or image reads as its text, so a page
 // heading carrying its anchor (`[Validation](#validation)`) is `Validation`,
 // and a linked badge (`[![CI](badge)](runs)`) is `CI`. Innermost first, until
-// none is left, so reading a heading twice reads it the same. A destination
-// may hold balanced parentheses (`a_(b)`).
+// none is left, so reading a heading twice reads it the same. A label may
+// hold balanced brackets (`Array [T]`), a destination balanced parentheses
+// (`a_(b)`), one level deep.
 export function plain(s) {
-  const link = /!?\[([^[\]]*)\]\((?:[^()]|\([^()]*\))*\)/g;
+  const link = /!?\[((?:[^[\]]|\[[^[\]]*\])*)\]\((?:[^()]|\([^()]*\))*\)/g;
   for (let t; (t = s.replace(link, "$1")) !== s;) s = t;
   return squash(s);
 }
