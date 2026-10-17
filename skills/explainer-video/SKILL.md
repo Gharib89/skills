@@ -208,9 +208,9 @@ to the **script gates**.
    - `support`: every sentence judged `supported` or `connective` on its
      present wording. A sentence whose place, words, cites and cited
      excerpts are unchanged keeps the first verdict it got, so a kept
-     failure clears only when one of those changes; a later checker's
-     different verdict on it prints as `drift`, a warn that adds no failure
-     and no fix attempt.
+     failure clears when one of those changes, or when a brief change sends
+     the run back to the script stage; a later checker's different verdict
+     on it prints as `drift`, a warn that adds no failure and no fix attempt.
    - `coverage`: the `must` and `avoid` items, each matched as whole words in
      any case (`must=merge` is not met by "merges").
    - `reading`: each visual item on screen, from the sentence it rises at to
