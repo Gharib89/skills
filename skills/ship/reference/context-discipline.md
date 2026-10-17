@@ -74,7 +74,7 @@ a read of the output file buys nothing it does not deliver.
 
 ## The Run file
 
-`run-file init <issue|slug> --from-profile` (`--criteria <file>` for an issue)
+`run-file init <issue|slug> --from-profile` (`--criteria -` for an issue)
 is the run's first write, placed by SKILL.md's
 [pipeline step](../SKILL.md#the-pipeline). Init reads the
 profile's `Tripwires:`, its Verification names, its reviewers and its `Legs:`

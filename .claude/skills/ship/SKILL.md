@@ -69,7 +69,7 @@ decisions. **First**, read
 that keep a long run from bloating the window, and what it still requires. Then
 the run's **first write**: after `prepare`, an issue's `read-issue` and
 before phase 0, `run-file init <issue|slug> --from-profile` initializes the Run
-file holding the ten-item checklist; an issue's run adds `--criteria <file>`,
+file holding the ten-item checklist; an issue's run adds `--criteria -`,
 per [implement.md](reference/implement.md#phase-1-criteria-the-run-owes). Each
 phase below flips it with `run-file next`, `open`, `close` or `skip`, and closes
 once its `Done when:` holds, not before.

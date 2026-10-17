@@ -22,7 +22,7 @@ satisfies it.
 
 ## Before phase 0
 
-`run-file init <issue> --from-profile --criteria <body file>`, the body read
+`run-file init <issue> --from-profile --criteria -`, the effective spec read
 first; phase 1's feedback criteria stay in the plan. When it refuses an existing
 record, run phase 0's `preflight` first, since it writes nothing, and repeat the
 init with `--rebuild` only on its `ok: true`: a stop leaves the earlier record

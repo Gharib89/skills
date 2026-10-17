@@ -71,16 +71,17 @@ verbatim in the issue body.
 ## Phase 1: criteria the run owes
 
 An issue's run reads the issue first, `read-issue <issue>`, a read that claims
-nothing, and settles which text is the spec by
-[spec precedence](#phase-1-spec-precedence): the body, or the latest
-`writer: true` brief or comment where it has checkboxes of its own. It writes
-that text to a file, taking the body with `jq -er .body` so a failed read stops
-there. `run-file init <issue> --from-profile --criteria <file>` then records
-each checkbox line (`-`, `*`, `+` or a numbered item) as an entry under the Run
-file's `## Criteria`, `- <n>: <text>`, and refuses the text `null`. Phase 0
-reuses this read. A free-text run has no issue and passes none. A phase-1
-anchor rewrite that changes a criterion leaves the entry as recorded: its
-`Criterion` line names the substitution.
+nothing (a failed read stops the run there, `host-unreachable`), and settles the
+effective spec by [spec precedence](#phase-1-spec-precedence): the body's
+checkboxes, less each a later `writer: true` brief or comment drops or revises,
+plus the checkboxes it adds. `run-file init <issue> --from-profile --criteria -`
+takes that text as a heredoc, so the issue's own words never pass a file or a
+pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
+entry under the Run file's `## Criteria`, `- <n>: <text>`. It refuses the text
+`null`. Phase 0 reuses this read. A free-text run has no issue and passes none.
+A phase-1 anchor rewrite that changes a criterion adds each replacement
+checkbox to `## Criteria` under the next number, owing its own line, and the
+original's `Criterion` line names them.
 
 Every entry is owed one line, anywhere in the file, written by the run as it
 settles the criterion: `Criterion <n>: met: <proof>`, the proof a test, a
