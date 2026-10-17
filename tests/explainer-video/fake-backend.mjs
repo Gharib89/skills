@@ -127,9 +127,11 @@ export async function aceStep({ dir, device, seconds, seed, caption }) {
 }
 
 // The machine: EXPLAINER_VIDEO_FAKE_GPU a compute capability (unset, no NVIDIA
-// card), EXPLAINER_VIDEO_FAKE_RAM its bytes of RAM (default 64 GB).
+// card; `failed`, a probe that failed), EXPLAINER_VIDEO_FAKE_RAM its bytes of
+// RAM (default 64 GB).
 export async function computeCapability() {
   const cap = process.env.EXPLAINER_VIDEO_FAKE_GPU;
+  if (cap === "failed") return undefined;
   return cap ? +cap : null;
 }
 

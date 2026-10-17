@@ -517,7 +517,7 @@ One image per moving scene of a rendered explainer video: 12 consecutive frames 
 _Avoid_: filmstrip, flipbook
 
 **Tool cache**:
-The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model under its pinned revision, so copies of the skill at different versions coexist. An npm or Chrome install under another hash that no run has used for 30 days is stale, and setup's install removes it; a model at an older revision stays.
+The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model and Python env under its pinned revisions, so copies of the skill at different versions coexist. An install no catalogue row lands in on this machine (npm or Chrome under another hash, a model or env at another revision or for the other device) that no run has used for 30 days is stale, and setup's install removes it.
 _Avoid_: node_modules, tools folder
 
 **Font store**:

@@ -606,6 +606,62 @@ test("an install unused for 30 days is listed with its size and pruned under the
   assert.ok(fs.existsSync(fresh));
 });
 
+test("an env or model folder no catalogue row lands in for this machine's device ages out like an npm install; a current one never does", () => {
+  const row0 = aceRow();
+  const fx = fixture([
+    { ...row0, cpu: { ...row0.cpu, env: { path: "setup/ace", size: 1e9 } } },
+    modelRow(FAKE_SHA),
+  ]);
+  const pin = path.join(fx.skill, "setup", "ace");
+  fs.mkdirSync(pin, { recursive: true });
+  fs.writeFileSync(path.join(pin, "uv.lock"), CPU_PIN.lock);
+  const cpu = crypto
+    .createHash("sha256")
+    .update(CPU_PIN.lock)
+    .digest("hex")
+    .slice(0, 7);
+  const now = Date.now() / 1000;
+  const make = (rel, ageDays) => {
+    const dir = path.join(cacheDir(fx), rel);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, ".stamp"), "");
+    const t = now - ageDays * 24 * 60 * 60;
+    fs.utimesSync(path.join(dir, ".stamp"), t, t);
+    return dir;
+  };
+  // ace-step is opt-in, so a check without --all does not list it: its folder
+  // for this machine's device is still current.
+  const current = [
+    make(path.join("python", `ace-step@fedcba9-0123456-cpu${cpu}`), 45),
+    make(path.join("models", "aligner@0123456789ab"), 45),
+  ];
+  const gpuEnv = make(path.join("python", "ace-step@fedcba9-0123456"), 45);
+  const oldEnv = make(path.join("python", "ace-step@1111111-0123456"), 45);
+  const oldModel = make(path.join("models", "aligner@aaaaaaaaaaaa"), 45);
+  const fresh = make(path.join("models", "aligner@bbbbbbbbbbbb"), 3);
+  // A failed probe may hide a card: the GPU env stays current.
+  const failed = run(fx, ["check"], "ffmpeg", machine("failed")).out;
+  assert.ok(row(failed, "stale python/ace-step@1111111-0123456"), failed);
+  assert.equal(row(failed, "stale python/ace-step@fedcba9-0123456"), undefined);
+  // With no card, the GPU env is stale like on a card under 8.0.
+  const noCard = run(fx, ["check"], "ffmpeg", machine(null)).out;
+  assert.ok(row(noCard, "stale python/ace-step@fedcba9-0123456"), noCard);
+  const c = run(fx, ["check"], "ffmpeg", machine(7.5));
+  assert.equal(c.code, 1, c.out + c.err);
+  for (const id of [
+    "python/ace-step@fedcba9-0123456",
+    "python/ace-step@1111111-0123456",
+    "models/aligner@aaaaaaaaaaaa",
+  ])
+    assert.ok(row(c.out, `stale ${id}`), c.out);
+  assert.doesNotMatch(c.out, /stale python\/ace-step@fedcba9-0123456-cpu/);
+  assert.doesNotMatch(c.out, /stale models\/aligner@(0123456789ab|bbbb)/);
+  const i = run(fx, ["install"], "ffmpeg", machine(7.5));
+  assert.equal(i.code, 0, i.out + i.err);
+  for (const dir of [gpuEnv, oldEnv, oldModel]) assert.ok(!fs.existsSync(dir));
+  for (const dir of [...current, fresh]) assert.ok(fs.existsSync(dir));
+});
+
 test("a usage error exits 2", () => {
   const fx = fixture([]);
   assert.equal(run(fx, ["frobnicate"]).code, 2);
