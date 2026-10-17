@@ -10,13 +10,14 @@
 // writes: <data>/voices/<name>/clip.wav (16-bit PCM, 24 kHz, mono) and
 //         consent.json { name, gender, statement, date, clip: sha256 of
 //         clip.wav, seconds }; remove deletes the folder
-// stderr: a clip outside 8 to 30 s is refused and nothing is kept; removing a
-//         name nobody enrolled
+// stderr: a clip outside 8 to 30 s is refused and nothing is kept; enrolling
+//         on a platform setup refuses the own-voice row on, before anything is
+//         written; removing a name nobody enrolled
 // exit:   0 done · 1 refused · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { clipHash, OWN_NAME, ownVoiceDir } from "../lib/narrators.mjs";
-import { loadBackend } from "../lib/tools.mjs";
+import { catalogue, loadBackend, unavailable } from "../lib/tools.mjs";
 
 const usage =
   'usage: node own-voice.mjs enroll <name> <clip> --gender female|male --consent "<statement>"\n       node own-voice.mjs remove <name>';
@@ -61,6 +62,12 @@ function seconds(file) {
 }
 
 const backend = await loadBackend();
+// Where setup refuses the own-voice row, an enrolled voice could never speak.
+const why = unavailable(
+  catalogue().find((r) => r.id === "own-voice"),
+  backend.platform(),
+);
+if (why) fail(`own-voice: ${why}`, 1);
 fs.mkdirSync(dir, { recursive: true });
 const part = path.join(dir, "clip.wav.part");
 // A refusal leaves nothing behind but an earlier enrollment of the name.

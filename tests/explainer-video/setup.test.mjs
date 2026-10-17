@@ -762,3 +762,98 @@ test("--voice with a narrator nobody ships is a usage error naming it", () => {
   );
   assert.deepEqual(calls(fx), []);
 });
+
+// The machine's platform, as backend.platform() reports it.
+const on = (platform, extra = {}) => ({
+  ...machine(8.6),
+  EXPLAINER_VIDEO_FAKE_PLATFORM: platform,
+  ...extra,
+});
+
+test("on Intel macOS ace-step is refused as unavailable, with the torch reason, and nothing of it is fetched or synced", () => {
+  const fx = fixture(realRows());
+  const check = run(fx, ["check", "--all"], "ffmpeg,uv", on("darwin/x64/14.5"));
+  assert.equal(check.code, 1, check.out + check.err);
+  assert.equal(
+    row(check.out, "ace-step")[2],
+    "refused: unavailable on darwin/x64 14.5: no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; torch's last is 2.2.2",
+  );
+  const install = run(
+    fx,
+    ["install", "--all"],
+    "ffmpeg,uv",
+    on("darwin/x64/14.5"),
+  );
+  assert.match(row(install.out, "ace-step")[2], /^refused: unavailable on/);
+  const fetched = calls(fx).filter(
+    (c) =>
+      (c.call === "download" && /ace-step/i.test(c.url)) || c.call === "uvSync",
+  );
+  assert.deepEqual(fetched, []);
+});
+
+test("on Intel macOS an own voice's row is refused as unavailable, with the torch reason, before any sync", () => {
+  const fx = fixture(realRows());
+  enrolled(fx);
+  const r = run(
+    fx,
+    ["install", "--voice", "own:maya"],
+    "ffmpeg,uv",
+    on("darwin/x64/14.5"),
+  );
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(
+    row(r.out, "own-voice")[2],
+    "refused: unavailable on darwin/x64 14.5: no torch 2.6 wheel for Intel macOS; torch's last is 2.2.2",
+  );
+  assert.deepEqual(
+    calls(fx).filter(
+      (c) =>
+        c.call === "uvSync" ||
+        (c.call === "download" && c.url.includes("chatterbox")),
+    ),
+    [],
+  );
+});
+
+test("on Apple Silicon ace-step is refused below macOS 14 with the mlx reason, and offered from 14", () => {
+  const fx = fixture(realRows());
+  const old = run(fx, ["check", "--all"], "ffmpeg,uv", on("darwin/arm64/13.6"));
+  assert.equal(
+    row(old.out, "ace-step")[2],
+    "refused: unavailable on darwin/arm64 13.6: mlx 0.30.6 has wheels for macOS 14 and later only",
+  );
+  for (const v of ["14.0", "15.2"])
+    assert.equal(
+      row(
+        run(fx, ["check", "--all"], "ffmpeg,uv", on(`darwin/arm64/${v}`)).out,
+        "ace-step",
+      )[2],
+      "missing",
+      v,
+    );
+  enrolled(fx);
+  assert.equal(
+    row(
+      run(
+        fx,
+        ["check", "--voice", "own:maya"],
+        "ffmpeg,uv",
+        on("darwin/arm64/13.6"),
+      ).out,
+      "own-voice",
+    )[2],
+    "missing",
+    "own voice resolves on Apple Silicon at macOS 13",
+  );
+});
+
+test("on Linux and Windows x64 the torch rows are offered as before", () => {
+  const fx = fixture(realRows());
+  for (const p of ["linux/x64", "win32/x64"])
+    assert.equal(
+      row(run(fx, ["check", "--all"], "ffmpeg,uv", on(p)).out, "ace-step")[2],
+      "missing",
+      p,
+    );
+});

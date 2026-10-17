@@ -45,6 +45,7 @@ import {
   skill,
   staged,
   torchDevice,
+  unavailable,
 } from "./lib/tools.mjs";
 
 const usage = "usage: node setup.mjs check|install [--all] [--voice <id>]";
@@ -112,6 +113,9 @@ const size = (r) =>
 const cap = rows.some((r) => r.cpu) ? await backend.computeCapability() : null;
 const shortOfRam = (r) =>
   r.cpu && torchDevice(cap) === "cpu" && backend.memory() < r.cpu.ram;
+// A row with no wheels for this OS, CPU or macOS version is refused before
+// download, since its uv sync could only fail.
+const machine = backend.platform();
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
   const s = fs.lstatSync(p);
@@ -147,6 +151,8 @@ function status(r) {
     return backend.which(r.command) ? "present" : "missing";
   const s = stamp(dest(r));
   if (!fs.existsSync(s)) {
+    const why = unavailable(r, machine);
+    if (why) return `refused: ${why}`;
     if (shortOfRam(r))
       return `refused: the CPU path needs ${formatSize(r.cpu.ram)} RAM, this machine has ${formatSize(backend.memory())}`;
     // uv syncs the row's env, so without it the download would end in a failed row.

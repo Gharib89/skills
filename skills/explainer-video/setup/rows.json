@@ -187,6 +187,19 @@
       "kind": "uv",
       "when": "opt-in",
       "python": true,
+      "unsupported": [
+        {
+          "os": "darwin",
+          "arch": "x64",
+          "why": "no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; torch's last is 2.2.2"
+        },
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "below": "14.0",
+          "why": "mlx 0.30.6 has wheels for macOS 14 and later only"
+        }
+      ],
       "source": {
         "repo": "ace-step/ACE-Step-1.5",
         "revision": "ca1e85fe9430179831e6bc6be790c332190a3866"
@@ -296,6 +309,13 @@
       "when": "voice",
       "backend": "own",
       "python": true,
+      "unsupported": [
+        {
+          "os": "darwin",
+          "arch": "x64",
+          "why": "no torch 2.6 wheel for Intel macOS; torch's last is 2.2.2"
+        }
+      ],
       "source": {
         "path": "scripts/voice/vc"
       },

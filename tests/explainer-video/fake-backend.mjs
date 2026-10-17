@@ -134,6 +134,15 @@ export function memory() {
   return +(process.env.EXPLAINER_VIDEO_FAKE_RAM ?? 64e9);
 }
 
+// EXPLAINER_VIDEO_FAKE_PLATFORM `<os>/<arch>[/<macOS version>]` (default
+// linux/x64).
+export function platform() {
+  const [os, arch, version = null] = (
+    process.env.EXPLAINER_VIDEO_FAKE_PLATFORM ?? "linux/x64"
+  ).split("/");
+  return { os, arch, version };
+}
+
 export function which(cmd) {
   return (process.env.EXPLAINER_VIDEO_FAKE_PRESENT ?? "")
     .split(",")
