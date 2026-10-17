@@ -67,13 +67,15 @@ check_rc "init refuses a missing criteria file as tooling" 2 "$rc"
 check "init names the criteria file it could not read" true \
   "$(if grep -Fq "cannot read the criteria text at $tmp/missing.md" <<<"$out"; then echo true; else echo false; fi)"
 check "init leaves no record behind a refused criteria file" false "$(if [ -e "$tmp/init/ship-crit-e" ]; then echo true; else echo false; fi)"
-for empty in '' '   ' 'null'; do
-  out=$(printf '%s\n' "$empty" | bash "$m" init crit-f --scratchpad "$tmp/init" --criteria - 2>&1); rc=$?
-  check_rc "init refuses empty criteria text [$empty] as tooling" 2 "$rc"
-  check "init names the empty criteria text [$empty]" true \
-    "$(if grep -Fq 'the criteria text is empty' <<<"$out"; then echo true; else echo false; fi)"
+out=$(printf '%s\n' null | bash "$m" init crit-f --scratchpad "$tmp/init" --criteria - 2>&1); rc=$?
+check_rc "init refuses the text null, a failed read of the issue body, as tooling" 2 "$rc"
+check "init names the null criteria text" true \
+  "$(if grep -Fq 'the criteria text is null' <<<"$out"; then echo true; else echo false; fi)"
+check "init leaves no record behind null criteria text" false "$(if [ -e "$tmp/init/ship-crit-f" ]; then echo true; else echo false; fi)"
+for empty in '' '   '; do
+  run=$(printf '%s\n' "$empty" | bash "$m" init crit-g --scratchpad "$tmp/init" --rebuild --criteria - | jq -r .run_file)
+  check "init records no criteria for an empty issue body [$empty]" 0 "$(grep -c '^## Criteria' "$run")"
 done
-check "init leaves no record behind empty criteria text" false "$(if [ -e "$tmp/init/ship-crit-f" ]; then echo true; else echo false; fi)"
 
 # --- gate clean -------------------------------------------------------------------
 base() {
@@ -154,7 +156,7 @@ base; change_run 's/^Round: primary 1: .*/Round: primary 1: no finding was re-ra
 clean 'a round saying a finding was not re-raised'
 base; change_run 's/^Round: primary 1: .*/Round: primary 1: no finding re-raised declined: all fixed/'
 clean 'a round mentioning the marker mid-sentence'
-# A re-raise cap owes no fallback. Only the last-round case is red on the old cap_spent; the other guards it.
+# A re-raise cap owes no fallback. Only the last-round case is red on the code before the re-raise exclusion; the other guards it.
 cap_primary_settle_fallback() {
   sed -i 's/^Fallback-for: None\.$/Fallback-for: None.\n### fallback\nTrigger: on-request\nFallback-for: primary/' "$profile"
   change_run 's/^Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'

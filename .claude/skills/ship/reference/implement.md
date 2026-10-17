@@ -77,8 +77,8 @@ nothing, and settles which text is the spec by
 that text to a file, taking the body with `jq -er .body` so a failed read stops
 there. `run-file init <issue> --from-profile --criteria <file>` then records
 each checkbox line (`-`, `*`, `+` or a numbered item) as an entry under the Run
-file's `## Criteria`, `- <n>: <text>`, and refuses an empty text. A free-text
-run has no issue and passes none, and phase 0 reuses this read. A phase-1
+file's `## Criteria`, `- <n>: <text>`, and refuses the text `null`. Phase 0
+reuses this read. A free-text run has no issue and passes none. A phase-1
 anchor rewrite that changes a criterion leaves the entry as recorded: its
 `Criterion` line names the substitution.
 

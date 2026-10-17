@@ -53,8 +53,8 @@
 # call, refused whole when either half would be. `open 4` is the
 # one open admitted while phase 3 is open, the overlap the run has; any other
 # open over an open phase is refused.
-# `--criteria <file|->` takes the issue's spec text (`-` is stdin; empty text
-# is refused, being a failed read) and records each of its checkbox lines
+# `--criteria <file|->` takes the issue's spec text (`-` is stdin; the text
+# `null`, a failed read, is refused) and records each of its checkbox lines
 # (`-`, `*`, `+` or numbered) outside a fence as `- <n>: <text>` under
 # `## Criteria`, the full set a run owes. The run attests each as
 # `Criterion <n>: met: <proof>` or `Criterion <n>: not met: <reason>` (the last
@@ -869,7 +869,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
           else . end) | .ids;
       def criterion($n): rests("Criterion " + $n + ": ") | last // "";
       # Capped with findings: Cap: spent on a tree-changing last round, which a
-      # docs-only end before the cap, also `Stop: cap`, is not. The dispositioned
+      # docs-only end before the cap, also `Stop: cap`, is not, nor is a
+      # re-raised declined finding: no fix went unread, so no fallback stands in. The dispositioned
       # rounds must read 1..Cap exactly: a gapped, blank or overrun record is no
       # evidence of a spent cap.
       def cap_spent($name): stop($name) == "cap" and (reraised($name) | not)
@@ -982,8 +983,8 @@ init)
       [ -f "$criteria_src" ] && [ -r "$criteria_src" ] || ship_tooling "cannot read the criteria text at $criteria_src"
       text=$(cat "$criteria_src") || ship_tooling "cannot read the criteria text at $criteria_src"
     fi
-    # An empty text is a failed read (read-issue's error JSON gives `null`), not an issue with no criteria.
-    [ -n "${text//[[:space:]]/}" ] && [ "$text" != null ] || ship_tooling "the criteria text is empty"
+    # `null` is what a failed read of the issue body gives; an empty body is a real read.
+    [ "$text" != null ] || ship_tooling "the criteria text is null: a failed read of the issue body"
     criteria=$(ship_unfenced "$text" | awk 'match($0, /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]+\[[ xX]\][[:space:]]+/) {
       t = substr($0, RLENGTH + 1); sub(/[[:space:]]+$/, "", t)
       if (t != "") printf "- %d: %s\n", ++n, t }') || ship_tooling "cannot read the criteria text"

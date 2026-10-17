@@ -33,8 +33,8 @@ references call each item, not a layout:
 - **Deviations from plan**: the phase-2 deviations log verbatim, or that the
   plan held.
 - **Unmet criteria**: each criterion not met, verbatim from the issue, with its
-  reason (the action a human must take, for a host action), or `no line` for a
-  criterion owed one ([Unmet criteria](#unmet-criteria)).
+  reason (the action a human must take, for a host action), or `no line` where
+  the run recorded none ([Unmet criteria](#unmet-criteria)).
 - **Verification**: each applicable verification's phase-3 result and what
   ran, or the reason the PR body gives for none applying.
 - **Self-review**: its rounds and stop, each phase-4 report with its path, and
