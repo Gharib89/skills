@@ -95,9 +95,10 @@ if (rows.some((r) => r.python))
   rows.push(...catalogue.filter((r) => r.when === "python"));
 
 // The `fonts` rows saved style profiles carry (a draft fetched a family no row
-// installs): every profile in the style stores and each run's style.json under
-// ./explainers, one row per family and version, none a catalogue row. A file
-// that does not parse is a row of its own, refused.
+// installs): every profile in the folders profiles are saved to (stores()) and
+// each run's style.json under ./explainers, one row per family and version,
+// none a catalogue row. A file that does not parse is a row of its own,
+// refused.
 const profileFiles = (explainers) => {
   const jsonIn = (d) =>
     fs.existsSync(d)
