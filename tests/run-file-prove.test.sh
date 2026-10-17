@@ -81,6 +81,8 @@ check "a tooling refusal writes nothing" "$held" "$(cat "$rf")"
 prove tests/answer.test.sh
 check_rc "a test with no path to revert is a usage error" 2 "$status"
 check "a test with no path answers the usage line" "$(bash "$bin/run-file.sh" --help | head -n 1)" "$err"
+check "--help states prove's verbatim-word rule" "1" \
+  "$(bash "$bin/run-file.sh" --help | tr '\n' ' ' | grep -c '<test> must be one of the words of *<command>, character for character, or a node ID under it (<test>::<name>)')"
 prove tests/answer.test.sh 'lib .sh'
 check_rc "a reverted path holding whitespace is refused: the line could not be read back" 2 "$status"
 check "the whitespace refusal says why" \

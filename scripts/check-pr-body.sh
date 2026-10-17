@@ -30,6 +30,9 @@
 #
 #   scripts/check-pr-body.sh [<body-file>]      the body on stdin when no file is given
 #
+# `--help` prints that usage line and exits 0; any other argument starting with
+# `-` is a usage error, exit 2, never read as a file.
+#
 # PR_TEMPLATE overrides the template, default .github/pull_request_template.md.
 # Headings are level 2 and matched whole, ignoring trailing whitespace (a CRLF
 # body's `\r` included); a line inside a fenced block or an HTML comment renders
@@ -43,6 +46,12 @@
 # stderr: the `closes #N: <title>` evidence lines, and tooling errors
 # exit: 0 no violation · 1 a violation · 2 tooling
 set -uo pipefail
+
+usage='usage: scripts/check-pr-body.sh [<body-file>]  (the body on stdin when no file is given)'
+case ${1:-} in
+  --help) echo "$usage"; exit 0 ;;
+  -*) echo "$usage" >&2; exit 2 ;;
+esac
 
 template=${PR_TEMPLATE:-$(dirname "${BASH_SOURCE[0]}")/../.github/pull_request_template.md}
 [ -r "$template" ] || { echo "pr-body: cannot read the template $template" >&2; exit 2; }
