@@ -125,10 +125,10 @@ outgrew, though phase 3's settled results keep the first skip's reason. A
 harness that refuses the task tools has answered: run on the file alone.
 
 **Every attested line goes through `run-file note <section> <line> --issue
-<issue>`** (`Round:`, `Stop:`, `Criterion <n>:`, `Noted:`, `Filed:`, the plan):
-it appends under `## <section>` and creates one the record lacks, where an
-editor or heredoc write to the file from a worktree-isolated session draws a
-guard refusal.
+<issue>`** (`Round:`, `Stop:`, `Criterion <n>:`, `Noted:`, `Filed:`):
+it appends one line under `## <section>` and creates one the record lacks,
+where an editor or heredoc write to the file from a worktree-isolated session
+draws a guard refusal.
 
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned**, `<scratch>/<role>/<role>-report.md`, or
