@@ -1,7 +1,8 @@
 // The HyperFrames composition in the `bands` layout, its motion `rise` or
 // `spring`: a page per render (the video's index.html, or a stills page), and
-// one sub-composition file per scene whose visual is a component. The palette comes from the style
-// profile as CSS custom properties; every font is a file beside the page.
+// one sub-composition file per scene whose visual is a component. The palette
+// comes from the style profile as CSS custom properties; every font is a file
+// beside the page.
 import crypto from "node:crypto";
 import { diff, lines } from "../lib/visuals.mjs";
 import { ARABIC } from "../lib/style.mjs";
