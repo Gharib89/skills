@@ -55,7 +55,7 @@ bang=${BASH_REMATCH[3]}
 # Line-anchored, both spellings, because the release run treats either as major.
 # A mention of the words mid-sentence is prose.
 footer=no
-printf '%s\n%s\n' "$body" "$commits" | grep -Eq '^BREAKING[ -]CHANGE:' && footer=yes
+grep -Eq '^BREAKING[ -]CHANGE:' <<<"$body"$'\n'"$commits" && footer=yes
 
 if [ -z "$bang" ] && [ "$footer" = no ]; then
   echo "bump-guard: no major bump implied, no bump label required."
@@ -65,7 +65,7 @@ fi
 # Comma, newline or whitespace separated, whichever the workflow's `join` and the
 # host produced. Lowercased through `tr` rather than `${var,,}`, a Bash 4 builtin.
 have=$(printf '%s' "$labels" | tr ',[:space:]' '\n\n' | tr '[:upper:]' '[:lower:]')
-if printf '%s\n' "$have" | grep -qx 'major'; then
+if grep -qx 'major' <<<"$have"; then
   echo "bump-guard: breaking change carries the 'major' label."
   exit 0
 fi

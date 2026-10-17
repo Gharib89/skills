@@ -21,9 +21,9 @@ para() { awk -v RS= -v lbl="**$2" 'index($0, lbl) == 1' "$1"; }
 
 # Prints "listed" when the re-run paragraph names the item in its write-only clause.
 write_only_lists() {
-  para "$1" 'A setup section re-run' \
-    | grep -o 'writing only where none is found[^(]*([^)]*)' \
-    | grep -q 'Reviewer scaffolding' && echo listed
+  local clause
+  clause=$(para "$1" 'A setup section re-run' | grep -o 'writing only where none is found[^(]*([^)]*)')
+  grep -q 'Reviewer scaffolding' <<<"$clause" && echo listed
 }
 
 # Prints "compares" when the item's paragraph carries the compare for an installed
@@ -73,8 +73,8 @@ check "re-adding the item to the write-only group is caught beside the propose g
 check "the old item has no compare" "" "$(item_compares "$fx/old.md")"
 check "the new item compares an installed workflow" "compares" "$(item_compares "$fx/new.md")"
 
-check "the re-run paragraph exists to be judged" "yes" "$(para "$rerun" 'A setup section re-run' | grep -q . && echo yes || echo no)"
-check "the item exists to be judged" "yes" "$(para "$reviewers" 'Reviewer scaffolding' | grep -q . && echo yes || echo no)"
+check "the re-run paragraph exists to be judged" "yes" "$(grep -q . <<<"$(para "$rerun" 'A setup section re-run')" && echo yes || echo no)"
+check "the item exists to be judged" "yes" "$(grep -q . <<<"$(para "$reviewers" 'Reviewer scaffolding')" && echo yes || echo no)"
 
 check "the re-run paragraph does not list Reviewer scaffolding as write-only" "" "$(write_only_lists "$rerun")"
 

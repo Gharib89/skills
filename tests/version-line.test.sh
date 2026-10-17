@@ -161,6 +161,22 @@ check_rc "the sed idiom reworded is not a version line" 0 "$(rc_of "$d")"
 base_repo elsewhere; sed -i.bak 's/version: 9.9.9/version: 9.9.10/' "$d/docs/note.md"
 check_rc "a version line outside skills/ passes" 0 "$(rc_of "$d")"
 
+# A reader that exits on its first match leaves a writer with more than a pipe
+# buffer (64 KiB) still writing; under pipefail the writer's SIGPIPE then reads
+# as "no match" and flips the verdict (#758). A diff past that size makes the
+# race certain, where a small one lost it only now and then.
+pad() { awk 'BEGIN { for (i = 0; i < 6000; i++) print "# padding line " i " to outgrow a pipe buffer" }'; }
+
+base_repo big-bump
+sed -i.bak 's/version: 7.0.0/version: 7.0.1/' "$d/skills/ship/SKILL.md"
+awk 'BEGIN { for (i = 0; i < 6000; i++) print "  version: 7.0." i }' >> "$d/skills/ship/SKILL.md"
+check_rc "a bump whose diff outgrows a pipe buffer still fails" 1 "$(rc_of "$d")"
+
+base_repo big-renumber
+sed -i.bak 's/version: 7.0.0/version: 0.7.0/' "$d/skills/ship/SKILL.md"
+flip "$d" ship; pad >> "$d/.release/ship.toml"
+check_rc "a renumber whose toml diff outgrows a pipe buffer still passes" 0 "$(rc_of "$d")"
+
 # --- tooling -----------------------------------------------------------------
 
 check_rc "a root that is not a checkout is tooling" 2 "$(rc_of "$fixture/nope")"

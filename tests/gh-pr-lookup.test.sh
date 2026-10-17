@@ -36,7 +36,7 @@ body=$bin/body; printf 'b' > "$body"
 
 # The last call's words, one per line, after the final `--` marker.
 last_call() { awk '/^--$/ { n = ""; next } { n = n $0 "\n" } END { printf "%s", n }' "$GH_ARGV_LOG"; }
-has_pair() { printf '%s' "$1" | grep -A1 -Fx -- "$2" | grep -Fxq -- "$3" && echo yes || echo no; }
+has_pair() { grep -Fxq -- "$3" <<<"$(grep -A1 -Fx -- "$2" <<<"$1")" && echo yes || echo no; }
 
 : > "$GH_ARGV_LOG"
 host_pr_create "$slug" main title "$body" "" >/dev/null 2>&1

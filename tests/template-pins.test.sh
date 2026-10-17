@@ -85,8 +85,8 @@ actions/checkout@0123456789ABCDEF0123456789ABCDEF01234567 # v7.0.1" "$(unpinned 
 
 # A file that vanished or lost its steps passes every case below on empty
 # output, so each must yield at least one ref before it is judged.
-check "the template has uses: lines to judge" "yes" "$(uses "$tpl" | grep -q . && echo yes || echo no)"
-check "this repo's copy has uses: lines to judge" "yes" "$(uses "$own" | grep -q . && echo yes || echo no)"
+check "the template has uses: lines to judge" "yes" "$(grep -q . <<<"$(uses "$tpl")" && echo yes || echo no)"
+check "this repo's copy has uses: lines to judge" "yes" "$(grep -q . <<<"$(uses "$own")" && echo yes || echo no)"
 
 check "every uses: line in the template is a SHA pin with a version comment" "" "$(unpinned "$tpl")"
 check "every checkout in the template sets persist-credentials: false" "" "$(unpersisted "$tpl")"
