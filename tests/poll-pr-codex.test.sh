@@ -2,10 +2,13 @@
 # poll-pr --reviewer on a native Codex block (`Workflow: native codex`): a
 # comment transport with no workflow run behind it, whose round status is read
 # off the PR itself. The payloads under tests/fixtures/codex/ are the bodies
-# Codex posted on the #500 probe PRs (#504 findings, #505 clean) and the reply
-# it posted on issue #500; the only synthesized body is the in-progress status
-# row, a state the probe saw only as "Completed". Trailing whitespace is
-# stripped from the saved bodies, for the house style; nothing reads it.
+# Codex posted on the #500 probe PRs (#504 findings, #505 clean), its
+# marker-led clean comment on #736 (clean-marked.md) and the reply it posted on
+# issue #500. The synthesized bodies are the status rows below (in progress, a
+# state the probe saw only as "Completed", stale, unparseable, or carrying a
+# second marker) and the marker-led notices of the #736 cases. Trailing
+# whitespace is stripped from the saved bodies, for the house style; nothing
+# reads it.
 #
 # Driven end to end over the Host fake and a throwaway repo whose origin names
 # GitHub, as reviewer-run.test.sh drives the workflow transport.
@@ -117,6 +120,39 @@ check "a clean comment with no review is a landed round" '0 since null' \
   "$rc $(jq -r '.landed_by, .not_reviewed' <<<"$out" | xargs)"
 check "the clean round reads as Codex's own words" "Codex Review: Didn't find any major issues. Hooray!" \
   "$(jq -r '.rounds[0].body' <<<"$out" | head -1)"
+
+# The clean comment as #736 got it (clean-marked.md): an HTML comment marker
+# line opens it. The comment alone lands the round, before any 👍.
+reset "$clean_head"
+activity 1 "c|summary-clean.md|2026-10-07T12:36:32Z|2026-10-07T12:38:05Z" "c|clean-marked.md|2026-10-07T12:38:02Z"
+out=$(poll --brief); rc=$?
+check "a clean comment opening with a marker line is a landed round" '0 since null' \
+  "$rc $(jq -r '.landed_by, .not_reviewed' <<<"$out" | xargs)"
+# The status comment carries markers too (a second one added here). Alone, it
+# stays status, read for its row: neither a round nor a notice.
+{ echo '<!-- codex-review-state:v1 {"status":"completed"} -->'; cat "$work/summary-clean.md"; } > "$work/summary-marked.md"
+reset "$clean_head"
+activity 1 "c|summary-marked.md|2026-10-07T12:36:32Z|2026-10-07T12:38:05Z"
+out=$(poll --brief); rc=$?
+check "a status comment with two markers is neither a round nor a notice" '1 0 null' \
+  "$rc $(jq -r '(.rounds | length), .reviewer_blocked' <<<"$out" | xargs)"
+# Clean words below another first prose line make no clean round, whatever the
+# marker's name.
+printf '<!-- codex-future:v2 -->\n\nSomething went wrong.\n\nCodex Review: Didn'"'"'t find any major issues.\n' > "$work/clean-late.md"
+reset "$clean_head"
+activity 1 "c|clean-late.md|2026-10-07T12:38:02Z"
+out=$(poll); rc=$?
+check "the clean words past the first prose line are no round" '1 null blocked' \
+  "$rc $(jq -r '.landed_by, .not_reviewed' <<<"$out" | xargs)"
+check "a marked notice reports its first prose line, not the marker" 'Something went wrong.' \
+  "$(jq -r .reviewer_blocked <<<"$out")"
+# Prose between two comments on one line is prose, not a marker line.
+printf '<!-- a --> Quota hit <!-- b -->\nCodex Review: Didn'"'"'t find any major issues.\n' > "$work/inline-marker.md"
+reset "$clean_head"
+activity 1 "c|inline-marker.md|2026-10-07T12:38:02Z"
+out=$(poll); rc=$?
+check "a line with prose between two comments is the first prose line" '1 blocked <!-- a --> Quota hit <!-- b -->' \
+  "$rc $(jq -r '"\(.not_reviewed) \(.reviewer_blocked)"' <<<"$out")"
 
 # 👍 on the PR alone is Codex's other clean signal.
 reset "$clean_head"
