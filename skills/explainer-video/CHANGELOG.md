@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.0 (2026-10-17)
+
+### Features
+
+- **explainer-video**: A CPU-only torch env for ACE-Step on the CPU path
+  ([#765](https://github.com/Gharib89/skills/pull/765),
+  [`1fef2cf`](https://github.com/Gharib89/skills/commit/1fef2cf612559d0f0252a26b8eeeb9880395ea0e))
+
+
 ## v0.21.0 (2026-10-17)
 
 ### Features
