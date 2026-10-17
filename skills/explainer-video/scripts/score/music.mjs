@@ -227,10 +227,10 @@ export function renderMusic({ sections, total, preset, seed }) {
   // Each track is a list of [voice, t, gain, pan] notes, built into a
   // full-length buffer only when its chain runs, so one track is live at a
   // time rather than eight (a 300 s stereo track is 115 MB). A voice is a
-  // buffer, kept where it is small (the drum one-shots every hit shares, the
-  // fx), or a {make, state} record: made where the arrangement reaches it, to
-  // move the generator on, then dropped, and made again from that state when
-  // its track is built.
+  // buffer, kept where a track holds few of them (snap, clap, hat and shaker,
+  // shared by every hit, and the fx), or a {make, state} record: made where
+  // the arrangement reaches it, to move the generator on, then dropped, and
+  // made again from that state when its track is built.
   const T = Object.fromEntries(
     ["kick", "bass", "snare", "hats", "keys", "pad", "bell", "fx"].map((k) => [
       k,
