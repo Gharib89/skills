@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.1 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Pool the Arabic Gemini narrators over three texts
+  ([#767](https://github.com/Gharib89/skills/pull/767),
+  [`3441934`](https://github.com/Gharib89/skills/commit/34419340ff481588f9b2361ec85c20070eb4b71d))
+
+
 ## v0.22.0 (2026-10-17)
 
 ### Features
