@@ -53,8 +53,9 @@
 # call, refused whole when either half would be. `open 4` is the
 # one open admitted while phase 3 is open, the overlap the run has; any other
 # open over an open phase is refused.
-# `--criteria <file|->` takes the text the issue's spec is (`-` is stdin) and
-# records each of its checkbox lines outside a fence as `- <n>: <text>` under
+# `--criteria <file|->` takes the issue's spec text (`-` is stdin) and records
+# each of its checkbox lines (`-`, `*`, `+` or numbered) outside a fence as
+# `- <n>: <text>` under
 # `## Criteria`, the full set a run owes. The run attests each as
 # `Criterion <n>: met: <proof>` or `Criterion <n>: not met: <reason>` (the last
 # such line deciding, a line anywhere in the file like `Stop:`), and `gate clean`
@@ -185,9 +186,9 @@
 #     Run file (excluding .base.md), and a last `Stop: self-review: cap`
 #     where no reviewer stopped on tree unchanged at a covered head with a
 #     dispositioned Round hold the gate. So does each `## Criteria` entry that
-#     is not met or has no `Criterion <n>:` line, and a reviewer whose Round
-#     text carries `re-raised declined` stopping on tree unchanged: it stops on
-#     cap. An ordinary deviation, a Ship-defect
+#     is not met or has no `Criterion <n>:` line, and a reviewer with a Round
+#     whose text opens `re-raised declined: ` stopping on tree unchanged: it
+#     stops on cap, which that round also keeps from owing a fallback. An ordinary deviation, a Ship-defect
 #     line or a defect draft does not hold it: a defect that breaks a gating
 #     step fails that step's evidence. This read is independent of Merge.
 #     A stamp covers <sha> when it is <sha>, or when every later commit on
@@ -858,7 +859,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # A finding declined and raised again was not answered by the next round
       # reading an unchanged tree: declining is no cheaper than fixing, so the
       # reviewer stops on cap.
-      def reraised($name): any(rests("Round: " + $name + " ")[]; test("re-raised declined"));
+      def reraised($name): any(rests("Round: " + $name + " ")[]; test("^[1-9][0-9]*: re-raised declined: "));
       def settled($name): (stop($name) | word) == "tree unchanged" and reviewed($name) and (reraised($name) | not) and $cover[stop($name) | stamp] == true;
       # The `## Criteria` entries, `- <n>: <text>`, each owed a `Criterion <n>:` line.
       def criteria: [$lines[] | sub("[ \\t\\r]+$"; "")] | reduce .[] as $l ({in: false, ids: []};
@@ -870,7 +871,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # docs-only end before the cap, also `Stop: cap`, is not. The dispositioned
       # rounds must read 1..Cap exactly: a gapped, blank or overrun record is no
       # evidence of a spent cap.
-      def cap_spent($name): stop($name) == "cap"
+      def cap_spent($name): stop($name) == "cap" and (reraised($name) | not)
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
              | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test($round_re))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
@@ -976,9 +977,11 @@ init)
   criteria=""
   if [ -n "$criteria_src" ]; then
     if [ "$criteria_src" = - ]; then text=$(cat) || ship_tooling "cannot read the criteria text"
-    else [ -f "$criteria_src" ] && [ -r "$criteria_src" ] || ship_tooling "cannot read the criteria text at $criteria_src"; text=$(cat "$criteria_src")
+    else
+      [ -f "$criteria_src" ] && [ -r "$criteria_src" ] || ship_tooling "cannot read the criteria text at $criteria_src"
+      text=$(cat "$criteria_src") || ship_tooling "cannot read the criteria text at $criteria_src"
     fi
-    criteria=$(ship_unfenced "$text" | awk 'match($0, /^[[:space:]]*[-*][[:space:]]+\[[ xX]\][[:space:]]+/) {
+    criteria=$(ship_unfenced "$text" | awk 'match($0, /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]+\[[ xX]\][[:space:]]+/) {
       t = substr($0, RLENGTH + 1); sub(/[[:space:]]+$/, "", t)
       if (t != "") printf "- %d: %s\n", ++n, t }') || ship_tooling "cannot read the criteria text"
   fi

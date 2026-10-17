@@ -193,10 +193,12 @@ Stop: <reviewer>: <reason>
 `<text>` is the round's outcome in a line. A reviewer that raises again a
 finding this run declined in an earlier round gets no `tree unchanged` stop for
 it: declining must never be a cheaper way past the gate than fixing. Fix the
-finding, or leave it declined and stop that reviewer on `cap`, and say so in the
-round's text as `re-raised declined: <the finding>`; `gate clean` holds a
-`tree unchanged` stop beside that text, and the `cap` stop keeps the gate held
-as any other does. When the last fully read and
+finding, and the round reads as any other. Leave it declined, and the round's
+text opens with `re-raised declined: <the finding>` and the reviewer stops on
+`cap`, which holds the gate, no fallback standing in for it: the human reads the
+declined finding at the merge gate. `gate clean` also holds a `tree unchanged`
+stop beside that opening. A fixed finding never gets that text. When the last
+fully read and
 dispositioned round changed no file, record `tree unchanged at <sha>` even at
 `Cap:`, in the small lane or for an `auto-once` trigger, `<sha>` the head that
 round read: for a requested round, the PR's head when `request-review` sent it,
@@ -243,13 +245,16 @@ exit first, because a fallback's only input is how its primary exited.
   findings, or `Stop: <primary>: not landed`: drive the fallback as an ordinary
   on-request reviewer under its own `Cap:`. Capped with findings is `Stop:
   <primary>: cap` after it spent `Cap:` (rounds == Cap) on a last round whose
-  fixes changed the tree, so no host round read them. Its exit is its own, and
+  fixes changed the tree, so no host round read them; a `cap` from a
+  [re-raised declined finding](#the-exit) is not that and drives no fallback.
+  Its exit is its own, and
   its `## Review` line and merge-summary block both name the primary's reason
   (`fallback for codex: capped with findings` or `fallback for codex: not
   landed: blocked`, say), the only record of why a second reviewer was paid
   for.
 - Primary `reviewed` otherwise (it stopped on `tree unchanged at <sha>`, a
-  last round whose findings were all declined included, or on `small lane` or
+  last round whose findings were all declined included unless one was a
+  re-raised declined finding, or on `small lane` or
   `auto-once`, or a docs-only fix-only diff ended its loop before `Cap:` was
   spent): do not request it; it exits `not invoked: <primary> reviewed`, so a
   reader sees the reviewer exists.

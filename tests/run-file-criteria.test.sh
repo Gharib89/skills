@@ -30,11 +30,17 @@ cat > "$body" <<'BODY'
 - [ ] first criterion
   - [x] a nested checked one: with a colon
 * [ ] third, starred
++ [x] fourth, plus
+12. [ ] fifth, numbered
+3) [ ] sixth, numbered with a paren
 
 ```
 - [ ] inside a fence is an example, not a criterion
 ```
 
+> - [ ] quoted, not a criterion
+-[ ] no space after the marker
+- [ ]no space after the box
 - plain bullet, no box
 - [ ]
 BODY
@@ -43,7 +49,10 @@ check "init records the unfenced checkbox lines in order" \
   '- 1: not a criterion, but a checkbox line is one wherever it sits
 - 2: first criterion
 - 3: a nested checked one: with a colon
-- 4: third, starred' \
+- 4: third, starred
+- 5: fourth, plus
+- 6: fifth, numbered
+- 7: sixth, numbered with a paren' \
   "$(awk '/^## Criteria/ { f = 1; next } /^## / { f = 0 } f && /^- /' "$run")"
 check "init puts the criteria before the design and plan" \
   true "$(awk '/^## Criteria/ { c = NR } /^## Design and plan/ { d = NR } END { print (c > 0 && c < d) ? "true" : "false" }' "$run")"
@@ -53,8 +62,11 @@ run=$(printf '%s\n' 'no boxes at all' | bash "$m" init crit-c --scratchpad "$tmp
 check "init writes no Criteria section when the text has no checkbox" 0 "$(grep -c '^## Criteria' "$run")"
 check "init without --criteria answers with the keys it always did" 'id,items,mirror,opened,run_file,scratch' \
   "$(bash "$m" init crit-d --scratchpad "$tmp/init" | jq -r 'keys | join(",")')"
-bash "$m" init crit-e --scratchpad "$tmp/init" --criteria "$tmp/missing.md" >/dev/null 2>"$tmp/err"; rc=$?
-check_rc "init refuses an unreadable criteria file as tooling" 2 "$rc"
+out=$(bash "$m" init crit-e --scratchpad "$tmp/init" --criteria "$tmp/missing.md" 2>&1); rc=$?
+check_rc "init refuses a missing criteria file as tooling" 2 "$rc"
+check "init names the criteria file it could not read" true \
+  "$(if grep -Fq "cannot read the criteria text at $tmp/missing.md" <<<"$out"; then echo true; else echo false; fi)"
+check "init leaves no record behind a refused criteria file" false "$(if [ -e "$tmp/init/ship-crit-e" ]; then echo true; else echo false; fi)"
 
 # --- gate clean -------------------------------------------------------------------
 base() {
@@ -133,5 +145,21 @@ base; change_run 's/^Round: primary 1: .*/Round: primary 1: one finding declined
 held 'the cap stop that records it' 'reviewer primary: cap'
 base; change_run 's/^Round: primary 1: .*/Round: primary 1: no finding was re-raised, all fixed/'
 clean 'a round saying a finding was not re-raised'
+base; change_run 's/^Round: primary 1: .*/Round: primary 1: no finding re-raised declined: all fixed/'
+clean 'a round mentioning the marker mid-sentence'
+# A re-raise cap owes no fallback, whether it lands before the primary's Cap is spent or in its last round.
+fallback() {
+  sed -i 's/^Fallback-for: None\.$/Fallback-for: None.\n### fallback\nTrigger: on-request\nFallback-for: primary/' "$profile"
+  change_run 's/^Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'
+  printf '%s\n' 'Round: fallback 1: all dispositioned' 'Stop: fallback: tree unchanged at abcdef0123456789' >> "$f"
+}
+base; sed -i 's/^Trigger: on-request$/Trigger: on-request\nCap: 2/' "$profile"; fallback
+change_run 's/^Round: primary 1: .*/Round: primary 1: fixes pushed\nRound: primary 2: fixes pushed again/'
+clean 'a capped primary a fallback settled'
+change_run 's/^Round: primary 2: .*/Round: primary 2: re-raised declined: the retry guard/'
+held 'a re-raise cap in the last round of the primary Cap, a fallback settled' 'reviewer primary: cap'
+base; sed -i 's/^Trigger: on-request$/Trigger: on-request\nCap: 3/' "$profile"; fallback
+change_run 's/^Round: primary 1: .*/Round: primary 1: one finding declined\nRound: primary 2: re-raised declined: the retry guard/'
+held 'a re-raise cap before the primary Cap is spent, a fallback settled' 'reviewer primary: cap'
 
 finish

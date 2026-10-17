@@ -70,11 +70,16 @@ verbatim in the issue body.
 
 ## Phase 1: criteria the run owes
 
-`run-file init <issue> --from-profile --criteria -` takes the text the issue's
-spec is, from `read-issue`'s `body` (`jq -r .body`), or from the latest
-[superseding brief or comment](#phase-1-spec-precedence) where it has checkboxes
-of its own, and records each checkbox line as an entry under the Run file's
-`## Criteria`, `- <n>: <text>`. A free-text run has no issue and passes none.
+An issue's run reads it first, `read-issue <issue>`, a read that claims nothing,
+and settles which text is the spec by
+[spec precedence](#phase-1-spec-precedence): the body, or the latest
+`writer: true` brief or comment where it has checkboxes of its own.
+`run-file init <issue> --from-profile --criteria -`, that text on stdin, then
+records each of its checkbox lines (`-`, `*`, `+` or a numbered
+item) as an entry under the Run file's `## Criteria`, `- <n>: <text>`. A
+free-text run has no issue and passes none. A phase-1 anchor rewrite that
+changes a criterion leaves the entry as recorded: its `Criterion` line names
+the substitution.
 
 Every entry is owed one line, anywhere in the file, written by the run as it
 settles the criterion: `Criterion <n>: met: <proof>`, the proof a test, a
@@ -84,8 +89,7 @@ an `<n>` decides, so a later `met` replaces an earlier `not met`. A criterion is
 met by what the diff and its checks show, never by the summary's account of
 them: one the run declined, deferred or covered with a "gap" is `not met`.
 `run-file gate clean` holds the merge on each entry that is `not met` or has no
-line ([merge-gate.md](merge-gate.md#unmet-criteria)), and the Spec axis of the
-self-review reads the lines against the diff.
+line ([merge-gate.md](merge-gate.md#unmet-criteria)).
 
 ## Phase 2: classify, then implement test-first
 

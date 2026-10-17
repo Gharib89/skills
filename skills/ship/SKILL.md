@@ -69,8 +69,8 @@ decisions. **First**, read
 that keep a long run from bloating the window, and what it still requires.
 Then the run's **required first action**: after `prepare` and before phase 0,
 `run-file init <issue|slug> --from-profile` initializes the Run file holding the
-ten-item checklist (an issue adds `--criteria`, per
-[implement.md](reference/implement.md#phase-1-criteria-the-run-owes)). Each
+ten-item checklist; an issue's run reads it first and adds `--criteria -`, per
+[implement.md](reference/implement.md#phase-1-criteria-the-run-owes). Each
 phase below flips it with `run-file next`, `open`, `close` or `skip`, and
 closes once its `Done when:` holds, not before.
 
@@ -111,9 +111,10 @@ through `update-issue-body` only when it changes a criterion, else it is logged
 criterion needing a host action no mechanic performs stays verbatim: unattended,
 it is an **unmet criterion** the merge summary lists; attended, ask first, per
 [implement.md](reference/implement.md#phase-1-a-criterion-no-mechanic-can-perform)
-on both. Only then write what success looks like into the Run file as criteria
-a later phase can check; a later triage brief or authoritative comment, each
-`writer: true`, supersedes the body (**spec precedence**).
+on both. Only then settle what success looks like in the Run file: an issue's
+`## Criteria` as init recorded them, else criteria a later phase can check; a
+later triage brief or authoritative comment, each `writer: true`, supersedes the
+body (**spec precedence**).
 **Done when:** `claim: taken`, anchors grepped, the Run file holds the criteria.
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the

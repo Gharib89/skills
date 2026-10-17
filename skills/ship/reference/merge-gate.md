@@ -137,9 +137,10 @@ An **unmet criterion** is any checkbox criterion the run did not meet: one
 asking for a host action no mechanic performs, which stays verbatim in the issue
 ([implement.md](implement.md#phase-1-a-criterion-no-mechanic-can-perform)), or
 one the run could not prove. Each carries `Criterion <n>: not met: <reason>` in
-the Run file ([implement.md](implement.md#phase-1-criteria-the-run-owes)), and
-the `Unmet criteria` item lists it verbatim with that reason and the action a
-human must take; the gap is also in the deviations log. The item is the human's
+the Run file ([implement.md](implement.md#phase-1-criteria-the-run-owes)), or
+is owed that line and has none, and the `Unmet criteria` item lists it verbatim
+with its reason, which is the action a human must take where it is a host
+action; the gap is also in the deviations log. The item is the human's
 to clear: **merging needs an explicit waiver of each unmet criterion, beside the
 merge word**: "merge" alone, or a waiver naming fewer than all of them, is asked
 back. `gate clean` reads the same lines, holding on each criterion not met or
@@ -183,9 +184,10 @@ command a human runs after merging, from a file they save the draft to,
 Read the optional `Merge:` line under the profile's `## PR`. An absent line
 or `Merge: Default.` means post the summary in the conversation and **wait**
 for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
-means evaluate the clean gate below, which holds on an unmet criterion until the
-human's waiver ([Unmet criteria](#unmet-criteria)). Any other
-value holds for the human as a profile error. An inline-lane run reads it as
+means evaluate the clean gate below, which holds on an unmet criterion; the
+human's waiver beside "merge" clears it
+([Unmet criteria](#unmet-criteria)). Any other value holds for the human as a
+profile error. An inline-lane run reads it as
 `on-clean-gate` for its own PR. The unattended branch never evaluates this
 option.
 
