@@ -9,10 +9,6 @@
 //                                                  stale install, print the
 //                                                  table again
 //
-// Fonts a saved style profile carries (`fonts` rows) are listed and installed
-// beside the catalogue's: the profiles in the style stores, and each run's
-// style.json under ./explainers, so run it from the project root.
-//
 // --all adds the opt-in rows. --voice names the narrator whose voice rows are
 // listed (default: the English default narrator). A system package (ffmpeg,
 // uv) is never installed: its install lines (Linux, brew, winget) are printed

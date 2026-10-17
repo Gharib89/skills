@@ -29,22 +29,21 @@ writes, skip to Voice or Render.
 
 ## Setup
 
-`/explainer-video setup` runs the check and the install with no video, so the
-tools are in place before a deadline. Setup writes to two per-user folders: the
-**tool cache**, holding the npm packages and Chrome under the hash of this
-skill's lockfile and each model under its pinned revision, and the **font
-store**, holding fonts by family and version. An install in the tool cache for
-another lockfile hash that no run has used for 30 days is **stale**. Run the
-script by the skill's own path, `<skill>` below being the folder this file is
-in:
+`/explainer-video setup` runs the check and the install with no video. Setup
+writes to two per-user folders: the **tool cache**, holding the npm packages and
+Chrome under the hash of this skill's lockfile and each model under its pinned
+revision, and the **font store**, holding fonts by family and version, plus the
+`fonts` rows of saved style profiles (run setup from the project root so it
+finds them). An install in the tool cache for another lockfile hash that no run
+has used for 30 days is **stale**. Run the script by the skill's own path,
+`<skill>` below being the folder this file is in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
    user asked for every opt-in row too, or the brief's `score` is `ace-step`,
    and `--voice <id>` with the narrator the voice stage will use (the brief's
    `voice`, or `script.json`'s `narrator`): the voice rows listed are that
    narrator's (without it, the English default's). Exit 0 means every row
-   is present and nothing is stale: say so, with any line under the table, and
-   stop.
+   is present and nothing is stale: say so and stop.
 2. **One yes.** Show the table as printed, with any line under it (the
    `ace-step` and `own-voice` rows': GPU or CPU here, and on the CPU its cost
    per 30 s of score or narration), then ask once for the whole table, naming
