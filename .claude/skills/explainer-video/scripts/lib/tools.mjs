@@ -51,7 +51,7 @@ export function dest(r, dirs = userDirs(), device) {
         .digest("hex")
         .slice(0, 7);
     const code = r.source.path ? hashOf(r.source.path) : r.source.revision;
-    const pin = device === "cpu" && r.cpu?.env;
+    const pin = cpuEnv(r, device);
     return path.join(
       dirs.cache,
       "python",
@@ -71,6 +71,11 @@ export function dest(r, dirs = userDirs(), device) {
 // compute capability (null with no NVIDIA card): CUDA from 8.0, which has
 // bfloat16; under it acestep runs CUDA in float16, which gives NaN, so the CPU.
 export const torchDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
+
+// A row's CPU-only pin (`cpu.env`) where it runs on the `cpu` device, else
+// undefined.
+export const cpuEnv = (r, device) =>
+  device === "cpu" ? r.cpu?.env : undefined;
 
 // Why the catalogue row `id` cannot install on platform `p`
 // (backend.platform()), from the first of its `unavailable` entries `p`

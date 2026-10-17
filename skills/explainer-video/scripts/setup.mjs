@@ -39,6 +39,7 @@ import { stores } from "./lib/style.mjs";
 import {
   TOOL_DIRS,
   catalogue as readCatalogue,
+  cpuEnv,
   dest,
   fontGap,
   installFont,
@@ -169,8 +170,7 @@ const shortOfRam = (r) => device(r) === "cpu" && backend.memory() < r.cpu.ram;
 // A uv env's size is the CPU-only pin's, where the row has one and runs on the CPU.
 const size = (r) =>
   r.kind === "uv"
-    ? (device(r) === "cpu" && r.cpu.env ? r.cpu.env.size : r.size) +
-      filesSize(r)
+    ? (cpuEnv(r, device(r))?.size ?? r.size) + filesSize(r)
     : (r.size ?? filesSize(r));
 const installDir = (r) => dest(r, undefined, device(r));
 // The OS, CPU and macOS version a row's `unavailable` entries match.
@@ -318,10 +318,11 @@ async function install(r) {
       await backend.extract(zip, path.join(dir, "src"));
       fs.rmSync(zip);
       // On the CPU, the skill's own pin replaces the upstream's CUDA one.
-      if (device(r) === "cpu" && r.cpu.env)
+      const pin = cpuEnv(r, device(r));
+      if (pin)
         for (const f of ["pyproject.toml", "uv.lock"])
           fs.copyFileSync(
-            path.join(skill, r.cpu.env.path, f),
+            path.join(skill, pin.path, f),
             path.join(dir, "src", f),
           );
     }

@@ -422,7 +422,7 @@ test("the carried CPU pin was derived from the ACE-Step commit the row pins, so 
   assert.equal(ace.cpu.env.derivedFrom, ace.source.revision);
 });
 
-test("the carried CPU pin has no NVIDIA package and pins every torch to its +cpu build", () => {
+test("every +cpu torch build in the carried CPU lock depends on no NVIDIA package, triton or CUDA build", () => {
   const rows = JSON.parse(
     fs.readFileSync(path.join(source, "setup", "rows.json"), "utf8"),
   ).rows;
