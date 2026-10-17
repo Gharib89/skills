@@ -245,7 +245,7 @@ is_open()    { case $1 in *" in_progress ("[0-9][0-9]:[0-9][0-9]"→)") return 0
 reject_written_state() { # reject_written_state <rendered line>
   [ "${1%%$'\n'*}" = "$1" ] \
     || ship_tooling "a phase is one line: that reason carries a newline; reword it"
-  printf '%s\n' "$1" | grep -Eq '\([0-9]{2}:[0-9]{2}→([0-9]{2}:[0-9]{2}(\+1d)?)?\)$'
+  grep -Eq '\([0-9]{2}:[0-9]{2}→([0-9]{2}:[0-9]{2}(\+1d)?)?\)$' <<<"$1"
   case $? in
     0) ship_tooling "that reason leaves the phase line ending in one of the Run file's own state shapes; reword it" ;;
     1) ;;
@@ -253,7 +253,7 @@ reject_written_state() { # reject_written_state <rendered line>
   esac
 }
 reject_stamp_tail() { # reject_stamp_tail <flag> <value>
-  printf '%s\n' "$2" | grep -Eq '\([0-9]{2}:[0-9]{2}→[0-9]{2}:[0-9]{2}(\+1d)?\)|in_progress \([0-9]{2}:[0-9]{2}→\)| skipped \('
+  grep -Eq '\([0-9]{2}:[0-9]{2}→[0-9]{2}:[0-9]{2}(\+1d)?\)|in_progress \([0-9]{2}:[0-9]{2}→\)| skipped \(' <<<"$2"
   case $? in
     0) ship_tooling "$1 cannot carry the Run file's own state shapes ((HH:MM→HH:MM), in_progress (HH:MM→), skipped (<reason>)): a phase line reads them as state" ;;
     1) ;;

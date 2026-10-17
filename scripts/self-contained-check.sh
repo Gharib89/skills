@@ -67,7 +67,9 @@ while IFS= read -r f; do
   n=0 fence_char='' fence_len=0 fence_depth=0 pending=''
   while IFS= read -r line || [ -n "$line" ]; do
     n=$((n + 1))
-    if printf '%s\n' "$line" | grep -oiE "$url" | grep -qviE "$destination"; then
+    urls=$(grep -oiE "$url" <<<"$line")
+    # no URL is no finding: an empty here-string is one empty line, which -v selects
+    if [ -n "$urls" ] && grep -qviE "$destination" <<<"$urls"; then
       printf '%s:%s: links source-repo material by URL\n' "$f" "$n"; rc=1
     fi
     prev=$pending pending='' body=$line depth=0
@@ -87,7 +89,7 @@ while IFS= read -r f; do
     fi
     [ -z "$fence_char" ] || continue
     prose=$(printf '%s\n' "$body" | sed 's/`[^`]*`//g')
-    if printf '%s\n' "$prose" | grep -qiE "$number"; then
+    if grep -qiE "$number" <<<"$prose"; then
       printf '%s:%s: cites an issue or PR number\n' "$f" "$n"; rc=1
     fi
     while IFS= read -r target; do

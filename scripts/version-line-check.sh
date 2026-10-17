@@ -49,8 +49,9 @@ renumbered() {
   old=$(printf '%s\n' "$2" | sed -n 's/^-[[:space:]]*version:[[:space:]]*//p')
   new=$(printf '%s\n' "$2" | sed -n 's/^+[[:space:]]*version:[[:space:]]*//p')
   [[ $old =~ ^[1-9][0-9]*\.[0-9]+\.[0-9]+$ && $new == "0.${old%%.*}.${old##*.}" ]] || return 1
-  git -C "$root" diff -U0 "$mb" -- ".release/$s.toml" \
-    | grep -qx '+allow_zero_version = true'
+  local flip
+  flip=$(git -C "$root" diff -U0 "$mb" -- ".release/$s.toml") || return 1
+  grep -qx '+allow_zero_version = true' <<<"$flip"
 }
 
 rc=0
@@ -59,7 +60,7 @@ while IFS= read -r -d '' f; do
   hits=$(git -C "$root" diff -U0 "$mb" -- "$f" | grep -E "$line_re") || continue
   # A `+` alone is a line arriving with a new frontmatter block; a `-` is the one
   # that was already there and moved.
-  printf '%s\n' "$hits" | grep -q '^-' || continue
+  grep -q '^-' <<<"$hits" || continue
   renumbered "$f" "$hits" && continue
   printf '%s: changes a metadata.version line, which the release run owns\n' "$f"
   printf '%s\n' "$hits" | sed 's/^/    /'
