@@ -190,7 +190,13 @@ Round: <reviewer> <n>: <text>
 Stop: <reviewer>: <reason>
 ```
 
-`<text>` is the round's outcome in a line. When the last fully read and
+`<text>` is the round's outcome in a line. A reviewer that raises again a
+finding this run declined in an earlier round gets no `tree unchanged` stop for
+it: declining must never be a cheaper way past the gate than fixing. Fix the
+finding, or leave it declined and stop that reviewer on `cap`, and say so in the
+round's text as `re-raised declined: <the finding>`; `gate clean` holds a
+`tree unchanged` stop beside that text, and the `cap` stop keeps the gate held
+as any other does. When the last fully read and
 dispositioned round changed no file, record `tree unchanged at <sha>` even at
 `Cap:`, in the small lane or for an `auto-once` trigger, `<sha>` the head that
 round read: for a requested round, the PR's head when `request-review` sent it,
@@ -201,8 +207,9 @@ when the round starts, since another reviewer's fixes can move the PR's head
 past what a round read before its poll returns; `close 7` refuses the stop
 without it, and `gate clean` holds on the stop once its `<sha>` no longer
 covers the PR head. Otherwise `<reason>` is one of
-`cap` (`Cap:` spent, or a docs-only fix-only diff ended the loop: either way the
-last fixes went unread by a host round), `tree unchanged at <sha>` (a round's
+`cap` (`Cap:` spent, a docs-only fix-only diff ended the loop, or a declined
+finding came back: in each the last fixes or the declined finding went unread
+by a host round), `tree unchanged at <sha>` (a round's
 dispositions changed no file, so a further round would read the same tree),
 `small lane` (the lane's one requested round), `inline lane` (the lane requested
 no round), `auto-once` (the reviewer fires once, on PR open), `not landed` (a

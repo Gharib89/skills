@@ -69,8 +69,10 @@ decisions. **First**, read
 that keep a long run from bloating the window, and what it still requires.
 Then the run's **required first action**: after `prepare` and before phase 0,
 `run-file init <issue|slug> --from-profile` initializes the Run file holding the
-ten-item checklist. Each phase below flips it with `run-file next`, `open`,
-`close` or `skip`, and closes once its `Done when:` holds, not before.
+ten-item checklist (an issue adds `--criteria`, per
+[implement.md](reference/implement.md#phase-1-criteria-the-run-owes)). Each
+phase below flips it with `run-file next`, `open`, `close` or `skip`, and
+closes once its `Done when:` holds, not before.
 
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every gating call goes through a mechanic**, a host call a
