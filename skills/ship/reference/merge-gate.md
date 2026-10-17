@@ -51,9 +51,8 @@ references call each item, not a layout:
   [A tracker issue on Targets:](#a-tracker-issue-on-targets).
 - **CI**: each `Legs:` leg's state, any red check outside the legs and any
   check missing from `Legs:`.
-- **Issues filed**, each by number, title and link, from the `file-issue`
-  call's own answer, **linked**, each by number and title, and each **noted**
-  adjacent find.
+- **Issues filed**, each by number, title and link, **linked**, each by number
+  and title, and each **noted** adjacent find.
 - **Ship defects**, each with the phase it was met in and its draft's title
   and path (or its number, filed here), **Ship notes** and **Direct calls**,
   below.

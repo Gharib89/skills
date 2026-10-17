@@ -130,8 +130,6 @@ A section a rewrite swallowed is missing from `read-pr`'s `headings`, the only
 place a swallowed `## Attribution` shows while the PR is open;
 `update-pr-body`'s `sections` list is the same check one write earlier.
 
-Where the profile's `## PR` carries `Body-check: <path>`, the repo's own body
-checker, `update-pr-body` runs it on the body it would publish and refuses with
-its output when it fails, so a rewrite that breaks the repo's body rule (an
-outline over its fence limit, say) is fixed before the write, not found red in
-CI. Run that checker on a hand-written body before `open-pr` too.
+`update-pr-body` runs the repo's body checker, the profile's `## PR`
+`Body-check:` line, on the body it would publish; run it on a hand-written body
+before `open-pr` too.

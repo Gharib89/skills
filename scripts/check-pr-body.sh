@@ -98,10 +98,10 @@ outline_violations() {
       for (i = 1; i <= n; i++) {
         s = t[i]; sub(/[:,]$/, "", s)
         if (index(s, "/")) return s
-        if (t[i] !~ /\.[A-Za-z0-9][A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[:,]?$/) continue
+        if (s !~ /\.[A-Za-z0-9][A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?[A-Za-z0-9]?$/) continue
         # A stem of digits and dots is a version (24.2.9), not a file name.
-        sub(/\.[A-Za-z0-9]+$/, "", s)
-        if (s !~ /^[0-9.]+$/) return t[i] ~ /[:,]$/ ? substr(t[i], 1, length(t[i]) - 1) : t[i]
+        stem = s; sub(/\.[A-Za-z0-9]+$/, "", stem)
+        if (stem !~ /^[0-9.]+$/) return s
       }
       return ""
     }
@@ -212,7 +212,7 @@ case $? in
   *) echo "pr-body: grep failed" >&2; exit 2 ;;
 esac
 found=$(outline_violations "$body")
-violations=$(grep -v '^@sym' <<<"$found")
+violations=$(sed '/^@sym/d' <<<"$found")
 # A node the outline names must be a symbol in its root's file (or under it,
 # for a directory), so an outline cannot name a function the change never wrote.
 while IFS=$'\t' read -r _ file sym; do
@@ -226,7 +226,7 @@ while IFS=$'\t' read -r _ file sym; do
     1) violations+=${violations:+$'\n'}"pr-body: change outline: node $sym is not in $file" ;;
     *) violations+=${violations:+$'\n'}"pr-body: change outline: node $sym: file not found: $file" ;;
   esac
-done < <(grep '^@sym' <<<"$found")
+done < <(sed -n '/^@sym/p' <<<"$found")
 
 [ -n "$missing$violations" ] || exit 0
 printf '%s\n' "$missing${missing:+${violations:+$'\n'}}$violations"

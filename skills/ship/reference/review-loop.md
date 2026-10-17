@@ -145,15 +145,13 @@ admitted.
   `file-issue` call in this round**, `--outside-scope "<reason>"` when it cites
   a path the PR changes, per [phase 2's adjacent
   finds](implement.md#phase-2-adjacent-finds): the thread reply and the `##
-  Review` line name the issue from the call's answer. A refusal or a failure is
-  reported only as the call returned it, never as one the run assumed; and a
-  find left for the human to ask for is unfiled.
+  Review` line name the issue from the call's answer.
 - **Write each round to the Run file as you disposition it**
-  (`run-file note "Review evidence" "<line>" --issue <issue>`, one call per
-  line), one line per finding with its disposition, one per round whose
-  `reviewer_run.denied`
-  is numeric, with the run URL, and the round's `Round:` line (formats under
-  [The exit](#the-exit)): the `## Review` line is read from them.
+  (`run-file note Evidence "<line>" --issue <issue>`, one call per line), one
+  line per finding with its disposition, one per round whose
+  `reviewer_run.denied` is numeric, with the run URL, and the round's `Round:`
+  line (formats under [The exit](#the-exit)): the `## Review` line is read from
+  them.
 
 ## The exit
 
@@ -199,9 +197,10 @@ Round: <reviewer> <n>: <text>
 Stop: <reviewer>: <reason>
 ```
 
-`<text>` is the round's outcome in a line. `not reviewed: <reason>` is the same
-stop as `not reviewed` with its reason attached, and `close 7` and `gate clean`
-read it that way. A reviewer that raises again a
+`<text>` is the round's outcome in a line. Write each line with `run-file note
+Evidence "<line>" --issue <issue>`. `close 7` and `gate clean` match the `not
+reviewed` prefix, so `Stop: <reviewer>: not reviewed: <reason>` satisfies every
+rule the bare form does. A reviewer that raises again a
 finding this run declined in an earlier round gets no `tree unchanged` stop for
 it: declining must never be a cheaper way past the gate than fixing. Fix the
 finding, and the round reads as any other. Leave it declined, and the round's

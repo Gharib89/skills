@@ -274,6 +274,14 @@ check_rc "a root naming a directory searches under it" \
   0 "$(oc_rc '```diff\n scripts/\n+  helper()\n```')"
 check_rc "a node the root file calls but another file defines passes" \
   0 "$({ printf 'source lib.sh\nhelper\n' > "$PR_ROOT/c.sh"; oc_rc '```diff\n c.sh\n+  helper()\n```'; })"
+check "an absolute root is read under the root, not the filesystem" \
+  "pr-body: change outline: node helper: file not found: /etc/hostname" \
+  "$(oc_out '```diff\n /etc/hostname\n+  helper()\n```')"
+check "a root that climbs out of the tree is not found" \
+  "pr-body: change outline: node helper: file not found: ../a.sh" \
+  "$(oc_out '```diff\n ../a.sh\n+  helper()\n```')"
+check_rc "a tab-indented node is a node" \
+  1 "$(oc_rc '```diff\n scripts/a.sh\n+\tmissing_fn()\n```')"
 check_rc "a root with a glob is not resolved" \
   0 "$(oc_rc '```diff\n scripts/*.sh\n+  missing_fn()\n```')"
 check "a root whose file is absent is named" \

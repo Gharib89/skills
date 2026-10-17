@@ -93,4 +93,12 @@ out=$(mech 7 --section Review --body-file "$work/review" 2>/dev/null); rc=$?
 check_rc "a checker that exits 2 is tooling" 2 "$rc"
 check "its stderr is the reason" "body check scripts/check-outline.sh failed (exit 2): oops" "$(jq -r .error <<<"$out")"
 check "and nothing is written" no "$(wrote)"
+
+# A checker answering with a line per violation is capped at its last 40 lines.
+printf '#!/bin/sh\nseq 1 50\nexit 1\n' > "$repo/scripts/check-outline.sh"
+reset; pr_body 2
+out=$(mech 7 --section Review --body-file "$work/review" 2>/dev/null); rc=$?
+check_rc "a checker with long output is still refused" 1 "$rc"
+check "its first lines are cut" 0 "$(jq -r .error <<<"$out" | grep -cx '1\|10')"
+check "and its last 40 lines kept" 40 "$(jq -r .error <<<"$out" | grep -cE '^[0-9]+$|: 11$')"
 finish

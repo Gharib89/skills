@@ -49,7 +49,7 @@
 # (a path from the checkout root, run with the new body's file as its one
 # argument), runs on the body this would publish, before the host write: exit 0
 # publishes, exit 1 refuses with the checker's stdout in the error, and any other
-# exit is tooling with its stderr. No profile, no line or `None.` publishes
+# exit is tooling with its stderr, each capped at its last 40 lines. No profile, no line or `None.` publishes
 # unchecked. A body already failing the checker for a part this write does not
 # touch is refused too: it would fail the repo's CI as it stands.
 #
@@ -106,8 +106,8 @@ if [ -n "$check" ]; then
   checked=$(cd "$(git rev-parse --show-toplevel)" && "./$check" "$new" 2>"$new.err"); rc=$?
   case $rc in
     0) ;;
-    1) ship_fail "PR body fails the repo's body check ($check): $checked" ;;
-    *) ship_tooling "body check $check failed (exit $rc): $(cat "$new.err")" ;;
+    1) ship_fail "PR body fails the repo's body check ($check): $(printf '%s\n' "$checked" | tail -n 40)" ;;
+    *) ship_tooling "body check $check failed (exit $rc): $(tail -n 40 "$new.err")" ;;
   esac
 fi
 answer=$(host_pr_set_body "$pr" "$new") || ship_fail "PR body update failed" "$answer"
