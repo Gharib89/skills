@@ -622,16 +622,24 @@ const fromCache = (nodeDir) =>
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta";
 const GEMINI_TTS = "gemini-3.8-flash-tts";
 
-// A Gemini answer's error message: its JSON's, else its text.
+// A Gemini answer's error message: its JSON's, else its text. A rate or daily
+// limit answers 429; spent prepaid credits answer 402
+// (https://ai.google.dev/gemini-api/docs/troubleshooting) with `error.status:
+// "RESOURCE_EXHAUSTED"`, a body seen live but not in the docs.
 async function geminiError(r) {
   const body = await r.text();
-  let message = body;
+  let error = {};
   try {
-    message = JSON.parse(body).error?.message ?? body;
+    error = JSON.parse(body).error ?? {};
   } catch {}
   return Object.assign(
-    new Error(`Gemini answered HTTP ${r.status}: ${message}`),
-    { quota: r.status === 429, vendor: "Gemini" },
+    new Error(`Gemini answered HTTP ${r.status}: ${error.message ?? body}`),
+    {
+      quota:
+        r.status === 429 ||
+        (r.status === 402 && error.status === "RESOURCE_EXHAUSTED"),
+      vendor: "Gemini",
+    },
   );
 }
 

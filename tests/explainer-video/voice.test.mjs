@@ -568,3 +568,42 @@ test("the real ElevenLabs backend reads spent credits as a quota stop and invali
     globalThis.fetch = real;
   }
 });
+
+// Gemini answers spent prepaid credits with 402 and `error.status:
+// "RESOURCE_EXHAUSTED"` (the live answer of 2026-10-16; Google's docs name the
+// 402 but show no body), and a rate or daily limit with 429.
+test("the real Gemini backend reads spent prepaid credits as a quota stop and a bare 402 as not one", async () => {
+  const { synthesize } =
+    await import("../../skills/explainer-video/scripts/lib/backend.mjs");
+  const real = globalThis.fetch;
+  const answer = (status, error) => async () =>
+    new Response(JSON.stringify({ error }), { status });
+  const narrator = { backend: "gemini", voice: "Kore", style: "warm" };
+  try {
+    globalThis.fetch = answer(402, {
+      code: 402,
+      status: "RESOURCE_EXHAUSTED",
+      message: "Your prepayment credits are depleted.",
+    });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: true,
+      vendor: "Gemini",
+      message:
+        "Gemini answered HTTP 402: Your prepayment credits are depleted.",
+    });
+    globalThis.fetch = answer(429, {
+      code: 429,
+      status: "RESOURCE_EXHAUSTED",
+      message: "rate limit",
+    });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: true,
+    });
+    globalThis.fetch = answer(402, { code: 402, message: "no status" });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: false,
+    });
+  } finally {
+    globalThis.fetch = real;
+  }
+});
