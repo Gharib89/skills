@@ -262,7 +262,7 @@ test("a clip changed after enrollment has no consent record for it: the voice st
 
 const INTEL_MAC = { EXPLAINER_VIDEO_FAKE_PLATFORM: "darwin/x64/14.5" };
 const TORCH_26 =
-  "unavailable on darwin/x64 14.5: no torch 2.6 wheel for Intel macOS; torch's last is 2.2.2";
+  "unavailable on darwin/x64 14.5: no torch 2.6 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2";
 
 test("on Intel macOS enroll is refused with the own-voice row's reason before any clip or consent is written", () => {
   const fx = fixture();
@@ -285,7 +285,7 @@ test("on Intel macOS the brief refuses an own voice and score=ace-step, each nam
   assert.equal(r.code, 1, r.out + r.err);
   assert.equal(
     r.err.trim(),
-    "brief score ace-step: unavailable on darwin/x64 14.5: no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; torch's last is 2.2.2",
+    "brief score ace-step: unavailable on darwin/x64 14.5: no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2",
   );
   for (const s of ["on", "off"]) assert.equal(onMac([`score=${s}`]).code, 0, s);
   assert.equal(brief(fx, ["score=ace-step"]).code, 0, "linux takes it");

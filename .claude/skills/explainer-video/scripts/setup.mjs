@@ -113,8 +113,7 @@ const size = (r) =>
 const cap = rows.some((r) => r.cpu) ? await backend.computeCapability() : null;
 const shortOfRam = (r) =>
   r.cpu && torchDevice(cap) === "cpu" && backend.memory() < r.cpu.ram;
-// A row with no wheels for this OS, CPU or macOS version is refused before
-// download, since its uv sync could only fail.
+// The OS, CPU and macOS version a row's `unavailable` entries match.
 const machine = backend.platform();
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
@@ -151,7 +150,8 @@ function status(r) {
     return backend.which(r.command) ? "present" : "missing";
   const s = stamp(dest(r));
   if (!fs.existsSync(s)) {
-    const why = unavailable(r, machine);
+    // No wheels here: refused before download, since its uv sync could only fail.
+    const why = unavailable(r.id, machine);
     if (why) return `refused: ${why}`;
     if (shortOfRam(r))
       return `refused: the CPU path needs ${formatSize(r.cpu.ram)} RAM, this machine has ${formatSize(backend.memory())}`;

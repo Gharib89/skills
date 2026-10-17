@@ -776,7 +776,7 @@ test("on Intel macOS ace-step is refused as unavailable, with the torch reason, 
   assert.equal(check.code, 1, check.out + check.err);
   assert.equal(
     row(check.out, "ace-step")[2],
-    "refused: unavailable on darwin/x64 14.5: no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; torch's last is 2.2.2",
+    "refused: unavailable on darwin/x64 14.5: no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2",
   );
   const install = run(
     fx,
@@ -804,7 +804,7 @@ test("on Intel macOS an own voice's row is refused as unavailable, with the torc
   assert.equal(r.code, 1, r.out + r.err);
   assert.equal(
     row(r.out, "own-voice")[2],
-    "refused: unavailable on darwin/x64 14.5: no torch 2.6 wheel for Intel macOS; torch's last is 2.2.2",
+    "refused: unavailable on darwin/x64 14.5: no torch 2.6 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2",
   );
   assert.deepEqual(
     calls(fx).filter(
@@ -850,10 +850,30 @@ test("on Apple Silicon ace-step is refused below macOS 14 with the mlx reason, a
 
 test("on Linux and Windows x64 the torch rows are offered as before", () => {
   const fx = fixture(realRows());
-  for (const p of ["linux/x64", "win32/x64"])
+  enrolled(fx);
+  for (const p of ["linux/x64", "win32/x64"]) {
     assert.equal(
       row(run(fx, ["check", "--all"], "ffmpeg,uv", on(p)).out, "ace-step")[2],
       "missing",
       p,
     );
+    assert.equal(
+      row(
+        run(fx, ["check", "--voice", "own:maya"], "ffmpeg,uv", on(p)).out,
+        "own-voice",
+      )[2],
+      "missing",
+      p,
+    );
+  }
+});
+
+test("a macOS version is compared by its numbers, and an unknown one refuses nothing", () => {
+  const fx = fixture(realRows());
+  const ace = (p) =>
+    row(run(fx, ["check", "--all"], "ffmpeg,uv", on(p)).out, "ace-step")[2];
+  assert.match(ace("darwin/arm64/13.6.1"), /^refused: unavailable on/);
+  assert.match(ace("darwin/arm64/9.9"), /^refused: unavailable on/);
+  for (const p of ["darwin/arm64/14", "darwin/arm64/14.0.1", "darwin/arm64"])
+    assert.equal(ace(p), "missing", p);
 });

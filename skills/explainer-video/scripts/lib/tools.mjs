@@ -68,23 +68,26 @@ export function dest(r, dirs = userDirs()) {
 // bfloat16; under it acestep runs CUDA in float16, which gives NaN, so the CPU.
 export const torchDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
 
-// Why row `r` cannot install on platform `p` (backend.platform()), from the
-// first of its `unsupported` entries `p` matches: same os, same arch where the
-// entry names one, a version under its `below` where it names one (an unknown
-// version never matches). Null where nothing matches.
-export function unavailable(r, p) {
+// Why the catalogue row `id` cannot install on platform `p`
+// (backend.platform()), from the first of its `unavailable` entries `p`
+// matches: same os, same arch where the entry names one, a version under its
+// `below` where it names one (an unknown version never matches). Null where
+// nothing matches.
+export function unavailable(id, p) {
   const older = (a, b) => {
     const [x, y] = [a, b].map((v) => v.split(".").map(Number));
     for (let k = 0; k < Math.max(x.length, y.length); k++)
       if ((x[k] ?? 0) !== (y[k] ?? 0)) return (x[k] ?? 0) < (y[k] ?? 0);
     return false;
   };
-  const hit = r.unsupported?.find(
-    (u) =>
-      u.os === p.os &&
-      (!u.arch || u.arch === p.arch) &&
-      (!u.below || (p.version && older(p.version, u.below))),
-  );
+  const hit = catalogue()
+    .find((r) => r.id === id)
+    ?.unavailable?.find(
+      (u) =>
+        u.os === p.os &&
+        (!u.arch || u.arch === p.arch) &&
+        (!u.below || (p.version && older(p.version, u.below))),
+    );
   return hit
     ? `unavailable on ${p.os}/${p.arch}${p.version ? ` ${p.version}` : ""}: ${hit.why}`
     : null;

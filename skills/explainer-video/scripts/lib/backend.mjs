@@ -544,7 +544,7 @@ export async function computeCapability() {
 export const memory = () => os.totalmem();
 
 // The OS and CPU, as Node names them, and macOS's version from sw_vers (null
-// elsewhere, or when sw_vers fails), which a row's `unsupported` entries match.
+// elsewhere, or when sw_vers fails), which a row's `unavailable` entries match.
 export function platform() {
   const version =
     process.platform === "darwin"

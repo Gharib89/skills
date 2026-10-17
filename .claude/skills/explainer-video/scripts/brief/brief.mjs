@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { OWN_PREFIX, narrator, narrators } from "../lib/narrators.mjs";
 import { defaultStyle, stores } from "../lib/style.mjs";
-import { catalogue, loadBackend, unavailable } from "../lib/tools.mjs";
+import { loadBackend, unavailable } from "../lib/tools.mjs";
 
 const KNOBS = [
   "focus",
@@ -142,16 +142,13 @@ if (brief.aspect !== "16:9")
   refuse("aspect", brief.aspect, "this version renders 16:9 only");
 if (!["on", "off", "ace-step"].includes(brief.score))
   refuse("score", brief.score, "on, off or ace-step");
-// A knob naming a setup row this machine cannot install, which setup refuses.
+// Refuse a knob that names a setup row setup refuses on this machine.
 for (const [knob, id] of [
   ["voice", brief.voice.startsWith(OWN_PREFIX) && "own-voice"],
   ["score", brief.score === "ace-step" && "ace-step"],
 ]) {
   if (!id) continue;
-  const why = unavailable(
-    catalogue().find((r) => r.id === id),
-    (await loadBackend()).platform(),
-  );
+  const why = unavailable(id, (await loadBackend()).platform());
   if (why) refuse(knob, brief[knob], why);
 }
 

@@ -187,11 +187,11 @@
       "kind": "uv",
       "when": "opt-in",
       "python": true,
-      "unsupported": [
+      "unavailable": [
         {
           "os": "darwin",
           "arch": "x64",
-          "why": "no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; torch's last is 2.2.2"
+          "why": "no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2"
         },
         {
           "os": "darwin",
@@ -309,11 +309,11 @@
       "when": "voice",
       "backend": "own",
       "python": true,
-      "unsupported": [
+      "unavailable": [
         {
           "os": "darwin",
           "arch": "x64",
-          "why": "no torch 2.6 wheel for Intel macOS; torch's last is 2.2.2"
+          "why": "no torch 2.6 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2"
         }
       ],
       "source": {
