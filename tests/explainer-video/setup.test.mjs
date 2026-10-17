@@ -422,7 +422,7 @@ test("the carried CPU pin was derived from the ACE-Step commit the row pins, so 
   assert.equal(ace.cpu.env.derivedFrom, ace.source.revision);
 });
 
-test("every +cpu torch build in the carried CPU lock depends on no NVIDIA package, triton or CUDA build", () => {
+test("the carried CPU pin names only +cpu torch builds, none depending on an NVIDIA package, triton or a CUDA build, and its pyproject names no CUDA index", () => {
   const rows = JSON.parse(
     fs.readFileSync(path.join(source, "setup", "rows.json"), "utf8"),
   ).rows;
