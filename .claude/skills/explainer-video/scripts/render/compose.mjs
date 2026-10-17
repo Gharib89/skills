@@ -1,10 +1,12 @@
-// The HyperFrames composition in the `bands` layout with `rise` motion: a page
-// per render (the video's index.html, or a stills page), and one sub-composition
-// file per scene whose visual is a component. The palette comes from the style
-// profile as CSS custom properties; every font is a file beside the page.
+// The HyperFrames composition in the `bands` layout, its motion `rise` or
+// `spring`: a page per render (the video's index.html, or a stills page), and
+// one sub-composition file per scene whose visual is a component. The palette
+// comes from the style profile as CSS custom properties; every font is a file
+// beside the page.
 import crypto from "node:crypto";
 import { diff, lines } from "../lib/visuals.mjs";
 import { ARABIC } from "../lib/style.mjs";
+import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 
 export const W = 1920;
@@ -16,9 +18,18 @@ export const CONTENT = { left: 120, top: 178, width: 1680, height: 690 };
 // most two lines.
 export const CUE_CHARS = 84;
 const RISE = [
-  { opacity: 0, y: 20 },
+  { opacity: 0, y: RISE_PX },
   { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
 ];
+// A reveal under `spring`: the opacity, position and scale it starts from and
+// ends on, the class's settle time as its duration, and the class itself, which
+// the scene script evaluates (`SPRING[class]`) in place of a GSAP ease.
+const sprung = (cls) => {
+  const { scale } = SPRING[cls];
+  const from = { opacity: 0, y: RISE_PX, ...(scale < 1 && { scale }) };
+  const to = { opacity: 1, y: 0, ...(scale < 1 && { scale: 1 }) };
+  return [from, { ...to, duration: settleTime(SPRING[cls]) }];
+};
 // A code line's height: 30 px at 1.5.
 const LH = 45;
 
@@ -131,7 +142,8 @@ const codeFrame = (p, f, rows) => ({
 });
 
 // Each component: its markup, its scoped CSS, what reveals when, as [selector,
-// sentence number] pairs, and its other tweens, as [selector, from, to,
+// sentence number, spring class] triples (`settle` when left out; only the
+// `spring` motion reads it), and its other tweens, as [selector, from, to,
 // sentence number]. `x` holds the profile's look and allowed effects, Shiki's
 // tokens and rough.js outlines.
 const COMPONENTS = {
@@ -141,7 +153,7 @@ const COMPONENTS = {
 .kick { font: 600 30px ${f.text}; color: var(--accent); letter-spacing: ${f.ls("0.06em")}; text-transform: uppercase; }
 .big { font: ${f.titleWeight} 112px/${f.lh(1.08, "title")} ${f.title}; color: var(--text); letter-spacing: ${f.ls("-0.01em")}; max-width: 1600px; }
 .sub { font: 400 40px/${f.lh(1.3, "text")} ${f.text}; color: var(--muted); max-width: 1500px; }`,
-    reveals: [[".r0", 1]],
+    reveals: [[".r0", 1, "land"]],
   }),
   cards: (p, f) => ({
     html: `<div class="rail">${p.items
@@ -167,7 +179,7 @@ const COMPONENTS = {
 .name { margin-left: 16px; }
 .body { padding: 34px 44px; font: 400 34px/1.7 ${f.code}; color: var(--text); }
 .line { white-space: pre; }`,
-    reveals: [[".rt", 1], ...p.lines.map((x, i) => [`.r${i}`, x.at])],
+    reveals: [[".rt", 1], ...p.lines.map((x, i) => [`.r${i}`, x.at, "snap"])],
   }),
   flow: async (p, f, x) => {
     const n = p.steps.length;
@@ -203,7 +215,7 @@ const COMPONENTS = {
 ${sketchCss(x.look)}`,
       reveals: [
         ...p.steps.map((s, i) => [`.n${i}`, s.at]),
-        ...p.steps.slice(1).map((s, i) => [`.a${i + 1}`, s.at]),
+        ...p.steps.slice(1).map((s, i) => [`.a${i + 1}`, s.at, "snap"]),
       ],
       tweens: draw
         ? p.steps
@@ -251,8 +263,8 @@ ${sketchCss(x.look)}`,
 .dot { flex: 0 0 16px; height: 16px; border-radius: 4px; background: var(--accent); }
 .itext { font: 400 42px/${f.lh(1.3, "text")} ${f.text}; color: var(--text); }`,
     reveals: [
-      ...(p.title ? [[".lt", 1]] : []),
-      ...p.items.map((it, i) => [`.i${i}`, it.at]),
+      ...(p.title ? [[".lt", 1, "land"]] : []),
+      ...p.items.map((it, i) => [`.i${i}`, it.at, "snap"]),
     ],
   }),
   code: async (p, f, x) => {
@@ -363,7 +375,11 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
     .join("\n");
   const t = (at) => timing.sentences[at - 1];
   const tweens = [
-    ...c.reveals.map(([sel, at]) => [sel, ...RISE, t(at)]),
+    ...c.reveals.map(([sel, at, cls = "settle"]) =>
+      profile.motion === "spring"
+        ? [sel, ...sprung(cls), t(at), cls]
+        : [sel, ...RISE, t(at)],
+    ),
     ...(c.tweens ?? []).map(([sel, from, to, at]) => [sel, from, to, t(at)]),
   ];
   return {
@@ -375,14 +391,35 @@ ${css}
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
-        for (const [sel, from, to, t] of tweens)
-          tl.fromTo('${scope} ' + sel, from, to, t);
+${play(scope, tweens)}
         window.__timelines = window.__timelines || {};
         if (window.__stills) tl.progress(1);
         else window.__timelines["${id}"] = tl;
       })();`,
   };
 }
+
+// The script lines that play a scene's tweens on its timeline. A tween naming a
+// spring class evaluates `SPRING[class]` (written into the script with the
+// functions that read it) in place of a GSAP ease: opacity rises on its own
+// ease, never past 1, and position and scale follow the spring.
+const play = (scope, tweens) =>
+  tweens.some((x) => x[4])
+    ? `        const SPRING = ${JSON.stringify(SPRING)};
+        ${settleTime}
+        ${step}
+        for (const [sel, from, to, t, cls] of tweens) {
+          if (!cls) {
+            tl.fromTo('${scope} ' + sel, from, to, t);
+            continue;
+          }
+          const { opacity: o0, ...move } = from;
+          const { opacity: o1, duration, ...end } = to;
+          tl.fromTo('${scope} ' + sel, { opacity: o0 }, { opacity: o1, duration: ${RISE[1].duration}, ease: "${RISE[1].ease}" }, t);
+          tl.fromTo('${scope} ' + sel, move, { ...end, duration, ease: (p) => p >= 1 ? 1 : step(SPRING[cls], p * duration) }, t);
+        }`
+    : `        for (const [sel, from, to, t] of tweens)
+          tl.fromTo('${scope} ' + sel, from, to, t);`;
 
 // A full page: fonts, palette, the header band, then `body` inside the root.
 // Right to left, the header and the captions mirror and the root does not:
