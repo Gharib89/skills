@@ -109,6 +109,13 @@ check_rc "a colon inside the description passes" \
 check_rc "a bang inside the scope is not the breaking marker" \
   0 "$(rc_of 'feat(ship!): add a flag' '' '')"
 # The footer is line-anchored: a mention of the words mid-sentence is prose.
+# A footer on the first line of a body past a pipe buffer (64 KiB): the reader
+# exits on the match while the writer is still writing, and under pipefail the
+# writer's SIGPIPE must not read as "no footer" (#758).
+big_body=$(printf 'BREAKING CHANGE: gone.\n'; awk 'BEGIN { for (i = 0; i < 2200; i++) print "padding line padding line padding line " i }')
+check_rc "a BREAKING CHANGE footer ahead of a body past a pipe buffer still fails" \
+  1 "$(rc_of 'fix(ship): drop a stop reason' "$big_body" '')"
+
 check_rc "BREAKING CHANGE mid-line in the body is prose" \
   0 "$(rc_of 'fix: x' 'This is not a BREAKING CHANGE: it restores documented behavior.' '')"
 # Leading and trailing whitespace on the title is the host's, not the author's.

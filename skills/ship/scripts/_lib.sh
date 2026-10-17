@@ -1275,8 +1275,9 @@ ship_no_checks_expected() { # <profile-body>
 # ship_no_checks_legal <profile-body>: true when the profile's `## CI` block says
 # `No-checks legal: yes`, read in that section only like every profile fact.
 ship_no_checks_legal() { # <profile-body>
-  awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$1" \
-    | grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)'
+  local ci
+  ci=$(awk '/^## /{f = ($0 ~ /^## CI[ \t\r]*$/)} f' <<<"$1")
+  grep -Eq '^No-checks legal:[[:space:]]*yes([^[:alnum:]]|$)' <<<"$ci"
 }
 
 # ship_profile_legs <profile-body>: the leg names the profile's `Legs:` names
