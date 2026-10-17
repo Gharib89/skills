@@ -101,8 +101,10 @@ check "every leg missing past the grace is no-checks" no-checks "$(jq -r .status
 # --- the call cap and the cursor -----------------------------------------------
 
 reset
-for i in 1 2 3 4 5; do ans "$i" "$(rows "$(row test pending)" "$(row lint success)")"; done
-ans 6 "$(rows "$(row test success)" "$(row lint success)")"
+# Pending from the first read, however many polls the capped call fits; the green
+# answer is written only once the first call has returned, at the resumed call's
+# first read, so the case never leans on polls per wall-clock second (#755).
+ans 1 "$(rows "$(row test pending)" "$(row lint success)")"
 out=$(SHIP_CALL_CAP=3 ci "$two" --timeout 60); rc=$?
 check_rc "a call that would pass the cap answers pending, exit 1" 1 "$rc"
 check "pending, with a cursor" 'pending true' "$(jq -r '[.status, (.cursor | length > 0)] | join(" ")' <<<"$out")"
@@ -110,6 +112,7 @@ check "pending, with a cursor" 'pending true' "$(jq -r '[.status, (.cursor | len
 # the cap (#507): the bound holds the call far short of the 60 s window.
 check "within the cap" true "$(jq '.waited_s <= 10' <<<"$out")"
 cur=$(jq -r .cursor <<<"$out")
+ans $(( $(cat "$SHIP_FAKE/host_pr_checks.n") + 1 )) "$(rows "$(row test success)" "$(row lint success)")"
 out2=$(SHIP_CALL_CAP=3 ci "$two" --cursor "$cur"); rc=$?
 check_rc "the resumed call answers green" 0 "$rc"
 check "green" green "$(jq -r .status <<<"$out2")"
