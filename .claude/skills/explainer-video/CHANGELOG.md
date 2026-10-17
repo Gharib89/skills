@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.3 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Voice several sentences per Kokoro call
+  ([#750](https://github.com/Gharib89/skills/pull/750),
+  [`b2f91c0`](https://github.com/Gharib89/skills/commit/b2f91c0cb3112dca5e8eec1640b18d40d6dfd04e))
+
+
 ## v0.19.2 (2026-10-17)
 
 ### Bug Fixes
