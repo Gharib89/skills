@@ -119,8 +119,9 @@ export function check(narration, transcript, seconds, language = "en") {
   const recall = ref.length ? count(hit) / ref.length : 1;
   const precision = hyp.length ? count(used) / hyp.length : 1;
   const rate = seconds > 0 ? narration.length / seconds : 0;
-  // Two places, or more where two would print an edge the value is not: a
-  // floor and band edges have two places, so rounding lands on one, never past.
+  // Two decimal places, and more while rounding would print a floor or band
+  // edge the value does not equal, so 0.849 never prints as the 0.85 floor it
+  // fails. The edges have two places, so rounding lands on one, never past it.
   const shown = (n, ...edges) => {
     let p = 2;
     while (p < 6 && edges.some((e) => n !== e && +n.toFixed(p) === e)) p++;

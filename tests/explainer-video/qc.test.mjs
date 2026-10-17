@@ -121,8 +121,13 @@ test("a value that rounds onto the floor it fails prints enough places to differ
   const q = check(narration, heard, seconds(narration, 13));
   assert.equal(q.precision, 0.846);
   assert.deepEqual(q.failures, ["precision 0.846 under 0.85"]);
+  // A value away from its edge keeps two places: 11 in 12 is 0.92.
   assert.equal(
-    check(narration, narration, seconds(narration, 13)).precision,
-    1,
+    check(narration, `${narration} purple`, seconds(narration, 13)).precision,
+    0.92,
   );
+  // A band edge too, as many places as it takes: 8.9996 is not 9.
+  const slow = check(narration, narration, seconds(narration, 8.9996));
+  assert.equal(slow.rate, 8.9996);
+  assert.deepEqual(slow.failures, ["rate 8.9996 chars/s outside 9 to 22"]);
 });

@@ -14,8 +14,9 @@
 // voiced scenes and the render's closing hold must land within 10 percent of
 // the brief's `length`.
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
-//         rate · pass|fail: <why>; heard: <file>`, the file holding what the
-//         aligner heard; once every scene passes, with a brief,
+//         rate · pass` or `... · fail: <why>; heard: <file>`, that file
+//         (relative to the run folder) holding what the aligner heard; once
+//         every scene passes, with a brief,
 //         `voice length: pass|fail: the scenes voice <s> s (<id> <s> s, ...)
 //         and the <hold> s hold vs the brief's <s> s ±10%`; then one summary
 //         line

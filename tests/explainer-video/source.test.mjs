@@ -332,6 +332,26 @@ test("a heading holding a Markdown link reads as its text in the pack, and eithe
     );
     assert.equal(excerpts[0].locator, "§ Validation");
   }
+  // A link around a badge image reads as the image's text, and the stored
+  // locator still finds its section.
+  const g = write(
+    fx,
+    "readme.md",
+    "# Project [![CI](x/badge.svg)](x/actions)\n\nIt builds.\n",
+  );
+  assert.equal(snapshot(fx, [g]).code, 0);
+  draft(fx, "readme", [
+    ["§ Project [![CI](x/badge.svg)](x/actions)", "It builds."],
+  ]);
+  draft(fx, "cache", [["§ Validation", "An ETag names a version."]]);
+  assert.equal(pack(fx).code, 0);
+  const { excerpts } = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
+  );
+  const badge = excerpts.find((x) => x.source === "readme");
+  assert.equal(badge.locator, "§ Project CI");
+  draft(fx, "readme", [[badge.locator, "It builds."]]);
+  assert.equal(pack(fx, ["readme"]).code, 0);
 });
 
 test("a heading used twice locates in either section, never across the two", () => {

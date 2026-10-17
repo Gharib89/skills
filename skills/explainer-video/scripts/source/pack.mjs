@@ -96,7 +96,7 @@ const excerpts = sources.flatMap((src) =>
   drafts.get(src.id).excerpts.map((ex) => ({
     id: `ex-${++n}`,
     source: src.id,
-    locator: plain(ex.locator),
+    locator: ex.locator.trim().replace(/^§ (.+)$/, (_, h) => `§ ${plain(h)}`),
     text: ex.text.trim(),
     note: ex.note.trim(),
   })),

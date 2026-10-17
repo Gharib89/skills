@@ -207,9 +207,9 @@ to the **script gates**.
      snapshot.
    - `support`: every sentence judged `supported` or `connective` on its
      present wording. A sentence whose place, words, cites and cited
-     excerpts are unchanged keeps the verdict an earlier check gave it; a
-     different verdict on it is `drift`, reported but never a new failure
-     or fix attempt.
+     excerpts are unchanged keeps the first verdict it got, so only a
+     rewrite clears a kept failure; a later checker's different verdict on
+     it prints as `drift`, a warn that adds no failure and no fix attempt.
    - `coverage`: the `must` and `avoid` items, each matched as whole words in
      any case (`must=merge` is not met by "merges").
    - `reading`: each visual item on screen, from the sentence it rises at to
@@ -217,7 +217,8 @@ to the **script gates**.
      else 0.3 s a word and at least 1.2 s; a card's texts add up.
 5. **On exit 1** with `script: no <input>: <why>` on stderr and no gate lines,
    run what `<why>` names, then the script gates again. Otherwise fix what each
-   `fail` line names in the scene file, compile, then run the support check
+   `fail` line names in the scene file (a `drift` finding needs no fix, even
+   inside a `fail` line), compile, then run the support check
    again whenever the narration changed, and the script gates again. A red
    `support` line ends the summary in `next: fix attempt <a> of 2`: rewrite each
    failing sentence to say only what its excerpts say, cite the excerpt that
@@ -226,8 +227,8 @@ to the **script gates**.
    stop: report each failing sentence and ask the user what the video may say.
    The stop holds, whatever the next rewrite, until the support gate passes
    or a brief change redoes the script.
-6. **On exit 0**, report the summary line and go on to Voice, then the
-   Storyboard.
+6. **On exit 0**, report the summary line and each `warn` line, and go on to
+   Voice, then the Storyboard.
 
 ## Voice
 

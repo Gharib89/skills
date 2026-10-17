@@ -45,10 +45,11 @@ in Arabic.
    the summary line.
 4. **On a fail** (exit 1) with a failing scene line, relay each failing
    scene's line as printed: it names the measure, its value and the floor or
-   band it missed, and the file holding what the aligner heard; read that
-   against the narration to find the misheard words. Rewrite that scene's
-   narration in spoken form and voice
-   again; the scenes that passed are cached. The run folder holds no
+   band it missed, then `heard: <file>`, a path in the run folder holding
+   what the aligner heard: lowercase, unpunctuated, spelled by sound. Compare
+   it with the narration for words missing, added or swapped (not
+   misspelled). Rewrite those words of that scene's narration in spoken form
+   and voice again; the scenes that passed are cached. The run folder holds no
    `voice.json`, not even an earlier pass's, until every scene passes and so
    does the length.
    **On `voice length: fail`**, every scene passed and is cached, but the

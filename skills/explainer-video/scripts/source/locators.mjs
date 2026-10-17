@@ -54,9 +54,14 @@ function lines(text, a, b) {
 // Whitespace runs as one space: word for word, not byte for byte.
 export const squash = (s) => s.replace(/\s+/g, " ").trim();
 
-// A locator or heading as read: a Markdown link reads as its text, so a page
-// heading carrying its anchor (`[Validation](#validation)`) is `Validation`.
-export const plain = (s) => squash(s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1"));
+// A heading as read: a Markdown link or image reads as its text, so a page
+// heading carrying its anchor (`[Validation](#validation)`) is `Validation`,
+// and a linked badge (`[![CI](badge)](runs)`) is `CI`. Innermost first, until
+// none is left, so reading a heading twice reads it the same.
+export function plain(s) {
+  for (let t; (t = s.replace(/!?\[([^[\]]*)\]\([^)]*\)/g, "$1")) !== s;) s = t;
+  return squash(s);
+}
 
 // The stretches a locator names in a source's snapshot, one per section for a
 // heading used twice, or `{error}` saying why there are none.
