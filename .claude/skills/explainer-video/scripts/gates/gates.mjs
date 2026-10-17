@@ -439,6 +439,7 @@ const verdicts = (h) =>
     if (v.worst.length > 3)
       bad(`worst holds ${v.worst.length} entries, at most 3`);
     v.worst.forEach((x, i) => {
+      if (!x || typeof x !== "object") bad(`worst ${i + 1} is not an object`);
       if (!(x?.at >= sc.start && x.at <= sc.start + sc.duration))
         bad(`worst ${i + 1} at ${x?.at} is not a time inside the scene`);
       for (const k of ["what", "evidence", "fix"])

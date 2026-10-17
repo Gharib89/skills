@@ -64,12 +64,11 @@ A summary line follows, `gates: <n> pass, <m> fail[, 1 pending]`, ending on a
 red run with `next: fix attempt <a> of 2` or `stop: red after two fix
 attempts, no video`, and when the critic alone holds the video with `next: run
 the critic, round <r> of 2`. A red determinism gate ends it `stop: determinism
-is red, a skill defect to report, no fix attempt, no video`. Layout, contrast,
-motion and determinism results are cached per scene
-by everything that draws it, so a fix re-gates only the scenes it touched;
-loudness, captions and sfx run every time. The stage writes `gates.json`, the
-machine record, and `gates.md`, the readable report with every red gate's
-findings and the critic's scores.
+is red, a skill defect to report, no fix attempt, no video`. Layout, contrast
+and determinism results are cached per scene by everything that draws it, so a
+fix re-gates only the scenes it touched; loudness, captions and sfx run every
+time. The stage writes `gates.json`, the machine record, and `gates.md`, the
+readable report with every red gate's findings and the critic's scores.
 
 ## The critic round
 

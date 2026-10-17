@@ -442,8 +442,8 @@ export async function strip(input, output, { first, fps }) {
 // memory whole. Entry k compares frame first+k+1 with frame first+k.
 export async function bandMotion(input, { start, duration, fps }) {
   const { first, n } = sceneFrames({ start, duration, fps });
-  const [w, h] = [420, 172];
   const { left, top, width, height } = CONTENT;
+  const [w, h] = [width / 4, Math.floor(height / 4)];
   const child = spawn(
     "ffmpeg",
     [

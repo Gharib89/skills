@@ -997,6 +997,7 @@ test("a malformed verdict stops the gates, naming the scene and what is wrong", 
       { failures: [], scores, worst: worst(1, { at: 999 }) },
       /worst 1 at 999 is not a time inside the scene/,
     ],
+    [{ failures: [], scores, worst: [null] }, /worst 1 is not an object/],
     [
       { failures: [], scores, worst: worst(1, { fix: " " }) },
       /worst 1 has no fix/,
