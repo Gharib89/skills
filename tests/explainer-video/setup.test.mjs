@@ -639,10 +639,13 @@ test("an env or model folder no catalogue row lands in for this machine's device
   const oldEnv = make(path.join("python", "ace-step@1111111-0123456"), 45);
   const oldModel = make(path.join("models", "aligner@aaaaaaaaaaaa"), 45);
   const fresh = make(path.join("models", "aligner@bbbbbbbbbbbb"), 3);
-  // With no capability read, the probe may have failed: the GPU env is current.
-  const unread = run(fx, ["check"], "ffmpeg", machine(null)).out;
-  assert.ok(row(unread, "stale python/ace-step@1111111-0123456"), unread);
-  assert.equal(row(unread, "stale python/ace-step@fedcba9-0123456"), undefined);
+  // A failed probe may hide a card: the GPU env stays current.
+  const failed = run(fx, ["check"], "ffmpeg", machine("failed")).out;
+  assert.ok(row(failed, "stale python/ace-step@1111111-0123456"), failed);
+  assert.equal(row(failed, "stale python/ace-step@fedcba9-0123456"), undefined);
+  // With no card, the GPU env is stale like on a card under 8.0.
+  const noCard = run(fx, ["check"], "ffmpeg", machine(null)).out;
+  assert.ok(row(noCard, "stale python/ace-step@fedcba9-0123456"), noCard);
   const c = run(fx, ["check"], "ffmpeg", machine(7.5));
   assert.equal(c.code, 1, c.out + c.err);
   for (const id of [

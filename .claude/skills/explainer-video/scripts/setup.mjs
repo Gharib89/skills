@@ -234,16 +234,15 @@ function status(r) {
 // (npm and Chrome under another lock hash, an env or model at another revision
 // or for the other device), whose stamp no run has touched in 30 days. Every
 // catalogue row counts, listed or not, since only a listed row's check touches
-// its stamp. No capability may be a failed probe (a driver mismatch, nvidia-smi
-// off PATH), not no card, so then both devices' folders count. One with no
-// stamp never finished, and ages by its folder.
+// its stamp. A failed probe may hide a card, so then both devices' folders
+// count. One with no stamp never finished, and ages by its folder.
 function stale() {
   const current = new Set([
     ...Object.values(TOOL_DIRS).map((f) => path.join(dirs.cache, f, lockHash)),
     ...catalogue
       .filter((r) => ["uv", "model"].includes(r.kind))
       .flatMap((r) =>
-        (cap === null ? ["cuda", "cpu"] : [device(r)]).map((d) =>
+        (cap === undefined ? ["cuda", "cpu"] : [device(r)]).map((d) =>
           dest(r, undefined, d),
         ),
       ),
@@ -407,7 +406,7 @@ function report(state, staleInstalls) {
       "",
       torchDevice(cap) === "cuda"
         ? `${r.id} runs on the GPU here (compute capability ${cap.toFixed(1)}).`
-        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0${r.cpu.why ? `: ${r.cpu.why}` : ""}` : "no NVIDIA card"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of ${r.cpu.of}.`,
+        : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0${r.cpu.why ? `: ${r.cpu.why}` : ""}` : cap === null ? "no NVIDIA card" : "nvidia-smi failed"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of ${r.cpu.of}.`,
     );
   }
   for (const r of rows.filter(
