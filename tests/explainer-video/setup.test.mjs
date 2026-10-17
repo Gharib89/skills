@@ -639,7 +639,11 @@ test("an env or model folder no catalogue row lands in for this machine's device
   const oldEnv = make(path.join("python", "ace-step@1111111-0123456"), 45);
   const oldModel = make(path.join("models", "aligner@aaaaaaaaaaaa"), 45);
   const fresh = make(path.join("models", "aligner@bbbbbbbbbbbb"), 3);
-  const c = run(fx, ["check"], "ffmpeg", machine(null));
+  // With no capability read, the probe may have failed: the GPU env is current.
+  const unread = run(fx, ["check"], "ffmpeg", machine(null)).out;
+  assert.ok(row(unread, "stale python/ace-step@1111111-0123456"), unread);
+  assert.equal(row(unread, "stale python/ace-step@fedcba9-0123456"), undefined);
+  const c = run(fx, ["check"], "ffmpeg", machine(7.5));
   assert.equal(c.code, 1, c.out + c.err);
   for (const id of [
     "python/ace-step@fedcba9-0123456",
@@ -649,7 +653,7 @@ test("an env or model folder no catalogue row lands in for this machine's device
     assert.ok(row(c.out, `stale ${id}`), c.out);
   assert.doesNotMatch(c.out, /stale python\/ace-step@fedcba9-0123456-cpu/);
   assert.doesNotMatch(c.out, /stale models\/aligner@(0123456789ab|bbbb)/);
-  const i = run(fx, ["install"], "ffmpeg", machine(null));
+  const i = run(fx, ["install"], "ffmpeg", machine(7.5));
   assert.equal(i.code, 0, i.out + i.err);
   for (const dir of [gpuEnv, oldEnv, oldModel]) assert.ok(!fs.existsSync(dir));
   for (const dir of [...current, fresh]) assert.ok(fs.existsSync(dir));

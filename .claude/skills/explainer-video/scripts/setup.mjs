@@ -234,13 +234,19 @@ function status(r) {
 // (npm and Chrome under another lock hash, an env or model at another revision
 // or for the other device), whose stamp no run has touched in 30 days. Every
 // catalogue row counts, listed or not, since only a listed row's check touches
-// its stamp. One with no stamp never finished, and ages by its folder.
+// its stamp. No capability may be a failed probe (a driver mismatch, nvidia-smi
+// off PATH), not no card, so then both devices' folders count. One with no
+// stamp never finished, and ages by its folder.
 function stale() {
   const current = new Set([
     ...Object.values(TOOL_DIRS).map((f) => path.join(dirs.cache, f, lockHash)),
     ...catalogue
       .filter((r) => ["uv", "model"].includes(r.kind))
-      .map(installDir),
+      .flatMap((r) =>
+        (cap === null ? ["cuda", "cpu"] : [device(r)]).map((d) =>
+          dest(r, undefined, d),
+        ),
+      ),
   ]);
   const out = [];
   for (const folder of [...Object.values(TOOL_DIRS), "python", "models"]) {
