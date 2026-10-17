@@ -298,7 +298,12 @@
         "seconds": 88,
         "ram": 15539236864,
         "of": "score",
-        "why": "no bfloat16, and float16 gives NaN"
+        "why": "no bfloat16, and float16 gives NaN",
+        "env": {
+          "path": "setup/ace-step-cpu",
+          "derivedFrom": "ca1e85fe9430179831e6bc6be790c332190a3866",
+          "size": 1547902537
+        }
       },
       "neededBy": "score (ace-step)",
       "licence": "MIT (ACE-Step 1.5 code and weights)"

@@ -159,15 +159,20 @@ const quietEnv = {
 // A model row's size is its files'; a uv row's, its environment's and its
 // checkpoints'.
 const filesSize = (r) => r.files?.reduce((n, f) => n + f.size, 0);
-const size = (r) =>
-  r.kind === "uv" ? r.size + filesSize(r) : (r.size ?? filesSize(r));
 
 // A row with a CPU cost (ACE-Step, own voice) runs on the device torchDevice
 // picks; on the CPU, a machine with less RAM than the cost names is refused
 // before download.
 const cap = rows.some((r) => r.cpu) ? await backend.computeCapability() : null;
-const shortOfRam = (r) =>
-  r.cpu && torchDevice(cap) === "cpu" && backend.memory() < r.cpu.ram;
+const device = (r) => (r.cpu ? torchDevice(cap) : undefined);
+const shortOfRam = (r) => device(r) === "cpu" && backend.memory() < r.cpu.ram;
+// A uv env's size is the CPU-only pin's, where the row has one and runs on the CPU.
+const size = (r) =>
+  r.kind === "uv"
+    ? (device(r) === "cpu" && r.cpu.env ? r.cpu.env.size : r.size) +
+      filesSize(r)
+    : (r.size ?? filesSize(r));
+const installDir = (r) => dest(r, undefined, device(r));
 // The OS, CPU and macOS version a row's `unavailable` entries match.
 const machine = backend.platform();
 const stamp = (dir) => path.join(dir, ".stamp");
@@ -205,7 +210,7 @@ function status(r) {
     return backend.which(r.command) ? "present" : "missing";
   if (r.kind === "profile") return `refused: ${r.why}`;
   if (r.kind === "font" && fontGap(r)) return "missing";
-  const s = stamp(dest(r));
+  const s = stamp(installDir(r));
   if (!fs.existsSync(s)) {
     // No wheels here: refused before download, since its uv sync could only fail.
     const why = unavailable(r.id, machine);
@@ -266,7 +271,7 @@ async function fetchFiles(r, dir) {
 
 async function install(r) {
   if (r.kind === "font") return installFont(r, backend);
-  const dir = dest(r);
+  const dir = installDir(r);
   // A missing row's folder can hold what an earlier install left half done.
   // A model is written beside it and renamed in, so it never is.
   if (r.kind !== "model") {
@@ -312,6 +317,13 @@ async function install(r) {
       );
       await backend.extract(zip, path.join(dir, "src"));
       fs.rmSync(zip);
+      // On the CPU, the skill's own pin replaces the upstream's CUDA one.
+      if (device(r) === "cpu" && r.cpu.env)
+        for (const f of ["pyproject.toml", "uv.lock"])
+          fs.copyFileSync(
+            path.join(skill, r.cpu.env.path, f),
+            path.join(dir, "src", f),
+          );
     }
     const code = await backend.uvSync(path.join(dir, "src"));
     if (code !== 0) throw new Error(`uv sync exited ${code}`);
@@ -361,7 +373,7 @@ function report(state, staleInstalls) {
           ? `nothing, you set ${r.env}`
           : r.kind === "profile"
             ? "nothing, fix the file"
-            : dest(r);
+            : installDir(r);
     lines.push(
       `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${size(r) ? formatSize(size(r)) : "-"} | ${r.licence} | ${where} |`,
     );

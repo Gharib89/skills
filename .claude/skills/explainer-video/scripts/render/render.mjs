@@ -157,7 +157,9 @@ const ace =
   !stillsOnly && scoreMode === "ace-step"
     ? rows.find((r) => r.id === "ace-step")
     : null;
-if (ace && !fs.existsSync(path.join(dest(ace), ".stamp")))
+const backend = await loadBackend();
+const device = ace && torchDevice(await backend.computeCapability());
+if (ace && !fs.existsSync(path.join(dest(ace, undefined, device), ".stamp")))
   fail(
     "ace-step is not installed: run /explainer-video setup, asking for ace-step",
   );
@@ -274,7 +276,6 @@ function narration(file) {
     pcm: new Int16Array(data.buffer, data.byteOffset, data.length / 2),
   };
 }
-const backend = await loadBackend();
 const raw = path.join(run, ".cache", "narration.wav");
 fs.mkdirSync(path.dirname(raw), { recursive: true });
 const voiced = narration(raw);
@@ -290,7 +291,6 @@ if (scored) {
   const seed = parseInt(hash(slug).slice(0, 8), 16);
   const level = r3(bedLevel(voiced.pcm, voiced.rate, scenes));
   const { perMinute } = floors(profile).sfx;
-  const device = ace && torchDevice(await backend.computeCapability());
   const engine = path.join(skill, "scripts", "score");
   const code = fs
     .readdirSync(engine)
@@ -315,7 +315,7 @@ if (scored) {
       music =
         ace &&
         (await backend.aceStep({
-          dir: dest(ace),
+          dir: dest(ace, undefined, device),
           device,
           seconds: total,
           seed,
