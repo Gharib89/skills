@@ -178,7 +178,9 @@ to the **script gates**.
    idea each), `recap` (the points again in brief), `end` (one closing line).
    Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
    up to the brief's length less the 1 s hold the render closes on. A scene's
-   spoken words land within 10 percent of (seconds - sentences × `pause`) ×
+   spoken words (a `{written|spoken}` pair counts its spoken form, so
+   `{304|three oh four}` is three) land within 10 percent of
+   (seconds - sentences × `pause`) ×
    `rate`, the narrator's in `<skill>/narrators.json`: a sentence spends
    `pause` on silence, and ends at its one full stop, `!`, `?` or `؟`. Write
    for the brief's audience, about its focus; say or show each `must` item
@@ -196,14 +198,18 @@ to the **script gates**.
    and `{skill}` this skill's folder. It writes `support.json`, its verdict on
    every sentence, and replies with its `script support:` line.
 4. **Script gates.** `node <skill>/scripts/script/check.mjs explainers/<slug>`
-   prints one line per gate, `script <gate>: pass` or `fail: <findings>`
-   (`sentences` warns instead of failing), then `script: <p> pass, <f> fail,
+   prints one line per gate, `script <gate>: pass`, `fail: <findings>` or
+   `warn: <findings>` (`sentences` warns instead of failing, `support` on
+   drift alone), then `script: <p> pass, <f> fail,
    <w> warn`. `arc`, `budget`, `dashes` and `sentences` hold step 1's rules;
    the others:
    - `cites`: every cite in `excerpts.json`, still word for word in its
      snapshot.
    - `support`: every sentence judged `supported` or `connective` on its
-     present wording.
+     present wording. A sentence whose place, words, cites and cited
+     excerpts are unchanged keeps the verdict an earlier check gave it; a
+     different verdict on it is `drift`, reported but never a new failure
+     or fix attempt.
    - `coverage`: the `must` and `avoid` items, each matched as whole words in
      any case (`must=merge` is not met by "merges").
    - `reading`: each visual item on screen, from the sentence it rises at to

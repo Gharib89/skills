@@ -30,7 +30,8 @@ in Arabic.
    steps before voicing.
 2. **Voice.** `node <skill>/scripts/voice/voice.mjs explainers/<slug>`. It
    prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
-   rate · pass|fail: <why>`, then a summary line. A scene whose narration,
+   rate · pass|fail: <why>`, a failing one ending in `heard: <file>`, then a
+   summary line. A scene whose narration,
    narrator and language (and, for an own voice, the enrolled clip) are
    unchanged is a cache hit and is not voiced again. Once every scene passes,
    with a `brief.json` in the run folder, a `voice length: pass|fail` line
@@ -44,7 +45,9 @@ in Arabic.
    the summary line.
 4. **On a fail** (exit 1) with a failing scene line, relay each failing
    scene's line as printed: it names the measure, its value and the floor or
-   band it missed. Rewrite that scene's narration in spoken form and voice
+   band it missed, and the file holding what the aligner heard; read that
+   against the narration to find the misheard words. Rewrite that scene's
+   narration in spoken form and voice
    again; the scenes that passed are cached. The run folder holds no
    `voice.json`, not even an earlier pass's, until every scene passes and so
    does the length.
