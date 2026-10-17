@@ -179,17 +179,15 @@ to the **script gates**.
    Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
    up to the brief's length less the 1 s hold the render closes on. A scene's
    spoken words land within 10 percent of (seconds - sentences × `pause`) ×
-   `rate`, both the narrator's in `<skill>/narrators.json`: each added
-   sentence spends `pause` seconds on silence. The budget counts a sentence
-   where a full stop, `!`, `?` or `؟` ends it, so make each numbered sentence
-   one such sentence, ending in one of them. Write for the brief's audience,
-   about its focus; say or show each `must` item and none of the `avoid`
-   items. Every sentence that states a fact cites the excerpts
-   that state it; a transition or framing question is `[no-claim]`. No em or
-   en dashes anywhere, and at most 25 words a sentence. Leave the header's
-   `language`, `narrator` and `style` out: the brief supplies them. In an
-   Arabic run (`language: ar`), write the narration and the screen text in
-   Egyptian Arabic from the first draft. **Kept terms** (code identifiers,
+   `rate`, the narrator's in `<skill>/narrators.json`: a sentence spends
+   `pause` on silence, and ends at its one full stop, `!`, `?` or `؟`. Write
+   for the brief's audience, about its focus; say or show each `must` item
+   and none of the `avoid` items. Every sentence that states a fact cites the
+   excerpts that state it; a transition or framing question is `[no-claim]`.
+   No em or en dashes anywhere, and at most 25 words a sentence. Leave the
+   header's `language`, `narrator` and `style` out: the brief supplies them.
+   In an Arabic run (`language: ar`), write the narration and the screen text
+   in Egyptian Arabic from the first draft. **Kept terms** (code identifiers,
    product names, acronyms, and any the user names) stay in English letters:
    said, shown and captioned as written.
 2. **Compile.** As under Render, step 3.
