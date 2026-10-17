@@ -32,18 +32,29 @@ in Arabic.
    prints one line per scene, `voice <id>: voiced|cached · recall · precision ·
    rate · pass|fail: <why>`, then a summary line. A scene whose narration,
    narrator and language (and, for an own voice, the enrolled clip) are
-   unchanged is a cache hit and is not voiced again. Before voicing an own
-   voice on the CPU, tell the user the time setup's cost line gives for this
-   narration's length.
+   unchanged is a cache hit and is not voiced again. Once every scene passes,
+   with a `brief.json` in the run folder, a `voice length: pass|fail` line
+   follows the scene lines: the scenes' total voiced seconds, then each
+   scene's, and whether they and the render's closing hold land within 10
+   percent of the brief's `length`. Before voicing an own voice on the CPU,
+   tell the user the time setup's cost line gives for this narration's length.
 3. **On a pass** (exit 0), the stage has written `voice.json` in the run
    folder: per scene its WAV under `.cache/voice/`, its duration and each
    word's start and end in seconds from the start of that scene's WAV. Report
    the summary line.
-4. **On a fail** (exit 1) with scene lines, relay each failing scene's line as
-   printed: it names the measure, its value and the floor or band it missed.
-   Rewrite that scene's narration in spoken form and voice again; the scenes
-   that passed are cached. The run folder holds no `voice.json`, not even an
-   earlier pass's, until every scene passes.
+4. **On a fail** (exit 1) with a failing scene line, relay each failing
+   scene's line as printed: it names the measure, its value and the floor or
+   band it missed. Rewrite that scene's narration in spoken form and voice
+   again; the scenes that passed are cached. The run folder holds no
+   `voice.json`, not even an earlier pass's, until every scene passes and so
+   does the length.
+   **On `voice length: fail`**, every scene passed and is cached, but the
+   narration runs long or short of the brief. Cut or add words in the scenes
+   whose voiced seconds on that line sit furthest from their seconds in
+   `script.md`, then compile, run the support check and the script gates, and
+   voice again. If that rewrite fails the script's `budget` gate, or a
+   rewrite that passes the `budget` gate fails `voice length` again, stop and
+   relay the `script budget` line and the latest `voice length` line.
    Exit 1 with no scene lines and no `voice: <vendor> quota reached` (step 5)
    is an input or tool error (an unknown narrator, a scene with no narration,
    a Gemini narrator or own voice with no `GEMINI_API_KEY`, an ElevenLabs

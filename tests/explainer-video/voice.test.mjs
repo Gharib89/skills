@@ -238,6 +238,54 @@ test("a rerun refused for its input removes the timeline the last pass wrote", (
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
 });
 
+// Five scenes, the i-th of `n[i]` sentences, or each of `n[0]`; the fake voices
+// a sentence in about 2.95 s, so four a scene voice about 59 s, six 88.6 s,
+// and 4, 4, 4, 3, 3 about 53.5 s.
+const long = (...n) =>
+  ["one", "two", "three", "four", "five"].map((w, i) => ({
+    id: `scene-${w}`,
+    narration: new Array(n[i] ?? n[0]).fill(
+      `Scene ${w} reads the issue and then writes it.`,
+    ),
+  }));
+
+test("with a brief, the voiced timeline and the closing hold must land within 10 percent of the brief's length", () => {
+  const fx = fixture(long(4));
+  fs.writeFileSync(
+    path.join(fx.dir, "brief.json"),
+    JSON.stringify({ length: 1 }),
+  );
+  let r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^voice length: pass: the scenes voice /m);
+  assert.ok(fs.existsSync(path.join(fx.dir, "voice.json")));
+
+  write(fx, long(6));
+  r = run(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^voice length: fail: the scenes voice 88\.6 s \(scene-one 17\.5 s, scene-two 17\.4 s, scene-three 18\.1 s, scene-four 17\.8 s, scene-five 17\.9 s\) and the 1 s hold vs the brief's 60 s ±10%$/m,
+  );
+  assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
+
+  // Short of the band by less than the hold: the hold brings it inside.
+  write(fx, long(4, 4, 4, 3, 3));
+  r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(
+    r.out,
+    /^voice length: pass: the scenes voice 53\.5 s \(scene-one 11\.7 s, scene-two 11\.6 s, scene-three 12\.1 s, scene-four 9\.1 s, scene-five 9\.1 s\) and the 1 s hold vs the brief's 60 s ±10%$/m,
+  );
+});
+
+test("with no brief, as when voicing a narration alone, no length is checked", () => {
+  const fx = fixture(long(6));
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.doesNotMatch(r.out, /^voice length:/m);
+});
+
 test("voice on a mistyped run folder says which stage to run and writes nothing", () => {
   const fx = fixture();
   const r = run({ ...fx, dir: path.join(fx.tmp, "typo") });

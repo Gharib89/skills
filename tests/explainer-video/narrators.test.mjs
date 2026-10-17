@@ -28,6 +28,7 @@ test("every narrator carries the contract's fields, and each language has a defa
         "language",
         "leavesMachine",
         "licence",
+        "pause",
         "rate",
         "style",
         "voice",
@@ -41,7 +42,7 @@ test("every narrator carries the contract's fields, and each language has a defa
     );
 });
 
-test("the English narrators ship with a calibrated rate in words per second", () => {
+test("the English narrators ship with a calibrated rate in words per second and pause a sentence", () => {
   const english = narrators.filter(
     (n) => n.language === "en" && n.backend === "kokoro",
   );
@@ -49,8 +50,10 @@ test("the English narrators ship with a calibrated rate in words per second", ()
     english.map((n) => n.id),
     ["bf_emma", "am_fenrir"],
   );
-  for (const n of english)
+  for (const n of english) {
     assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} rate ${n.rate}`);
+    assert.ok(n.pause > 0.3 && n.pause < 2, `${n.id} pause ${n.pause}`);
+  }
 });
 
 test("the Egyptian Arabic narrators are Gemini voices whose text leaves the machine", () => {

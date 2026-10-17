@@ -17,19 +17,31 @@ after(() =>
   temps.forEach((t) => fs.rmSync(t, { recursive: true, force: true })),
 );
 
-// The fake's frame layout, worked by hand: a word holds 3 frames per letter,
-// then a `|` frame; words are 2 silent frames apart, sentences 12. Frames are
-// 20 ms. The span runs from the first word's first letter to the last `|`.
-function fakeRate(text) {
-  const sentences = text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.toUpperCase().match(/[A-Z']+/g));
-  const words = sentences.flat();
-  const frames =
-    words.reduce((n, w) => n + 3 * w.length + 1, 0) +
-    2 * (words.length - sentences.length) +
-    12 * (sentences.length - 1);
-  return words.length / (frames * 0.02);
+// The fake's frame layout, worked by hand: 10 silent frames lead, a word holds
+// 3 frames per letter, then a `|` frame and 2 silent frames, and each sentence
+// ends on 10 more. Frames are 20 ms. A sentence's speech runs from its first
+// word's first letter to its last `|`; the rest of the audio is silence.
+function fakeCalibration(texts) {
+  let words = 0;
+  let speech = 0;
+  let sentences = 0;
+  let total = 0;
+  for (const text of texts) {
+    const ss = text
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.toUpperCase().match(/[A-Z']+/g));
+    const ws = ss.flat();
+    words += ws.length;
+    sentences += ss.length;
+    speech +=
+      ws.reduce((n, w) => n + 3 * w.length + 1, 0) +
+      2 * (ws.length - ss.length);
+    total += 10 + ws.reduce((n, w) => n + 3 * w.length + 3, 0) + 10 * ss.length;
+  }
+  return {
+    rate: words / (speech * 0.02),
+    pause: ((total - speech) * 0.02) / sentences,
+  };
 }
 
 // Calibrate `language` on a copy of the shipped narrators.json: the exit, the
@@ -62,20 +74,44 @@ function calibrateCopy(language) {
   return { out: r.stdout, calls, before, after };
 }
 
-test("calibration measures each English narrator's rate in words per second and leaves the rest of narrators.json alone", () => {
+test("calibration measures each English narrator's speech rate and pause a sentence over several texts, printing each text's rate and pause, and leaves the rest of narrators.json alone", () => {
   const { out, calls, before, after } = calibrateCopy("en");
+  const texts = [...new Set(calls.map((c) => c.text))];
+  assert.ok(texts.length >= 3, `${texts.length} texts`);
   assert.deepEqual(
     calls.map((c) => c.voice),
-    ["bf_emma", "am_fenrir", "JBFqnCBsd6RMkjVDRZzb"],
+    ["bf_emma", "am_fenrir", "JBFqnCBsd6RMkjVDRZzb"].flatMap((v) =>
+      texts.map(() => v),
+    ),
   );
-  const want = fakeRate(calls[0].text);
+  const want = fakeCalibration(texts);
   for (const n of after.filter((n) => n.language === "en")) {
-    assert.ok(Math.abs(n.rate - want) / want < 0.02, `${n.id} ${n.rate}`);
-    assert.match(out, new RegExp(`^calibrate ${n.id}: ${n.rate} words/s`, "m"));
+    assert.ok(
+      Math.abs(n.rate - want.rate) / want.rate < 0.02,
+      `${n.id} ${n.rate}`,
+    );
+    // The aligner's word edges sit a frame or two inside the hand count's.
+    assert.ok(Math.abs(n.pause - want.pause) < 0.05, `${n.id} ${n.pause}`);
+    texts.forEach((_, k) =>
+      assert.match(
+        out,
+        new RegExp(
+          `^calibrate ${n.id} text ${k + 1}: \\d+\\.\\d+ words/s, \\d+\\.\\d+ s a sentence$`,
+          "m",
+        ),
+      ),
+    );
+    assert.match(
+      out,
+      new RegExp(
+        `^calibrate ${n.id}: ${n.rate} words/s, ${n.pause} s a sentence$`,
+        "m",
+      ),
+    );
   }
   assert.deepEqual(
-    after.map(({ rate, ...n }) => n),
-    before.map(({ rate, ...n }) => n),
+    after.map(({ rate, pause, ...n }) => n),
+    before.map(({ rate, pause, ...n }) => n),
   );
   const arabic = before.filter((n) => n.language === "ar");
   assert.ok(arabic.length);
@@ -85,19 +121,36 @@ test("calibration measures each English narrator's rate in words per second and 
   );
 });
 
-test("calibration on the Arabic text voices it on each Gemini narrator and writes their rates", () => {
+test("calibration voices each Arabic text on each Gemini narrator, printing each text's rate and pause, and writes their rates and pauses", () => {
   const { out, calls, before, after } = calibrateCopy("ar");
+  const texts = [...new Set(calls.map((c) => c.text))];
+  assert.ok(texts.length >= 3, `${texts.length} texts`);
   assert.deepEqual(
-    calls.map((c) => [c.backend, c.voice]),
-    [
-      ["gemini", "ar-eg-csagent-2"],
-      ["gemini", "ar-eg-commercial-11"],
-    ],
+    calls.map((c) => [c.backend, c.voice, c.text]),
+    ["ar-eg-csagent-2", "ar-eg-commercial-11"].flatMap((v) =>
+      texts.map((t) => ["gemini", v, t]),
+    ),
   );
-  assert.ok(calls[0].text.split(/\s+/).length >= 55, calls[0].text);
+  for (const t of texts) assert.ok(t.split(/\s+/).length >= 55, t);
   for (const n of after.filter((n) => n.language === "ar")) {
     assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} ${n.rate}`);
-    assert.match(out, new RegExp(`^calibrate ${n.id}: ${n.rate} words/s`, "m"));
+    assert.ok(n.pause > 0 && n.pause < 2, `${n.id} ${n.pause}`);
+    texts.forEach((_, k) =>
+      assert.match(
+        out,
+        new RegExp(
+          `^calibrate ${n.id} text ${k + 1}: \\d+\\.\\d+ words/s, \\d+\\.\\d+ s a sentence$`,
+          "m",
+        ),
+      ),
+    );
+    assert.match(
+      out,
+      new RegExp(
+        `^calibrate ${n.id}: ${n.rate} words/s, ${n.pause} s a sentence$`,
+        "m",
+      ),
+    );
   }
   assert.deepEqual(
     after.filter((n) => n.language === "en"),

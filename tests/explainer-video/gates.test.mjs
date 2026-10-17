@@ -237,6 +237,16 @@ test("the same timings render the cached score again", () => {
   assert.equal(fs.statSync(again).mtimeMs, before);
 });
 
+// The fixture's script voices about 15 s, under any length brief.mjs takes,
+// so a score test's brief asks for a quarter minute to pass the voice stage.
+function quarterMinute(fx) {
+  const file = path.join(fx.dir, "brief.json");
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ ...JSON.parse(read(file)), length: 0.25 }, null, 2),
+  );
+}
+
 // The brief set to score=ace-step; `installed` stamps the ace-step row as
 // setup leaves it.
 function aceBrief(fx, installed = true) {
@@ -251,6 +261,7 @@ function aceBrief(fx, installed = true) {
     { env: fx.env, encoding: "utf8" },
   );
   assert.equal(b.status, 0, b.stderr);
+  quarterMinute(fx);
   const d = dest(
     catalogue().find((r) => r.id === "ace-step"),
     fx.dirs,
@@ -330,6 +341,7 @@ test("a brief with the score off masters the narration alone", () => {
     { env: fx.env, encoding: "utf8" },
   );
   assert.equal(b.status, 0, b.stderr);
+  quarterMinute(fx);
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(calls(fx, "master")[0].bed, undefined);

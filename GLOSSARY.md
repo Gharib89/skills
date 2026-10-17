@@ -449,7 +449,7 @@ The voice that reads a run's narration, named by the brief's voice knob. Each la
 _Avoid_: speaker, TTS voice, voice-over
 
 **Voice QC**:
-The check each voiced scene must pass before the run uses its audio: the aligner's transcript is compared with the narration for content-word recall and precision, and the speaking rate must sit inside a band. A failing scene is not cached, so the next run voices it again. A numeral in the narration costs precision, since the words it is spoken as match nothing in the text.
+The check each voiced scene must pass before the run uses its audio: the aligner's transcript is compared with the narration for content-word recall and precision, and the speaking rate must sit inside a band. A failing scene is not cached, so the next run voices it again. Once every scene passes, in a run with a brief, the voiced scenes and the render's closing hold must land within 10 percent of the brief's length, or no word timeline is written. A numeral in the narration costs precision, since the words it is spoken as match nothing in the text.
 _Avoid_: TTS check, audio QA
 
 **Own voice**:

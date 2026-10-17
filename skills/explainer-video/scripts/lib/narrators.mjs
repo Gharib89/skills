@@ -57,6 +57,7 @@ export function narrator(id, language) {
     licence: base.licence,
     leavesMachine: true,
     rate: base.rate,
+    pause: base.pause,
     default: false,
     base,
     clip,

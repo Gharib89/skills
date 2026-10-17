@@ -31,6 +31,7 @@ import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { HOLD } from "../lib/length.mjs";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
@@ -69,7 +70,6 @@ function fail(why) {
   process.exit(1);
 }
 const slug = path.basename(path.resolve(run));
-const HOLD = 1.0;
 const r3 = (n) => +n.toFixed(3);
 const hash = (...parts) => {
   const h = crypto.createHash("sha256");
