@@ -7,8 +7,8 @@
 // Needs the voice rows installed (`node scripts/setup.mjs install`). The rate
 // is words per second of speech, each sentence timed from its first word's
 // start to its last word's end; the pause a sentence is the audio's seconds
-// less its speech, over its sentences, because a voiced scene carries each
-// sentence's lead and tail silence (Kokoro voices one sentence per inference).
+// less its speech, over its sentences, because a voiced scene carries the
+// silence between its sentences and around each call.
 // Both pool every text of the language. A narrator not yet calibrated this way
 // carries pause 0 and a rate over its aligned span, first word to last, silence
 // between sentences included, the same budget.

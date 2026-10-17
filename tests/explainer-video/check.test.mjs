@@ -38,8 +38,8 @@ const say = (n, cites = "[ex-1]") => `${spoken(n)}. ${cites}`;
 
 const TITLE = { component: "title", props: { title: "The local gate" } };
 
-// bf_emma speaks 3.51 words a second and pauses 1.12 s a sentence, so a 12 s
-// scene of three sentences budgets (12 - 3.36) x 3.51 = 30 words, and a
+// bf_emma speaks 3.8 words a second and pauses 0.78 s a sentence, so a 12 s
+// scene of three sentences budgets (12 - 2.34) x 3.8 = 37 words, and a
 // one-minute brief takes five such scenes and the 1 s hold.
 const SCENES = [
   { id: "hook", role: "hook" },
@@ -50,7 +50,7 @@ const SCENES = [
 ].map((s) => ({
   ...s,
   seconds: 12,
-  sentences: [say(10), say(10, "[no-claim]"), say(10, "[ex-2, ex-3]")],
+  sentences: [say(12), say(12, "[no-claim]"), say(12, "[ex-2, ex-3]")],
   visual: TITLE,
 }));
 
@@ -219,16 +219,16 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   assert.match(line(r, "budget"), /hook 31 s is outside 12 to 30 s/);
   assert.match(
     line(r, "budget"),
-    /hook 30 words vs 97 \(31 s less 3 sentences at 1\.12 s, at 3\.51 words\/s\) ±10%/,
+    /hook 36 words vs 109 \(31 s less 3 sentences at 0\.78 s, at 3\.8 words\/s\) ±10%/,
   );
   r = check(
     fixture({
-      scenes: edit(SCENES, 2, { sentences: [say(10), say(10, "[no-claim]")] }),
+      scenes: edit(SCENES, 2, { sentences: [say(12), say(12, "[no-claim]")] }),
     }),
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 20 words vs 34 (12 s less 2 sentences at 1.12 s, at 3.51 words/s) ±10%",
+    "script budget: fail: steps 24 words vs 40 (12 s less 2 sentences at 0.78 s, at 3.8 words/s) ±10%",
   );
   // Kokoro voices a sentence where a full stop, ! or ? meets a space, not a
   // numbered item: three items with no full stop run as one sentence, and one
@@ -237,21 +237,21 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
     fixture({
       scenes: edit(SCENES, 2, {
         sentences: [
-          `${spoken(10)} [ex-1]`,
-          `${spoken(10)} [no-claim]`,
-          `${spoken(10)} [ex-2, ex-3]`,
+          `${spoken(12)} [ex-1]`,
+          `${spoken(12)} [no-claim]`,
+          `${spoken(12)} [ex-2, ex-3]`,
         ],
       }),
     }),
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 30 words vs 38 (12 s less 1 sentences at 1.12 s, at 3.51 words/s) ±10%",
+    "script budget: fail: steps 36 words vs 43 (12 s less 1 sentences at 0.78 s, at 3.8 words/s) ±10%",
   );
   r = check(
     fixture({
       scenes: edit(SCENES, 2, {
-        sentences: [`${spoken(10)}. ${spoken(10)}. ${spoken(10)}. [ex-1]`],
+        sentences: [`${spoken(12)}. ${spoken(12)}. ${spoken(12)}. [ex-1]`],
       }),
     }),
   );
@@ -269,7 +269,7 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
     fixture({
       scenes: edit(SCENES, 2, {
         seconds: 18,
-        sentences: [say(17), say(17, "[no-claim]"), say(17, "[ex-2, ex-3]")],
+        sentences: [say(20), say(20, "[no-claim]"), say(20, "[ex-2, ex-3]")],
       }),
     }),
   );
@@ -520,7 +520,7 @@ test("an em or en dash anywhere in the scene file fails, and a sentence over 25 
   r = check(
     fixture({
       scenes: edit(SCENES, 0, {
-        sentences: [say(26), say(2, "[no-claim]"), say(2)],
+        sentences: [say(26), say(5, "[no-claim]"), say(5)],
       }),
     }),
   );

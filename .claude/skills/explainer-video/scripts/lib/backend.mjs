@@ -11,6 +11,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
+import { sentences } from "./length.mjs";
 import { skill, toolPaths, torchDevice } from "./tools.mjs";
 
 const win = process.platform === "win32";
@@ -838,8 +839,15 @@ async function ownVoice(text, narrator, tools) {
   }
 }
 
+// Kokoro reads at most 510 phoneme tokens a call, and kokoro-js truncates past
+// that without a word, so the adapter packs whole sentences into each call
+// under this budget, counted with kokoro-js's own phonemizer; the headroom
+// covers the normalisation kokoro-js applies before it phonemizes.
+const KOKORO_TOKENS = 400;
+
 // A narrator adapter: text in, audio out, never timings (ADR 0016). Kokoro
-// reads one sentence per inference, so the whole text goes through its splitter.
+// voices each call's lead and tail silence, so one call per sentence paces
+// narration slower than the voice speaks.
 let kokoro;
 export async function synthesize({ text, narrator, tools }) {
   if (narrator.backend === "gemini") return gemini(text, narrator);
@@ -848,7 +856,7 @@ export async function synthesize({ text, narrator, tools }) {
   if (narrator.backend !== "kokoro")
     throw new Error(`no adapter for backend ${narrator.backend}`);
   const req = fromCache(tools.node);
-  const { KokoroTTS, TextSplitterStream } = req("kokoro-js");
+  const { KokoroTTS } = req("kokoro-js");
   if (!kokoro) {
     // kokoro-js's own dependency, pinned by the lock: requiring it from the same
     // install yields the instance kokoro-js reads its settings from.
@@ -861,14 +869,23 @@ export async function synthesize({ text, narrator, tools }) {
       device: "cpu",
     });
   }
-  // A plain string passed to stream() is never closed, so its last sentence
-  // never yields (kokoro-js 1.2.1).
-  const split = new TextSplitterStream();
-  split.push(text);
-  split.close();
+  // kokoro-js's dependency again, phonemizing as it does: American voices
+  // (`a…`) in en-us, British ones in en.
+  const { phonemize } = req("phonemizer");
+  const lang = narrator.voice.startsWith("a") ? "en-us" : "en";
+  const calls = [];
+  for (const s of sentences(text.trim())) {
+    const n = (await phonemize(s, lang)).join(" ").length;
+    const last = calls.at(-1);
+    if (last && last.n + 1 + n <= KOKORO_TOKENS)
+      Object.assign(last, { text: `${last.text} ${s}`, n: last.n + 1 + n });
+    else calls.push({ text: s, n });
+  }
   const parts = [];
-  for await (const { audio } of kokoro.stream(split, { voice: narrator.voice }))
-    parts.push(audio.audio);
+  for (const c of calls)
+    parts.push(
+      (await kokoro.generate(c.text, { voice: narrator.voice })).audio,
+    );
   const samples = new Float32Array(parts.reduce((n, p) => n + p.length, 0));
   parts.reduce((o, p) => (samples.set(p, o), o + p.length), 0);
   return { samples, sampleRate: 24000 };
