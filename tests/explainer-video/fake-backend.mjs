@@ -175,6 +175,15 @@ const SAID = {
   ship: "شيب",
   github: "جيثوب",
   actions: "اكتيونس",
+  commit: "كوميت",
+  diff: "ديف",
+  dry: "دراي",
+  run: "رن",
+  main: "مين",
+  old: "اولد",
+  push: "بوش",
+  tidy: "تايدي",
+  trash: "تراش",
 };
 
 const synthCalls = () =>

@@ -9,6 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { sentences } from "../../skills/explainer-video/scripts/lib/length.mjs";
 import { VISUALS } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -276,6 +277,11 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
     line(r, "budget"),
     "script budget: fail: the scenes run 66 s and the 1 s hold vs the brief's 60 s ±10%",
   );
+});
+
+test("a sentence ends where Kokoro 1.2.1's splitter ends one, and at an Arabic question mark", () => {
+  assert.equal(sentences('He said "Ship it." Then the merge began.').length, 1);
+  assert.equal(sentences("مين يقدر يغير؟ ولا حد! كل تغيير بيعدي.").length, 3);
 });
 
 test("every cite names an excerpt still word for word in its snapshot", () => {

@@ -121,19 +121,29 @@ test("calibration measures each English narrator's speech rate and pause a sente
   );
 });
 
-test("calibration on the Arabic text voices it on each Gemini narrator and writes their rates and pauses", () => {
+test("calibration voices each Arabic text on each Gemini narrator, printing each text's, and writes their rates and pauses", () => {
   const { out, calls, before, after } = calibrateCopy("ar");
+  const texts = [...new Set(calls.map((c) => c.text))];
+  assert.ok(texts.length >= 3, `${texts.length} texts`);
   assert.deepEqual(
     calls.map((c) => [c.backend, c.voice]),
-    [
-      ["gemini", "ar-eg-csagent-2"],
-      ["gemini", "ar-eg-commercial-11"],
-    ],
+    ["ar-eg-csagent-2", "ar-eg-commercial-11"].flatMap((v) =>
+      texts.map(() => ["gemini", v]),
+    ),
   );
-  assert.ok(calls[0].text.split(/\s+/).length >= 55, calls[0].text);
+  for (const t of texts) assert.ok(t.split(/\s+/).length >= 55, t);
   for (const n of after.filter((n) => n.language === "ar")) {
     assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} ${n.rate}`);
     assert.ok(n.pause > 0 && n.pause < 2, `${n.id} ${n.pause}`);
+    texts.forEach((_, k) =>
+      assert.match(
+        out,
+        new RegExp(
+          `^calibrate ${n.id} text ${k + 1}: \\d+\\.\\d+ words/s, \\d+\\.\\d+ s a sentence$`,
+          "m",
+        ),
+      ),
+    );
     assert.match(
       out,
       new RegExp(
