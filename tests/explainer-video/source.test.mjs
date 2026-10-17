@@ -354,6 +354,24 @@ test("a heading holding a Markdown link reads as its text in the pack, and eithe
   assert.equal(pack(fx, ["readme"]).code, 0);
 });
 
+test("a repo locator is stored as written, brackets and spaces included", () => {
+  const fx = fixture();
+  const repo = path.join(fx.tmp, "app");
+  fs.mkdirSync(path.join(repo, "docs"), { recursive: true });
+  const file = "docs/[id](x)  notes.md";
+  fs.writeFileSync(path.join(repo, file), "It ships.\n");
+  git(repo, "init", "-q");
+  git(repo, "add", ".");
+  assert.equal(snapshot(fx, [repo]).code, 0);
+  draft(fx, "app", [[`${file}:1`, "It ships."]]);
+  const r = pack(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const { excerpts } = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "excerpts.json"), "utf8"),
+  );
+  assert.equal(excerpts[0].locator, `${file}:1`);
+});
+
 test("a heading used twice locates in either section, never across the two", () => {
   const fx = fixture();
   const f = write(

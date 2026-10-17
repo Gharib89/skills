@@ -63,6 +63,11 @@ export function plain(s) {
   return squash(s);
 }
 
+// A locator as the pack stores it: a heading as read, any other form as
+// written, since a repo path may hold brackets or a run of spaces.
+export const stored = (locator) =>
+  locator.trim().replace(/^§ (.+)$/, (_, h) => `§ ${plain(h)}`);
+
 // The stretches a locator names in a source's snapshot, one per section for a
 // heading used twice, or `{error}` saying why there are none.
 export function segment(run, source, locator) {
