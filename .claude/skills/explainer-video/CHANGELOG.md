@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.6 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Offer top-up and another key on a quota stop
+  ([#756](https://github.com/Gharib89/skills/pull/756),
+  [`5df6056`](https://github.com/Gharib89/skills/commit/5df6056e66ee6ab4a08136cdc2a0ec1098b3ee1c))
+
+
 ## v0.19.5 (2026-10-17)
 
 ### Bug Fixes
