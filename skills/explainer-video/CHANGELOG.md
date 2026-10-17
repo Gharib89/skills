@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.4 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Refuse the torch rows on platforms with no wheels for them
+  ([#751](https://github.com/Gharib89/skills/pull/751),
+  [`086a3ed`](https://github.com/Gharib89/skills/commit/086a3ed12f0aa6ca3acadccf3a26f1dfe4850a24))
+
+
 ## v0.19.3 (2026-10-17)
 
 ### Bug Fixes
