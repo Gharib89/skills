@@ -467,7 +467,7 @@ test("a Gemini quota stop keeps the scenes voiced before it, and the next run vo
   assert.equal(stopped.code, 1, stopped.out + stopped.err);
   assert.match(
     stopped.err,
-    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\), which voices only the missing scenes; use a paid key; or choose another narrator in the brief$/m,
+    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\) or the credits are topped up, which voices only the missing scenes; set another key \(a paid one, for a free-tier limit\); or choose another narrator in the brief$/m,
   );
   assert.equal(synths(fx).length, 2);
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
@@ -528,6 +528,21 @@ test("an ElevenLabs quota stop names ElevenLabs and keeps nothing it did not voi
     /^voice: ElevenLabs quota reached \(ElevenLabs answered HTTP 401: This request exceeds your quota limit\); 0 scene\(s\) voiced before it are kept\./m,
   );
   assert.equal(synths(fx).length, 0);
+});
+
+test("a spent-credits quota stop offers topping up the credits", () => {
+  const fx = fixture();
+  ELEVEN(fx);
+  const r = run(fx, {
+    ELEVENLABS_API_KEY: "test-key",
+    EXPLAINER_VIDEO_FAKE_QUOTA: "0",
+    EXPLAINER_VIDEO_FAKE_CREDITS: "1",
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: ElevenLabs quota reached \(ElevenLabs answered HTTP 402: credits are depleted\); 0 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\) or the credits are topped up,/m,
+  );
 });
 
 // The real backend on a stubbed fetch: ElevenLabs answers spent credits with

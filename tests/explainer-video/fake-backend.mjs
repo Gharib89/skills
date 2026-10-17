@@ -24,7 +24,8 @@
 // same way in the Egyptian aligner's vocabulary (see gemini below), and
 //   EXPLAINER_VIDEO_FAKE_QUOTA  a Gemini or ElevenLabs call throws its vendor's
 //                               quota error once this many synthesize calls
-//                               are in the log
+//                               are in the log; with EXPLAINER_VIDEO_FAKE_CREDITS
+//                               set it is the spent-credits 402 instead
 // geminiKey refuses the key `bad-key` as API_KEY_INVALID and takes any other;
 // elevenlabsKey refuses it as invalid_api_key. An `elevenlabs` narrator speaks
 // English like Kokoro, and an `own` one Arabic like its base Gemini narrator.
@@ -213,7 +214,14 @@ const toSamples = (frames) => {
 function quota(vendor, message) {
   const at = process.env.EXPLAINER_VIDEO_FAKE_QUOTA;
   if (at && synthCalls() >= +at)
-    throw Object.assign(new Error(message), { quota: true, vendor });
+    throw Object.assign(
+      new Error(
+        process.env.EXPLAINER_VIDEO_FAKE_CREDITS
+          ? `${vendor} answered HTTP 402: credits are depleted`
+          : message,
+      ),
+      { quota: true, vendor },
+    );
 }
 
 // A Gemini narrator speaks Arabic in the Arabic vocabulary's ids, blanks as
