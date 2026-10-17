@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.0 (2026-10-17)
+
+### Features
+
+- **explainer-video**: A determinism gate, and motion strips for the critic
+  ([#763](https://github.com/Gharib89/skills/pull/763),
+  [`d9e90d3`](https://github.com/Gharib89/skills/commit/d9e90d38deae9263e71e4c6d3bb9c369914b1798))
+
+
 ## v0.19.7 (2026-10-17)
 
 ### Bug Fixes
