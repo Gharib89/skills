@@ -90,9 +90,9 @@ try {
 } catch (e) {
   fail(e.message);
 }
-if (profile.layout !== "bands" || profile.motion !== "rise")
+if (profile.layout !== "bands")
   fail(
-    `style profile ${profile.name}: this version draws layout bands with motion rise, not ${profile.layout} with ${profile.motion}`,
+    `style profile ${profile.name}: this version draws layout bands, not ${profile.layout}`,
   );
 if (!["en", "ar"].includes(script.language))
   fail(`no render fonts for language ${script.language}`);

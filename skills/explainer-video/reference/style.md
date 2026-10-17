@@ -92,7 +92,8 @@ deck's title).
    and run the draft again. Writing the draft
    deletes the reference images, since a deck may be confidential.
 
-The draft keeps the bundled `claude-code` profile's layout, motion, look and
+The draft keeps the bundled `claude-code` profile's layout, motion (`rise`;
+`spring` is the other value a profile may name), look and
 effects, and its type for each role no source declares a family for, and
 derives each token you leave out from its colours. Show the draft on the style
 card next.

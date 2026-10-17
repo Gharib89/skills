@@ -8,6 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import vm from "node:vm";
 import { judged } from "./critic.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import {
@@ -567,7 +568,7 @@ for (const [name, arrange, why, voiced = true] of [
   [
     "a profile in a layout this version does not draw",
     (fx) => styled(fx, {}, { layout: "grid" }),
-    /^render: style profile odd: this version draws layout bands with motion rise, not grid with rise/m,
+    /^render: style profile odd: this version draws layout bands, not grid$/m,
     false,
   ],
   [
@@ -839,6 +840,84 @@ test("a right-to-left scene mirrors its flow and keeps its code left to right", 
   assert.match(code, /class="code rt" dir="ltr"/);
 });
 
+// A scene's script run against a stub GSAP that records each fromTo, with the
+// timeline paused and nothing else on the page.
+const played = (fx, id) => {
+  const calls = [];
+  const tl = {
+    fromTo: (sel, from, to, t) => calls.push({ sel, from, to, t }),
+    progress: () => {},
+  };
+  const script = comp(fx, `scenes/${id}.html`).match(
+    /<script>([\s\S]*?)<\/script>/,
+  )[1];
+  vm.runInNewContext(script, {
+    gsap: { timeline: () => tl },
+    window: { __stills: true },
+  });
+  return calls;
+};
+
+test("a spring profile renders: each reveal carries its class at its sentence, nothing on the clock", () => {
+  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: bouncy"));
+  profiled(fx, "bouncy", { motion: "spring" });
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  for (const id of ["flow", "sides", "gates", "code", "diff"]) {
+    const html = comp(fx, `scenes/${id}.html`);
+    assert.doesNotMatch(
+      html,
+      /transition|animation|@keyframes|setTimeout|setInterval|requestAnimationFrame|Date\.now|performance\.now|Math\.random/,
+      id,
+    );
+    assert.match(html, /gsap\.timeline\(\{ paused: true \}\)/, id);
+  }
+  const classOf = (id, sel) =>
+    tweens(fx, id)
+      .find(([s]) => s === sel)
+      ?.slice(3);
+  const [t, cls] = classOf("flow", ".n1");
+  assert.ok(near(t, at(fx, "flow", 2)));
+  assert.equal(cls, "settle");
+  assert.equal(classOf("flow", ".a1")[1], "snap");
+  assert.equal(classOf("gates", ".i0")[1], "snap");
+  assert.equal(classOf("gates", ".lt")[1], "land");
+  // the springs are sampled on the scene's timeline: opacity never past 1, and
+  // each settles before its scene's last frame
+  const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  for (const id of ["flow", "sides", "gates", "code", "diff"]) {
+    const { duration } = timeline.scenes.find((s) => s.id === id);
+    const calls = played(fx, id);
+    assert.ok(calls.length, id);
+    for (const { from, to, t: start } of calls) {
+      assert.ok(to.opacity === undefined || to.opacity <= 1, id);
+      if (typeof to.ease !== "function") continue;
+      assert.equal(to.ease(1), 1);
+      assert.equal(to.ease(0), 0);
+      assert.ok(
+        start + to.duration <= duration,
+        `${id} settles in ${duration}`,
+      );
+      for (let p = 0; p <= 1; p += 0.01) assert.ok(to.ease(p) <= 1.2, id);
+      assert.equal(from.y, 20);
+    }
+  }
+});
+
+test("a rise profile's scene carries no spring and its tweens are the old ones", () => {
+  const fx = fixture(DIAGRAMS);
+  assert.equal(render(fx).code, 0);
+  for (const id of ["flow", "sides", "gates", "code", "diff"]) {
+    assert.doesNotMatch(comp(fx, `scenes/${id}.html`), /SPRING|settleTime/, id);
+    assert.ok(
+      tweens(fx, id).every((x) => x.length === 4),
+      id,
+    );
+  }
+  for (const f of ["claude-code", "itworx"])
+    assert.equal(JSON.parse(read(skill, "styles", `${f}.json`)).motion, "rise");
+});
+
 test("a profile that disallows an effect keeps it out of the composition", () => {
   const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
   profiled(fx, "plain", { effects: [] });
@@ -860,6 +939,11 @@ for (const [name, extra, why] of [
     "an unknown look",
     { look: "neon" },
     /^render: style profile odd: look neon is not clean or sketch/m,
+  ],
+  [
+    "an unknown motion",
+    { motion: "bounce" },
+    /^render: style profile odd: motion bounce is not rise or spring$/m,
   ],
 ]) {
   test(`a profile naming ${name} refuses the run by name before any render`, () => {
