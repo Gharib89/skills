@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.5 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Read a Gemini 402 for spent prepaid credits as a quota stop
+  ([#752](https://github.com/Gharib89/skills/pull/752),
+  [`235eae1`](https://github.com/Gharib89/skills/commit/235eae13419d9bcbb5e57d7e5c3e07f578bb56c7))
+
+
 ## v0.19.4 (2026-10-17)
 
 ### Bug Fixes
