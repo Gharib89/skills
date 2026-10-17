@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.45.2 (2026-10-17)
+
+### Bug Fixes
+
+- **ship**: Read Codex's marker-led clean receipt as a clean round
+  ([#754](https://github.com/Gharib89/skills/pull/754),
+  [`cd9ab23`](https://github.com/Gharib89/skills/commit/cd9ab2388803170774c1414fde581a92ad43eecf))
+
+
 ## v0.45.1 (2026-10-15)
 
 ### Bug Fixes
