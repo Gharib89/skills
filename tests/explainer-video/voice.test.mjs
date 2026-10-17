@@ -603,6 +603,12 @@ test("the real Gemini backend reads spent prepaid credits as a quota stop and a 
     await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
       quota: false,
     });
+    globalThis.fetch = async () =>
+      new Response("Payment Required", { status: 402 });
+    await assert.rejects(synthesize({ text: "Hi.", narrator, tools: {} }), {
+      quota: false,
+      message: "Gemini answered HTTP 402: Payment Required",
+    });
   } finally {
     globalThis.fetch = real;
   }
