@@ -101,4 +101,23 @@ out=$(mech 7 --section Review --body-file "$work/review" 2>/dev/null); rc=$?
 check_rc "a checker with long output is still refused" 1 "$rc"
 check "its first lines are cut" 0 "$(jq -r .error <<<"$out" | grep -cx '1\|10')"
 check "and its last 40 lines kept" 40 "$(jq -r .error <<<"$out" | grep -cE '^[0-9]+$|: 11$')"
+
+# A Body-check: line inside a fenced example is text, not the setting.
+printf '#!/bin/sh\necho refused\nexit 1\n' > "$repo/scripts/check-outline.sh"
+{ printf '## PR\n\nTemplate: None.\n\n```text\nBody-check: scripts/check-outline.sh\n```\n\n## Public surface\n\nDefault.\n'; } > "$repo/docs/agents/ship.md"
+reset; pr_body 2
+out=$(mech 7 --section Review --body-file "$work/review" 2>/dev/null); rc=$?
+check_rc "a fenced Body-check example is not run" 0 "$rc"
+check "and the write goes through" yes "$(wrote)"
+
+# A profile that exists and cannot be read is tooling, not "no checker".
+profile 'Body-check: scripts/check-outline.sh'
+reset; pr_body 2
+if [ "$(id -u)" -ne 0 ]; then
+  chmod 000 "$repo/docs/agents/ship.md"
+  out=$(mech 7 --section Review --body-file "$work/review" 2>/dev/null); rc=$?
+  check_rc "an unreadable profile is tooling" 2 "$rc"
+  check "and nothing is written" no "$(wrote)"
+  chmod 600 "$repo/docs/agents/ship.md"
+fi
 finish

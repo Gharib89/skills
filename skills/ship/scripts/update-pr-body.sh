@@ -58,7 +58,8 @@
 #   sections[]: the `## ` headings of the body AFTER the write, so a swallowed
 #   section is visible in the verdict rather than in a review eight minutes later.
 # exit: 0 · 1 update failed, with the host's status where there was one, or the
-#   body checker refused · 2 usage, or a body checker that could not run
+#   body checker refused · 2 usage, a body checker that could not run, or a
+#   profile that exists and cannot be read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: update-pr-body <pr> (--section <name> | --preamble) --body-file <path>'
@@ -101,7 +102,7 @@ elif ship_body_replace_section "$body" "$section" "$file" > "$new"; then
 else
   replaced=false; created=true
 fi
-check=$(ship_body_check_path)
+check=$(ship_body_check_path) || ship_tooling "cannot read the ship profile for its Body-check: line"
 if [ -n "$check" ]; then
   checked=$(cd "$(git rev-parse --show-toplevel)" && "./$check" "$new" 2>"$new.err"); rc=$?
   case $rc in
