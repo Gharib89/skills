@@ -71,3 +71,8 @@ export function stillStretches(diffs, first, fps) {
 // frames from `first`.
 export const stripStart = (peakFrame, first, n) =>
   Math.max(first, Math.min(peakFrame - STRIP_LEAD, first + n - STRIP_FRAMES));
+
+// The strip's last frame: STRIP_FRAMES on from its first, or the scene's last
+// when the scene owns fewer frames than a strip holds.
+export const stripEnd = (from, first, n) =>
+  Math.min(from + STRIP_FRAMES - 1, first + n - 1);

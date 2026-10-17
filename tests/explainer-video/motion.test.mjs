@@ -12,6 +12,7 @@ import {
   meanDiff,
   peak,
   stillStretches,
+  stripEnd,
   stripStart,
 } from "../../skills/explainer-video/scripts/lib/motion.mjs";
 import { bandMotion } from "../../skills/explainer-video/scripts/lib/backend.mjs";
@@ -58,6 +59,10 @@ test("the strip starts 5 frames before the peak and stays inside the scene", () 
   assert.equal(stripStart(50, 0, 200), 45);
   assert.equal(stripStart(2, 0, 200), 0);
   assert.equal(stripStart(199, 0, 200), 188);
+  assert.equal(stripEnd(188, 0, 200), 199);
+  // A scene shorter than a strip: the strip starts at its first frame and ends at its last.
+  assert.equal(stripStart(5, 10, 8), 10);
+  assert.equal(stripEnd(10, 10, 8), 17);
 });
 
 // The content band alone is read: a change in the caption rows moves nothing.

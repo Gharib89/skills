@@ -33,8 +33,8 @@ import {
   peak as peakFrame,
   sceneFrames,
   stillStretches,
+  stripEnd,
   stripStart,
-  STRIP_FRAMES,
 } from "../lib/motion.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
@@ -534,7 +534,7 @@ if (judgedBy) {
               ? null
               : {
                   first: r3(from / FPS),
-                  last: r3((from + STRIP_FRAMES - 1) / FPS),
+                  last: r3(stripEnd(from, first, n) / FPS),
                 },
             stills: m.stills,
           },
