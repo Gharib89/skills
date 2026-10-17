@@ -842,7 +842,7 @@ test("the bundled ITWorx profile loads, passes contrast by role and renders the 
     return { code: x.status, out: x.stdout, err: x.stderr };
   });
   assert.equal(r.code, 0, r.out + r.err);
-  assert.match(r.out, /^gates: 6 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 7 pass, 0 fail$/m);
   assert.equal(json(fx.dir, "style.json").name, "itworx");
   assert.match(read(fx.dir, "composition", "index.html"), /--bg: #ffffff;/);
 });

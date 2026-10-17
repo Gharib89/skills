@@ -13,12 +13,14 @@
 // the cites it read), cutting a sheet per scene first when a verdict is
 // missing. Deletes nothing: the render stage acts on the verdict.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` for layout, contrast,
-//         loudness, captions, sfx and critic (or `gate critic: pending: ...`),
-//         then `gates: <n> pass, <m> fail[, 1 pending]`, when red ending
-//         `; next: fix attempt <a> of 2` or `; stop: red after two fix
-//         attempts, no video`, when only pending `; next: run the critic,
-//         round <r> of 2`
-// writes: <run>/gates.json, gates.md, .cache/gates/, .cache/critic/
+//         loudness, captions, sfx, determinism and critic (or `gate critic:
+//         pending: ...`), then `gates: <n> pass, <m> fail[, 1 pending]`, when
+//         red ending `; next: fix attempt <a> of 2` or `; stop: red after two
+//         fix attempts, no video` (`; stop: determinism is red, a skill defect
+//         to report, no fix attempt, no video` when determinism is red), when
+//         only pending `; next: run the critic, round <r> of 2`
+// writes: <run>/gates.json, gates.md, .cache/gates/ (with the frames each
+//         determinism check rendered), .cache/critic/
 // exit:   0 every gate passes · 1 a gate fails or is pending, or `gates: <why>`
 //         on stderr · 2 usage
 import crypto from "node:crypto";
@@ -27,6 +29,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
+import {
+  peak as peakFrame,
+  sceneFrames,
+  stillStretches,
+  stripEnd,
+  stripStart,
+} from "../lib/motion.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { CUE_CHARS, FPS, H, W } from "../render/compose.mjs";
@@ -114,6 +123,7 @@ const source = [
   "gates.mjs",
   "../lib/backend.mjs",
   "../lib/layout.mjs",
+  "../lib/motion.mjs",
   "../lib/terms.mjs",
   "../lib/style.mjs",
 ].map((f) =>
@@ -188,6 +198,40 @@ if (todo.length) {
   };
   judge(checked, frames, floor, add);
   settle();
+  // Motion, then determinism on the frame it picks: the scene's peak-motion
+  // frame, rendered twice in two browsers and compared as decoded pixels.
+  for (const p of todo) {
+    const scene = { start: p.sc.start, duration: p.sc.duration, fps: FPS };
+    const { first } = sceneFrames(scene);
+    const diffs = await orFail(() =>
+      backend.bandMotion(path.join(run, mp4), scene),
+    );
+    const pk = peakFrame(diffs, first, FPS);
+    const t = r3(pk.t);
+    p.found.motion = {
+      still: pk.still,
+      frame: pk.frame,
+      t,
+      stills: stillStretches(diffs, first, FPS),
+    };
+    const base = path.basename(p.file, ".json");
+    const files = ["a", "b"].map((x) =>
+      path.join(".cache", "gates", "frames", `${p.sc.id}-${base}-${x}.png`),
+    );
+    fs.mkdirSync(path.join(run, path.dirname(files[0])), { recursive: true });
+    const hashes = [];
+    for (const f of files) {
+      await orFail(() => backend.frame(comp, t, path.join(run, f), { env }));
+      hashes.push(await orFail(() => backend.framePixels(path.join(run, f))));
+    }
+    p.found.determinism = {
+      frame: pk.frame,
+      t,
+      a: hashes[0],
+      b: hashes[1],
+      files,
+    };
+  }
   for (const p of todo) fs.writeFileSync(p.file, JSON.stringify(p.found));
 }
 
@@ -284,6 +328,13 @@ const summary = (ev, noun = "finding(s)") =>
   `${ev.length} ${noun}${ev.length ? `, first: ${ev[0]}` : ""}`;
 const layoutFindings = plan.flatMap((p) => p.found.layout);
 const contrastFindings = plan.flatMap((p) => p.found.contrast);
+// Led by the scene's start, as layout's lines are, with both renders' files.
+const differing = plan
+  .filter((p) => p.found.determinism.a !== p.found.determinism.b)
+  .map((p) => {
+    const d = p.found.determinism;
+    return `${p.sc.start.toFixed(2)} s ${p.sc.id}: frame ${d.frame} (${d.t.toFixed(2)} s) renders differently twice, sha256 ${d.a.slice(0, 12)} vs ${d.b.slice(0, 12)}: ${d.files.join(", ")}`;
+  });
 const judged = {
   layout: [
     layoutFindings,
@@ -305,6 +356,11 @@ const judged = {
     sfx,
     `${sfxCues.length} cue(s), at most ${busiest.n} in a minute`,
     `<= ${perMinute} a minute`,
+  ],
+  determinism: [
+    differing,
+    summary(differing, `of ${plan.length} scene(s) differ between two renders`),
+    "none, the same pixels twice",
   ],
 };
 const scriptKey = scriptHash(script);
@@ -332,10 +388,14 @@ const count = (failing, before) =>
 // Gemini), and write <scene>.json beside it. A hard failure blocks; scores
 // advise. Two rounds of one script at most: once two renders are judged, a
 // later one carries the second round's verdict rather than ask for a third.
+// Beside each contact sheet it cuts a motion strip and a motion record.
 const KINDS = ["unreadable", "invented"];
-const SCORES = ["clarity", "legibility", "fit"];
-// A verdict stands for the render and for what else the critic read: the
-// title, each sentence's cites and the cited excerpts' text.
+const SCORES = ["clarity", "legibility", "fit", "motion"];
+// Bumped when the verdict's format changes, so a verdict cached in the old one
+// is judged again rather than refused by the new validator.
+const CRITIC_FORMAT = 2;
+// A verdict stands for the render, for what else the critic read (the title,
+// each sentence's cites and the cited excerpts' text) and for its format.
 const excerptsFile = path.join(run, "excerpts.json");
 const excerptText = new Map(
   fs.existsSync(excerptsFile)
@@ -345,12 +405,16 @@ const excerptText = new Map(
       ])
     : [],
 );
-const criticKey = hash(renderHash, [
-  script.title,
-  script.scenes.map((s) =>
-    s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
-  ),
-]);
+const criticKey = hash(
+  renderHash,
+  [
+    script.title,
+    script.scenes.map((s) =>
+      s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
+    ),
+  ],
+  CRITIC_FORMAT,
+);
 const sheetsOf = (h) => path.posix.join(".cache", "critic", h);
 const verdicts = (h) =>
   timeline.scenes.map((sc) => {
@@ -373,10 +437,28 @@ const verdicts = (h) =>
     for (const k of SCORES)
       if (![1, 2, 3, 4, 5].includes(v.scores?.[k]))
         bad(`score ${k} is not a whole number 1 to 5`);
+    if (!Array.isArray(v.worst)) bad("no worst list");
+    if (v.worst.length > 3)
+      bad(`worst holds ${v.worst.length} entries, at most 3`);
+    v.worst.forEach((x, i) => {
+      if (!x || typeof x !== "object") bad(`worst ${i + 1} is not an object`);
+      if (!(
+        Number.isFinite(x?.at) &&
+        x.at >= sc.start &&
+        x.at <= sc.start + sc.duration
+      ))
+        bad(`worst ${i + 1} at ${x?.at} is not a time inside the scene`);
+      for (const k of ["what", "evidence", "fix"])
+        if (typeof x[k] !== "string" || !x[k].trim())
+          bad(`worst ${i + 1} has no ${k}`);
+    });
     return { ...v, id: sc.id, start: sc.start };
   });
-const rounds = same ? (prev.gates.critic?.rounds ?? []) : [];
-const criticAttempts = same ? (prev.gates.critic?.attempts ?? 0) : 0;
+// Rounds judged in another verdict format are not carried: their verdicts would
+// meet the validator, which refuses them, and are judged again instead.
+const keptRounds = same && prev.gates.critic?.format === CRITIC_FORMAT;
+const rounds = keptRounds ? (prev.gates.critic.rounds ?? []) : [];
+const criticAttempts = keptRounds ? (prev.gates.critic.attempts ?? 0) : 0;
 let judgedBy;
 const own = verdicts(criticKey);
 if (own.every(Boolean) && (rounds.includes(criticKey) || rounds.length < 2)) {
@@ -407,16 +489,19 @@ if (judgedBy) {
     evidence,
     sheets: sheetsOf(carried ? rounds[1] : criticKey),
     rounds,
+    format: CRITIC_FORMAT,
     scores: vs.map((v) => ({
       scene: v.id,
       ...Object.fromEntries(SCORES.map((k) => [k, v.scores[k]])),
       note: v.note ?? "",
+      worst: v.worst,
     })),
   };
 } else {
   const dir = sheetsOf(criticKey);
   fs.mkdirSync(path.join(run, dir), { recursive: true });
-  for (const sc of timeline.scenes) {
+  for (const p of plan) {
+    const { sc } = p;
     const png = path.join(run, dir, `${sc.id}.png`);
     if (!fs.existsSync(png))
       await orFail(() =>
@@ -425,6 +510,37 @@ if (judgedBy) {
           duration: sc.duration,
           fps: FPS,
         }),
+      );
+    // The motion strip is 12 frames from just before the scene's peak-motion
+    // frame; a still scene has none. The record carries what the strip's tiles
+    // and the scene's dead beats are in video seconds.
+    const m = p.found.motion;
+    const { first, n } = sceneFrames({ ...sc, fps: FPS });
+    const from = stripStart(m.frame, first, n);
+    const strip = path.join(run, dir, `${sc.id}.motion.png`);
+    if (!m.still && !fs.existsSync(strip))
+      await orFail(() =>
+        backend.strip(path.join(run, mp4), strip, { first: from, fps: FPS }),
+      );
+    const record = path.join(run, dir, `${sc.id}.motion.json`);
+    if (!fs.existsSync(record))
+      fs.writeFileSync(
+        record,
+        JSON.stringify(
+          {
+            still: m.still,
+            peak: m.still ? null : { frame: m.frame, t: m.t },
+            strip: m.still
+              ? null
+              : {
+                  first: r3(from / FPS),
+                  last: r3(stripEnd(from, first, n) / FPS),
+                },
+            stills: m.stills,
+          },
+          null,
+          2,
+        ) + "\n",
       );
   }
   critic = {
@@ -435,6 +551,7 @@ if (judgedBy) {
     evidence: [],
     sheets: dir,
     rounds,
+    format: CRITIC_FORMAT,
   };
 }
 
@@ -456,9 +573,12 @@ const pending = critic.status === "pending";
 // A hard failure in the critic's last round is final: no third round can
 // judge a fix, so the run stops now rather than spend an attempt it cannot win.
 const criticFinal = critic.status === "fail" && judgedBy.round === 2;
+// A red determinism gate stops at once as well: the same script rendered twice
+// differs, so no fix to the script could clear it.
+const nondeterministic = gates.determinism.status === "fail";
 const attempts = Math.max(
   count(red.length, same ? prev.attempts : 0),
-  criticFinal ? 3 : 0,
+  criticFinal || nondeterministic ? 3 : 0,
 );
 fs.writeFileSync(
   recordFile,
@@ -498,6 +618,19 @@ fs.writeFileSync(
             (s) =>
               `| ${s.scene} | ${SCORES.map((k) => s[k]).join(" | ")} | ${cell(s.note)} |`,
           ),
+          ...(critic.scores.some((s) => s.worst.length)
+            ? [
+                "",
+                "### Worst defects",
+                "",
+                ...critic.scores.flatMap((s) =>
+                  s.worst.map(
+                    (w) =>
+                      `- ${s.scene} at ${w.at} s: ${w.what} (${w.evidence}). Fix: ${w.fix}`,
+                  ),
+                ),
+              ]
+            : []),
         ]
       : []),
   ].join("\n") + "\n",
@@ -507,11 +640,13 @@ for (const [name, g] of Object.entries(gates))
 console.log(
   `gates: ${Object.keys(gates).length - red.length - pending} pass, ${red.length} fail${pending ? ", 1 pending" : ""}${
     red.length
-      ? criticFinal
-        ? "; stop: the critic's second round is red, no video"
-        : stopped(attempts)
-          ? "; stop: red after two fix attempts, no video"
-          : `; next: fix attempt ${attempts} of 2`
+      ? nondeterministic
+        ? "; stop: determinism is red, a skill defect to report, no fix attempt, no video"
+        : criticFinal
+          ? "; stop: the critic's second round is red, no video"
+          : stopped(attempts)
+            ? "; stop: red after two fix attempts, no video"
+            : `; next: fix attempt ${attempts} of 2`
       : pending
         ? `; next: run the critic, round ${rounds.length + 1} of 2`
         : ""

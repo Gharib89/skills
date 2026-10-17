@@ -1,5 +1,11 @@
 # Gates
 
+## Contents
+
+- [The critic round](#the-critic-round)
+- [On a red gate](#on-a-red-gate)
+- [Floors](#floors)
+
 A **video gate** checks the rendered video against a floor and blocks: a red
 gate means no video. The render stage runs them all after every render;
 `node <skill>/scripts/gates/gates.mjs explainers/<slug>` re-judges the render
@@ -29,22 +35,46 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   in order, at most 84 characters and inside the video, and the SRT equal to
   the burned-in cues.
 - `sfx`: at most 24 sound effects in any minute of `score.json`.
+- `determinism`: each scene's **peak-motion frame** (its middle frame when
+  nothing in the scene moves) rendered twice, in two separate browser launches
+  of the pinned Chrome and the HyperFrames runtime seek, and the SHA-256 of the
+  decoded pixels compared, never the PNG files'. A frame mid-move catches what
+  a settled one hides, such as a time source other than the seek. It has no
+  floor but equal pixels, and a profile's `gates.determinism` block is refused
+  with `no such floor`. A red line names the scene, the frame and its time, and
+  both renders' PNGs under `.cache/gates/frames/` as evidence.
 - `critic`: the **critic**, Claude subagents reading one **contact sheet** per
-  scene (four of its frames, cut from the MP4 by ffmpeg), fails on any hard
-  failure: `unreadable` or `invented` content. Its scores (clarity,
-  legibility, fit, 1 to 5) only advise: the line shows their means, and
-  `gates.md` lists them per scene. Until the critic has judged this render the
-  gate reads `gate critic: pending: round <r> of 2, ..., contact sheets in
+  scene (four of its frames, cut from the MP4 by ffmpeg) and its **motion
+  strip**, fails on any hard failure: `unreadable` or `invented` content. Its
+  scores (clarity, legibility, fit, motion, 1 to 5) and its `worst` list (at
+  most 3 defects per scene, each with the one change that would fix it) only
+  advise: the line shows the score means, and `gates.md` lists the scores and
+  the worst defects per scene. Until the critic has judged this render the gate
+  reads `gate critic: pending: round <r> of 2, ..., contact sheets in
   <sheets>`.
+
+The **peak-motion frame** is the scene's frame with the largest mean absolute
+pixel difference from the frame before it, measured on the encoded MP4
+downscaled and over the content band alone (the caption words recolour at every
+word, so the whole frame would always peak on a caption); a tie goes to the
+earliest frame, and a scene whose largest difference is under the encode's
+noise floor is still. One helper (`scripts/lib/motion.mjs`) picks it for the
+determinism gate and the strip. The **motion strip** is 12 consecutive frames of
+the scene from 5 before the peak-motion frame (clamped inside the scene),
+320x180 a tile on a 6x2 grid in reading order, cut beside the scene's contact
+sheet as `<scene>.motion.png`; a still scene has none. `<scene>.motion.json`
+beside it holds the peak frame and its time, the strip's first and last tile
+times and each still stretch of the content band lasting 1.5 s or more.
 
 A summary line follows, `gates: <n> pass, <m> fail[, 1 pending]`, ending on a
 red run with `next: fix attempt <a> of 2` or `stop: red after two fix
 attempts, no video`, and when the critic alone holds the video with `next: run
-the critic, round <r> of 2`. Layout and contrast results are cached per scene
-by everything that draws it, so a fix re-gates only the scenes it touched;
-loudness, captions and sfx run every time. The stage writes `gates.json`, the
-machine record, and `gates.md`, the readable report with every red gate's
-findings and the critic's scores.
+the critic, round <r> of 2`. A red determinism gate ends it `stop: determinism
+is red, a skill defect to report, no fix attempt, no video`. Layout, contrast
+and determinism results are cached per scene by everything that draws it, so a
+fix re-gates only the scenes it touched; loudness, captions and sfx run every
+time. The stage writes `gates.json`, the machine record, and `gates.md`, the
+readable report with every red gate's findings and the critic's scores.
 
 ## The critic round
 
@@ -77,6 +107,11 @@ visual's layout, its text size, colours within the profile, timing, or
 re-voiced audio, never the narration, the scene order or the scene count. A
 critic's `invented` finding is fixed in the visual: show what the narration
 and its excerpts say. Compile, voice if the audio changed, and render again.
+A red `determinism` gate is a skill defect, not a script fault: the same script
+rendered twice differs, so no fix to the script could clear it, and the run
+stops at once with no fix attempt. Report the component and the frame its line
+names, and never patch the script.
+
 The attempt counts live in `gates.json`: each gate's count resets when that
 gate passes, and the run's count, which `stop` reads, when every gate passes.
 Both reset when the narration changes, so a red that moves from one gate to
@@ -88,5 +123,5 @@ Floors are set in the skill. A profile's optional `gates` block may only
 tighten them, and the tightened value is the one applied and printed:
 `contrast` (`body`, `large`, raise), `layout` (`textPx`, `margin` as a
 fraction, raise), `loudness` (`tolerance` in LU, above 0, and `peak` in
-dBTP, no lower than -8.5, lower), `sfx` (`perMinute`, lower). The critic has
-no floor to tighten.
+dBTP, no lower than -8.5, lower), `sfx` (`perMinute`, lower). The critic and
+the determinism gate have no floor to tighten.

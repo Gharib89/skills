@@ -38,10 +38,12 @@
 // error `text_box_overflow`; `tiny` is 12 px; `dim` is #c8c8c0; `small` is 20 px
 // in the palette's accent; `edge` sits at
 // left 40, inside the safe margin; `stacked` starts halfway down the element
-// before it, so the two overlap. EXPLAINER_VIDEO_FAKE_BLANK=1 makes probe find
-// no text at all.
+// before it, so the two overlap; `flaky` renders differently every time frame
+// draws it. EXPLAINER_VIDEO_FAKE_BLANK=1 makes probe find no text at all.
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { sceneFrames } from "../../skills/explainer-video/scripts/lib/motion.mjs";
 
 const log = (call) =>
   fs.appendFileSync(
@@ -458,6 +460,50 @@ export async function clip(input, output, { start, duration }) {
 export async function sheet(input, output, { start, duration, fps }) {
   log({ call: "sheet", input, output, start, duration, fps });
   fs.writeFileSync(output, `sheet of ${path.basename(output, ".png")}`);
+}
+
+export async function strip(input, output, { first, fps }) {
+  log({ call: "strip", input, output, first, fps });
+  fs.writeFileSync(output, `strip of ${path.basename(output, ".motion.png")}`);
+}
+
+// A scene moves unless its start is listed in EXPLAINER_VIDEO_FAKE_STILL (a JSON
+// array of seconds): a moving one differs by 1 a frame and by 9 at frame n/3, a
+// still one not at all. EXPLAINER_VIDEO_FAKE_MOTION is a JSON object of start
+// seconds to the scene's own differences, for a test that places a peak.
+export async function bandMotion(input, { start, duration, fps }) {
+  log({ call: "bandMotion", input, start, duration, fps });
+  const { n } = sceneFrames({ start, duration, fps });
+  const own = JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_MOTION ?? "{}")[
+    start
+  ];
+  if (own) return own;
+  const still = JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_STILL ?? "[]");
+  const diffs = Array(n - 1).fill(still.includes(start) ? 0 : 1);
+  if (!still.includes(start)) diffs[Math.floor(n / 3)] = 9;
+  return diffs;
+}
+
+// One frame of the composition: what shows at t as a pixels line, then a
+// metadata line that differs on every call, which a hash of the pixels must not
+// read. An element naming `flaky` draws differently each time it is rendered.
+export async function frame(dir, t, out) {
+  log({ call: "frame", t, out });
+  const renders = fs
+    .readFileSync(process.env.EXPLAINER_VIDEO_FAKE_LOG, "utf8")
+    .split("\n")
+    .filter((l) => l.includes('"call":"frame"')).length;
+  const { texts } = showing(dir, t);
+  const flaky = texts.some((e) => /\bflaky\b/.test(e.text));
+  fs.writeFileSync(
+    out,
+    `pixels: ${texts.map((e) => e.text).join("|")}${flaky ? ` #${renders}` : ""}\nmeta: render ${renders}\n`,
+  );
+}
+
+export async function framePixels(file) {
+  const line = fs.readFileSync(file, "utf8").split("\n")[0];
+  return crypto.createHash("sha256").update(line).digest("hex");
 }
 
 export async function narration(input, output) {

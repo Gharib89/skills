@@ -246,7 +246,7 @@ test("render composes every scene, renders with the CLI's guards, delivers and r
   assert.equal(read(fx.dir, "out", "poster.png"), "still of hook");
   // The render the critic held drew the stills and the video; the one after
   // reused both.
-  assert.match(r.held.out, /^gates: 5 pass, 0 fail, 1 pending; next: /m);
+  assert.match(r.held.out, /^gates: 6 pass, 0 fail, 1 pending; next: /m);
   assert.deepEqual(
     calls(fx)
       .map((c) => (c.args.includes("png-sequence") ? "stills" : "video"))
@@ -643,6 +643,12 @@ for (const [name, arrange, why, voiced = true] of [
     "a profile naming a gate group the skill has not",
     (fx) => styled(fx, {}, { gates: { motion: { speed: 2 } } }),
     /^render: style profile odd: gates\.motion: no such floor$/m,
+    false,
+  ],
+  [
+    "a profile with a determinism block, whose floor is equality",
+    (fx) => styled(fx, {}, { gates: { determinism: { tolerance: 1 } } }),
+    /^render: style profile odd: gates\.determinism: no such floor$/m,
     false,
   ],
   [

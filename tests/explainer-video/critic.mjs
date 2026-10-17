@@ -5,7 +5,8 @@ import path from "node:path";
 
 export const CLEAN = {
   failures: [],
-  scores: { clarity: 4, legibility: 5, fit: 4 },
+  scores: { clarity: 4, legibility: 5, fit: 4, motion: 3 },
+  worst: [],
 };
 
 // A verdict for every contact sheet the last gates run left without one,
