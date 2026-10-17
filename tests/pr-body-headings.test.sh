@@ -284,6 +284,11 @@ check "a root that climbs out of the tree is not found" \
 check "a root with a middle .. component is not found" \
   "pr-body: change outline: node helper: file not found: scripts/../a.sh" \
   "$(oc_out '```diff\n scripts/../a.sh\n+  helper()\n```')"
+mkdir -p "$PR_ROOT/dir.."; printf 'helper\n' > "$PR_ROOT/a..b.sh"; printf 'helper\n' > "$PR_ROOT/dir../c.sh"
+check_rc "a file name that merely contains two dots is read" \
+  0 "$(oc_rc '```diff\n a..b.sh\n+  helper()\n```')"
+check_rc "and so is a directory name ending in two dots" \
+  0 "$(oc_rc '```diff\n dir../c.sh\n+  helper()\n```')"
 check_rc "a tab-indented node is a node" \
   1 "$(oc_rc '```diff\n scripts/a.sh\n+\tmissing_fn()\n```')"
 check_rc "a root with a glob is not resolved" \
