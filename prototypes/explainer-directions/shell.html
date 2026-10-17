@@ -1,0 +1,419 @@
+<title>DORA Core Visual Directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--
+  PROTOTYPE, throwaway. Wayfinder ticket "Visual directions storyboard on dora-core".
+  Five visual directions for explainer-video, each a live GSAP build of three dora-core scenes
+  (hook, trails, integrate) over their real narration (72.5 s, word timings from timeline.json).
+  build.py inlines dir-*.js, the audio, the fonts and the scene data into storyboard.html.
+  Page tokens follow explainer-video's own storyboard page (grill-with-artifact's palette).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..700&display=swap">
+<style>
+/* Layout: one reading column. Header, direction tabs, the animatic, the direction's grammar,
+   one card per scene, the side-by-side sheet, the pick form; a floating switcher at the foot. */
+:root {
+  --page: #faf9f5; --card: #ffffff; --hover: #f0eee6;
+  --fg: #141413; --fg-body: #3d3d3a; --fg-label: #73726c;
+  --line: #1f1e1d14; --line-strong: #1f1e1d26;
+  --accent: #c6613f; --accent-ink: #ffffff; --accent-wash: #f6e7df; --accent-line: #c6613f66;
+  --ok: #2c7a39; --ok-wash: #e2efdf; --warn: #946410; --warn-wash: #f4ead2;
+  --bar: #141413; --bar-ink: #faf9f5;
+  --r: 12px; --r-sm: 8px; --r-btn: 999px;
+  --f-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-serif: ui-serif, Georgia, "Times New Roman", serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #262624; --card: #30302e; --hover: #1f1e1d;
+    --fg: #faf9f5; --fg-body: #c2c0b6; --fg-label: #9c9a92;
+    --line: #dedcd114; --line-strong: #dedcd126;
+    --accent: #d97757; --accent-ink: #141413; --accent-wash: #46302a; --accent-line: #d9775780;
+    --ok: #6fb37a; --ok-wash: #26372a; --warn: #d9a441; --warn-wash: #3d331f;
+    --bar: #faf9f5; --bar-ink: #141413;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #262624; --card: #30302e; --hover: #1f1e1d;
+  --fg: #faf9f5; --fg-body: #c2c0b6; --fg-label: #9c9a92;
+  --line: #dedcd114; --line-strong: #dedcd126;
+  --accent: #d97757; --accent-ink: #141413; --accent-wash: #46302a; --accent-line: #d9775780;
+  --ok: #6fb37a; --ok-wash: #26372a; --warn: #d9a441; --warn-wash: #3d331f;
+  --bar: #faf9f5; --bar-ink: #141413;
+  color-scheme: dark;
+}
+/*FONTS*/
+*, *::before, *::after { box-sizing: border-box; }
+body { color: var(--fg); font: 430 16px/1.6 var(--f-sans); -webkit-font-smoothing: antialiased; background: var(--page); }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-family: var(--f-serif); font-weight: 500; }
+h1 { font-size: clamp(28px, 4.4vw, 40px); line-height: 1.15; letter-spacing: -0.01em; }
+h2 { font-size: 24px; line-height: 1.25; }
+h3 { font-size: 19px; line-height: 1.3; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 140px; display: grid; gap: 36px; }
+.label { font: 600 11.5px/1.3 var(--f-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-label); }
+.mono { font-family: var(--f-mono); font-size: 13px; }
+.muted { color: var(--fg-label); }
+header.top { display: grid; gap: 12px; }
+header.top .lede { max-width: 68ch; color: var(--fg-body); }
+.panel { background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 20px; display: grid; gap: 16px; min-width: 0; }
+
+/* direction tabs */
+.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.tab { all: unset; cursor: pointer; display: grid; gap: 2px; padding: 12px 14px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--card); min-width: 0; }
+.tab:hover { background: var(--hover); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tab .k { font: 600 12px var(--f-mono); color: var(--fg-label); }
+.tab .n { font-weight: 600; }
+.tab .s { font-size: 13px; color: var(--fg-label); line-height: 1.4; }
+.tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-wash); }
+.tab[aria-selected="true"] .k { color: var(--accent); }
+
+/* stage */
+.stage { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-sm); background: #000; isolation: isolate; }
+.stage > .frame { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; }
+/* the video's own look: the dora-dev style profile, the same in every direction and both page themes */
+.frame { --bg: #ffffff; --panel: #dedddf; --chip: #f0e15a; --line: #dedddf; --rule: #9a9b9c; --text: #202124; --muted: #616264; --faint: #7d7d7f; --accent: #2782cc; --ok: #558141; --warn: #91610f; --stop: #b84b33;
+  --ft: "Google Sans Flex", "Inter", system-ui, sans-serif; --fm: "JetBrains Mono", ui-monospace, monospace;
+  background: var(--bg); color: var(--text); font-family: var(--ft); font-weight: 400; line-height: 1.2; }
+.player { display: grid; gap: 12px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: var(--r-btn); border: 1px solid var(--line-strong); font-weight: 600; font-size: 14px; background: var(--card); }
+.btn:hover { background: var(--hover); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.05); }
+.time { font: 500 13px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--fg-label); }
+.scrub { position: relative; flex: 1 1 260px; min-width: 0; height: 34px; cursor: pointer; touch-action: none; }
+.scrub .track { position: absolute; left: 0; right: 0; top: 14px; height: 6px; border-radius: 3px; background: var(--hover); display: flex; overflow: hidden; }
+.scrub .seg { height: 100%; border-right: 2px solid var(--card); }
+.scrub .fill { position: absolute; left: 0; top: 14px; height: 6px; border-radius: 3px; background: var(--accent); pointer-events: none; }
+.scrub .seglabel { position: absolute; top: 24px; font-size: 11px; color: var(--fg-label); white-space: nowrap; pointer-events: none; }
+.scenechips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { all: unset; cursor: pointer; font-size: 13px; padding: 4px 10px; border-radius: var(--r-btn); border: 1px solid var(--line-strong); }
+.chip:hover { background: var(--hover); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip.on { border-color: var(--accent); color: var(--accent); }
+.caption { min-height: 3.2em; font-size: 17px; line-height: 1.6; color: var(--fg-label); max-width: 80ch; }
+.caption .w.said { color: var(--fg); }
+.caption .w.now { color: var(--accent); }
+
+/* grammar */
+.grammar { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 24px; }
+.grammar .row { display: grid; gap: 4px; min-width: 0; }
+.grammar .row p { color: var(--fg-body); font-size: 15px; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px 24px; }
+.notes .row { display: grid; gap: 4px; min-width: 0; }
+.notes p, .notes li { font-size: 14.5px; color: var(--fg-body); }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* scene cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+.card .body { padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.card .stage { border-radius: 0; cursor: pointer; }
+.card ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; color: var(--fg-body); }
+.card ol .t { font: 500 12px var(--f-mono); color: var(--fg-label); font-variant-numeric: tabular-nums; }
+.card .style { font-size: 14px; color: var(--fg-body); border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* sheet */
+.sheet { display: grid; grid-template-columns: 150px repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; }
+.sheet .h { font-size: 13px; font-weight: 600; }
+.sheet .stage { border-radius: 6px; cursor: pointer; }
+.sheetwrap { overflow-x: auto; }
+.sheetwrap .sheet { min-width: 720px; }
+
+/* pick */
+form.pick { display: grid; gap: 18px; }
+.pickrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.radio { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-btn); cursor: pointer; font-size: 14px; }
+.radio:has(input:checked) { border-color: var(--accent); background: var(--accent-wash); }
+.radio input { accent-color: var(--accent); margin: 0; }
+.mix { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.mix label { display: grid; gap: 4px; font-size: 14px; }
+select, textarea { font: inherit; font-size: 14px; color: var(--fg); background: var(--page); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px 10px; width: 100%; }
+textarea { min-height: 96px; resize: vertical; }
+select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.status { font-size: 14px; }
+.status.ok { color: var(--ok); }
+.status.warn { color: var(--warn); }
+
+/* floating switcher (prototype chrome, not part of any direction) */
+.switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: var(--r-btn); background: var(--bar); color: var(--bar-ink); box-shadow: 0 8px 28px #0000003d; max-width: calc(100vw - 32px); }
+.switcher button { all: unset; cursor: pointer; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; font-size: 18px; }
+.switcher button:hover { background: #ffffff22; }
+.switcher button:focus-visible { outline: 2px solid var(--accent); }
+.switcher .cur { font-size: 14px; font-weight: 600; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 560px) { .sheet { grid-template-columns: 90px repeat(3, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="label">Wayfinder ticket · explainer-video: rich visuals and operator-set length</span>
+    <h1>Visual directions on DORA Core</h1>
+    <p class="lede">Three scenes of <span class="mono">dora-core</span> (the hook, a flow, a terminal), 72.5 seconds of their real narration, built five ways. Each direction is a different grammar: how the camera moves, how one scene hands over to the next, how type moves, what the ground looks like, and whether anything is 3D. Colours and fonts stay the dora-dev profile in all five, so only the grammar differs. Play one, flip with the arrow keys, then pick a direction or a mix at the bottom.</p>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Directions"></nav>
+
+  <section class="panel player" aria-label="Animatic">
+    <div class="stage" id="main-stage"></div>
+    <div class="controls">
+      <button class="btn primary" id="play" type="button">Play with narration</button>
+      <div class="scrub" id="scrub" role="slider" aria-label="Seek" tabindex="0" aria-valuemin="0" aria-valuemax="72.5" aria-valuenow="0">
+        <div class="track" id="track"></div><div class="fill" id="fill"></div>
+      </div>
+      <span class="time" id="time">0:00.0 / 1:12.5</span>
+    </div>
+    <div class="scenechips" id="chips"></div>
+    <p class="caption" id="caption" aria-live="off"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="g-h">
+    <div style="display:grid;gap:6px"><span class="label">The grammar</span><h2 id="g-h"></h2><p id="g-sum" class="muted" style="max-width:72ch"></p></div>
+    <div class="grammar" id="grammar"></div>
+    <div class="notes" id="notes"></div>
+  </section>
+
+  <section style="display:grid;gap:14px" aria-labelledby="c-h">
+    <div style="display:grid;gap:4px"><span class="label">Storyboard</span><h2 id="c-h">One card per scene</h2><p class="muted">Each frame is the live build seeked to the scene's fullest moment. Click a frame to play from that scene.</p></div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="s-h">
+    <div style="display:grid;gap:4px"><span class="label">Side by side</span><h2 id="s-h">All five at the same moments</h2><p class="muted">Fifteen live builds, so it loads on request. Click a frame to open that direction there.</p></div>
+    <div><button class="btn" id="sheet-btn" type="button">Build the sheet</button></div>
+    <div class="sheetwrap"><div class="sheet" id="sheet" hidden></div></div>
+  </section>
+
+  <section class="panel" aria-labelledby="p-h">
+    <div style="display:grid;gap:4px"><span class="label">Your pick</span><h2 id="p-h">Pick a direction, or mix them</h2><p class="muted">Saved to this page, where the wayfinding session reads it back. A mix takes each part from the direction you name.</p></div>
+    <form class="pick" id="pick">
+      <div class="pickrow" id="pick-dir" role="radiogroup" aria-label="Direction"></div>
+      <div class="mix" id="mix"></div>
+      <label style="display:grid;gap:4px;font-size:14px">Notes (what to keep, drop or change)<textarea id="pick-notes" name="notes"></textarea></label>
+      <div class="controls"><button class="btn primary" type="submit" id="pick-save">Save pick</button><span class="status" id="pick-status"></span></div>
+    </form>
+  </section>
+</div>
+
+<div class="switcher" role="group" aria-label="Direction switcher">
+  <button type="button" id="prev" aria-label="Previous direction">‹</button>
+  <span class="cur" id="cur"></span>
+  <button type="button" id="next" aria-label="Next direction">›</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/CustomEase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+<script>
+/*DATA*/
+window.DIRECTIONS = [];
+gsap.registerPlugin(CustomEase);
+// Shared helpers every direction builds from. Times are absolute film seconds.
+window.H = (() => {
+  const S = {};
+  for (const s of DATA.scenes) {
+    S[s.id] = { id: s.id, start: s.start, dur: s.duration, end: s.start + s.duration,
+      sentences: s.sentences.map(t => s.start + t),
+      words: s.words.map(([text, a, b]) => ({ text, a: s.start + a, b: s.start + b })) };
+  }
+  const norm = t => t.toLowerCase().replace(/[^a-z0-9']/g, '');
+  return {
+    S, T: DATA.total, props: DATA.props, order: DATA.scenes.map(s => s.id),
+    // sentence n (1-based, the scene file's "at") of scene id
+    sent: (id, n) => S[id].sentences[n - 1],
+    // start of the nth (0-based) spoken word equal to text
+    word(id, text, nth = 0) {
+      const hits = S[id].words.filter(w => norm(w.text) === norm(text));
+      if (!hits[nth]) throw new Error(`word ${text}#${nth} not in ${id}`);
+      return hits[nth].a;
+    },
+    rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; },
+    el(parent, tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; parent.appendChild(e); return e; },
+    // split text into word spans (whole words only: RTL safe)
+    words(parent, text, cls = 'w') { return text.split(/\s+/).map((t, i, a) => { const s = document.createElement('span'); s.className = cls; s.textContent = t; parent.appendChild(s); if (i < a.length - 1) parent.appendChild(document.createTextNode(' ')); return s; }); },
+  };
+})();
+</script>
+/*DIRS*/
+<script>
+(() => {
+  const D = window.DIRECTIONS, T = H.T, order = H.order;
+  const titles = { hook: 'Fast and stable', trails: 'Why Core moves slowly', integrate: 'Integration and tests' };
+  const roles = { hook: 'hook · title', trails: 'point · flow', integrate: 'point · terminal' };
+  const $ = id => document.getElementById(id);
+  const fmt = t => { const m = Math.floor(t / 60), s = (t - m * 60); return m + ':' + s.toFixed(1).padStart(4, '0'); };
+  const injected = new Set();
+  function css(dir) { if (injected.has(dir.key)) return; injected.add(dir.key); const st = document.createElement('style'); st.textContent = dir.css || ''; document.head.appendChild(st); }
+
+  // A live instance of one direction inside a .stage element.
+  function mount(stageEl, dir) {
+    css(dir);
+    if (stageEl._inst) stageEl._inst.dispose();
+    stageEl.innerHTML = '';
+    const frame = H.el(stageEl, 'div', 'frame dir-' + dir.key.toLowerCase());
+    const tl = dir.build(frame);
+    tl.to({}, { duration: 0 }, T); // pad to the film length
+    tl.pause();
+    const fit = () => { frame.style.transform = `scale(${stageEl.clientWidth / 1920})`; };
+    const ro = new ResizeObserver(fit); ro.observe(stageEl); fit();
+    const inst = {
+      dir, tl,
+      seek(t) { tl.time(Math.min(Math.max(t, 0), T - 0.001), false); if (tl.renderAt) tl.renderAt(tl.time()); },
+      dispose() { ro.disconnect(); tl.kill(); if (tl.dispose) tl.dispose(); stageEl.innerHTML = ''; stageEl._inst = null; },
+    };
+    stageEl._inst = inst;
+    return inst;
+  }
+
+  window.__mount = mount; // contact sheets while prototyping
+  // key frame per scene: just after the scene's last reveal
+  const keyT = { hook: H.sent('hook', 4) + 3.2, trails: H.sent('trails', 5) + 2.5, integrate: H.sent('integrate', 4) + 3 };
+
+  let cur = 0, main = null, playing = false, now = 0, lastTick = 0;
+  const audio = new Audio(DATA.audio); audio.preload = 'auto';
+
+  // tabs + switcher
+  const tabs = $('tabs');
+  D.forEach((d, i) => {
+    const b = H.el(tabs, 'button', 'tab'); b.type = 'button'; b.setAttribute('role', 'tab');
+    b.innerHTML = `<span class="k">${d.key}</span><span class="n">${d.name}</span><span class="s">${d.tagline}</span>`;
+    b.onclick = () => select(i);
+  });
+  $('prev').onclick = () => select((cur + D.length - 1) % D.length);
+  $('next').onclick = () => select((cur + 1) % D.length);
+  addEventListener('keydown', e => {
+    if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); $('prev').click(); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); $('next').click(); }
+    if (e.key === ' ' && e.target === document.body) { e.preventDefault(); toggle(); }
+  });
+
+  // scrub track segments
+  for (const id of order) {
+    const s = H.S[id], seg = H.el($('track'), 'div', 'seg'); seg.style.width = (s.dur / T * 100) + '%';
+    const lab = H.el($('scrub'), 'span', 'seglabel', titles[id]); lab.style.left = (s.start / T * 100) + '%';
+    const c = H.el($('chips'), 'button', 'chip', titles[id]); c.type = 'button'; c.dataset.id = id; c.onclick = () => go(s.start + 0.05);
+  }
+  const scrub = $('scrub');
+  const scrubTo = e => { const r = scrub.getBoundingClientRect(); go(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * T); };
+  scrub.addEventListener('pointerdown', e => { scrub.setPointerCapture(e.pointerId); scrubTo(e); scrub.onpointermove = scrubTo; });
+  scrub.addEventListener('pointerup', () => { scrub.onpointermove = null; });
+  scrub.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.stopPropagation(); e.preventDefault(); go(now + (e.key === 'ArrowLeft' ? -2 : 2)); } });
+
+  // caption
+  const capWords = order.flatMap(id => H.S[id].words.map(w => ({ ...w, id })));
+  function caption(t) {
+    const id = order.find(i => t < H.S[i].end) || order[order.length - 1], s = H.S[id];
+    let k = s.sentences.findIndex((a, j) => t >= a && (j === s.sentences.length - 1 || t < s.sentences[j + 1]));
+    if (k < 0) k = 0;
+    const a = s.sentences[k], b = s.sentences[k + 1] ?? s.end;
+    const ws = s.words.filter(w => w.a >= a - 0.01 && w.a < b - 0.01);
+    $('caption').innerHTML = ws.map(w => `<span class="w${w.a <= t ? (w.b > t ? ' now' : ' said') : ''}">${w.text}</span>`).join(' ');
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.id === id));
+  }
+  function paint() {
+    main && main.seek(now);
+    $('fill').style.width = (now / T * 100) + '%';
+    $('time').textContent = fmt(now) + ' / ' + fmt(T);
+    scrub.setAttribute('aria-valuenow', now.toFixed(1));
+    caption(now);
+  }
+  function go(t) { now = Math.max(0, Math.min(T, t)); if (playing) { try { audio.currentTime = now; } catch {} } paint(); }
+  function tick(ts) {
+    if (!playing) return;
+    if (!audio.paused && audio.readyState >= 2) now = audio.currentTime;
+    else now += (ts - lastTick) / 1000;
+    lastTick = ts;
+    if (now >= T - 0.01) { now = T - 0.01; stop(); }
+    paint();
+    if (playing) requestAnimationFrame(tick);
+  }
+  function play() { if (now >= T - 0.05) now = 0; playing = true; try { audio.currentTime = now; } catch {} audio.play().catch(() => {}); lastTick = performance.now(); $('play').textContent = 'Pause'; requestAnimationFrame(tick); }
+  function stop() { playing = false; audio.pause(); $('play').textContent = 'Play with narration'; }
+  function toggle() { playing ? stop() : play(); }
+  $('play').onclick = toggle;
+
+  // grammar + notes + cards for the current direction
+  const AXES = [['camera', 'Camera'], ['seams', 'Scene to scene'], ['type', 'Type'], ['texture', 'Ground and texture'], ['threeD', '3D']];
+  function describe(d) {
+    $('g-h').textContent = d.key + '. ' + d.name; $('g-sum').textContent = d.summary;
+    $('grammar').innerHTML = AXES.map(([k, l]) => `<div class="row"><span class="label">${l}</span><p>${d.axes[k]}</p></div>`).join('');
+    const refs = d.refs.map(r => `<li><a href="${r.url}" target="_blank" rel="noopener">${r.label}</a>${r.what ? ': ' + r.what : ''}</li>`).join('');
+    $('notes').innerHTML = `<div class="row"><span class="label">References</span><ul>${refs}</ul></div>
+      <div class="row"><span class="label">Arabic, right to left</span><p>${d.rtl}</p></div>
+      <div class="row"><span class="label">In the composer</span><p>${d.composer}</p></div>`;
+    const cards = $('cards'); cards.querySelectorAll('.stage').forEach(s => s._inst && s._inst.dispose()); cards.innerHTML = '';
+    for (const id of order) {
+      const s = H.S[id], c = H.el(cards, 'article', 'card');
+      const st = H.el(c, 'div', 'stage'); st.title = 'Play from this scene'; st.onclick = () => { go(s.start + 0.05); scrollTo({ top: 0, behavior: 'smooth' }); if (!playing) play(); };
+      const body = H.el(c, 'div', 'body');
+      const lines = DATA.narration[id].map((x, j) => `<li><span class="t">${fmt(s.sentences[j] - s.start)}</span> ${x}</li>`).join('');
+      body.innerHTML = `<div style="display:grid;gap:2px"><span class="label">${roles[id]}</span><h3>${titles[id]}</h3></div>
+        <div class="meta"><span class="time">${fmt(s.start)} to ${fmt(s.end)}</span><span class="time">${s.dur.toFixed(1)} s</span></div>
+        <ol>${lines}</ol><p class="style">${d.scenes[id]}</p>`;
+      requestAnimationFrame(() => mount(st, d).seek(keyT[id]));
+    }
+  }
+  function select(i) {
+    cur = i;
+    tabs.querySelectorAll('.tab').forEach((b, j) => b.setAttribute('aria-selected', j === i));
+    $('cur').textContent = D[i].key + ' · ' + D[i].name;
+    main = mount($('main-stage'), D[i]);
+    paint(); describe(D[i]);
+    try { history.replaceState(null, '', '#' + D[i].key.toLowerCase()); } catch {}
+    try { localStorage.setItem('dir', D[i].key); } catch {}
+  }
+
+  // side-by-side sheet
+  $('sheet-btn').onclick = () => {
+    const sh = $('sheet'); sh.hidden = false; $('sheet-btn').hidden = true;
+    H.el(sh, 'span', 'h', ''); for (const id of order) H.el(sh, 'span', 'h', titles[id]);
+    D.forEach((d, i) => {
+      H.el(sh, 'span', 'h', d.key + '. ' + d.name);
+      for (const id of order) {
+        const st = H.el(sh, 'div', 'stage'); st.title = 'Open ' + d.name + ' here';
+        st.onclick = () => { select(i); go(keyT[id]); scrollTo({ top: 0, behavior: 'smooth' }); };
+        requestAnimationFrame(() => mount(st, d).seek(keyT[id]));
+      }
+    });
+  };
+
+  // pick form, saved to the page's db (doc picks/owner)
+  const dirOpts = D.map(d => [d.key, d.key + '. ' + d.name]);
+  $('pick-dir').innerHTML = [...dirOpts, ['mix', 'A mix']].map(([v, l]) => `<label class="radio"><input type="radio" name="direction" id="pick-${v}" value="${v}"> ${l}</label>`).join('');
+  $('mix').innerHTML = AXES.map(([k, l]) => `<label for="mix-${k}">${l}<select id="mix-${k}" name="${k}"><option value="">Same as the pick</option>${dirOpts.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}<option value="none">None</option></select></label>`).join('');
+  const form = $('pick'), status = $('pick-status');
+  let ref = null;
+  const fill = p => { if (!p) return; const r = form.querySelector(`input[value="${p.direction}"]`); if (r) r.checked = true; for (const [k] of AXES) $('mix-' + k).value = (p.mix || {})[k] || ''; $('pick-notes').value = p.notes || ''; };
+  const show = p => { status.className = 'status ok'; status.textContent = p ? 'Saved ' + new Date(p.savedAt).toLocaleString() + '.' : ''; };
+  status.textContent = 'Connecting to the page store.';
+  (async () => {
+    const db = await window.claude?.use?.('db').catch(() => null);
+    if (!db) { status.className = 'status warn'; status.textContent = 'Saving needs the published page, signed in. Tell the session your pick instead.'; return; }
+    ref = db.doc('picks/owner'); status.textContent = '';
+    ref.onSnapshot(s => { if (s.exists) { fill(s.data()); show(s.data()); } }, () => {});
+  })();
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(form), direction = fd.get('direction');
+    if (!direction) { status.className = 'status warn'; status.textContent = 'Choose a direction or A mix first.'; return; }
+    const mix = Object.fromEntries(AXES.map(([k]) => [k, fd.get(k) || '']));
+    const p = { direction, mix, notes: fd.get('notes') || '', savedAt: new Date().toISOString() };
+    if (!ref) { status.className = 'status warn'; status.textContent = 'Not saved: this view has no page store. Tell the session your pick.'; return; }
+    try { await ref.set(p); show(p); } catch (err) { status.className = 'status warn'; status.textContent = 'Not saved (' + (err.code || err.message) + '). Tell the session your pick instead.'; }
+  });
+
+  let start = 0;
+  const h = (location.hash || '').slice(1).toUpperCase();
+  try { const k = h || localStorage.getItem('dir'); const j = D.findIndex(d => d.key === k); if (j >= 0) start = j; } catch {}
+  now = keyT.hook; select(start);
+})();
+</script>
