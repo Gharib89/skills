@@ -12,5 +12,5 @@
 
 - Editing one sentence on the storyboard re-voices its whole scene; prosody stays even across the scene, and a Kokoro scene costs seconds on CPU.
 - The voice cache key is (scene narration, narrator, language), plus the clip's hash for own voice. This replaces the per-sentence voice key set on #682.
-- A quota stop (HTTP 429) keeps every finished scene; a resumed run voices only the missing ones.
+- A quota stop (a rate or daily limit, or spent credits) keeps every finished scene; a resumed run voices only the missing ones.
 - The house LEAD, GAP and TAIL spacing still applies, since sentence times come from the aligner.

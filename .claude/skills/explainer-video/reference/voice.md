@@ -66,8 +66,9 @@ in Arabic.
    failed synthesis): relay the stderr message as printed. Keep the brief's
    narrator: only the user moves `voice`.
 5. **On `voice: Gemini quota reached`** (or `ElevenLabs`), the key has hit
-   that vendor's limit, whose own message the line quotes. The scenes it
-   counts as kept are cached. Relay the line and ask the user to pick one:
-   voice again once the quota resets, which voices only the missing scenes;
-   set a paid key and voice again; or move the brief's `voice` to another
-   narrator.
+   that vendor's limit: a rate or daily limit, or spent credits. The line
+   quotes the vendor's own message, and the scenes it counts as kept are
+   cached. Relay the line and ask the user to pick one: voice again once the
+   quota resets or the credits are topped up, which voices only the missing
+   scenes; set a paid key and voice again; or move the brief's `voice` to
+   another narrator.
