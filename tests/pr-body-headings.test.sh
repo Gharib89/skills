@@ -281,6 +281,9 @@ printf 'helper\n' > "$T/a.sh" # outside PR_ROOT, where `../a.sh` would land
 check "a root that climbs out of the tree is not found" \
   "pr-body: change outline: node helper: file not found: ../a.sh" \
   "$(oc_out '```diff\n ../a.sh\n+  helper()\n```')"
+check "a root with a middle .. component is not found" \
+  "pr-body: change outline: node helper: file not found: scripts/../a.sh" \
+  "$(oc_out '```diff\n scripts/../a.sh\n+  helper()\n```')"
 check_rc "a tab-indented node is a node" \
   1 "$(oc_rc '```diff\n scripts/a.sh\n+\tmissing_fn()\n```')"
 check_rc "a root with a glob is not resolved" \

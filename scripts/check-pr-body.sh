@@ -221,8 +221,8 @@ violations=$(sed '/^@sym/d' <<<"$found")
 while IFS=$'\t' read -r _ file sym; do
   [ -n "$sym" ] || continue
   target=$root/$file
-  case /$file/ in */../*) target=/nonexistent ;; esac
-  if [ -d "$target" ]; then grep -rqwF -- "$sym" "$target"; rc=$?; [ "$rc" -le 1 ] || rc=3
+  if [[ /$file/ == */../* ]]; then rc=2 # a `..` component is not found, wrapped in slashes to match at either end
+  elif [ -d "$target" ]; then grep -rqwF -- "$sym" "$target"; rc=$?; [ "$rc" -le 1 ] || rc=3
   elif [ -r "$target" ]; then grep -qwF -- "$sym" "$target"; rc=$?
   elif [ -e "$target" ]; then rc=3
   else rc=2; fi
