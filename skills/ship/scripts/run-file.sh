@@ -152,7 +152,8 @@
 #     reads `skipped` and a phase with no range `unverified`
 #   prove: {test, paths, red, command, run_file, head}, revert-red's verdict plus the
 #     record and the head, its paths as typed where the line normalises them;
-#     on a refusal revert-red's own answer
+#     on a refusal revert-red's own answer. <test> must be one of the words of
+#     <command>, character for character, or a node ID under it (<test>::<name>)
 #   probe: {run_file, ref, command, exit, head, last}
 #   call: {run_file, command, why}
 #   gate record: {run_file, head, verdict}

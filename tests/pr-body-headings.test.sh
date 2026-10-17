@@ -298,4 +298,18 @@ chmod +x "$T/stub/grep"
 check_rc "a failing grep is tooling, not a pass" \
   2 "$(PATH=$T/stub:$PATH rc_of "$body")"
 
+# --- arguments that are not a body file --------------------------------------
+
+# `--help` once went to `cat`, whose own usage text was checked as the body and
+# failed every heading: a failed check of a body nobody passed.
+help_out=$(bash scripts/check-pr-body.sh --help 2>&1)
+check_rc "--help is a usage answer, exit 0" 0 "$(bash scripts/check-pr-body.sh --help >/dev/null 2>&1; printf '%s' "$?")"
+check "--help prints no violation line" "0" "$(printf '%s\n' "$help_out" | grep -c '^pr-body:')"
+check "--help names the script's call" "1" "$(printf '%s\n' "$help_out" | grep -c '^usage: scripts/check-pr-body.sh \[<body-file>\]')"
+dash_out=$(bash scripts/check-pr-body.sh -x 2>/dev/null)
+check_rc "an unknown dash argument is tooling" 2 "$(bash scripts/check-pr-body.sh -x >/dev/null 2>&1; printf '%s' "$?")"
+check "an unknown dash argument prints no violation" "" "$dash_out"
+check "an unknown dash argument answers the usage line on stderr" "1" \
+  "$(bash scripts/check-pr-body.sh -x 2>&1 >/dev/null | grep -c '^usage: scripts/check-pr-body.sh')"
+
 finish
