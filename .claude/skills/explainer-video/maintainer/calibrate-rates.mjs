@@ -17,7 +17,7 @@
 // exit:   0 written · 1 synthesis or alignment failed · 2 usage
 import fs from "node:fs";
 import path from "node:path";
-import { sentences as split } from "../scripts/lib/length.mjs";
+import { sentences } from "../scripts/lib/length.mjs";
 import { loadBackend, skill, toolPaths } from "../scripts/lib/tools.mjs";
 import { align } from "../scripts/voice/align.mjs";
 
@@ -85,18 +85,17 @@ try {
   for (const n of doc.narrators.filter((n) => n.language === language)) {
     const sum = { words: 0, speech: 0, silence: 0, sentences: 0 };
     for (const [k, text] of TEXTS[language].entries()) {
-      const sentences = split(text).map((s) => s.split(/\s+/));
+      const said = sentences(text).map((s) => s.split(/\s+/));
       const { samples, sampleRate } = await backend.synthesize({
         text,
         narrator: n,
         language,
         tools,
       });
-      const timed = (await align(samples, sampleRate, sentences.flat(), ctc))
-        .words;
+      const timed = (await align(samples, sampleRate, said.flat(), ctc)).words;
       let first = 0;
       let speech = 0;
-      for (const s of sentences) {
+      for (const s of said) {
         speech += timed[first + s.length - 1].end - timed[first].start;
         first += s.length;
       }
@@ -104,7 +103,7 @@ try {
         words: timed.length,
         speech,
         silence: samples.length / sampleRate - speech,
-        sentences: sentences.length,
+        sentences: said.length,
       };
       for (const key in sum) sum[key] += t[key];
       console.log(

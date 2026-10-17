@@ -74,7 +74,7 @@ function calibrateCopy(language) {
   return { out: r.stdout, calls, before, after };
 }
 
-test("calibration measures each English narrator's speech rate and pause a sentence over several texts, printing each text's, and leaves the rest of narrators.json alone", () => {
+test("calibration measures each English narrator's speech rate and pause a sentence over several texts, printing each text's rate and pause, and leaves the rest of narrators.json alone", () => {
   const { out, calls, before, after } = calibrateCopy("en");
   const texts = [...new Set(calls.map((c) => c.text))];
   assert.ok(texts.length >= 3, `${texts.length} texts`);
@@ -121,14 +121,14 @@ test("calibration measures each English narrator's speech rate and pause a sente
   );
 });
 
-test("calibration voices each Arabic text on each Gemini narrator, printing each text's, and writes their rates and pauses", () => {
+test("calibration voices each Arabic text on each Gemini narrator, printing each text's rate and pause, and writes their rates and pauses", () => {
   const { out, calls, before, after } = calibrateCopy("ar");
   const texts = [...new Set(calls.map((c) => c.text))];
   assert.ok(texts.length >= 3, `${texts.length} texts`);
   assert.deepEqual(
-    calls.map((c) => [c.backend, c.voice]),
+    calls.map((c) => [c.backend, c.voice, c.text]),
     ["ar-eg-csagent-2", "ar-eg-commercial-11"].flatMap((v) =>
-      texts.map(() => ["gemini", v]),
+      texts.map((t) => ["gemini", v, t]),
     ),
   );
   for (const t of texts) assert.ok(t.split(/\s+/).length >= 55, t);

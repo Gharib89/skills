@@ -279,7 +279,7 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   );
 });
 
-test("a sentence ends where Kokoro 1.2.1's splitter ends one, and at an Arabic question mark", () => {
+test("a sentence ends where a full stop, ! or ? meets a space, so one closed inside quotes ends none, and at an Arabic question mark", () => {
   assert.equal(sentences('He said "Ship it." Then the merge began.').length, 1);
   assert.equal(sentences("مين يقدر يغير؟ ولا حد! كل تغيير بيعدي.").length, 3);
 });
