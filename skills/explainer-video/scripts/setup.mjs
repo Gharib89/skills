@@ -99,7 +99,7 @@ if (rows.some((r) => r.python))
 // ./explainers, one row per family and version, none a catalogue row. A file
 // that does not parse is a row of its own, refused.
 const profileFiles = (explainers) => {
-  const json = (d) =>
+  const jsonIn = (d) =>
     fs.existsSync(d)
       ? fs
           .readdirSync(d)
@@ -107,7 +107,7 @@ const profileFiles = (explainers) => {
           .map((f) => path.join(d, f))
       : [];
   return [
-    ...stores(explainers, dirs).flatMap(json),
+    ...stores(explainers, dirs).flatMap(jsonIn),
     ...(fs.existsSync(explainers)
       ? fs
           .readdirSync(explainers, { withFileTypes: true })

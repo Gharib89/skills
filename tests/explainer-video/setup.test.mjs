@@ -977,3 +977,9 @@ test("a font folder holding the stamp but lacking one of its files is missing an
     ),
   );
 });
+
+test("a font only a run's style.json carries is listed", () => {
+  const fx = fixture([INTER]);
+  withProfile(fx, ["demo", "style.json"], [LORA]);
+  assert.equal(row(run(fx, ["check"]).out, "font:lora")?.[2], "missing");
+});

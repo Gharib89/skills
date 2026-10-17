@@ -34,12 +34,12 @@ tools are in place before a deadline. Setup writes to two per-user folders: the
 **tool cache**, holding the npm packages and Chrome under the hash of this
 skill's lockfile and each model under its pinned revision, and the **font
 store**, holding fonts by family and version, those of the table's rows plus
-the `fonts` rows of every saved style profile it finds (the style stores and
-each `explainers/<slug>/style.json` under the working directory, so run it from
-the project root). An install in the tool cache for
-another lockfile hash that no run has used for 30 days is **stale**. Run the
-script by the skill's own path, `<skill>` below being the folder this file is
-in:
+the `fonts` rows of every saved style profile it finds (the folders style
+profiles are saved to, and each `explainers/<slug>/style.json` under the
+working directory, so run it from the project root). An install in the tool
+cache for another lockfile hash that no run has used for 30 days is
+**stale**. Run the script by the skill's own path, `<skill>` below being the
+folder this file is in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
    user asked for every opt-in row too, or the brief's `score` is `ace-step`,
