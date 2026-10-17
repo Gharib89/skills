@@ -33,7 +33,8 @@ references call each item, not a layout:
 - **Deviations from plan**: the phase-2 deviations log verbatim, or that the
   plan held.
 - **Unmet criteria**: each criterion not met, verbatim from the issue, with its
-  reason and the action a human must take ([Unmet criteria](#unmet-criteria)).
+  reason (the action a human must take, for a host action), or `no line` for a
+  criterion owed one ([Unmet criteria](#unmet-criteria)).
 - **Verification**: each applicable verification's phase-3 result and what
   ran, or the reason the PR body gives for none applying.
 - **Self-review**: its rounds and stop, each phase-4 report with its path, and
@@ -140,8 +141,8 @@ one the run could not prove. Each carries `Criterion <n>: not met: <reason>` in
 the Run file ([implement.md](implement.md#phase-1-criteria-the-run-owes)), or
 is owed that line and has none, and the `Unmet criteria` item lists it verbatim
 with its reason, which is the action a human must take where it is a host
-action; the gap is also in the deviations log. The item is the human's
-to clear: **merging needs an explicit waiver of each unmet criterion, beside the
+action; the gap is also in the deviations log. The item is the human's to
+clear: **merging needs an explicit waiver of each unmet criterion, beside the
 merge word**: "merge" alone, or a waiver naming fewer than all of them, is asked
 back. `gate clean` reads the same lines, holding on each criterion not met or
 with no line, so `Merge: on-clean-gate` posts the summary with the reply line
@@ -187,9 +188,8 @@ for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
 means evaluate the clean gate below, which holds on an unmet criterion; the
 human's waiver beside "merge" clears it
 ([Unmet criteria](#unmet-criteria)). Any other value holds for the human as a
-profile error. An inline-lane run reads it as
-`on-clean-gate` for its own PR. The unattended branch never evaluates this
-option.
+profile error. An inline-lane run reads it as `on-clean-gate` for its own PR.
+The unattended branch never evaluates this option.
 
 For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
 and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`

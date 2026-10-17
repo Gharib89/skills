@@ -67,6 +67,13 @@ check_rc "init refuses a missing criteria file as tooling" 2 "$rc"
 check "init names the criteria file it could not read" true \
   "$(if grep -Fq "cannot read the criteria text at $tmp/missing.md" <<<"$out"; then echo true; else echo false; fi)"
 check "init leaves no record behind a refused criteria file" false "$(if [ -e "$tmp/init/ship-crit-e" ]; then echo true; else echo false; fi)"
+for empty in '' '   ' 'null'; do
+  out=$(printf '%s\n' "$empty" | bash "$m" init crit-f --scratchpad "$tmp/init" --criteria - 2>&1); rc=$?
+  check_rc "init refuses empty criteria text [$empty] as tooling" 2 "$rc"
+  check "init names the empty criteria text [$empty]" true \
+    "$(if grep -Fq 'the criteria text is empty' <<<"$out"; then echo true; else echo false; fi)"
+done
+check "init leaves no record behind empty criteria text" false "$(if [ -e "$tmp/init/ship-crit-f" ]; then echo true; else echo false; fi)"
 
 # --- gate clean -------------------------------------------------------------------
 base() {
@@ -147,18 +154,18 @@ base; change_run 's/^Round: primary 1: .*/Round: primary 1: no finding was re-ra
 clean 'a round saying a finding was not re-raised'
 base; change_run 's/^Round: primary 1: .*/Round: primary 1: no finding re-raised declined: all fixed/'
 clean 'a round mentioning the marker mid-sentence'
-# A re-raise cap owes no fallback, whether it lands before the primary's Cap is spent or in its last round.
-fallback() {
+# A re-raise cap owes no fallback. Only the last-round case is red on the old cap_spent; the other guards it.
+cap_primary_settle_fallback() {
   sed -i 's/^Fallback-for: None\.$/Fallback-for: None.\n### fallback\nTrigger: on-request\nFallback-for: primary/' "$profile"
   change_run 's/^Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'
   printf '%s\n' 'Round: fallback 1: all dispositioned' 'Stop: fallback: tree unchanged at abcdef0123456789' >> "$f"
 }
-base; sed -i 's/^Trigger: on-request$/Trigger: on-request\nCap: 2/' "$profile"; fallback
+base; sed -i 's/^Trigger: on-request$/Trigger: on-request\nCap: 2/' "$profile"; cap_primary_settle_fallback
 change_run 's/^Round: primary 1: .*/Round: primary 1: fixes pushed\nRound: primary 2: fixes pushed again/'
 clean 'a capped primary a fallback settled'
 change_run 's/^Round: primary 2: .*/Round: primary 2: re-raised declined: the retry guard/'
 held 'a re-raise cap in the last round of the primary Cap, a fallback settled' 'reviewer primary: cap'
-base; sed -i 's/^Trigger: on-request$/Trigger: on-request\nCap: 3/' "$profile"; fallback
+base; sed -i 's/^Trigger: on-request$/Trigger: on-request\nCap: 3/' "$profile"; cap_primary_settle_fallback
 change_run 's/^Round: primary 1: .*/Round: primary 1: one finding declined\nRound: primary 2: re-raised declined: the retry guard/'
 held 'a re-raise cap before the primary Cap is spent, a fallback settled' 'reviewer primary: cap'
 

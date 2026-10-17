@@ -339,7 +339,7 @@ A reviewer driven only when the reviewer it names exits not reviewed, for any re
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Capped with findings**:
-A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of those rounds' fixes changing the tree, so no host round read them. It and a not-landed primary are the `reviewed` primaries that still drive their fallback. A docs-only fix-only diff that ends the loop before the cap is spent, and a last round whose findings were all declined, are not it.
+A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of those rounds' fixes changing the tree, so no host round read them. It and a not-landed primary are the `reviewed` primaries that still drive their fallback. A docs-only fix-only diff that ends the loop before the cap is spent, a last round whose findings were all declined, and a cap from a re-raised declined finding, are not it.
 _Avoid_: ran out of rounds, hit the cap
 
 **Not landed**:

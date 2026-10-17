@@ -74,9 +74,9 @@ a read of the output file buys nothing it does not deliver.
 
 ## The Run file
 
-`run-file init <issue|slug> --from-profile` (`--criteria -` for an issue) is
-the run's first action, placed
-by SKILL.md's [pipeline step](../SKILL.md#the-pipeline). Init reads the
+`run-file init <issue|slug> --from-profile` (`--criteria <file>` for an issue)
+is the run's first write, placed by SKILL.md's
+[pipeline step](../SKILL.md#the-pipeline). Init reads the
 profile's `Tripwires:`, its Verification names, its reviewers and its `Legs:`
 into the checklist. The record lives at `<root>/ship-<issue>/run.md`, `<root>`
 being `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` with the key hashed

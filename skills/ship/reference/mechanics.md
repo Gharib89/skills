@@ -58,12 +58,12 @@ contract.
 | Mechanic | Phase |
 |---|---|
 | `prepare` (runs `tooling`, then the Cloud lane `Bootstrap:`) | every run but the no-issue lane's inner one, before `run-file init` |
-| `run-file init` | the first action, placed by SKILL.md's pipeline step |
+| `run-file init` | the first write, placed by SKILL.md's pipeline step |
 | `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing` item |
 | `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head and, attended with `Merge: on-clean-gate` or in the inline lane, `clean` against the recorded results and `ci-wait` JSON |
 | `run-file grade` | 2, the version grade `open-pr` and `update-pr-title` hold the title type to |
 | `preflight` | 0 |
-| `read-issue` | 0 |
+| `read-issue` | 0; an issue's run reads it before `run-file init`, which serves 0 |
 | `isolate` | 0 |
 | `manage-issue` | 1; any stop after the claim; 3, to close a scratch issue a verification created; 9 |
 | `file-issue` | 2, 4, 7; 9 with `--repo`, per Ship defect draft, on the human's word |
