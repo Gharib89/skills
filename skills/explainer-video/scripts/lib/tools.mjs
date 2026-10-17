@@ -37,21 +37,25 @@ export const TOOL_DIRS = { npm: "node", chrome: "chrome" };
 // A font by family and version in the font store; a model by its pinned
 // revision; a uv row by its code's and its checkpoints' (the code of a row
 // that lives in the skill, by the hash of its uv.lock); npm packages and
-// Chrome by the lockfile's hash.
-export function dest(r, dirs = userDirs()) {
+// Chrome by the lockfile's hash. A uv row with a CPU-only pin (`cpu.env`) on
+// the `cpu` device gets a folder of its own, named by that pin's lock hash, so
+// an env synced for one device is never the other's.
+export function dest(r, dirs = userDirs(), device) {
   if (r.kind === "font")
     return path.join(dirs.data, "fonts", `${r.family}@${r.version}`);
   if (r.kind === "uv") {
-    const code = r.source.path
-      ? crypto
-          .createHash("sha256")
-          .update(fs.readFileSync(path.join(skill, r.source.path, "uv.lock")))
-          .digest("hex")
-      : r.source.revision;
+    const hashOf = (p) =>
+      crypto
+        .createHash("sha256")
+        .update(fs.readFileSync(path.join(skill, p, "uv.lock")))
+        .digest("hex")
+        .slice(0, 7);
+    const code = r.source.path ? hashOf(r.source.path) : r.source.revision;
+    const pin = cpuEnv(r, device);
     return path.join(
       dirs.cache,
       "python",
-      `${r.id}@${code.slice(0, 7)}-${r.revision.slice(0, 7)}`,
+      `${r.id}@${code.slice(0, 7)}-${r.revision.slice(0, 7)}${pin ? `-cpu${hashOf(pin.path)}` : ""}`,
     );
   }
   if (r.kind === "model")
@@ -67,6 +71,11 @@ export function dest(r, dirs = userDirs()) {
 // compute capability (null with no NVIDIA card): CUDA from 8.0, which has
 // bfloat16; under it acestep runs CUDA in float16, which gives NaN, so the CPU.
 export const torchDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
+
+// A row's CPU-only pin (`cpu.env`) where it runs on the `cpu` device, else
+// undefined.
+export const cpuEnv = (r, device) =>
+  device === "cpu" ? r.cpu?.env : undefined;
 
 // Why the catalogue row `id` cannot install on platform `p`
 // (backend.platform()), from the first of its `unavailable` entries `p`

@@ -279,6 +279,7 @@ function aceBrief(fx, installed = true) {
   const d = dest(
     catalogue().find((r) => r.id === "ace-step"),
     fx.dirs,
+    "cpu", // no card here, so the CPU-only pin's folder
   );
   if (installed) {
     fs.mkdirSync(d, { recursive: true });

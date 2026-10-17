@@ -338,6 +338,114 @@ test("ace-step installs its code at the pinned commit, syncs it under uv from it
   );
 });
 
+// A row that carries a CPU-only pin: its own pyproject and lock, and the size
+// of the env they sync, which replace the upstream's on the CPU path.
+const CPU_PIN = { pyproject: "[project]\n# cpu\n", lock: "# cpu lock\n" };
+const cpuFixture = () => {
+  const row0 = aceRow();
+  const fx = fixture([
+    ...pyRows.slice(0, 2),
+    { ...row0, cpu: { ...row0.cpu, env: { path: "setup/ace", size: 1e9 } } },
+  ]);
+  const pin = path.join(fx.skill, "setup", "ace");
+  fs.mkdirSync(pin, { recursive: true });
+  fs.writeFileSync(path.join(pin, "pyproject.toml"), CPU_PIN.pyproject);
+  fs.writeFileSync(path.join(pin, "uv.lock"), CPU_PIN.lock);
+  return fx;
+};
+const aceDirs = (fx) =>
+  fs
+    .readdirSync(path.join(cacheDir(fx), "python"))
+    .filter((d) => /^ace/.test(d));
+
+test("on the CPU path ace-step syncs the CPU pin, not the upstream lock, into its own folder, sized by the CPU env", () => {
+  const fx = cpuFixture();
+  const check = run(fx, ["check", "--all"], "ffmpeg,uv", machine(7.5));
+  assert.equal(row(check.out, "ace-step")[3], "5.8 GB");
+  assert.match(check.out, /\(5\.8 GB to install\)$/m);
+  const r = run(fx, ["install", "--all"], "ffmpeg,uv", machine(7.5));
+  assert.equal(r.code, 0, r.out + r.err);
+  const [dir] = aceDirs(fx);
+  assert.match(dir, /^ace-step@fedcba9-0123456-cpu[0-9a-f]{7}$/);
+  assert.equal(
+    row(r.out, "ace-step")[5],
+    path.join(cacheDir(fx), "python", dir),
+  );
+  const src = path.join(cacheDir(fx), "python", dir, "src");
+  assert.equal(
+    fs.readFileSync(path.join(src, "pyproject.toml"), "utf8"),
+    CPU_PIN.pyproject,
+  );
+  assert.equal(
+    fs.readFileSync(path.join(src, "uv.lock"), "utf8"),
+    CPU_PIN.lock,
+  );
+  assert.equal(calls(fx).find((c) => c.call === "uvSync").dir, src);
+});
+
+test("on the GPU path ace-step keeps the upstream lock and its folder, and a CPU env is not its env", () => {
+  const fx = cpuFixture();
+  assert.equal(
+    row(
+      run(fx, ["check", "--all"], "ffmpeg,uv", machine(8.6)).out,
+      "ace-step",
+    )[3],
+    "10.8 GB",
+  );
+  assert.equal(
+    run(fx, ["install", "--all"], "ffmpeg,uv", machine(7.5)).code,
+    0,
+  );
+  assert.equal(
+    row(
+      run(fx, ["check", "--all"], "ffmpeg,uv", machine(8.6)).out,
+      "ace-step",
+    )[2],
+    "missing",
+  );
+  const gpu = run(fx, ["install", "--all"], "ffmpeg,uv", machine(8.6));
+  assert.equal(gpu.code, 0, gpu.out + gpu.err);
+  const dir = aceDirs(fx).find((d) => !d.includes("-cpu"));
+  assert.equal(dir, "ace-step@fedcba9-0123456");
+  const src = path.join(cacheDir(fx), "python", dir, "src");
+  assert.equal(
+    fs.readFileSync(path.join(src, "pyproject.toml"), "utf8"),
+    "[project]\n",
+  );
+  assert.ok(!fs.existsSync(path.join(src, "uv.lock")));
+});
+
+test("the carried CPU pin was derived from the ACE-Step commit the row pins, so a bump of that pin fails until the pin is re-derived", () => {
+  const ace = JSON.parse(
+    fs.readFileSync(path.join(source, "setup", "rows.json"), "utf8"),
+  ).rows.find((r) => r.id === "ace-step");
+  assert.equal(ace.cpu.env.derivedFrom, ace.source.revision);
+});
+
+test("the carried CPU pin names only +cpu torch builds, none depending on an NVIDIA package, triton or a CUDA build, and its pyproject names no CUDA index", () => {
+  const rows = JSON.parse(
+    fs.readFileSync(path.join(source, "setup", "rows.json"), "utf8"),
+  ).rows;
+  const { path: pin } = rows.find((r) => r.id === "ace-step").cpu.env;
+  const lock = fs.readFileSync(path.join(source, pin, "uv.lock"), "utf8");
+  const project = fs.readFileSync(
+    path.join(source, pin, "pyproject.toml"),
+    "utf8",
+  );
+  // Optional flash-attn wheels and PyPI's torch fork stay in the lock but no
+  // sync installs them: the +cpu torch builds are what Linux and Windows take.
+  const blocks = lock
+    .split("[[package]]")
+    .filter((b) => /name = "torch(vision|audio)?"\nversion = "[^"]*\+/.test(b));
+  assert.ok(blocks.length >= 3);
+  for (const block of blocks) {
+    assert.match(block, /\+cpu"/);
+    assert.doesNotMatch(block, /nvidia|triton|\+cu\d/i);
+  }
+  assert.doesNotMatch(project, /\+cu\d|pytorch-cu/);
+  assert.match(lock, /name = "torch"\nversion = "2\.10\.0\+cpu"/);
+});
+
 test("an ace-step checkpoint whose sha256 differs from its pin fails the row and leaves it missing", () => {
   const fx = fixture([...pyRows.slice(0, 2), aceRow("0".repeat(64))]);
   const r = run(fx, ["install", "--all"], "ffmpeg,uv", machine(7.5));
