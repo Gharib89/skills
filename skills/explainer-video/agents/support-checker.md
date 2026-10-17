@@ -66,11 +66,15 @@ sentence; for a failing verdict it names the words the excerpts do not back.
 
 ## Check it
 
-Run the script gates. Their `script support:` line reads `pass`, or names each
-failing sentence with its verdict and your reason. A sentence it calls `not
+Run the script gates. Their `script support:` line reads `pass`; `warn:
+<findings>` when every finding is drift; or `fail: <findings>`, naming each
+failing sentence with its verdict and reason. A sentence whose place, words,
+cites and cited excerpts an earlier check already judged keeps that first
+verdict and its reason, which may not be yours; a `drift` finding says you
+judged it differently this time, and needs no action. A sentence it calls `not
 judged` has no entry matching it: fix the entry's `scene`, `n` or `text` and
-run the script gates again, at most twice. Keep each verdict as you judged it:
-fix only `scene`, `n`, `text` and `cites`.
+run the script gates again, at most twice. Keep each verdict as you judged it,
+drift or not: fix only `scene`, `n`, `text` and `cites`.
 
 ## Report
 

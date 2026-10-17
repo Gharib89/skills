@@ -179,6 +179,23 @@ const line = (r, name) =>
 const edit = (scenes, i, patch) =>
   scenes.map((s, k) => (k === i ? { ...s, ...patch } : s));
 
+// A fix rewrites each `<scene> <n>` sentence in script.json, its first word
+// swapped for a fresh one, so its count and cites stay.
+let rewrites = 0;
+function reword(fx, ...keys) {
+  const file = path.join(fx.dir, "script.json");
+  const s = JSON.parse(fs.readFileSync(file, "utf8"));
+  for (const k of keys) {
+    const [id, n] = k.split(" ");
+    const sc = s.scenes.find((x) => x.id === id);
+    sc.narration[n - 1] = sc.narration[n - 1].replace(
+      /^\S+/,
+      `rewrite${++rewrites}`,
+    );
+  }
+  fs.writeFileSync(file, JSON.stringify(s));
+}
+
 test("a script meeting every gate passes each one and writes check.json", () => {
   const fx = fixture();
   const r = check(fx);
@@ -219,7 +236,7 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   assert.match(line(r, "budget"), /hook 31 s is outside 12 to 30 s/);
   assert.match(
     line(r, "budget"),
-    /hook 36 words vs 109 \(31 s less 3 sentences at 0\.78 s, at 3\.8 words\/s\) ±10%/,
+    /hook 36 spoken words \(\{written\|spoken\} counts its spoken form\) vs 109 \(31 s less 3 sentences at 0\.78 s, at 3\.8 words\/s\) ±10%/,
   );
   r = check(
     fixture({
@@ -228,7 +245,22 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 24 words vs 40 (12 s less 2 sentences at 0.78 s, at 3.8 words/s) ±10%",
+    "script budget: fail: steps 24 spoken words ({written|spoken} counts its spoken form) vs 40 (12 s less 2 sentences at 0.78 s, at 3.8 words/s) ±10%",
+  );
+  // #725: `{304|three oh four}` counts three, so the 22 written words are 24.
+  r = check(
+    fixture({
+      scenes: edit(SCENES, 2, {
+        sentences: [
+          `A {304|three oh four} ${spoken(8)}. [ex-1]`,
+          say(12, "[no-claim]"),
+        ],
+      }),
+    }),
+  );
+  assert.equal(
+    line(r, "budget"),
+    "script budget: fail: steps 24 spoken words ({written|spoken} counts its spoken form) vs 40 (12 s less 2 sentences at 0.78 s, at 3.8 words/s) ±10%",
   );
   // Kokoro voices a sentence where a full stop, ! or ? meets a space, not a
   // numbered item: three items with no full stop run as one sentence, and one
@@ -246,7 +278,7 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 36 words vs 43 (12 s less 1 sentences at 0.78 s, at 3.8 words/s) ±10%",
+    "script budget: fail: steps 36 spoken words ({written|spoken} counts its spoken form) vs 43 (12 s less 1 sentences at 0.78 s, at 3.8 words/s) ±10%",
   );
   r = check(
     fixture({
@@ -348,20 +380,28 @@ test("support blocks an unsupported claim, counts two fix attempts, then stops",
   r = check(fx);
   assert.match(r.out, /; next: fix attempt 1 of 2$/m);
 
+  reword(fx, "steps 1", "steps 2");
   judge(fx, { "steps 2": "unmarked" });
   assert.match(check(fx).out, /; next: fix attempt 2 of 2$/m);
-  judge(fx, { "hook 1": "unsupported" });
+  reword(fx, "hook 1");
+  judge(fx, { "hook 1": "unsupported", "steps 2": "unmarked" });
   r = check(fx);
   assert.equal(r.code, 1);
   assert.match(r.out, /; stop: unsupported claims after two fix attempts$/m);
 
   // A third rewrite brings no third attempt: the stop holds until it passes.
-  judge(fx, { "why 1": "unsupported" });
+  reword(fx, "why 1");
+  judge(fx, {
+    "why 1": "unsupported",
+    "hook 1": "unsupported",
+    "steps 2": "unmarked",
+  });
   assert.match(
     check(fx).out,
     /; stop: unsupported claims after two fix attempts$/m,
   );
 
+  reword(fx, "why 1", "hook 1", "steps 2");
   judge(fx);
   r = check(fx);
   assert.equal(r.code, 0, r.out);
@@ -369,6 +409,41 @@ test("support blocks an unsupported claim, counts two fix attempts, then stops",
     fs.readFileSync(path.join(fx.dir, "check.json"), "utf8"),
   );
   assert.equal(rec.support.attempts, 0);
+});
+
+// #725: a recap sentence passed one support check and failed the next with its
+// words and cites unchanged, and the fail counted as a fix attempt.
+test("a sentence whose words, cites and cited excerpts are unchanged keeps its earlier verdict, and a different one is drift", () => {
+  const fx = fixture();
+  assert.equal(check(fx).code, 0);
+  judge(fx, { "recap 1": "unsupported" });
+  let r = check(fx);
+  assert.equal(r.code, 0, r.out);
+  assert.equal(
+    line(r, "support"),
+    "script support: warn: recap 1 drift: judged unsupported on unchanged words, kept supported",
+  );
+  assert.match(r.out, /^script: 7 pass, 0 fail, 1 warn$/m);
+
+  // A kept failure stays one fix attempt, however the next check judges it.
+  reword(fx, "steps 1");
+  judge(fx, { "steps 1": "unsupported" });
+  assert.match(check(fx).out, /; next: fix attempt 1 of 2$/m);
+  judge(fx);
+  r = check(fx);
+  assert.equal(
+    line(r, "support"),
+    "script support: fail: steps 1 unsupported: fixture; steps 1 drift: judged supported on unchanged words, kept unsupported",
+  );
+  assert.match(r.out, /; next: fix attempt 1 of 2$/m);
+
+  // New words behind a cited excerpt are a new sentence to judge.
+  const file = path.join(fx.dir, "excerpts.json");
+  const pack = JSON.parse(fs.readFileSync(file, "utf8"));
+  pack.excerpts[0].text = "Ship reads";
+  fs.writeFileSync(file, JSON.stringify(pack));
+  judge(fx);
+  assert.equal(line(check(fx), "support"), "script support: pass");
 });
 
 test("a verdict for another wording of the sentence is not a verdict for this one", () => {
@@ -388,6 +463,7 @@ test("a verdict for another wording of the sentence is not a verdict for this on
 test("the stop holds while support.json is missing or older than the pack", () => {
   const fx = fixture();
   for (const k of ["hook 1", "steps 1", "steps 2"]) {
+    reword(fx, k);
     judge(fx, { [k]: "unsupported" });
     check(fx);
   }

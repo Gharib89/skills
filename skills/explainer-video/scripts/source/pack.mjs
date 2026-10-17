@@ -18,7 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { segment, squash } from "./locators.mjs";
+import { segment, squash, stored } from "./locators.mjs";
 
 const [run, only, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -96,7 +96,7 @@ const excerpts = sources.flatMap((src) =>
   drafts.get(src.id).excerpts.map((ex) => ({
     id: `ex-${++n}`,
     source: src.id,
-    locator: ex.locator.trim(),
+    locator: stored(ex.locator, src.kind),
     text: ex.text.trim(),
     note: ex.note.trim(),
   })),

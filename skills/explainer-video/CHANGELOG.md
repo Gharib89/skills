@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.2 (2026-10-17)
+
+### Bug Fixes
+
+- **explainer-video**: Keep support verdicts, trace voice failures, read linked headings plainly,
+  name the budget rule ([#749](https://github.com/Gharib89/skills/pull/749),
+  [`9111e4c`](https://github.com/Gharib89/skills/commit/9111e4c8a4f6f473ae0734b18a9bb924db32ba11))
+
+
 ## v0.19.1 (2026-10-17)
 
 ### Bug Fixes
