@@ -984,6 +984,24 @@ test("a font only a run's style.json carries is listed", () => {
   assert.equal(row(run(fx, ["check"]).out, "font:lora")?.[2], "missing");
 });
 
+test("valid JSON of the wrong shape is a refused profile row, not a crash", () => {
+  const fx = fixture([INTER]);
+  withProfile(fx, [".styles", "null.json"], "null");
+  withProfile(fx, [".styles", "notarray.json"], '{"fonts":{"family":"lora"}}');
+  withProfile(
+    fx,
+    [".styles", "nofiles.json"],
+    '{"fonts":[{"family":"lora","version":"5.3.0"}]}',
+  );
+  const r = run(fx, ["check"]);
+  assert.equal(r.code, 1, r.out + r.err);
+  for (const f of ["null", "notarray", "nofiles"])
+    assert.match(
+      r.out,
+      new RegExp(`^\\| profile:\\S*${f}\\.json \\|.*\\| refused: `, "m"),
+    );
+});
+
 test("two profiles carrying one family and version with different weights install both", () => {
   const fx = fixture([INTER]);
   withProfile(
