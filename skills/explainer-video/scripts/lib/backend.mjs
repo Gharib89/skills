@@ -544,6 +544,18 @@ export async function computeCapability() {
 
 export const memory = () => os.totalmem();
 
+// The OS and CPU, as Node names them, and macOS's version from sw_vers (null
+// elsewhere, or when sw_vers fails), which a row's `unavailable` entries match.
+export function platform() {
+  const version =
+    process.platform === "darwin"
+      ? spawnSync("sw_vers", ["-productVersion"], {
+          encoding: "utf8",
+        }).stdout?.trim() || null
+      : null;
+  return { os: process.platform, arch: process.arch, version };
+}
+
 // ACE-Step's music: scripts/score/ace.py under uv in the ace-step row's folder
 // `dir`, as a 48 kHz stereo buffer exactly `seconds` long.
 export async function aceStep({ dir, device, seconds, seed, caption }) {

@@ -259,3 +259,34 @@ test("a clip changed after enrollment has no consent record for it: the voice st
   );
   assert.ok(!fs.existsSync(fx.log) || !synths(fx).length);
 });
+
+const INTEL_MAC = { EXPLAINER_VIDEO_FAKE_PLATFORM: "darwin/x64/14.5" };
+const TORCH_26 =
+  "unavailable on darwin/x64 14.5: no torch 2.6 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2";
+
+test("on Intel macOS enroll is refused with the own-voice row's reason before any clip or consent is written", () => {
+  const fx = fixture();
+  const r = enroll(fx, "maya", INTEL_MAC);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(r.err.trim(), `own-voice: ${TORCH_26}`);
+  assert.ok(!fs.existsSync(voices(fx)), "nothing written");
+  assert.ok(!fs.existsSync(fx.log), "no clip was made");
+});
+
+test("on Intel macOS the brief refuses an own voice and score=ace-step, each naming the platform and reason; score on and off still pass", () => {
+  const fx = fixture();
+  assert.equal(enroll(fx).code, 0);
+  const onMac = (args) =>
+    node(fx, "brief/brief.mjs", [fx.dir, ...args], INTEL_MAC);
+  let r = onMac(["language=ar", "voice=own:maya"]);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(r.err.trim(), `brief voice own:maya: ${TORCH_26}`);
+  r = onMac(["score=ace-step"]);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(
+    r.err.trim(),
+    "brief score ace-step: unavailable on darwin/x64 14.5: no torch 2.10 or torchcodec 0.10 wheel for Intel macOS; the last torch with an Intel macOS wheel is 2.2.2",
+  );
+  for (const s of ["on", "off"]) assert.equal(onMac([`score=${s}`]).code, 0, s);
+  assert.equal(brief(fx, ["score=ace-step"]).code, 0, "linux takes it");
+});
