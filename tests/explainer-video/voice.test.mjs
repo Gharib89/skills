@@ -454,6 +454,10 @@ test("an English script with GEMINI_API_KEY set still voices on Kokoro", () => {
   );
 });
 
+// The line as it read before #753: the new assertions must reject it.
+const OLD_QUOTA_LINE =
+  "voice: Gemini quota reached (Gemini answered HTTP 429: You exceeded your current quota); 1 scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota), which voices only the missing scenes; use a paid key; or choose another narrator in the brief";
+
 test("a Gemini quota stop keeps the scenes voiced before it, and the next run voices only the rest", () => {
   const fx = fixture(AR_SCENES, "ar");
   assert.equal(run(fx, KEY).code, 0);
@@ -465,10 +469,10 @@ test("a Gemini quota stop keeps the scenes voiced before it, and the next run vo
   write(fx, changed, "ar");
   const stopped = run(fx, { ...KEY, EXPLAINER_VIDEO_FAKE_QUOTA: "2" });
   assert.equal(stopped.code, 1, stopped.out + stopped.err);
-  assert.match(
-    stopped.err,
-    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\) or the credits are topped up, which voices only the missing scenes; set another key \(a paid one, for a free-tier limit\); or choose another narrator in the brief$/m,
-  );
+  const QUOTA_LINE =
+    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\) or the credits are topped up, which voices only the missing scenes; set another key \(a paid one, for a free-tier limit\); or choose another narrator in the brief$/m;
+  assert.match(stopped.err, QUOTA_LINE);
+  assert.doesNotMatch(OLD_QUOTA_LINE, QUOTA_LINE);
   assert.equal(synths(fx).length, 2);
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
   const resumed = run(fx, KEY);
@@ -542,6 +546,10 @@ test("a spent-credits quota stop offers topping up the credits", () => {
   assert.match(
     r.err,
     /^voice: ElevenLabs quota reached \(ElevenLabs answered HTTP 402: credits are depleted\); 0 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\) or the credits are topped up,/m,
+  );
+  assert.doesNotMatch(
+    OLD_QUOTA_LINE.replace("Gemini", "ElevenLabs"),
+    /or the credits are topped up/,
   );
 });
 
