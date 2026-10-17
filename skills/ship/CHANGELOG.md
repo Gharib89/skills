@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.45.3 (2026-10-17)
+
+### Bug Fixes
+
+- Stop pipefail gates failing open on an early-exiting grep -q
+  ([#761](https://github.com/Gharib89/skills/pull/761),
+  [`e6c6a11`](https://github.com/Gharib89/skills/commit/e6c6a114e893c554cda1bbb8fd677df47bc91b16))
+
+
 ## v0.45.2 (2026-10-17)
 
 ### Bug Fixes
