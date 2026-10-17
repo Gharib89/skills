@@ -1043,16 +1043,18 @@ readonly SHIP_REVIEWER_RUN='
 # on the request comment (removed when the round ends), keeps one status comment
 # marked `codex-pull-request-review-summary` edited in place, its Code Review row
 # naming the status, the time and the short commit, and delivers a round either
-# as a formal review (findings) or, clean, as an issue comment opening
-# `Codex Review: Didn't find any major issues` plus 👍 on the PR, with no review
-# at all (probed on #504 and #505 for #500). Answers {run, rounds, notice}:
+# as a formal review (findings) or, clean, as an issue comment whose first prose
+# line is `Codex Review: Didn't find any major issues` plus 👍 on the PR, with no
+# review at all (probed on #504 and #505 for #500). Prose skips `<!-- ... -->`
+# marker lines: since #736 the clean comment opens with
+# `<!-- codex-review-receipt:v1 -->`. Answers {run, rounds, notice}:
 #   rounds  each clean delivery at or after <since> as a REVIEW row, so the
 #           landing rule lands a clean round like any other; the 👍 counts only
 #           where no clean comment does.
 #   notice  {line, at} for the first comment by the login at or after <since>
 #           that is neither the status comment nor a clean one: a refusal of a
 #           shape not yet observed (quota, access, a missing environment), whose
-#           first line poll-pr reports as the blocked notice.
+#           first prose line poll-pr reports as the blocked notice.
 #   run     the `reviewer_run` shape, so the window logic a workflow run drives
 #           drives this too: completed/success once a clean round or a Completed
 #           row on the head is in; completed/refused beside a notice; in_progress
@@ -1070,9 +1072,10 @@ readonly SHIP_REVIEWER_RUN='
 readonly SHIP_NATIVE_CODEX="$SHIP_LOGIN_NORM"'
   def utc: (. // "") | sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z");
   def is_status: (.body // "") | contains("<!-- codex-pull-request-review-summary -->");
-  def is_clean: (.body // "") | test("^\\s*Codex Review: Didn.t find any major issues");
+  def first_line: [(.body // "") | splits("\n") | sub("^\\s+"; "") | sub("\\s+$"; "")
+    | select(. != "" and (test("^<!--.*-->$") | not))] | first // "";
+  def is_clean: first_line | test("^Codex Review: Didn.t find any major issues");
   def mine: ((.login // "") | norm) == ($l | norm);
-  def first_line: [splits("\n") | sub("^\\s+"; "") | sub("\\s+$"; "") | select(. != "")] | first // "";
   [.comments[] | select(mine)] as $c
   | ([$c[] | select(is_status)] | last) as $st
   | (($st.body // "") | [splits("\n") | select(test("\\*\\*Code Review\\*\\*"))] | first // "") as $row
@@ -1086,7 +1089,7 @@ readonly SHIP_NATIVE_CODEX="$SHIP_LOGIN_NORM"'
   | (if $clean != [] then $clean else $thumbs end) as $rounds
   | ([$c[] | select((is_status | not) and (is_clean | not) and (.created_at | utc) >= $s)] | first) as $reply
   | {rounds: $rounds,
-     notice: (if $reply == null then null else {line: (($reply.body // "") | first_line), at: ($reply.created_at | utc)} end),
+     notice: (if $reply == null then null else {line: ($reply | first_line), at: ($reply.created_at | utc)} end),
      run: (if $rounds == [] and $reply == null and $touched and $sha == null
              and ($row | test("Completed")) then "unavailable"
            else {url: ($st.url // $reply.url // null), denied: null} +
