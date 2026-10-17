@@ -77,8 +77,9 @@ export function floors(profile) {
 // profile with no `effects` allows none.
 const EFFECTS = ["draw", "highlight"];
 const LOOKS = ["clean", "sketch"];
+const MOTIONS = ["rise", "spring"];
 
-// The profile's look and effects, refused by name when unknown.
+// The profile's look, motion and effects, refused by name when unknown.
 function features(profile) {
   const refuse = (why) => {
     throw new Error(`style profile ${profile.name}: ${why}`);
@@ -86,6 +87,8 @@ function features(profile) {
   const look = profile.look ?? "clean";
   if (!LOOKS.includes(look))
     refuse(`look ${look} is not ${LOOKS.join(" or ")}`);
+  if (!MOTIONS.includes(profile.motion))
+    refuse(`motion ${profile.motion} is not ${MOTIONS.join(" or ")}`);
   const effects = profile.effects ?? [];
   if (!Array.isArray(effects)) refuse("effects is not a list");
   for (const e of effects)

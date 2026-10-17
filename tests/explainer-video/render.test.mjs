@@ -900,6 +900,9 @@ test("a spring profile renders: each reveal carries its class at its sentence, n
       );
       for (let p = 0; p <= 1; p += 0.01) assert.ok(to.ease(p) <= 1.2, id);
       assert.equal(from.y, 20);
+      // the stills page's progress(1) ends where rise does: in place, full size
+      assert.equal(to.y, 0);
+      assert.equal(to.scale ?? 1, 1);
     }
   }
 });
