@@ -67,7 +67,9 @@ sentence; for a failing verdict it names the words the excerpts do not back.
 ## Check it
 
 Run the script gates. Their `script support:` line reads `pass`, or names each
-failing sentence with its verdict and your reason. A sentence it calls `not
+failing sentence with its verdict and your reason. A `drift` finding is a
+sentence an earlier check judged on the same words and cites: its earlier
+verdict stands, so leave it. A sentence it calls `not
 judged` has no entry matching it: fix the entry's `scene`, `n` or `text` and
 run the script gates again, at most twice. Keep each verdict as you judged it:
 fix only `scene`, `n`, `text` and `cites`.

@@ -27,7 +27,7 @@ export function sections(text) {
     const f = line.match(/^ {0,3}(`{3,}|~{3,})/);
     if (f && (!fence || f[1][0] === fence[0])) fence = fence ? null : f[1];
     const h = !fence && !f && line.match(/^ {0,3}#{1,6}\s+(.*?)(?:\s+#+)?\s*$/);
-    if (h) out.push({ heading: squash(h[1]), lines: [line] });
+    if (h) out.push({ heading: plain(h[1]), lines: [line] });
     else out.at(-1)?.lines.push(line);
   }
   return out.map((s) => ({ heading: s.heading, text: s.lines.join("\n") }));
@@ -53,6 +53,10 @@ function lines(text, a, b) {
 
 // Whitespace runs as one space: word for word, not byte for byte.
 export const squash = (s) => s.replace(/\s+/g, " ").trim();
+
+// A locator or heading as read: a Markdown link reads as its text, so a page
+// heading carrying its anchor (`[Validation](#validation)`) is `Validation`.
+export const plain = (s) => squash(s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1"));
 
 // The stretches a locator names in a source's snapshot, one per section for a
 // heading used twice, or `{error}` saying why there are none.
@@ -89,7 +93,7 @@ export function segment(run, source, locator) {
   if (["md", "html", "docx", "page"].includes(source.kind)) {
     m = locator.match(/^§ (.+)$/);
     if (m) {
-      const hits = sections(read()).filter((s) => s.heading === squash(m[1]));
+      const hits = sections(read()).filter((s) => s.heading === plain(m[1]));
       return hits.length
         ? { texts: hits.map((s) => s.text) }
         : { error: `no section "${m[1]}"` };

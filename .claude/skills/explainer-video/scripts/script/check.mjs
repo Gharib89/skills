@@ -15,7 +15,8 @@
 //         sentences), then `script: <p> pass, <f> fail, <w> warn`, ending on
 //         a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
 //         unsupported claims after two fix attempts`
-// writes: <run>/check.json, the machine record and the support attempts
+// writes: <run>/check.json, the machine record, the support attempts and each
+//         sentence's kept verdict
 // exit:   0 no gate failed · 1 a gate failed, or `script: no <input>: <why>`
 //         on stderr when an input is missing or names no narrator · 2 usage
 import crypto from "node:crypto";
@@ -86,7 +87,7 @@ const gates = {};
     const n = s.counts.reduce((a, b) => a + b, 0);
     if (Math.abs(n - budget) > budget * 0.1)
       f.push(
-        `${s.id} ${n} words vs ${Math.round(budget)} (${s.seconds} s less ${stops} sentences at ${narrator.pause} s, at ${narrator.rate} words/s) ±10%`,
+        `${s.id} ${n} spoken words ({written|spoken} counts its spoken form) vs ${Math.round(budget)} (${s.seconds} s less ${stops} sentences at ${narrator.pause} s, at ${narrator.rate} words/s) ±10%`,
       );
   }
   const total = scenes.reduce((a, s) => a + (s.seconds ?? 0), 0);
@@ -128,14 +129,28 @@ const gates = {};
 }
 
 // support: every sentence judged, on its present wording, as supported or
-// connective.
+// connective. The checker judges afresh each time, so a sentence whose place,
+// words, cites and cited excerpts' words are unchanged keeps the first verdict
+// it got, and a different one is drift: a warn, never a new failure or fix
+// attempt.
 const record = fs.existsSync(file("check.json"))
   ? JSON.parse(fs.readFileSync(file("check.json"), "utf8"))
   : null;
 let support = record?.support ?? { attempts: 0, judged: null };
 let red = false;
+const drift = [];
 {
   const f = [];
+  const excerpt = new Map(pack.excerpts.map((x) => [x.id, x.text]));
+  const keyOf = (id, n, text, cites) =>
+    crypto
+      .createHash("sha256")
+      .update(
+        JSON.stringify([id, n, text, cites, cites.map((c) => excerpt.get(c))]),
+      )
+      .digest("hex");
+  const kept = support.verdicts ?? {};
+  const verdictsNow = {};
   const mtime = (f) => fs.statSync(file(f)).mtimeMs;
   if (!fs.existsSync(file("support.json")))
     f.push("no support.json: run the support check");
@@ -149,17 +164,26 @@ let red = false;
     const failing = [];
     for (const s of scenes)
       s.narration.forEach((text, i) => {
-        const v = verdicts.find(
+        const now = verdicts.find(
           (x) =>
             x.scene === s.id &&
             x.n === i + 1 &&
             x.text === text &&
             JSON.stringify(x.cites) === JSON.stringify(s.cites[i]),
         );
-        if (!v) {
+        const key = keyOf(s.id, i + 1, text, s.cites[i]);
+        const v = kept[key] ?? now;
+        if (v) verdictsNow[key] = { verdict: v.verdict, why: v.why };
+        if (!now) {
           judged = false;
           f.push(`${s.id} ${i + 1} not judged: run the support check`);
-        } else if (!["supported", "connective"].includes(v.verdict)) {
+          return;
+        }
+        if (v.verdict !== now.verdict)
+          drift.push(
+            `${s.id} ${i + 1} drift: judged ${now.verdict} on unchanged words, kept ${v.verdict}`,
+          );
+        if (!["supported", "connective"].includes(v.verdict)) {
           f.push(`${s.id} ${i + 1} ${v.verdict}: ${v.why}`);
           failing.push([s.id, i + 1, text, s.cites[i], v.verdict]);
         }
@@ -172,14 +196,17 @@ let red = false;
     // A red set of failing sentences is one fix attempt, however often it is
     // judged; past the last fix attempt the stop holds until the gate passes.
     red = judged && f.length > 0;
-    support = red
-      ? {
-          attempts: prev.attempts + (prev.judged === hash ? 0 : 1),
-          judged: hash,
-        }
-      : judged
-        ? { attempts: 0, judged: hash }
-        : prev;
+    support = {
+      ...(red
+        ? {
+            attempts: prev.attempts + (prev.judged === hash ? 0 : 1),
+            judged: hash,
+          }
+        : judged
+          ? { attempts: 0, judged: hash }
+          : prev),
+      verdicts: verdictsNow,
+    };
   }
   gates.support = f;
 }
@@ -262,23 +289,28 @@ const warns = scenes.flatMap((s) =>
   ),
 );
 
+// A gate's warnings print after its failures, and warn it only when none fails.
+gates.sentences = [];
+const warned = { support: drift, sentences: warns };
 const checks = {};
 for (const [name, f] of Object.entries(gates)) {
-  checks[name] = { status: f.length ? "fail" : "pass", findings: f };
-  console.log(`script ${name}: ${f.length ? `fail: ${f.join("; ")}` : "pass"}`);
+  const findings = [...f, ...(warned[name] ?? [])];
+  const status = f.length ? "fail" : findings.length ? "warn" : "pass";
+  checks[name] = { status, findings };
+  console.log(
+    `script ${name}: ${status}${findings.length ? `: ${findings.join("; ")}` : ""}`,
+  );
 }
-checks.sentences = { status: warns.length ? "warn" : "pass", findings: warns };
-console.log(
-  `script sentences: ${warns.length ? `warn: ${warns.join("; ")}` : "pass"}`,
-);
-const failed = Object.values(checks).filter((c) => c.status === "fail").length;
+const count = (status) =>
+  Object.values(checks).filter((c) => c.status === status).length;
+const failed = count("fail");
 fs.writeFileSync(
   file("check.json"),
   JSON.stringify({ checks, support }, null, 2) + "\n",
 );
 writeIgnore(run);
 console.log(
-  `script: ${Object.keys(checks).length - failed - (warns.length ? 1 : 0)} pass, ${failed} fail, ${warns.length ? 1 : 0} warn${
+  `script: ${count("pass")} pass, ${failed} fail, ${count("warn")} warn${
     !red
       ? ""
       : support.attempts > 2
