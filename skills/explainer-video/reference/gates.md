@@ -1,5 +1,11 @@
 # Gates
 
+## Contents
+
+- [The critic round](#the-critic-round)
+- [On a red gate](#on-a-red-gate)
+- [Floors](#floors)
+
 A **video gate** checks the rendered video against a floor and blocks: a red
 gate means no video. The render stage runs them all after every render;
 `node <skill>/scripts/gates/gates.mjs explainers/<slug>` re-judges the render
