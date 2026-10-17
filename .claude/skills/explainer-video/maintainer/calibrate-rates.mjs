@@ -10,7 +10,8 @@
 // less its speech, over its sentences, because a voiced scene carries each
 // sentence's lead and tail silence (Kokoro voices one sentence per inference).
 // Both pool every text of the language. A narrator not yet calibrated this way
-// carries pause 0 and a rate over its whole audio, the same budget.
+// carries pause 0 and a rate over its aligned span, first word to last, silence
+// between sentences included, the same budget.
 // stdout: `calibrate <id> text <k>: <rate> words/s, <pause> s a sentence` per
 //         text, then `calibrate <id>: <rate> words/s, <pause> s a sentence`,
 //         the values written, per narrator of that language
