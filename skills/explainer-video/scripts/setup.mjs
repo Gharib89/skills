@@ -129,12 +129,14 @@ for (const file of profileFiles(path.resolve("explainers"))) {
     continue;
   }
   for (const r of profile.fonts ?? [])
-    if (!rows.some((c) => c.kind === "font" && c.family === r.family))
-      carried.set(`${r.family}@${r.version}`, {
-        neededBy: "render",
-        size: 0,
-        ...r,
-      });
+    if (!rows.some((c) => c.kind === "font" && c.family === r.family)) {
+      // Drafts of one family each carry the weights they use: keep them all.
+      const key = `${r.family}@${r.version}`;
+      const files = [
+        ...new Set([...(carried.get(key)?.files ?? []), ...r.files]),
+      ];
+      carried.set(key, { neededBy: "render", size: 0, ...r, files });
+    }
 }
 rows.push(...carried.values());
 for (const [file, why] of unreadable)

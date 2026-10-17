@@ -983,3 +983,22 @@ test("a font only a run's style.json carries is listed", () => {
   withProfile(fx, ["demo", "style.json"], [LORA]);
   assert.equal(row(run(fx, ["check"]).out, "font:lora")?.[2], "missing");
 });
+
+test("two profiles carrying one family and version with different weights install both", () => {
+  const fx = fixture([INTER]);
+  withProfile(
+    fx,
+    [".styles", "a.json"],
+    [{ ...LORA, files: ["latin-400-normal"] }],
+  );
+  withProfile(
+    fx,
+    ["demo", "style.json"],
+    [{ ...LORA, files: ["latin-600-normal"] }],
+  );
+  assert.equal(run(fx, ["install"]).code, 0);
+  for (const f of LORA.files)
+    assert.ok(
+      fs.existsSync(path.join(fontDir(fx), "lora@5.3.0", `${f}.woff2`)),
+    );
+});
