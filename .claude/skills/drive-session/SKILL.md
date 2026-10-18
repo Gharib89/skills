@@ -136,7 +136,8 @@ line names the parent and any merge allowance
 (`spec batch #<parent>, merge each if all OK`).
 
 1. **Launch turn.** Run `frontier --parent <n>` and post its frontier, a slot
-   plan (which slices run side by side, which wait, and why), and, when a slice
+   plan (which slices run side by side, which wait, and why; it names each
+   run-alone timing slice and the reason), and, when a slice
    has a blocker outside the spec, one question proposing to add the blocker's
    spec to the batch. Then end the turn: spawn nothing until the user's go. On
    a yes, run `frontier` on that spec's parent too and plan both together. On
@@ -148,10 +149,19 @@ line names the parent and any merge allowance
    them and the areas their agent briefs name do not overlap: a skill
    directory, the repo's scripts, its tests, the glossary, its docs. That call
    is yours, from reading each agent brief. A slice whose agent brief names no
-   area runs alone: it starts only when no other run holds a slot. A slot frees
+   area runs alone: it starts only when no other run holds a slot. So does a
+   slice whose acceptance criteria require a timing series (repeated A/B runs,
+   a median and range): a second run beside it widens the range, so while its
+   series runs no second slot is taken and no triage tab that runs a gate is
+   spawned (a triage tab that runs no gate may still spawn). A slot frees
    only when its run is at rest (merged, handed back or crashed): a run waiting
    on an escalation keeps it. The gate slice, blocked by every other slice,
-   starts once all of them are closed.
+   starts once all of them are closed. Before spawning a slice, list the PRs
+   merged to main since its agent brief was posted and compare their changed
+   files with the areas the brief names: on an overlap, the spawn prompt gains
+   one line telling the run to re-check the brief against main in phase 1,
+   naming those PRs, since a brief written before a merge can describe code
+   that has moved.
 3. **Merges.** The launch line's merge allowance covers every PR in the spec,
    and only on Ship's own `run-file gate clean`, as Escalation says. After
    each merge, fast-forward main as above, then re-run `frontier`.
