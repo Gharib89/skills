@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.23.1 (2026-10-18)
+
+### Bug Fixes
+
+- **explainer-video**: Refuse a page that renders no text
+  ([#816](https://github.com/Gharib89/skills/pull/816),
+  [`233ffe6`](https://github.com/Gharib89/skills/commit/233ffe663e06a06049200c4fc5960664ad0b6ea9))
+
+
 ## v0.23.0 (2026-10-17)
 
 ### Features

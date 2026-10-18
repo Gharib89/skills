@@ -5,7 +5,7 @@ description: >-
   the user wants sessions driven in Herdr: a batch of `/ship` runs, or a skill
   smoke test in another checkout. Needs HERDR_ENV=1.
 metadata:
-  version: 0.2.1
+  version: 0.3.0
 ---
 
 # drive-session
@@ -16,13 +16,13 @@ in your workspace. The **roster** is the file listing them.
 
 Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer.
 
-## The four scripts
+## The scripts
 
-They live in `scripts/` under this skill's base directory, each taking the
-roster by `--roster <file>`, and each answers `--help` with its flags and the
-JSON it prints. Read, wait on and answer a roster session through them alone:
-each keeps the row's sequence number, which is what tells Herdr's stale `done`
-from a new turn.
+They live in `scripts/` under this skill's base directory, and each answers
+`--help` with its flags and the JSON it prints. Every script but `frontier`
+takes the roster by `--roster <file>`. Read, wait on and answer a roster session
+through `spawn`, `watch`, `read` and `answer` alone: each keeps the row's
+sequence number, which is what tells Herdr's stale `done` from a new turn.
 
 - `spawn` opens the tab without focus, starts claude, sends the task and adds
   the row.
@@ -34,6 +34,12 @@ from a new turn.
   with `--lines 200`.
 - `answer` sends a prompt with `--text`, or presses keys into a dialog with
   `--keys`.
+- `frontier --parent <n>` prints a spec parent's sub-issues, lowest number
+  first, each with its `repo`, state, assignees and open blockers, a blocker
+  carrying its `repo` and marked `inside` when it is another sub-issue of the
+  same parent. Run it from the spec's checkout, or with `GH_REPO=<owner/name>`:
+  it reads the parent from that repo. It reads GitHub alone (an Azure DevOps
+  checkout has no spec batch), so it takes no roster and runs outside Herdr.
 
 ## The run
 
@@ -115,6 +121,57 @@ anything else is an escalation that quotes its `held_by`.
 A supervised `/ship` is an **attended** run: you are the human present. Launch
 it as `/ship <issue>`, leaving `--unattended` to the user alone, and answer its
 hand-offs and questions the way the user would, by the escalation list.
+
+After every merge, `git status` the main checkout, then `git pull --ff-only`
+there before the next spawn: sessions start there, and its `.claude/skills/`
+is what runs, so a stale main runs the previous skills and branches from old
+code. On a dirty tree or a refused pull, spawn nothing: tell the user what
+`git status` or the pull printed, and wait for their word.
+
+## Spec batch
+
+A **spec batch** drives one spec parent's sub-issues (its **slices**, joined
+by native blocking edges) to merge, each as a supervised ship run. The launch
+line names the parent and any merge allowance
+(`spec batch #<parent>, merge each if all OK`).
+
+1. **Launch turn.** Run `frontier --parent <n>` and post its frontier, a slot
+   plan (which slices run side by side, which wait, and why), and, when a slice
+   has a blocker outside the spec, one question proposing to add the blocker's
+   spec to the batch. Then end the turn: spawn nothing until the user's go. On
+   a yes, run `frontier` on that spec's parent too and plan both together. On
+   a "no", those slices stay blocked, the parent stays open, and both go in the
+   report.
+2. **Slots.** At most two ship runs at once. Take open, unblocked slices
+   lowest number first, skipping one assigned with no run of yours in the
+   roster (another run's claim), and pair two only when no blocking edge joins
+   them and the areas their agent briefs name do not overlap: a skill
+   directory, the repo's scripts, its tests, the glossary, its docs. That call
+   is yours, from reading each agent brief. A slice whose agent brief names no
+   area runs alone: it starts only when no other run holds a slot. A slot frees
+   only when its run is at rest (merged, handed back or crashed): a run waiting
+   on an escalation keeps it. The gate slice, blocked by every other slice,
+   starts once all of them are closed.
+3. **Merges.** The launch line's merge allowance covers every PR in the spec,
+   and only on Ship's own `run-file gate clean`, as Escalation says. After
+   each merge, fast-forward main as above, then re-run `frontier`.
+   Once no slice is open, close the parent as completed with a comment naming
+   each slice and its PR: ship closes only the issue its PR names.
+4. **Batch log.** `<scratchpad>/drive-session/batch-log.md`, beside the
+   roster and read back with it after a compaction. A **find** is anything a
+   run surfaced beyond its own task: an escalation, a reviewer quirk, a
+   classifier refusal, a gate gap. Write one line per find as it surfaces,
+   before the next `watch`, naming the run, what happened, and whether it would
+   recur in the runs still to come. File a recurring find as an issue, spawn a
+   `/triage <n>` tab on it (a triage tab takes no slot), then ship it as the
+   next run in a free slot, before any slice it would hit.
+5. **End.** When every reachable slice is at rest, report one row per slice
+   (resting state and PR link), in place of The report's rows, plus each slice
+   left blocked and why. Then draft the rest of the batch log as one retro
+   spec, a parent with PR-sized sub-issues, show it, and file it only on the
+   user's word.
+
+Wake only on The run's background `watch`, never on `/loop` or a schedule.
 
 ## The report
 

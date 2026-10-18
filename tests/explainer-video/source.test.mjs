@@ -516,6 +516,37 @@ test("a web page renders in Chrome and its excerpt locates by section", () => {
   );
 });
 
+// #782: a page whose load timed out reached the snapshot as its heading alone,
+// exit 0, and took a share of the excerpt budget. Markup with no text in it
+// (an empty heading, an image) reads the same.
+test("a page that renders no text is refused, and no sources.json is written", () => {
+  const fx = fixture();
+  const blank = "https://dora.dev/guides/dora-metrics/";
+  const bare = "https://dora.dev/guides/how-to-transform/";
+  const chart = "https://dora.dev/guides/chart/";
+  const pages = JSON.stringify({
+    [blank]: { title: "", html: "" },
+    [bare]: { title: "", html: "<h2></h2>" },
+    [chart]: { title: "", html: '<img src="chart_(empty).png">' },
+  });
+  const s = snapshot(fx, [blank, bare, chart], {
+    EXPLAINER_VIDEO_FAKE_PAGES: pages,
+  });
+  assert.equal(s.code, 1, s.out + s.err);
+  for (const page of ["dora-metrics", "how-to-transform", "chart"])
+    assert.match(
+      s.err,
+      new RegExp(
+        `^source https://dora\\.dev/guides/${page}/: the page rendered no text, as it timed out or renders client side: snapshot it again, or give it as a saved \\.html or \\.md file$`,
+        "m",
+      ),
+    );
+  assert.equal(
+    fs.existsSync(path.join(fx.dir, "snapshots", "sources.json")),
+    false,
+  );
+});
+
 test("a page URL is kept without its credentials, query or fragment, and a malformed URL is refused by name", () => {
   const fx = fixture();
   const url = "https://me:pw@docs.example.com/guide/intro?token=s3cret#t=key";

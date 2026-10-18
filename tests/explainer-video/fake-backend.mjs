@@ -675,19 +675,23 @@ export async function probe(dir, times) {
 // `{"parts": {path: xml}}`, both JSON; a .docx holds the HTML mammoth would
 // give. renderPage answers a URL from the JSON map in
 // $EXPLAINER_VIDEO_FAKE_PAGES ({url: {title, html}}), a file: URL from the
-// file, as the page Chrome would hand Readability once its scripts ran.
+// file, as the page Chrome would hand Readability once its scripts ran; its
+// text is the HTML without its tags.
 export async function renderPage(url) {
   log({ call: "renderPage", url });
+  const text = (html) => html.replace(/<[^>]+>/g, "");
   if (url.startsWith("file:")) {
-    const html = fs.readFileSync(new URL(url), "utf8");
+    const file = fs.readFileSync(new URL(url), "utf8");
+    const html = file.replace(/^[\s\S]*<body>|<\/body>[\s\S]*$/g, "");
     return {
-      title: html.match(/<title>([^<]*)<\/title>/)?.[1] ?? "",
-      html: html.replace(/^[\s\S]*<body>|<\/body>[\s\S]*$/g, ""),
+      title: file.match(/<title>([^<]*)<\/title>/)?.[1] ?? "",
+      html,
+      text: text(html),
     };
   }
   const page = JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_PAGES ?? "{}")[url];
   if (!page) throw new Error(`net::ERR_NAME_NOT_RESOLVED at ${url}`);
-  return page;
+  return { ...page, text: text(page.html) };
 }
 
 // Headings to `#` lines, each block its own paragraph, other tags dropped.

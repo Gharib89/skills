@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.3.0 (2026-10-18)
+
+### Features
+
+- **drive-session**: A spec batch drives one spec parent's sub-issues to merge, two at a time
+  ([#815](https://github.com/Gharib89/skills/pull/815),
+  [`ff170a7`](https://github.com/Gharib89/skills/commit/ff170a7c5c122713834389642a49fac8baa30548))
+
+
 ## v0.2.1 (2026-10-11)
 
 ### Bug Fixes
