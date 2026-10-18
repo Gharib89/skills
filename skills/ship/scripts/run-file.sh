@@ -1469,7 +1469,7 @@ note)
   parse_file "$@"
   no_extra
   # A Criterion line in any other form reads as unmet to `gate clean` (#853).
-  crit='^Criterion [1-9][0-9]*: (met|not met): .*[^ ]'
+  crit='^Criterion [1-9][0-9]*: (met|not met): .*[^[:space:]]'
   case $text in Criterion*) [[ $text =~ $crit ]] || ship_fail "a Criterion line is \`Criterion <n>: met: <proof>\` or \`Criterion <n>: not met: <reason>\`, the form gate clean reads: $text" ;; esac
   append_to_section "## $sect" "$text"
   jq -n --arg f "$file" --arg s "$sect" --arg l "$text" '{run_file: $f, section: $s, line: $l}'

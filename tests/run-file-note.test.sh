@@ -48,7 +48,7 @@ check "no malformed call touched the record" "$before" "$(cat "$rf")"
 # A Criterion line is written only in the form `gate clean` reads (#853), so the
 # gate never holds on a met line's form; the refusal names both forms.
 forms="a Criterion line is \`Criterion <n>: met: <proof>\` or \`Criterion <n>: not met: <reason>\`, the form gate clean reads:"
-for line in 'Criterion 2: met at 907b1bf: test green' 'Criterion 2: met:' 'Criterion 2: not met:' 'Criterion 2: done' 'Criterion two: met: x' 'Criterion 2 met: x'; do
+for line in 'Criterion 2: met at 907b1bf: test green' 'Criterion 2: met:' $'Criterion 2: met: \t' 'Criterion 2: not met:' 'Criterion 2: done' 'Criterion two: met: x' 'Criterion 2 met: x'; do
   note Evidence "$line" --file "$rf"
   check_rc "$line is refused" 1 "$status"
   check "the refusal of $line names the accepted forms" "$forms $line" "$(jq -r .error <<<"$out")"
