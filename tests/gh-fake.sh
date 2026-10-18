@@ -22,10 +22,9 @@
 #
 # `GH_ROUTES` set to a directory answers each call by its endpoint instead, for
 # a script that makes several different reads: `gh_route <endpoint> <body>`
-# writes the body one endpoint answers, an empty one included, its query
-# string ignored, and an
-# endpoint with no route fails the way gh's 404 does. `gh_args` lists each
-# call's arguments, one line per call.
+# writes the body one endpoint answers (an empty body too), matched with the
+# call's query string ignored, and an endpoint with no route fails the way
+# gh's 404 does. `gh_args` lists each call's arguments, one line per call.
 gh_fake_install() { # <dir>
   export GH_LOG=$1/calls
   cat > "$1/gh" <<'FAKE'
@@ -53,11 +52,12 @@ printf '%s\t%s\n' "$n" "$body" >> "$GH_LOG"
 status=200 i=0
 for s in ${GH_STATUS_SEQ:-200}; do i=$((i + 1)); status=$s; [ "$i" -ge "$n" ] && break; done
 [ "$status" = none ] && { echo "gh: connection refused" >&2; exit 1; }
+out=${GH_BODY:-ok}
 if [ -n "${GH_ROUTES:-}" ] && [ "$status" -lt 400 ]; then
   route=${endpoint%%\?*}
   route=$GH_ROUTES/${route//\//_}
   [ -f "$route" ] || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
-  GH_BODY=$(cat "$route")
+  out=$(cat "$route")
 fi
 if [ -n "$include" ]; then
   printf 'HTTP/2.0 %s Some Reason\r\n' "$status"
@@ -69,7 +69,7 @@ if [ "$status" -ge 400 ]; then
   echo "gh: unexpected end of JSON input" >&2
   exit 1
 fi
-if [ -n "${GH_ROUTES:-}" ]; then printf '%s\n' "$GH_BODY"; else printf '%s\n' "${GH_BODY:-ok}"; fi
+printf '%s\n' "$out"
 exit 0
 FAKE
   chmod +x "$1/gh"
