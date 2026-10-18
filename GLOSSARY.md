@@ -497,7 +497,7 @@ A component or a technique (3D, blur, a camera move, per-word type) a style prof
 _Avoid_: restriction, disallowed effect
 
 **Style card**:
-A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast, and each font a source decided marked as its own, the replacement for one it names, or an Arabic companion. The human edits a colour or a font on the card itself, then saves the profile, uses it once, or asks for a revision.
+A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast, each font a source decided marked as its own, the replacement for one it names, or an Arabic companion, and each visual grammar field marked as measured from a reference video, judged from its frames, or the default. The frames play the grammar's motion, and one seam hands a frame to the next. The human edits a colour or a font on the card itself, then saves the profile, uses it once, or asks for a revision.
 _Avoid_: style preview, mood board
 
 **Card version**:
