@@ -1,0 +1,314 @@
+// The setup stage through its process door, part 1: check and install of the
+// base rows, fonts, models, pruning and usage errors.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  CPU_PIN,
+  FAKE_SHA,
+  aceRow,
+  cacheDir,
+  calls,
+  fixture,
+  fontDir,
+  machine,
+  pyRows,
+  row,
+  run,
+} from "./setup-lib.mjs";
+
+test("a check on an empty machine lists every row missing, with size, licence and destination, and installs nothing", () => {
+  const fx = fixture();
+  const r = run(fx, ["check"], "");
+  assert.equal(r.code, 1, r.err);
+  assert.match(
+    r.out,
+    /^\| row \| needed by \| status \| size \| licence \| writes to \|$/m,
+  );
+  // The default narrator is English, so its voice rows are listed too.
+  const rows = JSON.parse(
+    fs.readFileSync(path.join(fx.skill, "setup", "rows.json"), "utf8"),
+  ).rows.filter((x) => !x.when || (x.when === "voice" && x.language === "en"));
+  assert.ok(rows.some((x) => x.id === "model:kokoro-82m"));
+  assert.ok(rows.length >= 4);
+  for (const x of rows) {
+    const cells = row(r.out, x.id);
+    assert.ok(cells, `row ${x.id} missing from:\n${r.out}`);
+    assert.equal(cells[2], "missing", x.id);
+    assert.ok(cells[4], `${x.id} has no licence`);
+    assert.ok(cells[5], `${x.id} has no destination`);
+    if (x.kind !== "system")
+      assert.match(cells[3], /\d/, `${x.id} has no size`);
+  }
+  assert.deepEqual(calls(fx), []);
+  assert.ok(!fs.existsSync(cacheDir(fx)));
+});
+
+test("install is the yes: it installs every row, npm ci skips the onnxruntime provider download, and a second check is all present", () => {
+  const fx = fixture();
+  const i = run(fx, ["install"]);
+  assert.equal(i.code, 0, i.out + i.err);
+  const ci = calls(fx).filter((c) => c.call === "npmCi");
+  assert.equal(ci.length, 1);
+  assert.equal(ci[0].onnxruntime, "skip");
+  const c = run(fx, ["check"]);
+  assert.equal(c.code, 0, c.out + c.err);
+  for (const l of c.out
+    .split("\n")
+    .filter(
+      (l) =>
+        l.startsWith("| ") &&
+        !l.startsWith("| row |") &&
+        !l.startsWith("| ---"),
+    )) {
+    assert.equal(l.split("|")[3].trim(), "present", l);
+  }
+  assert.equal(
+    calls(fx).filter((x) => x.call === "npmCi").length,
+    1,
+    "the second check installed something",
+  );
+});
+
+test("install clears what an earlier Chrome install left half done", () => {
+  const fx = fixture();
+  const chromeDir = row(run(fx, ["check"]).out, "chrome")[5];
+  const leftover = path.join(chromeDir, "partial-download");
+  fs.mkdirSync(path.dirname(leftover), { recursive: true });
+  fs.writeFileSync(leftover, "x");
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.ok(!fs.existsSync(leftover), "the half-done download survived");
+  assert.ok(fs.existsSync(path.join(path.dirname(leftover), ".stamp")));
+});
+
+test("ffmpeg missing prints its apt, brew and winget lines and installs nothing system-wide", () => {
+  const fx = fixture();
+  const r = run(fx, ["install"], "");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(row(r.out, "ffmpeg")[2], "missing");
+  assert.match(r.out, /apt: sudo apt install ffmpeg/);
+  assert.match(r.out, /brew: brew install ffmpeg/);
+  assert.match(r.out, /winget: winget install/);
+  assert.match(r.out, /^not present: ffmpeg$/m, "a system package has no size");
+  const tools = ["npmCi", "ensureChrome", "fontMeta", "download"];
+  for (const c of calls(fx)) assert.ok(tools.includes(c.call), c.call);
+  assert.equal(row(run(fx, ["check"], "").out, "ffmpeg")[2], "missing");
+});
+
+test("uv is listed only when an opt-in Python row is asked for", () => {
+  const fx = fixture(pyRows);
+  const plain = run(fx, ["check"], "ffmpeg");
+  assert.equal(row(plain.out, "uv"), undefined, plain.out);
+  assert.equal(row(plain.out, "py-model"), undefined, plain.out);
+  const all = run(fx, ["check", "--all"], "ffmpeg");
+  assert.equal(row(all.out, "py-model")[2], "missing");
+  assert.equal(row(all.out, "uv")[2], "missing");
+  assert.match(all.out, /brew: brew install uv/);
+});
+
+test("fonts are fetched by family at the pinned version into the font store", () => {
+  const fx = fixture([
+    {
+      id: "font:inter",
+      kind: "font",
+      family: "inter",
+      version: "5.3.0",
+      files: ["latin-400-normal", "latin-600-normal"],
+      size: 48116,
+      neededBy: "render",
+      licence: "OFL-1.1",
+    },
+  ]);
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    calls(fx)
+      .filter((c) => c.call === "fontMeta")
+      .map((c) => c.id),
+    ["inter"],
+  );
+  const urls = calls(fx)
+    .filter((c) => c.call === "download")
+    .map((c) => c.url);
+  assert.deepEqual(urls, [
+    "https://cdn.jsdelivr.net/fontsource/fonts/inter@5.3.0/latin-400-normal.woff2",
+    "https://cdn.jsdelivr.net/fontsource/fonts/inter@5.3.0/latin-600-normal.woff2",
+  ]);
+  assert.ok(
+    fs.existsSync(
+      path.join(fontDir(fx), "inter@5.3.0", "latin-600-normal.woff2"),
+    ),
+  );
+});
+
+test("a font whose licence is neither OFL nor Apache is refused and nothing is written", () => {
+  const fx = fixture([
+    {
+      id: "font:ubuntu",
+      kind: "font",
+      family: "ubuntu",
+      version: "5.2.0",
+      files: ["latin-400-normal"],
+      size: 1,
+      neededBy: "render",
+      licence: "UFL-1.0",
+    },
+  ]);
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(row(r.out, "font:ubuntu")[2], /^refused: licence UFL-1\.0/);
+  assert.ok(calls(fx).every((c) => c.call !== "download"));
+  assert.ok(!fs.existsSync(path.join(fontDir(fx), "ubuntu@5.2.0")));
+});
+
+const modelRow = (sha256) => ({
+  id: "model:aligner",
+  kind: "model",
+  repo: "org/aligner",
+  revision: "0123456789abcdef0123456789abcdef01234567",
+  files: [
+    { path: "vocab.json", size: 358, sha256: FAKE_SHA },
+    { path: "onnx/model_int8.onnx", size: 95286006, sha256 },
+  ],
+  neededBy: "voice",
+  licence: "Apache-2.0",
+});
+
+test("a model is its own row with its files' size, fetched at its pinned revision into the tool cache", () => {
+  const fx = fixture([modelRow(FAKE_SHA)]);
+  const c = run(fx, ["check"]);
+  assert.equal(row(c.out, "model:aligner")[3], "95 MB");
+  const where = row(c.out, "model:aligner")[5];
+  assert.equal(
+    where,
+    path.join(cacheDir(fx), "models", "aligner@0123456789ab"),
+  );
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    calls(fx)
+      .filter((x) => x.call === "download")
+      .map((x) => x.url),
+    [
+      "https://huggingface.co/org/aligner/resolve/0123456789abcdef0123456789abcdef01234567/vocab.json",
+      "https://huggingface.co/org/aligner/resolve/0123456789abcdef0123456789abcdef01234567/onnx/model_int8.onnx",
+    ],
+  );
+  assert.ok(fs.existsSync(path.join(where, "onnx", "model_int8.onnx")));
+  assert.equal(row(run(fx, ["check"]).out, "model:aligner")[2], "present");
+});
+
+test("a model file whose sha256 differs from its pin fails the row and leaves nothing installed", () => {
+  const fx = fixture([modelRow("0".repeat(64))]);
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    row(r.out, "model:aligner")[2],
+    /^failed: onnx\/model_int8\.onnx has sha256 [0-9a-f]{64}, pinned 0{64}/,
+  );
+  assert.ok(
+    !fs.existsSync(path.join(cacheDir(fx), "models", "aligner@0123456789ab")),
+  );
+  assert.equal(row(run(fx, ["check"]).out, "model:aligner")[2], "missing");
+});
+
+test("an install unused for 30 days is listed with its size and pruned under the yes; a fresh one is kept", () => {
+  const fx = fixture([]);
+  const day = 24 * 60 * 60;
+  const now = Date.now() / 1000;
+  // An install that never finished has no stamp, and ages by its folder.
+  const make = (rel, ageDays, stamped = true) => {
+    const dir = path.join(cacheDir(fx), rel);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "blob"), "x".repeat(2048));
+    const aged = stamped ? path.join(dir, ".stamp") : dir;
+    if (stamped) fs.writeFileSync(aged, "");
+    fs.utimesSync(aged, now - ageDays * day, now - ageDays * day);
+    return dir;
+  };
+  const old = make(path.join("node", "aaaaaaaaaaaaaaaa"), 31);
+  const oldChrome = make(path.join("chrome", "aaaaaaaaaaaaaaaa"), 45);
+  const unfinished = make(path.join("node", "cccccccccccccccc"), 40, false);
+  const fresh = make(path.join("node", "bbbbbbbbbbbbbbbb"), 3);
+  const c = run(fx, ["check"]);
+  assert.equal(c.code, 1, c.out + c.err);
+  const cells = row(c.out, "stale node/aaaaaaaaaaaaaaaa");
+  assert.ok(cells, c.out);
+  assert.match(cells[2], /^stale, unused 31 days/);
+  assert.match(cells[3], /KB/);
+  assert.ok(row(c.out, "stale chrome/aaaaaaaaaaaaaaaa"));
+  assert.ok(row(c.out, "stale node/cccccccccccccccc"), c.out);
+  assert.equal(row(c.out, "stale node/bbbbbbbbbbbbbbbb"), undefined);
+  assert.ok(fs.existsSync(old), "check removed a stale install");
+  const i = run(fx, ["install"]);
+  assert.equal(i.code, 0, i.out + i.err);
+  assert.ok(!fs.existsSync(old));
+  assert.ok(!fs.existsSync(oldChrome));
+  assert.ok(!fs.existsSync(unfinished));
+  assert.ok(fs.existsSync(fresh));
+});
+
+test("an env or model folder no catalogue row lands in for this machine's device ages out like an npm install; a current one never does", () => {
+  const row0 = aceRow();
+  const fx = fixture([
+    { ...row0, cpu: { ...row0.cpu, env: { path: "setup/ace", size: 1e9 } } },
+    modelRow(FAKE_SHA),
+  ]);
+  const pin = path.join(fx.skill, "setup", "ace");
+  fs.mkdirSync(pin, { recursive: true });
+  fs.writeFileSync(path.join(pin, "uv.lock"), CPU_PIN.lock);
+  const cpu = crypto
+    .createHash("sha256")
+    .update(CPU_PIN.lock)
+    .digest("hex")
+    .slice(0, 7);
+  const now = Date.now() / 1000;
+  const make = (rel, ageDays) => {
+    const dir = path.join(cacheDir(fx), rel);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, ".stamp"), "");
+    const t = now - ageDays * 24 * 60 * 60;
+    fs.utimesSync(path.join(dir, ".stamp"), t, t);
+    return dir;
+  };
+  // ace-step is opt-in, so a check without --all does not list it: its folder
+  // for this machine's device is still current.
+  const current = [
+    make(path.join("python", `ace-step@fedcba9-0123456-cpu${cpu}`), 45),
+    make(path.join("models", "aligner@0123456789ab"), 45),
+  ];
+  const gpuEnv = make(path.join("python", "ace-step@fedcba9-0123456"), 45);
+  const oldEnv = make(path.join("python", "ace-step@1111111-0123456"), 45);
+  const oldModel = make(path.join("models", "aligner@aaaaaaaaaaaa"), 45);
+  const fresh = make(path.join("models", "aligner@bbbbbbbbbbbb"), 3);
+  // A failed probe may hide a card: the GPU env stays current.
+  const failed = run(fx, ["check"], "ffmpeg", machine("failed")).out;
+  assert.ok(row(failed, "stale python/ace-step@1111111-0123456"), failed);
+  assert.equal(row(failed, "stale python/ace-step@fedcba9-0123456"), undefined);
+  // With no card, the GPU env is stale like on a card under 8.0.
+  const noCard = run(fx, ["check"], "ffmpeg", machine(null)).out;
+  assert.ok(row(noCard, "stale python/ace-step@fedcba9-0123456"), noCard);
+  const c = run(fx, ["check"], "ffmpeg", machine(7.5));
+  assert.equal(c.code, 1, c.out + c.err);
+  for (const id of [
+    "python/ace-step@fedcba9-0123456",
+    "python/ace-step@1111111-0123456",
+    "models/aligner@aaaaaaaaaaaa",
+  ])
+    assert.ok(row(c.out, `stale ${id}`), c.out);
+  assert.doesNotMatch(c.out, /stale python\/ace-step@fedcba9-0123456-cpu/);
+  assert.doesNotMatch(c.out, /stale models\/aligner@(0123456789ab|bbbb)/);
+  const i = run(fx, ["install"], "ffmpeg", machine(7.5));
+  assert.equal(i.code, 0, i.out + i.err);
+  for (const dir of [gpuEnv, oldEnv, oldModel]) assert.ok(!fs.existsSync(dir));
+  for (const dir of [...current, fresh]) assert.ok(fs.existsSync(dir));
+});
+
+test("a usage error exits 2", () => {
+  const fx = fixture([]);
+  assert.equal(run(fx, ["frobnicate"]).code, 2);
+  assert.equal(run(fx, ["check", "--voice"]).code, 2);
+});
