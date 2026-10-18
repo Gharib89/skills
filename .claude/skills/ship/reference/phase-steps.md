@@ -178,11 +178,11 @@ waiting for an explicit "merge" by default, or merging when
 `Merge: on-clean-gate` or the run is inline lane and `run-file gate clean`
 answers `clean: true`; an unmet criterion needs the human's explicit waiver.
 On either authorization run `merge <pr> <issue|none> <head> [--worktree
-<path>]`, `<head>` the gate's `head_sha`, invoked from the worktree root as
-`.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,
-and by its absolute base-directory path only where there is no project copy (a
-global install): auto mode refuses the absolute form on a clean gate, and the
-run gets one try. `update-issue-body` per tracker draft, file Ship defect
+<path>]`, `<head>` the gate's `head_sha`. Invoke it from the worktree root as
+`.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope;
+the absolute base-directory path is for an install with no project copy (a
+global install), because auto mode refuses the absolute form on a clean gate.
+Then `update-issue-body` per tracker draft, file Ship defect
 drafts on the human's word, `run-file close 9`, `ExitWorktree` with `action:
 "keep"` (`cleanup` owns the removal) so the session is not left in a deleted
 folder, then `cleanup
