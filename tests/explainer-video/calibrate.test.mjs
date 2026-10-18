@@ -22,7 +22,7 @@ after(() =>
 // ends on 10 more. Frames are 20 ms. A sentence's speech runs from its first
 // word's first letter to its last `|`; the rest of the audio is silence.
 function fakeCalibration(texts) {
-  let words = 0;
+  let chars = 0;
   let speech = 0;
   let sentences = 0;
   let total = 0;
@@ -31,7 +31,7 @@ function fakeCalibration(texts) {
       .split(/(?<=[.!?])\s+/)
       .map((s) => s.toUpperCase().match(/[A-Z']+/g));
     const ws = ss.flat();
-    words += ws.length;
+    chars += text.match(/[\p{L}\p{N}]/gu).length;
     sentences += ss.length;
     speech +=
       ws.reduce((n, w) => n + 3 * w.length + 1, 0) +
@@ -39,7 +39,7 @@ function fakeCalibration(texts) {
     total += 10 + ws.reduce((n, w) => n + 3 * w.length + 3, 0) + 10 * ss.length;
   }
   return {
-    rate: words / (speech * 0.02),
+    rate: chars / (speech * 0.02),
     pause: ((total - speech) * 0.02) / sentences,
   };
 }
@@ -74,13 +74,13 @@ function calibrateCopy(language) {
   return { out: r.stdout, calls, before, after };
 }
 
-test("calibration measures each English narrator's speech rate and pause a sentence over several texts, printing each text's rate and pause, and leaves the rest of narrators.json alone", () => {
+test("calibration measures each English narrator's characters a second of speech and pause a sentence over several texts, printing each text's rate and pause, and leaves the rest of narrators.json alone", () => {
   const { out, calls, before, after } = calibrateCopy("en");
   const texts = [...new Set(calls.map((c) => c.text))];
   assert.ok(texts.length >= 3, `${texts.length} texts`);
   assert.deepEqual(
     calls.map((c) => c.voice),
-    ["bf_emma", "am_fenrir", "JBFqnCBsd6RMkjVDRZzb"].flatMap((v) =>
+    ["bf_emma", "am_fenrir", "af_heart", "JBFqnCBsd6RMkjVDRZzb"].flatMap((v) =>
       texts.map(() => v),
     ),
   );
@@ -96,7 +96,7 @@ test("calibration measures each English narrator's speech rate and pause a sente
       assert.match(
         out,
         new RegExp(
-          `^calibrate ${n.id} text ${k + 1}: \\d+\\.\\d+ words/s, \\d+\\.\\d+ s a sentence$`,
+          `^calibrate ${n.id} text ${k + 1}: \\d+\\.\\d+ chars/s, \\d+\\.\\d+ s a sentence$`,
           "m",
         ),
       ),
@@ -104,7 +104,7 @@ test("calibration measures each English narrator's speech rate and pause a sente
     assert.match(
       out,
       new RegExp(
-        `^calibrate ${n.id}: ${n.rate} words/s, ${n.pause} s a sentence$`,
+        `^calibrate ${n.id}: ${n.rate} chars/s, ${n.pause} s a sentence$`,
         "m",
       ),
     );
@@ -133,13 +133,13 @@ test("calibration voices each Arabic text on each Gemini narrator, printing each
   );
   for (const t of texts) assert.ok(t.split(/\s+/).length >= 55, t);
   for (const n of after.filter((n) => n.language === "ar")) {
-    assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} ${n.rate}`);
+    assert.ok(n.rate > 8 && n.rate < 25, `${n.id} ${n.rate}`);
     assert.ok(n.pause > 0 && n.pause < 2, `${n.id} ${n.pause}`);
     texts.forEach((_, k) =>
       assert.match(
         out,
         new RegExp(
-          `^calibrate ${n.id} text ${k + 1}: \\d+\\.\\d+ words/s, \\d+\\.\\d+ s a sentence$`,
+          `^calibrate ${n.id} text ${k + 1}: \\d+\\.\\d+ chars/s, \\d+\\.\\d+ s a sentence$`,
           "m",
         ),
       ),
@@ -147,7 +147,7 @@ test("calibration voices each Arabic text on each Gemini narrator, printing each
     assert.match(
       out,
       new RegExp(
-        `^calibrate ${n.id}: ${n.rate} words/s, ${n.pause} s a sentence$`,
+        `^calibrate ${n.id}: ${n.rate} chars/s, ${n.pause} s a sentence$`,
         "m",
       ),
     );
