@@ -35,7 +35,7 @@
     "explainer-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "0cfdf85c78fce86b036e366c602557079d61297b2a134f7c335dc49d05f8092d"
+      "computedHash": "daef66ac4f949ed24bb470f129b6505ccae2623b7653151451b031d695979f39"
     },
     "find-docs": {
       "source": "upstash/context7",
@@ -47,7 +47,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "dea7cf410cd4a4b38c426f98778bf144c179b9a3d24c54facdf226ff627e3ff8"
+      "computedHash": "176dc01cfbac608487eb7ae560494e7f7ea5ed5e4449759ac02994a19251ef47"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",

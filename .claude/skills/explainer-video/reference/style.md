@@ -122,12 +122,13 @@ is `node <skill>/scripts/style/card.mjs explainers/<slug> <name>`.
    and tell the user the card is
    `explainers/<slug>/style-draft/card/stylecard.html`, opened in a browser,
    and that they paste its answers text back here.
-2. **Publish, once per card.** `card page` writes `style-draft/card/page.html`.
-   Publish it as a new artifact: `capabilities` `{"db": {}, "user": {},
-   "comments": {}, "assets": {}}`, `icon` `palette`, a one-sentence
-   `description`. Refused: the card is local (step 1). Never publish it again:
-   every later change is a card version. Record its URL with `card page
-   <url>`. Arm the watch as the storyboard's step 3 says.
+2. **Publish, once per card.** `card page` writes `style-draft/card/page.html`
+   and `card.css`, `card-core.js` and `card-boot.js` beside it. Publish
+   `page.html` as a new artifact with those three in `files`: `capabilities`
+   `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon` `palette`, a
+   one-sentence `description`. Refused: the card is local (step 1). Never
+   publish it again: every later change is a card version. Record its URL
+   with `card page <url>`. Arm the watch as the storyboard's step 3 says.
 3. **Build.** `card build`, adding `--local` on a local card, and `--project`
    when the user asked for a project profile, so the card names the store Save
    writes (by default the user store when this copy of the skill sits under

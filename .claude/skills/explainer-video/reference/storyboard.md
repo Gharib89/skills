@@ -31,9 +31,11 @@ delivery it reports Render's last line and the videos-folder path.
    `explainers/<slug>/storyboard.html`, opened in a browser, and that the user
    pastes its answers text back here.
 3. **Publish, once per run.** `board page` writes `board/page.html`, the page
-   with the video's title. Publish that file as a new artifact:
-   `capabilities` `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon`
-   `video`, a one-sentence `description`. Refused: the board is local (step 2).
+   with the video's title, and `page.css`, `page-core.js` and `page-boot.js`
+   beside it. Publish `page.html` as a new artifact with those three in
+   `files`: `capabilities`
+   `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon` `video`, a
+   one-sentence `description`. Refused: the board is local (step 2).
    Never publish it again: every later change is a board version. Record its
    URL with `board page <url>`, which keeps it in `manifest.json`. A Submit
    wakes this session only while the artifact's watch shows auto-replies armed;
