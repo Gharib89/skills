@@ -110,6 +110,19 @@ d=$(mkrepo glossary-itself)
 printf '\n**Other**:\nx\n_Avoid_: pipeline\n' >> "$d/GLOSSARY.md"; git_ commit -q -am head
 check "GLOSSARY.md itself is not read" "" "$(run "$d" main)"
 
+# The glossary is one root file plus an area file per area under docs/glossary/:
+# an avoided word of a moved area is still named, and the area file is not read.
+d=$(mkrepo area-file)
+mkdir -p "$d/docs/glossary"
+printf '### Area\n\n**Moved**:\nx\n_Avoid_: relocated\n' > "$d/docs/glossary/area.md"
+git_ add -A; git_ commit -q -m base2; git_ branch -f main
+printf 'it was relocated\n' > "$d/docs/a.md"; git_ commit -q -am head
+check "an _Avoid_ word of an area file is named" \
+  'glossary: docs/a.md:1: "relocated" is on the _Avoid_ list of Moved; use Moved if the word names it' "$(run "$d" main)"
+git_ branch -f main
+printf '\n**Other**:\nx\n_Avoid_: pipeline\n' >> "$d/docs/glossary/area.md"; git_ commit -q -am head2
+check "an area file itself is not read" "" "$(run "$d" main)"
+
 d=$(mkrepo bad-base)
 rc=$(rc_of "$d" no-such-ref)
 check_rc "a base that is not a commit is tooling" 2 "$rc"
