@@ -153,18 +153,17 @@ line names the parent and any merge allowance
    whose acceptance criteria require a timing series (repeated A/B runs, a
    median and range) also runs alone: a second run beside it widens the range,
    so until that slice is at rest no second slot is taken and no triage tab
-   that runs the local gate is spawned (a triage tab that runs no gate may
+   that runs the local gate is spawned (a triage tab that runs no local gate may
    still spawn). A slot frees
    only when its run is at rest (merged, handed back or crashed): a run waiting
    on an escalation keeps it. The gate slice, blocked by every other slice,
    starts once all of them are closed. Before spawning a slice, list the PRs
    merged to main since its agent brief was posted (the brief comment's
-   `created_at`, then `gh pr list --state merged --search "merged:>=<date>"`)
-   and compare their changed
-   files with the areas the brief names: on an overlap, the spawn prompt gains
-   one line telling the run to re-check the brief against main in phase 1,
-   naming those PRs, since a brief written before a merge can describe code
-   that has moved.
+   `created_at`, then `gh pr list --state merged --base main --limit 100
+   --search "merged:>=<date>"`) and compare their changed files with the
+   areas the brief names: on an overlap, the spawn prompt gains one line
+   telling the run to re-check the brief against main in phase 1, naming those
+   PRs, since a brief written before a merge can describe code that has moved.
 3. **Merges.** The launch line's merge allowance covers every PR in the spec,
    and only on Ship's own `run-file gate clean`, as Escalation says. After
    each merge, fast-forward main as above, then re-run `frontier`.

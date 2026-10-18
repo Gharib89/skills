@@ -11,7 +11,7 @@ section=$(awk '/^## Spec batch/{f=1; next} /^## /{f=0} f' skills/drive-session/S
 has() { grep -qiF -- "$1" <<<"$section" && echo yes || echo no; }
 
 check "a slice whose criteria require a timing series is named" yes "$(has 'require a timing series')"
-check "that slice also runs alone" yes "$(has 'also runs alone')"
+check "that slice also runs alone" yes "$(has 'median and range) also runs alone')"
 check "no gate-running triage tab spawns beside it" yes "$(has 'no triage tab that runs the local gate')"
 check "the launch turn's slot plan names each run-alone timing slice with its reason" yes "$(has 'names each run-alone timing slice with its reason')"
 check "the pre-spawn check lists PRs merged since the brief" yes "$(has 'PRs merged to main since')"
