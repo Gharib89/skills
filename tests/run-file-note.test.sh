@@ -73,6 +73,12 @@ note Criteria 'another' --file "$crf"
 check "a Criterion line stays unchanged and the next entry is 4" \
   $'- 1: a\n- 2: b\n- 3: the replacement criterion\nCriterion 3: met: tests/run-file-note.test.sh green\n- 4: another' \
   "$(section Criteria | grep -v -e '^$' -e '^## ')"
+# Only `Criterion <n>: ` opens an attestation there: other text on that word is
+# criterion text, and an attestation out of the gate's form is still refused.
+note Criteria 'Criterion parser keeps the replacement text' --file "$crf"
+check "criterion text opening on Criterion is numbered" '- 5: Criterion parser keeps the replacement text' "$(jq -r .line <<<"$out")"
+note Criteria 'Criterion 3: met at 907b1bf: test green' --file "$crf"
+check_rc "an off-form attestation under Criteria is refused" 1 "$status"
 rf=$(bash "$m" init 11 --scratchpad "$T/sp" | jq -r .run_file)
 note Criteria 'first of its kind' --file "$rf"
 check "a record with no Criteria section starts at 1" '- 1: first of its kind' "$(section Criteria | grep -v -e '^$' -e '^## ')"

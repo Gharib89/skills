@@ -241,13 +241,15 @@ note)
   no_extra
   # A Criterion line in any other form reads as unmet to `gate clean` (#853).
   crit='^Criterion [1-9][0-9]*: (met|not met): .*[^[:space:]]'
-  case $text in Criterion*) [[ $text =~ $crit ]] || ship_fail "a Criterion line is \`Criterion <n>: met: <proof>\` or \`Criterion <n>: not met: <reason>\`, the form gate clean reads: $text" ;; esac
-  # Any other line under `## Criteria` is an entry the gate holds, so it takes
-  # the number after the highest entry (#863).
-  if [ "$sect" = Criteria ] && [[ $text != Criterion* ]]; then
+  # Under `## Criteria` any line but a `Criterion <n>: ` attestation is an entry
+  # the gate holds, so it takes the number after the highest entry (#863); its
+  # text may itself open on the word `Criterion`.
+  attest='^Criterion [1-9][0-9]*: '
+  if [ "$sect" = Criteria ] && ! [[ $text =~ $attest ]]; then
     n=$(awk '{ t = $0; sub(/[ \t\r]+$/, "", t) } t ~ /^## / { f = (t == "## Criteria") } f && /^- [1-9][0-9]*: / { v = substr($0, 3) + 0; if (v > m) m = v } END { print m + 1 }' "$file")
     text="- $n: $text"
   fi
+  case $text in Criterion*) [[ $text =~ $crit ]] || ship_fail "a Criterion line is \`Criterion <n>: met: <proof>\` or \`Criterion <n>: not met: <reason>\`, the form gate clean reads: $text" ;; esac
   append_to_section "## $sect" "$text"
   jq -n --arg f "$file" --arg s "$sect" --arg l "$text" '{run_file: $f, section: $s, line: $l}'
   ;;
