@@ -678,7 +678,8 @@ if [ -s "$work/shell-hits" ]; then cat "$work/shell-hits"; rc=1; fi
 # pipeline reads as no match: a gate failed open on it in #758. A here-string
 # over a captured value makes the verdict depend on the input alone. A pipe at
 # the end of a line, or a `\`, continues the command onto the next line; a `|&`
-# is a pipe; a flag counts up to the command's next separator.
+# is a pipe; a flag counts up to the command's next separator; assignments, `env`,
+# `command` and the like, and a path before `grep` do not hide it.
 files=$(find "$skills" ${extra[@]+"${extra[@]}"} -name '*.sh' | sort) || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
 while IFS= read -r f; do
   [ -n "$f" ] || continue
@@ -693,7 +694,7 @@ while IFS= read -r f; do
       if (line ~ /\\$/) { sub(/\\$/, "", line); acc = acc line " "; next }
       if (line ~ /[^|]\|&?[ \t]*$/) { acc = acc line " "; next }
       cmd = acc line; acc = ""
-      while (match(cmd, /[^|]\|&?[ \t]*(e|f)?grep([ \t]|$)/)) {
+      while (match(cmd, /[^|]\|&?[ \t]*(([A-Za-z_][A-Za-z0-9_]*=[^ \t]*|command|builtin|env|exec|time|nice)[ \t]+)*([^ \t]*[/])?(e|f)?grep([ \t]|$)/)) {
         cmd = substr(cmd, RSTART + RLENGTH)
         seg = cmd; sub(/[|;&<>)].*/, "", seg)
         n = split(seg, tok, /[ \t]+/)

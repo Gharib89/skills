@@ -844,6 +844,10 @@ pipe_case silent 'printf x PIPE grep --silent x'
 pipe_case egrep 'printf x PIPE egrep -q x'
 pipe_case stderr-too 'printf x PIPE& grep -q x'
 pipe_case after-and 'true && printf x PIPE grep -q x'
+pipe_case env-assignment 'printf x PIPE LC_ALL=C grep -q x'
+pipe_case env-command 'printf x PIPE env LC_ALL=C grep -q x'
+pipe_case command-prefix 'printf x PIPE command grep -q x'
+pipe_case grep-path 'printf x PIPE /usr/bin/grep -q x'
 # A trailing pipe or a backslash continues the command; the line named is its first.
 pipe_case trailing-pipe 'printf x PIPE
   grep -q x'
@@ -862,7 +866,9 @@ printf x PIPE grep -c q
 cmd PIPEPIPE grep -q x "$f"
 grep -q x "$f"
 printf x PIPE grep x && grep -q y "$f"
-printf x PIPE grep -e x -- -q')"
+printf x PIPE grep -e x -- -q
+printf x PIPE LC_ALL=C grep x
+printf x PIPE env LC_ALL=C sort')"
 check_rc "a here-string grep -q and near misses pass under pipefail" 0 "$rc"
 check "and print nothing" "" "$out"
 
