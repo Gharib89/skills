@@ -19,7 +19,11 @@ const [skill, fx] = process.argv.slice(2);
 const say = (...a) => console.log(a.join(' '));
 const read = f => { try { return fs.readFileSync(f, 'utf8'); } catch { say('missing', f); process.exit(0); } };
 
-const html = read(path.join(skill, 'page.html'));
+// The page is markup plus siblings it links by relative path; inline them as a publish would not need to.
+const sib = f => read(path.join(skill, f));
+const html = read(path.join(skill, 'page.html'))
+  .replace(/<link rel="stylesheet" href="([^":]+)">/g, (_, f) => '<style>\n' + sib(f) + '</style>')
+  .replace(/(<script src="[^":]+"><\/script>\n?)+/, m => '<script>\n' + [...m.matchAll(/src="([^"]+)"/g)].map(x => sib(x[1])).join('') + '</script>\n');
 const shapeDoc = read(path.join(skill, 'round-data.md'));
 const sample = n => JSON.parse(read(path.join(fx, n + '.json')));
 const clone = o => JSON.parse(JSON.stringify(o));

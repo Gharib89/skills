@@ -106,6 +106,13 @@ const versions = () =>
     : [];
 const template = () =>
   fs.readFileSync(path.join(skill, "storyboard", "card.html"), "utf8");
+// The page links its style and scripts by relative path: a publish carries them
+// in `files`, and a local copy needs them beside it.
+const siblings = ["card.css", "card-core.js", "card-boot.js"];
+const copySiblings = (dir) => {
+  for (const f of siblings)
+    fs.copyFileSync(path.join(skill, "storyboard", f), path.join(dir, f));
+};
 // The store Save writes to: the user config store's styles/, or the project's
 // explainers/.styles/.
 const storeOf = (scope) =>
@@ -139,6 +146,7 @@ if (cmd === "page") {
       at("page.html"),
       template().replace("{{TITLE}}", () => esc(title)),
     );
+    copySiblings(cardDir);
     console.log("card: page style-draft/card/page.html");
   } else {
     if (!url.startsWith("https://")) fail(`${url} is not an https:// URL`);
@@ -515,6 +523,7 @@ const doc = {
 };
 write(at(`${doc.version}.json`), doc);
 // The local copy declares its encoding: no publish wraps it in a skeleton.
+copySiblings(cardDir);
 fs.writeFileSync(
   at("stylecard.html"),
   '<!doctype html>\n<meta charset="utf-8">\n' +

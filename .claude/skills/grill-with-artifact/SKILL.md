@@ -22,11 +22,12 @@ This skill replaces only two things in them: how a
 **grilling round** is shown (a round document on the page, never the terminal
 format `grilling` gives) and how the answers come back (a Submit on the page).
 
-The page is [page.html](page.html), fixed and tested: a session fills its title
-and publishes it once. From then on every grilling round is a document in the
-page's database, and the page renders it live. [round-data.md](round-data.md)
-is the contract between the two: read it before writing round 1, and hold every
-document you write to its field table and its figure style contract.
+The page is [page.html](page.html) with its style and script siblings, fixed
+and tested: a session fills its title and publishes it once. From then on
+every grilling round is a document in the page's database, and the page renders
+it live. [round-data.md](round-data.md) is the contract between the two: read
+it before writing round 1, and hold every document you write to its field
+table and its figure style contract.
 
 ## 1 · Pick the surface
 
@@ -43,13 +44,14 @@ terminal format runs.
 
 1. Take the topic from the invocation; only when none was given, ask the human
    for one in a few words.
-2. Copy `page.html` into your scratchpad as `grill-<topic-slug>/page.html` and
-   replace its one `{{TOPIC}}` with the topic, HTML-escaped (`&`, `<`, `>`,
-   `"`).
-3. Publish that file as a new artifact: `capabilities`
-   `{"db": {}, "user": {}, "comments": {}}`, `icon` `question`, and a one
-   sentence `description` naming what is being grilled. Each session gets its
-   own artifact. Refused: print step 1's line and fall back.
+2. Copy `page.html` and its siblings (`page.css`, `page-core.js`,
+   `page-boot.js`) into your scratchpad as `grill-<topic-slug>/` and replace
+   the one `{{TOPIC}}` in `page.html` only with the topic, HTML-escaped (`&`,
+   `<`, `>`, `"`).
+3. Publish `page.html` as a new artifact, the siblings in `files`:
+   `capabilities` `{"db": {}, "user": {}, "comments": {}}`, `icon` `question`,
+   and a one sentence `description` naming what is being grilled. Each session
+   gets its own artifact. Refused: print step 1's line and fall back.
 4. Read the publish result's subscription line. The Submit wake reaches you
    only while the artifact's watch shows auto-replies armed; when the line
    leaves that in doubt, check with `ArtifactComments` `watch` and no `url`.

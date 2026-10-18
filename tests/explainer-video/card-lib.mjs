@@ -18,7 +18,17 @@ export const here = path.dirname(fileURLToPath(import.meta.url));
 export const skill = path.join(here, "..", "..", "skills", "explainer-video");
 export const read = (...p) => fs.readFileSync(path.join(...p), "utf8");
 export const json = (...p) => JSON.parse(read(...p));
-export const html = read(skill, "storyboard", "card.html");
+export const html = read(skill, "storyboard", "card.html")
+  // The page links its style and scripts as siblings; inline them to test the whole.
+  .replace(
+    /<link rel="stylesheet" href="([^":]+)">/g,
+    (_, f) => `<style>\n${read(skill, "storyboard", f)}</style>`,
+  )
+  .replace(
+    /(<script src="[^":]+"><\/script>\n?)+/,
+    (m) =>
+      `<script>\n${[...m.matchAll(/src="([^"]+)"/g)].map((x) => read(skill, "storyboard", x[1])).join("")}</script>\n`,
+  );
 export const doc = read(skill, "storyboard", "card-data.md");
 export const clone = (o) => JSON.parse(JSON.stringify(o));
 
