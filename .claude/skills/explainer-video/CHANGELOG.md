@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.4 (2026-10-18)
+
+### Documentation
+
+- **explainer-video**: Point the Script stage at reference/scene-file.md
+  ([#861](https://github.com/Gharib89/skills/pull/861),
+  [`2d4de8f`](https://github.com/Gharib89/skills/commit/2d4de8fe5828066b36b75381e6fa81289ce7fad7))
+
+
 ## v0.24.3 (2026-10-18)
 
 ### Refactoring
