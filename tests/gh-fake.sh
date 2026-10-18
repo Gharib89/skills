@@ -19,19 +19,28 @@
 # body, so a case can hand back the shape `--paginate` produces: a second header
 # block after a blank line. With `-i` it comes back on a failing status too,
 # because `-i` prints the whole response and an error carries one.
+#
+# `GH_ROUTES` set to a directory answers each call by its endpoint instead, for
+# a script that makes several different reads: `gh_route <endpoint> <body>`
+# writes the body one endpoint answers (an empty body too), matched with the
+# call's query string ignored, and an endpoint with no route fails the way
+# gh's 404 does. `gh_args` lists each call's arguments, one line per call.
 gh_fake_install() { # <dir>
   export GH_LOG=$1/calls
   cat > "$1/gh" <<'FAKE'
 #!/usr/bin/env bash
-input="" prev="" include=""
-for a in "$@"; do
-  case $a in
-    --input=*) input=${a#--input=} ;;
-    -i|--include) include=1 ;;
-    *) [ "$prev" = --input ] && input=$a ;;
+input="" prev="" include="" endpoint=""
+for a in "${@:2}"; do
+  case $prev:$a in
+    --input:*) input=$a ;;
+    *:--input=*) input=${a#--input=} ;;
+    *:-i|*:--include) include=1 ;;
+    *:-*|-X:*|--method:*|-q:*|--jq:*|-H:*|--header:*|-f:*|--raw-field:*|-F:*|--field:*) ;;
+    *) [ -n "$endpoint" ] || endpoint=$a ;;
   esac
   prev=$a
 done
+printf '%s\n' "$*" >> "$GH_LOG.args"
 case $input in
   "") body="" ;;
   -)  body=$(cat) ;;
@@ -43,6 +52,13 @@ printf '%s\t%s\n' "$n" "$body" >> "$GH_LOG"
 status=200 i=0
 for s in ${GH_STATUS_SEQ:-200}; do i=$((i + 1)); status=$s; [ "$i" -ge "$n" ] && break; done
 [ "$status" = none ] && { echo "gh: connection refused" >&2; exit 1; }
+out=${GH_BODY:-ok}
+if [ -n "${GH_ROUTES:-}" ] && [ "$status" -lt 400 ]; then
+  route=${endpoint%%\?*}
+  route=$GH_ROUTES/${route//\//_}
+  [ -f "$route" ] || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
+  out=$(cat "$route")
+fi
 if [ -n "$include" ]; then
   printf 'HTTP/2.0 %s Some Reason\r\n' "$status"
   printf 'Content-Type: application/json\r\n'
@@ -53,12 +69,14 @@ if [ "$status" -ge 400 ]; then
   echo "gh: unexpected end of JSON input" >&2
   exit 1
 fi
-printf '%s\n' "${GH_BODY:-ok}"
+printf '%s\n' "$out"
 exit 0
 FAKE
   chmod +x "$1/gh"
   PATH=$1:$PATH
 }
-gh_reset()    { : > "$GH_LOG"; printf '0' > "$GH_LOG.n"; }
+gh_reset()    { : > "$GH_LOG"; : > "$GH_LOG.args"; printf '0' > "$GH_LOG.n"; }
+gh_route()    { mkdir -p "$GH_ROUTES"; printf '%s\n' "$2" > "$GH_ROUTES/${1//\//_}"; } # <endpoint> <body>
+gh_args()     { cat "$GH_LOG.args" 2>/dev/null; }
 gh_attempts() { cat "$GH_LOG.n"; }
 gh_body_of()  { awk -F'\t' -v n="$1" '$1 == n { print $2 }' "$GH_LOG"; }

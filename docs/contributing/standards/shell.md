@@ -42,7 +42,10 @@ exceptions bound these rules.
   A sixth: `scripts/live-run-ship.sh` files, reads and closes issues and PRs,
   and deletes branches, on the fixture repo with `gh`, because those writes are
   a live run's scaffolding around Ship, not Ship's own, and the mechanics are
-  what it tests.
+  what it tests. A seventh: `drive-session`'s `frontier` reads a spec parent's
+  sub-issues and blocked-by edges with `gh api`, because drive-session composes
+  no other skill and may be installed alone, so no adapter is beside it to
+  route through; it only reads.
   A direct call made in two runs, where this run can see the other, is a
   candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
