@@ -147,6 +147,12 @@ below lands as a minor
   reviewer's question is "did the text change correctly", never where it is
   "what does X now do"; the diff being comments or prose does not settle which.
   Silent absence is a finding either way.
+- **PR body: a `## Verification` line names the probe that measured it.** Each
+  line gives the command or check whose output it reports, not the conclusion
+  alone. The reviewer's evidence rule in the index binds the author's claims
+  too, and a conclusion goes no further than the probe measured: on #768 a
+  `check` printing "ready" measured an env's stamp date, not whether the 14 GB
+  env was current, and #768's Verification line said so.
 - **A fix landed after review has its hunk re-read before the push.** Read the
   changed lines back out of the file, not out of the reply you are about to
   post; a fix applied to the wrong copy or applied by half costs a whole round
