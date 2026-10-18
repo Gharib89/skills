@@ -22,12 +22,12 @@ all=$(for f in tests/explainer-video/*.test.mjs; do printf '%s\n' "${f##*/}"; do
 
 check "the bare call hands node every test file" "$all" "$(handed)"
 check "--turn hands it every file but gates and render" \
-  "$(printf '%s\n' "$all" | grep -v -e '^gates\.test\.mjs$' -e '^render\.test\.mjs$')" "$(handed --turn)"
+  "$(printf '%s\n' "$all" | grep -v -e '^gates-.*\.test\.mjs$' -e '^render-.*\.test\.mjs$')" "$(handed --turn)"
 
 # Both files named in the skip exist, or a rename would put one back on the rung.
 for f in gates render; do
-  if [ -f "tests/explainer-video/$f.test.mjs" ]; then have=0; else have=1; fi
-  check_rc "tests/explainer-video/$f.test.mjs exists" 0 "$have"
+  if compgen -G "tests/explainer-video/$f-*.test.mjs" > /dev/null; then have=0; else have=1; fi
+  check_rc "tests/explainer-video/$f-*.test.mjs exist" 0 "$have"
 done
 
 # Every turn row that runs the suite passes --turn, so the rung never runs it whole.

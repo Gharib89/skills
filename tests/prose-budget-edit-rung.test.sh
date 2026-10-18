@@ -18,7 +18,7 @@ fi
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 r=$fixture/repo
 mkdir -p "$r/scripts" "$r/skills/demo/reference" "$r/docs"
-cp scripts/check.sh scripts/prose-budget-check.sh "$r/scripts/"
+cp scripts/check.sh scripts/prose-budget-check.sh scripts/token-limit-check.sh "$r/scripts/"
 cp .pre-commit-config.yaml "$r/"
 printf '#!/bin/sh\necho "house-style ran"; exit 1\n' > "$r/scripts/house-style-check.sh"
 chmod +x "$r/scripts/house-style-check.sh"

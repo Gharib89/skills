@@ -1,0 +1,3 @@
+# Sourced pieces resolve from their parent's folder even when a test sources the parent (-P SCRIPTDIR alone resolves them against the test).
+source-path=skills/ship/scripts
+source-path=skills/ship/scripts/host
