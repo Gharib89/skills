@@ -45,5 +45,20 @@ note Evidence $'two\nlines' --file "$rf"
 check_rc "a two-line note is tooling" 2 "$status"
 check "no malformed call touched the record" "$before" "$(cat "$rf")"
 
+# A Criterion line is written only in the form `gate clean` reads (#853), so the
+# gate never holds on a met line's form; the refusal names both forms.
+forms="a Criterion line is \`Criterion <n>: met: <proof>\` or \`Criterion <n>: not met: <reason>\`, the form gate clean reads:"
+for line in 'Criterion 2: met at 907b1bf: test green' 'Criterion 2: met:' 'Criterion 2: not met:' 'Criterion 2: done' 'Criterion two: met: x' 'Criterion 2 met: x'; do
+  note Evidence "$line" --file "$rf"
+  check_rc "$line is refused" 1 "$status"
+  check "the refusal of $line names the accepted forms" "$forms $line" "$(jq -r .error <<<"$out")"
+done
+check "no refused Criterion line touched the record" "$before" "$(cat "$rf")"
+for line in 'Criterion 2: met: tests/run-file-note.test.sh green at 907b1bf' 'Criterion 3: not met: the host action needs a human'; do
+  note Evidence "$line" --file "$rf"
+  check_rc "$line is accepted" 0 "$status"
+  check "$line is written unchanged" "$line" "$(section Evidence | grep -v '^$' | tail -n 1)"
+done
+
 check "--help documents the verb and its answer" "2" "$(bash "$m" --help | grep -c -e 'note <section> <line>' -e 'note: {run_file, section, line}')"
 finish
