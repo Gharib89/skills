@@ -150,7 +150,10 @@
 # `Criterion` and evidence lines, since a heredoc edit of the record from a
 # worktree-isolated session is refused (#787). <section> is the heading's name
 # without its `## `, and <line> is one line that opens on neither `-` nor `#`,
-# so it is never a flag and never a heading.
+# so it is never a flag and never a heading. A <line> opening on `Criterion`
+# that is not `Criterion <n>: met: <proof>` or `Criterion <n>: not met:
+# <reason>` is refused (exit 1) naming both forms, since `gate clean` reads any
+# other as unmet (#853: `met at <sha>:`).
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git

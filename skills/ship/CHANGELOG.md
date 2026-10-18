@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.47.1 (2026-10-18)
+
+### Bug Fixes
+
+- **ship**: Run-file note refuses a Criterion line out of the gate's form
+  ([#859](https://github.com/Gharib89/skills/pull/859),
+  [`78b3658`](https://github.com/Gharib89/skills/commit/78b365883565c09a92d06e8a71caf7c43b173df7))
+
+
 ## v0.47.0 (2026-10-18)
 
 ### Features

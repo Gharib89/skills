@@ -140,6 +140,14 @@ base; change_run 's/^Criterion 1: met: .*/Criterion 1: met:/'
 held 'a met line with no proof' 'criterion 1: met:'
 base; change_run 's/^Criterion 1: met: .*/Criterion 1: nearly/'
 held 'a line that is neither met nor not met' 'criterion 1: nearly'
+# `note` refuses a met line annotated out of the gate's form (#853, `met at <sha>:`),
+# so the run re-records it in the form and the gate reads clean.
+base; change_run '/^Criterion 2: /d'
+bash "$m" note 'Review evidence' 'Criterion 2: met at 907b1bf: grep shows it' --file "$f" >/dev/null 2>&1
+check_rc "an annotated met line is refused at write time" 1 "$?"
+bash "$m" note 'Review evidence' 'Criterion 2: met: grep shows it at 907b1bf' --file "$f" >/dev/null 2>&1
+check_rc "the re-recorded met line is written" 0 "$?"
+clean 'a criterion re-recorded through note'
 # A fenced example cannot satisfy a criterion.
 base; change_run '/^Criterion 3: /d'; printf '%s\n' '```' 'Criterion 3: met: an example in a fence' '```' >> "$f"
 held 'a met line inside a fence' 'criterion 3: no line'
