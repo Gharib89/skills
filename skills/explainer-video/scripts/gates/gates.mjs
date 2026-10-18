@@ -33,12 +33,13 @@ import {
   peak as peakFrame,
   sceneFrames,
   stillStretches,
-  stripEnd,
-  stripStart,
 } from "../lib/motion.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
-import { CUE_CHARS, FPS, H, W } from "../render/compose.mjs";
+import { FPS, H, W } from "../render/compose.mjs";
+import { captionFindings, cuesOf } from "./captions.mjs";
+import { cutSheets } from "./sheets.mjs";
+import { SCORES, KINDS, checkVerdict } from "./verdict.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -92,23 +93,7 @@ try {
 const { textPx, margin } = floor.layout;
 const backend = await loadBackend();
 
-const unescape = (s) =>
-  s
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&amp;", "&");
-const cues = [
-  ...read("composition/index.html").matchAll(
-    /<div class="cue clip" data-start="([\d.]+)" data-duration="([\d.]+)"[^>]*>(.*?)<\/div>/g,
-  ),
-].map((m) => ({
-  start: +m[1],
-  end: +m[1] + +m[2],
-  text: [...m[3].matchAll(/<span class="w"[^>]*>(.*?)<\/span>/g)]
-    .map((w) => unescape(w[1].replace(/<[^>]+>/g, "")))
-    .join(" "),
-}));
+const cues = cuesOf(read("composition/index.html"));
 
 // Per scene: its samples, and its layout and contrast evidence, cached by
 // everything that draws its frames, every floor that judges them, and the
@@ -121,7 +106,15 @@ const inputs = renderInputs(
 const source = [
   "../render/compose.mjs",
   "gates.mjs",
+  "captions.mjs",
+  "sheets.mjs",
+  "verdict.mjs",
   "../lib/backend.mjs",
+  "../lib/backend/common.mjs",
+  "../lib/backend/browser.mjs",
+  "../lib/backend/media.mjs",
+  "../lib/backend/voice.mjs",
+  "../lib/backend/source.mjs",
   "../lib/layout.mjs",
   "../lib/motion.mjs",
   "../lib/terms.mjs",
@@ -250,59 +243,7 @@ if (peak > ceiling)
 
 // Captions: the timeline's words, the composition's cues, and the SRT as the
 // cues' copy.
-const caps = [];
-const eps = 1e-6;
-for (const sc of timeline.scenes)
-  sc.words.forEach((w, i) => {
-    const at = `word ${i + 1} "${w.text}" of ${sc.id}`;
-    if (!(w.start < w.end)) caps.push(`${at} does not start before it ends`);
-    if (i && w.start < sc.words[i - 1].end - eps)
-      caps.push(`${at} starts before the word before it ends`);
-    if (w.start < sc.start - eps || w.end > sc.start + sc.duration + eps)
-      caps.push(`${at} falls outside its scene`);
-  });
-cues.forEach((c, i) => {
-  const at = `cue ${i + 1}`;
-  if (!c.text.trim() || !(c.start < c.end)) caps.push(`${at} is empty`);
-  if (c.text.length > CUE_CHARS)
-    caps.push(`${at} holds ${c.text.length} characters, over ${CUE_CHARS}`);
-  if (i && c.start < cues[i - 1].end - eps)
-    caps.push(`${at} starts before cue ${i} ends`);
-  if (c.end > timeline.total + 0.001)
-    caps.push(`${at} runs past the video's ${timeline.total} s`);
-});
-const seconds = (t = "") => {
-  const m = t.trim().match(/^(\d+):(\d\d):(\d\d)[,.](\d{3})$/);
-  return m ? +m[1] * 3600 + +m[2] * 60 + +m[3] + +m[4] / 1000 : NaN;
-};
-const srt = read(srtFile)
-  .trim()
-  .split(/\r?\n\r?\n/)
-  .filter(Boolean)
-  .map((b) => {
-    const [, times = "", ...text] = b.split(/\r?\n/);
-    const [a, z] = times.split(" --> ");
-    return { start: seconds(a), end: seconds(z), text: text.join(" ") };
-  });
-if (srt.length !== cues.length)
-  caps.push(
-    `the SRT holds ${srt.length} cue(s), the composition ${cues.length}`,
-  );
-else
-  srt.forEach((s, i) => {
-    const c = cues[i];
-    if (s.text !== c.text)
-      caps.push(
-        `SRT cue ${i + 1} reads "${s.text}", the composition "${c.text}"`,
-      );
-    if (!(
-      Math.abs(s.start - c.start) <= 0.001 + eps &&
-      Math.abs(s.end - c.end) <= 0.001 + eps
-    ))
-      caps.push(
-        `SRT cue ${i + 1} runs ${s.start}-${s.end} s, the composition ${r3(c.start)}-${r3(c.end)} s`,
-      );
-  });
+const caps = captionFindings({ timeline, cues, srtText: read(srtFile) });
 
 // Sound effects: the most cues the score puts in any minute.
 const sfxCues = JSON.parse(read("score.json")).cues;
@@ -389,8 +330,6 @@ const count = (failing, before) =>
 // advise. Two rounds of one script at most: once two renders are judged, a
 // later one carries the second round's verdict rather than ask for a third.
 // Beside each contact sheet it cuts a motion strip and a motion record.
-const KINDS = ["unreadable", "invented"];
-const SCORES = ["clarity", "legibility", "fit", "motion"];
 // Bumped when the verdict's format changes, so a verdict cached in the old one
 // is judged again rather than refused by the new validator.
 const CRITIC_FORMAT = 2;
@@ -427,31 +366,7 @@ const verdicts = (h) =>
     } catch (e) {
       bad(e.message);
     }
-    if (!Array.isArray(v?.failures)) bad("no failures list");
-    v.failures.forEach((x, i) => {
-      if (!KINDS.includes(x?.kind))
-        bad(`failure ${i + 1} kind "${x?.kind}" is not ${KINDS.join(" or ")}`);
-      if (typeof x.what !== "string" || !x.what.trim())
-        bad(`failure ${i + 1} says nothing`);
-    });
-    for (const k of SCORES)
-      if (![1, 2, 3, 4, 5].includes(v.scores?.[k]))
-        bad(`score ${k} is not a whole number 1 to 5`);
-    if (!Array.isArray(v.worst)) bad("no worst list");
-    if (v.worst.length > 3)
-      bad(`worst holds ${v.worst.length} entries, at most 3`);
-    v.worst.forEach((x, i) => {
-      if (!x || typeof x !== "object") bad(`worst ${i + 1} is not an object`);
-      if (!(
-        Number.isFinite(x?.at) &&
-        x.at >= sc.start &&
-        x.at <= sc.start + sc.duration
-      ))
-        bad(`worst ${i + 1} at ${x?.at} is not a time inside the scene`);
-      for (const k of ["what", "evidence", "fix"])
-        if (typeof x[k] !== "string" || !x[k].trim())
-          bad(`worst ${i + 1} has no ${k}`);
-    });
+    checkVerdict(v, sc, bad);
     return { ...v, id: sc.id, start: sc.start };
   });
 // Rounds judged in another verdict format are not carried: their verdicts would
@@ -500,49 +415,7 @@ if (judgedBy) {
 } else {
   const dir = sheetsOf(criticKey);
   fs.mkdirSync(path.join(run, dir), { recursive: true });
-  for (const p of plan) {
-    const { sc } = p;
-    const png = path.join(run, dir, `${sc.id}.png`);
-    if (!fs.existsSync(png))
-      await orFail(() =>
-        backend.sheet(path.join(run, mp4), png, {
-          start: sc.start,
-          duration: sc.duration,
-          fps: FPS,
-        }),
-      );
-    // The motion strip is 12 frames from just before the scene's peak-motion
-    // frame; a still scene has none. The record carries what the strip's tiles
-    // and the scene's dead beats are in video seconds.
-    const m = p.found.motion;
-    const { first, n } = sceneFrames({ ...sc, fps: FPS });
-    const from = stripStart(m.frame, first, n);
-    const strip = path.join(run, dir, `${sc.id}.motion.png`);
-    if (!m.still && !fs.existsSync(strip))
-      await orFail(() =>
-        backend.strip(path.join(run, mp4), strip, { first: from, fps: FPS }),
-      );
-    const record = path.join(run, dir, `${sc.id}.motion.json`);
-    if (!fs.existsSync(record))
-      fs.writeFileSync(
-        record,
-        JSON.stringify(
-          {
-            still: m.still,
-            peak: m.still ? null : { frame: m.frame, t: m.t },
-            strip: m.still
-              ? null
-              : {
-                  first: r3(from / FPS),
-                  last: r3(stripEnd(from, first, n) / FPS),
-                },
-            stills: m.stills,
-          },
-          null,
-          2,
-        ) + "\n",
-      );
-  }
+  await cutSheets({ run, mp4, dir, plan, backend, orFail });
   critic = {
     status: "pending",
     measured: `round ${rounds.length + 1} of 2, ${own.filter(Boolean).length} of ${own.length} scene(s) judged, contact sheets in ${dir}`,
