@@ -704,7 +704,7 @@ while IFS= read -r f; do
             break
           }
       }
-    }' "$f"
+    }' "$f" || { printf 'cannot scan %s\n' "$f" >&2; exit 2; }
 done <<< "$files" > "$work/pipe-hits"
 if [ -s "$work/pipe-hits" ]; then cat "$work/pipe-hits"; rc=1; fi
 

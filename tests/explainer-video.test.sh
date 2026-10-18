@@ -8,9 +8,10 @@
 #
 # `--turn` is the harness's turn rung, which has 60 s: it leaves out the two
 # files that run the render and gates pipeline once per case, `gates` (132 s)
-# and `render` (67 s) of the suite's 258 s, measured file by file on an idle
-# machine. The full rung and the local gate run `tests/run.sh`, which passes no
-# flag and so runs every file.
+# and `render` (67 s) of the 258 s its files take summed, measured file by file
+# on an idle machine; the suite runs them side by side, 141 s end to end. The
+# full rung and the local gate run `tests/run.sh`, which passes no flag and so
+# runs every file.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh

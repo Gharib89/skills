@@ -889,6 +889,14 @@ check_rc "a pipe into grep -q under an extra directory fails" 1 "$rc"
 check "and is named at its line" "$d/gate.sh:3: $pipe_msg" "$out"
 out=$(bash scripts/contract-check.sh "$inert" skills "$fixture/absent" 2>/dev/null); rc=$?
 check_rc "an absent extra directory is tooling, not a pass" 2 "$rc"
+# An awk that fails on the scan leaves the file looking clean, so it is tooling
+# too: a stub awk refuses the check-16 program (the one naming --silent).
+real_awk=$(command -v awk)
+mkdir -p "$fixture/bin"
+printf '#!/bin/sh\ncase "$*" in *--silent*) exit 2 ;; esac\nexec %s "$@"\n' "$real_awk" > "$fixture/bin/awk"
+chmod +x "$fixture/bin/awk"
+out=$(PATH="$fixture/bin:$PATH" bash scripts/contract-check.sh "$inert" skills "$d" 2>/dev/null); rc=$?
+check_rc "a scan awk fails on is tooling, not a pass" 2 "$rc"
 if [ "$(id -u)" -ne 0 ]; then
   mkdir -p "$d/sealed"; chmod 000 "$d/sealed"
   out=$(bash scripts/contract-check.sh "$inert" skills "$d" 2>/dev/null); rc=$?

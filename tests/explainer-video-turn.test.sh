@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The explainer-video member's turn budget. The turn rung has 60 s and the
-# member's suite takes 258 s, so `tests/explainer-video.test.sh --turn` leaves
+# member's suite takes 141 s idle (258 s summed over its files), so `tests/explainer-video.test.sh --turn` leaves
 # out the two render-heavy files and every turn row passes it; the bare call,
 # which `tests/run.sh` makes for the full rung and the local gate, keeps every
 # file. A stub `node` records the files it is handed, so the case runs none.
