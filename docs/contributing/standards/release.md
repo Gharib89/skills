@@ -6,7 +6,8 @@ that bind every change whatever its paths.
 
 ## Every change
 
-- [GLOSSARY.md](../../../GLOSSARY.md) is the glossary. Use its terms in prose,
+- [GLOSSARY.md](../../../GLOSSARY.md) is the glossary: its index
+  links one area file each under `docs/glossary/`. Use its terms in prose,
   issue titles and commit subjects, and avoid the synonyms each entry lists.
 - [docs/adr/](../../adr/) records decisions. Contradicting one is surfaced, not
   done silently.
