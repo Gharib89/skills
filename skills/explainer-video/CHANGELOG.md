@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.2 (2026-10-18)
+
+### Bug Fixes
+
+- **explainer-video**: Judge again only changed scenes, dispatch critics 20 at once
+  ([#851](https://github.com/Gharib89/skills/pull/851),
+  [`25abb09`](https://github.com/Gharib89/skills/commit/25abb0971130fc86aea1e0a0ea2ce291aa8e5d86))
+
+
 ## v0.24.1 (2026-10-18)
 
 ### Bug Fixes

@@ -38,7 +38,7 @@ import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { FPS, H, W } from "../render/compose.mjs";
 import { captionFindings, cuesOf } from "./captions.mjs";
-import { cutSheets } from "./sheets.mjs";
+import { cutSheets, readPrevKeys } from "./sheets.mjs";
 import { SCORES, KINDS, checkVerdict } from "./verdict.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
@@ -344,16 +344,15 @@ const excerptText = new Map(
       ])
     : [],
 );
-const criticKey = hash(
-  renderHash,
-  [
-    script.title,
-    script.scenes.map((s) =>
-      s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
-    ),
-  ],
-  CRITIC_FORMAT,
-);
+// Every critic reads every excerpt the script cites, so a scene's key below
+// takes all of them, not its own cites alone.
+const criticRead = [
+  script.title,
+  script.scenes.map((s) =>
+    s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
+  ),
+];
+const criticKey = hash(renderHash, criticRead, CRITIC_FORMAT);
 const sheetsOf = (h) => path.posix.join(".cache", "critic", h);
 const verdicts = (h) =>
   timeline.scenes.map((sc) => {
@@ -374,6 +373,33 @@ const verdicts = (h) =>
 const keptRounds = same && prev.gates.critic?.format === CRITIC_FORMAT;
 const rounds = keptRounds ? (prev.gates.critic.rounds ?? []) : [];
 const criticAttempts = keptRounds ? (prev.gates.critic.attempts ?? 0) : 0;
+const dir = sheetsOf(criticKey);
+// Past two rounds a render carries the second round's verdict: no sheets.
+if (rounds.includes(criticKey) || rounds.length < 2) {
+  fs.mkdirSync(path.join(run, dir), { recursive: true });
+  // The previous render's verdict under the same scene key is carried, so only
+  // changed scenes are pending.
+  const prevSheets = keptRounds ? prev.gates.critic.sheets : null;
+  const prevKeys =
+    !prevSheets || prevSheets === dir
+      ? {}
+      : readPrevKeys(run, prevSheets, fail);
+  const keys = await cutSheets({
+    run,
+    mp4,
+    dir,
+    plan,
+    backend,
+    orFail,
+    script,
+    criticRead,
+    hash,
+    format: CRITIC_FORMAT,
+    prevSheets,
+    prevKeys,
+  });
+  fs.writeFileSync(path.join(run, dir, "keys.json"), JSON.stringify(keys));
+}
 let judgedBy;
 const own = verdicts(criticKey);
 if (own.every(Boolean) && (rounds.includes(criticKey) || rounds.length < 2)) {
@@ -413,9 +439,6 @@ if (judgedBy) {
     })),
   };
 } else {
-  const dir = sheetsOf(criticKey);
-  fs.mkdirSync(path.join(run, dir), { recursive: true });
-  await cutSheets({ run, mp4, dir, plan, backend, orFail });
   critic = {
     status: "pending",
     measured: `round ${rounds.length + 1} of 2, ${own.filter(Boolean).length} of ${own.length} scene(s) judged, contact sheets in ${dir}`,
