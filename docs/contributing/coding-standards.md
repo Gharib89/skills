@@ -60,9 +60,16 @@ repo already installs; a new dependency names, under the PR body's
 every one is a supply-chain and upgrade cost the repo carries for good.
 
 **A file copied from upstream states its derivation and keeps its comments true
-to its edits.** Name the source it was derived from at the top, and rewrite
-every comment an edit made false. On #765 CPU pins sat under comments
-that still said "CUDA 12.8".
+to its edits.** Record the source where a reader or a check finds it: a header
+comment, or a field where the format has no comments. Rewrite every comment an
+edit made false. On #765 CPU pins sat under comments that still said
+"CUDA 12.8".
+
+**A data file read at load is validated for shape, with a named refusal.** A
+parse that succeeds says nothing about shape: valid JSON of the wrong shape
+passes the parser and crashes the first use with a bare `TypeError`. The loader
+checks the shape it needs and refuses by naming the file and the field. On #759
+setup crashed that way.
 
 **What the rules cover.** These are the scope facts reviewers most often got
 wrong; each sub-file's rule holds inside them.

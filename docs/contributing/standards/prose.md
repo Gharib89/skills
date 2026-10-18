@@ -31,10 +31,10 @@ these rules bind as hard as the shell ones.
   link to this repo's glossary, or its frozen lines as an issue link, reaches a
   consumer as a pointer to nothing.
 - **An instruction the running agent needs lives in `SKILL.md` or its
-  references.** A script header is read by the maintainer, and an agent runs the
-  script without opening it, so a step stated only there is never followed. On
-  #759 the owner corrected "run setup from the project root", an instruction
-  that lived in a script header alone.
+  references.** A script header reaches the maintainer, and an agent runs the
+  script without opening it, so a step stated only there goes unread. #759's
+  "run setup from the project root" belongs in the skill's prose, with the
+  header at most repeating it.
 - **A command or YAML block a skill hands a consumer runs as written.** Every
   placeholder is named and explained beside the block, a secret is read from
   stdin rather than passed on the command line, where shell history and `ps`
