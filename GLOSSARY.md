@@ -508,8 +508,20 @@ _Avoid_: candidate (that is `file-issue`'s open-issue match), swatch
 The one engine that lays out every scene of an explainer video on a single timeline, so captions, the score and word timing run unbroken from the first scene to the last.
 _Avoid_: renderer, backend, framework
 
+**Component**:
+One kind of on-screen content a scene shows, drawn by the composer under the visual grammar: cards, a flow, a chart, kinetic type. A scene shows exactly one component, never one nested in another.
+_Avoid_: visual, block, widget, template
+
+**Rich component**:
+A component that moves the frame itself past the visual grammar's camera: its own camera path, a moving ground, or 3D. Richness belongs to the component, never to one scene's use of it, and the storyboard marks every scene that shows one.
+_Avoid_: heavy component, advanced visual
+
+**Cue**:
+The spoken moment a reveal, the camera beat or the emphasis lands on: a sentence of the scene's narration, or a word or phrase within that sentence.
+_Avoid_: trigger, beat (for the general case), keyframe
+
 **Clip insert**:
-A pre-rendered video made outside the composer (a maths animation, a cached 3D shot, a screen recording) that fills one scene's slot on the composer's timeline.
+A pre-rendered video made outside the composer (a maths animation, a screen recording: footage the composer cannot draw from a seek) that fills one scene's slot on the composer's timeline.
 _Avoid_: embed, sub-render, segment
 
 **Score**:
