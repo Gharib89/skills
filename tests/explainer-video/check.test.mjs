@@ -9,7 +9,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { sentences } from "../../skills/explainer-video/scripts/lib/length.mjs";
+import {
+  chars,
+  sentences,
+} from "../../skills/explainer-video/scripts/lib/length.mjs";
 import { VISUALS } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -38,9 +41,10 @@ const say = (n, cites = "[ex-1]") => `${spoken(n)}. ${cites}`;
 
 const TITLE = { component: "title", props: { title: "The local gate" } };
 
-// bf_emma speaks 3.8 words a second and pauses 0.78 s a sentence, so a 12 s
-// scene of three sentences budgets (12 - 2.34) x 3.8 = 37 words, and a
-// one-minute brief takes five such scenes and the 1 s hold.
+// bf_emma speaks 16.55 characters a second and pauses 0.78 s a sentence, so a
+// 12 s scene of three sentences budgets (12 - 2.34) x 16.55 = 160 characters,
+// which three 12-word sentences of 49 characters meet, and a one-minute brief
+// takes five such scenes and the 1 s hold.
 const SCENES = [
   { id: "hook", role: "hook" },
   { id: "why", role: "context" },
@@ -230,13 +234,13 @@ test("the arc wants hook, context, one or more points, recap, end, each scene wi
   assert.match(r.out, /^script: \d+ pass, \d+ fail, 0 warn$/m);
 });
 
-test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a pause a sentence at the narrator's rate, and the scenes and hold the brief's length", () => {
+test("a scene runs 12 to 30 s, its spoken characters within 10 percent of its seconds less a pause a sentence at the narrator's rate, and the scenes and hold the brief's length", () => {
   let r = check(fixture({ scenes: edit(SCENES, 0, { seconds: 31 }) }));
   assert.equal(r.code, 1);
   assert.match(line(r, "budget"), /hook 31 s is outside 12 to 30 s/);
   assert.match(
     line(r, "budget"),
-    /hook 36 spoken words \(\{written\|spoken\} counts its spoken form\) vs 109 \(31 s less 3 sentences at 0\.78 s, at 3\.8 words\/s\) ±10%/,
+    /hook 147 spoken characters \(\{written\|spoken\} counts its spoken form\) vs 474 \(31 s less 3 sentences at 0\.78 s, at 16\.55 chars\/s\) ±10%/,
   );
   r = check(
     fixture({
@@ -245,9 +249,10 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 24 spoken words ({written|spoken} counts its spoken form) vs 40 (12 s less 2 sentences at 0.78 s, at 3.8 words/s) ±10%",
+    "script budget: fail: steps 98 spoken characters ({written|spoken} counts its spoken form) vs 173 (12 s less 2 sentences at 0.78 s, at 16.55 chars/s) ±10%",
   );
-  // #725: `{304|three oh four}` counts three, so the 22 written words are 24.
+  // #725: `{304|three oh four}` counts its 12 spoken characters, not the 3
+  // written ones, so the scene's 88 written characters are 96.
   r = check(
     fixture({
       scenes: edit(SCENES, 2, {
@@ -260,7 +265,7 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 24 spoken words ({written|spoken} counts its spoken form) vs 40 (12 s less 2 sentences at 0.78 s, at 3.8 words/s) ±10%",
+    "script budget: fail: steps 96 spoken characters ({written|spoken} counts its spoken form) vs 173 (12 s less 2 sentences at 0.78 s, at 16.55 chars/s) ±10%",
   );
   // Kokoro voices a sentence where a full stop, ! or ? meets a space, not a
   // numbered item: three items with no full stop run as one sentence, and one
@@ -278,7 +283,7 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
   );
   assert.equal(
     line(r, "budget"),
-    "script budget: fail: steps 36 spoken words ({written|spoken} counts its spoken form) vs 43 (12 s less 1 sentences at 0.78 s, at 3.8 words/s) ±10%",
+    "script budget: fail: steps 147 spoken characters ({written|spoken} counts its spoken form) vs 186 (12 s less 1 sentences at 0.78 s, at 16.55 chars/s) ±10%",
   );
   r = check(
     fixture({
@@ -309,6 +314,48 @@ test("a scene runs 12 to 30 s, its words within 10 percent of its seconds less a
     line(r, "budget"),
     "script budget: fail: the scenes run 66 s and the 1 s hold vs the brief's 60 s ±10%",
   );
+});
+
+// #783: Kokoro speaks a near-constant number of characters a second, whatever
+// the words' length, so two scenes of the same characters budget the same.
+test("the budget counts a scene's spoken characters, so a short-word scene and a long-word scene of the same characters both pass, and one off by over 10 percent fails naming characters", () => {
+  const { rate, pause } = JSON.parse(
+    fs.readFileSync(path.join(scripts, "..", "narrators.json"), "utf8"),
+  ).narrators.find((n) => n.id === "bf_emma");
+  const each = ((12 - 3 * pause) * rate) / 3;
+  const of = (word) =>
+    Array(Math.round(each / word.length))
+      .fill(word)
+      .join(" ");
+  const scene = (word) => ({
+    sentences: [
+      `${of(word)}. [ex-1]`,
+      `${of(word)}. [no-claim]`,
+      `${of(word)}. [ex-2, ex-3]`,
+    ],
+  });
+  const short = of("pod").split(" ").length;
+  const long = of("kubernetes").split(" ").length;
+  assert.ok(short > long * 1.1, `${short} vs ${long} words`);
+  let r = check(
+    fixture({
+      scenes: edit(edit(SCENES, 2, scene("pod")), 3, scene("kubernetes")),
+    }),
+  );
+  assert.equal(line(r, "budget"), "script budget: pass");
+  r = check(
+    fixture({ scenes: edit(SCENES, 2, { ...scene("pod"), seconds: 15 }) }),
+  );
+  assert.match(
+    line(r, "budget"),
+    new RegExp(
+      `^script budget: fail: steps ${3 * short * 3} spoken characters \\(\\{written\\|spoken\\} counts its spoken form\\) vs \\d+ \\(15 s less 3 sentences at ${pause} s, at ${rate} chars/s\\) ±10%$`,
+    ),
+  );
+});
+
+test("the spoken characters are its letters and digits in any script, not its spaces or punctuation", () => {
+  assert.equal(chars("Git's 304, ok? نعم!"), 12);
 });
 
 test("a sentence ends where a full stop, ! or ? meets a space, so one closed inside quotes ends none, and at an Arabic question mark", () => {
