@@ -143,6 +143,8 @@ Write every confirmed file. Then run ship's preflight against the new profile:
 
 Report its `reasons`. The issueless call raises none of its own, so the list should be empty; any `profile missing`, `profile invalid`, `skill missing`, `skill off pin`, `skills lock unreadable` or `composes pin invalid` reason is yours to fix before finishing, the last by re-running the refresh line, since it means the installed `ship` copy is malformed. A `skill missing` or `skill off pin` reason names a composed skill step 1 left uninstalled or off its pin and carries the line that installs it: run that line. A `skills lock unreadable` reason comes before any install line: the skills CLI rewrites a lock it cannot parse holding only the new entry, so repair its JSON first.
 
+Ship calls `merge` by the relative path an allow rule matches, so tell them to add `Bash(.claude/skills/ship/scripts/merge.sh:*)` under `permissions.allow` in the repo's `.claude/settings.local.json`; without the rule auto mode may refuse the merge.
+
 ### 7. Done
 
 Tell the user: the profile is at `docs/agents/ship.md`, the first `/ship <issue>` can run, and `cloud-ship` is installed: a cloud routine on this repo fires it with the one-line prompt `Run the cloud-ship skill.` (it selects its own issue; the prompt names no repo). The routine itself is one operator's schedule and not written here. They can edit `docs/agents/ship.md` directly later.
