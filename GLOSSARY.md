@@ -484,6 +484,10 @@ _Avoid_: round, board update
 A saved, named look (palette, type, motion and layout rules, whether diagrams draw clean or sketched, and the motion effects a video may use) that a run can use. One profile is the default; a profile can come from a prototype, screenshots, a website or a deck.
 _Avoid_: theme, preset, template
 
+**Visual grammar**:
+The part of a style profile that holds for every scene of a video: how scenes hand over at a cut, how the camera moves, how type enters, the texture over the ground, the ease of every move, and what is banned. Each scene places it on its own narration and may reach past it wherever the grammar bans nothing.
+_Avoid_: motion register, direction
+
 **Style card**:
 A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast, and each font a source decided marked as its own, the replacement for one it names, or an Arabic companion. The human edits a colour or a font on the card itself, then saves the profile, uses it once, or asks for a revision.
 _Avoid_: style preview, mood board
