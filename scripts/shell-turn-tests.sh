@@ -11,7 +11,8 @@
 #   scripts/shell-turn-tests.sh [--list] <file>...
 #
 # stdout: tests/run.sh's report; with --list, the selected files, one per line
-# exit: tests/run.sh's, 0 when nothing is selected
+# exit: tests/run.sh's, 0 when nothing is selected, 2 when the repo root or the
+#       test files cannot be read (a grep error is never read as "nothing named")
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 
