@@ -15,7 +15,7 @@ has() { grep -qiF -- "$2" <<<"$1" && echo yes || echo no; }
 # <case>|<clause the section must hold>|<the clause with its meaning negated>
 rules=(
   "a timing-series slice also runs alone|require a timing series (repeated A/B runs, a median and range) also runs alone|require a timing series (repeated A/B runs, a median and range) does not run alone"
-  "no triage tab that runs the local gate spawns beside it|no triage tab that runs the local gate is spawned|a triage tab that runs the local gate is spawned"
+  "no triage tab that runs the local gate is spawned|no triage tab that runs the local gate is spawned|a triage tab that runs the local gate is spawned"
   "the launch turn's slot plan names each run-alone timing slice with its reason|names each run-alone timing slice with its reason|names no run-alone timing slice"
   "the pre-spawn check lists the PRs merged since the brief|Before spawning a slice, list the PRs merged to main since|Before spawning a slice, do not list the PRs merged to main since"
   "an overlap adds the re-check line to the spawn prompt|the spawn prompt gains one line telling the run to re-check the brief against main|the spawn prompt gains no line telling the run to re-check the brief against main"
