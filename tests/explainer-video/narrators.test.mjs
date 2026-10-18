@@ -42,7 +42,7 @@ test("every narrator carries the contract's fields, and each language has a defa
     );
 });
 
-test("the English narrators ship with a calibrated rate in words per second and pause a sentence", () => {
+test("the English narrators ship with a calibrated pause a sentence", () => {
   const english = narrators.filter(
     (n) => n.language === "en" && n.backend === "kokoro",
   );
@@ -50,10 +50,15 @@ test("the English narrators ship with a calibrated rate in words per second and 
     english.map((n) => n.id),
     ["bf_emma", "am_fenrir"],
   );
-  for (const n of english) {
-    assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} rate ${n.rate}`);
+  for (const n of english)
     assert.ok(n.pause > 0.3 && n.pause < 2, `${n.id} pause ${n.pause}`);
-  }
+});
+
+// #783: a narrator still in words a second (2 to 4) budgets about a quarter of
+// the characters the script gate counts.
+test("every narrator's rate is in spoken characters a second, none left in words a second", () => {
+  for (const n of narrators)
+    assert.ok(n.rate > 8 && n.rate < 25, `${n.id} rate ${n.rate}`);
 });
 
 test("the Egyptian Arabic narrators are Gemini voices whose text leaves the machine", () => {
@@ -69,7 +74,6 @@ test("the Egyptian Arabic narrators are Gemini voices whose text leaves the mach
     assert.equal(n.backend, "gemini", n.id);
     assert.equal(n.voice, n.id);
     assert.equal(n.leavesMachine, true, n.id);
-    assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} rate ${n.rate}`);
   }
 });
 

@@ -457,7 +457,7 @@ A run's scenes in order, each with its role in the video, its narration sentence
 _Avoid_: storyboard, outline, transcript
 
 **Script gate**:
-One of the automated checks the script must pass before it is voiced: the scene arc, each scene's word budget, every cite found word for word in the source pack, every sentence judged supported or connective by the support checker, the brief's must-include and avoid lists, and house rules. A support verdict still red after two fix attempts stops the run.
+One of the automated checks the script must pass before it is voiced: the scene arc, each scene's character budget, every cite found word for word in the source pack, every sentence judged supported or connective by the support checker, the brief's must-include and avoid lists, and house rules. A support verdict still red after two fix attempts stops the run.
 _Avoid_: lint, script check, video gate
 
 **Kept term**:
