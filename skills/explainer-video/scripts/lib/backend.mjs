@@ -1099,8 +1099,16 @@ export async function renderPage(url, { env }) {
     return await page.evaluate(() => {
       const a = new window.Readability(document.cloneNode(true)).parse();
       return a?.content
-        ? { title: a.title || document.title, html: a.content }
-        : { title: document.title, html: document.body?.innerHTML ?? "" };
+        ? {
+            title: a.title || document.title,
+            html: a.content,
+            text: a.textContent,
+          }
+        : {
+            title: document.title,
+            html: document.body?.innerHTML ?? "",
+            text: document.body?.innerText ?? "",
+          };
     });
   } finally {
     await browser.close();
