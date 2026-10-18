@@ -141,10 +141,17 @@ admitted.
   None.` means the findings are answered with `comment-pr`, which also answers a
   body finding with no thread. A finding about the PR body is fixed through the
   writes [pr-body.md](pr-body.md) names.
-- **Write each round to the Run file as you disposition it**, one line per
-  finding with its disposition, one per round whose `reviewer_run.denied`
-  is numeric, with the run URL, and the round's `Round:` line (formats under
-  [The exit](#the-exit)): the `## Review` line is read from them.
+- **A finding outside the PR's scope that merits an issue is filed by a real
+  `file-issue` call in this round**, `--outside-scope "<reason>"` when it cites
+  a path the PR changes, per [phase 2's adjacent
+  finds](implement.md#phase-2-adjacent-finds): the thread reply and the `##
+  Review` line name the issue from the call's answer.
+- **Write each round to the Run file as you disposition it**
+  (`run-file note Evidence "<line>" --issue <issue>`, one call per line), one
+  line per finding with its disposition, one per round whose
+  `reviewer_run.denied` is numeric, with the run URL, and the round's `Round:`
+  line (formats under [The exit](#the-exit)): the `## Review` line is read from
+  them.
 
 ## The exit
 
@@ -190,30 +197,41 @@ Round: <reviewer> <n>: <text>
 Stop: <reviewer>: <reason>
 ```
 
-`<text>` is the round's outcome in a line. When the last fully read and
-dispositioned round changed no file, record `tree unchanged at <sha>` even at
-`Cap:`, in the small lane or for an `auto-once` trigger, `<sha>` the head that
-round read: for a requested round, the PR's head when `request-review` sent it,
-since ship pushes nothing until the round is dispositioned; for an `on-push`
-round, the `head_sha` its poll waited for; for a round the host opened with the
-PR (`auto-once`, or round 1's unbidden one), the head the PR opened on. Take it
-when the round starts, since another reviewer's fixes can move the PR's head
-past what a round read before its poll returns; `close 7` refuses the stop
-without it, and `gate clean` holds on the stop once its `<sha>` no longer
-covers the PR head. Otherwise `<reason>` is one of
-`cap` (`Cap:` spent, or a docs-only fix-only diff ended the loop: either way the
-last fixes went unread by a host round), `tree unchanged at <sha>` (a round's
-dispositions changed no file, so a further round would read the same tree),
-`small lane` (the lane's one requested round), `inline lane` (the lane requested
-no round), `auto-once` (the reviewer fires once, on PR open), `not landed` (a
-dispositioned round's fixes changed the tree, then the next requested round did
-not land, so no host round read them; its cause goes on the `## Review` line),
-`not reviewed` (no round was dispositioned: none landed, or a round landed whose
-threads could not be read, which keeps its `Round:` line too) or `not invoked:
-<primary> reviewed` (a fallback whose primary reviewed, its exit word). A
-declined finding from a `Gating: yes` reviewer also leaves `Override:
-<reviewer>: <finding>, <evidence>` in the Run file, so the clean-gate decision
-reads the same override the human sees in the summary.
+`<text>` is the round's outcome in a line. Write each line with `run-file note
+Evidence "<line>" --issue <issue>`. `close 7` and `gate clean` match the `not
+reviewed` prefix, so `Stop: <reviewer>: not reviewed: <reason>` satisfies every
+rule the bare form does. A reviewer that raises again a
+finding this run declined in an earlier round gets no `tree unchanged` stop for
+it: declining must never be a cheaper way past the gate than fixing. Fix the
+finding, and the round reads as any other. Leave it declined, and the round's
+text opens with `re-raised declined: <the finding>` and the reviewer stops on
+`cap`, which holds the gate, no fallback standing in for it: the human reads the
+declined finding at the merge gate. `gate clean` also holds a `tree unchanged`
+stop beside that opening. A fixed finding never gets that text. When the last
+fully read and dispositioned round changed no file, record `tree unchanged at
+<sha>` even at `Cap:`, in the small lane or for an `auto-once` trigger, `<sha>`
+the head that round read: for a requested round, the PR's head when
+`request-review` sent it, since ship pushes nothing until the round is
+dispositioned; for an `on-push` round, the `head_sha` its poll waited for; for a
+round the host opened with the PR (`auto-once`, or round 1's unbidden one), the
+head the PR opened on. Take it when the round starts, since another reviewer's
+fixes can move the PR's head past what a round read before its poll returns;
+`close 7` refuses the stop without it, and `gate clean` holds on the stop once
+its `<sha>` no longer covers the PR head. Otherwise `<reason>` is one of `cap`
+(`Cap:` spent, a docs-only fix-only diff ended the loop, or a declined finding
+came back: in each the last fixes or the declined finding went unread by a host
+round; only a spent `Cap:` drives a fallback), `tree unchanged at <sha>` (a
+round's dispositions changed no file, so a further round would read the same
+tree), `small lane` (the lane's one requested round), `inline lane` (the lane
+requested no round), `auto-once` (the reviewer fires once, on PR open), `not
+landed` (a dispositioned round's fixes changed the tree, then the next requested
+round did not land, so no host round read them; its cause goes on the `##
+Review` line), `not reviewed` (no round was dispositioned: none landed, or a
+round landed whose threads could not be read, which keeps its `Round:` line too)
+or `not invoked: <primary> reviewed` (a fallback whose primary reviewed, its
+exit word). A declined finding from a `Gating: yes` reviewer also leaves
+`Override: <reviewer>: <finding>, <evidence>` in the Run file, so the clean-gate
+decision reads the same override the human sees in the summary.
 
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each file
@@ -236,16 +254,17 @@ exit first, because a fallback's only input is how its primary exited.
   findings, or `Stop: <primary>: not landed`: drive the fallback as an ordinary
   on-request reviewer under its own `Cap:`. Capped with findings is `Stop:
   <primary>: cap` after it spent `Cap:` (rounds == Cap) on a last round whose
-  fixes changed the tree, so no host round read them. Its exit is its own, and
-  its `## Review` line and merge-summary block both name the primary's reason
-  (`fallback for codex: capped with findings` or `fallback for codex: not
-  landed: blocked`, say), the only record of why a second reviewer was paid
-  for.
-- Primary `reviewed` otherwise (it stopped on `tree unchanged at <sha>`, a
-  last round whose findings were all declined included, or on `small lane` or
-  `auto-once`, or a docs-only fix-only diff ended its loop before `Cap:` was
-  spent): do not request it; it exits `not invoked: <primary> reviewed`, so a
-  reader sees the reviewer exists.
+  fixes changed the tree, so no host round read them; a `cap` from a
+  [re-raised declined finding](#the-exit) is not that and drives no fallback.
+  Its exit is its own, and its `## Review` line and merge-summary block both
+  name the primary's reason (`fallback for codex: capped with findings` or
+  `fallback for codex: not landed: blocked`, say), the only record of why a
+  second reviewer was paid for.
+- Primary `reviewed` otherwise (it stopped on `tree unchanged at <sha>`, a last
+  round whose findings were all declined included, on `small lane` or
+  `auto-once`, on `cap` from a re-raised declined finding, or a docs-only
+  fix-only diff ended its loop before `Cap:` was spent): do not request it; it
+  exits `not invoked: <primary> reviewed`, so a reader sees the reviewer exists.
 - Primary `not reviewed: inline lane`: request nothing; the fallback records
   `Stop: <fallback>: inline lane` too
   ([small-lane.md](small-lane.md#the-inline-lane)).

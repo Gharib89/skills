@@ -5,6 +5,7 @@
 - [Phase 1: spec precedence](#phase-1-spec-precedence)
 - [Phase 1: anchors the issue cites](#phase-1-anchors-the-issue-cites)
 - [Phase 1: a criterion no mechanic can perform](#phase-1-a-criterion-no-mechanic-can-perform)
+- [Phase 1: criteria the run owes](#phase-1-criteria-the-run-owes)
 - [Phase 2: classify, then implement test-first](#phase-2-classify-then-implement-test-first)
 - [Phase 2: verify the spec's external-system claims before building on them](#phase-2-verify-the-specs-external-system-claims-before-building-on-them)
 - [Phase 2: delegate execution, keep judgment](#phase-2-delegate-execution-keep-judgment)
@@ -66,6 +67,31 @@ verbatim in the issue body.
 - **Attended**: ask the human which way before building; an answer that the
   issue is wrong is the `mis-specified` stop, and one to build the rest makes
   it an unmet criterion as above.
+
+## Phase 1: criteria the run owes
+
+An issue's run reads the issue first, `read-issue <issue>`, a read that claims
+nothing (a failed read stops the run there, `host-unreachable`), and settles the
+effective spec by [spec precedence](#phase-1-spec-precedence): the body's
+checkboxes, less each a later `writer: true` brief or comment drops or revises,
+plus the checkboxes it adds. `run-file init <issue> --from-profile --criteria -`
+takes that text as a heredoc, so the issue's own words never pass a file or a
+pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
+entry under the Run file's `## Criteria`, `- <n>: <text>`. It refuses the text
+`null`. Phase 0 reuses this read. A free-text run has no issue and passes none.
+A phase-1 anchor rewrite that changes a criterion adds each replacement
+checkbox to `## Criteria` under the next number, owing its own line, and the
+original's `Criterion` line names them.
+
+Every entry is owed one line, anywhere in the file, written by the run as it
+settles the criterion: `Criterion <n>: met: <proof>`, the proof a test, a
+command or a grep, never a bare "done", or `Criterion <n>: not met: <reason>`,
+the host action a human must take where that is the reason. The last line for
+an `<n>` decides, so a later `met` replaces an earlier `not met`. A criterion is
+met by what the diff and its checks show, never by the summary's account of
+them: one the run declined, deferred or covered with a "gap" is `not met`.
+`run-file gate clean` holds the merge on each entry that is `not met` or has no
+line ([merge-gate.md](merge-gate.md#unmet-criteria)).
 
 ## Phase 2: classify, then implement test-first
 
@@ -168,18 +194,23 @@ wrong is the `mis-specified` stop instead.
   release grade (a `fix` PR that would become a `feat` files it instead). Log
   the deviation and name the fold under the PR body's `## Special things to
   note`. Folded lines count toward the inline lane's 20-line cap.
-- **File** a find worth an issue that fails the fold's test through
-  `file-issue`, with the profile's triage marker, and leave it. The mechanic
+- **File** a find worth an issue that fails the fold's test through a real
+  `file-issue` call made inside the run, with the profile's triage marker, and
+  leave it. A find is filed when the call's answer says `filed: true`; report
+  `filed` or `refused` by quoting that answer. The mechanic
   answers `filed: false` with candidates when an open issue's title shares three
   or more tokens with yours, and each candidate is **read**: the same finding is
   linked in the deviations log rather than refiled, and `comment-issue` posts
   any evidence this run adds to it; a different one is refiled with
   `--distinct-from`. A find citing a path this PR already changes is refused
   with `in_diff`, since a find there folds unless it fails the fold's test;
-  `--outside-scope "<reason>"` files that case.
+  a find that does fail it is filed in that same call with
+  `--outside-scope "<reason>"`.
 - **Note** a find not worth a fold or an issue (a typo outside the diff, a
   cosmetic nit): record `Noted: <find>` in the Run file when it is met, so the
-  merge summary can list it after a compaction.
+  merge summary can list it after a compaction. A filed find is recorded the
+  same way, as `Filed: <issue link>: <find>`, from the `file-issue` answer's own
+  link.
 
 The merge summary lists every issue filed, every candidate linked and every
 noted find.

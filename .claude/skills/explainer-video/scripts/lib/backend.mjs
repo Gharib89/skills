@@ -633,15 +633,17 @@ export async function uvSync(dir) {
 }
 
 // The first NVIDIA card's compute capability, as nvidia-smi reports it; null
-// with no card or no nvidia-smi.
+// with no nvidia-smi (no card); undefined when nvidia-smi fails or answers no
+// number (a driver mismatch after an update), which may hide a card.
 export async function computeCapability() {
   const r = spawnSync(
     "nvidia-smi",
     ["--query-gpu=compute_cap", "--format=csv,noheader"],
     { encoding: "utf8" },
   );
+  if (r.error?.code === "ENOENT") return null;
   const cap = parseFloat(r.stdout ?? "");
-  return r.status === 0 && cap ? cap : null;
+  return r.status === 0 && cap ? cap : undefined;
 }
 
 export const memory = () => os.totalmem();
@@ -1097,8 +1099,16 @@ export async function renderPage(url, { env }) {
     return await page.evaluate(() => {
       const a = new window.Readability(document.cloneNode(true)).parse();
       return a?.content
-        ? { title: a.title || document.title, html: a.content }
-        : { title: document.title, html: document.body?.innerHTML ?? "" };
+        ? {
+            title: a.title || document.title,
+            html: a.content,
+            text: a.textContent,
+          }
+        : {
+            title: document.title,
+            html: document.body?.innerHTML ?? "",
+            text: document.body?.innerText ?? "",
+          };
     });
   } finally {
     await browser.close();

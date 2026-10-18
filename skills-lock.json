@@ -35,7 +35,7 @@
     "explainer-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "ef7b391a4d6fc0fcb27a44bc31f0fd9ce30dc6d87cf336b71169f1f9abf6aae7"
+      "computedHash": "b4056c7b6f075ce21a48d55cecda8a7e5dd4ac424dc4210d3c74dcbadd5e81e7"
     },
     "find-docs": {
       "source": "upstash/context7",
@@ -104,12 +104,12 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "e5f396a29b87815b5d2566796d476b2b387f96d771abba5b2bc1ab8d4f29503e"
+      "computedHash": "48d6ac371ee50a0c91cd165fff0548e828a731649494324c19a1b05a0aec589f"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "ddd7d51eb44659fa24b0baee5afddadfec03469001c23e70233149a6d12b9432"
+      "computedHash": "17c6074ca620c1c97d3046529f1f5a923a9ea4ad7c52c824caaf56480c9ed8ca"
     },
     "show-me": {
       "source": "humanlayer/skills",

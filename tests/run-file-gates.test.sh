@@ -314,6 +314,16 @@ admitted "bulleted stop and round lines"
 run7; add 'Stop: copilot: cap' 'Stop: claude: not reviewed' 'Round: copilot 1: clean'; close 7
 admitted "one reviewer with rounds and one not reviewed"
 
+# `not reviewed: <reason>` is the documented spelling of `not reviewed` (#787):
+# the reason rides along and the stop reads the same, a round still not owed.
+run7; add 'Stop: copilot: not reviewed: unreachable' 'Stop: claude: small lane' 'Round: claude 1: clean'
+close 7
+admitted "a not-reviewed stop carrying its reason needs no round"
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: not reviewed: threads unreadable' 'Stop: claude: not invoked: copilot reviewed'; held=$(cat "$rf"); close 7
+refused "a not-invoked fallback whose primary stopped on a not-reviewed reason" "Stop line for claude says copilot reviewed, but copilot stopped 'not reviewed: threads unreadable'"
+run7; add 'Stop: copilot: not reviewedish' 'Stop: claude: small lane' 'Round: claude 1: clean'; held=$(cat "$rf"); close 7
+refused "a longer word is no not-reviewed reason" "Stop line for copilot has reason 'not reviewedish'"
+
 # A fallback whose primary reviewed was never invoked: its stop says so, with no
 # round (#672). `not reviewed` with no round is a round that never landed; with
 # one, a round that landed whose threads could not be read.
@@ -354,8 +364,8 @@ refused "a tree-unchanged stop with no head" 'Stop line for copilot has no head:
 run7; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged at HEAD' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
 refused "a tree-unchanged stop whose head is no sha" "Stop line for copilot has reason 'tree unchanged at HEAD', whose head is not a commit sha"
 
-run7; add 'Stop: copilot: not reviewed: blocked' 'Stop: claude: cap' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
-refused "a reason that only starts with a listed one" "Stop line for copilot has reason 'not reviewed: blocked'"
+run7; add 'Stop: copilot: cap: blocked' 'Stop: claude: cap' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
+refused "a reason that only starts with a listed one" "Stop line for copilot has reason 'cap: blocked'"
 
 run7; add 'Stop: copilot: cap' 'Stop: claude: cap' 'Stop: claude: nonsense' 'Round: copilot 1: x' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
 refused "the last Stop line decides" "Stop line for claude has reason 'nonsense'"

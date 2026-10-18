@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# skills/ship/scripts/run-file.sh `note`: one line appended under a `## ` section
+# of the Run file, the section created at the end when the record has none, so a
+# run writes its Round, Stop and evidence lines through a mechanic instead of a
+# heredoc edit the worktree guard refuses (#787). The seam is
+# `run-file note <section> <line> --file <run file>`: an exit code, one JSON
+# answer, and the Run file's bytes.
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
+source tests/lib.sh
+
+T=$(mktemp -d)
+trap 'rm -rf "$T"' EXIT
+m=$PWD/skills/ship/scripts/run-file.sh
+rf=$(bash "$m" init 9 --scratchpad "$T/sp" | jq -r .run_file)
+
+# note <args>...: sets out and status for one call.
+note() { out=$(bash "$m" note "$@" 2>/dev/null); status=$?; }
+section() { awk -v h="## $1" '/^## /{ f = ($0 == h) } f' "$rf"; }
+
+# A section the record already has: the line lands after its last line and
+# before the next heading.
+printf '\n## Evidence\n\nProbe: a: true => exit 0 at abc1234: ok\n\n## Zeta\n' >> "$rf"
+note Evidence 'Round: self-review 1: clean' --file "$rf"
+check_rc "a line under an existing section is accepted" 0 "$status"
+check "the answer names the section and the line" '{"run_file":"'"$rf"'","section":"Evidence","line":"Round: self-review 1: clean"}' "$(jq -c . <<<"$out")"
+check "the line follows the section's last line" $'Probe: a: true => exit 0 at abc1234: ok\nRound: self-review 1: clean' "$(section Evidence | grep -v '^$' | tail -n 2)"
+note Evidence 'Stop: self-review: tree unchanged' --issue 9 --scratchpad "$T/sp"
+check_rc "the --issue form finds the same record" 0 "$status"
+check "a second line follows the first" $'Round: self-review 1: clean\nStop: self-review: tree unchanged' "$(section Evidence | grep -v '^$' | tail -n 2)"
+check "the next section is untouched" "## Zeta" "$(tail -n 1 "$rf")"
+
+# A section the record lacks is created at the end.
+note 'Review notes' 'Round: self-review: report at scratch/standards/standards-report.md' --file "$rf"
+check_rc "a missing section is created" 0 "$status"
+check "the heading and the line close the file" $'## Review notes\n\nRound: self-review: report at scratch/standards/standards-report.md' "$(tail -n 3 "$rf")"
+
+# Malformed calls are the usage error, and the record stays as it was.
+before=$(cat "$rf")
+for args in "" "Evidence" "Evidence ''" "'' x" "Evidence -x" "-x y" "'## Evidence' y" "Evidence '## heading'"; do
+  eval "note $args --file \"\$rf\""
+  check_rc "note $args is tooling" 2 "$status"
+done
+note Evidence $'two\nlines' --file "$rf"
+check_rc "a two-line note is tooling" 2 "$status"
+check "no malformed call touched the record" "$before" "$(cat "$rf")"
+
+check "--help documents the verb and its answer" "2" "$(bash "$m" --help | grep -c -e 'note <section> <line>' -e 'note: {run_file, section, line}')"
+finish

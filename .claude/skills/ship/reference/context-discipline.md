@@ -74,8 +74,9 @@ a read of the output file buys nothing it does not deliver.
 
 ## The Run file
 
-`run-file init <issue|slug> --from-profile` is the run's first action, placed
-by SKILL.md's [pipeline step](../SKILL.md#the-pipeline). Init reads the
+`run-file init <issue|slug> --from-profile` (`--criteria -` for an issue)
+is the run's first write, placed by SKILL.md's
+[pipeline step](../SKILL.md#the-pipeline). Init reads the
 profile's `Tripwires:`, its Verification names, its reviewers and its `Legs:`
 into the checklist. The record lives at `<root>/ship-<issue>/run.md`, `<root>`
 being `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` with the key hashed
@@ -122,6 +123,12 @@ all ten items and `skip`s each collapsed phase, so the record shows a decision
 and not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
 outgrew, though phase 3's settled results keep the first skip's reason. A
 harness that refuses the task tools has answered: run on the file alone.
+
+**Every attested line goes through `run-file note <section> <line> --issue
+<issue>`** (`Round:`, `Stop:`, `Criterion <n>:`, `Noted:`, `Filed:`):
+it appends one line under `## <section>` and creates one the record lacks,
+where an editor or heredoc write to the file from a worktree-isolated session
+draws a guard refusal.
 
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned**, `<scratch>/<role>/<role>-report.md`, or

@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.0 (2026-10-18)
+
+### Features
+
+- **ship**: Checked body edits, run-file Stop grammar and note verb, and adjacent finds filed in the
+  run ([#791](https://github.com/Gharib89/skills/pull/791),
+  [`26106e2`](https://github.com/Gharib89/skills/commit/26106e2f863ddb96b167d4b491e430cd737172af))
+
+
 ## v0.24.0 (2026-10-15)
 
 ### Features

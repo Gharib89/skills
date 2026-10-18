@@ -30,10 +30,13 @@ shopt -u patsub_replacement 2>/dev/null || :
 
 # >>> setup-harness configuration
 # Files the edit rung covers, as shell globs on the file name; any other file
-# is `skipped`.
-EDIT_GLOBS='*.sh *.yml *.yaml *.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts'
-# The runner on a file list ({files}), and on every file for `full`.
-EDIT_RUN='prek run --files {files}'
+# is `skipped`. `*.md` is there for the prose-budget hook alone, which only a
+# skill's SKILL.md and references wake.
+EDIT_GLOBS='*.sh *.yml *.yaml *.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts *.md'
+# The runner on a file list ({files}), and on every file for `full`. The edit
+# rung skips house-style, a whole-repo check that costs a second on every
+# Markdown write and stays at the commit rung.
+EDIT_RUN='prek run --skip house-style --files {files}'
 FULL_RUN='prek run --all-files'
 # The turn table, one row per member:
 #   <path prefix>|<member>|<globs>|<typecheck>|<tests>|<affected tests>
@@ -41,8 +44,8 @@ FULL_RUN='prek run --all-files'
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
 # member's directory; <affected tests> takes {files}, relative to it, and an
 # empty one runs <tests>. An empty command is no check.
-TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json||../../tests/explainer-video.test.sh|
-tests/explainer-video/|explainer-video-tests|*.mjs||../explainer-video.test.sh|'
+TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json||../../tests/explainer-video.test.sh --turn|
+tests/explainer-video/|explainer-video-tests|*.mjs||../explainer-video.test.sh --turn|'
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS='tests|tests/run.sh
 derived-copies|scripts/derived-copies-check.sh
@@ -51,7 +54,7 @@ prose-budget|scripts/prose-budget-check.sh
 stray-files|scripts/stray-file-check.sh
 frontmatter|scripts/frontmatter-check.sh
 self-contained|scripts/self-contained-check.sh
-contract|scripts/contract-check.sh skills/ship/scripts skills && scripts/contract-check.sh skills/update-skills/scripts skills/update-skills && scripts/contract-check.sh skills/drive-session/scripts skills/drive-session && scripts/contract-check.sh skills/setup-project/scripts skills/setup-project'
+contract|scripts/contract-check.sh skills/ship/scripts skills scripts tests .claude/hooks && scripts/contract-check.sh skills/update-skills/scripts skills/update-skills && scripts/contract-check.sh skills/drive-session/scripts skills/drive-session && scripts/contract-check.sh skills/setup-project/scripts skills/setup-project'
 # FULL_ROWS names the cloud cannot run (the profile's Local-only: parts),
 # space-separated: `skipped` unrun when CLAUDE_CODE_REMOTE=true.
 LOCAL_ONLY=''

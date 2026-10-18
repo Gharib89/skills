@@ -7,6 +7,24 @@ released version. See
 
 <!-- version list -->
 
+## v0.23.1 (2026-10-18)
+
+### Bug Fixes
+
+- **explainer-video**: Refuse a page that renders no text
+  ([#816](https://github.com/Gharib89/skills/pull/816),
+  [`233ffe6`](https://github.com/Gharib89/skills/commit/233ffe663e06a06049200c4fc5960664ad0b6ea9))
+
+
+## v0.23.0 (2026-10-17)
+
+### Features
+
+- **explainer-video**: Setup's stale sweep reclaims superseded env and model folders
+  ([#768](https://github.com/Gharib89/skills/pull/768),
+  [`5f167c8`](https://github.com/Gharib89/skills/commit/5f167c85654260cd725789f00c4edec0d02c34d9))
+
+
 ## v0.22.1 (2026-10-17)
 
 ### Bug Fixes

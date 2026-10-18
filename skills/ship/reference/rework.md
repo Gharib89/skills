@@ -22,11 +22,11 @@ satisfies it.
 
 ## Before phase 0
 
-`run-file init <issue> --from-profile`. When it refuses an existing record, run
-phase 0's `preflight` first, since it writes nothing, and repeat the init with
-`--rebuild` only on its `ok: true`: a stop must leave the earlier run's record
-as it was. Every rework run gets a new Run file, and with it a fresh `Cap:`
-budget for every reviewer, since the budget counts the Run file's rounds.
+`run-file init <issue> --from-profile --criteria -`, the effective spec read
+first; phase 1's feedback criteria stay in the plan. When it refuses an existing
+record, run phase 0's `preflight` first, since it writes nothing, and repeat the
+init with `--rebuild` only on its `ok: true`: a stop leaves the earlier record
+as it was. Every rework run gets a new Run file and a fresh `Cap:` per reviewer.
 
 ## Phase 0: admission and the worktree
 

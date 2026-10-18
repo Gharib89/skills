@@ -71,11 +71,11 @@ The container any cloud session runs in, attended or unattended, reaching hosts 
 _Avoid_: cloud env, default env, container
 
 **Merge gate**:
-The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate`, or an inline-lane run, authorizes a merge when `run-file gate clean` confirms every recorded condition and no unmet criterion is listed, since each needs the human's waiver. An unattended run posts to the PR and returns.
+The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate`, or an inline-lane run, authorizes a merge when `run-file gate clean` confirms every recorded condition, including that no criterion is unmet, since each needs the human's waiver. An unattended run posts to the PR and returns.
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:
-The recorded conditions permitting an attended run to merge without a reply when its profile opts in or the run is in the inline lane: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree at a covered head (a fallback answers for its primary) or on the inline lane, every applicable Verification passed at a covered head or deferred to a green CI leg, and no override or Tracker draft. Deviations and Ship defects alone do not hold it.
+The recorded conditions permitting an attended run to merge without a reply when its profile opts in or the run is in the inline lane: every CI leg green, every local gate passed or deferred to CI on the PR head (a deferral holds the gate while a CI check outside the legs is not green), every reviewer's loop stopped on an unchanged tree at a covered head (a fallback answers for its primary) or on the inline lane, every applicable Verification passed at a covered head or deferred to a green CI leg, no unmet criterion, and no override or Tracker draft. Deviations and Ship defects alone do not hold it.
 _Avoid_: auto-merge (a host flag that can merge before Ship finishes its reviews)
 
 **Covered head**:
@@ -95,7 +95,7 @@ An attended stop where Ship prints the exact command and setup, waits for the hu
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
 
 **Unmet criterion**:
-An acceptance criterion asking for a host action no mechanic performs, which a run leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Merging needs the human's explicit waiver of each, beside the merge word. Not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
+Any checkbox criterion of the issue the run did not meet, recorded in the Run file as `Criterion <n>: not met: <reason>`, or owed a line and given none. The kind a run cannot meet is a criterion asking for a host action no mechanic performs, which it leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Either kind holds the clean gate, and merging needs the human's explicit waiver of each, beside the merge word. A host-action criterion is not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
 _Avoid_: rewritten criterion, descoped criterion
 
 **Spec precedence**:
@@ -123,7 +123,7 @@ A real skill turn driven on a fixture repo to prove one path through the skill's
 _Avoid_: smoke test, smoke run, e2e, dry run
 
 **Run file**:
-The one file a Ship run keeps outside every checkout, in the user's state directory at `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>/ship-<issue>/run.md`, keyed by issue under a repo key hashed from the git common dir, so the main checkout and the run's worktree resolve the same path, two clones get different roots short of a CRC collision, a session isolated by `EnterWorktree` (which refuses an Edit or a Bash command naming a `.git` path) can still write it, and a wiped temp directory leaves it standing. It holds the ten-phase checklist with a clock stamp on every flip, the run's design and plan, each Verification's result, each Local gate verdict with the head it ran on, the run's `Grade:`, and the evidence lines `run-file close 4` and `close 7` refuse without (`Reverted-fix:` per test file the diff adds or changes, then a `Round:` per round and a `Stop:` per reviewer). The red `Reverted-fix:` line is produced, written by `run-file prove`; the rest are attested, written by the run. The run's record, and the harness task list is its display: the source of truth for where the run is and the map back after a mid-run context summary, shown as one task per item, all ten created at `init` and each set to the `mirror` its flip returns; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps. `cleanup <issue>` removes it after the merge; a free-text run (`cleanup none`) leaves its `ship-<slug>/` in place, and a run that stops before the merge gate leaves its record, which `init` then refuses to overwrite without `--rebuild`.
+The one file a Ship run keeps outside every checkout, in the user's state directory at `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>/ship-<issue>/run.md`, keyed by issue under a repo key hashed from the git common dir, so the main checkout and the run's worktree resolve the same path, two clones get different roots short of a CRC collision, a session isolated by `EnterWorktree` (which refuses an Edit or a Bash command naming a `.git` path) can still write it, and a wiped temp directory leaves it standing. It holds the ten-phase checklist with a clock stamp on every flip, the run's design and plan, each Verification's result, each Local gate verdict with the head it ran on, the run's `Grade:`, and the evidence lines `run-file close 4` and `close 7` refuse without (`Reverted-fix:` per test file the diff adds or changes, then a `Round:` per round and a `Stop:` per reviewer). The red `Reverted-fix:` line is produced, written by `run-file prove`; the rest are attested, written by the run with `run-file note`. The run's record, and the harness task list is its display: the source of truth for where the run is and the map back after a mid-run context summary, shown as one task per item, all ten created at `init` and each set to the `mirror` its flip returns; each stamp is read from the clock by the command that writes it, and the merge summary's timing is computed from those stamps. `cleanup <issue>` removes it after the merge; a free-text run (`cleanup none`) leaves its `ship-<slug>/` in place, and a run that stops before the merge gate leaves its record, which `init` then refuses to overwrite without `--rebuild`.
 _Avoid_: task list, scratch file, plan file, todo
 
 **Scratch directory**:
@@ -339,7 +339,7 @@ A reviewer driven only when the reviewer it names exits not reviewed, for any re
 _Avoid_: backup bot, secondary reviewer, second opinion
 
 **Capped with findings**:
-A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of those rounds' fixes changing the tree, so no host round read them. It and a not-landed primary are the `reviewed` primaries that still drive their fallback. A docs-only fix-only diff that ends the loop before the cap is spent, and a last round whose findings were all declined, are not it.
+A reviewer that stopped at `cap` after spending its whole `Cap:`, the last of those rounds' fixes changing the tree, so no host round read them. It and a not-landed primary are the `reviewed` primaries that still drive their fallback. A docs-only fix-only diff that ends the loop before the cap is spent, a last round whose findings were all declined, and a cap from a re-raised declined finding, are not it.
 _Avoid_: ran out of rounds, hit the cap
 
 **Not landed**:
@@ -581,7 +581,7 @@ A stretch of 1.5 s or more of a scene in which nothing moves but the camera's dr
 _Avoid_: still, pause, hold
 
 **Tool cache**:
-The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model under its pinned revision, so copies of the skill at different versions coexist. An npm or Chrome install under another hash that no run has used for 30 days is stale, and setup's install removes it; a model at an older revision stays.
+The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model and Python env under its pinned revisions, so copies of the skill at different versions coexist. An install no catalogue row lands in on this machine (npm or Chrome under another hash, a model or env at another revision or for the other device) that no run has used for 30 days is stale, and setup's install removes it.
 _Avoid_: node_modules, tools folder
 
 **Font store**:

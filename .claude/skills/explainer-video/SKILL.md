@@ -7,7 +7,7 @@ description: >-
   screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
-  version: 0.22.1
+  version: 0.23.1
 ---
 
 # explainer-video
@@ -31,12 +31,12 @@ writes, skip to Voice or Render.
 
 `/explainer-video setup` runs the check and the install with no video. Setup
 writes to two per-user folders: the **tool cache**, holding the npm packages and
-Chrome under the hash of this skill's lockfile and each model under its pinned
-revision, and the **font store**, holding fonts by family and version, plus the
-`fonts` rows of saved style profiles (run setup from the project root). An
-install in the tool cache for another lockfile hash that no run has used for 30
-days is **stale**. Run the script by the skill's own path, `<skill>` below being
-the folder this file is in:
+Chrome under the hash of this skill's lockfile and each model and Python env
+under its pinned revisions, and the **font store**, holding fonts by family and
+version, plus the `fonts` rows of saved style profiles (run setup from the
+project root). A tool cache install no row needs on this machine, unused for 30
+days, is **stale**. Run the script by the skill's own path, `<skill>` below
+being the folder this file is in:
 
 1. **Check.** `node <skill>/scripts/setup.mjs check`, adding `--all` when the
    user asked for every opt-in row too, or the brief's `score` is `ace-step`,
