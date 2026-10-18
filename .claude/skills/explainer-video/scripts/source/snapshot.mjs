@@ -351,7 +351,13 @@ for (const [i, s] of given.entries()) {
       const url = kind === "page" ? s : pathToFileURL(path.resolve(s)).href;
       const page = await backend.renderPage(url, { env: hyperframesEnv() });
       title = page.title?.trim() || (kind === "page" ? shown : name);
-      text = titled(title, await backend.toMarkdown(page.html));
+      const md = await backend.toMarkdown(page.html);
+      if (!md.trim())
+        refuse(
+          s,
+          "the page rendered no text, as it timed out or renders client side: snapshot it again, or give it as a saved .html or .md file",
+        );
+      text = titled(title, md);
     }
   } catch (e) {
     refuse(s, `could not read it: ${e.message}`);

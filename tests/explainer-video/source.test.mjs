@@ -516,6 +516,24 @@ test("a web page renders in Chrome and its excerpt locates by section", () => {
   );
 });
 
+// #782: a page whose load timed out reached the snapshot as its heading alone,
+// exit 0, and took a share of the excerpt budget.
+test("a page that renders no text is refused, and no sources.json is written", () => {
+  const fx = fixture();
+  const url = "https://dora.dev/guides/dora-metrics/";
+  const pages = JSON.stringify({ [url]: { title: "", html: "" } });
+  const s = snapshot(fx, [url], { EXPLAINER_VIDEO_FAKE_PAGES: pages });
+  assert.equal(s.code, 1, s.out + s.err);
+  assert.match(
+    s.err,
+    /^source https:\/\/dora\.dev\/guides\/dora-metrics\/: the page rendered no text, as it timed out or renders client side: snapshot it again, or give it as a saved \.html or \.md file$/m,
+  );
+  assert.equal(
+    fs.existsSync(path.join(fx.dir, "snapshots", "sources.json")),
+    false,
+  );
+});
+
 test("a page URL is kept without its credentials, query or fragment, and a malformed URL is refused by name", () => {
   const fx = fixture();
   const url = "https://me:pw@docs.example.com/guide/intro?token=s3cret#t=key";
