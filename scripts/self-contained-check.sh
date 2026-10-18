@@ -67,7 +67,10 @@ while IFS= read -r f; do
   n=0 fence_char='' fence_len=0 fence_depth=0 pending=''
   while IFS= read -r line || [ -n "$line" ]; do
     n=$((n + 1))
-    urls=$(grep -oiE "$url" <<<"$line")
+    # Each subprocess below runs only on a line holding the text its pattern
+    # needs: a fork per line per check made this the gate's slowest row.
+    urls=''
+    case $line in *[Gg][Ii][Tt][Hh][Uu][Bb]*) urls=$(grep -oiE "$url" <<<"$line") ;; esac
     # no URL is no finding: an empty here-string is one empty line, which -v selects
     if [ -n "$urls" ] && grep -qviE "$destination" <<<"$urls"; then
       printf '%s:%s: links source-repo material by URL\n' "$f" "$n"; rc=1
@@ -88,11 +91,14 @@ while IFS= read -r f; do
       fi
     fi
     [ -z "$fence_char" ] || continue
-    prose=$(printf '%s\n' "$body" | sed 's/`[^`]*`//g')
-    if grep -qiE "$number" <<<"$prose"; then
+    prose=$body
+    case $body in *'`'*) prose=$(printf '%s\n' "$body" | sed 's/`[^`]*`//g') ;; esac
+    if [[ $prose == *'#'* ]] && grep -qiE "$number" <<<"$prose"; then
       printf '%s:%s: cites an issue or PR number\n' "$f" "$n"; rc=1
     fi
-    while IFS= read -r target; do
+    links=$prev
+    case $prose in *']('* | *']:'*) links=1 ;; esac
+    [ -n "$links" ] && while IFS= read -r target; do
       case $target in *://*|mailto:*|/*|'') continue ;; esac
       resolved=$(normalize "$dir/${target%%#*}")
       case $resolved/ in "$skill"/*) ;; *)
