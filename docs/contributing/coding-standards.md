@@ -100,7 +100,7 @@ Always read [standards/release.md](standards/release.md), the glossary and
 ADRs, the version grade, the PR title and body, commits, and adding a skill this
 repo writes: every PR has a title, a body and commits. Then read each file below
 whose condition a path in the diff meets. A Reviewer skips
-[standards/gates.md](standards/gates.md), what the Local gate and the CI leg
+[standards/gates.md](standards/gates.md), what the Local gate and the CI legs
 already enforce, since a green gate settles its rules; the author reads it
 before pushing, as does a Reviewer whose finding would turn on what a gate
 checks.

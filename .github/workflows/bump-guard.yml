@@ -15,7 +15,8 @@ name: bump-guard
 # driven by `tests/pr-body-headings.test.sh`, and it reads the body from the event
 # rather than through `gh`.
 #
-# Not path-filtered, so it reports on every PR and is the profile's one CI leg.
+# Not path-filtered, so it reports on every PR and is one of the profile's two
+# CI legs, beside `check-full`.
 
 on:
   pull_request:
