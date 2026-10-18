@@ -49,7 +49,8 @@ FULL_RUN='prek run --all-files'
 # more beside it.
 TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn
 tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn
-skills/grill-with-artifact/|grill-with-artifact|*.js||../../tests/grill-with-artifact.test.sh|'
+skills/grill-with-artifact/|grill-with-artifact|*.js||../../tests/grill-with-artifact.test.sh|
+|shell|*.sh|||scripts/shell-turn-tests.sh {files}'
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS='tests|tests/run.sh
 derived-copies|scripts/derived-copies-check.sh
