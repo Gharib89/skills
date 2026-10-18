@@ -469,11 +469,11 @@ A narrator that speaks in a real person's voice, made by converting a default na
 _Avoid_: clone, voice clone, custom voice
 
 **Storyboard**:
-A browser page with one card per scene (its narration, a still rendered in the run's style, its timing and style notes) that the human approves or revises scene by scene. It is the one human checkpoint before production; everything after it runs behind video gates.
+A browser page with one card per scene (its narration, the scene in the run's style shown at its fullest moment and playing through its seam into the next, its timing and style notes) that the human approves or revises scene by scene, under an estimate of the first render's time. It is the one human checkpoint before production; everything after it runs behind video gates.
 _Avoid_: outline, shot list, script
 
 **Animatic**:
-The storyboard's stills played in scene order over the run's real narration, so the human judges pace by ear before anything renders.
+The whole video's scenes and seams played in order, without a break, over the run's real narration, so the human judges pace and motion before the final render.
 _Avoid_: preview, rough cut, slideshow
 
 **Board version**:
