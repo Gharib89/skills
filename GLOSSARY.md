@@ -449,7 +449,7 @@ A run's scenes in order, each with its role in the video, its narration sentence
 _Avoid_: storyboard, outline, transcript
 
 **Script gate**:
-One of the automated checks the script must pass before it is voiced: the scene arc, each scene's word budget, every cite found word for word in the source pack, every sentence judged supported or connective by the support checker, the brief's must-include and avoid lists, reading time and house rules. A support verdict still red after two fix attempts stops the run.
+One of the automated checks the script must pass before it is voiced: the scene arc, each scene's word budget, every cite found word for word in the source pack, every sentence judged supported or connective by the support checker, the brief's must-include and avoid lists, and house rules. A support verdict still red after two fix attempts stops the run.
 _Avoid_: lint, script check, video gate
 
 **Kept term**:
@@ -541,8 +541,20 @@ The music and sound effects an explainer video carries under its narration, synt
 _Avoid_: soundtrack, background music, BGM
 
 **Video gate**:
-An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, loudness, caption timing or sound effects per minute. Each has a floor the skill sets, and a style profile may only tighten every one but the critic's and the determinism gate's (which renders a frame of each scene twice and has no floor but equal pixels); a gate still failing after two fix attempts stops the run, and no video ships, while a red determinism gate stops at once, since no change to the script could clear it.
+An automated check a run must pass after the storyboard is approved and before the video is delivered, such as layout, contrast, reading time, loudness, caption timing or sound effects per minute. Each has a floor the skill sets, and a style profile may only tighten every one but the critic's and the determinism gate's (which renders a frame of each scene twice and has no floor but equal pixels); a gate still failing after two fix attempts stops the run, and no video ships, while a red determinism gate stops at once, since no change to the script could clear it.
 _Avoid_: QA, check, local gate
+
+**Seam**:
+How one scene hands over to the next at a cut, as the visual grammar names it (a zoom-through, a cut on a curve, a plain cut). The outgoing scene draws it, running on past its own last moment while the next scene starts on time.
+_Avoid_: transition (for the grammar's field), wipe
+
+**Readable**:
+A text box is readable at a moment when it is fully shown, outside a seam, and not being carried into or out of the frame by the camera. The layout and reading time gates judge a box only while it is readable.
+_Avoid_: visible, settled, on screen
+
+**Reading time**:
+The video gate that every text box is readable long enough for its words to be read.
+_Avoid_: dwell time, hold time
 
 **Critic**:
 An independent reviewer that reads a run's contact sheets and motion strips: its hard failures (unreadable or invented content, a broken right-to-left layout) block like a video gate, and its scores and its worst defects only advise.
@@ -553,7 +565,11 @@ One image per scene of a rendered explainer video: four of its frames (its quart
 _Avoid_: snapshot, thumbnail, filmstrip
 
 **Motion strip**:
-One image per moving scene of a rendered explainer video: 12 consecutive frames of it, starting 5 before its peak-motion frame, cut from the encoded video and tiled six by two, that the critic reads beside the contact sheet to judge motion. A motion record next to it names the peak frame and the stretches of 1.5 s or more in which nothing in the content area moves.
+One image per moving scene of a rendered explainer video: 12 consecutive frames of it, starting 5 before its peak-motion frame outside its seams, cut from the encoded video and tiled six by two, that the critic reads beside the contact sheet to judge motion. A scene that hands over at a seam gets a second strip of that seam. A motion record next to them names the peak frame and the dead beats.
+
+**Dead beat**:
+A stretch of 1.5 s or more of a scene in which nothing moves but the camera's drift and the texture.
+_Avoid_: still, pause, hold
 _Avoid_: filmstrip, flipbook
 
 **Tool cache**:
