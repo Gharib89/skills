@@ -14,6 +14,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 lib=skills/ship/scripts/_lib.sh
+doc=skills/ship/scripts/lib/host.sh
 defaults=tests/host-fake/defaults
 
 # <adapter>: the host_* functions it defines, one per line, sorted. The
@@ -36,7 +37,7 @@ check "the Host fake defines the GitHub adapter's host functions" "$gh_fns" "$(f
 # `->`, on the function's own line or the next, joined with continuation lines
 # while its braces stay open; a key is a top-level name, cut at `:` or `[`.
 shapes() {
-  sed '/^[^#]/q' "$lib" | awk '
+  sed '/^[^#]/q' "$doc" | awk '
     function flush(   t, i, c, bd, kd, tok, out, n, k, keys) {
       if (fn == "") return
       t = txt; sub(/^[ \t]*/, "", t)
@@ -76,7 +77,7 @@ check "the contract comment documents object answers at all" true "$([ -n "$cont
 # drifted from it would drop out of $contract with nothing to say so: every
 # adapter function has to be an entry the parser can see.
 check "every adapter function is a contract entry at the parsed indent" "$gh_fns" \
-  "$(sed '/^[^#]/q' "$lib" | awk '/^#   host_/ {print $2}' | sort)"
+  "$(sed '/^[^#]/q' "$doc" | awk '/^#   host_/ {print $2}' | sort)"
 
 while read -r fn keys; do
   f=$defaults/$fn.json
@@ -88,7 +89,7 @@ done <<<"$contract"
 # REVIEW is the one named row shape, documented on a line of its own under
 # host_pr_reviews, so the default's rows are held to it separately.
 check "host_pr_reviews' default rows carry the documented REVIEW keys" \
-  "$(sed -n 's/.*REVIEW = {\([^}]*\)}.*/\1/p' "$lib" | tr , '\n' | sort | paste -sd, -)" \
+  "$(sed -n 's/.*REVIEW = {\([^}]*\)}.*/\1/p' "$doc" | tr , '\n' | sort | paste -sd, -)" \
   "$(jq -r '[.on_head[0], .all[0]] | map(keys_unsorted | sort | join(",")) | unique | join(" ")' "$defaults/host_pr_reviews.json")"
 
 # `<fn> <vocabulary line>` for every entry whose continuation lines open with
@@ -96,7 +97,7 @@ check "host_pr_reviews' default rows carry the documented REVIEW keys" \
 # status is held to the words a real adapter emits: a fake-driven test passing
 # on any other word passes on a state no mechanic ever sees. A line in that form
 # that does not parse fails rather than dropping its entry from the check.
-vocab=$(sed '/^[^#]/q' "$lib" | awk '
+vocab=$(sed '/^[^#]/q' "$doc" | awk '
   /^#   host_/ { fn = $2; next }
   fn != "" && /^#[ \t]+status: / { s = $0; sub(/^#[ \t]+status: /, "", s); print fn, s }')
 check "the contract comment documents host_pr_checks' status vocabulary" true \

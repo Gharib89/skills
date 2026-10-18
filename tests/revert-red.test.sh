@@ -139,7 +139,7 @@ check "and no verdict is on stdout" \
 # it, which is what a consumer's skills/ship/scripts is, it still stubs the host.
 standalone=$T/consumer/skills/ship/scripts
 mkdir -p "$standalone"
-cp "$(dirname "$script")/revert-red.sh" "$(dirname "$script")/_lib.sh" "$standalone/"
+cp -r "$(dirname "$script")/revert-red.sh" "$(dirname "$script")/_lib.sh" "$(dirname "$script")/lib" "$standalone/"
 check_rc "with no tests/host-stub.sh anywhere near it, a red test still exits 0" \
   0 "$(cd "$repo" && bash "$standalone/revert-red.sh" tests/answer.test.sh lib.sh >/dev/null 2>&1; printf '%s' "$?")"
 check_rc "and a reverted tree that calls a host is still tooling" \
