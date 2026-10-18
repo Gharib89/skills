@@ -47,8 +47,12 @@ test("the English narrators ship with a calibrated rate in words per second and 
     (n) => n.language === "en" && n.backend === "kokoro",
   );
   assert.deepEqual(
-    english.map((n) => n.id),
-    ["bf_emma", "am_fenrir"],
+    english.map((n) => [n.id, n.gender, n.default]),
+    [
+      ["bf_emma", "female", true],
+      ["am_fenrir", "male", true],
+      ["af_heart", "female", false],
+    ],
   );
   for (const n of english) {
     assert.ok(n.rate > 1.5 && n.rate < 4.5, `${n.id} rate ${n.rate}`);

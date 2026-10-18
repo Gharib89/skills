@@ -27,6 +27,19 @@
       "default": true
     },
     {
+      "id": "af_heart",
+      "language": "en",
+      "gender": "female",
+      "backend": "kokoro",
+      "voice": "af_heart",
+      "style": null,
+      "licence": "Apache-2.0",
+      "leavesMachine": false,
+      "rate": 3.47,
+      "pause": 0.81,
+      "default": false
+    },
+    {
       "id": "ar-eg-csagent-2",
       "language": "ar",
       "gender": "female",

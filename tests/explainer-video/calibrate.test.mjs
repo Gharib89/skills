@@ -80,7 +80,7 @@ test("calibration measures each English narrator's speech rate and pause a sente
   assert.ok(texts.length >= 3, `${texts.length} texts`);
   assert.deepEqual(
     calls.map((c) => c.voice),
-    ["bf_emma", "am_fenrir", "JBFqnCBsd6RMkjVDRZzb"].flatMap((v) =>
+    ["bf_emma", "am_fenrir", "af_heart", "JBFqnCBsd6RMkjVDRZzb"].flatMap((v) =>
       texts.map(() => v),
     ),
   );

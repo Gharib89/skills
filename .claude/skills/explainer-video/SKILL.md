@@ -100,9 +100,9 @@ must include and must avoid. The user's request beside the sources, the
    prompt moves, and `must=<item>` or `avoid=<item>` per list item. A male or
    female voice asked for is that language's default narrator of that gender.
    An ElevenLabs narrator (`elevenlabs-george`, on the user's
-   `ELEVENLABS_API_KEY`) or an own voice is the `voice` only when the steering
-   prompt asks for it; for "my voice" with no enrolled name, enroll one first
-   (Setup).
+   `ELEVENLABS_API_KEY`), `af_heart` (American) or an own voice is the
+   `voice` only when the steering prompt asks for it; for "my voice" with no
+   enrolled name, enroll one first (Setup).
    It prints one `brief <knob>: <value>` line per knob, then `brief: written
    -> brief.json`: show the knob lines to the user as the brief and go on
    without waiting for their approval.
