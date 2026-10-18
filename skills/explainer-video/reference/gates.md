@@ -96,14 +96,14 @@ replaces.
 
 The critic judges two renders of one script at most, a render counting anew when
 only its cites or a cited excerpt's text changed. Each scene's verdict stands
-for its sheet, motion strip and record, its span in the video, its cites and
-their excerpts' text, the title and the verdict format: a new render copies the
-verdict of every unchanged scene beside its new sheet, so step 1 dispatches only
-changed scenes, and the render still counts as the next round. A hard failure in
-the second round is final, so the summary ends `stop: the critic's second round
-is red, no video`. A third render reuses the second round's verdict, its line
-ending `carried: no third round`; new narration is a new script and starts at
-round 1.
+for its sheet, motion strip and record, its span in the video, the title, every
+cite in the script and its excerpt's text (each critic reads them all) and the
+verdict format: a new render copies the verdict of every unchanged scene beside
+its new sheet, so step 1 dispatches only changed scenes, and the render still
+counts as the next round. A hard failure in the second round is final, so the
+summary ends `stop: the critic's second round is red, no video`. A third render
+reuses the second round's verdict, its line ending `carried: no third round`;
+new narration is a new script and starts at round 1.
 
 ## On a red gate
 

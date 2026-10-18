@@ -1095,7 +1095,7 @@ test("a re-render judges again only the scenes it changed; the rest carry their 
   assert.match(again.out, /^gate critic: pass: .*round 2 of 2 vs /m);
 });
 
-test("a scene whose sheet is unchanged is judged again when its cites or a cited excerpt's text change", () => {
+test("a changed cite or cited excerpt's text sends every scene back to the critic, though no sheet changed, since each critic reads every excerpt", () => {
   const excerpts = (fx, text) =>
     fs.writeFileSync(
       path.join(fx.dir, "excerpts.json"),
@@ -1108,9 +1108,9 @@ test("a scene whose sheet is unchanged is judged again when its cites or a cited
   const r1 = stage(fx, "render/render.mjs");
   assert.match(
     r1.out,
-    /^gate critic: pending: .*, 2 of 3 scene\(s\) judged, /m,
+    /^gate critic: pending: .*, 0 of 3 scene\(s\) judged, /m,
   );
-  assert.deepEqual(critique(fx.dir), ["steps"]);
+  assert.deepEqual(critique(fx.dir).sort(), ["gate", "hook", "steps"]);
   const fresh = fixture();
   assert.equal(render(fresh).code, 0);
   const r2 = renderUnjudged(
@@ -1119,9 +1119,9 @@ test("a scene whose sheet is unchanged is judged again when its cites or a cited
   );
   assert.match(
     r2.out,
-    /^gate critic: pending: .*, 2 of 3 scene\(s\) judged, /m,
+    /^gate critic: pending: .*, 0 of 3 scene\(s\) judged, /m,
   );
-  assert.deepEqual(critique(fresh.dir), ["steps"]);
+  assert.deepEqual(critique(fresh.dir).sort(), ["gate", "hook", "steps"]);
 });
 
 test("a malformed keys.json in the previous sheets folder stops the gates, naming it", () => {

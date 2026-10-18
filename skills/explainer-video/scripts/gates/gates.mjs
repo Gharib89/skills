@@ -405,13 +405,15 @@ const excerptText = new Map(
       ])
     : [],
 );
-const cited = (s) =>
-  s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)]));
-const criticKey = hash(
-  renderHash,
-  [script.title, script.scenes.map(cited)],
-  CRITIC_FORMAT,
-);
+// Every critic reads every excerpt the script cites, so a scene's key below
+// takes all of them, not its own cites alone.
+const criticRead = [
+  script.title,
+  script.scenes.map((s) =>
+    s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
+  ),
+];
+const criticKey = hash(renderHash, criticRead, CRITIC_FORMAT);
 const sheetsOf = (h) => path.posix.join(".cache", "critic", h);
 const verdicts = (h) =>
   timeline.scenes.map((sc) => {
@@ -461,8 +463,8 @@ const dir = sheetsOf(criticKey);
 if (rounds.includes(criticKey) || rounds.length < 2) {
   fs.mkdirSync(path.join(run, dir), { recursive: true });
   // A scene's verdict stands for what its critic read: its sheet, strip and
-  // record, its span in the video (a worst moment must fall inside it), its
-  // cites and their text, the title and the format. The previous render's
+  // record, its span in the video (a worst moment must fall inside it), the
+  // title, the script's cites and their text, and the format. The previous render's
   // verdict under the same scene key is carried, so only changed scenes are
   // pending.
   const prevSheets = keptRounds ? prev.gates.critic.sheets : null;
@@ -529,7 +531,7 @@ if (rounds.includes(criticKey) || rounds.length < 2) {
       m.still ? "" : fs.readFileSync(strip),
       fs.readFileSync(record),
       [sc.start, sc.duration],
-      [script.title, cited(script.scenes.find((s) => s.id === sc.id))],
+      criticRead,
       CRITIC_FORMAT,
     );
     const verdict = path.join(run, dir, `${sc.id}.json`);
