@@ -20,6 +20,13 @@ check "a lib piece selects the tests naming _lib.sh" \
   "$(naming _lib.sh)" "$(sel skills/ship/scripts/lib/"$(ls skills/ship/scripts/lib | head -1)")"
 check "_lib.sh selects the tests naming _lib.sh" \
   "$(naming _lib.sh)" "$(sel skills/ship/scripts/_lib.sh)"
+# The oracle above repeats the selector's grep, so an empty answer on both sides
+# would pass; these two fix the answer.
+check "_lib.sh is named by tests, so the selection is not vacuous" 1 \
+  "$([ -n "$(naming _lib.sh)" ] && echo 1 || echo 0)"
+check "the runner's excluded prefixes select nothing through the turn rung" \
+  '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' \
+  "$(scripts/check.sh turn tests/fixtures/x.sh .claude/skills/ship/scripts/_lib.sh)"
 # Built at run time: spelled out here, this file would name it and select itself.
 unnamed=zz-unnamed-$$.sh
 check "a file no test names selects nothing" "" "$(sel scripts/$unnamed)"

@@ -24,7 +24,8 @@ for f; do
     skills/ship/scripts/lib/*.sh) name=_lib.sh ;;
     *) name=${f##*/} ;;
   esac
-  selected="$selected$(grep -lF -- "$name" tests/*.test.sh)"$'\n'
+  hits=$(grep -lF -- "$name" tests/*.test.sh); [ $? -le 1 ] || exit 2
+  selected="$selected$hits"$'\n'
 done
 selected=$(printf '%s' "$selected" | sort -u | sed '/^$/d')
 
