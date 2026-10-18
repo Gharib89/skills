@@ -32,7 +32,9 @@ unnamed=zz-unnamed-$$.sh
 check "a file no test names selects nothing" "" "$(sel scripts/$unnamed)"
 check_rc "a file no test names is no failure" 0 "$(bash scripts/shell-turn-tests.sh scripts/$unnamed >/dev/null 2>&1; echo $?)"
 
-out=$(bash scripts/shell-turn-tests.sh tests/token-limit.test.sh 2>&1)
+# Only the runner's own lines: a selected test may print a `skipped` line of its
+# own (token-limit does without prek), which is no part of the claim.
+out=$(bash scripts/shell-turn-tests.sh tests/token-limit.test.sh 2>&1 | grep -E '^(ok|FAIL) |^[0-9]+ passed')
 check "the selection runs through the suite runner, one file" \
   "ok   tests/token-limit.test.sh
 1 passed, 0 failed" "$out"
