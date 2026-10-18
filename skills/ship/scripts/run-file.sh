@@ -153,7 +153,9 @@
 # so it is never a flag and never a heading. A <line> opening on `Criterion`
 # that is not `Criterion <n>: met: <proof>` or `Criterion <n>: not met:
 # <reason>` is refused (exit 1) naming both forms, since `gate clean` reads any
-# other as unmet (#853: `met at <sha>:`).
+# other as unmet (#853: `met at <sha>:`). Any other <line> under `Criteria` is
+# written `- <n>: <line>`, <n> the number after the highest entry, the new
+# criterion a phase-1 rewrite owes (#863).
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git
