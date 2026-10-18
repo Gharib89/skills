@@ -19,7 +19,7 @@ calls() { cat "$HERDR_FAKE/calls" 2>/dev/null; : > "$HERDR_FAKE/calls"; }
 seen() { jq -r --arg n "$1" '.sessions[] | select(.name == $n) | .seen_seq' "$roster"; }
 
 # --- the contract every script keeps ------------------------------------------
-for m in spawn watch read answer; do
+for m in spawn watch read answer frontier; do
   out=$(bash "$s/$m.sh" --help 2>"$tmp/err"); rc=$?
   check "$m --help opens with its usage line" "usage: $m" "$(sed -n 1p <<<"$out" | cut -d' ' -f1-2)"
   check "$m --help names its stdout fields next" stdout: "$(sed -n 2p <<<"$out" | cut -c1-7)"
@@ -337,5 +337,51 @@ bash "$s/read.sh" s2 --roster "$roster" >/dev/null
 out=$(bash "$s/watch.sh" --roster "$roster" 2>/dev/null); rc=$?
 check_rc "watch with every session gone exits 1" 1 "$rc"
 check "and says there is nothing to watch" "no live session in the roster $roster" "$(jq -r .error <<<"$out")"
+
+# --- frontier --------------------------------------------------------------------
+# frontier reads GitHub alone, over the fake `gh` answering by endpoint, and
+# needs no Herdr: every case runs with HERDR_ENV unset.
+source tests/gh-fake.sh
+gh_fake_install "$tmp/bin"
+export GH_ROUTES=$tmp/routes
+gh_reset; export GH_STATUS_SEQ=200
+calls >/dev/null
+here=https://api.github.com/repos/o/r there=https://api.github.com/repos/o/other
+issues="repos/{owner}/{repo}/issues"
+# Two pages, the shape --paginate prints, out of number order.
+gh_route "$issues/1/sub_issues" '[{"number":12,"title":"b","state":"open","repository_url":"'$here'"},{"number":14,"title":"c","state":"closed","repository_url":"'$here'"}]
+[{"number":11,"title":"a","state":"open","repository_url":"'$here'"}]'
+gh_route "$issues/11/dependencies/blocked_by" '[]'
+gh_route "$issues/12/dependencies/blocked_by" '[{"number":11,"title":"a","state":"open","repository_url":"'$here'"},{"number":90,"title":"z","state":"open","repository_url":"'$here'"},{"number":14,"title":"c","state":"closed","repository_url":"'$here'"},{"number":11,"title":"elsewhere","state":"open","repository_url":"'$there'"}]'
+out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 1); rc=$?
+check_rc "frontier exits 0 outside Herdr" 0 "$rc"
+check "frontier lists each sub-issue lowest number first with its open blockers, each inside or outside the spec" \
+  '{"parent":1,"sub_issues":[{"number":11,"title":"a","state":"open","blockers":[]},{"number":12,"title":"b","state":"open","blockers":[{"number":11,"title":"a","inside":true},{"number":90,"title":"z","inside":false},{"number":11,"title":"elsewhere","inside":false}]},{"number":14,"title":"c","state":"closed","blockers":[]}]}' \
+  "$(jq -c . <<<"$out")"
+check "frontier reads over REST, every page, and no blockers of a closed sub-issue" \
+  "api --paginate $issues/1/sub_issues?per_page=100
+api --paginate $issues/11/dependencies/blocked_by?per_page=100
+api --paginate $issues/12/dependencies/blocked_by?per_page=100" "$(gh_args)"
+check "frontier reaches no herdr" "" "$(calls)"
+gh_reset
+gh_route "$issues/2/sub_issues" '[]'
+out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 2); rc=$?
+check_rc "frontier on a parent with no sub-issues exits 0" 0 "$rc"
+check "and lists none" '{"parent":2,"sub_issues":[]}' "$(jq -c . <<<"$out")"
+out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 3 2>/dev/null); rc=$?
+check_rc "frontier whose read GitHub refuses exits 1" 1 "$rc"
+check "the refusal carries gh's message" "sub-issues of #3: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
+gh_route "$issues/4/sub_issues" '[{"number":5,"title":"e","state":"open","repository_url":"'$here'"}]'
+out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 4 2>/dev/null); rc=$?
+check_rc "frontier whose blocker read GitHub refuses exits 1" 1 "$rc"
+check "that refusal names the sub-issue" "blockers of #5: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
+gh_reset
+for bad in "--parent x" "--parent 0" "--parent" "--parent -1" "--parent 1 --roster r" "1"; do
+  # shellcheck disable=SC2086  # the call's words are split on purpose
+  out=$(HERDR_ENV='' bash "$s/frontier.sh" $bad 2>/dev/null); rc=$?
+  check_rc "frontier refuses '$bad'" 2 "$rc"
+  check "frontier answers '$bad' with its usage line" "usage: frontier --parent <n>" "$(jq -r .error <<<"$out")"
+done
+check "a refused call reaches no gh" "" "$(gh_args)"
 
 finish

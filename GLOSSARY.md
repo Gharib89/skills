@@ -410,6 +410,14 @@ _Avoid_: hand-off (that is ship's stop), question, ping
 The launch prompt's permission for the supervisor to answer a supervised ship run's merge gate with "merge" when that gate is clean, by Ship's own `run-file gate clean` verdict. Without it, or on a gate that is not clean, the merge gate is an escalation.
 _Avoid_: auto-merge, merge permission, `Merge: on-clean-gate` (that is the ship profile's opt-in)
 
+**Spec batch**:
+A supervisor's drive of one spec parent's sub-issues to merge, each as a supervised `/ship` run, at most two at a time and only when no blocking edge joins them and the areas their briefs name do not overlap. It ends when every sub-issue it can reach is at rest.
+_Avoid_: supervised batch, spec run (run is ship's), wave
+
+**Batch log**:
+A spec batch's running list of finds, one line each naming the run, what happened and whether it would recur in the runs still to come. A recurring find is fixed before the slices it would hit; the rest become the retro drafted at the batch's end.
+_Avoid_: notes, journal, retro (that is what the log becomes)
+
 ### Explainer video
 
 **Explainer video**:
