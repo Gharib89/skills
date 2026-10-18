@@ -178,10 +178,11 @@ to the **script gates**.
    idea each), `recap` (the points again in brief), `end` (one closing line).
    Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
    up to the brief's length less the 1 s hold the render closes on. A scene's
-   spoken words land within 10 percent of (seconds - sentences × `pause`) ×
-   `rate`, the narrator's in `<skill>/narrators.json`: a sentence spends
-   `pause` on silence, and ends at its one full stop, `!`, `?` or `؟`. Write
-   for the brief's audience, about its focus; say or show each `must` item
+   spoken characters (letters, digits) land within 10% of (seconds -
+   sentences × `pause`) × the narrator's `rate` (chars/s,
+   `<skill>/narrators.json`): a sentence spends `pause` silent, and ends at
+   its one full stop, `!`, `?` or `؟`. Write for the brief's audience,
+   about its focus; say or show each `must` item
    and none of the `avoid` items. Every sentence that states a fact cites the
    excerpts that state it; a transition or framing question is `[no-claim]`.
    No em or en dashes anywhere, and at most 25 words a sentence. Leave the
