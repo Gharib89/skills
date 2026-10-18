@@ -50,7 +50,7 @@ check_rc "a differently cased URL fails" 1 "$(rc_of "$d")"
 d=$(repo cased-host skills/a/SKILL.md 'see https://GitHub.COM/Gharib89/skills/wiki/Home')
 check_rc "a differently cased host fails" 1 "$(rc_of "$d")"
 
-d=$(repo raw skills/a/SKILL.md 'fetch https://RAW.GitHubUserContent.com/Gharib89/skills/main/x.md')
+d=$(repo raw skills/a/SKILL.md 'fetch https://raw.githubusercontent.com/Gharib89/skills/main/x.md')
 check_rc "a raw-content URL fails" 1 "$(rc_of "$d")"
 
 d=$(repo new-issue skills/a/SKILL.md 'open [a new issue](https://github.com/Gharib89/skills/issues/new) or read https://github.com/Gharib89/skills.')
