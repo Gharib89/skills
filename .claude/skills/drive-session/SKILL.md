@@ -159,11 +159,12 @@ line names the parent and any merge allowance
    on an escalation keeps it. The gate slice, blocked by every other slice,
    starts once all of them are closed. Before spawning a slice, list the PRs
    merged to main since its agent brief was posted (the brief comment's
-   `created_at`, then `gh pr list --state merged --base main --limit 100
-   --search "merged:>=<date>"`) and compare their changed files with the
-   areas the brief names: on an overlap, the spawn prompt gains one line
-   telling the run to re-check the brief against main in phase 1, naming those
-   PRs, since a brief written before a merge can describe code that has moved.
+   `created_at`, then `gh pr list --state merged --base main --limit 1000
+   --search "merged:>=<date>"`, a full 1000 rows being truncated: narrow the
+   date) and compare their changed files with the areas the brief names: on an
+   overlap, the spawn prompt gains one line telling the run to re-check the
+   brief against main in phase 1, naming those PRs, since a brief written
+   before a merge can describe code that has moved.
 3. **Merges.** The launch line's merge allowance covers every PR in the spec,
    and only on Ship's own `run-file gate clean`, as Escalation says. After
    each merge, fast-forward main as above, then re-run `frontier`.
