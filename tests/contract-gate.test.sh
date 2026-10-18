@@ -727,7 +727,7 @@ And `update-pr-body 5 --preamble --body-file b` too.
 check_rc "invocations with their required flags, and a fenced sample, pass" 0 "$rc"
 check "and print nothing" "" "$out"
 
-# 15. Three shell rules grep can hold. One fixture per violation, each asserting
+# 15. Four shell rules grep can hold. One fixture per violation, each asserting
 # the exit code and the one printed reason, and a passing fixture of near misses
 # alone.
 shell_run() { # <case> <file-content>: leaves the fixture's path in `sk`
@@ -819,6 +819,92 @@ rm "$sk/ship/scripts/_lib.sh.bak"
 run "$inert" "$sk"
 check_rc "near misses, and a fence pattern inside the SHIP_AWK_FENCE definition, pass" 0 "$rc"
 check "and print nothing" "" "$out"
+
+# A pipe into a quiet grep in a script that sets pipefail: grep -q exits at its
+# first match, the writer dies of SIGPIPE, and the pipeline reads as no match
+# (#758). Each spelling of the quiet flag, and the continued-line form, fails.
+# The check scans this directory too, so a fixture writes PIPE for the pipe and
+# `pipes` turns it back; a literal one here would be a violation of its own.
+pipes() { printf '%s' "${1//PIPE/|}"; }
+pipe_msg='a pipe into a quiet grep under pipefail fails open on SIGPIPE; read the writer'"'"'s output into a variable and use grep -q PATTERN <<<"$var"'
+pipe_case() { # <name> <line>: a pipefail script whose line 3 is <line>, which fails
+  shell_run "pipe-$1" "$(pipes "#!/usr/bin/env bash
+set -uo pipefail
+$2")"
+  check_rc "a pipe into a quiet grep ($1) under pipefail fails" 1 "$rc"
+  check "and is named at its line" "$sk/zz/bad.sh:3: $pipe_msg" "$out"
+}
+pipe_case short 'printf x PIPE grep -q x'
+pipe_case bundled 'printf x PIPE grep -Eq x'
+pipe_case reordered 'printf x PIPE grep -qE x'
+pipe_case apart 'printf x PIPE grep -E -q x'
+pipe_case after-pattern 'printf x PIPE grep -e x -q'
+pipe_case long 'printf x PIPE grep --quiet x'
+pipe_case silent 'printf x PIPE grep --silent x'
+pipe_case egrep 'printf x PIPE egrep -q x'
+pipe_case stderr-too 'printf x PIPE& grep -q x'
+pipe_case after-and 'true && printf x PIPE grep -q x'
+pipe_case env-assignment 'printf x PIPE LC_ALL=C grep -q x'
+pipe_case env-command 'printf x PIPE env LC_ALL=C grep -q x'
+pipe_case command-prefix 'printf x PIPE command grep -q x'
+pipe_case grep-path 'printf x PIPE /usr/bin/grep -q x'
+# A trailing pipe or a backslash continues the command; the line named is its first.
+pipe_case trailing-pipe 'printf x PIPE
+  grep -q x'
+pipe_case trailing-pipe-stderr 'printf x PIPE&
+  grep -q x'
+pipe_case backslash 'printf x PIPE \
+  grep -q x'
+
+# Its here-string form passes, and so does everything that only looks like it.
+shell_run pipe-grep-near-misses "$(pipes '#!/usr/bin/env bash
+set -uo pipefail
+# printf x PIPE grep -q x is prose
+grep -q x <<<"$v"
+printf x PIPE grep x
+printf x PIPE grep -c q
+cmd PIPEPIPE grep -q x "$f"
+grep -q x "$f"
+printf x PIPE grep x && grep -q y "$f"
+printf x PIPE grep -e x -- -q
+printf x PIPE LC_ALL=C grep x
+printf x PIPE env LC_ALL=C sort')"
+check_rc "a here-string grep -q and near misses pass under pipefail" 0 "$rc"
+check "and print nothing" "" "$out"
+
+# Without pipefail the pipeline status is grep's own, so the shape is harmless.
+shell_run pipe-grep-no-pipefail "$(pipes '#!/usr/bin/env bash
+printf x PIPE grep -q x')"
+check_rc "a pipe into grep -q in a script that sets no pipefail passes" 0 "$rc"
+
+# An <extra-dir> is scanned like the skills tree: the repo's own scripts, tests
+# and hooks set pipefail too.
+d=$fixture/extra; mkdir -p "$d"
+pipes '#!/usr/bin/env bash
+set -uo pipefail
+printf x PIPE grep -q x
+' > "$d/gate.sh"
+out=$(bash scripts/contract-check.sh "$inert" skills "$d" 2>/dev/null); rc=$?
+check_rc "a pipe into grep -q under an extra directory fails" 1 "$rc"
+check "and is named at its line" "$d/gate.sh:3: $pipe_msg" "$out"
+out=$(bash scripts/contract-check.sh "$inert" skills "$fixture/absent" 2>/dev/null); rc=$?
+check_rc "an absent extra directory is tooling, not a pass" 2 "$rc"
+# An awk that fails on the scan leaves the file looking clean, so it is tooling
+# too: a stub awk refuses the check-16 program (the one naming --silent).
+real_awk=$(command -v awk)
+mkdir -p "$fixture/bin"
+printf '#!/bin/sh\ncase "$*" in *--silent*) exit 2 ;; esac\nexec %s "$@"\n' "$real_awk" > "$fixture/bin/awk"
+chmod +x "$fixture/bin/awk"
+out=$(PATH="$fixture/bin:$PATH" bash scripts/contract-check.sh "$inert" skills "$d" 2>/dev/null); rc=$?
+check_rc "a scan awk fails on is tooling, not a pass" 2 "$rc"
+if [ "$(id -u)" -ne 0 ]; then
+  mkdir -p "$d/sealed"; chmod 000 "$d/sealed"
+  out=$(bash scripts/contract-check.sh "$inert" skills "$d" 2>/dev/null); rc=$?
+  chmod 755 "$d/sealed"
+  check_rc "an extra directory the search cannot read is tooling, not a pass" 2 "$rc"
+else
+  skipped "an extra directory the search cannot read is tooling, not a pass"
+fi
 
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.

@@ -40,3 +40,12 @@ repos:
         language: system
         types: [markdown]
         pass_filenames: false
+      # A skill's SKILL.md word budget and its references' `## Contents` map, at
+      # the edit that breaks them rather than at the local gate. The script
+      # reads the whole tree, so it takes no file list.
+      - id: prose-budget
+        name: prose-budget
+        entry: scripts/prose-budget-check.sh
+        language: system
+        files: ^skills/[^/]+/(SKILL\.md|reference/[^/]+\.md)$
+        pass_filenames: false

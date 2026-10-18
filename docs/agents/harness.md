@@ -45,6 +45,6 @@ Local-only: None.
 Declined: shfmt: its default tab indent rewrites every indented line of this repo's two-space scripts, a change across the skills this repo writes; no Go toolchain on the maintainer's machine
 Declined: markdownlint-cli2: 264 findings over the skills' prose (MD024 fires on the catalog's repeated tool headings by design); adopting it is its own ticket, and house-style and prose-budget already hold these files
 Declined: Prettier on Markdown: rewrites 40 files across the skills this repo writes; its own ticket, as markdownlint-cli2
-Declined: *.md *.markdown in EDIT_GLOBS: house-style is a whole-repo check that #518 placed at the commit rung, so a Markdown edit does not pay it on every write
+Declined: house-style at the edit rung: it is a whole-repo check that #518 placed at the commit rung, so a Markdown edit does not pay it on every write; `EDIT_RUN`'s `--skip house-style` keeps it there while `*.md` rides `EDIT_GLOBS` for prose-budget
 Declined: skills/explainer-video npm ci in DEPS_ROWS: its dependencies (hyperframes, onnxruntime-node) are the per-user tool cache's payload, which setup.mjs installs there and never in the skill's own folder; its tests run on a fake backend and need none of them
 Declined: ESLint on skills/explainer-video: the default adds eslint and @eslint/js to a manifest setup.mjs installs with npm ci into every user's tool cache, and moves the lock hash that keys that cache

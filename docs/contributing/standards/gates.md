@@ -86,6 +86,9 @@ do to pass.
   `contract` gate: it drains the loop's remaining rows on Bash 3.2 and 5.3.
 - No hand-rolled three-backtick fence pattern in a shell file under `skills/`
   outside `_lib.sh`'s `SHIP_AWK_FENCE`, per the `contract` gate.
+- No pipe into a quiet grep in a shell file that sets pipefail, under
+  `skills/`, `scripts/`, `tests/` and `.claude/hooks/`, per the `contract` gate:
+  the writer's SIGPIPE reads as no match.
 - The skills' own documents inside their prose budget, per the `prose-budget`
   gate: `skills/*/SKILL.md` at most 3500 words, and every
   `skills/*/reference/*.md` over 100 lines opening with a `## Contents` list
