@@ -1,0 +1,429 @@
+{
+ "naive": {
+  "frames": {
+   "whole": 9417,
+   "joined": 9418,
+   "sections": [
+    2966,
+    3147,
+    3305
+   ],
+   "planned": [
+    2966,
+    3147,
+    3305
+   ]
+  },
+  "identical_frames": "3148/9418",
+  "section_offsets_in_whole": [
+   {
+    "offset": 0,
+    "matching": 2966,
+    "of": 2966
+   },
+   {
+    "offset": -1,
+    "matching": 39,
+    "of": 3147
+   },
+   {
+    "offset": -1,
+    "matching": 389,
+    "of": 3305
+   }
+  ],
+  "joined_pts": {
+   "time_base": "1/15360",
+   "steps": [
+    512
+   ],
+   "keyframes_at_section_starts": true,
+   "section_starts": [
+    0,
+    2966,
+    6113
+   ]
+  },
+  "opener_start_frames": [
+   0,
+   2965.05,
+   6112.05
+  ],
+  "captions_whole": {
+   "cues": 86,
+   "off_frame": []
+  },
+  "captions_joined": {
+   "cues": 86,
+   "off_frame": [
+    {
+     "t": 106.615,
+     "frame": 3199,
+     "late_by": 1
+    },
+    {
+     "t": 114.955,
+     "frame": 3449,
+     "late_by": 1
+    },
+    {
+     "t": 120.195,
+     "frame": 3606,
+     "late_by": 1
+    },
+    {
+     "t": 124.8,
+     "frame": 3744,
+     "late_by": 1
+    },
+    {
+     "t": 128.9,
+     "frame": 3867,
+     "late_by": 1
+    },
+    {
+     "t": 133.06,
+     "frame": 3992,
+     "late_by": 1
+    },
+    {
+     "t": 135.4,
+     "frame": 4062,
+     "late_by": 1
+    },
+    {
+     "t": 139.26,
+     "frame": 4178,
+     "late_by": 1
+    },
+    {
+     "t": 140.48,
+     "frame": 4215,
+     "late_by": 1
+    },
+    {
+     "t": 145.46,
+     "frame": 4364,
+     "late_by": 1
+    },
+    {
+     "t": 147.56,
+     "frame": 4427,
+     "late_by": 1
+    },
+    {
+     "t": 150.03,
+     "frame": 4501,
+     "late_by": 1
+    },
+    {
+     "t": 154.99,
+     "frame": 4650,
+     "late_by": 1
+    },
+    {
+     "t": 157.89,
+     "frame": 4737,
+     "late_by": 1
+    },
+    {
+     "t": 164.53,
+     "frame": 4936,
+     "late_by": 1
+    },
+    {
+     "t": 169.01,
+     "frame": 5071,
+     "late_by": 1
+    },
+    {
+     "t": 171.25,
+     "frame": 5138,
+     "late_by": 1
+    },
+    {
+     "t": 176.47,
+     "frame": 5295,
+     "late_by": 1
+    },
+    {
+     "t": 178.605,
+     "frame": 5359,
+     "late_by": 1
+    },
+    {
+     "t": 183.225,
+     "frame": 5497,
+     "late_by": 1
+    },
+    {
+     "t": 188.185,
+     "frame": 5646,
+     "late_by": 1
+    },
+    {
+     "t": 193.545,
+     "frame": 5807,
+     "late_by": 1
+    },
+    {
+     "t": 200.525,
+     "frame": 6016,
+     "late_by": 1
+    },
+    {
+     "t": 206.475,
+     "frame": 6195,
+     "late_by": 1
+    },
+    {
+     "t": 211.715,
+     "frame": 6352,
+     "late_by": 1
+    },
+    {
+     "t": 223.015,
+     "frame": 6691,
+     "late_by": 1
+    },
+    {
+     "t": 230.485,
+     "frame": 6915,
+     "late_by": 1
+    },
+    {
+     "t": 235.445,
+     "frame": 7064,
+     "late_by": 1
+    },
+    {
+     "t": 239.045,
+     "frame": 7172,
+     "late_by": 1
+    },
+    {
+     "t": 244.265,
+     "frame": 7328,
+     "late_by": 1
+    },
+    {
+     "t": 249.525,
+     "frame": 7486,
+     "late_by": 1
+    },
+    {
+     "t": 254.745,
+     "frame": 7643,
+     "late_by": 1
+    },
+    {
+     "t": 256.83,
+     "frame": 7705,
+     "late_by": 1
+    },
+    {
+     "t": 264.27,
+     "frame": 7929,
+     "late_by": 1
+    },
+    {
+     "t": 269.29,
+     "frame": 8079,
+     "late_by": 1
+    },
+    {
+     "t": 271.65,
+     "frame": 8150,
+     "late_by": 1
+    },
+    {
+     "t": 276.31,
+     "frame": 8290,
+     "late_by": 1
+    },
+    {
+     "t": 278.91,
+     "frame": 8368,
+     "late_by": 1
+    },
+    {
+     "t": 283.87,
+     "frame": 8517,
+     "late_by": 1
+    },
+    {
+     "t": 285.3,
+     "frame": 8559,
+     "late_by": 1
+    },
+    {
+     "t": 290.28,
+     "frame": 8709,
+     "late_by": 1
+    },
+    {
+     "t": 291.42,
+     "frame": 8743,
+     "late_by": 1
+    },
+    {
+     "t": 296.36,
+     "frame": 8891,
+     "late_by": 1
+    },
+    {
+     "t": 298.16,
+     "frame": 8945,
+     "late_by": 1
+    },
+    {
+     "t": 303.5,
+     "frame": 9105,
+     "late_by": 1
+    },
+    {
+     "t": 306.8,
+     "frame": 9204,
+     "late_by": 1
+    },
+    {
+     "t": 311.76,
+     "frame": 9353,
+     "late_by": 1
+    }
+   ]
+  }
+ },
+ "snapped": {
+  "frames": {
+   "whole": 9422,
+   "joined": 9422,
+   "sections": [
+    2967,
+    3149,
+    3306
+   ],
+   "planned": [
+    2967,
+    3149,
+    3306
+   ]
+  },
+  "identical_frames": "4292/9422",
+  "section_offsets_in_whole": [
+   {
+    "offset": 0,
+    "matching": 2967,
+    "of": 2967
+   },
+   {
+    "offset": 0,
+    "matching": 750,
+    "of": 3149
+   },
+   {
+    "offset": 0,
+    "matching": 575,
+    "of": 3306
+   }
+  ],
+  "joined_pts": {
+   "time_base": "1/15360",
+   "steps": [
+    512
+   ],
+   "keyframes_at_section_starts": true,
+   "section_starts": [
+    0,
+    2967,
+    6116
+   ]
+  },
+  "opener_start_frames": [
+   0,
+   2967,
+   6116
+  ],
+  "captions_whole": {
+   "cues": 86,
+   "off_frame": []
+  },
+  "captions_joined": {
+   "cues": 86,
+   "off_frame": []
+  }
+ },
+ "determinism_s2_rerender": "3149/3149 frames identical",
+ "edit": {
+  "changed_frames": 624,
+  "first": 903,
+  "last": 1526,
+  "climate_scene_frames": [
+   769,
+   1527
+  ]
+ },
+ "audio_mux_once": {
+  "streams": [
+   {
+    "codec_type": "video",
+    "start_time": "0.000000",
+    "duration": "314.066667",
+    "nb_frames": "9422"
+   },
+   {
+    "codec_type": "audio",
+    "start_time": "0.000000",
+    "duration": "314.066000",
+    "nb_frames": "14723"
+   },
+   {
+    "codec_type": "data",
+    "start_time": "0.000000",
+    "duration": "314.067000",
+    "nb_frames": "3"
+   }
+  ],
+  "chapters": [
+   {
+    "title": "hook",
+    "start": "0.000000",
+    "frame": 0,
+    "is_opener_frame0": true,
+    "changes_from_previous": true
+   },
+   {
+    "title": "structure",
+    "start": "98.900000",
+    "frame": 2967,
+    "is_opener_frame0": true,
+    "changes_from_previous": true
+   },
+   {
+    "title": "flow",
+    "start": "203.867000",
+    "frame": 6116,
+    "is_opener_frame0": true,
+    "changes_from_previous": true
+   }
+  ],
+  "lag_samples_at_joins": [
+   0,
+   0
+  ],
+  "lag_samples_at_end": 0,
+  "hyperframes_whole_lag_at_joins": [
+   0,
+   0
+  ]
+ },
+ "audio_per_section": {
+  "duration_s": 314.1547,
+  "reference_s": 314.0667,
+  "lag_samples_at_joins": [
+   2112,
+   3840
+  ],
+  "lag_samples_at_end": 3840
+ }
+}

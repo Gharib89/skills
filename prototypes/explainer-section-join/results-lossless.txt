@@ -1,0 +1,17 @@
+Lossless renders (--crf 0), snapped timing, measured with ffmpeg framemd5 on 2026-10-18.
+
+joined s1+s2+s3 vs whole: 9422 vs 9422 frames, 9369 identical, 53 differ (PSNR >= 42.73 dB)
+every one of the 53 differs only in the captions box (crop 1680x104+120+908)
+every one of the 53 sits on a caption word time that falls exactly on a frame boundary
+  (all in s3: its offset 203.8666... s is a repeating decimal, so a shifted word
+  time written to 6 places rounds up past the frame in the whole composition)
+s3 rendered 3 times: 0 frames differ between any two
+whole rendered 2 times: 0 frames differ
+each s3 render vs each whole render: the same 53 frames differ
+
+Lossy (--quality looks, CRF 16): joined vs whole 4292/9422 bit-identical, rest PSNR >= 42.72 dB
+(x264 state: a section opens on an IDR where the whole stream predicts from earlier frames;
+ whole keyframes at 1 251 501 ... 2913 3163 ..., sections at 0 2967 6116)
+
+Per-section determinism gate (gate.mjs, backend.frame twice + whole at the same absolute time):
+[{"section":1,"t":5,"a_eq_b":true,"section_eq_whole":true},{"section":2,"t":5,"a_eq_b":true,"section_eq_whole":true},{"section":3,"t":5,"a_eq_b":true,"section_eq_whole":true}]

@@ -1,0 +1,164 @@
+<title>Section Join Probe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: one reading column, a frame-grid diagram as the hero, a ledger of measurements, the decisions last. */
+:root {
+  --bg: #f6f7f5; --panel: #ffffff; --fg: #1d2420; --muted: #5b655f; --line: #d5dbd6;
+  --accent: #1f6f5c; --late: #b5512d; --ok: #2f7d3a; --cell: #e7ece8; --cellb: #c9d2cc;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #131816; --panel: #1b211e; --fg: #e3e8e4; --muted: #9aa59f; --line: #2e3833;
+  --accent: #5cc0a4; --late: #e48a63; --ok: #7fc98a; --cell: #232b27; --cellb: #3a4640; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #131816; --panel: #1b211e; --fg: #e3e8e4; --muted: #9aa59f; --line: #2e3833;
+  --accent: #5cc0a4; --late: #e48a63; --ok: #7fc98a; --cell: #232b27; --cellb: #3a4640; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 17px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px; }
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 2.1rem; font-weight: 700; }
+h2 { font-size: 1.3rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 600 0.78rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 14px; }
+.verdict { border-left: 3px solid var(--accent); padding: 4px 0 4px 18px; display: grid; gap: 10px; }
+.verdict strong { font-family: var(--display); font-weight: 700; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+.fig { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+.fig svg { display: block; min-width: 640px; width: 100%; height: auto; }
+.fig svg text { font-family: var(--mono); font-size: 12px; fill: var(--muted); }
+.fig svg .lab { fill: var(--fg); font-weight: 600; }
+.fig svg .late { fill: var(--late); }
+.fig svg .ok { fill: var(--ok); }
+.cap { font-size: 0.92rem; color: var(--muted); }
+.table { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 0.95rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 0.75rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+td.n { font-family: var(--mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font: 600 0.72rem var(--mono); padding: 1px 8px; border-radius: 99px; margin-right: 6px; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); } .pill.late { color: var(--late); }
+.frames { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.frames figure { margin: 0; display: grid; gap: 6px; }
+.frames img { width: 100%; border: 1px solid var(--line); border-radius: 4px; display: block; }
+.frames figcaption { font: 0.78rem var(--mono); color: var(--muted); }
+ol.calls { margin: 0; padding-left: 1.3em; display: grid; gap: 14px; }
+ol.calls li { padding-left: 4px; }
+ol.calls b { font-family: var(--display); }
+.rec { color: var(--accent); font: 600 0.78rem var(--mono); letter-spacing: 0.04em; }
+.foot { font-size: 0.9rem; color: var(--muted); display: grid; gap: 6px; }
+a { color: var(--accent); }
+@media (max-width: 560px) { h1 { font-size: 1.6rem; } .frames { grid-template-columns: minmax(0, 1fr); } }
+</style>
+
+<main>
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">Wayfinder prototype · explainer-video · 2026-10-18</div>
+    <h1>Section join on dora-core</h1>
+    <p>Does a long video render per section and join cleanly? Twelve dora-core scenes (hook to infra, 5 min 14 s), cut into three sections opened by <em>hook</em>, <em>structure</em> and <em>flow</em>, each rendered on its own and joined with <code>ffmpeg -f concat -c copy</code>, against the same twelve scenes rendered whole.</p>
+  </header>
+
+  <section class="verdict">
+    <strong>Yes, once a section starts on a frame boundary.</strong>
+    <p>The concat is frame-exact; the risk sits in the timeline. The composer times scenes to the millisecond, so a section opener falls between frames (structure starts at frame 2965.05). Each section renders <code>ceil(duration × 30)</code> frames, and the joined video gains up to one frame per join. Round every scene's duration up to whole frames and the joined video equals the whole render frame for frame: chapters land on the opener, captions on the right frame, and the audio stays sample-exact when it is mixed once over the joined video.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Where the opener lands</div>
+    <h2>The boundary between rubric and structure, frame by frame</h2>
+    <div class="fig">
+      <svg viewBox="0 0 760 250" role="img" aria-label="Frame grid around 98.8 seconds: the naive section 2 starts one frame after the opener's time, the snapped one starts on it">
+        <text x="0" y="16" class="lab">frame</text>
+        <g id="ticks"></g>
+        <text x="0" y="80" class="lab">naive</text>
+        <text x="0" y="96">ms times</text>
+        <text x="0" y="170" class="lab">snapped</text>
+        <text x="0" y="186">whole frames</text>
+      </svg>
+    </div>
+    <p class="cap">One cell is one frame (33.3 ms). Naive: structure is timed at 98.835 s, between frames 2965 and 2966, so section 1 renders 2966 frames and section 2's first frame (structure at its own time 0) goes out at frame 2966 against an audio clock that reached structure 0.95 frame earlier. Snapped: every scene's duration rounded up to whole frames moves structure to 98.900 s, exactly frame 2967, and the narration is padded with the same silence.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Measured</div>
+    <h2>What each check returned</h2>
+    <div class="table"><table>
+      <thead><tr><th>Check</th><th>Naive</th><th>Snapped</th></tr></thead>
+      <tbody>
+        <tr><td>Frame count, joined against whole</td><td class="n"><span class="pill late">+1</span>9418 vs 9417 (sections 2966, 3147, 3305)</td><td class="n"><span class="pill ok">equal</span>9422 vs 9422 (2967, 3149, 3306)</td></tr>
+        <tr><td>Same pictures as the whole render (lossless, CRF 0)</td><td class="n">section 2 and 3 a sub-frame phase off: 39 and 389 of their frames match</td><td class="n"><span class="pill ok">9369 / 9422</span>the other 53 are caption-word highlights tied to an exact frame time (below)</td></tr>
+        <tr><td>Concat stream</td><td class="n" colspan="2">pts step constant (512 / 15360 s), a keyframe at every section start, both modes: no dropped, doubled or shifted frame at a join</td></tr>
+        <tr><td>Captions on their frame (86 cues)</td><td class="n"><span class="pill late">47 late</span>every cue past the first join that moves is one frame late</td><td class="n"><span class="pill ok">86 / 86</span></td></tr>
+        <tr><td>MP4 chapter marks</td><td class="n">n/a</td><td class="n"><span class="pill ok">3 / 3</span>frames 0, 2967, 6116, each the opener's first frame</td></tr>
+        <tr><td>Audio mixed once over the joined video</td><td class="n">n/a</td><td class="n"><span class="pill ok">0 samples</span>lag at both joins and at the end (AAC encoded once, 48 kHz cross-correlation)</td></tr>
+        <tr><td>Audio encoded per section, then concat</td><td class="n">n/a</td><td class="n"><span class="pill late">+44 ms, +80 ms</span>at joins 1 and 2: AAC priming and padding stack up per join</td></tr>
+        <tr><td>Determinism gate per section</td><td class="n">n/a</td><td class="n"><span class="pill ok">holds</span>a frame seeked twice from each section is pixel-identical, and equal to the whole composition at the same absolute time; s3 rendered 3 times and the whole twice: 0 frames differ</td></tr>
+        <tr><td>A fix to one section</td><td class="n">n/a</td><td class="n"><span class="pill ok">only s2</span>a label edited in <em>climate</em>: s2 re-rendered, 624 frames changed, all inside climate (frames 903 to 1526 of its 769 to 1527); s1 and s3 reused unchanged</td></tr>
+      </tbody>
+    </table></div>
+    <p class="cap">At the composer's own quality (CRF 16) the joined video is bit-identical to the whole render on 4292 of 9422 frames and at least 42.7 dB PSNR elsewhere: a section opens on a keyframe where the whole stream predicts from earlier frames. That is encoder state, not a different picture; the lossless run above is the picture test.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Frames at the joins, snapped</div>
+    <div class="frames">
+      <figure><img alt="Frame 2966, rubric's last frame" src="{{snapped-join2-2966}}"><figcaption>2966 · rubric, last frame of section 1</figcaption></figure>
+      <figure><img alt="Frame 2967, structure's first frame" src="{{snapped-join2-2967}}"><figcaption>2967 · structure, chapter 2 starts here</figcaption></figure>
+      <figure><img alt="Frame 6115, culture's last frame" src="{{snapped-join3-6115}}"><figcaption>6115 · culture, last frame of section 2</figcaption></figure>
+      <figure><img alt="Frame 6116, flow's first frame" src="{{snapped-join3-6116}}"><figcaption>6116 · flow, chapter 3 starts here</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Two smaller finds</div>
+    <p><b>A time written a hair long gains a frame.</b> HyperFrames renders <code>ceil(duration × fps)</code> frames, so a frame-exact duration printed as <code>104.966667</code> (3149.00001 frames) renders 3150. The prototype's first build lost one frame that way; it now truncates. The 53 lossless differences are the same effect on caption words: in section 3, whose offset 203.8666... s never terminates, a word time shifted to the whole timeline and written to six places rounds past its frame, so the highlight shows one frame later in the whole render than in the section. Times on the frame grid want integer frames, not decimals.</p>
+    <p><b>HyperFrames' own <code>--resume</code> does not do this job.</b> Its segment reuse is keyed by a hash of the whole composition (read from source, <code>computeSegmentPlanHash</code>), so it resumes a crashed render but reuses nothing after an edit.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Your call</div>
+    <h2>What the spec carries from this</h2>
+    <ol class="calls">
+      <li><b>Time every scene on the frame grid.</b> <span class="rec">RECOMMENDED</span><br>Each scene's duration rounds up to whole frames, its WAV padded with that silence, so every scene start (and with it every section opener, still and gate sample) is a whole frame. Cost: under 33 ms per scene; these 12 scenes grew 0.18 s. The alternative, snapping only section openers, keeps two timing rules in the composer for no saving.</li>
+      <li><b>Sections render video only and join with a stream copy; the audio is mixed and AAC-encoded once on the joined file, with the chapters.</b><br>This is the shape the long-video ticket chose; the probe confirms it and rules out encoding audio per section (44 ms, then 80 ms off).</li>
+      <li><b>The determinism gate compares a section with itself.</b><br>It holds per section. The joined file is not bit-identical to a whole render under lossy encoding, and nothing should test that.</li>
+      <li><b>Times are integer frames inside the composer</b>, written out truncated, never rounded up.</li>
+    </ol>
+    <p>Reply in the session: take the recommendations, or say which to change.</p>
+  </section>
+
+  <footer class="foot">
+    <div>Measured on this machine (RTX 2070 Super Max-Q, HyperFrames 0.8.160, <code>--fps 30 --workers 3</code>). Single render wall times were too noisy to quote: the same 99 s section took 40 s in one run and 120 s in another.</div>
+    <div>Source: <code>prototypes/explainer-section-join/</code> on branch <code>prototype/explainer-section-join</code> (<code>build.mjs</code>, <code>bench.sh</code>, <code>analyze.py</code>, <code>gate.mjs</code>, results). Ticket: <a href="https://github.com/Gharib89/skills/issues/794">Section join: render a long video per section and concat</a>.</div>
+  </footer>
+</main>
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg", svg = document.querySelector(".fig svg");
+  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; };
+  const x0 = 120, w = 104, f0 = 2963;
+  const xf = (f) => x0 + (f - f0) * w;
+  for (let f = f0; f <= f0 + 6; f++) {
+    el("line", { x1: xf(f), y1: 24, x2: xf(f), y2: 230, stroke: "var(--line)" });
+    if (f < f0 + 6) { const t = el("text", { x: xf(f) + 6, y: 16 }); t.textContent = f + " · " + (f / 30).toFixed(3); }
+  }
+  const row = (y, cells) => cells.forEach(([f, label, kind]) => {
+    el("rect", { x: xf(f) + 2, y, width: w - 4, height: 34, rx: 3, fill: kind === "s2" ? "var(--cellb)" : "var(--cell)" });
+    const t = el("text", { x: xf(f) + 8, y: y + 21, class: kind === "s2" ? "lab" : "" }); t.textContent = label;
+  });
+  row(64, [[2963, "rubric"], [2964, "rubric"], [2965, "rubric"], [2966, "structure 0"], [2967, "structure"], [2968, "structure"]]);
+  row(154, [[2963, "rubric"], [2964, "rubric"], [2965, "rubric"], [2966, "rubric"], [2967, "structure 0"], [2968, "structure"]]);
+  const mark = (t, y, cls, text) => {
+    const x = x0 + (t * 30 - f0) * w;
+    el("line", { x1: x, y1: y - 10, x2: x, y2: y + 46, stroke: cls === "late" ? "var(--late)" : "var(--ok)", "stroke-width": 2 });
+    const tx = el("text", { x: x + 4, y: y + 62, class: cls }); tx.textContent = text;
+  };
+  mark(98.835, 64, "late", "structure's audio starts 98.835 s: picture 0.95 frame late");
+  mark(98.9, 154, "ok", "structure starts 98.900 s = frame 2967: picture and audio together");
+})();
+</script>

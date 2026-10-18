@@ -1,0 +1,17 @@
+{"dir":"<work>/naive/whole","out":"<work>/renders/naive-whole.mp4","extra":["--quality","looks"],"code":0,"wall":154.33}
+{"dir":"<work>/naive/s1","out":"<work>/renders/naive-s1.mp4","extra":["--quality","looks"],"code":0,"wall":119.84}
+{"dir":"<work>/naive/s2","out":"<work>/renders/naive-s2.mp4","extra":["--quality","looks"],"code":0,"wall":52.24}
+{"dir":"<work>/naive/s3","out":"<work>/renders/naive-s3.mp4","extra":["--quality","looks"],"code":0,"wall":46.43}
+{"dir":"<work>/snapped/whole","out":"<work>/renders/snapped-whole.mp4","extra":["--quality","looks"],"code":0,"wall":142.67}
+{"dir":"<work>/snapped/s1","out":"<work>/renders/snapped-s1.mp4","extra":["--quality","looks"],"code":0,"wall":40.24}
+{"dir":"<work>/snapped/s2","out":"<work>/renders/snapped-s2.mp4","extra":["--quality","looks"],"code":0,"wall":42.94}
+{"dir":"<work>/snapped/s3","out":"<work>/renders/snapped-s3.mp4","extra":["--quality","looks"],"code":0,"wall":122.49}
+{"dir":"<work>/snapped/s2edit","out":"<work>/renders/snapped-s2edit.mp4","extra":["--quality","looks"],"code":0,"wall":62.75}
+{"dir":"<work>/snapped/s2","out":"<work>/renders/snapped-s2:again.mp4","extra":["--quality","looks"],"code":0,"wall":48.55}
+{"dir":"<work>/snapped/whole","out":"<work>/renders/snapped-whole-crf0.mp4","extra":["--quality","looks","--crf","0"],"code":0,"wall":187.59}
+{"dir":"<work>/snapped/s1","out":"<work>/renders/snapped-s1-crf0.mp4","extra":["--quality","looks","--crf","0"],"code":0,"wall":52.62}
+{"dir":"<work>/snapped/s2","out":"<work>/renders/snapped-s2-crf0.mp4","extra":["--quality","looks","--crf","0"],"code":0,"wall":55.7}
+{"dir":"<work>/snapped/s3","out":"<work>/renders/snapped-s3-crf0.mp4","extra":["--quality","looks","--crf","0"],"code":0,"wall":57.67}
+{"dir":"<work>/snapped/s3","out":"<work>/renders/snapped-s3-crf0-b.mp4","extra":["--quality","looks","--crf","0"],"code":0,"wall":56.79}
+{"dir":"<work>/snapped/s3","out":"<work>/renders/snapped-s3-crf0-c.mp4","extra":["--quality","looks","--crf","0"],"code":0,"wall":58.41}
+{"dir":"<work>/snapped/whole","out":"<work>/renders/snapped-whole-crf0-b.mp4","extra":["--quality","looks","--crf","0"],"code":0,"wall":189.76}

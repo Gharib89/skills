@@ -1,0 +1,178 @@
+{
+  "naive": {
+    "total": 313.885,
+    "sections": [
+      {
+        "opener": "hook",
+        "start": 0,
+        "duration": 98.835,
+        "startFrames": 0,
+        "frames": 2966
+      },
+      {
+        "opener": "structure",
+        "start": 98.835,
+        "duration": 104.9,
+        "startFrames": 2965.05,
+        "frames": 3147
+      },
+      {
+        "opener": "flow",
+        "start": 203.735,
+        "duration": 110.15,
+        "startFrames": 6112.05,
+        "frames": 3305
+      }
+    ],
+    "scenes": [
+      {
+        "id": "hook",
+        "start": 0,
+        "duration": 26.69
+      },
+      {
+        "id": "context",
+        "start": 26.69,
+        "duration": 29.55
+      },
+      {
+        "id": "trails",
+        "start": 56.24,
+        "duration": 23.775
+      },
+      {
+        "id": "rubric",
+        "start": 80.015,
+        "duration": 18.82
+      },
+      {
+        "id": "structure",
+        "start": 98.83500000000001,
+        "duration": 25.625
+      },
+      {
+        "id": "climate",
+        "start": 124.46000000000001,
+        "duration": 25.25
+      },
+      {
+        "id": "maintain",
+        "start": 149.71,
+        "duration": 28.575
+      },
+      {
+        "id": "culture",
+        "start": 178.285,
+        "duration": 25.45
+      },
+      {
+        "id": "flow",
+        "start": 203.73499999999999,
+        "duration": 26.45
+      },
+      {
+        "id": "delivery",
+        "start": 230.18499999999997,
+        "duration": 26.325
+      },
+      {
+        "id": "deploy",
+        "start": 256.51,
+        "duration": 28.45
+      },
+      {
+        "id": "infra",
+        "start": 284.96,
+        "duration": 28.925
+      }
+    ]
+  },
+  "snapped": {
+    "total": 314.066667,
+    "sections": [
+      {
+        "opener": "hook",
+        "start": 0,
+        "duration": 98.9,
+        "startFrames": 0,
+        "frames": 2967
+      },
+      {
+        "opener": "structure",
+        "start": 98.9,
+        "duration": 104.966667,
+        "startFrames": 2967,
+        "frames": 3149
+      },
+      {
+        "opener": "flow",
+        "start": 203.866667,
+        "duration": 110.2,
+        "startFrames": 6116,
+        "frames": 3306
+      }
+    ],
+    "scenes": [
+      {
+        "id": "hook",
+        "start": 0,
+        "duration": 26.7
+      },
+      {
+        "id": "context",
+        "start": 26.7,
+        "duration": 29.566666666666666
+      },
+      {
+        "id": "trails",
+        "start": 56.266666666666666,
+        "duration": 23.8
+      },
+      {
+        "id": "rubric",
+        "start": 80.06666666666666,
+        "duration": 18.833333333333332
+      },
+      {
+        "id": "structure",
+        "start": 98.89999999999999,
+        "duration": 25.633333333333333
+      },
+      {
+        "id": "climate",
+        "start": 124.53333333333333,
+        "duration": 25.266666666666666
+      },
+      {
+        "id": "maintain",
+        "start": 149.8,
+        "duration": 28.6
+      },
+      {
+        "id": "culture",
+        "start": 178.4,
+        "duration": 25.466666666666665
+      },
+      {
+        "id": "flow",
+        "start": 203.86666666666667,
+        "duration": 26.466666666666665
+      },
+      {
+        "id": "delivery",
+        "start": 230.33333333333334,
+        "duration": 26.333333333333332
+      },
+      {
+        "id": "deploy",
+        "start": 256.6666666666667,
+        "duration": 28.466666666666665
+      },
+      {
+        "id": "infra",
+        "start": 285.1333333333333,
+        "duration": 28.933333333333334
+      }
+    ]
+  }
+}
