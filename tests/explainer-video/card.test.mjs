@@ -29,7 +29,17 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
 const read = (...p) => fs.readFileSync(path.join(...p), "utf8");
 const json = (...p) => JSON.parse(read(...p));
-const html = read(skill, "storyboard", "card.html");
+const html = read(skill, "storyboard", "card.html")
+  // The page links its style and scripts as siblings; inline them to test the whole.
+  .replace(
+    /<link rel="stylesheet" href="([^":]+)">/g,
+    (_, f) => `<style>\n${read(skill, "storyboard", f)}</style>`,
+  )
+  .replace(
+    /(<script src="[^":]+"><\/script>\n?)+/,
+    (m) =>
+      `<script>\n${[...m.matchAll(/src="([^"]+)"/g)].map((x) => read(skill, "storyboard", x[1])).join("")}</script>\n`,
+  );
 const doc = read(skill, "storyboard", "card-data.md");
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
