@@ -375,9 +375,10 @@ gh_route "$issues/4/sub_issues" '[{"number":5,"title":"e","state":"open","reposi
 out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 4 2>/dev/null); rc=$?
 check_rc "frontier whose blocker read GitHub refuses exits 1" 1 "$rc"
 check "that refusal names the sub-issue" "blockers of #5: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
-# A read that lands but is no list (an object, nothing, not JSON) is never
-# "no sub-issues".
-for body in '{"message":"moved"}' '' 'not json'; do
+# A read that lands but is no list of issues (an object, nothing, not JSON, an
+# entry that is no issue) is never "no sub-issues".
+for body in '{"message":"moved"}' '' 'not json' '["oops"]' '[{"title":"x","state":"open"}]' '[]
+{"number":1}'; do
   gh_route "$issues/6/sub_issues" "$body"
   out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 6 2>/dev/null); rc=$?
   check_rc "frontier refuses the answer '$body' as unreadable" 2 "$rc"

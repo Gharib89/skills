@@ -29,7 +29,9 @@ list() {
   local out
   out=$(gh api --paginate "repos/{owner}/{repo}/issues/$2?per_page=100" 2>&1 </dev/null) \
     || ds_fail "$1: $(tail -1 <<<"$out")"
-  listed=$(jq -ces 'if length > 0 and all(type == "array") then add else error end' <<<"$out" 2>/dev/null) \
+  listed=$(jq -ces 'def issue: type == "object" and (.number | type) == "number"
+      and (.title | type) == "string" and (.state | type) == "string";
+    if length > 0 and all(type == "array" and all(.[]; issue)) then add else error end' <<<"$out" 2>/dev/null) \
     || ds_tooling "$1: unreadable answer from gh"
 }
 
