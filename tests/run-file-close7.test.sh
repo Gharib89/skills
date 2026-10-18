@@ -15,7 +15,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 bin=$tmp/bin work=$tmp/work origin=$tmp/origin.git
 mkdir -p "$bin"
-cp skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh "$bin/"
+cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$bin/"
 cat > "$bin/dropped-lines.sh" <<'STUB'
 #!/usr/bin/env bash
 printf '{"base":"x","blocks":[{"id":"scripts/old.sh:1","file":"scripts/old.sh","line":1,"lines":3,"text":"t"}]}\n'
