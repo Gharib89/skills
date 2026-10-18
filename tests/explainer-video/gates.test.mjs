@@ -1077,6 +1077,80 @@ test("a verdict stands only for the evidence it read: new cites or a changed cit
   assert.match(r2.out, /^gate critic: pending: round 2 of 2, /m);
 });
 
+test("a re-render judges again only the scenes it changed; the rest carry their verdicts into the round", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const r = renderUnjudged(
+    fx,
+    SCRIPT.replace('"value": "code"', '"value": "some code"'),
+  );
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate critic: pending: round 2 of 2, 2 of 3 scene\(s\) judged, /m,
+  );
+  assert.deepEqual(critique(fx.dir), ["steps"]);
+  const again = stage(fx, "render/render.mjs");
+  assert.equal(again.code, 0, again.out + again.err);
+  assert.match(again.out, /^gate critic: pass: .*round 2 of 2 vs /m);
+});
+
+test("a scene whose sheet is unchanged is judged again when its cites or a cited excerpt's text change", () => {
+  const excerpts = (fx, text) =>
+    fs.writeFileSync(
+      path.join(fx.dir, "excerpts.json"),
+      JSON.stringify({ excerpts: [{ id: "ex-1", text }] }),
+    );
+  const fx = fixture();
+  excerpts(fx, "Ship reads the issue first.");
+  assert.equal(render(fx).code, 0);
+  excerpts(fx, "Ship reads the issue and its comments.");
+  const r1 = stage(fx, "render/render.mjs");
+  assert.match(
+    r1.out,
+    /^gate critic: pending: .*, 2 of 3 scene\(s\) judged, /m,
+  );
+  assert.deepEqual(critique(fx.dir), ["steps"]);
+  const fresh = fixture();
+  assert.equal(render(fresh).code, 0);
+  const r2 = renderUnjudged(
+    fresh,
+    SCRIPT.replace("It reads the issue. [ex-1]", "It reads the issue. [ex-2]"),
+  );
+  assert.match(
+    r2.out,
+    /^gate critic: pending: .*, 2 of 3 scene\(s\) judged, /m,
+  );
+  assert.deepEqual(critique(fresh.dir), ["steps"]);
+});
+
+test("a scene shifted by an earlier scene's new length is judged again, its old verdict not carried", () => {
+  const fx = fixture();
+  assert.equal(renderUnjudged(fx, SCRIPT).code, 1);
+  const before = JSON.parse(read(fx.dir, "timeline.json")).scenes[2];
+  // A worst moment at the scene's old start, which the shift moves outside it.
+  critique(fx.dir, (id) => ({
+    ...CLEAN,
+    worst:
+      id === "gate"
+        ? [{ at: before.start, what: "x", evidence: "x", fix: "x" }]
+        : [],
+  }));
+  assert.equal(stage(fx, "render/render.mjs").code, 0);
+  const voice = JSON.parse(read(fx.dir, "voice.json"));
+  voice.scenes[1].duration += 2;
+  fs.writeFileSync(path.join(fx.dir, "voice.json"), JSON.stringify(voice));
+  const r = stage(fx, "render/render.mjs");
+  assert.ok(!/critic verdict/.test(r.err), r.err);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(
+    JSON.parse(read(fx.dir, "timeline.json")).scenes[2].start,
+    before.start + 2,
+  );
+  assert.match(r.out, /^gate critic: pending: .*, 1 of 3 scene\(s\) judged, /m);
+  assert.deepEqual(critique(fx.dir).sort(), ["gate", "steps"]);
+});
+
 // The fake backend's peak for a moving scene: its largest difference sits at
 // entry n/3, which is frame first + n/3 + 1.
 const peakOf = (s) => {
