@@ -11,12 +11,13 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 tpl=skills/setup-skills/reviewers/github-claude-review.md
+tpl_push=skills/setup-skills/reviewers/github-claude-review-on-push.md
 own=.github/workflows/claude-review.yml
 
-uses() { sed -n 's/^ *\(- *\)\{0,1\}uses: *//p' "$1"; }
+uses() { sed -n 's/^ *\(- *\)\{0,1\}uses: *//p' "$@"; }
 
 # Prints each `uses:` value that is not `<action>@<40-hex> # vX.Y.Z`.
-unpinned() { uses "$1" | grep -Ev '^[^@ ]+@[0-9a-f]{40} # v[0-9]+\.[0-9]+\.[0-9]+$'; }
+unpinned() { uses "$@" | grep -Ev '^[^@ ]+@[0-9a-f]{40} # v[0-9]+\.[0-9]+\.[0-9]+$'; }
 
 # Prints the line of each checkout step lacking its own persist-credentials:
 # false. A step is a blank-line-separated paragraph, so a key in another step or
@@ -25,7 +26,7 @@ unpersisted() {
   awk 'BEGIN { RS = "" }
        /uses: *actions\/checkout@/ && !/(^|\n) *persist-credentials: false *(#[^\n]*)?(\n|$)/ {
          n = split($0, l, "\n"); for (i = 1; i <= n; i++) if (l[i] ~ /uses: *actions\/checkout@/) print l[i]
-       }' "$1"
+       }' "$@"
 }
 
 sha=0123456789abcdef0123456789abcdef01234567
@@ -85,17 +86,17 @@ actions/checkout@0123456789ABCDEF0123456789ABCDEF01234567 # v7.0.1" "$(unpinned 
 
 # A file that vanished or lost its steps passes every case below on empty
 # output, so each must yield at least one ref before it is judged.
-check "the template has uses: lines to judge" "yes" "$(grep -q . <<<"$(uses "$tpl")" && echo yes || echo no)"
+check "the template has uses: lines to judge" "yes" "$(grep -q . <<<"$(uses "$tpl" "$tpl_push")" && echo yes || echo no)"
 check "this repo's copy has uses: lines to judge" "yes" "$(grep -q . <<<"$(uses "$own")" && echo yes || echo no)"
 
-check "every uses: line in the template is a SHA pin with a version comment" "" "$(unpinned "$tpl")"
-check "every checkout in the template sets persist-credentials: false" "" "$(unpersisted "$tpl")"
+check "every uses: line in the template is a SHA pin with a version comment" "" "$(unpinned "$tpl" "$tpl_push")"
+check "every checkout in the template sets persist-credentials: false" "" "$(unpersisted "$tpl" "$tpl_push")"
 check "every checkout in this repo's claude-review.yml sets persist-credentials: false" "" "$(unpersisted "$own")"
 
 # Refs only the copy carries: a ref the template lacks is drift, while a template
 # ref the copy does not use (the copy installs one of the template's two shapes)
 # is not.
 check "this repo's claude-review.yml pins no ref its template does not" "" \
-  "$(comm -13 <(uses "$tpl" | sort -u) <(uses "$own" | sort -u))"
+  "$(comm -13 <(uses "$tpl" "$tpl_push" | sort -u) <(uses "$own" | sort -u))"
 
 finish
