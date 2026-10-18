@@ -12,6 +12,8 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 ## File structure
 
+This repo is single-context with a split glossary: the root `GLOSSARY.md` holds the intro and an index, and each area's terms live in one file under `docs/glossary/` (`ship-run.md`, `ship-run-mechanics.md`, `profiles.md`, `harness.md`, `distribution-and-refresh.md`, `review.md`, `grilling.md`, `supervision.md`, `explainer-video.md`). A term appears in exactly one file; read the area file for the area you work in. Keep each file under 20,000 bytes: add a term to its area file, and split an area file by term when it outgrows that.
+
 Single-context repo (most repos):
 
 ```
