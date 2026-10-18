@@ -493,7 +493,7 @@ The named text sizes of a style profile, from a display title down to a label. E
 _Avoid_: font sizes, type ramp
 
 **Ban**:
-A component or a technique (3D, blur, a camera move, per-word type) a style profile forbids in every scene of a video. A scene that uses one is refused, whether a component or its own custom scene draws it.
+A component or a technique (3D, blur, a camera move, per-word type, arrows drawn on) a style profile forbids in every scene of a video. A scene that uses one is refused, whether a component or its own custom scene draws it.
 _Avoid_: restriction, disallowed effect
 
 **Style card**:
