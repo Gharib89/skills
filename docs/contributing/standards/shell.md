@@ -61,9 +61,7 @@ exceptions bound these rules.
   than reading both out of one pipeline, give every `case $?` a failing `*)`
   arm, and use `jq -e` where the value decides the answer. Every instance is a
   silent pass: jq missing makes both sides of a comparison print nothing, and
-  `cmp` of two empty outputs exits 0. A delete keyed on a probe follows the same
-  rule: an unknown answer means keep. On #768 a failed GPU probe could have
-  removed the CUDA env in use.
+  `cmp` of two empty outputs exits 0.
 - **A mechanic's header is its contract.** The header comment of a mechanic or
   gate script lists its output keys and exit meanings, and each moves in the
   same hunk as the code that changes it. A header that drifted is what the next

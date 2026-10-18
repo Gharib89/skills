@@ -59,6 +59,11 @@ repo already installs; a new dependency names, under the PR body's
 `## Special things to note`, the concrete requirement neither meets, because
 every one is a supply-chain and upgrade cost the repo carries for good.
 
+**A delete keyed on a probe treats an unknown answer as keep.** A probe that
+fails, times out or prints nothing has not said the target is unused or stale,
+so the delete waits for a probe that answered. On #768 a failed GPU probe could
+have removed the CUDA env in use.
+
 **A file copied from upstream states its derivation and keeps its comments true
 to its edits.** Record the source where a reader or a check finds it: a header
 comment, or a field where the format has no comments. Rewrite every comment an
