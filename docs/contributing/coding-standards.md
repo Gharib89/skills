@@ -67,7 +67,8 @@ edit made false. On #765 CPU pins sat under comments that still said
 
 **A data file read at load is validated for shape, with a named refusal.** A
 parse that succeeds says nothing about shape: valid JSON of the wrong shape
-passes the parser and crashes the first use with a bare `TypeError`. The loader
+passes the parser and fails at the first use, far from the file, with an error
+that names neither (a `TypeError`, a jq null). The loader
 checks the shape it needs and refuses by naming the file and the field. On #759
 setup crashed that way.
 
