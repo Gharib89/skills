@@ -223,7 +223,7 @@ ambiguous_body='Do what we agreed on the call.'
 # One Ship run of <path> on a new issue and a fresh copy of the fixture, judged,
 # then reset. Appends its record to $tmp/runs; returns 0 pass, 1 fail.
 attempt() { # <happy|ambiguous> <attempt>
-  local co=$tmp/$1-$2 failed=$tmp/failed-$1-$2 rc start wall pr="" flag="" reply run_file assignees prs mine branches state n b
+  local co=$tmp/$1-$2 failed=$tmp/failed-$1-$2 rc start wall pr="" flag="" reply run_file assignees prs mine branches state n b closing
   cp -a "$base" "$co" || unavailable "cannot copy the fixture clone"
   if [ "$1" = happy ]; then file_issue "$1" "$2" "$happy_title" "$happy_body"
   else file_issue "$1" "$2" "$ambiguous_title" "$ambiguous_body"; flag=--ambiguous; fi
@@ -259,12 +259,18 @@ attempt() { # <happy|ambiguous> <attempt>
       '{assignees: $a, open_prs: [$p[] | {number, body}], branches: ($b | split("\n") | map(select(. != ""))),
         reply: $r}' > "$co.host.json"
     pr=$(head -n 1 <<<"$mine" | cut -d ' ' -f 1)
-    # The outline's files are read at the PR's head, not in this repo or at seed.
-    if [ -n "$pr" ]; then
-      { git -C "$co" fetch -q origin "pull/$pr/head" && git -C "$co" worktree add -q --detach "$co.head" FETCH_HEAD; } \
-        >/dev/null 2>&1 || unavailable "cannot check out PR #$pr's head"
+    # The outline's files are read at the head of the one PR whose body closes
+    # the issue, the body the checks judge, not in this repo or at seed.
+    closing=()
+    for n in $(jq -r '.[].number' <<<"$prs"); do
+      ship_body_closes "$(jq -r --argjson n "$n" '.[] | select(.number == $n) | .body // ""' <<<"$prs")" "$issue"
+      case $? in 0) closing+=("$n") ;; 1) ;; *) unavailable "cannot read the open PRs" ;; esac
+    done
+    if [ "${#closing[@]}" -eq 1 ]; then
+      { git -C "$co" fetch -q origin "pull/${closing[0]}/head" && git -C "$co" worktree add -q --detach "$co.head" FETCH_HEAD; } \
+        >/dev/null 2>&1 || unavailable "cannot check out PR #${closing[0]}'s head"
     fi
-    PR_ROOT=${pr:+$co.head} PR_TEMPLATE=$co/.github/pull_request_template.md \
+    PR_ROOT=${closing[0]:+$co.head} PR_TEMPLATE=$co/.github/pull_request_template.md \
       "$here/live-run-checks.sh" ${flag:+"$flag"} "${run_file:-$tmp/no-run-file}" "$co.host.json" "$issue" >> "$failed"
     [ $? -le 1 ] || unavailable "live-run-checks.sh failed as tooling"
   fi
