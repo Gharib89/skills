@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # GitHub adapter: pull request create, read, checks, reviews and threads. Sourced by ../github.sh, never run.
-# shellcheck disable=SC2034,SC2154
+# shellcheck disable=SC2034,SC2154 # variables the sourcing script sets and reads
 
 # Put `Closes #<issue>` above the first `## ` heading, where no section rewrite
 # reaches it: `update-pr-body` replaces a section wholesale, so a closing line

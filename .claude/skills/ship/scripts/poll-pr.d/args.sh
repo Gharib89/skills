@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # poll-pr: the flags, the cursor, --since and the reviewer derivation. Sourced by ../poll-pr.sh, never run.
-# shellcheck disable=SC2034,SC2154
+# shellcheck disable=SC2034,SC2154 # variables the sourcing script sets and reads
 
 pr=$1; shift
 timeout=""; interval=20; name=""; since=""; full='[]'; brief=false; after_run=0; want=""; cursor=""

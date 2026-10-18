@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # poll-pr: the host-dependent setup, the read helpers and the poll loop. Sourced by ../poll-pr.sh, never run.
-# shellcheck disable=SC2034,SC2154
+# shellcheck disable=SC2034,SC2154 # variables the sourcing script sets and reads
 
 # The host's own word for when this reviewer was last asked, so a caller that
 # lost the `requested_at` of its request does not have to guess one. Only an

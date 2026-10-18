@@ -139,3 +139,23 @@ exceptions bound these rules.
   each side before it is compared, rather than one side being reshaped to match
   the other's format. Otherwise the comparison fails on format while the values
   agree, or passes on a format both sides lost.
+
+## Splitting a file that outgrew the size limit
+
+The limit is in `scripts/token-limit-check.sh`. Where the pieces go depends on
+who shares them:
+
+- A library several scripts source goes in a `lib/` folder beside them
+  (`skills/ship/scripts/lib/`), sourced by one entry point (`_lib.sh`). It never
+  goes in as `*.sh` siblings in `scripts/`: `contract-check.sh` and
+  `mechanic-help` treat every top-level script there as a mechanic.
+- Pieces private to one script go in `<script>.d/` beside it
+  (`scripts/contract-check.d/`, `skills/ship/scripts/poll-pr.d/`).
+- A split test file's shared fixtures go in `tests/<name>-lib.sh`
+  (`tests/run-file-lib.sh`), sourced after `tests/lib.sh`.
+- A sourced file carries `# shellcheck disable=SC2034,SC2154` with a reason only
+  where ShellCheck cannot see the sourcing script's variables.
+- A JavaScript module follows the same split: a folder named for the concern
+  beside the entry module (`skills/explainer-video/scripts/gates/`, `render/`,
+  `lib/backend/`), re-exported or imported by the entry so importers keep
+  working.

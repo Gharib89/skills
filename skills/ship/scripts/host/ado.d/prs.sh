@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Azure DevOps adapter: pull request create, reads and comment. Sourced by ../ado.sh, never run.
-# shellcheck disable=SC2034,SC2154
+# shellcheck disable=SC2034,SC2154 # variables the sourcing script sets and reads
 
 host_pr_create() { # <head> <base> <title> <body-file> <issue>
   local out

@@ -9,9 +9,10 @@
 # in and all, is ../reference/mechanics.md. It is the one copy: a second one
 # here would be the copy that goes stale.
 #
-# The library is split by concern into siblings under lib/, which this entry
-# point sources by a path relative to its own location, so a mechanic's
-# `source _lib.sh` and a consumer install need no change:
+# The library is split by concern into siblings under lib/. This file is the one
+# entry point that sources them, by a path relative to its own location, for the
+# 30+ callers of `source _lib.sh` (mechanics, host adapters and tests), so none
+# of them and no consumer install needs a change:
 #   lib/core.sh     exit shapes, grades, argument handling, labels
 #   lib/repo.sh     branch convention, checkout, worktree and base-ref reads
 #   lib/host.sh     the host adapter interface, --repo targeting

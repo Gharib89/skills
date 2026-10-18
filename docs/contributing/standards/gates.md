@@ -25,6 +25,10 @@ do to pass.
   later. A version-stable code may be disabled under the rule above, its reason
   on the same line. `skills/setup-harness/templates/check.sh` dispatches its
   rungs with a `case` rather than `"rung_$rung"` for this reason.
+- No agent-authored file over the size limit, per the `token-limit` hook in
+  `.pre-commit-config.yaml`: the limit, its exclusions and the split
+  instruction for each kind of file are in the header of
+  `scripts/token-limit-check.sh`. Split the file rather than bypass the hook.
 - `gitleaks detect` over the branch's commits, per the `secrets` gate.
 - `.claude/skills/<name>/` byte-identical to `skills/<name>/` for every skill
   whose `skills-lock.json` entry has `source: "."`, per the `derived-copies`

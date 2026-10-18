@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # GitHub adapter: workflow runs, native activity, review requests, comments, merge and listings. Sourced by ../github.sh, never run.
-# shellcheck disable=SC2034,SC2154
+# shellcheck disable=SC2034,SC2154 # variables the sourcing script sets and reads
 
 # The runs of one workflow file, created at or after <since>.
 # A reviewer reached through a comment transport runs as a workflow, and an

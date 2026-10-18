@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # The file-size limit on agent-authored files. Agents read whole files into
-# context, so a file over 5,000 tokens costs every session that opens it and
-# invites the next agent to append rather than place. The limit, whole: a file
-# of more than 20,000 bytes fails, tokens counted as bytes / 4 rounded up (no
-# tokenizer, the same answer on every machine). The exclusions live in the
+# context, so a file over the limit costs every session that opens it and
+# invites the next agent to append rather than place. The limit, whole: the
+# `limit` variable below, in tokens, counted as bytes / 4 rounded up (no
+# tokenizer, the same answer on every machine); a file of more than limit * 4
+# bytes fails. It is the one place the figure is stated. The exclusions live in the
 # `token-limit` hook's `exclude` in .pre-commit-config.yaml, so pre-commit never
 # passes them: lockfiles (`*.lock`, `*-lock.json`), every CHANGELOG.md (the
 # release run writes them), and the config's global exclude (the derived skill
@@ -18,7 +19,7 @@
 # exit: 0 inside the limit or no files · 1 a file over it · 2 tooling (a file
 #       that is not readable)
 set -uo pipefail
-limit=5000
+limit=5000 # tokens
 
 # <path>: the split instruction for that kind of file.
 instruction() {

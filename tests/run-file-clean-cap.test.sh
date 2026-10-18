@@ -4,16 +4,8 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-m=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
-tmp=$(mktemp -d) || exit 2
-trap 'rm -rf "$tmp"' EXIT
-repo="$tmp/repo with spaces"
-mkdir -p "$repo/docs/agents" "$tmp/records/ship-clean"
-git init -q "$repo"
-head=abcdef0123456789
-f="$tmp/records/ship-clean/run.md"
-ci="$tmp/ci.json"
-profile="$repo/docs/agents/ship.md"
+source tests/run-file-lib.sh
+run_file_clean_setup
 base() {
   cat > "$profile" <<'PROFILE'
 ## CI

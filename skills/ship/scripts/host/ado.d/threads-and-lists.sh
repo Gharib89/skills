@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Azure DevOps adapter: thread replies, merge, listings and the unsupported stubs. Sourced by ../ado.sh, never run.
-# shellcheck disable=SC2034,SC2154
+# shellcheck disable=SC2034,SC2154 # variables the sourcing script sets and reads
 
 # A child comment on the thread, status untouched: resolving stays
 # host_pr_resolve_thread's job. parentCommentId is the thread's root comment,

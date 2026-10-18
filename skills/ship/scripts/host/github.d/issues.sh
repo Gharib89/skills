@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # GitHub adapter: issue reads and writes. Sourced by ../github.sh, never run.
-# shellcheck disable=SC2034,SC2154
+# shellcheck disable=SC2034,SC2154 # variables the sourcing script sets and reads
 
 _norm_issue='{number, title, body: (.body // ""),
   state: (if .state == "open" then "open" else "closed" end),
