@@ -472,6 +472,10 @@ _Avoid_: clone, voice clone, custom voice
 A browser page with one card per scene (its narration, the scene in the run's style shown at its fullest moment and playing through its seam into the next, its timing and style notes) that the human approves or revises scene by scene, under an estimate of the first render's time. Each card arrives on the agent's recommendation (approve, or its proposed fix for a card with a finding), so the human may take the whole board in one answer. It is the one human checkpoint before production; everything after it runs behind video gates.
 _Avoid_: outline, shot list, script
 
+**Live build**:
+A video's own composition played in the browser instead of rendered: it can be seeked to any moment, looped, or driven by the narration, so the human sees motion before anything renders. Storyboard cards, the animatic and the style card's frames are live builds.
+_Avoid_: preview, mockup, prototype
+
 **Animatic**:
 The whole video's scenes and seams played in order, without a break, over the run's real narration, so the human judges pace and motion before the final render.
 _Avoid_: preview, rough cut, slideshow
