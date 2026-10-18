@@ -86,7 +86,9 @@ original's `Criterion` line names them.
 Every entry is owed one line, anywhere in the file, written by the run as it
 settles the criterion: `Criterion <n>: met: <proof>`, the proof a test, a
 command or a grep, never a bare "done", or `Criterion <n>: not met: <reason>`,
-the host action a human must take where that is the reason. The last line for
+the host action a human must take where that is the reason. `run-file note`
+refuses a `Criterion` line in any other form (`met at <sha>:` included), which
+the gate would read as unmet: put the sha inside the proof. The last line for
 an `<n>` decides, so a later `met` replaces an earlier `not met`. A criterion is
 met by what the diff and its checks show, never by the summary's account of
 them: one the run declined, deferred or covered with a "gap" is `not met`.

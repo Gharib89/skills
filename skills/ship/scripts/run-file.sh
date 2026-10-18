@@ -150,7 +150,10 @@
 # `Criterion` and evidence lines, since a heredoc edit of the record from a
 # worktree-isolated session is refused (#787). <section> is the heading's name
 # without its `## `, and <line> is one line that opens on neither `-` nor `#`,
-# so it is never a flag and never a heading.
+# so it is never a flag and never a heading. A <line> opening on `Criterion`
+# that is not `Criterion <n>: met: <proof>` or `Criterion <n>: not met:
+# <reason>` is refused (exit 1) naming both forms, since `gate clean` reads any
+# other as unmet (#853: `met at <sha>:`).
 #
 # Reaches no host and writes only the record root, except through the command
 # `probe` is given, which may do either. `close 4` reads the checkout's git
@@ -1465,6 +1468,9 @@ note)
   shift 2
   parse_file "$@"
   no_extra
+  # A Criterion line in any other form reads as unmet to `gate clean` (#853).
+  crit='^Criterion [1-9][0-9]*: (met|not met): .*[^[:space:]]'
+  case $text in Criterion*) [[ $text =~ $crit ]] || ship_fail "a Criterion line is \`Criterion <n>: met: <proof>\` or \`Criterion <n>: not met: <reason>\`, the form gate clean reads: $text" ;; esac
   append_to_section "## $sect" "$text"
   jq -n --arg f "$file" --arg s "$sect" --arg l "$text" '{run_file: $f, section: $s, line: $l}'
   ;;
