@@ -463,10 +463,11 @@ const dir = sheetsOf(criticKey);
 if (rounds.includes(criticKey) || rounds.length < 2) {
   fs.mkdirSync(path.join(run, dir), { recursive: true });
   // A scene's verdict stands for what its critic read: its sheet, strip and
-  // record, its span in the video (a worst moment must fall inside it), the
-  // title, the script's cites and their text, and the format. The previous render's
-  // verdict under the same scene key is carried, so only changed scenes are
-  // pending.
+  // record, its span in the video (a worst moment must fall inside it), its
+  // visual, the title, the script's cites and their text, and the format.
+  // Narration needs no place: a new one is a new script, which carries
+  // nothing. The previous render's verdict under the same scene key is
+  // carried, so only changed scenes are pending.
   const prevSheets = keptRounds ? prev.gates.critic.sheets : null;
   const prevKeysFile = prevSheets && path.join(run, prevSheets, "keys.json");
   let prevKeys = {};
@@ -531,6 +532,7 @@ if (rounds.includes(criticKey) || rounds.length < 2) {
       m.still ? "" : fs.readFileSync(strip),
       fs.readFileSync(record),
       [sc.start, sc.duration],
+      script.scenes.find((s) => s.id === sc.id).visual,
       criticRead,
       CRITIC_FORMAT,
     );

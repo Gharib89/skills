@@ -1124,6 +1124,28 @@ test("a changed cite or cited excerpt's text sends every scene back to the criti
   assert.deepEqual(critique(fresh.dir).sort(), ["gate", "hook", "steps"]);
 });
 
+test("a scene whose visual changed is judged again though its sheet did not, since its critic reads the visual", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  fs.writeFileSync(
+    path.join(fx.dir, "script.md"),
+    SCRIPT.replace('"value": "code"', '"value": "some code"'),
+  );
+  for (const s of ["script/compile.mjs", "voice/voice.mjs"])
+    assert.equal(stage(fx, s).code, 0, s);
+  // A prop no component draws: the gate scene's HTML, so its sheet, stays.
+  const file = path.join(fx.dir, "script.json");
+  const script = JSON.parse(fs.readFileSync(file, "utf8"));
+  script.scenes.find((s) => s.id === "gate").visual.props.aside = "moved";
+  fs.writeFileSync(file, JSON.stringify(script, null, 2));
+  const r = stage(fx, "render/render.mjs");
+  assert.match(
+    r.out,
+    /^gate critic: pending: round 2 of 2, 1 of 3 scene\(s\) judged, /m,
+  );
+  assert.deepEqual(critique(fx.dir).sort(), ["gate", "steps"]);
+});
+
 test("a malformed keys.json in the previous sheets folder stops the gates, naming it", () => {
   const fx = fixture();
   assert.equal(render(fx).code, 0);
