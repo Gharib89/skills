@@ -23,17 +23,18 @@ Location: scripts/local-gate.sh
 Small node: the path of the changed script, e.g. `skills/ship/scripts/merge.sh`; for a `docs`-class change, the path of the changed document, e.g. `skills/ship/SKILL.md`
 Tripwires: None.
 
-The one workflow on a PR head, `bump-guard`, reads the PR title and body rather than the diff, and CI runs no tests, so no gate is ever `deferred-to-ci`: this script is the whole automated check on a diff, alongside that leg and the reviewers. It is `scripts/check.sh full` plus the two gates only Ship needs, `secrets` and `version-lines`, both relative to the base, so each check `full` runs is a gate of the same name and none runs twice. It also prints `scripts/glossary-warn.sh` to stderr, which sets no gate status. The small lane runs `secrets`, `version-lines` and the checks in `check.sh`'s `FULL_ROWS` (`tests`, `derived-copies`, the prose checks, `contract`), read from `check.sh` so the lanes cannot drift, in place of `check.sh full`. That leaves out its `runner`, the linters (ShellCheck, actionlint, zizmor, Prettier), to the full lane and the edit and commit hooks. `tests/run.sh` takes no node, so the suite runs whole and the recorded node is only what the run records.
+Two CI legs report on a PR head: `bump-guard` reads the PR title and body rather than the diff, and `check-full` runs `scripts/check.sh full` on the head, so a head whose local gate did not run is still tested. Ship still runs this script on every run, and no gate is ever `deferred-to-ci`. It is `scripts/check.sh full` plus the two gates only Ship needs, `secrets` and `version-lines`, both relative to the base, so each check `full` runs is a gate of the same name and none runs twice. It also prints `scripts/glossary-warn.sh` to stderr, which sets no gate status. The small lane runs `secrets`, `version-lines` and the checks in `check.sh`'s `FULL_ROWS` (`tests`, `derived-copies`, the prose checks, `contract`), read from `check.sh` so the lanes cannot drift, in place of `check.sh full`. That leaves out its `runner`, the linters (ShellCheck, actionlint, zizmor, Prettier), to the full lane and the edit and commit hooks. `tests/run.sh` takes no node, so the suite runs whole and the recorded node is only what the run records.
 
 Gate notes (the test catalog, `prose-budget`, `version-lines`, `stray-files`, `self-contained`, `contract`, `derived-copies`): [ship-gates.md](ship-gates.md). Read it when a gate fails or a new test or check needs placing; a run needs nothing in it at start.
 
 ## CI
 
 Legs: bump-guard: the PR title is a Conventional Commit of a type the release run reads, and a title implying a major bump carries the `major` label; the PR body carries every `##` heading of the PR template; its `## Change outline` holds a `diff` fence or a `Shape: none, mechanical (` line, the first `diff` fence is at most 15 lines, each root line in it carries a file path, and each call node one level under a root is a word of that root's file
-No-checks legal: no, `bump-guard` is not path-filtered and reports on every PR
+Legs: check-full: `scripts/check.sh full` exits 0 on the PR head
+No-checks legal: no, neither leg is path-filtered and both report on every PR
 Push policy: Default.
 
-`bump-guard` is the one leg: its triggers, what a red run means, and the rule for a breaking change (titled `feat(<skill>):` while 0.x, the `major` label asked for at the merge gate) are in [ship-gates.md](ship-gates.md).
+Each leg's triggers and what a red run means are in [ship-gates.md](ship-gates.md): a red `check-full` is a failing test or check on the head, fixed on the branch; `bump-guard` adds the rule for a breaking change (titled `feat(<skill>):` while 0.x, the `major` label asked for at the merge gate).
 
 Two workflows are not legs. `.github/workflows/claude-review.yml` is triggered by an issue comment carrying `@claude` and has no `pull_request` trigger, so it lands no check run on a PR head: it is the `claude` reviewer below. `.github/workflows/semantic-release.yml` runs on push to main, after the merge, so no PR ever sees it.
 

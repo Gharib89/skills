@@ -118,10 +118,10 @@ do to pass.
 - The PR title a Conventional Commit of a type the release run reads, a title
   implying a major bump carrying the maintainer's `major` label, and the PR body
   carrying every `##` heading of the PR template, per the `bump-guard` workflow,
-  the repo's one CI leg. A `BREAKING CHANGE:` footer in the description or in
-  any commit on the branch implies a major too, because the squash body the
-  release run grades is composed from one or the other. How to grade the title
-  is [release.md](release.md).
+  one of the repo's two CI legs. A `BREAKING CHANGE:` footer in the description
+  or in any commit on the branch implies a major too, because the squash body
+  the release run grades is composed from one or the other. How to grade the
+  title is [release.md](release.md).
 - A `## Change outline` holding a Shape `diff` fence or a
   `Shape: none, mechanical (` line, per the `bump-guard` workflow's body check.
 - That Shape fence at most 15 lines, per the same check.
