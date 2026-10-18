@@ -691,7 +691,7 @@ while IFS= read -r f; do
       if (acc == "") start = FNR
       line = $0
       if (line ~ /\\$/) { sub(/\\$/, "", line); acc = acc line " "; next }
-      if (line ~ /[^|]\|[ \t]*$/) { acc = acc line " "; next }
+      if (line ~ /[^|]\|&?[ \t]*$/) { acc = acc line " "; next }
       cmd = acc line; acc = ""
       while (match(cmd, /[^|]\|&?[ \t]*(e|f)?grep([ \t]|$)/)) {
         cmd = substr(cmd, RSTART + RLENGTH)

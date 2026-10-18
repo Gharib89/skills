@@ -847,6 +847,8 @@ pipe_case after-and 'true && printf x PIPE grep -q x'
 # A trailing pipe or a backslash continues the command; the line named is its first.
 pipe_case trailing-pipe 'printf x PIPE
   grep -q x'
+pipe_case trailing-pipe-stderr 'printf x PIPE&
+  grep -q x'
 pipe_case backslash 'printf x PIPE \
   grep -q x'
 
