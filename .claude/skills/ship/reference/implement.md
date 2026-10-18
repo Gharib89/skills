@@ -80,8 +80,8 @@ pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
 entry under the Run file's `## Criteria`, `- <n>: <text>`. It refuses the text
 `null`. Phase 0 reuses this read. A free-text run has no issue and passes none.
 A phase-1 anchor rewrite that changes a criterion adds each replacement
-checkbox to `## Criteria` under the next number, owing its own line, and the
-original's `Criterion` line names them.
+checkbox with `run-file note Criteria <text>`, which writes it under the next
+number, owing its own line, and the original's `Criterion` line names them.
 
 Every entry is owed one line, anywhere in the file, written by the run as it
 settles the criterion: `Criterion <n>: met: <proof>`, the proof a test, a
