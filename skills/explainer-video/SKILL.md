@@ -153,19 +153,19 @@ conversation, so a large repo does not crowd out the work.
    above, then snapshot again. A scanned PDF has no text to read, and a folder
    outside git cannot say which of its files are ignored: ask the user for the
    source in another form, or to drop it, then snapshot again.
-3. **Read.** Dispatch one subagent per source, all in one turn, each with
-   `<skill>/agents/source-reader.md` as its prompt, its placeholders filled
-   from that source's entry in `explainers/<slug>/snapshots/sources.json`
-   (`{id}`, `{kind}`, `{source}`, `{snapshot}`, `{share}`), `{run}` the run
-   folder, `{skill}` this skill's folder, and `{focus}` the brief's focus.
-   Each writes its draft and
-   replies with its check's pass line. Never read a snapshot or a draft here.
-4. **Pack.** `node <skill>/scripts/source/pack.mjs explainers/<slug>` checks
-   every draft again, numbers the excerpts `ex-1`, `ex-2`, ... across the
-   pack, and writes `excerpts.json` and `outline.md`. On exit 1, send each
+3. **Read.** Dispatch one subagent per source, at most 20 at once (Claude
+   Code's cap), the next batch once these reply, each with
+   `<skill>/agents/source-reader.md` as its prompt, placeholders from that
+   source's entry in `explainers/<slug>/snapshots/sources.json` (`{id}`,
+   `{kind}`, `{source}`, `{snapshot}`, `{share}`), `{run}` the run folder,
+   `{skill}` this skill's folder, `{focus}` the brief's focus. Each writes its
+   draft, replying with its check's pass line. Read no snapshot or draft here.
+4. **Pack.** `node <skill>/scripts/source/pack.mjs explainers/<slug>` rechecks
+   every draft, numbers the excerpts `ex-1`, `ex-2`, ... across the pack, and
+   writes `excerpts.json` and `outline.md`. On exit 1, send each
    `pack <id>: ...` line to that source's reader to fix, then pack again.
-5. **Outline.** Read `outline.md`: each source with its summary, each excerpt
-   by id, locator and note. A scene file cites an excerpt by id, `[ex-3]`.
+5. **Outline.** Read `outline.md`: each source's summary, each excerpt's id,
+   locator and note. A scene file cites an excerpt by id, `[ex-3]`.
 
 ## Script
 

@@ -459,9 +459,16 @@ export async function clip(input, output, { start, duration }) {
   );
 }
 
+// A sheet's bytes follow its scene's own HTML, as the real frames do, and not
+// where the scene sits in the video.
 export async function sheet(input, output, { start, duration, fps }) {
   log({ call: "sheet", input, output, start, duration, fps });
-  fs.writeFileSync(output, `sheet of ${path.basename(output, ".png")}`);
+  const id = path.basename(output, ".png");
+  const html = fs.readFileSync(
+    path.join(path.dirname(input), "..", "composition", "scenes", `${id}.html`),
+  );
+  const own = crypto.createHash("sha256").update(html).digest("hex");
+  fs.writeFileSync(output, `sheet of ${id} ${own}`);
 }
 
 export async function strip(input, output, { first, fps }) {
