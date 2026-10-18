@@ -481,12 +481,20 @@ One state of a run's storyboard, posted as one document the page renders: the fi
 _Avoid_: round, board update
 
 **Style profile**:
-A saved, named look (palette, type, motion and layout rules, whether diagrams draw clean or sketched, and the motion effects a video may use) that a run can use. One profile is the default; a profile can come from a prototype, screenshots, a website or a deck.
+A saved, named look (a palette, type faces, a type scale and a visual grammar) that a run can use. One profile is the default; a profile can come from a prototype, screenshots, a website or a deck.
 _Avoid_: theme, preset, template
 
 **Visual grammar**:
-The part of a style profile that holds for every scene of a video: how scenes hand over at a cut, how the camera moves, how type enters, the texture over the ground, the ease of every move, and what is banned. Each scene places it on its own narration and may reach past it wherever the grammar bans nothing.
+The part of a style profile that holds for every scene of a video: how scenes hand over at a cut, how the camera moves, how type enters, the texture over the ground, the ease of every move, and its bans. A profile states only where its grammar departs from the default one. Each scene places it on its own narration and may reach past it wherever the grammar bans nothing.
 _Avoid_: motion register, direction
+
+**Type scale**:
+The named text sizes of a style profile, from a display title down to a label. Every scene, a component or a custom scene, sizes its text from these steps and never states a size of its own.
+_Avoid_: font sizes, type ramp
+
+**Ban**:
+A component or a technique (3D, blur, a camera move, per-word type) a style profile forbids in every scene of a video. A scene that uses one is refused, whether a component or its own custom scene draws it.
+_Avoid_: restriction, disallowed effect
 
 **Style card**:
 A page showing a draft style profile rendered on sample frames (a title, a diagram, a caption, a code frame, an Arabic frame), with each colour marked as measured from the reference images, derived, or adjusted for contrast, and each font a source decided marked as its own, the replacement for one it names, or an Arabic companion. The human edits a colour or a font on the card itself, then saves the profile, uses it once, or asks for a revision.
@@ -497,7 +505,7 @@ One state of a style card, posted as one document the page renders: the first fr
 _Avoid_: card round, card update
 
 **Reference image**:
-An image a draft style profile's colours are measured from: a screenshot, a slide, a video frame, or a page of a website as rendered. Every source of a style becomes reference images first; a colour the source declares counts only where its reference images show it.
+An image a draft style profile is drawn from: a screenshot, a slide, a video frame, or a page of a website as rendered. Its colours are measured; a video's frames around each cut also show its visual grammar. Every source of a style becomes reference images first; a colour the source declares counts only where its reference images show it.
 _Avoid_: sample, screenshot (for the general case), mood image
 
 **Colour candidate**:
