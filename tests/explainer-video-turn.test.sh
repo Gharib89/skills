@@ -42,4 +42,22 @@ $rows
 EOF
 check "every turn row running the suite passes --turn" "" "${bad# }"
 
+# `full` runs every row's <tests> beside the `tests` row, which already runs the
+# suite whole, so the suite sits under <affected tests> alone.
+whole=''
+while IFS='|' read -r _ member _ _ tests _; do
+  case $tests in *explainer-video.test.sh*) whole="$whole $member" ;; esac
+done <<EOF
+$rows
+EOF
+check "no turn row names the suite as its whole-suite tests" "" "${whole# }"
+
+# The turn rung on a changed file of either member still runs the --turn set.
+turn_set=$(handed --turn)
+for f in skills/explainer-video/scripts/lib/backend.mjs tests/explainer-video/board-apply.test.mjs; do
+  : > "$fixture/log"
+  NODE_LOG=$fixture/log PATH="$fixture:$PATH" bash scripts/check.sh turn "$f" > /dev/null 2>&1
+  check "turn on $f hands node the --turn set" "$turn_set" "$(sed 's|.*/||' "$fixture/log")"
+done
+
 finish
