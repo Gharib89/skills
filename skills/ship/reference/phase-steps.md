@@ -179,9 +179,9 @@ waiting for an explicit "merge" by default, or merging when
 answers `clean: true`; an unmet criterion needs the human's explicit waiver.
 On either authorization run `merge <pr> <issue|none> <head> [--worktree
 <path>]`, `<head>` the gate's `head_sha`. Invoke it from the worktree root as
-`.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope;
-the absolute base-directory path is for an install with no project copy (a
-global install), because auto mode refuses the absolute form on a clean gate.
+`.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,
+since auto mode has refused the absolute form on a clean gate; the absolute
+base-directory path is for an install with no project copy (a global install).
 Then `update-issue-body` per tracker draft, file Ship defect
 drafts on the human's word, `run-file close 9`, `ExitWorktree` with `action:
 "keep"` (`cleanup` owns the removal) so the session is not left in a deleted
