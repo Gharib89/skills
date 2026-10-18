@@ -417,8 +417,16 @@ A narrated video, as long as the operator asks for (two minutes by default), tha
 _Avoid_: promo, trailer, reel
 
 **Part**:
-One of the explainer videos a long request is split into, on the operator's yes: the parts share the brief, the source pack and the style profile, and each is delivered as its own video.
-_Avoid_: clip (that is the clip insert), episode, chapter
+One of the explainer videos a request longer than five minutes is split into, on the operator's yes: the parts share the brief, the source pack and the style profile, and each is delivered as its own video. A part stands alone: it opens with its own promise and closes with its own recap, and every part after the first bridges back to the one before.
+_Avoid_: clip (that is the clip insert), episode, chapter (that is a section)
+
+**Part plan**:
+How a split request's content is divided between its parts: each part's title, focus, length and the excerpts it draws on. The skill proposes it with the offer to split, and the operator accepts or edits it before any part is scripted.
+_Avoid_: series outline, episode list
+
+**Section**:
+A group of points inside one explainer video longer than five minutes, opened by a short scene of its own and marked so a player can jump to it. The video keeps one promise at the start and one recap at the end.
+_Avoid_: chapter, part (that is its own video), segment
 
 **Steering prompt**:
 Free text given with a run that moves the brief off its defaults, such as a narrower focus, a longer cut or another style.
