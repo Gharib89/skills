@@ -533,7 +533,8 @@ if (rounds.includes(criticKey) || rounds.length < 2) {
       CRITIC_FORMAT,
     );
     const verdict = path.join(run, dir, `${sc.id}.json`);
-    const prevVerdict = path.join(run, prevSheets ?? dir, `${sc.id}.json`);
+    const prevVerdict =
+      prevSheets && path.join(run, prevSheets, `${sc.id}.json`);
     if (
       prevKeys[sc.id] === keys[sc.id] &&
       !fs.existsSync(verdict) &&

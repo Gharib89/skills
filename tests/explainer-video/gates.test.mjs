@@ -1124,7 +1124,7 @@ test("a scene whose sheet is unchanged is judged again when its cites or a cited
   assert.deepEqual(critique(fresh.dir), ["steps"]);
 });
 
-test("an unreadable keys.json in the previous sheets folder stops the gates, naming it", () => {
+test("a malformed keys.json in the previous sheets folder stops the gates, naming it", () => {
   const fx = fixture();
   assert.equal(render(fx).code, 0);
   const keys = path.join(fx.dir, record(fx).gates.critic.sheets, "keys.json");
