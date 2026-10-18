@@ -460,6 +460,28 @@ const dir = sheetsOf(criticKey);
 // Past two rounds a render carries the second round's verdict: no sheets.
 if (rounds.includes(criticKey) || rounds.length < 2) {
   fs.mkdirSync(path.join(run, dir), { recursive: true });
+  // A scene's verdict stands for what its critic read: its sheet, strip and
+  // record, its span in the video (a worst moment must fall inside it), its
+  // cites and their text, the title and the format. The previous render's
+  // verdict under the same scene key is carried, so only changed scenes are
+  // pending.
+  const prevSheets = keptRounds ? prev.gates.critic.sheets : null;
+  const prevKeysFile = prevSheets && path.join(run, prevSheets, "keys.json");
+  let prevKeys = {};
+  if (prevSheets !== dir && prevKeysFile && fs.existsSync(prevKeysFile)) {
+    const bad = (why) =>
+      fail(
+        `critic keys ${prevSheets}/keys.json: ${why}; delete it to judge every scene again`,
+      );
+    try {
+      prevKeys = JSON.parse(fs.readFileSync(prevKeysFile, "utf8"));
+    } catch (e) {
+      bad(e.message);
+    }
+    if (!prevKeys || typeof prevKeys !== "object" || Array.isArray(prevKeys))
+      bad("not an object of scene keys");
+  }
+  const keys = {};
   for (const p of plan) {
     const { sc } = p;
     const png = path.join(run, dir, `${sc.id}.png`);
@@ -502,37 +524,24 @@ if (rounds.includes(criticKey) || rounds.length < 2) {
           2,
         ) + "\n",
       );
+    keys[sc.id] = hash(
+      fs.readFileSync(png),
+      m.still ? "" : fs.readFileSync(strip),
+      fs.readFileSync(record),
+      [sc.start, sc.duration],
+      [script.title, cited(script.scenes.find((s) => s.id === sc.id))],
+      CRITIC_FORMAT,
+    );
+    const verdict = path.join(run, dir, `${sc.id}.json`);
+    const prevVerdict = path.join(run, prevSheets ?? dir, `${sc.id}.json`);
+    if (
+      prevKeys[sc.id] === keys[sc.id] &&
+      !fs.existsSync(verdict) &&
+      fs.existsSync(prevVerdict)
+    )
+      fs.copyFileSync(prevVerdict, verdict);
   }
-  // A scene's verdict stands for what its critic read: its sheet, strip and
-  // record, its span in the video (a worst moment must fall inside it), its
-  // cites and their text, the title and the format. A previous render's verdict
-  // under the same scene key is carried, so only changed scenes are pending.
-  const keys = Object.fromEntries(
-    plan.map(({ sc }) => [
-      sc.id,
-      hash(
-        ...[".png", ".motion.png", ".motion.json"].map((ext) => {
-          const f = path.join(run, dir, `${sc.id}${ext}`);
-          return fs.existsSync(f) ? fs.readFileSync(f) : "";
-        }),
-        [sc.start, sc.duration],
-        [script.title, cited(script.scenes.find((s) => s.id === sc.id))],
-        CRITIC_FORMAT,
-      ),
-    ]),
-  );
   fs.writeFileSync(path.join(run, dir, "keys.json"), JSON.stringify(keys));
-  const from = keptRounds && prev.gates.critic.sheets;
-  const fromKeys = from && path.join(run, from, "keys.json");
-  if (from !== dir && fromKeys && fs.existsSync(fromKeys)) {
-    const before = JSON.parse(fs.readFileSync(fromKeys, "utf8"));
-    for (const [id, key] of Object.entries(keys)) {
-      const v = path.join(run, from, `${id}.json`);
-      const to = path.join(run, dir, `${id}.json`);
-      if (before[id] === key && fs.existsSync(v) && !fs.existsSync(to))
-        fs.copyFileSync(v, to);
-    }
-  }
 }
 let judgedBy;
 const own = verdicts(criticKey);

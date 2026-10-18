@@ -153,7 +153,7 @@ conversation, so a large repo does not crowd out the work.
    above, then snapshot again. A scanned PDF has no text to read, and a folder
    outside git cannot say which of its files are ignored: ask the user for the
    source in another form, or to drop it, then snapshot again.
-3. **Read.** Dispatch one subagent per source, 20 a turn (the host's cap),
+3. **Read.** Dispatch one subagent per source, 20 at once (the host's cap),
    each with `<skill>/agents/source-reader.md` as its prompt, its placeholders
    filled from that source's entry in `explainers/<slug>/snapshots/sources.json`
    (`{id}`, `{kind}`, `{source}`, `{snapshot}`, `{share}`), `{run}` the run
