@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.47.3 (2026-10-18)
+
+### Bug Fixes
+
+- **ship**: Run-file note numbers a line under Criteria as the next entry
+  ([#866](https://github.com/Gharib89/skills/pull/866),
+  [`45e366b`](https://github.com/Gharib89/skills/commit/45e366b4e3412cb84a206b6ac5a7b1249ba63b79))
+
+
 ## v0.47.2 (2026-10-18)
 
 ### Refactoring
