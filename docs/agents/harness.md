@@ -12,7 +12,7 @@ Floor: 2.1.277
 
 Location: scripts/check.sh
 
-The turn rung has a repo-root `shell` row for `*.sh`, added by hand to `check.sh`'s configuration block (the setup-harness shell catalog entry has no test runner, and a re-run keeps what was added). Its command, `scripts/shell-turn-tests.sh`, maps each edited file to the `tests/*.test.sh` that name its basename (ship's `_lib.sh` and its `lib/` pieces map to the tests naming `_lib.sh`) and runs them through `tests/run.sh`, so the host stub stays in front of PATH. A fan-out past the turn budget reports `over-budget`.
+The turn rung has a repo-root `shell` row for `*.sh`, added by hand to `check.sh`'s configuration block (the setup-harness shell catalog entry has no test runner, and a re-run keeps what was added). Its command, `scripts/shell-turn-tests.sh`, maps each edited file to the `tests/*.test.sh` that name its basename (ship's `_lib.sh` and its `lib/` pieces map to the tests naming `_lib.sh`, and a `<script>.d/` piece to the tests naming `<script>.sh`) and runs them through `tests/run.sh`, so the host stub stays in front of PATH. A fan-out past the turn budget reports `over-budget`.
 
 ## Budgets
 

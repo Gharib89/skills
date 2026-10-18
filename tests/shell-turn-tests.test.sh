@@ -18,6 +18,8 @@ check "an edited test beside a script is not widened by the script's name" \
   "$(sel tests/token-limit.test.sh scripts/token-limit-check.sh)"
 check "a lib piece selects the tests naming _lib.sh" \
   "$(naming _lib.sh)" "$(sel skills/ship/scripts/lib/"$(ls skills/ship/scripts/lib | head -1)")"
+check "a <script>.d piece selects the tests naming the script" \
+  "$(naming poll-pr.sh)" "$(sel skills/ship/scripts/poll-pr.d/loop.sh)"
 check "_lib.sh selects the tests naming _lib.sh" \
   "$(naming _lib.sh)" "$(sel skills/ship/scripts/_lib.sh)"
 # The oracle above repeats the selector's grep, so an empty answer on both sides

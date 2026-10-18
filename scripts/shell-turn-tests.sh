@@ -3,7 +3,8 @@
 # to shell code can break. An edited tests/*.test.sh selects itself; any other
 # .sh selects every tests/*.test.sh whose text names its basename, and ship's
 # _lib.sh and each piece in its lib/ directory select the tests naming
-# `_lib.sh`, since a piece is sourced, not named. A file no test names selects
+# `_lib.sh`, and a piece in a `<script>.d/` directory the tests naming
+# `<script>.sh`, since a piece is sourced, not named. A file no test names selects
 # nothing and is no failure. The selection runs through tests/run.sh, not the
 # files directly, because the runner is what puts the host stub in front of PATH.
 #
@@ -22,6 +23,7 @@ for f; do
   case $f in
     tests/*.test.sh) selected="$selected$f"$'\n'; continue ;;
     skills/ship/scripts/lib/*.sh) name=_lib.sh ;;
+    *.d/*.sh) d=${f%/*}; name=${d##*/}; name=${name%.d}.sh ;;
     *) name=${f##*/} ;;
   esac
   hits=$(grep -lF -- "$name" tests/*.test.sh); [ $? -le 1 ] || exit 2
