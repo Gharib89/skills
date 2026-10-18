@@ -1,0 +1,51 @@
+name: check-full
+
+# Runs `scripts/check.sh full`, the suite and every check the local gate runs
+# but the two relative to the base, on each PR head, so a failing test is a red
+# PR check even when a run's local gate was waived. Any nonzero exit fails the
+# job, 2 (a tool unavailable) and 3 (over budget) included: a head checked
+# without a tool is a head left unchecked.
+#
+# The tools come from the harness cloud setup, `.claude/hooks/cloud-setup.sh`,
+# whose `STEPS` block is the one place their versions live: bumping a version
+# there changes what this job installs. The script runs only where
+# `CLAUDE_CODE_REMOTE=true`, so the step sets it; setup-go and setup-uv supply
+# the `go` and `uv` its steps call, which the runner image does not put on PATH.
+#
+# Not path-filtered, so it reports on every PR beside `bump-guard`.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-full-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check-full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Install the tools the cloud setup installs
+        env:
+          CLAUDE_CODE_REMOTE: "true"
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          PATH="$HOME/.local/bin:$PATH" .claude/hooks/cloud-setup.sh
+
+      - name: Run scripts/check.sh full
+        run: scripts/check.sh full
