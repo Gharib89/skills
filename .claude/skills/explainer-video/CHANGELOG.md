@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.3 (2026-10-18)
+
+### Refactoring
+
+- Split every agent-authored file over 5,000 tokens, then gate new ones (#799)
+  ([#848](https://github.com/Gharib89/skills/pull/848),
+  [`0c5b31b`](https://github.com/Gharib89/skills/commit/0c5b31bb4ab1bdb0e156c422e867c2165f6d74d4))
+
+
 ## v0.24.2 (2026-10-18)
 
 ### Bug Fixes
