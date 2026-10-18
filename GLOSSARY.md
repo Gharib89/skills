@@ -509,7 +509,7 @@ The one engine that lays out every scene of an explainer video on a single timel
 _Avoid_: renderer, backend, framework
 
 **Component**:
-One kind of on-screen content a scene shows, drawn by the composer under the visual grammar: cards, a flow, a chart, kinetic type. A scene shows exactly one component, never one nested in another.
+One kind of on-screen content a scene shows, drawn by the composer under the visual grammar: cards, a flow, a chart, kinetic type. A scene that names a component shows exactly that one, never one nested in another; a custom scene may place several.
 _Avoid_: visual, block, widget, template
 
 **Rich component**:
