@@ -169,9 +169,9 @@ conversation, so a large repo does not crowd out the work.
 
 ## Script
 
-The script stage writes the **scene file**, `explainers/<slug>/script.md` (its
-format is under Render), from the pack's outline and the brief, then holds it
-to the **script gates**.
+The script stage writes the **scene file**, `explainers/<slug>/script.md`, from
+the pack's outline and the brief, then holds it to the **script gates**. Read
+[reference/scene-file.md](reference/scene-file.md) before you write or edit it.
 
 1. **Write.** Five roles in order, one scene each but `point`, which takes one
    or more: `hook` (why watch), `context` (what the thing is), `point` (one
