@@ -58,10 +58,10 @@
 set -uo pipefail
 dir=${1:-skills/ship/scripts}
 skills=${2:-skills}
-extra=${*:3}
+extra=("${@:3}")
 [ -d "$dir" ] || { printf 'not a directory: %s\n' "$dir" >&2; exit 2; }
 [ -d "$skills" ] || { printf 'not a directory: %s\n' "$skills" >&2; exit 2; }
-for d in $extra; do [ -d "$d" ] || { printf 'not a directory: %s\n' "$d" >&2; exit 2; }; done
+for d in ${extra[@]+"${extra[@]}"}; do [ -d "$d" ] || { printf 'not a directory: %s\n' "$d" >&2; exit 2; }; done
 command -v jq >/dev/null || { echo "jq not installed" >&2; exit 2; }
 
 rc=0
@@ -671,16 +671,20 @@ find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills
     }' > "$work/shell-hits"
 if [ -s "$work/shell-hits" ]; then cat "$work/shell-hits"; rc=1; fi
 
-# 16. No pipe into a quiet grep (`grep -q`, `-Eq`, `-qE`, `--quiet`) in a shell
-# file under the skills tree or an <extra-dir> that sets pipefail, on lines that are not comments.
-# `grep -q` exits at its first match, the writer dies of SIGPIPE (141) while
-# still writing, and under pipefail the pipeline reads as no match: a gate
-# failed open on it in #758. A here-string over a captured value makes the
-# verdict depend on the input alone. A pipe at the end of a line, or a `\`,
-# continues the command onto the next line.
-# shellcheck disable=SC2086 # the extra directories split on whitespace by design
-find "$skills" $extra -name '*.sh' | sort | while IFS= read -r f; do
-  grep -qE '^[[:space:]]*set[[:space:]].*pipefail' "$f" || continue
+# 16. No pipe into a quiet grep (`grep -q`, `-Eq`, `-qE`, `-e PAT -q`, `--quiet`,
+# `--silent`) in a shell file under the skills tree or an <extra-dir> that sets
+# pipefail, on lines that are not comments. `grep -q` exits at its first match,
+# the writer dies of SIGPIPE (141) while still writing, and under pipefail the
+# pipeline reads as no match: a gate failed open on it in #758. A here-string
+# over a captured value makes the verdict depend on the input alone. A pipe at
+# the end of a line, or a `\`, continues the command onto the next line; a `|&`
+# is a pipe; a flag counts up to the command's next separator.
+files=$(find "$skills" ${extra[@]+"${extra[@]}"} -name '*.sh' | sort) || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  grep -qE '^[[:space:]]*set[[:space:]].*pipefail' "$f"; st=$?
+  [ "$st" -le 1 ] || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
+  [ "$st" -eq 0 ] || continue
   awk -v f="$f" '
     /^[ \t]*#/ { next }
     {
@@ -689,17 +693,18 @@ find "$skills" $extra -name '*.sh' | sort | while IFS= read -r f; do
       if (line ~ /\\$/) { sub(/\\$/, "", line); acc = acc line " "; next }
       if (line ~ /[^|]\|[ \t]*$/) { acc = acc line " "; next }
       cmd = acc line; acc = ""
-      while (match(cmd, /[^|]\|[ \t]*(e|f)?grep([ \t]|$)/)) {
+      while (match(cmd, /[^|]\|&?[ \t]*(e|f)?grep([ \t]|$)/)) {
         cmd = substr(cmd, RSTART + RLENGTH)
-        n = split(cmd, tok, /[ \t]+/)
-        for (i = 1; i <= n && tok[i] ~ /^-/; i++)
+        seg = cmd; sub(/[|;&<>)].*/, "", seg)
+        n = split(seg, tok, /[ \t]+/)
+        for (i = 1; i <= n && tok[i] != "--"; i++)
           if (tok[i] ~ /^(--quiet|--silent)$/ || tok[i] ~ /^-[A-Za-z]*q/) {
             printf "%s:%d: a pipe into a quiet grep under pipefail fails open on SIGPIPE; read the writer\047s output into a variable and use grep -q PATTERN <<<\"$var\"\n", f, start
             break
           }
       }
     }' "$f"
-done > "$work/pipe-hits"
+done <<< "$files" > "$work/pipe-hits"
 if [ -s "$work/pipe-hits" ]; then cat "$work/pipe-hits"; rc=1; fi
 
 exit $rc

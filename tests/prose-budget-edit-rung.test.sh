@@ -26,6 +26,8 @@ git -C "$r" init -q
 
 # <n>: n words on one line.
 words() { awk -v n="$1" 'BEGIN { for (i = 0; i < n; i++) printf "w "; print "" }'; }
+# <n>: n lines.
+lines() { awk -v n="$1" 'BEGIN { for (i = 0; i < n; i++) print "line " i }'; }
 # <file>: run the edit rung on it; leaves the exit code in `rc` and stderr in `err`.
 edit() {
   err=$(cd "$r" && CLAUDE_CODE_REMOTE='' bash scripts/check.sh edit "$1" 2>&1 >/dev/null); rc=$?
@@ -43,14 +45,14 @@ words 3400 > "$r/skills/demo/SKILL.md"
 edit skills/demo/SKILL.md
 check_rc "a SKILL.md within its budget passes" 0 "$rc"
 
-awk 'BEGIN { for (i = 0; i < 120; i++) print "line " i }' > "$r/skills/demo/reference/long.md"
+lines 120 > "$r/skills/demo/reference/long.md"
 edit skills/demo/reference/long.md
 check_rc "a long reference with no ## Contents fails the edit rung" 1 "$rc"
 says "and the failure names its line count" \
   "skills/demo/reference/long.md: 120 lines and no \`## Contents\` heading"
 
 { printf '## Contents\n\n- [Part](#part)\n\n## Part\n'
-  awk 'BEGIN { for (i = 0; i < 120; i++) print "line " i }'; } > "$r/skills/demo/reference/long.md"
+  lines 120; } > "$r/skills/demo/reference/long.md"
 edit skills/demo/reference/long.md
 check_rc "a long reference with its map passes" 0 "$rc"
 

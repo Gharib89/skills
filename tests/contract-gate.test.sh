@@ -827,18 +827,28 @@ check "and print nothing" "" "$out"
 # `pipes` turns it back; a literal one here would be a violation of its own.
 pipes() { printf '%s' "${1//PIPE/|}"; }
 pipe_msg='a pipe into a quiet grep under pipefail fails open on SIGPIPE; read the writer'"'"'s output into a variable and use grep -q PATTERN <<<"$var"'
-shell_run pipe-grep "$(pipes '#!/usr/bin/env bash
+pipe_case() { # <name> <line>: a pipefail script whose line 3 is <line>, which fails
+  shell_run "pipe-$1" "$(pipes "#!/usr/bin/env bash
 set -uo pipefail
-printf x PIPE grep -q x
-printf x PIPE grep -Eq x
-printf x PIPE grep -qE x
-printf x PIPE grep -E -q x
-printf x PIPE grep --quiet x
-printf x PIPE
-  grep -q x')"
-check_rc "a pipe into a quiet grep under pipefail fails" 1 "$rc"
-check "and each spelling is named at its line, the continued one at its first" \
-  "$(for n in 3 4 5 6 7 8; do printf '%s:%s: %s\n' "$sk/zz/bad.sh" "$n" "$pipe_msg"; done)" "$out"
+$2")"
+  check_rc "a pipe into a quiet grep ($1) under pipefail fails" 1 "$rc"
+  check "and is named at its line" "$sk/zz/bad.sh:3: $pipe_msg" "$out"
+}
+pipe_case short 'printf x PIPE grep -q x'
+pipe_case bundled 'printf x PIPE grep -Eq x'
+pipe_case reordered 'printf x PIPE grep -qE x'
+pipe_case apart 'printf x PIPE grep -E -q x'
+pipe_case after-pattern 'printf x PIPE grep -e x -q'
+pipe_case long 'printf x PIPE grep --quiet x'
+pipe_case silent 'printf x PIPE grep --silent x'
+pipe_case egrep 'printf x PIPE egrep -q x'
+pipe_case stderr-too 'printf x PIPE& grep -q x'
+pipe_case after-and 'true && printf x PIPE grep -q x'
+# A trailing pipe or a backslash continues the command; the line named is its first.
+pipe_case trailing-pipe 'printf x PIPE
+  grep -q x'
+pipe_case backslash 'printf x PIPE \
+  grep -q x'
 
 # Its here-string form passes, and so does everything that only looks like it.
 shell_run pipe-grep-near-misses "$(pipes '#!/usr/bin/env bash
@@ -848,7 +858,9 @@ grep -q x <<<"$v"
 printf x PIPE grep x
 printf x PIPE grep -c q
 cmd PIPEPIPE grep -q x "$f"
-grep -q x "$f"')"
+grep -q x "$f"
+printf x PIPE grep x && grep -q y "$f"
+printf x PIPE grep -e x -- -q')"
 check_rc "a here-string grep -q and near misses pass under pipefail" 0 "$rc"
 check "and print nothing" "" "$out"
 
@@ -869,6 +881,14 @@ check_rc "a pipe into grep -q under an extra directory fails" 1 "$rc"
 check "and is named at its line" "$d/gate.sh:3: $pipe_msg" "$out"
 out=$(bash scripts/contract-check.sh "$inert" skills "$fixture/absent" 2>/dev/null); rc=$?
 check_rc "an absent extra directory is tooling, not a pass" 2 "$rc"
+if [ "$(id -u)" -ne 0 ]; then
+  mkdir -p "$d/sealed"; chmod 000 "$d/sealed"
+  out=$(bash scripts/contract-check.sh "$inert" skills "$d" 2>/dev/null); rc=$?
+  chmod 755 "$d/sealed"
+  check_rc "an extra directory the search cannot read is tooling, not a pass" 2 "$rc"
+else
+  skipped "an extra directory the search cannot read is tooling, not a pass"
+fi
 
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.

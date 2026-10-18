@@ -15,11 +15,7 @@ chmod +x "$fixture/node"
 # <flag...>: the test files the suite hands `node --test`, one basename per line.
 handed() {
   export NODE_LOG=$fixture/log PATH="$fixture:$PATH"
-  if [ "${1:-}" = --turn ]; then
-    bash tests/explainer-video.test.sh --turn > /dev/null 2>&1
-  else
-    bash tests/explainer-video.test.sh > /dev/null 2>&1
-  fi
+  bash tests/explainer-video.test.sh "$@" > /dev/null 2>&1
   sed 's|.*/||' "$fixture/log"
 }
 all=$(for f in tests/explainer-video/*.test.mjs; do printf '%s\n' "${f##*/}"; done)
