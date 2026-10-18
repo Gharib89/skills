@@ -727,7 +727,7 @@ And `update-pr-body 5 --preamble --body-file b` too.
 check_rc "invocations with their required flags, and a fenced sample, pass" 0 "$rc"
 check "and print nothing" "" "$out"
 
-# 15. Three shell rules grep can hold. One fixture per violation, each asserting
+# 15. Four shell rules grep can hold. One fixture per violation, each asserting
 # the exit code and the one printed reason, and a passing fixture of near misses
 # alone.
 shell_run() { # <case> <file-content>: leaves the fixture's path in `sk`
@@ -819,6 +819,56 @@ rm "$sk/ship/scripts/_lib.sh.bak"
 run "$inert" "$sk"
 check_rc "near misses, and a fence pattern inside the SHIP_AWK_FENCE definition, pass" 0 "$rc"
 check "and print nothing" "" "$out"
+
+# A pipe into a quiet grep in a script that sets pipefail: grep -q exits at its
+# first match, the writer dies of SIGPIPE, and the pipeline reads as no match
+# (#758). Each spelling of the quiet flag, and the continued-line form, fails.
+# The check scans this directory too, so a fixture writes PIPE for the pipe and
+# `pipes` turns it back; a literal one here would be a violation of its own.
+pipes() { printf '%s' "${1//PIPE/|}"; }
+pipe_msg='a pipe into a quiet grep under pipefail fails open on SIGPIPE; read the writer'"'"'s output into a variable and use grep -q PATTERN <<<"$var"'
+shell_run pipe-grep "$(pipes '#!/usr/bin/env bash
+set -uo pipefail
+printf x PIPE grep -q x
+printf x PIPE grep -Eq x
+printf x PIPE grep -qE x
+printf x PIPE grep -E -q x
+printf x PIPE grep --quiet x
+printf x PIPE
+  grep -q x')"
+check_rc "a pipe into a quiet grep under pipefail fails" 1 "$rc"
+check "and each spelling is named at its line, the continued one at its first" \
+  "$(for n in 3 4 5 6 7 8; do printf '%s:%s: %s\n' "$sk/zz/bad.sh" "$n" "$pipe_msg"; done)" "$out"
+
+# Its here-string form passes, and so does everything that only looks like it.
+shell_run pipe-grep-near-misses "$(pipes '#!/usr/bin/env bash
+set -uo pipefail
+# printf x PIPE grep -q x is prose
+grep -q x <<<"$v"
+printf x PIPE grep x
+printf x PIPE grep -c q
+cmd PIPEPIPE grep -q x "$f"
+grep -q x "$f"')"
+check_rc "a here-string grep -q and near misses pass under pipefail" 0 "$rc"
+check "and print nothing" "" "$out"
+
+# Without pipefail the pipeline status is grep's own, so the shape is harmless.
+shell_run pipe-grep-no-pipefail "$(pipes '#!/usr/bin/env bash
+printf x PIPE grep -q x')"
+check_rc "a pipe into grep -q in a script that sets no pipefail passes" 0 "$rc"
+
+# An <extra-dir> is scanned like the skills tree: the repo's own scripts, tests
+# and hooks set pipefail too.
+d=$fixture/extra; mkdir -p "$d"
+pipes '#!/usr/bin/env bash
+set -uo pipefail
+printf x PIPE grep -q x
+' > "$d/gate.sh"
+out=$(bash scripts/contract-check.sh "$inert" skills "$d" 2>/dev/null); rc=$?
+check_rc "a pipe into grep -q under an extra directory fails" 1 "$rc"
+check "and is named at its line" "$d/gate.sh:3: $pipe_msg" "$out"
+out=$(bash scripts/contract-check.sh "$inert" skills "$fixture/absent" 2>/dev/null); rc=$?
+check_rc "an absent extra directory is tooling, not a pass" 2 "$rc"
 
 # A tree the check cannot read is tooling, exit 2, never a pass: an unsearchable
 # skills tree reported as clean is the silent pass the rule exists to prevent.

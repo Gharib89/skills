@@ -94,6 +94,14 @@ exceptions bound these rules.
   bootstrap script setup-skills lands, may add `-e`. A file only ever sourced
   (`_lib.sh`, a host adapter, `tests/lib.sh`, a fake) inherits its caller's
   options and sets none, so it does not change them under the caller.
+- **No pipe into `grep -q` under pipefail.** `grep -q` exits at its first
+  match, so a writer still writing dies of SIGPIPE (141) and the pipeline reads
+  as no match. On #758 the `version-lines` gate used `writer | grep -q pat` to
+  decide "this file removed a version line" and could wave a real bump through:
+  7 of 3,840 runs failed at 48 at once. Capture the writer's output, then read
+  it with a here-string: `grep -q pat <<<"$out"`. The `contract` gate refuses
+  the shape (`-q`, `-Eq`, `-qE`, `--quiet`) in a shell file under `skills/` that
+  sets pipefail, naming the line.
 - **Quote every expansion Bash would split or glob.** An unquoted `$var` in a
   command's arguments splits on whitespace and expands `*`, so a path with a
   space becomes two arguments. The places Bash never splits are the index's

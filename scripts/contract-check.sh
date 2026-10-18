@@ -6,7 +6,7 @@
 # diagnostic and no JSON. `scripts/check.sh full` runs this as its `contract`
 # row, which scripts/local-gate.sh reports under the same name.
 #
-#   scripts/contract-check.sh [<scripts-dir> [<skills-dir>]]
+#   scripts/contract-check.sh [<scripts-dir> [<skills-dir> [<extra-dir>...]]]
 #
 # Reaches no host: every mechanic's usage guard fires before it loads the host
 # adapter, so a no-argument invocation makes no network call. Keep a new
@@ -48,14 +48,20 @@
 # Check 15 greps every shell file for three habits that fail silently: a curl
 # with no time limit, a command in a redirect-fed read loop that drains the loop's
 # input, and a fence pattern written by hand instead of SHIP_AWK_FENCE.
+# Check 16 greps the same files, and every shell file under each <extra-dir>,
+# for a pipe into `grep -q` under pipefail, which fails open when the writer
+# dies of SIGPIPE. The repo's own gate rows pass `scripts`, `tests` and
+# `.claude/hooks`, since a gate script there fails open the same way.
 #
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
 dir=${1:-skills/ship/scripts}
 skills=${2:-skills}
+extra=${*:3}
 [ -d "$dir" ] || { printf 'not a directory: %s\n' "$dir" >&2; exit 2; }
 [ -d "$skills" ] || { printf 'not a directory: %s\n' "$skills" >&2; exit 2; }
+for d in $extra; do [ -d "$d" ] || { printf 'not a directory: %s\n' "$d" >&2; exit 2; }; done
 command -v jq >/dev/null || { echo "jq not installed" >&2; exit 2; }
 
 rc=0
@@ -664,5 +670,36 @@ find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills
       if (def && FNR > def && /\047[ \t]*$/) def = 0
     }' > "$work/shell-hits"
 if [ -s "$work/shell-hits" ]; then cat "$work/shell-hits"; rc=1; fi
+
+# 16. No pipe into a quiet grep (`grep -q`, `-Eq`, `-qE`, `--quiet`) in a shell
+# file under the skills tree or an <extra-dir> that sets pipefail, on lines that are not comments.
+# `grep -q` exits at its first match, the writer dies of SIGPIPE (141) while
+# still writing, and under pipefail the pipeline reads as no match: a gate
+# failed open on it in #758. A here-string over a captured value makes the
+# verdict depend on the input alone. A pipe at the end of a line, or a `\`,
+# continues the command onto the next line.
+# shellcheck disable=SC2086 # the extra directories split on whitespace by design
+find "$skills" $extra -name '*.sh' | sort | while IFS= read -r f; do
+  grep -qE '^[[:space:]]*set[[:space:]].*pipefail' "$f" || continue
+  awk -v f="$f" '
+    /^[ \t]*#/ { next }
+    {
+      if (acc == "") start = FNR
+      line = $0
+      if (line ~ /\\$/) { sub(/\\$/, "", line); acc = acc line " "; next }
+      if (line ~ /[^|]\|[ \t]*$/) { acc = acc line " "; next }
+      cmd = acc line; acc = ""
+      while (match(cmd, /[^|]\|[ \t]*(e|f)?grep([ \t]|$)/)) {
+        cmd = substr(cmd, RSTART + RLENGTH)
+        n = split(cmd, tok, /[ \t]+/)
+        for (i = 1; i <= n && tok[i] ~ /^-/; i++)
+          if (tok[i] ~ /^(--quiet|--silent)$/ || tok[i] ~ /^-[A-Za-z]*q/) {
+            printf "%s:%d: a pipe into a quiet grep under pipefail fails open on SIGPIPE; read the writer\047s output into a variable and use grep -q PATTERN <<<\"$var\"\n", f, start
+            break
+          }
+      }
+    }' "$f"
+done > "$work/pipe-hits"
+if [ -s "$work/pipe-hits" ]; then cat "$work/pipe-hits"; rc=1; fi
 
 exit $rc
