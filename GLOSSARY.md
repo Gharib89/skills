@@ -566,11 +566,11 @@ _Avoid_: snapshot, thumbnail, filmstrip
 
 **Motion strip**:
 One image per moving scene of a rendered explainer video: 12 consecutive frames of it, starting 5 before its peak-motion frame outside its seams, cut from the encoded video and tiled six by two, that the critic reads beside the contact sheet to judge motion. A scene that hands over at a seam gets a second strip of that seam. A motion record next to them names the peak frame and the dead beats.
+_Avoid_: filmstrip, flipbook
 
 **Dead beat**:
 A stretch of 1.5 s or more of a scene in which nothing moves but the camera's drift and the texture.
 _Avoid_: still, pause, hold
-_Avoid_: filmstrip, flipbook
 
 **Tool cache**:
 The per-user folder setup installs a run's tools into: the npm packages and Chrome under the lockfile's hash, each model under its pinned revision, so copies of the skill at different versions coexist. An npm or Chrome install under another hash that no run has used for 30 days is stale, and setup's install removes it; a model at an older revision stays.
