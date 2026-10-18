@@ -516,6 +516,10 @@ _Avoid_: visual, block, widget, template
 A component that moves the frame itself past the visual grammar's camera: its own camera path, a moving ground, or 3D. Richness belongs to the component, never to one scene's use of it, and the storyboard marks every scene that shows one.
 _Avoid_: heavy component, advanced visual
 
+**Custom scene**:
+A scene whose on-screen content the agent writes itself instead of taking a component, held by the same hard rules and video gates as every scene. Components are tested shortcuts beside it, not a menu it must choose from.
+_Avoid_: freeform scene, escape hatch, bespoke component
+
 **Cue**:
 The spoken moment a reveal, the camera beat or the emphasis lands on: a sentence of the scene's narration, or a word or phrase within that sentence.
 _Avoid_: trigger, beat (for the general case), keyframe
