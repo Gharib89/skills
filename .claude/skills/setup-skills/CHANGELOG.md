@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.2 (2026-10-18)
+
+### Bug Fixes
+
+- **ship**: Phase 9 names the relative merge.sh invocation
+  ([#873](https://github.com/Gharib89/skills/pull/873),
+  [`fdbe6e5`](https://github.com/Gharib89/skills/commit/fdbe6e50233e3b7ca7d428f6190dfd1cf4c25028))
+
+
 ## v0.25.1 (2026-10-18)
 
 ### Refactoring
