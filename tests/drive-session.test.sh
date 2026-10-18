@@ -29,7 +29,7 @@ for m in spawn watch read answer frontier; do
   check "$m: a bare call answers its usage line" "$(sed -n 1p <<<"$(bash "$s/$m.sh" --help)")" "$(jq -r .error <<<"$out")"
   check_rc "$m: a bare call exits 2" 2 "$rc"
 done
-# Outside Herdr every script refuses before it touches anything.
+# Outside Herdr every roster script refuses before it touches anything.
 out=$(HERDR_ENV='' bash "$s/spawn.sh" s1 --roster "$roster" --cwd "$tmp/cwd" --prompt hi 2>/dev/null); rc=$?
 check_rc "spawn outside Herdr exits 2" 2 "$rc"
 check "spawn outside Herdr says why" "drive-session runs inside Herdr only: HERDR_ENV=1 is not set" "$(jq -r .error <<<"$out")"
@@ -375,6 +375,14 @@ gh_route "$issues/4/sub_issues" '[{"number":5,"title":"e","state":"open","reposi
 out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 4 2>/dev/null); rc=$?
 check_rc "frontier whose blocker read GitHub refuses exits 1" 1 "$rc"
 check "that refusal names the sub-issue" "blockers of #5: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
+# A read that lands but is no list (an object, nothing, not JSON) is never
+# "no sub-issues".
+for body in '{"message":"moved"}' '' 'not json'; do
+  gh_route "$issues/6/sub_issues" "$body"
+  out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 6 2>/dev/null); rc=$?
+  check_rc "frontier refuses the answer '$body' as unreadable" 2 "$rc"
+  check "and says so" "sub-issues of #6: unreadable answer from gh" "$(jq -r .error <<<"$out")"
+done
 gh_reset
 for bad in "--parent x" "--parent 0" "--parent" "--parent -1" "--parent 1 --roster r" "1"; do
   # shellcheck disable=SC2086  # the call's words are split on purpose

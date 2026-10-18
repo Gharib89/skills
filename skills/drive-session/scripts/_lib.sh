@@ -28,7 +28,8 @@ ds_help() {
 # or the next flag is read as the value.
 ds_flag_value() { case $2 in -*|'') ds_tooling "$1" ;; esac; }
 
-# ds_in_herdr: the guard every script runs once its call is well formed. A
+# ds_in_herdr: the guard every roster script runs once its call is well formed
+# (`frontier` reads GitHub alone and skips it). A
 # supervisor outside Herdr has no tab beside it, and its `herdr` would reach
 # whichever session the socket names.
 ds_in_herdr() {

@@ -29,7 +29,8 @@ list() {
   local out
   out=$(gh api --paginate "repos/{owner}/{repo}/issues/$2?per_page=100" 2>&1 </dev/null) \
     || ds_fail "$1: $(tail -1 <<<"$out")"
-  listed=$(jq -cs 'add // []' <<<"$out" 2>/dev/null) || ds_tooling "$1: unreadable answer from gh"
+  listed=$(jq -ces 'if length > 0 and all(type == "array") then add else error end' <<<"$out" 2>/dev/null) \
+    || ds_tooling "$1: unreadable answer from gh"
 }
 
 list "sub-issues of #$parent" "$parent/sub_issues"

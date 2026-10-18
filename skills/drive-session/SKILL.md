@@ -19,10 +19,10 @@ Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer.
 ## The scripts
 
 They live in `scripts/` under this skill's base directory, and each answers
-`--help` with its flags and the JSON it prints. The first four take the roster
-by `--roster <file>`. Read, wait on and answer a roster session through them
-alone: each keeps the row's sequence number, which is what tells Herdr's stale
-`done` from a new turn.
+`--help` with its flags and the JSON it prints. Every script but `frontier`
+takes the roster by `--roster <file>`. Read, wait on and answer a roster session
+through `spawn`, `watch`, `read` and `answer` alone: each keeps the row's
+sequence number, which is what tells Herdr's stale `done` from a new turn.
 
 - `spawn` opens the tab without focus, starts claude, sends the task and adds
   the row.
@@ -36,8 +36,9 @@ alone: each keeps the row's sequence number, which is what tells Herdr's stale
   `--keys`.
 - `frontier --parent <n>` prints a spec parent's sub-issues, lowest number
   first, each with its state and open blockers, a blocker marked `inside` when
-  it is another sub-issue of the same parent. It reads GitHub alone, so it takes
-  no roster and runs outside Herdr.
+  it is another sub-issue of the same parent. It reads GitHub alone (an Azure
+  DevOps checkout has no spec batch), so it takes no roster and runs outside
+  Herdr.
 
 ## The run
 
@@ -123,43 +124,52 @@ hand-offs and questions the way the user would, by the escalation list.
 After every merge, `git status` the main checkout, then `git pull --ff-only`
 there before the next spawn: sessions start there, and its `.claude/skills/`
 is what runs, so a stale main runs the previous skills and branches from old
-code.
+code. A dirty tree or a refused pull is an escalation: spawn nothing until it
+clears.
 
 ## Spec batch
 
-A **spec batch** drives one spec parent's sub-issues to merge, each as a
-supervised ship run. The launch line names the parent and any merge allowance
+A **spec batch** drives one spec parent's sub-issues (its **slices**, joined
+by native blocking edges) to merge, each as a supervised ship run. The launch
+line names the parent and any merge allowance
 (`spec batch #799, merge each if all OK`).
 
 1. **Launch turn.** Run `frontier --parent <n>` and post its frontier, a slot
    plan (which slices run side by side, which wait, and why), and, when a slice
-   has a blocker outside the spec, one question proposing to add that spec to
-   the batch. Then end the turn: spawn nothing until the owner's go. On a "no",
-   those slices stay blocked and go in the report.
+   has a blocker outside the spec, one question proposing to add the blocker's
+   spec to the batch. Then end the turn: spawn nothing until the user's go. On
+   a yes, run `frontier` on that spec's parent too and plan both together. On
+   a "no", those slices stay blocked, the parent stays open, and both go in the
+   report.
 2. **Slots.** At most two ship runs at once. Take open, unblocked slices
    lowest number first, and pair two only when no blocking edge joins them and
-   the areas their briefs name do not overlap: a skill directory, the repo's
-   scripts, its tests, the glossary, its docs. That call is yours, from reading
-   each brief. A slice whose brief names no area waits for an empty slot. A
-   slot frees only when its run is at rest (merged, handed back or crashed): a
-   run waiting on an escalation keeps it. The gate slice, blocked by every
-   other sub-issue, starts once all of them are closed.
+   the areas their agent briefs name do not overlap: a skill directory, the
+   repo's scripts, its tests, the glossary, its docs. That call is yours, from
+   reading each agent brief. A slice whose agent brief names no area runs
+   alone: it starts only when no other run holds a slot. A slot frees only when
+   its run is at rest (merged, handed back or crashed): a run waiting on an
+   escalation keeps it. The gate slice, blocked by every other slice, starts
+   once all of them are closed.
 3. **Merges.** The launch line's merge allowance covers every PR in the spec,
    and only on Ship's own `run-file gate clean`, as Escalation says. After
    each merge, fast-forward main as above, then re-run `frontier`.
-   Once no sub-issue is open, close the parent as completed with a comment
-   naming each sub-issue and its PR: ship closes only the issue its PR names.
+   Once no slice is open, close the parent as completed with a comment naming
+   each slice and its PR: ship closes only the issue its PR names.
 4. **Batch log.** `<scratchpad>/drive-session/batch-log.md`, beside the
-   roster and read back with it after a compaction: one line per find, naming
-   the run, what happened, and whether it would recur in the runs still to
-   come. A recurring find is filed by spawning a `/triage <n>` tab, then shipped
-   as the next run in a free slot, before any slice it would hit.
-5. **End.** When every reachable sub-issue is at rest, report one row per
-   sub-issue (resting state and PR link) plus each slice left blocked and why.
-   Then draft the rest of the batch log as one retro spec, a parent with
-   PR-sized sub-issues, show it, and file it only on the owner's word.
+   roster and read back with it after a compaction. A **find** is anything a
+   run surfaced beyond its own task: an escalation, a reviewer quirk, a
+   classifier refusal, a gate gap. Write one line per find as it surfaces,
+   before the next `watch`, naming the run, what happened, and whether it would
+   recur in the runs still to come. File a recurring find as an issue, spawn a
+   `/triage <n>` tab on it (a triage tab takes no slot), then ship it as the
+   next run in a free slot, before any slice it would hit.
+5. **End.** When every reachable slice is at rest, report one row per slice
+   (resting state and PR link), in place of The report's rows, plus each slice
+   left blocked and why. Then draft the rest of the batch log as one retro
+   spec, a parent with PR-sized sub-issues, show it, and file it only on the
+   user's word.
 
-`watch` is the batch's only clock: no recurring schedule or loop.
+Wake only on The run's background `watch`, never on `/loop` or a schedule.
 
 ## The report
 
