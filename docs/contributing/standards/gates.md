@@ -25,6 +25,10 @@ do to pass.
   later. A version-stable code may be disabled under the rule above, its reason
   on the same line. `skills/setup-harness/templates/check.sh` dispatches its
   rungs with a `case` rather than `"rung_$rung"` for this reason.
+- No agent-authored file over the size limit, per the `token-limit` hook in
+  `.pre-commit-config.yaml`: the limit, its exclusions and the split
+  instruction for each kind of file are in the header of
+  `scripts/token-limit-check.sh`. Split the file rather than bypass the hook.
 - `gitleaks detect` over the branch's commits, per the `secrets` gate.
 - `.claude/skills/<name>/` byte-identical to `skills/<name>/` for every skill
   whose `skills-lock.json` entry has `source: "."`, per the `derived-copies`
@@ -133,6 +137,7 @@ do to pass.
   regions, per `scripts/template-drift-check.sh` under the `tests` gate: mark a
   deliberate departure in the workflow between `# >>> repo-owned` and
   `# <<< repo-owned`.
-- A `GLOSSARY.md` `_Avoid_` word in the diff's added Markdown lines, printed by
-  `scripts/glossary-warn.sh` from the Local gate as a warning only: read each
-  `glossary:` line and use the glossary term where the word names it.
+- A glossary (`GLOSSARY.md` or a `docs/glossary/` area file) `_Avoid_` word
+  in the diff's added Markdown lines, printed by `scripts/glossary-warn.sh`
+  from the Local gate as a warning only: read each `glossary:` line and use
+  the glossary term where the word names it.

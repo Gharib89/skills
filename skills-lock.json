@@ -35,7 +35,7 @@
     "explainer-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "1a94c0a7b9ed8bf231e62ba769bf7dd9294e2af788d98baea972614d932f1647"
+      "computedHash": "a9921295415edf307f82303e26e6f48d6b06344e2992b2f1264afea7dfb48f5d"
     },
     "find-docs": {
       "source": "upstash/context7",
@@ -47,7 +47,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "dea7cf410cd4a4b38c426f98778bf144c179b9a3d24c54facdf226ff627e3ff8"
+      "computedHash": "176dc01cfbac608487eb7ae560494e7f7ea5ed5e4449759ac02994a19251ef47"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",
@@ -104,12 +104,12 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "48d6ac371ee50a0c91cd165fff0548e828a731649494324c19a1b05a0aec589f"
+      "computedHash": "fdcdf3ad8be89aee93c8f511f55c688a8d81a3b8b36c21f7dabc922221f76a35"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "a899cb73be8d2decb37cf531705a69b430ac485d586121877e6b7a259203da88"
+      "computedHash": "7f78d367f000bdf5abb8b9220eb9bcb9f250d918f5824763424cb0070b030b8a"
     },
     "show-me": {
       "source": "humanlayer/skills",

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Glossary warning: names each `_Avoid_` word of GLOSSARY.md that a diff adds to
+# Glossary warning: names each `_Avoid_` word of the glossary that a diff adds to
 # a markdown file.
 #
-# GLOSSARY.md lists, per term, the words a doc should not use for it, and a word
-# creeps back in through a PR nobody re-reads against the glossary. This reads
+# The glossary (GLOSSARY.md and every docs/glossary/*.md area file) lists, per
+# term, the words a doc should not use for it, and a word creeps back in through
+# a PR nobody re-reads against the glossary. This reads
 # the lines the branch adds, not the whole tree, so the words already in the
 # docs are not a backlog this reports. It is a warning, never a gate: an avoided
 # word is often a plain English word (`check`, `run`) in a sentence that is not
@@ -15,7 +16,7 @@
 # parenthetical and backticks from each word, and matches it case-insensitively
 # as a whole word or phrase (a letter, digit or underscore beside it is no
 # match). Added lines come from `git diff <base>...HEAD` over `*.md`, minus
-# every CHANGELOG.md (the release run writes those), the root GLOSSARY.md and
+# every CHANGELOG.md (the release run writes those), the glossary files and
 # anything under `.claude/` (derived copies repeat every hit of `skills/`).
 #
 # stdout: per hit, `glossary: <file>:<line>: "<word>" is on the _Avoid_ list of
@@ -28,6 +29,8 @@ die() { echo "glossary-warn: $*" >&2; exit 2; }
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null)" || die "not inside a git checkout"
 [ -r GLOSSARY.md ] || die "no GLOSSARY.md at the repo root"
+glossaries=(GLOSSARY.md)
+for f in docs/glossary/*.md; do [ -r "$f" ] && glossaries+=("$f"); done
 
 base=${1:-}
 if [ -z "$base" ]; then
@@ -53,7 +56,7 @@ awk -v tf="$tmp/terms" '
       if (w[i] != "" && term != "") printf "%s\t%s\n", term, w[i]
     }
   }
-' GLOSSARY.md > "$tmp/avoid"
+' "${glossaries[@]}" > "$tmp/avoid"
 
 git -c core.quotepath=off diff --no-color --no-ext-diff --unified=0 "$base...HEAD" -- '*.md' > "$tmp/diff" \
   || die "git diff $base...HEAD failed"
@@ -71,7 +74,7 @@ awk -F'\t' -v tf="$tmp/terms" -v af="$tmp/avoid" '
   }
   FILENAME == tf { T[++nt] = $0; isterm[$0] = 1; next }
   FILENAME == af { if (!(tolower($2) in isterm)) { terms[++n] = $1; words[n] = $2 }; next }
-  /^\+\+\+ / { file = substr($0, 7); if ($0 == "+++ /dev/null") file = ""; skip = (file ~ /(^|\/)CHANGELOG\.md$/ || file == "GLOSSARY.md" || file ~ /^\.claude\//); next }
+  /^\+\+\+ / { file = substr($0, 7); if ($0 == "+++ /dev/null") file = ""; skip = (file ~ /(^|\/)CHANGELOG\.md$/ || file == "GLOSSARY.md" || file ~ /^docs\/glossary\// || file ~ /^\.claude\//); next }
   /^@@ / { split($0, f, " "); split(f[3], h, ","); line = substr(h[1], 2) + 0; next }
   /^\+/ {
     if (file != "" && !skip) {

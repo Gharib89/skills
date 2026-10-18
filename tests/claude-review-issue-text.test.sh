@@ -12,6 +12,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 tpl=skills/setup-skills/reviewers/github-claude-review.md
+tpl_push=skills/setup-skills/reviewers/github-claude-review-on-push.md
 own=.github/workflows/claude-review.yml
 
 # <file> [<nth>]: the `run:` body of the nth `id: issue` step, dedented.
@@ -26,9 +27,9 @@ step_script() {
         print substr($0, ind + 1) }' "$1"
 }
 
-script=$(step_script "$tpl" 1)
+script=$(step_script "$tpl_push" 1)
 check "the on-push shape carries the step" "yes" "$([ -n "$script" ] && echo yes || echo no)"
-check "the on-request shape carries the same step" "$script" "$(step_script "$tpl" 2)"
+check "the on-request shape carries the same step" "$script" "$(step_script "$tpl" 1)"
 check "this repo's workflow carries the same step" "$script" "$(step_script "$own")"
 
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT

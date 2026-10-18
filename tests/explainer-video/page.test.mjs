@@ -18,7 +18,17 @@ import { ARABIC, SCRIPT } from "./scene-file.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skill = path.join(here, "..", "..", "skills", "explainer-video");
 const read = (f) => fs.readFileSync(f, "utf8");
-const html = read(path.join(skill, "storyboard", "page.html"));
+const html = read(path.join(skill, "storyboard", "page.html"))
+  // The page links its style and scripts as siblings; inline them to test the whole.
+  .replace(
+    /<link rel="stylesheet" href="([^":]+)">/g,
+    (_, f) => `<style>\n${read(path.join(skill, "storyboard", f))}</style>`,
+  )
+  .replace(
+    /(<script src="[^":]+"><\/script>\n?)+/,
+    (m) =>
+      `<script>\n${[...m.matchAll(/src="([^"]+)"/g)].map((x) => read(path.join(skill, "storyboard", x[1]))).join("")}</script>\n`,
+  );
 const doc = read(path.join(skill, "storyboard", "board-data.md"));
 const sample = (n) =>
   JSON.parse(read(path.join(here, "board-fixtures", `${n}.json`)));

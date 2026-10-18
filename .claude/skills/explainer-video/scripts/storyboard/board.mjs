@@ -105,6 +105,13 @@ const versions = () =>
 const template = () =>
   fs.readFileSync(path.join(skill, "storyboard", "page.html"), "utf8");
 const filled = (title) => template().replace("{{TITLE}}", () => esc(title));
+// The page links its style and scripts by relative path: a publish carries them
+// in `files`, and a local copy needs them beside it.
+const siblings = ["page.css", "page-core.js", "page-boot.js"];
+const copySiblings = (dir) => {
+  for (const f of siblings)
+    fs.copyFileSync(path.join(skill, "storyboard", f), path.join(dir, f));
+};
 
 function needScript() {
   if (!fs.existsSync(at("script.json")))
@@ -182,6 +189,7 @@ if (cmd === "page") {
     const script = needScript();
     fs.mkdirSync(at("board"), { recursive: true });
     fs.writeFileSync(at("board", "page.html"), filled(script.title));
+    copySiblings(at("board"));
     console.log("board: page board/page.html");
   } else {
     if (!url.startsWith("https://")) fail(`${url} is not an https:// URL`);
@@ -491,6 +499,7 @@ if (published && media.some((f) => !assets[f])) {
   fail(`record each upload with: node board.mjs ${run} asset <path>=<url>`);
 }
 // The local copy declares its encoding: no publish wraps it in a skeleton.
+copySiblings(run);
 fs.writeFileSync(
   at("storyboard.html"),
   '<!doctype html>\n<meta charset="utf-8">\n' +
