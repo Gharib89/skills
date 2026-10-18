@@ -68,9 +68,8 @@ edit made false. On #765 CPU pins sat under comments that still said
 **A data file read at load is validated for shape, with a named refusal.** A
 parse that succeeds says nothing about shape: valid JSON of the wrong shape
 passes the parser and fails at the first use, far from the file, with an error
-that names neither (a `TypeError`, a jq null). The loader
-checks the shape it needs and refuses by naming the file and the field. On #759
-setup crashed that way.
+that names no file (a Node `TypeError`). The loader checks the shape it needs
+and refuses by naming the file and the field. On #759 setup crashed that way.
 
 **What the rules cover.** These are the scope facts reviewers most often got
 wrong; each sub-file's rule holds inside them.

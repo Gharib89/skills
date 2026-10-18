@@ -152,7 +152,7 @@ below lands as a minor
   alone. The reviewer's evidence rule in the index binds the author's claims
   too, and a conclusion goes no further than the probe measured: on #768 a
   `check` printing "ready" measured an env's stamp date, not whether the 14 GB
-  env was current, and its line said so.
+  env was current, and #768's Verification line said so.
 - **A fix landed after review has its hunk re-read before the push.** Read the
   changed lines back out of the file, not out of the reply you are about to
   post; a fix applied to the wrong copy or applied by half costs a whole round
