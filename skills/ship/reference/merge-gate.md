@@ -51,8 +51,8 @@ references call each item, not a layout:
   [A tracker issue on Targets:](#a-tracker-issue-on-targets).
 - **CI**: each `Legs:` leg's state, any red check outside the legs and any
   check missing from `Legs:`.
-- **Issues filed** and **linked**, each by number and title, and each
-  **noted** adjacent find.
+- **Issues filed**, each by number, title and link, **linked**, each by number
+  and title, and each **noted** adjacent find.
 - **Ship defects**, each with the phase it was met in and its draft's title
   and path (or its number, filed here), **Ship notes** and **Direct calls**,
   below.
@@ -87,11 +87,13 @@ on one side, the candidates it answered with instead on the other), and
 `Verification` and the tests are the phase-3 and phase-2 results. On an
 `unexercised` result, what ran names the **subject that did not exist** rather
 than a command. A value you cannot point to a tool result for is written
-`unverified`. A **tally of the run's own work** has no tool to re-run, so it is
-**written to the Run file at the moment it happens** and read back from there,
-which is what survives a compaction: a `file-issue` result when the call
-answers, a Ship defect, Ship note or `Noted:` find when it is met, and a
-reviewer's round when it is dispositioned ([review-loop.md](review-loop.md)).
+`unverified`: a find the run reports filed or refused with no `file-issue`
+answer behind it is one. A **tally of the run's own work** has no tool to
+re-run, so it is **written to the Run file at the moment it happens** and read
+back from there, which is what survives a compaction: a `file-issue` result
+when the call answers, a Ship defect, Ship note or `Noted:` find when it is
+met, and a reviewer's round when it is dispositioned
+([review-loop.md](review-loop.md)).
 `Ship defects` lists every gap in Ship that broke or misled the run: a gating
 call no mechanic performs, or a mechanic or prose whose wrong answer the run
 acted on. Friction the run worked around by judgment (a rule that did not fit

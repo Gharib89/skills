@@ -124,6 +124,10 @@ base; printf 'Round: primary 2:   \n' >> "$f"; held 'blank latest round' 'review
 base; change_run '/^Round: primary/d'; held 'stop without dispositioned round' 'reviewer primary: no dispositioned round'
 base; change_run '/^Stop: primary/d'; held 'missing reviewer stop' 'reviewer primary: missing stop'
 base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'not reviewed primary covered by a fallback stopped on tree unchanged'
+# `not reviewed: <reason>` reads as `not reviewed` (#787).
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed: unreachable/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a not-reviewed primary with a reason covered by a fallback'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not reviewed: unreachable/'; held 'a not-reviewed primary with a reason and no fallback' 'reviewer primary: not reviewed'
+base; change_run 's/Stop: fallback: not reviewed/Stop: fallback: not reviewed: the primary reviewed/'; clean 'a not-reviewed fallback with a reason behind a settled primary'
 base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'cap is not rescued by fallback' 'reviewer primary: cap'
 # A primary that spent its Cap: on a tree-changing last round owes its fallback a run (#531).
 capped() { base; sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Round: primary 2: fixes pushed\nStop: primary: cap/'; }
@@ -180,6 +184,11 @@ base; legal; change_run 's/punctuation: pass at abcdef0123456789/punctuation: de
 base; rm "$ci"; answer=$(call); check_rc 'unreadable CI input is tooling' 2 "$?"; check 'unreadable CI names its path' "cannot read CI answer at $ci" "$(jq -r .error <<<"$answer")"
 base; sed '/^## Verification/i ```' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; answer=$(call); check_rc 'unclosed profile fence is tooling' 2 "$?"; check 'unclosed profile fence names failed read' "cannot read profile evidence at $profile" "$(jq -r .error <<<"$answer")"
 base; sed 's/^Legs:$/Legs: None./; /  test: prove the change/d' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; sed '/^Legs:/a No-checks legal: no' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; printf '\n```\n## CI\nLegs: None.\nNo-checks legal: yes\n```\n' >> "$profile"; change_ci '.status="no-checks" | .checks=[]'; held 'fenced CI policy cannot authorize no-checks' 'CI: no-checks'
+# A background task's output file ends in an exit-code trailer: the first JSON
+# object is the answer (#787).
+base; printf '[exit 0]\n' >> "$ci"; clean 'a ci-wait answer followed by a trailing non-JSON line'
+base; { jq . "$ci"; printf 'Background command exited with code 0\n'; } > "$ci.new"; mv "$ci.new" "$ci"; clean 'a pretty-printed ci-wait answer followed by a trailer'
+base; { printf 'preamble line\n'; cat "$ci"; } > "$ci.new"; mv "$ci.new" "$ci"; answer=$(call); check_rc 'a non-JSON line before the answer is still tooling' 2 "$?"
 base; printf 'not-json\n' > "$ci"; answer=$(call); check_rc 'malformed CI is tooling' 2 "$?"; check 'malformed CI names failed read' 'CI answer is not a valid ci-wait object' "$(jq -r .error <<<"$answer")"
 base; printf '{}\n' > "$ci"; answer=$(call); check_rc 'empty CI object is tooling' 2 "$?"; check 'empty CI names failed read' 'CI answer is not a valid ci-wait object' "$(jq -r .error <<<"$answer")"
 base; change_run 's/{.*}/{broken}/'; answer=$(call); check_rc 'malformed recorded gates is tooling' 2 "$?"; check 'bad gate JSON names failed read' 'cannot read recorded local gate results' "$(jq -r .error <<<"$answer")"

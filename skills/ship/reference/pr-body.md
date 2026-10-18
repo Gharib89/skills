@@ -129,3 +129,7 @@ states.
 A section a rewrite swallowed is missing from `read-pr`'s `headings`, the only
 place a swallowed `## Attribution` shows while the PR is open;
 `update-pr-body`'s `sections` list is the same check one write earlier.
+
+`update-pr-body` runs the repo's body checker, the profile's `## PR`
+`Body-check:` line, on the body it would publish; run it on a hand-written body
+before `open-pr` too.

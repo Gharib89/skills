@@ -194,18 +194,23 @@ wrong is the `mis-specified` stop instead.
   release grade (a `fix` PR that would become a `feat` files it instead). Log
   the deviation and name the fold under the PR body's `## Special things to
   note`. Folded lines count toward the inline lane's 20-line cap.
-- **File** a find worth an issue that fails the fold's test through
-  `file-issue`, with the profile's triage marker, and leave it. The mechanic
+- **File** a find worth an issue that fails the fold's test through a real
+  `file-issue` call made inside the run, with the profile's triage marker, and
+  leave it. A find is filed when the call's answer says `filed: true`; report
+  `filed` or `refused` by quoting that answer. The mechanic
   answers `filed: false` with candidates when an open issue's title shares three
   or more tokens with yours, and each candidate is **read**: the same finding is
   linked in the deviations log rather than refiled, and `comment-issue` posts
   any evidence this run adds to it; a different one is refiled with
   `--distinct-from`. A find citing a path this PR already changes is refused
   with `in_diff`, since a find there folds unless it fails the fold's test;
-  `--outside-scope "<reason>"` files that case.
+  a find that does fail it is filed in that same call with
+  `--outside-scope "<reason>"`.
 - **Note** a find not worth a fold or an issue (a typo outside the diff, a
   cosmetic nit): record `Noted: <find>` in the Run file when it is met, so the
-  merge summary can list it after a compaction.
+  merge summary can list it after a compaction. A filed find is recorded the
+  same way, as `Filed: <issue link>: <find>`, from the `file-issue` answer's own
+  link.
 
 The merge summary lists every issue filed, every candidate linked and every
 noted find.
