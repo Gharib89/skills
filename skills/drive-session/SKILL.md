@@ -124,8 +124,8 @@ hand-offs and questions the way the user would, by the escalation list.
 After every merge, `git status` the main checkout, then `git pull --ff-only`
 there before the next spawn: sessions start there, and its `.claude/skills/`
 is what runs, so a stale main runs the previous skills and branches from old
-code. A dirty tree or a refused pull is an escalation: spawn nothing until it
-clears.
+code. On a dirty tree or a refused pull, spawn nothing: tell the user what
+`git status` or the pull printed, and wait for their word.
 
 ## Spec batch
 

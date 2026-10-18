@@ -29,9 +29,9 @@ ds_help() {
 ds_flag_value() { case $2 in -*|'') ds_tooling "$1" ;; esac; }
 
 # ds_in_herdr: the guard every roster script runs once its call is well formed
-# (`frontier` reads GitHub alone and skips it). A
-# supervisor outside Herdr has no tab beside it, and its `herdr` would reach
-# whichever session the socket names.
+# (`frontier` reads GitHub alone and skips it). A supervisor outside Herdr has
+# no tab beside it, and its `herdr` would reach whichever session the socket
+# names.
 ds_in_herdr() {
   [ "${HERDR_ENV:-}" = 1 ] || ds_tooling "drive-session runs inside Herdr only: HERDR_ENV=1 is not set"
   command -v herdr >/dev/null || ds_tooling "herdr not installed"

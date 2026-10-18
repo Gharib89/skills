@@ -22,7 +22,8 @@
 #
 # `GH_ROUTES` set to a directory answers each call by its endpoint instead, for
 # a script that makes several different reads: `gh_route <endpoint> <body>`
-# writes the body one endpoint answers, its query string ignored, and an
+# writes the body one endpoint answers, an empty one included, its query
+# string ignored, and an
 # endpoint with no route fails the way gh's 404 does. `gh_args` lists each
 # call's arguments, one line per call.
 gh_fake_install() { # <dir>
@@ -68,7 +69,7 @@ if [ "$status" -ge 400 ]; then
   echo "gh: unexpected end of JSON input" >&2
   exit 1
 fi
-printf '%s\n' "${GH_BODY:-ok}"
+if [ -n "${GH_ROUTES:-}" ]; then printf '%s\n' "$GH_BODY"; else printf '%s\n' "${GH_BODY:-ok}"; fi
 exit 0
 FAKE
   chmod +x "$1/gh"
