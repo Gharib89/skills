@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.1 (2026-10-18)
+
+### Bug Fixes
+
+- **explainer-video**: Budget spoken characters, not words
+  ([#847](https://github.com/Gharib89/skills/pull/847),
+  [`73b326a`](https://github.com/Gharib89/skills/commit/73b326a52327d17e46c2eca29f425fa7c27c3fe1))
+
+
 ## v0.24.0 (2026-10-18)
 
 ### Features
