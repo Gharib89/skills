@@ -352,19 +352,23 @@ issues="repos/{owner}/{repo}/issues"
 iss() { jq -cn --argjson n "$1" --arg t "$2" --arg s "$3" --arg u "$4" --arg a "${5:-}" \
   '{number: $n, title: $t, state: $s, repository_url: $u, assignees: (if $a == "" then [] else [{login: $a}] end)}'; }
 # Two pages, the shape --paginate prints, out of number order.
+# One sub-issue lives in another repo under a number this repo also uses: its
+# blockers are read from its own repo.
 gh_route "$issues/1/sub_issues" "[$(iss 12 b open $here),$(iss 14 c closed $here)]
-[$(iss 11 a open $here someone)]"
-gh_route "$issues/11/dependencies/blocked_by" '[]'
-gh_route "$issues/12/dependencies/blocked_by" "[$(iss 11 a open $here),$(iss 90 z open $here),$(iss 14 c closed $here),$(iss 11 elsewhere open $there)]"
+[$(iss 11 a open $here someone),$(iss 12 d open $there)]"
+gh_route "repos/o/r/issues/11/dependencies/blocked_by" '[]'
+gh_route "repos/o/r/issues/12/dependencies/blocked_by" "[$(iss 11 a open $here),$(iss 90 z open $here),$(iss 14 c closed $here),$(iss 11 elsewhere open $there)]"
+gh_route "repos/o/other/issues/12/dependencies/blocked_by" "[$(iss 11 a open $here)]"
 out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 1); rc=$?
 check_rc "frontier exits 0 outside Herdr" 0 "$rc"
-check "frontier lists each sub-issue lowest number first with its assignees and open blockers, each with its repo and inside or outside the spec" \
-  '{"parent":1,"sub_issues":[{"number":11,"title":"a","state":"open","assignees":["someone"],"blockers":[]},{"number":12,"title":"b","state":"open","assignees":[],"blockers":[{"number":11,"title":"a","repo":"o/r","inside":true},{"number":90,"title":"z","repo":"o/r","inside":false},{"number":11,"title":"elsewhere","repo":"o/other","inside":false}]},{"number":14,"title":"c","state":"closed","assignees":[],"blockers":[]}]}' \
+check "frontier lists each sub-issue lowest number first with its repo, assignees and open blockers, each with its repo and inside or outside the spec" \
+  '{"parent":1,"sub_issues":[{"number":11,"title":"a","repo":"o/r","state":"open","assignees":["someone"],"blockers":[]},{"number":12,"title":"d","repo":"o/other","state":"open","assignees":[],"blockers":[{"number":11,"title":"a","repo":"o/r","inside":true}]},{"number":12,"title":"b","repo":"o/r","state":"open","assignees":[],"blockers":[{"number":11,"title":"a","repo":"o/r","inside":true},{"number":90,"title":"z","repo":"o/r","inside":false},{"number":11,"title":"elsewhere","repo":"o/other","inside":false}]},{"number":14,"title":"c","repo":"o/r","state":"closed","assignees":[],"blockers":[]}]}' \
   "$(jq -c . <<<"$out")"
 check "frontier reads over REST, every page, and no blockers of a closed sub-issue" \
   "api --paginate $issues/1/sub_issues?per_page=100
-api --paginate $issues/11/dependencies/blocked_by?per_page=100
-api --paginate $issues/12/dependencies/blocked_by?per_page=100" "$(gh_args)"
+api --paginate repos/o/r/issues/11/dependencies/blocked_by?per_page=100
+api --paginate repos/o/other/issues/12/dependencies/blocked_by?per_page=100
+api --paginate repos/o/r/issues/12/dependencies/blocked_by?per_page=100" "$(gh_args)"
 check "frontier reaches no herdr" "" "$(calls)"
 gh_reset
 gh_route "$issues/2/sub_issues" '[]'
@@ -377,7 +381,7 @@ check "the refusal carries gh's message" "sub-issues of #3: gh: Not Found (HTTP 
 gh_route "$issues/4/sub_issues" "[$(iss 5 e open $here)]"
 out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 4 2>/dev/null); rc=$?
 check_rc "frontier whose blocker read GitHub refuses exits 1" 1 "$rc"
-check "that refusal names the sub-issue" "blockers of #5: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
+check "that refusal names the sub-issue" "blockers of o/r#5: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
 # A read that lands but is no list of issues (an object, nothing, not JSON, an
 # entry that is no issue) is never "no sub-issues".
 for body in '{"message":"moved"}' '' 'not json' '["oops"]' '[{"title":"x","state":"open"}]' '[]

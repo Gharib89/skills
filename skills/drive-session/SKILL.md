@@ -35,11 +35,11 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
 - `answer` sends a prompt with `--text`, or presses keys into a dialog with
   `--keys`.
 - `frontier --parent <n>` prints a spec parent's sub-issues, lowest number
-  first, each with its state, assignees and open blockers, a blocker carrying
-  its `repo` and marked `inside` when it is another sub-issue of the same
-  parent. It reads GitHub alone (an Azure
-  DevOps checkout has no spec batch), so it takes no roster and runs outside
-  Herdr.
+  first, each with its `repo`, state, assignees and open blockers, a blocker
+  carrying its `repo` and marked `inside` when it is another sub-issue of the
+  same parent. Run it from the spec's checkout, or with `GH_REPO=<owner/name>`:
+  it reads the parent from that repo. It reads GitHub alone (an Azure DevOps
+  checkout has no spec batch), so it takes no roster and runs outside Herdr.
 
 ## The run
 
@@ -133,7 +133,7 @@ code. On a dirty tree or a refused pull, spawn nothing: tell the user what
 A **spec batch** drives one spec parent's sub-issues (its **slices**, joined
 by native blocking edges) to merge, each as a supervised ship run. The launch
 line names the parent and any merge allowance
-(`spec batch #799, merge each if all OK`).
+(`spec batch #<parent>, merge each if all OK`).
 
 1. **Launch turn.** Run `frontier --parent <n>` and post its frontier, a slot
    plan (which slices run side by side, which wait, and why), and, when a slice
