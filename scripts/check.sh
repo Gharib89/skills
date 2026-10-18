@@ -43,9 +43,12 @@ FULL_RUN='prek run --all-files'
 # A changed file matching a row's globs belongs to the row with the longest
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
 # member's directory; <affected tests> takes {files}, relative to it, and an
-# empty one runs <tests>. An empty command is no check.
-TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json||../../tests/explainer-video.test.sh --turn|
-tests/explainer-video/|explainer-video-tests|*.mjs||../explainer-video.test.sh --turn|
+# empty one runs <tests>. An empty command is no check. The explainer-video
+# rows name their suite under <affected tests> alone: `full` runs the whole
+# suite in the `tests` row, so a <tests> entry ran its `--turn` subset twice
+# more beside it.
+TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn
+tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn
 skills/grill-with-artifact/|grill-with-artifact|*.js||../../tests/grill-with-artifact.test.sh|'
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS='tests|tests/run.sh
