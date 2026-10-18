@@ -22,7 +22,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { HOLD, fitsLength, sentences } from "../lib/length.mjs";
+import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
@@ -73,7 +73,7 @@ const gates = {};
   gates.arc = f;
 }
 
-// budget: 12 to 30 s a scene, its spoken words within 10 percent of its
+// budget: 12 to 30 s a scene, its spoken characters within 10 percent of its
 // seconds, less the narrator's pause a sentence, at the narrator's rate, and
 // the scenes with the render's closing hold within 10 percent of the brief's
 // length.
@@ -84,10 +84,10 @@ const gates = {};
       f.push(`${s.id} ${s.seconds} s is outside 12 to 30 s`);
     const stops = sentences(s.narration.join(" ")).length;
     const budget = (s.seconds - stops * narrator.pause) * narrator.rate;
-    const n = s.counts.reduce((a, b) => a + b, 0);
+    const n = chars(s.narration.join(" "));
     if (Math.abs(n - budget) > budget * 0.1)
       f.push(
-        `${s.id} ${n} spoken words ({written|spoken} counts its spoken form) vs ${Math.round(budget)} (${s.seconds} s less ${stops} sentences at ${narrator.pause} s, at ${narrator.rate} words/s) ±10%`,
+        `${s.id} ${n} spoken characters ({written|spoken} counts its spoken form) vs ${Math.round(budget)} (${s.seconds} s less ${stops} sentences at ${narrator.pause} s, at ${narrator.rate} chars/s) ±10%`,
       );
   }
   const total = scenes.reduce((a, s) => a + (s.seconds ?? 0), 0);

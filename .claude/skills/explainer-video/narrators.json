@@ -9,7 +9,7 @@
       "style": null,
       "licence": "Apache-2.0",
       "leavesMachine": false,
-      "rate": 3.8,
+      "rate": 16.55,
       "pause": 0.78,
       "default": true
     },
@@ -22,7 +22,7 @@
       "style": null,
       "licence": "Apache-2.0",
       "leavesMachine": false,
-      "rate": 3.6,
+      "rate": 15.7,
       "pause": 0.57,
       "default": true
     },
@@ -35,7 +35,7 @@
       "style": "a clear, warm, friendly narrator explaining a software workflow",
       "licence": "Gemini API terms",
       "leavesMachine": true,
-      "rate": 2.51,
+      "rate": 11.2,
       "pause": 0.7,
       "default": true
     },
@@ -48,8 +48,8 @@
       "style": "a clear, warm, friendly narrator explaining a software workflow",
       "licence": "Gemini API terms",
       "leavesMachine": true,
-      "rate": 2.77,
-      "pause": 0.66,
+      "rate": 12.71,
+      "pause": 0.68,
       "default": true
     },
     {
@@ -61,7 +61,7 @@
       "style": null,
       "licence": "ElevenLabs terms",
       "leavesMachine": true,
-      "rate": 3.07,
+      "rate": 13.38,
       "pause": 0,
       "default": false
     }

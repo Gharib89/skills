@@ -1,24 +1,25 @@
 // Maintainer only: measure each narrator's speaking rate and pause on fixed
 // texts and write them into narrators.json, where the script stage budgets
-// scene words.
+// scene characters.
 //
 //   node maintainer/calibrate-rates.mjs <language> [narrators.json]
 //
 // Needs the voice rows installed (`node scripts/setup.mjs install`). The rate
-// is words per second of speech, each sentence timed from its first word's
-// start to its last word's end; the pause a sentence is the audio's seconds
+// is spoken characters (`chars` in scripts/lib/length.mjs) per second of
+// speech, each sentence timed from its first word's start to its last word's
+// end; the pause a sentence is the audio's seconds
 // less its speech, over its sentences, because a voiced scene carries the
 // silence between its sentences and around each call.
 // Both pool every text of the language. A narrator not yet calibrated this way
 // carries pause 0 and a rate over its aligned span, first word to last, silence
 // between sentences included, the same budget.
-// stdout: `calibrate <id> text <k>: <rate> words/s, <pause> s a sentence` per
-//         text, then `calibrate <id>: <rate> words/s, <pause> s a sentence`,
+// stdout: `calibrate <id> text <k>: <rate> chars/s, <pause> s a sentence` per
+//         text, then `calibrate <id>: <rate> chars/s, <pause> s a sentence`,
 //         the values written, per narrator of that language
 // exit:   0 written · 1 synthesis or alignment failed · 2 usage
 import fs from "node:fs";
 import path from "node:path";
-import { sentences } from "../scripts/lib/length.mjs";
+import { chars, sentences } from "../scripts/lib/length.mjs";
 import { loadBackend, skill, toolPaths } from "../scripts/lib/tools.mjs";
 import { align } from "../scripts/voice/align.mjs";
 
@@ -84,7 +85,7 @@ const ctc = await backend.aligner({ language, tools });
 const r2 = (x) => +x.toFixed(2);
 try {
   for (const n of doc.narrators.filter((n) => n.language === language)) {
-    const sum = { words: 0, speech: 0, silence: 0, sentences: 0 };
+    const sum = { chars: 0, speech: 0, silence: 0, sentences: 0 };
     for (const [k, text] of TEXTS[language].entries()) {
       const said = sentences(text).map((s) => s.split(/\s+/));
       const { samples, sampleRate } = await backend.synthesize({
@@ -101,20 +102,20 @@ try {
         first += s.length;
       }
       const t = {
-        words: timed.length,
+        chars: chars(text),
         speech,
         silence: samples.length / sampleRate - speech,
         sentences: said.length,
       };
       for (const key in sum) sum[key] += t[key];
       console.log(
-        `calibrate ${n.id} text ${k + 1}: ${r2(t.words / t.speech)} words/s, ${r2(t.silence / t.sentences)} s a sentence`,
+        `calibrate ${n.id} text ${k + 1}: ${r2(t.chars / t.speech)} chars/s, ${r2(t.silence / t.sentences)} s a sentence`,
       );
     }
-    n.rate = r2(sum.words / sum.speech);
+    n.rate = r2(sum.chars / sum.speech);
     n.pause = r2(sum.silence / sum.sentences);
     console.log(
-      `calibrate ${n.id}: ${n.rate} words/s, ${n.pause} s a sentence`,
+      `calibrate ${n.id}: ${n.rate} chars/s, ${n.pause} s a sentence`,
     );
   }
 } catch (e) {

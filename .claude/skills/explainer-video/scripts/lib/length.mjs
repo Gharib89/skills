@@ -18,3 +18,11 @@ export function fitsLength(seconds, minutes) {
 export function sentences(text) {
   return text.split(/(?<=[.!?؟])\s+/);
 }
+
+// A narration's spoken characters, the unit a narrator's rate is in: its
+// letters and digits in any script, not its spaces or punctuation. Kokoro and
+// Gemini speak a near-constant number a second whatever the words' length,
+// where words a second fall as words lengthen (#783).
+export function chars(text) {
+  return text.match(/[\p{L}\p{N}]/gu)?.length ?? 0;
+}
