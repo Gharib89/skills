@@ -351,14 +351,12 @@ for (const [i, s] of given.entries()) {
       const url = kind === "page" ? s : pathToFileURL(path.resolve(s)).href;
       const page = await backend.renderPage(url, { env: hyperframesEnv() });
       title = page.title?.trim() || (kind === "page" ? shown : name);
-      const md = await backend.toMarkdown(page.html);
-      // Markup alone (an empty heading or link, an image, a rule) is no text.
-      if (!/[\p{L}\p{N}]/u.test(md.replace(/\]\([^)]*\)/g, "]")))
+      if (!page.text.trim())
         refuse(
           s,
           "the page rendered no text, as it timed out or renders client side: snapshot it again, or give it as a saved .html or .md file",
         );
-      text = titled(title, md);
+      text = titled(title, await backend.toMarkdown(page.html));
     }
   } catch (e) {
     refuse(s, `could not read it: ${e.message}`);
