@@ -108,6 +108,10 @@ checks.
 - A diff touching a shell script (`*.sh`, or a shell block in a workflow):
   [standards/shell.md](standards/shell.md), the mechanic contract and its
   header, Bash 3.2, traps, host calls, quoting, failed reads and matching.
+- A diff touching JavaScript (`*.js`, `*.mjs`, `*.cjs`, `*.jsx`): no language
+  file, since every rule that binds Node code already sits in the reviewer
+  section above, such as the `eslint-disable` suppression, the probe-keyed
+  delete and the shape-validated data file.
 - A diff touching `tests/` or a `*.test.sh`:
   [standards/tests.md](standards/tests.md), proving a test, fixtures, fakes and
   stubs.
