@@ -49,3 +49,11 @@ repos:
         language: system
         files: ^skills/[^/]+/(SKILL\.md|reference/[^/]+\.md)$
         pass_filenames: false
+      # The 5,000-token file limit (bytes / 4) on any staged file. The limit and
+      # the reasons for each exclusion are in the script's header; the exclude
+      # here is the exclusion list: lockfiles and every CHANGELOG.md.
+      - id: token-limit
+        name: token-limit
+        entry: scripts/token-limit-check.sh
+        language: system
+        exclude: (^|/)(CHANGELOG\.md|[^/]*-lock\.json|[^/]*\.lock)$
