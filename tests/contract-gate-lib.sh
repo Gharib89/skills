@@ -11,7 +11,7 @@ fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 copy_mechanics() {
   local d="$fixture/$1" m; shift
   rm -rf "$d"; mkdir -p "$d"
-  cp skills/ship/scripts/_lib.sh "$d/" || exit 2
+  cp -r skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$d/" || exit 2
   cp -r skills/ship/scripts/host "$d/" || exit 2
   # A mechanic renamed out from under this file would otherwise leave the case
   # appending its mutation to a file holding nothing else, still green.

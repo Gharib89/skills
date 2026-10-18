@@ -133,6 +133,7 @@ do to pass.
   regions, per `scripts/template-drift-check.sh` under the `tests` gate: mark a
   deliberate departure in the workflow between `# >>> repo-owned` and
   `# <<< repo-owned`.
-- A `GLOSSARY.md` `_Avoid_` word in the diff's added Markdown lines, printed by
-  `scripts/glossary-warn.sh` from the Local gate as a warning only: read each
-  `glossary:` line and use the glossary term where the word names it.
+- A glossary (`GLOSSARY.md` or a `docs/glossary/` area file) `_Avoid_` word
+  in the diff's added Markdown lines, printed by `scripts/glossary-warn.sh`
+  from the Local gate as a warning only: read each `glossary:` line and use
+  the glossary term where the word names it.
