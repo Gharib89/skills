@@ -553,7 +553,7 @@ A text box is readable at a moment when it is fully shown, outside a seam, and n
 _Avoid_: visible, settled, on screen
 
 **Reading time**:
-The video gate that every text box is readable long enough for its words to be read.
+The video gate that every text box is readable, in one unbroken stretch, long enough for its words to be read. Kinetic type revealed word by word on the narration is read along with the voice instead, and must stay readable whole for a moment after its last word is spoken.
 _Avoid_: dwell time, hold time
 
 **Critic**:
@@ -561,8 +561,12 @@ An independent reviewer that reads a run's contact sheets and motion strips: its
 _Avoid_: judge, grader, reviewer
 
 **Contact sheet**:
-One image per scene of a rendered explainer video: four of its frames (its quarter marks and its last frame), cut from the encoded video and tiled two by two, that the critic reads in place of the video.
+One image per scene of a rendered explainer video: four of its frames (its quarter marks and its fullest moment), cut from the encoded video and tiled two by two, that the critic reads in place of the video.
 _Avoid_: snapshot, thumbnail, filmstrip
+
+**Fullest moment**:
+The moment of a scene at which the most words are readable at once, the latest such moment when several tie.
+_Avoid_: end state, settled frame, key frame
 
 **Motion strip**:
 One image per moving scene of a rendered explainer video: 12 consecutive frames of it, starting 5 before its peak-motion frame outside its seams, cut from the encoded video and tiled six by two, that the critic reads beside the contact sheet to judge motion. A scene that hands over at a seam gets a second strip of that seam. A motion record next to them names the peak frame and the dead beats.
