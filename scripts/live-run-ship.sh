@@ -29,7 +29,7 @@
 # `--max-budget-usd` and the wall clock; hitting either is a failed check. What
 # keeps a run from happening or from being read (a missing tool, a failed
 # install, a clone ship's skill check would refuse, claude failing to run, the
-# fixture repo unreachable) is `unavailable`.
+# fixture repo unreachable, the run's PR head not fetchable) is `unavailable`.
 #
 # stdout: one JSON line {result: pass|fail, failed[], retried[], runs[]}, each
 #         failure `<path>: <check>: <what failed>`, each run {path, attempt,
@@ -259,7 +259,12 @@ attempt() { # <happy|ambiguous> <attempt>
       '{assignees: $a, open_prs: [$p[] | {number, body}], branches: ($b | split("\n") | map(select(. != ""))),
         reply: $r}' > "$co.host.json"
     pr=$(head -n 1 <<<"$mine" | cut -d ' ' -f 1)
-    PR_TEMPLATE=$co/.github/pull_request_template.md \
+    # The outline's files are read at the PR's head, not in this repo or at seed.
+    if [ -n "$pr" ]; then
+      { git -C "$co" fetch -q origin "pull/$pr/head" && git -C "$co" worktree add -q --detach "$co.head" FETCH_HEAD; } \
+        >/dev/null 2>&1 || unavailable "cannot check out PR #$pr's head"
+    fi
+    PR_ROOT=${pr:+$co.head} PR_TEMPLATE=$co/.github/pull_request_template.md \
       "$here/live-run-checks.sh" ${flag:+"$flag"} "${run_file:-$tmp/no-run-file}" "$co.host.json" "$issue" >> "$failed"
     [ $? -le 1 ] || unavailable "live-run-checks.sh failed as tooling"
   fi

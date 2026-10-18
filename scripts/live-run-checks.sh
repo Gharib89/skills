@@ -8,6 +8,8 @@
 #                plus "branches": [<the run's branch>...] and "reply": <the run's
 #                final reply> with --ambiguous
 #   PR_TEMPLATE: the fixture's PR template, which scripts/check-pr-body.sh reads
+#   PR_ROOT: a checkout of the fixture PR's head, where scripts/check-pr-body.sh
+#            reads the outline's files
 #
 # Without a flag it judges the happy path: the run reached the merge gate with
 # one PR. --ambiguous judges the early stop on a vague issue: the reply carries

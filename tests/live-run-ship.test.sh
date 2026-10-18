@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # scripts/live-run-ship.sh: the live run's driver, over stub tools in a
 # throwaway state directory. A fake `gh` keeps the fixture's issues, PRs and
-# branches as files and clones a local seed repo; a fake `claude` plays one
+# branches as files and clones a local seed repo, with a bare repo as its origin
+# where a PR's head is pushed as `refs/pull/<n>/head`; a fake `claude` plays one
 # scripted outcome per invocation (a Ship that reaches the merge gate, stops
 # ambiguous, fails a check, claims a vague issue, hits a cap, or fails to start)
 # and writes the Run file and host state that outcome leaves; `npx` is a no-op.
@@ -27,6 +28,7 @@ if [ "$1 $2" = "repo clone" ]; then
   printf 'Closes #\n\n## Why\n\n## Attribution\n' > "$d/.github/pull_request_template.md"
   git -C "$d" add -A && git -C "$d" -c user.name=t -c user.email=t@t commit -qm seed
   git -C "$d" tag seed && git -C "$d" update-ref refs/remotes/origin/main HEAD
+  git init -q --bare "$S/origin.git" && git -C "$d" remote add origin "$S/origin.git"
   exit 0
 fi
 shift # api
@@ -86,16 +88,21 @@ phases() { # <last closed phase> <open phase>
     else echo "- [ ] $p · Phase: x"; fi
   done
 }
-ship_pr() { # claim, push a branch, open a PR closing the issue
+ship_pr() { # claim, push a branch adding calc.sh, open a PR closing the issue whose outline names it
   local f=$S/issues/$n.json
   jq '.assignees = [{login: "agent"}]' "$f" > "$S/i" && mv "$S/i" "$f"
   echo "feat/x-$n" >> "$S/branches"
+  git worktree add -q -b "feat/x-$n" "$S/wt-$n" && echo 'sub() { :; }' > "$S/wt-$n/calc.sh" \
+    && git -C "$S/wt-$n" add calc.sh && git -C "$S/wt-$n" -c user.name=t -c user.email=t@t commit -qm sub \
+    && { [ -n "${UNPUSHED:-}" ] || git -C "$S/wt-$n" push -q origin "HEAD:refs/pull/$(( 100 + n ))/head"; }
   jq --argjson n "$n" '. + [{number: (100 + $n), state: "open", head: {ref: "feat/x-\($n)"},
-    body: "Closes #\($n)\n\n## Why\n\nx\n\n## Attribution\n\nf\n"}]' "$S/pulls.json" > "$S/p" && mv "$S/p" "$S/pulls.json"
+    body: "Closes #\($n)\n\n## Why\n\nx\n\n## Change outline\n\n```diff\n+calc.sh\n+  sub()\n```\n\n## Attribution\n\nf\n"}]' \
+    "$S/pulls.json" > "$S/p" && mv "$S/p" "$S/pulls.json"
 }
 reply="Done."
 case $play in
   happy) phases 8 9 > "$run"; ship_pr ;;
+  happy-unpushed) phases 8 9 > "$run"; UNPUSHED=1 ship_pr ;;
   happy-skips-gate) phases 4 5 > "$run"; ship_pr ;;
   ambiguous) rmdir "${run%/*}"; reply='Stopped `ambiguous` on the issue, with no claim taken.' ;;
   ambiguous-claims) phases 1 2 > "$run"; ship_pr ;;
@@ -214,6 +221,9 @@ rc=1' "$(LIVE_RUN_WALL_S=1 drive slow slow ambiguous)"
 
 check "an unreachable fixture repo is unavailable" '{"result":"unavailable","reason":"cannot clone Gharib89/ship-fixture"}
 rc=2' "$(CLONE_FAILS=1 drive happy ambiguous)"
+
+check "a PR whose head cannot be checked out is unavailable" '{"result":"unavailable","reason":"cannot check out PR #101'"'"'s head"}
+rc=2' "$(drive happy-unpushed)"
 
 check "a claude killed before the wall clock is not the cap" '{"result":"unavailable","reason":"claude -p failed"}
 rc=2' "$(drive killed)"
