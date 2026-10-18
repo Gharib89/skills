@@ -84,17 +84,22 @@ replaces.
 
 1. Dispatch one subagent per scene whose `<run>/<sheets>/<scene>.png` has
    no `<scene>.json` beside it (`<sheets>` is relative to the run folder,
-   `<run>`), all in one turn, each with
+   `<run>`), at most 20 a turn, each with
    `<skill>/agents/critic.md` as its prompt, `{run}` the run folder, `{scene}`
    the scene id and `{sheets}` the folder the pending line names. Each writes
-   its verdict and replies with one `critic <scene>:` line. Never read a sheet
-   or a verdict here.
+   its verdict and replies with one `critic <scene>:` line. Claude Code runs 20
+   subagents at once and refuses the rest, so send the next batch once that
+   one has replied. Never read a sheet or a verdict here.
 2. Render again: the video is cached, so this only judges it.
 3. On `gates: critic verdict <scene>.json: <why>`, send the line to that
    scene's critic to fix, then render again.
 
 The critic judges two renders of one script at most, a render counting anew
-when only its cites or a cited excerpt's text changed. A hard failure in the
+when only its cites or a cited excerpt's text changed. Each scene's verdict
+stands for its sheet, motion strip and record, its span in the video, its cites
+and their excerpts' text: a new render carries the verdict of every scene whose
+inputs did not change, so only changed scenes are pending, and a carried
+verdict counts toward the round it lands in. A hard failure in the
 second round is final, so the summary ends `stop: the critic's second round is
 red, no video`. A third render carries the second round's verdict, its line
 ending `carried: no third round`; new narration is a new script and starts at

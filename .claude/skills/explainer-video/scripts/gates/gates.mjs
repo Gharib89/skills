@@ -405,14 +405,11 @@ const excerptText = new Map(
       ])
     : [],
 );
+const cited = (s) =>
+  s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)]));
 const criticKey = hash(
   renderHash,
-  [
-    script.title,
-    script.scenes.map((s) =>
-      s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
-    ),
-  ],
+  [script.title, script.scenes.map(cited)],
   CRITIC_FORMAT,
 );
 const sheetsOf = (h) => path.posix.join(".cache", "critic", h);
@@ -459,46 +456,9 @@ const verdicts = (h) =>
 const keptRounds = same && prev.gates.critic?.format === CRITIC_FORMAT;
 const rounds = keptRounds ? (prev.gates.critic.rounds ?? []) : [];
 const criticAttempts = keptRounds ? (prev.gates.critic.attempts ?? 0) : 0;
-let judgedBy;
-const own = verdicts(criticKey);
-if (own.every(Boolean) && (rounds.includes(criticKey) || rounds.length < 2)) {
-  if (!rounds.includes(criticKey)) rounds.push(criticKey);
-  judgedBy = { vs: own, round: rounds.indexOf(criticKey) + 1 };
-} else if (rounds.length >= 2) {
-  const vs = verdicts(rounds[1]);
-  if (vs.every(Boolean)) judgedBy = { vs, round: 2, carried: true };
-}
-const wantCritic = `no ${KINDS.join(" or ")} content; scores advise`;
-let critic;
-if (judgedBy) {
-  const { vs, round, carried } = judgedBy;
-  // Led by the scene's start, as layout's lines are, so the storyboard's gate
-  // stop reopens the scene's card.
-  const evidence = vs.flatMap((v) =>
-    v.failures.map(
-      (x) => `${v.start.toFixed(2)} s ${v.id}: ${x.kind}: ${x.what}`,
-    ),
-  );
-  const mean = (k) =>
-    (vs.reduce((n, v) => n + v.scores[k], 0) / vs.length).toFixed(1);
-  critic = {
-    status: evidence.length ? "fail" : "pass",
-    measured: `${summary(evidence, "hard failure(s)")}, mean scores ${SCORES.map((k) => `${k} ${mean(k)}`).join(", ")}, round ${round} of 2${carried ? ", carried: no third round" : ""}`,
-    floor: wantCritic,
-    attempts: count(evidence.length, criticAttempts),
-    evidence,
-    sheets: sheetsOf(carried ? rounds[1] : criticKey),
-    rounds,
-    format: CRITIC_FORMAT,
-    scores: vs.map((v) => ({
-      scene: v.id,
-      ...Object.fromEntries(SCORES.map((k) => [k, v.scores[k]])),
-      note: v.note ?? "",
-      worst: v.worst,
-    })),
-  };
-} else {
-  const dir = sheetsOf(criticKey);
+const dir = sheetsOf(criticKey);
+// Past two rounds a render carries the second round's verdict: no sheets.
+if (rounds.includes(criticKey) || rounds.length < 2) {
   fs.mkdirSync(path.join(run, dir), { recursive: true });
   for (const p of plan) {
     const { sc } = p;
@@ -543,6 +503,76 @@ if (judgedBy) {
         ) + "\n",
       );
   }
+  // A scene's verdict stands for what its critic read: its sheet, strip and
+  // record, its span in the video (a worst moment must fall inside it), its
+  // cites and their text, the title and the format. A previous render's verdict
+  // under the same scene key is carried, so only changed scenes are pending.
+  const keys = Object.fromEntries(
+    plan.map(({ sc }) => [
+      sc.id,
+      hash(
+        ...[".png", ".motion.png", ".motion.json"].map((ext) => {
+          const f = path.join(run, dir, `${sc.id}${ext}`);
+          return fs.existsSync(f) ? fs.readFileSync(f) : "";
+        }),
+        [sc.start, sc.duration],
+        [script.title, cited(script.scenes.find((s) => s.id === sc.id))],
+        CRITIC_FORMAT,
+      ),
+    ]),
+  );
+  fs.writeFileSync(path.join(run, dir, "keys.json"), JSON.stringify(keys));
+  const from = keptRounds && prev.gates.critic.sheets;
+  const fromKeys = from && path.join(run, from, "keys.json");
+  if (from !== dir && fromKeys && fs.existsSync(fromKeys)) {
+    const before = JSON.parse(fs.readFileSync(fromKeys, "utf8"));
+    for (const [id, key] of Object.entries(keys)) {
+      const v = path.join(run, from, `${id}.json`);
+      const to = path.join(run, dir, `${id}.json`);
+      if (before[id] === key && fs.existsSync(v) && !fs.existsSync(to))
+        fs.copyFileSync(v, to);
+    }
+  }
+}
+let judgedBy;
+const own = verdicts(criticKey);
+if (own.every(Boolean) && (rounds.includes(criticKey) || rounds.length < 2)) {
+  if (!rounds.includes(criticKey)) rounds.push(criticKey);
+  judgedBy = { vs: own, round: rounds.indexOf(criticKey) + 1 };
+} else if (rounds.length >= 2) {
+  const vs = verdicts(rounds[1]);
+  if (vs.every(Boolean)) judgedBy = { vs, round: 2, carried: true };
+}
+const wantCritic = `no ${KINDS.join(" or ")} content; scores advise`;
+let critic;
+if (judgedBy) {
+  const { vs, round, carried } = judgedBy;
+  // Led by the scene's start, as layout's lines are, so the storyboard's gate
+  // stop reopens the scene's card.
+  const evidence = vs.flatMap((v) =>
+    v.failures.map(
+      (x) => `${v.start.toFixed(2)} s ${v.id}: ${x.kind}: ${x.what}`,
+    ),
+  );
+  const mean = (k) =>
+    (vs.reduce((n, v) => n + v.scores[k], 0) / vs.length).toFixed(1);
+  critic = {
+    status: evidence.length ? "fail" : "pass",
+    measured: `${summary(evidence, "hard failure(s)")}, mean scores ${SCORES.map((k) => `${k} ${mean(k)}`).join(", ")}, round ${round} of 2${carried ? ", carried: no third round" : ""}`,
+    floor: wantCritic,
+    attempts: count(evidence.length, criticAttempts),
+    evidence,
+    sheets: sheetsOf(carried ? rounds[1] : criticKey),
+    rounds,
+    format: CRITIC_FORMAT,
+    scores: vs.map((v) => ({
+      scene: v.id,
+      ...Object.fromEntries(SCORES.map((k) => [k, v.scores[k]])),
+      note: v.note ?? "",
+      worst: v.worst,
+    })),
+  };
+} else {
   critic = {
     status: "pending",
     measured: `round ${rounds.length + 1} of 2, ${own.filter(Boolean).length} of ${own.length} scene(s) judged, contact sheets in ${dir}`,
