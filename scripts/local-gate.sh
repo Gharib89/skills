@@ -21,8 +21,8 @@
 # file owns only what check.sh cannot know: `secrets` over base..HEAD and
 # `version-lines`, both relative to the base. CI's `check-full` leg runs
 # `check.sh full` on the PR head too, but no gate is ever `deferred-to-ci`: Ship
-# still runs every gate here on every run. This repo has no
-# dependencies, so no `deps` gate. `--small` runs check.sh's own `FULL_ROWS`
+# still runs this gate on every run. This repo has no dependencies, so no `deps`
+# gate. `--small` runs check.sh's own `FULL_ROWS`
 # checks in place of `check.sh full`, which leaves out only its `runner`, the
 # linters, that the edit and commit hooks run on every change.
 # Bash 3.2 plus jq, so it runs on a stock macOS bash.

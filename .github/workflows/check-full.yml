@@ -1,7 +1,7 @@
 name: check-full
 
 # Runs `scripts/check.sh full`, the suite and every check the local gate runs
-# but the two relative to the base, on each PR head, so a failing test is a red
+# except the two relative to the base, on each PR head, so a failing test is a red
 # PR check even when a run's local gate was waived. Any nonzero exit fails the
 # job, 2 (a tool unavailable) and 3 (over budget) included: a head checked
 # without a tool is a head left unchecked.
