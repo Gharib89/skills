@@ -84,19 +84,9 @@ note**. [reference/mechanics.md](reference/mechanics.md) lists the gating calls,
 each phase's mechanic and their shared contract, `--help` included.
 
 **0 · Isolate.** [reference/isolate.md](reference/isolate.md) carries what
-preflight proves and refuses, the profile it loads and why the worktree is made
-the way it is. Run `preflight <issue>` (`--unattended` in an unattended run):
-every `reasons` entry is a row of the stop table below. Then `read-issue
-<issue>` (reused for an issue), phase 1's input, from which the branch `<type>`
-(`feat`, `fix`, `docs`, ...) and `<slug>` are derived. Then `isolate <issue>
-<type> <slug>` with the profile's `Carry:` files, or `isolate ... --in-place`
-unattended. Attended, `EnterWorktree` with `path` set to that path comes right
-after isolate, before any edit or `LSP` call: the language server roots where
-the session stands when it first starts
-([isolate.md](reference/isolate.md#entering-the-worktree)). Every edit, commit
-and the PR happen from the path `isolate` printed, and you **commit as you go**,
-because the PR needs real commits. A `Bootstrap:` under `## Worktree` runs once
-here, after isolate.
+preflight proves and refuses and why the worktree is made the way it is.
+Run `preflight <issue>`, then `read-issue`, then `isolate`; the steps are in
+[phase-steps.md](reference/phase-steps.md#phase-0-isolate).
 **Done when:** `preflight` answered `ok: true`, `isolate` printed its path, any
 `## Worktree` `Bootstrap:` ran green, and, attended, `EnterWorktree` entered
 that path.
@@ -113,31 +103,20 @@ the Run file (a later `writer: true` brief or comment supersedes the body:
 
 **2 · Implement.** [reference/implement.md](reference/implement.md) carries the
 classes, the TDD override, external-claim probes, the judgment/execution split
-and the adjacent-find dispositions. Classify `docs` / `code` / `infra`, judge
-the three lane keys and the applicable verifications from `## Verification`
-(their `Applies when:` lines are prose you judge here), and by default say
-what you chose. Record the version grade of the public
-surface change under the profile's `Subject constraints:` with `run-file grade
-<patch|minor|breaking>`: `open-pr` and `update-pr-title` refuse a title type
-that grades lower. Then implement test-first per class; `Tripwires:` and
-`In-PR requirement:` land in this change whatever the class.
-Keep a **deviations log** from the first edit: whenever the territory forces a
-departure from the issue, brief or plan, take the conservative option, log what
-and why, keep going; it lands verbatim in the merge summary. A change you judge
-too big for one PR, or needing a redesign the issue did not scope, stops
-`needs-split` with a proposal;
-[implement.md](reference/implement.md#phase-2-needs-split) lists tells.
+and the adjacent-find dispositions.
+Classify the change, judge the lane keys and verifications, record `run-file
+grade`, keep the **deviations log** from the first edit, and stop
+`needs-split` when one PR cannot hold it. The steps are in
+[phase-steps.md](reference/phase-steps.md#phase-2-implement).
 **Done when:** the applicable tests are green (red first, per class), the
 tripwires and in-PR requirement have landed, `Grade:` is recorded, a small-lane
 diff is counted, and every departure and adjacent find so far is in the Run
 file with its disposition.
 
 **3 · Verify.** [reference/verify.md](reference/verify.md) carries the result
-words, the `Without it:` dispositions and what `unexercised` is. Run each
-applicable verification's `Run:` line **scoped to what you touched**, on the
-environment the issue was reported against: green elsewhere is not fixed. Noisy
-runs go to a cheap-tier subagent in the `verify` scratch directory. Skip this
-phase only when no Verification applies, whatever the class.
+words, the `Without it:` dispositions and what `unexercised` is.
+Run each applicable verification's `Run:` line, scoped to what you touched
+([phase-steps.md](reference/phase-steps.md#phase-3-verify)).
 **Done when:** `run-file close 3` took a `--result` for every Verification,
 each applicable one `pass`, `deferred-to-ci` or `unexercised`; any other result
 is recorded, then takes its named stop. Or `run-file skip 3` recorded what
@@ -160,8 +139,8 @@ small-lane form are in
 `code-review` against the diff since `origin/HEAD`, triage waits for every
 Report file, each finding takes one disposition, and the Standards axis
 re-runs over each round's fix-only diff until `tree unchanged` or the `cap`;
-`run-file close 4` refuses without the evidence lines. Read the steps in
-[phase-steps.md](reference/phase-steps.md#phase-4-self-review) before round 1.
+`run-file close 4` refuses without the evidence lines. Steps:
+[phase-steps.md](reference/phase-steps.md#phase-4-self-review).
 **Done when:** every report that fired has its Report file on disk and its path
 in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.
@@ -180,9 +159,8 @@ and the recorded verdict reads `verdict: pass` with `gates.secrets` present.
 **6 · Open PR.** [reference/pr-body.md](reference/pr-body.md) carries what the
 body holds and how it is written and read back. `open-pr <issue> --title
 --body-file`, **non-draft** (drafts may not trigger a reviewer). Title: a
-Conventional-Commit subject derived from the issue, honouring `Subject
-constraints:`; it becomes the squash subject release tooling reads, and one that
-later proves wrong is fixed with `update-pr-title`. **Every title or body write
+Conventional-Commit subject honouring `Subject constraints:`, fixed later with
+`update-pr-title`. **Every title or body write
 to an open PR ends with `read-pr <pr>`**, its `## ` headings checked against the
 ones the body owes. Then `reflect <issue> <pr>`.
 **Done when:** `read-pr` shows an open, non-draft PR carrying the headings the
@@ -194,10 +172,9 @@ fallbacks.
 Best-effort: each reviewer under `## Reviewers` gets its rounds, every
 reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks; a
 round starts by the block's `Trigger:`, waits one `poll-pr --brief` window,
-triages what landed, pushes the fixes once and answers each thread. Read
-[phase-steps.md](reference/phase-steps.md#phase-7-reviewers) on entering
-this phase: it holds the per-round proof, the exit words and the exit
-write-up.
+triages what landed, pushes the fixes once and answers each thread. Steps,
+exit words and exit write-up:
+[phase-steps.md](reference/phase-steps.md#phase-7-reviewers).
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned is replied to and resolved per `Resolve:`, every section the rounds
 grew is rewritten, the title matches `Grade:`, any local review a cap, docs-only
@@ -213,9 +190,8 @@ is in [phase-steps.md](reference/phase-steps.md#phase-8-ci).
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
 the summary's shape, what `merge` does, its refusals and the tracker drafts.
-Write the summary per that file. Attended or unattended, the steps from the
-merge authorization to the return, `merge`, `cleanup` and `comment-pr`
-included, are in [phase-steps.md](reference/phase-steps.md#phase-9-merge-gate).
+Write the summary per that file; the steps from the merge authorization to
+the return are in [phase-steps.md](reference/phase-steps.md#phase-9-merge-gate).
 **Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
 `false`, then `close 9`, then `ExitWorktree`, then `cleanup
 <issue|none>` exited 0 with no `false`; unattended, `comment-pr` posted.
@@ -257,11 +233,9 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 | The host's blocker query exists and failed | `blockers-unavailable` | no claim |
 | Merge gate reached | none: the run's success | holds until merge |
 
-Hand-back is `manage-issue <issue> handback "<reason>"`: unassign, drop
-`ready-for-agent`, add `ready-for-human`, comment the reason; one that exits 1
-says on its own output what the claim is left as. In an attended run you stop
-and ask, and hand back only if the human says stop, to the human queue: never to
-the agent queue, which loops forever.
+Hand-back is `manage-issue <issue> handback "<reason>"`; the rules, attended
+and unattended, are in
+[phase-steps.md](reference/phase-steps.md#hand-back).
 
 ## The lanes
 

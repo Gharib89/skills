@@ -1,18 +1,39 @@
 # Phase steps
 
-The long steps of six phases, moved out of `SKILL.md` so it stays short. Each
+The long steps of nine phases, moved out of `SKILL.md` so it stays short. Each
 phase there keeps its summary and its `Done when:`; read the section here when
 the run enters that phase.
 
 ## Contents
 
+- [Phase 0 isolate](#phase-0-isolate)
 - [Phase 1 anchors and criteria](#phase-1-anchors-and-criteria)
+- [Phase 2 implement](#phase-2-implement)
+- [Phase 3 verify](#phase-3-verify)
 - [Phase 4 self-review](#phase-4-self-review)
 - [Phase 4 writing pass](#phase-4-writing-pass)
 - [Phase 5 local gate](#phase-5-local-gate)
 - [Phase 7 reviewers](#phase-7-reviewers)
 - [Phase 8 CI](#phase-8-ci)
 - [Phase 9 merge gate](#phase-9-merge-gate)
+- [Hand-back](#hand-back)
+
+## Phase 0 isolate
+
+The text below continues phase 0 in `SKILL.md`.
+
+Run `preflight <issue>` (`--unattended` in an unattended run):
+every `reasons` entry is a row of the stop table below. Then `read-issue
+<issue>` (reused for an issue), phase 1's input, from which the branch `<type>`
+(`feat`, `fix`, `docs`, ...) and `<slug>` are derived. Then `isolate <issue>
+<type> <slug>` with the profile's `Carry:` files, or `isolate ... --in-place`
+unattended. Attended, `EnterWorktree` with `path` set to that path comes right
+after isolate, before any edit or `LSP` call: the language server roots where
+the session stands when it first starts
+([isolate.md](isolate.md#entering-the-worktree)). Every edit, commit
+and the PR happen from the path `isolate` printed, and you **commit as you go**,
+because the PR needs real commits. A `Bootstrap:` under `## Worktree` runs once
+here, after isolate.
 
 ## Phase 1 anchors and criteria
 
@@ -29,6 +50,35 @@ on both. Only then settle what success looks like in the Run file: an issue's
 `## Criteria` as init recorded them, else criteria a later phase can check; a
 later triage brief or authoritative comment, each `writer: true`, supersedes the
 body (**spec precedence**).
+
+## Phase 2 implement
+
+The text below continues phase 2 in `SKILL.md`.
+
+Classify `docs` / `code` / `infra`, judge
+the three lane keys and the applicable verifications from `## Verification`
+(their `Applies when:` lines are prose you judge here), and by default say
+what you chose. Record the version grade of the public
+surface change under the profile's `Subject constraints:` with `run-file grade
+<patch|minor|breaking>`: `open-pr` and `update-pr-title` refuse a title type
+that grades lower. Then implement test-first per class; `Tripwires:` and
+`In-PR requirement:` land in this change whatever the class.
+Keep a **deviations log** from the first edit: whenever the territory forces a
+departure from the issue, brief or plan, take the conservative option, log what
+and why, keep going; it lands verbatim in the merge summary. A change you judge
+too big for one PR, or needing a redesign the issue did not scope, stops
+`needs-split` with a proposal;
+[implement.md](implement.md#phase-2-needs-split) lists tells.
+
+## Phase 3 verify
+
+The text below continues phase 3 in `SKILL.md`.
+
+Run each
+applicable verification's `Run:` line **scoped to what you touched**, on the
+environment the issue was reported against: green elsewhere is not fixed. Noisy
+runs go to a cheap-tier subagent in the `verify` scratch directory. Skip this
+phase only when no Verification applies, whatever the class.
 
 ## Phase 4 self-review
 
@@ -138,3 +188,13 @@ in `merge`'s or `cleanup`'s JSON, re-runs the mechanic that owns the step; a
 step no mechanic re-does is a Ship defect for the summary. Unattended: the
 final head's gate, then `comment-pr <pr> --body-file` with the summary,
 `run-file close 9`. Either lane then returns.
+
+## Hand-back
+
+The text below continues the stop table in `SKILL.md`.
+
+Hand-back is `manage-issue <issue> handback "<reason>"`: unassign, drop
+`ready-for-agent`, add `ready-for-human`, comment the reason; one that exits 1
+says on its own output what the claim is left as. In an attended run you stop
+and ask, and hand back only if the human says stop, to the human queue: never to
+the agent queue, which loops forever.
