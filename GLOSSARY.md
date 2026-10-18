@@ -549,7 +549,7 @@ An automated check a run must pass after the storyboard is approved and before t
 _Avoid_: QA, check, local gate
 
 **Seam**:
-How one scene hands over to the next at a cut, as the visual grammar names it (a zoom-through, a cut on a curve, a plain cut). The outgoing scene draws it, running on past its own last moment while the next scene starts on time.
+How one scene hands over to the next at a cut, as the visual grammar names it (a zoom-through, a cut on a curve, a plain cut); a scene may pick another seam of the same family for its own hand-over. The outgoing scene draws it, running on past its own last moment while the next scene starts on time.
 _Avoid_: transition (for the grammar's field), wipe
 
 **Readable**:
