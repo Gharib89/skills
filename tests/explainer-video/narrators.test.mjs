@@ -47,8 +47,12 @@ test("the English narrators ship with a calibrated pause a sentence", () => {
     (n) => n.language === "en" && n.backend === "kokoro",
   );
   assert.deepEqual(
-    english.map((n) => n.id),
-    ["bf_emma", "am_fenrir"],
+    english.map((n) => [n.id, n.gender, n.default]),
+    [
+      ["bf_emma", "female", true],
+      ["am_fenrir", "male", true],
+      ["af_heart", "female", false],
+    ],
   );
   for (const n of english)
     assert.ok(n.pause > 0.3 && n.pause < 2, `${n.id} pause ${n.pause}`);

@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.0 (2026-10-18)
+
+### Features
+
+- **explainer-video**: Af_heart, an opt-in American female narrator
+  ([#818](https://github.com/Gharib89/skills/pull/818),
+  [`c7404ab`](https://github.com/Gharib89/skills/commit/c7404abc3111c1fb4d43bab904b413ecb26a9266))
+
+
 ## v0.23.1 (2026-10-18)
 
 ### Bug Fixes

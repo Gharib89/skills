@@ -12,9 +12,9 @@
 // and around each call.
 // Both pool every text of the language. A narrator not yet calibrated this way
 // carries pause 0 and a rate over its aligned span, first word to last, silence
-// between sentences included, the same budget: elevenlabs-george, whose rate
-// is its old words a second times the English texts' 4.36 characters a word
-// (#783), not a measure.
+// between sentences included, the same budget: elevenlabs-george. Its rate is
+// converted, not measured: 3.07 words a second times 4.36, the English texts'
+// characters a word (#783).
 // stdout: `calibrate <id> text <k>: <rate> chars/s, <pause> s a sentence` per
 //         text, then `calibrate <id>: <rate> chars/s, <pause> s a sentence`,
 //         the values written, per narrator of that language

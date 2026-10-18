@@ -7,7 +7,7 @@ description: >-
   screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
-  version: 0.23.1
+  version: 0.24.0
 ---
 
 # explainer-video
@@ -100,9 +100,9 @@ must include and must avoid. The user's request beside the sources, the
    prompt moves, and `must=<item>` or `avoid=<item>` per list item. A male or
    female voice asked for is that language's default narrator of that gender.
    An ElevenLabs narrator (`elevenlabs-george`, on the user's
-   `ELEVENLABS_API_KEY`) or an own voice is the `voice` only when the steering
-   prompt asks for it; for "my voice" with no enrolled name, enroll one first
-   (Setup).
+   `ELEVENLABS_API_KEY`), `af_heart` (American) or an own voice is the
+   `voice` only when the steering prompt asks for it; for "my voice" with no
+   enrolled name, enroll one first (Setup).
    It prints one `brief <knob>: <value>` line per knob, then `brief: written
    -> brief.json`: show the knob lines to the user as the brief and go on
    without waiting for their approval.
@@ -179,9 +179,9 @@ to the **script gates**.
    Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
    up to the brief's length less the 1 s hold the render closes on. A scene's
    spoken characters (letters, digits) land within 10% of (seconds -
-   sentences × `pause`) × `rate`, the narrator's chars/s in
-   `<skill>/narrators.json`: a sentence spends `pause` on silence, and ends
-   at its one full stop, `!`, `?` or `؟`. Write for the brief's audience,
+   sentences × `pause`) × the narrator's `rate` (chars/s,
+   `<skill>/narrators.json`): a sentence spends `pause` silent, and ends at
+   its one full stop, `!`, `?` or `؟`. Write for the brief's audience,
    about its focus; say or show each `must` item
    and none of the `avoid` items. Every sentence that states a fact cites the
    excerpts that state it; a transition or framing question is `[no-claim]`.
