@@ -7,8 +7,8 @@
 #   tests/explainer-video.test.sh [--turn]
 #
 # `--turn` is the harness's turn rung, which has 60 s: it leaves out the two
-# files that run the render and gates pipeline once per case, `gates` (132 s)
-# and `render` (67 s) of the 258 s its files take summed, measured file by file
+# files that run the render and gates pipeline once per case, `gates-*` (132 s)
+# and `render-*` (67 s) of the 258 s its files take summed, measured file by file
 # on an idle machine; the suite runs them side by side, 141 s end to end. The
 # full rung and the local gate run `tests/run.sh`, which passes no flag and so
 # runs every file.
@@ -22,7 +22,7 @@ files=(tests/explainer-video/*.test.mjs)
 if [ "${1:-}" = --turn ]; then
   kept=()
   for f in "${files[@]}"; do
-    case ${f##*/} in gates.test.mjs | render.test.mjs) ;; *) kept+=("$f") ;; esac
+    case ${f##*/} in gates-*.test.mjs | render-*.test.mjs) ;; *) kept+=("$f") ;; esac
   done
   files=("${kept[@]}")
 fi
