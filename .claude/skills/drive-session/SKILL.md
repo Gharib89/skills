@@ -35,8 +35,9 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
 - `answer` sends a prompt with `--text`, or presses keys into a dialog with
   `--keys`.
 - `frontier --parent <n>` prints a spec parent's sub-issues, lowest number
-  first, each with its state and open blockers, a blocker marked `inside` when
-  it is another sub-issue of the same parent. It reads GitHub alone (an Azure
+  first, each with its state, assignees and open blockers, a blocker carrying
+  its `repo` and marked `inside` when it is another sub-issue of the same
+  parent. It reads GitHub alone (an Azure
   DevOps checkout has no spec batch), so it takes no roster and runs outside
   Herdr.
 
@@ -142,14 +143,15 @@ line names the parent and any merge allowance
    a "no", those slices stay blocked, the parent stays open, and both go in the
    report.
 2. **Slots.** At most two ship runs at once. Take open, unblocked slices
-   lowest number first, and pair two only when no blocking edge joins them and
-   the areas their agent briefs name do not overlap: a skill directory, the
-   repo's scripts, its tests, the glossary, its docs. That call is yours, from
-   reading each agent brief. A slice whose agent brief names no area runs
-   alone: it starts only when no other run holds a slot. A slot frees only when
-   its run is at rest (merged, handed back or crashed): a run waiting on an
-   escalation keeps it. The gate slice, blocked by every other slice, starts
-   once all of them are closed.
+   lowest number first, skipping one assigned with no run of yours in the
+   roster (another run's claim), and pair two only when no blocking edge joins
+   them and the areas their agent briefs name do not overlap: a skill
+   directory, the repo's scripts, its tests, the glossary, its docs. That call
+   is yours, from reading each agent brief. A slice whose agent brief names no
+   area runs alone: it starts only when no other run holds a slot. A slot frees
+   only when its run is at rest (merged, handed back or crashed): a run waiting
+   on an escalation keeps it. The gate slice, blocked by every other slice,
+   starts once all of them are closed.
 3. **Merges.** The launch line's merge allowance covers every PR in the spec,
    and only on Ship's own `run-file gate clean`, as Escalation says. After
    each merge, fast-forward main as above, then re-run `frontier`.

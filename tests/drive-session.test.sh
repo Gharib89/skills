@@ -348,15 +348,18 @@ gh_reset; export GH_STATUS_SEQ=200
 calls >/dev/null
 here=https://api.github.com/repos/o/r there=https://api.github.com/repos/o/other
 issues="repos/{owner}/{repo}/issues"
+# iss <number> <title> <state> <repository_url> [<assignee>]: one issue as the API answers it.
+iss() { jq -cn --argjson n "$1" --arg t "$2" --arg s "$3" --arg u "$4" --arg a "${5:-}" \
+  '{number: $n, title: $t, state: $s, repository_url: $u, assignees: (if $a == "" then [] else [{login: $a}] end)}'; }
 # Two pages, the shape --paginate prints, out of number order.
-gh_route "$issues/1/sub_issues" '[{"number":12,"title":"b","state":"open","repository_url":"'$here'"},{"number":14,"title":"c","state":"closed","repository_url":"'$here'"}]
-[{"number":11,"title":"a","state":"open","repository_url":"'$here'"}]'
+gh_route "$issues/1/sub_issues" "[$(iss 12 b open $here),$(iss 14 c closed $here)]
+[$(iss 11 a open $here someone)]"
 gh_route "$issues/11/dependencies/blocked_by" '[]'
-gh_route "$issues/12/dependencies/blocked_by" '[{"number":11,"title":"a","state":"open","repository_url":"'$here'"},{"number":90,"title":"z","state":"open","repository_url":"'$here'"},{"number":14,"title":"c","state":"closed","repository_url":"'$here'"},{"number":11,"title":"elsewhere","state":"open","repository_url":"'$there'"}]'
+gh_route "$issues/12/dependencies/blocked_by" "[$(iss 11 a open $here),$(iss 90 z open $here),$(iss 14 c closed $here),$(iss 11 elsewhere open $there)]"
 out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 1); rc=$?
 check_rc "frontier exits 0 outside Herdr" 0 "$rc"
-check "frontier lists each sub-issue lowest number first with its open blockers, each inside or outside the spec" \
-  '{"parent":1,"sub_issues":[{"number":11,"title":"a","state":"open","blockers":[]},{"number":12,"title":"b","state":"open","blockers":[{"number":11,"title":"a","inside":true},{"number":90,"title":"z","inside":false},{"number":11,"title":"elsewhere","inside":false}]},{"number":14,"title":"c","state":"closed","blockers":[]}]}' \
+check "frontier lists each sub-issue lowest number first with its assignees and open blockers, each with its repo and inside or outside the spec" \
+  '{"parent":1,"sub_issues":[{"number":11,"title":"a","state":"open","assignees":["someone"],"blockers":[]},{"number":12,"title":"b","state":"open","assignees":[],"blockers":[{"number":11,"title":"a","repo":"o/r","inside":true},{"number":90,"title":"z","repo":"o/r","inside":false},{"number":11,"title":"elsewhere","repo":"o/other","inside":false}]},{"number":14,"title":"c","state":"closed","assignees":[],"blockers":[]}]}' \
   "$(jq -c . <<<"$out")"
 check "frontier reads over REST, every page, and no blockers of a closed sub-issue" \
   "api --paginate $issues/1/sub_issues?per_page=100
@@ -371,14 +374,14 @@ check "and lists none" '{"parent":2,"sub_issues":[]}' "$(jq -c . <<<"$out")"
 out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 3 2>/dev/null); rc=$?
 check_rc "frontier whose read GitHub refuses exits 1" 1 "$rc"
 check "the refusal carries gh's message" "sub-issues of #3: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
-gh_route "$issues/4/sub_issues" '[{"number":5,"title":"e","state":"open","repository_url":"'$here'"}]'
+gh_route "$issues/4/sub_issues" "[$(iss 5 e open $here)]"
 out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 4 2>/dev/null); rc=$?
 check_rc "frontier whose blocker read GitHub refuses exits 1" 1 "$rc"
 check "that refusal names the sub-issue" "blockers of #5: gh: Not Found (HTTP 404)" "$(jq -r .error <<<"$out")"
 # A read that lands but is no list of issues (an object, nothing, not JSON, an
 # entry that is no issue) is never "no sub-issues".
 for body in '{"message":"moved"}' '' 'not json' '["oops"]' '[{"title":"x","state":"open"}]' '[]
-{"number":1}'; do
+{"number":1}' "[$(iss 7 g open $here | jq -c 'del(.repository_url)')]" "[$(iss 7 g open $here | jq -c 'del(.assignees)')]"; do
   gh_route "$issues/6/sub_issues" "$body"
   out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 6 2>/dev/null); rc=$?
   check_rc "frontier refuses the answer '$body' as unreadable" 2 "$rc"

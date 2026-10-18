@@ -10,8 +10,9 @@
 # not. It reads GitHub alone, so it takes no roster and runs outside Herdr.
 #
 # stdout: {parent, sub_issues[]}, each sub-issue {number, title, state,
-#         blockers[]} lowest number first, each open blocker {number, title,
-#         inside}; a closed sub-issue's blockers are not read and list none
+#         assignees[], blockers[]} lowest number first, `assignees` its logins,
+#         each open blocker {number, title, repo, inside}, `repo` its
+#         `owner/name`; a closed sub-issue's blockers are not read and list none
 # exit: 0 answered · 1 GitHub refused a read (gh's message in `error`) · 2
 #       usage, gh missing, or an answer from gh it cannot read
 set -uo pipefail
@@ -30,7 +31,9 @@ list() {
   out=$(gh api --paginate "repos/{owner}/{repo}/issues/$2?per_page=100" 2>&1 </dev/null) \
     || ds_fail "$1: $(tail -1 <<<"$out")"
   listed=$(jq -ces 'def issue: type == "object" and (.number | type) == "number"
-      and (.title | type) == "string" and (.state | type) == "string";
+      and (.title | type) == "string" and (.state | type) == "string"
+      and (.repository_url | type) == "string" and (.assignees | type) == "array"
+      and all(.assignees[]; (.login | type) == "string");
     if length > 0 and all(type == "array" and all(.[]; issue)) then add else error end' <<<"$out" 2>/dev/null) \
     || ds_tooling "$1: unreadable answer from gh"
 }
@@ -46,9 +49,9 @@ while read -r n; do
     blockers=$listed
   fi
   result=$(jq -c --argjson s "$sub" --argjson b "$blockers" --argjson all "$subs" '. + [{
-    number: $s.number, title: $s.title, state: $s.state,
+    number: $s.number, title: $s.title, state: $s.state, assignees: [$s.assignees[].login],
     blockers: [$b[] | select(.state == "open") as $x
-      | {number: $x.number, title: $x.title,
+      | {number: $x.number, title: $x.title, repo: ($x.repository_url | sub("^.*/repos/"; "")),
          inside: any($all[]; .number == $x.number and .repository_url == $x.repository_url)}]}]' <<<"$result")
 done < <(jq -r 'map(.number) | sort[]' <<<"$subs")
 jq -cn --argjson p "$parent" --argjson s "$result" '{parent: $p, sub_issues: $s}'
