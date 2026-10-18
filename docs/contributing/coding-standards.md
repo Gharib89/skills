@@ -59,6 +59,11 @@ repo already installs; a new dependency names, under the PR body's
 `## Special things to note`, the concrete requirement neither meets, because
 every one is a supply-chain and upgrade cost the repo carries for good.
 
+**A file copied from upstream states its derivation and keeps its comments true
+to its edits.** Name the source it was derived from at the top, and rewrite
+every comment an edit made false. On #765 CPU pins sat under comments
+that still said "CUDA 12.8".
+
 **What the rules cover.** These are the scope facts reviewers most often got
 wrong; each sub-file's rule holds inside them.
 

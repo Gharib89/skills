@@ -26,6 +26,11 @@ index's clock exception bounds the clock rule below.
   refuses without one per test file the diff adds or changes, and refuses a
   hand-written red line or one whose test or reverted path changed since that
   head.
+- **A test of a window or a duration covers its boundaries.** The input shorter
+  than the window, and the one ending exactly on the last frame or tick, each
+  get a case: the middle of the range passes while an off-by-one hides at the
+  edge. #763's strip ran past a short scene, and #764's settle test ended on the
+  scene's last frame.
 - **A negated fixture accompanies a test that asserts on prose.** Assert on a
   word the change introduced, and run the assertion once against the sentence
   with its meaning negated: it must fail. An assertion on a word the old text
