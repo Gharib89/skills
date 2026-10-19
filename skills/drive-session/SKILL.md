@@ -151,12 +151,13 @@ line names the parent and any merge allowance
    is yours, from reading each agent brief. A slice whose agent brief names no
    area runs alone: it starts only when no other run holds a slot. A slice
    whose acceptance criteria require a timing series (repeated A/B runs, a
-   median and range) also runs alone: a second run beside it widens the range,
-   so until that slice is at rest no second slot is taken and no triage tab
-   that runs the local gate is spawned (a triage tab that runs no local gate may
-   still spawn). A slot frees
-   only when its run is at rest (merged, handed back or crashed): a run waiting
-   on an escalation keeps it. The gate slice, blocked by every other slice,
+   median and range) also runs alone: a second run beside it widens the range.
+   It starts only once no other run holds a slot and no triage tab that runs
+   the local gate is still running; until it is at rest no second slot is taken
+   and no triage tab that runs the local gate is spawned (a triage tab that
+   runs no local gate may still spawn). A slot frees only when its run is at
+   rest (merged, handed back or crashed): a run waiting on an escalation keeps
+   it. The gate slice, blocked by every other slice,
    starts once all of them are closed. Before spawning a slice, list the PRs
    merged to main since its agent brief was posted (the brief comment's
    `created_at`, then `gh pr list --state merged --base main --limit 1000
