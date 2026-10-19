@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.3 (2026-10-19)
+
+### Bug Fixes
+
+- **harness**: Turn rung runs the tests naming a deleted .sh
+  ([#886](https://github.com/Gharib89/skills/pull/886),
+  [`63e8b4f`](https://github.com/Gharib89/skills/commit/63e8b4f151f8586ff7718370567632d07cab21ec))
+
+
 ## v0.12.2 (2026-10-15)
 
 ### Bug Fixes
