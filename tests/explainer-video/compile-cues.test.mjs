@@ -42,6 +42,15 @@ test("a cue's `on` phrase compiles when its sentence says it, and the script kee
   assert.equal(compiled(fx).scenes[0].visual.props.items[1].on, "failing test");
 });
 
+test("a cue's `on` phrase of bare punctuation does not land on a dash the sentence holds", () => {
+  const fx = fixture(
+    around(cards(withOn("..."))).replace("It writes a", "It writes - a"),
+  );
+  const r = run(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^compile: only: on "\.\.\." is not said in sentence 2/m);
+});
+
 test("a cue's `on` phrase matches whatever its case and punctuation", () => {
   const fx = fixture(around(cards(withOn("A FAILING, test!"))));
   const r = run(fx);
