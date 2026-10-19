@@ -16,6 +16,7 @@ const voiceDir = path.join(
 );
 const { check } = await import(path.join(voiceDir, "qc.mjs"));
 const { toArabic } = await import(path.join(voiceDir, "arabic.mjs"));
+const { chars } = await import(path.join(voiceDir, "..", "lib", "length.mjs"));
 
 const NARRATION =
   "بعد كده الوكيل بيفتح pull request جديد على branch منفصل، وبيستنى المراجعة من الفريق.";
@@ -23,7 +24,7 @@ const NARRATION =
 // speaker says them, no punctuation.
 const HEARD =
   "بعد كده الوكيل بيفتح بول ريكويست جديد على برانش منفصل وبيستنى المراجعة من الفريق";
-const seconds = (text, rate) => text.length / rate;
+const seconds = (text, rate) => chars(text) / rate;
 
 test("an Arabic transcript with the English terms spoken in Arabic letters passes", () => {
   const q = check(NARRATION, HEARD, seconds(NARRATION, 13), "ar");
@@ -60,10 +61,18 @@ test("a looped Arabic transcript fails precision at 0.85", () => {
   assert.deepEqual(q.failures, ["precision 0.5 under 0.85"]);
 });
 
-test("an Arabic rate outside 9 to 22 chars/s fails", () => {
+// The rate is the budget's own unit (#783, #845): spoken characters, not the
+// narration's length with its spaces and punctuation.
+test("the rate counts spoken characters, not spaces or punctuation", () => {
+  assert.ok(chars(NARRATION) < NARRATION.length);
+  const q = check(NARRATION, HEARD, 5, "ar");
+  assert.equal(q.rate, +(chars(NARRATION) / 5).toFixed(2));
+});
+
+test("an Arabic rate outside 7 to 18 chars/s fails", () => {
   for (const rate of [5, 30]) {
     const q = check(NARRATION, HEARD, seconds(NARRATION, rate), "ar");
-    assert.deepEqual(q.failures, [`rate ${rate} chars/s outside 9 to 22`]);
+    assert.deepEqual(q.failures, [`rate ${rate} chars/s outside 7 to 18`]);
   }
 });
 
@@ -126,8 +135,8 @@ test("a value that rounds onto the floor it fails prints enough places to differ
     check(narration, `${narration} purple`, seconds(narration, 13)).precision,
     0.92,
   );
-  // A band edge too, as many places as it takes: 8.9996 is not 9.
-  const slow = check(narration, narration, seconds(narration, 8.9996));
-  assert.equal(slow.rate, 8.9996);
-  assert.deepEqual(slow.failures, ["rate 8.9996 chars/s outside 9 to 22"]);
+  // A band edge too, as many places as it takes: 6.9996 is not 7.
+  const slow = check(narration, narration, seconds(narration, 6.9996));
+  assert.equal(slow.rate, 6.9996);
+  assert.deepEqual(slow.failures, ["rate 6.9996 chars/s outside 7 to 18"]);
 });

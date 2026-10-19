@@ -1,10 +1,17 @@
 // Voice QC (ADR 0016): the aligner's greedy transcript against the narration,
 // so a garbled, cut or looped render blocks before anything is built on it.
 // Floors from the spec: content-word recall 0.8 (cuts and mumbles), precision
-// 0.85 (loops and invented speech), and 9 to 22 characters per second.
+// 0.85 (loops and invented speech), and 7 to 18 spoken characters per second.
 import { fold, toArabic } from "./arabic.mjs";
+import { chars } from "../lib/length.mjs";
 
-export const FLOORS = { recall: 0.8, precision: 0.85, rate: [9, 22] };
+// The rate is in the script budget's unit, spoken characters (`chars()`: letters
+// and digits, no spaces or punctuation). The band is the spec's 9 to 22 on the
+// full length, divided by the 1.25 that length runs over `chars()` on the
+// calibration texts (1.22 to 1.28), 7.2 to 17.6, rounded out to whole numbers. Its
+// seconds are the voiced span, gaps between sentences included, so the rate is
+// gross and reads lower than a narrator's speech-only `rate`.
+export const FLOORS = { recall: 0.8, precision: 0.85, rate: [7, 18] };
 
 // English function words: a content word is any other word of two letters or more.
 const STOP = new Set(
@@ -118,7 +125,7 @@ export function check(narration, transcript, seconds, language = "en") {
   const count = (xs) => xs.filter(Boolean).length;
   const recall = ref.length ? count(hit) / ref.length : 1;
   const precision = hyp.length ? count(used) / hyp.length : 1;
-  const rate = seconds > 0 ? narration.length / seconds : 0;
+  const rate = seconds > 0 ? chars(narration) / seconds : 0;
   // Two decimal places, and more while rounding would print a floor or band
   // edge the value does not equal, so 0.849 never prints as the 0.85 floor it
   // fails. The edges have two places, so rounding lands on one, never past it.

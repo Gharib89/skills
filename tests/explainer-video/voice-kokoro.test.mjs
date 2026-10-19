@@ -121,7 +121,7 @@ for (const [name, sentence, why] of [
   [
     "a dragged render",
     "This sentence reads slowly.",
-    /rate \d+(\.\d+)? chars\/s outside 9 to 22/,
+    /rate \d+(\.\d+)? chars\/s outside 7 to 18/,
   ],
 ]) {
   test(`voice QC blocks ${name} with the measured value, writes no timeline and caches nothing for it`, () => {
