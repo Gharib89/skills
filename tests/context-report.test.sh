@@ -52,7 +52,7 @@ AGENTS.md: absent
 total: 0 chars' "$out"
 
 # The description reader against the shapes frontmatter-check.sh reads: each
-# skill's description below is one such shape, its expected count in the name.
+# skill's description below is one such shape, its expected count in the block.
 a=$fixture/adv
 mkdir -p "$a"
 printf '{"version":1,"skills":{"single":{"source":"."},"literal":{"source":"."},"comment":{"source":"."},"trailing":{"source":"."},"blockquote":{"source":"."},"none":{"source":"."},"decoy":{"source":"."},"unclosed":{"source":"."}}}\n' > "$a/skills-lock.json"
@@ -79,6 +79,13 @@ skills/none: 0 chars
 skills/decoy: 2 chars
 skills/unclosed: 13 chars
 total: 59 chars' "$out"
+
+# A counting tool that fails is tooling, never a zero.
+mkdir -p "$fixture/failbin"
+printf '#!/usr/bin/env bash\nexit 1\n' > "$fixture/failbin/tr"; chmod +x "$fixture/failbin/tr"
+out=$(PATH="$fixture/failbin:$PATH" bash "$script" "$a" 2>/dev/null); rc=$?
+check_rc "a failing tr is tooling" 2 "$rc"
+check "a failing tr prints no count" "0" "$(grep -c 'chars' <<<"$out")"
 
 rm "$a/skills/none/SKILL.md"
 bash "$script" "$a" >/dev/null 2>&1; rc=$?

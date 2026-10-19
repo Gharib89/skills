@@ -35,10 +35,10 @@ names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$r
 # Characters under any locale: the cloud sandbox runs with LANG and LC_ALL
 # empty, where a shell's own length counts bytes, so drop UTF-8 continuation
 # bytes before counting.
-chars() { echo $(( $(LC_ALL=C tr -d '\200-\277' | wc -c) )); }
+chars() { local n; n=$(LC_ALL=C tr -d '\200-\277' | wc -c) || return 1; echo $((n)); }
 
 # <file>: the frontmatter `description`, read as scripts/frontmatter-check.sh's
-# `fields` reads it: indented continuation lines joined with one space, a `#`
+# `fields` reads it, for every input that script accepts: indented continuation lines joined with one space, a `#`
 # comment after an unquoted value and trailing blanks dropped, a closed quote
 # stripped, and a quote inside a `>` or `|` block left as text.
 description() {
@@ -68,11 +68,17 @@ total=0
 line() { echo "$1: $2 chars"; total=$((total + $2)); }
 
 for f in CLAUDE.md AGENTS.md; do
-  if [ -r "$root/$f" ]; then line "$f" "$(chars < "$root/$f")"; else echo "$f: absent"; fi
+  if [ -r "$root/$f" ]; then
+    n=$(chars < "$root/$f") || die "cannot count $f"
+    line "$f" "$n"
+  else
+    echo "$f: absent"
+  fi
 done
 while IFS= read -r n; do
   [ -n "$n" ] || continue
   [ -r "$root/skills/$n/SKILL.md" ] || die "cannot read skills/$n/SKILL.md"
-  line "skills/$n" "$(description "$root/skills/$n/SKILL.md" | chars)"
+  c=$(description "$root/skills/$n/SKILL.md" | chars) || die "cannot count skills/$n"
+  line "skills/$n" "$c"
 done <<<"$names"
 echo "total: $total chars"
