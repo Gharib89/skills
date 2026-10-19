@@ -51,3 +51,15 @@ test("a scene's PCM is padded with silence to its frames", () => {
   assert.deepEqual(padded.subarray(0, data.length), data);
   assert.ok(padded.subarray(data.length).every((b) => b === 0));
 });
+
+test("a PCM already whole frames, or longer, gains no silence and is cut to them", () => {
+  const rate = 24000;
+  const exact = Buffer.alloc((3 * rate * 2) / FPS, 1);
+  assert.deepEqual(padToFrames(exact, rate, 3), exact);
+  assert.equal(padToFrames(exact, rate, 2).length, (2 * rate * 2) / FPS);
+});
+
+test("one scene is the whole grid, the hold on it", () => {
+  const g = gridScenes([1.0], 1);
+  assert.deepEqual([g[0].start, g[0].frames, g.total], [0, 60, 60]);
+});

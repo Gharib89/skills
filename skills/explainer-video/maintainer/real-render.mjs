@@ -68,12 +68,10 @@ const FIXTURE = [
 const HALF = 1;
 const RATE = 24000;
 
-const say = (check, ok, detail) =>
-  console.log(`real-render ${check}: ${ok ? "pass" : "fail"}: ${detail}`);
 let failed = 0;
 const check = (name, ok, detail) => {
   if (!ok) failed++;
-  say(name, ok, detail);
+  console.log(`real-render ${name}: ${ok ? "pass" : "fail"}: ${detail}`);
 };
 const missing = catalogue()
   .filter((r) => ["npm", "chrome"].includes(r.kind))
@@ -86,6 +84,7 @@ if (missing.length || spawnSync("ffmpeg", ["-version"]).error) {
 }
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "real-render-"));
+process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 const backend = await loadBackend();
 const env = hyperframesEnv();
 const profile = loadStyle(work, "claude-code");
@@ -241,5 +240,4 @@ check(
   `${parts} frames joined, ${a.length} in the whole (${first.frames} + ${second.frames})`,
 );
 
-fs.rmSync(work, { recursive: true, force: true });
 process.exit(failed ? 1 : 0);

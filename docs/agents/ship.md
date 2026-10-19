@@ -123,14 +123,14 @@ Paths: skills/ship/SKILL.md, skills/ship/reference/**
 
 ### real-render
 
-Proves: the explainer-video composer's frame grid holds under real HyperFrames: the render has the composer's frames, two renders match frame for frame, and two stream-copy-joined halves have the whole's frame count.
-Applies when: the change touches `skills/explainer-video/scripts/render/`, `skills/explainer-video/scripts/gates/`, or its `package.json` (the HyperFrames pin), or times a scene. A slice adding scenes extends the fixture in `maintainer/real-render.mjs` first.
-Run: `node skills/explainer-video/maintainer/real-render.mjs` after `node skills/explainer-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new tool cache). It runs outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
+Proves: the explainer-video composer's frame grid holds under real HyperFrames: the render's frame count equals the composer's, two renders match frame for frame, and two stream-copy-joined halves have the whole's frame count.
+Applies when: the change touches a file in `Paths:`.
+Run: first, a slice adding scenes extends the fixture in `maintainer/real-render.mjs`; then `node skills/explainer-video/maintainer/real-render.mjs` after `node skills/explainer-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new cache). Outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
 Needs: the `npm-packages` and `chrome` rows installed, and `ffmpeg`.
 Without it: hand-off
 Also proven by CI: None.
-Claims to probe: that HyperFrames renders `ceil(duration x fps)` frames and has no frame-range flag.
-Paths: skills/explainer-video/scripts/render/**, skills/explainer-video/scripts/gates/**, skills/explainer-video/package.json
+Claims to probe: that HyperFrames renders `ceil(duration * fps)` frames and has no frame-range flag (both held on 0.8.169, 2026-10-19).
+Paths: skills/explainer-video/scripts/render/**, skills/explainer-video/scripts/gates/**, skills/explainer-video/scripts/lib/**, skills/explainer-video/maintainer/**, skills/explainer-video/package*.json
 
 ## Versioning and changelog
 
