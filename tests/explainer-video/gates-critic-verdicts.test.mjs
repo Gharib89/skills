@@ -200,16 +200,16 @@ test("a malformed verdict stops the gates, naming the scene and what is wrong", 
   }
 });
 
-test("a contact sheet shows the scene's quarter marks and its own last frame, even for a scene starting between frames", () => {
-  assert.deepEqual(sheetFrames({ start: 2, duration: 4, fps: 30 }), [
-    60,
-    [90, 120, 150, 179],
-  ]);
+test("a contact sheet shows the scene's quarter marks and its fullest moment, even for a scene starting between frames", () => {
+  assert.deepEqual(
+    sheetFrames({ start: 2, duration: 4, fps: 30, fullest: 100 }),
+    [60, [90, 120, 150, 100]],
+  );
   // 28.25 s to 45.9 s at 30 fps: frames 848 to 1376; 1377 is the next scene's.
-  assert.deepEqual(sheetFrames({ start: 28.25, duration: 17.65, fps: 30 }), [
-    848,
-    [980, 1112, 1244, 1376],
-  ]);
+  assert.deepEqual(
+    sheetFrames({ start: 28.25, duration: 17.65, fps: 30, fullest: 1376 }),
+    [848, [980, 1112, 1244, 1376]],
+  );
 });
 
 test("a worst moment at a scene's 3-place start is inside it, though the start is truncated", () => {

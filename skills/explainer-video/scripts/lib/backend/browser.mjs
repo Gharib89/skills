@@ -173,6 +173,7 @@ function measureFrame() {
     }
     out.push({
       text: own.slice(0, 60),
+      words: own.split(/\s+/).length,
       scene: el.closest(sub)?.dataset.compositionId ?? null,
       rect: box(r),
       fontPx: parseFloat(cs.fontSize) * scale,
@@ -338,6 +339,36 @@ export async function probe(dir, times, { env }) {
       });
     }
     return frames;
+  } finally {
+    await close();
+  }
+}
+
+// Each scene's timeline events, in the scene's own seconds: the end of every
+// tween on its GSAP timeline, and the `seam:start`/`seam:end` and
+// `camera:start`/`camera:end` label pairs that mark when its seam or camera
+// runs. A scene's timeline has no labels today, so only its tween ends count.
+export async function events(dir, { env }) {
+  const { page, close } = await openComposition(dir, env);
+  try {
+    return await page.evaluate(() => {
+      const r3 = (n) => Math.round(n * 1000) / 1000;
+      const out = {};
+      for (const [id, tl] of Object.entries(window.__timelines ?? {})) {
+        if (id === "main") continue;
+        const pair = (kind) =>
+          `${kind}:start` in tl.labels && `${kind}:end` in tl.labels
+            ? [[r3(tl.labels[`${kind}:start`]), r3(tl.labels[`${kind}:end`])]]
+            : [];
+        const seams = pair("seam");
+        const camera = pair("camera");
+        const ends = tl
+          .getChildren(true, true, false)
+          .map((c) => r3(c.endTime()));
+        out[id] = { ends, seams, camera };
+      }
+      return out;
+    });
   } finally {
     await close();
   }

@@ -31,7 +31,13 @@ function rtl(e, bad) {
   }
 }
 
-export function judge(checked, frames, floor, add) {
+// A box is readable while fully shown, outside a seam and not carried by the
+// camera: `moving(scene, t)` says whether the scene's seam or camera is
+// running at `t`, and the layout gate judges a box only while it reads.
+export const readable = (e, t, moving) =>
+  e.opacity >= 0.99 && !moving(e.scene, t);
+
+export function judge(checked, frames, floor, add, moving = () => false) {
   const { textPx, margin } = floor.layout;
   for (const f of checked.layout.findings)
     if (f.severity === "error") add("layout", f.time, `${f.code} "${f.text}"`);
@@ -59,8 +65,7 @@ export function judge(checked, frames, floor, add) {
     outside(a, b, 0) &&
     outside(b, a, 0);
   for (const { t, elements, rootDir } of frames) {
-    // Mid-reveal text is judged once it settles.
-    const shown = elements.filter((e) => e.opacity >= 0.99);
+    const shown = elements.filter((e) => readable(e, t, moving));
     for (const r of rootDir ?? [])
       add("layout", t, `dir on the page root ${r}`);
     shown.forEach((e, i) => {
