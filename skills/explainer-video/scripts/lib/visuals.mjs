@@ -115,7 +115,17 @@ function emphasis(name, p, said, texts) {
         : `${name} emphasis target "${e.target}" matches no item (${texts.join(", ")})`,
     );
   known(`${name} emphasis`, e, EMPHASIS);
+  // The callout sits inside its item, so it cannot show before the item does.
+  const target = p[VISUALS[name].rows][texts.indexOf(e.target)];
+  if (!(place(e, said) >= place(target, said)))
+    fail(
+      `${name} emphasis of "${e.target}" lands before the item appears (at ${target.at}${target.on ? ` on "${target.on}"` : ""})`,
+    );
 }
+// Where a cue falls in the scene's speech, as a number that orders cues:
+// its sentence, then the phrase's word within it.
+const place = (x, said) =>
+  x.at * 1000 + (x.on === undefined ? 0 : findPhrase(said[x.at - 1], x.on));
 // A code emphasis names a line range, counted from 1.
 function codeEmphasis(p, said) {
   const e = p.emphasis;

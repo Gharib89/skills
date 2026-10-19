@@ -110,6 +110,16 @@ for (const [name, visual, why] of [
     /^compile: only: cards emphasis target "Same" matches 3 items/m,
   ],
   [
+    "an emphasis in a sentence before its item appears",
+    cards(three, { target: "Then", at: 2 }),
+    /^compile: only: cards emphasis of "Then" lands before the item appears \(at 3\)/m,
+  ],
+  [
+    "an emphasis on a phrase before its item's own phrase",
+    cards(withOn("failing test"), { target: "First", at: 2, on: "writes" }),
+    /^compile: only: cards emphasis of "First" lands before the item appears \(at 2 on "failing test"\)/m,
+  ],
+  [
     "an emphasis with no sentence to land at",
     cards(three, { target: "First" }),
     /^compile: only: at undefined is not a sentence \(1 to 3\)/m,

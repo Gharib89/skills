@@ -66,7 +66,8 @@ narrator: am_fenrir
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a
     leader line, revealed on its cue. `target` is the text of one item (its
     `label`; a panel's `title`; a `text` for a terminal line or list item),
-    matched exactly, and refused when it matches no item or more than one. On
+    matched exactly, and refused when it matches no item or more than one, or
+    when its cue falls before the item's own, the callout sitting inside it. On
     `code` it is a line range, `[first, last]` counted from 1.
 
 ## Style profiles
