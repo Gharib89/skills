@@ -106,6 +106,17 @@ for body in '{"message":"moved"}' '' 'not json' '["oops"]' '[{"title":"x","state
   check_rc "frontier refuses the answer '$body' as unreadable" 2 "$rc"
   check "and says so" "sub-issues of #6: unreadable answer from gh" "$(jq -r .error <<<"$out")"
 done
+# One argv string over 128 KiB (MAX_ARG_STRLEN) must not reach jq: only the
+# fields frontier reads are kept from each answer.
+head -c 140000 /dev/zero | tr '\0' x > "$tmp/big"
+# fat <number> <title>: iss with that body, built from the file so no argv string is large.
+fat() { iss "$1" "$2" open $here | jq -c --rawfile b "$tmp/big" '. + {body: $b}'; }
+fat 8 h | jq -s -c . > "$tmp/routes/$(tr / _ <<<"$issues/7/sub_issues")"
+fat 9 i | jq -s -c . > "$tmp/routes/$(tr / _ <<<"repos/o/r/issues/8/dependencies/blocked_by")"
+out=$(HERDR_ENV='' bash "$s/frontier.sh" --parent 7 2>/dev/null); rc=$?
+check_rc "frontier on sub-issues with bodies over 128 KiB exits 0" 0 "$rc"
+check "and lists them" '{"parent":7,"sub_issues":[{"number":8,"title":"h","repo":"o/r","state":"open","assignees":[],"blockers":[{"number":9,"title":"i","repo":"o/r","inside":false}]}]}' \
+  "$(jq -c . <<<"$out")"
 gh_reset
 for bad in "--parent x" "--parent 0" "--parent" "--parent -1" "--parent 1 --roster r" "1"; do
   # shellcheck disable=SC2086  # the call's words are split on purpose

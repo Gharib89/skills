@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.1 (2026-10-19)
+
+### Bug Fixes
+
+- **drive-session**: Frontier cuts each GitHub answer to the fields it reads
+  ([#888](https://github.com/Gharib89/skills/pull/888),
+  [`dcbad4e`](https://github.com/Gharib89/skills/commit/dcbad4ec5cb10f0259dd01709346d5acbba6d31e))
+
+
 ## v0.5.0 (2026-10-19)
 
 ### Features
