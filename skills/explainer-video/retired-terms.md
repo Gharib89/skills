@@ -10,3 +10,8 @@ adds its row here in the same diff. A cell holds no `|`.
 | Version | Term | Replacement |
 |---|---|---|
 | 0.24.1 | words/s | chars/s |
+| 0.28.0 | "motion" | "grammar.ease" |
+| 0.28.0 | "look" | "grammar.texture.surface" |
+| 0.28.0 | "effects" | None. |
+| 0.28.0 | "rise" | "soft" |
+| 0.28.0 | "clean" | "flat" |

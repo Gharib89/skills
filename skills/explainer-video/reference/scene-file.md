@@ -85,5 +85,6 @@ component stops compile; a ban naming no component is refused.
 
 `scale` overrides steps of the type scale every component sizes text from, as
 `{ "body": 44 }`: `display` 112, `title` 56, `heading` 46, `body` 40, `code`
-32, `small` 28, `label` 24 px. An unknown step, or one under the layout floor
-(18 px, or the profile's `gates.layout.textPx`), is refused.
+32, `small` 28, `label` 24 px. An unknown step, or any step under the layout
+floor (18 px, or the profile's `gates.layout.textPx`), is refused, so a profile
+that raises the floor sets each step the new floor passes.

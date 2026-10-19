@@ -212,8 +212,12 @@ test("a type step is the profile's, else the scale's, and never under the layout
   );
   refused({ scale: { body: "big" } }, /scale\.body big is not a number/);
   refused(
-    { scale: { label: 30 }, gates: { layout: { textPx: 32 } } },
+    { scale: { small: 34, label: 30 }, gates: { layout: { textPx: 32 } } },
     /scale\.label 30 is under the 32 px layout floor/,
+  );
+  refused(
+    { gates: { layout: { textPx: 32 } } },
+    /scale\.small 28 is under the 32 px layout floor/,
   );
 });
 

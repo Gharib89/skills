@@ -205,6 +205,10 @@ function features(profile) {
   for (const [step, px] of Object.entries(profile.scale ?? {})) {
     if (!Object.hasOwn(SCALE, step)) refuse(`scale.${step}: no such step`);
     if (!Number.isFinite(px)) refuse(`scale.${step} ${px} is not a number`);
+  }
+  // Every step in play, a default one too: a profile that raises the floor
+  // owns the steps it leaves at the scale's value.
+  for (const [step, px] of Object.entries(scale(profile))) {
     if (px < floor)
       refuse(`scale.${step} ${px} is under the ${floor} px layout floor`);
   }
