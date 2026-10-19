@@ -4,6 +4,9 @@
 // hair costs a whole extra frame.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { FPS } from "../../skills/explainer-video/scripts/render/compose.mjs";
 import {
   frames,
@@ -11,6 +14,7 @@ import {
   padToFrames,
   written,
 } from "../../skills/explainer-video/scripts/render/grid.mjs";
+import { wavSeconds } from "../../skills/explainer-video/scripts/render/narration.mjs";
 
 test("a duration rounds up to whole frames, float noise aside", () => {
   assert.equal(frames(1 / FPS), 1);
@@ -62,4 +66,21 @@ test("a PCM already whole frames, or longer, gains no silence and is cut to them
 test("one scene is the whole grid, the hold on it", () => {
   const g = gridScenes([1.0], 1);
   assert.deepEqual([g[0].start, g[0].frames, g.total], [0, 60, 60]);
+});
+
+test("a scene is sized from its WAV, not the voice stage's rounded seconds", () => {
+  // 24010 samples at 24 kHz is 1.000417 s, stored as 1.000: 30 frames would cut
+  // 10 samples; the WAV's own length takes 31.
+  const rate = 24000;
+  const h = Buffer.alloc(44);
+  h.writeUInt32LE(rate, 24);
+  h.writeUInt32LE(24010 * 2, 40);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wav-seconds-"));
+  const file = path.join(dir, "s.wav");
+  fs.writeFileSync(file, Buffer.concat([h, Buffer.alloc(24010 * 2)]));
+  try {
+    assert.equal(frames(wavSeconds(file)), 31);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

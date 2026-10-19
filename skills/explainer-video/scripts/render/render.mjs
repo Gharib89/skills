@@ -60,7 +60,7 @@ import {
   videoPage,
 } from "./compose.mjs";
 import { gridScenes, written } from "./grid.mjs";
-import { joinNarration } from "./narration.mjs";
+import { joinNarration, wavSeconds } from "./narration.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 const stillsOnly = rest[0] === "--stills";
@@ -169,7 +169,7 @@ if (ace && !fs.existsSync(path.join(dest(ace, undefined, device), ".stamp")))
 // Timeline: scenes back to back on the frame grid, every word and sentence
 // start absolute.
 const grid = gridScenes(
-  voice.scenes.map((v) => v.duration),
+  voice.scenes.map((v) => wavSeconds(path.join(run, v.audio))),
   HOLD,
 );
 const scenes = script.scenes.map((s, i) => {

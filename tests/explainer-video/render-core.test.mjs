@@ -28,6 +28,25 @@ import {
   unescape,
 } from "./render-lib.mjs";
 
+test("a scene is sized from its WAV, so rounded metadata never clips the narration", () => {
+  const fx = fixture();
+  assert.equal(render(fx).code, 0);
+  const file = path.join(fx.dir, "voice.json");
+  const voice = JSON.parse(fs.readFileSync(file, "utf8"));
+  for (const v of voice.scenes) v.duration -= 0.05;
+  fs.writeFileSync(file, JSON.stringify(voice));
+  const r = judged(fx.dir, () => stage(fx, "render/render.mjs"));
+  assert.equal(r.code, 0, r.out + r.err);
+  // Each scene's frames hold all of its WAV's samples.
+  const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  voice.scenes.forEach((v, i) => {
+    const wav = fs.readFileSync(path.join(fx.dir, v.audio));
+    const spoken = wav.readUInt32LE(40) / 2 / wav.readUInt32LE(24);
+    const held = timeline.scenes[i].duration;
+    assert.ok(held >= spoken - 1e-6, `${v.audio}: ${held} s of ${spoken} s`);
+  });
+});
+
 test("render composes every scene, renders with the CLI's guards, delivers and records the run", () => {
   const fx = fixture();
   const r = render(fx);

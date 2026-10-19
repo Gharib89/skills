@@ -5,6 +5,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { padToFrames } from "./grid.mjs";
 
+// Seconds of speech in the 16-bit mono WAV at `file`, from its data chunk: the
+// voice stage's `duration` is rounded to 3 places, so a WAV a hair over a frame
+// boundary would size its scene one frame short and lose its tail.
+export function wavSeconds(file) {
+  const b = fs.readFileSync(file);
+  return b.readUInt32LE(40) / 2 / b.readUInt32LE(24);
+}
+
 export function joinNarration({ run, voice, frames, file, fail }) {
   const parts = voice.scenes.map((v) => {
     const b = fs.readFileSync(path.join(run, v.audio));
