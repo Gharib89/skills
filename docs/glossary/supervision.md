@@ -9,7 +9,7 @@ One Claude agent in a Herdr tab the supervisor created, beside its own tab, reco
 _Avoid_: child session, worker, sub-session, spawned agent
 
 **Roster**:
-The JSON file listing a supervisor's supervised sessions, one row each with its name, pane, tab, task and the sequence number last acknowledged. It is how a compacted or resumed supervisor still knows which sessions it owns.
+The JSON file listing a supervisor's supervised sessions, one row each with its name, pane, tab, task and the sequence number last acknowledged, and whether it is gone or at rest, which `watch` skips. It is how a compacted or resumed supervisor still knows which sessions it owns.
 _Avoid_: session list, registry, run file alone (that is ship's)
 
 **Escalation**:
@@ -17,7 +17,7 @@ A supervised session's question the supervisor forwards to the human instead of 
 _Avoid_: hand-off (that is ship's stop), question, ping
 
 **Merge allowance**:
-The launch prompt's permission for the supervisor to answer a supervised ship run's merge gate with "merge" when that gate is clean, by Ship's own `run-file gate clean` verdict, and on a gate held only by reviewer rules (a reviewer's cap after a clean local review, or a small lane or cap answered by one more host round on the final head). Without it, or on a gate held by any other reason or an unmet criterion, the merge gate is an escalation.
+The launch prompt's permission for the supervisor to answer a supervised ship run's merge gate with "merge" when that gate is clean, by Ship's own `run-file gate clean` verdict, and on a gate held only by reviewer rules (a reviewer's cap after a local review that stopped on `tree unchanged`, or a small lane or cap answered by one more host round on the final head). Without it, or on a gate held by any other reason or an unmet criterion, the merge gate is an escalation.
 _Avoid_: auto-merge, merge permission, `Merge: on-clean-gate` (that is the ship profile's opt-in)
 
 **Spec batch**:
