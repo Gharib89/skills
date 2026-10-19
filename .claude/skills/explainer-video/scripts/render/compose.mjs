@@ -15,8 +15,10 @@ export const H = 1080;
 export const FPS = 30;
 // The content band every scene draws in, between the header and the captions.
 export const CONTENT = { left: 120, top: 178, width: 1680, height: 690 };
-// 40 px Inter fits about 70 characters a line in the 1680 px band: 84 is at
-// most two lines.
+// A caption is 40 px whatever the profile's `scale`: the caption band and
+// CUE_CHARS are sized for it. 40 px Inter fits about 70 characters a line in
+// the 1680 px band: 84 is at most two lines.
+const CAPTION_PX = 40;
 export const CUE_CHARS = 84;
 const RISE = [
   { opacity: 0, y: RISE_PX },
@@ -187,7 +189,9 @@ function page({
   const f = faces(profile, dir);
   const tokens = [
     ...Object.entries(profile.colors).map(([k, v]) => `--${k}: ${v};`),
-    ...Object.entries(scale(profile)).map(([k, v]) => `--size-${k}: ${v}px;`),
+    ...Object.entries({ ...scale(profile), caption: CAPTION_PX }).map(
+      ([k, v]) => `--size-${k}: ${v}px;`,
+    ),
     `--font-title: ${f.title};`,
     `--font-text: ${f.text};`,
     `--font-code: ${f.code};`,
@@ -218,7 +222,7 @@ html, body { margin: 0; width: ${W}px; height: ${H}px; overflow: hidden; backgro
 .mark { width: 18px; height: 18px; border-radius: 4px; background: var(--accent); }
 .kicker { font: 600 var(--size-label) ${f.text}; color: var(--muted); letter-spacing: ${f.ls("0.04em")}; text-transform: uppercase; }
 .captions { position: absolute; left: 120px; right: 120px; ${band} }
-.cue { display: flex; align-items: center; justify-content: center; text-align: center; font: 400 var(--size-body)/${f.lh(1.3, "caption")} ${f.text}; color: var(--faint); overflow: hidden; }${latin}
+.cue { display: flex; align-items: center; justify-content: center; text-align: center; font: 400 var(--size-caption)/${f.lh(1.3, "caption")} ${f.text}; color: var(--faint); overflow: hidden; }${latin}
     </style>
   </head>
   <body>

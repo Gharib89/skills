@@ -256,6 +256,20 @@ test("a profile's type step override reaches the page as its token", () => {
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
   assert.match(comp(fx), /--size-body: 44px;/);
+  assert.match(comp(fx), /--size-caption: 40px;/);
+});
+
+test("a malformed profile file is refused at compile naming the file", () => {
+  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: broken"));
+  const styles = path.join(fx.tmp, "proj", "explainers", ".styles");
+  fs.mkdirSync(styles, { recursive: true });
+  fs.writeFileSync(path.join(styles, "broken.json"), '{ "schema": 2,');
+  const r = stage(fx, "script/compile.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^compile: style profile .*broken\.json is not valid JSON/m,
+  );
 });
 
 test("a code step override moves the code row height with it", () => {

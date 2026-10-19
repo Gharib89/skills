@@ -109,7 +109,7 @@ test("render composes every scene, renders with the CLI's guards, delivers and r
   assert.match(index, /--accent: #cc6c54;/);
   assert.match(
     index,
-    /\.cue \{[^}]*font: 400 var\(--size-body\)\/1\.3 "inter"/,
+    /\.cue \{[^}]*font: 400 var\(--size-caption\)\/1\.3 "inter"/,
   );
   assert.match(
     index,

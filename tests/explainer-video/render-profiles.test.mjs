@@ -198,7 +198,7 @@ test("a draft naming a family no setup row installs renders it from the font sto
   );
   assert.match(
     comp(fx),
-    /\.cue \{[^}]*font: 400 var\(--size-body\)\/1\.3 "noto-serif"/,
+    /\.cue \{[^}]*font: 400 var\(--size-caption\)\/1\.3 "noto-serif"/,
   );
 });
 
@@ -217,7 +217,7 @@ test("an Arabic script renders right to left on its text boxes, its English term
     assert.match(index, new RegExp(`@font-face \\{ font-family: "${family}"`));
   assert.match(
     index,
-    /\.cue \{[^}]*font: 400 var\(--size-body\)\/1\.7 "ibm-plex-sans-arabic", "inter"/,
+    /\.cue \{[^}]*font: 400 var\(--size-caption\)\/1\.7 "ibm-plex-sans-arabic", "inter"/,
   );
   assert.match(index, /\.lat \{ font-family: "inter"; white-space: nowrap; \}/);
   const cues = [...index.matchAll(/<div class="cue clip"[^>]*>/g)];

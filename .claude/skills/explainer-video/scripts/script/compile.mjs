@@ -125,7 +125,12 @@ const language = header.language ?? "en";
 
 // The components the run's style profile bans. A profile no store holds, or one
 // with a bad grammar, is the render stage's refusal, not compile's.
-const style = findStyle(run, header.style).profile;
+let style;
+try {
+  style = findStyle(run, header.style).profile;
+} catch (e) {
+  fail(null, e.message);
+}
 const bans = style?.grammar?.bans;
 const banned = new Set(Array.isArray(bans) ? bans : []);
 

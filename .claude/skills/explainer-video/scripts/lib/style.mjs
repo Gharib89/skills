@@ -343,10 +343,15 @@ export const defaultStyle = (list) =>
 // holds the one it asks for, else the named or default profile from the
 // stores, null when no store holds it.
 export function findStyle(run, name, dirs = userDirs()) {
+  const parse = (file) => {
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch (e) {
+      throw new Error(`style profile ${file} is not valid JSON: ${e.message}`);
+    }
+  };
   const own = path.join(run, "style.json");
-  const held = fs.existsSync(own)
-    ? JSON.parse(fs.readFileSync(own, "utf8"))
-    : null;
+  const held = fs.existsSync(own) ? parse(own) : null;
   if (held && (!name || held.name === name)) return { profile: held };
   const list = stores(path.dirname(path.resolve(run)), dirs);
   const want = name ?? defaultStyle(list);
@@ -354,9 +359,7 @@ export function findStyle(run, name, dirs = userDirs()) {
     .map((d) => path.join(d, `${want}.json`))
     .find((f) => fs.existsSync(f));
   if (!file) return { want, list, profile: null };
-  return {
-    profile: { ...JSON.parse(fs.readFileSync(file, "utf8")), name: want },
-  };
+  return { profile: { ...parse(file), name: want } };
 }
 
 // The profile a run uses, checked and copied into the run so a later edit to
