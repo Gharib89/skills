@@ -12,6 +12,10 @@ _Avoid_: harness config, harness.md (the path, not the concept)
 The integer a per-repo profile declares and its reader declares it reads: Ship for the ship profile, the harness setup skill for the harness profile. It moves only when the reader's expectations of the profile change; Ship refuses a run on a mismatch either way; the profile's setup skill migrates a trailing profile on its re-run and stops on one ahead. Separate from the reader's version, which moves on any change.
 _Avoid_: profile version, format version, compat level
 
+**Fix scope**:
+Which side of the skills and profiles split a fix lands on: **procedure** when the fix changes how a skill works in every repo (the skill's own files), **domain** when it changes a fact about one repo (its ship or harness profile, or a memory). Every fix names its scope and the run that exposed it.
+_Avoid_: fix type, edit kind, layer
+
 **Axis**:
 One dimension along which repos legitimately differ in how they ship: worktree layout, local gate, reviewers, verification kind, versioning, PR template. The small-lane floor is not an axis: it is the same in every repo.
 _Avoid_: option, knob, setting
