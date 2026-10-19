@@ -100,6 +100,16 @@ test("install downloads the pinned package after npm-packages, puts the provider
     );
   const c = run(fx, ["check"], "ffmpeg", machine(7.5));
   assert.equal(row(c.out, ID)[2], "present", c.out);
+  // The stamp lives apart from the libraries: a rebuilt npm folder keeps it.
+  fs.rmSync(
+    path.join(
+      node,
+      lock,
+      "node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_cuda.so",
+    ),
+  );
+  const gone = run(fx, ["check"], "ffmpeg", machine(7.5));
+  assert.equal(row(gone.out, ID)[2], "missing", gone.out);
 });
 
 test("a package whose sha256 differs from its pin fails the row and installs no provider", () => {

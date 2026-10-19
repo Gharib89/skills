@@ -5,9 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { sentences } from "../length.mjs";
 import {
-  ORT_CUDA_LIBS,
   ORT_CUDA_MIN_CAP,
-  ortBin,
+  ortProvider,
   skill,
   toolPaths,
   torchDevice,
@@ -265,7 +264,6 @@ const KOKORO_TOKENS = 400;
 // voices each call's lead and tail silence, so one call per sentence paces
 // narration slower than the voice speaks.
 let kokoro;
-let kokoroDevice;
 let speak;
 
 const cudaFailed = (why) =>
@@ -279,10 +277,7 @@ const cudaFailed = (why) =>
 // transformers.js keeps the first session's promise (`wasmInitPromise`), so
 // every later session, a CPU one included, rejects with the same error.
 async function pickDevice(node) {
-  const provider = ORT_CUDA_LIBS.every((f) =>
-    fs.existsSync(path.join(ortBin(node), f)),
-  );
-  if (!provider || !((await computeCapability()) >= ORT_CUDA_MIN_CAP))
+  if (!ortProvider(node) || !((await computeCapability()) >= ORT_CUDA_MIN_CAP))
     return "cpu";
   const why = await cudaProbe(node);
   if (why) cudaFailed(why);
@@ -309,18 +304,27 @@ export async function synthesize({ text, narrator, tools }) {
         dtype: "fp32",
         device,
       });
-    kokoroDevice = await pickDevice(tools.node);
-    kokoro = await load(kokoroDevice);
-    // A call failing on a session that did load (the card's memory taken by
-    // another process, say): reload on the CPU once, for the rest of the process.
+    // The CPU model loads first, beside a CUDA one too: a CUDA load that fails
+    // after the probe passed (the card's memory taken by another process, say)
+    // would otherwise be the first session and poison the CPU load that follows
+    // (see pickDevice). A call failing on the CUDA model falls back the same way,
+    // for the rest of the process.
+    const cpu = await load("cpu");
+    kokoro = cpu;
+    if ((await pickDevice(tools.node)) === "cuda")
+      try {
+        kokoro = await load("cuda");
+      } catch (e) {
+        cudaFailed(e.message);
+      }
     speak = async (c, voice) => {
       try {
         return await kokoro.generate(c, { voice });
       } catch (e) {
-        if (kokoroDevice !== "cuda") throw e;
+        if (kokoro === cpu) throw e;
         cudaFailed(e.message);
-        kokoro = await load((kokoroDevice = "cpu"));
-        return kokoro.generate(c, { voice });
+        kokoro = cpu;
+        return cpu.generate(c, { voice });
       }
     };
   }

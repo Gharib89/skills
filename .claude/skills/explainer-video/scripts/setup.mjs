@@ -46,6 +46,7 @@ import {
   lockHash,
   loadBackend,
   ortBin,
+  ortProvider,
   skill,
   staged,
   torchDevice,
@@ -222,6 +223,8 @@ function status(r) {
     return backend.which(r.command) ? "present" : "missing";
   if (r.kind === "profile") return `refused: ${r.why}`;
   if (r.kind === "font" && fontGap(r)) return "missing";
+  if (r.kind === "cuda" && !ortProvider(dest({ kind: "npm" })))
+    return "missing";
   const s = stamp(installDir(r));
   if (!fs.existsSync(s)) {
     // No wheels here: refused before download, since its uv sync could only fail.

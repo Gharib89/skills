@@ -44,6 +44,8 @@ function toolCache({ provider }) {
     "kokoro-js",
     `exports.KokoroTTS = { from_pretrained: async (model, o) => {
       globalThis.kokoroLoads.push(o.device);
+      if (o.device === "cuda" && globalThis.loadFail)
+        throw new Error("CUDA out of memory at load");
       return { generate: async (text) => {
         if (o.device === "cuda" && globalThis.kokoroFail)
           throw new Error("CUDA out of memory");
@@ -82,10 +84,12 @@ async function voice({
   cap = "7.5",
   probeFail,
   generateFail,
+  loadFail,
 } = {}) {
   const tools = toolCache({ provider });
   globalThis.kokoroLoads = [];
   globalThis.kokoroFail = generateFail;
+  globalThis.loadFail = loadFail;
   const env = { ...process.env };
   process.env.PATH = withCard(cap);
   if (probeFail) process.env.PROBE_FAIL = probeFail;
@@ -111,7 +115,7 @@ async function voice({
 
 test("a card of compute capability 7.5, the CUDA provider installed and its libraries loading voices on CUDA", async () => {
   const r = await voice();
-  assert.deepEqual(r.loads, ["cuda"]);
+  assert.deepEqual(r.loads, ["cpu", "cuda"]);
   assert.deepEqual(r.errors, []);
 });
 
@@ -134,9 +138,17 @@ test("without the provider, without a card or under 7.5, Kokoro loads on the CPU
   }
 });
 
-test("a call that throws on CUDA reloads Kokoro on the CPU once, with one stderr line, and returns its audio", async () => {
+test("a CUDA load that rejects after the probe passed voices on the already loaded CPU model, with one stderr line", async () => {
+  const r = await voice({ loadFail: true });
+  assert.deepEqual(r.loads, ["cpu", "cuda"]);
+  assert.equal(r.errors.length, 1, r.errors.join("\n"));
+  assert.match(r.errors[0], /CUDA out of memory at load/);
+  assert.equal(r.samples.length, "Hello there.".length);
+});
+
+test("a call that throws on CUDA falls back to the CPU model without a reload, with one stderr line, and returns its audio", async () => {
   const r = await voice({ generateFail: true });
-  assert.deepEqual(r.loads, ["cuda", "cpu"]);
+  assert.deepEqual(r.loads, ["cpu", "cuda"]);
   assert.equal(r.errors.length, 1, r.errors.join("\n"));
   assert.match(r.errors[0], /CUDA out of memory/);
   assert.equal(r.samples.length, "Hello there.".length);

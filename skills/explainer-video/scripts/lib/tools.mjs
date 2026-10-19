@@ -83,6 +83,11 @@ export const ORT_CUDA_MIN_CAP = 7.5;
 export const ortBin = (node) =>
   path.join(node, "node_modules/onnxruntime-node/bin/napi-v6/linux/x64");
 
+// Whether setup's CUDA provider sits in that npm folder: its stamp lives apart,
+// so a rebuilt npm folder leaves the stamp standing without the libraries.
+export const ortProvider = (node) =>
+  ORT_CUDA_LIBS.every((f) => fs.existsSync(path.join(ortBin(node), f)));
+
 // A row's CPU-only pin (`cpu.env`) where it runs on the `cpu` device, else
 // undefined.
 export const cpuEnv = (r, device) =>
