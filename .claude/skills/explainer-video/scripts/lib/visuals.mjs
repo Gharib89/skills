@@ -16,9 +16,9 @@ export const lines = (code) => code.split("\n");
 export const TECHNIQUES = { draw: ["flow"] };
 
 const words = (s) => s.split(/\s+/).filter(Boolean);
-// A word compared without its case or the punctuation round it.
-const bare = (w) =>
-  w.toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+// A word compared without its case or its punctuation, an apostrophe inside
+// it included.
+const bare = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
 
 // Where in the spoken `sentence` the words of `phrase` first run, as a word
 // index, or -1.
@@ -194,6 +194,7 @@ export const VISUALS = {
         `item ${i + 1}`,
         x.at,
         [x.label, x.value, x.note],
+        x.on,
       ]),
   },
   terminal: {
@@ -210,7 +211,8 @@ export const VISUALS = {
         p.lines.map((x) => x.text),
       );
     },
-    items: (p) => p.lines.map((x, i) => [`line ${i + 1}`, x.at, [x.text]]),
+    items: (p) =>
+      p.lines.map((x, i) => [`line ${i + 1}`, x.at, [x.text], x.on]),
   },
   flow: {
     props: ["steps", "emphasis"],
@@ -227,7 +229,7 @@ export const VISUALS = {
       );
     },
     items: (p) =>
-      p.steps.map((x, i) => [`step ${i + 1}`, x.at, [x.label, x.note]]),
+      p.steps.map((x, i) => [`step ${i + 1}`, x.at, [x.label, x.note], x.on]),
   },
   panels: {
     props: ["items", "emphasis"],
@@ -247,7 +249,7 @@ export const VISUALS = {
       );
     },
     items: (p) =>
-      p.items.map((x, i) => [`panel ${i + 1}`, x.at, [x.title, x.body]]),
+      p.items.map((x, i) => [`panel ${i + 1}`, x.at, [x.title, x.body], x.on]),
   },
   list: {
     props: ["title", "items", "emphasis"],
@@ -265,7 +267,7 @@ export const VISUALS = {
     },
     items: (p) => [
       ...(p.title ? [["title", 1, [p.title]]] : []),
-      ...p.items.map((x, i) => [`item ${i + 1}`, x.at, [x.text]]),
+      ...p.items.map((x, i) => [`item ${i + 1}`, x.at, [x.text], x.on]),
     ],
   },
   code: {
@@ -300,6 +302,7 @@ export const VISUALS = {
           diff(before, after)
             .filter(([op]) => op === "add")
             .map(([, , j]) => after[j]),
+          p.on,
         ],
       ];
     },

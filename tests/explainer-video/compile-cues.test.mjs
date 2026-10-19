@@ -51,10 +51,21 @@ test("a cue's `on` phrase of bare punctuation does not land on a dash the senten
   assert.match(r.err, /^compile: only: on "\.\.\." is not said in sentence 2/m);
 });
 
-test("a cue's `on` phrase matches whatever its case and punctuation", () => {
-  const fx = fixture(around(cards(withOn("A FAILING, test!"))));
-  const r = run(fx);
-  assert.equal(r.code, 0, r.out + r.err);
+test("a cue's `on` phrase matches whatever its case and punctuation, inside a word as at its edge", () => {
+  for (const [phrase, sentence] of [
+    ["A FAILING, test!", "It writes a failing test."],
+    ["cant fail", "It can't fail the test."],
+    ["can't fail", "It cant fail the test."],
+  ]) {
+    const fx = fixture(
+      around(cards(withOn(phrase))).replace(
+        "It writes a failing test.",
+        sentence,
+      ),
+    );
+    const r = run(fx);
+    assert.equal(r.code, 0, `${phrase}: ${r.out}${r.err}`);
+  }
 });
 
 for (const [name, visual, why] of [

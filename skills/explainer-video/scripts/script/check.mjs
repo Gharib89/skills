@@ -25,7 +25,7 @@ import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { VISUALS } from "../lib/visuals.mjs";
+import { VISUALS, findPhrase } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
@@ -249,7 +249,8 @@ const drift = [];
 }
 
 // reading: each visual item on screen long enough to read, from the sentence
-// it rises at to the scene's end, timed by its share of the scene's words. A
+// (or the `on` phrase) it rises at to the scene's end, timed by its share of
+// the scene's words. A
 // text of at most three words is a label, 0.8 s; a longer one 0.3 s a word
 // and 1.2 s at least; an item's texts add up.
 {
@@ -261,8 +262,10 @@ const drift = [];
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {
     const items = VISUALS[s.visual.component].items(s.visual.props);
     const total = s.counts.reduce((a, b) => a + b, 0);
-    for (const [name, at, texts] of items) {
-      const after = s.counts.slice(at - 1).reduce((a, b) => a + b, 0);
+    for (const [name, at, texts, on] of items) {
+      // An `on` phrase starts the item that many words into its sentence.
+      const into = on === undefined ? 0 : findPhrase(s.narration[at - 1], on);
+      const after = s.counts.slice(at - 1).reduce((a, b) => a + b, 0) - into;
       const shown = (s.seconds * after) / total;
       const read = texts.reduce((a, t) => a + floor(t), 0);
       if (shown < read)
