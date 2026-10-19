@@ -90,7 +90,9 @@ export async function check(dir, times) {
 // span in a caption's IBM Plex Sans Arabic, as the real probe measured it on a
 // live render (1.35 em, Chromium 152).
 function reading(html, scene, text, bdi, rtl, within) {
-  const cue = html.match(/\.cue \{[^}]*font: \d+ [\d.]+px\/([\d.]+) "([^"]+)"/);
+  const cue = html.match(
+    /\.cue \{[^}]*font: \d+ (?:[\d.]+px|var\(--size-\w+\))\/([\d.]+) "([^"]+)"/,
+  );
   const arabic = /\p{Script=Arabic}/u.test(text);
   return {
     dir: arabic && rtl ? "rtl" : "ltr",

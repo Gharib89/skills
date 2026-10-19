@@ -38,15 +38,13 @@ narrator: am_fenrir
   - `title` (`kicker`, `title*`, `subtitle`).
   - `cards` (`items*`, each `at*`, `label*`, `value*`, `note`).
   - `terminal` (`title`, `lines*`, each `at*`, `text*`).
-  - `flow`: a chain of 2 to 5 steps joined by arrows (`steps*`, each `at*`,
-    `label*`, `note`).
+  - `flow`: a chain of 2 to 5 steps joined by arrows that stroke on as each
+    step arrives (`steps*`, each `at*`, `label*`, `note`).
   - `panels`: 2 or 3 side by side (`items*`, each `at*`, `title*`, `body*`).
   - `list`: 1 to 6 points (`title`, `items*`, each `at*`, `text*`).
   - `code`: a highlighted code frame (`lang*`, a Shiki language id; `code*`,
     one string with `\n` between lines, at most 12 lines; `file`;
     `highlights`, each `at*` and `lines*`, `[first, last]` counted from 1).
-    The highlights draw only when the style profile's `effects` lists
-    `highlight`; otherwise they are dropped with no error.
   - `codediff`: a code frame that turns `before*` into `after*` at `at*`, the
     removed lines closing and the added ones opening (`lang*`, `file`; each
     side one string like `code`, at most 12 lines).
@@ -59,12 +57,34 @@ skill's bundled `<skill>/styles/`. The header's `style:` names one; without it,
 the first store holding a `default` file (one profile name) decides, else
 `claude-code`. A run copies its profile to `<run>/style.json` and keeps using
 that copy, so a later edit to a store never changes this video; delete the
-copy to take up the edit, or name another profile in `style:`. Two profile
-keys choose how diagrams and code frames draw: `look`, `clean` (the default) or
-`sketch`, which outlines flow steps and panels by hand, seeded per scene and
-element so a render repeats exactly; and `effects`, the ones a video may use,
-from `draw` (flow arrows stroke on) and `highlight` (code lines a sentence
-names). A profile with no `effects` allows none, and one it leaves out never
-reaches the video. The score's sound effects are separate: `effects` never
-mutes them. A profile's `motion` is `rise` or `spring`
-(see [style.md](style.md)).
+copy to take up the edit, or name another profile in `style:`.
+
+A profile holds `"schema": 2` (a profile without it is read as schema 1),
+`colors` (the tokens in [style.md](style.md)), `type` (a face and weight per
+role), and optionally `fonts` (families the draft fetched), `gates` (floors it
+may only tighten), `scale` and one `grammar` block. The loader refuses a
+schema 1 profile (`motion`, `look`, `effects`, `layout`), naming each
+change. Every grammar field is optional; a field left out takes its default,
+the family listed first, so a profile states only where it departs:
+
+| Field (under `grammar`) | Families (default first) | Knobs |
+| --- | --- | --- |
+| `layout` | `bands` | none |
+| `seams` | `cut` | `duration` 0.2 to 0.4 s, `blur` 0 to 24 px |
+| `camera` | `locked` | `scale` 1.03 to 1.12 |
+| `type` | `block` | `stagger` 0.03 to 0.08 s |
+| `ease` | `soft` (every reveal slides up and fades in on one ease), `spring` (a headline lands with one overshoot; panels, cards, frames and flow nodes settle with a soft one; list items, arrows and terminal lines snap) | none |
+| `texture` | `surface`: `flat`, or `sketch`, which outlines flow steps and panels by hand, seeded per scene and element so a render repeats exactly | none |
+| `bans` | a list of component names (see Visual above) | none |
+
+A field with knobs is a family name or `{ "family": "cut", "duration": 0.3 }`;
+a field without knobs is a family name; `texture` is an object,
+`{ "surface": "sketch" }`. A knob out of its range, an unknown family and an
+unknown field are refused, naming the field. A scene that names a banned
+component stops compile; a ban naming no component is refused.
+
+`scale` overrides steps of the type scale every component sizes text from, as
+`{ "body": 44 }`: `display` 112, `title` 56, `heading` 46, `body` 40, `code`
+32, `small` 28, `label` 24 px. An unknown step, or any step under the layout
+floor (18 px, or the profile's `gates.layout.textPx`), is refused, so a profile
+that raises the floor sets each step the new floor passes.

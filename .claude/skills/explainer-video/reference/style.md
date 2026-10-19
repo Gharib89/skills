@@ -92,16 +92,12 @@ deck's title).
    and run the draft again. Writing the draft
    deletes the reference images, since a deck may be confidential.
 
-The draft keeps the bundled `claude-code` profile's layout, motion (`rise`;
-`spring` is the other value a profile may name), look and
-effects, and its type for each role no source declares a family for, and
-derives each token you leave out from its colours. Show the draft on the style
-card next.
+The draft keeps the bundled `claude-code` profile's schema, grammar and type
+for each role no source declares a family for, and derives each token you leave
+out from its colours. Show the draft on the style card next.
 
-A profile's `motion` is `rise` (every reveal slides up and fades in on one
-ease) or `spring` (a headline lands with one overshoot, panels, cards, frames
-and flow nodes settle with a soft one, list items, arrows and terminal lines
-snap). The card shows settled frames, where the two look the same.
+The card shows settled frames, so a profile's `grammar.ease`
+([scene-file.md](scene-file.md)) does not show on it.
 
 ## The style card
 

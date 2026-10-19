@@ -103,9 +103,19 @@ test("a tightened floor is the floor applied and printed", () => {
   const r = render(fx, SCRIPT.replace("style: claude-code", "style: big"));
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(
-    r.out,
-    /^gate layout: fail: \d+ finding\(s\), first: [\d.]+ s hook: small 40 px .* vs none, text >= 48 px, margin 5%$/m,
+    r.err,
+    /style profile big: scale\.heading 46 is under the 48 px layout floor/,
   );
+  fs.writeFileSync(
+    path.join(styles, "big.json"),
+    JSON.stringify({
+      ...p,
+      gates: { layout: { textPx: 48 } },
+      scale: { heading: 48, body: 48, code: 48, small: 48, label: 48 },
+    }),
+  );
+  const again = render(fx, SCRIPT.replace("style: claude-code", "style: big"));
+  assert.match(again.out, /^gate layout: .* text >= 48 px, margin 5%$/m);
 });
 
 test("a tightened sfx floor thins the score's cues to it", () => {

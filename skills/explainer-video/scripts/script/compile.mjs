@@ -20,6 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { CUE_CHARS } from "../render/compose.mjs";
+import { findStyle } from "../lib/style.mjs";
 import { checkVisual } from "../lib/visuals.mjs";
 import { BRACES, endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
 
@@ -122,6 +123,17 @@ if (fs.existsSync(briefFile)) {
 
 const language = header.language ?? "en";
 
+// The components the run's style profile bans. A malformed profile file is
+// refused here; a missing profile or a bad grammar is the render stage's.
+let style;
+try {
+  style = findStyle(run, header.style).profile;
+} catch (e) {
+  fail(null, e.message);
+}
+const bans = style?.grammar?.bans;
+const banned = new Set(Array.isArray(bans) ? bans : []);
+
 // One numbered sentence: its spoken form, its written tokens, each with the
 // count of spoken words it covers, and its cites. In Arabic, Latin words in a
 // row are one English term and so one token: a token per word would run a
@@ -173,6 +185,11 @@ const compiled = scenes.map((s) => {
   } catch (e) {
     fail(s.id, e.message);
   }
+  if (banned.has(visual.component))
+    fail(
+      s.id,
+      `component ${visual.component} is banned by style profile ${style.name}`,
+    );
   const parts = s.sentences.map((x) => sentence(x, s.id));
   return {
     id: s.id,

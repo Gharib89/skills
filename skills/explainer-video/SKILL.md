@@ -294,13 +294,14 @@ or edit a scene file or choose a style.
    `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
    and `out/` was emptied, an earlier render's files too. A `style profile
-   <name>` line names a colour pair, `gates`, `look`, `motion` or `effects`
-   value the skill refuses: fix it or choose another profile. `<row> is not
-   installed`: run setup. `no script.json`, `no voice.json`, `voice.json does
-   not match` or `voice.json holds narrator` names the stage to run first.
-   `no render fonts for language <x>`: set the brief's `language` to `en` or
-   `ar`. A profile's layout or font this version cannot draw: choose another
-   profile. Any other `render: <why>`
+   <name>` line names a colour pair or a `gates`, `grammar` or `scale` value
+   the skill refuses, or says the profile is schema 1 and lists each change:
+   fix what it names or choose another profile.
+   `<row> is not installed`: run setup. `no script.json`, `no voice.json`,
+   `voice.json does not match` or `voice.json holds narrator` names the stage
+   to run first. `no render fonts for language <x>`: set the brief's
+   `language` to `en` or `ar`. A profile's font this version cannot draw:
+   choose another profile. Any other `render: <why>`
    line, a HyperFrames or ffprobe failure among them: relay it with the
    output printed above it. A `gates: <why>` line with no `gate` line above
    it means the gates could not run: `no Chrome under`: run setup; any other,

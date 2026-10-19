@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "claude-code",
   "label": "Claude Code",
   "source": "Measured from frames of Anthropic's Claude Code explainer videos, 2026-10-15",
@@ -23,9 +23,5 @@
     "code": { "font": "jetbrains-mono", "weight": 400 },
     "arTitle": { "font": "noto-naskh-arabic", "weight": 600 },
     "arText": { "font": "ibm-plex-sans-arabic", "weight": 400 }
-  },
-  "layout": "bands",
-  "motion": "rise",
-  "look": "clean",
-  "effects": ["draw", "highlight"]
+  }
 }

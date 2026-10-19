@@ -107,7 +107,10 @@ test("render composes every scene, renders with the CLI's guards, delivers and r
     /@font-face \{ font-family: "inter"; src: url\("fonts\/inter-latin-600-normal\.woff2"\); font-weight: 600;/,
   );
   assert.match(index, /--accent: #cc6c54;/);
-  assert.match(index, /\.cue \{[^}]*font: 400 40px\/1\.3 "inter"/);
+  assert.match(
+    index,
+    /\.cue \{[^}]*font: 400 var\(--size-caption\)\/1\.3 "inter"/,
+  );
   assert.match(
     index,
     /<audio id="narration" src="narration\.wav" data-start="0"/,

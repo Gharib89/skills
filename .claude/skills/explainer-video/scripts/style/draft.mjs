@@ -16,8 +16,8 @@
 // it under an admitted licence, else the replacement roles.json names for it
 // under `fonts` (`{ "<family>": { "font", "class"?, "why" } }`), and its
 // Arabic role the companion of its class; a family setup does not install is
-// fetched into the font store. The rest of the type, layout, motion, look and
-// effects are `claude-code`'s.
+// fetched into the font store. The schema, grammar and rest of the type are
+// `claude-code`'s.
 // stdout: `style <token>: <hex> · <measured|derived|adjusted> · <why>` per
 //         token, `style type <role>: <font> · <measured|replaced|derived> ·
 //         <why>` per type role a source decided, then `style: draft <name> ->

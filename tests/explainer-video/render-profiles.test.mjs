@@ -1,5 +1,5 @@
-// The render stage through its process door, part 4: spring and rise motion,
-// profiles that disallow an effect, fetched fonts and Arabic scripts.
+// The render stage through its process door, part 4: soft and spring ease,
+// profiles the grammar refuses, fetched fonts and Arabic scripts.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { FPS } from "../../skills/explainer-video/scripts/render/compose.mjs";
+import { grammar } from "../../skills/explainer-video/scripts/lib/style.mjs";
 import { SLIDE } from "./fake-backend.mjs";
 import { ARABIC, DIAGRAMS, SCRIPT } from "./scene-file.mjs";
 import {
@@ -44,7 +45,7 @@ const played = (fx, id) => {
 
 test("a spring profile renders: each reveal carries its class at its sentence, nothing on the clock", () => {
   const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: bouncy"));
-  profiled(fx, "bouncy", { motion: "spring" });
+  profiled(fx, "bouncy", { grammar: { ease: "spring" } });
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
   for (const id of ["flow", "sides", "gates", "code", "diff"]) {
@@ -116,35 +117,27 @@ test("a rise profile's scene carries no spring and its tweens are the old ones",
     );
   }
   for (const f of ["claude-code", "itworx"])
-    assert.equal(JSON.parse(read(skill, "styles", `${f}.json`)).motion, "rise");
-});
-
-test("a profile that disallows an effect keeps it out of the composition", () => {
-  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
-  profiled(fx, "plain", { effects: [] });
-  const r = render(fx);
-  assert.equal(r.code, 0, r.out + r.err);
-  assert.ok(!tweens(fx, "flow").some(([, f]) => "strokeDashoffset" in f));
-  assert.doesNotMatch(comp(fx, "scenes/flow.html"), /stroke-dasharray/);
-  assert.ok(!tweens(fx, "code").some(([s]) => s.startsWith(".hl")));
-  assert.doesNotMatch(comp(fx, "scenes/code.html"), /class="hl /);
+    assert.equal(
+      grammar(JSON.parse(read(skill, "styles", `${f}.json`))).ease,
+      "soft",
+    );
 });
 
 for (const [name, extra, why] of [
   [
-    "an unknown effect",
-    { effects: ["draw", "confetti"] },
-    /^render: style profile odd: effects: confetti is not an effect \(draw, highlight\)/m,
+    "an unknown surface",
+    { grammar: { texture: { surface: "neon" } } },
+    /^render: style profile odd: grammar\.texture\.surface neon is not flat or sketch/m,
   ],
   [
-    "an unknown look",
-    { look: "neon" },
-    /^render: style profile odd: look neon is not clean or sketch/m,
+    "an unknown ease",
+    { grammar: { ease: "bounce" } },
+    /^render: style profile odd: grammar\.ease bounce is not soft or spring$/m,
   ],
   [
-    "an unknown motion",
-    { motion: "bounce" },
-    /^render: style profile odd: motion bounce is not rise or spring$/m,
+    "schema 1",
+    { schema: 1, motion: "rise", look: "clean", effects: [] },
+    /^render: style profile odd is schema 1.*motion.*look.*effects/m,
   ],
 ]) {
   test(`a profile naming ${name} refuses the run by name before any render`, () => {
@@ -203,7 +196,10 @@ test("a draft naming a family no setup row installs renders it from the font sto
       .readdirSync(path.join(fx.dir, "composition", "fonts"))
       .includes("noto-serif-latin-400-normal.woff2"),
   );
-  assert.match(comp(fx), /\.cue \{[^}]*font: 400 40px\/1\.3 "noto-serif"/);
+  assert.match(
+    comp(fx),
+    /\.cue \{[^}]*font: 400 var\(--size-caption\)\/1\.3 "noto-serif"/,
+  );
 });
 
 test("an Arabic script renders right to left on its text boxes, its English terms whole and left to right", () => {
@@ -221,7 +217,7 @@ test("an Arabic script renders right to left on its text boxes, its English term
     assert.match(index, new RegExp(`@font-face \\{ font-family: "${family}"`));
   assert.match(
     index,
-    /\.cue \{[^}]*font: 400 40px\/1\.7 "ibm-plex-sans-arabic", "inter"/,
+    /\.cue \{[^}]*font: 400 var\(--size-caption\)\/1\.7 "ibm-plex-sans-arabic", "inter"/,
   );
   assert.match(index, /\.lat \{ font-family: "inter"; white-space: nowrap; \}/);
   const cues = [...index.matchAll(/<div class="cue clip"[^>]*>/g)];

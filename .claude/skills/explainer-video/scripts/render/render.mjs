@@ -34,7 +34,13 @@ import path from "node:path";
 import { HOLD } from "../lib/length.mjs";
 import { videosDir } from "../lib/paths.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
+import {
+  LUFS,
+  checkScenes,
+  floors,
+  loadStyle,
+  typeRoles,
+} from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
 import { ACE_CAPTION, bedLevel, score } from "../score/score.mjs";
 import {
@@ -89,13 +95,10 @@ writeIgnore(run);
 let profile;
 try {
   profile = loadStyle(run, script.style);
+  checkScenes(profile, script.scenes);
 } catch (e) {
   fail(e.message);
 }
-if (profile.layout !== "bands")
-  fail(
-    `style profile ${profile.name}: this version draws layout bands, not ${profile.layout}`,
-  );
 if (!["en", "ar"].includes(script.language))
   fail(`no render fonts for language ${script.language}`);
 // Arabic reads right to left, in the Arabic type roles beside the Latin ones.
