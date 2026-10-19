@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.48.0 (2026-10-19)
+
+### Features
+
+- **ship**: Past-cap review line, single slug number, next with none open
+  ([#884](https://github.com/Gharib89/skills/pull/884),
+  [`663da02`](https://github.com/Gharib89/skills/commit/663da026ac9d7259d0f49d1719f48676f40ca6e5))
+
+
 ## v0.47.4 (2026-10-18)
 
 ### Bug Fixes
