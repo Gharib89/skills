@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.26.0 (2026-10-19)
+
+### Features
+
+- **explainer-video**: Run Kokoro voice on CUDA where the host has CUDA 13 and cuDNN 9
+  ([#877](https://github.com/Gharib89/skills/pull/877),
+  [`a14336d`](https://github.com/Gharib89/skills/commit/a14336d39fd4019f064d5a33bcc24e62d6360181))
+
+
 ## v0.25.0 (2026-10-19)
 
 ### Features
