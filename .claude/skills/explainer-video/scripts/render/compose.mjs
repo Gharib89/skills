@@ -99,6 +99,8 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   const { surface } = texture;
   const x = {
     surface,
+    // A code row is the code step at 1.5, so a `scale.code` override keeps the
+    // text inside its row.
     row: Math.round(scale(profile).code * 1.5),
     highlight: backend.highlight,
     sketch: async (shapes) =>

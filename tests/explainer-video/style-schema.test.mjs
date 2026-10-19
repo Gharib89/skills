@@ -67,7 +67,7 @@ test("a schema is read before contrast, and a schema 2 profile holding a schema 
   for (const k of ["motion", "look", "effects", "layout"])
     assert.throws(
       () => validate({ ...base, name: "old", [k]: "x" }),
-      new RegExp(`style profile old: ${k} is a schema 1 key`),
+      new RegExp(`style profile old: ${k} is a schema 1 key, replaced by`),
     );
 });
 

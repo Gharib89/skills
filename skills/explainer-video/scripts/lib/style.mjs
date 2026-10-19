@@ -107,13 +107,19 @@ const SURFACES = ["flat", "sketch"];
 // ban one its own families need. No family draws one yet.
 const USES = {};
 
-// A knob field's value as `{ family, ...knobs }`.
+// A grammar field's value as `{ family, ...knobs }`.
 const asFamily = (v) => (typeof v === "string" ? { family: v } : (v ?? {}));
 const plain = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const or = (list) => list.join(" or ");
 
-// Top-level keys schema 1 carried; a schema 2 profile holds them nowhere.
-const RETIRED = ["motion", "look", "effects", "layout"];
+// Top-level keys schema 1 carried, each with what replaces it; a schema 2
+// profile holds them nowhere.
+const RETIRED = {
+  motion: "grammar.ease",
+  look: "grammar.texture.surface",
+  effects: "nothing, remove it",
+  layout: "grammar.layout",
+};
 
 // The grammar a profile plays: its own fields over the defaults.
 export function grammar(profile) {
@@ -147,12 +153,12 @@ export function checkBans(g, uses, name) {
 function checkSchema(profile) {
   if (profile.schema !== SCHEMA)
     throw new Error(
-      `style profile ${profile.name} is schema ${profile.schema ?? 1}, this version loads schema ${SCHEMA}: set schema to ${SCHEMA}, rename motion to grammar.ease (rise is soft), move look to grammar.texture.surface (clean is flat) and remove effects`,
+      `style profile ${profile.name} is schema ${profile.schema ?? 1}, this version loads schema ${SCHEMA}: set schema to ${SCHEMA}, rename motion to grammar.ease (rise is soft), move look to grammar.texture.surface (clean is flat), move layout to grammar.layout and remove effects`,
     );
-  for (const k of RETIRED)
+  for (const [k, to] of Object.entries(RETIRED))
     if (Object.hasOwn(profile, k))
       throw new Error(
-        `style profile ${profile.name}: ${k} is a schema 1 key, see the schema 2 grammar and scale`,
+        `style profile ${profile.name}: ${k} is a schema 1 key, replaced by ${to}`,
       );
 }
 
