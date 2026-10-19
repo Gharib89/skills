@@ -8,7 +8,7 @@ import { chars } from "../lib/length.mjs";
 // The rate is in the script budget's unit, spoken characters (`chars()`: letters
 // and digits, no spaces or punctuation). The band is the spec's 9 to 22 on the
 // full length, divided by the 1.25 that length runs over `chars()` on the
-// calibration texts (1.22 to 1.28), so a render passes or fails as before. Its
+// calibration texts (1.22 to 1.28), 7.2 to 17.6, rounded out to whole numbers. Its
 // seconds are the voiced span, gaps between sentences included, so the rate is
 // gross and reads lower than a narrator's speech-only `rate`.
 export const FLOORS = { recall: 0.8, precision: 0.85, rate: [7, 18] };
