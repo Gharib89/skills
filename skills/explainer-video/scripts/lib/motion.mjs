@@ -72,6 +72,7 @@ export function peak(diffs, first, fps, seams = []) {
       ([a, b]) => (first + k + 1) / fps >= a && (first + k + 1) / fps < b,
     );
   const ks = diffs.map((_, k) => k).filter(allowed);
+  // A scene wholly inside a seam has no frame outside it: judge it unfiltered.
   if (!ks.length && diffs.length) return peak(diffs, first, fps);
   let at = ks[0] ?? 0;
   for (const k of ks) if (diffs[k] > diffs[at]) at = k;

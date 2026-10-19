@@ -173,7 +173,7 @@ function measureFrame() {
     }
     out.push({
       text: own.slice(0, 60),
-      words: own.split(/\s+/).length,
+      words: own.trim().split(/\s+/).length,
       scene: el.closest(sub)?.dataset.compositionId ?? null,
       rect: box(r),
       fontPx: parseFloat(cs.fontSize) * scale,
