@@ -26,7 +26,8 @@ parent=$2
 command -v gh >/dev/null || ds_tooling "gh not installed"
 
 # list <what> <endpoint>: every page of a list endpoint as one JSON array, in
-# $listed. Run in this shell, not a command substitution, so a refusal exits.
+# $listed, cut to the fields read: a whole issue body can pass jq's per-argument
+# limit (128 KiB) as --argjson. Run in this shell, not a command substitution, so a refusal exits.
 list() {
   local out
   out=$(gh api --paginate "$2?per_page=100" 2>&1 </dev/null) \
@@ -35,7 +36,8 @@ list() {
       and (.title | type) == "string" and (.state | type) == "string"
       and (.repository_url | type) == "string" and (.assignees | type) == "array"
       and all(.assignees[]; (.login | type) == "string");
-    if length > 0 and all(type == "array" and all(.[]; issue)) then add else error end' <<<"$out" 2>/dev/null) \
+    if length > 0 and all(type == "array" and all(.[]; issue)) then
+      add | map({number, title, state, repository_url, assignees: [.assignees[] | {login}]}) else error end' <<<"$out" 2>/dev/null) \
     || ds_tooling "$1: unreadable answer from gh"
 }
 
