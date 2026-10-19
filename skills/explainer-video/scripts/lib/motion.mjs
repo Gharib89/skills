@@ -67,13 +67,14 @@ export function meanDiff(a, b) {
 // [from, to)) are not candidates: the peak is the scene's own motion, and a
 // still scene's frame is the allowed one nearest its middle.
 export function peak(diffs, first, fps, seams = []) {
-  const allowed = (k) =>
-    !seams.some(
-      ([a, b]) => (first + k + 1) / fps >= a && (first + k + 1) / fps < b,
-    );
-  const ks = diffs.map((_, k) => k).filter(allowed);
-  // A scene wholly inside a seam has no frame outside it: judge it unfiltered.
-  if (!ks.length && diffs.length) return peak(diffs, first, fps);
+  const inSeam = (f) => seams.some(([a, b]) => f / fps >= a && f / fps < b);
+  const ks = diffs.map((_, k) => k).filter((k) => !inSeam(first + k + 1));
+  // A seam over every frame after the first leaves the first frame: take it,
+  // and only a scene wholly inside a seam is judged unfiltered.
+  if (!ks.length && diffs.length) {
+    const p = peak(diffs, first, fps);
+    return inSeam(first) ? p : { ...p, frame: first, t: first / fps };
+  }
   let at = ks[0] ?? 0;
   for (const k of ks) if (diffs[k] > diffs[at]) at = k;
   const still = !(diffs[at] > STILL);

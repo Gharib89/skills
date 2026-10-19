@@ -51,6 +51,8 @@ test("a seam's frames are never the peak, and a still scene's frame stays outsid
   assert.deepEqual([p.still, p.frame], [true, 63]);
   // A scene wholly in a seam falls back to the unfiltered peak.
   assert.equal(peak(diffs, 100, 30, [[0, 99]]).frame, 103);
+  // A seam over every frame but the first leaves the first frame to judge.
+  assert.equal(peak([9], 0, 30, [[1 / 30, 1]]).frame, 0);
 });
 
 test("sample times are the 0.5 s grid, the last frame and each event's frame, once", () => {

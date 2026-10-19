@@ -314,9 +314,10 @@ const count = (failing, before) =>
 // advise. Two rounds of one script at most: once two renders are judged, a
 // later one carries the second round's verdict rather than ask for a third.
 // Beside each contact sheet it cuts a motion strip and a motion record.
-// Bumped when the verdict's format changes, so a verdict cached in the old one
-// is judged again rather than refused by the new validator.
-const CRITIC_FORMAT = 2;
+// Bumped when the verdict's format or what its sheet shows changes, so a
+// verdict cached in the old one is judged again rather than refused by the new
+// validator or kept for a sheet the critic no longer reads.
+const CRITIC_FORMAT = 3;
 // A verdict stands for the render, for what else the critic read (the title,
 // each sentence's cites and the cited excerpts' text) and for its format.
 const excerptsFile = path.join(run, "excerpts.json");
