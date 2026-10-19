@@ -11,15 +11,19 @@
 # pane closed or its claude exited. The sequence number is what keeps the
 # previous turn's `done`, which Herdr reports until the next turn starts, from
 # reading as an event. Watch writes nothing: `read` acknowledges an event, so an
-# unread one is reported again. A row `read` marked gone is not watched. The
-# timeout answer lists what the last poll saw, so a session stuck in `working`
-# or `unknown` shows as a sequence number that stood still.
+# unread one is reported again. A row `read` marked gone or, with --rest, at
+# rest is not watched. The timeout answer lists what the last poll saw, so a
+# session stuck in `working` or `unknown` shows as a sequence number that stood
+# still, and each at-rest row as status `at-rest`, polled no further.
 #
 # stdout: {name, event, seq} for `idle`, `done` or `blocked`; {name, event} for
 #         `gone`; {"name": null, "event": "timeout", sessions} once --timeout
 #         passes, `sessions` one {name, status, seq, still_s} per live session,
-#         `still_s` the seconds its seq has stood still while this watch ran
-# exit: 0 an event or the timeout · 1 no live session in the roster, or herdr
+#         `still_s` the seconds its seq has stood still while this watch ran,
+#         then one {name, status: "at-rest", seq: null, still_s: null} per
+#         at-rest row
+# exit: 0 an event or the timeout · 1 no live session in the roster (every row
+#       gone or at rest), or herdr
 #       refused (its code in `code`) · 2 usage, outside Herdr, an unreadable
 #       roster, or an answer from herdr it cannot read
 set -uo pipefail
@@ -52,7 +56,7 @@ since() { # <name> <seq>: sets $still_since to the SECONDS value since which <na
 start=$SECONDS
 while :; do
   polled=''
-  names=$(jq -r '.sessions[] | select(.gone != true) | .name' "$roster" 2>/dev/null) \
+  names=$(jq -r '.sessions[] | select(.gone != true and .at_rest != true) | .name' "$roster" 2>/dev/null) \
     || ds_tooling "cannot read the roster $roster"
   [ -n "$names" ] || ds_fail "no live session in the roster $roster"
   for n in $names; do
@@ -75,5 +79,7 @@ while :; do
   [ -n "$timeout" ] && [ $(( (SECONDS - start) * 1000 )) -ge "$timeout" ] && break
   sleep 1
 done
-printf '%s' "$polled" | jq -cRn '{name: null, event: "timeout", sessions: [inputs | split(" ")
-  | {name: .[0], status: .[1], seq: (.[2] | tonumber), still_s: (.[3] | tonumber)}]}'
+resting=$(jq -c '[.sessions[] | select(.gone != true and .at_rest == true)
+  | {name, status: "at-rest", seq: null, still_s: null}]' "$roster") || ds_tooling "cannot read the roster $roster"
+printf '%s' "$polled" | jq -cRn --argjson rest "$resting" '{name: null, event: "timeout", sessions: ([inputs | split(" ")
+  | {name: .[0], status: .[1], seq: (.[2] | tonumber), still_s: (.[3] | tonumber)}] + $rest)}'

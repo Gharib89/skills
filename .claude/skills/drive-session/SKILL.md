@@ -31,7 +31,8 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
   or its pane closed).
 - `read` prints the session's last 40 lines and acknowledges its event. When
   they open mid-message (a summary or question cut at the top), read again
-  with `--lines 200`.
+  with `--lines 200`. `--rest` also marks the row at rest (see The merge
+  allowance below).
 - `answer` sends a prompt with `--text`, or presses keys into a dialog with
   `--keys`.
 - `frontier --parent <n>` prints a spec parent's sub-issues, lowest number
@@ -111,10 +112,25 @@ The **merge allowance** is the launch prompt's permission to merge on a clean
 gate ("merge each if all OK"). A ship profile's `Merge: on-clean-gate` is not a
 merge allowance: a run stopped at its gate there is any other merge gate. A
 run whose summary reports the PR merged is at rest, with nothing left to
-answer. Ship decides clean, not you: at the gate, ask the session with `--text`
-to run `run-file gate clean` for its run and report the answer. Answer
-`--text merge` only on `clean: true` with no unmet criterion in the summary;
-anything else is an escalation that quotes its `held_by`.
+answer: read it with `--rest`, so `watch` stops waking on its idle compaction
+and a timeout still lists it. Ship decides clean, not you: at the gate, ask
+the session with `--text` to run `run-file gate clean` for its run and report
+the answer. Answer `--text merge` on `clean: true` with no unmet criterion in
+the summary.
+
+A gate that is not clean is still yours to decide when every `held_by` entry
+is a reviewer rule and the summary names no unmet criterion:
+
+- `reviewer <x>: past cap <n>, local review read <sha>, no host reviewer read
+  it`: a reviewer capped, and a local review read the final head and stopped on
+  `tree unchanged`. Answer `--text merge`.
+- `reviewer <x>: small lane`, or a `reviewer <x>: cap` entry alone: a host round
+  read an earlier head. Ask the session with `--text` for one more host round on
+  the final head, and answer `--text merge` once it stops on `tree unchanged`.
+
+Any other `held_by` entry, and every unmet criterion, is an escalation that
+quotes its `held_by`: a criterion waiver comes from the owner, and the auto-mode
+classifier refuses one the supervisor relays.
 
 ## Supervised ship runs
 
