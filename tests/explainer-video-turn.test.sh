@@ -16,7 +16,7 @@ chmod +x "$fixture/node"
 handed() {
   export NODE_LOG=$fixture/log PATH="$fixture:$PATH"
   bash tests/explainer-video.test.sh "$@" > /dev/null 2>&1
-  sed 's|.*/||' "$fixture/log"
+  sed 's|.*/||' "$fixture/log" | grep '\.test\.mjs$'
 }
 all=$(for f in tests/explainer-video/*.test.mjs; do printf '%s\n' "${f##*/}"; done)
 
@@ -57,7 +57,7 @@ turn_set=$(handed --turn)
 for f in skills/explainer-video/scripts/lib/backend.mjs tests/explainer-video/board-apply.test.mjs; do
   : > "$fixture/log"
   NODE_LOG=$fixture/log PATH="$fixture:$PATH" bash scripts/check.sh turn "$f" > /dev/null 2>&1
-  check "turn on $f hands node the --turn set" "$turn_set" "$(sed 's|.*/||' "$fixture/log")"
+  check "turn on $f hands node the --turn set" "$turn_set" "$(sed 's|.*/||' "$fixture/log" | grep '\.test\.mjs$')"
 done
 
 finish
