@@ -145,9 +145,29 @@ test("render composes every scene, renders with the CLI's guards, delivers and r
   const last = timeline.scenes.at(-1);
   assert.ok(Math.abs(timeline.total - (last.start + last.duration)) < 0.002);
   const voiced = JSON.parse(read(fx.dir, "voice.json")).scenes.at(-1);
+  // The hold, rounded up to a whole frame.
+  const held = last.duration - (voiced.duration + 1);
+  assert.ok(held > -0.002 && held < 1 / 30 + 0.002, "1 s hold");
+
+  // Every scene is whole frames, written truncated so HyperFrames counts the
+  // frames named, and the narration is that many frames of audio.
+  let frames = 0;
+  for (const s of timeline.scenes) {
+    assert.equal(Math.ceil(s.start * 30), frames, `${s.id} start`);
+    const n = Math.round(s.duration * 30);
+    assert.ok(Math.abs(s.duration * 30 - n) < 0.001, `${s.id} duration`);
+    assert.equal(Math.ceil(s.duration * 30), n, `${s.id} frames`);
+    frames += n;
+  }
+  // A rate with a fractional sample count a frame rounds each scene to a
+  // whole sample, so the total is within a sample a scene.
+  const wav = fs.readFileSync(
+    path.join(fx.dir, "composition", "narration.wav"),
+  );
+  const want = (frames * wav.readUInt32LE(24) * 2) / 30;
   assert.ok(
-    Math.abs(last.duration - (voiced.duration + 1)) < 0.002,
-    "1 s hold",
+    Math.abs(wav.readUInt32LE(40) - want) <= timeline.scenes.length * 2,
+    `narration is whole frames: ${wav.readUInt32LE(40)} bytes, want ${want}`,
   );
 
   for (const check of [
