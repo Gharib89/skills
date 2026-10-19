@@ -225,6 +225,6 @@ test("a worst moment at a scene's 3-place start is inside it, though the start i
     return why;
   };
   assert.equal(refused(9.433), null);
-  assert.equal(refused(14.367), null);
+  assert.equal(refused(14.366), null);
   assert.match(refused(9.432), /is not a time inside the scene/);
 });

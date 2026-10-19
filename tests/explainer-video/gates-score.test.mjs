@@ -10,6 +10,7 @@ import {
   catalogue,
   dest,
 } from "../../skills/explainer-video/scripts/lib/tools.mjs";
+import { frameTime } from "../../skills/explainer-video/scripts/lib/motion.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 import {
   calls,
@@ -84,14 +85,12 @@ test("a clean render passes all six gates, writes the record and the report, and
   assert.match(r.out, /^delivered: /m);
   // Samples: every 15 frames from each scene's start, plus its settled last frame.
   const timeline = JSON.parse(read(fx.dir, "timeline.json"));
-  // Each frame's time is rounded up to 3 places, so it seeks to that frame.
-  const at = (f) => (Math.ceil((f / 30) * 1000 - 1e-6) + 0) / 1000;
   const want = timeline.scenes.flatMap((s) => {
     const first = Math.round(s.start * 30);
     const last = first + Math.round(s.duration * 30) - 1;
     const ts = [];
-    for (let f = first; f < last; f += 15) ts.push(at(f));
-    return [...ts, at(last)];
+    for (let f = first; f < last; f += 15) ts.push(frameTime(f, 30));
+    return [...ts, frameTime(last, 30)];
   });
   assert.deepEqual(calls(fx, "probe")[0].times, want);
   assert.deepEqual(calls(fx, "check")[0].times, want);

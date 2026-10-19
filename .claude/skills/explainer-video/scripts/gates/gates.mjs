@@ -30,6 +30,7 @@ import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
 import {
+  frameTime,
   peak as peakFrame,
   sampleTimes,
   sceneFrames,
@@ -198,7 +199,7 @@ if (todo.length) {
       backend.bandMotion(path.join(run, mp4), scene),
     );
     const pk = peakFrame(diffs, first, FPS);
-    const t = r3(pk.t);
+    const t = frameTime(pk.frame, FPS);
     p.found.motion = {
       still: pk.still,
       frame: pk.frame,

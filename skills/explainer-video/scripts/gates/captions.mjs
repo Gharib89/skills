@@ -26,16 +26,17 @@ export const cuesOf = (html) =>
 // The timeline's words, the composition's cues, and the SRT as the cues' copy.
 export function captionFindings({ timeline, cues, srtText }) {
   const caps = [];
+  const eps = 1e-6;
   // Word times are 3-place values and a scene's start is truncated to 6, so
   // a word on the scene's first frame reads half a millisecond early.
-  const eps = 5e-4;
+  const edge = 5e-4;
   for (const sc of timeline.scenes)
     sc.words.forEach((w, i) => {
       const at = `word ${i + 1} "${w.text}" of ${sc.id}`;
       if (!(w.start < w.end)) caps.push(`${at} does not start before it ends`);
       if (i && w.start < sc.words[i - 1].end - eps)
         caps.push(`${at} starts before the word before it ends`);
-      if (w.start < sc.start - eps || w.end > sc.start + sc.duration + eps)
+      if (w.start < sc.start - edge || w.end > sc.start + sc.duration + edge)
         caps.push(`${at} falls outside its scene`);
     });
   cues.forEach((c, i) => {

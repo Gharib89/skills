@@ -24,17 +24,19 @@ export function sceneFrames({ start, duration, fps }) {
   return { first, n: at(start + duration) - first };
 }
 
-// A scene's sample times: every 15 frames from its first and at its last, each
-// frame's time rounded up to 3 places. Rounded to nearest, a time can sit
-// before its frame (frame 283 is 9.43333 s, and 9.433 seeks to frame 282), so
-// a scene's first sample would be its predecessor's last frame.
+// The time to seek to frame `f`, rounded up to 3 places. Rounded to nearest, a
+// time can sit before its frame (frame 283 is 9.43333 s, and 9.433 seeks to
+// frame 282).
+export const frameTime = (f, fps) =>
+  (Math.ceil((f / fps) * 1000 - 1e-6) + 0) / 1000;
+
+// A scene's sample times: every 15 frames from its first and at its last.
 export function sampleTimes({ start, duration, fps }) {
   const first = Math.round(start * fps);
   const last = first + Math.round(duration * fps) - 1;
-  const at = (f) => Math.ceil((f / fps) * 1000 - 1e-6) / 1000;
   const times = [];
-  for (let f = first; f < last; f += 15) times.push(at(f));
-  times.push(at(last));
+  for (let f = first; f < last; f += 15) times.push(frameTime(f, fps));
+  times.push(frameTime(last, fps));
   return times;
 }
 
