@@ -14,6 +14,7 @@ import {
   padToFrames,
   written,
 } from "../../skills/explainer-video/scripts/render/grid.mjs";
+import { sampleTimes } from "../../skills/explainer-video/scripts/lib/motion.mjs";
 import { wavSeconds } from "../../skills/explainer-video/scripts/render/narration.mjs";
 
 test("a duration rounds up to whole frames, float noise aside", () => {
@@ -92,5 +93,22 @@ test("a scene is sized from its WAV, not the voice stage's rounded seconds", () 
     assert.match(why[0], /^bad\.wav is not 16-bit mono PCM/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a scene's samples seek into its own frames, its first on its start", () => {
+  // Frame 283 is 9.43333 s: a first sample of 9.433 would seek to frame 282,
+  // the previous scene's last.
+  for (const f0 of [0, 134, 283, 1999]) {
+    const times = sampleTimes({
+      start: written(f0),
+      duration: written(40),
+      fps: FPS,
+    });
+    assert.deepEqual(
+      times.map((t) => Math.floor(t * FPS + 1e-6)),
+      [f0, f0 + 15, f0 + 30, f0 + 39],
+      `scene from frame ${f0}`,
+    );
   }
 });
