@@ -15,14 +15,15 @@
 # (`~/.claude`) are never read, so the report is the same on every machine. A
 # description counts as the agent reads it, as scripts/frontmatter-check.sh
 # does (a folded or literal block's lines joined by one space, a quoted value
-# without its quotes); the reader below mirrors that script's, so change both
-# together. Sizes are characters, not bytes, under any locale.
+# without its quotes); the reader below mirrors that script's for every input
+# it accepts, so change both together. Sizes are characters, not bytes, under
+# any locale.
 #
 # stdout: `<source>: <n> chars` or `<source>: absent` per source, then
 #         `total: <n> chars`
 # stderr: on tooling, the reason
 # exit: 0 a report · 2 tooling (no readable lock, an owned skill's SKILL.md
-#       missing)
+#       missing, a count that failed)
 set -uo pipefail
 
 die() { echo "context-report: $*" >&2; exit 2; }
@@ -38,9 +39,10 @@ names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$r
 chars() { local n; n=$(LC_ALL=C tr -d '\200-\277' | wc -c) || return 1; echo $((n)); }
 
 # <file>: the frontmatter `description`, read as scripts/frontmatter-check.sh's
-# `fields` reads it, for every input that script accepts: indented continuation lines joined with one space, a `#`
-# comment after an unquoted value and trailing blanks dropped, a closed quote
-# stripped, and a quote inside a `>` or `|` block left as text.
+# `fields` reads it, for every input that script accepts: indented continuation
+# lines joined with one space, a `#` comment after an unquoted value and
+# trailing blanks dropped, a closed quote stripped, and a quote inside a `>` or
+# `|` block left as text.
 description() {
   awk 'function flush() {
          if (key == "description") {
@@ -69,8 +71,8 @@ line() { echo "$1: $2 chars"; total=$((total + $2)); }
 
 for f in CLAUDE.md AGENTS.md; do
   if [ -r "$root/$f" ]; then
-    n=$(chars < "$root/$f") || die "cannot count $f"
-    line "$f" "$n"
+    c=$(chars < "$root/$f") || die "cannot count $f"
+    line "$f" "$c"
   else
     echo "$f: absent"
   fi

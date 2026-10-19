@@ -83,8 +83,10 @@ total: 59 chars' "$out"
 # A counting tool that fails is tooling, never a zero.
 mkdir -p "$fixture/failbin"
 printf '#!/usr/bin/env bash\nexit 1\n' > "$fixture/failbin/tr"; chmod +x "$fixture/failbin/tr"
-out=$(PATH="$fixture/failbin:$PATH" bash "$script" "$a" 2>/dev/null); rc=$?
+out=$(PATH="$fixture/failbin:$PATH" bash "$script" "$a" 2>"$fixture/err"); rc=$?
 check_rc "a failing tr is tooling" 2 "$rc"
+check "a failing tr names the source it could not count" \
+  "context-report: cannot count skills/single" "$(cat "$fixture/err")"
 check "a failing tr prints no count" "0" "$(grep -c 'chars' <<<"$out")"
 
 rm "$a/skills/none/SKILL.md"
