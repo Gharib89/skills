@@ -32,7 +32,7 @@ export function loadBackend() {
 }
 
 // The tool cache's folder per row kind, each holding one install per lock hash.
-export const TOOL_DIRS = { npm: "node", chrome: "chrome" };
+export const TOOL_DIRS = { npm: "node", chrome: "chrome", cuda: "onnx-cuda" };
 
 // A font by family and version in the font store; a model by its pinned
 // revision; a uv row by its code's and its checkpoints' (the code of a row
@@ -71,6 +71,17 @@ export function dest(r, dirs = userDirs(), device) {
 // compute capability (null with no NVIDIA card): CUDA from 8.0, which has
 // bfloat16; under it acestep runs CUDA in float16, which gives NaN, so the CPU.
 export const torchDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
+
+// onnxruntime-node loads its CUDA provider from the folder holding its own
+// library, so setup installs the provider's files there. CUDA 13 dropped cards
+// under compute capability 7.5, the oldest measured working.
+export const ORT_CUDA_LIBS = [
+  "libonnxruntime_providers_cuda.so",
+  "libonnxruntime_providers_shared.so",
+];
+export const ORT_CUDA_MIN_CAP = 7.5;
+export const ortBin = (node) =>
+  path.join(node, "node_modules/onnxruntime-node/bin/napi-v6/linux/x64");
 
 // A row's CPU-only pin (`cpu.env`) where it runs on the `cpu` device, else
 // undefined.

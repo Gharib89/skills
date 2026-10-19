@@ -8,7 +8,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { CONTENT } from "../../render/compose.mjs";
 import { meanDiff, sceneFrames } from "../motion.mjs";
-import { skill, toolPaths, torchDevice } from "../tools.mjs";
+import { ORT_CUDA_LIBS, skill, toolPaths, torchDevice } from "../tools.mjs";
 import { fromCache, ffmpeg, quiet, sampleRate, which } from "./common.mjs";
 
 // The SHA-256 of an image's decoded pixels (RGB at full size), never of its
@@ -226,6 +226,52 @@ export async function extract(zip, dir) {
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, await f.async("nodebuffer"));
   }
+}
+
+// onnxruntime's CUDA provider files from its NuGet package into `dir`, the
+// folder onnxruntime-node loads them from.
+export async function extractOrtCuda(nupkg, dir) {
+  const JSZip = fromCache(toolPaths().node)("jszip");
+  const archive = await JSZip.loadAsync(fs.readFileSync(nupkg));
+  fs.mkdirSync(dir, { recursive: true });
+  for (const name of ORT_CUDA_LIBS) {
+    const f = archive.file(`runtimes/linux-x64/native/${name}`);
+    if (!f) throw new Error(`the package holds no ${name}`);
+    fs.writeFileSync(path.join(dir, name), await f.async("nodebuffer"));
+  }
+}
+
+// A one-node Conv model (a 1x1 kernel of 1.0 over a 1x1x1x1 input), the
+// smallest model that needs cuDNN: an Identity model runs on the CUDA provider
+// without it (measured on onnxruntime-node 1.30.0), a Conv one fails with "cuDNN
+// is unavailable" at its first run.
+const CONV_ONNX =
+  "08084202100d3a630a0f0a01780a01771201792204436f6e761201672a13080108010801080110014201774a040000803f5a1b0a017812160a14080112100a0208010a0208010a0208010a020801621b0a017912160a14080112100a0208010a0208010a0208010a020801";
+
+// Why onnxruntime-node's CUDA provider does not run here, or null where it does:
+// the Conv model run on it in a child process, since a library that fails to
+// load can take the process down with it. The reason names the library where
+// the loader or onnxruntime does.
+export async function cudaProbe(nodeDir) {
+  const script = `
+    const ort = require(process.argv[1] + "/node_modules/onnxruntime-node");
+    (async () => {
+      const s = await ort.InferenceSession.create(Buffer.from("${CONV_ONNX}", "hex"), { executionProviders: ["cuda"] });
+      await s.run({ x: new ort.Tensor("float32", [3], [1, 1, 1, 1]) });
+    })().catch((e) => { console.log(e.message); process.exit(1); });`;
+  const r = spawnSync(process.execPath, ["-e", script, nodeDir], {
+    encoding: "utf8",
+    timeout: 120000,
+  });
+  if (r.status === 0) return null;
+  const said =
+    r.stdout || r.stderr || `the probe exited ${r.status ?? r.signal}`;
+  const lib = said.match(/(lib[\w.+-]+\.so[\w.]*): cannot open shared object/);
+  if (lib) return `${lib[1]} is not found by the dynamic loader`;
+  if (/cuDNN is unavailable/.test(said))
+    return "libcudnn.so.9 is not found by the dynamic loader";
+  const cuda = said.match(/CUDA failure \d+: ([^;]+)/);
+  return cuda ? cuda[1].trim() : said.trim().split("\n")[0].slice(0, 160);
 }
 
 // A uv project's .venv from its own lockfile, exactly.

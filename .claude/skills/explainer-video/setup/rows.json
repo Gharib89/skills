@@ -8,6 +8,23 @@
       "licence": "Apache-2.0 (hyperframes, kokoro-js, transformers.js, pdfjs-dist, Readability), MIT (onnxruntime-node, Turndown, JSZip, Shiki, rough.js), BSD-2-Clause (mammoth), the GSAP Standard License (gsap), and their dependencies"
     },
     {
+      "id": "onnx-cuda",
+      "kind": "cuda",
+      "when": "voice",
+      "backend": "kokoro",
+      "os": "linux",
+      "arch": "x64",
+      "minCapability": 7.5,
+      "url": "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.gpu.linux/1.30.0/microsoft.ml.onnxruntime.gpu.linux.1.30.0.nupkg",
+      "sha256": "77ca23682fc164789e67cd0fa4ce022b1b1c94e1978046c6446eee5fb0a3a3d6",
+      "size": 236037232,
+      "install": {
+        "apt": "sudo apt install cudnn9-cuda-13"
+      },
+      "neededBy": "voice (Kokoro on the GPU)",
+      "licence": "MIT (onnxruntime's CUDA provider); it loads your own NVIDIA CUDA 13 and cuDNN 9 libraries"
+    },
+    {
       "id": "model:kokoro-82m",
       "kind": "model",
       "when": "voice",

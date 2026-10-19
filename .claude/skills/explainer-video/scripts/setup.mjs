@@ -45,6 +45,7 @@ import {
   installFont,
   lockHash,
   loadBackend,
+  ortBin,
   skill,
   staged,
   torchDevice,
@@ -86,11 +87,25 @@ const forNarrator = (r) =>
   ["language", "backend"].every(
     (k) => !(k in r) || r[k] === narrator[k] || r[k] === narrator.base?.[k],
   );
+// The machine's compute capability, read for any catalogue row that depends on
+// the card, listed or not: the stale sweep keeps each row's folder for this
+// device. The OS, CPU and macOS version are what a row's `unavailable` entries
+// match.
+const cap = catalogue.some((r) => r.cpu || r.kind === "cuda")
+  ? await backend.computeCapability()
+  : null;
+const machine = backend.platform();
+// A CUDA provider row is listed only where its card can run it: no card, a
+// failed probe or too old a card lists none, so such a machine downloads nothing.
+const fitsCard = (r) =>
+  r.kind !== "cuda" ||
+  (machine.os === r.os && machine.arch === r.arch && cap >= r.minCapability);
 const rows = catalogue.filter(
   (r) =>
-    !r.when ||
-    (all && r.when === "opt-in") ||
-    (r.when === "voice" && forNarrator(r)),
+    fitsCard(r) &&
+    (!r.when ||
+      (all && r.when === "opt-in") ||
+      (r.when === "voice" && forNarrator(r))),
 );
 if (rows.some((r) => r.python))
   rows.push(...catalogue.filter((r) => r.when === "python"));
@@ -163,11 +178,7 @@ const filesSize = (r) => r.files?.reduce((n, f) => n + f.size, 0);
 
 // A row with a CPU cost (ACE-Step, own voice) runs on the device torchDevice
 // picks; on the CPU, a machine with less RAM than the cost names is refused
-// before download. Read for any catalogue row with one, listed or not: the
-// stale sweep keeps each row's folder for this device.
-const cap = catalogue.some((r) => r.cpu)
-  ? await backend.computeCapability()
-  : null;
+// before download.
 const device = (r) => (r.cpu ? torchDevice(cap) : undefined);
 const shortOfRam = (r) => device(r) === "cpu" && backend.memory() < r.cpu.ram;
 // A uv env's size is the CPU-only pin's, where the row has one and runs on the CPU.
@@ -176,8 +187,6 @@ const size = (r) =>
     ? (cpuEnv(r, device(r))?.size ?? r.size) + filesSize(r)
     : (r.size ?? filesSize(r));
 const installDir = (r) => dest(r, undefined, device(r));
-// The OS, CPU and macOS version a row's `unavailable` entries match.
-const machine = backend.platform();
 const stamp = (dir) => path.join(dir, ".stamp");
 const du = (p) => {
   const s = fs.lstatSync(p);
@@ -267,9 +276,16 @@ function stale() {
   return out;
 }
 
+// A file's sha256, hashed as a stream: a checkpoint can pass the 2 GiB a file
+// read takes.
+async function sha256(file) {
+  const hash = crypto.createHash("sha256");
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest("hex");
+}
+
 // A row's files from Hugging Face into `dir`, pinned by revision and checked by
-// sha256, as ADR 0017 hosts models. Hashed as a stream: a checkpoint can pass
-// the 2 GiB a file read takes.
+// sha256, as ADR 0017 hosts models.
 async function fetchFiles(r, dir) {
   for (const f of r.files) {
     const file = path.join(dir, ...f.path.split("/"));
@@ -278,9 +294,7 @@ async function fetchFiles(r, dir) {
       `https://huggingface.co/${r.repo}/resolve/${r.revision}/${f.path}`,
       file,
     );
-    const hash = crypto.createHash("sha256");
-    for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
-    const sum = hash.digest("hex");
+    const sum = await sha256(file);
     if (sum !== f.sha256)
       throw new Error(`${f.path} has sha256 ${sum}, pinned ${f.sha256}`);
   }
@@ -298,8 +312,8 @@ async function install(r) {
   if (r.kind === "npm") {
     for (const f of ["package.json", "package-lock.json"])
       fs.copyFileSync(path.join(skill, f), path.join(dir, f));
-    // onnxruntime-node's postinstall otherwise fetches the CUDA 12 provider from
-    // NuGet on Linux x64 (1.30.0): a download no row lists.
+    // onnxruntime-node's postinstall otherwise fetches its CUDA provider from
+    // NuGet on Linux x64 (1.30.0): a download only the onnx-cuda row makes.
     const code = await backend.npmCi(dir, {
       ...quietEnv,
       ONNXRUNTIME_NODE_INSTALL: "skip",
@@ -312,6 +326,17 @@ async function install(r) {
     const code = await backend.ensureChrome(nodeDir, dir, quietEnv);
     if (code !== 0)
       throw new Error(`hyperframes browser ensure exited ${code}`);
+  } else if (r.kind === "cuda") {
+    const nodeDir = dest({ kind: "npm" });
+    if (!fs.existsSync(stamp(nodeDir)))
+      throw new Error("needs npm-packages first");
+    const nupkg = path.join(dir, "provider.nupkg");
+    await backend.download(r.url, nupkg);
+    const sum = await sha256(nupkg);
+    if (sum !== r.sha256)
+      throw new Error(`the package has sha256 ${sum}, pinned ${r.sha256}`);
+    await backend.extractOrtCuda(nupkg, ortBin(nodeDir));
+    fs.rmSync(nupkg);
   } else if (r.kind === "model") {
     await staged(dir, (part) => fetchFiles(r, part));
   } else if (r.kind === "uv") {
@@ -378,7 +403,26 @@ function firstNotice(key) {
   return true;
 }
 
-function report(state, staleInstalls) {
+// What the CUDA provider row says about the host: whether the provider loads
+// here, probed once the row is present, since a missing CUDA 13 or cuDNN 9
+// library shows only by running.
+async function cudaLines(state) {
+  const r = rows.find((r) => r.kind === "cuda");
+  if (!r || state.get(r) !== "present") return [];
+  const why = await backend.cudaProbe(dest({ kind: "npm" }));
+  return why
+    ? [
+        "",
+        `${r.id}: CUDA is unavailable here: ${why}. Kokoro stays on the CPU. Install the NVIDIA libraries yourself, then check again; for cuDNN 9:`,
+        ...Object.entries(r.install).map(([via, line]) => `  ${via}: ${line}`),
+      ]
+    : [
+        "",
+        `${r.id}: Kokoro runs on the GPU here (the CUDA provider loads, compute capability ${cap.toFixed(1)}).`,
+      ];
+}
+
+function report(state, staleInstalls, cudaNote) {
   const lines = [
     "| row | needed by | status | size | licence | writes to |",
     "| --- | --- | --- | --- | --- | --- |",
@@ -409,6 +453,7 @@ function report(state, staleInstalls) {
         : `${r.id} runs on the CPU here (${cap ? `compute capability ${cap.toFixed(1)}, under 8.0${r.cpu.why ? `: ${r.cpu.why}` : ""}` : cap === null ? "no NVIDIA card" : "nvidia-smi failed"}): about ${Math.floor(s / 60)} min ${s % 60} s and ${formatSize(r.cpu.ram)} RAM per 30 s of ${r.cpu.of}.`,
     );
   }
+  lines.push(...cudaNote);
   for (const r of rows.filter(
     (r) => r.kind === "system" && state.get(r) !== "present",
   )) {
@@ -463,4 +508,4 @@ if (mode === "install") {
   }
   for (const s of stale()) fs.rmSync(s.dir, { recursive: true, force: true });
 }
-process.exit(report(state, stale()));
+process.exit(report(state, stale(), await cudaLines(state)));
