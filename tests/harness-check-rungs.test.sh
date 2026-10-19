@@ -267,6 +267,29 @@ run "$r" turn web/old/gone.ts
 check "a named file deleted with its directory still checks its member" "typecheck
 suite" "$(cat "$ARGS_LOG")"
 
+# A deleted .sh is still named by the tests that call it, and the shell row's
+# selector matches by basename, so the row gets the path with no file on disk.
+# Any other row keeps excluding a deleted path.
+r=$(repo deleted-sh "TURN_ROWS='web/|web|*.ts|||args web {files}
+|shell|*.sh|||args shell {files}'")
+mkdir -p "$r/web" "$r/scripts"; echo x > "$r/web/gone.ts"; echo x > "$r/scripts/gone.sh"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+rm "$r/scripts/gone.sh"
+: > "$ARGS_LOG"
+run "$r" turn
+check "a deleted .sh alone reaches the shell row's affected tests" \
+  "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
+rm "$r/web/gone.ts"; echo y > "$r/web/new.ts"
+: > "$ARGS_LOG"
+run "$r" turn
+check "a deleted .ts beside it gives its row no missing path" \
+  "web new.ts
+shell scripts/gone.sh" "$(sort -r "$ARGS_LOG")"
+: > "$ARGS_LOG"
+run "$r" turn scripts/gone.sh
+check "a deleted .sh named on the command line reaches the shell row" \
+  "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
+
 # A root's dependencies, missing as in a fresh worktree, are installed before
 # any other check on every rung, so a runner hook that calls a root's own
 # binary finds it on the first call (#586). Each command runs from the repo root.

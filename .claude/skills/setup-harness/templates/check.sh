@@ -274,9 +274,11 @@ rung_turn() {
       '') ;;
       new-root) new="$new ${f%/*}" ;;
       # A deleted file still selects its member, whose typecheck may now
-      # break, but is no argument to affected tests.
+      # break, but is no argument to affected tests. A deleted .sh is the
+      # exception: the tests that name a script select by its basename, so
+      # they still have to run once the file is gone.
       *) case $nl$rows in *"$nl$o$nl"*) ;; *) rows="$rows$o$nl" ;; esac
-         [ -e "$f" ] && pairs="$pairs$o$tab$f$nl" ;;
+         { [ -e "$f" ] || [ "${f##*.}" = sh ]; } && pairs="$pairs$o$tab$f$nl" ;;
     esac
   done
   if [ -n "$new" ]; then
