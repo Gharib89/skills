@@ -121,6 +121,17 @@ Also proven by CI: None.
 Claims to probe: that `claude -p` reports a hit `--max-budget-usd` cap as a nonzero exit with `subtype` `error_max_budget_usd` (it did on 2026-10-12).
 Paths: skills/ship/SKILL.md, skills/ship/reference/**
 
+### real-render
+
+Proves: the explainer-video composer's frame grid holds under real HyperFrames: the render's frame count equals the composer's, two renders match frame for frame, and two stream-copy-joined halves have the whole's frame count.
+Applies when: the change touches a file in `Paths:`.
+Run: first, a slice adding scenes extends the fixture in `maintainer/real-render.mjs`; then `node skills/explainer-video/maintainer/real-render.mjs` after `node skills/explainer-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new cache). Outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
+Needs: the `npm-packages` and `chrome` rows installed, and `ffmpeg`.
+Without it: hand-off
+Also proven by CI: None.
+Claims to probe: that HyperFrames renders `ceil(duration * fps)` frames and has no frame-range flag (both held on 0.8.169, 2026-10-19).
+Paths: skills/explainer-video/scripts/render/**, skills/explainer-video/scripts/gates/**, skills/explainer-video/scripts/lib/**, skills/explainer-video/maintainer/**, skills/explainer-video/package*.json
+
 ## Versioning and changelog
 
 Tooling: semantic-release
@@ -128,9 +139,7 @@ Reads: the squash subject's Conventional-Commit type, one configuration per skil
 In-PR requirement: the PR title is a Conventional Commit, of a type the release run reads, whose type is the public-surface grade from [release.md](../contributing/standards/release.md), because the squash subject is what the release run reads; a change to what `ship` expects of a profile still bumps `metadata.profile-schema` by hand and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
 Subject constraints: conventional-commit prefix, scoped to the skill where the change is a skill's, e.g. `fix(ship):`, and to the area otherwise, e.g. `feat(ci):`. The scope is for a human reading the log: `path_filters` in `.release/*.toml` route a commit to a skill by the paths it touched, and `bump-guard` accepts a scopeless subject, so it is the type that decides the bump and the type is graded first
 
-**The release run owns `metadata.version`.** `.github/workflows/semantic-release.yml` writes it on every push to main, once per skill, from the commits that touched that skill's `skills/<name>/`: every conventional type is at least a patch, `feat` is minor, and a `!` or a `BREAKING CHANGE:` footer is minor while the skill is 0.x, as every skill is until its public release, and major after ([ADR 0005](../adr/0005-skills-stay-0x-until-public-release.md)). The `version-lines` gate above refuses a diff that moves the line, so the habit from the old rule is caught before the PR opens rather than by a reviewer. `metadata.profile-schema` is the exception and stays a hand edit, because the `## Schema N` entry it carries is written by the change that needs it.
-
-The title is therefore load-bearing twice: the `bump-guard` leg holds it to a Conventional Commit of a type the release run reads and gates the major grade behind the maintainer's `major` label, and `merge.sh` passes it as the squash `commit_title` so the subject the leg validated is the subject the release run reads. A human merging through the host's own UI instead must land the PR title as that subject.
+Why the release run owns the version line and the title is load-bearing: [ship-versioning.md](ship-versioning.md). Read it for a title or version question; a run needs nothing in it at start.
 
 ## PR
 

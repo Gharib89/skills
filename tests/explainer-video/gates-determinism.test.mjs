@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  frameTime,
   sceneFrames,
   stripStart,
 } from "../../skills/explainer-video/scripts/lib/motion.mjs";
@@ -42,7 +43,7 @@ test("determinism renders each scene's peak-motion frame twice in two browsers a
   assert.equal(frames.length, 6, "two renders of one frame per scene");
   timeline.scenes.forEach((s, i) => {
     const [a, b] = frames.slice(2 * i, 2 * i + 2);
-    assert.equal(a.t, +(peakOf(s).frame / 30).toFixed(3));
+    assert.equal(a.t, frameTime(peakOf(s).frame, 30));
     assert.equal(b.t, a.t);
     assert.notEqual(a.out, b.out);
     // The files differ in metadata on every render; the pixels do not.
@@ -127,7 +128,7 @@ test("each moving scene gets a motion strip and record beside its contact sheet;
     assert.ok(fs.existsSync(path.join(dir, `${s.id}.motion.png`)));
     assert.deepEqual(rec, {
       still: false,
-      peak: { frame, t: +(frame / 30).toFixed(3) },
+      peak: { frame, t: frameTime(frame, 30) },
       strip: {
         first: +(from / 30).toFixed(3),
         last: +((from + 11) / 30).toFixed(3),

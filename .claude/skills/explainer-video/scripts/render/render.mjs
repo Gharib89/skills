@@ -3,9 +3,9 @@
 //   node render.mjs <run-folder> [--stills]
 //
 // Reads <run>/script.json and <run>/voice.json and the run's style profile
-// (lib/style.mjs). Times every scene back to back at its voice duration, the
-// last held 1 s, cues captions from the word timings, composes the video in
-// <run>/composition/ with the narration mastered (the score from
+// (lib/style.mjs). Times every scene back to back on the frame grid (render/grid.mjs)
+// from its voice duration, the last held 1 s, cues captions from the word
+// timings, composes the video in <run>/composition/ with the narration mastered (the score from
 // score/score.mjs mixed under it, unless brief.json turns it off), renders a
 // settled still per scene and then the video with HyperFrames, each cached in
 // <run>/.cache/ by content hash, runs the gates stage (gates/gates.mjs) on
@@ -59,7 +59,8 @@ import {
   stillsPage,
   videoPage,
 } from "./compose.mjs";
-import { joinNarration } from "./narration.mjs";
+import { gridScenes, written } from "./grid.mjs";
+import { joinNarration, wavSeconds } from "./narration.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 const stillsOnly = rest[0] === "--stills";
@@ -165,13 +166,16 @@ if (ace && !fs.existsSync(path.join(dest(ace, undefined, device), ".stamp")))
     "ace-step is not installed: run /explainer-video setup, asking for ace-step",
   );
 
-// Timeline: scenes back to back, every word and sentence start absolute.
-let at = 0;
+// Timeline: scenes back to back on the frame grid, every word and sentence
+// start absolute.
+const grid = gridScenes(
+  voice.scenes.map((v) => wavSeconds(run, v.audio, fail)),
+  HOLD,
+);
 const scenes = script.scenes.map((s, i) => {
   const v = voice.scenes[i];
-  const start = r3(at);
-  const duration = r3(v.duration + (i === script.scenes.length - 1 ? HOLD : 0));
-  at += duration;
+  const start = written(grid[i].start);
+  const duration = written(grid[i].frames);
   const words = v.words.map((w) => ({
     text: w.text,
     start: r3(start + w.start),
@@ -185,7 +189,7 @@ const scenes = script.scenes.map((s, i) => {
   });
   return { id: s.id, start, duration, sentences, words };
 });
-const total = r3(at);
+const total = written(grid.total);
 fs.writeFileSync(
   path.join(run, "timeline.json"),
   JSON.stringify({ total, scenes }, null, 2) + "\n",
@@ -239,7 +243,13 @@ const fonts = compositionAssets(fontRows, comp);
 
 const raw = path.join(run, ".cache", "narration.wav");
 fs.mkdirSync(path.dirname(raw), { recursive: true });
-const voiced = joinNarration({ run, voice, file: raw, fail });
+const voiced = joinNarration({
+  run,
+  voice,
+  frames: grid.map((g) => g.frames),
+  file: raw,
+  fail,
+});
 
 // The score, unless the brief turns it off or only stills are wanted: cached
 // in .cache/score/ by the timings, roles, seed, level, sfx floor and the

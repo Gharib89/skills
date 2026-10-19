@@ -121,6 +121,13 @@ test("a scene shifted by an earlier scene's new length is judged again, its old 
   }));
   assert.equal(stage(fx, "render/render.mjs").code, 0);
   const voice = JSON.parse(read(fx.dir, "voice.json"));
+  // The scene's WAV, 2 s longer: render sizes a scene from its WAV.
+  const file = path.join(fx.dir, voice.scenes[1].audio);
+  const wav = fs.readFileSync(file);
+  const more = Buffer.alloc(2 * wav.readUInt32LE(24) * 2);
+  wav.writeUInt32LE(wav.readUInt32LE(40) + more.length, 40);
+  wav.writeUInt32LE(wav.readUInt32LE(4) + more.length, 4);
+  fs.writeFileSync(file, Buffer.concat([wav, more]));
   voice.scenes[1].duration += 2;
   fs.writeFileSync(path.join(fx.dir, "voice.json"), JSON.stringify(voice));
   const r = stage(fx, "render/render.mjs");

@@ -30,7 +30,9 @@ import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
 import {
+  frameTime,
   peak as peakFrame,
+  sampleTimes,
   sceneFrames,
   stillStretches,
 } from "../lib/motion.mjs";
@@ -126,11 +128,7 @@ const cacheDir = path.join(run, ".cache", "gates");
 fs.mkdirSync(cacheDir, { recursive: true });
 const plan = timeline.scenes.map((sc) => {
   const end = sc.start + sc.duration;
-  const last = end - 1 / FPS;
-  const times = [];
-  for (let k = 0; sc.start + (k * 15) / FPS < last - 1e-6; k++)
-    times.push(r3(sc.start + (k * 15) / FPS));
-  times.push(r3(last));
+  const times = sampleTimes({ ...sc, fps: FPS });
   const file = path.join(
     cacheDir,
     `${hash(
@@ -139,7 +137,8 @@ const plan = timeline.scenes.map((sc) => {
       profile,
       script.title,
       inputs,
-      cues.filter((c) => c.start >= sc.start && c.start < end),
+      // Cue starts are 3-place values, so the scene's bounds are too.
+      cues.filter((c) => c.start >= r3(sc.start) && c.start < r3(end)),
       floor,
       source,
     )}.json`,
@@ -200,7 +199,7 @@ if (todo.length) {
       backend.bandMotion(path.join(run, mp4), scene),
     );
     const pk = peakFrame(diffs, first, FPS);
-    const t = r3(pk.t);
+    const t = frameTime(pk.frame, FPS);
     p.found.motion = {
       still: pk.still,
       frame: pk.frame,

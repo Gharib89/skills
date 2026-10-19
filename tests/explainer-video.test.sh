@@ -24,7 +24,7 @@ if [ "${1:-}" = --turn ]; then
   done
   files=("${kept[@]}")
 fi
-out=$(node --test "${files[@]}" 2>&1)
+out=$(node --test --test-timeout=180000 "${files[@]}" 2>&1)
 rc=$?
 [ "$rc" -eq 0 ] || printf '%s\n' "$out" | grep -E '^not ok|^# (pass|fail)|AssertionError|Error|expected|actual' | head -40 >&2
 check_rc "node --test tests/explainer-video" 0 "$rc"

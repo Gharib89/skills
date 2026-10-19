@@ -35,7 +35,7 @@
     "explainer-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "24f9b5691e5b8b59dd74641553b7690b08bbe9a6d801a46dc6c8dc7021b17840"
+      "computedHash": "3d392cd4fe09b35565e28007fedae4fdb98312076acf2bf90d59ed9ed46f4593"
     },
     "find-docs": {
       "source": "upstash/context7",
@@ -62,6 +62,27 @@
       "sourceType": "github",
       "skillPath": "skills/productivity/grilling/SKILL.md",
       "computedHash": "ef1641a2047b71b60f1942cd35efb47d3afc9d584dff5a0b01f8c7db923aaa08"
+    },
+    "hyperframes-animation": {
+      "source": "heygen-com/hyperframes",
+      "ref": "7735338b49ed6e11c227b0710da3bd35c3366b9c",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes-animation/SKILL.md",
+      "computedHash": "3d6678f0e325d69026678982b8616e181f8e92a4e7075f1f51a9b9696a265aba"
+    },
+    "hyperframes-core": {
+      "source": "heygen-com/hyperframes",
+      "ref": "7735338b49ed6e11c227b0710da3bd35c3366b9c",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes-core/SKILL.md",
+      "computedHash": "c9c7e45910fc11189097e23d804adee814e2647b1c486d959fd1acb54a3fbf04"
+    },
+    "hyperframes-keyframes": {
+      "source": "heygen-com/hyperframes",
+      "ref": "7735338b49ed6e11c227b0710da3bd35c3366b9c",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes-keyframes/SKILL.md",
+      "computedHash": "99f3b420941f6f91d49c36865fb21e46a562cd43a3b88a1f2297f79d55542c35"
     },
     "prototype": {
       "source": "mattpocock/skills",
