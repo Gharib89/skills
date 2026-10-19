@@ -9,6 +9,7 @@ import {
   sampleTimes,
   sceneFrames,
 } from "../../skills/explainer-video/scripts/lib/motion.mjs";
+import { sceneEvents } from "../../skills/explainer-video/scripts/gates/events.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 import {
   calls,
@@ -70,6 +71,21 @@ test("a box in a seam or carried by the camera is not judged there", () => {
     assert.equal(r.code, 1, r.out + r.err);
     assert.ok(firstAt(fx) >= 2, `${kind}: judged at ${firstAt(fx)}`);
   }
+});
+
+test("a scene's seam holds the next scene's text back, its camera only its own", () => {
+  const sc = [
+    { id: "a", start: 0 },
+    { id: "b", start: 4 },
+  ];
+  const { moving } = sceneEvents(
+    { a: { seams: [[3, 5]], camera: [[0, 1]] } },
+    sc,
+  );
+  assert.ok(moving("b", 4.5), "a's seam runs on into b");
+  assert.ok(!moving("b", 0.5), "a's camera does not carry b");
+  assert.ok(moving("a", 0.5));
+  assert.ok(!moving("b", 5));
 });
 
 test("the contact sheet's fourth frame is the fullest moment, the latest of tied samples", () => {

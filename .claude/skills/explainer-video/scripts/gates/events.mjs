@@ -6,10 +6,11 @@ const r3 = (n) => +n.toFixed(3);
 //   moves   scene id to the video-second windows its seam and camera run in
 //   seams   every scene's seam windows, flat
 //   times   every event: tween ends and window edges, of every scene
-//   moving  (id, t) whether the scene's seam or camera runs at `t`, when its
-//           text does not read
-// A scene's seam runs on past its own slot, so its events fall in the next
-// scene's samples too.
+//   moving  (id, t) whether any scene's seam or the scene's own camera runs at
+//           `t`, when its text does not read
+// A seam is the transition between scenes and runs on past its own slot, so
+// it holds the next scene's text back and its events fall in the next scene's
+// samples too.
 export function sceneEvents(raw, scenes) {
   const moves = {};
   const times = [];
@@ -23,8 +24,6 @@ export function sceneEvents(raw, scenes) {
   }
   const seams = Object.values(moves).flatMap((m) => m.seams);
   const moving = (id, t) =>
-    [...(moves[id]?.seams ?? []), ...(moves[id]?.camera ?? [])].some(
-      ([a, b]) => t >= a && t < b,
-    );
+    [...seams, ...(moves[id]?.camera ?? [])].some(([a, b]) => t >= a && t < b);
   return { moves, seams, times, moving };
 }

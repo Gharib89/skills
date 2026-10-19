@@ -362,9 +362,14 @@ export async function events(dir, { env }) {
             : [];
         const seams = pair("seam");
         const camera = pair("camera");
-        const ends = tl
-          .getChildren(true, true, false)
-          .map((c) => r3(c.endTime()));
+        // endTime() is in the parent's time: lift a nested tween's end through
+        // each ancestor's start to the scene timeline's.
+        const ends = tl.getChildren(true, true, false).map((c) => {
+          let t = c.endTime();
+          for (let p = c.parent; p && p !== tl; p = p.parent)
+            t = p.startTime() + t / p.timeScale();
+          return r3(t);
+        });
         out[id] = { ends, seams, camera };
       }
       return out;
