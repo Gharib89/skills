@@ -26,7 +26,9 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See
 repo writes: its source is `skills/<name>/`, and `.claude/skills/<name>/` is its
 derived copy, refreshed from it. Every other entry is installed from the
 upstream its `source` names, at the lock's `ref` (the skills ship composes come
-from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`), and lives
+from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`; the
+`hyperframes-*` entries from `heygen-com/hyperframes` are maintainer aids for
+runs that build explainer-video components, composed by no skill), and lives
 only under `.claude/skills/`. Adding a skill this repo writes touches the sites
 in the checklist under `## Adding a skill this repo writes` in
 `docs/contributing/standards/release.md`. Refresh at project scope, without
