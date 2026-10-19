@@ -5,7 +5,7 @@ description: >-
   the user wants sessions driven in Herdr: a batch of `/ship` runs, or a skill
   smoke test in another checkout. Needs HERDR_ENV=1.
 metadata:
-  version: 0.4.0
+  version: 0.5.0
 ---
 
 # drive-session

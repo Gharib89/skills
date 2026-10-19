@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.0 (2026-10-19)
+
+### Features
+
+- **drive-session**: Reviewer-rule gate holds are the supervisor's call, watch skips at-rest rows
+  ([#885](https://github.com/Gharib89/skills/pull/885),
+  [`4982649`](https://github.com/Gharib89/skills/commit/498264950a95da36da0584e6d7ae6e2d374c7816))
+
+
 ## v0.4.0 (2026-10-19)
 
 ### Features
