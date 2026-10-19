@@ -31,7 +31,8 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
   or its pane closed).
 - `read` prints the session's last 40 lines and acknowledges its event. When
   they open mid-message (a summary or question cut at the top), read again
-  with `--lines 200`.
+  with `--lines 200`. `--rest` also marks the row at rest (see The merge
+  allowance below).
 - `answer` sends a prompt with `--text`, or presses keys into a dialog with
   `--keys`.
 - `frontier --parent <n>` prints a spec parent's sub-issues, lowest number
@@ -58,7 +59,8 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
    the background command's own time limit: a `timeout` answer, or an exit
    with no output, means start step 3 again. A timeout lists each live
    session's `status` and `still_s`, the seconds its sequence number stood
-   still during that watch. One `working` or `unknown` with `still_s` over 1200
+   still during that watch, then each row marked at rest as `at-rest`. One
+   `working` or `unknown` with `still_s` over 1200
    (of the 1500 s timeout) gets a `read`, handled as step 5 would, before the
    next watch.
 4. **Read** the session it names with `read`, every time, before deciding.
@@ -85,9 +87,9 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
    text still in the input box gets `--keys Enter`; a session back at its
    prompt gets its next `--text`.
 7. **Loop** from step 3 while any session is running. A session waiting on an
-   escalation is at rest; once you relay the user's reply, it runs again, so
-   start step 3 again. When `watch` exits 1 on no live session, every session
-   is gone: report.
+   escalation is idle but not marked at rest; once you relay the user's reply,
+   it runs again, so start step 3 again. When `watch` exits 1 on no live
+   session, every session is gone or marked at rest: report.
 
 ## Escalation
 
@@ -96,7 +98,7 @@ it came as a dialog (`blocked`) or a turn ending on it (`done`, `idle`).
 Escalate exactly these, and answer everything else yourself:
 
 - a merge gate, unless the launch prompt granted the merge allowance and the
-  gate is clean;
+  gate is clean or held only by reviewer rules the merge allowance answers;
 - an approval for a destructive or irreversible command;
 - every permission dialog (step 5; the startup trust dialog of step 2 is not
   one): the session's own permission system held that call for the owner, and
@@ -108,13 +110,36 @@ answer, so the user can reply in one word. Relay the reply with `answer` to that
 session. While it waits, keep watching the others.
 
 The **merge allowance** is the launch prompt's permission to merge on a clean
-gate ("merge each if all OK"). A ship profile's `Merge: on-clean-gate` is not a
+gate, or one held only by the reviewer rules below ("merge each if all OK"). A
+ship profile's `Merge: on-clean-gate` is not a
 merge allowance: a run stopped at its gate there is any other merge gate. A
 run whose summary reports the PR merged is at rest, with nothing left to
-answer. Ship decides clean, not you: at the gate, ask the session with `--text`
-to run `run-file gate clean` for its run and report the answer. Answer
-`--text merge` only on `clean: true` with no unmet criterion in the summary;
-anything else is an escalation that quotes its `held_by`.
+answer: read it with `--rest`, so `watch` stops waking on its idle compaction
+and a timeout still lists it. Use `--rest` on a finished task (a merged PR, a
+smoke test's verdict) and never on a session waiting on an escalation, which
+runs again once you relay the reply. Ship decides clean, not you: at the gate,
+ask the session with `--text` to run `run-file gate clean` for its run and
+report the answer. Answer `--text merge` on `clean: true` with no unmet
+criterion in the summary.
+
+A gate that is not clean is still yours to decide when the summary names no
+unmet criterion and every `held_by` entry is one of these three, and no other
+`reviewer <x>:` entry (`not landed`, `no dispositioned round`, a stale `tree
+unchanged`) qualifies:
+
+- `reviewer <x>: past cap <n>, local review read <sha>, no host reviewer read
+  it`: a reviewer capped, and a local review read the final head and stopped on
+  `tree unchanged`. Answer `--text merge`.
+- `reviewer <x>: small lane`: a host round read an earlier head. Ask the session
+  with `--text` for one more host round on the final head, and answer
+  `--text merge` once it stops on `tree unchanged`.
+- `reviewer <x>: cap` (several such entries may stand together, one per
+  reviewer): the same one more host round, and the same answer.
+
+A round that stops on findings or on cap again, any other `held_by` entry, and
+every unmet criterion are escalations that quote the `held_by`: a criterion
+waiver comes from the owner, and the auto-mode classifier refuses one the
+supervisor relays.
 
 ## Supervised ship runs
 
@@ -168,7 +193,8 @@ line names the parent and any merge allowance
    brief against main in phase 1, naming those PRs, since a brief written
    before a merge can describe code that has moved.
 3. **Merges.** The launch line's merge allowance covers every PR in the spec,
-   and only on Ship's own `run-file gate clean`, as Escalation says. After
+   on Ship's own `run-file gate clean` and the reviewer-rule holds the merge
+   allowance answers, as Escalation says. After
    each merge, fast-forward main as above, then re-run `frontier`.
    Once no slice is open, close the parent as completed with a comment naming
    each slice and its PR: ship closes only the issue its PR names.
