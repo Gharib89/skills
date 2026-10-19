@@ -273,7 +273,9 @@ or edit a scene file or choose a style.
    `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
    cached, video cached|rendered`. A scene still, the score and the video are
-   cached by content, so an unchanged run renders nothing again.
+   cached by content, so an unchanged run renders nothing again. The video
+   encodes on NVENC where ffmpeg can use it, else on the CPU, and the encode
+   mode is part of its cache key.
 6. **On a pass** (exit 0), the run folder's `out/` holds `<slug>.mp4`,
    `<slug>.srt` and `poster.png`, and the same three are copied to the printed
    path, `explainer-video/<repo>/<slug>/` in the user's videos folder (the XDG
