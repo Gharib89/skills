@@ -5,8 +5,9 @@
 // Reads <run>/script.json, timeline.json, style.json (its floors through
 // lib/style.mjs), score.json, composition/ and out/<slug>.mp4|.srt. Samples
 // each scene every 15 frames from its start, at its settled last frame and at
-// each timeline event, one sample per whole frame; HyperFrames' check and the layout probe measure the samples of every scene
-// not cached in <run>/.cache/gates/, judged here for layout and contrast.
+// each timeline event, one sample per whole frame; HyperFrames' check and the
+// layout probe measure the samples of every scene not cached in
+// <run>/.cache/gates/, judged here for layout and contrast.
 // Loudness, captions and the sound effects per minute are measured on every
 // run. The critic gate reads the verdicts the critic subagents wrote beside
 // this render's contact sheets, in <run>/.cache/critic/<key>/ (the render and
