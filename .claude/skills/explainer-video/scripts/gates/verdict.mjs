@@ -21,8 +21,8 @@ export function checkVerdict(v, sc, bad) {
     if (!x || typeof x !== "object") bad(`worst ${i + 1} is not an object`);
     if (!(
       Number.isFinite(x?.at) &&
-      x.at >= sc.start &&
-      x.at <= sc.start + sc.duration
+      x.at >= +sc.start.toFixed(3) &&
+      x.at <= +(sc.start + sc.duration).toFixed(3)
     ))
       bad(`worst ${i + 1} at ${x?.at} is not a time inside the scene`);
     for (const k of ["what", "evidence", "fix"])

@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { checkVerdict } from "../../skills/explainer-video/scripts/gates/verdict.mjs";
 import { sheetFrames } from "../../skills/explainer-video/scripts/lib/backend.mjs";
 import { CLEAN, critique } from "./critic.mjs";
 import { SCRIPT } from "./scene-file.mjs";
@@ -209,4 +210,21 @@ test("a contact sheet shows the scene's quarter marks and its own last frame, ev
     848,
     [980, 1112, 1244, 1376],
   ]);
+});
+
+test("a worst moment at a scene's 3-place start is inside it, though the start is truncated", () => {
+  // Frame 283 is 9.433333 s, written truncated; a time is read to 3 places.
+  const sc = { start: 9.433333, duration: 4.933333 };
+  const worst = (at) => ({
+    ...CLEAN,
+    worst: [{ at, what: "x", evidence: "x", fix: "x" }],
+  });
+  const refused = (at) => {
+    let why = null;
+    checkVerdict(worst(at), sc, (w) => (why ??= w));
+    return why;
+  };
+  assert.equal(refused(9.433), null);
+  assert.equal(refused(14.367), null);
+  assert.match(refused(9.432), /is not a time inside the scene/);
 });

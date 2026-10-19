@@ -69,6 +69,9 @@ export function run(fx, extra = {}) {
       EXPLAINER_VIDEO_FAKE_LOG: fx.log,
     },
     encoding: "utf8",
+    // A voice stage takes under a second here: a hang fails the test (status
+    // null) instead of holding the suite.
+    timeout: 60000,
   });
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
