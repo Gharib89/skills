@@ -65,18 +65,18 @@ capped; printf 'Stop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; h
 capped; change_run 's/Round: primary 2:/Round: primary 3:/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'gapped round numbers do not spend the cap' 'reviewer primary: cap'
 capped; change_run 's/Round: primary 2: fixes pushed/Round: primary 2:   /'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a blank round does not spend the cap' 'reviewer primary: cap'
 capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged at abcdef0123456789/'; clean 'primary at its cap with an unchanged tree owes no fallback'
-# A run past the cap records its local round as `Past-cap:`, never as a reviewer
+# A run past the cap records its local review as `Past-cap:`, never as a reviewer
 # `Round:`, so the capped reviewer's rounds still read 1..Cap (ship-849). The
-# gate stays held, naming the cap and the head the local round read (#880).
+# gate stays held, naming the cap and the head the local review read (#880).
 pastcap='reviewer primary: past cap 2, local review read abcdef0123456789, no host reviewer read it'
 capped; before=$(grep -c '^Round: primary' "$f"); printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"
-held 'a local round past the cap' "$pastcap"
-check 'the local round adds no reviewer Round line' "$before" "$(grep -c '^Round: primary' "$f")"
-capped; unheld 'a capped primary with no local round' "$pastcap"
-capped; held 'a capped primary with no local round keeps the cap reason' 'reviewer primary: cap'
-capped; printf 'Past-cap: primary: tree unchanged at 1234567\n' >> "$f"; held 'a local round at an uncovered head keeps the cap reason' 'reviewer primary: cap'
+held 'a local review past the cap' "$pastcap"
+check 'the local review adds no reviewer Round line' "$before" "$(grep -c '^Round: primary' "$f")"
+capped; unheld 'a capped primary with no local review' "$pastcap"
+capped; held 'a capped primary with no local review keeps the cap reason' 'reviewer primary: cap'
+capped; printf 'Past-cap: primary: tree unchanged at 1234567\n' >> "$f"; held 'a local review at an uncovered head keeps the cap reason' 'reviewer primary: cap'
 capped; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\nRound: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a fallback that read the head settles a past-cap primary'
-capped; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; unheld 'a past-cap local round' 'reviewer primary: cap'
+capped; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; unheld 'a past-cap local review' 'reviewer primary: cap'
 base; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a past-cap line on a reviewer that settled'
 # `note` takes the one form the gate reads.
 base; check_rc 'note takes a past-cap line' 0 "$(bash "$m" note 'Review evidence' 'Past-cap: primary: tree unchanged at abcdef0123456789' --file "$f" >/dev/null 2>&1; echo $?)"

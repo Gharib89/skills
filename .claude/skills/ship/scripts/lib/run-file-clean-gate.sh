@@ -115,7 +115,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
              | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test($round_re))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
-      # The head a local round past the cap read with its tree unchanged, when
+      # The head a local review past the cap read with its tree unchanged, when
       # that head covers the PR head. It names the hold but never lifts it: no
       # host reviewer read those fixes.
       def pastcap_head($name): (rests("Past-cap: " + $name + ": tree unchanged at ") | last // "") as $s
