@@ -25,6 +25,8 @@ const bare = (w) =>
 export function findPhrase(sentence, phrase) {
   const have = words(sentence).map(bare);
   const want = words(phrase).map(bare);
+  // A word of bare punctuation has nothing to match on.
+  if (!want.length || want.includes("")) return -1;
   for (let i = 0; i + want.length <= have.length; i++)
     if (want.every((w, j) => w === have[i + j])) return i;
   return -1;

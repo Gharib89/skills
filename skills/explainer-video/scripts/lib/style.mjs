@@ -167,11 +167,11 @@ function checkSchema(profile) {
 export function banReason(bans, component, name) {
   if (bans.includes(component))
     return `component ${component} is banned by style profile ${name}`;
-  const t = Object.keys(TECHNIQUES).find(
+  const technique = Object.keys(TECHNIQUES).find(
     (t) => bans.includes(t) && TECHNIQUES[t].includes(component),
   );
-  return t
-    ? `component ${component} uses ${t}, which style profile ${name} bans`
+  return technique
+    ? `component ${component} uses ${technique}, which style profile ${name} bans`
     : null;
 }
 

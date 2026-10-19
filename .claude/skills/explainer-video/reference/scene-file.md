@@ -45,13 +45,8 @@ narrator: am_fenrir
   or that change plays, as the sentence starts. Add `on`, a phrase of that
   sentence in its spoken form, and it lands on the phrase's first spoken word
   instead; compile refuses a phrase the sentence does not say (case and
-  punctuation aside), and a phrase said twice takes its first place.
-  - `emphasis` (on every component below but `title` and `codediff`): one
-    callout per scene, `{ "target", "at*", "on" }`, drawn as a ring round the
-    target with a leader line, revealed on its cue. `target` is the text of
-    one item (its `label`; a panel's `title`; a `text` for a terminal line or
-    list item), matched exactly, and refused when it matches no item or more
-    than one. On `code` it is a line range, `[first, last]` counted from 1.
+  punctuation aside), and a phrase said twice takes its first place. `on`
+  goes wherever `at` does, on an item and on `codediff` too.
   - `title` (`kicker`, `title*`, `subtitle`).
   - `cards` (`items*`, each `at*`, `label*`, `value*`, `note`).
   - `terminal` (`title`, `lines*`, each `at*`, `text*`).
@@ -66,6 +61,13 @@ narrator: am_fenrir
   - `codediff`: a code frame that turns `before*` into `after*` at `at*`, the
     removed lines closing and the added ones opening (`lang*`, `file`; each
     side one string like `code`, at most 12 lines).
+  - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
+    `code` (`title` and `codediff` take none): one callout per scene,
+    `{ "target*", "at*", "on" }`, drawn as a ring round the target with a
+    leader line, revealed on its cue. `target` is the text of one item (its
+    `label`; a panel's `title`; a `text` for a terminal line or list item),
+    matched exactly, and refused when it matches no item or more than one. On
+    `code` it is a line range, `[first, last]` counted from 1.
 
 ## Style profiles
 
@@ -93,7 +95,7 @@ the family listed first, so a profile states only where it departs:
 | `type` | `block` | `stagger` 0.03 to 0.08 s |
 | `ease` | `soft` (every reveal slides up and fades in on one ease), `spring` (a headline lands with one overshoot; panels, cards, frames and flow nodes settle with a soft one; list items, arrows and terminal lines snap) | none |
 | `texture` | `surface`: `flat`, or `sketch`, which outlines flow steps and panels by hand, seeded per scene and element so a render repeats exactly | none |
-| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` on | none |
+| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` on: banning it refuses every `flow` scene | none |
 
 A field with knobs is a family name or `{ "family": "cut", "duration": 0.3 }`;
 a field without knobs is a family name; `texture` is an object,

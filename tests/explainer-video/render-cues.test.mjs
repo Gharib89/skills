@@ -73,7 +73,8 @@ test("a code emphasis rings the range it names, beside the text", () => {
   assert.equal(r.code, 0, r.out + r.err);
   const html = comp(fx, "scenes/code.html");
   assert.equal([...html.matchAll(/class="em side"/g)].length, 1);
-  assert.match(html, /class="em side" style="top: \d+px; height: \d+px/);
+  // Line 2 of 45 px rows: 28 px of frame padding, one row down, 4 px of slack.
+  assert.match(html, /class="em side" style="top: 69px; height: 53px;/);
   const [, , , t] = tweens(fx, "code").find(([s]) => s === ".em");
   assert.ok(near(t, at(fx, "code", 2)));
 });
