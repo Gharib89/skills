@@ -30,14 +30,29 @@ export function sceneFrames({ start, duration, fps }) {
 export const frameTime = (f, fps) =>
   (Math.ceil((f / fps) * 1000 - 1e-6) + 0) / 1000;
 
-// A scene's sample times: every 15 frames from its first and at its last.
-export function sampleTimes({ start, duration, fps }) {
+// A scene's sample times: every 15 frames from its first (the 0.5 s grid at 30
+// fps), the frame each of `events` (video seconds: tween ends, camera and seam
+// edges) first shows in, and its last frame, one sample per whole frame.
+export function sampleTimes({ start, duration, fps, events = [] }) {
   const first = Math.round(start * fps);
   const last = first + Math.round(duration * fps) - 1;
-  const times = [];
-  for (let f = first; f < last; f += 15) times.push(frameTime(f, fps));
-  times.push(frameTime(last, fps));
-  return times;
+  const frames = new Set([last]);
+  for (let f = first; f < last; f += 15) frames.add(f);
+  for (const e of events) {
+    const f = Math.ceil(e * fps - 1e-6);
+    if (f >= first && f <= last) frames.add(f);
+  }
+  return [...frames].sort((a, b) => a - b).map((f) => frameTime(f, fps));
+}
+
+// The sample a scene is fullest at: the most readable words at once, the latest
+// on a tie. `samples` is [{ t, words }] in time order; a scene with no readable
+// word in any sample is fullest at its last.
+export function fullest(samples) {
+  let best = null;
+  for (const s of samples)
+    if (s.words > 0 && (!best || s.words >= best.words)) best = s;
+  return (best ?? samples.at(-1)).t;
 }
 
 export function meanDiff(a, b) {
@@ -48,16 +63,27 @@ export function meanDiff(a, b) {
 
 // The frame with the largest difference from the frame before it, the earliest
 // on a tie; a scene whose largest difference is under STILL is still and gives
-// its middle frame.
-export function peak(diffs, first, fps) {
-  let at = 0;
-  diffs.forEach((d, k) => {
-    if (d > diffs[at]) at = k;
-  });
+// its middle frame. Frames inside a seam window (`seams`, video seconds as
+// [from, to)) are not candidates: the peak is the scene's own motion, and a
+// still scene's frame is the allowed one nearest its middle.
+export function peak(diffs, first, fps, seams = []) {
+  const inSeam = (f) => seams.some(([a, b]) => f / fps >= a && f / fps < b);
+  const ks = diffs.map((_, k) => k).filter((k) => !inSeam(first + k + 1));
+  // A seam over every frame after the first leaves the first frame: take it,
+  // and only a scene wholly inside a seam is judged unfiltered.
+  if (!ks.length && diffs.length) {
+    const p = peak(diffs, first, fps);
+    return inSeam(first) ? p : { ...p, frame: first, t: first / fps };
+  }
+  let at = ks[0] ?? 0;
+  for (const k of ks) if (diffs[k] > diffs[at]) at = k;
   const still = !(diffs[at] > STILL);
-  const frame = still
-    ? first + Math.floor((diffs.length + 1) / 2)
-    : first + at + 1;
+  const middle = Math.floor((diffs.length + 1) / 2) - 1;
+  const near = ks.reduce(
+    (best, k) => (Math.abs(k - middle) < Math.abs(best - middle) ? k : best),
+    ks[0] ?? middle,
+  );
+  const frame = first + (still ? near : at) + 1;
   return { still, frame, t: frame / fps, diff: diffs[at] ?? 0 };
 }
 

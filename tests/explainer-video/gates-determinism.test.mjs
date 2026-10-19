@@ -213,5 +213,5 @@ test("two old-format rounds recorded in gates.json are dropped, not read by the 
     r.out,
     /^gate critic: pending: round 1 of 2, 0 of 3 scene\(s\) judged, /m,
   );
-  assert.equal(record(fx).gates.critic.format, 2);
+  assert.equal(record(fx).gates.critic.format, 3);
 });

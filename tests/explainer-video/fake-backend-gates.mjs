@@ -34,6 +34,7 @@ export function showing(dir, t) {
         if (e[4].trim())
           texts.push({
             scene: m[1],
+            start: +m[2],
             text: e[4].trim(),
             bdi: e[2] === "bdi",
             rtl: (own ?? within) === "rtl",
@@ -57,6 +58,15 @@ export function showing(dir, t) {
         texts.push({ scene: null, text: r[1], bdi: true, rtl });
     }
   return { html, texts };
+}
+
+// A scene's timeline events, as the real backend reads them off its GSAP
+// timeline: tween ends and the `seam:` and `camera:` label pairs, in scene
+// seconds. EXPLAINER_VIDEO_FAKE_EVENTS is a JSON object of scene id to
+// {ends, seams, camera}; a scene it omits has none.
+export async function events(dir) {
+  log({ call: "events", dir });
+  return JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_EVENTS ?? "{}");
 }
 
 export async function check(dir, times) {
@@ -111,6 +121,14 @@ function reading(html, scene, text, bdi, rtl, within) {
   };
 }
 
+// An element naming `fading` is mid-reveal (opacity 0.4) until
+// EXPLAINER_VIDEO_FAKE_FADE_END scene seconds (default 1), then fully shown.
+const fading = (text, since) =>
+  /\bfading\b/.test(text) &&
+  since < +(process.env.EXPLAINER_VIDEO_FAKE_FADE_END ?? 1)
+    ? 0.4
+    : 1;
+
 export async function probe(dir, times) {
   log({ call: "probe", times });
   return times.map((t) => {
@@ -119,7 +137,7 @@ export async function probe(dir, times) {
     if (process.env.EXPLAINER_VIDEO_FAKE_BLANK) return { t, elements: [] };
     return {
       t,
-      elements: texts.map(({ scene, text, bdi, rtl, within }, i) => {
+      elements: texts.map(({ scene, start, text, bdi, rtl, within }, i) => {
         const row = /\bstacked\b/.test(text) ? i - 0.5 : i;
         const top = scene ? 200 + row * 50 : 920;
         const left = /\bedge\b/.test(text) ? 40 : 160;
@@ -134,9 +152,10 @@ export async function probe(dir, times) {
           inline: false,
           scrollW: clipped ? 4000 : 1600,
           scrollH: 48,
+          words: text.split(/\s+/).length,
           clientW: 1600,
           clientH: 48,
-          opacity: 1,
+          opacity: fading(text, t - start),
           clip: clipped ? { ...rect, right: 1000 } : null,
           color: /\bdim\b/.test(text)
             ? "#c8c8c0"

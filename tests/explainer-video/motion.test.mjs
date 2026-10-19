@@ -9,13 +9,18 @@ import os from "node:os";
 import path from "node:path";
 import {
   STILL,
+  fullest,
   meanDiff,
   peak,
+  sampleTimes,
   stillStretches,
   stripEnd,
   stripStart,
 } from "../../skills/explainer-video/scripts/lib/motion.mjs";
-import { bandMotion } from "../../skills/explainer-video/scripts/lib/backend.mjs";
+import {
+  bandMotion,
+  sheet,
+} from "../../skills/explainer-video/scripts/lib/backend.mjs";
 
 test("the peak frame is the one with the largest difference from the frame before it", () => {
   // diffs[k] compares frame first+k+1 with frame first+k.
@@ -34,6 +39,40 @@ test("a scene nothing moves in is still, and its frame is the middle one", () =>
   // The encode's noise floor is not motion.
   assert.equal(peak([STILL, STILL / 2, 0], 0, 30).still, true);
   assert.equal(peak([STILL, STILL * 2, 0], 0, 30).still, false);
+});
+
+test("a seam's frames are never the peak, and a still scene's frame stays outside it", () => {
+  const diffs = [1, 2, 9, 3, 4];
+  // Frames 103 and 104 sit in [3.4, 3.5): the next largest difference wins.
+  assert.equal(peak(diffs, 100, 30, [[102 / 30, 105 / 30]]).frame, 105);
+  assert.equal(peak(diffs, 100, 30, [[5, 6]]).frame, 103);
+  // The middle frame (65) is in the seam: the nearest one outside it is taken, the earlier of two.
+  const p = peak(Array(9).fill(0), 60, 30, [[64 / 30, 67 / 30]]);
+  assert.deepEqual([p.still, p.frame], [true, 63]);
+  // A scene wholly in a seam falls back to the unfiltered peak.
+  assert.equal(peak(diffs, 100, 30, [[0, 99]]).frame, 103);
+  // A seam over every frame but the first leaves the first frame to judge.
+  assert.equal(peak([9], 0, 30, [[1 / 30, 1]]).frame, 0);
+});
+
+test("sample times are the 0.5 s grid, the last frame and each event's frame, once", () => {
+  const base = { start: 2, duration: 4, fps: 30 };
+  const grid = sampleTimes(base).map((t) => Math.round(t * 30));
+  assert.deepEqual(grid, [60, 75, 90, 105, 120, 135, 150, 165, 179]);
+  // 2.5 s is on the grid already; 3.01 s takes frame 91, 3.0 s frame 90; one
+  // before the scene and one past it are no sample of it.
+  const ev = sampleTimes({ ...base, events: [2.5, 3.01, 3.0, 1, 6.5, 5.999] });
+  assert.deepEqual(
+    ev.map((t) => Math.round(t * 30)),
+    [60, 75, 90, 91, 105, 120, 135, 150, 165, 179],
+  );
+});
+
+test("the fullest sample has the most words, the latest on a tie, the last when none read", () => {
+  const at = (...w) => w.map((words, i) => ({ t: i, words }));
+  assert.equal(fullest(at(1, 3, 3, 2)), 2);
+  assert.equal(fullest(at(4, 1, 4, 4)), 3);
+  assert.equal(fullest(at(0, 0, 0)), 2);
 });
 
 test("mean absolute difference reads two frames' bytes", () => {
@@ -94,6 +133,50 @@ test(
       const p = peak(content, 0, 30);
       assert.equal(p.still, false);
       assert.equal(p.frame, 30);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  },
+);
+
+// The sheet's fourth tile is the fullest frame whatever its place in time.
+test(
+  "the real contact sheet puts the fullest frame fourth, ahead of the quarter marks it precedes",
+  { skip: !ffmpeg && "ffmpeg is not installed" },
+  async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-sheet-"));
+    try {
+      // Frame N is a flat grey of 4N, so a tile's grey names its frame.
+      const video = path.join(tmp, "v.mp4");
+      let r = spawnSync("ffmpeg", [
+        ...["-hide_banner", "-v", "error", "-y", "-f", "lavfi"],
+        ...["-i", "nullsrc=s=1920x1080:r=30:d=2,geq=lum=4*N:cb=128:cr=128"],
+        ...["-pix_fmt", "yuv420p", "-c:v", "libx264", "-crf", "0", video],
+      ]);
+      assert.equal(r.status, 0, String(r.stderr));
+      const png = path.join(tmp, "sheet.png");
+      // 60 frames from 0: quarter marks 15, 30, 45; the fullest is frame 5.
+      await sheet(video, png, { start: 0, duration: 2, fps: 30, fullest: 5 });
+      r = spawnSync(
+        "ffmpeg",
+        [
+          ...["-hide_banner", "-v", "error", "-i", png],
+          ...["-vf", "format=gray", "-f", "rawvideo", "-"],
+        ],
+        { maxBuffer: 1 << 25 },
+      );
+      assert.equal(r.status, 0, String(r.stderr));
+      const grey = (x, y) => r.stdout[y * 1920 + x];
+      const tiles = [
+        [480, 270],
+        [1440, 270],
+        [480, 810],
+        [1440, 810],
+      ].map(([x, y]) => grey(x, y));
+      // Grey rises with the frame: the three marks in order, the earlier
+      // frame 5 last.
+      const [q1, q2, q3, full] = tiles;
+      assert.ok(full < q1 && q1 < q2 && q2 < q3, `tiles ${tiles}`);
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }

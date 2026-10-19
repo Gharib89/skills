@@ -4,9 +4,10 @@
 //
 // Reads <run>/script.json, timeline.json, style.json (its floors through
 // lib/style.mjs), score.json, composition/ and out/<slug>.mp4|.srt. Samples
-// each scene every 15 frames from its start and at its settled last frame;
-// HyperFrames' check and the layout probe measure the samples of every scene
-// not cached in <run>/.cache/gates/, judged here for layout and contrast.
+// each scene every 15 frames from its start, at its settled last frame and at
+// each timeline event, one sample per whole frame; HyperFrames' check and the
+// layout probe measure the samples of every scene not cached in
+// <run>/.cache/gates/, judged here for layout and contrast.
 // Loudness, captions and the sound effects per minute are measured on every
 // run. The critic gate reads the verdicts the critic subagents wrote beside
 // this render's contact sheets, in <run>/.cache/critic/<key>/ (the render and
@@ -29,17 +30,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
-import {
-  frameTime,
-  peak as peakFrame,
-  sampleTimes,
-  sceneFrames,
-  stillStretches,
-} from "../lib/motion.mjs";
+import { sampleTimes } from "../lib/motion.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { FPS, H, W } from "../render/compose.mjs";
 import { captionFindings, cuesOf } from "./captions.mjs";
+import { sceneEvents } from "./events.mjs";
+import { fullestFrame, motionAndDeterminism } from "./scene.mjs";
 import { cutSheets, readPrevKeys } from "./sheets.mjs";
 import { SCORES, KINDS, checkVerdict } from "./verdict.mjs";
 
@@ -109,6 +106,8 @@ const source = [
   "../render/compose.mjs",
   "gates.mjs",
   "captions.mjs",
+  "events.mjs",
+  "scene.mjs",
   "sheets.mjs",
   "verdict.mjs",
   "../lib/backend.mjs",
@@ -126,14 +125,25 @@ const source = [
 );
 const cacheDir = path.join(run, ".cache", "gates");
 fs.mkdirSync(cacheDir, { recursive: true });
+const env = hyperframesEnv();
+const comp = path.join(run, "composition");
+const {
+  moves,
+  seams,
+  times: eventTimes,
+  moving,
+} = sceneEvents(
+  await orFail(() => backend.events(comp, { env })),
+  timeline.scenes,
+);
 const plan = timeline.scenes.map((sc) => {
   const end = sc.start + sc.duration;
-  const times = sampleTimes({ ...sc, fps: FPS });
+  const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
   const file = path.join(
     cacheDir,
     `${hash(
       read(`composition/scenes/${sc.id}.html`),
-      [times, W, H, sc.duration, sc.sentences],
+      [times, moves[sc.id], seams, W, H, sc.duration, sc.sentences],
       profile,
       script.title,
       inputs,
@@ -151,8 +161,6 @@ const plan = timeline.scenes.map((sc) => {
 
 const todo = plan.filter((p) => !p.found);
 if (todo.length) {
-  const env = hyperframesEnv();
-  const comp = path.join(run, "composition");
   const times = todo.flatMap((p) => p.times);
   const checked = await orFail(() => backend.check(comp, times, { env }));
   // A check that never reached the browser answers {ok: false, error} alone.
@@ -188,41 +196,19 @@ if (todo.length) {
       p.found[gate][at] =
         `${t.toFixed(2)} s ${p.sc.id}: ${what}${n > 1 ? ` (${n} samples)` : ""}`;
   };
-  judge(checked, frames, floor, add);
+  judge(checked, frames, floor, add, moving);
   settle();
-  // Motion, then determinism on the frame it picks: the scene's peak-motion
-  // frame, rendered twice in two browsers and compared as decoded pixels.
   for (const p of todo) {
-    const scene = { start: p.sc.start, duration: p.sc.duration, fps: FPS };
-    const { first } = sceneFrames(scene);
-    const diffs = await orFail(() =>
-      backend.bandMotion(path.join(run, mp4), scene),
-    );
-    const pk = peakFrame(diffs, first, FPS);
-    const t = frameTime(pk.frame, FPS);
-    p.found.motion = {
-      still: pk.still,
-      frame: pk.frame,
-      t,
-      stills: stillStretches(diffs, first, FPS),
-    };
-    const base = path.basename(p.file, ".json");
-    const files = ["a", "b"].map((x) =>
-      path.join(".cache", "gates", "frames", `${p.sc.id}-${base}-${x}.png`),
-    );
-    fs.mkdirSync(path.join(run, path.dirname(files[0])), { recursive: true });
-    const hashes = [];
-    for (const f of files) {
-      await orFail(() => backend.frame(comp, t, path.join(run, f), { env }));
-      hashes.push(await orFail(() => backend.framePixels(path.join(run, f))));
-    }
-    p.found.determinism = {
-      frame: pk.frame,
-      t,
-      a: hashes[0],
-      b: hashes[1],
-      files,
-    };
+    p.found.fullest = fullestFrame(p, frames, moving);
+    await motionAndDeterminism(p, {
+      run,
+      mp4,
+      comp,
+      env,
+      backend,
+      orFail,
+      seams,
+    });
   }
   for (const p of todo) fs.writeFileSync(p.file, JSON.stringify(p.found));
 }
@@ -329,9 +315,10 @@ const count = (failing, before) =>
 // advise. Two rounds of one script at most: once two renders are judged, a
 // later one carries the second round's verdict rather than ask for a third.
 // Beside each contact sheet it cuts a motion strip and a motion record.
-// Bumped when the verdict's format changes, so a verdict cached in the old one
-// is judged again rather than refused by the new validator.
-const CRITIC_FORMAT = 2;
+// Bumped when the verdict's format or what its sheet shows changes, so a
+// verdict cached in the old one is judged again rather than refused by the new
+// validator or kept for a sheet the critic no longer reads.
+const CRITIC_FORMAT = 3;
 // A verdict stands for the render, for what else the critic read (the title,
 // each sentence's cites and the cited excerpts' text) and for its format.
 const excerptsFile = path.join(run, "excerpts.json");

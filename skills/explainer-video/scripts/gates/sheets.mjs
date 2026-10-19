@@ -57,6 +57,7 @@ export async function cutSheets({
           start: sc.start,
           duration: sc.duration,
           fps: FPS,
+          fullest: p.found.fullest,
         }),
       );
     // The motion strip is 12 frames from just before the scene's peak-motion
