@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run-file mechanic: the phase 4 and 7 gates, and the covered-head and untouched-path reads. Sourced by ../run-file.sh, never run.
+# Run-file mechanic: the phase 4, 5 and 7 gates, and the covered-head and untouched-path reads. Sourced by ../run-file.sh, never run.
 # shellcheck disable=SC2154,SC2034 # shares the globals of run-file.sh (file, head, verb, usage)
 
 is_test_path() {

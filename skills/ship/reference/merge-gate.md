@@ -32,9 +32,10 @@ references call each item, not a layout:
   tripwire that fired.
 - **Deviations from plan**: the phase-2 deviations log verbatim, or that the
   plan held.
-- **Unmet criteria**: each criterion not met, verbatim from the issue, with its
-  reason (the action a human must take, for a host action), or `no line` where
-  the run recorded none ([Unmet criteria](#unmet-criteria)).
+- **Unmet criteria**: each criterion not met, from `gate summary`'s
+  `unmet_criteria_line` (a run with no `## Criteria` lists them from the issue),
+  with its reason (the action a human must take, for a host action), or
+  `no line` where the run recorded none ([Unmet criteria](#unmet-criteria)).
 - **Verification**: each applicable verification's phase-3 result and what
   ran, or the reason the PR body gives for none applying.
 - **Self-review**: its rounds and stop, each phase-4 report with its path, and
@@ -57,8 +58,8 @@ references call each item, not a layout:
   and path (or its number, filed here), **Ship notes** and **Direct calls**,
   below.
 - **Timing**: `run-file timing`'s `row`, verbatim.
-- **Clean gate held by**: each `held_by` reason, when opted in and `clean:
-  false`.
+- **Clean gate held by**: `gate summary`'s `clean_gate_held_by_line`, `none`
+  on a clean gate.
 
 It ends with the reply the human gives: "merge" to squash-merge, close the
 issue and clean up; with an unmet criterion, "merge" with an explicit waiver of
@@ -196,12 +197,13 @@ The unattended branch never evaluates this option.
 **Every attended run, opted in or not, takes the summary's `Unmet criteria` and
 `Clean gate held by` lines from `run-file gate summary <pr> --issue <issue>`**
 (`--file <run.md>` for a record addressed by path), never from its own account
-of the run. Save the final `ci-wait` JSON as `ci-wait.json` beside the Run file
-first; the verb reads that file and the head `read-pr <pr>` returns, takes no
-ci-wait or head from the caller, and refuses naming the step to run where either
-is absent. It answers `gate clean`'s `{clean, held_by}` for that head (exit 0
-clean, 1 held) plus `unmet_criteria_line` and `clean_gate_held_by_line`, the two
-lines to paste. The unattended lane keeps its own path and does not use it.
+of the run. Save the final settled `ci-wait` answer (not `pending`) to
+`ci-wait.json` beside the Run file after phase 8; the verb reads that file and
+the head `read-pr <pr>` returns, takes no ci-wait or head from the caller, and
+exits 2 naming the step to run where either is absent. It answers `gate
+clean`'s `{clean, held_by}` for that head (exit 0 clean, 1 held) plus
+`unmet_criteria_line` and `clean_gate_held_by_line`, the two lines to paste.
+The unattended lane keeps its own path and does not use it.
 
 For an opted-in attended run that answer is the decision; `run-file gate clean
 <ci-file> --head <head_sha> --issue <issue>` answers the same for a ci-wait file

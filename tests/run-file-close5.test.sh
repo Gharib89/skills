@@ -79,6 +79,22 @@ check_rc "a not met naming its settling step: exits ok" 0 "$status"
 fresh; add 'Criterion 1: met: ok' 'Criterion 2: not met:'; held=$(cat "$rf"); call close 5 --file "$rf"
 refused "a hand-written line gate clean cannot read" 'criterion 2 has a line gate clean cannot read'
 
+for w in open unknown '...' '?'; do
+  fresh; add 'Criterion 1: met: ok' "Criterion 2: not met: $w"; held=$(cat "$rf"); call close 5 --file "$rf"
+  refused "a placeholder reason ($w)" 'criterion 2 is'
+done
+
+fresh; add 'Criterion 1: met: ok' 'Criterion 2: not met: pending review of the phase 7 reply, which phase 7 settles'; call close 5 --file "$rf"
+check_rc "a real reason that opens with a placeholder word: exits ok" 0 "$status"
+
+# A `- N:` line outside `## Criteria` is no entry.
+fresh; add 'Criterion 1: met: ok' 'Criterion 2: met: ok' '## Deviations log' '- 3: a decoy, not a criterion'; call close 5 --file "$rf"
+check_rc "a numbered line outside Criteria is not an entry" 0 "$status"
+
+# `next 5` closes phase 5 through the same gate.
+fresh; held=$(cat "$rf"); call next 6 --file "$rf"
+refused "next over phase 5 with no Criterion lines" 'criterion 1 has no line'
+
 n=$((n + 1))
 rf=$(bash "$bin/run-file.sh" init "c$n" --scratchpad "$tmp/sp" --state 0=done --state 1=done --state 2=done --state 3=done --state 4=done --state 5=open | jq -r .run_file)
 call close 5 --file "$rf"
@@ -103,13 +119,13 @@ fresh; add 'Criterion 1: met: ok' 'Criterion 2: not met: waits on phase 7 round 
 add 'Round: primary 1: clean' "Stop: primary: tree unchanged at $head" '## Local gate' "- 10:00 $head pass {\"secrets\":\"pass\"}"
 dir=$(dirname "$rf")
 call gate summary 7 --file "$rf"
-check_rc "no saved ci-wait: exits 1" 1 "$status"
+check_rc "no saved ci-wait: exits 2, no verdict" 2 "$status"
 check "and names the step to run" yes "$(has "run \`ci-wait 7\`" "$err")"
 
 cp "$tmp/ci.json" "$dir/ci-wait.json"
 rm "$tmp/pr-head"
 call gate summary 7 --file "$rf"
-check_rc "an unreadable PR: exits 1" 1 "$status"
+check_rc "an unreadable PR: exits 2, no verdict" 2 "$status"
 check "and names read-pr" yes "$(has 'run `read-pr 7`' "$err")"
 chmod +x "$bin/read-pr.sh"
 printf '%s\n' "$head" > "$tmp/pr-head"
@@ -117,7 +133,8 @@ printf '%s\n' "$head" > "$tmp/pr-head"
 call gate summary 7 --file "$rf"
 summary=$out status_summary=$status
 call gate clean "$tmp/ci.json" --head "$head" --file "$rf"
-check_rc "a held gate: summary exits 1 as gate clean does" "$status" "$status_summary"
+check_rc "a held gate: summary exits as gate clean does" "$status" "$status_summary"
+check_rc "and that is 1" 1 "$status_summary"
 check "its held_by is gate clean's" "$(jq -c .held_by <<<"$out")" "$(jq -c .held_by <<<"$summary")"
 check "the Unmet criteria line lists the unmet criterion" 'criterion 2: not met: waits on phase 7 round 1' "$(jq -r .unmet_criteria_line <<<"$summary")"
 check "the Clean gate held by line lists each reason" 'criterion 2: not met: waits on phase 7 round 1' "$(jq -r .clean_gate_held_by_line <<<"$summary")"

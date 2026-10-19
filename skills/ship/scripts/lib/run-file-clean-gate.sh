@@ -203,9 +203,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
 gate_summary() { # gate_summary <pr>, with file already parsed
   local pr=$1 ci_file pull answer rc
   ci_file="$(dirname "$file")/ci-wait.json"
-  [ -f "$ci_file" ] || ship_fail "no saved ci-wait answer at $ci_file: run \`ci-wait $pr\` and save its output there, then re-run"
+  # Exit 2, not the exit 1 of a held gate: a read that failed is no verdict.
+  [ -f "$ci_file" ] || ship_tooling "no saved ci-wait answer at $ci_file: run \`ci-wait $pr\` and save its output there, then re-run"
   pull=$("$SHIP_SCRIPTS/read-pr.sh" "$pr" 2>/dev/null) && head=$(jq -r '.head_sha // empty' <<<"$pull" 2>/dev/null) && [ -n "$head" ] \
-    || ship_fail "cannot read the head of PR $pr: run \`read-pr $pr\` and fix what it reports, then re-run"
+    || ship_tooling "cannot read the head of PR $pr: run \`read-pr $pr\` and fix what it reports, then re-run"
   answer=$(gate_clean "$ci_file" 2>/dev/null)
   rc=$?
   [ "$rc" -le 1 ] || ship_tooling "$(jq -r '.error // "cannot evaluate clean gate evidence"' <<<"$answer")"

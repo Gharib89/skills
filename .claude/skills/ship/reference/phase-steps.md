@@ -173,12 +173,12 @@ review quota, so push when the tree changed.
 The text below continues phase 9 in `SKILL.md`, after the summary is written per
 merge-gate.md.
 
-Write the summary per that file, its `Unmet criteria` and `Clean gate held by`
-lines taken from `run-file gate summary <pr>` once the final `ci-wait` JSON is
-saved as `ci-wait.json` beside the Run file. Attended: follow its `Merge:`
-branch, waiting for an explicit "merge" by default, or merging when
-`Merge: on-clean-gate` or the run is inline lane and `run-file gate clean`
-answers `clean: true`; an unmet criterion needs the human's explicit waiver.
+Write the summary per that file. Attended: take its `Unmet criteria` and
+`Clean gate held by` lines from `run-file gate summary <pr>`, the settled
+`ci-wait` answer saved as `ci-wait.json` beside the Run file first; follow the
+`Merge:` branch, waiting for an explicit "merge" by default, or merging when
+`Merge: on-clean-gate` or the run is inline lane and that answer reads `clean:
+true`; an unmet criterion needs the human's explicit waiver.
 On either authorization run `merge <pr> <issue|none> <head> [--worktree
 <path>]`, `<head>` the gate's `head_sha`. Invoke it from the worktree root as
 `.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,

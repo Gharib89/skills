@@ -16,6 +16,7 @@
 #   run-file gate record <file|-> [--head <sha>] <where>
 #   run-file gate read --head <sha> <where>
 #   run-file gate clean <ci-file|-> --head <sha> <where>
+#   run-file gate summary <pr> <where>
 #   run-file timing <where>
 #   run-file prove <test> <path>... <where> [-- <command>...]
 #   run-file probe <ref> <where> -- <command>...
@@ -86,15 +87,17 @@
 # when it does not re-run the gate. Both take `--head` as a full or abbreviated
 # sha, 7 to 64 hex digits.
 #
-# `close 4` and `close 7` hold the self-review and the review loop to the
-# evidence they leave in the Run file. They are completeness guards: they check
+# `close 4`, `close 5` and `close 7` hold the self-review, the criteria and the
+# review loop to the evidence they leave in the Run file (`close 5` reads only
+# the `## Criteria` entries and their `Criterion` lines, below). They are
+# completeness guards: they check
 # that each line is present and in its shape, and the self-review keeps the
 # judgment of what a line says. The red `Reverted-fix:` line is produced, written
 # by `prove`, the verb that ran the proof. The rest are attested, written by the
 # run and taken at its word: the `n/a` `Reverted-fix:` line, and the `Round:`
 # and `Stop:` lines of `close 4`'s self-review and `close 7`. A refused close
 # writes nothing, names everything missing in one message, and `next` over
-# either phase is held the same way. A gate line is a line anywhere in the file,
+# any of the three phases is held the same way. A gate line is a line anywhere in the file,
 # an optional leading `- ` accepted, matched by exact prefix at the line start.
 # `close 4` reads the checkout's own diff (the working tree, untracked files
 # included, against the merge base of HEAD and origin/HEAD); it needs:
@@ -189,7 +192,8 @@
 #     of the head `read-pr <pr>` returns and the final `ci-wait` answer saved as
 #     `ci-wait.json` beside the Run file; the merge summary's `Unmet criteria`
 #     and `Clean gate held by` lines are its two `_line` fields. It refuses,
-#     naming the step to run, where that answer or the head is absent.
+#     naming the step to run, with exit 2 (no verdict) where that answer or
+#     the head is absent.
 #   close 5 refuses while a `## Criteria` entry has no `Criterion <n>:` line or
 #     its last line is a `not met` whose reason is a placeholder (pending, todo,
 #     tbd, later, wip, open or unknown): one that settles later is written
