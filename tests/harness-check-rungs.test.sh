@@ -271,13 +271,15 @@ suite" "$(cat "$ARGS_LOG")"
 # selector matches by basename, so the row gets the path with no file on disk.
 # Any other row keeps excluding a deleted path.
 r=$(repo deleted-sh "TURN_ROWS='web/|web|*.ts|||args web {files}
+lib/|lib|*.sh|||args lib {files}
 |shell|*.sh|||args shell {files}'")
-mkdir -p "$r/web" "$r/scripts"; echo x > "$r/web/gone.ts"; echo x > "$r/scripts/gone.sh"
+mkdir -p "$r/web" "$r/scripts" "$r/lib"
+echo x > "$r/web/gone.ts"; echo x > "$r/scripts/gone.sh"; echo x > "$r/lib/gone.sh"
 git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
-rm "$r/scripts/gone.sh"
+rm "$r/scripts/gone.sh" "$r/lib/gone.sh"
 : > "$ARGS_LOG"
 run "$r" turn
-check "a deleted .sh alone reaches the shell row's affected tests" \
+check "a deleted .sh reaches the shell row's affected tests, a .sh row of another member gets none" \
   "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
 rm "$r/web/gone.ts"; echo y > "$r/web/new.ts"
 : > "$ARGS_LOG"

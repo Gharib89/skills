@@ -29,6 +29,14 @@ check "_lib.sh is named by tests, so the selection is not vacuous" 1 \
 check "the runner's excluded prefixes select nothing through the turn rung" \
   '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' \
   "$(scripts/check.sh turn tests/fixtures/x.sh .claude/skills/ship/scripts/_lib.sh)"
+# A script deleted from disk is still named by its tests: the turn rung, given
+# the path of one that no longer exists, runs them through the shell row. The
+# name is split so this file does not name it and select itself, which would
+# recurse.
+gone=stray-file-""check.sh
+check "a deleted script runs the tests naming it through the turn rung" \
+  '{"rung":"turn","verdict":"pass","checks":{"tests:shell":"pass"}}' \
+  "$(scripts/check.sh turn scripts/deleted/$gone 2>/dev/null)"
 # Built at run time: spelled out here, this file would name it and select itself.
 unnamed=zz-unnamed-$$.sh
 check "a file no test names selects nothing" "" "$(sel scripts/$unnamed)"
