@@ -123,8 +123,8 @@ if (fs.existsSync(briefFile)) {
 
 const language = header.language ?? "en";
 
-// The components the run's style profile bans. A profile no store holds or a
-// malformed profile file is refused here; a bad grammar is the render stage's.
+// The components the run's style profile bans. A malformed profile file is
+// refused here; a missing profile or a bad grammar is the render stage's.
 let style;
 try {
   style = findStyle(run, header.style).profile;
