@@ -381,7 +381,7 @@ const SAMPLES = [
         lang: "json",
         file: `${draft.name}.json`,
         code: `{\n  "bg": "${draft.colors.bg}",\n  "accent": "${draft.colors.accent}"\n}`,
-        highlights: [{ lines: [3, 3], at: 1 }],
+        emphasis: { target: [3, 3], at: 1 },
       },
     },
   },

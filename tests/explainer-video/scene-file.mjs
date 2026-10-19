@@ -98,7 +98,7 @@ style: claude-code
 
 ### Visual
 \`\`\`json
-{ "component": "code", "props": { "lang": "bash", "file": "scripts/gate.sh", "code": "set -euo pipefail\\nscripts/check.sh full", "highlights": [ { "at": 2, "lines": [2, 2] } ] } }
+{ "component": "code", "props": { "lang": "bash", "file": "scripts/gate.sh", "code": "set -euo pipefail\\nscripts/check.sh full", "emphasis": { "target": [2, 2], "at": 2 } } }
 \`\`\`
 
 ## Scene diff · The fix

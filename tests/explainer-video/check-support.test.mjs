@@ -171,6 +171,38 @@ test("a visual item stays on screen long enough to read: 0.8 s a label, 0.3 s a 
   );
 });
 
+test("an item cued on a phrase is on screen from that phrase, not from its sentence", () => {
+  const steps = (on) => ({
+    component: "cards",
+    props: {
+      items: [
+        { at: 1, label: "Input", value: "issue" },
+        {
+          at: 2,
+          label: "Then",
+          value: "the code that makes the failing test pass",
+          ...(on && { on }),
+        },
+      ],
+    },
+  });
+  const run = (on) =>
+    check(
+      fixture({
+        scenes: edit(SCENES, 2, {
+          sentences: [say(17), say(18, "[no-claim]"), say(2)],
+          visual: steps(on),
+        }),
+      }),
+    );
+  assert.equal(line(run(), "reading"), "script reading: pass");
+  // `review` is the sentence's 18th and last word: 3 of 37 words remain.
+  assert.equal(
+    line(run("review"), "reading"),
+    "script reading: fail: steps item 2: 1.0 s on screen vs 3.2 s to read",
+  );
+});
+
 test("a code diff's reader reads the lines the render adds, a moved line among them", () => {
   const [, [, at, added]] = VISUALS.codediff.items({
     lang: "js",

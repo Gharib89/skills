@@ -6,6 +6,7 @@
 import { ARABIC, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
+import { cueWord } from "../lib/visuals.mjs";
 import { COMPONENTS, esc, seed } from "./components.mjs";
 
 export { esc };
@@ -120,7 +121,14 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
     .filter((l) => l.trim())
     .map((l) => `${scope} ${l}`)
     .join("\n");
-  const t = (at) => timing.sentences[at - 1];
+  // A cue is a sentence number, or `{ at, on }`: with `on`, the time of the
+  // phrase's first voiced word.
+  const t = (c) => {
+    const cue = typeof c === "number" ? { at: c } : c;
+    return cue.on === undefined
+      ? timing.sentences[cue.at - 1]
+      : timing.words[cueWord(scene.narration, cue)];
+  };
   const tweens = [
     ...c.reveals.map(([sel, at, cls = "settle"]) =>
       ease === "spring"

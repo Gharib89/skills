@@ -15,3 +15,4 @@ adds its row here in the same diff. A cell holds no `|`.
 | 0.28.0 | "effects" | None. |
 | 0.28.0 | "rise" | "soft" |
 | 0.28.0 | "clean" | "flat" |
+| 0.29.0 | "highlights" | "emphasis" |

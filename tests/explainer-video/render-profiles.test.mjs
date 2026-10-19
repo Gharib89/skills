@@ -99,7 +99,7 @@ test("a rise profile's scene carries no spring and its tweens are the old ones",
     assert.doesNotMatch(comp(fx, `scenes/${id}.html`), /SPRING|settleTime/, id);
     // every reveal is the rise tween: a 4-slot entry from y 20 to 0 in 0.35 s
     const reveals = tweens(fx, id).filter(
-      ([s]) => !/^\.(hl|del|add)|path$/.test(s),
+      ([s]) => !/^\.(em|del|add)|path$/.test(s),
     );
     assert.ok(reveals.length, id);
     for (const [, from, to, t] of reveals) {

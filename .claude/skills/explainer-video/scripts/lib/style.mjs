@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { userDirs } from "./paths.mjs";
 import { skill } from "./tools.mjs";
-import { VISUALS } from "./visuals.mjs";
+import { TECHNIQUES, VISUALS } from "./visuals.mjs";
 
 export const FALLBACK = "claude-code";
 
@@ -162,16 +162,28 @@ function checkSchema(profile) {
       );
 }
 
-// A scene naming a component the profile bans is refused. Compile checks it
+// Why `bans` bar a scene's component, or null: it is named, or it uses a
+// technique that is.
+export function banReason(bans, component, name) {
+  if (bans.includes(component))
+    return `component ${component} is banned by style profile ${name}`;
+  const technique = Object.keys(TECHNIQUES).find(
+    (t) => bans.includes(t) && TECHNIQUES[t].includes(component),
+  );
+  return technique
+    ? `component ${component} uses ${technique}, which style profile ${name} bans`
+    : null;
+}
+
+// A scene whose component the profile bans is refused. Compile checks it
 // against the profile it saw; render checks it again, since the profile may
 // have changed between the two.
 export function checkScenes(profile, scenes) {
   const { bans } = grammar(profile);
-  for (const s of scenes)
-    if (bans.includes(s.visual.component))
-      throw new Error(
-        `scene ${s.id}: component ${s.visual.component} is banned by style profile ${profile.name}`,
-      );
+  for (const s of scenes) {
+    const why = banReason(bans, s.visual.component, profile.name);
+    if (why) throw new Error(`scene ${s.id}: ${why}`);
+  }
 }
 
 // The profile's grammar and type scale, each refused by its field.
@@ -183,8 +195,8 @@ function features(profile) {
     if (field === "bans") {
       if (!Array.isArray(v)) refuse("grammar.bans is not a list");
       for (const b of v)
-        if (!Object.hasOwn(VISUALS, b))
-          refuse(`grammar.bans: ${b} is not a component`);
+        if (!Object.hasOwn(VISUALS, b) && !Object.hasOwn(TECHNIQUES, b))
+          refuse(`grammar.bans: ${b} is not a component or a technique`);
     } else if (field === "texture") {
       if (!plain(v))
         refuse(`grammar.texture is not an object like { "surface": "sketch" }`);
