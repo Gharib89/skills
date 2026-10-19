@@ -26,11 +26,11 @@ Attended, `isolate <issue> <type> <slug>` fetches, branches
 `<main checkout>/.claude/worktrees/<slug>-<issue>`, lists `.claude/worktrees/`
 once in the repo's shared exclude file (`<git common dir>/info/exclude`, so the
 consumer commits nothing and the main checkout's `git status` stays clean),
-copies the profile's `Carry:` files in one way, and prints the path. A `<slug>`
-already ending in `-<issue>` drops it, so the number appears once; `--rework`
-keeps the slug as given, since it names the PR's own branch. Unattended,
-`isolate ... --in-place` does the same fetch and branch in the sandbox clone,
-which is already isolation: no worktree, no carry.
+copies the profile's `Carry:` files in one way, and prints the path. For a
+`<slug>` already ending in `-<issue>`, `isolate` drops that suffix so the number
+appears once; `--rework` keeps the slug as given, since it names the PR's own
+branch. Unattended, `isolate ... --in-place` does the same fetch and branch in
+the sandbox clone, which is already isolation: no worktree, no carry.
 
 Creating the worktree is `isolate`'s call alone, rather than `EnterWorktree` or
 a bare `git worktree add`: it is what lands the worktree at the path and branch

@@ -68,7 +68,7 @@ capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged at abcdef
 # A run past the cap records its local round as `Past-cap:`, never as a reviewer
 # `Round:`, so the capped reviewer's rounds still read 1..Cap (ship-849). The
 # gate stays held, naming the cap and the head the local round read (#880).
-pastcap='reviewer primary: past cap 2, local round read abcdef0123456789, no host reviewer read it'
+pastcap='reviewer primary: past cap 2, local review read abcdef0123456789, no host reviewer read it'
 capped; before=$(grep -c '^Round: primary' "$f"); printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"
 held 'a local round past the cap' "$pastcap"
 check 'the local round adds no reviewer Round line' "$before" "$(grep -c '^Round: primary' "$f")"
@@ -81,6 +81,10 @@ base; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; 
 # `note` takes the one form the gate reads.
 base; check_rc 'note takes a past-cap line' 0 "$(bash "$m" note 'Review evidence' 'Past-cap: primary: tree unchanged at abcdef0123456789' --file "$f" >/dev/null 2>&1; echo $?)"
 check 'the past-cap line landed' 1 "$(grep -c '^Past-cap: primary: tree unchanged at abcdef0123456789$' "$f")"
+capped; printf 'Past-cap: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; unheld "another reviewer's past-cap line" "$pastcap"
+for bad in 'abc123' 'ABCDEF0123456789'; do
+  base; check_rc "note refuses a past-cap line at $bad" 1 "$(bash "$m" note 'Review evidence' "Past-cap: primary: tree unchanged at $bad" --file "$f" >/dev/null 2>&1; echo $?)"
+done
 base; answer=$(bash "$m" note 'Review evidence' 'Past-cap: primary: tree unchanged' --file "$f" 2>/dev/null); rc=$?
 check_rc 'note refuses a past-cap line with no head' 1 "$rc"
 check 'the refusal names the form' 'a Past-cap line is `Past-cap: <reviewer>: tree unchanged at <sha>`, the form gate clean reads: Past-cap: primary: tree unchanged' "$(jq -r .error <<<"$answer")"

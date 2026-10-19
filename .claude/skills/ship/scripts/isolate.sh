@@ -8,7 +8,8 @@
 #
 # `none` as the issue argument is the task-spec run: it is the literal branch
 # and worktree suffix, and every check runs unchanged. One trailing `-<n>` on
-# the slug is dropped, so the number appears once.
+# the slug is dropped, so the number appears once, except under `--rework`,
+# where the slug names the PR's own branch as given.
 #
 # Resolves the MAIN checkout through --git-common-dir, so a run started inside a
 # worktree lands its worktree in that checkout's container rather than its own.

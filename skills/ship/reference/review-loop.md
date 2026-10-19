@@ -78,6 +78,14 @@ primary capped with findings or stopped `not landed` whose fallback then exited
 last reviewer that stopped at `cap`, primary or fallback, and to a capped or
 not-landed primary whose fallback exited `not reviewed`.
 
+A local review past a reviewer's `Cap:` is no `Round:` of that reviewer, so its
+rounds still read 1 through `Cap:`. Review again while a review's fixes change
+files. Once one changes none, record `Past-cap: <reviewer>: tree unchanged at
+<sha>` with `run-file note Evidence "<line>" --issue <issue>`, `<sha>` the head
+that review read. `gate clean` still holds on the reviewer, reporting its cap
+and that `<sha>`, because no host reviewer read the fixes: the human reads them
+at the merge gate.
+
 ## Reading a round
 
 `poll-pr` returns the reviewer's rounds, each graded `substantive`, threads with
@@ -232,14 +240,6 @@ or `not invoked: <primary> reviewed` (a fallback whose primary reviewed, its
 exit word). A declined finding from a `Gating: yes` reviewer also leaves
 `Override: <reviewer>: <finding>, <evidence>` in the Run file, so the clean-gate
 decision reads the same override the human sees in the summary.
-
-A local round taken past a reviewer's `Cap:` is no `Round:` of that reviewer, so
-its rounds still read 1 through `Cap:`. Record it, once the round's dispositions
-changed no file, as `Past-cap: <reviewer>: tree unchanged at <sha>` with
-`run-file note Evidence "<line>" --issue <issue>`, `<sha>` the head the local
-round read. `gate clean` keeps the reviewer held, naming the cap and that head,
-because no host reviewer read the fixes: the human reads them at the merge
-gate.
 
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each file
