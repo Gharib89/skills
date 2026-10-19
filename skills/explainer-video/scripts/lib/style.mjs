@@ -162,6 +162,18 @@ function checkSchema(profile) {
       );
 }
 
+// A scene naming a component the profile bans is refused. Compile checks it
+// against the profile it saw; render checks it again, since the profile may
+// have changed between the two.
+export function checkScenes(profile, scenes) {
+  const { bans } = grammar(profile);
+  for (const s of scenes)
+    if (bans.includes(s.visual.component))
+      throw new Error(
+        `scene ${s.id}: component ${s.visual.component} is banned by style profile ${profile.name}`,
+      );
+}
+
 // The profile's grammar and type scale, each refused by its field.
 function features(profile) {
   const refuse = (why) => {

@@ -280,6 +280,21 @@ test("an Arabic run's face tokens resolve to the profile's Arabic companions", (
   assert.match(index, /--font-code: "jetbrains-mono";/);
 });
 
+test("a ban added to the profile after compile is refused at render", () => {
+  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
+  profiled(fx, "plain", {});
+  for (const s of ["script/compile.mjs", "voice/voice.mjs"])
+    assert.equal(stage(fx, s).code, 0, s);
+  profiled(fx, "plain", { grammar: { bans: ["flow"] } });
+  fs.rmSync(path.join(fx.dir, "style.json"), { force: true });
+  const r = stage(fx, "render/render.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^render: scene flow: component flow is banned by style profile plain$/m,
+  );
+});
+
 test("a scene naming a component the profile bans is refused at compile", () => {
   const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
   profiled(fx, "plain", { grammar: { bans: ["flow"] } });
