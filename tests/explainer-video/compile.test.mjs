@@ -1,6 +1,7 @@
 // The compile stage through its process door: a run folder holding a house
 // Markdown scene file, and assertions on the machine script it writes, the
 // `explainers/.gitignore`, its refusals, and the voice stage reading its output.
+// Part 2, compile-cues.test.mjs, holds the cue, emphasis and prop refusals.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
