@@ -166,12 +166,13 @@ test("one changed scene re-gates only that scene's samples", () => {
   assert.equal(r.code, 0, r.out + r.err);
   const [first, again] = calls(fx, "probe");
   const steps = JSON.parse(read(fx.dir, "timeline.json")).scenes[1];
+  // Times are written to 3 places, so the next scene's first sample (9.433)
+  // sits under this scene's truncated end (9.433333): cut at the rounded end.
+  const end = +(steps.start + steps.duration).toFixed(3);
   assert.ok(again.times.length > 1);
   assert.deepEqual(
     again.times,
-    first.times.filter(
-      (t) => t >= steps.start && t < steps.start + steps.duration,
-    ),
+    first.times.filter((t) => t >= steps.start && t < end),
   );
   assert.deepEqual(calls(fx, "check")[1].times, again.times);
 });
