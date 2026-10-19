@@ -43,7 +43,9 @@ FULL_RUN='prek run --all-files'
 # A changed file matching a row's globs belongs to the row with the longest
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
 # member's directory; <affected tests> takes {files}, relative to it, and an
-# empty one runs <tests>. An empty command is no check. The explainer-video
+# empty one runs <tests>. An empty command is no check. A deleted file is no
+# argument to affected tests, except a deleted .sh under a member named `shell`,
+# whose tests are picked by the script's basename. The explainer-video
 # rows name their suite under <affected tests> alone: `full` runs the whole
 # suite in the `tests` row, so a <tests> entry ran its `--turn` subset twice
 # more beside it.

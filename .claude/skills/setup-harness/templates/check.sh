@@ -45,7 +45,9 @@ FULL_RUN=''
 # A changed file matching a row's globs belongs to the row with the longest
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
 # member's directory; <affected tests> takes {files}, relative to it, and an
-# empty one runs <tests>. An empty command is no check.
+# empty one runs <tests>. An empty command is no check. A deleted file is no
+# argument to affected tests, except a deleted .sh under a member named `shell`,
+# whose tests are picked by the script's basename.
 TURN_ROWS=''
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS=''
