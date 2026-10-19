@@ -472,10 +472,10 @@ const listing = (dir) =>
 // GPU and software encodes of one composition differ, so the encode mode keys
 // the cached video. `--gpu` is passed only where NVENC probes usable: HyperFrames
 // would otherwise pick another GPU encoder this key does not name.
-const gpu = await backend.nvenc();
+const nvenc = await backend.nvenc();
 const key = crypto
   .createHash("sha256")
-  .update(JSON.stringify([...inputs, gpu ? "nvenc" : "x264"]));
+  .update(JSON.stringify([...inputs, nvenc ? "nvenc" : "x264"]));
 for (const f of listing(comp))
   key.update(f).update(fs.readFileSync(path.join(comp, f)));
 const renderDir = path.join(run, ".cache", "render");
@@ -486,7 +486,13 @@ if (!cached) {
   const part = video.replace(/\.mp4$/, ".part.mp4");
   await hyperframes(
     "video",
-    ["--quality", "looks", ...(gpu ? ["--gpu"] : []), "-o", path.resolve(part)],
+    [
+      "--quality",
+      "looks",
+      ...(nvenc ? ["--gpu"] : []),
+      "-o",
+      path.resolve(part),
+    ],
     comp,
   );
   fs.renameSync(part, video);

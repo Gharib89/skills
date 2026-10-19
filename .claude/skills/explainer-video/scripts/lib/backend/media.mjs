@@ -253,8 +253,9 @@ export async function computeCapability() {
 }
 
 // Whether ffmpeg can encode one frame on NVENC here: false with no ffmpeg, no
-// NVIDIA card or a driver too old for it. Mirrors HyperFrames' own probe, which
-// `--gpu` falls back from silently, so the render cache can key on the mode.
+// NVIDIA card or a driver too old for it. HyperFrames' `--gpu` falls back from
+// its own probe silently, so the render cache keys on this stand-in for it; the
+// two can disagree on an edge case (timeout, frame size, which ffmpeg binary).
 export async function nvenc() {
   const r = spawnSync(
     "ffmpeg",
