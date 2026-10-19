@@ -22,8 +22,7 @@ in Arabic.
 
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
    `model:kokoro-82m` and `model:wav2vec2-base-960h`, plus `onnx-cuda` where
-   setup lists it (Kokoro then voices on the GPU, and a CUDA failure at voice
-   time falls back to the CPU with one stderr line); Egyptian Arabic
+   setup lists it; Egyptian Arabic
    `model:egyptian-arabic-wav2vec2` and `key:gemini`; an ElevenLabs narrator
    `key:elevenlabs` and `model:wav2vec2-base-960h`; an own voice
    (`own:<name>`) the Arabic rows plus `own-voice` and `uv`. Run the setup

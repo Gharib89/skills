@@ -47,12 +47,11 @@ being the folder this file is in:
    stop.
 2. **One yes.** Show the table as printed, with any line under it (the
    `ace-step` and `own-voice` rows': GPU or CPU here, and on the CPU its cost
-   per 30 s of score or narration; the `onnx-cuda` row's: whether Kokoro runs on
-   the GPU here, or which NVIDIA library is missing), then ask once for the
-   whole table, naming the total it prints: one yes installs every missing
-   row and removes every stale install. Run install only after the yes. When
-   every missing row is a system package or a key and nothing is stale, skip
-   the question and go to step 4.
+   per 30 s of score or narration), then ask once for the whole table, naming
+   the total it prints: one yes installs every missing row and removes every
+   stale install. Run install only after the yes. When every missing row is a
+   system package or a key and nothing is stale, skip the question and go to
+   step 4.
 3. **Install.** `node <skill>/scripts/setup.mjs install`, with the same
    `--all` and `--voice`. It installs into the tool cache and the font store,
    removes the stale installs, then prints the table again.
@@ -66,14 +65,13 @@ being the folder this file is in:
    check again; Voice waits until the key reads `present`. Any other `refused`
    or `failed` row: relay the reason as printed.
 
-The `onnx-cuda` row appears only on Linux x64 with an NVIDIA card of compute
-capability 7.5 or higher, beside an English Kokoro narrator, and puts
-onnxruntime's CUDA provider beside onnxruntime-node so Kokoro voices on the GPU
-(about twice as fast as the CPU for a cold voice run). The provider needs the
-host's own CUDA 13 and cuDNN 9 libraries, which setup never installs: with one
-missing it prints which, and the install line for cuDNN, and Kokoro stays on
-the CPU. A run that finds CUDA failing at voice time falls back to the CPU with
-one stderr line.
+`onnx-cuda` (Kokoro on the GPU) is listed on Linux x64 with an NVIDIA card of
+compute capability 7.5 or higher, beside an English Kokoro narrator: it puts
+onnxruntime's CUDA provider beside onnxruntime-node. CUDA 13 and cuDNN 9 are
+host prerequisites: the line under the table says whether Kokoro runs on the
+GPU here or names the missing library, and Kokoro stays on the CPU until it is
+there. A CUDA failure at voice time falls back to the CPU and prints one stderr
+line.
 
 Whenever the **Gemini data notice** prints under a table, relay it word for
 word: setup prints it once per key, the first time Google accepts that key.

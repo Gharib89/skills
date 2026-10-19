@@ -15,6 +15,7 @@ import {
   row,
   run,
 } from "./setup-lib.mjs";
+import { ORT_CUDA_MIN_CAP } from "../../skills/explainer-video/scripts/lib/tools.mjs";
 
 const ID = "onnx-cuda";
 const cudaFixture = () =>
@@ -127,4 +128,21 @@ test("with a library missing, setup names it, prints the install line and keeps 
   assert.match(i.out, /Kokoro stays on the CPU/);
   assert.match(i.out, /apt: sudo apt install cudnn9-cuda-13/);
   assert.doesNotMatch(i.out, /runs on the GPU here/);
+});
+
+test("a missing library other than cuDNN is named without the cuDNN install line", () => {
+  const fx = cudaFixture();
+  const env = {
+    ...machine(7.5),
+    EXPLAINER_VIDEO_FAKE_CUDA:
+      "libcudart.so.13 is not found by the dynamic loader",
+  };
+  const i = run(fx, ["install"], "ffmpeg", env);
+  assert.match(i.out, /CUDA is unavailable here: libcudart\.so\.13/);
+  assert.doesNotMatch(i.out, /apt:|cudnn9/);
+});
+
+test("the row's compute capability floor is the one the voice stage checks", () => {
+  const cuda = realRows().find((r) => r.id === ID);
+  assert.equal(cuda.minCapability, ORT_CUDA_MIN_CAP);
 });

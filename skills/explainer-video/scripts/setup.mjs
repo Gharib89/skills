@@ -410,11 +410,15 @@ async function cudaLines(state) {
   const r = rows.find((r) => r.kind === "cuda");
   if (!r || state.get(r) !== "present") return [];
   const why = await backend.cudaProbe(dest({ kind: "npm" }));
+  // The row's install lines are cuDNN's: other missing libraries get none.
+  const cudnn = why?.includes("libcudnn");
   return why
     ? [
         "",
-        `${r.id}: CUDA is unavailable here: ${why}. Kokoro stays on the CPU. Install the NVIDIA libraries yourself, then check again; for cuDNN 9:`,
-        ...Object.entries(r.install).map(([via, line]) => `  ${via}: ${line}`),
+        `${r.id}: CUDA is unavailable here: ${why}. Kokoro stays on the CPU. Install the NVIDIA libraries yourself, then check again${cudnn ? "; for cuDNN 9:" : "."}`,
+        ...(cudnn
+          ? Object.entries(r.install).map(([via, line]) => `  ${via}: ${line}`)
+          : []),
       ]
     : [
         "",
