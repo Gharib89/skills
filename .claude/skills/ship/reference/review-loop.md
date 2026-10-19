@@ -68,15 +68,23 @@ unchanged at <sha>` for the fix's head, so the stop covers the PR head again;
 otherwise the clean gate holds on the old stop and the human decides.
 
 **The cap round, a docs-only round and a not-landed primary's last round each
-get one local review before the merge gate** when their fixes changed the
-tree: one `code-review` subagent, Standards axis only, over the fix-only
-diff, its Report file `<scratch>/standards/standards-report-local.md` so it
-never overwrites phase 4's round 1. Its findings take the dispositions above;
-`Cap:` is unchanged and no host round is requested. Skip this review for a
+get a local review before the merge gate** when their fixes changed the
+tree, repeated while its own fixes change files: one `code-review` subagent,
+Standards axis only, over the fix-only diff, its Report file
+`<scratch>/standards/standards-report-local.md` so it never overwrites phase 4's
+round 1. Its findings take the dispositions above; `Cap:` is unchanged and no
+host round is requested. Skip this review for a
 primary capped with findings or stopped `not landed` whose fallback then exited
 `reviewed`: the fallback's host rounds read those fixes. The review goes to the
 last reviewer that stopped at `cap`, primary or fallback, and to a capped or
 not-landed primary whose fallback exited `not reviewed`.
+
+A local review past a reviewer's `Cap:` is no `Round:` of that reviewer, so its
+rounds still read 1 through `Cap:`. Once a review's fixes change no file, record
+`Past-cap: <reviewer>: tree unchanged at <sha>` with `run-file note Evidence
+"<line>" --issue <issue>`, `<sha>` the head that review read. `gate clean` still
+holds on the reviewer, reporting its cap and that `<sha>`, because no host
+reviewer read the fixes: the human reads them at the merge gate.
 
 ## Reading a round
 

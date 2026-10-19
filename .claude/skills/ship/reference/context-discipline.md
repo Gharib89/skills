@@ -100,7 +100,8 @@ task list is its **display**, one harness task per item: create all ten from
 init's `items` in one parallel turn, then set phase 0 to its `mirror`, so the
 human sees the phases still ahead and not only the open one. `run-file next
 <n>` closes the open phase and opens `<n>` in one call and returns both `mirror`
-values, two `TaskUpdate`s. `open`, `close` and `skip` flip one phase, and each
+values, two `TaskUpdate`s; with no phase open it only opens `<n>` (`closed:
+null`), one `TaskUpdate`. `open`, `close` and `skip` flip one phase, and each
 returns the `mirror` its task takes. Phase 4 may open while phase 3 is still
 open, both stamped; a phase-4 fix that touches a path a Verification already ran
 on re-runs that Verification scoped to the fix before phase 3 closes. `close 3`

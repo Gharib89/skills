@@ -250,6 +250,9 @@ note)
     text="- $n: $text"
   fi
   case $text in Criterion*) [[ $text =~ $crit ]] || ship_fail "a Criterion line is \`Criterion <n>: met: <proof>\` or \`Criterion <n>: not met: <reason>\`, the form gate clean reads: $text" ;; esac
+  # The local review a run takes past a reviewer's cap: a line of its own, so the
+  # reviewer's `Round:` lines still read 1..Cap (#880).
+  case $text in Past-cap:*) [[ $text =~ ^Past-cap:\ .+:\ tree\ unchanged\ at\ [0-9a-f]{7,64}$ ]] || ship_fail "a Past-cap line is \`Past-cap: <reviewer>: tree unchanged at <sha>\`, the form gate clean reads: $text" ;; esac
   append_to_section "## $sect" "$text"
   jq -n --arg f "$file" --arg s "$sect" --arg l "$text" '{run_file: $f, section: $s, line: $l}'
   ;;

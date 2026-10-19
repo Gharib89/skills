@@ -167,7 +167,16 @@ next)
   next_line=$line next_lineno=$lineno
   opens=$(open_phases | tr '\n' ' ')
   case $opens in
-    '') ship_fail "no phase is open; use \`run-file open $n\`" ;;
+    '')
+      # Nothing to close: `next` is `open` under the same order check.
+      gap=$(unflipped "$n")
+      [ -n "$gap" ] && refuse_gap open "$gap" "$n"
+      opened=$(render open "$(item "$next_line")" "$(date -u +%H:%M)")
+      write_line "$next_lineno" "$opened"
+      jq -n --arg f "$file" --argjson n "$n" --arg ol "$opened" \
+        '{run_file: $f, closed: null, opened: {phase: $n, line: $ol, mirror: "in_progress"}}'
+      exit 0
+      ;;
     *" "?*) ship_fail "phases ${opens%% *} and $(printf '%s' "${opens#* }" | tr -d ' ') are both open; close ${opens%% *} first with \`run-file close ${opens%% *}\`, then retry \`run-file next $n\`" ;;
   esac
   c=${opens% }
