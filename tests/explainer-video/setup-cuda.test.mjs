@@ -112,6 +112,18 @@ test("install downloads the pinned package after npm-packages, puts the provider
   assert.equal(row(gone.out, ID)[2], "missing", gone.out);
 });
 
+test("an npm folder about to be rebuilt takes the provider with it, so the row reads missing until npm is back", () => {
+  const fx = cudaFixture();
+  run(fx, ["install"], "ffmpeg", machine(7.5));
+  const node = path.join(cacheDir(fx), "node");
+  const [lock] = fs.readdirSync(node);
+  fs.rmSync(path.join(node, lock, ".stamp"));
+  const c = run(fx, ["check"], "ffmpeg", machine(7.5));
+  assert.equal(row(c.out, ID)[2], "missing", c.out);
+  const i = run(fx, ["install"], "ffmpeg", machine(7.5));
+  assert.equal(row(i.out, ID)[2], "present", i.out);
+});
+
 test("a package whose sha256 differs from its pin fails the row and installs no provider", () => {
   const fx = fixture(
     realRows().map((r) =>

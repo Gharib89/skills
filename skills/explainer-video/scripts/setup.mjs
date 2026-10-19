@@ -29,6 +29,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { formatSize, sha256 } from "./lib/files.mjs";
 import {
   OWN_PREFIX,
   narrator as findNarrator,
@@ -223,7 +224,15 @@ function status(r) {
     return backend.which(r.command) ? "present" : "missing";
   if (r.kind === "profile") return `refused: ${r.why}`;
   if (r.kind === "font" && fontGap(r)) return "missing";
-  if (r.kind === "cuda" && !ortProvider(dest({ kind: "npm" })))
+  // The provider lives in the npm folder: an npm install about to rebuild that
+  // folder takes the libraries with it, so the row is missing until npm is there.
+  if (
+    r.kind === "cuda" &&
+    !(
+      fs.existsSync(stamp(dest({ kind: "npm" }))) &&
+      ortProvider(dest({ kind: "npm" }))
+    )
+  )
     return "missing";
   const s = stamp(installDir(r));
   if (!fs.existsSync(s)) {
@@ -277,14 +286,6 @@ function stale() {
     }
   }
   return out;
-}
-
-// A file's sha256, hashed as a stream: a checkpoint can pass the 2 GiB a file
-// read takes.
-async function sha256(file) {
-  const hash = crypto.createHash("sha256");
-  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
-  return hash.digest("hex");
 }
 
 // A row's files from Hugging Face into `dir`, pinned by revision and checked by
@@ -378,13 +379,6 @@ async function install(r) {
   fs.writeFileSync(stamp(dir), "");
   return "present";
 }
-
-const formatSize = (n) =>
-  n >= 1e9
-    ? `${(n / 1e9).toFixed(1)} GB`
-    : n >= 1e6
-      ? `${Math.round(n / 1e6)} MB`
-      : `${Math.max(1, Math.round(n / 1e3))} KB`;
 
 // Whether a key's data notice is due, recording that it was shown. No tier
 // can be read from a key, so every key sees it once, remembered by a
