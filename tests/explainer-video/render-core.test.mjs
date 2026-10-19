@@ -304,3 +304,23 @@ test("render on a mistyped run folder says which stage to run and writes nothing
   assert.ok(!fs.existsSync(path.join(fx.tmp, ".gitignore")));
   assert.ok(!fs.existsSync(path.join(fx.tmp, "typo")));
 });
+
+test("the video encodes on NVENC where one works, the stills never ask for it, and a render is not reused across encode modes", () => {
+  const fx = fixture();
+  const cpu = render(fx);
+  assert.equal(cpu.code, 0, cpu.out + cpu.err);
+  assert.ok(calls(fx).every((c) => !c.args.includes("--gpu")));
+
+  const before = calls(fx).length;
+  const gpu = render(fx, { EXPLAINER_VIDEO_FAKE_NVENC: "1" });
+  assert.equal(gpu.code, 0, gpu.out + gpu.err);
+  assert.match(gpu.out, /stills 3\/3 cached, video rendered$/m);
+  const fresh = calls(fx).slice(before);
+  assert.equal(fresh.length, 1);
+  assert.ok(fresh[0].args.includes("--gpu"));
+
+  const again = render(fx, { EXPLAINER_VIDEO_FAKE_NVENC: "1" });
+  assert.match(again.out, /video cached$/m);
+  const back = render(fx);
+  assert.match(back.out, /video cached$/m);
+});

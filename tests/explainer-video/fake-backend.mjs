@@ -132,6 +132,11 @@ export async function computeCapability() {
   return cap ? +cap : null;
 }
 
+// EXPLAINER_VIDEO_FAKE_NVENC `1`: ffmpeg encodes on NVENC (unset, it cannot).
+export async function nvenc() {
+  return process.env.EXPLAINER_VIDEO_FAKE_NVENC === "1";
+}
+
 export function memory() {
   return +(process.env.EXPLAINER_VIDEO_FAKE_RAM ?? 64e9);
 }

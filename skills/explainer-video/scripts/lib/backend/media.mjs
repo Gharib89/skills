@@ -252,6 +252,32 @@ export async function computeCapability() {
   return r.status === 0 && cap ? cap : undefined;
 }
 
+// Whether ffmpeg can encode one frame on NVENC here: false with no ffmpeg, no
+// NVIDIA card or a driver too old for it. Mirrors HyperFrames' own probe, which
+// `--gpu` falls back from silently, so the render cache can key on the mode.
+export async function nvenc() {
+  const r = spawnSync(
+    "ffmpeg",
+    [
+      "-v",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "color=s=256x256:d=0.1",
+      "-frames:v",
+      "1",
+      "-c:v",
+      "h264_nvenc",
+      "-f",
+      "null",
+      "-",
+    ],
+    { encoding: "utf8", timeout: 10000 },
+  );
+  return r.status === 0;
+}
+
 export const memory = () => os.totalmem();
 
 // The OS and CPU, as Node names them, and macOS's version from sw_vers (null
