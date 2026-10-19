@@ -11,7 +11,8 @@
 #   stderr: a failing gate's last 40 log lines, and the last 40 lines of
 #           check.sh's own stderr unless check.sh answered a clean pass; this
 #           repo's gates slot adds scripts/glossary-warn.sh's `glossary:` lines
-#           on every run, uncapped, which set no gate status
+#           and scripts/context-report.sh's size lines on every run, uncapped,
+#           which set no gate status
 #   exit:   0 every gate passed · 1 a gate failed · 2 tooling
 #   gate status: pass | fail | deferred-to-ci | unavailable
 #   verdict: pass | fail | unavailable; fail wins over unavailable
@@ -123,6 +124,9 @@ run version-lines scripts/version-line-check.sh "$base"
 # glossary-warn is a warning, not a gate: its hits go to stderr for the author to
 # read, its exit status is ignored, and no gate status is put for it.
 scripts/glossary-warn.sh "$base" >&2 || true
+# context-report is the same kind: the always-on context's sizes, for the author
+# to read, with no cap and no gate status.
+scripts/context-report.sh >&2 || true
 # --- end gates -----------------------------------------------------------------
 
 # A name both report keeps the worse status, so neither side can mask a failure.

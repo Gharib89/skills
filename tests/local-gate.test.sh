@@ -51,7 +51,9 @@ STUB
   printf '#!/usr/bin/env bash\necho "contract-check.sh $*" >> "$CALLS"\n' > "$d/scripts/contract-check.sh"
   # A warning, not a gate: its exit status, here a tooling 2, grades nothing.
   printf '#!/usr/bin/env bash\nexit 2\n' > "$d/scripts/glossary-warn.sh"
-  chmod +x "$d/scripts/derived-copies-check.sh" "$d/scripts/contract-check.sh" "$d/scripts/check.sh" "$d/tests/run.sh" "$d/scripts/version-line-check.sh" "$d/scripts/glossary-warn.sh"
+  # The same for the context report, which prints $CONTEXT_LINE when a case sets it.
+  printf '#!/usr/bin/env bash\n[ -z "${CONTEXT_LINE-}" ] || echo "$CONTEXT_LINE"\nexit 2\n' > "$d/scripts/context-report.sh"
+  chmod +x "$d/scripts/derived-copies-check.sh" "$d/scripts/contract-check.sh" "$d/scripts/check.sh" "$d/tests/run.sh" "$d/scripts/version-line-check.sh" "$d/scripts/glossary-warn.sh" "$d/scripts/context-report.sh"
   git_ "$d" init -q && git_ "$d" add -A && git_ "$d" commit -qm base && git_ "$d" tag base || return 1
   printf '%s' "$d"
 }
@@ -75,6 +77,13 @@ check "the gates are check.sh's checks plus secrets and version-lines, each once
 check "check.sh runs once, as full, with no CHECK_DEADLINE, and the suite is check.sh's alone" \
   "check.sh full deadline=unset
 version-line-check.sh base" "$calls"
+
+CHECK_OUT=$ALL_GREEN CONTEXT_LINE='total: 1 chars' gate "$d"
+check_rc "the context report's tooling exit 2 grades nothing" 0 "$rc"
+check "the context report's lines reach stderr" "total: 1 chars" "$err"
+check "the report adds no gate status and leaves the verdict JSON as it was" \
+  '{"verdict":"pass","base":"base","lane":"full","gates":{"derived-copies":"pass","runner":"pass","secrets":"pass","tests":"pass","version-lines":"pass"}}' \
+  "$(jq -c '.gates |= (to_entries | sort_by(.key) | from_entries)' <<<"$out")"
 
 CHECK_OUT=$ALL_GREEN VERSION_RC=1 gate "$d"
 check_rc "version-lines failing fails the verdict" 1 "$rc"
