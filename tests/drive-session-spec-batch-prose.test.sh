@@ -36,6 +36,9 @@ allow_rules=(
   "a small lane hold asks for one more host round|a host round read an earlier head. Ask the session with \`--text\` for one more host round|a host round read an earlier head. Answer \`--text merge\` at once"
   "a cap hold takes the same extra round|the same one more host round, and the same answer|answer \`--text merge\` with no further host round"
   "other holds and unmet criteria are escalations|any other \`held_by\` entry, and every unmet criterion are escalations|any other \`held_by\` entry, and every unmet criterion are merged"
+  "other reviewer entries do not qualify|and no other \`reviewer <x>:\` entry (\`not landed\`|and every other \`reviewer <x>:\` entry (\`not landed\`"
+  "a round that stops on findings or cap again escalates|A round that stops on findings or on cap again,|A round that stops on findings or on cap again is merged,"
+  "a session waiting on an escalation is never marked|never on a session waiting on an escalation|also on a session waiting on an escalation"
   "a finished task is read with --rest|read it with \`--rest\`, so|read it without \`--rest\`, so"
 )
 for r in "${allow_rules[@]}"; do

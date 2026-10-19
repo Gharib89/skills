@@ -87,9 +87,9 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
    text still in the input box gets `--keys Enter`; a session back at its
    prompt gets its next `--text`.
 7. **Loop** from step 3 while any session is running. A session waiting on an
-   escalation is at rest; once you relay the user's reply, it runs again, so
-   start step 3 again. When `watch` exits 1 on no live session, every session
-   is gone or at rest: report.
+   escalation is idle but not marked at rest; once you relay the user's reply,
+   it runs again, so start step 3 again. When `watch` exits 1 on no live
+   session, every session is gone or marked at rest: report.
 
 ## Escalation
 
@@ -110,7 +110,8 @@ answer, so the user can reply in one word. Relay the reply with `answer` to that
 session. While it waits, keep watching the others.
 
 The **merge allowance** is the launch prompt's permission to merge on a clean
-gate ("merge each if all OK"). A ship profile's `Merge: on-clean-gate` is not a
+gate, or one held only by the reviewer rules below ("merge each if all OK"). A
+ship profile's `Merge: on-clean-gate` is not a
 merge allowance: a run stopped at its gate there is any other merge gate. A
 run whose summary reports the PR merged is at rest, with nothing left to
 answer: read it with `--rest`, so `watch` stops waking on its idle compaction
