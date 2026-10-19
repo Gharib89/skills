@@ -43,7 +43,9 @@ FULL_RUN='prek run --all-files'
 # A changed file matching a row's globs belongs to the row with the longest
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
 # member's directory; <affected tests> takes {files}, relative to it, and an
-# empty one runs <tests>. An empty command is no check. The explainer-video
+# empty one runs <tests>. An empty command is no check. A deleted file is no
+# argument to affected tests, except a deleted .sh under a member named `shell`,
+# whose tests are picked by the script's basename. The explainer-video
 # rows name their suite under <affected tests> alone: `full` runs the whole
 # suite in the `tests` row, so a <tests> entry ran its `--turn` subset twice
 # more beside it.
@@ -236,9 +238,13 @@ rung_turn() {
   local f o rows='' pairs='' row files pair tab='	' new='' rec changed='' p
   if [ "$#" -eq 0 ]; then
     # Every uncommitted change, untracked files included. NUL-separated, so
-    # no path comes back quoted; a rename's second record is its old path.
+    # no path comes back quoted; a rename's second record is its old path,
+    # which counts as deleted, and a copy's is a file that has not changed.
     while IFS= read -r -d '' rec; do
-      case $rec in R* | C*) IFS= read -r -d '' _ ;; esac
+      case $rec in
+        R*) IFS= read -r -d '' p; changed="$changed$p$nl" ;;
+        C*) IFS= read -r -d '' _ ;;
+      esac
       changed="$changed${rec#???}$nl"
     done < <(git status --porcelain -z --untracked-files=all)
     local IFS=$nl
@@ -259,9 +265,12 @@ rung_turn() {
       '') ;;
       new-root) new="$new ${f%/*}" ;;
       # A deleted file still selects its member, whose typecheck may now
-      # break, but is no argument to affected tests.
+      # break, but is no argument to affected tests. A deleted .sh is the
+      # exception for the `shell` row: its tests are picked by the script's
+      # basename, so they still have to run once the file is gone.
       *) case $nl$rows in *"$nl$o$nl"*) ;; *) rows="$rows$o$nl" ;; esac
-         [ -e "$f" ] && pairs="$pairs$o$tab$f$nl" ;;
+         case ${f##*.}:${o#*|} in sh:shell\|*) ;; *) [ -e "$f" ] || continue ;; esac
+         pairs="$pairs$o$tab$f$nl" ;;
     esac
   done
   if [ -n "$new" ]; then

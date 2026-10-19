@@ -267,6 +267,45 @@ run "$r" turn web/old/gone.ts
 check "a named file deleted with its directory still checks its member" "typecheck
 suite" "$(cat "$ARGS_LOG")"
 
+# A deleted .sh is still named by the tests that call it, and the shell row's
+# selector matches by basename, so the row gets the path with no file on disk.
+# Any other row keeps excluding a deleted path.
+r=$(repo deleted-sh "TURN_ROWS='web/|web|*.ts|||args web {files}
+lib/|shellx|*.sh|||args shellx {files}
+|shell|*.sh|||args shell {files}'")
+mkdir -p "$r/web" "$r/scripts" "$r/lib"
+echo x > "$r/web/gone.ts"; echo x > "$r/scripts/gone.sh"; echo x > "$r/lib/gone.sh"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+rm "$r/scripts/gone.sh" "$r/lib/gone.sh"
+: > "$ARGS_LOG"
+run "$r" turn
+check "a deleted .sh reaches the shell row's affected tests, a .sh row of another member gets none" \
+  "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
+rm "$r/web/gone.ts"; echo y > "$r/web/new.ts"
+: > "$ARGS_LOG"
+run "$r" turn
+check "a deleted .ts beside it gives its row no missing path" \
+  "web new.ts
+shell scripts/gone.sh" "$(sort -r "$ARGS_LOG")"
+: > "$ARGS_LOG"
+run "$r" turn scripts/gone.sh
+check "a deleted .sh named on the command line reaches the shell row" \
+  "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
+
+# A rename is a deletion of its source: the default file set keeps the old path
+# of a staged rename, so the tests naming the old script's basename still run.
+r=$(repo renamed "TURN_ROWS='|shell|*.sh|||args shell {files}'")
+echo x > "$r/old.sh"; echo x > "$r/moved.sh"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+git -C "$r" mv old.sh new.sh; git -C "$r" mv moved.sh moved.txt
+: > "$ARGS_LOG"
+run "$r" turn
+check "a renamed .sh hands its old and new path to the shell row" \
+  "moved.sh
+new.sh
+old.sh
+shell" "$(tr ' ' '\n' < "$ARGS_LOG" | sort)"
+
 # A root's dependencies, missing as in a fresh worktree, are installed before
 # any other check on every rung, so a runner hook that calls a root's own
 # binary finds it on the first call (#586). Each command runs from the repo root.
