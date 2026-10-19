@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.26.1 (2026-10-19)
+
+### Bug Fixes
+
+- **explainer-video**: Count voice QC's rate in spoken characters
+  ([#878](https://github.com/Gharib89/skills/pull/878),
+  [`d7bb0a2`](https://github.com/Gharib89/skills/commit/d7bb0a2fc014b7990b522fe174f72240d0402f36))
+
+
 ## v0.26.0 (2026-10-19)
 
 ### Features
