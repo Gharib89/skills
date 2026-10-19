@@ -341,6 +341,7 @@ fs.rmSync(raw);
 const timing = (sc) => ({
   duration: sc.duration,
   sentences: sc.sentences.map((t) => r3(t - sc.start)),
+  words: sc.words.map((w) => r3(w.start - sc.start)),
 });
 const files = [];
 for (const [i, s] of script.scenes.entries()) {

@@ -321,6 +321,37 @@ test("a ban added to the profile after compile is refused at render", () => {
   );
 });
 
+test("a profile banning draw refuses a scene whose component draws arrows on, at compile and again at render", () => {
+  assert.doesNotThrow(() => validate(odd({ grammar: { bans: ["draw"] } })));
+  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
+  profiled(fx, "plain", { grammar: { bans: ["draw"] } });
+  const r = stage(fx, "script/compile.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^compile: flow: component flow uses draw, which style profile plain bans$/m,
+  );
+
+  profiled(fx, "plain", {});
+  for (const s of ["script/compile.mjs", "voice/voice.mjs"])
+    assert.equal(stage(fx, s).code, 0, s);
+  profiled(fx, "plain", { grammar: { bans: ["draw"] } });
+  fs.rmSync(path.join(fx.dir, "style.json"), { force: true });
+  const late = stage(fx, "render/render.mjs");
+  assert.equal(late.code, 1, late.out + late.err);
+  assert.match(
+    late.err,
+    /^render: scene flow: component flow uses draw, which style profile plain bans$/m,
+  );
+});
+
+test("a profile banning draw still compiles scenes whose components draw nothing on", () => {
+  const fx = fixture(SCRIPT.replace("style: claude-code", "style: plain"));
+  profiled(fx, "plain", { grammar: { bans: ["draw"] } });
+  const r = stage(fx, "script/compile.mjs");
+  assert.equal(r.code, 0, r.out + r.err);
+});
+
 test("a scene naming a component the profile bans is refused at compile", () => {
   const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: plain"));
   profiled(fx, "plain", { grammar: { bans: ["flow"] } });

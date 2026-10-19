@@ -60,6 +60,7 @@ const FIXTURE = [
             { at: 1, label: "Input", value: "issue" },
             { at: 2, label: "Then", value: "pull request" },
           ],
+          emphasis: { target: "Input", at: 1 },
         },
       },
     },

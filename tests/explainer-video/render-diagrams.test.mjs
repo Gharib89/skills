@@ -73,7 +73,7 @@ test("each diagram and code component composes onto its scene's paused timeline,
   assert.match(code, /<span style="color:var\(--code-[a-z-]+\)">/);
   assert.match(code, /--code-token-keyword: var\(--accent\);/);
   assert.match(code, /class="code rt" dir="ltr"/);
-  const bar = tweens(fx, "code").find(([s]) => s === ".hl0");
+  const bar = tweens(fx, "code").find(([s]) => s === ".em");
   assert.ok(near(bar[3], at(fx, "code", 2)));
 
   // The diff: the removed line closes and the added one opens at sentence 2,
