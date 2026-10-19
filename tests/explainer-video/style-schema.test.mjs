@@ -272,6 +272,15 @@ test("a malformed profile file is refused at compile naming the file", () => {
   );
 });
 
+test("the default code row is 45 px, so 12 rows fit the 690 px content band", () => {
+  const fx = fixture(DIAGRAMS);
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(comp(fx, "scenes/code.html"), /\.ln \{[^}]*height: 45px/);
+  // bar 56 + 1, body padding 2 * 28, 12 rows, frame border 2 * 2
+  assert.ok(56 + 1 + 56 + 12 * 45 + 4 <= 690);
+});
+
 test("a code step override moves the code row height with it", () => {
   const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: big"));
   profiled(fx, "big", { scale: { code: 40 } });
@@ -279,8 +288,8 @@ test("a code step override moves the code row height with it", () => {
   assert.equal(r.code, 0, r.out + r.err);
   assert.match(comp(fx), /--size-code: 40px;/);
   const code = comp(fx, "scenes/code.html");
-  assert.match(code, /var\(--size-code\)\/60px/);
-  assert.match(code, /\.ln \{[^}]*height: 60px/);
+  assert.match(code, /var\(--size-code\)\/56px/);
+  assert.match(code, /\.ln \{[^}]*height: 56px/);
 });
 
 test("an Arabic run's face tokens resolve to the profile's Arabic companions", () => {
