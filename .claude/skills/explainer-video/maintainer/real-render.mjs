@@ -23,6 +23,7 @@ import {
   catalogue,
   compositionAssets,
   dest,
+  fontGap,
   fontRow,
   hyperframesEnv,
   loadBackend,
@@ -91,6 +92,11 @@ const profile = loadStyle(work, "claude-code");
 const fontRows = [
   ...new Set(typeRoles("en").map((r) => profile.type[r].font)),
 ].map((font) => fontRow(profile, font));
+const gaps = fontRows.map(fontGap).filter(Boolean);
+if (gaps.length) {
+  console.error(`real-render: ${gaps.join(", ")}: run /explainer-video setup`);
+  process.exit(2);
+}
 
 // A mono 16-bit tone of `seconds`, the narration stand-in.
 const tone = (seconds) => {
