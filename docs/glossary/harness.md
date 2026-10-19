@@ -37,7 +37,7 @@ One workspace package inside a stack: the unit typecheck and affected tests run 
 _Avoid_: package (overloaded), module, subproject
 
 **File kind**:
-Tracked files that tools act on without a package manager, such as shell scripts, Dockerfiles, workflow YAML and Markdown. They take the edit and commit rungs only, never turn.
+Tracked files that tools act on without a package manager, such as shell scripts, Dockerfiles, workflow YAML and Markdown. They take the edit and commit rungs only, never turn, unless a repo hand-adds a turn row for one (this repo does for shell, in `docs/agents/harness.md`).
 _Avoid_: pseudo-stack, file type
 
 **Catalog**:

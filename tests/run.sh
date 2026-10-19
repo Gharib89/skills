@@ -15,7 +15,10 @@
 # still names the file that made the call, and the report is printed once every
 # file has finished, in file order, whichever finished first.
 #
-#   tests/run.sh
+#   tests/run.sh [<test file>...]
+#
+# With test files named, only those run (the turn rung's shell row passes the
+# ones an edit can break); the host stub and the report are the same.
 #
 # stdout: one line per test file, after any `skipped` lines it printed, then a
 #         count, then each failing file again
@@ -27,6 +30,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 
 shopt -s nullglob
 files=(tests/*.test.sh)
+# Test files named on the command line replace the whole suite.
+[ "$#" -eq 0 ] || files=("$@")
 [ "${#files[@]}" -gt 0 ] || { echo "no test files under tests/" >&2; exit 2; }
 
 source tests/host-stub.sh
