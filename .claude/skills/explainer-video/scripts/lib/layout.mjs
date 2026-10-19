@@ -39,10 +39,19 @@ export const readable = (e, t, moving) =>
 
 export function judge(checked, frames, floor, add, moving = () => false) {
   const { textPx, margin } = floor.layout;
+  // A check finding names its text and sample time only: it is held back when
+  // every probed box with that text is unreadable then.
+  const unread = (f) => {
+    const boxes = (frames.find((x) => x.t === f.time)?.elements ?? []).filter(
+      (e) => f.text?.startsWith(e.text),
+    );
+    return boxes.length && boxes.every((e) => !readable(e, f.time, moving));
+  };
   for (const f of checked.layout.findings)
-    if (f.severity === "error") add("layout", f.time, `${f.code} "${f.text}"`);
+    if (f.severity === "error" && !unread(f))
+      add("layout", f.time, `${f.code} "${f.text}"`);
   for (const f of checked.contrast.findings)
-    if (f.severity === "error")
+    if (f.severity === "error" && !unread(f))
       add(
         "contrast",
         f.time,

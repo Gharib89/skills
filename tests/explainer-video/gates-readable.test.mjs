@@ -35,6 +35,14 @@ test("a box mid-reveal is not judged, and is judged once fully shown", () => {
   assert.equal(firstAt(fx), 1);
 });
 
+test("a HyperFrames finding on a box mid-reveal is held back too", () => {
+  const fx = fixture();
+  // The fake check flags a "clipped" box at every sample, shown or not.
+  const r = renderUnjudged(fx, titled("clipped fading"));
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(firstAt(fx), 1);
+});
+
 test("the gate's samples include every timeline event of the scene, one per whole frame", () => {
   const fx = fixture();
   // 0.69 and 0.7 are the one frame 21; 1.234 is frame 38.
