@@ -15,8 +15,14 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 
 - `layout`: HyperFrames' check, plus the layout probe (text at least 18 px,
   nothing clipped or overflowing its box, every text box inside the 5 percent
-  safe margin, no text box overlapping another), on frames every 15 frames
-  and on each scene's settled last frame. In an Arabic run, the probe also holds
+  safe margin, no text box overlapping another), judging a box only while it
+  is **readable**: fully shown, outside its scene's seam and not carried by its
+  camera. The frames are the 0.5 s grid, each scene's settled last frame and
+  every **timeline event** (the end of a tween, the start and end of a seam or
+  camera move, read off the scene's GSAP timeline, the seam and camera as the
+  label pairs `seam:start`/`seam:end` and `camera:start`/`camera:end`), one
+  sample per whole frame. A scene with no text in any sample is a hard error.
+  In an Arabic run, the probe also holds
   the reading rules: `dir` on the text boxes and never on a page root
   (`dir on the page root <el>`), Arabic text reading right to left with no
   Latin run left in it (`Arabic reads <dir>`, `Latin run not isolated in`), each
@@ -35,19 +41,22 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   in order, at most 84 characters and inside the video, and the SRT equal to
   the burned-in cues.
 - `sfx`: at most 24 sound effects in any minute of `score.json`.
-- `determinism`: each scene's **peak-motion frame** (its middle frame when
-  nothing in the scene moves) rendered twice, in two separate browser launches
-  of the pinned Chrome and the HyperFrames runtime seek, and the SHA-256 of the
-  decoded pixels compared, never the PNG files'. A frame mid-move catches what
-  a settled one hides, such as a time source other than the seek. It has no
-  floor but equal pixels, and a profile's `gates.determinism` block is refused
-  with `no such floor`. A red line names the scene, the frame and its time, and
-  both renders' PNGs under `.cache/gates/frames/` as evidence.
+- `determinism`: each scene's **peak-motion frame**, outside every seam window
+  (its middle frame when nothing in the scene moves), rendered twice, in two
+  separate browser launches of the pinned Chrome and the HyperFrames runtime
+  seek, and the SHA-256 of the decoded pixels compared, never the PNG files'. A
+  frame mid-move catches what a settled one hides, such as a time source other
+  than the seek. It has no floor but equal pixels, and a profile's
+  `gates.determinism` block is refused with `no such floor`. A red line names
+  the scene, the frame and its time, and both renders' PNGs under
+  `.cache/gates/frames/` as evidence.
 - `critic`: the **critic**, Claude subagents reading one **contact sheet** per
-  scene (four of its frames, cut from the MP4 by ffmpeg) and its **motion
-  strip**, fails on any hard failure: `unreadable` or `invented` content. Its
-  scores (clarity, legibility, fit, motion, 1 to 5) and its `worst` list (at
-  most 3 defects per scene, each with the one change that would fix it) only
+  scene (four of its frames, cut from the MP4 by ffmpeg: its three quarter
+  marks, then its **fullest moment**, the sample with the most readable words
+  at once, the latest on a tie) and its **motion strip**, fails on any hard
+  failure: `unreadable` or `invented` content. Its scores (clarity,
+  legibility, fit, motion, 1 to 5) and its `worst` list (at most 3 defects per
+  scene, each with the one change that would fix it) only
   advise: the line shows the score means, and `gates.md` lists the scores and
   the worst defects per scene. Until the critic has judged this render the gate
   reads `gate critic: pending: round <r> of 2, ..., contact sheets in
