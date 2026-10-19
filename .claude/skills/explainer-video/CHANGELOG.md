@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.29.0 (2026-10-19)
+
+### Features
+
+- **explainer-video**: Cue phrases, emphasis by text and strict props in the scene file
+  ([#892](https://github.com/Gharib89/skills/pull/892),
+  [`f77725a`](https://github.com/Gharib89/skills/commit/f77725a8fcb2943d2cf10d7b89718dea723a3380))
+
+
 ## v0.28.0 (2026-10-19)
 
 ### Features
