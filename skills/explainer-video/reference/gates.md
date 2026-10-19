@@ -68,14 +68,17 @@ The **peak-motion frame** is the scene's frame with the largest mean absolute
 pixel difference from the frame before it, measured on the encoded MP4
 downscaled and over the content band alone (the caption words recolour at every
 word, so the whole frame would always peak on a caption); a tie goes to the
-earliest frame, and a scene whose largest difference is under the encode's
-noise floor is still. One helper (`scripts/lib/motion.mjs`) picks it for the
-determinism gate and the strip. The **motion strip** is 12 consecutive frames of
-the scene from 5 before the peak-motion frame (clamped inside the scene),
-320x180 a tile on a 6x2 grid in reading order, cut beside the scene's contact
-sheet as `<scene>.motion.png`; a still scene has none. `<scene>.motion.json`
-beside it holds the peak frame and its time, the strip's first and last tile
-times and each still stretch of the content band lasting 1.5 s or more.
+earliest frame, frames inside a seam window are not candidates, and a scene
+whose largest difference is under the encode's noise floor is still and takes
+the frame nearest its middle outside every seam (a scene wholly inside a seam
+falls back to its unfiltered peak). One helper (`scripts/lib/motion.mjs`)
+picks it for the determinism gate and the strip. The **motion strip** is 12
+consecutive frames of the scene from 5 before the peak-motion frame (clamped
+inside the scene), 320x180 a tile on a 6x2 grid in reading order, cut beside
+the scene's contact sheet as `<scene>.motion.png`; a still scene has none.
+`<scene>.motion.json` beside it holds the peak frame and its time, the strip's
+first and last tile times and each still stretch of the content band lasting
+1.5 s or more.
 
 A summary line follows, `gates: <n> pass, <m> fail[, 1 pending]`, ending on a
 red run with `next: fix attempt <a> of 2` or `stop: red after two fix
