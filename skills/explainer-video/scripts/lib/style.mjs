@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { userDirs } from "./paths.mjs";
 import { skill } from "./tools.mjs";
+import { VISUALS } from "./visuals.mjs";
 
 export const FALLBACK = "claude-code";
 
@@ -71,29 +72,118 @@ export function floors(profile) {
   return out;
 }
 
-// The effects a profile may allow, each a GSAP tween in the composition (an
-// effect comes only from a commercial-safe source, ADR 0012): `draw` strokes
-// a flow's arrows on; `highlight` marks the code lines a sentence names. A
-// profile with no `effects` allows none.
-const EFFECTS = ["draw", "highlight"];
-const LOOKS = ["clean", "sketch"];
-const MOTIONS = ["rise", "spring"];
+// Schema 2: `colors`, `type`, an optional `scale` of type-step overrides and
+// an optional `grammar` block. Schema 1 (`motion`, `look`, `effects`) is
+// refused, with no in-memory migration.
+export const SCHEMA = 2;
 
-// The profile's look, motion and effects, refused by name when unknown.
+// The seven type steps in px, each exposed to the composition as
+// `--size-<step>`; a profile's `scale` overrides a step, never under the
+// layout floor.
+export const SCALE = {
+  display: 112,
+  title: 56,
+  heading: 46,
+  body: 40,
+  code: 32,
+  small: 28,
+  label: 24,
+};
+
+// The grammar: each field a named family, default first, holding the families
+// the composer draws today; each later slice adds its family and moves its
+// field's default. A field left out takes the default, so a profile states
+// only where it departs. A field with knobs takes a bare family name or an
+// object `{ family, ...knobs }`; a knob is a number within its range.
+const FIELDS = {
+  layout: { families: ["bands"] },
+  seams: { families: ["cut"], knobs: { duration: [0.2, 0.4], blur: [0, 24] } },
+  camera: { families: ["locked"], knobs: { scale: [1.03, 1.12] } },
+  type: { families: ["block"], knobs: { stagger: [0.03, 0.08] } },
+  ease: { families: ["soft", "spring"] },
+};
+const SURFACES = ["flat", "sketch"];
+
+// The components a family draws, keyed `<field>.<family>`: a grammar may not
+// ban one its own families need. Empty until a family needs a component (the
+// `canvas` seams will need `canvas`).
+const USES = {};
+
+const own = (v) => (typeof v === "string" ? { family: v } : (v ?? {}));
+const or = (list) => list.join(" or ");
+
+// The grammar a profile plays: its own fields over the defaults.
+export function grammar(profile) {
+  const g = profile.grammar ?? {};
+  const out = { bans: g.bans ?? [] };
+  for (const [field, { families, knobs }] of Object.entries(FIELDS))
+    out[field] = knobs
+      ? { family: families[0], ...own(g[field]) }
+      : (g[field] ?? families[0]);
+  out.texture = { surface: SURFACES[0], ...g.texture };
+  return out;
+}
+
+// The profile's type steps: the scale, as the profile overrides it.
+export const scale = (profile) => ({ ...SCALE, ...profile.scale });
+
+// A grammar that bans a component one of its own families draws is refused.
+export function checkBans(g, uses, name) {
+  for (const [field, v] of Object.entries(g)) {
+    const family = typeof v === "string" ? v : v?.family;
+    for (const c of uses[`${field}.${family}`] ?? [])
+      if (g.bans?.includes(c))
+        throw new Error(
+          `style profile ${name}: grammar.${field} ${family} uses the ${c} component, which grammar.bans bans`,
+        );
+  }
+}
+
+// The profile's schema, grammar and type scale, each refused by its field.
 function features(profile) {
   const refuse = (why) => {
     throw new Error(`style profile ${profile.name}: ${why}`);
   };
-  const look = profile.look ?? "clean";
-  if (!LOOKS.includes(look))
-    refuse(`look ${look} is not ${LOOKS.join(" or ")}`);
-  if (!MOTIONS.includes(profile.motion))
-    refuse(`motion ${profile.motion} is not ${MOTIONS.join(" or ")}`);
-  const effects = profile.effects ?? [];
-  if (!Array.isArray(effects)) refuse("effects is not a list");
-  for (const e of effects)
-    if (!EFFECTS.includes(e))
-      refuse(`effects: ${e} is not an effect (${EFFECTS.join(", ")})`);
+  if (profile.schema !== SCHEMA)
+    throw new Error(
+      `style profile ${profile.name} is schema ${profile.schema ?? 1}, this version loads schema ${SCHEMA}: set schema to ${SCHEMA}, rename motion to grammar.ease (rise is soft), move look to grammar.texture.surface (clean is flat) and remove effects`,
+    );
+  for (const [field, v] of Object.entries(profile.grammar ?? {})) {
+    if (field === "bans") {
+      if (!Array.isArray(v)) refuse("grammar.bans is not a list");
+      for (const b of v)
+        if (!Object.hasOwn(VISUALS, b))
+          refuse(`grammar.bans: ${b} is not a component`);
+    } else if (field === "texture") {
+      for (const [k, t] of Object.entries(v ?? {})) {
+        if (k !== "surface") refuse(`grammar.texture.${k}: no such field`);
+        if (!SURFACES.includes(t))
+          refuse(`grammar.texture.surface ${t} is not ${or(SURFACES)}`);
+      }
+    } else if (Object.hasOwn(FIELDS, field)) {
+      const { families, knobs = {} } = FIELDS[field];
+      const { family = families[0], ...rest } = own(v);
+      if (!families.includes(family))
+        refuse(`grammar.${field} ${family} is not ${or(families)}`);
+      for (const [k, n] of Object.entries(rest)) {
+        if (!Object.hasOwn(knobs, k))
+          refuse(`grammar.${field}.${k}: no such knob`);
+        const [lo, hi] = knobs[k];
+        if (!Number.isFinite(n))
+          refuse(`grammar.${field}.${k} ${n} is not a number`);
+        if (n < lo || n > hi)
+          refuse(`grammar.${field}.${k} ${n} is outside ${lo} to ${hi}`);
+      }
+    } else refuse(`grammar.${field}: no such field`);
+  }
+  const floor = floors(profile).layout.textPx;
+  for (const [step, px] of Object.entries(profile.scale ?? {})) {
+    if (!Object.hasOwn(SCALE, step)) refuse(`scale.${step}: no such step`);
+    if (!Number.isFinite(px)) refuse(`scale.${step} ${px} is not a number`);
+    if (px < floor)
+      refuse(`scale.${step} ${px} is under the ${floor} px layout floor`);
+  }
+  checkBans(grammar(profile), USES, profile.name);
 }
 
 // Body text sits on every surface; large or faint text (captions before their
@@ -208,32 +298,40 @@ const read = (f) =>
 export const defaultStyle = (list) =>
   list.map((d) => read(path.join(d, "default"))).find(Boolean) ?? FALLBACK;
 
-// The profile a run uses: `<run>/style.json` when the run already holds the
-// one it asks for, else the named or default profile from the stores, copied
-// into the run so a later edit to the store never changes this video.
-export function loadStyle(run, name, dirs = userDirs()) {
+// The profile a run uses, unchecked: `<run>/style.json` when the run already
+// holds the one it asks for, else the named or default profile from the
+// stores, null when no store holds it.
+export function findStyle(run, name, dirs = userDirs()) {
   const own = path.join(run, "style.json");
-  let profile = fs.existsSync(own)
+  const held = fs.existsSync(own)
     ? JSON.parse(fs.readFileSync(own, "utf8"))
     : null;
-  if (!profile || (name && profile.name !== name)) {
-    const list = stores(path.dirname(path.resolve(run)), dirs);
-    const want = name ?? defaultStyle(list);
-    const file = list
-      .map((d) => path.join(d, `${want}.json`))
-      .find((f) => fs.existsSync(f));
-    if (!file)
-      throw new Error(`no style profile ${want} in ${list.join(", ")}`);
-    profile = JSON.parse(fs.readFileSync(file, "utf8"));
-    profile.name = want;
-  }
+  if (held && (!name || held.name === name)) return { profile: held };
+  const list = stores(path.dirname(path.resolve(run)), dirs);
+  const want = name ?? defaultStyle(list);
+  const file = list
+    .map((d) => path.join(d, `${want}.json`))
+    .find((f) => fs.existsSync(f));
+  if (!file) return { want, list, profile: null };
+  return {
+    profile: { ...JSON.parse(fs.readFileSync(file, "utf8")), name: want },
+  };
+}
+
+// The profile a run uses, checked and copied into the run so a later edit to
+// the store never changes this video.
+export function loadStyle(run, name, dirs = userDirs()) {
+  const own = path.join(run, "style.json");
+  const { profile, want, list } = findStyle(run, name, dirs);
+  if (!profile)
+    throw new Error(`no style profile ${want} in ${list.join(", ")}`);
   validate(profile);
   fs.writeFileSync(own, JSON.stringify(profile, null, 2) + "\n");
   return profile;
 }
 
 // Every check a profile passes at load: contrast by role, its gates only
-// tightening, its look, motion and effects known.
+// tightening, schema 2 with its grammar and type scale in range.
 export function validate(profile) {
   const bad = failures(profile);
   if (bad.length)

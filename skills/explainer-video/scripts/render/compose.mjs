@@ -1,9 +1,9 @@
-// The HyperFrames composition in the `bands` layout, its motion `rise` or
+// The HyperFrames composition in the `bands` layout, its ease `soft` or
 // `spring`: a page per render (the video's index.html, or a stills page), and
-// one sub-composition file per scene whose visual is a component. The palette
-// comes from the style profile as CSS custom properties; every font is a file
-// beside the page.
-import { ARABIC } from "../lib/style.mjs";
+// one sub-composition file per scene whose visual is a component. The palette,
+// the type scale and the faces come from the style profile as CSS custom
+// properties; every font is a file beside the page.
+import { ARABIC, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { COMPONENTS, esc, seed } from "./components.mjs";
@@ -95,13 +95,13 @@ ${script}
 async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   const id = scene.id;
   const f = faces(profile, dir);
-  const look = profile.look ?? "clean";
+  const { ease, texture } = grammar(profile);
+  const { surface } = texture;
   const x = {
-    look,
-    effects: new Set(profile.effects ?? []),
+    surface,
     highlight: backend.highlight,
     sketch: async (shapes) =>
-      look === "sketch"
+      surface === "sketch"
         ? backend.sketch(
             shapes.map(({ key, ...s }) => ({ ...s, seed: seed(id, key) })),
           )
@@ -117,7 +117,7 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   const t = (at) => timing.sentences[at - 1];
   const tweens = [
     ...c.reveals.map(([sel, at, cls = "settle"]) =>
-      profile.motion === "spring"
+      ease === "spring"
         ? [sel, ...sprung(cls), t(at), cls]
         : [sel, ...RISE, t(at)],
     ),
@@ -181,10 +181,14 @@ function page({
         `@font-face { font-family: "${x.family}"; src: url("fonts/${x.file}"); font-weight: ${x.weight}; font-style: ${x.style}; font-display: block; }`,
     )
     .join("\n");
-  const palette = Object.entries(profile.colors)
-    .map(([k, v]) => `--${k}: ${v};`)
-    .join(" ");
   const f = faces(profile, dir);
+  const tokens = [
+    ...Object.entries(profile.colors).map(([k, v]) => `--${k}: ${v};`),
+    ...Object.entries(scale(profile)).map(([k, v]) => `--size-${k}: ${v}px;`),
+    `--font-title: ${f.title};`,
+    `--font-text: ${f.text};`,
+    `--font-code: ${f.code};`,
+  ].join(" ");
   // Arabic captions: 40 px at 1.7, two lines (136 px) between the content box
   // (y 868, plus 12 px clear) and the 5 percent safe margin (y 1026).
   const band = f.rtl
@@ -203,15 +207,15 @@ function page({
 ${head}    <script src="gsap.min.js"></script>
     <style>
 ${fontFaces}
-:root { ${palette} }
+:root { ${tokens} }
 html, body { margin: 0; width: ${W}px; height: ${H}px; overflow: hidden; background: var(--bg); }
 #root { position: relative; width: ${W}px; height: ${H}px; overflow: hidden; background: var(--bg); color: var(--text); font-family: ${f.text}; }
 .clip { position: absolute; inset: 0; }
 .header { position: absolute; left: 120px; right: 120px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); }
 .mark { width: 18px; height: 18px; border-radius: 4px; background: var(--accent); }
-.kicker { font: 600 26px ${f.text}; color: var(--muted); letter-spacing: ${f.ls("0.04em")}; text-transform: uppercase; }
+.kicker { font: 600 var(--size-label) ${f.text}; color: var(--muted); letter-spacing: ${f.ls("0.04em")}; text-transform: uppercase; }
 .captions { position: absolute; left: 120px; right: 120px; ${band} }
-.cue { display: flex; align-items: center; justify-content: center; text-align: center; font: 400 40px/${f.lh(1.3, "caption")} ${f.text}; color: var(--faint); overflow: hidden; }${latin}
+.cue { display: flex; align-items: center; justify-content: center; text-align: center; font: 400 var(--size-body)/${f.lh(1.3, "caption")} ${f.text}; color: var(--faint); overflow: hidden; }${latin}
     </style>
   </head>
   <body>

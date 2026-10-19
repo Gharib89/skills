@@ -95,7 +95,7 @@ test("each diagram and code component composes onto its scene's paused timeline,
 test("a seeded sketch renders identically twice, each outline at its own seed", () => {
   const twice = [0, 1].map(() => {
     const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: rough"));
-    profiled(fx, "rough", { look: "sketch" });
+    profiled(fx, "rough", { grammar: { texture: { surface: "sketch" } } });
     const r = render(fx);
     assert.equal(r.code, 0, r.out + r.err);
     return {

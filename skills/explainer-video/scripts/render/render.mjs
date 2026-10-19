@@ -92,10 +92,6 @@ try {
 } catch (e) {
   fail(e.message);
 }
-if (profile.layout !== "bands")
-  fail(
-    `style profile ${profile.name}: this version draws layout bands, not ${profile.layout}`,
-  );
 if (!["en", "ar"].includes(script.language))
   fail(`no render fonts for language ${script.language}`);
 // Arabic reads right to left, in the Arabic type roles beside the Latin ones.
