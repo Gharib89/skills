@@ -97,12 +97,11 @@ these rules bind as hard as the shell ones.
   each change shows its direction; one that adds more than it removes says why
   in that bullet. The `prose-budget` cap bounds SKILL.md alone, and this check
   covers the reference files too.
-- **A fix to a skill, a profile or a memory names its Fix scope and the run
-  that exposed it.** The scope is **procedure** when the fix lands in the
-  skill's own files, so it reaches every repo, and **domain** when it lands in
-  one repo's ship or harness profile, or in a memory. The run is a PR, an
-  issue, a session or a ship run. Both go in the PR body under
-  `## Special things to note` and in the issue, never in skill prose, so a fact
-  about one repo stays out of what every consumer reads. Self-review and the
-  Reviewer check the line; no body checker enforces it, since a skill fix often
-  ships as `feat`.
+- **A fix to a skill, a profile or a memory names its
+  [Fix scope](../../glossary/profiles.md) and the run that exposed it.** The
+  scope is **procedure** or **domain**; the run is a PR, an issue, a session or
+  a ship run. Both go in the PR body under `## Special things to note` and in
+  the issue, never in skill prose, so a fact about one repo stays out of what
+  every consumer reads. Self-review and the Reviewer check the line; no body
+  checker enforces it, because a fix cannot be told from its title (a skill fix
+  often ships as `feat`).

@@ -51,6 +51,39 @@ check "both absent, total zero" 'CLAUDE.md: absent
 AGENTS.md: absent
 total: 0 chars' "$out"
 
+# The description reader against the shapes frontmatter-check.sh reads: each
+# skill's description below is one such shape, its expected count in the name.
+a=$fixture/adv
+mkdir -p "$a"
+printf '{"version":1,"skills":{"single":{"source":"."},"literal":{"source":"."},"comment":{"source":"."},"trailing":{"source":"."},"blockquote":{"source":"."},"none":{"source":"."},"decoy":{"source":"."},"unclosed":{"source":"."}}}\n' > "$a/skills-lock.json"
+skill() { mkdir -p "$a/skills/$1"; printf -- '---\nname: %s\n%b---\nbody\n' "$1" "$2" > "$a/skills/$1/SKILL.md"; }
+skill single "description: 'single one'\n"
+skill literal "description: |\n  one\n  two\n"
+skill comment "description: plain text # note\n"
+skill trailing "description: abc   \n"
+skill blockquote "description: >-\n  say \"hi\"\n  there\n"
+skill none "metadata:\n  version: 0.1.0\n"
+skill decoy "descriptions: zzzzzz\ndescription: ab\n"
+skill unclosed "description: \"never closed\n"
+out=$(bash "$script" "$a" 2>/dev/null); rc=$?
+check_rc "every shape reports" 0 "$rc"
+check "single quotes, a literal block, a trailing comment and blanks, a quote inside a block, no description, a decoy key, an unclosed quote" \
+'CLAUDE.md: absent
+AGENTS.md: absent
+skills/single: 10 chars
+skills/literal: 7 chars
+skills/comment: 10 chars
+skills/trailing: 3 chars
+skills/blockquote: 14 chars
+skills/none: 0 chars
+skills/decoy: 2 chars
+skills/unclosed: 13 chars
+total: 59 chars' "$out"
+
+rm "$a/skills/none/SKILL.md"
+bash "$script" "$a" >/dev/null 2>&1; rc=$?
+check_rc "an owned skill without a SKILL.md is tooling" 2 "$rc"
+
 rm "$d/skills-lock.json"
 bash "$script" "$d" >/dev/null 2>&1; rc=$?
 check_rc "a missing lock is tooling" 2 "$rc"

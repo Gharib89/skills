@@ -14,8 +14,9 @@
 # entry whose `source` is `.`. Vendored skills and anything outside the checkout
 # (`~/.claude`) are never read, so the report is the same on every machine. A
 # description counts as the agent reads it, as scripts/frontmatter-check.sh
-# does: a folded or literal block's lines joined by one space, a quoted value
-# without its quotes. Sizes are characters, not bytes, under any locale.
+# does (a folded or literal block's lines joined by one space, a quoted value
+# without its quotes); the reader below mirrors that script's, so change both
+# together. Sizes are characters, not bytes, under any locale.
 #
 # stdout: `<source>: <n> chars` or `<source>: absent` per source, then
 #         `total: <n> chars`
@@ -34,17 +35,32 @@ names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$r
 # Characters under any locale: the cloud sandbox runs with LANG and LC_ALL
 # empty, where a shell's own length counts bytes, so drop UTF-8 continuation
 # bytes before counting.
-chars() { local n; n=$(LC_ALL=C tr -d '\200-\277' | wc -c) || exit 2; echo $((n)); }
+chars() { echo $(( $(LC_ALL=C tr -d '\200-\277' | wc -c) )); }
 
-# <file>: the frontmatter `description`, its indented continuation lines joined
-# with one space.
+# <file>: the frontmatter `description`, read as scripts/frontmatter-check.sh's
+# `fields` reads it: indented continuation lines joined with one space, a `#`
+# comment after an unquoted value and trailing blanks dropped, a closed quote
+# stripped, and a quote inside a `>` or `|` block left as text.
 description() {
-  awk 'NR == 1 { if ($0 != "---") exit; next }
+  awk 'function flush() {
+         if (key == "description") {
+           if (!block && v ~ /^["\047]/) {
+             if (substr(v, 1, 1) == "\"") closed = match(v, /^"([^"\\]|\\.)*"/)
+             else closed = match(v, "^\047([^\047]|\047\047)*\047")
+             if (closed) v = substr(v, 2, RLENGTH - 2) }
+           desc = v } }
+       NR == 1 { if ($0 != "---") exit; next }
        $0 == "---" { exit }
-       /^description:/ { on = 1; v = substr($0, 13); sub(/^[ \t]+/, "", v); if (v ~ /^[>|][-+0-9]*$/) v = ""; next }
-       on && /^[ \t]/ { l = $0; sub(/^[ \t]+/, "", l); v = (v == "" ? l : v " " l); next }
-       /^[^ \t]/ { on = 0 }
-       END { if (v ~ /^".*"$/ || v ~ /^\047.*\047$/) v = substr(v, 2, length(v) - 2); printf "%s", v }' "$1"
+       /^[^ \t#][^:]*:/ {
+         flush()
+         key = substr($0, 1, index($0, ":") - 1); val = substr($0, length(key) + 2)
+         sub(/^[ \t]+/, "", val)
+         if (val !~ /^["\047]/) sub(/[ \t]+#.*$/, "", val)
+         sub(/[ \t]+$/, "", val)
+         block = (val ~ /^[>|]([1-9]?[-+]?|[-+][1-9])$/); v = block ? "" : val
+         next }
+       /^[ \t]/ { line = $0; sub(/^[ \t]+/, "", line); v = (v == "" ? line : v " " line) }
+       END { flush(); printf "%s", desc }' "$1"
 }
 
 total=0
