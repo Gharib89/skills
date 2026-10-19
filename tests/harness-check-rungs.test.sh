@@ -271,7 +271,7 @@ suite" "$(cat "$ARGS_LOG")"
 # selector matches by basename, so the row gets the path with no file on disk.
 # Any other row keeps excluding a deleted path.
 r=$(repo deleted-sh "TURN_ROWS='web/|web|*.ts|||args web {files}
-lib/|lib|*.sh|||args lib {files}
+lib/|shellx|*.sh|||args shellx {files}
 |shell|*.sh|||args shell {files}'")
 mkdir -p "$r/web" "$r/scripts" "$r/lib"
 echo x > "$r/web/gone.ts"; echo x > "$r/scripts/gone.sh"; echo x > "$r/lib/gone.sh"
