@@ -21,7 +21,8 @@ of more than four capitals QC reads as a word: write it as its letters' names
 in Arabic.
 
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
-   `model:kokoro-82m` and `model:wav2vec2-base-960h`; Egyptian Arabic
+   `model:kokoro-82m` and `model:wav2vec2-base-960h`, plus `onnx-cuda` where
+   setup lists it; Egyptian Arabic
    `model:egyptian-arabic-wav2vec2` and `key:gemini`; an ElevenLabs narrator
    `key:elevenlabs` and `model:wav2vec2-base-960h`; an own voice
    (`own:<name>`) the Arabic rows plus `own-voice` and `uv`. Run the setup

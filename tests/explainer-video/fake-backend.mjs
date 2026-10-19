@@ -97,6 +97,23 @@ export async function download(url, file) {
   fs.writeFileSync(file, "woff2");
 }
 
+// The CUDA provider's package extracts to its two library files.
+export async function extractOrtCuda(nupkg, dir) {
+  log({ call: "extractOrtCuda", nupkg, dir });
+  fs.mkdirSync(dir, { recursive: true });
+  for (const f of [
+    "libonnxruntime_providers_cuda.so",
+    "libonnxruntime_providers_shared.so",
+  ])
+    fs.writeFileSync(path.join(dir, f), "");
+}
+
+// EXPLAINER_VIDEO_FAKE_CUDA the reason the provider does not run (unset, it
+// does).
+export async function cudaProbe() {
+  return process.env.EXPLAINER_VIDEO_FAKE_CUDA ?? null;
+}
+
 // A source archive extracts to a pyproject; uv sync leaves a .venv beside it.
 export async function extract(zip, dir) {
   log({ call: "extract", zip, dir });

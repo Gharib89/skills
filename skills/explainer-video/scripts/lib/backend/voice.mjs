@@ -4,8 +4,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { sentences } from "../length.mjs";
-import { skill, toolPaths, torchDevice } from "../tools.mjs";
+import {
+  ORT_CUDA_MIN_CAP,
+  ortProvider,
+  skill,
+  toolPaths,
+  torchDevice,
+} from "../tools.mjs";
 import { fromCache, ffmpeg, quiet, sampleRate, which } from "./common.mjs";
+import { computeCapability, cudaProbe } from "./media.mjs";
 
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta";
 const GEMINI_TTS = "gemini-3.8-flash-tts";
@@ -257,6 +264,26 @@ const KOKORO_TOKENS = 400;
 // voices each call's lead and tail silence, so one call per sentence paces
 // narration slower than the voice speaks.
 let kokoro;
+let speak;
+
+const cudaFailed = (why) =>
+  console.error(
+    `kokoro: CUDA failed (${String(why).split("\n")[0].slice(0, 160)}); voicing on the CPU`,
+  );
+
+// CUDA where setup installed the provider, the card can run it and the host's
+// CUDA 13 and cuDNN 9 libraries load, else the CPU. The libraries are probed in
+// a child process because a failed CUDA load cannot be recovered in this one:
+// transformers.js keeps the first session's promise (`wasmInitPromise`), so
+// every later session, a CPU one included, rejects with the same error.
+async function pickDevice(node) {
+  if (!ortProvider(node) || !((await computeCapability()) >= ORT_CUDA_MIN_CAP))
+    return "cpu";
+  const why = await cudaProbe(node);
+  if (why) cudaFailed(why);
+  return why ? "cpu" : "cuda";
+}
+
 export async function synthesize({ text, narrator, tools }) {
   if (narrator.backend === "gemini") return gemini(text, narrator);
   if (narrator.backend === "elevenlabs") return elevenlabs(text, narrator);
@@ -272,10 +299,34 @@ export async function synthesize({ text, narrator, tools }) {
     env.allowRemoteModels = false;
     // An absolute path is read as a folder; a name under localModelPath must
     // pass the hub's model-id check, which the `@` in the cache name fails.
-    kokoro = await KokoroTTS.from_pretrained(tools.models["model:kokoro-82m"], {
-      dtype: "fp32",
-      device: "cpu",
-    });
+    const load = (device) =>
+      KokoroTTS.from_pretrained(tools.models["model:kokoro-82m"], {
+        dtype: "fp32",
+        device,
+      });
+    // The CPU model loads first, beside a CUDA one too: a CUDA load that fails
+    // after the probe passed (the card's memory taken by another process, say)
+    // would otherwise be the first session and poison the CPU load that follows
+    // (see pickDevice). A call failing on the CUDA model falls back the same way,
+    // for the rest of the process.
+    const cpu = await load("cpu");
+    kokoro = cpu;
+    if ((await pickDevice(tools.node)) === "cuda")
+      try {
+        kokoro = await load("cuda");
+      } catch (e) {
+        cudaFailed(e.message);
+      }
+    speak = async (c, voice) => {
+      try {
+        return await kokoro.generate(c, { voice });
+      } catch (e) {
+        if (kokoro === cpu) throw e;
+        cudaFailed(e.message);
+        kokoro = cpu;
+        return cpu.generate(c, { voice });
+      }
+    };
   }
   // kokoro-js's dependency again, phonemizing as it does: American voices
   // (`a…`) in en-us, British ones in en.
@@ -309,9 +360,7 @@ export async function synthesize({ text, narrator, tools }) {
   }
   const parts = [];
   for (const c of calls)
-    parts.push(
-      (await kokoro.generate(c.text, { voice: narrator.voice })).audio,
-    );
+    parts.push((await speak(c.text, narrator.voice)).audio);
   const samples = new Float32Array(parts.reduce((n, p) => n + p.length, 0));
   parts.reduce((o, p) => (samples.set(p, o), o + p.length), 0);
   return { samples, sampleRate: 24000 };

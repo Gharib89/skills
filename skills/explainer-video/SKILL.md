@@ -65,6 +65,14 @@ being the folder this file is in:
    check again; Voice waits until the key reads `present`. Any other `refused`
    or `failed` row: relay the reason as printed.
 
+`onnx-cuda` (Kokoro on the GPU) is listed on Linux x64 with an NVIDIA card of
+compute capability 7.5 or higher, beside an English Kokoro narrator: it puts
+onnxruntime's CUDA provider beside onnxruntime-node. CUDA 13 and cuDNN 9 are
+host prerequisites: the line under the table says whether Kokoro runs on the
+GPU here or names the missing library, and Kokoro stays on the CPU until it is
+there. A CUDA failure at voice time falls back to the CPU and prints one stderr
+line.
+
 Whenever the **Gemini data notice** prints under a table, relay it word for
 word: setup prints it once per key, the first time Google accepts that key.
 
