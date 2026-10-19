@@ -168,7 +168,8 @@
 #   close 3 --result on a closed or skipped phase 3: {run_file, phase, state, line}
 #     with state "recorded", the row unchanged and no mirror
 #   grade: {run_file, grade}
-#   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}}
+#   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}};
+#     closed is null where no phase was open
 #   timing: {run_file, start_to_pr, pr_to_gate, phases{}, row}; a skipped phase
 #     reads `skipped` and a phase with no range `unverified`
 #   prove: {test, paths, red, command, run_file, head}, revert-red's verdict plus the
@@ -177,7 +178,8 @@
 #     <command>, character for character, or a node ID under it (<test>::<name>)
 #   probe: {run_file, ref, command, exit, head, last}
 #   call: {run_file, command, why}
-#   note: {run_file, section, line}
+#   note: {run_file, section, line}; a `Criterion` or `Past-cap` line must take
+#     the form `gate clean` reads, or it is refused
 #   gate record: {run_file, head, verdict}
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the

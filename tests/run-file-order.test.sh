@@ -169,17 +169,33 @@ check "next onto the phase already open is refused" "phase 1 is already open" "$
 check "next over an earlier phase never flipped names it, as open does" \
   "phase 2 is neither closed nor skipped." "$(err next 4 --file "$z" | cut -c1-38)"
 check "next over a gap names the gap with the next recovery" \
-  'phase 2 is neither closed nor skipped. If it ran: `run-file next 2`, `run-file close 2`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: `run-file skip 2 <reason>`. Then retry `run-file open 4`, which names the next such phase if any.' \
+  'phase 2 is neither closed nor skipped. If it ran: `run-file next 2`, `run-file close 2`, then note in the deviations log that its stamp is the recovery time, so its minutes and any start→PR or PR→gate figure it bounds reflect the recovery, plus when it really ran if the transcript holds that. If it did not run: `run-file skip 2 <reason>`. Then retry `run-file open 4`, which names the next such phase if any. Also passed over: 3.' \
   "$(err next 4 --file "$z")"
 check_rc "a refused next exits 1" 1 "$(rc next 4 --file "$z")"
 check "a refused next wrote nothing, not even the close" "$held" "$(cat "$z")"
 check_rc "next needs a phase number" 2 "$(rc next --file "$z")"
 check_rc "next with a flag as the phase is malformed" 2 "$(rc next --x --file "$z")"
 
+# With nothing open `next` has nothing to close, so it is `open` under the same
+# order check (ship-850 closed 7, then `next 8` was refused).
 out close 1 --file "$z" >/dev/null
-check "next with nothing open points at open" \
-  'no phase is open; use `run-file open 2`' "$(err next 2 --file "$z")"
-check_rc "next with nothing open exits 1" 1 "$(rc next 2 --file "$z")"
+nj=$(out next 2 --file "$z"); nrc=$?
+check_rc "next with nothing open exits ok" 0 "$nrc"
+check "next with nothing open closes nothing" "null" "$(jq -c .closed <<<"$nj")"
+check "next with nothing open opens the target, as open does" \
+  "2 in_progress $(grep '^- \[.\] 2 · ' "$z")" \
+  "$(jq -r '[.opened.phase, .opened.mirror, .opened.line] | join(" ")' <<<"$nj")"
+out close 2 --file "$z" >/dev/null
+held=$(cat "$z")
+check "next with nothing open still refuses a gap" \
+  "phase 3 is neither closed nor skipped." "$(err next 5 --file "$z" | cut -c1-38)"
+check "a refused next with nothing open wrote nothing" "$held" "$(cat "$z")"
+
+# Every passed-over phase is named, not only the lowest (ship-849 passed over 5).
+g=$(out init 606 --scratchpad "$tmp" "${done_below2[@]}" | jq -r '.run_file')
+check "open over several never-flipped phases names the others" \
+  'Then retry `run-file open 5`, which names the next such phase if any. Also passed over: 3, 4.' \
+  "$(err open 5 --file "$g" | grep -o 'Then retry.*')"
 
 # Two open (the 3/4 overlap): next cannot say which to close, so it names one.
 y=$(out init 702 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done | jq -r .run_file)

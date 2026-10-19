@@ -7,7 +7,8 @@
 #   isolate <issue> <type> <slug> --rework [--carry <file>...]
 #
 # `none` as the issue argument is the task-spec run: it is the literal branch
-# and worktree suffix, and every check runs unchanged.
+# and worktree suffix, and every check runs unchanged. One trailing `-<n>` on
+# the slug is dropped, so the number appears once.
 #
 # Resolves the MAIN checkout through --git-common-dir, so a run started inside a
 # worktree lands its worktree in that checkout's container rather than its own.
@@ -44,6 +45,11 @@ while [ $# -gt 0 ]; do
   esac
 done
 { $rework && { $in_place || [ "$n" = none ]; }; } && ship_tooling "$usage"
+
+# A slug already ending in the issue number would double it in the branch and
+# the worktree. `--rework` keeps the slug as given: it names the PR's own
+# branch, which may already carry the doubled number.
+$rework || slug=${slug%-"$n"}
 
 root=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
 branch=$(ship_branch "$type" "$slug" "$n")

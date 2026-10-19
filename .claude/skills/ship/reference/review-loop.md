@@ -233,6 +233,14 @@ exit word). A declined finding from a `Gating: yes` reviewer also leaves
 `Override: <reviewer>: <finding>, <evidence>` in the Run file, so the clean-gate
 decision reads the same override the human sees in the summary.
 
+A local round taken past a reviewer's `Cap:` is no `Round:` of that reviewer, so
+its rounds still read 1 through `Cap:`. Record it, once the round's dispositions
+changed no file, as `Past-cap: <reviewer>: tree unchanged at <sha>` with
+`run-file note Evidence "<line>" --issue <issue>`, `<sha>` the head the local
+round read. `gate clean` keeps the reviewer held, naming the cap and that head,
+because no host reviewer read the fixes: the human reads them at the merge
+gate.
+
 At exit, from the Run file and never from the body the write replaces, one
 `update-pr-body <pr> --section <name> --body-file <path>` per section, each file
 carrying its section rebuilt entire: `"Special things to note"` where the rounds
