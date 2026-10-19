@@ -12,7 +12,8 @@ Your inputs, filled in by the run that dispatched you:
 - **Run folder:** `{run}`
 - **Scene:** `{scene}`
 - **Contact sheet:** `{run}/{sheets}/{scene}.png`, four frames of the scene cut
-  from the encoded video (its quarter marks, then its last frame) at half size
+  from the encoded video (its three quarter marks, then its fullest moment, the
+  frame with the most words readable at once) at half size
   on a 2x2 grid, read left to right, top to bottom
 - **Motion strip:** `{run}/{sheets}/{scene}.motion.png`, 12 consecutive frames
   of the scene (about 0.4 s at 30 fps) cut from the encoded video, starting 5

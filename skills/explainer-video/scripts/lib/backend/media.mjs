@@ -41,14 +41,24 @@ export async function clip(input, output, { start, duration }) {
 }
 
 // A scene's contact sheet for the critic: four frames of the encoded video (its
-// quarter marks and its settled last frame) at half size on a 2x2 grid. Cut by
-// ffmpeg, never by HyperFrames' snapshot, which sends frames to Gemini.
-export async function sheet(input, output, { start, duration, fps }) {
-  const [first, picks] = sheetFrames({ start, duration, fps });
+// three quarter marks and its fullest moment, `fullest` a frame index) at half
+// size on a 2x2 grid, in that reading order. Cut by ffmpeg, never by
+// HyperFrames' snapshot, which sends frames to Gemini.
+export async function sheet(input, output, { start, duration, fps, fullest }) {
+  const [first, picks] = sheetFrames({ start, duration, fps, fullest });
+  const tiles = picks.map((_, i) => String.fromCharCode(97 + i));
   ffmpeg([
     ...["-y", "-ss", String(start), "-t", String(duration), "-i", input],
-    "-vf",
-    `select='${picks.map((f) => `eq(n,${f - first})`).join("+")}',scale=960:540,tile=2x2`,
+    "-filter_complex",
+    [
+      `[0:v]split=4${tiles.map((x) => `[${x}]`).join("")}`,
+      // Each branch keeps its one frame, restamped to 0 so the stack pairs them.
+      ...picks.map(
+        (f, i) =>
+          `[${tiles[i]}]select='eq(n,${f - first})',setpts=0,scale=960:540[${tiles[i]}1]`,
+      ),
+      `${tiles.map((x) => `[${x}1]`).join("")}xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0`,
+    ].join(";"),
     ...["-frames:v", "1", output],
   ]);
 }
@@ -108,12 +118,12 @@ export async function bandMotion(input, { start, duration, fps }) {
 }
 
 // The scene's first frame and the four a sheet shows, as indices into the
-// video.
-export function sheetFrames(scene) {
+// video: the quarter marks, then `fullest`.
+export function sheetFrames({ fullest, ...scene }) {
   const { first, n } = sceneFrames(scene);
   return [
     first,
-    [n / 4, n / 2, (3 * n) / 4, n - 1].map((f) => first + Math.floor(f)),
+    [...[n / 4, n / 2, (3 * n) / 4].map((f) => first + Math.floor(f)), fullest],
   ];
 }
 

@@ -39,7 +39,10 @@
 // in the palette's accent; `edge` sits at
 // left 40, inside the safe margin; `stacked` starts halfway down the element
 // before it, so the two overlap; `flaky` renders differently every time frame
-// draws it. EXPLAINER_VIDEO_FAKE_BLANK=1 makes probe find no text at all.
+// draws it; `fading` is mid-reveal until EXPLAINER_VIDEO_FAKE_FADE_END scene
+// seconds. EXPLAINER_VIDEO_FAKE_BLANK=1 makes probe find no text at all, and
+// EXPLAINER_VIDEO_FAKE_EVENTS (scene id to {ends, seams, camera}) is what
+// events reads off the scenes' timelines.
 import fs from "node:fs";
 import path from "node:path";
 import { log } from "./fake-backend-log.mjs";
