@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.4.0 (2026-10-19)
+
+### Features
+
+- **drive-session**: Spec batch runs timing slices alone and flags stale agent briefs
+  ([#872](https://github.com/Gharib89/skills/pull/872),
+  [`6a5c116`](https://github.com/Gharib89/skills/commit/6a5c1161bd4e83d71b487693b1225f70125e7bc4))
+
+
 ## v0.3.0 (2026-10-18)
 
 ### Features
