@@ -152,11 +152,45 @@ $names
 EONAMES
   refuse_gaps 7
 }
+# A `not met` reason that says nothing: only words like these, or none at all.
+# The merge summary is posted after phase 5, so a criterion still open then
+# names what is outstanding and the step that settles it (#894).
+placeholder_reason() { # placeholder_reason <reason>: 0 when it names no step
+  local w
+  for w in $(tr '[:upper:]' '[:lower:]' <<<"$1" | tr -c 'a-z\n' ' '); do
+    case $w in pending | todo | tbd | later | wip | open | unknown) ;; *) return 1 ;; esac
+  done
+  return 0
+}
+
+# Phase 5: every `## Criteria` entry has a `Criterion <n>:` line, and one still
+# `not met` gives a real reason. A Run file with no `## Criteria` is not refused.
+gate_phase5() {
+  local n r
+  while IFS= read -r n; do
+    [ -n "$n" ] || continue
+    r=$(trim_end "$(rests "Criterion $n: " | tail -n 1)")
+    case $r in
+      "") gap "criterion $n has no line: write \`Criterion $n: met: <proof>\`, or \`Criterion $n: not met: <what is outstanding and the step that settles it>\`" ;;
+      "met: "?*) ;;
+      "not met: "?*)
+        if placeholder_reason "${r#not met: }"; then
+          gap "criterion $n is \`$r\`, which names no outstanding work: write \`Criterion $n: not met: <what is outstanding and the step that settles it>\`"
+        fi ;;
+      *) gap "criterion $n has a line gate clean cannot read: $r" ;;
+    esac
+  done <<EOCRIT
+$(awk '{ t = $0; sub(/[ \t\r]+$/, "", t) } t ~ /^## / { f = (t == "## Criteria") } f && /^- [1-9][0-9]*: / { v = substr($0, 3); sub(/:.*/, "", v); print v }' "$file")
+EOCRIT
+  refuse_gaps 5
+}
+
 # The gate a phase's close owes, run once the phase is known open and before a
 # line is written, so a refusal leaves the record as it was.
 close_gate() { # close_gate <phase> <its row>
   case $1 in
     4) gate_phase4 ;;
+    5) gate_phase5 ;;
     7) gate_phase7 "$2" ;;
   esac
 }

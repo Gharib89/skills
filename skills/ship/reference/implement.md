@@ -95,6 +95,11 @@ them: one the run declined, deferred or covered with a "gap" is `not met`.
 `run-file gate clean` holds the merge on each entry that is `not met` or has no
 line ([merge-gate.md](merge-gate.md#unmet-criteria)).
 
+`run-file close 5` refuses an entry with no line or a placeholder `not met`
+(pending, todo, tbd, later). One that settles later is written there `Criterion
+<n>: not met: <what is outstanding and the step that settles it>`; that step
+writes `met: <proof>`, replacing it.
+
 ## Phase 2: classify, then implement test-first
 
 Classify the change into one of three classes. By default, say the class and

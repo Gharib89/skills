@@ -193,10 +193,19 @@ human's waiver beside "merge" clears it
 profile error. An inline-lane run reads it as `on-clean-gate` for its own PR.
 The unattended branch never evaluates this option.
 
-For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
-and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
-(`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
-`read-pr`; the mechanic answers `{clean, held_by}` and writes nothing, and
+**Every attended run, opted in or not, takes the summary's `Unmet criteria` and
+`Clean gate held by` lines from `run-file gate summary <pr> --issue <issue>`**
+(`--file <run.md>` for a record addressed by path), never from its own account
+of the run. Save the final `ci-wait` JSON as `ci-wait.json` beside the Run file
+first; the verb reads that file and the head `read-pr <pr>` returns, takes no
+ci-wait or head from the caller, and refuses naming the step to run where either
+is absent. It answers `gate clean`'s `{clean, held_by}` for that head (exit 0
+clean, 1 held) plus `unmet_criteria_line` and `clean_gate_held_by_line`, the two
+lines to paste. The unattended lane keeps its own path and does not use it.
+
+For an opted-in attended run that answer is the decision; `run-file gate clean
+<ci-file> --head <head_sha> --issue <issue>` answers the same for a ci-wait file
+saved elsewhere or a head already in hand. The mechanic writes nothing, and
 `run-file --help` lists what holds the gate. Any `tracker-*.md` draft always
 holds it, and a `defect-*.md` draft never does (`*.base.md` files are saved
 originals, not drafts).

@@ -184,6 +184,16 @@
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the
 #     commits between the recorded head and <sha>
+#   gate summary: {clean, head, held_by[], unmet_criteria[], unmet_criteria_line,
+#     clean_gate_held_by_line}, `gate clean`'s evaluation (exit 0 clean, 1 held)
+#     of the head `read-pr <pr>` returns and the final `ci-wait` answer saved as
+#     `ci-wait.json` beside the Run file; the merge summary's `Unmet criteria`
+#     and `Clean gate held by` lines are its two `_line` fields. It refuses,
+#     naming the step to run, where that answer or the head is absent.
+#   close 5 refuses while a `## Criteria` entry has no `Criterion <n>:` line or
+#     its last line is a `not met` whose reason is a placeholder (pending, todo,
+#     tbd, later, wip, open or unknown): one that settles later is written
+#     `not met: <what is outstanding and the step that settles it>`
 #   gate clean: {clean, held_by[]}; clean means the current gate passed or deferred to CI every
 #     check, every profile CI leg succeeded on head or, where No-checks legal:
 #     says yes and no local gate deferred to CI, ran no check there,
@@ -226,7 +236,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | timing | prove <test> <path>... <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | gate summary <pr> | timing | prove <test> <path>... <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers, --legs and --criteria the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"

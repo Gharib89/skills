@@ -196,3 +196,25 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   return 1
 }
 
+# The merge-gate summary's two gate-derived lines, from the clean gate's own
+# evaluation of the PR's head: the final `ci-wait` JSON the run saved beside the
+# Run file, and the head `read-pr` returns. Neither is the caller's to supply,
+# so the summary cannot claim what the gate never read (#894).
+gate_summary() { # gate_summary <pr>, with file already parsed
+  local pr=$1 ci_file pull answer rc
+  ci_file="$(dirname "$file")/ci-wait.json"
+  [ -f "$ci_file" ] || ship_fail "no saved ci-wait answer at $ci_file: run \`ci-wait $pr\` and save its output there, then re-run"
+  pull=$("$SHIP_SCRIPTS/read-pr.sh" "$pr" 2>/dev/null) && head=$(jq -r '.head_sha // empty' <<<"$pull" 2>/dev/null) && [ -n "$head" ] \
+    || ship_fail "cannot read the head of PR $pr: run \`read-pr $pr\` and fix what it reports, then re-run"
+  answer=$(gate_clean "$ci_file" 2>/dev/null)
+  rc=$?
+  [ "$rc" -le 1 ] || ship_tooling "$(jq -r '.error // "cannot evaluate clean gate evidence"' <<<"$answer")"
+  jq --arg head "$head" '
+    ([.held_by[] | select(startswith("criterion "))]) as $unmet
+    | {clean, head: $head, held_by,
+       unmet_criteria: $unmet,
+       unmet_criteria_line: (if $unmet == [] then "none" else ($unmet | join("; ")) end),
+       clean_gate_held_by_line: (if .clean then "none" else (.held_by | join("; ")) end)}' <<<"$answer"
+  return "$rc"
+}
+
