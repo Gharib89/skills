@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.27.0 (2026-10-19)
+
+### Features
+
+- **explainer-video**: HyperFrames 0.8.169, frame-grid timing and a real-render Verification
+  ([#889](https://github.com/Gharib89/skills/pull/889),
+  [`1964132`](https://github.com/Gharib89/skills/commit/1964132be5a1953c6de1d38e6f245829e0ba029c))
+
+
 ## v0.26.1 (2026-10-19)
 
 ### Bug Fixes
