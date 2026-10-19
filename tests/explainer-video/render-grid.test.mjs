@@ -73,13 +73,23 @@ test("a scene is sized from its WAV, not the voice stage's rounded seconds", () 
   // 10 samples; the WAV's own length takes 31.
   const rate = 24000;
   const h = Buffer.alloc(44);
+  h.write("RIFF", 0, "ascii");
+  h.writeUInt16LE(1, 22);
   h.writeUInt32LE(rate, 24);
+  h.writeUInt16LE(16, 34);
   h.writeUInt32LE(24010 * 2, 40);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wav-seconds-"));
-  const file = path.join(dir, "s.wav");
-  fs.writeFileSync(file, Buffer.concat([h, Buffer.alloc(24010 * 2)]));
+  fs.writeFileSync(
+    path.join(dir, "s.wav"),
+    Buffer.concat([h, Buffer.alloc(24010 * 2)]),
+  );
+  fs.writeFileSync(path.join(dir, "bad.wav"), Buffer.alloc(64));
   try {
-    assert.equal(frames(wavSeconds(file)), 31);
+    assert.equal(frames(wavSeconds(dir, "s.wav", assert.fail)), 31);
+    // A file that is no 16-bit mono WAV is refused by name, not read.
+    const why = [];
+    wavSeconds(dir, "bad.wav", (w) => why.push(w));
+    assert.match(why[0], /^bad\.wav is not 16-bit mono PCM/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

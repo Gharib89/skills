@@ -169,7 +169,7 @@ if (ace && !fs.existsSync(path.join(dest(ace, undefined, device), ".stamp")))
 // Timeline: scenes back to back on the frame grid, every word and sentence
 // start absolute.
 const grid = gridScenes(
-  voice.scenes.map((v) => wavSeconds(path.join(run, v.audio))),
+  voice.scenes.map((v) => wavSeconds(run, v.audio, fail)),
   HOLD,
 );
 const scenes = script.scenes.map((s, i) => {
