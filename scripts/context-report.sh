@@ -30,7 +30,8 @@ die() { echo "context-report: $*" >&2; exit 2; }
 
 root=${1:-.}
 [ -d "$root" ] || die "not a directory: $root"
-names=$(jq -r '.skills | to_entries[] | select(.value.source == ".") | .key' "$root/skills-lock.json") \
+names=$(jq -r '(.skills | if type == "object" then . else error("skills is not an object") end)
+  | to_entries[] | select(.value.source == ".") | .key' "$root/skills-lock.json") \
   || die "cannot read $root/skills-lock.json"
 
 # Characters under any locale: the cloud sandbox runs with LANG and LC_ALL

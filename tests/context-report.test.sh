@@ -99,5 +99,11 @@ check_rc "a missing lock is tooling" 2 "$rc"
 printf 'not json' > "$d/skills-lock.json"
 bash "$script" "$d" >/dev/null 2>&1; rc=$?
 check_rc "an unreadable lock is tooling" 2 "$rc"
+# A lock that parses but is not the lock's shape would report zero skills.
+for shape in '{"skills":[]}' '{}' '{"skills":{"a":"x"}}'; do
+  printf '%s' "$shape" > "$d/skills-lock.json"
+  bash "$script" "$d" >/dev/null 2>&1; rc=$?
+  check_rc "a lock shaped $shape is tooling" 2 "$rc"
+done
 
 finish
