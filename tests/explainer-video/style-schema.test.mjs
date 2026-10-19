@@ -12,6 +12,7 @@ import {
   scale,
   validate,
 } from "../../skills/explainer-video/scripts/lib/style.mjs";
+import { CONTENT } from "../../skills/explainer-video/scripts/render/compose.mjs";
 import { ARABIC, DIAGRAMS, SCRIPT } from "./scene-file.mjs";
 import {
   comp,
@@ -276,9 +277,12 @@ test("the default code row is 45 px, so 12 rows fit the 690 px content band", ()
   const fx = fixture(DIAGRAMS);
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
-  assert.match(comp(fx, "scenes/code.html"), /\.ln \{[^}]*height: 45px/);
+  const row = comp(fx, "scenes/code.html").match(
+    /\.ln \{[^}]*height: (\d+)px/,
+  )[1];
+  assert.equal(row, "45");
   // bar 56 + 1, body padding 2 * 28, 12 rows, frame border 2 * 2
-  assert.ok(56 + 1 + 56 + 12 * 45 + 4 <= 690);
+  assert.ok(56 + 1 + 56 + 12 * Number(row) + 4 <= CONTENT.height);
 });
 
 test("a code step override moves the code row height with it", () => {

@@ -102,7 +102,8 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   const x = {
     surface,
     // A code row is the code step at 1.4 (45 px at 32), so a `scale.code`
-    // override keeps the text inside its row and 12 rows still fit the band.
+    // override keeps the text inside its row; 12 rows fit the band at the
+    // default step only, a taller override is the layout gate's to catch.
     row: Math.round(scale(profile).code * 1.4),
     highlight: backend.highlight,
     sketch: async (shapes) =>
