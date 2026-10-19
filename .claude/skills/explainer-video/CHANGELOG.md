@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.28.0 (2026-10-19)
+
+### Features
+
+- **explainer-video**: Style profile schema 2 with a grammar block, type scale and tokens
+  ([#891](https://github.com/Gharib89/skills/pull/891),
+  [`d754036`](https://github.com/Gharib89/skills/commit/d75403682a63590f8b42c49793c98e6b0a14be55))
+
+
 ## v0.27.0 (2026-10-19)
 
 ### Features
