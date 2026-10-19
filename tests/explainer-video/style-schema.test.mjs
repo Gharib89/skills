@@ -55,6 +55,22 @@ test("a schema 1 profile is refused with a message naming what to change", () =>
   assert.throws(() => validate({ ...rest, name: "old" }), /is schema 1/);
 });
 
+test("a schema is read before contrast, and a schema 2 profile holding a schema 1 key is refused naming it", () => {
+  const base = bundled("claude-code");
+  const bad = {
+    ...base,
+    name: "old",
+    schema: 1,
+    colors: { ...base.colors, text: base.colors.bg },
+  };
+  assert.throws(() => validate(bad), /is schema 1/);
+  for (const k of ["motion", "look", "effects", "layout"])
+    assert.throws(
+      () => validate({ ...base, name: "old", [k]: "x" }),
+      new RegExp(`style profile old: ${k} is a schema 1 key`),
+    );
+});
+
 test("a field left out of the grammar takes today's look", () => {
   assert.deepEqual(grammar(bundled("claude-code")), {
     layout: "bands",
@@ -125,6 +141,26 @@ for (const [name, g, why] of [
     /grammar\.texture\.surface glass is not flat or sketch/,
   ],
   ["an unknown field", { motion: "rise" }, /grammar\.motion: no such field/],
+  [
+    "a layout that is not a family name",
+    { layout: 5 },
+    /grammar\.layout is not a family name/,
+  ],
+  [
+    "an ease given as an object",
+    { ease: { family: "spring" } },
+    /grammar\.ease is not a family name/,
+  ],
+  [
+    "a field with knobs given as a number",
+    { seams: 7 },
+    /grammar\.seams is not a family name or \{ family, \.\.\.knobs \}/,
+  ],
+  [
+    "a texture given as a bare surface",
+    { texture: "sketch" },
+    /grammar\.texture is not an object/,
+  ],
   [
     "a ban that names no component",
     { bans: ["confetti"] },
@@ -209,6 +245,17 @@ test("a profile's type step override reaches the page as its token", () => {
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
   assert.match(comp(fx), /--size-body: 44px;/);
+});
+
+test("a code step override moves the code row height with it", () => {
+  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: big"));
+  profiled(fx, "big", { scale: { code: 40 } });
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(comp(fx), /--size-code: 40px;/);
+  const code = comp(fx, "scenes/code.html");
+  assert.match(code, /var\(--size-code\)\/60px/);
+  assert.match(code, /\.ln \{[^}]*height: 60px/);
 });
 
 test("an Arabic run's face tokens resolve to the profile's Arabic companions", () => {

@@ -99,6 +99,7 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   const { surface } = texture;
   const x = {
     surface,
+    row: Math.round(scale(profile).code * 1.5),
     highlight: backend.highlight,
     sketch: async (shapes) =>
       surface === "sketch"

@@ -3,9 +3,6 @@
 import crypto from "node:crypto";
 import { diff, lines } from "../lib/visuals.mjs";
 
-// A code line's height: the code step's 32 px at 1.5.
-const LH = 48;
-
 export const esc = (s) =>
   String(s)
     .replaceAll("&", "&amp;")
@@ -58,7 +55,7 @@ const CODE_VARS = {
   "token-punctuation": "muted",
   "token-link": "accent",
 };
-const codeFrame = (p, f, rows) => ({
+const codeFrame = (p, f, rows, LH) => ({
   html: `<div class="code rt" dir="ltr"><div class="bar">${esc(p.file ?? p.lang)}</div><div class="body">${rows}</div></div>`,
   css: `.code { position: absolute; left: 0; top: 0; width: 1680px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; overflow: hidden; ${Object.entries(
     CODE_VARS,
@@ -199,6 +196,7 @@ ${sketchCss(x.surface)}`,
   code: async (p, f, x) => {
     const rows = await x.highlight(p.code, p.lang);
     const marks = p.highlights ?? [];
+    const LH = x.row;
     const bars = marks
       .map(
         (h, k) =>
@@ -211,6 +209,7 @@ ${sketchCss(x.surface)}`,
         f,
         bars +
           rows.map((row) => `<div class="ln">${tokens(row)}</div>`).join(""),
+        LH,
       ),
       reveals: [[".rt", 1]],
       tweens: marks.map((h, k) => [
@@ -228,6 +227,7 @@ ${sketchCss(x.surface)}`,
     const now = await x.highlight(p.after, p.lang);
     const k = { del: 0, add: 0 };
     const shut = { height: 0, opacity: 0 };
+    const LH = x.row;
     const open = { height: LH, opacity: 1 };
     const go = { duration: 0.5, ease: "power2.inOut" };
     const tweens = [];
@@ -242,7 +242,7 @@ ${sketchCss(x.surface)}`,
       return `<div class="ln ${op} ${cls}">${tokens(op === "del" ? was[i] : now[j])}</div>`;
     });
     return {
-      ...codeFrame(p, f, rows.join("")),
+      ...codeFrame(p, f, rows.join(""), LH),
       reveals: [[".rt", 1]],
       tweens,
     };

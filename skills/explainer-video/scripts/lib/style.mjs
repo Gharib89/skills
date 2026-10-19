@@ -90,11 +90,10 @@ export const SCALE = {
   label: 24,
 };
 
-// The grammar: each field a named family, default first, holding the families
-// the composer draws today; each later slice adds its family and moves its
-// field's default. A field left out takes the default, so a profile states
-// only where it departs. A field with knobs takes a bare family name or an
-// object `{ family, ...knobs }`; a knob is a number within its range.
+// The grammar: each field a named family, default first. A field left out
+// takes the default, so a profile states only where it departs. A field with
+// knobs takes a bare family name or an object `{ family, ...knobs }`; a knob
+// is a number within its range; a field without knobs is a family name.
 const FIELDS = {
   layout: { families: ["bands"] },
   seams: { families: ["cut"], knobs: { duration: [0.2, 0.4], blur: [0, 24] } },
@@ -105,12 +104,16 @@ const FIELDS = {
 const SURFACES = ["flat", "sketch"];
 
 // The components a family draws, keyed `<field>.<family>`: a grammar may not
-// ban one its own families need. Empty until a family needs a component (the
-// `canvas` seams will need `canvas`).
+// ban one its own families need. No family draws one yet.
 const USES = {};
 
-const own = (v) => (typeof v === "string" ? { family: v } : (v ?? {}));
+// A knob field's value as `{ family, ...knobs }`.
+const asFamily = (v) => (typeof v === "string" ? { family: v } : (v ?? {}));
+const plain = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const or = (list) => list.join(" or ");
+
+// Top-level keys schema 1 carried; a schema 2 profile holds them nowhere.
+const RETIRED = ["motion", "look", "effects", "layout"];
 
 // The grammar a profile plays: its own fields over the defaults.
 export function grammar(profile) {
@@ -118,7 +121,7 @@ export function grammar(profile) {
   const out = { bans: g.bans ?? [] };
   for (const [field, { families, knobs }] of Object.entries(FIELDS))
     out[field] = knobs
-      ? { family: families[0], ...own(g[field]) }
+      ? { family: families[0], ...asFamily(g[field]) }
       : (g[field] ?? families[0]);
   out.texture = { surface: SURFACES[0], ...g.texture };
   return out;
@@ -129,8 +132,8 @@ export const scale = (profile) => ({ ...SCALE, ...profile.scale });
 
 // A grammar that bans a component one of its own families draws is refused.
 export function checkBans(g, uses, name) {
-  for (const [field, v] of Object.entries(g)) {
-    const family = typeof v === "string" ? v : v?.family;
+  for (const field of Object.keys(FIELDS)) {
+    const family = asFamily(g[field]).family;
     for (const c of uses[`${field}.${family}`] ?? [])
       if (g.bans?.includes(c))
         throw new Error(
@@ -139,15 +142,25 @@ export function checkBans(g, uses, name) {
   }
 }
 
-// The profile's schema, grammar and type scale, each refused by its field.
-function features(profile) {
-  const refuse = (why) => {
-    throw new Error(`style profile ${profile.name}: ${why}`);
-  };
+// The schema a profile declares, checked before anything else: a schema 1
+// profile fails its other checks for reasons the migration note covers.
+function checkSchema(profile) {
   if (profile.schema !== SCHEMA)
     throw new Error(
       `style profile ${profile.name} is schema ${profile.schema ?? 1}, this version loads schema ${SCHEMA}: set schema to ${SCHEMA}, rename motion to grammar.ease (rise is soft), move look to grammar.texture.surface (clean is flat) and remove effects`,
     );
+  for (const k of RETIRED)
+    if (Object.hasOwn(profile, k))
+      throw new Error(
+        `style profile ${profile.name}: ${k} is a schema 1 key, see the schema 2 grammar and scale`,
+      );
+}
+
+// The profile's grammar and type scale, each refused by its field.
+function features(profile) {
+  const refuse = (why) => {
+    throw new Error(`style profile ${profile.name}: ${why}`);
+  };
   for (const [field, v] of Object.entries(profile.grammar ?? {})) {
     if (field === "bans") {
       if (!Array.isArray(v)) refuse("grammar.bans is not a list");
@@ -155,14 +168,20 @@ function features(profile) {
         if (!Object.hasOwn(VISUALS, b))
           refuse(`grammar.bans: ${b} is not a component`);
     } else if (field === "texture") {
-      for (const [k, t] of Object.entries(v ?? {})) {
+      if (!plain(v))
+        refuse(`grammar.texture is not an object like { "surface": "sketch" }`);
+      for (const [k, t] of Object.entries(v)) {
         if (k !== "surface") refuse(`grammar.texture.${k}: no such field`);
         if (!SURFACES.includes(t))
           refuse(`grammar.texture.surface ${t} is not ${or(SURFACES)}`);
       }
     } else if (Object.hasOwn(FIELDS, field)) {
-      const { families, knobs = {} } = FIELDS[field];
-      const { family = families[0], ...rest } = own(v);
+      const { families, knobs } = FIELDS[field];
+      if (!(typeof v === "string" || (knobs && plain(v))))
+        refuse(
+          `grammar.${field} is not a family name${knobs ? " or { family, ...knobs }" : ""}`,
+        );
+      const { family = families[0], ...rest } = asFamily(v);
       if (!families.includes(family))
         refuse(`grammar.${field} ${family} is not ${or(families)}`);
       for (const [k, n] of Object.entries(rest)) {
@@ -333,6 +352,7 @@ export function loadStyle(run, name, dirs = userDirs()) {
 // Every check a profile passes at load: contrast by role, its gates only
 // tightening, schema 2 with its grammar and type scale in range.
 export function validate(profile) {
+  checkSchema(profile);
   const bad = failures(profile);
   if (bad.length)
     throw new Error(

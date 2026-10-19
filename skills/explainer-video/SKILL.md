@@ -294,8 +294,9 @@ or edit a scene file or choose a style.
    `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
    and `out/` was emptied, an earlier render's files too. A `style profile
-   <name>` line names a colour pair, `gates`, `grammar` or `scale` value, or a
-   schema 1 profile, the skill refuses: fix it or choose another profile.
+   <name>` line names a colour pair or a `gates`, `grammar` or `scale` value
+   the skill refuses, or says the profile is schema 1 and lists each change:
+   fix what it names or choose another profile.
    `<row> is not installed`: run setup. `no script.json`, `no voice.json`,
    `voice.json does not match` or `voice.json holds narrator` names the stage
    to run first. `no render fonts for language <x>`: set the brief's
