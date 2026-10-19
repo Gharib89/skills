@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.30.0 (2026-10-19)
+
+### Features
+
+- **explainer-video**: Video gates judge only readable text, sample timeline events and find the
+  fullest moment ([#893](https://github.com/Gharib89/skills/pull/893),
+  [`5ea7362`](https://github.com/Gharib89/skills/commit/5ea7362f6212a79544c12c1749d7d262c7f1e15d))
+
+
 ## v0.29.0 (2026-10-19)
 
 ### Features
