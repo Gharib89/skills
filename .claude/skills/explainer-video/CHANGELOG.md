@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.0 (2026-10-19)
+
+### Features
+
+- **explainer-video**: Encode the final render with NVENC through HyperFrames --gpu
+  ([#876](https://github.com/Gharib89/skills/pull/876),
+  [`09147b0`](https://github.com/Gharib89/skills/commit/09147b01212b2eef7c65bf412c67a0d272c62116))
+
+
 ## v0.24.4 (2026-10-18)
 
 ### Documentation
