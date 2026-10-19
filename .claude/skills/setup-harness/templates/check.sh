@@ -253,9 +253,13 @@ rung_turn() {
   local f o rows='' pairs='' row files pair tab='	' new='' rec changed='' p
   if [ "$#" -eq 0 ]; then
     # Every uncommitted change, untracked files included. NUL-separated, so
-    # no path comes back quoted; a rename's second record is its old path.
+    # no path comes back quoted; a rename's second record is its old path,
+    # which counts as deleted, and a copy's is a file that has not changed.
     while IFS= read -r -d '' rec; do
-      case $rec in R* | C*) IFS= read -r -d '' _ ;; esac
+      case $rec in
+        R*) IFS= read -r -d '' p; changed="$changed$p$nl" ;;
+        C*) IFS= read -r -d '' _ ;;
+      esac
       changed="$changed${rec#???}$nl"
     done < <(git status --porcelain -z --untracked-files=all)
     local IFS=$nl

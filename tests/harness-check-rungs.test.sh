@@ -292,6 +292,20 @@ run "$r" turn scripts/gone.sh
 check "a deleted .sh named on the command line reaches the shell row" \
   "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
 
+# A rename is a deletion of its source: the default file set keeps the old path
+# of a staged rename, so the tests naming the old script's basename still run.
+r=$(repo renamed "TURN_ROWS='|shell|*.sh|||args shell {files}'")
+echo x > "$r/old.sh"; echo x > "$r/moved.sh"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+git -C "$r" mv old.sh new.sh; git -C "$r" mv moved.sh moved.txt
+: > "$ARGS_LOG"
+run "$r" turn
+check "a renamed .sh hands its old and new path to the shell row" \
+  "moved.sh
+new.sh
+old.sh
+shell" "$(tr ' ' '\n' < "$ARGS_LOG" | sort)"
+
 # A root's dependencies, missing as in a fresh worktree, are installed before
 # any other check on every rung, so a runner hook that calls a root's own
 # binary finds it on the first call (#586). Each command runs from the repo root.
