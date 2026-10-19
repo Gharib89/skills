@@ -64,10 +64,17 @@ test("a schema is read before contrast, and a schema 2 profile holding a schema 
     colors: { ...base.colors, text: base.colors.bg },
   };
   assert.throws(() => validate(bad), /is schema 1/);
-  for (const k of ["motion", "look", "effects", "layout"])
+  for (const [k, to] of [
+    ["motion", "grammar.ease"],
+    ["look", "grammar.texture.surface"],
+    ["effects", "nothing"],
+    ["layout", "grammar.layout"],
+  ])
     assert.throws(
       () => validate({ ...base, name: "old", [k]: "x" }),
-      new RegExp(`style profile old: ${k} is a schema 1 key, replaced by`),
+      new RegExp(
+        `style profile old: ${k} is a schema 1 key, replaced by ${to}`,
+      ),
     );
 });
 

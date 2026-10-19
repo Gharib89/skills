@@ -63,9 +63,9 @@ A profile holds `"schema": 2` (a profile without it is read as schema 1),
 `colors` (the tokens in [style.md](style.md)), `type` (a face and weight per
 role), and optionally `fonts` (families the draft fetched), `gates` (floors it
 may only tighten), `scale` and one `grammar` block. The loader refuses a
-schema 1 profile (`motion`, `look`, `effects`), naming each change. Every
-grammar field is optional; a field left out takes its default, the family
-listed first, so a profile states only where it departs:
+schema 1 profile (`motion`, `look`, `effects`, `layout`), naming each
+change. Every grammar field is optional; a field left out takes its default,
+the family listed first, so a profile states only where it departs:
 
 | Field (under `grammar`) | Families (default first) | Knobs |
 | --- | --- | --- |
