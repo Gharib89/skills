@@ -10,6 +10,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 fixture=$(mktemp -d)
+# The selector reads only the skill's and its tests' trees, so a file nothing
+# names has to sit in one; not a *.test.mjs, so no suite run picks it up.
 unnamed=tests/explainer-video/zz-unnamed-$$.mjs
 trap 'rm -rf "$fixture" "$unnamed"' EXIT
 printf '#!/bin/sh\nshift; printf "%%s\\n" "$@" > "$NODE_LOG"\n' > "$fixture/node"
@@ -76,6 +78,8 @@ check "a selection never reaches a gates or render file" "" \
   "$(sel skills/explainer-video/scripts/render/render.mjs | grep -e /gates- -e /render-)"
 check "files are read relative to the caller's directory" "$terms" \
   "$(cd skills/explainer-video && sel scripts/lib/terms.mjs)"
+check "a path through .. names the file it reaches" tests/explainer-video/terms.test.mjs \
+  "$(sel tests/explainer-video/../explainer-video/terms.test.mjs)"
 # page-core.js is no import: page.html names it and page-lib.mjs reads page.html.
 check "a page script reaches the page tests through the page that loads it" 1 \
   "$(sel skills/explainer-video/storyboard/page-core.js | grep -cx tests/explainer-video/page.test.mjs)"

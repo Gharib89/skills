@@ -15,8 +15,9 @@
 # text names its basename after a `/` or a quote: an import, a script a test
 # runs, a page that loads it; those files' names reach further, to a fixed
 # point. A file that is gone, is neither .mjs nor .js (package.json), or reaches
-# no --turn file selects the whole --turn set, so an unplaced change never
-# passes on nothing run. `--list` prints the selection instead of running it.
+# no --turn file selects the whole --turn set rather than nothing; changed
+# gates-* or render-* tests alone select nothing here, the full rung running
+# them. `--list` prints the selection instead of running it.
 # The full rung and the local gate run `tests/run.sh`, which passes no flag and
 # so runs every file.
 #
@@ -28,13 +29,15 @@ root=$(pwd -P)
 source tests/lib.sh
 
 nl=$'\n'
-q="'" bq='`'
+quotes="\"'\`"
+# <list> <line>: 0 when the newline-separated list holds the line.
+holds() { case $nl$1$nl in *"$nl$2$nl"*) return 0 ;; esac; return 1; }
 # <file>: the test files the file reaches, one per line; 2 on a grep error.
 reach() {
   local names=${1##*/} seen=" ${1##*/} " found='' hits h b re
   while [ -n "$names" ]; do
     re=$(printf '%s\n' "$names" | sed '/^$/d; s/[]*^$+?(){}|\\.[]/\\&/g' | paste -sd'|' -)
-    hits=$(grep -rlE --exclude='*.md' --exclude-dir=node_modules -- "[/\"$q$bq]($re)" skills/explainer-video tests/explainer-video)
+    hits=$(grep -rlE --exclude='*.md' --exclude-dir=node_modules -- "[/$quotes]($re)" skills/explainer-video tests/explainer-video)
     [ $? -le 1 ] || return 2
     names=''
     while IFS= read -r h; do
@@ -64,6 +67,10 @@ if [ "${1:-}" = --turn ]; then
   reached='' whole=''
   for f; do
     case $f in /*) ;; *) f=$caller/$f ;; esac
+    # Through the directory's real path, so a `..` or a link names the file
+    # the trees hold; a directory that is gone took the file with it.
+    d=$(cd -- "${f%/*}" 2>/dev/null && pwd -P) || { whole=1; break; }
+    f=$d/${f##*/}
     f=${f#"$root"/}
     [ -f "$f" ] || { whole=1; break; }
     case $f in
@@ -71,15 +78,15 @@ if [ "${1:-}" = --turn ]; then
       skills/explainer-video/*.mjs | skills/explainer-video/*.js | tests/explainer-video/*.mjs) ;;
       *) whole=1; break ;;
     esac
-    r=$(reach "$f") || exit 2
+    tests=$(reach "$f") || exit 2
     hit=''
-    for k in "${files[@]}"; do case $nl$r$nl in *"$nl$k$nl"*) hit=1; break ;; esac; done
+    for k in "${files[@]}"; do holds "$tests" "$k" && { hit=1; break; }; done
     [ -n "$hit" ] || { whole=1; break; }
-    reached="$reached$r$nl"
+    reached="$reached$tests$nl"
   done
   if [ "$#" -gt 0 ] && [ -z "$whole" ]; then
     kept=()
-    for f in "${files[@]}"; do case $nl$reached in *"$nl$f$nl"*) kept+=("$f") ;; esac; done
+    for f in "${files[@]}"; do holds "$reached" "$f" && kept+=("$f"); done
     # Only gates-* or render-* tests changed: nothing of theirs runs on this rung.
     [ "${#kept[@]}" -gt 0 ] || exit 0
     files=("${kept[@]}")
