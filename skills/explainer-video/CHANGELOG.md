@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.39.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Chart and stat components, numbers verbatim from a cited excerpt
+  ([#906](https://github.com/Gharib89/skills/pull/906),
+  [`cabe1df`](https://github.com/Gharib89/skills/commit/cabe1df4ff025a0c4f42ffeb01ff87042acb6b98))
+
+
 ## v0.38.0 (2026-10-20)
 
 ### Features
