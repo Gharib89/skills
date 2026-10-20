@@ -409,7 +409,8 @@ export const VISUALS = {
       ]),
   },
   // Two sides, the first at the reading start, each a title over items; a
-  // side's title arrives with its first item. Rich like `words`.
+  // side's title arrives with its first item, so no item cues before it.
+  // Rich like `words`.
   compare: {
     props: ["sides"],
     ownCamera: true,
@@ -419,8 +420,15 @@ export const VISUALS = {
       for (const s of p.sides) {
         object(s, "a compare side");
         named("compare", s.title, "a title per side");
-        list("compare", s.items, "items per side", said);
-        for (const x of s.items) text("compare", x.text, "a text per item");
+        list("compare side", s.items, "items", said);
+        for (const x of s.items) named("compare", x.text, "a text per item");
+        const j = s.items.findIndex(
+          (x) => place(x, said) < place(s.items[0], said),
+        );
+        if (j > 0)
+          fail(
+            `compare side "${s.title}" item ${j + 1} cues before item 1, which brings in the side's title`,
+          );
         known("a compare side", s, ["title", "items"]);
         for (const x of s.items) known("a compare item", x, [...CUE, "text"]);
       }

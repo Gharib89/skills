@@ -206,8 +206,8 @@ const FIXTURE = [
     },
     seconds: 3.4,
   },
-  // Events and two sides revealed on their cues: a timeline, then a timeline
-  // and a compare right to left (the first event and side at the right).
+  // A timeline, then an Arabic timeline and compare that run right to left
+  // (the first event and the first side at the right), each item on its cue.
   {
     scene: {
       id: "timeline",
@@ -535,7 +535,8 @@ check(
     )
     .join("; "),
 );
-// The timeline and compare scenes settled, kept for a look at their order.
+// With REAL_RENDER_FRAMES set, save each timeline and compare scene's settled
+// frame (3 s in) for a human to check the reading order; nothing asserts it.
 if (process.env.REAL_RENDER_FRAMES)
   for (const id of ["timeline", "arabic-timeline", "arabic-compare"]) {
     const start = whole.scenes.find((s) => s.id === id).start;

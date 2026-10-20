@@ -35,8 +35,10 @@ export const timeline = (p, f) => ({
   ],
 });
 
-// Two boxes side by side, each its title over its items; a side arrives with
-// its first item, and each item on its own cue.
+// Two boxes side by side, each its title over its items. The boxes frame the
+// scene from its start; a side's title arrives with its first item, and each
+// item on its own cue (compile holds every item to cue no earlier than the
+// first). Title and items reveal as siblings, so none rides another's rise.
 export const compare = async (p, f, x) => {
   const box = { w: 800, h: 560 };
   const shapes = await x.sketch(
@@ -59,7 +61,7 @@ export const compare = async (p, f, x) => {
 .ci::before { content: ""; position: absolute; inset-inline-start: 0; top: calc(${f.lh(1.35, "text") / 2}em - 7px); width: 14px; height: 14px; border-radius: 50%; background: var(--accent); }
 ${sketchCss(x.surface)}`,
     reveals: p.sides.flatMap((s, i) => [
-      [`.s${i}`, s.items[0]],
+      [`.s${i} .stitle`, s.items[0]],
       ...s.items.map((it, j) => [`.s${i} .i${j}`, it]),
     ]),
   };

@@ -100,8 +100,19 @@ test("a compare reveals each item on its cue, and a side's title with its first 
   );
   // "every team" is the 11th spoken word, 3 s in
   assert.deepEqual(
-    [at[".s0"], at[".s0 .i0"], at[".s0 .i1"], at[".s1"], at[".s1 .i0"]],
+    [
+      at[".s0 .stitle"],
+      at[".s0 .i0"],
+      at[".s0 .i1"],
+      at[".s1 .stitle"],
+      at[".s1 .i0"],
+    ],
     [0, 0, 3, 4.5, 4.5],
+  );
+  // the boxes frame the scene from its start: nothing nests one rise in another
+  assert.deepEqual(
+    Object.keys(at).filter((k) => /^\.s\d$/.test(k)),
+    [],
   );
   assert.deepEqual(
     texts(

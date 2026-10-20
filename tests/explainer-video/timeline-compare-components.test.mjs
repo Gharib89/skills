@@ -62,8 +62,10 @@ test("compare sides take a title and items of at, on and text, and refuse the re
     ),
   );
   bad(compare([side("", [row(1, "a")]), b]), /compare needs a title per side/);
-  bad(compare([side("A", []), b]), /compare needs items per side/);
+  bad(compare([side("A", []), b]), /compare side needs items/);
+  bad(compare([side("A", ["x"]), b]), /a compare side item is not a JSON/);
   bad(compare([side("A", [{ at: 1 }]), b]), /compare needs a text per item/);
+  bad(compare([side("A", [row(1, " ")]), b]), /compare needs a text per item/);
   bad(compare([side("A", [row(4, "a")]), b]), /at 4 is not a sentence/);
   bad(
     compare([side("A", [row(1, "a", "no such words")]), b]),
@@ -83,6 +85,33 @@ test("compare sides take a title and items of at, on and text, and refuse the re
       props: { sides: [side("A", [row(1, "a")]), b], emphasis: {} },
     },
     /compare has no prop emphasis/,
+  );
+});
+
+test("no compare item cues before its side's first item, which brings in the side's title", () => {
+  const b = side("After", [row(3, "Automatic")]);
+  // the same sentence, a later phrase of it, and a later sentence all pass
+  assert.doesNotThrow(() =>
+    checkVisual(
+      compare([
+        side("Before", [
+          row(1, "a"),
+          row(1, "b"),
+          row(1, "c", "side project"),
+          row(2, "d"),
+        ]),
+        b,
+      ]),
+      said,
+    ),
+  );
+  bad(
+    compare([side("Before", [row(2, "a"), row(1, "b")]), b]),
+    /compare side "Before" item 2 cues before item 1/,
+  );
+  bad(
+    compare([side("Before", [row(1, "a", "side project"), row(1, "b")]), b]),
+    /compare side "Before" item 2 cues before item 1/,
   );
 });
 
