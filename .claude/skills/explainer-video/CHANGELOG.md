@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.40.1 (2026-10-20)
+
+### Bug Fixes
+
+- **explainer-video**: Draw the field's blur as gradients so renders stay identical
+  ([#918](https://github.com/Gharib89/skills/pull/918),
+  [`5aa6466`](https://github.com/Gharib89/skills/commit/5aa6466d39e237154e9a1682934f5efc0503efda))
+
+
 ## v0.40.0 (2026-10-20)
 
 ### Features
