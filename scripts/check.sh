@@ -48,9 +48,10 @@ FULL_RUN='prek run --all-files'
 # whose tests are picked by the script's basename. The explainer-video
 # rows name their suite under <affected tests> alone: `full` runs the whole
 # suite in the `tests` row, so a <tests> entry ran its `--turn` subset twice
-# more beside it.
-TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn
-tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn
+# more beside it. Their `--turn {files}` runs the --turn tests the files reach,
+# and the whole --turn set for a file it cannot place.
+TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn {files}
+tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn {files}
 skills/grill-with-artifact/|grill-with-artifact|*.js||../../tests/grill-with-artifact.test.sh|
 |shell|*.sh|||scripts/shell-turn-tests.sh {files}'
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
