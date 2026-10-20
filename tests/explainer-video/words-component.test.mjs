@@ -108,6 +108,27 @@ test("a read-along line rises word by word on its spoken words and is marked for
   );
 });
 
+test("right to left, an English term glued into one span rises on its last spoken word", async () => {
+  const ar = ["بعد كده بيعمل pull request."];
+  const html = await sceneFile(
+    {
+      id: "a",
+      narration: ar,
+      visual: words(line(1, "بيعمل pull request", "بيعمل")),
+    },
+    { ...timing, sentences: [0] },
+    claude,
+    { backend: {}, seam: {}, dir: "rtl" },
+  );
+  assert.deepEqual(
+    rises(html).map(([sel, , , at]) => [sel, at]),
+    [
+      [".k0", 1],
+      [".k1", 2],
+    ],
+  );
+});
+
 test("a line cued off its spoken words rises on its cue, one stagger apart, and is not marked", async () => {
   const html = await drawn(words(line(2, "opens a pull request")));
   assert.match(html, /<div class="kl" data-line="l0">/);

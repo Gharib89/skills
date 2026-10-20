@@ -346,8 +346,8 @@ ${CALLOUT_CSS}`,
   // Key lines, each a box of whole-word spans. A line read along (see
   // `readAlong`) rises word by word on each word's own spoken time and carries
   // `data-along` for the reading gate; any other rises on its cue, a stagger
-  // apart. A Latin run glued into one span under right to left covers every
-  // spoken word it holds.
+  // apart. A Latin run glued into one span under right to left rises on the
+  // last spoken word it holds.
   words: (p, f, x) => {
     const tweens = [];
     let next = 0;
@@ -372,9 +372,8 @@ ${CALLOUT_CSS}`,
             ease: x.type.ease,
             ...(start < 0 && { delay: +(j * x.type.stagger).toFixed(6) }),
           },
-          start < 0 ? line : { word: spoken },
+          start < 0 ? line : { word: (spoken += w.split(" ").length) - 1 },
         ]);
-        spoken += w.split(/\s+/).length;
       });
       next = k.count;
       return `<div class="kl" data-line="l${i}"${start < 0 ? "" : " data-along"}>${k.html}</div>`;
