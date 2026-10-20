@@ -201,3 +201,24 @@ test("the frame takes commands only from its page, fonts first, and runs a loop 
   assert.deepEqual(clone(f.sent.at(-1)), { type: "done" });
   assert.ok(!f.running());
 });
+
+test("a timeline missing a scene's slot, or a scene file with no template, is refused by name", async () => {
+  const fx = fixture();
+  prep(fx);
+  const file = path.join(fx.dir, "timeline.json");
+  const tl = JSON.parse(fs.readFileSync(file, "utf8"));
+  delete tl.scenes[0].slot;
+  fs.writeFileSync(file, JSON.stringify(tl));
+  const r = board(fx, "build");
+  assert.equal(r.code, 1);
+  assert.match(r.err, /timeline\.json has no start and slot for scene hook/);
+  const { liveScript } = await import(
+    path.join(skill, "scripts", "render", "live.mjs")
+  );
+  const comp = path.join(fx.dir, "composition");
+  fs.writeFileSync(path.join(comp, "scenes", "hook.html"), "x");
+  assert.throws(
+    () => liveScript(comp),
+    /scenes\/hook\.html holds no <template>/,
+  );
+});
