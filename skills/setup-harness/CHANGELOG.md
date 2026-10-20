@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.0 (2026-10-20)
+
+### Features
+
+- **setup-harness**: {paths} hands a turn row its deleted paths
+  ([#914](https://github.com/Gharib89/skills/pull/914),
+  [`d33dd8f`](https://github.com/Gharib89/skills/commit/d33dd8f198f3c2d44a9cdc01b944bdbf8abc2c9e))
+
+
 ## v0.12.3 (2026-10-19)
 
 ### Bug Fixes
