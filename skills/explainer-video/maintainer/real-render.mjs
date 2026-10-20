@@ -26,6 +26,7 @@ import { sceneEvents } from "../scripts/gates/events.mjs";
 import { HOLD } from "../scripts/lib/length.mjs";
 import { seamStripStart } from "../scripts/lib/motion.mjs";
 import { loadStyle, typeRoles } from "../scripts/lib/style.mjs";
+import { VISUALS } from "../scripts/lib/visuals.mjs";
 import {
   catalogue,
   compositionAssets,
@@ -124,6 +125,86 @@ const FIXTURE = [
       },
     },
     seconds: 2.6,
+  },
+  // Numbers that count up: bars and stats, then the same right to left (a line
+  // chart and a stat). Each number cues on a sentence after the scene's entry
+  // seam, so a frame during the count is outside any seam.
+  {
+    scene: {
+      id: "bars",
+      role: "point",
+      title: "Bars",
+      narration: ["Latency was 900.", "Then it fell to 240.", "Quite a drop."],
+      visual: {
+        component: "chart",
+        props: {
+          kind: "bar",
+          unit: "ms",
+          items: [
+            { at: 2, label: "Before", value: "900" },
+            { at: 3, label: "After", value: "240" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
+  {
+    scene: {
+      id: "numbers",
+      role: "point",
+      title: "Numbers",
+      narration: ["Two numbers.", "It holds 1,200 requests.", "In 40 ms."],
+      visual: {
+        component: "stat",
+        props: {
+          items: [
+            { at: 2, value: "1,200", label: "requests a second" },
+            { at: 3, value: "40", label: "milliseconds" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic-line",
+      role: "point",
+      title: "خط",
+      narration: ["الأرقام بتنزل.", "كانت 900.", "بقت 240."],
+      visual: {
+        component: "chart",
+        props: {
+          kind: "line",
+          items: [
+            { at: 2, label: "قبل", value: "900" },
+            { at: 3, label: "بعد", value: "240" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic-stat",
+      role: "point",
+      title: "أرقام",
+      narration: ["رقمين.", "فيه 1,200 طلب.", "في ٤٠ ثانية."],
+      visual: {
+        component: "stat",
+        props: {
+          items: [
+            { at: 2, value: "1,200", label: "طلب" },
+            { at: 3, value: "٤٠", label: "ثانية" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
   },
 ];
 const HALF = 1;
@@ -313,7 +394,8 @@ check(
 // of their own: the PNGs match byte for byte. The hook's zoom-through (out) and
 // the steps' cut on a curve (out) each have an exit window and the scene after
 // it an entry window, and the seams into the Arabic and the read-along scenes
-// the same, so eight windows.
+// the same, and so does each scene after: an exit and an entry window for each
+// of the fixture's scene changes.
 const raw = await backend.events(whole.comp, { env });
 const seek = async (t, n) => {
   const png = path.join(work, `seam-${t}-${n}.png`);
@@ -345,20 +427,55 @@ async function sweep(kind) {
   }
   return { count: windows.length, apart, still };
 }
+const windows = (FIXTURE.length - 1) * 2;
 const seams = await sweep("seams");
 check(
   "seams",
-  seams.count === 8 && seams.apart === 0 && seams.still === 0,
-  `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (8 expected)`,
+  seams.count === windows && seams.apart === 0 && seams.still === 0,
+  `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (${windows} expected)`,
 );
-// Every scene but the rich one composes a push-in under the default camera:
-// one window each.
-const pushes = whole.scenes.length - 1;
+// Every scene but the rich ones (`ownCamera`) composes a push-in under the
+// default camera: one window each.
+const pushes = FIXTURE.filter(
+  (p) => !VISUALS[p.scene.visual.component].ownCamera,
+).length;
 const push = await sweep("camera");
 check(
   "camera",
   push.count === pushes && push.apart === 0 && push.still === 0,
   `${push.apart} of ${push.count * 3} push-in frames differ between two seeks, ${push.still} windows draw no motion, in ${push.count} windows (${pushes} expected)`,
+);
+
+// A number counts up as a function of time: each stat scene's frame 0.45 s into
+// the first count, seeked twice, matches byte for byte, differs from the frame
+// once the count has settled, and the same frame at the same time is saved for
+// a look (`REAL_RENDER_FRAMES=<dir>` keeps the settled and mid-count frames).
+const counting = [];
+for (const id of ["numbers", "arabic-stat", "bars", "arabic-line"]) {
+  const start = whole.scenes.find((s) => s.id === id).start;
+  const mid = +(start + 1.0 + 0.45).toFixed(3);
+  const done = +(start + 3.0).toFixed(3);
+  const a = await seek(mid, "count-a");
+  const b = await seek(mid, "count-b");
+  const settled = await seek(done, "count-done");
+  counting.push([id, a.equals(b), !a.equals(settled)]);
+  if (process.env.REAL_RENDER_FRAMES) {
+    fs.mkdirSync(process.env.REAL_RENDER_FRAMES, { recursive: true });
+    fs.writeFileSync(
+      path.join(process.env.REAL_RENDER_FRAMES, `${id}.png`),
+      settled,
+    );
+  }
+}
+check(
+  "count-up",
+  counting.every(([, same, moved]) => same && moved),
+  counting
+    .map(
+      ([id, same, moved]) =>
+        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moved ? "differs" : "SAME"} from settled`,
+    )
+    .join("; "),
 );
 
 // What the critic reads of motion, off the real timeline and the real video:

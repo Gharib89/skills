@@ -8,6 +8,8 @@
 // A cue is `at`, a sentence number, and optionally `on`, a phrase that
 // sentence says: the reveal lands on the phrase's first spoken word.
 
+import { plain } from "./count.mjs";
+
 // A code frame holds this many lines at 30 px: longer code is a second scene.
 const CODE_LINES = 12;
 export const lines = (code) => code.split("\n");
@@ -95,6 +97,40 @@ const object = (x, what) => {
 const text = (name, v, what) => {
   if (typeof v !== "string") fail(`${name} needs ${what}`);
 };
+const named = (name, v, what) => {
+  text(name, v, what);
+  if (!v.trim()) fail(`${name} needs ${what}`);
+};
+// A number as a source writes it: digits, thousands commas that group by
+// three, an optional decimal part. Its characters are what the script gate
+// finds in an excerpt, and what a count-up ends on.
+// It is written in ASCII, Arabic-Indic (١٢٠٠) or Persian (۱۲۰۰) digits, one
+// script to a number, as an Arabic source writes it.
+const NUMBER = /^(0|[1-9]\d*|[1-9]\d{0,2}(,\d{3})+)(\.\d+)?$/;
+const SCRIPTS = [/[0-9]/, /[٠-٩]/, /[۰-۹]/];
+function digits(name, v) {
+  if (v === undefined) fail(`${name} needs a value per item`);
+  if (
+    typeof v !== "string" ||
+    !NUMBER.test(plain(v)) ||
+    SCRIPTS.filter((s) => s.test(v)).length > 1
+  )
+    fail(
+      `${name} value ${JSON.stringify(v)} is not a number written in digits (1200 or 1,200.5)`,
+    );
+  // What a double keeps exactly: a longer one would count up and size a bar
+  // from a rounded (or infinite) number.
+  if (plain(v).replace(/\D/g, "").length > 15)
+    fail(`${name} value ${JSON.stringify(v)} has more than 15 digits`);
+}
+const DIGIT = "[0-9\\u0660-\\u0669\\u06f0-\\u06f9]";
+const POINT = "[.,\\u066b\\u066c]";
+// Whether `value` stands in `text` as written and whole, never as part of a
+// longer number (200 is not in 1,200 nor 5 in 0.5), in any digit script.
+export const numberIn = (text, value) =>
+  new RegExp(
+    `(?<!${DIGIT})(?<!${DIGIT}${POINT})${value.replace(/\./g, "\\.")}(?!${DIGIT})(?!${POINT}${DIGIT})`,
+  ).test(text);
 // A list prop of `min` to `max` objects, each with a cue.
 function list(name, v, what, said, [min, max] = [1, Infinity]) {
   if (!Array.isArray(v) || v.length < min || v.length > max)
@@ -303,6 +339,51 @@ export const VISUALS = {
     },
     items: (p) =>
       p.lines.map((x, i) => [`line ${i + 1}`, x.at, [x.text], x.on]),
+  },
+  // Bars or a line over 1 or more numbers that count up as each is said. Rich
+  // like `words`; `numbers` are what the script gate holds to a cited excerpt.
+  chart: {
+    props: ["kind", "unit", "items"],
+    rows: "items",
+    item: [...CUE, "label", "value"],
+    ownCamera: true,
+    check: (p, said) => {
+      if (!["bar", "line"].includes(p.kind))
+        fail("chart needs a kind of bar or line");
+      if (p.unit !== undefined) text("chart unit", p.unit, "text");
+      list("chart", p.items, "items", said);
+      if (p.kind === "line" && p.items.length < 2)
+        fail("a line chart needs 2 or more items");
+      for (const x of p.items) {
+        named("chart", x.label, "a label per item");
+        digits("chart", x.value);
+      }
+    },
+    items: (p) =>
+      p.items.map((x, i) => [
+        `item ${i + 1}`,
+        x.at,
+        [x.label, x.value, p.unit],
+        x.on,
+      ]),
+    numbers: (p) => p.items.map((x) => x.value),
+  },
+  // Big numbers that count up, each with its label. Rich like `chart`.
+  stat: {
+    props: ["items"],
+    rows: "items",
+    item: [...CUE, "value", "label"],
+    ownCamera: true,
+    check: (p, said) => {
+      list("stat", p.items, "items", said);
+      for (const x of p.items) {
+        digits("stat", x.value);
+        named("stat", x.label, "a label per item");
+      }
+    },
+    items: (p) =>
+      p.items.map((x, i) => [`stat ${i + 1}`, x.at, [x.value, x.label], x.on]),
+    numbers: (p) => p.items.map((x) => x.value),
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],

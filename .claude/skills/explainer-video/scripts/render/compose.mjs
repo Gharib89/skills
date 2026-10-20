@@ -4,6 +4,7 @@
 // whose visual is a component. The palette, the type scale and the faces come
 // from the style profile as CSS custom properties; every font is a file beside
 // the page.
+import { COUNT_SECONDS, countText, plain } from "../lib/count.mjs";
 import { ARABIC, blursDepth, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
@@ -198,11 +199,28 @@ async function sceneParts(
         t(cameraCue(scene.visual, scene.narration)) - camera.duration,
       ).toFixed(6)
     : null;
+  // A number counts up within the scene: a cue near the end shortens its count
+  // (and its bar) rather than cutting away on a half-counted number.
+  const fit = (at, d) =>
+    c.counts
+      ? +Math.min(d, Math.max(timing.duration - at, 0.05)).toFixed(6)
+      : d;
   const tweens = [
     ...c.reveals.map(reveal),
-    ...(c.tweens ?? []).map(([sel, from, to, at]) => [sel, from, to, t(at)]),
+    ...(c.tweens ?? []).map(([sel, from, to, at]) => [
+      sel,
+      from,
+      to.duration ? { ...to, duration: fit(t(at), to.duration) } : to,
+      t(at),
+    ]),
     ...depth,
   ];
+  const counts = (c.counts ?? []).map(([sel, written, at]) => [
+    sel,
+    written,
+    t(at),
+    fit(t(at), COUNT_SECONDS),
+  ]);
   return {
     html: `    <div class="content" dir="${dir}">${push === null ? c.html : `<div class="camera">${c.html}</div>`}</div>
     <style>
@@ -212,7 +230,7 @@ ${css}
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
-${play(scope, tweens)}${pushScript(scope, push, camera)}
+${play(scope, tweens)}${countScript(scope, counts)}${pushScript(scope, push, camera)}
         // never before the entry seam ends: earlier the content is still fading in
         const full = Math.min(Math.max(tl.duration(), ${seam.in?.duration ?? 0}), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};
@@ -243,6 +261,20 @@ const play = (scope, tweens) =>
         }`
     : `        for (const [sel, from, to, t] of tweens)
           tl.fromTo('${scope} ' + sel, from, to, t);`;
+
+// The script lines that count a scene's numbers up, `[selector, written, time]`
+// each: a tween of the element's text from 0 to 1 whose modifier turns the
+// progress into text, so the text is a function of the timeline's time alone.
+// `countText` is written into the script as source.
+const countScript = (scope, counts) =>
+  counts.length
+    ? `
+        const counts = ${JSON.stringify(counts)};
+        ${plain}
+        ${countText}
+        for (const [sel, written, t, d] of counts)
+          tl.fromTo('${scope} ' + sel, { textContent: 0 }, { textContent: 1, duration: d, ease: "power2.out", modifiers: { textContent: (p) => countText(written, p) } }, t);`
+    : "";
 
 // A full page: fonts, palette, the texture behind and over `body` and, under
 // `bands`, the header band, inside the root. Right to left, the header and the

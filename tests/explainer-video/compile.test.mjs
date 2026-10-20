@@ -238,8 +238,8 @@ for (const [name, from, to, why] of [
   [
     "an unknown component",
     '"component": "cards"',
-    '"component": "chart"',
-    /^compile: steps: unknown component chart/m,
+    '"component": "gauge"',
+    /^compile: steps: unknown component gauge/m,
   ],
   [
     "a visual that is not JSON",

@@ -25,6 +25,8 @@ import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { plain } from "../lib/count.mjs";
+import { VISUALS, numberIn } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
@@ -97,8 +99,10 @@ const gates = {};
   gates.budget = f;
 }
 
-// cites: every cite in the pack, and each cited excerpt still word for word
-// in its snapshot when the snapshots are there.
+// cites: every cite in the pack, each cited excerpt still word for word in its
+// snapshot when the snapshots are there, and every number a scene shows on
+// screen (`numbers` of its component) standing as written in an excerpt the
+// scene cites: whole, so 200 is not found in 1,200 nor 5 in 0.5.
 {
   const f = [];
   const byId = new Map(pack.excerpts.map((x) => [x.id, x]));
@@ -124,6 +128,22 @@ const gates = {};
           f.push(`${id} is no longer word for word in ${ex.locator}`);
       }
     });
+  for (const s of scenes) {
+    const shown = VISUALS[s.visual.component].numbers?.(s.visual.props) ?? [];
+    const ids = [...new Set(s.cites.flat())];
+    const texts = ids.map((id) => byId.get(id)?.text ?? "");
+    for (const n of shown) {
+      if (texts.some((t) => numberIn(t, n))) continue;
+      // The same number in another digit script is a near miss worth naming:
+      // the video shows the excerpt's own digits.
+      const hint = texts.some((t) => numberIn(plain(t), plain(n)))
+        ? "; the excerpt writes it in another digit script, so write it as the excerpt does"
+        : "";
+      f.push(
+        `${s.id}: on-screen number "${n}" is in none of ${ids.join(", ") || "its cites (it has none)"}${hint}`,
+      );
+    }
+  }
   gates.cites = f;
 }
 

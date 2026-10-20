@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { WORD_RISE_SECONDS } from "../lib/style.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { diff, lines, readAlong } from "../lib/visuals.mjs";
+import { chart, stat } from "./numbers.mjs";
 import { GLASS } from "./texture.mjs";
 
 export const esc = (s) =>
@@ -150,6 +151,8 @@ const WORD_RISE = 115;
 // sentence number]. `x` holds the profile's surface, Shiki's tokens and
 // rough.js outlines.
 export const COMPONENTS = {
+  chart,
+  stat,
   title: (p, f, x) => {
     const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";
     const css = `.stack { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
