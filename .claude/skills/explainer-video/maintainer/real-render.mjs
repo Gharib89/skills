@@ -22,7 +22,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { sceneEvents } from "../scripts/gates/events.mjs";
 import { HOLD } from "../scripts/lib/length.mjs";
+import { seamStripStart } from "../scripts/lib/motion.mjs";
 import { loadStyle, typeRoles } from "../scripts/lib/style.mjs";
 import {
   catalogue,
@@ -357,6 +359,41 @@ check(
   "camera",
   push.count === pushes && push.apart === 0 && push.still === 0,
   `${push.apart} of ${push.count * 3} push-in frames differ between two seeks, ${push.still} windows draw no motion, in ${push.count} windows (${pushes} expected)`,
+);
+
+// What the critic reads of motion, off the real timeline and the real video:
+// every scene's tweens, the push-in's among them and left out of the windows a
+// dead beat is read against, and the hook's seam strip, 6x2 tiles of 320x180.
+const { moves } = sceneEvents(raw, whole.scenes);
+const same = ([a, b], [x, y]) =>
+  Math.abs(a - x) < 1e-3 && Math.abs(b - y) < 1e-3;
+const pushed = whole.scenes.filter((s) => moves[s.id].camera.length);
+const hook = whole.scenes[0];
+const [exit] = moves.hook.seams.filter(
+  ([a]) => a >= hook.start + hook.duration - 1e-3,
+);
+const stripPng = path.join(work, "hook.seam.png");
+await backend.strip(videos["whole-1"], stripPng, {
+  first: seamStripStart(exit, FPS),
+  fps: FPS,
+});
+const stripBytes = fs.readFileSync(stripPng);
+const size = [stripBytes.readUInt32BE(16), stripBytes.readUInt32BE(20)];
+check(
+  "critic motion",
+  whole.scenes.every((s) => raw[s.id]?.tweens?.length) &&
+    pushed.length === pushes &&
+    pushed.every(
+      (s) =>
+        raw[s.id].camera.every((c) =>
+          raw[s.id].tweens.some((t) => same(t, c)),
+        ) &&
+        !moves[s.id].tweens.some((t) =>
+          moves[s.id].camera.some((c) => same(t, c)),
+        ),
+    ) &&
+    size.join("x") === "1920x360",
+  `${whole.scenes.filter((s) => raw[s.id]?.tweens?.length).length} of ${whole.scenes.length} scenes list their tweens, ${pushed.length} of ${pushes} push-ins left out of them, the hook's seam strip is ${size.join("x")} (1920x360 expected)`,
 );
 
 const list = path.join(work, "halves.txt");

@@ -37,7 +37,7 @@ test("a clean render passes all seven gates, writes the record and the report, a
     lines[4],
     lines[5],
     "gate determinism: pass: 0 of 3 scene(s) differ between two renders vs none, the same pixels twice",
-    "gate critic: pass: 0 hard failure(s), mean scores clarity 4.0, legibility 5.0, fit 4.0, motion 3.0, round 1 of 2 vs no unreadable or invented content; scores advise",
+    "gate critic: pass: 0 hard failure(s), mean scores clarity 4.0, legibility 5.0, fit 4.0, motion 3.0, round 1 of 2 vs no unreadable, invented or rtl content; scores advise",
     "gates: 8 pass, 0 fail",
   ]);
   assert.match(

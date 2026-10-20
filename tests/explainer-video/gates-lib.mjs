@@ -115,6 +115,23 @@ export function assertGreen(fx, r) {
   assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
 }
 
+// The fixture's seam windows in video seconds, as its scenes' labels give them:
+// the hook hands over at 4.5 s, the steps scene at 9.433 s, and the gate
+// scene, the last, hands over to none. `first` is the seam strip's first frame:
+// the window's 6 frames, 3 of lead before them.
+export const SEAMS = {
+  hook: { window: [4.5, 4.7], first: 132 },
+  steps: { window: [9.433, 9.633], first: 280 },
+  gate: null,
+};
+// What a scene's motion record says of its seam strip.
+export const seamRecord = (id) =>
+  SEAMS[id] && {
+    first: +(SEAMS[id].first / 30).toFixed(3),
+    last: +((SEAMS[id].first + 11) / 30).toFixed(3),
+    window: SEAMS[id].window,
+  };
+
 // The render stage alone, no critic round taken.
 export function renderUnjudged(fx, text, extra) {
   fs.writeFileSync(path.join(fx.dir, "script.md"), text);

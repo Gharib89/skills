@@ -119,7 +119,8 @@ export async function sheet(input, output, { start, duration, fps, fullest }) {
 
 export async function strip(input, output, { first, fps }) {
   log({ call: "strip", input, output, first, fps });
-  fs.writeFileSync(output, `strip of ${path.basename(output, ".motion.png")}`);
+  const id = path.basename(output).replace(/\.(motion|seam)\.png$/, "");
+  fs.writeFileSync(output, `strip of ${id} from ${first}`);
 }
 
 // A scene moves unless its start is listed in EXPLAINER_VIDEO_FAKE_STILL (a JSON
