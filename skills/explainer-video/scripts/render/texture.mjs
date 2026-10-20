@@ -1,12 +1,8 @@
 // The texture a page draws around its scenes, as the profile's grammar names
 // it: a blurred colour field behind them, and grain and a vignette over them.
 // Every layer is static (the grain's noise has a fixed seed), so a frame
-// renders the same whenever HyperFrames seeks to it. The field is its own
-// composited layer: sharing one with the scenes, each frame's damage re-rasters
-// the blur inside the damaged rect only, and those pixels then depend on which
-// rects were redrawn before, so two renders differ under load (#905). The
-// glass surface and the depth blur are the scenes' own (components.mjs,
-// compose.mjs).
+// renders the same whenever HyperFrames seeks to it. The glass surface and the
+// depth blur are the scenes' own (components.mjs, compose.mjs).
 
 // The glass a box is drawn in: the panel colour half see-through over the
 // field, blurred behind it.
@@ -21,6 +17,10 @@ const GRAIN_SEED = 7;
 export function texture({ overlays, grain, fieldBlur }) {
   const on = (o) => overlays.includes(o);
   const blob = (cls) => `<i class="${cls}"></i>`;
+  // `.field` is its own composited layer. Sharing one with the scenes, each
+  // frame's damage re-rasters the blur inside the damaged rect only, and those
+  // pixels then depend on which rects were redrawn before, so two renders of
+  // one composition differ under load (#905).
   return {
     css: `.field { position: absolute; inset: 0; overflow: hidden; will-change: transform; }
 .field i { position: absolute; border-radius: 50%; filter: blur(${fieldBlur}px); opacity: 0.16; }
