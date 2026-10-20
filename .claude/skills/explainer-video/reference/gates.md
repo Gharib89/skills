@@ -16,13 +16,15 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 - `layout`: HyperFrames' check, plus the layout probe (text at least 18 px,
   nothing clipped or overflowing its box, every text box inside the 5 percent
   safe margin, no text box overlapping another), judging a box only while it
-  is **readable**: fully shown, outside any scene's seam (a seam runs on into
-  the next scene) and not carried by its own camera. A finding of HyperFrames'
-  check on a box that is not readable is held back too. The frames are the
-  0.5 s grid, each scene's settled last frame and every **timeline event**
+  is **readable**: fully shown, outside any scene's seam (the outgoing scene's
+  exit and the next scene's entry both count) and not carried by its own
+  camera. A finding of HyperFrames' check on a box that is not readable is
+  held back too. The frames are the 0.5 s grid, each scene's settled last
+  frame and every **timeline event**
   (the end of a tween, the start and end of a seam or camera move, read off the
   scene's GSAP timeline, the seam and camera as the label pairs
-  `seam:start`/`seam:end` and `camera:start`/`camera:end`), one sample per
+  `seam:start`/`seam:end` (numbered `seam:start2` for a scene's second seam)
+  and `camera:start`/`camera:end`), one sample per
   whole frame. A scene with no text in any sample is a hard error.
   In an Arabic run, the probe also holds
   the reading rules: `dir` on the text boxes and never on a page root

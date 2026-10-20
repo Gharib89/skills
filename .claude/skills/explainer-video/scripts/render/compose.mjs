@@ -93,10 +93,12 @@ export function faces(profile, dir = "ltr") {
 // same whenever HyperFrames seeks to it. A stills page sets window.__stills, so
 // the timeline jumps to its end and stays unregistered: HyperFrames never seeks
 // it back. `dir` is the scene's reading direction; code stays left to right.
+// `timing.slot`, longer than `timing.duration` by the scene's seam out, is the
+// stretch the template runs for.
 export async function sceneFile(scene, timing, profile, opts) {
   const { html, script } = await sceneParts(scene, timing, profile, opts);
   return `<template id="${scene.id}-template">
-  <div data-composition-id="${scene.id}" data-width="${W}" data-height="${H}" data-duration="${timing.duration}">
+  <div data-composition-id="${scene.id}" data-width="${W}" data-height="${H}" data-duration="${timing.slot ?? timing.duration}">
 ${html}
     <script>
 ${script}
@@ -107,7 +109,12 @@ ${script}
 }
 
 // A scene's markup with its scoped style, and its timeline script, apart.
-async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
+async function sceneParts(
+  scene,
+  timing,
+  profile,
+  { backend, dir = "ltr", seam = {} },
+) {
   const id = scene.id;
   const f = faces(profile, dir);
   const { ease, layout, texture: tx } = grammar(profile);
@@ -176,12 +183,97 @@ ${css}
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
-${play(scope, tweens)}
+${play(scope, tweens)}${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};
         if (window.__stills) tl.progress(1);
         else window.__timelines["${id}"] = tl;
       })();`,
   };
+}
+
+// A seam's two halves on a scene's `.content`, as `[from, to]` tween vars: the
+// exit of the outgoing scene, the entry of the incoming one. Blur is left off
+// at 0: a filter of any value, even `blur(0px)`, makes the content a backdrop
+// root that the glass surface cannot see through.
+const blur = (px) => ({ filter: `blur(${px}px)` });
+const SEAMS = {
+  // Through the frame: the exit grows to 1.2 and blurs, the entry settles in
+  // from 0.75.
+  "zoom-through": {
+    exit: (b, d) => [
+      { scale: 1, opacity: 1, ...(b && blur(0)) },
+      {
+        scale: 1.2,
+        opacity: 0,
+        ...(b && blur(b)),
+        duration: d,
+        ease: "power3.in",
+      },
+    ],
+    entry: (b, d) => [
+      { scale: 0.75, opacity: 0, ...(b && blur(b)) },
+      {
+        scale: 1,
+        opacity: 1,
+        ...(b && blur(0)),
+        duration: d,
+        ease: "expo.out",
+      },
+    ],
+  },
+  // Along the reading direction: `s` is 1 left to right, -1 right to left.
+  "cut-the-curve": {
+    exit: (b, d, s) => [
+      { xPercent: 0, opacity: 1, ...(b && blur(0)) },
+      {
+        xPercent: -13 * s,
+        opacity: 0,
+        ...(b && blur(b)),
+        duration: d,
+        ease: "power2.in",
+      },
+    ],
+    entry: (b, d, s) => [
+      { xPercent: 13 * s, opacity: 0, ...(b && blur(b)) },
+      {
+        xPercent: 0,
+        opacity: 1,
+        ...(b && blur(0)),
+        duration: d,
+        ease: "power4.out",
+      },
+    ],
+  },
+};
+
+// The script lines that play a scene's seam: its entry over the first
+// `seam.in.duration` seconds, its exit from `end`, the scene's own last
+// moment, on into the next scene's start. The `seam:start`/`seam:end` labels
+// (`seam:start2`/`seam:end2` for the exit when both run) mark the windows for
+// the gates. A stills page runs no seam: it holds each scene settled at its
+// end.
+function seamScript(scope, seam, end, rtl) {
+  const halves = [
+    ["entry", seam.in, 0],
+    ["exit", seam.out, end],
+  ].filter(([, x]) => x);
+  if (!halves.length) return "";
+  const lines = halves.map(([half, x, at], k) => {
+    const [from, to] = SEAMS[x.move][half](x.blur, x.duration, rtl ? -1 : 1);
+    // The entry hides the scene from its first frame and clears what it set,
+    // the exit leaves the scene whole until it runs and ends it gone.
+    const vars =
+      half === "entry"
+        ? { ...to, clearProps: "all" }
+        : { ...to, immediateRender: false };
+    const n = k ? k + 1 : "";
+    return `          tl.fromTo('${scope} .content', ${JSON.stringify(from)}, ${JSON.stringify(vars)}, ${at});
+          tl.addLabel("seam:start${n}", ${at}).addLabel("seam:end${n}", ${+(at + x.duration).toFixed(6)});`;
+  });
+  return `
+        if (!window.__stills) {
+${lines.join("\n")}
+        }`;
 }
 
 // The script lines that play a scene's tweens on its timeline. A tween naming a
@@ -296,10 +388,13 @@ export function videoPage({
   dir = "ltr",
 }) {
   const f = faces(profile, dir);
+  // A scene is mounted for its slot: it runs on past its own duration into its
+  // seam, over the next scene's start; clips on one track may overlap, the
+  // later one layering above (measured: a real render of that overlap passes).
   const hosts = scenes
     .map(
       (s) =>
-        `      <div id="scene-${s.id}" class="clip" data-composition-id="${s.id}" data-composition-src="scenes/${s.id}.html" data-start="${s.start}" data-duration="${s.duration}" data-track-index="1"></div>`,
+        `      <div id="scene-${s.id}" class="clip" data-composition-id="${s.id}" data-composition-src="scenes/${s.id}.html" data-start="${s.start}" data-duration="${s.slot ?? s.duration}" data-track-index="1"></div>`,
     )
     .join("\n");
   const captions = cues

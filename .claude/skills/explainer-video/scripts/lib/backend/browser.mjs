@@ -381,7 +381,8 @@ export async function probe(dir, times, { env }) {
 // Each scene's timeline events, in the scene's own seconds: the end of every
 // tween on its GSAP timeline, and the `seam:start`/`seam:end` and
 // `camera:start`/`camera:end` label pairs that mark when its seam or camera
-// runs. A scene's timeline has no labels today, so only its tween ends count.
+// runs; a scene's seam labels come from compose.mjs's seam, and nothing draws
+// a camera yet.
 export async function events(dir, { env }) {
   const { page, close } = await openComposition(dir, env);
   try {
@@ -390,10 +391,16 @@ export async function events(dir, { env }) {
       const out = {};
       for (const [id, tl] of Object.entries(window.__timelines ?? {})) {
         if (id === "main") continue;
+        // Every `<kind>:start<n>`/`<kind>:end<n>` pair, `<n>` blank or a
+        // number: a scene has a seam in and a seam out.
         const pair = (kind) =>
-          `${kind}:start` in tl.labels && `${kind}:end` in tl.labels
-            ? [[r3(tl.labels[`${kind}:start`]), r3(tl.labels[`${kind}:end`])]]
-            : [];
+          Object.keys(tl.labels)
+            .map((k) => k.match(new RegExp(`^${kind}:start(\\d*)$`)))
+            .filter((m) => m && `${kind}:end${m[1]}` in tl.labels)
+            .map((m) => [
+              r3(tl.labels[m[0]]),
+              r3(tl.labels[`${kind}:end${m[1]}`]),
+            ]);
         const seams = pair("seam");
         const camera = pair("camera");
         // endTime() is in the parent's time: lift a nested tween's end through

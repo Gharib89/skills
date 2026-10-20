@@ -315,6 +315,8 @@ export const VISUALS = {
 // misspelt required prop is reported as the missing one.
 export function checkVisual(visual, said) {
   object(visual, "visual");
+  if (visual.seam !== undefined && typeof visual.seam !== "string")
+    fail("seam is not a name like zoom-through, cut-the-curve or cut");
   const v = VISUALS[visual.component];
   if (!v) fail(`unknown component ${visual.component}`);
   const props = visual.props ?? {};

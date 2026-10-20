@@ -9,7 +9,9 @@
 // ffmpeg. The fixture is FIXTURE below, composed as render/render.mjs composes
 // a run (the scenes on the frame grid, each scene's WAV padded to its frames,
 // the last held HOLD seconds) with a synthetic tone for the narration; a later
-// slice adds its own scenes to it. The whole is rendered three times, the
+// slice adds its own scenes to it. Its roles give both velocity seams: a
+// zoom-through at the beat change out of the hook, a cut on a curve inside the
+// point beat. The whole is rendered three times, the
 // style's texture included (a second and a third render catch noise that
 // drifts between runs, which two renders can match by chance), and the halves
 // split it after `HALF` scenes: the
@@ -35,6 +37,7 @@ import {
 import { FPS, sceneFile, videoPage } from "../scripts/render/compose.mjs";
 import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
+import { seamPlan, slot } from "../scripts/render/seams.mjs";
 
 // Scene ids and component visuals as the compile stage writes them, each with
 // its narration's seconds: not whole frames, so the padding is exercised.
@@ -42,6 +45,7 @@ const FIXTURE = [
   {
     scene: {
       id: "hook",
+      role: "hook",
       title: "The promise",
       narration: ["One run, one merge."],
       visual: {
@@ -54,6 +58,7 @@ const FIXTURE = [
   {
     scene: {
       id: "steps",
+      role: "point",
       title: "The steps",
       narration: ["It reads the issue.", "Then it ships."],
       visual: {
@@ -68,6 +73,19 @@ const FIXTURE = [
       },
     },
     seconds: 1.91,
+  },
+  {
+    scene: {
+      id: "merge",
+      role: "point",
+      title: "The merge",
+      narration: ["Then it merges."],
+      visual: {
+        component: "title",
+        props: { kicker: "Ship", title: "Merged" },
+      },
+    },
+    seconds: 1.43,
   },
 ];
 const HALF = 1;
@@ -153,20 +171,25 @@ async function compose(name, part, hold) {
       throw new Error(why);
     },
   });
+  // The seams the style draws between the part's scenes: the hook to the
+  // steps is a zoom-through, the steps to the merge a cut on a curve.
+  const seams = seamPlan(
+    part.map((p) => p.scene),
+    profile,
+  );
   const scenes = part.map((p, i) => ({
     id: p.scene.id,
     start: written(grid[i].start),
     duration: written(grid[i].frames),
+    slot: slot(grid[i].frames, seams[i]),
   }));
   for (const [i, p] of part.entries())
     fs.writeFileSync(
       path.join(comp, "scenes", `${p.scene.id}.html`),
-      await sceneFile(
-        p.scene,
-        { duration: scenes[i].duration, sentences: [0.2] },
-        profile,
-        { backend },
-      ),
+      await sceneFile(p.scene, { ...scenes[i], sentences: [0.2] }, profile, {
+        backend,
+        seam: seams[i],
+      }),
     );
   fs.writeFileSync(
     path.join(comp, "index.html"),
@@ -179,7 +202,7 @@ async function compose(name, part, hold) {
       total: written(grid.total),
     }),
   );
-  return { comp, frames: grid.total };
+  return { comp, frames: grid.total, scenes };
 }
 
 // Renders a composition to `out`; true on a clean exit.
@@ -235,6 +258,39 @@ check(
   "determinism",
   differing.every((n) => n === 0),
   `${differing.join(" and ")} differing frames of ${a.length} against the first, in two more renders`,
+);
+
+// Each seam window's first, middle and last frames, seeked twice in browsers
+// of their own: the PNGs match byte for byte. The hook's zoom-through (out) and
+// the steps' cut on a curve (out) each have an exit window and the scene after
+// it an entry window, so four windows.
+const raw = await backend.events(whole.comp, { env });
+const windows = whole.scenes.flatMap((s) =>
+  (raw[s.id]?.seams ?? []).map(([from, to]) =>
+    [from, (from + to) / 2, to - 1 / FPS].map((t) => +(s.start + t).toFixed(3)),
+  ),
+);
+const seek = async (t, n) => {
+  const png = path.join(work, `seam-${t}-${n}.png`);
+  await backend.frame(whole.comp, t, png, { env });
+  return fs.readFileSync(png);
+};
+let apart = 0;
+let still = 0;
+for (const w of windows) {
+  const seen = new Set();
+  for (const t of w) {
+    const png = await seek(t, "a");
+    if (!png.equals(await seek(t, "b"))) apart++;
+    seen.add(png.toString("base64"));
+  }
+  // a seam that draws nothing leaves its three frames alike
+  if (seen.size < w.length) still++;
+}
+check(
+  "seams",
+  windows.length === 4 && apart === 0 && still === 0,
+  `${apart} of ${windows.length * 3} seam frames differ between two seeks, ${still} windows draw no motion, in ${windows.length} windows (4 expected)`,
 );
 
 const list = path.join(work, "halves.txt");
