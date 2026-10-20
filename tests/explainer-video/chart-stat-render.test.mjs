@@ -38,6 +38,8 @@ const counted = (html) => {
   const tl = {
     fromTo: (sel, from, to, t) => calls.push({ sel, from, to, t }),
     progress: () => {},
+    duration: () => 0,
+    time: () => {},
   };
   vm.runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], {
     gsap: { timeline: () => tl },
