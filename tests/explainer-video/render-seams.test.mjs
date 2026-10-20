@@ -220,6 +220,7 @@ test("a stills page seeks each scene to its fullest moment: every reveal landed,
   // to the entry's end: earlier the content is still fading in
   assert.deepEqual(await seeked({ in: zoom, out: zoom }, 0.1), [0.2]);
   assert.deepEqual(await seeked({ in: zoom, out: zoom }, 0), [0.2]);
+  assert.deepEqual(await seeked({ in: zoom, out: zoom }, 0.2), [0.2]);
 });
 
 test("compiling the fixture keeps every scene start and extends each outgoing slot by its seam", () => {

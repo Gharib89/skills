@@ -213,6 +213,7 @@ ${css}
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
 ${play(scope, tweens)}${pushScript(scope, push, camera)}
+        // never before the entry seam ends: earlier the content is still fading in
         const full = Math.min(Math.max(tl.duration(), ${seam.in?.duration ?? 0}), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};
         if (window.__stills) tl.time(full);
