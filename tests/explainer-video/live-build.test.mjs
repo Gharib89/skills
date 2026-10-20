@@ -202,6 +202,16 @@ test("the frame takes commands only from its page, fonts first, and runs a loop 
   assert.ok(!f.running());
 });
 
+test("a timeline of the wrong shape is refused by name, not with a stack", () => {
+  const fx = fixture();
+  prep(fx);
+  fs.writeFileSync(path.join(fx.dir, "timeline.json"), "{}");
+  const r = board(fx, "build");
+  assert.equal(r.code, 1);
+  assert.match(r.err, /no composition: run node render\.mjs/);
+  assert.doesNotMatch(r.err, /TypeError/);
+});
+
 test("a timeline missing a scene's slot, or a scene file with no template, is refused by name", async () => {
   const fx = fixture();
   prep(fx);

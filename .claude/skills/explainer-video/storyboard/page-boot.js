@@ -35,7 +35,10 @@ async function boot() {
         : [...t.content.querySelectorAll("[data-audio]")].find(
             (x) => x.dataset.audio === audio.dataset.audio,
           );
-      if (twin) twin.replaceWith(audio);
+      // A revision with the same ids but another file must not keep playing the old one.
+      if (twin && twin.getAttribute("src") === audio.getAttribute("src"))
+        twin.replaceWith(audio);
+      else audio.pause();
     }
     const frames = [...app.querySelectorAll("iframe[data-live]")],
       olds = [...app.childNodes],
@@ -224,12 +227,20 @@ async function boot() {
   // The animatic: the one build, seeked to the narration's clock, the playing card ringed and listed.
   const narration = () => document.getElementById("player-audio");
   let raf = 0;
+  // Narration waits for the animatic's frame, so the opening is not heard over the poster.
+  let waiting = false;
   function seek() {
     const el = frameOf("animatic");
     if (el && el.dataset.ready)
       say(el, { type: "seek", t: narration().currentTime });
   }
   function tick() {
+    if (waiting && frameOf("animatic")?.dataset.ready) {
+      waiting = false;
+      narration()
+        .play()
+        .catch(() => {});
+    }
     const on = sceneAt(latest(S), narration().currentTime).id;
     seek();
     if (on !== S.playing) {
@@ -240,6 +251,7 @@ async function boot() {
   }
   function stop() {
     cancelAnimationFrame(raf);
+    waiting = false;
     narration().pause();
     S.animatic = false;
     S.playing = null;
@@ -253,7 +265,7 @@ async function boot() {
     const a = narration();
     a.currentTime = t;
     a.onended = stop;
-    a.play().catch(() => {});
+    waiting = true;
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tick);
   }

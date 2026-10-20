@@ -296,7 +296,10 @@ for (const s of script.scenes) {
 }
 // The stills run writes the timeline and the composition the live build plays.
 const timeline = maybe(at("timeline.json"));
-if (!timeline || !fs.existsSync(at("composition", "index.html")))
+if (
+  !Array.isArray(timeline?.scenes) ||
+  !fs.existsSync(at("composition", "index.html"))
+)
   fail(`no composition: run node render.mjs ${run} --stills`);
 
 const slug = path.basename(path.resolve(run));
