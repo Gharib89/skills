@@ -29,7 +29,34 @@ test("a profile with no grammar block composes the open layout with glass, field
   const page = comp(fx);
   assert.doesNotMatch(page, /class="header"/);
   assert.match(page, /<div class="field"><i class="a"><\/i>/);
-  assert.match(page, /filter: blur\(120px\)/);
+  // no filter on the field: texture() draws its blur as a gradient (#905)
+  assert.doesNotMatch(page, /\.field[^{]*\{[^}]*filter:/);
+  // each box grows 3s a side, so the gradient's 3s spread is not clipped
+  assert.match(page, /\.field i \{[^}]*margin: -360px; padding: 360px;/);
+  assert.match(
+    page,
+    /\.field \.b \{[^}]*width: 940px;[^}]*radial-gradient\(circle 830px, color-mix\(in srgb, var\(--rule\) /,
+  );
+  assert.match(
+    page,
+    /\.field \.c \{[^}]*width: 620px;[^}]*radial-gradient\(circle 670px, color-mix\(in srgb, var\(--line\) /,
+  );
+  const stops = [
+    ...page
+      .match(/\.field \.a \{[^}]*\}/)[0]
+      .matchAll(/var\(--accent\) ([\d.]+)%, transparent\) ([\d.]+)px/g),
+  ].map(([, pct, px]) => [+pct, +px]);
+  // a 760 px disc blurred at 120 px: nearly whole at its centre, about half at
+  // its 380 px edge, gone 3s (360 px) past it
+  assert.deepEqual(stops[0][1], 0);
+  assert.ok(stops[0][0] > 98, String(stops[0]));
+  const edge = stops.reduce((a, b) =>
+    Math.abs(b[1] - 380) < Math.abs(a[1] - 380) ? b : a,
+  );
+  assert.ok(edge[0] > 40 && edge[0] < 55, String(edge));
+  assert.deepEqual(stops.at(-1)[1], 740);
+  assert.ok(stops.at(-1)[0] < 0.5, String(stops.at(-1)));
+  assert.ok(stops.every(([pct], i) => !i || pct <= stops[i - 1][0]));
   assert.match(page, /<feTurbulence[^>]* seed="7"/);
   // an svg is 300 by 150 until sized: the grain must span the whole frame
   assert.match(page, /\.grain \{[^}]*width: 100%; height: 100%;/);
@@ -75,8 +102,27 @@ test("a profile leaves an overlay out, or sets its blur to 0, and the page leave
   assert.match(comp(fx), /<svg class="grain"/);
   assert.ok(!tweens(fx, "steps").some(([sel]) => sel.includes(":not(")));
   const flat = run(EMPHASISED, { texture: { depthBlur: 0, fieldBlur: 0 } });
-  assert.match(comp(flat), /filter: blur\(0px\)/);
+  assert.match(
+    comp(flat),
+    /\.field \.a \{[^}]*radial-gradient\(circle 380px, var\(--accent\) 380px, transparent 380px\)/,
+  );
   assert.ok(!tweens(flat, "steps").some(([sel]) => sel.includes(":not(")));
+  // a blur too small to draw is the hard disc, its Gaussian never underflowing
+  assert.match(
+    comp(run(EMPHASISED, { texture: { fieldBlur: 1e-162 } })),
+    /\.field \.a \{[^}]*radial-gradient\(circle 380px, var\(--accent\) 380px, transparent 380px\)/,
+  );
+  // a slight blur still mixes a share from 0 to 100% at every stop
+  const shares = [
+    ...comp(run(EMPHASISED, { texture: { fieldBlur: 1 } })).matchAll(
+      /var\(--(?:accent|rule|line)\) (-?[\d.]+)%, transparent\)/g,
+    ),
+  ].map(([, pct]) => +pct);
+  assert.ok(shares.length, "no field stops");
+  assert.ok(
+    shares.every((pct) => pct >= 0 && pct <= 100),
+    String(shares),
+  );
 });
 
 test("a code scene takes no depth blur, its emphasis ring being the focus", () => {
