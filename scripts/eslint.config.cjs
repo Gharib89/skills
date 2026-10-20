@@ -41,7 +41,7 @@ module.exports = [
     rules,
   },
   {
-    files: ["**/*-core.js", "**/*-boot.js"],
+    files: ["**/*.js"],
     languageOptions: { sourceType: "script", globals: globals.browser },
     rules,
   },
