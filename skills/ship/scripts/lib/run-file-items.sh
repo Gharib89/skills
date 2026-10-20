@@ -328,8 +328,9 @@ join_names() { awk '{ out = out (NR > 1 ? ", " : "") $0 } END { print out }'; }
 # matched by exact prefix at the line start: the text after the prefix, one line
 # each. The prefix goes through ENVIRON, so a name's dot or bracket is never a
 # pattern.
-rests() { # rests <prefix>
-  p=$1 awk '{ l = $0; sub(/^- /, "", l) } index(l, ENVIRON["p"]) == 1 { print substr(l, length(ENVIRON["p"]) + 1) }' "$file"
+rests() { # rests <prefix> [<text>]: reads the Run file, or <text> where given
+  { if [ $# -gt 1 ]; then printf '%s\n' "$2"; else cat "$file"; fi; } \
+    | p=$1 awk '{ l = $0; sub(/^- /, "", l) } index(l, ENVIRON["p"]) == 1 { print substr(l, length(ENVIRON["p"]) + 1) }'
 }
 trim_end() { # trim_end <text>
   local t=$1

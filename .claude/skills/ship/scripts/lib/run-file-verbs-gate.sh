@@ -5,8 +5,8 @@
 case $verb in
 gate)
   sub=${1:-}
-  case $sub in record | read | clean) shift ;; *) ship_tooling "$usage" ;; esac
-  if [ "$sub" = record ] || [ "$sub" = clean ]; then
+  case $sub in record | read | clean | summary) shift ;; *) ship_tooling "$usage" ;; esac
+  if [ "$sub" = record ] || [ "$sub" = clean ] || [ "$sub" = summary ]; then
     # `-` is the verdict on stdin, so it is the one dash-led value a positional may be.
     src=${1:-}
     case $src in '' | -?*) ship_tooling "$usage" ;; esac
@@ -14,7 +14,12 @@ gate)
   fi
   parse_file "$@"
   [ -z "$results" ] || ship_tooling "$usage"
-  if [ "$sub" = clean ]; then
+  if [ "$sub" = summary ]; then
+    [ -z "$head" ] || ship_tooling "$usage"
+    [[ $src =~ ^[1-9][0-9]*$ ]] || ship_tooling "$usage"
+    gate_summary "$src"
+    exit $?
+  elif [ "$sub" = clean ]; then
     [ -n "$head" ] || ship_tooling "$usage"
     [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
     gate_clean "$src"
