@@ -284,9 +284,15 @@ const sampled = delivered ? null : maybe(at("samples.json"));
 if (!delivered) {
   if (!sampled)
     fail(`no samples.json: run node gates/samples.mjs ${run} first`);
-  if (!Array.isArray(sampled.scenes))
+  // One record per script scene, each with a findings list: a missing one
+  // would read as a clean scene and recommend Approve.
+  const gap = script.scenes.find(
+    (s) =>
+      !Array.isArray(sampled.scenes?.find?.((x) => x.id === s.id)?.findings),
+  );
+  if (gap)
     fail(
-      `samples.json holds no scenes: run node gates/samples.mjs ${run} again`,
+      `samples.json has no findings for scene ${gap.id}: run node gates/samples.mjs ${run} again`,
     );
   if (
     fs.statSync(at("samples.json")).mtimeMs <

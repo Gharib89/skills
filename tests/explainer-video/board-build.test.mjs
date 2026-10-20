@@ -332,10 +332,15 @@ test("build refuses until the sampling pass ran on these stills, then every card
   // A record with no scenes is refused by name, not as a TypeError.
   const record = path.join(fx.dir, "samples.json");
   const good = fs.readFileSync(record, "utf8");
-  fs.writeFileSync(record, "{}");
-  r = board(fx, "build");
-  assert.equal(r.code, 1);
-  assert.match(r.err, /^board: samples\.json holds no scenes: run node gates/);
+  for (const bad of ["{}", '{"scenes":[]}']) {
+    fs.writeFileSync(record, bad);
+    r = board(fx, "build");
+    assert.equal(r.code, 1, bad);
+    assert.match(
+      r.err,
+      /^board: samples\.json has no findings for scene hook: run node gates/,
+    );
+  }
   fs.writeFileSync(record, good);
   ok(board(fx, "build"), "build");
   const d = doc(fx, 1);
