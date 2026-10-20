@@ -137,7 +137,7 @@ call gate clean "$tmp/ci.json" --head "$head" --file "$rf"
 check_rc "a held gate: summary exits as gate clean does" "$status" "$status_summary"
 check_rc "and that is 1" 1 "$status_summary"
 check "its held_by is gate clean's" "$(jq -c .held_by <<<"$out")" "$(jq -c .held_by <<<"$summary")"
-check "the Unmet criteria line lists the unmet criterion" 'criterion 2: not met: waits on phase 7 round 1' "$(jq -r .unmet_criteria_line <<<"$summary")"
+check "the Unmet criteria line lists the unmet criterion with its text" 'criterion 2 (second): not met: waits on phase 7 round 1' "$(jq -r .unmet_criteria_line <<<"$summary")"
 check "the Clean gate held by line lists each reason" 'criterion 2: not met: waits on phase 7 round 1' "$(jq -r .clean_gate_held_by_line <<<"$summary")"
 check "it reports the head read-pr returned" "$head" "$(jq -r .head <<<"$summary")"
 
@@ -162,5 +162,9 @@ cp "$tmp/ci.json" "$(dirname "$rf")/ci-wait.json"
 call gate summary 7 --file "$rf"
 check "no Criteria section: criteria_recorded is false" false "$(jq -r .criteria_recorded <<<"$out")"
 check "and the line says unverified, not none" yes "$(has 'unverified: the Run file has no ## Criteria' "$(jq -r .unmet_criteria_line <<<"$out")")"
+# A fenced `## Criteria` example is no section: the gate strips fences before it reads.
+printf '%s\n' '```' '## Criteria' '- 1: an example' '```' >> "$rf"
+call gate summary 7 --file "$rf"
+check "a fenced Criteria heading is no section" false "$(jq -r .criteria_recorded <<<"$out")"
 
 finish
