@@ -352,7 +352,12 @@ for (const c of cards) {
 
 // The live build and the joined narration the animatic plays it over. Both
 // are named for their content, so a build of the same composition is made once.
-const live = liveScript(at("composition"));
+let live;
+try {
+  live = liveScript(at("composition"));
+} catch (e) {
+  fail(`${e.message}: run node render.mjs ${run} --stills`);
+}
 const build = await cached(
   path.join(".cache", "board-build", `${hash(live)}.js`),
   (out) => fs.writeFileSync(out, live),

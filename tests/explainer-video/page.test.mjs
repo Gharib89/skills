@@ -244,6 +244,13 @@ test("only the card in view mounts its build, in a frame that runs scripts and n
   assert.doesNotMatch(v, /data-live="steps"/);
 });
 
+test("the animatic's tick marks a scene change in place, never through render, which reloads a frame where moveBefore is missing", () => {
+  const boot = read(path.join(skill, "storyboard", "page-boot.js"));
+  const tick = boot.match(/function tick\(\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.match(tick, /classList\.toggle\("on"/);
+  assert.doesNotMatch(tick, /\brender\(/);
+});
+
 test("a card loops its slot, the animatic finds the scene at the narration's time, and its list highlights the playing card", () => {
   const board = sample("board-review");
   const S = session([board]);

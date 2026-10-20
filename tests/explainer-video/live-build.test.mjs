@@ -231,4 +231,12 @@ test("a timeline missing a scene's slot, or a scene file with no template, is re
     () => liveScript(comp),
     /scenes\/hook\.html holds no <template>/,
   );
+  // the CLI shows it as a board line, not a stack
+  tl.scenes[0].start = 0;
+  tl.scenes[0].slot = 1;
+  fs.writeFileSync(file, JSON.stringify(tl));
+  const r2 = board(fx, "build");
+  assert.equal(r2.code, 1);
+  assert.match(r2.err, /^board: .*(holds no <template>|no start and slot)/m);
+  assert.doesNotMatch(r2.err, /\n\s+at /);
 });

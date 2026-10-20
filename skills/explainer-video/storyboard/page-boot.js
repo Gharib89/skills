@@ -250,7 +250,15 @@ async function boot() {
     seek();
     if (on !== S.playing) {
       S.playing = on;
-      render();
+      // In place: a render without moveBefore (Firefox, Safari) would reload the playing frame at
+      // every scene change, where the seams are.
+      for (const el of document.querySelectorAll(".scene")) {
+        el.classList.toggle("on", el.dataset.id === on);
+        if (el.dataset.id === on) el.setAttribute("aria-current", "true");
+        else el.removeAttribute("aria-current");
+      }
+      for (const el of document.querySelectorAll("[data-card]"))
+        el.classList.toggle("playing", el.dataset.card === on);
     }
     raf = requestAnimationFrame(tick);
   }
