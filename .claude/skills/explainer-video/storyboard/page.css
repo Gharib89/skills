@@ -68,6 +68,15 @@ textarea:disabled, input:disabled { opacity: .6; }
 .player, .brief, .sources { padding: 16px 20px; display: grid; gap: 12px; }
 .player img, .card img, .card video { display: block; width: 100%; height: auto; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--hover); }
 .player audio, .card audio { width: 100%; }
+/* The stage is the poster; the build, a 1920 by 1080 page, is scaled over it by --k once it has shown. */
+.stage { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--hover); }
+.player .stage img, .card .stage img { position: absolute; inset: 0; height: 100%; border: 0; border-radius: 0; }
+iframe.live { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; transform: scale(var(--k, 0.4)); transform-origin: 0 0; visibility: hidden; }
+iframe.live[data-ready] { visibility: visible; }
+.scenes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.scene { width: 100%; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; text-align: start; font: 430 14px/1.4 var(--f-sans); color: var(--fg-body); background: var(--page); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; cursor: pointer; }
+.scene:hover { border-color: var(--fg-label); }
+.scene.on { color: var(--fg); border-color: var(--accent); background: var(--accent-wash); font-weight: 550; }
 .player .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .knobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 10px 14px; }
 .knob { display: grid; gap: 4px; }

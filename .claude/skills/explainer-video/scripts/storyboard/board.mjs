@@ -8,7 +8,9 @@
 //
 // The documents are the contract in storyboard/board-data.md. `build` reads
 // script.json, script.md, voice.json, stills.json, brief.json, excerpts.json,
-// gates.json, manifest.json and, once delivered, timeline.json and out/, and
+// gates.json, manifest.json, timeline.json, composition/ (the stills step writes
+// both; the live build and the joined narration come from it) and, once
+// delivered, out/, and
 // writes the next board/<n>.json (a card is `approved` when the last answers
 // approved it and nothing in it changed since), board/keys-<n>.json (the
 // content keys that decide that), and the local storyboard.html. A delivered
@@ -33,10 +35,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
-import { mapScreen, rename, respell } from "../lib/terms.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
 import { esc } from "../render/compose.mjs";
+import { liveScript } from "../render/live.mjs";
+import { narrationBlocks, renameKept } from "./script-text.mjs";
 
 const [run, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
@@ -118,70 +121,6 @@ function needScript() {
   if (!fs.existsSync(at("script.json")))
     fail("no script.json: run the compile stage first (script/compile.mjs)");
   return json(at("script.json"));
-}
-
-// Each scene's narration block in script.md: the lines after `### Narration`
-// up to `### Visual`, edge blank lines left out.
-function narrationBlocks(lines) {
-  const blocks = {};
-  let id = null;
-  let from = null;
-  lines.forEach((line, i) => {
-    const m = line.match(/^## Scene\s+([A-Za-z0-9-]+)\s+·\s+(.+?)\s*$/);
-    if (m) id = m[1];
-    else if (/^### Narration\s*$/.test(line)) from = i + 1;
-    else if (/^### Visual\s*$/.test(line) && id && from !== null) {
-      let a = from;
-      let b = i;
-      while (a < b && !lines[a].trim()) a++;
-      while (b > a && !lines[b - 1].trim()) b--;
-      blocks[id] = { from: a, to: b };
-      from = null;
-    }
-  });
-  return blocks;
-}
-
-// Kept terms spelled anew across script.md, in place, from a Map of term to
-// new spelling: the title, each scene's narration (its cites aside) and its
-// visual's screen text. The ids of the scenes they changed.
-function renameKept(lines, spellings) {
-  const swap = (t) => rename(t, spellings);
-  const touched = new Set();
-  let id = null;
-  let part = null;
-  let fence = null;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const m = line.match(/^## Scene\s+([A-Za-z0-9-]+)\s+·/);
-    if (m) [id, part] = [m[1], null];
-    else if (!id && /^# /.test(line)) lines[i] = swap(line);
-    else if (/^### /.test(line))
-      part = line.match(/^### (Narration|Visual)\s*$/)?.[1] ?? null;
-    else if (part === "Narration" && line.trim()) {
-      const next = line.replace(
-        /^(.*?)((?:\s*\[[^\]]*\])*\s*)$/,
-        (_, text, cites) => respell(text, spellings) + cites,
-      );
-      if (next !== line) {
-        lines[i] = next;
-        touched.add(id);
-      }
-    } else if (part === "Visual" && fence === null && /^```json\s*$/.test(line))
-      fence = i + 1;
-    else if (part === "Visual" && fence !== null && /^```\s*$/.test(line)) {
-      const visual = JSON.parse(lines.slice(fence, i).join("\n"));
-      const next = mapScreen(visual, swap);
-      if (JSON.stringify(next) !== JSON.stringify(visual)) {
-        const out = JSON.stringify(next, null, i - fence > 1 ? 2 : undefined);
-        lines.splice(fence, i - fence, ...out.split("\n"));
-        i = fence + out.split("\n").length;
-        touched.add(id);
-      }
-      [part, fence] = [null, null];
-    }
-  }
-  return [...touched];
 }
 
 if (cmd === "page") {
@@ -355,6 +294,10 @@ for (const s of script.scenes) {
   if (!f || !fs.existsSync(at(f)))
     fail(`no still for scene ${s.id}: run node render.mjs ${run} --stills`);
 }
+// The stills run writes the timeline and the composition the live build plays.
+const timeline = maybe(at("timeline.json"));
+if (!timeline || !fs.existsSync(at("composition", "index.html")))
+  fail(`no composition: run node render.mjs ${run} --stills`);
 
 const slug = path.basename(path.resolve(run));
 const manifest = maybe(at("manifest.json")) ?? {};
@@ -381,6 +324,9 @@ const cards = script.scenes.map((s, i) => ({
   style: `${s.visual.component}${VISUALS[s.visual.component]?.ownCamera ? " · past the default" : ""} · ${profile} · ${voice.narrator}`,
   still: stills.scenes.find((x) => x.id === s.id).still,
   audio: voice.scenes[i].audio,
+  // The slot is the scene's voiced length plus its exit seam: a card's loop.
+  start: timeline.scenes.find((x) => x.id === s.id).start,
+  slot: timeline.scenes.find((x) => x.id === s.id).slot,
   status: "open",
 }));
 
@@ -393,8 +339,20 @@ for (const c of cards) {
   );
 }
 
+// The live build and the joined narration the animatic plays it over. Both
+// are named for their content, so a build of the same composition is made once.
+const live = liveScript(at("composition"));
+const build = await cached(
+  path.join(".cache", "board-build", `${hash(live)}.js`),
+  (out) => fs.writeFileSync(out, live),
+);
+const joined = at("composition", "narration.wav");
+const narration = await cached(
+  path.join(".cache", "board-audio", `${hash(fs.readFileSync(joined))}.webm`),
+  (out) => backend.narration(joined, out),
+);
+
 if (delivered) {
-  const timeline = json(at("timeline.json"));
   const sha = crypto
     .createHash("sha256")
     .update(fs.readFileSync(mp4))
@@ -408,7 +366,11 @@ if (delivered) {
   }
 }
 
-const media = cards.flatMap((c) => [c.still, c.audio, c.clip].filter(Boolean));
+const media = [
+  build,
+  narration,
+  ...cards.flatMap((c) => [c.still, c.audio, c.clip].filter(Boolean)),
+];
 for (const f of media) {
   const size = fs.statSync(at(f)).size;
   if (size > CAP) fail(`${f} is ${MB(size)}, over the 15 MB asset cap`);
@@ -476,6 +438,8 @@ const doc = {
   version: prev + 1,
   kind,
   title: script.title,
+  build,
+  narration,
   brief: Object.entries(brief ?? {}).map(([knob, v]) => ({
     knob,
     value: Array.isArray(v) ? v.join("; ") : String(v ?? ""),
@@ -512,9 +476,12 @@ fs.writeFileSync(
         `<script type="application/json" id="board">${JSON.stringify(doc).replaceAll("<", "\\u003c")}</script>`,
     ),
 );
-if (published)
+if (published) {
+  doc.build = assets[build];
+  doc.narration = assets[narration];
   for (const c of cards)
     for (const k of ["still", "audio", "clip"]) if (c[k]) c[k] = assets[c[k]];
+}
 write(at("board", `${doc.version}.json`), doc);
 write(at("board", `keys-${doc.version}.json`), keys);
 const open = cards.filter((c) => c.status !== "approved").length;

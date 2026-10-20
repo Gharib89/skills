@@ -1,4 +1,4 @@
-/* ---- boot: the browser only. Wires the capabilities, the live boards, drafts, the animatic and Submit. ---- */
+/* ---- boot: the browser only. Wires the capabilities, the live boards, drafts, the live builds, the animatic and Submit. ---- */
 if (typeof document !== "undefined") boot();
 
 async function boot() {
@@ -26,18 +26,28 @@ async function boot() {
       fid = f && (f.id || null);
     const t = document.createElement("template");
     t.innerHTML = view(S);
-    // The player keeps its audio element across renders so a playing animatic is not cut off.
-    const old = document.getElementById("player"),
-      fresh = t.content.getElementById("player");
-    if (old && fresh) {
-      old.querySelector("#player-still").src = fresh
-        .querySelector("#player-still")
-        .getAttribute("src");
-      fresh.replaceWith(old);
+    // Playing media outlives a render. The narration is moved over its fresh twin. A live frame is
+    // moved with moveBefore, which keeps its document where any other move reloads it; one with no
+    // twin (its card left the view) is dropped, and a twin with no frame starts in mount().
+    const audio = document.getElementById("player-audio"),
+      twin = t.content.getElementById("player-audio");
+    if (audio && twin) twin.replaceWith(audio);
+    const frames = [...app.querySelectorAll("iframe[data-live]")],
+      olds = [...app.childNodes],
+      slots = [...t.content.querySelectorAll("iframe[data-live]")];
+    app.append(t.content);
+    for (const fr of frames) {
+      const slot = slots.find((x) => x.dataset.live === fr.dataset.live);
+      if (slot && app.moveBefore) {
+        slot.parentNode.moveBefore(fr, slot);
+        slot.remove();
+      }
     }
-    app.replaceChildren(t.content);
+    olds.forEach((n) => n.remove());
     const el = fid && document.getElementById(fid);
     if (el) el.focus({ preventScroll: true });
+    watch();
+    mount();
   }
   function refresh() {
     const b = latest(S);
@@ -53,7 +63,6 @@ async function boot() {
     const ft = document.getElementById("fallback-text");
     if (ft) ft.textContent = answersText(S);
   }
-  render();
   // Listeners first: a local page returns before the capabilities below.
   document.addEventListener("click", (e) => {
     const t = e.target.closest("[data-act]");
@@ -62,7 +71,12 @@ async function boot() {
     if (act === "submit") return submit(t);
     if (act === "wake") return rewake(t);
     if (act === "copy") return copy();
-    if (act === "play") return playFrom(0);
+    if (act === "play") return playAnimatic(0);
+    if (act === "jump")
+      return playAnimatic(
+        latest(S).scenes.find((c) => c.id === t.dataset.id).start,
+      );
+    if (act === "card-play") return cardPlay(t.dataset.id);
     if (act === "stop") return stop();
   });
   document.addEventListener("change", (e) => {
@@ -89,29 +103,160 @@ async function boot() {
     refresh();
   });
 
-  // The animatic: each card's narration in order, its still shown and its card ringed.
-  const audio = () => document.getElementById("player-audio");
+  // ---- live builds. The build is a script asset, so it loads the same from a published page and from
+  // file:. It plays in a frame with no origin: the page hands it fonts and commands by postMessage. ----
+  let loaded = null,
+    loadedUrl = null;
+  function loadBuild(b) {
+    const url = buildOf(b);
+    if (loadedUrl !== url) {
+      loadedUrl = url;
+      loaded = new Promise((done) => {
+        const el = document.createElement("script");
+        el.src = url;
+        el.onload = () => done(window.__build);
+        el.onerror = () => done(null);
+        document.head.append(el);
+      });
+    }
+    return loaded;
+  }
+  // Each face's bytes are decoded once and sent as a copy: a transfer would empty the original.
+  const fontsOf = (build) => {
+    build.bytes ||= build.fonts.map((x) => ({
+      ...x,
+      data: Uint8Array.from(atob(x.data), (c) => c.charCodeAt(0)).buffer,
+    }));
+    return build.bytes.map((x) => ({ ...x, data: x.data.slice(0) }));
+  };
+  const frameOf = (id) =>
+    [...document.querySelectorAll("iframe[data-live]")].find(
+      (x) => x.dataset.live === id,
+    );
+  const say = (el, m) => el.contentWindow.postMessage(m, "*");
+  // A frame with no origin can only be answered at "*"; its window is told apart by identity.
+  async function mount() {
+    const todo = [
+      ...document.querySelectorAll("iframe[data-live]:not([data-started])"),
+    ];
+    if (!todo.length) return;
+    todo.forEach((el) => (el.dataset.started = "1"));
+    const build = await loadBuild(latest(S));
+    if (build)
+      for (const el of todo) if (el.isConnected) el.srcdoc = build.html;
+  }
+  let solo = null;
+  addEventListener("message", async (e) => {
+    const el = [...document.querySelectorAll("iframe[data-live]")].find(
+      (x) => x.contentWindow === e.source,
+    );
+    const type = el && e.data && e.data.type;
+    if (type === "ready")
+      say(el, { type: "fonts", fonts: fontsOf(await loadBuild(latest(S))) });
+    else if (type === "shown") {
+      el.dataset.ready = "1";
+      drive(el);
+    } else if (type === "done" && el.dataset.live === solo) {
+      solo = null;
+      drive(el);
+    }
+  });
+  // A card's frame loops its slot; the animatic's follows the narration.
+  function drive(el) {
+    if (el.dataset.live === "animatic") return seek();
+    const c = latest(S).scenes.find((x) => x.id === el.dataset.live);
+    const [from, to] = loopOf(c);
+    say(el, { type: "run", from, to, loop: true });
+  }
+  // One card mounts its build, the one most in view; the rest show their poster.
+  const ratios = {};
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries)
+        ratios[e.target.dataset.stage] = e.isIntersecting
+          ? e.intersectionRatio
+          : 0;
+      const cur = Object.keys(S.inView)[0] || null;
+      const top = Object.keys(ratios).reduce(
+        (m, id) => (ratios[id] > (ratios[m] || 0) ? id : m),
+        "",
+      );
+      const pick = cur && ratios[cur] >= 0.5 ? cur : top;
+      const next = pick && ratios[pick] >= 0.5 ? pick : null;
+      if (next === cur) return;
+      S.inView = next ? { [next]: true } : {};
+      render();
+    },
+    { threshold: [0, 0.5, 1] },
+  );
+  // The frame is a 1920 by 1080 page scaled to its stage.
+  const ro = new ResizeObserver((entries) => {
+    for (const e of entries)
+      e.target.style.setProperty("--k", e.contentRect.width / 1920);
+  });
+  function watch() {
+    io.disconnect();
+    for (const k of Object.keys(ratios)) delete ratios[k];
+    for (const el of document.querySelectorAll(".stage[data-stage]")) {
+      ro.observe(el);
+      if (el.dataset.stage !== "animatic") io.observe(el);
+    }
+  }
+  const dropFrames = () =>
+    document.querySelectorAll("iframe[data-live]").forEach((x) => x.remove());
+
+  // Play on a card: its slot once, with its own narration; the loop resumes when it is done.
+  function cardPlay(id) {
+    const a = [...document.querySelectorAll("[data-audio]")].find(
+      (x) => x.dataset.audio === id,
+    );
+    a.currentTime = 0;
+    a.play().catch(() => {});
+    const el = frameOf(id);
+    if (!el || !el.dataset.ready) return;
+    solo = id;
+    const [from, to] = loopOf(latest(S).scenes.find((x) => x.id === id));
+    say(el, { type: "run", from, to, loop: false });
+  }
+
+  // The animatic: the one build, seeked to the narration's clock, the playing card ringed and listed.
+  const narration = () => document.getElementById("player-audio");
+  let raf = 0;
+  function seek() {
+    const el = frameOf("animatic");
+    if (el && el.dataset.ready)
+      say(el, { type: "seek", t: narration().currentTime });
+  }
+  function tick() {
+    const on = sceneAt(latest(S), narration().currentTime).id;
+    seek();
+    if (on !== S.playing) {
+      S.playing = on;
+      render();
+    }
+    raf = requestAnimationFrame(tick);
+  }
   function stop() {
-    const a = audio();
-    if (a) a.pause();
+    cancelAnimationFrame(raf);
+    narration().pause();
+    S.animatic = false;
     S.playing = null;
     render();
   }
-  function playFrom(i) {
-    const c = latest(S) && latest(S).scenes[i];
-    if (!c) {
-      S.playing = null;
-      render();
-      return;
-    }
-    S.playing = c.id;
+  function playAnimatic(t) {
+    S.animatic = true;
+    S.playing = sceneAt(latest(S), t).id;
     render();
-    const a = audio();
-    a.src = mediaUrl(c.audio);
-    a.onended = () => playFrom(i + 1);
+    const a = narration();
+    a.currentTime = t;
+    a.onended = stop;
     a.play().catch(() => {});
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tick);
   }
 
+  // After the observers above, which every render reads.
+  render();
   const embedded = () => {
     try {
       return JSON.parse(document.getElementById("board").textContent);
@@ -157,7 +302,10 @@ async function boot() {
           S,
           snap.docs.map((d) => d.data()),
         );
-        if (latest(S) && latest(S).version !== was) restoreDraft();
+        if (latest(S) && latest(S).version !== was) {
+          restoreDraft();
+          dropFrames();
+        }
         render();
       },
       () => {
