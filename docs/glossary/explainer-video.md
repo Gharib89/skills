@@ -61,7 +61,7 @@ A browser page with one card per scene (its narration, the scene in the run's st
 _Avoid_: outline, shot list, script
 
 **Menu**:
-A select on a storyboard card (its component, camera beat, emphasised item or seam) or on the brief (a closed knob), set to the agent's pick and listing only the options the board document gives it. A menu changed from the agent's pick turns its card to Revise and applies on Submit: the agent rebuilds the changed scenes and posts the next board version. A menu is the human's way to steer a scene; the agent still authors a scene's content itself.
+A select on a storyboard card (its component, camera beat, emphasised item or seam) or on the brief (a menu knob), set to the agent's pick and listing only the options the board document gives it. A menu changed from the agent's pick turns its card to Revise and applies on Submit: the agent rebuilds the changed scenes and posts the next board version. A menu steers a scene's component, camera, emphasis and seam; the agent still writes the scene's narration and content.
 _Avoid_: dropdown, picker, preset
 
 **Live build**:

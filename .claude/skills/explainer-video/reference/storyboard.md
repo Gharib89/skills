@@ -15,10 +15,10 @@ list jumps to a scene and marks the playing one. Every card arrives on the
 agent's recommendation
 ([Recommendation](../storyboard/board-data.md#recommendation)). The user
 approves or revises each card, may edit its narration in place, may change
-a card's **menus** (component, camera beat, emphasised item, seam) or the
-brief's closed knobs (language, style, voice, score, aspect; length is a
-number of minutes) (and, in an Arabic run, respell a kept term beside the
-brief), and presses Submit. Its
+a card's **menus** (component, camera beat, emphasised item, seam), may
+change the brief's menu knobs (language, style, voice, aspect, score) and its
+length in minutes, may respell a kept term beside the brief in an Arabic run,
+and presses Submit. Its
 page is
 [storyboard/page.html](../storyboard/page.html), fixed and tested, and
 [storyboard/board-data.md](../storyboard/board-data.md) is the contract between
@@ -97,18 +97,20 @@ delivery it reports Render's last line and the videos-folder path.
    can swap) over the title, the narration and the screen text, and prints one
    `board <id>: approve` or `revise: <note>` line per card and a
    `board kept: <term> -> <to>` line per term; a scene a respelt term changed
-   is in the redo list. It writes a changed camera, emphasis or seam pick into
-   that scene's visual in `script.md`, prints a
-   `board <id> pick: <menu>=<value>` line per pick, and puts the scene in the
-   redo list; a component pick is
-   printed but not written (each component's props differ), so rebuild that
-   scene as the picked component yourself. `board: approved`: go on to Render.
+   is in the redo list. A changed menu pick prints one
+   `board <id> pick: <menu>=<value>` line, `<menu>` being `component`,
+   `camera`, `emphasis` or `seam`, and puts the scene in the redo list;
+   `apply` writes a camera, emphasis or seam pick into that scene's visual in
+   `script.md`, but not a component pick (each component's props differ).
+   `board: approved`: go on to Render.
    `board: redo <ids>`: first run `brief.mjs` with the
    `; brief` arguments it lists, if any, and follow its redo line; then, for
    each card revised with a note,
-   change that scene in `script.md` as the note asks (a `revise: no note` line
-   without `, narration edited` names nothing to change: ask the user what to
-   change before rebuilding); then Script steps 2 to 6,
+   change that scene in `script.md` as the note asks, and for each
+   `pick: component=<x>` line rebuild that scene as component `<x>` in the
+   same pass (a `revise: no note` line without `, narration edited` and
+   without a `pick:` line under it names nothing to change: ask the user what
+   to change before rebuilding); then Script steps 2 to 6,
    Voice and step 1 again, each reusing its cache for every scene not changed,
    and build the next version (step 4). A note asking for a claim the sources
    do not support follows the Script stage's support stop. `answers for board

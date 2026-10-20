@@ -25,13 +25,14 @@ export function cueOf(value) {
   return on === undefined ? { at: Number(at) } : { at: Number(at), on };
 }
 
-const disabled = (pick) => ({ pick, options: [pick], disabled: true });
+const lockedMenu = (pick) => ({ pick, options: [pick], disabled: true });
 
 function camera(scene, profile) {
   const { visual, narration } = scene;
   const v = VISUALS[visual.component];
-  if (v.ownCamera || cameraReason(profile, { camera: {} }) !== null)
-    return disabled("none");
+  // A custom scene is no component: nothing in it names a cue to pick.
+  if (!v || v.ownCamera || cameraReason(profile, { camera: {} }) !== null)
+    return lockedMenu("none");
   const pick = cameraCue(visual, narration);
   const cues = new Map(
     [
@@ -55,7 +56,7 @@ function emphasis({ visual }) {
   if (!field) {
     // A code emphasis is a line range, which a note changes.
     const range = props.emphasis?.target;
-    return disabled(
+    return lockedMenu(
       Array.isArray(range) ? `lines ${range[0]}-${range[1]}` : "none",
     );
   }
@@ -73,7 +74,7 @@ function emphasis({ visual }) {
 // `out` is the seam out of the scene the plan drew: a move, or null for a plain
 // cut; the last scene has none to pick.
 function seam(family, out, last) {
-  if (last) return disabled("cut");
+  if (last) return lockedMenu("cut");
   return {
     pick: out?.move ?? "cut",
     options: [...(SEAM_MOVES[family] ?? []), "cut"],

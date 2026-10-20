@@ -33,7 +33,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { describe, voices } from "../brief/knobs.mjs";
+import { knobOffer, voices } from "../brief/knobs.mjs";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
 import { loadStyle } from "../lib/style.mjs";
@@ -416,7 +416,7 @@ const doc = {
   brief: Object.entries(brief ?? {}).map(([knob, v]) => ({
     knob,
     value: Array.isArray(v) ? v.join("; ") : String(v ?? ""),
-    ...describe(knob, run, brief),
+    ...knobOffer(knob, run, brief),
   })),
   voices: voices(),
   sources: (pack?.sources ?? []).map((s) => ({

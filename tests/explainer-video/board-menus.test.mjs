@@ -14,9 +14,11 @@ import {
   prep,
   read,
   run,
+  skill,
   stills,
   voice,
 } from "./board-lib.mjs";
+import { cardMenus } from "../../skills/explainer-video/scripts/storyboard/menus.mjs";
 import { profiled } from "./render-lib.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 
@@ -245,6 +247,23 @@ test("a pick the card's menu does not offer is refused, and an unchanged pick is
   assert.match(r.out, /^board: redo steps$/m);
 });
 
+test("a pick on a scene whose visual block is not JSON is refused by name, not with a stack trace", () => {
+  const fx = fixture();
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  const file = path.join(fx.dir, "script.md");
+  fs.writeFileSync(
+    file,
+    read(fx.dir, "script.md").replace(
+      '"component": "cards"',
+      '"component": cards',
+    ),
+  );
+  const r = answered(fx, ["  pick: seam=cut"]);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^board: script\.md visual block for steps is not JSON/m);
+});
+
 test("an approved card with a changed pick is still redone, so no change is lost to Approve", () => {
   const fx = fixture();
   prep(fx);
@@ -262,4 +281,53 @@ test("an approved card with a changed pick is still redone, so no change is lost
   );
   const r = ok(board(fx, "apply", file), "apply");
   assert.match(r.out, /^board: redo steps$/m);
+});
+
+test("a custom scene, which the composer has no component for, gets disabled camera and emphasis menus", () => {
+  const scene = { visual: { component: "custom" }, narration: ["It reads."] };
+  const m = cardMenus(scene, { name: "claude-code" }, null, false);
+  assert.equal(m.component.pick, "custom");
+  assert.deepEqual(m.camera, noCamera);
+  assert.deepEqual(m.emphasis, {
+    pick: "none",
+    options: ["none"],
+    disabled: true,
+  });
+});
+
+test("a code card's emphasis menu shows its line range and cannot change", () => {
+  const scene = {
+    visual: {
+      component: "code",
+      props: { code: "a\nb\nc\nd", emphasis: { target: [2, 3] } },
+    },
+    narration: ["It reads."],
+  };
+  const m = cardMenus(scene, { name: "claude-code" }, null, false);
+  assert.deepEqual(m.emphasis, {
+    pick: "lines 2-3",
+    options: ["lines 2-3"],
+    disabled: true,
+  });
+});
+
+test("the style menu lists the profile the run holds beside the installed ones", () => {
+  // A profile only the run holds, drawn from images: no store lists it.
+  const fx = fixture(
+    SCRIPT.replace("style: claude-code", "style: held-by-run"),
+  );
+  const base = path.join(skill, "styles", "claude-code.json");
+  fs.writeFileSync(
+    path.join(fx.dir, "style.json"),
+    JSON.stringify({
+      ...JSON.parse(fs.readFileSync(base, "utf8")),
+      name: "held-by-run",
+    }),
+  );
+  prep(fx);
+  ok(run(fx, "brief/brief.mjs", ["voice=am_fenrir"]), "brief");
+  ok(board(fx, "build"), "build");
+  const style = doc(fx, 1).brief.find((x) => x.knob === "style");
+  assert.ok(style.options.includes("held-by-run"), style.options.join());
+  assert.ok(style.options.includes("claude-code"));
 });

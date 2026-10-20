@@ -300,7 +300,7 @@ const select = (attrs, options, cur, off) =>
         `<option value="${esc(o)}"${o === cur ? " selected" : ""}>${esc(o)}</option>`,
     )
     .join("")}</select>`;
-// One knob's input: a select for a closed knob (its voices those of the language picked), a number of minutes, or text.
+// One knob's input: a select for a menu knob (its voices those of the language picked), a number of minutes, or text.
 function knobInput(S, k, dis) {
   const v = draftOf(S).brief[k.knob],
     at = `data-brief="${esc(k.knob)}"`;

@@ -81,7 +81,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].menus.component` | object | yes | The scene's component menu. |
 | `board.scenes[].menus.component.pick` | string | yes | The component now in the scene. |
 | `board.scenes[].menus.component.options` | array | yes | Every component the profile does not ban, then `custom`. |
-| `board.scenes[].menus.component.disabled` | boolean | no | True when the menu cannot change on this card. |
+| `board.scenes[].menus.component.disabled` | boolean | no | True when the menu cannot change on this card. No card sets it today. |
 | `board.scenes[].menus.camera` | object | yes | The scene's camera beat menu. |
 | `board.scenes[].menus.camera.pick` | string | yes | The beat now in the scene, as a cue value. |
 | `board.scenes[].menus.camera.options` | array | yes | The scene's cues as cue values, in order of place. |
@@ -148,12 +148,9 @@ which holds changed picks only. On a locked page every menu is disabled.
 
 - **Cue value.** A camera beat is `<at>` (a sentence number) or `<at> <phrase>`
   (the sentence, then a phrase of it); the menu lists the scene's own cues.
-- **Written picks.** `board.mjs apply` writes a camera, emphasis or seam pick
-  into the scene's visual in `script.md`, so the run rebuilds only the scenes
-  whose picks, narration or note changed; every other scene stays cached.
-- **Component pick.** Each component's props differ, so `apply` writes none:
-  it prints `board <id> pick: component=<x>` and the scene joins the redo set,
-  which the agent rebuilds as that component.
+- **Apply.** `board.mjs apply` prints a `board <id> pick: <menu>=<value>` line
+  for each pick and puts the scene in its redo list; the run's
+  [Apply step](../reference/storyboard.md) says what each pick changes.
 - **Brief knobs.** A `menu` knob is a select of its `options`; `voice` takes
   the options of the language the human picked from `board.voices`, and
   changing the language resets the voice to the first of the new language's.

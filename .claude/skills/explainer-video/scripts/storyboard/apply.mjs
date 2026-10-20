@@ -81,9 +81,13 @@ export function applyAnswers(run, board, n, raw, fail) {
   const picked = answers.scenes.filter((s) => Object.keys(s.picks).length);
   if (picked.length) {
     const lines = fs.readFileSync(at("script.md"), "utf8").split("\n");
-    for (const s of picked)
-      for (const [menu, value] of Object.entries(s.picks))
-        editVisual(lines, s.id, (v) => applyPick(v, menu, value));
+    try {
+      for (const s of picked)
+        for (const [menu, value] of Object.entries(s.picks))
+          editVisual(lines, s.id, (v) => applyPick(v, menu, value));
+    } catch (e) {
+      fail(e.message);
+    }
     fs.writeFileSync(at("script.md"), lines.join("\n"));
   }
   for (const s of answers.scenes) {

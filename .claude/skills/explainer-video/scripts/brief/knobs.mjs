@@ -30,7 +30,7 @@ export function voices() {
 // What the board offers for a brief knob: `menu` with its `options`, `number`
 // (length, in minutes) or `text`. The voice menu lists the brief's language's
 // narrators; the board's `voices` hold each language's.
-export function describe(knob, run, brief) {
+export function knobOffer(knob, run, brief) {
   switch (knob) {
     case "length":
       return { type: "number" };

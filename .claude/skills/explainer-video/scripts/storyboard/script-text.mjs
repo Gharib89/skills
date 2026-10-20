@@ -43,7 +43,12 @@ export function editVisual(lines, id, edit) {
     )
       fence = i + 1;
     else if (part === "Visual" && fence !== null && /^```\s*$/.test(lines[i])) {
-      const visual = JSON.parse(lines.slice(fence, i).join("\n"));
+      let visual;
+      try {
+        visual = JSON.parse(lines.slice(fence, i).join("\n"));
+      } catch (e) {
+        throw new Error(`script.md visual block for ${id} is not JSON`);
+      }
       if (edit(visual) === false) return;
       const out = JSON.stringify(visual, null, i - fence > 1 ? 2 : undefined);
       lines.splice(fence, i - fence, ...out.split("\n"));
