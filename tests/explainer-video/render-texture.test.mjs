@@ -83,6 +83,16 @@ test("the grain is the same bytes in two renders, its noise at a fixed seed", ()
   assert.equal(a, b);
 });
 
+test("the vignette takes its 16% from its opacity, so the layout audit reads it as an overlay, not a cover over text", () => {
+  const fx = fixture(SCRIPT);
+  assert.equal(render(fx).code, 0);
+  const rule = comp(fx).match(/\.vignette \{([^}]*)\}/)[1];
+  // the audit cannot score a color-mix() stop (Chrome serialises it as
+  // color(srgb ...)), so it counts one as opaque; under 0.6 opacity it skips
+  assert.match(rule, /opacity: 0\.16;/);
+  assert.doesNotMatch(rule, /color-mix/);
+});
+
 test("itworx composes flat with a vignette and no glass, field, grain or depth", () => {
   const fx = fixture(EMPHASISED.replace("style: claude-code", "style: itworx"));
   const r = render(fx);

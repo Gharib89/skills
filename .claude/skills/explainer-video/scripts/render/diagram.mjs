@@ -136,7 +136,7 @@ export const diagram = async (p, f, x) => {
 .links path { fill: none; stroke: var(--rule); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .pks { position: absolute; left: 0; top: 0; }
 .pk { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); }
-.node { position: absolute; ${boxCss(x.surface)} box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.node { ${boxCss(x.surface)} position: absolute; box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
 .label { position: relative; font: ${f.titleWeight} var(--size-body)/${f.lh(1.15, "title")} ${f.title}; color: var(--text); }
 .note { position: relative; font: 400 var(--size-small) ${f.note}; color: var(--muted); }
 ${sketchCss(x.surface)}`,

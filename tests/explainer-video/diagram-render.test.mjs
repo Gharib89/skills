@@ -101,6 +101,36 @@ test("packets run their link on the timeline, repeating to the scene's end and n
   );
 });
 
+test("a node stands at the place the layout gives it under every surface: its rule ends absolutely positioned", async () => {
+  for (const surface of ["flat", "glass", "sketch"]) {
+    const profile = {
+      ...claude,
+      grammar: {
+        ...claude.grammar,
+        texture: { ...claude.grammar?.texture, surface },
+      },
+    };
+    const html = await sceneFile(
+      { id: "a", narration: said, visual },
+      timing,
+      profile,
+      {
+        backend: {
+          sketch: async (s) => s.map(() => ({ fill: "", stroke: "M0 0" })),
+        },
+        seam: {},
+      },
+    );
+    const rule = html.match(/\] \.node \{([^}]*)\}/)[1];
+    // a later `position` wins, so a box style's own must come first
+    assert.equal(
+      [...rule.matchAll(/position:\s*(\w+)/g)].at(-1)[1],
+      "absolute",
+      `${surface}: ${rule}`,
+    );
+  }
+});
+
 test("right to left, the diagram mirrors: the first node at the right, packets running right to left", async () => {
   const ltr = await drawn();
   const rtl = await drawn("rtl");

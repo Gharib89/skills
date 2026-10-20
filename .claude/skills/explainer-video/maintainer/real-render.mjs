@@ -351,13 +351,15 @@ const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
 const findings = [];
 judge(
   await backend.check(whole.comp, times, { env }),
-  (await backend.probe(whole.comp, times, { env })).map((f) => ({
-    ...f,
-    elements: f.elements.filter((e) => e.scene === largest),
-  })),
+  await backend.probe(whole.comp, times, { env }),
   floors(profile),
+  // a finding is the scene's while its time is, as the gates stage files it
   (gate, t, what) => {
-    if (gate === "layout" && t < sc.start + sc.duration - 1e-6)
+    if (
+      gate === "layout" &&
+      t >= sc.start - 1e-6 &&
+      t < sc.start + sc.duration - 1e-6
+    )
       findings.push(`${t.toFixed(2)} s: ${what}`);
   },
   moving,
