@@ -388,12 +388,12 @@ export function videoPage({
   dir = "ltr",
 }) {
   const f = faces(profile, dir);
-  // A scene runs on past its own duration into its seam, over the next scene's
-  // start: neighbours take alternate tracks so no two overlap on one.
+  // A scene is mounted for its slot: it runs on past its own duration into its
+  // seam, over the next scene's start.
   const hosts = scenes
     .map(
-      (s, i) =>
-        `      <div id="scene-${s.id}" class="clip" data-composition-id="${s.id}" data-composition-src="scenes/${s.id}.html" data-start="${s.start}" data-duration="${s.slot ?? s.duration}" data-track-index="${i % 2 ? 4 : 1}"></div>`,
+      (s) =>
+        `      <div id="scene-${s.id}" class="clip" data-composition-id="${s.id}" data-composition-src="scenes/${s.id}.html" data-start="${s.start}" data-duration="${s.slot ?? s.duration}" data-track-index="1"></div>`,
     )
     .join("\n");
   const captions = cues

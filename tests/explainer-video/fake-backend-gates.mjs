@@ -81,7 +81,10 @@ export async function events(dir) {
         ].map((m) => [m[1], +m[2]]),
       );
     const [start, end] = [at("start"), at("end")];
-    const seams = Object.keys(start).map((k) => [start[k], end[k]]);
+    // an unpaired start is no window, as the real adapter reads it
+    const seams = Object.keys(start)
+      .filter((k) => k in end)
+      .map((k) => [start[k], end[k]]);
     if (seams.length) out[f.replace(/\.html$/, "")] = { seams };
   }
   return {

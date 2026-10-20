@@ -231,10 +231,10 @@ test("compiling the fixture keeps every scene start and extends each outgoing sl
     scenes.map((s) => +(s.slot - s.duration).toFixed(6)),
     [0.2, 0.2, 0],
   );
-  // the page mounts each scene for its slot, neighbours on alternate tracks
+  // the page mounts each scene for its slot
   const hosts = [
     ...comp(vel.fx).matchAll(
-      /data-start="([\d.]+)" data-duration="([\d.]+)" data-track-index="(\d)"><\/div>/g,
+      /data-start="([\d.]+)" data-duration="([\d.]+)" data-track-index="1"><\/div>/g,
     ),
   ];
   assert.deepEqual(
@@ -244,10 +244,6 @@ test("compiling the fixture keeps every scene start and extends each outgoing sl
   assert.deepEqual(
     hosts.map((m) => +m[2]),
     scenes.map((s) => s.slot),
-  );
-  assert.deepEqual(
-    hosts.map((m) => m[3]),
-    ["1", "4", "1"],
   );
   for (const s of scenes)
     assert.match(
@@ -274,6 +270,16 @@ test("compile refuses a scene seam outside the profile's seams family and cut", 
     /compile: hook: seam zoom-through is not one of cut: the moves of style profile odd's seams family cut/,
   );
   assert.equal(compile("whip", "velocity").code, 1);
+  // a seam that is not a name is refused before the family is asked
+  const named = SCRIPT.replace("style: claude-code", "style: odd").replace(
+    '"props": { "kicker": "Ship"',
+    '"seam": 3, "props": { "kicker": "Ship"',
+  );
+  const fx = fixture(named);
+  profiled(fx, "odd", { grammar: {} });
+  const bad = stage(fx, "script/compile.mjs");
+  assert.equal(bad.code, 1);
+  assert.match(bad.err, /seam is not a name like zoom-through/);
   for (const [seam, seams] of [
     ["cut", "cut"],
     ["cut-the-curve", "velocity"],
