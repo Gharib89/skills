@@ -113,6 +113,9 @@ const SEAM_DEFAULTS = { duration: 0.2, blur: 18 };
 // What a type knob left out takes: the seconds between one word's rise and the
 // next's.
 const TYPE_DEFAULTS = { stagger: 0.05 };
+// Seconds one word takes to rise out of its mask; the reading gate adds it to
+// the last word's stagger delay before a title counts as readable.
+export const WORD_RISE_SECONDS = 0.6;
 // What a camera knob left out takes: the push-in's end scale, and its length
 // in seconds.
 const CAMERA_DEFAULTS = { scale: 1.06, duration: 0.8 };

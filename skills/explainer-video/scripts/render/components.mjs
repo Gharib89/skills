@@ -1,6 +1,7 @@
 // The scene components: each one's markup, scoped CSS and tweens, and the
 // helpers they share with the page composer in compose.mjs.
 import crypto from "node:crypto";
+import { WORD_RISE_SECONDS } from "../lib/style.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { diff, lines } from "../lib/visuals.mjs";
 import { GLASS } from "./texture.mjs";
@@ -182,7 +183,7 @@ export const COMPONENTS = {
             yPercent: 0,
             opacity: 1,
             ...(blur && { filter: "blur(0px)" }),
-            duration: 0.6,
+            duration: WORD_RISE_SECONDS,
             ease: x.type.ease,
             delay: +(n * x.type.stagger).toFixed(6),
           },

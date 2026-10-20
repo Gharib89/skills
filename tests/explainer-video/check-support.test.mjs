@@ -272,6 +272,29 @@ test("a list's title stays sharp under the depth overlay, so the reading gate co
   assert.doesNotMatch(out, /steps title/);
 });
 
+test("a title's words land one stagger apart, so the reading gate times it from its last word", () => {
+  const ten = Array.from({ length: 18 }, (_, i) => `w${i}`).join(" ");
+  const run = (subtitle) =>
+    line(
+      check(
+        fixture({
+          scenes: edit(SCENES, 2, {
+            sentences: [say(17), say(18, "[no-claim]"), say(2)],
+            visual: { component: "title", props: { title: ten, subtitle } },
+          }),
+        }),
+      ),
+      "reading",
+    );
+  // 35 staggers of 0.05 s and one 0.6 s rise leave about 9.9 s of the scene's
+  // 12.3 s, under the 10.8 s two eighteen-word texts take to read.
+  assert.match(
+    run(ten),
+    /fail: steps title: 9\.\d s on screen vs 10\.8 s to read/,
+  );
+  assert.equal(run("one two"), "script reading: pass");
+});
+
 test("a code diff's reader reads the lines the render adds, a moved line among them", () => {
   const [, [, at, added]] = VISUALS.codediff.items({
     lang: "js",
