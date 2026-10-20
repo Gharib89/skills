@@ -100,11 +100,10 @@ Every card of a review version opens on its `recommendation`: `revise` when it
 has a `finding` and its status is not `approved`, else `approve`. The page
 opens on an overview of every `still` with counts read off this document: the
 cards with `rich` set, the cards with a `finding` and the cards whose status is
-not `approved`. **Approve all and submit** answers every card without a finding
-`approve`; a card with a finding keeps its answer, and the page submits once
-every card with a finding is on `approve`, since only that card's own Approve
-takes a known red. A note or an edited narration on a card answers it `revise`.
-A card's answer is the human's choice, whatever the recommendation was.
+not `approved`. **Approve all and submit** answers every card `approve`, a
+card with a finding included, and submits. A note or an edited narration on a
+card answers it `revise`. A card's answer is the human's choice, whatever the
+recommendation was.
 
 A `delivered` version holds every card `approved`, and its page takes no
 answers. `build` makes one only while the delivered MP4 is at least as new as

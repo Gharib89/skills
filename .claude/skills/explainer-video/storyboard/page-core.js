@@ -74,11 +74,6 @@ const needs = (c) => c.status !== "approved";
 const todoN = (S) =>
   latest(S).scenes.filter((c) => needs(c) && !draftOf(S).choices[c.id]).length;
 const canSubmit = (S) => !!latest(S) && !locked(S) && todoN(S) === 0;
-// Cards with a finding that are not on Approve: Approve all leaves them to the human.
-const heldN = (S) =>
-  latest(S).scenes.filter(
-    (c) => c.finding && draftOf(S).choices[c.id] !== "approve",
-  ).length;
 
 const ACT = {
   choose(S, d) {
@@ -93,13 +88,9 @@ const ACT = {
     if (d.field === "note" ? d.value.trim() : d.value !== c.narration)
       dr.choices[d.id] = "revise";
   },
-  // A card with a finding keeps its answer: only its own Approve takes a known
-  // red. Returns the cards still held, which the page must not submit past.
   approveAll(S) {
     if (!locked(S))
-      for (const c of latest(S).scenes)
-        if (!c.finding) draftOf(S).choices[c.id] = "approve";
-    return heldN(S);
+      for (const c of latest(S).scenes) draftOf(S).choices[c.id] = "approve";
   },
   brief(S, d) {
     if (!locked(S)) draftOf(S).brief[d.knob] = d.value;
@@ -349,7 +340,7 @@ function bar(S, b) {
     : `<button class="btn accent" id="submit" data-act="submit" ${canSubmit(S) ? "" : "disabled"}>Submit board ${esc(b.version)}</button>`;
   return `<div class="bar panel"><div class="bar-in">
     <span class="count"><b data-ready>${need - left}</b> of ${need} to answer done · ${b.scenes.length - need} already approved</span>
-    <div><button class="btn" data-act="approve-all" ${locked(S) ? "disabled" : ""}>${S.local ? "Approve all" : "Approve all and submit"}</button> ${act}</div>${heldN(S) ? `<span class="count" data-held>${heldN(S)} card(s) with a finding stay on Revise: approve each yourself, or add a note.</span>` : ""}${S.local ? localNote(S) : status(S)}</div></div>`;
+    <div><button class="btn" data-act="approve-all" ${locked(S) ? "disabled" : ""}>${S.local ? "Approve all" : "Approve all and submit"}</button> ${act}</div>${S.local ? localNote(S) : status(S)}</div></div>`;
 }
 function localNote(S) {
   return `<div class="st"><span>Copy the answers, paste them into the terminal, and Claude reads them.</span>

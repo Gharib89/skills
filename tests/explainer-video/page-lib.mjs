@@ -66,7 +66,7 @@ export const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
 export const ctx = vm.createContext({ console });
 vm.runInContext(
   scripts[0] +
-    "\n;globalThis.__page = { newState, setBoards, setAnswers, view, ACT, canSubmit, heldN, answersDoc, answersText, mediaUrl, outcome, loopOf, sceneAt, buildOf };",
+    "\n;globalThis.__page = { newState, setBoards, setAnswers, view, ACT, canSubmit, answersDoc, answersText, mediaUrl, outcome, loopOf, sceneAt, buildOf };",
   ctx,
 );
 export const P = ctx.__page;
