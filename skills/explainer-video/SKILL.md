@@ -7,7 +7,7 @@ description: >-
   screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
-  version: 0.37.0
+  version: 0.38.0
 ---
 
 # explainer-video
@@ -322,7 +322,7 @@ The run folder's **recipe**, `brief.json`, `excerpts.json`, `outline.md`,
 page's URL, skill version, lock hash, profile, narrator, delivered path), is
 committed. `explainers/.gitignore` ignores the rest: the snapshots and
 drafts, the compiled script, the voice and timeline files, `check.json`,
-`support.json`, `gates.json`, `score.json`, `stills.json`, the caches, the
-composition, `board/`, `storyboard.html` and `out/`. Every stage writes those
-lines between its `# explainer-video: begin` and `end` markers and leaves the
-file's other lines alone.
+`support.json`, `gates.json`, `score.json`, `stills.json`, `samples.json`, the
+caches, the composition, `board/`, `storyboard.html` and `out/`. Every stage
+writes those lines between its `# explainer-video: begin` and `end` markers and
+leaves the file's other lines alone.

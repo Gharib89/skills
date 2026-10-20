@@ -13,6 +13,7 @@ its answers text back.
 - [Documents](#documents)
 - [Fields](#fields)
 - [Card status](#card-status)
+- [Recommendation](#recommendation)
 - [Answers text](#answers-text)
 - [Media](#media)
 
@@ -62,6 +63,10 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].slot` | number | yes | The scene's voiced length plus its exit seam, in seconds: the stretch its card loops. |
 | `board.scenes[].narration` | string | yes | The scene file's narration lines for the scene, exactly as written, numbers, `{written\|spoken}` and cites included. |
 | `board.scenes[].style` | string | yes | Style notes: the visual's component (followed by `past the default` for a rich one), the profile and the narrator. |
+| `board.scenes[].rich` | boolean | yes | Whether its visual is a rich component, one that moves the frame itself. The overview counts these. |
+| `board.scenes[].recommendation` | `"approve"` or `"revise"` | yes | The agent's recommendation, which the card opens on. See [Recommendation](#recommendation). |
+| `board.scenes[].finding` | string | no | The reds on the card, one per line: what the sampling pass left, then a gate stop's evidence naming the scene. |
+| `board.scenes[].fix` | string | no | The agent's proposed fix for the finding. Only a card with a finding has one. |
 | `board.scenes[].still` | string | yes | The scene's still at its fullest moment, a [media](#media) URL. |
 | `board.scenes[].audio` | string | yes | The scene's narration as audio-only WebM, a media URL. |
 | `board.scenes[].clip` | string | delivered | The delivered video's stretch for this scene, an MP4 media URL. |
@@ -82,12 +87,23 @@ Text fields are plain text; the page interprets nothing in them.
 
 ## Card status
 
-- `open`: new or changed since the last version the human answered. Needs an
-  answer before Submit.
+- `open`: new or changed since the last version the human answered. Arrives on
+  its `recommendation`.
 - `approved`: approved on the last version and unchanged since. Shown
   collapsed; it can still be revised.
 - `reopened`: named by a red gate's evidence on the version a gate stop
-  posted. Needs an answer before Submit.
+  posted. Arrives on `revise` when its finding is the red gate's evidence.
+
+## Recommendation
+
+Every card of a review version opens on its `recommendation`: `revise` when it
+has a `finding` and its status is not `approved`, else `approve`. The page
+opens on an overview of every `still` with counts read off this document: the
+cards with `rich` set, the cards with a `finding` and the cards whose status is
+not `approved`. **Approve all and submit** answers every card `approve`, a
+card with a finding included, and submits. A note or an edited narration on a
+card answers it `revise`. A card's answer is the human's choice, whatever the
+recommendation was.
 
 A `delivered` version holds every card `approved`, and its page takes no
 answers. `build` makes one only while the delivered MP4 is at least as new as

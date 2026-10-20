@@ -70,8 +70,13 @@ export const ok = (r, what) => {
 };
 export const compile = (fx) => ok(run(fx, "script/compile.mjs"), "compile");
 export const voice = (fx) => ok(run(fx, "voice/voice.mjs"), "voice");
-export const stills = (fx) =>
-  ok(run(fx, "render/render.mjs", ["--stills"]), "stills");
+// The stills step, then the sampling pass the board refuses to post without:
+// its exit says only whether it found a red, which a test may want to build on.
+export const stills = (fx) => {
+  const r = ok(run(fx, "render/render.mjs", ["--stills"]), "stills");
+  run(fx, "gates/samples.mjs");
+  return r;
+};
 export const board = (fx, ...args) =>
   run(fx, "storyboard/board.mjs", args, fx.extra ?? {});
 export const prep = (fx) => {

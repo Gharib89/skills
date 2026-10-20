@@ -1,14 +1,22 @@
 # The storyboard
 
+## Contents
+
+The steps, numbered below: 1 stills and the sampling pass, 2 surface, 3
+publish, 4 build, 5 read a Submit, 6 apply, 7 gate stop, 8 after delivery.
+
 The **storyboard** is the run's one stop for the user: one card per scene with
 its narration, a still, its voiced length and style notes, beside the brief
 and the source pack. The card most in view plays a **live build** (the
 video's own composition), looping its slot through its exit seam; every other
 card shows its still as a poster. Play plays the slot once with its narration.
 The **animatic** plays the whole build over the joined narration; its scene
-list jumps to a scene and marks the playing one. The user approves or revises
-each card, may edit its narration in place (and, in an Arabic run, respell a
-kept term beside the brief), and presses Submit. Its page is
+list jumps to a scene and marks the playing one. Every card arrives on the
+agent's recommendation
+([Recommendation](../storyboard/board-data.md#recommendation)). The user
+approves or revises each card, may edit its narration in place (and, in an
+Arabic run, respell a kept term beside the brief), and presses Submit. Its
+page is
 [storyboard/page.html](../storyboard/page.html), fixed and tested, and
 [storyboard/board-data.md](../storyboard/board-data.md) is the contract between
 the page and `<skill>/scripts/storyboard/board.mjs`: each **board version** is
@@ -28,6 +36,15 @@ delivery it reports Render's last line and the videos-folder path.
    video, printing `render: stills <hit>/<n> cached`; a scene unchanged since
    its last still is a cache hit. It also writes the `composition/` and
    `timeline.json` the live build plays. A failure reads as under Render step 7.
+   Then the **sampling pass**, `node <skill>/scripts/gates/samples.mjs
+   explainers/<slug>`: layout and reading time judged on the composition's
+   samples (the ones the video gates take, so the scene's fullest moment is
+   among them), before any video exists. Its output is under the sampling pass
+   in [gates.md](gates.md). Fix each red inside the script as that file says
+   under On a red gate, run Script steps 2 to 6, Voice if the audio changed,
+   stills and this pass again, at most twice; a red left after that shows on
+   its card. `board build` refuses without a `samples.json` as new as the
+   stills.
 2. **Surface.** The page needs the `Artifact`, `ArtifactData` and
    `ArtifactComments` tools. With any of them missing, or when the user says
    the page cannot reach its database, the board is **local** for the rest of
@@ -47,7 +64,10 @@ delivery it reports Render's last line and the videos-folder path.
    `ArtifactComments` `watch` and no `url`. Unarmed, tell the user to type
    `submitted` here after each Submit.
 4. **Build.** `board build`, or `board build --local` on a local board (a
-   page recorded earlier would otherwise ask for uploads). Exit 1 with
+   page recorded earlier would otherwise ask for uploads). For each card that
+   carries a finding (a red the sampling pass left, or one a gate stop reopened)
+   add `--fix <scene>=<text>`: the fix you propose, which the card shows beside
+   the finding. Exit 1 with
    `board: no <file>`, `no still` or `no composition` names the stage to run
    first. On a published page it first lists `board: upload <path> (<size>)`
    per build script, still, narration or clip the page does not hold yet:

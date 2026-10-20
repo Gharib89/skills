@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.38.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Storyboard cards arrive on the agent's recommendation
+  ([#904](https://github.com/Gharib89/skills/pull/904),
+  [`131445c`](https://github.com/Gharib89/skills/commit/131445cff26d0b16f8cd0ebbb91609131a1d7f4f))
+
+
 ## v0.37.0 (2026-10-20)
 
 ### Features

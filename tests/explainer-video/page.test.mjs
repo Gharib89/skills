@@ -12,102 +12,23 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
-import { fileURLToPath } from "node:url";
 import { ARABIC, SCRIPT } from "./scene-file.mjs";
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-const skill = path.join(here, "..", "..", "skills", "explainer-video");
-const read = (f) => fs.readFileSync(f, "utf8");
-const html = read(path.join(skill, "storyboard", "page.html"))
-  // The page links its style and scripts as siblings; inline them to test the whole.
-  .replace(
-    /<link rel="stylesheet" href="([^":]+)">/g,
-    (_, f) => `<style>\n${read(path.join(skill, "storyboard", f))}</style>`,
-  )
-  .replace(
-    /(<script src="[^":]+"><\/script>\n?)+/,
-    (m) =>
-      `<script>\n${[...m.matchAll(/src="([^"]+)"/g)].map((x) => read(path.join(skill, "storyboard", x[1]))).join("")}</script>\n`,
-  );
-const doc = read(path.join(skill, "storyboard", "board-data.md"));
-const sample = (n) =>
-  JSON.parse(read(path.join(here, "board-fixtures", `${n}.json`)));
-// The page runs in its own vm realm: plain copies compare equal to ours.
-const clone = (o) => JSON.parse(JSON.stringify(o));
-
-// The documented shape: every table row whose first cell is a board. or answers. path.
-const shape = new Map();
-for (const m of doc.matchAll(
-  /^\| `((?:board|answers)\.[^`]+)` \| [^|]+ \| (\w+) \|/gm,
-))
-  shape.set(m[1], m[2]);
-
-// Every object in a document with its path, `[]` standing for an array element.
-function objects(v, p, acc = []) {
-  if (Array.isArray(v)) v.forEach((x) => objects(x, p + "[]", acc));
-  else if (v && typeof v === "object") {
-    acc.push([p, v]);
-    for (const k of Object.keys(v)) objects(v[k], p + "." + k, acc);
-  }
-  return acc;
-}
-function shapeProblems(d, root) {
-  const out = [];
-  const all = objects(d, root);
-  for (const [p, o] of all)
-    for (const k of Object.keys(o))
-      if (!shape.has(p + "." + k)) out.push(`undocumented field ${p}.${k}`);
-  for (const [f, req] of shape) {
-    if (!f.startsWith(root + ".") || req === "no") continue;
-    const parent = f.slice(0, f.lastIndexOf("."));
-    const key = f.slice(f.lastIndexOf(".") + 1);
-    for (const [p, o] of all)
-      if (p === parent && !(key in o) && ["yes", d.kind].includes(req))
-        out.push(`lacks required field ${f}`);
-  }
-  return out;
-}
-
-// The page's code, run with no document so it boots nothing and exposes its core.
-const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
-  (m) => m[1],
-);
-const ctx = vm.createContext({ console });
-vm.runInContext(
-  scripts[0] +
-    "\n;globalThis.__page = { newState, setBoards, setAnswers, view, ACT, answersDoc, answersText, mediaUrl, outcome, loopOf, sceneAt, buildOf };",
-  ctx,
-);
-const P = ctx.__page;
-const seen = new Set();
-function watch(v, p) {
-  if (!v || typeof v !== "object") return v;
-  return new Proxy(v, {
-    get(t, k, r) {
-      if (typeof k === "symbol") return Reflect.get(t, k, r);
-      if (Array.isArray(t))
-        return /^\d+$/.test(k) ? watch(t[k], p + "[]") : Reflect.get(t, k, r);
-      seen.add(p + "." + k);
-      return watch(t[k], p + "." + k);
-    },
-  });
-}
-function session(docs, answered = []) {
-  const S = P.newState("How Ship lands a pull request");
-  P.setBoards(
-    S,
-    docs.map((d) => watch(clone(d), "board")),
-  );
-  P.setAnswers(
-    S,
-    answered.map((a) => watch(a, "answers")),
-  );
-  P.view(S);
-  return S;
-}
-const submitDisabled = (v) =>
-  /<button[^>]*id="submit"[^>]*\sdisabled/.test(v) ||
-  /<button[^>]*\sdisabled[^>]*id="submit"/.test(v);
+import {
+  P,
+  clone,
+  doc,
+  here,
+  html,
+  read,
+  sample,
+  scripts,
+  seen,
+  session,
+  shape,
+  shapeProblems,
+  skill,
+  submitDisabled,
+} from "./page-lib.mjs";
 
 const temps = [];
 after(() =>
@@ -116,7 +37,12 @@ after(() =>
 
 test("the sample boards hold to the documented shape, and the checker refuses a malformed one", () => {
   assert.ok(shape.size > 30, "no field table in board-data.md");
-  for (const n of ["board-review", "board-gate-stop", "board-delivered"])
+  for (const n of [
+    "board-review",
+    "board-finding",
+    "board-gate-stop",
+    "board-delivered",
+  ])
     assert.deepEqual(shapeProblems(sample(n), "board"), [], n);
   const noStill = sample("board-review");
   delete noStill.scenes[0].still;
@@ -182,7 +108,7 @@ test("a review board takes choices, edits and brief changes, and the answers mat
   assert.ok(doc.includes("`" + head + "`"), head);
 });
 
-test("a gate stop shows its red gate lines, keeps Submit off until the reopened card is answered and defaults approved cards to approve", () => {
+test("a gate stop shows its red gate lines, opens its reopened card on Revise and its approved cards on approve", () => {
   const board = sample("board-gate-stop");
   const S = session([board]);
   const v = P.view(S);
@@ -200,14 +126,13 @@ test("a gate stop shows its red gate lines, keeps Submit off until the reopened 
   assert.ok(v.includes(board.banner.text));
   // The count names cards approved on an earlier board, not this board's picks.
   assert.match(v, /of 1 to answer done · 2 already approved/);
-  assert.ok(submitDisabled(v));
+  // The reopened card arrives recommended Revise, so nothing is left unanswered.
+  assert.ok(!submitDisabled(v));
   assert.deepEqual(clone(P.answersDoc(S).scenes.map((s) => s.choice)), [
     "approve",
-    null,
+    "revise",
     "approve",
   ]);
-  P.ACT.choose(S, { id: "steps", choice: "revise" });
-  assert.ok(!submitDisabled(P.view(S)));
 });
 
 test("a delivered board shows a video per clip and takes no answers", () => {
@@ -297,8 +222,8 @@ test("a board whose answers are submitted takes no more edits", () => {
       },
     ],
   );
-  P.ACT.choose(S, { id: "hook", choice: "approve" });
-  assert.equal(P.answersDoc(S).scenes[0].choice, null);
+  P.ACT.choose(S, { id: "hook", choice: "revise" });
+  assert.equal(P.answersDoc(S).scenes[0].choice, "approve");
   assert.ok(submitDisabled(P.view(S)));
 });
 

@@ -89,6 +89,7 @@ test("compile writes explainers/.gitignore so compiled files, caches and output 
     "*/check.json",
     "*/support.json",
     "*/stills.json",
+    "*/samples.json",
     "*/board/",
     "*/storyboard.html",
     "*/snapshots/",

@@ -196,6 +196,12 @@ test("a red gate record of this script at its third attempt reopens the scenes i
     d.scenes.map((s) => s.status),
     ["open", "reopened", "open"],
   );
+  // A reopened card carries the gate's finding and is recommended Revise.
+  assert.deepEqual(
+    d.scenes.map((s) => s.recommendation),
+    ["approve", "revise", "approve"],
+  );
+  assert.match(d.scenes[1].finding, /^1\.5 s steps: text 12 px under 18 px/);
 
   // Answered, the same red record is spent: the revision's build posts no
   // banner and reopens nothing until a render writes a new record.

@@ -25,7 +25,7 @@ const latest = (S) => S.boards[S.boards.length - 1];
 function newDraft(b) {
   const d = { choices: {}, narr: {}, notes: {}, brief: {}, kept: {} };
   for (const c of b.scenes) {
-    d.choices[c.id] = c.status === "approved" ? "approve" : null;
+    d.choices[c.id] = c.recommendation;
     d.narr[c.id] = c.narration;
     d.notes[c.id] = "";
   }
@@ -79,9 +79,18 @@ const ACT = {
   choose(S, d) {
     if (!locked(S)) draftOf(S).choices[d.id] = d.choice;
   },
+  // A note or an edited narration is a request to change the scene: it answers Revise.
   field(S, d) {
+    if (locked(S)) return;
+    const dr = draftOf(S);
+    dr[d.field === "note" ? "notes" : "narr"][d.id] = d.value;
+    const c = latest(S).scenes.find((x) => x.id === d.id);
+    if (d.field === "note" ? d.value.trim() : d.value !== c.narration)
+      dr.choices[d.id] = "revise";
+  },
+  approveAll(S) {
     if (!locked(S))
-      draftOf(S)[d.field === "note" ? "notes" : "narr"][d.id] = d.value;
+      for (const c of latest(S).scenes) draftOf(S).choices[c.id] = "approve";
   },
   brief(S, d) {
     if (!locked(S)) draftOf(S).brief[d.knob] = d.value;
@@ -192,6 +201,7 @@ function view(S) {
     <header class="hdr"><span class="label">explainer-video · board ${esc(b.version)}</span><h1 dir="auto">${esc(b.title)}</h1><p class="lede">${lede}</p>
       ${S.canEdit || delivered ? "" : '<p class="label">Only an editor of this page answers its boards.</p>'}</header>
     ${b.banner ? banner(b.banner) : ""}
+    ${delivered ? "" : overview(b)}
     ${player(S, b)}
     ${briefPanel(S, b)}
     ${sourcesPanel(b)}
@@ -203,6 +213,28 @@ function shell(S, text) {
 }
 function banner(x) {
   return `<div class="banner panel" role="alert"><b>${esc(x.text)}</b><pre>${x.gates.map(esc).join("\n")}</pre></div>`;
+}
+// The board's first screen: every poster, and how many cards are rich, carry a finding or changed.
+function overview(b) {
+  const n = (f) => b.scenes.filter(f).length;
+  const count = (k, label, v) =>
+    `<span class="tag" data-count="${k}"><b>${v}</b> ${label}</span>`;
+  return `<section class="overview panel" id="overview"><span class="label">Overview</span>
+    <div class="row">${count(
+      "rich",
+      "rich",
+      n((c) => c.rich),
+    )}${count(
+      "finding",
+      "with a finding",
+      n((c) => c.finding),
+    )}${count("changed", "changed", n(needs))}</div>
+    <div class="grid">${b.scenes
+      .map(
+        (c) =>
+          `<a class="thumb${c.finding ? " flagged" : ""}" href="#card-${esc(c.id)}"><img alt="" src="${esc(mediaUrl(c.still))}"><span class="label" dir="auto">${esc(c.title)}</span></a>`,
+      )
+      .join("")}</div></section>`;
 }
 // A stage is the poster, with the live build over it once a frame is mounted.
 const stage = (id, still, frame) =>
@@ -260,7 +292,7 @@ function card(S, b, c) {
     delivered = b.kind === "delivered";
   const [tagText, tagClass] = CARD_TAG[c.status] || CARD_TAG.open;
   const radio = (v, label) =>
-    `<label><input type="radio" name="c-${esc(c.id)}" value="${v}" data-id="${esc(c.id)}" ${d.choices[c.id] === v ? "checked" : ""} ${dis}>${label}</label>`;
+    `<label><input type="radio" name="c-${esc(c.id)}" value="${v}" data-id="${esc(c.id)}" ${d.choices[c.id] === v ? "checked" : ""} ${dis}>${label}${c.recommendation === v ? ' <span class="label">recommended</span>' : ""}</label>`;
   const media =
     delivered && c.clip
       ? `<video controls preload="none" src="${esc(mediaUrl(c.clip))}" poster="${esc(mediaUrl(c.still))}"></video>`
@@ -274,6 +306,11 @@ function card(S, b, c) {
   const body = `<div class="chead"><h3 dir="auto">${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ""}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
     ${media}
     <span class="style">${esc(c.style)}</span>
+    ${
+      c.finding
+        ? `<div class="finding" role="note"><span class="label">Finding</span><pre>${esc(c.finding)}</pre>${c.fix ? `<p dir="auto"><span class="label">Proposed fix</span> ${esc(c.fix)}</p>` : ""}</div>`
+        : ""
+    }
     ${
       delivered && c.clip
         ? `<audio controls preload="none" src="${esc(mediaUrl(c.audio))}"></audio>`
@@ -303,7 +340,7 @@ function bar(S, b) {
     : `<button class="btn accent" id="submit" data-act="submit" ${canSubmit(S) ? "" : "disabled"}>Submit board ${esc(b.version)}</button>`;
   return `<div class="bar panel"><div class="bar-in">
     <span class="count"><b data-ready>${need - left}</b> of ${need} to answer done · ${b.scenes.length - need} already approved</span>
-    <div>${act}</div>${S.local ? localNote(S) : status(S)}</div></div>`;
+    <div><button class="btn" data-act="approve-all" ${locked(S) ? "disabled" : ""}>${S.local ? "Approve all" : "Approve all and submit"}</button> ${act}</div>${S.local ? localNote(S) : status(S)}</div></div>`;
 }
 function localNote(S) {
   return `<div class="st"><span>Copy the answers, paste them into the terminal, and Claude reads them.</span>
