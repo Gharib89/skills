@@ -87,6 +87,22 @@ const FIXTURE = [
     },
     seconds: 1.43,
   },
+  // Right to left: the type family `words` rises it by whole words, an English
+  // term one unit, and the determinism check holds its frames.
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic",
+      role: "point",
+      title: "العربي",
+      narration: ["بعد كده بيعمل merge."],
+      visual: {
+        component: "title",
+        props: { title: "من issue لحد pull request", subtitle: "تشغيل واحد" },
+      },
+    },
+    seconds: 1.67,
+  },
 ];
 const HALF = 1;
 const RATE = 24000;
@@ -112,7 +128,7 @@ const backend = await loadBackend();
 const env = hyperframesEnv();
 const profile = loadStyle(work, "claude-code");
 const fontRows = [
-  ...new Set(typeRoles("en").map((r) => profile.type[r].font)),
+  ...new Set(typeRoles("ar").map((r) => profile.type[r].font)),
 ].map((font) => fontRow(profile, font));
 const gaps = fontRows.map(fontGap).filter(Boolean);
 if (gaps.length) {
@@ -194,7 +210,7 @@ async function compose(name, part, hold) {
           sentences: p.scene.narration.map((_, k) => 0.2 + 0.8 * k),
         },
         profile,
-        { backend, seam: seams[i] },
+        { backend, seam: seams[i], dir: p.dir },
       ),
     );
   fs.writeFileSync(
@@ -269,7 +285,8 @@ check(
 // Each seam window's first, middle and last frames, seeked twice in browsers
 // of their own: the PNGs match byte for byte. The hook's zoom-through (out) and
 // the steps' cut on a curve (out) each have an exit window and the scene after
-// it an entry window, so four windows.
+// it an entry window, and the merge's seam into the Arabic scene the same, so
+// six windows.
 const raw = await backend.events(whole.comp, { env });
 const seek = async (t, n) => {
   const png = path.join(work, `seam-${t}-${n}.png`);
@@ -304,8 +321,8 @@ async function sweep(kind) {
 const seams = await sweep("seams");
 check(
   "seams",
-  seams.count === 4 && seams.apart === 0 && seams.still === 0,
-  `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (4 expected)`,
+  seams.count === 6 && seams.apart === 0 && seams.still === 0,
+  `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (6 expected)`,
 );
 // Every scene composes a push-in under the default camera: one window each.
 const push = await sweep("camera");

@@ -1,6 +1,8 @@
 // The scene components: each one's markup, scoped CSS and tweens, and the
 // helpers they share with the page composer in compose.mjs.
 import crypto from "node:crypto";
+import { WORD_RISE_SECONDS } from "../lib/style.mjs";
+import { splitLatin } from "../lib/terms.mjs";
 import { diff, lines } from "../lib/visuals.mjs";
 import { GLASS } from "./texture.mjs";
 
@@ -109,20 +111,87 @@ const codeFrame = (p, f, rows, LH, surface) => ({
 .del { box-shadow: inset 6px 0 var(--stop); }`,
 });
 
+// A line as one masked span per whole word, numbered `k<n>` from `from`: the
+// type family `words` rises each out of its mask. A word is never split, so
+// Arabic keeps its joins; `wrap` isolates a Latin run inside it.
+const kineticWords = (text, f, wrap, from) => {
+  // Right to left, a Latin run (an English term) is one word however many it
+  // holds, and Arabic letters glued to it stay in that word.
+  const glued = f.rtl
+    ? splitLatin(String(text))
+        .map((p, i) => (i % 2 ? p.replace(/\s+/g, "\0") : p))
+        .join("")
+    : String(text);
+  const words = glued
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replaceAll("\0", " "));
+  return {
+    html: words
+      .map(
+        (w, i) =>
+          `<span class="w"><span class="wi k${from + i}">${wrap(w)}</span></span>`,
+      )
+      .join(" "),
+    count: from + words.length,
+  };
+};
+// The mask clips at the line box, so it takes a little padding to keep
+// descenders and Arabic marks whole.
+const WORD_CSS = `.w { display: inline-block; overflow: hidden; vertical-align: top; padding: 0.15em 0; margin: -0.15em 0; }
+.wi { display: inline-block; }`;
+// The percent of its own height a word starts below its mask.
+const WORD_RISE = 115;
+
 // Each component: its markup, its scoped CSS, what reveals when, as [selector,
 // sentence number, spring class] triples (`settle` when left out; only the
 // `spring` ease reads it), and its other tweens, as [selector, from, to,
 // sentence number]. `x` holds the profile's surface, Shiki's tokens and
 // rough.js outlines.
 export const COMPONENTS = {
-  title: (p, f) => ({
-    html: `<div class="stack">${p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : ""}<div class="big r0">${f.tt(p.title)}</div>${p.subtitle ? `<div class="sub r0">${f.t(p.subtitle)}</div>` : ""}</div>`,
-    css: `.stack { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+  title: (p, f, x) => {
+    const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";
+    const css = `.stack { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
 .kick { font: 600 var(--size-small) ${f.text}; color: var(--accent); letter-spacing: ${f.ls("0.06em")}; text-transform: uppercase; }
 .big { font: ${f.titleWeight} var(--size-display)/${f.lh(1.08, "title")} ${f.title}; color: var(--text); letter-spacing: ${f.ls("-0.01em")}; max-width: 1600px; }
-.sub { font: 400 var(--size-body)/${f.lh(1.3, "text")} ${f.text}; color: var(--muted); max-width: 1500px; }`,
-    reveals: [[".r0", 1, "land"]],
-  }),
+.sub { font: 400 var(--size-body)/${f.lh(1.3, "text")} ${f.text}; color: var(--muted); max-width: 1500px; }`;
+    if (!x.type.words)
+      return {
+        html: `<div class="stack">${kick}<div class="big r0">${f.tt(p.title)}</div>${p.subtitle ? `<div class="sub r0">${f.t(p.subtitle)}</div>` : ""}</div>`,
+        css,
+        reveals: [[".r0", 1, "land"]],
+      };
+    // The title, then the subtitle, one masked span per whole word.
+    const title = kineticWords(p.title, f, f.tt, 0);
+    const sub = p.subtitle
+      ? kineticWords(p.subtitle, f, f.t, title.count)
+      : { html: "", count: title.count };
+    return {
+      html: `<div class="stack">${kick}<div class="big">${title.html}</div>${p.subtitle ? `<div class="sub">${sub.html}</div>` : ""}</div>`,
+      css: `${css}\n${WORD_CSS}`,
+      reveals: kick ? [[".r0", 1, "land"]] : [],
+      tweens: Array.from({ length: sub.count }, (_, n) => {
+        const blur = n < title.count ? x.type.blur : 0;
+        return [
+          `.k${n}`,
+          {
+            yPercent: WORD_RISE,
+            opacity: 0,
+            ...(blur && { filter: `blur(${blur}px)` }),
+          },
+          {
+            yPercent: 0,
+            opacity: 1,
+            ...(blur && { filter: "blur(0px)" }),
+            duration: WORD_RISE_SECONDS,
+            ease: x.type.ease,
+            delay: +(n * x.type.stagger).toFixed(6),
+          },
+          1,
+        ];
+      }),
+    };
+  },
   cards: (p, f, x) => {
     const em = emphasised(
       p.emphasis,

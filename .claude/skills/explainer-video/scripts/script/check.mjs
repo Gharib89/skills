@@ -25,7 +25,12 @@ import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import { blursDepth, findStyle, grammar } from "../lib/style.mjs";
+import {
+  WORD_RISE_SECONDS,
+  blursDepth,
+  findStyle,
+  grammar,
+} from "../lib/style.mjs";
 import { VISUALS, findPhrase } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
@@ -260,7 +265,7 @@ const drift = [];
   // The run's texture decides whether an emphasis blurs the other items. A
   // style no store holds is the render stage's to refuse, and reads as the
   // default profile here; a profile file that is not JSON stops the compile.
-  const texture = grammar(findStyle(run, script.style).profile ?? {}).texture;
+  const { texture, type } = grammar(findStyle(run, script.style).profile ?? {});
   const floor = (t) => {
     const n = words(String(t ?? ""));
     return !n ? 0 : n <= 3 ? 0.8 : Math.max(1.2, 0.3 * n);
@@ -281,7 +286,17 @@ const drift = [];
         ? upTo(e.at - 1) +
           (e.on === undefined ? 0 : findPhrase(s.narration[e.at - 1], e.on))
         : total;
-      const shown = (s.seconds * (end - start)) / total;
+      // Under the words family a title's last word lands one stagger per
+      // word, and one rise, after the cue; the kicker moves as a block.
+      const lead =
+        name === "title" && type.family === "words"
+          ? (words(String(texts[1] ?? "")) +
+              words(String(texts[2] ?? "")) -
+              1) *
+              type.stagger +
+            WORD_RISE_SECONDS
+          : 0;
+      const shown = (s.seconds * (end - start)) / total - lead;
       const read = texts.reduce((a, t) => a + floor(t), 0);
       if (shown < read)
         f.push(

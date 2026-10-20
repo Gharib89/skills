@@ -85,7 +85,7 @@ test("a field left out of the grammar takes the Velocity Cut frame", () => {
     layout: "open",
     seams: { family: "velocity", duration: 0.2, blur: 18 },
     camera: { family: "push", scale: 1.06, duration: 0.8 },
-    type: { family: "block" },
+    type: { family: "words", stagger: 0.05 },
     ease: "velocity",
     texture: {
       surface: "glass",
