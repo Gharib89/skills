@@ -30,6 +30,8 @@ test("a profile with no grammar block composes the open layout with glass, field
   assert.doesNotMatch(page, /class="header"/);
   assert.match(page, /<div class="field"><i class="a"><\/i>/);
   assert.match(page, /filter: blur\(120px\)/);
+  // its own layer, so damage from the scenes above never re-rasters it (#905)
+  assert.match(page, /\.field \{[^}]*will-change: transform;/);
   assert.match(page, /<feTurbulence[^>]* seed="7"/);
   // an svg is 300 by 150 until sized: the grain must span the whole frame
   assert.match(page, /\.grain \{[^}]*width: 100%; height: 100%;/);
