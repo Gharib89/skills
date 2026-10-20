@@ -83,14 +83,18 @@ test("a clean render passes all six gates, writes the record and the report, and
   assert.ok(!/\d{4}-\d\d-\d\d/.test(md), "no date in the report");
   assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
   assert.match(r.out, /^delivered: /m);
-  // Samples: every 15 frames from each scene's start, plus its settled last frame.
+  // Samples: every 15 frames from each scene's start, plus its settled last
+  // frame and where the seam into it ends (the previous scene's seam length).
   const timeline = JSON.parse(read(fx.dir, "timeline.json"));
-  const want = timeline.scenes.flatMap((s) => {
+  const want = timeline.scenes.flatMap((s, i) => {
     const first = Math.round(s.start * 30);
     const last = first + Math.round(s.duration * 30) - 1;
-    const ts = [];
-    for (let f = first; f < last; f += 15) ts.push(frameTime(f, 30));
-    return [...ts, frameTime(last, 30)];
+    const prev = timeline.scenes[i - 1];
+    const seam = prev ? Math.round((prev.slot - prev.duration) * 30) : 0;
+    const frames = new Set([last]);
+    for (let f = first; f < last; f += 15) frames.add(f);
+    if (seam) frames.add(first + seam);
+    return [...frames].sort((a, b) => a - b).map((f) => frameTime(f, 30));
   });
   assert.deepEqual(calls(fx, "probe")[0].times, want);
   assert.deepEqual(calls(fx, "check")[0].times, want);

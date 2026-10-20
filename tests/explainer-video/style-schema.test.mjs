@@ -8,6 +8,7 @@ import path from "node:path";
 import {
   SCALE,
   checkBans,
+  checkScenes,
   grammar,
   scale,
   validate,
@@ -82,7 +83,7 @@ test("a schema is read before contrast, and a schema 2 profile holding a schema 
 test("a field left out of the grammar takes the Velocity Cut frame", () => {
   assert.deepEqual(grammar(bundled("claude-code")), {
     layout: "open",
-    seams: { family: "cut" },
+    seams: { family: "velocity", duration: 0.2, blur: 18 },
     camera: { family: "locked" },
     type: { family: "block" },
     ease: "velocity",
@@ -106,7 +107,7 @@ test("a field left out of the grammar takes the Velocity Cut frame", () => {
     odd({ grammar: { ease: "spring", seams: { duration: 0.3 } } }),
   );
   assert.equal(g.ease, "spring");
-  assert.deepEqual(g.seams, { family: "cut", duration: 0.3 });
+  assert.deepEqual(g.seams, { family: "velocity", duration: 0.3, blur: 18 });
   assert.equal(g.camera.family, "locked");
 });
 
@@ -236,17 +237,18 @@ test("a grammar that uses a component it bans is refused, naming the family and 
 
 test("a profile banning blur is refused while its field or depth blur is above 0 or its surface is glass, and loads once those are 0, left out or flat or sketch", () => {
   const bans = ["blur"];
+  const seams = { blur: 0 };
   refused(
-    { grammar: { bans } },
+    { grammar: { bans, seams } },
     /style profile odd: grammar\.texture\.fieldBlur 120 blurs, which grammar\.bans bans: set it to 0 or leave field out of grammar\.texture\.overlays/,
   );
   refused(
-    { grammar: { bans, texture: { fieldBlur: 0 } } },
+    { grammar: { bans, seams, texture: { fieldBlur: 0 } } },
     /style profile odd: grammar\.texture\.depthBlur 4 blurs.*leave depth out/,
   );
   // the glass surface blurs what is behind each box, so the ban refuses it too
   refused(
-    { grammar: { bans, texture: { fieldBlur: 0, depthBlur: 0 } } },
+    { grammar: { bans, seams, texture: { fieldBlur: 0, depthBlur: 0 } } },
     /style profile odd: grammar\.texture\.surface glass blurs.*flat or sketch/,
   );
   for (const texture of [
@@ -255,10 +257,54 @@ test("a profile banning blur is refused while its field or depth blur is above 0
     { surface: "flat", overlays: ["vignette"] },
   ])
     assert.doesNotThrow(
-      () => validate(odd({ grammar: { bans, texture } })),
+      () => validate(odd({ grammar: { bans, seams, texture } })),
       JSON.stringify(texture),
     );
   assert.doesNotThrow(() => validate(odd({ grammar: { texture: {} } })));
+});
+
+test("a profile banning blur cannot use velocity seams with a peak blur above 0", () => {
+  const flat = { surface: "flat", overlays: ["vignette"] };
+  const bans = ["blur"];
+  // the default peak blur is 18 px
+  refused(
+    { grammar: { bans, texture: flat } },
+    /style profile odd: grammar\.seams\.blur 18 blurs, which grammar\.bans bans: set it to 0 or use the cut family/,
+  );
+  refused(
+    { grammar: { bans, texture: flat, seams: { blur: 6 } } },
+    /grammar\.seams\.blur 6 blurs/,
+  );
+  for (const seams of [{ blur: 0 }, "cut", { family: "cut", blur: 12 }])
+    assert.doesNotThrow(
+      () => validate(odd({ grammar: { bans, texture: flat, seams } })),
+      JSON.stringify(seams),
+    );
+  // without the ban the peak blur is the profile's to set
+  assert.doesNotThrow(() =>
+    validate(odd({ grammar: { seams: { blur: 24 } } })),
+  );
+});
+
+test("the seams family is velocity or cut, a scene may name its moves or cut, and anything else is refused", () => {
+  refused(
+    { grammar: { seams: "canvas" } },
+    /grammar\.seams canvas is not velocity or cut/,
+  );
+  const scene = (seam) => ({ id: "a", visual: { component: "title", seam } });
+  const profile = (seams) => odd({ grammar: { seams } });
+  for (const seam of [undefined, "cut", "zoom-through", "cut-the-curve"])
+    assert.doesNotThrow(() => checkScenes(profile("velocity"), [scene(seam)]));
+  assert.doesNotThrow(() => checkScenes(profile("cut"), [scene("cut")]));
+  assert.throws(
+    () => checkScenes(profile("velocity"), [scene("whip")]),
+    /scene a: seam whip is not one of zoom-through, cut-the-curve, cut: the moves of style profile odd's seams family velocity, and a plain cut/,
+  );
+  // a family that draws no move leaves a scene only the plain cut
+  assert.throws(
+    () => checkScenes(profile("cut"), [scene("zoom-through")]),
+    /scene a: seam zoom-through is not one of cut: the moves of style profile odd's seams family cut, and a plain cut/,
+  );
 });
 
 test("a type step is the profile's, else the scale's, and never under the layout floor", () => {

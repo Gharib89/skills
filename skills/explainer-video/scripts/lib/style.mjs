@@ -96,10 +96,22 @@ export const SCALE = {
 // is a number within its range; a field without knobs is a family name.
 const FIELDS = {
   layout: { families: ["open", "bands"] },
-  seams: { families: ["cut"], knobs: { duration: [0.2, 0.4], blur: [0, 24] } },
+  seams: {
+    families: ["velocity", "cut"],
+    knobs: { duration: [0.2, 0.4], blur: [0, 24] },
+  },
   camera: { families: ["locked"], knobs: { scale: [1.03, 1.12] } },
   type: { families: ["block"], knobs: { stagger: [0.03, 0.08] } },
   ease: { families: ["velocity", "soft", "spring"] },
+};
+// What a seams knob left out takes: `blur` is the zoom-through's peak blur in
+// px, and the cut on a curve peaks at 4/9 of it (8 px at the default).
+const SEAM_DEFAULTS = { duration: 0.2, blur: 18 };
+// The moves a seams family draws, each a value a scene's `seam` may name; a
+// scene may always name `cut`, no seam at all.
+export const SEAM_MOVES = {
+  velocity: ["zoom-through", "cut-the-curve"],
+  cut: [],
 };
 const SURFACES = ["glass", "flat", "sketch"];
 // The texture overlays, all on by default, and the knobs they take: the grain's
@@ -144,6 +156,7 @@ export function grammar(profile) {
     out[field] = knobs
       ? { family: families[0], ...asFamily(g[field]) }
       : (g[field] ?? families[0]);
+  out.seams = { ...SEAM_DEFAULTS, ...out.seams };
   out.texture = {
     surface: SURFACES[0],
     overlays: OVERLAYS,
@@ -195,13 +208,25 @@ export function banReason(bans, component, name) {
     : null;
 }
 
-// A scene whose component the profile bans is refused. Compile checks it
-// against the profile it saw; render checks it again, since the profile may
-// have changed between the two.
+// Why a scene's `seam` is not the profile's to draw, or null: it is neither a
+// move of the profile's seams family nor `cut`, a plain cut.
+export function seamReason(profile, seam) {
+  const { family } = grammar(profile).seams;
+  const moves = [...(SEAM_MOVES[family] ?? []), "cut"];
+  return seam === undefined || moves.includes(seam)
+    ? null
+    : `seam ${seam} is not one of ${moves.join(", ")}: the moves of style profile ${profile.name}'s seams family ${family}, and a plain cut`;
+}
+
+// A scene whose component the profile bans, or whose `seam` it does not
+// draw, is refused. Compile checks it against the profile it saw; render
+// checks it again, since the profile may have changed between the two.
 export function checkScenes(profile, scenes) {
   const { bans } = grammar(profile);
   for (const s of scenes) {
-    const why = banReason(bans, s.visual.component, profile.name);
+    const why =
+      banReason(bans, s.visual.component, profile.name) ??
+      seamReason(profile, s.visual.seam);
     if (why) throw new Error(`scene ${s.id}: ${why}`);
   }
 }
@@ -282,6 +307,10 @@ function features(profile) {
     if (g.texture.surface === "glass")
       refuse(
         "grammar.texture.surface glass blurs, which grammar.bans bans: set it to flat or sketch",
+      );
+    if (g.seams.family === "velocity" && g.seams.blur > 0)
+      refuse(
+        `grammar.seams.blur ${g.seams.blur} blurs, which grammar.bans bans: set it to 0 or use the cut family`,
       );
   }
 }

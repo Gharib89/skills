@@ -56,17 +56,11 @@ import {
   skill,
   torchDevice,
 } from "../lib/tools.mjs";
-import {
-  CUE_CHARS,
-  FPS,
-  H,
-  W,
-  sceneFile,
-  stillsPage,
-  videoPage,
-} from "./compose.mjs";
+import { FPS, H, W, sceneFile, stillsPage, videoPage } from "./compose.mjs";
+import { captionCues } from "./cues.mjs";
 import { gridScenes, written } from "./grid.mjs";
 import { joinNarration, wavSeconds } from "./narration.mjs";
+import { seamPlan, slot } from "./seams.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 const stillsOnly = rest[0] === "--stills";
@@ -170,11 +164,13 @@ if (ace && !fs.existsSync(path.join(dest(ace, undefined, device), ".stamp")))
   );
 
 // Timeline: scenes back to back on the frame grid, every word and sentence
-// start absolute.
+// start absolute. A scene's `slot` is its duration plus its seam out, which
+// runs on over the next scene's start: no start and no word time moves.
 const grid = gridScenes(
   voice.scenes.map((v) => wavSeconds(run, v.audio, fail)),
   HOLD,
 );
+const seams = seamPlan(script.scenes, profile);
 const scenes = script.scenes.map((s, i) => {
   const v = voice.scenes[i];
   const start = written(grid[i].start);
@@ -190,7 +186,15 @@ const scenes = script.scenes.map((s, i) => {
     first += n.split(/\s+/).length;
     return t;
   });
-  return { id: s.id, start, duration, sentences, words };
+  return {
+    id: s.id,
+    start,
+    duration,
+    slot: slot(grid[i].frames, seams[i]),
+    seam: seams[i].out?.move ?? "cut",
+    sentences,
+    words,
+  };
 });
 const total = written(grid.total);
 fs.writeFileSync(
@@ -198,40 +202,7 @@ fs.writeFileSync(
   JSON.stringify({ total, scenes }, null, 2) + "\n",
 );
 
-// Captions: a cue breaks at a sentence end, or before a token that would take
-// it past CUE_CHARS; it shows until the next cue in its scene starts.
-const cues = [];
-script.scenes.forEach((s, i) => {
-  const sc = scenes[i];
-  const own = [];
-  let w = 0;
-  for (const tokens of s.captions) {
-    let cue = null;
-    for (const t of tokens) {
-      const token = {
-        text: t.text,
-        start: sc.words[w].start,
-        end: sc.words[w + t.words - 1].end,
-      };
-      w += t.words;
-      if (cue && `${cue.text} ${t.text}`.length > CUE_CHARS) cue = null;
-      if (cue) {
-        cue.text += ` ${t.text}`;
-        cue.tokens.push(token);
-      } else {
-        cue = { text: t.text, tokens: [token] };
-        own.push(cue);
-      }
-    }
-  }
-  own.forEach((c, k) => {
-    c.start = c.tokens[0].start;
-    c.end =
-      own[k + 1]?.tokens[0].start ??
-      r3(Math.min(c.tokens.at(-1).end + 0.3, sc.start + sc.duration));
-  });
-  cues.push(...own);
-});
+const cues = captionCues(script.scenes, scenes);
 const clock = (t) => {
   const ms = Math.round(t * 1000);
   const pad = (n, w = 2) => String(n).padStart(w, "0");
@@ -340,6 +311,7 @@ fs.rmSync(raw);
 
 const timing = (sc) => ({
   duration: sc.duration,
+  slot: sc.slot,
   sentences: sc.sentences.map((t) => r3(t - sc.start)),
   words: sc.words.map((w) => r3(w.start - sc.start)),
 });
@@ -347,7 +319,11 @@ const files = [];
 for (const [i, s] of script.scenes.entries()) {
   let html;
   try {
-    html = await sceneFile(s, timing(scenes[i]), profile, { backend, dir });
+    html = await sceneFile(s, timing(scenes[i]), profile, {
+      backend,
+      dir,
+      seam: seams[i],
+    });
   } catch (e) {
     fail(`scene ${s.id}: ${e.message}`);
   }

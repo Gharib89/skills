@@ -63,10 +63,31 @@ export function showing(dir, t) {
 // A scene's timeline events, as the real backend reads them off its GSAP
 // timeline: tween ends and the `seam:` and `camera:` label pairs, in scene
 // seconds. EXPLAINER_VIDEO_FAKE_EVENTS is a JSON object of scene id to
-// {ends, seams, camera}; a scene it omits has none.
+// {ends, seams, camera}; a scene it omits has the seam windows its own script
+// labels (`addLabel("seam:start", a)` ... `addLabel("seam:end", b)`) and no
+// other event.
 export async function events(dir) {
   log({ call: "events", dir });
-  return JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_EVENTS ?? "{}");
+  const out = {};
+  const scenes = path.join(dir, "scenes");
+  for (const f of fs.existsSync(scenes) ? fs.readdirSync(scenes) : []) {
+    const html = fs.readFileSync(path.join(scenes, f), "utf8");
+    const at = (kind) =>
+      Object.fromEntries(
+        [
+          ...html.matchAll(
+            new RegExp(`addLabel\\("seam:${kind}(\\d*)", ([\\d.]+)\\)`, "g"),
+          ),
+        ].map((m) => [m[1], +m[2]]),
+      );
+    const [start, end] = [at("start"), at("end")];
+    const seams = Object.keys(start).map((k) => [start[k], end[k]]);
+    if (seams.length) out[f.replace(/\.html$/, "")] = { seams };
+  }
+  return {
+    ...out,
+    ...JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_EVENTS ?? "{}"),
+  };
 }
 
 export async function check(dir, times) {

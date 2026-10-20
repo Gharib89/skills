@@ -20,7 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { CUE_CHARS } from "../render/compose.mjs";
-import { banReason, findStyle } from "../lib/style.mjs";
+import { banReason, findStyle, seamReason } from "../lib/style.mjs";
 import { checkVisual } from "../lib/visuals.mjs";
 import { BRACES, endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
 
@@ -191,6 +191,8 @@ const compiled = scenes.map((s) => {
   }
   const banned = banReason(bans, visual.component, style?.name);
   if (banned) fail(s.id, banned);
+  const seam = style && seamReason(style, visual.seam);
+  if (seam) fail(s.id, seam);
   return {
     id: s.id,
     title: s.title,
