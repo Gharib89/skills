@@ -206,6 +206,64 @@ const FIXTURE = [
     },
     seconds: 3.4,
   },
+  // A timeline, then an Arabic timeline and compare that run right to left
+  // (the first event and the first side at the right), each item on its cue.
+  {
+    scene: {
+      id: "timeline",
+      role: "point",
+      title: "Timeline",
+      narration: ["How it grew.", "A side project.", "Then every team."],
+      visual: {
+        component: "timeline",
+        props: {
+          items: [
+            { at: 2, when: "late 2019", label: "Started" },
+            { at: 3, when: "Q3 2021", label: "Shipped", note: "every team" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic-timeline",
+      role: "point",
+      title: "التاريخ",
+      narration: ["إزاي كبر.", "بدأ مشروع جانبي.", "وبعدين كل الفرق."],
+      visual: {
+        component: "timeline",
+        props: {
+          items: [
+            { at: 2, when: "أواخر 2019", label: "البداية" },
+            { at: 3, when: "Q3 2021", label: "الانتشار" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic-compare",
+      role: "point",
+      title: "مقارنة",
+      narration: ["قبل وبعد.", "كان يدوي.", "بقى تلقائي."],
+      visual: {
+        component: "compare",
+        props: {
+          sides: [
+            { title: "قبل", items: [{ at: 2, text: "يدوي" }] },
+            { title: "بعد", items: [{ at: 3, text: "تلقائي" }] },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
 ];
 const HALF = 1;
 const RATE = 24000;
@@ -477,6 +535,16 @@ check(
     )
     .join("; "),
 );
+// With REAL_RENDER_FRAMES set, save each timeline and compare scene's settled
+// frame (3 s in) for a human to check the reading order; nothing asserts it.
+if (process.env.REAL_RENDER_FRAMES)
+  for (const id of ["timeline", "arabic-timeline", "arabic-compare"]) {
+    const start = whole.scenes.find((s) => s.id === id).start;
+    fs.writeFileSync(
+      path.join(process.env.REAL_RENDER_FRAMES, `${id}.png`),
+      await seek(+(start + 3.0).toFixed(3), id),
+    );
+  }
 
 // What the critic reads of motion, off the real timeline and the real video:
 // every scene's tweens, the push-in's among them and left out of the windows a

@@ -4,8 +4,9 @@ import crypto from "node:crypto";
 import { WORD_RISE_SECONDS } from "../lib/style.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { diff, lines, readAlong } from "../lib/visuals.mjs";
+import { boxCss, paint, sketchCss, sketched } from "./box.mjs";
 import { chart, stat } from "./numbers.mjs";
-import { GLASS } from "./texture.mjs";
+import { compare, timeline } from "./sequence.mjs";
 
 export const esc = (s) =>
   String(s)
@@ -17,27 +18,6 @@ export const esc = (s) =>
 // The selector of every item a scene can bring into or out of focus: a card, a
 // terminal line, a flow step, a panel, a list item.
 export const ITEMS = ".card, .line, .node, .panel, .item";
-
-// A box's fill: glass over the page's colour field, else the panel colour.
-const paint = (surface) =>
-  surface === "glass" ? GLASS : "background: var(--panel);";
-
-// A sketch surface draws each box's outline with rough.js, at the box's own
-// seed; a flat or glass one draws it in CSS.
-const sketched = (surface, d) =>
-  surface === "sketch"
-    ? `<svg class="sk" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="none"><path class="f" d="${d.fill}"/><path class="s" d="${d.stroke}"/></svg>`
-    : "";
-const sketchCss = (surface) =>
-  surface === "sketch"
-    ? `.sk { position: absolute; inset: 0; width: 100%; height: 100%; }
-.sk .f { fill: var(--panel); }
-.sk .s { fill: none; stroke: var(--rule); stroke-width: 2.5; }`
-    : "";
-const boxCss = (surface) =>
-  surface === "sketch"
-    ? "position: relative;"
-    : `position: relative; ${paint(surface)} border: 2px solid var(--line); border-radius: 18px;`;
 
 // An arrow as one stroke, its head retraced, so `draw` strokes it whole.
 const ARROW = [
@@ -153,6 +133,8 @@ const WORD_RISE = 115;
 export const COMPONENTS = {
   chart,
   stat,
+  timeline,
+  compare,
   title: (p, f, x) => {
     const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";
     const css = `.stack { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }

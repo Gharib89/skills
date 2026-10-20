@@ -131,6 +131,12 @@ export const numberIn = (text, value) =>
   new RegExp(
     `(?<!${DIGIT})(?<!${DIGIT}${POINT})${value.replace(/\./g, "\\.")}(?!${DIGIT})(?!${POINT}${DIGIT})`,
   ).test(text);
+// Every number written in `texts` as `numberIn` reads one: digits joined by a
+// point or comma between digits, so `Q3 '21` holds 3 and 21.
+const numbersIn = (texts) =>
+  texts.flatMap(
+    (t) => t?.match(new RegExp(`${DIGIT}+(?:${POINT}${DIGIT}+)*`, "g")) ?? [],
+  );
 // A list prop of `min` to `max` objects, each with a cue.
 function list(name, v, what, said, [min, max] = [1, Infinity]) {
   if (!Array.isArray(v) || v.length < min || v.length > max)
@@ -384,6 +390,75 @@ export const VISUALS = {
     items: (p) =>
       p.items.map((x, i) => [`stat ${i + 1}`, x.at, [x.value, x.label], x.on]),
     numbers: (p) => p.items.map((x) => x.value),
+  },
+  // Events along a line in the order written, the first at the reading start.
+  // `when` is display text, shown as written and never parsed. Rich like
+  // `words`.
+  timeline: {
+    props: ["items"],
+    rows: "items",
+    item: [...CUE, "when", "label", "note"],
+    ownCamera: true,
+    check: (p, said) => {
+      list("timeline", p.items, "items", said);
+      for (const x of p.items) {
+        named("timeline", x.when, "a when per item");
+        named("timeline", x.label, "a label per item");
+        if (x.note !== undefined)
+          text("timeline", x.note, "a note that is text");
+      }
+    },
+    items: (p) =>
+      p.items.map((x, i) => [
+        `event ${i + 1}`,
+        x.at,
+        [x.when, x.label, x.note],
+        x.on,
+      ]),
+    // A number in its text is a claim like a chart's value; a `when` is
+    // searched, never parsed.
+    numbers: (p) =>
+      p.items.flatMap((x) => numbersIn([x.when, x.label, x.note])),
+  },
+  // Two sides, the first at the reading start, each a title over items; a
+  // side's title arrives with its first item, so no item cues before it.
+  // Rich like `words`.
+  compare: {
+    props: ["sides"],
+    ownCamera: true,
+    check: (p, said) => {
+      if (!Array.isArray(p.sides) || p.sides.length !== 2)
+        fail("compare needs 2 sides");
+      for (const s of p.sides) {
+        object(s, "a compare side");
+        named("compare", s.title, "a title per side");
+        list("compare side", s.items, "items", said);
+        for (const x of s.items) named("compare", x.text, "a text per item");
+        const j = s.items.findIndex(
+          (x) => place(x, said) < place(s.items[0], said),
+        );
+        if (j > 0)
+          fail(
+            `compare side "${s.title}" item ${j + 1} cues before item 1, which brings in the side's title`,
+          );
+        known("a compare side", s, ["title", "items"]);
+        for (const x of s.items) known("a compare item", x, [...CUE, "text"]);
+      }
+    },
+    items: (p) =>
+      p.sides.flatMap((s, i) => [
+        [`side ${i + 1}`, s.items[0].at, [s.title], s.items[0].on],
+        ...s.items.map((x, j) => [
+          `side ${i + 1} item ${j + 1}`,
+          x.at,
+          [x.text],
+          x.on,
+        ]),
+      ]),
+    numbers: (p) =>
+      p.sides.flatMap((s) =>
+        numbersIn([s.title, ...s.items.map((x) => x.text)]),
+      ),
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],
