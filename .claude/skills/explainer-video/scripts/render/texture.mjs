@@ -23,7 +23,7 @@ export function texture({ overlays, grain, fieldBlur }) {
 .field .a { left: -6%; top: -22%; width: 760px; height: 760px; background: var(--accent); }
 .field .b { right: -8%; bottom: -28%; width: 940px; height: 940px; background: var(--rule); }
 .field .c { left: 38%; top: 34%; width: 620px; height: 620px; background: var(--line); opacity: 0.5; }
-.grain { position: absolute; inset: 0; z-index: 20; opacity: ${grain}; pointer-events: none; }
+.grain { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 20; opacity: ${grain}; pointer-events: none; }
 .vignette { position: absolute; inset: 0; z-index: 20; pointer-events: none; background: radial-gradient(ellipse at center, transparent 58%, color-mix(in srgb, var(--text) 16%, transparent) 100%); }`,
     back: on("field")
       ? `      <div class="field">${["a", "b", "c"].map(blob).join("")}</div>\n`

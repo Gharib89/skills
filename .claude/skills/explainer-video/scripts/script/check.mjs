@@ -257,12 +257,10 @@ const drift = [];
 // longer one 0.3 s a word and 1.2 s at least; an item's texts add up.
 {
   const f = [];
-  // The run's texture decides whether an emphasis blurs the other items; a
-  // profile the render stage will refuse reads as the default one here.
-  let texture = grammar({}).texture;
-  try {
-    texture = grammar(findStyle(run, script.style).profile).texture;
-  } catch {}
+  // The run's texture decides whether an emphasis blurs the other items. A
+  // style no store holds is the render stage's to refuse, and reads as the
+  // default profile here; a profile file that is not JSON stops the compile.
+  const texture = grammar(findStyle(run, script.style).profile ?? {}).texture;
   const floor = (t) => {
     const n = words(String(t ?? ""));
     return !n ? 0 : n <= 3 ? 0.8 : Math.max(1.2, 0.3 * n);

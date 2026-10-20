@@ -31,6 +31,8 @@ test("a profile with no grammar block composes the open layout with glass, field
   assert.match(page, /<div class="field"><i class="a"><\/i>/);
   assert.match(page, /filter: blur\(120px\)/);
   assert.match(page, /<feTurbulence[^>]* seed="7"/);
+  // an svg is 300 by 150 until sized: the grain must span the whole frame
+  assert.match(page, /\.grain \{[^}]*width: 100%; height: 100%;/);
   assert.match(page, /<div class="vignette"><\/div>/);
   const steps = comp(fx, "scenes/steps.html");
   assert.match(
