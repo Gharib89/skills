@@ -75,10 +75,12 @@ export function texture({ overlays, grain, fieldBlur }) {
   // re-rasters a filter inside each frame's damage rect only, and those pixels
   // depend on which rects were redrawn before, so two renders of one
   // composition differed under load (#905). A gradient's pixel depends on its
-  // position alone. The box grows 3s a side to hold the spread.
-  const spread = 3 * fieldBlur;
+  // position alone. The box grows 3s a side to hold the spread. A blur under
+  // a hundredth of a pixel draws as none, before its Gaussian can underflow.
+  const s = fieldBlur < 0.01 ? 0 : fieldBlur;
+  const spread = 3 * s;
   const fill = (r, color) =>
-    `width: ${2 * r}px; height: ${2 * r}px; background: ${disc(r, fieldBlur, color)};`;
+    `width: ${2 * r}px; height: ${2 * r}px; background: ${disc(r, s, color)};`;
   return {
     css: `.field { position: absolute; inset: 0; overflow: hidden; }
 .field i { position: absolute; margin: -${spread}px; padding: ${spread}px; opacity: 0.16; }

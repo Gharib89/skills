@@ -107,6 +107,11 @@ test("a profile leaves an overlay out, or sets its blur to 0, and the page leave
     /\.field \.a \{[^}]*radial-gradient\(circle 380px, var\(--accent\) 380px, transparent 380px\)/,
   );
   assert.ok(!tweens(flat, "steps").some(([sel]) => sel.includes(":not(")));
+  // a blur too small to draw is the hard disc, its Gaussian never underflowing
+  assert.match(
+    comp(run(EMPHASISED, { texture: { fieldBlur: 1e-162 } })),
+    /\.field \.a \{[^}]*radial-gradient\(circle 380px, var\(--accent\) 380px, transparent 380px\)/,
+  );
   // a slight blur still mixes a share from 0 to 100% at every stop
   const shares = [
     ...comp(run(EMPHASISED, { texture: { fieldBlur: 1 } })).matchAll(
