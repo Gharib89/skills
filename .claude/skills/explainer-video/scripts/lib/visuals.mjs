@@ -118,6 +118,10 @@ function digits(name, v) {
     fail(
       `${name} value ${JSON.stringify(v)} is not a number written in digits (1200 or 1,200.5)`,
     );
+  // What a double keeps exactly: a longer one would count up and size a bar
+  // from a rounded (or infinite) number.
+  if (plain(v).replace(/\D/g, "").length > 15)
+    fail(`${name} value ${JSON.stringify(v)} has more than 15 digits`);
 }
 const DIGIT = "[0-9\\u0660-\\u0669\\u06f0-\\u06f9]";
 const POINT = "[.,\\u066b\\u066c]";

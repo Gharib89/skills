@@ -96,6 +96,23 @@ test("a value is a number written as digits, with optional commas and decimals",
     );
 });
 
+test("a value holds at most 15 digits, what a double keeps exactly", () => {
+  for (const ok of [
+    "9".repeat(15),
+    `0.${"1".repeat(14)}`,
+    "123,456,789,012,345",
+  ])
+    assert.doesNotThrow(
+      () => checkVisual(stat([{ at: 1, value: ok, label: "x" }]), said),
+      ok,
+    );
+  for (const no of ["9".repeat(16), `1.${"1".repeat(101)}`, "9".repeat(309)])
+    bad(
+      stat([{ at: 1, value: no, label: "x" }]),
+      /value .* has more than 15 digits/,
+    );
+});
+
 test("both are rich, so a camera key on either is refused", () => {
   assert.equal(VISUALS.chart.ownCamera, true);
   assert.equal(VISUALS.stat.ownCamera, true);
