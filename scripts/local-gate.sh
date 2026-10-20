@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Local gate over the harness: the gates only Ship needs, with every check of
-# the repo's `check.sh full` deferred to CI. Written by setup-skills where the repo has a harness profile
-# (docs/agents/harness.md); owned by the repo from here.
+# the repo's `check.sh full` deferred to CI. Written by setup-skills where the
+# repo has a harness profile (docs/agents/harness.md); owned by the repo from
+# here.
 #
 #   scripts/local-gate.sh [--small <node>] [--base <ref>]
 #   --help or -h prints that usage line and exits 0, before any check runs.
