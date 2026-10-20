@@ -88,7 +88,19 @@ test("render --stills renders the stills only, and build writes an open board wi
   // The asset upload takes video types but no audio type, so each narration
   // card plays an audio-only WebM cut once from the voice WAV.
   for (const c of d.scenes) assert.match(c.audio, /\.webm$/);
-  assert.equal(calls(fx, "narration").length, 3);
+  // The animatic plays the live build over one joined narration, cut the same way.
+  assert.match(d.narration, /^\.cache\/board-audio\/[0-9a-f]{16}\.webm$/);
+  assert.match(d.build, /^\.cache\/board-build\/[0-9a-f]{16}\.js$/);
+  for (const f of [d.narration, d.build])
+    assert.ok(fs.existsSync(path.join(fx.dir, f)), f);
+  assert.equal(calls(fx, "narration").length, 4);
+  // A card loops its slot: its start and its voiced length plus its exit seam.
+  const { scenes } = JSON.parse(read(fx.dir, "timeline.json"));
+  assert.deepEqual(
+    d.scenes.map((c) => [c.start, c.slot]),
+    scenes.map((c) => [c.start, c.slot]),
+  );
+  assert.ok(d.scenes[0].slot > scenes[0].duration, "the slot holds the seam");
   assert.ok(!fs.existsSync(path.join(fx.dir, "board", "page.html")));
 
   const local = read(fx.dir, "storyboard.html");
@@ -102,7 +114,7 @@ test("render --stills renders the stills only, and build writes an open board wi
   assert.match(local, /<title>How Ship lands a pull request<\/title>/);
 
   ok(board(fx, "build"), "build");
-  assert.equal(calls(fx, "narration").length, 3);
+  assert.equal(calls(fx, "narration").length, 4);
 });
 
 test("page with no url writes the page to publish with its title filled and no board", () => {
@@ -132,7 +144,7 @@ test("a media file whose encode failed is made again on the next build, not serv
   assert.match(r.err, /^board: ffmpeg: encode failed$/m);
   assert.equal(calls(fx, "narration").length, 1);
   ok(board(fx, "build"), "build");
-  assert.equal(calls(fx, "narration").length, 4);
+  assert.equal(calls(fx, "narration").length, 5);
   for (const c of doc(fx, 1).scenes)
     assert.notEqual(read(fx.dir, c.audio), "part");
 });
@@ -152,7 +164,7 @@ test("a published page needs every media file uploaded and recorded before build
   r = board(fx, "build");
   assert.equal(r.code, 1);
   const uploads = r.err.match(/^board: upload .+ \(\d+\.\d MB\)$/gm);
-  assert.equal(uploads.length, 6);
+  assert.equal(uploads.length, 8);
   assert.match(
     r.err,
     /board: record each upload with: node board\.mjs .+ asset <path>=<url>/,
@@ -176,11 +188,13 @@ test("a published page needs every media file uploaded and recorded before build
     ),
     "asset",
   );
-  assert.match(r.out, /^board: 6 asset\(s\) recorded$/m);
+  assert.match(r.out, /^board: 8 asset\(s\) recorded$/m);
 
   r = ok(board(fx, "build"), "build");
   assert.match(r.out, /^board: post board\/1\.json to boards\/1$/m);
   const d = doc(fx, 1);
+  for (const u of [d.build, d.narration])
+    assert.match(u, /^(https:\/\/cdn\.x\/|\/_blob\/[0-9a-f]{32}$)/);
   for (const c of d.scenes) {
     assert.match(c.still, /^(https:\/\/cdn\.x\/|\/_blob\/[0-9a-f]{32}$)/);
     assert.match(c.audio, /^(https:\/\/cdn\.x\/|\/_blob\/[0-9a-f]{32}$)/);

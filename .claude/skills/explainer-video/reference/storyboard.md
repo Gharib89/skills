@@ -2,10 +2,13 @@
 
 The **storyboard** is the run's one stop for the user: one card per scene with
 its narration, a still, its voiced length and style notes, beside the brief
-and the source pack, playable as an **animatic** (each still over its scene's
-real narration, in order). The user approves or revises each card, may edit
-its narration in place (and, in an Arabic run, respell a kept term beside the
-brief), and presses Submit. Its page is
+and the source pack. The card most in view plays a **live build** (the
+video's own composition), looping its slot through its exit seam; every other
+card shows its still as a poster. Play plays the slot once with its narration.
+The **animatic** plays the whole build over the joined narration; its scene
+list jumps to a scene and marks the playing one. The user approves or revises
+each card, may edit its narration in place (and, in an Arabic run, respell a
+kept term beside the brief), and presses Submit. Its page is
 [storyboard/page.html](../storyboard/page.html), fixed and tested, and
 [storyboard/board-data.md](../storyboard/board-data.md) is the contract between
 the page and `<skill>/scripts/storyboard/board.mjs`: each **board version** is
@@ -21,9 +24,10 @@ asks the user about a fix that changes the narration, order or count. After
 delivery it reports Render's last line and the videos-folder path.
 
 1. **Stills.** `node <skill>/scripts/render/render.mjs explainers/<slug>
-   --stills` renders one settled still per scene and nothing else, printing
-   `render: stills <hit>/<n> cached`; a scene unchanged since its last still is
-   a cache hit. A failure reads as under Render step 7.
+   --stills` renders one still per scene, at its fullest moment, and no
+   video, printing `render: stills <hit>/<n> cached`; a scene unchanged since
+   its last still is a cache hit. It also writes the `composition/` and
+   `timeline.json` the live build plays. A failure reads as under Render step 7.
 2. **Surface.** The page needs the `Artifact`, `ArtifactData` and
    `ArtifactComments` tools. With any of them missing, or when the user says
    the page cannot reach its database, the board is **local** for the rest of
@@ -44,10 +48,10 @@ delivery it reports Render's last line and the videos-folder path.
    `submitted` here after each Submit.
 4. **Build.** `board build`, or `board build --local` on a local board (a
    page recorded earlier would otherwise ask for uploads). Exit 1 with
-   `board: no <file>` or `no still` names the stage to run first. On a
-   published page it first lists
-   `board: upload <path> (<size>)` per still, narration or clip the page does
-   not hold yet: upload them with `Artifact` publishes of up to 25 files each,
+   `board: no <file>`, `no still` or `no composition` names the stage to run
+   first. On a published page it first lists `board: upload <path> (<size>)`
+   per build script, still, narration or clip the page does not hold yet:
+   upload them with `Artifact` publishes of up to 25 files each,
    `url` the page, `asset: true` and `file_paths` each path prefixed with
    `explainers/<slug>/`, record each with `board asset <path>=<url> ...`,
    `<path>` as `board` printed it and the `url` exactly as the upload result

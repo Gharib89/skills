@@ -72,8 +72,8 @@ export function pushScript(scope, at, { scale, duration }) {
 // `seam.in.duration` seconds, its exit from `end`, the scene's own last
 // moment, on into the next scene's start. The `seam:start`/`seam:end` labels
 // (`seam:start2`/`seam:end2` for the exit when both run) mark the windows for
-// the gates. A stills page runs no seam: it holds each scene settled at its
-// end.
+// the gates. A stills page runs the seam too, and seeks the scene to its
+// fullest moment (compose.mjs), so a poster is a frame of the live build.
 export function seamScript(scope, seam, end, rtl) {
   const halves = [
     ["entry", seam.in, 0],
@@ -89,11 +89,9 @@ export function seamScript(scope, seam, end, rtl) {
         ? { ...to, clearProps: "all" }
         : { ...to, immediateRender: false };
     const n = k ? k + 1 : "";
-    return `          tl.fromTo('${scope} .content', ${JSON.stringify(from)}, ${JSON.stringify(vars)}, ${at});
-          tl.addLabel("seam:start${n}", ${at}).addLabel("seam:end${n}", ${+(at + x.duration).toFixed(6)});`;
+    return `        tl.fromTo('${scope} .content', ${JSON.stringify(from)}, ${JSON.stringify(vars)}, ${at});
+        tl.addLabel("seam:start${n}", ${at}).addLabel("seam:end${n}", ${+(at + x.duration).toFixed(6)});`;
   });
   return `
-        if (!window.__stills) {
-${lines.join("\n")}
-        }`;
+${lines.join("\n")}`;
 }

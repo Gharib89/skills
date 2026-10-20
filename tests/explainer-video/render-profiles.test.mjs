@@ -31,7 +31,9 @@ const played = (fx, id) => {
   const calls = [];
   const tl = {
     fromTo: (sel, from, to, t) => calls.push({ sel, from, to, t }),
-    progress: () => {},
+    addLabel: () => tl,
+    duration: () => 0,
+    time: () => {},
   };
   const script = comp(fx, `scenes/${id}.html`).match(
     /<script>([\s\S]*?)<\/script>/,
@@ -86,7 +88,7 @@ test("a spring profile renders: each reveal carries its class at its sentence, n
       );
       for (let p = 0; p <= 1; p += 0.01) assert.ok(to.ease(p) <= 1.2, id);
       assert.equal(from.y, 20);
-      // the stills page's progress(1) ends where rise does: in place, full size
+      // the stills page seeks past where rise ends: in place, full size
       assert.equal(to.y, 0);
       assert.equal(to.scale ?? 1, 1);
     }
