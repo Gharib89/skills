@@ -29,16 +29,25 @@ test("a profile with no grammar block composes the open layout with glass, field
   const page = comp(fx);
   assert.doesNotMatch(page, /class="header"/);
   assert.match(page, /<div class="field"><i class="a"><\/i>/);
-  // no filter on the field: a blur redrawn inside each frame's damage rect
-  // came out different under load (#905), so the blur is drawn as a gradient
+  // no filter on the field: texture() draws its blur as a gradient (#905)
   assert.doesNotMatch(page, /\.field[^{]*\{[^}]*filter:/);
+  // each box grows 3s a side, so the gradient's 3s spread is not clipped
+  assert.match(page, /\.field i \{[^}]*margin: -360px; padding: 360px;/);
+  assert.match(
+    page,
+    /\.field \.b \{[^}]*width: 940px;[^}]*radial-gradient\(circle 830px, color-mix\(in srgb, var\(--rule\) /,
+  );
+  assert.match(
+    page,
+    /\.field \.c \{[^}]*width: 620px;[^}]*radial-gradient\(circle 670px, color-mix\(in srgb, var\(--line\) /,
+  );
   const stops = [
     ...page
       .match(/\.field \.a \{[^}]*\}/)[0]
       .matchAll(/var\(--accent\) ([\d.]+)%, transparent\) ([\d.]+)px/g),
   ].map(([, pct, px]) => [+pct, +px]);
   // a 760 px disc blurred at 120 px: nearly whole at its centre, about half at
-  // its 380 px edge, gone three blurs past it
+  // its 380 px edge, gone 3s (360 px) past it
   assert.deepEqual(stops[0][1], 0);
   assert.ok(stops[0][0] > 98, String(stops[0]));
   const edge = stops.reduce((a, b) =>

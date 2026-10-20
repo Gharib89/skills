@@ -24,10 +24,10 @@ const erf = (x) => {
 };
 
 // The share of a disc of radius r that a Gaussian blur of deviation s (a CSS
-// blur radius) leaves at d from its centre: along x, the blur of the share of
-// each chord it keeps, by Simpson's rule.
-const blurred = (r, s, d) => {
-  const n = 200;
+// blur radius) leaves at d from its centre. Each vertical chord's blur along y
+// is an erf; Simpson's rule sums those along x, weighted by the x Gaussian.
+const coverage = (r, s, d) => {
+  const n = 200; // Simpson's intervals: must stay even
   const h = (2 * r) / n;
   let sum = 0;
   for (let k = 0; k <= n; k++) {
@@ -42,7 +42,7 @@ const blurred = (r, s, d) => {
 };
 
 // A disc of radius r in color, blurred at s, as a radial gradient: stops from
-// three blurs inside its edge to three past it, where the blur has spent itself.
+// 3s inside its edge to 3s past it, where under 0.5% of the colour remains.
 const STOPS = 32;
 const disc = (r, s, color) => {
   if (!s)
@@ -57,7 +57,7 @@ const disc = (r, s, color) => {
   ];
   const stops = at.map(
     (d) =>
-      `color-mix(in srgb, ${color} ${(100 * blurred(r, s, d)).toFixed(2)}%, transparent) ${+d.toFixed(2)}px`,
+      `color-mix(in srgb, ${color} ${(100 * coverage(r, s, d)).toFixed(2)}%, transparent) ${+d.toFixed(2)}px`,
   );
   return `radial-gradient(circle ${to}px, ${stops.join(", ")})`;
 };
@@ -72,14 +72,16 @@ export function texture({ overlays, grain, fieldBlur }) {
   // re-rasters a filter inside each frame's damage rect only, and those pixels
   // depend on which rects were redrawn before, so two renders of one
   // composition differed under load (#905). A gradient's pixel depends on its
-  // position alone. The box grows three blurs a side to hold the spread.
+  // position alone. The box grows 3s a side to hold the spread.
   const spread = 3 * fieldBlur;
+  const fill = (r, color) =>
+    `width: ${2 * r}px; height: ${2 * r}px; background: ${disc(r, fieldBlur, color)};`;
   return {
     css: `.field { position: absolute; inset: 0; overflow: hidden; }
 .field i { position: absolute; margin: -${spread}px; padding: ${spread}px; opacity: 0.16; }
-.field .a { left: -6%; top: -22%; width: 760px; height: 760px; background: ${disc(380, fieldBlur, "var(--accent)")}; }
-.field .b { right: -8%; bottom: -28%; width: 940px; height: 940px; background: ${disc(470, fieldBlur, "var(--rule)")}; }
-.field .c { left: 38%; top: 34%; width: 620px; height: 620px; background: ${disc(310, fieldBlur, "var(--line)")}; opacity: 0.5; }
+.field .a { left: -6%; top: -22%; ${fill(380, "var(--accent)")} }
+.field .b { right: -8%; bottom: -28%; ${fill(470, "var(--rule)")} }
+.field .c { left: 38%; top: 34%; ${fill(310, "var(--line)")} opacity: 0.5; }
 .grain { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 20; opacity: ${grain}; pointer-events: none; }
 .vignette { position: absolute; inset: 0; z-index: 20; pointer-events: none; background: radial-gradient(ellipse at center, transparent 58%, color-mix(in srgb, var(--text) 16%, transparent) 100%); }`,
     back: on("field")
