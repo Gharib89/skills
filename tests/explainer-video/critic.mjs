@@ -18,7 +18,9 @@ export function critique(run, verdict = () => CLEAN) {
   const dir = path.join(run, record.gates.critic.sheets);
   const ids = fs
     .readdirSync(dir)
-    .filter((f) => f.endsWith(".png"))
+    // A contact sheet is `<scene>.png`; the strips are `<scene>.motion.png`
+    // and `<scene>.seam.png`.
+    .filter((f) => /^[^.]+\.png$/.test(f))
     .map((f) => path.basename(f, ".png"))
     .filter((id) => !fs.existsSync(path.join(dir, `${id}.json`)));
   for (const id of ids)

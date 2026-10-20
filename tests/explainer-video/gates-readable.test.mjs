@@ -105,6 +105,29 @@ test("a scene's seam holds the next scene's text back, its camera only its own",
   assert.ok(!moving("b", 5));
 });
 
+test("a camera push-in is no tween a dead beat reads, a content tween on its window and a zero-length tween are or are not", () => {
+  const { moves } = sceneEvents(
+    {
+      b: {
+        seams: [],
+        camera: [[0, 5]],
+        tweens: [
+          [0, 5],
+          [1, 2],
+          [3, 3],
+          [0, 5],
+        ],
+      },
+    },
+    [{ id: "b", start: 4 }],
+  );
+  // One of the two tweens on the camera's window is the camera's; the other is content.
+  assert.deepEqual(moves.b.tweens, [
+    [5, 6],
+    [4, 9],
+  ]);
+});
+
 test("the contact sheet's fourth frame is the fullest moment, the latest of tied samples", () => {
   const fade = { EXPLAINER_VIDEO_FAKE_FADE_END: "0.7" };
   // The box's words count once it is fully shown, so every later sample ties.

@@ -386,7 +386,7 @@ export async function probe(dir, times, { env }) {
 }
 
 // Each scene's timeline events, in the scene's own seconds: the end of every
-// tween on its GSAP timeline, and the `seam:start`/`seam:end` and
+// child on its GSAP timeline, the `[start, end]` of every tween on it, and the `seam:start`/`seam:end` and
 // `camera:start`/`camera:end` label pairs that mark when its seam or camera
 // runs; both label pairs come from the scene's script (render/seam-script.mjs).
 export async function events(dir, { env }) {
@@ -409,15 +409,20 @@ export async function events(dir, { env }) {
             ]);
         const seams = pair("seam");
         const camera = pair("camera");
-        // endTime() is in the parent's time: lift a nested tween's end through
-        // each ancestor's start to the scene timeline's.
-        const ends = tl.getChildren(true, true, false).map((c) => {
-          let t = c.endTime();
+        // startTime() and endTime() are in the parent's time: lift a nested
+        // tween's through each ancestor's start to the scene timeline's.
+        const lift = (c, t) => {
           for (let p = c.parent; p && p !== tl; p = p.parent)
             t = p.startTime() + t / p.timeScale();
           return r3(t);
-        });
-        out[id] = { ends, seams, camera };
+        };
+        const kids = tl.getChildren(true, true, false);
+        const ends = kids.map((c) => lift(c, c.endTime()));
+        // A nested timeline spans its tweens, so only a tween is a window.
+        const tweens = kids
+          .filter((c) => !c.getChildren)
+          .map((c) => [lift(c, c.startTime()), lift(c, c.endTime())]);
+        out[id] = { ends, tweens, seams, camera };
       }
       return out;
     });

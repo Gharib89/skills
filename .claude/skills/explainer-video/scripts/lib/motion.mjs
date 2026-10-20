@@ -8,8 +8,8 @@
 // A mean difference on the 0 to 255 grey scale at or under this is no motion:
 // an encode's noise floor is never exactly zero.
 export const STILL = 0.5;
-// A stretch of the band this long with nothing moving is a dead beat.
-export const STILL_SECONDS = 1.5;
+// A stretch of the scene this long with no tween running is a dead beat.
+export const DEAD_BEAT_SECONDS = 1.5;
 // The strip's tiles, and how many sit before the peak frame.
 export const STRIP_FRAMES = 12;
 export const STRIP_LEAD = 5;
@@ -61,13 +61,17 @@ export function meanDiff(a, b) {
   return sum / a.length;
 }
 
+// Whether frame `f` shows inside one of `windows`, [from, to) in video seconds.
+const inWindows = (f, fps, windows) =>
+  windows.some(([a, b]) => f / fps >= a && f / fps < b);
+
 // The frame with the largest difference from the frame before it, the earliest
 // on a tie; a scene whose largest difference is under STILL is still and gives
 // its middle frame. Frames inside a seam window (`seams`, video seconds as
 // [from, to)) are not candidates: the peak is the scene's own motion, and a
 // still scene's frame is the allowed one nearest its middle.
 export function peak(diffs, first, fps, seams = []) {
-  const inSeam = (f) => seams.some(([a, b]) => f / fps >= a && f / fps < b);
+  const inSeam = (f) => inWindows(f, fps, seams);
   const ks = diffs.map((_, k) => k).filter((k) => !inSeam(first + k + 1));
   // A seam over every frame after the first leaves the first frame: take it,
   // and only a scene wholly inside a seam is judged unfiltered.
@@ -87,32 +91,58 @@ export function peak(diffs, first, fps, seams = []) {
   return { still, frame, t: frame / fps, diff: diffs[at] ?? 0 };
 }
 
-// Each run of unchanged frames lasting STILL_SECONDS or more, as video seconds.
-export function stillStretches(diffs, first, fps) {
+// Each stretch of DEAD_BEAT_SECONDS or more of the scene in which no tween runs,
+// as video seconds: `windows` is [from, to] of every tween that moves content
+// (the camera's push-in and the page's texture are drift, so they are left
+// out). Read off the timeline: pixel difference would count the push-in and
+// the grain as motion.
+export function deadBeats({ start, duration }, windows) {
+  const end = start + duration;
   const out = [];
-  const close = (from, to) => {
-    if (to - from >= STILL_SECONDS * fps - 1e-6)
-      out.push({
-        start: +((first + from) / fps).toFixed(3),
-        end: +((first + to) / fps).toFixed(3),
-      });
+  let at = start;
+  const close = (to) => {
+    if (to - at >= DEAD_BEAT_SECONDS - 1e-6)
+      out.push({ start: +at.toFixed(3), end: +to.toFixed(3) });
   };
-  let from = null;
-  diffs.forEach((d, k) => {
-    if (d <= STILL) from ??= k;
-    else if (from !== null) {
-      close(from, k);
-      from = null;
-    }
-  });
-  if (from !== null) close(from, diffs.length);
+  for (const [a, b] of [...windows].sort((x, y) => x[0] - y[0])) {
+    if (a >= end) break;
+    if (a > at) close(a);
+    at = Math.max(at, b);
+  }
+  if (at < end) close(end);
   return out;
 }
 
 // The strip's first frame: STRIP_LEAD before the peak, inside the scene's `n`
-// frames from `first`.
-export const stripStart = (peakFrame, first, n) =>
-  Math.max(first, Math.min(peakFrame - STRIP_LEAD, first + n - STRIP_FRAMES));
+// frames from `first`, moved to the nearest start (the earlier of two) whose
+// 12 frames all sit outside `seams`. Where no start does, the unmoved one.
+export function stripStart(peakFrame, first, n, fps, seams = []) {
+  const last = Math.max(first, first + n - STRIP_FRAMES);
+  const want = Math.max(first, Math.min(peakFrame - STRIP_LEAD, last));
+  const clear = (s) =>
+    Array.from({ length: STRIP_FRAMES }, (_, k) => s + k).every(
+      (f) => !inWindows(f, fps, seams),
+    );
+  let best = null;
+  for (let s = first; s <= last; s++)
+    if (
+      clear(s) &&
+      (best === null || Math.abs(s - want) < Math.abs(best - want))
+    )
+      best = s;
+  return best ?? want;
+}
+
+// The first frame of a seam's strip: its window's frames in the middle of the
+// strip's STRIP_FRAMES, so the move is seen before, through and after.
+export function seamStripStart([from, to], fps) {
+  const at = (t) => Math.ceil(t * fps - 1e-6);
+  const lead = Math.max(
+    0,
+    Math.floor((STRIP_FRAMES - (at(to) - at(from))) / 2),
+  );
+  return Math.max(0, at(from) - lead);
+}
 
 // The strip's last frame: STRIP_FRAMES on from its first, or the scene's last
 // when the scene owns fewer frames than a strip holds.

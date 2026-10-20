@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.36.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: The critic judges motion with seam strips, timeline dead beats and rtl
+  ([#901](https://github.com/Gharib89/skills/pull/901),
+  [`35e059a`](https://github.com/Gharib89/skills/commit/35e059adee44fa32926b6cef3deadb6048fb9bfc))
+
+
 ## v0.35.0 (2026-10-20)
 
 ### Features

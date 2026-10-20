@@ -39,7 +39,7 @@ import { sceneEvents } from "./events.mjs";
 import { ALONG_SECONDS, readingFindings } from "./reading.mjs";
 import { fullestFrame, motionAndDeterminism } from "./scene.mjs";
 import { cutSheets, readPrevKeys } from "./sheets.mjs";
-import { SCORES, KINDS, checkVerdict } from "./verdict.mjs";
+import { SCORES, KIND_LIST, checkVerdict } from "./verdict.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
@@ -211,6 +211,7 @@ if (todo.length) {
       backend,
       orFail,
       seams,
+      tweens: moves[p.sc.id].tweens,
       band: contentBox(grammar(profile).layout),
     });
   }
@@ -328,9 +329,10 @@ const count = (failing, before) =>
 // Bumped when the verdict's format or what its sheet shows changes, so a
 // verdict cached in the old one is judged again rather than refused by the new
 // validator or kept for a sheet the critic no longer reads.
-const CRITIC_FORMAT = 3;
+const CRITIC_FORMAT = 4;
 // A verdict stands for the render, for what else the critic read (the title,
-// each sentence's cites and the cited excerpts' text) and for its format.
+// every scene's narration, each sentence's cites and the cited excerpts' text)
+// and for its format.
 const excerptsFile = path.join(run, "excerpts.json");
 const excerptText = new Map(
   fs.existsSync(excerptsFile)
@@ -344,6 +346,7 @@ const excerptText = new Map(
 // takes all of them, not its own cites alone.
 const criticRead = [
   script.title,
+  script.scenes.map((s) => s.narration),
   script.scenes.map((s) =>
     s.cites.map((ids) => ids.map((id) => [id, excerptText.get(id)])),
   ),
@@ -385,6 +388,8 @@ if (rounds.includes(criticKey) || rounds.length < 2) {
     mp4,
     dir,
     plan,
+    moves,
+    seams,
     backend,
     orFail,
     script,
@@ -405,7 +410,7 @@ if (own.every(Boolean) && (rounds.includes(criticKey) || rounds.length < 2)) {
   const vs = verdicts(rounds[1]);
   if (vs.every(Boolean)) judgedBy = { vs, round: 2, carried: true };
 }
-const wantCritic = `no ${KINDS.join(" or ")} content; scores advise`;
+const wantCritic = `no ${KIND_LIST} content; scores advise`;
 let critic;
 if (judgedBy) {
   const { vs, round, carried } = judgedBy;

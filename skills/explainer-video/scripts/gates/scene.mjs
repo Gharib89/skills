@@ -7,8 +7,8 @@ import {
   frameTime,
   fullest as fullestSample,
   peak as peakFrame,
+  deadBeats,
   sceneFrames,
-  stillStretches,
 } from "../lib/motion.mjs";
 import { readable } from "../lib/layout.mjs";
 import { FPS } from "../render/compose.mjs";
@@ -28,10 +28,11 @@ export function fullestFrame(p, frames, moving) {
 
 // Motion, then determinism on the frame it picks: the scene's peak-motion
 // frame outside every seam, rendered twice in two browsers and compared as
-// decoded pixels. Sets p.found.motion and p.found.determinism.
+// decoded pixels; and the scene's dead beats, read off its timeline from
+// `tweens`. Sets p.found.motion and p.found.determinism.
 export async function motionAndDeterminism(
   p,
-  { run, mp4, comp, env, backend, orFail, seams, band },
+  { run, mp4, comp, env, backend, orFail, seams, tweens, band },
 ) {
   const scene = { start: p.sc.start, duration: p.sc.duration, fps: FPS };
   const { first } = sceneFrames(scene);
@@ -44,7 +45,7 @@ export async function motionAndDeterminism(
     still: pk.still,
     frame: pk.frame,
     t,
-    stills: stillStretches(diffs, first, FPS),
+    dead: deadBeats(scene, tweens),
   };
   const base = path.basename(p.file, ".json");
   const files = ["a", "b"].map((x) =>

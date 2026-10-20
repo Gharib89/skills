@@ -20,6 +20,7 @@ import {
   record,
   render,
   renderUnjudged,
+  seamRecord,
   skill,
   stage,
 } from "./gates-lib.mjs";
@@ -121,8 +122,7 @@ test("each moving scene gets a motion strip and record beside its contact sheet;
       assert.equal(rec.still, true);
       assert.equal(rec.peak, null);
       assert.equal(rec.strip, null);
-      // Nothing moves for the whole scene, a dead beat from end to end.
-      assert.equal(rec.stills.length, 1);
+      assert.deepEqual(rec.seam, seamRecord(s.id));
       return;
     }
     const { first: f, n, frame } = peakOf(s);
@@ -135,17 +135,19 @@ test("each moving scene gets a motion strip and record beside its contact sheet;
         first: +(from / 30).toFixed(3),
         last: +((from + 11) / 30).toFixed(3),
       },
-      stills: [],
+      seam: seamRecord(s.id),
+      dead: [],
     });
     const cut = calls(fx, "strip").find((c) =>
       c.output.endsWith(`${s.id}.motion.png`),
     );
     assert.equal(cut.first, from);
   });
-  assert.equal(calls(fx, "strip").length, 2);
+  // Two motion strips and two seam strips (the still scene hands over too).
+  assert.equal(calls(fx, "strip").length, 4);
   // Cut only when absent: gating again cuts nothing.
   stage(fx, "render/render.mjs");
-  assert.equal(calls(fx, "strip").length, 2);
+  assert.equal(calls(fx, "strip").length, 4);
   assert.equal(calls(fx, "sheet").length, 3);
 });
 
@@ -215,5 +217,5 @@ test("two old-format rounds recorded in gates.json are dropped, not read by the 
     r.out,
     /^gate critic: pending: round 1 of 2, 0 of 3 scene\(s\) judged, /m,
   );
-  assert.equal(record(fx).gates.critic.format, 3);
+  assert.equal(record(fx).gates.critic.format, 4);
 });

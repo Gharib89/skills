@@ -1,8 +1,15 @@
-// The gates stage's critic inputs: per scene, a contact sheet, a motion strip
-// and a motion record, cut from the MP4 into the verdict folder `dir`.
+// The gates stage's critic inputs: per scene, a contact sheet, a motion strip,
+// a strip of the seam it hands over at and a motion record, cut from the MP4
+// into the verdict folder `dir`.
 import fs from "node:fs";
 import path from "node:path";
-import { sceneFrames, stripEnd, stripStart } from "../lib/motion.mjs";
+import {
+  STRIP_FRAMES,
+  sceneFrames,
+  seamStripStart,
+  stripEnd,
+  stripStart,
+} from "../lib/motion.mjs";
 import { FPS } from "../render/compose.mjs";
 
 // The previous sheets folder's scene keys; {} when it has none. A malformed
@@ -27,17 +34,18 @@ export function readPrevKeys(run, sheets, fail) {
 
 const r3 = (n) => +n.toFixed(3);
 
-// A scene's verdict stands for what its critic read: its sheet, strip and
-// record, its span in the video (a worst moment must fall inside it), its
-// visual, the title, the script's cites and their text, and the format.
-// Narration needs no place: a new one is a new script, which carries nothing.
-// Returns each scene's key; a scene whose key the previous render kept gets
+// A scene's verdict stands for what its critic read: its sheet, both strips
+// and record, its span in the video (a worst moment must fall inside it), its
+// visual, and `criticRead` (the title, every scene's narration, the script's
+// cites and their text), and the format. Returns each scene's key; a scene whose key the previous render kept gets
 // that render's verdict copied in.
 export async function cutSheets({
   run,
   mp4,
   dir,
   plan,
+  moves,
+  seams,
   backend,
   orFail,
   script,
@@ -61,11 +69,25 @@ export async function cutSheets({
         }),
       );
     // The motion strip is 12 frames from just before the scene's peak-motion
-    // frame; a still scene has none. The record carries what the strip's tiles
-    // and the scene's dead beats are in video seconds.
+    // frame, clear of every seam; a still scene has none. The scene's seam
+    // strip is its exit seam's window: the one opening at the scene's own end,
+    // which runs on into the next scene. The record carries what the tiles of
+    // both strips and the scene's dead beats are in video seconds.
     const m = p.found.motion;
     const { first, n } = sceneFrames({ ...sc, fps: FPS });
-    const from = stripStart(m.frame, first, n);
+    const from = stripStart(m.frame, first, n, FPS, seams);
+    const window = (moves[sc.id]?.seams ?? []).find(
+      ([a]) => a >= sc.start + sc.duration - 1e-3,
+    );
+    const seamFrom = window && seamStripStart(window, FPS);
+    const seamPng = path.join(run, dir, `${sc.id}.seam.png`);
+    if (window && !fs.existsSync(seamPng))
+      await orFail(() =>
+        backend.strip(path.join(run, mp4), seamPng, {
+          first: seamFrom,
+          fps: FPS,
+        }),
+      );
     const strip = path.join(run, dir, `${sc.id}.motion.png`);
     if (!m.still && !fs.existsSync(strip))
       await orFail(() =>
@@ -85,7 +107,14 @@ export async function cutSheets({
                   first: r3(from / FPS),
                   last: r3(stripEnd(from, first, n) / FPS),
                 },
-            stills: m.stills,
+            seam: window
+              ? {
+                  first: r3(seamFrom / FPS),
+                  last: r3((seamFrom + STRIP_FRAMES - 1) / FPS),
+                  window,
+                }
+              : null,
+            dead: m.dead,
           },
           null,
           2,
@@ -94,6 +123,7 @@ export async function cutSheets({
     keys[sc.id] = hash(
       fs.readFileSync(png),
       m.still ? "" : fs.readFileSync(strip),
+      window ? fs.readFileSync(seamPng) : "",
       fs.readFileSync(record),
       [sc.start, sc.duration],
       script.scenes.find((s) => s.id === sc.id).visual,
