@@ -50,6 +50,13 @@ function camera(scene, profile) {
   };
 }
 
+// The menu value that names no emphasis: `none`, unless an item is labelled so.
+const noEmphasis = (texts) => {
+  let off = "none";
+  while (texts.includes(off)) off = `(${off})`;
+  return off;
+};
+
 function emphasis({ visual }) {
   const props = visual.props ?? {};
   const field = EMPHASIS_TEXT[visual.component];
@@ -61,11 +68,12 @@ function emphasis({ visual }) {
     );
   }
   const texts = props[VISUALS[visual.component].rows].map((x) => x[field]);
+  const off = noEmphasis(texts);
   return {
-    pick: props.emphasis?.target ?? "none",
+    pick: props.emphasis?.target ?? off,
     // A label two items share names none of them: compile refuses it.
     options: [
-      "none",
+      off,
       ...texts.filter((t) => texts.filter((u) => u === t).length === 1),
     ],
   };
@@ -89,11 +97,11 @@ export function applyPick(visual, menu, value) {
   else if (menu === "camera") visual.camera = cueOf(value);
   else if (menu === "emphasis") {
     const { props } = visual;
-    if (value === "none") delete props.emphasis;
+    const rows = props[VISUALS[visual.component].rows];
+    const field = EMPHASIS_TEXT[visual.component];
+    if (value === noEmphasis(rows.map((x) => x[field]))) delete props.emphasis;
     else {
-      const row = props[VISUALS[visual.component].rows].find(
-        (x) => x[EMPHASIS_TEXT[visual.component]] === value,
-      );
+      const row = rows.find((x) => x[field] === value);
       props.emphasis = {
         target: value,
         at: row.at,

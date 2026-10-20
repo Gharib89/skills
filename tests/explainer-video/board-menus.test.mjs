@@ -18,7 +18,11 @@ import {
   stills,
   voice,
 } from "./board-lib.mjs";
-import { cardMenus } from "../../skills/explainer-video/scripts/storyboard/menus.mjs";
+import {
+  applyPick,
+  cardMenus,
+} from "../../skills/explainer-video/scripts/storyboard/menus.mjs";
+import { VISUALS } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
 import { profiled } from "./render-lib.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 
@@ -311,6 +315,42 @@ test("a custom scene, which the composer has no component for, gets disabled cam
     options: ["none"],
     disabled: true,
   });
+});
+
+test("an item labelled none stays selectable beside the no-emphasis option, and the pick removes only the emphasis", () => {
+  const rows = VISUALS.cards.rows;
+  const scene = (emphasis) => ({
+    visual: {
+      component: "cards",
+      props: {
+        [rows]: [
+          { label: "none", at: 1 },
+          { label: "Then", at: 2 },
+        ],
+        ...(emphasis && { emphasis }),
+      },
+    },
+    narration: ["It reads.", "Then it runs."],
+  });
+  const profile = { name: "claude-code" };
+  const plain = cardMenus(scene(), profile, null, false).emphasis;
+  assert.deepEqual(plain, {
+    pick: "(none)",
+    options: ["(none)", "none", "Then"],
+  });
+  // An emphasis on the item labelled none is a pick of its own.
+  const on = cardMenus(
+    scene({ target: "none", at: 1 }),
+    profile,
+    null,
+    false,
+  ).emphasis;
+  assert.equal(on.pick, "none");
+  const { visual } = scene({ target: "none", at: 1 });
+  assert.ok(applyPick(visual, "emphasis", "(none)"));
+  assert.equal(visual.props.emphasis, undefined);
+  assert.ok(applyPick(visual, "emphasis", "none"));
+  assert.equal(visual.props.emphasis.target, "none");
 });
 
 test("a code card's emphasis menu shows its line range and cannot change", () => {

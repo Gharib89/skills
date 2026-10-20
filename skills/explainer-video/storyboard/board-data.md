@@ -87,8 +87,8 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].menus.camera.options` | array | yes | The scene's cues as cue values, in order of place. |
 | `board.scenes[].menus.camera.disabled` | boolean | no | True on a rich or custom card, or when the profile bans or locks the camera. |
 | `board.scenes[].menus.emphasis` | object | yes | The scene's emphasised item menu. |
-| `board.scenes[].menus.emphasis.pick` | string | yes | The item now emphasised, or `none`. |
-| `board.scenes[].menus.emphasis.options` | array | yes | `none`, then each item label the scene names once. |
+| `board.scenes[].menus.emphasis.pick` | string | yes | The item now emphasised, or the no-emphasis value (`none`, or `(none)` when an item is labelled `none`). |
+| `board.scenes[].menus.emphasis.options` | array | yes | The no-emphasis value, then each item label the scene names once. |
 | `board.scenes[].menus.emphasis.disabled` | boolean | no | True when the component has no item to emphasise. |
 | `board.scenes[].menus.seam` | object | yes | The menu for the seam out of the scene. |
 | `board.scenes[].menus.seam.pick` | string | yes | The seam move now planned, or `cut`. |
@@ -104,7 +104,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `answers.scenes[].picks` | object | yes | The card's changed menu picks, by menu; empty when none changed. See [Menus](#menus). |
 | `answers.scenes[].picks.component` | string | no | The component picked. |
 | `answers.scenes[].picks.camera` | string | no | The camera beat picked, as a cue value. |
-| `answers.scenes[].picks.emphasis` | string | no | The item picked, or `none`. |
+| `answers.scenes[].picks.emphasis` | string | no | The item picked, or the no-emphasis value. |
 | `answers.scenes[].picks.seam` | string | no | The seam move picked, or `cut`. |
 | `answers.brief` | array | yes | `<knob>=<value>` arguments for `brief.mjs`, one per changed knob and one per list item of a changed list; empty when none changed. |
 | `answers.kept` | array | no | Present when the board has `kept`: one entry per kept term respelt; empty when none changed. |
