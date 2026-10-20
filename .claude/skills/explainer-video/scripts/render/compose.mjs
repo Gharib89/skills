@@ -27,6 +27,8 @@ export const contentBox = (layout) => (layout === "open" ? OPEN : CONTENT);
 // the 1680 px band: 84 is at most two lines.
 const CAPTION_PX = 40;
 export const CUE_CHARS = 84;
+// The blur in px a title's words resolve out of under the type family `words`.
+const TITLE_BLUR = 12;
 const RISE = [
   { opacity: 0, y: RISE_PX },
   { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
@@ -118,7 +120,7 @@ async function sceneParts(
 ) {
   const id = scene.id;
   const f = faces(profile, dir);
-  const { bans, camera, ease, layout, texture: tx } = grammar(profile);
+  const { bans, camera, ease, layout, texture: tx, type } = grammar(profile);
   const { surface } = tx;
   const pushes =
     camera.family === "push" &&
@@ -131,6 +133,13 @@ async function sceneParts(
     // override keeps the text inside its row; 12 rows fit the band at the
     // default step only, a taller override is the layout gate's to catch.
     row: Math.round(scale(profile).code * 1.4),
+    // The type family, and the blur in px a title resolves out of (none under
+    // a `blur` ban).
+    type: {
+      words: type.family === "words",
+      stagger: type.stagger,
+      blur: bans.includes("blur") ? 0 : TITLE_BLUR,
+    },
     highlight: backend.highlight,
     sketch: async (shapes) =>
       surface === "sketch"

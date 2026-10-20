@@ -104,12 +104,15 @@ const FIELDS = {
     families: ["push", "locked"],
     knobs: { scale: [1.03, 1.12], duration: [0.4, 1.6] },
   },
-  type: { families: ["block"], knobs: { stagger: [0.03, 0.08] } },
+  type: { families: ["words", "block"], knobs: { stagger: [0.03, 0.08] } },
   ease: { families: ["velocity", "soft", "spring"] },
 };
 // What a seams knob left out takes: `blur` is the zoom-through's peak blur in
 // px, and the cut on a curve peaks at 4/9 of it (8 px at the default).
 const SEAM_DEFAULTS = { duration: 0.2, blur: 18 };
+// What a type knob left out takes: the seconds between one word's rise and the
+// next's.
+const TYPE_DEFAULTS = { stagger: 0.05 };
 // What a camera knob left out takes: the push-in's end scale, and its length
 // in seconds.
 const CAMERA_DEFAULTS = { scale: 1.06, duration: 0.8 };
@@ -164,6 +167,11 @@ export function grammar(profile) {
       : (g[field] ?? families[0]);
   out.seams = { ...SEAM_DEFAULTS, ...out.seams };
   out.camera = { ...CAMERA_DEFAULTS, ...out.camera };
+  out.type = { ...TYPE_DEFAULTS, ...out.type };
+  // The default family moves per word, so a profile that bans `kinetic` and
+  // names no type family plays `block`.
+  if (out.bans.includes("kinetic") && !asFamily(g.type).family)
+    out.type.family = "block";
   out.texture = {
     surface: SURFACES[0],
     overlays: OVERLAYS,
@@ -267,6 +275,10 @@ function features(profile) {
   }
   const g = grammar(profile);
   checkBans(g, USES, profile.name);
+  if (g.bans.includes("kinetic") && g.type.family === "words")
+    refuse(
+      "grammar.type words moves per word, which grammar.bans bans: set it to block or lift the ban",
+    );
   // A blur the texture draws is a blur the profile bans: the two knobs, and
   // the glass surface's backdrop blur, which `flat` and `sketch` do not draw.
   if (g.bans.includes("blur")) {
