@@ -21,9 +21,8 @@ export function diagramColumns({ nodes, links }) {
   return columns;
 }
 
-// Throws why the props `p` are not a diagram for the scene's sentences in
-// spoken form, `said`: a link names nodes by id, rises no earlier than both,
-// and the layout fits the frame.
+// Throws the first reason the props `p` are not a diagram for the scene's
+// sentences in spoken form, `said`.
 export function checkDiagram(p, said) {
   list("diagram", p.nodes, "nodes", said, [2, Infinity]);
   const ids = p.nodes.map((n) => n.id);

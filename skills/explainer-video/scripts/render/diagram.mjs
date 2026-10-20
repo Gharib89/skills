@@ -92,12 +92,11 @@ export function diagramLayout(p, box, rtl) {
   return { nodes, links };
 }
 
-// Each node and link rises on its cue, a link's arrow stroked on as it does,
-// and each packet runs its link's centre to centre run over and over, under
-// the nodes (it leaves its first node and enters the second unseen), from once
-// the arrow is drawn to the scene's end: `repeat: -1`, which the composer
-// turns into the repeats that reach the scene's end, so a packet's place is a
-// function of the timeline's time.
+// Each node and link rises on its cue, and a link's arrow strokes on as it
+// rises. Each packet runs its link centre to centre, under the nodes (it leaves
+// its first node and enters the second unseen), from once the arrow is drawn to
+// the scene's end. Its `repeat: -1` becomes the repeats that reach the scene's
+// end, so a packet's place is a function of the timeline's time.
 export const diagram = async (p, f, x) => {
   const { nodes, links } = diagramLayout(p, x.box, f.rtl);
   const shapes = await x.sketch([

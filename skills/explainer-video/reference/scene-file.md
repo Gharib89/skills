@@ -119,10 +119,11 @@ narrator: am_fenrir
     `at*`, `on`, `label*`, `note`; `links*`, each `from*`, `to*`, `at*`,
     `on`, `packets`). A node stands one column past every node linked to it
     from earlier in the list, so list nodes in the order the system runs and
-    a reply link back to an earlier node moves none; a column holds its
-    nodes in the order written. A frame holds 5 columns of up to 3 nodes:
-    more is refused. A link naming an id no node holds, linking a node to
-    itself, given twice, or cued before either of its nodes is refused.
+    a link back to an earlier node (a reply) moves no node; a column holds
+    its nodes in the order written. A frame holds 5 columns of up to 3
+    nodes: more is refused. A node id used twice is refused, and so is a
+    link naming an id no node holds, linking a node to itself, given twice,
+    or cued before either of its nodes.
     `packets`, 1 to 3, are dots that run the link from its first node to its
     second once its arrow is drawn, over and over to the scene's end. Rich,
     so a `camera` key is refused; in an Arabic run the columns run right to

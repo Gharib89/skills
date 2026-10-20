@@ -9,13 +9,12 @@
 // ffmpeg. The fixture is FIXTURE in real-render-fixture.mjs, composed as
 // render/render.mjs composes a run (the scenes on the frame grid, each scene's
 // WAV padded to its frames, the last held HOLD seconds) with a synthetic tone
-// for the narration; a later slice adds its own scenes to it. Its roles give both velocity seams: a
-// zoom-through at the beat change out of the hook, a cut on a curve inside the
-// point beat. The whole is rendered three times, the
-// style's texture included (a second and a third render catch noise that
-// drifts between runs, which two renders can match by chance), and the halves
-// split it after `HALF` scenes: the
-// first without the hold, the second with it.
+// for the narration. Its roles give both velocity seams: a zoom-through at the
+// beat change out of the hook, a cut on a curve inside the point beat. The
+// whole is rendered three times, the style's texture included (a second and a
+// third render catch noise that drifts between runs, which two renders can
+// match by chance), and the halves split it after `HALF` scenes: the first
+// without the hold, the second with it.
 // stdout: `real-render <check>: pass|fail: <detail>` per check
 // exit:   0 every check passed · 1 a check failed · 2 a tool row is missing
 import { spawnSync } from "node:child_process";
@@ -317,8 +316,11 @@ check(
 // A packet's place is a function of time: each diagram scene's frame 2 s in,
 // packets mid-run, seeked twice, matches byte for byte and differs from the
 // frame 0.2 s later.
+const diagrams = FIXTURE.map((p) => p.scene).filter(
+  (s) => s.visual.component === "diagram",
+);
 const flowing = [];
-for (const id of ["diagram", "arabic-diagram"]) {
+for (const { id } of diagrams) {
   const start = whole.scenes.find((s) => s.id === id).start;
   const at = +(start + 2.0).toFixed(3);
   const a = await seek(at, "packets-a");
@@ -339,12 +341,9 @@ check(
 
 // The layout gate over the largest diagram's samples, as the gates stage
 // takes them: its text inside the safe area, none clipped, small or stacked.
-const largest = FIXTURE.filter(
-  (p) => p.scene.visual.component === "diagram",
-).sort(
-  (a, b) =>
-    b.scene.visual.props.nodes.length - a.scene.visual.props.nodes.length,
-)[0].scene.id;
+const largest = diagrams.toSorted(
+  (a, b) => b.visual.props.nodes.length - a.visual.props.nodes.length,
+)[0].id;
 const sc = whole.scenes.find((s) => s.id === largest);
 const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
 const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
@@ -378,8 +377,7 @@ if (process.env.REAL_RENDER_FRAMES)
     "timeline",
     "arabic-timeline",
     "arabic-compare",
-    "diagram",
-    "arabic-diagram",
+    ...diagrams.map((s) => s.id),
   ]) {
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(

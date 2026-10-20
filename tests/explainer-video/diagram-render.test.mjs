@@ -34,8 +34,8 @@ const visual = {
     ],
   },
 };
-const drawn = (dir = "ltr") =>
-  sceneFile({ id: "a", narration: said, visual }, timing, claude, {
+const drawn = (dir = "ltr", at = timing) =>
+  sceneFile({ id: "a", narration: said, visual }, at, claude, {
     backend: {},
     seam: {},
     dir,
@@ -99,6 +99,29 @@ test("packets run their link on the timeline, repeating to the scene's end and n
     await drawn(),
     /Date\.now|performance\.now|requestAnimationFrame|setInterval|animation:/,
   );
+});
+
+test("at the window's edges: a scene a whole number of trips long ends on the last trip, and a link cued too late to start runs one trip, never repeating", async () => {
+  const [, , to] = first(tweens(await drawn()), ".k0-0");
+  // the first packet leaves at 2 + delay s; three whole trips to the end
+  const whole = {
+    ...timing,
+    duration: +(2 + to.delay + 3 * to.duration).toFixed(6),
+  };
+  const [, , last] = first(tweens(await drawn("ltr", whole)), ".k0-0");
+  assert.equal(last.repeat, 2);
+  // the link rises at 2 s, its arrow drawn by 2.5 s: in a scene ending first,
+  // each packet keeps its one trip, waiting at its first node's centre (under
+  // the node) past the scene's end, where the page's timeline stops
+  const short = { ...timing, duration: 2.4, slot: 2.4 };
+  const late = tweens(await drawn("ltr", short)).filter(([s]) =>
+    /^\.k0-/.test(s),
+  );
+  assert.equal(late.length, 2);
+  for (const [, , to, t] of late) {
+    assert.equal(to.repeat, 0);
+    assert.ok(t + to.delay >= short.duration);
+  }
 });
 
 test("a node stands at the place the layout gives it under every surface: its rule ends absolutely positioned", async () => {

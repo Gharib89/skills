@@ -3,10 +3,7 @@
 // they must hold (`check`, throwing the reason) and what it shows a viewer to
 // read (`items`, as [name, sentence it rises at, texts], which the camera beat
 // reads). The compile stage checks, the video gates time the reading from the
-// rendered frames; render/compose.mjs draws each.
-//
-// A cue is `at`, a sentence number, and optionally `on`, a phrase that
-// sentence says: the reveal lands on the phrase's first spoken word.
+// rendered frames; render/compose.mjs draws each. A cue is lib/props.mjs's.
 
 import { plain } from "./count.mjs";
 import { checkDiagram } from "./diagram.mjs";
@@ -23,8 +20,6 @@ import {
   text,
   words,
 } from "./props.mjs";
-
-export { findPhrase };
 
 // A code frame holds this many lines at 30 px: longer code is a second scene.
 const CODE_LINES = 12;
@@ -405,7 +400,7 @@ export const VISUALS = {
   },
   // Nodes and the links between them, laid out by the composer: the scene
   // file holds no coordinates. Each node and link rises on its own cue, a link
-  // never before both its nodes, and a link's packets flow along it from its
+  // no earlier than both its nodes, and a link's packets flow along it from its
   // cue to the scene's end. Rich like `words`.
   diagram: {
     props: ["nodes", "links"],

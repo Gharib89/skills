@@ -206,7 +206,8 @@ async function sceneParts(
       : d;
   // A tween repeating forever (`repeat: -1`) repeats until it has reached the
   // scene's end, and no further: the timeline stays finite, so a frame is a
-  // function of its time.
+  // function of its time. One starting at or past the end keeps a single run,
+  // its from state drawn, and the page's timeline stops at the end.
   const repeats = (to, at) =>
     to.repeat === -1
       ? {

@@ -60,7 +60,7 @@ test("a link never rises before both its nodes", () => {
   );
 });
 
-test("a diagram refuses a self link, a link twice, a stray prop and packets past 3", () => {
+test("a diagram refuses a node id used twice, a self link, a link twice, a stray prop and packets past 3", () => {
   bad(diagram(NODES, [link("server", "server", 2)]), /link server to itself/);
   bad(
     diagram(NODES, [link("client", "server", 2), link("client", "server", 3)]),
@@ -79,7 +79,7 @@ test("a diagram refuses a self link, a link twice, a stray prop and packets past
     /a diagram node has no prop y/,
   );
   bad(
-    diagram([node("a", 1), node("a", 2)], [link("a", "a", 2)]),
+    diagram([node("a", 1), node("b", 1), node("a", 2)], [link("a", "b", 2)]),
     /node id "a" is used twice/,
   );
 });
