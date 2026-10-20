@@ -73,6 +73,7 @@ check "a source selects the test named for it" 1 \
   "$(printf '%s\n' "$terms" | grep -cx tests/explainer-video/terms.test.mjs)"
 check "a source only the source tests reach selects them alone" \
   "tests/explainer-video/source-pack.test.mjs
+tests/explainer-video/source-page.test.mjs
 tests/explainer-video/source-repo.test.mjs" "$(sel skills/explainer-video/scripts/source/pack.mjs)"
 check "a selection never reaches a gates or render file" "" \
   "$(sel skills/explainer-video/scripts/render/render.mjs | grep -e /gates- -e /render-)"
