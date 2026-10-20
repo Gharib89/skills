@@ -32,6 +32,17 @@ repos:
         entry: prettier --write --ignore-unknown
         language: system
         files: ^(\.github/workflows/[^/]+\.ya?ml|.*\.(js|jsx|mjs|cjs|ts|tsx|mts|cts))$
+      # A call to a name a file never imports or declares: Prettier does not
+      # resolve names, and the source tests run on a fake backend, so #912's
+      # missing import passed every check. The dependencies live in prek's own
+      # hook environment, never in a skill's manifest, whose lock hash keys the
+      # per-user tool cache. The rule and the globals are in scripts/eslint.config.cjs.
+      - id: no-undef
+        name: eslint no-undef
+        entry: eslint --config scripts/eslint.config.cjs
+        language: node
+        additional_dependencies: ["eslint@9.39.1", "espree@10.4.0", "globals@16.5.0"]
+        files: \.(mjs|js)$
       # The house-style rules, the 80-column wrap among them, on any Markdown
       # change. The script reads every file it holds, so it takes no file list.
       - id: house-style
