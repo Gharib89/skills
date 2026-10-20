@@ -49,9 +49,10 @@ narrator: am_fenrir
   `camera` beside `component`, `{ "at*", "on" }`, is the scene's **camera
   beat**, the cue its push-in lands on; with none, the camera beat is the cue
   of the last item to reveal. A cue under one push duration into the scene
-  runs the push from the scene's start. Compile refuses a `camera` key under a
-  profile that bans `camera` or whose camera family is `locked`, and on a rich
-  component, which draws its own camera. A
+  runs the push from the scene's start, and a scene shorter than the push ends
+  mid-push. Compile refuses a `camera` key under a profile that bans `camera`
+  or whose camera family is `locked`, and on a rich component, which draws its
+  own camera. A
   **cue** is `at`, a sentence number: that item rises in, or that change
   plays, as the sentence starts. Add `on`, a phrase of that sentence in its
   spoken form, and it lands on the phrase's first spoken word instead;
