@@ -270,7 +270,7 @@ rung_turn() {
       # break, but is an argument to affected tests only in a row naming
       # {paths}, whose selector maps a path to tests by name.
       *) case $nl$rows in *"$nl$o$nl"*) ;; *) rows="$rows$o$nl" ;; esac
-         case ${o##*|} in *'{paths}'*) ;; *) [ -e "$f" ] || continue ;; esac
+         case ${o#*|*|*|*|*|} in *'{paths}'*) ;; *) [ -e "$f" ] || continue ;; esac
          pairs="$pairs$o$tab$f$nl" ;;
     esac
   done

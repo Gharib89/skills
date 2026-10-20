@@ -306,6 +306,16 @@ new.sh
 old.sh
 sh" "$(tr ' ' '\n' < "$ARGS_LOG" | sort)"
 
+# <affected tests> is the rest of the row, so a pipe after {paths} keeps it.
+r=$(repo piped "TURN_ROWS='|sh|*.sh|||args sh {paths} | cat'")
+echo x > "$r/gone.sh"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+rm "$r/gone.sh"
+: > "$ARGS_LOG"
+run "$r" turn
+check "a {paths} command piped after the placeholder still gets a deleted path" \
+  "sh gone.sh" "$(cat "$ARGS_LOG")"
+
 # A root's dependencies, missing as in a fresh worktree, are installed before
 # any other check on every rung, so a runner hook that calls a root's own
 # binary finds it on the first call (#586). Each command runs from the repo root.
