@@ -86,7 +86,7 @@ check "a page script reaches the page tests through the page that loads it" 1 \
 
 # A file the mapping cannot place selects the whole --turn set.
 printf '// named by nothing\n' > "$unnamed"
-for f in skills/explainer-video/scripts/gone-$$.mjs skills/explainer-video/package.json "$unnamed"; do
+for f in skills/explainer-video/scripts/gone-$$.mjs skills/explainer-video/gone-$$/x.mjs skills/explainer-video/package.json "$unnamed"; do
   check "$f selects the whole --turn set" "$turn_set" "$(sel "$f")"
 done
 check "one unplaceable file among placed ones selects the whole --turn set" "$turn_set" \

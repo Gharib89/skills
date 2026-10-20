@@ -67,8 +67,8 @@ if [ "${1:-}" = --turn ]; then
   reached='' whole=''
   for f; do
     case $f in /*) ;; *) f=$caller/$f ;; esac
-    # Through the directory's real path, so a `..` or a link names the file
-    # the trees hold; a directory that is gone took the file with it.
+    # Through the directory's real path, so a `..` or a linked directory names
+    # the file the trees hold; a directory that is gone took the file with it.
     d=$(cd -- "${f%/*}" 2>/dev/null && pwd -P) || { whole=1; break; }
     f=$d/${f##*/}
     f=${f#"$root"/}
