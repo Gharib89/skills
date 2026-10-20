@@ -203,6 +203,42 @@ test("an item cued on a phrase is on screen from that phrase, not from its sente
   );
 });
 
+test("an item the emphasis blurs is on screen only until the emphasis lands, the emphasised item to the end", () => {
+  const steps = (emphasis) => ({
+    component: "cards",
+    props: {
+      items: [
+        { at: 1, label: "Input", value: "issue" },
+        {
+          at: 1,
+          label: "Then",
+          value: "the code that makes the failing test pass",
+        },
+      ],
+      ...(emphasis && { emphasis }),
+    },
+  });
+  const run = (emphasis) =>
+    line(
+      check(
+        fixture({
+          scenes: edit(SCENES, 2, {
+            sentences: [say(17), say(18, "[no-claim]"), say(2)],
+            visual: steps(emphasis),
+          }),
+        }),
+      ),
+      "reading",
+    );
+  assert.equal(run(), "script reading: pass");
+  // the depth overlay blurs the other item from the first sentence on
+  assert.match(
+    run({ target: "Input", at: 1 }),
+    /^script reading: fail: steps item 2: [\d.]+ s on screen vs 3\.2 s to read$/,
+  );
+  assert.match(run({ target: "Then", at: 1 }), /steps item 1: /);
+});
+
 test("a code diff's reader reads the lines the render adds, a moved line among them", () => {
   const [, [, at, added]] = VISUALS.codediff.items({
     lang: "js",

@@ -161,11 +161,16 @@ function measureFrame() {
     const r = el.getBoundingClientRect();
     const scale = el.offsetHeight > 0 ? r.height / el.offsetHeight : 1;
     let opacity = 1;
+    let blur = 0;
     let clip = null;
     let bg = null;
     for (let a = el; a; a = a.parentElement) {
       const acs = getComputedStyle(a);
       opacity *= +acs.opacity;
+      blur = Math.max(
+        blur,
+        parseFloat(/blur\(([\d.]+)px\)/.exec(acs.filter)?.[1] ?? 0),
+      );
       if (!clip && a !== el && acs.overflow !== "visible")
         clip = box(a.getBoundingClientRect());
       if (!bg && !/rgba\(.*, 0\)$|transparent/.test(acs.backgroundColor))
@@ -184,6 +189,7 @@ function measureFrame() {
       clientW: el.clientWidth,
       clientH: el.clientHeight,
       opacity,
+      blur,
       clip,
       color: hex(cs.color),
       bg: bg ?? "#ffffff",

@@ -250,9 +250,10 @@ const drift = [];
 
 // reading: each visual item on screen long enough to read, from the sentence
 // (or the `on` phrase) it rises at to the scene's end, timed by its share of
-// the scene's words. A
-// text of at most three words is a label, 0.8 s; a longer one 0.3 s a word
-// and 1.2 s at least; an item's texts add up.
+// the scene's words, or in a scene with an emphasis to the emphasis's cue for
+// every item but the emphasised one, which the depth overlay blurs from then
+// on (code takes none). A text of at most three words is a label, 0.8 s; a
+// longer one 0.3 s a word and 1.2 s at least; an item's texts add up.
 {
   const f = [];
   const floor = (t) => {
@@ -262,11 +263,19 @@ const drift = [];
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {
     const items = VISUALS[s.visual.component].items(s.visual.props);
     const total = s.counts.reduce((a, b) => a + b, 0);
+    const e = s.visual.props.emphasis;
+    const depth = e && !s.visual.component.startsWith("code");
+    const upTo = (n) => s.counts.slice(0, n).reduce((a, b) => a + b, 0);
     for (const [name, at, texts, on] of items) {
       // An `on` phrase starts the item that many words into its sentence.
       const into = on === undefined ? 0 : findPhrase(s.narration[at - 1], on);
-      const after = s.counts.slice(at - 1).reduce((a, b) => a + b, 0) - into;
-      const shown = (s.seconds * after) / total;
+      const start = upTo(at - 1) + into;
+      const blurred = depth && texts[0] !== e.target;
+      const end = blurred
+        ? upTo(e.at - 1) +
+          (e.on === undefined ? 0 : findPhrase(s.narration[e.at - 1], e.on))
+        : total;
+      const shown = (s.seconds * (end - start)) / total;
       const read = texts.reduce((a, t) => a + floor(t), 0);
       if (shown < read)
         f.push(
