@@ -100,4 +100,17 @@ for f in skills/explainer-video/scripts/lib/terms.mjs tests/explainer-video/boar
     "$(sed 's|.*/||' "$fixture/log" | grep '\.test\.mjs$')"
 done
 
+# A deleted file reaches either member's row through {paths}, so a turn that
+# only deletes one still runs the whole --turn set rather than nothing.
+for case in "skills/explainer-video/maintainer/gone-$$.mjs explainer-video" \
+  "tests/explainer-video/gone-$$.test.mjs explainer-video-tests"; do
+  f=${case% *} member=${case#* }
+  : > "$fixture/log"
+  out=$(NODE_LOG=$fixture/log PATH="$fixture:$PATH" bash scripts/check.sh turn "$f" 2>/dev/null)
+  check "turn on deleted $f runs its row's tests" \
+    "{\"rung\":\"turn\",\"verdict\":\"pass\",\"checks\":{\"tests:$member\":\"pass\"}}" "$out"
+  check "and hands node the whole --turn set" "$(printf '%s\n' "$turn_set" | sed 's|.*/||')" \
+    "$(sed 's|.*/||' "$fixture/log" | grep '\.test\.mjs$')"
+done
+
 finish

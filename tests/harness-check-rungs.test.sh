@@ -267,44 +267,54 @@ run "$r" turn web/old/gone.ts
 check "a named file deleted with its directory still checks its member" "typecheck
 suite" "$(cat "$ARGS_LOG")"
 
-# A deleted .sh is still named by the tests that call it, and the shell row's
-# selector matches by basename, so the row gets the path with no file on disk.
-# Any other row keeps excluding a deleted path.
-r=$(repo deleted-sh "TURN_ROWS='web/|web|*.ts|||args web {files}
-lib/|shellx|*.sh|||args shellx {files}
-|shell|*.sh|||args shell {files}'")
+# A row whose <affected tests> names {paths} gets a deleted path too, for a
+# selector that places a file by its name with no file on disk. A {files} row
+# keeps excluding it, whatever its member is called.
+r=$(repo deleted-paths "TURN_ROWS='web/|web|*.ts|||args web {files}
+lib/|shell|*.sh|||args shell {files}
+|sh|*.sh|||args sh {paths}'")
 mkdir -p "$r/web" "$r/scripts" "$r/lib"
 echo x > "$r/web/gone.ts"; echo x > "$r/scripts/gone.sh"; echo x > "$r/lib/gone.sh"
 git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
 rm "$r/scripts/gone.sh" "$r/lib/gone.sh"
 : > "$ARGS_LOG"
 run "$r" turn
-check "a deleted .sh reaches the shell row's affected tests, a .sh row of another member gets none" \
-  "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
+check "a deleted path reaches a {paths} row, a {files} row named shell gets none" \
+  "sh scripts/gone.sh" "$(cat "$ARGS_LOG")"
 rm "$r/web/gone.ts"; echo y > "$r/web/new.ts"
 : > "$ARGS_LOG"
 run "$r" turn
-check "a deleted .ts beside it gives its row no missing path" \
+check "a deleted .ts beside it gives its {files} row no missing path" \
   "web new.ts
-shell scripts/gone.sh" "$(sort -r "$ARGS_LOG")"
+sh scripts/gone.sh" "$(sort -r "$ARGS_LOG")"
 : > "$ARGS_LOG"
 run "$r" turn scripts/gone.sh
-check "a deleted .sh named on the command line reaches the shell row" \
-  "shell scripts/gone.sh" "$(cat "$ARGS_LOG")"
+check "a deleted path named on the command line reaches a {paths} row" \
+  "sh scripts/gone.sh" "$(cat "$ARGS_LOG")"
 
 # A rename is a deletion of its source: the default file set keeps the old path
-# of a staged rename, so the tests naming the old script's basename still run.
-r=$(repo renamed "TURN_ROWS='|shell|*.sh|||args shell {files}'")
+# of a staged rename, so a {paths} row still sees the name it had.
+r=$(repo renamed "TURN_ROWS='|sh|*.sh|||args sh {paths}'")
 echo x > "$r/old.sh"; echo x > "$r/moved.sh"
 git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
 git -C "$r" mv old.sh new.sh; git -C "$r" mv moved.sh moved.txt
 : > "$ARGS_LOG"
 run "$r" turn
-check "a renamed .sh hands its old and new path to the shell row" \
+check "a rename hands a {paths} row its old and new path" \
   "moved.sh
 new.sh
 old.sh
-shell" "$(tr ' ' '\n' < "$ARGS_LOG" | sort)"
+sh" "$(tr ' ' '\n' < "$ARGS_LOG" | sort)"
+
+# <affected tests> is the rest of the row, so a pipe after {paths} keeps it.
+r=$(repo piped "TURN_ROWS='|sh|*.sh|||args sh {paths} | cat'")
+echo x > "$r/gone.sh"
+git -C "$r" add -A >/dev/null; git -C "$r" -c user.name=t -c user.email=t@t commit -qm seed
+rm "$r/gone.sh"
+: > "$ARGS_LOG"
+run "$r" turn
+check "a {paths} command piped after the placeholder still gets a deleted path" \
+  "sh gone.sh" "$(cat "$ARGS_LOG")"
 
 # A root's dependencies, missing as in a fresh worktree, are installed before
 # any other check on every rung, so a runner hook that calls a root's own

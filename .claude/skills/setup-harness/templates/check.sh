@@ -44,10 +44,10 @@ FULL_RUN=''
 #   <path prefix>|<member>|<globs>|<typecheck>|<tests>|<affected tests>
 # A changed file matching a row's globs belongs to the row with the longest
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
-# member's directory; <affected tests> takes {files}, relative to it, and an
-# empty one runs <tests>. An empty command is no check. A deleted file is no
-# argument to affected tests, except a deleted .sh under a member named `shell`,
-# whose tests are picked by the script's basename.
+# member's directory; <affected tests> takes {files}, the changed files on
+# disk, or {paths}, every changed path with deleted ones included, for a
+# selector that maps a path to tests by name; both are relative to the member,
+# and an empty one runs <tests>. An empty command is no check.
 TURN_ROWS=''
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS=''
@@ -230,7 +230,7 @@ EOF
 # <row> [<files, relative to the root>]: the row's typecheck and tests.
 # `full` passes no files and gets the member's whole suite.
 run_row() {
-  local row=$1 prefix member typecheck tests affected dir f rel=''
+  local row=$1 prefix member typecheck tests affected dir f q rel=''
   shift
   IFS='|' read -r prefix member _ typecheck tests affected <<EOF
 $row
@@ -243,7 +243,8 @@ EOF
     # shellcheck disable=SC2086 # the list splits on newlines only
     set -- $rel
     unset IFS
-    check "tests:$member" "$dir" "${affected//\{files\}/$(quoted "$@")}"
+    q=$(quoted "$@"); affected=${affected//\{files\}/$q}
+    check "tests:$member" "$dir" "${affected//\{paths\}/$q}"
   elif [ -n "$tests" ]; then
     check "tests:$member" "$dir" "$tests"
   fi
@@ -280,11 +281,10 @@ rung_turn() {
       '') ;;
       new-root) new="$new ${f%/*}" ;;
       # A deleted file still selects its member, whose typecheck may now
-      # break, but is no argument to affected tests. A deleted .sh is the
-      # exception for the `shell` row: its tests are picked by the script's
-      # basename, so they still have to run once the file is gone.
+      # break, but is an argument to affected tests only in a row naming
+      # {paths}, whose selector maps a path to tests by name.
       *) case $nl$rows in *"$nl$o$nl"*) ;; *) rows="$rows$o$nl" ;; esac
-         case ${f##*.}:${o#*|} in sh:shell\|*) ;; *) [ -e "$f" ] || continue ;; esac
+         case ${o#*|*|*|*|*|} in *'{paths}'*) ;; *) [ -e "$f" ] || continue ;; esac
          pairs="$pairs$o$tab$f$nl" ;;
     esac
   done
