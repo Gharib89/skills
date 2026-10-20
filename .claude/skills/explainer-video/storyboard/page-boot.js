@@ -68,6 +68,10 @@ async function boot() {
       .forEach((x) => {
         x.disabled = S.local ? todoN(S) > 0 : !canSubmit(S);
       });
+    // A note or an edit flips its card's answer: the radios follow in place, so typing keeps focus.
+    document.querySelectorAll('input[type="radio"][data-id]').forEach((r) => {
+      r.checked = draftOf(S).choices[r.dataset.id] === r.value;
+    });
     const ft = document.getElementById("fallback-text");
     if (ft) ft.textContent = answersText(S);
   }
@@ -76,6 +80,16 @@ async function boot() {
     const t = e.target.closest("[data-act]");
     if (!t || t.disabled) return;
     const act = t.dataset.act;
+    if (act === "approve-all") {
+      ACT.approveAll(S);
+      saveDraft();
+      render();
+      // A local page has no Submit: the answers are copied from the bar. A card
+      // with a finding left on Revise holds the board for the human.
+      return S.local || heldN(S) || !canSubmit(S)
+        ? null
+        : submit(document.getElementById("submit"));
+    }
     if (act === "submit") return submit(t);
     if (act === "wake") return rewake(t);
     if (act === "copy") return copy();

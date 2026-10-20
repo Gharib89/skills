@@ -70,7 +70,9 @@
       "audio": ".cache/voice/hook.wav",
       "start": 0,
       "slot": 9.8,
-      "status": "open"
+      "status": "open",
+      "rich": false,
+      "recommendation": "approve"
     },
     {
       "id": "steps",
@@ -83,7 +85,9 @@
       "audio": ".cache/voice/steps.wav",
       "start": 9.4,
       "slot": 12.5,
-      "status": "open"
+      "status": "open",
+      "rich": false,
+      "recommendation": "approve"
     },
     {
       "id": "gate",
@@ -96,7 +100,9 @@
       "audio": ".cache/voice/gate.wav",
       "start": 21.5,
       "slot": 8.7,
-      "status": "open"
+      "status": "open",
+      "rich": false,
+      "recommendation": "approve"
     }
   ]
 }

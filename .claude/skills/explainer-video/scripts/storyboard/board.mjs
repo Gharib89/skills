@@ -1,7 +1,7 @@
 // The storyboard stage: one board version per review, from the run's
 // compiled, voiced and stilled script, and the human's answers back into it.
 //
-//   node board.mjs <run-folder> build [--local]
+//   node board.mjs <run-folder> build [--local] [--fix <scene>=<text>]...
 //   node board.mjs <run-folder> page [<url>]
 //   node board.mjs <run-folder> asset <path>=<url>...
 //   node board.mjs <run-folder> apply <answers-file>
@@ -39,19 +39,30 @@ import { loadBackend, skill } from "../lib/tools.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
 import { esc } from "../render/compose.mjs";
 import { liveScript } from "../render/live.mjs";
+import { readAnswers } from "./answers-text.mjs";
 import { narrationBlocks, renameKept } from "./script-text.mjs";
 
 const [run, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
-    "usage: node board.mjs <run-folder> build [--local] | page [<url>] | asset <path>=<url>... | apply <answers-file>",
+    "usage: node board.mjs <run-folder> build [--local] [--fix <scene>=<text>]... | page [<url>] | asset <path>=<url>... | apply <answers-file>",
   );
   process.exit(2);
 };
+// build's flags: `--local` once, `--fix <scene>=<text>` any number of times.
+const opts = { local: false, fixes: {} };
+if (cmd === "build")
+  for (let i = 0; i < args.length; i++) {
+    const m = args[i] === "--fix" && args[i + 1]?.match(/^([^=]+)=(.+)$/s);
+    if (m) {
+      opts.fixes[m[1]] = m[2];
+      i++;
+    } else if (args[i] === "--local" && !opts.local) opts.local = true;
+    else usage();
+  }
 if (
   !run ||
   !["build", "page", "asset", "apply"].includes(cmd) ||
-  (cmd === "build" && !["", "--local"].includes(args.join(" "))) ||
   (cmd === "page" && args.length > 1) ||
   (cmd === "asset" && !args.length) ||
   (cmd === "apply" && args.length !== 1)
@@ -157,52 +168,7 @@ if (cmd === "apply") {
   const n = all.at(-1);
   const board = json(at("board", `${n}.json`));
   const raw = fs.readFileSync(args[0], "utf8");
-  let answers;
-  if (raw.trimStart().startsWith("{")) {
-    answers = JSON.parse(raw);
-  } else {
-    const lines = raw.split("\n");
-    if (lines.some((l) => l.startsWith("[cut to fit:")))
-      fail(
-        `the answers were cut to fit a comment: read answers/board-${n} from the database`,
-      );
-    const head = lines[0].match(/^explainer-video: board (\d+) answers/);
-    if (!head) fail("not an answers text: its first line is not the header");
-    answers = {
-      version: Number(head[1]),
-      submittedAt: new Date().toISOString(),
-      scenes: [],
-      brief: [],
-    };
-    let card = null;
-    let inNarration = false;
-    for (const line of lines.slice(1)) {
-      let m;
-      if ((m = line.match(/^([A-Za-z0-9-]+): (Approve|Revise)$/))) {
-        card = {
-          id: m[1],
-          choice: m[2].toLowerCase(),
-          note: "",
-          narration: "",
-        };
-        answers.scenes.push(card);
-        inNarration = false;
-      } else if (card && (m = line.match(/^ {2}note: (.*)$/))) {
-        card.note = m[1];
-        inNarration = false;
-      } else if (card && line === "  narration:") {
-        inNarration = true;
-      } else if (inNarration && line.startsWith("    ")) {
-        card.narration += (card.narration ? "\n" : "") + line.slice(4);
-      } else if ((m = line.match(/^Brief: (.+)$/))) {
-        answers.brief.push(m[1]);
-        inNarration = false;
-      } else if ((m = line.match(/^Kept: (.+?) -> (.+)$/))) {
-        (answers.kept ??= []).push({ term: m[1], to: m[2] });
-        inNarration = false;
-      } else if (line.trim()) fail(`cannot read this answers line: ${line}`);
-    }
-  }
+  const answers = readAnswers(raw, n, fail);
   if (answers.version !== n)
     fail(`answers for board ${answers.version}, the latest is board ${n}`);
   const ids = board.scenes.map((c) => c.id);
@@ -312,6 +278,20 @@ const delivered =
   fs.existsSync(mp4) &&
   fs.statSync(mp4).mtimeMs >= fs.statSync(at("stills.json")).mtimeMs;
 const kind = delivered ? "delivered" : "review";
+// A review board posts only after the sampling pass ran on these stills, so a
+// red it left reaches its card; a delivered one passed every video gate.
+const sampled = delivered ? null : maybe(at("samples.json"));
+if (!delivered) {
+  if (!sampled)
+    fail(`no samples.json: run node gates/samples.mjs ${run} first`);
+  if (
+    fs.statSync(at("samples.json")).mtimeMs <
+    fs.statSync(at("stills.json")).mtimeMs
+  )
+    fail(
+      `samples.json is older than the stills: run node gates/samples.mjs ${run} again`,
+    );
+}
 const md = fs.readFileSync(at("script.md"), "utf8").split("\n");
 const blocks = narrationBlocks(md);
 const profile = maybe(at("style.json"))?.name ?? script.style ?? "claude-code";
@@ -334,6 +314,7 @@ const cards = script.scenes.map((s, i) => ({
   // A rich component moves the frame itself, which the human weighs at the
   // card, so it is marked past the default.
   style: `${s.visual.component}${VISUALS[s.visual.component]?.ownCamera ? " · past the default" : ""} · ${profile} · ${voice.narrator}`,
+  rich: !!VISUALS[s.visual.component]?.ownCamera,
   still: stills.scenes.find((x) => x.id === s.id).still,
   audio: voice.scenes[i].audio,
   // The slot is the scene's voiced length plus its exit seam: a card's loop.
@@ -437,15 +418,39 @@ for (const c of cards) {
   )
     c.status = "approved";
 }
+// A card's findings: the reds the sampling pass left, then the gate stop's
+// evidence naming it.
+const found = new Map(
+  cards.map((c) => [
+    c.id,
+    [...(sampled?.scenes.find((x) => x.id === c.id)?.findings ?? [])],
+  ]),
+);
 if (banner) {
   for (const [, g] of red)
     for (const e of g.evidence) {
       const id = e.match(/\bs ([A-Za-z0-9-]+):/)?.[1];
       const c = cards.find((x) => x.id === id);
-      if (c) c.status = "reopened";
+      if (c) {
+        c.status = "reopened";
+        found.get(id).push(e);
+      }
     }
   if (cards.some((c) => c.status === "reopened"))
     banner.text += " Revise the reopened cards.";
+}
+// A card with a finding arrives recommended Revise, unless an earlier board's
+// approval of it still stands.
+for (const c of cards) {
+  const lines = found.get(c.id);
+  if (lines.length) c.finding = lines.join("\n");
+  c.recommendation =
+    lines.length && c.status !== "approved" ? "revise" : "approve";
+}
+for (const id of Object.keys(opts.fixes)) {
+  const c = cards.find((x) => x.id === id);
+  if (!c?.finding) fail(`--fix names no card with a finding: ${id}`);
+  c.fix = opts.fixes[id];
 }
 
 const brief = maybe(at("brief.json"));
@@ -474,7 +479,7 @@ const doc = {
 
 // A published page reads uploaded URLs; storyboard.html, opened from the run
 // folder, reads the run's paths.
-const published = !!manifest.board && args[0] !== "--local";
+const published = !!manifest.board && !opts.local;
 const assets = maybe(at("board", "assets.json")) ?? {};
 if (published && media.some((f) => !assets[f])) {
   for (const f of media.filter((f) => !assets[f]))

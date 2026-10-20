@@ -65,7 +65,15 @@ textarea:disabled, input:disabled { opacity: .6; }
 .notice { padding: 20px; color: var(--fg-body); }
 .banner { padding: 16px 20px; display: grid; gap: 8px; background: var(--warn-wash); border-color: var(--warn); color: var(--fg); }
 .banner pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 var(--f-mono); color: var(--fg-body); }
-.player, .brief, .sources { padding: 16px 20px; display: grid; gap: 12px; }
+.player, .brief, .sources, .overview { padding: 16px 20px; display: grid; gap: 12px; }
+.overview .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 10px; }
+.thumb { display: grid; gap: 4px; text-decoration: none; color: var(--fg-body); }
+.thumb img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--hover); }
+.thumb.flagged img { border-color: var(--warn); box-shadow: 0 0 0 2px var(--warn); }
+.finding { padding: 10px 12px; display: grid; gap: 6px; border: 1px solid var(--warn); border-left-width: 3px; border-radius: var(--r-sm); background: var(--warn-wash); color: var(--fg); }
+.finding pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 var(--f-mono); color: var(--fg-body); }
+.finding p { margin: 0; font-size: 14px; }
 .player img, .card img, .card video { display: block; width: 100%; height: auto; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--hover); }
 .player audio, .card audio { width: 100%; }
 /* The stage is the poster; the build, a 1920 by 1080 page, is scaled over it by --k once it has shown. */

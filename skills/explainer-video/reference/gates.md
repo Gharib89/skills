@@ -101,6 +101,14 @@ the scene's GSAP timeline, not from pixels, which the push-in and the grain
 would mask: a stretch of 1.5 s or more in which no tween runs, the camera's
 push-in aside.
 
+The **sampling pass**, `node <skill>/scripts/gates/samples.mjs
+explainers/<slug>`, judges `layout` (contrast stays with the gates) and
+`reading` on those same samples from the composition alone, before any video
+exists, so the storyboard shows a red on its card
+([storyboard.md](storyboard.md) step 1). It keeps no cache, prints `sample
+<scene>: <finding>` per red and its own seconds, and has no attempt count: its
+reds are not gates.
+
 A summary line follows, `gates: <n> pass, <m> fail[, 1 pending]`, ending on a
 red run with `next: fix attempt <a> of 2` or `stop: red after two fix
 attempts, no video`, and when the critic alone holds the video with `next: run

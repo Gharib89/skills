@@ -316,3 +316,67 @@ test("a scene showing a rich component is marked past the default on its card", 
   );
   assert.match(d.scenes[0].style, /^title · claude-code · am_fenrir$/);
 });
+
+test("build refuses until the sampling pass ran on these stills, then every card carries its recommendation", () => {
+  const fx = fixture();
+  compile(fx);
+  voice(fx);
+  ok(run(fx, "render/render.mjs", ["--stills"]), "stills");
+  let r = board(fx, "build");
+  assert.equal(r.code, 1);
+  assert.match(
+    r.err,
+    /^board: no samples\.json: run node gates\/samples\.mjs .+ first/,
+  );
+  ok(run(fx, "gates/samples.mjs"), "samples");
+  ok(board(fx, "build"), "build");
+  const d = doc(fx, 1);
+  for (const c of d.scenes) {
+    assert.equal(c.recommendation, "approve");
+    assert.equal(c.rich, false);
+    assert.ok(!("finding" in c) && !("fix" in c));
+  }
+  // New stills make the record stale: a changed script is sampled again.
+  ok(run(fx, "render/render.mjs", ["--stills"]), "stills");
+  r = board(fx, "build");
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^board: samples\.json is older than the stills/);
+});
+
+test("a red the sampling pass left shows on its card with the agent's proposed fix, and the card is recommended Revise", () => {
+  const fx = fixture(
+    SCRIPT.replace("Issue to pull request", "Issue to clipped request"),
+  );
+  prep(fx);
+  let r = board(fx, "build", "--fix", "steps=Shorten it");
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^board: --fix names no card with a finding: steps\n$/);
+  r = ok(board(fx, "build", "--fix", "hook=Shorten the title"), "build");
+  assert.match(r.out, /^board 1: review, 3 card\(s\), 3 to answer/m);
+  const [hook, steps] = doc(fx, 1).scenes;
+  assert.equal(hook.recommendation, "revise");
+  assert.match(
+    hook.finding,
+    /^[\d.]+ s hook: text_box_overflow "Issue to clipped/,
+  );
+  assert.equal(hook.fix, "Shorten the title");
+  assert.equal(steps.recommendation, "approve");
+  assert.ok(!("finding" in steps));
+  // The local page carries the same document.
+  assert.match(read(fx.dir, "storyboard.html"), /"recommendation":"revise"/);
+  assert.equal(board(fx, "build", "--fix").code, 2);
+});
+
+test("a rich component's card is marked rich on the document", () => {
+  const rich = SCRIPT.replace(
+    /\{\n {2}"component": "cards"[\s\S]*?\n\}\n/,
+    '{ "component": "words", "props": { "lines": [ { "at": 1, "text": "reads the issue", "on": "reads" } ] } }\n',
+  );
+  const fx = fixture(rich);
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  assert.deepEqual(
+    doc(fx, 1).scenes.map((c) => c.rich),
+    [false, true, false],
+  );
+});
