@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.35.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Reading time becomes a video gate, with a words component read along
+  ([#900](https://github.com/Gharib89/skills/pull/900),
+  [`bdf5ac3`](https://github.com/Gharib89/skills/commit/bdf5ac3b17c25c6a7b77a4be7d0cf03bf79a7073))
+
+
 ## v0.34.0 (2026-10-20)
 
 ### Features
