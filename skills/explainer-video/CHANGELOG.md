@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.42.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Diagram component laid out by the composer, with flowing packets
+  ([#921](https://github.com/Gharib89/skills/pull/921),
+  [`f73e430`](https://github.com/Gharib89/skills/commit/f73e430368c573bf152aa2c358871dea2a919a63))
+
+
 ## v0.41.0 (2026-10-20)
 
 ### Features
