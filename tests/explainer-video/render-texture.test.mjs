@@ -29,9 +29,25 @@ test("a profile with no grammar block composes the open layout with glass, field
   const page = comp(fx);
   assert.doesNotMatch(page, /class="header"/);
   assert.match(page, /<div class="field"><i class="a"><\/i>/);
-  assert.match(page, /filter: blur\(120px\)/);
-  // its own layer, so damage from the scenes above never re-rasters it (#905)
-  assert.match(page, /\.field \{[^}]*will-change: transform;/);
+  // no filter on the field: a blur redrawn inside each frame's damage rect
+  // came out different under load (#905), so the blur is drawn as a gradient
+  assert.doesNotMatch(page, /\.field[^{]*\{[^}]*filter:/);
+  const stops = [
+    ...page
+      .match(/\.field \.a \{[^}]*\}/)[0]
+      .matchAll(/var\(--accent\) ([\d.]+)%, transparent\) ([\d.]+)px/g),
+  ].map(([, pct, px]) => [+pct, +px]);
+  // a 760 px disc blurred at 120 px: nearly whole at its centre, about half at
+  // its 380 px edge, gone three blurs past it
+  assert.deepEqual(stops[0][1], 0);
+  assert.ok(stops[0][0] > 98, String(stops[0]));
+  const edge = stops.reduce((a, b) =>
+    Math.abs(b[1] - 380) < Math.abs(a[1] - 380) ? b : a,
+  );
+  assert.ok(edge[0] > 40 && edge[0] < 55, String(edge));
+  assert.deepEqual(stops.at(-1)[1], 740);
+  assert.ok(stops.at(-1)[0] < 0.5, String(stops.at(-1)));
+  assert.ok(stops.every(([pct], i) => !i || pct <= stops[i - 1][0]));
   assert.match(page, /<feTurbulence[^>]* seed="7"/);
   // an svg is 300 by 150 until sized: the grain must span the whole frame
   assert.match(page, /\.grain \{[^}]*width: 100%; height: 100%;/);
@@ -77,7 +93,10 @@ test("a profile leaves an overlay out, or sets its blur to 0, and the page leave
   assert.match(comp(fx), /<svg class="grain"/);
   assert.ok(!tweens(fx, "steps").some(([sel]) => sel.includes(":not(")));
   const flat = run(EMPHASISED, { texture: { depthBlur: 0, fieldBlur: 0 } });
-  assert.match(comp(flat), /filter: blur\(0px\)/);
+  assert.match(
+    comp(flat),
+    /\.field \.a \{[^}]*radial-gradient\(circle 380px, var\(--accent\) 380px, transparent 380px\)/,
+  );
   assert.ok(!tweens(flat, "steps").some(([sel]) => sel.includes(":not(")));
 });
 
