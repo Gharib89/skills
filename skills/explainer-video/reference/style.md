@@ -97,7 +97,8 @@ for each role no source declares a family for, and derives each token you leave
 out from its colours. Show the draft on the style card next.
 
 The card shows settled frames, so a profile's `grammar.ease`
-([scene-file.md](scene-file.md)) does not show on it.
+([scene-file.md](scene-file.md)) does not show on it; its layout and texture
+do.
 
 ## The style card
 

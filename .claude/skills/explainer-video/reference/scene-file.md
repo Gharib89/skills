@@ -90,18 +90,21 @@ the family listed first, so a profile states only where it departs:
 
 | Field (under `grammar`) | Families (default first) | Knobs |
 | --- | --- | --- |
-| `layout` | `bands` | none |
+| `layout` | `open` (no header band, content from the top down to the captions), `bands` (a header band above the content) | none |
 | `seams` | `cut` | `duration` 0.2 to 0.4 s, `blur` 0 to 24 px |
 | `camera` | `locked` | `scale` 1.03 to 1.12 |
 | `type` | `block` | `stagger` 0.03 to 0.08 s |
-| `ease` | `soft` (every reveal slides up and fades in on one ease), `spring` (a headline lands with one overshoot; panels, cards, frames and flow nodes settle with a soft one; list items, arrows and terminal lines snap) | none |
-| `texture` | `surface`: `flat`, or `sketch`, which outlines flow steps and panels by hand, seeded per scene and element so a render repeats exactly | none |
-| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` on; banning it refuses every `flow` scene | none |
+| `ease` | `velocity` (every reveal slides up and fades in on a fast-out ease: `power3` for most, `power4` for a headline, `expo` for list items, arrows and terminal lines), `soft` (every reveal on one `power2` ease), `spring` (a headline lands with one overshoot; panels, cards, frames and flow nodes settle with a soft one; list items, arrows and terminal lines snap) | none |
+| `texture` | `surface`: `glass` (boxes half see-through, blurred behind, over the colour field), `flat`, or `sketch`, which outlines flow steps and panels by hand, seeded per scene and element so a render repeats exactly; `overlays`: a list of `field` (a blurred field in the profile's colours behind the scenes), `grain` (noise at a fixed seed), `vignette` and `depth` (everything but the emphasised item blurs once the emphasis lands), all four by default | `grain` opacity 0 to 0.3, `fieldBlur` 0 to 240 px, `depthBlur` 0 to 24 px |
+| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` on, so banning it refuses every `flow` scene; `blur`, which the texture draws as `fieldBlur` and `depthBlur`, so banning it refuses a profile whose `field` or `depth` overlay has a blur above 0 | none |
 
 A field with knobs is a family name or `{ "family": "cut", "duration": 0.3 }`;
 a field without knobs is a family name; `texture` is an object,
-`{ "surface": "sketch" }`. A knob out of its range, an unknown family and an
-unknown field are refused, naming the field. A scene that names a banned
+`{ "surface": "flat", "overlays": ["vignette"] }`. A profile with no grammar
+block plays the first family of every field: the open layout, glass over a
+colour field with grain, a vignette and depth blur, and the velocity eases. A
+knob out of its range, an unknown family and an unknown field are refused,
+naming the field. A scene that names a banned
 component, or one that uses a banned technique, stops compile; a ban naming
 neither is refused.
 

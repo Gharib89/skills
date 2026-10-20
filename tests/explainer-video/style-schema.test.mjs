@@ -36,7 +36,7 @@ test("both bundled profiles load as schema 2, claude-code with no grammar block 
   }
   assert.equal(bundled("claude-code").grammar, undefined);
   assert.deepEqual(bundled("itworx").grammar, {
-    texture: { surface: "flat" },
+    texture: { surface: "flat", overlays: ["vignette"] },
   });
 });
 
@@ -79,15 +79,28 @@ test("a schema is read before contrast, and a schema 2 profile holding a schema 
     );
 });
 
-test("a field left out of the grammar takes today's look", () => {
+test("a field left out of the grammar takes the Velocity Cut frame", () => {
   assert.deepEqual(grammar(bundled("claude-code")), {
-    layout: "bands",
+    layout: "open",
     seams: { family: "cut" },
     camera: { family: "locked" },
     type: { family: "block" },
-    ease: "soft",
-    texture: { surface: "flat" },
+    ease: "velocity",
+    texture: {
+      surface: "glass",
+      overlays: ["field", "grain", "vignette", "depth"],
+      grain: 0.08,
+      fieldBlur: 120,
+      depthBlur: 4,
+    },
     bans: [],
+  });
+  assert.deepEqual(grammar(bundled("itworx")).texture, {
+    surface: "flat",
+    overlays: ["vignette"],
+    grain: 0.08,
+    fieldBlur: 120,
+    depthBlur: 4,
   });
   const g = grammar(
     odd({ grammar: { ease: "spring", seams: { duration: 0.3 } } }),
@@ -136,17 +149,47 @@ for (const [name, g, why] of [
   [
     "an unknown ease",
     { ease: "bounce" },
-    /grammar\.ease bounce is not soft or spring/,
+    /grammar\.ease bounce is not velocity or soft or spring/,
   ],
   [
     "a layout not drawn yet",
     { layout: "grid" },
-    /grammar\.layout grid is not bands/,
+    /grammar\.layout grid is not open or bands/,
   ],
   [
     "an unknown surface",
-    { texture: { surface: "glass" } },
-    /grammar\.texture\.surface glass is not flat or sketch/,
+    { texture: { surface: "neon" } },
+    /grammar\.texture\.surface neon is not glass or flat or sketch/,
+  ],
+  [
+    "an overlay that is not drawn",
+    { texture: { overlays: ["field", "bokeh"] } },
+    /grammar\.texture\.overlays: bokeh is not field or grain or vignette or depth/,
+  ],
+  [
+    "overlays that are not a list",
+    { texture: { overlays: "grain" } },
+    /grammar\.texture\.overlays is not a list/,
+  ],
+  [
+    "a grain over its range",
+    { texture: { grain: 0.5 } },
+    /grammar\.texture\.grain 0\.5 is outside 0 to 0\.3/,
+  ],
+  [
+    "a field blur that is not a number",
+    { texture: { fieldBlur: "soft" } },
+    /grammar\.texture\.fieldBlur soft is not a number/,
+  ],
+  [
+    "a depth blur over its range",
+    { texture: { depthBlur: 30 } },
+    /grammar\.texture\.depthBlur 30 is outside 0 to 24/,
+  ],
+  [
+    "a texture knob it lacks",
+    { texture: { fog: 1 } },
+    /grammar\.texture\.fog: no such field/,
   ],
   ["an unknown field", { motion: "rise" }, /grammar\.motion: no such field/],
   [
@@ -189,6 +232,28 @@ test("a grammar that uses a component it bans is refused, naming the family and 
   assert.doesNotThrow(() =>
     checkBans({ ...g, bans: ["flow"] }, { "seams.canvas": ["canvas"] }, "odd"),
   );
+});
+
+test("a profile banning blur is refused while its field or depth blur is above 0, and loads once both are 0 or left out", () => {
+  const bans = ["blur"];
+  refused(
+    { grammar: { bans } },
+    /style profile odd: grammar\.texture\.fieldBlur 120 blurs, which grammar\.bans bans: set it to 0 or leave field out of grammar\.texture\.overlays/,
+  );
+  refused(
+    { grammar: { bans, texture: { fieldBlur: 0 } } },
+    /style profile odd: grammar\.texture\.depthBlur 4 blurs.*leave depth out/,
+  );
+  for (const texture of [
+    { fieldBlur: 0, depthBlur: 0 },
+    { overlays: ["grain", "vignette"] },
+    { surface: "flat", overlays: ["vignette"] },
+  ])
+    assert.doesNotThrow(
+      () => validate(odd({ grammar: { bans, texture } })),
+      JSON.stringify(texture),
+    );
+  assert.doesNotThrow(() => validate(odd({ grammar: { texture: {} } })));
 });
 
 test("a type step is the profile's, else the scale's, and never under the layout floor", () => {

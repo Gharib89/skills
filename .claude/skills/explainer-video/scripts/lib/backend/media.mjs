@@ -75,12 +75,16 @@ export async function strip(input, output, { first, fps }) {
 
 // The mean absolute difference between each frame of a scene and the one
 // before it, over the content band alone (the caption words recolour at every
-// word, so the whole frame would peak on a caption): the band downscaled to
-// 420x172 grey, frame by frame off ffmpeg's pipe so a long scene never sits in
-// memory whole. Entry k compares frame first+k+1 with frame first+k.
-export async function bandMotion(input, { start, duration, fps }) {
+// word, so the whole frame would peak on a caption): the layout's band, as
+// `band`, downscaled to a quarter size in grey, frame by frame off ffmpeg's
+// pipe so a long scene never sits in memory whole. Entry k compares frame
+// first+k+1 with frame first+k.
+export async function bandMotion(
+  input,
+  { start, duration, fps, band = CONTENT },
+) {
   const { first, n } = sceneFrames({ start, duration, fps });
-  const { left, top, width, height } = CONTENT;
+  const { left, top, width, height } = band;
   const [w, h] = [width / 4, Math.floor(height / 4)];
   const child = spawn(
     "ffmpeg",

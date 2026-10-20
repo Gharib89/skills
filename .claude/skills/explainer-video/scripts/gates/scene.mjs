@@ -31,12 +31,12 @@ export function fullestFrame(p, frames, moving) {
 // decoded pixels. Sets p.found.motion and p.found.determinism.
 export async function motionAndDeterminism(
   p,
-  { run, mp4, comp, env, backend, orFail, seams },
+  { run, mp4, comp, env, backend, orFail, seams, band },
 ) {
   const scene = { start: p.sc.start, duration: p.sc.duration, fps: FPS };
   const { first } = sceneFrames(scene);
   const diffs = await orFail(() =>
-    backend.bandMotion(path.join(run, mp4), scene),
+    backend.bandMotion(path.join(run, mp4), { ...scene, band }),
   );
   const pk = peakFrame(diffs, first, FPS, seams);
   const t = frameTime(pk.frame, FPS);

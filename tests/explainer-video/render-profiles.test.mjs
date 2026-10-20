@@ -92,8 +92,9 @@ test("a spring profile renders: each reveal carries its class at its sentence, n
   }
 });
 
-test("a rise profile's scene carries no spring and its tweens are the old ones", () => {
-  const fx = fixture(DIAGRAMS);
+test("a soft profile's scene carries no spring and its tweens are the old ones", () => {
+  const fx = fixture(DIAGRAMS.replace("style: claude-code", "style: calm"));
+  profiled(fx, "calm", { grammar: { ease: "soft" } });
   assert.equal(render(fx).code, 0);
   for (const id of ["flow", "sides", "gates", "code", "diff"]) {
     assert.doesNotMatch(comp(fx, `scenes/${id}.html`), /SPRING|settleTime/, id);
@@ -119,7 +120,7 @@ test("a rise profile's scene carries no spring and its tweens are the old ones",
   for (const f of ["claude-code", "itworx"])
     assert.equal(
       grammar(JSON.parse(read(skill, "styles", `${f}.json`))).ease,
-      "soft",
+      "velocity",
     );
 });
 
@@ -127,12 +128,12 @@ for (const [name, extra, why] of [
   [
     "an unknown surface",
     { grammar: { texture: { surface: "neon" } } },
-    /^render: style profile odd: grammar\.texture\.surface neon is not flat or sketch/m,
+    /^render: style profile odd: grammar\.texture\.surface neon is not glass or flat or sketch/m,
   ],
   [
     "an unknown ease",
     { grammar: { ease: "bounce" } },
-    /^render: style profile odd: grammar\.ease bounce is not soft or spring$/m,
+    /^render: style profile odd: grammar\.ease bounce is not velocity or soft or spring$/m,
   ],
   [
     "schema 1",
@@ -212,7 +213,7 @@ test("an Arabic script renders right to left on its text boxes, its English term
   assert.match(index, /<html lang="ar">/);
   assert.doesNotMatch(index, /<(html|body)[^>]* dir=/);
   assert.doesNotMatch(index, /id="root"[^>]* dir=/);
-  assert.match(index, /<div class="header" dir="rtl">/);
+  assert.doesNotMatch(index, /class="header"/);
   for (const family of ["noto-naskh-arabic", "ibm-plex-sans-arabic"])
     assert.match(index, new RegExp(`@font-face \\{ font-family: "${family}"`));
   assert.match(

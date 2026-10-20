@@ -197,7 +197,7 @@ for (const [name, arrange, why, voiced = true] of [
   [
     "a profile in a layout this version does not draw",
     (fx) => styled(fx, {}, { grammar: { layout: "grid" } }),
-    /^render: style profile odd: grammar\.layout grid is not bands$/m,
+    /^render: style profile odd: grammar\.layout grid is not open or bands$/m,
     false,
   ],
   [
