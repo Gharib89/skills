@@ -132,6 +132,7 @@ printf '%s\n' "$head" > "$tmp/pr-head"
 
 call gate summary 7 --file "$rf"
 summary=$out status_summary=$status
+check "a held gate writes its reasons on stderr, as gate clean does" yes "$(has 'criterion 2: not met: waits on phase 7 round 1' "$(cat "$tmp/err")")"
 call gate clean "$tmp/ci.json" --head "$head" --file "$rf"
 check_rc "a held gate: summary exits as gate clean does" "$status" "$status_summary"
 check_rc "and that is 1" 1 "$status_summary"
@@ -151,5 +152,15 @@ sed "s/$head/1234567890abcdef/" "$tmp/ci.json" > "$dir/ci-wait.json"
 call gate summary 7 --file "$rf"
 check_rc "a PR head the evidence does not cover: exits 1" 1 "$status"
 check "and holds on the stale stop" yes "$(has 'does not cover head 1234567890abcdef' "$(jq -r '.held_by | join(";")' <<<"$out")")"
+
+# A Run file with no `## Criteria`: the gate read none, so the line must not say "none".
+printf '%s\n' "$head" > "$tmp/pr-head"
+cp "$tmp/ci.json" "$dir/ci-wait.json"
+n=$((n + 1))
+rf=$(bash "$bin/run-file.sh" init "c$n" --scratchpad "$tmp/sp" --state 0=done | jq -r .run_file)
+cp "$tmp/ci.json" "$(dirname "$rf")/ci-wait.json"
+call gate summary 7 --file "$rf"
+check "no Criteria section: criteria_recorded is false" false "$(jq -r .criteria_recorded <<<"$out")"
+check "and the line says unverified, not none" yes "$(has 'unverified: the Run file has no ## Criteria' "$(jq -r .unmet_criteria_line <<<"$out")")"
 
 finish

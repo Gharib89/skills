@@ -187,7 +187,8 @@
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the
 #     commits between the recorded head and <sha>
-#   gate summary: {clean, head, held_by[], unmet_criteria[], unmet_criteria_line,
+#   gate summary: {clean, head, held_by[], criteria_recorded, unmet_criteria[],
+#     unmet_criteria_line (`unverified: ...` where no `## Criteria` was read),
 #     clean_gate_held_by_line}, `gate clean`'s evaluation (exit 0 clean, 1 held)
 #     of the head `read-pr <pr>` returns and the final `ci-wait` answer saved as
 #     `ci-wait.json` beside the Run file; the merge summary's `Unmet criteria`
