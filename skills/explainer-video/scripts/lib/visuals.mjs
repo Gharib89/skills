@@ -404,6 +404,8 @@ export const VISUALS = {
       for (const x of p.items) {
         named("timeline", x.when, "a when per item");
         named("timeline", x.label, "a label per item");
+        if (x.note !== undefined)
+          text("timeline", x.note, "a note that is text");
       }
     },
     items: (p) =>

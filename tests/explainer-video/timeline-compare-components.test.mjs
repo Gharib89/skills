@@ -132,6 +132,11 @@ test("timeline takes items of at, on, when, label and note, and refuses the rest
     /timeline needs a when per item/,
   );
   bad(timeline([{ at: 1, when: "2019" }]), /timeline needs a label per item/);
+  // a note is optional, but text when given: the script gate reads its numbers
+  bad(
+    timeline([{ at: 1, when: "Now", label: "a", note: 5 }]),
+    /timeline needs a note that is text/,
+  );
   bad(
     timeline([{ at: 4, when: "2019", label: "a" }]),
     /at 4 is not a sentence/,
