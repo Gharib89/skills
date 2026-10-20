@@ -100,13 +100,19 @@ const FIELDS = {
     families: ["velocity", "cut"],
     knobs: { duration: [0.2, 0.4], blur: [0, 24] },
   },
-  camera: { families: ["locked"], knobs: { scale: [1.03, 1.12] } },
+  camera: {
+    families: ["push", "locked"],
+    knobs: { scale: [1.03, 1.12], duration: [0.4, 1.6] },
+  },
   type: { families: ["block"], knobs: { stagger: [0.03, 0.08] } },
   ease: { families: ["velocity", "soft", "spring"] },
 };
 // What a seams knob left out takes: `blur` is the zoom-through's peak blur in
 // px, and the cut on a curve peaks at 4/9 of it (8 px at the default).
 const SEAM_DEFAULTS = { duration: 0.2, blur: 18 };
+// What a camera knob left out takes: the push-in's end scale, and its length
+// in seconds.
+const CAMERA_DEFAULTS = { scale: 1.06, duration: 0.8 };
 // The moves a seams family draws, each a value a scene's `seam` may name; a
 // scene may always name `cut`, no seam at all.
 export const SEAM_MOVES = {
@@ -157,6 +163,7 @@ export function grammar(profile) {
       ? { family: families[0], ...asFamily(g[field]) }
       : (g[field] ?? families[0]);
   out.seams = { ...SEAM_DEFAULTS, ...out.seams };
+  out.camera = { ...CAMERA_DEFAULTS, ...out.camera };
   out.texture = {
     surface: SURFACES[0],
     overlays: OVERLAYS,
@@ -193,42 +200,6 @@ function checkSchema(profile) {
       throw new Error(
         `style profile ${profile.name}: ${k} is a schema 1 key, replaced by ${to}`,
       );
-}
-
-// Why `bans` bar a scene's component, or null: it is named, or it uses a
-// technique that is.
-export function banReason(bans, component, name) {
-  if (bans.includes(component))
-    return `component ${component} is banned by style profile ${name}`;
-  const technique = Object.keys(TECHNIQUES).find(
-    (t) => bans.includes(t) && TECHNIQUES[t].includes(component),
-  );
-  return technique
-    ? `component ${component} uses ${technique}, which style profile ${name} bans`
-    : null;
-}
-
-// Why a scene's `seam` is not the profile's to draw, or null: it is neither a
-// move of the profile's seams family nor `cut`, a plain cut.
-export function seamReason(profile, seam) {
-  const { family } = grammar(profile).seams;
-  const moves = [...(SEAM_MOVES[family] ?? []), "cut"];
-  return seam === undefined || moves.includes(seam)
-    ? null
-    : `seam ${seam} is not one of ${moves.join(", ")}: the moves of style profile ${profile.name}'s seams family ${family}, and a plain cut`;
-}
-
-// A scene whose component the profile bans, or whose `seam` it does not
-// draw, is refused. Compile checks it against the profile it saw; render
-// checks it again, since the profile may have changed between the two.
-export function checkScenes(profile, scenes) {
-  const { bans } = grammar(profile);
-  for (const s of scenes) {
-    const why =
-      banReason(bans, s.visual.component, profile.name) ??
-      seamReason(profile, s.visual.seam);
-    if (why) throw new Error(`scene ${s.id}: ${why}`);
-  }
 }
 
 // The profile's grammar and type scale, each refused by its field.

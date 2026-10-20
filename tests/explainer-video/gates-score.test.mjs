@@ -84,8 +84,10 @@ test("a clean render passes all six gates, writes the record and the report, and
   assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));
   assert.match(r.out, /^delivered: /m);
   // Samples: every 15 frames from each scene's start, plus its settled last
-  // frame and where the seam into it ends (the previous scene's seam length).
+  // frame, where the seam into it ends (the previous scene's seam length) and
+  // the two edges of its camera's push-in.
   const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  const { dir } = calls(fx, "events")[0];
   assert.ok(
     timeline.scenes.some((s) => s.slot > s.duration),
     "the default style draws a seam",
@@ -98,6 +100,13 @@ test("a clean render passes all six gates, writes the record and the report, and
     const frames = new Set([last]);
     for (let f = first; f < last; f += 15) frames.add(f);
     if (seam) frames.add(first + seam);
+    const push = read(dir, "scenes", `${s.id}.html`).match(
+      /addLabel\("camera:start", ([\d.]+)\)\.addLabel\("camera:end", ([\d.]+)\)/,
+    );
+    for (const t of push?.slice(1) ?? []) {
+      const f = Math.ceil((s.start + +t) * 30 - 1e-6);
+      if (f >= first && f <= last) frames.add(f);
+    }
     return [...frames].sort((a, b) => a - b).map((f) => frameTime(f, 30));
   });
   assert.deepEqual(calls(fx, "probe")[0].times, want);

@@ -63,29 +63,39 @@ export function showing(dir, t) {
 // A scene's timeline events, as the real backend reads them off its GSAP
 // timeline: tween ends and the `seam:` and `camera:` label pairs, in scene
 // seconds. EXPLAINER_VIDEO_FAKE_EVENTS is a JSON object of scene id to
-// {ends, seams, camera}; a scene it omits has the seam windows its own script
-// labels (`addLabel("seam:start", a)` ... `addLabel("seam:end", b)`) and no
-// other event.
+// {ends, seams, camera}; a scene it omits has the seam and camera windows its
+// own script labels (`addLabel("seam:start", a)` ... `addLabel("seam:end", b)`)
+// and no other event.
 export async function events(dir) {
   log({ call: "events", dir });
   const out = {};
   const scenes = path.join(dir, "scenes");
   for (const f of fs.existsSync(scenes) ? fs.readdirSync(scenes) : []) {
     const html = fs.readFileSync(path.join(scenes, f), "utf8");
-    const at = (kind) =>
+    const at = (label, edge) =>
       Object.fromEntries(
         [
           ...html.matchAll(
-            new RegExp(`addLabel\\("seam:${kind}(\\d*)", ([\\d.]+)\\)`, "g"),
+            new RegExp(
+              `addLabel\\("${label}:${edge}(\\d*)", ([\\d.]+)\\)`,
+              "g",
+            ),
           ),
         ].map((m) => [m[1], +m[2]]),
       );
-    const [start, end] = [at("start"), at("end")];
     // an unpaired start is no window, as the real adapter reads it
-    const seams = Object.keys(start)
-      .filter((k) => k in end)
-      .map((k) => [start[k], end[k]]);
-    if (seams.length) out[f.replace(/\.html$/, "")] = { seams };
+    const windows = (label) => {
+      const [start, end] = [at(label, "start"), at(label, "end")];
+      return Object.keys(start)
+        .filter((k) => k in end)
+        .map((k) => [start[k], end[k]]);
+    };
+    const [seams, camera] = [windows("seam"), windows("camera")];
+    if (seams.length || camera.length)
+      out[f.replace(/\.html$/, "")] = {
+        ...(seams.length && { seams }),
+        ...(camera.length && { camera }),
+      };
   }
   return {
     ...out,

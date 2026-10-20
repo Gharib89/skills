@@ -381,8 +381,7 @@ export async function probe(dir, times, { env }) {
 // Each scene's timeline events, in the scene's own seconds: the end of every
 // tween on its GSAP timeline, and the `seam:start`/`seam:end` and
 // `camera:start`/`camera:end` label pairs that mark when its seam or camera
-// runs; a scene's seam labels come from compose.mjs's seam, and nothing draws
-// a camera yet.
+// runs; both label pairs come from the scene's script (render/seam-script.mjs).
 export async function events(dir, { env }) {
   const { page, close } = await openComposition(dir, env);
   try {

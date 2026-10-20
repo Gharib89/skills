@@ -5,10 +5,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { checkScenes } from "../../skills/explainer-video/scripts/lib/allowed.mjs";
 import {
   SCALE,
   checkBans,
-  checkScenes,
   grammar,
   scale,
   validate,
@@ -84,7 +84,7 @@ test("a field left out of the grammar takes the Velocity Cut frame", () => {
   assert.deepEqual(grammar(bundled("claude-code")), {
     layout: "open",
     seams: { family: "velocity", duration: 0.2, blur: 18 },
-    camera: { family: "locked" },
+    camera: { family: "push", scale: 1.06, duration: 0.8 },
     type: { family: "block" },
     ease: "velocity",
     texture: {
@@ -108,7 +108,7 @@ test("a field left out of the grammar takes the Velocity Cut frame", () => {
   );
   assert.equal(g.ease, "spring");
   assert.deepEqual(g.seams, { family: "velocity", duration: 0.3, blur: 18 });
-  assert.equal(g.camera.family, "locked");
+  assert.equal(g.camera.family, "push");
 });
 
 for (const [name, g, why] of [
@@ -145,7 +145,7 @@ for (const [name, g, why] of [
   [
     "an unknown family",
     { camera: { family: "orbit" } },
-    /grammar\.camera orbit is not locked/,
+    /grammar\.camera orbit is not push or locked/,
   ],
   [
     "an unknown ease",
