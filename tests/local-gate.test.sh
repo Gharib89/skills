@@ -93,6 +93,11 @@ check "the context report's lines reach stderr" "total: 1 chars" "$err"
 check "the report adds no gate status and leaves the verdict JSON as it was" \
   "{\"verdict\":\"pass\",\"base\":\"base\",\"lane\":\"full\",\"gates\":$DEFERRED}" "$(jq -c "$sorted" <<<"$out")"
 
+d=$(repo no-runner)
+sed -i.bak "s/^FULL_RUN=.*/FULL_RUN=''/" "$d/scripts/check.sh"
+gate "$d"
+check "a check.sh with no FULL_RUN defers no runner" "null pass" "$(jq -r '"\(.gates.runner) \(.verdict)"' <<<"$out")"
+
 d=$(repo no-rows)
 sed -i.bak '/setup-harness configuration/d' "$d/scripts/check.sh"
 gate "$d"
