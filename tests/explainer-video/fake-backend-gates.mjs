@@ -67,15 +67,22 @@ export function showing(dir, t) {
 // A scene's timeline events, as the real backend reads them off its GSAP
 // timeline: tween ends and the `seam:` and `camera:` label pairs, in scene
 // seconds. EXPLAINER_VIDEO_FAKE_EVENTS is a JSON object of scene id to
-// {ends, seams, camera}; a scene it omits has the seam and camera windows its
+// {ends, tweens, seams, camera}; a scene it omits has the seam and camera windows its
 // own script labels (`addLabel("seam:start", a)` ... `addLabel("seam:end", b)`)
-// and no other event.
+// and one tween across its whole slot, so it has no dead beat.
 export async function events(dir) {
   log({ call: "events", dir });
   const out = {};
   const scenes = path.join(dir, "scenes");
+  const index = fs.existsSync(path.join(dir, "index.html"))
+    ? fs.readFileSync(path.join(dir, "index.html"), "utf8")
+    : "";
   for (const f of fs.existsSync(scenes) ? fs.readdirSync(scenes) : []) {
     const html = fs.readFileSync(path.join(scenes, f), "utf8");
+    const id = f.replace(/\.html$/, "");
+    const slot = index.match(
+      new RegExp(`data-composition-id="${id}"[^>]*data-duration="([\\d.]+)"`),
+    )?.[1];
     const at = (label, edge) =>
       Object.fromEntries(
         [
@@ -95,11 +102,11 @@ export async function events(dir) {
         .map((k) => [start[k], end[k]]);
     };
     const [seams, camera] = [windows("seam"), windows("camera")];
-    if (seams.length || camera.length)
-      out[f.replace(/\.html$/, "")] = {
-        ...(seams.length && { seams }),
-        ...(camera.length && { camera }),
-      };
+    out[id] = {
+      ...(slot && { tweens: [[0, +slot]] }),
+      ...(seams.length && { seams }),
+      ...(camera.length && { camera }),
+    };
   }
   return {
     ...out,

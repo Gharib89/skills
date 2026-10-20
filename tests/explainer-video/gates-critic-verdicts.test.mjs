@@ -28,7 +28,7 @@ test("a render the critic has not judged is held: critic pending, a contact shee
   assert.match(g.gates.critic.sheets, /^\.cache\/critic\/[0-9a-f]{16}$/);
   assert.ok(
     r.out.includes(
-      `gate critic: pending: round 1 of 2, 0 of 3 scene(s) judged, contact sheets in ${g.gates.critic.sheets} vs no unreadable or invented content; scores advise\n`,
+      `gate critic: pending: round 1 of 2, 0 of 3 scene(s) judged, contact sheets in ${g.gates.critic.sheets} vs no unreadable, invented or rtl content; scores advise\n`,
     ),
     r.out,
   );
@@ -89,6 +89,33 @@ test("invented content on screen fails the critic, delivers nothing, and passes 
   assert.equal(record(fx).gates.critic.attempts, 1);
   assert.equal(record(fx).attempts, 1);
   assert.match(read(fx.dir, "gates.md"), /^## critic$/m);
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("an rtl failure blocks like unreadable and invented, and passes on the fix", () => {
+  const fx = fixture();
+  renderUnjudged(fx, SCRIPT.replace('"value": "code"', '"value": "kod"'));
+  critique(fx.dir, (id) =>
+    id === "steps"
+      ? {
+          failures: [
+            {
+              kind: "rtl",
+              what: "the steps read left to right in an Arabic scene",
+            },
+          ],
+          scores: { clarity: 3, legibility: 5, fit: 2, motion: 3 },
+          worst: [],
+        }
+      : CLEAN,
+  );
+  const r = stage(fx, "render/render.mjs");
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate critic: fail: 1 hard failure\(s\), first: [\d.]+ s steps: rtl: the steps read left to right/m,
+  );
+  assert.ok(!fs.existsSync(delivered(fx)));
   assertGreen(fx, render(fx, SCRIPT));
 });
 
@@ -155,7 +182,7 @@ test("a malformed verdict stops the gates, naming the scene and what is wrong", 
     [{ scores, worst: [] }, /no failures list/],
     [
       { failures: [{ kind: "ugly", what: "x" }], scores, worst: [] },
-      /failure 1 kind "ugly" is not unreadable or invented/,
+      /failure 1 kind "ugly" is not unreadable, invented or rtl/,
     ],
     [
       { failures: [{ kind: "invented", what: " " }], scores, worst: [] },

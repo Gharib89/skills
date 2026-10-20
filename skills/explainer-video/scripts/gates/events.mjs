@@ -3,7 +3,8 @@
 const r3 = (n) => +n.toFixed(3);
 
 // `raw` is backend.events' answer, `scenes` the timeline's. Returns
-//   moves   scene id to the video-second windows its seam and camera run in
+//   moves   scene id to the video-second windows its seam and camera run in,
+//           and the ones its other tweens run in
 //   seams   every scene's seam windows, flat
 //   times   every event: tween ends and window edges, of every scene
 //   moving  (id, t) whether any scene's seam or the scene's own camera runs at
@@ -19,7 +20,18 @@ export function sceneEvents(raw, scenes) {
     const at = (w) => w.map((x) => r3(sc.start + x));
     const seams = (ev.seams ?? []).map(at);
     const camera = (ev.camera ?? []).map(at);
-    moves[sc.id] = { seams, camera };
+    // The camera's push is a tween too, but drift, not motion: a tween on its
+    // window is left out of `tweens`, which a dead beat is read against.
+    const tweens = (ev.tweens ?? [])
+      .map(at)
+      .filter(
+        ([a, b]) =>
+          b > a &&
+          !camera.some(
+            ([x, y]) => Math.abs(a - x) < 1e-3 && Math.abs(b - y) < 1e-3,
+          ),
+      );
+    moves[sc.id] = { seams, camera, tweens };
     times.push(...at(ev.ends ?? []), ...seams.flat(), ...camera.flat());
   }
   const seams = Object.values(moves).flatMap((m) => m.seams);

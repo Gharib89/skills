@@ -12,8 +12,9 @@ import {
   fullest,
   meanDiff,
   peak,
+  deadBeats,
   sampleTimes,
-  stillStretches,
+  seamStripStart,
   stripEnd,
   stripStart,
 } from "../../skills/explainer-video/scripts/lib/motion.mjs";
@@ -83,15 +84,43 @@ test("mean absolute difference reads two frames' bytes", () => {
   assert.equal(meanDiff(Buffer.from([5, 5]), Buffer.from([5, 5])), 0);
 });
 
-test("a still stretch is a run of unchanged frames lasting at least 1.5 s", () => {
-  // 10 fps keeps the arithmetic whole: 15 unchanged diffs are 1.5 s.
-  const diffs = [
-    ...Array(3).fill(5),
-    ...Array(15).fill(0),
-    ...Array(4).fill(5),
-    ...Array(14).fill(0),
-  ];
-  assert.deepEqual(stillStretches(diffs, 0, 10), [{ start: 0.3, end: 1.8 }]);
+test("a dead beat is a stretch of 1.5 s or more of the scene's timeline with no tween running", () => {
+  const scene = { start: 10, duration: 6 };
+  // Tweens run 10-11 and 12.6-13: the gap 11-12.6 is 1.6 s.
+  assert.deepEqual(
+    deadBeats(scene, [
+      [10, 11],
+      [12.6, 13],
+    ]),
+    [
+      { start: 11, end: 12.6 },
+      { start: 13, end: 16 },
+    ],
+  );
+  // A tween inside the 1.6 s stretch splits it into two short ones.
+  assert.deepEqual(
+    deadBeats(scene, [
+      [10, 11],
+      [11.5, 12],
+      [12.6, 13],
+      [13.5, 16],
+    ]),
+    [],
+  );
+  // Overlapping tweens count once, and a tween window is clipped to the scene.
+  assert.deepEqual(
+    deadBeats({ start: 0, duration: 4 }, [
+      [-1, 1],
+      [0.5, 1.2],
+    ]),
+    [{ start: 1.2, end: 4 }],
+  );
+  // No tween at all is a dead beat from end to end.
+  assert.deepEqual(deadBeats({ start: 2, duration: 3 }, []), [
+    { start: 2, end: 5 },
+  ]);
+  // A stretch just under 1.5 s is no dead beat.
+  assert.deepEqual(deadBeats({ start: 0, duration: 1.4 }, []), []);
 });
 
 test("the strip starts 5 frames before the peak and stays inside the scene", () => {
@@ -102,6 +131,36 @@ test("the strip starts 5 frames before the peak and stays inside the scene", () 
   // A scene shorter than a strip: the strip starts at its first frame and ends at its last.
   assert.equal(stripStart(5, 10, 8), 10);
   assert.equal(stripEnd(10, 10, 8), 17);
+});
+
+test("the strip steps off a seam: its first and last frame, and every one between, sit outside the seam window", () => {
+  const inSeam = (f, seams) =>
+    seams.some(([a, b]) => f / 30 >= a && f / 30 < b);
+  // A seam over frames 45-50 pushes a strip due at 47 to start after it.
+  const seams = [[45 / 30, 51 / 30]];
+  const from = stripStart(52, 0, 200, 30, seams);
+  assert.equal(from, 51);
+  // A seam after the peak ends the strip before it, the nearest start kept.
+  const early = stripStart(44, 0, 200, 30, [[50 / 30, 56 / 30]]);
+  assert.equal(early, 38);
+  for (const [f, s] of [
+    [from, seams],
+    [early, [[50 / 30, 56 / 30]]],
+  ])
+    for (let k = f; k < f + 12; k++) assert.ok(!inSeam(k, s), `frame ${k}`);
+  // No seam: unchanged.
+  assert.equal(stripStart(50, 0, 200, 30, []), 45);
+  // No room between seams: the clamped start, as before.
+  assert.equal(stripStart(50, 0, 200, 30, [[0, 100]]), 45);
+});
+
+test("a seam's strip is 12 frames centred on its window, from the frame the window opens in", () => {
+  // 6 frames, 60-66: three frames of lead, three after.
+  assert.equal(seamStripStart([2, 2.2], 30), 57);
+  // A window of 12 or more frames starts at its own first frame.
+  assert.equal(seamStripStart([2, 2.5], 30), 60);
+  // Never before the video's first frame.
+  assert.equal(seamStripStart([0, 0.2], 30), 0);
 });
 
 // The content band alone is read: a change in the caption rows moves nothing.

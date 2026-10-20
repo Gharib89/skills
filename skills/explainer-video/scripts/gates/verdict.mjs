@@ -1,5 +1,7 @@
 // The critic's verdict format, and the check that refuses a verdict outside it.
-export const KINDS = ["unreadable", "invented"];
+export const KINDS = ["unreadable", "invented", "rtl"];
+// The kinds as prose: "unreadable, invented or rtl".
+export const KIND_LIST = `${KINDS.slice(0, -1).join(", ")} or ${KINDS.at(-1)}`;
 export const SCORES = ["clarity", "legibility", "fit", "motion"];
 
 // `bad(why)` stops the run; `sc` is the timeline scene the verdict judges.
@@ -7,7 +9,7 @@ export function checkVerdict(v, sc, bad) {
   if (!Array.isArray(v?.failures)) bad("no failures list");
   v.failures.forEach((x, i) => {
     if (!KINDS.includes(x?.kind))
-      bad(`failure ${i + 1} kind "${x?.kind}" is not ${KINDS.join(" or ")}`);
+      bad(`failure ${i + 1} kind "${x?.kind}" is not ${KIND_LIST}`);
     if (typeof x.what !== "string" || !x.what.trim())
       bad(`failure ${i + 1} says nothing`);
   });

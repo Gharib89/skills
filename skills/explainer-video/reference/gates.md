@@ -66,8 +66,10 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
 - `critic`: the **critic**, Claude subagents reading one **contact sheet** per
   scene (four of its frames, cut from the MP4 by ffmpeg: its three quarter
   marks, then its **fullest moment**, the sample with the most readable words
-  at once, the latest on a tie) and its **motion strip**, fails on any hard
-  failure: `unreadable` or `invented` content. Its scores (clarity,
+  at once, the latest on a tie), its **motion strip** and the **seam strip** of
+  the seam it hands over at, fails on any hard failure: `unreadable` or
+  `invented` content, or `rtl` (a right-to-left layout broken in an Arabic
+  video). Its scores (clarity,
   legibility, fit, motion, 1 to 5) and its `worst` list (at most 3 defects per
   scene, each with the one change that would fix it) only
   advise: the line shows the score means, and `gates.md` lists the scores and
@@ -85,11 +87,18 @@ the frame nearest its middle outside every seam (a scene wholly inside a seam
 falls back to its unfiltered peak). One helper (`scripts/lib/motion.mjs`)
 picks it for the determinism gate and the strip. The **motion strip** is 12
 consecutive frames of the scene from 5 before the peak-motion frame (clamped
-inside the scene), 320x180 a tile on a 6x2 grid in reading order, cut beside
-the scene's contact sheet as `<scene>.motion.png`; a still scene has none.
-`<scene>.motion.json` beside it holds the peak frame and its time, the strip's
-first and last tile times and each still stretch of the content band lasting
-1.5 s or more.
+inside the scene, and moved to the nearest start whose 12 frames all sit
+outside every seam window), 320x180 a tile on a 6x2 grid in reading order, cut
+beside the scene's contact sheet as `<scene>.motion.png`; a still scene has
+none. A scene that hands over at a seam, the window opening at its own last
+moment, also gets `<scene>.seam.png`: the same tiling of 12 frames with that
+seam's window in the middle, so it runs on into the next scene's first
+frames; the last scene has none. `<scene>.motion.json` beside them holds the
+peak frame and its time, the first and last tile times of the motion strip
+and of the seam strip (with the seam window) and each **dead beat**, read from
+the scene's GSAP timeline, not from pixels, which the push-in and the grain
+would mask: a stretch of 1.5 s or more in which no tween runs, the camera's
+push-in aside.
 
 A summary line follows, `gates: <n> pass, <m> fail[, 1 pending]`, ending on a
 red run with `next: fix attempt <a> of 2` or `stop: red after two fix
@@ -108,8 +117,9 @@ Run it when the summary ends `next: run the critic`; a pending critic beside a
 red gate waits for that gate's fix, so no round is spent on a render the fix
 replaces.
 
-1. Dispatch one subagent per scene whose `<run>/<sheets>/<scene>.png` has
-   no `<scene>.json` beside it (`<sheets>` is relative to the run folder,
+1. Dispatch one subagent per scene whose contact sheet
+   `<run>/<sheets>/<scene>.png` (not its `.motion.png` or `.seam.png` strip)
+   has no `<scene>.json` beside it (`<sheets>` is relative to the run folder,
    `<run>`), at most 20 at once, each with
    `<skill>/agents/critic.md` as its prompt, `{run}` the run folder, `{scene}`
    the scene id and `{sheets}` the folder the pending line names. Each writes
@@ -122,14 +132,15 @@ replaces.
 
 The critic judges two renders of one script at most, a render counting anew when
 only its cites or a cited excerpt's text changed. Each scene's verdict stands
-for its sheet, motion strip and record, its span in the video, its visual, the
-title, every cite in the script and its excerpt's text (each critic reads them
-all) and the verdict format: a new render copies the verdict of every unchanged
-scene beside its new sheet, so step 1 dispatches only changed scenes, and the
-render still counts as the next round. A hard failure in the second round is
-final, so the summary ends `stop: the critic's second round is red, no video`. A
-third render reuses the second round's verdict, its line ending `carried: no
-third round`; new narration is a new script and starts at round 1.
+for its sheet, both strips and record, its span in the video, its visual, the
+title, every scene's narration, every cite in the script and its excerpt's text
+(each critic reads them all) and the verdict format: a new render copies the
+verdict of every unchanged scene beside its new sheet, so step 1 dispatches
+only changed scenes, and the render still counts as the next round. A hard
+failure in the second round is final, so the summary ends `stop: the critic's
+second round is red, no video`. A third render reuses the second round's
+verdict, its line ending `carried: no third round`; new narration is a new
+script and starts at round 1.
 
 ## On a red gate
 
