@@ -218,10 +218,15 @@ async function boot() {
     );
     quiet();
     a.currentTime = 0;
-    a.play().catch(() => {});
-    solo = id;
     const [from, to] = loopOf(sceneOf(id));
-    say(el, { type: "run", from, to, loop: false });
+    // The motion starts with the narration, so a slow or refused play() never runs it alone.
+    a.play().then(
+      () => {
+        solo = id;
+        say(el, { type: "run", from, to, loop: false });
+      },
+      () => {},
+    );
   }
 
   // The animatic: the one build, seeked to the narration's clock, the playing card ringed and listed.
@@ -319,6 +324,11 @@ async function boot() {
         );
         if (latest(S) && latest(S).version !== was) {
           restoreDraft();
+          // A revised board leaves the old animatic stopped, driver included.
+          cancelAnimationFrame(raf);
+          waiting = false;
+          S.animatic = false;
+          S.playing = null;
           dropFrames();
         }
         render();
