@@ -214,7 +214,7 @@ originals, not drafts).
 
 On `clean: true`, post the summary with no reply line, then run the merge
 sequence below without waiting for a reply. On `clean: false`, post it with
-`Clean gate held by: <each held_by reason>` and the usual reply line, then
+`Clean gate held by: <clean_gate_held_by_line>` and the usual reply line, then
 wait for "merge". Exit 2 is an unreadable decision: name the error and wait.
 An auto-merge flag is never used: authorization is the recorded
 gate, after reviewers have finished.
@@ -243,8 +243,9 @@ this gate, including after a clean-gate decision. Two of them come back here:
 
 - `head-moved`: the earlier approval covered the old head only. Re-run
   `read-pr`, read the new commits, cite or re-run the gate for the new
-  `head_sha` per **The gate's verdict is cited**, rewrite the summary for it and
-  ask again, or re-run `run-file gate clean` with `--head <new head_sha>` when
+  `head_sha` per **The gate's verdict is cited**, wait for `ci-wait` on it, save
+  its settled answer to `ci-wait.json`, re-run `run-file gate summary <pr>`,
+  rewrite the summary from that answer and ask again, or decide on it when
   opted in.
 - `stale-base`: merge the base in, re-run the local gate and come back to this
   gate. A merge with no conflict to resolve leaves the reviewer stops and
@@ -259,8 +260,9 @@ close 9` and set the task to the returned `mirror`, and last `cleanup
 <issue|none>`.
 
 **If the human says no or wants changes**, treat the note as the next round of
-work: apply it on the same branch, re-run the local gate, come back to this
-gate. Do not re-open the whole pipeline. Under `Merge: on-clean-gate` the
+work: apply it on the same branch, re-run the local gate, save the new head's
+settled `ci-wait` answer, come back to this gate and re-run `gate summary`. Do
+not re-open the whole pipeline. Under `Merge: on-clean-gate` the
 change breaks coverage, so `gate clean` holds, naming each piece of evidence
 with both heads: every reviewer stop, until an on-push reviewer's own round on
 the new head records a new stop
