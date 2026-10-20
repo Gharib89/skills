@@ -38,9 +38,19 @@ module.exports = [
       sourceType: "module",
       // nodeBuiltin, not node: node adds require, module and __dirname, which
       // an ES module does not have, so a call to one would pass and throw.
-      globals: { ...globals.nodeBuiltin, ...globals.browser },
+      globals: { ...globals.nodeBuiltin },
     },
     rules,
+  },
+  // The two modules whose page.evaluate bodies run in a page. Browser globals
+  // elsewhere would let a missing import of a helper named open, close, find
+  // or name pass, since the browser declares those too.
+  {
+    files: [
+      "skills/explainer-video/scripts/lib/backend/browser.mjs",
+      "skills/explainer-video/scripts/lib/backend/source.mjs",
+    ],
+    languageOptions: { globals: globals.browser },
   },
   {
     files: ["**/*.js"],
