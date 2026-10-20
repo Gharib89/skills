@@ -32,9 +32,10 @@ references call each item, not a layout:
   tripwire that fired.
 - **Deviations from plan**: the phase-2 deviations log verbatim, or that the
   plan held.
-- **Unmet criteria**: each criterion not met, verbatim from the issue, with its
-  reason (the action a human must take, for a host action), or `no line` where
-  the run recorded none ([Unmet criteria](#unmet-criteria)).
+- **Unmet criteria**: each criterion not met, from `gate summary`'s
+  `unmet_criteria_line` (a run with no `## Criteria` lists them from the issue),
+  with its reason (the action a human must take, for a host action), or
+  `no line` where the run recorded none ([Unmet criteria](#unmet-criteria)).
 - **Verification**: each applicable verification's phase-3 result and what
   ran, or the reason the PR body gives for none applying.
 - **Self-review**: its rounds and stop, each phase-4 report with its path, and
@@ -57,8 +58,8 @@ references call each item, not a layout:
   and path (or its number, filed here), **Ship notes** and **Direct calls**,
   below.
 - **Timing**: `run-file timing`'s `row`, verbatim.
-- **Clean gate held by**: each `held_by` reason, when opted in and `clean:
-  false`.
+- **Clean gate held by**: `gate summary`'s `clean_gate_held_by_line`, `none`
+  on a clean gate.
 
 It ends with the reply the human gives: "merge" to squash-merge, close the
 issue and clean up; with an unmet criterion, "merge" with an explicit waiver of
@@ -193,17 +194,27 @@ human's waiver beside "merge" clears it
 profile error. An inline-lane run reads it as `on-clean-gate` for its own PR.
 The unattended branch never evaluates this option.
 
-For an opted-in attended run, save the final `ci-wait` JSON beside the Run file
-and run `run-file gate clean <ci-file> --head <head_sha> --issue <issue>`
-(`--file <run.md>` for a record addressed by path). Read `<head_sha>` from
-`read-pr`; the mechanic answers `{clean, held_by}` and writes nothing, and
+**Every attended run, opted in or not, takes the summary's `Unmet criteria` and
+`Clean gate held by` lines from `run-file gate summary <pr> --issue <issue>`**
+(`--file <run.md>` for a record addressed by path), never from its own account
+of the run. Save the final settled `ci-wait` answer (not `pending`) to
+`ci-wait.json` beside the Run file after phase 8; the verb reads that file and
+the head `read-pr <pr>` returns, takes no ci-wait or head from the caller, and
+exits 2 naming the step to run where either is absent. It answers `gate
+clean`'s `{clean, held_by}` for that head (exit 0 clean, 1 held) plus
+`unmet_criteria_line` and `clean_gate_held_by_line`, the two lines to paste.
+The unattended lane keeps its own path and does not use it.
+
+For an opted-in attended run that answer is the decision; `run-file gate clean
+<ci-file> --head <head_sha> --issue <issue>` answers the same for a ci-wait file
+saved elsewhere or a head already in hand. The mechanic writes nothing, and
 `run-file --help` lists what holds the gate. Any `tracker-*.md` draft always
 holds it, and a `defect-*.md` draft never does (`*.base.md` files are saved
 originals, not drafts).
 
 On `clean: true`, post the summary with no reply line, then run the merge
 sequence below without waiting for a reply. On `clean: false`, post it with
-`Clean gate held by: <each held_by reason>` and the usual reply line, then
+`Clean gate held by: <clean_gate_held_by_line>` and the usual reply line, then
 wait for "merge". Exit 2 is an unreadable decision: name the error and wait.
 An auto-merge flag is never used: authorization is the recorded
 gate, after reviewers have finished.
@@ -232,13 +243,15 @@ this gate, including after a clean-gate decision. Two of them come back here:
 
 - `head-moved`: the earlier approval covered the old head only. Re-run
   `read-pr`, read the new commits, cite or re-run the gate for the new
-  `head_sha` per **The gate's verdict is cited**, rewrite the summary for it and
-  ask again, or re-run `run-file gate clean` with `--head <new head_sha>` when
+  `head_sha` per **The gate's verdict is cited**, wait for `ci-wait` on it, save
+  its settled answer to `ci-wait.json`, re-run `run-file gate summary <pr>`,
+  rewrite the summary from that answer and ask again, or decide on it when
   opted in.
-- `stale-base`: merge the base in, re-run the local gate and come back to this
-  gate. A merge with no conflict to resolve leaves the reviewer stops and
-  Verification passes covering the new head; one that resolved a conflict
-  breaks that coverage.
+- `stale-base`: merge the base in, re-run the local gate, save the new head's
+  settled `ci-wait` answer and come back to this gate for `gate summary`. A
+  merge with no conflict to resolve leaves the reviewer stops and Verification
+  passes covering the new head; one that resolved a conflict breaks that
+  coverage.
 
 Then each drafted tracker section. A Ship defect draft not yet filed goes into
 the closing message the way the [unattended
@@ -248,8 +261,9 @@ close 9` and set the task to the returned `mirror`, and last `cleanup
 <issue|none>`.
 
 **If the human says no or wants changes**, treat the note as the next round of
-work: apply it on the same branch, re-run the local gate, come back to this
-gate. Do not re-open the whole pipeline. Under `Merge: on-clean-gate` the
+work: apply it on the same branch, re-run the local gate, save the new head's
+settled `ci-wait` answer, come back to this gate and re-run `gate summary`. Do
+not re-open the whole pipeline. Under `Merge: on-clean-gate` the
 change breaks coverage, so `gate clean` holds, naming each piece of evidence
 with both heads: every reviewer stop, until an on-push reviewer's own round on
 the new head records a new stop

@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.49.0 (2026-10-20)
+
+### Features
+
+- **ship**: Refuse close 5 on unsettled criteria and add gate summary for the merge-gate lines
+  ([#895](https://github.com/Gharib89/skills/pull/895),
+  [`2153b02`](https://github.com/Gharib89/skills/commit/2153b029367988ef8f1e5c039ad43c124631eb0f))
+
+
 ## v0.48.0 (2026-10-19)
 
 ### Features
