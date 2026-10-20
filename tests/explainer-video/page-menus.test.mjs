@@ -1,6 +1,6 @@
 // The menus on the storyboard page: every option comes from the board document
 // (the page hardcodes none), a changed pick answers the card Revise with the new
-// value, and the picks and the brief's closed knobs read back through
+// value, and the picks and the brief's menu knobs read back through
 // `board.mjs apply`.
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
@@ -142,7 +142,7 @@ test("the answers text of a pick card reads back through apply and writes the pi
   assert.match(read(path.join(dir, "script.md")), /"seam": ?"cut-the-curve"/);
 });
 
-test("the brief's closed knobs are menus, length is a number, and the rest stay text", () => {
+test("the brief's menu knobs are menus, length is a number, and the rest stay text", () => {
   const v = P.view(session([sample("board-review")]));
   assert.deepEqual(knob(v, "language").options, ["en", "ar"]);
   assert.deepEqual(knob(v, "style").options, ["claude-code", "itworx"]);

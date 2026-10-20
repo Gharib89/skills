@@ -87,7 +87,7 @@ test("a rich component draws its own camera, so its card's camera menu is disabl
   assert.deepEqual(words.camera, noCamera);
 });
 
-test("the brief's closed knobs arrive as menus with their options, length as a number, the rest as text", () => {
+test("the brief's menu knobs arrive as menus with their options, length as a number, the rest as text", () => {
   const fx = fixture();
   prep(fx);
   // The brief lands after the voice stage, whose length gate would hold a
