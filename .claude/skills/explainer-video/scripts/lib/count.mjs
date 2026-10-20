@@ -20,6 +20,9 @@ export function plain(written) {
 }
 
 export function countText(written, p) {
+  // Settled, the text is the written one itself: a double cannot hold every
+  // value a script may write.
+  if (p >= 1) return written;
   const ascii = plain(written);
   const dot = ascii.indexOf(".");
   const places = dot < 0 ? 0 : ascii.length - dot - 1;

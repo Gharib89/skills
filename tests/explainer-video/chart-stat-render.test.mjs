@@ -58,6 +58,34 @@ test("countText counts from 0 to the number as written, a function of progress a
   assert.equal(countText("1,200.5", 0.4), "480.2");
 });
 
+test("a count-up ends on the written number even past a double's precision", () => {
+  for (const w of [
+    "9007199254740993",
+    "1.123456789012345678901",
+    "١٢٣٤٥٦٧٨٩٠١٢٣٤٥٦٧٨٩٠",
+  ])
+    assert.equal(countText(w, 1), w);
+});
+
+test("a count-up cued near the scene's end finishes inside the scene", async () => {
+  const html = await sceneFile(
+    {
+      id: "a",
+      narration: said,
+      visual: stat([
+        { at: 1, value: "240", label: "ms" },
+        { at: 2, value: "1,200", label: "per second" },
+      ]),
+    },
+    { ...timing, duration: 2.4 },
+    claude,
+    { backend: {}, seam: {}, dir: "ltr" },
+  );
+  const [a, b] = counted(html);
+  // sentence 2 is cued at 2 s, 0.4 s before the end: its count takes 0.4 s
+  assert.deepEqual([a.to.duration, b.to.duration], [0.9, 0.4]);
+});
+
 test("a stat's numbers sit in the markup as written and count up on their cues", async () => {
   const html = await drawn(
     stat([

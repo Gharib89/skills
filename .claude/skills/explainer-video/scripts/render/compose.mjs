@@ -199,15 +199,27 @@ async function sceneParts(
         t(cameraCue(scene.visual, scene.narration)) - camera.duration,
       ).toFixed(6)
     : null;
+  // A number counts up within the scene: a cue near the end shortens its count
+  // (and its bar) rather than cutting away on a half-counted number.
+  const fit = (at, d) =>
+    c.counts
+      ? +Math.min(d, Math.max(timing.duration - at, 0.05)).toFixed(6)
+      : d;
   const tweens = [
     ...c.reveals.map(reveal),
-    ...(c.tweens ?? []).map(([sel, from, to, at]) => [sel, from, to, t(at)]),
+    ...(c.tweens ?? []).map(([sel, from, to, at]) => [
+      sel,
+      from,
+      to.duration ? { ...to, duration: fit(t(at), to.duration) } : to,
+      t(at),
+    ]),
     ...depth,
   ];
   const counts = (c.counts ?? []).map(([sel, written, at]) => [
     sel,
     written,
     t(at),
+    fit(t(at), COUNT_SECONDS),
   ]);
   return {
     html: `    <div class="content" dir="${dir}">${push === null ? c.html : `<div class="camera">${c.html}</div>`}</div>
@@ -260,8 +272,8 @@ const countScript = (scope, counts) =>
         const counts = ${JSON.stringify(counts)};
         ${plain}
         ${countText}
-        for (const [sel, written, t] of counts)
-          tl.fromTo('${scope} ' + sel, { textContent: 0 }, { textContent: 1, duration: ${COUNT_SECONDS}, ease: "power2.out", modifiers: { textContent: (p) => countText(written, p) } }, t);`
+        for (const [sel, written, t, d] of counts)
+          tl.fromTo('${scope} ' + sel, { textContent: 0 }, { textContent: 1, duration: d, ease: "power2.out", modifiers: { textContent: (p) => countText(written, p) } }, t);`
     : "";
 
 // A full page: fonts, palette, the texture behind and over `body` and, under
