@@ -247,10 +247,11 @@ this gate, including after a clean-gate decision. Two of them come back here:
   its settled answer to `ci-wait.json`, re-run `run-file gate summary <pr>`,
   rewrite the summary from that answer and ask again, or decide on it when
   opted in.
-- `stale-base`: merge the base in, re-run the local gate and come back to this
-  gate. A merge with no conflict to resolve leaves the reviewer stops and
-  Verification passes covering the new head; one that resolved a conflict
-  breaks that coverage.
+- `stale-base`: merge the base in, re-run the local gate, save the new head's
+  settled `ci-wait` answer and come back to this gate for `gate summary`. A
+  merge with no conflict to resolve leaves the reviewer stops and Verification
+  passes covering the new head; one that resolved a conflict breaks that
+  coverage.
 
 Then each drafted tracker section. A Ship defect draft not yet filed goes into
 the closing message the way the [unattended
