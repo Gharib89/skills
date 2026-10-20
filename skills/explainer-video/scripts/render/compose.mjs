@@ -213,7 +213,7 @@ ${css}
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
 ${play(scope, tweens)}${pushScript(scope, push, camera)}
-        const full = Math.min(tl.duration(), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
+        const full = Math.min(Math.max(tl.duration(), ${seam.in?.duration ?? 0}), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};
         if (window.__stills) tl.time(full);
         else window.__timelines["${id}"] = tl;
