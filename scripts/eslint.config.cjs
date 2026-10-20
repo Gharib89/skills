@@ -36,7 +36,9 @@ module.exports = [
     files: ["**/*.mjs"],
     languageOptions: {
       sourceType: "module",
-      globals: { ...globals.node, ...globals.browser },
+      // nodeBuiltin, not node: node adds require, module and __dirname, which
+      // an ES module does not have, so a call to one would pass and throw.
+      globals: { ...globals.nodeBuiltin, ...globals.browser },
     },
     rules,
   },
