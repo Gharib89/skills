@@ -15,6 +15,7 @@ const BLOCK = `${BEGIN} (each run folder commits its recipe only)
 */check.json
 */support.json
 */stills.json
+*/samples.json
 */board/
 */storyboard.html
 */snapshots/
