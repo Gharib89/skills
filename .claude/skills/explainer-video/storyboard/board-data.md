@@ -14,6 +14,7 @@ its answers text back.
 - [Fields](#fields)
 - [Card status](#card-status)
 - [Recommendation](#recommendation)
+- [Menus](#menus)
 - [Answers text](#answers-text)
 - [Media](#media)
 
@@ -44,6 +45,11 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.brief` | array | yes | The brief, one entry per knob and list, in `brief.json` order. |
 | `board.brief[].knob` | string | yes | `focus`, `length`, `audience`, `language`, `style`, `voice`, `aspect`, `score`, `must` or `avoid`. |
 | `board.brief[].value` | string | yes | The value; a list's items joined by `; `. |
+| `board.brief[].type` | `"menu"`, `"number"` or `"text"` | yes | How the page offers the knob: a menu of `options`, a number (`length`, in minutes), or free text. |
+| `board.brief[].options` | array | no | A menu knob's options, as strings: `language`, `style`, `voice`, `aspect` and `score`. |
+| `board.voices` | array | yes | The narrators each language offers, one entry per language. The `voice` menu shows the entry of the language the human has picked. |
+| `board.voices[].language` | string | yes | The language code. |
+| `board.voices[].options` | array | yes | That language's narrator ids, as strings. |
 | `board.sources` | array | yes | The source pack, one entry per source. Empty for narration the user wrote. |
 | `board.sources[].id` | string | yes | The source's id. |
 | `board.sources[].kind` | string | yes | `repo`, `page`, `pdf`, ... |
@@ -71,6 +77,23 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].audio` | string | yes | The scene's narration as audio-only WebM, a media URL. |
 | `board.scenes[].clip` | string | delivered | The delivered video's stretch for this scene, an MP4 media URL. |
 | `board.scenes[].status` | `"open"`, `"approved"` or `"reopened"` | yes | See [Card status](#card-status). |
+| `board.scenes[].menus` | object | yes | The card's four [menus](#menus), each set to the agent's pick. |
+| `board.scenes[].menus.component` | object | yes | The scene's component menu. |
+| `board.scenes[].menus.component.pick` | string | yes | The component now in the scene. |
+| `board.scenes[].menus.component.options` | array | yes | Every component the profile does not ban, then `custom`. |
+| `board.scenes[].menus.component.disabled` | boolean | no | True when the menu cannot change on this card. |
+| `board.scenes[].menus.camera` | object | yes | The scene's camera beat menu. |
+| `board.scenes[].menus.camera.pick` | string | yes | The beat now in the scene, as a cue value. |
+| `board.scenes[].menus.camera.options` | array | yes | The scene's cues as cue values, in order of place. |
+| `board.scenes[].menus.camera.disabled` | boolean | no | True on a rich or custom card, or when the profile bans or locks the camera. |
+| `board.scenes[].menus.emphasis` | object | yes | The scene's emphasised item menu. |
+| `board.scenes[].menus.emphasis.pick` | string | yes | The item now emphasised, or `none`. |
+| `board.scenes[].menus.emphasis.options` | array | yes | `none`, then each item label the scene names once. |
+| `board.scenes[].menus.emphasis.disabled` | boolean | no | True when the component has no item to emphasise. |
+| `board.scenes[].menus.seam` | object | yes | The menu for the seam out of the scene. |
+| `board.scenes[].menus.seam.pick` | string | yes | The seam move now planned, or `cut`. |
+| `board.scenes[].menus.seam.options` | array | yes | The moves of the profile's seam family, then `cut`. |
+| `board.scenes[].menus.seam.disabled` | boolean | no | True on the last scene, which has no seam out. |
 | `answers.version` | number | yes | The version answered. |
 | `answers.submittedAt` | string | yes | ISO 8601 time of the Submit. |
 | `answers.scenes` | array | yes | One entry per card, in order. |
@@ -78,6 +101,11 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `answers.scenes[].choice` | `"approve"` or `"revise"` | yes | The human's answer. |
 | `answers.scenes[].note` | string | yes | What to change; empty when none. |
 | `answers.scenes[].narration` | string | yes | The edited narration lines; empty when unedited. |
+| `answers.scenes[].picks` | object | yes | The card's changed menu picks, by menu; empty when none changed. See [Menus](#menus). |
+| `answers.scenes[].picks.component` | string | no | The component picked. |
+| `answers.scenes[].picks.camera` | string | no | The camera beat picked, as a cue value. |
+| `answers.scenes[].picks.emphasis` | string | no | The item picked, or `none`. |
+| `answers.scenes[].picks.seam` | string | no | The seam move picked, or `cut`. |
 | `answers.brief` | array | yes | `<knob>=<value>` arguments for `brief.mjs`, one per changed knob and one per list item of a changed list; empty when none changed. |
 | `answers.kept` | array | no | Present when the board has `kept`: one entry per kept term respelt; empty when none changed. |
 | `answers.kept[].term` | string | yes | The kept term as the board listed it. |
@@ -110,6 +138,27 @@ answers. `build` makes one only while the delivered MP4 is at least as new as
 `stills.json`: new stills mean a changed script, so the next version is a
 review.
 
+## Menus
+
+The page hardcodes no option: every menu on a card and in the brief lists what
+the board document gives it, and opens on the pick the agent made. A menu with
+`disabled` set shows its pick and takes no change. A card's menu set to
+another option turns the card to `revise` and joins `answers.scenes[].picks`,
+which holds changed picks only. On a locked page every menu is disabled.
+
+- **Cue value.** A camera beat is `<at>` (a sentence number) or `<at> <phrase>`
+  (the sentence, then a phrase of it); the menu lists the scene's own cues.
+- **Written picks.** `board.mjs apply` writes a camera, emphasis or seam pick
+  into the scene's visual in `script.md`, so the run rebuilds only the scenes
+  whose picks, narration or note changed; every other scene stays cached.
+- **Component pick.** Each component's props differ, so `apply` writes none:
+  it prints `board <id> pick: component=<x>` and the scene joins the redo set,
+  which the agent rebuilds as that component.
+- **Brief knobs.** A `menu` knob is a select of its `options`; `voice` takes
+  the options of the language the human picked from `board.voices`, and
+  changing the language resets the voice to the first of the new language's.
+  A `number` knob is a number of minutes; a `text` knob is free text.
+
 ## Answers text
 
 The Submit comment carries the answers as text, and the page's copy fallback
@@ -123,6 +172,7 @@ either it or the answers document. One line per form, in this order:
 | `  note: <text>` | under a card with a note; a note's own line breaks become spaces |
 | `  narration:` | under a card whose narration was edited |
 | `    <line>` | each edited narration line, under `  narration:`, four spaces then the line as written |
+| `  pick: <menu>=<value>` | under a card, one per changed menu pick, after its note and narration |
 | `Brief: <knob>=<value>` | each `answers.brief` entry |
 | `Kept: <term> -> <to>` | each `answers.kept` entry |
 | `[cut to fit: read answers/board-<n>]` | last, when the text was cut to a comment's 4 KiB |

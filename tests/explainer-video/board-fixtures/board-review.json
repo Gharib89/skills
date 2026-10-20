@@ -7,39 +7,65 @@
   "brief": [
     {
       "knob": "focus",
-      "value": "how Ship lands a pull request"
+      "value": "how Ship lands a pull request",
+      "type": "text"
     },
     {
       "knob": "length",
-      "value": "2"
+      "value": "2",
+      "type": "number"
     },
     {
       "knob": "audience",
-      "value": "a developer new to Ship"
+      "value": "a developer new to Ship",
+      "type": "text"
     },
     {
       "knob": "language",
-      "value": "en"
+      "value": "en",
+      "type": "menu",
+      "options": [
+        "en",
+        "ar"
+      ]
     },
     {
       "knob": "style",
-      "value": "claude-code"
+      "value": "claude-code",
+      "type": "menu",
+      "options": [
+        "claude-code",
+        "itworx"
+      ]
     },
     {
       "knob": "voice",
-      "value": "am_fenrir"
+      "value": "am_fenrir",
+      "type": "menu",
+      "options": [
+        "bf_emma",
+        "am_fenrir",
+        "af_heart",
+        "elevenlabs-george"
+      ]
     },
     {
       "knob": "aspect",
-      "value": "16:9"
+      "value": "16:9",
+      "type": "menu",
+      "options": [
+        "16:9"
+      ]
     },
     {
       "knob": "must",
-      "value": "name the gate; show the merge"
+      "value": "name the gate; show the merge",
+      "type": "text"
     },
     {
       "knob": "avoid",
-      "value": "jargon"
+      "value": "jargon",
+      "type": "text"
     }
   ],
   "sources": [
@@ -72,7 +98,43 @@
       "slot": 9.8,
       "status": "open",
       "rich": false,
-      "recommendation": "approve"
+      "recommendation": "approve",
+      "menus": {
+        "component": {
+          "pick": "title",
+          "options": [
+            "title",
+            "cards",
+            "terminal",
+            "chart",
+            "words",
+            "custom"
+          ]
+        },
+        "camera": {
+          "pick": "1",
+          "options": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "emphasis": {
+          "pick": "none",
+          "options": [
+            "none"
+          ],
+          "disabled": true
+        },
+        "seam": {
+          "pick": "zoom-through",
+          "options": [
+            "zoom-through",
+            "cut-the-curve",
+            "cut"
+          ]
+        }
+      }
     },
     {
       "id": "steps",
@@ -87,7 +149,45 @@
       "slot": 12.5,
       "status": "open",
       "rich": false,
-      "recommendation": "approve"
+      "recommendation": "approve",
+      "menus": {
+        "component": {
+          "pick": "cards",
+          "options": [
+            "title",
+            "cards",
+            "terminal",
+            "chart",
+            "words",
+            "custom"
+          ]
+        },
+        "camera": {
+          "pick": "1",
+          "options": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "emphasis": {
+          "pick": "none",
+          "options": [
+            "none",
+            "Open",
+            "Gate",
+            "Merge"
+          ]
+        },
+        "seam": {
+          "pick": "zoom-through",
+          "options": [
+            "zoom-through",
+            "cut-the-curve",
+            "cut"
+          ]
+        }
+      }
     },
     {
       "id": "gate",
@@ -102,7 +202,60 @@
       "slot": 8.7,
       "status": "open",
       "rich": false,
-      "recommendation": "approve"
+      "recommendation": "approve",
+      "menus": {
+        "component": {
+          "pick": "terminal",
+          "options": [
+            "title",
+            "cards",
+            "terminal",
+            "chart",
+            "words",
+            "custom"
+          ]
+        },
+        "camera": {
+          "pick": "1",
+          "options": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "emphasis": {
+          "pick": "none",
+          "options": [
+            "none"
+          ],
+          "disabled": true
+        },
+        "seam": {
+          "pick": "cut",
+          "options": [
+            "cut"
+          ],
+          "disabled": true
+        }
+      }
+    }
+  ],
+  "voices": [
+    {
+      "language": "en",
+      "options": [
+        "bf_emma",
+        "am_fenrir",
+        "af_heart",
+        "elevenlabs-george"
+      ]
+    },
+    {
+      "language": "ar",
+      "options": [
+        "ar-eg-csagent-2",
+        "ar-eg-commercial-11"
+      ]
     }
   ]
 }

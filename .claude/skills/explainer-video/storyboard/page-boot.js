@@ -20,6 +20,9 @@ async function boot() {
     for (const f of ["choices", "narr", "notes", "brief", "kept"])
       for (const [k, v] of Object.entries(saved[f] || {}))
         if (k in d[f] && (typeof v === "string" || v === null)) d[f][k] = v;
+    for (const [id, picks] of Object.entries(saved.picks || {}))
+      for (const [m, v] of Object.entries(picks))
+        if (id in d.picks && typeof v === "string") d.picks[id][m] = v;
   }
   function render() {
     const f = document.activeElement,
@@ -99,8 +102,14 @@ async function boot() {
   });
   document.addEventListener("change", (e) => {
     const t = e.target;
-    if (!t.matches('input[type="radio"][data-id]')) return;
-    ACT.choose(S, { id: t.dataset.id, choice: t.value });
+    // A menu answers its card Revise; a brief menu re-renders so the voices follow the language.
+    if (t.matches("select[data-menu]"))
+      ACT.pick(S, { id: t.dataset.id, menu: t.dataset.menu, value: t.value });
+    else if (t.matches("select[data-brief]"))
+      ACT.brief(S, { knob: t.dataset.brief, value: t.value });
+    else if (t.matches('input[type="radio"][data-id]'))
+      ACT.choose(S, { id: t.dataset.id, choice: t.value });
+    else return;
     saveDraft();
     render();
   });

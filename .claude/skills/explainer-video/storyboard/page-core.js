@@ -23,11 +23,19 @@ function newState(title) {
 }
 const latest = (S) => S.boards[S.boards.length - 1];
 function newDraft(b) {
-  const d = { choices: {}, narr: {}, notes: {}, brief: {}, kept: {} };
+  const d = {
+    choices: {},
+    narr: {},
+    notes: {},
+    picks: {},
+    brief: {},
+    kept: {},
+  };
   for (const c of b.scenes) {
     d.choices[c.id] = c.recommendation;
     d.narr[c.id] = c.narration;
     d.notes[c.id] = "";
+    d.picks[c.id] = {};
   }
   for (const k of b.brief) d.brief[k.knob] = k.value;
   for (const t of b.kept || []) d.kept[t] = t;
@@ -88,17 +96,43 @@ const ACT = {
     if (d.field === "note" ? d.value.trim() : d.value !== c.narration)
       dr.choices[d.id] = "revise";
   },
+  // A menu set to another option than the agent's pick is a request to change the scene: it answers Revise.
+  pick(S, d) {
+    if (locked(S)) return;
+    const dr = draftOf(S);
+    dr.picks[d.id][d.menu] = d.value;
+    const c = latest(S).scenes.find((x) => x.id === d.id);
+    if (d.value !== c.menus[d.menu].pick) dr.choices[d.id] = "revise";
+  },
   approveAll(S) {
     if (!locked(S))
       for (const c of latest(S).scenes) draftOf(S).choices[c.id] = "approve";
   },
   brief(S, d) {
-    if (!locked(S)) draftOf(S).brief[d.knob] = d.value;
+    if (locked(S)) return;
+    const dr = draftOf(S);
+    dr.brief[d.knob] = d.value;
+    // A voice belongs to a language: another language takes its first voice unless the pick is one of its own.
+    const opts = voiceOptions(S);
+    if (d.knob === "language" && opts && !opts.includes(dr.brief.voice))
+      dr.brief.voice = opts[0];
   },
   kept(S, d) {
     if (!locked(S)) draftOf(S).kept[d.term] = d.value;
   },
 };
+
+// The voices of the language the draft brief holds, or undefined when the board lists none.
+const voiceOptions = (S) =>
+  latest(S).voices.find((v) => v.language === draftOf(S).brief.language)
+    ?.options;
+// A card's menu picks that differ from the agent's own.
+const changedPicks = (S, c) =>
+  Object.fromEntries(
+    Object.entries(draftOf(S).picks[c.id]).filter(
+      ([m, v]) => v !== c.menus[m].pick,
+    ),
+  );
 
 // Each kept term edited to a new non-empty spelling, as `{term, to}`.
 function keptEdits(S) {
@@ -139,6 +173,7 @@ function answersDoc(S, at = new Date().toISOString()) {
       note: d.notes[c.id].trim(),
       narration:
         d.narr[c.id].trim() && d.narr[c.id] !== c.narration ? d.narr[c.id] : "",
+      picks: changedPicks(S, c),
     })),
     brief: briefArgs(S),
     ...(b.kept && { kept: keptEdits(S) }),
@@ -161,6 +196,8 @@ function answersText(S) {
         "  narration:",
         ...c.narration.split("\n").map((l) => "    " + l),
       );
+    for (const [m, v] of Object.entries(c.picks))
+      lines.push(`  pick: ${m}=${v}`);
   }
   for (const a of doc.brief) lines.push("Brief: " + a);
   for (const k of doc.kept || []) lines.push("Kept: " + k.term + " -> " + k.to);
@@ -255,6 +292,28 @@ function player(S, b) {
       )
       .join("")}</ol></section>`;
 }
+// A select over `options`, the one equal to `cur` picked; `attrs` is its data attributes.
+const select = (attrs, options, cur, off) =>
+  `<select ${attrs} ${off ? "disabled" : ""}>${options
+    .map(
+      (o) =>
+        `<option value="${esc(o)}"${o === cur ? " selected" : ""}>${esc(o)}</option>`,
+    )
+    .join("")}</select>`;
+// One knob's input: a select for a closed knob (its voices those of the language picked), a number of minutes, or text.
+function knobInput(S, k, dis) {
+  const v = draftOf(S).brief[k.knob],
+    at = `data-brief="${esc(k.knob)}"`;
+  if (k.type === "menu")
+    return select(
+      at,
+      (k.knob === "voice" && voiceOptions(S)) || k.options,
+      v,
+      dis,
+    );
+  const kind = k.type === "number" ? 'number" min="1" step="any' : "text";
+  return `<input type="${kind}" ${at} value="${esc(v)}" ${dis}>`;
+}
 function briefPanel(S, b) {
   const d = draftOf(S),
     dis = locked(S) ? "disabled" : "";
@@ -264,7 +323,7 @@ function briefPanel(S, b) {
   return `<section class="brief panel"><span class="label">Brief</span><div class="knobs">${b.brief
     .map(
       (k) =>
-        `<label class="knob"><span class="label">${esc(k.knob)}</span><input type="text" data-brief="${esc(k.knob)}" value="${esc(d.brief[k.knob])}" ${dis}></label>`,
+        `<label class="knob"><span class="label">${esc(k.knob)}</span>${knobInput(S, k, dis)}</label>`,
     )
     .join("")}</div>${
     kept.length
@@ -322,6 +381,12 @@ function card(S, b, c) {
         ? `<p dir="auto">${esc(c.narration).replace(/\n/g, "<br>")}</p>`
         : `<label class="field"><span class="label">Narration (edit to reword)</span>
       <textarea dir="auto" rows="4" data-field="narration" data-id="${esc(c.id)}" ${dis}>${esc(d.narr[c.id])}</textarea></label>
+    <div class="menus">${Object.entries(c.menus)
+      .map(
+        ([m, x]) =>
+          `<label class="knob"><span class="label">${m}</span>${select(`data-menu="${m}" data-id="${esc(c.id)}"`, x.options, d.picks[c.id][m] ?? x.pick, dis || x.disabled)}</label>`,
+      )
+      .join("")}</div>
     <fieldset class="choices"><legend class="label">Your answer</legend>${radio("approve", "Approve")}${radio("revise", "Revise")}</fieldset>
     <label class="field"><span class="label">Note (what to change, optional)</span>
       <textarea dir="auto" rows="2" data-field="note" data-id="${esc(c.id)}" ${dis}>${esc(d.notes[c.id])}</textarea></label>`

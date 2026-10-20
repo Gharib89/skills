@@ -60,6 +60,10 @@ _Avoid_: clone, voice clone, custom voice
 A browser page with one card per scene (its narration, the scene in the run's style shown at its fullest moment and playing through its seam into the next, its timing and style notes) that the human approves or revises scene by scene, under an estimate of the first render's time. Each card arrives on the agent's recommendation (approve, or its proposed fix for a card with a finding), so the human may take the whole board in one answer. It is the one human checkpoint before production; everything after it runs behind video gates.
 _Avoid_: outline, shot list, script
 
+**Menu**:
+A select on a storyboard card (its component, camera beat, emphasised item or seam) or on the brief (a closed knob), set to the agent's pick and listing only the options the board document gives it. A menu changed from the agent's pick turns its card to Revise and applies on Submit: the agent rebuilds the changed scenes and posts the next board version. A menu is the human's way to steer a scene; the agent still authors a scene's content itself.
+_Avoid_: dropdown, picker, preset
+
 **Live build**:
 A video's own composition played in the browser instead of rendered: it can be seeked to any moment, looped, or driven by the narration, so the human sees motion before anything renders. Storyboard cards, the animatic and the style card's frames are live builds.
 _Avoid_: preview, mockup, prototype
