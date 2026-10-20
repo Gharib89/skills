@@ -12,10 +12,16 @@ const CODE_LINES = 12;
 export const lines = (code) => code.split("\n");
 
 // The techniques a style profile may ban beside the components, each with the
-// components that use it: `draw` strokes arrows on. The texture draws `blur`,
-// not a component: the profile loader checks it there. `camera` is a scene's
-// `camera` key, which compile checks.
-export const TECHNIQUES = { draw: ["flow"], blur: [], camera: [] };
+// components that use it: `draw` strokes arrows on, `kinetic` moves type word
+// by word. The texture draws `blur`, not a component: the profile loader checks
+// it there, and the type family `words` the same way for `kinetic`. `camera` is
+// a scene's `camera` key, which compile checks.
+export const TECHNIQUES = {
+  draw: ["flow"],
+  blur: [],
+  camera: [],
+  kinetic: ["words"],
+};
 
 const words = (s) => s.split(/\s+/).filter(Boolean);
 // A word compared without its case or its punctuation, an apostrophe inside

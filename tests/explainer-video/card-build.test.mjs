@@ -73,7 +73,7 @@ test("build gates five sample frames with check and the probe, each mid-way thro
   }
   assert.match(
     c.frames.find((f) => f.id === "arabic").html,
-    /dir="rtl"[\s\S]*فيديو شرح/,
+    /dir="rtl"[\s\S]*فيديو[\s\S]*شرح/,
   );
   // The local page embeds the same card, its fonts beside it.
   const local = read(fx.dir, "style-draft", "card", "stylecard.html");

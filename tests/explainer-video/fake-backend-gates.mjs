@@ -14,10 +14,12 @@ export function showing(dir, t) {
     /data-composition-id="([^"]+)" data-composition-src="[^"]+" data-start="([\d.]+)" data-duration="([\d.]+)"/g,
   ))
     if (on(m[2], m[3])) {
-      const scene = fs.readFileSync(
-        path.join(dir, "scenes", `${m[1]}.html`),
-        "utf8",
-      );
+      // A line of the type family `words` reads as the one box it is: the
+      // canned measure has no per-word rects.
+      const scene = fs
+        .readFileSync(path.join(dir, "scenes", `${m[1]}.html`), "utf8")
+        .replace(/<span class="w"><span class="wi k\d+">/g, "")
+        .replace(/<\/span><\/span>/g, "");
       // Each element's `dir`, or null, open around the text: the nearest one
       // outside it is the box it sits in.
       const dirs = [];
