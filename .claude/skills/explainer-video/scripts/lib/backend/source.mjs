@@ -5,6 +5,7 @@ import http from "node:http";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { skill, toolPaths, torchDevice } from "../tools.mjs";
+import { findChrome } from "./browser.mjs";
 import { fromCache, ffmpeg } from "./common.mjs";
 
 // The source stage's readers, each one format to text or HTML; the stage turns

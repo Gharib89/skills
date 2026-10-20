@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.40.2 (2026-10-20)
+
+### Bug Fixes
+
+- **explainer-video**: Import findChrome so HTML and page sources read again
+  ([#916](https://github.com/Gharib89/skills/pull/916),
+  [`6d9f24d`](https://github.com/Gharib89/skills/commit/6d9f24d76d650f679fe3a94b0d986b5efda35aed))
+
+
 ## v0.40.1 (2026-10-20)
 
 ### Bug Fixes
