@@ -10,7 +10,9 @@
 // a run (the scenes on the frame grid, each scene's WAV padded to its frames,
 // the last held HOLD seconds) with a synthetic tone for the narration; a later
 // slice adds its own scenes to it. The whole is rendered three times, the
-// style's texture included, and the halves split it after `HALF` scenes: the
+// style's texture included (a second and a third render catch noise that
+// drifts between runs, which two renders can match by chance), and the halves
+// split it after `HALF` scenes: the
 // first without the hold, the second with it.
 // stdout: `real-render <check>: pass|fail: <detail>` per check
 // exit:   0 every check passed · 1 a check failed · 2 a tool row is missing

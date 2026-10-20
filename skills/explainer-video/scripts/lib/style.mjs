@@ -263,7 +263,8 @@ function features(profile) {
   }
   const g = grammar(profile);
   checkBans(g, USES, profile.name);
-  // A blur the texture draws is a blur the profile bans.
+  // The ban covers the two blurs the texture sets by knob; the glass surface's
+  // backdrop blur is the surface itself, which `flat` replaces.
   if (g.bans.includes("blur"))
     for (const [overlay, knob] of Object.entries(BLURS))
       if (g.texture.overlays.includes(overlay) && g.texture[knob] > 0)

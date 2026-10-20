@@ -126,8 +126,8 @@ export async function strip(input, output, { first, fps }) {
 // array of seconds): a moving one differs by 1 a frame and by 9 at frame n/3, a
 // still one not at all. EXPLAINER_VIDEO_FAKE_MOTION is a JSON object of start
 // seconds to the scene's own differences, for a test that places a peak.
-export async function bandMotion(input, { start, duration, fps }) {
-  log({ call: "bandMotion", input, start, duration, fps });
+export async function bandMotion(input, { start, duration, fps, band }) {
+  log({ call: "bandMotion", input, start, duration, fps, band });
   const { n } = sceneFrames({ start, duration, fps });
   const own = JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_MOTION ?? "{}")[
     start
