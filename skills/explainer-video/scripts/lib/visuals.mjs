@@ -385,6 +385,57 @@ export const VISUALS = {
       p.items.map((x, i) => [`stat ${i + 1}`, x.at, [x.value, x.label], x.on]),
     numbers: (p) => p.items.map((x) => x.value),
   },
+  // Events along a line in the order written, the first at the reading start.
+  // `when` is display text, shown as written and never parsed. Rich like
+  // `words`.
+  timeline: {
+    props: ["items"],
+    rows: "items",
+    item: [...CUE, "when", "label", "note"],
+    ownCamera: true,
+    check: (p, said) => {
+      list("timeline", p.items, "items", said);
+      for (const x of p.items) {
+        named("timeline", x.when, "a when per item");
+        named("timeline", x.label, "a label per item");
+      }
+    },
+    items: (p) =>
+      p.items.map((x, i) => [
+        `event ${i + 1}`,
+        x.at,
+        [x.when, x.label, x.note],
+        x.on,
+      ]),
+  },
+  // Two sides, the first at the reading start, each a title over items; a
+  // side's title arrives with its first item. Rich like `words`.
+  compare: {
+    props: ["sides"],
+    ownCamera: true,
+    check: (p, said) => {
+      if (!Array.isArray(p.sides) || p.sides.length !== 2)
+        fail("compare needs 2 sides");
+      for (const s of p.sides) {
+        object(s, "a compare side");
+        named("compare", s.title, "a title per side");
+        list("compare", s.items, "items per side", said);
+        for (const x of s.items) text("compare", x.text, "a text per item");
+        known("a compare side", s, ["title", "items"]);
+        for (const x of s.items) known("a compare item", x, [...CUE, "text"]);
+      }
+    },
+    items: (p) =>
+      p.sides.flatMap((s, i) => [
+        [`side ${i + 1}`, s.items[0].at, [s.title], s.items[0].on],
+        ...s.items.map((x, j) => [
+          `side ${i + 1} item ${j + 1}`,
+          x.at,
+          [x.text],
+          x.on,
+        ]),
+      ]),
+  },
   code: {
     props: ["lang", "code", "file", "emphasis"],
     retired: {
