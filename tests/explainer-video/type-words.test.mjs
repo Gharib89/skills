@@ -81,6 +81,16 @@ test("a title and a subtitle compose one span per word, revealed in order on the
   assert.match(html, /<div class="kick r0">/);
 });
 
+test("the soft ease takes the words' rise, the velocity and spring eases rise on power4", async () => {
+  const eases = async (ease) =>
+    new Set(
+      rises(await drawn(title, odd({ ease }))).map(([, , to]) => to.ease),
+    );
+  assert.deepEqual([...(await eases("soft"))], ["power2.out"]);
+  assert.deepEqual([...(await eases("velocity"))], ["power4.out"]);
+  assert.deepEqual([...(await eases("spring"))], ["power4.out"]);
+});
+
 test("the stagger knob spaces the words", async () => {
   const tw = rises(await drawn(title, odd({ type: { stagger: 0.08 } })));
   assert.equal(tw[2][2].delay, 0.16);

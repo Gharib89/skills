@@ -138,6 +138,10 @@ async function sceneParts(
     type: {
       words: type.family === "words",
       stagger: type.stagger,
+      // `soft` is one `power2` ease for every reveal; a word's rise is a
+      // `power4` headline's under the other families, since a spring has no
+      // per-word form.
+      ease: ease === "soft" ? "power2.out" : "power4.out",
       blur: bans.includes("blur") ? 0 : TITLE_BLUR,
     },
     highlight: backend.highlight,

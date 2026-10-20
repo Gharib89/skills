@@ -183,7 +183,7 @@ export const COMPONENTS = {
             opacity: 1,
             ...(blur && { filter: "blur(0px)" }),
             duration: 0.6,
-            ease: "power4.out",
+            ease: x.type.ease,
             delay: +(n * x.type.stagger).toFixed(6),
           },
           1,
