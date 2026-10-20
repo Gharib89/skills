@@ -218,13 +218,16 @@ test("an item the emphasis blurs is on screen only until the emphasis lands, the
       ...(emphasis && { emphasis }),
     },
   });
-  const run = (emphasis) =>
+  const run = (emphasis, ...brief) =>
     line(
       check(
         fixture({
           scenes: edit(SCENES, 2, {
             sentences: [say(17), say(18, "[no-claim]"), say(2)],
             visual: steps(emphasis),
+          }),
+          ...(brief.length && {
+            brief: ["length=1", "must=local gate", "avoid=pricing", ...brief],
           }),
         }),
       ),
@@ -237,6 +240,11 @@ test("an item the emphasis blurs is on screen only until the emphasis lands, the
     /^script reading: fail: steps item 2: [\d.]+ s on screen vs 3\.2 s to read$/,
   );
   assert.match(run({ target: "Then", at: 1 }), /steps item 1: /);
+  // itworx draws no depth overlay, so nothing blurs and the whole scene counts
+  assert.equal(
+    run({ target: "Input", at: 1 }, "style=itworx"),
+    "script reading: pass",
+  );
 });
 
 test("a code diff's reader reads the lines the render adds, a moved line among them", () => {

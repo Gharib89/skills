@@ -113,12 +113,18 @@ const MIME = {
 // Runs in the page for one frame: the visible text owners and their geometry.
 // Measurements only; the layout gate judges them.
 function measureFrame() {
+  // A colour as `#rrggbb`, its alpha dropped. A `color-mix` serializes as
+  // `color(srgb r g b / a)` with channels from 0 to 1.
   const hex = (c) =>
     "#" +
     c
       .match(/[\d.]+/g)
       .slice(0, 3)
-      .map((v) => Math.round(+v).toString(16).padStart(2, "0"))
+      .map((v) =>
+        Math.round(c.startsWith("color(") ? +v * 255 : +v)
+          .toString(16)
+          .padStart(2, "0"),
+      )
       .join("");
   const r1 = (n) => Math.round(n * 10) / 10;
   const box = (r) => ({

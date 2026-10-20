@@ -4,7 +4,7 @@
 // whose visual is a component. The palette, the type scale and the faces come
 // from the style profile as CSS custom properties; every font is a file beside
 // the page.
-import { ARABIC, grammar, scale } from "../lib/style.mjs";
+import { ARABIC, blursDepth, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { cueWord } from "../lib/visuals.mjs";
@@ -149,13 +149,10 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
     return [sel, from, to, t(at)];
   };
   // Depth: once the emphasis lands, every item but the emphasised one falls out
-  // of focus. A code frame has no items to blur.
+  // of focus.
   const emphasis = scene.visual.props.emphasis;
   const depth =
-    emphasis &&
-    tx.overlays.includes("depth") &&
-    tx.depthBlur > 0 &&
-    !scene.visual.component.startsWith("code")
+    emphasis && blursDepth(tx, scene.visual.component)
       ? [
           [
             `:is(${ITEMS}):not(.em-host)`,

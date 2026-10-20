@@ -128,6 +128,14 @@ const RETIRED = {
   layout: "grammar.layout",
 };
 
+// Whether a scene of `component` blurs the items off focus when its emphasis
+// lands: the depth overlay is on with a blur above 0, and a code frame has no
+// items to blur. The renderer draws it and the reading gate counts it.
+export const blursDepth = (texture, component) =>
+  texture.overlays.includes("depth") &&
+  texture.depthBlur > 0 &&
+  !component.startsWith("code");
+
 // The grammar a profile plays: its own fields over the defaults.
 export function grammar(profile) {
   const g = profile.grammar ?? {};
@@ -263,14 +271,19 @@ function features(profile) {
   }
   const g = grammar(profile);
   checkBans(g, USES, profile.name);
-  // The ban covers the two blurs the texture sets by knob; the glass surface's
-  // backdrop blur is the surface itself, which `flat` replaces.
-  if (g.bans.includes("blur"))
+  // A blur the texture draws is a blur the profile bans: the two knobs, and
+  // the glass surface's backdrop blur, which `flat` and `sketch` do not draw.
+  if (g.bans.includes("blur")) {
     for (const [overlay, knob] of Object.entries(BLURS))
       if (g.texture.overlays.includes(overlay) && g.texture[knob] > 0)
         refuse(
           `grammar.texture.${knob} ${g.texture[knob]} blurs, which grammar.bans bans: set it to 0 or leave ${overlay} out of grammar.texture.overlays`,
         );
+    if (g.texture.surface === "glass")
+      refuse(
+        "grammar.texture.surface glass blurs, which grammar.bans bans: set it to flat or sketch",
+      );
+  }
 }
 
 // Body text sits on every surface; large or faint text (captions before their

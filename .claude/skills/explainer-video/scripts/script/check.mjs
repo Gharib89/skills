@@ -25,6 +25,7 @@ import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { blursDepth, findStyle, grammar } from "../lib/style.mjs";
 import { VISUALS, findPhrase } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
@@ -256,6 +257,12 @@ const drift = [];
 // longer one 0.3 s a word and 1.2 s at least; an item's texts add up.
 {
   const f = [];
+  // The run's texture decides whether an emphasis blurs the other items; a
+  // profile the render stage will refuse reads as the default one here.
+  let texture = grammar({}).texture;
+  try {
+    texture = grammar(findStyle(run, script.style).profile).texture;
+  } catch {}
   const floor = (t) => {
     const n = words(String(t ?? ""));
     return !n ? 0 : n <= 3 ? 0.8 : Math.max(1.2, 0.3 * n);
@@ -264,7 +271,7 @@ const drift = [];
     const items = VISUALS[s.visual.component].items(s.visual.props);
     const total = s.counts.reduce((a, b) => a + b, 0);
     const e = s.visual.props.emphasis;
-    const depth = e && !s.visual.component.startsWith("code");
+    const depth = e && blursDepth(texture, s.visual.component);
     const upTo = (n) => s.counts.slice(0, n).reduce((a, b) => a + b, 0);
     for (const [name, at, texts, on] of items) {
       // An `on` phrase starts the item that many words into its sentence.

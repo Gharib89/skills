@@ -234,7 +234,7 @@ test("a grammar that uses a component it bans is refused, naming the family and 
   );
 });
 
-test("a profile banning blur is refused while its field or depth blur is above 0, and loads once both are 0 or left out", () => {
+test("a profile banning blur is refused while its field or depth blur is above 0 or its surface is glass, and loads once those are 0, left out or flat or sketch", () => {
   const bans = ["blur"];
   refused(
     { grammar: { bans } },
@@ -244,9 +244,14 @@ test("a profile banning blur is refused while its field or depth blur is above 0
     { grammar: { bans, texture: { fieldBlur: 0 } } },
     /style profile odd: grammar\.texture\.depthBlur 4 blurs.*leave depth out/,
   );
+  // the glass surface blurs what is behind each box, so the ban refuses it too
+  refused(
+    { grammar: { bans, texture: { fieldBlur: 0, depthBlur: 0 } } },
+    /style profile odd: grammar\.texture\.surface glass blurs.*flat or sketch/,
+  );
   for (const texture of [
-    { fieldBlur: 0, depthBlur: 0 },
-    { overlays: ["grain", "vignette"] },
+    { surface: "flat", fieldBlur: 0, depthBlur: 0 },
+    { surface: "sketch", overlays: ["grain", "vignette"] },
     { surface: "flat", overlays: ["vignette"] },
   ])
     assert.doesNotThrow(
