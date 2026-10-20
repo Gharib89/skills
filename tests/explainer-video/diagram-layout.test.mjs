@@ -34,7 +34,7 @@ const overlap = (a, b) =>
   a.top < b.top + b.h &&
   b.top < a.top + a.h;
 // Each node box inside `box`, and no two overlapping; `what` names the case.
-function contained(nodes, box, what) {
+function assertContained(nodes, box, what) {
   for (const a of nodes) {
     assert.ok(
       a.left >= 0 &&
@@ -54,7 +54,7 @@ test("every node of every grid a frame holds sits inside the content area, and n
     const box = contentBox(layout);
     for (const heights of shapes()) {
       const { nodes } = diagramLayout(grid(heights), box, false);
-      contained(nodes, box, `${layout} ${heights}`);
+      assertContained(nodes, box, `${layout} ${heights}`);
       n++;
     }
   }
@@ -72,7 +72,7 @@ test("the real-render fixture's diagrams compile, and lay out inside the content
     for (const layout of ["open", "bands"]) {
       const box = contentBox(layout);
       const { nodes } = diagramLayout(scene.visual.props, box, dir === "rtl");
-      contained(nodes, box, `${scene.id} ${layout}`);
+      assertContained(nodes, box, `${scene.id} ${layout}`);
     }
   }
 });

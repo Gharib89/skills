@@ -34,8 +34,8 @@ const visual = {
     ],
   },
 };
-const drawn = (dir = "ltr", at = timing) =>
-  sceneFile({ id: "a", narration: said, visual }, at, claude, {
+const drawn = (dir = "ltr", timed = timing) =>
+  sceneFile({ id: "a", narration: said, visual }, timed, claude, {
     backend: {},
     seam: {},
     dir,
