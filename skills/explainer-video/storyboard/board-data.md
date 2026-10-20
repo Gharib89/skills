@@ -49,7 +49,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.brief[].options` | array | no | A menu knob's options, as strings: `language`, `style`, `voice`, `aspect` and `score`. |
 | `board.voices` | array | yes | The narrators each language offers, one entry per language. The `voice` menu shows the entry of the language the human has picked. |
 | `board.voices[].language` | string | yes | The language code. |
-| `board.voices[].options` | array | yes | That language's narrator ids, as strings. |
+| `board.voices[].options` | array | yes | That language's narrator ids, as strings, and the brief's own voice (`own:<name>`) last in its language's. |
 | `board.sources` | array | yes | The source pack, one entry per source. Empty for narration the user wrote. |
 | `board.sources[].id` | string | yes | The source's id. |
 | `board.sources[].kind` | string | yes | `repo`, `page`, `pdf`, ... |

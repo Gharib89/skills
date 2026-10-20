@@ -132,6 +132,24 @@ test("the brief's menu knobs arrive as menus with their options, length as a num
   assert.equal(knob("focus").options, undefined);
 });
 
+test("an enrolled own voice the brief holds stays in the voice menu and its language's voices", () => {
+  const fx = fixture();
+  prep(fx);
+  ok(run(fx, "brief/brief.mjs", ["voice=am_fenrir"]), "brief");
+  const file = path.join(fx.dir, "brief.json");
+  const held = JSON.parse(fs.readFileSync(file, "utf8"));
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ ...held, language: "ar", voice: "own:maya" }),
+  );
+  ok(board(fx, "build"), "build");
+  const d = doc(fx, 1);
+  const arabic = ["ar-eg-csagent-2", "ar-eg-commercial-11", "own:maya"];
+  assert.deepEqual(d.brief.find((x) => x.knob === "voice").options, arabic);
+  assert.deepEqual(d.voices.find((v) => v.language === "ar").options, arabic);
+  assert.equal(d.voices.find((v) => v.language === "en").options.length, 4);
+});
+
 // Answers approving every card but `steps`, which is revised with `lines`
 // under it, applied to board 1.
 const answered = (fx, lines) => {

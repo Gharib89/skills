@@ -28,6 +28,7 @@ function newDraft(b) {
     narr: {},
     notes: {},
     picks: {},
+    was: {},
     brief: {},
     kept: {},
   };
@@ -85,7 +86,9 @@ const canSubmit = (S) => !!latest(S) && !locked(S) && todoN(S) === 0;
 
 const ACT = {
   choose(S, d) {
-    if (!locked(S)) draftOf(S).choices[d.id] = d.choice;
+    if (locked(S)) return;
+    draftOf(S).choices[d.id] = d.choice;
+    delete draftOf(S).was[d.id];
   },
   // A note or an edited narration is a request to change the scene: it answers Revise.
   field(S, d) {
@@ -97,12 +100,19 @@ const ACT = {
       dr.choices[d.id] = "revise";
   },
   // A menu set to another option than the agent's pick is a request to change the scene: it answers Revise.
+  // The answer it replaced is kept in `was`, and comes back once nothing on the card asks for a change.
   pick(S, d) {
     if (locked(S)) return;
     const dr = draftOf(S);
     dr.picks[d.id][d.menu] = d.value;
     const c = latest(S).scenes.find((x) => x.id === d.id);
-    if (d.value !== c.menus[d.menu].pick) dr.choices[d.id] = "revise";
+    if (d.value !== c.menus[d.menu].pick) {
+      if (dr.choices[d.id] !== "revise") dr.was[d.id] = dr.choices[d.id] || "";
+      dr.choices[d.id] = "revise";
+    } else if (d.id in dr.was && !asks(S, c)) {
+      dr.choices[d.id] = dr.was[d.id];
+      delete dr.was[d.id];
+    }
   },
   approveAll(S) {
     if (!locked(S))
@@ -133,6 +143,12 @@ const changedPicks = (S, c) =>
       ([m, v]) => v !== c.menus[m].pick,
     ),
   );
+
+// Whether the card still asks for a change: a changed pick, a note or an edited narration.
+const asks = (S, c) =>
+  Object.keys(changedPicks(S, c)).length > 0 ||
+  !!draftOf(S).notes[c.id].trim() ||
+  draftOf(S).narr[c.id] !== c.narration;
 
 // Each kept term edited to a new non-empty spelling, as `{term, to}`.
 function keptEdits(S) {

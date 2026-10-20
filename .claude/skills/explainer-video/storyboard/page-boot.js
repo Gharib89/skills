@@ -23,6 +23,8 @@ async function boot() {
     for (const [id, picks] of Object.entries(saved.picks || {}))
       for (const [m, v] of Object.entries(picks))
         if (id in d.picks && typeof v === "string") d.picks[id][m] = v;
+    for (const [id, v] of Object.entries(saved.was || {}))
+      if (id in d.picks && typeof v === "string") d.was[id] = v;
   }
   function render() {
     const f = document.activeElement,

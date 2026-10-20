@@ -96,6 +96,34 @@ test("a changed pick answers the card Revise with the new value, and only a chan
   assert.doesNotMatch(P.answersText(S), /pick:/);
 });
 
+test("a pick put back on the agent's own returns the card to its earlier answer, unless something else still asks for a change", () => {
+  const answer = (S, id) =>
+    clone(P.answersDoc(S)).scenes.find((c) => c.id === id).choice;
+  const S = session([sample("board-review")]);
+  P.ACT.choose(S, { id: "steps", choice: "approve" });
+  P.ACT.pick(S, { id: "steps", menu: "camera", value: "2" });
+  assert.equal(answer(S, "steps"), "revise");
+  P.ACT.pick(S, { id: "steps", menu: "camera", value: "1" });
+  assert.equal(answer(S, "steps"), "approve");
+  // A second changed pick keeps Revise until both are back.
+  P.ACT.pick(S, { id: "steps", menu: "camera", value: "2" });
+  P.ACT.pick(S, { id: "steps", menu: "seam", value: "cut" });
+  P.ACT.pick(S, { id: "steps", menu: "camera", value: "1" });
+  assert.equal(answer(S, "steps"), "revise");
+  P.ACT.pick(S, { id: "steps", menu: "seam", value: "zoom-through" });
+  assert.equal(answer(S, "steps"), "approve");
+  // A note keeps it Revise, and so does an explicit Revise.
+  P.ACT.pick(S, { id: "steps", menu: "camera", value: "2" });
+  P.ACT.field(S, { id: "steps", field: "note", value: "slower" });
+  P.ACT.pick(S, { id: "steps", menu: "camera", value: "1" });
+  assert.equal(answer(S, "steps"), "revise");
+  const T = session([sample("board-review")]);
+  P.ACT.choose(T, { id: "steps", choice: "revise" });
+  P.ACT.pick(T, { id: "steps", menu: "camera", value: "2" });
+  P.ACT.pick(T, { id: "steps", menu: "camera", value: "1" });
+  assert.equal(answer(T, "steps"), "revise");
+});
+
 test("a locked page takes no pick", () => {
   const S = session(
     [sample("board-review")],

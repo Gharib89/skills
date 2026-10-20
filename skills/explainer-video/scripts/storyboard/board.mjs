@@ -418,7 +418,7 @@ const doc = {
     value: Array.isArray(v) ? v.join("; ") : String(v ?? ""),
     ...knobOffer(knob, run, brief),
   })),
-  voices: voices(),
+  voices: voices(brief),
   sources: (pack?.sources ?? []).map((s) => ({
     id: s.id,
     kind: s.kind,

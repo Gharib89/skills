@@ -16,14 +16,19 @@ const names = (dir) =>
         .map((f) => f.slice(0, -".json".length))
     : [];
 
-// The narrators of each language the skill voices, in narrators.json's order.
-export function voices() {
+// The narrators of each language the skill voices, in narrators.json's order,
+// and the brief's own voice (`own:<name>`, enrolled outside narrators.json)
+// last in its language's, so its menu opens on the agent's pick.
+export function voices(brief) {
   const out = [];
   for (const n of narrators()) {
     let l = out.find((x) => x.language === n.language);
     if (!l) out.push((l = { language: n.language, options: [] }));
     l.options.push(n.id);
   }
+  const mine = out.find((x) => x.language === brief?.language)?.options;
+  if (mine && brief.voice && !mine.includes(brief.voice))
+    mine.push(brief.voice);
   return out;
 }
 
@@ -49,7 +54,8 @@ export function knobOffer(knob, run, brief) {
       return {
         type: "menu",
         options:
-          voices().find((v) => v.language === brief.language)?.options ?? [],
+          voices(brief).find((v) => v.language === brief.language)?.options ??
+          [],
       };
     case "aspect":
       return { type: "menu", options: ASPECTS };
