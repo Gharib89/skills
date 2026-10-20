@@ -42,6 +42,8 @@ Root: None.
 
 Local-only: None.
 
+Ship's local gate rests on this: with no `full` check tied to this machine, it defers every `full` check to CI's `check-full` and runs only `secrets` and `version-lines` ([ship.md](ship.md#local-gate) says why).
+
 ## Declined
 
 Declined: shfmt: its default tab indent rewrites every indented line of this repo's two-space scripts, a change across the skills this repo writes; no Go toolchain on the maintainer's machine

@@ -49,8 +49,8 @@ self-review: the run's remaining phases then invoke the new mechanics. Changed
 its start. Ship's own prose is proven by the
 `ship-live-run` Verification in `docs/agents/ship.md`, which drives the
 worktree's Ship on a fixture repo; any other skill's prose is proven by its
-next run. The `derived-copies` gate in `scripts/local-gate.sh`
-fails when the two trees differ.
+next run. The `derived-copies` check in `scripts/check.sh full`, which
+CI's `check-full` leg runs on every PR head, fails when the two trees differ.
 
 ### Harness
 
@@ -66,6 +66,7 @@ Hooks in `.claude/settings.json` run `edit` after every Edit or Write and `turn`
 at every stop, and the pre-commit runner is the commit rung, which also runs the
 house-style check on Markdown. Harness profile: `docs/agents/harness.md`. Re-run
 `/setup-harness` after adding a stack, a member or a tool. Ship's gate,
-`scripts/local-gate.sh`, calls `full` and adds `secrets` and `version-lines`,
-which need a base ref. Ship's phase 5 runs that gate inline; outside Ship,
-`full` can run in the background.
+`scripts/local-gate.sh`, runs only `secrets` and `version-lines`, which need a
+base ref, and reports every `full` check `deferred-to-ci`: CI's `check-full`
+runs `full` on the PR head. Ship's phase 5 runs that gate inline; outside
+Ship, `full` can run in the background.
