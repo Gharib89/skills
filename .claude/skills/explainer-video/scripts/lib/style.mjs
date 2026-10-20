@@ -95,13 +95,20 @@ export const SCALE = {
 // knobs takes a bare family name or an object `{ family, ...knobs }`; a knob
 // is a number within its range; a field without knobs is a family name.
 const FIELDS = {
-  layout: { families: ["bands"] },
+  layout: { families: ["open", "bands"] },
   seams: { families: ["cut"], knobs: { duration: [0.2, 0.4], blur: [0, 24] } },
   camera: { families: ["locked"], knobs: { scale: [1.03, 1.12] } },
   type: { families: ["block"], knobs: { stagger: [0.03, 0.08] } },
-  ease: { families: ["soft", "spring"] },
+  ease: { families: ["velocity", "soft", "spring"] },
 };
-const SURFACES = ["flat", "sketch"];
+const SURFACES = ["glass", "flat", "sketch"];
+// The texture overlays, all on by default, and the knobs they take: the grain's
+// opacity, and the blur in px of the colour field and of the depth blur on
+// whatever is off focus. A `blur` ban refuses either blur above 0.
+const OVERLAYS = ["field", "grain", "vignette", "depth"];
+const TEXTURE = { grain: [0, 0.3], fieldBlur: [0, 240], depthBlur: [0, 24] };
+const TEXTURE_DEFAULTS = { grain: 0.08, fieldBlur: 120, depthBlur: 4 };
+const BLURS = { field: "fieldBlur", depth: "depthBlur" };
 
 // The components a family draws, keyed `<field>.<family>`: a grammar may not
 // ban one its own families need. No family draws one yet.
@@ -121,6 +128,14 @@ const RETIRED = {
   layout: "grammar.layout",
 };
 
+// Whether a scene of `component` blurs the items off focus when its emphasis
+// lands: the depth overlay is on with a blur above 0, and a code frame has no
+// items to blur. The renderer draws it and the reading gate counts it.
+export const blursDepth = (texture, component) =>
+  texture.overlays.includes("depth") &&
+  texture.depthBlur > 0 &&
+  !component.startsWith("code");
+
 // The grammar a profile plays: its own fields over the defaults.
 export function grammar(profile) {
   const g = profile.grammar ?? {};
@@ -129,7 +144,12 @@ export function grammar(profile) {
     out[field] = knobs
       ? { family: families[0], ...asFamily(g[field]) }
       : (g[field] ?? families[0]);
-  out.texture = { surface: SURFACES[0], ...g.texture };
+  out.texture = {
+    surface: SURFACES[0],
+    overlays: OVERLAYS,
+    ...TEXTURE_DEFAULTS,
+    ...g.texture,
+  };
   return out;
 }
 
@@ -201,9 +221,22 @@ function features(profile) {
       if (!plain(v))
         refuse(`grammar.texture is not an object like { "surface": "sketch" }`);
       for (const [k, t] of Object.entries(v)) {
-        if (k !== "surface") refuse(`grammar.texture.${k}: no such field`);
-        if (!SURFACES.includes(t))
-          refuse(`grammar.texture.surface ${t} is not ${or(SURFACES)}`);
+        if (k === "surface") {
+          if (!SURFACES.includes(t))
+            refuse(`grammar.texture.surface ${t} is not ${or(SURFACES)}`);
+        } else if (k === "overlays") {
+          if (!Array.isArray(t))
+            refuse("grammar.texture.overlays is not a list");
+          for (const o of t)
+            if (!OVERLAYS.includes(o))
+              refuse(`grammar.texture.overlays: ${o} is not ${or(OVERLAYS)}`);
+        } else if (Object.hasOwn(TEXTURE, k)) {
+          const [lo, hi] = TEXTURE[k];
+          if (!Number.isFinite(t))
+            refuse(`grammar.texture.${k} ${t} is not a number`);
+          if (t < lo || t > hi)
+            refuse(`grammar.texture.${k} ${t} is outside ${lo} to ${hi}`);
+        } else refuse(`grammar.texture.${k}: no such field`);
       }
     } else if (Object.hasOwn(FIELDS, field)) {
       const { families, knobs } = FIELDS[field];
@@ -236,7 +269,21 @@ function features(profile) {
     if (px < floor)
       refuse(`scale.${step} ${px} is under the ${floor} px layout floor`);
   }
-  checkBans(grammar(profile), USES, profile.name);
+  const g = grammar(profile);
+  checkBans(g, USES, profile.name);
+  // A blur the texture draws is a blur the profile bans: the two knobs, and
+  // the glass surface's backdrop blur, which `flat` and `sketch` do not draw.
+  if (g.bans.includes("blur")) {
+    for (const [overlay, knob] of Object.entries(BLURS))
+      if (g.texture.overlays.includes(overlay) && g.texture[knob] > 0)
+        refuse(
+          `grammar.texture.${knob} ${g.texture[knob]} blurs, which grammar.bans bans: set it to 0 or leave ${overlay} out of grammar.texture.overlays`,
+        );
+    if (g.texture.surface === "glass")
+      refuse(
+        "grammar.texture.surface glass blurs, which grammar.bans bans: set it to flat or sketch",
+      );
+  }
 }
 
 // Body text sits on every surface; large or faint text (captions before their

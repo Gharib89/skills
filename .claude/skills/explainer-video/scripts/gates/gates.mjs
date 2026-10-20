@@ -31,9 +31,9 @@ import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
 import { sampleTimes } from "../lib/motion.mjs";
-import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
+import { LUFS, floors, grammar, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
-import { FPS, H, W } from "../render/compose.mjs";
+import { FPS, H, W, contentBox } from "../render/compose.mjs";
 import { captionFindings, cuesOf } from "./captions.mjs";
 import { sceneEvents } from "./events.mjs";
 import { fullestFrame, motionAndDeterminism } from "./scene.mjs";
@@ -208,6 +208,7 @@ if (todo.length) {
       backend,
       orFail,
       seams,
+      band: contentBox(grammar(profile).layout),
     });
   }
   for (const p of todo) fs.writeFileSync(p.file, JSON.stringify(p.found));

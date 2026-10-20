@@ -2,6 +2,7 @@
 // helpers they share with the page composer in compose.mjs.
 import crypto from "node:crypto";
 import { diff, lines } from "../lib/visuals.mjs";
+import { GLASS } from "./texture.mjs";
 
 export const esc = (s) =>
   String(s)
@@ -10,8 +11,16 @@ export const esc = (s) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 
+// The selector of every item a scene can bring into or out of focus: a card, a
+// terminal line, a flow step, a panel, a list item.
+export const ITEMS = ".card, .line, .node, .panel, .item";
+
+// A box's fill: glass over the page's colour field, else the panel colour.
+const paint = (surface) =>
+  surface === "glass" ? GLASS : "background: var(--panel);";
+
 // A sketch surface draws each box's outline with rough.js, at the box's own
-// seed; a flat one draws it in CSS.
+// seed; a flat or glass one draws it in CSS.
 const sketched = (surface, d) =>
   surface === "sketch"
     ? `<svg class="sk" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="none"><path class="f" d="${d.fill}"/><path class="s" d="${d.stroke}"/></svg>`
@@ -25,7 +34,7 @@ const sketchCss = (surface) =>
 const boxCss = (surface) =>
   surface === "sketch"
     ? "position: relative;"
-    : "position: relative; background: var(--panel); border: 2px solid var(--line); border-radius: 18px;";
+    : `position: relative; ${paint(surface)} border: 2px solid var(--line); border-radius: 18px;`;
 
 // An arrow as one stroke, its head retraced, so `draw` strokes it whole.
 const ARROW = [
@@ -86,9 +95,9 @@ const CODE_VARS = {
   "token-punctuation": "muted",
   "token-link": "accent",
 };
-const codeFrame = (p, f, rows, LH) => ({
+const codeFrame = (p, f, rows, LH, surface) => ({
   html: `<div class="code rt" dir="ltr"><div class="bar">${esc(p.file ?? p.lang)}</div><div class="body">${rows}</div></div>`,
-  css: `.code { position: absolute; left: 0; top: 0; width: 1680px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; overflow: hidden; ${Object.entries(
+  css: `.code { position: absolute; left: 0; top: 0; width: 1680px; box-sizing: border-box; ${paint(surface)} border: 2px solid var(--line); border-radius: 18px; overflow: hidden; ${Object.entries(
     CODE_VARS,
   )
     .map(([k, v]) => `--code-${k}: var(--${v});`)
@@ -114,7 +123,7 @@ export const COMPONENTS = {
 .sub { font: 400 var(--size-body)/${f.lh(1.3, "text")} ${f.text}; color: var(--muted); max-width: 1500px; }`,
     reveals: [[".r0", 1, "land"]],
   }),
-  cards: (p, f) => {
+  cards: (p, f, x) => {
     const em = emphasised(
       p.emphasis,
       p.items.map((x) => x.label),
@@ -127,7 +136,7 @@ export const COMPONENTS = {
         )
         .join("")}</div>`,
       css: `.rail { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 40px; }
-.card { flex: 0 1 380px; min-height: 240px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 34px; }
+.card { flex: 0 1 380px; min-height: 240px; box-sizing: border-box; ${paint(x.surface)} border: 2px solid var(--line); border-radius: 18px; padding: 34px; }
 .label { font: 600 var(--size-label) ${f.text}; color: var(--muted); letter-spacing: ${f.ls("0.06em")}; text-transform: uppercase; }
 .value { margin-top: 26px; font: ${f.titleWeight} var(--size-title)/${f.lh(1.1, "title")} ${f.title}; color: var(--text); }
 .note { margin-top: 22px; font: 400 var(--size-small) ${f.note}; color: var(--muted); }
@@ -136,7 +145,7 @@ ${CALLOUT_CSS}`,
       tweens: reveal(p.emphasis),
     };
   },
-  terminal: (p, f) => {
+  terminal: (p, f, x) => {
     const em = emphasised(
       p.emphasis,
       p.lines.map((x) => x.text),
@@ -148,7 +157,7 @@ ${CALLOUT_CSS}`,
             `<div class="line r${i}${host(i === em, " row")}">${esc(x.text)}${i === em ? callout() : ""}</div>`,
         )
         .join("")}</div></div>`,
-      css: `.term { position: absolute; left: 260px; top: 30px; width: 1240px; height: 600px; box-sizing: border-box; background: var(--panel); border: 2px solid var(--line); border-radius: 18px; overflow: hidden; }
+      css: `.term { position: absolute; left: 260px; top: 30px; width: 1240px; height: 600px; box-sizing: border-box; ${paint(x.surface)} border: 2px solid var(--line); border-radius: 18px; overflow: hidden; }
 .bar { height: 56px; border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 26px; gap: 12px; font: 400 var(--size-label) ${f.code}; color: var(--muted); }
 .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--line); }
 .name { margin-left: 16px; }
@@ -282,6 +291,7 @@ ${CALLOUT_CSS}`,
       f,
       ring + rows.map((row) => `<div class="ln">${tokens(row)}</div>`).join(""),
       LH,
+      x.surface,
     );
     return {
       ...frame,
@@ -312,7 +322,7 @@ ${CALLOUT_CSS}`,
       return `<div class="ln ${op} ${cls}">${tokens(op === "del" ? was[i] : now[j])}</div>`;
     });
     return {
-      ...codeFrame(p, f, rows.join(""), LH),
+      ...codeFrame(p, f, rows.join(""), LH, x.surface),
       reveals: [[".rt", 1]],
       tweens,
     };

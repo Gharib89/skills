@@ -12,8 +12,9 @@ const CODE_LINES = 12;
 export const lines = (code) => code.split("\n");
 
 // The techniques a style profile may ban beside the components, each with the
-// components that use it: `draw` strokes arrows on.
-export const TECHNIQUES = { draw: ["flow"] };
+// components that use it: `draw` strokes arrows on. The texture draws `blur`,
+// not a component: the profile loader checks it there.
+export const TECHNIQUES = { draw: ["flow"], blur: [] };
 
 const words = (s) => s.split(/\s+/).filter(Boolean);
 // A word compared without its case or its punctuation, an apostrophe inside

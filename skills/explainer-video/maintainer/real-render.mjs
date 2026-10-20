@@ -9,8 +9,11 @@
 // ffmpeg. The fixture is FIXTURE below, composed as render/render.mjs composes
 // a run (the scenes on the frame grid, each scene's WAV padded to its frames,
 // the last held HOLD seconds) with a synthetic tone for the narration; a later
-// slice adds its own scenes to it. The whole is rendered twice, and the halves
-// split it after `HALF` scenes: the first without the hold, the second with it.
+// slice adds its own scenes to it. The whole is rendered three times, the
+// style's texture included (a second and a third render catch noise that
+// drifts between runs, which two renders can match by chance), and the halves
+// split it after `HALF` scenes: the
+// first without the hold, the second with it.
 // stdout: `real-render <check>: pass|fail: <detail>` per check
 // exit:   0 every check passed · 1 a check failed · 2 a tool row is missing
 import { spawnSync } from "node:child_process";
@@ -206,6 +209,7 @@ const videos = {};
 for (const [name, c, n] of [
   ["whole-1", whole, "whole"],
   ["whole-2", whole, "whole"],
+  ["whole-3", whole, "whole"],
   ["first", first, "first"],
   ["second", second, "second"],
 ]) {
@@ -216,18 +220,21 @@ for (const [name, c, n] of [
   }
 }
 
-const [a, b] = [framemd5(videos["whole-1"]), framemd5(videos["whole-2"])];
+const [a, ...others] = ["whole-1", "whole-2", "whole-3"].map((n) =>
+  framemd5(videos[n]),
+);
 check(
   "frame grid",
   a.length === whole.frames,
   `${a.length} frames rendered, the composer's grid is ${whole.frames}`,
 );
-const differing =
-  a.filter((l, i) => l !== b[i]).length + Math.abs(a.length - b.length);
+const differing = others.map(
+  (b) => a.filter((l, i) => l !== b[i]).length + Math.abs(a.length - b.length),
+);
 check(
   "determinism",
-  differing === 0,
-  `${differing} differing frames of ${a.length}`,
+  differing.every((n) => n === 0),
+  `${differing.join(" and ")} differing frames of ${a.length} against the first, in two more renders`,
 );
 
 const list = path.join(work, "halves.txt");

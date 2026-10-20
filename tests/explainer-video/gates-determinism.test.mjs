@@ -51,6 +51,8 @@ test("determinism renders each scene's peak-motion frame twice in two browsers a
     assert.ok(a.out.includes(path.join(".cache", "gates", "frames")), a.out);
   });
   assert.equal(calls(fx, "bandMotion").length, 3);
+  // the default layout is open: the motion gate crops its content from 96 px
+  assert.ok(calls(fx, "bandMotion").every((c) => c.band.top === 96));
 });
 
 test("a second gates run on an unchanged render makes no frame render call", () => {

@@ -31,11 +31,12 @@ function rtl(e, bad) {
   }
 }
 
-// A box is readable while fully shown, outside a seam and not carried by the
+// A box is readable while fully shown, not blurred by the depth overlay (a
+// box of 1 px or less still reads), outside a seam and not carried by the
 // camera: `moving(scene, t)` says whether the scene's seam or camera is
 // running at `t`, and the layout gate judges a box only while it reads.
 export const readable = (e, t, moving) =>
-  e.opacity >= 0.99 && !moving(e.scene, t);
+  e.opacity >= 0.99 && !(e.blur > 1) && !moving(e.scene, t);
 
 export function judge(checked, frames, floor, add, moving = () => false) {
   const { textPx, margin } = floor.layout;

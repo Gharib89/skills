@@ -9,6 +9,7 @@ import {
   sampleTimes,
   sceneFrames,
 } from "../../skills/explainer-video/scripts/lib/motion.mjs";
+import { readable } from "../../skills/explainer-video/scripts/lib/layout.mjs";
 import { sceneEvents } from "../../skills/explainer-video/scripts/gates/events.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 import {
@@ -125,4 +126,12 @@ test("the determinism frame lies outside every seam window of its scene", () => 
   assert.equal(r.code, 1, r.out + r.err);
   const t = calls(fx, "frame")[2].t;
   assert.ok(t < window[0] || t >= window[1], `${t} in ${window}`);
+});
+
+test("a box the depth overlay blurs is not readable, one blurred by a pixel or less is", () => {
+  const box = { opacity: 1, scene: "hook" };
+  const still = () => false;
+  assert.equal(readable({ ...box, blur: 0 }, 1, still), true);
+  assert.equal(readable({ ...box, blur: 1 }, 1, still), true);
+  assert.equal(readable({ ...box, blur: 4 }, 1, still), false);
 });

@@ -113,13 +113,26 @@ const MIME = {
 // Runs in the page for one frame: the visible text owners and their geometry.
 // Measurements only; the layout gate judges them.
 function measureFrame() {
+  // A colour as `#rrggbb`, its alpha dropped. A `color-mix` serializes as
+  // `color(srgb r g b / a)` with channels from 0 to 1.
   const hex = (c) =>
     "#" +
     c
       .match(/[\d.]+/g)
       .slice(0, 3)
-      .map((v) => Math.round(+v).toString(16).padStart(2, "0"))
+      .map((v) =>
+        Math.round(c.startsWith("color(") ? +v * 255 : +v)
+          .toString(16)
+          .padStart(2, "0"),
+      )
       .join("");
+  // A colour as [r, g, b, alpha], channels 0 to 255, in any form the computed
+  // style takes (`rgb`, `rgba`, `color(srgb ...)`).
+  const rgba = (c) => {
+    const n = c.match(/[\d.]+/g).map(Number);
+    const k = c.startsWith("color(") ? 255 : 1;
+    return [n[0] * k, n[1] * k, n[2] * k, n.length > 3 ? n[3] : 1];
+  };
   const r1 = (n) => Math.round(n * 10) / 10;
   const box = (r) => ({
     left: r1(r.left),
@@ -161,16 +174,36 @@ function measureFrame() {
     const r = el.getBoundingClientRect();
     const scale = el.offsetHeight > 0 ? r.height / el.offsetHeight : 1;
     let opacity = 1;
+    let blur = 0;
     let clip = null;
-    let bg = null;
+    let bg;
+    let solid = false;
+    const layers = [];
     for (let a = el; a; a = a.parentElement) {
       const acs = getComputedStyle(a);
       opacity *= +acs.opacity;
+      blur = Math.max(
+        blur,
+        parseFloat(/blur\(([\d.]+)px\)/.exec(acs.filter)?.[1] ?? 0),
+      );
       if (!clip && a !== el && acs.overflow !== "visible")
         clip = box(a.getBoundingClientRect());
-      if (!bg && !/rgba\(.*, 0\)$|transparent/.test(acs.backgroundColor))
-        bg = hex(acs.backgroundColor);
+      if (!solid) {
+        const [r, g, b, al] = rgba(acs.backgroundColor);
+        if (al > 0) layers.push([r, g, b, al]);
+        solid = al === 1;
+      }
     }
+    // The box's ground: each see-through layer (the glass surface) over the
+    // ones behind it, down to the first opaque one, else white.
+    const ground = layers.reduceRight(
+      (under, [r, g, b, al]) =>
+        [r, g, b].map((v, i) => v * al + under[i] * (1 - al)),
+      [255, 255, 255],
+    );
+    bg =
+      "#" +
+      ground.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
     out.push({
       text: own.slice(0, 60),
       words: own.trim().split(/\s+/).length,
@@ -184,9 +217,10 @@ function measureFrame() {
       clientW: el.clientWidth,
       clientH: el.clientHeight,
       opacity,
+      blur,
       clip,
       color: hex(cs.color),
-      bg: bg ?? "#ffffff",
+      bg,
       // Reading direction: the element's own, the `dir` it sits in, how it
       // is isolated and wrapped, and its line height against its ink.
       dir: cs.direction,

@@ -1,21 +1,26 @@
-// The HyperFrames composition in the `bands` layout, its ease `soft` or
-// `spring`: a page per render (the video's index.html, or a stills page), and
-// one sub-composition file per scene whose visual is a component. The palette,
-// the type scale and the faces come from the style profile as CSS custom
-// properties; every font is a file beside the page.
-import { ARABIC, grammar, scale } from "../lib/style.mjs";
+// The HyperFrames composition in the profile's layout (`open` or `bands`), its
+// ease `velocity`, `soft` or `spring` and its texture: a page per render (the
+// video's index.html, or a stills page), and one sub-composition file per scene
+// whose visual is a component. The palette, the type scale and the faces come
+// from the style profile as CSS custom properties; every font is a file beside
+// the page.
+import { ARABIC, blursDepth, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { cueWord } from "../lib/visuals.mjs";
-import { COMPONENTS, esc, seed } from "./components.mjs";
+import { COMPONENTS, ITEMS, esc, seed } from "./components.mjs";
+import { texture } from "./texture.mjs";
 
 export { esc };
 
 export const W = 1920;
 export const H = 1080;
 export const FPS = 30;
-// The content band every scene draws in, between the header and the captions.
+// The content band every scene draws in, above the captions: under the `bands`
+// layout's header, or from the top under `open`, which has none.
 export const CONTENT = { left: 120, top: 178, width: 1680, height: 690 };
+const OPEN = { left: 120, top: 96, width: 1680, height: 772 };
+export const contentBox = (layout) => (layout === "open" ? OPEN : CONTENT);
 // A caption is 40 px whatever the profile's `scale`: the caption band and
 // CUE_CHARS are sized for it. 40 px Inter fits about 70 characters a line in
 // the 1680 px band: 84 is at most two lines.
@@ -25,6 +30,13 @@ const RISE = [
   { opacity: 0, y: RISE_PX },
   { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
 ];
+// A reveal under `velocity`: each class on its own fast-out ease, a headline
+// the longest and a snap the sharpest.
+const VELOCITY = {
+  settle: { duration: 0.45, ease: "power3.out" },
+  land: { duration: 0.6, ease: "power4.out" },
+  snap: { duration: 0.3, ease: "expo.out" },
+};
 // A reveal under `spring`: the opacity, position and scale it starts from and
 // ends on, the class's settle time as its duration, and the class itself, which
 // the scene script evaluates (`SPRING[class]`) in place of a GSAP ease.
@@ -98,8 +110,9 @@ ${script}
 async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
   const id = scene.id;
   const f = faces(profile, dir);
-  const { ease, texture } = grammar(profile);
-  const { surface } = texture;
+  const { ease, layout, texture: tx } = grammar(profile);
+  const { surface } = tx;
+  const box = contentBox(layout);
   const x = {
     surface,
     // A code row is the code step at 1.4 (45 px at 32), so a `scale.code`
@@ -129,18 +142,35 @@ async function sceneParts(scene, timing, profile, { backend, dir = "ltr" }) {
       ? timing.sentences[cue.at - 1]
       : timing.words[cueWord(scene.narration, cue)];
   };
+  const reveal = ([sel, at, cls = "settle"]) => {
+    if (ease === "spring") return [sel, ...sprung(cls), t(at), cls];
+    const [from, to] =
+      ease === "velocity" ? [RISE[0], { ...RISE[1], ...VELOCITY[cls] }] : RISE;
+    return [sel, from, to, t(at)];
+  };
+  // Depth: once the emphasis lands, every item but the emphasised one falls out
+  // of focus.
+  const emphasis = scene.visual.props.emphasis;
+  const depth =
+    emphasis && blursDepth(tx, scene.visual.component)
+      ? [
+          [
+            `:is(${ITEMS}):not(.em-host)`,
+            { filter: "blur(0px)" },
+            { filter: `blur(${tx.depthBlur}px)`, duration: 0.35 },
+            t(emphasis),
+          ],
+        ]
+      : [];
   const tweens = [
-    ...c.reveals.map(([sel, at, cls = "settle"]) =>
-      ease === "spring"
-        ? [sel, ...sprung(cls), t(at), cls]
-        : [sel, ...RISE, t(at)],
-    ),
+    ...c.reveals.map(reveal),
     ...(c.tweens ?? []).map(([sel, from, to, at]) => [sel, from, to, t(at)]),
+    ...depth,
   ];
   return {
     html: `    <div class="content" dir="${dir}">${c.html}</div>
     <style>
-${scope} .content { position: absolute; left: ${CONTENT.left}px; top: ${CONTENT.top}px; width: ${CONTENT.width}px; height: ${CONTENT.height}px; }
+${scope} .content { position: absolute; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; }
 ${css}
     </style>`,
     script: `      (function () {
@@ -176,9 +206,9 @@ const play = (scope, tweens) =>
     : `        for (const [sel, from, to, t] of tweens)
           tl.fromTo('${scope} ' + sel, from, to, t);`;
 
-// A full page: fonts, palette, the header band, then `body` inside the root.
-// Right to left, the header and the captions mirror and the root does not:
-// `dir` sits on the text boxes alone.
+// A full page: fonts, palette, the texture behind and over `body` and, under
+// `bands`, the header band, inside the root. Right to left, the header and the
+// captions mirror and the root does not: `dir` sits on the text boxes alone.
 function page({
   title,
   profile,
@@ -196,6 +226,9 @@ function page({
     )
     .join("\n");
   const f = faces(profile, dir);
+  const { layout, texture: tx } = grammar(profile);
+  const tex = texture(tx);
+  const bands = layout === "bands";
   const tokens = [
     ...Object.entries(profile.colors).map(([k, v]) => `--${k}: ${v};`),
     ...Object.entries({ ...scale(profile), caption: CAPTION_PX }).map(
@@ -226,19 +259,23 @@ ${fontFaces}
 :root { ${tokens} }
 html, body { margin: 0; width: ${W}px; height: ${H}px; overflow: hidden; background: var(--bg); }
 #root { position: relative; width: ${W}px; height: ${H}px; overflow: hidden; background: var(--bg); color: var(--text); font-family: ${f.text}; }
-.clip { position: absolute; inset: 0; }
+.clip { position: absolute; inset: 0; }${
+    bands
+      ? `
 .header { position: absolute; left: 120px; right: 120px; top: 56px; height: 80px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); }
 .mark { width: 18px; height: 18px; border-radius: 4px; background: var(--accent); }
-.kicker { font: 600 var(--size-label) ${f.text}; color: var(--muted); letter-spacing: ${f.ls("0.04em")}; text-transform: uppercase; }
-.captions { position: absolute; left: 120px; right: 120px; ${band} }
+.kicker { font: 600 var(--size-label) ${f.text}; color: var(--muted); letter-spacing: ${f.ls("0.04em")}; text-transform: uppercase; }`
+      : ""
+  }
+${tex.css}
+.captions { position: absolute; z-index: 30; left: 120px; right: 120px; ${band} }
 .cue { display: flex; align-items: center; justify-content: center; text-align: center; font: 400 var(--size-caption)/${f.lh(1.3, "caption")} ${f.text}; color: var(--faint); overflow: hidden; }${latin}
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-fps="${FPS}" data-duration="${duration}">
-      <div class="header" dir="${dir}"><div class="mark"></div><div class="kicker">${f.t(title)}</div></div>
-${body}
-    </div>
+${tex.back}${bands ? `      <div class="header" dir="${dir}"><div class="mark"></div><div class="kicker">${f.t(title)}</div></div>\n` : ""}${body}
+${tex.front}    </div>
     <script>
 ${script}
     </script>

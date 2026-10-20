@@ -25,6 +25,7 @@ import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { blursDepth, findStyle, grammar } from "../lib/style.mjs";
 import { VISUALS, findPhrase } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
@@ -250,11 +251,16 @@ const drift = [];
 
 // reading: each visual item on screen long enough to read, from the sentence
 // (or the `on` phrase) it rises at to the scene's end, timed by its share of
-// the scene's words. A
-// text of at most three words is a label, 0.8 s; a longer one 0.3 s a word
-// and 1.2 s at least; an item's texts add up.
+// the scene's words, or in a scene with an emphasis to the emphasis's cue for
+// every item but the emphasised one, which the depth overlay blurs from then
+// on (code takes none). A text of at most three words is a label, 0.8 s; a
+// longer one 0.3 s a word and 1.2 s at least; an item's texts add up.
 {
   const f = [];
+  // The run's texture decides whether an emphasis blurs the other items. A
+  // style no store holds is the render stage's to refuse, and reads as the
+  // default profile here; a profile file that is not JSON stops the compile.
+  const texture = grammar(findStyle(run, script.style).profile ?? {}).texture;
   const floor = (t) => {
     const n = words(String(t ?? ""));
     return !n ? 0 : n <= 3 ? 0.8 : Math.max(1.2, 0.3 * n);
@@ -262,11 +268,20 @@ const drift = [];
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {
     const items = VISUALS[s.visual.component].items(s.visual.props);
     const total = s.counts.reduce((a, b) => a + b, 0);
+    const e = s.visual.props.emphasis;
+    const depth = e && blursDepth(texture, s.visual.component);
+    const upTo = (n) => s.counts.slice(0, n).reduce((a, b) => a + b, 0);
     for (const [name, at, texts, on] of items) {
       // An `on` phrase starts the item that many words into its sentence.
       const into = on === undefined ? 0 : findPhrase(s.narration[at - 1], on);
-      const after = s.counts.slice(at - 1).reduce((a, b) => a + b, 0) - into;
-      const shown = (s.seconds * after) / total;
+      const start = upTo(at - 1) + into;
+      // A list's title is no `ITEMS` box, so the depth overlay leaves it sharp.
+      const blurred = depth && name !== "title" && texts[0] !== e.target;
+      const end = blurred
+        ? upTo(e.at - 1) +
+          (e.on === undefined ? 0 : findPhrase(s.narration[e.at - 1], e.on))
+        : total;
+      const shown = (s.seconds * (end - start)) / total;
       const read = texts.reduce((a, t) => a + floor(t), 0);
       if (shown < read)
         f.push(

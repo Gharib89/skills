@@ -217,8 +217,11 @@ the pack's outline and the brief, then holds it to the **script gates**. Read
    - `coverage`: the `must` and `avoid` items, each matched as whole words in
      any case (`must=merge` is not met by "merges").
    - `reading`: each visual item on screen, from the sentence it rises at to
-     the scene's end, long enough to read: 0.8 s for three words or fewer,
-     else 0.3 s a word and at least 1.2 s; a card's texts add up.
+     the scene's end (with the profile's depth overlay on, an item the
+     emphasis does not name, to the emphasis's cue, since the overlay blurs it
+     then), long enough to read: 0.8 s
+     for three words or fewer, else 0.3 s a word and at least 1.2 s; a card's
+     texts add up.
 5. **On exit 1** with `script: no <input>: <why>` on stderr and no gate lines,
    run what `<why>` names, then the script gates again. Otherwise fix what each
    `fail` line names in the scene file, compile, then run the support check
