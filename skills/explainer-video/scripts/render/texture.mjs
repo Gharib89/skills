@@ -25,13 +25,16 @@ const erf = (x) => {
 
 // The share of a disc of radius r that a Gaussian blur of deviation s (a CSS
 // blur radius) leaves at d from its centre. Each vertical chord's blur along y
-// is an erf; Simpson's rule sums those along x, weighted by the x Gaussian.
+// is an erf; Simpson's rule sums those along x, weighted by the x Gaussian,
+// over the chords within 6s of d only, so the step stays small beside s.
 const coverage = (r, s, d) => {
+  const [a, b] = [Math.max(-r, d - 6 * s), Math.min(r, d + 6 * s)];
+  if (a >= b) return 0;
   const n = 200; // Simpson's intervals: must stay even
-  const h = (2 * r) / n;
+  const h = (b - a) / n;
   let sum = 0;
   for (let k = 0; k <= n; k++) {
-    const x = -r + k * h;
+    const x = a + k * h;
     const chord = erf(Math.sqrt(Math.max(0, r * r - x * x)) / (s * Math.SQRT2));
     sum +=
       (k % n ? 2 + (k % 2) * 2 : 1) *

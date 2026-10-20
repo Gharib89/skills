@@ -107,6 +107,17 @@ test("a profile leaves an overlay out, or sets its blur to 0, and the page leave
     /\.field \.a \{[^}]*radial-gradient\(circle 380px, var\(--accent\) 380px, transparent 380px\)/,
   );
   assert.ok(!tweens(flat, "steps").some(([sel]) => sel.includes(":not(")));
+  // a slight blur still mixes a share from 0 to 100% at every stop
+  const shares = [
+    ...comp(run(EMPHASISED, { texture: { fieldBlur: 1 } })).matchAll(
+      /var\(--(?:accent|rule|line)\) (-?[\d.]+)%, transparent\)/g,
+    ),
+  ].map(([, pct]) => +pct);
+  assert.ok(shares.length, "no field stops");
+  assert.ok(
+    shares.every((pct) => pct >= 0 && pct <= 100),
+    String(shares),
+  );
 });
 
 test("a code scene takes no depth blur, its emphasis ring being the focus", () => {
