@@ -27,11 +27,15 @@ export function readAnswers(raw, n, fail) {
         choice: m[2].toLowerCase(),
         note: "",
         narration: "",
+        picks: {},
       };
       answers.scenes.push(card);
       inNarration = false;
     } else if (card && (m = line.match(/^ {2}note: (.*)$/))) {
       card.note = m[1];
+      inNarration = false;
+    } else if (card && (m = line.match(/^ {2}pick: ([a-z]+)=(.+)$/))) {
+      card.picks[m[1]] = m[2];
       inNarration = false;
     } else if (card && line === "  narration:") {
       inNarration = true;
