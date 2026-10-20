@@ -44,11 +44,10 @@ FULL_RUN=''
 #   <path prefix>|<member>|<globs>|<typecheck>|<tests>|<affected tests>
 # A changed file matching a row's globs belongs to the row with the longest
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
-# member's directory; <affected tests> takes {files}, relative to it, and an
-# empty one runs <tests>. An empty command is no check. A deleted file is an
-# argument to affected tests only through {paths}, which takes every changed
-# path the way {files} takes the files on disk, for a selector that places a
-# file by its name.
+# member's directory; <affected tests> takes {files}, the changed files on
+# disk, or {paths}, every changed path with deleted ones included, for a
+# selector that maps a path to tests by name; both are relative to the member,
+# and an empty one runs <tests>. An empty command is no check.
 TURN_ROWS=''
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS=''
@@ -244,8 +243,8 @@ EOF
     # shellcheck disable=SC2086 # the list splits on newlines only
     set -- $rel
     unset IFS
-    affected=${affected//\{files\}/$(quoted "$@")}
-    check "tests:$member" "$dir" "${affected//\{paths\}/$(quoted "$@")}"
+    f=$(quoted "$@") affected=${affected//\{files\}/$f}
+    check "tests:$member" "$dir" "${affected//\{paths\}/$f}"
   elif [ -n "$tests" ]; then
     check "tests:$member" "$dir" "$tests"
   fi
