@@ -26,12 +26,17 @@ async function boot() {
       fid = f && (f.id || null);
     const t = document.createElement("template");
     t.innerHTML = view(S);
-    // Playing media outlives a render. The narration is moved over its fresh twin. A live frame is
+    // Playing media outlives a render. Each audio element is moved over its fresh twin. A live frame is
     // moved with moveBefore, which keeps its document where any other move reloads it; one with no
     // twin (its card left the view) is dropped, and a twin with no frame starts in mount().
-    const audio = document.getElementById("player-audio"),
-      twin = t.content.getElementById("player-audio");
-    if (audio && twin) twin.replaceWith(audio);
+    for (const audio of app.querySelectorAll("audio[id], audio[data-audio]")) {
+      const twin = audio.id
+        ? t.content.getElementById(audio.id)
+        : [...t.content.querySelectorAll("[data-audio]")].find(
+            (x) => x.dataset.audio === audio.dataset.audio,
+          );
+      if (twin) twin.replaceWith(audio);
+    }
     const frames = [...app.querySelectorAll("iframe[data-live]")],
       olds = [...app.childNodes],
       slots = [...t.content.querySelectorAll("iframe[data-live]")];
@@ -72,10 +77,7 @@ async function boot() {
     if (act === "wake") return rewake(t);
     if (act === "copy") return copy();
     if (act === "play") return playAnimatic(0);
-    if (act === "jump")
-      return playAnimatic(
-        latest(S).scenes.find((c) => c.id === t.dataset.id).start,
-      );
+    if (act === "jump") return playAnimatic(sceneOf(t.dataset.id).start);
     if (act === "card-play") return cardPlay(t.dataset.id);
     if (act === "stop") return stop();
   });
@@ -129,10 +131,9 @@ async function boot() {
     }));
     return build.bytes.map((x) => ({ ...x, data: x.data.slice(0) }));
   };
-  const frameOf = (id) =>
-    [...document.querySelectorAll("iframe[data-live]")].find(
-      (x) => x.dataset.live === id,
-    );
+  const frames = () => [...document.querySelectorAll("iframe[data-live]")];
+  const frameOf = (id) => frames().find((x) => x.dataset.live === id);
+  const sceneOf = (id) => latest(S).scenes.find((x) => x.id === id);
   const say = (el, m) => el.contentWindow.postMessage(m, "*");
   // A frame with no origin can only be answered at "*"; its window is told apart by identity.
   async function mount() {
@@ -147,9 +148,7 @@ async function boot() {
   }
   let solo = null;
   addEventListener("message", async (e) => {
-    const el = [...document.querySelectorAll("iframe[data-live]")].find(
-      (x) => x.contentWindow === e.source,
-    );
+    const el = frames().find((x) => x.contentWindow === e.source);
     const type = el && e.data && e.data.type;
     if (type === "ready")
       say(el, { type: "fonts", fonts: fontsOf(await loadBuild(latest(S))) });
@@ -164,8 +163,7 @@ async function boot() {
   // A card's frame loops its slot; the animatic's follows the narration.
   function drive(el) {
     if (el.dataset.live === "animatic") return seek();
-    const c = latest(S).scenes.find((x) => x.id === el.dataset.live);
-    const [from, to] = loopOf(c);
+    const [from, to] = loopOf(sceneOf(el.dataset.live));
     say(el, { type: "run", from, to, loop: true });
   }
   // One card mounts its build, the one most in view; the rest show their poster.
@@ -206,16 +204,20 @@ async function boot() {
     document.querySelectorAll("iframe[data-live]").forEach((x) => x.remove());
 
   // Play on a card: its slot once, with its own narration; the loop resumes when it is done.
+  // Only a card whose build is showing plays: narration over a poster would have no motion to judge.
+  const quiet = () =>
+    document.querySelectorAll("audio").forEach((x) => x.pause());
   function cardPlay(id) {
+    const el = frameOf(id);
+    if (!el || !el.dataset.ready) return;
     const a = [...document.querySelectorAll("[data-audio]")].find(
       (x) => x.dataset.audio === id,
     );
+    quiet();
     a.currentTime = 0;
     a.play().catch(() => {});
-    const el = frameOf(id);
-    if (!el || !el.dataset.ready) return;
     solo = id;
-    const [from, to] = loopOf(latest(S).scenes.find((x) => x.id === id));
+    const [from, to] = loopOf(sceneOf(id));
     say(el, { type: "run", from, to, loop: false });
   }
 
@@ -244,6 +246,7 @@ async function boot() {
     render();
   }
   function playAnimatic(t) {
+    quiet();
     S.animatic = true;
     S.playing = sceneAt(latest(S), t).id;
     render();

@@ -42,11 +42,13 @@ export function liveScript(comp) {
       () => `<script>${inline(read("gsap.min.js"))}</script>`,
     )
     .replace(/ *<audio[^>]*><\/audio>\n?/g, "")
-    .replace(
-      HOST,
-      (_, open, id, rest) =>
-        `${open}${rest}>${read("scenes", `${id}.html`).match(/<template[^>]*>([\s\S]*)<\/template>/)[1]}</div>`,
-    )
+    .replace(HOST, (_, open, id, rest) => {
+      const inner = read("scenes", `${id}.html`).match(
+        /<template[^>]*>([\s\S]*)<\/template>/,
+      );
+      if (!inner) throw new Error(`scenes/${id}.html holds no <template>`);
+      return `${open}${rest}>${inner[1]}</div>`;
+    })
     .replace("</body>", () => `<script>${inline(frameJs)}</script>\n  </body>`);
   return `window.__build = ${JSON.stringify({ html, fonts })};\n`;
 }

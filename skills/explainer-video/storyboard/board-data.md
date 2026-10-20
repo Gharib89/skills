@@ -62,7 +62,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].slot` | number | yes | The scene's voiced length plus its exit seam, in seconds: the stretch its card loops. |
 | `board.scenes[].narration` | string | yes | The scene file's narration lines for the scene, exactly as written, numbers, `{written\|spoken}` and cites included. |
 | `board.scenes[].style` | string | yes | Style notes: the visual's component (followed by `past the default` for a rich one), the profile and the narrator. |
-| `board.scenes[].still` | string | yes | The scene's settled still, a [media](#media) URL. |
+| `board.scenes[].still` | string | yes | The scene's still at its fullest moment, a [media](#media) URL. |
 | `board.scenes[].audio` | string | yes | The scene's narration as audio-only WebM, a media URL. |
 | `board.scenes[].clip` | string | delivered | The delivered video's stretch for this scene, an MP4 media URL. |
 | `board.scenes[].status` | `"open"`, `"approved"` or `"reopened"` | yes | See [Card status](#card-status). |
@@ -114,14 +114,15 @@ either it or the answers document. One line per form, in this order:
 ## Media
 
 `build`, `narration`, `still`, `audio` and `clip` are URLs the page uses as
-given. On the
-artifact page each is the URL the asset upload returned, recorded with
-`board.mjs asset`. In `storyboard.html`, and in every version built before a
-page is recorded or with `build --local`, each is the file's path relative to
-the run folder. `build` refuses a media file over 15 MB, the asset cap. The
-page drops a URL that is not `https:`, `/_blob/` or a relative path.
+given. On the artifact page each is the URL the asset upload returned,
+recorded with `board.mjs asset`. In `storyboard.html`, and in every version
+built before a page is recorded or with `build --local`, each is the file's
+path relative to the run folder. `build` refuses a media file over 15 MB, the
+asset cap. The page drops a URL that is not `https:`, `/_blob/` or a relative
+path.
 
 The build is a script, not a picture: the page loads it with `<script src>` and
-plays it in a frame that may run scripts and nothing else, which works the same
-from a published page and from `file:`. A card shows its `still` until it is
-in view, then plays the build over `start` for `slot` seconds in a loop.
+plays it in a frame with `sandbox="allow-scripts"` and nothing else, which
+works the same from a published page and from `file:`. A card shows its
+`still` until it is in view, then plays the build over `start` for `slot`
+seconds in a loop.

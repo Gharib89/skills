@@ -392,7 +392,7 @@ function stillCue(text, attrs, f) {
     .join(" ")}</span></div>`;
 }
 
-// One frame per scene, each scene settled at its end; `cues` holds a still
+// One frame per scene, each scene at its fullest moment; `cues` holds a still
 // caption for a scene by its id, and `frame` is each scene's stretch in
 // seconds. data-no-timeline stops HyperFrames waiting for the timelines the
 // scenes leave unregistered.

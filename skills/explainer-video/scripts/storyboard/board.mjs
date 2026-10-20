@@ -313,6 +313,15 @@ const md = fs.readFileSync(at("script.md"), "utf8").split("\n");
 const blocks = narrationBlocks(md);
 const profile = maybe(at("style.json"))?.name ?? script.style ?? "claude-code";
 
+// A card's place in the build: where its scene starts and how long its slot is.
+const loop = (id) => {
+  const t = timeline.scenes.find((x) => x.id === id);
+  if (!Number.isFinite(t?.start) || !Number.isFinite(t?.slot))
+    fail(
+      `timeline.json has no start and slot for scene ${id}: run node render.mjs ${run} --stills`,
+    );
+  return { start: t.start, slot: t.slot };
+};
 const cards = script.scenes.map((s, i) => ({
   id: s.id,
   title: s.title,
@@ -325,8 +334,7 @@ const cards = script.scenes.map((s, i) => ({
   still: stills.scenes.find((x) => x.id === s.id).still,
   audio: voice.scenes[i].audio,
   // The slot is the scene's voiced length plus its exit seam: a card's loop.
-  start: timeline.scenes.find((x) => x.id === s.id).start,
-  slot: timeline.scenes.find((x) => x.id === s.id).slot,
+  ...loop(s.id),
   status: "open",
 }));
 
