@@ -86,6 +86,10 @@ test("a clean render passes all six gates, writes the record and the report, and
   // Samples: every 15 frames from each scene's start, plus its settled last
   // frame and where the seam into it ends (the previous scene's seam length).
   const timeline = JSON.parse(read(fx.dir, "timeline.json"));
+  assert.ok(
+    timeline.scenes.some((s) => s.slot > s.duration),
+    "the default style draws a seam",
+  );
   const want = timeline.scenes.flatMap((s, i) => {
     const first = Math.round(s.start * 30);
     const last = first + Math.round(s.duration * 30) - 1;

@@ -389,7 +389,8 @@ export function videoPage({
 }) {
   const f = faces(profile, dir);
   // A scene is mounted for its slot: it runs on past its own duration into its
-  // seam, over the next scene's start.
+  // seam, over the next scene's start; clips on one track may overlap, the
+  // later one layering above (measured: a real render of that overlap passes).
   const hosts = scenes
     .map(
       (s) =>
