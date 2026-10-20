@@ -169,6 +169,26 @@ test("a camera key moves the push to its cue, an `on` phrase to its first spoken
   ]);
 });
 
+test("the push window at its edges: a cue one duration in, and a scene shorter than the push", async () => {
+  const at = (duration, sentences) =>
+    sceneFile(
+      { id: "a", narration: said, visual: cards({ camera: { at: 1 } }) },
+      { ...timing, duration, slot: duration, sentences },
+      claude,
+      { backend: {}, seam: {} },
+    );
+  // a cue exactly one duration in starts the push at 0 with nothing clamped
+  assert.deepEqual(labels(await at(8, [0.8, 2, 4])), [
+    ["camera:start", 0],
+    ["camera:end", 0.8],
+  ]);
+  // a scene shorter than the push still composes it, ending past the scene
+  assert.deepEqual(labels(await at(0.5, [0.2, 0.3, 0.4])), [
+    ["camera:start", 0],
+    ["camera:end", 0.8],
+  ]);
+});
+
 test("the locked family, a camera ban and a component with its own camera compose no push-in", async () => {
   for (const [why, profile, visual] of [
     ["locked", odd({ camera: "locked" }), cards()],
