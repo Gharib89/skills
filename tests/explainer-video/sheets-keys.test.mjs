@@ -42,7 +42,7 @@ async function cut(run, dir, seamBytes) {
       sc,
       found: {
         fullest: 0,
-        motion: { still: false, frame: 10, t: 10 / 30, stills: [] },
+        motion: { still: false, frame: 10, t: 10 / 30, dead: [] },
       },
     })),
     moves: {

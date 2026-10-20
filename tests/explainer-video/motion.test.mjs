@@ -121,6 +121,11 @@ test("a dead beat is a stretch of 1.5 s or more of the scene's timeline with no 
   ]);
   // A stretch just under 1.5 s is no dead beat.
   assert.deepEqual(deadBeats({ start: 0, duration: 1.4 }, []), []);
+  // Exactly 1.5 s is one; a tween ending on the scene's last moment leaves none.
+  assert.deepEqual(deadBeats({ start: 0, duration: 1.5 }, []), [
+    { start: 0, end: 1.5 },
+  ]);
+  assert.deepEqual(deadBeats({ start: 0, duration: 4 }, [[0, 4]]), []);
 });
 
 test("the strip starts 5 frames before the peak and stays inside the scene", () => {

@@ -149,7 +149,7 @@ The video gate that every text box is readable, in one unbroken stretch, long en
 _Avoid_: dwell time, hold time
 
 **Critic**:
-An independent reviewer that reads a run's contact sheets and motion strips: its hard failures (unreadable or invented content, a broken right-to-left layout) block like a video gate, and its scores and its worst defects only advise.
+An independent reviewer that reads a run's contact sheets, motion strips and seam strips: its hard failures (unreadable or invented content, a broken right-to-left layout) block like a video gate, and its scores and its worst defects only advise.
 _Avoid_: judge, grader, reviewer
 
 **Contact sheet**:
@@ -163,6 +163,10 @@ _Avoid_: end state, settled frame, key frame
 **Motion strip**:
 One image per moving scene of a rendered explainer video: 12 consecutive frames of it, starting 5 before its peak-motion frame outside its seams, cut from the encoded video and tiled six by two, that the critic reads beside the contact sheet to judge motion. A scene that hands over at a seam gets a second strip of that seam. A motion record next to them names the peak frame and the dead beats.
 _Avoid_: filmstrip, flipbook
+
+**Seam strip**:
+One image per scene that hands over at a seam: 12 consecutive frames tiled six by two with that seam's window in the middle tiles, so the scene leaving and the one arriving show together, that the critic reads to judge the hand-over. None at a plain cut or for the last scene.
+_Avoid_: transition strip
 
 **Dead beat**:
 A stretch of 1.5 s or more of a scene in which nothing moves but the camera's drift and the texture.

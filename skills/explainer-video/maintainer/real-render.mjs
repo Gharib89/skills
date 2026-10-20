@@ -377,8 +377,8 @@ await backend.strip(videos["whole-1"], stripPng, {
   first: seamStripStart(exit, FPS),
   fps: FPS,
 });
-const dims = fs.readFileSync(stripPng);
-const size = [dims.readUInt32BE(16), dims.readUInt32BE(20)];
+const stripBytes = fs.readFileSync(stripPng);
+const size = [stripBytes.readUInt32BE(16), stripBytes.readUInt32BE(20)];
 check(
   "critic motion",
   whole.scenes.every((s) => raw[s.id]?.tweens?.length) &&

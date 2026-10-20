@@ -9,7 +9,7 @@
 // an encode's noise floor is never exactly zero.
 export const STILL = 0.5;
 // A stretch of the scene this long with no tween running is a dead beat.
-export const STILL_SECONDS = 1.5;
+export const DEAD_BEAT_SECONDS = 1.5;
 // The strip's tiles, and how many sit before the peak frame.
 export const STRIP_FRAMES = 12;
 export const STRIP_LEAD = 5;
@@ -91,7 +91,7 @@ export function peak(diffs, first, fps, seams = []) {
   return { still, frame, t: frame / fps, diff: diffs[at] ?? 0 };
 }
 
-// Each stretch of STILL_SECONDS or more of the scene in which no tween runs,
+// Each stretch of DEAD_BEAT_SECONDS or more of the scene in which no tween runs,
 // as video seconds: `windows` is [from, to] of every tween that moves content
 // (the camera's push-in and the page's texture are drift, so they are left
 // out). Read off the timeline: pixel difference would count the push-in and
@@ -101,7 +101,7 @@ export function deadBeats({ start, duration }, windows) {
   const out = [];
   let at = start;
   const close = (to) => {
-    if (to - at >= STILL_SECONDS - 1e-6)
+    if (to - at >= DEAD_BEAT_SECONDS - 1e-6)
       out.push({ start: +at.toFixed(3), end: +to.toFixed(3) });
   };
   for (const [a, b] of [...windows].sort((x, y) => x[0] - y[0])) {
