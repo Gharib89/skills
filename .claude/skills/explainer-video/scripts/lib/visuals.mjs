@@ -3,12 +3,23 @@
 // they must hold (`check`, throwing the reason) and what it shows a viewer to
 // read (`items`, as [name, sentence it rises at, texts], which the camera beat
 // reads). The compile stage checks, the video gates time the reading from the
-// rendered frames; render/compose.mjs draws each.
-//
-// A cue is `at`, a sentence number, and optionally `on`, a phrase that
-// sentence says: the reveal lands on the phrase's first spoken word.
+// rendered frames; render/compose.mjs draws each. A cue is lib/props.mjs's.
 
 import { plain } from "./count.mjs";
+import { checkDiagram } from "./diagram.mjs";
+import {
+  CUE,
+  cue,
+  fail,
+  findPhrase,
+  known,
+  list,
+  named,
+  object,
+  place,
+  text,
+  words,
+} from "./props.mjs";
 
 // A code frame holds this many lines at 30 px: longer code is a second scene.
 const CODE_LINES = 12;
@@ -20,28 +31,11 @@ export const lines = (code) => code.split("\n");
 // it there, and the type family `words` the same way for `kinetic`. `camera` is
 // a scene's `camera` key, which compile checks.
 export const TECHNIQUES = {
-  draw: ["flow"],
+  draw: ["flow", "diagram"],
   blur: [],
   camera: [],
   kinetic: ["words"],
 };
-
-const words = (s) => s.split(/\s+/).filter(Boolean);
-// A word compared without its case or its punctuation, an apostrophe inside
-// it included.
-const bare = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
-
-// Where in the spoken `sentence` the words of `phrase` first run, as a word
-// index, or -1.
-export function findPhrase(sentence, phrase) {
-  const have = words(sentence).map(bare);
-  const want = words(phrase).map(bare);
-  // A word of bare punctuation would match a bare dash in the sentence.
-  if (want.includes("")) return -1;
-  for (let i = 0; i + want.length <= have.length; i++)
-    if (want.every((w, j) => w === have[i + j])) return i;
-  return -1;
-}
 
 // The index, among the scene's spoken words, of the word the cue `{ at, on }`
 // lands on: the sentence's first word, or the phrase's.
@@ -87,20 +81,6 @@ export function diff(a, b) {
   return out;
 }
 
-const fail = (why) => {
-  throw new Error(why);
-};
-const object = (x, what) => {
-  if (x === null || typeof x !== "object" || Array.isArray(x))
-    fail(`${what} is not a JSON object`);
-};
-const text = (name, v, what) => {
-  if (typeof v !== "string") fail(`${name} needs ${what}`);
-};
-const named = (name, v, what) => {
-  text(name, v, what);
-  if (!v.trim()) fail(`${name} needs ${what}`);
-};
 // A number as a source writes it: digits, thousands commas that group by
 // three, an optional decimal part. Its characters are what the script gate
 // finds in an excerpt, and what a count-up ends on.
@@ -137,32 +117,6 @@ const numbersIn = (texts) =>
   texts.flatMap(
     (t) => t?.match(new RegExp(`${DIGIT}+(?:${POINT}${DIGIT}+)*`, "g")) ?? [],
   );
-// A list prop of `min` to `max` objects, each with a cue.
-function list(name, v, what, said, [min, max] = [1, Infinity]) {
-  if (!Array.isArray(v) || v.length < min || v.length > max)
-    fail(
-      max === Infinity
-        ? `${name} needs ${what}`
-        : `${name} needs ${min} to ${max} ${what}`,
-    );
-  for (const x of v) {
-    object(x, `a ${name} ${what.replace(/s$/, "")}`);
-    cue(x, said);
-  }
-}
-function at(x, n) {
-  if (!Number.isInteger(x) || x < 1 || x > n)
-    fail(`at ${x} is not a sentence (1 to ${n})`);
-}
-// `said` holds the scene's sentences in spoken form.
-function cue(x, said) {
-  at(x.at, said.length);
-  if (x.on === undefined) return;
-  if (typeof x.on !== "string" || !words(x.on).length)
-    fail("on needs the words of the sentence");
-  if (findPhrase(said[x.at - 1], x.on) < 0)
-    fail(`on "${x.on}" is not said in sentence ${x.at}`);
-}
 // The one item `emphasis` names by the `texts` its component shows for each.
 function emphasis(name, p, said, texts) {
   const e = p.emphasis;
@@ -184,10 +138,6 @@ function emphasis(name, p, said, texts) {
       `${name} emphasis of "${e.target}" lands before the item appears (at ${target.at}${target.on ? ` on "${target.on}"` : ""})`,
     );
 }
-// Where a cue falls in the scene's speech, as a number that orders cues:
-// its sentence, then the phrase's word within it.
-const place = (x, said) =>
-  x.at * 1000 + (x.on === undefined ? 0 : findPhrase(said[x.at - 1], x.on));
 // A code emphasis names a line range, counted from 1.
 function codeEmphasis(p, said) {
   const e = p.emphasis;
@@ -208,19 +158,7 @@ function codeEmphasis(p, said) {
     );
   known("code emphasis", e, EMPHASIS);
 }
-const CUE = ["at", "on"];
 const EMPHASIS = ["target", ...CUE];
-// A prop the component does not take is refused, never silently dropped;
-// `retired` names where one it once took went.
-function known(what, x, allowed, retired = {}) {
-  for (const k of Object.keys(x))
-    if (!allowed.includes(k))
-      fail(
-        retired[k]
-          ? `${what} has no prop ${k}: ${retired[k]}`
-          : `${what} has no prop ${k} (${allowed.join(", ")})`,
-      );
-}
 function code(name, v, what) {
   text(name, v, what);
   const k = lines(v).length;
@@ -459,6 +397,18 @@ export const VISUALS = {
       p.sides.flatMap((s) =>
         numbersIn([s.title, ...s.items.map((x) => x.text)]),
       ),
+  },
+  // Nodes and the links between them, laid out by the composer: the scene
+  // file holds no coordinates. Each node and link rises on its own cue, a link
+  // no earlier than both its nodes, and a link's packets flow along it from its
+  // cue to the scene's end. Rich like `words`.
+  diagram: {
+    props: ["nodes", "links"],
+    ownCamera: true,
+    check: checkDiagram,
+    items: (p) =>
+      p.nodes.map((n, i) => [`node ${i + 1}`, n.at, [n.label, n.note], n.on]),
+    numbers: (p) => p.nodes.flatMap((n) => numbersIn([n.label, n.note])),
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],

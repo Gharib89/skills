@@ -3,8 +3,9 @@
 // and seam, each `{ pick, options[, disabled] }`. A menu that cannot change on
 // this card is `disabled` with its one value as the only option.
 import { banReason, cameraReason } from "../lib/allowed.mjs";
+import { findPhrase } from "../lib/props.mjs";
 import { SEAM_MOVES, grammar } from "../lib/style.mjs";
-import { VISUALS, cameraCue, findPhrase } from "../lib/visuals.mjs";
+import { VISUALS, cameraCue } from "../lib/visuals.mjs";
 
 // The prop of each row that `emphasis` names its target by, per component
 // that takes one over a list of rows.
