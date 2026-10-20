@@ -53,10 +53,10 @@ code { font: .86em var(--f-mono); background: var(--hover); border: 1px solid va
 .btn.accent:hover:not(:disabled) { filter: brightness(.95); }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn-sm { padding: 6px 11px; font-size: 14px; }
-textarea, input[type="text"] { width: 100%; font: 14px/1.5 var(--f-sans); color: var(--fg); background: var(--page); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px 10px; }
+textarea, input[type="text"], input[type="number"], select { width: 100%; font: 14px/1.5 var(--f-sans); color: var(--fg); background: var(--page); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px 10px; }
 textarea { resize: vertical; min-height: 2.6em; }
-textarea:focus, input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
-textarea:disabled, input:disabled { opacity: .6; }
+textarea:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+textarea:disabled, input:disabled, select:disabled { opacity: .6; }
 
 .panel { background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); }
 .wrap { max-width: 860px; margin: 0 auto; padding-inline: 24px; padding-block: 40px 32px; display: grid; gap: 28px; }
@@ -88,6 +88,7 @@ iframe.live[data-ready] { visibility: visible; }
 .player .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .knobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 10px 14px; }
 .knob { display: grid; gap: 4px; }
+.menus { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 8px 12px; }
 .src { display: grid; gap: 2px; font-size: 14px; color: var(--fg-body); }
 .src b { color: var(--fg); font-weight: 550; }
 .cards { display: grid; gap: 16px; }

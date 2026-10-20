@@ -24,6 +24,7 @@ import path from "node:path";
 import { OWN_PREFIX, narrator, narrators } from "../lib/narrators.mjs";
 import { defaultStyle, stores } from "../lib/style.mjs";
 import { loadBackend, unavailable } from "../lib/tools.mjs";
+import { ASPECTS, SCORES } from "./knobs.mjs";
 
 const KNOBS = [
   "focus",
@@ -138,9 +139,9 @@ if (
     brief.style,
     `no style profile ${brief.style} in ${styles.join(", ")}`,
   );
-if (brief.aspect !== "16:9")
+if (!ASPECTS.includes(brief.aspect))
   refuse("aspect", brief.aspect, "this version renders 16:9 only");
-if (!["on", "off", "ace-step"].includes(brief.score))
+if (!SCORES.includes(brief.score))
   refuse("score", brief.score, "on, off or ace-step");
 // Refuse a knob that names a setup row setup refuses on this machine.
 for (const [knob, id] of [

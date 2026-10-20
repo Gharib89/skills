@@ -24,6 +24,40 @@ export function narrationBlocks(lines) {
   return blocks;
 }
 
+// A scene's `### Visual` JSON in script.md, changed in place by `edit(visual)`:
+// a block of several lines stays indented, a one-line block stays one line.
+export function editVisual(lines, id, edit) {
+  let on = false;
+  let part = null;
+  let fence = null;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^## Scene\s+([A-Za-z0-9-]+)\s+·/);
+    if (m) [on, part] = [m[1] === id, null];
+    else if (!on) continue;
+    else if (/^### /.test(lines[i]))
+      part = lines[i].match(/^### (Visual)\s*$/)?.[1] ?? null;
+    else if (
+      part === "Visual" &&
+      fence === null &&
+      /^```json\s*$/.test(lines[i])
+    )
+      fence = i + 1;
+    else if (part === "Visual" && fence !== null && /^```\s*$/.test(lines[i])) {
+      let visual;
+      try {
+        visual = JSON.parse(lines.slice(fence, i).join("\n"));
+      } catch (e) {
+        throw new Error(`script.md visual block for ${id} is not JSON`);
+      }
+      if (edit(visual) === false) return;
+      const out = JSON.stringify(visual, null, i - fence > 1 ? 2 : undefined);
+      lines.splice(fence, i - fence, ...out.split("\n"));
+      return;
+    }
+  }
+  throw new Error(`script.md has no visual block for ${id}`);
+}
+
 // Kept terms spelled anew across script.md, in place, from a Map of term to
 // new spelling: the title, each scene's narration (its cites aside) and its
 // visual's screen text. The ids of the scenes they changed.

@@ -33,14 +33,18 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { knobOffer, voices } from "../brief/knobs.mjs";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
+import { loadStyle } from "../lib/style.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
 import { esc } from "../render/compose.mjs";
 import { liveScript } from "../render/live.mjs";
-import { readAnswers } from "./answers-text.mjs";
-import { narrationBlocks, renameKept } from "./script-text.mjs";
+import { seamPlan } from "../render/seams.mjs";
+import { applyAnswers } from "./apply.mjs";
+import { cardMenus } from "./menus.mjs";
+import { narrationBlocks } from "./script-text.mjs";
 
 const [run, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
@@ -166,78 +170,12 @@ if (cmd === "apply") {
   const all = versions();
   if (!all.length) fail("no board yet: run build first");
   const n = all.at(-1);
-  const board = json(at("board", `${n}.json`));
-  const raw = fs.readFileSync(args[0], "utf8");
-  const answers = readAnswers(raw, n, fail);
-  if (answers.version !== n)
-    fail(`answers for board ${answers.version}, the latest is board ${n}`);
-  const ids = board.scenes.map((c) => c.id);
-  for (const s of answers.scenes)
-    if (!ids.includes(s.id)) fail(`the answers name no scene ${s.id}`);
-  for (const s of answers.scenes)
-    if (!["approve", "revise"].includes(s.choice))
-      fail(`scene ${s.id} has no answer`);
-  for (const id of ids)
-    if (!answers.scenes.some((s) => s.id === id))
-      fail(`the answers miss card ${id}`);
-  answers.scenes = ids.map((id) => {
-    const s = answers.scenes.find((x) => x.id === id);
-    return {
-      id,
-      choice: s.choice,
-      note: s.note ?? "",
-      narration: s.narration ?? "",
-    };
-  });
-  answers.brief ??= [];
-  if (board.kept) answers.kept ??= [];
-  for (const k of answers.kept ?? []) {
-    if (!board.kept?.includes(k.term))
-      fail(`the answers edit ${k.term}, which board ${n} does not keep`);
-    if (!k.to?.trim()) fail(`kept term ${k.term} is edited to nothing`);
-  }
-  write(at("board", `answers-${n}.json`), answers);
-
-  const edited = (s) =>
-    s.narration.trim() &&
-    s.narration !== board.scenes.find((c) => c.id === s.id).narration;
-  const edits = answers.scenes.filter(edited);
-  if (edits.length) {
-    const lines = fs.readFileSync(at("script.md"), "utf8").split("\n");
-    const blocks = narrationBlocks(lines);
-    for (const s of edits)
-      if (!blocks[s.id]) fail(`script.md has no narration block for ${s.id}`);
-    for (const s of edits.sort((a, b) => blocks[b.id].from - blocks[a.id].from))
-      lines.splice(
-        blocks[s.id].from,
-        blocks[s.id].to - blocks[s.id].from,
-        ...s.narration.split("\n"),
-      );
-    fs.writeFileSync(at("script.md"), lines.join("\n"));
-  }
-  const renamed = new Set();
-  if (answers.kept?.length) {
-    const lines = fs.readFileSync(at("script.md"), "utf8").split("\n");
-    const spellings = new Map(answers.kept.map((k) => [k.term, k.to.trim()]));
-    for (const id of renameKept(lines, spellings)) renamed.add(id);
-    fs.writeFileSync(at("script.md"), lines.join("\n"));
-  }
-  for (const s of answers.scenes)
-    console.log(
-      `board ${s.id}: ${s.choice === "approve" ? "approve" : `revise: ${s.note || "no note"}`}${edited(s) ? ", narration edited" : ""}`,
-    );
-  for (const a of answers.brief) console.log(`board brief: ${a}`);
-  for (const k of answers.kept ?? [])
-    console.log(`board kept: ${k.term} -> ${k.to.trim()}`);
-  // An approved card whose narration or kept terms were edited still needs
-  // its scene redone.
-  const redo = answers.scenes
-    .filter((s) => s.choice === "revise" || edited(s) || renamed.has(s.id))
-    .map((s) => s.id);
-  console.log(
-    !redo.length && !answers.brief.length && !answers.kept?.length
-      ? "board: approved"
-      : `board: redo ${redo.join(",") || "none"}${answers.brief.length ? `; brief ${answers.brief.join(" ")}` : ""}`,
+  applyAnswers(
+    run,
+    json(at("board", `${n}.json`)),
+    n,
+    fs.readFileSync(args[0], "utf8"),
+    fail,
   );
   process.exit(0);
 }
@@ -316,6 +254,8 @@ const loop = (id) => {
   return { start: t.start, slot: t.slot };
 };
 const rich = (s) => !!VISUALS[s.visual.component]?.ownCamera;
+const style = loadStyle(run, script.style);
+const plan = seamPlan(script.scenes, style);
 const cards = script.scenes.map((s, i) => ({
   id: s.id,
   title: s.title,
@@ -326,6 +266,7 @@ const cards = script.scenes.map((s, i) => ({
   // card, so it is marked past the default.
   style: `${s.visual.component}${rich(s) ? " · past the default" : ""} · ${profile} · ${voice.narrator}`,
   rich: rich(s),
+  menus: cardMenus(s, style, plan[i].out, i === script.scenes.length - 1),
   still: stills.scenes.find((x) => x.id === s.id).still,
   audio: voice.scenes[i].audio,
   // The slot is the scene's voiced length plus its exit seam: a card's loop.
@@ -475,7 +416,9 @@ const doc = {
   brief: Object.entries(brief ?? {}).map(([knob, v]) => ({
     knob,
     value: Array.isArray(v) ? v.join("; ") : String(v ?? ""),
+    ...knobOffer(knob, run, brief),
   })),
+  voices: voices(brief),
   sources: (pack?.sources ?? []).map((s) => ({
     id: s.id,
     kind: s.kind,
