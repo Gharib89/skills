@@ -193,13 +193,13 @@ const FIXTURE = [
       id: "arabic-stat",
       role: "point",
       title: "أرقام",
-      narration: ["رقمين.", "فيه 1,200 طلب.", "في 40 ثانية."],
+      narration: ["رقمين.", "فيه 1,200 طلب.", "في ٤٠ ثانية."],
       visual: {
         component: "stat",
         props: {
           items: [
             { at: 2, value: "1,200", label: "طلب" },
-            { at: 3, value: "40", label: "ثانية" },
+            { at: 3, value: "٤٠", label: "ثانية" },
           ],
         },
       },

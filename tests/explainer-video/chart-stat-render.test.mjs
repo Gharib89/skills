@@ -128,6 +128,16 @@ test("a bar chart draws a bar a number, its height the number's share of the lar
   assert.equal(counted(html).length, 2);
 });
 
+test("only ASCII digits take the Latin face; Arabic-Indic and Persian keep the page's Arabic stack", async () => {
+  const html = await drawn(
+    stat([item(1, "a", "٢٤٠"), item(2, "b", "۱۲۰۰"), item(3, "c", "40")]),
+    "rtl",
+  );
+  assert.match(html, /<bdi class="num">٢٤٠<\/bdi>/);
+  assert.match(html, /<bdi class="num">۱۲۰۰<\/bdi>/);
+  assert.match(html, /<bdi class="num lat ti">40<\/bdi>/);
+});
+
 test("a bar's height is the share of the largest in any digit script", async () => {
   const html = await drawn(
     chart([item(1, "a", "٢٤٠"), item(2, "b", "١٬٢٠٠")]),

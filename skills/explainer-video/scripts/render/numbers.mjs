@@ -8,8 +8,10 @@ import { COUNT_SECONDS, plain } from "../lib/count.mjs";
 
 // A number as its own element, so the scene's script can count its text up; the
 // value is digits and separators (the compile stage checks), so it needs no
-// escaping. `<bdi>` isolates it right to left.
-const num = (v) => `<bdi class="num lat ti">${v}</bdi>`;
+// escaping. `<bdi>` isolates it right to left. ASCII digits take the Latin
+// title face; Arabic-Indic and Persian ones stay in the page's Arabic stack.
+const num = (v) =>
+  `<bdi class="${/[0-9]/.test(v) ? "num lat ti" : "num"}">${v}</bdi>`;
 // Each item's number counts up on the item's own cue: [selector, written, cue].
 const counts = (items) => items.map((x, i) => [`.r${i} .num`, x.value, x]);
 // Each number's share of the largest, 0 to 1, whatever digits it is written in.
