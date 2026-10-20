@@ -91,6 +91,12 @@ check_rc "a real reason that opens with a placeholder word: exits ok" 0 "$status
 fresh; add 'Criterion 1: met: ok' 'Criterion 2: met: ok' '## Deviations log' '- 3: a decoy, not a criterion'; call close 5 --file "$rf"
 check_rc "a numbered line outside Criteria is not an entry" 0 "$status"
 
+# close 5 reads the unfenced text gate clean reads: a fenced example is no line, no entry.
+fresh; add 'Criterion 1: met: ok' '```' 'Criterion 2: met: a pasted example' '```'; held=$(cat "$rf"); call close 5 --file "$rf"
+refused "a Criterion line inside a fence" 'criterion 2 has no line'
+fresh; add 'Criterion 1: met: ok' 'Criterion 2: met: ok' '```' '## Criteria' '- 3: a pasted example' '```'; call close 5 --file "$rf"
+check_rc "a fenced Criteria entry is no entry" 0 "$status"
+
 # `next 5` closes phase 5 through the same gate.
 fresh; held=$(cat "$rf"); call next 6 --file "$rf"
 refused "next over phase 5 with no Criterion lines" 'criterion 1 has no line'

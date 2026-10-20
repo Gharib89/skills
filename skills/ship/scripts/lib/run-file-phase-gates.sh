@@ -166,10 +166,14 @@ placeholder_reason() { # placeholder_reason <reason>: 0 when it names no step
 # Phase 5: every `## Criteria` entry has a `Criterion <n>:` line, and one still
 # `not met` gives a real reason. A Run file with no `## Criteria` is not refused.
 gate_phase5() {
-  local n r
+  local n r lines
+  # The unfenced text gate clean reads: a fenced example is neither a line nor an entry.
+  lines=$(awk "$SHIP_AWK_FENCE"'
+    { if (!ship_fence($0)) print }
+    END { if (_fenced) exit 1 }' "$file") || ship_tooling "cannot read Run file evidence at $file"
   while IFS= read -r n; do
     [ -n "$n" ] || continue
-    r=$(trim_end "$(rests "Criterion $n: " | tail -n 1)")
+    r=$(trim_end "$(rests "Criterion $n: " "$lines" | tail -n 1)")
     case $r in
       "") gap "criterion $n has no line: write \`Criterion $n: met: <proof>\`, or \`Criterion $n: not met: <what is outstanding and the step that settles it>\`" ;;
       "met: "?*) ;;
@@ -180,7 +184,7 @@ gate_phase5() {
       *) gap "criterion $n has a line gate clean cannot read: $r" ;;
     esac
   done <<EOCRIT
-$(awk '{ t = $0; sub(/[ \t\r]+$/, "", t) } t ~ /^## / { f = (t == "## Criteria") } f && /^- [1-9][0-9]*: / { v = substr($0, 3); sub(/:.*/, "", v); print v }' "$file")
+$(awk '{ t = $0; sub(/[ \t\r]+$/, "", t) } t ~ /^## / { f = (t == "## Criteria") } f && /^- [1-9][0-9]*: / { v = substr($0, 3); sub(/:.*/, "", v); print v }' <<<"$lines")
 EOCRIT
   refuse_gaps 5
 }
