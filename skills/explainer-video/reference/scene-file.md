@@ -103,13 +103,17 @@ narrator: am_fenrir
     the order written, so list them in the order they happened. About 5
     events read well: guidance, not a limit. Rich, so a `camera` key is
     refused; in an Arabic run the first event sits at the right.
+    **Each number in a `when`, `label` or `note` is a claim**, held like a
+    chart's `value` to an excerpt the scene cites (`Q3 '21` holds 3 and 21);
+    the `when` still shows as written.
   - `compare`: exactly 2 sides side by side (`sides*`, each `title*` and
     `items*`, each `at*`, `on`, `text*`); any other count is refused. The
     two boxes frame the scene from its start; a side's title arrives with
     its first item, each item on its own cue, and an item cued before its
     side's first is refused. About 4 items a side read well: guidance, not a
     limit. Rich, so a `camera` key is refused; in an Arabic run the first
-    side sits at the right.
+    side sits at the right. Each number in a side's `title` or an item's
+    `text` is a claim, held to a cited excerpt as a timeline's are.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
     `code` (`title` and `codediff` take none): one callout per scene,
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a

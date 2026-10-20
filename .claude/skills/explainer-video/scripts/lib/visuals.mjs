@@ -131,6 +131,12 @@ export const numberIn = (text, value) =>
   new RegExp(
     `(?<!${DIGIT})(?<!${DIGIT}${POINT})${value.replace(/\./g, "\\.")}(?!${DIGIT})(?!${POINT}${DIGIT})`,
   ).test(text);
+// Every number written in `texts` as `numberIn` reads one: digits joined by a
+// point or comma between digits, so `Q3 '21` holds 3 and 21.
+const numbersIn = (texts) =>
+  texts.flatMap(
+    (t) => t?.match(new RegExp(`${DIGIT}+(?:${POINT}${DIGIT}+)*`, "g")) ?? [],
+  );
 // A list prop of `min` to `max` objects, each with a cue.
 function list(name, v, what, said, [min, max] = [1, Infinity]) {
   if (!Array.isArray(v) || v.length < min || v.length > max)
@@ -407,6 +413,10 @@ export const VISUALS = {
         [x.when, x.label, x.note],
         x.on,
       ]),
+    // A number in its text is a claim like a chart's value; a `when` is
+    // searched, never parsed.
+    numbers: (p) =>
+      p.items.flatMap((x) => numbersIn([x.when, x.label, x.note])),
   },
   // Two sides, the first at the reading start, each a title over items; a
   // side's title arrives with its first item, so no item cues before it.
@@ -443,6 +453,10 @@ export const VISUALS = {
           x.on,
         ]),
       ]),
+    numbers: (p) =>
+      p.sides.flatMap((s) =>
+        numbersIn([s.title, ...s.items.map((x) => x.text)]),
+      ),
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],
