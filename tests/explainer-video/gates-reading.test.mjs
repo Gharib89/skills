@@ -59,6 +59,17 @@ test("a box readable in two short stretches fails even when their sum would pass
   assert.match(f[0], /1\.0 s readable vs 1\.8 s to read/);
 });
 
+test("a stretch exactly as long as the floor passes, half a sample less fails", () => {
+  const box = el("a b c d e f g h i j", 10);
+  // 3.0 s needed: shown 1.0 to 4.0 is exactly 3.0 s, to 3.5 only 2.5 s.
+  assert.deepEqual(
+    judge((t) => (t >= 1 && t < 4 ? [box] : [])),
+    [],
+  );
+  const f = judge((t) => (t >= 1 && t < 3.5 ? [box] : []));
+  assert.match(f[0], /2\.5 s readable vs 3\.0 s to read/);
+});
+
 test("a box carried by a seam or camera is readable only outside it", () => {
   const box = el("one two three four five six", 6);
   const moving = (id, t) => t >= 12 && t < 14.5;
@@ -131,12 +142,12 @@ test("a line's words must all read at once: one word still rising holds the line
 
 test("a line cued off its own spoken words is judged like any box, by its words", () => {
   // Seven words need 2.1 s; 1.0 s whole is not enough, as it is not for any box.
-  const six = (t) =>
+  const seven = (t) =>
     Array.from({ length: 7 }, (_, i) => ({
       ...el(`w${i}`, 1, "l0", false),
       opacity: t >= 5 ? 1 : 0,
     }));
-  const f = judge(six);
+  const f = judge(seven);
   assert.equal(f.length, 1);
   assert.match(
     f[0],
@@ -144,7 +155,7 @@ test("a line cued off its own spoken words is judged like any box, by its words"
   );
   // The same line read along passes on the same samples.
   assert.deepEqual(
-    judge((t) => six(t).map((e) => ({ ...e, along: true }))),
+    judge((t) => seven(t).map((e) => ({ ...e, along: true }))),
     [],
   );
 });

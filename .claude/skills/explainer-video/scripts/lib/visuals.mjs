@@ -1,8 +1,9 @@
 // The visual vocabulary a scene's `### Visual` block names: per component, the
 // props it takes (`props`, and `item` for each entry of its `rows` list), what
 // they must hold (`check`, throwing the reason) and what it shows a viewer to
-// read (`items`, as [name, sentence it rises at, texts]). The compile stage
-// checks, the video gates time the reading; render/compose.mjs draws each.
+// read (`items`, as [name, sentence it rises at, texts], which the camera beat
+// reads). The compile stage checks, the video gates time the reading from the
+// rendered frames; render/compose.mjs draws each.
 //
 // A cue is `at`, a sentence number, and optionally `on`, a phrase that
 // sentence says: the reveal lands on the phrase's first spoken word.
