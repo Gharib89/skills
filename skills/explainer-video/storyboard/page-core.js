@@ -93,11 +93,13 @@ const ACT = {
     if (d.field === "note" ? d.value.trim() : d.value !== c.narration)
       dr.choices[d.id] = "revise";
   },
-  // A card with a finding keeps its answer: only its own Approve takes a known red.
+  // A card with a finding keeps its answer: only its own Approve takes a known
+  // red. Returns the cards still held, which the page must not submit past.
   approveAll(S) {
     if (!locked(S))
       for (const c of latest(S).scenes)
         if (!c.finding) draftOf(S).choices[c.id] = "approve";
+    return heldN(S);
   },
   brief(S, d) {
     if (!locked(S)) draftOf(S).brief[d.knob] = d.value;

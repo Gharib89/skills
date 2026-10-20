@@ -81,12 +81,12 @@ async function boot() {
     if (!t || t.disabled) return;
     const act = t.dataset.act;
     if (act === "approve-all") {
-      ACT.approveAll(S);
+      const held = ACT.approveAll(S);
       saveDraft();
       render();
       // A local page has no Submit: the answers are copied from the bar. A card
       // with a finding left on Revise holds the board for the human.
-      return S.local || heldN(S) || !canSubmit(S)
+      return S.local || held || !canSubmit(S)
         ? null
         : submit(document.getElementById("submit"));
     }

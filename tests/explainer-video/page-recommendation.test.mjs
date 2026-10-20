@@ -74,7 +74,8 @@ test("a card with a finding opens on Revise with the proposed fix shown, and App
 test("Approve all leaves a card with a finding on Revise and holds the submit until its own Approve", () => {
   const S = session([sample("board-finding")]);
   P.ACT.choose(S, { id: "hook", choice: "revise" });
-  P.ACT.approveAll(S);
+  // The boot handler submits only on a 0 here.
+  assert.equal(P.ACT.approveAll(S), 1);
   assert.deepEqual(clone(P.answersDoc(S).scenes.map((s) => s.choice)), [
     "approve",
     "approve",
@@ -85,6 +86,7 @@ test("Approve all leaves a card with a finding on Revise and holds the submit un
   P.ACT.choose(S, { id: "gate", choice: "approve" });
   assert.equal(P.heldN(S), 0);
   assert.ok(!/data-held/.test(P.view(S)));
+  assert.equal(P.ACT.approveAll(S), 0);
 });
 
 test("the overview shows every poster and counts rich, finding and changed cards as the board document does", () => {

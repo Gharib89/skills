@@ -106,8 +106,9 @@ explainers/<slug>`, judges `layout` (contrast stays with the gates) and
 `reading` on those same samples from the composition alone, before any video
 exists, so the storyboard shows a red on its card
 ([storyboard.md](storyboard.md) step 1). It keeps no cache, prints `sample
-<scene>: <finding>` per red and its own seconds, and has no attempt count: its
-reds are not gates.
+<scene>: <finding>` per red, then `samples: <n> scene(s), <k> finding(s) in <s>
+s`, and exits 1 on a red. Its reds are findings, not gates: the storyboard caps
+their fixes, not `gates.json`.
 
 A summary line follows, `gates: <n> pass, <m> fail[, 1 pending]`, ending on a
 red run with `next: fix attempt <a> of 2` or `stop: red after two fix

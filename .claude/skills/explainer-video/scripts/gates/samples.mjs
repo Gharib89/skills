@@ -79,6 +79,16 @@ const checked = await orFail(() => backend.check(comp, times, { env }));
 if (!checked.layout || !checked.contrast)
   fail(`hyperframes check: ${checked.error ?? "no layout or contrast result"}`);
 const frames = await orFail(() => backend.probe(comp, times, { env }));
+// A scene with no text of its own in any sample is a probe that saw nothing,
+// not a pass: captions and the header draw over every scene.
+for (const p of plan)
+  if (
+    !frames.some(
+      (f) =>
+        p.times.includes(f.t) && f.elements.some((e) => e.scene === p.sc.id),
+    )
+  )
+    fail(`layout probe: no text in scene ${p.sc.id}`);
 
 // One defect held across a scene is one finding: its first time, and the
 // number of samples it showed in.

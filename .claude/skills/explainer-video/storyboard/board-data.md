@@ -87,25 +87,24 @@ Text fields are plain text; the page interprets nothing in them.
 
 ## Card status
 
-- `open`: new or changed since the last version the human answered. Needs an
-  answer before Submit.
+- `open`: new or changed since the last version the human answered. Arrives on
+  its `recommendation`.
 - `approved`: approved on the last version and unchanged since. Shown
   collapsed; it can still be revised.
 - `reopened`: named by a red gate's evidence on the version a gate stop
-  posted. Needs an answer before Submit.
+  posted. Arrives on `revise` when its finding is the red gate's evidence.
 
 ## Recommendation
 
 Every card of a review version opens on its `recommendation`: `revise` when it
-has a `finding` and no earlier approval of it still stands (status not
-`approved`), else `approve`. The page opens on an overview of every `still`
-with counts read off this document: the cards with `rich` set, the cards with a
-`finding` and the cards whose status is not `approved`. **Approve all and
-submit** answers every card without a finding `approve`; a card with a finding
-keeps its answer, and while one is not on `approve` the page does not submit,
-since only that card's own Approve takes a known red. A note
-or an edited narration on a card answers it `revise`. A card's answer is the
-human's choice, whatever the recommendation was.
+has a `finding` and its status is not `approved`, else `approve`. The page
+opens on an overview of every `still` with counts read off this document: the
+cards with `rich` set, the cards with a `finding` and the cards whose status is
+not `approved`. **Approve all and submit** answers every card without a finding
+`approve`; a card with a finding keeps its answer, and the page submits once
+every card with a finding is on `approve`, since only that card's own Approve
+takes a known red. A note or an edited narration on a card answers it `revise`.
+A card's answer is the human's choice, whatever the recommendation was.
 
 A `delivered` version holds every card `approved`, and its page takes no
 answers. `build` makes one only while the delivered MP4 is at least as new as

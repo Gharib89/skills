@@ -284,6 +284,10 @@ const sampled = delivered ? null : maybe(at("samples.json"));
 if (!delivered) {
   if (!sampled)
     fail(`no samples.json: run node gates/samples.mjs ${run} first`);
+  if (!Array.isArray(sampled.scenes))
+    fail(
+      `samples.json holds no scenes: run node gates/samples.mjs ${run} again`,
+    );
   if (
     fs.statSync(at("samples.json")).mtimeMs <
     fs.statSync(at("stills.json")).mtimeMs
@@ -305,6 +309,7 @@ const loop = (id) => {
     );
   return { start: t.start, slot: t.slot };
 };
+const rich = (s) => !!VISUALS[s.visual.component]?.ownCamera;
 const cards = script.scenes.map((s, i) => ({
   id: s.id,
   title: s.title,
@@ -313,8 +318,8 @@ const cards = script.scenes.map((s, i) => ({
   narration: md.slice(blocks[s.id].from, blocks[s.id].to).join("\n"),
   // A rich component moves the frame itself, which the human weighs at the
   // card, so it is marked past the default.
-  style: `${s.visual.component}${VISUALS[s.visual.component]?.ownCamera ? " · past the default" : ""} · ${profile} · ${voice.narrator}`,
-  rich: !!VISUALS[s.visual.component]?.ownCamera,
+  style: `${s.visual.component}${rich(s) ? " · past the default" : ""} · ${profile} · ${voice.narrator}`,
+  rich: rich(s),
   still: stills.scenes.find((x) => x.id === s.id).still,
   audio: voice.scenes[i].audio,
   // The slot is the scene's voiced length plus its exit seam: a card's loop.
