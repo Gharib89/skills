@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.37.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Storyboard cards and the animatic play live builds
+  ([#902](https://github.com/Gharib89/skills/pull/902),
+  [`61a1886`](https://github.com/Gharib89/skills/commit/61a1886389a5a3cf67dbcecce119558b387afa0b))
+
+
 ## v0.36.0 (2026-10-20)
 
 ### Features
