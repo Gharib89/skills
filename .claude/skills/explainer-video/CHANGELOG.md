@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.34.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Kinetic type as the default type family
+  ([#899](https://github.com/Gharib89/skills/pull/899),
+  [`501e9a5`](https://github.com/Gharib89/skills/commit/501e9a5a9bcf30c2c008f781b645129817cdefb0))
+
+
 ## v0.33.0 (2026-10-20)
 
 ### Features
