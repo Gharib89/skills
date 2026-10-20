@@ -1,7 +1,7 @@
 // The `chart` and `stat` components: numbers that count up on their cue, each
 // written as the source writes it. Both are rich (they draw their own frame),
 // so a `camera` key is refused on them; the script gate holds each number to a
-// cited excerpt (see check-gates.test.mjs for that side).
+// cited excerpt (the gate cases are below).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";

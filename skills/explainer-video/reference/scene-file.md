@@ -82,20 +82,21 @@ narrator: am_fenrir
     `camera` key is refused.
   - `chart`: numbers drawn as bars or a line (`kind*`, `bar` or `line`;
     `unit`; `items*`, each `at*`, `on`, `label*`, `value*`; a line takes 2 or
-    more; about 6 bars reads well). A `stat` is 1 to 3 big numbers side by side
-    (`items*`, each `at*`, `on`, `value*`, `label*`). Each number counts up
-    from 0 on its cue and ends on the text as written. Both are rich, so a
-    `camera` key is refused, and both run right to left in an Arabic run (the
-    first bar, point or stat at the right).
+    more). A `stat` is big numbers side by side (`items*`, each `at*`, `on`,
+    `value*`, `label*`). About 6 bars and 1 to 3 stats read well: guidance, not
+    limits; more compiles when the layout and reading time gates pass. Each
+    number counts up from 0 on its cue and ends on the text as written. Both
+    are rich, so a `camera` key is refused, and both run right to left in an
+    Arabic run (the first bar, point or stat at the right).
     **A number on screen is a claim, so a `value` is digits as written**
-    (`1200` or `1,200.5`, a unit goes in `unit` or the label) **and must stand
-    in an excerpt the scene cites**, whole and with the same commas and
+    (`1200` or `1,200.5`; a unit goes in a chart's `unit` or the label)
+    **and must stand in an excerpt the scene cites**, whole and with the
+    same commas and
     decimals: the script gate's `cites` refuses `1200` against `1,200`, and
     `200` against `1,200`. An Arabic excerpt's numbers are written in its own
     digits (`١٬٢٠٠` or Persian `۱٬۲۰۰`, one script to a number): write the
-    value in those digits, which count up in them, and one in another script
-    than the excerpt's is refused. More than the guidance counts compiles when
-    the layout and reading time gates pass.
+    value in the excerpt's digits (it counts up in them); a value in another
+    digit script is refused.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
     `code` (`title` and `codediff` take none): one callout per scene,
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a

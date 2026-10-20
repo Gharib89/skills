@@ -4,7 +4,7 @@
 // counts it up. An item is one reading box, `data-line` `c<n>`, its number and
 // label. The direction is the page's: the flex row and the line's points start
 // at the reading start, so Arabic runs right to left.
-import { COUNT_SECONDS } from "../lib/count.mjs";
+import { COUNT_SECONDS, plain } from "../lib/count.mjs";
 
 // A number as its own element, so the scene's script can count its text up; the
 // value is digits, commas and a point (the compile stage checks), so it needs
@@ -12,9 +12,9 @@ import { COUNT_SECONDS } from "../lib/count.mjs";
 const num = (v) => `<bdi class="num lat ti">${v}</bdi>`;
 // Each item's number counts up on the item's own cue: [selector, written, cue].
 const counts = (items) => items.map((x, i) => [`.r${i} .num`, x.value, x]);
-// Each number's share of the largest, 0 to 1.
+// Each number's share of the largest, 0 to 1, whatever digits it is written in.
 const share = (items) => {
-  const v = items.map((x) => parseFloat(x.value.replaceAll(",", "")));
+  const v = items.map((x) => parseFloat(plain(x.value).replaceAll(",", "")));
   const max = Math.max(...v);
   return v.map((x) => (max > 0 ? +(x / max).toFixed(4) : 0));
 };

@@ -55,8 +55,9 @@ test("countText counts from 0 to the number as written, a function of progress a
   assert.equal(countText("0.5", 0.5), "0.3");
   for (const w of ["1,200", "1200", "0.5", "1,200.25", "0", "7", "240"])
     assert.equal(countText(w, 1), w);
-  for (const p of [0, 0.31, 0.77, 1])
-    assert.equal(countText("1,200.5", p), countText("1,200.5", p));
+  // any order of seeks gives the text of that progress alone
+  for (const p of [1, 0, 0.77, 0.4, 0.4]) countText("1,200.5", p);
+  assert.equal(countText("1,200.5", 0.4), "480.2");
 });
 
 test("a stat's numbers sit in the markup as written and count up on their cues", async () => {
@@ -81,8 +82,10 @@ test("a stat's numbers sit in the markup as written and count up on their cues",
   assert.deepEqual([a.from.textContent, a.to.textContent], [0, 1]);
   assert.deepEqual([text(a, 0), text(a, 1)], ["0", "240"]);
   assert.deepEqual([text(b, 0.5), text(b, 1)], ["600", "1,200"]);
-  // seeking twice to one time gives equal text
-  assert.equal(text(b, 0.37), text(b, 0.37));
+  // seeking around and back to one time gives its text again
+  text(b, 1);
+  text(b, 0);
+  assert.equal(text(b, 0.5), "600");
   // a rich component: no push-in on its camera
   assert.doesNotMatch(html, /class="camera"/);
 });
@@ -97,6 +100,15 @@ test("a bar chart draws a bar a number, its height the number's share of the lar
   assert.match(html, /class="bar r1" data-line="c1" style="--p:1"/);
   assert.match(html, /<span class="unit">ms<\/span>/);
   assert.equal(counted(html).length, 2);
+});
+
+test("a bar's height is the share of the largest in any digit script", async () => {
+  const html = await drawn(
+    chart([item(1, "a", "٢٤٠"), item(2, "b", "١٬٢٠٠")]),
+    "rtl",
+  );
+  assert.match(html, /class="bar r0"[^>]*style="--p:0.2"/);
+  assert.match(html, /class="bar r1"[^>]*style="--p:1"/);
 });
 
 test("a line chart puts a point and a segment a number, the first at the reading start", async () => {
