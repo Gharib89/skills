@@ -3,7 +3,9 @@
 // a frame holds; right to left, the layout mirrors.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { FIXTURE } from "../../skills/explainer-video/maintainer/real-render-fixture.mjs";
 import { DIAGRAM } from "../../skills/explainer-video/scripts/lib/diagram.mjs";
+import { checkVisual } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
 import { contentBox } from "../../skills/explainer-video/scripts/render/compose.mjs";
 import { diagramLayout } from "../../skills/explainer-video/scripts/render/diagram.mjs";
 
@@ -55,6 +57,25 @@ test("every node of every grid a frame holds sits inside the content area, and n
   }
   // 3 + 9 + 27 + 81 + 243 grids, under each layout
   assert.equal(n, 726);
+});
+
+test("the real-render fixture's diagrams compile, and lay out inside the content area with no two nodes overlapping", () => {
+  const diagrams = FIXTURE.filter(
+    (p) => p.scene.visual.component === "diagram",
+  );
+  assert.equal(diagrams.length, 2);
+  for (const { scene, dir } of diagrams) {
+    checkVisual(scene.visual, scene.narration);
+    for (const layout of ["open", "bands"]) {
+      const box = contentBox(layout);
+      const { nodes } = diagramLayout(scene.visual.props, box, dir === "rtl");
+      for (const a of nodes) {
+        assert.ok(a.left >= 0 && a.left + a.w <= box.width);
+        assert.ok(a.top >= 0 && a.top + a.h <= box.height);
+        for (const b of nodes) if (a !== b) assert.ok(!overlap(a, b));
+      }
+    }
+  }
 });
 
 test("columns run along the reading direction: left to right, mirrored right to left", () => {

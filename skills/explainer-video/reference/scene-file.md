@@ -114,6 +114,20 @@ narrator: am_fenrir
     limit. Rich, so a `camera` key is refused; in an Arabic run the first
     side sits at the right. Each number in a side's `title` or an item's
     `text` is a claim, held to a cited excerpt as a timeline's are.
+  - `diagram`: nodes and the links between them, laid out by the composer, so
+    the scene file holds no coordinates (`nodes*`, at least 2, each `id*`,
+    `at*`, `on`, `label*`, `note`; `links*`, each `from*`, `to*`, `at*`,
+    `on`, `packets`). A node stands one column past every node linked to it
+    from earlier in the list, so list nodes in the order the system runs and
+    a reply link back to an earlier node moves none; a column holds its
+    nodes in the order written. A frame holds 5 columns of up to 3 nodes:
+    more is refused. A link naming an id no node holds, linking a node to
+    itself, given twice, or cued before either of its nodes is refused.
+    `packets`, 1 to 3, are dots that run the link from its first node to its
+    second once its arrow is drawn, over and over to the scene's end. Rich,
+    so a `camera` key is refused; in an Arabic run the columns run right to
+    left. Each number in a `label` or `note` is a claim, held to a cited
+    excerpt as a timeline's are.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
     `code` (`title` and `codediff` take none): one callout per scene,
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a

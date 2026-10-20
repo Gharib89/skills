@@ -6,10 +6,10 @@
 //   node maintainer/real-render.mjs
 //
 // Needs the render rows installed (`node scripts/setup.mjs install`) and
-// ffmpeg. The fixture is FIXTURE below, composed as render/render.mjs composes
-// a run (the scenes on the frame grid, each scene's WAV padded to its frames,
-// the last held HOLD seconds) with a synthetic tone for the narration; a later
-// slice adds its own scenes to it. Its roles give both velocity seams: a
+// ffmpeg. The fixture is FIXTURE in real-render-fixture.mjs, composed as
+// render/render.mjs composes a run (the scenes on the frame grid, each scene's
+// WAV padded to its frames, the last held HOLD seconds) with a synthetic tone
+// for the narration; a later slice adds its own scenes to it. Its roles give both velocity seams: a
 // zoom-through at the beat change out of the hook, a cut on a curve inside the
 // point beat. The whole is rendered three times, the
 // style's texture included (a second and a third render catch noise that
@@ -24,8 +24,9 @@ import os from "node:os";
 import path from "node:path";
 import { sceneEvents } from "../scripts/gates/events.mjs";
 import { HOLD } from "../scripts/lib/length.mjs";
-import { seamStripStart } from "../scripts/lib/motion.mjs";
-import { loadStyle, typeRoles } from "../scripts/lib/style.mjs";
+import { judge } from "../scripts/lib/layout.mjs";
+import { sampleTimes, seamStripStart } from "../scripts/lib/motion.mjs";
+import { floors, loadStyle, typeRoles } from "../scripts/lib/style.mjs";
 import { VISUALS } from "../scripts/lib/visuals.mjs";
 import {
   catalogue,
@@ -41,230 +42,8 @@ import { FPS, sceneFile, videoPage } from "../scripts/render/compose.mjs";
 import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
+import { FIXTURE } from "./real-render-fixture.mjs";
 
-// Scene ids and component visuals as the compile stage writes them, each with
-// its narration's seconds: not whole frames, so the padding is exercised.
-const FIXTURE = [
-  {
-    scene: {
-      id: "hook",
-      role: "hook",
-      title: "The promise",
-      narration: ["One run, one merge."],
-      visual: {
-        component: "title",
-        props: { kicker: "Ship", title: "Issue to pull request" },
-      },
-    },
-    seconds: 2.37,
-  },
-  {
-    scene: {
-      id: "steps",
-      role: "point",
-      title: "The steps",
-      narration: ["It reads the issue.", "Then it ships."],
-      visual: {
-        component: "cards",
-        props: {
-          items: [
-            { at: 1, label: "Input", value: "issue" },
-            { at: 2, label: "Then", value: "pull request" },
-          ],
-          emphasis: { target: "Input", at: 1 },
-        },
-      },
-    },
-    seconds: 1.91,
-  },
-  {
-    scene: {
-      id: "merge",
-      role: "point",
-      title: "The merge",
-      narration: ["Then it merges."],
-      visual: {
-        component: "title",
-        props: { kicker: "Ship", title: "Merged" },
-      },
-    },
-    seconds: 1.43,
-  },
-  // Right to left: the type family `words` rises it by whole words, an English
-  // term one unit, and the determinism check holds its frames.
-  {
-    dir: "rtl",
-    scene: {
-      id: "arabic",
-      role: "point",
-      title: "العربي",
-      narration: ["بعد كده بيعمل merge."],
-      visual: {
-        component: "title",
-        props: { title: "من issue لحد pull request", subtitle: "تشغيل واحد" },
-      },
-    },
-    seconds: 1.67,
-  },
-  // Kinetic type read along: each word rises on its own spoken word, and the
-  // rich component draws no push-in of the composer's.
-  {
-    scene: {
-      id: "along",
-      role: "point",
-      title: "Read along",
-      narration: ["Read the issue, ship it, merge it."],
-      visual: {
-        component: "words",
-        props: {
-          lines: [
-            { at: 1, on: "Read the issue", text: "Read the issue" },
-            { at: 1, on: "ship it", text: "ship it" },
-          ],
-        },
-      },
-    },
-    seconds: 2.6,
-  },
-  // Numbers that count up: bars and stats, then the same right to left (a line
-  // chart and a stat). Each number cues on a sentence after the scene's entry
-  // seam, so a frame during the count is outside any seam.
-  {
-    scene: {
-      id: "bars",
-      role: "point",
-      title: "Bars",
-      narration: ["Latency was 900.", "Then it fell to 240.", "Quite a drop."],
-      visual: {
-        component: "chart",
-        props: {
-          kind: "bar",
-          unit: "ms",
-          items: [
-            { at: 2, label: "Before", value: "900" },
-            { at: 3, label: "After", value: "240" },
-          ],
-        },
-      },
-    },
-    seconds: 3.4,
-  },
-  {
-    scene: {
-      id: "numbers",
-      role: "point",
-      title: "Numbers",
-      narration: ["Two numbers.", "It holds 1,200 requests.", "In 40 ms."],
-      visual: {
-        component: "stat",
-        props: {
-          items: [
-            { at: 2, value: "1,200", label: "requests a second" },
-            { at: 3, value: "40", label: "milliseconds" },
-          ],
-        },
-      },
-    },
-    seconds: 3.4,
-  },
-  {
-    dir: "rtl",
-    scene: {
-      id: "arabic-line",
-      role: "point",
-      title: "خط",
-      narration: ["الأرقام بتنزل.", "كانت 900.", "بقت 240."],
-      visual: {
-        component: "chart",
-        props: {
-          kind: "line",
-          items: [
-            { at: 2, label: "قبل", value: "900" },
-            { at: 3, label: "بعد", value: "240" },
-          ],
-        },
-      },
-    },
-    seconds: 3.4,
-  },
-  {
-    dir: "rtl",
-    scene: {
-      id: "arabic-stat",
-      role: "point",
-      title: "أرقام",
-      narration: ["رقمين.", "فيه 1,200 طلب.", "في ٤٠ ثانية."],
-      visual: {
-        component: "stat",
-        props: {
-          items: [
-            { at: 2, value: "1,200", label: "طلب" },
-            { at: 3, value: "٤٠", label: "ثانية" },
-          ],
-        },
-      },
-    },
-    seconds: 3.4,
-  },
-  // A timeline, then an Arabic timeline and compare that run right to left
-  // (the first event and the first side at the right), each item on its cue.
-  {
-    scene: {
-      id: "timeline",
-      role: "point",
-      title: "Timeline",
-      narration: ["How it grew.", "A side project.", "Then every team."],
-      visual: {
-        component: "timeline",
-        props: {
-          items: [
-            { at: 2, when: "late 2019", label: "Started" },
-            { at: 3, when: "Q3 2021", label: "Shipped", note: "every team" },
-          ],
-        },
-      },
-    },
-    seconds: 3.4,
-  },
-  {
-    dir: "rtl",
-    scene: {
-      id: "arabic-timeline",
-      role: "point",
-      title: "التاريخ",
-      narration: ["إزاي كبر.", "بدأ مشروع جانبي.", "وبعدين كل الفرق."],
-      visual: {
-        component: "timeline",
-        props: {
-          items: [
-            { at: 2, when: "أواخر 2019", label: "البداية" },
-            { at: 3, when: "Q3 2021", label: "الانتشار" },
-          ],
-        },
-      },
-    },
-    seconds: 3.4,
-  },
-  {
-    dir: "rtl",
-    scene: {
-      id: "arabic-compare",
-      role: "point",
-      title: "مقارنة",
-      narration: ["قبل وبعد.", "كان يدوي.", "بقى تلقائي."],
-      visual: {
-        component: "compare",
-        props: {
-          sides: [
-            { title: "قبل", items: [{ at: 2, text: "يدوي" }] },
-            { title: "بعد", items: [{ at: 3, text: "تلقائي" }] },
-          ],
-        },
-      },
-    },
-    seconds: 3.4,
-  },
-];
 const HALF = 1;
 const RATE = 24000;
 
@@ -535,10 +314,71 @@ check(
     )
     .join("; "),
 );
-// With REAL_RENDER_FRAMES set, save each timeline and compare scene's settled
-// frame (3 s in) for a human to check the reading order; nothing asserts it.
+// A packet's place is a function of time: each diagram scene's frame 2 s in,
+// packets mid-run, seeked twice, matches byte for byte and differs from the
+// frame 0.2 s later.
+const flowing = [];
+for (const id of ["diagram", "arabic-diagram"]) {
+  const start = whole.scenes.find((s) => s.id === id).start;
+  const at = +(start + 2.0).toFixed(3);
+  const a = await seek(at, "packets-a");
+  const b = await seek(at, "packets-b");
+  const later = await seek(+(at + 0.2).toFixed(3), "packets-later");
+  flowing.push([id, a.equals(b), !a.equals(later)]);
+}
+check(
+  "packets",
+  flowing.every(([, same, moved]) => same && moved),
+  flowing
+    .map(
+      ([id, same, moved]) =>
+        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moved ? "moves" : "STILL"} 0.2 s later`,
+    )
+    .join("; "),
+);
+
+// The layout gate over the largest diagram's samples, as the gates stage
+// takes them: its text inside the safe area, none clipped, small or stacked.
+const largest = FIXTURE.filter(
+  (p) => p.scene.visual.component === "diagram",
+).sort(
+  (a, b) =>
+    b.scene.visual.props.nodes.length - a.scene.visual.props.nodes.length,
+)[0].scene.id;
+const sc = whole.scenes.find((s) => s.id === largest);
+const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
+const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
+const findings = [];
+judge(
+  await backend.check(whole.comp, times, { env }),
+  (await backend.probe(whole.comp, times, { env })).map((f) => ({
+    ...f,
+    elements: f.elements.filter((e) => e.scene === largest),
+  })),
+  floors(profile),
+  (gate, t, what) => {
+    if (gate === "layout" && t < sc.start + sc.duration - 1e-6)
+      findings.push(`${t.toFixed(2)} s: ${what}`);
+  },
+  moving,
+);
+check(
+  "layout",
+  findings.length === 0,
+  `${largest}, ${times.length} samples: ${[...new Set(findings)].join("; ") || "no finding"}`,
+);
+
+// With REAL_RENDER_FRAMES set, save each timeline, compare and diagram scene's
+// settled frame (3 s in) for a human to check the reading order; nothing
+// asserts it.
 if (process.env.REAL_RENDER_FRAMES)
-  for (const id of ["timeline", "arabic-timeline", "arabic-compare"]) {
+  for (const id of [
+    "timeline",
+    "arabic-timeline",
+    "arabic-compare",
+    "diagram",
+    "arabic-diagram",
+  ]) {
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(
       path.join(process.env.REAL_RENDER_FRAMES, `${id}.png`),

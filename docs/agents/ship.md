@@ -125,7 +125,7 @@ Paths: skills/ship/SKILL.md, skills/ship/reference/**
 
 Proves: the explainer-video composer's frame grid holds under real HyperFrames: the render's frame count equals the composer's, two renders match frame for frame, and two stream-copy-joined halves have the whole's frame count.
 Applies when: the change touches a file in `Paths:`.
-Run: first, a slice adding scenes extends the fixture in `maintainer/real-render.mjs`; then `node skills/explainer-video/maintainer/real-render.mjs` after `node skills/explainer-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new cache). Outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
+Run: first, a slice adding scenes extends the fixture in `maintainer/real-render-fixture.mjs`; then `node skills/explainer-video/maintainer/real-render.mjs` after `node skills/explainer-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new cache). Outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
 Needs: the `npm-packages` and `chrome` rows installed, and `ffmpeg`.
 Without it: hand-off
 Also proven by CI: None.

@@ -4,14 +4,15 @@
 // whose visual is a component. The palette, the type scale and the faces come
 // from the style profile as CSS custom properties; every font is a file beside
 // the page.
-import { COUNT_SECONDS, countText, plain } from "../lib/count.mjs";
+import { COUNT_SECONDS } from "../lib/count.mjs";
 import { ARABIC, blursDepth, grammar, scale } from "../lib/style.mjs";
-import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
+import { RISE_PX, SPRING, settleTime } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { VISUALS, cameraCue, cueWord } from "../lib/visuals.mjs";
 import { COMPONENTS, ITEMS, esc, seed } from "./components.mjs";
 import { pushScript, seamScript } from "./seam-script.mjs";
 import { texture } from "./texture.mjs";
+import { RISE, countScript, play } from "./tween-script.mjs";
 
 export { esc };
 
@@ -30,10 +31,6 @@ const CAPTION_PX = 40;
 export const CUE_CHARS = 84;
 // The blur in px a title's words resolve out of under the type family `words`.
 const TITLE_BLUR = 12;
-const RISE = [
-  { opacity: 0, y: RISE_PX },
-  { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
-];
 // A reveal under `velocity`: each class on its own fast-out ease, a headline
 // the longest and a snap the sharpest.
 const VELOCITY = {
@@ -130,6 +127,8 @@ async function sceneParts(
   const box = contentBox(layout);
   const x = {
     surface,
+    // The content box, for a component the composer lays out itself.
+    box,
     // A code row is the code step at 1.4 (45 px at 32), so a `scale.code`
     // override keeps the text inside its row; 12 rows fit the band at the
     // default step only, a taller override is the layout gate's to catch.
@@ -205,12 +204,29 @@ async function sceneParts(
     c.counts
       ? +Math.min(d, Math.max(timing.duration - at, 0.05)).toFixed(6)
       : d;
+  // A tween repeating forever (`repeat: -1`) repeats until it has reached the
+  // scene's end, and no further: the timeline stays finite, so a frame is a
+  // function of its time.
+  const repeats = (to, at) =>
+    to.repeat === -1
+      ? {
+          ...to,
+          repeat: Math.max(
+            0,
+            Math.ceil((timing.duration - at - (to.delay ?? 0)) / to.duration) -
+              1,
+          ),
+        }
+      : to;
   const tweens = [
     ...c.reveals.map(reveal),
     ...(c.tweens ?? []).map(([sel, from, to, at]) => [
       sel,
       from,
-      to.duration ? { ...to, duration: fit(t(at), to.duration) } : to,
+      repeats(
+        to.duration ? { ...to, duration: fit(t(at), to.duration) } : to,
+        t(at),
+      ),
       t(at),
     ]),
     ...depth,
@@ -239,42 +255,6 @@ ${play(scope, tweens)}${countScript(scope, counts)}${pushScript(scope, push, cam
       })();`,
   };
 }
-
-// The script lines that play a scene's tweens on its timeline. A tween naming a
-// spring class evaluates `SPRING[class]` (written into the script with the
-// functions that read it) in place of a GSAP ease: opacity rises on its own
-// ease, never past 1, and position and scale follow the spring.
-const play = (scope, tweens) =>
-  tweens.some((x) => x[4])
-    ? `        const SPRING = ${JSON.stringify(SPRING)};
-        ${settleTime}
-        ${step}
-        for (const [sel, from, to, t, cls] of tweens) {
-          if (!cls) {
-            tl.fromTo('${scope} ' + sel, from, to, t);
-            continue;
-          }
-          const { opacity: o0, ...move } = from;
-          const { opacity: o1, duration, ...end } = to;
-          tl.fromTo('${scope} ' + sel, { opacity: o0 }, { opacity: o1, duration: ${RISE[1].duration}, ease: "${RISE[1].ease}" }, t);
-          tl.fromTo('${scope} ' + sel, move, { ...end, duration, ease: (p) => p >= 1 ? 1 : step(SPRING[cls], p * duration) }, t);
-        }`
-    : `        for (const [sel, from, to, t] of tweens)
-          tl.fromTo('${scope} ' + sel, from, to, t);`;
-
-// The script lines that count a scene's numbers up, `[selector, written, time]`
-// each: a tween of the element's text from 0 to 1 whose modifier turns the
-// progress into text, so the text is a function of the timeline's time alone.
-// `countText` is written into the script as source.
-const countScript = (scope, counts) =>
-  counts.length
-    ? `
-        const counts = ${JSON.stringify(counts)};
-        ${plain}
-        ${countText}
-        for (const [sel, written, t, d] of counts)
-          tl.fromTo('${scope} ' + sel, { textContent: 0 }, { textContent: 1, duration: d, ease: "power2.out", modifiers: { textContent: (p) => countText(written, p) } }, t);`
-    : "";
 
 // A full page: fonts, palette, the texture behind and over `body` and, under
 // `bands`, the header band, inside the root. Right to left, the header and the
