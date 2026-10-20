@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.31.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: The Velocity Cut frame (open layout, texture and velocity ease)
+  ([#896](https://github.com/Gharib89/skills/pull/896),
+  [`9bb1596`](https://github.com/Gharib89/skills/commit/9bb1596d33fa68d16b323d3298eed053a7bacfab))
+
+
 ## v0.30.0 (2026-10-19)
 
 ### Features
