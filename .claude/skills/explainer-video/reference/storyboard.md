@@ -67,7 +67,7 @@ delivery it reports Render's last line and the videos-folder path.
    page recorded earlier would otherwise ask for uploads). For each card that
    carries a finding (a red the sampling pass left, or one a gate stop reopened)
    add `--fix <scene>=<text>`: the fix you propose, which the card shows beside
-   the finding; the card shows it beside the finding. Exit 1 with
+   the finding. Exit 1 with
    `board: no <file>`, `no still` or `no composition` names the stage to run
    first. On a published page it first lists `board: upload <path> (<size>)`
    per build script, still, narration or clip the page does not hold yet:

@@ -63,6 +63,15 @@ test("a clean script samples green: no video made, one record per scene, and the
   assert.equal(calls(fx, "probe").length, probes + 1);
 });
 
+test("a probe that finds no text in a scene is a tool error, not a green pass", () => {
+  const fx = prepared();
+  const r = run(fx, "gates/samples.mjs", [], {
+    EXPLAINER_VIDEO_FAKE_BLANK: "1",
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, /^samples: layout probe: no text in scene hook$/m);
+});
+
 test("a clipped title is a layout finding on its scene, and a reading finding is one too; both exit 1", () => {
   const fx = prepared(
     SCRIPT.replace("Issue to pull request", "Issue to clipped request"),

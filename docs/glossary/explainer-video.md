@@ -73,7 +73,7 @@ One state of a run's storyboard, posted as one document the page renders: the fi
 _Avoid_: round, board update
 
 **Sampling pass**:
-Layout and reading time judged on a composition's samples (the ones the video gates take) before any video exists, so a red shows on its storyboard card instead of after a render. Its reds are findings the human sees, not video gates: nothing blocks on them.
+Layout and reading time judged on a composition's samples (the ones the video gates take) before any video exists, so a red shows on its storyboard card instead of after a render. Its reds are findings the human sees, not video gates: they open their cards on Revise and no gate attempt count tracks them.
 _Avoid_: pre-gate, dry run
 
 **Style profile**:
