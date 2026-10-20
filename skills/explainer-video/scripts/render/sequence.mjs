@@ -38,7 +38,8 @@ export const timeline = (p, f) => ({
 // Two boxes side by side, each its title over its items. The boxes frame the
 // scene from its start; a side's title arrives with its first item, and each
 // item on its own cue (compile holds every item to cue no earlier than the
-// first). Title and items reveal as siblings, so none rides another's rise.
+// first). Title and items reveal as siblings, so no reveal moves inside
+// another's.
 export const compare = async (p, f, x) => {
   const box = { w: 800, h: 560 };
   const shapes = await x.sketch(
