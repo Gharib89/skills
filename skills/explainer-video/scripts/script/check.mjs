@@ -275,7 +275,8 @@ const drift = [];
       // An `on` phrase starts the item that many words into its sentence.
       const into = on === undefined ? 0 : findPhrase(s.narration[at - 1], on);
       const start = upTo(at - 1) + into;
-      const blurred = depth && texts[0] !== e.target;
+      // A list's title is no `ITEMS` box, so the depth overlay leaves it sharp.
+      const blurred = depth && name !== "title" && texts[0] !== e.target;
       const end = blurred
         ? upTo(e.at - 1) +
           (e.on === undefined ? 0 : findPhrase(s.narration[e.at - 1], e.on))

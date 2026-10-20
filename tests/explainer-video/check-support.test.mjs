@@ -247,6 +247,31 @@ test("an item the emphasis blurs is on screen only until the emphasis lands, the
   );
 });
 
+test("a list's title stays sharp under the depth overlay, so the reading gate counts it to the end", () => {
+  const out = line(
+    check(
+      fixture({
+        scenes: edit(SCENES, 2, {
+          sentences: [say(17), say(18, "[no-claim]"), say(2)],
+          visual: {
+            component: "list",
+            props: {
+              title: "The plan",
+              items: [
+                { at: 1, text: "Input" },
+                { at: 1, text: "Then" },
+              ],
+              emphasis: { target: "Input", at: 1 },
+            },
+          },
+        }),
+      }),
+    ),
+    "reading",
+  );
+  assert.doesNotMatch(out, /steps title/);
+});
+
 test("a code diff's reader reads the lines the render adds, a moved line among them", () => {
   const [, [, at, added]] = VISUALS.codediff.items({
     lang: "js",
