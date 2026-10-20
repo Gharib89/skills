@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.32.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Velocity seams between scenes
+  ([#897](https://github.com/Gharib89/skills/pull/897),
+  [`7e99442`](https://github.com/Gharib89/skills/commit/7e9944239ad4b4133d04d98aa633dd6a3a322b43))
+
+
 ## v0.31.0 (2026-10-20)
 
 ### Features
