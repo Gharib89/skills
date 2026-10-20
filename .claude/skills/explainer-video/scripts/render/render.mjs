@@ -7,7 +7,7 @@
 // from its voice duration, the last held 1 s, cues captions from the word
 // timings, composes the video in <run>/composition/ with the narration mastered (the score from
 // score/score.mjs mixed under it, unless brief.json turns it off), renders a
-// settled still per scene and then the video with HyperFrames, each cached in
+// still per scene (its fullest moment) and then the video with HyperFrames, each cached in
 // <run>/.cache/ by content hash, runs the gates stage (gates/gates.mjs) on
 // out/, checks the MP4 with ffprobe, and copies MP4, SRT and poster to the
 // videos folder. A red gate or a failed check empties out/ and delivers
@@ -412,7 +412,7 @@ if (missing.length) {
   fs.rmSync(work, { recursive: true, force: true });
 }
 
-// Every scene's settled still, for the storyboard (path relative to the run).
+// Every scene's still, at its fullest moment, for the storyboard (path relative to the run).
 fs.writeFileSync(
   path.join(run, "stills.json"),
   JSON.stringify(

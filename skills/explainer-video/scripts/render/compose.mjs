@@ -95,8 +95,8 @@ export function faces(profile, dir = "ltr") {
 // A scene's sub-composition: its timeline reveals each piece as the sentence
 // naming it starts, every tween on that paused timeline, so a frame renders the
 // same whenever HyperFrames seeks to it. A stills page sets window.__stills, so
-// the timeline jumps to its end and stays unregistered: HyperFrames never seeks
-// it back. `dir` is the scene's reading direction; code stays left to right.
+// the timeline jumps to the scene's fullest moment, every reveal landed and the
+// exit not begun, and stays unregistered: HyperFrames never seeks it back. `dir` is the scene's reading direction; code stays left to right.
 // `timing.slot`, longer than `timing.duration` by the scene's seam out, is the
 // stretch the template runs for.
 export async function sceneFile(scene, timing, profile, opts) {
@@ -218,9 +218,11 @@ ${css}
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
-${play(scope, tweens)}${countScript(scope, counts)}${pushScript(scope, push, camera)}${seamScript(scope, seam, timing.duration, dir === "rtl")}
+${play(scope, tweens)}${countScript(scope, counts)}${pushScript(scope, push, camera)}
+        // never before the entry seam ends: earlier the content is still fading in
+        const full = Math.min(Math.max(tl.duration(), ${seam.in?.duration ?? 0}), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};
-        if (window.__stills) tl.progress(1);
+        if (window.__stills) tl.time(full);
         else window.__timelines["${id}"] = tl;
       })();`,
   };
@@ -411,7 +413,7 @@ function stillCue(text, attrs, f) {
     .join(" ")}</span></div>`;
 }
 
-// One frame per scene, each scene settled at its end; `cues` holds a still
+// One frame per scene, each scene at its fullest moment; `cues` holds a still
 // caption for a scene by its id, and `frame` is each scene's stretch in
 // seconds. data-no-timeline stops HyperFrames waiting for the timelines the
 // scenes leave unregistered.

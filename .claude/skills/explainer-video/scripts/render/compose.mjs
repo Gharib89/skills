@@ -4,7 +4,6 @@
 // whose visual is a component. The palette, the type scale and the faces come
 // from the style profile as CSS custom properties; every font is a file beside
 // the page.
-import { COUNT_SECONDS, countText, plain } from "../lib/count.mjs";
 import { ARABIC, blursDepth, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime, step } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
@@ -95,8 +94,8 @@ export function faces(profile, dir = "ltr") {
 // A scene's sub-composition: its timeline reveals each piece as the sentence
 // naming it starts, every tween on that paused timeline, so a frame renders the
 // same whenever HyperFrames seeks to it. A stills page sets window.__stills, so
-// the timeline jumps to its end and stays unregistered: HyperFrames never seeks
-// it back. `dir` is the scene's reading direction; code stays left to right.
+// the timeline jumps to the scene's fullest moment, every reveal landed and the
+// exit not begun, and stays unregistered: HyperFrames never seeks it back. `dir` is the scene's reading direction; code stays left to right.
 // `timing.slot`, longer than `timing.duration` by the scene's seam out, is the
 // stretch the template runs for.
 export async function sceneFile(scene, timing, profile, opts) {
@@ -204,11 +203,6 @@ async function sceneParts(
     ...(c.tweens ?? []).map(([sel, from, to, at]) => [sel, from, to, t(at)]),
     ...depth,
   ];
-  const counts = (c.counts ?? []).map(([sel, written, at]) => [
-    sel,
-    written,
-    t(at),
-  ]);
   return {
     html: `    <div class="content" dir="${dir}">${push === null ? c.html : `<div class="camera">${c.html}</div>`}</div>
     <style>
@@ -218,9 +212,11 @@ ${css}
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
-${play(scope, tweens)}${countScript(scope, counts)}${pushScript(scope, push, camera)}${seamScript(scope, seam, timing.duration, dir === "rtl")}
+${play(scope, tweens)}${pushScript(scope, push, camera)}
+        // never before the entry seam ends: earlier the content is still fading in
+        const full = Math.min(Math.max(tl.duration(), ${seam.in?.duration ?? 0}), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};
-        if (window.__stills) tl.progress(1);
+        if (window.__stills) tl.time(full);
         else window.__timelines["${id}"] = tl;
       })();`,
   };
@@ -247,20 +243,6 @@ const play = (scope, tweens) =>
         }`
     : `        for (const [sel, from, to, t] of tweens)
           tl.fromTo('${scope} ' + sel, from, to, t);`;
-
-// The script lines that count a scene's numbers up, `[selector, written, time]`
-// each: a tween of the element's text from 0 to 1 whose modifier turns the
-// progress into text, so the text is a function of the timeline's time alone.
-// `countText` is written into the script as source.
-const countScript = (scope, counts) =>
-  counts.length
-    ? `
-        const counts = ${JSON.stringify(counts)};
-        ${plain}
-        ${countText}
-        for (const [sel, written, t] of counts)
-          tl.fromTo('${scope} ' + sel, { textContent: 0 }, { textContent: 1, duration: ${COUNT_SECONDS}, ease: "power2.out", modifiers: { textContent: (p) => countText(written, p) } }, t);`
-    : "";
 
 // A full page: fonts, palette, the texture behind and over `body` and, under
 // `bands`, the header band, inside the root. Right to left, the header and the
@@ -411,7 +393,7 @@ function stillCue(text, attrs, f) {
     .join(" ")}</span></div>`;
 }
 
-// One frame per scene, each scene settled at its end; `cues` holds a still
+// One frame per scene, each scene at its fullest moment; `cues` holds a still
 // caption for a scene by its id, and `frame` is each scene's stretch in
 // seconds. data-no-timeline stops HyperFrames waiting for the timelines the
 // scenes leave unregistered.

@@ -75,7 +75,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
 const ctx = vm.createContext({ console });
 vm.runInContext(
   scripts[0] +
-    "\n;globalThis.__page = { newState, setBoards, setAnswers, view, ACT, answersDoc, answersText, mediaUrl, outcome };",
+    "\n;globalThis.__page = { newState, setBoards, setAnswers, view, ACT, answersDoc, answersText, mediaUrl, outcome, loopOf, sceneAt, buildOf };",
   ctx,
 );
 const P = ctx.__page;
@@ -220,6 +220,71 @@ test("a delivered board shows a video per clip and takes no answers", () => {
   assert.equal(P.answersDoc(S).scenes[1].choice, "approve");
 });
 
+test("only the card in view mounts its build, in a frame that runs scripts and nothing else", () => {
+  const S = session([sample("board-review")]);
+  const frames = (v) => v.split("<iframe").length - 1;
+  const posters = (v) => v.split('class="stage"').length - 1;
+  let v = P.view(S);
+  assert.equal(frames(v), 0, "no card in view, no build");
+  assert.equal(posters(v), 4, "three cards and the animatic show a poster");
+  S.inView = { steps: true };
+  v = P.view(S);
+  assert.equal(frames(v), 1);
+  assert.match(
+    v,
+    /<div class="stage" data-stage="steps"><img[^>]*><iframe class="live" sandbox="allow-scripts" [^>]*data-live="steps"><\/iframe>/,
+  );
+  // no origin and no markup in the attribute: the page hands the build in after mount
+  assert.doesNotMatch(v, /allow-same-origin|srcdoc/);
+  // the animatic plays the one build, so no card keeps its own
+  S.animatic = true;
+  v = P.view(S);
+  assert.equal(frames(v), 1);
+  assert.match(v, /data-live="animatic"/);
+  assert.doesNotMatch(v, /data-live="steps"/);
+});
+
+test("the animatic's tick marks a scene change in place, never through render, which reloads a frame where moveBefore is missing", () => {
+  const boot = read(path.join(skill, "storyboard", "page-boot.js"));
+  const tick = boot.match(/function tick\(\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.match(tick, /classList\.toggle\("on"/);
+  assert.doesNotMatch(tick, /\brender\(/);
+});
+
+test("a card loops its slot, the animatic finds the scene at the narration's time, and its list highlights the playing card", () => {
+  const board = sample("board-review");
+  const S = session([board]);
+  const b = S.boards[0];
+  const [hook, steps] = b.scenes;
+  assert.deepEqual(clone(P.loopOf(hook)), [hook.start, hook.start + hook.slot]);
+  assert.ok(hook.slot > hook.seconds, "the slot holds the exit seam");
+  assert.equal(P.sceneAt(b, 0).id, "hook");
+  assert.equal(P.sceneAt(b, steps.start - 0.01).id, "hook");
+  assert.equal(
+    P.sceneAt(b, steps.start).id,
+    "steps",
+    "a seam belongs to the scene it enters",
+  );
+  assert.equal(P.sceneAt(b, 999).id, "gate");
+  assert.equal(P.buildOf(b), board.build);
+  assert.match(
+    P.view(S),
+    /<audio id="player-audio"[^>]* src="\.cache\/board-audio\//,
+  );
+  const on = (v) =>
+    [...v.matchAll(/class="scene on" data-act="jump" data-id="(\w+)"/g)].map(
+      (m) => m[1],
+    );
+  assert.deepEqual(on(P.view(S)), []);
+  S.animatic = true;
+  S.playing = "steps";
+  const v = P.view(S);
+  assert.deepEqual(on(v), ["steps"]);
+  assert.match(v, /class="scene on" [^>]*aria-current="true"/);
+  assert.match(v, /data-act="jump" data-id="hook"/);
+  assert.match(v, /data-act="card-play" data-id="steps"/);
+});
+
 test("a board whose answers are submitted takes no more edits", () => {
   const S = session(
     [sample("board-review")],
@@ -358,6 +423,10 @@ test("every field the page reads is documented, and it reads the ones it renders
     "board.scenes[].seconds",
     "board.scenes[].style",
     "board.scenes[].audio",
+    "board.scenes[].start",
+    "board.scenes[].slot",
+    "board.narration",
+    "board.build",
     "answers.version",
   ])
     assert.ok(seen.has(p), `page never reads ${p}`);

@@ -3,6 +3,7 @@
 // seam extends.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import vm from "node:vm";
 import {
   grammar,
   validate,
@@ -186,12 +187,40 @@ test("a seam with no blur sets no filter, and a scene with no seam draws none", 
   assert.equal(JSON.stringify(flat.tweens).includes("filter"), false);
   const none = await drawn({});
   assert.deepEqual(none.tweens, []);
-  assert.doesNotMatch(none.html, /seam:|__stills\) \{/);
-  // a stills page holds each scene settled at its end: no seam plays
-  assert.match(
-    (await drawn({ out: zoom })).html,
-    /if \(!window\.__stills\) \{/,
-  );
+  assert.doesNotMatch(none.html, /seam:/);
+});
+
+// The scene's script run as a stills page runs it, against a stub timeline
+// that records where it is seeked: `reveals` is when its last reveal lands.
+const seeked = async (seam, reveals) => {
+  const at = [];
+  const tl = {
+    fromTo: () => {},
+    addLabel: () => tl,
+    duration: () => reveals,
+    time: (t) => at.push(t),
+  };
+  const { html } = await drawn(seam);
+  vm.runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], {
+    gsap: { timeline: () => tl },
+    window: { __stills: true },
+  });
+  return at;
+};
+
+test("a stills page seeks each scene to its fullest moment: every reveal landed, the exit not begun", async () => {
+  // the seam is in the timeline the still seeks, so the timeline's end is no
+  // longer the still's moment: the reveals' last landing is
+  assert.deepEqual(await seeked({ in: zoom, out: zoom }, 2.4), [2.4]);
+  assert.deepEqual(await seeked({}, 2.4), [2.4]);
+  // a reveal landing past the scene's own end (3 s) leaves the still at that
+  // end, where the exit starts
+  assert.deepEqual(await seeked({ in: zoom, out: zoom }, 3.4), [3]);
+  // a scene whose reveals land inside the entry, or that has none, is seeked
+  // to the entry's end: earlier the content is still fading in
+  assert.deepEqual(await seeked({ in: zoom, out: zoom }, 0.1), [0.2]);
+  assert.deepEqual(await seeked({ in: zoom, out: zoom }, 0), [0.2]);
+  assert.deepEqual(await seeked({ in: zoom, out: zoom }, 0.2), [0.2]);
 });
 
 test("compiling the fixture keeps every scene start and extends each outgoing slot by its seam", () => {

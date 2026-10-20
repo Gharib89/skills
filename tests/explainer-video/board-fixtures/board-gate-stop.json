@@ -2,6 +2,8 @@
   "version": 3,
   "kind": "review",
   "title": "How Ship lands a pull request",
+  "build": ".cache/board-build/0123456789abcdef.js",
+  "narration": ".cache/board-audio/0123456789abcdef.webm",
   "brief": [
     {
       "knob": "focus",
@@ -72,6 +74,8 @@
       "style": "title · claude-code · am_fenrir",
       "still": ".cache/stills/hook.png",
       "audio": ".cache/voice/hook.wav",
+      "start": 0,
+      "slot": 9.8,
       "status": "approved"
     },
     {
@@ -83,6 +87,8 @@
       "style": "cards · claude-code · am_fenrir",
       "still": ".cache/stills/steps.png",
       "audio": ".cache/voice/steps.wav",
+      "start": 9.4,
+      "slot": 12.5,
       "status": "reopened"
     },
     {
@@ -94,6 +100,8 @@
       "style": "terminal · claude-code · am_fenrir",
       "still": ".cache/stills/gate.png",
       "audio": ".cache/voice/gate.wav",
+      "start": 21.5,
+      "slot": 8.7,
       "status": "approved"
     }
   ]

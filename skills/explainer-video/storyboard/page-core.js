@@ -16,6 +16,9 @@ function newState(title) {
     canEdit: true,
     local: false,
     playing: null,
+    // The one card in view, whose build is mounted; the animatic mounts its own.
+    inView: {},
+    animatic: false,
   };
 }
 const latest = (S) => S.boards[S.boards.length - 1];
@@ -42,8 +45,15 @@ function setBoards(S, docs) {
   if (latest(S) && latest(S).version !== was) {
     S.status = "idle";
     S.playing = null;
+    S.animatic = false;
   }
 }
+// A card loops its slot, which holds the scene's exit seam.
+const loopOf = (c) => [c.start, c.start + c.slot];
+// The scene playing at narration time t: the last one begun, so a seam belongs to the scene it enters.
+const sceneAt = (b, t) =>
+  b.scenes.reduce((on, c) => (c.start <= t ? c : on), b.scenes[0]);
+const buildOf = (b) => mediaUrl(b.build);
 function setAnswers(S, docs) {
   S.submitted = Object.fromEntries(docs.map((d) => [d.version, true]));
 }
@@ -194,13 +204,24 @@ function shell(S, text) {
 function banner(x) {
   return `<div class="banner panel" role="alert"><b>${esc(x.text)}</b><pre>${x.gates.map(esc).join("\n")}</pre></div>`;
 }
+// A stage is the poster, with the live build over it once a frame is mounted.
+const stage = (id, still, frame) =>
+  `<div class="stage" data-stage="${esc(id)}"><img alt="" src="${esc(mediaUrl(still))}">${frame}</div>`;
+const frame = (id, label) =>
+  `<iframe class="live" sandbox="allow-scripts" title="${esc(label)}" data-live="${esc(id)}"></iframe>`;
 function player(S, b) {
   const on = b.scenes.find((c) => c.id === S.playing) || b.scenes[0];
   return `<section class="player panel" id="player"><span class="label">Animatic</span>
-    <img id="player-still" alt="" src="${esc(mediaUrl(on && on.still))}">
-    <audio id="player-audio" controls></audio>
+    ${stage("animatic", on.still, S.animatic ? frame("animatic", "Live build of the whole video") : "")}
+    <audio id="player-audio" preload="none" src="${esc(mediaUrl(b.narration))}"></audio>
     <div class="row"><button class="btn btn-sm accent" data-act="play">Play animatic</button><button class="btn btn-sm" data-act="stop">Stop</button>
-      <span class="label">Plays each card's narration in order with its still shown.</span></div></section>`;
+      <span class="label">Plays the whole build over the joined narration, seams included.</span></div>
+    <ol class="scenes">${b.scenes
+      .map(
+        (c) =>
+          `<li><button class="scene${S.playing === c.id ? " on" : ""}" data-act="jump" data-id="${esc(c.id)}" ${S.playing === c.id ? 'aria-current="true"' : ""}><span dir="auto">${esc(c.title)}</span><span class="label">${esc(c.seconds)} s</span></button></li>`,
+      )
+      .join("")}</ol></section>`;
 }
 function briefPanel(S, b) {
   const d = draftOf(S),
@@ -243,11 +264,22 @@ function card(S, b, c) {
   const media =
     delivered && c.clip
       ? `<video controls preload="none" src="${esc(mediaUrl(c.clip))}" poster="${esc(mediaUrl(c.still))}"></video>`
-      : `<img alt="Still of scene ${esc(c.id)}" src="${esc(mediaUrl(c.still))}">`;
+      : stage(
+          c.id,
+          c.still,
+          S.inView[c.id] && !S.animatic
+            ? frame(c.id, "Live build of scene " + c.id)
+            : "",
+        );
   const body = `<div class="chead"><h3 dir="auto">${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ""}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
     ${media}
     <span class="style">${esc(c.style)}</span>
-    <audio controls preload="none" src="${esc(mediaUrl(c.audio))}"></audio>
+    ${
+      delivered && c.clip
+        ? `<audio controls preload="none" src="${esc(mediaUrl(c.audio))}"></audio>`
+        : `<div class="row"><button class="btn btn-sm accent" data-act="card-play" data-id="${esc(c.id)}">Play</button>
+      <audio preload="none" data-audio="${esc(c.id)}" src="${esc(mediaUrl(c.audio))}"></audio></div>`
+    }
     ${
       delivered
         ? `<p dir="auto">${esc(c.narration).replace(/\n/g, "<br>")}</p>`
