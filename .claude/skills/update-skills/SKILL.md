@@ -3,7 +3,7 @@ name: update-skills
 description: "Refresh this repo's skills in one PR: the Gharib89/skills skills, every skill they compose at its pinned ref, and any other repo-scoped skill the owner picks; report upstream drift to the source repo and summarise what changed. In the source repo, move the drifted pins instead. Attended only."
 disable-model-invocation: true
 metadata:
-  version: 0.10.0
+  version: 0.10.1
 ---
 
 # update-skills
@@ -283,10 +283,12 @@ finds the drift issue this PR closes; steps 6 and 8 run unchanged. Per row:
    restores its folder and lock entry from `<old>`), put `<from>` back on each
    line step 2 edited, and record `held back: <skill>: <reliance it breaks>`.
 
-Then the refresh line, and `scripts/local-gate.sh`, whose `derived-copies` gate
-holds every pin to the lock. A gate red at the new pins holds back the row whose
-skill or folder its failing output names, or every moved row where it names
-none, the failing gate as the reliance; then refresh and gate again. In step 8
+Then the refresh line, and `scripts/check.sh full`, whose `derived-copies`
+check holds every pin to the lock and whose `tests` check runs the suite; the
+local gate defers both to CI, so it cannot hold a row back. A check red at the
+new pins holds back the row whose skill or folder its failing output names, or
+every moved row where it names none, the failing check as the reliance; then
+refresh and run `full` again. In step 8
 the PR body opens with `Closes #<n>`, the drift issue step 7 filed or found, or
 `Refs #<n>` with a row held back, and `## Needs attention` lists each `held
 back` line. With every row held back, open no PR: hand the owner those lines and
@@ -314,9 +316,10 @@ would file, and phase 6 opens the PR with `Closes #<issue>` but for a hold-back.
 2. Step 2's source-repo refresh line, from the source repo's CLAUDE.md.
 3. Step 3, with its source-repo token. A `heads` exit 1 is retried once, then
    stops the run `red-after-retry: heads`.
-4. Step 9 per `drift` and `others` row, then its refresh line. The local gate
-   is Ship's phase 5, where a red gate at the new pins is step 9's hold-back,
-   not a fix-and-retry; step 9's title rule is phase 6's title.
+4. Step 9 per `drift` and `others` row, then its refresh line and its
+   `scripts/check.sh full`, before Ship's phase 5: a red check at the new pins
+   is step 9's hold-back, not a fix-and-retry; step 9's title rule is phase 6's
+   title.
 
 A held-back row hands the issue back to the owner. With some rows moved, phase
 6 runs `open-pr none --title <t> --body-file <f>`, `<f>` saying `Refs #<issue>`,

@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.1 (2026-10-20)
+
+### Performance Improvements
+
+- **gate**: Defer every check.sh full check to CI's check-full
+  ([#909](https://github.com/Gharib89/skills/pull/909),
+  [`fd2ced4`](https://github.com/Gharib89/skills/commit/fd2ced42422f7de7e41b51d08d3653acf690fe49))
+
+
 ## v0.10.0 (2026-10-15)
 
 ### Features

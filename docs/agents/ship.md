@@ -15,7 +15,7 @@ Host: github
 Carry: None.
 Bootstrap: None.
 
-Nothing here is gitignored. The mechanics are bash; the gate needs `gitleaks` on PATH for its `secrets` gate, and every tool `scripts/check.sh full` runs (`shellcheck`, `actionlint`, `zizmor`, Prettier, `prek`), which the harness cloud setup, `.claude/hooks/cloud-setup.sh`, installs in a cloud session.
+Nothing here is gitignored. The mechanics are bash; the gate needs `gitleaks` on PATH for its `secrets` gate, and the hooks need every tool `scripts/check.sh` runs (`shellcheck`, `actionlint`, `zizmor`, Prettier, `prek`), which the harness cloud setup, `.claude/hooks/cloud-setup.sh`, installs in a cloud session.
 
 ## Local gate
 
@@ -23,7 +23,7 @@ Location: scripts/local-gate.sh
 Small node: the path of the changed script, e.g. `skills/ship/scripts/merge.sh`; for a `docs`-class change, the path of the changed document, e.g. `skills/ship/SKILL.md`
 Tripwires: None.
 
-Two CI legs report on a PR head: `bump-guard` reads the PR title and body rather than the diff, and `check-full` runs `scripts/check.sh full` on the head, so a head whose local gate did not run is still tested. Ship still runs this script on every run, and no gate is ever `deferred-to-ci`. It is `scripts/check.sh full` plus the two gates only Ship needs, `secrets` and `version-lines`, both relative to the base, so each check `full` runs is a gate of the same name and none runs twice. It also prints `scripts/glossary-warn.sh` and `scripts/context-report.sh` (characters in `CLAUDE.md`, `AGENTS.md` and the owned skills' descriptions, no cap) to stderr, which set no gate status. The small lane runs `secrets`, `version-lines` and the checks in `check.sh`'s `FULL_ROWS` (`tests`, `derived-copies`, the prose checks, `contract`), read from `check.sh` so the lanes cannot drift, in place of `check.sh full`. That leaves out its `runner`, the linters (ShellCheck, actionlint, zizmor, Prettier), to the full lane and the edit and commit hooks. `tests/run.sh` takes no node, so the suite runs whole and the recorded node is only what the run records.
+Two CI legs report on a PR head: `bump-guard` reads the PR title and body rather than the diff, and `check-full` runs `scripts/check.sh full` on the head. The repo is public, so CI minutes cost nothing, and this script runs only what CI cannot or must not: `secrets` over the base range, so a secret is caught before the push, and `version-lines`, which needs the base `check-full` lacks. Every check `full` would report (its `runner`, a `TURN_ROWS` member's `typecheck:` and `tests:` checks, and each `FULL_ROWS` row: `tests`, `derived-copies`, the prose checks, `contract`) is a gate of the same name, `deferred-to-ci` and unrun, its names read from `check.sh`'s configuration block so they cannot drift. Ship's clean gate admits a `deferred-to-ci` gate only while every CI check on the head is green. No `full` check needs this machine. It also prints `scripts/glossary-warn.sh` and `scripts/context-report.sh` (characters in `CLAUDE.md`, `AGENTS.md` and the owned skills' descriptions, no cap) to stderr, which set no gate status. The small lane is the same gate, `secrets` and `version-lines` with the rest deferred, so the recorded node is only what the run records.
 
 Gate notes (the test catalog, `prose-budget`, `version-lines`, `stray-files`, `self-contained`, `contract`, `derived-copies`): [ship-gates.md](ship-gates.md). Read it when a gate fails or a new test or check needs placing; a run needs nothing in it at start.
 
