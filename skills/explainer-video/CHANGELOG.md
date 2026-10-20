@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.40.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Timeline and compare components
+  ([#913](https://github.com/Gharib89/skills/pull/913),
+  [`486a737`](https://github.com/Gharib89/skills/commit/486a7374a024965c3daf5ed1f610b72d141875f4))
+
+
 ## v0.39.0 (2026-10-20)
 
 ### Features
