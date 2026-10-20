@@ -136,7 +136,7 @@ async function sceneParts(
     // The type family, and the blur in px a title resolves out of (none under
     // a `blur` ban).
     type: {
-      words: type.family === "words" && !bans.includes("kinetic"),
+      words: type.family === "words",
       stagger: type.stagger,
       blur: bans.includes("blur") ? 0 : TITLE_BLUR,
     },

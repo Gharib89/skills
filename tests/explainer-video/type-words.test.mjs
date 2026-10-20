@@ -108,6 +108,19 @@ test("an Arabic run composes one span per whole word and none inside a word", as
   assert.equal(rises(html).length, 5);
 });
 
+test("Arabic letters glued to an English term stay in its word", async () => {
+  const html = await drawn(
+    { component: "title", props: { title: "وpull request كامل" } },
+    claude,
+    ["x"],
+    "rtl",
+  );
+  assert.deepEqual(
+    spans(html).map((m) => m[1].replace(/<[^>]*>/g, "")),
+    ["وpull request", "كامل"],
+  );
+});
+
 test("a profile with type block composes today's block entrance", async () => {
   const html = await drawn(title, odd({ type: "block" }));
   assert.equal(rises(html).length, 0);

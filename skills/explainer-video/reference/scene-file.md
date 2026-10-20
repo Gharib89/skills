@@ -115,9 +115,8 @@ a field without knobs is a family name; `texture` is an object,
 `{ "surface": "flat", "overlays": ["vignette"] }`. A profile with no grammar
 block plays the first family of every field: the open layout, glass over a
 colour field with grain, a vignette and depth blur, word-by-word type and the
-velocity eases. A
-knob out of its range, an unknown family and an unknown field are refused,
-naming the field. A scene that names a banned
+velocity eases. A knob out of its range, an unknown family and an unknown
+field are refused, naming the field. A scene that names a banned
 component, or one that uses a banned technique, stops compile; a ban naming
 neither is refused.
 

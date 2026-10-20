@@ -114,12 +114,17 @@ const codeFrame = (p, f, rows, LH, surface) => ({
 // type family `words` rises each out of its mask. A word is never split, so
 // Arabic keeps its joins; `wrap` isolates a Latin run inside it.
 const kineticWords = (text, f, wrap, from) => {
-  const spaced = (s) => s.split(/\s+/).filter(Boolean);
-  // Right to left, a Latin run (an English term) is one word, however many it
-  // holds.
-  const words = f.rtl
-    ? splitLatin(String(text)).flatMap((p, i) => (i % 2 ? [p] : spaced(p)))
-    : spaced(String(text));
+  // Right to left, a Latin run (an English term) is one word however many it
+  // holds, and Arabic letters glued to it stay in that word.
+  const glued = f.rtl
+    ? splitLatin(String(text))
+        .map((p, i) => (i % 2 ? p.replace(/\s+/g, "\0") : p))
+        .join("")
+    : String(text);
+  const words = glued
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replaceAll("\0", " "));
   return {
     html: words
       .map(
@@ -164,24 +169,26 @@ export const COMPONENTS = {
       html: `<div class="stack">${kick}<div class="big">${title.html}</div>${p.subtitle ? `<div class="sub">${sub.html}</div>` : ""}</div>`,
       css: `${css}\n${WORD_CSS}`,
       reveals: kick ? [[".r0", 1, "land"]] : [],
-      tweens: Array.from({ length: sub.count }, (_, n) => [
-        `.k${n}`,
-        {
-          yPercent: WORD_RISE,
-          opacity: 0,
-          ...(x.type.blur &&
-            n < title.count && { filter: `blur(${x.type.blur}px)` }),
-        },
-        {
-          yPercent: 0,
-          opacity: 1,
-          ...(x.type.blur && n < title.count && { filter: "blur(0px)" }),
-          duration: 0.6,
-          ease: "power4.out",
-          delay: +(n * x.type.stagger).toFixed(6),
-        },
-        1,
-      ]),
+      tweens: Array.from({ length: sub.count }, (_, n) => {
+        const blur = n < title.count ? x.type.blur : 0;
+        return [
+          `.k${n}`,
+          {
+            yPercent: WORD_RISE,
+            opacity: 0,
+            ...(blur && { filter: `blur(${blur}px)` }),
+          },
+          {
+            yPercent: 0,
+            opacity: 1,
+            ...(blur && { filter: "blur(0px)" }),
+            duration: 0.6,
+            ease: "power4.out",
+            delay: +(n * x.type.stagger).toFixed(6),
+          },
+          1,
+        ];
+      }),
     };
   },
   cards: (p, f, x) => {

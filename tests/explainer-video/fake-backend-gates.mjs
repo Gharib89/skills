@@ -18,8 +18,10 @@ export function showing(dir, t) {
       // canned measure has no per-word rects.
       const scene = fs
         .readFileSync(path.join(dir, "scenes", `${m[1]}.html`), "utf8")
-        .replace(/<span class="w"><span class="wi k\d+">/g, "")
-        .replace(/<\/span><\/span>/g, "");
+        .replace(
+          /<span class="w"><span class="wi k\d+">(.*?)<\/span><\/span>/g,
+          "$1",
+        );
       // Each element's `dir`, or null, open around the text: the nearest one
       // outside it is the box it sits in.
       const dirs = [];
