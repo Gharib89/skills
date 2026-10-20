@@ -67,7 +67,7 @@ test("a hard failure in the critic's second round stops the run: no third round 
   renderUnjudged(fx, SCRIPT);
   critique(fx.dir, invented);
   const r1 = stage(fx, "render/render.mjs");
-  assert.match(r1.out, /^gates: 6 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(r1.out, /^gates: 7 pass, 1 fail; next: fix attempt 1 of 2$/m);
   renderUnjudged(fx, SCRIPT.replace('"value": "code"', '"value": "the code"'));
   critique(fx.dir, invented);
   const r2 = stage(fx, "render/render.mjs");
@@ -75,7 +75,7 @@ test("a hard failure in the critic's second round stops the run: no third round 
   assert.match(r2.out, /^gate critic: fail: .*round 2 of 2 vs /m);
   assert.match(
     r2.out,
-    /^gates: 6 pass, 1 fail; stop: the critic's second round is red, no video$/m,
+    /^gates: 7 pass, 1 fail; stop: the critic's second round is red, no video$/m,
   );
   assert.ok(record(fx).attempts >= 3, "the storyboard reads it as stopped");
 });

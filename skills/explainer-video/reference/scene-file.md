@@ -73,6 +73,13 @@ narrator: am_fenrir
   - `codediff`: a code frame that turns `before*` into `after*` at `at*`, the
     removed lines closing and the added ones opening (`lang*`, `file`; each
     side one string like `code`, at most 12 lines).
+  - `words`: kinetic type, each line a row of words that rise in (`lines*`,
+    each `at*`, `on`, `text*`; about 6 key words a line). A line whose `text`
+    is a phrase of sentence `at`, cued on that phrase's first word, is read
+    along: each word rises on its own spoken word, and the reading time gate
+    asks only that the whole line stays readable for 0.8 s after its last word.
+    Any other cue rises the line as a block. It is a rich component, so a
+    `camera` key is refused.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
     `code` (`title` and `codediff` take none): one callout per scene,
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a

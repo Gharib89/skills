@@ -103,6 +103,26 @@ const FIXTURE = [
     },
     seconds: 1.67,
   },
+  // Kinetic type read along: each word rises on its own spoken word, and the
+  // rich component draws no push-in of the composer's.
+  {
+    scene: {
+      id: "along",
+      role: "point",
+      title: "Read along",
+      narration: ["Read the issue, ship it, merge it."],
+      visual: {
+        component: "words",
+        props: {
+          lines: [
+            { at: 1, on: "Read the issue", text: "Read the issue" },
+            { at: 1, on: "ship it", text: "ship it" },
+          ],
+        },
+      },
+    },
+    seconds: 2.6,
+  },
 ];
 const HALF = 1;
 const RATE = 24000;
@@ -204,10 +224,15 @@ async function compose(name, part, hold) {
       path.join(comp, "scenes", `${p.scene.id}.html`),
       await sceneFile(
         p.scene,
-        // a sentence every 0.8 s from 0.2, so each cue has a time
+        // a sentence every 0.8 s from 0.2 and a word every 0.3 s, so each
+        // cue has a time
         {
           ...scenes[i],
           sentences: p.scene.narration.map((_, k) => 0.2 + 0.8 * k),
+          words: p.scene.narration
+            .join(" ")
+            .split(/\s+/)
+            .map((_, k) => 0.2 + 0.3 * k),
         },
         profile,
         { backend, seam: seams[i], dir: p.dir },
@@ -285,8 +310,8 @@ check(
 // Each seam window's first, middle and last frames, seeked twice in browsers
 // of their own: the PNGs match byte for byte. The hook's zoom-through (out) and
 // the steps' cut on a curve (out) each have an exit window and the scene after
-// it an entry window, and the merge's seam into the Arabic scene the same, so
-// six windows.
+// it an entry window, and the seams into the Arabic and the read-along scenes
+// the same, so eight windows.
 const raw = await backend.events(whole.comp, { env });
 const seek = async (t, n) => {
   const png = path.join(work, `seam-${t}-${n}.png`);
@@ -321,15 +346,17 @@ async function sweep(kind) {
 const seams = await sweep("seams");
 check(
   "seams",
-  seams.count === 6 && seams.apart === 0 && seams.still === 0,
-  `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (6 expected)`,
+  seams.count === 8 && seams.apart === 0 && seams.still === 0,
+  `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (8 expected)`,
 );
-// Every scene composes a push-in under the default camera: one window each.
+// Every scene but the rich one composes a push-in under the default camera:
+// one window each.
+const pushes = whole.scenes.length - 1;
 const push = await sweep("camera");
 check(
   "camera",
-  push.count === whole.scenes.length && push.apart === 0 && push.still === 0,
-  `${push.apart} of ${push.count * 3} push-in frames differ between two seeks, ${push.still} windows draw no motion, in ${push.count} windows (${whole.scenes.length} expected)`,
+  push.count === pushes && push.apart === 0 && push.still === 0,
+  `${push.apart} of ${push.count * 3} push-in frames differ between two seeks, ${push.still} windows draw no motion, in ${push.count} windows (${pushes} expected)`,
 );
 
 const list = path.join(work, "halves.txt");

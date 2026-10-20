@@ -57,7 +57,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].role` | string | no | Its role (`hook`, `context`, `point`, `recap`, `end`). |
 | `board.scenes[].seconds` | number | yes | Its voiced length in seconds. |
 | `board.scenes[].narration` | string | yes | The scene file's narration lines for the scene, exactly as written, numbers, `{written\|spoken}` and cites included. |
-| `board.scenes[].style` | string | yes | Style notes: the visual's component, the profile and the narrator. |
+| `board.scenes[].style` | string | yes | Style notes: the visual's component (followed by `past the default` for a rich one), the profile and the narrator. |
 | `board.scenes[].still` | string | yes | The scene's settled still, a [media](#media) URL. |
 | `board.scenes[].audio` | string | yes | The scene's narration as audio-only WebM, a media URL. |
 | `board.scenes[].clip` | string | delivered | The delivered video's stretch for this scene, an MP4 media URL. |

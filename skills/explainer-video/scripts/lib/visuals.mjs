@@ -1,8 +1,9 @@
 // The visual vocabulary a scene's `### Visual` block names: per component, the
 // props it takes (`props`, and `item` for each entry of its `rows` list), what
 // they must hold (`check`, throwing the reason) and what it shows a viewer to
-// read (`items`, as [name, sentence it rises at, texts]). The compile stage
-// checks, the script gates time the reading; render/compose.mjs draws each.
+// read (`items`, as [name, sentence it rises at, texts], which the camera beat
+// reads). The compile stage checks, the video gates time the reading from the
+// rendered frames; render/compose.mjs draws each.
 //
 // A cue is `at`, a sentence number, and optionally `on`, a phrase that
 // sentence says: the reveal lands on the phrase's first spoken word.
@@ -47,6 +48,17 @@ export function cueWord(narration, { at, on }) {
     .slice(0, at - 1)
     .reduce((n, s) => n + words(s).length, 0);
   return on === undefined ? before : before + findPhrase(narration[at - 1], on);
+}
+
+// The index, among the scene's spoken words, of the first word of a `words`
+// line whose words each land on their own spoken word, or -1: the line's text
+// is said in its sentence and its cue lands on that phrase's first word. A line
+// cued anywhere else (or whose text the sentence never says) rises as a block
+// on its cue.
+export function readAlong(narration, { at, on, text }) {
+  if (findPhrase(narration[at - 1], text) < 0) return -1;
+  const start = cueWord(narration, { at, on: text });
+  return cueWord(narration, { at, on }) === start ? start : -1;
 }
 
 // The lines of `a` and `b` as keep, del and add rows, the longest common
@@ -277,6 +289,20 @@ export const VISUALS = {
       ...(p.title ? [["title", 1, [p.title]]] : []),
       ...p.items.map((x, i) => [`item ${i + 1}`, x.at, [x.text], x.on]),
     ],
+  },
+  // Key lines of about six words, each staged word by word. It is rich: the
+  // component owns the frame, so the grammar's camera never pushes on it.
+  words: {
+    props: ["lines"],
+    rows: "lines",
+    item: [...CUE, "text"],
+    ownCamera: true,
+    check: (p, said) => {
+      list("words", p.lines, "lines", said);
+      for (const x of p.lines) text("words", x.text, "a text per line");
+    },
+    items: (p) =>
+      p.lines.map((x, i) => [`line ${i + 1}`, x.at, [x.text], x.on]),
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],

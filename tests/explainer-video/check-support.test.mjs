@@ -1,5 +1,5 @@
 // The script check stage through its process door, part 2: kept verdicts, must
-// include and avoid items, reading time and style rules.
+// include and avoid items and style rules.
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -30,7 +30,7 @@ test("a sentence whose words, cites and cited excerpts are unchanged keeps its e
     line(r, "support"),
     "script support: warn: recap 1 drift: judged unsupported on unchanged words, kept supported",
   );
-  assert.match(r.out, /^script: 7 pass, 0 fail, 1 warn$/m);
+  assert.match(r.out, /^script: 6 pass, 0 fail, 1 warn$/m);
 
   // A kept failure stays one fix attempt, however the next check judges it.
   reword(fx, "steps 1");
@@ -142,157 +142,29 @@ test("every must-include item is said or shown and no avoid item is", () => {
   );
 });
 
-test("a visual item stays on screen long enough to read: 0.8 s a label, 0.3 s a word and 1.2 s at least for longer text", () => {
-  const cards = {
-    component: "cards",
-    props: {
-      items: [
-        { at: 1, label: "Input", value: "issue" },
-        {
-          at: 3,
-          label: "Then",
-          value: "the code that makes the failing test pass",
-        },
-      ],
-    },
-  };
+test("the script gate no longer judges reading time: a card on screen for 0.6 s, which failed it before, passes", () => {
   const r = check(
     fixture({
       scenes: edit(SCENES, 2, {
         sentences: [say(17), say(18, "[no-claim]"), say(2)],
-        visual: cards,
+        visual: {
+          component: "cards",
+          props: {
+            items: [
+              { at: 1, label: "Input", value: "issue" },
+              {
+                at: 3,
+                label: "Then",
+                value: "the code that makes the failing test pass",
+              },
+            ],
+          },
+        },
       }),
     }),
   );
-  assert.equal(r.code, 1);
-  assert.equal(
-    line(r, "reading"),
-    "script reading: fail: steps item 2: 0.6 s on screen vs 3.2 s to read",
-  );
-});
-
-test("an item cued on a phrase is on screen from that phrase, not from its sentence", () => {
-  const steps = (on) => ({
-    component: "cards",
-    props: {
-      items: [
-        { at: 1, label: "Input", value: "issue" },
-        {
-          at: 2,
-          label: "Then",
-          value: "the code that makes the failing test pass",
-          ...(on && { on }),
-        },
-      ],
-    },
-  });
-  const run = (on) =>
-    check(
-      fixture({
-        scenes: edit(SCENES, 2, {
-          sentences: [say(17), say(18, "[no-claim]"), say(2)],
-          visual: steps(on),
-        }),
-      }),
-    );
-  assert.equal(line(run(), "reading"), "script reading: pass");
-  // `review` is the sentence's 18th and last word: 3 of 37 words remain.
-  assert.equal(
-    line(run("review"), "reading"),
-    "script reading: fail: steps item 2: 1.0 s on screen vs 3.2 s to read",
-  );
-});
-
-test("an item the emphasis blurs is on screen only until the emphasis lands, the emphasised item to the end", () => {
-  const steps = (emphasis) => ({
-    component: "cards",
-    props: {
-      items: [
-        { at: 1, label: "Input", value: "issue" },
-        {
-          at: 1,
-          label: "Then",
-          value: "the code that makes the failing test pass",
-        },
-      ],
-      ...(emphasis && { emphasis }),
-    },
-  });
-  const run = (emphasis, ...brief) =>
-    line(
-      check(
-        fixture({
-          scenes: edit(SCENES, 2, {
-            sentences: [say(17), say(18, "[no-claim]"), say(2)],
-            visual: steps(emphasis),
-          }),
-          ...(brief.length && {
-            brief: ["length=1", "must=local gate", "avoid=pricing", ...brief],
-          }),
-        }),
-      ),
-      "reading",
-    );
-  assert.equal(run(), "script reading: pass");
-  // the depth overlay blurs the other item from the first sentence on
-  assert.match(
-    run({ target: "Input", at: 1 }),
-    /^script reading: fail: steps item 2: [\d.]+ s on screen vs 3\.2 s to read$/,
-  );
-  assert.match(run({ target: "Then", at: 1 }), /steps item 1: /);
-  // itworx draws no depth overlay, so nothing blurs and the whole scene counts
-  assert.equal(
-    run({ target: "Input", at: 1 }, "style=itworx"),
-    "script reading: pass",
-  );
-});
-
-test("a list's title stays sharp under the depth overlay, so the reading gate counts it to the end", () => {
-  const out = line(
-    check(
-      fixture({
-        scenes: edit(SCENES, 2, {
-          sentences: [say(17), say(18, "[no-claim]"), say(2)],
-          visual: {
-            component: "list",
-            props: {
-              title: "The plan",
-              items: [
-                { at: 1, text: "Input" },
-                { at: 1, text: "Then" },
-              ],
-              emphasis: { target: "Input", at: 1 },
-            },
-          },
-        }),
-      }),
-    ),
-    "reading",
-  );
-  assert.doesNotMatch(out, /steps title/);
-});
-
-test("a title's words land one stagger apart, so the reading gate times it from its last word", () => {
-  const ten = Array.from({ length: 18 }, (_, i) => `w${i}`).join(" ");
-  const run = (subtitle) =>
-    line(
-      check(
-        fixture({
-          scenes: edit(SCENES, 2, {
-            sentences: [say(17), say(18, "[no-claim]"), say(2)],
-            visual: { component: "title", props: { title: ten, subtitle } },
-          }),
-        }),
-      ),
-      "reading",
-    );
-  // 35 staggers of 0.05 s and one 0.6 s rise leave about 9.9 s of the scene's
-  // 12.3 s, under the 10.8 s two eighteen-word texts take to read.
-  assert.match(
-    run(ten),
-    /fail: steps title: 9\.\d s on screen vs 10\.8 s to read/,
-  );
-  assert.equal(run("one two"), "script reading: pass");
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.doesNotMatch(r.out, /reading/);
 });
 
 test("a code diff's reader reads the lines the render adds, a moved line among them", () => {
@@ -336,7 +208,7 @@ test("an em or en dash anywhere in the scene file fails, and a sentence over 25 
     line(r, "sentences"),
     "script sentences: warn: hook 1 has 26 words (over 25)",
   );
-  assert.match(r.out, /^script: 7 pass, 0 fail, 1 warn$/m);
+  assert.match(r.out, /^script: 6 pass, 0 fail, 1 warn$/m);
 });
 
 test("a run folder missing what the gates read names the stage to run first", () => {

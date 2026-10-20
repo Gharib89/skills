@@ -3,7 +3,7 @@
 import crypto from "node:crypto";
 import { WORD_RISE_SECONDS } from "../lib/style.mjs";
 import { splitLatin } from "../lib/terms.mjs";
-import { diff, lines } from "../lib/visuals.mjs";
+import { diff, lines, readAlong } from "../lib/visuals.mjs";
 import { GLASS } from "./texture.mjs";
 
 export const esc = (s) =>
@@ -134,6 +134,7 @@ const kineticWords = (text, f, wrap, from) => {
       )
       .join(" "),
     count: from + words.length,
+    words,
   };
 };
 // The mask clips at the line box, so it takes a little padding to keep
@@ -340,6 +341,50 @@ ${CALLOUT_CSS}`,
         ...p.items.map((it, i) => [`.i${i}`, it, "snap"]),
       ],
       tweens: reveal(p.emphasis),
+    };
+  },
+  // Key lines, each a box of whole-word spans. A line read along (see
+  // `readAlong`) rises word by word on each word's own spoken time and carries
+  // `data-along` for the reading gate; any other rises on its cue, a stagger
+  // apart. A Latin run glued into one span under right to left rises on the
+  // last spoken word it holds.
+  words: (p, f, x) => {
+    const tweens = [];
+    let next = 0;
+    const lines = p.lines.map((line, i) => {
+      const k = kineticWords(line.text, f, f.tt, next);
+      const start = readAlong(x.said, line);
+      let spoken = start;
+      k.words.forEach((w, j) => {
+        const blur = x.type.blur;
+        tweens.push([
+          `.k${next + j}`,
+          {
+            yPercent: WORD_RISE,
+            opacity: 0,
+            ...(blur && { filter: `blur(${blur}px)` }),
+          },
+          {
+            yPercent: 0,
+            opacity: 1,
+            ...(blur && { filter: "blur(0px)" }),
+            duration: WORD_RISE_SECONDS,
+            ease: x.type.ease,
+            ...(start < 0 && { delay: +(j * x.type.stagger).toFixed(6) }),
+          },
+          start < 0 ? line : { word: (spoken += w.split(" ").length) - 1 },
+        ]);
+      });
+      next = k.count;
+      return `<div class="kl" data-line="l${i}"${start < 0 ? "" : " data-along"}>${k.html}</div>`;
+    });
+    return {
+      html: `<div class="klines">${lines.join("")}</div>`,
+      css: `.klines { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 36px; }
+.kl { font: ${f.titleWeight} var(--size-title)/${f.lh(1.15, "title")} ${f.title}; color: var(--text); letter-spacing: ${f.ls("-0.01em")}; max-width: 1680px; }
+${WORD_CSS}`,
+      reveals: [],
+      tweens,
     };
   },
   code: async (p, f, x) => {

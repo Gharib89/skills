@@ -24,7 +24,7 @@ import {
   stage,
 } from "./gates-lib.mjs";
 
-test("a clean render passes all six gates, writes the record and the report, and delivers", () => {
+test("a clean render passes all seven gates, writes the record and the report, and delivers", () => {
   const fx = fixture();
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
@@ -32,20 +32,21 @@ test("a clean render passes all six gates, writes the record and the report, and
   assert.deepEqual(lines, [
     "gate layout: pass: 0 finding(s) vs none, text >= 18 px, margin 5%",
     "gate contrast: pass: 0 finding(s) vs body 4.5:1, large 3:1",
+    "gate reading: pass: 0 finding(s) vs each box readable in one stretch of 0.8 s (up to 3 words) or 0.3 s a word, 1.2 s at least; kinetic type read along whole for 0.8 s",
     "gate loudness: pass: -14.0 LUFS, peak -1.6 dBTP vs -14 +-1 LUFS, peak <= -1 dBTP",
-    lines[3],
     lines[4],
+    lines[5],
     "gate determinism: pass: 0 of 3 scene(s) differ between two renders vs none, the same pixels twice",
     "gate critic: pass: 0 hard failure(s), mean scores clarity 4.0, legibility 5.0, fit 4.0, motion 3.0, round 1 of 2 vs no unreadable or invented content; scores advise",
-    "gates: 7 pass, 0 fail",
+    "gates: 8 pass, 0 fail",
   ]);
   assert.match(
-    lines[3],
+    lines[4],
     /^gate captions: pass: \d+ cue\(s\), 0 finding\(s\) vs none$/,
   );
   const sfx = JSON.parse(read(fx.dir, "score.json")).cues.length;
   assert.equal(
-    lines[4],
+    lines[5],
     `gate sfx: pass: ${sfx} cue(s), at most ${sfx} in a minute vs <= 24 a minute`,
   );
   const gates = record(fx);
@@ -53,6 +54,7 @@ test("a clean render passes all six gates, writes the record and the report, and
   assert.deepEqual(Object.keys(gates.gates), [
     "layout",
     "contrast",
+    "reading",
     "loudness",
     "captions",
     "sfx",
@@ -117,7 +119,7 @@ test("a clean render passes all six gates, writes the record and the report, and
 test("the narration is mastered to -14 LUFS under the peak floor before the video renders", () => {
   const fx = fixture();
   const r = renderUnjudged(fx, SCRIPT);
-  assert.match(r.out, /^gates: 6 pass, 0 fail, 1 pending/m, r.out + r.err);
+  assert.match(r.out, /^gates: 7 pass, 0 fail, 1 pending/m, r.out + r.err);
   const m = calls(fx, "master");
   assert.equal(m.length, 1);
   assert.equal(m[0].lufs, -14);

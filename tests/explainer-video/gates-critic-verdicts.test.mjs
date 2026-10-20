@@ -34,7 +34,7 @@ test("a render the critic has not judged is held: critic pending, a contact shee
   );
   assert.match(
     r.out,
-    /^gates: 6 pass, 0 fail, 1 pending; next: run the critic, round 1 of 2$/m,
+    /^gates: 7 pass, 0 fail, 1 pending; next: run the critic, round 1 of 2$/m,
   );
   assert.equal(g.attempts, 0);
   assert.equal(g.gates.critic.status, "pending");
@@ -83,7 +83,7 @@ test("invented content on screen fails the critic, delivers nothing, and passes 
     r.out,
     /^gate critic: fail: 1 hard failure\(s\), first: [\d.]+ s steps: invented: the card "ten times faster" .* vs /m,
   );
-  assert.match(r.out, /^gates: 6 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(r.out, /^gates: 7 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
   assert.ok(!fs.existsSync(delivered(fx)));
   assert.equal(record(fx).gates.critic.attempts, 1);

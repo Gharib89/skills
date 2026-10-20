@@ -113,7 +113,7 @@ One kind of on-screen content a scene shows, drawn by the composer under the vis
 _Avoid_: visual, block, widget, template
 
 **Rich component**:
-A component that moves the frame itself past the visual grammar's camera: its own camera path, a moving ground, or 3D. Richness belongs to the component, never to one scene's use of it, and the storyboard marks every scene that shows one.
+A component that moves the frame itself past the visual grammar's camera: its own camera path, a moving ground, 3D, or kinetic type that moves word by word on the narration. Richness belongs to the component, never to one scene's use of it, and the storyboard marks every scene that shows one.
 _Avoid_: heavy component, advanced visual
 
 **Custom scene**:

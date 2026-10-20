@@ -286,3 +286,19 @@ test("apply redoes an approved card whose narration was edited", () => {
   assert.match(r.out, /^board steps: approve, narration edited$/m);
   assert.match(r.out, /^board: redo steps$/m);
 });
+
+test("a scene showing a rich component is marked past the default on its card", () => {
+  const rich = SCRIPT.replace(
+    /\{\n {2}"component": "cards"[\s\S]*?\n\}\n/,
+    '{ "component": "words", "props": { "lines": [ { "at": 1, "text": "reads the issue", "on": "reads" } ] } }\n',
+  );
+  const fx = fixture(rich);
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  const d = doc(fx, 1);
+  assert.match(
+    d.scenes[1].style,
+    /^words · past the default · claude-code · am_fenrir$/,
+  );
+  assert.match(d.scenes[0].style, /^title · claude-code · am_fenrir$/);
+});
