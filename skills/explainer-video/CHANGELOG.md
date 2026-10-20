@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.33.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Push camera on each scene's camera beat
+  ([#898](https://github.com/Gharib89/skills/pull/898),
+  [`753088e`](https://github.com/Gharib89/skills/commit/753088eac7c041205a065b52affcb75dce4758d0))
+
+
 ## v0.32.0 (2026-10-20)
 
 ### Features
