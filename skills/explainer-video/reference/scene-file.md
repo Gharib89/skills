@@ -97,6 +97,16 @@ narrator: am_fenrir
     `۱٬۲۰۰`, one script to a number): write the value in the excerpt's
     digits (it counts up in them); a value in another digit script is
     refused.
+  - `timeline`: events in order along an axis (`items*`, each `at*`, `on`,
+    `when*`, `label*`, `note`). `when` is display text (`late 2019`, `Q3`,
+    `Day 1`), shown exactly as written and never parsed, so put events in the
+    order they happened. About 5 events read well: guidance, not a limit.
+  - `compare`: exactly 2 sides side by side (`sides*`, each `title*` and
+    `items*`, each `at*`, `on`, `text*`); any other count is refused. A side
+    arrives with its first item, each item on its own cue. About 4 items a
+    side read well.
+  - Both are rich, so a `camera` key is refused, and both run right to left
+    in an Arabic run: the first event and the first side sit at the right.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
     `code` (`title` and `codediff` take none): one callout per scene,
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a
