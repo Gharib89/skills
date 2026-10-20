@@ -210,7 +210,8 @@ the pack's outline and the brief, then holds it to the **script gates**. Read
    failing), then `script: <p> pass, <f> fail, <w> warn`. `arc`, `budget`,
    `dashes` and `sentences` hold step 1's rules; the others:
    - `cites`: every cite in `excerpts.json`, still word for word in its
-     snapshot.
+     snapshot, and every number a `chart` or `stat` shows standing as written
+     (digits, commas and all) in an excerpt its scene cites.
    - `support`: every sentence judged `supported` or `connective` on its
      present wording; an unchanged sentence keeps its first verdict, and a
      different later one is `drift`.
