@@ -69,11 +69,12 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   at once, the latest on a tie), its **motion strip** and the **seam strip** of
   the seam it hands over at, fails on any hard failure: `unreadable` or
   `invented` content, or `rtl` (a right-to-left layout broken in an Arabic
-  video). Its scores
-  (clarity, legibility, fit, motion, 1 to 5) and its `worst` list (at most 3
-  defects per scene, each with the one change that would fix it) only advise:
-  the line shows the score means, and `gates.md` lists the scores and the worst
-  defects per scene. Until the critic has judged this render the gate
+  video), judged on the sheet and the motion strip, never on the seam strip,
+  which carries text across a hand-over on purpose. Its scores (clarity,
+  legibility, fit, motion, 1 to 5) and its `worst` list (at most 3 defects per
+  scene, each with the one change that would fix it) only advise: the line
+  shows the score means, and `gates.md` lists the scores and the worst defects
+  per scene. Until the critic has judged this render the gate
   reads `gate critic: pending: round <r> of 2, ..., contact sheets in
   <sheets>`.
 

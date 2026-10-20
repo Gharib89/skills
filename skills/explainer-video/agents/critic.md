@@ -67,6 +67,11 @@ you know about the subject.
   that runs left to right where the reading runs right to left. Never raised
   for a video in another language.
 
+The seam strip never raises a hard failure: a hand-over carries text to an edge
+or crossfades two scenes' text on purpose, so it feeds the motion score and the
+worst defects alone. Judge the hard failures on the contact sheet and the motion
+strip.
+
 Motion only advises: whether a move stutters or slides is a call of taste, read
 from 12 frames.
 
