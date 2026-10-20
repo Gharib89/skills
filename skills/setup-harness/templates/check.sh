@@ -230,7 +230,7 @@ EOF
 # <row> [<files, relative to the root>]: the row's typecheck and tests.
 # `full` passes no files and gets the member's whole suite.
 run_row() {
-  local row=$1 prefix member typecheck tests affected dir f rel=''
+  local row=$1 prefix member typecheck tests affected dir f q rel=''
   shift
   IFS='|' read -r prefix member _ typecheck tests affected <<EOF
 $row
@@ -243,8 +243,8 @@ EOF
     # shellcheck disable=SC2086 # the list splits on newlines only
     set -- $rel
     unset IFS
-    f=$(quoted "$@") affected=${affected//\{files\}/$f}
-    check "tests:$member" "$dir" "${affected//\{paths\}/$f}"
+    q=$(quoted "$@"); affected=${affected//\{files\}/$q}
+    check "tests:$member" "$dir" "${affected//\{paths\}/$q}"
   elif [ -n "$tests" ]; then
     check "tests:$member" "$dir" "$tests"
   fi
@@ -282,7 +282,7 @@ rung_turn() {
       new-root) new="$new ${f%/*}" ;;
       # A deleted file still selects its member, whose typecheck may now
       # break, but is an argument to affected tests only in a row naming
-      # {paths}, whose selector places a file by its name.
+      # {paths}, whose selector maps a path to tests by name.
       *) case $nl$rows in *"$nl$o$nl"*) ;; *) rows="$rows$o$nl" ;; esac
          case ${o##*|} in *'{paths}'*) ;; *) [ -e "$f" ] || continue ;; esac
          pairs="$pairs$o$tab$f$nl" ;;
