@@ -43,17 +43,18 @@ FULL_RUN='prek run --all-files'
 # A changed file matching a row's globs belongs to the row with the longest
 # prefix it sits under (an empty prefix is the repo root). Commands run in the
 # member's directory; <affected tests> takes {files}, relative to it, and an
-# empty one runs <tests>. An empty command is no check. A deleted file is no
-# argument to affected tests, except a deleted .sh under a member named `shell`,
-# whose tests are picked by the script's basename. The explainer-video
-# rows name their suite under <affected tests> alone: `full` runs the whole
-# suite in the `tests` row, so a <tests> entry ran its `--turn` subset twice
-# more beside it. Their `--turn {files}` runs the --turn tests the files reach,
-# and the whole --turn set for a file it cannot place.
-TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn {files}
-tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn {files}
+# empty one runs <tests>. An empty command is no check. A deleted file is an
+# argument to affected tests only through {paths}, which takes every changed
+# path the way {files} takes the files on disk, for a selector that places a
+# file by its name. The explainer-video rows name their suite under
+# <affected tests> alone: `full` runs the whole suite in the `tests` row, so a
+# <tests> entry ran its `--turn` subset twice more beside it. Their
+# `--turn {paths}` runs the --turn tests the files reach, and the whole --turn
+# set for a file it cannot place, a deleted one included.
+TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn {paths}
+tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn {paths}
 skills/grill-with-artifact/|grill-with-artifact|*.js||../../tests/grill-with-artifact.test.sh|
-|shell|*.sh|||scripts/shell-turn-tests.sh {files}'
+|shell|*.sh|||scripts/shell-turn-tests.sh {paths}'
 # Extra checks on `full` only, one per line: <name>|<command>, from the root.
 FULL_ROWS='tests|tests/run.sh
 derived-copies|scripts/derived-copies-check.sh
@@ -229,7 +230,8 @@ EOF
     # shellcheck disable=SC2086 # the list splits on newlines only
     set -- $rel
     unset IFS
-    check "tests:$member" "$dir" "${affected//\{files\}/$(quoted "$@")}"
+    affected=${affected//\{files\}/$(quoted "$@")}
+    check "tests:$member" "$dir" "${affected//\{paths\}/$(quoted "$@")}"
   elif [ -n "$tests" ]; then
     check "tests:$member" "$dir" "$tests"
   fi
@@ -266,11 +268,10 @@ rung_turn() {
       '') ;;
       new-root) new="$new ${f%/*}" ;;
       # A deleted file still selects its member, whose typecheck may now
-      # break, but is no argument to affected tests. A deleted .sh is the
-      # exception for the `shell` row: its tests are picked by the script's
-      # basename, so they still have to run once the file is gone.
+      # break, but is an argument to affected tests only in a row naming
+      # {paths}, whose selector places a file by its name.
       *) case $nl$rows in *"$nl$o$nl"*) ;; *) rows="$rows$o$nl" ;; esac
-         case ${f##*.}:${o#*|} in sh:shell\|*) ;; *) [ -e "$f" ] || continue ;; esac
+         case ${o##*|} in *'{paths}'*) ;; *) [ -e "$f" ] || continue ;; esac
          pairs="$pairs$o$tab$f$nl" ;;
     esac
   done
