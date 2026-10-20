@@ -7,15 +7,15 @@
 // each scene every 15 frames from its start, at its settled last frame and at
 // each timeline event, one sample per whole frame; HyperFrames' check and the
 // layout probe measure the samples of every scene not cached in
-// <run>/.cache/gates/, judged here for layout and contrast.
+// <run>/.cache/gates/, judged here for layout, contrast and reading time.
 // Loudness, captions and the sound effects per minute are measured on every
 // run. The critic gate reads the verdicts the critic subagents wrote beside
 // this render's contact sheets, in <run>/.cache/critic/<key>/ (the render and
 // the cites it read), cutting a sheet per scene first when a verdict is
 // missing. Deletes nothing: the render stage acts on the verdict.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` for layout, contrast,
-//         loudness, captions, sfx, determinism and critic (or `gate critic:
-//         pending: ...`), then `gates: <n> pass, <m> fail[, 1 pending]`, when
+//         reading, loudness, captions, sfx, determinism and critic (or `gate
+//         critic: pending: ...`), then `gates: <n> pass, <m> fail[, 1 pending]`, when
 //         red ending `; next: fix attempt <a> of 2` or `; stop: red after two
 //         fix attempts, no video` (`; stop: determinism is red, a skill defect
 //         to report, no fix attempt, no video` when determinism is red), when
@@ -36,6 +36,7 @@ import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { FPS, H, W, contentBox } from "../render/compose.mjs";
 import { captionFindings, cuesOf } from "./captions.mjs";
 import { sceneEvents } from "./events.mjs";
+import { ALONG_SECONDS, readingFindings } from "./reading.mjs";
 import { fullestFrame, motionAndDeterminism } from "./scene.mjs";
 import { cutSheets, readPrevKeys } from "./sheets.mjs";
 import { SCORES, KINDS, checkVerdict } from "./verdict.mjs";
@@ -107,6 +108,7 @@ const source = [
   "gates.mjs",
   "captions.mjs",
   "events.mjs",
+  "reading.mjs",
   "scene.mjs",
   "sheets.mjs",
   "verdict.mjs",
@@ -179,7 +181,7 @@ if (todo.length) {
       )
     )
       fail(`layout probe: no text in scene ${p.sc.id}`);
-  for (const p of todo) p.found = { layout: [], contrast: [] };
+  for (const p of todo) p.found = { layout: [], contrast: [], reading: [] };
   // One defect held across a scene is one finding: its first time, and the
   // number of samples it showed in.
   const seen = new Map();
@@ -199,6 +201,7 @@ if (todo.length) {
   judge(checked, frames, floor, add, moving);
   settle();
   for (const p of todo) {
+    p.found.reading = readingFindings(p, frames, moving);
     p.found.fullest = fullestFrame(p, frames, moving);
     await motionAndDeterminism(p, {
       run,
@@ -255,6 +258,7 @@ const summary = (ev, noun = "finding(s)") =>
   `${ev.length} ${noun}${ev.length ? `, first: ${ev[0]}` : ""}`;
 const layoutFindings = plan.flatMap((p) => p.found.layout);
 const contrastFindings = plan.flatMap((p) => p.found.contrast);
+const readingFound = plan.flatMap((p) => p.found.reading);
 // Led by the scene's start, as layout's lines are, with both renders' files.
 const differing = plan
   .filter((p) => p.found.determinism.a !== p.found.determinism.b)
@@ -272,6 +276,11 @@ const judged = {
     contrastFindings,
     summary(contrastFindings),
     `body ${floor.contrast.body}:1, large ${floor.contrast.large}:1`,
+  ],
+  reading: [
+    readingFound,
+    summary(readingFound),
+    `each box readable in one stretch of 0.8 s (up to 3 words) or 0.3 s a word, 1.2 s at least; kinetic type read along whole for ${ALONG_SECONDS} s`,
   ],
   loudness: [
     loud,

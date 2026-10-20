@@ -113,8 +113,7 @@ const SEAM_DEFAULTS = { duration: 0.2, blur: 18 };
 // What a type knob left out takes: the seconds between one word's rise and the
 // next's.
 const TYPE_DEFAULTS = { stagger: 0.05 };
-// Seconds one word takes to rise out of its mask; the reading gate adds it to
-// the last word's stagger delay before a title counts as readable.
+// Seconds one word takes to rise out of its mask.
 export const WORD_RISE_SECONDS = 0.6;
 // What a camera knob left out takes: the push-in's end scale, and its length
 // in seconds.
@@ -154,7 +153,7 @@ const RETIRED = {
 
 // Whether a scene of `component` blurs the items off focus when its emphasis
 // lands: the depth overlay is on with a blur above 0, and a code frame has no
-// items to blur. The renderer draws it and the reading gate counts it.
+// items to blur.
 export const blursDepth = (texture, component) =>
   texture.overlays.includes("depth") &&
   texture.depthBlur > 0 &&

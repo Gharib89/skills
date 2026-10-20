@@ -208,6 +208,10 @@ function measureFrame() {
       text: own.slice(0, 60),
       words: own.trim().split(/\s+/).length,
       scene: el.closest(sub)?.dataset.compositionId ?? null,
+      // A kinetic line is one box: its words share a `data-line`, and
+      // `data-along` marks one revealed on its own spoken words.
+      line: el.closest("[data-line]")?.dataset.line ?? null,
+      along: el.closest("[data-along]") !== null,
       rect: box(r),
       fontPx: parseFloat(cs.fontSize) * scale,
       weight: +cs.fontWeight,

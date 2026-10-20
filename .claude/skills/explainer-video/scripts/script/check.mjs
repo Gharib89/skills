@@ -11,10 +11,10 @@
 // excerpts.json, judges nothing; `verdict` is supported or connective (a pass),
 // unsupported or unmarked (a [no-claim] sentence that makes a claim).
 // stdout: `script <gate>: pass|fail: <findings>|warn: <findings>` per gate
-//         (arc, budget, cites, support, coverage, reading, dashes,
-//         sentences), then `script: <p> pass, <f> fail, <w> warn`, ending on
-//         a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
-//         unsupported claims after two fix attempts`
+//         (arc, budget, cites, support, coverage, dashes, sentences), then
+//         `script: <p> pass, <f> fail, <w> warn`, ending on a red support
+//         verdict in `; next: fix attempt <a> of 2` or `; stop: unsupported
+//         claims after two fix attempts`
 // writes: <run>/check.json, the machine record, the support attempts and each
 //         sentence's kept verdict
 // exit:   0 no gate failed · 1 a gate failed, or `script: no <input>: <why>`
@@ -25,13 +25,6 @@ import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
-import {
-  WORD_RISE_SECONDS,
-  blursDepth,
-  findStyle,
-  grammar,
-} from "../lib/style.mjs";
-import { VISUALS, findPhrase } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
@@ -252,59 +245,6 @@ const drift = [];
       f.push(`avoid "${a}" is in ${hit.map((s) => s.id).join(", ")}`);
   }
   gates.coverage = f;
-}
-
-// reading: each visual item on screen long enough to read, from the sentence
-// (or the `on` phrase) it rises at to the scene's end, timed by its share of
-// the scene's words, or in a scene with an emphasis to the emphasis's cue for
-// every item but the emphasised one, which the depth overlay blurs from then
-// on (code takes none). A text of at most three words is a label, 0.8 s; a
-// longer one 0.3 s a word and 1.2 s at least; an item's texts add up.
-{
-  const f = [];
-  // The run's texture decides whether an emphasis blurs the other items. A
-  // style no store holds is the render stage's to refuse, and reads as the
-  // default profile here; a profile file that is not JSON stops the compile.
-  const { texture, type } = grammar(findStyle(run, script.style).profile ?? {});
-  const floor = (t) => {
-    const n = words(String(t ?? ""));
-    return !n ? 0 : n <= 3 ? 0.8 : Math.max(1.2, 0.3 * n);
-  };
-  for (const s of scenes.filter((s) => s.seconds !== undefined)) {
-    const items = VISUALS[s.visual.component].items(s.visual.props);
-    const total = s.counts.reduce((a, b) => a + b, 0);
-    const e = s.visual.props.emphasis;
-    const depth = e && blursDepth(texture, s.visual.component);
-    const upTo = (n) => s.counts.slice(0, n).reduce((a, b) => a + b, 0);
-    for (const [name, at, texts, on] of items) {
-      // An `on` phrase starts the item that many words into its sentence.
-      const into = on === undefined ? 0 : findPhrase(s.narration[at - 1], on);
-      const start = upTo(at - 1) + into;
-      // A list's title is no `ITEMS` box, so the depth overlay leaves it sharp.
-      const blurred = depth && name !== "title" && texts[0] !== e.target;
-      const end = blurred
-        ? upTo(e.at - 1) +
-          (e.on === undefined ? 0 : findPhrase(s.narration[e.at - 1], e.on))
-        : total;
-      // Under the words family a title's last word lands one stagger per
-      // word, and one rise, after the cue; the kicker moves as a block.
-      const lead =
-        name === "title" && type.family === "words"
-          ? (words(String(texts[1] ?? "")) +
-              words(String(texts[2] ?? "")) -
-              1) *
-              type.stagger +
-            WORD_RISE_SECONDS
-          : 0;
-      const shown = (s.seconds * (end - start)) / total - lead;
-      const read = texts.reduce((a, t) => a + floor(t), 0);
-      if (shown < read)
-        f.push(
-          `${s.id} ${name}: ${shown.toFixed(1)} s on screen vs ${read.toFixed(1)} s to read`,
-        );
-    }
-  }
-  gates.reading = f;
 }
 
 // dashes: no em or en dash anywhere in the scene file.

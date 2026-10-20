@@ -35,6 +35,7 @@ import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
 import { mapScreen, rename, respell } from "../lib/terms.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
+import { VISUALS } from "../lib/visuals.mjs";
 import { esc } from "../render/compose.mjs";
 
 const [run, cmd, ...args] = process.argv.slice(2);
@@ -375,7 +376,9 @@ const cards = script.scenes.map((s, i) => ({
   ...(s.role && { role: s.role }),
   seconds: Math.round(voice.scenes[i].duration * 10) / 10,
   narration: md.slice(blocks[s.id].from, blocks[s.id].to).join("\n"),
-  style: `${s.visual.component} · ${profile} · ${voice.narrator}`,
+  // A rich component moves the frame itself, which the human weighs at the
+  // card, so it is marked past the default.
+  style: `${s.visual.component}${VISUALS[s.visual.component]?.ownCamera ? " · past the default" : ""} · ${profile} · ${voice.narrator}`,
   still: stills.scenes.find((x) => x.id === s.id).still,
   audio: voice.scenes[i].audio,
   status: "open",

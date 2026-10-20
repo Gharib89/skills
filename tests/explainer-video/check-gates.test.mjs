@@ -32,10 +32,9 @@ test("a script meeting every gate passes each one and writes check.json", () => 
     "script cites: pass",
     "script support: pass",
     "script coverage: pass",
-    "script reading: pass",
     "script dashes: pass",
     "script sentences: pass",
-    "script: 8 pass, 0 fail, 0 warn",
+    "script: 7 pass, 0 fail, 0 warn",
   ]);
   const rec = JSON.parse(
     fs.readFileSync(path.join(fx.dir, "check.json"), "utf8"),
@@ -233,7 +232,7 @@ test("support blocks an unsupported claim, counts two fix attempts, then stops",
     line(r, "support"),
     /^script support: fail: no support\.json: run the support check$/,
   );
-  assert.match(r.out, /^script: 7 pass, 1 fail, 0 warn$/m);
+  assert.match(r.out, /^script: 6 pass, 1 fail, 0 warn$/m);
 
   judge(fx, { "steps 1": "unsupported" });
   r = check(fx);
@@ -243,7 +242,7 @@ test("support blocks an unsupported claim, counts two fix attempts, then stops",
   );
   assert.match(
     r.out,
-    /^script: 7 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
+    /^script: 6 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
   );
   // The same verdicts judged again are not another attempt.
   r = check(fx);

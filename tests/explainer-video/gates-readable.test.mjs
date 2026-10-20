@@ -151,3 +151,19 @@ test("a box the depth overlay blurs is not readable, one blurred by a pixel or l
   assert.equal(readable({ ...box, blur: 1 }, 1, still), true);
   assert.equal(readable({ ...box, blur: 4 }, 1, still), false);
 });
+
+test("the reading gate fails a box the camera carries off after 1.0 s, 1.2 s being what four words need", () => {
+  const fx = fixture();
+  const r = renderUnjudged(fx, SCRIPT, events({ hook: { camera: [[1, 99]] } }));
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.out,
+    /^gate reading: fail: 2 finding\(s\), first: 0\.00 s hook: /m,
+  );
+  const found = record(fx).gates.reading;
+  assert.equal(found.status, "fail");
+  assert.deepEqual(found.evidence, [
+    '0.00 s hook: "Issue to pull request": 1.0 s readable vs 1.2 s to read',
+    '0.00 s hook: "One run, one merge": 1.0 s readable vs 1.2 s to read',
+  ]);
+});

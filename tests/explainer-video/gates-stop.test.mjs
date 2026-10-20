@@ -33,7 +33,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   );
   assert.match(
     second.out,
-    /^gates: 5 pass, 1 fail, 1 pending; next: fix attempt 2 of 2$/m,
+    /^gates: 6 pass, 1 fail, 1 pending; next: fix attempt 2 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 2);
   const third = render(
@@ -43,7 +43,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   assert.equal(third.code, 1);
   assert.match(
     third.out,
-    /^gates: 5 pass, 1 fail, 1 pending; stop: red after two fix attempts, no video$/m,
+    /^gates: 6 pass, 1 fail, 1 pending; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 3);
   const renarrated = render(
@@ -52,7 +52,7 @@ test("a gate red three times in a row stops; a changed script starts the count a
   );
   assert.match(
     renarrated.out,
-    /^gates: 5 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
+    /^gates: 6 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
 });
@@ -63,7 +63,7 @@ test("a red that moves from layout to contrast and back still stops", () => {
   const second = render(fx, titled("dim"));
   assert.match(
     second.out,
-    /^gates: 5 pass, 1 fail, 1 pending; next: fix attempt 2 of 2$/m,
+    /^gates: 6 pass, 1 fail, 1 pending; next: fix attempt 2 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 0);
   assert.equal(record(fx).gates.contrast.attempts, 1);
@@ -71,7 +71,7 @@ test("a red that moves from layout to contrast and back still stops", () => {
   assert.equal(third.code, 1);
   assert.match(
     third.out,
-    /^gates: 5 pass, 1 fail, 1 pending; stop: red after two fix attempts, no video$/m,
+    /^gates: 6 pass, 1 fail, 1 pending; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
   assert.equal(record(fx).attempts, 3);
@@ -86,7 +86,7 @@ test("the same red render judged again keeps its attempt count", () => {
   assert.equal(again.code, 1, again.out + again.err);
   assert.match(
     again.out,
-    /^gates: 5 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
+    /^gates: 6 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
   );
   assert.equal(record(fx).gates.layout.attempts, 1);
 });

@@ -98,7 +98,7 @@ export function assertRed(fx, r, gate, why) {
   assert.match(r.out, new RegExp(`^gate ${gate}: fail: .*${why}`, "m"));
   assert.match(
     r.out,
-    /^gates: 5 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
+    /^gates: 6 pass, 1 fail, 1 pending; next: fix attempt 1 of 2$/m,
   );
   assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
   assert.ok(!fs.existsSync(delivered(fx)));
@@ -109,7 +109,7 @@ export function assertRed(fx, r, gate, why) {
 // Green on the fix: every gate passes, attempts back to 0, the video delivered.
 export function assertGreen(fx, r) {
   assert.equal(r.code, 0, r.out + r.err);
-  assert.match(r.out, /^gates: 7 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 8 pass, 0 fail$/m);
   for (const g of Object.values(record(fx).gates)) assert.equal(g.attempts, 0);
   assert.equal(record(fx).attempts, 0);
   assert.ok(fs.existsSync(path.join(delivered(fx), "demo.mp4")));

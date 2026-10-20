@@ -144,6 +144,8 @@ async function sceneParts(
       ease: ease === "soft" ? "power2.out" : "power4.out",
       blur: bans.includes("blur") ? 0 : TITLE_BLUR,
     },
+    // The scene's sentences in spoken form, for a cue that lands on words.
+    said: scene.narration,
     highlight: backend.highlight,
     sketch: async (shapes) =>
       surface === "sketch"
@@ -160,9 +162,10 @@ async function sceneParts(
     .map((l) => `${scope} ${l}`)
     .join("\n");
   // A cue is a sentence number, or `{ at, on }`: with `on`, the time of the
-  // phrase's first voiced word.
+  // phrase's first voiced word. `{ word }` is the scene's nth voiced word.
   const t = (c) => {
     const cue = typeof c === "number" ? { at: c } : c;
+    if (cue.word !== undefined) return timing.words[cue.word];
     return cue.on === undefined
       ? timing.sentences[cue.at - 1]
       : timing.words[cueWord(scene.narration, cue)];

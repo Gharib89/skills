@@ -212,7 +212,7 @@ test("render composes every scene, renders with the CLI's guards, delivers and r
   assert.equal(read(fx.dir, "out", "poster.png"), "still of hook");
   // The render the critic held drew the stills and the video; the one after
   // reused both.
-  assert.match(r.held.out, /^gates: 6 pass, 0 fail, 1 pending; next: /m);
+  assert.match(r.held.out, /^gates: 7 pass, 0 fail, 1 pending; next: /m);
   assert.deepEqual(
     calls(fx)
       .map((c) => (c.args.includes("png-sequence") ? "stills" : "video"))

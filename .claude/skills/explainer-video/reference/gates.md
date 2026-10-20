@@ -39,6 +39,15 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   bold), on the same frames. The palette check when the profile loads holds
   the faint, accent and status colours to 3:1 only, since the scenes draw them
   large; text drawn small in one of them is held to 4.5:1.
+- `reading`: every text box **readable** in one unbroken stretch long enough
+  for its words, judged on the same frames: its longest single stretch against
+  0.8 s for three words or fewer, else 0.3 s a word and at least 1.2 s. Two
+  short stretches never add up. A kinetic line of the `words` component whose
+  words each rise on their own spoken words is **read along** with the voice:
+  one box, judged whole and exempt from words per second, it must stay
+  readable whole (every word up, outside any seam or camera move) for 0.8 s.
+  A `words` line cued off its own spoken words is judged like any box. A red
+  line names the scene, the box's text and its longest stretch.
 - `loudness`: -14 LUFS plus or minus 1 and a true peak at most -1 dBTP,
   measured on the encoded MP4.
 - `captions`: every word timed in order inside its scene, every cue non-empty,
