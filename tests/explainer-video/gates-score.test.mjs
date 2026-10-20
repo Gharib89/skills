@@ -103,7 +103,8 @@ test("a clean render passes all six gates, writes the record and the report, and
     const push = read(dir, "scenes", `${s.id}.html`).match(
       /addLabel\("camera:start", ([\d.]+)\)\.addLabel\("camera:end", ([\d.]+)\)/,
     );
-    for (const t of push?.slice(1) ?? []) {
+    assert.ok(push, `${s.id} composes a push-in`);
+    for (const t of push.slice(1)) {
       const f = Math.ceil((s.start + +t) * 30 - 1e-6);
       if (f >= first && f <= last) frames.add(f);
     }
