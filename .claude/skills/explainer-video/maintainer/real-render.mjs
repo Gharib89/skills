@@ -186,10 +186,16 @@ async function compose(name, part, hold) {
   for (const [i, p] of part.entries())
     fs.writeFileSync(
       path.join(comp, "scenes", `${p.scene.id}.html`),
-      await sceneFile(p.scene, { ...scenes[i], sentences: [0.2] }, profile, {
-        backend,
-        seam: seams[i],
-      }),
+      await sceneFile(
+        p.scene,
+        // a sentence every 0.8 s from 0.2, so each cue has a time
+        {
+          ...scenes[i],
+          sentences: p.scene.narration.map((_, k) => 0.2 + 0.8 * k),
+        },
+        profile,
+        { backend, seam: seams[i] },
+      ),
     );
   fs.writeFileSync(
     path.join(comp, "index.html"),
@@ -265,32 +271,48 @@ check(
 // the steps' cut on a curve (out) each have an exit window and the scene after
 // it an entry window, so four windows.
 const raw = await backend.events(whole.comp, { env });
-const windows = whole.scenes.flatMap((s) =>
-  (raw[s.id]?.seams ?? []).map(([from, to]) =>
-    [from, (from + to) / 2, to - 1 / FPS].map((t) => +(s.start + t).toFixed(3)),
-  ),
-);
 const seek = async (t, n) => {
   const png = path.join(work, `seam-${t}-${n}.png`);
   await backend.frame(whole.comp, t, png, { env });
   return fs.readFileSync(png);
 };
-let apart = 0;
-let still = 0;
-for (const w of windows) {
-  const seen = new Set();
-  for (const t of w) {
-    const png = await seek(t, "a");
-    if (!png.equals(await seek(t, "b"))) apart++;
-    seen.add(png.toString("base64"));
+// Each window of `kind` (`seams` or `camera`) in video seconds: its first,
+// middle and last frames seeked twice, and how many differ between the seeks
+// (`apart`) or leave the window's three frames alike (`still`).
+async function sweep(kind) {
+  const windows = whole.scenes.flatMap((s) =>
+    (raw[s.id]?.[kind] ?? []).map(([from, to]) =>
+      [from, (from + to) / 2, to - 1 / FPS].map(
+        (t) => +(s.start + t).toFixed(3),
+      ),
+    ),
+  );
+  let apart = 0;
+  let still = 0;
+  for (const w of windows) {
+    const seen = new Set();
+    for (const t of w) {
+      const png = await seek(t, "a");
+      if (!png.equals(await seek(t, "b"))) apart++;
+      seen.add(png.toString("base64"));
+    }
+    // a window that draws nothing leaves its three frames alike
+    if (seen.size < w.length) still++;
   }
-  // a seam that draws nothing leaves its three frames alike
-  if (seen.size < w.length) still++;
+  return { count: windows.length, apart, still };
 }
+const seams = await sweep("seams");
 check(
   "seams",
-  windows.length === 4 && apart === 0 && still === 0,
-  `${apart} of ${windows.length * 3} seam frames differ between two seeks, ${still} windows draw no motion, in ${windows.length} windows (4 expected)`,
+  seams.count === 4 && seams.apart === 0 && seams.still === 0,
+  `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (4 expected)`,
+);
+// Every scene composes a push-in under the default camera: one window each.
+const push = await sweep("camera");
+check(
+  "camera",
+  push.count === whole.scenes.length && push.apart === 0 && push.still === 0,
+  `${push.apart} of ${push.count * 3} push-in frames differ between two seeks, ${push.still} windows draw no motion, in ${push.count} windows (${whole.scenes.length} expected)`,
 );
 
 const list = path.join(work, "halves.txt");
