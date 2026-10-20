@@ -13,8 +13,9 @@ export const lines = (code) => code.split("\n");
 
 // The techniques a style profile may ban beside the components, each with the
 // components that use it: `draw` strokes arrows on. The texture draws `blur`,
-// not a component: the profile loader checks it there.
-export const TECHNIQUES = { draw: ["flow"], blur: [] };
+// not a component: the profile loader checks it there. `camera` is a scene's
+// `camera` key, which compile checks.
+export const TECHNIQUES = { draw: ["flow"], blur: [], camera: [] };
 
 const words = (s) => s.split(/\s+/).filter(Boolean);
 // A word compared without its case or its punctuation, an apostrophe inside
@@ -319,9 +320,33 @@ export function checkVisual(visual, said) {
     fail("seam is not a name like zoom-through, cut-the-curve or cut");
   const v = VISUALS[visual.component];
   if (!v) fail(`unknown component ${visual.component}`);
+  if (visual.camera !== undefined) {
+    // A component with `ownCamera` set moves the frame itself.
+    if (v.ownCamera)
+      fail(
+        `${visual.component} draws its own camera, so it takes no camera key`,
+      );
+    object(visual.camera, "camera");
+    cue(visual.camera, said);
+    known("camera", visual.camera, CUE);
+  }
   const props = visual.props ?? {};
   v.check(props, said);
   known(visual.component, props, v.props, v.retired);
   for (const x of props[v.rows] ?? [])
     known(`a ${visual.component} item`, x, v.item);
+}
+
+// The cue the scene's camera pushes in on: its `camera` key, else the cue of
+// the item that reveals last, a later word of a sentence after an earlier one.
+// `said` holds the scene's sentences in spoken form.
+export function cameraCue(visual, said) {
+  if (visual.camera) return visual.camera;
+  let last;
+  for (const [, at, , on] of VISUALS[visual.component].items(
+    visual.props ?? {},
+  ))
+    if (!last || place({ at, on }, said) >= place(last, said))
+      last = { at, on };
+  return last.on === undefined ? { at: last.at } : last;
 }

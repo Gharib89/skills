@@ -45,13 +45,20 @@ narrator: am_fenrir
   `cut-the-curve` or `cut`) sets the seam out of this scene; with none the
   composer picks from the arc: a zoom-through where the next scene's role
   differs (or either has none), a cut on a curve inside a beat. Compile
-  refuses a `seam` outside the profile's seams family and `cut`. A **cue** is
-  `at`, a sentence number: that item rises in, or that change plays, as the
-  sentence starts. Add `on`, a phrase of that sentence in its spoken form,
-  and it lands on the phrase's first spoken word
-  instead; compile refuses a phrase the sentence does not say (case and
-  punctuation aside), and a phrase said twice takes its first place. `on`
-  goes wherever `at` does, on an item and on `codediff` too.
+  refuses a `seam` outside the profile's seams family and `cut`. An optional
+  `camera` beside `component`, `{ "at*", "on" }`, is the scene's **camera
+  beat**, the cue its push-in lands on; with none, the camera beat is the cue
+  of the last item to reveal. A cue under one push duration into the scene
+  runs the push from the scene's start, and a scene shorter than the push ends
+  mid-push. Compile refuses a `camera` key under a profile that bans `camera`
+  or whose camera family is `locked`, and on a rich component, which draws its
+  own camera. A
+  **cue** is `at`, a sentence number: that item rises in, or that change
+  plays, as the sentence starts. Add `on`, a phrase of that sentence in its
+  spoken form, and it lands on the phrase's first spoken word instead;
+  compile refuses a phrase the sentence does not say (case and punctuation
+  aside), and a phrase said twice takes its first place. `on` goes wherever
+  `at` does, on an item and on `codediff` too.
   - `title` (`kicker`, `title*`, `subtitle`).
   - `cards` (`items*`, each `at*`, `label*`, `value*`, `note`).
   - `terminal` (`title`, `lines*`, each `at*`, `text*`).
@@ -97,11 +104,11 @@ the family listed first, so a profile states only where it departs:
 | --- | --- | --- |
 | `layout` | `open` (no header band, content from the top down to the captions), `bands` (a header band above the content) | none |
 | `seams` | `velocity` (the outgoing scene draws the seam and runs on past its last moment while the next starts on time: a zoom-through at a beat change, a cut on a curve inside a beat), `cut` (a hard cut) | `duration` 0.2 to 0.4 s (default 0.2, whole frames), `blur` 0 to 24 px (default 18, the zoom-through's peak; the cut on a curve peaks at 4/9 of it) |
-| `camera` | `locked` | `scale` 1.03 to 1.12 |
+| `camera` | `push` (one push-in per scene, landing on its camera beat and held to the scene's end), `locked` (no push-in) | `scale` 1.03 to 1.12 (default 1.06, the push-in's end scale), `duration` 0.4 to 1.6 s (default 0.8) |
 | `type` | `block` | `stagger` 0.03 to 0.08 s |
 | `ease` | `velocity` (every reveal slides up and fades in on a fast-out ease: `power3` for most, `power4` for a headline, `expo` for list items, arrows and terminal lines), `soft` (every reveal on one `power2` ease), `spring` (a headline lands with one overshoot; panels, cards, frames and flow nodes settle with a soft one; list items, arrows and terminal lines snap) | none |
 | `texture` | `surface`: `glass` (boxes half see-through, blurred behind, over the colour field), `flat`, or `sketch`, which outlines flow steps and panels by hand, seeded per scene and element so a render repeats exactly; `overlays`: a list of `field` (a blurred field in the profile's colours behind the scenes), `grain` (noise at a fixed seed), `vignette` and `depth` (everything but the emphasised item blurs once the emphasis lands), all four by default | `grain` opacity 0 to 0.3, `fieldBlur` 0 to 240 px, `depthBlur` 0 to 24 px |
-| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` on, so banning it refuses every `flow` scene; `blur`, which the texture sets as `fieldBlur` and `depthBlur`, so banning it refuses a profile whose `field` or `depth` overlay has a blur above 0, whose surface is `glass`, whose boxes blur what is behind them (set `flat` or `sketch`), or whose `velocity` seams have a `blur` above 0 (set it to 0 or use the `cut` family) | none |
+| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` on, so banning it refuses every `flow` scene; `blur`, which the texture sets as `fieldBlur` and `depthBlur`, so banning it refuses a profile whose `field` or `depth` overlay has a blur above 0, whose surface is `glass`, whose boxes blur what is behind them (set `flat` or `sketch`), or whose `velocity` seams have a `blur` above 0 (set it to 0 or use the `cut` family); `camera`, the push-in, so banning it draws none and refuses a scene's `camera` key | none |
 
 A field with knobs is a family name or `{ "family": "cut", "duration": 0.3 }`;
 a field without knobs is a family name; `texture` is an object,

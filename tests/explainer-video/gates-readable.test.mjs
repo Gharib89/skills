@@ -74,6 +74,22 @@ test("a box in a seam or carried by the camera is not judged there", () => {
   }
 });
 
+test("a push-in that leaves a box past the safe area is judged once it ends, and fails", () => {
+  const fx = fixture();
+  // the margin title sits outside the safe area; the composed push-in carries
+  // it only while it runs
+  const r = renderUnjudged(fx, titled("edge"));
+  assert.equal(r.code, 1, r.out + r.err);
+  const hook = read(calls(fx, "events")[0].dir, "scenes", "hook.html");
+  const [, start, end] = hook.match(
+    /addLabel\("camera:start", ([\d.]+)\)\.addLabel\("camera:end", ([\d.]+)\)/,
+  );
+  assert.ok(+end > +start, "the hook scene composes a push-in");
+  const first = record(fx).gates.layout.evidence[0];
+  assert.match(first, /outside the safe margin/);
+  assert.equal(firstAt(fx), +end, "judged from the push's end, not inside it");
+});
+
 test("a scene's seam holds the next scene's text back, its camera only its own", () => {
   const sc = [
     { id: "a", start: 0 },

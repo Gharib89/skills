@@ -72,7 +72,8 @@ test("a spring profile renders: each reveal carries its class at its sentence, n
   const timeline = JSON.parse(read(fx.dir, "timeline.json"));
   for (const id of ["flow", "sides", "gates", "code", "diff"]) {
     const { duration } = timeline.scenes.find((s) => s.id === id);
-    const calls = played(fx, id);
+    // the push-in is no reveal: it has no class and no rise
+    const calls = played(fx, id).filter((c) => !c.sel.endsWith(".camera"));
     assert.ok(calls.length, id);
     for (const { from, to, t: start } of calls) {
       assert.ok(to.opacity === undefined || to.opacity <= 1, id);
