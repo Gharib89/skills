@@ -59,6 +59,22 @@ test("a box readable in two short stretches fails even when their sum would pass
   assert.match(f[0], /1\.0 s readable vs 1\.8 s to read/);
 });
 
+test("two boxes with the same text are judged apart: one readable the whole scene does not carry the other", () => {
+  const first = { ...el("Status", 1), nth: 1 };
+  const second = { ...el("Status", 1), nth: 2 };
+  const f = judge((t) => (t >= 5.5 ? [first, second] : [first]));
+  assert.equal(f.length, 1);
+  assert.match(f[0], /"Status": 0\.5 s readable vs 0\.8 s to read/);
+});
+
+test("a box no sample shows readable is not a reading finding", () => {
+  const hidden = { ...el("Spare", 1), opacity: 0 };
+  assert.deepEqual(
+    judge(() => [hidden]),
+    [],
+  );
+});
+
 test("a stretch exactly as long as the floor passes, half a sample less fails", () => {
   const box = el("a b c d e f g h i j", 10);
   // 3.0 s needed: shown 1.0 to 4.0 is exactly 3.0 s, to 3.5 only 2.5 s.

@@ -164,7 +164,7 @@ function measureFrame() {
     return inks.get(key);
   };
   const out = [];
-  for (const el of document.querySelectorAll("#root *")) {
+  for (const [nth, el] of [...document.querySelectorAll("#root *")].entries()) {
     const own = [...el.childNodes]
       .filter((n) => n.nodeType === 3 && n.textContent.trim())
       .map((n) => n.textContent.trim())
@@ -211,6 +211,9 @@ function measureFrame() {
       // A kinetic line is one box: its words share a `data-line`, and
       // `data-along` marks one revealed on its own spoken words.
       line: el.closest("[data-line]")?.dataset.line ?? null,
+      // The element's place in the page, the same on every sample, so two
+      // boxes with the same text stay two.
+      nth,
       along: el.closest("[data-along]") !== null,
       rect: box(r),
       fontPx: parseFloat(cs.fontSize) * scale,

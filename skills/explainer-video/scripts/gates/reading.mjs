@@ -15,8 +15,8 @@ const EPS = 1e-3;
 
 // Findings for scene `p.sc`, from the probe's `frames` at `p.times` (video
 // seconds, `p.end` the scene's end). A box is a line (the elements sharing a
-// `line`, readable only when every one is) or the text of an element, readable
-// when any element with that text is. A finding is led by the scene's start,
+// `line`, readable only when every one is) or one element's text, told from
+// another's with the same text by its `nth`. A finding is led by the scene's start,
 // as layout's lines are, so the storyboard's gate stop reopens the scene's card.
 export function readingFindings(p, frames, moving) {
   const boxes = new Map();
@@ -26,13 +26,14 @@ export function readingFindings(p, frames, moving) {
       .elements.filter((e) => e.scene === p.sc.id);
     const seen = new Map();
     for (const e of mine) {
-      const key = e.line == null ? `text ${e.text}` : `line ${e.line}`;
+      const key = e.line == null ? `text ${e.nth} ${e.text}` : `line ${e.line}`;
       if (!seen.has(key)) seen.set(key, []);
       seen.get(key).push(e);
     }
     for (const [key, els] of seen) {
       const box = boxes.get(key) ?? {
         along: false,
+        drawn: false,
         words: 0,
         parts: [],
         read: Array(p.times.length).fill(false),
@@ -40,6 +41,7 @@ export function readingFindings(p, frames, moving) {
       };
       boxes.set(key, box);
       box.along = box.along || els.some((e) => e.along);
+      box.drawn = box.drawn || els.some((e) => e.opacity > 0);
       if (key.startsWith("line")) {
         if (els.length > box.parts.length) {
           box.parts = els.map((e) => e.text);
@@ -58,6 +60,10 @@ export function readingFindings(p, frames, moving) {
     // A line reads when every one of its elements does, at the most it showed.
     const line = key.startsWith("line");
     const read = line ? box.full.map((n) => n >= box.parts.length) : box.read;
+    // A box no sample draws at all (opacity 0 throughout) is never on screen
+    // to be read, so it is no reading finding; one drawn but never readable,
+    // blurred or under a seam, still is.
+    if (!box.drawn) continue;
     let longest = 0;
     let from = null;
     read.forEach((on, i) => {
