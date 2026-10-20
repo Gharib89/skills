@@ -1,9 +1,9 @@
 # Standards: what the gates enforce
 
 The author reads this before pushing. These rules are enforced by
-`scripts/local-gate.sh` or the `bump-guard` CI leg, so a reviewer cites the gate
-rather than the rule. What each gate checks in full is its script and the ship
-profile's `## Local gate` section in
+`scripts/local-gate.sh` or the `check-full` and `bump-guard` CI legs, so a
+reviewer cites the gate rather than the rule. What each gate checks in full is
+its script and the ship profile's `## Local gate` section in
 [docs/agents/ship.md](../../agents/ship.md); this file keeps what an author must
 do to pass.
 

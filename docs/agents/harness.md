@@ -42,6 +42,8 @@ Root: None.
 
 Local-only: None.
 
+Ship's local gate rests on this: with no `full` check tied to this machine, `scripts/local-gate.sh` runs only `secrets` and `version-lines`, which need the base ref, and reports every `full` check `deferred-to-ci`, since CI's `check-full` leg runs `full` on each PR head of this public repo.
+
 ## Declined
 
 Declined: shfmt: its default tab indent rewrites every indented line of this repo's two-space scripts, a change across the skills this repo writes; no Go toolchain on the maintainer's machine
