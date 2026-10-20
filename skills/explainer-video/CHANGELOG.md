@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.41.0 (2026-10-20)
+
+### Features
+
+- **explainer-video**: Menus on the storyboard card and the brief
+  ([#920](https://github.com/Gharib89/skills/pull/920),
+  [`3162a29`](https://github.com/Gharib89/skills/commit/3162a2964f4c9a849e6d31163e6671ea0caf5cdf))
+
+
 ## v0.40.2 (2026-10-20)
 
 ### Bug Fixes
