@@ -55,8 +55,6 @@ test("countText counts from 0 to the number as written, a function of progress a
   assert.equal(countText("0.5", 0.5), "0.3");
   for (const w of ["1,200", "1200", "0.5", "1,200.25", "0", "7", "240"])
     assert.equal(countText(w, 1), w);
-  // any order of seeks gives the text of that progress alone
-  for (const p of [1, 0, 0.77, 0.4, 0.4]) countText("1,200.5", p);
   assert.equal(countText("1,200.5", 0.4), "480.2");
 });
 

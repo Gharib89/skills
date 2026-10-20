@@ -91,9 +91,9 @@ narrator: am_fenrir
     **A number on screen is a claim, so a `value` is digits as written**
     (`1200` or `1,200.5`; a unit goes in a chart's `unit` or the label)
     **and must stand in an excerpt the scene cites**, whole and with the
-    same commas and
-    decimals: the script gate's `cites` refuses `1200` against `1,200`, and
-    `200` against `1,200`. An Arabic excerpt's numbers are written in its own
+    same commas and decimals: the script gate's `cites` refuses `1200`
+    against `1,200`, and `200` against `1,200`. An Arabic excerpt's numbers
+    are written in its own
     digits (`١٬٢٠٠` or Persian `۱٬۲۰۰`, one script to a number): write the
     value in the excerpt's digits (it counts up in them); a value in another
     digit script is refused.
