@@ -4,6 +4,7 @@
 // own frame), so a `camera` key is refused on it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { banReason } from "../../skills/explainer-video/scripts/lib/allowed.mjs";
 import { checkVisual } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
 
 const said = [
@@ -109,4 +110,11 @@ test("a diagram wider or taller than a frame holds is refused at compile", () =>
     );
   assert.doesNotThrow(() => checkVisual(fan(3), said));
   bad(fan(4), /2 columns of up to 4 nodes/);
+});
+
+test("a profile that bans draw bars the diagram, whose arrows stroke on", () => {
+  assert.match(
+    banReason(["draw"], "diagram", "plain"),
+    /component diagram uses draw, which style profile plain bans/,
+  );
 });

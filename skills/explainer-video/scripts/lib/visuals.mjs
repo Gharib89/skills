@@ -31,7 +31,7 @@ export const lines = (code) => code.split("\n");
 // it there, and the type family `words` the same way for `kinetic`. `camera` is
 // a scene's `camera` key, which compile checks.
 export const TECHNIQUES = {
-  draw: ["flow"],
+  draw: ["flow", "diagram"],
   blur: [],
   camera: [],
   kinetic: ["words"],
