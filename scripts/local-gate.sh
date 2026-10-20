@@ -8,24 +8,23 @@
 #
 # Contract (ship's local-gate contract, the same in every repo):
 #   stdout: one JSON object, {"verdict","base","lane","gates":{<name>:<status>}}
-#   stderr: a failing gate's last 40 log lines, and the last 40 lines of
-#           check.sh's own stderr unless check.sh answered a clean pass; this
-#           repo's gates slot adds scripts/glossary-warn.sh's `glossary:` lines
-#           and scripts/context-report.sh's size lines on every run, uncapped,
+#   stderr: a failing gate's last 40 log lines; this repo's gates slot adds
+#           scripts/glossary-warn.sh's `glossary:` lines and
+#           scripts/context-report.sh's size lines on every run, uncapped,
 #           which set no gate status
 #   exit:   0 every gate passed · 1 a gate failed · 2 tooling
 #   gate status: pass | fail | deferred-to-ci | unavailable
 #   verdict: pass | fail | unavailable; fail wins over unavailable
 #   `secrets` is required in every lane. Base defaults to origin/HEAD.
 #
-# check.sh owns every check it runs, each one a gate of the same name here. This
-# file owns only what check.sh cannot know: `secrets` over base..HEAD and
-# `version-lines`, both relative to the base. CI's `check-full` leg runs
-# `check.sh full` on the PR head too, but no gate is ever `deferred-to-ci`: Ship
-# still runs this gate on every run. This repo has no dependencies, so no `deps`
-# gate. `--small` runs check.sh's own `FULL_ROWS`
-# checks in place of `check.sh full`, which leaves out only its `runner`, the
-# linters, that the edit and commit hooks run on every change.
+# This file runs only what CI cannot or must not: `secrets` over base..HEAD, so
+# a secret is caught before the push to this public repo, and `version-lines`,
+# which needs the base. Every check `check.sh full` would report (its `runner`,
+# each TURN_ROWS member's typecheck and tests, each FULL_ROWS row) is CI's
+# `check-full` leg's, which runs `check.sh full` on every PR head, so each is a
+# gate of the same name here, `deferred-to-ci` and unrun. `--small` runs the
+# same two gates: with the rest deferred there is nothing left to trim. This
+# repo has no dependencies, so no `deps` gate.
 # Bash 3.2 plus jq, so it runs on a stock macOS bash.
 set -uo pipefail
 
@@ -69,50 +68,23 @@ else
   mark secrets unavailable
 fi
 
-if [ "$lane" = small ]; then
-  # FULL_ROWS is read from check.sh's configuration block, so the two lanes
-  # cannot drift; each row is `<name>|<command>`, the command may hold a `|`.
-  # The row data is check.sh's; the runner is not, and covers the parts of
-  # check.sh's own that a row's result rests on: exit 127 is `unavailable`, a
-  # LOCAL_ONLY row is skipped (read as `pass`) in a cloud session, a command
-  # gets no stdin, which would otherwise drain the rows still to come, and it
-  # runs under `-u` and `pipefail` as check.sh does. No deadline here.
-  eval "$(sed -n '/^# >>> setup-harness configuration/,/^# <<< setup-harness configuration/p' scripts/check.sh)"
-  if [ -z "${FULL_ROWS:-}" ]; then
-    mark check unavailable
-    echo "check.sh carries no FULL_ROWS block between its setup-harness configuration markers" >&2
-  fi
-  while IFS='|' read -r name cmd; do
-    [ -n "$name" ] || continue
-    if [ "${CLAUDE_CODE_REMOTE:-}" = true ]; then
-      case " ${LOCAL_ONLY:-} " in *" $name "*) put "$name" pass; continue ;; esac
-    fi
-    bash -uo pipefail -c "$cmd" </dev/null >"$log" 2>&1; rc=$?
-    case $rc in
-      0) put "$name" pass ;;
-      127) put "$name" unavailable; tail -n 40 "$log" >&2 ;;
-      *) put "$name" fail; tail -n 40 "$log" >&2 ;;
-    esac
-  done <<<"${FULL_ROWS:-}"
-else
-  # No CHECK_DEADLINE: `full` is measured only, and a deadline would have
-  # check.sh skip whatever it had not reached.
-  (unset CHECK_DEADLINE; exec scripts/check.sh full) >"$log" 2>"$err"; rc=$?
-  # 0 to 3 all carry the one JSON line (2 is a check unavailable, 3 over
-  # budget), so an unavailable tool still names its own check; a stdout outside
-  # the contract (the usage path, not a git repo) leaves nothing to map, which
-  # the jq guard catches. A status outside the gate vocabulary reads as
-  # unavailable.
-  if [ "$rc" -le 3 ] && parsed=$(jq -sce 'select(length == 1) | .[0].checks | objects
-      | map_values(if . == "skipped" then "pass" elif . == "pass" or . == "fail" or . == "unavailable" then . else "unavailable" end)' \
-      "$log" 2>/dev/null); then
-    checks=$parsed
-    [ "$rc" -eq 0 ] || tail -n 40 "$err" >&2
-  else
-    mark check unavailable
-    tail -n 40 "$err" >&2
-  fi
+# The deferred names are read from check.sh's configuration block and named the
+# way its `full` rung names them, so they cannot drift from what CI reports.
+eval "$(sed -n '/^# >>> setup-harness configuration/,/^# <<< setup-harness configuration/p' scripts/check.sh)"
+if [ -z "${FULL_ROWS:-}" ]; then
+  mark check unavailable
+  echo "check.sh carries no FULL_ROWS block between its setup-harness configuration markers" >&2
 fi
+[ -z "${FULL_RUN:-}" ] || mark runner deferred-to-ci
+# `full` passes no files, so a member's affected tests never run there.
+while IFS='|' read -r _ member _ typecheck tests _; do
+  [ -n "$member" ] || continue
+  [ -z "$typecheck" ] || mark "typecheck:$member" deferred-to-ci
+  [ -z "$tests" ] || mark "tests:$member" deferred-to-ci
+done <<<"${TURN_ROWS:-}"
+while IFS='|' read -r name _; do
+  [ -z "$name" ] || mark "$name" deferred-to-ci
+done <<<"${FULL_ROWS:-}"
 
 # version-lines: `metadata.version` is the release run's to write, from the squash
 # subject's Conventional-Commit type, so a PR that moves one either loses to that

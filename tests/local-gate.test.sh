@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# scripts/local-gate.sh: what it adds to `check.sh full` and how it grades, rather
+# scripts/local-gate.sh: what it runs itself and what it leaves to CI, rather
 # than what any one check does. Each fixture is a throwaway checkout carrying the
 # real gate and a stub for every script it calls, so the subject is the gate's
-# own wiring: check.sh runs once, as `full`, in the full lane; the small lane
-# never runs it and runs the `FULL_ROWS` checks it lists instead; its checks
-# become gates by their own names, with no gate of the repo's own duplicating
-# one; `version-lines` is handed the base; `secrets` is in every lane. The base cases sit apart: both this gate and the setup-skills
-# template refuse a base that is not a commit, before any gate runs. How the
-# full lane grades check.sh's answer (a failing check, exit 2 or 3, output
-# outside its contract) is the harness template's mapping with check.sh's path
-# filled in, and tests/setup-skills-harness-gate.test.sh holds it there; a case
-# below holds the two copies of the mapping equal.
+# own wiring: in both lanes it runs `secrets` and `version-lines` (handed the
+# base) and nothing else, and reports every check `check.sh full` would report,
+# named from check.sh's configuration block, as `deferred-to-ci` unrun, so a
+# failing check no longer fails it while a failing `secrets` or `version-lines`
+# still does. The base cases sit apart: both this gate and the setup-skills
+# template refuse a base that is not a commit, before any gate runs.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -18,13 +15,14 @@ source tests/lib.sh
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 git_() { git -c user.email=t@example.com -c user.name=t -C "$1" "${@:2}"; }
 
-# gitleaks, which the `secrets` gate calls by name, answering clean.
+# gitleaks, which the `secrets` gate calls by name, exiting $SECRETS_RC.
 mkdir -p "$fixture/bin"
-printf '#!/usr/bin/env bash\nexit 0\n' > "$fixture/bin/gitleaks"; chmod +x "$fixture/bin/gitleaks"
+printf '#!/usr/bin/env bash\nexit "${SECRETS_RC:-0}"\n' > "$fixture/bin/gitleaks"; chmod +x "$fixture/bin/gitleaks"
 export PATH="$fixture/bin:$PATH"
 
 # A checkout whose base commit carries the gate and its stubs: a check.sh that
-# logs how it was called, prints $CHECK_OUT and carries a `FULL_ROWS` block, and
+# logs how it was called, prints $CHECK_OUT and carries a configuration block
+# (`alpha` has typecheck and tests on `full`, `beta` affected tests alone), and
 # the scripts those rows and the gate call, each logging its arguments and
 # exiting with $TESTS_RC, $DERIVED_RC or $VERSION_RC; prints its path.
 repo() {
@@ -38,7 +36,8 @@ printf '%s' "$CHECK_OUT"
 exit "${CHECK_RC:-0}"
 # >>> setup-harness configuration
 FULL_RUN='prek run --all-files'
-LOCAL_ONLY="${STUB_LOCAL_ONLY-}"
+TURN_ROWS='a/|alpha|*.js|tsc|npm test|
+b/|beta|*.mjs|||run {files}'
 FULL_ROWS='tests|tests/run.sh
 derived-copies|scripts/derived-copies-check.sh
 contract|scripts/contract-check.sh a && scripts/contract-check.sh b
@@ -66,70 +65,39 @@ gate() {
   out=$(cd "$d" && CALLS="$d/calls" CHECK_DEADLINE=99 bash scripts/local-gate.sh --base base "$@" 2>"$d/err"); rc=$?
   err=$(cat "$d/err"); calls=$(cat "$d/calls")
 }
-ALL_GREEN='{"rung":"full","verdict":"pass","checks":{"tests":"pass","derived-copies":"pass","runner":"pass"}}'
+FAILING='{"rung":"full","verdict":"fail","checks":{"tests":"fail","runner":"fail"}}'
+DEFERRED='{"contract":"deferred-to-ci","derived-copies":"deferred-to-ci","piped":"deferred-to-ci","runner":"deferred-to-ci","secrets":"pass","tests":"deferred-to-ci","tests:alpha":"deferred-to-ci","typecheck:alpha":"deferred-to-ci","version-lines":"pass"}'
+sorted='.gates |= (to_entries | sort_by(.key) | from_entries)'
 
 d=$(repo full)
-CHECK_OUT=$ALL_GREEN gate "$d"
-check_rc "full lane, all green: exit 0" 0 "$rc"
-check "the gates are check.sh's checks plus secrets and version-lines, each once" \
-  '{"verdict":"pass","base":"base","lane":"full","gates":["derived-copies","runner","secrets","tests","version-lines"]}' \
-  "$(jq -c '.gates |= keys' <<<"$out")"
-check "check.sh runs once, as full, with no CHECK_DEADLINE, and the suite is check.sh's alone" \
-  "check.sh full deadline=unset
-version-line-check.sh base" "$calls"
+for lane in full small; do
+  flags=(); [ "$lane" = full ] || flags=(--small docs/note.md)
+  CHECK_OUT=$FAILING CHECK_RC=1 TESTS_RC=1 DERIVED_RC=1 gate "$d" "${flags[@]}"
+  check_rc "$lane lane, every check.sh check failing: exit 0" 0 "$rc"
+  check "$lane lane: each check check.sh full reports is deferred-to-ci, secrets and version-lines pass" \
+    "{\"verdict\":\"pass\",\"base\":\"base\",\"lane\":\"$lane\",\"gates\":$DEFERRED}" "$(jq -c "$sorted" <<<"$out")"
+  check "$lane lane: version-lines is the only script it runs, handed the base" "version-line-check.sh base" "$calls"
 
-CHECK_OUT=$ALL_GREEN CONTEXT_LINE='total: 1 chars' gate "$d"
+  SECRETS_RC=1 gate "$d" "${flags[@]}"
+  check "$lane lane: a failing secrets fails the verdict" "1 fail fail" "$rc $(jq -r '"\(.verdict) \(.gates.secrets)"' <<<"$out")"
+
+  VERSION_RC=1 gate "$d" "${flags[@]}"
+  check_rc "$lane lane: a failing version-lines fails the verdict" 1 "$rc"
+  check "$lane lane: version-lines failing is graded fail and its log reaches stderr" "fail version log line" \
+    "$(jq -r '.gates["version-lines"]' <<<"$out") $err"
+done
+
+CONTEXT_LINE='total: 1 chars' gate "$d"
 check_rc "the context report's tooling exit 2 grades nothing" 0 "$rc"
 check "the context report's lines reach stderr" "total: 1 chars" "$err"
 check "the report adds no gate status and leaves the verdict JSON as it was" \
-  '{"verdict":"pass","base":"base","lane":"full","gates":{"derived-copies":"pass","runner":"pass","secrets":"pass","tests":"pass","version-lines":"pass"}}' \
-  "$(jq -c '.gates |= (to_entries | sort_by(.key) | from_entries)' <<<"$out")"
-
-CHECK_OUT=$ALL_GREEN VERSION_RC=1 gate "$d"
-check_rc "version-lines failing fails the verdict" 1 "$rc"
-check "version-lines failing is graded fail and its log reaches stderr" "fail version log line" \
-  "$(jq -r '.gates["version-lines"]' <<<"$out") $err"
-
-CHECK_OUT=$ALL_GREEN gate "$d" --small docs/note.md
-check_rc "--small, all green: exit 0" 0 "$rc"
-check "--small runs check.sh's FULL_ROWS by name, never its runner" '{"lane":"small","gates":["contract","derived-copies","piped","secrets","tests","version-lines"]}' \
-  "$(jq -c '{lane, gates: (.gates | keys)}' <<<"$out")"
-check "--small: the calls are the rows in order, a row's && and | commands in full, then version-lines" "run.sh
-derived-copies-check.sh
-contract-check.sh a
-contract-check.sh b
-piped row
-version-line-check.sh base" "$calls"
-
-TESTS_RC=1 gate "$d" --small docs/note.md
-check_rc "--small, a failing suite fails the verdict" 1 "$rc"
-check "--small, a failing suite: its log tail reaches stderr" "tests log line" "$err"
-
-DERIVED_RC=1 gate "$d" --small docs/note.md
-check "--small, derived copies that differ fail the verdict" "fail fail" "$(jq -r '"\(.verdict) \(.gates["derived-copies"])"' <<<"$out")"
-
-DERIVED_RC=127 gate "$d" --small docs/note.md
-check_rc "--small, a row whose tool is missing (127) is tooling" 2 "$rc"
-check "--small, a row whose tool is missing (127) grades unavailable" "unavailable" "$(jq -r '.gates["derived-copies"]' <<<"$out")"
-
-STUB_LOCAL_ONLY=contract CLAUDE_CODE_REMOTE=true gate "$d" --small docs/note.md
-check "--small, a LOCAL_ONLY row in a cloud session is skipped and read as pass" "pass 4" \
-  "$(jq -r '.gates.contract' <<<"$out") $(grep -c . <<<"$calls")"
-STUB_LOCAL_ONLY=contract CLAUDE_CODE_REMOTE='' gate "$d" --small docs/note.md
-check "--small, a LOCAL_ONLY row outside a cloud session still runs" "6" "$(grep -c . <<<"$calls")"
-
-# A row runs under pipefail, as check.sh runs it: a failing head of a pipe fails
-# the row, where a bare `bash -c` would read the last command's status alone.
-d=$(repo pipefail)
-sed -i.bak "s/^piped|.*/piped|false | cat'/" "$d/scripts/check.sh"
-gate "$d" --small docs/note.md
-check "--small, a row failing at the head of a pipe fails (pipefail)" "fail" "$(jq -r '.gates.piped' <<<"$out")"
+  "{\"verdict\":\"pass\",\"base\":\"base\",\"lane\":\"full\",\"gates\":$DEFERRED}" "$(jq -c "$sorted" <<<"$out")"
 
 d=$(repo no-rows)
 sed -i.bak '/setup-harness configuration/d' "$d/scripts/check.sh"
-gate "$d" --small docs/note.md
-check_rc "--small, a check.sh with no configuration block is tooling" 2 "$rc"
-check "--small, a check.sh with no configuration block grades one check: unavailable" "unavailable" "$(jq -r '.gates.check' <<<"$out")"
+gate "$d"
+check_rc "a check.sh with no configuration block is tooling" 2 "$rc"
+check "a check.sh with no configuration block grades one check: unavailable" "unavailable" "$(jq -r '.gates.check' <<<"$out")"
 d=$fixture/full
 
 # A base that names no commit is tooling, before any gate runs: gitleaks given a
@@ -176,10 +144,5 @@ for f in scripts/local-gate.sh skills/setup-skills/local-gate.sh skills/setup-sk
       "usage: scripts/local-gate.sh [--small <node>] [--base <ref>]" "$out"
   done
 done
-
-mapping() { awk '/# No CHECK_DEADLINE/ { p = 1 } p { print } p && /^fi$/ { exit }' "$1"; }
-check "the full-lane mapping is the harness template's, check.sh's path filled in" "" \
-  "$(diff <(mapping skills/setup-skills/local-gate-harness.sh | sed 's|__CHECK__|scripts/check.sh|') <(mapping scripts/local-gate.sh))$(
-    [ -n "$(mapping scripts/local-gate.sh)" ] || echo 'no mapping found in scripts/local-gate.sh')"
 
 finish
