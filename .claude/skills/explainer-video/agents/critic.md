@@ -97,7 +97,8 @@ the record, each with the one change that would fix it: a local change inside
 the approved storyboard, never new content, a new scene or new narration. Each
 is `{ "at", "what", "evidence", "fix" }`:
 
-- `at`: video seconds, inside this scene or its exit seam's `window`
+- `at`: video seconds, inside this scene; a defect seen only in the seam
+  strip takes the scene's last moment
 - `what`: the defect, in at most 25 words
 - `evidence`: where you saw it, as `strip frames 4-7`, `seam strip frames 5-8`,
   `sheet tile 3` or `dead beat 12.0-14.5 s`

@@ -20,17 +20,16 @@ export function sceneEvents(raw, scenes) {
     const at = (w) => w.map((x) => r3(sc.start + x));
     const seams = (ev.seams ?? []).map(at);
     const camera = (ev.camera ?? []).map(at);
-    // The camera's push is a tween too, but drift, not motion: a tween on its
-    // window is left out of `tweens`, which a dead beat is read against.
-    const tweens = (ev.tweens ?? [])
-      .map(at)
-      .filter(
-        ([a, b]) =>
-          b > a &&
-          !camera.some(
-            ([x, y]) => Math.abs(a - x) < 1e-3 && Math.abs(b - y) < 1e-3,
-          ),
+    // The camera's push is a tween too, but drift, not motion: one tween per
+    // camera window is left out of `tweens`, which a dead beat is read
+    // against. A content tween sharing the window stays.
+    const tweens = (ev.tweens ?? []).map(at).filter(([a, b]) => b > a);
+    for (const [x, y] of camera) {
+      const own = tweens.findIndex(
+        ([a, b]) => Math.abs(a - x) < 1e-3 && Math.abs(b - y) < 1e-3,
       );
+      if (own >= 0) tweens.splice(own, 1);
+    }
     moves[sc.id] = { seams, camera, tweens };
     times.push(...at(ev.ends ?? []), ...seams.flat(), ...camera.flat());
   }
