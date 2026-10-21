@@ -2,16 +2,21 @@
 // `camera` key, each refused with the reason. Compile checks a scene against the
 // profile it saw; render checks it again, since the profile may have changed
 // between the two.
+import { techniquesIn } from "./fragment.mjs";
 import { SEAM_MOVES, grammar } from "./style.mjs";
 import { TECHNIQUES } from "./visuals.mjs";
 
 // Why `bans` bar a scene's component, or null: it is named, or it uses a
-// technique that is.
-export function banReason(bans, component, name) {
+// technique that is. A custom scene uses the techniques its `fragment`'s text
+// matches (lib/fragment.mjs), since no list of components says what it draws.
+export function banReason(bans, component, name, fragment) {
   if (bans.includes(component))
     return `component ${component} is banned by style profile ${name}`;
+  const used = component === "custom" && fragment ? techniquesIn(fragment) : [];
   const technique = Object.keys(TECHNIQUES).find(
-    (t) => bans.includes(t) && TECHNIQUES[t].includes(component),
+    (t) =>
+      bans.includes(t) &&
+      (TECHNIQUES[t].includes(component) || used.includes(t)),
   );
   return technique
     ? `component ${component} uses ${technique}, which style profile ${name} bans`
@@ -46,7 +51,12 @@ export function checkScenes(profile, scenes) {
   const { bans } = grammar(profile);
   for (const s of scenes) {
     const why =
-      banReason(bans, s.visual.component, profile.name) ??
+      banReason(
+        bans,
+        s.visual.component,
+        profile.name,
+        s.visual.props?.source,
+      ) ??
       seamReason(profile, s.visual.seam) ??
       cameraReason(profile, s.visual);
     if (why) throw new Error(`scene ${s.id}: ${why}`);
