@@ -125,8 +125,21 @@ async function sceneParts(
     !bans.includes("camera") &&
     !VISUALS[scene.visual.component].ownCamera;
   const box = contentBox(layout);
+  // A cue is a sentence number, or `{ at, on }`: with `on`, the time of the
+  // phrase's first voiced word. `{ word }` is the scene's nth voiced word.
+  const t = (c) => {
+    const cue = typeof c === "number" ? { at: c } : c;
+    if (cue.word !== undefined) return timing.words[cue.word];
+    return cue.on === undefined
+      ? timing.sentences[cue.at - 1]
+      : timing.words[cueWord(scene.narration, cue)];
+  };
   const x = {
     surface,
+    // A cue's time in seconds, and the scene's end, for a component whose
+    // tweens depend on the gap between two cues or on the time left.
+    time: t,
+    end: timing.duration,
     // The content box, for a component the composer lays out itself.
     box,
     // A code row is the code step at 1.4 (45 px at 32), so a `scale.code`
@@ -161,15 +174,6 @@ async function sceneParts(
     .filter((l) => l.trim())
     .map((l) => `${scope} ${l}`)
     .join("\n");
-  // A cue is a sentence number, or `{ at, on }`: with `on`, the time of the
-  // phrase's first voiced word. `{ word }` is the scene's nth voiced word.
-  const t = (c) => {
-    const cue = typeof c === "number" ? { at: c } : c;
-    if (cue.word !== undefined) return timing.words[cue.word];
-    return cue.on === undefined
-      ? timing.sentences[cue.at - 1]
-      : timing.words[cueWord(scene.narration, cue)];
-  };
   const reveal = ([sel, at, cls = "settle"]) => {
     if (ease === "spring") return [sel, ...sprung(cls), t(at), cls];
     const [from, to] =

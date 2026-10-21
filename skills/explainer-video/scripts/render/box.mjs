@@ -2,6 +2,13 @@
 // every component that draws one.
 import { GLASS } from "./texture.mjs";
 
+export const esc = (s) =>
+  String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+
 // A box's fill: glass over the page's colour field, else the panel colour.
 export const paint = (surface) =>
   surface === "glass" ? GLASS : "background: var(--panel);";

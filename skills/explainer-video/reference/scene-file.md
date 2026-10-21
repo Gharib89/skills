@@ -129,6 +129,25 @@ narrator: am_fenrir
     so a `camera` key is refused; in an Arabic run the columns run right to
     left. Each number in a `label` or `note` is a claim, held to a cited
     excerpt as a timeline's are.
+  - `browser`: a generic page in the profile's colours and the actions a
+    cursor plays on it (`url*`, `title*`, `elements*`, each `id*`, `kind*`,
+    `text*`; `actions*`, each `at*`, `on`, `target*`, `act*`, `text`). A
+    `kind` is `heading`, `text`, `button`, `field` or `link`; the composer
+    stacks the elements down the page, so the scene file holds no
+    coordinates, and a frame holds them by height, 5 buttons to 7 links: more
+    is refused. The page stands from the scene's start. An action is `move`,
+    `click` or `type`: on its cue the cursor travels to the element its
+    `target` names by id, then a `click` rings out and a `type` action
+    (`text*`, onto a `field` only) brings its words in one whole word at a
+    time, quicker when the next action or the scene's end is near and all
+    together when no time is left, the field's own `text` giving way to them.
+    Only a `type` takes
+    `text`. Actions cue in the order written, each strictly after the last,
+    since one cursor plays them all; an id no element holds, an id used twice
+    and an unknown `act` are refused. Rich, so a `camera` key is refused; in
+    an Arabic run the page runs right to left and the URL stays left to
+    right. Each number in the `url`, `title`, an element's `text` or typed
+    text is a claim, held to a cited excerpt as a timeline's are.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
     `code` (`title` and `codediff` take none): one callout per scene,
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a
@@ -164,7 +183,7 @@ the family listed first, so a profile states only where it departs:
 | `type` | `words` (a title and its subtitle rise word by word out of a mask, the title resolving out of blur, on `power4` or on `power2` under the `soft` ease; Arabic moves by whole words, an English term inside it one unit), `block` (the whole line enters at once) | `stagger` 0.03 to 0.08 s (default 0.05, between one word and the next) |
 | `ease` | `velocity` (every reveal slides up and fades in on a fast-out ease: `power3` for most, `power4` for a headline, `expo` for list items, arrows and terminal lines), `soft` (every reveal on one `power2` ease), `spring` (a headline lands with one overshoot; panels, cards, frames and flow nodes settle with a soft one; list items, arrows and terminal lines snap) | none |
 | `texture` | `surface`: `glass` (boxes half see-through, blurred behind, over the colour field), `flat`, or `sketch`, which outlines flow steps and panels by hand, seeded per scene and element so a render repeats exactly; `overlays`: a list of `field` (a blurred field in the profile's colours behind the scenes), `grain` (noise at a fixed seed), `vignette` and `depth` (everything but the emphasised item blurs once the emphasis lands), all four by default | `grain` opacity 0 to 0.3, `fieldBlur` 0 to 240 px, `depthBlur` 0 to 24 px |
-| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` and `diagram` on, so banning it refuses every `flow` and `diagram` scene; `blur`, which the texture sets as `fieldBlur` and `depthBlur`, so banning it refuses a profile whose `field` or `depth` overlay has a blur above 0, whose surface is `glass`, whose boxes blur what is behind them (set `flat` or `sketch`), or whose `velocity` seams have a `blur` above 0 (set it to 0 or use the `cut` family); `camera`, the push-in, so banning it draws none and refuses a scene's `camera` key; `kinetic`, per-word type, so banning it plays the `block` family and refuses a profile that names `words` | none |
+| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` and `diagram` on, so banning it refuses every `flow` and `diagram` scene; `blur`, which the texture sets as `fieldBlur` and `depthBlur`, so banning it refuses a profile whose `field` or `depth` overlay has a blur above 0, whose surface is `glass`, whose boxes blur what is behind them (set `flat` or `sketch`), or whose `velocity` seams have a `blur` above 0 (set it to 0 or use the `cut` family); `camera`, the push-in, so banning it draws none and refuses a scene's `camera` key; `kinetic`, per-word type, so banning it plays the `block` family and refuses a profile that names `words` and a scene that names `browser`, whose typed text arrives word by word | none |
 
 A field with knobs is a family name or `{ "family": "cut", "duration": 0.3 }`;
 a field without knobs is a family name; `texture` is an object,
