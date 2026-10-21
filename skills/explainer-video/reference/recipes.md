@@ -82,10 +82,10 @@ markup, one `<style>` of plain rules, and one `<script>`:
 - **Rules are plain**: one selector list and one block each. No `@` rules, no
   nesting, no `@keyframes`.
 - **Stand alone.** No `<script src>`, and no library: a pasted library carries
-  time sources the lint refuses. Draw with `tl` alone. For 3D use the `stack3d`
-  component. Text is DOM text: `fillText`, `strokeText`, `TextGeometry`,
-  `FontLoader` and `troika` are refused, since the layout gate reads DOM text
-  alone.
+  time sources the lint refuses. Draw with `tl` alone. A scene that needs 3D is
+  a `stack3d` scene, not custom markup. Text is DOM text: text drawn into a
+  canvas or WebGL (`fillText`, `strokeText`, `TextGeometry`, `FontLoader`,
+  `troika`) is refused, since the layout gate reads DOM text alone.
 - **Show text.** A scene that shows none at any sample is a hard error, since
   captions do not count. A number in that text is a claim, held to an excerpt
   the scene cites, as in a chart ([scene-file.md](scene-file.md)): `6 of 6

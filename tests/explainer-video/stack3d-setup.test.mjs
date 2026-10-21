@@ -35,6 +35,7 @@ test("install downloads nothing for the row, on a card or off one", () => {
   for (const env of [machine(7.5), machine(null)]) {
     const fx = fixture(realRows());
     run(fx, ["install", "--all"], "ffmpeg", env);
+    assert.ok(calls(fx).length > 0, "install ran other rows");
     assert.equal(
       calls(fx).filter((c) => JSON.stringify(c).includes(ID)).length,
       0,

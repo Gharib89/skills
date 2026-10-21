@@ -73,8 +73,8 @@ GPU here or names the missing library, and Kokoro stays on the CPU until it is
 there. A CUDA failure at voice time falls back to the CPU and prints one stderr
 line.
 
-`gpu-3d` (a `stack3d` scene's WebGL) installs nothing: `present` with an NVIDIA
-card, else `refused`, and a render that needs it stops on that reason.
+`gpu-3d` (a `stack3d` scene's WebGL) installs nothing: it reads `present` with
+an NVIDIA card, else `refused`.
 
 Whenever the **Gemini data notice** prints under a table, relay it word for
 word: setup prints it once per key, the first time Google accepts that key.

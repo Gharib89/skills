@@ -29,6 +29,13 @@ test("a stack of labelled layers compiles", () => {
 });
 
 test("a stack holds two to six layers", () => {
+  for (const n of [2, 6])
+    assert.doesNotThrow(() =>
+      checkVisual(
+        stack(Array.from({ length: n }, (_, i) => layer(1, `L${i}`))),
+        said,
+      ),
+    );
   bad(stack([layer(1, "Edge")]), /stack3d needs 2 to 6 layers/);
   bad(
     stack(Array.from({ length: 7 }, (_, i) => layer(1, `L${i}`))),

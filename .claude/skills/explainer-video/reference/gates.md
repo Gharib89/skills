@@ -59,12 +59,12 @@ Each prints `gate <name>: pass|fail: <measured> vs <floor>`:
   separate browser launches of the pinned Chrome and the HyperFrames runtime
   seek, and the SHA-256 of the decoded pixels compared, never the PNG files'. A
   frame mid-move catches what a settled one hides, such as a time source other
-  than the seek. A scene that draws WebGL (`stack3d`) has both frames drawn on
-  SwiftShader, the CPU renderer, since a host GPU's frames are not bit-stable;
-  every other scene's launch is as above. It has no floor but equal pixels,
-  and a profile's `gates.determinism` block is refused with `no such floor`. A
-  red line names the scene, the frame and its time, and both renders' PNGs
-  under `.cache/gates/frames/` as evidence.
+  than the seek. The gate has no floor but equal pixels, and a profile's
+  `gates.determinism` block is refused with `no such floor`. A red line names
+  the scene, the frame and its time, and both renders' PNGs under
+  `.cache/gates/frames/` as evidence. A scene that draws WebGL (`stack3d`) has
+  both frames drawn on SwiftShader, the CPU renderer, since a host GPU's frames
+  are not bit-stable; other scenes use the launch above.
 - `critic`: the **critic**, Claude subagents reading one **contact sheet** per
   scene (four of its frames, cut from the MP4 by ffmpeg: its three quarter
   marks, then its **fullest moment**, the sample with the most readable words

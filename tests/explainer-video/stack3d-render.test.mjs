@@ -1,6 +1,7 @@
 // The `stack3d` component drawn: a canvas Three.js draws into, its labels as DOM
-// text beside it, and one tween on the scene's paused timeline that redraws the
-// whole frame from the scene's time, so a seek renders the frame it names.
+// text beside it, and a paused timeline padded to the scene's slot that redraws
+// the whole frame from the scene's time on each update, so a seek renders the
+// frame it names.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { sceneFile } from "../../skills/explainer-video/scripts/render/compose.mjs";
@@ -56,6 +57,10 @@ test("the redraw hangs on the paused timeline and reads no clock but the scene's
 });
 
 test("a right to left scene puts each label before its slab, mirrored", async () => {
-  assert.match(await drawn("ltr"), /translate\(0, -50%\)/);
-  assert.match(await drawn("rtl"), /translate\(-100%, -50%\)/);
+  const [ltr, rtl] = [await drawn("ltr"), await drawn("rtl")];
+  assert.match(ltr, /translate\(0, -50%\)/);
+  assert.match(rtl, /translate\(-100%, -50%\)/);
+  // The label stands past the silhouette's far corner on its own side.
+  assert.match(ltr, /c\.x > a\.x[\s\S]*\* 1680 \+ 28\)/);
+  assert.match(rtl, /c\.x < a\.x[\s\S]*\* 1680 \+ -28\)/);
 });
