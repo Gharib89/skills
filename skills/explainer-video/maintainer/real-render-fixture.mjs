@@ -286,6 +286,37 @@ export const FIXTURE = [
     },
     seconds: 3.4,
   },
+  // A custom scene as compile writes it: the fragment's text kept as `source`.
+  {
+    scene: {
+      id: "custom",
+      role: "point",
+      title: "Custom",
+      narration: ["The check passes.", "Then the badge lands."],
+      visual: {
+        component: "custom",
+        props: {
+          file: "scenes/custom.html",
+          intent: "a check line passes, then a merged badge lands",
+          cues: [
+            { name: "check", at: 1 },
+            { name: "badge", at: 2 },
+          ],
+          source: `<div class="row"><div class="line">checks passed</div><div class="badge">merged</div></div>
+<style>
+.row { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 24px; }
+.line { color: var(--text); font: 500 var(--size-heading) var(--font-text); opacity: 0; }
+.badge { color: var(--ok); font: 600 var(--size-body) var(--font-text); opacity: 0; }
+</style>
+<script>
+tl.to($(".line"), { opacity: 1, duration: 0.25 }, cue("check"));
+tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
+</script>`,
+        },
+      },
+    },
+    seconds: 3.4,
+  },
   // A browser page: the cursor moves, text is typed a whole word at a time and
   // a button is clicked, each on its sentence's cue (the first sentence's is
   // under the entry seam). Then the same page in Arabic, which runs right to

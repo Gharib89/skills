@@ -7,7 +7,7 @@ description: >-
   screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
-  version: 0.43.0
+  version: 0.44.0
 ---
 
 # explainer-video
@@ -73,10 +73,8 @@ GPU here or names the missing library, and Kokoro stays on the CPU until it is
 there. A CUDA failure at voice time falls back to the CPU and prints one stderr
 line.
 
-`gpu-3d` (the `stack3d` component's WebGL) is opt-in and installs nothing: it
-reads `present` with an NVIDIA card and `refused` without one, with the reason.
-Only a script with a `stack3d` scene needs it, and the render stops before
-drawing a frame where it reads `refused`.
+`gpu-3d` (a `stack3d` scene's WebGL) installs nothing: `present` with an NVIDIA
+card, else `refused`, and a render that needs it stops on that reason.
 
 Whenever the **Gemini data notice** prints under a table, relay it word for
 word: setup prints it once per key, the first time Google accepts that key.
@@ -254,7 +252,8 @@ The render stage turns a **scene file**, the script's Markdown form at
 `explainers/<slug>/script.md`, into a captioned MP4 with an SRT and a poster.
 Its shape, and where style profiles are looked up and what their keys do, are
 in [reference/scene-file.md](reference/scene-file.md): read it before you write
-or edit a scene file or choose a style.
+or edit a scene file or choose a style. Before a `custom` or rich scene, read
+[reference/recipes.md](reference/recipes.md).
 
 1. **Draft.** From sources, the Script stage above wrote and checked the scene
    file, and the user approved it on the Storyboard. With none, write it with

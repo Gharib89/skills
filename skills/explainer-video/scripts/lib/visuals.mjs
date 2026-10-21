@@ -7,7 +7,9 @@
 
 import { checkBrowser } from "./browser.mjs";
 import { plain } from "./count.mjs";
+import { checkCustom } from "./custom.mjs";
 import { checkDiagram } from "./diagram.mjs";
+import { shownText } from "./fragment.mjs";
 import { checkStack3d } from "./stack3d.mjs";
 import {
   CUE,
@@ -489,12 +491,26 @@ export const VISUALS = {
       ];
     },
   },
+  // The agent's own scene: an HTML fragment beside the scene file that adds to
+  // the scene's paused timeline, and the cues it reads by name. Compile lints
+  // the fragment and keeps its text as `source`. Rich like `words`, and it shows
+  // nothing the camera beat could read.
+  custom: {
+    props: ["file", "intent", "cues"],
+    ownCamera: true,
+    check: checkCustom,
+    items: () => [],
+    numbers: (p) => numbersIn([shownText(p.source ?? "")]),
+    shown: (p) => [shownText(p.source ?? "")],
+  },
 };
 
 // The props a visual must hold and no others, for the scene's sentences in
 // spoken form; throws why not. The component's own checks come first, so a
 // misspelt required prop is reported as the missing one.
-export function checkVisual(visual, said) {
+// `ctx` reaches a component that reads beyond the scene file: `read(file)` and
+// the run's `language`.
+export function checkVisual(visual, said, ctx = {}) {
   object(visual, "visual");
   if (visual.seam !== undefined && typeof visual.seam !== "string")
     fail("seam is not a name like zoom-through, cut-the-curve or cut");
@@ -511,7 +527,7 @@ export function checkVisual(visual, said) {
     known("camera", visual.camera, CUE);
   }
   const props = visual.props ?? {};
-  v.check(props, said);
+  v.check(props, said, ctx);
   known(visual.component, props, v.props, v.retired);
   for (const x of props[v.rows] ?? [])
     known(`a ${visual.component} item`, x, v.item);

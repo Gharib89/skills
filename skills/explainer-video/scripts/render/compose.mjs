@@ -10,6 +10,7 @@ import { RISE_PX, SPRING, settleTime } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { VISUALS, cameraCue, cueWord } from "../lib/visuals.mjs";
 import { COMPONENTS, ITEMS, esc, seed } from "./components.mjs";
+import { fragmentScript } from "./fragment-script.mjs";
 import { pushScript, seamScript } from "./seam-script.mjs";
 import { texture } from "./texture.mjs";
 import { RISE, countScript, play } from "./tween-script.mjs";
@@ -246,6 +247,17 @@ async function sceneParts(
     t(at),
     fit(t(at), COUNT_SECONDS),
   ]);
+  // A custom scene's declared cues, each resolved to its time in seconds.
+  const fragment = c.fragment
+    ? fragmentScript(
+        scope,
+        c.fragment.script,
+        Object.fromEntries(
+          c.fragment.cues.map(({ name, ...cue }) => [name, t(cue)]),
+        ),
+        timing.duration,
+      )
+    : "";
   return {
     html: `    <div class="content" dir="${dir}">${push === null ? c.html : `<div class="camera">${c.html}</div>`}</div>
     <style>
@@ -255,7 +267,7 @@ ${css}
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
-${play(scope, tweens)}${countScript(scope, counts)}${pushScript(scope, push, camera)}${c.script ? `\n${c.script}` : ""}
+${play(scope, tweens)}${countScript(scope, counts)}${fragment}${pushScript(scope, push, camera)}${c.script ? `\n${c.script}` : ""}
         // never before the entry seam ends: earlier the content is still fading in
         const full = Math.min(Math.max(tl.duration(), ${seam.in?.duration ?? 0}), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};

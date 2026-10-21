@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.44.0 (2026-10-21)
+
+### Features
+
+- **explainer-video**: Custom scenes, a compile lint and a recipes reference
+  ([#923](https://github.com/Gharib89/skills/pull/923),
+  [`a84aa08`](https://github.com/Gharib89/skills/commit/a84aa080be258255e4270ac0f2f0d9dc7978c4e8))
+
+
 ## v0.43.0 (2026-10-21)
 
 ### Features

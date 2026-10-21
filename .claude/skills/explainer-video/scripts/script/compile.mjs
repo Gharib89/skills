@@ -182,15 +182,26 @@ const compiled = scenes.map((s) => {
     fail(s.id, `visual is not JSON: ${e.message}`);
   }
   const parts = s.sentences.map((x) => sentence(x, s.id));
+  // A custom scene's fragment is read beside the scene file, then kept in the
+  // script so a later stage plays what was linted.
+  const read = (f) => fs.readFileSync(path.join(run, f), "utf8");
   try {
     checkVisual(
       visual,
       parts.map((x) => x.narration),
+      { read, language },
     );
   } catch (e) {
     fail(s.id, e.message);
   }
-  const banned = banReason(bans, visual.component, style?.name);
+  if (visual.component === "custom")
+    visual.props.source = read(visual.props.file);
+  const banned = banReason(
+    bans,
+    visual.component,
+    style?.name,
+    visual.props?.source,
+  );
   if (banned) fail(s.id, banned);
   const seam = style && seamReason(style, visual.seam);
   if (seam) fail(s.id, seam);

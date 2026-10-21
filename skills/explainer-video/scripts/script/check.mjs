@@ -244,7 +244,11 @@ const drift = [];
       ...s.narration,
       ...s.captions.flat().map((c) => c.text),
       s.title,
-      ...strings(s.visual.props),
+      // a component may name the props a viewer reads, as custom does for its
+      // source, whose style and script are not text on screen
+      ...strings(
+        VISUALS[s.visual.component]?.shown?.(s.visual.props) ?? s.visual.props,
+      ),
     ]
       .join("\n")
       .toLowerCase();
