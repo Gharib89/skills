@@ -34,12 +34,12 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { knobOffer, voices } from "../brief/knobs.mjs";
-import { estimate, rates } from "../lib/estimate.mjs";
+import { estimate, loadRates } from "../lib/estimate.mjs";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
 import { grammar, loadStyle } from "../lib/style.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
-import { VISUALS } from "../lib/visuals.mjs";
+import { VISUALS, webgl } from "../lib/visuals.mjs";
 import { esc } from "../render/compose.mjs";
 import { liveScript } from "../render/live.mjs";
 import { seamPlan } from "../render/seams.mjs";
@@ -415,15 +415,22 @@ for (const id of Object.keys(opts.fixes)) {
 }
 
 // The first-render estimate: it warns on the page, and never refuses a board.
-const table = rates();
+let table;
+try {
+  table = loadRates();
+} catch (e) {
+  fail(e.message);
+}
+const { texture } = grammar(style);
 const estimated = estimate(
   cards.map((c, i) => ({
     id: c.id,
     seconds: c.seconds,
-    webgl: !!VISUALS[script.scenes[i].visual.component].webgl,
+    webgl: webgl(script.scenes[i]),
   })),
   table.rates,
-  { textured: grammar(style).texture.overlays.length > 0 },
+  // textured as the calibrator's textured video is: any surface but flat, or any overlay
+  { textured: texture.surface !== "flat" || texture.overlays.length > 0 },
 );
 for (const c of cards) if (c.rich) c.adds = estimated.adds[c.id];
 

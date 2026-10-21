@@ -8,13 +8,13 @@ publish, 4 build, 5 read a Submit, 6 apply, 7 gate stop, 8 after delivery.
 The **storyboard** is the run's one stop for the user: one card per scene with
 its narration, a still, its voiced length and style notes, beside the brief
 and the source pack. Ahead of the brief sits the **render estimate**: the
-first render's seconds (the render and the gates, the voice being done) from
-`<skill>/render-rates.json`, amber above 5 render minutes per video minute,
-and on a rich or custom card the seconds it adds. It warns and never refuses;
-a maintainer refreshes the table with `maintainer/calibrate-render-rates.mjs`
-at each HyperFrames bump. The card most in view plays a **live build** (the
-video's own composition), looping its slot through its exit seam; every other
-card shows its still as a poster. Play plays the slot once with its narration.
+seconds the first render takes (render and gates, the voice being done), read
+from `<skill>/render-rates.json` and shown amber above the budget of 5 render
+seconds per video second. A rich card (a `custom` scene is one) also shows the
+seconds it adds. It warns and never refuses. The card most in view plays a
+**live build** (the video's own composition), looping its slot through its exit
+seam; every other card shows its still as a poster. Play plays the slot once
+with its narration.
 The **animatic** plays the whole build over the joined narration; its scene
 list jumps to a scene and marks the playing one. Every card arrives on the
 agent's recommendation

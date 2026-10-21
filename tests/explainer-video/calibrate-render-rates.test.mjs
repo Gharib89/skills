@@ -92,6 +92,18 @@ test("a measurement that cannot run leaves the table alone and says why", () => 
 
 test("calibration refuses a bad command line", () => {
   const { calibrate } = machine();
-  for (const args of [["--runs"], ["--runs", "0"], ["--runs", "two"], ["--x"]])
-    assert.equal(calibrate(...args).status, 2, args.join(" "));
+  for (const args of [
+    ["--runs"],
+    ["--runs", "0"],
+    ["--runs", "two"],
+    ["--x"],
+  ]) {
+    const r = calibrate(...args);
+    assert.equal(r.status, 2, args.join(" "));
+    assert.match(
+      r.stderr,
+      /^usage: node calibrate-render-rates\.mjs /,
+      args.join(" "),
+    );
+  }
 });

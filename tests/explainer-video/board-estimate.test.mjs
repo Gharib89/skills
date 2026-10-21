@@ -65,6 +65,43 @@ test("the board document carries the estimate worked from the table over the car
   for (const c of d.scenes) assert.ok(!("adds" in c), c.id);
 });
 
+// The default style with its texture replaced by `texture`, for a project style.
+function textured(texture) {
+  const profile = JSON.parse(
+    fs.readFileSync(path.join(skill, "styles", "claude-code.json"), "utf8"),
+  );
+  const fx = fixture(SCRIPT.replace("style: claude-code", "style: bare"));
+  fs.mkdirSync(path.join(fx.dir, "..", ".styles"));
+  fs.writeFileSync(
+    path.join(fx.dir, "..", ".styles", "bare.json"),
+    JSON.stringify({
+      ...profile,
+      name: "bare",
+      grammar: { ...profile.grammar, texture },
+    }),
+  );
+  return fx;
+}
+
+test("a style pays the texture rate for a surface other than flat even with no overlay, and none for a flat one", () => {
+  const { base, gates, texture } = table.rates;
+  const seconds = (surface) => {
+    const fx = textured({ surface, overlays: [] });
+    prep(fx);
+    ok(board(fx, "build"), "build");
+    const d = doc(fx, 1);
+    return [d.scenes.reduce((n, c) => n + c.seconds, 0), d.estimate.seconds];
+  };
+  const [video, flat] = seconds("flat");
+  assert.equal(flat, r1(video * (base + gates)));
+  for (const surface of ["glass", "sketch"])
+    assert.equal(
+      seconds(surface)[1],
+      r1(video * (base + gates + texture)),
+      surface,
+    );
+});
+
 test("a rich card carries its added seconds, none for a component with no cost of its own", () => {
   const fx = fixture(WORDS);
   prep(fx);

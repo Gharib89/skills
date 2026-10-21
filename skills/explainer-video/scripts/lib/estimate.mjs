@@ -1,7 +1,7 @@
 // The first-render estimate the storyboard shows: render seconds from the
 // measured rates table (render-rates.json, written by
 // maintainer/calibrate-render-rates.mjs). The board comes after the voice, so
-// the estimate covers the render and the video gates, not the narration.
+// the estimate covers the render and the gates, not the narration.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -12,8 +12,27 @@ export const BUDGET = 5;
 
 // The measured table: `{ hyperframes, rates: { base, texture, live3d, gates } }`,
 // each rate in render seconds per video second.
-export const rates = () =>
-  JSON.parse(fs.readFileSync(path.join(skill, "render-rates.json"), "utf8"));
+// Refuses a table of the wrong shape by naming the file and the field: a
+// missing rate would otherwise show on the page as `NaN s`.
+export function loadRates(file = path.join(skill, "render-rates.json")) {
+  let table;
+  try {
+    table = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (e) {
+    throw new Error(`${file}: is not JSON (${e.message})`);
+  }
+  const refuse = (field, want) => {
+    throw new Error(`${file}: ${field} is not ${want}`);
+  };
+  if (typeof table?.hyperframes !== "string" || !table.hyperframes)
+    refuse("hyperframes", "the HyperFrames version it was measured on");
+  if (!table.rates || typeof table.rates !== "object")
+    refuse("rates", "an object of rates");
+  for (const k of ["base", "texture", "live3d", "gates"])
+    if (!Number.isFinite(table.rates[k]) || table.rates[k] < 0)
+      refuse(`rates.${k}`, "a number of 0 or more");
+  return table;
+}
 
 const r1 = (x) => Math.round(x * 10) / 10;
 

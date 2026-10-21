@@ -3,6 +3,7 @@
 // measured on. Run it with each HyperFrames bump.
 //
 //   node maintainer/calibrate-render-rates.mjs [render-rates.json] [--runs <n>]
+//   (from the skill folder)
 //
 // Needs every stage row installed (`node scripts/setup.mjs install`) and, for
 // the live 3D video, an NVIDIA card. Three videos are made through the stage
@@ -13,18 +14,20 @@
 // run clears the render and gates caches and runs render.mjs, which renders the
 // video and gates it cold; a second render.mjs run on the cached video, the
 // gates cache cleared again, times the gates alone. Render seconds are the
-// first run less the second. The score is off. The rates, in seconds per video
-// second:
-//   base     the flat video's render
-//   texture  the textured video's render less the flat one's
-//   live3d   the live 3D video's render less the textured rate over its length,
-//            over the seconds of its `stack3d` scene
-//   gates    the textured video's gates
-// stdout: `calibrate-render <video> run <i>/<n>: render <s> s, gates <s> s over
-//         <s> s of video` per timed run (the live 3D video's adds `, <s> s of it
-//         the stack scene`, the denominator of its rate), then `calibrate-render: HyperFrames
-//         <version>: base <r>, texture <r>, live3d <r>, gates <r> render s per
-//         video s`, the values written
+// first run less the second. The brief's `score` is off. The rates, in render
+// seconds per video second:
+//   base     flat render / flat video s
+//   texture  textured render / textured video s, less base
+//   live3d   (live3d render - textured render / textured video s * live3d video
+//            s) / the stack scene's s
+//   gates    textured gates / textured video s
+// stdout, per timed run:
+//   calibrate-render <video> run <i>/<n>: render <s> s, gates <s> s over <s> s
+//   of video
+// the live 3D video's lines end `, <s> s of it the stack scene`, the divisor of
+// its rate. Then the values written:
+//   calibrate-render: HyperFrames <version>: base <r>, texture <r>, live3d <r>,
+//   gates <r> render s per video s
 // exit:   0 written · 1 a stage failed or rendered nothing, the table left
 //         alone · 2 usage
 import { spawnSync } from "node:child_process";
