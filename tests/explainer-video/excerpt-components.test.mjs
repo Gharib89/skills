@@ -92,6 +92,15 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
       { sources: [], excerpts: [{ ...entry, text: "  " }] },
       /excerpts.json excerpt 1 needs text/,
     ],
+    // a source of no known kind would read a repo's code as prose
+    [
+      { sources: [{ id: "notes" }], excerpts: [] },
+      /excerpts.json source 1 needs a kind: page, repo, pdf, md, txt, html, docx or pptx/,
+    ],
+    [
+      { sources: [{ id: "notes", kind: "rep" }], excerpts: [] },
+      /excerpts.json source 1 needs a kind: page, repo, pdf, md, txt, html, docx or pptx/,
+    ],
     // a source the pack lacks would read a code excerpt as prose
     [
       {

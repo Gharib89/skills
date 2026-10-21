@@ -44,10 +44,12 @@ export const endsLatin = (token) =>
   /[A-Za-z]/.test(token.match(LAST_RUN)?.[0] ?? "");
 
 // A visual with each screen string passed through `fn`. Code frames and
-// terminal lines are code, kept as written, so they hold no kept term; nor do
-// the keys a component reads as values (`component`, `lang`).
+// terminal lines are code, kept as written, so they hold no kept term; nor
+// does an excerpt, which holds the pack's own words, its ids and its locators,
+// none of which a rewrite may change; nor do the keys a component reads as
+// values (`component`, `lang`).
 export function mapScreen(visual, fn) {
-  if (["code", "codediff"].includes(visual.component)) return visual;
+  if (["code", "codediff", "excerpt"].includes(visual.component)) return visual;
   const walk = (v, key) => {
     if (typeof v === "string")
       return key === "text" && visual.component === "terminal" ? v : fn(v);

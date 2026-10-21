@@ -5,6 +5,8 @@
 import { CUE, cue, fail, known, named, object, place } from "./props.mjs";
 import { ARABIC_SCRIPT } from "./terms.mjs";
 
+// The kinds the source stage gives a source (`kindOf` in source/snapshot.mjs).
+const KINDS = ["page", "repo", "pdf", "md", "txt", "html", "docx", "pptx"];
 // A repo source holds code unless the file it names is prose.
 const PROSE_FILE = /\.(?:md|mdx|markdown|txt|rst|adoc)(?::[\d-]+)?$/i;
 const EMPHASIS = ["target", ...CUE];
@@ -50,9 +52,15 @@ function load(read) {
   }
   if (!Array.isArray(pack?.sources) || !Array.isArray(pack?.excerpts))
     fail("excerpts.json must hold a sources list and an excerpts list");
-  pack.sources.forEach((s, i) =>
-    named(`excerpts.json source ${i + 1}`, s?.id, "an id"),
-  );
+  pack.sources.forEach((s, i) => {
+    const at = `excerpts.json source ${i + 1}`;
+    named(at, s?.id, "an id");
+    // an unknown kind would read a repo's code as prose
+    if (!KINDS.includes(s.kind))
+      fail(
+        `${at} needs a kind: ${KINDS.slice(0, -1).join(", ")} or ${KINDS.at(-1)}`,
+      );
+  });
   const kind = new Map(pack.sources.map((s) => [s.id, s.kind]));
   pack.excerpts.forEach((x, i) => {
     const at = `excerpts.json excerpt ${i + 1}`;
