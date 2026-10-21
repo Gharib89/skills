@@ -37,7 +37,7 @@ A scene leans on one direction; name it in `intent`.
 | Type | words arriving with the voice | `title`, `words` |
 | Data | a number earned, compared or moved | `chart`, `stat`, `timeline`, `compare` |
 | System | parts and what flows between them | `diagram`, `flow` |
-| Interface | a tool at work: lines, cards, diffs | `terminal`, `cards`, `panels`, `list`, `code`, `codediff` |
+| Interface | a tool at work: lines, cards, diffs | `terminal`, `cards`, `panels`, `list`, `code`, `codediff`, `excerpt` |
 | Camera | attention steered to one place | the push-in, `emphasis` |
 
 Techniques, in the order to try them (reach for the first that says it):

@@ -1,6 +1,6 @@
 // A component box's fill and outline under the profile's surface, shared by
 // every component that draws one.
-import { GLASS } from "./texture.mjs";
+import { GLASS, GLASS_TINT } from "./texture.mjs";
 
 export const esc = (s) =>
   String(s)
@@ -12,6 +12,14 @@ export const esc = (s) =>
 // A box's fill: glass over the page's colour field, else the panel colour.
 export const paint = (surface) =>
   surface === "glass" ? GLASS : "background: var(--panel);";
+
+// The fill of a box whose own text restyles while it plays: glass's tint
+// without its backdrop blur. Chrome re-rasters a blur inside the damaged rects
+// only, so two renders of an excerpt's document differed from its first
+// restyle on (#905); the field behind is already smooth, so the tint reads the
+// same.
+export const paintStill = (surface) =>
+  surface === "glass" ? GLASS_TINT : paint(surface);
 
 // A sketch surface draws each box's outline with rough.js, at the box's own
 // seed; a flat or glass one draws it in CSS.

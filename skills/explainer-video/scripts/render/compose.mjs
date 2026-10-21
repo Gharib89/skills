@@ -137,6 +137,11 @@ async function sceneParts(
   };
   const x = {
     surface,
+    // The profile's palette, for a tween between two of its colours.
+    colors: profile.colors,
+    // The faces under another reading direction, for a component that quotes
+    // text in a script other than the scene's.
+    faces: (d) => faces(profile, d),
     // A cue's time in seconds, and the scene's end, for a component whose
     // tweens depend on the gap between two cues or on the time left.
     time: t,

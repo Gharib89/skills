@@ -369,6 +369,26 @@ test("a code card's emphasis menu shows its line range and cannot change", () =>
   });
 });
 
+test("an excerpt card's emphasis menu shows the lit sentence and cannot change", () => {
+  const scene = {
+    visual: {
+      component: "excerpt",
+      props: {
+        cite: "ex-1",
+        excerpts: { "ex-1": { text: "A. B.", locator: "line 1", code: false } },
+        emphasis: { target: "B.", at: 1 },
+      },
+    },
+    narration: ["It reads."],
+  };
+  const m = cardMenus(scene, { name: "claude-code" }, null, false);
+  assert.deepEqual(m.emphasis, {
+    pick: "B.",
+    options: ["B."],
+    disabled: true,
+  });
+});
+
 test("the style menu lists the profile the run holds beside the installed ones", () => {
   // A profile only the run holds, drawn from images: no store lists it.
   const fx = fixture(

@@ -379,6 +379,120 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
     },
     seconds: 3.4,
   },
+  // A cited excerpt, the longest the gates are held to: a sentence lit on its
+  // cue with the rest dimmed, and two chips popping in as the narration cites
+  // them. The pack's resolved text stands in for compile's.
+  {
+    scene: {
+      id: "excerpt",
+      role: "point",
+      title: "Excerpt",
+      narration: [
+        "The cache is cleared.",
+        "Stale entries never survive.",
+        "Readers see fresh data.",
+      ],
+      visual: {
+        component: "excerpt",
+        props: {
+          cite: "ex-1",
+          chips: [
+            { at: 2, cite: "ex-2" },
+            { at: 3, cite: "ex-3" },
+          ],
+          emphasis: {
+            target:
+              "Stale entries never survive a release, because each key carries the build number it was written under.",
+            at: 2,
+          },
+          excerpts: {
+            "ex-1": {
+              text: "The cache is cleared on every deploy, so a release never serves answers from an older build. Stale entries never survive a release, because each key carries the build number it was written under. Readers therefore see fresh data within a second of a rollout, and an operator can verify the state at any time by listing the keys the cache holds.",
+              locator: "§ Caching",
+              code: false,
+            },
+            "ex-2": {
+              text: "export function clear() { cache.clear(); }",
+              locator: "src/cache.js:3-5",
+              code: true,
+            },
+            "ex-3": {
+              text: "Keys carry a build number.",
+              locator: "line 12",
+              code: false,
+            },
+          },
+        },
+      },
+    },
+    // Long enough to read its longest sentence (28 words at 0.3 s a word) once
+    // the document has settled, which is what the reading gate asks of it.
+    seconds: 11,
+  },
+  // The same in Arabic: right to left in whole-word spans, an English term one
+  // word, the source line left to right.
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic-excerpt",
+      role: "point",
+      title: "مقتطف",
+      narration: [
+        "تمسح الذاكرة عند النشر.",
+        "لا تبقى بيانات قديمة.",
+        "ويرى القراء الجديد.",
+      ],
+      visual: {
+        component: "excerpt",
+        props: {
+          cite: "ex-1",
+          chips: [{ at: 3, cite: "ex-2" }],
+          emphasis: { target: "لا تبقى أي بيانات قديمة بعد الإصدار.", at: 2 },
+          excerpts: {
+            "ex-1": {
+              text: "يمسح النظام الذاكرة المؤقتة عند كل نشر جديد. لا تبقى أي بيانات قديمة بعد الإصدار. ويرى القراء بيانات حديثة خلال ثانية عبر pull request الخاصة بالمراجعة.",
+              locator: "§ الذاكرة",
+              code: false,
+            },
+            "ex-2": {
+              text: "مفتاح لكل إصدار.",
+              locator: "line 4",
+              code: false,
+            },
+          },
+        },
+      },
+    },
+    seconds: 6,
+  },
+  // A code excerpt, lit by line, which stays left to right.
+  {
+    scene: {
+      id: "code-excerpt",
+      role: "point",
+      title: "Code excerpt",
+      narration: [
+        "The module keeps a map.",
+        "One call clears it.",
+        "Size reads the map.",
+      ],
+      visual: {
+        component: "excerpt",
+        props: {
+          cite: "ex-1",
+          emphasis: { target: "  cache.clear();", at: 2 },
+          excerpts: {
+            "ex-1": {
+              text: "const cache = new Map();\nexport function clear() {\n  cache.clear();\n}\nexport const size = () => cache.size;",
+              locator: "src/cache.js:1-5",
+              code: true,
+            },
+          },
+        },
+      },
+    },
+    seconds: 4,
+  },
   // Lit layers drawn by Three.js, each dropping in on its sentence's cue.
   {
     scene: {

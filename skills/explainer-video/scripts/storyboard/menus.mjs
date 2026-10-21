@@ -61,10 +61,13 @@ function emphasis({ visual }) {
   const props = visual.props ?? {};
   const field = EMPHASIS_TEXT[visual.component];
   if (!field) {
-    // A code emphasis is a line range, which a note changes.
-    const range = props.emphasis?.target;
+    // A code emphasis is a line range and an excerpt's a sentence's text; a
+    // note changes either.
+    const target = props.emphasis?.target;
     return lockedMenu(
-      Array.isArray(range) ? `lines ${range[0]}-${range[1]}` : "none",
+      Array.isArray(target)
+        ? `lines ${target[0]}-${target[1]}`
+        : (target ?? "none"),
     );
   }
   const texts = props[VISUALS[visual.component].rows].map((x) => x[field]);

@@ -8,6 +8,7 @@ import { boxCss, esc, paint, sketchCss, sketched } from "./box.mjs";
 import { browser } from "./browser.mjs";
 import { custom } from "./custom.mjs";
 import { diagram } from "./diagram.mjs";
+import { excerpt } from "./excerpt.mjs";
 import { chart, stat } from "./numbers.mjs";
 import { compare, timeline } from "./sequence.mjs";
 import { stack3d } from "./stack3d.mjs";
@@ -126,6 +127,7 @@ export const COMPONENTS = {
   compare,
   diagram,
   browser,
+  excerpt,
   stack3d,
   custom,
   title: (p, f, x) => {

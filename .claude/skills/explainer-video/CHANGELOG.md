@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.47.0 (2026-10-21)
+
+### Features
+
+- **explainer-video**: Excerpt component showing a cited passage with its sentence lit
+  ([#926](https://github.com/Gharib89/skills/pull/926),
+  [`7cb7896`](https://github.com/Gharib89/skills/commit/7cb7896d936191468d5ad50d6557ddf8c64cc28d))
+
+
 ## v0.46.0 (2026-10-21)
 
 ### Features

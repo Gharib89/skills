@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   endsLatin,
   keptTerms,
+  mapScreen,
   rename,
   respell,
 } from "../../skills/explainer-video/scripts/lib/terms.mjs";
@@ -51,6 +52,32 @@ test("a Latin term used only in the video's title is kept", () => {
     ],
   };
   assert.deepEqual(keptTerms(script), ["Ship", "GitHub"]);
+});
+
+test("an excerpt's quoted pack text is no kept term and no rewrite reaches it", () => {
+  const visual = {
+    component: "excerpt",
+    props: {
+      cite: "ex-1",
+      emphasis: { target: "We open a pull request.", at: 1 },
+      excerpts: {
+        "ex-1": {
+          text: "We open a pull request.",
+          locator: "src/cache.js:1",
+          code: false,
+        },
+      },
+    },
+  };
+  const script = {
+    title: "عنوان",
+    scenes: [{ captions: [[{ text: "بيشتغل" }]], visual }],
+  };
+  assert.deepEqual(keptTerms(script), []);
+  assert.equal(
+    mapScreen(visual, (s) => s.toUpperCase()),
+    visual,
+  );
 });
 
 test("a respelt term drops the spoken form of a brace it covers, even one holding part of it", () => {
