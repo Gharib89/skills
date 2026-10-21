@@ -381,6 +381,7 @@ function card(S, b, c) {
   const body = `<div class="chead"><h3 dir="auto">${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ""}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
     ${media}
     <span class="style">${esc(c.style)}</span>
+    ${c.intent ? `<p class="intent" dir="auto"><span class="label">Intent</span> ${esc(c.intent)}</p>` : ""}
     ${
       c.finding
         ? `<div class="finding" role="note"><span class="label">Finding</span><pre>${esc(c.finding)}</pre>${c.fix ? `<p dir="auto"><span class="label">Proposed fix</span> ${esc(c.fix)}</p>` : ""}</div>`

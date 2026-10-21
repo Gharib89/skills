@@ -249,7 +249,8 @@ The render stage turns a **scene file**, the script's Markdown form at
 `explainers/<slug>/script.md`, into a captioned MP4 with an SRT and a poster.
 Its shape, and where style profiles are looked up and what their keys do, are
 in [reference/scene-file.md](reference/scene-file.md): read it before you write
-or edit a scene file or choose a style.
+or edit a scene file or choose a style. Before a `custom` or rich scene, read
+[reference/recipes.md](reference/recipes.md).
 
 1. **Draft.** From sources, the Script stage above wrote and checked the scene
    file, and the user approved it on the Storyboard. With none, write it with

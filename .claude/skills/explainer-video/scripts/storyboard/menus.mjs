@@ -31,8 +31,7 @@ const lockedMenu = (pick) => ({ pick, options: [pick], disabled: true });
 function camera(scene, profile) {
   const { visual, narration } = scene;
   const v = VISUALS[visual.component];
-  // A custom scene is no component: nothing in it names a cue to pick.
-  if (!v || v.ownCamera || cameraReason(profile, { camera: {} }) !== null)
+  if (v.ownCamera || cameraReason(profile, { camera: {} }) !== null)
     return lockedMenu("none");
   const pick = cameraCue(visual, narration);
   const cues = new Map(
@@ -122,7 +121,6 @@ export function cardMenus(scene, profile, out, last) {
         ...Object.keys(VISUALS).filter(
           (c) => !banReason(bans, c, profile.name),
         ),
-        "custom",
       ],
     },
     camera: camera(scene, profile),

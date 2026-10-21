@@ -380,6 +380,30 @@ test("a red the sampling pass left shows on its card with the agent's proposed f
   assert.equal(board(fx, "build", "--fix").code, 2);
 });
 
+test("a custom scene's card shows its intent line, is marked rich, and no other card carries one", () => {
+  const fx = fixture(
+    SCRIPT.replace(
+      /\{\n {2}"component": "cards"[\s\S]*?\n\}\n/,
+      '{ "component": "custom", "props": { "file": "scenes/steps.html", "intent": "three steps land in turn", "cues": [{ "name": "one", "at": 1 }] } }\n',
+    ),
+  );
+  fs.mkdirSync(path.join(fx.dir, "scenes"));
+  fs.writeFileSync(
+    path.join(fx.dir, "scenes", "steps.html"),
+    '<div class="a">Reads the issue</div><script>tl.to($(".a"), { opacity: 1, duration: 0.2 }, cue("one"));</script>',
+  );
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  const d = doc(fx, 1);
+  assert.deepEqual(
+    d.scenes.map((c) => c.intent),
+    [undefined, "three steps land in turn", undefined],
+  );
+  assert.match(d.scenes[1].style, /^custom · past the default · /);
+  assert.equal(d.scenes[1].rich, true);
+  assert.match(read(fx.dir, "storyboard.html"), /three steps land in turn/);
+});
+
 test("a rich component's card is marked rich on the document", () => {
   const rich = SCRIPT.replace(
     /\{\n {2}"component": "cards"[\s\S]*?\n\}\n/,

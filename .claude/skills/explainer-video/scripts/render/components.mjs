@@ -6,6 +6,7 @@ import { wholeWords } from "../lib/terms.mjs";
 import { diff, lines, readAlong } from "../lib/visuals.mjs";
 import { boxCss, esc, paint, sketchCss, sketched } from "./box.mjs";
 import { browser } from "./browser.mjs";
+import { custom } from "./custom.mjs";
 import { diagram } from "./diagram.mjs";
 import { chart, stat } from "./numbers.mjs";
 import { compare, timeline } from "./sequence.mjs";
@@ -124,6 +125,7 @@ export const COMPONENTS = {
   compare,
   diagram,
   browser,
+  custom,
   title: (p, f, x) => {
     const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";
     const css = `.stack { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
