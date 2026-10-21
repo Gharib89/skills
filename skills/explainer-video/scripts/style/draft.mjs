@@ -51,7 +51,12 @@ import {
   skill,
   weights,
 } from "../lib/tools.mjs";
-import { grammarOf, judgedProblems, measuredFields } from "./grammar.mjs";
+import {
+  grammarOf,
+  grammarRows,
+  judgedProblems,
+  measuredFields,
+} from "./grammar.mjs";
 
 const [run, name] = process.argv.slice(2);
 if (!run || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name ?? "")) {
@@ -352,10 +357,7 @@ for (const t of TOKENS)
   console.log(`style ${t}: ${colors[t]} · ${marks[t].mark} · ${marks[t].why}`);
 for (const [r, { font, mark, why }] of Object.entries(type))
   if (mark) console.log(`style type ${r}: ${font} · ${mark} · ${why}`);
-for (const [p, { mark, why }] of Object.entries(grammarMarks ?? {}))
-  console.log(
-    `style grammar ${p}: ${JSON.stringify(
-      p.split(".").reduce((g, k) => g[k], grammar),
-    ).replaceAll('"', "")} · ${mark} · ${why}`,
-  );
+for (const g of grammarRows(profile))
+  if (g.mark === "measured" || g.mark === "judged")
+    console.log(`style grammar ${g.field}: ${g.value} · ${g.mark} · ${g.why}`);
 console.log(`style: draft ${name} -> ${out}`);

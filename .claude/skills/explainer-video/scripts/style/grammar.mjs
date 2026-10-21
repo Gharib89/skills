@@ -52,7 +52,7 @@ export function measuredFields({ cutsPerMinute, blurAtCuts, grain }) {
   if (px < PLAIN) {
     out["seams.family"] = {
       value: "cut",
-      why: `blur ${blurAtCuts} at the reference video's cuts: plain cuts`,
+      why: `blur ${blurAtCuts} at the reference video's cuts, ${cutsPerMinute} cuts/min: plain cuts`,
     };
     return out;
   }
@@ -101,24 +101,26 @@ export function judgedProblems(judged, measured) {
 // grammar block a profile carries (a field with knobs an object over its
 // `family`) and each field's mark and why. No field at all is no grammar.
 export function grammarOf(measured, judged) {
-  const grammar = {};
+  const block = {};
   const marks = {};
   const put = (fields, mark) => {
     for (const [p, { value, why }] of Object.entries(fields)) {
       const [field, knob] = p.split(".");
       if (knob) {
-        const held = grammar[field];
-        grammar[field] = {
+        const held = block[field];
+        block[field] = {
           ...(typeof held === "string" ? { family: held } : held),
           [knob]: value,
         };
-      } else grammar[field] = value;
+      } else block[field] = value;
       marks[p] = { mark, why };
     }
   };
   put(measured, "measured");
   put(judged, "judged");
-  return Object.keys(marks).length ? { grammar, grammarMarks: marks } : {};
+  return Object.keys(marks).length
+    ? { grammar: block, grammarMarks: marks }
+    : {};
 }
 
 // The style card's grammar rows, one per field in `FIELD_PATHS` order:

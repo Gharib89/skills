@@ -33,8 +33,9 @@ deck's title).
    deck to PDF and measure again with both files; relay any other stderr line.
    A video also prints `style motion <video>: <n> cuts/min · blur <x> · grain
    <y>`, measured over its frames, and keeps the frames before, at and after
-   its first cuts as `<video>-cut<n>-before|at|after.png` beside the other
-   reference images, so a seam shows in them.
+   two of its cuts (the first and the last, or the one it has) as
+   `<video>-cut<n>-before|at|after.png` beside the other reference images, so
+   a seam shows in them. A video with no cuts keeps none.
 2. **Assign.** Look at each image in `explainers/<slug>/style-draft/refs/` with
    the Read tool, then write `explainers/<slug>/style-draft/roles.json`: for
    each token an image shows, the colour candidate playing it and one line on
@@ -70,14 +71,19 @@ deck's title).
    { "fonts": { "Helvetica Neue": { "font": "inter", "class": "sans", "why": "a neo-grotesque of the same width" } } }
    ```
 
-   From a video, the grammar's seam and grain fields come measured (`seams`,
-   `texture.grain`). Judge the rest from the frame strips and write
-   `explainers/<slug>/style-draft/grammar.json`, a field under its path in
-   [scene-file.md](scene-file.md)'s grammar (`layout`, `camera.family`,
-   `camera.scale`, `type.family`, `ease`, `texture.surface`, `bans`...), each
-   with its value and one line on what the strips show; a field you cannot
-   judge stays out and takes the default. The draft refuses a path that is not
-   a grammar field, one measured already, or a value `validate` rejects.
+   **Judge the grammar (optional, a video's draft).** From a video,
+   `texture.grain` and `seams.family` come measured, and with blur at the cuts
+   `seams.blur` and `seams.duration` too (plain cuts leave those two for you
+   to judge). Judge the rest from the frame strips and write
+   `explainers/<slug>/style-draft/grammar.json`: one key per field path, from
+   `layout`, `seams.family|duration|blur`, `camera.family|scale|duration`,
+   `type.family|stagger`, `ease`,
+   `texture.surface|overlays|grain|fieldBlur|depthBlur` and `bans` (the
+   families and ranges are in [scene-file.md](scene-file.md)'s grammar;
+   `texture.overlays` and `bans` take a list). Each takes its value
+   and one line on what the strips show; a field you cannot judge stays out
+   and takes the default. With no file the draft writes only the measured
+   fields, and a draft from screenshots has none.
 
    ```json
    { "camera.family": { "value": "locked", "why": "no push-in across the strips" } }
@@ -111,9 +117,10 @@ deck's title).
    and run the draft again. Writing the draft
    deletes the reference images, since a deck may be confidential.
 
-The draft keeps the bundled `claude-code` profile's schema, grammar and type
-for each role no source declares a family for, and derives each token you leave
-out from its colours. Show the draft on the style card next.
+The draft keeps the bundled `claude-code` profile's schema and type for each
+role no source declares a family for, takes each grammar field no one measured
+or judged at its default, and derives each token you leave out from its
+colours. Show the draft on the style card next.
 
 ## The style card
 
@@ -154,13 +161,14 @@ is `node <skill>/scripts/style/card.mjs explainers/<slug> <name>`.
    `explainers/.styles/`). Exit 1 with `card: ... is not installed` means run
    `/explainer-video setup`; `fails contrast` or `names font` names what to fix
    in the draft; relay any other `card:` line. On a published page it first
-   lists `card: upload <path> (<size>)` per font file and for `style-draft/
-   card/live.js` the page does not hold:
+   lists `card: upload <path> (<size>)` per font file, and for
+   `style-draft/card/live.js`, the page does not hold:
    upload them as the storyboard's step 4 uploads, record each with `card
-   asset <path>=<url> ...`, and build again (a build that changes `live.js`
-   drops its recorded upload). On exit 0 it prints `card <n>: 6
-   frame(s), <k> finding(s) -> style-draft/card/<n>.json` and a `card <gate>
-   <frame>: <what>` line per finding; a finding blocks Save and Use once on the
+   asset <path>=<url> ...`, and build again. A build that changes `live.js`
+   (an edit to the draft) lists it again: upload and record it again. On
+   exit 0 it prints `card <n>: 6 frame(s), <k> finding(s) ->
+   style-draft/card/<n>.json` and a `card <gate> <frame>: <what>` line per
+   finding; a finding blocks Save and Use once on the
    page, so say which frame broke which rule. Published: write that file with
    `ArtifactData` `set`, collection `cards`, doc id `<n>`, `file_path` the
    file. Then print the page link or the local path and `Style card <n>

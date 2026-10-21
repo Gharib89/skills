@@ -543,7 +543,12 @@ const doc = {
   grammar: grammarRows(draft),
   frames: [
     ...pages.map((p) => ({ ...p, loop: live.loops[p.id] })),
-    { id: "seam", label: "Seam", html: pages[1].html, loop: live.loops.seam },
+    {
+      id: "seam",
+      label: "Seam",
+      html: pages.find((p) => p.id === "diagram").html,
+      loop: live.loops.seam,
+    },
   ],
   findings,
   scope,

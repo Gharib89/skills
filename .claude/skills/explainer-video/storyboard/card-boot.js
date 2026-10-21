@@ -45,7 +45,8 @@ async function boot() {
   }
 
   // ---- live builds. The build is a script asset, so it loads the same from a published page and from
-  // file:. It plays in a frame with no origin: the page hands it fonts and commands by postMessage. ----
+  // file:. It plays in a frame with no origin: the page hands it fonts and commands by postMessage.
+  // page-boot.js holds the same mechanics for the storyboard's frames: a fix to one belongs in both. ----
   let loaded = null,
     loadedUrl = null;
   function loadBuild(c) {

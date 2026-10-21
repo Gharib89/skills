@@ -73,6 +73,8 @@ export async function liveBuild({ comp, draft, samples, fontRows, backend }) {
   const loops = Object.fromEntries(
     scenes.map((sc) => [sc.id, [sc.start, r6(sc.start + sc.slot)]]),
   );
+  // The seam frame plays the first seam, out of the first sample (the title)
+  // into the second (the diagram): the samples' order is part of its loop.
   const seam = scenes[1].start;
   loops.seam = [r6(seam - PAD), r6(seam + (plan[0].out?.duration ?? 0) + PAD)];
   return { script: liveScript(comp), loops };

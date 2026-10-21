@@ -4,6 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { measuredFields } from "../../skills/explainer-video/scripts/style/grammar.mjs";
 import { candidates, fixture, loads, node } from "./style-lib.mjs";
 
 // A run measured from a fake video, its roles written from the colours the
@@ -77,10 +78,24 @@ test("a reference video's motion becomes the seam and grain fields, each marked 
   assert.equal(loads(file, "talk").schema, 2);
 });
 
+test("a seam's length clamps at 6 and 30 cuts a minute, and the blur is plain under 2 px", () => {
+  const at = (cutsPerMinute, blurAtCuts) =>
+    measuredFields({ cutsPerMinute, blurAtCuts, grain: 0 });
+  assert.equal(at(3, 0.5)["seams.duration"].value, 0.4);
+  assert.equal(at(6, 0.5)["seams.duration"].value, 0.4);
+  assert.equal(at(30, 0.5)["seams.duration"].value, 0.2);
+  assert.equal(at(90, 0.5)["seams.duration"].value, 0.2);
+  assert.equal(at(20, 1 / 24)["seams.family"].value, "cut");
+  assert.equal(at(20, 2 / 24)["seams.family"].value, "velocity");
+  assert.equal(at(20, 2 / 24)["seams.blur"].value, 2);
+});
+
 test("a video with no blur at its cuts is a plain cut, and says only that", () => {
   const { r, profile } = drafted({ duration: 6, cuts: [2, 4], grain: 0.5 });
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(profile.grammar.seams, { family: "cut" });
+  // The cut rate has no field of its own then, so the family's reason holds it.
+  assert.match(profile.grammarMarks["seams.family"].why, /20 cuts\/min/);
   assert.deepEqual(Object.keys(profile.grammarMarks).sort(), [
     "seams.family",
     "texture.grain",
