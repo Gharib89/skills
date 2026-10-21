@@ -4,9 +4,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { lintFragment } from "../../skills/explainer-video/scripts/lib/fragment.mjs";
 import { skill } from "./render-lib.mjs";
 
 const read = (f) => fs.readFileSync(`${skill}/${f}`, "utf8");
+
+// The counter recipe's code, as one line: the recipes show it in backticks.
+const counter = (md) =>
+  md
+    .match(/`(tl\.fromTo\(\$\("\.n"\)[\s\S]*?cue\("count"\)\);)`/)?.[1]
+    .replace(/\s+/g, " ");
+
+// What the counter recipe must be: code the lint accepts that a seek replays,
+// a tween of the text through a modifier, never an `onUpdate` callback.
+function holdsCounter(md) {
+  const code = counter(md);
+  assert.ok(code, "the recipes show the counter");
+  assert.match(code, /modifiers: \{ textContent:/);
+  assert.doesNotMatch(code, /onUpdate/);
+  lintFragment(`<div class="n">0</div><script>${code}</script>`, {
+    names: ["count"],
+  });
+}
 
 test("SKILL.md tells the agent to read the recipes before a custom or rich scene", () => {
   assert.match(
@@ -59,6 +78,19 @@ test("the recipes check fails on a text missing a move, a timing or the motion r
   assert.throws(
     () => holdsRecipes(`${head}## Moves to borrow${untimed}`),
     /Tool calls ticking by/,
+  );
+});
+
+test("the counter recipe lints clean and tweens the text with a modifier, so a seek replays it", () => {
+  const md = read("reference/recipes.md");
+  holdsCounter(md);
+  assert.throws(
+    () => holdsCounter(md.replace("modifiers: {", "onUpdate: {")),
+    /modifiers/,
+  );
+  assert.throws(
+    () => holdsCounter(md.replace("duration: 0.8", "duration: Date.now()")),
+    /time source Date\.now/,
   );
 });
 

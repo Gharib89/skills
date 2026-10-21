@@ -34,6 +34,13 @@ test("a fragment splits into its markup, its plain rules one to a line, and its 
   assert.match(script, /tl\.fromTo\(\$\("\.orb"\)/);
 });
 
+test("a comment in the style is not a rule, nor part of the rule after it", () => {
+  const { css } = splitFragment(
+    "<p>x</p><style>/* the card */ .a { opacity: 1; } /* { */ .b { opacity: 0; }</style>",
+  );
+  assert.deepEqual(css, [".a { opacity: 1; }", ".b { opacity: 0; }"]);
+});
+
 test("a fragment that keeps to tokens and the timeline lints clean", () => {
   assert.doesNotThrow(() => lint(CLEAN));
   assert.doesNotThrow(() =>
