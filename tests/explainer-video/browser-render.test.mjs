@@ -140,6 +140,22 @@ test("typed words land before the next action's cue and before the scene ends", 
   assert.ok(Math.max(...landed(last)) <= 10, "by the scene's end, 10 s");
 });
 
+test("with no room before the next cue, the typed words still appear whole, together", async () => {
+  // the click cues 0.6 s after the type, inside its move and one fade
+  const list = tweens(
+    await drawn("ltr", {
+      ...page,
+      actions: [
+        { at: 1, target: "name", act: "type", text: "Ada Lovelace" },
+        { at: 1, on: "the", target: "go", act: "click" },
+      ],
+    }),
+  );
+  const words = list.filter(([s]) => /^\.tw\d+$/.test(s));
+  assert.equal(words.length, 2);
+  assert.equal(words[0][2].delay, words[1][2].delay);
+});
+
 test("a click ripples at its target once the cursor has arrived, and a move ripples nowhere", async () => {
   const html = await drawn();
   const list = tweens(html);
