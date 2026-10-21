@@ -191,8 +191,8 @@ narrator: am_fenrir
     when its cue falls before the item's own, the callout sitting inside it. On
     `code` it is a line range, `[first, last]` counted from 1. On `excerpt` it
     is no ring: `target` names one unit of the cited excerpt (see `excerpt`),
-    its whitespace squashed before matching, refused when it matches none or
-    more than one.
+    a sentence's whitespace squashed before matching and a code line matched as
+    written, refused when it matches none or more than one.
 
 ## Style profiles
 
