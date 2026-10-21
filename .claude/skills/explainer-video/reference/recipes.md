@@ -66,10 +66,11 @@ markup, one `<style>` of plain rules, and one `<script>`:
   `--warn`, `--stop`. Text sizes: `var(--size-display)`, `--size-title`,
   `--size-heading`, `--size-body`, `--size-code`, `--size-small`,
   `--size-label`. Faces: `var(--font-title)`, `--font-text`, `--font-code`.
-  Compile refuses a hex, a colour function (`rgb()`, `hsl()`, `oklch()`), a
-  colour name in a colour property, and a text size in `px`, `pt`, `rem`, `vh`
-  or another fixed unit or a size word (`small`, `large`), in a rule, an inline
-  style, an attribute or a tween. `em` and `%` sizes are fine.
+  Compile refuses a hex, a colour function (`rgb()`, `hsl()`, `oklch()`) and a
+  colour name in a colour property, in a rule, an inline style, an attribute or
+  a tween. It refuses a text size in `px`, `pt`, `rem`, `vh` or another fixed
+  unit or a size word (`small`, `large`) in a rule, an inline style or a tween.
+  `em` and `%` sizes are fine.
 - **The script is `(tl, cue, $, duration)`.** `tl` is the scene's paused
   timeline. `cue("land")` is the named cue's time in seconds from the scene's
   start; the name is a string literal the scene declares in `cues`, each
@@ -150,7 +151,8 @@ entering in 350 ms with a gap of 100 ms. Each row streams a short status line
 and ticks done on its own cue, in no fixed order. When the last has ticked, a
 merged summary row lands in 450 ms, the emphasis of the scene.
 
-**A punch-in with a ring (camera).** Scale the content to 1.06 over 0.7 s ending
-on the phrase's first word, and grow an accent ring round one target in 400 ms
-as the scale settles. Move one or the other at a time, never both from the
-same start. Hold the ring to the scene's end.
+**A punch-in with a ring (camera).** Scale the one element that matters, a child
+of the scene, to 1.06 over 0.7 s ending on the phrase's first word, and grow an
+accent ring round one target in 400 ms as the scale settles. Move one or the
+other at a time, never both from the same start. Hold the ring to the scene's
+end.

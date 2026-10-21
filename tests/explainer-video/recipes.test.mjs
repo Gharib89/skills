@@ -46,13 +46,20 @@ test("the recipes hold the motion rule, the five directions and the six borrowed
 
 test("the recipes check fails on a text missing a move, a timing or the motion rule", () => {
   const md = read("reference/recipes.md");
-  assert.throws(() => holdsRecipes(md.replace("A fan-out", "A spread")));
-  assert.throws(() =>
-    holdsRecipes(md.replace("One element moves at a time", "")),
+  assert.throws(
+    () => holdsRecipes(md.replace("A fan-out", "A spread")),
+    /A fan-out/,
+  );
+  assert.throws(
+    () => holdsRecipes(md.replace("One element moves at a time", "")),
+    /One element moves at a time/,
   );
   const [head, moves] = md.split("## Moves to borrow");
   const untimed = moves.replace(/\d+ ?(ms|s)\b/g, "a while");
-  assert.throws(() => holdsRecipes(`${head}## Moves to borrow${untimed}`));
+  assert.throws(
+    () => holdsRecipes(`${head}## Moves to borrow${untimed}`),
+    /Tool calls ticking by/,
+  );
 });
 
 test("the recipes carry no source library's code or asset, and no em dash", () => {
