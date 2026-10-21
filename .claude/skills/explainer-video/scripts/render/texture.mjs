@@ -6,8 +6,9 @@
 
 // The glass a box is drawn in: the panel colour half see-through over the
 // field, blurred behind it.
-export const GLASS =
-  "background: color-mix(in srgb, var(--panel) 62%, transparent); backdrop-filter: blur(26px) saturate(1.15);";
+export const GLASS_TINT =
+  "background: color-mix(in srgb, var(--panel) 62%, transparent);";
+export const GLASS = `${GLASS_TINT} backdrop-filter: blur(26px) saturate(1.15);`;
 
 const GRAIN_SEED = 7;
 

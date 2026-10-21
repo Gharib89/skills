@@ -288,6 +288,13 @@ test("each sentence is one reading box, a code excerpt's line likewise", async (
   );
 });
 
+test("the document is tinted glass with no backdrop blur, which renders differ in", async () => {
+  const html = await drawn({ cite: "ex-1" });
+  const doc = html.match(/\.xd \{[^}]*\}/)[0];
+  assert.match(doc, /background: color-mix\(in srgb, var\(--panel\) 62%/);
+  assert.doesNotMatch(doc, /backdrop-filter/);
+});
+
 test("the document draws in the profile's tokens only", async () => {
   const html = await drawn({
     cite: "ex-1",

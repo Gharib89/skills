@@ -6,7 +6,7 @@
 // the surface is the profile's tokens, never a real site's look.
 import { matching, tongue, units } from "../lib/excerpt.mjs";
 import { ARABIC_SCRIPT, wholeWords } from "../lib/terms.mjs";
-import { esc, paint } from "./box.mjs";
+import { esc, paintStill } from "./box.mjs";
 
 // Lighting a sentence takes at most LIGHT seconds however many words it has,
 // each word starting STEP seconds after the last at the most.
@@ -78,7 +78,7 @@ export const excerpt = (p, f, x) => {
   return {
     html: `<div class="xr"><div class="xd${code ? " xcode" : ""}" dir="${rtl ? "rtl" : "ltr"}"><div class="xsrc" dir="${dirOf(locator)}">${where(locator)}</div><div class="xt">${all.map(sentence).join(code ? "" : " ")}</div></div>${chips ? `<div class="xcs">${chips}</div>` : ""}</div>`,
     css: `.xr { position: absolute; inset: 0; display: flex; align-items: center; gap: 80px; }
-.xd { flex: 1; min-width: 0; box-sizing: border-box; ${paint(x.surface)} border: 2px solid var(--line); border-radius: 18px; padding: 40px 56px; text-align: start; }
+.xd { flex: 1; min-width: 0; box-sizing: border-box; ${paintStill(x.surface)} border: 2px solid var(--line); border-radius: 18px; padding: 40px 56px; text-align: start; }
 .xsrc { padding-bottom: 20px; margin-bottom: 28px; border-bottom: 1px solid var(--line); text-align: start; ${one} font: 400 var(--size-label) ${f.code}; color: var(--muted); }
 .xt { font: 400 var(--size-body)/${f.lh(1.5, "text")} ${f.text}; color: var(--text); }
 .xcode .xt { font: 400 var(--size-code)/1.5 ${f.code}; white-space: pre; }
