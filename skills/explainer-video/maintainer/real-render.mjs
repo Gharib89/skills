@@ -22,6 +22,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { sceneEvents } from "../scripts/gates/events.mjs";
+import { readingFindings } from "../scripts/gates/reading.mjs";
 import { HOLD } from "../scripts/lib/length.mjs";
 import { judge } from "../scripts/lib/layout.mjs";
 import { sampleTimes, seamStripStart } from "../scripts/lib/motion.mjs";
@@ -400,6 +401,7 @@ const largest = diagrams.toSorted(
 )[0].id;
 const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
 const laid = [];
+const reads = [];
 for (const id of [
   largest,
   ...browsers.map((s) => s.id),
@@ -408,9 +410,10 @@ for (const id of [
   const sc = whole.scenes.find((s) => s.id === id);
   const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
   const findings = [];
+  const frames = await backend.probe(whole.comp, times, { env });
   judge(
     await backend.check(whole.comp, times, { env }),
-    await backend.probe(whole.comp, times, { env }),
+    frames,
     floors(profile),
     // a finding is the scene's while its time is, as the gates stage files it
     (gate, t, what) => {
@@ -424,6 +427,17 @@ for (const id of [
     moving,
   );
   laid.push([id, times.length, [...new Set(findings)]]);
+  // Each sentence of an excerpt is one reading box (`data-line`), judged on its
+  // words as the gates stage judges a scene's text.
+  if (excerpts.some((s) => s.id === id))
+    reads.push([
+      id,
+      readingFindings(
+        { sc, times, end: sc.start + sc.duration },
+        frames,
+        moving,
+      ),
+    ]);
 }
 check(
   "layout",
@@ -433,6 +447,13 @@ check(
       ([id, n, found]) =>
         `${id}, ${n} samples: ${found.join("; ") || "no finding"}`,
     )
+    .join(" | "),
+);
+check(
+  "reading",
+  reads.length === excerpts.length && reads.every(([, found]) => !found.length),
+  reads
+    .map(([id, found]) => `${id}: ${found.join("; ") || "no finding"}`)
     .join(" | "),
 );
 

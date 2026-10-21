@@ -164,22 +164,24 @@ narrator: am_fenrir
     text is a claim, held to a cited excerpt as a timeline's are.
   - `excerpt`: a cited passage shown as proof (`cite*`, an excerpt id of
     `excerpts.json`; `chips`, each `at*`, `on`, `cite*`; `emphasis`). It shows
-    the pack's own words, never text the scene file restates, on a document
+    the pack's own words, which the scene file names by id only, on a document
     surface (a code one for a code excerpt) under a source line holding the
     excerpt's locator. `cite` and each chip's `cite` must be ids the scene's
     narration cites, and an id the pack lacks is refused; the scene file needs
     `excerpts.json` beside it, so run the source stage first. Compile resolves
     each text and locator into `script.json`, so a changed pack needs a compile
     again. A chip is a numbered card with another excerpt's locator, popping
-    in on its cue; chips are numbered as written and cue in that order, about
-    4 to a frame. On its `emphasis` cue the named unit lights, underlined word
-    by word, and the rest dim. A unit is a sentence, cut by the run's language
-    with whitespace squashed (a paragraph break is not kept), or a line for a
-    code excerpt: a `repo` source whose locator names a file that is not prose
-    (`md`, `mdx`, `markdown`, `txt`, `rst`, `adoc`). Not rich, so a `camera`
-    key is allowed, and the profile's `depth` blur does not apply. In an
-    Arabic run the document runs right to left, one span to a whole word, the
-    locators stay left to right, and a code excerpt stays left to right.
+    in on its cue; each names a different excerpt than the one shown and than
+    the other chips, and chips are numbered as written and cue in that order;
+    about 4 read well beside the document: guidance, not a limit. On its
+    `emphasis` cue the named unit lights, underlined word by word, and the rest
+    dim. A unit is a sentence, cut by the excerpt's own language, or a line for
+    a code excerpt: a `repo` source whose locator names a file that is not
+    prose (`md`, `mdx`, `markdown`, `txt`, `rst`, `adoc`). The passage shows as
+    one paragraph. Not rich, so a `camera` key is allowed. An excerpt reads
+    right to left when its own text is Arabic, in whatever language the run
+    speaks, and left to right otherwise; the locators and a code excerpt stay
+    left to right.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list`,
     `code` and `excerpt` (`title` and `codediff` take none): one callout per
     scene, `{ "target*", "at*", "on" }`, drawn as a ring round the target with
@@ -188,8 +190,9 @@ narrator: am_fenrir
     matched exactly, and refused when it matches no item or more than one, or
     when its cue falls before the item's own, the callout sitting inside it. On
     `code` it is a line range, `[first, last]` counted from 1. On `excerpt` it
-    is no ring: `target` is one sentence of the cited excerpt (one line of a
-    code excerpt), matched exactly, and it lights while the rest dim.
+    is no ring: `target` names one unit of the cited excerpt (see `excerpt`),
+    its whitespace squashed before matching, refused when it matches none or
+    more than one.
 
 ## Style profiles
 

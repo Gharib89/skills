@@ -65,8 +65,25 @@ test("a cited excerpt compiles with no text of its own", () => {
   bad(excerpt({ text: PROSE }), /excerpt has no prop text/);
 });
 
+test("a pack that parses but is not a pack is refused, naming the file", () => {
+  for (const held of [{}, { sources: [] }, { sources: {}, excerpts: [] }, []])
+    bad(
+      excerpt(),
+      /excerpts.json must hold a sources list and an excerpts list/,
+      ctx({ read: () => JSON.stringify(held) }),
+    );
+  bad(
+    excerpt(),
+    /excerpts.json cannot be read: /,
+    ctx({ read: () => "not json" }),
+  );
+});
+
 test("a cite the pack lacks, or the narration does not make, is refused", () => {
-  bad(excerpt({ cite: "ex-9" }), /excerpt cite "ex-9" is not in excerpts.json/);
+  bad(
+    excerpt({ cite: "ex-9" }),
+    /excerpt cite "ex-9" is not in excerpts.json; cite an id it holds, or run the source stage again/,
+  );
   bad(
     excerpt({ cite: "ex-3" }),
     /excerpt cite "ex-3" is not cited by the scene's narration \(ex-1, ex-2\)/,
@@ -154,9 +171,24 @@ test("a code excerpt is lit by line, an Arabic one by its sentences", () => {
 test("a chip names an excerpt the scene cites, each on a cue in order", () => {
   const chips = [
     { at: 2, cite: "ex-2" },
-    { at: 3, on: "in one call", cite: "ex-2" },
+    { at: 3, on: "in one call", cite: "ex-3" },
   ];
-  assert.doesNotThrow(() => checkVisual(excerpt({ chips }), said, ctx()));
+  const three = ctx({ cites: ["ex-1", "ex-2", "ex-3"] });
+  assert.doesNotThrow(() => checkVisual(excerpt({ chips }), said, three));
+  // a chip is a further excerpt: not the one shown, and none twice
+  bad(
+    excerpt({ chips: [{ at: 2, cite: "ex-1" }] }),
+    /excerpt chip 1 cites ex-1, the excerpt shown; a chip is a further excerpt/,
+  );
+  bad(
+    excerpt({
+      chips: [
+        { at: 2, cite: "ex-2" },
+        { at: 3, cite: "ex-2" },
+      ],
+    }),
+    /excerpt chip 2 cites ex-2 again; each chip names a different excerpt/,
+  );
   bad(
     excerpt({ chips: [{ at: 2, cite: "ex-9" }] }),
     /excerpt chip cite "ex-9" is not in excerpts.json/,
@@ -169,6 +201,7 @@ test("a chip names an excerpt the scene cites, each on a cue in order", () => {
   bad(
     excerpt({ chips: [chips[1], chips[0]] }),
     /excerpt chip 2 cues before chip 1/,
+    three,
   );
   bad(
     excerpt({ chips: [{ at: 4, cite: "ex-2" }] }),

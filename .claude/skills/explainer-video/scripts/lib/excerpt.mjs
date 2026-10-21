@@ -3,11 +3,17 @@
 // cited id to the pack's own text and locator and keeps them in script.json,
 // for a later stage to play what was checked.
 import { CUE, cue, fail, known, named, object, place } from "./props.mjs";
+import { ARABIC_SCRIPT } from "./terms.mjs";
 
 // A repo source holds code unless the file it names is prose.
 const PROSE_FILE = /\.(?:md|mdx|markdown|txt|rst|adoc)(?::[\d-]+)?$/i;
 const EMPHASIS = ["target", ...CUE];
 export const squash = (s) => s.replace(/\s+/g, " ").trim();
+
+// The language an excerpt reads in, by its own script and not the run's: an
+// English README quoted in an Arabic run is still left to right.
+export const tongue = (text, code) =>
+  !code && ARABIC_SCRIPT.test(text) ? "ar" : "en";
 
 // The units an emphasis names: a code excerpt's lines as written, any other
 // excerpt's sentences, whitespace squashed, as the language's own rules cut
@@ -19,6 +25,15 @@ export function units(text, code, language) {
   ]
     .map((s) => squash(s.segment))
     .filter(Boolean);
+}
+
+// The indexes of the units a `target` names, so compile and render agree on
+// which unit lights: one index is a match.
+export function matching(text, code, target) {
+  const want = code ? target : squash(String(target));
+  return units(text, code, tongue(text, code)).flatMap((u, i) =>
+    u === want ? [i] : [],
+  );
 }
 
 // The pack's excerpts by id, each `{ text, locator, code }`.
@@ -33,6 +48,8 @@ function load(read) {
         : `excerpts.json cannot be read: ${e.message}`,
     );
   }
+  if (!Array.isArray(pack?.sources) || !Array.isArray(pack?.excerpts))
+    fail("excerpts.json must hold a sources list and an excerpts list");
   const kind = new Map(pack.sources.map((s) => [s.id, s.kind]));
   return new Map(
     pack.excerpts.map((x) => [
@@ -57,7 +74,10 @@ export function resolveExcerpts(p, read) {
   const pack = load(read);
   const out = {};
   for (const [what, id] of cites(p)) {
-    if (!pack.has(id)) fail(`${what} "${id}" is not in excerpts.json`);
+    if (!pack.has(id))
+      fail(
+        `${what} "${id}" is not in excerpts.json; cite an id it holds, or run the source stage again`,
+      );
     out[id] = pack.get(id);
   }
   return out;
@@ -82,7 +102,17 @@ export function checkExcerpt(p, said, ctx = {}) {
         `${what} "${id}" is not cited by the scene's narration (${spoken.join(", ") || "none"})`,
       );
   let last;
+  const shown = new Set([p.cite]);
   for (const [i, c] of (p.chips ?? []).entries()) {
+    if (c.cite === p.cite)
+      fail(
+        `excerpt chip ${i + 1} cites ${c.cite}, the excerpt shown; a chip is a further excerpt`,
+      );
+    if (shown.has(c.cite))
+      fail(
+        `excerpt chip ${i + 1} cites ${c.cite} again; each chip names a different excerpt`,
+      );
+    shown.add(c.cite);
     cue(c, said);
     known("an excerpt chip", c, [...CUE, "cite"]);
     // Chips are numbered as they appear, so one never cues before another.
@@ -97,10 +127,7 @@ export function checkExcerpt(p, said, ctx = {}) {
   known("excerpt emphasis", e, EMPHASIS);
   const { text, code } = got[p.cite];
   const noun = code ? "line" : "sentence";
-  const want = code ? e.target : squash(String(e.target));
-  const hits = units(text, code, ctx.language ?? "en").filter(
-    (u) => u === want,
-  ).length;
+  const hits = matching(text, code, e.target).length;
   if (hits !== 1)
     fail(
       hits

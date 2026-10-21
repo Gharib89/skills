@@ -32,14 +32,17 @@ const timing = {
   sentences: [0, 3, 6],
   words: Array.from({ length: 18 }, (_, i) => +(i * 0.5).toFixed(6)),
 };
-const drawn = (props, dir = "ltr") =>
+const drawn = (props, dir = "ltr", at = timing, more = {}) =>
   sceneFile(
     {
       id: "a",
       narration: said,
-      visual: { component: "excerpt", props: { excerpts, ...props } },
+      visual: {
+        component: "excerpt",
+        props: { excerpts: { ...excerpts, ...more }, ...props },
+      },
     },
-    timing,
+    at,
     claude,
     { backend: {}, seam: {}, dir },
   );
@@ -78,7 +81,7 @@ test("the document shows the excerpt's own words and nothing else", async () => 
   // a code excerpt keeps its lines and their indent
   const code = await drawn({ cite: "ex-2" });
   assert.equal(
-    [...code.matchAll(/<div class="xs xs\d[^"]*">([\s\S]*?)<\/div>/g)]
+    [...code.matchAll(/<div class="xs xs\d[^"]*"[^>]*>([\s\S]*?)<\/div>/g)]
       .map((m) => shown(m[1]))
       .join("\n"),
     CODE,
@@ -97,7 +100,7 @@ test("the emphasised sentence is lit and the rest dimmed on its cue", async () =
     cite: "ex-1",
     emphasis: { target: "Stale entries never survive a release.", at: 2 },
   });
-  const sentences = [...html.matchAll(/<span class="xs ([^"]*)">/g)].map(
+  const sentences = [...html.matchAll(/<span class="xs ([^"]*)"/g)].map(
     (m) => m[1],
   );
   assert.deepEqual(
@@ -116,6 +119,49 @@ test("the emphasised sentence is lit and the rest dimmed on its cue", async () =
   assert.equal(words.length, 6);
   for (const [, , , t] of words) assert.equal(t, 3);
   assert.equal(words[0][2].backgroundSize, "100% 4px");
+});
+
+test("the words of a lit sentence start a step apart, within the light-up window", async () => {
+  const lw = (html) =>
+    tweens(html)
+      .filter(([s]) => /^\.lw\d+$/.test(s))
+      .map(([, , to]) => to.delay);
+  const target = "Stale entries never survive a release.";
+  // 6 words at 0.08 s: the step cap
+  assert.deepEqual(
+    lw(await drawn({ cite: "ex-1", emphasis: { target, at: 2 } })),
+    [0, 0.08, 0.16, 0.24, 0.32, 0.4],
+  );
+  // 30 words would run 2.4 s at that step: they share 0.6 s instead
+  const long = Array.from({ length: 30 }, (_, i) => `w${i}`).join(" ") + ".";
+  const delays = lw(
+    await drawn(
+      { cite: "ex-9", emphasis: { target: long, at: 2 } },
+      "ltr",
+      timing,
+      { "ex-9": { text: long, locator: "x", code: false } },
+    ),
+  );
+  assert.equal(delays.length, 30);
+  assert.equal(delays[1], 0.02);
+  assert.ok(delays.at(-1) <= 0.6);
+  // a cue in the scene's last half second leaves no room: every word at once
+  const late = { ...timing, words: timing.words.map((w) => w * 1.14) };
+  const at = lw(
+    await drawn(
+      {
+        cite: "ex-1",
+        emphasis: {
+          target: "Readers see fresh data.",
+          at: 3,
+          on: "in one call",
+        },
+      },
+      "ltr",
+      late,
+    ),
+  );
+  assert.deepEqual(at, [0, 0, 0, 0]);
 });
 
 test("an emphasis cued on a phrase lights on that phrase's word", async () => {
@@ -181,6 +227,37 @@ test("an Arabic excerpt reads right to left, one span to a whole word", async ()
 test("a code excerpt stays left to right in an Arabic run", async () => {
   const html = await drawn({ cite: "ex-2" }, "rtl");
   assert.match(html, /<div class="xd xcode" dir="ltr">/);
+});
+
+test("the document's direction is the excerpt's own script, not the run's", async () => {
+  // an English README quoted in an Arabic run stays left to right, a word to a
+  // span and no Latin wrapper that keeps a sentence on one line
+  const en = await drawn({ cite: "ex-1" }, "rtl");
+  assert.match(en, /<div class="xd" dir="ltr">/);
+  assert.deepEqual(
+    [...en.matchAll(/<span class="xw[^"]*">([^<]*)<\/span>/g)].map((m) => m[1]),
+    PROSE.split(" "),
+  );
+  assert.doesNotMatch(block(en, "xt"), /<bdi/);
+  // and an Arabic excerpt quoted in an English run reads right to left
+  const ar = await drawn({ cite: "ex-3" });
+  assert.match(ar, /<div class="xd" dir="rtl">/);
+  assert.match(ar, /\.xd\[dir="rtl"\] \.xs\.lit \.xw \{[^}]*100% 100%/);
+});
+
+test("each sentence is one reading box, a code excerpt's line likewise", async () => {
+  const prose = await drawn({ cite: "ex-1" });
+  assert.deepEqual(
+    [...prose.matchAll(/<span class="xs [^"]*" data-line="(s\d)"/g)].map(
+      (m) => m[1],
+    ),
+    ["s0", "s1", "s2"],
+  );
+  const code = await drawn({ cite: "ex-2" });
+  assert.equal(
+    [...code.matchAll(/<div class="xs [^"]*" data-line="s\d"/g)].length,
+    4,
+  );
 });
 
 test("the document draws in the profile's tokens only", async () => {
