@@ -11,11 +11,12 @@
 // one (a style with no texture), the same scenes in the default texture, and
 // those with a `stack3d` scene added. Each is composed, voiced and stilled once
 // (not timed), then timed `--runs` times (default 3), the median kept. A timed
-// run clears the render and gates caches and runs render.mjs, which renders the
-// video and gates it cold; a second render.mjs run on the cached video, the
-// gates cache cleared again, times the gates alone. Render seconds are the
-// first run less the second. The brief's `score` is off. The rates, in render
-// seconds per video second:
+// run clears the render, gates and critic caches and runs render.mjs, which
+// renders the video and gates it cold, cutting the critic's contact sheets; a
+// second render.mjs run on the cached video, the gates cache cleared again,
+// times the gates alone. Render seconds are the first run less the second. The
+// brief's `score` is off (the estimate leaves the score out). The rates, in
+// render seconds per video second:
 //   base     flat render / flat video s
 //   texture  textured render / textured video s, less base
 //   live3d   (live3d render - textured render / textured video s * live3d video
@@ -199,7 +200,9 @@ function measure(v) {
   const render = [];
   const gates = [];
   for (let i = 1; i <= runs; i++) {
-    caches("render", "gates");
+    // the critic's contact sheets are cut by the first render's gates, a cost
+    // the first render pays and the cached second one does not
+    caches("render", "gates", "critic");
     // A gate left red by the critic still pending exits 1 after the video is
     // made; the video is what counts, and its absence is the failure.
     const first = stage("render/render.mjs", v.run);

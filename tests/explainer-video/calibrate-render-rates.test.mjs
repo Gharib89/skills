@@ -69,6 +69,14 @@ test("every timed run renders its video afresh, for a flat, a textured and a liv
   );
 });
 
+test("every timed run cuts the critic's contact sheets afresh, so a rate carries that cost", () => {
+  const { fx, calibrate } = machine(stack3d);
+  const r = calibrate("--runs", "2");
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  // one sheet per scene: 3 + 3 + 4 scenes over the three videos, in each of 2 runs
+  assert.equal(calls(fx, "sheet").length, 2 * (3 + 3 + 4));
+});
+
 test("the live 3D lines name the stack scene's seconds, so its rate can be recomputed from the output", () => {
   const { calibrate } = machine(stack3d);
   const r = calibrate("--runs", "1");

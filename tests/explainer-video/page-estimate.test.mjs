@@ -33,6 +33,16 @@ test("the estimate shows its time against the budget, and the HyperFrames versio
   assert.ok(v.indexOf('class="estimate') < v.indexOf('class="brief'));
 });
 
+test("a time that rounds up to a whole minute reads as that minute, never as 60 s", () => {
+  const shown = (seconds) =>
+    estimate(
+      P.view(session([withEstimate({ seconds, budget: 600, over: false })])),
+    ).match(/<b>(.*?)<\/b>/)[1];
+  assert.equal(shown(119.5), "2 min");
+  assert.equal(shown(59.6), "1 min");
+  assert.equal(shown(59.4), "59 s");
+});
+
 test("an estimate above the budget is flagged amber and the board still submits", () => {
   const S = session([withEstimate({ seconds: 720, budget: 600, over: true })]);
   const v = P.view(S);

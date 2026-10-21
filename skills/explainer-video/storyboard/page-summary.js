@@ -26,8 +26,9 @@ function overview(b) {
 }
 // Seconds as `6 min 30 s`, the seconds left out of whole minutes.
 function span(s) {
-  const m = Math.floor(s / 60),
-    r = Math.round(s - m * 60);
+  const whole = Math.round(s),
+    m = Math.floor(whole / 60),
+    r = whole - m * 60;
   return m ? `${m} min${r ? ` ${r} s` : ""}` : `${r} s`;
 }
 // The first-render estimate: a warning, amber above the budget, never a lock on the board.
