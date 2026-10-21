@@ -21,7 +21,8 @@
 //            over the seconds of its `stack3d` scene
 //   gates    the textured video's gates
 // stdout: `calibrate-render <video> run <i>/<n>: render <s> s, gates <s> s over
-//         <s> s of video` per timed run, then `calibrate-render: HyperFrames
+//         <s> s of video` per timed run (the live 3D video's adds `, <s> s of it
+//         the stack scene`, the denominator of its rate), then `calibrate-render: HyperFrames
 //         <version>: base <r>, texture <r>, live3d <r>, gates <r> render s per
 //         video s`, the values written
 // exit:   0 written · 1 a stage failed or rendered nothing, the table left
@@ -203,7 +204,7 @@ function measure(v) {
     render.push(first.seconds - second.seconds);
     gates.push(second.seconds);
     console.log(
-      `calibrate-render ${v.name} run ${i}/${runs}: render ${r2(render.at(-1))} s, gates ${r2(gates.at(-1))} s over ${r2(v.video)} s of video`,
+      `calibrate-render ${v.name} run ${i}/${runs}: render ${r2(render.at(-1))} s, gates ${r2(gates.at(-1))} s over ${r2(v.video)} s of video${v.stack ? `, ${r2(v.stack)} s of it the stack scene` : ""}`,
     );
   }
   return { render: median(render), gates: median(gates) };

@@ -69,6 +69,17 @@ test("every timed run renders its video afresh, for a flat, a textured and a liv
   );
 });
 
+test("the live 3D lines name the stack scene's seconds, so its rate can be recomputed from the output", () => {
+  const { calibrate } = machine(stack3d);
+  const r = calibrate("--runs", "1");
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(
+    r.stdout,
+    /^calibrate-render live3d run 1\/1: .* s of video, \d+(\.\d+)? s of it the stack scene$/m,
+  );
+  assert.doesNotMatch(r.stdout, /^calibrate-render (flat|textured) .*stack/m);
+});
+
 test("a measurement that cannot run leaves the table alone and says why", () => {
   // no NVIDIA card: the live 3D video is refused by the render stage
   const { table, calibrate } = machine();
