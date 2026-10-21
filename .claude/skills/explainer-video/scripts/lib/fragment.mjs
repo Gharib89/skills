@@ -157,6 +157,15 @@ const TIME = [
   ["requestAnimationFrame", /\brequestAnimationFrame\b/],
   ["gsap.ticker", /\bgsap\s*\.\s*ticker\b/],
 ];
+// Text drawn into a canvas or WebGL: pixels the layout gate cannot read, so a
+// word that matters is DOM text.
+const CANVAS_TEXT = [
+  ["fillText", /\bfillText\b/],
+  ["strokeText", /\bstrokeText\b/],
+  ["TextGeometry", /\bTextGeometry\b/],
+  ["FontLoader", /\bFontLoader\b/],
+  ["troika", /\btroika\w*/],
+];
 const STRING = /(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g;
 // A colour-bearing property of a tween or style object, with a string value.
 const COLOURED_PROP =
@@ -178,6 +187,13 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
     if (re.test(code))
       fail(
         `time source ${name}: a frame is a function of the timeline's time alone`,
+      );
+  // A string holding an API's name is DOM text the scene shows, not a draw call.
+  const unquoted = code.replace(STRING, '""');
+  for (const [name, re] of CANVAS_TEXT)
+    if (re.test(unquoted))
+      fail(
+        `text in a canvas or WebGL ${name}: write the text as DOM text, which the layout gate reads`,
       );
   // A tween made on `gsap` or a legacy class runs on wall time, outside the
   // paused `tl` the render seeks.

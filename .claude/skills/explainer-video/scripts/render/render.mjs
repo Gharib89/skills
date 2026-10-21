@@ -34,6 +34,7 @@ import path from "node:path";
 import { checkScenes } from "../lib/allowed.mjs";
 import { HOLD } from "../lib/length.mjs";
 import { videosDir } from "../lib/paths.mjs";
+import { drawsWebgl } from "../lib/visuals.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
@@ -44,6 +45,7 @@ import {
   dest,
   fontGap,
   fontRow,
+  gpuRefusal,
   hyperframesEnv,
   loadBackend,
   lockHash,
@@ -152,6 +154,16 @@ const ace =
     ? rows.find((r) => r.id === "ace-step")
     : null;
 const backend = await loadBackend();
+// A scene that draws WebGL takes the host GPU: refused here, before any render,
+// where the gpu-3d row says no NVIDIA card answers.
+const webgl = drawsWebgl(script.scenes);
+const noGpu =
+  webgl &&
+  gpuRefusal(
+    rows.find((r) => r.id === "gpu-3d"),
+    await backend.computeCapability(),
+  );
+if (noGpu) fail(`gpu-3d: ${noGpu}`);
 const device = ace && torchDevice(await backend.computeCapability());
 if (ace && !fs.existsSync(path.join(dest(ace, undefined, device), ".stamp")))
   fail(
@@ -208,7 +220,7 @@ const clock = (t) => {
 const comp = path.join(run, "composition");
 fs.rmSync(comp, { recursive: true, force: true });
 fs.mkdirSync(path.join(comp, "scenes"), { recursive: true });
-const fonts = compositionAssets(fontRows, comp);
+const fonts = compositionAssets(fontRows, comp, { webgl });
 
 const raw = path.join(run, ".cache", "narration.wav");
 fs.mkdirSync(path.dirname(raw), { recursive: true });
@@ -327,7 +339,16 @@ for (const [i, s] of script.scenes.entries()) {
 }
 fs.writeFileSync(
   path.join(comp, "index.html"),
-  videoPage({ title: script.title, profile, fonts, scenes, cues, total, dir }),
+  videoPage({
+    title: script.title,
+    profile,
+    fonts,
+    scenes,
+    cues,
+    total,
+    webgl,
+    dir,
+  }),
 );
 
 const env = hyperframesEnv();
@@ -341,6 +362,7 @@ async function hyperframes(what, args, cwd) {
       String(FPS),
       "--workers",
       "3",
+      ...(webgl ? ["--browser-gpu"] : []),
       ...args,
     ],
     { cwd, env },
@@ -351,6 +373,7 @@ async function hyperframes(what, args, cwd) {
 const inputs = renderInputs(
   fontRows.map((r) => r.family),
   profile,
+  webgl,
 );
 
 // Stills: the uncached scenes in one stills page, a frame each.
@@ -370,10 +393,8 @@ if (missing.length) {
   fs.cpSync(path.join(comp, "fonts"), path.join(work, "fonts"), {
     recursive: true,
   });
-  fs.copyFileSync(
-    path.join(comp, "gsap.min.js"),
-    path.join(work, "gsap.min.js"),
-  );
+  for (const f of ["gsap.min.js", ...(webgl ? ["three.min.js"] : [])])
+    fs.copyFileSync(path.join(comp, f), path.join(work, f));
   for (const s of missing)
     fs.copyFileSync(
       path.join(comp, "scenes", `${s.id}.html`),
@@ -386,6 +407,7 @@ if (missing.length) {
       profile,
       fonts,
       ids: missing.map((s) => s.id),
+      webgl,
       dir,
     }),
   );

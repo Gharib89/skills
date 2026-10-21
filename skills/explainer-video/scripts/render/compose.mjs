@@ -143,6 +143,10 @@ async function sceneParts(
     end: timing.duration,
     // The content box, for a component the composer lays out itself.
     box,
+    // The scene's selector scope and the seconds its template runs (its slot),
+    // for a component whose own script draws on the paused timeline `tl`.
+    scope: `[data-composition-id="${id}"]`,
+    slot: timing.slot ?? timing.duration,
     // A code row is the code step at 1.4 (45 px at 32), so a `scale.code`
     // override keeps the text inside its row; 12 rows fit the band at the
     // default step only, a taller override is the layout gate's to catch.
@@ -169,7 +173,7 @@ async function sceneParts(
         : [],
   };
   const c = await COMPONENTS[scene.visual.component](scene.visual.props, f, x);
-  const scope = `[data-composition-id="${id}"]`;
+  const scope = x.scope;
   const css = c.css
     .split("\n")
     .filter((l) => l.trim())
@@ -263,7 +267,7 @@ ${css}
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         const tweens = ${JSON.stringify(tweens)};
-${play(scope, tweens)}${countScript(scope, counts)}${fragment}${pushScript(scope, push, camera)}
+${play(scope, tweens)}${countScript(scope, counts)}${fragment}${pushScript(scope, push, camera)}${c.script ? `\n${c.script}` : ""}
         // never before the entry seam ends: earlier the content is still fading in
         const full = Math.min(Math.max(tl.duration(), ${seam.in?.duration ?? 0}), ${timing.duration});${seamScript(scope, seam, timing.duration, dir === "rtl")}
         window.__timelines = window.__timelines || {};
@@ -282,6 +286,7 @@ function page({
   fonts,
   duration,
   head = "",
+  three = false,
   body,
   script,
   dir = "ltr",
@@ -320,7 +325,7 @@ function page({
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=${W}, height=${H}" />
     <title>${esc(title)}</title>
-${head}    <script src="gsap.min.js"></script>
+${head}    <script src="gsap.min.js"></script>${three ? '\n    <script src="three.min.js"></script>' : ""}
     <style>
 ${fontFaces}
 :root { ${tokens} }
@@ -360,6 +365,7 @@ export function videoPage({
   scenes,
   cues,
   total,
+  webgl = false,
   dir = "ltr",
 }) {
   const f = faces(profile, dir);
@@ -387,6 +393,7 @@ export function videoPage({
     profile,
     fonts,
     dir,
+    three: webgl,
     duration: total,
     body: `${hosts}
       <div class="captions">
@@ -433,6 +440,7 @@ export function stillsPage({
   ids,
   cues = {},
   frame = 1 / FPS,
+  webgl = false,
   dir = "ltr",
 }) {
   const f = faces(profile, dir);
@@ -444,6 +452,7 @@ export function stillsPage({
     profile,
     fonts,
     dir,
+    three: webgl,
     duration: +(ids.length * frame).toFixed(6),
     head: "    <script>window.__stills = true;</script>\n",
     body:

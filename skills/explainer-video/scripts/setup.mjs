@@ -43,6 +43,7 @@ import {
   cpuEnv,
   dest,
   fontGap,
+  gpuStatus,
   installFont,
   lockHash,
   loadBackend,
@@ -93,7 +94,7 @@ const forNarrator = (r) =>
 // the card, listed or not: the stale sweep keeps each row's folder for this
 // device. The OS, CPU and macOS version are what a row's `unavailable` entries
 // match.
-const cap = catalogue.some((r) => r.cpu || r.kind === "cuda")
+const cap = catalogue.some((r) => r.cpu || ["cuda", "gpu"].includes(r.kind))
   ? await backend.computeCapability()
   : null;
 const machine = backend.platform();
@@ -223,6 +224,7 @@ function status(r) {
   if (r.kind === "system")
     return backend.which(r.command) ? "present" : "missing";
   if (r.kind === "profile") return `refused: ${r.why}`;
+  if (r.kind === "gpu") return gpuStatus(r, cap);
   if (r.kind === "font" && fontGap(r)) return "missing";
   // The provider lives in the npm folder: an npm install about to rebuild that
   // folder takes the libraries with it, so the row is missing until npm is there.
@@ -436,7 +438,7 @@ function report(state, staleInstalls, cudaNote) {
           ? `nothing, you set ${r.env}`
           : r.kind === "profile"
             ? "nothing, fix the file"
-            : installDir(r);
+            : (r.writes ?? installDir(r));
     lines.push(
       `| ${r.id} | ${r.neededBy} | ${state.get(r)} | ${size(r) ? formatSize(size(r)) : "-"} | ${r.licence} | ${where} |`,
     );
