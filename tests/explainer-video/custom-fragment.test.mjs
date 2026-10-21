@@ -225,6 +225,13 @@ test("the techniques a fragment uses are found by their patterns, for the ban ch
   assert.deepEqual(techniquesIn(js('tl.to($(""), { x: -40 }, 0);')), [
     "camera",
   ]);
+  // a class the agent names `camera` is its own: custom has no camera layer
+  assert.deepEqual(
+    techniquesIn(
+      '<p class="camera">x</p><style>.camera { opacity: 0; }</style><script>tl.to($(".camera"), { x: 5 }, 0);</script>',
+    ),
+    [],
+  );
   assert.deepEqual(
     techniquesIn(
       js('tl.to($(".a"), { strokeDashoffset: 0, filter: "blur(2px)" }, 0);'),

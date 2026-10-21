@@ -279,7 +279,7 @@ const USES = {
   draw: /stroke-?dash(?:offset|array)|drawSVG/i,
   blur: /\bblur\s*\(|backdrop-?filter|feGaussianBlur/i,
   kinetic: /SplitText|\.split\(\s*(?:(["'`])\s\1|\/\\s\+?\/[a-z]*)\s*\)/,
-  camera: /\$\(\s*(?:(["'`])\s*\1)?\s*\)|\.camera\b/,
+  camera: /\$\(\s*(?:(["'`])\s*\1)?\s*\)/,
 };
 
 // The techniques `src` uses, in the order of USES.
