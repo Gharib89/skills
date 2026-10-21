@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.45.0 (2026-10-21)
+
+### Features
+
+- **explainer-video**: The style card plays the grammar, drafted from a reference video
+  ([#924](https://github.com/Gharib89/skills/pull/924),
+  [`b818e2f`](https://github.com/Gharib89/skills/commit/b818e2f4dde9ed56ea75b75930f6434c8b111e3f))
+
+
 ## v0.44.0 (2026-10-21)
 
 ### Features
