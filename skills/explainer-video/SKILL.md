@@ -95,7 +95,7 @@ must include and must avoid. The user's request beside the sources, the
 | Knob | Default | Takes |
 | --- | --- | --- |
 | `focus` | the source's main ideas | what the video should say |
-| `length` | 2 | minutes, 1 to 5 |
+| `length` | 2 | minutes, 1 or more |
 | `audience` | a developer new to the source | who watches |
 | `language` | `en` | `en`, or `ar` (Egyptian Arabic, rendered right to left) |
 | `style` | the store default (see Render) | a style profile name |
@@ -184,9 +184,10 @@ The script stage writes the **scene file**, `explainers/<slug>/script.md`, from
 the pack's outline and the brief, then holds it to the **script gates**. Read
 [reference/scene-file.md](reference/scene-file.md) before you write or edit it.
 
-1. **Write.** Five roles in order, one scene each but `point`, which takes one
-   or more: `hook` (why watch), `context` (what the thing is), `point` (one
-   idea each), `recap` (the points again in brief), `end` (one closing line).
+1. **Write.** Five roles in order (over 5 minutes, `section` openers too:
+   scene-file.md), one scene each but `point`, which takes one or more:
+   `hook` (why watch), `context` (what the thing is), `point` (one idea each),
+   `recap` (the points again in brief), `end` (one closing line).
    Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
    up to the brief's length less the 1 s hold the render closes on. A scene's
    spoken characters (letters, digits) land within 10% of (seconds -

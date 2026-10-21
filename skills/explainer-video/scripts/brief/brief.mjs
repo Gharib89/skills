@@ -4,7 +4,7 @@
 //
 //   node brief.mjs <run-folder> [<knob>=<value>]...
 //
-// Knobs: focus, length (minutes, 1 to 5), audience, language, style, voice
+// Knobs: focus, length (minutes, 1 or more), audience, language, style, voice
 // (a narrator id, or `own:<name>` for an own voice enrolled with
 // voice/own-voice.mjs, Arabic only), aspect, score (on, off or ace-step); `must=` and `avoid=`
 // add one list item each, and any given replaces that list (`must=` alone
@@ -108,8 +108,8 @@ const brief = {
 for (const k of ["focus", "audience"])
   if (!brief[k]) refuse(k, undefined, "empty");
 const minutes = Number(brief.length);
-if (!(minutes >= 1 && minutes <= 5))
-  refuse("length", brief.length, "a number of minutes from 1 to 5");
+if (!(Number.isFinite(minutes) && minutes >= 1))
+  refuse("length", brief.length, "a number of minutes, 1 or more");
 brief.length = minutes;
 const speakers = all.filter((n) => n.language === brief.language);
 if (!speakers.length)

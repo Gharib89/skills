@@ -258,7 +258,7 @@ function view(S) {
     ${player(S, b)}
     ${briefPanel(S, b)}
     ${sourcesPanel(b)}
-    <section class="cards">${b.scenes.map((c) => card(S, b, c)).join("")}</section>
+    <section class="cards">${cardList(S, b)}</section>
   </div>${delivered ? "" : bar(S, b)}`;
 }
 function shell(S, text) {

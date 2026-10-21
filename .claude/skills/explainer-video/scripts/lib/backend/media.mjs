@@ -200,10 +200,64 @@ export async function master(input, output, { lufs, peak, bed }) {
   ]);
 }
 
+// The video-only `parts` joined at hard cuts by stream copy: no frame is
+// re-encoded, so each part must start on a keyframe, as every render does.
+export async function concat(parts, output) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-concat-"));
+  try {
+    const list = path.join(dir, "parts.txt");
+    fs.writeFileSync(
+      list,
+      parts.map((p) => `file '${p.replaceAll("'", "'\\''")}'\n`).join(""),
+    );
+    ffmpeg([
+      "-y",
+      ...["-f", "concat", "-safe", "0", "-i", list],
+      "-c",
+      "copy",
+      output,
+    ]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// `video` with `audio` encoded to AAC once and `chapters` (`{ start, end,
+// title }`, seconds) written as MP4 chapter marks; the video stream is copied.
+export async function mux({ video, audio, chapters, output }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-mux-"));
+  try {
+    const meta = path.join(dir, "chapters.txt");
+    const esc = (t) => t.replace(/[=;#\\\n]/g, "\\$&");
+    const ms = (t) => Math.round(t * 1000);
+    fs.writeFileSync(
+      meta,
+      ";FFMETADATA1\n" +
+        chapters
+          .map(
+            (c) =>
+              `[CHAPTER]\nTIMEBASE=1/1000\nSTART=${ms(c.start)}\nEND=${ms(c.end)}\ntitle=${esc(c.title)}\n`,
+          )
+          .join(""),
+    );
+    ffmpeg([
+      ...["-y", "-i", video, "-i", audio, "-i", meta],
+      ...["-map", "0:v", "-map", "1:a", "-map_chapters", "2"],
+      ...["-c:v", "copy", "-c:a", "aac", "-b:a", "192k"],
+      ...["-movflags", "+faststart", output],
+    ]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export async function ffprobe(file) {
   const r = spawnSync(
     "ffprobe",
-    ["-v", "error", "-show_streams", "-show_format", "-of", "json", file],
+    [
+      ...["-v", "error", "-show_streams", "-show_format", "-show_chapters"],
+      ...["-of", "json", file],
+    ],
     { encoding: "utf8" },
   );
   if (r.status !== 0)

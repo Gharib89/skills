@@ -14,6 +14,10 @@ const pages = [
   "skills/explainer-video/storyboard/page",
   "skills/grill-with-artifact/page",
 ];
+// A page's scripts between its core and boot, which share the same scope.
+const extras = { "skills/explainer-video/storyboard/page": ["-sections"] };
+const parts = (page) =>
+  ["-core", ...(extras[page] ?? [])].map((s) => `${page}${s}.js`);
 
 // The names a classic script declares at top level, read from the file itself
 // so a function removed from a core file leaves its boot file's call undefined.
@@ -58,7 +62,9 @@ module.exports = [
     rules,
   },
   ...pages.map((page) => ({
-    files: [`${page}-boot.js`],
-    languageOptions: { globals: declaredNames(`${page}-core.js`) },
+    files: [`${page}-boot.js`, ...parts(page)],
+    languageOptions: {
+      globals: Object.assign({}, ...parts(page).map(declaredNames)),
+    },
   })),
 ];

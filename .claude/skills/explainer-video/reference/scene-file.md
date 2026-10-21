@@ -3,6 +3,7 @@
 ## Contents
 
 - [The scene file](#the-scene-file)
+- [Sections](#sections)
 - [Style profiles](#style-profiles)
 
 ## The scene file
@@ -203,6 +204,25 @@ narrator: am_fenrir
     is no ring: `target` names one unit of the cited excerpt (see `excerpt`),
     a sentence's whitespace squashed before matching and a code line matched as
     written, refused when it matches none or more than one.
+
+## Sections
+
+A video over 5 minutes is cut into sections; a shorter one may be. A `section`
+scene opens each group of 2 to 5 `point` scenes, in the arc `hook, context,
+(section, point x 2 to 5)..., recap, end`, and its title becomes the video's
+chapter mark. Its `role` line takes 6 to 12 s, the other scenes 12 to 30 s.
+Compile numbers every scene's section (`section` in `script.json`): hook and
+context belong to the first section, recap and end to the last, and it
+refuses an opener outside 6 to 12 s and a section of fewer than 2 or more than
+5 points. The script's `arc` and `budget` gates hold the same rules.
+
+Render cuts the video at each opener, which is always entered by a plain cut
+whatever the scene before it asks for. Each section renders video only,
+cached on its own: editing one scene re-renders its section and the others
+come from the cache. The parts join by stream copy, and the narration and
+score are mixed and AAC-encoded once on the joined file, which carries one
+chapter mark per section at its opener's first frame. The gates run on the
+joined file, and the delivery checks add `chapters`.
 
 ## Style profiles
 

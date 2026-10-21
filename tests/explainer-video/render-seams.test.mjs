@@ -98,6 +98,20 @@ test("a seam is whole frames, its blur the family's, and a scene's own seam wins
   assert.equal(slot(249, { out: null }), 8.299999);
 });
 
+test("a section opener is entered by a hard cut, even where the scene before it names a seam", () => {
+  const own = scenes("context", "section", "point", "point", "section");
+  own[3].visual.seam = "zoom-through";
+  const plan = seamPlan(own, claude);
+  assert.deepEqual(
+    plan.map((p) => p.out?.move ?? null),
+    [null, "zoom-through", "cut-the-curve", null, null],
+  );
+  assert.deepEqual(
+    plan.map((p) => p.in?.move ?? null),
+    [null, null, "zoom-through", "cut-the-curve", null],
+  );
+});
+
 // A scene's seam tweens, `[from, to, at]` each on `.content`, and its labels.
 const drawn = async (seam, { dir = "ltr", profile = claude } = {}) => {
   const scene = {

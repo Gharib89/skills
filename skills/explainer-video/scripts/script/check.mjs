@@ -61,28 +61,41 @@ const scenes = script.scenes.map((s) => ({
 }));
 const gates = {};
 
-// arc: one hook, one context, one or more points, one recap, one end.
+// arc: one hook, one context, one or more points, one recap, one end. A script
+// with a `section` scene groups its points instead, two to five to a section,
+// and a video over five minutes must: compile counts each section's points, so
+// this holds their order.
 {
   const f = scenes
     .filter((s) => !s.role)
     .map((s) => `${s.id} has no role line`);
   const roles = scenes.map((s) => s.role ?? "?");
-  if (!f.length && !/^hook,context,(point,)+recap,end$/.test(roles.join(",")))
+  const sectioned = roles.includes("section");
+  const arc = sectioned
+    ? /^hook,context,(section,(point,){2,5})+recap,end$/
+    : /^hook,context,(point,)+recap,end$/;
+  const long = brief.length > 5;
+  if (!f.length && !(arc.test(roles.join(",")) && (sectioned || !long)))
     f.push(
-      `roles ${roles.join(", ")}; want hook, context, point..., recap, end`,
+      `roles ${roles.join(", ")}; ${
+        sectioned || long
+          ? `${sectioned ? "" : "a video over 5 minutes is cut into sections: "}want hook, context, (section, point x 2 to 5)..., recap, end`
+          : "want hook, context, point..., recap, end"
+      }`,
     );
   gates.arc = f;
 }
 
-// budget: 12 to 30 s a scene, its spoken characters within 10 percent of its
+// budget: 12 to 30 s a scene (6 to 12 s a section opener), its spoken characters within 10 percent of its
 // seconds, less the narrator's pause a sentence, at the narrator's rate, and
 // the scenes with the render's closing hold within 10 percent of the brief's
 // length.
 {
   const f = [];
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {
-    if (s.seconds < 12 || s.seconds > 30)
-      f.push(`${s.id} ${s.seconds} s is outside 12 to 30 s`);
+    const [min, max] = s.role === "section" ? [6, 12] : [12, 30];
+    if (s.seconds < min || s.seconds > max)
+      f.push(`${s.id} ${s.seconds} s is outside ${min} to ${max} s`);
     const stops = sentences(s.narration.join(" ")).length;
     const budget = (s.seconds - stops * narrator.pause) * narrator.rate;
     const n = chars(s.narration.join(" "));

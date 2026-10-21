@@ -49,13 +49,38 @@ export async function hyperframes(args, { cwd, env }) {
         height: 1080,
         fps: 30,
         duration,
-        audio: true,
+        audio: html.includes("<audio"),
         lufs: -14.0,
         peak: -1.6,
       }),
     );
   }
   return 0;
+}
+
+const stand = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
+
+// Stream-copy join of the fake parts: their durations add, and the audio the
+// parts do not carry stays out.
+export async function concat(parts, output) {
+  log({ call: "concat", parts, output });
+  const all = parts.map(stand);
+  fs.writeFileSync(
+    output,
+    JSON.stringify({
+      ...all[0],
+      duration: +all.reduce((t, p) => t + p.duration, 0).toFixed(3),
+    }),
+  );
+}
+
+// The one mux: the video's stand-in with audio and the chapters written.
+export async function mux({ video, audio, chapters, output }) {
+  log({ call: "mux", video, audio, chapters, output });
+  fs.writeFileSync(
+    output,
+    JSON.stringify({ ...stand(video), audio: true, chapters }),
+  );
 }
 
 // Answers from the fake render's file, each field overridable through
@@ -77,6 +102,11 @@ export async function ffprobe(file) {
       ...(v.audio ? [{ codec_type: "audio" }] : []),
     ],
     format: { duration: String(v.duration) },
+    chapters: (v.chapters ?? []).map((c) => ({
+      start_time: String(c.start),
+      end_time: String(c.end),
+      tags: { title: c.title },
+    })),
   };
 }
 

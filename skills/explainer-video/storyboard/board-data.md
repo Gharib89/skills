@@ -63,7 +63,8 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes` | array | yes | One card per scene, in order. |
 | `board.scenes[].id` | string | yes | The scene id. |
 | `board.scenes[].title` | string | yes | The scene's title. |
-| `board.scenes[].role` | string | no | Its role (`hook`, `context`, `point`, `recap`, `end`). |
+| `board.scenes[].role` | string | no | Its role (`hook`, `context`, `section`, `point`, `recap`, `end`). |
+| `board.scenes[].section` | number | no | The 1-based section the scene belongs to, on every card of a video with section openers and on none otherwise. The page groups the cards under a heading per section, titled by the opener's title. |
 | `board.scenes[].seconds` | number | yes | Its voiced length in seconds. |
 | `board.scenes[].start` | number | yes | Where the scene begins in the joined narration and the build, in seconds. |
 | `board.scenes[].slot` | number | yes | The scene's voiced length plus its exit seam, in seconds: the stretch its card loops. |

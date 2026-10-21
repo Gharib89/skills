@@ -214,6 +214,10 @@ test("the excerpt budget is 8 per minute of target length, at least 12, split ac
     budget(["--minutes", "2.5", a]),
     "budget: 20 excerpts (2.5 min at 8 per minute, at least 12); shares a 20",
   );
+  assert.equal(
+    budget(["--minutes", "25", a]),
+    "budget: 200 excerpts (25 min at 8 per minute, at least 12); shares a 200",
+  );
   assert.equal(snapshot(fx, ["--minutes", "0", a]).code, 2);
 
   budget([a, b, c]);

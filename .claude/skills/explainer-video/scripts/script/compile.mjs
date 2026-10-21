@@ -5,7 +5,7 @@
 // Reads <run>/script.md: a `# <title>` line, `key: value` header lines
 // (language, default en; narrator; style), then per scene a
 // `## Scene <id> · <title>` heading, an optional `role: <role> · <n> s` line
-// (hook, context, point, recap or end, and its seconds), a `### Narration`
+// (hook, context, section, point, recap or end, and its seconds), a `### Narration`
 // list of numbered sentences (an indented line continues the one above) and
 // one `### Visual` block of JSON. In a sentence `{written|spoken}` shows the
 // written form on screen and voices the spoken one, backticks are
@@ -43,7 +43,7 @@ const file = path.join(run, "script.md");
 if (!fs.existsSync(file)) fail(null, `no ${file}`);
 const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
 
-const ROLES = ["hook", "context", "point", "recap", "end"];
+const ROLES = ["hook", "context", "section", "point", "recap", "end"];
 let title = null;
 const header = {};
 const scenes = [];
@@ -220,6 +220,28 @@ const compiled = scenes.map((s) => {
     visual,
   };
 });
+
+// Sections: a `section` scene opens a group of two to five points with a card of
+// 6 to 12 s, and each scene takes the number of its group, the hook and the
+// context joining the first and the recap and the end the last, so a render
+// can cut the video where a section opens. The arc gate holds the roles' order.
+let opened = 0;
+compiled.forEach((s, i) => {
+  if (s.role === "section") {
+    opened++;
+    if (s.seconds < 6 || s.seconds > 12)
+      fail(s.id, `the section opener is ${s.seconds} s, want 6 to 12 s`);
+    let points = 0;
+    while (compiled[i + 1 + points]?.role === "point") points++;
+    if (points < 2 || points > 5)
+      fail(
+        s.id,
+        `the section holds ${points} point${points === 1 ? "" : "s"}, want 2 to 5`,
+      );
+  }
+  if (opened) s.section = opened;
+});
+if (opened) for (const s of compiled) s.section ??= 1;
 
 const script = {
   title,
