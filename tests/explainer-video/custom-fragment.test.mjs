@@ -247,11 +247,15 @@ test("the text a fragment shows also holds what its script writes, but not a cou
     shownText(
       '<p class="n">0</p><script>tl.set($(".n"), { textContent: 42 }, 0); el.innerHTML = "1,200 files"; x.innerText = \'ok\';</script>',
     ),
-    "0 42 1,200 files ok",
+    "42 1,200 files ok",
   );
   const counter =
     '<p class="n">0</p><script>tl.fromTo($(".n"), { textContent: 0 }, { textContent: 87, duration: 1 }, 0);</script>';
-  assert.equal(shownText(counter), "0 87");
+  assert.equal(shownText(counter), "87");
+  // the 0 the markup starts the counter at is no claim either, but a 0 in a
+  // fragment whose script writes no text is shown as it is written
+  assert.equal(shownText("<p>Failures: <b>0</b></p>"), "Failures: 0");
+  assert.equal(shownText('<p class="n">0</p>'), "0");
   // a start that is bare zero says nothing; a written zero in a string too
   assert.equal(
     shownText('<script>tl.set(a, { textContent: "0" }, 0);</script>'),

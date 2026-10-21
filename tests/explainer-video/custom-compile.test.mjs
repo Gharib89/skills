@@ -160,8 +160,8 @@ test("the numbers a custom scene shows are its fragment's text, held to a cited 
 test("a number the script writes is a claim too, and a counter's start at 0 is not", () => {
   const source =
     '<p class="n">0</p><script>tl.fromTo($(".n"), { textContent: 0 }, { textContent: 87, duration: 1 }, 0); tl.set($(".m"), { textContent: 42 }, 0);</script>';
-  assert.deepEqual(VISUALS.custom.numbers({ source }), ["0", "87", "42"]);
-  assert.deepEqual(VISUALS.custom.shown({ source }), ["0 87 42"]);
+  assert.deepEqual(VISUALS.custom.numbers({ source }), ["87", "42"]);
+  assert.deepEqual(VISUALS.custom.shown({ source }), ["87 42"]);
   assert.deepEqual(VISUALS.custom.shown({}), [""]);
 });
 
