@@ -51,6 +51,18 @@ export function fixture(text = SCRIPT) {
   const gsap = path.join(dest({ kind: "npm" }, dirs), "node_modules", "gsap");
   fs.mkdirSync(path.join(gsap, "dist"), { recursive: true });
   fs.writeFileSync(path.join(gsap, "dist", "gsap.min.js"), "/* gsap */");
+  // three's ES module, and an esbuild whose bundle is a marker of its entry.
+  const modules = path.join(dest({ kind: "npm" }, dirs), "node_modules");
+  fs.mkdirSync(path.join(modules, "three", "build"), { recursive: true });
+  fs.writeFileSync(
+    path.join(modules, "three", "build", "three.module.js"),
+    "/* three */",
+  );
+  fs.mkdirSync(path.join(modules, "esbuild"), { recursive: true });
+  fs.writeFileSync(
+    path.join(modules, "esbuild", "index.js"),
+    `exports.buildSync = (o) => ({ outputFiles: [{ text: "/* bundle of " + o.entryPoints[0].split("node_modules")[1] + " as " + o.globalName + " */" }] });`,
+  );
   const dir = path.join(tmp, "proj", "explainers", "demo");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "script.md"), text);

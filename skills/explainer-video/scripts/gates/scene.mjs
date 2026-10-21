@@ -29,10 +29,11 @@ export function fullestFrame(p, frames, moving) {
 // Motion, then determinism on the frame it picks: the scene's peak-motion
 // frame outside every seam, rendered twice in two browsers and compared as
 // decoded pixels; and the scene's dead beats, read off its timeline from
-// `tweens`. Sets p.found.motion and p.found.determinism.
+// `tweens`. A scene that draws WebGL (`software`) has its two frames rendered
+// on SwiftShader. Sets p.found.motion and p.found.determinism.
 export async function motionAndDeterminism(
   p,
-  { run, mp4, comp, env, backend, orFail, seams, tweens, band },
+  { run, mp4, comp, env, backend, orFail, seams, tweens, band, software },
 ) {
   const scene = { start: p.sc.start, duration: p.sc.duration, fps: FPS };
   const { first } = sceneFrames(scene);
@@ -54,7 +55,9 @@ export async function motionAndDeterminism(
   fs.mkdirSync(path.join(run, path.dirname(files[0])), { recursive: true });
   const hashes = [];
   for (const f of files) {
-    await orFail(() => backend.frame(comp, t, path.join(run, f), { env }));
+    await orFail(() =>
+      backend.frame(comp, t, path.join(run, f), { env, software }),
+    );
     hashes.push(await orFail(() => backend.framePixels(path.join(run, f))));
   }
   p.found.determinism = {

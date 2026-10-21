@@ -9,6 +9,7 @@ import { browser } from "./browser.mjs";
 import { diagram } from "./diagram.mjs";
 import { chart, stat } from "./numbers.mjs";
 import { compare, timeline } from "./sequence.mjs";
+import { stack3d } from "./stack3d.mjs";
 
 export { esc };
 
@@ -124,6 +125,7 @@ export const COMPONENTS = {
   compare,
   diagram,
   browser,
+  stack3d,
   title: (p, f, x) => {
     const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";
     const css = `.stack { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
