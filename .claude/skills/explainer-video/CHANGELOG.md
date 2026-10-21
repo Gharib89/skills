@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.43.0 (2026-10-21)
+
+### Features
+
+- **explainer-video**: Browser component with a generic page and scripted actions
+  ([#922](https://github.com/Gharib89/skills/pull/922),
+  [`1334d16`](https://github.com/Gharib89/skills/commit/1334d1615ade21505fddf5c859cd5a720bef73c1))
+
+
 ## v0.42.0 (2026-10-20)
 
 ### Features
