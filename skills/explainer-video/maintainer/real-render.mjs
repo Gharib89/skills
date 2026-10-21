@@ -22,6 +22,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { sceneEvents } from "../scripts/gates/events.mjs";
+import { readingFindings } from "../scripts/gates/reading.mjs";
 import { HOLD } from "../scripts/lib/length.mjs";
 import { judge } from "../scripts/lib/layout.mjs";
 import { sampleTimes, seamStripStart } from "../scripts/lib/motion.mjs";
@@ -42,6 +43,7 @@ import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
+import { timeChecks } from "./real-render-time.mjs";
 
 const HALF = 1;
 const RATE = 24000;
@@ -346,90 +348,38 @@ check(
     .join("; "),
 );
 
-// The cursor's place is a function of time: each browser scene's frame 1.35 s
-// in, the cursor mid-move to the field, seeked twice, matches byte for byte and
-// differs from the frame 0.2 s later.
-const browsers = FIXTURE.map((p) => p.scene).filter(
-  (s) => s.visual.component === "browser",
-);
-const cursors = [];
-for (const { id } of browsers) {
-  const start = whole.scenes.find((s) => s.id === id).start;
-  const at = +(start + 1.35).toFixed(3);
-  const a = await seek(at, "cursor-a");
-  const b = await seek(at, "cursor-b");
-  const later = await seek(+(at + 0.2).toFixed(3), "cursor-later");
-  cursors.push([id, a.equals(b), !a.equals(later)]);
-}
-check(
-  "cursor",
-  cursors.every(([, same, moved]) => same && moved),
-  cursors
-    .map(
-      ([id, same, moved]) =>
-        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moved ? "moves" : "STILL"} 0.2 s later`,
-    )
-    .join("; "),
-);
+// A browser's cursor, an excerpt's lit sentence and a stack3d scene's WebGL
+// canvas are each a function of time (checks `cursor`, `lit`, `webgl`).
+const sceneOf = (component) =>
+  FIXTURE.map((p) => p.scene).filter((s) => s.visual.component === component);
+const browsers = sceneOf("browser");
+const excerpts = sceneOf("excerpt");
+const stacks = sceneOf("stack3d");
+await timeChecks({ whole, seek, check, browsers, excerpts, stacks });
 
-// The WebGL canvas is a function of time: each stack3d scene's frame 1.3 s in,
-// a layer mid-drop, rendered twice on SwiftShader as the determinism gate does,
-// matches byte for byte, and differs from the frame 0.2 s later. The canvas is
-// drawn, not blank: its frame, and the slot's last, differ from the first,
-// before any layer is in.
-const stacks = FIXTURE.map((p) => p.scene).filter(
-  (s) => s.visual.component === "stack3d",
-);
-const drawn = [];
-for (const { id } of stacks) {
-  const { start, slot } = whole.scenes.find((s) => s.id === id);
-  const at = +(start + 1.3).toFixed(3);
-  const a = await seek(at, "stack-a", true);
-  const b = await seek(at, "stack-b", true);
-  const later = await seek(+(at + 0.2).toFixed(3), "stack-later", true);
-  const empty = await seek(+(start + 0.05).toFixed(3), "stack-empty", true);
-  const last = await seek(
-    +(start + slot - 0.04).toFixed(3),
-    "stack-last",
-    true,
-  );
-  drawn.push([
-    id,
-    a.equals(b),
-    !a.equals(later),
-    !a.equals(empty) && !last.equals(empty),
-  ]);
-}
-check(
-  "webgl",
-  drawn.every((d) => d.slice(1).every(Boolean)),
-  drawn
-    .map(
-      ([id, same, moves, filled]) =>
-        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moves ? "moves" : "STILL"} 0.2 s later, ${filled ? "drawn" : "BLANK"}`,
-    )
-    .join("; "),
-);
-
-// The layout gate over the largest diagram's samples and each browser page's
-// and stack3d scene's, as the gates stage takes them: its text inside the safe
+// The layout gate over the largest diagram's samples, each browser page's, each
+// excerpt's (the longest one's reading is what the sizes were set for) and each
+// stack3d scene's, as the gates stage takes them: its text inside the safe
 // area, none clipped, small or stacked.
 const largest = diagrams.toSorted(
   (a, b) => b.visual.props.nodes.length - a.visual.props.nodes.length,
 )[0].id;
 const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
 const laid = [];
+const reads = [];
 for (const id of [
   largest,
   ...browsers.map((s) => s.id),
+  ...excerpts.map((s) => s.id),
   ...stacks.map((s) => s.id),
 ]) {
   const sc = whole.scenes.find((s) => s.id === id);
   const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
   const findings = [];
+  const frames = await backend.probe(whole.comp, times, { env });
   judge(
     await backend.check(whole.comp, times, { env }),
-    await backend.probe(whole.comp, times, { env }),
+    frames,
     floors(profile),
     // a finding is the scene's while its time is, as the gates stage files it
     (gate, t, what) => {
@@ -443,6 +393,17 @@ for (const id of [
     moving,
   );
   laid.push([id, times.length, [...new Set(findings)]]);
+  // Each sentence of an excerpt is one reading box (`data-line`), judged on its
+  // words as the gates stage judges a scene's text.
+  if (excerpts.some((s) => s.id === id))
+    reads.push([
+      id,
+      readingFindings(
+        { sc, times, end: sc.start + sc.duration },
+        frames,
+        moving,
+      ),
+    ]);
 }
 check(
   "layout",
@@ -454,9 +415,16 @@ check(
     )
     .join(" | "),
 );
+check(
+  "reading",
+  excerpts.length > 0 && reads.every(([, found]) => !found.length),
+  reads
+    .map(([id, found]) => `${id}: ${found.join("; ") || "no finding"}`)
+    .join(" | "),
+);
 
-// With REAL_RENDER_FRAMES set, save each timeline, compare, diagram and browser
-// scene's settled frame (3 s in) for a human to check the reading order;
+// With REAL_RENDER_FRAMES set, save each timeline, compare, diagram, browser and
+// excerpt scene's settled frame (3 s in) for a human to check the reading order;
 // nothing asserts it.
 if (process.env.REAL_RENDER_FRAMES)
   for (const id of [
@@ -465,6 +433,7 @@ if (process.env.REAL_RENDER_FRAMES)
     "arabic-compare",
     ...diagrams.map((s) => s.id),
     ...browsers.map((s) => s.id),
+    ...excerpts.map((s) => s.id),
     ...stacks.map((s) => s.id),
   ]) {
     const start = whole.scenes.find((s) => s.id === id).start;

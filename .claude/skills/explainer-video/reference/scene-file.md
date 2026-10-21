@@ -162,6 +162,26 @@ narrator: am_fenrir
     an Arabic run the page runs right to left and the URL stays left to
     right. Each number in the `url`, `title`, an element's `text` or typed
     text is a claim, held to a cited excerpt as a timeline's are.
+  - `excerpt`: a cited passage shown as proof (`cite*`, an excerpt id of
+    `excerpts.json`; `chips`, each `at*`, `on`, `cite*`; `emphasis`). It shows
+    the pack's own words, which the scene file names by id only, on a document
+    surface (a code one for a code excerpt) under a source line holding the
+    excerpt's locator. `cite` and each chip's `cite` must be ids the scene's
+    narration cites, and an id the pack lacks is refused; the scene file needs
+    `excerpts.json` beside it, so run the source stage first. Compile resolves
+    each text and locator into `script.json`, so a changed pack needs a compile
+    again. A chip is a numbered card with another excerpt's locator, popping
+    in on its cue; each names a different excerpt than the one shown and than
+    the other chips, and chips are numbered as written and cue in that order;
+    about 4 read well beside the document: guidance, not a limit. On its
+    `emphasis` cue the named unit lights, underlined word by word, and the rest
+    dim. A unit is a sentence, cut by the excerpt's own language, or a line for
+    a code excerpt: a `repo` source whose locator names a file that is not
+    prose (`md`, `mdx`, `markdown`, `txt`, `rst`, `adoc`). The passage shows as
+    one paragraph. Not rich, so a `camera` key is allowed. An excerpt reads
+    right to left when its own text is Arabic, in whatever language the run
+    speaks, and left to right otherwise; the locators and a code excerpt stay
+    left to right.
   - `stack3d`: lit layers stacked in 3D and drawn by Three.js on the GPU
     (`layers*`, 2 to 6, each `at*`, `label*`, `on`). The camera orbits slowly;
     each layer drops in on its `at` cue, with its `label` beside it; the first
@@ -172,14 +192,17 @@ narrator: am_fenrir
     `--browser-gpu`. Rich, so a `camera` key is refused; in an Arabic run the
     labels stand left of their layers. Each number in a `label` is a claim,
     held to a cited excerpt as a timeline's are.
-  - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
-    `code` (`title` and `codediff` take none): one callout per scene,
-    `{ "target*", "at*", "on" }`, drawn as a ring round the target with a
-    leader line, revealed on its cue. `target` is the text of one item (its
+  - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list`,
+    `code` and `excerpt` (`title` and `codediff` take none): one callout per
+    scene, `{ "target*", "at*", "on" }`, drawn as a ring round the target with
+    a leader line, revealed on its cue. `target` is the text of one item (its
     `label`; a panel's `title`; a `text` for a terminal line or list item),
     matched exactly, and refused when it matches no item or more than one, or
     when its cue falls before the item's own, the callout sitting inside it. On
-    `code` it is a line range, `[first, last]` counted from 1.
+    `code` it is a line range, `[first, last]` counted from 1. On `excerpt` it
+    is no ring: `target` names one unit of the cited excerpt (see `excerpt`),
+    a sentence's whitespace squashed before matching and a code line matched as
+    written, refused when it matches none or more than one.
 
 ## Style profiles
 
