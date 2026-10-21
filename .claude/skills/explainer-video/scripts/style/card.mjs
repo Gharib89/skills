@@ -1,7 +1,8 @@
 // The style card: a draft style profile shown on five sample frames (a title,
 // a diagram, a caption, a code frame and an Arabic frame) over the shared
-// layout, gated by the video gates' layout and contrast rules, then saved to a
-// store or used once.
+// layout, gated by the video gates' layout and contrast rules, each looping as
+// a live build, a sixth frame playing a seam, and each grammar field listed
+// with its mark; then saved to a store or used once.
 //
 //   node card.mjs <run-folder> <draft> build [--local] [--project]
 //   node card.mjs <run-folder> <draft> page [<url>]
@@ -55,6 +56,8 @@ import {
   weights,
 } from "../lib/tools.mjs";
 import { esc, framePage, sceneFile, stillsPage } from "../render/compose.mjs";
+import { liveBuild } from "./card-live.mjs";
+import { grammarRows } from "./grammar.mjs";
 
 const [run, draftName, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
@@ -471,7 +474,32 @@ for (const s of SAMPLES)
       dir: s.dir,
     }),
   });
-const media = fonts.map((f) => `style-draft/card/frames/fonts/${f.file}`);
+// The live build, one script holding every sample's scene and its fonts. A
+// build that differs from the last forgets the upload recorded for it.
+const live = await liveBuild({
+  comp: at("live"),
+  draft,
+  samples: SAMPLES,
+  fontRows,
+  backend,
+});
+fs.rmSync(at("live"), { recursive: true, force: true });
+const LIVE = "style-draft/card/live.js";
+const liveFile = path.join(run, LIVE);
+const changed =
+  !fs.existsSync(liveFile) || fs.readFileSync(liveFile, "utf8") !== live.script;
+fs.writeFileSync(liveFile, live.script);
+if (changed) {
+  const old = maybe(at("assets.json"));
+  if (old?.[LIVE]) {
+    delete old[LIVE];
+    write(at("assets.json"), old);
+  }
+}
+const media = [
+  ...fonts.map((f) => `style-draft/card/frames/fonts/${f.file}`),
+  LIVE,
+];
 const page = maybe(at("page.json"));
 const published = !!page && args[0] !== "--local";
 const assets = maybe(at("assets.json")) ?? {};
@@ -511,7 +539,17 @@ const doc = {
     file: f.file,
     url: published ? assets[media[i]] : `frames/fonts/${f.file}`,
   })),
-  frames: pages,
+  live: { url: published ? assets[LIVE] : "live.js" },
+  grammar: grammarRows(draft),
+  frames: [
+    ...pages.map((p) => ({ ...p, loop: live.loops[p.id] })),
+    {
+      id: "seam",
+      label: "Seam",
+      html: pages.find((p) => p.id === "diagram").html,
+      loop: live.loops.seam,
+    },
+  ],
   findings,
   scope,
   taken: fs.existsSync(store)
@@ -532,11 +570,11 @@ fs.writeFileSync(
       .replace(
         '<script type="application/json" id="card">null</script>',
         () =>
-          `<script type="application/json" id="card">${JSON.stringify({ ...doc, fonts: doc.fonts.map((f) => ({ ...f, url: `frames/fonts/${f.file}` })) }).replaceAll("<", "\\u003c")}</script>`,
+          `<script type="application/json" id="card">${JSON.stringify({ ...doc, fonts: doc.fonts.map((f) => ({ ...f, url: `frames/fonts/${f.file}` })), live: { url: "live.js" } }).replaceAll("<", "\\u003c")}</script>`,
       ),
 );
 console.log(
-  `card ${doc.version}: ${SAMPLES.length} frame(s), ${findings.length} finding(s) -> style-draft/card/${doc.version}.json`,
+  `card ${doc.version}: ${doc.frames.length} frame(s), ${findings.length} finding(s) -> style-draft/card/${doc.version}.json`,
 );
 for (const f of findings) console.log(`card ${f}`);
 console.log(

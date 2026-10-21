@@ -27,6 +27,8 @@ import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { oklab } from "../lib/style.mjs";
 import { catalogue, dest, hyperframesEnv, loadBackend } from "../lib/tools.mjs";
+import { decodePpm } from "./motion.mjs";
+import { readVideo } from "./video.mjs";
 
 const args = process.argv.slice(2);
 const run = args.shift();
@@ -175,6 +177,7 @@ const images = [];
 const declared = [];
 const fonts = [];
 const report = [];
+const motions = [];
 for (const [i, s] of given.entries()) {
   const kind = kinds[i];
   const id = idOf(s, kind);
@@ -194,9 +197,11 @@ for (const [i, s] of given.entries()) {
       const out = path.join(refs, id);
       const opts = { env: hyperframesEnv(), max: MAX };
       if (kind === "pdf") files = await backend.renderPdf(s, out, opts);
-      else if (kind === "video")
-        files = await backend.videoFrames(s, out, opts);
-      else {
+      else if (kind === "video") {
+        const v = await readVideo(backend, s, out, opts);
+        files = v.files;
+        motions.push({ source: s, ...v.motion });
+      } else {
         const site = await backend.capturePages(s, out, { ...opts, max: 5 });
         files = site.images;
         declared.push(...site.colors.map((hex) => ({ hex, kind, source: s })));
@@ -219,18 +224,10 @@ if (!errors.length && !images.length)
   );
 if (errors.length) stop();
 
-// A binary PPM's size and its RGB bytes, decoded once per image.
-function decode(buf) {
-  const m = buf
-    .subarray(0, 64)
-    .toString("latin1")
-    .match(/^P6\s+(\d+)\s+(\d+)\s+255\s/);
-  if (!m) throw new Error("not a binary PPM");
-  return { w: +m[1], h: +m[2], px: buf.subarray(m[0].length) };
-}
+// Each image decoded once.
 for (const img of images)
   try {
-    img.pixels = decode(await backend.ppm(img.file));
+    img.pixels = decodePpm(await backend.ppm(img.file));
   } catch (e) {
     refuse(img.source, `could not read ${img.name}: ${e.message}`);
   }
@@ -338,12 +335,27 @@ for (const { hex, ...d } of declared) {
 }
 const dropped = [...unconfirmed].filter((hex) => !confirmed.has(hex));
 
+// The videos' motion as one: cuts over the videos' whole length, blur and
+// grain averaged over the videos.
+const mean = (k) => motions.reduce((n, m) => n + m[k], 0) / motions.length;
+const motion = motions.length && {
+  cutsPerMinute:
+    Math.round(
+      (motions.reduce((n, m) => n + m.cuts, 0) /
+        motions.reduce((n, m) => n + m.duration, 0)) *
+        600,
+    ) / 10,
+  blurAtCuts: Math.round(mean("blurAtCuts") * 1e3) / 1e3,
+  grain: Math.round(mean("grain") * 1e3) / 1e3,
+};
+
 const out = path.join(draft, "candidates.json");
 fs.writeFileSync(
   out,
   JSON.stringify(
     {
       sources: given.map((source, i) => ({ kind: kinds[i], source })),
+      ...(motion && { motion }),
       images: images.map(({ name, source }) => ({ name, source })),
       fonts: [
         ...new Map(
@@ -361,6 +373,10 @@ fs.writeFileSync(
   ) + "\n",
 );
 for (const l of report) console.log(l);
+for (const m of motions)
+  console.log(
+    `style motion ${path.basename(m.source)}: ${m.cutsPerMinute} cuts/min · blur ${m.blurAtCuts} · grain ${m.grain}`,
+  );
 for (const c of [...surfaces, ...accents])
   console.log(
     `style candidate ${c.id}: ${c.hex} · ${Math.round(c.share * 1000) / 10}% · ${c.images.join(", ")}`,

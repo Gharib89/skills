@@ -67,6 +67,16 @@
         cancelAnimationFrame(raf);
         show(m.t);
       } else if (m.type === "run") run(m.from, m.to, m.loop);
+      else if (m.type === "css") {
+        // The page's edited palette, appended after the scene's own so it wins.
+        let s = document.getElementById("edits");
+        if (!s) {
+          s = document.createElement("style");
+          s.id = "edits";
+          document.head.append(s);
+        }
+        s.textContent = m.css;
+      }
     });
   });
   show(0);

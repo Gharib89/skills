@@ -55,10 +55,18 @@ token or type role. The page reads and writes nothing outside this table.
 | `card.fonts` | array | yes | The font files the frames load. |
 | `card.fonts[].file` | string | yes | The file name a frame's `url("fonts/<file>")` names. |
 | `card.fonts[].url` | string | yes | Where the page loads it from, a [media](#media) URL. |
-| `card.frames` | array | yes | The sample frames, in order: title, diagram, caption, code, Arabic. |
+| `card.live` | object | yes | The live build the frames play. |
+| `card.live.url` | string | yes | Where the page loads `live.js` from, a [media](#media) URL. |
+| `card.grammar` | array | yes | One entry per grammar field, in the order `scripts/style/grammar.mjs` lists them. |
+| `card.grammar[].field` | string | yes | The field's path under `grammar`, such as `seams.blur`. |
+| `card.grammar[].value` | string | yes | The value the draft plays, as text; a list joined by commas, `none` for an empty one. |
+| `card.grammar[].mark` | string | yes | How the field was reached: `measured`, `judged`, `bundled` (the profile states it with no mark) or `default` (the draft leaves it out). |
+| `card.grammar[].why` | string | yes | The mark's reason; empty for `default` and for a mark with none. |
+| `card.frames` | array | yes | The sample frames, in order: title, diagram, caption, code, Arabic, then a seam. |
 | `card.frames[].id` | string | yes | The frame id. |
 | `card.frames[].label` | string | yes | Its heading on the page. |
-| `card.frames[].html` | string | yes | The frame as a whole 1920x1080 page with no script, the draft's palette as `--<token>` properties on `:root`. |
+| `card.frames[].html` | string | yes | The frame as a whole 1920x1080 page with no script, the draft's palette as `--<token>` properties on `:root`. It stays the frame's poster until the live build mounts. |
+| `card.frames[].loop` | array | yes | `[from, to]` in seconds: the stretch of the live build the frame loops, a sample's own scene through its exit seam, and for the seam frame the title-to-diagram seam with half a second either side. |
 | `card.findings` | array | yes | Each layout or contrast finding as `<gate> <frame>: <what>`; empty when every frame passed. |
 | `card.scope` | `"user"` or `"project"` | yes | The store Save writes to. |
 | `card.taken` | array | yes | The profile names that store holds already. |
@@ -109,3 +117,7 @@ the artifact page each is the URL the asset upload returned, recorded with
 --local` or before a page is recorded, each is `frames/fonts/<file>`, relative
 to the card folder. The page drops a URL that is not `https:`, `/_blob/` or a
 relative path, or that holds a quote, a bracket, a backslash or a space.
+`live.url` is the live build the same way: the uploaded URL on the artifact
+page, recorded with `card.mjs asset style-draft/card/live.js=<url>`, and
+`live.js` beside the page otherwise. A build that changes `live.js` drops its
+recorded upload, so upload it again.

@@ -29,8 +29,8 @@ async function boot() {
   // Each frame is drawn at 1920x1080 and scaled to its box.
   function fit() {
     document.querySelectorAll(".frame").forEach((b) => {
-      const f = b.firstElementChild;
-      if (f) f.style.transform = `scale(${b.clientWidth / 1920})`;
+      for (const f of b.children)
+        f.style.transform = `scale(${b.clientWidth / 1920})`;
     });
   }
   // Live colours: the frames keep their documents and take the edited palette.
@@ -40,6 +40,93 @@ async function boot() {
       const s = f.contentDocument && f.contentDocument.getElementById("edits");
       if (s) s.textContent = paletteCss(S);
     });
+    for (const el of lives())
+      if (el.dataset.ready) say(el, { type: "css", css: paletteCss(S) });
+  }
+
+  // ---- live builds. The build is a script asset, so it loads the same from a published page and from
+  // file:. It plays in a frame with no origin: the page hands it fonts and commands by postMessage.
+  // page-boot.js holds the same mechanics for the storyboard's frames: a fix to one belongs in both. ----
+  let loaded = null,
+    loadedUrl = null;
+  function loadBuild(c) {
+    const url = buildUrl(c);
+    if (!url) return Promise.resolve(null);
+    if (loadedUrl !== url) {
+      loadedUrl = url;
+      loaded = new Promise((done) => {
+        const el = document.createElement("script");
+        el.src = url;
+        el.onload = () => done(window.__build);
+        el.onerror = () => done(null);
+        document.head.append(el);
+      });
+    }
+    return loaded;
+  }
+  // Each face's bytes are decoded once and sent as a copy: a transfer would empty the original.
+  const fontsOf = (build) => {
+    build.bytes ||= build.fonts.map((x) => ({
+      ...x,
+      data: Uint8Array.from(atob(x.data), (c) => c.charCodeAt(0)).buffer,
+    }));
+    return build.bytes.map((x) => ({ ...x, data: x.data.slice(0) }));
+  };
+  // `data-play`, not `data-live`: refresh() swaps the data-live parts while the
+  // user types, and a swapped playing iframe would come back empty.
+  const lives = () => [...document.querySelectorAll("iframe[data-play]")];
+  const say = (el, m) =>
+    el.contentWindow && el.contentWindow.postMessage(m, "*");
+  async function mount() {
+    const todo = lives().filter((el) => !el.dataset.started);
+    if (!todo.length) return;
+    todo.forEach((el) => (el.dataset.started = "1"));
+    const build = await loadBuild(latest(S));
+    if (build)
+      for (const el of todo) if (el.isConnected) el.srcdoc = build.html;
+  }
+  addEventListener("message", async (e) => {
+    const el = lives().find((x) => x.contentWindow === e.source);
+    const type = el && e.data && e.data.type;
+    if (type === "ready") {
+      const build = await loadBuild(latest(S));
+      if (build) say(el, { type: "fonts", fonts: fontsOf(build) });
+    } else if (type === "shown") {
+      el.dataset.ready = "1";
+      const [from, to] = latest(S).frames.find(
+        (f) => f.id === el.dataset.play,
+      ).loop;
+      say(el, { type: "css", css: paletteCss(S) });
+      say(el, { type: "run", from, to, loop: true });
+    }
+  });
+  // One frame plays its build, the one most in view; the rest show their poster.
+  const ratios = {};
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries)
+        ratios[e.target.dataset.stage] = e.isIntersecting
+          ? e.intersectionRatio
+          : 0;
+      const cur = Object.keys(S.inView)[0] || null;
+      const top = Object.keys(ratios).reduce(
+        (m, id) => (ratios[id] > (ratios[m] || 0) ? id : m),
+        "",
+      );
+      const pick = cur && ratios[cur] >= 0.5 ? cur : top;
+      const next = pick && ratios[pick] >= 0.5 ? pick : null;
+      if (next === cur) return;
+      S.inView = next ? { [next]: true } : {};
+      render();
+    },
+    { threshold: [0, 0.5, 1] },
+  );
+  function watch() {
+    io.disconnect();
+    for (const k of Object.keys(ratios)) delete ratios[k];
+    document
+      .querySelectorAll(".frame[data-stage]")
+      .forEach((el) => io.observe(el));
   }
   function render() {
     const f = document.activeElement,
@@ -52,6 +139,8 @@ async function boot() {
     if (el) el.focus({ preventScroll: true });
     fit();
     repaint();
+    watch();
+    mount();
   }
   // While typing: only the parts that follow the edit change, so the input keeps its caret.
   function refresh() {

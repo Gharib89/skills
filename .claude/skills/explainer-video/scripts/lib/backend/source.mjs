@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { skill, toolPaths, torchDevice } from "../tools.mjs";
 import { findChrome } from "./browser.mjs";
 import { fromCache, ffmpeg } from "./common.mjs";
+import { ffprobe } from "./media.mjs";
 
 // The source stage's readers, each one format to text or HTML; the stage turns
 // HTML to Markdown through toMarkdown and splits each snapshot by locator.
@@ -256,6 +257,35 @@ export async function videoFrames(file, out, { max }) {
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+}
+
+// A video's length in seconds and its cuts: the times its scene score passes
+// 0.3, the same threshold `videoFrames` cuts frames at.
+export async function videoCuts(file) {
+  const log = ffmpeg([
+    ...["-i", file, "-an", "-vf", "select='gt(scene,0.3)',showinfo"],
+    ...["-f", "null", "-"],
+  ]);
+  const duration = (await ffprobe(file)).format?.duration;
+  if (!(+duration > 0)) throw new Error(`ffprobe ${file}: no duration`);
+  return {
+    duration: +duration,
+    cuts: [...log.matchAll(/showinfo.*pts_time:([\d.]+)/g)].map((m) => +m[1]),
+  };
+}
+
+// One 1440-wide frame of a video at each of `times`, written `<out>-<n>.png`
+// in order.
+export async function videoStills(file, out, times) {
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  return times.map((t, n) => {
+    const f = `${out}-${n + 1}.png`;
+    ffmpeg([
+      ...["-ss", String(Math.max(0, t)), "-i", file, "-frames:v", "1"],
+      ...["-vf", "scale=1440:-2", "-y", f],
+    ]);
+    return f;
+  });
 }
 
 // An image decoded to a binary PPM at most 480 wide, each pixel a colour the
