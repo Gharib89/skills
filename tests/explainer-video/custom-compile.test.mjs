@@ -157,6 +157,14 @@ test("the numbers a custom scene shows are its fragment's text, held to a cited 
   assert.deepEqual(VISUALS.custom.numbers({}), []);
 });
 
+test("a number the script writes is a claim too, and a counter's start at 0 is not", () => {
+  const source =
+    '<p class="n">0</p><script>tl.fromTo($(".n"), { textContent: 0 }, { textContent: 87, duration: 1 }, 0); tl.set($(".m"), { textContent: 42 }, 0);</script>';
+  assert.deepEqual(VISUALS.custom.numbers({ source }), ["0", "87", "42"]);
+  assert.deepEqual(VISUALS.custom.shown({ source }), ["0 87 42"]);
+  assert.deepEqual(VISUALS.custom.shown({}), [""]);
+});
+
 test("a fragment that moves the frame or blurs is refused by the profile's ban on that technique, and a ban on custom refuses it whole", () => {
   const blurry = "<style>.a { filter: blur(4px); }</style><p class='a'>x</p>";
   assert.equal(

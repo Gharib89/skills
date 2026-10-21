@@ -60,6 +60,23 @@ export const fragmentText = (src) =>
     .replace(/\s+/g, " ")
     .trim();
 
+// A value the script writes into an element's text.
+const WRITTEN =
+  /\b(?:textContent|innerText|innerHTML)\s*[:=]\s*(?:(["'`])((?:(?!\1).)*)\1|(-?[\d.]+))/g;
+
+// What a viewer reads: the fragment's text, and the values its script writes
+// into an element, as a counter does. A bare 0 is a counter's start, not a
+// claim.
+export const shownText = (src) =>
+  [
+    fragmentText(src),
+    ...[...splitFragment(src).script.matchAll(WRITTEN)]
+      .map((m) => (m[2] ?? m[3]).replace(/<[^>]*>/g, " "))
+      .filter((v) => v !== "0"),
+  ]
+    .join(" ")
+    .trim();
+
 const NAMED = new Set(
   `aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen`.split(
     " ",
@@ -140,6 +157,15 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
       fail(
         `time source ${name}: a frame is a function of the timeline's time alone`,
       );
+  // A tween made on `gsap` or a legacy class runs on wall time, outside the
+  // paused `tl` the render seeks.
+  const loose = code.match(
+    /\bgsap\s*\.\s*(?!utils\b|registerPlugin\b)[A-Za-z]\w*|\b(?:TweenMax|TweenLite|TimelineMax|TimelineLite)\b/,
+  );
+  if (loose)
+    fail(
+      `off the timeline ${loose[0].replace(/\s+/g, "")}: add the tween to the timeline \`tl\``,
+    );
   if (/\.animate\s*\(/.test(code))
     fail("web animation .animate(): add the tween to the timeline `tl`");
   if (/<animate(?:Transform|Motion)?\b|<set\b/i.test(markup))

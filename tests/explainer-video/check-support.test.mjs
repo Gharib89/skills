@@ -142,6 +142,43 @@ test("every must-include item is said or shown and no avoid item is", () => {
   );
 });
 
+test("a custom scene counts as showing only the text a viewer reads, not its style or script", () => {
+  const withSource = (brief, source) => {
+    const fx = fixture({ brief });
+    const file = path.join(fx.dir, "script.json");
+    const s = JSON.parse(fs.readFileSync(file, "utf8"));
+    s.scenes[1].visual = {
+      component: "custom",
+      props: { file: "scenes/a.html", intent: "a scene", source },
+    };
+    fs.writeFileSync(file, JSON.stringify(s));
+    return check(fx);
+  };
+  // a must term in the script's code, or an avoid term in a class name, is not
+  // on screen
+  let r = withSource(
+    ["length=1", "must=Codex"],
+    "<p>hello</p><script>const brand = 'Codex';</script>",
+  );
+  assert.equal(
+    line(r, "coverage"),
+    'script coverage: fail: must "Codex" is not said or shown',
+  );
+  r = withSource(
+    ["length=1", "must=local gate", "avoid=pricing"],
+    "<p class='pricing'>hello</p><style>.pricing { opacity: 1; }</style>",
+  );
+  assert.match(line(r, "coverage"), /^script coverage: pass/);
+  // the text it shows does count, and so does a text its script writes
+  r = withSource(["length=1", "must=Codex"], "<p>Codex</p>");
+  assert.match(line(r, "coverage"), /^script coverage: pass/);
+  r = withSource(
+    ["length=1", "avoid=pricing"],
+    "<p class='n'>x</p><script>tl.set($('.n'), { textContent: 'pricing' }, 0);</script>",
+  );
+  assert.match(line(r, "coverage"), /^script coverage: fail: avoid "pricing"/);
+});
+
 test("the script gate no longer judges reading time: a card on screen for 0.6 s, which failed it before, passes", () => {
   const r = check(
     fixture({

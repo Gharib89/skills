@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   fragmentText,
   lintFragment,
+  shownText,
   splitFragment,
   techniquesIn,
 } from "../../skills/explainer-video/scripts/lib/fragment.mjs";
@@ -105,6 +106,25 @@ test("each time source is refused in the script, named", () => {
   assert.doesNotThrow(() => lint("<p>Date.now() reads the clock</p>"));
 });
 
+test("a tween off the scene's timeline is refused, since it runs on wall time", () => {
+  for (const [code, name] of [
+    ['gsap.to($("div"), { opacity: 0 });', "gsap.to"],
+    ['gsap.fromTo($("div"), { x: 0 }, { x: 9 });', "gsap.fromTo"],
+    ['gsap.set($("div"), { opacity: 0 });', "gsap.set"],
+    ["const t = gsap.timeline();", "gsap.timeline"],
+    ['TweenMax.to($("div"), 1, { x: 1 });', "TweenMax"],
+    ["new TimelineLite();", "TimelineLite"],
+  ])
+    bad(js(code), new RegExp(`off the timeline ${name.replace(".", "\\.")}`));
+  // the scene's own `tl`, a gsap utility and plain text are not off-timeline
+  assert.doesNotThrow(() =>
+    lint(
+      js('const f = gsap.utils.interpolate(0, 9); tl.to($("a"), { x: 1 });'),
+    ),
+  );
+  assert.doesNotThrow(() => lint("<p>gsap.to is a tween</p>"));
+});
+
 test("a CSS animation, a transition, keyframes, a web animation and an SVG animation are refused", () => {
   bad(css(".a { animation: spin 1s; }"), /CSS animation/);
   bad(css(".a { animation-delay: 1s; }"), /CSS animation/);
@@ -121,7 +141,7 @@ test("a CSS animation, a transition, keyframes, a web animation and an SVG anima
     js('tl.to($(".a"), { opacity: 1, transition: "all 1s" }, 0);'),
     /CSS transition/,
   );
-  bad(js('gsap.set($(".a"), { animationName: "spin" });'), /CSS animation/);
+  bad(js('tl.set($(".a"), { animationName: "spin" });'), /CSS animation/);
 });
 
 test("a script that does not parse is refused at compile, and a commented-out block is neither linted nor played", () => {
@@ -220,4 +240,22 @@ test("the text a fragment shows is its markup without tags, styles and scripts",
     ),
     "Ship 12 & more",
   );
+});
+
+test("the text a fragment shows also holds what its script writes, but not a counter's start at 0", () => {
+  assert.equal(
+    shownText(
+      '<p class="n">0</p><script>tl.set($(".n"), { textContent: 42 }, 0); el.innerHTML = "1,200 files"; x.innerText = \'ok\';</script>',
+    ),
+    "0 42 1,200 files ok",
+  );
+  const counter =
+    '<p class="n">0</p><script>tl.fromTo($(".n"), { textContent: 0 }, { textContent: 87, duration: 1 }, 0);</script>';
+  assert.equal(shownText(counter), "0 87");
+  // a start that is bare zero says nothing; a written zero in a string too
+  assert.equal(
+    shownText('<script>tl.set(a, { textContent: "0" }, 0);</script>'),
+    "",
+  );
+  assert.equal(shownText("<p>plain</p><script>const n = 7;</script>"), "plain");
 });

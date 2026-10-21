@@ -8,7 +8,7 @@
 import { plain } from "./count.mjs";
 import { checkCustom } from "./custom.mjs";
 import { checkDiagram } from "./diagram.mjs";
-import { fragmentText } from "./fragment.mjs";
+import { shownText } from "./fragment.mjs";
 import {
   CUE,
   cue,
@@ -458,7 +458,8 @@ export const VISUALS = {
     ownCamera: true,
     check: checkCustom,
     items: () => [],
-    numbers: (p) => numbersIn([fragmentText(p.source ?? "")]),
+    numbers: (p) => numbersIn([shownText(p.source ?? "")]),
+    shown: (p) => [shownText(p.source ?? "")],
   },
 };
 

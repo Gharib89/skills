@@ -87,7 +87,9 @@ markup, one `<style>` of plain rules, and one `<script>`:
 - **Show text.** A scene that shows none at any sample is a hard error, since
   captions do not count. A number in that text is a claim, held to an excerpt
   the scene cites, as in a chart ([scene-file.md](scene-file.md)): `6 of 6
-  pass` needs a cited excerpt that says it.
+  pass` needs a cited excerpt that says it. So is a number the script writes
+  into an element's text (`textContent`, `innerText`, `innerHTML`), such as a
+  counter's end value; a counter's start at 0 is not.
 - **No camera key**, and moving `$()` (the whole content) counts as a camera: a
   profile that bans `camera` refuses it. A profile's other bans reach the
   fragment too, by what it writes: `draw` by `stroke-dasharray`,
@@ -105,6 +107,9 @@ frame. Keep every move on `tl`.
 
 - No `Date.now`, `Math.random`, `performance.now`, `setTimeout`,
   `setInterval`, `requestAnimationFrame` or `gsap.ticker`: each is refused.
+- No `gsap.to`, `gsap.set`, `gsap.timeline` or other call on `gsap`, and no
+  `TweenMax` or `TimelineLite`: such a tween runs on wall time, outside the
+  paused `tl`. Add it to `tl`. `gsap.utils` is fine.
 - No CSS `animation`, `transition` or `@keyframes`, no `.animate()`, no SVG
   animate element.
 - Set a start state with `tl.set(...)` or the `from` side of `tl.fromTo(...)`,
