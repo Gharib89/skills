@@ -3,14 +3,14 @@
 // cited id to the pack's own text and locator and keeps them in script.json,
 // for a later stage to play what was checked.
 import { CUE, cue, fail, known, named, object, place } from "./props.mjs";
+import { FORMS, squash } from "../source/locators.mjs";
 import { ARABIC_SCRIPT } from "./terms.mjs";
 
-// The kinds the source stage gives a source (`kindOf` in source/snapshot.mjs).
-const KINDS = ["page", "repo", "pdf", "md", "txt", "html", "docx", "pptx"];
+// The kinds the source stage gives a source: those with a locator form.
+const KINDS = Object.keys(FORMS);
 // A repo source holds code unless the file it names is prose.
 const PROSE_FILE = /\.(?:md|mdx|markdown|txt|rst|adoc)(?::[\d-]+)?$/i;
 const EMPHASIS = ["target", ...CUE];
-export const squash = (s) => s.replace(/\s+/g, " ").trim();
 
 // The language an excerpt reads in, by its own script and not the run's: an
 // English README quoted in an Arabic run is still left to right.

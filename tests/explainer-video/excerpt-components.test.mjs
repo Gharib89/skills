@@ -9,6 +9,7 @@ import {
   VISUALS,
   checkVisual,
 } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
+import { FORMS } from "../../skills/explainer-video/scripts/source/locators.mjs";
 import {
   resolveExcerpts,
   units,
@@ -95,11 +96,11 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
     // a source of no known kind would read a repo's code as prose
     [
       { sources: [{ id: "notes" }], excerpts: [] },
-      /excerpts.json source 1 needs a kind: page, repo, pdf, md, txt, html, docx or pptx/,
+      /excerpts.json source 1 needs a kind: pdf, pptx, md, txt, html, docx, page or repo/,
     ],
     [
       { sources: [{ id: "notes", kind: "rep" }], excerpts: [] },
-      /excerpts.json source 1 needs a kind: page, repo, pdf, md, txt, html, docx or pptx/,
+      /excerpts.json source 1 needs a kind: pdf, pptx, md, txt, html, docx, page or repo/,
     ],
     // a source the pack lacks would read a code excerpt as prose
     [
@@ -123,6 +124,20 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
     /excerpts.json cannot be read: /,
     ctx({ read: () => "not json" }),
   );
+});
+
+test("every kind the source stage gives a source is a kind a pack may hold", () => {
+  for (const kind of Object.keys(FORMS)) {
+    const held = {
+      sources: [{ id: "s", kind }],
+      excerpts: [{ id: "ex-1", source: "s", locator: "l", text: "T." }],
+    };
+    assert.doesNotThrow(
+      () =>
+        checkVisual(excerpt(), said, ctx({ read: () => JSON.stringify(held) })),
+      kind,
+    );
+  }
 });
 
 test("a cite the pack lacks, or the narration does not make, is refused", () => {
