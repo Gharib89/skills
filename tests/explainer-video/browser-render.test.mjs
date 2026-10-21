@@ -153,7 +153,9 @@ test("with no room before the next cue, the typed words still appear whole, toge
   );
   const words = list.filter(([s]) => /^\.tw\d+$/.test(s));
   assert.equal(words.length, 2);
-  assert.equal(words[0][2].delay, words[1][2].delay);
+  // both land as the cursor arrives, 0.6 s after the cue (the move shortened to
+  // the click's cue)
+  assert.deepEqual([words[0][2].delay, words[1][2].delay], [0.6, 0.6]);
 });
 
 test("a click ripples at its target once the cursor has arrived, and a move ripples nowhere", async () => {

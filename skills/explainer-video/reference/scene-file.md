@@ -140,7 +140,7 @@ narrator: am_fenrir
     `target` names by id, then a `click` rings out and a `type` action
     (`text*`, onto a `field` only) brings its words in one whole word at a
     time, quicker when the next action or the scene's end is near and all
-    together when none is left, the field's own `text` giving way to them.
+    together when no time is left, the field's own `text` giving way to them.
     Only a `type` takes
     `text`. Actions cue in the order written, each strictly after the last,
     since one cursor plays them all; an id no element holds, an id used twice
