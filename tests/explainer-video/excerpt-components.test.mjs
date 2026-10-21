@@ -75,18 +75,22 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
   // each entry holds what an excerpt scene reads of it
   const entry = { id: "ex-1", source: "notes", locator: "l", text: "T." };
   for (const [held, why] of [
-    [{ sources: [null], excerpts: [] }, /source 1 needs an id/],
+    [{ sources: [null], excerpts: [] }, /excerpts.json source 1 needs an id/],
     [
       { sources: [], excerpts: [{ ...entry, text: undefined }] },
-      /excerpt 1 needs a text/,
+      /excerpts.json excerpt 1 needs text/,
     ],
     [
       { sources: [], excerpts: [{ ...entry, locator: 7 }] },
-      /excerpt 1 needs a locator/,
+      /excerpts.json excerpt 1 needs a locator/,
     ],
     [
       { sources: [], excerpts: [{ ...entry, id: "" }] },
-      /excerpt 1 needs an id/,
+      /excerpts.json excerpt 1 needs an id/,
+    ],
+    [
+      { sources: [], excerpts: [{ ...entry, text: "  " }] },
+      /excerpts.json excerpt 1 needs text/,
     ],
   ])
     bad(excerpt(), why, ctx({ read: () => JSON.stringify(held) }));

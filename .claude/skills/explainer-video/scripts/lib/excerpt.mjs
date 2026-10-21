@@ -50,16 +50,14 @@ function load(read) {
   }
   if (!Array.isArray(pack?.sources) || !Array.isArray(pack?.excerpts))
     fail("excerpts.json must hold a sources list and an excerpts list");
-  const has = (v) => typeof v === "string" && v !== "";
-  pack.sources.forEach((s, i) => {
-    if (!has(s?.id)) fail(`excerpts.json source ${i + 1} needs an id`);
-  });
+  pack.sources.forEach((s, i) =>
+    named(`excerpts.json source ${i + 1}`, s?.id, "an id"),
+  );
   pack.excerpts.forEach((x, i) => {
-    for (const field of ["id", "text", "locator"])
-      if (!has(x?.[field]))
-        fail(
-          `excerpts.json excerpt ${i + 1} needs ${field === "id" ? "an" : "a"} ${field}`,
-        );
+    const at = `excerpts.json excerpt ${i + 1}`;
+    named(at, x?.id, "an id");
+    named(at, x?.text, "text");
+    named(at, x?.locator, "a locator");
   });
   const kind = new Map(pack.sources.map((s) => [s.id, s.kind]));
   return new Map(
