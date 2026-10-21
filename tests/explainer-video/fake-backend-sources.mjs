@@ -138,3 +138,61 @@ export async function videoFrames(file, out, { max }) {
   log({ call: "videoFrames", file: path.basename(file), max });
   return frames(out, max);
 }
+
+// EXPLAINER_VIDEO_FAKE_VIDEO maps a video's file name to `{ duration, cuts,
+// blur, grain }`: its cuts in seconds, the blur (0 to 1) of the frames just
+// before each, and the grain (0 to 1) of every frame. A video it does not
+// name is 10 s with no cut, sharp and clean.
+const video = (file) => ({
+  duration: 10,
+  cuts: [],
+  blur: 0,
+  grain: 0,
+  ...JSON.parse(process.env.EXPLAINER_VIDEO_FAKE_VIDEO ?? "{}")[
+    path.basename(file)
+  ],
+});
+export async function videoCuts(file) {
+  log({ call: "videoCuts", file: path.basename(file) });
+  const { duration, cuts } = video(file);
+  return { duration, cuts };
+}
+
+// Each still a 96 by 54 PPM, a cream half beside a dark one, the edge spread
+// over 20 px at full blur in the frames within 0.2 s before a cut, and uniform
+// noise on every pixel at the grain's strength (12 levels of RMS at 1).
+export async function videoStills(file, out, times) {
+  log({ call: "videoStills", file: path.basename(file), times });
+  const { cuts, blur, grain } = video(file);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  return times.map((t, n) => {
+    const soft = cuts.some((c) => t > c - 0.2 && t < c) ? blur * 20 : 0;
+    const amp = grain * 12 * Math.sqrt(3);
+    let seed = n + 1;
+    const rand = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32;
+    const [w, h] = [96, 54];
+    const px = Buffer.alloc(w * h * 3);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const k = soft
+          ? Math.min(1, Math.max(0, (x - w / 2 + soft) / (2 * soft)))
+          : +(x >= w / 2);
+        // One draw a pixel, so the grain is luma noise, not colour noise.
+        const noise = (rand() - 0.5) * 2 * amp;
+        for (const [c, [a, b]] of [
+          [0xf5, 0x14],
+          [0xf4, 0x14],
+          [0xed, 0x13],
+        ].entries()) {
+          const v = a + (b - a) * k + noise;
+          px[(y * w + x) * 3 + c] = Math.min(255, Math.max(0, Math.round(v)));
+        }
+      }
+    const f = `${out}-${n + 1}.png`;
+    fs.writeFileSync(
+      f,
+      Buffer.concat([Buffer.from(`P6\n${w} ${h}\n255\n`), px]),
+    );
+    return f;
+  });
+}
