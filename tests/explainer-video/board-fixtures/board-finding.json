@@ -142,7 +142,8 @@
       "role": "point",
       "seconds": 12.1,
       "narration": "1. It reads the issue. [ex-1]\n2. It writes a failing test. [ex-2]\n3. Then the code makes it pass. [ex-5]",
-      "style": "words · past the default · claude-code · am_fenrir",
+      "style": "custom · past the default · claude-code · am_fenrir",
+      "intent": "three steps land in turn, each on its sentence",
       "still": ".cache/stills/steps.png",
       "audio": ".cache/voice/steps.wav",
       "start": 9.4,
@@ -152,7 +153,7 @@
       "recommendation": "approve",
       "menus": {
         "component": {
-          "pick": "words",
+          "pick": "custom",
           "options": [
             "title",
             "cards",

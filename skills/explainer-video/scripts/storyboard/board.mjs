@@ -266,6 +266,9 @@ const cards = script.scenes.map((s, i) => ({
   // card, so it is marked past the default.
   style: `${s.visual.component}${rich(s) ? " · past the default" : ""} · ${profile} · ${voice.narrator}`,
   rich: rich(s),
+  // A custom scene's own line of what it shows, so the card says what the
+  // frame is meant to do.
+  ...(s.visual.component === "custom" && { intent: s.visual.props.intent }),
   menus: cardMenus(s, style, plan[i].out, i === script.scenes.length - 1),
   still: stills.scenes.find((x) => x.id === s.id).still,
   audio: voice.scenes[i].audio,

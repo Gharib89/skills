@@ -355,6 +355,7 @@ test("every field the page reads is documented, and it reads the ones it renders
     "board.scenes[].role",
     "board.scenes[].seconds",
     "board.scenes[].style",
+    "board.scenes[].intent",
     "board.scenes[].audio",
     "board.scenes[].start",
     "board.scenes[].slot",
