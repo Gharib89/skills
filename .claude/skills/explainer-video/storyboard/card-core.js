@@ -19,6 +19,7 @@ function newState(title) {
     mode: "loading",
     canEdit: true,
     local: false,
+    inView: {},
   };
 }
 const latest = (S) => S.cards[S.cards.length - 1];
@@ -190,6 +191,8 @@ function mediaUrl(u) {
   if (/^https:/i.test(s) || s.startsWith("/_blob/")) return s;
   return /^[a-z][a-z0-9+.-]*:/i.test(s) || s.startsWith("/") ? "" : s;
 }
+// The live build's script URL, or "" when it is not one a page may load.
+const buildUrl = (c) => mediaUrl(c.live && c.live.url);
 // The edited palette as CSS: the frame's own palette comes first, so this one wins.
 const paletteCss = (S) =>
   ":root { " +
@@ -231,16 +234,17 @@ function view(S) {
     );
   return `<div class="wrap">
     <header class="hdr"><span class="label">explainer-video · style card ${esc(c.version)}</span><h1>${esc(c.label)}</h1>
-      <p class="lede">The draft profile on five sample frames. Edit a colour or a font right here, then save the profile, use it once for this video, or ask for a revision.</p>
+      <p class="lede">The draft profile on sample frames that play live as they come into view, the last across a seam. Edit a colour or a font right here, then save the profile, use it once for this video, or ask for a revision.</p>
       ${c.source ? `<p class="label">${esc(c.source)}</p>` : ""}
       ${S.canEdit ? "" : '<p class="label">Only an editor of this page answers its cards.</p>'}</header>
     ${c.findings.length ? `<div class="banner panel" role="alert"><b>These frames break the video gates' layout rules, so Save and Use once wait for an edit or a revision.</b><pre>${c.findings.map(esc).join("\n")}</pre></div>` : ""}
     <section class="frames" id="frames">${c.frames
       .map(
         (f) =>
-          `<figure class="shot panel"><span class="label">${esc(f.label)}</span><div class="frame"><iframe sandbox="allow-same-origin" title="${esc(f.label)} frame" data-frame="${esc(f.id)}" srcdoc="${esc(frameDoc(S, f))}"></iframe></div></figure>`,
+          `<figure class="shot panel"><span class="label">${esc(f.label)}</span><div class="frame" data-stage="${esc(f.id)}"><iframe sandbox="allow-same-origin" title="${esc(f.label)} frame" data-frame="${esc(f.id)}" srcdoc="${esc(frameDoc(S, f))}"></iframe>${S.inView[f.id] ? `<iframe sandbox="allow-scripts" class="live" title="${esc(f.label)} playing" data-live="${esc(f.id)}"></iframe>` : ""}</div></figure>`,
       )
       .join("")}</section>
+    ${grammarPanel(c)}
     ${palettePanel(S, c)}
     ${typePanel(S, c)}
     ${decision(S, c)}
@@ -256,6 +260,16 @@ function contrastNote(S) {
       ? `<ul class="fails" role="alert">${bad.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`
       : '<p class="ok-line">Every colour passes contrast by role.</p>'
   }</div>`;
+}
+// Each grammar field with how it was reached; the page edits none of them.
+function grammarPanel(c) {
+  return `<section class="edit panel"><h2>Grammar</h2><div class="rows">${c.grammar
+    .map(
+      (g) =>
+        `<div class="grow"><span class="label">${esc(g.field)}</span>
+      <span>${esc(g.value)}</span><span class="why"><span class="tag${g.mark === "measured" || g.mark === "judged" ? " accent" : ""}">${esc(g.mark)}</span>${g.why ? `<span>${esc(g.why)}</span>` : ""}</span></div>`,
+    )
+    .join("")}</div></section>`;
 }
 function palettePanel(S, c) {
   const d = draftOf(S),

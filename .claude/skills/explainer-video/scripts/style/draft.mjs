@@ -39,6 +39,7 @@ import {
   floors,
   fromOklab,
   oklab,
+  validate,
 } from "../lib/style.mjs";
 import {
   LICENCES,
@@ -50,6 +51,7 @@ import {
   skill,
   weights,
 } from "../lib/tools.mjs";
+import { grammarOf, judgedProblems, measuredFields } from "./grammar.mjs";
 
 const [run, name] = process.argv.slice(2);
 if (!run || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name ?? "")) {
@@ -93,10 +95,19 @@ for (const t of ["bg", "text"])
     errors.push(
       `style role ${t}: required, every reference image shows a ground and its text`,
     );
+// The grammar: the seam and grain fields the reference video's motion sets,
+// the fields the agent judged in grammar.json, every other left to the
+// default.
+const measured = found.motion ? measuredFields(found.motion) : {};
+const judged = fs.existsSync(path.join(dir, "grammar.json"))
+  ? read("grammar.json")
+  : {};
+errors.push(...judgedProblems(judged, measured));
 if (errors.length) {
   for (const e of errors) console.error(e);
   process.exit(1);
 }
+const { grammar, grammarMarks } = grammarOf(measured, judged);
 
 const colors = {};
 const marks = {};
@@ -296,11 +307,18 @@ const profile = {
   colors: Object.fromEntries(TOKENS.map((t) => [t, colors[t]])),
   marks: Object.fromEntries(TOKENS.map((t) => [t, marks[t]])),
   type,
+  ...(grammar && { grammar, grammarMarks }),
   ...(carried.size && { fonts: [...carried.values()] }),
 };
 const bad = failures(profile);
 if (bad.length) {
   console.error(`style: the draft fails contrast: ${bad.join("; ")}`);
+  process.exit(1);
+}
+try {
+  validate(profile);
+} catch (e) {
+  console.error(`style: ${e.message}`);
   process.exit(1);
 }
 // Each carried family into the font store render reads, unless it holds the
@@ -334,4 +352,10 @@ for (const t of TOKENS)
   console.log(`style ${t}: ${colors[t]} · ${marks[t].mark} · ${marks[t].why}`);
 for (const [r, { font, mark, why }] of Object.entries(type))
   if (mark) console.log(`style type ${r}: ${font} · ${mark} · ${why}`);
+for (const [p, { mark, why }] of Object.entries(grammarMarks ?? {}))
+  console.log(
+    `style grammar ${p}: ${JSON.stringify(
+      p.split(".").reduce((g, k) => g[k], grammar),
+    ).replaceAll('"', "")} · ${mark} · ${why}`,
+  );
 console.log(`style: draft ${name} -> ${out}`);
