@@ -188,8 +188,10 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
       fail(
         `time source ${name}: a frame is a function of the timeline's time alone`,
       );
+  // A string holding an API's name is DOM text the scene shows, not a draw call.
+  const unquoted = code.replace(STRING, '""');
   for (const [name, re] of CANVAS_TEXT)
-    if (re.test(code))
+    if (re.test(unquoted))
       fail(
         `text in a canvas or WebGL ${name}: write the text as DOM text, which the layout gate reads`,
       );

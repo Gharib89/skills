@@ -123,6 +123,10 @@ test("text drawn into a canvas or WebGL is refused in the script, named, so the 
     ),
   );
   assert.doesNotThrow(() => lint("<p>fillText draws text</p>"));
+  // the API's name inside a string is DOM text a scene shows, not a draw call
+  assert.doesNotThrow(() =>
+    lint(js('tl.set($(".lb"), { textContent: "fillText" }, 0);')),
+  );
 });
 
 test("a tween off the scene's timeline is refused, since it runs on wall time", () => {
