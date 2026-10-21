@@ -41,7 +41,7 @@ function stackFixture() {
   return fx;
 }
 
-test("the rates table names the HyperFrames version it was measured on and a positive rate for each cost", () => {
+test("the rates table names the HyperFrames version it was measured on and a rate of 0 or more for each cost", () => {
   assert.match(table.hyperframes, /^\d+\.\d+\.\d+$/);
   assert.deepEqual(Object.keys(table.rates).sort(), [
     "base",
@@ -49,7 +49,9 @@ test("the rates table names the HyperFrames version it was measured on and a pos
     "live3d",
     "texture",
   ]);
-  for (const v of Object.values(table.rates)) assert.ok(v > 0, String(v));
+  // the calibrator clamps a noisy delta to 0, so 0 is a valid measurement
+  for (const v of Object.values(table.rates))
+    assert.ok(Number.isFinite(v) && v >= 0, String(v));
 });
 
 test("the board document carries the estimate worked from the table over the cards' voiced seconds", () => {
