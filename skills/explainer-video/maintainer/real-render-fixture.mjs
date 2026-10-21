@@ -286,4 +286,66 @@ export const FIXTURE = [
     },
     seconds: 3.4,
   },
+  // A browser page: the cursor moves, text is typed a whole word at a time and
+  // a button is clicked, each on its sentence's cue (the first sentence's is
+  // under the entry seam). Then the same page in Arabic, which runs right to
+  // left with its URL left to right and types an English term as one word.
+  {
+    scene: {
+      id: "browser",
+      role: "point",
+      title: "Browser",
+      narration: ["Open the page.", "Type the name.", "Press the button."],
+      visual: {
+        component: "browser",
+        props: {
+          url: "example.com/signup",
+          title: "Sign up",
+          elements: [
+            { id: "head", kind: "heading", text: "Create an account" },
+            { id: "name", kind: "field", text: "Your name" },
+            { id: "go", kind: "button", text: "Continue" },
+          ],
+          actions: [
+            { at: 1, target: "head", act: "move" },
+            { at: 2, target: "name", act: "type", text: "Ada Lovelace" },
+            { at: 3, target: "go", act: "click" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic-browser",
+      role: "point",
+      title: "متصفح",
+      narration: ["افتح الصفحة.", "اكتب الطلب.", "اضغط الزر."],
+      visual: {
+        component: "browser",
+        props: {
+          url: "example.com/new",
+          title: "طلب جديد",
+          elements: [
+            { id: "head", kind: "heading", text: "إنشاء طلب" },
+            { id: "name", kind: "field", text: "العنوان" },
+            { id: "go", kind: "button", text: "متابعة" },
+          ],
+          actions: [
+            { at: 1, target: "head", act: "move" },
+            {
+              at: 2,
+              target: "name",
+              act: "type",
+              text: "اكتب pull request هنا",
+            },
+            { at: 3, target: "go", act: "click" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
 ];

@@ -339,45 +339,82 @@ check(
     .join("; "),
 );
 
-// The layout gate over the largest diagram's samples, as the gates stage
-// takes them: its text inside the safe area, none clipped, small or stacked.
+// The cursor's place is a function of time: each browser scene's frame 1.35 s
+// in, the cursor mid-move to the field, seeked twice, matches byte for byte and
+// differs from the frame 0.2 s later.
+const browsers = FIXTURE.map((p) => p.scene).filter(
+  (s) => s.visual.component === "browser",
+);
+const cursors = [];
+for (const { id } of browsers) {
+  const start = whole.scenes.find((s) => s.id === id).start;
+  const at = +(start + 1.35).toFixed(3);
+  const a = await seek(at, "cursor-a");
+  const b = await seek(at, "cursor-b");
+  const later = await seek(+(at + 0.2).toFixed(3), "cursor-later");
+  cursors.push([id, a.equals(b), !a.equals(later)]);
+}
+check(
+  "cursor",
+  cursors.every(([, same, moved]) => same && moved),
+  cursors
+    .map(
+      ([id, same, moved]) =>
+        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moved ? "moves" : "STILL"} 0.2 s later`,
+    )
+    .join("; "),
+);
+
+// The layout gate over the largest diagram's samples and each browser page's,
+// as the gates stage takes them: its text inside the safe area, none clipped,
+// small or stacked.
 const largest = diagrams.toSorted(
   (a, b) => b.visual.props.nodes.length - a.visual.props.nodes.length,
 )[0].id;
-const sc = whole.scenes.find((s) => s.id === largest);
 const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
-const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
-const findings = [];
-judge(
-  await backend.check(whole.comp, times, { env }),
-  await backend.probe(whole.comp, times, { env }),
-  floors(profile),
-  // a finding is the scene's while its time is, as the gates stage files it
-  (gate, t, what) => {
-    if (
-      gate === "layout" &&
-      t >= sc.start - 1e-6 &&
-      t < sc.start + sc.duration - 1e-6
-    )
-      findings.push(`${t.toFixed(2)} s: ${what}`);
-  },
-  moving,
-);
+const laid = [];
+for (const id of [largest, ...browsers.map((s) => s.id)]) {
+  const sc = whole.scenes.find((s) => s.id === id);
+  const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
+  const findings = [];
+  judge(
+    await backend.check(whole.comp, times, { env }),
+    await backend.probe(whole.comp, times, { env }),
+    floors(profile),
+    // a finding is the scene's while its time is, as the gates stage files it
+    (gate, t, what) => {
+      if (
+        gate === "layout" &&
+        t >= sc.start - 1e-6 &&
+        t < sc.start + sc.duration - 1e-6
+      )
+        findings.push(`${t.toFixed(2)} s: ${what}`);
+    },
+    moving,
+  );
+  laid.push([id, times.length, [...new Set(findings)]]);
+}
 check(
   "layout",
-  findings.length === 0,
-  `${largest}, ${times.length} samples: ${[...new Set(findings)].join("; ") || "no finding"}`,
+  laid.every(([, , found]) => found.length === 0),
+  laid
+    .map(
+      ([id, n, found]) =>
+        `${id}, ${n} samples: ${found.join("; ") || "no finding"}`,
+    )
+    .join(" | "),
 );
 
-// With REAL_RENDER_FRAMES set, save each timeline, compare and diagram scene's
-// settled frame (3 s in) for a human to check the reading order; nothing
-// asserts it.
+// With REAL_RENDER_FRAMES set, save each timeline, compare, diagram and browser
+// scene's settled frame (3 s in) for a human to check the reading order;
+// nothing asserts it.
 if (process.env.REAL_RENDER_FRAMES)
   for (const id of [
     "timeline",
     "arabic-timeline",
     "arabic-compare",
     ...diagrams.map((s) => s.id),
+    ...browsers.map((s) => s.id),
   ]) {
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(

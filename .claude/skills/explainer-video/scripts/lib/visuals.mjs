@@ -5,6 +5,7 @@
 // reads). The compile stage checks, the video gates time the reading from the
 // rendered frames; render/compose.mjs draws each. A cue is lib/props.mjs's.
 
+import { checkBrowser } from "./browser.mjs";
 import { plain } from "./count.mjs";
 import { checkDiagram } from "./diagram.mjs";
 import {
@@ -409,6 +410,29 @@ export const VISUALS = {
     items: (p) =>
       p.nodes.map((n, i) => [`node ${i + 1}`, n.at, [n.label, n.note], n.on]),
     numbers: (p) => p.nodes.flatMap((n) => numbersIn([n.label, n.note])),
+  },
+  // A generic page (a url, a title, elements) and the actions a cursor plays on
+  // it, each on its own cue against an element by id: never a real product's
+  // look. The page stands from the scene's start, so only typed text arrives
+  // later. Rich like `words`. A number on the page, typed text included, is a
+  // claim like a diagram's.
+  browser: {
+    props: ["url", "title", "elements", "actions"],
+    ownCamera: true,
+    check: checkBrowser,
+    items: (p) => [
+      ["page", 1, [p.title, p.url, ...p.elements.map((e) => e.text)]],
+      ...p.actions
+        .filter((a) => a.act === "type")
+        .map((a, i) => [`typed ${i + 1}`, a.at, [a.text], a.on]),
+    ],
+    numbers: (p) =>
+      numbersIn([
+        p.url,
+        p.title,
+        ...p.elements.map((e) => e.text),
+        ...p.actions.map((a) => a.text),
+      ]),
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],

@@ -2,19 +2,15 @@
 // helpers they share with the page composer in compose.mjs.
 import crypto from "node:crypto";
 import { WORD_RISE_SECONDS } from "../lib/style.mjs";
-import { splitLatin } from "../lib/terms.mjs";
+import { wholeWords } from "../lib/terms.mjs";
 import { diff, lines, readAlong } from "../lib/visuals.mjs";
-import { boxCss, paint, sketchCss, sketched } from "./box.mjs";
+import { boxCss, esc, paint, sketchCss, sketched } from "./box.mjs";
+import { browser } from "./browser.mjs";
 import { diagram } from "./diagram.mjs";
 import { chart, stat } from "./numbers.mjs";
 import { compare, timeline } from "./sequence.mjs";
 
-export const esc = (s) =>
-  String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+export { esc };
 
 // The selector of every item a scene can bring into or out of focus: a card, a
 // terminal line, a flow step, a panel, a list item.
@@ -97,17 +93,7 @@ const codeFrame = (p, f, rows, LH, surface) => ({
 // type family `words` rises each out of its mask. A word is never split, so
 // Arabic keeps its joins; `wrap` isolates a Latin run inside it.
 const kineticWords = (text, f, wrap, from) => {
-  // Right to left, a Latin run (an English term) is one word however many it
-  // holds, and Arabic letters glued to it stay in that word.
-  const glued = f.rtl
-    ? splitLatin(String(text))
-        .map((p, i) => (i % 2 ? p.replace(/\s+/g, "\0") : p))
-        .join("")
-    : String(text);
-  const words = glued
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w.replaceAll("\0", " "));
+  const words = wholeWords(text, f.rtl);
   return {
     html: words
       .map(
@@ -137,6 +123,7 @@ export const COMPONENTS = {
   timeline,
   compare,
   diagram,
+  browser,
   title: (p, f, x) => {
     const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";
     const css = `.stack { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
