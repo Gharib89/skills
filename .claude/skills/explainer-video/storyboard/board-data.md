@@ -70,6 +70,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].narration` | string | yes | The scene file's narration lines for the scene, exactly as written, numbers, `{written\|spoken}` and cites included. |
 | `board.scenes[].style` | string | yes | Style notes: the visual's component (followed by `past the default` for a rich one), the profile and the narrator. |
 | `board.scenes[].rich` | boolean | yes | Whether its visual is a rich component, one that moves the frame itself. The overview counts these. |
+| `board.scenes[].intent` | string | no | A custom scene's `intent` line, shown on its card. Other components carry none. |
 | `board.scenes[].recommendation` | `"approve"` or `"revise"` | yes | The agent's recommendation, which the card opens on. See [Recommendation](#recommendation). |
 | `board.scenes[].finding` | string | no | The reds on the card, one per line: what the sampling pass left, then a gate stop's evidence naming the scene. |
 | `board.scenes[].fix` | string | no | The agent's proposed fix for the finding. Only a card with a finding has one. |
@@ -80,7 +81,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].menus` | object | yes | The card's four [menus](#menus), each set to the agent's pick. |
 | `board.scenes[].menus.component` | object | yes | The scene's component menu. |
 | `board.scenes[].menus.component.pick` | string | yes | The component now in the scene. |
-| `board.scenes[].menus.component.options` | array | yes | Every component the profile does not ban, then `custom`. |
+| `board.scenes[].menus.component.options` | array | yes | Every component the profile does not ban, `custom` among them. |
 | `board.scenes[].menus.component.disabled` | boolean | no | True when the menu cannot change on this card. No card sets it today. |
 | `board.scenes[].menus.camera` | object | yes | The scene's camera beat menu. |
 | `board.scenes[].menus.camera.pick` | string | yes | The beat now in the scene, as a cue value. |

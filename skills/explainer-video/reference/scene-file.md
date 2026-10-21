@@ -129,6 +129,20 @@ narrator: am_fenrir
     so a `camera` key is refused; in an Arabic run the columns run right to
     left. Each number in a `label` or `note` is a claim, held to a cited
     excerpt as a timeline's are.
+  - `custom`: a scene whose picture no component draws (`file*`, an `.html`
+    fragment beside the scene file; `intent*`, one line of what it shows;
+    `cues`, each `name*`, `at*`, `on`). The agent writes the fragment: markup,
+    plain `<style>` rules and a `<script>` that adds to the scene's paused
+    timeline and reads each cue's time by name. Compile reads the file, holds
+    it to one lint and keeps its text in `script.json`, so a changed fragment
+    needs a compile again. It refuses a literal colour or text size, a time
+    source, a CSS animation or transition, a per-letter span in Arabic, and a
+    cue the scene does not declare, each naming the pattern; a profile's bans
+    (`blur`, `draw`, `camera`, `kinetic`) refuse a fragment that uses that
+    technique. Rich, so a `camera` key is refused; its card shows the `intent`
+    line. A scene that shows no readable text in any sample fails the layout
+    probe as a hard error. Numbers in its text are claims, held to a cited
+    excerpt. [recipes.md](recipes.md) holds how to write one.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and
     `code` (`title` and `codediff` take none): one callout per scene,
     `{ "target*", "at*", "on" }`, drawn as a ring round the target with a

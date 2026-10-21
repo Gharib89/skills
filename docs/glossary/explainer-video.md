@@ -117,7 +117,7 @@ The one engine that lays out every scene of an explainer video on a single timel
 _Avoid_: renderer, backend, framework
 
 **Component**:
-One kind of on-screen content a scene shows, drawn by the composer under the visual grammar: cards, a flow, a chart, kinetic type. A scene that names a component shows exactly that one, never one nested in another; a custom scene may place several.
+One kind of on-screen content a scene shows, drawn by the composer under the visual grammar: cards, a flow, a chart, kinetic type. A scene that names a component shows exactly that one, never one nested in another; a custom scene draws its own markup instead.
 _Avoid_: visual, block, widget, template
 
 **Rich component**:
@@ -125,7 +125,7 @@ A component that moves the frame itself past the visual grammar's camera: its ow
 _Avoid_: heavy component, advanced visual
 
 **Custom scene**:
-A scene whose on-screen content the agent writes itself instead of taking a component, held by the same hard rules and video gates as every scene. Components are tested shortcuts beside it, not a menu it must choose from.
+A scene whose on-screen content the agent writes itself instead of taking a component, held by the same hard rules and video gates as every scene. The agent writes a **fragment**, an HTML file beside the scene file holding markup, plain style rules and a timeline script, and the scene names its `intent` and the **cues** the fragment reads by name. Compile holds every fragment to one lint and a rich scene is marked on its card. Components are tested shortcuts beside it, not a menu it must choose from.
 _Avoid_: freeform scene, escape hatch, bespoke component
 
 **Cue**:
