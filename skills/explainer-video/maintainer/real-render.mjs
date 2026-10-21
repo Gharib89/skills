@@ -238,9 +238,11 @@ check(
 // the same, and so does each scene after: an exit and an entry window for each
 // of the fixture's scene changes.
 const raw = await backend.events(whole.comp, { env });
-const seek = async (t, n) => {
+// A frame of a WebGL scene is seeked on SwiftShader, as the gate does; every
+// other scene's, as before.
+const seek = async (t, n, software = false) => {
   const png = path.join(work, `seam-${t}-${n}.png`);
-  await backend.frame(whole.comp, t, png, { env, software: true });
+  await backend.frame(whole.comp, t, png, { env, software });
   return fs.readFileSync(png);
 };
 // Each window of `kind` (`seams` or `camera`) in video seconds: its first,
@@ -381,10 +383,10 @@ const drawn = [];
 for (const { id } of stacks) {
   const start = whole.scenes.find((s) => s.id === id).start;
   const at = +(start + 1.3).toFixed(3);
-  const a = await seek(at, "stack-a");
-  const b = await seek(at, "stack-b");
-  const later = await seek(+(at + 0.2).toFixed(3), "stack-later");
-  const empty = await seek(+(start + 0.05).toFixed(3), "stack-empty");
+  const a = await seek(at, "stack-a", true);
+  const b = await seek(at, "stack-b", true);
+  const later = await seek(+(at + 0.2).toFixed(3), "stack-later", true);
+  const empty = await seek(+(start + 0.05).toFixed(3), "stack-empty", true);
   drawn.push([id, a.equals(b), !a.equals(later), !a.equals(empty)]);
 }
 check(
@@ -457,7 +459,11 @@ if (process.env.REAL_RENDER_FRAMES)
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(
       path.join(process.env.REAL_RENDER_FRAMES, `${id}.png`),
-      await seek(+(start + 3.0).toFixed(3), id),
+      await seek(
+        +(start + 3.0).toFixed(3),
+        id,
+        stacks.some((s) => s.id === id),
+      ),
     );
   }
 
