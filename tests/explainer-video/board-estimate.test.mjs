@@ -2,12 +2,14 @@
 // carries it from the shipped rates table, and each rich card its added seconds.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { SCRIPT, STACK3D } from "./scene-file.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import { dest } from "../../skills/explainer-video/scripts/lib/tools.mjs";
-import { board, doc, fixture, ok, prep, skill } from "./board-lib.mjs";
+import { board, doc, fixture, ok, prep, skill, temps } from "./board-lib.mjs";
 
 const table = JSON.parse(
   fs.readFileSync(path.join(skill, "render-rates.json"), "utf8"),
@@ -111,6 +113,26 @@ test("a rich card carries its added seconds, none for a component with no cost o
     d.scenes.map((c) => c.adds),
     [undefined, 0, undefined],
   );
+});
+
+test("a table over the budget flags the board estimate over and the board still builds", () => {
+  const fx = fixture();
+  prep(fx);
+  // The board of a copy of the skill whose table is slower than the budget
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-slow-"));
+  temps.push(copy);
+  fs.cpSync(skill, copy, { recursive: true });
+  const slow = { ...table, rates: { ...table.rates, base: 5 } };
+  fs.writeFileSync(path.join(copy, "render-rates.json"), JSON.stringify(slow));
+  const r = spawnSync(
+    process.execPath,
+    [path.join(copy, "scripts", "storyboard", "board.mjs"), fx.dir, "build"],
+    { env: fx.env, encoding: "utf8" },
+  );
+  ok({ code: r.status, out: r.stdout, err: r.stderr }, "build");
+  const { estimate } = doc(fx, 1);
+  assert.ok(estimate.seconds > estimate.budget, JSON.stringify(estimate));
+  assert.equal(estimate.over, true);
 });
 
 test("a live 3D card adds its voiced seconds at the live 3D rate", () => {
