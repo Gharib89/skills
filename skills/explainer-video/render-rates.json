@@ -1,0 +1,9 @@
+{
+  "hyperframes": "0.8.169",
+  "rates": {
+    "base": 1.85,
+    "texture": 0.39,
+    "live3d": 0.1,
+    "gates": 0.99
+  }
+}
