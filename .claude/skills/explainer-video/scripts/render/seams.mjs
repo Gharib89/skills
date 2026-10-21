@@ -15,8 +15,9 @@ const CURVE_BLUR = 4 / 9;
 // (`visual.seam`), else read off the arc: a zoom-through where the next scene
 // opens another beat (its role differs), a cut on a curve inside a beat (the
 // same role). A section opener is entered by a plain cut whatever the scene
-// before it asks for, so a render can cut the video there. A seam carries its whole `frames` and `duration` in seconds,
-// written as the frame grid writes it, and its peak `blur` in px.
+// before it asks for, so a render can cut the video there. A seam carries its
+// whole `frames` and `duration` in seconds, written as the frame grid writes
+// it, and its peak `blur` in px.
 export function seamPlan(scenes, profile) {
   const { seams } = grammar(profile);
   const n = frames(seams.duration);

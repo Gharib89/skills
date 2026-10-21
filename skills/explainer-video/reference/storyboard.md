@@ -13,10 +13,9 @@ card shows its still as a poster. Play plays the slot once with its narration.
 The **animatic** plays the whole build over the joined narration; its scene
 list jumps to a scene and marks the playing one. A video in sections is still
 one board: its cards sit under a heading per section ("Section 2: <the
-opener's title>"), and each heading's Play section plays the animatic from that
-section's first scene to the next section's first, then stops by itself. Every
-card arrives on the
-agent's recommendation
+opener's title>"), and each heading's **Play section** button plays the
+animatic from that section's first scene to the next section's first, then
+stops by itself. Every card arrives on the agent's recommendation
 ([Recommendation](../storyboard/board-data.md#recommendation)). The user
 approves or revises each card, may edit its narration in place, may change
 a card's **menus** (component, camera beat, emphasised item, seam), may

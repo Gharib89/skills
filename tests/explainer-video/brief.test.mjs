@@ -169,7 +169,7 @@ test("changing one knob keeps the rest and names only the stages it feeds", () =
 
 test("length has no upper bound: a long video is the operator's to ask for", () => {
   const fx = fixture();
-  for (const minutes of [6, 25]) {
+  for (const minutes of [1, 6, 25]) {
     const r = brief(fx, [`length=${minutes}`]);
     assert.equal(r.code, 0, r.out + r.err);
     assert.equal(read(fx, "brief.json").length, minutes);
@@ -181,6 +181,10 @@ test("a value this version cannot make is refused and nothing is written", () =>
   for (const [arg, why] of [
     ["length=0.5", /^brief length 0\.5: a number of minutes, 1 or more$/m],
     ["length=two", /^brief length two: a number of minutes, 1 or more$/m],
+    [
+      "length=Infinity",
+      /^brief length Infinity: a number of minutes, 1 or more$/m,
+    ],
     ["language=fr", /^brief language fr: no narrator speaks fr \(en, ar\)$/m],
     [
       "voice=nobody",

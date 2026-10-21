@@ -86,10 +86,10 @@ const gates = {};
   gates.arc = f;
 }
 
-// budget: 12 to 30 s a scene (6 to 12 s a section opener), its spoken characters within 10 percent of its
-// seconds, less the narrator's pause a sentence, at the narrator's rate, and
-// the scenes with the render's closing hold within 10 percent of the brief's
-// length.
+// budget: 12 to 30 s a scene (6 to 12 s a section opener), its spoken
+// characters within 10 percent of its seconds, less the narrator's pause a
+// sentence, at the narrator's rate, and the scenes with the render's closing
+// hold within 10 percent of the brief's length.
 {
   const f = [];
   for (const s of scenes.filter((s) => s.seconds !== undefined)) {

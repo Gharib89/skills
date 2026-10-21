@@ -184,12 +184,12 @@ The script stage writes the **scene file**, `explainers/<slug>/script.md`, from
 the pack's outline and the brief, then holds it to the **script gates**. Read
 [reference/scene-file.md](reference/scene-file.md) before you write or edit it.
 
-1. **Write.** Five roles in order (over 5 minutes, `section` openers too:
-   scene-file.md), one scene each but `point`, which takes one or more:
-   `hook` (why watch), `context` (what the thing is), `point` (one idea each),
-   `recap` (the points again in brief), `end` (one closing line).
-   Under each scene heading, `role: <role> · <n> s`: 12 to 30 seconds, adding
-   up to the brief's length less the 1 s hold the render closes on. A scene's
+1. **Write.** Five roles in order (plus `section` openers over 5 minutes:
+   scene-file.md), one scene each but `point` (1 or more): `hook` (why watch),
+   `context` (what the thing is), `point` (one idea each), `recap` (the points
+   again in brief), `end` (one closing line). Under each heading,
+   `role: <role> · <n> s`: 12 to 30 seconds (`section` 6 to 12), adding up to
+   the brief's length less the 1 s hold the render closes on. A scene's
    spoken characters (letters, digits) land within 10% of (seconds -
    sentences × `pause`) × the narrator's `rate` (chars/s,
    `<skill>/narrators.json`): a sentence spends `pause` silent, and ends at
@@ -275,13 +275,13 @@ or edit a scene file or choose a style. Before a `custom` or rich scene, read
 5. **Render.** `node <skill>/scripts/render/render.mjs explainers/<slug>`. It
    mixes in the **score**, synthesised music (or ACE-Step's, by the brief)
    ducked under speech with sound effects at the cuts and the end, unless the
-   brief turns it off, masters to
-   -14 LUFS, renders, then runs the gates (see Gates) and prints
-   their lines. With `score` `ace-step` on the CPU, render takes minutes: run
-   it in the background and wait for its exit. A first render always ends with
-   the critic pending (see Gates). Only when every gate passes does it print one
-   `delivery <check>: pass|fail` line per delivery check (`resolution`,
-   `frame rate`, `aspect`, `duration`, `audio`, `srt`), then `delivered:
+   brief turns it off, masters to -14 LUFS, renders, then runs the gates (see
+   Gates) and prints their lines. With `score` `ace-step` on the CPU, render
+   takes minutes: run it in the background and wait. A first
+   render always ends with the critic pending (see Gates). Only when every
+   gate passes does it print one `delivery <check>: pass|fail` line per
+   delivery check (`resolution`, `frame rate`, `aspect`, `duration`, `audio`,
+   `srt`; sections add `chapters`), then `delivered:
    <path>` and `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
    cached, video cached|rendered`. A scene still, the score and the video are
    cached by content, so an unchanged run renders nothing again. The video

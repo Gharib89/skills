@@ -84,7 +84,8 @@ export async function mux({ video, audio, chapters, output }) {
 }
 
 // Answers from the fake render's file, each field overridable through
-// EXPLAINER_VIDEO_FAKE_PROBE (JSON), as ffprobe's -show_streams -show_format.
+// EXPLAINER_VIDEO_FAKE_PROBE (JSON), as ffprobe's -show_streams -show_format
+// -show_chapters.
 export async function ffprobe(file) {
   const v = {
     ...JSON.parse(fs.readFileSync(file, "utf8")),

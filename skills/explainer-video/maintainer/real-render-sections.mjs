@@ -6,6 +6,13 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { meanDiff } from "../scripts/lib/motion.mjs";
+import { FPS } from "../scripts/render/compose.mjs";
+import {
+  chapterCheck,
+  chaptersOf,
+  joinSections,
+  sectionsOf,
+} from "../scripts/render/sections.mjs";
 
 const title = (section, id, role, seconds, narration) => ({
   seconds,
@@ -105,28 +112,18 @@ export async function sectionChecks({
   }
   if (!rendered) return check("sections frames", false, "a render failed");
 
-  const chapters = numbers.map((n, k) => {
-    const i = SECTIONED.findIndex(
-      (p) => p.scene.section === n && p.scene.role === "section",
-    );
-    const next = SECTIONED.findIndex(
-      (p) => p.scene.section === numbers[k + 1] && p.scene.role === "section",
-    );
-    // The first chapter starts at 0: an MP4 cannot start it later.
-    return {
-      start: k ? whole.scenes[i].start : 0,
-      end: whole.scenes[next]?.start ?? +(whole.frames / 30).toFixed(3),
-      title: SECTIONED[i].scene.title,
-    };
-  });
-  const video = path.join(work, "sections-joined-video.mp4");
-  const joined = path.join(work, "sections-joined.mp4");
-  await backend.concat(
-    parts.map((p) => p.mp4),
-    video,
+  // The shipped helpers: the chapters of render/sections.mjs and its join.
+  const scenes = SECTIONED.map((p) => p.scene);
+  const chapters = chaptersOf(
+    sectionsOf(scenes),
+    scenes,
+    whole.scenes,
+    +(whole.frames / FPS).toFixed(3),
   );
-  await backend.mux({
-    video,
+  const joined = path.join(work, "sections-joined.mp4");
+  await joinSections(backend, {
+    parts: parts.map((p) => p.mp4),
+    joined: path.join(work, "sections-joined-video.mp4"),
     audio: path.join(whole.comp, "narration.wav"),
     chapters,
     output: joined,
@@ -167,15 +164,8 @@ export async function sectionChecks({
     `${own.map((s) => s.length).join("+")} audio streams in the parts, ${mixed.length} in the joined file (${mixed[0]?.codec_name ?? "none"}; 0+0+0 and 1 aac expected)`,
   );
 
+  // The delivery check's own comparison, on what the real ffprobe reads.
   const marks = (await backend.ffprobe(joined)).chapters ?? [];
-  check(
-    "sections chapters",
-    marks.length === chapters.length &&
-      marks.every(
-        (m, k) =>
-          Math.abs(+m.start_time - chapters[k].start) <= 1 / 30 &&
-          m.tags?.title === chapters[k].title,
-      ),
-    `${marks.map((m) => `${(+m.start_time).toFixed(2)} s ${m.tags?.title}`).join(", ")} (${chapters.map((c) => `${c.start.toFixed(2)} s ${c.title}`).join(", ")} expected)`,
-  );
+  const [, got, want, ok] = chapterCheck(chapters, marks);
+  check("sections chapters", ok, `${got} vs ${want}`);
 }

@@ -5,9 +5,9 @@
 // Reads <run>/script.md: a `# <title>` line, `key: value` header lines
 // (language, default en; narrator; style), then per scene a
 // `## Scene <id> · <title>` heading, an optional `role: <role> · <n> s` line
-// (hook, context, section, point, recap or end, and its seconds), a `### Narration`
-// list of numbered sentences (an indented line continues the one above) and
-// one `### Visual` block of JSON. In a sentence `{written|spoken}` shows the
+// (hook, context, section, point, recap or end, and its seconds), a
+// `### Narration` list of numbered sentences (an indented line continues the
+// one above) and one `### Visual` block of JSON. In a sentence `{written|spoken}` shows the
 // written form on screen and voices the spoken one, backticks are
 // dropped, and every sentence ends in `[a, b]`, its cites, or `[no-claim]`.
 // With <run>/brief.json, language, narrator and style come from the brief, and

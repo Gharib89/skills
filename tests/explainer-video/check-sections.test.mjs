@@ -2,6 +2,8 @@
 // seconds.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { SCENES, TITLE, check, fixture, line, say } from "./check-lib.mjs";
 
 const LONG = ["length=6", "must=local gate", "avoid=pricing"];
@@ -66,4 +68,48 @@ test("a video over five minutes is cut into sections, and one of five minutes or
   );
   r = check(fixture({ brief: ["length=5", "must=local gate"] }));
   assert.equal(line(r, "arc"), "script arc: pass");
+});
+
+// Compile refuses a section outside its bounds, so the gates meet one only in a
+// script.json edited after it: `edit` rewrites a compiled one and checks it.
+const edited = (change) => {
+  const fx = fixture({
+    scenes: [hook, why, opener("one"), point("a"), point("b"), recap, bye],
+    brief: LONG,
+  });
+  const file = path.join(fx.dir, "script.json");
+  const script = JSON.parse(fs.readFileSync(file, "utf8"));
+  change(script);
+  fs.writeFileSync(file, JSON.stringify(script));
+  return check(fx);
+};
+
+test("the arc holds a section to two to five points, the bounds themselves included", () => {
+  const arc = (n) =>
+    line(
+      edited((s) => {
+        const points = s.scenes.filter((x) => x.role === "point");
+        s.scenes.splice(
+          s.scenes.indexOf(points[0]),
+          points.length,
+          ...Array.from({ length: n }, (_, i) => ({
+            ...points[0],
+            id: `p${i}`,
+          })),
+        );
+      }),
+      "arc",
+    );
+  for (const n of [2, 5]) assert.equal(arc(n), "script arc: pass");
+  for (const n of [1, 6]) assert.match(arc(n), /^script arc: fail: roles /);
+});
+
+test("the budget holds an opener to 6 to 12 s, the bounds themselves included", () => {
+  const out = (seconds) =>
+    edited((s) => {
+      s.scenes.find((x) => x.role === "section").seconds = seconds;
+    }).out;
+  for (const s of [6, 12]) assert.doesNotMatch(out(s), /one \S+ s is outside/);
+  for (const s of [5.9, 12.1])
+    assert.match(out(s), new RegExp(`one ${s} s is outside 6 to 12 s`));
 });
