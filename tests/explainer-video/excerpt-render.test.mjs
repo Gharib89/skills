@@ -88,11 +88,34 @@ test("the document shows the excerpt's own words and nothing else", async () => 
   );
 });
 
-test("the source line is the excerpt's locator, left to right", async () => {
+test("the source line is the excerpt's locator, in the script it is written in", async () => {
   const html = await drawn({ cite: "ex-2" });
   assert.match(html, /<div class="xsrc" dir="ltr">src\/cache\.js:3-6<\/div>/);
   const ar = await drawn({ cite: "ex-3" }, "rtl");
   assert.match(ar, /<div class="xsrc" dir="ltr">line 4<\/div>/);
+  // an Arabic locator reads right to left, its Latin term isolated
+  const where = {
+    "ex-5": { text: ARABIC, locator: "§ الذاكرة pull", code: false },
+  };
+  const loc = await drawn({ cite: "ex-5" }, "rtl", timing, where);
+  assert.match(
+    loc,
+    /<div class="xsrc" dir="rtl">§ الذاكرة <bdi class="lat">pull<\/bdi><\/div>/,
+  );
+});
+
+test("a Latin run stays on one line in an Arabic run, a locator wraps in English", async () => {
+  const ar = await drawn(
+    { cite: "ex-3", chips: [{ at: 2, cite: "ex-2" }] },
+    "rtl",
+  );
+  assert.match(ar, /\.xw \{[^}]*white-space: nowrap/);
+  assert.match(ar, /\.xsrc \{[^}]*white-space: nowrap/);
+  assert.match(ar, /\.xl \{[^}]*white-space: nowrap/);
+  const en = await drawn({ cite: "ex-1" });
+  assert.match(en, /\.xw \{[^}]*white-space: nowrap/);
+  assert.match(en, /\.xsrc \{[^}]*overflow-wrap: anywhere/);
+  assert.doesNotMatch(en, /\.xsrc \{[^}]*white-space/);
 });
 
 test("the emphasised sentence is lit and the rest dimmed on its cue", async () => {

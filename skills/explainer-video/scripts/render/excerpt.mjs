@@ -5,7 +5,7 @@
 // rest fall to the muted colour. The text is the pack's, resolved at compile;
 // the surface is the profile's tokens, never a real site's look.
 import { matching, tongue, units } from "../lib/excerpt.mjs";
-import { wholeWords } from "../lib/terms.mjs";
+import { ARABIC_SCRIPT, wholeWords } from "../lib/terms.mjs";
 import { esc, paint } from "./box.mjs";
 
 // Lighting a sentence takes at most LIGHT seconds however many words it has,
@@ -20,6 +20,13 @@ export const excerpt = (p, f, x) => {
   const e = p.emphasis;
   const lit = e ? (matching(text, code, e.target)[0] ?? -1) : -1;
   const tweens = [];
+  // A locator reads in its own script, left to right unless it is Arabic, and
+  // in an Arabic run its Latin runs are isolated like any other there.
+  const dirOf = (s) => (ARABIC_SCRIPT.test(s) ? "rtl" : "ltr");
+  const where = (s) => (f.rtl && ARABIC_SCRIPT.test(s) ? f.t(s) : esc(s));
+  // A word is never split, so a Latin term in an Arabic run stays on one line
+  // (the layout gate's rule); a locator breaks anywhere except in that run.
+  const one = f.rtl ? "white-space: nowrap;" : "overflow-wrap: anywhere;";
   // One unit of the excerpt: a sentence, or a code excerpt's line.
   const sentence = (u, i) => {
     const words = code ? [u] : wholeWords(u, rtl);
@@ -65,23 +72,23 @@ export const excerpt = (p, f, x) => {
   const chips = (p.chips ?? [])
     .map(
       (c, i) =>
-        `<div class="xc xc${i}"><span class="xn">${i + 1}</span><span class="xl" dir="ltr">${esc(p.excerpts[c.cite].locator)}</span></div>`,
+        `<div class="xc xc${i}"><span class="xn">${i + 1}</span><span class="xl" dir="${dirOf(p.excerpts[c.cite].locator)}">${where(p.excerpts[c.cite].locator)}</span></div>`,
     )
     .join("");
   return {
-    html: `<div class="xr"><div class="xd${code ? " xcode" : ""}" dir="${rtl ? "rtl" : "ltr"}"><div class="xsrc" dir="ltr">${esc(locator)}</div><div class="xt">${all.map(sentence).join(code ? "" : " ")}</div></div>${chips ? `<div class="xcs">${chips}</div>` : ""}</div>`,
+    html: `<div class="xr"><div class="xd${code ? " xcode" : ""}" dir="${rtl ? "rtl" : "ltr"}"><div class="xsrc" dir="${dirOf(locator)}">${where(locator)}</div><div class="xt">${all.map(sentence).join(code ? "" : " ")}</div></div>${chips ? `<div class="xcs">${chips}</div>` : ""}</div>`,
     css: `.xr { position: absolute; inset: 0; display: flex; align-items: center; gap: 80px; }
 .xd { flex: 1; min-width: 0; box-sizing: border-box; ${paint(x.surface)} border: 2px solid var(--line); border-radius: 18px; padding: 40px 56px; text-align: start; }
-.xsrc { padding-bottom: 20px; margin-bottom: 28px; border-bottom: 1px solid var(--line); text-align: left; overflow-wrap: anywhere; font: 400 var(--size-label) ${f.code}; color: var(--muted); }
+.xsrc { padding-bottom: 20px; margin-bottom: 28px; border-bottom: 1px solid var(--line); text-align: start; ${one} font: 400 var(--size-label) ${f.code}; color: var(--muted); }
 .xt { font: 400 var(--size-body)/${f.lh(1.5, "text")} ${f.text}; color: var(--text); }
 .xcode .xt { font: 400 var(--size-code)/1.5 ${f.code}; white-space: pre; }
 .xcode .xs { min-height: 1.5em; }
-.xw { display: inline; background: linear-gradient(var(--accent), var(--accent)) no-repeat 0 100% / 0% 4px; }
+.xw { display: inline; white-space: nowrap; background: linear-gradient(var(--accent), var(--accent)) no-repeat 0 100% / 0% 4px; }
 .xd[dir="rtl"] .xs.lit .xw { background-position: 100% 100%; }
 .xcs { flex: 0 0 360px; display: flex; flex-direction: column; gap: 24px; }
 .xc { display: flex; align-items: center; gap: 20px; box-sizing: border-box; padding: 16px 24px; background: var(--chip); border: 2px solid var(--line); border-radius: 18px; }
 .xn { flex: none; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent); color: var(--bg); font: 600 var(--size-label) ${f.text}; }
-.xl { min-width: 0; text-align: left; overflow-wrap: anywhere; font: 400 var(--size-label) ${f.code}; color: var(--text); }`,
+.xl { min-width: 0; text-align: start; ${one} font: 400 var(--size-label) ${f.code}; color: var(--text); }`,
     reveals: [
       [".xd", 1],
       ...(p.chips ?? []).map((c, i) => [`.xc${i}`, c, "snap"]),

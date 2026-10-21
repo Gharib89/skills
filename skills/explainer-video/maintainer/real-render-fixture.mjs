@@ -425,7 +425,9 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
         },
       },
     },
-    seconds: 4,
+    // Long enough to read its longest sentence (28 words at 0.3 s a word) once
+    // the document has settled, which is what the reading gate asks of it.
+    seconds: 11,
   },
   // The same in Arabic: right to left in whole-word spans, an English term one
   // word, the source line left to right.
@@ -461,7 +463,7 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
         },
       },
     },
-    seconds: 4,
+    seconds: 6,
   },
   // A code excerpt, lit by line, which stays left to right.
   {
