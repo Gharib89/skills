@@ -95,6 +95,7 @@ function frame() {
   let tick = null;
   let now = 0;
   const added = [];
+  const styles = {};
   vm.runInNewContext(
     fs.readFileSync(
       path.join(skill, "scripts", "render", "live-frame.js"),
@@ -104,6 +105,9 @@ function frame() {
       window: { __timelines: tls },
       document: {
         querySelectorAll: () => els,
+        getElementById: (id) => styles[id] ?? null,
+        createElement: () => ({}),
+        head: { append: (el) => (styles[el.id] = el) },
         fonts: { add: (f) => added.push(f), ready: Promise.resolve() },
       },
       FontFace: class {
@@ -125,6 +129,7 @@ function frame() {
   return {
     els,
     tls,
+    styles,
     sent,
     added,
     async post(data, source = parent) {
@@ -200,6 +205,18 @@ test("the frame takes commands only from its page, fonts first, and runs a loop 
   assert.equal(f.tls.main.at.at(-1), 4);
   assert.deepEqual(clone(f.sent.at(-1)), { type: "done" });
   assert.ok(!f.running());
+});
+
+test("a css message puts the page's edited palette in one style element, replaced on the next", async () => {
+  const f = frame();
+  await f.post({ type: "css", css: ":root { --bg: #111111; }" });
+  assert.equal(f.styles.edits.textContent, ":root { --bg: #111111; }");
+  const first = f.styles.edits;
+  await f.post({ type: "css", css: ":root { --bg: #222222; }" });
+  assert.equal(f.styles.edits, first);
+  assert.equal(first.textContent, ":root { --bg: #222222; }");
+  await f.post({ type: "css", css: "x" }, {});
+  assert.equal(first.textContent, ":root { --bg: #222222; }");
 });
 
 test("a timeline of the wrong shape is refused by name, not with a stack", () => {

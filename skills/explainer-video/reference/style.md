@@ -31,6 +31,10 @@ deck's title).
    `style: <row> is not installed` line means run `/explainer-video setup` and
    measure again; a PPTX alone carries no pixels, so ask the user to export the
    deck to PDF and measure again with both files; relay any other stderr line.
+   A video also prints `style motion <video>: <n> cuts/min · blur <x> · grain
+   <y>`, measured over its frames, and keeps the frames before, at and after
+   its first cuts as `<video>-cut<n>-before|at|after.png` beside the other
+   reference images, so a seam shows in them.
 2. **Assign.** Look at each image in `explainers/<slug>/style-draft/refs/` with
    the Read tool, then write `explainers/<slug>/style-draft/roles.json`: for
    each token an image shows, the colour candidate playing it and one line on
@@ -65,6 +69,19 @@ deck's title).
    ```json
    { "fonts": { "Helvetica Neue": { "font": "inter", "class": "sans", "why": "a neo-grotesque of the same width" } } }
    ```
+
+   From a video, the grammar's seam and grain fields come measured (`seams`,
+   `texture.grain`). Judge the rest from the frame strips and write
+   `explainers/<slug>/style-draft/grammar.json`, a field under its path in
+   [scene-file.md](scene-file.md)'s grammar (`layout`, `camera.family`,
+   `camera.scale`, `type.family`, `ease`, `texture.surface`, `bans`...), each
+   with its value and one line on what the strips show; a field you cannot
+   judge stays out and takes the default. The draft refuses a path that is not
+   a grammar field, one measured already, or a value `validate` rejects.
+
+   ```json
+   { "camera.family": { "value": "locked", "why": "no push-in across the strips" } }
+   ```
 3. **Draft.** `node <skill>/scripts/style/draft.mjs explainers/<slug>
    <name>` prints `style <token>: <hex> · <mark> · <why>` per token, each mark
    `measured`, `derived` or `adjusted` (moved in lightness to pass contrast;
@@ -73,7 +90,9 @@ deck's title).
    <font> · <mark> · <why>` per type role a source decided, each mark
    `measured` (the source's own family), `replaced` (its `was` is the family
    it replaced) or `derived` (an Arabic role's companion of the same class),
-   then the draft's path, `explainers/<slug>/style-draft/<name>.json`. A family
+   then `style grammar <path>: <value> · <mark> · <why>` per grammar field
+   measured or judged (the profile's `grammar` and `grammarMarks`), then the
+   draft's path, `explainers/<slug>/style-draft/<name>.json`. A family
    setup does not install is fetched into the font store render reads, and its
    row is carried in the draft's `fonts`. Show the token and type lines to the
    user. On exit 1, a `style role` line names a role to fix in `roles.json`;
@@ -96,15 +115,17 @@ The draft keeps the bundled `claude-code` profile's schema, grammar and type
 for each role no source declares a family for, and derives each token you leave
 out from its colours. Show the draft on the style card next.
 
-The card shows settled frames, so a profile's `grammar.ease`
-([scene-file.md](scene-file.md)) does not show on it; its layout and texture
-do.
-
 ## The style card
 
 The **style card** shows the draft on five sample frames (a title, a diagram,
 a caption, a code frame, an Arabic frame) over the shared layout, each gated
-by the video gates' layout and contrast rules before it shows. The user edits
+by the video gates' layout and contrast rules before it shows, and a sixth
+frame that plays the seam out of the title. The frame most in view plays as a
+looping live build (the draft's grammar in motion: seams, camera, type
+reveals, ease), the others show their settled poster. A grammar panel lists
+every field with its mark: `measured` from a reference video, `judged` from its
+frame strips, `bundled` when the profile states it with no mark, `default`
+when the draft leaves it out. The user edits
 a colour or a font in place, then saves the profile, uses it once for this
 video, or asks for a revision. Its page is
 [storyboard/card.html](../storyboard/card.html), and
@@ -133,9 +154,11 @@ is `node <skill>/scripts/style/card.mjs explainers/<slug> <name>`.
    `explainers/.styles/`). Exit 1 with `card: ... is not installed` means run
    `/explainer-video setup`; `fails contrast` or `names font` names what to fix
    in the draft; relay any other `card:` line. On a published page it first
-   lists `card: upload <path> (<size>)` per font file the page does not hold:
+   lists `card: upload <path> (<size>)` per font file and for `style-draft/
+   card/live.js` the page does not hold:
    upload them as the storyboard's step 4 uploads, record each with `card
-   asset <path>=<url> ...`, and build again. On exit 0 it prints `card <n>: 5
+   asset <path>=<url> ...`, and build again (a build that changes `live.js`
+   drops its recorded upload). On exit 0 it prints `card <n>: 6
    frame(s), <k> finding(s) -> style-draft/card/<n>.json` and a `card <gate>
    <frame>: <what>` line per finding; a finding blocks Save and Use once on the
    page, so say which frame broke which rule. Published: write that file with

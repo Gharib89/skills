@@ -45,7 +45,7 @@ test("build gates five sample frames with check and the probe, each mid-way thro
   const r = built(fx);
   assert.match(
     r.out,
-    /^card 1: 5 frame\(s\), 0 finding\(s\) -> style-draft\/card\/1\.json$/m,
+    /^card 1: 6 frame\(s\), 0 finding\(s\) -> style-draft\/card\/1\.json$/m,
   );
   assert.match(r.out, /^card: local page style-draft\/card\/stylecard\.html$/m);
   // Each frame holds a second, measured mid-way: HyperFrames' seek leaves
@@ -56,7 +56,7 @@ test("build gates five sample frames with check and the probe, each mid-way thro
   const c = latestCard(fx);
   assert.deepEqual(
     c.frames.map((f) => f.id),
-    ["title", "diagram", "caption", "code", "arabic"],
+    ["title", "diagram", "caption", "code", "arabic", "seam"],
   );
   assert.equal(c.scope, "project");
   assert.deepEqual(c.taken, []);
@@ -142,7 +142,7 @@ test("the built card holds to the documented shape, and the checker refuses a ma
 test("a draft whose text breaks a layout rule lists the finding by frame; a probe that sees no text refuses", () => {
   const fx = fixture({ label: "Acme tiny" });
   const r = built(fx);
-  assert.match(r.out, /^card 1: 5 frame\(s\), 1 finding\(s\)/m);
+  assert.match(r.out, /^card 1: 6 frame\(s\), 1 finding\(s\)/m);
   assert.match(r.out, /^card layout title: .*12/m);
   assert.deepEqual(latestCard(fx).findings.length, 1);
   const g = fixture();
