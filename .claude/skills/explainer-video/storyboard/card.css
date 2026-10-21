@@ -69,7 +69,11 @@ textarea:disabled, input:disabled, select:disabled { opacity: .6; }
 .frame { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--hover); }
 .frame iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; }
 .edit { padding: 16px 20px 20px; display: grid; gap: 12px; }
+.frame iframe.live { visibility: hidden; }
+.frame iframe.live[data-ready] { visibility: visible; }
 .rows { display: grid; gap: 8px; }
+.grow { display: grid; grid-template-columns: 9rem 8rem 1fr; gap: 8px 12px; align-items: baseline; }
+.grow .why { font-size: 13px; color: var(--fg-body); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; }
 .row { display: grid; grid-template-columns: 7rem 2.4rem 7.5rem 1fr; gap: 8px 12px; align-items: center; }
 .row input[type="color"] { width: 2.4rem; height: 2rem; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: none; cursor: pointer; }
 .row .why { font-size: 13px; color: var(--fg-body); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; }
@@ -97,6 +101,8 @@ textarea:disabled, input:disabled, select:disabled { opacity: .6; }
   .edit { padding: 14px 16px 16px; }
   .row { grid-template-columns: 6rem 2.4rem 1fr; }
   .row .why { grid-column: 1 / -1; }
+  .grow { grid-template-columns: 7rem 1fr; }
+  .grow .why { grid-column: 1 / -1; }
   .trow { grid-template-columns: 1fr; }
   .trow .why { grid-column: 1; }
 }

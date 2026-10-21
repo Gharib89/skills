@@ -25,7 +25,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
 const ctx = vm.createContext({ console });
 vm.runInContext(
   scripts[0] +
-    "\n;globalThis.__page = { newState, setCards, setAnswers, view, ACT, answersDoc, answersText, frameDoc, failing, mediaUrl };",
+    "\n;globalThis.__page = { newState, setCards, setAnswers, view, ACT, answersDoc, answersText, frameDoc, failing, mediaUrl, buildUrl };",
   ctx,
 );
 const P = ctx.__page;
@@ -81,7 +81,7 @@ test("the page reads only documented card fields, and its answers match the shap
   const c = latestCard(fx);
   const S = session([c]);
   const v = P.view(S);
-  assert.equal(v.split("<iframe").length - 1, 5);
+  assert.equal(v.split("<iframe").length - 1, 6);
   assert.ok(submitOff(v));
   P.ACT.set(S, { field: "choice", value: "save" });
   P.ACT.set(S, { field: "name", value: "acme-brand" });
@@ -123,6 +123,39 @@ test("the page reads only documented card fields, and its answers match the shap
   assert.deepEqual(
     { ...back, submittedAt: a.submittedAt },
     { ...a, note: "keep the red" },
+  );
+});
+
+test("the frame most in view mounts a live iframe over its poster, and the grammar panel lists each field with its mark", () => {
+  const fx = fixture({
+    grammar: { seams: { family: "velocity", blur: 12 } },
+    grammarMarks: {
+      "seams.blur": { mark: "measured", why: "blur 0.5, 12 px" },
+    },
+  });
+  built(fx);
+  const c = latestCard(fx);
+  const S = session([c]);
+  const live = 'sandbox="allow-scripts"';
+  assert.ok(!P.view(S).includes(live), "no frame is live until one is in view");
+  S.inView = { seam: true };
+  const v = P.view(S);
+  assert.equal(v.split(live).length - 1, 1);
+  assert.match(v, /<iframe sandbox="allow-scripts"[^>]*data-play="seam"/);
+  // refresh() swaps the data-live parts while the user types: the playing
+  // iframe is not one of them, or it would come back empty.
+  assert.doesNotMatch(v, /<iframe[^>]*data-live=/);
+  assert.equal(P.buildUrl(c), "live.js");
+  c.live.url = "javascript:alert(1)";
+  assert.equal(P.buildUrl(c), "");
+  assert.match(v, /<h2>Grammar<\/h2>/);
+  assert.match(
+    v,
+    /seams\.blur<\/span>\s*<span>12<\/span><span class="why"><span class="tag accent">measured<\/span><span>blur 0\.5, 12 px<\/span>/,
+  );
+  assert.match(
+    v,
+    /<span class="label">ease<\/span>\s*<span>velocity<\/span><span class="why"><span class="tag">default<\/span><\/span>/,
   );
 });
 
