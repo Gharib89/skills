@@ -27,15 +27,16 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { judge } from "../lib/layout.mjs";
 import { sampleTimes } from "../lib/motion.mjs";
 import { LUFS, floors, grammar, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
+import { drawsWebgl } from "../lib/visuals.mjs";
 import { FPS, H, W, contentBox } from "../render/compose.mjs";
 import { captionFindings, cuesOf } from "./captions.mjs";
 import { sceneEvents } from "./events.mjs";
+import { source } from "./source.mjs";
 import { ALONG_SECONDS, readingFindings } from "./reading.mjs";
 import { fullestFrame, motionAndDeterminism } from "./scene.mjs";
 import { cutSheets, readPrevKeys } from "./sheets.mjs";
@@ -102,28 +103,7 @@ const cues = cuesOf(read("composition/index.html"));
 const inputs = renderInputs(
   [...new Set(typeRoles(script.language).map((r) => profile.type[r].font))],
   profile,
-);
-const source = [
-  "../render/compose.mjs",
-  "gates.mjs",
-  "captions.mjs",
-  "events.mjs",
-  "reading.mjs",
-  "scene.mjs",
-  "sheets.mjs",
-  "verdict.mjs",
-  "../lib/backend.mjs",
-  "../lib/backend/common.mjs",
-  "../lib/backend/browser.mjs",
-  "../lib/backend/media.mjs",
-  "../lib/backend/voice.mjs",
-  "../lib/backend/source.mjs",
-  "../lib/layout.mjs",
-  "../lib/motion.mjs",
-  "../lib/terms.mjs",
-  "../lib/style.mjs",
-].map((f) =>
-  fs.readFileSync(fileURLToPath(new URL(f, import.meta.url)), "utf8"),
+  drawsWebgl(script.scenes),
 );
 const cacheDir = path.join(run, ".cache", "gates");
 fs.mkdirSync(cacheDir, { recursive: true });
@@ -213,6 +193,7 @@ if (todo.length) {
       seams,
       tweens: moves[p.sc.id].tweens,
       band: contentBox(grammar(profile).layout),
+      software: drawsWebgl(script.scenes.filter((s) => s.id === p.sc.id)),
     });
   }
   for (const p of todo) fs.writeFileSync(p.file, JSON.stringify(p.found));

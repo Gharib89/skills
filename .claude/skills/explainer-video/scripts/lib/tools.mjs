@@ -2,6 +2,7 @@
 // which installs the rows, and the stages that load what it installed.
 import crypto from "node:crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { userDirs } from "./paths.mjs";
@@ -71,6 +72,19 @@ export function dest(r, dirs = userDirs(), device) {
 // compute capability (null with no NVIDIA card): CUDA from 8.0, which has
 // bfloat16; under it acestep runs CUDA in float16, which gives NaN, so the CPU.
 export const torchDevice = (cap) => (cap >= 8 ? "cuda" : "cpu");
+
+// Why a GPU-only row (`kind: "gpu"`) cannot run here, for a card's compute
+// capability (null with no NVIDIA card, undefined when nvidia-smi failed, which
+// may hide one); null where a card answers. Setup shows it as the row's status
+// and a run that needs the row repeats it.
+export const gpuRefusal = (row, cap) =>
+  cap
+    ? null
+    : `unavailable without an NVIDIA GPU (${cap === null ? "no card found" : "nvidia-smi failed"}): ${row.why}`;
+export const gpuStatus = (row, cap) => {
+  const why = gpuRefusal(row, cap);
+  return why ? `refused: ${why}` : "present";
+};
 
 // onnxruntime-node loads its CUDA provider from the folder holding its own
 // library, so setup installs the provider's files there. CUDA 13 dropped cards
@@ -191,10 +205,13 @@ export function hyperframesEnv() {
 }
 
 // What draws a frame beyond the composition's own files: the npm install
-// (HyperFrames, GSAP) and Chrome by the lock, and each font family's version.
-export const renderInputs = (families, profile) => [
+// (HyperFrames, GSAP) and Chrome by the lock, each font family's version, and,
+// where a scene draws WebGL, the host GPU mode its render forces: a GPU frame
+// and a software one differ.
+export const renderInputs = (families, profile, webgl = false) => [
   lockHash,
   ...families.map((f) => `${f}@${fontRow(profile, f)?.version}`),
+  ...(webgl ? ["browser-gpu"] : []),
 ];
 
 // What a backend loads from: the npm install, each model's folder by id, and
@@ -214,13 +231,32 @@ export function toolPaths(dirs = userDirs()) {
 
 // GSAP and each font row's files copied into a composition folder, as
 // HyperFrames lint refuses `../` asset paths; returns the faces the page
-// declares, `{family, file, weight, style}` each.
-export function compositionAssets(fontRows, dir) {
+// declares, `{family, file, weight, style}` each. With `webgl`, three too, as one
+// classic script: its release ships ES modules only, which a scene's template
+// cannot load in order, so esbuild bundles it to a global `THREE`.
+export function compositionAssets(fontRows, dir, { webgl = false } = {}) {
+  const node = toolPaths().node;
   fs.mkdirSync(path.join(dir, "fonts"), { recursive: true });
   fs.copyFileSync(
-    path.join(toolPaths().node, "node_modules", "gsap", "dist", "gsap.min.js"),
+    path.join(node, "node_modules", "gsap", "dist", "gsap.min.js"),
     path.join(dir, "gsap.min.js"),
   );
+  if (webgl) {
+    const { buildSync } = createRequire(path.join(node, "package.json"))(
+      "esbuild",
+    );
+    const [bundle] = buildSync({
+      entryPoints: [
+        path.join(node, "node_modules", "three", "build", "three.module.js"),
+      ],
+      bundle: true,
+      format: "iife",
+      globalName: "THREE",
+      minify: true,
+      write: false,
+    }).outputFiles;
+    fs.writeFileSync(path.join(dir, "three.min.js"), bundle.text);
+  }
   const fonts = [];
   for (const r of fontRows)
     for (const f of fs
