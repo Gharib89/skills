@@ -42,7 +42,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.title` | string | yes | The scene file's title. |
 | `board.build` | string | yes | The live build every card and the animatic play: the video's composition as one `.js` asset, a [media](#media) URL. |
 | `board.narration` | string | yes | The whole narration joined, as audio-only WebM, a media URL. The animatic plays it. |
-| `board.estimate` | object | yes | The first-render estimate, from the rates table `render-rates.json` over the video's seconds (the cards' voiced seconds and the one second the render holds the last frame): the render and the gates, the voice being done. A warning, never a refusal. |
+| `board.estimate` | object | yes | The first-render estimate, from the rates table `render-rates.json` over the video's seconds (the cards' voiced seconds and the one second the render holds the last frame): the render and the gates, the voice being done and the brief's score not counted (a synthesised score and `ace-step` both add to a first render). A warning, never a refusal. |
 | `board.estimate.seconds` | number | yes | Estimated seconds of the first render, render and gates together. |
 | `board.estimate.budget` | number | yes | The budget in seconds: 5 times the video's seconds, the hold included. |
 | `board.estimate.over` | boolean | yes | Whether `seconds` is above `budget`; the page flags it amber. |

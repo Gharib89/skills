@@ -80,6 +80,24 @@ test("the live 3D lines name the stack scene's seconds, so its rate can be recom
   assert.doesNotMatch(r.stdout, /^calibrate-render (flat|textured) .*stack/m);
 });
 
+test("the stack scene's seconds are its voiced length, the amount the live 3D video grows over the textured one", () => {
+  const { calibrate } = machine(stack3d);
+  const r = calibrate("--runs", "1");
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const video = (name) =>
+    Number(
+      r.stdout.match(new RegExp(`${name} run .* over (\\S+) s of video`))[1],
+    );
+  const stack = Number(r.stdout.match(/, (\S+) s of it the stack scene/)[1]);
+  // the closing hold moves from the last scene to the stack scene, so it is in
+  // neither the growth nor the voiced length; the timeline's duration for the
+  // stack scene, which adds it, is a second off
+  assert.ok(
+    Math.abs(stack - (video("live3d") - video("textured"))) < 0.2,
+    `${stack} s against a growth of ${video("live3d") - video("textured")} s`,
+  );
+});
+
 test("a measurement that cannot run leaves the table alone and says why", () => {
   // no NVIDIA card: the live 3D video is refused by the render stage
   const { table, calibrate } = machine();

@@ -19,13 +19,14 @@
 //   base     flat render / flat video s
 //   texture  textured render / textured video s, less base
 //   live3d   (live3d render - textured render / textured video s * live3d video
-//            s) / the stack scene's s
+//            s) / the stack scene's voiced s (voice.json, not the timeline's
+//            duration, which adds the closing hold)
 //   gates    textured gates / textured video s
 // stdout, per timed run:
 //   calibrate-render <video> run <i>/<n>: render <s> s, gates <s> s over <s> s
 //   of video
-// the live 3D video's lines end `, <s> s of it the stack scene`, the divisor of
-// its rate. Then the values written:
+// the live 3D video's lines end `, <s> s of it the stack scene`, its voiced
+// seconds, the divisor of its rate. Then the values written:
 //   calibrate-render: HyperFrames <version>: base <r>, texture <r>, live3d <r>,
 //   gates <r> render s per video s
 // exit:   0 written · 1 a stage failed or rendered nothing, the table left
@@ -177,7 +178,13 @@ for (const v of videos) {
     fs.readFileSync(path.join(v.run, "timeline.json"), "utf8"),
   );
   v.video = timeline.total;
-  v.stack = timeline.scenes.find((s) => s.id === "stack")?.duration;
+  // The stack scene's voiced seconds, what the board multiplies the live 3D
+  // rate by: the timeline's duration for it adds the closing hold, the last
+  // scene's.
+  const voice = JSON.parse(
+    fs.readFileSync(path.join(v.run, "voice.json"), "utf8"),
+  );
+  v.stack = voice.scenes.find((s) => s.id === "stack")?.duration;
 }
 
 // The video's render and gates seconds, `runs` times, the median of each.
