@@ -14,7 +14,7 @@ const DROP = 1.6;
 const RISE = 0.7;
 // The camera's orbit: distance, height and a sway about a base angle, in radians.
 const ORBIT = { radius: 9.5, height: 3.4, base: 0.7, sway: 0.35, rate: 0.45 };
-// A label stands this many px from its slab's edge.
+// A label stands this many px past its slab's silhouette on the label's side.
 const GAP = 28;
 
 export const stack3d = (p, f, x) => {
@@ -65,9 +65,10 @@ export const stack3d = (p, f, x) => {
               slab.position.set(0, place(i) + (1 - rise) * ${DROP}, 0);
               slab.material.opacity = rise;
               slab.visible = k > 0;
-              const edge = slab.position.clone().add(new THREE.Vector3(${f.rtl ? -SLAB.w : SLAB.w} / 2, 0, 0)).project(camera);
+              const side = [-1, 1].flatMap((dz) => [-1, 1].map((dy) => slab.position.clone().add(new THREE.Vector3(${f.rtl ? -SLAB.w : SLAB.w} / 2, dy * ${SLAB.h} / 2, dz * ${SLAB.d} / 2)).project(camera)));
+              const edge = side.reduce((a, c) => (${f.rtl ? "c.x < a.x" : "c.x > a.x"} ? c : a));
               labels[i].style.left = ((edge.x * 0.5 + 0.5) * ${W} + ${f.rtl ? -GAP : GAP}) + "px";
-              labels[i].style.top = ((-edge.y * 0.5 + 0.5) * ${H}) + "px";
+              labels[i].style.top = ((-slab.position.clone().project(camera).y * 0.5 + 0.5) * ${H}) + "px";
               labels[i].style.opacity = rise;
             });
             renderer.render(scene, camera);
