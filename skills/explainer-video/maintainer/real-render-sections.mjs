@@ -112,8 +112,9 @@ export async function sectionChecks({
     const next = SECTIONED.findIndex(
       (p) => p.scene.section === numbers[k + 1] && p.scene.role === "section",
     );
+    // The first chapter starts at 0: an MP4 cannot start it later.
     return {
-      start: whole.scenes[i].start,
+      start: k ? whole.scenes[i].start : 0,
       end: whole.scenes[next]?.start ?? +(whole.frames / 30).toFixed(3),
       title: SECTIONED[i].scene.title,
     };

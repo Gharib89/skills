@@ -68,13 +68,15 @@ export function writeSection(d, { sec, comp, script, timeline, ...page }) {
 }
 
 // One chapter per section: its opener's title from the opener's first frame to
-// the next opener's, the last to the video's end.
+// the next opener's, the last to the video's end. The first starts at 0: the
+// hook and context are its section's, and an MP4 cannot start its first
+// chapter later (ffmpeg moves it to 0).
 export function chaptersOf(sections, script, timeline, total) {
   const opens = sections.map((sec) =>
     sec.at.find((i) => script[i].role === "section"),
   );
   return opens.map((i, k) => ({
-    start: timeline[i].start,
+    start: k ? timeline[i].start : 0,
     end: timeline[opens[k + 1]]?.start ?? total,
     title: script[i].title,
   }));

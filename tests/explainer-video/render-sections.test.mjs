@@ -50,14 +50,17 @@ test("a sectioned video renders each section on its own, video only, then joins 
   assert.match(r.out, /video 3\/3 sections cached/);
 });
 
-test("the delivered MP4 carries one chapter mark per section at its opener's first frame", () => {
+test("the delivered MP4 carries one chapter mark per section, each after the first at its opener's first frame", () => {
   const fx = fixture(sectionFile());
   const r = render(fx);
   assert.equal(r.code, 0, r.out + r.err);
   const mp4 = JSON.parse(read(fx.dir, "out", "demo.mp4"));
+  // The first chapter starts at 0, the hook and context being its section's:
+  // an MP4 cannot start its first chapter later (measured with ffmpeg).
+  assert.ok(start(fx, OPENERS[0]) > 0);
   assert.deepEqual(
     mp4.chapters.map((c) => [c.title, c.start]),
-    OPENERS.map((id) => [`Scene ${id}`, start(fx, id)]),
+    OPENERS.map((id, k) => [`Scene ${id}`, k ? start(fx, id) : 0]),
   );
   // Each chapter ends where the next starts, the last at the video's end.
   assert.equal(mp4.chapters[0].end, mp4.chapters[1].start);

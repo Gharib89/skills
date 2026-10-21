@@ -221,8 +221,9 @@ whatever the scene before it asks for. Each section renders video only,
 cached on its own: editing one scene re-renders its section and the others
 come from the cache. The parts join by stream copy, and the narration and
 score are mixed and AAC-encoded once on the joined file, which carries one
-chapter mark per section at its opener's first frame. The gates run on the
-joined file, and the delivery checks add `chapters`.
+chapter mark per section at its opener's first frame, the first at 0 (the hook
+and context are its section's). The gates run on the joined file, and the
+delivery checks add `chapters`.
 
 ## Style profiles
 
