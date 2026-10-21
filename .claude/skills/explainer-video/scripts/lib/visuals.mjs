@@ -35,7 +35,7 @@ export const TECHNIQUES = {
   draw: ["flow", "diagram"],
   blur: [],
   camera: [],
-  kinetic: ["words"],
+  kinetic: ["words", "browser"],
 };
 
 // The index, among the scene's spoken words, of the word the cue `{ at, on }`

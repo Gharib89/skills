@@ -93,6 +93,27 @@ test("the cursor moves to each action's target on its cue, from where the last o
   );
 });
 
+test("a move ends when the next action's cue arrives, so the cursor never jumps", async () => {
+  // "the" is the scene's 2nd spoken word, 0.6 s in: closer than a full move
+  const props = {
+    ...page,
+    actions: [
+      { at: 1, target: "head", act: "move" },
+      { at: 1, on: "the", target: "go", act: "click" },
+    ],
+  };
+  const list = tweens(await drawn("ltr", props));
+  const moves = all(".cur", list);
+  assert.deepEqual(
+    moves.map(([, , , t]) => t),
+    [0, 0.6],
+  );
+  assert.equal(moves[0][2].duration, 0.6);
+  assert.equal(moves[1][2].duration, 0.7);
+  // the click rings once its own, full-length move has arrived
+  assert.equal(all(".rp1", list)[0][2].delay, 0.7);
+});
+
 test("a click ripples at its target once the cursor has arrived, and a move ripples nowhere", async () => {
   const html = await drawn();
   const list = tweens(html);

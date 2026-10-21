@@ -40,9 +40,9 @@ export function checkBrowser(p, said) {
   named("browser", p.title, "a title");
   if (!Array.isArray(p.elements) || !p.elements.length)
     fail("browser needs elements");
+  for (const e of p.elements) object(e, "a browser element");
   const ids = p.elements.map((e) => e.id);
   for (const e of p.elements) {
-    object(e, "a browser element");
     named("browser", e.id, "an id per element");
     if (ids.indexOf(e.id) !== ids.lastIndexOf(e.id))
       fail(`browser element id "${e.id}" is used twice`);

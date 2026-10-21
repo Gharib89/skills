@@ -49,12 +49,16 @@ export const browser = (p, f, x) => {
   for (const [i, a] of p.actions.entries()) {
     const box = boxes[index.get(a.target)];
     const to = rel(centre(box));
+    // A move ends by the next action's cue, so the cursor is where the next
+    // move starts from and never jumps.
+    const next = p.actions[i + 1];
+    const move = next ? r(Math.min(MOVE, x.time(next) - x.time(a))) : MOVE;
     // The timeline alone moves the cursor, and a later move must not repaint
     // an earlier one's from state, so none renders its from at build.
     tweens.push([
       ".cur",
       from,
-      { ...to, duration: MOVE, ease: "power2.inOut", immediateRender: false },
+      { ...to, duration: move, ease: "power2.inOut", immediateRender: false },
       a,
     ]);
     from = to;
@@ -67,7 +71,7 @@ export const browser = (p, f, x) => {
           opacity: 0,
           duration: CLICK,
           ease: "power2.out",
-          delay: MOVE,
+          delay: move,
           immediateRender: false,
         },
         a,
@@ -79,7 +83,7 @@ export const browser = (p, f, x) => {
         tweens.push([
           `.ph${e}`,
           { opacity: 1 },
-          { opacity: 0, duration: 0.2, delay: MOVE },
+          { opacity: 0, duration: 0.2, delay: move },
           a,
         ]);
       const words = wholeWords(a.text, f.rtl).map((w) => ({ k: word++, w }));
@@ -92,7 +96,7 @@ export const browser = (p, f, x) => {
             opacity: 1,
             duration: 0.2,
             ease: "power2.out",
-            delay: r(MOVE + j * STEP),
+            delay: r(move + j * STEP),
           },
           a,
         ]);

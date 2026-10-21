@@ -4,6 +4,7 @@
 // draws its own frame), so a `camera` key is refused on it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { banReason } from "../../skills/explainer-video/scripts/lib/allowed.mjs";
 import {
   VISUALS,
   checkVisual,
@@ -146,6 +147,17 @@ test("a page taller than the frame holds is refused at compile", () => {
     });
   assert.doesNotThrow(() => checkVisual(page(6), said));
   bad(page(7), /browser lays out 7 elements; a frame holds 6 of this height/);
+});
+
+test("an element that is not an object is refused by name, not by a TypeError", () => {
+  bad(browser({ elements: [null] }), /a browser element is not a JSON object/);
+});
+
+test("a profile that bans kinetic bars the browser, which types word by word", () => {
+  assert.match(
+    banReason(["kinetic"], "browser", "plain"),
+    /component browser uses kinetic, which style profile plain bans/,
+  );
 });
 
 test("a browser is rich: it draws its own camera, so a camera key is refused", () => {
