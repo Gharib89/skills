@@ -32,14 +32,21 @@ export const excerpt = (p, f, x) => {
   const one = f.rtl ? "white-space: nowrap;" : "overflow-wrap: anywhere;";
   // One unit of the excerpt: a sentence, or a code excerpt's line.
   const sentence = (u, i) => {
-    const words = code ? [u] : wholeWords(u, rtl);
+    // A code line's indent is plain text before its span, so the underline
+    // starts at the code (the `.xs` line sets it as written, `pre`).
+    const [indent, rest] = code
+      ? u.match(/^(\s*)([\s\S]*)$/).slice(1)
+      : ["", u];
+    const words = code ? [rest] : wholeWords(u, rtl);
     const mark = e ? (i === lit ? " lit" : " dim") : "";
-    const inner = words
-      .map(
-        (w, j) =>
-          `<span class="xw${i === lit ? ` lw${j}` : ""}">${g.t(w)}</span>`,
-      )
-      .join(" ");
+    const inner =
+      indent +
+      words
+        .map(
+          (w, j) =>
+            `<span class="xw${i === lit ? ` lw${j}` : ""}">${g.t(w)}</span>`,
+        )
+        .join(" ");
     if (i === lit) {
       // The time the cue leaves for starting words: the scene's end less the
       // 0.25 s sweep and a margin, so a late cue lights all its words at once.

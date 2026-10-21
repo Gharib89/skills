@@ -225,6 +225,23 @@ test("a code word keeps its leading and inner spaces: the word span sets them as
   assert.ok(css.indexOf(".xcode .xw") > css.indexOf("\n.xw {"));
 });
 
+test("a lit indented code line's span starts at its first non-space character", async () => {
+  const html = await drawn({
+    cite: "ex-2",
+    emphasis: { target: "  cache.clear();", at: 3 },
+  });
+  // the indent is plain text before the span, so the underline starts at the
+  // code and an underlined indent never reads as a highlighted blank
+  assert.match(
+    html,
+    /data-line="s2">  <span class="xw lw0">cache\.clear\(\);<\/span><\/div>/,
+  );
+  assert.match(
+    html,
+    /data-line="s0"><span class="xw">const cache = new Map\(\);<\/span>/,
+  );
+});
+
 test("a code excerpt is lit by line", async () => {
   const html = await drawn({
     cite: "ex-2",
