@@ -136,9 +136,10 @@ async function sceneParts(
   };
   const x = {
     surface,
-    // A cue's time in seconds, for a component whose tweens depend on the gap
-    // between two cues.
+    // A cue's time in seconds, and the scene's end, for a component whose
+    // tweens depend on the gap between two cues or on the time left.
     time: t,
+    end: timing.duration,
     // The content box, for a component the composer lays out itself.
     box,
     // A code row is the code step at 1.4 (45 px at 32), so a `scale.code`

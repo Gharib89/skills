@@ -139,7 +139,8 @@ narrator: am_fenrir
     `click` or `type`: on its cue the cursor travels to the element its
     `target` names by id, then a `click` rings out and a `type` action
     (`text*`, onto a `field` only) brings its words in one whole word at a
-    time, the field's own `text` giving way to them. Only a `type` takes
+    time, quicker when the next action or the scene's end is near, the
+    field's own `text` giving way to them. Only a `type` takes
     `text`. Actions cue in the order written, each strictly after the last,
     since one cursor plays them all; an id no element holds, an id used twice
     and an unknown `act` are refused. Rich, so a `camera` key is refused; in

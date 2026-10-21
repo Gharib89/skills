@@ -8,10 +8,11 @@ import { wholeWords } from "../lib/terms.mjs";
 import { esc, paint } from "./box.mjs";
 
 // A cursor move takes this long and a click rings out for CLICK; typed text
-// follows the move, a whole word every STEP.
+// follows the move, a whole word every STEP, each fading in over FADE.
 const MOVE = 0.7;
 const CLICK = 0.5;
 const STEP = 0.25;
+const FADE = 0.2;
 // A button is a button's width, not the column's.
 const WIDTH = { button: 360 };
 
@@ -52,7 +53,8 @@ export const browser = (p, f, x) => {
     // A move ends by the next action's cue, so the cursor is where the next
     // move starts from and never jumps.
     const next = p.actions[i + 1];
-    const move = next ? r(Math.min(MOVE, x.time(next) - x.time(a))) : MOVE;
+    const until = next ? x.time(next) : x.end;
+    const move = r(Math.min(MOVE, until - x.time(a)));
     // The timeline alone moves the cursor, and a later move must not repaint
     // an earlier one's from state, so none renders its from at build.
     tweens.push([
@@ -83,20 +85,24 @@ export const browser = (p, f, x) => {
         tweens.push([
           `.ph${e}`,
           { opacity: 1 },
-          { opacity: 0, duration: 0.2, delay: move },
+          { opacity: 0, duration: FADE, delay: move },
           a,
         ]);
       const words = wholeWords(a.text, f.rtl).map((w) => ({ k: word++, w }));
       typed.set(e, [...(typed.get(e) ?? []), ...words]);
+      // The words end before the next cue or the scene's end, so a long text
+      // types faster than STEP rather than past it.
+      const room = until - x.time(a) - move - FADE;
+      const step = r(Math.max(0, Math.min(STEP, room / words.length)));
       for (const [j, { k }] of words.entries())
         tweens.push([
           `.tw${k}`,
           { opacity: 0 },
           {
             opacity: 1,
-            duration: 0.2,
+            duration: FADE,
             ease: "power2.out",
-            delay: r(move + j * STEP),
+            delay: r(move + j * step),
           },
           a,
         ]);

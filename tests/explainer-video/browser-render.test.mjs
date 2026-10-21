@@ -114,6 +114,32 @@ test("a move ends when the next action's cue arrives, so the cursor never jumps"
   assert.equal(all(".rp1", list)[0][2].delay, 0.7);
 });
 
+test("typed words land before the next action's cue and before the scene ends", async () => {
+  const long = Array.from({ length: 20 }, (_, i) => `w${i}`).join(" ");
+  const landed = (list) =>
+    list
+      .filter(([s]) => /^\.tw\d+$/.test(s))
+      .map(([, , to, t]) => t + to.delay + to.duration);
+  // 20 words at the default step would end 5.45 s + 0.2 s after the cue
+  const before = tweens(
+    await drawn("ltr", {
+      ...page,
+      actions: [
+        { at: 2, target: "name", act: "type", text: long },
+        { at: 3, target: "go", act: "click" },
+      ],
+    }),
+  );
+  assert.ok(Math.max(...landed(before)) <= 6, "by the click's cue, 6 s");
+  const last = tweens(
+    await drawn("ltr", {
+      ...page,
+      actions: [{ at: 3, target: "name", act: "type", text: long }],
+    }),
+  );
+  assert.ok(Math.max(...landed(last)) <= 10, "by the scene's end, 10 s");
+});
+
 test("a click ripples at its target once the cursor has arrived, and a move ripples nowhere", async () => {
   const html = await drawn();
   const list = tweens(html);
