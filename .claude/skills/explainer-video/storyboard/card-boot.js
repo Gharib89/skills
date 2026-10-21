@@ -72,7 +72,9 @@ async function boot() {
     }));
     return build.bytes.map((x) => ({ ...x, data: x.data.slice(0) }));
   };
-  const lives = () => [...document.querySelectorAll("iframe[data-live]")];
+  // `data-play`, not `data-live`: refresh() swaps the data-live parts while the
+  // user types, and a swapped playing iframe would come back empty.
+  const lives = () => [...document.querySelectorAll("iframe[data-play]")];
   const say = (el, m) =>
     el.contentWindow && el.contentWindow.postMessage(m, "*");
   async function mount() {
@@ -92,7 +94,7 @@ async function boot() {
     } else if (type === "shown") {
       el.dataset.ready = "1";
       const [from, to] = latest(S).frames.find(
-        (f) => f.id === el.dataset.live,
+        (f) => f.id === el.dataset.play,
       ).loop;
       say(el, { type: "css", css: paletteCss(S) });
       say(el, { type: "run", from, to, loop: true });

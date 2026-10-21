@@ -241,7 +241,7 @@ function view(S) {
     <section class="frames" id="frames">${c.frames
       .map(
         (f) =>
-          `<figure class="shot panel"><span class="label">${esc(f.label)}</span><div class="frame" data-stage="${esc(f.id)}"><iframe sandbox="allow-same-origin" title="${esc(f.label)} frame" data-frame="${esc(f.id)}" srcdoc="${esc(frameDoc(S, f))}"></iframe>${S.inView[f.id] ? `<iframe sandbox="allow-scripts" class="live" title="${esc(f.label)} playing" data-live="${esc(f.id)}"></iframe>` : ""}</div></figure>`,
+          `<figure class="shot panel"><span class="label">${esc(f.label)}</span><div class="frame" data-stage="${esc(f.id)}"><iframe sandbox="allow-same-origin" title="${esc(f.label)} frame" data-frame="${esc(f.id)}" srcdoc="${esc(frameDoc(S, f))}"></iframe>${S.inView[f.id] ? `<iframe sandbox="allow-scripts" class="live" title="${esc(f.label)} playing" data-play="${esc(f.id)}"></iframe>` : ""}</div></figure>`,
       )
       .join("")}</section>
     ${grammarPanel(c)}

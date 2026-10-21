@@ -77,6 +77,8 @@ export function measuredFields({ cutsPerMinute, blurAtCuts, grain }) {
 // The agent's `grammar.json` read: `{ path: { value, why } }` for the fields it
 // judged. Returns the problems, one line each, naming the path.
 export function judgedProblems(judged, measured) {
+  if (judged === null || typeof judged !== "object" || Array.isArray(judged))
+    return ["style grammar: grammar.json must be an object of field paths"];
   const out = [];
   for (const [p, f] of Object.entries(judged)) {
     if (!FIELD_PATHS.includes(p))

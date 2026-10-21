@@ -35,7 +35,7 @@ function drafted(config, judged) {
       text: { candidate: by("#141413"), why: "text" },
     }),
   );
-  if (judged)
+  if (judged !== undefined)
     fs.writeFileSync(path.join(dir, "grammar.json"), JSON.stringify(judged));
   const r = node("draft.mjs", [run, "talk"], env);
   const file = path.join(dir, "talk.json");
@@ -154,6 +154,19 @@ test("a judged field is refused when it is unknown, unexplained, measured alread
     const { r, profile } = drafted(REEL, judged);
     assert.equal(r.status, 1, JSON.stringify(judged));
     assert.match(r.stderr, want);
+    assert.equal(profile, null);
+  }
+});
+
+test("a grammar file that is not an object of field paths is refused by name, not with a stack", () => {
+  for (const judged of [null, [], "ease", 3]) {
+    const { r, profile } = drafted(REEL, judged);
+    assert.equal(r.status, 1, JSON.stringify(judged));
+    assert.match(
+      r.stderr,
+      /style grammar: grammar\.json must be an object of field paths/,
+    );
+    assert.doesNotMatch(r.stderr, /TypeError/);
     assert.equal(profile, null);
   }
 });

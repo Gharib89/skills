@@ -141,7 +141,10 @@ test("the frame most in view mounts a live iframe over its poster, and the gramm
   S.inView = { seam: true };
   const v = P.view(S);
   assert.equal(v.split(live).length - 1, 1);
-  assert.match(v, /<iframe sandbox="allow-scripts"[^>]*data-live="seam"/);
+  assert.match(v, /<iframe sandbox="allow-scripts"[^>]*data-play="seam"/);
+  // refresh() swaps the data-live parts while the user types: the playing
+  // iframe is not one of them, or it would come back empty.
+  assert.doesNotMatch(v, /<iframe[^>]*data-live=/);
   assert.equal(P.buildUrl(c), "live.js");
   c.live.url = "javascript:alert(1)";
   assert.equal(P.buildUrl(c), "");
