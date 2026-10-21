@@ -70,15 +70,21 @@ test("the file and the intent are required, and the file stays beside the scene 
   bad(custom({ source: "<p>x</p>" }), /custom has no prop source/);
 });
 
-test("a file compile cannot read is refused naming it", () => {
+test("a file compile cannot read is refused naming it, and a read error that is not a missing file says what it was", () => {
+  const failing = (code, message) => ({
+    read: () => {
+      throw Object.assign(new Error(message), { code });
+    },
+  });
   bad(
     custom(),
     /custom file scenes\/orbit\.html is not beside the scene file/,
-    {
-      read: () => {
-        throw new Error("ENOENT");
-      },
-    },
+    failing("ENOENT", "no such file"),
+  );
+  bad(
+    custom(),
+    /custom file scenes\/orbit\.html cannot be read: EISDIR: illegal operation on a directory/,
+    failing("EISDIR", "EISDIR: illegal operation on a directory"),
   );
 });
 

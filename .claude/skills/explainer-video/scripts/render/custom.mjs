@@ -6,7 +6,7 @@ import { splitFragment } from "../lib/fragment.mjs";
 
 // A rule's selector list as one rule per selector, since the composer scopes
 // the start of a line: `.a, .b { x }` is `.a { x }` and `.b { x }`. A comma
-// inside parentheses (`:is(.a, .b)`) stays.
+// inside parentheses (`:is(.a, .b)`) or brackets (`[data-x="a,b"]`) stays.
 function perSelector(rule) {
   const open = rule.indexOf("{");
   const body = rule.slice(open);
@@ -15,8 +15,8 @@ function perSelector(rule) {
   let from = 0;
   const list = rule.slice(0, open);
   for (const [i, ch] of [...list].entries()) {
-    if (ch === "(") depth++;
-    else if (ch === ")") depth--;
+    if (ch === "(" || ch === "[") depth++;
+    else if (ch === ")" || ch === "]") depth--;
     else if (ch === "," && depth === 0) {
       selectors.push(list.slice(from, i));
       from = i + 1;

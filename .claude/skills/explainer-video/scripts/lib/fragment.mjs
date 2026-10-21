@@ -13,20 +13,22 @@ import { fail } from "./props.mjs";
 const block = (tag) =>
   new RegExp(`<${tag}\\b([^>]*)>([\\s\\S]*?)</${tag}\\s*>`, "gi");
 const COMMENT = /<!--[\s\S]*?-->/g;
+const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
 
 // The fragment's markup with its blocks cut out, its style as written, its
 // plain rules one to a line (the composer scopes a line at a time), its script
 // and whether a script tag loads a file.
-export function splitFragment(src) {
+export function splitFragment(whole) {
+  // A commented-out block is neither linted nor played.
+  const src = whole.replace(COMMENT, "");
   const style = [...src.matchAll(block("style"))].map((m) => m[2]).join("\n");
   const scripts = [...src.matchAll(block("script"))];
   const markup = src
-    .replace(COMMENT, "")
     .replace(block("style"), "")
     .replace(block("script"), "")
     .trim();
   const css = style
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(BLOCK_COMMENT, "")
     .replace(/\s+/g, " ")
     .split("}")
     .map((r) => r.trim())
@@ -74,13 +76,14 @@ const SIZE_WORD =
   /(?<![\w-])(?:x{1,3}-)?(?:small|large)(?![\w-])|(?<![\w-])(?:medium|smaller|larger)(?![\w-])/;
 
 // The first literal colour a value holds, or undefined: a hex, a colour
-// function or, when `named`, a keyword. A `var()` holds a token's name.
-function colourIn(value, named) {
-  const v = value.replace(/var\([^)]*\)/g, "");
+// function or, when `keywords`, a colour name. A `var()` holds a token's name
+// and a `url()` a file's.
+function colourIn(value, keywords) {
+  const v = value.replace(/(?:var|url)\([^)]*\)/g, "");
   return (
     v.match(HEX)?.[0] ??
     v.match(COLOUR_FN)?.[0] ??
-    (named
+    (keywords
       ? v.split(/[^a-z]+/i).find((w) => NAMED.has(w.toLowerCase()))
       : undefined)
   );
@@ -128,7 +131,7 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
   if (scriptSrc)
     fail("script src: the fragment stands alone, so inline the file's text");
   const code = script
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(BLOCK_COMMENT, "")
     .replace(/(^|[^:"'\w])\/\/.*$/gm, "$1");
   const css = [style, inlineStyle(markup), ...colourAttrs(markup)].join("\n");
 
@@ -145,10 +148,16 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
     );
   if (/@(?:-webkit-)?keyframes\b/i.test(css))
     fail("CSS animation @keyframes: add the tween to the timeline `tl`");
-  for (const [prop] of [...declarations(css), ...declarations(code)]) {
-    if (/^animation(?:-|$)/.test(prop))
+  // In the script, every key of an object literal: `{ opacity: 1, transition: 0 }`.
+  const keys = [
+    ...code.matchAll(
+      /["']?\b(animation|transition)(?:-[a-z-]+|[A-Z]\w*)?["']?\s*:/g,
+    ),
+  ].map((m) => m[0].replace(/["':\s]/g, ""));
+  for (const prop of [...declarations(css).map(([p]) => p), ...keys]) {
+    if (/^animation(?:-|[A-Z]|$)/.test(prop))
       fail(`CSS animation ${prop}: add the tween to the timeline \`tl\``);
-    if (/^transition(?:-|$)/.test(prop))
+    if (/^transition(?:-|[A-Z]|$)/.test(prop))
       fail(`CSS transition ${prop}: add the tween to the timeline \`tl\``);
   }
   if (/\.style\s*\.\s*(?:animation|transition)\w*\s*=/.test(code))
@@ -162,15 +171,15 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
       `at-rule ${at}: write plain rules, the composer scopes each to the scene`,
     );
   let depth = 0;
-  for (const c of style.replace(/\/\*[\s\S]*?\*\//g, ""))
+  for (const c of style.replace(BLOCK_COMMENT, ""))
     if (c === "{" && ++depth > 1)
       fail(
         "nested rule: write plain rules, the composer scopes each to the scene",
       );
     else if (c === "}") depth--;
 
-  const colour = (value, named) => {
-    const c = colourIn(value, named);
+  const colour = (value, keywords) => {
+    const c = colourIn(value, keywords);
     if (c)
       fail(
         `literal colour ${c}: name a profile token, var(--accent) or var(--text)`,
@@ -189,11 +198,17 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
   // In the script a colour is a property's string value, or a colour function
   // in any string; a hex alone in a string may be a selector (`#add`).
   for (const [, , , value] of code.matchAll(COLOURED_PROP)) colour(value, true);
-  for (const [, value] of code.matchAll(STRING)) colour(value.replace(HEX, ""));
-  if (/\bfontSize\s*[:=]\s*(?!\s|["'`]var\()/.test(code))
-    fail(
-      "literal size fontSize: size text from a type token, var(--size-body) and its steps",
-    );
+  for (const [, , value] of code.matchAll(STRING))
+    colour(value.replace(HEX, ""));
+  // A script's `fontSize` is a token or a relative size, as in a rule: a bare
+  // number is pixels to GSAP, and any other unit is as literal as in a rule.
+  for (const [, , quoted, bare] of code.matchAll(
+    /\bfontSize\s*[:=]\s*(?:(["'`])((?:(?!\1).)*)\1|([^\s,;})]+))/g,
+  ))
+    if (!/^\s*var\(|^[\d.]+(?:em|%)$/.test(quoted ?? bare))
+      fail(
+        `literal size fontSize ${quoted ?? bare}: size text from a type token, var(--size-body) and its steps`,
+      );
 
   const inArabic = arabic || /\p{Script=Arabic}/u.test(markup);
   for (const [span, letter] of markup.matchAll(
@@ -207,6 +222,14 @@ export function lintFragment(src, { names = [], arabic = false } = {}) {
     fail(
       "per-letter split in Arabic text: Arabic moves by whole words, never letters",
     );
+
+  // A script that does not parse would break the whole scene's timeline at
+  // render, so it fails here, not there. `Function` compiles the body only.
+  try {
+    new Function("tl", "cue", "$", "duration", script);
+  } catch (e) {
+    fail(`script syntax: ${e.message}`);
+  }
 
   const calls = code.match(/\bcue\s*\(/g)?.length ?? 0;
   const named = [

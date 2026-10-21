@@ -51,8 +51,14 @@ test("a literal colour is refused in a rule, an inline style, an attribute and a
     js('tl.to($(".a"), { backgroundColor: "#123456" }, 0);'),
     /literal colour #123456/,
   );
-  // a colour named inside var() is a token's name, not a colour
+  // a colour function in any string of the script, not only a coloured property
+  bad(js('el.style.setProperty("x", "rgb(1, 2, 3)");'), /literal colour rgb\(/);
+  // a colour named inside var() is a token's name, not a colour; a url() holds
+  // a file's name
   assert.doesNotThrow(() => lint(css(".a { color: var(--tan); }")));
+  assert.doesNotThrow(() =>
+    lint(css(".a { background: var(--chip) url(red.png); }")),
+  );
 });
 
 test("a literal font size is refused, in a rule, the font shorthand and a tween; a token or a relative size is not", () => {
@@ -64,6 +70,10 @@ test("a literal font size is refused, in a rule, the font shorthand and a tween;
     /literal size 4px/,
   );
   bad(js('tl.to($(".a"), { fontSize: 52 }, 0);'), /literal size fontSize/);
+  bad(js('tl.to($(".a"), { fontSize: "40px" }, 0);'), /literal size fontSize/);
+  assert.doesNotThrow(() =>
+    lint(js('tl.to($(".a"), { fontSize: "1.2em" }, 0);')),
+  );
   assert.doesNotThrow(() =>
     lint(css(".a { font-size: 1.2em; width: 300px; }")),
   );
@@ -99,6 +109,21 @@ test("a CSS animation, a transition, keyframes, a web animation and an SVG anima
     /SVG animation/,
   );
   bad('<p style="transition: all 1s">x</p>', /CSS transition/);
+  // in the script, any key of an object literal, not only its first
+  bad(
+    js('tl.to($(".a"), { opacity: 1, transition: "all 1s" }, 0);'),
+    /CSS transition/,
+  );
+  bad(js('gsap.set($(".a"), { animationName: "spin" });'), /CSS animation/);
+});
+
+test("a script that does not parse is refused at compile, and a commented-out block is neither linted nor played", () => {
+  bad(js('tl.to($(".a"), { opacity: 1 }, 0'), /script syntax/);
+  const commented = `<p>x</p><!-- <script>setTimeout(f, 1)</script><style>.a { color: #fff; }</style> -->`;
+  assert.doesNotThrow(() => lint(commented));
+  const { script, css } = splitFragment(commented);
+  assert.equal(script, "");
+  assert.deepEqual(css, []);
 });
 
 test("a rule the scoping cannot carry, an at-rule or a nested rule, is refused", () => {

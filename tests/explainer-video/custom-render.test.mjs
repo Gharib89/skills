@@ -53,6 +53,23 @@ test("a custom scene composes its fragment onto the scene's paused timeline, its
   );
 });
 
+test("a selector list is split per selector, except a comma inside parentheses or brackets", () => {
+  const fx = custom(
+    `<div class="orb" data-x="a,b">Gate open</div>
+<style>
+:is(.orb, .tag) { opacity: 1; }
+[data-x="a,b"], .tag { opacity: 1; }
+</style>`,
+  );
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const html = comp(fx, "scenes/gate.html");
+  const scope = '[data-composition-id="gate"]';
+  assert.ok(html.includes(`${scope} :is(.orb, .tag) { opacity: 1; }`));
+  assert.ok(html.includes(`${scope} [data-x="a,b"] { opacity: 1; }`));
+  assert.ok(html.includes(`${scope} .tag { opacity: 1; }`));
+});
+
 test("a custom scene that shows no text stops the gates as a tool error, not a pass", () => {
   const fx = custom(
     '<div class="orb"></div><style>.orb { opacity: 1; }</style>',

@@ -41,8 +41,12 @@ export function checkCustom(p, said, ctx = {}) {
   let src;
   try {
     src = ctx.read(p.file);
-  } catch {
-    fail(`custom file ${p.file} is not beside the scene file`);
+  } catch (e) {
+    fail(
+      e.code === "ENOENT"
+        ? `custom file ${p.file} is not beside the scene file`
+        : `custom file ${p.file} cannot be read: ${e.message}`,
+    );
   }
   try {
     lintFragment(src, { names, arabic: ctx.language === "ar" });
