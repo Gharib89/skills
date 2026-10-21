@@ -6,6 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { fragmentScript } from "../../skills/explainer-video/scripts/render/fragment-script.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 import { at, comp, fixture, near, render } from "./render-lib.mjs";
 
@@ -46,7 +47,11 @@ test("a custom scene composes its fragment onto the scene's paused timeline, its
   assert.ok(near(cues.land, at(fx, "gate", 1)), JSON.stringify(cues));
   assert.ok(near(cues.done, at(fx, "gate", 2)), JSON.stringify(cues));
   // `$()` scopes a selector to the scene, so two scenes never share a class
-  assert.match(html, /\(sel\) => "\[data-composition-id=\\"gate\\"\]"/);
+  assert.match(html, /const scope = "\[data-composition-id=\\"gate\\"\]"/);
+  assert.match(
+    html,
+    /splitSelectors\(sel\)\.map\(\(s\) => scope \+ " " \+ s\)/,
+  );
   assert.doesNotMatch(
     html,
     /transition|animation|@keyframes|setTimeout|setInterval|requestAnimationFrame|Date\.now|performance\.now|Math\.random/,
@@ -68,6 +73,25 @@ test("a selector list is split per selector, except a comma inside parentheses o
   assert.ok(html.includes(`${scope} :is(.orb, .tag) { opacity: 1; }`));
   assert.ok(html.includes(`${scope} [data-x="a,b"] { opacity: 1; }`));
   assert.ok(html.includes(`${scope} .tag { opacity: 1; }`));
+});
+
+test("the script's $ scopes every selector of a list to the scene, as the rules are, so no other scene's element moves", () => {
+  const scope = '[data-composition-id="gate"]';
+  const seen = [];
+  const code = fragmentScript(
+    scope,
+    'seen.push($(".a, .b"), $(":is(.a, .b), .c"), $(\'[data-x="a,b"]\'), $(".a"), $());',
+    {},
+    1,
+  );
+  new Function("tl", "seen", code)({}, seen);
+  assert.deepEqual(seen, [
+    `${scope} .a, ${scope} .b`,
+    `${scope} :is(.a, .b), ${scope} .c`,
+    `${scope} [data-x="a,b"]`,
+    `${scope} .a`,
+    `${scope} .content`,
+  ]);
 });
 
 test("a custom scene that shows no text stops the gates as a tool error, not a pass", () => {

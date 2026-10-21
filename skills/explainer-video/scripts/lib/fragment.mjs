@@ -43,6 +43,27 @@ export function splitFragment(whole) {
   };
 }
 
+// A selector list as its selectors, trimmed. A comma inside parentheses
+// (`:is(.a, .b)`) or brackets (`[data-x="a,b"]`) stays. The composer scopes the
+// rules with it and the scene's `$` runs its source in the page, so it holds no
+// reference outside itself, and one split serves both.
+export function splitSelectors(list) {
+  const selectors = [];
+  let depth = 0;
+  let from = 0;
+  for (let i = 0; i < list.length; i++) {
+    const ch = list[i];
+    if (ch === "(" || ch === "[") depth++;
+    else if (ch === ")" || ch === "]") depth--;
+    else if (ch === "," && depth === 0) {
+      selectors.push(list.slice(from, i));
+      from = i + 1;
+    }
+  }
+  selectors.push(list.slice(from));
+  return selectors.map((s) => s.trim());
+}
+
 // The text a viewer reads in the fragment: the markup without tags, styles,
 // scripts and comments.
 export const fragmentText = (src) =>
