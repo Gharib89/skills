@@ -365,15 +365,46 @@ check(
     .join("; "),
 );
 
-// The layout gate over the largest diagram's samples and each browser page's,
-// as the gates stage takes them: its text inside the safe area, none clipped,
+// A sentence is lit as a function of time: each excerpt scene's frame mid-way
+// through the light-up on its emphasis cue (sentence 2, a third of the way in),
+// seeked twice, matches byte for byte and differs from the frame before it.
+const excerpts = FIXTURE.map((p) => p.scene).filter(
+  (s) => s.visual.component === "excerpt",
+);
+const lighting = [];
+for (const { id } of excerpts) {
+  const start = whole.scenes.find((s) => s.id === id).start;
+  const at = +(start + 1.55).toFixed(3);
+  const a = await seek(at, "lit-a");
+  const b = await seek(at, "lit-b");
+  const before = await seek(+(start + 1.0).toFixed(3), "lit-before");
+  lighting.push([id, a.equals(b), !a.equals(before)]);
+}
+check(
+  "lit",
+  lighting.every(([, same, moved]) => same && moved),
+  lighting
+    .map(
+      ([id, same, moved]) =>
+        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moved ? "differs" : "SAME"} from before its cue`,
+    )
+    .join("; "),
+);
+
+// The layout gate over the largest diagram's samples, each browser page's and
+// each excerpt's (the longest one's reading is what the sizes were set for), as
+// the gates stage takes them: its text inside the safe area, none clipped,
 // small or stacked.
 const largest = diagrams.toSorted(
   (a, b) => b.visual.props.nodes.length - a.visual.props.nodes.length,
 )[0].id;
 const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
 const laid = [];
-for (const id of [largest, ...browsers.map((s) => s.id)]) {
+for (const id of [
+  largest,
+  ...browsers.map((s) => s.id),
+  ...excerpts.map((s) => s.id),
+]) {
   const sc = whole.scenes.find((s) => s.id === id);
   const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
   const findings = [];
@@ -405,8 +436,8 @@ check(
     .join(" | "),
 );
 
-// With REAL_RENDER_FRAMES set, save each timeline, compare, diagram and browser
-// scene's settled frame (3 s in) for a human to check the reading order;
+// With REAL_RENDER_FRAMES set, save each timeline, compare, diagram, browser and
+// excerpt scene's settled frame (3 s in) for a human to check the reading order;
 // nothing asserts it.
 if (process.env.REAL_RENDER_FRAMES)
   for (const id of [
@@ -415,6 +446,7 @@ if (process.env.REAL_RENDER_FRAMES)
     "arabic-compare",
     ...diagrams.map((s) => s.id),
     ...browsers.map((s) => s.id),
+    ...excerpts.map((s) => s.id),
   ]) {
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(

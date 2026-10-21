@@ -21,6 +21,7 @@ import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { CUE_CHARS } from "../render/compose.mjs";
 import { banReason, cameraReason, seamReason } from "../lib/allowed.mjs";
+import { resolveExcerpts } from "../lib/excerpt.mjs";
 import { findStyle } from "../lib/style.mjs";
 import { checkVisual } from "../lib/visuals.mjs";
 import { BRACES, endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
@@ -182,20 +183,22 @@ const compiled = scenes.map((s) => {
     fail(s.id, `visual is not JSON: ${e.message}`);
   }
   const parts = s.sentences.map((x) => sentence(x, s.id));
-  // A custom scene's fragment is read beside the scene file, then kept in the
-  // script so a later stage plays what was linted.
+  // A custom scene's fragment and an excerpt scene's pack are read beside the
+  // scene file, then kept in the script so a later stage plays what was checked.
   const read = (f) => fs.readFileSync(path.join(run, f), "utf8");
   try {
     checkVisual(
       visual,
       parts.map((x) => x.narration),
-      { read, language },
+      { read, language, cites: [...new Set(parts.flatMap((x) => x.cites))] },
     );
   } catch (e) {
     fail(s.id, e.message);
   }
   if (visual.component === "custom")
     visual.props.source = read(visual.props.file);
+  if (visual.component === "excerpt")
+    visual.props.excerpts = resolveExcerpts(visual.props, read);
   const banned = banReason(
     bans,
     visual.component,

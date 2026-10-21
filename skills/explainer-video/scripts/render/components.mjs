@@ -8,6 +8,7 @@ import { boxCss, esc, paint, sketchCss, sketched } from "./box.mjs";
 import { browser } from "./browser.mjs";
 import { custom } from "./custom.mjs";
 import { diagram } from "./diagram.mjs";
+import { excerpt } from "./excerpt.mjs";
 import { chart, stat } from "./numbers.mjs";
 import { compare, timeline } from "./sequence.mjs";
 
@@ -125,6 +126,7 @@ export const COMPONENTS = {
   compare,
   diagram,
   browser,
+  excerpt,
   custom,
   title: (p, f, x) => {
     const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";

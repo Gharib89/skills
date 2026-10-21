@@ -153,11 +153,12 @@ const RETIRED = {
 
 // Whether a scene of `component` blurs the items off focus when its emphasis
 // lands: the depth overlay is on with a blur above 0, and a code frame has no
-// items to blur.
+// items to blur; an excerpt dims its own sentences.
 export const blursDepth = (texture, component) =>
   texture.overlays.includes("depth") &&
   texture.depthBlur > 0 &&
-  !component.startsWith("code");
+  !component.startsWith("code") &&
+  component !== "excerpt";
 
 // The grammar a profile plays: its own fields over the defaults.
 export function grammar(profile) {

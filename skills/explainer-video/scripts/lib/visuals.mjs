@@ -9,6 +9,7 @@ import { checkBrowser } from "./browser.mjs";
 import { plain } from "./count.mjs";
 import { checkCustom } from "./custom.mjs";
 import { checkDiagram } from "./diagram.mjs";
+import { checkExcerpt } from "./excerpt.mjs";
 import { shownText } from "./fragment.mjs";
 import {
   CUE,
@@ -435,6 +436,26 @@ export const VISUALS = {
         ...p.elements.map((e) => e.text),
         ...p.actions.map((a) => a.text),
       ]),
+  },
+  // One cited excerpt of the source pack on a page or document surface, its
+  // text the pack's own and never the scene file's, and numbered chips for
+  // further cited excerpts. Not rich: the camera beat reads what it shows.
+  excerpt: {
+    props: ["cite", "chips", "emphasis"],
+    check: checkExcerpt,
+    items: (p) => [
+      [
+        "excerpt",
+        1,
+        [p.excerpts?.[p.cite]?.text, p.excerpts?.[p.cite]?.locator],
+      ],
+      ...(p.chips ?? []).map((c, i) => [
+        `chip ${i + 1}`,
+        c.at,
+        [`${i + 1}`, p.excerpts?.[c.cite]?.locator],
+        c.on,
+      ]),
+    ],
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],
