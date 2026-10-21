@@ -13,6 +13,21 @@ export const latinRuns = (text) => text.match(RUN) ?? [];
 // The text cut around its Latin runs: the runs at odd indexes.
 export const splitLatin = (text) => text.split(new RegExp(`(${RUN.source})`));
 
+// The words of `text`, each moved whole. Right to left, a Latin run (an English
+// term) is one word however many it holds, and Arabic letters glued to it stay
+// in that word, so its order survives the reading direction.
+export function wholeWords(text, rtl) {
+  const glued = rtl
+    ? splitLatin(String(text))
+        .map((p, i) => (i % 2 ? p.replace(/\s+/g, "\0") : p))
+        .join("")
+    : String(text);
+  return glued
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replaceAll("\0", " "));
+}
+
 export const ARABIC_SCRIPT = /\p{Script=Arabic}/u;
 
 // A narration's `{written|spoken}` pair: the term as captioned, then as said.
