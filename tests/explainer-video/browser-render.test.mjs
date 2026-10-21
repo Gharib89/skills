@@ -1,6 +1,6 @@
 // The `browser` component drawn: a generic page whose cursor, click and typed
 // text play on each action's cue, on the scene's paused timeline. Typed text
-// rises a whole word at a time, in Arabic too. Right to left, the page mirrors
+// appears a whole word at a time, in Arabic too. Right to left, the page mirrors
 // and its URL stays left to right. The page draws in the profile's tokens only.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -132,7 +132,7 @@ test("a click ripples at its target once the cursor has arrived, and a move ripp
   assert.ok(from.opacity > 0 && to.opacity === 0);
 });
 
-test("typed text rises a whole word at a time, each after the last, once the cursor has arrived", async () => {
+test("typed text appears a whole word at a time, each after the last, once the cursor has arrived", async () => {
   const html = await drawn();
   const words = tweens(html).filter(([s]) => /^\.tw\d+$/.test(s));
   assert.equal(words.length, 2);
