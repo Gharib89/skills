@@ -214,6 +214,17 @@ test("with no emphasis nothing is dimmed or lit", async () => {
   assert.equal(tweens(html).filter(([s]) => /^\.(xs|lw)/.test(s)).length, 0);
 });
 
+test("a code word keeps its leading and inner spaces: the word span sets them as written", async () => {
+  const css = (await drawn({ cite: "ex-2" })).match(
+    /<style>([\s\S]*?)<\/style>/,
+  )[1];
+  // `.xw` alone is `nowrap`, which collapses a line's indent; the code rule
+  // after it puts the spaces back, as its `.xt` parent's `pre` would for text
+  const word = css.match(/\.xcode \.xw \{[^}]*\}/)?.[0] ?? "";
+  assert.match(word, /white-space: pre;/);
+  assert.ok(css.indexOf(".xcode .xw") > css.indexOf("\n.xw {"));
+});
+
 test("a code excerpt is lit by line", async () => {
   const html = await drawn({
     cite: "ex-2",

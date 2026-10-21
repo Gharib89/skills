@@ -88,6 +88,7 @@ export const excerpt = (p, f, x) => {
 .xcode .xt { font: 400 var(--size-code)/1.5 ${f.code}; white-space: pre; }
 .xcode .xs { min-height: 1.5em; }
 .xw { display: inline; white-space: nowrap; background: linear-gradient(var(--accent), var(--accent)) no-repeat 0 100% / 0% 4px; }
+.xcode .xw { white-space: pre; }
 .xd[dir="rtl"] .xs.lit .xw { background-position: 100% 100%; }
 .xcs { flex: 0 0 360px; display: flex; flex-direction: column; gap: 24px; }
 .xc { display: flex; align-items: center; gap: 20px; box-sizing: border-box; padding: 16px 24px; background: var(--chip); border: 2px solid var(--line); border-radius: 18px; }
