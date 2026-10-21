@@ -11,6 +11,7 @@ import { checkCustom } from "./custom.mjs";
 import { checkDiagram } from "./diagram.mjs";
 import { checkExcerpt } from "./excerpt.mjs";
 import { shownText } from "./fragment.mjs";
+import { checkStack3d } from "./stack3d.mjs";
 import {
   CUE,
   cue,
@@ -31,15 +32,21 @@ export const lines = (code) => code.split("\n");
 
 // The techniques a style profile may ban beside the components, each with the
 // components that use it: `draw` strokes arrows on, `kinetic` moves type word
-// by word. The texture draws `blur`, not a component: the profile loader checks
-// it there, and the type family `words` the same way for `kinetic`. `camera` is
-// a scene's `camera` key, which compile checks.
+// by word, `3d` draws with WebGL. The texture draws `blur`, not a component: the
+// profile loader checks it there, and the type family `words` the same way for
+// `kinetic`. `camera` is a scene's `camera` key, which compile checks.
 export const TECHNIQUES = {
   draw: ["flow", "diagram"],
   blur: [],
   camera: [],
   kinetic: ["words", "browser"],
+  "3d": ["stack3d"],
 };
+
+// Whether any of `scenes` draws WebGL, which the render and the gates take the
+// GPU path for.
+export const drawsWebgl = (scenes) =>
+  scenes.some((s) => VISUALS[s.visual.component].webgl);
 
 // The index, among the scene's spoken words, of the word the cue `{ at, on }`
 // lands on: the sentence's first word, or the phrase's.
@@ -456,6 +463,17 @@ export const VISUALS = {
         c.on,
       ]),
     ],
+  },
+  // Lit layers drawn in 3D with WebGL, each rising on its cue with its label
+  // (DOM text over the canvas, so the layout gate judges it). Rich like `words`.
+  stack3d: {
+    props: ["layers"],
+    ownCamera: true,
+    webgl: true,
+    check: checkStack3d,
+    items: (p) =>
+      p.layers.map((l, i) => [`layer ${i + 1}`, l.at, [l.label], l.on]),
+    numbers: (p) => p.layers.flatMap((l) => numbersIn([l.label])),
   },
   code: {
     props: ["lang", "code", "file", "emphasis"],

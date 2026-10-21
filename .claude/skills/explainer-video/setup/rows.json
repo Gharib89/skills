@@ -360,6 +360,15 @@
       "licence": "MIT"
     },
     {
+      "id": "gpu-3d",
+      "kind": "gpu",
+      "when": "opt-in",
+      "why": "the stack3d component draws WebGL on the GPU, and the render forces the host GPU for it",
+      "neededBy": "3D scenes (stack3d)",
+      "writes": "nothing, it needs an NVIDIA card",
+      "licence": "None (your NVIDIA card and driver; three, MIT, comes with npm-packages)"
+    },
+    {
       "id": "ffmpeg",
       "kind": "system",
       "command": "ffmpeg",

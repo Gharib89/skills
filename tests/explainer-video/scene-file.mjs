@@ -113,6 +113,25 @@ style: claude-code
 \`\`\`
 `;
 
+// One stack3d scene, which draws WebGL, for the GPU render tests.
+export const STACK3D = `# How Ship lands a pull request
+language: en
+narrator: am_fenrir
+style: claude-code
+
+## Scene stack · The stack
+
+### Narration
+1. The issue is the base. [ex-1]
+2. A failing test sits on it. [ex-2]
+3. Then the code makes it pass. [ex-5]
+
+### Visual
+\`\`\`json
+{ "component": "stack3d", "props": { "layers": [ { "at": 1, "label": "Issue" }, { "at": 2, "label": "Test" }, { "at": 3, "label": "Code" } ] } }
+\`\`\`
+`;
+
 // An Egyptian Arabic scene file, written in Arabic with its kept terms in
 // Latin letters: a title, a flow and a code frame, for the Arabic tests.
 export const ARABIC = `# إزاي Ship بيوصل لحد pull request

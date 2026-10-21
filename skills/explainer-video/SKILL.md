@@ -7,7 +7,7 @@ description: >-
   screenshots, a website, a deck or a video, or for its tools to be checked or
   installed (`/explainer-video setup`).
 metadata:
-  version: 0.45.0
+  version: 0.46.0
 ---
 
 # explainer-video
@@ -72,6 +72,9 @@ host prerequisites: the line under the table says whether Kokoro runs on the
 GPU here or names the missing library, and Kokoro stays on the CPU until it is
 there. A CUDA failure at voice time falls back to the CPU and prints one stderr
 line.
+
+`gpu-3d` (a `stack3d` scene's WebGL) installs nothing: it reads `present` with
+an NVIDIA card, else `refused`.
 
 Whenever the **Gemini data notice** prints under a table, relay it word for
 word: setup prints it once per key, the first time Google accepts that key.

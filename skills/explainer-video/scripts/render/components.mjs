@@ -11,6 +11,7 @@ import { diagram } from "./diagram.mjs";
 import { excerpt } from "./excerpt.mjs";
 import { chart, stat } from "./numbers.mjs";
 import { compare, timeline } from "./sequence.mjs";
+import { stack3d } from "./stack3d.mjs";
 
 export { esc };
 
@@ -127,6 +128,7 @@ export const COMPONENTS = {
   diagram,
   browser,
   excerpt,
+  stack3d,
   custom,
   title: (p, f, x) => {
     const kick = p.kicker ? `<div class="kick r0">${f.t(p.kicker)}</div>` : "";

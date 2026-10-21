@@ -263,8 +263,10 @@ export function findChrome(home) {
 // The composition open in a fresh browser, ready to seek. It is served as
 // `hyperframes check` sees it: its folder over HTTP with the HyperFrames
 // runtime injected into index.html, which mounts the data-composition-src
-// scenes and sets window.__renderReady.
-async function openComposition(dir, env) {
+// scenes and sets window.__renderReady. With `software`, Chrome draws WebGL on
+// SwiftShader, the CPU renderer, so two launches agree to the pixel where a host
+// GPU's frames may not.
+async function openComposition(dir, env, software = false) {
   const nodeDir = toolPaths().node;
   const runtime = path.join(
     nodeDir,
@@ -309,7 +311,17 @@ async function openComposition(dir, env) {
     browser = await fromCache(nodeDir)("puppeteer-core").launch({
       headless: true,
       executablePath: findChrome(env.HOME),
-      args: ["--no-sandbox", "--font-render-hinting=none"],
+      args: [
+        "--no-sandbox",
+        "--font-render-hinting=none",
+        ...(software
+          ? [
+              "--use-gl=angle",
+              "--use-angle=swiftshader",
+              "--enable-unsafe-swiftshader",
+            ]
+          : []),
+      ],
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
@@ -433,8 +445,10 @@ export async function events(dir, { env }) {
 
 // The composition's frame at `t` as a PNG, in a browser launched for it alone:
 // the probe's seek then a screenshot, the route that needs no second renderer.
-export async function frame(dir, t, out, { env }) {
-  const { page, close } = await openComposition(dir, env);
+// `software` renders WebGL on SwiftShader, as the determinism gate needs of a
+// scene that draws it.
+export async function frame(dir, t, out, { env, software = false }) {
+  const { page, close } = await openComposition(dir, env, software);
   try {
     await seek(page, t);
     await page.screenshot({ path: out, type: "png" });

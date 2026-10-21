@@ -493,4 +493,24 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
     },
     seconds: 4,
   },
+  // Lit layers drawn by Three.js, each dropping in on its sentence's cue.
+  {
+    scene: {
+      id: "stack",
+      role: "point",
+      title: "Stack",
+      narration: ["The issue is the base.", "A test sits on it.", "Then code."],
+      visual: {
+        component: "stack3d",
+        props: {
+          layers: [
+            { at: 1, label: "Issue" },
+            { at: 2, label: "Test" },
+            { at: 3, label: "Code" },
+          ],
+        },
+      },
+    },
+    seconds: 3.4,
+  },
 ];

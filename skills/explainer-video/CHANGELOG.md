@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.46.0 (2026-10-21)
+
+### Features
+
+- **explainer-video**: Live 3D with stack3d on the GPU
+  ([#925](https://github.com/Gharib89/skills/pull/925),
+  [`599315c`](https://github.com/Gharib89/skills/commit/599315c525028fd4800a9a323c40848369b7daeb))
+
+
 ## v0.45.0 (2026-10-21)
 
 ### Features

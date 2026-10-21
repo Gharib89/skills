@@ -106,6 +106,29 @@ test("each time source is refused in the script, named", () => {
   assert.doesNotThrow(() => lint("<p>Date.now() reads the clock</p>"));
 });
 
+test("text drawn into a canvas or WebGL is refused in the script, named, so the layout gate sees every word", () => {
+  for (const [code, name] of [
+    ['ctx.fillText("Ship", 10, 20);', "fillText"],
+    ['ctx.strokeText("Ship", 10, 20);', "strokeText"],
+    ["const g = new TextGeometry(word, { font });", "TextGeometry"],
+    ["new FontLoader().load(url, (font) => {});", "FontLoader"],
+    ["const t = new troika.Text();", "troika"],
+  ])
+    bad(js(code), new RegExp(`text in a canvas or WebGL ${name}`));
+  // a canvas that draws no text, a DOM label and plain text saying the word
+  assert.doesNotThrow(() =>
+    lint(
+      '<canvas class="gl"></canvas><p class="lb">Ship</p>' +
+        js("ctx.fillRect(0, 0, 9, 9);"),
+    ),
+  );
+  assert.doesNotThrow(() => lint("<p>fillText draws text</p>"));
+  // the API's name inside a string is DOM text a scene shows, not a draw call
+  assert.doesNotThrow(() =>
+    lint(js('tl.set($(".lb"), { textContent: "fillText" }, 0);')),
+  );
+});
+
 test("a tween off the scene's timeline is refused, since it runs on wall time", () => {
   for (const [code, name] of [
     ['gsap.to($("div"), { opacity: 0 });', "gsap.to"],

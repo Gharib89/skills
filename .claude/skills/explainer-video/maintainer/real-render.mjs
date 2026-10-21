@@ -27,7 +27,7 @@ import { HOLD } from "../scripts/lib/length.mjs";
 import { judge } from "../scripts/lib/layout.mjs";
 import { sampleTimes, seamStripStart } from "../scripts/lib/motion.mjs";
 import { floors, loadStyle, typeRoles } from "../scripts/lib/style.mjs";
-import { VISUALS } from "../scripts/lib/visuals.mjs";
+import { VISUALS, drawsWebgl } from "../scripts/lib/visuals.mjs";
 import {
   catalogue,
   compositionAssets,
@@ -43,6 +43,7 @@ import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
+import { timeChecks } from "./real-render-time.mjs";
 
 const HALF = 1;
 const RATE = 24000;
@@ -106,7 +107,8 @@ async function compose(name, part, hold) {
   const run = path.join(work, name);
   const comp = path.join(run, "composition");
   fs.mkdirSync(path.join(comp, "scenes"), { recursive: true });
-  const fonts = compositionAssets(fontRows, comp);
+  const webgl = drawsWebgl(part.map((p) => p.scene));
+  const fonts = compositionAssets(fontRows, comp, { webgl });
   const voice = {
     scenes: part.map((p) => {
       const audio = `${p.scene.id}.wav`;
@@ -167,16 +169,20 @@ async function compose(name, part, hold) {
       scenes,
       cues: [],
       total: written(grid.total),
+      webgl,
     }),
   );
   return { comp, frames: grid.total, scenes };
 }
 
-// Renders a composition to `out`; true on a clean exit.
+// Renders a composition to `out`; true on a clean exit. Every render runs on
+// SwiftShader (`--no-browser-gpu`): a host GPU's frames are not bit-stable, and
+// the determinism checks compare renders.
 const render = async (comp, out) =>
   (await backend.hyperframes(
     [
-      ...["render", "--strict", "--quiet", "--fps", String(FPS)],
+      ...["render", "--strict", "--quiet", "--no-browser-gpu"],
+      ...["--fps", String(FPS)],
       ...["--workers", "3", "--quality", "looks", "-o", out],
     ],
     { cwd: comp, env },
@@ -234,9 +240,11 @@ check(
 // the same, and so does each scene after: an exit and an entry window for each
 // of the fixture's scene changes.
 const raw = await backend.events(whole.comp, { env });
-const seek = async (t, n) => {
+// A frame of a WebGL scene is seeked on SwiftShader, as the gate does; every
+// other scene's, as before.
+const seek = async (t, n, software = false) => {
   const png = path.join(work, `seam-${t}-${n}.png`);
-  await backend.frame(whole.comp, t, png, { env });
+  await backend.frame(whole.comp, t, png, { env, software });
   return fs.readFileSync(png);
 };
 // Each window of `kind` (`seams` or `camera`) in video seconds: its first,
@@ -340,62 +348,19 @@ check(
     .join("; "),
 );
 
-// The cursor's place is a function of time: each browser scene's frame 1.35 s
-// in, the cursor mid-move to the field, seeked twice, matches byte for byte and
-// differs from the frame 0.2 s later.
-const browsers = FIXTURE.map((p) => p.scene).filter(
-  (s) => s.visual.component === "browser",
-);
-const cursors = [];
-for (const { id } of browsers) {
-  const start = whole.scenes.find((s) => s.id === id).start;
-  const at = +(start + 1.35).toFixed(3);
-  const a = await seek(at, "cursor-a");
-  const b = await seek(at, "cursor-b");
-  const later = await seek(+(at + 0.2).toFixed(3), "cursor-later");
-  cursors.push([id, a.equals(b), !a.equals(later)]);
-}
-check(
-  "cursor",
-  cursors.every(([, same, moved]) => same && moved),
-  cursors
-    .map(
-      ([id, same, moved]) =>
-        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moved ? "moves" : "STILL"} 0.2 s later`,
-    )
-    .join("; "),
-);
+// A browser's cursor, an excerpt's lit sentence and a stack3d scene's WebGL
+// canvas are each a function of time (checks `cursor`, `lit`, `webgl`).
+const sceneOf = (component) =>
+  FIXTURE.map((p) => p.scene).filter((s) => s.visual.component === component);
+const browsers = sceneOf("browser");
+const excerpts = sceneOf("excerpt");
+const stacks = sceneOf("stack3d");
+await timeChecks({ whole, seek, check, browsers, excerpts, stacks });
 
-// A sentence is lit as a function of time: each excerpt scene's frame mid-way
-// through the light-up on its emphasis cue (sentence 2, a third of the way in),
-// seeked twice, matches byte for byte and differs from the frame before it.
-const excerpts = FIXTURE.map((p) => p.scene).filter(
-  (s) => s.visual.component === "excerpt",
-);
-const lighting = [];
-for (const { id } of excerpts) {
-  const start = whole.scenes.find((s) => s.id === id).start;
-  const at = +(start + 1.55).toFixed(3);
-  const a = await seek(at, "lit-a");
-  const b = await seek(at, "lit-b");
-  const before = await seek(+(start + 1.0).toFixed(3), "lit-before");
-  lighting.push([id, a.equals(b), !a.equals(before)]);
-}
-check(
-  "lit",
-  lighting.every(([, same, moved]) => same && moved),
-  lighting
-    .map(
-      ([id, same, moved]) =>
-        `${id}: ${same ? "equal" : "DIFFERENT"} on two seeks, ${moved ? "differs" : "SAME"} from before its cue`,
-    )
-    .join("; "),
-);
-
-// The layout gate over the largest diagram's samples, each browser page's and
-// each excerpt's (the longest one's reading is what the sizes were set for), as
-// the gates stage takes them: its text inside the safe area, none clipped,
-// small or stacked.
+// The layout gate over the largest diagram's samples, each browser page's, each
+// excerpt's (the longest one's reading is what the sizes were set for) and each
+// stack3d scene's, as the gates stage takes them: its text inside the safe
+// area, none clipped, small or stacked.
 const largest = diagrams.toSorted(
   (a, b) => b.visual.props.nodes.length - a.visual.props.nodes.length,
 )[0].id;
@@ -406,6 +371,7 @@ for (const id of [
   largest,
   ...browsers.map((s) => s.id),
   ...excerpts.map((s) => s.id),
+  ...stacks.map((s) => s.id),
 ]) {
   const sc = whole.scenes.find((s) => s.id === id);
   const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
@@ -468,11 +434,16 @@ if (process.env.REAL_RENDER_FRAMES)
     ...diagrams.map((s) => s.id),
     ...browsers.map((s) => s.id),
     ...excerpts.map((s) => s.id),
+    ...stacks.map((s) => s.id),
   ]) {
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(
       path.join(process.env.REAL_RENDER_FRAMES, `${id}.png`),
-      await seek(+(start + 3.0).toFixed(3), id),
+      await seek(
+        +(start + 3.0).toFixed(3),
+        id,
+        stacks.some((s) => s.id === id),
+      ),
     );
   }
 
