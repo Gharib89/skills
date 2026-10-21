@@ -82,6 +82,16 @@ test("a published page needs the live build uploaded like a font, and takes its 
   assert.equal(r.code, 0, r.err);
   built(fx);
   assert.equal(latestCard(fx).live.url, blob(99));
+  // The local copy opens from file:, where a blob URL resolves to nothing: it
+  // keeps its build and its fonts beside it.
+  const page = read(dir, "stylecard.html");
+  const embedded = JSON.parse(
+    page.match(
+      /<script type="application\/json" id="card">(.*?)<\/script>/s,
+    )[1],
+  );
+  assert.equal(embedded.live.url, "live.js");
+  assert.ok(embedded.fonts.every((f) => f.url.startsWith("frames/fonts/")));
 });
 
 test("each grammar field is listed with its mark: measured, judged, or default where the draft leaves it out", () => {

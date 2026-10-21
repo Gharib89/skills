@@ -570,7 +570,7 @@ fs.writeFileSync(
       .replace(
         '<script type="application/json" id="card">null</script>',
         () =>
-          `<script type="application/json" id="card">${JSON.stringify({ ...doc, fonts: doc.fonts.map((f) => ({ ...f, url: `frames/fonts/${f.file}` })) }).replaceAll("<", "\\u003c")}</script>`,
+          `<script type="application/json" id="card">${JSON.stringify({ ...doc, fonts: doc.fonts.map((f) => ({ ...f, url: `frames/fonts/${f.file}` })), live: { url: "live.js" } }).replaceAll("<", "\\u003c")}</script>`,
       ),
 );
 console.log(
