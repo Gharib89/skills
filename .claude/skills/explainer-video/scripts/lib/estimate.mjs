@@ -15,9 +15,15 @@ export const BUDGET = 5;
 // Refuses a table of the wrong shape by naming the file and the field: a
 // missing rate would otherwise show on the page as `NaN s`.
 export function loadRates(file = path.join(skill, "render-rates.json")) {
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch (e) {
+    throw new Error(`${file}: cannot be read (${e.code})`);
+  }
   let table;
   try {
-    table = JSON.parse(fs.readFileSync(file, "utf8"));
+    table = JSON.parse(text);
   } catch (e) {
     throw new Error(`${file}: is not JSON (${e.message})`);
   }

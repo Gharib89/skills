@@ -39,7 +39,7 @@ import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
 import { grammar, loadStyle } from "../lib/style.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
-import { VISUALS, webgl } from "../lib/visuals.mjs";
+import { VISUALS, isWebgl } from "../lib/visuals.mjs";
 import { esc } from "../render/compose.mjs";
 import { liveScript } from "../render/live.mjs";
 import { seamPlan } from "../render/seams.mjs";
@@ -426,10 +426,11 @@ const estimated = estimate(
   cards.map((c, i) => ({
     id: c.id,
     seconds: c.seconds,
-    webgl: webgl(script.scenes[i]),
+    webgl: isWebgl(script.scenes[i]),
   })),
   table.rates,
-  // textured as the calibrator's textured video is: any surface but flat, or any overlay
+  // Textured is what the calibrator's flat style lacks: a surface other than
+  // flat, or any overlay.
   { textured: texture.surface !== "flat" || texture.overlays.length > 0 },
 );
 for (const c of cards) if (c.rich) c.adds = estimated.adds[c.id];

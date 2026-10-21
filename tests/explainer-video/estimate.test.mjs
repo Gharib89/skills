@@ -84,3 +84,14 @@ test("a table of the wrong shape is refused naming the file and the field", () =
       field,
     );
 });
+
+test("a table that cannot be read is refused as unreadable, not as bad JSON", () => {
+  const missing = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "estimate-")),
+    "render-rates.json",
+  );
+  assert.throws(
+    () => loadRates(missing),
+    /render-rates\.json: cannot be read \(ENOENT/,
+  );
+});
