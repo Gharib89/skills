@@ -40,7 +40,12 @@ test("the scene is a canvas and one DOM label per layer, drawn by a WebGL render
 
 test("the redraw hangs on the paused timeline and reads no clock but the scene's", async () => {
   const html = await drawn();
-  assert.match(html, /tl\.to\(clock, \{ t: 9, duration: 9, ease: "none"/);
+  assert.match(
+    html,
+    /tl\.eventCallback\("onUpdate", \(\) => draw\(tl\.time\(\)\)\)/,
+  );
+  assert.match(html, /tl\.set\(\{\}, \{\}, 9\)/);
+  assert.ok(!html.includes("duration: 9"), "a tween as long as the slot");
   for (const clock of [
     "requestAnimationFrame",
     "Date.now",

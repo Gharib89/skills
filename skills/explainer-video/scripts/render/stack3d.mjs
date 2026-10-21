@@ -3,8 +3,10 @@
 // WebGL draws; a label is DOM text placed by projecting its layer through the
 // camera that drew the canvas, so the layout gate judges it like any other text.
 // Everything is a function of the scene's time, closed form, so a seek renders
-// the frame it names: the paused timeline's one tween calls the renderer on each
-// update and runs the whole slot, the seam out included.
+// the frame it names: the paused timeline calls the renderer on each update, and
+// an empty `set` at the slot's end pads it to run the whole slot, the seam out
+// included. No tween spans the slot: a long one on a scene shifted an earlier
+// scene's bar edge by a pixel row between two seeks (cause not found).
 
 // The slab's size in world units, the pitch between slabs, and how far above its
 // place a layer starts before it drops in over RISE seconds.
@@ -73,8 +75,8 @@ export const stack3d = (p, f, x) => {
             });
             renderer.render(scene, camera);
           };
-          const clock = { t: 0 };
-          tl.to(clock, { t: ${x.slot}, duration: ${x.slot}, ease: "none", onUpdate: () => draw(clock.t) }, 0);
+          tl.set({}, {}, ${x.slot});
+          tl.eventCallback("onUpdate", () => draw(tl.time()));
           draw(0);
         })();`,
   };

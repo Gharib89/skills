@@ -375,19 +375,30 @@ check(
 // The WebGL canvas is a function of time: each stack3d scene's frame 1.3 s in,
 // a layer mid-drop, rendered twice on SwiftShader as the determinism gate does,
 // matches byte for byte, and differs from the frame 0.2 s later. The canvas is
-// drawn, not blank: its frame differs from the first, before any layer is in.
+// drawn, not blank: its frame, and the slot's last, differ from the first,
+// before any layer is in.
 const stacks = FIXTURE.map((p) => p.scene).filter(
   (s) => s.visual.component === "stack3d",
 );
 const drawn = [];
 for (const { id } of stacks) {
-  const start = whole.scenes.find((s) => s.id === id).start;
+  const { start, slot } = whole.scenes.find((s) => s.id === id);
   const at = +(start + 1.3).toFixed(3);
   const a = await seek(at, "stack-a", true);
   const b = await seek(at, "stack-b", true);
   const later = await seek(+(at + 0.2).toFixed(3), "stack-later", true);
   const empty = await seek(+(start + 0.05).toFixed(3), "stack-empty", true);
-  drawn.push([id, a.equals(b), !a.equals(later), !a.equals(empty)]);
+  const last = await seek(
+    +(start + slot - 0.04).toFixed(3),
+    "stack-last",
+    true,
+  );
+  drawn.push([
+    id,
+    a.equals(b),
+    !a.equals(later),
+    !a.equals(empty) && !last.equals(empty),
+  ]);
 }
 check(
   "webgl",
