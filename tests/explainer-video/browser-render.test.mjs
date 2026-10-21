@@ -6,6 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { sceneFile } from "../../skills/explainer-video/scripts/render/compose.mjs";
+import { pageLayout } from "../../skills/explainer-video/scripts/render/browser.mjs";
 import { read, skill } from "./render-lib.mjs";
 
 const claude = JSON.parse(read(skill, "styles", "claude-code.json"));
@@ -68,6 +69,16 @@ test("the cursor moves to each action's target on its cue, from where the last o
     moves.map(([, , , t]) => t),
     [0, 3, 7.2],
   );
+  // each move ends at its target's centre (the cursor starts at 1220, 600)
+  const boxes = pageLayout(page.elements, false);
+  page.actions.forEach((a, i) => {
+    const { left, top, w, h } =
+      boxes[page.elements.findIndex((e) => e.id === a.target)];
+    assert.deepEqual(
+      [moves[i][2].x, moves[i][2].y],
+      [+(left + w / 2 - 1220).toFixed(2), +(top + h / 2 - 600).toFixed(2)],
+    );
+  });
   // each move starts where the one before ended
   for (let i = 1; i < moves.length; i++) {
     assert.equal(moves[i][1].x, moves[i - 1][2].x);
@@ -83,8 +94,15 @@ test("the cursor moves to each action's target on its cue, from where the last o
 });
 
 test("a click ripples at its target once the cursor has arrived, and a move ripples nowhere", async () => {
-  const list = tweens(await drawn());
+  const html = await drawn();
+  const list = tweens(html);
   const ripples = list.filter(([s]) => /^\.rp\d+$/.test(s));
+  const go = pageLayout(page.elements, false)[2];
+  assert.ok(
+    html.includes(
+      `class="rp rp2" style="left: ${go.left + go.w / 2}px; top: ${go.top + go.h / 2}px;"`,
+    ),
+  );
   assert.equal(ripples.length, 1);
   const [sel, from, to, t] = ripples[0];
   assert.equal(sel, ".rp2");

@@ -34,17 +34,9 @@ export function pageLayout(elements, rtl) {
   });
 }
 
-const CLASS = {
-  heading: "heading",
-  text: "txt",
-  button: "btn",
-  field: "fld",
-  link: "lnk",
-};
-
 export const browser = (p, f, x) => {
   const boxes = pageLayout(p.elements, f.rtl);
-  const at = new Map(p.elements.map((e, i) => [e.id, i]));
+  const index = new Map(p.elements.map((e, i) => [e.id, i]));
   // The cursor comes in from the reading end, low in the window, and each move
   // runs from where the last left it, in px from that start.
   const start = [f.rtl ? 140 : PAGE.width - 140, PAGE.height - 90];
@@ -55,7 +47,7 @@ export const browser = (p, f, x) => {
   let word = 0;
   let from = rel(start);
   for (const [i, a] of p.actions.entries()) {
-    const box = boxes[at.get(a.target)];
+    const box = boxes[index.get(a.target)];
     const to = rel(centre(box));
     // The timeline alone moves the cursor, and a later move must not repaint
     // an earlier one's from state, so none renders its from at build.
@@ -81,7 +73,7 @@ export const browser = (p, f, x) => {
         a,
       ]);
     if (a.act === "type") {
-      const e = at.get(a.target);
+      const e = index.get(a.target);
       // The field's own label gives way once, as the first words arrive.
       if (!typed.has(e))
         tweens.push([
@@ -116,13 +108,13 @@ export const browser = (p, f, x) => {
             .map(({ k, w }) => `<span class="tw tw${k}">${f.t(w)}</span>`)
             .join("")}</span>`
         : f.tt(e.text);
-    return `<div class="el e${i} ${CLASS[e.kind]}" style="left: ${left}px; top: ${top}px; width: ${w}px; height: ${h}px;">${inner}</div>`;
+    return `<div class="el e${i} k-${e.kind}" style="left: ${left}px; top: ${top}px; width: ${w}px; height: ${h}px;">${inner}</div>`;
   };
   const ripples = p.actions
     .map((a, i) => [a, i])
     .filter(([a]) => a.act === "click")
     .map(([a, i]) => {
-      const [cx, cy] = centre(boxes[at.get(a.target)]);
+      const [cx, cy] = centre(boxes[index.get(a.target)]);
       return `<div class="rp rp${i}" style="left: ${r(cx)}px; top: ${r(cy)}px;"></div>`;
     });
   return {
@@ -133,11 +125,11 @@ export const browser = (p, f, x) => {
 .btab { flex: none; font: 600 var(--size-label) ${f.text}; color: var(--text); white-space: nowrap; }
 .url { flex: 1; min-width: 0; box-sizing: border-box; text-align: left; white-space: nowrap; overflow: hidden; padding: 6px 24px; font: 400 var(--size-label) ${f.code}; color: var(--muted); background: var(--bg); border: 2px solid var(--line); border-radius: 999px; }
 .el { position: absolute; box-sizing: border-box; display: flex; align-items: center; text-align: start; }
-.heading { font: ${f.titleWeight} var(--size-title)/${f.lh(1.1, "title")} ${f.title}; color: var(--text); }
-.txt { font: 400 var(--size-body)/${f.lh(1.3, "text")} ${f.text}; color: var(--muted); }
-.btn { justify-content: center; font: 600 var(--size-body) ${f.text}; color: var(--bg); background: var(--accent); border-radius: 14px; }
-.lnk { font: 600 var(--size-body) ${f.text}; color: var(--accent); text-decoration: underline; }
-.fld { padding: 0 24px; font: 400 var(--size-body) ${f.text}; color: var(--text); background: var(--bg); border: 2px solid var(--line); border-radius: 12px; }
+.k-heading { font: ${f.titleWeight} var(--size-title)/${f.lh(1.1, "title")} ${f.title}; color: var(--text); }
+.k-text { font: 400 var(--size-body)/${f.lh(1.3, "text")} ${f.text}; color: var(--muted); }
+.k-button { justify-content: center; font: 600 var(--size-body) ${f.text}; color: var(--bg); background: var(--accent); border-radius: 14px; }
+.k-link { font: 600 var(--size-body) ${f.text}; color: var(--accent); text-decoration: underline; }
+.k-field { padding: 0 24px; font: 400 var(--size-body) ${f.text}; color: var(--text); background: var(--bg); border: 2px solid var(--line); border-radius: 12px; }
 .ph { position: absolute; inset-inline-start: 24px; color: var(--faint); }
 .ty { display: flex; gap: 0.3em; }
 .tw { opacity: 0; }

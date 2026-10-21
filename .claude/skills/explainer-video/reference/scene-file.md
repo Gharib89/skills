@@ -129,22 +129,21 @@ narrator: am_fenrir
     so a `camera` key is refused; in an Arabic run the columns run right to
     left. Each number in a `label` or `note` is a claim, held to a cited
     excerpt as a timeline's are.
-  - `browser`: a generic page and the actions a cursor plays on it, never a
-    real product's look or colours (`url*`, `title*`, `elements*`, each `id*`,
-    `kind*`, `text*`; `actions*`, each `at*`, `on`, `target*`, `act*`,
-    `text`). A `kind` is `heading`, `text`, `button`, `field` or `link`; the
-    composer stacks the elements down the page, so the scene file holds no
-    coordinates, and a page holds about 6 elements before compile refuses it.
-    The page stands from the scene's start. An action is `move`, `click` or
-    `type`: on its cue the cursor travels to the element its `target` names
-    by id, then a click rings out and a `type` action (`text*`, onto a
-    `field` only) brings its words in one whole word at a time, the field's
-    own `text` giving way to them. A `move` and a `click` take no `text`.
-    Actions cue in the order written, each strictly after the last, since one
-    cursor plays them all; an id no element holds, an id used twice and an
-    unknown `act` are refused. Rich, so a `camera` key is refused; in an
-    Arabic run the page runs right to left, its elements standing at the
-    right and the cursor coming in from the left, while the URL stays left to
+  - `browser`: a generic page in the profile's colours and the actions a
+    cursor plays on it (`url*`, `title*`, `elements*`, each `id*`, `kind*`,
+    `text*`; `actions*`, each `at*`, `on`, `target*`, `act*`, `text`). A
+    `kind` is `heading`, `text`, `button`, `field` or `link`; the composer
+    stacks the elements down the page, so the scene file holds no
+    coordinates, and a frame holds them by height, 5 buttons to 7 links: more
+    is refused. The page stands from the scene's start. An action is `move`,
+    `click` or `type`: on its cue the cursor travels to the element its
+    `target` names by id, then a `click` rings out and a `type` action
+    (`text*`, onto a `field` only) brings its words in one whole word at a
+    time, the field's own `text` giving way to them. Only a `type` takes
+    `text`. Actions cue in the order written, each strictly after the last,
+    since one cursor plays them all; an id no element holds, an id used twice
+    and an unknown `act` are refused. Rich, so a `camera` key is refused; in
+    an Arabic run the page runs right to left and the URL stays left to
     right. Each number in the `url`, `title`, an element's `text` or typed
     text is a claim, held to a cited excerpt as a timeline's are.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list` and

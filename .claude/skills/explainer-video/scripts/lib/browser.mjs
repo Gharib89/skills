@@ -12,10 +12,13 @@ import {
   text,
 } from "./props.mjs";
 
+// "a, b or c", for a refusal naming what is allowed.
+const oneOf = (xs) => `${xs.slice(0, -1).join(", ")} or ${xs.at(-1)}`;
+
 // The elements a generic page draws, each at a fixed height: a heading, a line
 // of text, a button, a text field and a link.
 export const KINDS = { heading: 88, text: 64, button: 72, field: 72, link: 56 };
-export const ACTS = ["move", "click", "type"];
+const ACTS = ["move", "click", "type"];
 
 // The page, in px. The window is as tall as the content band under the `bands`
 // layout (compose.mjs's CONTENT, the shorter of the two) and the elements stand
@@ -23,10 +26,10 @@ export const ACTS = ["move", "click", "type"];
 export const PAGE = { width: 1360, height: 690, bar: 72, pad: 40, gap: 24 };
 export const COLUMN = { width: 880, inset: 120 };
 
-// How many elements of the tallest kind a frame holds is by height, so what a
-// page holds is the sum of its heights.
+// A frame holds a page by height, not by count: the elements' heights and the
+// gaps between them must fit in `room`.
 const room = PAGE.height - PAGE.bar - 2 * PAGE.pad;
-export const stacked = (elements) =>
+const stacked = (elements) =>
   elements.reduce((h, e) => h + KINDS[e.kind], 0) +
   (elements.length - 1) * PAGE.gap;
 
@@ -45,7 +48,7 @@ export function checkBrowser(p, said) {
       fail(`browser element id "${e.id}" is used twice`);
     if (!Object.hasOwn(KINDS, e.kind))
       fail(
-        `browser element kind "${e.kind}" is not ${Object.keys(KINDS).slice(0, -1).join(", ")} or ${Object.keys(KINDS).at(-1)}`,
+        `browser element kind "${e.kind}" is not ${oneOf(Object.keys(KINDS))}`,
       );
     named("browser", e.text, "a text per element");
     known("a browser element", e, ["id", "kind", "text"]);
@@ -63,9 +66,7 @@ export function checkBrowser(p, said) {
         `browser action target ${JSON.stringify(a.target)} names no element (${ids.join(", ")})`,
       );
     if (!ACTS.includes(a.act))
-      fail(
-        `browser action act ${JSON.stringify(a.act)} is not move, click or type`,
-      );
+      fail(`browser action act ${JSON.stringify(a.act)} is not ${oneOf(ACTS)}`);
     if (a.act === "type") {
       if (a.text === undefined) fail("browser type action needs text");
       named("browser", a.text, "text to type");

@@ -145,7 +145,7 @@ test("a page taller than the frame holds is refused at compile", () => {
       actions: [{ at: 1, target: "e0", act: "move" }],
     });
   assert.doesNotThrow(() => checkVisual(page(6), said));
-  bad(page(9), /browser lays out 9 elements; a frame holds 6 of this height/);
+  bad(page(7), /browser lays out 7 elements; a frame holds 6 of this height/);
 });
 
 test("a browser is rich: it draws its own camera, so a camera key is refused", () => {
