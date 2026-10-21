@@ -92,6 +92,21 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
       { sources: [], excerpts: [{ ...entry, text: "  " }] },
       /excerpts.json excerpt 1 needs text/,
     ],
+    // a source the pack lacks would read a code excerpt as prose
+    [
+      {
+        sources: [{ id: "notes", kind: "repo" }],
+        excerpts: [{ ...entry, source: undefined }],
+      },
+      /excerpts.json excerpt 1 needs a source its sources list holds/,
+    ],
+    [
+      {
+        sources: [{ id: "notes", kind: "repo" }],
+        excerpts: [{ ...entry, source: "nots" }],
+      },
+      /excerpts.json excerpt 1 needs a source its sources list holds/,
+    ],
   ])
     bad(excerpt(), why, ctx({ read: () => JSON.stringify(held) }));
   bad(

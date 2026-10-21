@@ -53,13 +53,16 @@ function load(read) {
   pack.sources.forEach((s, i) =>
     named(`excerpts.json source ${i + 1}`, s?.id, "an id"),
   );
+  const kind = new Map(pack.sources.map((s) => [s.id, s.kind]));
   pack.excerpts.forEach((x, i) => {
     const at = `excerpts.json excerpt ${i + 1}`;
     named(at, x?.id, "an id");
     named(at, x?.text, "text");
     named(at, x?.locator, "a locator");
+    // an absent source would read a repo's code as prose
+    if (!kind.has(x.source))
+      fail(`${at} needs a source its sources list holds`);
   });
-  const kind = new Map(pack.sources.map((s) => [s.id, s.kind]));
   return new Map(
     pack.excerpts.map((x) => [
       x.id,

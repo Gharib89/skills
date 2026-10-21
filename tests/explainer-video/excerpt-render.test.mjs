@@ -102,6 +102,12 @@ test("the source line is the excerpt's locator, in the script it is written in",
     loc,
     /<div class="xsrc" dir="rtl">§ الذاكرة <bdi class="lat">pull<\/bdi><\/div>/,
   );
+  // and so does one in an English run
+  const en = await drawn({ cite: "ex-5" }, "ltr", timing, where);
+  assert.match(
+    en,
+    /<div class="xsrc" dir="rtl">§ الذاكرة <bdi class="lat">pull<\/bdi><\/div>/,
+  );
 });
 
 test("a Latin run stays on one line in an Arabic run, a locator wraps in English", async () => {
@@ -271,6 +277,29 @@ test("the document's direction is the excerpt's own script, not the run's", asyn
   const ar = await drawn({ cite: "ex-3" });
   assert.match(ar, /<div class="xd" dir="rtl">/);
   assert.match(ar, /\.xd\[dir="rtl"\] \.xs\.lit \.xw \{[^}]*100% 100%/);
+});
+
+test("an Arabic excerpt in an English run takes the Arabic face and isolates its Latin runs", async () => {
+  const mixed = {
+    "ex-6": {
+      text: "يدمج النظام pull request ثم ينشر. لا تبقى بيانات قديمة.",
+      locator: "line 4",
+      code: false,
+    },
+  };
+  const ltr = await drawn({ cite: "ex-6" }, "ltr", timing, mixed);
+  assert.match(block(ltr, "xt"), /<bdi class="lat">pull request<\/bdi>/);
+  assert.match(
+    ltr,
+    /\.xt \{ font: 400 var\(--size-body\)\/1\.6 "ibm-plex-sans-arabic", "inter"/,
+  );
+  assert.match(ltr, /\.xr \.lat \{[^}]*font-family: "inter"[^}]*nowrap/);
+  // the same excerpt in an Arabic run draws the same
+  const rtl = await drawn({ cite: "ex-6" }, "rtl", timing, mixed);
+  assert.equal(block(rtl, "xt"), block(ltr, "xt"));
+  // and an English excerpt in an English run keeps Latin metrics
+  const en = await drawn({ cite: "ex-1" });
+  assert.match(en, /\.xt \{ font: 400 var\(--size-body\)\/1\.5 "inter"/);
 });
 
 test("each sentence is one reading box, a code excerpt's line likewise", async () => {

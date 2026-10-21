@@ -16,6 +16,9 @@ const STEP = 0.08;
 export const excerpt = (p, f, x) => {
   const { text, locator, code } = p.excerpts[p.cite];
   const rtl = tongue(text, code) === "ar";
+  // The document sets in the excerpt's own script, whatever the scene's
+  // direction: its face, line height and isolated Latin runs follow the text.
+  const g = x.faces(rtl ? "rtl" : "ltr");
   const all = units(text, code);
   const e = p.emphasis;
   const lit = e ? (matching(text, code, e.target)[0] ?? -1) : -1;
@@ -23,7 +26,7 @@ export const excerpt = (p, f, x) => {
   // A locator reads in its own script, left to right unless it is Arabic, and
   // in an Arabic run its Latin runs are isolated like any other there.
   const dirOf = (s) => (ARABIC_SCRIPT.test(s) ? "rtl" : "ltr");
-  const where = (s) => (f.rtl && ARABIC_SCRIPT.test(s) ? f.t(s) : esc(s));
+  const where = (s) => x.faces(dirOf(s)).t(s);
   // A word is never split, so a Latin term in an Arabic run stays on one line
   // (the layout gate's rule); a locator breaks anywhere except in that run.
   const one = f.rtl ? "white-space: nowrap;" : "overflow-wrap: anywhere;";
@@ -34,7 +37,7 @@ export const excerpt = (p, f, x) => {
     const inner = words
       .map(
         (w, j) =>
-          `<span class="xw${i === lit ? ` lw${j}` : ""}">${rtl && f.rtl ? f.t(w) : esc(w)}</span>`,
+          `<span class="xw${i === lit ? ` lw${j}` : ""}">${g.t(w)}</span>`,
       )
       .join(" ");
     if (i === lit) {
@@ -80,7 +83,8 @@ export const excerpt = (p, f, x) => {
     css: `.xr { position: absolute; inset: 0; display: flex; align-items: center; gap: 80px; }
 .xd { flex: 1; min-width: 0; box-sizing: border-box; ${paintStill(x.surface)} border: 2px solid var(--line); border-radius: 18px; padding: 40px 56px; text-align: start; }
 .xsrc { padding-bottom: 20px; margin-bottom: 28px; border-bottom: 1px solid var(--line); text-align: start; ${one} font: 400 var(--size-label) ${f.code}; color: var(--muted); }
-.xt { font: 400 var(--size-body)/${f.lh(1.5, "text")} ${f.text}; color: var(--text); }
+.xt { font: 400 var(--size-body)/${g.lh(1.5, "text")} ${g.text}; color: var(--text); }
+.xr .lat { font-family: ${x.faces("ltr").text}; white-space: nowrap; }
 .xcode .xt { font: 400 var(--size-code)/1.5 ${f.code}; white-space: pre; }
 .xcode .xs { min-height: 1.5em; }
 .xw { display: inline; white-space: nowrap; background: linear-gradient(var(--accent), var(--accent)) no-repeat 0 100% / 0% 4px; }
