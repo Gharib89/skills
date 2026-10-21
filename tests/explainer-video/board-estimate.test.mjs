@@ -57,7 +57,8 @@ test("the board document carries the estimate worked from the table over the car
   prep(fx);
   ok(board(fx, "build"), "build");
   const d = doc(fx, 1);
-  const video = d.scenes.reduce((n, c) => n + c.seconds, 0);
+  // the voiced seconds and the one second the render holds the last frame
+  const video = d.scenes.reduce((n, c) => n + c.seconds, 0) + 1;
   const { base, gates, texture } = table.rates;
   // claude-code plays the default texture, and no scene draws WebGL
   assert.equal(d.estimate.seconds, r1(video * (base + gates + texture)));
@@ -92,7 +93,10 @@ test("a style pays the texture rate for a surface other than flat even with no o
     prep(fx);
     ok(board(fx, "build"), "build");
     const d = doc(fx, 1);
-    return [d.scenes.reduce((n, c) => n + c.seconds, 0), d.estimate.seconds];
+    return [
+      d.scenes.reduce((n, c) => n + c.seconds, 0) + 1,
+      d.estimate.seconds,
+    ];
   };
   const [video, flat] = seconds("flat");
   assert.equal(flat, r1(video * (base + gates)));
