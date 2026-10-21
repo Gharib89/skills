@@ -145,23 +145,28 @@ test("the words of a lit sentence start a step apart, within the light-up window
   assert.equal(delays.length, 30);
   assert.equal(delays[1], 0.02);
   assert.ok(delays.at(-1) <= 0.6);
-  // a cue in the scene's last half second leaves no room: every word at once
-  const late = { ...timing, words: timing.words.map((w) => w * 1.14) };
-  const at = lw(
-    await drawn(
-      {
-        cite: "ex-1",
-        emphasis: {
-          target: "Readers see fresh data.",
-          at: 3,
-          on: "in one call",
+  // "in one call" cues on the 18th spoken word, `t` s into a 10 s scene; the
+  // cue leaves 10 - t - 0.35 s to start the sentence's 4 words
+  const cuedAt = async (t) =>
+    lw(
+      await drawn(
+        {
+          cite: "ex-1",
+          emphasis: {
+            target: "Readers see fresh data.",
+            at: 3,
+            on: "in one call",
+          },
         },
-      },
-      "ltr",
-      late,
-    ),
-  );
-  assert.deepEqual(at, [0, 0, 0, 0]);
+        "ltr",
+        { ...timing, words: timing.words.map((w, i) => (i === 17 ? t : w)) },
+      ),
+    );
+  // 0.2 s of room is shared out: a step of 0.05 s
+  assert.deepEqual(await cuedAt(9.45), [0, 0.05, 0.1, 0.15]);
+  // none left (exactly, then past it): every word at once
+  assert.deepEqual(await cuedAt(9.65), [0, 0, 0, 0]);
+  assert.deepEqual(await cuedAt(9.7), [0, 0, 0, 0]);
 });
 
 test("an emphasis cued on a phrase lights on that phrase's word", async () => {

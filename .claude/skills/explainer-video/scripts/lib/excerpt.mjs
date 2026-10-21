@@ -16,12 +16,14 @@ export const tongue = (text, code) =>
   !code && ARABIC_SCRIPT.test(text) ? "ar" : "en";
 
 // The units an emphasis names: a code excerpt's lines as written, any other
-// excerpt's sentences, whitespace squashed, as the language's own rules cut
+// excerpt's sentences, whitespace squashed, as its own language's rules cut
 // them (Arabic's `؟` ends one).
-export function units(text, code, language) {
+export function units(text, code) {
   if (code) return text.split("\n");
   return [
-    ...new Intl.Segmenter(language, { granularity: "sentence" }).segment(text),
+    ...new Intl.Segmenter(tongue(text, code), {
+      granularity: "sentence",
+    }).segment(text),
   ]
     .map((s) => squash(s.segment))
     .filter(Boolean);
@@ -31,9 +33,7 @@ export function units(text, code, language) {
 // which unit lights: one index is a match.
 export function matching(text, code, target) {
   const want = code ? target : squash(String(target));
-  return units(text, code, tongue(text, code)).flatMap((u, i) =>
-    u === want ? [i] : [],
-  );
+  return units(text, code).flatMap((u, i) => (u === want ? [i] : []));
 }
 
 // The pack's excerpts by id, each `{ text, locator, code }`.
@@ -50,6 +50,17 @@ function load(read) {
   }
   if (!Array.isArray(pack?.sources) || !Array.isArray(pack?.excerpts))
     fail("excerpts.json must hold a sources list and an excerpts list");
+  const has = (v) => typeof v === "string" && v !== "";
+  pack.sources.forEach((s, i) => {
+    if (!has(s?.id)) fail(`excerpts.json source ${i + 1} needs an id`);
+  });
+  pack.excerpts.forEach((x, i) => {
+    for (const field of ["id", "text", "locator"])
+      if (!has(x?.[field]))
+        fail(
+          `excerpts.json excerpt ${i + 1} needs ${field === "id" ? "an" : "a"} ${field}`,
+        );
+  });
   const kind = new Map(pack.sources.map((s) => [s.id, s.kind]));
   return new Map(
     pack.excerpts.map((x) => [

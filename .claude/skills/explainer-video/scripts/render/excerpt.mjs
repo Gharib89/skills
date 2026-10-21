@@ -15,9 +15,8 @@ const STEP = 0.08;
 
 export const excerpt = (p, f, x) => {
   const { text, locator, code } = p.excerpts[p.cite];
-  const lang = tongue(text, code);
-  const rtl = lang === "ar";
-  const all = units(text, code, lang);
+  const rtl = tongue(text, code) === "ar";
+  const all = units(text, code);
   const e = p.emphasis;
   const lit = e ? (matching(text, code, e.target)[0] ?? -1) : -1;
   const tweens = [];

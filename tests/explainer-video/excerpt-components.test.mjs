@@ -72,6 +72,24 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
       /excerpts.json must hold a sources list and an excerpts list/,
       ctx({ read: () => JSON.stringify(held) }),
     );
+  // each entry holds what an excerpt scene reads of it
+  const entry = { id: "ex-1", source: "notes", locator: "l", text: "T." };
+  for (const [held, why] of [
+    [{ sources: [null], excerpts: [] }, /source 1 needs an id/],
+    [
+      { sources: [], excerpts: [{ ...entry, text: undefined }] },
+      /excerpt 1 needs a text/,
+    ],
+    [
+      { sources: [], excerpts: [{ ...entry, locator: 7 }] },
+      /excerpt 1 needs a locator/,
+    ],
+    [
+      { sources: [], excerpts: [{ ...entry, id: "" }] },
+      /excerpt 1 needs an id/,
+    ],
+  ])
+    bad(excerpt(), why, ctx({ read: () => JSON.stringify(held) }));
   bad(
     excerpt(),
     /excerpts.json cannot be read: /,
@@ -233,13 +251,13 @@ test("the excerpts a scene shows resolve from the pack, locator and kind with ea
 });
 
 test("an excerpt splits into sentences, a code one into lines", () => {
-  assert.deepEqual(units(PROSE, false, "en"), [
+  assert.deepEqual(units(PROSE, false), [
     "The cache is cleared on every deploy.",
     "Stale entries never survive a release.",
     "Readers see fresh data.",
   ]);
-  assert.deepEqual(units(CODE, true, "en"), CODE.split("\n"));
-  assert.equal(units(ARABIC, false, "ar").length, 2);
+  assert.deepEqual(units(CODE, true), CODE.split("\n"));
+  assert.equal(units(ARABIC, false).length, 2);
 });
 
 test("excerpt is registered with items the camera beat can read", () => {
