@@ -132,7 +132,7 @@ export const browser = (p, f, x) => {
 .k-field { padding: 0 24px; font: 400 var(--size-body) ${f.text}; color: var(--text); background: var(--bg); border: 2px solid var(--line); border-radius: 12px; }
 .ph { position: absolute; inset-inline-start: 24px; color: var(--faint); }
 .ty { display: flex; gap: 0.3em; }
-.tw { opacity: 0; }
+.tw { opacity: 0; white-space: nowrap; }
 .rp { position: absolute; box-sizing: border-box; width: 48px; height: 48px; margin: -24px 0 0 -24px; border: 4px solid var(--accent); border-radius: 50%; opacity: 0; }
 .cur { position: absolute; left: ${start[0]}px; top: ${start[1]}px; }
 .cur path { fill: var(--text); stroke: var(--bg); stroke-width: 2; stroke-linejoin: round; }`,

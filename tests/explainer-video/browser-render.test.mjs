@@ -144,6 +144,9 @@ test("Arabic typed text is whole words, never letters, and a Latin term stays on
     '<bdi class="lat">pull request</bdi>',
     "هنا",
   ]);
+  // the layout gate holds a Latin run in right to left text to one line, and
+  // the word's own box is such a run (real-render's layout row found it wrapping)
+  assert.match(html, /\.tw \{[^}]*white-space: nowrap/);
 });
 
 test("right to left, the page mirrors and the URL stays left to right", async () => {
