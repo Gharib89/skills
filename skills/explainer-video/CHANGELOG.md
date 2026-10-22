@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.50.0 (2026-10-22)
+
+### Features
+
+- **explainer-video**: Long videos in sections, rendered and gated per section
+  ([#929](https://github.com/Gharib89/skills/pull/929),
+  [`571bf34`](https://github.com/Gharib89/skills/commit/571bf3493abc2d669c0b9c79b495739e856c7c89))
+
+
 ## v0.49.0 (2026-10-22)
 
 ### Features
