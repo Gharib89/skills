@@ -18,8 +18,7 @@
 # runs, a page that loads it; those files' names reach further, to a fixed
 # point. A file that is gone, is neither .mjs nor .js (package.json), or reaches
 # no --turn file selects the whole --turn set rather than nothing; changed
-# gates-* or render-* tests alone select nothing here, the full rung running
-# them. `--list` prints the selection instead of running it.
+# skipped tests alone select nothing here, the full rung running them. `--list` prints the selection instead of running it.
 # The full rung and the local gate run `tests/run.sh`, which passes no flag and
 # so runs every file.
 #
