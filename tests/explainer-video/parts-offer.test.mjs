@@ -109,6 +109,20 @@ test("a run with no brief is refused with the stage to run first", () => {
   assert.match(r.err, /^parts: no brief\.json: run brief\.mjs first$/m);
 });
 
+test("a style no store holds is refused as a parts line, never a stack trace", () => {
+  const fx = fixture();
+  const file = path.join(fx.dir, "brief.json");
+  const brief = JSON.parse(fs.readFileSync(file, "utf8"));
+  fs.writeFileSync(file, JSON.stringify({ ...brief, style: "nope" }));
+  for (const cmd of ["offer", "decline"]) {
+    const r = parts(fx, cmd);
+    assert.equal(r.code, 1, cmd);
+    assert.match(r.err, /^parts: no style profile nope in /m, cmd);
+    assert.doesNotMatch(r.err, /\n\s+at /, r.err);
+  }
+  assert.equal(fs.existsSync(path.join(fx.dir, "parts.json")), false);
+});
+
 test("a brief.json of the wrong shape is refused by file and field, whichever command reads it", () => {
   const fx = fixture();
   const file = path.join(fx.dir, "brief.json");

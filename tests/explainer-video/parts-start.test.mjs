@@ -169,11 +169,16 @@ test("a part's board answers or manifest of the wrong shape are refused by file 
     ["[]", /^parts: answers-1\.json is not an object$/m],
     ['{"scenes":"x"}', /^parts: answers-1\.json scenes is not a list$/m],
     ['{"kept":{}}', /^parts: answers-1\.json kept is not a list$/m],
-    [
-      '{"scenes":[null]}',
-      /^parts: answers-1\.json scenes entry 1 is not an object$/m,
-    ],
-    ['{"kept":[3]}', /^parts: answers-1\.json kept entry 1 is not an object$/m],
+    ...['{"scenes":[null]}', '{"scenes":[{"note":"x"}]}'].map((b) => [
+      b,
+      /^parts: answers-1\.json scenes entry 1 is not an object with an id$/m,
+    ]),
+    ...['{"kept":[3]}', '{"kept":[{}]}', '{"kept":[{"term":"a","to":2}]}'].map(
+      (b) => [
+        b,
+        /^parts: answers-1\.json kept entry 1 is not an object with a term and a to$/m,
+      ],
+    ),
     ['{"brief":[3]}', /^parts: answers-1\.json brief entry 1 is not text$/m],
     [
       '{"scenes":[{"id":"a","note":3}]}',

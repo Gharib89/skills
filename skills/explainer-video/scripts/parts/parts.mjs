@@ -81,9 +81,16 @@ function proposal() {
 // Render and gates seconds as minutes to a tenth, for a video of `lengths`
 // minutes rendered one video after another.
 function minutes(lengths) {
-  const { profile } = findStyle(run, brief.style);
-  const { texture } = grammar(profile);
-  const { rates } = loadRates();
+  // The style and rates readers throw their own refusals: a parts line says it.
+  let texture, rates;
+  try {
+    const { profile, want, list } = findStyle(run, brief.style);
+    if (!profile) fail(`no style profile ${want} in ${list.join(", ")}`);
+    ({ texture } = grammar(profile));
+    ({ rates } = loadRates());
+  } catch (e) {
+    fail(e.message);
+  }
   const textured = texture.surface !== "flat" || texture.overlays.length > 0;
   const each = lengths.map(
     (m) =>
@@ -184,8 +191,11 @@ function notesOn(dir) {
     });
     return list;
   };
-  const obj = (x) => x && typeof x === "object";
-  const scenes = entries("scenes", "an object", obj);
+  const scenes = entries(
+    "scenes",
+    "an object with an id",
+    (s) => typeof s?.id === "string",
+  );
   scenes.forEach((s, i) => {
     if (s.note !== undefined && typeof s.note !== "string")
       fail(`${name} scenes entry ${i + 1} note is not text`);
@@ -194,9 +204,11 @@ function notesOn(dir) {
     ...scenes
       .filter((s) => s.note?.trim())
       .map((s) => `${s.id}: ${s.note.trim()}`),
-    ...entries("kept", "an object", obj).map(
-      (k) => `kept term ${k.term} -> ${k.to}`,
-    ),
+    ...entries(
+      "kept",
+      "an object with a term and a to",
+      (k) => typeof k?.term === "string" && typeof k.to === "string",
+    ).map((k) => `kept term ${k.term} -> ${k.to}`),
     ...entries("brief", "text", (b) => typeof b === "string").map(
       (b) => `brief ${b}`,
     ),
@@ -339,12 +351,13 @@ if (cmd === "start") {
 } else if (cmd === "decline") {
   if (length <= LONG)
     fail(`${num(length)} min is within ${LONG}, nothing to decline`);
+  const long = minutes([length]);
   fs.writeFileSync(
     file("parts.json"),
     JSON.stringify({ declined: true, length }) + "\n",
   );
   console.log(
-    `parts: declined, one long video in sections, first render about ${minutes([length]).all} min`,
+    `parts: declined, one long video in sections, first render about ${long.all} min`,
   );
 } else if (length <= LONG) {
   console.log(`parts: no offer, ${num(length)} min is within ${LONG}`);
