@@ -61,18 +61,20 @@ const inked = (b) => {
 };
 
 // One cue a scene, its words every 0.3 s from 0.2 s in, as `compose` times them.
+// Times keep microseconds: a millisecond rounding puts a section's cue up to
+// half a millisecond off the whole's, and a caption word mid-animation shows it.
 const cuesOf = (part, timeline) =>
   part.map((p, i) => {
     const words = p.scene.narration.join(" ").split(/\s+/);
     const tokens = words.map((text, k) => ({
       text,
-      start: +(timeline[i].start + 0.2 + 0.3 * k).toFixed(3),
+      start: +(timeline[i].start + 0.2 + 0.3 * k).toFixed(6),
     }));
     return {
       text: words.join(" "),
       tokens,
       start: tokens[0].start,
-      end: +(timeline[i].start + timeline[i].duration).toFixed(3),
+      end: +(timeline[i].start + timeline[i].duration).toFixed(6),
     };
   });
 
