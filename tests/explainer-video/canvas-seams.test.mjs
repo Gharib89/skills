@@ -68,6 +68,15 @@ test("every scene hands over by a travel of whole frames, the last by none", () 
   assert.equal(slow[0].out.frames, 45);
 });
 
+test("a section opener is entered by a plain cut, not a travel, so a render can cut the video there", () => {
+  const own = scenes(4);
+  own[2].role = "section";
+  assert.deepEqual(
+    seamPlan(own, mapped).map((p) => p.out?.move ?? null),
+    ["travel", null, "travel", null],
+  );
+});
+
 test("a scene may name a travel or a plain cut, never another family's move", () => {
   assert.equal(seamReason(mapped, "travel"), null);
   assert.equal(seamReason(mapped, "cut"), null);
