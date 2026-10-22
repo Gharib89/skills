@@ -166,6 +166,9 @@ fi
 added=()
 for p in "$@"; do
   if ! git cat-file -e "$base:$p" 2>/dev/null; then
+    # A path a later commit added is not this fix's to take out.
+    [ -z "$fix" ] || git cat-file -e "$fix:$p" 2>/dev/null \
+      || ship_tooling "$p is not a file --fix ${fix:0:12} added or changed"
     rm -f "$wt/$p"
     added+=("$p")
   elif [ -n "$fix" ]; then
