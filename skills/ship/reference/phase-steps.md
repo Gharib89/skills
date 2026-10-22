@@ -142,7 +142,10 @@ Best-effort: for each reviewer under `## Reviewers`, per round, start
 it by its `Trigger:`, wait out one `poll-pr --brief` window, triage whatever
 landed, push the fixes once, answer each thread with `reply-thread`, then the
 block's `Resolve:`; `Cap:` bounds the rounds, and a docs-only fix-only diff ends
-them. A round's fix is proven by its targeted test nodes plus the repo's edit
+them. A window that closes with no round is read per
+[review-loop.md](review-loop.md#a-window-that-closes-with-no-round): its stop,
+its fallback and the two closed windows that re-poll. A round's
+fix is proven by its targeted test nodes plus the repo's edit
 rung, the per-file check its harness runs after each edit (`check.sh edit
 <file>...`), over the files it touched; a repo with no harness, and so no edit
 rung, proves it with the local gate instead. Otherwise the local gate is not

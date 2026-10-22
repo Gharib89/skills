@@ -74,6 +74,13 @@ per [implement.md](reference/implement.md#phase-1-criteria-the-run-owes). Each
 phase below flips it with `run-file next`, `open`, `close` or `skip`, and closes
 once its `Done when:` holds, not before.
 
+**A turn never ends on a plan line.** It ends on a stop from the table below
+(the merge gate included) or on a wait its last line names: a background job or
+subagent whose notification resumes the run. A line saying what comes next is
+followed by doing it in the same turn. When that job or subagent comes back,
+announce its end in one line before the next step, so the human reading the
+session sees the run move on.
+
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every gating call goes through a mechanic**, a host call a
 later phase, stop, merge or release depends on: one no mechanic performs is a

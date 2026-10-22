@@ -115,11 +115,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
              | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test($round_re))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
-      # The head a local review past the cap read with its tree unchanged, when
-      # that head covers the PR head. It names the hold but never lifts it: no
-      # host reviewer read those fixes.
-      def pastcap_head($name): (rests("Past-cap: " + $name + ": tree unchanged at ") | last // "") as $s
-        | if $s != "" and $cover[$s] == true then $s else "" end;
+      # The head the last local review past the cap read with its tree unchanged.
+      def pastcap_stamp($name): rests("Past-cap: " + $name + ": tree unchanged at ") | last // "";
       def owes_fallback($name): (stop($name) | IN("not reviewed", "not landed")) or cap_spent($name);
       # A revocation appends its own Lane: line, so a stale inline stop holds.
       def inline_run: (rests("Lane: ") | last // "") == "inline";
@@ -170,8 +167,13 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
          | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
            elif settled($r.name) or (stop($r.name) == "inline lane" and $r.trigger == "on-request" and inline_run) then empty
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
-           elif cap_spent($r.name) and pastcap_head($r.name) != "" then
-             "reviewer " + $r.name + ": past cap " + ([$r.cap | numbers] | first | tostring) + ", local review read " + pastcap_head($r.name) + ", no host reviewer read it"
+           elif cap_spent($r.name) and pastcap_stamp($r.name) != "" then
+             pastcap_stamp($r.name) as $s
+             # A covering stamp names the hold but never lifts it: no host reviewer read those
+             # fixes. One that no longer covers the PR head (a hand-resolved conflict merge, a
+             # later fix) leaves the range a human reads to waive the cap.
+             | "reviewer " + $r.name + ": past cap " + ([$r.cap | numbers] | first | tostring) + ", local review read " + $s + ", "
+               + (if $cover[$s] == true then "no host reviewer read it" else "head moved: read " + $s + ".." + $head end)
            elif (stop($r.name) | word) == "tree unchanged" then
              if reraised($r.name) then "reviewer " + $r.name + ": tree unchanged with a re-raised declined finding, which stops on cap"
              elif reviewed($r.name) | not then "reviewer " + $r.name + ": no dispositioned round"
