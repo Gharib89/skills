@@ -35,6 +35,7 @@ noise=(
   " 903 bash scripts/check.sh edit a.sh b.sh"
   " 904 node skills/explainer-video/maintainer/real-render.test.mjs"
   " 905 grep -r hyperframes skills"
+  " 906 node -r dotenv/config skills/explainer-video/maintainer/real-render.test.mjs"
 )
 
 window "${noise[@]}"
@@ -61,6 +62,8 @@ running=(
   "a full check|4101 bash scripts/check.sh full|check.sh full"
   "a full check run by its path|4101 /home/u/skills/scripts/check.sh full|check.sh full"
   "a full check under a shell -c|4101 bash -c scripts/check.sh full|check.sh full"
+  "a render behind an interpreter flag that takes a value|4101 node -r dotenv/config skills/explainer-video/maintainer/real-render.mjs|real-render"
+  "a calibration behind a long flag and its value|4101 node --import tsx skills/explainer-video/maintainer/calibrate-rates.mjs|calibrate"
   "a render run from a path with a space|4101 node /tmp/window space/real-render.mjs|real-render"
   "a calibration run from a path with a space|4101 /usr/bin/node /tmp/my skills/calibrate-rates.mjs|calibrate"
   "a hyperframes render run from a path with a space|4101 node /tmp/my cache/node_modules/hyperframes/bin/hyperframes.mjs render|hyperframes"

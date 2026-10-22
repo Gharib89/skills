@@ -9,11 +9,12 @@
 # Reads the process table once and names each process it holds: a
 # `real-render*` script, `hyperframes`, a `calibrate*` script, or `check.sh`
 # given `full`. A process counts by the program it runs, which is its first word
-# or, behind an interpreter (`node`, `bash`, `npx`, ...), the first word after
-# its flags: an editor or a `grep` that merely names the file is no render. An
-# absolute path may hold spaces, which `ps` does not mark, so a line starting
-# with one is matched whole: it can over-report, never miss. It reads no roster
-# and runs outside Herdr.
+# or, behind an interpreter (`node`, `bash`, `npx`, ...), any word after its
+# leading flags, since a flag may take a value (`node -r dotenv/config x.mjs`):
+# an editor or a `grep` that merely names the file is no render. An absolute
+# path may hold spaces, which `ps` does not mark, so a line starting with one is
+# matched whole. Both can over-report, never miss. It reads no roster and runs
+# outside Herdr.
 #
 # stdout: {running: []} when nothing runs; else {error, running}, `running`
 #         one {pid, name} per process in table order, `name` one of
@@ -56,9 +57,10 @@ running=$(awk '
   }
   BEGIN { n = split("node bash sh zsh npx bunx bun pnpm tsx python python3 uv", w, " "); for (i = 1; i <= n; i++) interpreter[w[i]] = 1 }
   {
-    i = 2
-    if (base($2) in interpreter) { i = 3; while (i <= NF && $i ~ /^-/) i++ }
-    k = kind($i, $(i + 1))
+    i = 2; last = 2
+    if (base($2) in interpreter) { i = 3; last = NF; while (i <= NF && $i ~ /^-/) i++ }
+    k = ""
+    for (m = i; k == "" && m <= last; m++) k = kind($m, $(m + 1))
     if (k == "") {
       rest = $i
       for (j = i + 1; j <= NF; j++) rest = rest " " $j
