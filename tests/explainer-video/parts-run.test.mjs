@@ -6,14 +6,21 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fixture, parts, plan, readJson, writePlan } from "./parts-lib.mjs";
+import {
+  fixture,
+  node,
+  parts,
+  plan,
+  readJson,
+  writePlan,
+} from "./parts-lib.mjs";
 import {
   fixture as machine,
   profile,
   put,
   read,
   render,
-  stage,
+  skill,
   unstyled,
 } from "./render-lib.mjs";
 
@@ -48,6 +55,22 @@ test("a part's files follow the ignore rules of its explainers folder: the recip
     git(fx.tmp, "check-ignore", "-q", path.join(fx.dir, "parts.json")),
     0,
   );
+});
+
+test("a brief change in a part sees the project style store of its explainers folder, and its menu lists those styles", async () => {
+  const fx = fixture();
+  writePlan(fx, plan([4, 4, 4]));
+  assert.equal(parts(fx, "start", "1").code, 0);
+  const dir = path.join(fx.dir, "parts", "01-claiming-work");
+  const store = path.join(fx.tmp, "explainers", ".styles");
+  put(store, "mine.json", profile("Mine"));
+  const r = node({ ...fx, dir }, "brief/brief.mjs", ["style=mine"]);
+  assert.equal(r.code, 0, r.err);
+  assert.equal(readJson(dir, "brief.json").style, "mine");
+  const { knobOffer } = await import(
+    path.join(skill, "scripts", "brief", "knobs.mjs")
+  );
+  assert.ok(knobOffer("style", dir, {}).options.includes("mine"));
 });
 
 // A part folder under the render fixture's project, its scene file moved in.
