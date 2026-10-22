@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.51.0 (2026-10-22)
+
+### Features
+
+- **explainer-video**: Parts, with a part plan offered after the source stage
+  ([#931](https://github.com/Gharib89/skills/pull/931),
+  [`8b621d9`](https://github.com/Gharib89/skills/commit/8b621d9bee4adf265bc2e1287263fce7ed9cfb65))
+
+
 ## v0.50.0 (2026-10-22)
 
 ### Features
