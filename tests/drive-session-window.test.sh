@@ -16,6 +16,7 @@ cat > "$tmp/bin/ps" <<'FAKE'
 #!/usr/bin/env bash
 [ "$*" = "-eo pid=,args=" ] || { echo "fake ps: unexpected call: $*" >&2; exit 1; }
 cat "$PS_TABLE"
+[ -z "${PS_FAIL:-}" ]
 FAKE
 chmod +x "$tmp/bin/ps"
 real_path=$PATH
@@ -40,10 +41,13 @@ window "${noise[@]}"
 check_rc "nothing running exits 0" 0 "$rc"
 check "and answers an empty list" '{"running":[]}' "$out"
 # An empty table is a failed read, not a verdict: a live one always lists ps itself.
-: > "$PS_TABLE"
-out=$(PATH="$tmp/bin:$real_path" bash "$w" 2>/dev/null); rc=$?
+window
 check_rc "an empty process table exits 2" 2 "$rc"
 check "and says the table could not be read" "window: cannot read the process table" "$(jq -r .error <<<"$out")"
+# So is a table `ps` printed before it failed.
+PS_FAIL=1 window "${noise[@]}"
+check_rc "a ps that fails after printing part of a table exits 2" 2 "$rc"
+check "and says the table could not be read too" "window: cannot read the process table" "$(jq -r .error <<<"$out")"
 
 # <case>|<process line>|<name the answer carries>
 running=(

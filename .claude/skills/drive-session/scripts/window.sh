@@ -27,9 +27,9 @@ ds_help "$usage" "$@"
 [ $# -eq 0 ] || ds_tooling "$usage"
 command -v ps >/dev/null || ds_tooling "ps not installed"
 
-table=$(ps -eo pid=,args= 2>/dev/null)
-# A live table always lists ps itself: an empty one is a failed read, never "nothing runs".
-[ -n "$table" ] || ds_tooling "window: cannot read the process table"
+# A live table always lists ps itself: an empty or partial one is a failed read.
+table=$(ps -eo pid=,args= 2>/dev/null) && [ -n "$table" ] \
+  || ds_tooling "window: cannot read the process table"
 running=$(awk '
   function strip(t) { gsub(/["\047]/, "", t); return t }
   function base(t) { t = strip(t); sub(/.*\//, "", t); return t }
