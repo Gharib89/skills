@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The explainer-video member's turn budget. The turn rung has 60 s and the
 # member's whole suite takes longer, so `tests/explainer-video.test.sh --turn` leaves
-# out the render-heavy and real-ffmpeg files and every turn row passes it, with the changed
-# files, so the rung runs only the tests they reach; the bare call, which
+# out the render-heavy and real-ffmpeg files and every turn row passes it, with
+# the changed files, so the rung runs only the tests they reach; the bare call, which
 # `tests/run.sh` makes for the full rung and the local gate, keeps every file.
 # A stub `node` records the files it is handed, so the case runs none.
 set -uo pipefail

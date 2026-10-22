@@ -8,9 +8,9 @@
 #
 # `--turn` is the harness's turn rung, which has 60 s: it leaves out the files
 # that run the render and gates pipeline once per case, `gates-*` and
-# `render-*`, which together take longer than that, and the two that run the
-# real ffmpeg, `style-motion-real` and `backend-concat`, so a turn never takes
-# the CPU another run's timing is measuring. Given changed files,
+# `render-*`, which together take longer than that. It also leaves out the two
+# that run the real ffmpeg, `style-motion-real` and `backend-concat`, so a turn
+# never takes CPU from a timed render in another session. Given changed files,
 # relative to the caller's directory as the turn rows pass them, it runs only
 # the --turn files they reach. A changed test reaches itself. A changed .mjs or
 # .js reaches every file under the skill or its tests (Markdown aside) whose
@@ -18,7 +18,8 @@
 # runs, a page that loads it; those files' names reach further, to a fixed
 # point. A file that is gone, is neither .mjs nor .js (package.json), or reaches
 # no --turn file selects the whole --turn set rather than nothing; changed
-# skipped tests alone select nothing here, the full rung running them. `--list` prints the selection instead of running it.
+# skipped tests alone select nothing here, the full rung running them.
+# `--list` prints the selection instead of running it.
 # The full rung and the local gate run `tests/run.sh`, which passes no flag and
 # so runs every file.
 #
