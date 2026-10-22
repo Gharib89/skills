@@ -330,6 +330,7 @@ refuse_bad_headings() { # refuse_bad_headings <names, one per line>
   [ -z "$bad" ] || ship_tooling "a Verification heading cannot carry a result word as a later field: '$bad' would read as a settled result while pending; rename it"
 }
 join_names() { awk '{ out = out (NR > 1 ? ", " : "") $0 } END { print out }'; }
+
 # --- The self-review and review-loop gates -------------------------------------
 # A gate line is a line of the Run file, an optional leading `- ` accepted,
 # matched by exact prefix at the line start: the text after the prefix, one line

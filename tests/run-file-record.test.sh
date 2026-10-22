@@ -193,6 +193,12 @@ at "$repo" open 3 --file "$rh" >/dev/null
 g commit -q --allow-empty -m three
 at "$repo" close 3 --file "$rh" --result github-mechanics=pass --head 0123abcd >/dev/null
 check "an explicit --head outranks a ran line" "- github-mechanics: pass at 0123abcd" "$(grep '^- github-mechanics: ' "$rh")"
+at "$repo" open 3 --file "$rh" >/dev/null
+printf '%s\n' 'Ran: github-mechanics at not-a-sha' >> "$rh"
+head_now=$(g rev-parse HEAD)
+at "$repo" close 3 --file "$rh" --result github-mechanics=pass >/dev/null
+check "a hand-written Ran line holding no sha is not read: HEAD is stamped" \
+  "- github-mechanics: pass at $head_now" "$(grep '^- github-mechanics: ' "$rh")"
 was=$(cat "$rh")
 check_rc "ran for a name no results section knows is malformed" 2 "$(inrc "$repo" ran nope --file "$rh")"
 check_rc "ran with no name is malformed" 2 "$(inrc "$repo" ran --file "$rh")"

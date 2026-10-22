@@ -188,7 +188,10 @@ missing_re='No such file or directory|not found|Cannot find module|No module nam
 missing_lines=$(grep -E "$missing_re" "$log")
 for p in ${added[@]+"${added[@]}"}; do
   b=${p##*/} stem=${p##*/}; stem=${stem%.*}
-  if grep -qF -e "$b" -e "'$stem'" -e ".$stem'" -e "/$stem'" <<<"$missing_lines"; then
+  names=(-e "$b")
+  # A dotfile has no stem, and the empty one would match any quote.
+  [ -z "$stem" ] || names+=(-e "'$stem'" -e ".$stem'" -e "/$stem'")
+  if grep -qF "${names[@]}" <<<"$missing_lines"; then
     verdict false "$@"
     echo "revert-red: $test_path goes red with $list reverted, but its error names $p as missing, which says nothing about the fix's behaviour: revert a hunk inside it, or a path the fix changed and the test reads." >&2
     exit 1
