@@ -44,7 +44,13 @@ import { FPS, sceneFile, videoPage } from "../scripts/render/compose.mjs";
 import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
+import { differing } from "./real-render-compare.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
+import {
+  RASTER_FLAGS,
+  headlessShell,
+  shellWith,
+} from "./real-render-shell.mjs";
 import { sectionChecks } from "./real-render-sections.mjs";
 import { mapChecks } from "./real-render-map.mjs";
 import { cameraLeftOut } from "./real-render-motion.mjs";
@@ -72,6 +78,15 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), "real-render-"));
 process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 const backend = await loadBackend();
 const env = hyperframesEnv();
+// The renders run through a headless shell with raster flags (#917).
+const renderEnv = {
+  ...env,
+  PRODUCER_HEADLESS_SHELL_PATH: shellWith(
+    work,
+    RASTER_FLAGS,
+    headlessShell(env.HOME),
+  ),
+};
 const profile = loadStyle(work, "claude-code");
 const fontRows = [
   ...new Set(typeRoles("ar").map((r) => profile.type[r].font)),
@@ -199,7 +214,7 @@ const render = async (comp, out) =>
       ...["--fps", String(FPS)],
       ...["--workers", "3", "--quality", "looks", "-o", out],
     ],
-    { cwd: comp, env },
+    { cwd: comp, env: renderEnv },
   )) === 0;
 
 // The video stream's frames as `framemd5` lists them, one line a frame.
@@ -238,13 +253,25 @@ check(
   a.length === whole.frames,
   `${a.length} frames rendered, the composer's grid is ${whole.frames}`,
 );
-const differing = others.map(
-  (b) => a.filter((l, i) => l !== b[i]).length + Math.abs(a.length - b.length),
-);
+const differs = differing(a, others);
+// A failing row keeps the three renders' frame hash lists beside the frames
+// (REAL_RENDER_FRAMES, else the temp folder), for a later comparison.
+const kept = differs.every(({ n }) => n === 0)
+  ? ""
+  : ["whole-1", "whole-2", "whole-3"]
+      .map((n, i) => {
+        const file = path.join(
+          process.env.REAL_RENDER_FRAMES ?? os.tmpdir(),
+          `real-render-determinism-${n}.framemd5`,
+        );
+        fs.writeFileSync(file, [a, ...others][i].join("\n"));
+        return file;
+      })
+      .join(", ");
 check(
   "determinism",
-  differing.every((n) => n === 0),
-  `${differing.join(" and ")} differing frames of ${a.length} against the first, in two more renders`,
+  differs.every(({ n }) => n === 0),
+  `${differs.map(({ n, at }) => (at.length ? `${n} (frames ${at[0]} to ${at.at(-1)})` : n)).join(" and ")} differing frames of ${a.length} against the first, in two more renders${kept && `; hash lists: ${kept}`}`,
 );
 
 // Each seam window's first, middle and last frames, seeked twice in browsers
