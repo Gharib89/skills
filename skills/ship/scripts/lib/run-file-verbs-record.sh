@@ -36,9 +36,7 @@ init)
     fi
     # `null` is what a failed read of the issue body gives; an empty body is a real read.
     [ "$text" != null ] || ship_tooling "the criteria text is null: a failed read of the issue body"
-    criteria=$(ship_unfenced "$text" | awk 'match($0, /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]+\[[ xX]\][[:space:]]+/) {
-      t = substr($0, RLENGTH + 1); sub(/[[:space:]]+$/, "", t)
-      if (t != "") printf "- %d: %s\n", ++n, t }') || ship_tooling "cannot read the criteria text"
+    criteria=$(criteria_entries "$text") || ship_tooling "cannot read the criteria text"
   fi
   # The profile fills the slots a flag did not: the flag is the run's own word
   # for this run, the profile the repo's standing one.
@@ -61,6 +59,14 @@ init)
     case " $given " in *" reviewers "*) ;; *) [ -z "$pf" ] || reviewers=$pf ;; esac
     pf=$(ship_profile_legs "$profile" | join_names)
     case " $given " in *" legs "*) ;; *) legs=${pf:-None.} ;; esac
+  fi
+  # A numbered issue's checkboxes are criteria the gate holds on, and a run that
+  # never passed them reaches its merge gate unjudged (#933). The profile names
+  # the host the issue is read from, so a bare init reads none; a failed read
+  # warns of nothing, since init needs no host.
+  if [ "$from_profile" = true ] && [ -z "$criteria_src" ] && [[ $id =~ ^[1-9][0-9]*$ ]]; then
+    cb=$(issue_checkboxes "$id") && [ "$cb" -gt 0 ] \
+      && printf 'run-file init: issue #%s has %s checkboxes but --criteria was not passed: record each with `run-file note Criteria <text>`, or run `run-file init %s --criteria - --rebuild` with the issue body on stdin\n' "$id" "$cb" "$id" >&2
   fi
   resolve_root
   reject_stamp_tail --tripwires "$tripwires"
@@ -202,6 +208,7 @@ close)
   check_results
   # Each result records the head it was proven on, so the clean gate can ask
   # whether that head still covers the PR's.
+  head_given=$head
   if [ -n "$results" ] && [ -z "$head" ]; then
     head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "no --head given and not inside a git checkout"
   fi
@@ -240,6 +247,11 @@ skip)
   no_extra
   take_row "$n"
   is_open "$line" && ship_fail "phase $n is open; close it before skipping it"
+  # Rows 5 to 8 wait behind phase 3, as `open` and `close` hold them; a skip
+  # was the way round (#933).
+  case $n in
+    [5-8]) case " $(open_phases | tr '\n' ' ') " in *" 3 "*) ship_fail "phase 3 is open; close it before skipping $n" ;; esac ;;
+  esac
   # The marker is the mechanic's own record that the phase is done, so it
   # answers before the stamps do: a phase rebuilt as `done` carries no range.
   # A skipped line carries that same marker, so its arm comes first: a second

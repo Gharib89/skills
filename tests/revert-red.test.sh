@@ -81,10 +81,8 @@ err_of() { (cd "$repo" && bash "$script" "$@" 2>&1 >/dev/null | cat); }
 check_rc "a test that goes red on the revert exits 0" \
   0 "$(rc_of tests/answer.test.sh lib.sh)"
 check "no temp directory remains after a red run" "" "$(ls -A "$TMPDIR")"
-check_rc "a file the fix added is removed by the revert" \
-  0 "$(rc_of tests/extra.test.sh extra.sh)"
 check_rc "several paths are reverted together" \
-  0 "$(rc_of tests/extra.test.sh lib.sh extra.sh)"
+  0 "$(rc_of tests/answer.test.sh lib.sh extra.sh)"
 check_rc "a test that stays green on the revert exits 1" \
   1 "$(rc_of tests/unrelated.test.sh lib.sh)"
 check "no temp directory remains after a green run" "" "$(ls -A "$TMPDIR")"
@@ -97,8 +95,29 @@ check "a red test says so in one JSON verdict" \
   '{"test":"tests/answer.test.sh","paths":["lib.sh"],"red":true,"command":["bash","tests/answer.test.sh"]}' \
   "$(out_of tests/answer.test.sh lib.sh | jq -c .)"
 check "a verdict lists every path reverted, in order" \
-  '{"test":"tests/extra.test.sh","paths":["lib.sh","extra.sh"],"red":true,"command":["bash","tests/extra.test.sh"]}' \
-  "$(out_of tests/extra.test.sh lib.sh extra.sh | jq -c .)"
+  '{"test":"tests/answer.test.sh","paths":["lib.sh","extra.sh"],"red":true,"command":["bash","tests/answer.test.sh"]}' \
+  "$(out_of tests/answer.test.sh lib.sh extra.sh | jq -c .)"
+
+# A red that comes only from a file the fix added going missing says nothing about
+# the fix's behaviour: any test that reads the file goes red without it (#933).
+check_rc "a test red only because the file the fix added is gone exits 1" \
+  1 "$(rc_of tests/extra.test.sh extra.sh)"
+check "its verdict says red false" \
+  '{"test":"tests/extra.test.sh","paths":["extra.sh"],"red":false,"command":["bash","tests/extra.test.sh"]}' \
+  "$(out_of tests/extra.test.sh extra.sh | jq -c .)"
+check "and the refusal names the missing file" \
+  "revert-red: tests/extra.test.sh goes red with extra.sh reverted, but its error names extra.sh as missing, which says nothing about the fix's behaviour: revert a hunk inside it, or a path the fix changed and the test reads." \
+  "$(err_of tests/extra.test.sh extra.sh | tail -n 1)"
+check_rc "a refused red with another path reverted beside the file is refused too" \
+  1 "$(rc_of tests/extra.test.sh lib.sh extra.sh)"
+check_rc "an added file the test never reads does not refuse its red" \
+  0 "$(rc_of tests/answer.test.sh lib.sh extra.sh)"
+check "no temp directory remains after a refused run" "" "$(ls -A "$TMPDIR")"
+printf '%s\n' 'import sys' 'sys.path.insert(0, ".")' 'import extramod' 'sys.exit(0)' > "$repo/tests/modcheck.py"
+printf '%s\n' 'x = 1' > "$repo/extramod.py"
+git -C "$repo" add -A && git -C "$repo" commit -qm 'a module the fix adds'
+check_rc "a module the command's own error names missing is refused" \
+  1 "$(rc_of tests/modcheck.py extramod.py -- python3 tests/modcheck.py)"
 check "a green test says red false" \
   '{"test":"tests/unrelated.test.sh","paths":["lib.sh"],"red":false,"command":["bash","tests/unrelated.test.sh"]}' \
   "$(out_of tests/unrelated.test.sh lib.sh | jq -c .)"
@@ -198,7 +217,7 @@ check_rc "a -- with no command is a usage error" \
 check_rc "an empty first word is a usage error even where a later word names the test" \
   2 "$(rc_of tests/answer_check.py lib.sh -- '' tests/answer_check.py)"
 check "and it answers the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" \
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" \
   "$(out_of tests/answer_check.py lib.sh -- '' tests/answer_check.py | jq -r .error)"
 check_rc "a -- with no path before it is a usage error" \
   2 "$(rc_of tests/answer_check.py -- python3 tests/answer_check.py)"
@@ -215,16 +234,16 @@ check "the fixture's own tree is untouched" \
 help=$(cd "$T" && bash "$script" --help 2>"$T/err"); rc=$?
 check_rc "--help exits 0 from a directory that is no repository" 0 "$rc"
 check "--help opens with the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" "$(sed -n 1p <<<"$help")"
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" "$(sed -n 1p <<<"$help")"
 check "--help names its stdout fields next" "stdout:" "$(sed -n 2p <<<"$help" | cut -c1-7)"
 check "--help writes nothing on stderr" "" "$(cat "$T/err")"
 
 # Exit 1 means the test proved nothing, so a malformed call must not share it.
 check_rc "no arguments is a usage error" 2 "$(rc_of)"
 check "a bad call prints one JSON object carrying the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" "$(out_of | jq -r .error)"
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" "$(out_of | jq -r .error)"
 check "a flag where the test belongs is refused with the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" "$(out_of --x lib.sh | jq -r .error)"
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" "$(out_of --x lib.sh | jq -r .error)"
 check_rc "a test with no path is a usage error" 2 "$(rc_of tests/answer.test.sh)"
 # A test file bash cannot open exits non-zero, which would read as red.
 check_rc "a test missing at HEAD is refused, not read as red" \
@@ -250,6 +269,51 @@ check "outside a repository the cause is named" \
   "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh 2>&1 >/dev/null)"
 check_rc "outside a repository is tooling" \
   2 "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh >/dev/null 2>&1; printf '%s' "$?")"
+
+# --- --fix: a review fix is judged against its own parent (#933) ---------------
+
+# Two fix commits touch one file. Reverted to the merge base, a test of the
+# first fix goes red on the second's revert too; reverted to the second fix's
+# parent, each is judged alone.
+multi=$T/multi
+git init -q -b main "$multi"
+git -C "$multi" config user.email t@example.com
+git -C "$multi" config user.name t
+git -C "$multi" config commit.gpgsign false
+mkdir "$multi/tests"
+echo 'answer() { echo 1; }' > "$multi/lib.sh"
+git -C "$multi" add -A && git -C "$multi" commit -qm base
+git -C "$multi" update-ref refs/remotes/origin/main HEAD
+git -C "$multi" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+printf '%s\n' 'answer() { echo 2; }' > "$multi/lib.sh"
+git -C "$multi" add -A && git -C "$multi" commit -qm 'fix one'
+fix1=$(git -C "$multi" rev-parse HEAD)
+printf '%s\n' 'answer() { echo 2; }' 'other() { echo yes; }' > "$multi/lib.sh"
+git -C "$multi" add -A && git -C "$multi" commit -qm 'fix two'
+fix2=$(git -C "$multi" rev-parse HEAD)
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source lib.sh' '[ "$(answer)" = 2 ]' > "$multi/tests/one.test.sh"
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source lib.sh' '[ "$(other)" = yes ]' > "$multi/tests/two.test.sh"
+printf '%s\n' 'newfn() { echo n; }' > "$multi/added.sh"
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source added.sh' '[ "$(newfn)" = n ]' > "$multi/tests/added.test.sh"
+git -C "$multi" add -A && git -C "$multi" commit -qm tests
+multi_rc() { (cd "$multi" && bash "$script" "$@" >/dev/null 2>&1); printf '%s' "$?"; }
+multi_err() { (cd "$multi" && bash "$script" "$@" 2>&1 >/dev/null | cat); }
+check_rc "without --fix the first fix's test goes red on the whole branch's revert" 0 "$(multi_rc tests/one.test.sh lib.sh)"
+check_rc "--fix names the second fix: the first fix's test stays green, so it does not prove it" \
+  1 "$(multi_rc tests/one.test.sh lib.sh --fix "$fix2")"
+check_rc "--fix names the second fix: its own test goes red" 0 "$(multi_rc tests/two.test.sh lib.sh --fix "$fix2")"
+check_rc "--fix names the first fix: its own test goes red" 0 "$(multi_rc tests/one.test.sh lib.sh --fix "$fix1")"
+check "a --fix verdict names the fix" \
+  "{\"test\":\"tests/two.test.sh\",\"paths\":[\"lib.sh\"],\"red\":true,\"command\":[\"bash\",\"tests/two.test.sh\"],\"fix\":\"$fix2\"}" \
+  "$(cd "$multi" && bash "$script" tests/two.test.sh lib.sh --fix "$fix2" 2>/dev/null | jq -c .)"
+check "a green --fix run names the fix on stderr" \
+  "revert-red: tests/one.test.sh stays green with lib.sh reverted to ${fix2:0:12}^, so it does not prove that fix." \
+  "$(multi_err tests/one.test.sh lib.sh --fix "$fix2")"
+check_rc "--fix with a revision no commit answers to is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh --fix nope)"
+check_rc "--fix with no value is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh --fix)"
+check_rc "a path in neither the fix's parent nor HEAD is refused" 2 "$(multi_rc tests/one.test.sh nothere.sh --fix "$fix2")"
+check_rc "a --fix that is not on HEAD's history is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh --fix "$(git -C "$multi" commit-tree -m x "$(git -C "$multi" write-tree)")")"
+check_rc "a file the fix added is still a missing-file red" 1 "$(multi_rc tests/added.test.sh added.sh)"
 
 # The base is the merge base with origin/HEAD, so no origin/HEAD is no base.
 git -C "$repo" symbolic-ref --delete refs/remotes/origin/HEAD

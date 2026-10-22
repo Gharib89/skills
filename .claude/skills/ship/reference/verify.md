@@ -16,8 +16,9 @@ here you run the applicable entries.
   so far as evidence, so the run stops `red-after-retry: <verification>`
   instead of looping. An entry
   without the line has no bound.
-- **Head.** `close 3` records each result with the head it ran on, the
-  worktree's `HEAD` unless `--head` names another. A `pass` keeps the clean
+- **Head.** `close 3` records each result with the head it ran on: the
+  one `run-file ran <name>` stamped when the run ended, else the worktree's
+  `HEAD`, and `--head` outranks both. A `pass` keeps the clean
   gate only while its head covers the PR head: a later commit other than a
   clean base merge holds the gate, unless no file the entry's `Paths:` globs
   match differs between the recorded head and the PR head (a glob matching no

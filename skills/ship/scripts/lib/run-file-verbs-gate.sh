@@ -121,8 +121,15 @@ prove)
   [ ${#args[@]} -ge 2 ] || ship_tooling "$usage"
   # <where> ends at `--`; the command tail, `--` included, goes to revert-red as
   # typed.
-  where=()
-  while [ $# -gt 0 ] && [ "$1" != -- ]; do where+=("$1"); shift; done
+  where=() fixarg=()
+  while [ $# -gt 0 ] && [ "$1" != -- ]; do
+    if [ "$1" = --fix ]; then
+      ship_flag_value "$usage" "${2:-}"
+      fixarg=(--fix "$2"); shift 2
+    else
+      where+=("$1"); shift
+    fi
+  done
   parse_file ${where[@]+"${where[@]}"}
   no_extra
   # `close 4` looks the line up by the path git diff prints, top-relative with
@@ -138,13 +145,26 @@ prove)
     case $p in *[[:space:]]*) ship_tooling "prove cannot record '$p': a reverted path holding whitespace cannot be read back from its line" ;; esac
   done
   head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "prove records the head revert-red runs on: not inside a git checkout with a commit"
-  answer=$(bash "$SHIP_SCRIPTS/revert-red.sh" "${args[@]}" "$@")
+  answer=$(bash "$SHIP_SCRIPTS/revert-red.sh" "${args[@]}" ${fixarg[@]+"${fixarg[@]}"} "$@")
   rc=$?
   [ "$rc" -eq 0 ] || { printf '%s\n' "$answer"; exit "$rc"; }
   out=$(jq -c --arg f "$file" --arg h "$head" '. + {run_file: $f, head: $h}' <<<"$answer" 2>/dev/null) \
     || ship_tooling "revert-red did not print a JSON verdict"
   append_to_section "## Evidence" "Reverted-fix: ${recorded[0]}: red at $head reverting ${recorded[*]:1}"
   jq . <<<"$out"
+  ;;
+ran)
+  names=()
+  while [ $# -gt 0 ]; do case $1 in --*) break ;; esac; names+=("$1"); shift; done
+  [ ${#names[@]} -ge 1 ] || ship_tooling "$usage"
+  parse_file "$@"
+  no_extra
+  # Every name is checked before any line is written, so a bad one leaves the
+  # record as it was.
+  for nm in "${names[@]}"; do parse_result "$nm=pass"; done
+  head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "ran records the head the verification ran at: not inside a git checkout with a commit"
+  for nm in "${names[@]}"; do append_to_section "## Evidence" "Ran: $nm at $head"; done
+  printf '%s\n' "${names[@]}" | jq -Rn --arg f "$file" --arg h "$head" '{run_file: $f, ran: [inputs | {name: ., head: $h}]}'
   ;;
 probe)
   ref=${1:-}

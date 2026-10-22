@@ -20,11 +20,16 @@ g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$
 mkdir "$repo/tests"
 echo 'answer() { echo 1; }' > "$repo/lib.sh"
 echo 'other() { echo 1; }' > "$repo/other.sh"
+# A file whose name git reads as pathspec magic unless it is written `./`, there at
+# the base so its fix changes it: a file the fix adds is a red revert-red refuses.
+echo 'colon() { echo no; }' > "$repo/:fix.sh"
 g add -A && g commit -qm base
 g update-ref refs/remotes/origin/main HEAD
 g symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
 echo 'answer() { echo 2; }' > "$repo/lib.sh"
+echo 'colon() { echo yes; }' > "$repo/:fix.sh"
 g add -A && g commit -qm fix
+fix1=$(g rev-parse HEAD)
 cat > "$repo/tests/answer.test.sh" <<'EOF'
 cd "$(dirname "$0")/.." || exit 2
 source lib.sh
@@ -96,7 +101,6 @@ check "the refusal names the missing record, not a revert-red answer" yes \
 # --- the line is one close 4 reads -------------------------------------------------
 
 # A fix in a file whose name git reads as pathspec magic unless it is written `./`.
-echo 'colon() { echo yes; }' > "$repo/:fix.sh"
 printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source ./:fix.sh' '[ "$(colon)" = yes ]' > "$repo/tests/colon.test.sh"
 g add -A && g commit -qm 'colon fix and test'
 head=$(g rev-parse HEAD)
@@ -151,5 +155,38 @@ check_rc "a -- with no command is a usage error" 2 "$status"
 printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-review: tree unchanged' >> "$rf"
 out=$(cd "$repo" && bash "$bin/run-file.sh" close 4 --file "$rf" 2>&1); status=$?
 check_rc "close 4 accepts the line a command's red wrote" 0 "$status"
+
+# --- a review fix is judged alone, against the tree before it ----------------------
+
+echo 'other() { echo 2; }' > "$repo/other.sh"
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source other.sh' '[ "$(other)" = 2 ]' > "$repo/tests/other.test.sh"
+g add -A && g commit -qm 'second fix and its test'
+fix2=$(g rev-parse HEAD)
+head=$(g rev-parse HEAD)
+rf=$(cd "$repo" && bash "$bin/run-file.sh" init 10 --scratchpad "$T/sp" --state 4=open | jq -r .run_file)
+held=$(cat "$rf")
+prove tests/answer.test.sh lib.sh --fix "$fix2"
+check_rc "a test that stays green with only the later fix reverted exits 1" 1 "$status"
+check "and writes nothing" "$held" "$(cat "$rf")"
+prove tests/answer.test.sh lib.sh --fix "$fix1"
+check_rc "the same test goes red with the fix that changed lib.sh reverted" 0 "$status"
+check "the answer names the fix" "$fix1" "$(jq -r .fix <<<"$out")"
+check "the line is the usual one" "Reverted-fix: tests/answer.test.sh: red at $head reverting lib.sh" "$(tail -n 1 "$rf")"
+prove tests/other.test.sh other.sh --fix "$fix2"
+check_rc "the second fix's test goes red with the second fix reverted" 0 "$status"
+prove tests/other.test.sh other.sh --fix nonesuch
+check_rc "a --fix naming no commit is a tooling refusal" 2 "$status"
+prove tests/other.test.sh other.sh --fix
+check_rc "a --fix with no commit is a usage error" 2 "$status"
+
+# A fix that adds a file: the red a missing file shows is not proof.
+echo 'added() { echo 1; }' > "$repo/added.sh"
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source added.sh' '[ "$(added)" = 1 ]' > "$repo/tests/added.test.sh"
+g add -A && g commit -qm 'new file and its test'
+held=$(cat "$rf")
+prove tests/added.test.sh added.sh
+check_rc "a red whose only failure is the missing file exits 1" 1 "$status"
+check "the answer is red false" false "$(jq -r .red <<<"$out")"
+check "and writes nothing" "$held" "$(cat "$rf")"
 
 finish

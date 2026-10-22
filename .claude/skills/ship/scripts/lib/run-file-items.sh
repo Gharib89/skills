@@ -264,11 +264,19 @@ $results
 EORESULTS
 }
 record_results() {
-  local r text
+  local r text at ran
   while IFS= read -r r; do
     [ -n "$r" ] || continue
     parse_result "$r"
-    text="$rword at $head"; [ -z "$rnote" ] || text="$text: $rnote"
+    # The head the verification ran at, where `ran` marked it, outranks the head
+    # the record is written on; a `--head` is the caller's own word and outranks
+    # both (#933).
+    at=$head
+    if [ -z "$head_given" ]; then
+      ran=$(rests "Ran: $rname at " | tail -n 1)
+      [[ $ran =~ ^[0-9a-f]{7,64}$ ]] && at=$ran
+    fi
+    text="$rword at $at"; [ -z "$rnote" ] || text="$text: $rnote"
     if [ "$radd" = true ]; then
       # After the section's last line, or a new section at the end when init
       # named no Verification and so wrote none.
@@ -322,7 +330,6 @@ refuse_bad_headings() { # refuse_bad_headings <names, one per line>
   [ -z "$bad" ] || ship_tooling "a Verification heading cannot carry a result word as a later field: '$bad' would read as a settled result while pending; rename it"
 }
 join_names() { awk '{ out = out (NR > 1 ? ", " : "") $0 } END { print out }'; }
-
 # --- The self-review and review-loop gates -------------------------------------
 # A gate line is a line of the Run file, an optional leading `- ` accepted,
 # matched by exact prefix at the line start: the text after the prefix, one line

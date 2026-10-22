@@ -173,4 +173,88 @@ printf '%s\n' '```' '## Criteria' '- 1: an example' '```' >> "$rf"
 call gate summary 7 --file "$rf"
 check "a fenced Criteria heading is no section" false "$(jq -r .criteria_recorded <<<"$out")"
 
+# --- no Criteria beside an issue with checkboxes (#933) --------------------------
+
+# A run whose `init` was never given the issue's checkboxes reached its merge gate
+# unjudged. With no `## Criteria` and a numbered issue whose body carries
+# checkboxes, the summary holds; the issue is read only then.
+cat > "$bin/read-issue.sh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$tmp/read-issue.calls"
+[ -f "$tmp/issue-body" ] || exit 2
+jq -Rs '{number: 9, body: .}' "$tmp/issue-body"
+STUB
+chmod +x "$bin/read-issue.sh"
+printf '%s\n' '## What' '- [ ] first' '- [x] second' '```' '- [ ] an example, not a criterion' '```' > "$tmp/issue-body"
+numbered() { # numbered <issue> [criteria]: a run on a numbered issue with phase 5's evidence
+  local rf9
+  if [ -n "${2:-}" ]; then rf9=$(printf '%s\n' "$2" | bash "$bin/run-file.sh" init "$1" --scratchpad "$tmp/sp" --criteria - --state 0=done | jq -r .run_file)
+  else rf9=$(bash "$bin/run-file.sh" init "$1" --scratchpad "$tmp/sp" --state 0=done | jq -r .run_file); fi
+  printf '%s\n' 'Round: primary 1: clean' "Stop: primary: tree unchanged at $head" '## Local gate' "- 10:00 $head pass {\"secrets\":\"pass\"}" >> "$rf9"
+  cp "$tmp/ci.json" "$(dirname "$rf9")/ci-wait.json"
+  printf '%s' "$rf9"
+}
+: > "$tmp/read-issue.calls"
+rf=$(numbered 9)
+call gate summary 7 --file "$rf"
+check_rc "no Criteria beside an issue with checkboxes: exits 1" 1 "$status"
+check "clean is false" false "$(jq -r .clean <<<"$out")"
+check "it names the issue, the count and the way to record them" \
+  'criteria: the Run file has no ## Criteria but issue #9 has 2 checkboxes; record each with `run-file note Criteria <text>`' \
+  "$(jq -r '.held_by[]' <<<"$out")"
+check "the Clean gate held by line carries it" yes "$(has 'issue #9 has 2 checkboxes' "$(jq -r .clean_gate_held_by_line <<<"$out")")"
+check "the reasons reach stderr as gate clean's do" yes "$(has 'issue #9 has 2 checkboxes' "$(cat "$tmp/err")")"
+check "the Unmet criteria line still says unverified" yes "$(has 'unverified: the Run file has no ## Criteria' "$(jq -r .unmet_criteria_line <<<"$out")")"
+
+printf '%s\n' '## What' '- plain bullet, no box' > "$tmp/issue-body"
+rf=$(numbered 91)
+call gate summary 7 --file "$rf"
+check_rc "an issue with no checkboxes holds nothing" 0 "$status"
+
+printf '%s\n' '- [ ] first' > "$tmp/issue-body"
+: > "$tmp/read-issue.calls"
+rf=$(numbered 92 '- [ ] first')
+printf '%s\n' 'Criterion 1: met: ok' >> "$rf"
+call gate summary 7 --file "$rf"
+check_rc "a recorded Criteria section needs no issue read" 0 "$status"
+check "and the issue is not read" 0 "$(wc -l < "$tmp/read-issue.calls" | tr -d ' ')"
+
+rm "$tmp/issue-body"
+rf=$(numbered 93)
+call gate summary 7 --file "$rf"
+check_rc "an issue that cannot be read is no verdict: exits 2" 2 "$status"
+check "and it names read-issue" yes "$(has 'run `read-issue 93`' "$err")"
+
+: > "$tmp/read-issue.calls"
+rf=$(numbered some-slug)
+call gate summary 7 --file "$rf"
+check_rc "a slug run has no issue to read" 0 "$status"
+check "and none is read" 0 "$(wc -l < "$tmp/read-issue.calls" | tr -d ' ')"
+
+# --- init warns when the criteria were not passed (#933) ------------------------
+
+printf '%s\n' '- [ ] first' '- [ ] second' > "$tmp/issue-body"
+warn() { # warn <args>...: init from the fixture repo, its stderr in $tmp/err
+  out=$(cd "$repo" && bash "$bin/run-file.sh" init "$@" --scratchpad "$tmp/sp2" 2>"$tmp/err"); status=$?
+}
+warn 31 --from-profile
+check_rc "init still succeeds without --criteria" 0 "$status"
+check "a numbered issue with checkboxes and no --criteria draws a warning naming the flag" yes \
+  "$(has 'issue #31 has 2 checkboxes but --criteria was not passed' "$(cat "$tmp/err")")"
+check "the warning says how to pass them" yes "$(has 'run-file init 31 --criteria -' "$(cat "$tmp/err")")"
+check "stdout is still the one JSON answer" 31 "$(jq -r .id <<<"$out")"
+warn 32 --from-profile --criteria "$tmp/issue-body"
+check "--criteria silences it" "" "$(cat "$tmp/err")"
+warn 33
+check "a bare init, with no profile to name the host, reads no issue" "" "$(cat "$tmp/err")"
+warn some-slug --from-profile
+check "a slug run reads no issue" "" "$(cat "$tmp/err")"
+printf '%s\n' 'no boxes' > "$tmp/issue-body"
+warn 34 --from-profile
+check "an issue with no checkboxes draws none" "" "$(cat "$tmp/err")"
+rm "$tmp/issue-body"
+warn 35 --from-profile
+check_rc "an unreadable issue does not stop init" 0 "$status"
+check "and draws no warning" "" "$(cat "$tmp/err")"
+
 finish
