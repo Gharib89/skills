@@ -8,7 +8,9 @@
 #
 # `--turn` is the harness's turn rung, which has 60 s: it leaves out the files
 # that run the render and gates pipeline once per case, `gates-*` and
-# `render-*`, which together take longer than that. Given changed files,
+# `render-*`, which together take longer than that, and the two that run the
+# real ffmpeg, `style-motion-real` and `backend-concat`, so a turn never takes
+# the CPU another run's timing is measuring. Given changed files,
 # relative to the caller's directory as the turn rows pass them, it runs only
 # the --turn files they reach. A changed test reaches itself. A changed .mjs or
 # .js reaches every file under the skill or its tests (Markdown aside) whose
@@ -61,7 +63,10 @@ if [ "${1:-}" = --turn ]; then
   [ "${1:-}" = --list ] && { list=1; shift; }
   kept=()
   for f in "${files[@]}"; do
-    case ${f##*/} in gates-*.test.mjs | render-*.test.mjs) ;; *) kept+=("$f") ;; esac
+    case ${f##*/} in
+      gates-*.test.mjs | render-*.test.mjs | style-motion-real.test.mjs | backend-concat.test.mjs) ;;
+      *) kept+=("$f") ;;
+    esac
   done
   files=("${kept[@]}")
   reached='' whole=''
@@ -87,7 +92,7 @@ if [ "${1:-}" = --turn ]; then
   if [ "$#" -gt 0 ] && [ -z "$whole" ]; then
     kept=()
     for f in "${files[@]}"; do holds "$reached" "$f" && kept+=("$f"); done
-    # Only gates-* or render-* tests changed: nothing of theirs runs on this rung.
+    # Only skipped tests changed: nothing of theirs runs on this rung.
     [ "${#kept[@]}" -gt 0 ] || exit 0
     files=("${kept[@]}")
   fi
