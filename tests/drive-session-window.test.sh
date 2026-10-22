@@ -61,6 +61,10 @@ running=(
   "a full check|4101 bash scripts/check.sh full|check.sh full"
   "a full check run by its path|4101 /home/u/skills/scripts/check.sh full|check.sh full"
   "a full check under a shell -c|4101 bash -c scripts/check.sh full|check.sh full"
+  "a render run from a path with a space|4101 node /tmp/window space/real-render.mjs|real-render"
+  "a calibration run from a path with a space|4101 /usr/bin/node /tmp/my skills/calibrate-rates.mjs|calibrate"
+  "a hyperframes render run from a path with a space|4101 node /tmp/my cache/node_modules/hyperframes/bin/hyperframes.mjs render|hyperframes"
+  "a full check run from a path with a space|4101 bash /home/u/my skills/scripts/check.sh full|check.sh full"
 )
 for r in "${running[@]}"; do
   IFS='|' read -r name line want <<<"$r"
