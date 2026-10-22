@@ -278,7 +278,6 @@ check "outside a repository the cause is named" \
 check_rc "outside a repository is tooling" \
   2 "$(cd "$T" && bash "$script" tests/answer.test.sh lib.sh >/dev/null 2>&1; printf '%s' "$?")"
 
-
 # The base is the merge base with origin/HEAD, so no origin/HEAD is no base.
 git -C "$repo" symbolic-ref --delete refs/remotes/origin/HEAD
 check_rc "no origin/HEAD is tooling, not a verdict" \

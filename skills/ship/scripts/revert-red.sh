@@ -32,9 +32,9 @@
 # red for another test while the line credits this one.
 # A red that comes from a file the fix added going missing, a `No such file`, a
 # `Cannot find module`, a `No module named` or a like missing-file phrase,
-# proves nothing about the fix: any
-# test that reads the file goes red without it. Such a red is exit 1, red false,
-# so revert a hunk inside the file, or a path the fix changed, instead.
+# proves nothing about the fix: any test that reads the file goes red without
+# it. Such a red is exit 1, red false, so revert a hunk inside the file, or a
+# path the fix changed, instead.
 # stdout: {test, paths, red, command[, fix]}   red: true when the test failed on
 #   the reverted tree for a reason other than a missing file; command: the argv
 #   that ran, `["bash", <test>]` by default; fix: the commit named, where one
