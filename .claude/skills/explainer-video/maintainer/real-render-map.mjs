@@ -10,6 +10,16 @@ const IDS = {
   rtl: ["arabic-canvas", "arabic-timeline"],
 };
 
+// The seconds the camera is sampled at over the second scene's start: just after
+// it begins to travel and once it has settled. The travel into the second scene
+// is the first scene's run past its duration, not the second's own.
+export const sampleTimes = ([from, next]) => {
+  const travel = from.slot - from.duration;
+  return [next.start + 0.1, next.start + travel + 0.4].map(
+    (t) => +t.toFixed(3),
+  );
+};
+
 export async function mapChecks({
   FIXTURE,
   profile,
@@ -30,14 +40,10 @@ export async function mapChecks({
     const ok = (await render(map.comp, x)) && (await render(map.comp, y));
     const [fx, fy] = ok ? [x, y].map(framemd5) : [[], []];
     const apart = fx.filter((l, i) => l !== fy[i]).length;
-    const next = map.scenes[1];
-    const travel = next.slot - next.duration;
+    const [t1, t2] = sampleTimes(map.scenes);
     const at = (t) => seek(t, `map-${dir}-${t}`, false, map.comp);
     const [during, after] = ok
-      ? [
-          await at(+(next.start + 0.1).toFixed(3)),
-          await at(+(next.start + travel + 0.4).toFixed(3)),
-        ]
+      ? [await at(t1), await at(t2)]
       : [Buffer.alloc(0), Buffer.alloc(0)];
     check(
       `canvas map ${dir}`,
