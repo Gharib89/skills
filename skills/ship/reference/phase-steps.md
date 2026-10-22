@@ -145,12 +145,11 @@ block's `Resolve:`; `Cap:` bounds the rounds, and a docs-only fix-only diff ends
 them. A round's fix is proven by its targeted test nodes plus the repo's edit
 rung, the per-file check its harness runs after each edit (`check.sh edit
 <file>...`), over the files it touched; a repo with no harness, and so no edit
-rung, proves it with the local gate instead. A fix that carries a test is also
-proven red: commit it, then `run-file prove <test> <path>... --fix <fix commit>`
-reverts the fix's own change, not the merge base's (a red from a missing module
-or file is refused). Otherwise the local gate is not
+rung, proves it with the local gate instead. Otherwise the local gate is not
 re-run per round: the final head's gate is the merge gate's re-run on `gate
-read`'s `current: false`, never while a `code-review` is out (phase 5). **Every
+read`'s `current: false`, never while a `code-review` is out (phase 5). A fix
+that carries a test is also proven red, per [evidence lines](evidence-lines.md)
+(`--fix <fix commit>`). **Every
 reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks**, each
 driven when its primary exits `not reviewed` (`inline lane` aside), is capped
 with findings or stops `not landed`. Exits: `reviewed`, `not reviewed:

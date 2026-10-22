@@ -161,6 +161,7 @@ ran)
   no_extra
   # Every name is checked before any line is written, so a bad one leaves the
   # record as it was.
+  # parse_result is the name check close 3 --result applies; the word is a stand-in.
   for nm in "${names[@]}"; do parse_result "$nm=pass"; done
   head=$(git rev-parse HEAD 2>/dev/null) || ship_tooling "ran records the head the verification ran at: not inside a git checkout with a commit"
   for nm in "${names[@]}"; do append_to_section "## Evidence" "Ran: $nm at $head"; done

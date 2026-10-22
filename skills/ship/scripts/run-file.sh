@@ -80,7 +80,8 @@
 # `Deviations log`, and `Direct calls`, one line per direct call the run made
 # straight through the host's REST form, no mechanic covering it, so one that
 # recurs across runs is visible as a mechanic to promote. `skip 3 <reason>`
-# settles each still-pending result as `n/a: <reason>`. `close 3 --result` also
+# settles each still-pending result as `n/a: <reason>`; `skip` of 5 to 8 is
+# refused, naming phase 3, while phase 3 is open. `close 3 --result` also
 # takes a name the Run file lacks when the checkout profile has it as a
 # `## Verification` heading, one the PR added after init: it applies init's
 # heading checks to the name, then appends its entry. Once phase 3 has closed or
@@ -132,7 +133,10 @@
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
 # it wrote.
 #
-# `skip <n>` for 5 to 8 is refused while phase 3 is open, naming it.
+# `ran <name>... <where>` marks, for each verification name the Run file's
+# results section knows, that its `Run:` line has just run: it appends
+# `Ran: <name> at <sha>` under `## Evidence`, <sha> the HEAD now, and writes
+# nothing if any name is malformed. Call it as each run ends, not at the close.
 # `prove` runs the sibling `revert-red` on <test> and its <path>s, passing any
 # `--fix <commit>` (a review fix's commit: the paths are restored from its parent,
 # not the merge base) and any
@@ -178,8 +182,8 @@
 #   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
 #   open, close, skip: {run_file, phase, state, line, mirror[, reason]}
 #   close 3 --result on a closed or skipped phase 3: {run_file, phase, state, line}
-#   ran: {run_file, ran: [{name, head}]}
 #     with state "recorded", the row unchanged and no mirror
+#   ran: {run_file, ran: [{name, head}]}
 #   grade: {run_file, grade}
 #   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}};
 #     closed is null where no phase was open

@@ -9,9 +9,9 @@
 # restored from the merge base with origin/HEAD, or deleted where the fix added
 # it, and the test runs again. With `--fix <commit>` the paths are restored from
 # that commit's parent instead, so a review fix is judged against the tree
-# before it and not against every commit the branch holds. A test that is not green at HEAD proves nothing
-# when it goes red later, so that first run is the precondition. It reads
-# committed state, so commit the test and the fix first.
+# before it and not against every commit the branch holds. A test that is not
+# green at HEAD proves nothing when it goes red later, so that first run is the
+# precondition. It reads committed state, so commit the test and the fix first.
 #
 # The test runs behind a `gh` and an `az` stub this mechanic writes itself, so it
 # needs nothing from the repo it runs in: a revert can take out what swaps in a
@@ -31,12 +31,14 @@
 # it runs: it refuses the command that names no word of <test>, which could go
 # red for another test while the line credits this one.
 # A red that comes from a file the fix added going missing, a `No such file`, a
-# `Cannot find module`, a `No module named`, proves nothing about the fix: any
+# `Cannot find module`, a `No module named` or a like missing-file phrase,
+# proves nothing about the fix: any
 # test that reads the file goes red without it. Such a red is exit 1, red false,
 # so revert a hunk inside the file, or a path the fix changed, instead.
 # stdout: {test, paths, red, command[, fix]}   red: true when the test failed on
 #   the reverted tree for a reason other than a missing file; command: the argv
-#   that ran, `["bash", <test>]` by default; fix: the commit named, where one was
+#   that ran, `["bash", <test>]` by default; fix: the commit named, where one
+#   was given
 # stderr: the test's last 40 lines when it went red, the evidence it failed (or,
 #   exit 2, when it was already red at HEAD); on a green run, one line saying the
 #   test does not prove the fix

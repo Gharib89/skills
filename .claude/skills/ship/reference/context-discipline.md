@@ -118,7 +118,7 @@ re-run's result replacing the entry) without re-opening phase 3 and leaves
 phase 3's row and task as they are. Close a phase only once its `Done when:`
 holds: the mechanic stamps whatever close it is given, except
 that `close 3`, `close 4` and `close 7` refuse without the results or evidence
-lines [implement.md](evidence-lines.md) and
+lines [evidence-lines.md](evidence-lines.md) and
 [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps
 all ten items and `skip`s each collapsed phase, so the record shows a decision
 and not a gap; re-running `skip <n> "<reason>"` replaces a reason a wider diff
