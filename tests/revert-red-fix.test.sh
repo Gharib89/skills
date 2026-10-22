@@ -100,7 +100,7 @@ printf '%s\n' 'later=1' > "$ab/later.sh"
 git -C "$ab" add -A && git -C "$ab" commit -qm 'later file'
 check_rc "a path added after the fix is refused as tooling" 2 "$(ab_rc tests/b.test.sh lib.sh later.sh --fix "$abfix2")"
 check "and the refusal names the path and the fix" "later.sh is not a file --fix ${abfix2:0:12} added" \
-  "$(cd "$ab" && bash "$script" tests/b.test.sh lib.sh later.sh --fix "$abfix2" 2>&1 >/dev/null | grep -o 'later.sh is not a file --fix [0-9a-f]* added')"
+  "$(cd "$ab" && bash "$script" tests/b.test.sh lib.sh later.sh --fix "$abfix2" 2>&1 >/dev/null | grep -o 'later.sh is not a file --fix [0-9a-f]* added$')"
 
 # With no origin/HEAD there is no merge base to find, and --fix needs none: it
 # still answers, where the plain form is tooling.
