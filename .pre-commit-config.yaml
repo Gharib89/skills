@@ -45,13 +45,14 @@ repos:
         files: \.(mjs|js)$
       # A core file's change is read through its boot file's calls, and the hook
       # above only visits the files an edit hands it, so a core edit lints every
-      # page script, not just the one changed.
+      # page script, not just the one changed. A page's summary part (see
+      # scripts/eslint.config.cjs) is read the same way.
       - id: no-undef-pages
         name: eslint no-undef (page scripts)
         entry: eslint --config scripts/eslint.config.cjs "skills/**/*-boot.js"
         language: node
         additional_dependencies: ["eslint@9.39.1", "espree@10.4.0", "globals@16.5.0"]
-        files: -(core|boot)\.js$
+        files: -(core|summary|boot)\.js$
         pass_filenames: false
       # The house-style rules, the 80-column wrap among them, on any Markdown
       # change. The script reads every file it holds, so it takes no file list.

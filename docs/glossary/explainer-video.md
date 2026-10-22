@@ -72,6 +72,10 @@ _Avoid_: preview, mockup, prototype
 The whole video's scenes and seams played in order, without a break, over the run's real narration, so the human judges pace and motion before the final render.
 _Avoid_: preview, rough cut, slideshow
 
+**Render estimate**:
+The storyboard's forecast of the first render's seconds, render and gates together, worked from a table of rates measured on this machine for the installed HyperFrames. It is amber above 5 render seconds per video second and never stops a board; a rich card also shows the seconds it adds.
+_Avoid_: render time, ETA, cost
+
 **Board version**:
 One state of a run's storyboard, posted as one document the page renders: the first cards, each revision, a gate stop's banner with the failing cards reopened, and the delivered video's clips. A version is never rewritten once the human can see it; a change is the next version.
 _Avoid_: round, board update

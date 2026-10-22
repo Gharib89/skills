@@ -7,9 +7,15 @@ publish, 4 build, 5 read a Submit, 6 apply, 7 gate stop, 8 after delivery.
 
 The **storyboard** is the run's one stop for the user: one card per scene with
 its narration, a still, its voiced length and style notes, beside the brief
-and the source pack. The card most in view plays a **live build** (the
-video's own composition), looping its slot through its exit seam; every other
-card shows its still as a poster. Play plays the slot once with its narration.
+and the source pack. Ahead of the brief sits the **render estimate**: the
+seconds the first render takes (render and gates, the voice being done, the
+brief's score not counted: a synthesised score and `ace-step` both add to it),
+read from `<skill>/render-rates.json` and shown amber above the budget of 5
+render seconds per video second. A rich card (a `custom` scene is one) also
+shows the seconds it adds. It warns and never refuses. The card most in view
+plays a **live build** (the video's own composition), looping its slot through
+its exit seam; every other card shows its still as a poster. Play plays the
+slot once with its narration.
 The **animatic** plays the whole build over the joined narration; its scene
 list jumps to a scene and marks the playing one. Every card arrives on the
 agent's recommendation
@@ -55,9 +61,9 @@ delivery it reports Render's last line and the videos-folder path.
    `explainers/<slug>/storyboard.html`, opened in a browser, and that the user
    pastes its answers text back here.
 3. **Publish, once per run.** `board page` writes `board/page.html`, the page
-   with the video's title, and `page.css`, `page-core.js` and `page-boot.js`
-   beside it. Publish `page.html` as a new artifact with those three in
-   `files`: `capabilities`
+   with the video's title, and `page.css`, `page-core.js`, `page-summary.js`
+   and `page-boot.js` beside it. Publish `page.html` as a new artifact with
+   those four in `files`: `capabilities`
    `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon` `video`, a
    one-sentence `description`. Refused: the board is local (step 2).
    Never publish it again: every later change is a board version. Record its

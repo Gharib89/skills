@@ -43,10 +43,10 @@ export const TECHNIQUES = {
   "3d": ["stack3d"],
 };
 
-// Whether any of `scenes` draws WebGL, which the render and the gates take the
-// GPU path for.
-export const drawsWebgl = (scenes) =>
-  scenes.some((s) => VISUALS[s.visual.component].webgl);
+// Whether a scene draws WebGL, which the render and the gates take the GPU
+// path for, and whether any of `scenes` does.
+export const isWebgl = (s) => !!VISUALS[s.visual.component].webgl;
+export const drawsWebgl = (scenes) => scenes.some(isWebgl);
 
 // The index, among the scene's spoken words, of the word the cue `{ at, on }`
 // lands on: the sentence's first word, or the phrase's.

@@ -34,11 +34,12 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { knobOffer, voices } from "../brief/knobs.mjs";
+import { estimate, loadRates } from "../lib/estimate.mjs";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
-import { loadStyle } from "../lib/style.mjs";
+import { grammar, loadStyle } from "../lib/style.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
-import { VISUALS } from "../lib/visuals.mjs";
+import { VISUALS, isWebgl } from "../lib/visuals.mjs";
 import { esc } from "../render/compose.mjs";
 import { liveScript } from "../render/live.mjs";
 import { seamPlan } from "../render/seams.mjs";
@@ -126,7 +127,12 @@ const template = () =>
 const filled = (title) => template().replace("{{TITLE}}", () => esc(title));
 // The page links its style and scripts by relative path: a publish carries them
 // in `files`, and a local copy needs them beside it.
-const siblings = ["page.css", "page-core.js", "page-boot.js"];
+const siblings = [
+  "page.css",
+  "page-core.js",
+  "page-summary.js",
+  "page-boot.js",
+];
 const copySiblings = (dir) => {
   for (const f of siblings)
     fs.copyFileSync(path.join(skill, "storyboard", f), path.join(dir, f));
@@ -408,6 +414,27 @@ for (const id of Object.keys(opts.fixes)) {
   c.fix = opts.fixes[id];
 }
 
+// The first-render estimate: it warns on the page, and never refuses a board.
+let table;
+try {
+  table = loadRates();
+} catch (e) {
+  fail(e.message);
+}
+const { texture } = grammar(style);
+const estimated = estimate(
+  cards.map((c, i) => ({
+    id: c.id,
+    seconds: c.seconds,
+    webgl: isWebgl(script.scenes[i]),
+  })),
+  table.rates,
+  // Textured is what the calibrator's flat style lacks: a surface other than
+  // flat, or any overlay.
+  { textured: texture.surface !== "flat" || texture.overlays.length > 0 },
+);
+for (const c of cards) if (c.rich) c.adds = estimated.adds[c.id];
+
 const brief = maybe(at("brief.json"));
 const pack = maybe(at("excerpts.json"));
 const doc = {
@@ -416,6 +443,12 @@ const doc = {
   title: script.title,
   build,
   narration,
+  estimate: {
+    seconds: estimated.seconds,
+    budget: estimated.budget,
+    over: estimated.over,
+    hyperframes: table.hyperframes,
+  },
   brief: Object.entries(brief ?? {}).map(([knob, v]) => ({
     knob,
     value: Array.isArray(v) ? v.join("; ") : String(v ?? ""),
