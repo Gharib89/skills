@@ -15,7 +15,19 @@
 # calls answer `agent_pane_busy` first, the shell not yet up in a new tab.
 # `<name>.prompt-stall` makes `agent prompt --wait` answer `agent_prompt_stalled`,
 # the text sent but no turn started, as herdr 0.9.3 does after 5 s; without
-# `--wait` that prompt succeeds, as the real CLI's does.
+# `--wait` that prompt succeeds, as the real CLI's does. A stall holding the word
+# `enter` is the common one: `agent send-keys <name> Enter` clears it, the text
+# sitting in the input box submitted at last. `enter:<n>` drops the first n-1
+# Enters and clears on the nth (a loaded machine drops the first Enter in most
+# spawns, measured on herdr 0.9.5). Any other stall survives every Enter, and
+# `agent wait` on it answers `timeout` as the real CLI does when no turn starts
+# (`herdr agent wait <agent> --until blocked --timeout 500` on a working agent:
+# exit 1, code `timeout`, measured on herdr 0.9.5).
+# `<name>.turn-delay` holds the milliseconds a turn takes to start once the text
+# is submitted (up to 12 s after an Enter that took, measured): each `agent wait`
+# shorter than what is left answers `timeout` and takes its `--timeout` off it.
+# `<name>.keys-error` makes `agent send-keys` fail with the code it holds, the
+# pane gone between a prompt and the key that follows it.
 # `agent prompt` refuses an agent whose current line reads `blocked` with
 # `agent_blocked`, and `agent read` refuses it any source but `visible` with
 # `agent_not_idle`, as herdr 0.9.3 does past the viewport. Every call is a line
@@ -54,8 +66,24 @@ case "$1 $2" in
       && err agent_prompt_stalled "agent $3 showed no activity after the prompt"
     printf '{"result":{"type":"agent_prompted"}}\n' ;;
   "agent send-keys")
+    [ -f "$HERDR_FAKE/$3.keys-error" ] && err "$(cat "$HERDR_FAKE/$3.keys-error")" "send-keys failed"
     known "$3"
+    if [[ " $* " == *" Enter "* ]]; then
+      held=$(cat "$HERDR_FAKE/$3.prompt-stall" 2>/dev/null)
+      case $held in
+        enter) rm "$HERDR_FAKE/$3.prompt-stall" ;;
+        enter:1) rm "$HERDR_FAKE/$3.prompt-stall" ;;
+        enter:*) echo "enter:$((${held#enter:} - 1))" > "$HERDR_FAKE/$3.prompt-stall" ;;
+      esac
+    fi
     printf '{"result":{"type":"ok"}}\n' ;;
+  "agent wait")
+    known "$3"
+    [ -f "$HERDR_FAKE/$3.prompt-stall" ] && err timeout "timed out waiting for agent $3"
+    n=$3 ms=0; while [ $# -gt 0 ]; do [ "$1" = --timeout ] && ms=$2; shift; done
+    left=$(cat "$HERDR_FAKE/$n.turn-delay" 2>/dev/null || echo 0)
+    [ "$left" -gt "$ms" ] && { echo $((left - ms)) > "$HERDR_FAKE/$n.turn-delay"; err timeout "timed out waiting for agent $n"; }
+    printf '{"result":{"type":"agent_wait_matched"}}\n' ;;
   "agent read")
     known "$3"; read -r st _ < "$HERDR_FAKE/$3.states"
     [ "$st" = blocked ] && [ "$5" != visible ] && err agent_not_idle "agent $3 is not idle"

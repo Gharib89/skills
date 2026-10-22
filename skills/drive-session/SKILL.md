@@ -20,9 +20,10 @@ Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer.
 
 They live in `scripts/` under this skill's base directory, and each answers
 `--help` with its flags and the JSON it prints. Every script but `frontier`
-takes the roster by `--roster <file>`. Read, wait on and answer a roster session
-through `spawn`, `watch`, `read` and `answer` alone: each keeps the row's
-sequence number, which is what tells Herdr's stale `done` from a new turn.
+and `window` takes the roster by `--roster <file>`. Read, wait on and answer a
+roster session through `spawn`, `watch`, `read` and `answer` alone: each keeps
+the row's sequence number, which is what tells Herdr's stale `done` from a new
+turn.
 
 - `spawn` opens the tab without focus, starts claude, sends the task and adds
   the row.
@@ -41,11 +42,29 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
   same parent. Run it from the spec's checkout, or with `GH_REPO=<owner/name>`:
   it reads the parent from that repo. It reads GitHub alone (an Azure DevOps
   checkout has no spec batch), so it takes no roster and runs outside Herdr.
+- `window` prints what is running of a render, a calibration or a full check
+  (`real-render`, `hyperframes`, `calibrate`, `check.sh full`): exit 0 with
+  nothing running, exit 1 naming each process and its pid. It takes no roster.
+  It leans to over-reporting: a shell call that only greps for a render script
+  reads as running, so read the pid's command before telling the user.
+
+**The quiet window.** A session that asks for a quiet window (to time a render,
+calibrate, or run the full check without a neighbour) is answered `--text` that
+the window is open only after `window` exits 0, and one session holds it at a
+time: until the holder reports its run finished, every other request waits.
+On exit 1, answer nothing: tell the user what runs, keep watching the others,
+and run `window` again at each `watch` wake until it exits 0.
 
 ## The run
 
-1. **Roster.** One per run, in your scratchpad:
-   `<scratchpad>/drive-session/roster.json`. Read it back after a compaction.
+1. **Roster.** One per run, under the state directory, which survives a
+   reboot:
+   `${XDG_STATE_HOME:-$HOME/.local/state}/drive-session/<run>/roster.json`,
+   `<run>` a short name for the run (`spec-932`, `smoke-test`); list
+   `${XDG_STATE_HOME:-$HOME/.local/state}/drive-session/` to find one you
+   forgot. Never the session scratchpad: it is tmpfs, so a laptop restart wipes
+   the roster and the batch log with it. `spawn` makes the directory. Read it
+   back after a compaction or a reboot.
 2. **Spawn** each session. Name it after its task (`ship-541`), the name
    doubling as the tab label. `--cwd` is a folder Claude Code already trusts:
    in any other, claude stops on the trust dialog, `spawn` answers
@@ -82,10 +101,12 @@ sequence number, which is what tells Herdr's stale `done` from a new turn.
    for text opening with `-`). Text that starts no turn (a local slash
    command such as `/rename`, or an Enter that did not register) comes back
    from `answer` or `spawn` as a not-ok answer with `code`
-   `agent_prompt_stalled` or `timeout`. The text reached the pane, and `watch`
-   will not report the session until something starts a turn, so `read` it:
-   text still in the input box gets `--keys Enter`; a session back at its
-   prompt gets its next `--text`.
+   `agent_prompt_stalled` or `timeout`. (`spawn` has already pressed Enter up
+   to three times on an `agent_prompt_stalled` before reporting it, a loaded
+   machine dropping the first; `answer` reports the first stall.) The text
+   reached the pane, and `watch` will not report the session until something
+   starts a turn, so `read` it: text still in the input box gets
+   `--keys Enter`; a session back at its prompt gets its next `--text`.
 7. **Loop** from step 3 while any session is running. A session waiting on an
    escalation is idle but not marked at rest; once you relay the user's reply,
    it runs again, so start step 3 again. When `watch` exits 1 on no live
@@ -198,8 +219,8 @@ line names the parent and any merge allowance
    each merge, fast-forward main as above, then re-run `frontier`.
    Once no slice is open, close the parent as completed with a comment naming
    each slice and its PR: ship closes only the issue its PR names.
-4. **Batch log.** `<scratchpad>/drive-session/batch-log.md`, beside the
-   roster and read back with it after a compaction. A **find** is anything a
+4. **Batch log.** `batch-log.md`, in the roster's directory and read back with
+   it after a compaction or a reboot. A **find** is anything a
    run surfaced beyond its own task: an escalation, a reviewer quirk, a
    classifier refusal, a gate gap. Write one line per find as it surfaces,
    before the next `watch`, naming the run, what happened, and whether it would
