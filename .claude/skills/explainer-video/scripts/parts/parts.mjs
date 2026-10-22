@@ -226,6 +226,11 @@ function start(n) {
     fs.rmSync(path.join(dir, "check.json"), { force: true });
   }
   keep(own, JSON.stringify(now, null, 2) + "\n");
+  // A profile only the run holds (the style card's Use once) goes with each
+  // part, which looks for its style in its own folder first.
+  const style = file("style.json");
+  if (fs.existsSync(style) && readJson(style).name === now.style)
+    keep(path.join(dir, "style.json"), fs.readFileSync(style, "utf8"));
   const pack = readJson(file("excerpts.json"));
   const wanted = new Set([...p.excerpts, ...(bridge?.excerpts ?? [])]);
   keep(

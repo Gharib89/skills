@@ -73,6 +73,29 @@ test("a brief change in a part sees the project style store of its explainers fo
   assert.ok(knobOffer("style", dir, {}).options.includes("mine"));
 });
 
+test("a style the run holds only in its own style.json (the card's Use once) comes with each part", () => {
+  const fx = fixture();
+  fs.writeFileSync(path.join(fx.dir, "style.json"), profile("Once"));
+  const once = { ...readJson(fx.dir, "style.json"), name: "once" };
+  fs.writeFileSync(path.join(fx.dir, "style.json"), JSON.stringify(once));
+  const brief = { ...readJson(fx.dir, "brief.json"), style: "once" };
+  fs.writeFileSync(path.join(fx.dir, "brief.json"), JSON.stringify(brief));
+  writePlan(fx, plan([4, 4, 4]));
+  assert.equal(parts(fx, "start", "1").code, 0);
+  const dir = path.join(fx.dir, "parts", "01-claiming-work");
+  assert.deepEqual(readJson(dir, "style.json"), once);
+  const r = node({ ...fx, dir }, "brief/brief.mjs", ["style=once"]);
+  assert.equal(r.code, 0, r.err);
+  // a run holding another profile than the brief names copies nothing
+  fs.rmSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(fx.dir, "brief.json"),
+    JSON.stringify({ ...brief, style: "claude-code" }),
+  );
+  assert.equal(parts(fx, "start", "1").code, 0);
+  assert.equal(fs.existsSync(path.join(dir, "style.json")), false);
+});
+
 // A part folder under the render fixture's project, its scene file moved in.
 function partOf() {
   const fx = machine();
@@ -115,6 +138,17 @@ test("a part's video is delivered under its number into the series' folder, with
     "01-intro.srt",
     "poster.png",
   ]);
+});
+
+test("a part.json of the wrong shape stops the render before it starts, naming file and field", () => {
+  const fx = partOf();
+  const own = path.join(fx.dir, "part.json");
+  fs.writeFileSync(own, "{}");
+  const r = render(fx);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.err, /^render: part\.json: series is not a name$/m);
+  assert.doesNotMatch(r.err, /TypeError/);
+  assert.equal(fs.existsSync(path.join(fx.tmp, "videos")), false);
 });
 
 test("a video that is no part's is delivered as it was, with its poster named poster.png", () => {

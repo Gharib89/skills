@@ -121,6 +121,39 @@ test("part two onward's context cites its bridge to the part before, and the las
   assert.equal(r.code, 1);
 });
 
+test("a part.json of the wrong shape is refused by file and field, not skipped", () => {
+  const { part } = partRun(2, three());
+  const own = path.join(part.dir, "part.json");
+  const good = JSON.parse(fs.readFileSync(own, "utf8"));
+  for (const [body, why] of [
+    ["{", /^script: part\.json is not valid JSON: /],
+    ["{}", /^script: part\.json: series is not a name$/],
+    [{ ...good, n: "2" }, /^script: part\.json: n is not a part number$/],
+    [
+      { ...good, next: { title: 3 } },
+      /^script: part\.json: next\.title is not a title$/,
+    ],
+    [
+      { ...good, bridge: {} },
+      /^script: part\.json: bridge\.excerpts is not a list of ids$/,
+    ],
+    [
+      { ...good, bridge: "ex-1" },
+      /^script: part\.json: bridge\.excerpts is not a list of ids$/,
+    ],
+  ]) {
+    fs.writeFileSync(
+      own,
+      typeof body === "string" ? body : JSON.stringify(body),
+    );
+    const r = check(part);
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.err.trim(), why);
+  }
+  fs.writeFileSync(own, JSON.stringify(good));
+  assert.equal(line(check(part), "parts"), "script parts: pass");
+});
+
 test("a script that is no part's runs no parts gate", () => {
   const fx = fixture({ length: 1, excerpts: 3 });
   snapshot(fx, 3);

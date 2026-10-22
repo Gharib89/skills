@@ -25,7 +25,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
-import { isPart, packRun, writeIgnore } from "../lib/runfolder.mjs";
+import { isPart, packRun, readPart, writeIgnore } from "../lib/runfolder.mjs";
 import { plain } from "../lib/count.mjs";
 import { numberIn } from "../lib/figures.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
@@ -293,7 +293,14 @@ const has = (s, item) => {
 // after. Only a part's run folder runs it.
 if (isPart(run)) {
   const f = [];
-  const part = JSON.parse(need("part.json", "run parts.mjs start first"));
+  need("part.json", "run parts.mjs start first");
+  let part;
+  try {
+    part = readPart(run);
+  } catch (e) {
+    console.error(`script: ${e.message}`);
+    process.exit(1);
+  }
   const context = scenes.find((s) => s.role === "context");
   if (
     part.bridge &&

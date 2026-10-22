@@ -35,6 +35,38 @@ ${END}
 // the run folder two levels up, which holds the source pack.
 export const isPart = (run) => fs.existsSync(path.join(run, "part.json"));
 
+// A part's `part.json`, held to the fields the script gate and delivery read.
+// Throws `part.json: <field> ...` for a file of another shape, so a stage
+// refuses it by field and neither skips its checks nor dies on a TypeError.
+export function readPart(run) {
+  let part;
+  try {
+    part = JSON.parse(fs.readFileSync(path.join(run, "part.json"), "utf8"));
+  } catch (e) {
+    throw new Error(`part.json is not valid JSON: ${e.message}`);
+  }
+  const bad = (why) => {
+    throw new Error(`part.json: ${why}`);
+  };
+  const obj = (v) => v && typeof v === "object" && !Array.isArray(v);
+  if (!obj(part)) bad("is not an object");
+  if (typeof part.series !== "string" || !part.series)
+    bad("series is not a name");
+  if (!Number.isInteger(part.n) || part.n < 1) bad("n is not a part number");
+  if (part.bridge != null) {
+    if (!obj(part.bridge) || !Array.isArray(part.bridge.excerpts))
+      bad("bridge.excerpts is not a list of ids");
+    if (!part.bridge.excerpts.every((x) => typeof x === "string"))
+      bad("bridge.excerpts is not a list of ids");
+  }
+  if (
+    part.next != null &&
+    (!obj(part.next) || typeof part.next.title !== "string")
+  )
+    bad("next.title is not a title");
+  return part;
+}
+
 // The run folder holding `run`'s source pack: itself, or a part's parent.
 export const packRun = (run) =>
   isPart(run) ? path.dirname(path.dirname(path.resolve(run))) : run;

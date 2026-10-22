@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { explainersDir, isPart } from "../lib/runfolder.mjs";
+import { explainersDir, isPart, readPart } from "../lib/runfolder.mjs";
 import { skill } from "../lib/tools.mjs";
 
 const clock = (t) => {
@@ -63,9 +63,7 @@ export function repoName(run) {
 // under the repo's name and returns that folder. A part goes into its series'
 // folder, so the numbered parts sit side by side, its poster named after it.
 export function deliver(run, out, slug, videos) {
-  const part = isPart(run)
-    ? JSON.parse(fs.readFileSync(path.join(run, "part.json"), "utf8"))
-    : null;
+  const part = isPart(run) ? readPart(run) : null;
   const to = path.join(
     videos,
     "explainer-video",
