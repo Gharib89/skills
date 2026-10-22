@@ -205,6 +205,16 @@ check_rc "ran with no name is malformed" 2 "$(inrc "$repo" ran --file "$rh")"
 check_rc "ran refuses --head, which belongs to close 3" 2 "$(inrc "$repo" ran github-mechanics --head 0123abcd --file "$rh")"
 check "a refused ran changed nothing" "$was" "$(cat "$rh")"
 
+# A verification name may begin with `--`: only the flags <where> reads end the names.
+rd=$(at "$repo" init 29 --verifications 'dashed, github-mechanics' | jq -r .run_file)
+# The profile route (--from-profile) is what brings such a name in; the flag refuses a leading dash.
+sed -i 's/^- dashed:/- --dashed:/' "$rd"
+at "$repo" close 0 --file "$rd" >/dev/null
+for p in 1 2; do at "$repo" open "$p" --file "$rd" >/dev/null; at "$repo" close "$p" --file "$rd" >/dev/null; done
+at "$repo" open 3 --file "$rd" >/dev/null
+dashat=$(g rev-parse HEAD)
+check "ran takes a name that begins with --" "Ran: --dashed at $dashat" "$(at "$repo" ran --dashed --file "$rd" >/dev/null; sed -n '/^## Evidence$/,$p' "$rd" | grep '^Ran: ')"
+
 # No verification named: close 3 needs no result, and --result has no name to take.
 rn=$(at "$repo" init 25 | jq -r .run_file)
 at "$repo" close 0 --file "$rn" >/dev/null

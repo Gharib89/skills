@@ -85,16 +85,18 @@ verdict() {
 # `cd ""` succeeds without moving, so the toplevel is read and checked first.
 root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$root" ] || ship_tooling "not inside a git repository"
 cd "$root" || ship_tooling "cannot enter $root"
-tip=$(ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
-base=$(git merge-base HEAD "$tip" 2>/dev/null) || ship_tooling "no merge base between HEAD and $tip"
-from="the merge base"
 # The fix's parent is the tree before it, whichever commits came after: only that
-# commit's own change is taken out. The commit is named in full in the verdict.
+# commit's own change is taken out, so a repo with no origin/HEAD still answers.
+# The commit is named in full in the verdict.
 if [ -n "$fix" ]; then
   fix=$(git rev-parse --verify -q "$fix^{commit}") || ship_tooling "--fix $fix is no commit here"
   git merge-base --is-ancestor "$fix" HEAD || ship_tooling "--fix $fix is not on HEAD's history"
   base=$(git rev-parse --verify -q "$fix^") || ship_tooling "--fix $fix has no parent to restore from"
   from="the parent of --fix"
+else
+  tip=$(ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
+  base=$(git merge-base HEAD "$tip" 2>/dev/null) || ship_tooling "no merge base between HEAD and $tip"
+  from="the merge base"
 fi
 
 # bash reads any other runner's test as a syntax error, which is red whatever the

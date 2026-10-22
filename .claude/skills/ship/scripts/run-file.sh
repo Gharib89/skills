@@ -136,7 +136,9 @@
 # `ran <name>... <where>` marks, for each verification name the Run file's
 # results section knows, that its `Run:` line has just run: it appends
 # `Ran: <name> at <sha>` under `## Evidence`, <sha> the HEAD now, and writes
-# nothing if any name is malformed. Call it as each run ends, not at the close.
+# nothing if any name is malformed. A name may begin with `--`: the names end at
+# the first `--file`, `--issue`, `--scratchpad`, `--result` or `--head`. Call it
+# as each run ends, not at the close.
 # `prove` runs the sibling `revert-red` on <test> and its <path>s, passing any
 # `--fix <commit>` (a review fix's commit: only its own change to the paths is
 # taken out, not the merge base's copy) and any

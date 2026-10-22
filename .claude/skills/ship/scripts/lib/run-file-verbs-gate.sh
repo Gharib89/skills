@@ -155,7 +155,8 @@ prove)
   ;;
 ran)
   names=()
-  while [ $# -gt 0 ]; do case $1 in --*) break ;; esac; names+=("$1"); shift; done
+  # A name may begin with `--`, so only the flags <where> reads end the names.
+  while [ $# -gt 0 ]; do case $1 in --file | --issue | --scratchpad | --result | --head) break ;; esac; names+=("$1"); shift; done
   [ ${#names[@]} -ge 1 ] || ship_tooling "$usage"
   parse_file "$@"
   no_extra

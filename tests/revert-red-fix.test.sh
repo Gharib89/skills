@@ -94,4 +94,10 @@ printf '%s\n' 'a=2' 'b=1' > "$ab/lib.sh"
 git -C "$ab" add -A && git -C "$ab" commit -qm 'rewrite a'
 check_rc "a later commit on the fix's own line is tooling, not a verdict" 2 "$(ab_rc tests/c.test.sh lib.sh --fix "$abfix1")"
 
+# With no origin/HEAD there is no merge base to find, and --fix needs none: it
+# still answers, where the plain form is tooling.
+git -C "$ab" symbolic-ref --delete refs/remotes/origin/HEAD
+check_rc "--fix answers in a repo with no origin/HEAD" 0 "$(ab_rc tests/b.test.sh lib.sh --fix "$abfix2")"
+check_rc "the plain form with no origin/HEAD is tooling" 2 "$(ab_rc tests/b.test.sh lib.sh)"
+
 finish
