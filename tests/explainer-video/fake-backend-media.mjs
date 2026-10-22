@@ -175,7 +175,7 @@ export async function bandMotion(input, { start, duration, fps, band }) {
 // metadata line that differs on every call, which a hash of the pixels must not
 // read. An element naming `flaky` draws differently each time it is rendered.
 export async function frame(dir, t, out, { software = false } = {}) {
-  log({ call: "frame", t, out, software });
+  log({ call: "frame", dir, t, out, software });
   const renders = fs
     .readFileSync(process.env.EXPLAINER_VIDEO_FAKE_LOG, "utf8")
     .split("\n")

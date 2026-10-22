@@ -30,10 +30,24 @@ export function fullestFrame(p, frames, moving) {
 // frame outside every seam, rendered twice in two browsers and compared as
 // decoded pixels; and the scene's dead beats, read off its timeline from
 // `tweens`. A scene that draws WebGL (`software`) has its two frames rendered
-// on SwiftShader. Sets p.found.motion and p.found.determinism.
+// on SwiftShader. In a video in sections the two frames come from the scene's
+// `section` composition, on its own clock, since that is what ships. Sets
+// p.found.motion and p.found.determinism.
 export async function motionAndDeterminism(
   p,
-  { run, mp4, comp, env, backend, orFail, seams, tweens, band, software },
+  {
+    run,
+    mp4,
+    comp,
+    section,
+    env,
+    backend,
+    orFail,
+    seams,
+    tweens,
+    band,
+    software,
+  },
 ) {
   const scene = { start: p.sc.start, duration: p.sc.duration, fps: FPS };
   const { first } = sceneFrames(scene);
@@ -56,7 +70,12 @@ export async function motionAndDeterminism(
   const hashes = [];
   for (const f of files) {
     await orFail(() =>
-      backend.frame(comp, t, path.join(run, f), { env, software }),
+      backend.frame(
+        section?.dir ?? comp,
+        section ? +(t - section.base).toFixed(6) : t,
+        path.join(run, f),
+        { env, software },
+      ),
     );
     hashes.push(await orFail(() => backend.framePixels(path.join(run, f))));
   }

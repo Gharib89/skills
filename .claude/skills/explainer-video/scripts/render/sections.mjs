@@ -26,6 +26,21 @@ export function sectionsOf(scenes) {
   return out;
 }
 
+// Where scene `id`'s frames are delivered from: its section's composition and
+// the whole video's time that composition starts at. Null for a video the
+// compile stage did not cut.
+export function sectionOf(run, script, timeline, id) {
+  const sec = sectionsOf(script.scenes).find((s) =>
+    s.at.some((i) => script.scenes[i].id === id),
+  );
+  return (
+    sec && {
+      dir: path.join(run, ".cache", "sections", String(sec.number)),
+      base: timeline.scenes[sec.at[0]].start,
+    }
+  );
+}
+
 // Writes `sec`'s composition into `d`: the whole composition's fonts, scripts
 // and scene files for its scenes, and a page of those scenes without the
 // narration. `timeline` is the render's scenes by script index.

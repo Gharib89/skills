@@ -34,6 +34,7 @@ import { LUFS, floors, grammar, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { drawsWebgl } from "../lib/visuals.mjs";
 import { FPS, H, W, contentBox } from "../render/compose.mjs";
+import { sectionOf } from "../render/sections.mjs";
 import { captionFindings, cuesOf } from "./captions.mjs";
 import { sceneEvents } from "./events.mjs";
 import { source } from "./source.mjs";
@@ -121,6 +122,7 @@ const {
 const plan = timeline.scenes.map((sc) => {
   const end = sc.start + sc.duration;
   const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
+  const section = sectionOf(run, script, timeline, sc.id);
   const file = path.join(
     cacheDir,
     `${hash(
@@ -133,12 +135,14 @@ const plan = timeline.scenes.map((sc) => {
       cues.filter((c) => c.start >= r3(sc.start) && c.start < r3(end)),
       floor,
       source,
+      // The determinism frames come from the scene's section, on its clock.
+      ...(section ? [section.base] : []),
     )}.json`,
   );
   const cached = fs.existsSync(file)
     ? JSON.parse(fs.readFileSync(file, "utf8"))
     : null;
-  return { sc, end, times, file, found: cached };
+  return { sc, end, times, file, section, found: cached };
 });
 
 const todo = plan.filter((p) => !p.found);
@@ -187,6 +191,7 @@ if (todo.length) {
       run,
       mp4,
       comp,
+      section: p.section,
       env,
       backend,
       orFail,

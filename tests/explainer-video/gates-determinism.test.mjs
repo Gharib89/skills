@@ -12,6 +12,7 @@ import {
 } from "../../skills/explainer-video/scripts/lib/motion.mjs";
 import { judged } from "./critic.mjs";
 import { SCRIPT } from "./scene-file.mjs";
+import { sectionFile } from "./sections-lib.mjs";
 import {
   calls,
   delivered,
@@ -54,6 +55,28 @@ test("determinism renders each scene's peak-motion frame twice in two browsers a
   assert.equal(calls(fx, "bandMotion").length, 3);
   // the default layout is open: the motion gate crops its content from 96 px
   assert.ok(calls(fx, "bandMotion").every((c) => c.band.top === 96));
+});
+
+test("in a video in sections, determinism renders a scene's frame from its section, on the section's own time", () => {
+  const fx = fixture(sectionFile());
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const script = JSON.parse(read(fx.dir, "script.json"));
+  const { scenes } = JSON.parse(read(fx.dir, "timeline.json"));
+  const frames = calls(fx, "frame");
+  assert.equal(frames.length, 2 * scenes.length);
+  scenes.forEach((s, i) => {
+    const n = script.scenes[i].section;
+    const opener = scenes[script.scenes.findIndex((x) => x.section === n)];
+    for (const f of frames.slice(2 * i, 2 * i + 2)) {
+      assert.equal(f.dir, path.join(fx.dir, ".cache", "sections", String(n)));
+      // The part's own clock starts at its first scene.
+      assert.ok(
+        Math.abs(f.t - (frameTime(peakOf(s).frame, 30) - opener.start)) < 1e-6,
+        `${s.id}: ${f.t}`,
+      );
+    }
+  });
 });
 
 test("a second gates run on an unchanged render makes no frame render call", () => {
