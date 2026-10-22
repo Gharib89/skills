@@ -15,7 +15,11 @@
 # calls answer `agent_pane_busy` first, the shell not yet up in a new tab.
 # `<name>.prompt-stall` makes `agent prompt --wait` answer `agent_prompt_stalled`,
 # the text sent but no turn started, as herdr 0.9.3 does after 5 s; without
-# `--wait` that prompt succeeds, as the real CLI's does.
+# `--wait` that prompt succeeds, as the real CLI's does. A stall holding the word
+# `enter` is the common one: `agent send-keys <name> Enter` clears it, the text
+# sitting in the input box submitted at last. Any other stall survives the
+# Enter, and `agent wait` on it answers `timeout` as the real CLI does when no
+# turn starts.
 # `agent prompt` refuses an agent whose current line reads `blocked` with
 # `agent_blocked`, and `agent read` refuses it any source but `visible` with
 # `agent_not_idle`, as herdr 0.9.3 does past the viewport. Every call is a line
@@ -55,7 +59,13 @@ case "$1 $2" in
     printf '{"result":{"type":"agent_prompted"}}\n' ;;
   "agent send-keys")
     known "$3"
+    [[ " $* " == *" Enter "* ]] && [ "$(cat "$HERDR_FAKE/$3.prompt-stall" 2>/dev/null)" = enter ] \
+      && rm "$HERDR_FAKE/$3.prompt-stall"
     printf '{"result":{"type":"ok"}}\n' ;;
+  "agent wait")
+    known "$3"
+    [ -f "$HERDR_FAKE/$3.prompt-stall" ] && err timeout "timed out waiting for agent $3"
+    printf '{"result":{"type":"agent_wait_matched"}}\n' ;;
   "agent read")
     known "$3"; read -r st _ < "$HERDR_FAKE/$3.states"
     [ "$st" = blocked ] && [ "$5" != visible ] && err agent_not_idle "agent $3 is not idle"
