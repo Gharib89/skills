@@ -65,11 +65,18 @@ test("the fewest parts take each at most 5 minutes and at least 2", () => {
 });
 
 test("every part the offer proposes is within 2 to 5 minutes and the proposal passes its own check", () => {
-  for (const length of [24.7, 29.6, 24.75, 5.01, 13, 99.9]) {
-    const n = Math.ceil(length / 5);
+  for (const [length, n] of [
+    [24.7, 5],
+    [29.6, 6],
+    [24.75, 5],
+    [5.01, 2],
+    [13, 3],
+    [99.9, 20],
+  ]) {
     const fx = fixture({ length, excerpts: n });
     const line = parts(fx, "offer").out.split("\n")[0];
     const got = line.match(/: \d+ parts of ([\d. +]+) min, or /)?.[1];
+    assert.ok(got, line);
     const minutes = got.split(" + ").map(Number);
     assert.equal(minutes.length, n, line);
     for (const m of minutes) assert.ok(m >= 2 && m <= 5, `${length}: ${line}`);

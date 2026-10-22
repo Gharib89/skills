@@ -69,8 +69,10 @@ const saved = fs.existsSync(file("parts.json"))
 const held = saved?.declined && saved.length !== length ? null : saved;
 
 // The fewest parts take ceil(length / 5) of them, the length in whole tenths of
-// a minute shared out evenly, the first parts holding the extra tenths, so none
-// passes the share rounded up and so none passes 5.
+// a minute shared out evenly, the first parts holding the extra tenths. The
+// largest part is then ceil(tenths / n) tenths, at most 5.0 since 5.0 is itself
+// a tenth. Rounding the length to a tenth can leave the parts up to 0.05 min off
+// the brief (24.75 offers 24.8), which `check` tolerates.
 function proposal() {
   const n = Math.ceil(length / PART.max);
   const tenths = Math.round(length * 10);
