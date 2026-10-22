@@ -73,7 +73,7 @@ The whole video's scenes and seams played in order, without a break, over the ru
 _Avoid_: preview, rough cut, slideshow
 
 **Render estimate**:
-The storyboard's forecast of the first render's seconds, render and gates together, worked from a table of rates measured on this machine for the installed HyperFrames. It is amber above 5 render seconds per video second and never stops a board; a rich card also shows the seconds it adds.
+The storyboard's forecast of the first render's seconds, render, gates and the brief's score together, worked from a table of rates measured on this machine for the installed HyperFrames. It is amber above 5 render seconds per video second and never stops a board; a rich card also shows the seconds it adds.
 _Avoid_: render time, ETA, cost
 
 **Board version**:

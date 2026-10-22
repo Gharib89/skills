@@ -36,5 +36,5 @@ function estimatePanel(b) {
   const e = b.estimate;
   return `<section class="estimate panel" data-over="${e.over}"><span class="label">Render estimate</span>
     <div class="row"><span class="tag${e.over ? " warn" : ""}"><b>${span(e.seconds)}</b> ${e.over ? "over" : "within"} a ${span(e.budget)} budget</span>
-    <span class="label">First render only, from rates measured on HyperFrames ${esc(e.hyperframes)}.</span></div></section>`;
+    <span class="label">First render only, from rates measured on HyperFrames ${esc(e.hyperframes)}.</span>${e.aceStepUnmeasured ? `\n    <span class="label">ace-step is not measured, so this leaves its score out.</span>` : ""}</div></section>`;
 }

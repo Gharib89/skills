@@ -42,11 +42,12 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.title` | string | yes | The scene file's title. |
 | `board.build` | string | yes | The live build every card and the animatic play: the video's composition as one `.js` asset, a [media](#media) URL. |
 | `board.narration` | string | yes | The whole narration joined, as audio-only WebM, a media URL. The animatic plays it. |
-| `board.estimate` | object | yes | The first-render estimate, from the rates table `render-rates.json` over the video's seconds (the cards' voiced seconds and the one second the render holds the last frame): the render and the gates, the voice being done and the brief's score not counted (a synthesised score and `ace-step` both add to a first render). A warning, never a refusal. |
-| `board.estimate.seconds` | number | yes | Estimated seconds of the first render, render and gates together. |
+| `board.estimate` | object | yes | The first-render estimate, from the rates table `render-rates.json` over the video's seconds (the cards' voiced seconds and the one second the render holds the last frame): the render, the gates and the score the brief asks for (the synthesised rate for `on`, the `ace-step` rate for `ace-step`, none for `off`), the voice being done. A warning, never a refusal. |
+| `board.estimate.seconds` | number | yes | Estimated seconds of the first render, render, gates and score together. |
 | `board.estimate.budget` | number | yes | The budget in seconds: 5 times the video's seconds, the hold included. |
 | `board.estimate.over` | boolean | yes | Whether `seconds` is above `budget`; the page flags it amber. |
 | `board.estimate.hyperframes` | string | yes | The HyperFrames version the table's rates were measured on. |
+| `board.estimate.aceStepUnmeasured` | boolean | yes | Whether the brief asks `ace-step` and the table holds no rate for it: `seconds` is then the estimate without a score, and the page says `ace-step` is not measured. |
 | `board.brief` | array | yes | The brief, one entry per knob and list, in `brief.json` order. |
 | `board.brief[].knob` | string | yes | `focus`, `length`, `audience`, `language`, `style`, `voice`, `aspect`, `score`, `must` or `avoid`. |
 | `board.brief[].value` | string | yes | The value; a list's items joined by `; `. |

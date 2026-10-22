@@ -16,11 +16,15 @@ import {
 import { skill } from "./board-lib.mjs";
 
 const rates = readJson(skill, "render-rates.json").rates;
-// The default look is textured, so a video second costs base, texture and gates.
+// The default look is textured and the default brief scores on, so a video
+// second costs base, texture, gates and the synthesised score.
 const minutes = (videoSeconds) =>
   (
     Math.round(
-      ((videoSeconds * (rates.base + rates.texture + rates.gates)) / 60) * 10,
+      ((videoSeconds *
+        (rates.base + rates.texture + rates.gates + rates.score)) /
+        60) *
+        10,
     ) / 10
   ).toString();
 
@@ -41,7 +45,7 @@ test("a 12-minute request is offered three parts of 4 minutes, with an estimate 
     r.out,
     [
       "parts offer: 12 min is over 5: 3 parts of 4 + 4 + 4 min, or one long video in sections",
-      `parts estimate: 3 parts ${minutes(720)} min in all, the first after ${minutes(240)} min; one long video ${minutes(720)} min (render and gates, not narration)`,
+      `parts estimate: 3 parts ${minutes(720)} min in all, the first after ${minutes(240)} min; one long video ${minutes(720)} min (render, gates and score, not narration)`,
       "",
     ].join("\n"),
   );
