@@ -160,6 +160,4 @@ branch, so a read straight after a push never grades the previous head: a
 landed, then re-run. Run either wait in the Bash tool's
 background mode when the run has other work meanwhile, its completion
 notification resuming the run, and start `ci-wait <pr>` that way at PR open,
-alongside the first reviewer poll, since CI runs from there. When a background
-job (a wait, a render, a check) ends, announce its end in one line before the
-next step, so the human reading the session sees the run move on.
+alongside the first reviewer poll, since CI runs from there.

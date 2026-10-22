@@ -30,7 +30,7 @@
     "drive-session": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "ca5896417f410d64df3a085761b64a62f1eb3b809f2b5ce1a28dde7c31728f14"
+      "computedHash": "a79d501ec96926ca51437333a4171ada970f6631f445e973db63a536017ad3bf"
     },
     "explainer-video": {
       "source": ".",
@@ -130,7 +130,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "4c37e57fe74bab7c5d7313a57b72180e06287e78ee7be13b316458d05193abd7"
+      "computedHash": "1ff63d2ac72ba0aea2061a7ba513ea331d8478319a278eb871ddf14e4a88d233"
     },
     "show-me": {
       "source": "humanlayer/skills",

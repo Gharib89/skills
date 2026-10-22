@@ -3,8 +3,8 @@
 ## Contents
 
 - [The round](#the-round)
-- [A window that closes with no round](#a-window-that-closes-with-no-round)
 - [Reading a round](#reading-a-round)
+- [A window that closes with no round](#a-window-that-closes-with-no-round)
 - [Triage, fix, reply](#triage-fix-reply)
 - [The exit](#the-exit)
 - [Fallbacks](#fallbacks)
@@ -50,10 +50,9 @@ touching a file an agent executes as instructions (a skill's `SKILL.md` or its
 reference files, `CLAUDE.md`, `AGENTS.md`, a rules file) is `code`, though phase
 2 files it under `docs`: a fix to it changes behaviour. Any other `docs`
 fix-only diff is **docs-only** and ends the host loop, because another round
-would buy wording nits. The poll takes its bound from the block, and a window
-that closed is the answer rather than a reason to re-poll, except after a
-`conflict`, which says nothing about the reviewer: resolve it (phase 8) and poll
-again.
+would buy wording nits. The poll takes its bound from the block; a window that
+closes is read per
+[A window that closes with no round](#a-window-that-closes-with-no-round).
 
 **`Cap:`** is the budget on rounds ship starts: a number, or `None.` for an
 uncapped loop; `auto-once` delivers one round whatever it reads, and under
@@ -85,27 +84,9 @@ rounds still read 1 through `Cap:`. Once a review's fixes change no file, record
 `Past-cap: <reviewer>: tree unchanged at <sha>` with `run-file note Evidence
 "<line>" --issue <issue>`, `<sha>` the head that review read. `gate clean` still
 holds on the reviewer, reporting its cap and that `<sha>`, because no host
-reviewer read the fixes: the human reads them at the merge gate.
-
-## A window that closes with no round
-
-A window that closes with `done: false` and `not_reviewed` set is that round's
-answer, whatever the reviewer's own status says it may still do: record it and
-turn to the fallback, so no second window opens for the same round and no second
-request goes out (#929: codex round 2 was polled for over an hour after its
-window had closed). A `status: pending` answer is no closed window: it carries
-`not_reviewed: null` and resumes by its cursor, which keeps the window's
-original deadline, so the wait ends at the ceiling `poll-pr` states. Only a
-`conflict`, which says nothing about the reviewer, re-polls once resolved
-(phase 8).
-
-- After a dispositioned round whose fixes changed the tree, the next requested
-  round that closes this way is `Stop: <reviewer>: not landed`, its cause on the
-  `## Review` line.
-- With no dispositioned round, the exit is `not reviewed: <cause>`.
-
-Either way the `Fallback-for:` reviewer is requested next
-([Fallbacks](#fallbacks)), and the loop does not wait on the primary again.
+reviewer read the fixes: the human reads them at the merge gate. Where the head
+later moves past that `<sha>` (a hand-resolved conflict merge, a lint fix), the
+hold names the range to read, `<sha>..<head>`.
 
 ## Reading a round
 
@@ -154,6 +135,22 @@ admitted.
   brief's `pending_checks` names the checks still pending when the window
   closed, and `stale: true` says the host still showed another head than the
   expected one; a round the since rule landed stands even so.
+
+## A window that closes with no round
+
+A window that closes with `done: false` and `not_reviewed` set is that round's
+answer, whatever the reviewer's own status says it may still do: no second
+window opens for the same round and no second request goes out. Record its stop
+per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned
+round whose fixes changed the tree, else `not reviewed: <cause>`. Either way
+that exit is final, and the `Fallback-for:` reviewer that names it, if any, is
+driven per [Fallbacks](#fallbacks).
+
+A `status: pending` answer is no closed window: resume it by its cursor
+([mechanics.md](mechanics.md#waits-past-540-s)). Two closed windows re-poll
+instead, because neither says anything about the reviewer: a `conflict`, once
+resolved (phase 8), and `unreachable` on a `head_sha` that is not the expected
+head ([Reading a round](#reading-a-round)).
 
 ## Triage, fix, reply
 
