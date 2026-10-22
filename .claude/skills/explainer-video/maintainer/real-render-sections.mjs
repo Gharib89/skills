@@ -1,8 +1,10 @@
 // Maintainer only: the sections checks of maintainer/real-render.mjs. A video in
 // sections renders each section video only and joins the parts by stream copy;
 // the real tools must give it the whole render's frames, the captions on its
-// frames, one audio track and the chapter marks (checks `sections frames`,
-// `sections captions`, `sections audio` and `sections chapters`).
+// frames, one audio track and the chapter marks, and the determinism gate's
+// frame from a later section must be the whole composition's (checks `sections
+// frames`, `sections captions`, `sections gate frame`, `sections audio` and
+// `sections chapters`).
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { meanDiff } from "../scripts/lib/motion.mjs";
@@ -83,6 +85,7 @@ export async function sectionChecks({
   check,
   backend,
   work,
+  env,
 }) {
   const extra = (part, audio) => (timeline) => ({
     audio,
@@ -142,6 +145,32 @@ export async function sectionChecks({
     "sections captions",
     apart.every((x) => x.inked && x.diff <= 12),
     `caption bands of ${apart.length} sections: ${apart.map((x) => `${x.inked ? "inked" : "flat"} diff ${x.diff.toFixed(1)}`).join(", ")} (inked, diff <= 12 expected)`,
+  );
+
+  // The determinism gate renders a scene's frame from its section's composition
+  // at the scene's time less the section's start: in a later section that frame
+  // must be the whole composition's at the scene's time.
+  const shot = async (comp, t, name) => {
+    const png = path.join(work, `sections-${name}.png`);
+    await backend.frame(comp, +t.toFixed(6), png, { env });
+    return backend.framePixels(png);
+  };
+  const offsets = [];
+  for (const [i, n] of numbers.entries()) {
+    if (!i) continue;
+    const k = SECTIONED.findIndex((p) => p.scene.section === n);
+    const t = whole.scenes[k + 1].start + 0.5;
+    const base = whole.scenes[k].start;
+    offsets.push([
+      n,
+      (await shot(whole.comp, t, `whole-${n}`)) ===
+        (await shot(parts[i].comp, t - base, `part-${n}`)),
+    ]);
+  }
+  check(
+    "sections gate frame",
+    offsets.every(([, same]) => same),
+    `section ${offsets.map(([n, same]) => `${n}: ${same ? "same" : "DIFFERENT"}`).join(", ")} pixels as the whole composition at the scene's time (same expected)`,
   );
 
   const audio = (f) =>

@@ -523,6 +523,14 @@ check(
   `${parts} frames joined, ${a.length} in the whole (${first.frames} + ${second.frames})`,
 );
 
-await sectionChecks({ compose, render, framemd5, check, backend, work });
+await sectionChecks({
+  compose,
+  render,
+  framemd5,
+  check,
+  backend,
+  work,
+  env,
+});
 
 process.exit(failed ? 1 : 0);
