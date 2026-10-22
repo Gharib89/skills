@@ -17,8 +17,9 @@
 # skipped. A command that can run another (`find -exec`, `git rebase -x`, an
 # editor) is not on that list, so it hides nothing. An absolute path may hold
 # spaces, which `ps` does not mark, so a line starting with one is matched
-# whole. The widenings lean to over-reporting. It reads no roster and runs
-# outside Herdr.
+# whole. The widenings lean to over-reporting. Known gaps: a read-only program
+# told to run a command (`rg --pre`, `bat --pager`) and `check.sh` with a flag
+# before `full`. It reads no roster and runs outside Herdr.
 #
 # stdout: {running: []} when nothing runs; else {error, running}, `running`
 #         one {pid, name} per process in table order, `name` one of
@@ -45,6 +46,7 @@ running=$(awk '
     if (b ~ /^real-render[a-z-]*(\.mjs)?$/) return "real-render"
     if (b ~ /^hyperframes(\.mjs)?$/ || strip(t) ~ /(^|\/)hyperframes\//) return "hyperframes"
     if (b ~ /^calibrate[a-z-]*(\.(mjs|sh))?$/) return "calibrate"
+    sub(/[;&|)`].*/, "", next_word)
     if (b == "check.sh" && base(next_word) == "full") return "check.sh full"
     return ""
   }
@@ -79,9 +81,14 @@ running=$(awk '
       t = strip($m)
       if (t == "eval") { seg = 1; skip = 0; continue }
       if (t ~ /[;&|(`]/) {
+        head = t; sub(/[;&|(`].*/, "", head)
+        if (head != "") {
+          if (seg) skip = (base(head) in viewer)
+          if (!skip) k = kind(head, $(m + 1))
+        }
         seg = 1; skip = 0
         sub(/.*[;&|(`]/, "", t)
-        if (t == "") continue
+        if (t == "" || k != "") continue
       }
       if (seg) { seg = 0; skip = (base(t) in viewer) }
       if (!skip) k = kind(t, $(m + 1))
