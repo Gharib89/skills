@@ -30,20 +30,36 @@ test("the wrapper runs the real shell with the launch's own arguments first and 
   ]);
 });
 
-test("the raster flags hold raster to one thread, whole-tile and copy-free", () => {
-  assert.ok(RASTER_FLAGS.includes("--num-raster-threads=1"));
-  assert.ok(RASTER_FLAGS.includes("--disable-partial-raster"));
-  assert.ok(RASTER_FLAGS.includes("--disable-zero-copy"));
+test("the raster flags are the five the arms measured", () => {
+  assert.deepEqual(RASTER_FLAGS, [
+    "--num-raster-threads=1",
+    "--disable-partial-raster",
+    "--disable-zero-copy",
+    "--disable-checker-imaging",
+    "--disable-threaded-animation",
+  ]);
 });
+
+const cached = (home, version) => {
+  const bin = path.join(
+    home,
+    `.cache/hyperframes/chrome/chrome-headless-shell/${version}/chrome-headless-shell-linux64/chrome-headless-shell`,
+  );
+  fs.mkdirSync(path.dirname(bin), { recursive: true });
+  fs.writeFileSync(bin, "ELF");
+  return bin;
+};
 
 test("the headless shell is found under HyperFrames' cache in the tools home", () => {
   const home = tmp();
-  const bin = path.join(
-    home,
-    ".cache/hyperframes/chrome/chrome-headless-shell/linux-1.2.3/chrome-headless-shell-linux64/chrome-headless-shell",
-  );
-  fs.mkdirSync(path.dirname(bin), { recursive: true });
-  fs.writeFileSync(bin, "");
+  const bin = cached(home, "linux-1.2.3");
   assert.equal(headlessShell(home), bin);
   assert.throws(() => headlessShell(tmp()), /headless shell/);
+});
+
+test("of two cached versions, the newest is the one wrapped", () => {
+  const home = tmp();
+  cached(home, "linux-9.0.1");
+  const newest = cached(home, "linux-10.0.1");
+  assert.equal(headlessShell(home), newest);
 });

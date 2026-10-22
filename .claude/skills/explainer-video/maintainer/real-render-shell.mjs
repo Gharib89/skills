@@ -6,9 +6,10 @@ import path from "node:path";
 
 // Under load the screenshot route's anti-aliased edge pixels (a diagram link's
 // arrowhead) differed between renders of one composition: 4 of 10 renders of
-// the diagram slice, none of 10 with these flags (#917). Raster runs on one
-// thread, redraws whole tiles, and copies through memory; the last two are what
-// HyperFrames' beginframe route adds and its screenshot route leaves out.
+// the diagram slice, none of 10 with these flags (#917). They hold raster to one
+// thread, redraw whole tiles and copy through memory; HyperFrames' beginframe
+// route adds the checker-imaging and threaded-animation switches, its
+// screenshot route leaves them out.
 export const RASTER_FLAGS = [
   "--num-raster-threads=1",
   "--disable-partial-raster",
@@ -23,7 +24,10 @@ export function headlessShell(home) {
     home,
     ".cache/hyperframes/chrome/chrome-headless-shell",
   );
-  for (const v of fs.existsSync(root) ? fs.readdirSync(root).sort() : []) {
+  const versions = fs.existsSync(root) ? fs.readdirSync(root) : [];
+  // newest first, as HyperFrames reads its own cache
+  versions.sort((x, y) => y.localeCompare(x, "en", { numeric: true }));
+  for (const v of versions) {
     const bin = path.join(
       root,
       v,

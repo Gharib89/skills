@@ -16,7 +16,9 @@
 // match by chance), and the halves split it after `HALF` scenes: the first
 // without the hold, the second with it. A three-section fixture
 // (real-render-sections.mjs) is rendered whole and by section, joined and muxed
-// as render.mjs does.
+// as render.mjs does. Every render runs through a headless shell with raster
+// flags (real-render-shell.mjs), and a failing determinism row names the
+// differing frames and keeps the renders' frame hash lists (real-render-compare.mjs).
 // stdout: `real-render <check>: pass|fail: <detail>` per check
 // exit:   0 every check passed · 1 a check failed · 2 a tool row is missing
 import { spawnSync } from "node:child_process";
@@ -44,7 +46,7 @@ import { FPS, sceneFile, videoPage } from "../scripts/render/compose.mjs";
 import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
-import { differing } from "./real-render-compare.mjs";
+import { describe, differing, keepHashLists } from "./real-render-compare.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
 import {
   RASTER_FLAGS,
@@ -258,20 +260,16 @@ const differs = differing(a, others);
 // (REAL_RENDER_FRAMES, else the temp folder), for a later comparison.
 const kept = differs.every(({ n }) => n === 0)
   ? ""
-  : ["whole-1", "whole-2", "whole-3"]
-      .map((n, i) => {
-        const file = path.join(
-          process.env.REAL_RENDER_FRAMES ?? os.tmpdir(),
-          `real-render-determinism-${n}.framemd5`,
-        );
-        fs.writeFileSync(file, [a, ...others][i].join("\n"));
-        return file;
-      })
-      .join(", ");
+  : keepHashLists(
+      Object.fromEntries(
+        ["whole-1", "whole-2", "whole-3"].map((n, i) => [n, [a, ...others][i]]),
+      ),
+      process.env.REAL_RENDER_FRAMES ?? os.tmpdir(),
+    ).join(", ");
 check(
   "determinism",
   differs.every(({ n }) => n === 0),
-  `${differs.map(({ n, at }) => (at.length ? `${n} (frames ${at[0]} to ${at.at(-1)})` : n)).join(" and ")} differing frames of ${a.length} against the first, in two more renders${kept && `; hash lists: ${kept}`}`,
+  `${describe(differs)} differing frames of ${a.length} against the first, in two more renders${kept && `; hash lists: ${kept}`}`,
 );
 
 // Each seam window's first, middle and last frames, seeked twice in browsers
