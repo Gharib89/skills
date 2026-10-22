@@ -44,6 +44,7 @@ import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
 import { mapChecks } from "./real-render-map.mjs";
+import { cameraLeftOut } from "./real-render-motion.mjs";
 import { timeChecks } from "./real-render-time.mjs";
 
 const HALF = 1;
@@ -443,6 +444,7 @@ if (process.env.REAL_RENDER_FRAMES)
     ...browsers.map((s) => s.id),
     ...excerpts.map((s) => s.id),
     ...stacks.map((s) => s.id),
+    ...tours.map((s) => s.id),
   ]) {
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(
@@ -456,11 +458,11 @@ if (process.env.REAL_RENDER_FRAMES)
   }
 
 // What the critic reads of motion, off the real timeline and the real video:
-// every scene's tweens, the push-in's or the tour's among them and left out of the windows a
-// dead beat is read against, and the hook's seam strip, 6x2 tiles of 320x180.
+// every scene's tweens, the push-in's or the tour's among them and exactly one
+// per camera window left out of what a dead beat is read against (a card the
+// canvas dims over the same window stays in), and the hook's seam strip, 6x2
+// tiles of 320x180.
 const { moves } = sceneEvents(raw, whole.scenes);
-const same = ([a, b], [x, y]) =>
-  Math.abs(a - x) < 1e-3 && Math.abs(b - y) < 1e-3;
 const pushed = whole.scenes.filter((s) => moves[s.id].camera.length);
 const hook = whole.scenes[0];
 const [exit] = moves.hook.seams.filter(
@@ -477,15 +479,7 @@ check(
   "critic motion",
   whole.scenes.every((s) => raw[s.id]?.tweens?.length) &&
     pushed.length === pushes + tours.length &&
-    pushed.every(
-      (s) =>
-        raw[s.id].camera.every((c) =>
-          raw[s.id].tweens.some((t) => same(t, c)),
-        ) &&
-        !moves[s.id].tweens.some((t) =>
-          moves[s.id].camera.some((c) => same(t, c)),
-        ),
-    ) &&
+    pushed.every((s) => cameraLeftOut(raw[s.id], moves[s.id])) &&
     size.join("x") === "1920x360",
   `${whole.scenes.filter((s) => raw[s.id]?.tweens?.length).length} of ${whole.scenes.length} scenes list their tweens, ${pushed.length} of ${pushes + tours.length} camera scenes left out of them, the hook's seam strip is ${size.join("x")} (1920x360 expected)`,
 );
