@@ -184,7 +184,7 @@ The script stage writes the **scene file**, `explainers/<slug>/script.md`, from
 the pack's outline and the brief, then holds it to the **script gates**. Read
 [reference/scene-file.md](reference/scene-file.md) before you write or edit it.
 
-1. **Write.** Five roles in order (plus `section` openers over 5 minutes:
+1. **Write.** Five roles in order (plus `section` openers, required over 5 min:
    scene-file.md), one scene each but `point` (1 or more): `hook` (why watch),
    `context` (what the thing is), `point` (one idea each), `recap` (the points
    again in brief), `end` (one closing line). Under each heading,

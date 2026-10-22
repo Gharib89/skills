@@ -13,7 +13,7 @@ How a split request's content is divided between its parts: each part's title, f
 _Avoid_: series outline, episode list
 
 **Section**:
-A group of points inside one explainer video longer than five minutes, opened by a short scene of its own and marked so a player can jump to it. The video keeps one promise at the start and one recap at the end.
+A group of points inside one explainer video, required when the video runs longer than five minutes and allowed at any length, opened by a short scene of its own and marked so a player can jump to it. The video keeps one promise at the start and one recap at the end.
 _Avoid_: chapter, part (that is its own video), segment
 
 **Steering prompt**:
