@@ -34,7 +34,7 @@ import os from "node:os";
 import path from "node:path";
 import { judge } from "../lib/layout.mjs";
 import { userDirs } from "../lib/paths.mjs";
-import { recordAssets } from "../lib/runfolder.mjs";
+import { explainersDir, recordAssets } from "../lib/runfolder.mjs";
 import {
   ARABIC,
   COMPANION,
@@ -121,7 +121,7 @@ const copySiblings = (dir) => {
 const storeOf = (scope) =>
   scope === "user"
     ? path.join(userDirs().config, "styles")
-    : path.join(path.dirname(path.resolve(run)), ".styles");
+    : path.join(explainersDir(run), ".styles");
 const scope = args.includes("--project")
   ? "project"
   : saveScope(skill, os.homedir());

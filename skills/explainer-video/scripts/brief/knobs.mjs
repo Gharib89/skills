@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { narrators } from "../lib/narrators.mjs";
+import { explainersDir } from "../lib/runfolder.mjs";
 import { stores } from "../lib/style.mjs";
 
 export const SCORES = ["on", "off", "ace-step"];
@@ -43,9 +44,7 @@ export function knobOffer(knob, run, brief) {
       return { type: "menu", options: voices().map((v) => v.language) };
     case "style": {
       const held = path.join(run, "style.json");
-      const styles = new Set(
-        stores(path.dirname(path.resolve(run))).flatMap(names),
-      );
+      const styles = new Set(stores(explainersDir(run)).flatMap(names));
       if (fs.existsSync(held))
         styles.add(JSON.parse(fs.readFileSync(held, "utf8")).name);
       return { type: "menu", options: [...styles].sort() };

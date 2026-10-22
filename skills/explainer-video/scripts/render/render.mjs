@@ -36,7 +36,7 @@ import { checkScenes } from "../lib/allowed.mjs";
 import { HOLD } from "../lib/length.mjs";
 import { videosDir } from "../lib/paths.mjs";
 import { drawsWebgl } from "../lib/visuals.mjs";
-import { writeIgnore } from "../lib/runfolder.mjs";
+import { isPart, readPart, writeIgnore } from "../lib/runfolder.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
 import { ACE_CAPTION, bedLevel, score } from "../score/score.mjs";
@@ -58,7 +58,7 @@ import { FPS, H, W, sceneFile, stillsPage, videoPage } from "./compose.mjs";
 import { captionCues } from "./cues.mjs";
 import { gridScenes, written } from "./grid.mjs";
 import { joinNarration, wavSeconds } from "./narration.mjs";
-import { repoName, srtText, videoFacts, writeManifest } from "./delivery.mjs";
+import { deliver, srtText, videoFacts, writeManifest } from "./delivery.mjs";
 import { seamPlan, slot } from "./seams.mjs";
 import {
   chapterCheck,
@@ -90,6 +90,13 @@ const json = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
 if (!fs.existsSync(path.join(run, "script.json")))
   fail("no script.json: run the compile stage first (script/compile.mjs)");
 const script = json(path.join(run, "script.json"));
+// A part.json of another shape would fail at delivery, after the whole render.
+if (isPart(run))
+  try {
+    readPart(run);
+  } catch (e) {
+    fail(e.message);
+  }
 writeIgnore(run);
 
 let profile;
@@ -602,16 +609,7 @@ if (failed) {
   process.exit(1);
 }
 
-// The videos folder, under the repo's name.
-const delivered = path.join(
-  videosDir(),
-  "explainer-video",
-  repoName(run),
-  slug,
-);
-fs.mkdirSync(delivered, { recursive: true });
-for (const f of [`${slug}.mp4`, `${slug}.srt`, "poster.png"])
-  fs.copyFileSync(path.join(out, f), path.join(delivered, f));
+const delivered = deliver(run, out, slug, videosDir());
 console.log(`delivered: ${delivered}`);
 
 writeManifest(run, {

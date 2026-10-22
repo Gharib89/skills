@@ -6,30 +6,79 @@ import path from "node:path";
 
 const BEGIN = "# explainer-video: begin";
 const END = "# explainer-video: end";
+const REBUILDABLE = [
+  "script.json",
+  "voice.json",
+  "timeline.json",
+  "gates.json",
+  "score.json",
+  "check.json",
+  "support.json",
+  "stills.json",
+  "samples.json",
+  "board/",
+  "storyboard.html",
+  "snapshots/",
+  ".cache/",
+  "composition/",
+  "out/",
+  "style-draft/",
+];
+// A part's run folder, `<run>/parts/<nn>-<title>/`, ignores the same files.
 const BLOCK = `${BEGIN} (each run folder commits its recipe only)
-*/script.json
-*/voice.json
-*/timeline.json
-*/gates.json
-*/score.json
-*/check.json
-*/support.json
-*/stills.json
-*/samples.json
-*/board/
-*/storyboard.html
-*/snapshots/
-*/.cache/
-*/composition/
-*/out/
-*/style-draft/
+${["*/", "*/parts/*/"].flatMap((at) => REBUILDABLE.map((f) => at + f)).join("\n")}
 ${END}
 `;
+
+// A part's run folder is marked by the `part.json` that `parts.mjs start`
+// writes. It is a run folder like any other, its brief and excerpts taken from
+// the run folder two levels up, which holds the source pack.
+export const isPart = (run) => fs.existsSync(path.join(run, "part.json"));
+
+// A part's `part.json`, held to the fields the script gate and delivery read.
+// Throws `part.json: <field> ...` for a file of another shape, so a stage
+// refuses it by field and neither skips its checks nor dies on a TypeError.
+export function readPart(run) {
+  let part;
+  try {
+    part = JSON.parse(fs.readFileSync(path.join(run, "part.json"), "utf8"));
+  } catch (e) {
+    throw new Error(`part.json is not valid JSON: ${e.message}`);
+  }
+  const bad = (why) => {
+    throw new Error(`part.json: ${why}`);
+  };
+  const obj = (v) => v && typeof v === "object" && !Array.isArray(v);
+  if (!obj(part)) bad("is not an object");
+  if (typeof part.series !== "string" || !part.series)
+    bad("series is not a name");
+  if (!Number.isInteger(part.n) || part.n < 1) bad("n is not a part number");
+  if (part.bridge != null) {
+    if (!obj(part.bridge) || !Array.isArray(part.bridge.excerpts))
+      bad("bridge.excerpts is not a list of ids");
+    if (!part.bridge.excerpts.every((x) => typeof x === "string"))
+      bad("bridge.excerpts is not a list of ids");
+  }
+  if (
+    part.next != null &&
+    (!obj(part.next) || typeof part.next.title !== "string")
+  )
+    bad("next.title is not a title");
+  return part;
+}
+
+// The run folder holding `run`'s source pack: itself, or a part's parent.
+export const packRun = (run) =>
+  isPart(run) ? path.dirname(path.dirname(path.resolve(run))) : run;
+
+// The `explainers/` folder holding `run`: where the style store and the
+// `.gitignore` are.
+export const explainersDir = (run) => path.dirname(path.resolve(packRun(run)));
 
 // Writes the skill's block between its markers, leaving every other line of
 // the file as the user wrote it.
 export function writeIgnore(run) {
-  const file = path.join(path.dirname(path.resolve(run)), ".gitignore");
+  const file = path.join(explainersDir(run), ".gitignore");
   const old = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
   const i = old.indexOf(BEGIN);
   const j = old.indexOf(`${END}\n`, i);

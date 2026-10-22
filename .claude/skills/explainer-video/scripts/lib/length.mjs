@@ -4,6 +4,11 @@
 // brief's `length`.
 export const HOLD = 1;
 
+// A request over LONG minutes is offered a split into parts of PART.min to
+// PART.max minutes each, or one long video in sections.
+export const LONG = 5;
+export const PART = { min: 2, max: 5 };
+
 // Whether `seconds` of scenes and the hold fit a brief `length` of `minutes`.
 export function fitsLength(seconds, minutes) {
   const want = minutes * 60;

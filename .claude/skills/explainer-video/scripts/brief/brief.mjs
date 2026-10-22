@@ -22,6 +22,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { OWN_PREFIX, narrator, narrators } from "../lib/narrators.mjs";
+import { explainersDir } from "../lib/runfolder.mjs";
 import { defaultStyle, stores } from "../lib/style.mjs";
 import { loadBackend, unavailable } from "../lib/tools.mjs";
 import { ASPECTS, SCORES } from "./knobs.mjs";
@@ -90,7 +91,7 @@ function refuse(knob, value, why) {
 }
 
 const all = narrators();
-const styles = stores(path.dirname(path.resolve(run)));
+const styles = stores(explainersDir(run));
 
 const brief = {
   focus: given.focus ?? old?.focus ?? "the source's main ideas",

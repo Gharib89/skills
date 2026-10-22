@@ -4,6 +4,7 @@
 
 - [Extracting the draft](#extracting-the-draft)
 - [The style card](#the-style-card)
+- [A refused profile](#a-refused-profile)
 
 **Style extraction** turns a look the user points at into a draft style
 profile. Every source becomes **reference images** first, a script measures
@@ -199,3 +200,9 @@ is `node <skill>/scripts/style/card.mjs explainers/<slug> <name>`.
    `card:` refusal (a name the store took since the card was built, a
    project profile of the name hiding a user save, a finding): relay it as
    printed and build the next version (step 3), which the page answers afresh.
+
+## A refused profile
+
+A `style profile <name>` line printed by a render names a colour pair or a
+`gates`, `grammar` or `scale` value the skill refuses, or says the profile is
+schema 1 and lists each change: fix what it names or choose another profile.
