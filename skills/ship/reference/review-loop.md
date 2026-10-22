@@ -127,9 +127,9 @@ admitted.
   `codex review`, not the phrase itself: the host delivers every mention, and a
   stray one starts a round or a Codex task no poll is waiting for.
 - **A poll waits for the expected head**, the worktree's `HEAD` on the PR's
-  branch or `--sha`. `not_reviewed: unreachable` with a `head_sha` that is not
-  that head means the host never showed the push: confirm it landed, then poll
-  again.
+  branch or `--sha`. `not_reviewed: unreachable` with `landed_by` null and a
+  `head_sha` that is not that head means the host never showed the push: confirm
+  it landed, then poll again.
 - **Exit 1 beside a landed round is still the answer.** A non-null
   `landed_by` with `done: false` and no `status` is triaged like any other; the
   brief's `pending_checks` names the checks still pending when the window
@@ -139,8 +139,9 @@ admitted.
 ## A window that closes with no round
 
 A window that closes with `done: false` and `not_reviewed` set is that round's
-answer, bar `unreachable` on a `head_sha` that is not the expected head: confirm
-the push landed, then poll again ([Reading a round](#reading-a-round)). The
+answer, bar `unreachable` with `landed_by` null on a `head_sha` that is not the
+expected head: confirm the push landed, then poll again ([Reading a
+round](#reading-a-round)). A landed round keeps its answer there. The
 answer stands whatever the reviewer's own status says it may still do: no second
 window opens for the same round and no second request goes out. Record its stop
 per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned

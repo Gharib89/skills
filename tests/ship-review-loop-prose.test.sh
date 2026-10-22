@@ -21,6 +21,7 @@ rules=(
   "a closed window with not_reviewed set is the round's answer|loop|A window that closes with \`done: false\` and \`not_reviewed\` set is that round's answer|A window that closes with \`done: false\` and \`not_reviewed\` set is not that round's answer"
   "no second window opens for the same round|loop|no second window opens for the same round|a second window opens for the same round"
   "a pending answer is no closed window|loop|A \`status: pending\` answer is no closed window|A \`status: pending\` answer is a closed window"
+  "the stale-head re-poll needs no landed round|loop|bar \`unreachable\` with \`landed_by\` null on a \`head_sha\`|bar \`unreachable\` on a \`head_sha\`"
   "a round after a tree-changing fix stops not landed|loop|\`Stop: <reviewer>: not landed\`|\`Stop: <reviewer>: tree unchanged\`"
   "the stop is final|loop|that exit is final|that exit is not final"
   "the fallback that names it is driven per Fallbacks|loop|reviewer that names it, if any, is driven per [Fallbacks](#fallbacks)|reviewer that names it, if any, is not driven per [Fallbacks](#fallbacks)"

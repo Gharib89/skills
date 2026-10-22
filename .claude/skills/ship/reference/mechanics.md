@@ -155,9 +155,9 @@ and deadline; repeat until an answer arrives without `pending`. A pending answer
 is not a closed window, so never read it as `silent`. Both waits hold for the
 expected head, `--sha <sha>` else the worktree's `HEAD` when it is on the PR's
 branch, so a read straight after a push never grades the previous head: a
-`ci-wait` `timeout`, or a `poll-pr` `not_reviewed: unreachable`, whose
-`head_sha` is not that head means the host never showed the push, so confirm it
-landed, then re-run. Run either wait in the Bash tool's
+`ci-wait` `timeout`, or a `poll-pr` `not_reviewed: unreachable` with `landed_by`
+null, whose `head_sha` is not that head means the host never showed the push, so
+confirm it landed, then re-run. Run either wait in the Bash tool's
 background mode when the run has other work meanwhile, its completion
 notification resuming the run, and start `ci-wait <pr>` that way at PR open,
 alongside the first reviewer poll, since CI runs from there.
