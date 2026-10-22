@@ -149,7 +149,10 @@ export async function sectionChecks({
 
   // The determinism gate renders a scene's frame from its section's composition
   // at the scene's time less the section's start: in a later section that frame
-  // must be the whole composition's at the scene's time.
+  // must be the whole composition's at the scene's time. The time is the middle
+  // of a frame: a start written to 6 decimals sits a microsecond off its frame,
+  // and a seek on a frame's edge lands on the frame before in one composition
+  // and not in the other.
   const shot = async (comp, t, name) => {
     const png = path.join(work, `sections-${name}.png`);
     await backend.frame(comp, +t.toFixed(6), png, { env });
@@ -159,7 +162,7 @@ export async function sectionChecks({
   for (const [i, n] of numbers.entries()) {
     if (!i) continue;
     const k = SECTIONED.findIndex((p) => p.scene.section === n);
-    const t = whole.scenes[k + 1].start + 0.5;
+    const t = whole.scenes[k + 1].start + 0.5 + 0.5 / FPS;
     const base = whole.scenes[k].start;
     offsets.push([
       n,
