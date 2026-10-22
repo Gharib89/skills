@@ -35,16 +35,13 @@ ${END}
 // the run folder two levels up, which holds the source pack.
 export const isPart = (run) => fs.existsSync(path.join(run, "part.json"));
 
-// The `explainers/` folder holding `run`: where the style store and the
-// `.gitignore` are.
-export function explainersDir(run) {
-  const up = (dir, n) => (n ? up(path.dirname(dir), n - 1) : dir);
-  return up(path.resolve(run), isPart(run) ? 3 : 1);
-}
-
 // The run folder holding `run`'s source pack: itself, or a part's parent.
 export const packRun = (run) =>
   isPart(run) ? path.dirname(path.dirname(path.resolve(run))) : run;
+
+// The `explainers/` folder holding `run`: where the style store and the
+// `.gitignore` are.
+export const explainersDir = (run) => path.dirname(path.resolve(packRun(run)));
 
 // Writes the skill's block between its markers, leaving every other line of
 // the file as the user wrote it.

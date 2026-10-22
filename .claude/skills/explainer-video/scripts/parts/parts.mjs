@@ -43,13 +43,25 @@ function fail(why) {
 }
 const num = (x) => String(+x.toFixed(2));
 
+// The JSON in `f`, or a refusal naming the file when it does not parse.
+function readJson(f) {
+  try {
+    return JSON.parse(fs.readFileSync(f, "utf8"));
+  } catch (e) {
+    fail(`${path.basename(f)} is not valid JSON: ${e.message}`);
+  }
+}
+
 if (!fs.existsSync(file("brief.json")))
   fail("no brief.json: run brief.mjs first");
-const brief = JSON.parse(fs.readFileSync(file("brief.json"), "utf8"));
+const brief = readJson(file("brief.json"));
 const length = brief.length;
-const held = fs.existsSync(file("parts.json"))
-  ? JSON.parse(fs.readFileSync(file("parts.json"), "utf8"))
+// A decline holds for the length it was made at: a brief changed since is
+// offered the split again.
+const saved = fs.existsSync(file("parts.json"))
+  ? readJson(file("parts.json"))
   : null;
+const held = saved?.declined && saved.length !== length ? null : saved;
 
 // The fewest parts take ceil(length / 5) of them, each the even share to a
 // tenth of a minute, the last holding the rest.
@@ -80,7 +92,22 @@ function minutes(lengths) {
 // The plan's findings, one line each, against the brief and the pack.
 function problems(plan) {
   const out = [];
-  const pack = JSON.parse(fs.readFileSync(file("excerpts.json"), "utf8"));
+  if (!Array.isArray(plan.parts) || !plan.parts.length)
+    return ["parts.json holds no parts list"];
+  const bad = plan.parts.findIndex((p) => !p || typeof p !== "object");
+  if (bad >= 0) return [`part ${bad + 1} is not an object`];
+  const strings = (v) =>
+    Array.isArray(v) && v.every((x) => typeof x === "string");
+  for (const [i, p] of plan.parts.entries()) {
+    if (typeof p.minutes !== "number")
+      return [`part ${i + 1}: minutes is not a number`];
+    for (const k of ["excerpts", "must"])
+      if (p[k] !== undefined && !strings(p[k]))
+        return [`part ${i + 1}: ${k} is not a list of ids`];
+  }
+  if (!fs.existsSync(file("excerpts.json")))
+    return ["no excerpts.json: run pack.mjs first"];
+  const pack = readJson(file("excerpts.json"));
   const ids = new Set(pack.excerpts.map((x) => x.id));
   const owner = new Map();
   plan.parts.forEach((p, i) => {
@@ -133,7 +160,7 @@ function notesOn(dir) {
         .sort((a, b) => b[1] - a[1])[0]
     : null;
   if (!latest) return [];
-  const a = JSON.parse(fs.readFileSync(path.join(board, latest[0]), "utf8"));
+  const a = readJson(path.join(board, latest[0]));
   return [
     ...(a.scenes ?? [])
       .filter((s) => s.note?.trim())
@@ -146,18 +173,16 @@ function notesOn(dir) {
 // Whether `dir`'s render delivered its video: its manifest names the videos
 // folder and the video stands in it.
 function delivered(dir) {
-  const file = path.join(dir, "manifest.json");
-  const out = fs.existsSync(file)
-    ? JSON.parse(fs.readFileSync(file, "utf8")).delivered
-    : null;
+  const manifest = path.join(dir, "manifest.json");
+  const out = fs.existsSync(manifest) ? readJson(manifest).delivered : null;
   return !!out && fs.existsSync(path.join(out, `${path.basename(dir)}.mp4`));
 }
 
-// Writes `text` to `file` unless it already holds it, so a stage's cache
+// Writes `text` to `target` unless it already holds it, so a stage's cache
 // stays as old as what it was made from.
-function keep(file, text) {
-  if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== text)
-    fs.writeFileSync(file, text);
+function keep(target, text) {
+  if (!fs.existsSync(target) || fs.readFileSync(target, "utf8") !== text)
+    fs.writeFileSync(target, text);
 }
 
 function start(n) {
@@ -182,9 +207,7 @@ function start(n) {
   const notes = n > 1 ? notesOn(at(n - 2)) : [];
   const next = n < plan.length ? { title: plan[n].title } : null;
   const own = path.join(dir, "brief.json");
-  const old = fs.existsSync(own)
-    ? JSON.parse(fs.readFileSync(own, "utf8"))
-    : null;
+  const old = fs.existsSync(own) ? readJson(own) : null;
   const now = {
     ...brief,
     focus: p.focus,
@@ -199,7 +222,7 @@ function start(n) {
     fs.rmSync(path.join(dir, "check.json"), { force: true });
   }
   keep(own, JSON.stringify(now, null, 2) + "\n");
-  const pack = JSON.parse(fs.readFileSync(file("excerpts.json"), "utf8"));
+  const pack = readJson(file("excerpts.json"));
   const wanted = new Set([...p.excerpts, ...(bridge?.excerpts ?? [])]);
   keep(
     path.join(dir, "excerpts.json"),
@@ -264,7 +287,7 @@ if (cmd === "start") {
     fail(`${num(length)} min is within ${LONG}, nothing to decline`);
   fs.writeFileSync(
     file("parts.json"),
-    JSON.stringify({ declined: true }) + "\n",
+    JSON.stringify({ declined: true, length }) + "\n",
   );
   console.log(
     `parts: declined, one long video in sections, first render about ${minutes([length]).all} min`,

@@ -2,6 +2,8 @@
 // parts.json held to the brief's length and the source pack.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { fixture, parts, plan, writePlan } from "./parts-lib.mjs";
 
 const refused = (fx, p) => {
@@ -105,4 +107,37 @@ test("a plan is refused where the request is within five minutes, absent, or a d
   const d = parts(fx, "check");
   assert.equal(d.code, 0);
   assert.equal(d.out, "parts: declined, one long video in sections\n");
+});
+
+test("a parts.json that is not a plan is refused by name, never as a stack trace", () => {
+  const fx = fixture();
+  const file = path.join(fx.dir, "parts.json");
+  for (const [body, why] of [
+    ["{not json", /^parts: parts\.json is not valid JSON: /m],
+    ["{}", /^parts: parts\.json holds no parts list$/m],
+    ['{"parts":"x"}', /^parts: parts\.json holds no parts list$/m],
+    ['{"parts":[null]}', /^parts: part 1 is not an object$/m],
+    [
+      JSON.stringify(plan([4, 4, 4]), (k, v) => (v === 4 ? "4" : v)),
+      /^parts: part 1: minutes is not a number$/m,
+    ],
+    [
+      JSON.stringify({
+        parts: [{ title: "a", focus: "b", minutes: 4, excerpts: "ex-1" }],
+      }),
+      /^parts: part 1: excerpts is not a list of ids$/m,
+    ],
+  ]) {
+    fs.writeFileSync(file, body);
+    const r = parts(fx, "check");
+    assert.equal(r.code, 1, body);
+    assert.match(r.err, why, body);
+    assert.doesNotMatch(r.err, /\n\s+at /, r.err);
+  }
+  fs.rmSync(path.join(fx.dir, "excerpts.json"));
+  writePlan(fx, plan([4, 4, 4]));
+  assert.match(
+    parts(fx, "check").err,
+    /^parts: no excerpts\.json: run pack\.mjs first$/m,
+  );
 });

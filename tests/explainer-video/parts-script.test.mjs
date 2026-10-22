@@ -89,6 +89,14 @@ test("a part's arc, hook and recap held on its own: a 3-minute part needs no sec
 test("each part but the last ends by naming the next part", () => {
   const named = check(partRun(1, three(NEXT)).part);
   assert.equal(line(named, "parts"), "script parts: pass", named.out);
+  // a near miss of the title (a longer word, one more word) names nothing
+  const near = check(
+    partRun(1, three({ bye: naming("Opening the PRs") })).part,
+  );
+  assert.match(
+    line(near, "parts"),
+    /^script parts: fail: bye \(end\) does not name/,
+  );
   const silent = check(partRun(1, three()).part);
   assert.equal(
     line(silent, "parts"),

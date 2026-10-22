@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { fixture, parts, readJson } from "./parts-lib.mjs";
+import { fixture, node, parts, readJson } from "./parts-lib.mjs";
 import { skill } from "./board-lib.mjs";
 
 const rates = readJson(skill, "render-rates.json").rates;
@@ -42,6 +42,7 @@ test("a 12-minute request is offered three parts of 4 minutes, with an estimate 
 
 test("the fewest parts take each at most 5 minutes and at least 2", () => {
   for (const [length, want] of [
+    [5.01, "2 parts of 2.5 + 2.51 min"],
     [5.5, "2 parts of 2.8 + 2.7 min"],
     [10, "2 parts of 5 + 5 min"],
     [10.5, "3 parts of 3.5 + 3.5 + 3.5 min"],
@@ -64,12 +65,31 @@ test("a decline carries on with sections, prints one line with the estimate and 
     r.out,
     `parts: declined, one long video in sections, first render about ${minutes(720)} min\n`,
   );
-  assert.deepEqual(readJson(fx.dir, "parts.json"), { declined: true });
+  assert.deepEqual(readJson(fx.dir, "parts.json"), {
+    declined: true,
+    length: 12,
+  });
   // asked again, the offer is not made twice
   assert.equal(
     parts(fx, "offer").out,
     "parts: declined earlier, one long video in sections\n",
   );
+});
+
+test("a decline holds for the length it was made at: a changed brief is offered again", () => {
+  const fx = fixture({ length: 12 });
+  assert.equal(parts(fx, "decline").code, 0);
+  assert.equal(
+    parts(fx, "offer").out,
+    "parts: declined earlier, one long video in sections\n",
+  );
+  assert.equal(node(fx, "brief/brief.mjs", ["length=8"]).code, 0);
+  const again = parts(fx, "offer");
+  assert.match(
+    again.out,
+    /^parts offer: 8 min is over 5: 2 parts of 4 \+ 4 min/,
+  );
+  assert.equal(parts(fx, "start", "1").code, 1);
 });
 
 test("a request within five minutes has nothing to decline", () => {
