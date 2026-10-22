@@ -11,12 +11,14 @@
 # given `full`. A process counts by the program it runs, which is its first word
 # or, behind an interpreter or wrapper (`node`, `bash`, `env`, `timeout`, ...),
 # any word after its leading flags, since a flag may take a value (`node -r
-# dotenv/config x.mjs`). A command that only reads or searches a file (an
-# editor, `grep`, `git`, ...) is no render, even inside a `bash -c` chain: its
-# words up to the next `&&`, `;`, `|` or `eval` are skipped. An absolute path
-# may hold spaces, which `ps` does not mark, so a line starting with one is
-# matched whole. These widenings can over-report, never miss a render run by an
-# unlisted program. It reads no roster and runs outside Herdr.
+# dotenv/config x.mjs`). A command that only reads or lists a file (`grep`,
+# `cat`, `ls`, ...) is no render, even inside a `bash -c` chain: its words up to
+# the next word holding `;`, `&`, `|`, `(` or a backtick, or `eval`, are
+# skipped. A command that can run another (`find -exec`, `git rebase -x`, an
+# editor) is not on that list, so it hides nothing. An absolute path may hold
+# spaces, which `ps` does not mark, so a line starting with one is matched
+# whole. The widenings lean to over-reporting. It reads no roster and runs
+# outside Herdr.
 #
 # stdout: {running: []} when nothing runs; else {error, running}, `running`
 #         one {pid, name} per process in table order, `name` one of
@@ -36,7 +38,7 @@ command -v ps >/dev/null || ds_tooling "ps not installed"
 table=$(ps -eo pid=,args= 2>/dev/null) && [ -n "$table" ] \
   || ds_tooling "window: cannot read the process table"
 running=$(awk '
-  function strip(t) { gsub(/["\047]/, "", t); return t }
+  function strip(t) { gsub(/["\047)]/, "", t); return t }
   function base(t) { t = strip(t); sub(/.*\//, "", t); return t }
   function kind(t, next_word,   b) {
     b = base(t)
@@ -60,21 +62,31 @@ running=$(awk '
   BEGIN {
     n = split("node bash sh zsh npx bunx bun pnpm tsx python python3 uv env nohup timeout nice setsid time sudo xvfb-run", w, " ")
     for (i = 1; i <= n; i++) interpreter[w[i]] = 1
-    # Programs that read or search a file and never run it.
-    n = split("grep egrep fgrep rg ag ack vim vi nvim nano emacs less more cat bat head tail sed awk ls find git code stat file diff wc", w, " ")
+    # Programs that only read or list a file. One that can run a command (find
+    # -exec, git rebase -x, an editor, awk, sed) is left off, so it never hides a run.
+    n = split("grep egrep fgrep rg ag ack less more cat bat head tail ls stat file diff wc", w, " ")
     for (i = 1; i <= n; i++) viewer[w[i]] = 1
   }
   {
     i = 2; last = 2
     if (base($2) in interpreter) { i = 3; last = NF; while (i <= NF && $i ~ /^-/) i++ }
     # A shell call chains commands (source snap, then eval of a grep): the words
-    # after a viewer, up to the next separator, are its arguments.
+    # after a viewer, up to the next separator, are its arguments. A word holding
+    # a separator character (glued or not) ends the skip, and what follows the
+    # character starts the next command.
     k = ""; seg = 1; skip = 0
     for (m = i; k == "" && m <= last; m++) {
-      if (strip($m) ~ /^(&&|\|\||;|\||eval)$/) { seg = 1; skip = 0; continue }
-      if (seg) { seg = 0; skip = (base($m) in viewer) }
-      if (!skip) k = kind($m, $(m + 1))
+      t = strip($m)
+      if (t == "eval") { seg = 1; skip = 0; continue }
+      if (t ~ /[;&|(`]/) {
+        seg = 1; skip = 0
+        sub(/.*[;&|(`]/, "", t)
+        if (t == "") continue
+      }
+      if (seg) { seg = 0; skip = (base(t) in viewer) }
+      if (!skip) k = kind(t, $(m + 1))
     }
+    # A viewer handed an absolute path is no render, so only other lines are matched whole.
     if (k == "" && !(base($i) in viewer)) {
       rest = $i
       for (j = i + 1; j <= NF; j++) rest = rest " " $j

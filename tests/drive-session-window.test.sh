@@ -37,8 +37,8 @@ noise=(
   " 905 grep -r hyperframes skills"
   " 906 node -r dotenv/config skills/explainer-video/maintainer/real-render.test.mjs"
   " 907 /bin/bash -c source /tmp/snap.sh && eval 'grep -rn real-render.mjs skills'"
-  " 908 /bin/zsh -c source /tmp/snap.sh && eval 'git log -S hyperframes | head' < /dev/null"
-  " 909 bash -c vim skills/explainer-video/maintainer/calibrate-rates.mjs"
+  " 908 /bin/zsh -c source /tmp/snap.sh && eval 'cat skills/x/hyperframes.mjs | head' < /dev/null"
+  " 909 bash -c less skills/explainer-video/maintainer/calibrate-rates.mjs"
 )
 
 window "${noise[@]}"
@@ -72,6 +72,13 @@ running=(
   "a calibration behind nohup|4101 nohup node skills/explainer-video/maintainer/calibrate-rates.mjs|calibrate"
   "a render a Claude Code shell call runs|4101 /bin/bash -c source /tmp/snap.sh && eval 'node skills/explainer-video/maintainer/real-render.mjs' < /dev/null|real-render"
   "a render after a grep in the same shell call|4101 /bin/bash -c grep -c x f && node skills/explainer-video/maintainer/real-render.mjs|real-render"
+  "a render after a grep and a glued semicolon|4101 bash -c grep -c x f; node skills/explainer-video/maintainer/real-render.mjs|real-render"
+  "a render after a grep and a semicolon glued to the next word|4101 bash -c grep y z ;node skills/explainer-video/maintainer/real-render.mjs|real-render"
+  "a render after a grep and a background ampersand|4101 bash -c grep x f & node skills/explainer-video/maintainer/real-render.mjs|real-render"
+  "a render in a command substitution after a grep|4101 bash -c grep x \$(node skills/explainer-video/maintainer/real-render.mjs)|real-render"
+  "a full check after a grep and a glued semicolon|4101 bash -c grep y z; bash scripts/check.sh full|check.sh full"
+  "a render in the Claude Code shell shape after a grep and a semicolon|4101 /bin/bash -c source /s.sh && eval 'grep -c x f; node skills/explainer-video/maintainer/real-render.mjs' < /dev/null|real-render"
+  "a render run by find -exec, which is no viewer|4101 bash -c find . -exec node skills/explainer-video/maintainer/real-render.mjs {} +|real-render"
   "a render run from a path with a space|4101 node /tmp/window space/real-render.mjs|real-render"
   "a calibration run from a path with a space|4101 /usr/bin/node /tmp/my skills/calibrate-rates.mjs|calibrate"
   "a hyperframes render run from a path with a space|4101 node /tmp/my cache/node_modules/hyperframes/bin/hyperframes.mjs render|hyperframes"
@@ -86,6 +93,10 @@ for r in "${running[@]}"; do
   check "$name: the list holds that one process" "[{\"pid\":4101,\"name\":\"$want\"}]" "$(jq -c .running <<<"$out")"
   check "$name: it says the same on stderr" "$(jq -r .error <<<"$out")" "$(cat "$tmp/err")"
 done
+
+# A pipe glued to a word is a separator too (outside the table above, whose fields a `|` splits).
+window "${noise[@]}" "4101 bash -c grep x f|node skills/explainer-video/maintainer/real-render.mjs"
+check "a render after a grep and a glued pipe is seen" '[{"pid":4101,"name":"real-render"}]' "$(jq -c .running <<<"$out")"
 
 window "${noise[@]}" "4101 bash scripts/check.sh full" "4102 node skills/explainer-video/maintainer/real-render.mjs"
 check "every running process is listed, in table order" \
