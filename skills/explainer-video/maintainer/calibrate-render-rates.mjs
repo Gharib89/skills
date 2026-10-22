@@ -186,6 +186,8 @@ for (const v of videos) {
     fs.readFileSync(path.join(v.run, "voice.json"), "utf8"),
   );
   v.stack = voice.scenes.find((s) => s.id === "stack")?.duration;
+  if (v.name === "live3d" && !(v.stack > 0))
+    fail(`${v.name}: voice.json: no voiced duration for scene stack`);
 }
 
 // The video's render and gates seconds, `runs` times, the median of each.

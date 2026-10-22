@@ -4,8 +4,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { calls, fixture, skill } from "./render-lib.mjs";
+import { calls, fixture, skill, temps } from "./render-lib.mjs";
 import { dest } from "../../skills/explainer-video/scripts/lib/tools.mjs";
 
 const script = path.join(skill, "maintainer", "calibrate-render-rates.mjs");
@@ -113,6 +114,30 @@ test("a measurement that cannot run leaves the table alone and says why", () => 
   const r = calibrate("--runs", "1");
   assert.equal(r.status, 1);
   assert.match(r.stderr, /^calibrate-render: .*live3d.*gpu-3d/m);
+  assert.equal(fs.readFileSync(table, "utf8"), before);
+});
+
+test("a live 3D video with no voiced stack scene leaves the table alone and names the file and scene", () => {
+  const { fx, table } = machine(stack3d);
+  // A copy of the skill whose calibration names its stack scene otherwise, so
+  // voice.json holds no scene `stack`
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), "calibrate-nostack-"));
+  temps.push(copy);
+  fs.cpSync(skill, copy, { recursive: true });
+  const file = path.join(copy, "maintainer", "calibrate-render-rates.mjs");
+  fs.writeFileSync(
+    file,
+    fs
+      .readFileSync(file, "utf8")
+      .replace("## Scene stack ·", "## Scene pile ·"),
+  );
+  const before = fs.readFileSync(table, "utf8");
+  const r = spawnSync(process.execPath, [file, table, "--runs", "1"], {
+    env: { ...fx.env, ...stack3d },
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stderr, /^calibrate-render: live3d: voice\.json: .*stack/m);
   assert.equal(fs.readFileSync(table, "utf8"), before);
 });
 
