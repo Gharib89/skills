@@ -246,7 +246,8 @@ test("past four scenes the map turns back along the next row, so neighbours in t
   const size = { width: 1920, height: 1080 };
   const w = 1920 + 480;
   const h = 1080 + 270;
-  const col = (p) => [p.left / w, p.top / h];
+  // `+ 0` turns the mirrored first column's -0 into 0, which deepEqual tells apart
+  const col = (p) => [p.left / w + 0, p.top / h];
   assert.deepEqual(places(6, size, false).map(col), [
     [0, 0],
     [1, 0],
@@ -255,17 +256,12 @@ test("past four scenes the map turns back along the next row, so neighbours in t
     [3, 1],
     [2, 1],
   ]);
-  assert.deepEqual(
-    places(6, size, true)
-      .map(col)
-      .map(([c, r]) => [c + 0, r]),
-    [
-      [0, 0],
-      [-1, 0],
-      [-2, 0],
-      [-3, 0],
-      [-3, 1],
-      [-2, 1],
-    ],
-  );
+  assert.deepEqual(places(6, size, true).map(col), [
+    [0, 0],
+    [-1, 0],
+    [-2, 0],
+    [-3, 0],
+    [-3, 1],
+    [-2, 1],
+  ]);
 });

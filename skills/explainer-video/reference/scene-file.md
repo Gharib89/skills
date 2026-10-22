@@ -199,8 +199,8 @@ narrator: am_fenrir
     leaves dim, and once the last item has been read the camera pulls back to
     the overview. List the items in the order the camera visits them: an item
     whose cue comes earlier than the previous item's is refused (equal cues
-    pass), and so is a last item cued so near the scene's end that the
-    pull-back to the overview does not fit (it needs 1.1 s). Rich, so a
+    pass), and so is, at render, a last item cued so near the scene's end that
+    the pull-back to the overview does not fit (it needs 1.1 s). Rich, so a
     `camera` key is refused; banning `camera` refuses every `canvas` scene. The
     layout gate judges only settled text: the item in view once the camera has
     landed, not text in transit or on a dimmed card. In an Arabic run the tour
