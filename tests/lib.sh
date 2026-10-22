@@ -11,6 +11,10 @@
 # the local gate report which assertion broke rather than that something did.
 # Nothing is printed for a passing case: the gate's log is evidence, not noise.
 TEST_NAME=$(basename "${BASH_SOURCE[1]:-$0}" .test.sh)
+# The stop hook runs the turn rung under a CHECK_DEADLINE that a test inherits,
+# and a nested `scripts/check.sh` would answer over-budget once it passes. A
+# case that wants a deadline sets its own, inline.
+unset CHECK_DEADLINE
 _failed=0
 
 check() { # <case> <expected> <actual>

@@ -2,6 +2,7 @@
 // page to publish, and apply of edited narration.
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { SCRIPT } from "./scene-file.mjs";
@@ -402,6 +403,36 @@ test("a custom scene's card shows its intent line, is marked rich, and no other 
   assert.match(d.scenes[1].style, /^custom · past the default · /);
   assert.equal(d.scenes[1].rich, true);
   assert.match(read(fx.dir, "storyboard.html"), /three steps land in turn/);
+});
+
+test("build copies the page's five files into the run root, and the run folder's ignore block covers each", () => {
+  const fx = fixture();
+  prep(fx);
+  ok(board(fx, "build"), "build");
+  spawnSync("git", ["init", "-q"], { cwd: path.join(fx.tmp, "proj") });
+  for (const f of [
+    "page.css",
+    "page-core.js",
+    "page-sections.js",
+    "page-summary.js",
+    "page-boot.js",
+  ]) {
+    assert.ok(fs.existsSync(path.join(fx.dir, f)), `${f} is copied`);
+    assert.equal(
+      spawnSync("git", ["check-ignore", "-q", path.join(fx.dir, f)], {
+        cwd: path.join(fx.tmp, "proj"),
+      }).status,
+      0,
+      `${f} is ignored`,
+    );
+  }
+  assert.notEqual(
+    spawnSync("git", ["check-ignore", "-q", path.join(fx.dir, "script.md")], {
+      cwd: path.join(fx.tmp, "proj"),
+    }).status,
+    0,
+    "the recipe stays committed",
+  );
 });
 
 test("a rich component's card is marked rich on the document", () => {
