@@ -139,19 +139,19 @@ admitted.
 ## A window that closes with no round
 
 A window that closes with `done: false` and `not_reviewed` set is that round's
-answer, whatever the reviewer's own status says it may still do: no second
-window opens for the same round (bar the two re-polls below) and no second
-request goes out. Record its stop
+answer, bar `unreachable` on a `head_sha` that is not the expected head: confirm
+the push landed, then poll again ([Reading a round](#reading-a-round)). The
+answer stands whatever the reviewer's own status says it may still do: no second
+window opens for the same round and no second request goes out. Record its stop
 per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned
 round whose fixes changed the tree, else `not reviewed: <cause>`. Either way
 that exit is final, and the `Fallback-for:` reviewer that names it, if any, is
 driven per [Fallbacks](#fallbacks).
 
 A `status: pending` answer is no closed window: resume it by its cursor
-([mechanics.md](mechanics.md#waits-past-540-s)). Two closed windows re-poll
-instead, because neither says anything about the reviewer: a `conflict`, once
-resolved (phase 8), and `unreachable` on a `head_sha` that is not the expected
-head ([Reading a round](#reading-a-round)).
+([mechanics.md](mechanics.md#waits-past-540-s)). A `conflict` closes the window
+with `not_reviewed` null, which says nothing about the reviewer: resolve it
+(phase 8) and poll again.
 
 ## Triage, fix, reply
 
