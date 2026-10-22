@@ -157,11 +157,11 @@ unchanged`) qualifies:
 - `reviewer <x>: cap` (several such entries may stand together, one per
   reviewer): the same one more host round, and the same answer.
 
-A round that stops on findings or on cap again, any other `held_by` entry
-(`reviewer <x>: past cap <n>, ..., head moved: read <a>..<b>` among them: the
-owner reads that range to waive it), and every unmet criterion are escalations
-that quote the `held_by`: a criterion waiver comes from the owner, and the
-auto-mode classifier refuses one the supervisor relays.
+A round that stops on findings or on cap again, any other `held_by` entry, and
+every unmet criterion are escalations that quote the `held_by`: a criterion
+waiver comes from the owner, and the auto-mode classifier refuses one the
+supervisor relays. A `reviewer <x>: past cap <n>, ..., head moved: read
+<a>..<b>` entry is one: the owner reads that range to waive it.
 
 ## Supervised ship runs
 
