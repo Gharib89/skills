@@ -5,7 +5,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
-import { sceneFile } from "../../skills/explainer-video/scripts/render/compose.mjs";
+import {
+  CONTENT,
+  W,
+  sceneFile,
+} from "../../skills/explainer-video/scripts/render/compose.mjs";
 import { read, skill } from "./render-lib.mjs";
 
 const claude = JSON.parse(read(skill, "styles", "claude-code.json"));
@@ -177,5 +181,17 @@ test("a last item cued too near the scene's end for the pull-back to the overvie
   const fits = { ...timing, sentences: [0, 2, 8.9] };
   assert.ok(
     END(moves(played(await drawn(canvas(), "ltr", fits))).at(-1)) <= 10,
+  );
+});
+
+test("the map's viewport clips at the frame's sides, not the content band's, so a neighbour runs off the frame", async () => {
+  const html = await drawn(canvas());
+  const rule = html.match(/\.cvp \{([^}]*)\}/)[1];
+  // the band's own edge, 120 px in, would cut a card in open space
+  assert.doesNotMatch(rule, /overflow: hidden/);
+  const side = W - CONTENT.left - CONTENT.width;
+  assert.match(
+    rule,
+    new RegExp(`clip-path: inset\\(0px -${side}px 0px -${CONTENT.left}px\\)`),
   );
 });

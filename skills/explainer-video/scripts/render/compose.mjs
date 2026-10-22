@@ -107,8 +107,10 @@ async function sceneParts(
     // tweens depend on the gap between two cues or on the time left.
     time: t,
     end: timing.duration,
-    // The content box, for a component the composer lays out itself.
+    // The content box, for a component the composer lays out itself, and the
+    // frame's width, for one that runs off the frame's sides.
     box,
+    frameWidth: W,
     // The scene's selector scope and the seconds its template runs (its slot),
     // for a component whose own script draws on the paused timeline `tl`.
     scope: `[data-composition-id="${id}"]`,

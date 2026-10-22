@@ -125,7 +125,11 @@ export const canvas = async (p, f, x) => {
           `<div class="cvi i${i}" style="left: ${at[i].left}px; top: ${at[i].top}px;">${sketched(x.surface, { w: CARD.w, h: CARD.h, ...shapes[i] })}<div class="ct">${f.tt(it.title)}</div><div class="cb">${f.t(it.body)}</div></div>`,
       )
       .join("")}</div></div>`,
-    css: `.cvp { position: absolute; inset: 0; overflow: hidden; }
+    // The viewport clips at the frame's sides, not the content box's: a
+    // neighbour runs off the frame instead of stopping in open space at the safe
+    // margin. Above and below it stays in the content band, which the header and
+    // the captions own.
+    css: `.cvp { position: absolute; inset: 0; clip-path: inset(0px -${x.frameWidth - x.box.left - x.box.width}px 0px -${x.box.left}px); }
 .cv { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .cvi { position: absolute; box-sizing: border-box; width: ${CARD.w}px; height: ${CARD.h}px; padding: 40px; opacity: ${DIM}; ${fill(x.surface)} text-align: start; }
 .ct { position: relative; font: ${f.titleWeight} var(--size-heading)/${f.lh(1.15, "title")} ${f.title}; color: var(--text); }
