@@ -359,7 +359,7 @@ test("a scene's role line gives its role and seconds, and a malformed one is ref
     assert.equal(r.code, 1, bad);
     assert.match(
       r.err,
-      /^compile: hook: role: .* is not <hook\|context\|point\|recap\|end> · <n> s$/m,
+      /^compile: hook: role: .* is not <hook\|context\|section\|point\|recap\|end> · <n> s$/m,
       bad,
     );
   }

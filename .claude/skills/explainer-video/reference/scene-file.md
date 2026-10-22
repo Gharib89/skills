@@ -3,6 +3,7 @@
 ## Contents
 
 - [The scene file](#the-scene-file)
+- [Sections](#sections)
 - [Style profiles](#style-profiles)
 
 ## The scene file
@@ -218,6 +219,12 @@ narrator: am_fenrir
     is no ring: `target` names one unit of the cited excerpt (see `excerpt`),
     a sentence's whitespace squashed before matching and a code line matched as
     written, refused when it matches none or more than one.
+
+## Sections
+
+A video over 5 minutes is cut into sections, each opened by a `section`
+scene: the rules, the render and the chapter marks are in
+[sections.md](sections.md).
 
 ## Style profiles
 

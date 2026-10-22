@@ -130,6 +130,7 @@ const filled = (title) => template().replace("{{TITLE}}", () => esc(title));
 const siblings = [
   "page.css",
   "page-core.js",
+  "page-sections.js",
   "page-summary.js",
   "page-boot.js",
 ];
@@ -266,6 +267,7 @@ const cards = script.scenes.map((s, i) => ({
   id: s.id,
   title: s.title,
   ...(s.role && { role: s.role }),
+  ...(s.section && { section: s.section }),
   seconds: Math.round(voice.scenes[i].duration * 10) / 10,
   narration: md.slice(blocks[s.id].from, blocks[s.id].to).join("\n"),
   // A rich component moves the frame itself, which the human weighs at the

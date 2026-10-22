@@ -99,6 +99,7 @@ async function boot() {
     if (act === "copy") return copy();
     if (act === "play") return playAnimatic(0);
     if (act === "jump") return playAnimatic(sceneOf(t.dataset.id).start);
+    if (act === "play-section") return playSection(t.dataset.section);
     if (act === "card-play") return cardPlay(t.dataset.id);
     if (act === "stop") return stop();
   });
@@ -258,12 +259,15 @@ async function boot() {
   let raf = 0;
   // Narration waits for the animatic's frame, so the opening is not heard over the poster.
   let waiting = false;
+  // Where a section's stretch ends in the narration; null plays to the end.
+  let until = null;
   function seek() {
     const el = frameOf("animatic");
     if (el && el.dataset.ready)
       say(el, { type: "seek", t: narration().currentTime });
   }
   function tick() {
+    if (until !== null && narration().currentTime >= until) return stop();
     if (waiting && frameOf("animatic")?.dataset.ready) {
       waiting = false;
       narration()
@@ -289,12 +293,14 @@ async function boot() {
   function stop() {
     cancelAnimationFrame(raf);
     waiting = false;
+    until = null;
     narration().pause();
     S.animatic = false;
     S.playing = null;
     render();
   }
-  function playAnimatic(t) {
+  function playAnimatic(t, to = null) {
+    until = to;
     quiet();
     S.animatic = true;
     S.playing = sceneAt(latest(S), t).id;
@@ -305,6 +311,12 @@ async function boot() {
     waiting = true;
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tick);
+  }
+  // A section's stretch of the animatic, which plays in the player above the cards.
+  function playSection(n) {
+    const g = sectionsOf(latest(S)).find((x) => String(x.n) === n);
+    playAnimatic(g.from, g.to);
+    document.getElementById("player").scrollIntoView({ behavior: "smooth" });
   }
 
   // After the observers above, which every render reads.

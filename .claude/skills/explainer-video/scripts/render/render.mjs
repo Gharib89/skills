@@ -16,7 +16,8 @@
 // stdout: the gates stage's lines, one `delivery <check>: pass|fail:
 //         <measured> vs <wanted>` line per check, `delivered: <path>`, then
 //         `render: <slug>.mp4 <seconds> s, <n> scene(s), stills <hit>/<n>
-//         cached, video cached|rendered`
+//         cached, video cached|rendered` (`video <hit>/<n> sections cached`
+//         for a video in sections, joined with chapter marks: sections.mjs)
 // writes: <run>/style.json, stills.json, timeline.json, score.json,
 //         composition/, .cache/stills/, .cache/score/, .cache/render/,
 //         out/<slug>.mp4|.srt, out/poster.png, manifest.json,
@@ -57,7 +58,15 @@ import { FPS, H, W, sceneFile, stillsPage, videoPage } from "./compose.mjs";
 import { captionCues } from "./cues.mjs";
 import { gridScenes, written } from "./grid.mjs";
 import { joinNarration, wavSeconds } from "./narration.mjs";
+import { repoName, srtText, videoFacts, writeManifest } from "./delivery.mjs";
 import { seamPlan, slot } from "./seams.mjs";
+import {
+  chapterCheck,
+  chaptersOf,
+  joinSections,
+  sectionsOf,
+  writeSection,
+} from "./sections.mjs";
 
 const [run, ...rest] = process.argv.slice(2);
 const stillsOnly = rest[0] === "--stills";
@@ -210,11 +219,6 @@ fs.writeFileSync(
 );
 
 const cues = captionCues(script.scenes, scenes);
-const clock = (t) => {
-  const ms = Math.round(t * 1000);
-  const pad = (n, w = 2) => String(n).padStart(w, "0");
-  return `${pad(Math.floor(ms / 3600000))}:${pad(Math.floor(ms / 60000) % 60)}:${pad(Math.floor(ms / 1000) % 60)},${pad(ms % 1000, 3)}`;
-};
 // The composition: fonts and GSAP copied in from setup's stores, the scenes'
 // WAVs joined into one narration with the hold as silence.
 const comp = path.join(run, "composition");
@@ -460,14 +464,7 @@ const out = path.join(run, "out");
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out);
 const srt = path.join(out, `${slug}.srt`);
-fs.writeFileSync(
-  srt,
-  cues
-    .map(
-      (c, i) => `${i + 1}\n${clock(c.start)} --> ${clock(c.end)}\n${c.text}\n`,
-    )
-    .join("\n"),
-);
+fs.writeFileSync(srt, srtText(cues));
 
 // The video, keyed by every file the composition holds.
 const listing = (dir) =>
@@ -480,31 +477,76 @@ const listing = (dir) =>
 // the cached video. `--gpu` is passed only where NVENC probes usable: HyperFrames
 // would otherwise pick another GPU encoder this key does not name.
 const nvenc = await backend.nvenc();
-const key = crypto
-  .createHash("sha256")
-  .update(JSON.stringify([...inputs, nvenc ? "nvenc" : "x264"]));
-for (const f of listing(comp))
-  key.update(f).update(fs.readFileSync(path.join(comp, f)));
 const renderDir = path.join(run, ".cache", "render");
 fs.mkdirSync(renderDir, { recursive: true });
-const video = path.join(renderDir, `${key.digest("hex").slice(0, 16)}.mp4`);
-const cached = fs.existsSync(video);
-if (!cached) {
-  const part = video.replace(/\.mp4$/, ".part.mp4");
-  await hyperframes(
-    "video",
-    [
-      "--quality",
-      "looks",
-      ...(nvenc ? ["--gpu"] : []),
-      "-o",
-      path.resolve(part),
-    ],
-    comp,
-  );
-  fs.renameSync(part, video);
+// `d`'s video from the cache, or rendered into it.
+async function cachedVideo(d) {
+  const key = crypto
+    .createHash("sha256")
+    .update(JSON.stringify([...inputs, nvenc ? "nvenc" : "x264"]));
+  for (const f of listing(d))
+    key.update(f).update(fs.readFileSync(path.join(d, f)));
+  const video = path.join(renderDir, `${key.digest("hex").slice(0, 16)}.mp4`);
+  const cached = fs.existsSync(video);
+  if (!cached) {
+    const part = video.replace(/\.mp4$/, ".part.mp4");
+    await hyperframes(
+      "video",
+      [
+        "--quality",
+        "looks",
+        ...(nvenc ? ["--gpu"] : []),
+        "-o",
+        path.resolve(part),
+      ],
+      d,
+    );
+    fs.renameSync(part, video);
+  }
+  return { video, cached };
 }
-fs.copyFileSync(video, path.join(out, `${slug}.mp4`));
+
+// A video in sections renders each section on its own (render/sections.mjs),
+// joins the parts and muxes the audio once; any other renders whole.
+const mp4 = path.join(out, `${slug}.mp4`);
+const sectionDir = path.join(run, ".cache", "sections");
+fs.rmSync(sectionDir, { recursive: true, force: true });
+const sections = sectionsOf(script.scenes);
+const built = [];
+let chapters = null;
+let hits = 0;
+for (const sec of sections.length ? sections : [null]) {
+  const d = sec ? path.join(sectionDir, String(sec.number)) : comp;
+  if (sec)
+    writeSection(d, {
+      sec,
+      comp,
+      script,
+      timeline: scenes,
+      profile,
+      fonts,
+      webgl,
+      dir,
+    });
+  const { video, cached } = await cachedVideo(d);
+  built.push(video);
+  hits += +cached;
+}
+if (!sections.length) fs.copyFileSync(built[0], mp4);
+else {
+  chapters = chaptersOf(sections, script.scenes, scenes, total);
+  try {
+    await joinSections(backend, {
+      parts: built,
+      joined: path.join(renderDir, "joined.mp4"),
+      audio: path.join(comp, "narration.wav"),
+      chapters,
+      output: mp4,
+    });
+  } catch (e) {
+    fail(e.message);
+  }
+}
 fs.copyFileSync(stills[0], path.join(out, "poster.png"));
 
 // The gates judge out/; a red one leaves no video. The cached render stays: a
@@ -522,25 +564,16 @@ if (gates.status !== 0) {
 // Delivery checks, every one printed before any verdict.
 let probe;
 try {
-  probe = await backend.ffprobe(video);
+  probe = await backend.ffprobe(mp4);
 } catch (e) {
   fail(e.message);
 }
-const vs = probe.streams.find((s) => s.codec_type === "video") ?? {};
-const [num, den = 1] = String(vs.r_frame_rate ?? "0/1")
-  .split("/")
-  .map(Number);
-const fps = +(num / den).toFixed(3);
-const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-const ratio =
-  vs.display_aspect_ratio && vs.display_aspect_ratio !== "0:1"
-    ? vs.display_aspect_ratio
-    : `${vs.width / gcd(vs.width, vs.height)}:${vs.height / gcd(vs.width, vs.height)}`;
+const { size, fps, ratio } = videoFacts(probe);
 const seconds = +probe.format.duration;
 const srtCues = (fs.readFileSync(srt, "utf8").match(/^\d+\n.+ --> .+$/gm) ?? [])
   .length;
 const checks = [
-  ["resolution", `${vs.width}x${vs.height}`, `${W}x${H}`],
+  ["resolution", size, `${W}x${H}`],
   ["frame rate", fps, FPS],
   ["aspect", ratio, "16:9"],
   [
@@ -556,6 +589,7 @@ const checks = [
   ],
   ["srt", `${srtCues} cue(s)`, `${cues.length} cue(s)`],
 ];
+if (chapters) checks.push(chapterCheck(chapters, probe.chapters));
 let failed = 0;
 for (const [name, got, want, ok = got === want] of checks) {
   if (!ok) failed++;
@@ -564,53 +598,34 @@ for (const [name, got, want, ok = got === want] of checks) {
 if (failed) {
   fs.rmSync(out, { recursive: true, force: true });
   // A failed video never stands in the cache as a later run's hit.
-  fs.rmSync(video, { force: true });
+  for (const v of built) fs.rmSync(v, { force: true });
   process.exit(1);
 }
 
-// The videos folder, under the repo's name: a worktree's is its main repo's.
-// A submodule's or a separate git dir's common dir is no `<repo>/.git`, so
-// those take their top level's name.
-const git = spawnSync(
-  "git",
-  [
-    ...["-C", run, "rev-parse", "--path-format=absolute"],
-    ...["--git-common-dir", "--show-toplevel"],
-  ],
-  { encoding: "utf8" },
+// The videos folder, under the repo's name.
+const delivered = path.join(
+  videosDir(),
+  "explainer-video",
+  repoName(run),
+  slug,
 );
-const [common, top] = git.stdout.trim().split("\n");
-const repo =
-  git.status !== 0
-    ? path.basename(path.dirname(path.dirname(path.resolve(run))))
-    : path.basename(common) === ".git"
-      ? path.basename(path.dirname(common))
-      : path.basename(top);
-const delivered = path.join(videosDir(), "explainer-video", repo, slug);
 fs.mkdirSync(delivered, { recursive: true });
 for (const f of [`${slug}.mp4`, `${slug}.srt`, "poster.png"])
   fs.copyFileSync(path.join(out, f), path.join(delivered, f));
 console.log(`delivered: ${delivered}`);
 
-const manifestFile = path.join(run, "manifest.json");
-const manifest = fs.existsSync(manifestFile) ? json(manifestFile) : {};
-fs.writeFileSync(
-  manifestFile,
-  JSON.stringify(
-    {
-      board: manifest.board ?? null,
-      skill: fs
-        .readFileSync(path.join(skill, "SKILL.md"), "utf8")
-        .match(/^ {2}version: (\S+)$/m)[1],
-      lock: lockHash,
-      profile: profile.name,
-      narrator: voice.narrator,
-      delivered,
-    },
-    null,
-    2,
-  ) + "\n",
-);
+writeManifest(run, {
+  lock: lockHash,
+  profile: profile.name,
+  narrator: voice.narrator,
+  delivered,
+});
 console.log(
-  `render: ${slug}.mp4 ${seconds.toFixed(2)} s, ${scenes.length} scene(s), stills ${scenes.length - missing.length}/${scenes.length} cached, video ${cached ? "cached" : "rendered"}`,
+  `render: ${slug}.mp4 ${seconds.toFixed(2)} s, ${scenes.length} scene(s), stills ${scenes.length - missing.length}/${scenes.length} cached, video ${
+    sections.length
+      ? `${hits}/${sections.length} sections cached`
+      : hits
+        ? "cached"
+        : "rendered"
+  }`,
 );

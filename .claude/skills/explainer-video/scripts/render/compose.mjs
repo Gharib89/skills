@@ -326,6 +326,8 @@ ${script}
 
 // The video: every scene mounted at its start for its duration, the caption
 // cues on the root timeline, each word turning the text colour as it is said.
+// `audio: false` leaves out the narration: a section of a long video renders
+// video only, and the joined file takes its audio once.
 export function videoPage({
   title,
   profile,
@@ -335,6 +337,7 @@ export function videoPage({
   total,
   webgl = false,
   dir = "ltr",
+  audio = true,
 }) {
   const f = faces(profile, dir);
   // A scene is mounted for its slot: it runs on past its own duration into its
@@ -376,8 +379,12 @@ export function videoPage({
     body: `${mapped ? `      <div id="world" style="position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px;">\n${hosts}\n      </div>` : hosts}
       <div class="captions">
         ${captions}
-      </div>
-      <audio id="narration" src="narration.wav" data-start="0" data-duration="${total}" data-track-index="3" data-volume="1"></audio>`,
+      </div>${
+        audio
+          ? `
+      <audio id="narration" src="narration.wav" data-start="0" data-duration="${total}" data-track-index="3" data-volume="1"></audio>`
+          : ""
+      }`,
     script: `      (function () {
         const tl = gsap.timeline({ paused: true });
         document.querySelectorAll("#root .cue .w").forEach((w) =>

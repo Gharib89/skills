@@ -14,9 +14,11 @@ const pages = [
   "skills/explainer-video/storyboard/page",
   "skills/grill-with-artifact/page",
 ];
-// A page that split its core file in two: the part loads after the core, the
-// core calls what it declares, and it calls what the core declares.
-const parts = { "skills/explainer-video/storyboard/page": "summary" };
+// A page that split its core file: the parts load after the core, the core
+// calls what they declare, and each calls what the core and the others declare.
+const parts = {
+  "skills/explainer-video/storyboard/page": ["sections", "summary"],
+};
 
 // The names a classic script declares at top level, read from the file itself
 // so a function removed from a core file leaves its boot file's call undefined.
@@ -61,19 +63,23 @@ module.exports = [
     rules,
   },
   ...pages.flatMap((page) => {
-    const core = `${page}-core.js`;
-    const part = parts[page] && `${page}-${parts[page]}.js`;
-    const names = (...files) => Object.assign({}, ...files.map(declaredNames));
+    const scripts = [
+      `${page}-core.js`,
+      ...(parts[page] ?? []).map((part) => `${page}-${part}.js`),
+    ];
+    const names = (files) => Object.assign({}, ...files.map(declaredNames));
     return [
       {
         files: [`${page}-boot.js`],
-        languageOptions: { globals: part ? names(core, part) : names(core) },
+        languageOptions: { globals: names(scripts) },
       },
-      ...(part
-        ? [
-            { files: [core], languageOptions: { globals: names(part) } },
-            { files: [part], languageOptions: { globals: names(core) } },
-          ]
+      ...(scripts.length > 1
+        ? scripts.map((file) => ({
+            files: [file],
+            languageOptions: {
+              globals: names(scripts.filter((other) => other !== file)),
+            },
+          }))
         : []),
     ];
   }),

@@ -49,7 +49,7 @@ export async function hyperframes(args, { cwd, env }) {
         height: 1080,
         fps: 30,
         duration,
-        audio: true,
+        audio: html.includes("<audio"),
         lufs: -14.0,
         peak: -1.6,
       }),
@@ -58,8 +58,34 @@ export async function hyperframes(args, { cwd, env }) {
   return 0;
 }
 
+const stand = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
+
+// Stream-copy join of the fake parts: their durations add, and the audio the
+// parts do not carry stays out.
+export async function concat(parts, output) {
+  log({ call: "concat", parts, output });
+  const all = parts.map(stand);
+  fs.writeFileSync(
+    output,
+    JSON.stringify({
+      ...all[0],
+      duration: +all.reduce((t, p) => t + p.duration, 0).toFixed(3),
+    }),
+  );
+}
+
+// The one mux: the video's stand-in with audio and the chapters written.
+export async function mux({ video, audio, chapters, output }) {
+  log({ call: "mux", video, audio, chapters, output });
+  fs.writeFileSync(
+    output,
+    JSON.stringify({ ...stand(video), audio: true, chapters }),
+  );
+}
+
 // Answers from the fake render's file, each field overridable through
-// EXPLAINER_VIDEO_FAKE_PROBE (JSON), as ffprobe's -show_streams -show_format.
+// EXPLAINER_VIDEO_FAKE_PROBE (JSON), as ffprobe's -show_streams -show_format
+// -show_chapters.
 export async function ffprobe(file) {
   const v = {
     ...JSON.parse(fs.readFileSync(file, "utf8")),
@@ -77,6 +103,11 @@ export async function ffprobe(file) {
       ...(v.audio ? [{ codec_type: "audio" }] : []),
     ],
     format: { duration: String(v.duration) },
+    chapters: (v.chapters ?? []).map((c) => ({
+      start_time: String(c.start),
+      end_time: String(c.end),
+      tags: { title: c.title },
+    })),
   };
 }
 
@@ -144,7 +175,7 @@ export async function bandMotion(input, { start, duration, fps, band }) {
 // metadata line that differs on every call, which a hash of the pixels must not
 // read. An element naming `flaky` draws differently each time it is rendered.
 export async function frame(dir, t, out, { software = false } = {}) {
-  log({ call: "frame", t, out, software });
+  log({ call: "frame", dir, t, out, software });
   const renders = fs
     .readFileSync(process.env.EXPLAINER_VIDEO_FAKE_LOG, "utf8")
     .split("\n")

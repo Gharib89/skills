@@ -17,8 +17,11 @@ plays a **live build** (the video's own composition), looping its slot through
 its exit seam; every other card shows its still as a poster. Play plays the
 slot once with its narration.
 The **animatic** plays the whole build over the joined narration; its scene
-list jumps to a scene and marks the playing one. Every card arrives on the
-agent's recommendation
+list jumps to a scene and marks the playing one. A video in sections is still
+one board: its cards sit under a heading per section ("Section 2: <the
+opener's title>"), and each heading's **Play section** button plays the
+animatic from that section's first scene to the next section's first, then
+stops by itself. Every card arrives on the agent's recommendation
 ([Recommendation](../storyboard/board-data.md#recommendation)). The user
 approves or revises each card, may edit its narration in place, may change
 a card's **menus** (component, camera beat, emphasised item, seam), may
@@ -61,9 +64,9 @@ delivery it reports Render's last line and the videos-folder path.
    `explainers/<slug>/storyboard.html`, opened in a browser, and that the user
    pastes its answers text back here.
 3. **Publish, once per run.** `board page` writes `board/page.html`, the page
-   with the video's title, and `page.css`, `page-core.js`, `page-summary.js`
-   and `page-boot.js` beside it. Publish `page.html` as a new artifact with
-   those four in `files`: `capabilities`
+   with the video's title, and `page.css`, `page-core.js`, `page-sections.js`,
+   `page-summary.js` and `page-boot.js` beside it. Publish `page.html` as a new
+   artifact with those five in `files`: `capabilities`
    `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon` `video`, a
    one-sentence `description`. Refused: the board is local (step 2).
    Never publish it again: every later change is a board version. Record its

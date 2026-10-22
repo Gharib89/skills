@@ -14,7 +14,9 @@
 // whole is rendered three times, the style's texture included (a second and a
 // third render catch noise that drifts between runs, which two renders can
 // match by chance), and the halves split it after `HALF` scenes: the first
-// without the hold, the second with it.
+// without the hold, the second with it. A three-section fixture
+// (real-render-sections.mjs) is rendered whole and by section, joined and muxed
+// as render.mjs does.
 // stdout: `real-render <check>: pass|fail: <detail>` per check
 // exit:   0 every check passed · 1 a check failed · 2 a tool row is missing
 import { spawnSync } from "node:child_process";
@@ -43,6 +45,7 @@ import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
+import { sectionChecks } from "./real-render-sections.mjs";
 import { mapChecks } from "./real-render-map.mjs";
 import { cameraLeftOut } from "./real-render-motion.mjs";
 import { timeChecks } from "./real-render-time.mjs";
@@ -105,7 +108,14 @@ const tone = (seconds) => {
 
 // The composition for `part` of FIXTURE, the hold on its last scene if `hold`;
 // returns its frames. The scenes go into `<work>/<name>/` as render.mjs does.
-async function compose(name, part, hold, { prof = profile, dir } = {}) {
+// `page(scenes)` adds to the video page's options: the sections checks' cues
+// and their video-only parts.
+async function compose(
+  name,
+  part,
+  hold,
+  { prof = profile, dir, page = () => ({}) } = {},
+) {
   const run = path.join(work, name);
   const comp = path.join(run, "composition");
   fs.mkdirSync(path.join(comp, "scenes"), { recursive: true });
@@ -172,6 +182,7 @@ async function compose(name, part, hold, { prof = profile, dir } = {}) {
       cues: [],
       total: written(grid.total),
       webgl,
+      ...page(scenes),
       dir,
     }),
   );
@@ -511,5 +522,15 @@ check(
   parts === a.length,
   `${parts} frames joined, ${a.length} in the whole (${first.frames} + ${second.frames})`,
 );
+
+await sectionChecks({
+  compose,
+  render,
+  framemd5,
+  check,
+  backend,
+  work,
+  env,
+});
 
 process.exit(failed ? 1 : 0);
