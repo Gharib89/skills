@@ -51,7 +51,7 @@ test("the row's detail reads each render's count, its range, and any frames beyo
   );
 });
 
-test("a render that differs only inside the first's frames reads as a range, a single frame as one", () => {
+test("a render that differs only inside the first's frames reads as a range, a single frame as a range of one", () => {
   assert.equal(
     describe([
       { n: 2, at: [1, 3], extra: 0 },
