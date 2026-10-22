@@ -68,14 +68,17 @@ const saved = fs.existsSync(file("parts.json"))
   : null;
 const held = saved?.declined && saved.length !== length ? null : saved;
 
-// The fewest parts take ceil(length / 5) of them, each the even share to a
-// tenth of a minute, the last holding the rest.
+// The fewest parts take ceil(length / 5) of them, the length in whole tenths of
+// a minute shared out evenly, the first parts holding the extra tenths, so none
+// passes the share rounded up and so none passes 5.
 function proposal() {
   const n = Math.ceil(length / PART.max);
-  const share = Math.round((length / n) * 10) / 10;
-  const lengths = Array.from({ length: n - 1 }, () => share);
-  lengths.push(+(length - share * (n - 1)).toFixed(2));
-  return lengths;
+  const tenths = Math.round(length * 10);
+  const base = Math.floor(tenths / n);
+  return Array.from(
+    { length: n },
+    (_, i) => (base + (i < tenths % n ? 1 : 0)) / 10,
+  );
 }
 
 // Render and gates seconds as minutes to a tenth, for a video of `lengths`

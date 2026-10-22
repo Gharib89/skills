@@ -5,7 +5,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { fixture, node, parts, readJson } from "./parts-lib.mjs";
+import {
+  fixture,
+  node,
+  parts,
+  plan,
+  readJson,
+  writePlan,
+} from "./parts-lib.mjs";
 import { skill } from "./board-lib.mjs";
 
 const rates = readJson(skill, "render-rates.json").rates;
@@ -42,7 +49,7 @@ test("a 12-minute request is offered three parts of 4 minutes, with an estimate 
 
 test("the fewest parts take each at most 5 minutes and at least 2", () => {
   for (const [length, want] of [
-    [5.01, "2 parts of 2.5 + 2.51 min"],
+    [5.01, "2 parts of 2.5 + 2.5 min"],
     [5.5, "2 parts of 2.8 + 2.7 min"],
     [10, "2 parts of 5 + 5 min"],
     [10.5, "3 parts of 3.5 + 3.5 + 3.5 min"],
@@ -54,6 +61,21 @@ test("the fewest parts take each at most 5 minutes and at least 2", () => {
       new RegExp(`: ${want.replace(/\+/g, "\\+")}, or `),
       r.out,
     );
+  }
+});
+
+test("every part the offer proposes is within 2 to 5 minutes and the proposal passes its own check", () => {
+  for (const length of [24.7, 29.6, 24.75, 5.01, 13, 99.9]) {
+    const n = Math.ceil(length / 5);
+    const fx = fixture({ length, excerpts: n });
+    const line = parts(fx, "offer").out.split("\n")[0];
+    const got = line.match(/: \d+ parts of ([\d. +]+) min, or /)?.[1];
+    const minutes = got.split(" + ").map(Number);
+    assert.equal(minutes.length, n, line);
+    for (const m of minutes) assert.ok(m >= 2 && m <= 5, `${length}: ${line}`);
+    writePlan(fx, plan(minutes, 1));
+    const r = parts(fx, "check");
+    assert.equal(r.code, 0, `${length}: ${line}\n${r.err}`);
   }
 });
 
