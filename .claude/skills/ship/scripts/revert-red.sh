@@ -7,9 +7,12 @@
 # does the revert in a temp worktree at HEAD, so the working tree is never
 # touched: the test runs once on the unreverted tree, then each <path> is
 # restored from the merge base with origin/HEAD, or deleted where the fix added
-# it, and the test runs again. A test that is not green at HEAD proves nothing
-# when it goes red later, so that first run is the precondition. It reads
-# committed state, so commit the test and the fix first.
+# it, and the test runs again. With `--fix <commit>` only that commit's own change
+# to each path comes out of HEAD's copy, so a review fix is judged alone: not
+# against every commit the branch holds, nor with a later commit's edit to the
+# file taken out too. A test that is not
+# green at HEAD proves nothing when it goes red later, so that first run is the
+# precondition. It reads committed state, so commit the test and the fix first.
 #
 # The test runs behind a `gh` and an `az` stub this mechanic writes itself, so it
 # needs nothing from the repo it runs in: a revert can take out what swaps in a
@@ -18,7 +21,7 @@
 # shell's "command not found". A run that reaches a host, at HEAD or reverted, is
 # exit 2, since the red it shows is the stub's 127.
 #
-#   revert-red <test> <path>... [-- <command>...]
+#   revert-red <test> <path>... [--fix <commit>] [-- <command>...]
 #
 # <test> and each <path> are files relative to the repo root; a directory is refused.
 # With no <command>, <test> runs under bash, so it is a `.sh` file and another
@@ -28,25 +31,43 @@
 # ignoring a leading `./` on either. That checks the command's words, not what
 # it runs: it refuses the command that names no word of <test>, which could go
 # red for another test while the line credits this one.
-# stdout: {test, paths, red, command}   red: true when the test failed on the
-#   reverted tree; command: the argv that ran, `["bash", <test>]` by default
+# A red whose log names a file the fix added as missing, a `No such file`, a
+# `Cannot find module`, a `No module named` or a like missing-file phrase,
+# proves nothing about the fix: any test that reads the file goes red without
+# it, and the check cannot tell that line from the test's other failures. Such a
+# red is exit 1, red false, so revert a hunk inside the file, or a path the fix
+# changed, instead.
+# stdout: {test, paths, red, command[, fix]}   red: true when the test failed on
+#   the reverted tree and its log names no file the fix added as missing;
+#   command: the argv that ran, `["bash", <test>]` by default; fix: the commit
+#   named, where one was given
 # stderr: the test's last 40 lines when it went red, the evidence it failed (or,
 #   exit 2, when it was already red at HEAD); on a green run, one line saying the
 #   test does not prove the fix
-# exit: 0 the test went red on the reverted tree · 1 it stayed green, so it does
-#       not prove the fix (the verdict, red false, is still on stdout) · 2 tooling,
+# exit: 0 the test went red on the reverted tree · 1 it stayed green, or its red
+#       names a file the fix added as missing, so it does not prove the fix (the
+#       verdict, red false, is still on stdout) · 2 tooling,
 #       a bad call, a non-`.sh` test with no command, a command not naming the
-#       test, a test already red at HEAD, or a tree that reached a host, none of
+#       test, a test already red at HEAD, a `--fix` path a later commit added
+#       or whose change does not reverse at HEAD, or a tree that reached a
+#       host, none of
 #       which is a verdict
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: revert-red <test> <path>... [-- <command>...]'
+usage='usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]'
 ship_help "$usage" "$@"
 ship_args "$usage" "arg arg" "$@"
 test_path=$1
 shift
-paths=()
-while [ $# -gt 0 ] && [ "$1" != -- ]; do paths+=("$1"); shift; done
+paths=() fix=""
+while [ $# -gt 0 ] && [ "$1" != -- ]; do
+  if [ "$1" = --fix ]; then
+    ship_flag_value "$usage" "${2:-}"
+    fix=$2; shift 2
+  else
+    paths+=("$1"); shift
+  fi
+done
 given=false command=(bash "$test_path")
 if [ $# -gt 0 ]; then
   shift
@@ -60,15 +81,26 @@ set -- "${paths[@]}"
 # so `--` keeps a word like `--test` or `-c` a word.
 verdict() {
   local red=$1; shift
-  jq -n --arg t "$test_path" --argjson r "$red" --argjson c "$(jq -nc '$ARGS.positional' --args -- "${command[@]}")" \
-    '{test: $t, paths: $ARGS.positional, red: $r, command: $c}' --args -- "$@"
+  jq -n --arg t "$test_path" --argjson r "$red" --arg f "$fix" --argjson c "$(jq -nc '$ARGS.positional' --args -- "${command[@]}")" \
+    '{test: $t, paths: $ARGS.positional, red: $r, command: $c} + (if $f == "" then {} else {fix: $f} end)' --args -- "$@"
 }
 
 # `cd ""` succeeds without moving, so the toplevel is read and checked first.
 root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$root" ] || ship_tooling "not inside a git repository"
 cd "$root" || ship_tooling "cannot enter $root"
-tip=$(ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
-base=$(git merge-base HEAD "$tip" 2>/dev/null) || ship_tooling "no merge base between HEAD and $tip"
+# The fix's parent is the tree before it, whichever commits came after: only that
+# commit's own change is taken out, so a repo with no origin/HEAD still answers.
+# The commit is named in full in the verdict.
+if [ -n "$fix" ]; then
+  fix=$(git rev-parse --verify -q "$fix^{commit}") || ship_tooling "--fix $fix is no commit here"
+  git merge-base --is-ancestor "$fix" HEAD || ship_tooling "--fix $fix is not on HEAD's history"
+  base=$(git rev-parse --verify -q "$fix^") || ship_tooling "--fix $fix has no parent to restore from"
+  from="the parent of --fix"
+else
+  tip=$(ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
+  base=$(git merge-base HEAD "$tip" 2>/dev/null) || ship_tooling "no merge base between HEAD and $tip"
+  from="the merge base"
+fi
 
 # bash reads any other runner's test as a syntax error, which is red whatever the
 # fix does.
@@ -98,7 +130,7 @@ for p in "$@"; do
   [ "$p" != "$test_path" ] || ship_tooling "$p is the test, not a path to revert"
   # A blob, since a directory clears `cat-file -e` and `rm -f` then reverts nothing.
   [ "$(git cat-file -t "$base:$p" 2>/dev/null)" = blob ] || [ "$(git cat-file -t "HEAD:$p" 2>/dev/null)" = blob ] \
-    || ship_tooling "$p is a file at neither the merge base nor HEAD"
+    || ship_tooling "$p is a file at neither $from nor HEAD"
 done
 
 tmp=$(mktemp -d) || ship_tooling "cannot create a temp directory"
@@ -133,11 +165,25 @@ if [ "$rc" -ne 0 ]; then
   ship_tooling "$test_path is red at HEAD, so a red with the fix reverted proves nothing"
 fi
 
+added=()
 for p in "$@"; do
-  if git cat-file -e "$base:$p" 2>/dev/null; then
-    git -C "$wt" checkout -q "$base" -- "$p" || ship_tooling "cannot restore $p from $base"
-  else
+  if ! git cat-file -e "$base:$p" 2>/dev/null; then
+    # A path a later commit added is not this fix's to take out.
+    if [ -n "$fix" ] && ! git cat-file -e "$fix:$p" 2>/dev/null; then
+      ship_tooling "$p is not a file --fix ${fix:0:12} added"
+    fi
     rm -f "$wt/$p"
+    added+=("$p")
+  elif [ -n "$fix" ]; then
+    # Only the fix's own hunks come out: restoring the whole file from its parent
+    # would take every later commit's change with it, and a red from one of those
+    # would be credited to this fix.
+    git diff --binary -U0 "$base" "$fix" -- "$p" > "$tmp/fix.patch" || ship_tooling "cannot diff $p across --fix"
+    if [ -s "$tmp/fix.patch" ]; then
+      git -C "$wt" apply -R --unidiff-zero "$tmp/fix.patch" || ship_tooling "the fix's change to $p does not reverse cleanly at HEAD, since a later commit edits the same lines: revert a hunk inside it by hand"
+    fi
+  else
+    git -C "$wt" checkout -q "$base" -- "$p" || ship_tooling "cannot restore $p from $base"
   fi
 done
 
@@ -147,8 +193,28 @@ list=$(printf '%s, ' "$@")
 list=${list%, }
 if [ "$rc" -eq 0 ]; then
   verdict false "$@"
-  echo "revert-red: $test_path stays green with $list reverted, so it does not prove the fix." >&2
+  if [ -n "$fix" ]; then
+    echo "revert-red: $test_path stays green with ${fix:0:12}'s change to $list reverted, so it does not prove that fix." >&2
+  else
+    echo "revert-red: $test_path stays green with $list reverted, so it does not prove the fix." >&2
+  fi
   exit 1
 fi
 tail -n 40 "$log" >&2
+# A red naming a file the fix added as missing is the absence of the file, not
+# the fix's behaviour: the line carries a missing-file phrase and the file's name,
+# or the module name a runner reports in place of the file's.
+missing_re='No such file or directory|not found|Cannot find module|No module named|ModuleNotFoundError|ImportError|cannot open|ENOENT|does not exist'
+missing_lines=$(grep -E "$missing_re" "$log")
+for p in ${added[@]+"${added[@]}"}; do
+  b=${p##*/} stem=${p##*/}; stem=${stem%.*}
+  names=(-e "$b")
+  # A dotfile has no stem, and the empty one would match any quote.
+  [ -z "$stem" ] || names+=(-e "'$stem'" -e ".$stem'" -e "/$stem'")
+  if grep -qF "${names[@]}" <<<"$missing_lines"; then
+    verdict false "$@"
+    echo "revert-red: $test_path goes red with $list reverted, but its error names $p as missing, which says nothing about the fix's behaviour: revert a hunk inside it, or a path the fix changed and the test reads." >&2
+    exit 1
+  fi
+done
 verdict true "$@"

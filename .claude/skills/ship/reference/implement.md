@@ -13,7 +13,6 @@
 - [Phase 2: adjacent finds](#phase-2-adjacent-finds)
 - [Phase 4: triage and depth checks](#phase-4-triage-and-depth-checks)
 - [Phase 4: the self-review loop](#phase-4-the-self-review-loop)
-- [Phase 4 evidence lines](#phase-4-evidence-lines)
 - [Consult current docs](#consult-current-docs)
 
 ## Phase 1: spec precedence
@@ -79,6 +78,9 @@ takes that text as a heredoc, so the issue's own words never pass a file or a
 pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
 entry under the Run file's `## Criteria`, `- <n>: <text>`. It refuses the text
 `null`. Phase 0 reuses this read. A free-text run has no issue and passes none.
+An issue's init without `--criteria` warns when the issue holds checkboxes, and
+`run-file gate summary` then holds the gate (`criteria:` in `held_by`) until
+each is recorded with `run-file note Criteria <text>`.
 A phase-1 anchor rewrite that changes a criterion adds each replacement
 checkbox with `run-file note Criteria <text>`, which writes it under the next
 number, owing its own line, and the original's `Criterion` line names them.
@@ -282,52 +284,6 @@ when the last round changed no file, even at the cap, and `cap` when the
 rounds reached it with the last fixes unread, which holds `run-file gate clean`
 unless a host reviewer stopped `tree unchanged at <sha>`, `<sha>` covering the
 final head.
-
-## Phase 4 evidence lines
-
-`run-file close 4` refuses until the Run file carries these lines, each with an
-optional `- ` prefix, written as its check settles. The check is a
-**completeness guard**: it holds each line to being present and in its shape,
-and the self-review keeps the judgment of what a line says. The red
-`Reverted-fix:` line is **produced**, written under the Run file's
-`## Evidence` by the `run-file` verb that ran the proof; every other line is
-**attested**, written by the run and taken at its word. They are kept because
-something reads them: the red line proves a new test fails on the old code, and
-`run-file gate clean` reads the loop's `Stop:` line. What the depth checks
-found (removed blocks, matcher cases, declines and their probes) is the
-self-review's judgment, recorded in the Run file where it helps the summary.
-
-- **Reverted-fix**, one per test file the diff adds or changes. Produced:
-  `run-file prove <test> <path>... --issue <issue>` runs `revert-red` on them
-  and, on its exit 0 (the test went red with the fix reverted), writes
-  `Reverted-fix: <test>: red at <sha> reverting <path>...`, `<sha>` the head it
-  ran on. Commit the test and the fix first: `revert-red` reads committed
-  state. The line stands while neither the test nor a listed path has changed
-  since `<sha>` in the working tree, so a fix landed after it means proving
-  again; a hand-written `red` is refused. Exit 1 means the test stayed green:
-  it proves nothing, so fix the test. A test that is not a `.sh` file passes
-  its runner's command as argv after `--`, run in place of `bash <test>` at
-  the top of a fresh temporary worktree with nothing installed; it names the
-  test as one of its words or a node ID under it: `run-file prove
-  tests/test_x.py src/x.py --issue 12 -- uv run pytest tests/test_x.py` (`uv
-  run` builds its own environment). An install step goes in as
-  `bash -c 'bun install && bun test "./$0"' <test>` (`./`: `bun test` reads a
-  bare path as a filter). The written line names no command; the JSON
-  answer's `command` records what ran. Attested:
-  `Reverted-fix: <test>: n/a: <reason>` where there is no fix to revert, the
-  test needs a database or service the command cannot start in a fresh
-  checkout, its runner cannot run that one file on its own, or it is already
-  red before the revert, since none of these can show the test going red for
-  the fix's absence.
-  A test file is a path with a `tests`, `test` or `__tests__` component, or a
-  basename `*.test.*`, `*.spec.*`, `*_test.*` or `test_*`.
-- **Round** and **Stop**, attested, for the
-  [self-review loop](#phase-4-the-self-review-loop): at least one
-  `Round: self-review <n>: <text>`, `<n>` a positive integer, and a
-  `Stop: self-review: <tree unchanged|cap>`, the last such line deciding.
-
-`close 7`'s `Round:` and `Stop:` lines
-([review-loop.md](review-loop.md#the-exit)) are attested the same way.
 
 ## Consult current docs
 

@@ -7,6 +7,24 @@ released version. See
 
 <!-- version list -->
 
+## v0.50.1 (2026-10-22)
+
+### Bug Fixes
+
+- **ship**: A round that never lands ends as not landed; the hold names the range to read
+  ([#943](https://github.com/Gharib89/skills/pull/943),
+  [`1294f36`](https://github.com/Gharib89/skills/commit/1294f36e03a7fb5d8092a7ea09bfd12581fa8c17))
+
+
+## v0.50.0 (2026-10-22)
+
+### Features
+
+- **ship**: Run file holds missing criteria, stamps ran head, orders skips, proves per fix
+  ([#941](https://github.com/Gharib89/skills/pull/941),
+  [`48932d4`](https://github.com/Gharib89/skills/commit/48932d409a1c426a644f486bc925eade98a142ab))
+
+
 ## v0.49.0 (2026-10-20)
 
 ### Features

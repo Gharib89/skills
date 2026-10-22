@@ -4,6 +4,7 @@
 
 - [The round](#the-round)
 - [Reading a round](#reading-a-round)
+- [A window that closes with no round](#a-window-that-closes-with-no-round)
 - [Triage, fix, reply](#triage-fix-reply)
 - [The exit](#the-exit)
 - [Fallbacks](#fallbacks)
@@ -49,10 +50,9 @@ touching a file an agent executes as instructions (a skill's `SKILL.md` or its
 reference files, `CLAUDE.md`, `AGENTS.md`, a rules file) is `code`, though phase
 2 files it under `docs`: a fix to it changes behaviour. Any other `docs`
 fix-only diff is **docs-only** and ends the host loop, because another round
-would buy wording nits. The poll takes its bound from the block, and a window
-that closed is the answer rather than a reason to re-poll, except after a
-`conflict`, which says nothing about the reviewer: resolve it (phase 8) and poll
-again.
+would buy wording nits. The poll takes its bound from the block; a window that
+closes is read per
+[A window that closes with no round](#a-window-that-closes-with-no-round).
 
 **`Cap:`** is the budget on rounds ship starts: a number, or `None.` for an
 uncapped loop; `auto-once` delivers one round whatever it reads, and under
@@ -84,7 +84,9 @@ rounds still read 1 through `Cap:`. Once a review's fixes change no file, record
 `Past-cap: <reviewer>: tree unchanged at <sha>` with `run-file note Evidence
 "<line>" --issue <issue>`, `<sha>` the head that review read. `gate clean` still
 holds on the reviewer, reporting its cap and that `<sha>`, because no host
-reviewer read the fixes: the human reads them at the merge gate.
+reviewer read the fixes: the human reads them at the merge gate. Where the head
+later moves past that `<sha>` (a hand-resolved conflict merge, a lint fix), the
+hold names the range to read, `<sha>..<head>`.
 
 ## Reading a round
 
@@ -125,14 +127,32 @@ admitted.
   `codex review`, not the phrase itself: the host delivers every mention, and a
   stray one starts a round or a Codex task no poll is waiting for.
 - **A poll waits for the expected head**, the worktree's `HEAD` on the PR's
-  branch or `--sha`. `not_reviewed: unreachable` with a `head_sha` that is not
-  that head means the host never showed the push: confirm it landed, then poll
-  again.
+  branch or `--sha`. `not_reviewed: unreachable` with `landed_by` null and a
+  `head_sha` that is not that head means the host never showed the push: confirm
+  it landed, then poll again.
 - **Exit 1 beside a landed round is still the answer.** A non-null
   `landed_by` with `done: false` and no `status` is triaged like any other; the
   brief's `pending_checks` names the checks still pending when the window
   closed, and `stale: true` says the host still showed another head than the
   expected one; a round the since rule landed stands even so.
+
+## A window that closes with no round
+
+A window that closes with `done: false` and `not_reviewed` set is that round's
+answer, bar `unreachable` with `landed_by` null on a `head_sha` that is not the
+expected head: confirm the push landed, then poll again ([Reading a
+round](#reading-a-round)). A landed round keeps its answer there. The
+answer stands whatever the reviewer's own status says it may still do: no second
+window opens for the same round and no second request goes out. Record its stop
+per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned
+round whose fixes changed the tree, else `not reviewed: <cause>`. Either way
+that exit is final, and the `Fallback-for:` reviewer that names it, if any, is
+driven per [Fallbacks](#fallbacks).
+
+A `status: pending` answer is no closed window: resume it by its cursor
+([mechanics.md](mechanics.md#waits-past-540-s)). A `conflict` closes the window
+with `not_reviewed` null, which says nothing about the reviewer: resolve it
+(phase 8) and poll again.
 
 ## Triage, fix, reply
 

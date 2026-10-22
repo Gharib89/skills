@@ -74,7 +74,7 @@ held 'a local review past the cap' "$pastcap"
 check 'the local review adds no reviewer Round line' "$before" "$(grep -c '^Round: primary' "$f")"
 capped; unheld 'a capped primary with no local review' "$pastcap"
 capped; held 'a capped primary with no local review keeps the cap reason' 'reviewer primary: cap'
-capped; printf 'Past-cap: primary: tree unchanged at 1234567\n' >> "$f"; held 'a local review at an uncovered head keeps the cap reason' 'reviewer primary: cap'
+capped; printf 'Past-cap: primary: tree unchanged at 1234567\n' >> "$f"; held 'a local review at an uncovered head names the range to read' 'reviewer primary: past cap 2, local review read 1234567, head moved: read 1234567..abcdef0123456789'
 capped; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\nRound: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a fallback that read the head settles a past-cap primary'
 capped; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; unheld 'a past-cap local review' 'reviewer primary: cap'
 base; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a past-cap line on a reviewer that settled'

@@ -115,11 +115,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
         and ([$reviewers[] | select(.name == $name) | .cap | numbers] as $cap
              | $cap != [] and ([rests("Round: " + $name + " ")[] | select(test($round_re))
                  | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique) == [range(1; $cap[0] + 1)]);
-      # The head a local review past the cap read with its tree unchanged, when
-      # that head covers the PR head. It names the hold but never lifts it: no
-      # host reviewer read those fixes.
-      def pastcap_head($name): (rests("Past-cap: " + $name + ": tree unchanged at ") | last // "") as $s
-        | if $s != "" and $cover[$s] == true then $s else "" end;
+      # The head the last local review past the cap read with its tree unchanged.
+      def pastcap_stamp($name): rests("Past-cap: " + $name + ": tree unchanged at ") | last // "";
       def owes_fallback($name): (stop($name) | IN("not reviewed", "not landed")) or cap_spent($name);
       # A revocation appends its own Lane: line, so a stale inline stop holds.
       def inline_run: (rests("Lane: ") | last // "") == "inline";
@@ -163,13 +160,20 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            elif $status == "deferred-to-ci" then
              if $v.leg != null and ($legs | index($v.leg)) != null and greenleg($v.leg) then empty
              else "verification " + $v.name + ": no associated green CI leg" end
+           elif $status == "missing" then
+             "verification " + $v.name + ": missing; record it with `run-file close 3 --result " + (if ($v.name | test("\\s")) then "\"" + $v.name + "=<word>\"" else $v.name + "=<word>" end) + "`"
            else "verification " + $v.name + ": " + $status end),
        ($reviewers[] as $r
          | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
            elif settled($r.name) or (stop($r.name) == "inline lane" and $r.trigger == "on-request" and inline_run) then empty
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
-           elif cap_spent($r.name) and pastcap_head($r.name) != "" then
-             "reviewer " + $r.name + ": past cap " + ([$r.cap | numbers] | first | tostring) + ", local review read " + pastcap_head($r.name) + ", no host reviewer read it"
+           elif cap_spent($r.name) and pastcap_stamp($r.name) != "" then
+             pastcap_stamp($r.name) as $s
+             # A covering stamp names the hold but never lifts it: no host reviewer read those
+             # fixes. One that no longer covers the PR head (a hand-resolved conflict merge, a
+             # later fix) leaves the range a human reads to waive the cap.
+             | "reviewer " + $r.name + ": past cap " + ([$r.cap | numbers] | first | tostring) + ", local review read " + $s + ", "
+               + (if $cover[$s] == true then "no host reviewer read it" else "head moved: read " + $s + ".." + $head end)
            elif (stop($r.name) | word) == "tree unchanged" then
              if reraised($r.name) then "reviewer " + $r.name + ": tree unchanged with a re-raised declined finding, which stops on cap"
              elif reviewed($r.name) | not then "reviewer " + $r.name + ": no dispositioned round"
@@ -201,7 +205,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
 # Run file, and the head `read-pr` returns. Neither is the caller's to supply,
 # so the summary cannot claim what the gate never read (#894).
 gate_summary() { # gate_summary <pr>, with file already parsed
-  local pr=$1 ci_file pull answer rc lines entries recorded=false
+  local pr=$1 ci_file pull answer rc lines entries recorded=false id boxes
   ci_file="$(dirname "$file")/ci-wait.json"
   # Exit 2, not the exit 1 of a held gate: a read that failed is no verdict.
   [ -f "$ci_file" ] || ship_tooling "no saved ci-wait answer at $ci_file: run \`ci-wait $pr\` and save its output there, then re-run"
@@ -217,6 +221,18 @@ gate_summary() { # gate_summary <pr>, with file already parsed
   # With no `## Criteria` the gate read none, so "none" would be a claim it never
   # checked: the line says so and the run lists the issue's criteria itself.
   grep -q '^## Criteria[[:space:]]*$' <<<"$lines" && recorded=true
+  # Unrecorded criteria beside an issue that has checkboxes are criteria nobody
+  # judged, so the gate holds rather than only reporting them (#933). A slug run
+  # has no issue to read.
+  id=$(basename "$(dirname "$file")"); id=${id#ship-}
+  if [ "$recorded" = false ] && [[ $id =~ ^[1-9][0-9]*$ ]]; then
+    boxes=$(issue_checkboxes "$id") || ship_tooling "cannot read issue $id to check for checkboxes: run \`read-issue $id\` and fix what it reports, then re-run"
+    if [ "$boxes" -gt 0 ]; then
+      answer=$(jq --arg h "criteria: the Run file has no ## Criteria but issue #$id has $boxes checkboxes; record each with \`run-file note Criteria <text>\`" \
+        '.clean = false | .held_by += [$h]' <<<"$answer") || ship_tooling "cannot add the criteria hold"
+      rc=1
+    fi
+  fi
   # Each entry's text, so an unmet criterion reads as the requirement a human is
   # asked to waive and not only its number.
   entries=$(jq -Rn '[inputs | sub("[ \\t\\r]+$"; "")] | reduce .[] as $l ({in: false, m: {}};

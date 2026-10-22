@@ -18,7 +18,8 @@
 #   run-file gate clean <ci-file|-> --head <sha> <where>
 #   run-file gate summary <pr> <where>
 #   run-file timing <where>
-#   run-file prove <test> <path>... <where> [-- <command>...]
+#   run-file ran <name>... <where>
+#   run-file prove <test> <path>... [--fix <commit>] <where> [-- <command>...]
 #   run-file probe <ref> <where> -- <command>...
 #   run-file call <why> <where> -- <command>...
 #   run-file note <section> <line> <where>
@@ -62,19 +63,25 @@
 # `Criterion <n>: met: <proof>` or `Criterion <n>: not met: <reason>` (the last
 # such line deciding, a line anywhere in the file like `Stop:`), and `gate clean`
 # holds on any criterion not met or with no line. No checkbox, or no flag, writes
-# no section and the gate judges nothing of the kind.
+# no section and the gate judges nothing of the kind. An init on an issue number
+# with `--from-profile` and no `--criteria` reads the issue and, where it holds
+# checkboxes, warns on stderr naming the flag; `gate summary` holds the same run
+# (`criteria: the Run file has no ## Criteria but issue #<n> has <k> checkboxes`).
 # Below the checklist it writes sections the run fills: `Verification results`
 # where `--from-profile` took the names from the profile's headings, or
 # `--verifications` names a comma list of name-shaped words (one
 # `- <name>: pending` each, which `close 3 --result <name>=<word>` settles with
 # one of pass, fail, deferred-to-ci, unavailable, unexercised or n/a, written
 # `- <name>: <word> at <sha>[: <note>]`, <sha> the `--head` close 3 was given or
-# else the checkout's HEAD, and which
+# else the head the last `ran <name>` recorded (`Ran: <name> at <sha>` under
+# `## Evidence`, written by `ran` when the verification's `Run:` line ran), or
+# the checkout's HEAD when none was, and which
 # `close 3` will not pass while any is pending), then `Design and plan`,
 # `Deviations log`, and `Direct calls`, one line per direct call the run made
 # straight through the host's REST form, no mechanic covering it, so one that
 # recurs across runs is visible as a mechanic to promote. `skip 3 <reason>`
-# settles each still-pending result as `n/a: <reason>`. `close 3 --result` also
+# settles each still-pending result as `n/a: <reason>`; `skip` of 5 to 8 is
+# refused, naming phase 3, while phase 3 is open. `close 3 --result` also
 # takes a name the Run file lacks when the checkout profile has it as a
 # `## Verification` heading, one the PR added after init: it applies init's
 # heading checks to the name, then appends its entry. Once phase 3 has closed or
@@ -126,7 +133,15 @@
 # `Grade: <word>` under the `## Grade` section, replacing the line a call before
 # it wrote.
 #
+# `ran <name>... <where>` marks, for each verification name the Run file's
+# results section knows, that its `Run:` line has just run: it appends
+# `Ran: <name> at <sha>` under `## Evidence`, <sha> the HEAD now, and writes
+# nothing if any name is malformed. A name may begin with `--`: the names end at
+# the first `--file`, `--issue`, `--scratchpad`, `--result` or `--head`. Call it
+# as each run ends, not at the close.
 # `prove` runs the sibling `revert-red` on <test> and its <path>s, passing any
+# `--fix <commit>` (a review fix's commit: only its own change to the paths is
+# taken out, not the merge base's copy) and any
 # `-- <command>...` tail to it as typed (`revert-red --help` says what the
 # command must be). On its exit 0
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under
@@ -170,12 +185,13 @@
 #   open, close, skip: {run_file, phase, state, line, mirror[, reason]}
 #   close 3 --result on a closed or skipped phase 3: {run_file, phase, state, line}
 #     with state "recorded", the row unchanged and no mirror
+#   ran: {run_file, ran: [{name, head}]}
 #   grade: {run_file, grade}
 #   next: {run_file, closed: {phase, line, mirror}, opened: {phase, line, mirror}};
 #     closed is null where no phase was open
 #   timing: {run_file, start_to_pr, pr_to_gate, phases{}, row}; a skipped phase
 #     reads `skipped` and a phase with no range `unverified`
-#   prove: {test, paths, red, command, run_file, head}, revert-red's verdict plus the
+#   prove: {test, paths, red, command[, fix], run_file, head}, revert-red's verdict plus the
 #     record and the head, its paths as typed where the line normalises them;
 #     on a refusal revert-red's own answer. <test> must be one of the words of
 #     <command>, character for character, or a node ID under it (<test>::<name>)
@@ -241,7 +257,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | gate summary <pr> | timing | prove <test> <path>... <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | gate summary <pr> | timing | ran <name>... <where> | prove <test> <path>... [--fix <commit>] <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 # The recovery both refusals of a missing record carry, rather than prose a
 # compacted run may no longer hold.
 rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers, --legs and --criteria the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
@@ -253,6 +269,8 @@ verb=$1; shift
 # their pieces depend on each other: helpers, then the gates, then the verbs.
 # shellcheck source=lib/run-file-items.sh
 source "$SHIP_SCRIPTS/lib/run-file-items.sh"
+# shellcheck source=lib/run-file-criteria.sh
+source "$SHIP_SCRIPTS/lib/run-file-criteria.sh"
 # shellcheck source=lib/run-file-phase-gates.sh
 source "$SHIP_SCRIPTS/lib/run-file-phase-gates.sh"
 # shellcheck source=lib/run-file-clean-gate.sh

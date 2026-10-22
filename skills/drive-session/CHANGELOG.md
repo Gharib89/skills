@@ -7,6 +7,24 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.1 (2026-10-22)
+
+### Bug Fixes
+
+- **ship**: A round that never lands ends as not landed; the hold names the range to read
+  ([#943](https://github.com/Gharib89/skills/pull/943),
+  [`1294f36`](https://github.com/Gharib89/skills/commit/1294f36e03a7fb5d8092a7ea09bfd12581fa8c17))
+
+
+## v0.6.0 (2026-10-22)
+
+### Features
+
+- **drive-session**: Roster survives a reboot, a window helper, spawn retries a stalled prompt
+  ([#939](https://github.com/Gharib89/skills/pull/939),
+  [`b99f438`](https://github.com/Gharib89/skills/commit/b99f438d7dfabc2567faff0e50054812f5e6310c))
+
+
 ## v0.5.1 (2026-10-19)
 
 ### Bug Fixes

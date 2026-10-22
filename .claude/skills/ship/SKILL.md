@@ -3,7 +3,7 @@ name: ship
 description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended | [--rework [\"<feedback>\"]] [--inline [--review]]]"
 metadata:
-  version: 0.49.0
+  version: 0.50.1
   profile-schema: 5
   composes: mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:tdd mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:codebase-design mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:code-review upstash/context7#3131245817e9e40626d8f43ce85dabab09d4ff35:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
 ---
@@ -73,6 +73,13 @@ file holding the ten-item checklist; an issue's run adds `--criteria -`,
 per [implement.md](reference/implement.md#phase-1-criteria-the-run-owes). Each
 phase below flips it with `run-file next`, `open`, `close` or `skip`, and closes
 once its `Done when:` holds, not before.
+
+**A turn never ends on a plan line.** It ends on a stop from the table below
+(the merge gate included) or on a wait its last line names: a background job or
+subagent whose notification resumes the run. A line saying what comes next is
+followed by doing it in the same turn. When that job or subagent comes back,
+announce its end in one line before the next step, so the human reading the
+session sees the run move on.
 
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every gating call goes through a mechanic**, a host call a

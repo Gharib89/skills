@@ -56,7 +56,7 @@ holds_verif() { # holds_verif <run file> <name>: the gate-clean holds naming tha
 fa=$(at "$added" init 80 --from-profile | jq -r .run_file)
 to_phase3 "$fa"
 add_heading live-run
-check "gate clean holds a heading the profile gained after init" 'verification live-run: missing' "$(holds_verif "$fa" live-run)"
+check "gate clean holds a heading the profile gained after init" 'verification live-run: missing; record it with `run-file close 3 --result live-run=<word>`' "$(holds_verif "$fa" live-run)"
 was=$(cat "$fa")
 check_rc "a name neither the Run file nor the profile names is malformed" 2 \
   "$(inrc "$added" close 3 --file "$fa" --result github-mechanics=pass --result ado-mechanics=pass --result nope=pass)"

@@ -76,7 +76,9 @@ The text below continues phase 3 in `SKILL.md`.
 
 Run each
 applicable verification's `Run:` line **scoped to what you touched**, on the
-environment the issue was reported against: green elsewhere is not fixed. Noisy
+environment the issue was reported against: green elsewhere is not fixed. Record
+each run with `run-file ran <name>... --issue <issue>` as it ends, so `close 3`
+stamps the head it ran at, not the head it is closed at. Noisy
 runs go to a cheap-tier subagent in the `verify` scratch directory. Skip this
 phase only when no Verification applies, whatever the class.
 
@@ -97,7 +99,7 @@ the rails and depth checks in
 axis alone over each round's **fix-only diff**, until a round changes no file
 (`tree unchanged`) or reaches preflight's `self_review_cap` (`cap`).
 `run-file close 4` refuses until the Run file holds the
-[evidence lines](implement.md#phase-4-evidence-lines): each round's
+[evidence lines](evidence-lines.md): each round's
 `Round: self-review`, the loop's `Stop: self-review:`, and a `Reverted-fix:`
 per test file the diff adds or changes, the red one written by `run-file
 prove`.
@@ -140,12 +142,17 @@ Best-effort: for each reviewer under `## Reviewers`, per round, start
 it by its `Trigger:`, wait out one `poll-pr --brief` window, triage whatever
 landed, push the fixes once, answer each thread with `reply-thread`, then the
 block's `Resolve:`; `Cap:` bounds the rounds, and a docs-only fix-only diff ends
-them. A round's fix is proven by its targeted test nodes plus the repo's edit
+them. A window that closes with no round is read per
+[review-loop.md](review-loop.md#a-window-that-closes-with-no-round): its stop,
+its fallback and the two closed windows that re-poll. A round's
+fix is proven by its targeted test nodes plus the repo's edit
 rung, the per-file check its harness runs after each edit (`check.sh edit
 <file>...`), over the files it touched; a repo with no harness, and so no edit
 rung, proves it with the local gate instead. Otherwise the local gate is not
 re-run per round: the final head's gate is the merge gate's re-run on `gate
-read`'s `current: false`, never while a `code-review` is out (phase 5). **Every
+read`'s `current: false`, never while a `code-review` is out (phase 5). A fix
+that carries a test is also proven red, per [evidence lines](evidence-lines.md)
+(`--fix <fix commit>`). **Every
 reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks**, each
 driven when its primary exits `not reviewed` (`inline lane` aside), is capped
 with findings or stops `not landed`. Exits: `reviewed`, `not reviewed:

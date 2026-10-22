@@ -70,7 +70,8 @@ contract.
 | `file-issue` | 2, 4, 7; 9 with `--repo`, per Ship defect draft, on the human's word |
 | `dropped-lines` | 4, the removed blocks with no new home, for the self-review to weigh |
 | `revert-red` | 4, a new test run with its fix reverted, through `run-file prove` |
-| `run-file prove` | 4, per test file the diff adds or changes, writing its red `Reverted-fix:` line |
+| `run-file prove` | 4, per test file the diff adds or changes, writing its red `Reverted-fix:` line; 7, a review fix with `--fix <commit>` |
+| `run-file ran` | 3, per verification as its `Run:` line ends, stamping the head it ran at |
 | `run-file probe` | 4, a decline's claim, run and recorded as a `Probe:` line |
 | `run-file call` | any phase, before each direct call, writing its `## Direct calls` line |
 | `run-file note` | any phase, for each attested line (`Round:`, `Stop:`, `Past-cap:`, `Criterion`, `Noted:`, `Filed:`), one line each, appended under its section |
@@ -154,9 +155,9 @@ and deadline; repeat until an answer arrives without `pending`. A pending answer
 is not a closed window, so never read it as `silent`. Both waits hold for the
 expected head, `--sha <sha>` else the worktree's `HEAD` when it is on the PR's
 branch, so a read straight after a push never grades the previous head: a
-`ci-wait` `timeout`, or a `poll-pr` `not_reviewed: unreachable`, whose
-`head_sha` is not that head means the host never showed the push, so confirm it
-landed, then re-run. Run either wait in the Bash tool's
+`ci-wait` `timeout`, or a `poll-pr` `not_reviewed: unreachable` with `landed_by`
+null, whose `head_sha` is not that head means the host never showed the push, so
+confirm it landed, then re-run. Run either wait in the Bash tool's
 background mode when the run has other work meanwhile, its completion
 notification resuming the run, and start `ci-wait <pr>` that way at PR open,
 alongside the first reviewer poll, since CI runs from there.
