@@ -201,14 +201,18 @@ export async function master(input, output, { lufs, peak, bed }) {
 }
 
 // The video-only `parts` joined at hard cuts by stream copy: no frame is
-// re-encoded, so each part must start on a keyframe, as every render does.
+// re-encoded, so each part must start on a keyframe, as every render does. The
+// list lives in a temp folder and ffmpeg reads a relative entry against that
+// folder, so each part goes in as an absolute path.
 export async function concat(parts, output) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-concat-"));
   try {
     const list = path.join(dir, "parts.txt");
     fs.writeFileSync(
       list,
-      parts.map((p) => `file '${p.replaceAll("'", "'\\''")}'\n`).join(""),
+      parts
+        .map((p) => `file '${path.resolve(p).replaceAll("'", "'\\''")}'\n`)
+        .join(""),
     );
     ffmpeg([
       "-y",
