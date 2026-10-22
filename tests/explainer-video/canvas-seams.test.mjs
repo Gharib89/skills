@@ -6,6 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
+import { places } from "../../skills/explainer-video/scripts/render/map.mjs";
 import { seamReason } from "../../skills/explainer-video/scripts/lib/allowed.mjs";
 import {
   grammar,
@@ -239,4 +240,32 @@ test("a plain cut between two scenes jumps the camera, and the stills page has n
 
 test("the other families draw no world layer", () => {
   assert.equal(video(claude).html.includes('id="world"'), false);
+});
+
+test("past four scenes the map turns back along the next row, so neighbours in the video stay neighbours, right to left too", () => {
+  const size = { width: 1920, height: 1080 };
+  const w = 1920 + 480;
+  const h = 1080 + 270;
+  const col = (p) => [p.left / w, p.top / h];
+  assert.deepEqual(places(6, size, false).map(col), [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [3, 0],
+    [3, 1],
+    [2, 1],
+  ]);
+  assert.deepEqual(
+    places(6, size, true)
+      .map(col)
+      .map(([c, r]) => [c + 0, r]),
+    [
+      [0, 0],
+      [-1, 0],
+      [-2, 0],
+      [-3, 0],
+      [-3, 1],
+      [-2, 1],
+    ],
+  );
 });

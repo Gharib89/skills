@@ -240,6 +240,16 @@ test("a grammar that uses a component it bans is refused, naming the family and 
   );
 });
 
+test("a profile whose canvas seams family travels the camera is refused when it bans camera", () => {
+  refused(
+    { grammar: { seams: { family: "canvas" }, bans: ["camera"] } },
+    /style profile odd: grammar\.seams canvas uses the camera component, which grammar\.bans bans/,
+  );
+  assert.doesNotThrow(() =>
+    validate(odd({ grammar: { seams: { family: "canvas" }, bans: ["flow"] } })),
+  );
+});
+
 test("a profile banning blur is refused while its field or depth blur is above 0 or its surface is glass, and loads once those are 0, left out or flat or sketch", () => {
   const bans = ["blur"];
   const seams = { blur: 0 };

@@ -166,3 +166,16 @@ test("the cards' text is escaped and its Latin runs are isolated in Arabic", asy
   );
   assert.match(rtl, /<bdi class="lat[^"]*">Git<\/bdi>/);
 });
+
+test("a last item cued too near the scene's end for the pull-back to the overview is refused", async () => {
+  const late = { ...timing, sentences: [0, 2, 9.4] };
+  await assert.rejects(
+    drawn(canvas(), "ltr", late),
+    /last item lands at 9\.4 s.*pull back to the overview/,
+  );
+  // 1.1 s is what the pull-back needs: a last cue that leaves it is drawn
+  const fits = { ...timing, sentences: [0, 2, 8.9] };
+  assert.ok(
+    END(moves(played(await drawn(canvas(), "ltr", fits))).at(-1)) <= 10,
+  );
+});

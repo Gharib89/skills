@@ -11,6 +11,7 @@ export const FIELD_PATHS = [
   "seams.family",
   "seams.duration",
   "seams.blur",
+  "seams.travel",
   "camera.family",
   "camera.scale",
   "camera.duration",

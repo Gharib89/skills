@@ -82,6 +82,10 @@ export const canvas = async (p, f, x) => {
       +(x.end - TRAVEL - READ).toFixed(6),
     ),
   );
+  if (start + TRAVEL > x.end + 1e-6)
+    throw new Error(
+      `canvas: the last item lands at ${landed} s, too near the scene's end (${x.end} s) for the camera to pull back to the overview, which needs ${WAIT.least + TRAVEL} s: cue it earlier or lengthen the scene`,
+    );
   moves.push({ start, end: +(start + TRAVEL).toFixed(6), to: whole });
 
   const lines = [

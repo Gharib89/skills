@@ -136,8 +136,9 @@ const TEXTURE_DEFAULTS = { grain: 0.08, fieldBlur: 120, depthBlur: 4 };
 const BLURS = { field: "fieldBlur", depth: "depthBlur" };
 
 // The components a family draws, keyed `<field>.<family>`: a grammar may not
-// ban one its own families need. No family draws one yet.
-const USES = {};
+// ban one its own families need. The `canvas` seams family is the camera
+// travelling between scenes, so the `camera` ban refuses it.
+const USES = { "seams.canvas": ["camera"] };
 
 // A grammar field's value as `{ family, ...knobs }`.
 const asFamily = (v) => (typeof v === "string" ? { family: v } : (v ?? {}));

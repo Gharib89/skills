@@ -515,7 +515,7 @@ export const VISUALS = {
 export function checkVisual(visual, said, ctx = {}) {
   object(visual, "visual");
   if (visual.seam !== undefined && typeof visual.seam !== "string")
-    fail("seam is not a name like zoom-through, cut-the-curve or cut");
+    fail("seam is not a name like zoom-through, cut-the-curve, travel or cut");
   const v = VISUALS[visual.component];
   if (!v) fail(`unknown component ${visual.component}`);
   if (visual.camera !== undefined) {
