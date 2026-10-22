@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.51.1 (2026-10-22)
+
+### Bug Fixes
+
+- **explainer-video**: Turn skips the real-ffmpeg tests, page copies ignored, tests drop the hook's
+  deadline ([#944](https://github.com/Gharib89/skills/pull/944),
+  [`6c24aca`](https://github.com/Gharib89/skills/commit/6c24acaeb20ab63c26127621c0a92c2716171818))
+
+
 ## v0.51.0 (2026-10-22)
 
 ### Features
