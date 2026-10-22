@@ -36,9 +36,6 @@ noise=(
   " 904 node skills/explainer-video/maintainer/real-render.test.mjs"
   " 905 grep -r hyperframes skills"
   " 906 node -r dotenv/config skills/explainer-video/maintainer/real-render.test.mjs"
-  " 907 /bin/bash -c source /tmp/snap.sh && eval 'grep -rn real-render.mjs skills'"
-  " 908 /bin/zsh -c source /tmp/snap.sh && eval 'cat skills/x/hyperframes.mjs | head' < /dev/null"
-  " 909 bash -c less skills/explainer-video/maintainer/calibrate-rates.mjs"
 )
 
 window "${noise[@]}"
@@ -83,6 +80,11 @@ running=(
   "a render in an if body|4101 bash -c if grep x f; then node skills/explainer-video/maintainer/real-render.mjs; fi|real-render"
   "a render in a brace group|4101 bash -c cat f ;{ node skills/explainer-video/maintainer/real-render.mjs; }|real-render"
   "a full check with a semicolon glued to its end|4101 bash -c ls f; bash scripts/check.sh full; echo|check.sh full"
+  "a render between two glued semicolons|4101 bash -c cat f;real-render.mjs;echo|real-render"
+  "a hyperframes render between two glued semicolons|4101 bash -c ls d;hyperframes;echo|hyperframes"
+  "a render with a redirect glued to it|4101 node skills/explainer-video/maintainer/real-render.mjs>o|real-render"
+  "a full check with a redirect glued to it|4101 bash scripts/check.sh full>o|check.sh full"
+  "a render in a shell call whose newlines ps flattened|4101 /bin/bash -c eval 'grep x f node skills/explainer-video/maintainer/real-render.mjs'|real-render"
   "a render run from a path with a space|4101 node /tmp/window space/real-render.mjs|real-render"
   "a calibration run from a path with a space|4101 /usr/bin/node /tmp/my skills/calibrate-rates.mjs|calibrate"
   "a hyperframes render run from a path with a space|4101 node /tmp/my cache/node_modules/hyperframes/bin/hyperframes.mjs render|hyperframes"
@@ -98,6 +100,10 @@ for r in "${running[@]}"; do
   check "$name: it says the same on stderr" "$(jq -r .error <<<"$out")" "$(cat "$tmp/err")"
 done
 
+# Accepted over-report, stated in the header: inside a shell call every word counts, so a
+# grep that names a render script holds the window (a held window is retried; a missed render is not).
+window "${noise[@]}" "4101 /bin/bash -c source /tmp/snap.sh && eval 'grep -rn real-render.mjs skills'"
+check_rc "a shell-wrapped grep naming a render script reads as running" 1 "$rc"
 # A pipe glued to a word is a separator too (outside the table above, whose fields a `|` splits).
 window "${noise[@]}" "4101 bash -c grep x f|node skills/explainer-video/maintainer/real-render.mjs"
 check "a render after a grep and a glued pipe is seen" '[{"pid":4101,"name":"real-render"}]' "$(jq -c .running <<<"$out")"

@@ -45,6 +45,8 @@ turn.
 - `window` prints what is running of a render, a calibration or a full check
   (`real-render`, `hyperframes`, `calibrate`, `check.sh full`): exit 0 with
   nothing running, exit 1 naming each process and its pid. It takes no roster.
+  It leans to over-reporting: a shell call that only greps for a render script
+  reads as running, so read the pid's command before telling the user.
 
 **The quiet window.** A session that asks for a quiet window (to time a render,
 calibrate, or run the full check without a neighbour) is answered `--text` that

@@ -11,15 +11,14 @@
 # given `full`. A process counts by the program it runs, which is its first word
 # or, behind an interpreter or wrapper (`node`, `bash`, `env`, `timeout`, ...),
 # any word after its leading flags, since a flag may take a value (`node -r
-# dotenv/config x.mjs`). A command that only reads or lists a file (`grep`,
-# `cat`, `ls`, ...) is no render, even inside a `bash -c` chain: its words up to
-# the next word holding `;`, `&`, `|`, `(` or a backtick, or `eval`, are
-# skipped. A command that can run another (`find -exec`, `git rebase -x`, an
-# editor) is not on that list, so it hides nothing. An absolute path may hold
-# spaces, which `ps` does not mark, so a line starting with one is matched
-# whole. The widenings lean to over-reporting. Known gaps: a read-only program
-# told to run a command (`rg --pre`, `bat --pager`) and `check.sh` with a flag
-# before `full`. It reads no roster and runs outside Herdr.
+# dotenv/config x.mjs`), each split at the shell syntax glued to it (`;`, `&`,
+# `|`, `(`, `>`). `ps` flattens quoting, newlines and the spaces in a path, so
+# a line starting with an absolute path is also matched whole. The rule leans to
+# over-reporting on purpose: a `bash -c` call that merely greps for a render
+# script reads as running, which holds the window until the next `watch` wake,
+# while a render it missed would be the failure this answers. Known gap:
+# `check.sh` with a flag before `full`. It reads no roster and runs outside
+# Herdr.
 #
 # stdout: {running: []} when nothing runs; else {error, running}, `running`
 #         one {pid, name} per process in table order, `name` one of
@@ -46,7 +45,6 @@ running=$(awk '
     if (b ~ /^real-render[a-z-]*(\.mjs)?$/) return "real-render"
     if (b ~ /^hyperframes(\.mjs)?$/ || strip(t) ~ /(^|\/)hyperframes\//) return "hyperframes"
     if (b ~ /^calibrate[a-z-]*(\.(mjs|sh))?$/) return "calibrate"
-    sub(/[;&|)`].*/, "", next_word)
     if (b == "check.sh" && base(next_word) == "full") return "check.sh full"
     return ""
   }
@@ -61,40 +59,24 @@ running=$(awk '
     if (rest ~ /^\/(.*\/)?check\.sh full( |$)/) return "check.sh full"
     return ""
   }
+  # A word may hold shell syntax glued to a program (`real-render.mjs;`, `x>o`,
+  # `$(node`): check each piece between those characters.
+  function wordkind(w, nw,   n, p, i, r) {
+    sub(/[;&|)`<>].*/, "", nw)
+    n = split(strip(w), p, /[;&|(`<>]/)
+    for (i = 1; i <= n; i++) if (p[i] != "" && (r = kind(p[i], nw)) != "") return r
+    return ""
+  }
   BEGIN {
     n = split("node bash sh zsh npx bunx bun pnpm tsx python python3 uv env nohup timeout nice setsid time sudo xvfb-run", w, " ")
     for (i = 1; i <= n; i++) interpreter[w[i]] = 1
-    # Programs that only read or list a file. One that can run a command (find
-    # -exec, git rebase -x, an editor, awk, sed) is left off, so it never hides a run.
-    n = split("grep egrep fgrep rg ag ack less more cat bat head tail ls stat file diff wc", w, " ")
-    for (i = 1; i <= n; i++) viewer[w[i]] = 1
   }
   {
     i = 2; last = 2
     if (base($2) in interpreter) { i = 3; last = NF; while (i <= NF && $i ~ /^-/) i++ }
-    # A shell call chains commands (source snap, then eval of a grep): the words
-    # after a viewer, up to the next separator, are its arguments. A word holding
-    # a separator character (glued or not) ends the skip, and what follows the
-    # character starts the next command.
-    k = ""; seg = 1; skip = 0
-    for (m = i; k == "" && m <= last; m++) {
-      t = strip($m)
-      if (t == "eval") { seg = 1; skip = 0; continue }
-      if (t ~ /[;&|(`]/) {
-        head = t; sub(/[;&|(`].*/, "", head)
-        if (head != "") {
-          if (seg) skip = (base(head) in viewer)
-          if (!skip) k = kind(head, $(m + 1))
-        }
-        seg = 1; skip = 0
-        sub(/.*[;&|(`]/, "", t)
-        if (t == "" || k != "") continue
-      }
-      if (seg) { seg = 0; skip = (base(t) in viewer) }
-      if (!skip) k = kind(t, $(m + 1))
-    }
-    # A viewer handed an absolute path is no render, so only other lines are matched whole.
-    if (k == "" && !(base($i) in viewer)) {
+    k = ""
+    for (m = i; k == "" && m <= last; m++) k = wordkind($m, $(m + 1))
+    if (k == "") {
       rest = $i
       for (j = i + 1; j <= NF; j++) rest = rest " " $j
       k = abskind(rest)
