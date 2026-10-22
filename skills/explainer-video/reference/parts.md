@@ -60,7 +60,9 @@ part's focus, length and `must`), the part's excerpts plus the previous part's,
 and `part.json` (the series, the number, the bridge back, the next part's title,
 the operator's notes). Run `start` again after a plan edit: it rewrites those
 three files and so any hand edit to the part's brief, and clears `check.json`
-when the brief moved.
+when the brief moved. A delivered part whose files changed prints `parts: part
+<n> changed since its render: render it again` and loses its `manifest.json`,
+so the part after it waits for the new render.
 
 Part `n` starts only once part `n-1` is delivered, its `delivered:` line
 printed. The series is done when the last part's is. `start` prints the bridge,

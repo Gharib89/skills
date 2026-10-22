@@ -56,6 +56,10 @@ function readJson(f) {
 if (!fs.existsSync(file("brief.json")))
   fail("no brief.json: run brief.mjs first");
 const brief = readJson(file("brief.json"));
+if (!brief || typeof brief !== "object" || Array.isArray(brief))
+  fail("brief.json is not an object");
+if (!Number.isFinite(brief.length)) fail("brief.json length is not a number");
+if (typeof brief.style !== "string") fail("brief.json style is not a name");
 const length = brief.length;
 // A decline holds for the length it was made at: a brief changed since is
 // offered the split again.
@@ -112,6 +116,9 @@ function problems(plan) {
   const pack = readJson(file("excerpts.json"));
   if (!Array.isArray(pack.excerpts))
     return ["excerpts.json holds no excerpts list"];
+  const odd = pack.excerpts.findIndex((x) => typeof x?.id !== "string");
+  if (odd >= 0)
+    return [`excerpts.json excerpt ${odd + 1} is not an object with an id`];
   const ids = new Set(pack.excerpts.map((x) => x.id));
   const owner = new Map();
   plan.parts.forEach((p, i) => {
@@ -164,13 +171,35 @@ function notesOn(dir) {
         .sort((a, b) => b[1] - a[1])[0]
     : null;
   if (!latest) return [];
-  const a = readJson(path.join(board, latest[0]));
+  const name = latest[0];
+  const a = readJson(path.join(board, name));
+  if (!a || typeof a !== "object" || Array.isArray(a))
+    fail(`${name} is not an object`);
+  // One field's entries, each held to `kind` with a named refusal.
+  const entries = (key, kind, ok) => {
+    const list = a[key] ?? [];
+    if (!Array.isArray(list)) fail(`${name} ${key} is not a list`);
+    list.forEach((x, i) => {
+      if (!ok(x)) fail(`${name} ${key} entry ${i + 1} is not ${kind}`);
+    });
+    return list;
+  };
+  const obj = (x) => x && typeof x === "object";
+  const scenes = entries("scenes", "an object", obj);
+  scenes.forEach((s, i) => {
+    if (s.note !== undefined && typeof s.note !== "string")
+      fail(`${name} scenes entry ${i + 1} note is not text`);
+  });
   return [
-    ...(a.scenes ?? [])
+    ...scenes
       .filter((s) => s.note?.trim())
       .map((s) => `${s.id}: ${s.note.trim()}`),
-    ...(a.kept ?? []).map((k) => `kept term ${k.term} -> ${k.to}`),
-    ...(a.brief ?? []).map((b) => `brief ${b}`),
+    ...entries("kept", "an object", obj).map(
+      (k) => `kept term ${k.term} -> ${k.to}`,
+    ),
+    ...entries("brief", "text", (b) => typeof b === "string").map(
+      (b) => `brief ${b}`,
+    ),
   ];
 }
 
@@ -178,15 +207,20 @@ function notesOn(dir) {
 // folder and the video stands in it.
 function delivered(dir) {
   const manifest = path.join(dir, "manifest.json");
-  const out = fs.existsSync(manifest) ? readJson(manifest).delivered : null;
-  return !!out && fs.existsSync(path.join(out, `${path.basename(dir)}.mp4`));
+  const out = fs.existsSync(manifest) ? readJson(manifest)?.delivered : null;
+  return (
+    typeof out === "string" &&
+    fs.existsSync(path.join(out, `${path.basename(dir)}.mp4`))
+  );
 }
 
 // Writes `text` to `target` unless it already holds it, so a stage's cache
-// stays as old as what it was made from.
+// stays as old as what it was made from. True when it replaced other text.
 function keep(target, text) {
-  if (!fs.existsSync(target) || fs.readFileSync(target, "utf8") !== text)
-    fs.writeFileSync(target, text);
+  const had = fs.existsSync(target);
+  if (had && fs.readFileSync(target, "utf8") === text) return false;
+  fs.writeFileSync(target, text);
+  return had;
 }
 
 function start(n) {
@@ -225,15 +259,19 @@ function start(n) {
       fs.rmSync(path.join(dir, "script.json"), { force: true });
     fs.rmSync(path.join(dir, "check.json"), { force: true });
   }
-  keep(own, JSON.stringify(now, null, 2) + "\n");
+  let changed = false;
+  const put = (target, text) => {
+    if (keep(target, text)) changed = true;
+  };
+  put(own, JSON.stringify(now, null, 2) + "\n");
   // A profile only the run holds (the style card's Use once) goes with each
   // part, which looks for its style in its own folder first.
   const style = file("style.json");
   if (fs.existsSync(style) && readJson(style).name === now.style)
-    keep(path.join(dir, "style.json"), fs.readFileSync(style, "utf8"));
+    put(path.join(dir, "style.json"), fs.readFileSync(style, "utf8"));
   const pack = readJson(file("excerpts.json"));
   const wanted = new Set([...p.excerpts, ...(bridge?.excerpts ?? [])]);
-  keep(
+  put(
     path.join(dir, "excerpts.json"),
     JSON.stringify(
       { ...pack, excerpts: pack.excerpts.filter((x) => wanted.has(x.id)) },
@@ -241,7 +279,7 @@ function start(n) {
       2,
     ) + "\n",
   );
-  keep(
+  put(
     path.join(dir, "part.json"),
     JSON.stringify(
       {
@@ -264,6 +302,13 @@ function start(n) {
   console.log(
     `parts: part ${n} of ${plan.length} -> parts/${path.basename(dir)}`,
   );
+  // A render made from the old recipe is no delivery of the new one: the part
+  // after it waits for the part to be rendered again.
+  const manifest = path.join(dir, "manifest.json");
+  if (changed && fs.existsSync(manifest)) {
+    fs.rmSync(manifest);
+    console.log(`parts: part ${n} changed since its render: render it again`);
+  }
   if (bridge)
     console.log(
       `parts: bridge: part ${n - 1} "${bridge.title}" (${bridge.excerpts.join(", ")})`,

@@ -150,6 +150,16 @@ test("a parts.json that is not a plan is refused by name, never as a stack trace
   assert.equal(pack.code, 1);
   assert.match(pack.err, /^parts: excerpts\.json holds no excerpts list$/m);
   assert.doesNotMatch(pack.err, /\n\s+at /, pack.err);
+  for (const entry of ["null", '"ex-1"', "{}", '{"id":3}']) {
+    const r = held("excerpts.json")(`{"excerpts":[${entry}]}`);
+    assert.equal(r.code, 1, entry);
+    assert.match(
+      r.err,
+      /^parts: excerpts\.json excerpt 1 is not an object with an id$/m,
+      entry,
+    );
+    assert.doesNotMatch(r.err, /\n\s+at /, r.err);
+  }
   const brief = JSON.parse(
     fs.readFileSync(path.join(fx.dir, "brief.json"), "utf8"),
   );

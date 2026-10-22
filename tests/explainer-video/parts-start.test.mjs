@@ -158,6 +158,44 @@ test("the operator's notes on the previous part reach the next part, from its la
   );
 });
 
+test("a part's board answers or manifest of the wrong shape are refused by file and field, never as a stack trace", () => {
+  const fx = ready();
+  parts(fx, "start", "1");
+  const part = path.join(fx.dir, "parts", "01-claiming-work");
+  deliver(fx, "01-claiming-work");
+  const board = path.join(part, "board");
+  fs.mkdirSync(board, { recursive: true });
+  for (const [body, why] of [
+    ["[]", /^parts: answers-1\.json is not an object$/m],
+    ['{"scenes":"x"}', /^parts: answers-1\.json scenes is not a list$/m],
+    ['{"kept":{}}', /^parts: answers-1\.json kept is not a list$/m],
+    [
+      '{"scenes":[null]}',
+      /^parts: answers-1\.json scenes entry 1 is not an object$/m,
+    ],
+    ['{"kept":[3]}', /^parts: answers-1\.json kept entry 1 is not an object$/m],
+    ['{"brief":[3]}', /^parts: answers-1\.json brief entry 1 is not text$/m],
+    [
+      '{"scenes":[{"id":"a","note":3}]}',
+      /^parts: answers-1\.json scenes entry 1 note is not text$/m,
+    ],
+  ]) {
+    fs.writeFileSync(path.join(board, "answers-1.json"), body);
+    const r = parts(fx, "start", "2");
+    assert.equal(r.code, 1, body);
+    assert.match(r.err, why, body);
+    assert.doesNotMatch(r.err, /\n\s+at /, r.err);
+  }
+  fs.rmSync(board, { recursive: true });
+  fs.writeFileSync(path.join(part, "manifest.json"), "null");
+  const m = parts(fx, "start", "2");
+  assert.equal(m.code, 1);
+  assert.match(
+    m.err,
+    /^parts: part 1 is not delivered: finish its render first$/m,
+  );
+});
+
 test("starting a part again keeps its scene file, and drops its compiled script only where the brief moved the language, voice or style", () => {
   const fx = ready();
   parts(fx, "start", "1");
@@ -179,6 +217,38 @@ test("starting a part again keeps its scene file, and drops its compiled script 
   assert.equal(
     fs.readFileSync(path.join(dir, "script.md"), "utf8"),
     "# mine\n",
+  );
+});
+
+test("a delivered part whose recipe the plan changed is no longer delivered, so the part after it waits for its new render", () => {
+  const fx = ready();
+  parts(fx, "start", "1");
+  deliver(fx, "01-claiming-work");
+  const dir = path.join(fx.dir, "parts", "01-claiming-work");
+  // starting it again with nothing changed keeps its delivery
+  assert.equal(parts(fx, "start", "1").code, 0);
+  assert.equal(fs.existsSync(path.join(dir, "manifest.json")), true);
+  assert.equal(parts(fx, "start", "2").code, 0);
+  fs.rmSync(path.join(fx.dir, "parts", "02-opening-the-pr"), {
+    recursive: true,
+  });
+  // the same title with another focus is another recipe
+  const p = plan([4, 4, 4]);
+  p.parts[0].focus = "a new angle on step 1";
+  p.parts[1].must = ["local gate"];
+  writePlan(fx, p);
+  const r = parts(fx, "start", "1");
+  assert.equal(r.code, 0, r.err);
+  assert.match(
+    r.out,
+    /^parts: part 1 changed since its render: render it again$/m,
+  );
+  assert.equal(fs.existsSync(path.join(dir, "manifest.json")), false);
+  const q = parts(fx, "start", "2");
+  assert.equal(q.code, 1);
+  assert.match(
+    q.err,
+    /^parts: part 1 is not delivered: finish its render first$/m,
   );
 });
 
