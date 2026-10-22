@@ -177,6 +177,8 @@ conversation, so a large repo does not crowd out the work.
    `pack <id>: ...` line to that source's reader to fix, then pack again.
 5. **Outline.** Read `outline.md`: each source's summary, each excerpt's id,
    locator and note. A scene file cites an excerpt by id, `[ex-3]`.
+6. **Parts.** Over 5 minutes, offer parts:
+   [reference/parts.md](reference/parts.md).
 
 ## Script
 
@@ -297,9 +299,7 @@ or edit a scene file or choose a style. Before a `custom` or rich scene, read
    `delivery <check>: fail:
    <measured> vs <wanted>` line means nothing was copied to the videos folder
    and `out/` was emptied, an earlier render's files too. A `style profile
-   <name>` line names a colour pair or a `gates`, `grammar` or `scale` value
-   the skill refuses, or says the profile is schema 1 and lists each change:
-   fix what it names or choose another profile.
+   <name>` line: [reference/style.md](reference/style.md#a-refused-profile).
    `<row> is not installed`: run setup. `no script.json`, `no voice.json`,
    `voice.json does not match` or `voice.json holds narrator` names the stage
    to run first. `no render fonts for language <x>`: set the brief's
@@ -323,7 +323,8 @@ line that is not `pass`, and follow it.
 ## Recipe
 
 The run folder's **recipe**, `brief.json`, `excerpts.json`, `outline.md`,
-`script.md`, `style.json`, `gates.md` and `manifest.json` (the storyboard
+`script.md`, `style.json`, `gates.md`, `parts.json`, `part.json` and
+`manifest.json` (the storyboard
 page's URL, skill version, lock hash, profile, narrator, delivered path), is
 committed. `explainers/.gitignore` ignores the rest: the snapshots and
 drafts, the compiled script, the voice and timeline files, `check.json`,

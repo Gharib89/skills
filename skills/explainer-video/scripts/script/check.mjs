@@ -11,7 +11,8 @@
 // excerpts.json, judges nothing; `verdict` is supported or connective (a pass),
 // unsupported or unmarked (a [no-claim] sentence that makes a claim).
 // stdout: `script <gate>: pass|fail: <findings>|warn: <findings>` per gate
-//         (arc, budget, cites, support, coverage, dashes, sentences), then
+//         (arc, budget, cites, support, coverage, parts in a part's run folder,
+//         dashes, sentences), then
 //         `script: <p> pass, <f> fail, <w> warn`, ending on a red support
 //         verdict in `; next: fix attempt <a> of 2` or `; stop: unsupported
 //         claims after two fix attempts`
@@ -24,7 +25,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
-import { writeIgnore } from "../lib/runfolder.mjs";
+import { isPart, packRun, writeIgnore } from "../lib/runfolder.mjs";
 import { plain } from "../lib/count.mjs";
 import { numberIn } from "../lib/figures.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
@@ -120,7 +121,9 @@ const gates = {};
 {
   const f = [];
   const byId = new Map(pack.excerpts.map((x) => [x.id, x]));
-  const sourcesFile = file(path.join("snapshots", "sources.json"));
+  // A part's snapshots stay with the run folder that holds the source pack.
+  const packDir = packRun(run);
+  const sourcesFile = path.join(packDir, "snapshots", "sources.json");
   const sources = fs.existsSync(sourcesFile)
     ? JSON.parse(fs.readFileSync(sourcesFile, "utf8")).sources
     : null;
@@ -136,7 +139,7 @@ const gates = {};
         const src = sources?.find((x) => x.id === ex.source);
         if (!src || seen.has(id)) continue;
         seen.add(id);
-        const seg = segment(run, src, ex.locator);
+        const seg = segment(packDir, src, ex.locator);
         if (seg.error) f.push(`${id}: ${ex.locator}: ${seg.error}`);
         else if (!seg.texts.some((t) => squash(t).includes(squash(ex.text))))
           f.push(`${id} is no longer word for word in ${ex.locator}`);
@@ -244,36 +247,36 @@ const drift = [];
   gates.support = f;
 }
 
+const strings = (x) =>
+  typeof x === "string"
+    ? [x]
+    : x && typeof x === "object"
+      ? Object.values(x).flatMap(strings)
+      : [];
+const text = (s) =>
+  [
+    ...s.narration,
+    ...s.captions.flat().map((c) => c.text),
+    s.title,
+    // a component may name the props a viewer reads, as custom does for its
+    // source, whose style and script are not text on screen
+    ...strings(
+      VISUALS[s.visual.component]?.shown?.(s.visual.props) ?? s.visual.props,
+    ),
+  ]
+    .join("\n")
+    .toLowerCase();
+// A whole-word match, so `avoid=AI` is not hit by "explain".
+const has = (s, item) => {
+  const quoted = item.toLowerCase().replace(/[.*+?^$|()[\]{}\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${quoted}(?![\\p{L}\\p{N}])`, "u").test(
+    text(s),
+  );
+};
+
 // coverage: each must-include item said or shown, no avoid item anywhere.
 {
   const f = [];
-  const strings = (x) =>
-    typeof x === "string"
-      ? [x]
-      : x && typeof x === "object"
-        ? Object.values(x).flatMap(strings)
-        : [];
-  const text = (s) =>
-    [
-      ...s.narration,
-      ...s.captions.flat().map((c) => c.text),
-      s.title,
-      // a component may name the props a viewer reads, as custom does for its
-      // source, whose style and script are not text on screen
-      ...strings(
-        VISUALS[s.visual.component]?.shown?.(s.visual.props) ?? s.visual.props,
-      ),
-    ]
-      .join("\n")
-      .toLowerCase();
-  // A whole-word match, so `avoid=AI` is not hit by "explain".
-  const has = (s, item) => {
-    const quoted = item.toLowerCase().replace(/[.*+?^$|()[\]{}\\]/g, "\\$&");
-    return new RegExp(
-      `(?<![\\p{L}\\p{N}])${quoted}(?![\\p{L}\\p{N}])`,
-      "u",
-    ).test(text(s));
-  };
   for (const m of brief.must)
     if (!scenes.some((s) => has(s, m)))
       f.push(`must "${m}" is not said or shown`);
@@ -283,6 +286,27 @@ const drift = [];
       f.push(`avoid "${a}" is in ${hit.map((s) => s.id).join(", ")}`);
   }
   gates.coverage = f;
+}
+
+// parts: a part is a video of its own that bridges back to the part before, by
+// its context citing one of that part's excerpts, and ends naming the part
+// after. Only a part's run folder runs it.
+if (isPart(run)) {
+  const f = [];
+  const part = JSON.parse(need("part.json", "run parts.mjs start first"));
+  const context = scenes.find((s) => s.role === "context");
+  if (
+    part.bridge &&
+    context &&
+    !context.cites.flat().some((id) => part.bridge.excerpts.includes(id))
+  )
+    f.push(
+      `${context.id} (context) cites none of part ${part.n - 1}'s excerpts ${part.bridge.excerpts.join(", ")}: bridge back to the part before`,
+    );
+  const end = scenes.find((s) => s.role === "end");
+  if (part.next && end && !has(end, part.next.title))
+    f.push(`${end.id} (end) does not name the next part "${part.next.title}"`);
+  gates.parts = f;
 }
 
 // dashes: no em or en dash anywhere in the scene file.

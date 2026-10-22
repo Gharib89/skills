@@ -1,0 +1,87 @@
+// The part offer through parts.mjs: no offer within five minutes, a fewest-parts
+// proposal with a first-render estimate for both shapes above it, and a decline
+// that carries on with sections in one line.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fixture, parts, readJson } from "./parts-lib.mjs";
+import { skill } from "./board-lib.mjs";
+
+const rates = readJson(skill, "render-rates.json").rates;
+// The default look is textured, so a video second costs base, texture and gates.
+const minutes = (videoSeconds) =>
+  (
+    Math.round(
+      ((videoSeconds * (rates.base + rates.texture + rates.gates)) / 60) * 10,
+    ) / 10
+  ).toString();
+
+test("a request of five minutes or less gets no offer", () => {
+  for (const length of [2, 5]) {
+    const fx = fixture({ length });
+    const r = parts(fx, "offer");
+    assert.equal(r.code, 0, r.err);
+    assert.equal(r.out, `parts: no offer, ${length} min is within 5\n`);
+    assert.equal(fs.existsSync(path.join(fx.dir, "parts.json")), false);
+  }
+});
+
+test("a 12-minute request is offered three parts of 4 minutes, with an estimate for parts and for one long video", () => {
+  const r = parts(fixture({ length: 12 }), "offer");
+  assert.equal(r.code, 0, r.err);
+  assert.equal(
+    r.out,
+    [
+      "parts offer: 12 min is over 5: 3 parts of 4 + 4 + 4 min, or one long video in sections",
+      `parts estimate: 3 parts ${minutes(720)} min in all, the first after ${minutes(240)} min; one long video ${minutes(720)} min (render and gates, not narration)`,
+      "",
+    ].join("\n"),
+  );
+});
+
+test("the fewest parts take each at most 5 minutes and at least 2", () => {
+  for (const [length, want] of [
+    [5.5, "2 parts of 2.8 + 2.7 min"],
+    [10, "2 parts of 5 + 5 min"],
+    [10.5, "3 parts of 3.5 + 3.5 + 3.5 min"],
+    [21, "5 parts of 4.2 + 4.2 + 4.2 + 4.2 + 4.2 min"],
+  ]) {
+    const r = parts(fixture({ length }), "offer");
+    assert.match(
+      r.out.split("\n")[0],
+      new RegExp(`: ${want.replace(/\+/g, "\\+")}, or `),
+      r.out,
+    );
+  }
+});
+
+test("a decline carries on with sections, prints one line with the estimate and records itself", () => {
+  const fx = fixture({ length: 12 });
+  const r = parts(fx, "decline");
+  assert.equal(r.code, 0, r.err);
+  assert.equal(
+    r.out,
+    `parts: declined, one long video in sections, first render about ${minutes(720)} min\n`,
+  );
+  assert.deepEqual(readJson(fx.dir, "parts.json"), { declined: true });
+  // asked again, the offer is not made twice
+  assert.equal(
+    parts(fx, "offer").out,
+    "parts: declined earlier, one long video in sections\n",
+  );
+});
+
+test("a request within five minutes has nothing to decline", () => {
+  const r = parts(fixture({ length: 3 }), "decline");
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^parts: 3 min is within 5, nothing to decline$/m);
+});
+
+test("a run with no brief is refused with the stage to run first", () => {
+  const fx = fixture();
+  fs.rmSync(path.join(fx.dir, "brief.json"));
+  const r = parts(fx, "offer");
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^parts: no brief\.json: run brief\.mjs first$/m);
+});

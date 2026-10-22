@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { explainersDir, isPart } from "../lib/runfolder.mjs";
 import { skill } from "../lib/tools.mjs";
 
 const clock = (t) => {
@@ -52,10 +53,33 @@ export function repoName(run) {
   );
   const [common, top] = git.stdout.trim().split("\n");
   return git.status !== 0
-    ? path.basename(path.dirname(path.dirname(path.resolve(run))))
+    ? path.basename(path.dirname(explainersDir(run)))
     : path.basename(common) === ".git"
       ? path.basename(path.dirname(common))
       : path.basename(top);
+}
+
+// Copies a run's video, captions and poster from `out` into the videos folder
+// under the repo's name and returns that folder. A part goes into its series'
+// folder, so the numbered parts sit side by side, its poster named after it.
+export function deliver(run, out, slug, videos) {
+  const part = isPart(run)
+    ? JSON.parse(fs.readFileSync(path.join(run, "part.json"), "utf8"))
+    : null;
+  const to = path.join(
+    videos,
+    "explainer-video",
+    repoName(run),
+    part ? part.series : slug,
+  );
+  fs.mkdirSync(to, { recursive: true });
+  for (const [from, as] of [
+    [`${slug}.mp4`, `${slug}.mp4`],
+    [`${slug}.srt`, `${slug}.srt`],
+    ["poster.png", part ? `${slug}.png` : "poster.png"],
+  ])
+    fs.copyFileSync(path.join(out, from), path.join(to, as));
+  return to;
 }
 
 // The video stream's size, frame rate and aspect ratio from ffprobe's answer.

@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { userDirs } from "./paths.mjs";
+import { explainersDir } from "./runfolder.mjs";
 import { skill } from "./tools.mjs";
 import { TECHNIQUES, VISUALS } from "./visuals.mjs";
 
@@ -430,7 +431,7 @@ export function findStyle(run, name, dirs = userDirs()) {
   const own = path.join(run, "style.json");
   const held = fs.existsSync(own) ? parse(own) : null;
   if (held && (!name || held.name === name)) return { profile: held };
-  const list = stores(path.dirname(path.resolve(run)), dirs);
+  const list = stores(explainersDir(run), dirs);
   const want = name ?? defaultStyle(list);
   const file = list
     .map((d) => path.join(d, `${want}.json`))

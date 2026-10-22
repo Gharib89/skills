@@ -6,30 +6,50 @@ import path from "node:path";
 
 const BEGIN = "# explainer-video: begin";
 const END = "# explainer-video: end";
+const REBUILDABLE = [
+  "script.json",
+  "voice.json",
+  "timeline.json",
+  "gates.json",
+  "score.json",
+  "check.json",
+  "support.json",
+  "stills.json",
+  "samples.json",
+  "board/",
+  "storyboard.html",
+  "snapshots/",
+  ".cache/",
+  "composition/",
+  "out/",
+  "style-draft/",
+];
+// A part's run folder, `<run>/parts/<nn>-<title>/`, ignores the same files.
 const BLOCK = `${BEGIN} (each run folder commits its recipe only)
-*/script.json
-*/voice.json
-*/timeline.json
-*/gates.json
-*/score.json
-*/check.json
-*/support.json
-*/stills.json
-*/samples.json
-*/board/
-*/storyboard.html
-*/snapshots/
-*/.cache/
-*/composition/
-*/out/
-*/style-draft/
+${["*/", "*/parts/*/"].flatMap((at) => REBUILDABLE.map((f) => at + f)).join("\n")}
 ${END}
 `;
+
+// A part's run folder is marked by the `part.json` that `parts.mjs start`
+// writes. It is a run folder like any other, its brief and excerpts taken from
+// the run folder two levels up, which holds the source pack.
+export const isPart = (run) => fs.existsSync(path.join(run, "part.json"));
+
+// The `explainers/` folder holding `run`: where the style store and the
+// `.gitignore` are.
+export function explainersDir(run) {
+  const up = (dir, n) => (n ? up(path.dirname(dir), n - 1) : dir);
+  return up(path.resolve(run), isPart(run) ? 3 : 1);
+}
+
+// The run folder holding `run`'s source pack: itself, or a part's parent.
+export const packRun = (run) =>
+  isPart(run) ? path.dirname(path.dirname(path.resolve(run))) : run;
 
 // Writes the skill's block between its markers, leaving every other line of
 // the file as the user wrote it.
 export function writeIgnore(run) {
-  const file = path.join(path.dirname(path.resolve(run)), ".gitignore");
+  const file = path.join(explainersDir(run), ".gitignore");
   const old = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
   const i = old.indexOf(BEGIN);
   const j = old.indexOf(`${END}\n`, i);
