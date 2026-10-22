@@ -63,8 +63,9 @@ export function estimate(scenes, rates, { textured, score = "on" }) {
   const adds = Object.fromEntries(
     scenes.map((s) => [s.id, r1(s.webgl ? s.seconds * rates.live3d : 0)]),
   );
-  const bed = { on: rates.score, "ace-step": rates.aceStep }[score] ?? 0;
-  const flat = rates.base + rates.gates + (textured ? rates.texture : 0) + bed;
+  const scoreRate = { on: rates.score, "ace-step": rates.aceStep }[score] ?? 0;
+  const flat =
+    rates.base + rates.gates + (textured ? rates.texture : 0) + scoreRate;
   const seconds = r1(
     video * flat + Object.values(adds).reduce((n, a) => n + a, 0),
   );

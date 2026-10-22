@@ -9,12 +9,11 @@ The **storyboard** is the run's one stop for the user: one card per scene with
 its narration, a still, its voiced length and style notes, beside the brief
 and the source pack. Ahead of the brief sits the **render estimate**: the
 seconds the first render takes (render, gates and the score the brief asks for,
-the voice being done; a brief asking `ace-step` where the table holds no
-measured rate for it is estimated without a score and the page says `ace-step`
-is not measured), read from `<skill>/render-rates.json` and shown amber above
-the budget of 5 render seconds per video second. A rich card (a `custom` scene
-is one) also shows the seconds it adds. It warns and never refuses. The card
-most in view
+the voice being done), read from `<skill>/render-rates.json` and shown amber
+above the budget of 5 render seconds per video second. A brief asking `ace-step`
+where the table holds no rate for it is estimated without a score, and the page
+says `ace-step` is not measured. A rich card (a `custom` scene is one) also
+shows the seconds it adds. It warns and never refuses. The card most in view
 plays a **live build** (the video's own composition), looping its slot through
 its exit seam; every other card shows its still as a poster. Play plays the
 slot once with its narration.

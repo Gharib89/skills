@@ -97,15 +97,18 @@ function minutes(lengths) {
     fail(e.message);
   }
   const textured = texture.surface !== "flat" || texture.overlays.length > 0;
-  const each = lengths.map(
-    (m) =>
-      estimate([{ id: "all", seconds: m * 60 - HOLD }], rates, {
-        textured,
-        score: brief.score,
-      }).seconds,
+  const each = lengths.map((m) =>
+    estimate([{ id: "all", seconds: m * 60 - HOLD }], rates, {
+      textured,
+      score: brief.score,
+    }),
   );
   const r1 = (s) => Math.round((s / 60) * 10) / 10;
-  return { first: r1(each[0]), all: r1(each.reduce((a, b) => a + b, 0)) };
+  return {
+    first: r1(each[0].seconds),
+    all: r1(each.reduce((n, e) => n + e.seconds, 0)),
+    unmeasured: each[0].unmeasured,
+  };
 }
 
 // The plan's findings, one line each, against the brief and the pack.
@@ -380,6 +383,6 @@ if (cmd === "start") {
     `parts offer: ${num(length)} min is over ${LONG}: ${lengths.length} parts of ${lengths.map(num).join(" + ")} min, or one long video in sections`,
   );
   console.log(
-    `parts estimate: ${lengths.length} parts ${parts.all} min in all, the first after ${parts.first} min; one long video ${long.all} min (render, gates and score, not narration)`,
+    `parts estimate: ${lengths.length} parts ${parts.all} min in all, the first after ${parts.first} min; one long video ${long.all} min (render, gates and score, not narration${long.unmeasured ? "; ace-step is not measured, so its score is left out" : ""})`,
   );
 }
