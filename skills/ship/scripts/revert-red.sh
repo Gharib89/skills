@@ -31,21 +31,22 @@
 # ignoring a leading `./` on either. That checks the command's words, not what
 # it runs: it refuses the command that names no word of <test>, which could go
 # red for another test while the line credits this one.
-# A red that comes from a file the fix added going missing, a `No such file`, a
+# A red whose log names a file the fix added as missing, a `No such file`, a
 # `Cannot find module`, a `No module named` or a like missing-file phrase,
 # proves nothing about the fix: any test that reads the file goes red without
-# it. Such a red is exit 1, red false, so revert a hunk inside the file, or a
-# path the fix changed, instead.
+# it, and the check cannot tell that line from the test's other failures. Such a
+# red is exit 1, red false, so revert a hunk inside the file, or a path the fix
+# changed, instead.
 # stdout: {test, paths, red, command[, fix]}   red: true when the test failed on
-#   the reverted tree for a reason other than a missing file; command: the argv
-#   that ran, `["bash", <test>]` by default; fix: the commit named, where one
-#   was given
+#   the reverted tree and its log names no file the fix added as missing;
+#   command: the argv that ran, `["bash", <test>]` by default; fix: the commit
+#   named, where one was given
 # stderr: the test's last 40 lines when it went red, the evidence it failed (or,
 #   exit 2, when it was already red at HEAD); on a green run, one line saying the
 #   test does not prove the fix
-# exit: 0 the test went red on the reverted tree · 1 it stayed green, or went red
-#       only on a missing file, so it does not prove the fix (the verdict, red
-#       false, is still on stdout) · 2 tooling,
+# exit: 0 the test went red on the reverted tree · 1 it stayed green, or its red
+#       names a file the fix added as missing, so it does not prove the fix (the
+#       verdict, red false, is still on stdout) · 2 tooling,
 #       a bad call, a non-`.sh` test with no command, a command not naming the
 #       test, a test already red at HEAD, or a tree that reached a host, none of
 #       which is a verdict

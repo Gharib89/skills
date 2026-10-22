@@ -241,7 +241,9 @@ warn 31 --from-profile
 check_rc "init still succeeds without --criteria" 0 "$status"
 check "a numbered issue with checkboxes and no --criteria draws a warning naming the flag" yes \
   "$(has 'issue #31 has 2 checkboxes but --criteria was not passed' "$(cat "$tmp/err")")"
-check "the warning says how to pass them" yes "$(has 'run-file init 31 --criteria -' "$(cat "$tmp/err")")"
+check "the warning says to re-run the same init with the flags added" yes \
+  "$(has 'run the same init again with `--criteria -` and `--rebuild` added' "$(cat "$tmp/err")")"
+check "the warning prints no shortened init line to paste" no "$(has 'run-file init 31 --criteria' "$(cat "$tmp/err")")"
 check "stdout is still the one JSON answer" 31 "$(jq -r .id <<<"$out")"
 warn 32 --from-profile --criteria "$tmp/issue-body"
 check "--criteria silences it" "" "$(cat "$tmp/err")"

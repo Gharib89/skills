@@ -22,9 +22,9 @@ self-review's judgment, recorded in the Run file where it helps the summary.
     path has changed since `<sha>` in the working tree, so a fix landed after
     it means proving again; a hand-written `red` is refused.
   - Exit 1 means the test stayed green: it proves nothing, so fix the test. It
-    is also exit 1 when the only failure is a missing file or module the fix
-    added: any test that reads the file goes red without it, so revert a hunk
-    inside the file or a path the fix changed.
+    is also exit 1 when its log names a file or module the fix added as
+    missing, whatever else failed: any test that reads the file goes red
+    without it, so revert a hunk inside the file or a path the fix changed.
   - A fix commit from a self-review round or a phase-7 round is proven alone
     with `--fix <fix commit>`: only that commit's own change to each path is
     taken out, not the merge base's copy, so each of two fix commits is judged
