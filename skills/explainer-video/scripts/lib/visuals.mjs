@@ -10,7 +10,7 @@ import { checkCanvas } from "./canvas.mjs";
 import { checkCustom } from "./custom.mjs";
 import { checkDiagram } from "./diagram.mjs";
 import { checkExcerpt } from "./excerpt.mjs";
-import { digits, numberIn, numbersIn } from "./figures.mjs";
+import { digits, numbersIn } from "./figures.mjs";
 import { shownText } from "./fragment.mjs";
 import { checkStack3d } from "./stack3d.mjs";
 import {
@@ -30,8 +30,6 @@ import {
 // A code frame holds this many lines at 30 px: longer code is a second scene.
 const CODE_LINES = 12;
 export const lines = (code) => code.split("\n");
-
-export { numberIn };
 
 // The techniques a style profile may ban beside the components, each with the
 // components that use it: `draw` strokes arrows on, `kinetic` moves type word
