@@ -24,17 +24,17 @@ handed() {
   sed 's|.*/||' "$fixture/log" | grep '\.test\.mjs$'
 }
 all=$(for f in tests/explainer-video/*.test.mjs; do printf '%s\n' "${f##*/}"; done)
-# What --turn leaves out: the gates and render pipeline files, and the two files
+# What --turn leaves out: the gates and render pipeline files, and the three files
 # that run the real ffmpeg. The rest of the suite runs on the canned backend or
 # on stubs, so a turn costs no other run's quiet window.
-skip='^(gates-.*|render-.*|style-motion-real|backend-concat)\.test\.mjs$'
+skip='^(gates-.*|render-.*|style-motion-real|motion-real|backend-concat)\.test\.mjs$'
 
 check "the bare call hands node every test file" "$all" "$(handed)"
 check "--turn hands it every file but gates, render and the real-ffmpeg ones" \
   "$(printf '%s\n' "$all" | grep -vE "$skip")" "$(handed --turn)"
 
 # Every name in the skip exists, or a rename would put one back on the rung.
-for f in 'gates-*' 'render-*' style-motion-real backend-concat; do
+for f in 'gates-*' 'render-*' style-motion-real motion-real backend-concat; do
   if compgen -G "tests/explainer-video/$f.test.mjs" > /dev/null; then have=0; else have=1; fi
   check_rc "tests/explainer-video/$f.test.mjs exists" 0 "$have"
 done
@@ -71,7 +71,7 @@ check "--list with no files lists the whole --turn set" \
 check "an edited turn test selects itself only" \
   tests/explainer-video/terms.test.mjs "$(sel tests/explainer-video/terms.test.mjs)"
 check "an edited gates, render or real-ffmpeg test selects nothing on the turn rung" "" \
-  "$(sel tests/explainer-video/gates-layout.test.mjs tests/explainer-video/render-core.test.mjs tests/explainer-video/style-motion-real.test.mjs tests/explainer-video/backend-concat.test.mjs)"
+  "$(sel tests/explainer-video/gates-layout.test.mjs tests/explainer-video/render-core.test.mjs tests/explainer-video/style-motion-real.test.mjs tests/explainer-video/motion-real.test.mjs tests/explainer-video/backend-concat.test.mjs)"
 terms=$(sel skills/explainer-video/scripts/lib/terms.mjs)
 check "a source selects the test named for it" 1 \
   "$(printf '%s\n' "$terms" | grep -cx tests/explainer-video/terms.test.mjs)"
@@ -80,7 +80,7 @@ check "a source only the source tests reach selects them alone" \
 tests/explainer-video/source-page.test.mjs
 tests/explainer-video/source-repo.test.mjs" "$(sel skills/explainer-video/scripts/source/pack.mjs)"
 check "a selection never reaches a skipped file" "" \
-  "$(sel skills/explainer-video/scripts/render/render.mjs skills/explainer-video/scripts/style/measure.mjs skills/explainer-video/scripts/lib/backend.mjs | grep -E '/(gates-|render-|style-motion-real|backend-concat)')"
+  "$(sel skills/explainer-video/scripts/render/render.mjs skills/explainer-video/scripts/style/measure.mjs skills/explainer-video/scripts/lib/backend.mjs | grep -E '/(gates-|render-|style-motion-real|motion-real|backend-concat)')"
 check "files are read relative to the caller's directory" "$terms" \
   "$(cd skills/explainer-video && sel scripts/lib/terms.mjs)"
 check "a path through .. names the file it reaches" tests/explainer-video/terms.test.mjs \
