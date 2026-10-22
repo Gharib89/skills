@@ -25,7 +25,7 @@ export function headlessShell(home) {
     ".cache/hyperframes/chrome/chrome-headless-shell",
   );
   const versions = fs.existsSync(root) ? fs.readdirSync(root) : [];
-  // newest first, as HyperFrames reads its own cache
+  // newest first, so a second cached version never hides the one setup just put there
   versions.sort((x, y) => y.localeCompare(x, "en", { numeric: true }));
   for (const v of versions) {
     const bin = path.join(

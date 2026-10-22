@@ -16,9 +16,9 @@
 // match by chance), and the halves split it after `HALF` scenes: the first
 // without the hold, the second with it. A three-section fixture
 // (real-render-sections.mjs) is rendered whole and by section, joined and muxed
-// as render.mjs does. Every render runs through a headless shell with raster
-// flags (real-render-shell.mjs), and a failing determinism row names the
-// differing frames and keeps the renders' frame hash lists (real-render-compare.mjs).
+// as render.mjs does. Renders run through a raster-flag headless shell
+// (real-render-shell.mjs); a failing determinism row names the differing
+// frames and keeps their hash lists (real-render-compare.mjs).
 // stdout: `real-render <check>: pass|fail: <detail>` per check
 // exit:   0 every check passed · 1 a check failed · 2 a tool row is missing
 import { spawnSync } from "node:child_process";
@@ -247,23 +247,21 @@ for (const [name, c, n] of [
   }
 }
 
-const [a, ...others] = ["whole-1", "whole-2", "whole-3"].map((n) =>
-  framemd5(videos[n]),
-);
+const wholes = ["whole-1", "whole-2", "whole-3"];
+const hashLists = wholes.map((n) => framemd5(videos[n]));
+const [a, ...others] = hashLists;
 check(
   "frame grid",
   a.length === whole.frames,
   `${a.length} frames rendered, the composer's grid is ${whole.frames}`,
 );
 const differs = differing(a, others);
-// A failing row keeps the three renders' frame hash lists beside the frames
-// (REAL_RENDER_FRAMES, else the temp folder), for a later comparison.
+// A failing row keeps the renders' hash lists in REAL_RENDER_FRAMES, else the
+// temp folder.
 const kept = differs.every(({ n }) => n === 0)
   ? ""
   : keepHashLists(
-      Object.fromEntries(
-        ["whole-1", "whole-2", "whole-3"].map((n, i) => [n, [a, ...others][i]]),
-      ),
+      Object.fromEntries(wholes.map((n, i) => [n, hashLists[i]])),
       process.env.REAL_RENDER_FRAMES ?? os.tmpdir(),
     ).join(", ");
 check(

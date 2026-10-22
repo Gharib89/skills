@@ -51,6 +51,16 @@ test("the row's detail reads each render's count, its range, and any frames beyo
   );
 });
 
+test("a render that differs only inside the first's frames reads as a range, a single frame as one", () => {
+  assert.equal(
+    describe([
+      { n: 2, at: [1, 3], extra: 0 },
+      { n: 1, at: [2], extra: 0 },
+    ]),
+    "2 (frames 1 to 3) and 1 (frames 2 to 2)",
+  );
+});
+
 test("the frame hash lists are kept in a folder made for them", () => {
   const dir = path.join(
     fs.mkdtempSync(path.join(os.tmpdir(), "compare-test-")),
@@ -61,7 +71,9 @@ test("the frame hash lists are kept in a folder made for them", () => {
     { "whole-1": ["a", "b"], "whole-2": ["a", "B"] },
     dir,
   );
-  assert.equal(files.length, 2);
+  assert.deepEqual(files, [
+    path.join(dir, "real-render-determinism-whole-1.framemd5"),
+    path.join(dir, "real-render-determinism-whole-2.framemd5"),
+  ]);
   assert.equal(fs.readFileSync(files[1], "utf8"), "a\nB");
-  assert.ok(files.every((f) => f.startsWith(dir)));
 });

@@ -29,8 +29,9 @@ export const describe = (diffs) =>
     )
     .join(" and ");
 
-// Writes each render's frame hashes, `{ name: [hash...] }`, to `<dir>/real-render-determinism-<name>.framemd5`
-// (`dir` made if need be); returns the paths.
+// Writes each render's frame hashes, `{ name: [hash...] }`, to
+// `<dir>/real-render-determinism-<name>.framemd5` (`dir` made if need be);
+// returns the paths.
 export function keepHashLists(lists, dir) {
   fs.mkdirSync(dir, { recursive: true });
   return Object.entries(lists).map(([name, hashes]) => {
