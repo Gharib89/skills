@@ -81,6 +81,10 @@ export function seamScript(scope, seam, end, rtl) {
   ].filter(([, x]) => x);
   if (!halves.length) return "";
   const lines = halves.map(([half, x, at], k) => {
+    const n = k ? k + 1 : "";
+    const marks = `tl.addLabel("seam:start${n}", ${at}).addLabel("seam:end${n}", ${+(at + x.duration).toFixed(6)});`;
+    // A travel moves the page's camera, not the scene: it only marks its window.
+    if (!SEAMS[x.move]) return `        ${marks}`;
     const [from, to] = SEAMS[x.move][half](x.blur, x.duration, rtl ? -1 : 1);
     // The entry hides the scene from its first frame and clears what it set,
     // the exit leaves the scene whole until it runs and ends it gone.
@@ -88,9 +92,8 @@ export function seamScript(scope, seam, end, rtl) {
       half === "entry"
         ? { ...to, clearProps: "all" }
         : { ...to, immediateRender: false };
-    const n = k ? k + 1 : "";
     return `        tl.fromTo('${scope} .content', ${JSON.stringify(from)}, ${JSON.stringify(vars)}, ${at});
-        tl.addLabel("seam:start${n}", ${at}).addLabel("seam:end${n}", ${+(at + x.duration).toFixed(6)});`;
+        ${marks}`;
   });
   return `
 ${lines.join("\n")}`;

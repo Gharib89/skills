@@ -35,7 +35,7 @@
     "explainer-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "4eaf681f331592981ecc86478cac940610c52397d306fd6d9ce01092a7f47eea"
+      "computedHash": "2c054efada2dfe61067555f175447ce7c47cd34e28887cf26af08fbebbbe91e7"
     },
     "find-docs": {
       "source": "upstash/context7",
