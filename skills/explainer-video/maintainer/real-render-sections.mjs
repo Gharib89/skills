@@ -74,7 +74,7 @@ const cuesOf = (part, timeline) =>
     };
   });
 
-// `compose(name, part, hold, page)` and `render(comp, out)` are
+// `compose(name, part, hold, { page })` and `render(comp, out)` are
 // real-render.mjs's own; `page(timeline)` adds to the composition's page.
 export async function sectionChecks({
   compose,
@@ -88,24 +88,18 @@ export async function sectionChecks({
     audio,
     cues: cuesOf(part, timeline),
   });
-  const whole = await compose(
-    "sections-whole",
-    SECTIONED,
-    true,
-    extra(SECTIONED, true),
-  );
+  const whole = await compose("sections-whole", SECTIONED, true, {
+    page: extra(SECTIONED, true),
+  });
   const wholeMp4 = path.join(work, "sections-whole.mp4");
   let rendered = await render(whole.comp, wholeMp4);
   const numbers = [...new Set(SECTIONED.map((p) => p.scene.section))];
   const parts = [];
   for (const n of numbers) {
     const part = SECTIONED.filter((p) => p.scene.section === n);
-    const c = await compose(
-      `section-${n}`,
-      part,
-      n === numbers.at(-1),
-      extra(part, false),
-    );
+    const c = await compose(`section-${n}`, part, n === numbers.at(-1), {
+      page: extra(part, false),
+    });
     const mp4 = path.join(work, `section-${n}.mp4`);
     rendered = (await render(c.comp, mp4)) && rendered;
     parts.push({ ...c, mp4 });

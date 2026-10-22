@@ -76,8 +76,8 @@ deck's title).
    `seams.blur` and `seams.duration` too (plain cuts leave those two for you
    to judge). Judge the rest from the frame strips and write
    `explainers/<slug>/style-draft/grammar.json`: one key per field path, from
-   `layout`, `seams.family|duration|blur`, `camera.family|scale|duration`,
-   `type.family|stagger`, `ease`,
+   `layout`, `seams.family|duration|blur|travel`,
+   `camera.family|scale|duration`, `type.family|stagger`, `ease`,
    `texture.surface|overlays|grain|fieldBlur|depthBlur` and `bans` (the
    families and ranges are in [scene-file.md](scene-file.md)'s grammar;
    `texture.overlays` and `bans` take a list). Each takes its value

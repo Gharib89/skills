@@ -26,7 +26,8 @@ import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { plain } from "../lib/count.mjs";
-import { VISUALS, numberIn } from "../lib/visuals.mjs";
+import { numberIn } from "../lib/figures.mjs";
+import { VISUALS } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
 const [run, ...rest] = process.argv.slice(2);

@@ -118,6 +118,7 @@ test("each grammar field is listed with its mark: measured, judged, or default w
     "seams.family",
     "seams.duration",
     "seams.blur",
+    "seams.travel",
     "camera.family",
     "camera.scale",
     "camera.duration",

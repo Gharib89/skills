@@ -123,6 +123,17 @@ test("the agent's judged fields join the draft marked judged", () => {
   assert.equal(loads(file, "talk").grammar.layout, "bands");
 });
 
+test("a judged canvas seams family carries its travel knob, marked judged", () => {
+  const { r, profile } = drafted(null, {
+    "seams.family": { value: "canvas", why: "one map, the camera travelling" },
+    "seams.travel": { value: 1.2, why: "the strips hold each move a second" },
+  });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(profile.grammar.seams.family, "canvas");
+  assert.equal(profile.grammar.seams.travel, 1.2);
+  assert.equal(profile.grammarMarks["seams.travel"].mark, "judged");
+});
+
 test("a draft from screenshots keeps the bundled grammar, and a judged field alone is marked judged", () => {
   const none = drafted(null);
   assert.equal(none.r.status, 0, none.r.stderr);

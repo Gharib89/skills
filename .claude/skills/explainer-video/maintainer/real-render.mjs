@@ -46,6 +46,8 @@ import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
 import { sectionChecks } from "./real-render-sections.mjs";
+import { mapChecks } from "./real-render-map.mjs";
+import { cameraLeftOut } from "./real-render-motion.mjs";
 import { timeChecks } from "./real-render-time.mjs";
 
 const HALF = 1;
@@ -108,7 +110,12 @@ const tone = (seconds) => {
 // returns its frames. The scenes go into `<work>/<name>/` as render.mjs does.
 // `page(scenes)` adds to the video page's options: the sections checks' cues
 // and their video-only parts.
-async function compose(name, part, hold, page = () => ({})) {
+async function compose(
+  name,
+  part,
+  hold,
+  { prof = profile, dir, page = () => ({}) } = {},
+) {
   const run = path.join(work, name);
   const comp = path.join(run, "composition");
   fs.mkdirSync(path.join(comp, "scenes"), { recursive: true });
@@ -138,7 +145,7 @@ async function compose(name, part, hold, page = () => ({})) {
   // steps is a zoom-through, the steps to the merge a cut on a curve.
   const seams = seamPlan(
     part.map((p) => p.scene),
-    profile,
+    prof,
   );
   const scenes = part.map((p, i) => ({
     id: p.scene.id,
@@ -161,7 +168,7 @@ async function compose(name, part, hold, page = () => ({})) {
             .split(/\s+/)
             .map((_, k) => 0.2 + 0.3 * k),
         },
-        profile,
+        prof,
         { backend, seam: seams[i], dir: p.dir },
       ),
     );
@@ -169,13 +176,14 @@ async function compose(name, part, hold, page = () => ({})) {
     path.join(comp, "index.html"),
     videoPage({
       title: "Real render fixture",
-      profile,
+      profile: prof,
       fonts,
       scenes,
       cues: [],
       total: written(grid.total),
       webgl,
       ...page(scenes),
+      dir,
     }),
   );
   return { comp, frames: grid.total, scenes };
@@ -248,9 +256,9 @@ check(
 const raw = await backend.events(whole.comp, { env });
 // A frame of a WebGL scene is seeked on SwiftShader, as the gate does; every
 // other scene's, as before.
-const seek = async (t, n, software = false) => {
+const seek = async (t, n, software = false, comp = whole.comp) => {
   const png = path.join(work, `seam-${t}-${n}.png`);
-  await backend.frame(whole.comp, t, png, { env, software });
+  await backend.frame(comp, t, png, { env, software });
   return fs.readFileSync(png);
 };
 // Each window of `kind` (`seams` or `camera`) in video seconds: its first,
@@ -286,15 +294,20 @@ check(
   `${seams.apart} of ${seams.count * 3} seam frames differ between two seeks, ${seams.still} windows draw no motion, in ${seams.count} windows (${windows} expected)`,
 );
 // Every scene but the rich ones (`ownCamera`) composes a push-in under the
-// default camera: one window each.
+// default camera: one window each. A canvas scene's camera travels to each of
+// its items after the first and then to the overview: one window per item.
 const pushes = FIXTURE.filter(
   (p) => !VISUALS[p.scene.visual.component].ownCamera,
 ).length;
+const tours = FIXTURE.map((p) => p.scene).filter(
+  (s) => s.visual.component === "canvas",
+);
+const travels = tours.reduce((n, s) => n + s.visual.props.items.length, 0);
 const push = await sweep("camera");
 check(
   "camera",
-  push.count === pushes && push.apart === 0 && push.still === 0,
-  `${push.apart} of ${push.count * 3} push-in frames differ between two seeks, ${push.still} windows draw no motion, in ${push.count} windows (${pushes} expected)`,
+  push.count === pushes + travels && push.apart === 0 && push.still === 0,
+  `${push.apart} of ${push.count * 3} camera frames differ between two seeks, ${push.still} windows draw no motion, in ${push.count} windows (${pushes} push-ins and ${travels} canvas travels expected)`,
 );
 
 // A number counts up as a function of time: each stat scene's frame 0.45 s into
@@ -378,6 +391,7 @@ for (const id of [
   ...browsers.map((s) => s.id),
   ...excerpts.map((s) => s.id),
   ...stacks.map((s) => s.id),
+  ...tours.map((s) => s.id),
 ]) {
   const sc = whole.scenes.find((s) => s.id === id);
   const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
@@ -441,6 +455,7 @@ if (process.env.REAL_RENDER_FRAMES)
     ...browsers.map((s) => s.id),
     ...excerpts.map((s) => s.id),
     ...stacks.map((s) => s.id),
+    ...tours.map((s) => s.id),
   ]) {
     const start = whole.scenes.find((s) => s.id === id).start;
     fs.writeFileSync(
@@ -454,11 +469,11 @@ if (process.env.REAL_RENDER_FRAMES)
   }
 
 // What the critic reads of motion, off the real timeline and the real video:
-// every scene's tweens, the push-in's among them and left out of the windows a
-// dead beat is read against, and the hook's seam strip, 6x2 tiles of 320x180.
+// every scene's tweens, the push-in's or the tour's among them and exactly one
+// per camera window left out of what a dead beat is read against (a card the
+// canvas dims over the same window stays in), and the hook's seam strip, 6x2
+// tiles of 320x180.
 const { moves } = sceneEvents(raw, whole.scenes);
-const same = ([a, b], [x, y]) =>
-  Math.abs(a - x) < 1e-3 && Math.abs(b - y) < 1e-3;
 const pushed = whole.scenes.filter((s) => moves[s.id].camera.length);
 const hook = whole.scenes[0];
 const [exit] = moves.hook.seams.filter(
@@ -474,19 +489,22 @@ const size = [stripBytes.readUInt32BE(16), stripBytes.readUInt32BE(20)];
 check(
   "critic motion",
   whole.scenes.every((s) => raw[s.id]?.tweens?.length) &&
-    pushed.length === pushes &&
-    pushed.every(
-      (s) =>
-        raw[s.id].camera.every((c) =>
-          raw[s.id].tweens.some((t) => same(t, c)),
-        ) &&
-        !moves[s.id].tweens.some((t) =>
-          moves[s.id].camera.some((c) => same(t, c)),
-        ),
-    ) &&
+    pushed.length === pushes + tours.length &&
+    pushed.every((s) => cameraLeftOut(raw[s.id], moves[s.id])) &&
     size.join("x") === "1920x360",
-  `${whole.scenes.filter((s) => raw[s.id]?.tweens?.length).length} of ${whole.scenes.length} scenes list their tweens, ${pushed.length} of ${pushes} push-ins left out of them, the hook's seam strip is ${size.join("x")} (1920x360 expected)`,
+  `${whole.scenes.filter((s) => raw[s.id]?.tweens?.length).length} of ${whole.scenes.length} scenes list their tweens, ${pushed.length} of ${pushes + tours.length} camera scenes left out of them, the hook's seam strip is ${size.join("x")} (1920x360 expected)`,
 );
+
+await mapChecks({
+  FIXTURE,
+  profile,
+  work,
+  compose,
+  render,
+  framemd5,
+  seek,
+  check,
+});
 
 const list = path.join(work, "halves.txt");
 fs.writeFileSync(

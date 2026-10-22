@@ -128,6 +128,10 @@ _Avoid_: visual, block, widget, template
 A component that moves the frame itself past the visual grammar's camera: its own camera path, a moving ground, 3D, or kinetic type that moves word by word on the narration. Richness belongs to the component, never to one scene's use of it, and the storyboard marks every scene that shows one.
 _Avoid_: heavy component, advanced visual
 
+**Canvas**:
+Cards on one map under a camera that travels. The `canvas` component is a rich component: one scene's items sit as cards on a map and the camera visits each on its cue, then ends on the overview, so text it carries is judged only once it settles. The `canvas` seams family is the whole video on one map, one scene to a place, with the camera travelling from each scene to the next while the next starts on time. Right to left, the map reads right to left.
+_Avoid_: whiteboard, infinite canvas
+
 **Custom scene**:
 A scene whose on-screen content the agent writes itself instead of taking a component, held by the same hard rules and video gates as every scene. The agent writes a **fragment**, an HTML file beside the scene file holding markup, plain style rules and a timeline script, and the scene names its `intent` and the **cues** the fragment reads by name. Compile holds every fragment to one lint. A custom scene is rich, so its card reads `past the default` and shows its `intent`. Components are tested shortcuts beside it, not a menu it must choose from.
 _Avoid_: freeform scene, escape hatch, bespoke component
@@ -149,7 +153,7 @@ An automated check a run must pass after the storyboard is approved and before t
 _Avoid_: QA, check, local gate
 
 **Seam**:
-How one scene hands over to the next at a cut, as the visual grammar names it (a zoom-through, a cut on a curve, a plain cut); a scene may pick another seam of the same family for its own hand-over. The outgoing scene draws it, running on past its own last moment while the next scene starts on time.
+How one scene hands over to the next at a cut, as the visual grammar names it (a zoom-through, a cut on a curve, a plain cut, or a camera travel under the canvas family); a scene may pick another seam of the same family for its own hand-over. The outgoing scene draws it, running on past its own last moment while the next scene starts on time; a canvas travel is drawn by the page's camera and moves no scene.
 _Avoid_: transition (for the grammar's field), wipe
 
 **Readable**:

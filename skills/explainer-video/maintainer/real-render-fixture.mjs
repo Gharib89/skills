@@ -513,4 +513,49 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
     },
     seconds: 3.4,
   },
+  // Cards on a map the camera tours: it lands on each at its cue (0.2, 1.0 and
+  // 1.8 s here) and ends on the overview, and the same map right to left.
+  {
+    scene: {
+      id: "canvas",
+      role: "point",
+      title: "Canvas",
+      narration: [
+        "The source comes first.",
+        "Then the build runs.",
+        "Then it ships.",
+      ],
+      visual: {
+        component: "canvas",
+        props: {
+          items: [
+            { at: 1, title: "Source", body: "Where the change begins" },
+            { at: 2, title: "Build", body: "Compiled and tested" },
+            { at: 3, title: "Release", body: "Shipped to every user" },
+          ],
+        },
+      },
+    },
+    seconds: 8,
+  },
+  {
+    dir: "rtl",
+    scene: {
+      id: "arabic-canvas",
+      role: "point",
+      title: "الخريطة",
+      narration: ["نبدأ من المصدر.", "بعدين البناء.", "وبعدين الإصدار."],
+      visual: {
+        component: "canvas",
+        props: {
+          items: [
+            { at: 1, title: "المصدر", body: "من هنا يبدأ التغيير" },
+            { at: 2, title: "البناء", body: "تجميع واختبار" },
+            { at: 3, title: "الإصدار", body: "يصل إلى كل مستخدم" },
+          ],
+        },
+      },
+    },
+    seconds: 8,
+  },
 ];

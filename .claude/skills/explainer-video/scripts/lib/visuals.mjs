@@ -6,10 +6,11 @@
 // rendered frames; render/compose.mjs draws each. A cue is lib/props.mjs's.
 
 import { checkBrowser } from "./browser.mjs";
-import { plain } from "./count.mjs";
+import { checkCanvas } from "./canvas.mjs";
 import { checkCustom } from "./custom.mjs";
 import { checkDiagram } from "./diagram.mjs";
 import { checkExcerpt } from "./excerpt.mjs";
+import { digits, numbersIn } from "./figures.mjs";
 import { shownText } from "./fragment.mjs";
 import { checkStack3d } from "./stack3d.mjs";
 import {
@@ -34,11 +35,12 @@ export const lines = (code) => code.split("\n");
 // components that use it: `draw` strokes arrows on, `kinetic` moves type word
 // by word, `3d` draws with WebGL. The texture draws `blur`, not a component: the
 // profile loader checks it there, and the type family `words` the same way for
-// `kinetic`. `camera` is a scene's `camera` key, which compile checks.
+// `kinetic`. `camera` is a scene's `camera` key, which compile checks, and the
+// `canvas` component, whose camera tours its map.
 export const TECHNIQUES = {
   draw: ["flow", "diagram"],
   blur: [],
-  camera: [],
+  camera: ["canvas"],
   kinetic: ["words", "browser"],
   "3d": ["stack3d"],
 };
@@ -92,42 +94,6 @@ export function diff(a, b) {
   return out;
 }
 
-// A number as a source writes it: digits, thousands commas that group by
-// three, an optional decimal part. Its characters are what the script gate
-// finds in an excerpt, and what a count-up ends on.
-// It is written in ASCII, Arabic-Indic (١٢٠٠) or Persian (۱۲۰۰) digits, one
-// script to a number, as an Arabic source writes it.
-const NUMBER = /^(0|[1-9]\d*|[1-9]\d{0,2}(,\d{3})+)(\.\d+)?$/;
-const SCRIPTS = [/[0-9]/, /[٠-٩]/, /[۰-۹]/];
-function digits(name, v) {
-  if (v === undefined) fail(`${name} needs a value per item`);
-  if (
-    typeof v !== "string" ||
-    !NUMBER.test(plain(v)) ||
-    SCRIPTS.filter((s) => s.test(v)).length > 1
-  )
-    fail(
-      `${name} value ${JSON.stringify(v)} is not a number written in digits (1200 or 1,200.5)`,
-    );
-  // What a double keeps exactly: a longer one would count up and size a bar
-  // from a rounded (or infinite) number.
-  if (plain(v).replace(/\D/g, "").length > 15)
-    fail(`${name} value ${JSON.stringify(v)} has more than 15 digits`);
-}
-const DIGIT = "[0-9\\u0660-\\u0669\\u06f0-\\u06f9]";
-const POINT = "[.,\\u066b\\u066c]";
-// Whether `value` stands in `text` as written and whole, never as part of a
-// longer number (200 is not in 1,200 nor 5 in 0.5), in any digit script.
-export const numberIn = (text, value) =>
-  new RegExp(
-    `(?<!${DIGIT})(?<!${DIGIT}${POINT})${value.replace(/\./g, "\\.")}(?!${DIGIT})(?!${POINT}${DIGIT})`,
-  ).test(text);
-// Every number written in `texts` as `numberIn` reads one: digits joined by a
-// point or comma between digits, so `Q3 '21` holds 3 and 21.
-const numbersIn = (texts) =>
-  texts.flatMap(
-    (t) => t?.match(new RegExp(`${DIGIT}+(?:${POINT}${DIGIT}+)*`, "g")) ?? [],
-  );
 // The one item `emphasis` names by the `texts` its component shows for each.
 function emphasis(name, p, said, texts) {
   const e = p.emphasis;
@@ -464,6 +430,19 @@ export const VISUALS = {
       ]),
     ],
   },
+  // Items placed on a map the camera visits in the order written, each on its
+  // cue, ending on the overview of the whole map. Rich like `words`: the
+  // component moves the frame itself.
+  canvas: {
+    props: ["items"],
+    rows: "items",
+    item: [...CUE, "title", "body"],
+    ownCamera: true,
+    check: checkCanvas,
+    items: (p) =>
+      p.items.map((x, i) => [`item ${i + 1}`, x.at, [x.title, x.body], x.on]),
+    numbers: (p) => p.items.flatMap((x) => numbersIn([x.title, x.body])),
+  },
   // Lit layers drawn in 3D with WebGL, each rising on its cue with its label
   // (DOM text over the canvas, so the layout gate judges it). Rich like `words`.
   stack3d: {
@@ -534,7 +513,7 @@ export const VISUALS = {
 export function checkVisual(visual, said, ctx = {}) {
   object(visual, "visual");
   if (visual.seam !== undefined && typeof visual.seam !== "string")
-    fail("seam is not a name like zoom-through, cut-the-curve or cut");
+    fail("seam is not a name like zoom-through, cut-the-curve, travel or cut");
   const v = VISUALS[visual.component];
   if (!v) fail(`unknown component ${visual.component}`);
   if (visual.camera !== undefined) {

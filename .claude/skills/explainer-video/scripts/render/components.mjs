@@ -6,6 +6,7 @@ import { wholeWords } from "../lib/terms.mjs";
 import { diff, lines, readAlong } from "../lib/visuals.mjs";
 import { boxCss, esc, paint, sketchCss, sketched } from "./box.mjs";
 import { browser } from "./browser.mjs";
+import { canvas } from "./canvas.mjs";
 import { custom } from "./custom.mjs";
 import { diagram } from "./diagram.mjs";
 import { excerpt } from "./excerpt.mjs";
@@ -127,6 +128,7 @@ export const COMPONENTS = {
   compare,
   diagram,
   browser,
+  canvas,
   excerpt,
   stack3d,
   custom,

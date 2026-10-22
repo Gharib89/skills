@@ -43,7 +43,8 @@ narrator: am_fenrir
 - **Visual.** One JSON block per scene, one component, required props marked
   `*`. A prop a component does not take is refused at compile, in an item as
   much as at the top. An optional `seam` beside `component` (`zoom-through`,
-  `cut-the-curve` or `cut`) sets the seam out of this scene; with none the
+  `cut-the-curve`, `travel` or `cut`) sets the seam out of this scene; with
+  none the `canvas` family plays `travel`, and otherwise the
   composer picks from the arc: a zoom-through where the next scene's role
   differs (or either has none), a cut on a curve inside a beat. Compile
   refuses a `seam` outside the profile's seams family and `cut`. An optional
@@ -193,6 +194,20 @@ narrator: am_fenrir
     `--browser-gpu`. Rich, so a `camera` key is refused; in an Arabic run the
     labels stand left of their layers. Each number in a `label` is a claim,
     held to a cited excerpt as a timeline's are.
+  - `canvas`: a camera touring items on one map (`items*`, 2 to 6, each `at*`,
+    `on`, `title*`, `body*`). The items sit as cards on a grid, the first one
+    in view; on each later item's cue the camera travels to it and the cards it
+    leaves dim, and once the last item has been read the camera pulls back to
+    the overview. List the items in the order the camera visits them: an item
+    whose cue comes earlier than the previous item's is refused (equal cues
+    pass), and so is, at render, a last item cued so near the scene's end that
+    the pull-back to the overview does not fit (it needs 1.1 s). Rich, so a
+    `camera` key is refused; banning `camera` refuses every `canvas` scene. The
+    layout gate judges only settled text: the item in view once the camera has
+    landed, not text in transit or on a dimmed card. In an Arabic run the tour
+    runs right to left. Not the `canvas` seams family, which maps scenes; this
+    component maps items inside one scene. Each number in a `title` or
+    `body` is a claim, held to a cited excerpt as a timeline's are.
   - `emphasis`, a prop of `cards`, `terminal`, `flow`, `panels`, `list`,
     `code` and `excerpt` (`title` and `codediff` take none): one callout per
     scene, `{ "target*", "at*", "on" }`, drawn as a ring round the target with
@@ -207,25 +222,9 @@ narrator: am_fenrir
 
 ## Sections
 
-A video over 5 minutes must be cut into sections; a shorter one may be. A
-`section` scene opens each group of 2 to 5 `point` scenes, in the arc `hook,
-context, (section, point x 2 to 5)..., recap, end`, and its title becomes the
-video's chapter mark. Its `role: section · <n> s` line takes 6 to 12 s, the
-other scenes 12 to 30 s. Compile numbers every scene's section (`section` in
-`script.json`): hook and context belong to the first section, recap and end to
-the last, and it refuses an opener or a section outside those bounds. The
-script's `arc` and `budget` gates hold them too.
-
-Render cuts the video into its sections, the first starting at the hook, each
-later one at its opener, which is always entered by a plain cut whatever the
-scene before it asks for. Each section renders video only, cached on its own:
-editing one scene re-renders its section and the others come from the cache.
-The parts join by stream copy, and the narration and score are mixed and
-AAC-encoded once on the joined file, which carries one chapter mark per
-section: the first at 0 (the hook and context belong to section 1), each later
-one at its opener's first frame. The gates run on the joined file, and the
-delivery checks add `chapters`. The `render:` line then ends `video <hit>/<n>
-sections cached` in place of `video cached|rendered`.
+A video over 5 minutes is cut into sections, each opened by a `section`
+scene: the rules, the render and the chapter marks are in
+[sections.md](sections.md).
 
 ## Style profiles
 
@@ -248,12 +247,12 @@ the family listed first, so a profile states only where it departs:
 | Field (under `grammar`) | Families (default first) | Knobs |
 | --- | --- | --- |
 | `layout` | `open` (no header band, content from the top down to the captions), `bands` (a header band above the content) | none |
-| `seams` | `velocity` (the outgoing scene draws the seam and runs on past its last moment while the next starts on time: a zoom-through at a beat change, a cut on a curve inside a beat), `cut` (a hard cut) | `duration` 0.2 to 0.4 s (default 0.2, whole frames), `blur` 0 to 24 px (default 18, the zoom-through's peak; the cut on a curve peaks at 4/9 of it) |
+| `seams` | `velocity` (the outgoing scene draws the seam and runs on past its last moment while the next starts on time: a zoom-through at a beat change, a cut on a curve inside a beat), `cut` (a hard cut), `canvas` (the whole video sits on one map, one scene to a place; the camera travels from each scene to the next, and the next scene starts on time; a scene's `seam` is `travel` or `cut`; not the `canvas` component, which maps items inside one scene) | `duration` 0.2 to 0.4 s (default 0.2, whole frames; the `canvas` family uses `travel` instead), `blur` 0 to 24 px (default 18, the zoom-through's peak; the cut on a curve peaks at 4/9 of it; the `canvas` family draws none), `travel` 0.4 to 1.6 s (default 0.8, the `canvas` camera's time between scenes) |
 | `camera` | `push` (one push-in per scene, landing on its camera beat and held to the scene's end), `locked` (no push-in) | `scale` 1.03 to 1.12 (default 1.06, the push-in's end scale), `duration` 0.4 to 1.6 s (default 0.8) |
 | `type` | `words` (a title and its subtitle rise word by word out of a mask, the title resolving out of blur, on `power4` or on `power2` under the `soft` ease; Arabic moves by whole words, an English term inside it one unit), `block` (the whole line enters at once) | `stagger` 0.03 to 0.08 s (default 0.05, between one word and the next) |
 | `ease` | `velocity` (every reveal slides up and fades in on a fast-out ease: `power3` for most, `power4` for a headline, `expo` for list items, arrows and terminal lines), `soft` (every reveal on one `power2` ease), `spring` (a headline lands with one overshoot; panels, cards, frames and flow nodes settle with a soft one; list items, arrows and terminal lines snap) | none |
 | `texture` | `surface`: `glass` (boxes half see-through, blurred behind, over the colour field), `flat`, or `sketch`, which outlines flow steps and panels by hand, seeded per scene and element so a render repeats exactly; `overlays`: a list of `field` (a blurred field in the profile's colours behind the scenes), `grain` (noise at a fixed seed), `vignette` and `depth` (everything but the emphasised item blurs once the emphasis lands), all four by default | `grain` opacity 0 to 0.3, `fieldBlur` 0 to 240 px, `depthBlur` 0 to 24 px |
-| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` and `diagram` on, so banning it refuses every `flow` and `diagram` scene; `blur`, which the texture sets as `fieldBlur` and `depthBlur`, so banning it refuses a profile whose `field` or `depth` overlay has a blur above 0, whose surface is `glass`, whose boxes blur what is behind them (set `flat` or `sketch`), or whose `velocity` seams have a `blur` above 0 (set it to 0 or use the `cut` family); `camera`, the push-in, so banning it draws none and refuses a scene's `camera` key; `kinetic`, per-word type, so banning it plays the `block` family and refuses a profile that names `words` and a scene that names `browser`, whose typed text arrives word by word; `3d`, WebGL, so banning it refuses every `stack3d` scene (banning `stack3d` by name does the same) | none |
+| `bans` | a list of component names (see Visual above) and techniques: `draw`, which strokes the arrows of `flow` and `diagram` on, so banning it refuses every `flow` and `diagram` scene; `blur`, which the texture sets as `fieldBlur` and `depthBlur`, so banning it refuses a profile whose `field` or `depth` overlay has a blur above 0, whose surface is `glass`, whose boxes blur what is behind them (set `flat` or `sketch`), or whose `velocity` seams have a `blur` above 0 (set it to 0 or use the `cut` family); `camera`, the push-in, so banning it draws none and refuses a scene's `camera` key, every `canvas` scene and a profile whose seams family is `canvas`; `kinetic`, per-word type, so banning it plays the `block` family and refuses a profile that names `words` and a scene that names `browser`, whose typed text arrives word by word; `3d`, WebGL, so banning it refuses every `stack3d` scene (banning `stack3d` by name does the same) | none |
 
 A field with knobs is a family name or `{ "family": "cut", "duration": 0.3 }`;
 a field without knobs is a family name; `texture` is an object,
