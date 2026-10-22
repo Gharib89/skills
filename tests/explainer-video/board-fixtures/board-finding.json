@@ -4,6 +4,7 @@
   "title": "How Ship lands a pull request",
   "build": ".cache/board-build/0123456789abcdef.js",
   "narration": ".cache/board-audio/0123456789abcdef.webm",
+  "estimate": { "seconds": 390, "budget": 600, "over": false, "hyperframes": "0.8.169" },
   "brief": [
     {
       "knob": "focus",

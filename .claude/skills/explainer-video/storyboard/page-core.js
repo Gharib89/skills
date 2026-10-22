@@ -256,6 +256,7 @@ function view(S) {
     ${b.banner ? banner(b.banner) : ""}
     ${delivered ? "" : overview(b)}
     ${player(S, b)}
+    ${delivered ? "" : estimatePanel(b)}
     ${briefPanel(S, b)}
     ${sourcesPanel(b)}
     <section class="cards">${cardList(S, b)}</section>
@@ -266,28 +267,6 @@ function shell(S, text) {
 }
 function banner(x) {
   return `<div class="banner panel" role="alert"><b>${esc(x.text)}</b><pre>${x.gates.map(esc).join("\n")}</pre></div>`;
-}
-// The board's first screen: every poster, and how many cards are rich, carry a finding or changed.
-function overview(b) {
-  const n = (f) => b.scenes.filter(f).length;
-  const count = (k, label, v) =>
-    `<span class="tag" data-count="${k}"><b>${v}</b> ${label}</span>`;
-  return `<section class="overview panel" id="overview"><span class="label">Overview</span>
-    <div class="row">${count(
-      "rich",
-      "rich",
-      n((c) => c.rich),
-    )}${count(
-      "finding",
-      "with a finding",
-      n((c) => c.finding),
-    )}${count("changed", "changed", n(needs))}</div>
-    <div class="grid">${b.scenes
-      .map(
-        (c) =>
-          `<a class="thumb${c.finding ? " flagged" : ""}" href="#card-${esc(c.id)}"><img alt="" src="${esc(mediaUrl(c.still))}"><span class="label" dir="auto">${esc(c.title)}</span></a>`,
-      )
-      .join("")}</div></section>`;
 }
 // A stage is the poster, with the live build over it once a frame is mounted.
 const stage = (id, still, frame) =>
@@ -381,6 +360,7 @@ function card(S, b, c) {
   const body = `<div class="chead"><h3 dir="auto">${esc(c.title)}</h3>${c.role ? `<span class="tag">${esc(c.role)}</span>` : ""}<span class="tag">${esc(c.seconds)} s</span><span class="tag ${tagClass}" data-tag="${esc(c.id)}">${tagText}</span></div>
     ${media}
     <span class="style">${esc(c.style)}</span>
+    ${c.adds === undefined ? "" : `<span class="label" data-adds>adds <b>+${esc(c.adds)} s</b> to the render</span>`}
     ${c.intent ? `<p class="intent" dir="auto"><span class="label">Intent</span> ${esc(c.intent)}</p>` : ""}
     ${
       c.finding

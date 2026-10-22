@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.48.0 (2026-10-22)
+
+### Features
+
+- **explainer-video**: Render estimate on the storyboard from a measured rates table
+  ([#927](https://github.com/Gharib89/skills/pull/927),
+  [`708f272`](https://github.com/Gharib89/skills/commit/708f272dd827d625d63022d1bb77d676d2e0391a))
+
+
 ## v0.47.0 (2026-10-21)
 
 ### Features

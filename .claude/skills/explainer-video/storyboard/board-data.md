@@ -42,6 +42,11 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.title` | string | yes | The scene file's title. |
 | `board.build` | string | yes | The live build every card and the animatic play: the video's composition as one `.js` asset, a [media](#media) URL. |
 | `board.narration` | string | yes | The whole narration joined, as audio-only WebM, a media URL. The animatic plays it. |
+| `board.estimate` | object | yes | The first-render estimate, from the rates table `render-rates.json` over the video's seconds (the cards' voiced seconds and the one second the render holds the last frame): the render and the gates, the voice being done and the brief's score not counted (a synthesised score and `ace-step` both add to a first render). A warning, never a refusal. |
+| `board.estimate.seconds` | number | yes | Estimated seconds of the first render, render and gates together. |
+| `board.estimate.budget` | number | yes | The budget in seconds: 5 times the video's seconds, the hold included. |
+| `board.estimate.over` | boolean | yes | Whether `seconds` is above `budget`; the page flags it amber. |
+| `board.estimate.hyperframes` | string | yes | The HyperFrames version the table's rates were measured on. |
 | `board.brief` | array | yes | The brief, one entry per knob and list, in `brief.json` order. |
 | `board.brief[].knob` | string | yes | `focus`, `length`, `audience`, `language`, `style`, `voice`, `aspect`, `score`, `must` or `avoid`. |
 | `board.brief[].value` | string | yes | The value; a list's items joined by `; `. |
@@ -71,6 +76,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.scenes[].narration` | string | yes | The scene file's narration lines for the scene, exactly as written, numbers, `{written\|spoken}` and cites included. |
 | `board.scenes[].style` | string | yes | Style notes: the visual's component (followed by `past the default` for a rich one), the profile and the narrator. |
 | `board.scenes[].rich` | boolean | yes | Whether its visual is a rich component, one that moves the frame itself. The overview counts these. |
+| `board.scenes[].adds` | number | no | The render seconds a `rich` card (a `custom` scene is one) adds over a default one, from the rates table: its voiced seconds at the live 3D rate for a `stack3d` card, 0 for any other. Absent on a card that is not `rich`. |
 | `board.scenes[].intent` | string | no | A custom scene's `intent` line, shown on its card. Other components carry none. |
 | `board.scenes[].recommendation` | `"approve"` or `"revise"` | yes | The agent's recommendation, which the card opens on. See [Recommendation](#recommendation). |
 | `board.scenes[].finding` | string | no | The reds on the card, one per line: what the sampling pass left, then a gate stop's evidence naming the scene. |
