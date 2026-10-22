@@ -8,7 +8,10 @@
 #
 # `--turn` is the harness's turn rung, which has 60 s: it leaves out the files
 # that run the render and gates pipeline once per case, `gates-*` and
-# `render-*`, which together take longer than that. Given changed files,
+# `render-*`, which together take longer than that. It also leaves out the
+# three that run the real ffmpeg, `style-motion-real`, `motion-real` and
+# `backend-concat`, so a turn never takes CPU from a timed render in another
+# session. Given changed files,
 # relative to the caller's directory as the turn rows pass them, it runs only
 # the --turn files they reach. A changed test reaches itself. A changed .mjs or
 # .js reaches every file under the skill or its tests (Markdown aside) whose
@@ -16,8 +19,8 @@
 # runs, a page that loads it; those files' names reach further, to a fixed
 # point. A file that is gone, is neither .mjs nor .js (package.json), or reaches
 # no --turn file selects the whole --turn set rather than nothing; changed
-# gates-* or render-* tests alone select nothing here, the full rung running
-# them. `--list` prints the selection instead of running it.
+# skipped tests alone select nothing here, the full rung running them.
+# `--list` prints the selection instead of running it.
 # The full rung and the local gate run `tests/run.sh`, which passes no flag and
 # so runs every file.
 #
@@ -61,7 +64,10 @@ if [ "${1:-}" = --turn ]; then
   [ "${1:-}" = --list ] && { list=1; shift; }
   kept=()
   for f in "${files[@]}"; do
-    case ${f##*/} in gates-*.test.mjs | render-*.test.mjs) ;; *) kept+=("$f") ;; esac
+    case ${f##*/} in
+      gates-*.test.mjs | render-*.test.mjs | style-motion-real.test.mjs | motion-real.test.mjs | backend-concat.test.mjs) ;;
+      *) kept+=("$f") ;;
+    esac
   done
   files=("${kept[@]}")
   reached='' whole=''
@@ -87,7 +93,7 @@ if [ "${1:-}" = --turn ]; then
   if [ "$#" -gt 0 ] && [ -z "$whole" ]; then
     kept=()
     for f in "${files[@]}"; do holds "$reached" "$f" && kept+=("$f"); done
-    # Only gates-* or render-* tests changed: nothing of theirs runs on this rung.
+    # Only skipped tests changed: nothing of theirs runs on this rung.
     [ "${#kept[@]}" -gt 0 ] || exit 0
     files=("${kept[@]}")
   fi

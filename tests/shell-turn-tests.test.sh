@@ -9,6 +9,11 @@ source tests/lib.sh
 sel() { bash scripts/shell-turn-tests.sh --list "$@" 2>&1; }
 naming() { grep -lF "$1" tests/*.test.sh | sort; }
 
+# The stop hook runs the turn rung under its own CHECK_DEADLINE, and a test's
+# nested `check.sh turn` would answer over-budget once that passes.
+check "a test starts without the hook's CHECK_DEADLINE" "unset" \
+  "$(CHECK_DEADLINE=1 bash -c 'source tests/lib.sh; echo "${CHECK_DEADLINE-unset}"')"
+
 check "an edited test selects itself only" \
   "tests/token-limit.test.sh" "$(sel tests/token-limit.test.sh)"
 check "a script selects the tests naming its basename" \

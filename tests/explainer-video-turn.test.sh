@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The explainer-video member's turn budget. The turn rung has 60 s and the
 # member's whole suite takes longer, so `tests/explainer-video.test.sh --turn` leaves
-# out the render-heavy files and every turn row passes it, with the changed
-# files, so the rung runs only the tests they reach; the bare call, which
+# out the render-heavy and real-ffmpeg files and every turn row passes it, with
+# the changed files, so the rung runs only the tests they reach; the bare call, which
 # `tests/run.sh` makes for the full rung and the local gate, keeps every file.
 # A stub `node` records the files it is handed, so the case runs none.
 set -uo pipefail
@@ -24,15 +24,19 @@ handed() {
   sed 's|.*/||' "$fixture/log" | grep '\.test\.mjs$'
 }
 all=$(for f in tests/explainer-video/*.test.mjs; do printf '%s\n' "${f##*/}"; done)
+# What --turn leaves out: the gates and render pipeline files, and the three files
+# that run the real ffmpeg. The rest of the suite runs on the canned backend or
+# on stubs, so a turn costs no other run's quiet window.
+skip='^(gates-.*|render-.*|style-motion-real|motion-real|backend-concat)\.test\.mjs$'
 
 check "the bare call hands node every test file" "$all" "$(handed)"
-check "--turn hands it every file but gates and render" \
-  "$(printf '%s\n' "$all" | grep -v -e '^gates-.*\.test\.mjs$' -e '^render-.*\.test\.mjs$')" "$(handed --turn)"
+check "--turn hands it every file but gates, render and the real-ffmpeg ones" \
+  "$(printf '%s\n' "$all" | grep -vE "$skip")" "$(handed --turn)"
 
-# Both files named in the skip exist, or a rename would put one back on the rung.
-for f in gates render; do
-  if compgen -G "tests/explainer-video/$f-*.test.mjs" > /dev/null; then have=0; else have=1; fi
-  check_rc "tests/explainer-video/$f-*.test.mjs exist" 0 "$have"
+# Every name in the skip exists, or a rename would put one back on the rung.
+for f in 'gates-*' 'render-*' style-motion-real motion-real backend-concat; do
+  if compgen -G "tests/explainer-video/$f.test.mjs" > /dev/null; then have=0; else have=1; fi
+  check_rc "tests/explainer-video/$f.test.mjs exists" 0 "$have"
 done
 
 # Every turn row that runs the suite passes --turn, so the rung never runs it whole.
@@ -63,11 +67,11 @@ suite=$PWD/tests/explainer-video.test.sh
 sel() { NODE_LOG=/dev/null PATH="$fixture:$PATH" bash "$suite" --turn --list "$@" 2>&1; }
 turn_set=$(sel)
 check "--list with no files lists the whole --turn set" \
-  "$(printf '%s\n' "$all" | grep -v -e '^gates-' -e '^render-' | sed 's|^|tests/explainer-video/|')" "$turn_set"
+  "$(printf '%s\n' "$all" | grep -vE "$skip" | sed 's|^|tests/explainer-video/|')" "$turn_set"
 check "an edited turn test selects itself only" \
   tests/explainer-video/terms.test.mjs "$(sel tests/explainer-video/terms.test.mjs)"
-check "an edited gates or render test selects nothing on the turn rung" \
-  "" "$(sel tests/explainer-video/gates-layout.test.mjs tests/explainer-video/render-core.test.mjs)"
+check "an edited gates, render or real-ffmpeg test selects nothing on the turn rung" "" \
+  "$(sel tests/explainer-video/gates-layout.test.mjs tests/explainer-video/render-core.test.mjs tests/explainer-video/style-motion-real.test.mjs tests/explainer-video/motion-real.test.mjs tests/explainer-video/backend-concat.test.mjs)"
 terms=$(sel skills/explainer-video/scripts/lib/terms.mjs)
 check "a source selects the test named for it" 1 \
   "$(printf '%s\n' "$terms" | grep -cx tests/explainer-video/terms.test.mjs)"
@@ -75,8 +79,8 @@ check "a source only the source tests reach selects them alone" \
   "tests/explainer-video/source-pack.test.mjs
 tests/explainer-video/source-page.test.mjs
 tests/explainer-video/source-repo.test.mjs" "$(sel skills/explainer-video/scripts/source/pack.mjs)"
-check "a selection never reaches a gates or render file" "" \
-  "$(sel skills/explainer-video/scripts/render/render.mjs | grep -e /gates- -e /render-)"
+check "a selection never reaches a skipped file" "" \
+  "$(sel skills/explainer-video/scripts/render/render.mjs skills/explainer-video/scripts/style/measure.mjs skills/explainer-video/scripts/lib/backend.mjs | grep -E '/(gates-|render-|style-motion-real|motion-real|backend-concat)')"
 check "files are read relative to the caller's directory" "$terms" \
   "$(cd skills/explainer-video && sel scripts/lib/terms.mjs)"
 check "a path through .. names the file it reaches" tests/explainer-video/terms.test.mjs \
