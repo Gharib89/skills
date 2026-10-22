@@ -11,10 +11,12 @@
 # given `full`. A process counts by the program it runs, which is its first word
 # or, behind an interpreter or wrapper (`node`, `bash`, `env`, `timeout`, ...),
 # any word after its leading flags, since a flag may take a value (`node -r
-# dotenv/config x.mjs`): an editor or a `grep` that merely names the file is no
-# render. An absolute path may hold spaces, which `ps` does not mark, so a line
-# starting with one is matched whole. Both can over-report, never miss. It reads
-# no roster and runs outside Herdr.
+# dotenv/config x.mjs`). A command that only reads or searches a file (an
+# editor, `grep`, `git`, ...) is no render, even inside a `bash -c` chain: its
+# words up to the next `&&`, `;`, `|` or `eval` are skipped. An absolute path
+# may hold spaces, which `ps` does not mark, so a line starting with one is
+# matched whole. These widenings can over-report, never miss a render run by an
+# unlisted program. It reads no roster and runs outside Herdr.
 #
 # stdout: {running: []} when nothing runs; else {error, running}, `running`
 #         one {pid, name} per process in table order, `name` one of
@@ -55,13 +57,25 @@ running=$(awk '
     if (rest ~ /^\/(.*\/)?check\.sh full( |$)/) return "check.sh full"
     return ""
   }
-  BEGIN { n = split("node bash sh zsh npx bunx bun pnpm tsx python python3 uv env nohup timeout nice setsid time sudo xvfb-run", w, " "); for (i = 1; i <= n; i++) interpreter[w[i]] = 1 }
+  BEGIN {
+    n = split("node bash sh zsh npx bunx bun pnpm tsx python python3 uv env nohup timeout nice setsid time sudo xvfb-run", w, " ")
+    for (i = 1; i <= n; i++) interpreter[w[i]] = 1
+    # Programs that read or search a file and never run it.
+    n = split("grep egrep fgrep rg ag ack vim vi nvim nano emacs less more cat bat head tail sed awk ls find git code stat file diff wc", w, " ")
+    for (i = 1; i <= n; i++) viewer[w[i]] = 1
+  }
   {
     i = 2; last = 2
     if (base($2) in interpreter) { i = 3; last = NF; while (i <= NF && $i ~ /^-/) i++ }
-    k = ""
-    for (m = i; k == "" && m <= last; m++) k = kind($m, $(m + 1))
-    if (k == "") {
+    # A shell call chains commands (source snap, then eval of a grep): the words
+    # after a viewer, up to the next separator, are its arguments.
+    k = ""; seg = 1; skip = 0
+    for (m = i; k == "" && m <= last; m++) {
+      if (strip($m) ~ /^(&&|\|\||;|\||eval)$/) { seg = 1; skip = 0; continue }
+      if (seg) { seg = 0; skip = (base($m) in viewer) }
+      if (!skip) k = kind($m, $(m + 1))
+    }
+    if (k == "" && !(base($i) in viewer)) {
       rest = $i
       for (j = i + 1; j <= NF; j++) rest = rest " " $j
       k = abskind(rest)

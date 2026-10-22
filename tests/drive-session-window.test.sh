@@ -36,6 +36,9 @@ noise=(
   " 904 node skills/explainer-video/maintainer/real-render.test.mjs"
   " 905 grep -r hyperframes skills"
   " 906 node -r dotenv/config skills/explainer-video/maintainer/real-render.test.mjs"
+  " 907 /bin/bash -c source /tmp/snap.sh && eval 'grep -rn real-render.mjs skills'"
+  " 908 /bin/zsh -c source /tmp/snap.sh && eval 'git log -S hyperframes | head' < /dev/null"
+  " 909 bash -c vim skills/explainer-video/maintainer/calibrate-rates.mjs"
 )
 
 window "${noise[@]}"
@@ -67,6 +70,8 @@ running=(
   "a render behind env|4101 env FOO=1 node skills/explainer-video/maintainer/real-render.mjs|real-render"
   "a full check behind timeout|4101 timeout 600 bash scripts/check.sh full|check.sh full"
   "a calibration behind nohup|4101 nohup node skills/explainer-video/maintainer/calibrate-rates.mjs|calibrate"
+  "a render a Claude Code shell call runs|4101 /bin/bash -c source /tmp/snap.sh && eval 'node skills/explainer-video/maintainer/real-render.mjs' < /dev/null|real-render"
+  "a render after a grep in the same shell call|4101 /bin/bash -c grep -c x f && node skills/explainer-video/maintainer/real-render.mjs|real-render"
   "a render run from a path with a space|4101 node /tmp/window space/real-render.mjs|real-render"
   "a calibration run from a path with a space|4101 /usr/bin/node /tmp/my skills/calibrate-rates.mjs|calibrate"
   "a hyperframes render run from a path with a space|4101 node /tmp/my cache/node_modules/hyperframes/bin/hyperframes.mjs render|hyperframes"
