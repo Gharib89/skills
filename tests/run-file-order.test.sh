@@ -11,7 +11,7 @@ m=skills/ship/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
-usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | gate summary <pr> | timing | prove <test> <path>... <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
+usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | gate summary <pr> | timing | ran <name>... <where> | prove <test> <path>... [--fix <commit>] <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
 
 out()  { bash "$m" "$@" 2>/dev/null; }
 err()  { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }
@@ -239,5 +239,22 @@ y=$(out init 706 --scratchpad "$tmp" --state 0=done --state 1=done --state 2=ope
 check "open 4 while 2 is open stays refused" \
   "phase 2 is open; close it before opening 4" "$(err open 4 --file "$y")"
 
+# --- skip keeps the gate's order (#933) -----------------------------------------
+
+# `open` and `close` already hold rows 5 to 8 behind phase 3; `skip` was the way
+# round that, so a phase 3 still running could be stepped over.
+y=$(out init 707 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done --state 3=open | jq -r .run_file)
+held=$(cat "$y")
+for n in 5 6 7 8; do
+  check "skip $n while phase 3 is open names phase 3" \
+    "phase 3 is open; close it before skipping $n" "$(err skip "$n" 'small lane' --file "$y")"
+  check_rc "skip $n while phase 3 is open exits 1" 1 "$(rc skip "$n" 'small lane' --file "$y")"
+done
+check "the refused skips wrote nothing" "$held" "$(cat "$y")"
+out open 4 --file "$y" >/dev/null
+check "skip 5 while 3 and 4 are open still names phase 3" \
+  "phase 3 is open; close it before skipping 5" "$(err skip 5 'small lane' --file "$y")"
+y=$(out init 708 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done --state 3=done --state 4=done | jq -r .run_file)
+check_rc "skip 5 once phase 3 is closed is admitted" 0 "$(rc skip 5 'small lane' --file "$y")"
 
 finish

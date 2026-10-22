@@ -167,6 +167,54 @@ check "the refusal says what --head takes" '--head takes a full or abbreviated c
 check "--head on another phase is refused" '--head belongs to close 3' "$(inerr "$repo" close 4 --file "$rg" --head 0123abcd)"
 check "the refused heads changed nothing" "$was" "$(cat "$rg")"
 
+# A result written after the head moved names the head the verification ran at,
+# when `ran` marked it (#933): the stamp the gate weighs is that head, not the
+# one the record happened to be written on.
+rh=$(at "$repo" init 27 --verifications 'github-mechanics, ado-mechanics' | jq -r .run_file)
+at "$repo" close 0 --file "$rh" >/dev/null
+for p in 1 2; do at "$repo" open "$p" --file "$rh" >/dev/null; at "$repo" close "$p" --file "$rh" >/dev/null; done
+at "$repo" open 3 --file "$rh" >/dev/null
+ranat=$(g rev-parse HEAD)
+r=$(at "$repo" ran github-mechanics --file "$rh")
+check "ran answers the head it marked" "{\"run_file\":\"$rh\",\"ran\":[{\"name\":\"github-mechanics\",\"head\":\"$ranat\"}]}" "$(jq -c . <<<"$r")"
+check "ran writes one line under ## Evidence" "Ran: github-mechanics at $ranat" "$(sed -n '/^## Evidence$/,$p' "$rh" | grep '^Ran: ')"
+g commit -q --allow-empty -m two
+moved=$(g rev-parse HEAD)
+at "$repo" close 3 --file "$rh" --result github-mechanics=pass --result ado-mechanics=n/a >/dev/null
+check "the result carries the head the verification ran at, not the head recorded on" \
+  "- github-mechanics: pass at $ranat" "$(grep '^- github-mechanics: ' "$rh")"
+check "a result no ran marked is stamped with HEAD as before" \
+  "- ado-mechanics: n/a at $moved" "$(grep '^- ado-mechanics: ' "$rh")"
+at "$repo" open 3 --file "$rh" >/dev/null
+at "$repo" ran github-mechanics --file "$rh" >/dev/null
+check "a later ran for the same name replaces the earlier one" \
+  "- github-mechanics: pass at $moved" "$(at "$repo" close 3 --file "$rh" --result github-mechanics=pass >/dev/null; grep '^- github-mechanics: ' "$rh")"
+at "$repo" open 3 --file "$rh" >/dev/null
+g commit -q --allow-empty -m three
+at "$repo" close 3 --file "$rh" --result github-mechanics=pass --head 0123abcd >/dev/null
+check "an explicit --head outranks a ran line" "- github-mechanics: pass at 0123abcd" "$(grep '^- github-mechanics: ' "$rh")"
+at "$repo" open 3 --file "$rh" >/dev/null
+printf '%s\n' 'Ran: github-mechanics at not-a-sha' >> "$rh"
+head_now=$(g rev-parse HEAD)
+at "$repo" close 3 --file "$rh" --result github-mechanics=pass >/dev/null
+check "a hand-written Ran line holding no sha is not read: HEAD is stamped" \
+  "- github-mechanics: pass at $head_now" "$(grep '^- github-mechanics: ' "$rh")"
+was=$(cat "$rh")
+check_rc "ran for a name no results section knows is malformed" 2 "$(inrc "$repo" ran nope --file "$rh")"
+check_rc "ran with no name is malformed" 2 "$(inrc "$repo" ran --file "$rh")"
+check_rc "ran refuses --head, which belongs to close 3" 2 "$(inrc "$repo" ran github-mechanics --head 0123abcd --file "$rh")"
+check "a refused ran changed nothing" "$was" "$(cat "$rh")"
+
+# A verification name may begin with `--`: only the flags <where> reads end the names.
+rd=$(at "$repo" init 29 --verifications 'dashed, github-mechanics' | jq -r .run_file)
+# The profile route (--from-profile) is what brings such a name in; the flag refuses a leading dash.
+sed -i 's/^- dashed:/- --dashed:/' "$rd"
+at "$repo" close 0 --file "$rd" >/dev/null
+for p in 1 2; do at "$repo" open "$p" --file "$rd" >/dev/null; at "$repo" close "$p" --file "$rd" >/dev/null; done
+at "$repo" open 3 --file "$rd" >/dev/null
+dashat=$(g rev-parse HEAD)
+check "ran takes a name that begins with --" "Ran: --dashed at $dashat" "$(at "$repo" ran --dashed --file "$rd" >/dev/null; sed -n '/^## Evidence$/,$p' "$rd" | grep '^Ran: ')"
+
 # No verification named: close 3 needs no result, and --result has no name to take.
 rn=$(at "$repo" init 25 | jq -r .run_file)
 at "$repo" close 0 --file "$rn" >/dev/null

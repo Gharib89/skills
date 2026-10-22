@@ -81,10 +81,8 @@ err_of() { (cd "$repo" && bash "$script" "$@" 2>&1 >/dev/null | cat); }
 check_rc "a test that goes red on the revert exits 0" \
   0 "$(rc_of tests/answer.test.sh lib.sh)"
 check "no temp directory remains after a red run" "" "$(ls -A "$TMPDIR")"
-check_rc "a file the fix added is removed by the revert" \
-  0 "$(rc_of tests/extra.test.sh extra.sh)"
 check_rc "several paths are reverted together" \
-  0 "$(rc_of tests/extra.test.sh lib.sh extra.sh)"
+  0 "$(rc_of tests/answer.test.sh lib.sh extra.sh)"
 check_rc "a test that stays green on the revert exits 1" \
   1 "$(rc_of tests/unrelated.test.sh lib.sh)"
 check "no temp directory remains after a green run" "" "$(ls -A "$TMPDIR")"
@@ -97,8 +95,37 @@ check "a red test says so in one JSON verdict" \
   '{"test":"tests/answer.test.sh","paths":["lib.sh"],"red":true,"command":["bash","tests/answer.test.sh"]}' \
   "$(out_of tests/answer.test.sh lib.sh | jq -c .)"
 check "a verdict lists every path reverted, in order" \
-  '{"test":"tests/extra.test.sh","paths":["lib.sh","extra.sh"],"red":true,"command":["bash","tests/extra.test.sh"]}' \
-  "$(out_of tests/extra.test.sh lib.sh extra.sh | jq -c .)"
+  '{"test":"tests/answer.test.sh","paths":["lib.sh","extra.sh"],"red":true,"command":["bash","tests/answer.test.sh"]}' \
+  "$(out_of tests/answer.test.sh lib.sh extra.sh | jq -c .)"
+
+# A red that comes only from a file the fix added going missing says nothing about
+# the fix's behaviour: any test that reads the file goes red without it (#933).
+check_rc "a test red only because the file the fix added is gone exits 1" \
+  1 "$(rc_of tests/extra.test.sh extra.sh)"
+check "its verdict says red false" \
+  '{"test":"tests/extra.test.sh","paths":["extra.sh"],"red":false,"command":["bash","tests/extra.test.sh"]}' \
+  "$(out_of tests/extra.test.sh extra.sh | jq -c .)"
+check "and the refusal names the missing file" \
+  "revert-red: tests/extra.test.sh goes red with extra.sh reverted, but its error names extra.sh as missing, which says nothing about the fix's behaviour: revert a hunk inside it, or a path the fix changed and the test reads." \
+  "$(err_of tests/extra.test.sh extra.sh | tail -n 1)"
+check_rc "a refused red with another path reverted beside the file is refused too" \
+  1 "$(rc_of tests/extra.test.sh lib.sh extra.sh)"
+check_rc "an added file the test never reads does not refuse its red" \
+  0 "$(rc_of tests/answer.test.sh lib.sh extra.sh)"
+check "no temp directory remains after a refused run" "" "$(ls -A "$TMPDIR")"
+printf '%s\n' 'import sys' 'sys.path.insert(0, ".")' 'import extramod' 'sys.exit(0)' > "$repo/tests/modcheck.py"
+printf '%s\n' 'x = 1' > "$repo/extramod.py"
+git -C "$repo" add -A && git -C "$repo" commit -qm 'a module the fix adds'
+check_rc "a module the command's own error names missing is refused" \
+  1 "$(rc_of tests/modcheck.py extramod.py -- python3 tests/modcheck.py)"
+# An error naming some other missing file is no reason to refuse the red, and a
+# dotfile, which has no stem, must not match on the quotes alone.
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source lib.sh' \
+  '[ "$(answer)" = 2 ] || { echo "cat: '"'"'sub/'"'"': No such file or directory"; exit 1; }' > "$repo/tests/othermiss.test.sh"
+echo 'x=1' > "$repo/.hidden"
+git -C "$repo" add -A && git -C "$repo" commit -qm 'a dotfile the fix adds'
+check_rc "a red naming another missing file proves the fix" \
+  0 "$(rc_of tests/othermiss.test.sh lib.sh .hidden)"
 check "a green test says red false" \
   '{"test":"tests/unrelated.test.sh","paths":["lib.sh"],"red":false,"command":["bash","tests/unrelated.test.sh"]}' \
   "$(out_of tests/unrelated.test.sh lib.sh | jq -c .)"
@@ -198,7 +225,7 @@ check_rc "a -- with no command is a usage error" \
 check_rc "an empty first word is a usage error even where a later word names the test" \
   2 "$(rc_of tests/answer_check.py lib.sh -- '' tests/answer_check.py)"
 check "and it answers the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" \
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" \
   "$(out_of tests/answer_check.py lib.sh -- '' tests/answer_check.py | jq -r .error)"
 check_rc "a -- with no path before it is a usage error" \
   2 "$(rc_of tests/answer_check.py -- python3 tests/answer_check.py)"
@@ -215,16 +242,16 @@ check "the fixture's own tree is untouched" \
 help=$(cd "$T" && bash "$script" --help 2>"$T/err"); rc=$?
 check_rc "--help exits 0 from a directory that is no repository" 0 "$rc"
 check "--help opens with the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" "$(sed -n 1p <<<"$help")"
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" "$(sed -n 1p <<<"$help")"
 check "--help names its stdout fields next" "stdout:" "$(sed -n 2p <<<"$help" | cut -c1-7)"
 check "--help writes nothing on stderr" "" "$(cat "$T/err")"
 
 # Exit 1 means the test proved nothing, so a malformed call must not share it.
 check_rc "no arguments is a usage error" 2 "$(rc_of)"
 check "a bad call prints one JSON object carrying the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" "$(out_of | jq -r .error)"
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" "$(out_of | jq -r .error)"
 check "a flag where the test belongs is refused with the usage line" \
-  "usage: revert-red <test> <path>... [-- <command>...]" "$(out_of --x lib.sh | jq -r .error)"
+  "usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]" "$(out_of --x lib.sh | jq -r .error)"
 check_rc "a test with no path is a usage error" 2 "$(rc_of tests/answer.test.sh)"
 # A test file bash cannot open exits non-zero, which would read as red.
 check_rc "a test missing at HEAD is refused, not read as red" \

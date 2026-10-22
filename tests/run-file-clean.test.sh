@@ -94,7 +94,7 @@ base; change_ci '.checks += [{name:"unlisted",status:"failure"}]'; clean 'non-le
 for status in fail unavailable unexercised pending; do
   base; change_run "s/punctuation: pass at abcdef0123456789/punctuation: $status/"; held "$status verification" "verification live check: punctuation: $status"
 done
-base; change_run '/^- live check/d'; held 'missing verification' 'verification live check: punctuation: missing'
+base; change_run '/^- live check/d'; held 'missing verification' 'verification live check: punctuation: missing; record it with `run-file close 3 --result "live check: punctuation=<word>"`'
 base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: n\/a/'; clean 'inapplicable verification'
 base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: deferred-to-ci: test/'; clean 'deferred verification with green associated leg'
 base; change_run 's/punctuation: pass at abcdef0123456789/punctuation: deferred-to-ci: test/'; sed 's/Also proven by CI: test/Also proven by CI: None./' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; held 'deferred verification without association' 'verification live check: punctuation: no associated green CI leg'

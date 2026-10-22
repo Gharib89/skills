@@ -264,11 +264,19 @@ $results
 EORESULTS
 }
 record_results() {
-  local r text
+  local r text at ran
   while IFS= read -r r; do
     [ -n "$r" ] || continue
     parse_result "$r"
-    text="$rword at $head"; [ -z "$rnote" ] || text="$text: $rnote"
+    # The head the verification ran at, where `ran` marked it, outranks the head
+    # the record is written on; a `--head` is the caller's own word and outranks
+    # both (#933).
+    at=$head
+    if [ -z "$head_given" ]; then
+      ran=$(rests "Ran: $rname at " | tail -n 1)
+      [[ $ran =~ ^[0-9a-f]{7,64}$ ]] && at=$ran
+    fi
+    text="$rword at $at"; [ -z "$rnote" ] || text="$text: $rnote"
     if [ "$radd" = true ]; then
       # After the section's last line, or a new section at the end when init
       # named no Verification and so wrote none.

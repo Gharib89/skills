@@ -70,7 +70,8 @@ contract.
 | `file-issue` | 2, 4, 7; 9 with `--repo`, per Ship defect draft, on the human's word |
 | `dropped-lines` | 4, the removed blocks with no new home, for the self-review to weigh |
 | `revert-red` | 4, a new test run with its fix reverted, through `run-file prove` |
-| `run-file prove` | 4, per test file the diff adds or changes, writing its red `Reverted-fix:` line |
+| `run-file prove` | 4, per test file the diff adds or changes, writing its red `Reverted-fix:` line; 7, a review fix with `--fix <commit>` |
+| `run-file ran` | 3, per verification as its `Run:` line ends, stamping the head it ran at |
 | `run-file probe` | 4, a decline's claim, run and recorded as a `Probe:` line |
 | `run-file call` | any phase, before each direct call, writing its `## Direct calls` line |
 | `run-file note` | any phase, for each attested line (`Round:`, `Stop:`, `Past-cap:`, `Criterion`, `Noted:`, `Filed:`), one line each, appended under its section |
