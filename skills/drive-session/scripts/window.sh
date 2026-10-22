@@ -9,12 +9,12 @@
 # Reads the process table once and names each process it holds: a
 # `real-render*` script, `hyperframes`, a `calibrate*` script, or `check.sh`
 # given `full`. A process counts by the program it runs, which is its first word
-# or, behind an interpreter (`node`, `bash`, `npx`, ...), any word after its
-# leading flags, since a flag may take a value (`node -r dotenv/config x.mjs`):
-# an editor or a `grep` that merely names the file is no render. An absolute
-# path may hold spaces, which `ps` does not mark, so a line starting with one is
-# matched whole. Both can over-report, never miss. It reads no roster and runs
-# outside Herdr.
+# or, behind an interpreter or wrapper (`node`, `bash`, `env`, `timeout`, ...),
+# any word after its leading flags, since a flag may take a value (`node -r
+# dotenv/config x.mjs`): an editor or a `grep` that merely names the file is no
+# render. An absolute path may hold spaces, which `ps` does not mark, so a line
+# starting with one is matched whole. Both can over-report, never miss. It reads
+# no roster and runs outside Herdr.
 #
 # stdout: {running: []} when nothing runs; else {error, running}, `running`
 #         one {pid, name} per process in table order, `name` one of
@@ -55,7 +55,7 @@ running=$(awk '
     if (rest ~ /^\/(.*\/)?check\.sh full( |$)/) return "check.sh full"
     return ""
   }
-  BEGIN { n = split("node bash sh zsh npx bunx bun pnpm tsx python python3 uv", w, " "); for (i = 1; i <= n; i++) interpreter[w[i]] = 1 }
+  BEGIN { n = split("node bash sh zsh npx bunx bun pnpm tsx python python3 uv env nohup timeout nice setsid time sudo xvfb-run", w, " "); for (i = 1; i <= n; i++) interpreter[w[i]] = 1 }
   {
     i = 2; last = 2
     if (base($2) in interpreter) { i = 3; last = NF; while (i <= NF && $i ~ /^-/) i++ }
