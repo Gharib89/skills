@@ -15,10 +15,12 @@ const CURVE_BLUR = 4 / 9;
 // (`visual.seam`), else read off the arc: a zoom-through where the next scene
 // opens another beat (its role differs), a cut on a curve inside a beat (the
 // same role). A seam carries its whole `frames` and `duration` in seconds,
-// written as the frame grid writes it, and its peak `blur` in px.
+// written as the frame grid writes it, and its peak `blur` in px. The `canvas`
+// family has one move, the camera's travel to the next scene's place on the
+// map, as long as its `travel` knob and never blurred.
 export function seamPlan(scenes, profile) {
   const { seams } = grammar(profile);
-  const n = frames(seams.duration);
+  const n = frames(seams.family === "canvas" ? seams.travel : seams.duration);
   const out = scenes.map((s, i) => {
     const next = scenes[i + 1];
     if (!next) return null;
@@ -26,14 +28,18 @@ export function seamPlan(scenes, profile) {
       s.visual.seam ??
       (seams.family === "cut"
         ? "cut"
-        : s.role && s.role === next.role
-          ? "cut-the-curve"
-          : "zoom-through");
+        : seams.family === "canvas"
+          ? "travel"
+          : s.role && s.role === next.role
+            ? "cut-the-curve"
+            : "zoom-through");
     if (move === "cut") return null;
     const blur =
-      move === "zoom-through"
-        ? seams.blur
-        : Math.round(seams.blur * CURVE_BLUR);
+      move === "travel"
+        ? 0
+        : move === "zoom-through"
+          ? seams.blur
+          : Math.round(seams.blur * CURVE_BLUR);
     return { move, frames: n, duration: written(n), blur };
   });
   return out.map((o, i) => ({ out: o, in: out[i - 1] ?? null }));

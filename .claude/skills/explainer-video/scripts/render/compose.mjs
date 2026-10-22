@@ -5,12 +5,14 @@
 // from the style profile as CSS custom properties; every font is a file beside
 // the page.
 import { COUNT_SECONDS } from "../lib/count.mjs";
-import { ARABIC, blursDepth, grammar, scale } from "../lib/style.mjs";
+import { blursDepth, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { VISUALS, cameraCue, cueWord } from "../lib/visuals.mjs";
 import { COMPONENTS, ITEMS, esc, seed } from "./components.mjs";
+import { faces, family } from "./faces.mjs";
 import { fragmentScript } from "./fragment-script.mjs";
+import { places, travels } from "./map.mjs";
 import { pushScript, seamScript } from "./seam-script.mjs";
 import { texture } from "./texture.mjs";
 import { RISE, countScript, play } from "./tween-script.mjs";
@@ -48,47 +50,6 @@ const sprung = (cls) => {
   const to = { opacity: 1, y: 0, ...(scale < 1 && { scale: 1 }) };
   return [from, { ...to, duration: settleTime(SPRING[cls]) }];
 };
-
-const family = (profile, role) => `"${profile.type[role].font}"`;
-const weight = (profile, role) => profile.type[role].weight ?? 400;
-
-// Right to left, the least line height a role's lines take: Arabic marks reach
-// further above and below than Latin ones (the owner's pick, #686).
-const AR_LH = { title: 1.5, text: 1.6, caption: 1.7 };
-
-// The faces and text helpers a scene draws with. Right to left, titles and
-// text take the Arabic roles, the Latin face behind each for a stray Latin
-// glyph, and every Latin run (an English term, a number) is an isolated
-// `<bdi>` set in the profile's Latin face and kept on one line.
-export function faces(profile, dir = "ltr") {
-  const rtl = dir === "rtl";
-  const stack = (r) =>
-    rtl
-      ? `${family(profile, ARABIC[r])}, ${family(profile, r)}`
-      : family(profile, r);
-  const wrap = (cls) => (s) =>
-    rtl
-      ? splitLatin(String(s))
-          .map((p, i) =>
-            i % 2 ? `<bdi class="${cls}">${esc(p)}</bdi>` : esc(p),
-          )
-          .join("")
-      : esc(s);
-  return {
-    rtl,
-    text: stack("text"),
-    title: stack("title"),
-    titleWeight: weight(profile, rtl ? ARABIC.title : "title"),
-    code: family(profile, "code"),
-    // A card's or a flow step's note: the code face, which draws no Arabic.
-    note: rtl ? stack("text") : family(profile, "code"),
-    t: wrap("lat"),
-    tt: wrap("lat ti"),
-    lh: (v, role) => (rtl ? Math.max(v, AR_LH[role]) : v),
-    // Spacing letters apart breaks the joins of Arabic script.
-    ls: (v) => (rtl ? "0" : v),
-  };
-}
 
 // A scene's sub-composition: its timeline reveals each piece as the sentence
 // naming it starts, every tween on that paused timeline, so a frame renders the
@@ -146,8 +107,10 @@ async function sceneParts(
     // tweens depend on the gap between two cues or on the time left.
     time: t,
     end: timing.duration,
-    // The content box, for a component the composer lays out itself.
+    // The content box, for a component the composer lays out itself, and the
+    // frame's width, for one that runs off the frame's sides.
     box,
+    frameWidth: W,
     // The scene's selector scope and the seconds its template runs (its slot),
     // for a component whose own script draws on the paused timeline `tl`.
     scope: `[data-composition-id="${id}"]`,
@@ -377,10 +340,20 @@ export function videoPage({
   // A scene is mounted for its slot: it runs on past its own duration into its
   // seam, over the next scene's start; clips on one track may overlap, the
   // later one layering above (measured: a real render of that overlap passes).
+  // Under the `canvas` seams family the scenes sit on one map in a `#world`
+  // layer the page's camera moves over (render/map.mjs).
+  const mapped = grammar(profile).seams.family === "canvas";
+  const at = mapped
+    ? places(scenes.length, { width: W, height: H }, f.rtl)
+    : [];
+  const place = (i) =>
+    mapped
+      ? ` style="inset: auto; left: ${at[i].left}px; top: ${at[i].top}px; width: ${W}px; height: ${H}px;"`
+      : "";
   const hosts = scenes
     .map(
-      (s) =>
-        `      <div id="scene-${s.id}" class="clip" data-composition-id="${s.id}" data-composition-src="scenes/${s.id}.html" data-start="${s.start}" data-duration="${s.slot ?? s.duration}" data-track-index="1"></div>`,
+      (s, i) =>
+        `      <div id="scene-${s.id}" class="clip" data-composition-id="${s.id}" data-composition-src="scenes/${s.id}.html" data-start="${s.start}" data-duration="${s.slot ?? s.duration}" data-track-index="1"${place(i)}></div>`,
     )
     .join("\n");
   const captions = cues
@@ -400,7 +373,7 @@ export function videoPage({
     dir,
     three: webgl,
     duration: total,
-    body: `${hosts}
+    body: `${mapped ? `      <div id="world" style="position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px;">\n${hosts}\n      </div>` : hosts}
       <div class="captions">
         ${captions}
       </div>
@@ -409,7 +382,7 @@ export function videoPage({
         const tl = gsap.timeline({ paused: true });
         document.querySelectorAll("#root .cue .w").forEach((w) =>
           tl.set(w, { color: "${profile.colors.text}" }, +w.dataset.at),
-        );
+        );${mapped ? `\n        ${travels(scenes, at)}` : ""}
         window.__timelines = window.__timelines || {};
         window.__timelines["main"] = tl;
       })();`,
