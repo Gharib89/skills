@@ -101,7 +101,7 @@ test("a plan is refused where the request is within five minutes, absent, or a d
   assert.match(r.err, /^parts: 4 min is within 5, no part plan$/m);
   const none = parts(fixture(), "check");
   assert.equal(none.code, 1);
-  assert.match(none.err, /^parts: no parts\.json: write the part plan first$/m);
+  assert.match(none.err, /^parts: no part plan: write parts\.json first$/m);
   const fx = fixture();
   assert.equal(parts(fx, "decline").code, 0);
   const d = parts(fx, "check");
@@ -134,8 +134,31 @@ test("a parts.json that is not a plan is refused by name, never as a stack trace
     assert.match(r.err, why, body);
     assert.doesNotMatch(r.err, /\n\s+at /, r.err);
   }
-  fs.rmSync(path.join(fx.dir, "excerpts.json"));
+  // valid JSON of the wrong shape in the files the plan is held against
   writePlan(fx, plan([4, 4, 4]));
+  const held = (name) => {
+    const f = path.join(fx.dir, name);
+    const text = fs.readFileSync(f, "utf8");
+    return (body) => {
+      fs.writeFileSync(f, body);
+      const r = parts(fx, "check");
+      fs.writeFileSync(f, text);
+      return r;
+    };
+  };
+  const pack = held("excerpts.json")('{"x":1}');
+  assert.equal(pack.code, 1);
+  assert.match(pack.err, /^parts: excerpts\.json holds no excerpts list$/m);
+  assert.doesNotMatch(pack.err, /\n\s+at /, pack.err);
+  const brief = JSON.parse(
+    fs.readFileSync(path.join(fx.dir, "brief.json"), "utf8"),
+  );
+  const must = held("brief.json")(JSON.stringify({ ...brief, must: "x" }));
+  assert.equal(must.code, 1);
+  assert.match(must.err, /^parts: brief\.json must is not a list$/m);
+  assert.doesNotMatch(must.err, /\n\s+at /, must.err);
+  assert.equal(parts(fx, "check").code, 0);
+  fs.rmSync(path.join(fx.dir, "excerpts.json"));
   assert.match(
     parts(fx, "check").err,
     /^parts: no excerpts\.json: run pack\.mjs first$/m,

@@ -10,8 +10,9 @@
 // Reads <run>/brief.json. `offer` prints `parts: no offer, <m> min is within 5`
 // for a short request, else the fewest parts (each 2 to 5 minutes) and the
 // first-render estimate of parts and of one long video; `decline` records
-// `{ "declined": true }` in <run>/parts.json and prints one line with the
-// estimate; `check` holds the plan the agent wrote into parts.json (each part's
+// `{ "declined": true, "length": <min> }` in <run>/parts.json, held only while
+// the brief asks that length, and prints one line with the estimate; `check`
+// holds the plan the agent wrote into parts.json (each part's
 // title, focus, minutes, excerpts and the must items it says) to the brief and
 // the pack, one line a part; `start <n>` makes part n's run folder under
 // <run>/parts/ once the part before it is delivered, with the bridge back to
@@ -107,7 +108,10 @@ function problems(plan) {
   }
   if (!fs.existsSync(file("excerpts.json")))
     return ["no excerpts.json: run pack.mjs first"];
+  if (!strings(brief.must)) return ["brief.json must is not a list"];
   const pack = readJson(file("excerpts.json"));
+  if (!Array.isArray(pack.excerpts))
+    return ["excerpts.json holds no excerpts list"];
   const ids = new Set(pack.excerpts.map((x) => x.id));
   const owner = new Map();
   plan.parts.forEach((p, i) => {
@@ -190,7 +194,7 @@ function start(n) {
     fail(`part number is 1 or more, got ${args[0]}`);
   if (held?.declined)
     fail("declined, one long video in sections: no parts to start");
-  if (!held) fail("no parts.json: write the part plan first");
+  if (!held) fail("no part plan: write parts.json first");
   const found = problems(held);
   if (found.length) fail(found.join("\nparts: "));
   const plan = held.parts;
@@ -269,7 +273,7 @@ if (cmd === "start") {
 } else if (cmd === "check") {
   if (length <= LONG)
     fail(`${num(length)} min is within ${LONG}, no part plan`);
-  if (!held) fail("no parts.json: write the part plan first");
+  if (!held) fail("no part plan: write parts.json first");
   if (held.declined) {
     console.log("parts: declined, one long video in sections");
     process.exit(0);

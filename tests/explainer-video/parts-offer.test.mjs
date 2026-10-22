@@ -89,7 +89,10 @@ test("a decline holds for the length it was made at: a changed brief is offered 
     again.out,
     /^parts offer: 8 min is over 5: 2 parts of 4 \+ 4 min/,
   );
-  assert.equal(parts(fx, "start", "1").code, 1);
+  // the stale decline is no plan: nothing starts, and the refusal says so
+  const start = parts(fx, "start", "1");
+  assert.equal(start.code, 1);
+  assert.match(start.err, /^parts: no part plan: write parts\.json first$/m);
 });
 
 test("a request within five minutes has nothing to decline", () => {
