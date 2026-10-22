@@ -68,6 +68,37 @@ test("the delivered MP4 carries one chapter mark per section, each after the fir
   assert.match(r.out, /^delivery chapters: pass$/m);
 });
 
+test("a section renders the frames it owns: its duration stays on the frame grid", () => {
+  // The hook named `hooks` makes section 1 506 frames: 16.866666 s, which
+  // rounds up to 16.867 s at the millisecond and so to 507 frames.
+  const fx = fixture(
+    sectionFile(
+      LAYOUT.map((s) => (s.id === "hook" ? { ...s, id: "hooks" } : s)),
+    ),
+  );
+  const r = render(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const scenes = JSON.parse(read(fx.dir, "timeline.json")).scenes;
+  const root = (n) =>
+    +read(fx.dir, ".cache", "sections", String(n), "index.html").match(
+      /data-composition-id="main"[^>]*data-duration="([\d.]+)"/,
+    )[1];
+  parts(fx).forEach((c, k) => {
+    const own = scenes.filter((s) => c.hosts.includes(s.id));
+    const frames = Math.round(
+      (own.at(-1).start + own.at(-1).duration - own[0].start) * 30,
+    );
+    // HyperFrames renders ceil(duration x fps) frames: a duration rounded up
+    // to the millisecond costs a frame, and the join would drift from the
+    // narration by it.
+    assert.equal(
+      Math.ceil(root(k + 1) * 30 - 1e-4),
+      frames,
+      `section ${k + 1}`,
+    );
+  });
+});
+
 test("editing one scene re-renders only its section, the others come from the cache", () => {
   const fx = fixture(sectionFile());
   assert.equal(render(fx).code, 0);

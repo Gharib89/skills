@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { FPS, videoPage } from "./compose.mjs";
 import { captionCues } from "./cues.mjs";
+import { written } from "./grid.mjs";
 
 const r3 = (n) => +n.toFixed(3);
 
@@ -32,9 +33,13 @@ export function writeSection(d, { sec, comp, script, timeline, ...page }) {
   const first = timeline[sec.at[0]];
   const last = timeline[sec.at.at(-1)];
   const rel = (t) => r3(t - first.start);
+  // A scene's start and the total are whole frames: HyperFrames renders
+  // ceil(duration x fps), so a millisecond-rounded 6.466666 s (194 frames)
+  // would cost a 195th.
+  const onGrid = (t) => written(Math.round((t - first.start) * FPS));
   const own = sec.at.map((i) => ({
     ...timeline[i],
-    start: rel(timeline[i].start),
+    start: onGrid(timeline[i].start),
     words: timeline[i].words.map((w) => ({
       ...w,
       start: rel(w.start),
@@ -61,7 +66,7 @@ export function writeSection(d, { sec, comp, script, timeline, ...page }) {
         sec.at.map((i) => script.scenes[i]),
         own,
       ),
-      total: rel(last.start + last.duration),
+      total: onGrid(last.start + last.duration),
       audio: false,
     }),
   );
