@@ -13,7 +13,9 @@
 # that starts no turn, which `watch` would never report, is a not-ok answer
 # saying the text reached the pane. A first stall (`agent_prompt_stalled`) gets
 # one Enter and a second wait for the turn before it counts, since the text was
-# sitting in the input box in every stall of the #819 batch. The row's `seen_seq` is the agent's
+# sitting in the input box in every stall of the #819 batch; a refusal of that
+# retry (the pane gone) is reported with its own code, not the stall's. The
+# row's `seen_seq` is the agent's
 # `state_change_seq` from before the prompt, which is what keeps the previous
 # turn's `done` from reading as this one's. An agent that stops on a startup
 # dialog (an untrusted folder) is no failure: its row is written one short of
@@ -92,7 +94,9 @@ ds_write "$roster" --arg n "$name" --arg p "$pane" --arg t "$tab" --arg c "$cwd"
 prompted=false
 if [ "$ds_status" != blocked ]; then
   ds_prompt "$name" "$prompt"; sent=$? code=$ds_code
-  if [ "$code" = agent_prompt_stalled ] && ds_unstall "$name"; then sent=0; fi
+  if [ "$code" = agent_prompt_stalled ]; then
+    if ds_unstall "$name"; then sent=0; elif [ "$ds_code" != timeout ]; then sent=1; fi
+  fi
   case $sent in
     0) ;;
     2) ds_fail "agent prompt: the text reached $name's pane but started no turn ($code); it stays in the roster with tab $tab open: read it before sending anything" "$code" ;;

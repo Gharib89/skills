@@ -46,6 +46,16 @@ check "one Enter and one wait were all it tried" \
 agent send-keys b Enter
 agent wait b --until working --until blocked --timeout 8000" "$(keys)"
 
+# A retry herdr refuses (the pane gone since the stall) carries that refusal, not
+# the stall's code, and does not tell the supervisor to read a session that is gone.
+: > "$HERDR_FAKE/f.prompt-stall"; printf agent_not_found > "$HERDR_FAKE/f.keys-error"
+spawn f 66 "task f"
+check_rc "a retry herdr refuses exits 1" 1 "$rc"
+check "it carries the retry's code" agent_not_found "$(jq -r .code <<<"$out")"
+check "and its message names the open tab, not a read" \
+  "agent prompt: send-keys failed; f stays in the roster with tab w1:t-f open: send the task with answer --text" "$(jq -r .error <<<"$out")"
+keys >/dev/null
+
 # Nothing else is retried: a prompt that starts its turn sends no key, and a
 # refusal that is no stall (or herdr's own timeout) fails as it did.
 spawn c 63 "task c"

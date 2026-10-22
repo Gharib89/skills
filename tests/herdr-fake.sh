@@ -21,6 +21,8 @@
 # Enter, and `agent wait` on it answers `timeout` as the real CLI does when no
 # turn starts (`herdr agent wait <agent> --until blocked --timeout 500` on a
 # working agent: exit 1, code `timeout`, measured on herdr 0.9.5).
+# `<name>.keys-error` makes `agent send-keys` fail with the code it holds, the
+# pane gone between a prompt and the key that follows it.
 # `agent prompt` refuses an agent whose current line reads `blocked` with
 # `agent_blocked`, and `agent read` refuses it any source but `visible` with
 # `agent_not_idle`, as herdr 0.9.3 does past the viewport. Every call is a line
@@ -59,6 +61,7 @@ case "$1 $2" in
       && err agent_prompt_stalled "agent $3 showed no activity after the prompt"
     printf '{"result":{"type":"agent_prompted"}}\n' ;;
   "agent send-keys")
+    [ -f "$HERDR_FAKE/$3.keys-error" ] && err "$(cat "$HERDR_FAKE/$3.keys-error")" "send-keys failed"
     known "$3"
     [[ " $* " == *" Enter "* ]] && [ "$(cat "$HERDR_FAKE/$3.prompt-stall" 2>/dev/null)" = enter ] \
       && rm "$HERDR_FAKE/$3.prompt-stall"
