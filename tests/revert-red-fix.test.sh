@@ -50,12 +50,48 @@ check "a --fix verdict names the fix" \
   "{\"test\":\"tests/two.test.sh\",\"paths\":[\"lib.sh\"],\"red\":true,\"command\":[\"bash\",\"tests/two.test.sh\"],\"fix\":\"$fix2\"}" \
   "$(cd "$multi" && bash "$script" tests/two.test.sh lib.sh --fix "$fix2" 2>/dev/null | jq -c .)"
 check "a green --fix run names the fix on stderr" \
-  "revert-red: tests/one.test.sh stays green with lib.sh reverted to ${fix2:0:12}^, so it does not prove that fix." \
+  "revert-red: tests/one.test.sh stays green with ${fix2:0:12}'s change to lib.sh reverted, so it does not prove that fix." \
   "$(multi_err tests/one.test.sh lib.sh --fix "$fix2")"
 check_rc "--fix with a revision no commit answers to is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh --fix nope)"
 check_rc "--fix with no value is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh --fix)"
 check_rc "a path in neither the fix's parent nor HEAD is refused" 2 "$(multi_rc tests/one.test.sh nothere.sh --fix "$fix2")"
 check_rc "a --fix that is not on HEAD's history is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh --fix "$(git -C "$multi" commit-tree -m x "$(git -C "$multi" write-tree)")")"
 check_rc "a file the fix added is still a missing-file red" 1 "$(multi_rc tests/added.test.sh added.sh)"
+
+# Two fixes edit adjacent lines of one file. Taking out the first fix's delta
+# leaves the second's, so a test of the second stays green; a whole-file restore
+# from the first fix's parent would lose both and credit the first (the review
+# finding on #941).
+ab=$T/ab
+git init -q -b main "$ab"
+git -C "$ab" config user.email t@example.com
+git -C "$ab" config user.name t
+git -C "$ab" config commit.gpgsign false
+mkdir "$ab/tests"
+printf '%s\n' 'a=0' 'b=0' > "$ab/lib.sh"
+git -C "$ab" add -A && git -C "$ab" commit -qm base
+git -C "$ab" update-ref refs/remotes/origin/main HEAD
+git -C "$ab" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+printf '%s\n' 'a=1' 'b=0' > "$ab/lib.sh"
+git -C "$ab" add -A && git -C "$ab" commit -qm 'fix a'
+abfix1=$(git -C "$ab" rev-parse HEAD)
+printf '%s\n' 'a=1' 'b=1' > "$ab/lib.sh"
+git -C "$ab" add -A && git -C "$ab" commit -qm 'fix b'
+abfix2=$(git -C "$ab" rev-parse HEAD)
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source lib.sh' '[ "$a" = 1 ]' > "$ab/tests/a.test.sh"
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source lib.sh' '[ "$b" = 1 ]' > "$ab/tests/b.test.sh"
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source lib.sh' '[ "$a" -gt 0 ]' > "$ab/tests/c.test.sh"
+git -C "$ab" add -A && git -C "$ab" commit -qm tests
+ab_rc() { (cd "$ab" && bash "$script" "$@" >/dev/null 2>&1); printf '%s' "$?"; }
+check_rc "a test of the later fix stays green when only the earlier fix is taken out" 1 "$(ab_rc tests/b.test.sh lib.sh --fix "$abfix1")"
+check_rc "a test of the earlier fix goes red when it is taken out" 0 "$(ab_rc tests/a.test.sh lib.sh --fix "$abfix1")"
+check_rc "a test of the later fix goes red when it is taken out" 0 "$(ab_rc tests/b.test.sh lib.sh --fix "$abfix2")"
+check_rc "a test of the earlier fix stays green when only the later fix is taken out" 1 "$(ab_rc tests/a.test.sh lib.sh --fix "$abfix2")"
+
+# A later commit that rewrites the fix's own line leaves nothing to reverse
+# cleanly: tooling, not a verdict.
+printf '%s\n' 'a=2' 'b=1' > "$ab/lib.sh"
+git -C "$ab" add -A && git -C "$ab" commit -qm 'rewrite a'
+check_rc "a later commit on the fix's own line is tooling, not a verdict" 2 "$(ab_rc tests/c.test.sh lib.sh --fix "$abfix1")"
 
 finish

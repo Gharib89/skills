@@ -138,8 +138,8 @@
 # `Ran: <name> at <sha>` under `## Evidence`, <sha> the HEAD now, and writes
 # nothing if any name is malformed. Call it as each run ends, not at the close.
 # `prove` runs the sibling `revert-red` on <test> and its <path>s, passing any
-# `--fix <commit>` (a review fix's commit: the paths are restored from its parent,
-# not the merge base) and any
+# `--fix <commit>` (a review fix's commit: only its own change to the paths is
+# taken out, not the merge base's copy) and any
 # `-- <command>...` tail to it as typed (`revert-red --help` says what the
 # command must be). On its exit 0
 # it appends `Reverted-fix: <test>: red at <sha> reverting <path>...` under

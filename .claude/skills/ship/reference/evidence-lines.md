@@ -26,9 +26,9 @@ self-review's judgment, recorded in the Run file where it helps the summary.
     added: any test that reads the file goes red without it, so revert a hunk
     inside the file or a path the fix changed.
   - A fix commit from a self-review round or a phase-7 round is proven alone
-    with `--fix <fix commit>`: the paths are restored from that commit's
-    parent, not the merge base, so each of two fix commits is judged on its own
-    change.
+    with `--fix <fix commit>`: only that commit's own change to each path is
+    taken out, not the merge base's copy, so each of two fix commits is judged
+    on its own change. A later commit editing the same lines is exit 2.
   - A test that is not a `.sh` file passes its runner's command as argv after
     `--`, run in place of `bash <test>` at the top of a fresh temporary
     worktree with nothing installed; it names the test as one of its words or

@@ -7,9 +7,10 @@
 # does the revert in a temp worktree at HEAD, so the working tree is never
 # touched: the test runs once on the unreverted tree, then each <path> is
 # restored from the merge base with origin/HEAD, or deleted where the fix added
-# it, and the test runs again. With `--fix <commit>` the paths are restored from
-# that commit's parent instead, so a review fix is judged against the tree
-# before it and not against every commit the branch holds. A test that is not
+# it, and the test runs again. With `--fix <commit>` only that commit's own change
+# to each path comes out of HEAD's copy, so a review fix is judged alone: not
+# against every commit the branch holds, nor with a later commit's edit to the
+# file taken out too. A test that is not
 # green at HEAD proves nothing when it goes red later, so that first run is the
 # precondition. It reads committed state, so commit the test and the fix first.
 #
@@ -161,11 +162,19 @@ fi
 
 added=()
 for p in "$@"; do
-  if git cat-file -e "$base:$p" 2>/dev/null; then
-    git -C "$wt" checkout -q "$base" -- "$p" || ship_tooling "cannot restore $p from $base"
-  else
+  if ! git cat-file -e "$base:$p" 2>/dev/null; then
     rm -f "$wt/$p"
     added+=("$p")
+  elif [ -n "$fix" ]; then
+    # Only the fix's own hunks come out: restoring the whole file from its parent
+    # would take every later commit's change with it, and a red from one of those
+    # would be credited to this fix.
+    git diff --binary -U0 "$base" "$fix" -- "$p" > "$tmp/fix.patch" || ship_tooling "cannot diff $p across --fix"
+    if [ -s "$tmp/fix.patch" ]; then
+      git -C "$wt" apply -R --unidiff-zero "$tmp/fix.patch" || ship_tooling "the fix's change to $p does not reverse cleanly at HEAD, since a later commit edits the same lines: revert a hunk inside it by hand"
+    fi
+  else
+    git -C "$wt" checkout -q "$base" -- "$p" || ship_tooling "cannot restore $p from $base"
   fi
 done
 
@@ -176,7 +185,7 @@ list=${list%, }
 if [ "$rc" -eq 0 ]; then
   verdict false "$@"
   if [ -n "$fix" ]; then
-    echo "revert-red: $test_path stays green with $list reverted to ${fix:0:12}^, so it does not prove that fix." >&2
+    echo "revert-red: $test_path stays green with ${fix:0:12}'s change to $list reverted, so it does not prove that fix." >&2
   else
     echo "revert-red: $test_path stays green with $list reverted, so it does not prove the fix." >&2
   fi
