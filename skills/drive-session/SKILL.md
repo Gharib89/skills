@@ -101,12 +101,12 @@ and run `window` again at each `watch` wake until it exits 0.
    for text opening with `-`). Text that starts no turn (a local slash
    command such as `/rename`, or an Enter that did not register) comes back
    from `answer` or `spawn` as a not-ok answer with `code`
-   `agent_prompt_stalled` or `timeout`. (`spawn` has already pressed Enter once
-   on an `agent_prompt_stalled` before reporting it; `answer` reports the first
-   stall.) The text reached the pane,
-   and `watch` will not report the session until something starts a turn, so
-   `read` it: text still in the input box gets `--keys Enter`; a session back
-   at its prompt gets its next `--text`.
+   `agent_prompt_stalled` or `timeout`. (`spawn` has already pressed Enter up
+   to three times on an `agent_prompt_stalled` before reporting it, a loaded
+   machine dropping the first; `answer` reports the first stall.) The text
+   reached the pane, and `watch` will not report the session until something
+   starts a turn, so `read` it: text still in the input box gets
+   `--keys Enter`; a session back at its prompt gets its next `--text`.
 7. **Loop** from step 3 while any session is running. A session waiting on an
    escalation is idle but not marked at rest; once you relay the user's reply,
    it runs again, so start step 3 again. When `watch` exits 1 on no live

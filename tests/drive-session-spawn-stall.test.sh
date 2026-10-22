@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# `spawn` presses Enter once when its first prompt stalls (`agent_prompt_stalled`:
-# the text reached the pane, no turn started) before it fails, since every stall
-# in the #819 batch cleared with one Enter. Driven over the fake `herdr`
-# (tests/herdr-fake.sh): a `enter` stall clears on the key, any other survives it.
+# `spawn` presses Enter, up to three times, when its first prompt stalls
+# (`agent_prompt_stalled`: the text reached the pane, no turn started) before it
+# fails, since every stall in the #819 batch cleared with an Enter and a loaded
+# machine drops the first. Driven over the fake `herdr` (tests/herdr-fake.sh):
+# an `enter` stall clears on the key, `enter:3` on the third, any other survives.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -21,7 +22,7 @@ spawn() { # <name> <seq> <prompt>
   out=$(bash "$s/spawn.sh" "$1" --roster "$tmp/$1.json" --cwd "$tmp/cwd" --prompt "$3" 2>/dev/null); rc=$?
 }
 
-# A first stall that one Enter clears: the retry starts the agent.
+# A first stall that the first Enter clears: the retry starts the agent.
 printf enter > "$HERDR_FAKE/a.prompt-stall"
 spawn a 61 "task a"
 check_rc "a first stall cleared by Enter exits 0" 0 "$rc"
@@ -29,8 +30,29 @@ check "its answer reads as an ordinary spawn" '{"name":"a","prompted":true}' "$(
 check "the Enter goes between the prompt and the wait for its turn" \
   "agent prompt a task a --wait --until working --until blocked --timeout 8000
 agent send-keys a Enter
-agent wait a --until working --until blocked --timeout 8000" "$(keys)"
+agent wait a --until working --until blocked --timeout 10000" "$(keys)"
 check "the row keeps the sequence number from before the prompt" 61 "$(jq -r '.sessions[0].seen_seq' "$tmp/a.json")"
+
+# A loaded machine drops the first Enters (measured: most spawns at load 80): a
+# stall that clears on the third Enter still starts the agent.
+printf enter:3 > "$HERDR_FAKE/h.prompt-stall"
+spawn h 68 "task h"
+check_rc "a stall that clears on the third Enter exits 0" 0 "$rc"
+check "each dropped Enter is followed by its own wait" \
+  "agent prompt h task h --wait --until working --until blocked --timeout 8000
+agent send-keys h Enter
+agent wait h --until working --until blocked --timeout 10000
+agent send-keys h Enter
+agent wait h --until working --until blocked --timeout 10000
+agent send-keys h Enter
+agent wait h --until working --until blocked --timeout 10000" "$(keys)"
+
+# An Enter that took can still start its turn late (12 s measured): a later wait
+# catches it, and the Enter before that wait is a no-op at an empty input box.
+printf enter > "$HERDR_FAKE/g.prompt-stall"; printf 12000 > "$HERDR_FAKE/g.turn-delay"
+spawn g 67 "task g"
+check_rc "a turn that starts 12 s after the Enter exits 0" 0 "$rc"
+keys >/dev/null
 
 # A second stall fails with the message a stall gave before the retry existed.
 : > "$HERDR_FAKE/b.prompt-stall"
@@ -41,10 +63,14 @@ check "it names the session and says the text reached its pane" \
   "agent prompt: the text reached b's pane but started no turn (agent_prompt_stalled); it stays in the roster with tab w1:t-b open: read it before sending anything" \
   "$(jq -r .error <<<"$out")"
 check "the stalled session keeps its row" b "$(jq -r '.sessions[0].name' "$tmp/b.json")"
-check "one Enter and one wait were all it tried" \
+check "three Enters, each with a wait, were all it tried" \
   "agent prompt b /rename x --wait --until working --until blocked --timeout 8000
 agent send-keys b Enter
-agent wait b --until working --until blocked --timeout 8000" "$(keys)"
+agent wait b --until working --until blocked --timeout 10000
+agent send-keys b Enter
+agent wait b --until working --until blocked --timeout 10000
+agent send-keys b Enter
+agent wait b --until working --until blocked --timeout 10000" "$(keys)"
 
 # A retry herdr refuses (the pane gone since the stall) carries that refusal, not
 # the stall's code, and does not tell the supervisor to read a session that is gone.

@@ -64,14 +64,24 @@ ds_prompt() {
   return 1
 }
 
-# ds_unstall <name>: one Enter at a session whose prompt stalled, then the same
-# wait for its turn as ds_prompt's. Every stall in the #819 batch was the text
-# sitting in the input box, and one Enter cleared it. Returns 0 once the turn
-# starts or opens a dialog, else nonzero: `send-keys` refused or no turn started
-# in time.
+# ds_unstall <name>: Enter at a session whose prompt stalled, up to three times
+# with a 10 s wait for its turn after each. Every stall in the #819 batch was
+# the text sitting in the input box, and an Enter clears it, but on a loaded
+# machine (herdr 0.9.5, load average 80, 12 parallel spawns, measured) claude
+# drops the first Enter in most spawns, which stays stuck after 30 s until a
+# second Enter, and takes up to 12 s to start the turn of an Enter that did
+# take. An Enter at an empty input box starts nothing (three of them left a
+# finished session's status and sequence number as they were), so the retry
+# cannot double-send. Returns 0 once the turn starts or opens a dialog, else
+# nonzero: `send-keys` or the wait refused (its code in $ds_code), or three
+# waits timed out.
 ds_unstall() {
-  ds_herdr agent send-keys "$1" Enter || return 1
-  ds_herdr agent wait "$1" --until working --until blocked --timeout 8000
+  for _ in 1 2 3; do
+    ds_herdr agent send-keys "$1" Enter || return 1
+    ds_herdr agent wait "$1" --until working --until blocked --timeout 10000 && return 0
+    [ "$ds_code" = timeout ] || return 1
+  done
+  return 1
 }
 
 # ds_agent_fields <what>: the agent in $ds_out's answer, its status in

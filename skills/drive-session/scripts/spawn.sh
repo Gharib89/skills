@@ -12,10 +12,11 @@
 # starts or opens a dialog, so one `watch` can cover every session; a prompt
 # that starts no turn, which `watch` would never report, is a not-ok answer
 # saying the text reached the pane. A first stall (`agent_prompt_stalled`) gets
-# one Enter and a second wait for the turn before it counts, since the text was
-# sitting in the input box in every stall of the #819 batch; a refusal of that
-# retry (the pane gone) is reported with its own code, not the stall's. The
-# row's `seen_seq` is the agent's
+# up to three Enters, each with a 10 s wait for the turn, before it counts: the
+# text was sitting in the input box in every stall of the #819 batch, and a
+# loaded machine drops the first Enter in most of them (see ds_unstall); a
+# refusal of that retry (the pane gone) is reported with its own code, not the
+# stall's. The row's `seen_seq` is the agent's
 # `state_change_seq` from before the prompt, which is what keeps the previous
 # turn's `done` from reading as this one's. An agent that stops on a startup
 # dialog (an untrusted folder) is no failure: its row is written one short of
