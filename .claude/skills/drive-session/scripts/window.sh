@@ -17,7 +17,8 @@
 #         one {pid, name} per process in table order, `name` one of
 #         `real-render`, `hyperframes`, `calibrate`, `check.sh full`
 # exit: 0 nothing running · 1 something runs (the answer is also on stderr) · 2
-#       usage, ps missing, or a process table it cannot read
+#       usage, ps missing, or a process table it cannot read (ps failing or
+#       printing nothing)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -26,7 +27,9 @@ ds_help "$usage" "$@"
 [ $# -eq 0 ] || ds_tooling "$usage"
 command -v ps >/dev/null || ds_tooling "ps not installed"
 
-table=$(ps -eo pid=,args= 2>/dev/null) || ds_tooling "window: cannot read the process table"
+table=$(ps -eo pid=,args= 2>/dev/null)
+# A live table always lists ps itself: an empty one is a failed read, never "nothing runs".
+[ -n "$table" ] || ds_tooling "window: cannot read the process table"
 running=$(awk '
   function strip(t) { gsub(/["\047]/, "", t); return t }
   function base(t) { t = strip(t); sub(/.*\//, "", t); return t }
@@ -51,6 +54,7 @@ if [ "$(jq length <<<"$running")" -eq 0 ]; then
   jq -cn '{running: []}'
   exit 0
 fi
-jq -c '{error: ("a render, calibration or check is running: " + (map("\(.name) (pid \(.pid))") | join(", "))), running: .}' <<<"$running"
-jq -r '"a render, calibration or check is running: " + (map("\(.name) (pid \(.pid))") | join(", "))' <<<"$running" >&2
+msg="a render, calibration or check is running: $(jq -r 'map("\(.name) (pid \(.pid))") | join(", ")' <<<"$running")"
+jq -c --arg e "$msg" '{error: $e, running: .}' <<<"$running"
+printf '%s\n' "$msg" >&2
 exit 1

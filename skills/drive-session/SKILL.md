@@ -47,19 +47,21 @@ turn.
   nothing running, exit 1 naming each process and its pid. It takes no roster.
 
 **The quiet window.** A session that asks for a quiet window (to time a render,
-calibrate, or run the full check without a neighbour) gets it handed on only
-after `window` exits 0. On exit 1, tell it what runs and hand nothing over:
-run `window` again once that process is gone, and keep watching the others
-meanwhile.
+calibrate, or run the full check without a neighbour) is answered `--text` that
+the window is open only after `window` exits 0, and one session holds it at a
+time: until the holder reports its run finished, every other request waits.
+On exit 1, answer nothing: tell the user what runs, keep watching the others,
+and run `window` again at each `watch` wake until it exits 0.
 
 ## The run
 
 1. **Roster.** One per run, under the state directory, which survives a
    reboot:
    `${XDG_STATE_HOME:-$HOME/.local/state}/drive-session/<run>/roster.json`,
-   `<run>` a short name for the run (`spec-932`, `smoke-test`). Never the
-   session scratchpad: it is tmpfs, and a laptop restart wiped the roster and
-   the batch log with it in the #819 batch. `spawn` makes the directory. Read it
+   `<run>` a short name for the run (`spec-932`, `smoke-test`); list
+   `${XDG_STATE_HOME:-$HOME/.local/state}/drive-session/` to find one you
+   forgot. Never the session scratchpad: it is tmpfs, so a laptop restart wipes
+   the roster and the batch log with it. `spawn` makes the directory. Read it
    back after a compaction or a reboot.
 2. **Spawn** each session. Name it after its task (`ship-541`), the name
    doubling as the tab label. `--cwd` is a folder Claude Code already trusts:
@@ -97,8 +99,9 @@ meanwhile.
    for text opening with `-`). Text that starts no turn (a local slash
    command such as `/rename`, or an Enter that did not register) comes back
    from `answer` or `spawn` as a not-ok answer with `code`
-   `agent_prompt_stalled` or `timeout`. (`spawn` presses Enter once on a first
-   stall before it answers so; `answer` does not.) The text reached the pane,
+   `agent_prompt_stalled` or `timeout`. (`spawn` has already pressed Enter once
+   on an `agent_prompt_stalled` before reporting it; `answer` reports the first
+   stall.) The text reached the pane,
    and `watch` will not report the session until something starts a turn, so
    `read` it: text still in the input box gets `--keys Enter`; a session back
    at its prompt gets its next `--text`.

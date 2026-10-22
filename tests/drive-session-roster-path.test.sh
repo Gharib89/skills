@@ -37,7 +37,9 @@ out=$(bash "$s/watch.sh" --roster "$roster" --timeout 3000 2>/dev/null)
 check "watch reads it" '{"name":"s1","event":"done","seq":11}' "$out"
 out=$(bash "$s/read.sh" s1 --roster "$roster" 2>/dev/null)
 check "read acknowledges the event in it" 11 "$(jq -r '.sessions[0].seen_seq' "$roster")"
-bash "$s/answer.sh" s1 --roster "$roster" --text next >/dev/null 2>&1
-check "answer writes to it" 11 "$(jq -r '.sessions[0].seen_seq' "$roster")"
+printf 'idle 12\n' > "$HERDR_FAKE/s1.states"
+bash "$s/answer.sh" s1 --roster "$roster" --text next >/dev/null 2>&1; rc=$?
+check_rc "answer takes it" 0 "$rc"
+check "answer writes the new sequence number to it" 12 "$(jq -r '.sessions[0].seen_seq' "$roster")"
 
 finish

@@ -67,7 +67,8 @@ ds_prompt() {
 # ds_unstall <name>: one Enter at a session whose prompt stalled, then the same
 # wait for its turn as ds_prompt's. Every stall in the #819 batch was the text
 # sitting in the input box, and one Enter cleared it. Returns 0 once the turn
-# starts or opens a dialog, 1 when it still has not.
+# starts or opens a dialog, else herdr's own exit status (nonzero), `send-keys`
+# refused or no turn started in time.
 ds_unstall() {
   ds_herdr agent send-keys "$1" Enter || return 1
   ds_herdr agent wait "$1" --until working --until blocked --timeout 8000

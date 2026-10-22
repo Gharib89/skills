@@ -19,7 +19,8 @@
 # `enter` is the common one: `agent send-keys <name> Enter` clears it, the text
 # sitting in the input box submitted at last. Any other stall survives the
 # Enter, and `agent wait` on it answers `timeout` as the real CLI does when no
-# turn starts.
+# turn starts (`herdr agent wait <agent> --until blocked --timeout 500` on a
+# working agent: exit 1, code `timeout`, measured on herdr 0.9.5).
 # `agent prompt` refuses an agent whose current line reads `blocked` with
 # `agent_blocked`, and `agent read` refuses it any source but `visible` with
 # `agent_not_idle`, as herdr 0.9.3 does past the viewport. Every call is a line
