@@ -140,7 +140,8 @@ admitted.
 
 A window that closes with `done: false` and `not_reviewed` set is that round's
 answer, whatever the reviewer's own status says it may still do: no second
-window opens for the same round and no second request goes out. Record its stop
+window opens for the same round (bar the two re-polls below) and no second
+request goes out. Record its stop
 per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned
 round whose fixes changed the tree, else `not reviewed: <cause>`. Either way
 that exit is final, and the `Fallback-for:` reviewer that names it, if any, is

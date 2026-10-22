@@ -160,9 +160,8 @@ unchanged`) qualifies:
 A round that stops on findings or on cap again, any other `held_by` entry
 (`reviewer <x>: past cap <n>, ..., head moved: read <a>..<b>` among them: the
 owner reads that range to waive it), and every unmet criterion are escalations
-that quote the `held_by`: a criterion
-waiver comes from the owner, and the auto-mode classifier refuses one the
-supervisor relays.
+that quote the `held_by`: a criterion waiver comes from the owner, and the
+auto-mode classifier refuses one the supervisor relays.
 
 ## Supervised ship runs
 
