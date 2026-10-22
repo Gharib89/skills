@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.49.0 (2026-10-22)
+
+### Features
+
+- **explainer-video**: One-map camera with the canvas component and the canvas seam family
+  ([#930](https://github.com/Gharib89/skills/pull/930),
+  [`f07692b`](https://github.com/Gharib89/skills/commit/f07692b25edd42b2f360e51c043b019c21cbe21c))
+
+
 ## v0.48.0 (2026-10-22)
 
 ### Features
