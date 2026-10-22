@@ -52,27 +52,32 @@ test("a 12-minute request is offered three parts of 4 minutes, with an estimate 
 });
 
 test("the estimate counts the score the brief asks for: none for off, and for ace-step with no rate it says so", () => {
-  const without = (videoSeconds) =>
+  const cost = (videoSeconds, score) =>
     (
       Math.round(
-        ((videoSeconds * (rates.base + rates.texture + rates.gates)) / 60) * 10,
+        ((videoSeconds * (rates.base + rates.texture + rates.gates + score)) /
+          60) *
+          10,
       ) / 10
     ).toString();
   const line = (score) =>
     parts(fixture({ length: 12, brief: [`score=${score}`] }), "offer").out;
-  assert.match(
-    line("off"),
-    new RegExp(
-      `one long video ${without(720)} min \\(render, gates and score, not narration\\)\\n$`,
-    ),
-  );
-  // the shipped table holds no ace-step rate until a machine with the row measures it
-  assert.match(
-    line("ace-step"),
-    new RegExp(
-      `one long video ${without(720)} min \\(render, gates and score, not narration; ace-step is not measured, so its score is left out\\)\\n$`,
-    ),
-  );
+  const ends = (out, min, note = "") =>
+    assert.match(
+      out,
+      new RegExp(
+        `one long video ${min} min \\(render, gates and score, not narration${note}\\)\\n$`,
+      ),
+    );
+  ends(line("off"), cost(720, 0));
+  // the table holds an ace-step rate only once a machine with the row measured it
+  if (rates.aceStep === undefined)
+    ends(
+      line("ace-step"),
+      cost(720, 0),
+      "; ace-step is not measured, so its score is left out",
+    );
+  else ends(line("ace-step"), cost(720, rates.aceStep));
 });
 
 test("the fewest parts take each at most 5 minutes and at least 2", () => {
