@@ -48,7 +48,9 @@
 #       names a file the fix added as missing, so it does not prove the fix (the
 #       verdict, red false, is still on stdout) · 2 tooling,
 #       a bad call, a non-`.sh` test with no command, a command not naming the
-#       test, a test already red at HEAD, or a tree that reached a host, none of
+#       test, a test already red at HEAD, a `--fix` path a later commit added
+#       or whose change does not reverse at HEAD, or a tree that reached a
+#       host, none of
 #       which is a verdict
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -167,8 +169,9 @@ added=()
 for p in "$@"; do
   if ! git cat-file -e "$base:$p" 2>/dev/null; then
     # A path a later commit added is not this fix's to take out.
-    [ -z "$fix" ] || git cat-file -e "$fix:$p" 2>/dev/null \
-      || ship_tooling "$p is not a file --fix ${fix:0:12} added or changed"
+    if [ -n "$fix" ] && ! git cat-file -e "$fix:$p" 2>/dev/null; then
+      ship_tooling "$p is not a file --fix ${fix:0:12} added"
+    fi
     rm -f "$wt/$p"
     added+=("$p")
   elif [ -n "$fix" ]; then
