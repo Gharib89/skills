@@ -120,6 +120,10 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # host reviewer read those fixes.
       def pastcap_head($name): (rests("Past-cap: " + $name + ": tree unchanged at ") | last // "") as $s
         | if $s != "" and $cover[$s] == true then $s else "" end;
+      # The head the last local review past the cap read, covering the PR head or not:
+      # one that no longer covers it (a hand-resolved conflict merge) names the range
+      # a human reads to waive the cap.
+      def pastcap_stamp($name): rests("Past-cap: " + $name + ": tree unchanged at ") | last // "";
       def owes_fallback($name): (stop($name) | IN("not reviewed", "not landed")) or cap_spent($name);
       # A revocation appends its own Lane: line, so a stale inline stop holds.
       def inline_run: (rests("Lane: ") | last // "") == "inline";
@@ -172,6 +176,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
            elif cap_spent($r.name) and pastcap_head($r.name) != "" then
              "reviewer " + $r.name + ": past cap " + ([$r.cap | numbers] | first | tostring) + ", local review read " + pastcap_head($r.name) + ", no host reviewer read it"
+           elif cap_spent($r.name) and pastcap_stamp($r.name) != "" then
+             "reviewer " + $r.name + ": past cap " + ([$r.cap | numbers] | first | tostring) + ", local review read " + pastcap_stamp($r.name) + ", head moved: read " + pastcap_stamp($r.name) + ".." + $head
            elif (stop($r.name) | word) == "tree unchanged" then
              if reraised($r.name) then "reviewer " + $r.name + ": tree unchanged with a re-raised declined finding, which stops on cap"
              elif reviewed($r.name) | not then "reviewer " + $r.name + ": no dispositioned round"

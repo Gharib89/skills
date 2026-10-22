@@ -101,6 +101,22 @@ holds 'a verification before a conflict-resolving merge' "$conflict_merge" "$(ve
 run "$conflict_merge" "tree unchanged at $clean_merge" "pass at $clean_merge"
 holds 'evidence at a clean merge before a conflicting one' "$conflict_merge" "$(reviewer_stale "$clean_merge" "$conflict_merge")"
 
+# A reviewer past its Cap: whose head moved through a conflict-resolving merge
+# names the range a human reads to waive it, `<reviewed>..<head>` (#938); a
+# clean base merge keeps the reading the local review gave.
+pastcap_run() { # pastcap_run <head> <past-cap stamp>
+  run "$1" "cap" "pass at $1"
+  printf 'Round: primary 2: fixes pushed\nPast-cap: primary: tree unchanged at %s\n' "$2" >> "$f"
+}
+sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$repo/docs/agents/ship.md" > "$tmp/capped.md" && cp "$tmp/capped.md" "$repo/docs/agents/ship.md"
+pastcap_run "$conflict_merge" "$stamp"
+holds 'a capped reviewer after a conflict merge names the range to read' "$conflict_merge" "reviewer primary: past cap 2, local review read $stamp, head moved: read $stamp..$conflict_merge"
+pastcap_run "$clean_merge" "$stamp"
+holds 'a capped reviewer after a clean base merge keeps the local review reading' "$clean_merge" "reviewer primary: past cap 2, local review read $stamp, no host reviewer read it"
+pastcap_run "$conflict_merge" "$clean_merge"
+holds 'the range starts at the local review head, not the first stamp' "$conflict_merge" "reviewer primary: past cap 2, local review read $clean_merge, head moved: read $clean_merge..$conflict_merge"
+profile
+
 # A Verification without Paths: holds on any break in coverage.
 run "$outside" "tree unchanged at $outside" "pass at $stamp"
 holds 'a verification without Paths: before a fix' "$outside" "$(verif_stale "$stamp" "$outside")"

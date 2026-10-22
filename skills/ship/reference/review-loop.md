@@ -3,6 +3,7 @@
 ## Contents
 
 - [The round](#the-round)
+- [A window that closes with no round](#a-window-that-closes-with-no-round)
 - [Reading a round](#reading-a-round)
 - [Triage, fix, reply](#triage-fix-reply)
 - [The exit](#the-exit)
@@ -85,6 +86,26 @@ rounds still read 1 through `Cap:`. Once a review's fixes change no file, record
 "<line>" --issue <issue>`, `<sha>` the head that review read. `gate clean` still
 holds on the reviewer, reporting its cap and that `<sha>`, because no host
 reviewer read the fixes: the human reads them at the merge gate.
+
+## A window that closes with no round
+
+A window that closes with `done: false` and `not_reviewed` set is that round's
+answer, whatever the reviewer's own status says it may still do: record it and
+turn to the fallback, so no second window opens for the same round and no second
+request goes out (#929: codex round 2 was polled for over an hour after its
+window had closed). A `status: pending` answer is no closed window: it carries
+`not_reviewed: null` and resumes by its cursor, which keeps the window's
+original deadline, so the wait ends at the ceiling `poll-pr` states. Only a
+`conflict`, which says nothing about the reviewer, re-polls once resolved
+(phase 8).
+
+- After a dispositioned round whose fixes changed the tree, the next requested
+  round that closes this way is `Stop: <reviewer>: not landed`, its cause on the
+  `## Review` line.
+- With no dispositioned round, the exit is `not reviewed: <cause>`.
+
+Either way the `Fallback-for:` reviewer is requested next
+([Fallbacks](#fallbacks)), and the loop does not wait on the primary again.
 
 ## Reading a round
 
