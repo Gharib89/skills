@@ -83,7 +83,7 @@ test("a schema is read before contrast, and a schema 2 profile holding a schema 
 test("a field left out of the grammar takes the Velocity Cut frame", () => {
   assert.deepEqual(grammar(bundled("claude-code")), {
     layout: "open",
-    seams: { family: "velocity", duration: 0.2, blur: 18 },
+    seams: { family: "velocity", duration: 0.2, blur: 18, travel: 0.8 },
     camera: { family: "push", scale: 1.06, duration: 0.8 },
     type: { family: "words", stagger: 0.05 },
     ease: "velocity",
@@ -107,7 +107,12 @@ test("a field left out of the grammar takes the Velocity Cut frame", () => {
     odd({ grammar: { ease: "spring", seams: { duration: 0.3 } } }),
   );
   assert.equal(g.ease, "spring");
-  assert.deepEqual(g.seams, { family: "velocity", duration: 0.3, blur: 18 });
+  assert.deepEqual(g.seams, {
+    family: "velocity",
+    duration: 0.3,
+    blur: 18,
+    travel: 0.8,
+  });
   assert.equal(g.camera.family, "push");
 });
 
@@ -286,10 +291,10 @@ test("a profile banning blur cannot use velocity seams with a peak blur above 0"
   );
 });
 
-test("the seams family is velocity or cut, a scene may name its moves or cut, and anything else is refused", () => {
+test("the seams family is velocity, cut or canvas, a scene may name its moves or cut, and anything else is refused", () => {
   refused(
-    { grammar: { seams: "canvas" } },
-    /grammar\.seams canvas is not velocity or cut/,
+    { grammar: { seams: "map" } },
+    /grammar\.seams map is not velocity or cut or canvas/,
   );
   const scene = (seam) => ({ id: "a", visual: { component: "title", seam } });
   const profile = (seams) => odd({ grammar: { seams } });
