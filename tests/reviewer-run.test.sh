@@ -11,8 +11,17 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-mech=$PWD/skills/ship/scripts/poll-pr.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+# The fixtures date the request 2026-09-17, and the ceiling counts from the
+# request (#952), so each case runs a copy of the mechanic whose ceiling is that
+# age plus the seconds the case allows past the call; the rest is the real one.
+ceiling_copy() { # <dir> <seconds past the call>
+  cp -R skills/ship/scripts "$1"
+  sed -i.bak "s/^ceiling=1800\$/ceiling=\$((\$(date +%s) - $(jq -rn '"2026-09-17T11:58:00Z" | fromdateiso8601') + $2))/" \
+    "$1/poll-pr.sh"
+}
+ceiling_copy "$work/live" 1800
+mech=$work/live/poll-pr.sh
 repo=$work/repo
 export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 mkdir -p "$repo" "$SHIP_FAKE"
@@ -166,8 +175,7 @@ check "a skipped run does not answer for the one that ran" \
 # round can only come from the live one. A landed round's live run holds the
 # window to the ceiling (#295), so these two cases run a copy of the mechanic
 # whose ceiling is seconds.
-cp -R skills/ship/scripts "$work/ceil5"
-sed -i.bak 's/^ceiling=1800$/ceiling=5/' "$work/ceil5/poll-pr.sh"
+ceiling_copy "$work/ceil5" 5
 poll5() { ( cd "$repo" && bash "$work/ceil5/poll-pr.sh" 7 --reviewer claude \
   --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 ); }
 reset
@@ -206,8 +214,7 @@ check "and it outranks a newer concluded run" 'true since waiting' \
 # forever: past it the poll returns with the run as it stands, as still-running. Driven against a copy of the mechanic whose ceiling
 # is seconds rather than half an hour; everything else is the real mechanic.
 reset
-cp -R skills/ship/scripts "$work/scripts"
-sed -i.bak 's/^ceiling=1800$/ceiling=2/' "$work/scripts/poll-pr.sh"
+ceiling_copy "$work/scripts" 2
 run_row in_progress '' > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$empty" > "$SHIP_FAKE/host_pr_reviews.1.json"
 out=$( cd "$repo" && bash "$work/scripts/poll-pr.sh" 7 --reviewer claude \

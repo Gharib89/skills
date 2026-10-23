@@ -7,7 +7,9 @@
 # through triage instead of being refused forever. Worktree teardown is
 # `cleanup`, run after this.
 #
-#   merge <pr> <issue|none> <head> [--worktree <path>]
+#   merge <pr> <issue|none> <head> [--worktree <path>, the feature checkout the
+#     main-checkout lookup and the base freshness check run from; teardown is
+#     cleanup, run after this]
 #
 # `none` as the issue argument is the task-spec run: there is no issue to close
 # or release, so those steps are skipped and their fields are absent from the
@@ -48,7 +50,7 @@ set -uo pipefail
 # No `set -e`: the steps below use explicit `|| flag=false`, and
 # `git ls-remote --exit-code` returning non-zero is a SUCCESS signal.
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: merge <pr> <issue|none> <head> [--worktree <path>]'
+usage='usage: merge <pr> <issue|none> <head> [--worktree <path>, the feature checkout the main-checkout lookup and the base freshness check run from; teardown is cleanup, run after this]'
 ship_help "$usage" "$@"
 ship_args "$usage" "pr issue|none head" "$@"
 pr=$1; issue=$2; gated=$3; shift 3

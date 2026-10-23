@@ -76,7 +76,7 @@ activity() {
                    body: "@codex review", url: "https://example.invalid/r"}] + $c),
       pr_reactions: $p, request_reactions: $r}' > "$SHIP_FAKE/host_pr_native_activity.$n.json"
 }
-poll() { ( cd "$repo" && bash "$mech" 7 --reviewer codex --since "$since" --timeout 0 --interval 1 "$@" ); }
+poll() { ( cd "$repo" && bash "${held:-$mech}" 7 --reviewer codex --since "$since" --timeout 0 --interval 1 "$@" ); }
 calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 # An in-progress row: the probe's Completed row with its status cell replaced.
 sed 's/✅ \*\*Completed\*\*/⏳ **In progress**/' "$fx/summary-completed.md" > "$work/summary-progress.md"
@@ -86,11 +86,17 @@ sed 's/`9ffa460`/9ffa460/' "$fx/summary-completed.md" > "$work/summary-nosha.md"
 
 # The findings round, as #504 delivered it: 👀 and an in-progress row first,
 # then the formal review on the head. The 👀 holds the window past --timeout 0.
+# The ceiling counts from the request (#952), which the fixtures date
+# 2026-10-07, so the cases that hold run a copy of the mechanic whose ceiling is
+# that age plus the real one; the rest is the real mechanic.
+cp -R skills/ship/scripts "$work/held"
+sed -i.bak "s/^ceiling=1800\$/ceiling=\$((\$(date +%s) - $(jq -rn --arg s "$since" '$s | fromdateiso8601') + 1800))/" \
+  "$work/held/poll-pr.sh"
 reset
 activity 1 eyes "c|summary-progress.md|2026-10-07T12:28:29Z"
 activity 2 "c|summary-completed.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
 printf '%s\n' "$findings" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll --brief); rc=$?
+out=$(held=$work/held/poll-pr.sh poll --brief); rc=$?
 check "a findings round lands after the in-progress pass" '0 since null' \
   "$rc $(jq -r '.landed_by, .not_reviewed' <<<"$out" | xargs)"
 check "the in-progress pass held the window for a second read" 2 "$(calls pr_reviews)"
@@ -103,7 +109,7 @@ reset
 activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
 activity 2 "c|summary-completed.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
 printf '%s\n' "$findings" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll); rc=$?
+out=$(held=$work/held/poll-pr.sh poll); rc=$?
 check "an in-progress status row holds the window until the round" '0 since' \
   "$rc $(jq -r .landed_by <<<"$out")"
 

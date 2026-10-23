@@ -78,7 +78,11 @@
 # is the RUN's lifetime and `--timeout` only its floor: a run that has not
 # finished keeps the poll going, and the ceiling the usage line states is the
 # bound on what the run may add, so a `--timeout` past it is the caller's own
-# window, which the run then extends by nothing. A run that concluded successfully buys one more
+# window, which the run then extends by nothing. The ceiling counts from the
+# request the poll reads (`--since`, the cursor's, or the host's), not from the
+# call, so a fresh call on a run stuck past it grades `still-running` once its
+# `--timeout` is spent rather than opening a new ceiling (#952); a poll with no
+# since counts it from the window's start. A run that concluded successfully buys one more
 # interval for the row to appear; one that concluded any other way closes the
 # window there and then, whatever `--timeout` had left, carrying its URL. A run
 # still live when the ceiling closes is reported as it stands, status and URL:
@@ -188,7 +192,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 # The hard bound on waiting a run out, written once: the usage line is where a
 # run reads it.
 ceiling=1800
-usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>, default the latest request of that reviewer on the host], whose workflow run or native status, under a comment transport, holds the window open past --timeout, to ${ceiling}s] [--brief, or --brief --full <id>[,<id>]|open to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>] [--cursor <c>, the cursor a status: pending answer carried, to resume its window; no --since or --timeout; a call holds the tool at most ${SHIP_CALL_CAP}s]"
+usage="usage: poll-pr <pr> [--reviewer <name> [--since <iso>, default the latest request of that reviewer on the host], whose workflow run or native status, under a comment transport, holds the window open past --timeout, to ${ceiling}s after that request] [--brief, or --brief --full <id>[,<id>]|open to read those rounds or threads whole] [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is done: false] [--timeout <s>] [--interval <s>] [--cursor <c>, the cursor a status: pending answer carried, to resume its window; no --since or --timeout; a call holds the tool at most ${SHIP_CALL_CAP}s]"
 ship_help "$usage" "$@"
 ship_args "$usage" pr "$@"
 # shellcheck source=poll-pr.d/args.sh
