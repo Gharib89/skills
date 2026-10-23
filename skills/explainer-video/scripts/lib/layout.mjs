@@ -47,19 +47,20 @@ export const readable = (e, t, moving) =>
 // as its face's ascent and descent, which runs past the line it sits in when a
 // fallback face draws its glyphs (Arabic-Indic digits in a serif box) though
 // no ink does, so it takes its line box, centred on it. A line too short for
-// the ink of Arabic letters is `rtl`'s to flag. A box that wraps spans its
-// lines, each as tall as the face's box, so one at least two line boxes tall
-// keeps its rect: its first and last lines are not the middle one.
+// the ink of Arabic letters is `rtl`'s to flag. A box that wraps, or holds a
+// nested inline, is several fragments (`rows`, each one's top and bottom), so
+// it takes the line box centred on each, which a line's fragments share and a
+// wrapped box's first and last lines keep.
 function placed(e) {
   if (!e.inline || e.lineH === null) return e.rect;
-  const { top, bottom } = e.rect;
-  const mid = (top + bottom) / 2;
   const half = (e.lineH * e.fontPx) / 2;
-  if (bottom - top >= 4 * half) return e.rect;
+  const mids = (e.rows ?? [[e.rect.top, e.rect.bottom]]).map(
+    ([top, bottom]) => (top + bottom) / 2,
+  );
   return {
     ...e.rect,
-    top: Math.max(top, mid - half),
-    bottom: Math.min(bottom, mid + half),
+    top: Math.max(e.rect.top, Math.min(...mids) - half),
+    bottom: Math.min(e.rect.bottom, Math.max(...mids) + half),
   };
 }
 

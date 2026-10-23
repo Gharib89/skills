@@ -101,25 +101,60 @@ test("an inline box whose line itself reaches the label still overlaps it", () =
   assert.deepEqual(found(...stat(1.7)), ['"٤٠" overlaps "ثانية"']);
 });
 
-// A wrapped inline box: two lines at line height 1 and a 191 px face box are
-// 112 + 191 px tall, and its last line reaches the label below. Held to the
-// middle line, it would miss the label.
-test("a wrapped inline box keeps its rect, so its last line still overlaps the label", () => {
+// An inline box of several fragments, `rows` their tops and bottoms as the
+// probe reports them, with a label whose top is given. Each fragment takes the
+// line box centred on it, so a box with a nested inline is as narrow as one
+// without, and a wrapped box keeps its first and last lines.
+const fragments = (lineH, fontPx, rows, labelTop) => {
   const ltr = { within: "ltr", dir: "ltr" };
-  assert.deepEqual(
-    found(
-      box("two words", {
-        ...ltr,
-        rect: { left: 719.1, top: 340, right: 825.5, bottom: 643 },
-      }),
-      box("label", {
-        ...ltr,
-        inline: false,
-        lineH: 1.6,
-        fontPx: 40,
-        rect: { left: 719.1, top: 600, right: 825.5, bottom: 664 },
-      }),
-    ),
-    ['"two words" overlaps "label"'],
-  );
+  const top = Math.min(...rows.map((r) => r[0]));
+  const bottom = Math.max(...rows.map((r) => r[1]));
+  return [
+    box("two words", {
+      ...ltr,
+      rows,
+      lineH,
+      fontPx,
+      rect: { left: 719.1, top, right: 825.5, bottom },
+    }),
+    box("label", {
+      ...ltr,
+      inline: false,
+      lineH: 1.6,
+      fontPx: 40,
+      rect: { left: 719.1, top: labelTop, right: 825.5, bottom: labelTop + 64 },
+    }),
+  ];
+};
+const hit = ['"two words" overlaps "label"'];
+
+test("a one-line inline box with a nested inline is as narrow as one without", () => {
+  const rows = [
+    [340, 531],
+    [350, 520],
+    [340, 531],
+  ];
+  assert.deepEqual(found(...fragments(1, 112, rows, 520)), []);
+});
+
+// 191 px of face box at 112 px, line height 1: the line boxes run 379.5 to 603.5.
+const wrapped = [
+  [340, 531],
+  [452, 643],
+];
+
+test("a wrapped inline box keeps its last line, so a label in it overlaps", () => {
+  assert.deepEqual(found(...fragments(1, 112, wrapped, 590)), hit);
+});
+
+test("a wrapped inline box takes its last line box, not its face box", () => {
+  assert.deepEqual(found(...fragments(1, 112, wrapped, 615)), []);
+});
+
+test("a wrapped inline box whose line is taller than its face box keeps its whole rect", () => {
+  const rows = [
+    [340, 388],
+    [404, 452],
+  ];
+  assert.deepEqual(found(...fragments(1.6, 40, rows, 432)), hit);
 });
