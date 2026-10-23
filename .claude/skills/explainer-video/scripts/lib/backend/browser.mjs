@@ -152,10 +152,12 @@ function measureFrame() {
   // it, whatever shape the path is. Each line box of an inline element is
   // tried, at its corners and centre, inside the viewport only. A hit test
   // skips an element with `pointer-events: none`, which the video never shows,
-  // so the element answers to `auto` for the test and is put back after.
+  // so the element answers to `auto`, important so that no rule's `!important`
+  // outranks it, for the test and is put back after, priority and all.
   const cutByPath = (el) => {
-    const was = el.style.pointerEvents;
-    el.style.pointerEvents = "auto";
+    const was = el.style.getPropertyValue("pointer-events");
+    const priority = el.style.getPropertyPriority("pointer-events");
+    el.style.setProperty("pointer-events", "auto", "important");
     try {
       return [...el.getClientRects()].some((r) =>
         [0, 0.5, 1].some((fx) =>
@@ -173,7 +175,7 @@ function measureFrame() {
         ),
       );
     } finally {
-      el.style.pointerEvents = was;
+      el.style.setProperty("pointer-events", was, priority);
     }
   };
   const sub = '[data-composition-id]:not([data-composition-id="main"])';
