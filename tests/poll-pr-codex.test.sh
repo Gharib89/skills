@@ -76,7 +76,7 @@ activity() {
                    body: "@codex review", url: "https://example.invalid/r"}] + $c),
       pr_reactions: $p, request_reactions: $r}' > "$SHIP_FAKE/host_pr_native_activity.$n.json"
 }
-poll() { ( cd "$repo" && bash "$mech" 7 --reviewer codex --since "$since" --timeout 0 --interval 1 "$@" ); }
+poll() { ( cd "$repo" && bash "${rebased:-$mech}" 7 --reviewer codex --since "$since" --timeout 0 --interval 1 "$@" ); }
 calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 # An in-progress row: the probe's Completed row with its status cell replaced.
 sed 's/✅ \*\*Completed\*\*/⏳ **In progress**/' "$fx/summary-completed.md" > "$work/summary-progress.md"
@@ -86,11 +86,14 @@ sed 's/`9ffa460`/9ffa460/' "$fx/summary-completed.md" > "$work/summary-nosha.md"
 
 # The findings round, as #504 delivered it: 👀 and an in-progress row first,
 # then the formal review on the head. The 👀 holds the window past --timeout 0.
+# The fixtures date the request 2026-10-07, past the ceiling, so the cases that
+# hold run a ceiling_copy; the rest is the real mechanic.
+ceiling_copy "$work/rebased" "$since" 1800
 reset
 activity 1 eyes "c|summary-progress.md|2026-10-07T12:28:29Z"
 activity 2 "c|summary-completed.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
 printf '%s\n' "$findings" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll --brief); rc=$?
+out=$(rebased=$work/rebased/poll-pr.sh poll --brief); rc=$?
 check "a findings round lands after the in-progress pass" '0 since null' \
   "$rc $(jq -r '.landed_by, .not_reviewed' <<<"$out" | xargs)"
 check "the in-progress pass held the window for a second read" 2 "$(calls pr_reviews)"
@@ -103,9 +106,48 @@ reset
 activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
 activity 2 "c|summary-completed.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
 printf '%s\n' "$findings" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(poll); rc=$?
+out=$(rebased=$work/rebased/poll-pr.sh poll); rc=$?
 check "an in-progress status row holds the window until the round" '0 since' \
   "$rc $(jq -r .landed_by <<<"$out")"
+
+# The ceiling counts from the request, not the call (#952): a fresh call, no
+# cursor, on a request already past the ceiling whose status still reads in
+# progress grades the round still-running at once instead of opening a new
+# window and answering pending at the call cap.
+reset
+activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
+out=$(SHIP_CALL_CAP=3 poll); rc=$?
+check "a stuck status on a request past the ceiling is still-running" '1 still-running null null' \
+  "$rc $(jq -r '.not_reviewed, .status, .cursor' <<<"$out" | xargs)"
+# The ceiling's last tick, on a clock the case controls: a `date` stub whose
+# every `+%s` reads one second past the last, from the instant clock() sets.
+# The poll's third read (the call's start, the pass's start, then `now`) is the
+# one the ceiling is checked on, so clock 1796 decides at 1799 s, inside the
+# ceiling, and holds the window to the call cap, and clock 1797 decides at
+# exactly 1800 s and grades the run at once. A shift in the read count breaks
+# the pair rather than passing it.
+mkdir -p "$work/bin"
+cat > "$work/bin/date" <<'STUB'
+#!/usr/bin/env bash
+[ "$*" = +%s ] || exec /usr/bin/env -i PATH=/usr/bin:/bin date "$@"
+t=$(($(cat "$CLOCK") + 1)); echo "$t" > "$CLOCK"; echo "$t"
+STUB
+chmod +x "$work/bin/date"
+clock() { echo $(($(jq -rn --arg s "$since" '$s | fromdateiso8601') + $1)) > "$work/clock"; }
+staged() { PATH="$work/bin:$PATH" CLOCK=$work/clock SHIP_CALL_CAP=3 poll; }
+reset
+activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
+clock 1796
+out=$(staged); rc=$?
+check "a stuck status a second inside the ceiling still answers pending" '1 pending null' \
+  "$rc $(jq -r '.status, .not_reviewed' <<<"$out" | xargs)"
+check "and carries a cursor to resume it" true "$(jq '.cursor | type == "string"' <<<"$out")"
+reset
+activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
+clock 1797
+out=$(staged); rc=$?
+check "a stuck status on the ceiling's exact tick is still-running" '1 still-running null null' \
+  "$rc $(jq -r '.not_reviewed, .status, .cursor' <<<"$out" | xargs)"
 
 # The clean round, as #505 delivered it: no formal review, an issue comment
 # naming the reviewed commit, then 👍 on the PR. It is a landed round.

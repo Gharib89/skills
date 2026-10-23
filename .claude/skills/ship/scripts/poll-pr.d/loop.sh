@@ -25,6 +25,14 @@ fi
 # window's `start` and `deadline` span every call of a cursor chain.
 call_start=$(date +%s)
 [ -n "$start" ] || { start=$call_start; deadline=$((start + timeout)); }
+# The ceiling bounds what a run may add to its request, so it counts from the
+# since instant where there is one, else from the window's start: counted from
+# the window's start alone, which a fresh call resets, every fresh call on a
+# stuck run opened a new ceiling (#952).
+anchor=$start
+if [ -n "$since" ]; then
+  anchor=$(jq -rn --arg s "$since" '$s | fromdateiso8601') || ship_tooling "cannot read the since instant: $since"
+fi
 key=on_head; [ -z "$since" ] || key=all
 readf=$(mktemp); SHIP_HTTP_STATUS_FILE=$(mktemp)
 trap 'rm -f "$readf" "$SHIP_HTTP_STATUS_FILE"' EXIT
@@ -184,7 +192,7 @@ while :; do
   fi
   # A window that closed on the previous head answered nothing on this one.
   ! $stale || done=false
-  waited=$(($(date +%s) - start))
+  now=$(date +%s); waited=$((now - start)); aged=$((now - anchor))
   run_status=$(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run")
   # A run that ended any way but successfully ends the window with it, wherever
   # `--timeout` stands: no round is coming out of it, and the minutes left on the
@@ -196,7 +204,7 @@ while :; do
   [ "$refused_by" = null ] || dead_run=true
   # The run outranks the constant: a round still being written is not a silent
   # reviewer, and the ceiling is what keeps that from being unbounded.
-  if ! $done && ! $dead_run && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$waited" -lt "$ceiling" ]; then
+  if ! $done && ! $dead_run && [ "$landed" = false ] && [ "$waited" -ge "$timeout" ] && [ "$aged" -lt "$ceiling" ]; then
     case $run_status in
       # No run to wait on: no flag, a read the host refused, or no run created.
       ''|none) ;;
@@ -213,7 +221,7 @@ while :; do
   # A landed round's run is still going: the job posts its review before its
   # denial step raises the count, so the window stays open until the run ends,
   # to the ceiling, and the count below is read from a completed run (#295).
-  if $done && [ "$landed" = true ] && [ "$mergeable" != conflict ] && [ "$waited" -lt "$ceiling" ]; then
+  if $done && [ "$landed" = true ] && [ "$mergeable" != conflict ] && [ "$aged" -lt "$ceiling" ]; then
     case $run_status in ''|none|completed) ;; *) nap; continue ;; esac
   fi
   if $done || $dead_run || [ "$waited" -ge "$timeout" ]; then
