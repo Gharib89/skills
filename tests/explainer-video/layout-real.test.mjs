@@ -45,12 +45,14 @@ const timing = {
 // is a block wide as its clip leaves it, so a cut shows at its edge.
 const CARDS = `<div class="clip-a"><div class="card ok">Inside the clip</div></div>
 <div class="clip-b"><div class="card wide">Cut by clip-path</div></div>
+<div class="clip-c"><div class="card wide">Cut with pointer events off</div></div>
 <div class="outer-a"><div class="inner-a"><div class="card ok">Inside both clips</div></div></div>
 <div class="outer-b"><div class="inner-b"><div class="mid"><div class="card wide">Cut by the outer clip</div></div></div></div>
 <style>
-.clip-a, .clip-b, .outer-a, .outer-b { position: absolute; left: 160px; width: 700px; height: 90px; }
+.clip-a, .clip-b, .clip-c, .outer-a, .outer-b { position: absolute; left: 160px; width: 700px; height: 90px; }
 .clip-a { top: 160px; clip-path: inset(0); }
 .clip-b { top: 300px; clip-path: inset(0 100px 0 0); }
+.clip-c { top: 720px; clip-path: inset(0 100px 0 0); pointer-events: none; }
 .outer-a { top: 440px; overflow: hidden; }
 .outer-b { top: 580px; width: 500px; overflow: hidden; }
 .inner-a { position: absolute; inset: 0; overflow: hidden; }
@@ -67,7 +69,7 @@ const SCENES = {
     id: "cards",
     role: "point",
     title: "Cards",
-    narration: ["Four cards."],
+    narration: ["Five cards."],
     visual: {
       component: "custom",
       props: {
@@ -142,6 +144,7 @@ test(
     assert.deepEqual(found.toSorted(), [
       'clipped "Cut by the outer clip"',
       'clipped by clip-path "Cut by clip-path"',
+      'clipped by clip-path "Cut with pointer events off"',
     ]);
   },
 );
